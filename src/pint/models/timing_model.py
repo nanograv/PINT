@@ -480,14 +480,18 @@ class TimingModel:
             if alias in getattr(self, p).aliases:
                 return p
         # if not in the top level, check parameters.
+        pint_par = None
         for cp in self.components.values():
-            pint_par = cp.match_param_aliases(alias)
-            if pint_par:
-                return pint_par
-        if not pint_par:
-            raise ValueError(
-                "{} is not recognized as a parameter or alias".format(alias)
-            )
+            try:
+                pint_par = cp.match_param_aliases(alias)
+                print(pint_par)
+            except UnknownParameter:
+                continue
+            return pint_par
+
+        raise UnknownParameter(
+            "{} is not recognized as a parameter or alias".format(alias)
+        )
 
     def get_params_dict(self, which="free", kind="quantity"):
         """Return a dict mapping parameter names to values.
@@ -2619,51 +2623,37 @@ class Component(object, metaclass=ModelMeta):
         # Split the alias prefix, see if it is a perfix alias
         try:
             prefix, idx_str, idx = split_prefixed_name(alias)
-        except PrefixError:
+        except PrefixError: # Not a prefixed name
             if pname is not None:
                 par = getattr(self, pname)
                 if par.is_prefix:
-                    raise ValueError(
-                        "Prefix {} maps to mulitple parameters"
-                        ". Please specify the index as well.".format(alias)
+                    raise UnknownParameter(
+                        f"Prefix {alias} maps to mulitple parameters"
+                        ". Please specify the index as well."
                     )
             else:
                 # Not a prefix, not an alias
-                return None
+                raise UnknownParameter(f"Unknown parameter name or alias {alias}")
         # When the alias is a prefixed name but not in the parameter list yet
         if pname is None:
             prefix_pname = self.aliases_map.get(prefix, None)
             if prefix_pname:
                 par = getattr(self, prefix_pname)
                 if par.is_prefix:
-                    raise ValueError(
+                    raise UnknownParameter(
                         f"Found a similar prefixed parameter '{prefix_pname}'"
                         f" But parameter {par.prefix}{idx} need to be added"
                         f" to the model."
                     )
-        return pname
-
-        # if pname is None: # Try the prefix parameter
-        #     try:
-        #         prefix, idx_str, idx = split_prefixed_name(alias)
-        #     except PrefixError:
-        #         return None
-        #     pname = self.alias_map.get(prefix, None)
-        # # for p in self.params:
-        # #     if p == alias:
-        # #         return p
-        # #     par = getattr(self, p)
-        # #     if alias in par.aliases:
-        # #         # For prefixable parameters, if the alias only has prefix, it
-        # #         # is ambigous, raise an error.
-        # #         if par.is_prefix:
-        # #             try:
-        # #                 prefix, idx_str, idx = split_prefixed_name(alias)
-        # #             except PrefixError:
-        # #                 raise ValueError("Prefix {} maps to mulitple parameters"
-        # #                     ". Please specify the index as well.".format(alias))
-        # #         return p
-        # return None
+                else:
+                    raise UnknownParameter(
+                        f"{par} is not a prefixed parameter, howere the input"
+                        f" {alias} has index with it."
+                    )
+            else:
+                raise UnknownParameter(f"Unknown parameter name or alias {alias}")
+        else:
+            return pname
 
     def register_deriv_funcs(self, func, param):
         """Register the derivative function in to the deriv_func dictionaries.
@@ -2909,7 +2899,7 @@ class AllComponents:
             if param_name == alias_map[alias]:
                 return alias_map
             else:
-                raise ConflictAliasError(
+                raise ConflictAlias(
                     f"Alias {alias} has been used by" f" parameter {param_name}."
                 )
         else:
@@ -3070,7 +3060,7 @@ class MissingParameter(TimingModelError):
         return result
 
 
-class ConflictAliasError(TimingModelError):
+class ConflictAlias(TimingModelError):
     """If the same alias is used for different parameters."""
 
     pass

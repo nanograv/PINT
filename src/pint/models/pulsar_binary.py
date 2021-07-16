@@ -12,7 +12,7 @@ from astropy.time import Time
 from pint import ls
 from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
 from pint.models.stand_alone_psr_binaries import binary_orbits as bo
-from pint.models.timing_model import DelayComponent, MissingParameter
+from pint.models.timing_model import DelayComponent, MissingParameter, UnknownParameter
 from pint.utils import taylor_horner_deriv
 
 log = logging.getLogger(__name__)
@@ -307,7 +307,7 @@ class PulsarBinary(DelayComponent):
             if hasattr(self._parent, par) or set(alias).intersection(self.params):
                 try:
                     pint_bin_name = self._parent.match_param_aliases(par)
-                except ValueError:
+                except UnknownParameter:
                     if par in self.internal_params:
                         pint_bin_name = par
                 binObjpar = getattr(self._parent, pint_bin_name)

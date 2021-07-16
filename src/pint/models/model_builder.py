@@ -34,12 +34,12 @@ class ComponentConflict(ValueError):
 class ModelBuilder:
     """Class for building a `TimingModel` object from a parameter file.
 
-    The `ModelBuilder` class helps building a `TimingModel` from a list of
-    parameters or a parameter file (i.e., pulsar ephemerise or '.par' file).
+    The ModelBuilder class helps building a TimingModel from a parameter file
+    (i.e., pulsar ephemerise or '.par' file).
     It first maps the provided parameter names to the PINT defined parameter
     names, if they are in the PINT parameter aliases list. Then, the
-    'ModelBuilder' selects model components based on the following rules:
-    1. The components in the .default_components list will be selected.
+    ModelBuilder selects model components based on the following rules:
+    1. The components in the :py:attr:`~default_components` list will be selected.
     2. When a component get mapped uniquely by the given parameters.
     3. The pulsar binary component will be selected by the 'BINARY' parameter.
     """
@@ -104,7 +104,7 @@ class ModelBuilder:
 
         Parameters
         ----------
-        components: component object
+        components: pint.models.timing_model.Component
             The component to be checked.
         Returns
         -------
@@ -139,7 +139,7 @@ class ModelBuilder:
 
         Parameters
         ----------
-        component: component object
+        component: pint.models.timing_model.Component
             The component to be checked.
         Returns
         -------
@@ -193,7 +193,7 @@ class ModelBuilder:
         ---------
         param_inpar: str
             Dictionary of the unique parameters in .par file with the key is the
-        parfile line. Function `.parse_parfile` returns this dictionary.
+        parfile line. :func:`parse_parfile` returns this dictionary.
 
         Return
         ------
