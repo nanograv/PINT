@@ -983,6 +983,7 @@ def _cluster_by_gaps(t, gap):
     clusters[ix] = clusters_sorted
     return clusters
 
+
 class FlagDict(MutableMapping):
     def __init__(self, *args, **kwargs):
         self.store = dict()
@@ -1040,6 +1041,7 @@ class FlagDict(MutableMapping):
 
     def copy(self):
         return FlagDict.from_dict(self.store)
+
 
 class TOA:
     """A time of arrival (TOA) class.
@@ -1555,6 +1557,13 @@ class TOAs:
         """The last MJD, in :class:`~astropy.time.Time` format."""
         return self.get_mjds(high_precision=True).max()
 
+    def get_all_flags(self):
+        """Return a list of all the flags used by any TOA."""
+        flags = set()
+        for f in self.table["flags"]:
+            flags.update(f.keys())
+        return flags
+
     def get_freqs(self):
         """Return a :class:`~astropy.units.Quantity` of the observing frequencies for the TOAs."""
         return self.table["freq"].quantity
@@ -1592,7 +1601,9 @@ class TOAs:
         if "pn" in self.table["flags"][0]:
             if "pulse_number" in self.table.colnames:
                 raise ValueError("Pulse number cannot be both a column and a TOA flag")
-            return np.array(float(flags.get("pn", np.nan)) for flags in self.table["flags"])
+            return np.array(
+                float(flags.get("pn", np.nan)) for flags in self.table["flags"]
+            )
         elif "pulse_number" in self.table.colnames:
             return self.table["pulse_number"]
         else:
@@ -1842,7 +1853,10 @@ class TOAs:
         )
         # Then add any -padd flag values
         dphs += np.asarray(
-            [float(flags["padd"]) if "padd" in flags else 0.0 for flags in self.table["flags"]]
+            [
+                float(flags["padd"]) if "padd" in flags else 0.0
+                for flags in self.table["flags"]
+            ]
         )
         self.table["delta_pulse_number"] += dphs
 
@@ -2013,7 +2027,7 @@ class TOAs:
             flags = flags.copy()
             toatime_out = toatime
             if "clkcorr" in flags:
-                toatime_out -= time.TimeDelta(float(flags["clkcorr"])*u.s)
+                toatime_out -= time.TimeDelta(float(flags["clkcorr"]) * u.s)
             out_str = (
                 "C " if isinstance(commentflag, str) and (commentflag in flags) else ""
             )
@@ -2097,7 +2111,7 @@ class TOAs:
                     # be applied in the parser, not here. In the table the time
                     # correction should have units.
                     # @aarchiba: flags should store strings only
-                    corr[jj] = float(flags[jj]["to"])*u.s
+                    corr[jj] = float(flags[jj]["to"]) * u.s
                     times[jj] += time.TimeDelta(corr[jj])
 
             gcorr = site.clock_corrections(time.Time(grp["mjd"]))

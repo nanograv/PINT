@@ -134,12 +134,12 @@ some_barycentered 999999.999 56403.000000000000000   1.000  @  -some argument -a
 )
 def test_flags(s):
     s = "\n".join(
-            [
-                basic_tim_header,
-                f"""some_barycentered 999999.999 56400.000000000000000   1.000  @{s}""",
-                basic_tim,
-            ]
-        )
+        [
+            basic_tim_header,
+            f"""some_barycentered 999999.999 56400.000000000000000   1.000  @{s}""",
+            basic_tim,
+        ]
+    )
     f = StringIO(s)
     toas = get_TOAs(f)
     do_roundtrip(toas)

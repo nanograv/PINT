@@ -195,12 +195,21 @@ def load_Fermi_TOAs(
     )
     if weightcolumn is None:
         toalist = [
-            toa.TOA(m, obs=obs, scale=scale, energy=str(e.to_value(u.MeV)), error=1.0 * u.us)
+            toa.TOA(
+                m, obs=obs, scale=scale, energy=str(e.to_value(u.MeV)), error=1.0 * u.us
+            )
             for m, e in zip(mjds, energies)
         ]
     else:
         toalist = [
-            toa.TOA(m, obs=obs, scale=scale, energy=str(e.to_value(u.MeV)), weight=str(w), error=1.0 * u.us)
+            toa.TOA(
+                m,
+                obs=obs,
+                scale=scale,
+                energy=str(e.to_value(u.MeV)),
+                weight=str(w),
+                error=1.0 * u.us,
+            )
             for m, e, w in zip(mjds, energies, weights)
         ]
 
