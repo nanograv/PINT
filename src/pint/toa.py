@@ -1254,6 +1254,14 @@ class TOAs:
 
     >>> t[t.table['freq'] > 1*u.GHz]
 
+    TOAs objects also accept indexing to select columns or flags, so that for example
+    ``t['mjd']`` returns the :class:`~astropy.table.Column` contained in the object, and
+    ``t['fish']`` returns an array of strings that has the value associated with the flag
+    ``-fish`` for each TOA that has that flag or the empty string for each TOA that doesn't.
+    TOAs objects also support assignment through these methods:
+
+    >>> t['high', t['freq'] > 1*u.GHz] = "1"
+
     .. list-table:: Columns in ``.table``
        :widths: 15 85
        :header-rows: 1
