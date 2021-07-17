@@ -1009,7 +1009,7 @@ class FlagDict(MutableMapping):
     def check_allowed_value(k, v):
         if not isinstance(v, str):
             raise ValueError(f"value {v} for key {k} must be a string")
-        if len(v.split()) != 1:
+        if not v and len(v.split()) != 1:
             raise ValueError(f"value {repr(v)} for key {k} cannot contain whitespace")
 
     def __setitem__(self, key, val):
@@ -1024,10 +1024,7 @@ class FlagDict(MutableMapping):
         del self.store[key.lower()]
 
     def __getitem__(self, key):
-        try:
-            return self.store[key.lower()]
-        except KeyError:
-            return ""
+        return self.store[key.lower()]
 
     def __iter__(self):
         return iter(self.store)
@@ -1523,8 +1520,6 @@ class TOAs:
                 for f, v in zip(self.table["flags", subset], value):
                     f[column] = v
 
-
-
     def __eq__(self, other):
         sd, od = self.__dict__.copy(), other.__dict__.copy()
         st = sd.pop("table")
@@ -1542,40 +1537,30 @@ class TOAs:
 
     @property
     def ntoas(self):
+        """The number of TOAs. Also available as len(toas)."""
         return len(self.table)
 
     @property
     def observatories(self):
+        """The set of observatories in use by these TOAs."""
         return set(self.get_obss())
 
     @property
     def first_MJD(self):
+        """The first MJD, in :class:`~astropy.time.Time` format."""
         return self.get_mjds(high_precision=True).min()
 
     @property
     def last_MJD(self):
+        """The last MJD, in :class:`~astropy.time.Time` format."""
         return self.get_mjds(high_precision=True).max()
 
-    def __add__(self, x):
-        if type(x) in [int, float]:
-            if not x:
-                # Adding zero. Do nothing
-                return self
-        raise NotImplementedError
-
-    def __sub__(self, x):
-        if type(x) in [int, float]:
-            if not x:
-                # Subtracting zero. Do nothing
-                return self
-        raise NotImplementedError
-
     def get_freqs(self):
-        """Return a numpy array of the observing frequencies in MHz for the TOAs"""
+        """Return a :class:`~astropy.units.Quantity` of the observing frequencies for the TOAs."""
         return self.table["freq"].quantity
 
     def get_mjds(self, high_precision=False):
-        """Array of MJDs in the TOAs object
+        """Array of MJDs in the TOAs object.
 
         With high_precision is True
         Return an array of the astropy.times (UTC) of the TOAs
