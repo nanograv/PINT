@@ -63,16 +63,16 @@ par_template = parfile + "\n" + "BINARY {}\n"
 
 
 binary_models = [
-    (get_model, "BT", pytest.raises(MissingParameter)),
-    (get_model, "ELL1", pytest.raises(MissingParameter)),
-    (get_model, "ELL1H", pytest.raises(MissingParameter)),
-    (get_model, "T2", pytest.raises(UnknownBinaryModel)),
-    (get_model, "ELLL1", pytest.raises(UnknownBinaryModel)),
+    ("BT", pytest.raises(MissingParameter)),
+    ("ELL1", pytest.raises(MissingParameter)),
+    ("ELL1H", pytest.raises(MissingParameter)),
+    ("T2", pytest.raises(UnknownBinaryModel)),
+    ("ELLL1", pytest.raises(UnknownBinaryModel)),
 ]
 
 
-@pytest.mark.parametrize("func, name, expectation", binary_models)
-def test_valid_model(tmp_dir, func, name, expectation):
+@pytest.mark.parametrize("name, expectation", binary_models)
+def test_valid_model(tmp_dir, name, expectation):
     """Check handling of bogus binary models.
 
     Note that ``get_model_new`` currently reports different errors
@@ -83,16 +83,15 @@ def test_valid_model(tmp_dir, func, name, expectation):
     with open(fn, "w") as f:
         f.write(par_template.format(name))
     with expectation:
-        func(f.name)
+        get_model(f.name)
 
 
 @pytest.mark.xfail(
     reason="This parfile includes both ecliptic and equatorial coordinates"
 )
-@pytest.mark.parametrize("gm", [get_model])
-def test_ecliptic(gm):
+def test_ecliptic():
     parfile = join(datadir, "J1744-1134.basic.ecliptic.par")
-    m = gm(parfile)
+    m = get_model(parfile)
     assert "AstrometryEcliptic" in m.components
 
 
