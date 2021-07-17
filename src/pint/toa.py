@@ -1009,19 +1009,25 @@ class FlagDict(MutableMapping):
     def check_allowed_value(k, v):
         if not isinstance(v, str):
             raise ValueError(f"value {v} for key {k} must be a string")
-        if not v or len(v.split()) != 1:
+        if len(v.split()) != 1:
             raise ValueError(f"value {repr(v)} for key {k} cannot contain whitespace")
 
     def __setitem__(self, key, val):
         self.__class__.check_allowed_key(key)
         self.__class__.check_allowed_value(key, val)
-        self.store[key.lower()] = val
+        if val:
+            self.store[key.lower()] = val
+        elif key in self.store:
+            del self.store[key]
 
     def __delitem__(self, key):
         del self.store[key.lower()]
 
     def __getitem__(self, key):
-        return self.store[key.lower()]
+        try:
+            return self.store[key.lower()]
+        except KeyError:
+            return ""
 
     def __iter__(self):
         return iter(self.store)
