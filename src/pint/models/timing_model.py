@@ -1092,7 +1092,7 @@ class TimingModel:
            name as value.
         """
         for cp in self.components.values():
-            mapping = cp.get_prefix_mapping(prefix)
+            mapping = cp.get_prefix_mapping_component(prefix)
             if len(mapping) != 0:
                 return mapping
         raise ValueError("Can not find prefix `{}`".format(prefix))
@@ -2444,28 +2444,6 @@ class Component(object, metaclass=ModelMeta):
                 ali_map[ali] = p
         return ali_map
 
-    def get_prefix_mapping(self, prefix):
-        """Get the index mapping for the prefix parameters.
-
-        Parameters
-        ----------
-        prefix : str
-           Name of prefix.
-
-        Returns
-        -------
-        dict
-           A dictionary with prefix pararameter real index as key and parameter
-           name as value.
-        """
-        parnames = [x for x in self.params if x.startswith(prefix)]
-        mapping = dict()
-        for parname in parnames:
-            par = getattr(self, parname)
-            if par.is_prefix and par.prefix == prefix:
-                mapping[par.index] = parname
-        return OrderedDict(sorted(mapping.items()))
-
     def add_param(self, param, deriv_func=None, setup=False):
         """Add a parameter to the Component.
 
@@ -2605,7 +2583,7 @@ class Component(object, metaclass=ModelMeta):
             par = getattr(self, parname)
             if par.is_prefix and par.prefix == prefix:
                 mapping[par.index] = parname
-        return mapping
+        return OrderedDict(sorted(mapping.items()))
 
     def match_param_aliases(self, alias):
         """Return the parameter corresponding to this alias.
