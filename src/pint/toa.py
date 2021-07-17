@@ -1391,34 +1391,125 @@ class TOAs:
         return len(self.table)
 
     def __getitem__(self, index):
-        if not hasattr(self, "table"):
-            raise ValueError("This TOAs object is incomplete and does not have a table")
-        if isinstance(index, np.ndarray) and index.dtype == bool:
-            r = copy.deepcopy(self)
-            r.table = r.table[index]
-            if len(r.table) > 0:
-                r.table = r.table.group_by("obs")
-            return r
-        elif (
-            isinstance(index, np.ndarray)
-            and index.dtype == np.int64
-            or isinstance(index, list)
-        ):
-            r = copy.deepcopy(self)
-            r.table = r.table[index]
-            if len(r.table) > 0:
-                r.table = r.table.group_by("obs")
-            return r
-        elif isinstance(index, slice):
-            r = copy.deepcopy(self)
-            r.table = r.table[index]
-            if len(r.table) > 0:
-                r.table = r.table.group_by("obs")
-            return r
-        elif isinstance(index, int):
-            raise ValueError("TOAs do not support extraction of TOA objects (yet?)")
+        column = None
+        subset = None
+        if isinstance(index, tuple):
+            if len(index) != 2:
+                raise ValueError("Invalid indexing")
+            a, b = index
+            if isinstance(a, str):
+                column, subset = a, b
+            else:
+                column, subset = b, a
+        elif isinstance(index, str):
+            column = index
         else:
-            raise ValueError("Unable to index TOAs with {}".format(index))
+            subset = index
+
+        if column is None:
+            if isinstance(index, np.ndarray) and index.dtype == bool:
+                r = copy.deepcopy(self)
+                r.table = r.table[index]
+                if len(r.table) > 0:
+                    r.table = r.table.group_by("obs")
+                return r
+            elif (
+                isinstance(index, np.ndarray)
+                and index.dtype == np.int64
+                or isinstance(index, list)
+            ):
+                r = copy.deepcopy(self)
+                r.table = r.table[index]
+                if len(r.table) > 0:
+                    r.table = r.table.group_by("obs")
+                return r
+            elif isinstance(index, slice):
+                r = copy.deepcopy(self)
+                r.table = r.table[index]
+                if len(r.table) > 0:
+                    r.table = r.table.group_by("obs")
+                return r
+            elif isinstance(index, int):
+                raise ValueError("TOAs do not support extraction of TOA objects (yet?)")
+            else:
+                raise ValueError("Unable to index TOAs with {}".format(index))
+        elif column in self.table.columns:
+            if subset is None:
+                return self.table[column]
+            else:
+                return self.table[column, subset]
+        else:
+            r = []
+            if subset is None:
+                for f in self.table["flags"]:
+                    r.append(f.get(column, ""))
+            elif isinstance(subset, int):
+                return self.table["flags"][subset].get(column, "")
+            else:
+                for f in self.table["flags"][subset]:
+                    r.append(f.get(column, ""))
+            # FIXME: what to do if length zero? How to ensure it's a string array even then?
+            return np.array(r)
+
+    def __setitem__(self, index, value):
+        column = None
+        subset = None
+        if isinstance(index, tuple):
+            if len(index) != 2:
+                raise ValueError("Invalid indexing")
+            a, b = index
+            if isinstance(a, str):
+                column, subset = a, b
+            else:
+                column, subset = b, a
+        elif isinstance(index, str):
+            column = index
+        else:
+            subset = index
+
+        if column is None:
+            raise ValueError("Unable to assign sets of TOAs")
+        elif column in self.table.columns:
+            if subset is None:
+                self.table[column] = value
+            else:
+                self.table[column][subset] = value
+        else:
+            if isinstance(value, str):
+                if subset is None:
+                    for f in self.table["flags"]:
+                        if value:
+                            f[column] = value
+                        else:
+                            try:
+                                del f[column]
+                            except KeyError:
+                                pass
+                elif isinstance(subset, int):
+                    f = self.table["flags"][subset]
+                    if value:
+                        f[column] = value
+                    else:
+                        try:
+                            del f[column]
+                        except KeyError:
+                            pass
+                else:
+                    for f in self.table["flags"][subset]:
+                        if value:
+                            f[column] = value
+                        else:
+                            try:
+                                del f[column]
+                            except KeyError:
+                                pass
+            else:
+                # FIXME: error if value is the wrong length
+                # FIXME: sensible error if value is a float or some other non-string non-iterable
+                for f, v in zip(self.table["flags", subset], value):
+                    f[column] = v
+
+
 
     def __eq__(self, other):
         sd, od = self.__dict__.copy(), other.__dict__.copy()
