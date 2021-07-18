@@ -10,7 +10,6 @@ import pint.models.model_builder as mb
 from pint import toa
 from pint.fitter import GLSFitter
 from pinttestdata import datadir
-import matplotlib.pyplot as plt
 
 
 class TestGLS(unittest.TestCase):
