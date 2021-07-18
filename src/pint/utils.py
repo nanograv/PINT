@@ -1781,3 +1781,82 @@ def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params=
         return dphase, random_models
     else:
         return dphase
+
+
+def list_parameters(class_=None):
+    """List parameters understood by PINT.
+
+    Parameters
+    ----------
+    class_: type, optional
+        If provided, produce a list of parameters understood by the Component type; if None,
+        return a list of parameters understood by all Components known to PINT.
+
+    Returns
+    -------
+    list of dict
+        Each entry is a dictionary describing one parameter. Dictionary values are all strings
+        or lists of strings, and will include at least "name", "classes", and "description".
+    """
+    if class_ is not None:
+        from pint.models.parameter import (
+            boolParameter,
+            strParameter,
+            intParameter,
+            prefixParameter,
+            maskParameter,
+        )
+
+        result = []
+        inst = class_()
+        for p in inst.params:
+            pm = getattr(inst, p)
+            d = dict(
+                name=pm.name,
+                class_=f"{class_.__module__}.{class_.__name__}",
+                description=pm.description,
+            )
+            if pm.aliases:
+                d["aliases"] = [a for a in pm.aliases if a != pm.name]
+            if pm.units:
+                d["kind"] = pm.units.to_string()
+                if not d["kind"]:
+                    d["kind"] = "number"
+            elif isinstance(pm, boolParameter):
+                d["kind"] = "boolean"
+            elif isinstance(pm, strParameter):
+                d["kind"] = "string"
+            elif isinstance(pm, intParameter):
+                d["kind"] = "integer"
+            if isinstance(pm, prefixParameter):
+                d["name"] = pm.prefix + "{number}"
+                d["aliases"] = [a + "{number}" for a in pm.prefix_aliases]
+            if isinstance(pm, maskParameter):
+                d["name"] = pm.origin_name + " {flag} {value}"
+                d["aliases"] = [a + " {flag} {value}" for a in pm.prefix_aliases]
+            if "aliases" in d and not d["aliases"]:
+                del d["aliases"]
+            result.append(d)
+        return result
+    else:
+        import pint.models.timing_model
+
+        results = {}
+        ct = pint.models.timing_model.Component.component_types.copy()
+        ct["TimingModel"] = pint.models.timing_model.TimingModel
+        for v in ct.values():
+            for d in list_parameters(v):
+                n = d["name"]
+                class_ = d.pop("class_")
+                if n not in results:
+                    d["classes"] = [class_]
+                    results[n] = d
+                else:
+                    r = results[n].copy()
+                    r.pop("classes")
+                    if r != d:
+                        raise ValueError(
+                            f"Parameter {d} in class {class_} does not match {results[n]}"
+                        )
+                    results[n]["classes"].append(class_)
+        return sorted(results.values(), key=lambda d: d["name"])

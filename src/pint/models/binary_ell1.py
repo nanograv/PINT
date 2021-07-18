@@ -1,3 +1,4 @@
+"""Approximate binary model for small eccentricity."""
 from warnings import warn
 
 import numpy as np
@@ -29,6 +30,10 @@ class BinaryELL1Base(PulsarBinary):
         - EPS1DOT First derivative of first Laplace-Lagrange parameter
         - EPS2DOT Second derivative of second Laplace-Lagrange parameter
 
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.binary_ell1.BinaryELL1
     """
 
     def __init__(self):
@@ -207,6 +212,11 @@ class BinaryELL1H(BinaryELL1Base):
     This is modified version of ELL1 model. a new parameter H3 is
     introduced to model the shapiro delay.
 
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.binary_ell1.BinaryELL1H
+
     Note
     ----
     Ref:  Freire and Wex 2010; Only the Medium-inclination case model is implemented.
@@ -244,6 +254,7 @@ class BinaryELL1H(BinaryELL1Base):
                 units="",
                 description="Shapiro delay parameter STIGMA as in Freire and Wex 2010 Eq(12)",
                 long_double=True,
+                aliases=["VARSIGMA"],
             )
         )
         self.add_param(

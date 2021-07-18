@@ -13,7 +13,7 @@ from pint.models.timing_model import Component
 
 class NoiseComponent(Component):
     def __init__(self,):
-        super(NoiseComponent, self).__init__()
+        super().__init__()
         self.covariance_matrix_funcs = []
         self.scaled_toa_sigma_funcs = []  # Need to move this to a speical place.
         self.scaled_dm_sigma_funcs = []
@@ -25,12 +25,14 @@ class NoiseComponent(Component):
         self.dm_covariance_matrix_funcs_component = []
         self.basis_funcs = []
 
-    def validate(self,):
-        super(NoiseComponent, self).validate()
-
 
 class ScaleToaError(NoiseComponent):
     """Correct reported template fitting uncertainties.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.noise_model.ScaleToaError
 
     Note
     ----
@@ -42,7 +44,7 @@ class ScaleToaError(NoiseComponent):
     category = "scale_toa_error"
 
     def __init__(self,):
-        super(ScaleToaError, self).__init__()
+        super().__init__()
         self.introduces_correlated_errors = False
         self.add_param(
             maskParameter(
@@ -79,7 +81,7 @@ class ScaleToaError(NoiseComponent):
         self.scaled_toa_sigma_funcs += [self.scale_toa_sigma]
 
     def setup(self):
-        super(ScaleToaError, self).setup()
+        super().setup()
         # Get all the EFAC parameters and EQUAD
         self.EFACs = {}
         self.EQUADs = {}
@@ -136,7 +138,7 @@ class ScaleToaError(NoiseComponent):
                 self.EQUADs[pp] = (par.key, par.key_value)
 
     def validate(self):
-        super(ScaleToaError, self).validate()
+        super().validate()
         # check duplicate
         for el in ["EFACs", "EQUADs"]:
             l = list(getattr(self, el).values())
@@ -171,6 +173,11 @@ class ScaleToaError(NoiseComponent):
 class ScaleDmError(NoiseComponent):
     """Correction for estimated wideband DM measurement uncertainty.
 
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.noise_model.ScaleDmError
+
     Note
     ----
     Ref: NanoGrav 12.5 yrs wideband data
@@ -180,7 +187,7 @@ class ScaleDmError(NoiseComponent):
     category = "scale_dm_error"
 
     def __init__(self,):
-        super(ScaleDmError, self).__init__()
+        super().__init__()
         self.introduces_correlated_errors = False
         self.add_param(
             maskParameter(
@@ -206,7 +213,7 @@ class ScaleDmError(NoiseComponent):
         self._paired_DMEFAC_DMEQUAD = None
 
     def setup(self):
-        super(ScaleDmError, self).setup()
+        super().setup()
         # Get all the EFAC parameters and EQUAD
         self.DMEFACs = {}
         self.DMEQUADs = {}
@@ -228,7 +235,7 @@ class ScaleDmError(NoiseComponent):
         #     self._paired_DMEFAC_DMEQUAD = self.pair_DMEFAC_DMEQUAD()
 
     def validate(self):
-        super(ScaleDmError, self).validate()
+        super().validate()
         # check duplicate
         for el in ["DMEFACs", "DMEQUADs"]:
             l = list(getattr(self, el).values())
@@ -272,6 +279,11 @@ class EcorrNoise(NoiseComponent):
     and forth within the average profile, and this effect is the same
     for all frequencies. Thus these TOAs have correlated errors.
 
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.noise_model.EcorrNoise
+
     Note
     ----
     Ref: NanoGrav 11 yrs data
@@ -282,7 +294,7 @@ class EcorrNoise(NoiseComponent):
     category = "ecorr_noise"
 
     def __init__(self,):
-        super(EcorrNoise, self).__init__()
+        super().__init__()
         self.introduces_correlated_errors = True
         self.add_param(
             maskParameter(
@@ -299,7 +311,7 @@ class EcorrNoise(NoiseComponent):
         self.basis_funcs += [self.ecorr_basis_weight_pair]
 
     def setup(self):
-        super(EcorrNoise, self).setup()
+        super().setup()
         # Get all the EFAC parameters and EQUAD
         self.ECORRs = {}
         for mask_par in self.get_params_of_type("maskParameter"):
@@ -310,7 +322,7 @@ class EcorrNoise(NoiseComponent):
                 continue
 
     def validate(self):
-        super(EcorrNoise, self).validate()
+        super().validate()
 
         # check duplicate
         for el in ["ECORRs"]:
@@ -370,6 +382,11 @@ class PLRedNoise(NoiseComponent):
     is noise dominated by the lowest frequency. This results in errors
     that are correlated between TOAs over fairly long time spans.
 
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.noise_model.PLRedNoise
+
     Note
     ----
     Ref: NanoGrav 11 yrs data
@@ -380,7 +397,7 @@ class PLRedNoise(NoiseComponent):
     category = "pl_red_noise"
 
     def __init__(self,):
-        super(PLRedNoise, self).__init__()
+        super().__init__()
         self.introduces_correlated_errors = True
         self.add_param(
             floatParameter(
@@ -426,12 +443,6 @@ class PLRedNoise(NoiseComponent):
 
         self.covariance_matrix_funcs += [self.pl_rn_cov_matrix]
         self.basis_funcs += [self.pl_rn_basis_weight_pair]
-
-    def setup(self):
-        super(PLRedNoise, self).setup()
-
-    def validate(self):
-        super(PLRedNoise, self).validate()
 
     def get_pl_vals(self):
         nf = int(self.TNRedC.value) if self.TNRedC.value is not None else 30

@@ -1,3 +1,4 @@
+"""Tabulated extra delays."""
 import astropy.units as u
 import numpy as np
 
@@ -16,17 +17,19 @@ class IFunc(PhaseComponent):
     they are converted to phase simply by multiplication with F0, therefore
     changing PEPOCH should be done with care.
 
-    The format of IFuncs in an ephemeris is:
-    SIFUNC X 0
-    IFUNC1 MJD1 DT1 0.0
-    IFUNC2 MJD2 DT2 0.0
-    ...
-    IFUNCN MJDN DTN 0.0
+    The format of IFuncs in an ephemeris is::
+
+        SIFUNC X 0
+        IFUNC1 MJD1 DT1 0.0
+        IFUNC2 MJD2 DT2 0.0
+        ...
+        IFUNCN MJDN DTN 0.0
 
     X indicates the type of interpolation:
-    0 == piecewise (no interpolation)
-    1 == sinc (not supported)
-    2 == linear
+
+        - 0 == piecewise constant (no interpolation)
+        - 1 == sinc (not supported)
+        - 2 == linear
 
     NB that the trailing 0.0s are necessary for accurate tempo2 parsing.
     NB also that tempo2 has a static setting MAX_IFUNC whose default value
@@ -39,13 +42,18 @@ class IFunc(PhaseComponent):
     of the interpolated signal.  Because the interpolant spacing is
     typically large (days to weeks), the difference between SAT and BAT of
     a few minutes should make little difference.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.ifunc.IFunc
     """
 
     register = True
     category = "ifunc"
 
     def __init__(self):
-        super(IFunc, self).__init__()
+        super().__init__()
 
         self.add_param(
             floatParameter(name="SIFUNC", description="Type of interpolation", units="")
@@ -54,7 +62,7 @@ class IFunc(PhaseComponent):
             prefixParameter(
                 name="IFUNC1",
                 units="s",
-                description="Interpolation Components (MJD+delay)",
+                description="Interpolation control point pair (MJD, delay)",
                 type_match="pair",
                 long_double=True,
                 parameter_type="pair",
@@ -63,12 +71,12 @@ class IFunc(PhaseComponent):
         self.phase_funcs_component += [self.ifunc_phase]
 
     def setup(self):
-        super(IFunc, self).setup()
+        super().setup()
         self.terms = list(self.get_prefix_mapping_component("IFUNC").keys())
         self.num_terms = len(self.terms)
 
     def validate(self):
-        super(IFunc, self).validate()
+        super().validate()
         if self.SIFUNC.quantity is None:
             raise MissingParameter(
                 "IFunc", "SIFUNC", "SIFUNC is required if IFUNC entries are present."
@@ -128,7 +136,7 @@ class IFunc(PhaseComponent):
             times[idx == 0] = y[0]
             times[idx == len(x)] = y[-1]
         else:
-            raise ValueError("Interpolation type %d not supported.".format(itype))
+            raise ValueError(f"Interpolation type {itype} not supported.")
 
         phase = ((times * u.s) * self._parent.F0.quantity).to(u.dimensionless_unscaled)
         return phase

@@ -29,6 +29,10 @@ class PulsarBinary(DelayComponent):
         - Longitude of periastron:         omega
         - Projected semi-major axis of orbit:   a1
 
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.pulsar_binary.PulsarBinary
     """
 
     category = "pulsar_system"

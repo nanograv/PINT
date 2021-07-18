@@ -244,7 +244,7 @@ def get_fit_keyvals(model, phs=0.0, phserr=0.1):
     for p in fitkeys:
         param = getattr(model, p)
         fitvals.append(param.value)
-        fiterrs.append(((param.uncertainty).to(param.units)).value)
+        fiterrs.append(((param.uncertainty).to_value(param.units)))
     # The last entry in each of the fit lists is our absolute PHASE term
     # Hopefully this will become a full PINT model param soon.
     fitkeys.append("PHASE")
@@ -265,7 +265,7 @@ class emcee_fitter(Fitter):
             self.ltemp = len(template)
             self.xtemp = np.arange(self.ltemp) * 1.0 / self.ltemp
         self.weights = weights
-        self.fitkeys, self.fitvals, self.fiterrs, self.fitunits = get_fit_keyvals(
+        self.fitkeys, self.fitvals, self.fiterrs = get_fit_keyvals(
             self.model, phs, phserr
         )
         self.n_fit_params = len(self.fitvals)

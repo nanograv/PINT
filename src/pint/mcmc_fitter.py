@@ -160,7 +160,7 @@ class MCMCFitter(Fitter):
         self.minMJD = kwargs.get("minMJD", 40000)
         self.maxMJD = kwargs.get("maxMJD", 60000)
 
-        (self.fitkeys, self.fitvals, self.fiterrs,) = self.generate_fit_keyvals()
+        self.fitkeys, self.fitvals, self.fiterrs = self.generate_fit_keyvals()
         self.n_fit_params = len(self.fitvals)
 
         template = kwargs.get("template", None)
@@ -260,13 +260,13 @@ class MCMCFitter(Fitter):
         """Read the model to determine fitted keys and their values and errors
         from the par file
         """
-        fitkeys = [p for p in self.model.params if not getattr(model, p).frozen]
+        fitkeys = [p for p in self.model.params if not getattr(self.model, p).frozen]
         fitvals = []
         fiterrs = []
         for p in fitkeys:
             param = getattr(self.model, p)
             fitvals.append(param.value)
-            fiterrs.append(((param.uncertainty).to(param.units)).value)
+            fiterrs.append(((param.uncertainty).to_value(param.units)))
         return fitkeys, np.asarray(fitvals), np.asarray(fiterrs)
 
     def get_weights(self):
