@@ -39,9 +39,9 @@ class ModelBuilder:
     It first maps the provided parameter names to the PINT defined parameter
     names, if they are in the PINT parameter aliases list. Then, the
     ModelBuilder selects model components based on the following rules:
-    1. The components in the :py:attr:`~default_components` list will be selected.
-    2. When a component get mapped uniquely by the given parameters.
-    3. The pulsar binary component will be selected by the 'BINARY' parameter.
+    #. The components in the :py:attr:`~default_components` list will be selected.
+    #. When a component get mapped uniquely by the given parameters.
+    #. The pulsar binary component will be selected by the 'BINARY' parameter.
     """
 
     def __init__(self):
