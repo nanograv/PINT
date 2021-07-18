@@ -203,14 +203,14 @@ class ModelBuilder:
         Note
         ----
         The selection algorithm:
-        1. Look at the BINARY in the par file and catche the indicated binary model
-        2. Translate para file parameters to the pint parameter name
-        3. Go over the parameter-component map and pick up the components based
-           on the parameters in parfile.
-           3.1 Select the components that have its unique parameters in the parfile.
-               In other words, select the components that have one parameter to
-               on component mapping.
-           3.2 Log the conflict components, one parameter to mulitple components mapping.
+            #. Look at the BINARY in the par file and catche the indicated binary model
+            #. Translate para file parameters to the pint parameter name
+            #. Go over the parameter-component map and pick up the components based
+               on the parameters in parfile.
+                #. Select the components that have its unique parameters in the parfile.
+                   In other words, select the components that have one parameter to
+                   on component mapping.
+                #. Log the conflict components, one parameter to mulitple components mapping.
         """
         selected_components = set()
         # 1. iteration read parfile with a no component timing_model to get
