@@ -776,7 +776,7 @@ def test_companion_mass_array(Mpsr, Mc, Pb, incl):
     # projected
     x = (apsr * np.sin(incl)).to(pint.ls)
     # computed companion mass
-    assert (np.isclose(companion_mass(Pb, x, mpsr=Mpsr, inc=incl), Mc,)).all()
+    assert (np.isclose(companion_mass(Pb, x, mpsr=Mpsr, inc=incl), Mc)).all()
 
 
 @given(

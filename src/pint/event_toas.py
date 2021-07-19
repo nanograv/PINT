@@ -65,7 +65,7 @@ def create_mission_config():
             "fits_extension": 1,
             "allow_local": False,
             "fits_columns": {"pi": "PI"},
-        },
+        }
     }
 
     # Allow local TOAs for those missions that have a load_<MISSION>_TOAs method

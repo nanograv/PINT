@@ -20,7 +20,13 @@ from pint.models.timing_model import DelayComponent
 
 
 class SolarSystemShapiro(DelayComponent):
-    """Shapiro delay due to light bending near Solar System objects."""
+    """Shapiro delay due to light bending near Solar System objects.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.solar_system_shapiro.SolarSystemShapiro
+    """
 
     register = True
     category = "solar_system_shapiro"
@@ -31,7 +37,7 @@ class SolarSystemShapiro(DelayComponent):
             boolParameter(
                 name="PLANET_SHAPIRO",
                 value=False,
-                description="Include planetary Shapiro delays (Y/N)",
+                description="Include planetary Shapiro delays",
             )
         )
         self.delay_funcs_component += [self.solar_system_shapiro_delay]

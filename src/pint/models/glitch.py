@@ -9,13 +9,19 @@ from pint.utils import split_prefixed_name
 
 
 class Glitch(PhaseComponent):
-    """Pulsar spin-down glitches."""
+    """Pulsar spin-down glitches.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.glitch.Glitch
+    """
 
     register = True
     category = "glitch"
 
     def __init__(self):
-        super(Glitch, self).__init__()
+        super().__init__()
 
         self.add_param(
             prefixParameter(
@@ -96,7 +102,7 @@ class Glitch(PhaseComponent):
         self.phase_funcs_component += [self.glitch_phase]
 
     def setup(self):
-        super(Glitch, self).setup()
+        super().setup()
         # Check for required glitch epochs, set not specified parameters to 0
         self.glitch_prop = [
             "GLEP_",
@@ -126,7 +132,7 @@ class Glitch(PhaseComponent):
     def validate(self):
         """ Validate parameters input.
         """
-        super(Glitch, self).validate()
+        super().validate()
         for idx in set(self.glitch_indices):
             if not hasattr(self, "GLEP_%d" % idx):
                 msg = "Glitch Epoch is needed for Glitch %d." % idx
