@@ -582,7 +582,7 @@ class CompositeMCMCFitter(MCMCFitter):
         self.minMJD = kwargs.get("minMJD", 0)
         self.maxMJD = kwargs.get("maxMJD", 100000)
 
-        (self.fitkeys, self.fitvals, self.fiterrs,) = self.generate_fit_keyvals(
+        self.fitkeys, self.fitvals, self.fiterrs = self.generate_fit_keyvals(
             phs, phserr
         )
         self.n_fit_params = len(self.fitvals)
