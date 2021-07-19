@@ -1404,6 +1404,42 @@ class TOAs:
         return len(self.table)
 
     def __getitem__(self, index):
+        """Extract a subset of TOAs and/or a column/flag from each one.
+
+        When selecting a column from ``self.table`` or a flag from ``self.table["flags"]``,
+        pass its name as a string (not including the ``-`` if it's a flag). The result will
+        be a :class:`~astropy.table.Column` if the string is the name of a column in ``self.table``
+        or a newly allocated array of strings if the string is the name of a flag. If the
+        flag is not set for some or all of the TOAs, this array will contain the empty string
+        at the corresponding place.
+
+        When selecting a subset of the TOAs, a list/array of indices will
+        result in selecting those TOAs (though not necessarily in that order),
+        a list/array of Booleans will result in selecting those TOAs for which
+        the list/array has True, and a slice will select the corresponding
+        slice of TOAs (again, the required grouping by observatory may mean
+        that reordering TOAs will not work as expected).
+
+        Both a column and subset can be selected at once by forming a tuple, as in
+        ``toas["fish", ::10]``; this will result in selecting that subset of the
+        appropriate column. This mode will allow selection of individual elements
+        (``toas["fish", 17]``), unlike all-column selection.
+
+        Parameter
+        ---------
+        index : str or pair or list or array or slice
+            How to choose what to select.
+
+        Returns
+        -------
+        pint.toa.TOAs or np.ndarray or astropy.table.Column
+            The selected part of the object.
+
+        Note
+        ----
+        This function does not currently support extracting a single :class:`~pint.toa.TOA` object,
+        to use integer indexing a column must be selected.
+        """
         column = None
         subset = None
         if isinstance(index, tuple):
@@ -1465,6 +1501,34 @@ class TOAs:
             return np.array(r)
 
     def __setitem__(self, index, value):
+        """Set values in this object.
+
+        This can set specified values into columns/flags or subsets of the same.
+
+        Columns/flags are specified by giving a string (without the initial ``-`` for a flag).
+
+        Subsets can be specified by a list/array of indices, a list/array of booleans, a slice, or
+        a single integer.
+
+        Parameters
+        ----------
+        index : str or pair
+            Which parts of the object to set.
+        value
+            What to set the values to. If a single value, will be "broadcast", otherwise should
+            be an iterable of the same size as the selected subset and of appropriate type.
+
+        Notes
+        ----_
+        This function does not currently support assignment of sets of TOAs to replace subsets of
+        the TOAs in a :class:`~pint.toa.TOAs` object. Thus a column must always be selected.
+
+        Because of the way flags are stored internally, looking up
+        ``toas["a_flag"]`` has to produce a newly allocated array, and
+        modifying it cannot affect the flags on the original object.
+        Unfortunately ``toas["a_flag"][7] = "value"`` will appear to work but
+        will do nothing. Use ``toas["a_flag", 7] = "value"`` instead.
+        """
         column = None
         subset = None
         if isinstance(index, tuple):
