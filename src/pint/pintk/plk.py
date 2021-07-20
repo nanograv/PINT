@@ -1201,64 +1201,65 @@ class PlkWidget(tk.Frame):
         """
         if event.inaxes == self.plkAxes:
             ind = self.coordToPoint(event.xdata, event.ydata)
-            if ind is not None:
-                # TODO: right click to delete doesn't work, needs to be reinstated
-                if event.button == 3:
-                    # Right click is delete
-                    # if the point is jumped, tell the user to delete the jump first
-                    jumped_copy = copy.deepcopy(self.jumped)
-                    for (
-                        param
-                    ) in self.psr.prefit_model.params:  # check for jumps in file
-                        if (
-                            param.startswith("JUMP")
-                            and getattr(self.psr.prefit_model, param).frozen == True
-                        ):
-                            self.updateJumped(param)
-                    all_jumped = copy.deepcopy(self.jumped)
-                    self.jumped = jumped_copy
-                    # check if point to be deleted is jumped
-                    if all_jumped[ind] == True:
-                        log.warn(
-                            "cannot delete jumped toas. Delete interfering jumps before deleting toas."
+            if ind is None:
+                return
+            # TODO: right click to delete doesn't work, needs to be reinstated
+            if event.button == 3:
+                # Right click is delete
+                # if the point is jumped, tell the user to delete the jump first
+                jumped_copy = copy.deepcopy(self.jumped)
+                for (
+                    param
+                ) in self.psr.prefit_model.params:  # check for jumps in file
+                    if (
+                        param.startswith("JUMP")
+                        and getattr(self.psr.prefit_model, param).frozen == True
+                    ):
+                        self.updateJumped(param)
+                all_jumped = copy.deepcopy(self.jumped)
+                self.jumped = jumped_copy
+                # check if point to be deleted is jumped
+                if all_jumped[ind] == True:
+                    log.warn(
+                        "cannot delete jumped toas. Delete interfering jumps before deleting toas."
+                    )
+                    return None
+                # create boolean array to readjust all_toas without point to be deleted
+                toas_to_delete = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
+                toas_to_delete[ind] = True
+                self.psr.all_toas.table = self.psr.all_toas.table[
+                    ~toas_to_delete
+                ].group_by("obs")
+                # adjust selected_toas to make sure it excludes toa to be deleted
+                self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
+                if hasattr(self.psr.all_toas, "table_selects"):
+                    for i in range(len(self.psr.all_toas.table_selects)):
+                        self.psr.all_toas.table_selects[
+                            i
+                        ] = self.psr.all_toas.table_selects[i][
+                            ~toas_to_delete
+                        ].group_by(
+                            "obs"
                         )
-                        return None
-                    # create boolean array to readjust all_toas without point to be deleted
-                    toas_to_delete = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
-                    toas_to_delete[ind] = True
-                    self.psr.all_toas.table = self.psr.all_toas.table[
-                        ~toas_to_delete
-                    ].group_by("obs")
-                    # adjust selected_toas to make sure it excludes toa to be deleted
+                # update jumps and rest of graph
+                self.jumped = self.jumped[~toas_to_delete]
+                print(self.jumped)
+                self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
+                self.psr.update_resids()
+                self.updatePlot(keepAxes=True)
+                self.call_updates()
+            elif event.button == 1:
+                # Left click is select
+                self.selected[ind] = not self.selected[ind]
+                self.updatePlot(keepAxes=True)
+                # if point is being selected (instead of unselected) or
+                # point is unselected but other points remain selected
+                if self.selected[ind] or any(self.selected):
+                    # update selected_toas object w/ selected points
                     self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
-                    if hasattr(self.psr.all_toas, "table_selects"):
-                        for i in range(len(self.psr.all_toas.table_selects)):
-                            self.psr.all_toas.table_selects[
-                                i
-                            ] = self.psr.all_toas.table_selects[i][
-                                ~toas_to_delete
-                            ].group_by(
-                                "obs"
-                            )
-                    # update jumps and rest of graph
-                    self.jumped = self.jumped[~toas_to_delete]
-                    print(self.jumped)
-                    self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
+                    self.psr.selected_toas.select(self.selected)
                     self.psr.update_resids()
-                    self.updatePlot(keepAxes=True)
                     self.call_updates()
-                if event.button == 1:
-                    # Left click is select
-                    self.selected[ind] = not self.selected[ind]
-                    self.updatePlot(keepAxes=True)
-                    # if point is being selected (instead of unselected) or
-                    # point is unselected but other points remain selected
-                    if self.selected[ind] or any(self.selected):
-                        # update selected_toas object w/ selected points
-                        self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
-                        self.psr.selected_toas.select(self.selected)
-                        self.psr.update_resids()
-                        self.call_updates()
 
     def clickAndDrag(self, event):
         """

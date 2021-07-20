@@ -2,7 +2,7 @@
 import logging
 
 import astropy.units as u
-import numpy
+import numpy as np
 
 from pint.models.parameter import maskParameter
 from pint.models.timing_model import DelayComponent, MissingParameter, PhaseComponent
@@ -54,7 +54,7 @@ class DelayJump(DelayComponent):
         in the unit of seconds.
         """
         tbl = toas.table
-        jdelay = numpy.zeros(len(tbl))
+        jdelay = np.zeros(len(tbl))
         for jump in self.jumps:
             jump_par = getattr(self, jump)
             mask = jump_par.select_toa_mask(toas)
@@ -65,7 +65,7 @@ class DelayJump(DelayComponent):
 
     def d_delay_d_jump(self, toas, jump_param, acc_delay=None):
         tbl = toas.table
-        d_delay_d_j = numpy.zeros(len(tbl))
+        d_delay_d_j = np.zeros(len(tbl))
         jpar = getattr(self, jump_param)
         mask = jpar.select_toa_mask(toas)
         d_delay_d_j[mask] = -1.0
@@ -201,7 +201,7 @@ class PhaseJump(PhaseComponent):
             The phase shift for each TOA.
         """
         tbl = toas.table
-        jphase = numpy.zeros(len(tbl)) * (self.JUMP1.units * self._parent.F0.units)
+        jphase = np.zeros(len(tbl)) * (self.JUMP1.units * self._parent.F0.units)
         for jump_par in self.jumps:
             mask = jump_par.select_toa_mask(toas)
             # NOTE: Currently parfile jump value has opposite sign with our
@@ -228,7 +228,7 @@ class PhaseJump(PhaseComponent):
         """
         tbl = toas.table
         jpar = getattr(self, jump_param)
-        d_phase_d_j = numpy.zeros(len(tbl))
+        d_phase_d_j = np.zeros(len(tbl))
         mask = jpar.select_toa_mask(toas)
         d_phase_d_j[mask] = self._parent.F0.value
         return (d_phase_d_j * self._parent.F0.units).to(1 / u.second)
@@ -245,7 +245,7 @@ class PhaseJump(PhaseComponent):
         jump_obs = list(self.jump.values())
         return jump_obs
 
-    def add_jump_and_flags(self, toa_table, key="gui_jump", key_value=None):
+    def add_jump_and_flags(self, toa_flags, key="gui_jump", key_value=None):
         """Add jump object to PhaseJump and appropriate flags to TOA tables.
 
         Given a subset of TOAs (specified by a reference to their flags objects),
@@ -262,8 +262,8 @@ class PhaseJump(PhaseComponent):
 
         Parameters
         ----------
-        toa_table: list
-            The TOA table which must be modified. In pintk (pulsar.py), this will
+        toa_flags: array of dict
+            The TOA flags which must be modified. In pintk (pulsar.py), this will
             be all_toas.table["flags"][selected]
         key: str
             The name of the flag to use for the JUMP.
@@ -307,7 +307,7 @@ class PhaseJump(PhaseComponent):
             frozen=False,
         )
         name = param.name
-        for d in toa_table:
+        for d in toa_flags:
             if key in d:
                 raise ValueError(
                     "The selected toa(s) overlap an existing jump. Remove all "
@@ -316,6 +316,54 @@ class PhaseJump(PhaseComponent):
         self.add_param(param)
         self.setup()
         # add appropriate flags to TOA table to link jump with appropriate TOA
-        for d in toa_table:
+        for d in toa_flags:
             d[key] = key_value
         return name
+
+    def tidy_jumps_for_fit(self, toas):
+        """Adjust the JUMPs so that this set of TOAs can be safely fit.
+
+        This is particularly intended for use when working with a subset of
+        a larger set of TOAs.
+
+        - If all TOAs are affected by free JUMPs, some or all will be frozen until
+          at least one TOA is unaffected by any JUMP.
+        - If any JUMP does not affect any TOAs, it will be frozen.
+
+        Parameters
+        ----------
+        toas : pint.toa.TOAs
+            The TOAs that this model is to be used with.
+        """
+        masks = {}
+        for n in self.free_params:
+            if not n.startswith("JUMP"):
+                continue
+            c = np.zeros(len(toas), dtype=bool)
+            pm = getattr(self, n)
+            if not np.any(c):
+                pm.frozen = True
+            else:
+                c[pm.select_toa_mask(toas)] = True
+                masks[n] = pm, c
+        while True:
+            affected = np.zeros(len(toas), dtype=bool)
+            most_n = None
+            most_pm = None
+            most_count = 0
+            for n, (pm, c) in masks:
+                affected |= c
+                if c.sum() > most_count:
+                    most_count = c.sum()
+                    most_pm = pm
+                    most_n = n
+            if np.all(affected):
+                log.info(f"Freezing {n} to avoid all TOAs being JUMPed")
+                most_pm.frozen = True
+                del masks[most_n]
+            else:
+                break
+
+
+
+
