@@ -47,7 +47,10 @@ def test_add_jumps_and_flags(setup_NGC6440E):
 
     # add second jump to different set of TOAs
     selected_toa_ind2 = [10, 11, 12]
-    cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind2])
+    j2 = cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind2])
+    jp2 = getattr(cp, j2)
+    assert jp2.key == "-gui_jump"
+    assert jp2.key_value == "2"
     # check previous jump flags unaltered
     for d in setup_NGC6440E.t.table["flags"][selected_toa_ind]:
         assert d["gui_jump"] == "1"
@@ -55,17 +58,17 @@ def test_add_jumps_and_flags(setup_NGC6440E):
     for d in setup_NGC6440E.t.table["flags"][selected_toa_ind2]:
         assert d["gui_jump"] == "2"
 
-
 def test_add_overlapping_jump(setup_NGC6440E):
     setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
     cp = setup_NGC6440E.m.components["PhaseJump"]
     selected_toa_ind = [1, 2, 3]
     selected_toa_ind2 = [10, 11, 12]
-    cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind])
-    cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind2])
+    j1 = cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind])
+    j2 = cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind2])
     # attempt to add overlapping jump - should not add jump
     selected_toa_ind3 = [9, 10, 11]
-    cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind3])
+    with pytest.raises(ValueError):
+        cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind3])
     # check previous jump flags unaltered
     for d in setup_NGC6440E.t.table["flags"][selected_toa_ind]:
         assert d["gui_jump"] == "1"

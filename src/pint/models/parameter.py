@@ -1543,6 +1543,8 @@ class maskParameter(floatParameter):
                     f"When selecting by {key} one must supply a "
                     f"string not {key_value}"
                 )
+            if len(key_value.split()) != 1:
+                raise ValueError(f"Key value {repr(key_value)} cannot occur in TOAs.")
             return key_value
 
     @staticmethod
@@ -1568,6 +1570,10 @@ class maskParameter(floatParameter):
     def key(self, key):
         if key is None:
             self._key = None
+        elif not isinstance(key, str):
+            raise ValueError(
+                f"maskParameters can only select on strings not {repr(key)}"
+            )
         else:
             key = key.lower()
             if key not in self.allowed_non_flags and not key.startswith("-"):
@@ -1780,10 +1786,16 @@ class maskParameter(floatParameter):
             r = np.nonzero(c)[0]
         else:
             r = []
-            if self.key is not None and self.key_value is not None:
-                for i, f in enumerate(toas.table["flags"]):
-                    if f.get(self.key[1:], None) == self.key_value:
-                        r.append(i)
+            if self.key is not None:
+                if self.key.startswith("-"):
+                    key = self.key[1:]
+                else:
+                    # only "name" is allowed here
+                    key = self.key
+                if self.key_value is not None:
+                    for i, f in enumerate(toas.table["flags"]):
+                        if str(f.get(key, "")) == self.key_value:
+                            r.append(i)
             r = np.array(r, dtype=int)
         return r
 

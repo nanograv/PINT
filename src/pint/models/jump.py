@@ -158,16 +158,15 @@ class PhaseJump(PhaseComponent):
     def setup(self):
         """Set up support data structures to reflect parameters as set."""
         super().setup()
-        self.jumps = []
-        self.jump_dict = {}
+        self.jumps = {}
         for mask_par in self.get_params_of_type("maskParameter"):
             if mask_par.startswith("JUMP"):
-                self.jumps.append(mask_par)
                 mp = getattr(self, mask_par)
-                self.jump_dict[mp.key, mp.key_value] = mp
-        for j in self.jumps:
+                self.jumps[mp.key, mp.key_value] = mp
+        for pm in self.jumps.values():
+            j = pm.name
             # prevents duplicates from being added to phase_deriv_funcs
-            if j in self.deriv_funcs.keys():
+            if j in self.deriv_funcs:
                 del self.deriv_funcs[j]
             self.register_deriv_funcs(self.d_phase_d_jump, j)
 
@@ -192,8 +191,7 @@ class PhaseJump(PhaseComponent):
         """
         tbl = toas.table
         jphase = numpy.zeros(len(tbl)) * (self.JUMP1.units * self._parent.F0.units)
-        for jump in self.jumps:
-            jump_par = getattr(self, jump)
+        for jump, jump_par in self.jumps.items():
             mask = jump_par.select_toa_mask(toas)
             # NOTE: Currently parfile jump value has opposite sign with our
             # phase calculation.
@@ -227,125 +225,86 @@ class PhaseJump(PhaseComponent):
     def print_par(self):
         """Return a string representation of all JUMP parameters appropriate for a par file."""
         result = ""
-        for jump in self.jumps:
-            jump_par = getattr(self, jump)
+        for jump, jump_par in self.jumps.items():
             result += jump_par.as_parfile_line()
         return result
 
-    def get_number_of_jumps(self):
-        """Returns the number of jumps contained in this PhaseJump object."""
-        return len(self.jumps)
-
     def get_jump_param_objects(self):
         """Returns a list of the maskParameter objects for all JUMPs."""
-        jump_obs = [getattr(self, jump) for jump in self.jumps]
+        jump_obs = list(self.jump.values())
         return jump_obs
 
-    def jump_params_to_flags(self, toas):
-        """Take jumps created from .par file and add appropriate flags to toa table.
-
-        This function was made specifically with pintk in mind for a way to properly
-        load jump flags at the same time a .par file with jumps is loaded (like how
-        jump_flags_to_params loads jumps from .tim files).
-
-        This function steps through all the defined JUMP parameters, and for each it
-        chooses all the TOAs affected by that JUMP and ensures that they have a flag
-        ``-jump`` whose argument contains the index of that JUMP.
-
-        At the end of the process, every TOA that is affected by any JUMP has a
-        flag ``-jump`` whose argument is either the index of the jump
-        parameter, or a list containing the index of the jump parameter. This
-        flag cannot be used in a JUMP as these only select on exact matches, so
-        that ``JUMP -jump 17 0.1`` would fail to match a TOA with the flag
-        ``-jump [17, 18]``.
-
-        Parameters
-        ----------
-        toas: TOAs object
-            The TOAs which contain the TOA table to be modified
-        """
-        # for every jump, set appropriate flag for TOAs it jumps
-        for jump_par in self.get_jump_param_objects():
-            # find TOAs jump applies to
-            mask = jump_par.select_toa_mask(toas)
-            # apply to dictionaries
-            for d in toas.table["flags"][mask]:
-                if "jump" in d:
-                    index_list = d["jump"].split(",")
-                    if str(jump_par.index) in index_list:
-                        continue
-                    index_list.append(str(jump_par.index))
-                    d["jump"] = ",".join(index_list)
-                else:
-                    d["jump"] = str(jump_par.index)
-
-    def add_jump_and_flags(self, toa_table):
+    def add_jump_and_flags(self, toa_table, key="gui_jump", key_value=None):
         """Add jump object to PhaseJump and appropriate flags to TOA tables.
 
-        Helper function for pintk. Primarily to be used when applying a jump through
-        pintk to TOAs - since these jumps don't have keys that match to preexisting
-        flags in the TOA tables, we must add the flags when adding the jump.
+        Given a subset of TOAs (specified by a reference to their flags objects),
+        create a new JUMP and assign flags to those TOAs so that they are selected
+        by it.
 
         This will add a parameter to the model corresponding to::
 
             JUMP -gui_jump N 0 1
 
-        where ``N`` is one more than the number of jumps that currently exist. This
+        where ``N`` some number not currently in use by any JUMP. This
         function will also add the flag ``-gui_jump N`` to all the TOAs in the segment
         of the table that is passed to this function.
 
         Parameters
         ----------
-        toa_table: list object
+        toa_table: list
             The TOA table which must be modified. In pintk (pulsar.py), this will
             be all_toas.table["flags"][selected]
+        key: str
+            The name of the flag to use for the JUMP.
+        key_value: str or None
+            The flag value to associate with this JUMP; if not specified, find the first
+            integer N not associated with a JUMP and use its string representation.
+
+        Returns
+        -------
+        str
+            The name of the new JUMP parameter.
         """
-        ind = None  # index of jump
-        name = None  # name of jump
-        # check if this is first jump added
-        if len(self.jumps) == 0 or (
-            len(self.jumps) == 1 and getattr(self, "JUMP1").key == None
-        ):
-            param = maskParameter(
-                name="JUMP",
-                index=1,
-                key="-gui_jump",
-                key_value="1",
-                value=0.0,
-                units="second",
-                frozen=False,
-            )
-            self.add_param(param)
-        # otherwise add on jump with next index
-        else:
-            # first, search for TOAs already jumped in inputted selection - pintk does not allow jumps added through GUI to overlap with existing jumps
-<<<<<<< HEAD
-            for d in toa_table:
-                if "gui_jump" in d.keys():
-                    log.warning(
-                        "The selected toa(s) overlap an existing jump. Remove all interfering jumps before attempting to jump these toas."
-=======
-            for dict in toa_table:
-                if "gui_jump" in dict.keys():
-                    log.error(
-                        "The selected toa(s) overlap an existing jump. Remove all "
-                        "interfering jumps before attempting to jump these toas."
->>>>>>> Document JUMP objects
-                    )
-                    return None
-            param = maskParameter(
-                name="JUMP",
-                index=len(self.jumps) + 1,
-                key="-gui_jump",
-                key_value=str(len(self.jumps) + 1),
-                value=0.0,
-                units="second",
-                frozen=False,
-            )
-            self.add_param(param)
-        ind = param.index
+        in_use = set()
+        for pm in self.jumps.values():
+            if pm.key == "-" + key:
+                in_use.add(pm.key_value)
+        if key_value is None:
+            i = 1
+            while True:
+                key_value = str(i)
+                if key_value not in in_use:
+                    break
+                i += 1
+        elif key_value in in_use:
+            raise ValueError(f"A JUMP -{key} {key_value} is already present.")
+
+        used_indices = set()
+        for pm in self.jumps.values():
+            used_indices.add(pm.index)
+        i = 1
+        while i in used_indices:
+            i += 1
+
+        param = maskParameter(
+            name="JUMP",
+            index=i,
+            key="-" + key,
+            key_value=key_value,
+            value=0.0,
+            units="second",
+            frozen=False,
+        )
         name = param.name
+        for d in toa_table:
+            if key in d:
+                raise ValueError(
+                    "The selected toa(s) overlap an existing jump. Remove all "
+                    "interfering jumps before attempting to jump these toas."
+                )
+        self.add_param(param)
         self.setup()
-        for dict1 in toa_table:
-            dict1["gui_jump"] = str(ind)
+        # add appropriate flags to TOA table to link jump with appropriate TOA
+        for d in toa_table:
+            d[key] = key_value
         return name

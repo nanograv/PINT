@@ -8,6 +8,9 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 from pinttestdata import datadir
+from pint.simulation import make_fake_toas_uniform
+from pint.toa import get_TOAs
+from astropy.time import Time
 
 from pint.models import (
     DEFAULT_ORDER,
@@ -102,8 +105,22 @@ class TestModelBuilding:
         print(cp.get_prefix_mapping_component("JUMP"))
         print(id(cp), "test")
         add_jumps = [
-            ("JUMP", {"value": 0.1, "key": "mjd", "key_value": [55000, 56000]}),
-            ("JUMP", {"value": 0.2, "key": "freq", "key_value": [1440, 2000]}),
+            (
+                "JUMP",
+                {
+                    "value": 0.1,
+                    "key": "mjd",
+                    "key_value": [Time(55000, format="mjd"), Time(56000, format="mjd")],
+                },
+            ),
+            (
+                "JUMP",
+                {
+                    "value": 0.2,
+                    "key": "freq",
+                    "key_value": [1440 * u.MHz, 2000 * u.MHz],
+                },
+            ),
             ("JUMP", {"value": 0.3, "key": "tel", "key_value": "ao"}),
         ]
 
@@ -139,9 +156,9 @@ class TestModelBuilding:
         assert jump2.value == 0.2
         assert jump3.value == 0.3
         # Check jump key value
-        assert jump1.key_value == [55000, 56000]
-        assert jump2.key_value == [1440 * u.MHz, 2000 * u.MHz]
-        assert jump3.key_value == ["arecibo"]
+        assert jump1.key_value == (Time(55000, format="mjd"), Time(56000, format="mjd"))
+        assert jump2.key_value == (1440 * u.MHz, 2000 * u.MHz)
+        assert jump3.key_value == "arecibo"
         assert tm.jumps == ["JUMP1", "JUMP2", "JUMP3"]
 
     def test_remove_component(self):
@@ -153,7 +170,7 @@ class TestModelBuilding:
 
         # test remove by name
         tm.remove_component("BinaryELL1")
-        assert "BinaryELL1" not in tm.components.keys()
+        assert "BinaryELL1" not in tm.components
         assert remove_cp not in tm.DelayComponent_list
 
         # test remove by component
@@ -163,7 +180,7 @@ class TestModelBuilding:
 
         remove_cp2 = tm2.components["BinaryELL1"]
         tm2.remove_component(remove_cp2)
-        assert "BinaryELL1" not in tm2.components.keys()
+        assert "BinaryELL1" not in tm2.components
         assert remove_cp2 not in tm2.DelayComponent_list
 
     def test_free_params(self):
@@ -333,6 +350,7 @@ def test_jump_flags_to_params(timfile_jumps, timfile_nojumps, model_0437):
     m.jump_flags_to_params(t)
     assert "PhaseJump" in m.components
     assert len(m.components["PhaseJump"].jumps) == 2
+<<<<<<< HEAD
     assert "JUMP1" in m.components["PhaseJump"].jumps
     assert "JUMP2" in m.components["PhaseJump"].jumps
 
@@ -349,3 +367,7 @@ def test_assumes_dmepoch_equals_pepoch():
     t = make_fake_toas_uniform(57000, 59000, 10, m_assume)
 
     assert_allclose(m_assume.dm_value(t), m_given.dm_value(t))
+=======
+    assert ("-jump", "1") in m.components["PhaseJump"].jumps
+    assert ("-jump", "2") in m.components["PhaseJump"].jumps
+>>>>>>> Clean up handling of unset values
