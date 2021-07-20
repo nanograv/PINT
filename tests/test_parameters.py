@@ -1,22 +1,27 @@
 import copy
 import os
+import pickle
 import unittest
 
 import astropy.time as time
 import astropy.units as u
 import numpy as np
 import pytest
-from pinttestdata import datadir
 from numpy.testing import assert_allclose
+from pinttestdata import datadir
 
 import pint.fitter
 from pint import pint_units
 from pint.models.model_builder import get_model
 from pint.models.parameter import (
+    AngleParameter,
     MJDParameter,
     boolParameter,
     floatParameter,
     intParameter,
+    maskParameter,
+    pairParameter,
+    prefixParameter,
     strParameter,
 )
 from pint.toa import get_TOAs
@@ -511,3 +516,27 @@ def test_parameter_setting(type_, set_value, value):
 def test_set_uncertainty_bogus_raises(p):
     with pytest.raises(NotImplementedError):
         p.uncertainty = 7.0
+
+
+@pytest.mark.parametrize(
+    "p",
+    [
+        boolParameter(name="FISH"),
+        intParameter(name="FISH"),
+        strParameter(name="FISH"),
+        pytest.param(
+            maskParameter(name="JUMP"),
+            marks=pytest.mark.xfail(reason="maskParameter uses lambdas internally."),
+        ),
+        pytest.param(
+            prefixParameter(name="F0"),
+            marks=pytest.mark.xfail(
+                reason="prefixParameter uses lambda functions for formatting help and defining units"
+            ),
+        ),
+        pairParameter(name="WEAVE"),
+        AngleParameter(name="BEND"),
+    ],
+)
+def test_parameter_can_be_pickled(p):
+    pickle.dumps(p)
