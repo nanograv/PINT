@@ -99,7 +99,15 @@ class PhaseJump(PhaseComponent):
         >>> toa_index_list = [1,3,5]
         >>> for i in toa_index_list:
         ...     toas.table['flags'][i]['fish'] = 'carp'
-        >>> model
+        >>> np = m.JUMP1.new_param(100)
+        >>> np.key = '-fish'
+        >>> np.key_value = 'carp'
+        >>> m.add_param_from_top(np, "PhaseJump")
+
+    More briefly, you could use
+    ``m.add_jump_and_flags(toas.table['flags'][1,3,5], key='-fish', key_value='carp')``,
+    which adds the flag ``-fish`` with the value ``carp`` to TOAs numbers 1,3, and 5,
+    and also creates a new JUMP affecting those TOAs.
 
     Jumps are specified by :class:`~pint.models.parameter.maskParameter`
     objects, so there is further documentation there on how these parameters
@@ -155,15 +163,18 @@ class PhaseJump(PhaseComponent):
         )
         self.phase_funcs_component += [self.jump_phase]
 
+    @property
+    def jumps(self):
+        r = []
+        for mask_par in self.get_params_of_type("maskParameter"):
+            if mask_par.startswith("JUMP"):
+                r.append(getattr(self, mask_par))
+        return r
+
     def setup(self):
         """Set up support data structures to reflect parameters as set."""
         super().setup()
-        self.jumps = {}
-        for mask_par in self.get_params_of_type("maskParameter"):
-            if mask_par.startswith("JUMP"):
-                mp = getattr(self, mask_par)
-                self.jumps[mp.key, mp.key_value] = mp
-        for pm in self.jumps.values():
+        for pm in self.jumps:
             j = pm.name
             # prevents duplicates from being added to phase_deriv_funcs
             if j in self.deriv_funcs:
@@ -191,7 +202,7 @@ class PhaseJump(PhaseComponent):
         """
         tbl = toas.table
         jphase = numpy.zeros(len(tbl)) * (self.JUMP1.units * self._parent.F0.units)
-        for jump, jump_par in self.jumps.items():
+        for jump_par in self.jumps:
             mask = jump_par.select_toa_mask(toas)
             # NOTE: Currently parfile jump value has opposite sign with our
             # phase calculation.
@@ -225,7 +236,7 @@ class PhaseJump(PhaseComponent):
     def print_par(self):
         """Return a string representation of all JUMP parameters appropriate for a par file."""
         result = ""
-        for jump, jump_par in self.jumps.items():
+        for jump_par in self.jumps:
             result += jump_par.as_parfile_line()
         return result
 
@@ -266,7 +277,7 @@ class PhaseJump(PhaseComponent):
             The name of the new JUMP parameter.
         """
         in_use = set()
-        for pm in self.jumps.values():
+        for pm in self.jumps:
             if pm.key == "-" + key:
                 in_use.add(pm.key_value)
         if key_value is None:
@@ -280,7 +291,7 @@ class PhaseJump(PhaseComponent):
             raise ValueError(f"A JUMP -{key} {key_value} is already present.")
 
         used_indices = set()
-        for pm in self.jumps.values():
+        for pm in self.jumps:
             used_indices.add(pm.index)
         i = 1
         while i in used_indices:

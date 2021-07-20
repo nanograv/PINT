@@ -42,7 +42,6 @@ from pint.pulsar_mjd import (
     time_to_longdouble,
     time_to_mjd_string,
 )
-from pint.toa_select import TOASelect
 from pint.utils import split_prefixed_name
 
 log = logging.getLogger(__name__)

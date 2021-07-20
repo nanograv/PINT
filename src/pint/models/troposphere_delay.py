@@ -13,7 +13,6 @@ from pint.models.parameter import boolParameter
 from pint.models.timing_model import DelayComponent
 from pint.observatory import get_observatory
 from pint.observatory.topo_obs import TopoObs
-from pint.toa_select import TOASelect
 
 log = logging.getLogger(__name__)
 

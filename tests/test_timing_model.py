@@ -350,7 +350,6 @@ def test_jump_flags_to_params(timfile_jumps, timfile_nojumps, model_0437):
     m.jump_flags_to_params(t)
     assert "PhaseJump" in m.components
     assert len(m.components["PhaseJump"].jumps) == 2
-<<<<<<< HEAD
     assert "JUMP1" in m.components["PhaseJump"].jumps
     assert "JUMP2" in m.components["PhaseJump"].jumps
 
@@ -367,7 +366,9 @@ def test_assumes_dmepoch_equals_pepoch():
     t = make_fake_toas_uniform(57000, 59000, 10, m_assume)
 
     assert_allclose(m_assume.dm_value(t), m_given.dm_value(t))
-=======
-    assert ("-jump", "1") in m.components["PhaseJump"].jumps
-    assert ("-jump", "2") in m.components["PhaseJump"].jumps
->>>>>>> Clean up handling of unset values
+    assert ("-jump", "1") in [
+        (j.key, j.key_value) for j in m.components["PhaseJump"].jumps
+    ]
+    assert ("-jump", "2") in [
+        (j.key, j.key_value) for j in m.components["PhaseJump"].jumps
+    ]

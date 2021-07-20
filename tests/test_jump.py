@@ -326,8 +326,7 @@ def test_multiple_jumps_add():
     """
         )
     )
-    for j in m.jumps:
-        jmp = getattr(m, j)
+    for jmp in m.jumps:
         if jmp.key == "mjd":
             start, end = jmp.key_value
             if start.mjd < 58500:
@@ -348,7 +347,8 @@ def test_multiple_jumps_add():
     second_jump.quantity = 75 * u.us
     r_sum = pint.residuals.Residuals(toas, m)
 
-    assert_allclose(r_first.resids + r_second.resids, r_sum.resids, atol=1e-3 * u.us)
+    assert_allclose((r_first.resids + r_second.resids).to_value(u.us),
+                    r_sum.resids.to_value(u.us), atol=1e-3)
 
 
 @pytest.mark.parametrize(

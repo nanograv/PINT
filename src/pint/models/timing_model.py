@@ -1356,7 +1356,7 @@ class TimingModel:
             self.add_component(a, setup=False)
             self.remove_param("JUMP1")
             a.setup()
-        for pm in self.jumps.values():
+        for pm in self.jumps:
             if pm.key == "-" + flag:
                 if pm.key_value in jumped:
                     jumped.remove(pm.key_value)
@@ -1364,7 +1364,7 @@ class TimingModel:
             log.info("All JUMPs appear to already be present.")
             return new_jumps
         used_indices = set()
-        for pm in self.jumps.values():
+        for pm in self.jumps:
             used_indices.add(pm.index)
         next_free_index = 1
         while next_free_index in used_indices:
