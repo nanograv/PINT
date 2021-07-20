@@ -50,6 +50,7 @@ The behavior we want for numerical Parameter variables (p):
 
 """
 
+
 def test_read_par_line_expected_values():
     test_m = get_model(os.path.join(datadir, "test_par_read.par"))
     assert test_m.F2.frozen
@@ -89,25 +90,33 @@ def test_read_par_line_expected_values():
     assert test_m.JUMP12.key_value[0] == "flagvalue"
     assert_allclose(test_m.JUMP12.value, 0.1)
     assert_allclose(test_m.JUMP12.uncertainty_value, 2.0)
-    assert_allclose(test_m.RAJ.uncertainty, 476.94611148516092061223*pint_units["hourangle_second"])
+    assert_allclose(
+        test_m.RAJ.uncertainty,
+        476.94611148516092061223 * pint_units["hourangle_second"],
+    )
 
     assert_allclose(
-            test_m.DECJ.uncertainty,
-            190996312986311097848351.00000000000000000000*u.arcsecond,
-        )
+        test_m.DECJ.uncertainty,
+        190996312986311097848351.00000000000000000000 * u.arcsecond,
+    )
 
 
-@pytest.mark.xfail(reason="For some reason AngleParameters should have different units for their uncertainties")
+@pytest.mark.xfail(
+    reason="For some reason AngleParameters should have different units for their uncertainties"
+)
 def test_read_par_line_raj_units():
     test_m = get_model(os.path.join(datadir, "test_par_read.par"))
     assert test_m.RAJ.uncertainty.unit == pint_units["hourangle_second"]
     assert test_m.DECJ.uncertainty.unit == u.arcsecond
 
 
-@pytest.mark.xfail(reason="For some reason AngleParameters should have different units for their uncertainties")
+@pytest.mark.xfail(
+    reason="For some reason AngleParameters should have different units for their uncertainties"
+)
 def test_read_par_line_decj_units():
     test_m = get_model(os.path.join(datadir, "test_par_read.par"))
     assert test_m.DECJ.uncertainty.unit == u.arcsecond
+
 
 def test_units_consistent():
     m = get_model(os.path.join(datadir, "test_par_read.par"))
@@ -116,7 +125,7 @@ def test_units_consistent():
         if not hasattr(pm.quantity, "unit"):
             continue
         assert pm.quantity.unit == pm.units
-        assert pm.quantity == pm.value*pm.units
+        assert pm.quantity == pm.value * pm.units
         if pm.uncertainty is None:
             continue
         assert pm.uncertainty.unit == pm.units

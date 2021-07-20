@@ -697,6 +697,7 @@ class strParameter(Parameter):
         """Convert to string."""
         return str(val)
 
+
 class boolParameter(Parameter):
     """Boolean-valued parameter.
 
