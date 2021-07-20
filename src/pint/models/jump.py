@@ -94,6 +94,13 @@ class PhaseJump(PhaseComponent):
     frequency band. Users can of course add their own flags to allow the
     selection of appropriate subsets of TOAs.
 
+    An example of how you could JUMP a particular set of TOAs::
+
+        >>> toa_index_list = [1,3,5]
+        >>> for i in toa_index_list:
+        ...     toas.table['flags'][i]['fish'] = 'carp'
+        >>> model
+
     Jumps are specified by :class:`~pint.models.parameter.maskParameter`
     objects, so there is further documentation there on how these parameters
     and their selection criteria work. In brief, in addition to matching
@@ -111,7 +118,10 @@ class PhaseJump(PhaseComponent):
     defined would then have an unnamed JUMP parameter associated with it and
     fit for. When PINT encounters such a command, the affected TOAs get a flag
     ``-jump N``, where N increases by 1 for each group encountered. A par file
-    can take advantage of this by including a line ``JUMP -jump 1 0.1``.
+    can take advantage of this by including a line ``JUMP -jump 1 0.1``; such parameters
+    can be automatically added with the
+    :func:`~pint.models.timing_model.TimingModel.jump_flags_to_params`
+    function.
 
     Parameters supported:
 
@@ -149,9 +159,12 @@ class PhaseJump(PhaseComponent):
         """Set up support data structures to reflect parameters as set."""
         super().setup()
         self.jumps = []
+        self.jump_dict = {}
         for mask_par in self.get_params_of_type("maskParameter"):
             if mask_par.startswith("JUMP"):
                 self.jumps.append(mask_par)
+                mp = getattr(self, mask_par)
+                self.jump_dict[mp.key, mp.key_value] = mp
         for j in self.jumps:
             # prevents duplicates from being added to phase_deriv_funcs
             if j in self.deriv_funcs.keys():
@@ -159,7 +172,7 @@ class PhaseJump(PhaseComponent):
             self.register_deriv_funcs(self.d_phase_d_jump, j)
 
     def jump_phase(self, toas, delay):
-        """The extra phase contributed by the JUMP.
+        """The extra phase contributed by the JUMPs.
 
         This method returns the jump phase for each toas section collected by
         jump parameters. The phase value is determined by jump parameter times

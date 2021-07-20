@@ -1,17 +1,18 @@
 """ Test for pint design matrix"""
 import os
-import pytest
+
+import astropy.units as u
 import numpy as np
+import pytest
+from pinttestdata import datadir
 
 from pint.models import get_model
-from pint.toa import get_TOAs
 from pint.pint_matrix import (
     DesignMatrixMaker,
-    combine_design_matrices_by_quantity,
     combine_design_matrices_by_param,
+    combine_design_matrices_by_quantity,
 )
-import astropy.units as u
-from pinttestdata import datadir
+from pint.toa import get_TOAs
 
 
 class TestDesignMatrix:

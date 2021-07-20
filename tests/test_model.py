@@ -6,11 +6,11 @@ import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy import log
+from pinttestdata import datadir
 
 import pint.models as tm
 from pint import toa
 from pint.residuals import Residuals
-from pinttestdata import datadir
 
 
 def test_model():

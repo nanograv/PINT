@@ -4,12 +4,12 @@ import astropy.constants as const
 import astropy.units as u
 import numpy
 from astropy import log
+from pinttestdata import datadir
 
 from pint import erfautils, toa
 from pint.observatory import Observatory
 from pint.pulsar_mjd import Time
 from pint.utils import PosVel
-from pinttestdata import datadir
 
 
 def test_times_against_tempo2():

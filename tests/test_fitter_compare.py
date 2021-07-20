@@ -10,10 +10,10 @@ from pinttestdata import datadir
 import pint
 from pint.fitter import (
     ConvergenceFailure,
-    MaxiterReached,
     DownhillGLSFitter,
     DownhillWLSFitter,
     GLSFitter,
+    MaxiterReached,
     WidebandDownhillFitter,
     WidebandTOAFitter,
     WLSFitter,

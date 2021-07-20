@@ -1328,15 +1328,22 @@ class TimingModel:
 
         return result
 
-    def jump_flags_to_params(self, toas):
+    def jump_flags_to_params(self, toas, flag="jump"):
         """Convert jump flags in toas.table["flags"] (loaded in .tim file) to jump parameters in the model.
 
-        The flag processed is ``jump``.
+        Parameters
+        ----------
+        toas : pint.toa.TOAs
+            The set of TOAs to extract jumps from.
+        flag : str
+            The flag to use; ``jump`` is produced when ``JUMP`` lines are
+            encountered in legacy ``.tim`` files. One ``JUMP`` parameter
+            will be introduced for each value associated with this flag.
         """
         from . import jump
 
         # check if any TOAs are jumped
-        jumped = ["jump" in flag_dict.keys() for flag_dict in toas.table["flags"]]
+        jumped = [flag in flag_dict for flag_dict in toas.table["flags"]]
         if not any(jumped):
             log.info("No jump flags to process from .tim file")
             return None
@@ -1348,24 +1355,23 @@ class TimingModel:
                 a.setup()
                 self.add_component(a)
                 self.remove_param("JUMP1")
+            # FIXME: numbers don't make sense here!
             # take jumps in TOA table and add them as parameters to the model
-            for num in flag_dict["jump"]:
-                if "JUMP" + str(num) not in self.params:
-                    param = maskParameter(
-                        name="JUMP",
-                        index=num,
-                        key="-tim_jump",
-                        key_value=num,
-                        value=0.0,
-                        units="second",
-                        uncertainty=0.0,
-                    )
-                    self.add_param_from_top(param, "PhaseJump")
-                    getattr(self, param.name).frozen = False
-                flag_dict["tim_jump"] = str(
-                    num
-                )  # this is the value select_toa_mask uses
-        self.components["PhaseJump"].setup()
+            existing_jumps = self.components["PhaseJump"].jump_dict
+            val = flag_dict[flag]
+            if (flag, val) not in existing_jumps:
+                param = maskParameter(
+                    name="JUMP",
+                    index=None,
+                    key="-" + flag,
+                    key_value=val,
+                    value=0.0,
+                    units="second",
+                    uncertainty=0.0,
+                    frozen=False,
+                )
+                self.add_param_from_top(param, "PhaseJump")
+                self.components["PhaseJump"].setup()
 
     def delete_jump_and_flags(self, toa_table, jump_num):
         """Delete jump object from PhaseJump and remove its flags from TOA table

@@ -1,20 +1,22 @@
 """Tests for jump model component """
 import logging
 import os
+import re
 import unittest
-import pytest
 from io import StringIO
 
+import astropy.time
 import astropy.units as u
 import numpy as np
+import pytest
 from numpy.testing import assert_allclose
+from pinttestdata import datadir
 
 import pint.models.model_builder as mb
+import pint.models.parameter
 import pint.toa
+from pint.models import PhaseJump, parameter as p
 from pint.residuals import Residuals
-from pinttestdata import datadir
-from pint.models import parameter as p
-from pint.models import PhaseJump
 
 
 class SimpleSetup:
@@ -98,7 +100,11 @@ def test_jump_params_to_flags(setup_NGC6440E):
     cp = setup_NGC6440E.m.components["PhaseJump"]
 
     par = p.maskParameter(
-        name="JUMP", key="freq", value=0.2, key_value=[1440, 1700], units=u.s
+        name="JUMP",
+        key="freq",
+        value=0.2,
+        key_value=[1440 * u.MHz, 1700 * u.MHz],
+        units=u.s,
     )  # TOAs indexed 48, 49, 54 in NGC6440E are within this frequency range
     cp.add_param(par, setup=True)
 
@@ -126,7 +132,11 @@ def test_jump_params_to_flags(setup_NGC6440E):
 
     # check that adding overlapping jump works
     par2 = p.maskParameter(
-        name="JUMP", key="freq", value=0.2, key_value=[1600, 1900], units=u.s
+        name="JUMP",
+        key="freq",
+        value=0.2,
+        key_value=[1600 * u.MHz, 1900 * u.MHz],
+        units=u.s,
     )  # frequency range overlaps with par, 2nd jump will have common TOAs w/ 1st
     cp.add_param(par2, setup=True)
     # add flags based off jumps added to model
@@ -144,7 +154,11 @@ def test_multijump_toa(setup_NGC6440E):
     setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
     cp = setup_NGC6440E.m.components["PhaseJump"]
     par = p.maskParameter(
-        name="JUMP", key="freq", value=0.2, key_value=[1440, 1700], units=u.s
+        name="JUMP",
+        key="freq",
+        value=0.2,
+        key_value=[1440 * u.MHz, 1700 * u.MHz],
+        units=u.s,
     )  # TOAs indexed 48, 49, 54 in NGC6440E are within this frequency range
     selected_toa_ind = [48, 49, 54]
     cp.add_param(par, setup=True)
@@ -168,9 +182,8 @@ def test_multijump_toa(setup_NGC6440E):
 class TestJUMP(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        os.chdir(datadir)
-        cls.parf = "B1855+09_NANOGrav_dfg+12_TAI.par"
-        cls.timf = "B1855+09_NANOGrav_dfg+12.tim"
+        cls.parf = os.path.join(datadir, "B1855+09_NANOGrav_dfg+12_TAI.par")
+        cls.timf = os.path.join(datadir, "B1855+09_NANOGrav_dfg+12.tim")
         cls.JUMPm = mb.get_model(cls.parf)
         cls.toas = pint.toa.get_TOAs(
             cls.timf, ephem="DE405", planets=False, include_bipm=False
@@ -180,13 +193,24 @@ class TestJUMP(unittest.TestCase):
             cls.parf + ".tempo_test", unpack=False, names=True, dtype=np.longdouble
         )
 
-    def test_jump(self):
+    def test_jump_agrees_with_tempo(self):
         presids_s = Residuals(
             self.toas, self.JUMPm, use_weighted_mean=False
         ).time_resids.to(u.s)
         assert np.all(
             np.abs(presids_s.value - self.ltres["residuals"]) < 1e-7
         ), "JUMP test failed."
+
+    def test_jump_selects_toas(self):
+        for p in self.JUMPm.params:
+            if not p.startswith("JUMP"):
+                continue
+            pm = getattr(self.JUMPm, p)
+            if pm.key != "-chanid":
+                continue
+            assert len(
+                [l for l in open(self.timf).readlines() if re.search(pm.key_value, l)]
+            ) == len(pm.select_toa_mask(self.toas))
 
     def test_derivative(self):
         log = logging.getLogger("Jump phase test")
@@ -205,8 +229,12 @@ class TestJUMP(unittest.TestCase):
             )
             assert np.nanmax(relative_diff) < 0.001, msg
 
-@pytest.mark.parametrize("tim, flag_ranges", [
-("""
+
+@pytest.mark.parametrize(
+    "tim, flag_ranges",
+    [
+        (
+            """
 FORMAT 1
 unk 999999.000000 57000.0000000078830324 1.000 gbt  -pn -2273593021.0
 unk 999999.000000 57052.6315789538116088 1.000 gbt  -pn -124285.0
@@ -234,8 +262,11 @@ unk 999999.000000 57894.7368420936182176 1.000 gbt  -pn 36378858766.0
 unk 999999.000000 57947.3684210606924768 1.000 gbt  -pn 38652757406.0
 unk 999999.000000 57999.9999999883338542 1.000 gbt  -pn 40926589498.0
 JUMP
-""", [(57100, 57250, 1), (57250, 57400, 2), (57600, 59000, 3)]),
-("""
+""",
+            [(57100, 57250, 1), (57250, 57400, 2), (57600, 59000, 3)],
+        ),
+        (
+            """
 FORMAT 1
 unk 999999.000000 57000.0000000078830324 1.000 gbt  -pn -2273593021.0
 unk 999999.000000 57052.6315789538116088 1.000 gbt  -pn -124285.0
@@ -263,8 +294,11 @@ unk 999999.000000 57894.7368420936182176 1.000 gbt  -pn 36378858766.0
 unk 999999.000000 57947.3684210606924768 1.000 gbt  -pn 38652757406.0
 unk 999999.000000 57999.9999999883338542 1.000 gbt  -pn 40926589498.0
 JUMP
-""", [(57100, 57250, 1), (57600, 59000, 3)]),
-])
+""",
+            [(57100, 57250, 1), (57600, 59000, 3)],
+        ),
+    ],
+)
 def test_tim_file_gets_jump_flags(tim, flag_ranges):
     toas = pint.toa.get_TOAs(StringIO(tim))
     for start, end, n in flag_ranges:
@@ -273,8 +307,11 @@ def test_tim_file_gets_jump_flags(tim, flag_ranges):
             m = int(f.get("jump", -1))
             assert (start < toas.table["tdbld"][i] < end) == (n == m)
 
+
 def test_multiple_jumps_add():
-    m = mb.get_model(StringIO("""
+    m = mb.get_model(
+        StringIO(
+            """
     PSR J1234+5678
     ELAT 0
     ELONG 0
@@ -283,27 +320,71 @@ def test_multiple_jumps_add():
     F0 500
     JUMP mjd 58000 60000 0
     JUMP mjd 59000 60000 0
-    """))
+    """
+        )
+    )
     for j in m.jumps:
         jmp = getattr(m, j)
-        if jmp.key == 'mjd':
+        if jmp.key == "mjd":
             start, end = jmp.key_value
-            if start < 58500:
+            if start.mjd < 58500:
                 first_jump = jmp
             else:
                 second_jump = jmp
-    toas = pint.toa.make_fake_toas(57000, 60000-1, 10, m)
+    toas = pint.toa.make_fake_toas(57000, 60000 - 1, 10, m)
 
-    first_jump.quantity = 100*u.us
-    second_jump.quantity = 0*u.us
+    first_jump.quantity = 100 * u.us
+    second_jump.quantity = 0 * u.us
     r_first = pint.residuals.Residuals(toas, m)
 
-    first_jump.quantity = 0*u.us
-    second_jump.quantity = 75*u.us
+    first_jump.quantity = 0 * u.us
+    second_jump.quantity = 75 * u.us
     r_second = pint.residuals.Residuals(toas, m)
 
-    first_jump.quantity = 100*u.us
-    second_jump.quantity = 75*u.us
+    first_jump.quantity = 100 * u.us
+    second_jump.quantity = 75 * u.us
     r_sum = pint.residuals.Residuals(toas, m)
 
-    assert_allclose(r_first.resids + r_second.resids, r_sum.resids, atol=1e-3*u.us)
+    assert_allclose(r_first.resids + r_second.resids, r_sum.resids, atol=1e-3 * u.us)
+
+
+@pytest.mark.parametrize(
+    "j",
+    [
+        pint.models.parameter.maskParameter(
+            name="JUMP",
+            key="-fish",
+            key_value="carp",
+            units=u.s,
+            value=7,
+            frozen=False,
+            uncertainty=0.1,
+        ),
+        pint.models.parameter.maskParameter(
+            name="JUMP", key="tel", key_value="ao", units=u.s, value=7, frozen=False,
+        ),
+        pint.models.parameter.maskParameter(
+            name="JUMP",
+            key="MJD",
+            key_value=(
+                astropy.time.Time(57000, format="mjd"),
+                astropy.time.Time(58000, format="mjd"),
+            ),
+            units=u.s,
+            value=7,
+            frozen=False,
+        ),
+    ],
+)
+def test_jump_parfile_roundtrip(j):
+    l = j.as_parfile_line()
+    nj = pint.models.parameter.maskParameter(name="JUMP", units=u.s)
+    nj.from_parfile_line(l)
+
+    assert nj.key == j.key
+    assert nj.key_value == j.key_value
+    if nj.quantity != j.quantity:
+        assert_allclose(nj.quantity, j.quantity)
+    assert nj.frozen == j.frozen
+    if nj.uncertainty != j.uncertainty:
+        assert_allclose(nj.uncertainty, j.uncertainty)

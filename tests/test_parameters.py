@@ -7,7 +7,11 @@ import astropy.time as time
 import astropy.units as u
 import numpy as np
 import pytest
+<<<<<<< HEAD
 from numpy.testing import assert_allclose
+=======
+from astropy.time import Time
+>>>>>>> Clean up maskParameter so jumps make more sense
 from pinttestdata import datadir
 
 import pint.fitter
@@ -20,8 +24,11 @@ from pint.models.parameter import (
     floatParameter,
     intParameter,
     maskParameter,
+<<<<<<< HEAD
     pairParameter,
     prefixParameter,
+=======
+>>>>>>> Clean up maskParameter so jumps make more sense
     strParameter,
 )
 from pint.toa import get_TOAs
@@ -144,6 +151,61 @@ class TestParameters(unittest.TestCase):
         cls.m = get_model("B1855+09_NANOGrav_dfg+12_modified.par")
         cls.mp = get_model("prefixtest.par")
 
+<<<<<<< HEAD
+=======
+    def test_read_par_line(self):
+        test_m = get_model("test_par_read.par")
+        self.assertEqual(test_m.F2.frozen, True)
+        self.assertEqual(test_m.F3.frozen, True)
+        self.assertTrue(np.isclose(test_m.F3.value, 0.0))
+        self.assertTrue(np.isclose(test_m.F3.uncertainty_value, 0.0))
+        self.assertEqual(test_m.F4.frozen, True)
+        self.assertTrue(np.isclose(test_m.F4.value, 0.0))
+        self.assertTrue(np.isclose(test_m.F4.uncertainty_value, 0.001))
+        self.assertEqual(test_m.F5.frozen, True)
+        self.assertTrue(np.isclose(test_m.F5.value, 0.0))
+        self.assertTrue(np.isclose(test_m.F5.uncertainty_value, 0.001))
+        self.assertEqual(test_m.F6.frozen, False)
+        self.assertTrue(np.isclose(test_m.F6.value, 0.0))
+        self.assertTrue(np.isclose(test_m.F6.uncertainty_value, 0.001))
+        self.assertEqual(test_m.F7.frozen, True)
+        self.assertTrue(np.isclose(test_m.F7.value, 0.0))
+        self.assertTrue(np.isclose(test_m.F7.uncertainty_value, 3.0))
+        self.assertEqual(test_m.F8.frozen, True)
+        self.assertTrue(np.isclose(test_m.F8.value, 0.0))
+        self.assertTrue(np.isclose(test_m.F8.uncertainty_value, 10))
+        self.assertEqual(test_m.JUMP1.frozen, True)
+        self.assertEqual(test_m.JUMP1.key, "mjd")
+        self.assertTrue(np.isclose(test_m.JUMP1.key_value[0].mjd, 52742.0, atol=1e-10))
+        self.assertTrue(np.isclose(test_m.JUMP1.key_value[1].mjd, 52745.0, atol=1e-10))
+        self.assertTrue(np.isclose(test_m.JUMP1.value, 0.2))
+
+        self.assertEqual(test_m.JUMP2.frozen, True)
+        self.assertTrue(np.isclose(test_m.JUMP2.value, 0.1))
+        self.assertEqual(test_m.JUMP2.uncertainty_value, None)
+        self.assertTrue(np.isclose(test_m.JUMP7.value, 0.1))
+        self.assertTrue(np.isclose(test_m.JUMP7.uncertainty_value, 10.5))
+        self.assertTrue(np.isclose(test_m.JUMP6.value, 0.1))
+        self.assertTrue(np.isclose(test_m.JUMP6.uncertainty_value, 10.0))
+        self.assertEqual(test_m.JUMP12.key, "-testflag")
+        self.assertEqual(test_m.JUMP12.frozen, False)
+        self.assertEqual(test_m.JUMP12.key_value, "flagvalue")
+        self.assertTrue(np.isclose(test_m.JUMP12.value, 0.1))
+        self.assertTrue(np.isclose(test_m.JUMP12.uncertainty_value, 2.0))
+        self.assertTrue(
+            np.isclose(test_m.RAJ.uncertainty_value, 476.94611148516092061223)
+        )
+
+        self.assertTrue(
+            np.isclose(
+                test_m.DECJ.uncertainty_value,
+                190996312986311097848351.00000000000000000000,
+            )
+        )
+        self.assertTrue(test_m.RAJ.uncertainty.unit, pint_units["hourangle_second"])
+        self.assertTrue(test_m.RAJ.uncertainty.unit, u.arcsecond)
+
+>>>>>>> Clean up maskParameter so jumps make more sense
     def test_RAJ(self):
         """Check whether the value and units of RAJ parameter are ok"""
         units = u.hourangle
@@ -540,3 +602,36 @@ def test_set_uncertainty_bogus_raises(p):
 )
 def test_parameter_can_be_pickled(p):
     pickle.dumps(p)
+
+# Testing maskParameters:
+# Their key and key_value attributes can be set three ways - by setting the attribute, during construction, or upon reading a parfile line. Each of these should produce only results of the correct type.
+
+valid_settings = [
+    ("tel", "ao"),
+    ("freq", (1000.0 * u.MHz, 2000.0 * u.MHz)),
+    ("mjd", (Time(57000.0, format="mjd"), Time(58000.0, format="mjd"))),
+    ("mjd", [Time(57000.0, format="mjd"), Time(58000.0, format="mjd")]),
+    ("-fish", "carp"),
+    ("freq", (2000.0 * u.MHz, np.inf * u.MHz)),
+    ("freq", np.array([1000, 2000], dtype=np.longdouble) * u.MHz),
+]
+invalid_settings = [
+    ("tel", (10, 20)),
+    ("freq", "ao"),
+    ("mjd", ([], [])),
+    ("-fish", (1, 2)),
+    ("-fish", ["c", "a", "r", "p"]),
+]
+
+
+@pytest.mark.parametrize("key, key_value", valid_settings)
+def test_maskParameter_construction_valid(key, key_value):
+    j = maskParameter(
+        name="JUMP",
+        index=467,
+        key=key,
+        key_value=key_value,
+        value=0,
+        units=u.s,
+        description="Generic description of a JUMP",
+    )

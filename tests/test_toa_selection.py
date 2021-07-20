@@ -5,14 +5,14 @@ import unittest
 
 import astropy.units as u
 import numpy as np
+from pinttestdata import datadir
+
+import pint.models.model_builder as mb
+import pint.toa as toa
 
 # import matplotlib
 # matplotlib.use('TKAgg')
 # import matplotlib.pyplot as plt
-
-import pint.models.model_builder as mb
-import pint.toa as toa
-from pinttestdata import datadir
 
 
 class TestTOAselection(unittest.TestCase):

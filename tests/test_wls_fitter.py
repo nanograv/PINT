@@ -2,10 +2,11 @@
 import os
 import unittest
 
-from pint.models.model_builder import get_model
+from pinttestdata import datadir
+
 from pint import toa
 from pint.fitter import WLSFitter
-from pinttestdata import datadir
+from pint.models.model_builder import get_model
 
 
 class Testwls(unittest.TestCase):

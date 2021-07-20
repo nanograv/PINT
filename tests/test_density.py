@@ -1,14 +1,16 @@
-import numpy as np
+import io
+from copy import deepcopy
+
 import astropy.units as u
-from astropy.time import Time
 import matplotlib.pyplot as plt
+import numpy as np
+import pytest
+from astropy.time import Time
+from pylab import *
+
 import pint.toa as toa
 import pint.simulation as simulation
 from pint.models import get_model
-from pylab import *
-from copy import deepcopy
-import io
-import pytest
 
 
 @pytest.mark.parametrize("ndays", [7 * u.d, 20 * u.d])

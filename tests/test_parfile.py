@@ -3,9 +3,9 @@ import os
 import tempfile
 
 import pytest
+from pinttestdata import testdir
 
 import pint.models as tm
-from pinttestdata import testdir
 
 datadir = os.path.join(testdir, "datafile")
 parfile = os.path.join(datadir, "J1744-1134.basic.par")

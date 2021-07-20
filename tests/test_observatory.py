@@ -4,11 +4,11 @@ import unittest
 
 import numpy as np
 import pytest
-from pint.pulsar_mjd import Time
+from pinttestdata import datadir
 
 from pint.observatory import get_observatory
 from pint.observatory.topo_obs import TopoObs
-from pinttestdata import datadir
+from pint.pulsar_mjd import Time
 
 
 class TestObservatory(unittest.TestCase):

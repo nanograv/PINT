@@ -2,12 +2,12 @@
 import os
 import unittest
 
+import numpy as np
 import pytest
+from astropy.io import fits
+from pinttestdata import datadir
 
 import pint.scripts.photonphase as photonphase
-from pinttestdata import datadir
-from astropy.io import fits
-import numpy as np
 
 parfile = os.path.join(datadir, "J1513-5908_PKS_alldata_white.par")
 eventfile = os.path.join(datadir, "B1509_RXTE_short.fits")

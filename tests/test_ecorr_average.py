@@ -5,11 +5,12 @@ import unittest
 
 import astropy.units as u
 import numpy as np
+from pinttestdata import datadir
 
 import pint.models.model_builder as mb
 from pint import toa
 from pint.fitter import GLSFitter
-from pinttestdata import datadir
+
 
 # This function can be used to recreate the data
 # for this test if needed.

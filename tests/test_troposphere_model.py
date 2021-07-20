@@ -5,14 +5,14 @@ import unittest
 
 import astropy.units as u
 import numpy as np
+from astropy.coordinates import AltAz, SkyCoord
+from astropy.time import Time
+from pinttestdata import testdir
+
 import pint.models as models
 import pint.observatory
 import pint.toa as toa
-from astropy.coordinates import AltAz, SkyCoord
-from astropy.time import Time
 from pint.observatory import get_observatory
-
-from pinttestdata import testdir
 
 
 class TestTroposphereDelay(unittest.TestCase):

@@ -4,9 +4,9 @@ import os
 import unittest
 
 import numpy as np
+from pinttestdata import datadir
 
 import pint.models.model_builder as mb
-from pinttestdata import datadir
 
 
 class TestPulsarPosition(unittest.TestCase):

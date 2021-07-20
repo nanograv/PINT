@@ -1,14 +1,14 @@
+import os
+import os.path
 from io import StringIO
 
 import numpy as np
-import os
-import os.path
 import pytest
+from pinttestdata import datadir
 
-from pint.toa import get_TOAs
 from pint.models import get_model
 from pint.observatory import get_observatory
-from pinttestdata import datadir
+from pint.toa import get_TOAs
 
 parfile = os.path.join(datadir, "NGC6440E.par")
 

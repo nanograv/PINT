@@ -9,13 +9,13 @@ import astropy.units as u
 import numpy as np
 import pytest
 from astropy.time import TimeDelta
-from pinttestdata import datadir
 from numpy.testing import assert_allclose
+from pinttestdata import datadir
 
+from pint.fitter import WidebandTOAFitter
 from pint.models import get_model
 from pint.residuals import Residuals, WidebandTOAResiduals
 from pint.toa import get_TOAs
-from pint.fitter import WidebandTOAFitter
 
 os.chdir(datadir)
 

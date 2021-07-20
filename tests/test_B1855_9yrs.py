@@ -5,12 +5,12 @@ import unittest
 
 import astropy.units as u
 import numpy as np
+import test_derivative_utils as tdu
+from pinttestdata import datadir
 
 import pint.models.model_builder as mb
 import pint.toa as toa
-import test_derivative_utils as tdu
 from pint.residuals import Residuals
-from pinttestdata import datadir
 
 
 class TestB1855(unittest.TestCase):

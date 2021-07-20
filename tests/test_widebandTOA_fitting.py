@@ -1,15 +1,16 @@
 """ Various of tests for the general data fitter using wideband TOAs.
 """
 
-import pytest
 import os
 
-import numpy as np
 import astropy.units as u
+import numpy as np
+import pytest
+from pinttestdata import datadir
+
+from pint.fitter import WidebandTOAFitter
 from pint.models import get_model
 from pint.toa import get_TOAs
-from pint.fitter import WidebandTOAFitter
-from pinttestdata import datadir
 
 os.chdir(datadir)
 

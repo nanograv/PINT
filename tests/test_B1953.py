@@ -1,16 +1,16 @@
 """Various tests to assess the performance of the B1953+29."""
-from astropy import log
 import os
 import unittest
 
 import astropy.units as u
 import numpy as np
+import test_derivative_utils as tdu
+from astropy import log
+from pinttestdata import datadir
 
 import pint.models.model_builder as mb
 import pint.toa as toa
-import test_derivative_utils as tdu
 from pint.residuals import Residuals
-from pinttestdata import datadir
 
 
 class TestB1953(unittest.TestCase):

@@ -5,12 +5,12 @@ import unittest
 import astropy.units as u
 import numpy as np
 import pytest
+from pinttestdata import datadir
 
 import pint.fitter
 import pint.models
 import pint.residuals
 import pint.toa
-from pinttestdata import datadir
 
 parfile = os.path.join(datadir, "prefixtest.par")
 timfile = os.path.join(datadir, "prefixtest.tim")

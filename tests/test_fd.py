@@ -2,15 +2,15 @@
 import copy
 import os
 import unittest
-import pytest
 
 import astropy.units as u
 import numpy as np
+import pytest
+from pinttestdata import datadir
 
 import pint.models.model_builder as mb
 import pint.residuals
 import pint.toa as toa
-from pinttestdata import datadir
 
 
 class TestFD(unittest.TestCase):

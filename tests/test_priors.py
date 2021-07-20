@@ -3,18 +3,18 @@ import os
 import unittest
 
 import numpy as np
+from pinttestdata import datadir
 from scipy.stats import norm
 
 import pint.models
 
 # from pint.models.priors import *
 from pint.models.priors import (
-    Prior,
-    UniformBoundedRV,
     GaussianBoundedRV,
+    Prior,
     RandomInclinationPrior,
+    UniformBoundedRV,
 )
-from pinttestdata import datadir
 
 
 class TestPriors(unittest.TestCase):

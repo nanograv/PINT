@@ -1,9 +1,9 @@
-import numpy as np
 import os
 import unittest
 from os.path import join
 
 import astropy.units as u
+import numpy as np
 import pytest
 from pinttestdata import datadir
 
@@ -12,9 +12,9 @@ from pint.fitter import (
     DownhillGLSFitter,
     DownhillWLSFitter,
     GLSFitter,
-    WLSFitter,
     WidebandDownhillFitter,
     WidebandTOAFitter,
+    WLSFitter,
 )
 from pint.models.model_builder import get_model
 from pint.toa import get_TOAs

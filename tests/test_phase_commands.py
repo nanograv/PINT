@@ -2,12 +2,13 @@
 import os
 import unittest
 
+import astropy.units as u
+import numpy as np
+from pinttestdata import datadir
+
 import pint.models
 import pint.toa
 from pint.residuals import Residuals
-from pinttestdata import datadir
-import astropy.units as u
-import numpy as np
 
 parfile = os.path.join(datadir, "NGC6440E_PHASETEST.par")
 timfile = os.path.join(datadir, "NGC6440E_PHASETEST.tim")

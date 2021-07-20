@@ -5,11 +5,11 @@ import unittest
 
 import astropy.units as u
 import numpy as np
+from pinttestdata import datadir
 
 import pint.models.model_builder as mb
 from pint import toa
 from pint.fitter import GLSFitter
-from pinttestdata import datadir
 
 
 class TestGLS(unittest.TestCase):

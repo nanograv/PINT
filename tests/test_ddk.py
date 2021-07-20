@@ -174,7 +174,3 @@ def test_remove_PX():
     m.remove_param("PX")
     with pytest.raises(MissingParameter):
         m.validate()
-
-
-if __name__ == "__main__":
-    pass

@@ -1,21 +1,25 @@
 import os
-import unittest
-import pytest
-import numpy as np
 import shutil
-from io import StringIO
+import unittest
 from glob import glob
+from io import StringIO
 
+import numpy as np
+import pytest
+
+# For this test, turn off the check for the age of the IERS A table
+from astropy.utils.iers import conf
 from hypothesis import given
-from hypothesis.strategies import integers, floats, sampled_from
 from hypothesis.extra.numpy import arrays
 from pint import toa, simulation
 from pint.observatory import bipm_default
 from pint.models import get_model, get_model_and_toas
+from hypothesis.strategies import floats, integers, sampled_from
 from pinttestdata import datadir
 
-# For this test, turn off the check for the age of the IERS A table
-from astropy.utils.iers import conf
+from pint import toa
+from pint.models import get_model, get_model_and_toas
+from pint.observatory import bipm_default
 
 conf.auto_max_age = None
 
