@@ -7,7 +7,6 @@ import getpass
 import platform
 import datetime
 import textwrap
-import git
 import configparser
 
 import astropy.constants as const
@@ -1704,10 +1703,11 @@ def info_string(prefix_string="# ", comment=None):
     # try to get the git username
     # if defined
     try:
+        import git
         # user-level git config
         c = git.GitConfigParser()
         username = c.get_value("user", option="name") + f" ({getpass.getuser()})"
-    except configparser.NoOptionError:
+    except configparser.NoOptionError, ImportError:
         username = getpass.getuser()
 
     s = f"""
