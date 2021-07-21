@@ -1704,6 +1704,7 @@ def info_string(prefix_string="# ", comment=None):
     # if defined
     try:
         import git
+
         # user-level git config
         c = git.GitConfigParser()
         username = c.get_value("user", option="name") + f" ({getpass.getuser()})"
