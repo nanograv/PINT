@@ -1679,6 +1679,17 @@ def info_string(prefix_string="# ", comment=None):
     """
     Returns an informative string about the current state of PINT.
 
+    Adds:
+    Creation date
+    PINT version
+    Username
+    Host
+    OS
+    plus a user-supplied comment (if present).
+
+    Username is given by the `gitpython` global configuration `user.name` (if available),
+    otherwise `getpass.getuser()`.
+
     Parameters
     ----------
     prefix_string: str, default='# '
@@ -1688,19 +1699,32 @@ def info_string(prefix_string="# ", comment=None):
     
     Returns
     -------
-    s
+    s : str
         informative string
 
-    example:
+
+    Notes
+    -------
+
+    Example:
     # Created: 2021-07-09T13:52:43.873908
     # PINT_version: 0.8.2+297.g5ddf3207.dirty
     # User: dlk
     # Host: margle-2.local
     # OS: macOS-10.14.6-x86_64-i386-64bit
     # Comment: trying combination
+
+    Multi-line comments are allowed:
+    # Created: 2021-07-09T13:52:43.873908
+    # PINT_version: 0.8.2+297.g5ddf3207.dirty
+    # User: dlk
+    # Host: margle-2.local
+    # OS: macOS-10.14.6-x86_64-i386-64bit
+    # Comment: trying combination
+    # Comment: will it work?
     """
 
-    # try to get the git username
+    # try to get the git user.name
     # if defined
     try:
         import git
@@ -1719,10 +1743,13 @@ def info_string(prefix_string="# ", comment=None):
     OS: {platform.platform()}
     """
 
-    if comment is not None:
-        comment = comment.replace("\n", "\\n")
-        s += f"Comment: {comment}"
     s = textwrap.dedent(s)
+    if comment is not None:
+        if "\n" in comment:
+            s += "\n".join([f"Comment: {x}" for x in comment.split("\n")])
+        else:
+            s += f"Comment: {comment}"
+
     if (prefix_string is not None) and (len(prefix_string) > 0):
         s = "\n".join([prefix_string + x for x in s.split("\n")])
     return s
