@@ -1538,9 +1538,8 @@ class TOAs:
         Groups can be larger than the gap limit - if toas are separated by a gap larger than
         the gap limit, a new group starts and continues until another such gap is found.
 
-        Groups with a two-hour spacing (default) are pre-computed when the TOAs object is constructed,
-        and these can rapidly be retrieved from ``self.table`` (which this function will do).
-
+        Group info can be added as a column to the ``self.table`` object if `add_column` is True.  In that case  ``self.table.meta['group_gap']``  will be set to the `gap_limit`.  If the desired grouping corresponds to that in ``self.table`` then that column is returned.
+        
         Parameters
         ----------
         gap_limit : :class:`astropy.units.Quantity`, optional
