@@ -947,24 +947,24 @@ def make_fake_toas(
     return ts
 
 
-def _group_by_gaps(t, gap):
+def _cluster_by_gaps(t, gap):
     """
-    A utility function to group times according to gap-less stretches.
+    A utility function to cluster times according to gap-less stretches.
 
-    This function is used by :func:`pint.toa.TOAs.get_groups` to determine
-    the groupings.
+    This function is used by :func:`pint.toa.TOAs.get_clusters` to determine
+    the clustering.
 
     Parameters
     ----------
-    t : np.ndarray
-        Input times to be grouped
+    t : :class:`np.ndarray`
+        Input times to be clustered
     gap : float
-        gap for grouping, same units as t
+        gap for clustering, same units as t
 
     Returns
     -------
-    groups : np.ndarray
-        group numbers to which the times belong
+    clusters : :class:`np.ndarray`
+        cluster numbers to which the times belong
 
     """
     ix = np.argsort(t)
@@ -972,10 +972,10 @@ def _group_by_gaps(t, gap):
     gaps = np.diff(t_sorted)
     gap_starts = np.where(gaps >= gap)[0]
     gsi = np.concatenate(([0], gap_starts + 1, [len(t)]))
-    groups_sorted = np.repeat(np.arange(len(gap_starts) + 1), np.diff(gsi))
-    groups = np.zeros(len(t), dtype=int)
-    groups[ix] = groups_sorted
-    return groups
+    clusters_sorted = np.repeat(np.arange(len(gap_starts) + 1), np.diff(gsi))
+    clusters = np.zeros(len(t), dtype=int)
+    clusters[ix] = clusters_sorted
+    return clusters
 
 
 class TOA:
@@ -1453,32 +1453,6 @@ class TOAs:
         """Return a numpy array of the TOA flags."""
         return self.table["flags"]
 
-    def add_flags(self, indices, flag, flag_values, overwrite=False):
-        """
-        Add/update specified flags to a TOA table.
-        
-        Parameters
-        ----------
-        indices : iterable or int
-            The TOA indices for which to add/update the flags
-        flag : str
-            The name of the flag to add (or update)
-        flag_values : iterable or single value
-            The values of the flags to add (one per index or a single value)
-        overwrite : bool, optional
-            Whether or not to overwrite existing values for a flag (default=False)
-            
-        """
-        if isinstance(indices, int):
-            indices = [indices]
-        if not isinstance(flag_values, (list, np.ndarray, set)):
-            # just a single value
-            flag_values = [flag_values] * len(indices)
-        for i, flag_value in zip(indices, flag_values):
-            if flag in self.table[i]["flags"] and not overwrite:
-                raise ValueError(f"Cannot overwrite TOA flag '{flag}'")
-            self.table[i]["flags"][flag] = flag_value
-
     def get_flag_value(self, flag, fill_value=None):
         """Get the requested TOA flag values.
 
@@ -1532,42 +1506,47 @@ class TOAs:
             raise AttributeError("No DM error is provided.")
         return np.array(result)[valid] * pint.dmu
 
-    def get_groups(self, gap_limit=2 * u.h, add_column=False):
-        """Flag toas within gap limit (default 2h = 0.0833d) of each other as the same group.
+    def get_clusters(self, gap_limit=2 * u.h, add_column=False):
+        """Identify toas within gap limit (default 2h = 0.0833d)
+        of each other as the same cluster.
 
-        Groups can be larger than the gap limit - if toas are separated by a gap larger than
-        the gap limit, a new group starts and continues until another such gap is found.
+        Clusters can be larger than the gap limit - if toas are
+        separated by a gap larger than the gap limit, a new cluster
+        starts and continues until another such gap is found.
 
-        Group info can be added as a column to the ``self.table`` object if `add_column` is True.  In that case  ``self.table.meta['group_gap']``  will be set to the `gap_limit`.  If the desired grouping corresponds to that in ``self.table`` then that column is returned.
+        Cluster info can be added as a column to the ``self.table`` object if `add_column`
+        is True.  In that case  ``self.table.meta['cluster_gap']``  will be set to the
+        `gap_limit`.  If the desired clustering corresponds to that in ``self.table`` then
+        that column is returned.
         
         Parameters
         ----------
         gap_limit : :class:`astropy.units.Quantity`, optional
             The minimum size of gap to create a new group. Defaults to two hours.
         add_column : bool, optional
-            Whether or not to add a `groups` column to the TOA table (default: False)
+            Whether or not to add a `clusters` column to the TOA table (default: False)
 
         Returns
         -------
-        groups : array
-            The group number associated to each TOA. Groups are numbered chronologically
-            from zero.
+        clusters : :class:`np.ndarray`
+            The cluster number associated to each TOA. Clusters are numbered
+            chronologically from zero.
         """
         if (
-            ("groups" not in self.table.colnames)
-            or ("group_gap" not in self.table.meta)
-            or (gap_limit != self.table.meta["group_gap"])
+            ("clusters" not in self.table.colnames)
+            or ("cluster_gap" not in self.table.meta)
+            or (gap_limit != self.table.meta["cluster_gap"])
         ):
-            groups = _group_by_gaps(
+            clusters = _cluster_by_gaps(
                 self.get_mjds().to_value(u.d), gap_limit.to_value(u.d)
             )
             if add_column:
-                self.table.add_column(groups, name="groups")
-                self.table.meta["group_gap"] = gap_limit
-            return groups
+                self.table.add_column(clusters, name="clusters")
+                self.table.meta["cluster_gap"] = gap_limit
+            return clusters
 
         else:
-            return self.table["groups"]
+            return self.table["clusters"]
 
     def get_highest_density_range(self, ndays=7 * u.d):
         """Print the range of mjds (default 7 days) with the most toas"""
