@@ -21,6 +21,11 @@ class BinaryBT(PulsarBinary):
     The aim for this class is to connect the stand alone binary model with PINT platform
     BTmodel special parameters:
     GAMMA Binary Einsten delay coeeficient
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.binary_bt.BinaryBT
     """
 
     register = True

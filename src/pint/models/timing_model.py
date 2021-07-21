@@ -1,6 +1,28 @@
 """Timing model objects.
 
 Defines the basic timing model interface classes.
+
+A PINT timing model will be an instance of
+:class:`~pint.models.timing_model.TimingModel`. It will have a number of
+"components", each an instance of a subclass of
+:class:`~pint.models.timing_model.Component`. These components each
+implement some part of the timing model, whether astrometry (for
+example :class:`~pint.models.astrometry.AstrometryEcliptic`), noise
+modelling (for example :class:`~pint.models.noise_model.ScaleToaError`),
+interstellar dispersion (for example
+:class:`~pint.models.dispersion_model.DispersionDM`), or pulsar binary orbits.
+This last category is somewhat unusual in that the code for each model is
+divided into a PINT-facing side (for example
+:class:`~pint.models.binary_bt.BinaryBT`) and an internal model that does the
+actual computation (for example
+:class:`~pint.models.stand_alone_psr_binaries.BT_model.BTmodel`); the management of
+data passing between these two parts is carried out by
+:class:`~pint.models.pulsar_binary.PulsarBinary` and
+:class:`~pint.models.stand_alone_psr_binaries.binary_generic.PSR_BINARY`.
+
+To actually create a timing model, you almost certainly want to use
+:func:`~pint.models.model_builder.get_model`.
+
 """
 import abc
 import copy
@@ -30,7 +52,14 @@ from pint.phase import Phase
 from pint.toa import TOAs
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
 
-__all__ = ["DEFAULT_ORDER", "TimingModel"]
+__all__ = [
+    "DEFAULT_ORDER",
+    "TimingModel",
+    "Component",
+    "TimingModelError",
+    "MissingParameter",
+    "MissingTOAs",
+]
 # Parameters or lines in parfiles we don't understand but shouldn't
 # complain about. These are still passed to components so that they
 # can use them if they want to.
@@ -76,6 +105,8 @@ DEFAULT_ORDER = [
 
 
 class MissingTOAs(ValueError):
+    """Some parameter does not describe any TOAs."""
+
     def __init__(self, parameter_names):
         if isinstance(parameter_names, str):
             parameter_names = [parameter_names]
@@ -122,11 +153,12 @@ class TimingModel:
     """Timing model object built from Components.
 
     This object is the primary object to represent a timing model in PINT.  It
-    is normally constructed with :func:`pint.models.model_builder.get_model`,
-    and it contains a variety of Component objects, each representing a
+    is normally constructed with :func:`~pint.models.model_builder.get_model`,
+    and it contains a variety of :class:`~pint.models.timing_model.Component`
+    objects, each representing a
     physical process that either introduces delays in the pulse arrival time or
     introduces shifts in the pulse arrival phase.  These components have
-    parameters, described by :class:`pint.models.parameter.Parameter` objects,
+    parameters, described by :class:`~pint.models.parameter.Parameter` objects,
     and methods. Both the parameters and the methods are accessible through
     this object using attribute access, for example as ``model.F0`` or
     ``model.coords_as_GAL()``.
@@ -148,8 +180,18 @@ class TimingModel:
     various things like orbital phase, and barycentric versions of TOAs,
     as well as the various derivatives and matrices needed to support fitting.
 
+    TimingModel objects forward attribute lookups to their components, so
+    that you can access any method or attribute (in particular Parameters)
+    of any Component directly on the TimingModel object, for example as
+    ``model.F0``.
+
     TimingModel objects can be written out to ``.par`` files using
     :func:`pint.models.timing_model.TimingModel.as_parfile`.
+
+    PINT Parameters supported (here, rather than in any Component):
+
+    .. paramtable::
+        :class: pint.models.timing_model.TimingModel
 
     Parameters
     ----------
@@ -172,7 +214,7 @@ class TimingModel:
         - Derivatives of delay and phase respect to parameter for fitting toas.
 
     Each timing parameters are stored as TimingModel attribute in the type of
-    :class:`pint.models.parameter.Parameter` delay or phase and its derivatives are implemented
+    :class:`~pint.models.parameter.Parameter` delay or phase and its derivatives are implemented
     as TimingModel Methods.
 
     Attributes
@@ -274,7 +316,7 @@ class TimingModel:
         )
 
         for cp in components:
-            self.add_component(cp, validate=False)
+            self.add_component(cp, setup=False, validate=False)
 
     def __repr__(self):
         return "{}(\n  {}\n)".format(
@@ -542,7 +584,7 @@ class TimingModel:
             [x for x in self.components.keys() if x.startswith("Binary")][0]
         ]
         # Make sure that the binary instance has the binary params
-        b.update_binary_object()
+        b.update_binary_object(None)
         # Handle input times and update them in stand-alone binary models
         if isinstance(barytimes, TOAs):
             # If we pass the TOA table, then barycenter the TOAs
@@ -828,7 +870,9 @@ class TimingModel:
         order = host_list.index(comp)
         return comp, order, host_list, comp_type
 
-    def add_component(self, component, order=DEFAULT_ORDER, force=False, validate=True):
+    def add_component(
+        self, component, order=DEFAULT_ORDER, force=False, setup=True, validate=True
+    ):
         """Add a component into TimingModel.
 
         Parameters
@@ -876,7 +920,8 @@ class TimingModel:
         new_comp_list = [c[1] for c in cur_cps]
         setattr(self, comp_type + "_list", new_comp_list)
         # Set up components
-        self.setup()
+        if setup:
+            self.setup()
         # Validate inputs
         if validate:
             self.validate()
@@ -1022,18 +1067,18 @@ class TimingModel:
     def delay(self, toas, cutoff_component="", include_last=True):
         """Total delay for the TOAs.
 
+        Return the total delay which will be subtracted from the given
+        TOA to get time of emission at the pulsar.
+
         Parameters
         ----------
-        toas: toa.table
+        toas: pint.toa.TOAs
             The toas for analysis delays.
         cutoff_component: str
             The delay component name that a user wants the calculation to stop
             at.
         include_last: bool
             If the cutoff delay component is included.
-
-        Return the total delay which will be subtracted from the given
-        TOA to get time of emission at the pulsar.
         """
         delay = np.zeros(toas.ntoas) * u.second
         if cutoff_component == "":
@@ -1054,7 +1099,11 @@ class TimingModel:
         return delay
 
     def phase(self, toas, abs_phase=False):
-        """Return the model-predicted pulse phase for the given TOAs."""
+        """Return the model-predicted pulse phase for the given TOAs.
+
+        This is the phase as observed at the observatory at the exact moment
+        specified in each TOA. The result is a :class:`pint.phase.Phase` object.
+        """
         # First compute the delays to "pulsar time"
         delay = self.delay(toas)
         phase = Phase(np.zeros(toas.ntoas), np.zeros(toas.ntoas))
@@ -1137,7 +1186,7 @@ class TimingModel:
 
         Parameters
         ----------
-        toas: `pint.toa.TOAs` object
+        toas: pint.toa.TOAs
             The input data object for TOAs uncertainty.
         """
         ntoa = toas.ntoas
@@ -1160,7 +1209,7 @@ class TimingModel:
 
         Parameters
         ----------
-        toas: `pint.toa.TOAs` object
+        toas: pint.toa.TOAs
             The input data object for DM uncertainty.
         """
         dm_error, valid = toas.get_flag_value("pp_dme")
@@ -1331,7 +1380,7 @@ class TimingModel:
 
         Return
         ------
-        astropy.Quantity
+        astropy.units.Quantity
             Barycentered TOAs.
         """
         tbl = toas.table
@@ -1344,22 +1393,21 @@ class TimingModel:
         return tbl["tdbld"] * u.day - corr
 
     def d_phase_d_toa(self, toas, sample_step=None):
-        """Return the derivative of phase wrt TOA.
+        """Return the finite-difference derivative of phase wrt TOA.
 
         Parameters
         ----------
-        toas : PINT TOAs class
+        toas : pint.toa.TOAs
             The toas when the derivative of phase will be evaluated at.
-        sample_step : float optional
-            Finite difference steps. If not specified, it will take 1/10 of the
+        sample_step : float, optional
+            Finite difference steps. If not specified, it will take 1000 times the
             spin period.
-
         """
         copy_toas = copy.deepcopy(toas)
         if sample_step is None:
             pulse_period = 1.0 / (self.F0.quantity)
             sample_step = pulse_period * 1000
-        sample_dt = [-sample_step, 2 * sample_step]
+        sample_dt = [-sample_step, sample_step]
 
         sample_phase = []
         for dt in sample_dt:
@@ -1381,13 +1429,42 @@ class TimingModel:
 
         NOT implemented yet.
         """
-        pass
+        raise NotImplementedError
 
     def d_phase_d_param(self, toas, delay, param):
-        """Return the derivative of phase with respect to the parameter."""
+        """Return the derivative of phase with respect to the parameter.
+
+        This is the derivative of the phase observed at each TOA with
+        respect to each parameter. This is closely related to the derivative
+        of residuals with respect to each parameter, differing only by a
+        factor of the spin frequency and possibly a minus sign. See
+        :meth:`pint.models.timing_model.TimingModel.designmatrix` for a way
+        of evaluating many derivatives at once.
+
+        The calculation is done by combining the analytical derivatives
+        reported by all the components in the model.
+
+        Parameters
+        ----------
+        toas : pint.toa.TOAs
+            The TOAs at which the derivative should be evaluated.
+        delay : astropy.units.Quantity or None
+            The delay at the TOAs where the derivatives should be evaluated.
+            This permits certain optimizations in the derivative calculations;
+            the value should be ``self.delay(toas)``.
+        param : str
+            The name of the parameter to differentiate with respect to.
+
+        Returns
+        -------
+        astropy.units.Quantity
+            The derivative of observed phase with respect to the model parameter.
+        """
         # TODO need to do correct chain rule stuff wrt delay derivs, etc
         # Is it safe to assume that any param affecting delay only affects
         # phase indirectly (and vice-versa)??
+        if delay is None:
+            delay = self.delay(toas)
         par = getattr(self, param)
         result = np.longdouble(np.zeros(toas.ntoas)) / par.units
         phase_derivs = self.phase_deriv_funcs
@@ -1510,10 +1587,42 @@ class TimingModel:
     def designmatrix(self, toas, acc_delay=None, incfrozen=False, incoffset=True):
         """Return the design matrix.
 
-        The design matrix is the matrix with columns of d_phase_d_param/F0
-        or d_toa_d_param; it is used in fitting and calculating parameter
+        The design matrix is the matrix with columns of ``d_phase_d_param/F0``
+        or ``d_toa_d_param``; it is used in fitting and calculating parameter
         covariances.
 
+        The value of ``F0`` used here is the parameter value in the model.
+
+        The order of parameters that are included is that returned by
+        ``self.params``.
+
+        Parameters
+        ----------
+        toas : pint.toa.TOAs
+            The TOAs at which to compute the design matrix.
+        acc_delay
+            ???
+        incfrozen : bool
+            Whether to include frozen parameters in the design matrix
+        incoffset : bool
+            Whether to include the constant offset in the design matrix
+
+        Returns
+        -------
+        M : array
+            The design matrix, with shape (len(toas), len(self.free_params)+1)
+        names : list of str
+            The names of parameters in the corresponding parts of the design matrix
+        units : astropy.units.Unit
+            The units of the corresponding parts of the design matrix
+
+        Note
+        ----
+        Here we have negative sign here. Since in pulsar timing
+        the residuals are calculated as (Phase - int(Phase)), which is different
+        from the conventional definition of least square definition (Data - model)
+        We decide to add minus sign here in the design matrix, so the fitter
+        keeps the conventional way.
         """
         params = ["Offset"] if incoffset else []
         params += [
@@ -1521,7 +1630,7 @@ class TimingModel:
         ]
 
         F0 = self.F0.quantity  # 1/sec
-        ntoas = toas.ntoas
+        ntoas = len(toas)
         nparams = len(params)
         delay = self.delay(toas)
         units = []
@@ -1533,24 +1642,13 @@ class TimingModel:
         M = np.zeros((ntoas, nparams))
         for ii, param in enumerate(params):
             if param == "Offset":
-                M[:, ii] = 1.0
+                M[:, ii] = 1.0 / F0.value
                 units.append(u.s / u.s)
             else:
-                # NOTE Here we have negative sign here. Since in pulsar timing
-                # the residuals are calculated as (Phase - int(Phase)), which is different
-                # from the conventional definition of least square definition (Data - model)
-                # We decide to add minus sign here in the design matrix, so the fitter
-                # keeps the conventional way.
                 q = -self.d_phase_d_param(toas, delay, param)
-                M[:, ii] = q
-                units.append(u.Unit("") / getattr(self, param).units)
-        mask = []
-        for ii, un in enumerate(units):
-            if params[ii] == "Offset":
-                continue
-            units[ii] = un * u.second
-            mask.append(ii)
-        M[:, mask] /= F0.value
+                the_unit = u.Unit("") / getattr(self, param).units
+                M[:, ii] = q.to_value(the_unit) / F0.value
+                units.append(the_unit / F0.unit)
         return M, params, units
 
     def compare(
@@ -2195,16 +2293,23 @@ class ModelMeta(abc.ABCMeta):
 
 
 class Component(object, metaclass=ModelMeta):
-    """A base class for timing model components."""
+    """Timing model components.
 
-    component_types = {}
-    """An index of all registered subtypes.
-
+    When such a class is defined, it registers itself in
+    ``Component.component_types`` so that it can be found and used
+    when parsing par files.
     Note that classes are registered when their modules are imported,
     so ensure all classes of interest are imported before this list
     is checked.
 
+    These objects can be constructed with no particular values, but
+    their `.setup()` and `.validate()` methods should be called
+    before using them to compute anything. These should check
+    parameter values for validity, raising an exception if
+    invalid parameter values are chosen.
     """
+
+    component_types = {}
 
     def __init__(self):
         self.params = []

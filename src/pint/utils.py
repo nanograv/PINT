@@ -8,6 +8,7 @@ import textwrap
 from contextlib import contextmanager
 from copy import deepcopy
 from io import StringIO
+from collections import OrderedDict
 
 import astropy.constants as const
 import astropy.coordinates as coords
@@ -310,17 +311,22 @@ def taylor_horner(x, coeffs):
         In [1]: taylor_horner(2.0, [10, 3, 4, 12])
         Out[1]: 40.0
 
+    Parameters
+    ----------
+    x: astropy.units.Quantity
+        Input value; may be an array.
+    coeffs: list of astropy.units.Quantity
+        Coefficient array; must have length at least one. The coefficient in
+        position ``i`` is multiplied by ``x**i``. Each coefficient should
+        just be a number, not an array. The units should be compatible once
+        multiplied by an appropriate power of x.
+
+    Returns
+    -------
+    astropy.units.Quantity
+        Output value; same shape as input. Units as inferred from inputs.
     """
-    result = 0.0
-    if hasattr(coeffs[-1], "unit"):
-        if not hasattr(x, "unit"):
-            x = x * u.Unit("")
-        result *= coeffs[-1].unit / x.unit
-    fact = float(len(coeffs))
-    for coeff in coeffs[::-1]:
-        result = result * x / fact + coeff
-        fact -= 1.0
-    return result
+    return taylor_horner_deriv(x, coeffs, deriv_order=0)
 
 
 def taylor_horner_deriv(x, coeffs, deriv_order=1):
@@ -332,6 +338,23 @@ def taylor_horner_deriv(x, coeffs, deriv_order=1):
         In [1]: taylor_horner_deriv(2.0, [10, 3, 4, 12], 1)
         Out[1]: 15.0
 
+    Parameters
+    ----------
+    x: astropy.units.Quantity
+        Input value; may be an array.
+    coeffs: list of astropy.units.Quantity
+        Coefficient array; must have length at least one. The coefficient in
+        position ``i`` is multiplied by ``x**i``. Each coefficient should
+        just be a number, not an array. The units should be compatible once
+        multiplied by an appropriate power of x.
+    deriv_order: int
+        The order of the derivative to take (that is, how many times to differentiate).
+        Must be non-negative.
+
+    Returns
+    -------
+    astropy.units.Quantity
+        Output value; same shape as input. Units as inferred from inputs.
     """
     result = 0.0
     if hasattr(coeffs[-1], "unit"):
@@ -339,7 +362,7 @@ def taylor_horner_deriv(x, coeffs, deriv_order=1):
             x = x * u.Unit("")
         result *= coeffs[-1].unit / x.unit
     der_coeffs = coeffs[deriv_order::]
-    fact = float(len(der_coeffs))
+    fact = len(der_coeffs)
     for coeff in der_coeffs[::-1]:
         result = result * x / fact + coeff
         fact -= 1.0
@@ -414,7 +437,16 @@ def show_param_cov_matrix(matrix, params, name="Covariance Matrix", switchRD=Fal
     :param name: title to be printed above, default Covariance Matrix
     :param switchRD: if True, switch the positions of RA and DEC to match setup of TEMPO cov. matrices
 
-    :return string to be printed"""
+    :return string to be printed
+
+    DEPRECATED
+    """
+
+    warn(
+        "This method is deprecated. Use `parameter_covariance_matrix.prettyprint()` instead of `show_param_cov_matrix()`",
+        category=DeprecationWarning,
+    )
+
     output = StringIO()
     matrix = deepcopy(matrix)
     try:
@@ -930,38 +962,20 @@ def dmxparse(fitter, save=False):
         DMX_keys_ma = None
 
     # Make sure that the fitter has a covariance matrix, otherwise return the initial values
-    if hasattr(fitter, "covariance_matrix"):
+    if hasattr(fitter, "parameter_covariance_matrix"):
         # now get the full parameter covariance matrix from pint
-        # NOTE: we will need to increase all indices by 1 to account for the 'Offset' parameter
-        # that is the first index of the designmatrix
-        params = np.array(fitter.model.free_params)
-        p_cov_mat = fitter.covariance_matrix
-        # Now we get the indices that correspond to the DMX values
-        DMX_p_idxs = np.zeros(len(dmx_epochs), dtype=int)
-        for ii in range(len(dmx_epochs)):
-            if DMX_keys_ma is None:
-                key = DMX_keys[ii]
-            else:
-                key = DMX_keys_ma[ii]
-            if "DMX" not in key:
-                pass
-            else:
-                DMX_p_idxs[ii] = (
-                    int(np.where(params == key)[0]) + 1
-                )  # extra 1 is for offset parameters
-        # Sort the array in numerical order for 2.7. 3.5
-        DMX_p_idxs = np.trim_zeros(np.sort(DMX_p_idxs))
-        # Define a matrix that is just the DMX covariances
-        cc = p_cov_mat[
-            DMX_p_idxs[0] : DMX_p_idxs[-1] + 1, DMX_p_idxs[0] : DMX_p_idxs[-1] + 1
-        ]
+        # access by label name to make sure we get the right values
+        # make sure they are sorted in ascending order
+        cc = fitter.parameter_covariance_matrix.get_label_matrix(
+            sorted(["DMX_" + x for x in dmx_epochs])
+        )
         n = len(DMX_Errs) - np.sum(mask_idxs)
         # Find error in mean DM
         DMX_mean = np.mean(DMXs)
-        DMX_mean_err = np.sqrt(cc.sum()) / float(n)
+        DMX_mean_err = np.sqrt(cc.matrix.sum()) / float(n)
         # Do the correction for varying DM
         m = np.identity(n) - np.ones((n, n)) / float(n)
-        cc = np.dot(np.dot(m, cc), m)
+        cc = np.dot(np.dot(m, cc.matrix), m)
         DMX_vErrs = np.zeros(n)
         # We also need to correct for the units here
         for i in range(n):
@@ -1217,6 +1231,11 @@ def mass_funct2(mp, mc, i):
     f_m : Quantity
         Mass function in `u.solMass`
 
+    Returns
+    -------
+    f_m : Quantity
+        Mass function in solar masses
+
     Notes
     -----
     Inclination is such that edge on is `i = 90*u.deg`
@@ -1253,10 +1272,10 @@ def pulsar_mass(pb, x, mc, inc):
     mass : Quantity in `u.solMass`
 
     Notes
-    -------    
+    -------
     This forms a quadratic equation of the form:
     ca*Mp**2 + cb*Mp + cc = 0
-    
+
     with:
     ca = massfunct
     cb = 2 * massfunct * mc
@@ -1264,7 +1283,7 @@ def pulsar_mass(pb, x, mc, inc):
 
     except the discriminant simplifies to:
     4 * massfunct * mc**3 * sini**3
-    
+
     solve it directly
     this has to be the positive branch of the quadratic
     because the vertex is at -mc, so the negative branch will always be < 0
@@ -1326,7 +1345,7 @@ def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
 
     It's useful to look at the discriminant to understand the nature of the roots
     and make sure we get the right one
-    
+
     https://en.wikipedia.org/wiki/Discriminant#Degree_3
     delta = (
         cb ** 2 * cc ** 2
@@ -1339,7 +1358,7 @@ def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
     and this should be < 0
     since this reduces to -27 * sin(i)**6 * massfunct**2 * mp**4 -4 * sin(i)**3 * massfunct**3 * mp**3
     so there is just 1 real root and we compute it below
-    
+
     """
     if not (isinstance(inc, angles.Angle) or isinstance(inc, u.quantity.Quantity)):
         raise ValueError(f"The inclination should be an Angle but is {inc}.")
@@ -1498,9 +1517,7 @@ def FTest(chi2_1, dof_1, chi2_2, dof_2):
     if delta_chi2 > 0 and dof_1 != dof_2:
         delta_dof = dof_1 - dof_2
         new_redchi2 = chi2_2 / dof_2
-        F = np.float64(
-            (delta_chi2 / delta_dof) / new_redchi2
-        )  # fdtr doesn't like float128
+        F = float((delta_chi2 / delta_dof) / new_redchi2)  # fdtr doesn't like float128
         ft = fdtrc(delta_dof, dof_2, F)
     elif dof_1 == dof_2:
         log.warning("Models have equal degrees of freedom, cannot perform F-test.")
@@ -1760,3 +1777,178 @@ def info_string(prefix_string="# ", comment=None):
     if (prefix_string is not None) and (len(prefix_string) > 0):
         s = "\n".join([prefix_string + x for x in s.split("\n")])
     return s
+
+def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params="all"):
+    """
+    Calculates random models based on the covariance matrix of the `fitter` object.
+
+    returns the new phase differences compared to the original model
+    optionally returns all of the random models
+
+    Parameters
+    ----------
+    fitter: `pint.fitter` object
+        current fitter object containing a model and parameter covariance matrix
+    toas: `pint.toa.TOAs` object
+        TOAs to calculate models
+    Nmodels: int (optional)
+        number of random models to calculate
+    keep_models: bool (optional)
+        whether to keep and return the individual random models (slower)
+    params: list (optional)
+        if specified, selects only those parameters to vary.  Default ('all') is to use all parameters other than Offset
+
+    Returns
+    -------
+    dphase : np.ndarray
+        phase difference with respect to input model, size is [Nmodels, len(toas)]
+    random_models : list (optional)
+        list of random models (each is a `pint.models.timing_model.TimingModel`)
+
+
+    Note
+    ----
+    To calculate new TOAs, you can do:
+        `tnew = pint.toa.make_fake_toas(MJDmin, MJDmax, Ntoa, model=fitter.model)`
+    or similar
+    """
+    Nmjd = len(toas)
+    phases_i = np.zeros((Nmodels, Nmjd))
+    phases_f = np.zeros((Nmodels, Nmjd))
+
+    cov_matrix = fitter.parameter_covariance_matrix
+    # this is a list of the parameter names in the order they appear in the coviarance matrix
+    param_names = cov_matrix.get_label_names(axis=0)
+    # this is a dictionary with the parameter values, but it might not be in the same order
+    # and it leaves out the Offset parameter
+    param_values = fitter.model.get_params_dict("free", "value")
+    mean_vector = np.array([param_values[x] for x in param_names if not x == "Offset"])
+    if params == "all":
+        # remove the first column and row (absolute phase)
+        if param_names[0] == "Offset":
+            cov_matrix = cov_matrix.get_label_matrix(param_names[1:])
+            fac = fitter.fac[1:]
+            param_names = param_names[1:]
+        else:
+            fac = fitter.fac
+    else:
+        # only select some parameters
+        # need to also select from the fac array and the mean_vector array
+        idx, labels = cov_matrix.get_label_slice(params)
+        cov_matrix = cov_matrix.get_label_matrix(params)
+        index = idx[0].flatten()
+        fac = fitter.fac[index]
+        # except mean_vector does not have the 'Offset' entry
+        # so may need to subtract 1
+        if param_names[0] == "Offset":
+            mean_vector = mean_vector[index - 1]
+        else:
+            mean_vector = mean_vector[index]
+        param_names = cov_matrix.get_label_names(axis=0)
+
+    f_rand = deepcopy(fitter)
+
+    # scale by fac
+    mean_vector = mean_vector * fac
+    scaled_cov_matrix = ((cov_matrix.matrix * fac).T * fac).T
+    random_models = []
+    for imodel in range(Nmodels):
+        # create a set of randomized parameters based on mean vector and covariance matrix
+        rparams_num = np.random.multivariate_normal(mean_vector, scaled_cov_matrix)
+        # scale params back to real units
+        for j in range(len(mean_vector)):
+            rparams_num[j] /= fac[j]
+        rparams = OrderedDict(zip(param_names, rparams_num))
+        f_rand.set_params(rparams)
+        phase = f_rand.model.phase(toas, abs_phase=True)
+        phases_i[imodel] = phase.int
+        phases_f[imodel] = phase.frac
+        if keep_models:
+            random_models.append(f_rand.model)
+            f_rand = deepcopy(fitter)
+    phases = phases_i + phases_f
+    phases0 = fitter.model.phase(toas, abs_phase=True)
+    dphase = phases - (phases0.int + phases0.frac)
+    if keep_models:
+        return dphase, random_models
+    else:
+        return dphase
+
+
+def list_parameters(class_=None):
+    """List parameters understood by PINT.
+
+    Parameters
+    ----------
+    class_: type, optional
+        If provided, produce a list of parameters understood by the Component type; if None,
+        return a list of parameters understood by all Components known to PINT.
+
+    Returns
+    -------
+    list of dict
+        Each entry is a dictionary describing one parameter. Dictionary values are all strings
+        or lists of strings, and will include at least "name", "classes", and "description".
+    """
+    if class_ is not None:
+        from pint.models.parameter import (
+            boolParameter,
+            strParameter,
+            intParameter,
+            prefixParameter,
+            maskParameter,
+        )
+
+        result = []
+        inst = class_()
+        for p in inst.params:
+            pm = getattr(inst, p)
+            d = dict(
+                name=pm.name,
+                class_=f"{class_.__module__}.{class_.__name__}",
+                description=pm.description,
+            )
+            if pm.aliases:
+                d["aliases"] = [a for a in pm.aliases if a != pm.name]
+            if pm.units:
+                d["kind"] = pm.units.to_string()
+                if not d["kind"]:
+                    d["kind"] = "number"
+            elif isinstance(pm, boolParameter):
+                d["kind"] = "boolean"
+            elif isinstance(pm, strParameter):
+                d["kind"] = "string"
+            elif isinstance(pm, intParameter):
+                d["kind"] = "integer"
+            if isinstance(pm, prefixParameter):
+                d["name"] = pm.prefix + "{number}"
+                d["aliases"] = [a + "{number}" for a in pm.prefix_aliases]
+            if isinstance(pm, maskParameter):
+                d["name"] = pm.origin_name + " {flag} {value}"
+                d["aliases"] = [a + " {flag} {value}" for a in pm.prefix_aliases]
+            if "aliases" in d and not d["aliases"]:
+                del d["aliases"]
+            result.append(d)
+        return result
+    else:
+        import pint.models.timing_model
+
+        results = {}
+        ct = pint.models.timing_model.Component.component_types.copy()
+        ct["TimingModel"] = pint.models.timing_model.TimingModel
+        for v in ct.values():
+            for d in list_parameters(v):
+                n = d["name"]
+                class_ = d.pop("class_")
+                if n not in results:
+                    d["classes"] = [class_]
+                    results[n] = d
+                else:
+                    r = results[n].copy()
+                    r.pop("classes")
+                    if r != d:
+                        raise ValueError(
+                            f"Parameter {d} in class {class_} does not match {results[n]}"
+                        )
+                    results[n]["classes"].append(class_)
+        return sorted(results.values(), key=lambda d: d["name"])

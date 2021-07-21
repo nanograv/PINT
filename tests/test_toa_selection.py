@@ -91,9 +91,9 @@ class TestTOAselection(unittest.TestCase):
         assert np.allclose(dmx_old, dmx_new)
 
     def test_hash(self):
-        self.model.dmx_toas_selector.use_hash = True
         dmx_old = self.get_dmx_old(self.toas).value
         dmx_new = self.model.dmx_dm(self.toas).value
+        self.model.dmx_toas_selector.use_hash = True
         assert np.allclose(dmx_old, dmx_new)
         assert self.model.dmx_toas_selector.use_hash
         dmx_old = self.get_dmx_old(self.sort_toas).value

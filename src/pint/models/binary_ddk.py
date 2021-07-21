@@ -4,7 +4,7 @@ from astropy import log
 from pint.models.binary_dd import BinaryDD
 from pint.models.parameter import boolParameter, floatParameter
 from pint.models.stand_alone_psr_binaries.DDK_model import DDKmodel
-from pint.models.timing_model import MissingParameter
+from pint.models.timing_model import MissingParameter, TimingModelError
 
 
 class BinaryDDK(BinaryDD):
@@ -18,6 +18,11 @@ class BinaryDDK(BinaryDD):
     DDKmodel special parameters:
     KIN inclination angle
     KOM the longitude of the ascending node, Kopeikin (1995) Eq 9. OMEGA
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.binary_ddk.BinaryDDK
 
     References
     ----------
@@ -98,7 +103,15 @@ class BinaryDDK(BinaryDD):
                     "DDK", "DDK model needs proper motion parameters."
                 )
         if self.SINI.quantity is not None:
-            raise ValueError(
+            raise TimingModelError(
                 "DDK model does not accept `SINI` as input. Please"
                 " use `KIN` instead."
+            )
+
+        if hasattr(self._parent, "PX"):
+            if self._parent.PX.value <= 0.0 or self._parent.PX.value is None:
+                raise ValueError("DDK model needs a valid `PX` value.")
+        else:
+            raise MissingParameter(
+                "Binary_DDK", "PX", "DDK model needs PX from" "Astrometry."
             )
