@@ -245,9 +245,9 @@ class PlkRandomModelSelect(tk.Frame):
 
     def changedRMCheckBox(self):
         if self.var.get() == 1:
-            log.info("Random Models turned on.")
+            log.debug("Random Models turned on.")
         else:
-            log.info("Random Models turned off.")
+            log.debug("Random Models turned off.")
 
     def getRandomModel(self):
         return self.var.get()
