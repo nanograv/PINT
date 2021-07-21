@@ -1699,17 +1699,17 @@ def info_string(prefix_string="# ", comment=None):
 
     Adds:
     
-    * Creation date
+    - Creation date
 
-    * PINT version
+    - PINT version
 
-    * Username
+    - Username
 
-    * Host
+    - Host
 
-    * OS
+    - OS
 
-    * plus a user-supplied comment (if present).
+    - plus a user-supplied comment (if present).
 
     Username is given by the ``gitpython`` global configuration ``user.name``
     (if available), otherwise ``getpass.getuser()``.
@@ -1724,7 +1724,7 @@ def info_string(prefix_string="# ", comment=None):
     
     Returns
     -------
-    s : str
+    str
         informative string
 
     Examples
@@ -1753,7 +1753,7 @@ def info_string(prefix_string="# ", comment=None):
 
     Notes
     -----
-    This can be called via ``t.write_TOA_file("combined.tim",comment="trying combination")``
+    This can be called via ``t.TOAs.write_TOA_file>("combined.tim",comment="trying combination")``
     for a tim file, or ``m.as_parfile(comment="test parfile writing")`` for par file    
     """
     # try to get the git user.name
