@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 import matplotlib.pyplot as plt
 import numpy as np
+from pint.models.priors import GaussianBoundedRV
 
-__all__ = ["phaseogram", "phaseogram_binned"]
+__all__ = ["phaseogram", "phaseogram_binned", "plot_priors"]
 
 
 def phaseogram(
@@ -176,3 +177,127 @@ def phaseogram_binned(
         plt.close()
     else:
         plt.show()
+
+
+def plot_priors(
+    model,
+    chains,
+    fitvals,
+    fiterrs,
+    maxpost_fitvals,
+    burnin=100,
+    bins=100,
+    scale=False,
+    file=False,
+):
+
+    """
+    Show binned samples, prior probability distribution and an initial gaussian
+    probability distribution plotted with 2 sigma, maximum posterior and original
+    fit values marked.
+    
+    Parameters
+    ----------
+    model
+        Input timing model 
+    chains: dict    
+        Post MCMC integration chains that are input into a histogram and compared with the priors. Contain the fitkeys and the samples
+    fitvals
+        Initial Parameter values
+    fiterrs
+        Initial Parameter uncertainties
+    maxpost_fitvals
+        Maximum Posterior values
+    With scale is True
+        The priors and initial probability distributions are scaled to the peak of the histogram.
+    With scale is False
+        The priors and initial probability distributions are plotted without the scaling.
+    """
+    keys = []
+    values = []
+    for item in chains.items():
+        keys.append(item[0]), values.append(item[1])
+
+    priors = []
+    initials = []
+    x_range = []
+    counts = []
+    for i in range(0, len(keys[:-1])):
+        values[i] = values[i][burnin:].flatten()
+        x_range.append(np.linspace(values[i].min(), values[i].max(), num=bins))
+        priors.append(getattr(model, keys[i]).prior.pdf(x_range[i]))
+        initials.append(
+            GaussianBoundedRV(loc=float(fitvals[i]), scale=float(fiterrs[i])).pdf(
+                x_range[i]
+            )
+        )
+        a, x = np.histogram(values[i], bins=bins)
+        counts.append(a)
+
+    fig, axs = plt.subplots(len(keys), figsize=(8, 11), constrained_layout=True)
+
+    for i, p in enumerate(keys):
+        if i != len(keys[:-1]):
+            axs[i].set_xlabel(
+                str(p)
+                + ": Max Post Value - "
+                + str("{:.9e}".format(maxpost_fitvals[i]))
+                + " ("
+                + str(getattr(model, p).units)
+                + ")"
+            )
+            axs[i].axvline(
+                fitvals[i] - maxpost_fitvals[i],
+                color="m",
+                linestyle="--",
+                label="Original Fit Value",
+            )
+            axs[i].axvline(
+                maxpost_fitvals[i] - maxpost_fitvals[i],
+                color="c",
+                linestyle="--",
+                label="Maximum Likelihood Value",
+            )
+            axs[i].axvline(
+                -2 * values[i].std(), color="b", linestyle="--", label="2 sigma"
+            )
+            axs[i].axvline(2 * values[i].std(), color="b", linestyle="--")
+            axs[i].hist(
+                values[i] - maxpost_fitvals[i], bins=bins, label="Samples",
+            )
+            if scale:
+                axs[i].plot(
+                    x_range[i] - maxpost_fitvals[i],
+                    initials[i] * counts[i].max() / initials[i].max(),
+                    label="Initial Gaussian Probability",
+                    color="r",
+                )
+                axs[i].plot(
+                    x_range[i] - maxpost_fitvals[i],
+                    priors[i] * counts[i].max() / priors[i].max(),
+                    label="Prior Probability",
+                    color="g",
+                )
+            else:
+                axs[i].plot(
+                    x_range[i] - maxpost_fitvals[i],
+                    initials[i],
+                    label="Initial Gaussian Probability",
+                    color="r",
+                )
+                axs[i].plot(
+                    x_range[i] - maxpost_fitvals[i],
+                    priors[i],
+                    label="Prior Probability",
+                    color="g",
+                )
+        else:
+            handles, labels = axs[0].get_legend_handles_labels()
+            axs[i].set_axis_off()
+            axs[i].legend(handles, labels)
+    if file:
+        fig.savefig(file)
+        plt.close()
+    else:
+        plt.show()
+        plt.close()

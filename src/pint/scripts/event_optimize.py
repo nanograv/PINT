@@ -411,109 +411,18 @@ class emcee_fitter(Fitter):
             plt.savefig(ftr.model.PSR.value + "_htest_v_wgtcut_unweighted.png")
         plt.close()
 
-    def plot_priors(self, samples, bins=100, scale=False, file=False):
-        """
-        Show binned samples, prior probability distribution and an initial gaussian
-        probability distribution plotted with 2 sigma, maximum posterior and original
-        fit values marked.
-        
-        Parameters
-        ----------
-        samples 
-            Post MCMC integration samples that are input into a histogram and compared with the priors.     
-        
-        With scale is True
-            The priors and initial probability distributions are scaled to the peak of the histogram.
-        With scale is False
-            The priors and initial probability distributions are plotted without the scaling.
-        """
-
-        priors = []
-        initials = []
-        x_range = []
-        counts = []
-        for i in range(0, len(self.fitkeys[:-1])):
-            x_range.append(
-                np.linspace(samples[:, i].min(), samples[:, i].max(), num=bins)
-            )
-            priors.append(getattr(self.model, self.fitkeys[i]).prior.pdf(x_range[i]))
-            initials.append(
-                GaussianBoundedRV(
-                    loc=float(self.fitvals[i]), scale=float(self.fiterrs[i])
-                ).pdf(x_range[i])
-            )
-            a, x = np.histogram(samples[:, i], bins=bins)
-            counts.append(a)
-
-        fig, axs = plt.subplots(
-            len(self.fitkeys), figsize=(8, 11), constrained_layout=True
+    def plot_priors(self, chains, burnin, bins=100, scale=False, file=False):
+        plot_utils.plot_priors(
+            self.model,
+            chains,
+            self.fitvals,
+            self.fiterrs,
+            self.maxpost_fitvals,
+            burnin=burnin,
+            bins=bins,
+            scale=scale,
+            file=file,
         )
-
-        for i, p in enumerate(self.fitkeys):
-            if i != len(self.fitkeys[:-1]):
-                axs[i].set_xlabel(
-                    str(p)
-                    + ": Max Post Value - "
-                    + str("{:.9e}".format(self.maxpost_fitvals[i]))
-                    + " ("
-                    + str(getattr(self.model, p).units)
-                    + ")"
-                )
-                axs[i].axvline(
-                    self.fitvals[i] - self.maxpost_fitvals[i],
-                    color="m",
-                    linestyle="--",
-                    label="Original Fit Value",
-                )
-                axs[i].axvline(
-                    self.maxpost_fitvals[i] - self.maxpost_fitvals[i],
-                    color="c",
-                    linestyle="--",
-                    label="Maximum Likelihood Value",
-                )
-                axs[i].axvline(
-                    -2 * samples[:, i].std(), color="b", linestyle="--", label="2 sigma"
-                )
-                axs[i].axvline(2 * samples[:, i].std(), color="b", linestyle="--")
-                axs[i].hist(
-                    samples[:, i] - self.maxpost_fitvals[i], bins=bins, label="Samples",
-                )
-                if scale:
-                    axs[i].plot(
-                        x_range[i] - self.maxpost_fitvals[i],
-                        initials[i] * counts[i].max() / initials[i].max(),
-                        label="Initial Gaussian Probability",
-                        color="r",
-                    )
-                    axs[i].plot(
-                        x_range[i] - self.maxpost_fitvals[i],
-                        priors[i] * counts[i].max() / priors[i].max(),
-                        label="Prior Probability",
-                        color="g",
-                    )
-                else:
-                    axs[i].plot(
-                        x_range[i] - self.maxpost_fitvals[i],
-                        initials[i],
-                        label="Initial Gaussian Probability",
-                        color="r",
-                    )
-                    axs[i].plot(
-                        x_range[i] - self.maxpost_fitvals[i],
-                        priors[i],
-                        label="Prior Probability",
-                        color="g",
-                    )
-            else:
-                handles, labels = axs[0].get_legend_handles_labels()
-                axs[i].set_axis_off()
-                axs[i].legend(handles, labels)
-        if file:
-            fig.savefig(file)
-            plt.close()
-        else:
-            plt.show()
-            plt.close()
 
 
 def main(argv=None):
@@ -885,6 +794,10 @@ def main(argv=None):
     except ImportError:
         pass
 
+    # Plot the scaled prior probability alongside the initial gaussian probability distribution and the histogrammed samples
+    ftr.plot_priors(
+        chains, burnin, scale=True, file=ftr.model.PSR.value + "_priors_scaled.png"
+    )
     # Make a phaseogram with the 50th percentile values
     # ftr.set_params(dict(zip(ftr.fitkeys, np.percentile(samples, 50, axis=0))))
     # Make a phaseogram with the best MCMC result
@@ -900,11 +813,6 @@ def main(argv=None):
     for x, v in zip(xs, vs):
         f.write("%.5f  %12.5f\n" % (x, v))
     f.close()
-
-    # Plot the scaled prior probability alongside the initial gaussian probability distribution and the histogrammed samples
-    ftr.plot_priors(
-        samples, scale=True, file=ftr.model.PSR.value + "_priors_scaled.png"
-    )
 
     # Write out the par file for the best MCMC parameter est
     f = open(ftr.model.PSR.value + "_post.par", "w")

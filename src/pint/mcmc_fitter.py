@@ -430,6 +430,19 @@ class MCMCFitter(Fitter):
             plt.savefig(self.model.PSR.value + "_htest_v_wgtcut_unweighted.png")
         plt.close()
 
+    def plot_priors(self, chains, burnin, bins=100, scale=False, file=False):
+        plot_utils.plot_priors(
+            self.model,
+            chains,
+            self.fitvals,
+            self.fiterrs,
+            self.maxpost_fitvals,
+            burnin=burnin,
+            bins=bins,
+            scale=scale,
+            file=file,
+        )
+
 
 class MCMCFitterBinnedTemplate(MCMCFitter):
     """A subclass of MCMCFitter, designed to use a binned template with
