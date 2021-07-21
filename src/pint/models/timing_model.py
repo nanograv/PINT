@@ -2053,6 +2053,7 @@ class TimingModel:
         self,
         start_order=["astrometry", "spindown", "dispersion"],
         last_order=["jump_delay"],
+        *,
         include_info=True,
         comment=None,
     ):

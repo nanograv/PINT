@@ -1748,6 +1748,7 @@ class TOAs:
         format="tempo2",
         commentflag=None,
         order_by_index=True,
+        *,
         include_info=True,
         comment=None,
     ):
