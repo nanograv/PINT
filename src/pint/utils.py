@@ -1,24 +1,24 @@
 """Miscellaneous potentially-helpful functions."""
+import configparser
+import datetime
+import getpass
+import platform
 import re
+import textwrap
 from contextlib import contextmanager
 from copy import deepcopy
 from io import StringIO
-import getpass
-import platform
-import datetime
-import textwrap
-import configparser
 
 import astropy.constants as const
 import astropy.coordinates as coords
-import astropy.units as u
 import astropy.coordinates.angles as angles
+import astropy.units as u
 import numpy as np
 import scipy.optimize.zeros as zeros
 from astropy import log
 from scipy.special import fdtrc
-import pint
 
+import pint
 import pint.pulsar_ecliptic
 
 __all__ = [
