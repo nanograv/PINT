@@ -40,6 +40,8 @@ class DefaultMode(ColorMode):
         """
         Plots application's residuals in proper color scheme.
         """
+        jumped = self.application.jumped
+
         if self.application.yerrs is None:
             self.application.plkAxes.scatter(
                 self.application.xvals[~self.application.selected],
@@ -48,8 +50,8 @@ class DefaultMode(ColorMode):
                 color="blue",
             )
             self.application.plkAxes.scatter(
-                self.application.xvals[self.application.jumped],
-                self.application.yvals[self.application.jumped],
+                self.application.xvals[jumped],
+                self.application.yvals[jumped],
                 marker=".",
                 color="red",
             )
@@ -61,7 +63,7 @@ class DefaultMode(ColorMode):
             )
         else:
             self.application.plotErrorbar(~self.application.selected, color="blue")
-            self.application.plotErrorbar(self.application.jumped, color="red")
+            self.application.plotErrorbar(jumped, color="red")
             self.application.plotErrorbar(self.application.selected, color="orange")
 
 

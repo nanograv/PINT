@@ -12,10 +12,9 @@ import pytest
 from numpy.testing import assert_allclose
 from pinttestdata import datadir
 
-import pint.models.model_builder as mb
 import pint.models.parameter
 import pint.toa
-from pint.models import PhaseJump, parameter as p
+from pint.models import PhaseJump, get_model, parameter as p
 from pint.residuals import Residuals
 
 
@@ -23,7 +22,7 @@ class SimpleSetup:
     def __init__(self, par, tim):
         self.par = par
         self.tim = tim
-        self.m = mb.get_model(self.par)
+        self.m = get_model(self.par)
         self.t = pint.toa.get_TOAs(
             self.tim, ephem="DE405", planets=False, include_bipm=False
         )
@@ -187,7 +186,7 @@ class TestJUMP(unittest.TestCase):
     def setUpClass(cls):
         cls.parf = os.path.join(datadir, "B1855+09_NANOGrav_dfg+12_TAI.par")
         cls.timf = os.path.join(datadir, "B1855+09_NANOGrav_dfg+12.tim")
-        cls.JUMPm = mb.get_model(cls.parf)
+        cls.JUMPm = get_model(cls.parf)
         cls.toas = pint.toa.get_TOAs(
             cls.timf, ephem="DE405", planets=False, include_bipm=False
         )
@@ -312,7 +311,7 @@ def test_tim_file_gets_jump_flags(tim, flag_ranges):
 
 
 def test_multiple_jumps_add():
-    m = mb.get_model(
+    m = get_model(
         StringIO(
             """
     PSR J1234+5678
@@ -347,8 +346,11 @@ def test_multiple_jumps_add():
     second_jump.quantity = 75 * u.us
     r_sum = pint.residuals.Residuals(toas, m)
 
-    assert_allclose((r_first.resids + r_second.resids).to_value(u.us),
-                    r_sum.resids.to_value(u.us), atol=1e-3)
+    assert_allclose(
+        (r_first.resids + r_second.resids).to_value(u.us),
+        r_sum.resids.to_value(u.us),
+        atol=1e-3,
+    )
 
 
 @pytest.mark.parametrize(
@@ -391,3 +393,73 @@ def test_jump_parfile_roundtrip(j):
     assert nj.frozen == j.frozen
     if nj.uncertainty != j.uncertainty:
         assert_allclose(nj.uncertainty, j.uncertainty)
+
+
+@pytest.fixture
+def small():
+    m = get_model(
+        StringIO(
+            """
+    PSR J1234+5678
+    F0 1
+    PEPOCH 58000
+    POSEPOCH 58000
+    ELONG 0
+    ELAT 0
+    JUMP mjd 59000 70000 0
+    """
+        )
+    )
+    t = pint.toa.make_fake_toas(58000, 60000, 20, m)
+
+    class R:
+        pass
+
+    r = R()
+    r.m = m
+    r.t = t
+    for j in m.jumps:
+        if j.key == "mjd":
+            r.j = j
+    return r
+
+
+def test_tidy_jumps_all_ok(small):
+    small.j.frozen = False
+    small.m.tidy_jumps_for_fit(small.t)
+    assert not small.j.frozen
+
+
+def test_tidy_jumps_all_jumped(small):
+    small.j.frozen = False
+    small.j.key_value = (
+        astropy.time.Time(56000, format="mjd"),
+        astropy.time.Time(70000, format="mjd"),
+    )
+    small.m.tidy_jumps_for_fit(small.t)
+    assert small.j.frozen
+
+
+def test_tidy_jumps_irrelevant(small):
+    small.j.frozen = False
+    j2 = small.j.new_param(index=100, copy_all=True)
+    j2.key_value = (
+        astropy.time.Time(50000, format="mjd"),
+        astropy.time.Time(55000, format="mjd"),
+    )
+    small.m.components["PhaseJump"].add_param(j2)
+    small.m.tidy_jumps_for_fit(small.t)
+    assert not small.j.frozen
+    assert j2.frozen
+
+
+def test_tidy_jumps_cover_all_freeze_one(small):
+    small.j.frozen = False
+    j2 = small.j.new_param(index=100, copy_all=True)
+    j2.key_value = (
+        astropy.time.Time(50000, format="mjd"),
+        astropy.time.Time(59000, format="mjd"),
+    )
+    small.m.components["PhaseJump"].add_param(j2)
+    small.m.tidy_jumps_for_fit(small.t)
+    assert small.j.frozen != j2.frozen

@@ -313,8 +313,12 @@ class Pulsar:
                 raise ValueError("Some TOAs are already jumped")
             # No jumps, add some!
             log.info("Adding a GUI jump for these TOAs")
-            new_name = self.prefit_model.add_jump_and_flags(self.all_toas.table["flags"][selected])
-            log.info(f"Added new GUI jump parameter {getattr(self.prefit_model, new_name)}")
+            new_name = self.prefit_model.add_jump_and_flags(
+                self.all_toas.table["flags"][selected]
+            )
+            log.info(
+                f"Added new GUI jump parameter {getattr(self.prefit_model, new_name)}"
+            )
         else:
             if len(gui_jump_flags) > 1:
                 raise ValueError("TOAs are from different GUI jumps")
@@ -328,10 +332,14 @@ class Pulsar:
                     param_to_zap = pm
                     break
             else:
-                raise ValueError(f"Unable to find JUMP parameter for -gui_jump {the_value}")
+                raise ValueError(
+                    f"Unable to find JUMP parameter for -gui_jump {the_value}"
+                )
             if len(param_to_zap.select_toa_mask(self.all_toas)) == 0:
                 # Parameter no longer selects any TOAs
-                log.info(f"No remaining TOAs appear JUMPed with {the_value}, removing {param_to_zap}")
+                log.info(
+                    f"No remaining TOAs appear JUMPed with {the_value}, removing {param_to_zap}"
+                )
                 self.prefit_model.remove_param(param_to_zap.name)
 
     def fit(self, selected, iters=1):

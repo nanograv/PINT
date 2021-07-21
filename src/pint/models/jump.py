@@ -203,6 +203,8 @@ class PhaseJump(PhaseComponent):
         tbl = toas.table
         jphase = np.zeros(len(tbl)) * (self.JUMP1.units * self._parent.F0.units)
         for jump_par in self.jumps:
+            if jump_par.value is None:
+                continue
             mask = jump_par.select_toa_mask(toas)
             # NOTE: Currently parfile jump value has opposite sign with our
             # phase calculation.
@@ -239,11 +241,6 @@ class PhaseJump(PhaseComponent):
         for jump_par in self.jumps:
             result += jump_par.as_parfile_line()
         return result
-
-    def get_jump_param_objects(self):
-        """Returns a list of the maskParameter objects for all JUMPs."""
-        jump_obs = list(self.jump.values())
-        return jump_obs
 
     def add_jump_and_flags(self, toa_flags, key="gui_jump", key_value=None):
         """Add jump object to PhaseJump and appropriate flags to TOA tables.
@@ -336,22 +333,22 @@ class PhaseJump(PhaseComponent):
             The TOAs that this model is to be used with.
         """
         masks = {}
-        for n in self.free_params:
-            if not n.startswith("JUMP"):
+        for pm in self.jumps:
+            if pm.frozen:
                 continue
             c = np.zeros(len(toas), dtype=bool)
-            pm = getattr(self, n)
+            c[pm.select_toa_mask(toas)] = True
             if not np.any(c):
+                log.info(f"No TOAs affected by {pm.name}, freezing it")
                 pm.frozen = True
             else:
-                c[pm.select_toa_mask(toas)] = True
-                masks[n] = pm, c
+                masks[pm.name] = pm, c
         while True:
             affected = np.zeros(len(toas), dtype=bool)
             most_n = None
             most_pm = None
             most_count = 0
-            for n, (pm, c) in masks:
+            for n, (pm, c) in masks.items():
                 affected |= c
                 if c.sum() > most_count:
                     most_count = c.sum()
@@ -363,7 +360,3 @@ class PhaseJump(PhaseComponent):
                 del masks[most_n]
             else:
                 break
-
-
-
-

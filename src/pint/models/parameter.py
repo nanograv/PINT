@@ -1464,14 +1464,6 @@ class maskParameter(floatParameter):
         aliases=[],
     ):
         self.is_mask = True
-        # {key_name: (keyvalue parse function, keyvalue length)}
-        # Move this to some other places.
-        self.key_identifier = {
-            "mjd": (lambda x: astropy.time.Time(x, format="mjd").mjd, 2),
-            "freq": (lambda x: u.Quantity(x, u.MHz, copy=False), 2),
-            "name": (str, 1),
-            "tel": (lambda x: get_observatory(str(x)).name, 1),
-        }
 
         self.key = key
         self.key_value = key_value
