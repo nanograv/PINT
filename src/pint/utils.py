@@ -1106,20 +1106,20 @@ def p_to_f(p, pd, pdd=None):
 
     Parameters
     ----------
-    p : :class:`astropy.units.Quantity`
+    p : astropy.units.Quantity
         pulsar period (or frequency)
-    pd : :class:`astropy.units.Quantity`
+    pd : astropy.units.Quantity
         period derivative (or frequency derivative)        
-    pdd : :class:`astropy.units.Quantity`, optional
+    pdd : astropy.units.Quantity, optional
         period second derivative (or frequency second derivative)
 
     Returns
     -------
-    f : :class:`astropy.units.Quantity`
+    f : astropy.units.Quantity
         pulsar frequency (or period)
-    fd : :class:`astropy.units.Quantity`
+    fd : astropy.units.Quantity
         pulsar frequency derivative (or period derivative)
-    fdd : :class:`astropy.units.Quantity`
+    fdd : astropy.units.Quantity
         frequency second derivative (or period second derivative) if pdd is supplied        
     """
     f = 1.0 / p
@@ -1142,24 +1142,24 @@ def pferrs(porf, porferr, pdorfd=None, pdorfderr=None):
 
     Parameters
     ----------
-    porf : :class:`astropy.units.Quantity`
+    porf : astropy.units.Quantity
         pulsar period (or frequency)
-    porferr : :class:`astropy.units.Quantity`
+    porferr : astropy.units.Quantity
         pulsar period uncertainty (or frequency uncertainty)
-    pdorfd : :class:`astropy.units.Quantity`, optional
+    pdorfd : astropy.units.Quantity, optional
         pulsar period derivative (or frequency derivative)
-    pdorfderr : :class:`astropy.units.Quantity`, optional
+    pdorfderr : astropy.units.Quantity, optional
         pulsar period derivative uncertainty (or frequency derivative uncertainty)
 
     Returns
     -------
-    forp : :class:`astropy.units.Quantity`
+    forp : astropy.units.Quantity
         pulsar frequency (or period)
-    forperr : :class:`astropy.units.Quantity`
+    forperr : astropy.units.Quantity
         pulsar frequency uncertainty (or period uncertainty)
-    fdorpd : :class:`astropy.units.Quantity`
+    fdorpd : astropy.units.Quantity
         pulsar frequency derivative (or period derivative) if pdorfd supplied
-    fdorpderr : :class:`astropy.units.Quantity` if pdorfd supplied
+    fdorpderr : astropy.units.Quantity if pdorfd supplied
         pulsar frequency derivative uncertainty (or period derivative uncertainty)
     """
     if pdorfd is None:
@@ -1184,18 +1184,18 @@ def pulsar_age(f, fdot, n=3, fo=1e99 * u.Hz):
 
     Parameters
     ----------
-    f : :class:`astropy.units.Quantity`
+    f : astropy.units.Quantity
         pulsar frequency
-    fdot : :class:`astropy.units.Quantity`
+    fdot : astropy.units.Quantity
         frequency derivative
     n : int, optional
         braking index (default = 3)
-    fo : :class:`astropy.units.Quantity`, optional
+    fo : astropy.units.Quantity, optional
         initial frequency
 
     Returns
     -------
-    age : :class:`astropy.units.Quantity`
+    age : astropy.units.Quantity
         pulsar age in ``u.yr``
 
     Notes
@@ -1214,16 +1214,16 @@ def pulsar_edot(f, fdot, I=1.0e45 * u.g * u.cm ** 2):
 
     Parameters
     ----------
-    f : :class:`astropy.units.Quantity`
+    f : astropy.units.Quantity
         pulsar frequency
-    fdot : :class:`astropy.units.Quantity`
+    fdot : astropy.units.Quantity
         frequency derivative
-    I : :class:`astropy.units.Quantity`, optional
+    I : astropy.units.Quantity, optional
         pulsar moment of inertia, default of 1e45 g*cm**2
 
     Returns
     -------
-    Edot : :class:`astropy.units.Quantity`
+    Edot : astropy.units.Quantity
         pulsar spin-down luminosity in ``u.erg/u.s``
 
     Notes
@@ -1241,14 +1241,14 @@ def pulsar_B(f, fdot):
 
     Parameters
     ----------
-    f : :class:`astropy.units.Quantity`
+    f : astropy.units.Quantity
         pulsar frequency
-    fdot : :class:`astropy.units.Quantity`
+    fdot : astropy.units.Quantity
         frequency derivative
 
     Returns
     -------
-    B : :class:`astropy.units.Quantity`
+    B : astropy.units.Quantity
         pulsar dipole magnetic field in ``u.G``
 
     Notes
@@ -1329,16 +1329,16 @@ def mass_funct2(mp, mc, i):
 
     Parameters
     ----------
-    mp : :class:`astropy.units.Quantity`
+    mp : astropy.units.Quantity
         Pulsar mass, typically in ``u.solMass``
-    mc : :class:`astropy.units.Quantity`
+    mc : astropy.units.Quantity
         Companion mass, typically in ``u.solMass``
-    i : :class:`astropy.coordinates.Angle`
+    i : astropy.coordinates.Angle
         Inclination angle, in ``u.deg`` or ``u.rad``
 
     Returns
     -------
-    f_m : :class:`astropy.units.Quantity`
+    f_m : astropy.units.Quantity
         Mass function in ``u.solMass``
 
     Raises
@@ -1370,23 +1370,32 @@ def pulsar_mass(pb, x, mc, inc):
 
     Parameters
     ----------
-    pb : :class:`astropy.units.Quantity`
+    pb : astropy.units.Quantity
         Binary orbital period
-    x : :class:`astropy.units.Quantity`
-        Projected semi-major axis (aka ASINI) in ``pint.ls``
-    mc : :class:`astropy.units.Quantity`
+    x : astropy.units.Quantity
+        Projected pulsar semi-major axis (aka ASINI) in ``pint.ls``
+    mc : astropy.units.Quantity
         Companion mass in ``u.solMass``
-    inc : :class:`astropy.coordinates.Angle`
+    inc : astropy.coordinates.Angle
         Inclination angle, in ``u.deg`` or ``u.rad``
 
     Returns
     -------
-    mass : :class:`astropy.units.Quantity` in ``u.solMass``
+    mass : astropy.units.Quantity in ``u.solMass``
 
     Raises
     ------
     ValueError
         If the input data are not appropriate quantities
+
+    Example
+    -------
+    >>> import pint
+    >>> import pint.utils
+    >>> from astropy import units as u
+    >>> print(pint.utils.pulsar_mass(2*u.hr, .2*pint.ls, 0.5*u.Msun, 60*u.deg))
+    7.6018341985817885 solMass
+
 
     Notes
     -------
@@ -1434,24 +1443,32 @@ def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
 
     Parameters
     ----------
-    pb : :class:`astropy.units.Quantity`
+    pb : astropy.units.Quantity
         Binary orbital period
-    x : :class:`astropy.units.Quantity`
-        Projected semi-major axis (aka ASINI) in ``pint.ls``
-    inc : :class:`astropy.coordinates.Angle`, optional
+    x : astropy.units.Quantity`
+        Projected pulsar semi-major axis (aka ASINI) in ``pint.ls``
+    inc : astropy.coordinates.Angle, optional
         Inclination angle, in ``u.deg`` or ``u.rad.`` Default is 60 deg.
-    mpsr : :class:`astropy.units.Quantity`, optional
+    mpsr : astropy.units.Quantity, optional
         Pulsar mass in ``u.solMass``. Default is 1.4 Msun
 
     Returns
     -------
-    mass : :class:`astropy.units.Quantity`
+    mass : astropy.units.Quantity
         In ``u.solMass``
 
     Raises
     ------
     ValueError
         If the input data are not appropriate quantities
+
+    Example
+    -------
+    >>> import pint
+    >>> import pint.utils
+    >>> from astropy import units as u
+    >>> print(pint.utils.companion_mass(1*u.d, 2*pint.ls, inc=30*u.deg, mpsr=1.3*u.Msun))
+    0.6363138973397279 solMass
 
     Notes
     -----
@@ -1662,14 +1679,14 @@ def add_dummy_distance(c, distance=1 * u.kpc):
 
     Parameters
     ----------
-    c: :class:`astropy.coordinates.sky_coordinate.SkyCoord` 
+    c: astropy.coordinates.sky_coordinate.SkyCoord
         current SkyCoord object without distance but with proper motion and obstime
-    distance: :class:`astropy.units.Quantity`, optional
+    distance: astropy.units.Quantity, optional
         distance to supply
 
     Returns
     -------
-    cnew : :class:`astropy.coordinates.sky_coordinate.SkyCoord` 
+    cnew : astropy.coordinates.sky_coordinate.SkyCoord
         new SkyCoord object with a distance attached
     """
 
@@ -1743,12 +1760,12 @@ def remove_dummy_distance(c):
 
     Parameters
     ----------
-    c: :class:`astropy.coordinates.sky_coordinate.SkyCoord` 
+    c: astropy.coordinates.sky_coordinate.SkyCoord
         current SkyCoord object with distance and with proper motion and obstime
 
     Returns
     -------
-    cnew : :class:`astropy.coordinates.sky_coordinate.SkyCoord` 
+    cnew : astropy.coordinates.sky_coordinate.SkyCoord
         new SkyCoord object with a distance removed
     """
 
@@ -1822,9 +1839,9 @@ def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params=
 
     Parameters
     ----------
-    fitter: :class:`pint.fitter` 
+    fitter: pint.fitter.Fitter
         current fitter object containing a model and parameter covariance matrix
-    toas: :class:`pint.toa.TOAs` 
+    toas: pint.toa.TOAs
         TOAs to calculate models
     Nmodels: int, optional
         number of random models to calculate
@@ -1835,7 +1852,7 @@ def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params=
 
     Returns
     -------
-    dphase : :class:`np.ndarray`
+    dphase : np.ndarray
         phase difference with respect to input model, size is [Nmodels, len(toas)]
     random_models : list, optional
         list of random models (each is a :class:`pint.models.timing_model.TimingModel`)
@@ -1843,7 +1860,7 @@ def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params=
     Note
     ----
     To calculate new TOAs, you can do:
-        ``tnew = pint.toa.make_fake_toas(MJDmin, MJDmax, Ntoa, model=fitter.model)``
+        ``tnew = :func:~pint.toa.make_fake_toas(MJDmin, MJDmax, Ntoa, model=fitter.model)``
     or similar
     """
     Nmjd = len(toas)
