@@ -3,6 +3,12 @@ import re
 from contextlib import contextmanager
 from copy import deepcopy
 from io import StringIO
+import getpass
+import platform
+import datetime
+import textwrap
+import git
+import configparser
 
 import astropy.constants as const
 import astropy.coordinates as coords
@@ -12,6 +18,7 @@ import numpy as np
 import scipy.optimize.zeros as zeros
 from astropy import log
 from scipy.special import fdtrc
+import pint
 
 import pint.pulsar_ecliptic
 
@@ -1670,14 +1677,51 @@ def remove_dummy_distance(c):
 
 
 def info_string(prefix_string="# ", comment=None):
-    import pint
-    import getpass
-    import platform
-    import datetime
+    """
+    Returns an informative string about the current state of PINT.
 
-    s = f"Created: {datetime.datetime.now().isoformat()}\nPINT_version: {pint.__version__}\nUser: {getpass.getuser()}\nHost: {platform.node()}\nOS: {platform.platform()}"
+    Parameters
+    ----------
+    prefix_string: str, default='# '
+        a string to be prefixed to the output (often to designate as a comment or similar)
+    comment: str, optional
+        a free-form comment string to be included if present
+    
+    Returns
+    -------
+    s
+        informative string
+
+    example:
+    # Created: 2021-07-09T13:52:43.873908
+    # PINT_version: 0.8.2+297.g5ddf3207.dirty
+    # User: dlk
+    # Host: margle-2.local
+    # OS: macOS-10.14.6-x86_64-i386-64bit
+    # Comment: trying combination
+    """
+
+    # try to get the git username
+    # if defined
+    try:
+        # user-level git config
+        c = git.GitConfigParser()
+        username = c.get_value("user", option="name") + f" ({getpass.getuser()})"
+    except configparser.NoOptionError:
+        username = getpass.getuser()
+
+    s = f"""
+    Created: {datetime.datetime.now().isoformat()}
+    PINT_version: {pint.__version__}
+    User: {username}
+    Host: {platform.node()}
+    OS: {platform.platform()}
+    """
+
     if comment is not None:
-        s += f"\nComment: {comment}"
+        comment = comment.replace("\n", "\\n")
+        s += f"Comment: {comment}"
+    s = textwrap.dedent(s)
     if (prefix_string is not None) and (len(prefix_string) > 0):
         s = "\n".join([prefix_string + x for x in s.split("\n")])
     return s
