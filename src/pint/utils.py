@@ -1703,25 +1703,32 @@ def info_string(prefix_string="# ", comment=None):
         informative string
 
 
-    Notes
+    Examples
     -------
 
-    Example:
-    # Created: 2021-07-09T13:52:43.873908
-    # PINT_version: 0.8.2+297.g5ddf3207.dirty
-    # User: dlk
+    >>> import pint.utils
+    >>> print(pint.utils.info_string(prefix_string="# ",comment="Example comment"))
+    # 
+    # Created: 2021-07-21T09:39:45.606894
+    # PINT_version: 0.8.2+311.ge351099d
+    # User: David Kaplan (dlk)
     # Host: margle-2.local
     # OS: macOS-10.14.6-x86_64-i386-64bit
-    # Comment: trying combination
+    # Comment: Example comment
+    
 
     Multi-line comments are allowed:
-    # Created: 2021-07-09T13:52:43.873908
-    # PINT_version: 0.8.2+297.g5ddf3207.dirty
-    # User: dlk
-    # Host: margle-2.local
-    # OS: macOS-10.14.6-x86_64-i386-64bit
-    # Comment: trying combination
-    # Comment: will it work?
+
+    >>> import pint.utils
+    >>> print(pint.utils.info_string(prefix_string="C ",comment="Example multi-line comment\nAlso using a different comment character"))
+    C 
+    C Created: 2021-07-21T09:40:34.172333
+    C PINT_version: 0.8.2+311.ge351099d
+    C User: David Kaplan (dlk)
+    C Host: margle-2.local
+    C OS: macOS-10.14.6-x86_64-i386-64bit
+    C Comment: Example multi-line comment
+    C Comment: Also using a different comment character    
     """
 
     # try to get the git user.name
