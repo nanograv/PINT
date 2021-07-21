@@ -9,6 +9,7 @@ import copy
 import gzip
 import hashlib
 import os
+import pickle
 import re
 import warnings
 from collections import OrderedDict
@@ -19,18 +20,21 @@ import astropy.units as u
 import numpy as np
 import numpy.ma
 from astropy import log
-from astropy.coordinates import EarthLocation
-from astropy.coordinates import ICRS, CartesianDifferential, CartesianRepresentation
-import pickle
+from astropy.coordinates import (
+    ICRS,
+    CartesianDifferential,
+    CartesianRepresentation,
+    EarthLocation,
+)
 
 import pint
-from pint.observatory import Observatory, get_observatory, bipm_default
+from pint.observatory import Observatory, bipm_default, get_observatory
 from pint.observatory.special_locations import T2SpacecraftObs
 from pint.observatory.topo_obs import TopoObs
-from pint.pulsar_mjd import Time
-from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 from pint.phase import Phase
 from pint.pulsar_ecliptic import PulsarEcliptic
+from pint.pulsar_mjd import Time
+from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 
 __all__ = [
     "TOAs",
