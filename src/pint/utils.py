@@ -2,13 +2,14 @@
 import configparser
 import datetime
 import getpass
+import os
 import platform
 import re
 import textwrap
+from collections import OrderedDict
 from contextlib import contextmanager
 from copy import deepcopy
 from io import StringIO
-from collections import OrderedDict
 
 import astropy.constants as const
 import astropy.coordinates as coords
@@ -1693,8 +1694,7 @@ def remove_dummy_distance(c):
 
 
 def info_string(prefix_string="# ", comment=None):
-    """
-    Returns an informative string about the current state of PINT.
+    """Returns an informative string about the current state of PINT.
 
     Adds:
     Creation date
@@ -1768,15 +1768,18 @@ def info_string(prefix_string="# ", comment=None):
     """
 
     s = textwrap.dedent(s)
+    # remove blank lines
+    s = os.linesep.join([x for x in s.splitlines() if x])
     if comment is not None:
-        if "\n" in comment:
-            s += "\n".join([f"Comment: {x}" for x in comment.split("\n")])
+        if os.linesep in comment:
+            s += os.linesep.join([f"Comment: {x}" for x in comment.splitlines()])
         else:
             s += f"Comment: {comment}"
 
     if (prefix_string is not None) and (len(prefix_string) > 0):
-        s = "\n".join([prefix_string + x for x in s.split("\n")])
+        s = os.linesep.join([prefix_string + x for x in s.splitlines()])
     return s
+
 
 def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params="all"):
     """
@@ -1893,10 +1896,10 @@ def list_parameters(class_=None):
     if class_ is not None:
         from pint.models.parameter import (
             boolParameter,
-            strParameter,
             intParameter,
-            prefixParameter,
             maskParameter,
+            prefixParameter,
+            strParameter,
         )
 
         result = []
