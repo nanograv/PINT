@@ -1707,7 +1707,7 @@ def info_string(prefix_string="# ", comment=None):
         # user-level git config
         c = git.GitConfigParser()
         username = c.get_value("user", option="name") + f" ({getpass.getuser()})"
-    except configparser.NoOptionError, ImportError:
+    except (configparser.NoOptionError, ImportError):
         username = getpass.getuser()
 
     s = f"""
