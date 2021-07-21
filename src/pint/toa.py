@@ -952,8 +952,7 @@ def make_fake_toas(
 
 
 def _cluster_by_gaps(t, gap):
-    """
-    A utility function to cluster times according to gap-less stretches.
+    """A utility function to cluster times according to gap-less stretches.
 
     This function is used by :func:`pint.toa.TOAs.get_clusters` to determine
     the clustering.
@@ -963,7 +962,7 @@ def _cluster_by_gaps(t, gap):
     t : :class:`np.ndarray`
         Input times to be clustered
     gap : float
-        gap for clustering, same units as t
+        gap for clustering, same units as `t`
 
     Returns
     -------
