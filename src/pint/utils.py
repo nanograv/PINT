@@ -56,6 +56,7 @@ __all__ = [
     "FTest",
     "add_dummy_distance",
     "remove_dummy_distance",
+    "info_string",
 ]
 
 
@@ -1697,20 +1698,27 @@ def info_string(prefix_string="# ", comment=None):
     """Returns an informative string about the current state of PINT.
 
     Adds:
-    Creation date
-    PINT version
-    Username
-    Host
-    OS
-    plus a user-supplied comment (if present).
+    
+    * Creation date
 
-    Username is given by the `gitpython` global configuration `user.name` (if available),
-    otherwise `getpass.getuser()`.
+    * PINT version
+
+    * Username
+
+    * Host
+
+    * OS
+
+    * plus a user-supplied comment (if present).
+
+    Username is given by the ``gitpython`` global configuration ``user.name``
+    (if available), otherwise ``getpass.getuser()``.
 
     Parameters
     ----------
     prefix_string: str, default='# '
-        a string to be prefixed to the output (often to designate as a comment or similar)
+        a string to be prefixed to the output (often to designate as a
+        comment or similar)
     comment: str, optional
         a free-form comment string to be included if present
     
@@ -1719,13 +1727,10 @@ def info_string(prefix_string="# ", comment=None):
     s : str
         informative string
 
-
     Examples
-    -------
-
+    --------
     >>> import pint.utils
     >>> print(pint.utils.info_string(prefix_string="# ",comment="Example comment"))
-    # 
     # Created: 2021-07-21T09:39:45.606894
     # PINT_version: 0.8.2+311.ge351099d
     # User: David Kaplan (dlk)
@@ -1733,12 +1738,11 @@ def info_string(prefix_string="# ", comment=None):
     # OS: macOS-10.14.6-x86_64-i386-64bit
     # Comment: Example comment
     
-
     Multi-line comments are allowed:
 
     >>> import pint.utils
-    >>> print(pint.utils.info_string(prefix_string="C ",comment="Example multi-line comment\nAlso using a different comment character"))
-    C 
+    >>> print(pint.utils.info_string(prefix_string="C ",
+    ...                              comment="Example multi-line comment\\nAlso using a different comment character"))
     C Created: 2021-07-21T09:40:34.172333
     C PINT_version: 0.8.2+311.ge351099d
     C User: David Kaplan (dlk)
@@ -1747,7 +1751,6 @@ def info_string(prefix_string="# ", comment=None):
     C Comment: Example multi-line comment
     C Comment: Also using a different comment character    
     """
-
     # try to get the git user.name
     # if defined
     try:
@@ -1772,9 +1775,11 @@ def info_string(prefix_string="# ", comment=None):
     s = os.linesep.join([x for x in s.splitlines() if x])
     if comment is not None:
         if os.linesep in comment:
-            s += os.linesep.join([f"Comment: {x}" for x in comment.splitlines()])
+            s += os.linesep + os.linesep.join(
+                [f"Comment: {x}" for x in comment.splitlines()]
+            )
         else:
-            s += f"Comment: {comment}"
+            s += f"{os.linesep}Comment: {comment}"
 
     if (prefix_string is not None) and (len(prefix_string) > 0):
         s = os.linesep.join([prefix_string + x for x in s.splitlines()])
