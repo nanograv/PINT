@@ -1750,6 +1750,11 @@ def info_string(prefix_string="# ", comment=None):
     C OS: macOS-10.14.6-x86_64-i386-64bit
     C Comment: Example multi-line comment
     C Comment: Also using a different comment character    
+
+    Notes
+    -----
+    This can be called via ``t.write_TOA_file("combined.tim",comment="trying combination")``
+    for a tim file, or ``m.as_parfile(comment="test parfile writing")`` for par file    
     """
     # try to get the git user.name
     # if defined
