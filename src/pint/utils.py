@@ -1698,7 +1698,7 @@ def info_string(prefix_string="# ", comment=None):
     """Returns an informative string about the current state of PINT.
 
     Adds:
-    
+
     - Creation date
 
     - PINT version
@@ -1721,7 +1721,7 @@ def info_string(prefix_string="# ", comment=None):
         comment or similar)
     comment: str, optional
         a free-form comment string to be included if present
-    
+
     Returns
     -------
     str
@@ -1737,7 +1737,7 @@ def info_string(prefix_string="# ", comment=None):
     # Host: margle-2.local
     # OS: macOS-10.14.6-x86_64-i386-64bit
     # Comment: Example comment
-    
+
     Multi-line comments are allowed:
 
     >>> import pint.utils
@@ -1749,12 +1749,12 @@ def info_string(prefix_string="# ", comment=None):
     C Host: margle-2.local
     C OS: macOS-10.14.6-x86_64-i386-64bit
     C Comment: Example multi-line comment
-    C Comment: Also using a different comment character    
+    C Comment: Also using a different comment character
 
     Notes
     -----
-    This can be called via ``t.TOAs.write_TOA_file>("combined.tim",comment="trying combination")``
-    for a tim file, or ``m.as_parfile(comment="test parfile writing")`` for par file    
+    This can be called via ``t.`` :func:`~pint.toa.TOAs.write_TOA_file` ``("combined.tim",comment="trying combination")``
+    for a tim file, or ``m.`` :func:`:func:`~pint.models.timing_model.TimingModel.as_parfile` ``(comment="test parfile writing")`` for par file
     """
     # try to get the git user.name
     # if defined
