@@ -1610,30 +1610,32 @@ class TOAs:
             log.error("No previous TOA table found.  No changes made.")
 
     def get_summary(self):
-        """Return a short ASCII summary of the TOAs."""
-        s = "Number of TOAs:  %d\n" % self.ntoas
+        """Return a short ASCII summary of the TOAs.
+
+        This includes summary information about the errors and frequencies
+        but is never more than a few lines regardless of how many TOAs there are.
+        """
+        s = f"Number of TOAs:  {self.ntoas}\n"
         if len(self.commands) and type(self.commands[0]) is list:
-            s += "Number of commands:  %s\n" % str([len(x) for x in self.commands])
+            s += f"Number of commands:  {[len(x) for x in self.commands]}\n"
         else:
-            s += "Number of commands:  %d\n" % len(self.commands)
-        s += "Number of observatories:  %d %s\n" % (
-            len(self.observatories),
-            list(self.observatories),
-        )
-        s += "MJD span:  %.3f to %.3f\n" % (self.first_MJD.mjd, self.last_MJD.mjd)
-        s += "Date span: {} to {}\n".format(self.first_MJD.iso, self.last_MJD.iso)
+            s += f"Number of commands:  {len(self.commands)}\n"
+        s += f"Number of observatories: {len(self.observatories)} {list(self.observatories)}\n"
+        s += "MJD span:  {self.first_MJD.mjd:.3f} to {self.last_MJD.mjd:.3f}\n"
+        s += "Date span: {self.first_MJD.iso} to {self.last_MJD.iso}\n"
         for ii, key in enumerate(self.table.groups.keys):
             grp = self.table.groups[ii]
-            s += "%s TOAs (%d):\n" % (key["obs"], len(grp))
-            s += "  Min freq:      {:.3f} \n".format(np.min(grp["freq"].to(u.MHz)))
-            s += "  Max freq:      {:.3f} \n".format(np.max(grp["freq"].to(u.MHz)))
-            s += "  Min error:     {:.3g}\n".format(np.min(grp["error"].to(u.us)))
-            s += "  Max error:     {:.3g}\n".format(np.max(grp["error"].to(u.us)))
-            s += "  Median error:  {:.3g}\n".format(np.median(grp["error"].to(u.us)))
+            s += "{key['obs']} TOAs ({len(grp)}):\n"
+            s += "  Min freq:      {np.min(grp['freq'].to(u.MHz)):.3f}\n"
+            s += "  Max freq:      {np.max(grp['freq'].to(u.MHz)):.3f}\n"
+            s += "  Min error:     {np.min(grp['error'].to(u.us)):.3g}\n"
+            s += "  Max error:     {np.max(grp['error'].to(u.us)):.3g}\n"
+            s += "  Median error:  {np.median(grp['error'].to(u.us)):.3g}\n"
         return s
 
     def print_summary(self):
-        """Write a summary of the TOAs to stdout."""
+        """Prints self.get_summary()."""
+        # FIXME: really do we need to have this function?
         print(self.get_summary())
 
     def phase_columns_from_flags(self):
