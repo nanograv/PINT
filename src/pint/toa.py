@@ -1517,10 +1517,11 @@ class TOAs:
         separated by a gap larger than the gap limit, a new cluster
         starts and continues until another such gap is found.
 
-        Cluster info can be added as a column to the ``self.table`` object if `add_column`
-        is True.  In that case  ``self.table.meta['cluster_gap']``  will be set to the
-        `gap_limit`.  If the desired clustering corresponds to that in ``self.table`` then
-        that column is returned.
+        Cluster info can be added as a ``clusters`` column to the
+        :attr:`pint.toa.TOAs.table` object if `add_column` is True.
+        In that case  ``self.table.meta['cluster_gap']``  will be set to the
+        `gap_limit`.  If the desired clustering corresponds to that in
+        :attr:`pint.toa.TOAs.table` then that column is returned.
         
         Parameters
         ----------
@@ -1531,7 +1532,7 @@ class TOAs:
 
         Returns
         -------
-        clusters : np.ndarray
+        clusters : numpy.ndarray
             The cluster number associated to each TOA. Clusters are numbered
             chronologically from zero.
         """
