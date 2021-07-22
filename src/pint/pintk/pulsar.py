@@ -106,7 +106,25 @@ class Pulsar:
     def name(self):
         return getattr(self.prefit_model, "PSR").value
 
+    @property
+    def jumped(self):
+        """Boolean array indicating which TOAs are affected by a JUMP.
+
+        This reports only those affected by unfrozen jumps, and the boolean
+        array matches ``self.all_toas``.
+        """
+        jumped = np.zeros(len(self.all_toas), dtype=bool)
+        # FIXME: prefit or postfit?
+        model = self.prefit_model
+        if hasattr(model, "jumps"):
+            for pm in model.jumps:
+                if not pm.frozen:
+                    jumped[pm.select_toa_mask(self.all_toas)] = True
+            log.info(f"Model jumps {jumped.sum()} of {len(jumped)} TOAs.")
+        return jumped
+
     def __getitem__(self, key):
+        # FIXME: why use this instead of just looking it up in prefit_model?
         try:
             return getattr(self.prefit_model, key)
         except AttributeError:

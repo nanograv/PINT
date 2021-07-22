@@ -16,7 +16,6 @@ from pint.models import (
     DEFAULT_ORDER,
     AstrometryEquatorial,
     BinaryELL1,
-    DelayJump,
     Spindown,
     TimingModel,
     Wave,
@@ -91,10 +90,10 @@ class TestModelBuilding:
             "TestTimingModel", [BinaryELL1(), AstrometryEquatorial(), Spindown()]
         )
 
-        tm.add_component(DelayJump(), validate=False)
+        tm.add_component(PhaseJump(), validate=False)
         # Test link
         # TODO may be add a get_component function
-        cp = tm.components["DelayJump"]
+        cp = tm.components["PhaseJump"]
         assert cp._parent == tm
 
         # Test order

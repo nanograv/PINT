@@ -623,9 +623,6 @@ class PlkWidget(tk.Frame):
         fit the selected points using the current pre-fit model
         """
         if not self.psr is None:
-            # check jumps wont cancel fit, if so, exit here
-            if self.check_jump_invalid() == True:
-                return None
             if self.psr.fitted:
                 # append the current state to the state stack
                 self.current_state.psr = copy.deepcopy(self.psr)
@@ -899,18 +896,6 @@ class PlkWidget(tk.Frame):
             miny = miny.to(u.us)
         return miny, maxy
 
-    @property
-    def jumped(self):
-        jumped = np.zeros(len(self.psr.all_toas), dtype=bool)
-        # FIXME: prefit or postfit?
-        model = self.psr.prefit_model
-        if hasattr(model, "jumps"):
-            for pm in model.jumps:
-                if not pm.frozen:
-                    jumped[pm.select_toa_mask(self.psr.all_toas)] = True
-            log.info(f"Model jumps {jumped.sum()} of {len(jumped)} TOAs.")
-        return jumped
-
     def print_info(self):
         """
         Write information about the current selection, or all points
@@ -1095,26 +1080,6 @@ class PlkWidget(tk.Frame):
                 ind = None
 
         return ind
-
-    def check_jump_invalid(self):
-        """checks if jumps will cancel the attempted fit"""
-        if "PhaseJump" not in self.psr.prefit_model.components:
-            return False
-        fit_jumps = []
-        for param in self.psr.prefit_model.params:
-            if getattr(
-                self.psr.prefit_model, param
-            ).frozen == False and param.startswith("JUMP"):
-                fit_jumps.append(int(param[4:]))
-        jumps = [
-            "jump" in dict.keys() and any(np.in1d(dict["jump"], fit_jumps))
-            for dict in self.psr.selected_toas.table["flags"]
-        ]
-        if all(jumps):
-            log.warn(
-                "toas being fit must not all be jumped. Remove or uncheck at least one jump in the selected toas before fitting."
-            )
-            return True
 
     def canvasClickEvent(self, event):
         """

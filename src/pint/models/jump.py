@@ -12,73 +12,6 @@ log = logging.getLogger(__name__)
 __all__ = ["PhaseJump"]
 
 
-class DelayJump(DelayComponent):
-    """Delay jumps
-
-    This is a different kind of JUMP, conceptually affecting the TOAs directly,
-    so that a 60s jump would advance the pulsar around its orbit by 60 extra
-    seconds. The conventional JUMP affects only the observed phase, as you
-    would expect if they are due to a redefinition of phase zero in a template.
-
-    Parameters supported:
-
-    .. paramtable::
-        :class: pint.models.jump.DelayJump
-
-    Note
-    ----
-    This component is disabled for now, since we don't have any method
-    to identify the phase jumps and delay jumps.
-    """
-
-    register = False
-    category = "delay_jump"
-
-    def __init__(self):
-        super().__init__()
-        self.add_param(maskParameter(name="JUMP", units="second"))
-        self.delay_funcs_component += [self.jump_delay]
-
-    def setup(self):
-        super().setup()
-        self.jumps = []
-        for mask_par in self.get_params_of_type("maskParameter"):
-            if mask_par.startswith("JUMP"):
-                self.jumps.append(mask_par)
-        for j in self.jumps:
-            self.register_deriv_funcs(self.d_delay_d_jump, j)
-
-    def jump_delay(self, toas, acc_delay=None):
-        """This method returns the jump delays for each toas section collected by
-        jump parameters. The delay value is determined by jump parameter value
-        in the unit of seconds.
-        """
-        tbl = toas.table
-        jdelay = np.zeros(len(tbl))
-        for jump in self.jumps:
-            jump_par = getattr(self, jump)
-            mask = jump_par.select_toa_mask(toas)
-            # NOTE: Currently parfile jump value has opposite sign with our
-            # delay calculation.
-            jdelay[mask] += -jump_par.value
-        return jdelay * u.second
-
-    def d_delay_d_jump(self, toas, jump_param, acc_delay=None):
-        tbl = toas.table
-        d_delay_d_j = np.zeros(len(tbl))
-        jpar = getattr(self, jump_param)
-        mask = jpar.select_toa_mask(toas)
-        d_delay_d_j[mask] = -1.0
-        return d_delay_d_j * u.second / jpar.units
-
-    def print_par(self):
-        result = ""
-        for jump in self.jumps:
-            jump_par = getattr(self, jump)
-            result += jump_par.as_parfile_line()
-        return result
-
-
 class PhaseJump(PhaseComponent):
     """Arbitrary jumps in pulse phase.
 
@@ -165,6 +98,7 @@ class PhaseJump(PhaseComponent):
 
     @property
     def jumps(self):
+        """A list of all the JUMP parameter objects in the model."""
         r = []
         for mask_par in self.get_params_of_type("maskParameter"):
             if mask_par.startswith("JUMP"):

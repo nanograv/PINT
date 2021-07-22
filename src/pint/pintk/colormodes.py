@@ -40,7 +40,7 @@ class DefaultMode(ColorMode):
         """
         Plots application's residuals in proper color scheme.
         """
-        jumped = self.application.jumped
+        jumped = self.application.psr.jumped
 
         if self.application.yerrs is None:
             self.application.plkAxes.scatter(
