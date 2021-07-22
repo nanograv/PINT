@@ -8,7 +8,8 @@ from pint.models.timing_model import MissingParameter
 class BinaryDD(PulsarBinary):
     """Damour and Deruelle binary model.
 
-    This binary model is described in Damour and Deruelle ????.
+    This binary model is described in
+    `Damour and Deruelle 1986 <https://ui.adsabs.harvard.edu/abs/1986AIHS...44..263D/abstract>`_
     It is a parametrized post-Keplerian model that supports additional
     effects and post-Keplerian parameters compared to :class:`pint.models.binary_bt.BinaryBT`.
     It does not assume General Relativity in order to infer

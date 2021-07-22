@@ -33,10 +33,6 @@ class BinaryELL1(PulsarBinary):
 
     .. paramtable::
         :class: pint.models.binary_ell1.BinaryELL1
-
-    Note
-    ----
-    The parameter T0 is permitted but only
     """
 
     register = True
