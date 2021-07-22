@@ -1109,7 +1109,7 @@ def p_to_f(p, pd, pdd=None):
     p : astropy.units.Quantity
         pulsar period (or frequency)
     pd : astropy.units.Quantity
-        period derivative (or frequency derivative)        
+        period derivative (or frequency derivative)
     pdd : astropy.units.Quantity, optional
         period second derivative (or frequency second derivative)
 
@@ -1120,7 +1120,7 @@ def p_to_f(p, pd, pdd=None):
     fd : astropy.units.Quantity
         pulsar frequency derivative (or period derivative)
     fdd : astropy.units.Quantity
-        frequency second derivative (or period second derivative) if pdd is supplied        
+        frequency second derivative (or period second derivative) if pdd is supplied
     """
     f = 1.0 / p
     fd = -pd / (p * p)
@@ -1146,10 +1146,14 @@ def pferrs(porf, porferr, pdorfd=None, pdorfderr=None):
         pulsar period (or frequency)
     porferr : astropy.units.Quantity
         pulsar period uncertainty (or frequency uncertainty)
+        :math:`\sigma_P` or :math:`\sigma_f`
     pdorfd : astropy.units.Quantity, optional
         pulsar period derivative (or frequency derivative)
+        :math:`\dot P` or :math:`\dot f`
     pdorfderr : astropy.units.Quantity, optional
-        pulsar period derivative uncertainty (or frequency derivative uncertainty)
+        pulsar period derivative uncertainty
+        (or frequency derivative uncertainty)  :math:`\sigma_{\dot P}`
+        or :math:`\sigma_{\dot f}`
 
     Returns
     -------
@@ -1157,10 +1161,14 @@ def pferrs(porf, porferr, pdorfd=None, pdorfderr=None):
         pulsar frequency (or period)
     forperr : astropy.units.Quantity
         pulsar frequency uncertainty (or period uncertainty)
+        :math:`\sigma_f` or :math:`\sigma_P`
     fdorpd : astropy.units.Quantity
         pulsar frequency derivative (or period derivative) if pdorfd supplied
+        :math:`\dot f` or :math:`\dot P`
     fdorpderr : astropy.units.Quantity if pdorfd supplied
-        pulsar frequency derivative uncertainty (or period derivative uncertainty)
+        pulsar frequency derivative uncertainty
+        (or period derivative uncertainty)
+        :math:`\sigma_{\dot f}` or :math:`\sigma_{\dot P}`
     """
     if pdorfd is None:
         return [1.0 / porf, porferr / porf ** 2.0]
@@ -1200,7 +1208,7 @@ def pulsar_age(f, fdot, n=3, fo=1e99 * u.Hz):
 
     Notes
     -----
-    Calculates :math:`(f/(n-1)\dot f) (1-(f/f_0)^{n-1})`    
+    Calculates :math:`(f/(n-1)\dot f) (1-(f/f_0)^{n-1})`
     """
     return (-f / ((n - 1.0) * fdot) * (1.0 - (f / fo) ** (n - 1.0))).to(u.yr)
 
@@ -1217,7 +1225,7 @@ def pulsar_edot(f, fdot, I=1.0e45 * u.g * u.cm ** 2):
     f : astropy.units.Quantity
         pulsar frequency
     fdot : astropy.units.Quantity
-        frequency derivative
+        frequency derivative :math:`\dot f`
     I : astropy.units.Quantity, optional
         pulsar moment of inertia, default of 1e45 g*cm**2
 
@@ -1244,7 +1252,7 @@ def pulsar_B(f, fdot):
     f : astropy.units.Quantity
         pulsar frequency
     fdot : astropy.units.Quantity
-        frequency derivative
+        frequency derivative :math:`\dot f`
 
     Returns
     -------
@@ -1272,7 +1280,7 @@ def pulsar_B_lightcyl(f, fdot):
     f : :class:`astropy.units.Quantity`
         pulsar frequency
     fdot : :class:`astropy.units.Quantity`
-        frequency derivative
+        frequency derivative :math:`\dot f`
 
     Returns
     -------
@@ -1860,7 +1868,8 @@ def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params=
     Note
     ----
     To calculate new TOAs, you can do:
-        ``tnew = :func:~pint.toa.make_fake_toas(MJDmin, MJDmax, Ntoa, model=fitter.model)``
+        ``tnew =`` :func:`~pint.toa.make_fake_toas` ``(MJDmin, MJDmax, Ntoa, model=fitter.model)``
+
     or similar
     """
     Nmjd = len(toas)
