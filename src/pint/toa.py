@@ -959,14 +959,14 @@ def _cluster_by_gaps(t, gap):
 
     Parameters
     ----------
-    t : :class:`np.ndarray`
+    t : np.ndarray
         Input times to be clustered
     gap : float
         gap for clustering, same units as `t`
 
     Returns
     -------
-    clusters : :class:`np.ndarray`
+    clusters : np.ndarray
         cluster numbers to which the times belong
 
     """
@@ -1524,14 +1524,14 @@ class TOAs:
         
         Parameters
         ----------
-        gap_limit : :class:`astropy.units.Quantity`, optional
+        gap_limit : astropy.units.Quantity, optional
             The minimum size of gap to create a new group. Defaults to two hours.
         add_column : bool, optional
-            Whether or not to add a `clusters` column to the TOA table (default: False)
+            Whether or not to add a ``clusters`` column to the TOA table (default: False)
 
         Returns
         -------
-        clusters : :class:`np.ndarray`
+        clusters : np.ndarray
             The cluster number associated to each TOA. Clusters are numbered
             chronologically from zero.
         """
