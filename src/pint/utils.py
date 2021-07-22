@@ -1180,18 +1180,18 @@ def pulsar_age(f, fdot, n=3, fo=1e99 * u.Hz):
     Return the age of a pulsar given the spin frequency
     and frequency derivative.  By default, the characteristic age
     is returned (assuming a braking index `n` =3 and an initial
-    spin frequency `fo` >> `f`).  But `n` and `fo` can be set.
+    spin frequency :math:`f_0 \gg f`).  But `n` and `fo` can be set.
 
     Parameters
     ----------
     f : astropy.units.Quantity
         pulsar frequency
     fdot : astropy.units.Quantity
-        frequency derivative
+        frequency derivative :math:`\dot f`
     n : int, optional
         braking index (default = 3)
     fo : astropy.units.Quantity, optional
-        initial frequency
+        initial frequency :math:`f_0`
 
     Returns
     -------
@@ -1200,7 +1200,7 @@ def pulsar_age(f, fdot, n=3, fo=1e99 * u.Hz):
 
     Notes
     -----
-    Calculates ``(-f/(n-1)/fdot) * (1 - (f/fo)**(n-1))``
+    Calculates :math:`(f/(n-1)\dot f) (1-(f/f_0)^{n-1})`    
     """
     return (-f / ((n - 1.0) * fdot) * (1.0 - (f / fo) ** (n - 1.0))).to(u.yr)
 
@@ -1228,7 +1228,7 @@ def pulsar_edot(f, fdot, I=1.0e45 * u.g * u.cm ** 2):
 
     Notes
     -----
-    Calculates ``-4 * np.pi**2 * I * f * fdot``
+    Calculates :math:`-4\pi^2  I  f  \dot f`
     """
     return (-4.0 * np.pi ** 2 * I * f * fdot).to(u.erg / u.s)
 
@@ -1253,7 +1253,7 @@ def pulsar_B(f, fdot):
 
     Notes
     -----
-    Calculates ``B=3.2e19 G * np.sqrt(-f/fdot**3)``
+    Calculates :math:`B=3.2\\times 10^{19}\\,{\\rm  G}\\sqrt{ f \dot f^{-3}}`
     """
     # This is a hack to use the traditional formula by stripping the units.
     # It would be nice to improve this to a  proper formula with units
@@ -1312,7 +1312,7 @@ def mass_funct(pb, x):
 
     Notes
     -----
-    Calculates ``4*np.pi**2 * x**3 / G / Pb**2``
+    Calculates :math:`4\pi^2 x^3 / G / P_b^2`
     """
     if not isinstance(x, u.quantity.Quantity):
         raise ValueError(
@@ -1351,7 +1351,7 @@ def mass_funct2(mp, mc, i):
     Inclination is such that edge on is ``i = 90*u.deg``
     An 'average' orbit has cos(i) = 0.5, or ``i = 60*u.deg``
 
-    Calculates ``(mc*sin(i))**3 / (mc + mp)**2``
+    Calculates :math:`m_c\sin^3 i / (m_c + m_p)^2`
     """
     if not (isinstance(i, angles.Angle) or isinstance(i, u.quantity.Quantity)):
         raise ValueError(f"The inclination should be an Angle but is {i}.")
