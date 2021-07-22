@@ -153,11 +153,20 @@ def test_tim_writing_order():
 
     o = StringIO()
     toas.write_TOA_file(o, order_by_index=False)
-    obs = [ln.split()[4] for ln in o.getvalue().split("\n")[1:] if ln]
+    toas.write_TOA_file("test.tim", order_by_index=False)
+    obs = [
+        ln.split()[4]
+        for ln in o.getvalue().split("\n")[1:]
+        if (ln and not ln.startswith("C "))
+    ]
     assert obs[0] == obs[1] == obs[2] == obs[3]
 
     o = StringIO()
     toas.write_TOA_file(o, order_by_index=True)
-    obs = [ln.split()[4] for ln in o.getvalue().split("\n")[1:] if ln]
+    obs = [
+        ln.split()[4]
+        for ln in o.getvalue().split("\n")[1:]
+        if (ln and not ln.startswith("C "))
+    ]
     assert obs[0] == obs[3] == obs[6] == obs[9]
     assert obs[0] != obs[1]
