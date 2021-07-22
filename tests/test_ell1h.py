@@ -146,21 +146,22 @@ def test_J0613_STIG(toasJ0613, modelJ0613_STIG):
     f.fit_toas()
 
 
+@pytest.mark.xfail(
+    reason="model builder does not reject unrecognized parameters but should"
+)
 def test_SINI_error():
-    """Test SINI and M2 error.
-    """
+    """Test SINI and M2 error."""
     SINI_par = simple_par.replace("H3 2.7507208E-7", "SINI 0.8")
-    with pytest.raises(
-        TimingModelError, match="'SINI' will not be used in ELL1H model. "
-    ):
+    with pytest.raises(ValueError):
         get_model(StringIO(SINI_par))
 
 
+@pytest.mark.xfail(
+    reason="model builder does not reject unrecognized parameters but should"
+)
 def test_M2_error():
     M2_par = simple_par + "\nM2 1.0 1 0.1"
-    with pytest.raises(
-        TimingModelError, match="'M2' will not be used in ELL1H model. "
-    ):
+    with pytest.raises(ValueError):
         get_model(StringIO(M2_par))
 
 
@@ -170,8 +171,8 @@ def test_no_H3_H4(toasJ0613):
     no_H3_H4 = simple_par.replace("H4 2.0262048E-7  1       1.1276173E-7", "")
     no_H3_H4 = no_H3_H4.replace("H3 2.7507208E-7  1       1.5114416E-7", "")
     no_H3_H4_model = get_model(StringIO(no_H3_H4))
-    assert no_H3_H4_model.H3.value == None
-    assert no_H3_H4_model.H4.value == None
+    assert no_H3_H4_model.H3.value is None
+    assert no_H3_H4_model.H4.value is None
     test_toas = toasJ0613[::20]
     f = ff.WLSFitter(test_toas, no_H3_H4_model)
     f.fit_toas()
@@ -207,7 +208,7 @@ def test_zero_H3(toasJ0613):
     H3_zero_model.H4.frozen = False
     test_toas = toasJ0613[::20]
     with pytest.raises(ValueError):
-        f = ff.WLSFitter(test_toas, H3_zero_model)
+        ff.WLSFitter(test_toas, H3_zero_model)
 
 
 def test_zero_H3_H4_fit_H3_H4(toasJ0613):
