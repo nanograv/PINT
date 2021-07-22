@@ -1700,15 +1700,11 @@ def info_string(prefix_string="# ", comment=None):
     Adds:
 
     - Creation date
-
     - PINT version
-
-    - Username (given by the `gitpython`_ global configuration ``user.name`` if available, in addition to :func:`getpass.getuser`).
-
+    - Username (given by the `gitpython`_ global configuration ``user.name``
+      if available, in addition to :func:`getpass.getuser`).
     - Host (given by :func:`platform.node`)
-
     - OS (given by :func:`platform.platform`)
-
     - plus a user-supplied comment (if present).
 
     Parameters
