@@ -1632,6 +1632,11 @@ class TOAs:
             s += "  Median error:  {np.median(grp['error'].to(u.us)):.3g}\n"
         return s
 
+    def print_summary(self):
+        """Prints self.get_summary()."""
+        # FIXME: really do we need to have this function?
+        print(self.get_summary())
+
     def phase_columns_from_flags(self):
         """Create and/or modify pulse_number and delta_pulse_number columns.
 
