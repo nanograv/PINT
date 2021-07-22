@@ -30,6 +30,7 @@ __all__ = [
     "lines_of",
     "interesting_lines",
     "show_param_cov_matrix",
+    "pmtot",
     "dmxparse",
     "dmxstats",
     "dmx_ranges_old",
@@ -432,9 +433,11 @@ def show_param_cov_matrix(matrix, params, name="Covariance Matrix", switchRD=Fal
     :param name: title to be printed above, default Covariance Matrix
     :param switchRD: if True, switch the positions of RA and DEC to match setup of TEMPO cov. matrices
 
-    :return string to be printed
+    :return: string to be printed
 
-    DEPRECATED
+    Warning
+    -------
+    **DEPRECATED**.  Use :meth:`pint.pint_matrix.CovarianceMatrix.prettyprint` instead of :func:`show_param_cov_matrix`
     """
 
     warn(
@@ -503,14 +506,19 @@ def pmtot(model):
     so PMRA = (d(RAJ)/dt)*cos(DECJ). This is different from the astrometry community where mu_alpha = d(alpha)/dt.
     Thus, we don't need to include cos(DECJ) or cos(ELAT) in our calculation.
 
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+
     Returns
     -------
-    pmtot : Quantity
-        Returns total proper motion with units of u.mas/u.yr
+    pmtot : astropy.units.Quantity
+        Returns total proper motion with units of ``u.mas/u.yr``
 
     Raises
     ------
-        AttributeError if no Astrometry component is found in the model
+    AttributeError
+        If no Astrometry component is found in the model
     """
 
     if "AstrometryEcliptic" in model.components.keys():
@@ -1101,26 +1109,30 @@ def p_to_f(p, pd, pdd=None):
     """Converts P, Pdot to F, Fdot (or vice versa)
 
     Convert period, period derivative and period second
-    derivative to the equivalent frequency counterparts.
-    Will also convert from f to p.
+    derivative (if supplied) to the equivalent frequency counterparts.
+    Will also convert from F to P.
 
     Parameters
     ----------
     p : astropy.units.Quantity
-        pulsar period (or frequency)
+        pulsar period (or frequency), :math:`P` (or :math:`f`)
     pd : astropy.units.Quantity
-        period derivative (or frequency derivative)
+        period derivative (or frequency derivative),
+        :math:`\dot P` (or :math:`\dot f`)
     pdd : astropy.units.Quantity, optional
-        period second derivative (or frequency second derivative)
+        period second derivative (or frequency second derivative),
+        :math:`\ddot P` (or :math:`\ddot f`)
 
     Returns
     -------
     f : astropy.units.Quantity
-        pulsar frequency (or period)
+        pulsar frequency (or period), :math:`f` (or :math:`P`)
     fd : astropy.units.Quantity
-        pulsar frequency derivative (or period derivative)
+        pulsar frequency derivative (or period derivative),
+        :math:`\dot f` (or :math:`\dot P`)
     fdd : astropy.units.Quantity
-        frequency second derivative (or period second derivative) if pdd is supplied
+        if `pdd` is supplied, then frequency second derivative
+        (or period second derivative), :math:`\ddot f` (or :math:`\ddot P`)
     """
     f = 1.0 / p
     fd = -pd / (p * p)
@@ -1135,20 +1147,20 @@ def p_to_f(p, pd, pdd=None):
 
 
 def pferrs(porf, porferr, pdorfd=None, pdorfderr=None):
-    """Convert P, Pdot to F, Fdot with uncertainties.
+    """Convert P, Pdot to F, Fdot with uncertainties (or vice versa).
 
     Calculate the period or frequency errors and
-    the pdot or fdot errors from the opposite one.
+    the Pdot or fdot errors from the opposite ones.
 
     Parameters
     ----------
     porf : astropy.units.Quantity
-        pulsar period (or frequency)
+        pulsar period (or frequency), :math:`P` or :math:`f`
     porferr : astropy.units.Quantity
-        pulsar period uncertainty (or frequency uncertainty)
+        pulsar period uncertainty (or frequency uncertainty),
         :math:`\sigma_P` or :math:`\sigma_f`
     pdorfd : astropy.units.Quantity, optional
-        pulsar period derivative (or frequency derivative)
+        pulsar period derivative (or frequency derivative),
         :math:`\dot P` or :math:`\dot f`
     pdorfderr : astropy.units.Quantity, optional
         pulsar period derivative uncertainty
@@ -1158,16 +1170,16 @@ def pferrs(porf, porferr, pdorfd=None, pdorfderr=None):
     Returns
     -------
     forp : astropy.units.Quantity
-        pulsar frequency (or period)
+        pulsar frequency (or period) :math:`f` or :math:`P`
     forperr : astropy.units.Quantity
         pulsar frequency uncertainty (or period uncertainty)
         :math:`\sigma_f` or :math:`\sigma_P`
     fdorpd : astropy.units.Quantity
         pulsar frequency derivative (or period derivative) if pdorfd supplied
         :math:`\dot f` or :math:`\dot P`
-    fdorpderr : astropy.units.Quantity if pdorfd supplied
-        pulsar frequency derivative uncertainty
-        (or period derivative uncertainty)
+    fdorpderr : astropy.units.Quantity
+        if `pdorfd` supplied, then pulsar frequency derivative uncertainty
+        (or period derivative uncertainty),
         :math:`\sigma_{\dot f}` or :math:`\sigma_{\dot P}`
     """
     if pdorfd is None:
@@ -1277,15 +1289,19 @@ def pulsar_B_lightcyl(f, fdot):
 
     Parameters
     ----------
-    f : :class:`astropy.units.Quantity`
+    f : astropy.units.Quantity
         pulsar frequency
-    fdot : :class:`astropy.units.Quantity`
+    fdot : astropy.units.Quantity
         frequency derivative :math:`\dot f`
 
     Returns
     -------
     Blc : :class:`astropy.units.Quantity`
         pulsar dipole magnetic field at the light cylinder in ``u.G``
+
+    Notes
+    -----
+    Calculates :math:`B_{LC} = 2.9\\times 10^8\\,{\\rm G} P^{-5/2} \dot P^{1/2}`
     """
     p, pd = p_to_f(f, fdot)
     # This is a hack to use the traditional formula by stripping the units.
@@ -1310,8 +1326,8 @@ def mass_funct(pb, x):
 
     Returns
     -------
-    f_m : Quantity
-        Mass function in `u.solMass`
+    f_m : astropy.units.Quantity
+        Mass function in ``u.solMass``
 
     Raises
     ------
@@ -1389,7 +1405,8 @@ def pulsar_mass(pb, x, mc, inc):
 
     Returns
     -------
-    mass : astropy.units.Quantity in ``u.solMass``
+    mass : astropy.units.Quantity
+        In ``u.solMass``
 
     Raises
     ------
@@ -1646,18 +1663,18 @@ def FTest(chi2_1, dof_1, chi2_2, dof_2):
 
     Parameters
     -----------
-    chi2_1 : Float
+    chi2_1 : float
         Chi-squared value of model with fewer parameters
-    dof_1 : Int
+    dof_1 : int
         Degrees of freedom of model with fewer parameters
-    chi2_2 : Float
+    chi2_2 : float
         Chi-squared value of model with more parameters
-    dof_2 : Int
+    dof_2 : int
         Degrees of freedom of model with more parameters
 
     Returns
     --------
-    ft : Float
+    ft : float
         F-test significance value for the model with the larger number of
         components over the other.
     """
@@ -1687,14 +1704,14 @@ def add_dummy_distance(c, distance=1 * u.kpc):
 
     Parameters
     ----------
-    c: astropy.coordinates.sky_coordinate.SkyCoord
+    c: astropy.coordinates.SkyCoord
         current SkyCoord object without distance but with proper motion and obstime
     distance: astropy.units.Quantity, optional
         distance to supply
 
     Returns
     -------
-    cnew : astropy.coordinates.sky_coordinate.SkyCoord
+    cnew : astropy.coordinates.SkyCoord
         new SkyCoord object with a distance attached
     """
 
@@ -1768,12 +1785,12 @@ def remove_dummy_distance(c):
 
     Parameters
     ----------
-    c: astropy.coordinates.sky_coordinate.SkyCoord
+    c: astropy.coordinates.SkyCoord
         current SkyCoord object with distance and with proper motion and obstime
 
     Returns
     -------
-    cnew : astropy.coordinates.sky_coordinate.SkyCoord
+    cnew : astropy.coordinates.SkyCoord
         new SkyCoord object with a distance removed
     """
 
@@ -1865,10 +1882,32 @@ def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params=
     random_models : list, optional
         list of random models (each is a :class:`pint.models.timing_model.TimingModel`)
 
+    Example
+    -------
+    >>> from pint.models import get_model_and_toas
+    >>> from pint import fitter, toa
+    >>> import pint.utils
+    >>> import io
+    >>> 
+    >>> # the locations of these may vary
+    >>> timfile = "tests/datafile/NGC6440E.tim"
+    >>> parfile = "tests/datafile/NGC6440E.par"
+    >>> m, t = get_model_and_toas(parfile, timfile)
+    >>> # fit the model to the data
+    >>> f = fitter.WLSFitter(toas=t, model=m)
+    >>> f.fit_toas()
+    >>> 
+    >>> # make fake TOAs starting at the end of the
+    >>> # current data and going out 100 days
+    >>> tnew = toa.make_fake_toas(t.get_mjds().max().value,
+    >>>                           t.get_mjds().max().value+100, 50, model=f.model)
+    >>> # now make random models
+    >>> dphase, mrand = pint.utils.calculate_random_models(f, tnew, Nmodels=100)
+    
+
     Note
     ----
-    To calculate new TOAs, you can do:
-        ``tnew =`` :func:`~pint.toa.make_fake_toas` ``(MJDmin, MJDmax, Ntoa, model=fitter.model)``
+    To calculate new TOAs, you can use :func:`~pint.toa.make_fake_toas` 
 
     or similar
     """
