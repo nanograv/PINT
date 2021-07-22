@@ -31,6 +31,7 @@ from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 from pint.phase import Phase
 from pint.pulsar_ecliptic import PulsarEcliptic
+import pint.utils
 
 __all__ = [
     "TOAs",
@@ -1747,6 +1748,9 @@ class TOAs:
         format="tempo2",
         commentflag=None,
         order_by_index=True,
+        *,
+        include_info=True,
+        comment=None,
     ):
         """Write this object to a ``.tim`` file.
 
@@ -1774,6 +1778,10 @@ class TOAs:
             if False, write them in the order they occur in the TOAs object
             (which is usually the same as the original file except that all the
             TOAs associated with each observatory have been grouped).
+        include_info : bool, optional
+            Include information string if True
+        comment : str, optional
+            Additional string to include in TOA file
         """
         try:
             # FIXME: file must be closed even if an exception occurs!
@@ -1785,6 +1793,9 @@ class TOAs:
             handle = True
         if format.upper() in ("TEMPO2", "1"):
             outf.write("FORMAT 1\n")
+        if include_info:
+            info_string = pint.utils.info_string(prefix_string="C ", comment=comment)
+            outf.write(info_string + "\n")
 
         # Add pulse numbers to flags temporarily if there is a pulse number column
         # FIXME: everywhere else the pulse number column is called pulse_number not pn

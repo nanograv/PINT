@@ -1,19 +1,26 @@
 """Miscellaneous potentially-helpful functions."""
+import configparser
+import datetime
+import getpass
+import os
+import platform
 import re
+import textwrap
+from collections import OrderedDict
 from contextlib import contextmanager
 from copy import deepcopy
 from io import StringIO
-from collections import OrderedDict
 
 import astropy.constants as const
 import astropy.coordinates as coords
-import astropy.units as u
 import astropy.coordinates.angles as angles
+import astropy.units as u
 import numpy as np
 import scipy.optimize.zeros as zeros
 from astropy import log
 from scipy.special import fdtrc
 
+import pint
 import pint.pulsar_ecliptic
 
 __all__ = [
@@ -49,6 +56,7 @@ __all__ = [
     "FTest",
     "add_dummy_distance",
     "remove_dummy_distance",
+    "info_string",
 ]
 
 
@@ -1686,6 +1694,140 @@ def remove_dummy_distance(c):
         return c
 
 
+def info_string(prefix_string="# ", comment=None):
+    """Returns an informative string about the current state of PINT.
+
+    Adds:
+
+    * Creation date
+    * PINT version
+    * Username (given by the `gitpython`_ global configuration ``user.name``
+      if available, in addition to :func:`getpass.getuser`).
+    * Host (given by :func:`platform.node`)
+    * OS (given by :func:`platform.platform`)
+    * plus a user-supplied comment (if present).
+
+    Parameters
+    ----------
+    prefix_string: str, default='# '
+        a string to be prefixed to the output (often to designate as a
+        comment or similar)
+    comment: str, optional
+        a free-form comment string to be included if present
+
+    Returns
+    -------
+    str
+        informative string
+
+    Examples
+    --------
+    >>> import pint.utils
+    >>> print(pint.utils.info_string(prefix_string="# ",comment="Example comment"))
+    # Created: 2021-07-21T09:39:45.606894
+    # PINT_version: 0.8.2+311.ge351099d
+    # User: David Kaplan (dlk)
+    # Host: margle-2.local
+    # OS: macOS-10.14.6-x86_64-i386-64bit
+    # Comment: Example comment
+
+    Multi-line comments are allowed:
+
+    >>> import pint.utils
+    >>> print(pint.utils.info_string(prefix_string="C ",
+    ...                              comment="Example multi-line comment\\nAlso using a different comment character"))
+    C Created: 2021-07-21T09:40:34.172333
+    C PINT_version: 0.8.2+311.ge351099d
+    C User: David Kaplan (dlk)
+    C Host: margle-2.local
+    C OS: macOS-10.14.6-x86_64-i386-64bit
+    C Comment: Example multi-line comment
+    C Comment: Also using a different comment character
+
+    Full example of writing a par and tim file:
+
+    >>> from pint.models import get_model_and_toas
+    >>> # the locations of these may vary
+    >>> timfile = "tests/datafile/NGC6440E.tim"
+    >>> parfile = "tests/datafile/NGC6440E.par"
+    >>> m, t = get_model_and_toas(parfile, timfile)
+    >>> print(m.as_parfile(comment="Here is a comment on the par file"))
+    # Created: 2021-07-22T08:24:27.101479
+    # PINT_version: 0.8.2+439.ge81c9b11.dirty
+    # User: David Kaplan (dlk)
+    # Host: margle-2.local
+    # OS: macOS-10.14.6-x86_64-i386-64bit
+    # Comment: Here is a comment on the par file
+    PSR                            1748-2021E
+    EPHEM                               DE421
+    CLK                             UTC(NIST)
+    ...
+
+    >>> from pint.models import get_model_and_toas
+    >>> import io
+    >>> # the locations of these may vary
+    >>> timfile = "tests/datafile/NGC6440E.tim"
+    >>> parfile = "tests/datafile/NGC6440E.par"
+    >>> m, t = get_model_and_toas(parfile, timfile)
+    >>> f = io.StringIO(parfile)
+    >>> t.write_TOA_file(f, comment="Here is a comment on the tim file")
+    >>> f.seek(0)
+    >>> print(f.getvalue())
+    FORMAT 1
+    C Created: 2021-07-22T08:24:27.213529
+    C PINT_version: 0.8.2+439.ge81c9b11.dirty
+    C User: David Kaplan (dlk)
+    C Host: margle-2.local
+    C OS: macOS-10.14.6-x86_64-i386-64bit
+    C Comment: Here is a comment on the tim file
+    unk 1949.609000 53478.2858714192189005 21.710 gbt  -format Princeton -ddm 0.0
+    unk 1949.609000 53483.2767051885165973 21.950 gbt  -format Princeton -ddm 0.0
+    unk 1949.609000 53489.4683897879295023 29.950 gbt  -format Princeton -ddm 0.0
+    ....
+
+
+    Notes
+    -----
+    This can be called via  :func:`~pint.toa.TOAs.write_TOA_file` on a :class:`~~pint.toa.TOAs` object,
+    or :func:`~pint.models.timing_model.TimingModel.as_parfile` on a
+    :class:`~pint.models.timing_model.TimingModel` object.
+
+    .. _gitpython: https://gitpython.readthedocs.io/en/stable/
+    """
+    # try to get the git user if defined
+    try:
+        import git
+
+        # user-level git config
+        c = git.GitConfigParser()
+        username = c.get_value("user", option="name") + f" ({getpass.getuser()})"
+    except (configparser.NoOptionError, ImportError):
+        username = getpass.getuser()
+
+    s = f"""
+    Created: {datetime.datetime.now().isoformat()}
+    PINT_version: {pint.__version__}
+    User: {username}
+    Host: {platform.node()}
+    OS: {platform.platform()}
+    """
+
+    s = textwrap.dedent(s)
+    # remove blank lines
+    s = os.linesep.join([x for x in s.splitlines() if x])
+    if comment is not None:
+        if os.linesep in comment:
+            s += os.linesep + os.linesep.join(
+                [f"Comment: {x}" for x in comment.splitlines()]
+            )
+        else:
+            s += f"{os.linesep}Comment: {comment}"
+
+    if (prefix_string is not None) and (len(prefix_string) > 0):
+        s = os.linesep.join([prefix_string + x for x in s.splitlines()])
+    return s
+
+
 def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params="all"):
     """
     Calculates random models based on the covariance matrix of the `fitter` object.
@@ -1801,10 +1943,10 @@ def list_parameters(class_=None):
     if class_ is not None:
         from pint.models.parameter import (
             boolParameter,
-            strParameter,
             intParameter,
-            prefixParameter,
             maskParameter,
+            prefixParameter,
+            strParameter,
         )
 
         result = []
