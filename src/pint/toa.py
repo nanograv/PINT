@@ -9,6 +9,7 @@ import copy
 import gzip
 import hashlib
 import os
+import pickle
 import re
 import warnings
 from collections import OrderedDict
@@ -19,19 +20,23 @@ import astropy.units as u
 import numpy as np
 import numpy.ma
 from astropy import log
-from astropy.coordinates import EarthLocation
-from astropy.coordinates import ICRS, CartesianDifferential, CartesianRepresentation
-import pickle
+from astropy.coordinates import (
+    ICRS,
+    CartesianDifferential,
+    CartesianRepresentation,
+    EarthLocation,
+)
 
 import pint
-from pint.observatory import Observatory, get_observatory, bipm_default
+import pint.utils
+from pint.observatory import Observatory, bipm_default, get_observatory
 from pint.observatory.special_locations import T2SpacecraftObs
 from pint.observatory.topo_obs import TopoObs
-from pint.pulsar_mjd import Time
-from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 from pint.phase import Phase
 from pint.pulsar_ecliptic import PulsarEcliptic
-import pint.utils
+from pint.pulsar_mjd import Time
+from pint.solar_system_ephemerides import objPosVel_wrt_SSB
+
 
 __all__ = [
     "TOAs",
@@ -243,6 +248,7 @@ def get_TOAs(
             t = TOAs(timfile)
         else:
             t = merge_TOAs([TOAs(t) for t in timfile])
+
         if isinstance(t.filename, str):
             files = [t.filename]
         else:
@@ -947,16 +953,34 @@ def make_fake_toas(
     return ts
 
 
-def _group_by_gaps(t, gap):
+def _cluster_by_gaps(t, gap):
+    """A utility function to cluster times according to gap-less stretches.
+
+    This function is used by :func:`pint.toa.TOAs.get_clusters` to determine
+    the clustering.
+
+    Parameters
+    ----------
+    t : np.ndarray
+        Input times to be clustered
+    gap : float
+        gap for clustering, same units as `t`
+
+    Returns
+    -------
+    clusters : np.ndarray
+        cluster numbers to which the times belong
+
+    """
     ix = np.argsort(t)
     t_sorted = t[ix]
     gaps = np.diff(t_sorted)
     gap_starts = np.where(gaps >= gap)[0]
     gsi = np.concatenate(([0], gap_starts + 1, [len(t)]))
-    groups_sorted = np.repeat(np.arange(len(gap_starts) + 1), np.diff(gsi))
-    groups = np.zeros(len(t), dtype=int)
-    groups[ix] = groups_sorted
-    return groups
+    clusters_sorted = np.repeat(np.arange(len(gap_starts) + 1), np.diff(gsi))
+    clusters = np.zeros(len(t), dtype=int)
+    clusters[ix] = clusters_sorted
+    return clusters
 
 
 class TOA:
@@ -1225,9 +1249,6 @@ class TOAs:
            ``PHASE`` statements in the ``.tim`` file or the ``padd`` entry in
            ``flags`` carry this information, and :func:`pint.toa.TOAs.phase_columns_from_flags`
            creates the column.
-       * - ``groups``
-         - the TOAs have been placed into groups, separated by gaps of at least two houes,
-           by :func:`pint.toa.TOAs.get_groups`; this will contain the group number of each TOA.
 
     Parameters
     ----------
@@ -1303,8 +1324,6 @@ class TOAs:
                 raise ValueError("Trying to initialize TOAs from a non-list class")
         self.table = build_table(toalist, filename=self.filename)
         self.max_index = len(self.table) - 1
-        groups = self.get_groups()
-        self.table.add_column(groups, name="groups")
         # Add pulse number column (if needed) or make PHASE adjustments
         try:
             self.phase_columns_from_flags()
@@ -1492,33 +1511,48 @@ class TOAs:
             raise AttributeError("No DM error is provided.")
         return np.array(result)[valid] * pint.dmu
 
-    def get_groups(self, gap_limit=None):
-        """Flag toas within gap limit (default 2h = 0.0833d) of each other as the same group.
+    def get_clusters(self, gap_limit=2 * u.h, add_column=False):
+        """Identify toas within gap limit (default 2h = 0.0833d)
+        of each other as the same cluster.
 
-        Groups can be larger than the gap limit - if toas are separated by a gap larger than
-        the gap limit, a new group starts and continues until another such gap is found.
+        Clusters can be larger than the gap limit - if toas are
+        separated by a gap larger than the gap limit, a new cluster
+        starts and continues until another such gap is found.
 
-        Groups with a two-hour spacing are pre-computed when the TOAs object is constructed,
-        and these can rapidly be retrieved from ``self.table`` (which this function will do).
-
+        Cluster info can be added as a ``clusters`` column to the
+        :attr:`pint.toa.TOAs.table` object if `add_column` is True.
+        In that case  ``self.table.meta['cluster_gap']``  will be set to the
+        `gap_limit`.  If the desired clustering corresponds to that in
+        :attr:`pint.toa.TOAs.table` then that column is returned.
+        
         Parameters
         ----------
-        gap_limit : :class:`astropy.units.Quantity`, optional
+        gap_limit : astropy.units.Quantity, optional
             The minimum size of gap to create a new group. Defaults to two hours.
+        add_column : bool, optional
+            Whether or not to add a ``clusters`` column to the TOA table (default: False)
 
         Returns
         -------
-        groups : array
-            The group number associated to each TOA. Groups are numbered chronologically
-            from zero.
+        clusters : numpy.ndarray
+            The cluster number associated to each TOA. Clusters are numbered
+            chronologically from zero.
         """
-        # TODO: make all values Quantity objects for consistency
-        if gap_limit is None:
-            gap_limit = 2 * u.h
-        if "groups" not in self.table.colnames or gap_limit != 2 * u.h:
-            return _group_by_gaps(self.get_mjds().value, gap_limit.to_value(u.d))
+        if (
+            ("clusters" not in self.table.colnames)
+            or ("cluster_gap" not in self.table.meta)
+            or (gap_limit != self.table.meta["cluster_gap"])
+        ):
+            clusters = _cluster_by_gaps(
+                self.get_mjds().to_value(u.d), gap_limit.to_value(u.d)
+            )
+            if add_column:
+                self.table.add_column(clusters, name="clusters")
+                self.table.meta["cluster_gap"] = gap_limit
+            return clusters
+
         else:
-            return self.table["groups"]
+            return self.table["clusters"]
 
     def get_highest_density_range(self, ndays=7 * u.d):
         """Print the range of mjds (default 7 days) with the most toas"""
