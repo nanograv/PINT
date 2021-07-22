@@ -59,15 +59,8 @@ def test_jump_by_cluster(setup_NGC6440E):
     )
     # this should be identical to the cluster above
     cp_copy.add_param(par_copy, setup=True)
-    assert (
-        cp.JUMP1.select_toa_mask(setup_NGC6440E.t)
-        == cp_copy.JUMP1.select_toa_mask(setup_NGC6440E.t)
-    ).all(), (
-        "Selecting by MJD range gives %s, but selecting by jump group gives %s"
-        % (
-            cp.JUMP1.select_toa_mask(setup_NGC6440E.t),
-            cp_copy.JUMP1.select_toa_mask(setup_NGC6440E.t),
-        )
+    assert set(cp.JUMP1.select_toa_mask(setup_NGC6440E.t)) == set(
+        cp_copy.JUMP1.select_toa_mask(setup_NGC6440E.t)
     )
 
 
