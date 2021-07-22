@@ -18,6 +18,7 @@ from pint.models import (
     BinaryELL1,
     Spindown,
     TimingModel,
+    PhaseJump,
     Wave,
     get_model,
     parameter as p,
@@ -97,8 +98,9 @@ class TestModelBuilding:
         assert cp._parent == tm
 
         # Test order
-        cp_pos = tm.DelayComponent_list.index(cp)
-        assert cp_pos == 2
+        # Wait why do we know this should be number 1?
+        cp_pos = tm.PhaseComponent_list.index(cp)
+        assert cp_pos == 1
 
         print(cp.params)
         print(cp.get_prefix_mapping_component("JUMP"))
@@ -158,7 +160,7 @@ class TestModelBuilding:
         assert jump1.key_value == (Time(55000, format="mjd"), Time(56000, format="mjd"))
         assert jump2.key_value == (1440 * u.MHz, 2000 * u.MHz)
         assert jump3.key_value == "arecibo"
-        assert tm.jumps == ["JUMP1", "JUMP2", "JUMP3"]
+        assert len(tm.jumps) == 3
 
     def test_remove_component(self):
         tm = TimingModel(
