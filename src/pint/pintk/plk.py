@@ -24,6 +24,7 @@ except ImportError:
     import tkinter as tk
     import tkinter.filedialog as tkFileDialog
     import tkinter.messagebox as tkMessageBox
+    from tkinter import ttk
 
 log.setLevel("INFO")
 log.debug("This should show up")
@@ -243,10 +244,36 @@ class PlkRandomModelSelect(tk.Frame):
             widget.grid_forget()
 
     def changedRMCheckBox(self):
-        log.info("Random Models set to %d" % (self.var.get()))
+        if self.var.get() == 1:
+            log.debug("Random Models turned on.")
+        else:
+            log.debug("Random Models turned off.")
 
     def getRandomModel(self):
         return self.var.get()
+
+
+class PlkLogLevelSelect(tk.Frame):
+    """
+    Allows one to select the log output level in the terminal
+    """
+
+    def __init__(self, master):
+        tk.Frame.__init__(self, master)
+        self.logLabel = tk.Label(self, text="Minimum Log Level: ")
+        self.logLabel.pack()
+        self.logLevelSelect = ttk.Combobox(self)
+        self.logLevelSelect.pack()
+        self.logLevelSelect["values"] = ["DEBUG", "INFO", "WARNING", "ERROR"]
+        self.logLevelSelect["state"] = "readonly"  # user can't enter an option
+        self.logLevelSelect.current(2)  # automatically on WARNING level
+        # bind user log level selection to function changing log level
+        self.logLevelSelect.bind("<<ComboboxSelected>>", self.changeLogLevel)
+
+    def changeLogLevel(self, event):
+        newLevel = self.logLevelSelect.get()  # get current value
+        log.setLevel(str(newLevel))
+        log.info("Log level changed to " + str(newLevel))
 
 
 class PlkColorModeBoxes(tk.Frame):
@@ -486,6 +513,7 @@ class PlkWidget(tk.Frame):
         self.xyChoiceWidget = PlkXYChoiceWidget(master=self)
         self.actionsWidget = PlkActionsWidget(master=self)
         self.randomboxWidget = PlkRandomModelSelect(master=self)
+        self.logLevelWidget = PlkLogLevelSelect(master=self)
         self.colorModeWidget = PlkColorModeBoxes(master=self)
 
         self.plkDpi = 100
@@ -518,6 +546,7 @@ class PlkWidget(tk.Frame):
         self.xyChoiceWidget.grid(row=2, column=0, sticky="nw")
         self.plkCanvas.get_tk_widget().grid(row=2, column=1, sticky="nesw")
         self.actionsWidget.grid(row=3, column=0, columnspan=2, sticky="W")
+        self.logLevelWidget.grid(row=3, column=1, sticky="E")
 
         self.grid_columnconfigure(1, weight=10)
         self.grid_columnconfigure(0, weight=1)

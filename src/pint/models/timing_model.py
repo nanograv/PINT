@@ -2151,6 +2151,9 @@ class TimingModel:
         self,
         start_order=["astrometry", "spindown", "dispersion"],
         last_order=["jump_delay"],
+        *,
+        include_info=True,
+        comment=None,
     ):
         """Represent the entire model as a parfile string.
 
@@ -2160,9 +2163,17 @@ class TimingModel:
             Categories to include at the beginning
         last_order : list
             Categories to include at the end
+        include_info : bool, optional
+            Include information string if True
+        comment : str, optional
+            Additional comment string to include in parfile
         """
         self.validate()
-        result_begin = ""
+        if include_info:
+            info_string = pint.utils.info_string(prefix_string="# ", comment=comment)
+            result_begin = info_string + "\n"
+        else:
+            result_begin = ""
         result_end = ""
         result_middle = ""
         cates_comp = self.get_components_by_category()

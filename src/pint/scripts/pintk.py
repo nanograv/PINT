@@ -10,6 +10,7 @@ import numpy as np
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
 import tkinter.messagebox as tkMessageBox
+from tkinter import ttk
 from astropy import log
 
 from pint.pintk.paredit import ParWidget
@@ -159,6 +160,7 @@ def main(argv=None):
     )
     args = parser.parse_args(argv)
 
+    log.setLevel("WARNING")  # only display warnings and higher in the terminal
     root = tk.Tk()
     root.minsize(800, 600)
     if not args.test:
