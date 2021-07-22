@@ -28,6 +28,7 @@ from astropy.coordinates import (
 )
 
 import pint
+import pint.utils
 from pint.observatory import Observatory, bipm_default, get_observatory
 from pint.observatory.special_locations import T2SpacecraftObs
 from pint.observatory.topo_obs import TopoObs
