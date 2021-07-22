@@ -28,8 +28,9 @@ class SimpleSetup:
 
 @pytest.fixture
 def setup_NGC6440E():
-    os.chdir(datadir)
-    return SimpleSetup("NGC6440E.par", "NGC6440E.tim")
+    return SimpleSetup(
+        os.path.join(datadir, "NGC6440E.par"), os.path.join(datadir, "NGC6440E.tim")
+    )
 
 
 def test_jump_by_cluster(setup_NGC6440E):
@@ -59,10 +60,10 @@ def test_jump_by_cluster(setup_NGC6440E):
     # this should be identical to the cluster above
     cp_copy.add_param(par_copy, setup=True)
     assert (
-        np.array(cp.JUMP1.select_toa_mask(setup_NGC6440E.t))
-        == np.array(cp_copy.JUMP1.select_toa_mask(setup_NGC6440E.t))
+        cp.JUMP1.select_toa_mask(setup_NGC6440E.t)
+        == cp_copy.JUMP1.select_toa_mask(setup_NGC6440E.t)
     ).all(), (
-        "%s vs. %s"
+        "Selecting by MJD range gives %s, but selecting by jump group gives %s"
         % (
             cp.JUMP1.select_toa_mask(setup_NGC6440E.t),
             cp_copy.JUMP1.select_toa_mask(setup_NGC6440E.t),
