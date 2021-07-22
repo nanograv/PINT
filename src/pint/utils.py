@@ -1703,16 +1703,13 @@ def info_string(prefix_string="# ", comment=None):
 
     - PINT version
 
-    - Username
+    - Username (given by the `gitpython`_ global configuration ``user.name`` if available, in addition to :func:`getpass.getuser`).
 
-    - Host
+    - Host (given by :func:`platform.node`)
 
-    - OS
+    - OS (given by :func:`platform.platform`)
 
     - plus a user-supplied comment (if present).
-
-    Username is given by the ``gitpython`` global configuration ``user.name``
-    (if available), otherwise ``getpass.getuser()``.
 
     Parameters
     ----------
@@ -1751,13 +1748,57 @@ def info_string(prefix_string="# ", comment=None):
     C Comment: Example multi-line comment
     C Comment: Also using a different comment character
 
+    Full example of writing a par and tim file:
+
+    >>> from pint.models import get_model_and_toas
+    >>> # the locations of these may vary
+    >>> timfile = "tests/datafile/NGC6440E.tim"
+    >>> parfile = "tests/datafile/NGC6440E.par"
+    >>> m, t = get_model_and_toas(parfile, timfile)
+    >>> print(m.as_parfile(comment="Here is a comment on the par file"))
+    # Created: 2021-07-22T08:24:27.101479
+    # PINT_version: 0.8.2+439.ge81c9b11.dirty
+    # User: David Kaplan (dlk)
+    # Host: margle-2.local
+    # OS: macOS-10.14.6-x86_64-i386-64bit
+    # Comment: Here is a comment on the par file
+    PSR                            1748-2021E
+    EPHEM                               DE421
+    CLK                             UTC(NIST)
+    ...
+
+    >>> from pint.models import get_model_and_toas
+    >>> import io
+    >>> # the locations of these may vary
+    >>> timfile = "tests/datafile/NGC6440E.tim"
+    >>> parfile = "tests/datafile/NGC6440E.par"
+    >>> m, t = get_model_and_toas(parfile, timfile)
+    >>> f = io.StringIO(parfile)
+    >>> t.write_TOA_file(f, comment="Here is a comment on the tim file")
+    >>> f.seek(0)
+    >>> print(f.getvalue())
+    FORMAT 1
+    C Created: 2021-07-22T08:24:27.213529
+    C PINT_version: 0.8.2+439.ge81c9b11.dirty
+    C User: David Kaplan (dlk)
+    C Host: margle-2.local
+    C OS: macOS-10.14.6-x86_64-i386-64bit
+    C Comment: Here is a comment on the tim file
+    unk 1949.609000 53478.2858714192189005 21.710 gbt  -format Princeton -ddm 0.0
+    unk 1949.609000 53483.2767051885165973 21.950 gbt  -format Princeton -ddm 0.0
+    unk 1949.609000 53489.4683897879295023 29.950 gbt  -format Princeton -ddm 0.0
+    ....
+
+
     Notes
     -----
-    This can be called via ``t.`` :func:`~pint.toa.TOAs.write_TOA_file` ``("combined.tim",comment="trying combination")``
-    for a tim file, or ``m.`` :func:`:func:`~pint.models.timing_model.TimingModel.as_parfile` ``(comment="test parfile writing")`` for par file
+    This can be called via  :func:`~pint.toa.TOAs.write_TOA_file` on a :class:`~~pint.toa.TOAs` object,
+    or :func:`~pint.models.timing_model.TimingModel.as_parfile` on a
+    :class:`~pint.models.timing_model.TimingModel` object.
+
+    .. _gitpython: https://gitpython.readthedocs.io/en/stable/
     """
-    # try to get the git user.name
-    # if defined
+    # try to get the git user if defined
     try:
         import git
 
