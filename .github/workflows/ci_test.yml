@@ -84,8 +84,8 @@ jobs:
     - name: Upload coverage to codecov
       if: "endsWith(matrix.tox_env, '-cov')"
       uses: codecov/codecov-action@v2
-      with:
-        files: ./coverage.xml
+#      with:
+#        files: ./coverage.xml
 #    - name: Publish docs as an artifact
 #      if: "endsWith(matrix.tox_env, 'docs')"
 #      uses: actions/upload-artifact@v2
