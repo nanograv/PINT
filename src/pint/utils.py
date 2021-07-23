@@ -1304,7 +1304,7 @@ def pulsar_B_lightcyl(f, fdot):
 
     Returns
     -------
-    Blc : :class:`astropy.units.Quantity`
+    Blc : astropy.units.Quantity
         pulsar dipole magnetic field at the light cylinder in ``u.G``
 
     Notes
@@ -1327,9 +1327,9 @@ def mass_funct(pb, x):
 
     Parameters
     ----------
-    pb : :class:`astropy.units.Quantity`
+    pb : astropy.units.Quantity
         Binary period
-    x : :class:`astropy.units.Quantity` in ``pint.ls``
+    x : astropy.units.Quantity in ``pint.ls``
         Semi-major axis, A1SINI, in units of ls
 
     Returns
