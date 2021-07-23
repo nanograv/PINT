@@ -84,7 +84,8 @@ jobs:
     - name: Upload coverage to codecov
       if: "endsWith(matrix.tox_env, '-cov')"
       uses: codecov/codecov-action@v2
-#      with:
+      with:
+          fail_ci_if_error: true # reset this to False once debugged
 #        files: ./coverage.xml
 #    - name: Publish docs as an artifact
 #      if: "endsWith(matrix.tox_env, 'docs')"
