@@ -54,6 +54,9 @@ from pint.utils import (
     pulsar_mass,
     taylor_horner,
     taylor_horner_deriv,
+    OMDOT,
+    PBDOT,
+    GAMMA,
 )
 
 
@@ -901,6 +904,120 @@ def test_companion_mass_error_noquantity_Pb():
     Mpsr = 1.4 * u.solMass
     with pytest.raises(ValueError):
         pulsar_mass(Pb.value, x, Mpsr, inc=inc)
+
+
+def test_omdot():
+    Mp = 1.3381 * u.Msun
+    Mc = 1.2489 * u.Msun
+    Pb = 0.10225156248 * u.d
+    e = 0.0877775
+    # for the Double Pulsar
+    # https://arxiv.org/pdf/astro-ph/0609417.pdf
+    # but recalculated based on the values above
+    assert np.isclose(OMDOT(Mp, Mc, Pb, e), 16.8991396 * u.deg / u.yr)
+
+
+def test_gamma():
+    Mp = 1.3381 * u.Msun
+    Mc = 1.2489 * u.Msun
+    Pb = 0.10225156248 * u.d
+    e = 0.0877775
+    # for the Double Pulsar
+    # https://arxiv.org/pdf/astro-ph/0609417.pdf
+    # but recalculated based on the values above
+    assert np.isclose(GAMMA(Mp, Mc, Pb, e), 0.38402 * u.ms)
+
+
+def test_pbdot():
+    Mp = 1.3381 * u.Msun
+    Mc = 1.2489 * u.Msun
+    Pb = 0.10225156248 * u.d
+    e = 0.0877775
+    # for the Double Pulsar
+    # https://arxiv.org/pdf/astro-ph/0609417.pdf
+    # but recalculated based on the values above
+    assert np.isclose(PBDOT(Mp, Mc, Pb, e), -1.24777223e-12 * u.s / u.s)
+
+
+def test_gamma_error_noquantity_mp():
+    Mp = 1.3381 * u.Msun
+    Mc = 1.2489 * u.Msun
+    Pb = 0.10225156248 * u.d
+    e = 0.0877775
+    with pytest.raises(ValueError):
+        GAMMA(Mp.value, Mc, Pb, e)
+
+
+def test_gamma_error_noquantity_mc():
+    Mp = 1.3381 * u.Msun
+    Mc = 1.2489 * u.Msun
+    Pb = 0.10225156248 * u.d
+    e = 0.0877775
+    with pytest.raises(ValueError):
+        GAMMA(Mp, Mc.value, Pb, e)
+
+
+def test_gamma_error_noquantity_pb():
+    Mp = 1.3381 * u.Msun
+    Mc = 1.2489 * u.Msun
+    Pb = 0.10225156248 * u.d
+    e = 0.0877775
+    with pytest.raises(ValueError):
+        GAMMA(Mp, Mc, Pb.value, e)
+
+
+def test_omdot_error_noquantity_mp():
+    Mp = 1.3381 * u.Msun
+    Mc = 1.2489 * u.Msun
+    Pb = 0.10225156248 * u.d
+    e = 0.0877775
+    with pytest.raises(ValueError):
+        OMDOT(Mp.value, Mc, Pb, e)
+
+
+def test_omdot_error_noquantity_mc():
+    Mp = 1.3381 * u.Msun
+    Mc = 1.2489 * u.Msun
+    Pb = 0.10225156248 * u.d
+    e = 0.0877775
+    with pytest.raises(ValueError):
+        OMDOT(Mp, Mc.value, Pb, e)
+
+
+def test_omdot_error_noquantity_pb():
+    Mp = 1.3381 * u.Msun
+    Mc = 1.2489 * u.Msun
+    Pb = 0.10225156248 * u.d
+    e = 0.0877775
+    with pytest.raises(ValueError):
+        OMDOT(Mp, Mc, Pb.value, e)
+
+
+def test_pbdot_error_noquantity_mp():
+    Mp = 1.3381 * u.Msun
+    Mc = 1.2489 * u.Msun
+    Pb = 0.10225156248 * u.d
+    e = 0.0877775
+    with pytest.raises(ValueError):
+        PBDOT(Mp.value, Mc, Pb, e)
+
+
+def test_pbdot_error_noquantity_mc():
+    Mp = 1.3381 * u.Msun
+    Mc = 1.2489 * u.Msun
+    Pb = 0.10225156248 * u.d
+    e = 0.0877775
+    with pytest.raises(ValueError):
+        PBDOT(Mp, Mc.value, Pb, e)
+
+
+def test_pbdot_error_noquantity_pb():
+    Mp = 1.3381 * u.Msun
+    Mc = 1.2489 * u.Msun
+    Pb = 0.10225156248 * u.d
+    e = 0.0877775
+    with pytest.raises(ValueError):
+        PBDOT(Mp, Mc, Pb.value, e)
 
 
 def test_ftest():

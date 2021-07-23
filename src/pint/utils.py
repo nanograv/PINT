@@ -49,6 +49,9 @@ __all__ = [
     "mass_funct2",
     "pulsar_mass",
     "companion_mass",
+    "OMDOT",
+    "PBDOT",
+    "GAMMA",
     "pulsar_age",
     "pulsar_edot",
     "pulsar_B",
@@ -1407,6 +1410,141 @@ def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
     # the denominator will be near 0 only when sin(i) is ~0, but that's already a known problem
     x1 = massfunct / 3.0 / a - C / 3.0 / a - delta0 / 3.0 / a / C
     return x1.to(u.Msun)
+
+
+def PBDOT(mp, mc, pb, e):
+    """Post-Keplerian orbital decay PBDOT.
+
+    Parameters
+    ----------
+    mp : astropy.units.Quantity
+        pulsar mass
+    mc : astropy.units.Quantity
+        companion mass
+    pb : astropy.units.Quantity
+        Binary orbital period
+    e : Quantity or float
+        orbital eccentricity
+
+    Returns
+    -------
+    pbdot : astropy.units.Quantity (dimensionless)
+
+    Notes
+    -----
+    Calculates :math:`(-192\pi/5)T_{\odot}^{5/3} (P_b/2\pi)^{-5/3} f(e)m_p m_c (m_p+m_c)^{-1/3}`,
+    with :math:`f(e)=(1+(73/24)e^2+(37/96)e^4)(1-e^2)^{-7/2}` and :math:`T_sun = GM_\odot c^{-3}`.
+
+    See [1]_
+
+    .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.52
+
+    """
+
+    if not isinstance(pb, u.quantity.Quantity):
+        raise ValueError(f"The binary period pb should be a Quantity but is {pb}.")
+    if not isinstance(mp, u.quantity.Quantity):
+        raise ValueError(f"The pulsar mass should be a Quantity but is {mp}.")
+    if not isinstance(mc, u.quantity.Quantity):
+        raise ValueError(f"The companion mass should be a Quantity but is {mc}.")
+
+    f = (1 + (73.0 / 24) * e ** 2 + (37.0 / 96) * e ** 4) / (1 - e ** 2) ** (7.0 / 2)
+    value = (
+        (const.G / const.c ** 3) ** (5.0 / 3)
+        * (pb / (2 * np.pi)) ** (-5.0 / 3)
+        * (-192 * np.pi / 5)
+        * f
+        * (mp * mc)
+        / (mp + mc) ** (1.0 / 3)
+    )
+    return value.to(u.s / u.s)
+
+
+def GAMMA(mp, mc, pb, e):
+    """Post-Keplerian time dilation and gravitational redshift GAMMA
+
+    Parameters
+    ----------
+    mp : astropy.units.Quantity
+        pulsar mass
+    mc : astropy.units.Quantity
+        companion mass
+    pb : astropy.units.Quantity
+        Binary orbital period
+    e : astropy.units.Quantity or float
+        orbital eccentricity
+
+    Returns
+    -------
+    gamma : astropy.units.Quantity in ``u.s``
+
+    Notes
+    -----
+    Calculates :math:`T_{\odot}^{2/3} (P_b/2\pi)^{1/3} e m_c(m_p+2m_c)(m_p+m_c)^{-4/3}`, with :math:`T_sun = GM_\odot c^{-3}`.
+
+    See [1]_
+
+    .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.49
+
+    """
+    if not isinstance(pb, u.quantity.Quantity):
+        raise ValueError(f"The binary period pb should be a Quantity but is {pb}.")
+    if not isinstance(mp, u.quantity.Quantity):
+        raise ValueError(f"The pulsar mass should be a Quantity but is {mp}.")
+    if not isinstance(mc, u.quantity.Quantity):
+        raise ValueError(f"The companion mass should be a Quantity but is {mc}.")
+
+    value = (
+        (const.G / const.c ** 3) ** (2.0 / 3)
+        * (pb / (2 * np.pi)) ** (1.0 / 3)
+        * e
+        * (mc * (mp + 2 * mc))
+        / (mp + mc) ** (4.0 / 3)
+    )
+    return value.to(u.s)
+
+
+def OMDOT(mp, mc, pb, e):
+    """Post-Keplerian longitude of periastron precession rate OMDOT
+
+    Parameters
+    ----------
+    mp : astropy.units.Quantity
+        pulsar mass
+    mc : astropy.units.Quantity
+        companion mass
+    pb : astropy.units.Quantity
+        Binary orbital period
+    e : astropy.units.Quantity or float
+        orbital eccentricity
+
+    Returns
+    -------
+    omdot : astropy.units.Quantity in ``u.deg/u.yr``
+
+    Notes
+    -----
+    Calculates :math:`3T_{\odot}^{2/3} (P_b/2\pi)^{-5/3} (1-e^2)^{-1}(m_p+m_c)^{2/3}`, with :math:`T_sun = GM_\odot c^{-3}`.
+
+    See [1]_
+
+    .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.48
+
+    """
+    if not isinstance(pb, u.quantity.Quantity):
+        raise ValueError(f"The binary period pb should be a Quantity but is {pb}.")
+    if not isinstance(mp, u.quantity.Quantity):
+        raise ValueError(f"The pulsar mass should be a Quantity but is {mp}.")
+    if not isinstance(mc, u.quantity.Quantity):
+        raise ValueError(f"The companion mass should be a Quantity but is {mc}.")
+
+    value = (
+        3
+        * (pb / (2 * np.pi)) ** (-5.0 / 3)
+        * (1 / (1 - e ** 2))
+        * (const.G * (mp + mc) / const.c ** 3) ** (2.0 / 3)
+    )
+    return value.to(u.deg / u.yr, equivalencies=u.dimensionless_angles())
 
 
 def ELL1_check(A1, E, TRES, NTOA, outstring=True):
