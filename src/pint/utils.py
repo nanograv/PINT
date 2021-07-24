@@ -1232,7 +1232,7 @@ def pulsar_age(f: u.Hz, fdot: u.Hz / u.s, n=3, fo=1e99 * u.Hz):
 
     Raises
     ------
-    u.UnitsError
+    astropy.units.UnitsError
         If the input data are not appropriate quantities
     TypeError
         If the input data are not quantities
@@ -1268,7 +1268,7 @@ def pulsar_edot(f: u.Hz, fdot: u.Hz / u.s, I=1.0e45 * u.g * u.cm ** 2):
 
     Raises
     ------
-    u.UnitsError
+    astropy.units.UnitsError
         If the input data are not appropriate quantities
     TypeError
         If the input data are not quantities
@@ -1301,7 +1301,7 @@ def pulsar_B(f: u.Hz, fdot: u.Hz / u.s):
 
     Raises
     ------
-    u.UnitsError
+    astropy.units.UnitsError
         If the input data are not appropriate quantities
     TypeError
         If the input data are not quantities
@@ -1337,7 +1337,7 @@ def pulsar_B_lightcyl(f: u.Hz, fdot: u.Hz / u.s):
 
     Raises
     ------
-    u.UnitsError
+    astropy.units.UnitsError
         If the input data are not appropriate quantities
     TypeError
         If the input data are not quantities
@@ -1375,7 +1375,7 @@ def mass_funct(pb: u.d, x: u.cm):
 
     Raises
     ------
-    u.UnitsError
+    astropy.units.UnitsError
         If the input data are not appropriate quantities
     TypeError
         If the input data are not quantities
@@ -1408,7 +1408,7 @@ def mass_funct2(mp: u.Msun, mc: u.Msun, i: u.deg):
 
     Raises
     ------
-    u.UnitsError
+    astropy.units.UnitsError
         If the input data are not appropriate quantities
     TypeError
         If the input data are not quantities
@@ -1447,7 +1447,7 @@ def pulsar_mass(pb: u.d, x: u.cm, mc: u.Msun, inc: u.deg):
 
     Raises
     ------
-    u.UnitsError
+    astropy.units.UnitsError
         If the input data are not appropriate quantities
     TypeError
         If the input data are not quantities
@@ -1464,20 +1464,21 @@ def pulsar_mass(pb: u.d, x: u.cm, mc: u.Msun, inc: u.deg):
     Notes
     -------
     This forms a quadratic equation of the form:
-    ca*Mp**2 + cb*Mp + cc = 0
+    :math:`ca M_p^2 + cb M_p + cc = 0``
 
     with:
-    ca = massfunct
-    cb = 2 * massfunct * mc
-    cc = massfunct * mc ** 2 - (mc * sini) ** 3
+
+    - :math:`ca = {\\rm massfunct}``
+    - :math:`cb = 2 {\\rm massfunct} M_c`
+    - :math:`cc = {\\rm massfunct}  M_c^2 - M_c\sin^3 i`
 
     except the discriminant simplifies to:
-    4 * massfunct * mc**3 * sini**3
+    :math:`4{\\rm massfunct} M_c^3 \sin^3 i`
 
     solve it directly
     this has to be the positive branch of the quadratic
-    because the vertex is at -mc, so the negative branch will always be < 0
-
+    because the vertex is at :math:`-M_c`,
+    so the negative branch will always be < 0
     """
     massfunct = mass_funct(pb, x)
 
@@ -1513,7 +1514,7 @@ def companion_mass(pb: u.d, x: u.cm, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
 
     Raises
     ------
-    u.UnitsError
+    astropy.units.UnitsError
         If the input data are not appropriate quantities
     TypeError
         If the input data are not quantities
@@ -1529,12 +1530,12 @@ def companion_mass(pb: u.d, x: u.cm, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
     Notes
     -----
     This ends up as a a cubic equation of the form:
-    a*Mc**3 + b*Mc**2 + c*Mc + d = 0
+    :math:`a M_c^3 + b M_c^2 + c M_c + d = 0`
 
-    a = np.sin(inc) ** 3
-    b = -massfunct
-    c = -2 * mpsr * massfunct
-    d = -massfunct * mpsr ** 2
+    - :math:`a = \sin^3(inc)`
+    - :math:`b = -{\\rm massfunct}`
+    - :math:`c = -2 M_p {\\rm massfunct}`
+    - :math:`d = -{\\rm massfunct} M_p^2`
 
     To solve it we can use a direct calculation of the cubic roots:
     https://en.wikipedia.org/wiki/Cubic_equation#General_cubic_formula
@@ -1543,16 +1544,13 @@ def companion_mass(pb: u.d, x: u.cm, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
     and make sure we get the right one
 
     https://en.wikipedia.org/wiki/Discriminant#Degree_3
-    delta = (
-        cb ** 2 * cc ** 2
-        - 4 * ca * cc ** 3
-        - 4 * cb ** 3 * cd
-        - 27 * ca ** 2 * cd ** 2
-        + 18 * ca * cb * cc * cd
-    )
-    if delta is < 0 then there is only 1 real root, and I think we do it correctly below
+
+    :math:`\Delta = (b^2 c^2 - 4ac^3-4b^3d-27a^2d^2+18abcd)`
+
+    if :math:`\delta< 0` then there is only 1 real root,
+    and I think we do it correctly below
     and this should be < 0
-    since this reduces to -27 * sin(i)**6 * massfunct**2 * mp**4 -4 * sin(i)**3 * massfunct**3 * mp**3
+    since this reduces to :math:`-27\sin^6 i {\\rm massfunct}^2 M_p^4 -4\sin^3 i {\\rm massfunct}^3 M_p^3`
     so there is just 1 real root and we compute it below
 
     """
@@ -1614,7 +1612,7 @@ def PBDOT(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
     Raises
     ------
-    u.UnitsError
+    astropy.units.UnitsError
         If the input data are not appropriate quantities
     TypeError
         If the input data are not quantities
@@ -1663,7 +1661,7 @@ def GAMMA(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
     Raises
     ------
-    u.UnitsError
+    astropy.units.UnitsError
         If the input data are not appropriate quantities
     TypeError
         If the input data are not quantities
@@ -1709,7 +1707,7 @@ def OMDOT(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
     Raises
     ------
-    u.UnitsError
+    astropy.units.UnitsError
         If the input data are not appropriate quantities
     TypeError
         If the input data are not quantities
