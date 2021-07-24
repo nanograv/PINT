@@ -1441,14 +1441,6 @@ def PBDOT(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
     .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.52
 
     """
-
-    if not isinstance(pb, u.quantity.Quantity):
-        raise ValueError(f"The binary period pb should be a Quantity but is {pb}.")
-    if not isinstance(mp, u.quantity.Quantity):
-        raise ValueError(f"The pulsar mass should be a Quantity but is {mp}.")
-    if not isinstance(mc, u.quantity.Quantity):
-        raise ValueError(f"The companion mass should be a Quantity but is {mc}.")
-
     f = (1 + (73.0 / 24) * e ** 2 + (37.0 / 96) * e ** 4) / (1 - e ** 2) ** (7.0 / 2)
     value = (
         (const.G / const.c ** 3) ** (5.0 / 3)
@@ -1489,13 +1481,6 @@ def GAMMA(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
     .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.49
 
     """
-    if not isinstance(pb, u.quantity.Quantity):
-        raise ValueError(f"The binary period pb should be a Quantity but is {pb}.")
-    if not isinstance(mp, u.quantity.Quantity):
-        raise ValueError(f"The pulsar mass should be a Quantity but is {mp}.")
-    if not isinstance(mc, u.quantity.Quantity):
-        raise ValueError(f"The companion mass should be a Quantity but is {mc}.")
-
     value = (
         (const.G / const.c ** 3) ** (2.0 / 3)
         * (pb / (2 * np.pi)) ** (1.0 / 3)
@@ -1534,13 +1519,6 @@ def OMDOT(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
     .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.48
 
     """
-    if not isinstance(pb, u.quantity.Quantity):
-        raise ValueError(f"The binary period pb should be a Quantity but is {pb}.")
-    if not isinstance(mp, u.quantity.Quantity):
-        raise ValueError(f"The pulsar mass should be a Quantity but is {mp}.")
-    if not isinstance(mc, u.quantity.Quantity):
-        raise ValueError(f"The companion mass should be a Quantity but is {mc}.")
-
     value = (
         3
         * (pb / (2 * np.pi)) ** (-5.0 / 3)
