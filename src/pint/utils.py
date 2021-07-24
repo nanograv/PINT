@@ -1412,7 +1412,8 @@ def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
     return x1.to(u.Msun)
 
 
-def PBDOT(mp, mc, pb, e):
+@u.quantity_input
+def PBDOT(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
     """Post-Keplerian orbital decay PBDOT.
 
     Parameters
@@ -1433,7 +1434,7 @@ def PBDOT(mp, mc, pb, e):
     Notes
     -----
     Calculates :math:`(-192\pi/5)T_{\odot}^{5/3} (P_b/2\pi)^{-5/3} f(e)m_p m_c (m_p+m_c)^{-1/3}`,
-    with :math:`f(e)=(1+(73/24)e^2+(37/96)e^4)(1-e^2)^{-7/2}` and :math:`T_sun = GM_\odot c^{-3}`.
+    with :math:`f(e)=(1+(73/24)e^2+(37/96)e^4)(1-e^2)^{-7/2}` and :math:`T_\odot = GM_\odot c^{-3}`.
 
     See [1]_
 
@@ -1460,7 +1461,8 @@ def PBDOT(mp, mc, pb, e):
     return value.to(u.s / u.s)
 
 
-def GAMMA(mp, mc, pb, e):
+@u.quantity_input
+def GAMMA(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
     """Post-Keplerian time dilation and gravitational redshift GAMMA
 
     Parameters
@@ -1480,7 +1482,7 @@ def GAMMA(mp, mc, pb, e):
 
     Notes
     -----
-    Calculates :math:`T_{\odot}^{2/3} (P_b/2\pi)^{1/3} e m_c(m_p+2m_c)(m_p+m_c)^{-4/3}`, with :math:`T_sun = GM_\odot c^{-3}`.
+    Calculates :math:`T_{\odot}^{2/3} (P_b/2\pi)^{1/3} e m_c(m_p+2m_c)(m_p+m_c)^{-4/3}`, with :math:`T_\odot = GM_\odot c^{-3}`.
 
     See [1]_
 
@@ -1504,7 +1506,8 @@ def GAMMA(mp, mc, pb, e):
     return value.to(u.s)
 
 
-def OMDOT(mp, mc, pb, e):
+@u.quantity_input
+def OMDOT(mp: u.g, mc: u.g, pb: u.d, e: u.dimensionless_unscaled):
     """Post-Keplerian longitude of periastron precession rate OMDOT
 
     Parameters
@@ -1524,7 +1527,7 @@ def OMDOT(mp, mc, pb, e):
 
     Notes
     -----
-    Calculates :math:`3T_{\odot}^{2/3} (P_b/2\pi)^{-5/3} (1-e^2)^{-1}(m_p+m_c)^{2/3}`, with :math:`T_sun = GM_\odot c^{-3}`.
+    Calculates :math:`3T_{\odot}^{2/3} (P_b/2\pi)^{-5/3} (1-e^2)^{-1}(m_p+m_c)^{2/3}`, with :math:`T_\odot = GM_\odot c^{-3}`.
 
     See [1]_
 
