@@ -910,7 +910,7 @@ def test_omdot():
     Mp = 1.3381 * u.Msun
     Mc = 1.2489 * u.Msun
     Pb = 0.10225156248 * u.d
-    e = 0.0877775
+    e = 0.0877775 * u.dimensionless_unscaled
     # for the Double Pulsar
     # https://arxiv.org/pdf/astro-ph/0609417.pdf
     # but recalculated based on the values above
@@ -921,7 +921,7 @@ def test_gamma():
     Mp = 1.3381 * u.Msun
     Mc = 1.2489 * u.Msun
     Pb = 0.10225156248 * u.d
-    e = 0.0877775
+    e = 0.0877775 * u.dimensionless_unscaled
     # for the Double Pulsar
     # https://arxiv.org/pdf/astro-ph/0609417.pdf
     # but recalculated based on the values above
@@ -932,7 +932,7 @@ def test_pbdot():
     Mp = 1.3381 * u.Msun
     Mc = 1.2489 * u.Msun
     Pb = 0.10225156248 * u.d
-    e = 0.0877775
+    e = 0.0877775 * u.dimensionless_unscaled
     # for the Double Pulsar
     # https://arxiv.org/pdf/astro-ph/0609417.pdf
     # but recalculated based on the values above
@@ -1140,7 +1140,11 @@ def test_taylor_horner_equals_deriv(x, coeffs):
 
 @pytest.mark.parametrize(
     "x, result, n",
-    [(1 * u.s, 1 * u.m, 5), (1 * u.s, 1 * u.m, 1), (1 * u.km ** 2, 1 * u.m, 3),],
+    [
+        (1 * u.s, 1 * u.m, 5),
+        (1 * u.s, 1 * u.m, 1),
+        (1 * u.km ** 2, 1 * u.m, 3),
+    ],
 )
 def test_taylor_horner_units_ok(x, result, n):
     coeffs = [result / x ** i for i in range(n + 1)]
