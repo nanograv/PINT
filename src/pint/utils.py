@@ -1205,7 +1205,8 @@ def pferrs(porf, porferr, pdorfd=None, pdorfderr=None):
         return [forp, forperr, fdorpd, fdorpderr]
 
 
-def pulsar_age(f, fdot, n=3, fo=1e99 * u.Hz):
+@u.quantity_input(fo=u.Hz)
+def pulsar_age(f: u.Hz, fdot: u.Hz / u.s, n=3, fo=1e99 * u.Hz):
     """Compute pulsar characteristic age
 
     Return the age of a pulsar given the spin frequency
@@ -1236,7 +1237,8 @@ def pulsar_age(f, fdot, n=3, fo=1e99 * u.Hz):
     return (-f / ((n - 1.0) * fdot) * (1.0 - (f / fo) ** (n - 1.0))).to(u.yr)
 
 
-def pulsar_edot(f, fdot, I=1.0e45 * u.g * u.cm ** 2):
+@u.quantity_input(I=u.g * u.cm ** 2)
+def pulsar_edot(f: u.Hz, fdot: u.Hz / u.s, I=1.0e45 * u.g * u.cm ** 2):
     """Compute pulsar spindown energy loss rate
 
     Return the pulsar Edot (in erg/s) given the spin frequency `f` and
@@ -1264,7 +1266,8 @@ def pulsar_edot(f, fdot, I=1.0e45 * u.g * u.cm ** 2):
     return (-4.0 * np.pi ** 2 * I * f * fdot).to(u.erg / u.s)
 
 
-def pulsar_B(f, fdot):
+@u.quantity_input
+def pulsar_B(f: u.Hz, fdot: u.Hz / u.s):
     """Compute pulsar surface magnetic field
 
     Return the estimated pulsar surface magnetic field strength
@@ -1291,7 +1294,8 @@ def pulsar_B(f, fdot):
     return 3.2e19 * u.G * np.sqrt(-fdot.to_value(u.Hz / u.s) / f.to_value(u.Hz) ** 3.0)
 
 
-def pulsar_B_lightcyl(f, fdot):
+@u.quantity_input
+def pulsar_B_lightcyl(f: u.Hz, fdot: u.Hz / u.s):
     """Compute pulsar magnetic field at the light cylinder
 
     Return the estimated pulsar magnetic field strength at the
@@ -1325,7 +1329,8 @@ def pulsar_B_lightcyl(f, fdot):
     )
 
 
-def mass_funct(pb, x):
+@u.quantity_input
+def mass_funct(pb: u.d, x: u.cm):
     """Compute binary mass function from period and semi-major axis
 
     Parameters
@@ -1349,17 +1354,12 @@ def mass_funct(pb, x):
     -----
     Calculates :math:`4\pi^2 x^3 / G / P_b^2`
     """
-    if not isinstance(x, u.quantity.Quantity):
-        raise ValueError(
-            f"The projected semi-major axis x should be a Quantity but is {x}."
-        )
-    if not isinstance(pb, u.quantity.Quantity):
-        raise ValueError(f"The binary period pb should be a Quantity but is {pb}.")
     fm = 4.0 * np.pi ** 2 * x ** 3 / (const.G * pb ** 2)
     return fm.to(u.solMass)
 
 
-def mass_funct2(mp, mc, i):
+@u.quantity_input
+def mass_funct2(mp: u.Msun, mc: u.Msun, i: u.deg):
     """Compute binary mass function from masses and inclination
 
     Parameters
@@ -1388,17 +1388,11 @@ def mass_funct2(mp, mc, i):
 
     Calculates :math:`m_c\sin^3 i / (m_c + m_p)^2`
     """
-    if not (isinstance(i, angles.Angle) or isinstance(i, u.quantity.Quantity)):
-        raise ValueError(f"The inclination should be an Angle but is {i}.")
-    if not isinstance(mc, u.quantity.Quantity):
-        raise ValueError(f"The companion mass should be a Quantity but is {mc}.")
-    if not isinstance(mp, u.quantity.Quantity):
-        raise ValueError(f"The pulsar mass should be a Quantity but is {mp}.")
-
     return (mc * np.sin(i)) ** 3.0 / (mc + mp) ** 2.0
 
 
-def pulsar_mass(pb, x, mc, inc):
+@u.quantity_input
+def pulsar_mass(pb: u.d, x: u.cm, mc: u.Msun, inc: u.deg):
     """Compute pulsar mass from orbital parameters
 
     Return the pulsar mass (in solar mass units) for a binary.
@@ -1451,17 +1445,6 @@ def pulsar_mass(pb, x, mc, inc):
     because the vertex is at -mc, so the negative branch will always be < 0
 
     """
-    if not (isinstance(inc, angles.Angle) or isinstance(inc, u.quantity.Quantity)):
-        raise ValueError(f"The inclination should be an Angle but is {inc}.")
-    if not isinstance(x, u.quantity.Quantity):
-        raise ValueError(
-            f"The projected semi-major axis x should be a Quantity but is {x}."
-        )
-    if not isinstance(pb, u.quantity.Quantity):
-        raise ValueError(f"The binary period pb should be a Quantity but is {pb}.")
-    if not isinstance(mc, u.quantity.Quantity):
-        raise ValueError(f"The companion mass should be a Quantity but is {mc}.")
-
     massfunct = mass_funct(pb, x)
 
     sini = np.sin(inc)
@@ -1471,7 +1454,8 @@ def pulsar_mass(pb, x, mc, inc):
     return ((-cb + np.sqrt(4 * massfunct * mc ** 3 * sini ** 3)) / (2 * ca)).to(u.Msun)
 
 
-def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
+@u.quantity_input(inc=u.deg, mpsr=u.solMass)
+def companion_mass(pb: u.d, x: u.cm, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
     """Commpute the companion mass from the orbital parameters
 
     Compute companion mass for a binary system from orbital mechanics,
@@ -1536,17 +1520,6 @@ def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
     so there is just 1 real root and we compute it below
 
     """
-    if not (isinstance(inc, angles.Angle) or isinstance(inc, u.quantity.Quantity)):
-        raise ValueError(f"The inclination should be an Angle but is {inc}.")
-    if not isinstance(x, u.quantity.Quantity):
-        raise ValueError(
-            f"The projected semi-major axis x should be a Quantity but is {x}."
-        )
-    if not isinstance(pb, u.quantity.Quantity):
-        raise ValueError(f"The binary period pb should be a Quantity but is {pb}.")
-    if not isinstance(mpsr, u.quantity.Quantity):
-        raise ValueError(f"The pulsar mass should be a Quantity but is {mpsr}.")
-
     massfunct = mass_funct(pb, x)
 
     # solution
@@ -2149,7 +2122,7 @@ def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params=
     >>> from pint import fitter, toa
     >>> import pint.utils
     >>> import io
-    >>> 
+    >>>
     >>> # the locations of these may vary
     >>> timfile = "tests/datafile/NGC6440E.tim"
     >>> parfile = "tests/datafile/NGC6440E.par"
@@ -2157,18 +2130,18 @@ def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params=
     >>> # fit the model to the data
     >>> f = fitter.WLSFitter(toas=t, model=m)
     >>> f.fit_toas()
-    >>> 
+    >>>
     >>> # make fake TOAs starting at the end of the
     >>> # current data and going out 100 days
     >>> tnew = toa.make_fake_toas(t.get_mjds().max().value,
     >>>                           t.get_mjds().max().value+100, 50, model=f.model)
     >>> # now make random models
     >>> dphase, mrand = pint.utils.calculate_random_models(f, tnew, Nmodels=100)
-    
+
 
     Note
     ----
-    To calculate new TOAs, you can use :func:`~pint.toa.make_fake_toas` 
+    To calculate new TOAs, you can use :func:`~pint.toa.make_fake_toas`
 
     or similar
     """
