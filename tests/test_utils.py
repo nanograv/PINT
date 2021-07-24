@@ -966,6 +966,42 @@ def test_gamma_error_noquantity_pb():
         GAMMA(Mp, Mc, Pb.value, e)
 
 
+def test_omdot_error_wrongquantity_mp():
+    Mp = 1.3381 * u.Msun
+    Mc = 1.2489 * u.Msun
+    Pb = 0.10225156248 * u.d
+    e = 0.0877775
+    with pytest.raises(UnitsError):
+        OMDOT(Mp.value * u.s, Mc, Pb, e)
+
+
+def test_omdot_error_wrongquantity_mc():
+    Mp = 1.3381 * u.Msun
+    Mc = 1.2489 * u.Msun
+    Pb = 0.10225156248 * u.d
+    e = 0.0877775
+    with pytest.raises(ValueError):
+        OMDOT(Mp, Mc.value * u.s, Pb, e)
+
+
+def test_omdot_error_wrongquantity_pb():
+    Mp = 1.3381 * u.Msun
+    Mc = 1.2489 * u.Msun
+    Pb = 0.10225156248 * u.d
+    e = 0.0877775
+    with pytest.raises(ValueError):
+        OMDOT(Mp, Mc, Pb.value * u.Msun, e)
+
+
+def test_omdot_error_wrongquantity_e():
+    Mp = 1.3381 * u.Msun
+    Mc = 1.2489 * u.Msun
+    Pb = 0.10225156248 * u.d
+    e = 0.0877775
+    with pytest.raises(ValueError):
+        OMDOT(Mp, Mc, Pb, e * u.s)
+
+
 def test_omdot_error_noquantity_mp():
     Mp = 1.3381 * u.Msun
     Mc = 1.2489 * u.Msun
@@ -1104,7 +1140,11 @@ def test_taylor_horner_equals_deriv(x, coeffs):
 
 @pytest.mark.parametrize(
     "x, result, n",
-    [(1 * u.s, 1 * u.m, 5), (1 * u.s, 1 * u.m, 1), (1 * u.km ** 2, 1 * u.m, 3),],
+    [
+        (1 * u.s, 1 * u.m, 5),
+        (1 * u.s, 1 * u.m, 1),
+        (1 * u.km ** 2, 1 * u.m, 3),
+    ],
 )
 def test_taylor_horner_units_ok(x, result, n):
     coeffs = [result / x ** i for i in range(n + 1)]
