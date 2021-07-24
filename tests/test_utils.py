@@ -657,14 +657,14 @@ def test_mass_function():
 
 def test_mass_function_error_without_quantity_x():
     # Mass function
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         mass_funct(1.0 * u.d, 2.0)
 
 
 def test_mass_function_error_without_quantity_pb():
 
     # Mass function
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         mass_funct(1.0, 2.0 * pint.ls)
 
 
@@ -682,21 +682,21 @@ def test_other_mass_function():
 def test_other_mass_function_error_without_quantity_mp():
 
     # Mass function, second form
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         mass_funct2(1.4, 0.2 * u.solMass, 60.0 * u.deg)
 
 
 def test_other_mass_function_error_without_quantity_mc():
 
     # Mass function, second form
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         mass_funct2(1.4 * u.solMass, 0.2, 60.0 * u.deg)
 
 
 def test_other_mass_function_error_without_quantity_inc():
 
     # Mass function, second form
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         mass_funct2(1.4 * u.solMass, 0.2 * u.solMass, 60.0)
 
 
@@ -839,7 +839,7 @@ def test_pulsar_mass_error_noquantity_inc():
     x = 2.0 * pint.ls
     inc = 60 * u.deg
     Mc = 0.5 * u.solMass
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         pulsar_mass(Pb, x, Mc, inc=inc.value)
 
 
@@ -848,7 +848,7 @@ def test_pulsar_mass_error_noquantity_Mc():
     x = 2.0 * pint.ls
     inc = 60 * u.deg
     Mc = 0.5 * u.solMass
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         pulsar_mass(Pb, x, Mc.value, inc=inc)
 
 
@@ -857,7 +857,7 @@ def test_pulsar_mass_error_noquantity_x():
     x = 2.0 * pint.ls
     inc = 60 * u.deg
     Mc = 0.5 * u.solMass
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         pulsar_mass(Pb, x.value, Mc, inc=inc)
 
 
@@ -866,7 +866,7 @@ def test_pulsar_mass_error_noquantity_Pb():
     x = 2.0 * pint.ls
     inc = 60 * u.deg
     Mc = 0.5 * u.solMass
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         pulsar_mass(Pb.value, x, Mc, inc=inc)
 
 
@@ -875,7 +875,7 @@ def test_companion_mass_error_noquantity_inc():
     x = 2.0 * pint.ls
     inc = 60 * u.deg
     Mpsr = 1.4 * u.solMass
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         pulsar_mass(Pb, x, Mpsr, inc=inc.value)
 
 
@@ -884,7 +884,7 @@ def test_companion_mass_error_noquantity_Mpsr():
     x = 2.0 * pint.ls
     inc = 60 * u.deg
     Mpsr = 1.4 * u.solMass
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         pulsar_mass(Pb, x, Mpsr.value, inc=inc)
 
 
@@ -893,7 +893,7 @@ def test_companion_mass_error_noquantity_x():
     x = 2.0 * pint.ls
     inc = 60 * u.deg
     Mpsr = 1.4 * u.solMass
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         pulsar_mass(Pb, x.value, Mpsr, inc=inc)
 
 
@@ -902,7 +902,7 @@ def test_companion_mass_error_noquantity_Pb():
     x = 2.0 * pint.ls
     inc = 60 * u.deg
     Mpsr = 1.4 * u.solMass
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         pulsar_mass(Pb.value, x, Mpsr, inc=inc)
 
 
