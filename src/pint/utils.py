@@ -1499,7 +1499,7 @@ def companion_mass(pb: u.d, x: u.cm, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
     ----------
     pb : astropy.units.Quantity
         Binary orbital period
-    x : astropy.units.Quantity`
+    x : astropy.units.Quantity
         Projected pulsar semi-major axis (aka ASINI) in ``pint.ls``
     inc : astropy.coordinates.Angle, optional
         Inclination angle, in ``u.deg`` or ``u.rad.`` Default is 60 deg.
@@ -1609,7 +1609,8 @@ def PBDOT(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
     Returns
     -------
-    pbdot : astropy.units.Quantity (dimensionless)
+    pbdot : astropy.units.Quantity
+        (dimensionless)
 
     Raises
     ------
@@ -1657,7 +1658,8 @@ def GAMMA(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
     Returns
     -------
-    gamma : astropy.units.Quantity in ``u.s``
+    gamma : astropy.units.Quantity
+        in ``u.s``
 
     Raises
     ------
@@ -1702,7 +1704,8 @@ def OMDOT(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
     Returns
     -------
-    omdot : astropy.units.Quantity in ``u.deg/u.yr``
+    omdot : astropy.units.Quantity
+        In ``u.deg/u.yr``
 
     Raises
     ------
