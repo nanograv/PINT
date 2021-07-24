@@ -944,7 +944,7 @@ def test_gamma_error_noquantity_mp():
     Mc = 1.2489 * u.Msun
     Pb = 0.10225156248 * u.d
     e = 0.0877775
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         GAMMA(Mp.value, Mc, Pb, e)
 
 
@@ -953,7 +953,7 @@ def test_gamma_error_noquantity_mc():
     Mc = 1.2489 * u.Msun
     Pb = 0.10225156248 * u.d
     e = 0.0877775
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         GAMMA(Mp, Mc.value, Pb, e)
 
 
@@ -962,7 +962,7 @@ def test_gamma_error_noquantity_pb():
     Mc = 1.2489 * u.Msun
     Pb = 0.10225156248 * u.d
     e = 0.0877775
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         GAMMA(Mp, Mc, Pb.value, e)
 
 
@@ -971,7 +971,7 @@ def test_omdot_error_wrongquantity_mp():
     Mc = 1.2489 * u.Msun
     Pb = 0.10225156248 * u.d
     e = 0.0877775
-    with pytest.raises(UnitsError):
+    with pytest.raises(u.UnitsError):
         OMDOT(Mp.value * u.s, Mc, Pb, e)
 
 
@@ -980,7 +980,7 @@ def test_omdot_error_wrongquantity_mc():
     Mc = 1.2489 * u.Msun
     Pb = 0.10225156248 * u.d
     e = 0.0877775
-    with pytest.raises(ValueError):
+    with pytest.raises(u.UnitsError):
         OMDOT(Mp, Mc.value * u.s, Pb, e)
 
 
@@ -989,7 +989,7 @@ def test_omdot_error_wrongquantity_pb():
     Mc = 1.2489 * u.Msun
     Pb = 0.10225156248 * u.d
     e = 0.0877775
-    with pytest.raises(ValueError):
+    with pytest.raises(u.UnitsError):
         OMDOT(Mp, Mc, Pb.value * u.Msun, e)
 
 
@@ -998,7 +998,7 @@ def test_omdot_error_wrongquantity_e():
     Mc = 1.2489 * u.Msun
     Pb = 0.10225156248 * u.d
     e = 0.0877775
-    with pytest.raises(ValueError):
+    with pytest.raises(u.UnitsError):
         OMDOT(Mp, Mc, Pb, e * u.s)
 
 
@@ -1007,7 +1007,7 @@ def test_omdot_error_noquantity_mp():
     Mc = 1.2489 * u.Msun
     Pb = 0.10225156248 * u.d
     e = 0.0877775
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         OMDOT(Mp.value, Mc, Pb, e)
 
 
@@ -1016,7 +1016,7 @@ def test_omdot_error_noquantity_mc():
     Mc = 1.2489 * u.Msun
     Pb = 0.10225156248 * u.d
     e = 0.0877775
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         OMDOT(Mp, Mc.value, Pb, e)
 
 
@@ -1025,7 +1025,7 @@ def test_omdot_error_noquantity_pb():
     Mc = 1.2489 * u.Msun
     Pb = 0.10225156248 * u.d
     e = 0.0877775
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         OMDOT(Mp, Mc, Pb.value, e)
 
 
@@ -1034,7 +1034,7 @@ def test_pbdot_error_noquantity_mp():
     Mc = 1.2489 * u.Msun
     Pb = 0.10225156248 * u.d
     e = 0.0877775
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         PBDOT(Mp.value, Mc, Pb, e)
 
 
@@ -1043,7 +1043,7 @@ def test_pbdot_error_noquantity_mc():
     Mc = 1.2489 * u.Msun
     Pb = 0.10225156248 * u.d
     e = 0.0877775
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         PBDOT(Mp, Mc.value, Pb, e)
 
 
@@ -1052,7 +1052,7 @@ def test_pbdot_error_noquantity_pb():
     Mc = 1.2489 * u.Msun
     Pb = 0.10225156248 * u.d
     e = 0.0877775
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         PBDOT(Mp, Mc, Pb.value, e)
 
 
