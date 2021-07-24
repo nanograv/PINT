@@ -1507,7 +1507,7 @@ def GAMMA(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
 
 @u.quantity_input
-def OMDOT(mp: u.g, mc: u.g, pb: u.d, e: u.dimensionless_unscaled):
+def OMDOT(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
     """Post-Keplerian longitude of periastron precession rate OMDOT
 
     Parameters
