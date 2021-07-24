@@ -1230,6 +1230,13 @@ def pulsar_age(f: u.Hz, fdot: u.Hz / u.s, n=3, fo=1e99 * u.Hz):
     age : astropy.units.Quantity
         pulsar age in ``u.yr``
 
+    Raises
+    ------
+    u.UnitsError
+        If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
+
     Notes
     -----
     Calculates :math:`(f/(n-1)\dot f) (1-(f/f_0)^{n-1})`
@@ -1259,6 +1266,13 @@ def pulsar_edot(f: u.Hz, fdot: u.Hz / u.s, I=1.0e45 * u.g * u.cm ** 2):
     Edot : astropy.units.Quantity
         pulsar spin-down luminosity in ``u.erg/u.s``
 
+    Raises
+    ------
+    u.UnitsError
+        If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
+
     Notes
     -----
     Calculates :math:`-4\pi^2  I  f  \dot f`
@@ -1284,6 +1298,13 @@ def pulsar_B(f: u.Hz, fdot: u.Hz / u.s):
     -------
     B : astropy.units.Quantity
         pulsar dipole magnetic field in ``u.G``
+
+    Raises
+    ------
+    u.UnitsError
+        If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
 
     Notes
     -----
@@ -1313,6 +1334,13 @@ def pulsar_B_lightcyl(f: u.Hz, fdot: u.Hz / u.s):
     -------
     Blc : astropy.units.Quantity
         pulsar dipole magnetic field at the light cylinder in ``u.G``
+
+    Raises
+    ------
+    u.UnitsError
+        If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
 
     Notes
     -----
@@ -1347,8 +1375,10 @@ def mass_funct(pb: u.d, x: u.cm):
 
     Raises
     ------
-    ValueError
+    u.UnitsError
         If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
 
     Notes
     -----
@@ -1378,8 +1408,10 @@ def mass_funct2(mp: u.Msun, mc: u.Msun, i: u.deg):
 
     Raises
     ------
-    ValueError
+    u.UnitsError
         If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
 
     Notes
     -----
@@ -1415,8 +1447,10 @@ def pulsar_mass(pb: u.d, x: u.cm, mc: u.Msun, inc: u.deg):
 
     Raises
     ------
-    ValueError
+    u.UnitsError
         If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
 
     Example
     -------
@@ -1479,8 +1513,10 @@ def companion_mass(pb: u.d, x: u.cm, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
 
     Raises
     ------
-    ValueError
+    u.UnitsError
         If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
 
     Example
     -------
@@ -1575,6 +1611,13 @@ def PBDOT(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
     -------
     pbdot : astropy.units.Quantity (dimensionless)
 
+    Raises
+    ------
+    u.UnitsError
+        If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
+
     Notes
     -----
     Calculates :math:`(-192\pi/5)T_{\odot}^{5/3} (P_b/2\pi)^{-5/3} f(e)m_p m_c (m_p+m_c)^{-1/3}`,
@@ -1616,6 +1659,13 @@ def GAMMA(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
     -------
     gamma : astropy.units.Quantity in ``u.s``
 
+    Raises
+    ------
+    u.UnitsError
+        If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
+
     Notes
     -----
     Calculates :math:`T_{\odot}^{2/3} (P_b/2\pi)^{1/3} e m_c(m_p+2m_c)(m_p+m_c)^{-4/3}`, with :math:`T_\odot = GM_\odot c^{-3}`.
@@ -1653,6 +1703,13 @@ def OMDOT(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
     Returns
     -------
     omdot : astropy.units.Quantity in ``u.deg/u.yr``
+
+    Raises
+    ------
+    u.UnitsError
+        If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
 
     Notes
     -----
