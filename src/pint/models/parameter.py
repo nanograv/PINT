@@ -178,9 +178,7 @@ class Parameter:
                 and self._quantity is not None
             ):
                 raise ValueError(
-                    "This parameter value is number convertible. "
-                    "Setting .value to None will lost the "
-                    "parameter value."
+                    "Setting .value to None will lose the parameter value."
                 )
             else:
                 self.value = val
@@ -244,14 +242,14 @@ class Parameter:
     def uncertainty(self, val):
         if val is None:
             if hasattr(self, "uncertainty") and self.uncertainty is not None:
-                raise ValueError("Setting an exist uncertainty to None is not allowed.")
+                raise ValueError("Setting an existing uncertainty to None is not allowed.")
             else:
                 self._uncertainty = self._uncertainty_value = None
                 return
         val = self._set_uncertainty(val)
 
         if not val >= 0:
-            raise ValueError(f"Uncertainty cannot be set to negative {val}")
+            raise ValueError(f"Uncertainties cannot be negative but {val} was supplied")
             # self.uncertainty_value = np.abs(self.uncertainty_value)
 
         self._uncertainty = val.to(self.units)
@@ -451,7 +449,7 @@ class Parameter:
     def name_matches(self, name):
         """Whether or not the parameter name matches the provided name"""
         return (name == self.name.upper()) or (
-            name in map(lambda x: x.upper(), self.aliases)
+            name in [x.upper() for x in self.aliases]
         )
 
     def set(self, value):
@@ -500,7 +498,7 @@ class floatParameter(Parameter):
     -------
     >>> from parameter import floatParameter
     >>> test = floatParameter(name='test1', value=100.0, units='second')
-    >>> print test
+    >>> print(test)
     test1 (s) 100.0
     """
 
@@ -1887,9 +1885,7 @@ class pairParameter(floatParameter):
                 and self._quantity is not None
             ):
                 raise ValueError(
-                    "This parameter value is number convertible. "
-                    "Setting .value to None will lose the "
-                    "parameter value."
+                    "Setting .value to None will lose the parameter value."
                 )
             else:
                 self.value = val
