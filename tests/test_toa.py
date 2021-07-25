@@ -105,17 +105,19 @@ class TestTOAs(unittest.TestCase):
 
 def test_toa_summary():
     m = get_model(os.path.join(datadir, "NGC6440E.par"))
-    toas = make_fake_toas(57000,58000,10,m, obs="ao", freq=2000*u.MHz)
+    toas = make_fake_toas(57000, 58000, 10, m, obs="ao", freq=2000 * u.MHz)
     s = toas.get_summary()
 
     assert re.search(r"Number of commands: *0", s)
     assert re.search(r"Number of observatories: *1 *\['arecibo'\]", s)
     assert re.search(r"MJD span: *57000\.000 to 58000\.000", s)
-    assert re.search(r"Date span: *20\d\d-\d\d-\d\d \d\d:\d\d:\d\d\.\d+ to 20\d\d-\d\d-\d\d \d\d:\d\d:\d\d\.\d+", s)
+    assert re.search(
+        r"Date span: *20\d\d-\d\d-\d\d \d\d:\d\d:\d\d\.\d+ to 20\d\d-\d\d-\d\d \d\d:\d\d:\d\d\.\d+",
+        s,
+    )
     assert re.search(r"arecibo TOAs *\(10\):", s)
     assert re.search(r" *Min freq: *2000.000 MHz", s)
     assert re.search(r" *Max freq: *2000.000 MHz", s)
     assert re.search(r" *Min error: *1 us", s)
     assert re.search(r" *Max error: *1 us", s)
     assert re.search(r" *Median error: *1 us", s)
-

@@ -242,7 +242,9 @@ class Parameter:
     def uncertainty(self, val):
         if val is None:
             if hasattr(self, "uncertainty") and self.uncertainty is not None:
-                raise ValueError("Setting an existing uncertainty to None is not allowed.")
+                raise ValueError(
+                    "Setting an existing uncertainty to None is not allowed."
+                )
             else:
                 self._uncertainty = self._uncertainty_value = None
                 return
