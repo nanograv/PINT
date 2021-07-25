@@ -199,7 +199,7 @@ class Pulsar:
         if self.fitted:
             chi2 = self.postfit_resids.chi2
             wrms = self.postfit_resids.rms_weighted()
-            print("Post-Fit Chi2:\t\t%.8g us^2" % chi2)
+            print("Post-Fit Chi2:\t\t%.8g" % chi2)
             print("Post-Fit Weighted RMS:\t%.8g us" % wrms.to(u.us).value)
             print(
                 "%19s  %24s\t%24s\t%16s  %16s  %16s"
@@ -224,8 +224,8 @@ class Pulsar:
                 post = getattr(self.postfit_model, key)
                 line += "%10s  " % ("" if post.units is None else str(post.units))
                 if post.quantity is not None:
-                    line += "%24s\t" % pre.print_quantity(pre.quantity)
-                    line += "%24s\t" % post.print_quantity(post.quantity)
+                    line += "%24s\t" % pre.str_quantity(pre.quantity)
+                    line += "%24s\t" % post.str_quantity(post.quantity)
                     try:
                         line += "%16.8g  " % post.uncertainty.value
                     except:
@@ -432,7 +432,7 @@ class Pulsar:
             fitter = pint.fitter.GLSFitter(self.selected_toas, self.prefit_model)
         chi2 = self.prefit_resids.chi2
         wrms = self.prefit_resids.rms_weighted()
-        print("Pre-Fit Chi2:\t\t%.8g us^2" % chi2)
+        print("Pre-Fit Chi2:\t\t%.8g" % chi2)
         print("Pre-Fit Weighted RMS:\t%.8g us" % wrms.to(u.us).value)
 
         fitter.fit_toas(maxiter=1)

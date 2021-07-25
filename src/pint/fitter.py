@@ -313,7 +313,7 @@ class Fitter:
                         )
                 elif isinstance(par, boolParameter):
                     s += ("{:" + spacingName + "s} {:>20s} {:28s} {}\n").format(
-                        pn, prefitpar._print_quantity(prefitpar.value), "", par.units
+                        pn, prefitpar.str_quantity(prefitpar.value), "", par.units
                     )
                 else:
                     # Assume a numerical parameter

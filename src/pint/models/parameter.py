@@ -338,7 +338,7 @@ class Parameter:
             value = self.value
         return self.prior.logpdf(value) if logpdf else self.prior.pdf(value)
 
-    def _print_quantity(self, quan):
+    def str_quantity(self, quan):
         """Format the argument in an appropriate way as a string."""
         return str(quan)
 
@@ -355,7 +355,7 @@ class Parameter:
         if self.quantity is None:
             out += "UNSET"
             return out
-        out += "{:17s}".format(self._print_quantity(self.quantity))
+        out += "{:17s}".format(self.str_quantity(self.quantity))
         if self.units is not None:
             out += " (" + str(self.units) + ")"
         if self.uncertainty is not None and isinstance(self.value, numbers.Number):
@@ -380,7 +380,7 @@ class Parameter:
             name = self.name
         else:
             name = self.use_alias
-        line = "%-15s %25s" % (name, self._print_quantity(self.quantity))
+        line = "%-15s %25s" % (name, self.str_quantity(self.quantity))
         if self.uncertainty is not None:
             line += " %d %s" % (
                 0 if self.frozen else 1,
@@ -634,7 +634,7 @@ class floatParameter(Parameter):
     def _set_uncertainty(self, val):
         return self._set_quantity(val)
 
-    def _print_quantity(self, quan):
+    def str_quantity(self, quan):
         """Quantity as a string (for floating-point values)."""
         v = quan.to(self.units).value
         if self._long_double:
@@ -746,7 +746,7 @@ class boolParameter(Parameter):
         self.value_type = bool
         self.paramType = "boolParameter"
 
-    def _print_quantity(self, quan):
+    def str_quantity(self, quan):
         return "Y" if quan else "N"
 
     def _set_quantity(self, val):
@@ -903,7 +903,7 @@ class MJDParameter(Parameter):
         self.paramType = "MJDParameter"
         self.special_arg += ["time_scale"]
 
-    def _print_quantity(self, quan):
+    def str_quantity(self, quan):
         return time_to_mjd_string(quan)
 
     def _get_value(self, quan):
@@ -1096,7 +1096,7 @@ class AngleParameter(Parameter):
             )
         return result
 
-    def _print_quantity(self, quan):
+    def str_quantity(self, quan):
         """This is a function to print out the angle parameter."""
         if ":" in self._str_unit:
             return quan.to_string(sep=":", precision=8)
@@ -1336,8 +1336,8 @@ class prefixParameter:
     def prior_pdf(self, value=None, logpdf=False):
         return self.param_comp.prior_pdf(value, logpdf)
 
-    def _print_quantity(self, quan):
-        return self.param_comp._print_quantity(quan)
+    def str_quantity(self, quan):
+        return self.param_comp.str_quantity(quan)
 
     def _print_uncertainty(self, uncertainty):
         return str(uncertainty.to(self.units).value)
@@ -1529,7 +1529,7 @@ class maskParameter(floatParameter):
             for kv in self.key_value:
                 out += " " + str(kv)
         if self.quantity is not None:
-            out += " " + self._print_quantity(self.quantity)
+            out += " " + self.str_quantity(self.quantity)
         else:
             out += " " + "UNSET"
             return out
@@ -1649,7 +1649,7 @@ class maskParameter(floatParameter):
                 line += f"{kv.value} "
             else:
                 line += f"{kv} "
-        line += "%25s" % self._print_quantity(self.quantity)
+        line += "%25s" % self.str_quantity(self.quantity)
         if self.uncertainty is not None:
             line += " %d %s" % (0 if self.frozen else 1, str(self.uncertainty_value))
         elif not self.frozen:
@@ -1841,8 +1841,8 @@ class pairParameter(floatParameter):
         else:
             name = self.use_alias
         line = "%-15s " % name
-        line += "%25s" % self._print_quantity(quantity[0])
-        line += " %25s" % self._print_quantity(quantity[1])
+        line += "%25s" % self.str_quantity(quantity[0])
+        line += " %25s" % self.str_quantity(quantity[1])
 
         return line + "\n"
 
@@ -1893,11 +1893,11 @@ class pairParameter(floatParameter):
                 self.value = val
         self._quantity = self._set_quantity(val)
 
-    def _print_quantity(self, quan):
+    def str_quantity(self, quan):
         """Return quantity as a string."""
         try:
             # Maybe it's a singleton quantity
-            return floatParameter._print_quantity(self, quan)
+            return floatParameter.str_quantity(self, quan)
         except AttributeError:
             # Not a quantity, let's hope it's a list of length two?
             if len(quan) != 2:
