@@ -67,4 +67,3 @@ def test_fit_summary(tmp_path, capsys):
     assert not re.search(r"Post-Fit Chi2:\s*[0-9.]+ +us", captured_fit_summary.out)
     assert re.search(r"Post-Fit Weighted RMS:\s*[0-9.]+ +us", captured_fit_summary.out)
     assert re.search(r"\s*JUMP", captured_fit_summary.out)
-
