@@ -38,6 +38,7 @@ from pint.pulsar_mjd import (
     time_to_longdouble,
 )
 from pint.utils import (
+    A1SINI,
     FTest,
     PosVel,
     companion_mass,
@@ -753,7 +754,7 @@ def test_companion_mass(Mpsr, Mc, Pb, incl):
     # projected
     x = (apsr * np.sin(incl)).to(pint.ls)
     # computed companion mass
-    assert np.isclose(companion_mass(Pb, x, mpsr=Mpsr, inc=incl), Mc)
+    assert np.isclose(companion_mass(Pb, x, mp=Mpsr, i=incl), Mc)
 
 
 @given(
@@ -779,7 +780,7 @@ def test_companion_mass_array(Mpsr, Mc, Pb, incl):
     # projected
     x = (apsr * np.sin(incl)).to(pint.ls)
     # computed companion mass
-    assert (np.isclose(companion_mass(Pb, x, mpsr=Mpsr, inc=incl), Mc)).all()
+    assert (np.isclose(companion_mass(Pb, x, mp=Mpsr, i=incl), Mc)).all()
 
 
 @given(
@@ -805,7 +806,7 @@ def test_pulsar_mass(Mpsr, Mc, Pb, incl):
     # projected
     x = (apsr * np.sin(incl)).to(pint.ls)
     # computed pulsar mass
-    assert np.isclose(pulsar_mass(Pb, x, Mc, inc=incl), Mpsr)
+    assert np.isclose(pulsar_mass(Pb, x, Mc, i=incl), Mpsr)
 
 
 @given(
@@ -831,7 +832,7 @@ def test_pulsar_mass_array(Mpsr, Mc, Pb, incl):
     # projected
     x = (apsr * np.sin(incl)).to(pint.ls)
     # computed pulsar mass
-    assert (np.isclose(pulsar_mass(Pb, x, Mc, inc=incl), Mpsr)).all()
+    assert (np.isclose(pulsar_mass(Pb, x, Mc, i=incl), Mpsr)).all()
 
 
 def test_pulsar_mass_error_noquantity_inc():
@@ -1054,6 +1055,16 @@ def test_pbdot_error_noquantity_pb():
     e = 0.0877775
     with pytest.raises(TypeError):
         PBDOT(Mp, Mc, Pb.value, e)
+
+
+def test_A1SINI():
+    """test A1SINI by looking for consistency with companion mass calculation."""
+    Mp = 1.4 * u.Msun
+    Mc = 1.3 * u.Msun
+    Pb = 2 * u.d
+    i = 60 * u.deg
+    x = A1SINI(Mp, Mc, Pb, i=i)
+    assert np.isclose(Mc, companion_mass(Pb, x, i=i, mp=Mp))
 
 
 def test_ftest():

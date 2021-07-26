@@ -1427,13 +1427,13 @@ def mass_funct2(mp: u.Msun, mc: u.Msun, i: u.deg):
     Inclination is such that edge on is ``i = 90*u.deg``
     An 'average' orbit has cos(i) = 0.5, or ``i = 60*u.deg``
 
-    Calculates :math:`m_c\sin^3 i / (m_c + m_p)^2`
+    Calculates :math:`m_c^3\sin^3 i / (m_c + m_p)^2`
     """
     return (mc * np.sin(i)) ** 3.0 / (mc + mp) ** 2.0
 
 
 @u.quantity_input
-def pulsar_mass(pb: u.d, x: u.cm, mc: u.Msun, inc: u.deg):
+def pulsar_mass(pb: u.d, x: u.cm, mc: u.Msun, i: u.deg):
     """Compute pulsar mass from orbital parameters
 
     Return the pulsar mass (in solar mass units) for a binary.
@@ -1446,7 +1446,7 @@ def pulsar_mass(pb: u.d, x: u.cm, mc: u.Msun, inc: u.deg):
         Projected pulsar semi-major axis (aka ASINI) in ``pint.ls``
     mc : astropy.units.Quantity
         Companion mass in ``u.solMass``
-    inc : astropy.coordinates.Angle
+    i : astropy.coordinates.Angle
         Inclination angle, in ``u.deg`` or ``u.rad``
 
     Returns
@@ -1491,7 +1491,7 @@ def pulsar_mass(pb: u.d, x: u.cm, mc: u.Msun, inc: u.deg):
     """
     massfunct = mass_funct(pb, x)
 
-    sini = np.sin(inc)
+    sini = np.sin(i)
     ca = massfunct
     cb = 2 * massfunct * mc
 
@@ -1499,7 +1499,7 @@ def pulsar_mass(pb: u.d, x: u.cm, mc: u.Msun, inc: u.deg):
 
 
 @u.quantity_input(inc=u.deg, mpsr=u.solMass)
-def companion_mass(pb: u.d, x: u.cm, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
+def companion_mass(pb: u.d, x: u.cm, i=60.0 * u.deg, mp=1.4 * u.solMass):
     """Commpute the companion mass from the orbital parameters
 
     Compute companion mass for a binary system from orbital mechanics,
@@ -1511,9 +1511,9 @@ def companion_mass(pb: u.d, x: u.cm, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
         Binary orbital period
     x : astropy.units.Quantity
         Projected pulsar semi-major axis (aka ASINI) in ``pint.ls``
-    inc : astropy.coordinates.Angle, optional
+    i : astropy.coordinates.Angle, optional
         Inclination angle, in ``u.deg`` or ``u.rad.`` Default is 60 deg.
-    mpsr : astropy.units.Quantity, optional
+    mp : astropy.units.Quantity, optional
         Pulsar mass in ``u.solMass``. Default is 1.4 Msun
 
     Returns
@@ -1566,24 +1566,24 @@ def companion_mass(pb: u.d, x: u.cm, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
     massfunct = mass_funct(pb, x)
 
     # solution
-    sini = np.sin(inc)
+    sini = np.sin(i)
     a = sini ** 3
     # delta0 = b ** 2 - 3 * a * c
     # delta0 is always > 0
-    delta0 = massfunct ** 2 + 6 * mpsr * massfunct * a
+    delta0 = massfunct ** 2 + 6 * mp * massfunct * a
     # delta1 is always <0
     # delta1 = 2 * b ** 3 - 9 * a * b * c + 27 * a ** 2 * d
     delta1 = (
         -2 * massfunct ** 3
-        - 18 * a * mpsr * massfunct ** 2
-        - 27 * a ** 2 * massfunct * mpsr ** 2
+        - 18 * a * mp * massfunct ** 2
+        - 27 * a ** 2 * massfunct * mp ** 2
     )
     # Q**2 is always > 0, so this is never a problem
     # in terms of complex numbers
     # Q = np.sqrt(delta1**2 - 4*delta0**3)
     Q = np.sqrt(
-        108 * a ** 3 * mpsr ** 3 * massfunct ** 3
-        + 729 * a ** 4 * mpsr ** 4 * massfunct ** 2
+        108 * a ** 3 * mp ** 3 * massfunct ** 3
+        + 729 * a ** 4 * mp ** 4 * massfunct ** 2
     )
     # this could be + or - Q
     # pick the - branch since delta1 is <0 so that delta1 - Q is never near 0
@@ -1739,21 +1739,66 @@ def OMDOT(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
     return value.to(u.deg / u.yr, equivalencies=u.dimensionless_angles())
 
 
-def ELL1_check(A1, E, TRES, NTOA, outstring=True):
+@u.quantity_input(pb=u.d, mp=u.Msun, mc=u.Msun, i=u.deg)
+def A1SINI(mp, mc, pb, i=90 * u.deg):
+    """Pulsar's semi-major axis.
+
+    Parameters
+    ----------
+    mp : astropy.units.Quantity
+        pulsar mass
+    mc : astropy.units.Quantity
+        companion mass
+    pb : astropy.units.Quantity
+        Binary orbital period
+    i : astropy.units.Quantity
+        orbital inclination
+
+    Returns
+    -------
+    A1SINI : astropy.units.Quantity
+        Projected semi-major axis of pulsar's orbit in ``pint.ls``
+
+    Raises
+    ------
+    astropy.units.UnitsError
+        If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
+
+    Notes
+    -----
+    Calculates :math:`m_c \sin i (G (P_b/(2\pi))^2 (m_p+m_c)^{-2})^{1/3}`
+
+    See [1]_
+
+    .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.21, 8.22, 8.27
+
+    """
+    return (
+        (mc * np.sin(i))
+        * (const.G * (pb / (2 * np.pi)) ** 2 / (mp + mc) ** 2) ** (1.0 / 3)
+    ).to(pint.ls)
+
+
+@u.quantity_input
+def ELL1_check(
+    A1: u.cm, E: u.dimensionless_unscaled, TRES: u.us, NTOA: int, outstring=True
+):
     """Check for validity of assumptions in ELL1 binary model
 
     Checks whether the assumptions that allow ELL1 to be safely used are
     satisfied. To work properly, we should have:
-    asini/c * ecc**2 << timing precision / sqrt(# TOAs)
-    or A1 * E**2 << TRES / sqrt(NTOA)
+    :math:`asini/c  e^2 \ll {\\rm timing precision} / \sqrt N_{\\rm TOA}`
+    or :math:`A1 E^2 \ll TRES / \sqrt N_{\\rm TOA}`
 
     Parameters
     ----------
-    A1 : Quantity
+    A1 : astropy.units.Quantity
         Projected semi-major axis (aka ASINI) in `pint.ls`
-    E : Quantity (dimensionless)
+    E : astropy.units.Quantity (dimensionless)
         Eccentricity
-    TRES : Quantity
+    TRES : astropy.units.Quantity
         RMS TOA uncertainty
     NTOA : int
         Number of TOAs in the fit
