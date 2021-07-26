@@ -1116,6 +1116,9 @@ def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
         return wmean, werr
 
 
+@u.quantity_input(
+    p=[u.Hz, u.s], pd=[u.Hz / u.s, u.s / u.s], pdd=[u.Hz / u.s ** 2, u.s / u.s ** 2]
+)
 def p_to_f(p, pd, pdd=None):
     """Converts P, Pdot to F, Fdot (or vice versa)
 
@@ -1157,6 +1160,12 @@ def p_to_f(p, pd, pdd=None):
         return [f, fd, fdd]
 
 
+@u.quantity_input(
+    porf=[u.Hz, u.s],
+    porferr=[u.Hz, u.s],
+    pdorfd=[u.Hz / u.s, u.s / u.s],
+    pdorfderr=[u.Hz / u.s, u.s / u.s],
+)
 def pferrs(porf, porferr, pdorfd=None, pdorfderr=None):
     """Convert P, Pdot to F, Fdot with uncertainties (or vice versa).
 
