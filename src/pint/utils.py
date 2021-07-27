@@ -46,14 +46,14 @@ __all__ = [
     "pferrs",
     "weighted_mean",
     "ELL1_check",
+    "a1sini",
+    "companion_mass",
     "mass_funct",
     "mass_funct2",
     "pulsar_mass",
-    "companion_mass",
-    "OMDOT",
-    "PBDOT",
-    "GAMMA",
-    "A1SINI",
+    "gamma",
+    "omdot",
+    "pbdot",
     "pulsar_age",
     "pulsar_edot",
     "pulsar_B",
@@ -1621,10 +1621,10 @@ def companion_mass(pb: u.d, x: u.cm, i=60.0 * u.deg, mp=1.4 * u.solMass):
 
 
 @u.quantity_input
-def PBDOT(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
-    """Post-Keplerian orbital decay PBDOT, assuming general relativity.
+def pbdot(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
+    """Post-Keplerian orbital decay pbdot, assuming general relativity.
 
-    PBDOT (:math:`\dot P_B`) is the change in the binary orbital period
+    pbdot (:math:`\dot P_B`) is the change in the binary orbital period
     due to emission of gravitational waves.
 
     Parameters
@@ -1683,10 +1683,10 @@ def PBDOT(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
 
 @u.quantity_input
-def GAMMA(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
-    """Post-Keplerian time dilation and gravitational redshift GAMMA, assuming general relativity.
+def gamma(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
+    """Post-Keplerian time dilation and gravitational redshift gamma, assuming general relativity.
 
-    GAMMA (:math:`\gamma`) is the amplitude of the modification in arrival times caused by the varying
+    gamma (:math:`\gamma`) is the amplitude of the modification in arrival times caused by the varying
     gravitational redshift of the companion and time dilation in an elliptical orbit.  The time delay is
     :math:`\gamma \sin E`, where :math:`E` is the eccentric anomaly.  
 
@@ -1738,10 +1738,10 @@ def GAMMA(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
 
 @u.quantity_input
-def OMDOT(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
-    """Post-Keplerian longitude of periastron precession rate OMDOT, assuming general relativity.
+def omdot(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
+    """Post-Keplerian longitude of periastron precession rate omdot, assuming general relativity.
 
-    OMDOT (:math:`\dot \omega`) is the relativistic advance of periastron.
+    omdot (:math:`\dot \omega`) is the relativistic advance of periastron.
 
     Parameters
     ----------
@@ -1792,7 +1792,7 @@ def OMDOT(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
 
 @u.quantity_input(pb=u.d, mp=u.Msun, mc=u.Msun, i=u.deg)
-def A1SINI(mp, mc, pb, i=90 * u.deg):
+def a1sini(mp, mc, pb, i=90 * u.deg):
     """Pulsar's semi-major axis.
 
     The full semi-major axis is given by Kepler's third law.  This is the
@@ -1812,7 +1812,7 @@ def A1SINI(mp, mc, pb, i=90 * u.deg):
 
     Returns
     -------
-    A1SINI : astropy.units.Quantity
+    a1sini : astropy.units.Quantity
         Projected semi-major axis of pulsar's orbit in ``pint.ls``
 
     Raises

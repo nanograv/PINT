@@ -38,7 +38,7 @@ from pint.pulsar_mjd import (
     time_to_longdouble,
 )
 from pint.utils import (
-    A1SINI,
+    a1sini,
     FTest,
     PosVel,
     companion_mass,
@@ -55,9 +55,9 @@ from pint.utils import (
     pulsar_mass,
     taylor_horner,
     taylor_horner_deriv,
-    OMDOT,
-    PBDOT,
-    GAMMA,
+    omdot,
+    pbdot,
+    gamma,
 )
 
 
@@ -915,7 +915,7 @@ def test_omdot():
     # for the Double Pulsar
     # https://arxiv.org/pdf/astro-ph/0609417.pdf
     # but recalculated based on the values above
-    assert np.isclose(OMDOT(Mp, Mc, Pb, e), 16.8991396 * u.deg / u.yr)
+    assert np.isclose(omdot(Mp, Mc, Pb, e), 16.8991396 * u.deg / u.yr)
 
 
 def test_gamma():
@@ -926,7 +926,7 @@ def test_gamma():
     # for the Double Pulsar
     # https://arxiv.org/pdf/astro-ph/0609417.pdf
     # but recalculated based on the values above
-    assert np.isclose(GAMMA(Mp, Mc, Pb, e), 0.38402 * u.ms)
+    assert np.isclose(gamma(Mp, Mc, Pb, e), 0.38402 * u.ms)
 
 
 def test_pbdot():
@@ -937,7 +937,7 @@ def test_pbdot():
     # for the Double Pulsar
     # https://arxiv.org/pdf/astro-ph/0609417.pdf
     # but recalculated based on the values above
-    assert np.isclose(PBDOT(Mp, Mc, Pb, e), -1.24777223e-12 * u.s / u.s)
+    assert np.isclose(pbdot(Mp, Mc, Pb, e), -1.24777223e-12 * u.s / u.s)
 
 
 def test_gamma_error_noquantity_mp():
@@ -946,7 +946,7 @@ def test_gamma_error_noquantity_mp():
     Pb = 0.10225156248 * u.d
     e = 0.0877775
     with pytest.raises(TypeError):
-        GAMMA(Mp.value, Mc, Pb, e)
+        gamma(Mp.value, Mc, Pb, e)
 
 
 def test_gamma_error_noquantity_mc():
@@ -955,7 +955,7 @@ def test_gamma_error_noquantity_mc():
     Pb = 0.10225156248 * u.d
     e = 0.0877775
     with pytest.raises(TypeError):
-        GAMMA(Mp, Mc.value, Pb, e)
+        gamma(Mp, Mc.value, Pb, e)
 
 
 def test_gamma_error_noquantity_pb():
@@ -964,7 +964,7 @@ def test_gamma_error_noquantity_pb():
     Pb = 0.10225156248 * u.d
     e = 0.0877775
     with pytest.raises(TypeError):
-        GAMMA(Mp, Mc, Pb.value, e)
+        gamma(Mp, Mc, Pb.value, e)
 
 
 def test_omdot_error_wrongquantity_mp():
@@ -973,7 +973,7 @@ def test_omdot_error_wrongquantity_mp():
     Pb = 0.10225156248 * u.d
     e = 0.0877775
     with pytest.raises(u.UnitsError):
-        OMDOT(Mp.value * u.s, Mc, Pb, e)
+        omdot(Mp.value * u.s, Mc, Pb, e)
 
 
 def test_omdot_error_wrongquantity_mc():
@@ -982,7 +982,7 @@ def test_omdot_error_wrongquantity_mc():
     Pb = 0.10225156248 * u.d
     e = 0.0877775
     with pytest.raises(u.UnitsError):
-        OMDOT(Mp, Mc.value * u.s, Pb, e)
+        omdot(Mp, Mc.value * u.s, Pb, e)
 
 
 def test_omdot_error_wrongquantity_pb():
@@ -991,7 +991,7 @@ def test_omdot_error_wrongquantity_pb():
     Pb = 0.10225156248 * u.d
     e = 0.0877775
     with pytest.raises(u.UnitsError):
-        OMDOT(Mp, Mc, Pb.value * u.Msun, e)
+        omdot(Mp, Mc, Pb.value * u.Msun, e)
 
 
 def test_omdot_error_wrongquantity_e():
@@ -1000,7 +1000,7 @@ def test_omdot_error_wrongquantity_e():
     Pb = 0.10225156248 * u.d
     e = 0.0877775
     with pytest.raises(u.UnitsError):
-        OMDOT(Mp, Mc, Pb, e * u.s)
+        omdot(Mp, Mc, Pb, e * u.s)
 
 
 def test_omdot_error_noquantity_mp():
@@ -1009,7 +1009,7 @@ def test_omdot_error_noquantity_mp():
     Pb = 0.10225156248 * u.d
     e = 0.0877775
     with pytest.raises(TypeError):
-        OMDOT(Mp.value, Mc, Pb, e)
+        omdot(Mp.value, Mc, Pb, e)
 
 
 def test_omdot_error_noquantity_mc():
@@ -1018,7 +1018,7 @@ def test_omdot_error_noquantity_mc():
     Pb = 0.10225156248 * u.d
     e = 0.0877775
     with pytest.raises(TypeError):
-        OMDOT(Mp, Mc.value, Pb, e)
+        omdot(Mp, Mc.value, Pb, e)
 
 
 def test_omdot_error_noquantity_pb():
@@ -1027,7 +1027,7 @@ def test_omdot_error_noquantity_pb():
     Pb = 0.10225156248 * u.d
     e = 0.0877775
     with pytest.raises(TypeError):
-        OMDOT(Mp, Mc, Pb.value, e)
+        omdot(Mp, Mc, Pb.value, e)
 
 
 def test_pbdot_error_noquantity_mp():
@@ -1036,7 +1036,7 @@ def test_pbdot_error_noquantity_mp():
     Pb = 0.10225156248 * u.d
     e = 0.0877775
     with pytest.raises(TypeError):
-        PBDOT(Mp.value, Mc, Pb, e)
+        pbdot(Mp.value, Mc, Pb, e)
 
 
 def test_pbdot_error_noquantity_mc():
@@ -1045,7 +1045,7 @@ def test_pbdot_error_noquantity_mc():
     Pb = 0.10225156248 * u.d
     e = 0.0877775
     with pytest.raises(TypeError):
-        PBDOT(Mp, Mc.value, Pb, e)
+        pbdot(Mp, Mc.value, Pb, e)
 
 
 def test_pbdot_error_noquantity_pb():
@@ -1054,7 +1054,7 @@ def test_pbdot_error_noquantity_pb():
     Pb = 0.10225156248 * u.d
     e = 0.0877775
     with pytest.raises(TypeError):
-        PBDOT(Mp, Mc, Pb.value, e)
+        pbdot(Mp, Mc, Pb.value, e)
 
 
 @given(
@@ -1063,13 +1063,13 @@ def test_pbdot_error_noquantity_pb():
     floats(min_value=0.04, max_value=1000),
     floats(min_value=0.1, max_value=90),
 )
-def test_A1SINI_Mc(Mp, Mc, Pb, i):
-    """test A1SINI by looking for consistency with companion mass calculation."""
+def test_a1sini_Mc(Mp, Mc, Pb, i):
+    """test a1sini by looking for consistency with companion mass calculation."""
     Mp = Mp * u.Msun
     Mc = Mc * u.Msun
     Pb = Pb * u.d
     i = i * u.deg
-    x = A1SINI(Mp, Mc, Pb, i=i)
+    x = a1sini(Mp, Mc, Pb, i=i)
     assert np.isclose(Mc, companion_mass(Pb, x, i=i, mp=Mp))
 
 
@@ -1079,13 +1079,13 @@ def test_A1SINI_Mc(Mp, Mc, Pb, i):
     floats(min_value=0.04, max_value=1000),
     floats(min_value=0.1, max_value=90),
 )
-def test_A1SINI_Mp(Mp, Mc, Pb, i):
-    """test A1SINI by looking for consistency with pulsar mass calculation."""
+def test_a1sini_Mp(Mp, Mc, Pb, i):
+    """test a1sini by looking for consistency with pulsar mass calculation."""
     Mp = Mp * u.Msun
     Mc = Mc * u.Msun
     Pb = Pb * u.d
     i = i * u.deg
-    x = A1SINI(Mp, Mc, Pb, i=i)
+    x = a1sini(Mp, Mc, Pb, i=i)
     assert np.isclose(Mp, pulsar_mass(Pb, x, Mc, i))
 
 
@@ -1095,13 +1095,13 @@ def test_A1SINI_Mp(Mp, Mc, Pb, i):
     arrays(float, 10, elements=floats(0.04, 1000)),
     arrays(float, 10, elements=floats(0.1, 90)),
 )
-def test_A1SINI_Mc_array(Mp, Mc, Pb, i):
-    """test A1SINI by looking for consistency with companion mass calculation with array input."""
+def test_a1sini_Mc_array(Mp, Mc, Pb, i):
+    """test a1sini by looking for consistency with companion mass calculation with array input."""
     Mp = Mp * u.Msun
     Mc = Mc * u.Msun
     Pb = Pb * u.d
     i = i * u.deg
-    x = A1SINI(Mp, Mc, Pb, i=i)
+    x = a1sini(Mp, Mc, Pb, i=i)
     assert (np.isclose(Mc, companion_mass(Pb, x, i=i, mp=Mp))).all()
 
 
@@ -1111,13 +1111,13 @@ def test_A1SINI_Mc_array(Mp, Mc, Pb, i):
     arrays(float, 10, elements=floats(0.04, 1000)),
     arrays(float, 10, elements=floats(0.1, 90)),
 )
-def test_A1SINI_Mp_array(Mp, Mc, Pb, i):
-    """test A1SINI by looking for consistency with pulsar mass calculation with array input."""
+def test_a1sini_Mp_array(Mp, Mc, Pb, i):
+    """test a1sini by looking for consistency with pulsar mass calculation with array input."""
     Mp = Mp * u.Msun
     Mc = Mc * u.Msun
     Pb = Pb * u.d
     i = i * u.deg
-    x = A1SINI(Mp, Mc, Pb, i=i)
+    x = a1sini(Mp, Mc, Pb, i=i)
     assert (np.isclose(Mp, pulsar_mass(Pb, x, Mc, i))).all()
 
 
