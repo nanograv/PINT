@@ -1601,7 +1601,10 @@ def companion_mass(pb: u.d, x: u.cm, i=60.0 * u.deg, mp=1.4 * u.solMass):
 
 @u.quantity_input
 def PBDOT(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
-    """Post-Keplerian orbital decay PBDOT.
+    """Post-Keplerian orbital decay PBDOT, assuming general relativity.
+
+    PBDOT (:math:`\dot P_B`) is the change in the binary orbital period
+    due to emission of gravitational waves.
 
     Parameters
     ----------
@@ -1650,7 +1653,11 @@ def PBDOT(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
 @u.quantity_input
 def GAMMA(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
-    """Post-Keplerian time dilation and gravitational redshift GAMMA
+    """Post-Keplerian time dilation and gravitational redshift GAMMA, assuming general relativity.
+
+    GAMMA (:math:`\gamma`) is the amplitude of the modification in arrival times caused by the varying
+    gravitational redshift of the companion and time dilation in an elliptical orbit.  The time delay is
+    :math:`\gamma \sin E`, where :math:`E` is the eccentric anomaly.  
 
     Parameters
     ----------
@@ -1677,7 +1684,8 @@ def GAMMA(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
     Notes
     -----
-    Calculates :math:`T_{\odot}^{2/3} (P_b/2\pi)^{1/3} e m_c(m_p+2m_c)(m_p+m_c)^{-4/3}`, with :math:`T_\odot = GM_\odot c^{-3}`.
+    Calculates :math:`T_{\odot}^{2/3} (P_b/2\pi)^{1/3} e m_c(m_p+2m_c)(m_p+m_c)^{-4/3}`,
+    with :math:`T_\odot = GM_\odot c^{-3}`.
 
     See [1]_
 
@@ -1696,7 +1704,9 @@ def GAMMA(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
 @u.quantity_input
 def OMDOT(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
-    """Post-Keplerian longitude of periastron precession rate OMDOT
+    """Post-Keplerian longitude of periastron precession rate OMDOT, assuming general relativity.
+
+    OMDOT (:math:`\dot \omega`) is the relativistic advance of periastron.
 
     Parameters
     ----------
@@ -1742,6 +1752,10 @@ def OMDOT(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 @u.quantity_input(pb=u.d, mp=u.Msun, mc=u.Msun, i=u.deg)
 def A1SINI(mp, mc, pb, i=90 * u.deg):
     """Pulsar's semi-major axis.
+
+    The full semi-major axis is given by Kepler's third law.  This is the
+    projection (:math:`\sin i`) of just the pulsar's orbit (:math:`m_c/(m_p+m_c)`
+    times the full semi-major axis), which is what pulsar timing measures.
 
     Parameters
     ----------
