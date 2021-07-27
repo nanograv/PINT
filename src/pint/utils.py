@@ -1424,7 +1424,7 @@ def mass_funct2(mp: u.Msun, mc: u.Msun, i: u.deg):
         Pulsar mass, typically in ``u.solMass``
     mc : astropy.units.Quantity
         Companion mass, typically in ``u.solMass``
-    i : astropy.coordinates.Angle
+    i : astropy.coordinates.Angle or astropy.units.Quantity
         Inclination angle, in ``u.deg`` or ``u.rad``
 
     Returns
@@ -1449,9 +1449,9 @@ def mass_funct2(mp: u.Msun, mc: u.Msun, i: u.deg):
     .. math::
         f(m_p, m_c) = \\frac{m_c^3\sin^3 i}{(m_c + m_p)^2}
         
-    See [1]_
+    See [2]_
 
-    .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.34 (LHS)
+    .. [2] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.34 (LHS)
 
     """
     return (mc * np.sin(i)) ** 3.0 / (mc + mp) ** 2.0
@@ -1472,7 +1472,7 @@ def pulsar_mass(pb: u.d, x: u.cm, mc: u.Msun, i: u.deg):
         Projected pulsar semi-major axis (aka ASINI) in ``pint.ls``
     mc : astropy.units.Quantity
         Companion mass in ``u.solMass``
-    i : astropy.coordinates.Angle
+    i : astropy.coordinates.Angle or astropy.units.Quantity
         Inclination angle, in ``u.deg`` or ``u.rad``
 
     Returns
@@ -1538,7 +1538,7 @@ def companion_mass(pb: u.d, x: u.cm, i=60.0 * u.deg, mp=1.4 * u.solMass):
         Binary orbital period
     x : astropy.units.Quantity
         Projected pulsar semi-major axis (aka ASINI) in ``pint.ls``
-    i : astropy.coordinates.Angle, optional
+    i : astropy.coordinates.Angle or astropy.units.Quantity, optional
         Inclination angle, in ``u.deg`` or ``u.rad.`` Default is 60 deg.
     mp : astropy.units.Quantity, optional
         Pulsar mass in ``u.solMass``. Default is 1.4 Msun
@@ -1573,13 +1573,12 @@ def companion_mass(pb: u.d, x: u.cm, i=60.0 * u.deg, mp=1.4 * u.solMass):
     - :math:`c = -2 M_p {\\rm massfunct}`
     - :math:`d = -{\\rm massfunct} M_p^2`
 
-    To solve it we can use a direct calculation of the cubic roots:
-    https://en.wikipedia.org/wiki/Cubic_equation#General_cubic_formula
+    To solve it we can use a direct calculation of the cubic roots [3]_.
+
 
     It's useful to look at the discriminant to understand the nature of the roots
-    and make sure we get the right one
+    and make sure we get the right one [4]_.
 
-    https://en.wikipedia.org/wiki/Discriminant#Degree_3
 
     :math:`\Delta = (b^2 c^2 - 4ac^3-4b^3d-27a^2d^2+18abcd)`
 
@@ -1588,6 +1587,9 @@ def companion_mass(pb: u.d, x: u.cm, i=60.0 * u.deg, mp=1.4 * u.solMass):
     and this should be < 0
     since this reduces to :math:`-27\sin^6 i {\\rm massfunct}^2 M_p^4 -4\sin^3 i {\\rm massfunct}^3 M_p^3`
     so there is just 1 real root and we compute it below
+
+    .. [3] https://en.wikipedia.org/wiki/Cubic_equation#General_cubic_formula
+    .. [4] https://en.wikipedia.org/wiki/Discriminant#Degree_3
 
     """
     massfunct = mass_funct(pb, x)
@@ -1672,9 +1674,9 @@ def pbdot(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
     and :math:`T_\odot = GM_\odot c^{-3}`.
 
-    See [1]_
+    More details in :ref:`Timing Models`.  Also see [5]_.
 
-    .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.52
+    .. [5] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.52
 
     """
     f = (1 + (73.0 / 24) * e ** 2 + (37.0 / 96) * e ** 4) / (1 - e ** 2) ** (7.0 / 2)
@@ -1730,9 +1732,9 @@ def gamma(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
     with :math:`T_\odot = GM_\odot c^{-3}`.
 
-    See [1]_
+    More details in :ref:`Timing Models`.  Also see [6]_
 
-    .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.49
+    .. [6] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.49
 
     """
     value = (
@@ -1786,9 +1788,9 @@ def omdot(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
         
     with :math:`T_\odot = GM_\odot c^{-3}`.
 
-    See [1]_
+    More details in :ref:`Timing Models`.  Also see [7]_.
 
-    .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.48
+    .. [7] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.48
 
     """
     value = (
@@ -1817,7 +1819,7 @@ def a1sini(mp, mc, pb, i=90 * u.deg):
         companion mass
     pb : astropy.units.Quantity
         Binary orbital period
-    i : astropy.units.Quantity
+    i : astropy.coordinates.Angle or astropy.units.Quantity
         orbital inclination
 
     Returns
@@ -1841,9 +1843,9 @@ def a1sini(mp, mc, pb, i=90 * u.deg):
         \\frac{a_p \sin i}{c} = \\frac{m_c \sin i}{(m_p+m_c)^{2/3}}
         G^{1/3}\\left(\\frac{P_b}{2\pi}\\right)^{2/3}
 
-    See [1]_
+    More details in :ref:`Timing Models`.  Also see [8]_
 
-    .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.21, 8.22, 8.27
+    .. [8] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.21, 8.22, 8.27
 
     """
     return (
