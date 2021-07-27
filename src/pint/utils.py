@@ -1375,6 +1375,8 @@ def pulsar_B_lightcyl(f: u.Hz, fdot: u.Hz / u.s):
 def mass_funct(pb: u.d, x: u.cm):
     """Compute binary mass function from period and semi-major axis
 
+    Can handle scalar or array inputs.
+    
     Parameters
     ----------
     pb : astropy.units.Quantity
@@ -1413,6 +1415,8 @@ def mass_funct(pb: u.d, x: u.cm):
 @u.quantity_input
 def mass_funct2(mp: u.Msun, mc: u.Msun, i: u.deg):
     """Compute binary mass function from masses and inclination
+
+    Can handle scalar or array inputs.
 
     Parameters
     ----------
@@ -1458,6 +1462,7 @@ def pulsar_mass(pb: u.d, x: u.cm, mc: u.Msun, i: u.deg):
     """Compute pulsar mass from orbital parameters
 
     Return the pulsar mass (in solar mass units) for a binary.
+    Can handle scalar or array inputs.
 
     Parameters
     ----------
@@ -1525,6 +1530,7 @@ def companion_mass(pb: u.d, x: u.cm, i=60.0 * u.deg, mp=1.4 * u.solMass):
 
     Compute companion mass for a binary system from orbital mechanics,
     not Shapiro delay.
+    Can handle scalar or array inputs.
 
     Parameters
     ----------
@@ -1626,7 +1632,8 @@ def pbdot(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
     pbdot (:math:`\dot P_B`) is the change in the binary orbital period
     due to emission of gravitational waves.
-
+    Can handle scalar or array inputs.
+    
     Parameters
     ----------
     mp : astropy.units.Quantity
@@ -1689,7 +1696,8 @@ def gamma(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
     gamma (:math:`\gamma`) is the amplitude of the modification in arrival times caused by the varying
     gravitational redshift of the companion and time dilation in an elliptical orbit.  The time delay is
     :math:`\gamma \sin E`, where :math:`E` is the eccentric anomaly.  
-
+    Can handle scalar or array inputs.
+    
     Parameters
     ----------
     mp : astropy.units.Quantity
@@ -1742,7 +1750,8 @@ def omdot(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
     """Post-Keplerian longitude of periastron precession rate omdot, assuming general relativity.
 
     omdot (:math:`\dot \omega`) is the relativistic advance of periastron.
-
+    Can handle scalar or array inputs.
+    
     Parameters
     ----------
     mp : astropy.units.Quantity
@@ -1798,7 +1807,8 @@ def a1sini(mp, mc, pb, i=90 * u.deg):
     The full semi-major axis is given by Kepler's third law.  This is the
     projection (:math:`\sin i`) of just the pulsar's orbit (:math:`m_c/(m_p+m_c)`
     times the full semi-major axis), which is what pulsar timing measures.
-
+    Can handle scalar or array inputs.
+    
     Parameters
     ----------
     mp : astropy.units.Quantity
