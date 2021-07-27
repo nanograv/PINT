@@ -53,6 +53,7 @@ __all__ = [
     "OMDOT",
     "PBDOT",
     "GAMMA",
+    "A1SINI",
     "pulsar_age",
     "pulsar_edot",
     "pulsar_B",
@@ -1248,7 +1249,11 @@ def pulsar_age(f: u.Hz, fdot: u.Hz / u.s, n=3, fo=1e99 * u.Hz):
 
     Notes
     -----
-    Calculates :math:`(f/(n-1)\dot f) (1-(f/f_0)^{n-1})`
+    Calculates
+
+    .. math::
+
+        \\tau = \\frac{f}{(n-1)\dot f}\\left(1-\\left(\\frac{f}{f_0}\\right)^{n-1}\\right)
     """
     return (-f / ((n - 1.0) * fdot) * (1.0 - (f / fo) ** (n - 1.0))).to(u.yr)
 
@@ -1257,7 +1262,7 @@ def pulsar_age(f: u.Hz, fdot: u.Hz / u.s, n=3, fo=1e99 * u.Hz):
 def pulsar_edot(f: u.Hz, fdot: u.Hz / u.s, I=1.0e45 * u.g * u.cm ** 2):
     """Compute pulsar spindown energy loss rate
 
-    Return the pulsar Edot (in erg/s) given the spin frequency `f` and
+    Return the pulsar `Edot` (:math:`\dot E`, in erg/s) given the spin frequency `f` and
     frequency derivative `fdot`. The NS moment of inertia is assumed to be
     `I` = 1.0e45 g cm^2 by default.
 
@@ -1284,7 +1289,7 @@ def pulsar_edot(f: u.Hz, fdot: u.Hz / u.s, I=1.0e45 * u.g * u.cm ** 2):
 
     Notes
     -----
-    Calculates :math:`-4\pi^2  I  f  \dot f`
+    Calculates :math:`\dot E = -4\pi^2  I  f  \dot f`
     """
     return (-4.0 * np.pi ** 2 * I * f * fdot).to(u.erg / u.s)
 
@@ -1391,7 +1396,15 @@ def mass_funct(pb: u.d, x: u.cm):
 
     Notes
     -----
-    Calculates :math:`4\pi^2 x^3 / G / P_b^2`
+    Calculates
+
+    .. math::
+
+        f(m_p, m_c) = \\frac{4\pi^2 x^3}{G P_b^2}
+
+    See [1]_
+
+    .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.34 (RHS)
     """
     fm = 4.0 * np.pi ** 2 * x ** 3 / (const.G * pb ** 2)
     return fm.to(u.solMass)
@@ -1427,7 +1440,15 @@ def mass_funct2(mp: u.Msun, mc: u.Msun, i: u.deg):
     Inclination is such that edge on is ``i = 90*u.deg``
     An 'average' orbit has cos(i) = 0.5, or ``i = 60*u.deg``
 
-    Calculates :math:`m_c^3\sin^3 i / (m_c + m_p)^2`
+    Calculates
+
+    .. math::
+        f(m_p, m_c) = \\frac{m_c^3\sin^3 i}{(m_c + m_p)^2}
+        
+    See [1]_
+
+    .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.34 (LHS)
+
     """
     return (mc * np.sin(i)) ** 3.0 / (mc + mp) ** 2.0
 
@@ -1631,8 +1652,18 @@ def PBDOT(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
     Notes
     -----
-    Calculates :math:`(-192\pi/5)T_{\odot}^{5/3} (P_b/2\pi)^{-5/3} f(e)m_p m_c (m_p+m_c)^{-1/3}`,
-    with :math:`f(e)=(1+(73/24)e^2+(37/96)e^4)(1-e^2)^{-7/2}` and :math:`T_\odot = GM_\odot c^{-3}`.
+    Calculates
+
+    .. math::
+        \dot P_b = -\\frac{192\pi}{5}T_{\odot}^{5/3} \\left(\\frac{P_b}{2\pi}\\right)^{-5/3}
+        f(e)\\frac{m_p m_c}{(m_p+m_c)^{1/3}}
+        
+    with
+
+    .. math::
+        f(e)=\\frac{1+(73/24)e^2+(37/96)e^4}{(1-e^2)^{7/2}}
+
+    and :math:`T_\odot = GM_\odot c^{-3}`.
 
     See [1]_
 
@@ -1684,7 +1715,11 @@ def GAMMA(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
     Notes
     -----
-    Calculates :math:`T_{\odot}^{2/3} (P_b/2\pi)^{1/3} e m_c(m_p+2m_c)(m_p+m_c)^{-4/3}`,
+    Calculates
+
+    .. math::
+        \gamma = T_{\odot}^{2/3} \\left(\\frac{P_b}{2\pi}\\right)^{1/3} e \\frac{m_c(m_p+2m_c)}{(m_p+m_c)^{4/3}}
+
     with :math:`T_\odot = GM_\odot c^{-3}`.
 
     See [1]_
@@ -1733,7 +1768,14 @@ def OMDOT(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
     Notes
     -----
-    Calculates :math:`3T_{\odot}^{2/3} (P_b/2\pi)^{-5/3} (1-e^2)^{-1}(m_p+m_c)^{2/3}`, with :math:`T_\odot = GM_\odot c^{-3}`.
+    Calculates
+
+    .. math::
+
+        \dot \omega = 3T_{\odot}^{2/3} \\left(\\frac{P_b}{2\pi}\\right)^{-5/3}
+        \\frac{1}{1-e^2}(m_p+m_c)^{2/3}
+        
+    with :math:`T_\odot = GM_\odot c^{-3}`.
 
     See [1]_
 
@@ -1782,7 +1824,12 @@ def A1SINI(mp, mc, pb, i=90 * u.deg):
 
     Notes
     -----
-    Calculates :math:`m_c \sin i (G (P_b/(2\pi))^2 (m_p+m_c)^{-2})^{1/3}`
+    Calculates
+
+    .. math::
+
+        \\frac{a_p \sin i}{c} = \\frac{m_c \sin i}{(m_p+m_c)^{2/3}}
+        G^{1/3}\\left(\\frac{P_b}{2\pi}\\right)^{2/3}
 
     See [1]_
 
