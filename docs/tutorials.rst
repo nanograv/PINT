@@ -12,6 +12,7 @@ We don't really have any proper tutorials yet. But for the moment, we have a few
    basic-installation
    examples/time_a_pulsar.ipynb
    examples/PINT_walkthrough.ipynb
+   examples/fit_NGC6440E.ipynb
    examples/understanding_timing_models.ipynb
    examples/understanding_parameters.ipynb
    examples/build_model_from_scratch.ipynb
