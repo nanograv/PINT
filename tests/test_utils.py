@@ -1057,14 +1057,36 @@ def test_pbdot_error_noquantity_pb():
         PBDOT(Mp, Mc, Pb.value, e)
 
 
-def test_A1SINI():
+@given(
+    floats(min_value=1.0, max_value=3.0),
+    floats(min_value=0.01, max_value=10),
+    floats(min_value=0.04, max_value=1000),
+    floats(min_value=0.1, max_value=90),
+)
+def test_A1SINI_Mc(Mp, Mc, Pb, i):
     """test A1SINI by looking for consistency with companion mass calculation."""
-    Mp = 1.4 * u.Msun
-    Mc = 1.3 * u.Msun
-    Pb = 2 * u.d
-    i = 60 * u.deg
+    Mp = Mp * u.Msun
+    Mc = Mc * u.Msun
+    Pb = Pb * u.d
+    i = i * u.deg
     x = A1SINI(Mp, Mc, Pb, i=i)
     assert np.isclose(Mc, companion_mass(Pb, x, i=i, mp=Mp))
+
+
+@given(
+    floats(min_value=1.0, max_value=3.0),
+    floats(min_value=0.01, max_value=10),
+    floats(min_value=0.04, max_value=1000),
+    floats(min_value=0.1, max_value=90),
+)
+def test_A1SINI_Mp(Mp, Mc, Pb, i):
+    """test A1SINI by looking for consistency with pulsar mass calculation."""
+    Mp = Mp * u.Msun
+    Mc = Mc * u.Msun
+    Pb = Pb * u.d
+    i = i * u.deg
+    x = A1SINI(Mp, Mc, Pb, i=i)
+    assert np.isclose(Mp, pulsar_mass(Pb, x, Mc, i))
 
 
 def test_ftest():
