@@ -1089,6 +1089,38 @@ def test_A1SINI_Mp(Mp, Mc, Pb, i):
     assert np.isclose(Mp, pulsar_mass(Pb, x, Mc, i))
 
 
+@given(
+    arrays(float, 10, elements=floats(0.5, 3)),
+    arrays(float, 10, elements=floats(0.01, 10)),
+    arrays(float, 10, elements=floats(0.04, 1000)),
+    arrays(float, 10, elements=floats(0.1, 90)),
+)
+def test_A1SINI_Mc_array(Mp, Mc, Pb, i):
+    """test A1SINI by looking for consistency with companion mass calculation with array input."""
+    Mp = Mp * u.Msun
+    Mc = Mc * u.Msun
+    Pb = Pb * u.d
+    i = i * u.deg
+    x = A1SINI(Mp, Mc, Pb, i=i)
+    assert (np.isclose(Mc, companion_mass(Pb, x, i=i, mp=Mp))).all()
+
+
+@given(
+    arrays(float, 10, elements=floats(0.5, 3)),
+    arrays(float, 10, elements=floats(0.01, 10)),
+    arrays(float, 10, elements=floats(0.04, 1000)),
+    arrays(float, 10, elements=floats(0.1, 90)),
+)
+def test_A1SINI_Mp_array(Mp, Mc, Pb, i):
+    """test A1SINI by looking for consistency with pulsar mass calculation with array input."""
+    Mp = Mp * u.Msun
+    Mc = Mc * u.Msun
+    Pb = Pb * u.d
+    i = i * u.deg
+    x = A1SINI(Mp, Mc, Pb, i=i)
+    assert (np.isclose(Mp, pulsar_mass(Pb, x, Mc, i))).all()
+
+
 def test_ftest():
     """Test for FTest. Numbers from example test."""
     chi2_1 = 5116.3297879409574835
