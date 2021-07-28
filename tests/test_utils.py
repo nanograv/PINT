@@ -58,6 +58,7 @@ from pint.utils import (
     omdot,
     pbdot,
     gamma,
+    omdot_to_mtot,
 )
 
 
@@ -810,6 +811,26 @@ def test_omdot():
     # https://arxiv.org/pdf/astro-ph/0609417.pdf
     # but recalculated based on the values above
     assert np.isclose(omdot(Mp, Mc, Pb, e), 16.8991396 * u.deg / u.yr)
+
+
+@given(
+    floats(min_value=1.0, max_value=3.0),
+    floats(min_value=0.01, max_value=10),
+    floats(min_value=0.04, max_value=1000),
+    floats(min_value=0.0001, max_value=0.99),
+)
+def test_omdot_to_mtot(Mp, Mc, Pb, e):
+    Mp = Mp * u.Msun
+    Mc = Mc * u.Msun
+    Pb = Pb * u.d
+    e = e * u.dimensionless_unscaled
+    # compute the total mass
+    Mtot = Mp + Mc
+    # compute the omdot
+    omdot_computed = omdot(Mp, Mc, Pb, e)
+    # compute the Mtot from that omdot and compare
+    Mtot_computed = omdot_to_mtot(omdot_computed, Pb, e)
+    assert np.allclose(Mtot, Mtot_computed)
 
 
 def test_gamma():
