@@ -7,6 +7,7 @@ import copy
 
 import astropy.units as u
 import numpy as np
+from astropy.time import Time
 
 import pint.models.model_builder as mb
 import pint.toa as toa
@@ -42,7 +43,7 @@ def test_jump_by_cluster(setup_NGC6440E):
     setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
     cp = setup_NGC6440E.m.components["PhaseJump"]
     par = p.maskParameter(
-        name="JUMP", key="mjd", value=0.2, key_value=[54099, 54100], units=u.s
+        name="JUMP", key="mjd", value=0.2, key_value=[Time(54099*u.d, format="mjd"), Time(54100*u.d, format="mjd")], units=u.s
     )
     # this should be the last group of any TOAs
     cp.add_param(par, setup=True)
@@ -55,7 +56,7 @@ def test_jump_by_cluster(setup_NGC6440E):
     m_copy.add_component(PhaseJump(), validate=False)
     cp_copy = m_copy.components["PhaseJump"]
     par_copy = p.maskParameter(
-        name="JUMP", key="-toacluster", value=0.2, key_value=41, units=u.s
+        name="JUMP", key="-toacluster", value=0.2, key_value="41", units=u.s
     )
     # this should be identical to the cluster above
     cp_copy.add_param(par_copy, setup=True)
