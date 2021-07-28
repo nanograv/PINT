@@ -1499,21 +1499,21 @@ def pulsar_mass(pb: u.d, x: u.cm, mc: u.Msun, i: u.deg):
     Notes
     -------
     This forms a quadratic equation of the form:
-    :math:`ca M_p^2 + cb M_p + cc = 0``
+    :math:`a M_p^2 + b M_p + c = 0``
 
     with:
 
-    - :math:`ca = {\\rm massfunct}``
-    - :math:`cb = 2 {\\rm massfunct} M_c`
-    - :math:`cc = {\\rm massfunct}  M_c^2 - M_c\sin^3 i`
+    - :math:`a = f(P_b,x)` (the mass function)
+    - :math:`b = 2 f(P_b,x) M_c`
+    - :math:`c = f(P_b,x)  M_c^2 - M_c\sin^3 i`
 
     except the discriminant simplifies to:
-    :math:`4{\\rm massfunct} M_c^3 \sin^3 i`
+    :math:`4f(P_b,x) M_c^3 \sin^3 i`
 
     solve it directly
     this has to be the positive branch of the quadratic
-    because the vertex is at :math:`-M_c`,
-    so the negative branch will always be < 0
+    because the vertex is at :math:`-M_c`, so
+    the negative branch will always be < 0
     """
     massfunct = mass_funct(pb, x)
 
@@ -1585,8 +1585,8 @@ def companion_mass(pb: u.d, x: u.cm, i=60.0 * u.deg, mp=1.4 * u.solMass):
     if :math:`\delta< 0` then there is only 1 real root,
     and I think we do it correctly below
     and this should be < 0
-    since this reduces to :math:`-27\sin^6 i {\\rm massfunct}^2 M_p^4 -4\sin^3 i {\\rm massfunct}^3 M_p^3`
-    so there is just 1 real root and we compute it below
+    since this reduces to :math:`-27\sin^6 i f(P_b,x)^2 M_p^4 -4\sin^3 i f(P_b,x)^3 M_p^3`
+    (where :math:`f(P_b,x)` is the mass function) so there is just 1 real root.
 
     .. [3] https://en.wikipedia.org/wiki/Cubic_equation#General_cubic_formula
     .. [4] https://en.wikipedia.org/wiki/Discriminant#Degree_3
