@@ -5,14 +5,16 @@ Implements a mixture model of LCPrimitives to form a normalized template represe
 author: M. Kerr <matthew.kerr@gmail.com>
 
 """
+import logging
 from collections import defaultdict
 from copy import deepcopy
 
 import numpy as np
-from astropy import log
 
 from .lcnorm import NormAngles
 from .lcprimitives import *
+
+log = logging.getLogger(__name__)
 
 
 class LCTemplate:

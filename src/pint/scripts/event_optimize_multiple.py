@@ -1,11 +1,11 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore::DeprecationWarning
 import argparse
+import logging
 import sys
 
 import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
-from astropy import log
 from astropy.coordinates import SkyCoord
 
 import pint.fermi_toas as fermi
@@ -15,6 +15,8 @@ from pint.mcmc_fitter import CompositeMCMCFitter
 from pint.observatory.satellite_obs import get_satellite_observatory
 from pint.sampler import EmceeSampler
 from pint.scripts.event_optimize import read_gaussfitfile
+
+log = logging.getLogger(__name__)
 
 __all__ = ["main"]
 # log.setLevel('DEBUG')

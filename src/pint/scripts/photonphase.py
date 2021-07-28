@@ -1,10 +1,10 @@
 #!/usr/bin/env python
+import logging
 import sys
 
 import astropy.io.fits as pyfits
 import astropy.units as u
 import numpy as np
-from astropy import log
 
 import pint.models
 import pint.residuals
@@ -15,6 +15,8 @@ from pint.fits_utils import read_fits_event_mjds
 from pint.observatory.satellite_obs import get_satellite_observatory
 from pint.plot_utils import phaseogram_binned
 from pint.pulsar_mjd import Time
+
+log = logging.getLogger(__name__)
 
 __all__ = ["main"]
 

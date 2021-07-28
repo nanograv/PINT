@@ -3,15 +3,19 @@
 This module if for wrapping standalone binary models so that they work
 as PINT timing models.
 """
+import logging
+
 import astropy.units as u
 import numpy as np
-from astropy import log
 from astropy.time import Time
+
 from pint import ls
 from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
 from pint.models.stand_alone_psr_binaries import binary_orbits as bo
 from pint.models.timing_model import DelayComponent, MissingParameter
 from pint.utils import taylor_horner_deriv
+
+log = logging.getLogger(__name__)
 
 
 class PulsarBinary(DelayComponent):

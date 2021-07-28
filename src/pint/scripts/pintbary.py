@@ -1,14 +1,16 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore::DeprecationWarning
 import argparse
+import logging
 
 import astropy.units as u
 import numpy as np
-from astropy import log
 from astropy.coordinates import Angle
 
 import pint.models
 import pint.toa as toa
 from pint.pulsar_mjd import Time
+
+log = logging.getLogger(__name__)
 
 __all__ = ["main"]
 

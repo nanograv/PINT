@@ -1,8 +1,9 @@
 """Approximate binary model for small eccentricity."""
+import logging
 from warnings import warn
 
+import astropy.units as u
 import numpy as np
-from astropy import log, units as u
 from astropy.time import Time
 
 from pint.models.parameter import MJDParameter, floatParameter, intParameter
@@ -12,6 +13,8 @@ from pint.models.stand_alone_psr_binaries.ELL1_model import ELL1model
 from pint.models.stand_alone_psr_binaries.ELL1H_model import ELL1Hmodel
 from pint.models.timing_model import MissingParameter, TimingModelError
 from pint.utils import taylor_horner_deriv
+
+log = logging.getLogger(__name__)
 
 
 class BinaryELL1(PulsarBinary):

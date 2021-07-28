@@ -1,11 +1,14 @@
 """Pulsar timing glitches."""
+import logging
+
 import astropy.units as u
 import numpy as np
-from astropy import log
 
-from pint.models.parameter import prefixParameter, MJDParameter
+from pint.models.parameter import MJDParameter, prefixParameter
 from pint.models.timing_model import MissingParameter, PhaseComponent
 from pint.utils import split_prefixed_name
+
+log = logging.getLogger(__name__)
 
 
 class Glitch(PhaseComponent):
@@ -195,7 +198,7 @@ class Glitch(PhaseComponent):
             else:
                 decayterm = 0.0 * u.Unit("")
 
-            log.info("{} {} ".format(dphs, dphs.unit))
+            log.info("Glitch phase {} {} ".format(dphs, dphs.unit))
             phs[affected] += (
                 dphs
                 + dt[affected]

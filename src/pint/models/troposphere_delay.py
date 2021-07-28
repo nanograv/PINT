@@ -1,18 +1,21 @@
 """Delay due to Earth's troposphere"""
+import logging
 from warnings import warn
 
 import astropy.constants as const
 import astropy.units as u
 import numpy as np
-import pint.utils as ut
 import scipy.interpolate
-from astropy import log
 from astropy.coordinates import AltAz, SkyCoord
+
+import pint.utils as ut
 from pint.models.parameter import boolParameter
 from pint.models.timing_model import DelayComponent
 from pint.observatory import get_observatory
 from pint.observatory.topo_obs import TopoObs
 from pint.toa_select import TOASelect
+
+log = logging.getLogger(__name__)
 
 
 class TroposphereDelay(DelayComponent):

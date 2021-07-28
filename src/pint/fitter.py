@@ -55,20 +55,20 @@ Fitters in use::
 """
 import collections
 import copy
+import logging
 from warnings import warn
 
 import astropy.units as u
 import numpy as np
 import scipy.linalg
 import scipy.optimize as opt
-from astropy import log
 
 import pint.utils
 import pint.derived_quantities
 from pint.models.parameter import AngleParameter, boolParameter, strParameter
 from pint.pint_matrix import (
-    CovarianceMatrix,
     CorrelationMatrix,
+    CovarianceMatrix,
     CovarianceMatrixMaker,
     DesignMatrixMaker,
     combine_covariance_matrix,
@@ -78,6 +78,8 @@ from pint.pint_matrix import (
 from pint.residuals import Residuals, WidebandTOAResiduals
 from pint.toa import TOAs
 from pint.utils import FTest
+
+log = logging.getLogger(__name__)
 
 __all__ = [
     "Fitter",

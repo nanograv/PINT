@@ -14,3 +14,4 @@ to use PINT. Please feel free to change this by writing more.
    development-setup
    editing-documentation
    working-with-notebooks
+   controlling-logging
