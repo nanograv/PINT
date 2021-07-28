@@ -1814,7 +1814,8 @@ def omdot_to_mtot(omdot: u.deg / u.yr, pb: u.d, e: u.dimensionless_unscaled):
 
     Parameters
     ----------
-    omdot : astropy.units.Quantity    
+    omdot : astropy.units.Quantity
+        relativistic advance of periastron
     pb : astropy.units.Quantity
         Binary orbital period
     e : astropy.units.Quantity or float
