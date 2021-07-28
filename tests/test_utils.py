@@ -780,7 +780,7 @@ def test_companion_mass_array(Mpsr, Mc, Pb, incl):
     # projected
     x = (apsr * np.sin(incl)).to(pint.ls)
     # computed companion mass
-    assert (np.isclose(companion_mass(Pb, x, mp=Mpsr, i=incl), Mc)).all()
+    assert np.allclose(companion_mass(Pb, x, mp=Mpsr, i=incl), Mc)
 
 
 @given(
@@ -832,7 +832,7 @@ def test_pulsar_mass_array(Mpsr, Mc, Pb, incl):
     # projected
     x = (apsr * np.sin(incl)).to(pint.ls)
     # computed pulsar mass
-    assert (np.isclose(pulsar_mass(Pb, x, Mc, i=incl), Mpsr)).all()
+    assert np.allclose(pulsar_mass(Pb, x, Mc, i=incl), Mpsr)
 
 
 def test_pulsar_mass_error_noquantity_inc():
@@ -1102,7 +1102,7 @@ def test_a1sini_Mc_array(Mp, Mc, Pb, i):
     Pb = Pb * u.d
     i = i * u.deg
     x = a1sini(Mp, Mc, Pb, i=i)
-    assert (np.isclose(Mc, companion_mass(Pb, x, i=i, mp=Mp))).all()
+    assert np.allclose(Mc, companion_mass(Pb, x, i=i, mp=Mp))
 
 
 @given(
@@ -1118,7 +1118,7 @@ def test_a1sini_Mp_array(Mp, Mc, Pb, i):
     Pb = Pb * u.d
     i = i * u.deg
     x = a1sini(Mp, Mc, Pb, i=i)
-    assert (np.isclose(Mp, pulsar_mass(Pb, x, Mc, i))).all()
+    assert np.allclose(Mp, pulsar_mass(Pb, x, Mc, i))
 
 
 def test_ftest():
