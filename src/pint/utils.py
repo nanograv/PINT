@@ -53,6 +53,7 @@ __all__ = [
     "pulsar_mass",
     "gamma",
     "omdot",
+    "omdot_to_mtot",
     "pbdot",
     "pulsar_age",
     "pulsar_edot",
@@ -1644,7 +1645,7 @@ def pbdot(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
         companion mass
     pb : astropy.units.Quantity
         Binary orbital period
-    e : Quantity or float
+    e : astropy.units.Quantity or float
         orbital eccentricity
 
     Returns
@@ -1800,6 +1801,67 @@ def omdot(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
         * (const.G * (mp + mc) / const.c ** 3) ** (2.0 / 3)
     )
     return value.to(u.deg / u.yr, equivalencies=u.dimensionless_angles())
+
+
+@u.quantity_input
+def omdot_to_mtot(omdot: u.deg / u.yr, pb: u.d, e: u.dimensionless_unscaled):
+    """Determine total mass from Post-Keplerian longitude of periastron precession rate omdot,
+    assuming general relativity.
+
+    omdot (:math:`\dot \omega`) is the relativistic advance of periastron.  It relates to the total
+    system mass (assuming GR).
+    Can handle scalar or array inputs.
+
+    Parameters
+    ----------
+    omdot : astropy.units.Quantity    
+    pb : astropy.units.Quantity
+        Binary orbital period
+    e : astropy.units.Quantity or float
+        orbital eccentricity
+
+    Returns
+    -------
+    mtot : astropy.units.Quantity    
+        In ``u.Msun``
+
+    Raises
+    ------
+    astropy.units.UnitsError
+        If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
+
+    Notes
+    -----
+    Inverts
+
+    .. math::
+
+        \dot \omega = 3T_{\odot}^{2/3} \\left(\\frac{P_b}{2\pi}\\right)^{-5/3}
+        \\frac{1}{1-e^2}(m_p+m_c)^{2/3}
+        
+    to calculate :math:`m_{\\rm tot} = m_p + m_c`,
+    with :math:`T_\odot = GM_\odot c^{-3}`.
+
+    More details in :ref:`Timing Models`.  Also see [9]_.
+
+    .. [9] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.48
+    """
+    return (
+        (
+            (
+                omdot
+                / (
+                    3
+                    * (const.G / const.c ** 3) ** (2.0 / 3)
+                    * (pb / (2 * np.pi)) ** (-5.0 / 3)
+                    * (1 - e ** 2) ** (-1)
+                )
+            )
+        )
+        ** (3.0 / 2)
+    ).to(u.Msun, equivalencies=u.dimensionless_angles())
 
 
 @u.quantity_input(pb=u.d, mp=u.Msun, mc=u.Msun, i=u.deg)
