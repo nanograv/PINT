@@ -8,7 +8,6 @@ import astropy
 import astropy.units as u
 import numpy as np
 import pytest
-from astropy.time import Time
 from pinttestdata import datadir
 
 from pint.models.model_builder import get_model
@@ -24,13 +23,9 @@ def toas():
 
 
 def test_mjd_mask(toas):
-    mp = maskParameter(
-        "test1",
-        key="mjd",
-        key_value=[Time(54000, format="mjd"), Time(54100, format="mjd")],
-    )
+    mp = maskParameter("test1", key="mjd", key_value=[54000, 54100],)
     assert mp.key == "mjd"
-    assert mp.key_value == (Time(54000, format="mjd"), Time(54100, format="mjd"))
+    assert mp.key_value == (54000, 54100)
     assert mp.value == None
     select_toas = mp.select_toa_mask(toas)
     assert len(select_toas) > 0
@@ -40,28 +35,14 @@ def test_mjd_mask(toas):
     assert np.all(select_toas == raw_selection[0])
     assert np.all(toas.table["mjd_float"][select_toas] <= 54100)
     assert np.all(toas.table["mjd_float"][select_toas] >= 54000)
-    mp_str_keyval = maskParameter(
-        "test2",
-        key="mjd",
-        key_value=[Time("54000", format="mjd"), Time("54100", format="mjd")],
-    )
-    assert mp_str_keyval.key_value == (
-        Time(54000, format="mjd"),
-        Time(54100, format="mjd"),
-    )
-    mp_value_switch = maskParameter(
-        "test1",
-        key="mjd",
-        key_value=[Time(54100, format="mjd"), Time(54000, format="mjd")],
-    )
-    assert mp_value_switch.key_value == (
-        Time(54000, format="mjd"),
-        Time(54100, format="mjd"),
-    )
     with pytest.raises(ValueError):
-        mp_str_keyval = maskParameter(
-            "test2", key="mjd", key_value=[Time("54000", format="mjd")]
+        maskParameter(
+            "test2", key="mjd", key_value=["54000", "54100"],
         )
+    mp_value_switch = maskParameter("test1", key="mjd", key_value=[54100, 54000],)
+    assert mp_value_switch.key_value == (54000, 54100,)
+    with pytest.raises(ValueError):
+        mp_str_keyval = maskParameter("test2", key="mjd", key_value=[54000])
 
 
 def test_freq_mask(toas):

@@ -1507,17 +1507,17 @@ class maskParameter(floatParameter):
         """
         if key is None:
             if key_value is not None:
-                raise ValueError(f"Cannot associate a value with no flag")
+                raise ValueError("Cannot associate a value with no flag")
         if key == "mjd":
             start, end = sorted(key_value)
-            if not isinstance(start, astropy.time.Time) or not isinstance(
-                end, astropy.time.Time
+            if not isinstance(start, (int, float, np.longdouble)) or not isinstance(
+                end, (int, float, np.longdouble)
             ):
                 raise ValueError(
                     f"When selecting by MJD one must supply a "
-                    f"pair of Times not {key_value}"
+                    f"pair of numbers not {key_value}"
                 )
-            return start, end
+            return float(start), float(end)
         elif key == "freq":
             low, high = sorted(key_value)
             if not isinstance(low, u.Quantity) or not isinstance(high, u.Quantity):
@@ -1534,18 +1534,19 @@ class maskParameter(floatParameter):
                     f"When selecting by {key} one must supply a "
                     f"string not {key_value}"
                 )
+            # FlagDict.validate() once #1074 is merged.
             if len(key_value.split()) != 1:
                 raise ValueError(f"Key value {repr(key_value)} cannot occur in TOAs.")
             return key_value
 
     @staticmethod
     def convert(key, key_value):
-        """Convert strings to the appropriate form for the key."""
+        """Convert key_value strings to the appropriate form for the key."""
         if key == "mjd":
             start, end = key_value
             return (
-                astropy.time.Time(start, format="mjd"),
-                astropy.time.Time(end, format="mjd"),
+                float(start),
+                float(end),
             )
         elif key == "freq":
             start, end = key_value
@@ -1707,8 +1708,8 @@ class maskParameter(floatParameter):
             line += self.key_value
         else:
             start, end = self.key_value
-            if isinstance(start, astropy.time.Time):
-                line += f"{time_to_mjd_string(start)} {time_to_mjd_string(end)} "
+            if isinstance(start, float):
+                line += f"{start} {end} "
             elif isinstance(start, u.Quantity):
                 line += f"{start.to_value(u.MHz)} {end.to_value(u.MHz)} "
             else:
@@ -1761,11 +1762,10 @@ class maskParameter(floatParameter):
         array
             An array of TOA indices selected by the mask.
         """
-        column_match = {"mjd": "mjd_float", "freq": "freq", "tel": "obs"}
         if self.key == "mjd":
             start, end = self.key_value
-            c = toas.table["mjd_float"] >= start.mjd
-            c &= toas.table["mjd_float"] <= end.mjd
+            c = toas.table["mjd_float"] >= start
+            c &= toas.table["mjd_float"] <= end
             r = np.nonzero(c)[0]
         elif self.key == "freq":
             low, high = self.key_value

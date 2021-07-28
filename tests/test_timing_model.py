@@ -106,14 +106,7 @@ class TestModelBuilding:
         print(cp.get_prefix_mapping_component("JUMP"))
         print(id(cp), "test")
         add_jumps = [
-            (
-                "JUMP",
-                {
-                    "value": 0.1,
-                    "key": "mjd",
-                    "key_value": [Time(55000, format="mjd"), Time(56000, format="mjd")],
-                },
-            ),
+            ("JUMP", {"value": 0.1, "key": "mjd", "key_value": [55000, 56000],},),
             (
                 "JUMP",
                 {
@@ -157,7 +150,7 @@ class TestModelBuilding:
         assert jump2.value == 0.2
         assert jump3.value == 0.3
         # Check jump key value
-        assert jump1.key_value == (Time(55000, format="mjd"), Time(56000, format="mjd"))
+        assert jump1.key_value == (55000, 56000)
         assert jump2.key_value == (1440 * u.MHz, 2000 * u.MHz)
         assert jump3.key_value == "arecibo"
         assert len(tm.jumps) == 3

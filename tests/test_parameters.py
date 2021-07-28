@@ -176,8 +176,8 @@ class TestParameters(unittest.TestCase):
         self.assertTrue(np.isclose(test_m.F8.uncertainty_value, 10))
         self.assertEqual(test_m.JUMP1.frozen, True)
         self.assertEqual(test_m.JUMP1.key, "mjd")
-        self.assertTrue(np.isclose(test_m.JUMP1.key_value[0].mjd, 52742.0, atol=1e-10))
-        self.assertTrue(np.isclose(test_m.JUMP1.key_value[1].mjd, 52745.0, atol=1e-10))
+        self.assertTrue(np.isclose(test_m.JUMP1.key_value[0], 52742.0, atol=1e-10))
+        self.assertTrue(np.isclose(test_m.JUMP1.key_value[1], 52745.0, atol=1e-10))
         self.assertTrue(np.isclose(test_m.JUMP1.value, 0.2))
 
         self.assertEqual(test_m.JUMP2.frozen, True)
@@ -609,8 +609,8 @@ def test_parameter_can_be_pickled(p):
 valid_settings = [
     ("tel", "ao"),
     ("freq", (1000.0 * u.MHz, 2000.0 * u.MHz)),
-    ("mjd", (Time(57000.0, format="mjd"), Time(58000.0, format="mjd"))),
-    ("mjd", [Time(57000.0, format="mjd"), Time(58000.0, format="mjd")]),
+    ("mjd", (57000.0, 58000.0)),
+    ("mjd", [57000.0, 58000.0]),
     ("-fish", "carp"),
     ("freq", (2000.0 * u.MHz, np.inf * u.MHz)),
     ("freq", np.array([1000, 2000], dtype=np.longdouble) * u.MHz),
@@ -626,7 +626,7 @@ invalid_settings = [
 
 @pytest.mark.parametrize("key, key_value", valid_settings)
 def test_maskParameter_construction_valid(key, key_value):
-    j = maskParameter(
+    maskParameter(
         name="JUMP",
         index=467,
         key=key,
@@ -635,3 +635,17 @@ def test_maskParameter_construction_valid(key, key_value):
         units=u.s,
         description="Generic description of a JUMP",
     )
+
+
+@pytest.mark.parametrize("key, key_value", invalid_settings)
+def test_maskParameter_construction_invalid(key, key_value):
+    with pytest.raises(ValueError):
+        maskParameter(
+            name="JUMP",
+            index=467,
+            key=key,
+            key_value=key_value,
+            value=0,
+            units=u.s,
+            description="Generic description of a JUMP",
+        )

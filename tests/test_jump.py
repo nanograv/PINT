@@ -5,7 +5,6 @@ import re
 import unittest
 from io import StringIO
 
-import astropy.time
 import astropy.units as u
 import numpy as np
 import pytest
@@ -328,7 +327,7 @@ def test_multiple_jumps_add():
     for jmp in m.jumps:
         if jmp.key == "mjd":
             start, end = jmp.key_value
-            if start.mjd < 58500:
+            if start < 58500:
                 first_jump = jmp
             else:
                 second_jump = jmp
@@ -371,10 +370,7 @@ def test_multiple_jumps_add():
         pint.models.parameter.maskParameter(
             name="JUMP",
             key="MJD",
-            key_value=(
-                astropy.time.Time(57000, format="mjd"),
-                astropy.time.Time(58000, format="mjd"),
-            ),
+            key_value=(57000, 58000,),
             units=u.s,
             value=7,
             frozen=False,
@@ -433,8 +429,8 @@ def test_tidy_jumps_all_ok(small):
 def test_tidy_jumps_all_jumped(small):
     small.j.frozen = False
     small.j.key_value = (
-        astropy.time.Time(56000, format="mjd"),
-        astropy.time.Time(70000, format="mjd"),
+        56000,
+        70000,
     )
     small.m.tidy_jumps_for_fit(small.t)
     assert small.j.frozen
@@ -444,8 +440,8 @@ def test_tidy_jumps_irrelevant(small):
     small.j.frozen = False
     j2 = small.j.new_param(index=100, copy_all=True)
     j2.key_value = (
-        astropy.time.Time(50000, format="mjd"),
-        astropy.time.Time(55000, format="mjd"),
+        50000,
+        55000,
     )
     small.m.components["PhaseJump"].add_param(j2)
     small.m.tidy_jumps_for_fit(small.t)
@@ -457,8 +453,8 @@ def test_tidy_jumps_cover_all_freeze_one(small):
     small.j.frozen = False
     j2 = small.j.new_param(index=100, copy_all=True)
     j2.key_value = (
-        astropy.time.Time(50000, format="mjd"),
-        astropy.time.Time(59000, format="mjd"),
+        50000,
+        59000,
     )
     small.m.components["PhaseJump"].add_param(j2)
     small.m.tidy_jumps_for_fit(small.t)
