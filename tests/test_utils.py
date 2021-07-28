@@ -38,6 +38,7 @@ from pint.pulsar_mjd import (
     time_to_longdouble,
 )
 from pint.utils import (
+    a1sini,
     FTest,
     PosVel,
     companion_mass,
@@ -54,6 +55,10 @@ from pint.utils import (
     pulsar_mass,
     taylor_horner,
     taylor_horner_deriv,
+    omdot,
+    pbdot,
+    gamma,
+    omdot_to_mtot,
 )
 
 
@@ -652,19 +657,6 @@ def test_mass_function():
     )
 
 
-def test_mass_function_error_without_quantity_x():
-    # Mass function
-    with pytest.raises(ValueError):
-        mass_funct(1.0 * u.d, 2.0)
-
-
-def test_mass_function_error_without_quantity_pb():
-
-    # Mass function
-    with pytest.raises(ValueError):
-        mass_funct(1.0, 2.0 * pint.ls)
-
-
 def test_other_mass_function():
 
     # Mass function, second form
@@ -674,27 +666,6 @@ def test_other_mass_function():
         mass_funct2(1.4 * u.solMass, 0.2 * u.solMass, 60.0 * u.deg),
         0.0020297470401197783 * u.solMass,
     )
-
-
-def test_other_mass_function_error_without_quantity_mp():
-
-    # Mass function, second form
-    with pytest.raises(ValueError):
-        mass_funct2(1.4, 0.2 * u.solMass, 60.0 * u.deg)
-
-
-def test_other_mass_function_error_without_quantity_mc():
-
-    # Mass function, second form
-    with pytest.raises(ValueError):
-        mass_funct2(1.4 * u.solMass, 0.2, 60.0 * u.deg)
-
-
-def test_other_mass_function_error_without_quantity_inc():
-
-    # Mass function, second form
-    with pytest.raises(ValueError):
-        mass_funct2(1.4 * u.solMass, 0.2 * u.solMass, 60.0)
 
 
 def test_characteristic_age():
@@ -750,7 +721,7 @@ def test_companion_mass(Mpsr, Mc, Pb, incl):
     # projected
     x = (apsr * np.sin(incl)).to(pint.ls)
     # computed companion mass
-    assert np.isclose(companion_mass(Pb, x, mpsr=Mpsr, inc=incl), Mc)
+    assert np.isclose(companion_mass(Pb, x, mp=Mpsr, i=incl), Mc)
 
 
 @given(
@@ -776,7 +747,7 @@ def test_companion_mass_array(Mpsr, Mc, Pb, incl):
     # projected
     x = (apsr * np.sin(incl)).to(pint.ls)
     # computed companion mass
-    assert (np.isclose(companion_mass(Pb, x, mpsr=Mpsr, inc=incl), Mc)).all()
+    assert np.allclose(companion_mass(Pb, x, mp=Mpsr, i=incl), Mc)
 
 
 @given(
@@ -802,7 +773,7 @@ def test_pulsar_mass(Mpsr, Mc, Pb, incl):
     # projected
     x = (apsr * np.sin(incl)).to(pint.ls)
     # computed pulsar mass
-    assert np.isclose(pulsar_mass(Pb, x, Mc, inc=incl), Mpsr)
+    assert np.isclose(pulsar_mass(Pb, x, Mc, i=incl), Mpsr)
 
 
 @given(
@@ -828,79 +799,124 @@ def test_pulsar_mass_array(Mpsr, Mc, Pb, incl):
     # projected
     x = (apsr * np.sin(incl)).to(pint.ls)
     # computed pulsar mass
-    assert (np.isclose(pulsar_mass(Pb, x, Mc, inc=incl), Mpsr)).all()
+    assert np.allclose(pulsar_mass(Pb, x, Mc, i=incl), Mpsr)
 
 
-def test_pulsar_mass_error_noquantity_inc():
-    Pb = 1.0 * u.d
-    x = 2.0 * pint.ls
-    inc = 60 * u.deg
-    Mc = 0.5 * u.solMass
-    with pytest.raises(ValueError):
-        pulsar_mass(Pb, x, Mc, inc=inc.value)
+def test_omdot():
+    Mp = 1.3381 * u.Msun
+    Mc = 1.2489 * u.Msun
+    Pb = 0.10225156248 * u.d
+    e = 0.0877775 * u.dimensionless_unscaled
+    # for the Double Pulsar
+    # https://arxiv.org/pdf/astro-ph/0609417.pdf
+    # but recalculated based on the values above
+    assert np.isclose(omdot(Mp, Mc, Pb, e), 16.8991396 * u.deg / u.yr)
 
 
-def test_pulsar_mass_error_noquantity_Mc():
-    Pb = 1.0 * u.d
-    x = 2.0 * pint.ls
-    inc = 60 * u.deg
-    Mc = 0.5 * u.solMass
-    with pytest.raises(ValueError):
-        pulsar_mass(Pb, x, Mc.value, inc=inc)
+@given(
+    floats(min_value=1.0, max_value=3.0),
+    floats(min_value=0.01, max_value=10),
+    floats(min_value=0.04, max_value=1000),
+    floats(min_value=0.0001, max_value=0.99),
+)
+def test_omdot_to_mtot(Mp, Mc, Pb, e):
+    Mp = Mp * u.Msun
+    Mc = Mc * u.Msun
+    Pb = Pb * u.d
+    e = e * u.dimensionless_unscaled
+    # compute the total mass
+    Mtot = Mp + Mc
+    # compute the omdot
+    omdot_computed = omdot(Mp, Mc, Pb, e)
+    # compute the Mtot from that omdot and compare
+    Mtot_computed = omdot_to_mtot(omdot_computed, Pb, e)
+    assert np.allclose(Mtot, Mtot_computed)
 
 
-def test_pulsar_mass_error_noquantity_x():
-    Pb = 1.0 * u.d
-    x = 2.0 * pint.ls
-    inc = 60 * u.deg
-    Mc = 0.5 * u.solMass
-    with pytest.raises(ValueError):
-        pulsar_mass(Pb, x.value, Mc, inc=inc)
+def test_gamma():
+    Mp = 1.3381 * u.Msun
+    Mc = 1.2489 * u.Msun
+    Pb = 0.10225156248 * u.d
+    e = 0.0877775 * u.dimensionless_unscaled
+    # for the Double Pulsar
+    # https://arxiv.org/pdf/astro-ph/0609417.pdf
+    # but recalculated based on the values above
+    assert np.isclose(gamma(Mp, Mc, Pb, e), 0.38402 * u.ms)
 
 
-def test_pulsar_mass_error_noquantity_Pb():
-    Pb = 1.0 * u.d
-    x = 2.0 * pint.ls
-    inc = 60 * u.deg
-    Mc = 0.5 * u.solMass
-    with pytest.raises(ValueError):
-        pulsar_mass(Pb.value, x, Mc, inc=inc)
+def test_pbdot():
+    Mp = 1.3381 * u.Msun
+    Mc = 1.2489 * u.Msun
+    Pb = 0.10225156248 * u.d
+    e = 0.0877775 * u.dimensionless_unscaled
+    # for the Double Pulsar
+    # https://arxiv.org/pdf/astro-ph/0609417.pdf
+    # but recalculated based on the values above
+    assert np.isclose(pbdot(Mp, Mc, Pb, e), -1.24777223e-12 * u.s / u.s)
 
 
-def test_companion_mass_error_noquantity_inc():
-    Pb = 1.0 * u.d
-    x = 2.0 * pint.ls
-    inc = 60 * u.deg
-    Mpsr = 1.4 * u.solMass
-    with pytest.raises(ValueError):
-        pulsar_mass(Pb, x, Mpsr, inc=inc.value)
+@given(
+    floats(min_value=1.0, max_value=3.0),
+    floats(min_value=0.01, max_value=10),
+    floats(min_value=0.04, max_value=1000),
+    floats(min_value=0.1, max_value=90),
+)
+def test_a1sini_Mc(Mp, Mc, Pb, i):
+    """test a1sini by looking for consistency with companion mass calculation."""
+    Mp = Mp * u.Msun
+    Mc = Mc * u.Msun
+    Pb = Pb * u.d
+    i = i * u.deg
+    x = a1sini(Mp, Mc, Pb, i=i)
+    assert np.isclose(Mc, companion_mass(Pb, x, i=i, mp=Mp))
 
 
-def test_companion_mass_error_noquantity_Mpsr():
-    Pb = 1.0 * u.d
-    x = 2.0 * pint.ls
-    inc = 60 * u.deg
-    Mpsr = 1.4 * u.solMass
-    with pytest.raises(ValueError):
-        pulsar_mass(Pb, x, Mpsr.value, inc=inc)
+@given(
+    floats(min_value=1.0, max_value=3.0),
+    floats(min_value=0.01, max_value=10),
+    floats(min_value=0.04, max_value=1000),
+    floats(min_value=0.1, max_value=90),
+)
+def test_a1sini_Mp(Mp, Mc, Pb, i):
+    """test a1sini by looking for consistency with pulsar mass calculation."""
+    Mp = Mp * u.Msun
+    Mc = Mc * u.Msun
+    Pb = Pb * u.d
+    i = i * u.deg
+    x = a1sini(Mp, Mc, Pb, i=i)
+    assert np.isclose(Mp, pulsar_mass(Pb, x, Mc, i))
 
 
-def test_companion_mass_error_noquantity_x():
-    Pb = 1.0 * u.d
-    x = 2.0 * pint.ls
-    inc = 60 * u.deg
-    Mpsr = 1.4 * u.solMass
-    with pytest.raises(ValueError):
-        pulsar_mass(Pb, x.value, Mpsr, inc=inc)
+@given(
+    arrays(float, 10, elements=floats(0.5, 3)),
+    arrays(float, 10, elements=floats(0.01, 10)),
+    arrays(float, 10, elements=floats(0.04, 1000)),
+    arrays(float, 10, elements=floats(0.1, 90)),
+)
+def test_a1sini_Mc_array(Mp, Mc, Pb, i):
+    """test a1sini by looking for consistency with companion mass calculation with array input."""
+    Mp = Mp * u.Msun
+    Mc = Mc * u.Msun
+    Pb = Pb * u.d
+    i = i * u.deg
+    x = a1sini(Mp, Mc, Pb, i=i)
+    assert np.allclose(Mc, companion_mass(Pb, x, i=i, mp=Mp))
 
 
-def test_companion_mass_error_noquantity_Pb():
-    Pb = 1.0 * u.d
-    x = 2.0 * pint.ls
-    inc = 60 * u.deg
-    Mpsr = 1.4 * u.solMass
-    with pytest.raises(ValueError):
-        pulsar_mass(Pb.value, x, Mpsr, inc=inc)
+@given(
+    arrays(float, 10, elements=floats(0.5, 3)),
+    arrays(float, 10, elements=floats(0.01, 10)),
+    arrays(float, 10, elements=floats(0.04, 1000)),
+    arrays(float, 10, elements=floats(0.1, 90)),
+)
+def test_a1sini_Mp_array(Mp, Mc, Pb, i):
+    """test a1sini by looking for consistency with pulsar mass calculation with array input."""
+    Mp = Mp * u.Msun
+    Mc = Mc * u.Msun
+    Pb = Pb * u.d
+    i = i * u.deg
+    x = a1sini(Mp, Mc, Pb, i=i)
+    assert np.allclose(Mp, pulsar_mass(Pb, x, Mc, i))
 
 
 def test_ftest():

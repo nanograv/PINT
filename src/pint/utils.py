@@ -46,10 +46,15 @@ __all__ = [
     "pferrs",
     "weighted_mean",
     "ELL1_check",
+    "a1sini",
+    "companion_mass",
     "mass_funct",
     "mass_funct2",
     "pulsar_mass",
-    "companion_mass",
+    "gamma",
+    "omdot",
+    "omdot_to_mtot",
+    "pbdot",
     "pulsar_age",
     "pulsar_edot",
     "pulsar_B",
@@ -1113,6 +1118,9 @@ def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
         return wmean, werr
 
 
+@u.quantity_input(
+    p=[u.Hz, u.s], pd=[u.Hz / u.s, u.s / u.s], pdd=[u.Hz / u.s ** 2, u.s / u.s ** 2]
+)
 def p_to_f(p, pd, pdd=None):
     """Converts P, Pdot to F, Fdot (or vice versa)
 
@@ -1154,6 +1162,12 @@ def p_to_f(p, pd, pdd=None):
         return [f, fd, fdd]
 
 
+@u.quantity_input(
+    porf=[u.Hz, u.s],
+    porferr=[u.Hz, u.s],
+    pdorfd=[u.Hz / u.s, u.s / u.s],
+    pdorfderr=[u.Hz / u.s, u.s / u.s],
+)
 def pferrs(porf, porferr, pdorfd=None, pdorfderr=None):
     """Convert P, Pdot to F, Fdot with uncertainties (or vice versa).
 
@@ -1202,7 +1216,8 @@ def pferrs(porf, porferr, pdorfd=None, pdorfderr=None):
         return [forp, forperr, fdorpd, fdorpderr]
 
 
-def pulsar_age(f, fdot, n=3, fo=1e99 * u.Hz):
+@u.quantity_input(fo=u.Hz)
+def pulsar_age(f: u.Hz, fdot: u.Hz / u.s, n=3, fo=1e99 * u.Hz):
     """Compute pulsar characteristic age
 
     Return the age of a pulsar given the spin frequency
@@ -1226,17 +1241,29 @@ def pulsar_age(f, fdot, n=3, fo=1e99 * u.Hz):
     age : astropy.units.Quantity
         pulsar age in ``u.yr``
 
+    Raises
+    ------
+    astropy.units.UnitsError
+        If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
+
     Notes
     -----
-    Calculates :math:`(f/(n-1)\dot f) (1-(f/f_0)^{n-1})`
+    Calculates
+
+    .. math::
+
+        \\tau = \\frac{f}{(n-1)\dot f}\\left(1-\\left(\\frac{f}{f_0}\\right)^{n-1}\\right)
     """
     return (-f / ((n - 1.0) * fdot) * (1.0 - (f / fo) ** (n - 1.0))).to(u.yr)
 
 
-def pulsar_edot(f, fdot, I=1.0e45 * u.g * u.cm ** 2):
+@u.quantity_input(I=u.g * u.cm ** 2)
+def pulsar_edot(f: u.Hz, fdot: u.Hz / u.s, I=1.0e45 * u.g * u.cm ** 2):
     """Compute pulsar spindown energy loss rate
 
-    Return the pulsar Edot (in erg/s) given the spin frequency `f` and
+    Return the pulsar `Edot` (:math:`\dot E`, in erg/s) given the spin frequency `f` and
     frequency derivative `fdot`. The NS moment of inertia is assumed to be
     `I` = 1.0e45 g cm^2 by default.
 
@@ -1254,14 +1281,22 @@ def pulsar_edot(f, fdot, I=1.0e45 * u.g * u.cm ** 2):
     Edot : astropy.units.Quantity
         pulsar spin-down luminosity in ``u.erg/u.s``
 
+    Raises
+    ------
+    astropy.units.UnitsError
+        If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
+
     Notes
     -----
-    Calculates :math:`-4\pi^2  I  f  \dot f`
+    Calculates :math:`\dot E = -4\pi^2  I  f  \dot f`
     """
     return (-4.0 * np.pi ** 2 * I * f * fdot).to(u.erg / u.s)
 
 
-def pulsar_B(f, fdot):
+@u.quantity_input
+def pulsar_B(f: u.Hz, fdot: u.Hz / u.s):
     """Compute pulsar surface magnetic field
 
     Return the estimated pulsar surface magnetic field strength
@@ -1279,6 +1314,13 @@ def pulsar_B(f, fdot):
     B : astropy.units.Quantity
         pulsar dipole magnetic field in ``u.G``
 
+    Raises
+    ------
+    astropy.units.UnitsError
+        If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
+
     Notes
     -----
     Calculates :math:`B=3.2\\times 10^{19}\\,{\\rm  G}\\sqrt{ f \dot f^{-3}}`
@@ -1288,7 +1330,8 @@ def pulsar_B(f, fdot):
     return 3.2e19 * u.G * np.sqrt(-fdot.to_value(u.Hz / u.s) / f.to_value(u.Hz) ** 3.0)
 
 
-def pulsar_B_lightcyl(f, fdot):
+@u.quantity_input
+def pulsar_B_lightcyl(f: u.Hz, fdot: u.Hz / u.s):
     """Compute pulsar magnetic field at the light cylinder
 
     Return the estimated pulsar magnetic field strength at the
@@ -1307,6 +1350,13 @@ def pulsar_B_lightcyl(f, fdot):
     Blc : astropy.units.Quantity
         pulsar dipole magnetic field at the light cylinder in ``u.G``
 
+    Raises
+    ------
+    astropy.units.UnitsError
+        If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
+
     Notes
     -----
     Calculates :math:`B_{LC} = 2.9\\times 10^8\\,{\\rm G} P^{-5/2} \dot P^{1/2}`
@@ -1322,9 +1372,12 @@ def pulsar_B_lightcyl(f, fdot):
     )
 
 
-def mass_funct(pb, x):
+@u.quantity_input
+def mass_funct(pb: u.d, x: u.cm):
     """Compute binary mass function from period and semi-major axis
 
+    Can handle scalar or array inputs.
+    
     Parameters
     ----------
     pb : astropy.units.Quantity
@@ -1339,25 +1392,32 @@ def mass_funct(pb, x):
 
     Raises
     ------
-    ValueError
+    astropy.units.UnitsError
         If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
 
     Notes
     -----
-    Calculates :math:`4\pi^2 x^3 / G / P_b^2`
+    Calculates
+
+    .. math::
+
+        f(m_p, m_c) = \\frac{4\pi^2 x^3}{G P_b^2}
+
+    See [1]_
+
+    .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.34 (RHS)
     """
-    if not isinstance(x, u.quantity.Quantity):
-        raise ValueError(
-            f"The projected semi-major axis x should be a Quantity but is {x}."
-        )
-    if not isinstance(pb, u.quantity.Quantity):
-        raise ValueError(f"The binary period pb should be a Quantity but is {pb}.")
     fm = 4.0 * np.pi ** 2 * x ** 3 / (const.G * pb ** 2)
     return fm.to(u.solMass)
 
 
-def mass_funct2(mp, mc, i):
+@u.quantity_input
+def mass_funct2(mp: u.Msun, mc: u.Msun, i: u.deg):
     """Compute binary mass function from masses and inclination
+
+    Can handle scalar or array inputs.
 
     Parameters
     ----------
@@ -1365,7 +1425,7 @@ def mass_funct2(mp, mc, i):
         Pulsar mass, typically in ``u.solMass``
     mc : astropy.units.Quantity
         Companion mass, typically in ``u.solMass``
-    i : astropy.coordinates.Angle
+    i : astropy.coordinates.Angle or astropy.units.Quantity
         Inclination angle, in ``u.deg`` or ``u.rad``
 
     Returns
@@ -1375,30 +1435,35 @@ def mass_funct2(mp, mc, i):
 
     Raises
     ------
-    ValueError
+    astropy.units.UnitsError
         If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
 
     Notes
     -----
     Inclination is such that edge on is ``i = 90*u.deg``
     An 'average' orbit has cos(i) = 0.5, or ``i = 60*u.deg``
 
-    Calculates :math:`m_c\sin^3 i / (m_c + m_p)^2`
-    """
-    if not (isinstance(i, angles.Angle) or isinstance(i, u.quantity.Quantity)):
-        raise ValueError(f"The inclination should be an Angle but is {i}.")
-    if not isinstance(mc, u.quantity.Quantity):
-        raise ValueError(f"The companion mass should be a Quantity but is {mc}.")
-    if not isinstance(mp, u.quantity.Quantity):
-        raise ValueError(f"The pulsar mass should be a Quantity but is {mp}.")
+    Calculates
 
+    .. math::
+        f(m_p, m_c) = \\frac{m_c^3\sin^3 i}{(m_c + m_p)^2}
+        
+    See [2]_
+
+    .. [2] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.34 (LHS)
+
+    """
     return (mc * np.sin(i)) ** 3.0 / (mc + mp) ** 2.0
 
 
-def pulsar_mass(pb, x, mc, inc):
+@u.quantity_input
+def pulsar_mass(pb: u.d, x: u.cm, mc: u.Msun, i: u.deg):
     """Compute pulsar mass from orbital parameters
 
     Return the pulsar mass (in solar mass units) for a binary.
+    Can handle scalar or array inputs.
 
     Parameters
     ----------
@@ -1408,7 +1473,7 @@ def pulsar_mass(pb, x, mc, inc):
         Projected pulsar semi-major axis (aka ASINI) in ``pint.ls``
     mc : astropy.units.Quantity
         Companion mass in ``u.solMass``
-    inc : astropy.coordinates.Angle
+    i : astropy.coordinates.Angle or astropy.units.Quantity
         Inclination angle, in ``u.deg`` or ``u.rad``
 
     Returns
@@ -1418,8 +1483,10 @@ def pulsar_mass(pb, x, mc, inc):
 
     Raises
     ------
-    ValueError
+    astropy.units.UnitsError
         If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
 
     Example
     -------
@@ -1433,56 +1500,48 @@ def pulsar_mass(pb, x, mc, inc):
     Notes
     -------
     This forms a quadratic equation of the form:
-    ca*Mp**2 + cb*Mp + cc = 0
+    :math:`a M_p^2 + b M_p + c = 0``
 
     with:
-    ca = massfunct
-    cb = 2 * massfunct * mc
-    cc = massfunct * mc ** 2 - (mc * sini) ** 3
+
+    - :math:`a = f(P_b,x)` (the mass function)
+    - :math:`b = 2 f(P_b,x) M_c`
+    - :math:`c = f(P_b,x)  M_c^2 - M_c\sin^3 i`
 
     except the discriminant simplifies to:
-    4 * massfunct * mc**3 * sini**3
+    :math:`4f(P_b,x) M_c^3 \sin^3 i`
 
     solve it directly
     this has to be the positive branch of the quadratic
-    because the vertex is at -mc, so the negative branch will always be < 0
-
+    because the vertex is at :math:`-M_c`, so
+    the negative branch will always be < 0
     """
-    if not (isinstance(inc, angles.Angle) or isinstance(inc, u.quantity.Quantity)):
-        raise ValueError(f"The inclination should be an Angle but is {inc}.")
-    if not isinstance(x, u.quantity.Quantity):
-        raise ValueError(
-            f"The projected semi-major axis x should be a Quantity but is {x}."
-        )
-    if not isinstance(pb, u.quantity.Quantity):
-        raise ValueError(f"The binary period pb should be a Quantity but is {pb}.")
-    if not isinstance(mc, u.quantity.Quantity):
-        raise ValueError(f"The companion mass should be a Quantity but is {mc}.")
-
     massfunct = mass_funct(pb, x)
 
-    sini = np.sin(inc)
+    sini = np.sin(i)
     ca = massfunct
     cb = 2 * massfunct * mc
 
     return ((-cb + np.sqrt(4 * massfunct * mc ** 3 * sini ** 3)) / (2 * ca)).to(u.Msun)
 
 
-def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
+@u.quantity_input(inc=u.deg, mpsr=u.solMass)
+def companion_mass(pb: u.d, x: u.cm, i=60.0 * u.deg, mp=1.4 * u.solMass):
     """Commpute the companion mass from the orbital parameters
 
     Compute companion mass for a binary system from orbital mechanics,
     not Shapiro delay.
+    Can handle scalar or array inputs.
 
     Parameters
     ----------
     pb : astropy.units.Quantity
         Binary orbital period
-    x : astropy.units.Quantity`
+    x : astropy.units.Quantity
         Projected pulsar semi-major axis (aka ASINI) in ``pint.ls``
-    inc : astropy.coordinates.Angle, optional
+    i : astropy.coordinates.Angle or astropy.units.Quantity, optional
         Inclination angle, in ``u.deg`` or ``u.rad.`` Default is 60 deg.
-    mpsr : astropy.units.Quantity, optional
+    mp : astropy.units.Quantity, optional
         Pulsar mass in ``u.solMass``. Default is 1.4 Msun
 
     Returns
@@ -1492,8 +1551,10 @@ def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
 
     Raises
     ------
-    ValueError
+    astropy.units.UnitsError
         If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
 
     Example
     -------
@@ -1506,65 +1567,53 @@ def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
     Notes
     -----
     This ends up as a a cubic equation of the form:
-    a*Mc**3 + b*Mc**2 + c*Mc + d = 0
+    :math:`a M_c^3 + b M_c^2 + c M_c + d = 0`
 
-    a = np.sin(inc) ** 3
-    b = -massfunct
-    c = -2 * mpsr * massfunct
-    d = -massfunct * mpsr ** 2
+    - :math:`a = \sin^3(inc)`
+    - :math:`b = -{\\rm massfunct}`
+    - :math:`c = -2 M_p {\\rm massfunct}`
+    - :math:`d = -{\\rm massfunct} M_p^2`
 
-    To solve it we can use a direct calculation of the cubic roots:
-    https://en.wikipedia.org/wiki/Cubic_equation#General_cubic_formula
+    To solve it we can use a direct calculation of the cubic roots [3]_.
+
 
     It's useful to look at the discriminant to understand the nature of the roots
-    and make sure we get the right one
+    and make sure we get the right one [4]_.
 
-    https://en.wikipedia.org/wiki/Discriminant#Degree_3
-    delta = (
-        cb ** 2 * cc ** 2
-        - 4 * ca * cc ** 3
-        - 4 * cb ** 3 * cd
-        - 27 * ca ** 2 * cd ** 2
-        + 18 * ca * cb * cc * cd
-    )
-    if delta is < 0 then there is only 1 real root, and I think we do it correctly below
+
+    :math:`\Delta = (b^2 c^2 - 4ac^3-4b^3d-27a^2d^2+18abcd)`
+
+    if :math:`\delta< 0` then there is only 1 real root,
+    and I think we do it correctly below
     and this should be < 0
-    since this reduces to -27 * sin(i)**6 * massfunct**2 * mp**4 -4 * sin(i)**3 * massfunct**3 * mp**3
-    so there is just 1 real root and we compute it below
+    since this reduces to :math:`-27\sin^6 i f(P_b,x)^2 M_p^4 -4\sin^3 i f(P_b,x)^3 M_p^3`
+    (where :math:`f(P_b,x)` is the mass function) so there is just 1 real root.
+
+    .. [3] https://en.wikipedia.org/wiki/Cubic_equation#General_cubic_formula
+    .. [4] https://en.wikipedia.org/wiki/Discriminant#Degree_3
 
     """
-    if not (isinstance(inc, angles.Angle) or isinstance(inc, u.quantity.Quantity)):
-        raise ValueError(f"The inclination should be an Angle but is {inc}.")
-    if not isinstance(x, u.quantity.Quantity):
-        raise ValueError(
-            f"The projected semi-major axis x should be a Quantity but is {x}."
-        )
-    if not isinstance(pb, u.quantity.Quantity):
-        raise ValueError(f"The binary period pb should be a Quantity but is {pb}.")
-    if not isinstance(mpsr, u.quantity.Quantity):
-        raise ValueError(f"The pulsar mass should be a Quantity but is {mpsr}.")
-
     massfunct = mass_funct(pb, x)
 
     # solution
-    sini = np.sin(inc)
+    sini = np.sin(i)
     a = sini ** 3
     # delta0 = b ** 2 - 3 * a * c
     # delta0 is always > 0
-    delta0 = massfunct ** 2 + 6 * mpsr * massfunct * a
+    delta0 = massfunct ** 2 + 6 * mp * massfunct * a
     # delta1 is always <0
     # delta1 = 2 * b ** 3 - 9 * a * b * c + 27 * a ** 2 * d
     delta1 = (
         -2 * massfunct ** 3
-        - 18 * a * mpsr * massfunct ** 2
-        - 27 * a ** 2 * massfunct * mpsr ** 2
+        - 18 * a * mp * massfunct ** 2
+        - 27 * a ** 2 * massfunct * mp ** 2
     )
     # Q**2 is always > 0, so this is never a problem
     # in terms of complex numbers
     # Q = np.sqrt(delta1**2 - 4*delta0**3)
     Q = np.sqrt(
-        108 * a ** 3 * mpsr ** 3 * massfunct ** 3
-        + 729 * a ** 4 * mpsr ** 4 * massfunct ** 2
+        108 * a ** 3 * mp ** 3 * massfunct ** 3
+        + 729 * a ** 4 * mp ** 4 * massfunct ** 2
     )
     # this could be + or - Q
     # pick the - branch since delta1 is <0 so that delta1 - Q is never near 0
@@ -1580,21 +1629,312 @@ def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
     return x1.to(u.Msun)
 
 
-def ELL1_check(A1, E, TRES, NTOA, outstring=True):
+@u.quantity_input
+def pbdot(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
+    """Post-Keplerian orbital decay pbdot, assuming general relativity.
+
+    pbdot (:math:`\dot P_B`) is the change in the binary orbital period
+    due to emission of gravitational waves.
+    Can handle scalar or array inputs.
+    
+    Parameters
+    ----------
+    mp : astropy.units.Quantity
+        pulsar mass
+    mc : astropy.units.Quantity
+        companion mass
+    pb : astropy.units.Quantity
+        Binary orbital period
+    e : astropy.units.Quantity or float
+        orbital eccentricity
+
+    Returns
+    -------
+    pbdot : astropy.units.Quantity
+        (dimensionless)
+
+    Raises
+    ------
+    astropy.units.UnitsError
+        If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
+
+    Notes
+    -----
+    Calculates
+
+    .. math::
+        \dot P_b = -\\frac{192\pi}{5}T_{\odot}^{5/3} \\left(\\frac{P_b}{2\pi}\\right)^{-5/3}
+        f(e)\\frac{m_p m_c}{(m_p+m_c)^{1/3}}
+        
+    with
+
+    .. math::
+        f(e)=\\frac{1+(73/24)e^2+(37/96)e^4}{(1-e^2)^{7/2}}
+
+    and :math:`T_\odot = GM_\odot c^{-3}`.
+
+    More details in :ref:`Timing Models`.  Also see [5]_.
+
+    .. [5] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.52
+
+    """
+    f = (1 + (73.0 / 24) * e ** 2 + (37.0 / 96) * e ** 4) / (1 - e ** 2) ** (7.0 / 2)
+    value = (
+        (const.G / const.c ** 3) ** (5.0 / 3)
+        * (pb / (2 * np.pi)) ** (-5.0 / 3)
+        * (-192 * np.pi / 5)
+        * f
+        * (mp * mc)
+        / (mp + mc) ** (1.0 / 3)
+    )
+    return value.to(u.s / u.s)
+
+
+@u.quantity_input
+def gamma(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
+    """Post-Keplerian time dilation and gravitational redshift gamma, assuming general relativity.
+
+    gamma (:math:`\gamma`) is the amplitude of the modification in arrival times caused by the varying
+    gravitational redshift of the companion and time dilation in an elliptical orbit.  The time delay is
+    :math:`\gamma \sin E`, where :math:`E` is the eccentric anomaly.  
+    Can handle scalar or array inputs.
+    
+    Parameters
+    ----------
+    mp : astropy.units.Quantity
+        pulsar mass
+    mc : astropy.units.Quantity
+        companion mass
+    pb : astropy.units.Quantity
+        Binary orbital period
+    e : astropy.units.Quantity or float
+        orbital eccentricity
+
+    Returns
+    -------
+    gamma : astropy.units.Quantity
+        in ``u.s``
+
+    Raises
+    ------
+    astropy.units.UnitsError
+        If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
+
+    Notes
+    -----
+    Calculates
+
+    .. math::
+        \gamma = T_{\odot}^{2/3} \\left(\\frac{P_b}{2\pi}\\right)^{1/3} e \\frac{m_c(m_p+2m_c)}{(m_p+m_c)^{4/3}}
+
+    with :math:`T_\odot = GM_\odot c^{-3}`.
+
+    More details in :ref:`Timing Models`.  Also see [6]_
+
+    .. [6] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.49
+
+    """
+    value = (
+        (const.G / const.c ** 3) ** (2.0 / 3)
+        * (pb / (2 * np.pi)) ** (1.0 / 3)
+        * e
+        * (mc * (mp + 2 * mc))
+        / (mp + mc) ** (4.0 / 3)
+    )
+    return value.to(u.s)
+
+
+@u.quantity_input
+def omdot(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
+    """Post-Keplerian longitude of periastron precession rate omdot, assuming general relativity.
+
+    omdot (:math:`\dot \omega`) is the relativistic advance of periastron.
+    Can handle scalar or array inputs.
+    
+    Parameters
+    ----------
+    mp : astropy.units.Quantity
+        pulsar mass
+    mc : astropy.units.Quantity
+        companion mass
+    pb : astropy.units.Quantity
+        Binary orbital period
+    e : astropy.units.Quantity or float
+        orbital eccentricity
+
+    Returns
+    -------
+    omdot : astropy.units.Quantity
+        In ``u.deg/u.yr``
+
+    Raises
+    ------
+    astropy.units.UnitsError
+        If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
+
+    Notes
+    -----
+    Calculates
+
+    .. math::
+
+        \dot \omega = 3T_{\odot}^{2/3} \\left(\\frac{P_b}{2\pi}\\right)^{-5/3}
+        \\frac{1}{1-e^2}(m_p+m_c)^{2/3}
+        
+    with :math:`T_\odot = GM_\odot c^{-3}`.
+
+    More details in :ref:`Timing Models`.  Also see [7]_.
+
+    .. [7] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.48
+
+    """
+    value = (
+        3
+        * (pb / (2 * np.pi)) ** (-5.0 / 3)
+        * (1 / (1 - e ** 2))
+        * (const.G * (mp + mc) / const.c ** 3) ** (2.0 / 3)
+    )
+    return value.to(u.deg / u.yr, equivalencies=u.dimensionless_angles())
+
+
+@u.quantity_input
+def omdot_to_mtot(omdot: u.deg / u.yr, pb: u.d, e: u.dimensionless_unscaled):
+    """Determine total mass from Post-Keplerian longitude of periastron precession rate omdot,
+    assuming general relativity.
+
+    omdot (:math:`\dot \omega`) is the relativistic advance of periastron.  It relates to the total
+    system mass (assuming GR).
+    Can handle scalar or array inputs.
+
+    Parameters
+    ----------
+    omdot : astropy.units.Quantity
+        relativistic advance of periastron
+    pb : astropy.units.Quantity
+        Binary orbital period
+    e : astropy.units.Quantity or float
+        orbital eccentricity
+
+    Returns
+    -------
+    mtot : astropy.units.Quantity    
+        In ``u.Msun``
+
+    Raises
+    ------
+    astropy.units.UnitsError
+        If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
+
+    Notes
+    -----
+    Inverts
+
+    .. math::
+
+        \dot \omega = 3T_{\odot}^{2/3} \\left(\\frac{P_b}{2\pi}\\right)^{-5/3}
+        \\frac{1}{1-e^2}(m_p+m_c)^{2/3}
+        
+    to calculate :math:`m_{\\rm tot} = m_p + m_c`,
+    with :math:`T_\odot = GM_\odot c^{-3}`.
+
+    More details in :ref:`Timing Models`.  Also see [9]_.
+
+    .. [9] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.48
+    """
+    return (
+        (
+            (
+                omdot
+                / (
+                    3
+                    * (const.G / const.c ** 3) ** (2.0 / 3)
+                    * (pb / (2 * np.pi)) ** (-5.0 / 3)
+                    * (1 - e ** 2) ** (-1)
+                )
+            )
+        )
+        ** (3.0 / 2)
+    ).to(u.Msun, equivalencies=u.dimensionless_angles())
+
+
+@u.quantity_input(pb=u.d, mp=u.Msun, mc=u.Msun, i=u.deg)
+def a1sini(mp, mc, pb, i=90 * u.deg):
+    """Pulsar's semi-major axis.
+
+    The full semi-major axis is given by Kepler's third law.  This is the
+    projection (:math:`\sin i`) of just the pulsar's orbit (:math:`m_c/(m_p+m_c)`
+    times the full semi-major axis), which is what pulsar timing measures.
+    Can handle scalar or array inputs.
+    
+    Parameters
+    ----------
+    mp : astropy.units.Quantity
+        pulsar mass
+    mc : astropy.units.Quantity
+        companion mass
+    pb : astropy.units.Quantity
+        Binary orbital period
+    i : astropy.coordinates.Angle or astropy.units.Quantity
+        orbital inclination
+
+    Returns
+    -------
+    a1sini : astropy.units.Quantity
+        Projected semi-major axis of pulsar's orbit in ``pint.ls``
+
+    Raises
+    ------
+    astropy.units.UnitsError
+        If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
+
+    Notes
+    -----
+    Calculates
+
+    .. math::
+
+        \\frac{a_p \sin i}{c} = \\frac{m_c \sin i}{(m_p+m_c)^{2/3}}
+        G^{1/3}\\left(\\frac{P_b}{2\pi}\\right)^{2/3}
+
+    More details in :ref:`Timing Models`.  Also see [8]_
+
+    .. [8] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.21, 8.22, 8.27
+
+    """
+    return (
+        (mc * np.sin(i))
+        * (const.G * (pb / (2 * np.pi)) ** 2 / (mp + mc) ** 2) ** (1.0 / 3)
+    ).to(pint.ls)
+
+
+@u.quantity_input
+def ELL1_check(
+    A1: u.cm, E: u.dimensionless_unscaled, TRES: u.us, NTOA: int, outstring=True
+):
     """Check for validity of assumptions in ELL1 binary model
 
     Checks whether the assumptions that allow ELL1 to be safely used are
     satisfied. To work properly, we should have:
-    asini/c * ecc**2 << timing precision / sqrt(# TOAs)
-    or A1 * E**2 << TRES / sqrt(NTOA)
+    :math:`asini/c  e^2 \ll {\\rm timing precision} / \sqrt N_{\\rm TOA}`
+    or :math:`A1 E^2 \ll TRES / \sqrt N_{\\rm TOA}`
 
     Parameters
     ----------
-    A1 : Quantity
+    A1 : astropy.units.Quantity
         Projected semi-major axis (aka ASINI) in `pint.ls`
-    E : Quantity (dimensionless)
+    E : astropy.units.Quantity (dimensionless)
         Eccentricity
-    TRES : Quantity
+    TRES : astropy.units.Quantity
         RMS TOA uncertainty
     NTOA : int
         Number of TOAs in the fit
@@ -2030,7 +2370,7 @@ def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params=
     >>> from pint import fitter, toa
     >>> import pint.utils
     >>> import io
-    >>> 
+    >>>
     >>> # the locations of these may vary
     >>> timfile = "tests/datafile/NGC6440E.tim"
     >>> parfile = "tests/datafile/NGC6440E.par"
@@ -2038,18 +2378,18 @@ def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params=
     >>> # fit the model to the data
     >>> f = fitter.WLSFitter(toas=t, model=m)
     >>> f.fit_toas()
-    >>> 
+    >>>
     >>> # make fake TOAs starting at the end of the
     >>> # current data and going out 100 days
     >>> tnew = toa.make_fake_toas(t.get_mjds().max().value,
     >>>                           t.get_mjds().max().value+100, 50, model=f.model)
     >>> # now make random models
     >>> dphase, mrand = pint.utils.calculate_random_models(f, tnew, Nmodels=100)
-    
+
 
     Note
     ----
-    To calculate new TOAs, you can use :func:`~pint.toa.make_fake_toas` 
+    To calculate new TOAs, you can use :func:`~pint.toa.make_fake_toas`
 
     or similar
     """
