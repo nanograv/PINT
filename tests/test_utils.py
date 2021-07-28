@@ -656,19 +656,6 @@ def test_mass_function():
     )
 
 
-def test_mass_function_error_without_quantity_x():
-    # Mass function
-    with pytest.raises(TypeError):
-        mass_funct(1.0 * u.d, 2.0)
-
-
-def test_mass_function_error_without_quantity_pb():
-
-    # Mass function
-    with pytest.raises(TypeError):
-        mass_funct(1.0, 2.0 * pint.ls)
-
-
 def test_other_mass_function():
 
     # Mass function, second form
@@ -678,27 +665,6 @@ def test_other_mass_function():
         mass_funct2(1.4 * u.solMass, 0.2 * u.solMass, 60.0 * u.deg),
         0.0020297470401197783 * u.solMass,
     )
-
-
-def test_other_mass_function_error_without_quantity_mp():
-
-    # Mass function, second form
-    with pytest.raises(TypeError):
-        mass_funct2(1.4, 0.2 * u.solMass, 60.0 * u.deg)
-
-
-def test_other_mass_function_error_without_quantity_mc():
-
-    # Mass function, second form
-    with pytest.raises(TypeError):
-        mass_funct2(1.4 * u.solMass, 0.2, 60.0 * u.deg)
-
-
-def test_other_mass_function_error_without_quantity_inc():
-
-    # Mass function, second form
-    with pytest.raises(TypeError):
-        mass_funct2(1.4 * u.solMass, 0.2 * u.solMass, 60.0)
 
 
 def test_characteristic_age():
@@ -835,78 +801,6 @@ def test_pulsar_mass_array(Mpsr, Mc, Pb, incl):
     assert np.allclose(pulsar_mass(Pb, x, Mc, i=incl), Mpsr)
 
 
-def test_pulsar_mass_error_noquantity_inc():
-    Pb = 1.0 * u.d
-    x = 2.0 * pint.ls
-    inc = 60 * u.deg
-    Mc = 0.5 * u.solMass
-    with pytest.raises(TypeError):
-        pulsar_mass(Pb, x, Mc, inc=inc.value)
-
-
-def test_pulsar_mass_error_noquantity_Mc():
-    Pb = 1.0 * u.d
-    x = 2.0 * pint.ls
-    inc = 60 * u.deg
-    Mc = 0.5 * u.solMass
-    with pytest.raises(TypeError):
-        pulsar_mass(Pb, x, Mc.value, inc=inc)
-
-
-def test_pulsar_mass_error_noquantity_x():
-    Pb = 1.0 * u.d
-    x = 2.0 * pint.ls
-    inc = 60 * u.deg
-    Mc = 0.5 * u.solMass
-    with pytest.raises(TypeError):
-        pulsar_mass(Pb, x.value, Mc, inc=inc)
-
-
-def test_pulsar_mass_error_noquantity_Pb():
-    Pb = 1.0 * u.d
-    x = 2.0 * pint.ls
-    inc = 60 * u.deg
-    Mc = 0.5 * u.solMass
-    with pytest.raises(TypeError):
-        pulsar_mass(Pb.value, x, Mc, inc=inc)
-
-
-def test_companion_mass_error_noquantity_inc():
-    Pb = 1.0 * u.d
-    x = 2.0 * pint.ls
-    inc = 60 * u.deg
-    Mpsr = 1.4 * u.solMass
-    with pytest.raises(TypeError):
-        pulsar_mass(Pb, x, Mpsr, inc=inc.value)
-
-
-def test_companion_mass_error_noquantity_Mpsr():
-    Pb = 1.0 * u.d
-    x = 2.0 * pint.ls
-    inc = 60 * u.deg
-    Mpsr = 1.4 * u.solMass
-    with pytest.raises(TypeError):
-        pulsar_mass(Pb, x, Mpsr.value, inc=inc)
-
-
-def test_companion_mass_error_noquantity_x():
-    Pb = 1.0 * u.d
-    x = 2.0 * pint.ls
-    inc = 60 * u.deg
-    Mpsr = 1.4 * u.solMass
-    with pytest.raises(TypeError):
-        pulsar_mass(Pb, x.value, Mpsr, inc=inc)
-
-
-def test_companion_mass_error_noquantity_Pb():
-    Pb = 1.0 * u.d
-    x = 2.0 * pint.ls
-    inc = 60 * u.deg
-    Mpsr = 1.4 * u.solMass
-    with pytest.raises(TypeError):
-        pulsar_mass(Pb.value, x, Mpsr, inc=inc)
-
-
 def test_omdot():
     Mp = 1.3381 * u.Msun
     Mc = 1.2489 * u.Msun
@@ -938,123 +832,6 @@ def test_pbdot():
     # https://arxiv.org/pdf/astro-ph/0609417.pdf
     # but recalculated based on the values above
     assert np.isclose(pbdot(Mp, Mc, Pb, e), -1.24777223e-12 * u.s / u.s)
-
-
-def test_gamma_error_noquantity_mp():
-    Mp = 1.3381 * u.Msun
-    Mc = 1.2489 * u.Msun
-    Pb = 0.10225156248 * u.d
-    e = 0.0877775
-    with pytest.raises(TypeError):
-        gamma(Mp.value, Mc, Pb, e)
-
-
-def test_gamma_error_noquantity_mc():
-    Mp = 1.3381 * u.Msun
-    Mc = 1.2489 * u.Msun
-    Pb = 0.10225156248 * u.d
-    e = 0.0877775
-    with pytest.raises(TypeError):
-        gamma(Mp, Mc.value, Pb, e)
-
-
-def test_gamma_error_noquantity_pb():
-    Mp = 1.3381 * u.Msun
-    Mc = 1.2489 * u.Msun
-    Pb = 0.10225156248 * u.d
-    e = 0.0877775
-    with pytest.raises(TypeError):
-        gamma(Mp, Mc, Pb.value, e)
-
-
-def test_omdot_error_wrongquantity_mp():
-    Mp = 1.3381 * u.Msun
-    Mc = 1.2489 * u.Msun
-    Pb = 0.10225156248 * u.d
-    e = 0.0877775
-    with pytest.raises(u.UnitsError):
-        omdot(Mp.value * u.s, Mc, Pb, e)
-
-
-def test_omdot_error_wrongquantity_mc():
-    Mp = 1.3381 * u.Msun
-    Mc = 1.2489 * u.Msun
-    Pb = 0.10225156248 * u.d
-    e = 0.0877775
-    with pytest.raises(u.UnitsError):
-        omdot(Mp, Mc.value * u.s, Pb, e)
-
-
-def test_omdot_error_wrongquantity_pb():
-    Mp = 1.3381 * u.Msun
-    Mc = 1.2489 * u.Msun
-    Pb = 0.10225156248 * u.d
-    e = 0.0877775
-    with pytest.raises(u.UnitsError):
-        omdot(Mp, Mc, Pb.value * u.Msun, e)
-
-
-def test_omdot_error_wrongquantity_e():
-    Mp = 1.3381 * u.Msun
-    Mc = 1.2489 * u.Msun
-    Pb = 0.10225156248 * u.d
-    e = 0.0877775
-    with pytest.raises(u.UnitsError):
-        omdot(Mp, Mc, Pb, e * u.s)
-
-
-def test_omdot_error_noquantity_mp():
-    Mp = 1.3381 * u.Msun
-    Mc = 1.2489 * u.Msun
-    Pb = 0.10225156248 * u.d
-    e = 0.0877775
-    with pytest.raises(TypeError):
-        omdot(Mp.value, Mc, Pb, e)
-
-
-def test_omdot_error_noquantity_mc():
-    Mp = 1.3381 * u.Msun
-    Mc = 1.2489 * u.Msun
-    Pb = 0.10225156248 * u.d
-    e = 0.0877775
-    with pytest.raises(TypeError):
-        omdot(Mp, Mc.value, Pb, e)
-
-
-def test_omdot_error_noquantity_pb():
-    Mp = 1.3381 * u.Msun
-    Mc = 1.2489 * u.Msun
-    Pb = 0.10225156248 * u.d
-    e = 0.0877775
-    with pytest.raises(TypeError):
-        omdot(Mp, Mc, Pb.value, e)
-
-
-def test_pbdot_error_noquantity_mp():
-    Mp = 1.3381 * u.Msun
-    Mc = 1.2489 * u.Msun
-    Pb = 0.10225156248 * u.d
-    e = 0.0877775
-    with pytest.raises(TypeError):
-        pbdot(Mp.value, Mc, Pb, e)
-
-
-def test_pbdot_error_noquantity_mc():
-    Mp = 1.3381 * u.Msun
-    Mc = 1.2489 * u.Msun
-    Pb = 0.10225156248 * u.d
-    e = 0.0877775
-    with pytest.raises(TypeError):
-        pbdot(Mp, Mc.value, Pb, e)
-
-
-def test_pbdot_error_noquantity_pb():
-    Mp = 1.3381 * u.Msun
-    Mc = 1.2489 * u.Msun
-    Pb = 0.10225156248 * u.d
-    e = 0.0877775
-    with pytest.raises(TypeError):
-        pbdot(Mp, Mc, Pb.value, e)
 
 
 @given(
