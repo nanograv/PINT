@@ -8,7 +8,7 @@ from io import StringIO
 import astropy.units as u
 import numpy as np
 import pytest
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_array_equal
 from pinttestdata import datadir
 
 import pint.models.parameter
@@ -47,14 +47,15 @@ def test_add_jumps_and_flags(setup_NGC6440E):
     selected_toa_ind2 = [10, 11, 12]
     j2 = cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind2])
     jp2 = getattr(cp, j2)
-    assert jp2.key == "-gui_jump"
-    assert jp2.key_value == "2"
+    assert jp2.flag == "-gui_jump"
+    assert jp2.flag_value == "2"
     # check previous jump flags unaltered
     for d in setup_NGC6440E.t.table["flags"][selected_toa_ind]:
         assert d["gui_jump"] == "1"
     # check appropriate flags added
     for d in setup_NGC6440E.t.table["flags"][selected_toa_ind2]:
         assert d["gui_jump"] == "2"
+
 
 def test_add_overlapping_jump(setup_NGC6440E):
     setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
@@ -77,88 +78,14 @@ def test_add_overlapping_jump(setup_NGC6440E):
     assert "gui_jump" not in setup_NGC6440E.t.table[9].colnames
 
 
-def test_remove_jump_and_flags(setup_NGC6440E):
-    setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
-    cp = setup_NGC6440E.m.components["PhaseJump"]
-    selected_toa_ind = [1, 2, 3]
-    selected_toa_ind2 = [10, 11, 12]
-    cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind])
-    cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind2])
-    # test delete_jump_and_flags
-    setup_NGC6440E.m.delete_jump_and_flags(setup_NGC6440E.t.table["flags"], 1)
-    assert len(cp.jumps) == 1
-
-    # delete last jump
-    setup_NGC6440E.m.delete_jump_and_flags(setup_NGC6440E.t.table["flags"], 2)
-    for d in setup_NGC6440E.t.table["flags"][selected_toa_ind2]:
-        assert "jump" not in d
-    assert "PhaseJump" not in setup_NGC6440E.m.components
-
-
-def test_jump_params_to_flags(setup_NGC6440E):
-    """ Check jump_params_to_flags function. """
-    setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
-    cp = setup_NGC6440E.m.components["PhaseJump"]
-
-    par = p.maskParameter(
-        name="JUMP",
-        key="freq",
-        value=0.2,
-        key_value=[1440 * u.MHz, 1700 * u.MHz],
-        units=u.s,
-    )  # TOAs indexed 48, 49, 54 in NGC6440E are within this frequency range
-    cp.add_param(par, setup=True)
-
-    # sanity check - ensure no jump flags from initialization
-    for i in range(setup_NGC6440E.t.ntoas):
-        assert "jump" not in setup_NGC6440E.t.table["flags"][i]
-
-    # add flags based off jumps added to model
-    setup_NGC6440E.m.jump_params_to_flags(setup_NGC6440E.t)
-
-    # index to affected TOAs and ensure appropriate flags set
-    toa_indeces = [48, 49, 54]
-    for i in toa_indeces:
-        assert "jump" in setup_NGC6440E.t.table["flags"][i]
-        assert setup_NGC6440E.t.table["flags"][i]["jump"][0] == "1"
-    # ensure no extraneous flags added to unaffected TOAs
-    for i in range(setup_NGC6440E.t.ntoas):
-        if i not in toa_indeces:
-            assert "jump" not in setup_NGC6440E.t.table["flags"][i]
-
-    # check case where multiple calls are performed (no-ops)
-    old_table = setup_NGC6440E.t.table
-    setup_NGC6440E.m.jump_params_to_flags(setup_NGC6440E.t)
-    assert all(old_table) == all(setup_NGC6440E.t.table)
-
-    # check that adding overlapping jump works
-    par2 = p.maskParameter(
-        name="JUMP",
-        key="freq",
-        value=0.2,
-        key_value=[1600 * u.MHz, 1900 * u.MHz],
-        units=u.s,
-    )  # frequency range overlaps with par, 2nd jump will have common TOAs w/ 1st
-    cp.add_param(par2, setup=True)
-    # add flags based off jumps added to model
-    setup_NGC6440E.m.jump_params_to_flags(setup_NGC6440E.t)
-    mask2 = par2.select_toa_mask(setup_NGC6440E.t)
-    intersect = np.intersect1d(toa_indeces, mask2)
-    assert intersect is not []
-    for i in mask2:
-        assert "2" in setup_NGC6440E.t.table["flags"][i]["jump"]
-    for i in toa_indeces:
-        assert "1" in setup_NGC6440E.t.table["flags"][i]["jump"]
-
-
 def test_multijump_toa(setup_NGC6440E):
     setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
     cp = setup_NGC6440E.m.components["PhaseJump"]
     par = p.maskParameter(
         name="JUMP",
-        key="freq",
+        flag="freq",
         value=0.2,
-        key_value=[1440 * u.MHz, 1700 * u.MHz],
+        flag_value=[1440 * u.MHz, 1700 * u.MHz],
         units=u.s,
     )  # TOAs indexed 48, 49, 54 in NGC6440E are within this frequency range
     selected_toa_ind = [48, 49, 54]
@@ -166,18 +93,8 @@ def test_multijump_toa(setup_NGC6440E):
 
     # check that one can still add "gui jumps" to model-jumped TOAs
     cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind])
-    # add flags based off jumps added to model
-    setup_NGC6440E.m.jump_params_to_flags(setup_NGC6440E.t)
-    for dict in setup_NGC6440E.t.table["flags"][selected_toa_ind]:
-        assert dict["jump"] == "1,2"
-        assert dict["gui_jump"] == "2"
+    assert_array_equal(setup_NGC6440E.t["gui_jump", selected_toa_ind], "1")
     assert len(cp.jumps) == 2
-
-    setup_NGC6440E.m.delete_jump_and_flags(setup_NGC6440E.t.table["flags"], 2)
-    for dict in setup_NGC6440E.t.table["flags"][selected_toa_ind]:
-        assert "jump" in dict
-    assert len(cp.jumps) == 1
-    assert "JUMP1" in cp.jumps
 
 
 class TestJUMP(unittest.TestCase):
@@ -207,10 +124,10 @@ class TestJUMP(unittest.TestCase):
             if not p.startswith("JUMP"):
                 continue
             pm = getattr(self.JUMPm, p)
-            if pm.key != "-chanid":
+            if pm.flag != "-chanid":
                 continue
             assert len(
-                [l for l in open(self.timf).readlines() if re.search(pm.key_value, l)]
+                [l for l in open(self.timf).readlines() if re.search(pm.flag_value, l)]
             ) == len(pm.select_toa_mask(self.toas))
 
     def test_derivative(self):
@@ -325,8 +242,8 @@ def test_multiple_jumps_add():
         )
     )
     for jmp in m.jumps:
-        if jmp.key == "mjd":
-            start, end = jmp.key_value
+        if jmp.flag == "mjd":
+            start, end = jmp.flag_value
             if start < 58500:
                 first_jump = jmp
             else:
@@ -357,20 +274,20 @@ def test_multiple_jumps_add():
     [
         pint.models.parameter.maskParameter(
             name="JUMP",
-            key="-fish",
-            key_value="carp",
+            flag="-fish",
+            flag_value="carp",
             units=u.s,
             value=7,
             frozen=False,
             uncertainty=0.1,
         ),
         pint.models.parameter.maskParameter(
-            name="JUMP", key="tel", key_value="ao", units=u.s, value=7, frozen=False,
+            name="JUMP", flag="tel", flag_value="ao", units=u.s, value=7, frozen=False,
         ),
         pint.models.parameter.maskParameter(
             name="JUMP",
-            key="MJD",
-            key_value=(57000, 58000,),
+            flag="MJD",
+            flag_value=(57000, 58000,),
             units=u.s,
             value=7,
             frozen=False,
@@ -382,8 +299,8 @@ def test_jump_parfile_roundtrip(j):
     nj = pint.models.parameter.maskParameter(name="JUMP", units=u.s)
     nj.from_parfile_line(l)
 
-    assert nj.key == j.key
-    assert nj.key_value == j.key_value
+    assert nj.flag == j.flag
+    assert nj.flag_value == j.flag_value
     if nj.quantity != j.quantity:
         assert_allclose(nj.quantity, j.quantity)
     assert nj.frozen == j.frozen
@@ -415,7 +332,7 @@ def small():
     r.m = m
     r.t = t
     for j in m.jumps:
-        if j.key == "mjd":
+        if j.flag == "mjd":
             r.j = j
     return r
 
@@ -428,7 +345,7 @@ def test_tidy_jumps_all_ok(small):
 
 def test_tidy_jumps_all_jumped(small):
     small.j.frozen = False
-    small.j.key_value = (
+    small.j.flag_value = (
         56000,
         70000,
     )
@@ -439,7 +356,7 @@ def test_tidy_jumps_all_jumped(small):
 def test_tidy_jumps_irrelevant(small):
     small.j.frozen = False
     j2 = small.j.new_param(index=100, copy_all=True)
-    j2.key_value = (
+    j2.flag_value = (
         50000,
         55000,
     )
@@ -452,7 +369,7 @@ def test_tidy_jumps_irrelevant(small):
 def test_tidy_jumps_cover_all_freeze_one(small):
     small.j.frozen = False
     j2 = small.j.new_param(index=100, copy_all=True)
-    j2.key_value = (
+    j2.flag_value = (
         50000,
         59000,
     )

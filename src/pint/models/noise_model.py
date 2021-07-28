@@ -91,32 +91,32 @@ class ScaleToaError(NoiseComponent):
         for mask_par in self.get_params_of_type("maskParameter"):
             if mask_par.startswith("EFAC"):
                 par = getattr(self, mask_par)
-                self.EFACs[mask_par] = (par.key, par.key_value)
+                self.EFACs[mask_par] = (par.flag, par.flag_value)
             elif mask_par.startswith("EQUAD"):
                 par = getattr(self, mask_par)
-                self.EQUADs[mask_par] = (par.key, par.key_value)
+                self.EQUADs[mask_par] = (par.flag, par.flag_value)
             elif mask_par.startswith("TNEQ"):
                 par = getattr(self, mask_par)
-                self.TNEQs[mask_par] = (par.key, par.key_value)
+                self.TNEQs[mask_par] = (par.flag, par.flag_value)
             else:
                 continue
         # convert all the TNEQ to EQUAD
 
         for tneq in self.TNEQs:
             tneq_par = getattr(self, tneq)
-            if tneq_par.key is None:
+            if tneq_par.flag is None:
                 continue
             if self.TNEQs[tneq] in list(self.EQUADs.values()):
                 log.warning(
                     "'%s %s %s' is provided by parameter EQUAD, using"
-                    " EQUAD instead. " % (tneq, tneq_par.key, tneq_par.key_value)
+                    " EQUAD instead. " % (tneq, tneq_par.flag, tneq_par.flag_value)
                 )
             else:
                 EQUAD_name = "EQUAD" + str(tneq_par.index)
-                if EQUAD_name in list(self.EQUADs.keys()):
+                if EQUAD_name in list(self.EQUADs.flags()):
                     EQUAD_par = getattr(self, EQUAD_name)
-                    EQUAD_par.key = tneq_par.key
-                    EQUAD_par.key_value = tneq_par.key_value
+                    EQUAD_par.flag = tneq_par.flag
+                    EQUAD_par.flag_value = tneq_par.flag_value
                     EQUAD_par.quantity = tneq_par.quantity.to(u.us)
                 else:
                     self.add_param(
@@ -131,13 +131,13 @@ class ScaleToaError(NoiseComponent):
                         )
                     )
                     EQUAD_par = getattr(self, EQUAD_name)
-                    EQUAD_par.key = tneq_par.key
-                    EQUAD_par.key_value = tneq_par.key_value
+                    EQUAD_par.flag = tneq_par.flag
+                    EQUAD_par.flag_value = tneq_par.flag_value
                     EQUAD_par.quantity = tneq_par.quantity.to(u.us)
         for pp in self.params:
             if pp.startswith("EQUAD"):
                 par = getattr(self, pp)
-                self.EQUADs[pp] = (par.key, par.key_value)
+                self.EQUADs[pp] = (par.flag, par.flag_value)
 
     def validate(self):
         super().validate()
@@ -145,7 +145,7 @@ class ScaleToaError(NoiseComponent):
         for el in ["EFACs", "EQUADs"]:
             l = list(getattr(self, el).values())
             if [x for x in l if l.count(x) > 1] != []:
-                raise ValueError("'%s' have duplicated keys and key values." % el)
+                raise ValueError("'%s' have duplicated flags and flag values." % el)
 
     def scale_toa_sigma(self, toas):
         sigma_scaled = toas.table["error"].quantity.copy()
@@ -222,12 +222,12 @@ class ScaleDmError(NoiseComponent):
         for mask_par in self.get_params_of_type("maskParameter"):
             if mask_par.startswith("DMEFAC"):
                 par = getattr(self, mask_par)
-                if par.key is not None:
-                    self.DMEFACs[mask_par] = (par.key, tuple(par.key_value))
+                if par.flag is not None:
+                    self.DMEFACs[mask_par] = (par.flag, tuple(par.flag_value))
             elif mask_par.startswith("DMEQUAD"):
                 par = getattr(self, mask_par)
-                if par.key is not None:
-                    self.DMEQUADs[mask_par] = (par.key, tuple(par.key_value))
+                if par.flag is not None:
+                    self.DMEQUADs[mask_par] = (par.flag, tuple(par.flag_value))
             else:
                 continue
 
@@ -242,7 +242,7 @@ class ScaleDmError(NoiseComponent):
         for el in ["DMEFACs", "DMEQUADs"]:
             l = list(getattr(self, el).values())
             if [x for x in l if l.count(x) > 1] != []:
-                raise ValueError("'%s' have duplicated keys and key values." % el)
+                raise ValueError("'%s' have duplicated flags and flag values." % el)
 
     def scale_dm_sigma(self, toas):
         """
@@ -319,7 +319,7 @@ class EcorrNoise(NoiseComponent):
         for mask_par in self.get_params_of_type("maskParameter"):
             if mask_par.startswith("ECORR"):
                 par = getattr(self, mask_par)
-                self.ECORRs[mask_par] = (par.key, par.key_value)
+                self.ECORRs[mask_par] = (par.flag, par.flag_value)
             else:
                 continue
 
@@ -330,11 +330,11 @@ class EcorrNoise(NoiseComponent):
         for el in ["ECORRs"]:
             l = list(getattr(self, el).values())
             if [x for x in l if l.count(x) > 1] != []:
-                raise ValueError("'%s' have duplicated keys and key values." % el)
+                raise ValueError("'%s' have duplicated flags and flag values." % el)
 
     def get_ecorrs(self):
         ecorrs = []
-        for ecorr, ecorr_key in list(self.ECORRs.items()):
+        for ecorr in self.ECORRs:
             ecorrs.append(getattr(self, ecorr))
         return ecorrs
 

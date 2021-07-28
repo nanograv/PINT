@@ -1404,7 +1404,7 @@ class maskParameter(floatParameter):
     parameters can be distinguished within the
     :class:`pint.models.timing_model.TimingModel` object. For example::
 
-        >>> p = maskParameter(name='JUMP', index=2, key="-fe", key_value="G430")
+        >>> p = maskParameter(name='JUMP', index=2, flag="-fe", flag_value="G430")
         >>> p.name
         'JUMP2'
 
@@ -1452,8 +1452,8 @@ class maskParameter(floatParameter):
         self,
         name,
         index=1,
-        key=None,
-        key_value=None,
+        flag=None,
+        flag_value=None,
         value=None,
         long_double=False,
         units=None,
@@ -1465,8 +1465,8 @@ class maskParameter(floatParameter):
     ):
         self.is_mask = True
 
-        self.key = key
-        self.key_value = key_value
+        self.flag = flag
+        self.flag_value = flag_value
         self.index = index
         name_param = name + str(index)
         self.origin_name = name
@@ -1498,103 +1498,103 @@ class maskParameter(floatParameter):
     wants_two_values = {"mjd", "freq"}
 
     @staticmethod
-    def validate(key, key_value):
+    def validate(flag, flag_value):
         """Verify that flag_value is an appropriate type and return it.
 
         This incidentally converts lists to tuples and mildly normalizes values
         but does not otherwise convert the value (for example it does not attempt
         to parse strings).
         """
-        if key is None:
-            if key_value is not None:
+        if flag is None:
+            if flag_value is not None:
                 raise ValueError("Cannot associate a value with no flag")
-        if key == "mjd":
-            start, end = sorted(key_value)
+        if flag == "mjd":
+            start, end = sorted(flag_value)
             if not isinstance(start, (int, float, np.longdouble)) or not isinstance(
                 end, (int, float, np.longdouble)
             ):
                 raise ValueError(
                     f"When selecting by MJD one must supply a "
-                    f"pair of numbers not {key_value}"
+                    f"pair of numbers not {flag_value}"
                 )
             return float(start), float(end)
-        elif key == "freq":
-            low, high = sorted(key_value)
+        elif flag == "freq":
+            low, high = sorted(flag_value)
             if not isinstance(low, u.Quantity) or not isinstance(high, u.Quantity):
                 raise ValueError(
                     f"When selecting by frequency one must supply a "
-                    f"pair of Quantities not {key_value}"
+                    f"pair of Quantities not {flag_value}"
                 )
             return low.to(u.MHz), high.to(u.MHz)
-        elif key == "tel":
-            return get_observatory(key_value).name
+        elif flag == "tel":
+            return get_observatory(flag_value).name
         else:
-            if not isinstance(key_value, str):
+            if not isinstance(flag_value, str):
                 raise ValueError(
-                    f"When selecting by {key} one must supply a "
-                    f"string not {key_value}"
+                    f"When selecting by {flag} one must supply a "
+                    f"string not {flag_value}"
                 )
             # FlagDict.validate() once #1074 is merged.
-            if len(key_value.split()) != 1:
-                raise ValueError(f"Key value {repr(key_value)} cannot occur in TOAs.")
-            return key_value
+            if len(flag_value.split()) != 1:
+                raise ValueError(f"Flag value {repr(flag_value)} cannot occur in TOAs.")
+            return flag_value
 
     @staticmethod
-    def convert(key, key_value):
-        """Convert key_value strings to the appropriate form for the key."""
-        if key == "mjd":
-            start, end = key_value
+    def convert(flag, flag_value):
+        """Convert flag_value strings to the appropriate form for the flag."""
+        if flag == "mjd":
+            start, end = flag_value
             return (
                 float(start),
                 float(end),
             )
-        elif key == "freq":
-            start, end = key_value
+        elif flag == "freq":
+            start, end = flag_value
             return float(start) * u.MHz, float(end) * u.MHz
         else:
-            return key_value
+            return flag_value
 
     @property
-    def key(self):
-        return self._key
+    def flag(self):
+        return self._flag
 
-    @key.setter
-    def key(self, key):
-        if key is None:
-            self._key = None
-        elif not isinstance(key, str):
+    @flag.setter
+    def flag(self, flag):
+        if flag is None:
+            self._flag = None
+        elif not isinstance(flag, str):
             raise ValueError(
-                f"maskParameters can only select on strings not {repr(key)}"
+                f"maskParameters can only select on strings not {repr(flag)}"
             )
         else:
-            key = key.lower()
-            if key not in self.allowed_non_flags and not key.startswith("-"):
+            flag = flag.lower()
+            if flag not in self.allowed_non_flags and not flag.startswith("-"):
                 raise ValueError(
                     f"Flags must be indicated with -, and the only "
                     f"non-flags allowed are {maskParameter.allowed_non_flags}."
                 )
-            self._key = key
+            self._flag = flag
 
     @property
-    def key_value(self):
-        return self._key_value
+    def flag_value(self):
+        return self._flag_value
 
-    @key_value.setter
-    def key_value(self, key_value):
-        if key_value is None:
-            self._key_value = None
+    @flag_value.setter
+    def flag_value(self, flag_value):
+        if flag_value is None:
+            self._flag_value = None
         else:
-            self._key_value = maskParameter.validate(self.key, key_value)
+            self._flag_value = maskParameter.validate(self.flag, flag_value)
 
     def __repr__(self):
         out = self.__class__.__name__ + "(" + self.name
-        if self.key is not None:
-            out += " " + self.key
-        if self.key_value is not None:
-            if isinstance(self.key_value, str):
-                out += " " + self.key_value
+        if self.flag is not None:
+            out += " " + self.flag
+        if self.flag_value is not None:
+            if isinstance(self.flag_value, str):
+                out += " " + self.flag_value
             else:
-                for kv in self.key_value:
+                for kv in self.flag_value:
                     out += " " + str(kv)
         if self.quantity is not None:
             out += " " + self.str_quantity(self.quantity)
@@ -1631,19 +1631,19 @@ class maskParameter(floatParameter):
 
         Notes
         -----
-        The accepted formats for most keys::
+        The accepted formats for most flags::
 
-            NAME key key_value parameter_value
-            NAME key key_value parameter_value fit_flag
-            NAME key key_value parameter_value fit_flag uncertainty
-            NAME key key_value parameter_value uncertainty
+            NAME flag flag_value parameter_value
+            NAME flag flag_value parameter_value fit_flag
+            NAME flag flag_value parameter_value fit_flag uncertainty
+            NAME flag flag_value parameter_value uncertainty
 
-        If the key is one of MJD or FREQ then::
+        If the flag is one of MJD or FREQ then::
 
-            NAME key key_value1 key_value2 parameter_value
-            NAME key key_value1 key_value2 parameter_value fit_flag
-            NAME key key_value1 key_value2 parameter_value fit_flag uncertainty
-            NAME key key_value1 key_value2 parameter_value uncertainty
+            NAME flag flag_value1 flag_value2 parameter_value
+            NAME flag flag_value1 flag_value2 parameter_value fit_flag
+            NAME flag flag_value1 flag_value2 parameter_value fit_flag uncertainty
+            NAME flag flag_value1 flag_value2 parameter_value uncertainty
 
         where NAME is the name for this class as reported by ``self.name_matches``.
 
@@ -1659,28 +1659,28 @@ class maskParameter(floatParameter):
             return False
 
         try:
-            self.key = k[1]
+            self.flag = k[1]
         except IndexError:
             raise ValueError(
-                "{}: No key found on timfile line {!r}".format(self.name, line)
+                "{}: No flag found on timfile line {!r}".format(self.name, line)
             )
 
-        if self.key in self.wants_two_values:
-            key_value_str = k[2], k[3]
-            len_key_v = 2
+        if self.flag in self.wants_two_values:
+            flag_value_str = k[2], k[3]
+            len_flag_v = 2
         else:
-            key_value_str = k[2]
-            len_key_v = 1
-        self.key_value = maskParameter.convert(self.key, key_value_str)
-        if len(k) < 3 + len_key_v:
+            flag_value_str = k[2]
+            len_flag_v = 1
+        self.flag_value = maskParameter.convert(self.flag, flag_value_str)
+        if len(k) < 3 + len_flag_v:
             raise ValueError(
                 "{}: Expected at least {} entries on timfile line {!r}".format(
-                    self.name, 3 + len_key_v, line
+                    self.name, 3 + len_flag_v, line
                 )
             )
-        self.value = str2longdouble(k[2 + len_key_v])
+        self.value = str2longdouble(k[2 + len_flag_v])
 
-        k_left = k[3 + len_key_v :]
+        k_left = k[3 + len_flag_v :]
         if not k_left:
             pass
         elif len(k_left) == 1:
@@ -1703,20 +1703,20 @@ class maskParameter(floatParameter):
             name = self.origin_name
         else:
             name = self.use_alias
-        line = "%-15s %s " % (name, self.key)
-        if isinstance(self.key_value, str):
-            line += self.key_value
+        line = "%-15s %s " % (name, self.flag)
+        if isinstance(self.flag_value, str):
+            line += self.flag_value
         else:
-            start, end = self.key_value
+            start, end = self.flag_value
             if isinstance(start, float):
                 line += f"{start} {end} "
             elif isinstance(start, u.Quantity):
                 line += f"{start.to_value(u.MHz)} {end.to_value(u.MHz)} "
             else:
                 raise ValueError(
-                    f"Unexpected format in self.key_value: {self.key_value}"
+                    f"Unexpected format in self.flag_value: {self.flag_value}"
                 )
-        line += "%25s" % self.print_quantity(self.quantity)
+        line += "%25s" % self.str_quantity(self.quantity)
         if self.uncertainty is not None:
             line += " %d %s" % (0 if self.frozen else 1, str(self.uncertainty_value))
         elif not self.frozen:
@@ -1737,8 +1737,8 @@ class maskParameter(floatParameter):
             new_mask_param = maskParameter(
                 name=self.origin_name,
                 index=index,
-                key=self.key,
-                key_value=self.key_value,
+                flag=self.flag,
+                flag_value=self.flag_value,
                 value=self.value,
                 long_double=self.long_double,
                 units=self.units,
@@ -1762,30 +1762,30 @@ class maskParameter(floatParameter):
         array
             An array of TOA indices selected by the mask.
         """
-        if self.key == "mjd":
-            start, end = self.key_value
+        if self.flag == "mjd":
+            start, end = self.flag_value
             c = toas.table["mjd_float"] >= start
             c &= toas.table["mjd_float"] <= end
             r = np.nonzero(c)[0]
-        elif self.key == "freq":
-            low, high = self.key_value
+        elif self.flag == "freq":
+            low, high = self.flag_value
             c = toas.table["freq"] >= low
             c &= toas.table["freq"] <= high
             r = np.nonzero(c)[0]
-        elif self.key == "tel":
-            c = toas.table["obs"] == self.key_value
+        elif self.flag == "tel":
+            c = toas.table["obs"] == self.flag_value
             r = np.nonzero(c)[0]
         else:
             r = []
-            if self.key is not None:
-                if self.key.startswith("-"):
-                    key = self.key[1:]
+            if self.flag is not None:
+                if self.flag.startswith("-"):
+                    flag = self.flag[1:]
                 else:
                     # only "name" is allowed here
-                    key = self.key
-                if self.key_value is not None:
+                    flag = self.flag
+                if self.flag_value is not None:
                     for i, f in enumerate(toas.table["flags"]):
-                        if str(f.get(key, "")) == self.key_value:
+                        if str(f.get(flag, "")) == self.flag_value:
                             r.append(i)
             r = np.array(r, dtype=int)
         return r

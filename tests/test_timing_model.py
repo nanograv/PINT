@@ -106,16 +106,16 @@ class TestModelBuilding:
         print(cp.get_prefix_mapping_component("JUMP"))
         print(id(cp), "test")
         add_jumps = [
-            ("JUMP", {"value": 0.1, "key": "mjd", "key_value": [55000, 56000],},),
+            ("JUMP", {"value": 0.1, "flag": "mjd", "flag_value": [55000, 56000],},),
             (
                 "JUMP",
                 {
                     "value": 0.2,
-                    "key": "freq",
-                    "key_value": [1440 * u.MHz, 2000 * u.MHz],
+                    "flag": "freq",
+                    "flag_value": [1440 * u.MHz, 2000 * u.MHz],
                 },
             ),
-            ("JUMP", {"value": 0.3, "key": "tel", "key_value": "ao"}),
+            ("JUMP", {"value": 0.3, "flag": "tel", "flag_value": "ao"}),
         ]
 
         for jp in add_jumps:
@@ -124,9 +124,9 @@ class TestModelBuilding:
             p_vals = jp[1]
             par = p.maskParameter(
                 name=p_name,
-                key=p_vals["key"],
+                flag=p_vals["flag"],
                 value=p_vals["value"],
-                key_value=p_vals["key_value"],
+                flag_value=p_vals["flag_value"],
                 units=u.s,
             )
             print("test", par.name)
@@ -142,17 +142,15 @@ class TestModelBuilding:
         jump1 = getattr(tm, "JUMP1")
         jump2 = getattr(tm, "JUMP2")
         jump3 = getattr(tm, "JUMP3")
-        assert jump1.key == "mjd"
-        assert jump2.key == "freq"
-        assert jump3.key == "tel"
-        # Check jump value
+        assert jump1.flag == "mjd"
+        assert jump2.flag == "freq"
+        assert jump3.flag == "tel"
         assert jump1.value == 0.1
         assert jump2.value == 0.2
         assert jump3.value == 0.3
-        # Check jump key value
-        assert jump1.key_value == (55000, 56000)
-        assert jump2.key_value == (1440 * u.MHz, 2000 * u.MHz)
-        assert jump3.key_value == "arecibo"
+        assert jump1.flag_value == (55000, 56000)
+        assert jump2.flag_value == (1440 * u.MHz, 2000 * u.MHz)
+        assert jump3.flag_value == "arecibo"
         assert len(tm.jumps) == 3
 
     def test_remove_component(self):
@@ -361,8 +359,8 @@ def test_assumes_dmepoch_equals_pepoch():
 
     assert_allclose(m_assume.dm_value(t), m_given.dm_value(t))
     assert ("-jump", "1") in [
-        (j.key, j.key_value) for j in m.components["PhaseJump"].jumps
+        (j.flag, j.flag_value) for j in m.components["PhaseJump"].jumps
     ]
     assert ("-jump", "2") in [
-        (j.key, j.key_value) for j in m.components["PhaseJump"].jumps
+        (j.flag, j.flag_value) for j in m.components["PhaseJump"].jumps
     ]

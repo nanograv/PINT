@@ -865,11 +865,11 @@ class TimingModel:
         """
         comps = self.components
         if isinstance(component, str):
-            if component not in list(comps.keys()):
+            if component not in comps:
                 raise AttributeError("No '%s' in the timing model." % component)
             comp = comps[component]
         else:  # When component is an component instance.
-            if component not in list(comps.values()):
+            if component not in comps.values():
                 raise AttributeError(
                     "No '%s' in the timing model." % component.__class__.__name__
                 )
@@ -1357,9 +1357,9 @@ class TimingModel:
             self.remove_param("JUMP1")
             a.setup()
         for pm in self.jumps:
-            if pm.key == "-" + flag:
-                if pm.key_value in jumped:
-                    jumped.remove(pm.key_value)
+            if pm.flag == "-" + flag:
+                if pm.flag_value in jumped:
+                    jumped.remove(pm.flag_value)
         if not jumped:
             log.info("All JUMPs appear to already be present.")
             return new_jumps
@@ -1373,8 +1373,8 @@ class TimingModel:
             param = maskParameter(
                 name="JUMP",
                 index=next_free_index,
-                key="-" + flag,
-                key_value=j,
+                flag="-" + flag,
+                flag_value=j,
                 value=0.0,
                 units="second",
                 uncertainty=0.0,
@@ -2245,7 +2245,7 @@ class TimingModel:
             if "TNEQ" in str(par.name) or par.frozen:
                 continue
             if len(par.select_toa_mask(toas)) == 0:
-                bad_parameters.append(f"'{maskpar}, {par.key}, {par.key_value}'")
+                bad_parameters.append(f"'{maskpar}, {par.flag}, {par.flag_value}'")
         for c in self.components.values():
             try:
                 c.validate_toas(toas)
@@ -2568,7 +2568,7 @@ class Component(object, metaclass=ModelMeta):
         """
         pn = self.match_param_aliases(param)
 
-        if pn not in list(self.deriv_funcs.keys()):
+        if pn not in self.deriv_funcs:
             self.deriv_funcs[pn] = [func]
         else:
             # TODO:

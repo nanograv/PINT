@@ -146,7 +146,7 @@ DILATEFREQ          N
 """
 
 
-def test_tim_writing_order():
+def test_tim_writing_order(tmpdir):
     m = get_model(StringIO(simplepar))
     fakes = [
         simulation.make_fake_toas_uniform(55000, 56000, 5, model=m, obs="ao"),
@@ -158,7 +158,8 @@ def test_tim_writing_order():
 
     o = StringIO()
     toas.write_TOA_file(o, order_by_index=False)
-    toas.write_TOA_file("test.tim", order_by_index=False)
+    # make sure we can write to an actual file I guess?
+    toas.write_TOA_file(os.path.join(tmpdir, "test.tim"), order_by_index=False)
     obs = [
         ln.split()[4]
         for ln in o.getvalue().split("\n")[1:]

@@ -33,12 +33,12 @@ class PhaseJump(PhaseComponent):
         >>> for i in toa_index_list:
         ...     toas.table['flags'][i]['fish'] = 'carp'
         >>> np = m.JUMP1.new_param(100)
-        >>> np.key = '-fish'
-        >>> np.key_value = 'carp'
+        >>> np.flag = '-fish'
+        >>> np.flag_value = 'carp'
         >>> m.add_param_from_top(np, "PhaseJump")
 
     More briefly, you could use
-    ``m.add_jump_and_flags(toas.table['flags'][1,3,5], key='-fish', key_value='carp')``,
+    ``m.add_jump_and_flags(toas.table['flags'][1,3,5], flag='-fish', flag_value='carp')``,
     which adds the flag ``-fish`` with the value ``carp`` to TOAs numbers 1,3, and 5,
     and also creates a new JUMP affecting those TOAs.
 
@@ -176,7 +176,7 @@ class PhaseJump(PhaseComponent):
             result += jump_par.as_parfile_line()
         return result
 
-    def add_jump_and_flags(self, toa_flags, key="gui_jump", key_value=None):
+    def add_jump_and_flags(self, toa_flags, flag="gui_jump", flag_value=None):
         """Add jump object to PhaseJump and appropriate flags to TOA tables.
 
         Given a subset of TOAs (specified by a reference to their flags objects),
@@ -196,9 +196,9 @@ class PhaseJump(PhaseComponent):
         toa_flags: array of dict
             The TOA flags which must be modified. In pintk (pulsar.py), this will
             be all_toas.table["flags"][selected]
-        key: str
+        flag: str
             The name of the flag to use for the JUMP.
-        key_value: str or None
+        flag_value: str or None
             The flag value to associate with this JUMP; if not specified, find the first
             integer N not associated with a JUMP and use its string representation.
 
@@ -209,17 +209,17 @@ class PhaseJump(PhaseComponent):
         """
         in_use = set()
         for pm in self.jumps:
-            if pm.key == "-" + key:
-                in_use.add(pm.key_value)
-        if key_value is None:
+            if pm.flag == "-" + flag:
+                in_use.add(pm.flag_value)
+        if flag_value is None:
             i = 1
             while True:
-                key_value = str(i)
-                if key_value not in in_use:
+                flag_value = str(i)
+                if flag_value not in in_use:
                     break
                 i += 1
-        elif key_value in in_use:
-            raise ValueError(f"A JUMP -{key} {key_value} is already present.")
+        elif flag_value in in_use:
+            raise ValueError(f"A JUMP -{flag} {flag_value} is already present.")
 
         used_indices = set()
         for pm in self.jumps:
@@ -231,15 +231,15 @@ class PhaseJump(PhaseComponent):
         param = maskParameter(
             name="JUMP",
             index=i,
-            key="-" + key,
-            key_value=key_value,
+            flag="-" + flag,
+            flag_value=flag_value,
             value=0.0,
             units="second",
             frozen=False,
         )
         name = param.name
         for d in toa_flags:
-            if key in d:
+            if flag in d:
                 raise ValueError(
                     "The selected toa(s) overlap an existing jump. Remove all "
                     "interfering jumps before attempting to jump these toas."
@@ -248,7 +248,7 @@ class PhaseJump(PhaseComponent):
         self.setup()
         # add appropriate flags to TOA table to link jump with appropriate TOA
         for d in toa_flags:
-            d[key] = key_value
+            d[flag] = flag_value
         return name
 
     def tidy_jumps_for_fit(self, toas):

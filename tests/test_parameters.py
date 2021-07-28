@@ -7,11 +7,8 @@ import astropy.time as time
 import astropy.units as u
 import numpy as np
 import pytest
-<<<<<<< HEAD
-from numpy.testing import assert_allclose
-=======
 from astropy.time import Time
->>>>>>> Clean up maskParameter so jumps make more sense
+from numpy.testing import assert_allclose
 from pinttestdata import datadir
 
 import pint.fitter
@@ -24,11 +21,8 @@ from pint.models.parameter import (
     floatParameter,
     intParameter,
     maskParameter,
-<<<<<<< HEAD
     pairParameter,
     prefixParameter,
-=======
->>>>>>> Clean up maskParameter so jumps make more sense
     strParameter,
 )
 from pint.toa import get_TOAs
@@ -85,21 +79,21 @@ def test_read_par_line_expected_values():
     assert_allclose(test_m.F8.value, 0.0)
     assert_allclose(test_m.F8.uncertainty_value, 10)
     assert test_m.JUMP1.frozen
-    assert test_m.JUMP1.key == "MJD"
-    assert_allclose(test_m.JUMP1.key_value[0], 52742.0, atol=1e-10)
-    assert_allclose(test_m.JUMP1.key_value[1], 52745.0, atol=1e-10)
+    assert test_m.JUMP1.flag == "mjd"
+    assert_allclose(test_m.JUMP1.flag_value[0], 52742.0, atol=1e-10)
+    assert_allclose(test_m.JUMP1.flag_value[1], 52745.0, atol=1e-10)
     assert_allclose(test_m.JUMP1.value, 0.2)
 
     assert test_m.JUMP2.frozen
     assert_allclose(test_m.JUMP2.value, 0.1)
-    assert_allclose(test_m.JUMP2.uncertainty_value, 0.0)
+    assert test_m.JUMP2.uncertainty_value is None
     assert_allclose(test_m.JUMP7.value, 0.1)
     assert_allclose(test_m.JUMP7.uncertainty_value, 10.5)
     assert_allclose(test_m.JUMP6.value, 0.1)
     assert_allclose(test_m.JUMP6.uncertainty_value, 10.0)
-    assert test_m.JUMP12.key == "-testflag"
+    assert test_m.JUMP12.flag == "-testflag"
     assert not test_m.JUMP12.frozen
-    assert test_m.JUMP12.key_value[0] == "flagvalue"
+    assert test_m.JUMP12.flag_value == "flagvalue"
     assert_allclose(test_m.JUMP12.value, 0.1)
     assert_allclose(test_m.JUMP12.uncertainty_value, 2.0)
     assert_allclose(
@@ -151,8 +145,6 @@ class TestParameters(unittest.TestCase):
         cls.m = get_model("B1855+09_NANOGrav_dfg+12_modified.par")
         cls.mp = get_model("prefixtest.par")
 
-<<<<<<< HEAD
-=======
     def test_read_par_line(self):
         test_m = get_model("test_par_read.par")
         self.assertEqual(test_m.F2.frozen, True)
@@ -175,9 +167,9 @@ class TestParameters(unittest.TestCase):
         self.assertTrue(np.isclose(test_m.F8.value, 0.0))
         self.assertTrue(np.isclose(test_m.F8.uncertainty_value, 10))
         self.assertEqual(test_m.JUMP1.frozen, True)
-        self.assertEqual(test_m.JUMP1.key, "mjd")
-        self.assertTrue(np.isclose(test_m.JUMP1.key_value[0], 52742.0, atol=1e-10))
-        self.assertTrue(np.isclose(test_m.JUMP1.key_value[1], 52745.0, atol=1e-10))
+        self.assertEqual(test_m.JUMP1.flag, "mjd")
+        self.assertTrue(np.isclose(test_m.JUMP1.flag_value[0], 52742.0, atol=1e-10))
+        self.assertTrue(np.isclose(test_m.JUMP1.flag_value[1], 52745.0, atol=1e-10))
         self.assertTrue(np.isclose(test_m.JUMP1.value, 0.2))
 
         self.assertEqual(test_m.JUMP2.frozen, True)
@@ -187,25 +179,21 @@ class TestParameters(unittest.TestCase):
         self.assertTrue(np.isclose(test_m.JUMP7.uncertainty_value, 10.5))
         self.assertTrue(np.isclose(test_m.JUMP6.value, 0.1))
         self.assertTrue(np.isclose(test_m.JUMP6.uncertainty_value, 10.0))
-        self.assertEqual(test_m.JUMP12.key, "-testflag")
+        self.assertEqual(test_m.JUMP12.flag, "-testflag")
         self.assertEqual(test_m.JUMP12.frozen, False)
-        self.assertEqual(test_m.JUMP12.key_value, "flagvalue")
+        self.assertEqual(test_m.JUMP12.flag_value, "flagvalue")
         self.assertTrue(np.isclose(test_m.JUMP12.value, 0.1))
         self.assertTrue(np.isclose(test_m.JUMP12.uncertainty_value, 2.0))
-        self.assertTrue(
-            np.isclose(test_m.RAJ.uncertainty_value, 476.94611148516092061223)
+        assert_allclose(
+            test_m.RAJ.uncertainty,
+            476.94611148516092061223 * pint_units["hourangle_second"],
         )
 
-        self.assertTrue(
-            np.isclose(
-                test_m.DECJ.uncertainty_value,
-                190996312986311097848351.00000000000000000000,
-            )
+        assert_allclose(
+            test_m.DECJ.uncertainty,
+            190996312986311097848351.00000000000000000000 * u.arcsec,
         )
-        self.assertTrue(test_m.RAJ.uncertainty.unit, pint_units["hourangle_second"])
-        self.assertTrue(test_m.RAJ.uncertainty.unit, u.arcsecond)
 
->>>>>>> Clean up maskParameter so jumps make more sense
     def test_RAJ(self):
         """Check whether the value and units of RAJ parameter are ok"""
         units = u.hourangle
@@ -603,8 +591,9 @@ def test_set_uncertainty_bogus_raises(p):
 def test_parameter_can_be_pickled(p):
     pickle.dumps(p)
 
+
 # Testing maskParameters:
-# Their key and key_value attributes can be set three ways - by setting the attribute, during construction, or upon reading a parfile line. Each of these should produce only results of the correct type.
+# Their flag and flag_value attributes can be set three ways - by setting the attribute, during construction, or upon reading a parfile line. Each of these should produce only results of the correct type.
 
 valid_settings = [
     ("tel", "ao"),
@@ -624,27 +613,27 @@ invalid_settings = [
 ]
 
 
-@pytest.mark.parametrize("key, key_value", valid_settings)
-def test_maskParameter_construction_valid(key, key_value):
+@pytest.mark.parametrize("flag, flag_value", valid_settings)
+def test_maskParameter_construction_valid(flag, flag_value):
     maskParameter(
         name="JUMP",
         index=467,
-        key=key,
-        key_value=key_value,
+        flag=flag,
+        flag_value=flag_value,
         value=0,
         units=u.s,
         description="Generic description of a JUMP",
     )
 
 
-@pytest.mark.parametrize("key, key_value", invalid_settings)
-def test_maskParameter_construction_invalid(key, key_value):
+@pytest.mark.parametrize("flag, flag_value", invalid_settings)
+def test_maskParameter_construction_invalid(flag, flag_value):
     with pytest.raises(ValueError):
         maskParameter(
             name="JUMP",
             index=467,
-            key=key,
-            key_value=key_value,
+            flag=flag,
+            flag_value=flag_value,
             value=0,
             units=u.s,
             description="Generic description of a JUMP",

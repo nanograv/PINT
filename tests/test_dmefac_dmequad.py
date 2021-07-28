@@ -38,8 +38,8 @@ def test_no_efact_noequad(test_toas, test_model):
 
 
 def test_only_one_efact(test_toas, test_model):
-    test_model.DMEFAC1.key = "-fe"
-    test_model.DMEFAC1.key_value = "Rcvr_800"
+    test_model.DMEFAC1.flag = "-fe"
+    test_model.DMEFAC1.flag_value = "Rcvr_800"
     test_model.DMEFAC1.value = 10
     test_model.setup()
     scale_sigma = test_model.scale_dm_sigma(test_toas)
@@ -50,8 +50,8 @@ def test_only_one_efact(test_toas, test_model):
 
 
 def test_only_one_equad(test_toas, test_model):
-    test_model.DMEQUAD1.key = "-fe"
-    test_model.DMEQUAD1.key_value = "YUPPI"
+    test_model.DMEQUAD1.flag = "-fe"
+    test_model.DMEQUAD1.flag_value = "YUPPI"
     test_model.DMEQUAD1.value = 10
     test_model.setup()
     scale_sigma = test_model.scale_dm_sigma(test_toas)
@@ -65,11 +65,11 @@ def test_only_one_equad(test_toas, test_model):
 
 
 def test_only_one_equad_one_efact_same_backend(test_toas, test_model):
-    test_model.DMEQUAD1.key = "-fe"
-    test_model.DMEQUAD1.key_value = "Rcvr_800"
+    test_model.DMEQUAD1.flag = "-fe"
+    test_model.DMEQUAD1.flag_value = "Rcvr_800"
     test_model.DMEQUAD1.value = 10
-    test_model.DMEFAC1.key = "-fe"
-    test_model.DMEFAC1.key_value = "Rcvr_800"
+    test_model.DMEFAC1.flag = "-fe"
+    test_model.DMEFAC1.flag_value = "Rcvr_800"
     test_model.DMEFAC1.value = 10
     test_model.setup()
     scale_sigma = test_model.scale_dm_sigma(test_toas)
@@ -88,11 +88,11 @@ def test_only_one_equad_one_efact_same_backend(test_toas, test_model):
 
 
 def test_only_one_equad_one_efact_different_backend(test_toas, test_model):
-    test_model.DMEQUAD1.key = "-fe"
-    test_model.DMEQUAD1.key_value = "Rcvr_800"
+    test_model.DMEQUAD1.flag = "-fe"
+    test_model.DMEQUAD1.flag_value = "Rcvr_800"
     test_model.DMEQUAD1.value = 10
-    test_model.DMEFAC1.key = "-fe"
-    test_model.DMEFAC1.key_value = "YUPPI"
+    test_model.DMEFAC1.flag = "-fe"
+    test_model.DMEFAC1.flag_value = "YUPPI"
     test_model.DMEFAC1.value = 20
     test_model.setup()
     scale_sigma = test_model.scale_dm_sigma(test_toas)
