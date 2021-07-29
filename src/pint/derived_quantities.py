@@ -1,4 +1,25 @@
-"""Functions to compute various derived quantities"""
+"""Functions to compute various derived quantities
+
+Contents:
+
+- :func:`~pint.derived_quantities.a1sini`: compute ``a1sini`` from pulsar, companion masses, orbital period, inclination
+- :func:`~pint.derived_quantities.companion_mass`: compute companion mass from pulsar mass, orbital period, ``a1sini`, inclination
+- :func:`~pint.derived_quantities.gamma`: compute post-Keplerian time-dilation/gravitational redshift from pulsar, companion masses, orbital period, eccentricity (assuming GR)
+- :func:`~pint.derived_quantities.mass_funct`: compute mass function from orbital period, ``a1sini``
+- :func:`~pint.derived_quantities.mass_funct2`: compute mass function from pulsar, companion masses, inclination
+- :func:`~pint.derived_quantities.omdot`: compute post-Keplerian precession from pulsar, companion masses, orbital period, eccentricity (assuming GR)
+- :func:`~pint.derived_quantities.omdot_to_mtot`: convert precession rate ``omdot`` to total mass (assuming GR)
+- :func:`~pint.derived_quantities.p_to_f`: convert P, Pdot to F, Fdot (or vice versa)
+- :func:`~pint.derived_quantities.pbdot`: compute post-Keplerian orbital decay from pulsar, companion masses, orbital period, eccentricity (assuming GR)
+- :func:`~pint.derived_quantities.pferrs`: convert P, Pdot to F, Fdot with uncertainties (or vice versa).
+- :func:`~pint.derived_quantities.pulsar_B`: compute pulsar surface magnetic field from F, Fdot
+- :func:`~pint.derived_quantities.pulsar_B_lightcyl`: compute pulsar light cylinder magnetic field from F, Fdot
+- :func:`~pint.derived_quantities.pulsar_age`: compute pulsar age from F, Fdot, braking index, initial frequency
+- :func:`~pint.derived_quantities.pulsar_edot`: compute pulsar spin-down luminosity from F, Fdot, moment of inertia
+- :func:`~pint.derived_quantities.pulsar_mass`: compute pulsar mass from copmanion mass, orbital period, ``a1sini`, inclination
+- :func:`~pint.derived_quantities.shklovskii_factor`: compute Shklovskii acceleration from proper motion, distance
+
+"""
 
 import astropy.constants as const
 import astropy.coordinates.angles as angles
