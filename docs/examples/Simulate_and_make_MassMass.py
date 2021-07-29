@@ -15,7 +15,7 @@
 
 # %% [markdown]
 # # Generate fake data on a relativistic double neutron star (PSR B1534+12), Plot a mass-mass diagram to illustrate the overlapping constraints
-# 
+#
 # This reproduces a version of Figure 9 from [Fonseca et al. (2014, ApJ, 787, 82)](https://ui.adsabs.harvard.edu/abs/2014ApJ...787...82F/abstract)
 
 # %%
