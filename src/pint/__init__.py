@@ -108,4 +108,4 @@ if astropy.version.major < 4:
     )
 
 # location of tim, par files
-datadir = pkg_resources.resource_filename("pint", "data/")
+datadir = pkg_resources.resource_filename(__name__, "data/")
