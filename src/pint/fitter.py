@@ -375,7 +375,8 @@ class Fitter:
                 )
                 brakingindex = 3
                 s += "Characteristic age = {:.4g} (braking index = {})\n".format(
-                    pint.derived_quantities.pulsar_age(F0, F1, n=brakingindex), brakingindex
+                    pint.derived_quantities.pulsar_age(F0, F1, n=brakingindex),
+                    brakingindex,
                 )
                 s += "Surface magnetic field = {:.3g}\n".format(
                     pint.derived_quantities.pulsar_B(F0, F1)
