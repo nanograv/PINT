@@ -1,4 +1,28 @@
-"""Miscellaneous potentially-helpful functions."""
+"""Miscellaneous potentially-helpful functions.
+
+Warning
+-------
+Functions:
+
+- :func:`~pint.derived_quantities.a1sini`
+- :func:`~pint.derived_quantities.companion_mass`
+- :func:`~pint.derived_quantities.gamma`
+- :func:`~pint.derived_quantities.mass_funct`
+- :func:`~pint.derived_quantities.mass_funct2`
+- :func:`~pint.derived_quantities.omdot`
+- :func:`~pint.derived_quantities.omdot_to_mtot`
+- :func:`~pint.derived_quantities.p_to_f`
+- :func:`~pint.derived_quantities.pbdot`
+- :func:`~pint.derived_quantities.pferrs`
+- :func:`~pint.derived_quantities.pulsar_B`
+- :func:`~pint.derived_quantities.pulsar_B_lightcyl`
+- :func:`~pint.derived_quantities.pulsar_age`
+- :func:`~pint.derived_quantities.pulsar_edot`
+- :func:`~pint.derived_quantities.pulsar_mass`
+- :func:`~pint.derived_quantities.shklovskii_factor`
+
+have moved to :mod:`pint.derived_quantities`.
+"""
 import configparser
 import datetime
 import getpass
