@@ -11,6 +11,7 @@ These docstrings contain reference documentation; for tutorials, explanations,
 or how-to documentation, please see other sections of the online documentation.
 """
 
+import os
 import pkg_resources
 import numpy as np
 import astropy
@@ -108,4 +109,29 @@ if astropy.version.major < 4:
     )
 
 # location of tim, par files
-datadir = pkg_resources.resource_filename(__name__, "data/")
+def data_dir():
+    """Location of the PINT data (par and tim files)
+
+    Returns
+    -------
+    str
+        Directory of PINT data files
+
+    """
+    return pkg_resources.resource_filename(__name__, "data/")
+
+
+def data_file(filename):
+    """Full path to the requested PINT data file
+
+    Parameters
+    ----------
+    filename : str
+
+    Returns
+    -------
+    str
+        Full path to the requested file
+
+    """
+    return os.path.join(data_dir(), filename)
