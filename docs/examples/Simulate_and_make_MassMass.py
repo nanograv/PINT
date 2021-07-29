@@ -29,7 +29,7 @@ import io
 
 import pint.fitter
 from pint.models import get_model
-import pint.utils
+import pint.derived_quantities
 
 
 # %% [markdown]
@@ -283,14 +283,14 @@ a_dot_n = (
 # Galactic acceleration contribution to PBDOT
 PBDOT_gal = (fit.model.PB.quantity * a_dot_n / c.c).decompose()
 # Shklovskii contribution
-PBDOT_shk = (fit.model.PB.quantity * pint.utils.pmtot(m) ** 2 * d / c.c).to(
-    u.s / u.s, equivalencies=u.dimensionless_angles()
-)
+PBDOT_shk = (
+    fit.model.PB.quantity * pint.derived_quantities.pmtot(m) ** 2 * d / c.c
+).to(u.s / u.s, equivalencies=u.dimensionless_angles())
 # the uncertainty from the Galactic acceleration isn't included
 # but it's much smaller than the Shklovskii term so we'll ignore it
-PBDOT_err = (fit.model.PB.quantity * pint.utils.pmtot(m) ** 2 * d_err / c.c).to(
-    u.s / u.s, equivalencies=u.dimensionless_angles()
-)
+PBDOT_err = (
+    fit.model.PB.quantity * pint.derived_quantities.pmtot(m) ** 2 * d_err / c.c
+).to(u.s / u.s, equivalencies=u.dimensionless_angles())
 print(f"PBDOT_gal = {PBDOT_gal:.2e}, PBDOT_shk = {PBDOT_shk:.2e} +/- {PBDOT_err:.2e}")
 
 # %%
@@ -298,11 +298,17 @@ print(f"PBDOT_gal = {PBDOT_gal:.2e}, PBDOT_shk = {PBDOT_shk:.2e} +/- {PBDOT_err:
 mp = np.linspace(1, 2, 500) * u.Msun
 mc = np.linspace(1, 2, 400) * u.Msun
 Mp, Mc = np.meshgrid(mp, mc)
-omdot_pred = pint.utils.omdot(Mp, Mc, fit.model.PB.quantity, fit.model.ECC.quantity)
-pbdot_pred = pint.utils.pbdot(Mp, Mc, fit.model.PB.quantity, fit.model.ECC.quantity)
-gamma_pred = pint.utils.gamma(Mp, Mc, fit.model.PB.quantity, fit.model.ECC.quantity)
+omdot_pred = pint.derived_quantities.omdot(
+    Mp, Mc, fit.model.PB.quantity, fit.model.ECC.quantity
+)
+pbdot_pred = pint.derived_quantities.pbdot(
+    Mp, Mc, fit.model.PB.quantity, fit.model.ECC.quantity
+)
+gamma_pred = pint.derived_quantities.gamma(
+    Mp, Mc, fit.model.PB.quantity, fit.model.ECC.quantity
+)
 sini_pred = (
-    pint.utils.mass_funct(fit.model.PB.quantity, fit.model.A1.quantity)
+    pint.derived_quantities.mass_funct(fit.model.PB.quantity, fit.model.A1.quantity)
     * (Mp + Mc) ** 2
     / Mc ** 3
 ) ** (1.0 / 3)
@@ -406,13 +412,19 @@ plt.text(x.value, y.value + 0.02, "$\sin i$", fontsize=fontsize, color="c")
 plt.contour(
     mp.value,
     mc.value,
-    pint.utils.mass_funct2(Mp, Mc, 90 * u.deg).value,
-    [pint.utils.mass_funct(fit.model.PB.quantity, fit.model.A1.quantity).value],
+    pint.derived_quantities.mass_funct2(Mp, Mc, 90 * u.deg).value,
+    [
+        pint.derived_quantities.mass_funct(
+            fit.model.PB.quantity, fit.model.A1.quantity
+        ).value
+    ],
     color="k",
 )
 z = (
-    pint.utils.mass_funct2(Mp, Mc, 90 * u.deg).value
-    - pint.utils.mass_funct(fit.model.PB.quantity, fit.model.A1.quantity).value
+    pint.derived_quantities.mass_funct2(Mp, Mc, 90 * u.deg).value
+    - pint.derived_quantities.mass_funct(
+        fit.model.PB.quantity, fit.model.A1.quantity
+    ).value
 )
 z[z > 0] = np.nan
 z[z <= 0] = 1
