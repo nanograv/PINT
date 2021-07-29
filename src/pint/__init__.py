@@ -11,6 +11,7 @@ These docstrings contain reference documentation; for tutorials, explanations,
 or how-to documentation, please see other sections of the online documentation.
 """
 
+import pkg_resources
 import numpy as np
 import astropy
 import astropy.constants as c
@@ -105,3 +106,6 @@ if astropy.version.major < 4:
             astropy.__version__
         )
     )
+
+# location of tim, par files
+datadir = pkg_resources.resource_filename("pint","data/")
