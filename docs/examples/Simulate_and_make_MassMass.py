@@ -283,14 +283,14 @@ a_dot_n = (
 # Galactic acceleration contribution to PBDOT
 PBDOT_gal = (fit.model.PB.quantity * a_dot_n / c.c).decompose()
 # Shklovskii contribution
-PBDOT_shk = (
-    fit.model.PB.quantity * pint.utils.pmtot(m) ** 2 * d / c.c
-).to(u.s / u.s, equivalencies=u.dimensionless_angles())
+PBDOT_shk = (fit.model.PB.quantity * pint.utils.pmtot(m) ** 2 * d / c.c).to(
+    u.s / u.s, equivalencies=u.dimensionless_angles()
+)
 # the uncertainty from the Galactic acceleration isn't included
 # but it's much smaller than the Shklovskii term so we'll ignore it
-PBDOT_err = (
-    fit.model.PB.quantity * pint.utils.pmtot(m) ** 2 * d_err / c.c
-).to(u.s / u.s, equivalencies=u.dimensionless_angles())
+PBDOT_err = (fit.model.PB.quantity * pint.utils.pmtot(m) ** 2 * d_err / c.c).to(
+    u.s / u.s, equivalencies=u.dimensionless_angles()
+)
 print(f"PBDOT_gal = {PBDOT_gal:.2e}, PBDOT_shk = {PBDOT_shk:.2e} +/- {PBDOT_err:.2e}")
 
 # %%
