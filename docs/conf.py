@@ -18,7 +18,7 @@ import sys
 from packaging.version import parse
 
 import jupytext
-import sphinx.ext.apidoc
+#import sphinx.ext.apidoc
 
 
 # If extensions (or modules to document with autodoc) are in another
@@ -48,6 +48,7 @@ import pint
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
     "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
     "sphinx.ext.coverage",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
@@ -56,7 +57,11 @@ extensions = [
     "nbsphinx",
     "paramtable",
     "componentlist",
+    #'IPython.sphinxext.ipython_console_highlighting',
+    #"sphinx_automodapi.automodapi",
+    #"sphinx_automodapi.smart_resolver",
 ]
+
 #                            'astropy_helpers.sphinx.ext.numpydoc',
 #                            'astropy_helpers.sphinx.ext.automodapi',
 #                            'astropy_helpers.sphinx.ext.automodsumm']
@@ -70,11 +75,20 @@ autodoc_member_order = "bysource"
 
 autodoc_mock_imports = ["psr_utils", "fftfit", "pint.cutils.str2ld_py"]
 
+#automodapi_inheritance_diagram = False
+#automodapi_writereprocessed = True
+
+# Needed by automodapi
+numpydoc_show_class_members = False
+
+autosummary_generate = True
+autodoc_inherit_docstrings = True
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 
 # The suffix of source filenames.
-source_suffix = ".rst"
+#source_suffix = ".rst"
 
 # The encoding of source files.
 # source_encoding = 'utf-8-sig'
@@ -84,7 +98,7 @@ master_doc = "index"
 
 # General information about the project.
 project = u"pint"
-copyright = u"2017-2020 PINT Developers"
+copyright = u"2017-2021 PINT Developers"
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
@@ -107,7 +121,7 @@ release = pint.__version__
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ["_build", "examples/.ipynb_checkpoints"]
+exclude_patterns = ["_build", "examples/.ipynb_checkpoints", "conf.py", "_ext"]
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -147,7 +161,7 @@ napoleon_numpy_docstring = True
 napoleon_use_ivar = True  # How to format Attributes sections
 napoleon_use_param = True
 
-nbsphinx_custom_formats = {".py": lambda s: jupytext.reads(s, ".py")}
+#nbsphinx_custom_formats = {".py": lambda s: jupytext.reads(s, ".py")}
 nbsphinx_prolog = """
 This Jupyter notebook can be downloaded from `{{ env.docname.split("/")[-1] }}.ipynb <{{ env.docname.split("/")[-1] }}.ipynb#http://>`_, or viewed as a python script at `{{ env.docname.split("/")[-1] }}.py <https://github.com/nanograv/PINT/blob/master/docs/{{ env.docname }}.py>`_.
 
@@ -207,8 +221,8 @@ def _process_module_docstring(app, what, name, obj, options, lines):
 
 def setup(app):
     app.add_css_file("custom.css")
-    app.connect("builder-inited", run_apidoc)
-    app.connect("autodoc-process-docstring", _process_module_docstring)
+    #app.connect("builder-inited", run_apidoc)
+    #app.connect("autodoc-process-docstring", _process_module_docstring)
 
 
 # -- Options for HTML output -------------------------------------------
@@ -216,7 +230,9 @@ def setup(app):
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = "sphinx_rtd_theme"
+on_rtd = os.environ.get("READTHEDOCS", None) == "True"
+if not on_rtd:  # only import and set the theme if we're building docs locally
+    html_theme = "sphinx_rtd_theme"
 
 # Theme options are theme-specific and customize the look and feel of a
 # theme further.  For a list of options available for each theme, see the
