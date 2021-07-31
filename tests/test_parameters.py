@@ -1,25 +1,32 @@
 import copy
 import os
+import pickle
 import unittest
 
 import astropy.time as time
 import astropy.units as u
 import numpy as np
 import pytest
+from numpy.testing import assert_allclose
 from pinttestdata import datadir
 
 import pint.fitter
 from pint import pint_units
 from pint.models.model_builder import get_model
 from pint.models.parameter import (
+    AngleParameter,
     MJDParameter,
     boolParameter,
     floatParameter,
     intParameter,
+    maskParameter,
+    pairParameter,
+    prefixParameter,
     strParameter,
 )
 from pint.toa import get_TOAs
 
+# FIXME: this should be in the docs!
 """
 The behavior we want for numerical Parameter variables (p):
 
@@ -49,64 +56,93 @@ The behavior we want for numerical Parameter variables (p):
 """
 
 
+def test_read_par_line_expected_values():
+    test_m = get_model(os.path.join(datadir, "test_par_read.par"))
+    assert test_m.F2.frozen
+    assert test_m.F3.frozen
+    assert_allclose(test_m.F3.value, 0.0)
+    assert_allclose(test_m.F3.uncertainty_value, 0.0)
+    assert test_m.F4.frozen
+    assert_allclose(test_m.F4.value, 0.0)
+    assert_allclose(test_m.F4.uncertainty_value, 0.001)
+    assert test_m.F5.frozen
+    assert_allclose(test_m.F5.value, 0.0)
+    assert_allclose(test_m.F5.uncertainty_value, 0.001)
+    assert not test_m.F6.frozen
+    assert_allclose(test_m.F6.value, 0.0)
+    assert_allclose(test_m.F6.uncertainty_value, 0.001)
+    assert test_m.F7.frozen
+    assert_allclose(test_m.F7.value, 0.0)
+    assert_allclose(test_m.F7.uncertainty_value, 3.0)
+    assert test_m.F8.frozen
+    assert_allclose(test_m.F8.value, 0.0)
+    assert_allclose(test_m.F8.uncertainty_value, 10)
+    assert test_m.JUMP1.frozen
+    assert test_m.JUMP1.key == "MJD"
+    assert_allclose(test_m.JUMP1.key_value[0], 52742.0, atol=1e-10)
+    assert_allclose(test_m.JUMP1.key_value[1], 52745.0, atol=1e-10)
+    assert_allclose(test_m.JUMP1.value, 0.2)
+
+    assert test_m.JUMP2.frozen
+    assert_allclose(test_m.JUMP2.value, 0.1)
+    assert_allclose(test_m.JUMP2.uncertainty_value, 0.0)
+    assert_allclose(test_m.JUMP7.value, 0.1)
+    assert_allclose(test_m.JUMP7.uncertainty_value, 10.5)
+    assert_allclose(test_m.JUMP6.value, 0.1)
+    assert_allclose(test_m.JUMP6.uncertainty_value, 10.0)
+    assert test_m.JUMP12.key == "-testflag"
+    assert not test_m.JUMP12.frozen
+    assert test_m.JUMP12.key_value[0] == "flagvalue"
+    assert_allclose(test_m.JUMP12.value, 0.1)
+    assert_allclose(test_m.JUMP12.uncertainty_value, 2.0)
+    assert_allclose(
+        test_m.RAJ.uncertainty,
+        476.94611148516092061223 * pint_units["hourangle_second"],
+    )
+
+    assert_allclose(
+        test_m.DECJ.uncertainty,
+        190996312986311097848351.00000000000000000000 * u.arcsecond,
+    )
+
+
+@pytest.mark.xfail(
+    reason="For some reason AngleParameters should have different units for their uncertainties"
+)
+def test_read_par_line_raj_units():
+    test_m = get_model(os.path.join(datadir, "test_par_read.par"))
+    assert test_m.RAJ.uncertainty.unit == pint_units["hourangle_second"]
+    assert test_m.DECJ.uncertainty.unit == u.arcsecond
+
+
+@pytest.mark.xfail(
+    reason="For some reason AngleParameters should have different units for their uncertainties"
+)
+def test_read_par_line_decj_units():
+    test_m = get_model(os.path.join(datadir, "test_par_read.par"))
+    assert test_m.DECJ.uncertainty.unit == u.arcsecond
+
+
+def test_units_consistent():
+    m = get_model(os.path.join(datadir, "test_par_read.par"))
+    for p in m.params:
+        pm = getattr(m, p)
+        if not hasattr(pm.quantity, "unit"):
+            continue
+        assert pm.quantity.unit == pm.units
+        assert pm.quantity == pm.value * pm.units
+        if pm.uncertainty is None:
+            continue
+        assert pm.uncertainty.unit == pm.units
+        assert pm.uncertainty_value * pm.units == pm.uncertainty
+
+
 class TestParameters(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         os.chdir(datadir)
         cls.m = get_model("B1855+09_NANOGrav_dfg+12_modified.par")
         cls.mp = get_model("prefixtest.par")
-
-    def test_read_par_line(self):
-        test_m = get_model("test_par_read.par")
-        self.assertEqual(test_m.F2.frozen, True)
-        self.assertEqual(test_m.F3.frozen, True)
-        self.assertTrue(np.isclose(test_m.F3.value, 0.0))
-        self.assertTrue(np.isclose(test_m.F3.uncertainty_value, 0.0))
-        self.assertEqual(test_m.F4.frozen, True)
-        self.assertTrue(np.isclose(test_m.F4.value, 0.0))
-        self.assertTrue(np.isclose(test_m.F4.uncertainty_value, 0.001))
-        self.assertEqual(test_m.F5.frozen, True)
-        self.assertTrue(np.isclose(test_m.F5.value, 0.0))
-        self.assertTrue(np.isclose(test_m.F5.uncertainty_value, 0.001))
-        self.assertEqual(test_m.F6.frozen, False)
-        self.assertTrue(np.isclose(test_m.F6.value, 0.0))
-        self.assertTrue(np.isclose(test_m.F6.uncertainty_value, 0.001))
-        self.assertEqual(test_m.F7.frozen, True)
-        self.assertTrue(np.isclose(test_m.F7.value, 0.0))
-        self.assertTrue(np.isclose(test_m.F7.uncertainty_value, 3.0))
-        self.assertEqual(test_m.F8.frozen, True)
-        self.assertTrue(np.isclose(test_m.F8.value, 0.0))
-        self.assertTrue(np.isclose(test_m.F8.uncertainty_value, 10))
-        self.assertEqual(test_m.JUMP1.frozen, True)
-        self.assertEqual(test_m.JUMP1.key, "MJD")
-        self.assertTrue(np.isclose(test_m.JUMP1.key_value[0], 52742.0, atol=1e-10))
-        self.assertTrue(np.isclose(test_m.JUMP1.key_value[1], 52745.0, atol=1e-10))
-        self.assertTrue(np.isclose(test_m.JUMP1.value, 0.2))
-
-        self.assertEqual(test_m.JUMP2.frozen, True)
-        self.assertTrue(np.isclose(test_m.JUMP2.value, 0.1))
-        self.assertTrue(np.isclose(test_m.JUMP2.uncertainty_value, 0.0))
-        self.assertTrue(np.isclose(test_m.JUMP7.value, 0.1))
-        self.assertTrue(np.isclose(test_m.JUMP7.uncertainty_value, 10.5))
-        self.assertTrue(np.isclose(test_m.JUMP6.value, 0.1))
-        self.assertTrue(np.isclose(test_m.JUMP6.uncertainty_value, 10.0))
-        self.assertEqual(test_m.JUMP12.key, "-testflag")
-        self.assertEqual(test_m.JUMP12.frozen, False)
-        self.assertEqual(test_m.JUMP12.key_value[0], "flagvalue")
-        self.assertTrue(np.isclose(test_m.JUMP12.value, 0.1))
-        self.assertTrue(np.isclose(test_m.JUMP12.uncertainty_value, 2.0))
-        self.assertTrue(
-            np.isclose(test_m.RAJ.uncertainty_value, 476.94611148516092061223)
-        )
-
-        self.assertTrue(
-            np.isclose(
-                test_m.DECJ.uncertainty_value,
-                190996312986311097848351.00000000000000000000,
-            )
-        )
-        self.assertTrue(test_m.RAJ.uncertainty.unit, pint_units["hourangle_second"])
-        self.assertTrue(test_m.RAJ.uncertainty.unit, u.arcsecond)
 
     def test_RAJ(self):
         """Check whether the value and units of RAJ parameter are ok"""
@@ -471,3 +507,36 @@ def test_parameter_setting(type_, set_value, value):
     else:
         p.value = set_value
         assert p.value == value
+
+
+@pytest.mark.parametrize(
+    "p",
+    [boolParameter(name="FISH"), intParameter(name="FISH"), strParameter(name="FISH")],
+)
+def test_set_uncertainty_bogus_raises(p):
+    with pytest.raises(NotImplementedError):
+        p.uncertainty = 7.0
+
+
+@pytest.mark.parametrize(
+    "p",
+    [
+        boolParameter(name="FISH"),
+        intParameter(name="FISH"),
+        strParameter(name="FISH"),
+        pytest.param(
+            maskParameter(name="JUMP"),
+            marks=pytest.mark.xfail(reason="maskParameter uses lambdas internally."),
+        ),
+        pytest.param(
+            prefixParameter(name="F0"),
+            marks=pytest.mark.xfail(
+                reason="prefixParameter uses lambda functions for formatting help and defining units"
+            ),
+        ),
+        pairParameter(name="WEAVE"),
+        AngleParameter(name="BEND"),
+    ],
+)
+def test_parameter_can_be_pickled(p):
+    pickle.dumps(p)
