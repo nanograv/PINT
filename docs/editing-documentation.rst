@@ -21,7 +21,9 @@ PINT's documentation is created from three different inputs:
 
 It should be fairly clear where to look for any given piece of documentation's
 code, but if there is any question, start from ``docs/index.rst``. Everything
-is in a tree depending from here.
+is in a tree depending from here.  If you add a function or a class to
+a file, make sure that the new function/class is included in the
+``__all__`` list, so that it will be included in the documentation.
 
 To build a local copy of the documentation, run::
 
