@@ -154,7 +154,7 @@ print(wlsfit.model.compare(powfit.model))
 # To test this fitter properly, we need a model that includes correlated noise components, so we will load one from NANOGrav 9yr data release.
 
 # %%
-m1855 = pint.models.get_model(pint.datafiles("B1855+09_NANOGrav_9yv1.gls.par"))
+m1855 = pint.models.get_model(pint.datafile("B1855+09_NANOGrav_9yv1.gls.par"))
 
 # %%
 # You can check if a model includes a noise model with correlated errors (e.g. ECORR or TNRED) by checking the has_correlated_errors property
