@@ -64,6 +64,7 @@ import scipy.optimize as opt
 from astropy import log
 
 import pint.utils
+import pint.derived_quantities
 from pint.models.parameter import AngleParameter, boolParameter, strParameter
 from pint.pint_matrix import (
     CovarianceMatrix,
@@ -313,7 +314,7 @@ class Fitter:
                         )
                 elif isinstance(par, boolParameter):
                     s += ("{:" + spacingName + "s} {:>20s} {:28s} {}\n").format(
-                        pn, prefitpar.print_quantity(prefitpar.value), "", par.units
+                        pn, prefitpar.str_quantity(prefitpar.value), "", par.units
                     )
                 else:
                     # Assume a numerical parameter
@@ -359,14 +360,14 @@ class Fitter:
         if hasattr(self.model, "F0"):
             F0 = self.model.F0.quantity
             if not self.model.F0.frozen:
-                p, perr = pint.utils.pferrs(F0, self.model.F0.uncertainty)
+                p, perr = pint.derived_quantities.pferrs(F0, self.model.F0.uncertainty)
                 s += "Period = {} +/- {}\n".format(p.to(u.s), perr.to(u.s))
             else:
                 s += "Period = {}\n".format((1.0 / F0).to(u.s))
         if hasattr(self.model, "F1"):
             F1 = self.model.F1.quantity
             if not any([self.model.F1.frozen, self.model.F0.frozen]):
-                p, perr, pd, pderr = pint.utils.pferrs(
+                p, perr, pd, pderr = pint.derived_quantities.pferrs(
                     F0, self.model.F0.uncertainty, F1, self.model.F1.uncertainty
                 )
                 s += "Pdot = {} +/- {}\n".format(
@@ -374,17 +375,18 @@ class Fitter:
                 )
                 brakingindex = 3
                 s += "Characteristic age = {:.4g} (braking index = {})\n".format(
-                    pint.utils.pulsar_age(F0, F1, n=brakingindex), brakingindex
+                    pint.derived_quantities.pulsar_age(F0, F1, n=brakingindex),
+                    brakingindex,
                 )
                 s += "Surface magnetic field = {:.3g}\n".format(
-                    pint.utils.pulsar_B(F0, F1)
+                    pint.derived_quantities.pulsar_B(F0, F1)
                 )
                 s += "Magnetic field at light cylinder = {:.4g}\n".format(
-                    pint.utils.pulsar_B_lightcyl(F0, F1)
+                    pint.derived_quantities.pulsar_B_lightcyl(F0, F1)
                 )
                 I_NS = I = 1.0e45 * u.g * u.cm ** 2
                 s += "Spindown Edot = {:.4g} (I={})\n".format(
-                    pint.utils.pulsar_edot(F0, F1, I=I_NS), I_NS
+                    pint.derived_quantities.pulsar_edot(F0, F1, I=I_NS), I_NS
                 )
 
         if hasattr(self.model, "PX"):
@@ -471,13 +473,13 @@ class Fitter:
                     )
                     fm = 4.0 * np.pi ** 2 * a1 ** 3 / (4.925490947e-6 * pbs ** 2)
                     s += "Mass function = {:SP} Msun\n".format(fm)
-                    mcmed = pint.utils.companion_mass(
+                    mcmed = pint.derived_quantities.companion_mass(
                         self.model.PB.quantity,
                         self.model.A1.quantity,
                         inc=60.0 * u.deg,
                         mpsr=1.4 * u.solMass,
                     )
-                    mcmin = pint.utils.companion_mass(
+                    mcmin = pint.derived_quantities.companion_mass(
                         self.model.PB.quantity,
                         self.model.A1.quantity,
                         inc=90.0 * u.deg,
@@ -501,7 +503,7 @@ class Fitter:
                                 um.asin(si) * 180.0 / np.pi
                             )
 
-                        psrmass = pint.utils.pulsar_mass(
+                        psrmass = pint.derived_quantities.pulsar_mass(
                             self.model.PB.quantity,
                             self.model.A1.quantity,
                             self.model.M2.quantity,

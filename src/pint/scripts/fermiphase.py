@@ -117,7 +117,8 @@ def main(argv=None):
     phss %= 1
     phases = phss.value
     mjds = ts.get_mjds()
-    weights = np.array([w["weight"] for w in ts.table["flags"]])
+    weights, _ = ts.get_flag_value("weight", as_type=float)
+    weights = np.array(weights)
     h = float(hmw(phases, weights))
     print("Htest : {0:.2f} ({1:.2f} sigma)".format(h, h2sig(h)))
     if args.plot:

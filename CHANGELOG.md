@@ -15,6 +15,9 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - TOAs now have a .renumber() method to simplify their index column (PR #1029)
 - TOAs objects have a .alias_translation attribute to allow them to output TEMPO-compatible observatory names (PR #1017)
 - TimingModel objects now remember which alias their parameters were called when read in and write those out by default; this can be overridden with the .use_aliases() method to ensure PINT-default or TEMPO-compatible names. (PR #1017)
+- New function utils.info_string() to return information about the PINT run (user, version, OS, optional comments).  This is run during TOA output to tim file or model output to par file by default, but can be suppressed by setting include_info=False (PR #1069)
+### Changed
+- get_groups() is renamed to get_clusters() and is no longer automatically called during TOA creation.  Can still be run manually, with the gap specified.  Addition of a clusters column to the TOA.table object is optional (PR #1070)
 
 ## [0.8.2] - 2021-01-27
 ### Fixed

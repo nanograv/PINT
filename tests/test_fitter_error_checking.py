@@ -135,8 +135,8 @@ def test_jump_everything_wideband():
     model = get_model(io.StringIO("\n".join([par_base, "JUMP TEL barycenter 0"])))
     toas = make_fake_toas(58000, 58900, 10, model, obs="barycenter", freq=np.inf)
     for f in toas.table["flags"]:
-        f["pp_dm"] = 15.0
-        f["pp_dme"] = 1e-4
+        f["pp_dm"] = "15.0"
+        f["pp_dme"] = "1e-4"
     model.free_params = ["JUMP1", "F0", "DM"]
     fitter = pint.fitter.WidebandTOAFitter(toas, model)
     with pytest.warns(pint.fitter.DegeneracyWarning, match=r".*degeneracy.*Offset\b"):
