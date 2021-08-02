@@ -568,7 +568,7 @@ def main(argv=None):
             if (
                 tl[ii].mjd.value > minMJD
                 and tl[ii].mjd.value < maxMJD
-                and (weightcol is None or tl[ii].flags["weight"] > minWeight)
+                and (weightcol is None or float(tl[ii].flags["weight"]) > minWeight)
             )
         ]
         log.info("There are %d events we will use" % len(tl))
@@ -581,7 +581,7 @@ def main(argv=None):
 
     if weightcol is not None:
         if weightcol == "CALC":
-            weights = np.asarray([x["weight"] for x in ts.table["flags"]])
+            weights = np.asarray([float(x["weight"]) for x in ts.table["flags"]])
             log.info(
                 "Original weights have min / max weights %.3f / %.3f"
                 % (weights.min(), weights.max())
@@ -593,8 +593,8 @@ def main(argv=None):
                 # make the highest weight = 1, but keep min weight the same
                 weights = wmn + ((weights - wmn) * (1.0 - wmn) / (wmx - wmn))
             for ii, x in enumerate(ts.table["flags"]):
-                x["weight"] = weights[ii]
-        weights = np.asarray([x["weight"] for x in ts.table["flags"]])
+                x["weight"] = str(weights[ii])
+        weights = np.asarray([float(x["weight"]) for x in ts.table["flags"]])
         log.info(
             "There are %d events, with min / max weights %.3f / %.3f"
             % (len(weights), weights.min(), weights.max())

@@ -168,18 +168,15 @@ class PhaseJump(PhaseComponent):
             # find TOAs jump applies to
             mask = jump_par.select_toa_mask(toas)
             # apply to dictionaries
-            for dict in toas.table["flags"][mask]:
-                if "jump" in dict.keys() and type(dict["jump"]) is list:
-                    # check if jump flag already added - don't add flag twice
-                    if str(jump_par.index) in dict["jump"]:
+            for d in toas.table["flags"][mask]:
+                if "jump" in d:
+                    index_list = d["jump"].split(",")
+                    if str(jump_par.index) in index_list:
                         continue
-                    dict["jump"].append(str(jump_par.index))  # otherwise, add jump flag
-                elif "jump" in dict.keys() and type(dict["jump"]) is str:
-                    if dict["jump"] == str(jump_par.index):
-                        continue
-                    dict["jump"] = [dict["jump"], str(jump_par.index)]
+                    index_list.append(str(jump_par.index))
+                    d["jump"] = ",".join(index_list)
                 else:
-                    dict["jump"] = [str(jump_par.index)]
+                    d["jump"] = str(jump_par.index)
 
     def add_jump_and_flags(self, toa_table):
         """Add jump object to PhaseJump and appropriate flags to TOA tables.
@@ -204,19 +201,17 @@ class PhaseJump(PhaseComponent):
                 name="JUMP",
                 index=1,
                 key="-gui_jump",
-                key_value=1,
+                key_value="1",
                 value=0.0,
                 units="second",
                 frozen=False,
             )
             self.add_param(param)
-            ind = 1
-            name = param.name
         # otherwise add on jump with next index
         else:
             # first, search for TOAs already jumped in inputted selection - pintk does not allow jumps added through GUI to overlap with existing jumps
-            for dict in toa_table:
-                if "gui_jump" in dict.keys():
+            for d in toa_table:
+                if "gui_jump" in d.keys():
                     log.warning(
                         "The selected toa(s) overlap an existing jump. Remove all interfering jumps before attempting to jump these toas."
                     )
@@ -225,20 +220,15 @@ class PhaseJump(PhaseComponent):
                 name="JUMP",
                 index=len(self.jumps) + 1,
                 key="-gui_jump",
-                key_value=len(self.jumps) + 1,
+                key_value=str(len(self.jumps) + 1),
                 value=0.0,
                 units="second",
                 frozen=False,
             )
             self.add_param(param)
-            ind = param.index
-            name = param.name
+        ind = param.index
+        name = param.name
         self.setup()
-        # add appropriate flags to TOA table to link jump with appropriate TOA
         for dict1 in toa_table:
-            if "jump" in dict1.keys():
-                dict1["jump"].append(str(ind))  # toa can have multiple jumps
-            else:
-                dict1["jump"] = [str(ind)]
-            dict1["gui_jump"] = str(ind)  # toa can only have one gui_jump
+            dict1["gui_jump"] = str(ind)
         return name

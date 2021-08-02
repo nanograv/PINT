@@ -1012,7 +1012,7 @@ class TimingModel:
             The name of parameter to be removed.
         """
         param_map = self.get_params_mapping()
-        if param not in list(param_map.keys()):
+        if param not in param_map:
             raise AttributeError("Can not find '%s' in timing model." % param)
         if param_map[param] == "timing_model":
             delattr(self, param)
@@ -1164,8 +1164,8 @@ class TimingModel:
         If there is no noise model component provided, a diagonal matrix with
         TOAs error as diagonal element will be returned.
         """
-        dms, valid_dm = toas.get_flag_value("pp_dm")
-        dmes, valid_dme = toas.get_flag_value("pp_dme")
+        dms, valid_dm = toas.get_flag_value("pp_dm", as_type=float)
+        dmes, valid_dme = toas.get_flag_value("pp_dme", as_type=float)
         dms = np.array(dms)[valid_dm]
         n_dms = len(dms)
         dmes = np.array(dmes)[valid_dme]
@@ -1214,7 +1214,7 @@ class TimingModel:
         toas: pint.toa.TOAs
             The input data object for DM uncertainty.
         """
-        dm_error, valid = toas.get_flag_value("pp_dme")
+        dm_error, valid = toas.get_flag_value("pp_dme", as_type=float)
         dm_error = np.array(dm_error)[valid] * u.pc / u.cm ** 3
         result = np.zeros(len(dm_error)) * u.pc / u.cm ** 3
         # When there is no noise model.
@@ -1329,27 +1329,15 @@ class TimingModel:
 
         # remove jump flags from selected TOA tables
         if toa_table is not None:
-            for dict in toa_table:
-                if "jump" in dict.keys() and str(jump_num) in dict["jump"]:
-                    if (
-                        type(dict["jump"]) is str
-                    ):  # if only one jump will just hold a str of the index number, otherwise will hold a list of str indeces
-                        del dict["jump"]
-                    elif len(dict["jump"]) == 1:
-                        del dict["jump"]
-                    else:
-                        dict["jump"].remove(str(jump_num))
-                if "gui_jump" in dict.keys() and dict["gui_jump"] == str(jump_num):
-                    del dict["gui_jump"]
-                # renumber jump flags at higher jump indeces in whole TOA table (held as str values, must convert to ints for subtraction and then back to str)
-                if "jump" in dict.keys():
-                    dict["jump"] = [
-                        str(int(num) - 1) if int(num) > jump_num else num
-                        for num in dict["jump"]
-                    ]
-                if "gui_jump" in dict.keys() and int(dict["gui_jump"]) > jump_num:
-                    cur_val = int(dict["gui_jump"])
-                    dict["gui_jump"] = str(cur_val - 1)
+            for d in toa_table:
+                if "jump" in d:
+                    index_list = d["jump"].split(",")
+                    if str(jump_num) in index_list:
+                        del index_list[index_list.index(str(jump_num))]
+                        if not index_list:
+                            del d["jump"]
+                        else:
+                            d["jump"] = ",".join(index_list)
 
         # if last jump deleted, remove PhaseJump object from model
         if (
@@ -1360,13 +1348,6 @@ class TimingModel:
                 if isinstance(item, pint.models.jump.PhaseJump):
                     self.remove_component(item)
             return
-        # if not, reindex higher index jump objects
-        for i in range(jump_num + 1, len(self.jumps) + 1):
-            cur_jump = getattr(self, "JUMP" + str(i))
-            cur_jump.key_value = str(i - 1)
-            new_jump = cur_jump.new_param(index=(i - 1), copy_all=True)
-            self.add_param_from_top(new_jump, "PhaseJump")
-            self.remove_param(cur_jump.name)
         self.components["PhaseJump"].setup()
 
     def get_barycentric_toas(self, toas, cutoff_component=""):
