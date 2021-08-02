@@ -39,3 +39,6 @@ We don't really have any proper tutorials yet. But for the moment, we have a few
    examples/Wideband_TOA_walkthrough.ipynb
    examples/Simulate_and_make_MassMass.ipynb
    examples-rendered/paper_validation_example.ipynb
+
+
+.. _`Time a Pulsar`: examples/time_a_pulsar.html
