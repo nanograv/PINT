@@ -43,6 +43,7 @@ ELONG 0
 PEPOCH 57000
 POSEPOCH 57000
 F0 500
+JUMP mjd 56000 60000 0
 JUMP mjd 58000 60000 0
 JUMP mjd 59000 60000 0
 """
@@ -67,3 +68,47 @@ def test_fit_summary(tmp_path, capsys):
     assert not re.search(r"Post-Fit Chi2:\s*[0-9.]+ +us", captured_fit_summary.out)
     assert re.search(r"Post-Fit Weighted RMS:\s*[0-9.]+ +us", captured_fit_summary.out)
     assert re.search(r"\s*JUMP", captured_fit_summary.out)
+
+
+def test_fit_timfile_jumps(tmp_path):
+    # Pulsar can't cope with file-like objects in place of filenames - I think?
+    par_file = tmp_path / "file.par"
+    with open(par_file, "wt") as f:
+        f.write(par)
+    tim_file = tmp_path / "file.tim"
+    with open(tim_file, "wt") as f:
+        f.write(tim)
+    p = pint.pintk.pulsar.Pulsar(parfile=str(par_file), timfile=str(tim_file))
+    p.fit(np.ones(len(p.all_toas), dtype=bool))
+
+    for i in range(1, 4):
+        for j in p.prefit_model.jumps:
+            if j.flag == "jump" and j.flag_value == str(i):
+                assert len(j.select_toa_mask(p.all_toas)) > 0
+                break
+        else:
+            assert False, f"Jump {i} not found"
+
+
+def test_fit_freezes_enough_jumps(tmp_path):
+    # Pulsar can't cope with file-like objects in place of filenames - I think?
+    par_file = tmp_path / "file.par"
+    with open(par_file, "wt") as f:
+        f.write(par)
+    tim_file = tmp_path / "file.tim"
+    with open(tim_file, "wt") as f:
+        f.write(tim)
+    p = pint.pintk.pulsar.Pulsar(parfile=str(par_file), timfile=str(tim_file))
+    for j in p.prefit_model.jumps:
+        j.frozen = False
+    p.fit(np.ones(len(p.all_toas), dtype=bool))
+
+    jumped_toas = set(range(len(p.all_toas)))
+    for j in p.prefit_model.jumps:
+        if not j.frozen:
+            t = j.select_toa_mask(p.all_toas)
+            assert len(t)
+            for i in t:
+                jumped_toas.discard(i)
+
+    assert jumped_toas
