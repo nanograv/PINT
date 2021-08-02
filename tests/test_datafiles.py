@@ -36,7 +36,7 @@ def test_datafiles_tempdir(getfiles):
     curdir = os.getcwd()
     try:
         with tempfile.TemporaryDirectory() as dir:
-            os.chdir(dir.name)
+            os.chdir(dir)
             for filename in files:
                 assert os.path.exists(pint.datafile(filename))
     finally:
@@ -50,7 +50,7 @@ def test_datafiles_tempdir_moveafter(getfiles):
     filenames = [pint.datafile(filename) for filename in files]
     try:
         with tempfile.TemporaryDirectory() as dir:
-            os.chdir(dir.name)
+            os.chdir(dir)
             for filename in filenames:
                 assert os.path.exists(filename)
     finally:
