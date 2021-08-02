@@ -1,30 +1,57 @@
 """Test installation of PINT data files"""
 import os
-import unittest
+import pytest
 import pint
+import tempfile
 
 
-class TestDatafiles(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
+@pytest.fixture
+def getfiles():
+    # get a list of par and tim files to make sure we can find
+    files = """B1855+09_NANOGrav_9yv1.gls.par
+    B1855+09_NANOGrav_9yv1.tim
+    B1855+09_NANOGrav_dfg+12.tim
+    B1855+09_NANOGrav_dfg+12_TAI.par
+    J0613-sim.par
+    J0613-sim.tim
+    J1614-2230_NANOGrav_12yv3.wb.gls.par
+    J1614-2230_NANOGrav_12yv3.wb.tim
+    NGC6440E.par
+    NGC6440E.tim
+    PSRJ0030+0451_psrcat.par
+    waves.par
+    waves_withpn.tim"""
 
-        # get a list of par and tim files to make sure we can find
-        files = """B1855+09_NANOGrav_9yv1.gls.par
-        B1855+09_NANOGrav_9yv1.tim
-        B1855+09_NANOGrav_dfg+12.tim
-        B1855+09_NANOGrav_dfg+12_TAI.par
-        J0613-sim.par
-        J0613-sim.tim
-        J1614-2230_NANOGrav_12yv3.wb.gls.par
-        J1614-2230_NANOGrav_12yv3.wb.tim
-        NGC6440E.par
-        NGC6440E.tim
-        PSRJ0030+0451_psrcat.par
-        waves.par
-        waves_withpn.tim"""
+    return [f.strip() for f in files.split("\n")]
 
-        cls.files = [f.strip() for f in files.split("\n")]
 
-    def test_datafiles(self):
-        for filename in self.files:
-            assert os.path.exists(pint.datafile(filename))
+def test_datafiles(getfiles):
+    files = getfiles
+    for filename in files:
+        assert os.path.exists(pint.datafile(filename))
+
+
+def test_datafiles_tempdir(getfiles):
+    files = getfiles
+    curdir = os.getcwd()
+    try:
+        with tempfile.TemporaryDirectory() as dir:
+            os.chdir(dir.name)
+            for filename in files:
+                assert os.path.exists(pint.datafile(filename))
+    finally:
+        os.chdir(curdir)
+
+
+def test_datafiles_tempdir_moveafter(getfiles):
+    files = getfiles
+    curdir = os.getcwd()
+    # get the full names before moving directories
+    filenames = [pint.datafile(filename) for filename in files]
+    try:
+        with tempfile.TemporaryDirectory() as dir:
+            os.chdir(dir.name)
+            for filename in filenames:
+                assert os.path.exists(filename)
+    finally:
+        os.chdir(curdir)

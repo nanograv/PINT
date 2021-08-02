@@ -21,9 +21,12 @@ def datapath(fname):
     """Returns the full path to the requested data file.
 
     Will first search the appdirs user_data_dir (typically
-    $HOME/.local/share/pint on linux) then the installed data files dir
-    (__file__/datafiles).  If the file is not found, raises FileNotFoundError.
+    ``$HOME/.local/share/pint`` on linux) then the installed data files dir
+    (``__file__/datafiles``).  If the file is not found, raises ``FileNotFoundError``.
 
+    Notes
+    -----
+    For files used in :ref:`Examples` and :ref:`Tutorials`, see :func:`pint.datadir` and :func:`pint.datafile`.
     """
 
     # List of directories to search, in order

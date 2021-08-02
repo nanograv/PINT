@@ -117,6 +117,9 @@ def datadir():
     str
         Directory of PINT data files
 
+    Notes
+    -----
+    This is **not** for files needed at runtime. Those are located by :func:`pint.config.datapath`.
     """
     return pkg_resources.resource_filename(__name__, "data/")
 
@@ -133,5 +136,8 @@ def datafile(filename):
     str
         Full path to the requested file
 
+    Notes
+    -----
+    This is **not** for files needed at runtime. Those are located by :func:`pint.config.datapath`.
     """
-    return os.path.join(datadir(), filename)
+    return pkg_resources.resource_filename(__name__, os.path.join("data/", filename))

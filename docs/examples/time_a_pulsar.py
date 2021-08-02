@@ -16,7 +16,7 @@
 # %% [markdown]
 # # Time a pulsar
 #
-# This notebook walks through a simple pulsar timing session, as one might do with TEMPO/TEMPO2: load a `.par` file, load a `.tim` file, do a fit, plot the residuals before and after. This one also displays various additional information you might find useful, and also ignores but then plots TOAs with large uncertainties. Similar code is available as a standalone script at [`fit_NGC6440E.py`](https://github.com/nanograv/PINT/blob/master/docs/examples/fit_NGC6440E.py)
+# This notebook walks through a simple pulsar timing session, as one might do with TEMPO/TEMPO2: load a `.par` file, load a `.tim` file, do a fit, plot the residuals before and after. This one also displays various additional information you might find useful, and also ignores but then plots TOAs with large uncertainties. Similar code is available as a standalone script at [fit_NGC6440E.py](https://github.com/nanograv/PINT/blob/master/docs/examples/fit_NGC6440E.py)
 
 # %%
 import astropy.units as u
