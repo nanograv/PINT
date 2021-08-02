@@ -28,4 +28,3 @@ class TestDatafiles(unittest.TestCase):
     def test_datafiles(self):
         for filename in self.files:
             assert os.path.exists(pint.datafile(filename))
-            
