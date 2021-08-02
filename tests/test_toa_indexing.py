@@ -17,7 +17,7 @@ fake 1400 54004 1.0 ao -flag thing
 fake 1400 54005 1.0 @ -flag thing
 fake 1400 54006 1.0 ao -flag thing
 fake 1500 54007 1.0 ao -flag thing
-fake 1500 54008 1.0 @ -flag thing
+fake 1500 54008 1.0 @ -flag thing -other_flag another_thing
 """
 n_tim = len(tim.split("\n")) - 2
 
@@ -87,3 +87,33 @@ def test_getitem_slice(c):
     if len(s) > 0:
         assert np.all(s.table["mjd_float"] == s.table.group_by("obs")["mjd_float"])
         toas.get_summary()
+
+
+def test_flag_column_reading():
+    toas = get_TOAs(StringIO(tim), ephem="de421")
+    assert (toas["flag"] == "other_thing").sum() == 1
+    assert (toas["flag"] == "thing").sum() == len(toas) - 1
+    assert (toas["other_flag"] == "another_thing").sum() == 1
+    assert (toas["other_flag"] == "").sum() == len(toas) - 1
+
+
+@pytest.mark.parametrize(
+    "subset",
+    [slice(1, n_tim), np.array([False] + [True] * (n_tim - 1)), np.arange(1, n_tim)],
+)
+def test_flag_column_reading_subset(subset):
+    toas = get_TOAs(StringIO(tim), ephem="de421")
+    assert (toas["flag", subset] == "other_thing").sum() == 1
+    assert (toas["flag", subset] == "thing").sum() == len(toas[subset]) - 1
+    assert (toas["other_flag", subset] == "another_thing").sum() == 1
+    assert (toas["other_flag", subset] == "").sum() == len(toas[subset]) - 1
+
+
+def test_flag_column_writing():
+    toas = get_TOAs(StringIO(tim), ephem="de421")
+    toas["new_flag"] = "new_value"
+    assert np.all(toas["new_flag"] == "new_value")
+    toas["new_flag", 0] = ""
+    assert (toas["new_flag"] == "new_value").sum() == len(toas) - 1
+    toas["new_flag"] = ""
+    assert np.all(toas["new_flag"] == "")

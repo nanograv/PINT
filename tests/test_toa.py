@@ -1,8 +1,15 @@
+import os
+import re
 import unittest
+from io import StringIO
+
 import astropy.units as u
 from astropy.time import Time
-from pint.toa import TOA, TOAs
+from pinttestdata import datadir
+
+from pint.models import get_model
 from pint.observatory import get_observatory
+from pint.toa import TOA, TOAs, make_fake_toas
 
 
 class TestTOA(unittest.TestCase):
@@ -36,7 +43,7 @@ class TestTOA(unittest.TestCase):
         self.assertEqual(t.mjd.precision, 9)
 
     def test_typo(self):
-        TOA(self.MJD, errror=1)
+        TOA(self.MJD, errror="1")
         with self.assertRaises(TypeError):
             TOA(self.MJD, errror=1, flags={})
 
@@ -94,3 +101,23 @@ class TestTOAs(unittest.TestCase):
         assert toas.table["mjd"][0].location == site2.earth_location_itrf()
         assert toas.table["mjd"][1].location == site3.earth_location_itrf()
         assert toas.table["mjd"][2].location == site1.earth_location_itrf()
+
+
+def test_toa_summary():
+    m = get_model(os.path.join(datadir, "NGC6440E.par"))
+    toas = make_fake_toas(57000, 58000, 10, m, obs="ao", freq=2000 * u.MHz)
+    s = toas.get_summary()
+
+    assert re.search(r"Number of commands: *0", s)
+    assert re.search(r"Number of observatories: *1 *\['arecibo'\]", s)
+    assert re.search(r"MJD span: *57000\.000 to 58000\.000", s)
+    assert re.search(
+        r"Date span: *20\d\d-\d\d-\d\d \d\d:\d\d:\d\d\.\d+ to 20\d\d-\d\d-\d\d \d\d:\d\d:\d\d\.\d+",
+        s,
+    )
+    assert re.search(r"arecibo TOAs *\(10\):", s)
+    assert re.search(r" *Min freq: *2000.000 MHz", s)
+    assert re.search(r" *Max freq: *2000.000 MHz", s)
+    assert re.search(r" *Min error: *1 us", s)
+    assert re.search(r" *Max error: *1 us", s)
+    assert re.search(r" *Median error: *1 us", s)

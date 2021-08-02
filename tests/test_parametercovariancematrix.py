@@ -49,12 +49,7 @@ def test_wls_covmatrix(wls):
         matrix_uncertainty = np.sqrt(
             wls.parameter_covariance_matrix.get_label_matrix([param]).matrix[0, 0]
         )
-        if param in ["RAJ", "DECJ"]:
-            # then uncertainties are in arcsec, need to convert
-            factor = 3600
-        else:
-            factor = 1
-        assert np.isclose(uncertainties[param] / factor, matrix_uncertainty)
+        assert np.isclose(uncertainties[param], matrix_uncertainty)
 
 
 def test_gls_covmatrix(wls):
@@ -71,12 +66,7 @@ def test_gls_covmatrix(wls):
         matrix_uncertainty = np.sqrt(
             gls.parameter_covariance_matrix.get_label_matrix([param]).matrix[0, 0]
         )
-        if param in ["RAJ", "DECJ"]:
-            # then uncertainties are in arcsec, need to convert
-            factor = 3600
-        else:
-            factor = 1
-        assert np.isclose(uncertainties[param] / factor, matrix_uncertainty)
+        assert np.isclose(uncertainties[param], matrix_uncertainty)
 
 
 def test_downhillwls_covmatrix(wls):
@@ -94,12 +84,7 @@ def test_downhillwls_covmatrix(wls):
         matrix_uncertainty = np.sqrt(
             dh_wls.parameter_covariance_matrix.get_label_matrix([param]).matrix[0, 0]
         )
-        if param in ["RAJ", "DECJ"]:
-            # then uncertainties are in arcsec, need to convert
-            factor = 3600
-        else:
-            factor = 1
-        assert np.isclose(uncertainties[param] / factor, matrix_uncertainty)
+        assert np.isclose(uncertainties[param], matrix_uncertainty)
 
 
 def test_downhillgls_covmatrix(wls):
@@ -117,12 +102,7 @@ def test_downhillgls_covmatrix(wls):
         matrix_uncertainty = np.sqrt(
             dh_gls.parameter_covariance_matrix.get_label_matrix([param]).matrix[0, 0]
         )
-        if param in ["RAJ", "DECJ"]:
-            # then uncertainties are in arcsec, need to convert
-            factor = 3600
-        else:
-            factor = 1
-        assert np.isclose(uncertainties[param] / factor, matrix_uncertainty)
+        assert np.isclose(uncertainties[param], matrix_uncertainty)
 
 
 def test_wb_covmatrix(wb):
@@ -132,12 +112,7 @@ def test_wb_covmatrix(wb):
         matrix_uncertainty = np.sqrt(
             wb.parameter_covariance_matrix.get_label_matrix([param]).matrix[0, 0]
         )
-        if param in ["RAJ", "DECJ"]:
-            # then uncertainties are in arcsec, need to convert
-            factor = 3600
-        else:
-            factor = 1
-        assert np.isclose(uncertainties[param] / factor, matrix_uncertainty)
+        assert np.isclose(uncertainties[param], matrix_uncertainty)
 
 
 def test_downhillwb_covmatrix(wb):
@@ -154,9 +129,4 @@ def test_downhillwb_covmatrix(wb):
         matrix_uncertainty = np.sqrt(
             dwb.parameter_covariance_matrix.get_label_matrix([param]).matrix[0, 0]
         )
-        if param in ["RAJ", "DECJ"]:
-            # then uncertainties are in arcsec, need to convert
-            factor = 3600
-        else:
-            factor = 1
-        assert np.isclose(uncertainties[param] / factor, matrix_uncertainty)
+        assert np.isclose(uncertainties[param], matrix_uncertainty)

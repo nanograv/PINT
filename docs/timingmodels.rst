@@ -18,6 +18,8 @@ these PINT raises an exception.
 
 .. componentlist::
 
+.. _`Supported Parameters`:
+
 Supported Parameters
 --------------------
 
