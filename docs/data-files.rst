@@ -13,7 +13,7 @@ other examples can be located via:
 
 
 For example, the file ``NGC6440E.par`` from the
-:ref:`examples/time_a_pulsar.ipynb` notebook can be found via:
+`Time a Pulsar`_ notebook can be found via:
 
 ::
 
@@ -21,3 +21,5 @@ For example, the file ``NGC6440E.par`` from the
    filename = pint.datafile("NGC6440E.par")
 
 Also see :func:`pint.datadir` and :func:`pint.datafile`.  
+
+.. _`Time a Pulsar`: examples/time_a_pulsar.html
