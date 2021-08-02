@@ -47,7 +47,7 @@ def test_add_jumps_and_flags(setup_NGC6440E):
     selected_toa_ind2 = [10, 11, 12]
     j2 = cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind2])
     jp2 = getattr(cp, j2)
-    assert jp2.flag == "-gui_jump"
+    assert jp2.flag == "gui_jump"
     assert jp2.flag_value == "2"
     # check previous jump flags unaltered
     for d in setup_NGC6440E.t.table["flags"][selected_toa_ind]:
@@ -274,7 +274,7 @@ def test_multiple_jumps_add():
     [
         pint.models.parameter.maskParameter(
             name="JUMP",
-            flag="-fish",
+            flag="fish",
             flag_value="carp",
             units=u.s,
             value=7,

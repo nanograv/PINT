@@ -1344,9 +1344,9 @@ class TimingModel:
 
         new_jumps = []
         # check if any TOAs are jumped
-        jumped = set(
-            flag_dict[flag] for flag_dict in toas.table["flags"] if flag in flag_dict
-        )
+        jumped = set(toas[flag])
+        if "" in jumped:
+            jumped.remove("")
         if not jumped:
             log.info("No jump flags to process from .tim file")
             return new_jumps
@@ -1373,7 +1373,7 @@ class TimingModel:
             param = maskParameter(
                 name="JUMP",
                 index=next_free_index,
-                flag="-" + flag,
+                flag=flag,
                 flag_value=j,
                 value=0.0,
                 units="second",

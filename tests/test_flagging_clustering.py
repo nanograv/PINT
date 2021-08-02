@@ -55,14 +55,10 @@ def test_jump_by_cluster(setup_NGC6440E):
     m_copy.add_component(PhaseJump(), validate=False)
     cp_copy = m_copy.components["PhaseJump"]
     par_copy = p.maskParameter(
-        name="JUMP", flag="-toacluster", value=0.2, flag_value="41", units=u.s
+        name="JUMP", flag="toacluster", value=0.2, flag_value="41", units=u.s
     )
     # this should be identical to the cluster above
     cp_copy.add_param(par_copy, setup=True)
     assert set(cp.JUMP1.select_toa_mask(setup_NGC6440E.t)) == set(
         cp_copy.JUMP1.select_toa_mask(setup_NGC6440E.t)
     )
-
-
-if __name__ == "__main__":
-    pass

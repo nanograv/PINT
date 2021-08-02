@@ -209,7 +209,7 @@ class PhaseJump(PhaseComponent):
         """
         in_use = set()
         for pm in self.jumps:
-            if pm.flag == "-" + flag:
+            if pm.flag == flag:
                 in_use.add(pm.flag_value)
         if flag_value is None:
             i = 1
@@ -231,7 +231,7 @@ class PhaseJump(PhaseComponent):
         param = maskParameter(
             name="JUMP",
             index=i,
-            flag="-" + flag,
+            flag=flag,
             flag_value=flag_value,
             value=0.0,
             units="second",

@@ -106,12 +106,12 @@ def test_name_mask(toas):
 
 def test_flag_mask(toas):
     with pytest.raises(ValueError):
-        maskParameter("test2", flag="-fe", flag_value=430)
-    mp_flag2 = maskParameter("test2", flag="-fe", flag_value="430")
+        maskParameter("test2", flag="fe", flag_value=430)
+    mp_flag2 = maskParameter("test2", flag="fe", flag_value="430")
     assert mp_flag2.flag_value == "430"
     with pytest.raises(ValueError):
-        maskParameter("test2", flag="fe", flag_value="430")
-    mp_flag3 = maskParameter("test2", flag="-fe", flag_value="L-wide")
+        maskParameter("test2", flag="-fe", flag_value="430")
+    mp_flag3 = maskParameter("test2", flag="fe", flag_value="L-wide")
     assert mp_flag3.flag_value == "L-wide"
     select_toas = mp_flag3.select_toa_mask(toas)
     assert len(select_toas) > 0

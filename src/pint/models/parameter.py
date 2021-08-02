@@ -42,6 +42,7 @@ from pint.pulsar_mjd import (
     time_to_longdouble,
     time_to_mjd_string,
 )
+from pint.toa import FlagDict
 from pint.utils import split_prefixed_name
 
 log = logging.getLogger(__name__)
@@ -1529,14 +1530,7 @@ class maskParameter(floatParameter):
         elif flag == "tel":
             return get_observatory(flag_value).name
         else:
-            if not isinstance(flag_value, str):
-                raise ValueError(
-                    f"When selecting by {flag} one must supply a "
-                    f"string not {flag_value}"
-                )
-            # FlagDict.validate() once #1074 is merged.
-            if len(flag_value.split()) != 1:
-                raise ValueError(f"Flag value {repr(flag_value)} cannot occur in TOAs.")
+            FlagDict.check_allowed_value(flag, flag_value)
             return flag_value
 
     @staticmethod
@@ -1568,11 +1562,7 @@ class maskParameter(floatParameter):
             )
         else:
             flag = flag.lower()
-            if flag not in self.allowed_non_flags and not flag.startswith("-"):
-                raise ValueError(
-                    f"Flags must be indicated with -, and the only "
-                    f"non-flags allowed are {maskParameter.allowed_non_flags}."
-                )
+            FlagDict.check_allowed_key(flag)
             self._flag = flag
 
     @property
@@ -1633,10 +1623,10 @@ class maskParameter(floatParameter):
         -----
         The accepted formats for most flags::
 
-            NAME flag flag_value parameter_value
-            NAME flag flag_value parameter_value fit_flag
-            NAME flag flag_value parameter_value fit_flag uncertainty
-            NAME flag flag_value parameter_value uncertainty
+            NAME -flag flag_value parameter_value
+            NAME -flag flag_value parameter_value fit_flag
+            NAME -flag flag_value parameter_value fit_flag uncertainty
+            NAME -flag flag_value parameter_value uncertainty
 
         If the flag is one of MJD or FREQ then::
 
@@ -1659,13 +1649,23 @@ class maskParameter(floatParameter):
             return False
 
         try:
-            self.flag = k[1]
+            flag = k[1].lower()
         except IndexError:
             raise ValueError(
                 "{}: No flag found on timfile line {!r}".format(self.name, line)
             )
+        if flag in self.allowed_non_flags:
+            self.flag = flag
+        elif not flag.startswith("-"):
+            raise ValueError(
+                f"Flags must be indicated with -, and the only "
+                f"non-flags allowed are {maskParameter.allowed_non_flags}."
+            )
+        else:
+            # Strip leading -
+            self.flag = flag[1:]
 
-        if self.flag in self.wants_two_values:
+        if flag in self.wants_two_values:
             flag_value_str = k[2], k[3]
             len_flag_v = 2
         else:
@@ -1703,7 +1703,11 @@ class maskParameter(floatParameter):
             name = self.origin_name
         else:
             name = self.use_alias
-        line = "%-15s %s " % (name, self.flag)
+        if self.flag in self.allowed_non_flags:
+            flag = self.flag
+        else:
+            flag = "-" + self.flag
+        line = "%-15s %s " % (name, flag)
         if isinstance(self.flag_value, str):
             line += self.flag_value
         else:

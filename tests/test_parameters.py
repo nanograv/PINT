@@ -91,7 +91,7 @@ def test_read_par_line_expected_values():
     assert_allclose(test_m.JUMP7.uncertainty_value, 10.5)
     assert_allclose(test_m.JUMP6.value, 0.1)
     assert_allclose(test_m.JUMP6.uncertainty_value, 10.0)
-    assert test_m.JUMP12.flag == "-testflag"
+    assert test_m.JUMP12.flag == "testflag"
     assert not test_m.JUMP12.frozen
     assert test_m.JUMP12.flag_value == "flagvalue"
     assert_allclose(test_m.JUMP12.value, 0.1)
@@ -179,7 +179,7 @@ class TestParameters(unittest.TestCase):
         self.assertTrue(np.isclose(test_m.JUMP7.uncertainty_value, 10.5))
         self.assertTrue(np.isclose(test_m.JUMP6.value, 0.1))
         self.assertTrue(np.isclose(test_m.JUMP6.uncertainty_value, 10.0))
-        self.assertEqual(test_m.JUMP12.flag, "-testflag")
+        self.assertEqual(test_m.JUMP12.flag, "testflag")
         self.assertEqual(test_m.JUMP12.frozen, False)
         self.assertEqual(test_m.JUMP12.flag_value, "flagvalue")
         self.assertTrue(np.isclose(test_m.JUMP12.value, 0.1))
@@ -600,7 +600,7 @@ valid_settings = [
     ("freq", (1000.0 * u.MHz, 2000.0 * u.MHz)),
     ("mjd", (57000.0, 58000.0)),
     ("mjd", [57000.0, 58000.0]),
-    ("-fish", "carp"),
+    ("fish", "carp"),
     ("freq", (2000.0 * u.MHz, np.inf * u.MHz)),
     ("freq", np.array([1000, 2000], dtype=np.longdouble) * u.MHz),
 ]
@@ -608,8 +608,9 @@ invalid_settings = [
     ("tel", (10, 20)),
     ("freq", "ao"),
     ("mjd", ([], [])),
-    ("-fish", (1, 2)),
-    ("-fish", ["c", "a", "r", "p"]),
+    ("-fish", "carp"),
+    ("fish", (1, 2)),
+    ("fish", ["c", "a", "r", "p"]),
 ]
 
 
