@@ -29,6 +29,7 @@ def plot_chains(chain_dict, file=False):
 
 
 import pint
+
 parfile = pint.datafile("NGC6440E.par.good")
 timfile = pint.datafile("NGC6440E.tim")
 print(parfile)
