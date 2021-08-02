@@ -59,7 +59,7 @@ def test_commenting_toas(tmpdir):
     ts2 = toa.get_TOAs(outnm)
     assert ts2.ntoas == 2  # none should be commented
     ts.table[0]["flags"]["cut"] = "do_not_like"  # cut flag
-    ts.table[1]["flags"]["ignore"] = True  # ignore flag
+    ts.table[1]["flags"]["ignore"] = str(1)  # ignore flag
     ts.write_TOA_file(outnm)
     ts3 = toa.get_TOAs(outnm)  # defaut is to not comment
     assert ts3.ntoas == 2  # none should be commented by default
@@ -153,11 +153,20 @@ def test_tim_writing_order():
 
     o = StringIO()
     toas.write_TOA_file(o, order_by_index=False)
-    obs = [ln.split()[4] for ln in o.getvalue().split("\n")[1:] if ln]
+    toas.write_TOA_file("test.tim", order_by_index=False)
+    obs = [
+        ln.split()[4]
+        for ln in o.getvalue().split("\n")[1:]
+        if (ln and not ln.startswith("C "))
+    ]
     assert obs[0] == obs[1] == obs[2] == obs[3]
 
     o = StringIO()
     toas.write_TOA_file(o, order_by_index=True)
-    obs = [ln.split()[4] for ln in o.getvalue().split("\n")[1:] if ln]
+    obs = [
+        ln.split()[4]
+        for ln in o.getvalue().split("\n")[1:]
+        if (ln and not ln.startswith("C "))
+    ]
     assert obs[0] == obs[3] == obs[6] == obs[9]
     assert obs[0] != obs[1]

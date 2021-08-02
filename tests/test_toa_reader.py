@@ -87,7 +87,7 @@ class TestTOAReader(unittest.TestCase):
         assert self.x.table[3]["flags"]["info"] == "test2"
 
     def test_time(self):
-        assert self.x.table[3]["flags"]["to"] == 1.0
+        assert float(self.x.table[3]["flags"]["to"]) == 1.0
 
     def test_jump_2(self):
         assert "jump" not in self.x.table[4]["flags"]
@@ -247,15 +247,15 @@ def test_toas_read_list():
 
 
 @given(arrays(float, integers(1, 100), elements=floats(50000, 70000)))
-def test_numpy_groups(t):
+def test_numpy_clusterss(t):
     gap = 1
-    groups = toa._group_by_gaps(t, gap)
-    for i in range(np.amax(groups) + 1):
-        c = groups == i
-        in_group = np.sort(t[c])
-        assert np.all(np.diff(in_group) < gap)
+    clusters = toa._cluster_by_gaps(t, gap)
+    for i in range(np.amax(clusters) + 1):
+        c = clusters == i
+        in_cluster = np.sort(t[c])
+        assert np.all(np.diff(in_cluster) < gap)
 
-        for e in [in_group[0], in_group[-1]]:
+        for e in [in_cluster[0], in_cluster[-1]]:
             assert np.all(np.abs(t[~c] - e) >= gap)
 
 

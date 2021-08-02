@@ -1,19 +1,50 @@
-"""Miscellaneous potentially-helpful functions."""
+"""Miscellaneous potentially-helpful functions.
+
+Warning
+-------
+Functions:
+
+- :func:`~pint.derived_quantities.a1sini`
+- :func:`~pint.derived_quantities.companion_mass`
+- :func:`~pint.derived_quantities.gamma`
+- :func:`~pint.derived_quantities.mass_funct`
+- :func:`~pint.derived_quantities.mass_funct2`
+- :func:`~pint.derived_quantities.omdot`
+- :func:`~pint.derived_quantities.omdot_to_mtot`
+- :func:`~pint.derived_quantities.p_to_f`
+- :func:`~pint.derived_quantities.pbdot`
+- :func:`~pint.derived_quantities.pferrs`
+- :func:`~pint.derived_quantities.pulsar_B`
+- :func:`~pint.derived_quantities.pulsar_B_lightcyl`
+- :func:`~pint.derived_quantities.pulsar_age`
+- :func:`~pint.derived_quantities.pulsar_edot`
+- :func:`~pint.derived_quantities.pulsar_mass`
+- :func:`~pint.derived_quantities.shklovskii_factor`
+
+have moved to :mod:`pint.derived_quantities`.
+"""
+import configparser
+import datetime
+import getpass
+import os
+import platform
 import re
+import textwrap
+from collections import OrderedDict
 from contextlib import contextmanager
 from copy import deepcopy
 from io import StringIO
-from collections import OrderedDict
 
 import astropy.constants as const
 import astropy.coordinates as coords
-import astropy.units as u
 import astropy.coordinates.angles as angles
+import astropy.units as u
 import numpy as np
 import scipy.optimize.zeros as zeros
 from astropy import log
 from scipy.special import fdtrc
 
+import pint
 import pint.pulsar_ecliptic
 
 __all__ = [
@@ -30,25 +61,18 @@ __all__ = [
     "lines_of",
     "interesting_lines",
     "show_param_cov_matrix",
+    "pmtot",
     "dmxparse",
     "dmxstats",
     "dmx_ranges_old",
     "dmx_ranges",
-    "p_to_f",
-    "pferrs",
     "weighted_mean",
     "ELL1_check",
-    "mass_funct",
-    "mass_funct2",
-    "pulsar_mass",
-    "companion_mass",
-    "pulsar_age",
-    "pulsar_edot",
-    "pulsar_B",
-    "pulsar_B_lightcyl",
     "FTest",
     "add_dummy_distance",
     "remove_dummy_distance",
+    "calculate_random_models",
+    "info_string",
 ]
 
 
@@ -431,9 +455,11 @@ def show_param_cov_matrix(matrix, params, name="Covariance Matrix", switchRD=Fal
     :param name: title to be printed above, default Covariance Matrix
     :param switchRD: if True, switch the positions of RA and DEC to match setup of TEMPO cov. matrices
 
-    :return string to be printed
+    :return: string to be printed
 
-    DEPRECATED
+    Warning
+    -------
+    **DEPRECATED**.  Use :meth:`pint.pint_matrix.CovarianceMatrix.prettyprint` instead of :func:`show_param_cov_matrix`
     """
 
     warn(
@@ -502,14 +528,19 @@ def pmtot(model):
     so PMRA = (d(RAJ)/dt)*cos(DECJ). This is different from the astrometry community where mu_alpha = d(alpha)/dt.
     Thus, we don't need to include cos(DECJ) or cos(ELAT) in our calculation.
 
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+
     Returns
     -------
-    pmtot : Quantity
-        Returns total proper motion with units of u.mas/u.yr
+    pmtot : astropy.units.Quantity
+        Returns total proper motion with units of ``u.mas/u.yr``
 
     Raises
     ------
-        AttributeError if no Astrometry component is found in the model
+    AttributeError
+        If no Astrometry component is found in the model
     """
 
     if "AstrometryEcliptic" in model.components.keys():
@@ -1096,326 +1127,24 @@ def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
         return wmean, werr
 
 
-def p_to_f(p, pd, pdd=None):
-    """Converts P, Pdot to F, Fdot (or vice versa)
-
-    Convert period, period derivative and period second
-    derivative to the equivalent frequency counterparts.
-    Will also convert from f to p.
-    """
-    f = 1.0 / p
-    fd = -pd / (p * p)
-    if pdd is None:
-        return [f, fd]
-    else:
-        if pdd == 0.0:
-            fdd = 0.0
-        else:
-            fdd = 2.0 * pd * pd / (p ** 3.0) - pdd / (p * p)
-        return [f, fd, fdd]
-
-
-def pferrs(porf, porferr, pdorfd=None, pdorfderr=None):
-    """Convert P, Pdot to F, Fdot with uncertainties.
-
-    Calculate the period or frequency errors and
-    the pdot or fdot errors from the opposite one.
-    """
-    if pdorfd is None:
-        return [1.0 / porf, porferr / porf ** 2.0]
-    else:
-        forperr = porferr / porf ** 2.0
-        fdorpderr = np.sqrt(
-            (4.0 * pdorfd ** 2.0 * porferr ** 2.0) / porf ** 6.0
-            + pdorfderr ** 2.0 / porf ** 4.0
-        )
-        [forp, fdorpd] = p_to_f(porf, pdorfd)
-        return [forp, forperr, fdorpd, fdorpderr]
-
-
-def pulsar_age(f, fdot, n=3, fo=1e99 * u.Hz):
-    """Compute pulsar characteristic age
-
-    Return the age of a pulsar given the spin frequency
-    and frequency derivative.  By default, the characteristic age
-    is returned (assuming a braking index 'n'=3 and an initial
-    spin frequency fo >> f).  But 'n' and 'fo' can be set.
-    """
-    return (-f / ((n - 1.0) * fdot) * (1.0 - (f / fo) ** (n - 1.0))).to(u.yr)
-
-
-def pulsar_edot(f, fdot, I=1.0e45 * u.g * u.cm ** 2):
-    """Compute pulsar spindown energy loss rate
-
-    Return the pulsar Edot (in erg/s) given the spin frequency and
-    frequency derivative. The NS moment of inertia is assumed to be
-    I = 1.0e45 g cm^2 by default.
-    """
-    return (-4.0 * np.pi ** 2 * I * f * fdot).to(u.erg / u.s)
-
-
-def pulsar_B(f, fdot):
-    """Compute pulsar surface magnetic field
-
-    Return the estimated pulsar surface magnetic field strength
-    given the spin frequency and frequency derivative.
-    """
-    # This is a hack to use the traditional formula by stripping the units.
-    # It would be nice to improve this to a  proper formula with units
-    return 3.2e19 * u.G * np.sqrt(-fdot.to(u.Hz / u.s).value / f.to(u.Hz).value ** 3.0)
-
-
-def pulsar_B_lightcyl(f, fdot):
-    """Compute pulsar magnetic field at the light cylinder
-
-    Return the estimated pulsar magnetic field strength at the
-    light cylinder given the spin frequency and
-    frequency derivative.
-    """
-    p, pd = p_to_f(f, fdot)
-    # This is a hack to use the traditional formula by stripping the units.
-    # It would be nice to improve this to a  proper formula with units
-    return (
-        2.9e8
-        * u.G
-        * p.to(u.s).value ** (-5.0 / 2.0)
-        * np.sqrt(pd.to(u.dimensionless_unscaled).value)
-    )
-
-
-def mass_funct(pb, x):
-    """Compute binary mass function from period and semi-major axis
-
-    Parameters
-    ----------
-    pb : Quantity
-        Binary period
-    x : Quantity in `pint.ls`
-        Semi-major axis, A1SINI, in units of ls
-
-    Returns
-    -------
-    f_m : Quantity
-        Mass function in `u.solMass`
-    """
-    if not isinstance(x, u.quantity.Quantity):
-        raise ValueError(
-            f"The projected semi-major axis x should be a Quantity but is {x}."
-        )
-    if not isinstance(pb, u.quantity.Quantity):
-        raise ValueError(f"The binary period pb should be a Quantity but is {pb}.")
-    fm = 4.0 * np.pi ** 2 * x ** 3 / (const.G * pb ** 2)
-    return fm.to(u.solMass)
-
-
-def mass_funct2(mp, mc, i):
-    """Compute binary mass function from masses and inclination
-
-    Parameters
-    ----------
-    mp : Quantity
-        Pulsar mass, typically in `u.solMass`
-    mc : Quantity
-        Companion mass, typically in `u.solMass`
-    i : Angle
-        Inclination angle, in `u.deg` or `u.rad`
-
-    Returns
-    -------
-    f_m : Quantity
-        Mass function in `u.solMass`
-
-    Returns
-    -------
-    f_m : Quantity
-        Mass function in solar masses
-
-    Notes
-    -----
-    Inclination is such that edge on is `i = 90*u.deg`
-    An 'average' orbit has cos(i) = 0.5, or `i = 60*u.deg`
-    """
-    if not (isinstance(i, angles.Angle) or isinstance(i, u.quantity.Quantity)):
-        raise ValueError(f"The inclination should be an Angle but is {i}.")
-    if not isinstance(mc, u.quantity.Quantity):
-        raise ValueError(f"The companion mass should be a Quantity but is {mc}.")
-    if not isinstance(mp, u.quantity.Quantity):
-        raise ValueError(f"The pulsar mass should be a Quantity but is {mp}.")
-
-    return (mc * np.sin(i)) ** 3.0 / (mc + mp) ** 2.0
-
-
-def pulsar_mass(pb, x, mc, inc):
-    """Compute pulsar mass from orbital parameters
-
-    Return the pulsar mass (in solar mass units) for a binary.
-
-    Parameters
-    ----------
-    pb : Quantity
-        Binary orbital period
-    x : Quantity
-        Projected semi-major axis (aka ASINI) in `pint.ls`
-    mc : Quantity
-        Companion mass in `u.solMass`
-    inc : Angle
-        Inclination angle, in `u.deg` or `u.rad`
-
-    Returns
-    -------
-    mass : Quantity in `u.solMass`
-
-    Notes
-    -------
-    This forms a quadratic equation of the form:
-    ca*Mp**2 + cb*Mp + cc = 0
-
-    with:
-    ca = massfunct
-    cb = 2 * massfunct * mc
-    cc = massfunct * mc ** 2 - (mc * sini) ** 3
-
-    except the discriminant simplifies to:
-    4 * massfunct * mc**3 * sini**3
-
-    solve it directly
-    this has to be the positive branch of the quadratic
-    because the vertex is at -mc, so the negative branch will always be < 0
-
-    """
-    if not (isinstance(inc, angles.Angle) or isinstance(inc, u.quantity.Quantity)):
-        raise ValueError(f"The inclination should be an Angle but is {inc}.")
-    if not isinstance(x, u.quantity.Quantity):
-        raise ValueError(
-            f"The projected semi-major axis x should be a Quantity but is {x}."
-        )
-    if not isinstance(pb, u.quantity.Quantity):
-        raise ValueError(f"The binary period pb should be a Quantity but is {pb}.")
-    if not isinstance(mc, u.quantity.Quantity):
-        raise ValueError(f"The companion mass should be a Quantity but is {mc}.")
-
-    massfunct = mass_funct(pb, x)
-
-    sini = np.sin(inc)
-    ca = massfunct
-    cb = 2 * massfunct * mc
-
-    return ((-cb + np.sqrt(4 * massfunct * mc ** 3 * sini ** 3)) / (2 * ca)).to(u.Msun)
-
-
-def companion_mass(pb, x, inc=60.0 * u.deg, mpsr=1.4 * u.solMass):
-    """Commpute the companion mass from the orbital parameters
-
-    Compute companion mass for a binary system from orbital mechanics,
-    not Shapiro delay.
-
-    Parameters
-    ----------
-    pb : Quantity
-        Binary orbital period
-    x : Quantity
-        Projected semi-major axis (aka ASINI) in `pint.ls`
-    inc : Angle, optional
-        Inclination angle, in `u.deg` or `u.rad.` Default is 60 deg.
-    mpsr : Quantity, optional
-        Pulsar mass in `u.solMass`. Default is 1.4 Msun
-
-    Returns
-    -------
-    mass : Quantity in `u.solMass`
-
-    Notes
-    -----
-    This ends up as a a cubic equation of the form:
-    a*Mc**3 + b*Mc**2 + c*Mc + d = 0
-
-    a = np.sin(inc) ** 3
-    b = -massfunct
-    c = -2 * mpsr * massfunct
-    d = -massfunct * mpsr ** 2
-
-    To solve it we can use a direct calculation of the cubic roots:
-    https://en.wikipedia.org/wiki/Cubic_equation#General_cubic_formula
-
-    It's useful to look at the discriminant to understand the nature of the roots
-    and make sure we get the right one
-
-    https://en.wikipedia.org/wiki/Discriminant#Degree_3
-    delta = (
-        cb ** 2 * cc ** 2
-        - 4 * ca * cc ** 3
-        - 4 * cb ** 3 * cd
-        - 27 * ca ** 2 * cd ** 2
-        + 18 * ca * cb * cc * cd
-    )
-    if delta is < 0 then there is only 1 real root, and I think we do it correctly below
-    and this should be < 0
-    since this reduces to -27 * sin(i)**6 * massfunct**2 * mp**4 -4 * sin(i)**3 * massfunct**3 * mp**3
-    so there is just 1 real root and we compute it below
-
-    """
-    if not (isinstance(inc, angles.Angle) or isinstance(inc, u.quantity.Quantity)):
-        raise ValueError(f"The inclination should be an Angle but is {inc}.")
-    if not isinstance(x, u.quantity.Quantity):
-        raise ValueError(
-            f"The projected semi-major axis x should be a Quantity but is {x}."
-        )
-    if not isinstance(pb, u.quantity.Quantity):
-        raise ValueError(f"The binary period pb should be a Quantity but is {pb}.")
-    if not isinstance(mpsr, u.quantity.Quantity):
-        raise ValueError(f"The pulsar mass should be a Quantity but is {mpsr}.")
-
-    massfunct = mass_funct(pb, x)
-
-    # solution
-    sini = np.sin(inc)
-    a = sini ** 3
-    # delta0 = b ** 2 - 3 * a * c
-    # delta0 is always > 0
-    delta0 = massfunct ** 2 + 6 * mpsr * massfunct * a
-    # delta1 is always <0
-    # delta1 = 2 * b ** 3 - 9 * a * b * c + 27 * a ** 2 * d
-    delta1 = (
-        -2 * massfunct ** 3
-        - 18 * a * mpsr * massfunct ** 2
-        - 27 * a ** 2 * massfunct * mpsr ** 2
-    )
-    # Q**2 is always > 0, so this is never a problem
-    # in terms of complex numbers
-    # Q = np.sqrt(delta1**2 - 4*delta0**3)
-    Q = np.sqrt(
-        108 * a ** 3 * mpsr ** 3 * massfunct ** 3
-        + 729 * a ** 4 * mpsr ** 4 * massfunct ** 2
-    )
-    # this could be + or - Q
-    # pick the - branch since delta1 is <0 so that delta1 - Q is never near 0
-    Ccubed = 0.5 * (delta1 + Q)
-    # try to get the real root
-    C = np.sign(Ccubed) * np.fabs(Ccubed) ** (1.0 / 3)
-    # note that the difference b**2 - 3*a*c should be strictly positive
-    # so those shouldn't cancel
-    # and then all three terms should have the same signs
-    # since a>0, b<0, C<0, and delta0>0
-    # the denominator will be near 0 only when sin(i) is ~0, but that's already a known problem
-    x1 = massfunct / 3.0 / a - C / 3.0 / a - delta0 / 3.0 / a / C
-    return x1.to(u.Msun)
-
-
-def ELL1_check(A1, E, TRES, NTOA, outstring=True):
+@u.quantity_input
+def ELL1_check(
+    A1: u.cm, E: u.dimensionless_unscaled, TRES: u.us, NTOA: int, outstring=True
+):
     """Check for validity of assumptions in ELL1 binary model
 
     Checks whether the assumptions that allow ELL1 to be safely used are
     satisfied. To work properly, we should have:
-    asini/c * ecc**2 << timing precision / sqrt(# TOAs)
-    or A1 * E**2 << TRES / sqrt(NTOA)
+    :math:`asini/c  e^2 \ll {\\rm timing precision} / \sqrt N_{\\rm TOA}`
+    or :math:`A1 E^2 \ll TRES / \sqrt N_{\\rm TOA}`
 
     Parameters
     ----------
-    A1 : Quantity
+    A1 : astropy.units.Quantity
         Projected semi-major axis (aka ASINI) in `pint.ls`
-    E : Quantity (dimensionless)
+    E : astropy.units.Quantity (dimensionless)
         Eccentricity
-    TRES : Quantity
+    TRES : astropy.units.Quantity
         RMS TOA uncertainty
     NTOA : int
         Number of TOAs in the fit
@@ -1452,29 +1181,6 @@ def ELL1_check(A1, E, TRES, NTOA, outstring=True):
         return False
 
 
-def shklovskii_factor(pmtot, D):
-    """Compute magnitude of Shklovskii correction factor.
-
-    Computes the Shklovskii correction factor, as defined in Eq 8.12 of Lorimer & Kramer (2005)
-    This is the factor by which Pdot/P is increased due to the transverse velocity.
-    Note that this affects both the measured spin period and the orbital period.
-    If we call this Shklovskii acceleration a_s, then
-        Pdot_intrinsic = Pdot_observed - a_s*P
-
-    Parameters
-    ----------
-    pmtot : Quantity, typically units of u.mas/u.yr
-        Total proper motion of the pulsar (system)
-    D : Quantity, typically in units of u.kpc or u.pc
-        Distance to the pulsar
-    """
-    # This uses the small angle approximation that sin(x) = x, so we need to
-    # make our angle dimensionless.
-    with u.set_enabled_equivalencies(u.dimensionless_angles()):
-        a_s = (D * pmtot ** 2 / const.c).to(u.s ** -1)
-    return a_s
-
-
 def FTest(chi2_1, dof_1, chi2_2, dof_2):
     """Run F-test.
 
@@ -1492,18 +1198,18 @@ def FTest(chi2_1, dof_1, chi2_2, dof_2):
 
     Parameters
     -----------
-    chi2_1 : Float
+    chi2_1 : float
         Chi-squared value of model with fewer parameters
-    dof_1 : Int
+    dof_1 : int
         Degrees of freedom of model with fewer parameters
-    chi2_2 : Float
+    chi2_2 : float
         Chi-squared value of model with more parameters
-    dof_2 : Int
+    dof_2 : int
         Degrees of freedom of model with more parameters
 
     Returns
     --------
-    ft : Float
+    ft : float
         F-test significance value for the model with the larger number of
         components over the other.
     """
@@ -1529,19 +1235,18 @@ def FTest(chi2_1, dof_1, chi2_2, dof_2):
 
 
 def add_dummy_distance(c, distance=1 * u.kpc):
-    """
-    Adds a dummy distance to a SkyCoord object for applying proper motion
+    """Adds a dummy distance to a SkyCoord object for applying proper motion
 
     Parameters
     ----------
-    c: `astropy.coordinates.sky_coordinate.SkyCoord` object
+    c: astropy.coordinates.SkyCoord
         current SkyCoord object without distance but with proper motion and obstime
-    distance: `Quantity`, optional
+    distance: astropy.units.Quantity, optional
         distance to supply
 
     Returns
     -------
-    cnew
+    cnew : astropy.coordinates.SkyCoord
         new SkyCoord object with a distance attached
     """
 
@@ -1611,17 +1316,16 @@ def add_dummy_distance(c, distance=1 * u.kpc):
 
 
 def remove_dummy_distance(c):
-    """
-    Removes a dummy distance from a SkyCoord object after applying proper motion
+    """Removes a dummy distance from a SkyCoord object after applying proper motion
 
     Parameters
     ----------
-    c: `astropy.coordinates.sky_coordinate.SkyCoord` object
+    c: astropy.coordinates.SkyCoord
         current SkyCoord object with distance and with proper motion and obstime
 
     Returns
     -------
-    cnew
+    cnew : astropy.coordinates.SkyCoord
         new SkyCoord object with a distance removed
     """
 
@@ -1686,6 +1390,140 @@ def remove_dummy_distance(c):
         return c
 
 
+def info_string(prefix_string="# ", comment=None):
+    """Returns an informative string about the current state of PINT.
+
+    Adds:
+
+    * Creation date
+    * PINT version
+    * Username (given by the `gitpython`_ global configuration ``user.name``
+      if available, in addition to :func:`getpass.getuser`).
+    * Host (given by :func:`platform.node`)
+    * OS (given by :func:`platform.platform`)
+    * plus a user-supplied comment (if present).
+
+    Parameters
+    ----------
+    prefix_string: str, default='# '
+        a string to be prefixed to the output (often to designate as a
+        comment or similar)
+    comment: str, optional
+        a free-form comment string to be included if present
+
+    Returns
+    -------
+    str
+        informative string
+
+    Examples
+    --------
+    >>> import pint.utils
+    >>> print(pint.utils.info_string(prefix_string="# ",comment="Example comment"))
+    # Created: 2021-07-21T09:39:45.606894
+    # PINT_version: 0.8.2+311.ge351099d
+    # User: David Kaplan (dlk)
+    # Host: margle-2.local
+    # OS: macOS-10.14.6-x86_64-i386-64bit
+    # Comment: Example comment
+
+    Multi-line comments are allowed:
+
+    >>> import pint.utils
+    >>> print(pint.utils.info_string(prefix_string="C ",
+    ...                              comment="Example multi-line comment\\nAlso using a different comment character"))
+    C Created: 2021-07-21T09:40:34.172333
+    C PINT_version: 0.8.2+311.ge351099d
+    C User: David Kaplan (dlk)
+    C Host: margle-2.local
+    C OS: macOS-10.14.6-x86_64-i386-64bit
+    C Comment: Example multi-line comment
+    C Comment: Also using a different comment character
+
+    Full example of writing a par and tim file:
+
+    >>> from pint.models import get_model_and_toas
+    >>> # the locations of these may vary
+    >>> timfile = "tests/datafile/NGC6440E.tim"
+    >>> parfile = "tests/datafile/NGC6440E.par"
+    >>> m, t = get_model_and_toas(parfile, timfile)
+    >>> print(m.as_parfile(comment="Here is a comment on the par file"))
+    # Created: 2021-07-22T08:24:27.101479
+    # PINT_version: 0.8.2+439.ge81c9b11.dirty
+    # User: David Kaplan (dlk)
+    # Host: margle-2.local
+    # OS: macOS-10.14.6-x86_64-i386-64bit
+    # Comment: Here is a comment on the par file
+    PSR                            1748-2021E
+    EPHEM                               DE421
+    CLK                             UTC(NIST)
+    ...
+
+    >>> from pint.models import get_model_and_toas
+    >>> import io
+    >>> # the locations of these may vary
+    >>> timfile = "tests/datafile/NGC6440E.tim"
+    >>> parfile = "tests/datafile/NGC6440E.par"
+    >>> m, t = get_model_and_toas(parfile, timfile)
+    >>> f = io.StringIO(parfile)
+    >>> t.write_TOA_file(f, comment="Here is a comment on the tim file")
+    >>> f.seek(0)
+    >>> print(f.getvalue())
+    FORMAT 1
+    C Created: 2021-07-22T08:24:27.213529
+    C PINT_version: 0.8.2+439.ge81c9b11.dirty
+    C User: David Kaplan (dlk)
+    C Host: margle-2.local
+    C OS: macOS-10.14.6-x86_64-i386-64bit
+    C Comment: Here is a comment on the tim file
+    unk 1949.609000 53478.2858714192189005 21.710 gbt  -format Princeton -ddm 0.0
+    unk 1949.609000 53483.2767051885165973 21.950 gbt  -format Princeton -ddm 0.0
+    unk 1949.609000 53489.4683897879295023 29.950 gbt  -format Princeton -ddm 0.0
+    ....
+
+
+    Notes
+    -----
+    This can be called via  :func:`~pint.toa.TOAs.write_TOA_file` on a :class:`~~pint.toa.TOAs` object,
+    or :func:`~pint.models.timing_model.TimingModel.as_parfile` on a
+    :class:`~pint.models.timing_model.TimingModel` object.
+
+    .. _gitpython: https://gitpython.readthedocs.io/en/stable/
+    """
+    # try to get the git user if defined
+    try:
+        import git
+
+        # user-level git config
+        c = git.GitConfigParser()
+        username = c.get_value("user", option="name") + f" ({getpass.getuser()})"
+    except (configparser.NoOptionError, ImportError):
+        username = getpass.getuser()
+
+    s = f"""
+    Created: {datetime.datetime.now().isoformat()}
+    PINT_version: {pint.__version__}
+    User: {username}
+    Host: {platform.node()}
+    OS: {platform.platform()}
+    """
+
+    s = textwrap.dedent(s)
+    # remove blank lines
+    s = os.linesep.join([x for x in s.splitlines() if x])
+    if comment is not None:
+        if os.linesep in comment:
+            s += os.linesep + os.linesep.join(
+                [f"Comment: {x}" for x in comment.splitlines()]
+            )
+        else:
+            s += f"{os.linesep}Comment: {comment}"
+
+    if (prefix_string is not None) and (len(prefix_string) > 0):
+        s = os.linesep.join([prefix_string + x for x in s.splitlines()])
+    return s
+
+
 def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params="all"):
     """
     Calculates random models based on the covariance matrix of the `fitter` object.
@@ -1695,29 +1533,51 @@ def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params=
 
     Parameters
     ----------
-    fitter: `pint.fitter` object
+    fitter: pint.fitter.Fitter
         current fitter object containing a model and parameter covariance matrix
-    toas: `pint.toa.TOAs` object
+    toas: pint.toa.TOAs
         TOAs to calculate models
-    Nmodels: int (optional)
+    Nmodels: int, optional
         number of random models to calculate
-    keep_models: bool (optional)
+    keep_models: bool, optional
         whether to keep and return the individual random models (slower)
-    params: list (optional)
+    params: list, optional
         if specified, selects only those parameters to vary.  Default ('all') is to use all parameters other than Offset
 
     Returns
     -------
     dphase : np.ndarray
         phase difference with respect to input model, size is [Nmodels, len(toas)]
-    random_models : list (optional)
-        list of random models (each is a `pint.models.timing_model.TimingModel`)
+    random_models : list, optional
+        list of random models (each is a :class:`pint.models.timing_model.TimingModel`)
+
+    Example
+    -------
+    >>> from pint.models import get_model_and_toas
+    >>> from pint import fitter, toa
+    >>> import pint.utils
+    >>> import io
+    >>>
+    >>> # the locations of these may vary
+    >>> timfile = "tests/datafile/NGC6440E.tim"
+    >>> parfile = "tests/datafile/NGC6440E.par"
+    >>> m, t = get_model_and_toas(parfile, timfile)
+    >>> # fit the model to the data
+    >>> f = fitter.WLSFitter(toas=t, model=m)
+    >>> f.fit_toas()
+    >>>
+    >>> # make fake TOAs starting at the end of the
+    >>> # current data and going out 100 days
+    >>> tnew = toa.make_fake_toas(t.get_mjds().max().value,
+    >>>                           t.get_mjds().max().value+100, 50, model=f.model)
+    >>> # now make random models
+    >>> dphase, mrand = pint.utils.calculate_random_models(f, tnew, Nmodels=100)
 
 
     Note
     ----
-    To calculate new TOAs, you can do:
-        `tnew = pint.toa.make_fake_toas(MJDmin, MJDmax, Ntoa, model=fitter.model)`
+    To calculate new TOAs, you can use :func:`~pint.toa.make_fake_toas`
+
     or similar
     """
     Nmjd = len(toas)
@@ -1801,10 +1661,10 @@ def list_parameters(class_=None):
     if class_ is not None:
         from pint.models.parameter import (
             boolParameter,
-            strParameter,
             intParameter,
-            prefixParameter,
             maskParameter,
+            prefixParameter,
+            strParameter,
         )
 
         result = []

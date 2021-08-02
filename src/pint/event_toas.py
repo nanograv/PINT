@@ -83,7 +83,7 @@ def create_mission_config():
         cols = {}
         if "ecol" in data:
             ecol = data["ecol"]
-            cols = {"ecol": ecol}
+            cols = {"ecol": str(ecol)}
         mission_config[mission]["fits_extension"] = ext
         mission_config[mission]["fits_columns"] = cols
 
@@ -272,8 +272,8 @@ def load_fits_TOAs(
     kw = {}
     for i in range(len(mjds)):
         # Create TOA list
-        for key in new_kwargs.keys():
-            kw[key] = new_kwargs[key][i]
+        for key in new_kwargs:
+            kw[key] = str(new_kwargs[key][i])
         toalist[i] = toa.TOA(mjds[i], obs=obs, scale=scale, **kw)
 
     return toalist

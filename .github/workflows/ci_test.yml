@@ -29,9 +29,9 @@ jobs:
           - os: ubuntu-latest
             python: '3.8'
             tox_env: 'notebooks'
-          - os: ubuntu-latest
-            python: '3.8'
-            tox_env: 'docs'
+#          - os: ubuntu-latest
+#            python: '3.8'
+#            tox_env: 'docs'
           - os: ubuntu-latest
             python: '3.8'
             tox_env: 'py38-test-alldeps-cov'
@@ -83,12 +83,12 @@ jobs:
       run: tox -e ${{ matrix.tox_env }} -- --remote-data=any
     - name: Upload coverage to codecov
       if: "endsWith(matrix.tox_env, '-cov')"
-      uses: codecov/codecov-action@v1.0.13
+      uses: codecov/codecov-action@v2
       with:
-        file: ./coverage.xml
-    - name: Publish docs as an artifact
-      if: "endsWith(matrix.tox_env, 'docs')"
-      uses: actions/upload-artifact@v2
-      with:
-          name: documentation
-          path: .tox/docs_out/
+        files: coverage.xml
+#    - name: Publish docs as an artifact
+#      if: "endsWith(matrix.tox_env, 'docs')"
+#      uses: actions/upload-artifact@v2
+#      with:
+#          name: documentation
+#          path: .tox/docs_out/

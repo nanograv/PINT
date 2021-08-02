@@ -614,8 +614,8 @@ class WidebandDMResiduals(Residuals):
         valid_index: list
             The TOA with DM data index.
         """
-        dm_data, valid_data = self.toas.get_flag_value("pp_dm")
-        dm_error, valid_error = self.toas.get_flag_value("pp_dme")
+        dm_data, valid_data = self.toas.get_flag_value("pp_dm", as_type=float)
+        dm_error, valid_error = self.toas.get_flag_value("pp_dme", as_type=float)
         if valid_data == []:
             raise ValueError("Input TOA object does not have wideband DM values")
         # Check valid error, if an error is none, change it to zero

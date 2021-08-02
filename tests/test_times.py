@@ -81,7 +81,9 @@ def test_times_against_tempo2():
         # Ensure that the clock corrections are accurate to better than 0.1 ns
         assert (
             math.fabs(
-                (oclk * u.s + gps_utc * u.s - TOA["flags"]["clkcorr"]).to(u.ns).value
+                (oclk * u.s + gps_utc * u.s - float(TOA["flags"]["clkcorr"]) * u.s)
+                .to(u.ns)
+                .value
             )
             < 0.1
         )

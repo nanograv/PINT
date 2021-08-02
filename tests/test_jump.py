@@ -39,21 +39,18 @@ def test_add_jumps_and_flags(setup_NGC6440E):
     # simulate selecting TOAs in pintk and jumping them
     selected_toa_ind = [1, 2, 3]  # arbitrary set of TOAs
     cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind])
-    for dict in setup_NGC6440E.t.table["flags"][selected_toa_ind]:
-        assert dict["jump"] == ["1"]
-        assert dict["gui_jump"] == "1"
+    for d in setup_NGC6440E.t.table["flags"][selected_toa_ind]:
+        assert d["gui_jump"] == "1"
 
     # add second jump to different set of TOAs
     selected_toa_ind2 = [10, 11, 12]
     cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind2])
     # check previous jump flags unaltered
-    for dict in setup_NGC6440E.t.table["flags"][selected_toa_ind]:
-        assert dict["jump"] == ["1"]
-        assert dict["gui_jump"] == "1"
+    for d in setup_NGC6440E.t.table["flags"][selected_toa_ind]:
+        assert d["gui_jump"] == "1"
     # check appropriate flags added
-    for dict in setup_NGC6440E.t.table["flags"][selected_toa_ind2]:
-        assert dict["jump"] == ["2"]
-        assert dict["gui_jump"] == "2"
+    for d in setup_NGC6440E.t.table["flags"][selected_toa_ind2]:
+        assert d["gui_jump"] == "2"
 
 
 def test_add_overlapping_jump(setup_NGC6440E):
@@ -67,12 +64,10 @@ def test_add_overlapping_jump(setup_NGC6440E):
     selected_toa_ind3 = [9, 10, 11]
     cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind3])
     # check previous jump flags unaltered
-    for dict in setup_NGC6440E.t.table["flags"][selected_toa_ind]:
-        assert dict["jump"] == ["1"]
-        assert dict["gui_jump"] == "1"
-    for dict in setup_NGC6440E.t.table["flags"][selected_toa_ind2]:
-        assert dict["jump"] == ["2"]
-        assert dict["gui_jump"] == "2"
+    for d in setup_NGC6440E.t.table["flags"][selected_toa_ind]:
+        assert d["gui_jump"] == "1"
+    for d in setup_NGC6440E.t.table["flags"][selected_toa_ind2]:
+        assert d["gui_jump"] == "2"
     # check that no flag added to index 9
     assert "jump" not in setup_NGC6440E.t.table[9].colnames
     assert "gui_jump" not in setup_NGC6440E.t.table[9].colnames
@@ -87,21 +82,12 @@ def test_remove_jump_and_flags(setup_NGC6440E):
     cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind2])
     # test delete_jump_and_flags
     setup_NGC6440E.m.delete_jump_and_flags(setup_NGC6440E.t.table["flags"], 1)
-    for dict in setup_NGC6440E.t.table["flags"][selected_toa_ind]:
-        assert "jump" not in dict
-        assert "gui_jump" not in dict
-    # check that other flags at higher indeces adjust
-    for dict in setup_NGC6440E.t.table["flags"][selected_toa_ind2]:
-        assert dict["jump"] == ["1"]
-        assert dict["gui_jump"] == "1"
     assert len(cp.jumps) == 1
-    assert "JUMP1" in cp.jumps
 
     # delete last jump
-    setup_NGC6440E.m.delete_jump_and_flags(setup_NGC6440E.t.table["flags"], 1)
-    for dict in setup_NGC6440E.t.table["flags"][selected_toa_ind2]:
-        assert "jump" not in dict
-        assert "gui_jump" not in dict
+    setup_NGC6440E.m.delete_jump_and_flags(setup_NGC6440E.t.table["flags"], 2)
+    for d in setup_NGC6440E.t.table["flags"][selected_toa_ind2]:
+        assert "jump" not in d
     assert "PhaseJump" not in setup_NGC6440E.m.components
 
 
@@ -161,20 +147,19 @@ def test_multijump_toa(setup_NGC6440E):
     )  # TOAs indexed 48, 49, 54 in NGC6440E are within this frequency range
     selected_toa_ind = [48, 49, 54]
     cp.add_param(par, setup=True)
-    # add flags based off jumps added to model
-    setup_NGC6440E.m.jump_params_to_flags(setup_NGC6440E.t)
 
     # check that one can still add "gui jumps" to model-jumped TOAs
     cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind])
+    # add flags based off jumps added to model
+    setup_NGC6440E.m.jump_params_to_flags(setup_NGC6440E.t)
     for dict in setup_NGC6440E.t.table["flags"][selected_toa_ind]:
-        assert dict["jump"] == ["1", "2"]
+        assert dict["jump"] == "1,2"
         assert dict["gui_jump"] == "2"
     assert len(cp.jumps) == 2
 
     setup_NGC6440E.m.delete_jump_and_flags(setup_NGC6440E.t.table["flags"], 2)
     for dict in setup_NGC6440E.t.table["flags"][selected_toa_ind]:
         assert "jump" in dict
-        assert "gui_jump" not in dict
     assert len(cp.jumps) == 1
     assert "JUMP1" in cp.jumps
 

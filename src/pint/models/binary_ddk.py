@@ -1,4 +1,4 @@
-"""The DDK model - DD with kinematics."""
+"""The DDK model - Damour and Deruelle with kinematics."""
 from astropy import log
 
 from pint.models.binary_dd import BinaryDD
@@ -8,16 +8,32 @@ from pint.models.timing_model import MissingParameter, TimingModelError
 
 
 class BinaryDDK(BinaryDD):
-    """Wrapper for the DDK model - DD with kinematics.
+    """Damour and Deruelle model with kinematics.
 
-    This is a PINT pulsar binary ddk model class a subclass of DD model.
-    It is a wrapper for independent DDKmodel class defined in
-    ./stand_alone_psr_binary/DDK_model.py
-    All the detailed calculations are in the independent DDKmodel.
-    The aim for this class is to connect the independent binary model with PINT platform
-    DDKmodel special parameters:
-    KIN inclination angle
-    KOM the longitude of the ascending node, Kopeikin (1995) Eq 9. OMEGA
+    This extends the :class:`pint.models.binary_dd.BinaryDD` model with
+    "Shklovskii" and "Kopeikin" terms that account for the finite distance
+    of the system from Earth, the finite size of the system, and the
+    interaction of these with the proper motion.
+
+    The actual calculations for this are done in
+    :class:`pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel`.
+
+    It supports all the parameters defined in :class:`pint.models.pulsar_binary.PulsarBinary`
+    and :class:`pint.models.pulsar_binary.BinaryDDK` plus:
+
+        - KIN - inclination angle (deg)
+        - KOM - the longitude of the ascending node, Kopeikin (1995) Eq 9. OMEGA (deg)
+        - K96 - flag for Kopeikin binary model proper motion correction
+
+    It also removes:
+
+        - SINI - use KIN instead
+
+    Note
+    ----
+    This model defines KOM with reference to celestial north regardless of the astrometry
+    model. This is incompatible with tempo2, which defines KOM with reference to ecliptic
+    north when using ecliptic coordinates.
 
     Parameters supported:
 
@@ -56,6 +72,7 @@ class BinaryDDK(BinaryDD):
                 " correction",
             )
         )
+        self.remove_param("SINI")
         self.internal_params += ["PMRA_DDK", "PMDEC_DDK"]
 
     @property
@@ -80,19 +97,9 @@ class BinaryDDK(BinaryDD):
         )
         return par_obj
 
-    def setup(self):
-        """Check out parameters setup.
-        """
-        super(BinaryDDK, self).setup()
-        log.info(
-            "Using ICRS equatorial coordinate. The parameter KOM is"
-            " measured respect to equatorial North."
-        )
-
     def validate(self):
-        """ Validate parameters
-        """
-        super(BinaryDDK, self).validate()
+        """Validate parameters."""
+        super().validate()
         if "PMRA" not in self._parent.params or "PMDEC" not in self._parent.params:
             # Check ecliptic coordinates proper motion.
             if (
@@ -102,16 +109,13 @@ class BinaryDDK(BinaryDD):
                 raise MissingParameter(
                     "DDK", "DDK model needs proper motion parameters."
                 )
-        if self.SINI.quantity is not None:
-            raise TimingModelError(
-                "DDK model does not accept `SINI` as input. Please"
-                " use `KIN` instead."
-            )
 
         if hasattr(self._parent, "PX"):
             if self._parent.PX.value <= 0.0 or self._parent.PX.value is None:
-                raise ValueError("DDK model needs a valid `PX` value.")
+                raise TimingModelError("DDK model needs a valid `PX` value.")
         else:
             raise MissingParameter(
                 "Binary_DDK", "PX", "DDK model needs PX from" "Astrometry."
             )
+        # Should we warn if the model is using ecliptic coordinates?
+        # Should we support KOM_PINT that works this way and KOM that works the way tempo2 does?

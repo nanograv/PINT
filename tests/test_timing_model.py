@@ -171,7 +171,7 @@ class TestModelBuilding:
         tm = TimingModel(
             "TestTimingModel", [BinaryELL1(), AstrometryEquatorial(), Spindown()]
         )
-        tfp = {"F0", "T0", "EPS1", "RAJ"}
+        tfp = {"F0", "TASC", "EPS1", "RAJ"}
         # Turn off the fit parameters
         for p in tm.params:
             par = getattr(tm, p)
@@ -186,9 +186,9 @@ class TestModelBuilding:
         )
 
         with pytest.raises(ValueError):
-            tm.free_params = ["F0", "T0", "EPS1", "RAJ", "CAPYBARA"]
+            tm.free_params = ["F0", "TASC", "EPS1", "RAJ", "CAPYBARA"]
 
-        tfp = {"F0", "T0", "EPS1", "RAJ"}
+        tfp = {"F0", "TASC", "EPS1", "RAJ"}
         tm.free_params = tfp
         assert set(tm.free_params) == tfp
 
