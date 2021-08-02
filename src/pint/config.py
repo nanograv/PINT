@@ -26,7 +26,7 @@ def datapath(fname):
 
     Notes
     -----
-    For files used in :ref:`Examples` and :ref:`Tutorials`, see :func:`pint.datadir` and :func:`pint.datafile`.
+    For files used in  :ref:`Tutorials`, see :func:`pint.datadir` and :func:`pint.datafile`.
     """
 
     # List of directories to search, in order

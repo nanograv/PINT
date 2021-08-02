@@ -48,6 +48,8 @@ __all__ = [
     "pint_units",
     # "PulsarEcliptic",
     # "PulsarMJD",
+    "datadir",
+    "datafile",
 ]
 
 __version__ = get_versions()["version"]
@@ -108,7 +110,7 @@ if astropy.version.major < 4:
         )
     )
 
-# location of tim, par files
+# location of tim, par files installed via pkg_resources
 def datadir():
     """Location of the PINT data (par and tim files)
 
