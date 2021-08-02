@@ -109,7 +109,7 @@ if astropy.version.major < 4:
     )
 
 # location of tim, par files
-def data_dir():
+def datadir():
     """Location of the PINT data (par and tim files)
 
     Returns
@@ -121,7 +121,7 @@ def data_dir():
     return pkg_resources.resource_filename(__name__, "data/")
 
 
-def data_file(filename):
+def datafile(filename):
     """Full path to the requested PINT data file
 
     Parameters
@@ -134,4 +134,4 @@ def data_file(filename):
         Full path to the requested file
 
     """
-    return os.path.join(data_dir(), filename)
+    return os.path.join(datadir(), filename)
