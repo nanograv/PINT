@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.5.1
+#       jupytext_version: 1.11.2
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -28,11 +28,12 @@ import astropy.units as u
 import pint.fitter, pint.toa
 from pint.models import get_model_and_toas
 from pint import utils
+import pint
 
 # %%
 # use the same data as `time_a_pulsar` notebook
-parfile = "NGC6440E.par"
-timfile = "NGC6440E.tim"
+parfile = pint.datafile("NGC6440E.par")
+timfile = pint.datafile("NGC6440E.tim")
 
 # %%
 # we will do this very simply - ignoring some of the TOA filtering

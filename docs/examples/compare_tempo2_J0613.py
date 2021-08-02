@@ -19,10 +19,11 @@ except ImportError:
     )
     raise
 
-# Using Nanograv data J0623-0200
-datadir = "../../tests/datafile"
-parfile = os.path.join(datadir, "J0613-0200_NANOGrav_dfg+12_TAI_FB90.par")
-timfile = os.path.join(datadir, "J0613-0200_NANOGrav_dfg+12.tim")
+# Using Nanograv data J0613-0200
+import pint
+
+parfile = pint.datafile("J0613-0200_NANOGrav_dfg+12_TAI_FB90.par")
+timfile = pint.datafile("J0613-0200_NANOGrav_dfg+12.tim")
 
 # libstempo calculation
 print("tempo2 calculation")

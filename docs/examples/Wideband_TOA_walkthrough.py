@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.7.1
+#       jupytext_version: 1.11.2
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -28,6 +28,7 @@ from astropy.visualization import quantity_support
 from pint.fitter import WidebandTOAFitter
 from pint.models import get_model_and_toas
 from pint.toa import get_TOAs
+import pint
 
 quantity_support()
 
@@ -36,7 +37,8 @@ quantity_support()
 
 # %%
 model, toas = get_model_and_toas(
-    "J1614-2230_NANOGrav_12yv3.wb.gls.par", "J1614-2230_NANOGrav_12yv3.wb.tim"
+    pint.datafile("J1614-2230_NANOGrav_12yv3.wb.gls.par"),
+    pint.datafile("J1614-2230_NANOGrav_12yv3.wb.tim"),
 )
 
 # %% [markdown]

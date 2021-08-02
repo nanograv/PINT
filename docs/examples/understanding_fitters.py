@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.7.1
+#       jupytext_version: 1.11.2
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -28,6 +28,7 @@ import astropy.units as u
 import pint.toa
 import pint.models
 import pint.fitter
+import pint
 
 # %%
 # %matplotlib inline
@@ -40,8 +41,8 @@ quantity_support()
 
 # %%
 # Load some TOAs and a model to fit
-t = pint.toa.get_TOAs("NGC6440E.tim", usepickle=False)
-m = pint.models.get_model("NGC6440E.par")
+t = pint.toa.get_TOAs(pint.datafile("NGC6440E.tim"), usepickle=False)
+m = pint.models.get_model(pint.datafile("NGC6440E.par"))
 
 # %%
 # You can check if a model includes a noise model with correlated errors (e.g. ECORR or TNRED) by checking the has_correlated_errors property

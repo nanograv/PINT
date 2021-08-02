@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.7.1
+#       jupytext_version: 1.11.2
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -28,8 +28,10 @@ from pint.residuals import Residuals
 from pint.toa import get_TOAs
 
 # %%
-parfile = "NGC6440E.par"
-timfile = "NGC6440E.tim"
+import pint
+
+parfile = pint.datafile("NGC6440E.par")
+timfile = pint.datafile("NGC6440E.tim")
 
 # %%
 m, t_all = get_model_and_toas(parfile, timfile)
