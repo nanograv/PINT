@@ -14,7 +14,7 @@ other examples can be located via :func:`pint.datafile`:
 ::
 
    import pint
-   filename = pint.datafile(<filename>)
+   fullfilename = pint.datafile(filename)
 
 
 For example, the file ``NGC6440E.par`` from the
@@ -23,7 +23,7 @@ For example, the file ``NGC6440E.par`` from the
 ::
 
    import pint
-   filename = pint.datafile("NGC6440E.par")
+   fullfilename = pint.datafile("NGC6440E.par")
 
 Examples
 --------

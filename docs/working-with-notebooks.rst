@@ -15,7 +15,21 @@ If you create a new notebook, tell ``jupytext`` that you want to keep a plain py
 
    $ jupytext --set-formats ipynb,py:percent docs/examples/my_notebook.ipynb
 
-This will generate a ``.py`` version that also contains the information from non-Python cells as comments. The format is understandable to `Spyder`_ as well, which can recognize and execute code cells.
+This will generate a ``.py`` version that also contains the
+information from non-Python cells as comments. The format is
+understandable to `Spyder`_ as well, which can recognize and execute
+code cells.
+
+Put any data files in ``src/pint/data``, and include a note about the
+data (where you got it from) in ``src/pint/data/README.md``.  This
+will ensure that the data get put in the proper place on installing
+``pint``.  To refer to the files use :func:`pint.datafile`:
+
+::
+
+   import pint
+   fullfilename = pint.datafile(filename)
+
 
 If you check something out of ``git``, or switch branches, or want to make sure you have current versions of all the notebooks, run::
 
