@@ -14,7 +14,10 @@
 # ---
 
 # %% [markdown]
-# # Generate fake data on a relativistic double neutron star (PSR B1534+12), Plot a mass-mass diagram to illustrate the overlapping constraints
+# # Generate fake data on a relativistic on a DNS, make a mass-mass diagram.
+#
+# As an example we use the double neutron star (PSR B1534+12).  We generate fake data, fit post-Keplerian parameters, and
+# plot a mass-mass diagram to illustrate the overlapping constraints
 #
 # This reproduces a version of Figure 9 from [Fonseca et al. (2014, ApJ, 787, 82)](https://ui.adsabs.harvard.edu/abs/2014ApJ...787...82F/abstract)
 
