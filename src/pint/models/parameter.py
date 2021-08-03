@@ -360,6 +360,10 @@ class Parameter:
             raise NotImplementedError()
 
     @property
+    def repeatable(self):
+        return False
+
+    @property
     def prior(self):
         """prior distribution for this parameter.
 
