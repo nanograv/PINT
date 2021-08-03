@@ -267,6 +267,12 @@ class TimingModel:
             MJDParameter(name="FINISH", description="End MJD for fitting"), ""
         )
         self.add_param_from_top(
+            floatParameter(
+                name="RM", description="Rotation measure", units=u.radian / u.m ** 2
+            ),
+            "",
+        )
+        self.add_param_from_top(
             strParameter(
                 name="INFO",
                 description="Tells TEMPO to write some extra information about frontend/backend combinations; -f is recommended",

@@ -186,11 +186,15 @@ class DispersionDM(Dispersion):
         # If DM1 is set, we need DMEPOCH
         if self.DM1.value != 0.0:
             if self.DMEPOCH.value is None:
-                raise MissingParameter(
-                    "Dispersion",
-                    "DMEPOCH",
-                    "DMEPOCH is required if DM1 or higher are set",
-                )
+                if (
+                    not hasattr(self._parent, "PEPOCH")
+                    or self._parent.PEPOCH.value is None
+                ):
+                    raise MissingParameter(
+                        "Dispersion",
+                        "DMEPOCH",
+                        "DMEPOCH or PEPOCH is required if DM1 or higher are set",
+                    )
 
     def DM_dervative_unit(self, n):
         return "pc cm^-3/yr^%d" % n if n else "pc cm^-3"
@@ -210,7 +214,10 @@ class DispersionDM(Dispersion):
         dm = np.zeros(len(tbl))
         dm_terms = self.get_DM_terms()
         if any(t.value != 0 for t in dm_terms[1:]):
-            DMEPOCH = self.DMEPOCH.value
+            if self.DMEPOCH.value is not None:
+                DMEPOCH = self.DMEPOCH.value
+            else:
+                DMEPOCH = self._parent.PEPOCH.value
             try:
                 dt = (tbl["tdbld"] - DMEPOCH) * u.day
             except TypeError as e:
