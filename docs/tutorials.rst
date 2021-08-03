@@ -28,7 +28,8 @@ For example, the file ``NGC6440E.par`` from the
 Examples
 --------
    
-We don't really have any proper tutorials yet. But for the moment, we have a few examples that may be useful:
+We don't really have any proper tutorials yet. But for the moment, we
+have a few examples that may be useful.  These tutorials examples are in the form of Jupyter notebooks, downloadable from a link at the top of each page. (Also available in the same place is a plain-python script version, in case this is more convenient.) You should be able to download these files and run them from anywhere convenient (provided ``PINT`` is installed). 
 
 .. toctree::
 
