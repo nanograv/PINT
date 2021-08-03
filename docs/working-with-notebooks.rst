@@ -4,6 +4,9 @@
 How to Work With Example Notebooks
 ==================================
 
+Converting Notebooks to Plain Python
+------------------------------------
+
 PINT's documentation includes a certain number of Jupyter notebooks. When the
 online documentation is built these are executed and the results are included
 in the documentation. This is a nice way to set up python tutorials, but there
@@ -20,6 +23,9 @@ information from non-Python cells as comments. The format is
 understandable to `Spyder`_ as well, which can recognize and execute
 code cells.
 
+Where to Put the Data
+---------------------
+
 Put any data files in ``src/pint/data``, and include a note about the
 data (where you got it from) in ``src/pint/data/README.md``.  This
 will ensure that the data get put in the proper place on installing
@@ -31,6 +37,9 @@ will ensure that the data get put in the proper place on installing
    fullfilename = pint.datafile(filename)
 
 
+Compiling and Synchronizing the Notebooks
+-----------------------------------------
+   
 If you check something out of ``git``, or switch branches, or want to make sure you have current versions of all the notebooks, run::
 
    $ make notebooks
@@ -47,11 +56,18 @@ this may stop part-way through. If this happens, try the simpler::
 
 This will synchronize the notebook contents without trying to execute them.
 
+Using the Notebooks
+-------------------
+
 Whichever of those you ran, now you can use `Jupyter Lab`_ to work
 with the notebooks as per normal. You may see a strange message about
 rebuilding and jupytext; just hit okay. The jupytext code should ensure that as
 you manipulate the notebook, the plain python is kept in sync (it contains only the
 inputs, not the outputs).
+
+
+Checking it Back Into GitHub
+----------------------------
 
 When you are ready to check things in to ``git``, just run::
 
@@ -70,6 +86,9 @@ notebook, ensure that it gets checked in to ``git`` with::
 
 That is, check the python versions in to ``git``, **not** the ``.ipynb``
 versions.
+
+Adding it to the Documentation
+------------------------------
 
 Now add the new notebook to the documentation somewhere — after all, that's why
 you wrote it, right? Do this by putting it in a "toctree", that is, add its
