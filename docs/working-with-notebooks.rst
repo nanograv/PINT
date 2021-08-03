@@ -11,7 +11,7 @@ are a few wrinkles in the way these are integrated into version control. In
 particular, storing a Jupyter notebook in ``git`` causes headaches. So we store
 a sort of "distilled" python version.
 
-If you create a new notebook, tell ``jupytext`` that you want to keep a plain python copy::
+If you create a new notebook, tell `jupytext`_ that you want to keep a plain python copy::
 
    $ jupytext --set-formats ipynb,py:percent docs/examples/my_notebook.ipynb
 
@@ -68,8 +68,8 @@ notebook, ensure that it gets checked in to ``git`` with::
 
    $ git add docs/examples/my_notebook.py
 
-That is, check the python versions in to ``git`` *not the ``.ipynb``
-versions*.
+That is, check the python versions in to ``git``, **not** the ``.ipynb``
+versions.
 
 Now add the new notebook to the documentation somewhere — after all, that's why
 you wrote it, right? Do this by putting it in a "toctree", that is, add its
@@ -99,3 +99,4 @@ it will stop with an error.
 
 .. _Spyder: https://www.spyder-ide.org/
 .. _`Jupyter Lab`: https://jupyterlab.readthedocs.io/en/stable/
+.. _Jupytext: https://jupytext.readthedocs.io/en/latest/install.html
