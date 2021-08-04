@@ -83,7 +83,14 @@ def create_mission_config():
 
     # Allow local TOAs for those missions that have a load_<MISSION>_TOAs method
     for mission in ["nustar", "nicer", "xte"]:
-        mission_config[mission]["allow_local"] = True
+        try:
+            # If mission was read from HEASARC, just update allow_local
+            mission_config[mission]["allow_local"] = True
+        except KeyError:
+            # If mission was not read from HEASARC, then create full new entry
+            mission_config[mission] = {}
+            mission_config[mission].update(mission_config["generic"])
+            mission_config[mission]["allow_local"] = True
 
     # Fix xte
     mission_config["xte"]["fits_columns"] = {"ecol": "PHA"}
