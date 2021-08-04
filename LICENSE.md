@@ -36,4 +36,4 @@ According to [this reference](http://dodcio.defense.gov/Open-Source-Software-FAQ
 > The resulting joint work as a whole is protected by the copyrights of the non-government authors and 
 > may be released according to the terms of the original open-source license.
 
-Portions of the code in the extern subdirectory (e.g. appdirs) may be covered by other licenses (e.g. the [MIT License](https://en.wikipedia.org/wiki/MIT_License)).
+Portions of the code in the extern subdirectory  may be covered by other licenses (e.g. the [MIT License](https://en.wikipedia.org/wiki/MIT_License)).
