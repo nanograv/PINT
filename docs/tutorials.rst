@@ -9,7 +9,8 @@ Data Files
 ----------
 
 The data files (``par`` and ``tim``) associated with the tutorials and
-other examples can be located via :func:`pint.examplefile`:
+other examples can be located via :func:`pint.config.examplefile`
+(available via the :mod:`pint` module):
 
 ::
 
