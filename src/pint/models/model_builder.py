@@ -45,13 +45,23 @@ class ModelBuilder:
     """
 
     def __init__(self):
-        super().__init__()
         # Validate the components
         self.all_components = AllComponents()
         self._validate_components()
         self.default_components = ["SolarSystemShapiro"]
 
     def __call__(self, parfile):
+        """Callable object for making a timing model from .par file.
+
+        Parameter
+        ---------
+        parfile: str or file-like object
+            Input .par file name or string contents
+        Return
+        ------
+        pint.models.timing_model.TimingModel
+            The result timing model based on the input .parfile or file object.
+        """
         param_inpar, repeat_par = self.parse_parfile(parfile)
         selected, conflict, param_not_in_pint = self.choose_model(param_inpar)
         selected.update(set(self.default_components))
@@ -163,8 +173,8 @@ class ModelBuilder:
         dict
             The unique parameters in .par file with the key is the parfile line.
         dict
-            The repeating parameters.
-
+            The parameters that have the same names in the .parfile or file-like
+            object.
         """
         repeat_par = defaultdict(list)
         param_inpar = {}
@@ -197,7 +207,14 @@ class ModelBuilder:
         Return
         ------
         list
-            List of selected components and a dictionary of conflict components.
+            List of selected components.
+        dict
+            Conflict components dictionary, where the key the component name,
+            the value is a list of component names that are conflicted with the
+            components in the key.
+        list
+            A list of parameters that are in the .parfile but not in the PINT
+            defined parameters.
 
         Note
         ----
