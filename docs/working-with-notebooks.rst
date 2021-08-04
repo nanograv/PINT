@@ -26,15 +26,15 @@ code cells.
 Where to Put the Data
 ---------------------
 
-Put any data files in ``src/pint/data``, and include a note about the
-data (where you got it from) in ``src/pint/data/README.md``.  This
+Put any data files in ``src/pint/data/examples``, and include a note about the
+data (where you got it from) in ``src/pint/data/examples/README.md``.  This
 will ensure that the data get put in the proper place on installing
-``pint``.  To refer to the files use :func:`pint.datafile`:
+``pint``.  To refer to the files use :func:`pint.examplefile`:
 
 ::
 
    import pint
-   fullfilename = pint.datafile(filename)
+   fullfilename = pint.examplefile(filename)
 
 
 Compiling and Synchronizing the Notebooks

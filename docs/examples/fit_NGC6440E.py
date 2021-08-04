@@ -42,8 +42,8 @@ from pint.models import get_model, get_model_and_toas
 # %%
 import pint
 
-parfile = pint.datafile("NGC6440E.par")
-timfile = pint.datafile("NGC6440E.tim")
+parfile = pint.examplefile("NGC6440E.par")
+timfile = pint.examplefile("NGC6440E.tim")
 assert os.path.exists(parfile)
 assert os.path.exists(timfile)
 

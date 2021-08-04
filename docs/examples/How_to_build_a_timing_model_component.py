@@ -267,7 +267,7 @@ from pint.fitter import WLSFitter
 from pint.toa import get_TOAs
 
 # %%
-toas = get_TOAs(pint.datafile("NGC6440E.tim"), ephem="DE421")
+toas = get_TOAs(pint.examplefile("NGC6440E.tim"), ephem="DE421")
 f = WLSFitter(toas, model)
 
 # %% [markdown]

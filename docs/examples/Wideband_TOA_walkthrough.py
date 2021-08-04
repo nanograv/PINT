@@ -37,8 +37,8 @@ quantity_support()
 
 # %%
 model, toas = get_model_and_toas(
-    pint.datafile("J1614-2230_NANOGrav_12yv3.wb.gls.par"),
-    pint.datafile("J1614-2230_NANOGrav_12yv3.wb.tim"),
+    pint.examplefile("J1614-2230_NANOGrav_12yv3.wb.gls.par"),
+    pint.examplefile("J1614-2230_NANOGrav_12yv3.wb.tim"),
 )
 
 # %% [markdown]

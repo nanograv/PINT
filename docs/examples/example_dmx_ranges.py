@@ -17,8 +17,10 @@ quantity_support()
 # In this case the model we load already has a DMX component, so we remove it first
 # and replace it with one we construct.
 
-m1855 = pint.models.get_model(pint.datafile("B1855+09_NANOGrav_9yv1.gls.par"))
-ts1855 = pint.toa.get_TOAs(pint.datafile("B1855+09_NANOGrav_9yv1.tim"), usepickle=True)
+m1855 = pint.models.get_model(pint.examplefile("B1855+09_NANOGrav_9yv1.gls.par"))
+ts1855 = pint.toa.get_TOAs(
+    pint.examplefile("B1855+09_NANOGrav_9yv1.tim"), usepickle=True
+)
 ts1855.print_summary()
 
 # Remove and build a new DMX component

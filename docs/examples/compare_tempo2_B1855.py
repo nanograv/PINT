@@ -21,8 +21,8 @@ except ImportError:
 # Using Nanograv data B1855
 import pint
 
-parfile = pint.datafile("B1855+09_NANOGrav_dfg+12_TAI_FB90.par")
-timfile = pint.datafile("B1855+09_NANOGrav_dfg+12.tim")
+parfile = pint.examplefile("B1855+09_NANOGrav_dfg+12_TAI_FB90.par")
+timfile = pint.examplefile("B1855+09_NANOGrav_dfg+12.tim")
 
 # libstempo calculation
 print("tempo2 calculation")

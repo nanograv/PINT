@@ -7,7 +7,7 @@ from astropy import log
 from astropy.utils.data import download_file
 from urllib.parse import urljoin
 
-from pint.config import datapath
+import pint
 from pint.utils import PosVel
 
 __all__ = ["objPosVel_wrt_SSB", "get_tdb_tt_ephem_geocenter"]
@@ -121,9 +121,9 @@ def _load_kernel_local(ephem, path):
         custom_path = path
     search_list = [custom_path]
     try:
-        search_list.append(datapath(ephem_bsp))
+        search_list.append(pint.runtimefile(ephem_bsp))
     except FileNotFoundError:
-        # If not found in datapath, just continue. Error will be raised later if also not in "path"
+        # If not found in runtimefile path, just continue. Error will be raised later if also not in "path"
         pass
     for p in search_list:
         if os.path.exists(p):

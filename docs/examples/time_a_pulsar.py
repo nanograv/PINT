@@ -30,8 +30,8 @@ from pint.toa import get_TOAs
 # %%
 import pint
 
-parfile = pint.datafile("NGC6440E.par")
-timfile = pint.datafile("NGC6440E.tim")
+parfile = pint.examplefile("NGC6440E.par")
+timfile = pint.examplefile("NGC6440E.tim")
 
 # %%
 m, t_all = get_model_and_toas(parfile, timfile)

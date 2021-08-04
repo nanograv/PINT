@@ -29,7 +29,7 @@ import pint
 
 # %%
 par = "B1855+09_NANOGrav_dfg+12_TAI.par"
-m = get_model(pint.datafile(par))
+m = get_model(pint.examplefile(par))
 
 
 # %% [markdown]
@@ -135,7 +135,7 @@ _ = [print(dc.__class__) for dc in m.DelayComponent_list]
 # First get the toas
 from pint.toa import get_TOAs
 
-t = get_TOAs(pint.datafile("B1855+09_NANOGrav_dfg+12.tim"))
+t = get_TOAs(pint.examplefile("B1855+09_NANOGrav_dfg+12.tim"))
 
 # %%
 # compute the total delay

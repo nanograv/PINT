@@ -27,7 +27,7 @@ import pint
 
 # %% {"jupyter": {"outputs_hidden": false}}
 # Load a model to play with
-model = pint.models.get_model(pint.datafile("B1855+09_NANOGrav_dfg+12_TAI.par"))
+model = pint.models.get_model(pint.examplefile("B1855+09_NANOGrav_dfg+12_TAI.par"))
 
 # %% {"jupyter": {"outputs_hidden": false}}
 # This model has a large number of parameters of various types

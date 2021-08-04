@@ -32,8 +32,8 @@ import pint
 
 # %%
 # use the same data as `time_a_pulsar` notebook
-parfile = pint.datafile("NGC6440E.par")
-timfile = pint.datafile("NGC6440E.tim")
+parfile = pint.examplefile("NGC6440E.par")
+timfile = pint.examplefile("NGC6440E.tim")
 
 # %%
 # we will do this very simply - ignoring some of the TOA filtering

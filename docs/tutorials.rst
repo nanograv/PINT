@@ -9,12 +9,12 @@ Data Files
 ----------
 
 The data files (``par`` and ``tim``) associated with the tutorials and
-other examples can be located via :func:`pint.datafile`:
+other examples can be located via :func:`pint.examplefile`:
 
 ::
 
    import pint
-   fullfilename = pint.datafile(filename)
+   fullfilename = pint.examplefile(filename)
 
 
 For example, the file ``NGC6440E.par`` from the
@@ -23,7 +23,7 @@ For example, the file ``NGC6440E.par`` from the
 ::
 
    import pint
-   fullfilename = pint.datafile("NGC6440E.par")
+   fullfilename = pint.examplefile("NGC6440E.par")
 
 Examples
 --------

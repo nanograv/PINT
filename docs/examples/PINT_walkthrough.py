@@ -69,7 +69,7 @@ print(a)
 import pint.toa as toa
 import pint
 
-t = toa.get_TOAs(pint.datafile("NGC6440E.tim"), usepickle=False)
+t = toa.get_TOAs(pint.examplefile("NGC6440E.tim"), usepickle=False)
 
 # %%
 #  You can print a summary of the loaded TOAs
@@ -146,7 +146,7 @@ pprint(t.table["tdbld"][:3])
 # %%
 import pint.models as models
 
-m = models.get_model(pint.datafile("NGC6440E.par"))
+m = models.get_model(pint.examplefile("NGC6440E.par"))
 
 # %%
 # Printing a model gives the parfile representation

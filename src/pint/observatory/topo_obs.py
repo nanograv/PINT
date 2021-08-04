@@ -9,8 +9,7 @@ import numpy
 from astropy import log
 from astropy.coordinates import EarthLocation
 
-from pint import JD_MJD
-from pint.config import datapath
+from pint import JD_MJD, runtimefile
 from pint.erfautils import gcrs_posvel_from_itrf
 from pint.observatory import Observatory, bipm_default
 from pint.observatory.clock_file import ClockFile
@@ -147,8 +146,8 @@ class TopoObs(Observatory):
         """Returns the full path to the clock file."""
         if self.clock_dir == "PINT":
             if self._multiple_clock_files:
-                return [datapath(f) for f in self.clock_file]
-            return datapath(self.clock_file)
+                return [runtimefile(f) for f in self.clock_file]
+            return runtimefile(self.clock_file)
         elif self.clock_dir == "TEMPO":
             # Technically should read $TEMPO/tempo.cfg and get clock file
             # location from CLKDIR line...
@@ -172,7 +171,7 @@ class TopoObs(Observatory):
         """Returns full path to the GPS-UTC clock file.  Will first try PINT
         data dirs, then fall back on $TEMPO2/clock."""
         fname = "gps2utc.clk"
-        fullpath = datapath(fname)
+        fullpath = runtimefile(fname)
         if fullpath is not None:
             return fullpath
         return os.path.join(os.getenv("TEMPO2"), "clock", fname)
@@ -185,7 +184,7 @@ class TopoObs(Observatory):
         """
         fname = "tai2tt_" + self.bipm_version.lower() + ".clk"
         try:
-            fullpath = datapath(fname)
+            fullpath = runtimefile(fname)
             return fullpath
         except FileNotFoundError:
             try:

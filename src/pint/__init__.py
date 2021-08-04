@@ -23,6 +23,7 @@ from astropy.units import si
 from pint.extern._version import get_versions
 from pint.pulsar_ecliptic import PulsarEcliptic  # ensure always loaded
 from pint.pulsar_mjd import PulsarMJD  # ensure always loaded
+from pint.config import datadir, examplefile, runtimefile
 import pint.pulsar_mjd
 
 __all__ = [
@@ -48,8 +49,6 @@ __all__ = [
     "pint_units",
     # "PulsarEcliptic",
     # "PulsarMJD",
-    "datadir",
-    "datafile",
 ]
 
 __version__ = get_versions()["version"]
@@ -109,37 +108,3 @@ if astropy.version.major < 4:
             astropy.__version__
         )
     )
-
-# location of tim, par files installed via pkg_resources
-def datadir():
-    """Location of the PINT data (par and tim files)
-
-    Returns
-    -------
-    str
-        Directory of PINT data files
-
-    Notes
-    -----
-    This is **not** for files needed at runtime. Those are located by :func:`pint.config.datapath`.
-    """
-    return pkg_resources.resource_filename(__name__, "data/")
-
-
-def datafile(filename):
-    """Full path to the requested PINT data file
-
-    Parameters
-    ----------
-    filename : str
-
-    Returns
-    -------
-    str
-        Full path to the requested file
-
-    Notes
-    -----
-    This is **not** for files needed at runtime. Those are located by :func:`pint.config.datapath`.
-    """
-    return pkg_resources.resource_filename(__name__, os.path.join("data/", filename))
