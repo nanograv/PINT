@@ -68,12 +68,6 @@ def create_mission_config():
         }
     }
 
-    # Allow local TOAs for those missions that have a load_<MISSION>_TOAs method
-    for mission in ["nustar", "nicer", "xte"]:
-        mission_config[mission] = {}
-        mission_config[mission].update(mission_config["generic"])
-        mission_config["allow_local"] = True
-
     # Read the relevant information from $HEADAS/bin/xselect.mdb, if present
     for mission, data in read_mission_info_from_heasoft().items():
         mission_config[mission] = {"allow_local": False}
@@ -86,6 +80,10 @@ def create_mission_config():
             cols = {"ecol": str(ecol)}
         mission_config[mission]["fits_extension"] = ext
         mission_config[mission]["fits_columns"] = cols
+
+    # Allow local TOAs for those missions that have a load_<MISSION>_TOAs method
+    for mission in ["nustar", "nicer", "xte"]:
+        mission_config[mission]["allow_local"] = True
 
     # Fix xte
     mission_config["xte"]["fits_columns"] = {"ecol": "PHA"}
