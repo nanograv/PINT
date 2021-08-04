@@ -1,0 +1,4 @@
+.. automodule:: {{ qualname }}
+
+.. automodsumm:: {{ qualname }}
+    
