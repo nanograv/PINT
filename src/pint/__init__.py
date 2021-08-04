@@ -22,6 +22,7 @@ from astropy import log
 from astropy.units import si
 from pint.extern._version import get_versions
 from pint.pulsar_mjd import time_to_longdouble, PulsarMJD  # ensure always loaded
+from pint.pulsar_ecliptic import PulsarEcliptic
 from pint.config import datadir, examplefile, runtimefile
 
 __all__ = [
