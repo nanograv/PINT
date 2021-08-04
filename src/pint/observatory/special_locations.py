@@ -76,7 +76,7 @@ class SpecialLocation(Observatory):
         data dirs, then fall back on $TEMPO2/clock."""
         fname = "gps2utc.clk"
         try:
-            fullpath = pint.runtimepath(fname)
+            fullpath = pint.runtimefile(fname)
             return fullpath
         except FileNotFoundError:
             log.info(
@@ -92,7 +92,7 @@ class SpecialLocation(Observatory):
         data dirs, then fall back on $TEMPO2/clock."""
         fname = "tai2tt_" + self.bipm_version.lower() + ".clk"
         try:
-            fullpath = pint.runtimepath(fname)
+            fullpath = pint.runtimefile(fname)
             return fullpath
         except FileNotFoundError:
             pass
