@@ -567,7 +567,7 @@ class Polycos:
                     ]
                 )
 
-                refPhase = model.phase(toaMid)
+                refPhase = model.phase(toaMid, abs_phase=True)
 
                 # Create node toas(Time sample using TOA class)
                 toaList = [
@@ -581,7 +581,7 @@ class Polycos:
 
                 toas = toa.get_TOAs_list(toaList)
 
-                ph = model.phase(toas)
+                ph = model.phase(toas, abs_phase=True)
                 dt = (nodes - tmid) * MIN_PER_DAY
                 rdcPhase = ph - refPhase
                 rdcPhase = rdcPhase.int - (dt * model.F0.value * 60.0) + rdcPhase.frac
