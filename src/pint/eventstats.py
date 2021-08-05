@@ -87,7 +87,7 @@ def sig2sigma(sig, two_tailed=True, logprob=False):
         if np.any(logsig > 0):
             raise ValueError("Probability must be between 0 and 1.")
     else:
-        if np.any((sig > 1) | (sig < 0)):
+        if np.any((sig > 1) | (sig <= 0)):
             raise ValueError("Probability must be between 0 and 1.")
 
     if not two_tailed:
