@@ -476,14 +476,14 @@ class Fitter:
                     mcmed = pint.derived_quantities.companion_mass(
                         self.model.PB.quantity,
                         self.model.A1.quantity,
-                        inc=60.0 * u.deg,
-                        mpsr=1.4 * u.solMass,
+                        i=60.0 * u.deg,
+                        mp=1.4 * u.solMass,
                     )
                     mcmin = pint.derived_quantities.companion_mass(
                         self.model.PB.quantity,
                         self.model.A1.quantity,
-                        inc=90.0 * u.deg,
-                        mpsr=1.4 * u.solMass,
+                        i=90.0 * u.deg,
+                        mp=1.4 * u.solMass,
                     )
                     s += "Companion mass min, median (assuming Mpsr = 1.4 Msun) = {:.4f}, {:.4f} Msun\n".format(
                         mcmin, mcmed
