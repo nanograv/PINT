@@ -62,6 +62,7 @@ __all__ = [
     "DEFAULT_ORDER",
     "TimingModel",
     "Component",
+    "AllComponents",
     "TimingModelError",
     "MissingParameter",
     "MissingTOAs",
@@ -467,11 +468,17 @@ class TimingModel:
             )
 
     def match_param_aliases(self, alias):
-        """Return the parameter corresponding to this alias.
+        """Return PINT parameter name corresponding to this alias.
 
         Parameters
         ----------
         alias: str
+           Parameter's alias.
+
+        Return
+        ------
+        str
+            PINT parameter name corresponding to the input alias.
         """
         # Search the top level first.
         for p in self.top_level_params:
@@ -484,7 +491,6 @@ class TimingModel:
         for cp in self.components.values():
             try:
                 pint_par = cp.match_param_aliases(alias)
-                print(pint_par)
             except UnknownParameter:
                 continue
             return pint_par
@@ -984,16 +990,16 @@ class TimingModel:
 
         Parameters
         ----------
-        components: list
-            Searching component list.
         param: str
             Target parameter.
 
         Return
         ------
-        List of tuples. The first element is the component object that have the
-        target parameter, the second one is the parameter object. If it is a
-        prefix-style parameter, it will return one example of such parameter.
+        list of tuples
+           All possible components that host the target parameter.  The first
+           element is the component object that have the target parameter, the
+           second one is the parameter object. If it is a prefix-style parameter
+           , it will return one example of such parameter.
         """
         result_comp = []
         for cp_name, cp in self.components.items():
@@ -2595,7 +2601,9 @@ class Component(object, metaclass=ModelMeta):
 
         Note
         ----
-        This function only searches the alias in the component level.
+        This function only searches the parameter aliases within the current
+        component. If one wants to search the aliases in the scope of TimingModel,
+        please use :py:meth:`TimingModel.match_param_aliase`.
         """
         pname = self.aliases_map.get(alias, None)
         # Split the alias prefix, see if it is a perfix alias
@@ -2834,7 +2842,7 @@ class AllComponents:
                     # also add the aliases to the repeatable param
                     for als in par.aliases:
                         repeatable.append(als)
-        return list(set(repeatable))
+        return set(repeatable)
 
     @lazyproperty
     def category_component_map(self):
