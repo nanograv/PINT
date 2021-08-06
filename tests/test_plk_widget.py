@@ -1,12 +1,14 @@
 import astropy.units as u
 import unittest
 from pint.pintk.plk import PlkWidget
+from tkinter import Frame
 
 
 class TestPlkWidget(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.widget = PlkWidget()
+        # use __new__ to prevent an actual tkinter window from popping up
+        cls.widget = Frame.__new__(PlkWidget)
 
     def test_determine_yaxis_units(self):
         # test interval where no unit conversion happens
