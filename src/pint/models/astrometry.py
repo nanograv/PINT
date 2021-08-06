@@ -251,19 +251,13 @@ class AstrometryEquatorial(Astrometry):
 
         self.add_param(
             floatParameter(
-                name="PMRA",
-                units="mas/year",
-                value=0.0,
-                description="Proper motion in RA",
+                name="PMRA", units="mas/year", description="Proper motion in RA",
             )
         )
 
         self.add_param(
             floatParameter(
-                name="PMDEC",
-                units="mas/year",
-                value=0.0,
-                description="Proper motion in DEC",
+                name="PMDEC", units="mas/year", description="Proper motion in DEC",
             )
         )
         self.set_special_params(["RAJ", "DECJ", "PMRA", "PMDEC"])
@@ -279,8 +273,10 @@ class AstrometryEquatorial(Astrometry):
         for p in ("RAJ", "DECJ"):
             if getattr(self, p).value is None:
                 raise MissingParameter("Astrometry", p)
+        if (self.PMRA.quantity is None) != (self.PMDEC.quantity is None):
+            raise ValueError("PMELONG and PMELAT must either both be set or neither.")
         # Check for POSEPOCH
-        if self.POSEPOCH.quantity is None:
+        if self.PMRA.quantity is not None and self.POSEPOCH.quantity is None:
             if self._parent.PEPOCH.quantity is None:
                 raise MissingParameter(
                     "AstrometryEquatorial",
@@ -288,7 +284,6 @@ class AstrometryEquatorial(Astrometry):
                     "POSEPOCH or PEPOCH are required if PM is set.",
                 )
             else:
-                log.warning("POSEPOCH not found; using PEPOCH unless set explicitly!")
                 self.POSEPOCH.quantity = self._parent.PEPOCH.quantity
 
     def print_par(self):
@@ -324,7 +319,11 @@ class AstrometryEquatorial(Astrometry):
         the position at the given epoch.
 
         """
-        if epoch is None or (self.PMRA.value == 0.0 and self.PMDEC.value == 0.0):
+        if (
+            epoch is None
+            or self.PMRA.value is None
+            or (self.PMRA.value == 0.0 and self.PMDEC.value == 0.0)
+        ):
             return coords.SkyCoord(
                 ra=self.RAJ.quantity,
                 dec=self.DECJ.quantity,
@@ -517,7 +516,6 @@ class AstrometryEcliptic(Astrometry):
             floatParameter(
                 name="PMELONG",
                 units="mas/year",
-                value=0.0,
                 description="Proper motion in ecliptic longitude",
                 aliases=["PMLAMBDA"],
             )
@@ -527,7 +525,6 @@ class AstrometryEcliptic(Astrometry):
             floatParameter(
                 name="PMELAT",
                 units="mas/year",
-                value=0.0,
                 description="Proper motion in ecliptic latitude",
                 aliases=["PMBETA"],
             )
@@ -555,8 +552,10 @@ class AstrometryEcliptic(Astrometry):
         for p in ("ELONG", "ELAT"):
             if getattr(self, p).value is None:
                 raise MissingParameter("AstrometryEcliptic", p)
+        if (self.PMELONG.quantity is None) != (self.PMELAT.quantity is None):
+            raise ValueError("PMELONG and PMELAT must either both be set or neither.")
         # Check for POSEPOCH
-        if self.POSEPOCH.quantity is None:
+        if self.PMELONG.quantity is not None and self.POSEPOCH.quantity is None:
             if self._parent.PEPOCH.quantity is None:
                 raise MissingParameter(
                     "Astrometry",
@@ -564,7 +563,6 @@ class AstrometryEcliptic(Astrometry):
                     "POSEPOCH or PEPOCH are required if PM is set.",
                 )
             else:
-                log.warning("POSEPOCH not found; using PEPOCH unless set explicitly!")
                 self.POSEPOCH.quantity = self._parent.PEPOCH.quantity
 
     def barycentric_radio_freq(self, toas):
@@ -592,7 +590,6 @@ class AstrometryEcliptic(Astrometry):
 
         If epoch (MJD) is specified, proper motion is included to return
         the position at the given epoch.
-
         """
         try:
             obliquity = OBL[self.ECL.value]
@@ -601,7 +598,12 @@ class AstrometryEcliptic(Astrometry):
                 "No obliquity " + str(self.ECL.value) + " provided. "
                 "Check your pint/datafile/ecliptic.dat file."
             )
-        if epoch is None or (self.PMELONG.value == 0.0 and self.PMELAT.value == 0.0):
+        if (
+            epoch is None
+            or (self.PMELONG.value == 0.0 and self.PMELAT.value == 0.0)
+            or self.PMELONG.value is None
+        ):
+            # Compute only once
             return coords.SkyCoord(
                 obliquity=obliquity,
                 lon=self.ELONG.quantity,
@@ -612,6 +614,7 @@ class AstrometryEcliptic(Astrometry):
                 frame=PulsarEcliptic,
             )
         else:
+            # Compute for each time because there is proper motion
             if isinstance(epoch, Time):
                 newepoch = epoch
             else:

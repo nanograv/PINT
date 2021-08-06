@@ -186,10 +186,9 @@ class DispersionDM(Dispersion):
         # If DM1 is set, we need DMEPOCH
         if self.DM1.value != 0.0:
             if self.DMEPOCH.value is None:
-                if (
-                    not hasattr(self._parent, "PEPOCH")
-                    or self._parent.PEPOCH.value is None
-                ):
+                # Copy PEPOCH (PEPOCH must be set!)
+                self.DMEPOCH.value = self._parent.PEPOCH.value
+                if self.DMEPOCH.value is None:
                     raise MissingParameter(
                         "Dispersion",
                         "DMEPOCH",
@@ -214,16 +213,14 @@ class DispersionDM(Dispersion):
         dm = np.zeros(len(tbl))
         dm_terms = self.get_DM_terms()
         if any(t.value != 0 for t in dm_terms[1:]):
-            if self.DMEPOCH.value is not None:
-                DMEPOCH = self.DMEPOCH.value
-            else:
-                DMEPOCH = self._parent.PEPOCH.value
-            try:
-                dt = (tbl["tdbld"] - DMEPOCH) * u.day
-            except TypeError as e:
+            DMEPOCH = self.DMEPOCH.value
+            if DMEPOCH is None:
+                # Should be ruled out by validate()
                 raise ValueError(
                     "DMEPOCH not set but some derivatives are not zero: {dm_terms}"
-                ) from e
+                )
+            else:
+                dt = (tbl["tdbld"] - DMEPOCH) * u.day
             dt_value = dt.to_value(u.yr)
         else:
             dt_value = np.zeros(len(toas), dtype=np.longdouble)
@@ -274,8 +271,9 @@ class DispersionDM(Dispersion):
         dm_terms[order] = np.longdouble(1.0)
         if self.DMEPOCH.value is None:
             if any(t.value != 0 for t in dms[1:]):
+                # Should be ruled out by validate()
                 raise ValueError(f"DMEPOCH is not set but {param_name} is not zero")
-            DMEPOCH = tbl["tdbld"][0]
+            DMEPOCH = self._parent.PEPOCH.value
         else:
             DMEPOCH = self.DMEPOCH.value
         dt = (tbl["tdbld"] - DMEPOCH) * u.day
@@ -302,6 +300,7 @@ class DispersionDM(Dispersion):
         dmterms = [0.0 * u.Unit("")] + self.get_DM_terms()
         if self.DMEPOCH.value is None:
             if any(d.value != 0 for d in dmterms[2:]):
+                # Should be ruled out by validate()
                 raise ValueError(
                     f"DMEPOCH not set but some DM derivatives are not zero: {dmterms}"
                 )
