@@ -1524,7 +1524,7 @@ class TOAs:
         In that case  ``self.table.meta['cluster_gap']``  will be set to the
         `gap_limit`.  If the desired clustering corresponds to that in
         :attr:`pint.toa.TOAs.table` then that column is returned.
-        
+
         Parameters
         ----------
         gap_limit : astropy.units.Quantity, optional
@@ -1655,16 +1655,16 @@ class TOAs:
         else:
             s += f"Number of commands:  {len(self.commands)}\n"
         s += f"Number of observatories: {len(self.observatories)} {list(self.observatories)}\n"
-        s += "MJD span:  {self.first_MJD.mjd:.3f} to {self.last_MJD.mjd:.3f}\n"
-        s += "Date span: {self.first_MJD.iso} to {self.last_MJD.iso}\n"
+        s += f"MJD span:  {self.first_MJD.mjd:.3f} to {self.last_MJD.mjd:.3f}\n"
+        s += f"Date span: {self.first_MJD.iso} to {self.last_MJD.iso}\n"
         for ii, key in enumerate(self.table.groups.keys):
             grp = self.table.groups[ii]
-            s += "{key['obs']} TOAs ({len(grp)}):\n"
-            s += "  Min freq:      {np.min(grp['freq'].to(u.MHz)):.3f}\n"
-            s += "  Max freq:      {np.max(grp['freq'].to(u.MHz)):.3f}\n"
-            s += "  Min error:     {np.min(grp['error'].to(u.us)):.3g}\n"
-            s += "  Max error:     {np.max(grp['error'].to(u.us)):.3g}\n"
-            s += "  Median error:  {np.median(grp['error'].to(u.us)):.3g}\n"
+            s += f"{key['obs']} TOAs ({len(grp)}):\n"
+            s += f"  Min freq:      {np.min(grp['freq'].to(u.MHz)):.3f}\n"
+            s += f"  Max freq:      {np.max(grp['freq'].to(u.MHz)):.3f}\n"
+            s += f"  Min error:     {np.min(grp['error'].to(u.us)):.3g}\n"
+            s += f"  Max error:     {np.max(grp['error'].to(u.us)):.3g}\n"
+            s += f"  Median error:  {np.median(grp['error'].to(u.us)):.3g}\n"
         return s
 
     def print_summary(self):
