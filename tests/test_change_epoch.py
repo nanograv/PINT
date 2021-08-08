@@ -199,9 +199,8 @@ def test_change_binary_epoch(binary_model):
     # new_epoch is within a single binary period of t0
     assert start_time < t0 < end_time
 
-    t1 = new_epoch + PB/3
+    t1 = new_epoch + PB / 3
     model_2 = copy.deepcopy(model)
     model_2.change_binary_epoch(t1)
     for p in model.params:
         assert getattr(model, p).quantity == getattr(model_2, p).quantity
-
