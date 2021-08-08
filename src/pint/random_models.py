@@ -42,19 +42,24 @@ def random_models(
         TOAs object containing the evenly spaced fake toas to plot the random lines with
         list of residual objects for the random models (one residual object each)
     """
-    params = fitter.model.get_params_dict("free", "num")
-    mean_vector = params.values()
+    param_values = fitter.model.get_params_dict("free", "num")
+    cov_matrix = fitter.parameter_covariance_matrix
+    # this is a list of the parameter names in the order they appear in the coviarance matrix
+    param_names = cov_matrix.get_label_names(axis=0)
+    mean_vector = np.array([param_values[x] for x in param_names if not x == "Offset"])
     # remove the first column and row (absolute phase)
-    cov_matrix = (((fitter.covariance_matrix.matrix[1:]).T)[1:]).T
-    fac = fitter.fac[1:]
+    if param_names[0] == "Offset":
+        cov_matrix = cov_matrix.get_label_matrix(param_names[1:])
+        fac = fitter.fac[1:]
+        param_names = param_names[1:]
+    else:
+        fac = fitter.fac
     f_rand = deepcopy(fitter)
     mrand = f_rand.model
 
     # scale by fac
-    log.debug("errors", np.sqrt(np.diag(cov_matrix)))
-    log.debug("mean vector", mean_vector)
-    mean_vector = np.array(list(mean_vector)) * fac
-    cov_matrix = ((cov_matrix * fac).T * fac).T
+    mean_vector = mean_vector * fac
+    scaled_cov_matrix = ((cov_matrix.matrix * fac).T * fac).T
 
     toa_mjds = fitter.toas.get_mjds()
     minMJD, maxMJD = toa_mjds.min(), toa_mjds.max()
@@ -73,11 +78,11 @@ def random_models(
     random_models = []
     for i in range(iter):
         # create a set of randomized parameters based on mean vector and covariance matrix
-        rparams_num = np.random.multivariate_normal(mean_vector, cov_matrix)
+        rparams_num = np.random.multivariate_normal(mean_vector, scaled_cov_matrix)
         # scale params back to real units
         for j in range(len(mean_vector)):
             rparams_num[j] /= fac[j]
-        rparams = OrderedDict(zip(params.keys(), rparams_num))
+        rparams = OrderedDict(zip(param_names, rparams_num))
         # print("randomized parameters",rparams)
         f_rand.set_params(rparams)
         rs = mrand.phase(x, abs_phase=True) - fitter.model.phase(x, abs_phase=True)
