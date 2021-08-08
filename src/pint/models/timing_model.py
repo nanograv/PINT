@@ -1111,7 +1111,9 @@ class TimingModel:
                 break
             i += 1
         if matches:
-            raise ValueError(f"Unused prefix parameters for start_index {start_index}: {matches}")
+            raise ValueError(
+                f"Unused prefix parameters for start_index {start_index}: {matches}"
+            )
         return r
 
     def param_help(self):
