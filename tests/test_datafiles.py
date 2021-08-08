@@ -1,7 +1,7 @@
 """Test installation of PINT data files"""
 import os
 import pytest
-import pint
+import pint.config
 import tempfile
 
 
@@ -28,7 +28,7 @@ def getfiles():
 def test_examplefiles(getfiles):
     files = getfiles
     for filename in files:
-        assert os.path.exists(pint.examplefile(filename))
+        assert os.path.exists(pint.config.examplefile(filename))
 
 
 def test_examplefiles_tempdir(getfiles):
@@ -38,7 +38,7 @@ def test_examplefiles_tempdir(getfiles):
         with tempfile.TemporaryDirectory() as dir:
             os.chdir(dir)
             for filename in files:
-                assert os.path.exists(pint.examplefile(filename))
+                assert os.path.exists(pint.config.examplefile(filename))
     finally:
         os.chdir(curdir)
 
@@ -47,7 +47,7 @@ def test_examplefiles_tempdir_moveafter(getfiles):
     files = getfiles
     curdir = os.getcwd()
     # get the full names before moving directories
-    filenames = [pint.examplefile(filename) for filename in files]
+    filenames = [pint.config.examplefile(filename) for filename in files]
     try:
         with tempfile.TemporaryDirectory() as dir:
             os.chdir(dir)
