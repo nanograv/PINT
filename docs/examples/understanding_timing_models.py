@@ -22,14 +22,14 @@
 # %%
 from pint.models import get_model
 from pint.models.timing_model import Component
-import pint
+import pint.config
 
 # %% [markdown]
 # One can build a timing model via `get_model()` method. This will read the par file and instantiate all the delay and phase components, using the default ordering.
 
 # %%
 par = "B1855+09_NANOGrav_dfg+12_TAI.par"
-m = get_model(pint.examplefile(par))
+m = get_model(pint.config.examplefile(par))
 
 
 # %% [markdown]
@@ -135,7 +135,7 @@ _ = [print(dc.__class__) for dc in m.DelayComponent_list]
 # First get the toas
 from pint.toa import get_TOAs
 
-t = get_TOAs(pint.examplefile("B1855+09_NANOGrav_dfg+12.tim"))
+t = get_TOAs(pint.config.examplefile("B1855+09_NANOGrav_dfg+12.tim"))
 
 # %%
 # compute the total delay

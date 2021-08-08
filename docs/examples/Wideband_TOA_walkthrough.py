@@ -28,7 +28,7 @@ from astropy.visualization import quantity_support
 from pint.fitter import WidebandTOAFitter
 from pint.models import get_model_and_toas
 from pint.toa import get_TOAs
-import pint
+import pint.config
 
 quantity_support()
 
@@ -37,8 +37,8 @@ quantity_support()
 
 # %%
 model, toas = get_model_and_toas(
-    pint.examplefile("J1614-2230_NANOGrav_12yv3.wb.gls.par"),
-    pint.examplefile("J1614-2230_NANOGrav_12yv3.wb.tim"),
+    pint.config.examplefile("J1614-2230_NANOGrav_12yv3.wb.gls.par"),
+    pint.config.examplefile("J1614-2230_NANOGrav_12yv3.wb.tim"),
 )
 
 # %% [markdown]

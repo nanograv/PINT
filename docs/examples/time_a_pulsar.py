@@ -28,10 +28,10 @@ from pint.residuals import Residuals
 from pint.toa import get_TOAs
 
 # %%
-import pint
+import pint.config
 
-parfile = pint.examplefile("NGC6440E.par")
-timfile = pint.examplefile("NGC6440E.tim")
+parfile = pint.config.examplefile("NGC6440E.par")
+timfile = pint.config.examplefile("NGC6440E.tim")
 
 # %%
 m, t_all = get_model_and_toas(parfile, timfile)

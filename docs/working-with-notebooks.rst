@@ -33,8 +33,8 @@ will ensure that the data get put in the proper place on installing
 
 ::
 
-   import pint
-   fullfilename = pint.examplefile(filename)
+   import pint.config
+   fullfilename = pint.econfig.xamplefile(filename)
 
 
 Compiling and Synchronizing the Notebooks

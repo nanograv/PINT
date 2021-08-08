@@ -23,11 +23,13 @@ import pint.models.parameter as pp
 import astropy.units as u
 from astropy.coordinates.angles import Angle
 from astropy.time import Time
-import pint
+import pint.config
 
 # %% {"jupyter": {"outputs_hidden": false}}
 # Load a model to play with
-model = pint.models.get_model(pint.examplefile("B1855+09_NANOGrav_dfg+12_TAI.par"))
+model = pint.models.get_model(
+    pint.config.examplefile("B1855+09_NANOGrav_dfg+12_TAI.par")
+)
 
 # %% {"jupyter": {"outputs_hidden": false}}
 # This model has a large number of parameters of various types

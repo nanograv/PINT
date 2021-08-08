@@ -10,12 +10,12 @@ Data Files
 
 The data files (``par`` and ``tim``) associated with the tutorials and
 other examples can be located via :func:`pint.config.examplefile`
-(available via the :mod:`pint` module):
+(available via the :mod:`pint.config` module):
 
 ::
 
-   import pint
-   fullfilename = pint.examplefile(filename)
+   import pint.config
+   fullfilename = pint.config.examplefile(filename)
 
 
 For example, the file ``NGC6440E.par`` from the
@@ -24,7 +24,7 @@ For example, the file ``NGC6440E.par`` from the
 ::
 
    import pint
-   fullfilename = pint.examplefile("NGC6440E.par")
+   fullfilename = pint.config.examplefile("NGC6440E.par")
 
 Examples
 --------

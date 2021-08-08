@@ -20,10 +20,10 @@ except ImportError:
     raise
 
 # Using Nanograv data J0613-0200
-import pint
+import pint.config
 
-parfile = pint.examplefile("J0613-0200_NANOGrav_dfg+12_TAI_FB90.par")
-timfile = pint.examplefile("J0613-0200_NANOGrav_dfg+12.tim")
+parfile = pint.config.examplefile("J0613-0200_NANOGrav_dfg+12_TAI_FB90.par")
+timfile = pint.config.examplefile("J0613-0200_NANOGrav_dfg+12.tim")
 
 # libstempo calculation
 print("tempo2 calculation")

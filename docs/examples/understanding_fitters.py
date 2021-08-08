@@ -28,7 +28,7 @@ import astropy.units as u
 import pint.toa
 import pint.models
 import pint.fitter
-import pint
+import pint.config
 
 # %%
 # %matplotlib inline
@@ -41,8 +41,8 @@ quantity_support()
 
 # %%
 # Load some TOAs and a model to fit
-t = pint.toa.get_TOAs(pint.examplefile("NGC6440E.tim"), usepickle=False)
-m = pint.models.get_model(pint.examplefile("NGC6440E.par"))
+t = pint.toa.get_TOAs(pint.config.examplefile("NGC6440E.tim"), usepickle=False)
+m = pint.models.get_model(pint.config.examplefile("NGC6440E.par"))
 
 # %%
 # You can check if a model includes a noise model with correlated errors (e.g. ECORR or TNRED) by checking the has_correlated_errors property
@@ -154,7 +154,7 @@ print(wlsfit.model.compare(powfit.model))
 # To test this fitter properly, we need a model that includes correlated noise components, so we will load one from NANOGrav 9yr data release.
 
 # %%
-m1855 = pint.models.get_model(pint.examplefile("B1855+09_NANOGrav_9yv1.gls.par"))
+m1855 = pint.models.get_model(pint.config.examplefile("B1855+09_NANOGrav_9yv1.gls.par"))
 
 # %%
 # You can check if a model includes a noise model with correlated errors (e.g. ECORR or TNRED) by checking the has_correlated_errors property
@@ -164,7 +164,7 @@ m1855.has_correlated_errors
 print(m1855)
 
 # %%
-ts1855 = pint.toa.get_TOAs(pint.examplefile("B1855+09_NANOGrav_9yv1.tim"))
+ts1855 = pint.toa.get_TOAs(pint.config.examplefile("B1855+09_NANOGrav_9yv1.tim"))
 ts1855.print_summary()
 
 # %%

@@ -9,7 +9,8 @@ import numpy
 from astropy import log
 from astropy.coordinates import EarthLocation
 
-from pint import JD_MJD, runtimefile
+from pint import JD_MJD
+from pint.config import runtimefile
 from pint.erfautils import gcrs_posvel_from_itrf
 from pint.observatory import Observatory, bipm_default
 from pint.observatory.clock_file import ClockFile

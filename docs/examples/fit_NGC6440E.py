@@ -40,10 +40,10 @@ import pint.toa
 from pint.models import get_model, get_model_and_toas
 
 # %%
-import pint
+import pint.config
 
-parfile = pint.examplefile("NGC6440E.par")
-timfile = pint.examplefile("NGC6440E.tim")
+parfile = pint.config.examplefile("NGC6440E.par")
+timfile = pint.config.examplefile("NGC6440E.tim")
 assert os.path.exists(parfile)
 assert os.path.exists(timfile)
 

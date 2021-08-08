@@ -11,7 +11,7 @@ from astropy import log
 from astropy.coordinates import EarthLocation
 import numpy as np
 
-import pint
+import pint.config
 from pint.observatory import bipm_default
 from pint.observatory.clock_file import ClockFile
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
@@ -76,7 +76,7 @@ class SpecialLocation(Observatory):
         data dirs, then fall back on $TEMPO2/clock."""
         fname = "gps2utc.clk"
         try:
-            fullpath = pint.runtimefile(fname)
+            fullpath = pint.config.runtimefile(fname)
             return fullpath
         except FileNotFoundError:
             log.info(
@@ -92,7 +92,7 @@ class SpecialLocation(Observatory):
         data dirs, then fall back on $TEMPO2/clock."""
         fname = "tai2tt_" + self.bipm_version.lower() + ".clk"
         try:
-            fullpath = pint.runtimefile(fname)
+            fullpath = pint.config.runtimefile(fname)
             return fullpath
         except FileNotFoundError:
             pass
