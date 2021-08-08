@@ -7,7 +7,7 @@ import astropy.time as time
 import numpy as np
 from astropy.coordinates import solar_system_ephemeris
 
-import pint
+import pint.config
 from pint.solar_system_ephemerides import objPosVel, objPosVel_wrt_SSB
 from pinttestdata import datadir
 
@@ -66,7 +66,7 @@ class TestSolarSystemDynamic(unittest.TestCase):
                 assert a.vel.shape == (3, 10000)
 
     def test_from_dir(self):
-        path = pint.runtimefile("de432s.bsp")
+        path = pint.config.runtimefile("de432s.bsp")
         a = objPosVel_wrt_SSB("earth", self.tdb_time, "de432s", path=path)
         assert a.obj == "earth"
         assert a.pos.shape == (3, 10000)
