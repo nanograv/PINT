@@ -1067,6 +1067,53 @@ class TimingModel:
                 mapping[par.index] = parname
         return mapping
 
+    def get_prefix_list(self, prefix, start_index=0):
+        """Return the Quantities associated with a sequence of prefix parameters.
+
+        Parameters
+        ----------
+        prefix : str
+            Name of prefix.
+        start_index : int
+            The index to start the sequence at (DM1, DM2, ... vs F0, F1, ...)
+
+        Returns
+        -------
+        list of astropy.units.Quantity
+            The ``.quantity`` associated with parameter prefix + start_index,
+            prefix + (start_index+1), ... up to the last that exists and is set.
+
+        Raises
+        ------
+        ValueError
+            If any prefix parameters exist outside the sequence that would be returned
+            (for example if there are DM1 and DM3 but not DM2, or F0 exists but start_index
+            was given as 1).
+        """
+        matches = {}
+        for p in self.params:
+            if not p.startswith(prefix):
+                continue
+            pm = getattr(self, p)
+            if not pm.is_prefix:
+                continue
+            if pm.quantity is None:
+                continue
+            if pm.prefix != prefix:
+                continue
+            matches[pm.index] = pm
+        r = []
+        i = start_index
+        while True:
+            try:
+                r.append(matches.pop(i).quantity)
+            except KeyError:
+                break
+            i += 1
+        if matches:
+            raise ValueError(f"Unused prefix parameters for start_index {start_index}: {matches}")
+        return r
+
     def param_help(self):
         """Print help lines for all available parameters in model."""
         return "".join(
