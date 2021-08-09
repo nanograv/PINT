@@ -11,6 +11,8 @@ These docstrings contain reference documentation; for tutorials, explanations,
 or how-to documentation, please see other sections of the online documentation.
 """
 
+import os
+import pkg_resources
 import numpy as np
 import astropy
 import astropy.constants as c
@@ -19,8 +21,8 @@ import astropy.units as u
 from astropy import log
 from astropy.units import si
 from pint.extern._version import get_versions
-from pint.pulsar_ecliptic import PulsarEcliptic
 from pint.pulsar_mjd import time_to_longdouble, PulsarMJD  # ensure always loaded
+from pint.pulsar_ecliptic import PulsarEcliptic
 
 __all__ = [
     "__version__",

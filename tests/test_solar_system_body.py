@@ -7,7 +7,7 @@ import astropy.time as time
 import numpy as np
 from astropy.coordinates import solar_system_ephemeris
 
-from pint.config import datapath
+import pint.config
 from pint.solar_system_ephemerides import objPosVel, objPosVel_wrt_SSB
 from pinttestdata import datadir
 
@@ -31,11 +31,6 @@ class TestSolarSystemDynamic(unittest.TestCase):
         cls.tdb_time = time.Time(mjd, scale="tdb", format="mjd")
         cls.ephem = ["de405", "de421", "de434", "de430", "de436"]
         cls.planets = ["jupiter", "saturn", "venus", "uranus", "neptune"]
-
-    def test_datapath(self):
-        # Check that datapath of a non-existent file raises FileNotFoundError exception.
-        with pytest.raises(FileNotFoundError):
-            d = datapath("foobar")
 
     # Here we only test if any errors happens.
     def test_earth(self):
@@ -71,7 +66,7 @@ class TestSolarSystemDynamic(unittest.TestCase):
                 assert a.vel.shape == (3, 10000)
 
     def test_from_dir(self):
-        path = datapath("de432s.bsp")
+        path = pint.config.runtimefile("de432s.bsp")
         a = objPosVel_wrt_SSB("earth", self.tdb_time, "de432s", path=path)
         assert a.obj == "earth"
         assert a.pos.shape == (3, 10000)

@@ -42,6 +42,7 @@ import astropy.units as u
 # Import the component classes.
 from pint.models.timing_model import TimingModel, Component, PhaseComponent
 import pint.models.parameter as p
+import pint.config
 
 
 # %% [markdown]
@@ -266,7 +267,7 @@ from pint.fitter import WLSFitter
 from pint.toa import get_TOAs
 
 # %%
-toas = get_TOAs("NGC6440E.tim", ephem="DE421")
+toas = get_TOAs(pint.config.examplefile("NGC6440E.tim"), ephem="DE421")
 f = WLSFitter(toas, model)
 
 # %% [markdown]
