@@ -2134,9 +2134,12 @@ class TimingModel:
                 self.FINISH.value = k[1]
                 continue
 
-            repeat_param[name] += 1
-            if repeat_param[name] > 1:
-                k[0] = k[0] + str(repeat_param[name])
+            # Check alias
+            p_name = self.match_param_aliases(name)
+
+            repeat_param[p_name] += 1
+            if repeat_param[p_name] > 1:
+                k[0] = k[0] + str(repeat_param[p_name])
                 li = " ".join(k)
 
             used = []
@@ -2156,7 +2159,7 @@ class TimingModel:
                 continue
 
             try:
-                prefix, f, v = split_prefixed_name(name)
+                prefix, f, v = split_prefixed_name(p_name)
                 if prefix in ignore_prefix:
                     log.debug("Ignoring prefix parfile line '%s'" % (li,))
                     continue
@@ -2248,6 +2251,8 @@ class TimingModel:
         cates_comp = self.get_components_by_category()
         printed_cate = []
         for p in self.top_level_params:
+            if p == 'BINARY': # Will print the Binary model name in the binary section
+                continue
             result_begin += getattr(self, p).as_parfile_line()
         for cat in start_order:
             if cat in list(cates_comp.keys()):
@@ -2847,6 +2852,13 @@ class AllComponents:
     @lazyproperty
     def category_component_map(self):
         """Return the mapping from category to component.
+
+        Return
+        ------
+        dict
+            The mapping from categories to the componens belongs to the categore.
+            The key is the categore name, and the value is a list of all the
+            components in the categore.
         """
         category = defaultdict(list)
         for k, cp in self.components.items():
@@ -2857,6 +2869,12 @@ class AllComponents:
     @lazyproperty
     def component_category_map(self):
         """Return the mapping from component to category.
+
+        Return
+        ------
+        dict
+            The mapping from components to its categore. The key is the component
+            name and the value is the component's category name.
         """
         cp_ca = {}
         for k, cp in self.components.items():
@@ -2865,11 +2883,17 @@ class AllComponents:
 
     @lazyproperty
     def component_unique_params(self):
-        """Return the unique parameter names in each componens.
+        """Return the parameters that are only present in one component.
+
+        Return
+        ------
+        dict
+            A mapping from a component name to a list of parameters are only
+            in this component.
 
         Note
         ----
-        This function only returns the pint defined parameter name, not
+        This function only returns the PINT defined parameter name, not
         including the aliases.
         """
         component_special_params = defaultdict(list)
@@ -2885,14 +2909,14 @@ class AllComponents:
             if param_name == alias_map[alias]:
                 return alias_map
             else:
-                raise ConflictAlias(
+                raise AliasConflict(
                     f"Alias {alias} has been used by" f" parameter {param_name}."
                 )
         else:
             alias_map[alias] = param_name
         return alias_map
 
-    def search_pulsar_system_components(self, system_name):
+    def search_binary_components(self, system_name):
         """Search the pulsar binary component based on given name.
 
         Parameters
@@ -3046,7 +3070,7 @@ class MissingParameter(TimingModelError):
         return result
 
 
-class ConflictAlias(TimingModelError):
+class AliasConflict(TimingModelError):
     """If the same alias is used for different parameters."""
 
     pass

@@ -15,6 +15,7 @@ from pint.models.timing_model import (
     ConflictAliasError,
     UnknownBinaryModel,
     UnknownParameter,
+    TimingModelError
 )
 from pint.toa import get_TOAs
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
@@ -72,11 +73,24 @@ class ModelBuilder:
         cps = [self.all_components.components[c] for c in selected]
         tm = TimingModel(components=cps)
         # Add indexed parameters
-        leftover_params = set(param_not_in_pint)
+        leftover_params = list(set(param_not_in_pint))
         # Give repeatable parameters an index.
+        # Convert all repeated parameter name/alises the pint_name and group
+        # them.
+        # TODO when we remove the number index for repeatable parameter, this
+        # code need to be updated.
+        pint_repeat_param = defaultdict(list)
         for k, v in repeat_par.items():
+            # The parameters in the repeat_par should all be PINT-understandable.
+            # Since they all belong to the repeatable_param list.
+            pint_name, first_init = self.all_components.alias_to_pint_param(k)
+            repeat_perfix, _, _ = split_prefixed_name(pint_name)
+            pint_repeat_param[repeat_perfix].append(v)
+        for p, v in pint_repeat_param.items():
             for ii in range(len(v)):
-                leftover_params.add(k + str(ii + 1))
+                leftover_params.append(p + str(ii + 1))
+        print(leftover_params)
+        # reiterate the lefe over parameters.
         tm, unknown_param = self._add_indexed_params(tm, leftover_params)
         return tm
 
@@ -185,11 +199,14 @@ class ModelBuilder:
             param_inpar[k[0]] = k[1:]
             # Handle the Mulit-tag lines
             multi_line[k[0]] += 1
+            # When the parameter is a repeatable parameter
             if k[0] in self.all_components.repeatable_param:
                 repeat_par[k[0]].append(k[1:])
             else:
+                # The parameter is not repeatable, but present in the par file
+                # for more than one line.
                 if multi_line[k[0]] > 1:
-                    log.info(
+                    raise TimingModelError(
                         "Lines with duplicate keys in par file:"
                         " {} and {}".format(k[0], k[1:])
                     )
@@ -229,13 +246,14 @@ class ModelBuilder:
                 #. Log the conflict components, one parameter to mulitple components mapping.
         """
         selected_components = set()
+        param_count = Counter()
         # 1. iteration read parfile with a no component timing_model to get
         # the overall control parameters. This will get us the binary model name
         # build the base fo the timing model
         binary = param_inpar.get("BINARY", None)
         if binary is not None:
             binary = binary[0]
-            binary_cp = self.all_components.search_pulsar_system_components(binary)
+            binary_cp = self.all_components.search_binary_components(binary)
             selected_components.add(binary_cp.__class__.__name__)
         # 2. Get the component list from the parameters in the parfile.
         # 2.1 Check the aliases of input parameters.
@@ -250,10 +268,18 @@ class ModelBuilder:
                 param_not_in_pint.append(pp)
                 continue
 
+            param_count[p_name] += 1
+
             # For the case that the indexed parameter maps to a component, but
             # the parameter with the provided index is not initialized yet.
             if p_name != first_init:
                 param_not_in_pint.append(pp)
+
+            # Check if the alises duplicates the other parameters
+            if param_count[p_name] > 1:
+                if p_name not in self.all_components.repeatable_param:
+                    raise TimingModelError(f"Parameter alias {pp} duplicates"
+                                           f" with {p_name}.")
 
             p_cp = self.all_components.param_component_map.get(first_init, None)
             if p_cp:
