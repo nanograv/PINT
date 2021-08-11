@@ -32,6 +32,28 @@ class ComponentConflict(ValueError):
     """Error for mulitple components can be select but no other indications."""
 
 
+def parse_parfile(parfile):
+    """Function for parsing .par file or .par style StringIO.
+
+    Parameter
+    ---------
+    parfile: str or file-like object
+        Input .par file name or string contents.
+
+    Return
+    ------
+    dict:
+        Parameter and its associated lines. The key is the parameter name and
+        the value is a list of the lines associated to the parameter name.
+    """
+    param_inpar = defaultdict(list)
+    for l in interesting_lines(lines_of(parfile), comments=("#", "C ")):
+        k = l.split()
+        param_inpar[k[0].upper()].append(k[1:])
+
+    return param_inpar
+
+
 class ModelBuilder:
     """Class for building a `TimingModel` object from a parameter file.
 
@@ -217,7 +239,7 @@ class ModelBuilder:
 
         Parameter
         ---------
-        param_inpar: str
+        param_inpar: dict
             Dictionary of the unique parameters in .par file with the key is the
         parfile line. :func:`parse_parfile` returns this dictionary.
 
