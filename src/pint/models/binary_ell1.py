@@ -124,12 +124,6 @@ class BinaryELL1(PulsarBinary):
         else:
             new_epoch = Time(new_epoch, scale="tdb", format="mjd", precision=9)
 
-        if hasattr(self, "FB2") and self.FB2.value is not None:
-            log.warning(
-                "Ignoring orbital frequency derivatives higher than FB1"
-                "in computing new TASC"
-            )
-
         # Get PB and PBDOT from model
         if self.PB.quantity is not None:
             PB = self.PB.quantity
@@ -149,8 +143,16 @@ class BinaryELL1(PulsarBinary):
         dt = (new_epoch.tdb.mjd_long - tasc_ld) * u.day
         d_orbits = dt / PB - PBDOT * dt ** 2 / (2.0 * PB ** 2)
         n_orbits = np.round(d_orbits.to(u.Unit("")))
+        if n_orbits == 0:
+            return
         dt_integer_orbits = PB * n_orbits + PB * PBDOT * n_orbits ** 2 / 2.0
         self.TASC.quantity = self.TASC.quantity + dt_integer_orbits
+
+        if hasattr(self, "FB2") and self.FB2.value is not None:
+            log.warning(
+                "Ignoring orbital frequency derivatives higher than FB1"
+                "in computing new TASC; a model fit should resolve this."
+            )
 
         # Update PB or FB0, FB1, etc.
         if isinstance(self.binary_instance.orbits_cls, bo.OrbitPB):
@@ -166,7 +168,7 @@ class BinaryELL1(PulsarBinary):
             for n in range(len(fbterms) - 1):
                 cur_deriv = getattr(self, "FB{}".format(n))
                 cur_deriv.value = taylor_horner_deriv(
-                    dt.to(u.s), fbterms, deriv_order=n + 1
+                    dt_integer_orbits.to(u.s), fbterms, deriv_order=n + 1
                 )
 
         # Update EPS1, EPS2, and A1

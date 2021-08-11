@@ -5,7 +5,7 @@ import astropy.units as u
 from astropy.coordinates import QuantityAttribute, frame_transform_graph
 from astropy.coordinates.matrix_utilities import rotation_matrix
 
-from pint.config import datapath
+import pint.config
 from pint.utils import interesting_lines, lines_of
 
 __all__ = ["OBL", "PulsarEcliptic"]
@@ -24,7 +24,7 @@ def load_obliquity_file(filename):
     return obliquity_data
 
 
-OBL = load_obliquity_file(datapath("ecliptic.dat"))
+OBL = load_obliquity_file(pint.config.runtimefile("ecliptic.dat"))
 
 
 class PulsarEcliptic(coord.BaseCoordinateFrame):
