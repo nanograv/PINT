@@ -1,87 +1,58 @@
 import astropy.units as u
-import unittest
+import pytest
 from pint.pintk.plk import PlkWidget
 from tkinter import Frame
 
 
-class TestPlkWidget(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        # use __new__ to prevent an actual tkinter window from popping up
-        cls.widget = Frame.__new__(PlkWidget)
+@pytest.mark.parametrize(
+    "in_min,in_max,out_min,out_max",
+    [
+        (0 * u.us, 190 * u.us, 0 * u.us, 190 * u.us),
+        (0 * u.us, 201 * u.us, 0 * u.ms, 0.201 * u.ms),
+        (0 * u.us, 200001 * u.us, 0 * u.s, 0.200001 * u.s),
+    ],
+)
+def test_determine_yaxis_units_start_with_us(in_min, in_max, out_min, out_max):
+    widget = Frame.__new__(PlkWidget)
+    newmin, newmax = widget.determine_yaxis_units(in_min, in_max)
 
-    def test_determine_yaxis_units(self):
-        # test interval where no unit conversion happens
-        miny = 5 * u.us
-        maxy = 10 * u.us
-        newmin, newmax = self.widget.determine_yaxis_units(maxy, miny)
+    assert newmin.value == pytest.approx(out_min.value)
+    assert newmin.unit == out_min.unit
+    assert newmax.value == pytest.approx(out_max.value)
+    assert newmax.unit == out_max.unit
 
-        self.assertAlmostEqual(newmin.value, miny.value)
-        self.assertEqual(newmin.unit, miny.unit)
-        self.assertAlmostEqual(newmax.value, maxy.value)
-        self.assertEqual(newmax.unit, maxy.unit)
 
-        # test interval where u.us converted to u.ms
-        maxy = 10000 * u.us
-        newmin, newmax = self.widget.determine_yaxis_units(maxy, miny)
+@pytest.mark.parametrize(
+    "in_min,in_max,out_min,out_max",
+    [
+        (0 * u.ms, 2.1 * u.ms, 0 * u.ms, 2.1 * u.ms),
+        (0 * u.ms, 201 * u.ms, 0 * u.s, 0.201 * u.s),
+        (0 * u.ms, 0.19 * u.ms, 0 * u.us, 190 * u.us),
+    ],
+)
+def test_determine_yaxis_units_start_with_ms(in_min, in_max, out_min, out_max):
+    widget = Frame.__new__(PlkWidget)
+    newmin, newmax = widget.determine_yaxis_units(in_min, in_max)
 
-        self.assertAlmostEqual(newmin.value, 0.005)
-        self.assertEqual(newmin.unit, u.ms)
-        self.assertAlmostEqual(newmax.value, 10)
-        self.assertEqual(newmax.unit, u.ms)
+    assert newmin.value == pytest.approx(out_min.value)
+    assert newmin.unit == out_min.unit
+    assert newmax.value == pytest.approx(out_max.value)
+    assert newmax.unit == out_max.unit
 
-        # test interval where u.us converted to u.s
-        maxy = 210000 * u.us
-        newmin, newmax = self.widget.determine_yaxis_units(maxy, miny)
 
-        self.assertAlmostEqual(newmin.value, 0.000005)
-        self.assertEqual(newmin.unit, u.s)
-        self.assertAlmostEqual(newmax.value, 0.21)
-        self.assertEqual(newmax.unit, u.s)
+@pytest.mark.parametrize(
+    "in_min,in_max,out_min,out_max",
+    [
+        (0 * u.s, 0.21 * u.s, 0 * u.s, 0.21 * u.s),
+        (0 * u.s, 0.19 * u.s, 0 * u.ms, 190 * u.ms),
+        (0 * u.s, 0.00019 * u.s, 0 * u.us, 190 * u.us),
+    ],
+)
+def test_yaxis_units_start_with_s(in_min, in_max, out_min, out_max):
+    widget = Frame.__new__(PlkWidget)
+    newmin, newmax = widget.determine_yaxis_units(in_min, in_max)
 
-        # test u.ms to u.ms
-        miny = 5 * u.ms
-        maxy = 10 * u.ms
-        newmin, newmax = self.widget.determine_yaxis_units(maxy, miny)
-
-        self.assertAlmostEqual(newmin.value, miny.value)
-        self.assertEqual(newmin.unit, miny.unit)
-        self.assertAlmostEqual(newmax.value, maxy.value)
-        self.assertEqual(newmax.unit, maxy.unit)
-
-        # test u.ms to u.s
-        maxy = 10000 * u.ms
-        newmin, newmax = self.widget.determine_yaxis_units(maxy, miny)
-
-        self.assertAlmostEqual(newmin.value, 0.005)
-        self.assertEqual(newmin.unit, u.s)
-        self.assertAlmostEqual(newmax.value, 10)
-        self.assertEqual(newmax.unit, u.s)
-
-        # test u.ms to u.us
-        maxy = 6 * u.ms
-        newmin, newmax = self.widget.determine_yaxis_units(maxy, miny)
-
-        self.assertAlmostEqual(newmin.value, 5000)
-        self.assertEqual(newmin.unit, u.us)
-        self.assertAlmostEqual(newmax.value, 6000)
-        self.assertEqual(newmax.unit, u.us)
-
-        # test u.s to u.s
-        miny = 5 * u.s
-        maxy = 10 * u.s
-        newmin, newmax = self.widget.determine_yaxis_units(maxy, miny)
-
-        self.assertAlmostEqual(newmin.value, miny.value)
-        self.assertEqual(newmin.unit, miny.unit)
-        self.assertAlmostEqual(newmax.value, maxy.value)
-        self.assertEqual(newmax.unit, maxy.unit)
-
-        # test u.s to u.ms
-        maxy = 5.5 * u.us
-        newmin, newmax = self.widget.determine_yaxis_units(maxy, miny)
-
-        self.assertAlmostEqual(newmin.value, miny.value)
-        self.assertEqual(newmin.unit, miny.unit)
-        self.assertAlmostEqual(newmax.value, maxy.value)
-        self.assertEqual(newmax.unit, maxy.unit)
+    assert newmin.value == pytest.approx(out_min.value)
+    assert newmin.unit == out_min.unit
+    assert newmax.value == pytest.approx(out_max.value)
+    assert newmax.unit == out_max.unit

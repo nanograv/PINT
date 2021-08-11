@@ -920,30 +920,18 @@ class PlkWidget(tk.Frame):
             for i in range(len(rs)):
                 self.plkAxes.plot(f_toas_plot, rs[i], "-k", alpha=0.3)
 
-    def determine_yaxis_units(self, maxy, miny):
+    def determine_yaxis_units(self, miny, maxy):
         """Checks range of residuals and converts units if range sufficiently large/small."""
         diff = maxy - miny
-        if diff.unit is u.us:
-            if diff.value > 200000:
-                maxy = maxy.to(u.s)
-                miny = miny.to(u.s)
-            elif diff.value > 2000:
-                maxy = maxy.to(u.ms)
-                miny = miny.to(u.ms)
-        elif diff.unit is u.ms:
-            if diff.value <= 2:
-                maxy = maxy.to(u.us)
-                miny = miny.to(u.us)
-            elif diff.value > 2000:
-                maxy = maxy.to(u.s)
-                miny = miny.to(u.s)
-        else:
-            if diff.value <= 0.002:
-                maxy = maxy.to(u.us)
-                miny = miny.to(u.us)
-            elif diff.value <= 2:
-                maxy = maxy.to(u.ms)
-                miny = miny.to(u.ms)
+        if diff > 200000 * u.us:
+            maxy = maxy.to(u.s)
+            miny = miny.to(u.s)
+        elif diff > 200 * u.us:
+            maxy = maxy.to(u.ms)
+            miny = miny.to(u.ms)
+        elif diff <= 200 * u.us:
+            maxy = maxy.to(u.us)
+            miny = miny.to(u.us)
         return miny, maxy
 
     def print_info(self):
