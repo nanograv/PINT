@@ -10,7 +10,7 @@ from pint.models.timing_model import (
     PhaseComponent,
     Component,
     AllComponents,
-    ConflictAlias,
+    AliasConflict,
     UnknownBinaryModel,
 )
 from pint.models.model_builder import ModelBuilder, ComponentConflict, get_model
@@ -135,7 +135,7 @@ def test_conflict_alias():
     """
     mb = AllComponents()
     # Test conflict parameter alias name
-    with pytest.raises(ConflictAlias):
+    with pytest.raises(AliasConflict):
         mb._add_alias_to_map("F0", "F1", mb._param_alias_map)
 
 
@@ -155,7 +155,7 @@ def test_conflict_alias_in_component():
             )
 
     mb2 = AllComponents()
-    with pytest.raises(ConflictAlias):
+    with pytest.raises(AliasConflict):
         mb2._param_alias_map
     del Component.component_types["SimpleModel2"]
 
