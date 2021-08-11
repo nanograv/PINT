@@ -214,6 +214,7 @@ def test_change_binary_epoch(binary_model):
     for p in model.params:
         assert getattr(model, p).quantity == getattr(model_2, p).quantity
 
+
 test_par = """
 PSR J1234+5678
 ELAT 0
