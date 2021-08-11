@@ -1,43 +1,63 @@
 """Functions related to PINT configuration."""
+
 import os
+import pkg_resources
 
-from .extern import appdirs
+__all__ = [
+    "datadir",
+    "examplefile",
+    "runtimefile",
+]
 
-# Hack to support FileNotFoundError in Python 2
-try:
-    FileNotFoundError
-except NameError:
-    FileNotFoundError = IOError
+# location of tim, par files installed via pkg_resources
+def datadir():
+    """Location of the PINT data (par and tim files)
 
-# Values for appdirs calls
-_app = "pint"
-_auth = "pint"
-
-# PINT install dir
-_install_dir = os.path.abspath(os.path.dirname(__file__))
-
-
-def datapath(fname):
-    """Returns the full path to the requested data file.
-
-    Will first search the appdirs user_data_dir (typically
-    $HOME/.local/share/pint on linux) then the installed data files dir
-    (__file__/datafiles).  If the file is not found, raises FileNotFoundError.
-
+    Returns
+    -------
+    str
+        Directory of PINT data files
     """
+    return pkg_resources.resource_filename(__name__, "data/")
 
-    # List of directories to search, in order
-    search_dirs = [
-        appdirs.user_data_dir(_app, _auth),
-        os.path.join(_install_dir, "datafiles"),
-    ]
 
-    for d in search_dirs:
-        full_fname = os.path.join(d, fname)
-        if os.path.exists(full_fname):
-            return full_fname
+def examplefile(filename):
+    """Full path to the requested PINT example data file
 
-    # See issue #652 for discussion of this <https://github.com/nanograv/PINT/issues/652>
-    raise FileNotFoundError(
-        "Unable to find {} in directories {}".format(fname, search_dirs)
+    Parameters
+    ----------
+    filename : str
+
+    Returns
+    -------
+    str
+        Full path to the requested file
+
+    Notes
+    -----
+    This is **not** for files needed at runtime. Those are located by :func:`pint.config.runtimefile`.  This is for files needed for the example notebooks.
+    """
+    return pkg_resources.resource_filename(
+        __name__, os.path.join("data/examples/", filename)
+    )
+
+
+def runtimefile(filename):
+    """Full path to the requested PINT runtime (clock etc) data file
+
+    Parameters
+    ----------
+    filename : str
+
+    Returns
+    -------
+    str
+        Full path to the requested file
+
+    Notes
+    -----
+    This **is**  for files needed at runtime. Files needed for the example notebooks are found via :func:`pint.config.examplefile`.
+    """
+    return pkg_resources.resource_filename(
+        __name__, os.path.join("data/runtime/", filename)
     )

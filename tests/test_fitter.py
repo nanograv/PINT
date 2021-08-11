@@ -13,6 +13,7 @@ from pint import fitter, toa
 from pinttestdata import datadir
 import pint.models.parameter as param
 from pint import ls
+from pint.models import get_model, get_model_and_toas
 
 
 @pytest.mark.xfail
@@ -195,3 +196,16 @@ def test_ftest_wb():
     # Test removing parallax
     Ftest_dict = wb_f.ftest(PX, PX_Component, remove=True, full_output=True)
     assert isinstance(Ftest_dict["ft"], float) or isinstance(Ftest_dict["ft"], bool)
+
+
+def test_fitsummary_binary():
+    """Test fitter print_summary() when an ELL1 binary is fit"""
+    par = os.path.join(datadir, "B1855+09_NANOGrav_12yv3.wb.gls.par")
+    tim = os.path.join(datadir, "B1855+09_NANOGrav_dfg+12.tim")
+
+    m, t = get_model_and_toas(par, tim)
+
+    f = fitter.WLSFitter(t, m)
+    f.model.free_params = ["PB", "A1", "SINI"]
+    f.fit_toas()
+    f.print_summary()

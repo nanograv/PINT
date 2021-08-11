@@ -8,7 +8,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.11.2
+#       jupytext_version: 1.11.3
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -40,12 +40,10 @@ import pint.toa
 from pint.models import get_model, get_model_and_toas
 
 # %%
-try:
-    datadir = os.path.dirname(os.path.abspath(str(__file__)))
-except NameError:
-    datadir = os.getcwd()
-parfile = os.path.join(datadir, "NGC6440E.par")
-timfile = os.path.join(datadir, "NGC6440E.tim")
+import pint.config
+
+parfile = pint.config.examplefile("NGC6440E.par")
+timfile = pint.config.examplefile("NGC6440E.tim")
 assert os.path.exists(parfile)
 assert os.path.exists(timfile)
 

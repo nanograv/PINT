@@ -6,6 +6,7 @@ import pint.toa
 import pint.models
 import pint.fitter
 import pint.utils
+import pint.config
 
 import matplotlib.pyplot as plt
 from astropy.visualization import quantity_support
@@ -16,8 +17,10 @@ quantity_support()
 # In this case the model we load already has a DMX component, so we remove it first
 # and replace it with one we construct.
 
-m1855 = pint.models.get_model("B1855+09_NANOGrav_9yv1.gls.par")
-ts1855 = pint.toa.get_TOAs("B1855+09_NANOGrav_9yv1.tim", usepickle=True)
+m1855 = pint.models.get_model(pint.config.examplefile("B1855+09_NANOGrav_9yv1.gls.par"))
+ts1855 = pint.toa.get_TOAs(
+    pint.config.examplefile("B1855+09_NANOGrav_9yv1.tim"), usepickle=True
+)
 ts1855.print_summary()
 
 # Remove and build a new DMX component
