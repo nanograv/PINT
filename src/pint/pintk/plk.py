@@ -21,10 +21,6 @@ from tkinter import ttk
 
 log = logging.getLogger(__name__)
 
-# FIXME: do not set logging in an importable module. Why is this here? settings should go in the scripts/
-# log.setLevel("INFO")
-# log.debug("This should show up")
-
 try:
     from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 except ImportError:

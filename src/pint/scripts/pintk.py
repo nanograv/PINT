@@ -158,7 +158,7 @@ def main(argv=None):
     )
     args = parser.parse_args(argv)
 
-    logging.getLogger().setLevel("INFO")
+    logging.getLogger().setLevel("DEBUG")
     root = tk.Tk()
     root.minsize(800, 600)
     if not args.test:
