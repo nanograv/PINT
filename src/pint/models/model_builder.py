@@ -46,12 +46,11 @@ def parse_parfile(parfile):
         Parameter and its associated lines. The key is the parameter name and
         the value is a list of the lines associated to the parameter name.
     """
-    param_inpar = defaultdict(list)
+    parfile_dict = defaultdict(list)
     for l in interesting_lines(lines_of(parfile), comments=("#", "C ")):
         k = l.split()
-        param_inpar[k[0].upper()].append(k[1:])
-
-    return param_inpar
+        parfile_dict[k[0].upper()].append(" ".join(k[1:]))
+    return parfile_dict
 
 
 class ModelBuilder:
@@ -233,6 +232,58 @@ class ModelBuilder:
                         " {} and {}".format(k[0], k[1:])
                     )
         return param_inpar, repeat_par
+
+    def _pintify_parfile(self, parfile):
+        """Translate parfile parameter name to PINT style name.
+
+        This function converts the parfile information to PINT understandable
+        parameter name. It also returns the PINT unrecognized parameters and
+        check if the parfile has illegal repeating lines.
+
+        Parameter
+        ---------
+        parfile: str, file-like object, or parfile dictionary
+            Parfile name, parfile StringIO, or the parfile dictionary returned
+            by :func:`parse_parfile`.
+
+        Return
+        ------
+            pint_param_dict: dict
+                Pintified parameter dictionary with the PINT name as key and list of
+                parameter value-uncertainty lines as value. The for the
+                repeating parameters in the parfile, the value will contain
+                mulitple lines.
+            unknown_param: dict
+                The PINT unrecognized parameters in the format of a dictionary.
+                The key is the unknown parameter name and the value is the
+                parfile value lines.
+
+        Raises
+        ------
+        TimingModelError
+            If the parfile has mulitple line with non-repeating parameters. 
+        """
+        pint_param_dict = defaultdict(list)
+        unknown_param = defaultdict(list)
+        repeating = Counter()
+        if isinstance(parfile, (str, StringIO)):
+            parfile_dict = parse_parfile(parfile)
+        for k, v in parfile_dict.items():
+            try:
+                pint_name, init0 = self.all_components.alias_to_pint_param(k)
+            except UnknownParameter:
+                unknown_param[k].append(v)
+            pint_param_dict[pint_name].append(v)
+            repeating[pint_name] += 1
+            # Check if this parameter is allowed to be repeated by PINT
+            if repeating[pint_name] > 1:
+                if pint_name not in self.all_components.repeatable_param:
+                    raise TimingModelError(
+                        f"Parameter {pint_name} is not a repeatable parameter. "
+                        f"However, mulitple line use it."
+                    )
+        return pint_param_dict, unknown_param
+
 
     def choose_model(self, param_inpar):
         """Choose the model components based on the parfile.

@@ -3036,6 +3036,11 @@ class AllComponents:
             )
         return pint_par, first_init_par
 
+    def get_param_host(self, param):
+        """Return the host component.
+        """
+        pass
+
 
 class TimingModelError(ValueError):
     """Generic base class for timing model errors."""
