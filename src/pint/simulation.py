@@ -43,15 +43,7 @@ def get_freq_array(base_frequencies, ntoas):
 
 
 def make_fake_toas(
-    times,
-    model,
-    fuzz=0,
-    freq=1400 * u.MHz,
-    obs="GBT",
-    error=1 * u.us,
-    add_noise=False,
-    dm=None,
-    dm_error=1e-4 * pint.dmu,
+    ts, model, add_noise=False, name="fake",
 ):
     """Make toas from an array of times
 
@@ -60,10 +52,80 @@ def make_fake_toas(
 
     Parameters
     ----------
-    times : astropy.units.Quantity
-        MJD times for new TOAs
+    ts : pint.toa.TOAs
+        Input TOAs to match
     model : pint.models.timing_model.TimingModel
         current model
+    add_noise : bool, optional
+        Add noise to the TOAs (otherwise `error` just populates the column)
+    name : str, optional
+        Name for the TOAs (goes into the flags)
+        
+    Returns
+    -------
+    TOAs : pint.toa.TOAs
+        object with toas matching toas but with residuals starting at zero (but then with optional noise)
+
+    Notes
+    -----
+    `add_noise` respects any ``EFAC`` or ``EQUAD`` present in the `model`
+    """
+    tsim = deepcopy(ts)
+    tsim.compute_pulse_numbers(model)
+    for i in range(10):
+        r = pint.residuals.Residuals(tsim, model, track_mode="use_pulse_numbers")
+        if abs(r.time_resids).max() < 1 * u.ns:
+            break
+        tsim.adjust_TOAs(time.TimeDelta(-r.time_resids))
+    else:
+        raise ValueError(
+            "Unable to make fake residuals - left over errors are {}".format(
+                abs(r.time_resids).max()
+            )
+        )
+    if add_noise:
+        # this function will include EFAC and EQUAD
+        err = model.scaled_toa_uncertainty(tsim) * np.random.normal(size=len(tsim))
+        # Add the actual TOA noise
+        tsim.adjust_TOAs(time.TimeDelta(err))
+
+    for f in tsim.table["flags"]:
+        f["name"] = name
+
+    return tsim
+
+
+def make_fake_toas_uniform(
+    startMJD,
+    endMJD,
+    ntoas,
+    model,
+    fuzz=0,
+    freq=1400 * u.MHz,
+    obs="GBT",
+    error=1 * u.us,
+    add_noise=False,
+    dm=None,
+    dm_error=1e-4 * pint.dmu,
+    name="fake",
+):
+    """Make evenly spaced toas 
+
+    Can include alternating frequencies if fed an array of frequencies,
+    only works with one observatory at a time
+
+    Parameters
+    ----------
+    startMJD : float
+        starting MJD for fake toas
+    endMJD : float
+        ending MJD for fake toas
+    ntoas : int
+        number of fake toas to create between startMJD and endMJD
+    model : pint.models.timing_model.TimingModel
+        current model
+    fuzz : astropy.units.Quantity, optional
+        Standard deviation of 'fuzz' distribution to be applied to TOAs
     freq : astropy.units.Quantity, optional
         frequency of the fake toas, default 1400 MHz
     obs : str, optional
@@ -76,12 +138,22 @@ def make_fake_toas(
         DM value to include with each TOA; default is not to include any DM information
     dm_error : astropy.units.Quantity
         uncertainty to attach to each DM measurement
+    name : str, optional
+        Name for the TOAs (goes into the flags)
         
     Returns
     -------
     TOAs : pint.toa.TOAs
-        object with toas matching input times array with optional errors
+        object with evenly spaced toas spanning given start and end MJD with
+        ntoas toas, with optional errors
     """
+
+    times = np.linspace(startMJD, endMJD, ntoas, dtype=np.longdouble) * u.d
+    if fuzz > 0:
+        # apply some fuzz to the dates
+        fuzz = np.random.normal(scale=fuzz.to_value(u.d), size=len(times)) * u.d
+        times += fuzz
+
     if freq is None or np.isinf(freq):
         freq = np.inf * u.MHz
     freq_array = get_freq_array(np.atleast_1d(freq), len(times))
@@ -133,104 +205,19 @@ def make_fake_toas(
             f["pp_dme"] = str(dm_error.to_value(pint.dmu))
     ts.compute_TDBs()
     ts.compute_posvels()
-    ts.compute_pulse_numbers(model)
-    for i in range(10):
-        r = pint.residuals.Residuals(ts, model, track_mode="use_pulse_numbers")
-        if abs(r.time_resids).max() < 1 * u.ns:
-            break
-        ts.adjust_TOAs(time.TimeDelta(-r.time_resids))
-    else:
-        raise ValueError(
-            "Unable to make fake residuals - left over errors are {}".format(
-                abs(r.time_resids).max()
-            )
-        )
-    if add_noise:
-        err = np.random.randn(len(ts.table)) * error
-        # Add the actual error fuzzing
-        ts.adjust_TOAs(time.TimeDelta(err))
-
-    return ts
-
-
-def make_fake_toas_uniform(
-    startMJD,
-    endMJD,
-    ntoas,
-    model,
-    fuzz=0,
-    freq=1400 * u.MHz,
-    obs="GBT",
-    error=1 * u.us,
-    add_noise=False,
-    dm=None,
-    dm_error=1e-4 * pint.dmu,
-):
-    """Make evenly spaced toas 
-
-    Can include alternating frequencies if fed an array of frequencies,
-    only works with one observatory at a time
-
-    Parameters
-    ----------
-    startMJD : float
-        starting MJD for fake toas
-    endMJD : float
-        ending MJD for fake toas
-    ntoas : int
-        number of fake toas to create between startMJD and endMJD
-    model : pint.models.timing_model.TimingModel
-        current model
-    fuzz : astropy.units.Quantity, optional
-        Standard deviation of 'fuzz' distribution to be applied to TOAs
-    freq : astropy.units.Quantity, optional
-        frequency of the fake toas, default 1400 MHz
-    obs : str, optional
-        observatory for fake toas, default GBT
-    error : astropy.units.Quantity
-        uncertainty to attach to each TOA
-    add_noise : bool, optional
-        Add noise to the TOAs (otherwise `error` just populates the column)
-    dm : astropy.units.Quantity, optional
-        DM value to include with each TOA; default is not to include any DM information
-    dm_error : astropy.units.Quantity
-        uncertainty to attach to each DM measurement
-        
-    Returns
-    -------
-    TOAs : pint.toa.TOAs
-        object with evenly spaced toas spanning given start and end MJD with
-        ntoas toas, with optional errors
-    """
-
-    times = np.linspace(startMJD, endMJD, ntoas, dtype=np.longdouble) * u.d
-    if fuzz > 0:
-        # apply some fuzz to the dates
-        fuzz = np.random.normal(scale=fuzz.to_value(u.d), size=len(times)) * u.d
-        times += fuzz
-    return make_fake_toas(
-        times,
-        model=model,
-        fuzz=fuzz,
-        freq=freq,
-        obs=obs,
-        error=error,
-        add_noise=add_noise,
-        dm=dm,
-        dm_error=dm_error,
-    )
+    return make_fake_toas(ts, model=model, add_noise=add_noise, name=name)
 
 
 def make_fake_toas_fromtim(
     timfile,
     model,
-    fuzz=0,
     freq=1400 * u.MHz,
     obs="GBT",
     error=1 * u.us,
     add_noise=False,
     dm=None,
     dm_error=1e-4 * pint.dmu,
+    name="fake",
 ):
     """Make fake toas with the same times as an input tim file
 
@@ -243,8 +230,6 @@ def make_fake_toas_fromtim(
         Filename, list of filenames, or file-like object containing the TOA data.
     model : pint.models.timing_model.TimingModel
         current model
-    fuzz : astropy.units.Quantity, optional
-        Standard deviation of 'fuzz' distribution to be applied to TOAs
     freq : astropy.units.Quantity, optional
         frequency of the fake toas, default 1400 MHz
     obs : str, optional
@@ -257,6 +242,8 @@ def make_fake_toas_fromtim(
         DM value to include with each TOA; default is not to include any DM information
     dm_error : astropy.units.Quantity
         uncertainty to attach to each DM measurement
+    name : str, optional
+        Name for the TOAs (goes into the flags)
         
     Returns
     -------
@@ -265,17 +252,7 @@ def make_fake_toas_fromtim(
         ntoas toas, with optional errors
     """
     input_ts = pint.toa.get_TOAs(timfile)
-    return make_fake_toas(
-        input_ts.get_mjds(),
-        model=model,
-        fuzz=fuzz,
-        freq=freq,
-        obs=obs,
-        error=error,
-        add_noise=add_noise,
-        dm=dm,
-        dm_error=dm_error,
-    )
+    return make_fake_toas(input_ts, model=model, add_noise=add_noise, name=name)
 
 
 def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params="all"):
