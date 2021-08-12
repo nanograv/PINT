@@ -16,7 +16,8 @@ from pint.fitter import GLSFitter, WidebandTOAFitter, WLSFitter
 from pint.models import get_model
 from pint.models.dispersion_model import Dispersion
 from pint.residuals import CombinedResiduals, Residuals, WidebandTOAResiduals
-from pint.toa import get_TOAs, make_fake_toas
+from pint.toa import get_TOAs
+from pint.simulation import make_fake_toas_uniform
 from pint.utils import weighted_mean
 
 os.chdir(datadir)
@@ -37,7 +38,7 @@ def wideband_fake():
             """
         )
     )
-    toas = make_fake_toas(
+    toas = make_fake_toas_uniform(
         57000, 59000, 40, model=model, error=1 * u.us, dm=10 * u.pc / u.cm ** 3
     )
     toas.compute_pulse_numbers(model)
@@ -136,7 +137,7 @@ def test_residuals_scaled_uncertainties():
             """
         )
     )
-    toas = make_fake_toas(57000, 59000, 20, model=model, error=1 * u.us)
+    toas = make_fake_toas_uniform(57000, 59000, 20, model=model, error=1 * u.us)
     r = Residuals(toas, model)
     e = r.get_data_error(scaled=True)
     assert np.all(e != 0)
@@ -159,7 +160,7 @@ def test_residuals_fake_wideband():
             """
         )
     )
-    toas = make_fake_toas(
+    toas = make_fake_toas_uniform(
         57000, 59000, 20, model=model, error=1 * u.us, dm=10 * u.pc / u.cm ** 3
     )
     r = WidebandTOAResiduals(toas, model)
@@ -183,7 +184,7 @@ def test_residuals_wls_chi2():
             """
         )
     )
-    toas = make_fake_toas(57000, 59000, 20, model=model, error=1 * u.us)
+    toas = make_fake_toas_uniform(57000, 59000, 20, model=model, error=1 * u.us)
     np.random.seed(0)
     toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
     r = Residuals(toas, model)
@@ -205,7 +206,7 @@ def test_residuals_gls_chi2():
             """
         )
     )
-    toas = make_fake_toas(57000, 59000, 20, model=model, error=1 * u.us)
+    toas = make_fake_toas_uniform(57000, 59000, 20, model=model, error=1 * u.us)
     np.random.seed(0)
     toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
     r = Residuals(toas, model)
@@ -242,7 +243,7 @@ def test_gls_chi2_reasonable(full_cov):
             """
         )
     )
-    toas = make_fake_toas(57000, 59000, 40, model=model, error=1 * u.us)
+    toas = make_fake_toas_uniform(57000, 59000, 40, model=model, error=1 * u.us)
     np.random.seed(0)
     toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
     f = GLSFitter(toas, model)
@@ -268,7 +269,7 @@ def test_gls_chi2_full_cov():
         )
     )
     model.free_params = ["ELAT", "ELONG"]
-    toas = make_fake_toas(57000, 59000, 100, model=model, error=1 * u.us)
+    toas = make_fake_toas_uniform(57000, 59000, 100, model=model, error=1 * u.us)
     np.random.seed(0)
     toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
     r = Residuals(toas, model)
@@ -292,7 +293,7 @@ def test_gls_chi2_behaviour():
         )
     )
     model.free_params = ["F0", "ELAT", "ELONG"]
-    toas = make_fake_toas(57000, 59000, 40, model=model, error=1 * u.us)
+    toas = make_fake_toas_uniform(57000, 59000, 40, model=model, error=1 * u.us)
     np.random.seed(0)
     toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
     f = GLSFitter(toas, model)

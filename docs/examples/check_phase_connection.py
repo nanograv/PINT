@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import astropy.units as u
 
-import pint.fitter, pint.toa
+import pint.fitter, pint.toa, pint.simulation
 from pint.models import get_model_and_toas
 from pint import utils
 import pint.config
@@ -53,7 +53,7 @@ print("Current last TOA: MJD {}".format(f.model.FINISH.quantity))
 # so make fake TOAs to cover the gap
 MJDmax = 59000
 # the number of TOAs is arbitrary since it's mostly for visualization
-tnew = pint.toa.make_fake_toas(f.model.FINISH.value, MJDmax, 50, f.model)
+tnew = pint.simulation.make_fake_toas_uniform(f.model.FINISH.value, MJDmax, 50, f.model)
 
 
 # %%

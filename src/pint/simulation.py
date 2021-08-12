@@ -1,3 +1,5 @@
+from collections import OrderedDict
+from copy import deepcopy
 import numpy as np
 import astropy.units as u
 import pint.residuals
@@ -78,7 +80,8 @@ def make_fake_toas(
     TOAs : pint.toa.TOAs
         object with toas matching input times array with optional errors
     """
-
+    if freq is None or np.isinf(freq):
+        freq = np.inf * u.MHz
     freq_array = get_freq_array(np.atleast_1d(freq), len(times))
     t1 = [
         pint.toa.TOA(t.value, obs=obs, freq=f, scale=get_observatory(obs).timescale)
@@ -304,7 +307,7 @@ def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params=
     -------
     >>> from pint.models import get_model_and_toas
     >>> from pint import fitter, toa
-    >>> import pint.utils
+    >>> import pint.simulation
     >>> import io
     >>>
     >>> # the locations of these may vary
@@ -317,15 +320,15 @@ def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params=
     >>>
     >>> # make fake TOAs starting at the end of the
     >>> # current data and going out 100 days
-    >>> tnew = toa.make_fake_toas(t.get_mjds().max().value,
+    >>> tnew = simulation.make_fake_toas(t.get_mjds().max().value,
     >>>                           t.get_mjds().max().value+100, 50, model=f.model)
     >>> # now make random models
-    >>> dphase, mrand = pint.utils.calculate_random_models(f, tnew, Nmodels=100)
+    >>> dphase, mrand = pint.simulation.calculate_random_models(f, tnew, Nmodels=100)
 
 
     Note
     ----
-    To calculate new TOAs, you can use :func:`~pint.toa.make_fake_toas`
+    To calculate new TOAs, you can use :func:`~pint.simulation.make_fake_toas`
 
     or similar
     """

@@ -9,6 +9,7 @@ import tempfile
 
 from pint.models import get_model
 import pint.toa as toa
+import pint.simulation as simulation
 import test_derivative_utils as tdu
 from pint.residuals import Residuals
 from pinttestdata import datadir
@@ -55,9 +56,9 @@ def test_stigma_zero(tmpdir):
         get_model(parfile_name(tmpdir, stigma_template.format(0)))
     # if STIGMA is zero everything goes wrong.
     # with np.errstate(invalid="raise"):
-    #    toa.make_fake_toas(58000, 59000, 10, model=m)
+    #    simulation.make_fake_toas_uniform(58000, 59000, 10, model=m)
 
 
 def test_stigma_nonzero(tmpdir):
     m = get_model(parfile_name(tmpdir, stigma_template.format(0.5)))
-    toa.make_fake_toas(58000, 59000, 10, model=m)
+    simulation.make_fake_toas_uniform(58000, 59000, 10, model=m)
