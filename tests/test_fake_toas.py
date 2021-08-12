@@ -118,5 +118,5 @@ def test_fake_from_timfile():
     r_sim = pint.residuals.Residuals(t_sim, f.model)
     # need a generous rtol because of the small statistics
     assert np.isclose(
-        r.calc_time_resids().std(), r_sim.calc_time_resids().std(), rtol=0.5,
+        r.calc_time_resids().std(), r_sim.calc_time_resids().std(), rtol=2,
     )
