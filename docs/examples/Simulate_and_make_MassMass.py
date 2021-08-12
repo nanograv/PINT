@@ -210,7 +210,7 @@ Ntoa = 1000
 # make the new TOAs.  Note that even though `error` is passed, the TOAs
 # start out perfect
 tnew = pint.simulation.make_fake_toas_uniform(
-    tstart.mjd * u.d, tstop.mjd * u.s, Ntoa, model=m, obs="ARECIBO", error=error
+    tstart.mjd * u.d, tstop.mjd * u.d, Ntoa, model=m, obs="ARECIBO", error=error
 )
 # So we have to still add in some noise
 tnew.adjust_TOAs(astropy.time.TimeDelta(np.random.normal(size=len(tnew)) * error))
