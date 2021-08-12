@@ -274,7 +274,7 @@ class AstrometryEquatorial(Astrometry):
             if getattr(self, p).value is None:
                 raise MissingParameter("Astrometry", p)
         if (self.PMRA.quantity is None) != (self.PMDEC.quantity is None):
-            raise ValueError("PMELONG and PMELAT must either both be set or neither.")
+            raise ValueError("PMRA and PMDEC must either both be set or neither.")
         # Check for POSEPOCH
         if self.PMRA.quantity is not None and self.POSEPOCH.quantity is None:
             if self._parent.PEPOCH.quantity is None:
