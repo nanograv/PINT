@@ -1,3 +1,5 @@
+"""Functions related to simulating TOAs and models
+"""
 from collections import OrderedDict
 from copy import deepcopy
 import numpy as np
