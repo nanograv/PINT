@@ -127,11 +127,7 @@ def test_zima():
     t = get_TOAs(outfile.name)
     r = pint.residuals.Residuals(t, m)
     # need a generous rtol because of the small statistics
-    assert np.isclose(
-        r.calc_time_resids().std(),
-        1 * u.us,
-        rtol=0.2,
-    )
+    assert np.isclose(r.calc_time_resids().std(), 1 * u.us, rtol=0.2,)
 
 
 def test_fake_from_timfile():
@@ -149,7 +145,5 @@ def test_fake_from_timfile():
     r_sim = pint.residuals.Residuals(t_sim, f.model)
     # need a generous rtol because of the small statistics
     assert np.isclose(
-        r.calc_time_resids().std(),
-        r_sim.calc_time_resids().std(),
-        rtol=2,
+        r.calc_time_resids().std(), r_sim.calc_time_resids().std(), rtol=2,
     )

@@ -44,10 +44,7 @@ def get_freq_array(base_frequencies, ntoas):
 
 
 def make_fake_toas(
-    ts,
-    model,
-    add_noise=False,
-    name="fake",
+    ts, model, add_noise=False, name="fake",
 ):
     """Make toas from an array of times
 
@@ -217,10 +214,7 @@ def make_fake_toas_uniform(
 
 
 def make_fake_toas_fromtim(
-    timfile,
-    model,
-    add_noise=False,
-    name="fake",
+    timfile, model, add_noise=False, name="fake",
 ):
     """Make fake toas with the same times as an input tim file
 
