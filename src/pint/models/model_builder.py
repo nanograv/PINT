@@ -409,7 +409,7 @@ class ModelBuilder:
                 del conflict_components[ps_cp]
         return selected_components, conflict_components, param_not_in_pint
 
-    def _setup_model(self, timing_model, pint_param_dict, setup=Ture):
+    def _setup_model(self, timing_model, pint_param_dict, setup=True):
         """Fill up a timing model with parameter values and then setup the model.
 
         This function fills up the timing model parameter values from the input
@@ -431,7 +431,7 @@ class ModelBuilder:
         setup: bool, optional
             Whether to run the setup function in the timing model.
         """
-        for pp, v in pint_param_dict:
+        for pp, v in pint_param_dict.items():
             try:
                 par = getattr(timing_model, pp)
             except AttributeError:
@@ -455,13 +455,13 @@ class ModelBuilder:
                 new_max_idx = max(len(lines), max(repeatable_map.keys())) + 1
                 temp_par = example_par.new_param(new_max_idx)
                 current_line =  lines.pop(0)
-                temp_par.from_parfile_line(" ".join([prefix + new_max_idx, current_line]))
+                temp_par.from_parfile_line(" ".join([prefix + str(new_max_idx), current_line]))
                 # Check current repeatable's key and value
                 # TODO need to change here when maskParameter name changes to name_key_value
                 empty_repeat_param = []
                 for idx, rp in repeatable_map.items():
                     rp_par = getattr(timing_model, rp)
-                    if test_par.compare_key_value(temp_par):
+                    if rp_par.compare_key_value(temp_par):
                         # Key and key value match, copy the new line to it
                         # and exit
                         rp_par.from_parfile_line(" ".join([rp, current_line]))
@@ -483,7 +483,7 @@ class ModelBuilder:
 
         if setup:
             timing_model.setup()
-
+        return timing_model
 
     def _add_indexed_params(self, timing_model, indexed_params):
         """Add the parameters with unknown number/indexed in parfile (maskParameter/prefixParameter) to timing model.

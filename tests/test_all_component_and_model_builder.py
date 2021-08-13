@@ -7,6 +7,7 @@ from glob import glob
 from os.path import basename, join
 import astropy.units as u
 from pint.models.timing_model import (
+    TimingModel,
     PhaseComponent,
     Component,
     AllComponents,
@@ -71,6 +72,27 @@ def simple_model_alias_overlap():
     )
     return simple_model
 
+
+@pytest.fixture
+def test_timing_model():
+    ac = AllComponents()
+    timing_model = TimingModel(name="Test",
+                               components=[ac.components['AstrometryEquatorial'],
+                                           ac.components['Spindown'],
+                                           ac.components['DispersionDMX'],
+                                           ac.components['PhaseJump'],
+                                           ac.components['ScaleToaError']])
+    return timing_model
+
+pint_dict_base = {'PSR': ['J1234+5678'],
+                  'RAJ': ['04:37:15.7865145       1   7.000e-07'],
+                  'DECJ': ['-47:15:08.461584       1   8.000e-06'],
+                  'F0': ['173.6879489990983      1   3.000e-13'],
+                  'PEPOCH': ['51194.000'],
+                  'JUMP1': ['-fe L-wide 1 1 0.1', '-fe 430 1 1 0.1', '-fe1 430 1 1 0.1'],
+                  'DMX_0001': ['3.01718358D-03  1      3.89019948D-05'],
+                  'EFAC1': ['-f L-wide_PUPPI   1.156', '-f 430_ASP   0.969'],
+                  'EQUAD1': ['-f L-wide_PUPPI   0.14320']}
 
 def test_model_builder_class():
     """Test if AllComponents collected components information correctly
@@ -201,6 +223,24 @@ def test_subset_component(sub_set_model):
     # Test subset
     superset = mb._is_subset_component(sub_set_model)
     assert superset == "Spindown"
+
+
+def test_model_fillup(test_timing_model):
+    """Test model value fill up
+    """
+    mb = ModelBuilder()
+    tm = mb._setup_model(test_timing_model, pint_dict_base)
+    assert tm.PSR.value == 'J1234+5678'
+    assert np.isclose(tm.F0.value, 173.6879489990983)
+    assert tm.F0.uncertainty_value == 3.000e-13
+    assert tm.DMX_0001.value == 3.01718358e-03
+    assert tm.DMX_0001.uncertainty_value == 3.89019948e-05
+    jump_map = tm.get_perfix_mapping('JUMP')
+    assert len(jump_map) == len(pint_dict_base['JUMP1'])
+    assert tm.JUMP2.key == 'fe1'
+    assert tm.JUMP2.key_value == ['430']
+    assert len()
+
 
 
 def test_model_from_par():
