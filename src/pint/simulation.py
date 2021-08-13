@@ -77,6 +77,7 @@ def update_fake_toa_clock(
     ts, model, include_bipm=False, include_gps=True,
 ):
     """Update the clock settings (corrections, etc) for fake TOAs
+
     Parameters
     ----------
     ts : pint.toa.TOAs
@@ -85,10 +86,10 @@ def update_fake_toa_clock(
         current model
     include_bipm : bool, optional
         Whether or not to disable UTC-> TT BIPM clock
-        correction (see :class:`pint.observatory.TopoObs`)
+        correction (see :class:`pint.observatory.topo_obs.TopoObs`)
     include_gps : bool, optional
         Whether or not to disable UTC(GPS)->UTC clock correction
-        (see :class:`pint.observatory.TopoObs`)
+        (see :class:`pint.observatory.topo_obs.TopoObs`)
     """
     bipm_version = bipm_default
     if model["CLOCK"].value is not None:
@@ -216,10 +217,10 @@ def make_fake_toas_uniform(
         Name for the TOAs (goes into the flags)
     include_bipm : bool, optional
         Whether or not to disable UTC-> TT BIPM clock
-        correction (see :class:`pint.observatory.TopoObs`)
+        correction (see :class:`pint.observatory.topo_obs.TopoObs`)
     include_gps : bool, optional
         Whether or not to disable UTC(GPS)->UTC clock correction
-        (see :class:`pint.observatory.TopoObs`)
+        (see :class:`pint.observatory.topo_obs.TopoObs`)
     Returns
     -------
     TOAs : pint.toa.TOAs
@@ -303,10 +304,10 @@ def make_fake_toas_fromMJDs(
         Name for the TOAs (goes into the flags)
     include_bipm : bool, optional
         Whether or not to disable UTC-> TT BIPM clock
-        correction (see :class:`pint.observatory.TopoObs`)
+        correction (see :class:`pint.observatory.topo_obs.TopoObs`)
     include_gps : bool, optional
         Whether or not to disable UTC(GPS)->UTC clock correction
-        (see :class:`pint.observatory.TopoObs`)
+        (see :class:`pint.observatory.topo_obs.TopoObs`)
 
     Returns
     -------
