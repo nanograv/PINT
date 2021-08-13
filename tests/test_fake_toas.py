@@ -127,7 +127,35 @@ def test_zima():
     t = get_TOAs(outfile.name)
     r = pint.residuals.Residuals(t, m)
     # need a generous rtol because of the small statistics
-    assert np.isclose(r.calc_time_resids().std(), 1 * u.us, rtol=0.2,)
+    assert np.isclose(
+        r.calc_time_resids().std(),
+        1 * u.us,
+        rtol=0.5,
+    )
+
+
+def test_fake_fromMJDs():
+    # basic model, no EFAC or EQUAD
+    model = get_model(
+        io.StringIO(
+            """
+        PSRJ J1234+5678
+        ELAT 0
+        ELONG 0
+        DM 10
+        F0 1
+        PEPOCH 58000
+        """
+        )
+    )
+    MJDs = np.linspace(57001, 58000, 200, dtype=np.longdouble) * u.d
+    toas = pint.simulation.make_fake_toas_fromMJDs(
+        MJDs, model=model, error=1 * u.us, add_noise=True
+    )
+    r = pint.residuals.Residuals(toas, model)
+
+    # need a generous rtol because of the small statistics
+    assert np.isclose(r.calc_time_resids().std(), 1 * u.us, rtol=0.2)
 
 
 def test_fake_from_timfile():
@@ -145,5 +173,7 @@ def test_fake_from_timfile():
     r_sim = pint.residuals.Residuals(t_sim, f.model)
     # need a generous rtol because of the small statistics
     assert np.isclose(
-        r.calc_time_resids().std(), r_sim.calc_time_resids().std(), rtol=2,
+        r.calc_time_resids().std(),
+        r_sim.calc_time_resids().std(),
+        rtol=2,
     )
