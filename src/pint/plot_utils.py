@@ -202,7 +202,7 @@ def plot_priors(
         MCMC samples which are histogrammed
     maxpost_fitvals : list, optional
         The maximum posterier values returned from MCMC integration
-    fitvals : int, optional
+    fitvals : list, optional
         The original parameter fit values
     burnin : int
         The number of steps that are the burnin in the MCMC integration
