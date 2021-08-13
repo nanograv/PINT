@@ -74,10 +74,7 @@ def zero_residuals(ts, model, maxiter=10, tolerance=1 * u.ns):
 
 
 def update_fake_toa_clock(
-    ts,
-    model,
-    include_bipm=False,
-    include_gps=True,
+    ts, model, include_bipm=False, include_gps=True,
 ):
     """Update the clock settings (corrections, etc) for fake TOAs
     Parameters
@@ -128,10 +125,7 @@ def update_fake_toa_clock(
 
 
 def make_fake_toas(
-    ts,
-    model,
-    add_noise=False,
-    name="fake",
+    ts, model, add_noise=False, name="fake",
 ):
     """Make toas from an array of times
 
@@ -352,10 +346,7 @@ def make_fake_toas_fromMJDs(
 
 
 def make_fake_toas_fromtim(
-    timfile,
-    model,
-    add_noise=False,
-    name="fake",
+    timfile, model, add_noise=False, name="fake",
 ):
     """Make fake toas with the same times as an input tim file
 
