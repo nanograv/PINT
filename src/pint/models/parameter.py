@@ -1808,6 +1808,30 @@ class maskParameter(floatParameter):
         select_idx = self.toa_selector.get_select_index(condition, col)
         return select_idx[self.name]
 
+    def compare_key_value(self, other_param):
+        """Compare if the key and value are the same with the other parameter.
+
+        Parameter
+        ---------
+        other_param: maskParameter
+            The parameter to compare.
+        Return
+        ------
+        bool:
+            If the key and value are the same, return True, otherwise False.
+        Raises
+        ------
+        ValueError:
+            If the parameter to compare does not have 'key' or 'key_value'.
+        """
+        if not (hasattr(other_param, 'key') or hasattr(other_param, 'key_value')):
+            raise ValueError("Parameter to compare does not have `key` or `key_value`.")
+        if self.key != other_param.key:
+            return False
+        if self.key_value != other_param.key_value:
+            return False
+        return True
+
 
 class pairParameter(floatParameter):
     """Parameter type for parameters that need two input floats.

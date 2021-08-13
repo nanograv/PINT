@@ -2,6 +2,7 @@ import logging
 import os
 import tempfile
 import copy
+from io import StringIO
 from collections import Counter, defaultdict
 from pint.models.parameter import maskParameter
 from astropy import log
@@ -52,6 +53,15 @@ def parse_parfile(parfile):
         parfile_dict[k[0].upper()].append(" ".join(k[1:]))
     return parfile_dict
 
+
+def fill_parameter_value(timing_model, pint_param_dict):
+    """Fill parameter value to a timing model.
+
+    Parameter
+    ---------
+    timing_model: pint.models.TimingModel object
+
+    """
 
 class ModelBuilder:
     """Class for building a `TimingModel` object from a parameter file.
@@ -261,20 +271,23 @@ class ModelBuilder:
         Raises
         ------
         TimingModelError
-            If the parfile has mulitple line with non-repeating parameters. 
+            If the parfile has mulitple line with non-repeating parameters.
         """
         pint_param_dict = defaultdict(list)
         unknown_param = defaultdict(list)
         repeating = Counter()
         if isinstance(parfile, (str, StringIO)):
             parfile_dict = parse_parfile(parfile)
+        else:
+            parfile_dict = parfile
         for k, v in parfile_dict.items():
             try:
                 pint_name, init0 = self.all_components.alias_to_pint_param(k)
             except UnknownParameter:
-                unknown_param[k].append(v)
-            pint_param_dict[pint_name].append(v)
-            repeating[pint_name] += 1
+                unknown_param[k] += v
+                continue
+            pint_param_dict[pint_name] += v
+            repeating[pint_name] += len(v)
             # Check if this parameter is allowed to be repeated by PINT
             if repeating[pint_name] > 1:
                 if pint_name not in self.all_components.repeatable_param:
@@ -283,7 +296,6 @@ class ModelBuilder:
                         f"However, mulitple line use it."
                     )
         return pint_param_dict, unknown_param
-
 
     def choose_model(self, param_inpar):
         """Choose the model components based on the parfile.
@@ -323,6 +335,8 @@ class ModelBuilder:
         # 1. iteration read parfile with a no component timing_model to get
         # the overall control parameters. This will get us the binary model name
         # build the base fo the timing model
+        #pint_param_dict, unknown_param = self._pintify_parfile(param_inpar)
+
         binary = param_inpar.get("BINARY", None)
         if binary is not None:
             binary = binary[0]
@@ -394,6 +408,82 @@ class ModelBuilder:
                     del conflict_components[cf_cp]
                 del conflict_components[ps_cp]
         return selected_components, conflict_components, param_not_in_pint
+
+    def _setup_model(self, timing_model, pint_param_dict, setup=Ture):
+        """Fill up a timing model with parameter values and then setup the model.
+
+        This function fills up the timing model parameter values from the input
+        pintified parameter dictionary. If the parameter has not initialized yet,
+        it will add the parameter to the timing model. For the repeatable parameters,
+        it will search matching key value pair first. If the input parameter line's
+        key-value matches the existing parameter, the parameter value and uncertainty
+        will copy to the existing parameter. If there is no match, it will find an
+        empty existing parameter, whose `key` is `None`, and fill it up. If no empyt
+        parameter left, it will add a new parameter to it.
+
+        Parameters
+        ----------
+        timing_model: pint.models.TimingModel
+            Timing model to get setup.
+        pint_param_dict: dict
+            Pintified parfile dictionary which can be aquired by
+            :meth:`ModelBuilder._pintify_parfile`
+        setup: bool, optional
+            Whether to run the setup function in the timing model.
+        """
+        for pp, v in pint_param_dict:
+            try:
+                par = getattr(timing_model, pp)
+            except AttributeError:
+            # since the input is pintfied, it should be an uninitized indexed parameter
+            # double check if the missing parameter an indexed parameter.
+                pint_par, first_init = self.all_components.alias_to_pint_param(pp)
+                prefix, _, index = split_prefixed_name(pint_par)
+                host_component = timing_model._locate_param_host(first_init)
+                timing_model.add_param_from_top(first_init.new_param(idx), host_component)
+            # Fill up the values
+            param_line = len(v)
+            if param_line < 2:
+                par.from_parfile_line(" ".join([pp] + v))
+            else: # For the repeatable parameters
+                lines = copy.deepcopy(v) # Line queue.
+                # Check how many repeatable parameters in the model.
+                example_par = getattr(timing_model, pp)
+                prefix , _, index = split_prefixed_name(pp)
+                repeatable_map = timing_model.get_prefix_mapping(prefix)
+                # Creat a temp parameter with the idx bigger than all the existing indices
+                new_max_idx = max(len(lines), max(repeatable_map.keys())) + 1
+                temp_par = example_par.new_param(new_max_idx)
+                current_line =  lines.pop(0)
+                temp_par.from_parfile_line(" ".join([prefix + new_max_idx, current_line]))
+                # Check current repeatable's key and value
+                # TODO need to change here when maskParameter name changes to name_key_value
+                empty_repeat_param = []
+                for idx, rp in repeatable_map.items():
+                    rp_par = getattr(timing_model, rp)
+                    if test_par.compare_key_value(temp_par):
+                        # Key and key value match, copy the new line to it
+                        # and exit
+                        rp_par.from_parfile_line(" ".join([rp, current_line]))
+                        break
+
+                    if rp_par.key is None:
+                        # Empty space for new repeatable parameter
+                        empty_repeat_param.append(rp_par)
+
+                # There is no current repeatable parameter matching the new line
+                # First try to fill up an empty space.
+                if empty_repeat_param != []:
+                    emt_par = empty_repeat_param.pop(0)
+                    emt_par.from_parfile_line(" ".join([emt_par.name, current_line]))
+                else:
+                # No empty space, add a new parameter to the timing model.
+                    host_component = timing_model._locate_param_host(pp)
+                    timing_model.add_param_from_top(temp_par, host_component)
+
+        if setup:
+            timing_model.setup()
+
 
     def _add_indexed_params(self, timing_model, indexed_params):
         """Add the parameters with unknown number/indexed in parfile (maskParameter/prefixParameter) to timing model.
