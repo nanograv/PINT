@@ -182,55 +182,45 @@ def phaseogram_binned(
 def plot_priors(
     model,
     chains,
-    fitvals,
-    fiterrs,
-    maxpost_fitvals,
+    maxpost_fitvals=None,
+    fitvals=None,
     burnin=100,
     bins=100,
     scale=False,
     file=False,
 ):
-
-    """
-    Show binned samples, prior probability distribution and an initial gaussian
-    probability distribution plotted with 2 sigma, maximum posterior and original
-    fit values marked.
+    """Plot of priors and the post-MCMC histogrammed samples
+    
+    Show binned samples, prior probability distribution and an initial
+    gaussian probability distribution plotted with 2 sigma, maximum
+    posterior and original fit values marked.
     
     Parameters
     ----------
-    model
-        Input timing model 
-    chains: dict    
-        Post MCMC integration chains that are input into a histogram and compared with the priors. Contain the fitkeys and the samples
-    fitvals
-        Initial Parameter values
-    fiterrs
-        Initial Parameter uncertainties
-    maxpost_fitvals
-        Maximum Posterior values
-    With scale is True
-        The priors and initial probability distributions are scaled to the peak of the histogram.
-    With scale is False
-        The priors and initial probability distributions are plotted without the scaling.
+    chains : dict
+        Post MCMC integration chains that contain the fitter keys and post
+        MCMC samples which are histogrammed
+    maxpost_fitvals : list, optional
+        The maximum posterier values returned from MCMC integration
+    fitvals : int, optional
+        The original parameter fit values
+    burnin : int
+        The number of steps that are the burnin in the MCMC integration
+    bins : int
+        Number of bins used in the histogram
     """
     keys = []
     values = []
-    for item in chains.items():
-        keys.append(item[0]), values.append(item[1])
+    for k, v in chains.items():
+        keys.append(k), values.append(v)
 
     priors = []
-    initials = []
     x_range = []
     counts = []
     for i in range(0, len(keys[:-1])):
         values[i] = values[i][burnin:].flatten()
         x_range.append(np.linspace(values[i].min(), values[i].max(), num=bins))
         priors.append(getattr(model, keys[i]).prior.pdf(x_range[i]))
-        initials.append(
-            GaussianBoundedRV(loc=float(fitvals[i]), scale=float(fiterrs[i])).pdf(
-                x_range[i]
-            )
-        )
         a, x = np.histogram(values[i], bins=bins)
         counts.append(a)
 
@@ -240,56 +230,46 @@ def plot_priors(
         if i != len(keys[:-1]):
             axs[i].set_xlabel(
                 str(p)
-                + ": Max Post Value - "
-                + str("{:.9e}".format(maxpost_fitvals[i]))
+                + ": Mean Value = "
+                + str("{:.9e}".format(values[i].mean()))
                 + " ("
                 + str(getattr(model, p).units)
                 + ")"
-            )
-            axs[i].axvline(
-                fitvals[i] - maxpost_fitvals[i],
-                color="m",
-                linestyle="--",
-                label="Original Fit Value",
-            )
-            axs[i].axvline(
-                maxpost_fitvals[i] - maxpost_fitvals[i],
-                color="c",
-                linestyle="--",
-                label="Maximum Likelihood Value",
             )
             axs[i].axvline(
                 -2 * values[i].std(), color="b", linestyle="--", label="2 sigma"
             )
             axs[i].axvline(2 * values[i].std(), color="b", linestyle="--")
             axs[i].hist(
-                values[i] - maxpost_fitvals[i], bins=bins, label="Samples",
+                values[i] - values[i].mean(), bins=bins, label="Samples",
             )
             if scale:
                 axs[i].plot(
-                    x_range[i] - maxpost_fitvals[i],
-                    initials[i] * counts[i].max() / initials[i].max(),
-                    label="Initial Gaussian Probability",
-                    color="r",
-                )
-                axs[i].plot(
-                    x_range[i] - maxpost_fitvals[i],
+                    x_range[i] - values[i].mean(),
                     priors[i] * counts[i].max() / priors[i].max(),
                     label="Prior Probability",
                     color="g",
                 )
             else:
                 axs[i].plot(
-                    x_range[i] - maxpost_fitvals[i],
-                    initials[i],
-                    label="Initial Gaussian Probability",
-                    color="r",
-                )
-                axs[i].plot(
-                    x_range[i] - maxpost_fitvals[i],
+                    x_range[i] - values[i].mean(),
                     priors[i],
                     label="Prior Probability",
                     color="g",
+                )
+            if maxpost_fitvals is not None:
+                axs[i].axvline(
+                    maxpost_fitvals[i] - values[i].mean(),
+                    color="c",
+                    linestyle="--",
+                    label="Maximum Likelihood Value",
+                )
+            if fitvals is not None:
+                axs[i].axvline(
+                    fitvals[i] - values[i].mean(),
+                    color="m",
+                    linestyle="--",
+                    label="Original Parameter Fit Value",
                 )
         else:
             handles, labels = axs[0].get_legend_handles_labels()
@@ -297,7 +277,3 @@ def plot_priors(
             axs[i].legend(handles, labels)
     if file:
         fig.savefig(file)
-        plt.close()
-    else:
-        plt.show()
-        plt.close()

@@ -415,9 +415,8 @@ class emcee_fitter(Fitter):
         plot_utils.plot_priors(
             self.model,
             chains,
-            self.fitvals,
-            self.fiterrs,
             self.maxpost_fitvals,
+            self.fitvals,
             burnin=burnin,
             bins=bins,
             scale=scale,
