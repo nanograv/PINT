@@ -2,13 +2,14 @@
 """
 from collections import OrderedDict
 from copy import deepcopy
-import numpy as np
+
 import astropy.units as u
+import numpy as np
+from astropy import log, time
+
 import pint.residuals
 import pint.toa
 from pint.observatory import Observatory, bipm_default, get_observatory
-from astropy import log
-from astropy import time
 
 __all__ = [
     "make_fake_toas",
@@ -43,7 +44,10 @@ def get_freq_array(base_frequencies, ntoas):
 
 
 def make_fake_toas(
-    ts, model, add_noise=False, name="fake",
+    ts,
+    model,
+    add_noise=False,
+    name="fake",
 ):
     """Make toas from an array of times
 
@@ -60,7 +64,7 @@ def make_fake_toas(
         Add noise to the TOAs (otherwise `error` just populates the column)
     name : str, optional
         Name for the TOAs (goes into the flags)
-        
+
     Returns
     -------
     TOAs : pint.toa.TOAs
@@ -109,7 +113,7 @@ def make_fake_toas_uniform(
     dm_error=1e-4 * pint.dmu,
     name="fake",
 ):
-    """Make evenly spaced toas 
+    """Make evenly spaced toas
 
     Can include alternating frequencies if fed an array of frequencies,
     only works with one observatory at a time
@@ -140,12 +144,16 @@ def make_fake_toas_uniform(
         uncertainty to attach to each DM measurement
     name : str, optional
         Name for the TOAs (goes into the flags)
-        
+
     Returns
     -------
     TOAs : pint.toa.TOAs
         object with evenly spaced toas spanning given start and end MJD with
         ntoas toas, with optional errors
+
+    See Also
+    --------
+    :func:`make_fake_toas`
     """
 
     times = np.linspace(startMJD, endMJD, ntoas, dtype=np.longdouble) * u.d
@@ -154,7 +162,7 @@ def make_fake_toas_uniform(
         fuzz = np.random.normal(scale=fuzz.to_value(u.d), size=len(times)) * u.d
         times += fuzz
 
-    if freq is None or np.isinf(freq):
+    if freq is None or np.isinf(freq).all():
         freq = np.inf * u.MHz
     freq_array = get_freq_array(np.atleast_1d(freq), len(times))
     t1 = [
@@ -211,12 +219,7 @@ def make_fake_toas_uniform(
 def make_fake_toas_fromtim(
     timfile,
     model,
-    freq=1400 * u.MHz,
-    obs="GBT",
-    error=1 * u.us,
     add_noise=False,
-    dm=None,
-    dm_error=1e-4 * pint.dmu,
     name="fake",
 ):
     """Make fake toas with the same times as an input tim file
@@ -230,26 +233,20 @@ def make_fake_toas_fromtim(
         Filename, list of filenames, or file-like object containing the TOA data.
     model : pint.models.timing_model.TimingModel
         current model
-    freq : astropy.units.Quantity, optional
-        frequency of the fake toas, default 1400 MHz
-    obs : str, optional
-        observatory for fake toas, default GBT
-    error : astropy.units.Quantity
-        uncertainty to attach to each TOA
     add_noise : bool, optional
         Add noise to the TOAs (otherwise `error` just populates the column)
-    dm : astropy.units.Quantity, optional
-        DM value to include with each TOA; default is not to include any DM information
-    dm_error : astropy.units.Quantity
-        uncertainty to attach to each DM measurement
     name : str, optional
         Name for the TOAs (goes into the flags)
-        
+
     Returns
     -------
     TOAs : pint.toa.TOAs
         object with evenly spaced toas spanning given start and end MJD with
         ntoas toas, with optional errors
+
+    See Also
+    --------
+    :func:`make_fake_toas`
     """
     input_ts = pint.toa.get_TOAs(timfile)
     return make_fake_toas(input_ts, model=model, add_noise=add_noise, name=name)
