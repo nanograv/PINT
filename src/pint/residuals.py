@@ -255,8 +255,8 @@ class Residuals:
         freq : astropy.units.Quantity
             Either the single ``F0`` in the model or the spin frequency at the moment of each TOA.
         """
-        assert calctype in ["modelF0", "taylor", "numerical"]
-        if calctype == "modelF0":
+        assert calctype.lower() in ["modelF0", "taylor", "numerical"]
+        if calctype.lower() == "modelf0":
             # TODO this function will be re-write and move to timing model soon.
             # The following is a temproary patch.
             if "Spindown" in self.model.components:
@@ -268,12 +268,12 @@ class Residuals:
                     "No pulsar spin parameter(e.g., 'F0'," " 'P0') found."
                 )
             return F0.to(u.Hz)
-        elif calctype == "taylor":
+        elif calctype.lower() == "taylor":
             # see Spindown.spindown_phase
             dt = self.model.get_dt(self.toas, 0)
             fterms = [0.0 * u.dimensionless_unscaled] + self.model.get_spin_terms()
             return taylor_horner_deriv(dt, fterms, deriv_order=1).to(u.Hz)
-        elif calctype == "numerical":
+        elif calctype.lower() == "numerical":
             return self.model.d_phase_d_toa(self.toas)
 
     def calc_phase_resids(self):
@@ -368,7 +368,7 @@ class Residuals:
         --------
         :meth:`pint.residuals.get_PSR_freq`
         """
-        assert calctype in ["modelF0", "taylor", "numerical"]
+        assert calctype.lower() in ["modelf0", "taylor", "numerical"]
         if self.phase_resids is None:
             self.phase_resids = self.calc_phase_resids()
         return (self.phase_resids / self.get_PSR_freq(calctype=calctype)).to(u.s)
