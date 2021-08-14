@@ -118,7 +118,7 @@ def main(argv=None):
         r = pint.residuals.Residuals(ts, m)
         plt.errorbar(
             ts.get_mjds(),
-            r.calc_time_resids().to(u.us),
+            r.calc_time_resids(calctype='taylor').to(u.us),
             yerr=ts.get_errors().to(u.us),
             fmt=".",
         )

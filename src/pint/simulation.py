@@ -62,19 +62,23 @@ def zero_residuals(ts, model, maxiter=10, tolerance=1 * u.ns):
     ts.compute_pulse_numbers(model)
     for i in range(maxiter):
         r = pint.residuals.Residuals(ts, model, track_mode="use_pulse_numbers")
-        if abs(r.time_resids).max() < tolerance:
+        resids = r.calc_time_resids(calctype="taylor")
+        if abs(resids).max() < tolerance:
             break
-        ts.adjust_TOAs(time.TimeDelta(-r.time_resids))
+        ts.adjust_TOAs(-time.TimeDelta(resids))
     else:
         raise ValueError(
             "Unable to make fake residuals - left over errors are {}".format(
-                abs(r.time_resids).max()
+                abs(resids).max()
             )
         )
 
 
 def update_fake_toa_clock(
-    ts, model, include_bipm=False, include_gps=True,
+    ts,
+    model,
+    include_bipm=False,
+    include_gps=True,
 ):
     """Update the clock settings (corrections, etc) for fake TOAs
 
@@ -126,7 +130,10 @@ def update_fake_toa_clock(
 
 
 def make_fake_toas(
-    ts, model, add_noise=False, name="fake",
+    ts,
+    model,
+    add_noise=False,
+    name="fake",
 ):
     """Make toas from an array of times
 
@@ -347,7 +354,10 @@ def make_fake_toas_fromMJDs(
 
 
 def make_fake_toas_fromtim(
-    timfile, model, add_noise=False, name="fake",
+    timfile,
+    model,
+    add_noise=False,
+    name="fake",
 ):
     """Make fake toas with the same times as an input tim file
 
