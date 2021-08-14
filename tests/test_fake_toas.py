@@ -9,6 +9,7 @@ import tempfile
 import os
 import pint.config
 from pint.fitter import GLSFitter
+from pinttestdata import datadir, testdir
 
 
 def test_noise_addition():
@@ -171,3 +172,14 @@ def test_fake_from_timfile():
     assert np.isclose(
         r.calc_time_resids().std(), r_sim.calc_time_resids().std(), rtol=2,
     )
+
+
+def test_fake_highF1():
+    m = get_model(os.path.join(datadir, "ngc300nicer.par"))
+    m.F1.quantity *= 10
+    MJDs = np.linspace(58300, 58400, 100, dtype=np.longdouble) * u.d
+    t = pint.simulation.make_fake_toas_fromMJDs(
+        MJDs, model=m, add_noise=True, error=1 * u.us
+    )
+    r = pint.residuals.Residuals(t, m)
+    assert np.isclose(r.calc_time_resids(calctype="taylor").std(), 1 * u.us, rtol=0.2)
