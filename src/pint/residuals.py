@@ -17,7 +17,7 @@ from scipy.linalg import LinAlgError
 
 from pint.models.dispersion_model import Dispersion
 from pint.phase import Phase
-from pint.utils import weighted_mean
+from pint.utils import weighted_mean, taylor_horner_deriv
 
 __all__ = [
     "Residuals",
@@ -239,21 +239,24 @@ class Residuals:
         wmean, werr, wsdev = weighted_mean(self.time_resids, w, sdev=True)
         return wsdev.to(u.us)
 
-    def get_PSR_freq(self, modelF0=True):
+    def get_PSR_freq(self, calctype="modelF0"):
         """Return pulsar rotational frequency in Hz.
 
         Parameters
         ----------
-        modelF0 : bool, optional
-            If True, simply read the ``F0`` parameter from the model. If False,
-            query the model for the spin period at the time of each TOA.
+        calctype : str, optional
+            Type of calculation.  If `calctype` == "modelF0", then simply the ``F0``
+            parameter from the model.
+            If `calctype` == "numerical", then try a numerical derivative
+            If `calctype` == "taylor", evaluate the frequency with a Taylor series
 
         Returns
         -------
-        freq : Quantity
+        freq : astropy.units.Quantity
             Either the single ``F0`` in the model or the spin frequency at the moment of each TOA.
         """
-        if modelF0:
+        assert calctype in ["modelF0", "taylor", "numerical"]
+        if calctype == "modelF0":
             # TODO this function will be re-write and move to timing model soon.
             # The following is a temproary patch.
             if "Spindown" in self.model.components:
@@ -265,7 +268,12 @@ class Residuals:
                     "No pulsar spin parameter(e.g., 'F0'," " 'P0') found."
                 )
             return F0.to(u.Hz)
-        else:
+        elif calctype == "taylor":
+            # see Spindown.spindown_phase
+            dt = self.model.get_dt(self.toas, 0)
+            fterms = [0.0 * u.dimensionless_unscaled] + self.model.get_spin_terms()
+            return taylor_horner_deriv(dt, fterms, deriv_order=1).to(u.Hz)
+        elif calctype == "numerical":
             return self.model.d_phase_d_toa(self.toas)
 
     def calc_phase_resids(self):
@@ -338,11 +346,32 @@ class Residuals:
             mean, err = weighted_mean(full, w)
         return full - mean
 
-    def calc_time_resids(self):
-        """Compute timing model residuals in time (seconds)."""
+    def calc_time_resids(self, calctype="modelF0"):
+        """Compute timing model residuals in time (seconds).
+
+        Converts from phase residuals to time residuals using several possible ways
+        to calculate the frequency.
+
+        Parameters
+        ----------
+        calctype : str, optional
+            Type of calculation.  If `calctype` == "modelF0", then simply the ``F0``
+            parameter from the model.
+            If `calctype` == "numerical", then try a numerical derivative
+            If `calctype` == "taylor", evaluate the frequency with a Taylor series
+
+        Returns
+        -------
+        residuals : astropy.units.Quantity
+
+        See Also
+        --------
+        :meth:`pint.residuals.get_PSR_freq`
+        """
+        assert calctype in ["modelF0", "taylor", "numerical"]
         if self.phase_resids is None:
             self.phase_resids = self.calc_phase_resids()
-        return (self.phase_resids / self.get_PSR_freq()).to(u.s)
+        return (self.phase_resids / self.get_PSR_freq(calctype=calctype)).to(u.s)
 
     def calc_chi2(self, full_cov=False):
         """Return the weighted chi-squared for the model and toas.
