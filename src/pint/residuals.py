@@ -255,7 +255,7 @@ class Residuals:
         freq : astropy.units.Quantity
             Either the single ``F0`` in the model or the spin frequency at the moment of each TOA.
         """
-        assert calctype.lower() in ["modelF0", "taylor", "numerical"]
+        assert calctype.lower() in ["modelf0", "taylor", "numerical"]
         if calctype.lower() == "modelf0":
             # TODO this function will be re-write and move to timing model soon.
             # The following is a temproary patch.
