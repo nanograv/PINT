@@ -926,13 +926,13 @@ class PlkWidget(tk.Frame):
     def determine_yaxis_units(self, miny, maxy):
         """Checks range of residuals and converts units if range sufficiently large/small."""
         diff = maxy - miny
-        if diff > 200000 * u.us:
+        if diff > 0.2 * u.s:
             maxy = maxy.to(u.s)
             miny = miny.to(u.s)
-        elif diff > 200 * u.us:
+        elif diff > 0.2 * u.ms:
             maxy = maxy.to(u.ms)
             miny = miny.to(u.ms)
-        elif diff <= 200 * u.us:
+        elif diff <= 0.2 * u.ms:
             maxy = maxy.to(u.us)
             miny = miny.to(u.us)
         return miny, maxy
