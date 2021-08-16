@@ -60,9 +60,15 @@ def zero_residuals(ts, model, maxiter=10, tolerance=1 * u.ns):
         maximum allowed absolute deviation of residuals from 0
     """
     ts.compute_pulse_numbers(model)
+    maxresid = None
     for i in range(maxiter):
         r = pint.residuals.Residuals(ts, model, track_mode="use_pulse_numbers")
         resids = r.calc_time_resids(calctype="taylor")
+        if maxresid is not None and (np.abs(resids).max() > maxresid):
+            log.warning(
+                f"Residual increasing at iteration {i} while attempting to simulate TOAs"
+            )
+        maxresid = np.abs(resids).max()
         if abs(resids).max() < tolerance:
             break
         ts.adjust_TOAs(-time.TimeDelta(resids))
