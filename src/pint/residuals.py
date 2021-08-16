@@ -244,7 +244,7 @@ class Residuals:
 
         Parameters
         ----------
-        calctype : str, optional
+        calctype : {'modelF0', 'numerical', 'taylor'}
             Type of calculation.  If `calctype` == "modelF0", then simply the ``F0``
             parameter from the model.
             If `calctype` == "numerical", then try a numerical derivative
@@ -354,7 +354,7 @@ class Residuals:
 
         Parameters
         ----------
-        calctype : str, optional
+        calctype : {'modelF0', 'numerical', 'taylor'}
             Type of calculation.  If `calctype` == "modelF0", then simply the ``F0``
             parameter from the model.
             If `calctype` == "numerical", then try a numerical derivative
