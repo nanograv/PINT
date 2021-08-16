@@ -12,6 +12,11 @@ from astropy import log
 class DelayJump(DelayComponent):
     """Phase jumps
 
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.jump.DelayJump
+
     Note
     ----
     This component is disabled for now, since we don't have any method
@@ -22,21 +27,18 @@ class DelayJump(DelayComponent):
     category = "delay_jump"
 
     def __init__(self):
-        super(DelayJump, self).__init__()
+        super().__init__()
         self.add_param(maskParameter(name="JUMP", units="second"))
         self.delay_funcs_component += [self.jump_delay]
 
     def setup(self):
-        super(DelayJump, self).setup()
+        super().setup()
         self.jumps = []
         for mask_par in self.get_params_of_type("maskParameter"):
             if mask_par.startswith("JUMP"):
                 self.jumps.append(mask_par)
         for j in self.jumps:
             self.register_deriv_funcs(self.d_delay_d_jump, j)
-
-    def validate(self):
-        super(DelayJump, self).validate()
 
     def jump_delay(self, toas, acc_delay=None):
         """This method returns the jump delays for each toas section collected by
@@ -70,18 +72,33 @@ class DelayJump(DelayComponent):
 
 
 class PhaseJump(PhaseComponent):
-    """A class to implement phase jumps."""
+    """Arbitrary jumps in pulse phase.
+
+    In spite of the name, the amounts here are specified in seconds and
+    converted to phase using F0.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.jump.PhaseJump
+    """
 
     register = True
     category = "phase_jump"
 
     def __init__(self):
-        super(PhaseJump, self).__init__()
-        self.add_param(maskParameter(name="JUMP", units="second"))
+        super().__init__()
+        self.add_param(
+            maskParameter(
+                name="JUMP",
+                units="second",
+                description="Amount to jump the selected TOAs by.",
+            )
+        )
         self.phase_funcs_component += [self.jump_phase]
 
     def setup(self):
-        super(PhaseJump, self).setup()
+        super().setup()
         self.jumps = []
         for mask_par in self.get_params_of_type("maskParameter"):
             if mask_par.startswith("JUMP"):
@@ -91,9 +108,6 @@ class PhaseJump(PhaseComponent):
             if j in self.deriv_funcs.keys():
                 del self.deriv_funcs[j]
             self.register_deriv_funcs(self.d_phase_d_jump, j)
-
-    def validate(self):
-        super(PhaseJump, self).validate()
 
     def jump_phase(self, toas, delay):
         """This method returns the jump phase for each toas section collected by
@@ -154,14 +168,15 @@ class PhaseJump(PhaseComponent):
             # find TOAs jump applies to
             mask = jump_par.select_toa_mask(toas)
             # apply to dictionaries
-            for dict in toas.table["flags"][mask]:
-                if "jump" in dict.keys():
-                    # check if jump flag already added - don't add flag twice
-                    if jump_par.index in dict["jump"]:
+            for d in toas.table["flags"][mask]:
+                if "jump" in d:
+                    index_list = d["jump"].split(",")
+                    if str(jump_par.index) in index_list:
                         continue
-                    dict["jump"].append(jump_par.index)  # otherwise, add jump flag
+                    index_list.append(str(jump_par.index))
+                    d["jump"] = ",".join(index_list)
                 else:
-                    dict["jump"] = [jump_par.index]
+                    d["jump"] = str(jump_par.index)
 
     def add_jump_and_flags(self, toa_table):
         """Add jump object to PhaseJump and appropriate flags to TOA tables.
@@ -186,20 +201,17 @@ class PhaseJump(PhaseComponent):
                 name="JUMP",
                 index=1,
                 key="-gui_jump",
-                key_value=1,
+                key_value="1",
                 value=0.0,
                 units="second",
                 frozen=False,
-                aliases=["JUMP"],
             )
             self.add_param(param)
-            ind = 1
-            name = param.name
         # otherwise add on jump with next index
         else:
             # first, search for TOAs already jumped in inputted selection - pintk does not allow jumps added through GUI to overlap with existing jumps
-            for dict in toa_table:
-                if "gui_jump" in dict.keys():
+            for d in toa_table:
+                if "gui_jump" in d.keys():
                     log.warning(
                         "The selected toa(s) overlap an existing jump. Remove all interfering jumps before attempting to jump these toas."
                     )
@@ -208,21 +220,15 @@ class PhaseJump(PhaseComponent):
                 name="JUMP",
                 index=len(self.jumps) + 1,
                 key="-gui_jump",
-                key_value=len(self.jumps) + 1,
+                key_value=str(len(self.jumps) + 1),
                 value=0.0,
                 units="second",
                 frozen=False,
-                aliases=["JUMP"],
             )
             self.add_param(param)
-            ind = param.index
-            name = param.name
+        ind = param.index
+        name = param.name
         self.setup()
-        # add appropriate flags to TOA table to link jump with appropriate TOA
         for dict1 in toa_table:
-            if "jump" in dict1.keys():
-                dict1["jump"].append(ind)  # toa can have multiple jumps
-            else:
-                dict1["jump"] = [ind]
-            dict1["gui_jump"] = ind  # toa can only have one gui_jump
+            dict1["gui_jump"] = str(ind)
         return name

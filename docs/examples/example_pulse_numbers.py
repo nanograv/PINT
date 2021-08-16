@@ -9,17 +9,18 @@ from pint.residuals import Residuals
 import matplotlib.pyplot as plt
 from astropy.visualization import quantity_support
 from astropy import log
+import pint.config
 
 quantity_support()
 
-modelin = pint.models.get_model("waves.par")
+modelin = pint.models.get_model(pint.config.examplefile("waves.par"))
 model2 = deepcopy(modelin)
 component, order, from_list, comp_type = model2.map_component("Wave")
 from_list.remove(component)
 # modelin.TRACK.value = "0"
 # model2.TRACK.value = "0"
 
-realtoas = pint.toa.get_TOAs("waves_withpn.tim")
+realtoas = pint.toa.get_TOAs(pint.config.examplefile("waves_withpn.tim"))
 res = Residuals(realtoas, modelin)
 res2 = Residuals(realtoas, model2)
 

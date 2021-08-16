@@ -1,3 +1,4 @@
+"""Astrometric models for describing pulsar sky positions."""
 # astrometry.py
 # Defines Astrometry timing model class
 import sys
@@ -23,13 +24,17 @@ from pint.utils import add_dummy_distance, remove_dummy_distance
 astropy_version = sys.modules["astropy"].__version__
 mas_yr = u.mas / u.yr
 
+__all__ = ["AstrometryEquatorial", "AstrometryEcliptic", "Astrometry"]
+
 
 class Astrometry(DelayComponent):
+    """Common tools for astrometric calculations."""
+
     register = False
     category = "astrometry"
 
     def __init__(self):
-        super(Astrometry, self).__init__()
+        super().__init__()
         self.add_param(
             MJDParameter(
                 name="POSEPOCH",
@@ -214,10 +219,18 @@ class Astrometry(DelayComponent):
 
 
 class AstrometryEquatorial(Astrometry):
+    """Astrometry in equatorial coordinates.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.astrometry.AstrometryEquatorial
+    """
+
     register = True
 
     def __init__(self):
-        super(AstrometryEquatorial, self).__init__()
+        super().__init__()
         self.add_param(
             AngleParameter(
                 name="RAJ",
@@ -259,13 +272,9 @@ class AstrometryEquatorial(Astrometry):
             func = getattr(self, deriv_func_name)
             self.register_deriv_funcs(func, param)
 
-    def setup(self):
-        super(AstrometryEquatorial, self).setup()
-
     def validate(self):
-        """ Validate the input parameter.
-        """
-        super(AstrometryEquatorial, self).validate()
+        """Validate the input parameter."""
+        super().validate()
         # RA/DEC are required
         for p in ("RAJ", "DECJ"):
             if getattr(self, p).value is None:
@@ -354,9 +363,7 @@ class AstrometryEquatorial(Astrometry):
         return pos_icrs.transform_to(PulsarEcliptic(ecl=ecl))
 
     def coords_as_GAL(self, epoch=None):
-        """Return the pulsar's galactic coordinates as an astropy coordinate object.
-
-        """
+        """Return the pulsar's galactic coordinates as an astropy coordinate object."""
         pos_icrs = self.get_psr_coords(epoch=epoch)
         return pos_icrs.transform_to(coords.Galactic)
 
@@ -373,14 +380,14 @@ class AstrometryEquatorial(Astrometry):
         """Calculate the derivative wrt RAJ
 
         For the RAJ and DEC derivatives, use the following approximate model for
-        the pulse delay. (Inner-product between two Cartesian vectors)
+        the pulse delay. (Inner-product between two Cartesian vectors):
 
-        de = Earth declination (wrt SSB)
-        ae = Earth right ascension
-        dp = pulsar declination
-        aa = pulsar right ascension
-        r = distance from SSB to Earh
-        c = speed of light
+            - de = Earth declination (wrt SSB)
+            - ae = Earth right ascension
+            - dp = pulsar declination
+            - aa = pulsar right ascension
+            - r = distance from SSB to Earh
+            - c = speed of light
 
         delay = r*[cos(de)*cos(dp)*cos(ae-aa)+sin(de)*sin(dp)]/c
         """
@@ -476,10 +483,18 @@ class AstrometryEquatorial(Astrometry):
 
 
 class AstrometryEcliptic(Astrometry):
+    """Astrometry in ecliptic coordinates.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.astrometry.AstrometryEcliptic
+    """
+
     register = True
 
     def __init__(self):
-        super(AstrometryEcliptic, self).__init__()
+        super().__init__()
         self.add_param(
             AngleParameter(
                 name="ELONG",
@@ -532,13 +547,10 @@ class AstrometryEcliptic(Astrometry):
             func = getattr(self, deriv_func_name)
             self.register_deriv_funcs(func, param)
 
-    def setup(self):
-        super(AstrometryEcliptic, self).setup()
-
     def validate(self):
         """ Validate Ecliptic coordinate parameter inputs.
         """
-        super(AstrometryEcliptic, self).validate()
+        super().validate()
         # ELONG/ELAT are required
         for p in ("ELONG", "ELAT"):
             if getattr(self, p).value is None:

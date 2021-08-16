@@ -3,6 +3,7 @@ import os
 from itertools import product
 from tempfile import NamedTemporaryFile
 
+import astropy.constants as c
 import astropy.units as u
 import numpy as np
 import pytest
@@ -19,7 +20,8 @@ from hypothesis.strategies import (
     sampled_from,
     slices,
 )
-from numpy.testing import assert_array_equal
+from numdifftools import Derivative
+from numpy.testing import assert_allclose, assert_array_equal
 from pinttestdata import datadir
 
 import pint
@@ -43,6 +45,7 @@ from pint.utils import (
     lines_of,
     open_or_use,
     taylor_horner,
+    taylor_horner_deriv,
 )
 
 
@@ -630,54 +633,6 @@ def test_pmtot():
         pmtot(m2)
 
 
-def test_psr_utils():
-
-    from pint.utils import (
-        companion_mass,
-        mass_funct,
-        mass_funct2,
-        pulsar_age,
-        pulsar_B,
-        pulsar_B_lightcyl,
-        pulsar_edot,
-        pulsar_mass,
-    )
-
-    pb = 1.0 * u.d
-    x = 2.0 * pint.ls
-
-    # Mass function
-    assert np.isclose(mass_funct(pb, x), 0.008589595519643776 * u.solMass)
-
-    # Mass function, second form
-    assert np.isclose(
-        mass_funct2(1.4 * u.solMass, 0.2 * u.solMass, 60.0 * u.deg),
-        0.0020297470401197783 * u.solMass,
-    )
-
-    # Characteristic age
-    assert np.isclose(
-        pulsar_age(0.033 * u.Hz, -2.0e-15 * u.Hz / u.s), 261426.72446573884 * u.yr
-    )
-
-    # Edot
-    assert np.isclose(
-        pulsar_edot(0.033 * u.Hz, -2.0e-15 * u.Hz / u.s),
-        2.6055755618875905e30 * u.erg / u.s,
-    )
-
-    # B
-    assert np.isclose(
-        pulsar_B(0.033 * u.Hz, -2.0e-15 * u.Hz / u.s), 238722891596281.66 * u.G
-    )
-
-    # B_lc
-    assert np.isclose(
-        pulsar_B_lightcyl(0.033 * u.Hz, -2.0e-15 * u.Hz / u.s),
-        0.07774704753236616 * u.G,
-    )
-
-
 def test_ftest():
     """Test for FTest. Numbers from example test."""
     chi2_1 = 5116.3297879409574835
@@ -720,3 +675,50 @@ def test_Ftest_chi2_increase():
 
 def test_Ftest_dof_same():
     assert np.isnan(FTest(100, 100, 100, 100))
+
+
+@pytest.mark.parametrize(
+    "x, coeffs, order",
+    [
+        (1.2, [2], 1),
+        (0.1, [2, 3], 1),
+        (-1, [2, 3, 5], 1),
+        (1.1, [2], 2),
+        (1.3, [2, 3, 4, 5], 2),
+        (1.3, [2, 3, 4, 5], 4),
+        (1.3, [2, 3, 4, 5, 6], 4),
+        (1.5, [2], 10),
+        (1.7, [2, 3, 4], 0),
+    ],
+)
+def test_taylor_horner_deriv(x, coeffs, order):
+    def f(x):
+        return taylor_horner(x, coeffs)
+
+    df = Derivative(f, n=order)
+    assert_allclose(df(x), taylor_horner_deriv(x, coeffs, order), atol=1e-11)
+
+
+@pytest.mark.parametrize(
+    "x, coeffs",
+    [
+        (1.2, [2]),
+        (0.1, [2, 3]),
+        (-1, [2, 3, 5]),
+        (1.1, [2]),
+        (1.3, [2, 3, 4, 5]),
+        (1.5, [2]),
+        (1.7, [2, 3, 4]),
+    ],
+)
+def test_taylor_horner_equals_deriv(x, coeffs):
+    assert_allclose(taylor_horner(x, coeffs), taylor_horner_deriv(x, coeffs, 0))
+
+
+@pytest.mark.parametrize(
+    "x, result, n",
+    [(1 * u.s, 1 * u.m, 5), (1 * u.s, 1 * u.m, 1), (1 * u.km ** 2, 1 * u.m, 3),],
+)
+def test_taylor_horner_units_ok(x, result, n):
+    coeffs = [result / x ** i for i in range(n + 1)]
+    taylor_horner(x, coeffs) + result

@@ -95,7 +95,7 @@ def test_generate_polycos(tmpdir, par_file, obs, obsfreq, nspan, ncoeff):
     t = toa.get_TOAs_list([toa.TOA(mjd, obs=obs, freq=obsfreq) for mjd in mjds])
     ph1 = p.eval_abs_phase(mjds)
     ph2 = q.eval_abs_phase(mjds)
-    ph3 = model.phase(t)
+    ph3 = model.phase(t, abs_phase=True)
 
     assert np.allclose(ph1.int.value[0], ph3.int.value[0])
     assert np.allclose(ph1.frac.value[0], ph3.frac.value[0])

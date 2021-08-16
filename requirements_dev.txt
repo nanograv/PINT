@@ -33,3 +33,4 @@ pygments
 ipython
 pathlib2
 twine
+numdifftools

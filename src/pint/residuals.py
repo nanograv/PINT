@@ -140,6 +140,8 @@ class Residuals:
         # only relevant if there are correlated errors
         self._chi2 = None
         self.noise_resids = {}
+        # For residual debugging
+        self.debug_info = {}
         # We should be carefully for the other type of residuals
         self.unit = unit
         # A flag to indentify if this residual object is combined with residual
@@ -511,6 +513,8 @@ class WidebandDMResiduals(Residuals):
         self.dm_data, self.dm_error, self.relevant_toas = self.get_dm_data()
         self._chi2 = None
         self._is_combined = False
+        # For residual debugging
+        self.debug_info = {}
 
     @property
     def resids(self):
@@ -610,8 +614,8 @@ class WidebandDMResiduals(Residuals):
         valid_index: list
             The TOA with DM data index.
         """
-        dm_data, valid_data = self.toas.get_flag_value("pp_dm")
-        dm_error, valid_error = self.toas.get_flag_value("pp_dme")
+        dm_data, valid_data = self.toas.get_flag_value("pp_dm", as_type=float)
+        dm_error, valid_error = self.toas.get_flag_value("pp_dme", as_type=float)
         if valid_data == []:
             raise ValueError("Input TOA object does not have wideband DM values")
         # Check valid error, if an error is none, change it to zero
@@ -655,6 +659,8 @@ class CombinedResiduals:
         for res in residuals:
             res._is_combined = True
             self.residual_objs[res.residual_type] = res
+        # For residual debugging
+        self.debug_info = {}
 
     @property
     def model(self):

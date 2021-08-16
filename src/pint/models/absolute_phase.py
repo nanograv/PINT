@@ -12,6 +12,11 @@ class AbsPhase(PhaseComponent):
 
     The model defines the absolute phase's reference time and observatory.
 
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.absolute_phase.AbsPhase
+
     Note
     ----
     Although this class is condisder as a phase component, it does not

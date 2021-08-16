@@ -28,9 +28,10 @@ def plot_chains(chain_dict, file=False):
         plt.close()
 
 
-datadir = os.path.dirname(os.path.abspath(str(__file__)))
-parfile = os.path.join(datadir, "NGC6440E.par.good")
-timfile = os.path.join(datadir, "NGC6440E.tim")
+import pint.config
+
+parfile = pint.config.examplefile("NGC6440E.par.good")
+timfile = pint.config.examplefile("NGC6440E.tim")
 print(parfile)
 print(timfile)
 nwalkers = 50

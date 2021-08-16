@@ -1,3 +1,4 @@
+"""Approximate binary model for small eccentricity."""
 from warnings import warn
 
 import numpy as np
@@ -9,30 +10,38 @@ from pint.models.pulsar_binary import PulsarBinary
 from pint.models.stand_alone_psr_binaries import binary_orbits as bo
 from pint.models.stand_alone_psr_binaries.ELL1_model import ELL1model
 from pint.models.stand_alone_psr_binaries.ELL1H_model import ELL1Hmodel
-from pint.models.timing_model import MissingParameter
+from pint.models.timing_model import MissingParameter, TimingModelError
 from pint.utils import taylor_horner_deriv
 
 
-class BinaryELL1Base(PulsarBinary):
-    """PINT wrapper around standalone ELL1 model.
+class BinaryELL1(PulsarBinary):
+    """ELL1 binary model.
 
-    This is a PINT pulsar binary ELL1 model class a subclass of PulsarBinary.
-    It is a wrapper for stand alone ELL1model class defined in ./pulsar_binary/ELL1_model.py
-    All the detailed calculations are in the stand alone ELL1model.
-    The aim for this class is to connect the stand alone binary model with PINT platform
+    This binary model uses a rectangular representation for the eccentricity of an orbit,
+    resolving complexities that arise with periastron-based parameters in nearly-circular
+    orbits. It also makes certain approximations that are invalid when the eccentricity
+    is "large"; what qualifies as "large" depends on your data quality. A formula exists
+    to determine when the approximations this model makes are sufficiently accurate.
 
-    ELL1model special parameters:
+    The actual calculations for this are done in
+    :class:`pint.models.stand_alone_psr_binaries.ELL1_model.ELL1model`.
 
-        - TASC Epoch of ascending node
-        - EPS1 First Laplace-Lagrange parameter, ECC x sin(OM) for ELL1 model
-        - EPS2 Second Laplace-Lagrange parameter, ECC x cos(OM) for ELL1 model
-        - EPS1DOT First derivative of first Laplace-Lagrange parameter
-        - EPS2DOT Second derivative of second Laplace-Lagrange parameter
+    It supports all the parameters defined in :class:`pint.models.pulsar_binary.PulsarBinary`
+    except that it removes the polar orbital parameters:
 
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.binary_ell1.BinaryELL1
     """
 
+    register = True
+
     def __init__(self):
-        super(BinaryELL1Base, self).__init__()
+        super().__init__()
+        self.binary_model_name = "ELL1"
+        self.binary_model_class = ELL1model
+
         self.add_param(
             MJDParameter(
                 name="TASC", description="Epoch of ascending node", time_scale="tdb"
@@ -74,33 +83,22 @@ class BinaryELL1Base(PulsarBinary):
                 long_double=True,
             )
         )
+        self.remove_param("ECC")
+        self.remove_param("OM")
+        self.remove_param("T0")
 
         self.warn_default_params = []
 
-    def setup(self):
-        super(BinaryELL1Base, self).setup()
-
     def validate(self):
-        """Validate parameters"""
-        super(BinaryELL1Base, self).validate()
+        """Validate parameters."""
+        super().validate()
 
-        for p in ["EPS1", "EPS2"]:
-            if getattr(self, p).value is None:
-                raise MissingParameter("ELL1", p, p + " is required for ELL1 model.")
-        # Check TASC
         if self.TASC.value is None:
-            if self.ECC.value == 0.0:
-                warn("Since ECC is 0.0, using T0 as TASC.")
-                if self.T0.value is not None:
-                    self.TASC.value = self.T0.value
-                else:
-                    raise MissingParameter(
-                        "ELL1", "T0", "T0 or TASC is required for ELL1 model."
-                    )
-            else:
-                raise MissingParameter(
-                    "ELL1", "TASC", "TASC is required for ELL1 model."
-                )
+            raise MissingParameter("ELL1", "TASC", "TASC is required for ELL1 model.")
+        for p in ["EPS1", "EPS2"]:
+            pm = getattr(self, p)
+            if pm.value is None:
+                pm.value = 0
 
     def change_binary_epoch(self, new_epoch):
         """Change the epoch for this binary model.
@@ -126,15 +124,6 @@ class BinaryELL1Base(PulsarBinary):
         else:
             new_epoch = Time(new_epoch, scale="tdb", format="mjd", precision=9)
 
-        try:
-            FB2 = self.FB2.quantity
-            log.warning(
-                "Ignoring orbital frequency derivatives higher than FB1"
-                "in computing new TASC"
-            )
-        except AttributeError:
-            pass
-
         # Get PB and PBDOT from model
         if self.PB.quantity is not None:
             PB = self.PB.quantity
@@ -154,8 +143,16 @@ class BinaryELL1Base(PulsarBinary):
         dt = (new_epoch.tdb.mjd_long - tasc_ld) * u.day
         d_orbits = dt / PB - PBDOT * dt ** 2 / (2.0 * PB ** 2)
         n_orbits = np.round(d_orbits.to(u.Unit("")))
+        if n_orbits == 0:
+            return
         dt_integer_orbits = PB * n_orbits + PB * PBDOT * n_orbits ** 2 / 2.0
         self.TASC.quantity = self.TASC.quantity + dt_integer_orbits
+
+        if hasattr(self, "FB2") and self.FB2.value is not None:
+            log.warning(
+                "Ignoring orbital frequency derivatives higher than FB1"
+                "in computing new TASC; a model fit should resolve this."
+            )
 
         # Update PB or FB0, FB1, etc.
         if isinstance(self.binary_instance.orbits_cls, bo.OrbitPB):
@@ -171,7 +168,7 @@ class BinaryELL1Base(PulsarBinary):
             for n in range(len(fbterms) - 1):
                 cur_deriv = getattr(self, "FB{}".format(n))
                 cur_deriv.value = taylor_horner_deriv(
-                    dt.to(u.s), fbterms, deriv_order=n + 1
+                    dt_integer_orbits.to(u.s), fbterms, deriv_order=n + 1
                 )
 
         # Update EPS1, EPS2, and A1
@@ -186,37 +183,26 @@ class BinaryELL1Base(PulsarBinary):
             self.A1.quantity = self.A1.quantity + dA1
 
 
-class BinaryELL1(BinaryELL1Base):
-    register = True
+class BinaryELL1H(BinaryELL1):
+    """ELL1 modified to use H3 parameter for Shapiro delay.
 
-    def __init__(self):
-        super(BinaryELL1, self).__init__()
-        self.binary_model_name = "ELL1"
-        self.binary_model_class = ELL1model
+    The actual calculations for this are done in
+    :class:`pint.models.stand_alone_psr_binaries.ELL1_model.ELL1model`.
 
-    def setup(self):
-        super(BinaryELL1, self).setup()
+    Parameters supported:
 
-    def validate(self):
-        super(BinaryELL1, self).validate()
-
-
-class BinaryELL1H(BinaryELL1Base):
-    """Modified ELL1 to with H3 parameter.
-
-    This is modified version of ELL1 model. a new parameter H3 is
-    introduced to model the shapiro delay.
+    .. paramtable::
+        :class: pint.models.binary_ell1.BinaryELL1H
 
     Note
     ----
     Ref:  Freire and Wex 2010; Only the Medium-inclination case model is implemented.
-
     """
 
     register = True
 
     def __init__(self):
-        super(BinaryELL1H, self).__init__()
+        super().__init__()
         self.binary_model_name = "ELL1H"
         self.binary_model_class = ELL1Hmodel
 
@@ -244,6 +230,7 @@ class BinaryELL1H(BinaryELL1Base):
                 units="",
                 description="Shapiro delay parameter STIGMA as in Freire and Wex 2010 Eq(12)",
                 long_double=True,
+                aliases=["VARSIGMA"],
             )
         )
         self.add_param(
@@ -254,6 +241,8 @@ class BinaryELL1H(BinaryELL1Base):
                 description="Number of harmonics for ELL1H shapiro delay.",
             )
         )
+        self.remove_param("M2")
+        self.remove_param("SINI")
 
     @property
     def Shapiro_delay_funcs(self):
@@ -261,25 +250,24 @@ class BinaryELL1H(BinaryELL1Base):
 
     def setup(self):
         """Parameter setup."""
-        super(BinaryELL1H, self).setup()
-
-    def validate(self):
-        """Parameter validation."""
-        super(BinaryELL1H, self).validate()
-        # if self.H3.quantity is None:
-        #     raise MissingParameter("ELL1H", "H3", "'H3' is required for ELL1H model")
-        if self.SINI.quantity is not None:
-            warn("'SINI' will not be used in ELL1H model. ")
-        if self.M2.quantity is not None:
-            warn("'M2' will not be used in ELL1H model. ")
+        super().setup()
         if self.H4.quantity is not None:
             self.binary_instance.fit_params = ["H3", "H4"]
             # If have H4 or STIGMA, choose 7th order harmonics
             if self.NHARMS.value < 7:
                 self.NHARMS.value = 7
+            if self.STIGMA.quantity is not None:
+                raise ValueError("ELL1H can use H4 or STIGMA but not both")
 
         if self.STIGMA.quantity is not None:
             self.binary_instance.fit_params = ["H3", "STIGMA"]
             self.binary_instance.ds_func = self.binary_instance.delayS_H3_STIGMA_exact
             if self.STIGMA.quantity <= 0:
                 raise ValueError("STIGMA must be greater than zero.")
+        self.update_binary_object(None)
+
+    def validate(self):
+        """Parameter validation."""
+        super().validate()
+        # if self.H3.quantity is None:
+        #     raise MissingParameter("ELL1H", "H3", "'H3' is required for ELL1H model")

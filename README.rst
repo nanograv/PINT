@@ -1,4 +1,6 @@
-
+.. image:: https://github.com/nanograv/PINT/blob/master/docs/logo/PINT_LOGO_128trans.png
+   :alt: PINT Logo
+   :align: right
 
 PINT
 ====
@@ -12,8 +14,16 @@ PINT
    :alt: Coverage
    
 .. image:: https://readthedocs.org/projects/nanograv-pint/badge/?version=latest
-    :target: https://nanograv-pint.readthedocs.io/en/latest/?badge=latest
-    :alt: Documentation Status
+   :target: https://nanograv-pint.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
+
+.. image:: https://img.shields.io/badge/arXiv-2012.00074-red
+   :target: https://arxiv.org/abs/2012.00074
+   :alt: PINT Paper on arXiv
+
+.. image:: https://img.shields.io/badge/ascl-1902.007-blue.svg?colorB=262255
+   :target: https://www.ascl.net/1902.007
+   :alt: PINT on ASCL
 
 .. image:: https://img.shields.io/pypi/l/pint-pulsar
     :target: https://github.com/nanograv/PINT/blob/master/LICENSE.md
@@ -95,3 +105,7 @@ Using
 See the online documentation_.
 
 .. _documentation:   http://nanograv-pint.readthedocs.io/en/latest/
+
+And for more details, please read and cite(!) the PINT paper_.
+
+.. _paper:   https://ui.adsabs.harvard.edu/abs/2021ApJ...911...45L/abstract

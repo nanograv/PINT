@@ -130,6 +130,10 @@ class DispersionDM(Dispersion):
     This model uses Taylor expansion to model DM variation over time. It
     can also be used for a constant DM.
 
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.dispersion_model.DispersionDM
     """
 
     register = True
@@ -312,6 +316,11 @@ class DispersionDMX(Dispersion):
 
     This model lets the user specify time ranges and fit for a different
     DM value in each time range.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.dispersion_model.DispersionDMX
     """
 
     register = True
@@ -571,6 +580,11 @@ class DispersionDMX(Dispersion):
 
 class DispersionJump(Dispersion):
     """This class provides the contant offsets to the DM values.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.dispersion_model.DispersionDMX
 
     Notes
     -----

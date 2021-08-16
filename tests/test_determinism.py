@@ -47,7 +47,8 @@ def test_sampler():
         ts.compute_TDBs()
         ts.compute_posvels(ephem="DE421", planets=False)
 
-        weights = np.asarray([x["weight"] for x in ts.table["flags"]])
+        weights, _ = ts.get_flag_value("weight", as_type=float)
+        weights = np.array(weights)
         template = read_gaussfitfile(gaussianfile, nbins)
         template /= template.mean()
 

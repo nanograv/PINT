@@ -9,12 +9,7 @@ from astropy import log
 import pint.models
 import pint.residuals
 import pint.toa as toa
-from pint.event_toas import (
-    load_NICER_TOAs,
-    load_NuSTAR_TOAs,
-    load_RXTE_TOAs,
-    load_XMM_TOAs,
-)
+from pint.event_toas import load_event_TOAs, load_fits_TOAs
 from pint.eventstats import h2sig, hm
 from pint.fits_utils import read_fits_event_mjds
 from pint.observatory.satellite_obs import get_satellite_observatory
@@ -121,42 +116,24 @@ def main(argv=None):
         )
     )
 
-    if hdr["TELESCOP"] == "NICER":
+    telescope = hdr["TELESCOP"].lower()
 
-        # Instantiate NICER observatory once so it gets added to the observatory registry
-        if args.orbfile is not None:
-            log.info("Setting up NICER observatory")
-            get_satellite_observatory("NICER", args.orbfile)
-        # Read event file and return list of TOA objects
+    # Instantiate observatory once so it gets added to the observatory registry
+    if args.orbfile is not None:
+        log.info(f"Setting up {telescope.upper()} observatory")
         try:
-            tl = load_NICER_TOAs(args.eventfile, minmjd=minmjd, maxmjd=maxmjd)
-        except KeyError:
+            get_satellite_observatory(telescope, args.orbfile)
+        except Exception:
             log.error(
-                "Observatory not recognized.  This probably means you need to provide an orbit file or barycenter the event file."
+                "The orbit file is not recognized. It is likely that this mission is not supported. "
+                "Please barycenter the event file using the official mission tools before processing with PINT"
             )
-            sys.exit(1)
-    elif hdr["TELESCOP"] == "XTE":
-
-        # Instantiate RXTE observatory once so it gets added to the observatory registry
-        if args.orbfile is not None:
-            # Determine what observatory type is.
-            log.info("Setting up RXTE observatory")
-            get_satellite_observatory("RXTE", args.orbfile)
-        # Read event file and return list of TOA objects
-        tl = load_RXTE_TOAs(args.eventfile, minmjd=minmjd, maxmjd=maxmjd)
-    elif hdr["TELESCOP"].startswith("XMM"):
-        # Not loading orbit file here, since that is not yet supported.
-        tl = load_XMM_TOAs(args.eventfile, minmjd=minmjd, maxmjd=maxmjd)
-    elif hdr["TELESCOP"].lower().startswith("nustar"):
-        if args.orbfile is not None:
-            log.info("Setting up NuSTAR observatory")
-            get_satellite_observatory("NuSTAR", args.orbfile)
-        tl = load_NuSTAR_TOAs(args.eventfile, minmjd=minmjd, maxmjd=maxmjd)
-    else:
+    # Read event file and return list of TOA objects
+    try:
+        tl = load_event_TOAs(args.eventfile, telescope, minmjd=minmjd, maxmjd=maxmjd)
+    except KeyError:
         log.error(
-            "FITS file not recognized, TELESCOPE = {0}, INSTRUMENT = {1}".format(
-                hdr["TELESCOP"], hdr["INSTRUME"]
-            )
+            "Observatory not recognized. This probably means you need to provide an orbit file or barycenter the event file."
         )
         sys.exit(1)
 
@@ -244,7 +221,7 @@ def main(argv=None):
             data_to_add["PULSE_PHASE"] = [phases, "D"]
 
         if args.absphase:
-            data_to_add["ABS_PHASE"] = [iphss - negmask, "K"]
+            data_to_add["ABS_PHASE"] = [iphss, "K"]
 
         if args.barytime:
             bats = modelin.get_barycentric_toas(ts)

@@ -3,13 +3,15 @@
 Special "site" locations (eg, barycenter) which do not need clock
 corrections or much else done.
 """
+import os
+
 import astropy.constants as const
 import astropy.units as u
 from astropy import log
 from astropy.coordinates import EarthLocation
 import numpy as np
 
-from pint.config import datapath
+import pint.config
 from pint.observatory import bipm_default
 from pint.observatory.clock_file import ClockFile
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
@@ -64,7 +66,9 @@ class SpecialLocation(Observatory):
         self.bipm_version = bipm_version
         self._bipm_clock = None
 
-        super(SpecialLocation, self).__init__(name, aliases=aliases)
+        self.origin = "Built-in special location."
+
+        super().__init__(name, aliases=aliases)
 
     @property
     def gps_fullpath(self):
@@ -72,7 +76,7 @@ class SpecialLocation(Observatory):
         data dirs, then fall back on $TEMPO2/clock."""
         fname = "gps2utc.clk"
         try:
-            fullpath = datapath(fname)
+            fullpath = pint.config.runtimefile(fname)
             return fullpath
         except FileNotFoundError:
             log.info(
@@ -88,7 +92,7 @@ class SpecialLocation(Observatory):
         data dirs, then fall back on $TEMPO2/clock."""
         fname = "tai2tt_" + self.bipm_version.lower() + ".clk"
         try:
-            fullpath = datapath(fname)
+            fullpath = pint.config.runtimefile(fname)
             return fullpath
         except FileNotFoundError:
             pass

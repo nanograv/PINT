@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.7.1
+#       jupytext_version: 1.11.3
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -164,12 +164,13 @@ for name, info in params.items():
             par.frozen = False  # Frozen means not fit.
         par.uncertainty = info[2]
 # %% [markdown]
-# ### Validating the model
+# ### Set up and Validating the model
 #
-# Validating model checks if there is any important parameter values missing, and if the
-# parameters are assigned correctly. If there is anything not assigned correctly, it will raise an exception.
-
+# Setting up the model builds the necessary model attributes, and validating model checks if there is any
+# important parameter values missing, and if the parameters are assigned correctly. If there is anything
+# not assigned correctly, it will raise an exception.
 # %%
+tm.setup()
 tm.validate()
 # You should see all the assigned parameters.
 # Printing a TimingModel object shows the parfile representation

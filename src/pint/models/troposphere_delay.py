@@ -16,9 +16,7 @@ from pint.toa_select import TOASelect
 
 
 class TroposphereDelay(DelayComponent):
-    """
-
-    Model for accounting for the troposphere delay for topocentric TOAs.
+    """Model for accounting for the troposphere delay for topocentric TOAs.
 
     Based on Davis zenith hydrostatic delay (Davis et al., 1985, Appendix A)
     Niell Mapping Functions (Niell, 1996, Eq 4)
@@ -35,6 +33,10 @@ class TroposphereDelay(DelayComponent):
     The wet delay represents changes due to dynamical variation in the
     atmosphere (ie changing water vapor) and is ususally around 10% of the hydrostatic delay
 
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.troposphere_delay.TroposphereDelay
     """
 
     register = True
@@ -97,7 +99,7 @@ class TroposphereDelay(DelayComponent):
         )
 
     def __init__(self):
-        super(TroposphereDelay, self).__init__()
+        super().__init__()
         self.add_param(
             boolParameter(
                 name="CORRECT_TROPOSPHERE",
@@ -123,12 +125,6 @@ class TroposphereDelay(DelayComponent):
         ]:
             array[0] = array[1]
             array[-1] = array[-2]
-
-    def setup(self):
-        super(TroposphereDelay, self).setup()
-
-    def validate(self):
-        super(TroposphereDelay, self).validate()
 
     def _get_target_altitude(self, obs, grp, radec):
         """convert the sky coordinates of the target to the angular altitude at each TOA
