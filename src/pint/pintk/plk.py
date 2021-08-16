@@ -889,11 +889,14 @@ class PlkWidget(tk.Frame):
                     if self.yid == "pre-fit" or not self.psr.fitted
                     else self.psr.postfit_resids
                 )
-                f0 = r.get_PSR_freq().to(u.MHz).value
+                if y_unit == u.us:
+                    f0 = r.get_PSR_freq().to(u.MHz).value
+                elif y_unit == u.ms:
+                    f0 = r.get_PSR_freq().to(u.kHz).value
+                else:
+                    f0 = r.get_PSR_freq().to(u.Hz).value
                 self.plkAx2x.set_visible(True)
-                self.plkAx2x.set_ylabel(
-                    plotlabels[self.yid][1] + " (" + str(y_unit) + ")"
-                )
+                self.plkAx2x.set_ylabel(plotlabels[self.yid][1])
                 self.plkAx2x.set_ylim(ymin * f0, ymax * f0)
                 self.plkAx2x.yaxis.set_major_locator(
                     mpl.ticker.FixedLocator(self.plkAxes.get_yticks() * f0)
