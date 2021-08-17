@@ -102,26 +102,6 @@ class ModelBuilder:
         cps = [self.all_components.components[c] for c in selected]
         tm = TimingModel(components=cps)
         self._setup_model(tm, pint_param_dict,  original_name, setup=True, validate=True)
-        # # Add indexed parameters
-        # leftover_params = list(set(param_not_in_pint))
-        # # Give repeatable parameters an index.
-        # # Convert all repeated parameter name/alises the pint_name and group
-        # # them.
-        # # TODO when we remove the number index for repeatable parameter, this
-        # # code need to be updated.
-        # pint_repeat_param = defaultdict(list)
-        # for k, v in repeat_par.items():
-        #     # The parameters in the repeat_par should all be PINT-understandable.
-        #     # Since they all belong to the repeatable_param list.
-        #     pint_name, first_init = self.all_components.alias_to_pint_param(k)
-        #     repeat_perfix, _, _ = split_prefixed_name(pint_name)
-        #     pint_repeat_param[repeat_perfix].append(v)
-        # for p, v in pint_repeat_param.items():
-        #     for ii in range(len(v)):
-        #         leftover_params.append(p + str(ii + 1))
-        # print(leftover_params)
-        # # reiterate the lefe over parameters.
-        # tm, unknown_param = self._add_indexed_params(tm, leftover_params)
         return tm
 
     def _validate_components(self):
@@ -419,6 +399,8 @@ class ModelBuilder:
             A map from PINT name to the original input name.
         setup : bool, optional
             Whether to run the setup function in the timing model.
+        validate : bool, optional
+            Whether to run the validate funciotn in the timing model. 
         """
         if original_name is not None:
             use_alias = True
