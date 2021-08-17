@@ -4,7 +4,9 @@ from collections import defaultdict
 import pytest
 import io
 from glob import glob
+import copy
 from os.path import basename, join
+import numpy as np
 import astropy.units as u
 from pint.models.timing_model import (
     TimingModel,
@@ -229,18 +231,57 @@ def test_model_fillup(test_timing_model):
     """Test model value fill up
     """
     mb = ModelBuilder()
-    tm = mb._setup_model(test_timing_model, pint_dict_base)
+    tm = mb._setup_model(test_timing_model, pint_dict_base, validate=False)
     assert tm.PSR.value == 'J1234+5678'
     assert np.isclose(tm.F0.value, 173.6879489990983)
-    assert tm.F0.uncertainty_value == 3.000e-13
+    assert np.isclose(tm.F0.uncertainty_value, 3.000e-13)
     assert tm.DMX_0001.value == 3.01718358e-03
     assert tm.DMX_0001.uncertainty_value == 3.89019948e-05
-    jump_map = tm.get_perfix_mapping('JUMP')
-    assert len(jump_map) == len(pint_dict_base['JUMP1'])
-    assert tm.JUMP2.key == 'fe1'
+    jump_map = tm.get_prefix_mapping('JUMP')
+    assert len(jump_map.keys()) == len(pint_dict_base['JUMP1'])
+    assert tm.JUMP1.key == '-fe'
+    assert tm.JUMP1.key_value == ['L-wide']
+    assert tm.JUMP1.value == 1
+    assert tm.JUMP2.key == '-fe'
     assert tm.JUMP2.key_value == ['430']
-    assert len()
+    assert tm.JUMP2.value == 1
+    assert tm.JUMP3.key == '-fe1'
+    assert tm.JUMP3.key_value == ['430']
+    assert tm.JUMP3.value == 1
+    efac = tm.get_prefix_mapping('EFAC')
+    assert len(efac.keys()) == len(pint_dict_base['EFAC1'])
+    assert tm.EFAC1.key == '-f'
+    assert tm.EFAC1.key_value == ['L-wide_PUPPI']
+    assert tm.EFAC1.value == 1.156
+    assert tm.EFAC2.key == '-f'
+    assert tm.EFAC2.key_value == ['430_ASP']
+    assert tm.EFAC2.value == 0.969
+    equad = tm.get_prefix_mapping('EQUAD')
+    assert len(equad.keys()) == len(pint_dict_base['EQUAD1'])
 
+
+def test_model_fillup_prefix_adding(test_timing_model):
+    pint_dict_prefix = copy.deepcopy(pint_dict_base)
+    pint_dict_prefix['DMX_0002'] = ['5.01718358D-03  1      3.89019948D-05']
+    pint_dict_prefix['DMX_0345'] = ['3.01718358D-03  1      5.89019948D-05']
+    mb = ModelBuilder()
+    tm = mb._setup_model(test_timing_model, pint_dict_prefix, validate=False)
+    assert np.isclose(tm.DMX_0002.value, 5.01718358e-03)
+    assert np.isclose(tm.DMX_0002.uncertainty_value, 3.89019948e-05)
+    assert np.isclose(tm.DMX_0345.value, 3.01718358e-03)
+    assert np.isclose(tm.DMX_0345.uncertainty_value, 5.89019948e-05)
+
+
+def test_model_fillup_prefix_adding_spin_freq(test_timing_model):
+    pint_dict_prefix = copy.deepcopy(pint_dict_base)
+    pint_dict_prefix['F2'] = ['5.0D-13  1      3.0e-15']
+    pint_dict_prefix['F3'] = ['3.0D-14  1      5.0e-15']
+    mb = ModelBuilder()
+    tm = mb._setup_model(test_timing_model, pint_dict_prefix)
+    assert np.isclose(tm.F2.value, 5.0e-13)
+    assert np.isclose(tm.F2.uncertainty_value, 3.0e-15)
+    assert np.isclose(tm.F3.value, 3.0e-14)
+    assert np.isclose(tm.F3.uncertainty_value, 5.0e-15)
 
 
 def test_model_from_par():
@@ -313,14 +354,13 @@ def test_model_from_par():
     JUMP -fe L-wide      -0.000009449  1       0.000009439
     """
     mb = ModelBuilder()
-    param_inpar, repeat = mb.parse_parfile(io.StringIO(test_par1))
-    valid_param_inline = []
-    for l in test_par1.split("\n"):
-        l = l.strip()
-        if not (l.startswith("#") or l == ""):
-            valid_param_inline.append(l.split()[0])
-    assert set(param_inpar.keys()) == set(valid_param_inline)
-    assert set(repeat) == {"JUMP", "ECORR", "T2EQUAD", "T2EFAC"}
+    param_inpar, original_name, unknown = mb._pintify_parfile(io.StringIO(test_par1))
+    # valid_param_inline = []
+    # for l in test_par1.split("\n"):
+    #     l = l.strip()
+    #     if not (l.startswith("#") or l == ""):
+    #         valid_param_inline.append(l.split()[0])
+    # assert set(repeat) == {"JUMP", "ECORR", "T2EQUAD", "T2EFAC"}
     comps, conflict, _ = mb.choose_model(param_inpar)
     assert comps == {
         "Spindown",

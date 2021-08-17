@@ -29,10 +29,10 @@ def test_dulicate_with_alise():
 
 def test_mix_alise():
     mixed_par = base_par + "\nEQUAD -fe 430 1\nT2EQUAD -fe guppi 2"
-    m = get_model(StringIO(mixed_par))
+    m = get_model(StringIO(mixed_par), allow_name_mixing=True)
     assert hasattr(m, 'EQUAD2')
     assert m.EQUAD2.value == 2
-    assert m.EQUAD2.key == 'fe'
+    assert m.EQUAD2.key == '-fe'
     assert m.EQUAD2.key_value == ['guppi']
 
 def test_conflict_position():
