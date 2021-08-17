@@ -67,6 +67,8 @@ __all__ = [
     "TimingModelError",
     "MissingParameter",
     "MissingTOAs",
+    "MissingBinaryError",
+    "UnknownBinaryModel"
 ]
 # Parameters or lines in parfiles we don't understand but shouldn't
 # complain about. These are still passed to components so that they
@@ -2980,4 +2982,9 @@ class UnknownParameter(TimingModelError):
 class UnknownBinaryModel(TimingModelError):
     """Signal that the par file requested a binary model no in PINT."""
 
+    pass
+
+
+class MissingBinaryError(TimingModelError):
+    """Error for missing BINARY parameter."""
     pass
