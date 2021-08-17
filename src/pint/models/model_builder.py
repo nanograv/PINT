@@ -18,7 +18,7 @@ from pint.models.timing_model import (
     UnknownBinaryModel,
     UnknownParameter,
     TimingModelError,
-    MissingBinaryError
+    MissingBinaryError,
 )
 from pint.toa import get_TOAs
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
@@ -94,7 +94,9 @@ class ModelBuilder:
         pint.models.timing_model.TimingModel
             The result timing model based on the input .parfile or file object.
         """
-        pint_param_dict, original_name, unknown_param = self._pintify_parfile(parfile, allow_name_mixing)
+        pint_param_dict, original_name, unknown_param = self._pintify_parfile(
+            parfile, allow_name_mixing
+        )
         selected, conflict, param_not_in_pint = self.choose_model(pint_param_dict)
         selected.update(set(self.default_components))
         # Report conflict
@@ -103,7 +105,7 @@ class ModelBuilder:
         # Make timing model
         cps = [self.all_components.components[c] for c in selected]
         tm = TimingModel(components=cps)
-        self._setup_model(tm, pint_param_dict,  original_name, setup=True, validate=True)
+        self._setup_model(tm, pint_param_dict, original_name, setup=True, validate=True)
         # Report unknown line
         for k, v in unknown_param.items():
             p_line = " ".join([k] + v)
@@ -308,7 +310,7 @@ class ModelBuilder:
         # 1. iteration read parfile with a no component timing_model to get
         # the overall control parameters. This will get us the binary model name
         # build the base fo the timing model
-        #pint_param_dict, unknown_param = self._pintify_parfile(param_inpar)
+        # pint_param_dict, unknown_param = self._pintify_parfile(param_inpar)
         binary = param_inpar.get("BINARY", None)
         if binary is not None:
             binary = binary[0]
@@ -349,11 +351,13 @@ class ModelBuilder:
             # by the BINARY tag
             if self.all_components.components[cps[0]].category == "pulsar_system":
                 if binary is None:
-                    raise MissingBinaryError(f"Pulsar binary/pulsar system model is"
-                                             f" decided by the parameter 'BINARY'. "
-                                             f" Please indicate the binary model "
-                                             f" before using parameter {k}, which is"
-                                             f" a binary model parameter.")
+                    raise MissingBinaryError(
+                        f"Pulsar binary/pulsar system model is"
+                        f" decided by the parameter 'BINARY'. "
+                        f" Please indicate the binary model "
+                        f" before using parameter {k}, which is"
+                        f" a binary model parameter."
+                    )
                 else:
                     continue
 
@@ -387,14 +391,23 @@ class ModelBuilder:
                 selected_cates[cate] = cp
             else:
                 exisit_cp = selected_cates[cate]
-                raise TimingModelError(f"Component '{cp}' and '{exisit_cp}' belong to the"
-                                       f" same category '{cate}'. Only one component from"
-                                       f" the same category can be used for a timing model."
-                                       f" Please check your input (e.g., .par file).")
+                raise TimingModelError(
+                    f"Component '{cp}' and '{exisit_cp}' belong to the"
+                    f" same category '{cate}'. Only one component from"
+                    f" the same category can be used for a timing model."
+                    f" Please check your input (e.g., .par file)."
+                )
 
         return selected_components, conflict_components, param_not_in_pint
 
-    def _setup_model(self, timing_model, pint_param_dict, original_name=None, setup=True, validate=True):
+    def _setup_model(
+        self,
+        timing_model,
+        pint_param_dict,
+        original_name=None,
+        setup=True,
+        validate=True,
+    ):
         """Fill up a timing model with parameter values and then setup the model.
 
         This function fills up the timing model parameter values from the input
@@ -429,43 +442,50 @@ class ModelBuilder:
             try:
                 par = getattr(timing_model, pp)
             except AttributeError:
-            # since the input is pintfied, it should be an uninitized indexed parameter
-            # double check if the missing parameter an indexed parameter.
+                # since the input is pintfied, it should be an uninitized indexed parameter
+                # double check if the missing parameter an indexed parameter.
                 pint_par, first_init = self.all_components.alias_to_pint_param(pp)
                 try:
                     prefix, _, index = split_prefixed_name(pint_par)
                 except PrefixError:
                     par_hosts = self.all_components.param_component_map[pint_par]
                     currnt_cp = timing_model.components.keys()
-                    raise TimingModelError(f"Parameter {pint_par} is recognized"
-                                           f" by PINT, but not used in the current"
-                                           f" timing model. It is used in {par_hosts},"
-                                           f" but the current timing model uses {currnt_cp}.")
+                    raise TimingModelError(
+                        f"Parameter {pint_par} is recognized"
+                        f" by PINT, but not used in the current"
+                        f" timing model. It is used in {par_hosts},"
+                        f" but the current timing model uses {currnt_cp}."
+                    )
                 # TODO need to create a beeter API for _loacte_param_host
                 host_component = timing_model._locate_param_host(first_init)
-                timing_model.add_param_from_top(getattr(timing_model, first_init).new_param(index), host_component[0][0])
+                timing_model.add_param_from_top(
+                    getattr(timing_model, first_init).new_param(index),
+                    host_component[0][0],
+                )
                 par = getattr(timing_model, pint_par)
 
             # Fill up the values
             param_line = len(v)
             if param_line < 2:
-                if use_alias: # Use the input alias as input
+                if use_alias:  # Use the input alias as input
                     name = original_name[pp]
                 else:
                     name = pp
                 par.from_parfile_line(" ".join([name] + v))
-            else: # For the repeatable parameters
-                lines = copy.deepcopy(v) # Line queue.
+            else:  # For the repeatable parameters
+                lines = copy.deepcopy(v)  # Line queue.
                 # Check how many repeatable parameters in the model.
                 example_par = getattr(timing_model, pp)
-                prefix , _, index = split_prefixed_name(pp)
+                prefix, _, index = split_prefixed_name(pp)
                 for li in lines:
                     # Creat a temp parameter with the idx bigger than all the existing indices
                     repeatable_map = timing_model.get_prefix_mapping(prefix)
                     new_max_idx = max(repeatable_map.keys()) + 1
                     temp_par = example_par.new_param(new_max_idx)
-                    temp_par.from_parfile_line(" ".join([prefix + str(new_max_idx), li]))
-                    if use_alias: # Use the input alias as input
+                    temp_par.from_parfile_line(
+                        " ".join([prefix + str(new_max_idx), li])
+                    )
+                    if use_alias:  # Use the input alias as input
                         temp_par.use_alias = original_name[pp]
                     # Check current repeatable's key and value
                     # TODO need to change here when maskParameter name changes to name_key_value
@@ -476,7 +496,7 @@ class ModelBuilder:
                             # Key and key value match, copy the new line to it
                             # and exit
                             rp_par.from_parfile_line(" ".join([rp, li]))
-                            if use_alias: # Use the input alias as input
+                            if use_alias:  # Use the input alias as input
                                 rp_par.use_alias = original_name[pp]
                             break
 
@@ -489,10 +509,10 @@ class ModelBuilder:
                     if empty_repeat_param != []:
                         emt_par = empty_repeat_param.pop(0)
                         emt_par.from_parfile_line(" ".join([emt_par.name, li]))
-                        if use_alias: # Use the input alias as input
+                        if use_alias:  # Use the input alias as input
                             emt_par.use_alias = original_name[pp]
                     else:
-                    # No empty space, add a new parameter to the timing model.
+                        # No empty space, add a new parameter to the timing model.
                         host_component = timing_model._locate_param_host(pp)
                         timing_model.add_param_from_top(temp_par, host_component[0][0])
 
@@ -564,7 +584,7 @@ def get_model_and_toas(
     usepickle=False,
     tdb_method="default",
     picklefilename=None,
-    allow_name_mixing=False
+    allow_name_mixing=False,
 ):
     """Load a timing model and a related TOAs, using model commands as needed
 

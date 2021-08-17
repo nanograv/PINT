@@ -342,10 +342,12 @@ class PulsarBinary(DelayComponent):
     def print_par(self):
         if self._parent is not None:
             # Check if the binary name are the same as BINARY parameter
-            if self._parent.BINARY.value  != self.binary_model_name:
-                raise TimingModelError(f"Parameter BINARY {self._parent.BINARY.value}"
-                                       f" does not match the binary"
-                                       f" component {self.binary_model_name}")
+            if self._parent.BINARY.value != self.binary_model_name:
+                raise TimingModelError(
+                    f"Parameter BINARY {self._parent.BINARY.value}"
+                    f" does not match the binary"
+                    f" component {self.binary_model_name}"
+                )
             result = self._parent.BINARY.as_parfile_line()
         else:
             result = "BINARY {0}\n".format(self.binary_model_name)

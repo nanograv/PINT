@@ -51,7 +51,7 @@ from pint.models.parameter import (
     intParameter,
     maskParameter,
     strParameter,
-    prefixParameter
+    prefixParameter,
 )
 from pint.phase import Phase
 from pint.toa import TOAs
@@ -68,7 +68,7 @@ __all__ = [
     "MissingParameter",
     "MissingTOAs",
     "MissingBinaryError",
-    "UnknownBinaryModel"
+    "UnknownBinaryModel",
 ]
 # Parameters or lines in parfiles we don't understand but shouldn't
 # complain about. These are still passed to components so that they
@@ -2148,7 +2148,7 @@ class TimingModel:
         cates_comp = self.get_components_by_category()
         printed_cate = []
         for p in self.top_level_params:
-            if p == 'BINARY': # Will print the Binary model name in the binary section
+            if p == "BINARY":  # Will print the Binary model name in the binary section
                 continue
             result_begin += getattr(self, p).as_parfile_line()
         for cat in start_order:
@@ -2987,4 +2987,5 @@ class UnknownBinaryModel(TimingModelError):
 
 class MissingBinaryError(TimingModelError):
     """Error for missing BINARY parameter."""
+
     pass

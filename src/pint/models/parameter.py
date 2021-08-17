@@ -1773,11 +1773,7 @@ class maskParameter(floatParameter):
         array
             An array of TOA indices selected by the mask.
         """
-        column_match = {
-            "mjd": "mjd_float",
-            "freq": "freq",
-            "tel": "obs",
-        }
+        column_match = {"mjd": "mjd_float", "freq": "freq", "tel": "obs"}
         if len(self.key_value) == 1:
             if not hasattr(self, "toa_selector"):
                 self.toa_selector = TOASelect(is_range=False, use_hash=True)
@@ -1832,7 +1828,7 @@ class maskParameter(floatParameter):
         ValueError:
             If the parameter to compare does not have 'key' or 'key_value'.
         """
-        if not (hasattr(other_param, 'key') or hasattr(other_param, 'key_value')):
+        if not (hasattr(other_param, "key") or hasattr(other_param, "key_value")):
             raise ValueError("Parameter to compare does not have `key` or `key_value`.")
         if self.key != other_param.key:
             return False

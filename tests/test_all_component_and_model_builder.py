@@ -78,23 +78,31 @@ def simple_model_alias_overlap():
 @pytest.fixture
 def test_timing_model():
     ac = AllComponents()
-    timing_model = TimingModel(name="Test",
-                               components=[ac.components['AstrometryEquatorial'],
-                                           ac.components['Spindown'],
-                                           ac.components['DispersionDMX'],
-                                           ac.components['PhaseJump'],
-                                           ac.components['ScaleToaError']])
+    timing_model = TimingModel(
+        name="Test",
+        components=[
+            ac.components["AstrometryEquatorial"],
+            ac.components["Spindown"],
+            ac.components["DispersionDMX"],
+            ac.components["PhaseJump"],
+            ac.components["ScaleToaError"],
+        ],
+    )
     return timing_model
 
-pint_dict_base = {'PSR': ['J1234+5678'],
-                  'RAJ': ['04:37:15.7865145       1   7.000e-07'],
-                  'DECJ': ['-47:15:08.461584       1   8.000e-06'],
-                  'F0': ['173.6879489990983      1   3.000e-13'],
-                  'PEPOCH': ['51194.000'],
-                  'JUMP1': ['-fe L-wide 1 1 0.1', '-fe 430 1 1 0.1', '-fe1 430 1 1 0.1'],
-                  'DMX_0001': ['3.01718358D-03  1      3.89019948D-05'],
-                  'EFAC1': ['-f L-wide_PUPPI   1.156', '-f 430_ASP   0.969'],
-                  'EQUAD1': ['-f L-wide_PUPPI   0.14320']}
+
+pint_dict_base = {
+    "PSR": ["J1234+5678"],
+    "RAJ": ["04:37:15.7865145       1   7.000e-07"],
+    "DECJ": ["-47:15:08.461584       1   8.000e-06"],
+    "F0": ["173.6879489990983      1   3.000e-13"],
+    "PEPOCH": ["51194.000"],
+    "JUMP1": ["-fe L-wide 1 1 0.1", "-fe 430 1 1 0.1", "-fe1 430 1 1 0.1"],
+    "DMX_0001": ["3.01718358D-03  1      3.89019948D-05"],
+    "EFAC1": ["-f L-wide_PUPPI   1.156", "-f 430_ASP   0.969"],
+    "EQUAD1": ["-f L-wide_PUPPI   0.14320"],
+}
+
 
 def test_model_builder_class():
     """Test if AllComponents collected components information correctly
@@ -232,38 +240,38 @@ def test_model_fillup(test_timing_model):
     """
     mb = ModelBuilder()
     tm = mb._setup_model(test_timing_model, pint_dict_base, validate=False)
-    assert tm.PSR.value == 'J1234+5678'
+    assert tm.PSR.value == "J1234+5678"
     assert np.isclose(tm.F0.value, 173.6879489990983)
     assert np.isclose(tm.F0.uncertainty_value, 3.000e-13)
     assert tm.DMX_0001.value == 3.01718358e-03
     assert tm.DMX_0001.uncertainty_value == 3.89019948e-05
-    jump_map = tm.get_prefix_mapping('JUMP')
-    assert len(jump_map.keys()) == len(pint_dict_base['JUMP1'])
-    assert tm.JUMP1.key == '-fe'
-    assert tm.JUMP1.key_value == ['L-wide']
+    jump_map = tm.get_prefix_mapping("JUMP")
+    assert len(jump_map.keys()) == len(pint_dict_base["JUMP1"])
+    assert tm.JUMP1.key == "-fe"
+    assert tm.JUMP1.key_value == ["L-wide"]
     assert tm.JUMP1.value == 1
-    assert tm.JUMP2.key == '-fe'
-    assert tm.JUMP2.key_value == ['430']
+    assert tm.JUMP2.key == "-fe"
+    assert tm.JUMP2.key_value == ["430"]
     assert tm.JUMP2.value == 1
-    assert tm.JUMP3.key == '-fe1'
-    assert tm.JUMP3.key_value == ['430']
+    assert tm.JUMP3.key == "-fe1"
+    assert tm.JUMP3.key_value == ["430"]
     assert tm.JUMP3.value == 1
-    efac = tm.get_prefix_mapping('EFAC')
-    assert len(efac.keys()) == len(pint_dict_base['EFAC1'])
-    assert tm.EFAC1.key == '-f'
-    assert tm.EFAC1.key_value == ['L-wide_PUPPI']
+    efac = tm.get_prefix_mapping("EFAC")
+    assert len(efac.keys()) == len(pint_dict_base["EFAC1"])
+    assert tm.EFAC1.key == "-f"
+    assert tm.EFAC1.key_value == ["L-wide_PUPPI"]
     assert tm.EFAC1.value == 1.156
-    assert tm.EFAC2.key == '-f'
-    assert tm.EFAC2.key_value == ['430_ASP']
+    assert tm.EFAC2.key == "-f"
+    assert tm.EFAC2.key_value == ["430_ASP"]
     assert tm.EFAC2.value == 0.969
-    equad = tm.get_prefix_mapping('EQUAD')
-    assert len(equad.keys()) == len(pint_dict_base['EQUAD1'])
+    equad = tm.get_prefix_mapping("EQUAD")
+    assert len(equad.keys()) == len(pint_dict_base["EQUAD1"])
 
 
 def test_model_fillup_prefix_adding(test_timing_model):
     pint_dict_prefix = copy.deepcopy(pint_dict_base)
-    pint_dict_prefix['DMX_0002'] = ['5.01718358D-03  1      3.89019948D-05']
-    pint_dict_prefix['DMX_0345'] = ['3.01718358D-03  1      5.89019948D-05']
+    pint_dict_prefix["DMX_0002"] = ["5.01718358D-03  1      3.89019948D-05"]
+    pint_dict_prefix["DMX_0345"] = ["3.01718358D-03  1      5.89019948D-05"]
     mb = ModelBuilder()
     tm = mb._setup_model(test_timing_model, pint_dict_prefix, validate=False)
     assert np.isclose(tm.DMX_0002.value, 5.01718358e-03)
@@ -274,8 +282,8 @@ def test_model_fillup_prefix_adding(test_timing_model):
 
 def test_model_fillup_prefix_adding_spin_freq(test_timing_model):
     pint_dict_prefix = copy.deepcopy(pint_dict_base)
-    pint_dict_prefix['F2'] = ['5.0D-13  1      3.0e-15']
-    pint_dict_prefix['F3'] = ['3.0D-14  1      5.0e-15']
+    pint_dict_prefix["F2"] = ["5.0D-13  1      3.0e-15"]
+    pint_dict_prefix["F3"] = ["3.0D-14  1      5.0e-15"]
     mb = ModelBuilder()
     tm = mb._setup_model(test_timing_model, pint_dict_prefix)
     assert np.isclose(tm.F2.value, 5.0e-13)
