@@ -493,8 +493,8 @@ class Parameter:
                     str2longdouble(k[2])
                     ucty = k[2]
                 except ValueError:
-                    errmsg = "Unidentified string " + k[2] + " in"
-                    errmsg += " parfile line " + k
+                    errmsg = f"Unidentified string '{k[2]}' in"
+                    errmsg += f" parfile line " + " ".join(k)
                     raise ValueError(errmsg)
 
             if len(k) >= 4:
