@@ -54,15 +54,6 @@ def parse_parfile(parfile):
     return parfile_dict
 
 
-def fill_parameter_value(timing_model, pint_param_dict):
-    """Fill parameter value to a timing model.
-
-    Parameter
-    ---------
-    timing_model: pint.models.TimingModel object
-
-    """
-
 class ModelBuilder:
     """Class for building a `TimingModel` object from a parameter file.
 
@@ -82,20 +73,27 @@ class ModelBuilder:
         self._validate_components()
         self.default_components = ["SolarSystemShapiro"]
 
-    def __call__(self, parfile):
+    def __call__(self, parfile, allow_name_mixing=False):
         """Callable object for making a timing model from .par file.
 
         Parameter
         ---------
         parfile: str or file-like object
             Input .par file name or string contents
+
+        allow_name_mixing : bool, optional
+            Flag for allowing the input to have mixing aliases names for the
+            same parameter. For example, if this flag is true, one can have
+            T2EFAC and EFAC, both of them maps to PINT parameter EFAC, present
+            in the parfile at the same time.
+
         Return
         ------
         pint.models.timing_model.TimingModel
             The result timing model based on the input .parfile or file object.
         """
-        param_inpar, repeat_par = self.parse_parfile(parfile)
-        selected, conflict, param_not_in_pint = self.choose_model(param_inpar)
+        pint_param_dict, original_name, unknown_param = self._pintify_parfile(parfile, allow_name_mixing)
+        selected, conflict, param_not_in_pint = self.choose_model(pint_param_dict)
         selected.update(set(self.default_components))
         # Report conflict
         if len(conflict) != 0:
@@ -103,26 +101,27 @@ class ModelBuilder:
         # Make timing model
         cps = [self.all_components.components[c] for c in selected]
         tm = TimingModel(components=cps)
-        # Add indexed parameters
-        leftover_params = list(set(param_not_in_pint))
-        # Give repeatable parameters an index.
-        # Convert all repeated parameter name/alises the pint_name and group
-        # them.
-        # TODO when we remove the number index for repeatable parameter, this
-        # code need to be updated.
-        pint_repeat_param = defaultdict(list)
-        for k, v in repeat_par.items():
-            # The parameters in the repeat_par should all be PINT-understandable.
-            # Since they all belong to the repeatable_param list.
-            pint_name, first_init = self.all_components.alias_to_pint_param(k)
-            repeat_perfix, _, _ = split_prefixed_name(pint_name)
-            pint_repeat_param[repeat_perfix].append(v)
-        for p, v in pint_repeat_param.items():
-            for ii in range(len(v)):
-                leftover_params.append(p + str(ii + 1))
-        print(leftover_params)
-        # reiterate the lefe over parameters.
-        tm, unknown_param = self._add_indexed_params(tm, leftover_params)
+        self._setup_model(tm, pint_param_dict,  original_name, setup=True, validate=True)
+        # # Add indexed parameters
+        # leftover_params = list(set(param_not_in_pint))
+        # # Give repeatable parameters an index.
+        # # Convert all repeated parameter name/alises the pint_name and group
+        # # them.
+        # # TODO when we remove the number index for repeatable parameter, this
+        # # code need to be updated.
+        # pint_repeat_param = defaultdict(list)
+        # for k, v in repeat_par.items():
+        #     # The parameters in the repeat_par should all be PINT-understandable.
+        #     # Since they all belong to the repeatable_param list.
+        #     pint_name, first_init = self.all_components.alias_to_pint_param(k)
+        #     repeat_perfix, _, _ = split_prefixed_name(pint_name)
+        #     pint_repeat_param[repeat_perfix].append(v)
+        # for p, v in pint_repeat_param.items():
+        #     for ii in range(len(v)):
+        #         leftover_params.append(p + str(ii + 1))
+        # print(leftover_params)
+        # # reiterate the lefe over parameters.
+        # tm, unknown_param = self._add_indexed_params(tm, leftover_params)
         return tm
 
     def _validate_components(self):
@@ -206,64 +205,38 @@ class ModelBuilder:
                 return k
         return None
 
-    def parse_parfile(self, parfile):
-        """Parse the par file for model buinding.
-
-        Parameter
-        ---------
-        parfile: str or file-like object
-            Input .par file name or string contents
-        Return
-        ------
-        dict
-            The unique parameters in .par file with the key is the parfile line.
-        dict
-            The parameters that have the same names in the .parfile or file-like
-            object.
-        """
-        repeat_par = defaultdict(list)
-        param_inpar = {}
-        # Parse all the useful lines
-        multi_line = Counter()
-        for l in interesting_lines(lines_of(parfile), comments=("#", "C ")):
-            k = l.split()
-            param_inpar[k[0]] = k[1:]
-            # Handle the Mulit-tag lines
-            multi_line[k[0]] += 1
-            # When the parameter is a repeatable parameter
-            if k[0] in self.all_components.repeatable_param:
-                repeat_par[k[0]].append(k[1:])
-            else:
-                # The parameter is not repeatable, but present in the par file
-                # for more than one line.
-                if multi_line[k[0]] > 1:
-                    raise TimingModelError(
-                        "Lines with duplicate keys in par file:"
-                        " {} and {}".format(k[0], k[1:])
-                    )
-        return param_inpar, repeat_par
-
-    def _pintify_parfile(self, parfile):
+    def _pintify_parfile(self, parfile, allow_name_mixing=False):
         """Translate parfile parameter name to PINT style name.
 
         This function converts the parfile information to PINT understandable
         parameter name. It also returns the PINT unrecognized parameters and
         check if the parfile has illegal repeating lines.
 
-        Parameter
-        ---------
-        parfile: str, file-like object, or parfile dictionary
+        Parameters
+        ----------
+        parfile : str, file-like object, or parfile dictionary
             Parfile name, parfile StringIO, or the parfile dictionary returned
             by :func:`parse_parfile`.
 
-        Return
-        ------
-            pint_param_dict: dict
+        allow_name_mixing : bool, optional
+            Flag for allowing the input to have mixing aliases names for the
+            same parameter. For example, if this flag is true, one can have
+            T2EFAC and EFAC, both of them maps to PINT parameter EFAC, present
+            in the parfile at the same time.
+
+        Returns
+        -------
+            pint_param_dict : dict
                 Pintified parameter dictionary with the PINT name as key and list of
-                parameter value-uncertainty lines as value. The for the
+                parameter value-uncertainty lines as value. For the
                 repeating parameters in the parfile, the value will contain
                 mulitple lines.
-            unknown_param: dict
+
+            original_name_map : dict
+                PINT name maps to the original .par file input names. PINT name
+                is the key and the original name is in the value.
+
+            unknown_param : dict
                 The PINT unrecognized parameters in the format of a dictionary.
                 The key is the unknown parameter name and the value is the
                 parfile value lines.
@@ -274,6 +247,7 @@ class ModelBuilder:
             If the parfile has mulitple line with non-repeating parameters.
         """
         pint_param_dict = defaultdict(list)
+        original_name_map = defaultdict(list)
         unknown_param = defaultdict(list)
         repeating = Counter()
         if isinstance(parfile, (str, StringIO)):
@@ -287,15 +261,28 @@ class ModelBuilder:
                 unknown_param[k] += v
                 continue
             pint_param_dict[pint_name] += v
+            original_name_map[pint_name].append(k)
             repeating[pint_name] += len(v)
             # Check if this parameter is allowed to be repeated by PINT
-            if repeating[pint_name] > 1:
+            if len(pint_param_dict[pint_name]) > 1:
                 if pint_name not in self.all_components.repeatable_param:
                     raise TimingModelError(
                         f"Parameter {pint_name} is not a repeatable parameter. "
                         f"However, mulitple line use it."
                     )
-        return pint_param_dict, unknown_param
+        # Check if the name is mixed
+        for p_n, o_n in original_name_map.items():
+            if len(o_n) > 1:
+                if not allow_name_mixing:
+                    raise TimingModelError(
+                        f"Parameter {p_n} have mixed input names/alias "
+                        f"{o_n}. If you want to have mixing names, please use"
+                        f" 'allow_name_mixing=True', and the output .par file "
+                        f"will use '{original_name_map[pint_name][0]}'."
+                    )
+            original_name_map[p_n] = o_n[0]
+
+        return pint_param_dict, original_name_map, unknown_param
 
     def choose_model(self, param_inpar):
         """Choose the model components based on the parfile.
@@ -362,11 +349,11 @@ class ModelBuilder:
             if p_name != first_init:
                 param_not_in_pint.append(pp)
 
-            # Check if the alises duplicates the other parameters
-            if param_count[p_name] > 1:
-                if p_name not in self.all_components.repeatable_param:
-                    raise TimingModelError(f"Parameter alias {pp} duplicates"
-                                           f" with {p_name}.")
+            # # Check if the alises duplicates the other parameters
+            # if param_count[p_name] > 1:
+            #     if p_name not in self.all_components.repeatable_param:
+            #         raise TimingModelError(f"Parameter alias {pp} duplicates"
+            #                                f" with {p_name}.")
 
             p_cp = self.all_components.param_component_map.get(first_init, None)
             if p_cp:
@@ -409,7 +396,7 @@ class ModelBuilder:
                 del conflict_components[ps_cp]
         return selected_components, conflict_components, param_not_in_pint
 
-    def _setup_model(self, timing_model, pint_param_dict, setup=True):
+    def _setup_model(self, timing_model, pint_param_dict, original_name=None, setup=True, validate=True):
         """Fill up a timing model with parameter values and then setup the model.
 
         This function fills up the timing model parameter values from the input
@@ -423,14 +410,21 @@ class ModelBuilder:
 
         Parameters
         ----------
-        timing_model: pint.models.TimingModel
+        timing_model : pint.models.TimingModel
             Timing model to get setup.
         pint_param_dict: dict
             Pintified parfile dictionary which can be aquired by
             :meth:`ModelBuilder._pintify_parfile`
-        setup: bool, optional
+        origin_name : dict, optional
+            A map from PINT name to the original input name.
+        setup : bool, optional
             Whether to run the setup function in the timing model.
         """
+        if original_name is not None:
+            use_alias = True
+        else:
+            use_alias = False
+
         for pp, v in pint_param_dict.items():
             try:
                 par = getattr(timing_model, pp)
@@ -438,105 +432,70 @@ class ModelBuilder:
             # since the input is pintfied, it should be an uninitized indexed parameter
             # double check if the missing parameter an indexed parameter.
                 pint_par, first_init = self.all_components.alias_to_pint_param(pp)
-                prefix, _, index = split_prefixed_name(pint_par)
+                try:
+                    prefix, _, index = split_prefixed_name(pint_par)
+                except PrefixError:
+                    raise UnknownParameter(f"Paraemter {pint_par} is not a PINT parameter.")
+                # TODO need to create a beeter API for _loacte_param_host
                 host_component = timing_model._locate_param_host(first_init)
-                timing_model.add_param_from_top(first_init.new_param(idx), host_component)
+                timing_model.add_param_from_top(getattr(timing_model, first_init).new_param(index), host_component[0][0])
+                par = getattr(timing_model, pint_par)
+
             # Fill up the values
             param_line = len(v)
             if param_line < 2:
-                par.from_parfile_line(" ".join([pp] + v))
+                if use_alias: # Use the input alias as input
+                    name = original_name[pp]
+                else:
+                    name = pp
+                par.from_parfile_line(" ".join([name] + v))
             else: # For the repeatable parameters
                 lines = copy.deepcopy(v) # Line queue.
                 # Check how many repeatable parameters in the model.
                 example_par = getattr(timing_model, pp)
                 prefix , _, index = split_prefixed_name(pp)
-                repeatable_map = timing_model.get_prefix_mapping(prefix)
-                # Creat a temp parameter with the idx bigger than all the existing indices
-                new_max_idx = max(len(lines), max(repeatable_map.keys())) + 1
-                temp_par = example_par.new_param(new_max_idx)
-                current_line =  lines.pop(0)
-                temp_par.from_parfile_line(" ".join([prefix + str(new_max_idx), current_line]))
-                # Check current repeatable's key and value
-                # TODO need to change here when maskParameter name changes to name_key_value
-                empty_repeat_param = []
-                for idx, rp in repeatable_map.items():
-                    rp_par = getattr(timing_model, rp)
-                    if rp_par.compare_key_value(temp_par):
-                        # Key and key value match, copy the new line to it
-                        # and exit
-                        rp_par.from_parfile_line(" ".join([rp, current_line]))
-                        break
+                for li in lines:
+                    # Creat a temp parameter with the idx bigger than all the existing indices
+                    repeatable_map = timing_model.get_prefix_mapping(prefix)
+                    new_max_idx = max(repeatable_map.keys()) + 1
+                    temp_par = example_par.new_param(new_max_idx)
+                    temp_par.from_parfile_line(" ".join([prefix + str(new_max_idx), li]))
+                    if use_alias: # Use the input alias as input
+                        temp_par.use_alias = original_name[pp]
+                    # Check current repeatable's key and value
+                    # TODO need to change here when maskParameter name changes to name_key_value
+                    empty_repeat_param = []
+                    for idx, rp in repeatable_map.items():
+                        rp_par = getattr(timing_model, rp)
+                        if rp_par.compare_key_value(temp_par):
+                            # Key and key value match, copy the new line to it
+                            # and exit
+                            rp_par.from_parfile_line(" ".join([rp, li]))
+                            if use_alias: # Use the input alias as input
+                                rp_par.use_alias = original_name[pp]
+                            break
 
-                    if rp_par.key is None:
-                        # Empty space for new repeatable parameter
-                        empty_repeat_param.append(rp_par)
+                        if rp_par.key is None:
+                            # Empty space for new repeatable parameter
+                            empty_repeat_param.append(rp_par)
 
-                # There is no current repeatable parameter matching the new line
-                # First try to fill up an empty space.
-                if empty_repeat_param != []:
-                    emt_par = empty_repeat_param.pop(0)
-                    emt_par.from_parfile_line(" ".join([emt_par.name, current_line]))
-                else:
-                # No empty space, add a new parameter to the timing model.
-                    host_component = timing_model._locate_param_host(pp)
-                    timing_model.add_param_from_top(temp_par, host_component)
+                    # There is no current repeatable parameter matching the new line
+                    # First try to fill up an empty space.
+                    if empty_repeat_param != []:
+                        emt_par = empty_repeat_param.pop(0)
+                        emt_par.from_parfile_line(" ".join([emt_par.name, li]))
+                        if use_alias: # Use the input alias as input
+                            emt_par.use_alias = original_name[pp]
+                    else:
+                    # No empty space, add a new parameter to the timing model.
+                        host_component = timing_model._locate_param_host(pp)
+                        timing_model.add_param_from_top(temp_par, host_component[0][0])
 
         if setup:
             timing_model.setup()
+        if validate:
+            timing_model.validate()
         return timing_model
-
-    def _add_indexed_params(self, timing_model, indexed_params):
-        """Add the parameters with unknown number/indexed in parfile (maskParameter/prefixParameter) to timing model.
-
-        Parameter
-        ---------
-        timing_model: `pint.models.TimeModel` object
-            Timing model to add the parameters to.
-        params: list
-            A list of number unknown parameter names.
-
-        Note
-        ----
-        This function do not fill the parameter values. Only adds the bare
-        parameter to the timing model.
-        """
-        # go over the input parameter list
-        unknown_param = []
-        for pp in indexed_params:
-            try:
-                pint_p, first_init_par = self.all_components.alias_to_pint_param(pp)
-            except UnknownParameter:
-                unknown_param.append(pp)
-                continue
-            # Check if parameter in the timing model already
-            if pint_p in timing_model.params:
-                continue
-            # Check if parameter name has and index and prefix
-            try:
-                prefix, idx_str, idx = split_prefixed_name(pint_p)
-            except PrefixError:
-                prefix = None
-                idx = None
-            if prefix:  #
-                search_name = prefix
-            else:
-                search_name = pint_p
-            # TODO, when the prefix parameter structure changed, this will have
-            # to change.
-            prefix_map = timing_model.get_prefix_mapping(search_name)
-            if prefix_map == {}:  # Can not find any prefix mapping
-                unknown_param.append(pp)
-                continue
-            # Get the parameter in the prefix map.
-            prefix_param0 = list(prefix_map.items())[0]
-            example = getattr(timing_model, prefix_param0[1])
-            if (
-                not idx
-            ):  # Input name has index, init from an example param and add it to timing model.
-                idx = max(list(prefix_map.keys())) + 1
-            host_component = timing_model._locate_param_host(prefix_param0[1])[0][0]
-            timing_model.add_param_from_top(example.new_param(idx), host_component)
-        return timing_model, unknown_param
 
     def _report_conflict(self, conflict_graph):
         """Report conflict components
@@ -549,13 +508,20 @@ class ModelBuilder:
             )
 
 
-def get_model(parfile):
+def get_model(parfile, allow_name_mixing=False):
     """A one step function to build model from a parfile.
 
     Parameters
     ----------
     parfile : str
         The parfile name, or a file-like object to read the parfile contents from
+
+    allow_name_mixing : bool, optional
+        Flag for allowing the input to have mixing aliases names for the
+        same parameter. For example, if this flag is true, one can have
+        T2EFAC and EFAC, both of them maps to PINT parameter EFAC, present
+        in the parfile at the same time.
+
     Returns
     -------
     Model instance get from parfile.
@@ -569,17 +535,15 @@ def get_model(parfile):
         # # parfile is a filename and can be handled by ModelBuilder
         # if _model_builder is None:
         #     _model_builder = ModelBuilder()
-        model = model_builder(parfile)
+        model = model_builder(parfile, allow_name_mixing)
         model.name = parfile
-        model.read_parfile(parfile)
         return model
     else:
         with tempfile.TemporaryDirectory() as td:
             fn = os.path.join(td, "temp.par")
             with open(fn, "wt") as f:
                 f.write(contents)
-            tm = model_builder(fn)
-            tm.read_parfile(fn)
+            tm = model_builder(fn, allow_name_mixing)
             return tm
 
 
@@ -594,6 +558,7 @@ def get_model_and_toas(
     usepickle=False,
     tdb_method="default",
     picklefilename=None,
+    allow_name_mixing=False
 ):
     """Load a timing model and a related TOAs, using model commands as needed
 
@@ -623,12 +588,17 @@ def get_model_and_toas(
         Filename to use for caching loaded file. Defaults to adding ``.pickle.gz`` to the
         filename of the timfile, if there is one and only one. If no filename is available,
         or multiple filenames are provided, a specific filename must be provided.
+    allow_name_mixing : bool, optional
+        Flag for allowing the input to have mixing aliases names for the
+        same parameter. For example, if this flag is true, one can have
+        T2EFAC and EFAC, both of them maps to PINT parameter EFAC, present
+        in the parfile at the same time.
     Returns
     -------
     A tuple with (model instance, TOAs instance)
     """
     pass
-    mm = get_model(parfile)
+    mm = get_model(parfile, allow_name_mixing)
     tt = get_TOAs(
         timfile,
         model=mm,

@@ -51,6 +51,7 @@ from pint.models.parameter import (
     intParameter,
     maskParameter,
     strParameter,
+    prefixParameter
 )
 from pint.phase import Phase
 from pint.toa import TOAs
@@ -364,6 +365,7 @@ class TimingModel:
             self.T2CMETHOD.value = "IAU2000B"
         if self.UNITS.value not in [None, "TDB"]:
             raise ValueError("PINT only supports 'UNITS TDB'")
+
         for cp in self.components.values():
             cp.validate()
 
@@ -542,7 +544,7 @@ class TimingModel:
         # plain float to Quantities. No idea why.
         for k, v in fitp.items():
             p = getattr(self, k)
-            if isinstance(v, Parameter):
+            if isinstance(v, (Parameter, prefixParameter)):
                 if v.value is None:
                     raise ValueError("Parameter {} is unset".format(v))
                 p.value = v.value
@@ -2083,113 +2085,6 @@ class TimingModel:
         if verbosity != "check":
             return s.split("\n")
 
-    def read_parfile(self, file, validate=True):
-        """Read values from the specified parfile into the model parameters.
-
-        Parameters
-        ----------
-        file : str or list or file-like
-            The parfile to read from. May be specified as a filename,
-            a list of lines, or a readable file-like object.
-        """
-        repeat_param = defaultdict(int)
-        param_map = self.get_params_mapping()
-        comps = self.components.copy()
-        comps["timing_model"] = self
-        wants_tcb = None
-        stray_lines = []
-        for li in interesting_lines(lines_of(file), comments=("#", "C ")):
-            k = li.split()
-            name = k[0].upper()
-
-            if name == "UNITS":
-                if name in repeat_param:
-                    raise ValueError("UNITS is repeated in par file")
-                else:
-                    repeat_param[name] += 1
-                if len(k) > 1 and k[1] == "TDB":
-                    wants_tcb = False
-                else:
-                    wants_tcb = li
-                self.UNITS.value = k[1]
-                continue
-
-            if name == "EPHVER":
-                if len(k) > 1 and k[1] != "2" and wants_tcb is None:
-                    wants_tcb = li
-                log.warning("EPHVER %s does nothing in PINT" % k[1])
-                # actually people expect EPHVER 5 to work
-                # even though it's supposed to imply TCB which doesn't
-                continue
-
-            if name == "START":
-                if name in repeat_param:
-                    raise ValueError("START is repeated in par file")
-                self.START.value = k[1]
-                continue
-
-            if name == "FINISH":
-                if name in repeat_param:
-                    raise ValueError("FINISH is repeated in par file")
-                self.FINISH.value = k[1]
-                continue
-
-            # Check alias
-            p_name = self.match_param_aliases(name)
-
-            repeat_param[p_name] += 1
-            if repeat_param[p_name] > 1:
-                k[0] = k[0] + str(repeat_param[p_name])
-                li = " ".join(k)
-
-            used = []
-            for p, c in param_map.items():
-                if getattr(comps[c], p).from_parfile_line(li):
-                    used.append((c, p))
-            if len(used) > 1:
-                log.warning(
-                    "More than one component made use of par file "
-                    "line {!r}: {}".format(li, used)
-                )
-            if used:
-                continue
-
-            if name in ignore_params:
-                log.debug("Ignoring parfile line '%s'" % (li,))
-                continue
-
-            try:
-                prefix, f, v = split_prefixed_name(p_name)
-                if prefix in ignore_prefix:
-                    log.debug("Ignoring prefix parfile line '%s'" % (li,))
-                    continue
-            except PrefixError:
-                pass
-
-            stray_lines.append(li)
-
-        if wants_tcb:
-            raise ValueError(
-                "Only UNITS TDB supported by PINT but parfile has {}".format(wants_tcb)
-            )
-        if stray_lines:
-            for l in stray_lines:
-                log.warning("Unrecognized parfile line {!r}".format(l))
-            for name, param in getattr(self, "discarded_components", []):
-                log.warning(
-                    "Model component {} was rejected because we "
-                    "didn't find parameter {}".format(name, param)
-                )
-            # Disable here for now. TODO  need to modified.
-            # log.info("Final object: {}".format(repr(self)))
-
-        self.setup()
-        # The "validate" functions contain tests for required parameters or
-        # combinations of parameters, etc, that can only be done
-        # after the entire parfile is read
-        if validate:
-            self.validate()
-
     def use_aliases(self, reset_to_default=True, alias_translation=None):
         """Set the parameters to use aliases as specified upon writing.
 
@@ -3035,11 +2930,6 @@ class AllComponents:
                 "Can not find matching PINT parameter for '{}'".format(alias)
             )
         return pint_par, first_init_par
-
-    def get_param_host(self, param):
-        """Return the host component.
-        """
-        pass
 
 
 class TimingModelError(ValueError):
