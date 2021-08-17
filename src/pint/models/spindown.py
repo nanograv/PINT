@@ -32,12 +32,24 @@ class Spindown(PhaseComponent):
 
     def __init__(self):
         super().__init__()
+        # self.add_param(
+        #     floatParameter(
+        #         name="F0",
+        #         value=0.0,
+        #         units="Hz",
+        #         description="Spin-frequency",
+        #         long_double=True,
+        #     )
+        # )
         self.add_param(
-            floatParameter(
+            prefixParameter(
                 name="F0",
                 value=0.0,
                 units="Hz",
-                description="Spin-frequency",
+                description="Spindown-frequency",
+                unit_template=self.F_unit,
+                description_template=self.F_description,
+                type_match="float",
                 long_double=True,
             )
         )
@@ -66,6 +78,8 @@ class Spindown(PhaseComponent):
 
     def setup(self):
         super().setup()
+        self.num_spin_terms = len(self.F_terms)
+        # Add derivative functions
         for fp in list(self.get_prefix_mapping_component("F").values()) + ["F0"]:
             self.register_deriv_funcs(self.d_phase_d_F, fp)
 
