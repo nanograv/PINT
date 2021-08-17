@@ -6,6 +6,7 @@ from io import StringIO
 from collections import Counter, defaultdict
 from pint.models.parameter import maskParameter
 from astropy import log
+import warnings
 from astropy.utils.decorators import lazyproperty
 from pint.models.timing_model import (
     DEFAULT_ORDER,
@@ -16,7 +17,8 @@ from pint.models.timing_model import (
     ConflictAliasError,
     UnknownBinaryModel,
     UnknownParameter,
-    TimingModelError
+    TimingModelError,
+    MissingBinaryError
 )
 from pint.toa import get_TOAs
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
@@ -102,6 +104,10 @@ class ModelBuilder:
         cps = [self.all_components.components[c] for c in selected]
         tm = TimingModel(components=cps)
         self._setup_model(tm, pint_param_dict,  original_name, setup=True, validate=True)
+        # Report unknown line
+        for k, v in unknown_param.items():
+            p_line = " ".join([k] + v)
+            warnings.warn(f"Unrecognized parfile line '{p_line}'", UserWarning)
         return tm
 
     def _validate_components(self):
@@ -303,7 +309,6 @@ class ModelBuilder:
         # the overall control parameters. This will get us the binary model name
         # build the base fo the timing model
         #pint_param_dict, unknown_param = self._pintify_parfile(param_inpar)
-
         binary = param_inpar.get("BINARY", None)
         if binary is not None:
             binary = binary[0]
@@ -329,12 +334,6 @@ class ModelBuilder:
             if p_name != first_init:
                 param_not_in_pint.append(pp)
 
-            # # Check if the alises duplicates the other parameters
-            # if param_count[p_name] > 1:
-            #     if p_name not in self.all_components.repeatable_param:
-            #         raise TimingModelError(f"Parameter alias {pp} duplicates"
-            #                                f" with {p_name}.")
-
             p_cp = self.all_components.param_component_map.get(first_init, None)
             if p_cp:
                 param_components_inpar[p_name] = p_cp
@@ -348,11 +347,17 @@ class ModelBuilder:
                 continue
             # Check if it is a binary component, if yes, skip. It is controlled
             # by the BINARY tag
-            if len(cps) == 1:  # No conflict, parameter only shows in one component.
-                # Check if it is a binary component, if yes, skip. It is
-                # controlled by the BINARY tag
-                if self.all_components.components[cps[0]].category == "pulsar_system":
+            if self.all_components.components[cps[0]].category == "pulsar_system":
+                if binary is None:
+                    raise MissingBinaryError(f"Pulsar binary/pulsar system model is"
+                                             f" decided by the parameter 'BINARY'. "
+                                             f" Please indicate the binary model "
+                                             f" before using parameter {k}, which is"
+                                             f" a binary model parameter.")
+                else:
                     continue
+
+            if len(cps) == 1:  # No conflict, parameter only shows in one component.
                 selected_components.add(cps[0])
                 continue
             # Has conflict, same parameter shows in different components
@@ -374,6 +379,19 @@ class ModelBuilder:
                 for cf_cp in cf_cps:
                     del conflict_components[cf_cp]
                 del conflict_components[ps_cp]
+        # Check if there are components from the same category
+        selected_cates = {}
+        for cp in selected_components:
+            cate = self.all_components.component_category_map[cp]
+            if cate not in selected_cates.keys():
+                selected_cates[cate] = cp
+            else:
+                exisit_cp = selected_cates[cate]
+                raise TimingModelError(f"Component '{cp}' and '{exisit_cp}' belong to the"
+                                       f" same category '{cate}'. Only one component from"
+                                       f" the same category can be used for a timing model."
+                                       f" Please check your input (e.g., .par file).")
+
         return selected_components, conflict_components, param_not_in_pint
 
     def _setup_model(self, timing_model, pint_param_dict, original_name=None, setup=True, validate=True):
@@ -400,7 +418,7 @@ class ModelBuilder:
         setup : bool, optional
             Whether to run the setup function in the timing model.
         validate : bool, optional
-            Whether to run the validate funciotn in the timing model. 
+            Whether to run the validate funciotn in the timing model.
         """
         if original_name is not None:
             use_alias = True
@@ -417,7 +435,12 @@ class ModelBuilder:
                 try:
                     prefix, _, index = split_prefixed_name(pint_par)
                 except PrefixError:
-                    raise UnknownParameter(f"Paraemter {pint_par} is not a PINT parameter.")
+                    par_hosts = self.all_components.param_component_map[pint_par]
+                    currnt_cp = timing_model.components.keys()
+                    raise TimingModelError(f"Parameter {pint_par} is recognized"
+                                           f" by PINT, but not used in the current"
+                                           f" timing model. It is used in {par_hosts},"
+                                           f" but the current timing model uses {currnt_cp}.")
                 # TODO need to create a beeter API for _loacte_param_host
                 host_component = timing_model._locate_param_host(first_init)
                 timing_model.add_param_from_top(getattr(timing_model, first_init).new_param(index), host_component[0][0])
@@ -484,7 +507,8 @@ class ModelBuilder:
         """
         for k, v in conflict_graph.items():
             # Put all the conflict components together from the graph
-            cf_cps = v.append(k)
+            cf_cps = list(v)
+            cf_cps.append(k)
             raise ComponentConflict(
                 "Can not decide the one component from:" " {}".format(cf_cps)
             )
