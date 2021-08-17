@@ -1365,6 +1365,14 @@ class prefixParameter:
         self.param_comp.aliases = a
 
     @property
+    def use_alias(self):
+        return self.param_comp.use_alias
+
+    @use_alias.setter
+    def use_alias(self, a):
+        self.param_comp.use_alias = a
+
+    @property
     def continuous(self):
         return self.param_comp.continuous
 
