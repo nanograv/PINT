@@ -1391,8 +1391,9 @@ class TimingModel:
         copy_toas = copy.deepcopy(toas)
         if sample_step is None:
             pulse_period = 1.0 / (self.F0.quantity)
-            sample_step = pulse_period * 1000
-        sample_dt = [-sample_step, sample_step]
+            sample_step = pulse_period * 2
+        # Note that sample_dt is applied cumulatively, so this evaulates phase at TOA-dt and TOA+dt
+        sample_dt = [-sample_step, 2 * sample_step]
 
         sample_phase = []
         for dt in sample_dt:
