@@ -21,6 +21,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Changed
 - get_groups() is renamed to get_clusters() and is no longer automatically called during TOA creation.  Can still be run manually, with the gap specified.  Addition of a clusters column to the TOA.table object is optional (PR #1070)
 - Some functions from utils.py are now in derived_quantities.py (PR #1102)
+- Data for tutorials etc. and clock files are now installed properly, with locations retrievable at runtime (PR #1103)
 
 ## [0.8.2] - 2021-01-27
 ### Fixed
