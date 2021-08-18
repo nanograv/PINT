@@ -271,7 +271,18 @@ class Residuals:
         elif calctype.lower() == "taylor":
             # see Spindown.spindown_phase
             dt = self.model.get_dt(self.toas, 0)
-            fterms = [0.0 * u.dimensionless_unscaled] + self.model.get_spin_terms()
+            # if the model is defined through F0, F1, ...
+            if "F0" in self.model.params:
+                fterms = [0.0 * u.dimensionless_unscaled] + self.model.get_spin_terms()
+
+            # otherwise assume P0, PDOT
+            else:
+                F0 = 1.0 / self.model.P0.quantity
+                if "PDOT" in self.model.params:
+                    F1 = -self.model.PDOT.quantity / self.model.P0.quantity ** 2
+                else:
+                    F1 = 0 * u.Hz / u.s
+                fterms = [0.0 * u.dimensionless_unscaled, F0, F1]
             return taylor_horner_deriv(dt, fterms, deriv_order=1).to(u.Hz)
         elif calctype.lower() == "numerical":
             return self.model.d_phase_d_toa(self.toas)
