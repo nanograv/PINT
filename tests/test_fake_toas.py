@@ -184,26 +184,27 @@ def test_fake_highF1():
     r = pint.residuals.Residuals(t, m)
     assert np.isclose(r.calc_time_resids(calctype="taylor").std(), 1 * u.us, rtol=0.2)
 
+
 def test_fake_DMfit():
     """ fit only for DM with fake TOAs
     compare the variance of that result against the uncertainties
     """
     parfile = pint.config.examplefile("NGC6440E.par")
     timfile = pint.config.examplefile("NGC6440E.tim")
-    m,t = get_model_and_toas(parfile, timfile)
-    
+    m, t = get_model_and_toas(parfile, timfile)
+
     # pick only data for a DM fit
-    t=t[-8:]
-    m.RAJ.frozen=True
-    m.DECJ.frozen=True
-    m.F0.frozen=True
-    m.F1.frozen=True
-    f = GLSFitter(t,m)
+    t = t[-8:]
+    m.RAJ.frozen = True
+    m.DECJ.frozen = True
+    m.F0.frozen = True
+    m.F1.frozen = True
+    f = GLSFitter(t, m)
     f.fit_toas()
 
     N = 30
-    
-    DMs = np.zeros(N)*u.pc/u.cm**3
+
+    DMs = np.zeros(N) * u.pc / u.cm ** 3
     for iter in range(N):
         t_fake = pint.simulation.make_fake_toas(t, m, add_noise=True)
         f_fake = GLSFitter(t_fake, m)
@@ -211,4 +212,3 @@ def test_fake_DMfit():
         DMs[iter] = f_fake.model.DM.quantity.astype(np.float64)
 
     assert np.isclose(DMs.std(), f.model.DM.uncertainty, rtol=0.2)
-    
