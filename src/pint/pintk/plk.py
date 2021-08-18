@@ -36,12 +36,12 @@ except ImportError:
 
 plotlabels = {
     "pre-fit": [
-        r"Pre-fit residual ($\mu$s)",
+        "Pre-fit residual",
         "Pre-fit residual (phase)",
         "Pre-fit residual (us)",
     ],
     "post-fit": [
-        r"Post-fit residual ($\mu$s)",
+        "Post-fit residual",
         "Post-fit residual (phase)",
         "Post-fit residual (us)",
     ],
@@ -531,7 +531,6 @@ class PlkWidget(tk.Frame):
         self.plkAxes.clear()
         self.plkAxes.grid(True)
         self.plkAxes.set_xlabel("MJD")
-        self.plkAxes.set_ylabel("Residual ($\mu$s)")
         self.plkFig.tight_layout()
         self.plkToolbar.push_current()
         self.plkCanvas.draw()
@@ -818,6 +817,7 @@ class PlkWidget(tk.Frame):
         """
         Update the plot, given all the plotting info
         """
+        y_unit = self.yvals.unit
         if keepAxes:
             xmin, xmax = self.plkAxes.get_xlim()
             ymin, ymax = self.plkAxes.get_ylim()
@@ -836,6 +836,10 @@ class PlkWidget(tk.Frame):
                 ymin = yave - 1.10 * (yave - np.min(self.yvals - self.yerrs))
                 ymax = yave + 1.10 * (np.max(self.yvals + self.yerrs) - yave)
             xmin, xmax = xmin.value, xmax.value
+            # determine if y-axis units need scaling and scale accordingly
+            ymin, ymax = self.determine_yaxis_units(miny=ymin, maxy=ymax)
+            y_unit = ymin.unit
+            self.yvals = self.yvals.to(y_unit)
             ymin, ymax = ymin.value, ymax.value
 
         self.plkAxes.clear()
@@ -873,14 +877,19 @@ class PlkWidget(tk.Frame):
             self.plkAxes.set_xlabel(plotlabels[self.xid])
 
         if self.yid in ["pre-fit", "post-fit"]:
-            self.plkAxes.set_ylabel(plotlabels[self.yid][0])
+            self.plkAxes.set_ylabel(plotlabels[self.yid][0] + " (" + str(y_unit) + ")")
             try:
                 r = (
                     self.psr.prefit_resids
                     if self.yid == "pre-fit" or not self.psr.fitted
                     else self.psr.postfit_resids
                 )
-                f0 = r.get_PSR_freq().to(u.MHz).value
+                if y_unit == u.us:
+                    f0 = r.get_PSR_freq().to(u.MHz).value
+                elif y_unit == u.ms:
+                    f0 = r.get_PSR_freq().to(u.kHz).value
+                else:
+                    f0 = r.get_PSR_freq().to(u.Hz).value
                 self.plkAx2x.set_visible(True)
                 self.plkAx2x.set_ylabel(plotlabels[self.yid][1])
                 self.plkAx2x.set_ylim(ymin * f0, ymax * f0)
@@ -908,6 +917,20 @@ class PlkWidget(tk.Frame):
                 f_toas_plot = f_toas.get_mjds()  # old implementation only used this
             for i in range(len(rs)):
                 self.plkAxes.plot(f_toas_plot, rs[i], "-k", alpha=0.3)
+
+    def determine_yaxis_units(self, miny, maxy):
+        """Checks range of residuals and converts units if range sufficiently large/small."""
+        diff = maxy - miny
+        if diff > 0.2 * u.s:
+            maxy = maxy.to(u.s)
+            miny = miny.to(u.s)
+        elif diff > 0.2 * u.ms:
+            maxy = maxy.to(u.ms)
+            miny = miny.to(u.ms)
+        elif diff <= 0.2 * u.ms:
+            maxy = maxy.to(u.us)
+            miny = miny.to(u.us)
+        return miny, maxy
 
     def print_info(self):
         """
