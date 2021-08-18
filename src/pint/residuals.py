@@ -346,7 +346,7 @@ class Residuals:
             mean, err = weighted_mean(full, w)
         return full - mean
 
-    def calc_time_resids(self, calctype="modelF0"):
+    def calc_time_resids(self, calctype="taylor"):
         """Compute timing model residuals in time (seconds).
 
         Converts from phase residuals to time residuals using several possible ways
@@ -354,7 +354,7 @@ class Residuals:
 
         Parameters
         ----------
-        calctype : {'modelF0', 'numerical', 'taylor'}
+        calctype : {'taylor', 'modelF0', 'numerical'}
             Type of calculation.  If `calctype` == "modelF0", then simply the ``F0``
             parameter from the model.
             If `calctype` == "numerical", then try a numerical derivative
