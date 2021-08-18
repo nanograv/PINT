@@ -2,32 +2,24 @@
 Interactive emulator of tempo2 plk
 """
 import copy
+import logging
 import os
 import sys
 
 import astropy.units as u
 import matplotlib as mpl
 import numpy as np
-from astropy import log
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 import pint.pintk.pulsar as pulsar
 import pint.pintk.colormodes as cm
 
-try:
-    # Python2
-    import Tkinter as tk
-    import tkFileDialog
-    import tkMessageBox
-except ImportError:
-    # Python3
-    import tkinter as tk
-    import tkinter.filedialog as tkFileDialog
-    import tkinter.messagebox as tkMessageBox
-    from tkinter import ttk
+import tkinter as tk
+import tkinter.filedialog as tkFileDialog
+import tkinter.messagebox as tkMessageBox
+from tkinter import ttk
 
-log.setLevel("INFO")
-log.debug("This should show up")
+log = logging.getLogger(__name__)
 
 try:
     from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
@@ -37,9 +29,10 @@ except ImportError:
     )
 
 
-log.debug(
-    "This should also show up. test click revert, turn params on and off, and prefit model"
-)
+# Where is this meant for? Maybe it belongs in application creation?
+# log.debug(
+#    "This should also show up. test click revert, turn params on and off, and prefit model"
+# )
 
 plotlabels = {
     "pre-fit": [
@@ -272,7 +265,9 @@ class PlkLogLevelSelect(tk.Frame):
 
     def changeLogLevel(self, event):
         newLevel = self.logLevelSelect.get()  # get current value
-        log.setLevel(str(newLevel))
+        # FIXME: this adjusts the level for all logging
+        # we might want to make it PINT-specific, or even narrower
+        logging.getLogger().setLevel(str(newLevel))
         log.info("Log level changed to " + str(newLevel))
 
 

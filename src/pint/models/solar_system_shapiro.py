@@ -1,8 +1,9 @@
 """Solar system Shapiro delay."""
+import logging
+
 import astropy.constants as const
 import astropy.units as u
 import numpy
-from astropy import log
 
 from pint import (
     Tearth,
@@ -17,6 +18,8 @@ from pint import (
 )
 from pint.models.parameter import boolParameter
 from pint.models.timing_model import DelayComponent
+
+log = logging.getLogger(__name__)
 
 
 class SolarSystemShapiro(DelayComponent):

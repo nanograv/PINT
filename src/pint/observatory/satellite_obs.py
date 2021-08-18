@@ -1,8 +1,10 @@
-# special_locations.py
+"""Observatories at special (non-Earth) locations."""
+
+import logging
+
 import astropy.io.fits as pyfits
 import astropy.units as u
 import astropy.constants as const
-from astropy import log
 from astropy.coordinates import EarthLocation
 from astropy.table import Table, vstack
 from scipy.interpolate import InterpolatedUnivariateSpline
@@ -12,6 +14,8 @@ from pint.fits_utils import read_fits_event_mjds
 from pint.observatory.special_locations import SpecialLocation
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 from pint.utils import PosVel
+
+log = logging.getLogger(__name__)
 
 
 def load_Fermi_FT2(ft2_filename):

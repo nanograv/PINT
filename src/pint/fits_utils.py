@@ -1,6 +1,7 @@
 """FITS handling functions"""
+import logging
+
 import numpy as np
-from astropy import log
 
 try:
     from erfa import DAYSEC as SECS_PER_DAY
@@ -8,6 +9,8 @@ except ImportError:
     from astropy._erfa import DAYSEC as SECS_PER_DAY
 
 from pint.pulsar_mjd import fortran_float
+
+log = logging.getLogger(__name__)
 
 __all__ = ["read_fits_event_mjds", "read_fits_event_mjds_tuples"]
 

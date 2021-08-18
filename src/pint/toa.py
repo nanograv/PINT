@@ -8,6 +8,7 @@ as this makes certain operations much more convenient. You probably want to load
 import copy
 import gzip
 import hashlib
+import logging
 import os
 import pickle
 import re
@@ -20,7 +21,6 @@ import astropy.time as time
 import astropy.units as u
 import numpy as np
 import numpy.ma
-from astropy import log
 from astropy.coordinates import (
     ICRS,
     CartesianDifferential,
@@ -38,6 +38,8 @@ from pint.pulsar_ecliptic import PulsarEcliptic
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 
+
+log = logging.getLogger(__name__)
 
 __all__ = [
     "TOAs",
@@ -1753,7 +1755,7 @@ class TOAs:
         In that case  ``self.table.meta['cluster_gap']``  will be set to the
         `gap_limit`.  If the desired clustering corresponds to that in
         :attr:`pint.toa.TOAs.table` then that column is returned.
-        
+
         Parameters
         ----------
         gap_limit : astropy.units.Quantity, optional
