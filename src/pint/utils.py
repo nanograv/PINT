@@ -31,6 +31,7 @@ has moved to :mod:`pint.simulation`.
 import configparser
 import datetime
 import getpass
+import logging
 import os
 import platform
 import re
@@ -46,11 +47,12 @@ import astropy.coordinates.angles as angles
 import astropy.units as u
 import numpy as np
 import scipy.optimize.zeros as zeros
-from astropy import log
 from scipy.special import fdtrc
 
 import pint
 import pint.pulsar_ecliptic
+
+log = logging.getLogger(__name__)
 
 __all__ = [
     "PosVel",
@@ -1501,7 +1503,7 @@ def info_string(prefix_string="# ", comment=None):
         # user-level git config
         c = git.GitConfigParser()
         username = c.get_value("user", option="name") + f" ({getpass.getuser()})"
-    except (configparser.NoOptionError, ImportError):
+    except (configparser.NoOptionError, configparser.NoSectionError, ImportError):
         username = getpass.getuser()
 
     s = f"""

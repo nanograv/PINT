@@ -1,8 +1,9 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore::DeprecationWarning
 """PINT-based tool for making simulated TOAs."""
+import logging
+
 import astropy.units as u
 import numpy as np
-from astropy import log
 from astropy.time import TimeDelta
 
 import pint.fitter
@@ -10,6 +11,8 @@ import pint.models
 import pint.toa as toa
 import pint.simulation
 import pint.residuals
+
+log = logging.getLogger(__name__)
 
 __all__ = ["main"]
 

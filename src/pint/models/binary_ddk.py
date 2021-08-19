@@ -1,6 +1,4 @@
 """The DDK model - Damour and Deruelle with kinematics."""
-from astropy import log
-
 from pint.models.binary_dd import BinaryDD
 from pint.models.parameter import boolParameter, floatParameter
 from pint.models.stand_alone_psr_binaries.DDK_model import DDKmodel

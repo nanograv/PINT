@@ -8,16 +8,18 @@ dispersion measures (:class:`pint.residuals.WidebandTOAResiduals`).
 """
 import collections
 import copy
+import logging
 import warnings
 
 import astropy.units as u
 import numpy as np
-from astropy import log
 from scipy.linalg import LinAlgError
 
 from pint.models.dispersion_model import Dispersion
 from pint.phase import Phase
 from pint.utils import weighted_mean, taylor_horner_deriv
+
+log = logging.getLogger(__name__)
 
 __all__ = [
     "Residuals",

@@ -21,13 +21,13 @@ See :ref:`Supported Parameters` for an overview, including a table of all the
 parameters PINT understands.
 
 """
+import logging
 import numbers
 from warnings import warn
 
 import astropy.time as time
 import astropy.units as u
 import numpy as np
-from astropy import log
 from astropy.coordinates.angles import Angle
 
 from pint import pint_units
@@ -44,6 +44,8 @@ from pint.pulsar_mjd import (
 )
 from pint.toa_select import TOASelect
 from pint.utils import split_prefixed_name
+
+log = logging.getLogger(__name__)
 
 
 class Parameter:
