@@ -12,7 +12,8 @@ from pint.residuals import Residuals
 from pinttestdata import datadir
 import pint.fitter
 from pint.models import get_model
-from pint.toa import get_TOAs, make_fake_toas
+from pint.toa import get_TOAs
+from pint.simulation import make_fake_toas_uniform
 
 parfile = os.path.join(datadir, "withpn.par")
 timfile = os.path.join(datadir, "withpn.tim")
@@ -33,7 +34,7 @@ def toas():
 
 @pytest.fixture
 def fake_toas(model):
-    t = make_fake_toas(56000, 59000, 10, model, obs="@")
+    t = make_fake_toas_uniform(56000, 59000, 10, model, obs="@")
     t.table["error"] = 1 * u.us
     return t
 
@@ -65,14 +66,14 @@ def test_pulse_number(model, toas):
 
 @pytest.mark.parametrize("obs", ["GBT", "AO", "@", "coe"])
 def test_make_fake_toas(obs, model):
-    t = make_fake_toas(56000, 59000, 10, model, obs=obs)
+    t = make_fake_toas_uniform(56000, 59000, 10, model, obs=obs)
     t.table["error"] = 1 * u.us
     r = Residuals(t, model, track_mode="nearest")
     assert np.amax(np.abs(r.phase_resids)) < 1e-6
 
 
 def test_parameter_overrides_model(model):
-    t = make_fake_toas(56000, 59000, 10, model, obs="@")
+    t = make_fake_toas_uniform(56000, 59000, 10, model, obs="@")
     t.table["error"] = 1 * u.us
     delta_f = (1 / (t.last_MJD - t.first_MJD)).to(u.Hz)
 
