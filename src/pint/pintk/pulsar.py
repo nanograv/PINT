@@ -444,8 +444,8 @@ class Pulsar:
 
         # subtract the mean residual of each random model from the respective residual set
         # based ONLY on the mean of the random residuals in the real data range
-        start_index = np.where(abs(f_toas.get_mjds() - minMJD) < 0.1 * u.d)
-        end_index = np.where(abs(f_toas.get_mjds() - maxMJD) < 0.1 * u.d)
+        start_index = np.where(abs(f_toas.get_mjds() - minMJD) < 1 * u.d)
+        end_index = np.where(abs(f_toas.get_mjds() - maxMJD) < 1 * u.d)
         for i in range(len(rs)):
             # use start_index[0][0] since np.where returns np.array([], dtype), extract index from list in array
             rs_mean = rs[i][start_index[0][0] : end_index[0][0]].mean()
