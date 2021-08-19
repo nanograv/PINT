@@ -413,6 +413,18 @@ class emcee_fitter(Fitter):
             plt.savefig(ftr.model.PSR.value + "_htest_v_wgtcut_unweighted.png")
         plt.close()
 
+    def plot_priors(self, chains, burnin, bins=100, scale=False, file=False):
+        plot_utils.plot_priors(
+            self.model,
+            chains,
+            self.maxpost_fitvals,
+            self.fitvals,
+            burnin=burnin,
+            bins=bins,
+            scale=scale,
+            file=file,
+        )
+
 
 def main(argv=None):
 
@@ -783,6 +795,10 @@ def main(argv=None):
     except ImportError:
         pass
 
+    # Plot the scaled prior probability alongside the initial gaussian probability distribution and the histogrammed samples
+    ftr.plot_priors(
+        chains, burnin, scale=True, file=ftr.model.PSR.value + "_priors_scaled.png"
+    )
     # Make a phaseogram with the 50th percentile values
     # ftr.set_params(dict(zip(ftr.fitkeys, np.percentile(samples, 50, axis=0))))
     # Make a phaseogram with the best MCMC result
