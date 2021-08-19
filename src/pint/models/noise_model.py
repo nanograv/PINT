@@ -1,14 +1,16 @@
 """Pulsar timing noise models."""
 
 import copy
+import logging
 import warnings
 
 import astropy.units as u
 import numpy as np
-from astropy import log
 
 from pint.models.parameter import floatParameter, maskParameter
 from pint.models.timing_model import Component
+
+log = logging.getLogger(__name__)
 
 
 class NoiseComponent(Component):
@@ -118,7 +120,7 @@ class ScaleToaError(NoiseComponent):
                     EQUAD_par.quantity = tneq_par.quantity.to(u.us)
                 else:
                     self.add_param(
-                        p.maskParameter(
+                        maskParameter(
                             name="EQUAD",
                             units="us",
                             index=tneq_par.index,

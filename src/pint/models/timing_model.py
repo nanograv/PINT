@@ -29,6 +29,7 @@ See :ref:`Timing Models` for more details on how PINT's timing models work.
 import abc
 import copy
 import inspect
+import logging
 from collections import OrderedDict, defaultdict
 from functools import wraps
 from warnings import warn
@@ -36,7 +37,6 @@ from warnings import warn
 import astropy.time as time
 import astropy.units as u
 import numpy as np
-from astropy import log
 from scipy.optimize import brentq
 
 import pint
@@ -53,6 +53,8 @@ from pint.models.parameter import (
 from pint.phase import Phase
 from pint.toa import TOAs
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
+
+log = logging.getLogger(__name__)
 
 __all__ = [
     "DEFAULT_ORDER",
@@ -1389,8 +1391,9 @@ class TimingModel:
         copy_toas = copy.deepcopy(toas)
         if sample_step is None:
             pulse_period = 1.0 / (self.F0.quantity)
-            sample_step = pulse_period * 1000
-        sample_dt = [-sample_step, sample_step]
+            sample_step = pulse_period * 2
+        # Note that sample_dt is applied cumulatively, so this evaulates phase at TOA-dt and TOA+dt
+        sample_dt = [-sample_step, 2 * sample_step]
 
         sample_phase = []
         for dt in sample_dt:
@@ -1664,7 +1667,7 @@ class TimingModel:
                 "max"     - print all lines from both models whether they are fit or not (note that nodmx will override this); DEFAULT
                 "med"     - only print lines for parameters that are fit
                 "min"     - only print lines for fit parameters for which diff_sigma > threshold
-                "check"   - only print significant changes with astropy.log.warning, not as string (note that all other modes will still print this)
+                "check"   - only print significant changes with logging.warning, not as string (note that all other modes will still print this)
 
         Returns
         -------
@@ -1682,7 +1685,7 @@ class TimingModel:
 
         Note
         ----
-            Prints astropy.log warnings for parameters that have changed significantly
+            Prints logging warnings for parameters that have changed significantly
             and/or have increased in uncertainty.
         """
         import sys
@@ -1851,7 +1854,6 @@ class TimingModel:
                         except (ValueError, AttributeError):
                             newstr += " {:28f}".format(otherpar.value)
                         if otherpar.value != par.value:
-                            sys.stdout.flush()
                             if par.name in ["START", "FINISH", "CHI2", "NTOA"]:
                                 if verbosity == "max":
                                     log.info(
@@ -1873,7 +1875,6 @@ class TimingModel:
                                     % par.name
                                 )
                                 newstr += " !"
-                            log.handlers[0].flush()
                         if (
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
@@ -1943,26 +1944,20 @@ class TimingModel:
 
             if "!" in newstr and not par.frozen:
                 try:
-                    sys.stdout.flush()
                     log.warning(
                         "Parameter %s has changed significantly (%f sigma)"
                         % (newstr.split()[0], float(newstr.split()[-2]))
                     )
-                    log.handlers[0].flush()
                 except ValueError:
-                    sys.stdout.flush()
                     log.warning(
                         "Parameter %s has changed significantly (%f sigma)"
                         % (newstr.split()[0], float(newstr.split()[-3]))
                     )
-                    log.handlers[0].flush()
             if "*" in newstr:
-                sys.stdout.flush()
                 log.warning(
                     "Uncertainty on parameter %s has increased (unc2/unc1 = %2.2f)"
                     % (newstr.split()[0], float(otherpar.uncertainty / par.uncertainty))
                 )
-                log.handlers[0].flush()
 
             if verbosity == "max":
                 s += newstr

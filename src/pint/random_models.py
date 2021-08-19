@@ -1,12 +1,15 @@
-"""Generate random models distributed like the results of a fit"""
+"""Generate random models distributed like the results of a fit."""
+
+import logging
 from collections import OrderedDict
 from copy import deepcopy
 
 import numpy as np
-from astropy import log
 
 import pint.toa as toa
 from pint.phase import Phase
+
+log = logging.getLogger(__name__)
 
 __all__ = ["random_models"]
 # log.setLevel("INFO")

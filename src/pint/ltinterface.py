@@ -1,5 +1,6 @@
 """An interface for pint compatible to the interface of libstempo."""
 import collections
+import logging
 import time
 from collections import OrderedDict
 
@@ -7,13 +8,14 @@ import astropy.constants as ac
 import astropy.coordinates.angles as ang
 import astropy.units as u
 import numpy as np
-from astropy import log
 
 import pint.models as pm
 import pint.toa as pt
 from pint import fitter
 from pint.utils import has_astropy_unit
 from pint.residuals import Residuals
+
+log = logging.getLogger(__name__)
 
 __all__ = ["PINTPar", "PINTPulsar"]
 
@@ -177,9 +179,9 @@ class PINTPulsar:
             Whether or not we are using the 'units' interface of libstempo
         """
         if warnings:
-            log.setLevel("INFO")
+            logging.getLogger().setLevel("INFO")
         else:
-            log.setLevel("ERROR")
+            logging.getLogger().setLevel("ERROR")
 
         self.loadparfile(parfile)
 

@@ -1,9 +1,6 @@
 """Pulsar timing piecewise spin-down solution."""
-# piecewise.py
-# Defines piecewise spindown timing model class
 import astropy.units as u
 import numpy as np
-from astropy import log
 
 from pint.models.parameter import prefixParameter, MJDParameter
 from pint.models.timing_model import MissingParameter, PhaseComponent

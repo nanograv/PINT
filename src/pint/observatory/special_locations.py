@@ -3,11 +3,11 @@
 Special "site" locations (eg, barycenter) which do not need clock
 corrections or much else done.
 """
+import logging
 import os
 
 import astropy.constants as const
 import astropy.units as u
-from astropy import log
 from astropy.coordinates import EarthLocation
 import numpy as np
 
@@ -17,6 +17,8 @@ from pint.observatory.clock_file import ClockFile
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 from pint.utils import PosVel
 from . import Observatory
+
+log = logging.getLogger(__name__)
 
 
 class SpecialLocation(Observatory):
