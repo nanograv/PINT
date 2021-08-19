@@ -14,7 +14,7 @@ from pint.models.timing_model import (
     AllComponents,
     TimingModel,
     ignore_prefix,
-    ConflictAliasError,
+    AliasConflict,
     UnknownBinaryModel,
     UnknownParameter,
     TimingModelError,
