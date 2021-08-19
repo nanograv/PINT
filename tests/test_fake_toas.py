@@ -211,4 +211,5 @@ def test_fake_DMfit():
         f_fake.fit_toas()
         DMs[iter] = f_fake.model.DM.quantity.astype(np.float64)
 
-    assert np.isclose(DMs.std(), f.model.DM.uncertainty, rtol=0.2)
+    assert np.isclose(DMs.std(), f.model.DM.uncertainty, rtol=0.5)
+    assert np.abs(DMs.mean() - f.model.DM.quantity) < 5 * f.model.DM.uncertainty
