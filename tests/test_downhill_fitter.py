@@ -13,7 +13,8 @@ from scipy.linalg import block_diag, cho_factor, cho_solve, cholesky
 import pint.fitter
 from pint.models import get_model
 from pint.models.timing_model import MissingTOAs
-from pint.toa import make_fake_toas, merge_TOAs
+from pint.toa import merge_TOAs
+from pint.simulation import make_fake_toas_uniform
 
 par_eccentric = """
 PSR J1234+5678
@@ -38,7 +39,9 @@ def model_eccentric_toas():
     g = np.random.default_rng(0)
     model_eccentric = get_model(io.StringIO(par_eccentric))
 
-    toas = make_fake_toas(57000, 57001, 20, model_eccentric, freq=1400, obs="@")
+    toas = make_fake_toas_uniform(
+        57000, 57001, 20, model_eccentric, freq=1400 * u.MHz, obs="@"
+    )
     toas.adjust_TOAs(TimeDelta(g.standard_normal(len(toas)) * toas.table["error"]))
 
     return model_eccentric, toas
@@ -53,8 +56,12 @@ def model_eccentric_toas_ecorr():
 
     toas = merge_TOAs(
         [
-            make_fake_toas(57000, 57001, 20, model_eccentric, freq=1000, obs="@"),
-            make_fake_toas(57000, 57001, 20, model_eccentric, freq=2000, obs="@"),
+            make_fake_toas_uniform(
+                57000, 57001, 20, model_eccentric, freq=1000 * u.MHz, obs="@"
+            ),
+            make_fake_toas_uniform(
+                57000, 57001, 20, model_eccentric, freq=2000 * u.MHz, obs="@"
+            ),
         ]
     )
     toas.adjust_TOAs(TimeDelta(g.standard_normal(len(toas)) * toas.table["error"]))
@@ -71,21 +78,21 @@ def model_eccentric_toas_wb():
 
     toas = merge_TOAs(
         [
-            make_fake_toas(
+            make_fake_toas_uniform(
                 57000,
                 57001,
                 20,
                 model_eccentric,
-                freq=1000,
+                freq=1000 * u.MHz,
                 obs="@",
                 dm=10 * u.pc / u.cm ** 3,
             ),
-            make_fake_toas(
+            make_fake_toas_uniform(
                 57000,
                 57001,
                 20,
                 model_eccentric,
-                freq=2000,
+                freq=2000 * u.MHz,
                 obs="@",
                 dm=10 * u.pc / u.cm ** 3,
             ),

@@ -9,7 +9,7 @@ import re
 import pint.fitter
 from pint.models import get_model
 from pint.models.timing_model import MissingTOAs
-from pint.toa import make_fake_toas
+from pint.simulation import make_fake_toas_uniform
 
 par_base = """
 PSR J1234+5678
@@ -36,7 +36,7 @@ def test_dmx_no_toas():
             )
         )
     )
-    toas = make_fake_toas(57000, 57900, 10, model)
+    toas = make_fake_toas_uniform(57000, 57900, 10, model)
     with pytest.raises(MissingTOAs) as e:
         model.validate_toas(toas)
     assert e.value.parameter_names == ["DMX_0001"]
@@ -47,7 +47,7 @@ def test_dmx_no_toas():
 
 def test_jump_no_toas():
     model = get_model(io.StringIO("\n".join([par_base, "JUMP -fe L_wide 0"])))
-    toas = make_fake_toas(57000, 57900, 10, model)
+    toas = make_fake_toas_uniform(57000, 57900, 10, model)
     assert len(model.JUMP1.select_toa_mask(toas)) == 0
     model.JUMP1.frozen = True
     model.validate_toas(toas)
@@ -62,7 +62,7 @@ def test_jump_no_toas():
 
 def test_dm_barycentered():
     model = get_model(io.StringIO(par_base))
-    toas = make_fake_toas(57000, 57900, 10, model, obs="@", freq=np.inf)
+    toas = make_fake_toas_uniform(57000, 57900, 10, model, obs="@", freq=np.inf)
     model.free_params = ["F0", "DM"]
     fitter = pint.fitter.WLSFitter(toas, model)
     with pytest.warns(pint.fitter.DegeneracyWarning, match=".*degeneracy.*DM.*"):
@@ -92,7 +92,7 @@ def test_dmx_barycentered(Fitter):
             )
         )
     )
-    toas = make_fake_toas(58000, 58900, 10, model, obs="@", freq=np.inf)
+    toas = make_fake_toas_uniform(58000, 58900, 10, model, obs="@", freq=np.inf)
     model.free_params = ["F0", "DM", "DMX_0001"]
     fitter = Fitter(toas, model)
     with pytest.warns(pint.fitter.DegeneracyWarning, match=r".*degeneracy.*DM\b"):
@@ -117,7 +117,9 @@ def test_dmx_barycentered(Fitter):
 )
 def test_jump_everything(Fitter):
     model = get_model(io.StringIO("\n".join([par_base, "JUMP TEL barycenter 0"])))
-    toas = make_fake_toas(58000, 58900, 10, model, obs="barycenter", freq=np.inf)
+    toas = make_fake_toas_uniform(
+        58000, 58900, 10, model, obs="barycenter", freq=np.inf
+    )
     model.free_params = ["JUMP1", "F0"]
     fitter = Fitter(toas, model)
     with pytest.warns(pint.fitter.DegeneracyWarning, match=r".*degeneracy.*Offset\b"):
@@ -133,7 +135,9 @@ def test_jump_everything(Fitter):
 
 def test_jump_everything_wideband():
     model = get_model(io.StringIO("\n".join([par_base, "JUMP TEL barycenter 0"])))
-    toas = make_fake_toas(58000, 58900, 10, model, obs="barycenter", freq=np.inf)
+    toas = make_fake_toas_uniform(
+        58000, 58900, 10, model, obs="barycenter", freq=np.inf
+    )
     for f in toas.table["flags"]:
         f["pp_dm"] = "15.0"
         f["pp_dme"] = "1e-4"
@@ -153,7 +157,9 @@ def test_jump_everything_wideband():
 @pytest.mark.parametrize("param, value", [("ECORR", 0), ("EQUAD", 0), ("EFAC", 1)])
 def test_unused_noise_model_parameter(param, value):
     model = get_model(io.StringIO("\n".join([par_base, f"{param} TEL ao {value}"])))
-    toas = make_fake_toas(58000, 58900, 10, model, obs="barycenter", freq=np.inf)
+    toas = make_fake_toas_uniform(
+        58000, 58900, 10, model, obs="barycenter", freq=np.inf
+    )
     model.free_params = ["F0"]
     fitter = pint.fitter.GLSFitter(toas, model)
     with pytest.warns(UserWarning, match=param):
@@ -172,13 +178,13 @@ def test_unused_noise_model_parameter(param, value):
 def test_null_vector(Fitter):
     model = get_model(io.StringIO("\n".join([par_base])))
     model.free_params = ["ELONG", "ELAT"]
-    toas = make_fake_toas(
+    toas = make_fake_toas_uniform(
         58000,
         58900,
         10,
         model,
         obs="barycenter",
-        freq=1400.0,
+        freq=1400.0 * u.MHz,
         dm=15.0 * u.pc / u.cm ** 3,
         dm_error=1e-4 * u.pc * u.cm ** -3,
     )
@@ -209,7 +215,9 @@ def test_update_model_sets_things(Fitter):
     model.DILATEFREQ.value = True
     model.T2CMETHOD.value = "TEMPO"
     model.use_aliases(reset_to_default=True)
-    toas = make_fake_toas(58000, 59000, 10, model, obs="barycenter", freq=np.inf)
+    toas = make_fake_toas_uniform(
+        58000, 59000, 10, model, obs="barycenter", freq=np.inf
+    )
     fitter = Fitter(toas, model)
     fitter.fit_toas()
     par_out = fitter.model.as_parfile()

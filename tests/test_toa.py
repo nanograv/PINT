@@ -9,7 +9,8 @@ from pinttestdata import datadir
 
 from pint.models import get_model
 from pint.observatory import get_observatory
-from pint.toa import TOA, TOAs, make_fake_toas
+from pint.toa import TOA, TOAs
+from pint.simulation import make_fake_toas_uniform
 
 
 class TestTOA(unittest.TestCase):
@@ -105,7 +106,7 @@ class TestTOAs(unittest.TestCase):
 
 def test_toa_summary():
     m = get_model(os.path.join(datadir, "NGC6440E.par"))
-    toas = make_fake_toas(57000, 58000, 10, m, obs="ao", freq=2000 * u.MHz)
+    toas = make_fake_toas_uniform(57000, 58000, 10, m, obs="ao", freq=2000 * u.MHz)
     s = toas.get_summary()
 
     assert re.search(r"Number of commands: *0", s)

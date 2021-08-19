@@ -7,7 +7,7 @@ import astropy.units as u
 import numpy as np
 import pytest
 from pinttestdata import datadir
-from pint.toa import make_fake_toas
+from pint.simulation import make_fake_toas_uniform
 from pint.toa import get_TOAs
 
 from pint.models import (
@@ -309,7 +309,7 @@ def test_free_params(lines, param, exception):
 
 def test_pepoch_late():
     model = get_model(io.StringIO(par_base))
-    make_fake_toas(56000, 57000, 10, model=model)
+    make_fake_toas_uniform(56000, 57000, 10, model=model)
 
 
 def test_t2cmethod_corrected():
