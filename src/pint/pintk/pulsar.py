@@ -6,11 +6,11 @@ pre/post fit residuals, and other useful information.
 self.selected_toas = selected toas, self.all_toas = all toas in tim file
 """
 import copy
+import logging
 from enum import Enum
 
 import astropy.units as u
 import numpy as np
-from astropy import log
 
 import pint.fitter
 import pint.models
@@ -19,6 +19,8 @@ from pint.simulation import make_fake_toas_uniform, calculate_random_models
 from pint.residuals import Residuals
 from pint.toa import get_TOAs
 from pint.phase import Phase
+
+log = logging.getLogger(__name__)
 
 plot_labels = [
     "pre-fit",
