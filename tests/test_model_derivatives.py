@@ -11,8 +11,10 @@ import pytest
 from hypothesis import HealthCheck, Verbosity, assume, given, settings
 from hypothesis.strategies import composite, floats, integers, sampled_from
 from numpy.testing import assert_allclose
+from astropy import units as u
 
 import pint.toa
+import pint.simulation
 from pint.models import get_model
 
 
@@ -58,20 +60,20 @@ def get_model_and_toas(parfile):
         else:
             start = 57000
         with quiet():
-            toas1 = pint.toa.make_fake_toas(
+            toas1 = pint.simulation.make_fake_toas_uniform(
                 model=model,
                 startMJD=start,
                 endMJD=start + 100,
                 ntoas=5,
-                freq=1400,
+                freq=1400 * u.MHz,
                 obs="gbt",
             )
-            toas2 = pint.toa.make_fake_toas(
+            toas2 = pint.simulation.make_fake_toas_uniform(
                 model=model,
                 startMJD=start + 1,
                 endMJD=start + 102,
                 ntoas=5,
-                freq=2000,
+                freq=2000 * u.MHz,
                 obs="ao",
             )
             toas = pint.toa.merge_TOAs([toas1, toas2])

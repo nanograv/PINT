@@ -915,8 +915,13 @@ class PlkWidget(tk.Frame):
                 f_toas_plot = self.psr.fake_year()  # uses f_toas inside pulsar.py
             else:
                 f_toas_plot = f_toas.get_mjds()  # old implementation only used this
+            scale = 1
+            if self.yvals.unit == u.us:
+                scale = 10 ** 6
+            elif self.yvals.unit == u.ms:
+                scale = 10 ** 3
             for i in range(len(rs)):
-                self.plkAxes.plot(f_toas_plot, rs[i], "-k", alpha=0.3)
+                self.plkAxes.plot(f_toas_plot, rs[i] * scale, "-k", alpha=0.3)
 
     def determine_yaxis_units(self, miny, maxy):
         """Checks range of residuals and converts units if range sufficiently large/small."""
