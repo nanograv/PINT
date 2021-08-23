@@ -76,3 +76,8 @@ def test_pm_acquires_posepoch_equatorial():
     m.PMRA.value = 7
     m.validate()
     assert m.POSEPOCH.quantity == m.PEPOCH.quantity
+
+
+def test_pm_one_set_other_not():
+    m = get_model(StringIO("\n".join([par_basic_equatorial, "PMRA 7"])))
+    assert m.POSEPOCH.quantity == m.PEPOCH.quantity
