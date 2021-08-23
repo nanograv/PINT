@@ -251,13 +251,19 @@ class AstrometryEquatorial(Astrometry):
 
         self.add_param(
             floatParameter(
-                name="PMRA", units="mas/year", description="Proper motion in RA",
+                name="PMRA",
+                units="mas/year",
+                description="Proper motion in RA",
+                value=0.0,
             )
         )
 
         self.add_param(
             floatParameter(
-                name="PMDEC", units="mas/year", description="Proper motion in DEC",
+                name="PMDEC",
+                units="mas/year",
+                description="Proper motion in DEC",
+                value=0.0,
             )
         )
         self.set_special_params(["RAJ", "DECJ", "PMRA", "PMDEC"])
@@ -273,10 +279,10 @@ class AstrometryEquatorial(Astrometry):
         for p in ("RAJ", "DECJ"):
             if getattr(self, p).value is None:
                 raise MissingParameter("Astrometry", p)
-        if (self.PMRA.quantity is None) != (self.PMDEC.quantity is None):
-            raise ValueError("PMRA and PMDEC must either both be set or neither.")
         # Check for POSEPOCH
-        if self.PMRA.quantity is not None and self.POSEPOCH.quantity is None:
+        if (
+            self.PMRA.quantity != 0 or self.PMDEC.quantity != 0
+        ) and self.POSEPOCH.quantity is None:
             if self._parent.PEPOCH.quantity is None:
                 raise MissingParameter(
                     "AstrometryEquatorial",
@@ -313,17 +319,13 @@ class AstrometryEquatorial(Astrometry):
         Returns
         -------
         position
-        ICRS SkyCoord object optionally with proper motion applied
+            ICRS SkyCoord object optionally with proper motion applied
 
         If epoch (MJD) is specified, proper motion is included to return
         the position at the given epoch.
 
         """
-        if (
-            epoch is None
-            or self.PMRA.value is None
-            or (self.PMRA.value == 0.0 and self.PMDEC.value == 0.0)
-        ):
+        if epoch is None or (self.PMRA.value == 0.0 and self.PMDEC.value == 0.0):
             return coords.SkyCoord(
                 ra=self.RAJ.quantity,
                 dec=self.DECJ.quantity,
@@ -518,6 +520,7 @@ class AstrometryEcliptic(Astrometry):
                 units="mas/year",
                 description="Proper motion in ecliptic longitude",
                 aliases=["PMLAMBDA"],
+                value=0.0,
             )
         )
 
@@ -527,6 +530,7 @@ class AstrometryEcliptic(Astrometry):
                 units="mas/year",
                 description="Proper motion in ecliptic latitude",
                 aliases=["PMBETA"],
+                value=0.0,
             )
         )
 
@@ -552,10 +556,10 @@ class AstrometryEcliptic(Astrometry):
         for p in ("ELONG", "ELAT"):
             if getattr(self, p).value is None:
                 raise MissingParameter("AstrometryEcliptic", p)
-        if (self.PMELONG.quantity is None) != (self.PMELAT.quantity is None):
-            raise ValueError("PMELONG and PMELAT must either both be set or neither.")
         # Check for POSEPOCH
-        if self.PMELONG.quantity is not None and self.POSEPOCH.quantity is None:
+        if (
+            self.PMELONG.value != 0 or self.PMELAT.value != 0
+        ) and self.POSEPOCH.quantity is None:
             if self._parent.PEPOCH.quantity is None:
                 raise MissingParameter(
                     "Astrometry",
@@ -598,11 +602,7 @@ class AstrometryEcliptic(Astrometry):
                 "No obliquity " + str(self.ECL.value) + " provided. "
                 "Check your pint/datafile/ecliptic.dat file."
             )
-        if (
-            epoch is None
-            or (self.PMELONG.value == 0.0 and self.PMELAT.value == 0.0)
-            or self.PMELONG.value is None
-        ):
+        if epoch is None or (self.PMELONG.value == 0.0 and self.PMELAT.value == 0.0):
             # Compute only once
             return coords.SkyCoord(
                 obliquity=obliquity,
@@ -631,9 +631,7 @@ class AstrometryEcliptic(Astrometry):
         return pos_ecl.transform_to(coords.ICRS)
 
     def coords_as_GAL(self, epoch=None):
-        """Return the pulsar's galactic coordinates as an astropy coordinate object.
-
-        """
+        """Return the pulsar's galactic coordinates as an astropy coordinate object."""
         pos_ecl = self.get_psr_coords(epoch=epoch)
         return pos_ecl.transform_to(coords.Galactic)
 
@@ -650,7 +648,7 @@ class AstrometryEcliptic(Astrometry):
         return pos_ecl
 
     def get_d_delay_quantities_ecliptical(self, toas):
-        """Calculate values needed for many d_delay_d_param functions """
+        """Calculate values needed for many d_delay_d_param functions."""
         # TODO: Move all these calculations in a separate class for elegance
         rd = dict()
         # From the earth_ra dec to earth_elong and elat
@@ -681,7 +679,7 @@ class AstrometryEcliptic(Astrometry):
         return result
 
     def d_delay_astrometry_d_ELONG(self, toas, param="", acc_delay=None):
-        """Calculate the derivative wrt RAJ
+        """Calculate the derivative wrt RAJ.
 
         For the RAJ and DEC derivatives, use the following approximate model for
         the pulse delay. (Inner-product between two Cartesian vectors)

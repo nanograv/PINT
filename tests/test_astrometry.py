@@ -28,6 +28,7 @@ def test_ecliptic_to_icrs(model):
     assert np.abs(params_icrs["RAJ"] - ref_ra) < 40 * u.uas
     assert np.abs(params_icrs["DECJ"] - ref_dec) < 40 * u.uas
 
+
 par_basic_ecliptic = """
 PSR J1234+5678
 F0 1
@@ -46,14 +47,32 @@ DECJ 00:38:41.2
 DM 10
 """
 
+
 def test_pm_unset():
     m = get_model(StringIO(par_basic_ecliptic))
-    assert m.PMELAT.quantity is None
-    assert m.PMELONG.quantity is None
+    assert m.PMELAT.value == 0
+    assert m.PMELONG.value == 0
     assert m.POSEPOCH.quantity is None
+
 
 def test_pm_unset_equatorial():
     m = get_model(StringIO(par_basic_equatorial))
-    assert m.PMRA.quantity is None
-    assert m.PMDEC.quantity is None
+    assert m.PMRA.value == 0
+    assert m.PMDEC.value == 0
     assert m.POSEPOCH.quantity is None
+
+
+def test_pm_acquires_posepoch():
+    m = get_model(StringIO(par_basic_ecliptic))
+    assert m.POSEPOCH.quantity is None
+    m.PMELAT.value = 7
+    m.validate()
+    assert m.POSEPOCH.quantity == m.PEPOCH.quantity
+
+
+def test_pm_acquires_posepoch_equatorial():
+    m = get_model(StringIO(par_basic_equatorial))
+    assert m.POSEPOCH.quantity is None
+    m.PMRA.value = 7
+    m.validate()
+    assert m.POSEPOCH.quantity == m.PEPOCH.quantity
