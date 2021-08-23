@@ -8,7 +8,6 @@ from astropy.coordinates import Latitude, Longitude
 from pinttestdata import datadir
 
 from pint.models import get_model
-from pinttestdata import datadir
 
 
 @pytest.fixture

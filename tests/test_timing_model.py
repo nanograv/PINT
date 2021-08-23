@@ -6,11 +6,8 @@ from copy import deepcopy
 import astropy.units as u
 import numpy as np
 import pytest
-from numpy.testing import assert_allclose
-from pinttestdata import datadir
-from pint.simulation import make_fake_toas_uniform
-from pint.toa import get_TOAs
 from astropy.time import Time
+from numpy.testing import assert_allclose
 from pinttestdata import datadir
 
 from pint.models import (
@@ -343,6 +340,12 @@ def test_jump_flags_to_params(timfile_jumps, timfile_nojumps, model_0437):
     m.jump_flags_to_params(t)
     assert "PhaseJump" in m.components
     assert len(m.components["PhaseJump"].jumps) == 2
+    assert ("jump", "1") in [
+        (j.flag, j.flag_value) for j in m.components["PhaseJump"].jumps
+    ]
+    assert ("jump", "2") in [
+        (j.flag, j.flag_value) for j in m.components["PhaseJump"].jumps
+    ]
 
 
 def test_supports_rm():
@@ -357,9 +360,3 @@ def test_assumes_dmepoch_equals_pepoch():
     t = make_fake_toas_uniform(57000, 59000, 10, m_assume)
 
     assert_allclose(m_assume.dm_value(t), m_given.dm_value(t))
-    assert ("jump", "1") in [
-        (j.flag, j.flag_value) for j in m.components["PhaseJump"].jumps
-    ]
-    assert ("jump", "2") in [
-        (j.flag, j.flag_value) for j in m.components["PhaseJump"].jumps
-    ]
