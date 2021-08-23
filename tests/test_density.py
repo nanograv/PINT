@@ -8,8 +8,8 @@ import pytest
 from astropy.time import Time
 from pylab import *
 
-import pint.toa as toa
 import pint.simulation as simulation
+import pint.toa as toa
 from pint.models import get_model
 
 

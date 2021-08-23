@@ -11,9 +11,9 @@ from pinttestdata import datadir
 
 import pint.fitter
 from pint.models import get_model
-from pint.toa import get_TOAs
-from pint.simulation import make_fake_toas_uniform
 from pint.residuals import Residuals
+from pint.simulation import make_fake_toas_uniform
+from pint.toa import get_TOAs
 
 parfile = os.path.join(datadir, "withpn.par")
 timfile = os.path.join(datadir, "withpn.tim")

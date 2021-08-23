@@ -28,17 +28,17 @@ import pint
 from pint.derived_quantities import (
     a1sini,
     companion_mass,
+    gamma,
     mass_funct,
     mass_funct2,
+    omdot,
+    omdot_to_mtot,
+    pbdot,
     pulsar_age,
     pulsar_B,
     pulsar_B_lightcyl,
     pulsar_edot,
     pulsar_mass,
-    omdot,
-    pbdot,
-    gamma,
-    omdot_to_mtot,
 )
 
 

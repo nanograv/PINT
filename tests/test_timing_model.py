@@ -11,14 +11,15 @@ from pinttestdata import datadir
 from pint.simulation import make_fake_toas_uniform
 from pint.toa import get_TOAs
 from astropy.time import Time
+from pinttestdata import datadir
 
 from pint.models import (
     DEFAULT_ORDER,
     AstrometryEquatorial,
     BinaryELL1,
+    PhaseJump,
     Spindown,
     TimingModel,
-    PhaseJump,
     Wave,
     get_model,
     parameter as p,

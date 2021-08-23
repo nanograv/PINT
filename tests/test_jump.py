@@ -15,6 +15,7 @@ import pint.models.parameter
 import pint.toa
 from pint.models import PhaseJump, get_model, parameter as p
 from pint.residuals import Residuals
+from pint.simulation import make_fake_toas_uniform
 
 
 class SimpleSetup:
@@ -248,7 +249,7 @@ def test_multiple_jumps_add():
                 first_jump = jmp
             else:
                 second_jump = jmp
-    toas = pint.toa.make_fake_toas(57000, 60000 - 1, 10, m)
+    toas = make_fake_toas_uniform(57000, 60000 - 1, 10, m)
 
     first_jump.quantity = 100 * u.us
     second_jump.quantity = 0 * u.us
@@ -323,7 +324,7 @@ def small():
     """
         )
     )
-    t = pint.toa.make_fake_toas(58000, 60000, 20, m)
+    t = make_fake_toas_uniform(58000, 60000, 20, m)
 
     class R:
         pass

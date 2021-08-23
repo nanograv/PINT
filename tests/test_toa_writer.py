@@ -8,12 +8,8 @@ import pytest
 from astropy.time import Time
 from pinttestdata import datadir
 
+from pint import simulation, toa
 from pint.models import get_model
-from pint import toa, simulation
-from pinttestdata import datadir
-from astropy.time import Time
-import numpy as np
-import astropy.units as u
 
 
 def test_roundtrip_bary_toa_Tempo2format(tmpdir):

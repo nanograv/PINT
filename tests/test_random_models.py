@@ -7,15 +7,11 @@ import astropy.units as u
 # matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
 import numpy as np
-import astropy.units as u
-
-from pint.models import get_model, get_model_and_toas
-from pint import fitter, toa, simulation
 import pytest
 from pinttestdata import datadir
 
 import pint.models.parameter as param
-from pint import fitter, ls, toa, utils
+from pint import fitter, ls, simulation, toa, utils
 from pint.models import get_model, get_model_and_toas
 
 

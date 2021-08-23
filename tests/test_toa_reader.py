@@ -11,13 +11,10 @@ import pytest
 from astropy.utils.iers import conf
 from hypothesis import given
 from hypothesis.extra.numpy import arrays
-from pint import toa, simulation
-from pint.observatory import bipm_default
-from pint.models import get_model, get_model_and_toas
 from hypothesis.strategies import floats, integers, sampled_from
 from pinttestdata import datadir
 
-from pint import toa
+from pint import simulation, toa
 from pint.models import get_model, get_model_and_toas
 from pint.observatory import bipm_default
 

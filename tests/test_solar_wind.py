@@ -14,9 +14,9 @@ from numpy.testing import assert_allclose
 from pinttestdata import datadir
 
 from pint.fitter import WidebandTOAFitter
-from pint.toa import get_TOAs
+from pint.models import get_model
 from pint.simulation import make_fake_toas_uniform
-from pinttestdata import datadir
+from pint.toa import get_TOAs
 
 os.chdir(datadir)
 
