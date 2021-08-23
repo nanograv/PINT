@@ -8,8 +8,6 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 from pinttestdata import datadir
-from pint.simulation import make_fake_toas_uniform
-from pint.toa import get_TOAs
 
 from pint.models import (
     DEFAULT_ORDER,
@@ -22,7 +20,8 @@ from pint.models import (
     get_model,
     parameter as p,
 )
-from pint.toa import get_TOAs, make_fake_toas
+from pint.simulation import make_fake_toas_uniform
+from pint.toa import get_TOAs
 
 
 @pytest.fixture
@@ -347,6 +346,6 @@ def test_assumes_dmepoch_equals_pepoch():
     m_assume = get_model(io.StringIO("\n".join([par_base, "DM1 1e-5"])))
     m_given = get_model(io.StringIO("\n".join([par_base, "DMEPOCH 58000", "DM1 1e-5"])))
 
-    t = make_fake_toas(57000, 59000, 10, m_assume)
+    t = make_fake_toas_uniform(57000, 59000, 10, m_assume)
 
     assert_allclose(m_assume.dm_value(t), m_given.dm_value(t))
