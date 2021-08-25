@@ -153,7 +153,6 @@ class DispersionDM(Dispersion):
         self.add_param(
             prefixParameter(
                 name="DM1",
-                value=0.0,
                 units="pc cm^-3/yr^1",
                 description="First order time derivative of the dispersion measure",
                 unit_template=self.DM_dervative_unit,
@@ -184,13 +183,16 @@ class DispersionDM(Dispersion):
         """Validate the DM parameters input."""
         super().validate()
         # If DM1 is set, we need DMEPOCH
-        if self.DM1.value != 0.0:
+        if self.DM1.value is not None and self.DM1.value != 0.0:
             if self.DMEPOCH.value is None:
-                raise MissingParameter(
-                    "Dispersion",
-                    "DMEPOCH",
-                    "DMEPOCH is required if DM1 or higher are set",
-                )
+                # Copy PEPOCH (PEPOCH must be set!)
+                self.DMEPOCH.value = self._parent.PEPOCH.value
+                if self.DMEPOCH.value is None:
+                    raise MissingParameter(
+                        "Dispersion",
+                        "DMEPOCH",
+                        "DMEPOCH or PEPOCH is required if DM1 or higher are set",
+                    )
 
     def DM_dervative_unit(self, n):
         return "pc cm^-3/yr^%d" % n if n else "pc cm^-3"
@@ -200,23 +202,20 @@ class DispersionDM(Dispersion):
 
     def get_DM_terms(self):
         """Return a list of the DM term values in the model: [DM, DM1, ..., DMn]"""
-        prefix_dm = list(self.get_prefix_mapping_component("DM").values())
-        dm_terms = [self.DM.quantity]
-        dm_terms += [getattr(self, x).quantity for x in prefix_dm]
-        return dm_terms
+        return [self.DM.quantity] + self._parent.get_prefix_list("DM", start_index=1)
 
     def base_dm(self, toas):
-        tbl = toas.table
-        dm = np.zeros(len(tbl))
+        dm = np.zeros(len(toas))
         dm_terms = self.get_DM_terms()
         if any(t.value != 0 for t in dm_terms[1:]):
             DMEPOCH = self.DMEPOCH.value
-            try:
-                dt = (tbl["tdbld"] - DMEPOCH) * u.day
-            except TypeError as e:
+            if DMEPOCH is None:
+                # Should be ruled out by validate()
                 raise ValueError(
-                    "DMEPOCH not set but some derivatives are not zero: {dm_terms}"
-                ) from e
+                    f"DMEPOCH not set but some derivatives are not zero: {dm_terms}"
+                )
+            else:
+                dt = (toas["tdbld"] - DMEPOCH) * u.day
             dt_value = dt.to_value(u.yr)
         else:
             dt_value = np.zeros(len(toas), dtype=np.longdouble)
@@ -249,14 +248,7 @@ class DispersionDM(Dispersion):
         self, toas, param_name, acc_delay=None
     ):  # NOTE we should have a better name for this.)
         """Derivatives of DM wrt the DM taylor expansion parameters."""
-        tbl = toas.table
-        try:
-            bfreq = self._parent.barycentric_radio_freq(toas)
-        except AttributeError:
-            warn("Using topocentric frequency for dedispersion!")
-            bfreq = tbl["freq"]
         par = getattr(self, param_name)
-        unit = par.units
         if param_name == "DM":
             order = 0
         else:
@@ -267,11 +259,12 @@ class DispersionDM(Dispersion):
         dm_terms[order] = np.longdouble(1.0)
         if self.DMEPOCH.value is None:
             if any(t.value != 0 for t in dms[1:]):
+                # Should be ruled out by validate()
                 raise ValueError(f"DMEPOCH is not set but {param_name} is not zero")
-            DMEPOCH = tbl["tdbld"][0]
+            DMEPOCH = 0
         else:
             DMEPOCH = self.DMEPOCH.value
-        dt = (tbl["tdbld"] - DMEPOCH) * u.day
+        dt = (toas["tdbld"] - DMEPOCH) * u.day
         dt_value = (dt.to(u.yr)).value
         d_dm_d_dm_param = taylor_horner(dt_value, dm_terms) * (
             self.DM.units / par.units
@@ -295,6 +288,7 @@ class DispersionDM(Dispersion):
         dmterms = [0.0 * u.Unit("")] + self.get_DM_terms()
         if self.DMEPOCH.value is None:
             if any(d.value != 0 for d in dmterms[2:]):
+                # Should be ruled out by validate()
                 raise ValueError(
                     f"DMEPOCH not set but some DM derivatives are not zero: {dmterms}"
                 )

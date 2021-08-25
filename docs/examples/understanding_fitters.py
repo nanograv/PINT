@@ -171,6 +171,9 @@ ts1855.print_summary()
 glsfit = pint.fitter.GLSFitter(toas=ts1855, model=m1855)
 
 # %%
+m1855.DMX_0001.prefix
+
+# %%
 glsfit.fit_toas(maxiter=1)
 
 # %%

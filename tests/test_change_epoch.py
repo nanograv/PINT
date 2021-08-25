@@ -1,16 +1,18 @@
-import io
 import copy
+import io
+import logging
 import os.path
+import warnings
 
 import astropy.units as u
 import numpy as np
-import pint
 import pytest
 from astropy.time import Time
-from pint import models
-import pint.toa
-
 from pinttestdata import datadir
+
+import pint
+import pint.toa
+from pint import models
 
 
 @pytest.fixture(params=["J1600-3053_test.par", "J2317+1439_ell1h_simple.par"])
@@ -91,20 +93,20 @@ def test_change_dmepoch_unset(times):
 
 
 def test_change_dmepoch_unset_exception(times):
-    with pytest.raises(ValueError):
-        models.get_model(
-            io.StringIO(
-                """
-                PSR J1234+5678
-                F0 1
-                PEPOCH 56000
-                ELAT 0
-                ELONG 0
-                DM 10
-                DM1 1e-10
-                """
-            )
+    model = models.get_model(
+        io.StringIO(
+            """
+            PSR J1234+5678
+            F0 1
+            PEPOCH 56000
+            ELAT 0
+            ELONG 0
+            DM 10
+            DM1 1e-10
+            """
         )
+    )
+    assert model.DMEPOCH.quantity == model.PEPOCH.quantity
 
 
 def test_change_dmepoch_unset_python_exception(times):
@@ -123,6 +125,9 @@ def test_change_dmepoch_unset_python_exception(times):
     model.DM1.value = 7
     with pytest.raises(ValueError):
         model.change_dmepoch(56000)
+    model.validate()
+    model.change_dmepoch(56000)
+    assert model.DMEPOCH.quantity == model.PEPOCH.quantity
 
 
 def test_unset_dmepoch_raises(times):
@@ -143,6 +148,10 @@ def test_unset_dmepoch_raises(times):
         model.base_dm(times)
     with pytest.raises(ValueError):
         model.d_dm_d_DMs(times, "DM")
+    model.validate()
+    model.base_dm(times)
+    model.d_dm_d_DMs(times, "DM")
+    assert model.DMEPOCH.quantity == model.PEPOCH.quantity
 
 
 @pytest.fixture(
@@ -204,3 +213,71 @@ def test_change_binary_epoch(binary_model):
     model_2.change_binary_epoch(t1)
     for p in model.params:
         assert getattr(model, p).quantity == getattr(model_2, p).quantity
+
+
+test_par = """
+PSR J1234+5678
+ELAT 0
+ELONG 0
+F0 1
+PEPOCH 58000
+DM 10
+"""
+
+test_par_radec = """
+PSR J1234+5678
+RA 10:23:47.67
+DEC 00:38:41.2
+F0 1
+PEPOCH 58000
+DM 10
+"""
+
+
+@pytest.mark.parametrize("par", [test_par, test_par_radec])
+def test_unset_other_epochs(caplog, par):
+    caplog.set_level(logging.WARNING)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        m = models.get_model(io.StringIO(par))
+        assert m.PEPOCH.quantity is not None
+        assert m.DMEPOCH.quantity is None
+        assert m.POSEPOCH.quantity is None
+    assert not caplog.records
+
+
+def test_unset_other_epochs_dm1(caplog):
+    caplog.set_level(logging.WARNING)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        m = models.get_model(io.StringIO("\n".join([test_par, "DM1 1e-10"])))
+        assert m.PEPOCH.quantity is not None
+        assert m.DMEPOCH.quantity == m.PEPOCH.quantity
+        assert m.POSEPOCH.quantity is None
+    assert not caplog.records
+
+
+def test_unset_other_epochs_pmra(caplog):
+    caplog.set_level(logging.WARNING)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        m = models.get_model(
+            io.StringIO("\n".join([test_par_radec, "PMRA 1e-10", "PMDEC 1e-10"]))
+        )
+        assert m.PEPOCH.quantity is not None
+        assert m.DMEPOCH.quantity is None
+        assert m.POSEPOCH.quantity == m.PEPOCH.quantity
+    assert not caplog.records
+
+
+def test_unset_other_epochs_pmelat(caplog):
+    caplog.set_level(logging.WARNING)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        m = models.get_model(
+            io.StringIO("\n".join([test_par, "PMELAT 1e-10", "PMELONG 1e-10"]))
+        )
+        assert m.PEPOCH.quantity is not None
+        assert m.DMEPOCH.quantity is None
+        assert m.POSEPOCH.quantity == m.PEPOCH.quantity
+    assert not caplog.records
