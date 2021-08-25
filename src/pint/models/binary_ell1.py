@@ -162,14 +162,10 @@ class BinaryELL1(PulsarBinary):
             dPB = PBDOT * dt_integer_orbits
             self.PB.quantity = self.PB.quantity + dPB
         else:
-            fbterms = [
-                getattr(self, k).quantity
-                for k in self.get_prefix_mapping("FB").values()
-            ]
-            fbterms = [0.0 * u.Unit("")] + fbterms
+            fbterms = [0.0 * u.Unit("")] + self._parent.get_prefix_list("FB")
 
             for n in range(len(fbterms) - 1):
-                cur_deriv = getattr(self, "FB{}".format(n))
+                cur_deriv = getattr(self, f"FB{n}")
                 cur_deriv.value = taylor_horner_deriv(
                     dt_integer_orbits.to(u.s), fbterms, deriv_order=n + 1
                 )
