@@ -23,6 +23,13 @@ def test_missing_f1():
     m = get_model(StringIO("\n".join([par_base, "F2 0"])))
     assert m.F1.value == 0
 
+def test_removed_f1():
+    m = get_model(StringIO(par_base))
+    assert m.F1.value == 0
+    m.remove_param("F1")
+    m.validate()
+    make_fake_toas_uniform(57000, 58000, 2, m)
+
 def test_missing_f2():
     with pytest.raises(ValueError):
         get_model(StringIO("\n".join([par_base, "F3 0"])))

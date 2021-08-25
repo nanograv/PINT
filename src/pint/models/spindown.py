@@ -78,7 +78,7 @@ class Spindown(PhaseComponent):
         # Check continuity
         self._parent.get_prefix_list("F", start_index=1)
         # If F1 is set, we need PEPOCH
-        if self.F1.value != 0.0:
+        if hasattr(self, "F1") and self.F1.value != 0.0:
             if self.PEPOCH.value is None:
                 raise MissingParameter(
                     "Spindown", "PEPOCH", "PEPOCH is required if F1 or higher are set"
