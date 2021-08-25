@@ -1,16 +1,29 @@
+import pytest
 from io import StringIO
 from pint.models import get_model
 from pint.simulation import make_fake_toas_uniform
 
+par_base = """
+    PSR J1235+5678
+    F0 1
+    ELAT 0
+    ELONG 0
+    PEPOCH 57000
+"""
+
 def test_fn_removal():
-    m = get_model(StringIO("""
-        PSR J1235+5678
-        F0 1
-        F1 0
-        F2 1e-30
-        ELAT 0
-        ELONG 0
-        PEPOCH 57000
-        """))
+    m = get_model(StringIO("\n".join([par_base, "F1 0", "F2 0"])))
     m.remove_param("F2")
     make_fake_toas_uniform(57000, 58000, 2, m)
+
+def test_no_f1():
+    get_model(StringIO(par_base))
+
+def test_missing_f1():
+    m = get_model(StringIO("\n".join([par_base, "F2 0"])))
+    assert m.F1.value == 0
+
+def test_missing_f2():
+    with pytest.raises(ValueError):
+        get_model(StringIO("\n".join([par_base, "F3 0"])))
+
