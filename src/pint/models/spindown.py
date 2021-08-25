@@ -86,7 +86,7 @@ class Spindown(PhaseComponent):
 
     @property
     def F_terms(self):
-        return [f"F{i}" for i in range(1+len(self._parent.get_prefix_list("F", 1)))]
+        return [f"F{i}" for i in range(1 + len(self._parent.get_prefix_list("F", 1)))]
 
     def F_description(self, n):
         """Template function for description."""
