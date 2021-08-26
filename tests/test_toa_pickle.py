@@ -14,6 +14,7 @@ from pinttestdata import datadir
 import pint.models
 import pint.toa
 from pint import toa
+from pint import simulation
 
 
 @pytest.fixture
@@ -125,7 +126,7 @@ def test_pickle_moved(temp_tim):
 def test_group_survives_pickle(tmpdir):
     p = os.path.join(tmpdir, "test.pickle.gz")
     test_model = pint.models.get_model(os.path.join(datadir, "NGC6440E.par"))
-    test_toas = pint.toa.make_fake_toas(58000, 59000, 5, model=test_model)
+    test_toas = simulation.make_fake_toas_uniform(58000, 59000, 5, model=test_model)
     test_toas.adjust_TOAs(
         astropy.time.TimeDelta((np.random.uniform(0, 1, size=(5,)) * u.d))
     )
@@ -141,7 +142,7 @@ def test_group_survives_pickle(tmpdir):
 def test_astropy_group_survives_pickle(tmpdir):
     p = os.path.join(tmpdir, "test.pickle.gz")
     test_model = pint.models.get_model(os.path.join(datadir, "NGC6440E.par"))
-    test_toas = pint.toa.make_fake_toas(58000, 59000, 5, model=test_model)
+    test_toas = simulation.make_fake_toas_uniform(58000, 59000, 5, model=test_model)
 
     with open(p, "wb") as f:
         pickle.dump(test_toas.table, f)
@@ -155,7 +156,7 @@ def test_astropy_group_survives_pickle(tmpdir):
 
 def test_group_survives_plain_pickle(tmpdir):
     test_model = pint.models.get_model(os.path.join(datadir, "NGC6440E.par"))
-    test_toas = pint.toa.make_fake_toas(58000, 59000, 5, model=test_model)
+    test_toas = simulation.make_fake_toas_uniform(58000, 59000, 5, model=test_model)
 
     new_toas = pickle.loads(pickle.dumps(test_toas))
 

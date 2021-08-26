@@ -18,16 +18,16 @@
 #
 # This notebook is meant to answer a common type of question: when I have a solution for a pulsar that goes from ${\rm MJD}_1$ to ${\rm MJD}_2$, can I confidently phase connect it to other data starting at ${\rm MJD}_3$?  What is the phase uncertainty bridging the gap from $\Delta t={\rm MJD}_3-{\rm MJD}_2$?
 #
-# This notebook will start with standard pulsar timing.  It will then use the `utils/calculate_random_models` function to propagate the phase uncertainties forward and examine what happens.
+# This notebook will start with standard pulsar timing.  It will then use the `simulation/calculate_random_models` function to propagate the phase uncertainties forward and examine what happens.
 
 # %%
 import matplotlib.pyplot as plt
 import numpy as np
 import astropy.units as u
 
-import pint.fitter, pint.toa
+import pint.fitter, pint.toa, pint.simulation
 from pint.models import get_model_and_toas
-from pint import utils
+from pint import utils, simulation
 import pint.config
 
 # %%
@@ -53,12 +53,12 @@ print("Current last TOA: MJD {}".format(f.model.FINISH.quantity))
 # so make fake TOAs to cover the gap
 MJDmax = 59000
 # the number of TOAs is arbitrary since it's mostly for visualization
-tnew = pint.toa.make_fake_toas(f.model.FINISH.value, MJDmax, 50, f.model)
+tnew = pint.simulation.make_fake_toas_uniform(f.model.FINISH.value, MJDmax, 50, f.model)
 
 
 # %%
 # make fake models crossing from the last existing TOA to the start of new observations
-dphase, mrand = utils.calculate_random_models(f, tnew, Nmodels=100)
+dphase, mrand = simulation.calculate_random_models(f, tnew, Nmodels=100)
 # this is the difference in time across the gap
 dt = tnew.get_mjds() - f.model.PEPOCH.value * u.d
 

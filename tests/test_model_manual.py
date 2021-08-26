@@ -166,8 +166,8 @@ def test_simple_manual():
     tm.PEPOCH.value = 48196.0
     tm.validate()  # This should work.
 
-    # When there is no POSEPOCH set, it should inherit the value from PEPOCH as a default.  Check that this is true.
-    assert tm.POSEPOCH.value == tm.PEPOCH.value
+    # When there is no POSEPOCH set, it should just be unset
+    assert tm.POSEPOCH.value is None
 
 
 def test_add_all_components():
