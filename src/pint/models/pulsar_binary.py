@@ -365,7 +365,7 @@ class PulsarBinary(DelayComponent):
         (FB2, FB3, etc.) are ignored in computing the new T0, even if present in
         the model. If high-precision results are necessary, especially for models
         containing higher derivatives of orbital frequency, consider re-fitting
-        the model to a set of TOAs. The use of :func:`pint.toa.make_fake_toas`
+        the model to a set of TOAs. The use of :func:`pint.simulation.make_fake_toas`
         and the :class:`pint.fitter.Fitter` option ``track_mode="use_pulse_number"``
         can make this extremely simple.
 

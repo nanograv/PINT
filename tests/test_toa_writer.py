@@ -4,7 +4,7 @@ import os.path
 import pytest
 
 from pint.models import get_model
-from pint import toa
+from pint import toa, simulation
 from pinttestdata import datadir
 from astropy.time import Time
 import numpy as np
@@ -144,9 +144,9 @@ DILATEFREQ          N
 def test_tim_writing_order():
     m = get_model(StringIO(simplepar))
     fakes = [
-        toa.make_fake_toas(55000, 56000, 5, model=m, obs="ao"),
-        toa.make_fake_toas(55000, 56000, 5, model=m, obs="gbt"),
-        toa.make_fake_toas(55000, 56000, 5, model=m, obs="@"),
+        simulation.make_fake_toas_uniform(55000, 56000, 5, model=m, obs="ao"),
+        simulation.make_fake_toas_uniform(55000, 56000, 5, model=m, obs="gbt"),
+        simulation.make_fake_toas_uniform(55000, 56000, 5, model=m, obs="@"),
     ]
     toas = toa.merge_TOAs(fakes)
     toas.table["index"][np.argsort(toas.table["tdbld"])] = np.arange(len(toas))

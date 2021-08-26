@@ -9,7 +9,7 @@ import pytest
 import astropy.units as u
 
 import pint.models as tm
-from pint import fitter, toa
+from pint import fitter, toa, simulation
 from pinttestdata import datadir
 import pint.models.parameter as param
 from pint import ls
@@ -21,7 +21,7 @@ def test_fitter_basic():
     m = tm.get_model(os.path.join(datadir, "NGC6440E.par"))
     m.fit_params = ["F0", "F1"]
     e = 1 * u.us
-    t = toa.make_fake_toas(56000, 59000, 16, m, error=e)
+    t = simulation.make_fake_toas_uniform(56000, 59000, 16, m, error=e)
 
     T = (t.last_MJD - t.first_MJD).to(u.s)
 
@@ -142,7 +142,9 @@ def test_fitter():
 def test_ftest_nb():
     """Test for narrowband fitter class F-test."""
     m = tm.get_model(os.path.join(datadir, "J0023+0923_ell1_simple.par"))
-    t = toa.make_fake_toas(56000.0, 56001.0, 10, m, freq=1400.0, obs="AO")
+    t = simulation.make_fake_toas_uniform(
+        56000.0, 56001.0, 10, m, freq=1400.0 * u.MHz, obs="AO"
+    )
     f = fitter.WLSFitter(toas=t, model=m)
     f.fit_toas()
     # Test adding parameters
@@ -171,8 +173,8 @@ def test_ftest_nb():
 def test_ftest_wb():
     """Test for wideband fitter class F-test."""
     wb_m = tm.get_model(os.path.join(datadir, "J0023+0923_ell1_simple.par"))
-    wb_t = toa.make_fake_toas(
-        56000.0, 56001.0, 10, wb_m, freq=1400.0, obs="GBT", dm=wb_m.DM.quantity
+    wb_t = simulation.make_fake_toas_uniform(
+        56000.0, 56001.0, 10, wb_m, freq=1400.0 * u.MHz, obs="GBT", dm=wb_m.DM.quantity
     )
     wb_f = fitter.WidebandTOAFitter(wb_t, wb_m)
     wb_f.fit_toas()

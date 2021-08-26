@@ -3,6 +3,7 @@ import astropy.units as u
 from astropy.time import Time
 import matplotlib.pyplot as plt
 import pint.toa as toa
+import pint.simulation as simulation
 from pint.models import get_model
 from pylab import *
 from copy import deepcopy
@@ -22,8 +23,10 @@ def test_get_highest_density_range(ndays):
     SOLARN0 0
     """
     model = get_model(io.StringIO(par_base))
-    toas_1 = toa.make_fake_toas(57000, 58000, 1000, model, obs="@")
-    toas_2 = toa.make_fake_toas(57500, 57500 + ndays.value, 100, model, obs="@")
+    toas_1 = simulation.make_fake_toas_uniform(57000, 58000, 1000, model, obs="@")
+    toas_2 = simulation.make_fake_toas_uniform(
+        57500, 57500 + ndays.value, 100, model, obs="@"
+    )
     merged = toa.merge_TOAs([toas_1, toas_2])
     if ndays == 7 * u.d:
         x1 = merged.get_highest_density_range()

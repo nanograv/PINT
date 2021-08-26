@@ -6,9 +6,8 @@ from copy import deepcopy
 import astropy.units as u
 import numpy as np
 import pytest
+from numpy.testing import assert_allclose
 from pinttestdata import datadir
-from pint.toa import make_fake_toas
-from pint.toa import get_TOAs
 
 from pint.models import (
     DEFAULT_ORDER,
@@ -21,6 +20,8 @@ from pint.models import (
     get_model,
     parameter as p,
 )
+from pint.simulation import make_fake_toas_uniform
+from pint.toa import get_TOAs
 
 
 @pytest.fixture
@@ -309,7 +310,7 @@ def test_free_params(lines, param, exception):
 
 def test_pepoch_late():
     model = get_model(io.StringIO(par_base))
-    make_fake_toas(56000, 57000, 10, model=model)
+    make_fake_toas_uniform(56000, 57000, 10, model=model)
 
 
 def test_t2cmethod_corrected():
@@ -334,3 +335,17 @@ def test_jump_flags_to_params(timfile_jumps, timfile_nojumps, model_0437):
     assert len(m.components["PhaseJump"].jumps) == 2
     assert "JUMP1" in m.components["PhaseJump"].jumps
     assert "JUMP2" in m.components["PhaseJump"].jumps
+
+
+def test_supports_rm():
+    m = get_model(io.StringIO("\n".join([par_base, "RM 10"])))
+    assert m.RM.value == 10
+
+
+def test_assumes_dmepoch_equals_pepoch():
+    m_assume = get_model(io.StringIO("\n".join([par_base, "DM1 1e-5"])))
+    m_given = get_model(io.StringIO("\n".join([par_base, "DMEPOCH 58000", "DM1 1e-5"])))
+
+    t = make_fake_toas_uniform(57000, 59000, 10, m_assume)
+
+    assert_allclose(m_assume.dm_value(t), m_given.dm_value(t))

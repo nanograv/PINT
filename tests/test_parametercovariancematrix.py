@@ -17,7 +17,8 @@ from pint.fitter import (
     WidebandTOAFitter,
 )
 from pint.models.model_builder import get_model
-from pint.toa import get_TOAs, make_fake_toas
+from pint.toa import get_TOAs
+from pint.simulation import make_fake_toas_uniform
 
 
 @pytest.fixture
@@ -34,7 +35,9 @@ def wls():
 @pytest.fixture
 def wb():
     m = get_model(join(datadir, "NGC6440E.par"))
-    t = make_fake_toas(55000, 58000, 20, model=m, freq=1400 * u.MHz, dm=10 * pint.dmu)
+    t = make_fake_toas_uniform(
+        55000, 58000, 20, model=m, freq=1400 * u.MHz, dm=10 * pint.dmu
+    )
 
     wb = WidebandTOAFitter(t, m)
     wb.fit_toas()
