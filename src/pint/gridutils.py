@@ -99,7 +99,7 @@ def grid_chisq_mp(ftr, par1_name, par1_grid, par2_name, par2_grid, ncpu=None):
     return chi2
 
 
-def grid_chisq(ftr, par1_name, par1_grid, par2_name, par2_grid):
+def grid_chisq(ftr, par1_name, par1_grid, par2_name, par2_grid, printprogress=True):
     """Compute chisq over a grid of two parameters, serial version
 
     Single-threaded computation of chisq over 2-D grid of parameters.
@@ -116,6 +116,8 @@ def grid_chisq(ftr, par1_name, par1_grid, par2_name, par2_grid):
         Name of the second parameter to grid over
     par2_grid : array, Quantity
         Array of par2 values for column of the output matrix
+    printprogress : bool, optional
+        Print indications of progress
 
     Returns
     -------
@@ -134,7 +136,7 @@ def grid_chisq(ftr, par1_name, par1_grid, par2_name, par2_grid):
 
     # All other unfrozen parameters will be fitted for at each grid point
 
-    chi2 = np.zeros((len(par1_grid), len(par2_grid)))
+    chi2 = np.zeros((len(par2_grid), len(par1_grid)))
     # Want par1 on X-axis and par2 on y-axis
     for ii, par1 in enumerate(par1_grid):
         getattr(ftr.model, par1_name).quantity = par1
@@ -142,12 +144,96 @@ def grid_chisq(ftr, par1_name, par1_grid, par2_name, par2_grid):
             getattr(ftr.model, par2_name).quantity = par2
             # Array index here is rownum, colnum so translates to y, x
             chi2[jj, ii] = ftr.fit_toas()
-            print(".", end="")
-        print("")
+            if printprogress:
+                print(".", end="")
+        if printprogress:
+            print("")
 
     # Restore saved model
     ftr.model = savemod
     return chi2
+
+
+def grid_chisq_derived(
+    ftr,
+    par1_name,
+    par1_func,
+    axis1_grid,
+    par2_name,
+    par2_func,
+    axis2_grid,
+    printprogress=True,
+):
+    """Compute chisq over a grid of two parameters, serial version
+
+    Single-threaded computation of chisq over 2-D grid of parameters.
+
+    Parameters
+    ----------
+    ftr
+        The base fitter to use.
+    par1_name : str
+        Name of the first parameter to grid over
+    par1_func : function
+        Function to compute `par1` based on (`axis1`,`axis2`)
+    axis1_grid : array, Quantity
+        Array of values for column of the input matrix
+    par2_name : str
+        Name of the second parameter to grid over
+    par2_func : function
+        Function to compute `par2` based on (`axis1`,`axis2`)
+    axis2_grid : array, Quantity
+        Array of values for column of the input matrix
+    printprogress : bool, optional
+        Print indications of progress
+
+    Returns
+    -------
+    array : 2-D array of chisq values with `par1` varying in columns and `par2` varying in rows
+    par1 : parameter1 derived from `axis1`, `axis2` according to `par1_func`
+    par2 : parameter2 derived from `axis1`, `axis2` according to `par2_func`
+    """
+
+    # Save the current model so we can tweak it for gridding, then restore it at the end
+    savemod = ftr.model
+    gridmod = copy.deepcopy(ftr.model)
+    ftr.model = gridmod
+
+    # Freeze the two params we are going to grid over
+    getattr(ftr.model, par1_name).frozen = True
+    getattr(ftr.model, par2_name).frozen = True
+
+    # All other unfrozen parameters will be fitted for at each grid point
+
+    chi2 = np.zeros((len(axis2_grid), len(axis1_grid)))
+    par1 = (
+        np.zeros((len(axis2_grid), len(axis1_grid)))
+        * getattr(ftr.model, par1_name).units
+    )
+    par2 = (
+        np.zeros((len(axis2_grid), len(axis1_grid)))
+        * getattr(ftr.model, par2_name).units
+    )
+
+    # Want par1 on X-axis and par2 on y-axis
+    for ii, axis1 in enumerate(axis1_grid):
+        for jj, axis2 in enumerate(axis2_grid):
+            par1[jj, ii] = par1_func(axis1, axis2)
+            par2[jj, ii] = par2_func(axis1, axis2)
+
+            getattr(ftr.model, par1_name).quantity = par1[jj, ii]
+            getattr(ftr.model, par2_name).quantity = par2[jj, ii]
+
+            # Array index here is rownum, colnum so translates to y, x
+            chi2[jj, ii] = ftr.fit_toas()
+            if printprogress:
+                print(".", end="")
+        if printprogress:
+            print("")
+
+    # Restore saved model
+    ftr.model = savemod
+    return chi2, par1, par2
 
 
 def plot_grid_chisq(
