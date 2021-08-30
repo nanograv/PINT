@@ -127,7 +127,6 @@ def test_simple_manual():
     )
     tm.setup()
     assert "F0" in tm.phase_deriv_funcs.keys()
-    assert "F1" in tm.phase_deriv_funcs.keys()
     assert "RAJ" in tm.delay_deriv_funcs.keys()
     assert "DECJ" in tm.delay_deriv_funcs.keys()
 

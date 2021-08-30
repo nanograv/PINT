@@ -19,6 +19,8 @@ from pint.models.timing_model import (
     UnknownParameter,
     TimingModelError,
     MissingBinaryError,
+    ignore_params,
+    ignore_prefix
 )
 from pint.toa import get_TOAs
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
@@ -246,7 +248,17 @@ class ModelBuilder:
             try:
                 pint_name, init0 = self.all_components.alias_to_pint_param(k)
             except UnknownParameter:
-                unknown_param[k] += v
+                if k in ignore_params: # Parameter is known but in the ingore list
+                    continue
+                else: # Check ignored prefix
+                    try:
+                        pfx, idxs, idx = split_prefixed_name(k)
+                        if pfx in ignore_prefix: # It is an ignored prefix.
+                            continue
+                        else:
+                            unknown_param[k] += v
+                    except PrefixError:
+                        unknown_param[k] += v
                 continue
             pint_param_dict[pint_name] += v
             original_name_map[pint_name].append(k)

@@ -44,7 +44,7 @@ class SubsetModel(PhaseComponent):
     def __init__(self):
         super(SubsetModel, self).__init__()
         self.add_param(floatParameter(name="F0", value=0.0, unit="1/s"))
-        self.add_param(floatParameter(name="F1", value=0.0, unit="1/s^2"))
+        #self.add_param(floatParameter(name="F1", value=0.0, unit="1/s^2"))
 
 
 @pytest.fixture
@@ -282,6 +282,7 @@ def test_model_fillup_prefix_adding(test_timing_model):
 
 def test_model_fillup_prefix_adding_spin_freq(test_timing_model):
     pint_dict_prefix = copy.deepcopy(pint_dict_base)
+    pint_dict_prefix["F1"] = ["5.0D-11  1      3.0e-15"]
     pint_dict_prefix["F2"] = ["5.0D-13  1      3.0e-15"]
     pint_dict_prefix["F3"] = ["3.0D-14  1      5.0e-15"]
     mb = ModelBuilder()
@@ -407,7 +408,6 @@ def test_model_from_par_hassubset():
         def __init__(self):
             super(SubsetModel2, self).__init__()
             self.add_param(floatParameter(name="F0", value=0.0, unit="1/s"))
-            self.add_param(floatParameter(name="F1", value=0.0, unit="1/s^2"))
 
     with pytest.raises(ComponentConflict):
         mb = ModelBuilder()

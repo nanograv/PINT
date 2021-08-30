@@ -53,18 +53,18 @@ class Spindown(PhaseComponent):
                 long_double=True,
             )
         )
-        self.add_param(
-            prefixParameter(
-                name="F1",
-                value=0.0,
-                units="Hz/s^1",
-                description="Spindown-rate",
-                unit_template=self.F_unit,
-                description_template=self.F_description,
-                type_match="float",
-                long_double=True,
-            )
-        )
+        # self.add_param(
+        #     prefixParameter(
+        #         name="F1",
+        #         value=0.0,
+        #         units="Hz/s^1",
+        #         description="Spindown-rate",
+        #         unit_template=self.F_unit,
+        #         description_template=self.F_description,
+        #         type_match="float",
+        #         long_double=True,
+        #     )
+        # )
         self.add_param(
             MJDParameter(
                 name="PEPOCH",
@@ -103,12 +103,12 @@ class Spindown(PhaseComponent):
         return [f"F{i}" for i in range(1 + len(self._parent.get_prefix_list("F", 1)))]
 
     def F_description(self, n):
-        """Template function for description."""
-        return "Spin-frequency %d derivative" % n if n else "Spin-frequency"
+        """Template function for description"""
+        return "Spin-frequency %d derivative" % n #if n else "Spin-frequency"
 
     def F_unit(self, n):
-        """Template function for unit."""
-        return "Hz/s^%d" % n if n else "Hz"
+        """Template function for unit"""
+        return "Hz/s^%d" % n #if n else "Hz"
 
     def get_spin_terms(self):
         """Return a list of the spin term values in the model: [F0, F1, ..., FN]."""

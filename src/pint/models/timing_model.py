@@ -86,7 +86,6 @@ ignore_params = set(
         "TZRSITE",
         "NITS",
         "IBOOT",
-        "BINARY",
         "CHI2R",
         "MODE",
         "PLANET_SHAPIRO2",
