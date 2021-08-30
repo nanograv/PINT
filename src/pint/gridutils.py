@@ -138,14 +138,7 @@ def grid_chisq(ftr, parnames, parvalues, printprogress=True):
 
 
 def grid_chisq_derived(
-    ftr,
-    par1_name,
-    par1_func,
-    axis1_grid,
-    par2_name,
-    par2_func,
-    axis2_grid,
-    printprogress=True,
+    ftr, parnames, parfuncs, gridvalues, printprogress=True,
 ):
     """Compute chisq over a grid of two parameters, serial version
 
@@ -155,26 +148,18 @@ def grid_chisq_derived(
     ----------
     ftr
         The base fitter to use.
-    par1_name : str
-        Name of the first parameter to grid over
-    par1_func : function
-        Function to compute `par1` based on (`axis1`,`axis2`)
-    axis1_grid : array, Quantity
-        Array of values for column of the input matrix
-    par2_name : str
-        Name of the second parameter to grid over
-    par2_func : function
-        Function to compute `par2` based on (`axis1`,`axis2`)
-    axis2_grid : array, Quantity
-        Array of values for column of the input matrix
+    parnames : list
+        Names of the parameters to grid over
+    parfuncs : list
+        List of functions to convert `gridvalues` to quantities accessed through `parnames`
+    gridvalues : list
+        List of underlying grid values to grid over (each should be array of Quantity)
     printprogress : bool, optional
         Print indications of progress
 
     Returns
     -------
-    array : 2-D array of chisq values with `par1` varying in columns and `par2` varying in rows
-    par1 : parameter1 derived from `axis1`, `axis2` according to `par1_func`
-    par2 : parameter2 derived from `axis1`, `axis2` according to `par2_func`
+    array : 2-D array of chisq values
     """
 
     # Save the current model so we can tweak it for gridding, then restore it at the end
@@ -182,41 +167,32 @@ def grid_chisq_derived(
     gridmod = copy.deepcopy(ftr.model)
     ftr.model = gridmod
 
-    # Freeze the two params we are going to grid over
-    getattr(ftr.model, par1_name).frozen = True
-    getattr(ftr.model, par2_name).frozen = True
+    # Freeze the params we are going to grid over
+    for parname in parnames:
+        getattr(ftr.model, parname).frozen = True
 
     # All other unfrozen parameters will be fitted for at each grid point
+    grid = np.meshgrid(*gridvalues)
+    chi2 = np.zeros(grid[0].shape)
+    it = np.nditer(grid[0], flags=["multi_index"])
+    out = []
+    # convert the gridded values to the actual parameter values
+    for j in range(len(gridvalues)):
+        out.append(parfuncs[j](*grid))
 
-    chi2 = np.zeros((len(axis2_grid), len(axis1_grid)))
-    par1 = (
-        np.zeros((len(axis2_grid), len(axis1_grid)))
-        * getattr(ftr.model, par1_name).units
-    )
-    par2 = (
-        np.zeros((len(axis2_grid), len(axis1_grid)))
-        * getattr(ftr.model, par2_name).units
-    )
-
-    # Want par1 on X-axis and par2 on y-axis
-    for ii, axis1 in enumerate(axis1_grid):
-        for jj, axis2 in enumerate(axis2_grid):
-            par1[jj, ii] = par1_func(axis1, axis2)
-            par2[jj, ii] = par2_func(axis1, axis2)
-
-            getattr(ftr.model, par1_name).quantity = par1[jj, ii]
-            getattr(ftr.model, par2_name).quantity = par2[jj, ii]
-
-            # Array index here is rownum, colnum so translates to y, x
-            chi2[jj, ii] = ftr.fit_toas()
-            if printprogress:
-                print(".", end="")
+    for x in it:
+        for parnum, parname in enumerate(parnames):
+            getattr(ftr.model, parname).quantity = out[parnum][it.multi_index]
+        chi2[it.multi_index] = ftr.fit_toas()
         if printprogress:
-            print("")
+            print(".", end="")
+
+    if printprogress:
+        print("")
 
     # Restore saved model
     ftr.model = savemod
-    return chi2, par1, par2
+    return chi2
 
 
 def plot_grid_chisq(
