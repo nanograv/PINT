@@ -1,15 +1,18 @@
+"""Solar system ephemeris downloading and setting support."""
+import logging
 import os
 
 from astropy.utils.data import download_file
 import astropy.coordinates
 import astropy.units as u
 import numpy as np
-from astropy import log
 from astropy.utils.data import download_file
 from urllib.parse import urljoin
 
 import pint.config
 from pint.utils import PosVel
+
+log = logging.getLogger(__name__)
 
 __all__ = ["objPosVel_wrt_SSB", "get_tdb_tt_ephem_geocenter"]
 

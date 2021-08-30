@@ -4,10 +4,19 @@ In particular, single TOAs are represented by :class:`pint.toa.TOA` objects, and
 want to manage a collection of these we recommend you use a :class:`pint.toa.TOAs` object
 as this makes certain operations much more convenient. You probably want to load one with
 :func:`pint.toa.get_TOAs`.
+
+Warning
+-------
+Function:
+
+- :func:`pint.simulation.make_fake_toas`
+
+has moved to :mod:`pint.simulation`.
 """
 import copy
 import gzip
 import hashlib
+import logging
 import os
 import pickle
 import re
@@ -20,7 +29,6 @@ import astropy.time as time
 import astropy.units as u
 import numpy as np
 import numpy.ma
-from astropy import log
 from astropy.coordinates import (
     ICRS,
     CartesianDifferential,
@@ -39,13 +47,14 @@ from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 
 
+log = logging.getLogger(__name__)
+
 __all__ = [
     "TOAs",
     "get_TOAs",
     "get_TOAs_list",
     "load_pickle",
     "save_pickle",
-    "make_fake_toas",
     "format_toa_line",
     "TOA",
 ]
@@ -828,130 +837,6 @@ def build_table(toas, filename=None):
         ),
         meta={"filename": filename},
     ).group_by("obs")
-
-
-def make_fake_toas(
-    startMJD,
-    endMJD,
-    ntoas,
-    model,
-    freq=999999,
-    obs="GBT",
-    error=1 * u.us,
-    dm=None,
-    dm_error=1e-4 * pint.dmu,
-):
-    """Make evenly spaced toas with residuals = 0 and without errors.
-
-    Might be able to do different frequencies if fed an array of frequencies,
-    only works with one observatory at a time
-
-    Parameters
-    ----------
-    startMJD
-        starting MJD for fake toas
-    endMJD
-        ending MJD for fake toas
-    ntoas
-        number of fake toas to create between startMJD and endMJD
-    model
-        current model
-    freq : float, optional
-        frequency of the fake toas, default 1400
-    obs : str, optional
-        observatory for fake toas, default GBT
-    error : :class:`astropy.units.Quantity`
-        uncertainty to attach to each TOA
-    dm : float, optional
-        DM value to include with each TOA; default is not to include any DM information
-    dm_error : :class:`astropy.units.Quantity`
-        uncertainty to attach to each DM measurement
-
-    Returns
-    -------
-    TOAs
-        object with evenly spaced toas spanning given start and end MJD with
-        ntoas toas, without errors
-    """
-    # FIXME: this is a sign this is not where this function belongs
-    # residuals depends on models and TOAs so this adds a circular dependency
-    import pint.residuals
-
-    # TODO:make all variables Quantity objects
-    # TODO: freq default to inf
-    def get_freq_array(bfv, ntoas):
-        freq = np.zeros(ntoas)
-        num_freqs = len(bfv)
-        for ii, fv in enumerate(bfv):
-            freq[ii::num_freqs] = fv
-        return freq
-
-    times = (
-        np.linspace(np.longdouble(startMJD) * u.d, np.longdouble(endMJD) * u.d, ntoas)
-        * u.day
-    )
-    freq_array = get_freq_array(np.atleast_1d(freq) * u.MHz, len(times))
-    t1 = [
-        TOA(t.value, obs=obs, freq=f, scale=get_observatory(obs).timescale)
-        for t, f in zip(times, freq_array)
-    ]
-    ts = TOAs(toalist=t1)
-    ts.planets = model["PLANET_SHAPIRO"].value
-    ts.ephem = model["EPHEM"].value
-    include_bipm = False
-    bipm_version = bipm_default
-    include_gps = True
-    if model["CLOCK"].value is not None:
-        if model["CLOCK"].value == "TT(TAI)":
-            include_bipm = False
-            log.info("Using CLOCK = TT(TAI), so setting include_bipm = False")
-        elif "BIPM" in model["CLOCK"].value:
-            clk = model["CLOCK"].value.strip(")").split("(")
-            if len(clk) == 2:
-                ctype, cvers = clk
-                if ctype == "TT" and cvers.startswith("BIPM"):
-                    include_bipm = True
-                    if bipm_version is None:
-                        bipm_version = cvers
-                        log.info(f"Using CLOCK = {bipm_version} from the given model")
-                else:
-                    log.warning(
-                        f'CLOCK = {model["CLOCK"].value} is not implemented. '
-                        f"Using TT({bipm_default}) instead."
-                    )
-        else:
-            log.warning(
-                f'CLOCK = {model["CLOCK"].value} is not implemented. '
-                f"Using TT({bipm_default}) instead."
-            )
-
-    ts.clock_corr_info.update(
-        {
-            "include_bipm": include_bipm,
-            "bipm_version": bipm_version,
-            "include_gps": include_gps,
-        }
-    )
-    ts.table["error"] = error
-    if dm is not None:
-        for f in ts.table["flags"]:
-            f["pp_dm"] = str(dm.to_value(pint.dmu))
-            f["pp_dme"] = str(dm_error.to_value(pint.dmu))
-    ts.compute_TDBs()
-    ts.compute_posvels()
-    ts.compute_pulse_numbers(model)
-    for i in range(10):
-        r = pint.residuals.Residuals(ts, model, track_mode="use_pulse_numbers")
-        if abs(r.time_resids).max() < 1 * u.ns:
-            break
-        ts.adjust_TOAs(time.TimeDelta(-r.time_resids))
-    else:
-        raise ValueError(
-            "Unable to make fake residuals - left over errors are {}".format(
-                abs(r.time_resids).max()
-            )
-        )
-    return ts
 
 
 def _cluster_by_gaps(t, gap):
@@ -1753,7 +1638,7 @@ class TOAs:
         In that case  ``self.table.meta['cluster_gap']``  will be set to the
         `gap_limit`.  If the desired clustering corresponds to that in
         :attr:`pint.toa.TOAs.table` then that column is returned.
-        
+
         Parameters
         ----------
         gap_limit : astropy.units.Quantity, optional

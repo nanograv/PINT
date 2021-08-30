@@ -1,3 +1,6 @@
+"""Machinery to support PINT's list of observatories."""
+
+import logging
 import os
 import textwrap
 from collections import defaultdict
@@ -7,12 +10,13 @@ import astropy.constants as const
 import astropy.coordinates
 import astropy.units as u
 import numpy as np
-from astropy import log
 from astropy.coordinates import EarthLocation
 
 import pint.solar_system_ephemerides as sse
 from pint.pulsar_mjd import Time
 from pint.utils import interesting_lines
+
+log = logging.getLogger(__name__)
 
 # Include any files that define observatories here.  This will start
 # with the standard distribution files, then will read any system- or

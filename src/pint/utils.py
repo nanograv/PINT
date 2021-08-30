@@ -22,10 +22,16 @@ Functions:
 - :func:`~pint.derived_quantities.shklovskii_factor`
 
 have moved to :mod:`pint.derived_quantities`.
+
+- :func:`pint.simulation.calculate_random_models`
+
+has moved to :mod:`pint.simulation`.
+
 """
 import configparser
 import datetime
 import getpass
+import logging
 import os
 import platform
 import re
@@ -41,11 +47,12 @@ import astropy.coordinates.angles as angles
 import astropy.units as u
 import numpy as np
 import scipy.optimize.zeros as zeros
-from astropy import log
 from scipy.special import fdtrc
 
 import pint
 import pint.pulsar_ecliptic
+
+log = logging.getLogger(__name__)
 
 __all__ = [
     "PosVel",
@@ -71,7 +78,6 @@ __all__ = [
     "FTest",
     "add_dummy_distance",
     "remove_dummy_distance",
-    "calculate_random_models",
     "info_string",
 ]
 
@@ -1497,7 +1503,7 @@ def info_string(prefix_string="# ", comment=None):
         # user-level git config
         c = git.GitConfigParser()
         username = c.get_value("user", option="name") + f" ({getpass.getuser()})"
-    except (configparser.NoOptionError, ImportError):
+    except (configparser.NoOptionError, configparser.NoSectionError, ImportError):
         username = getpass.getuser()
 
     s = f"""
@@ -1522,125 +1528,6 @@ def info_string(prefix_string="# ", comment=None):
     if (prefix_string is not None) and (len(prefix_string) > 0):
         s = os.linesep.join([prefix_string + x for x in s.splitlines()])
     return s
-
-
-def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params="all"):
-    """
-    Calculates random models based on the covariance matrix of the `fitter` object.
-
-    returns the new phase differences compared to the original model
-    optionally returns all of the random models
-
-    Parameters
-    ----------
-    fitter: pint.fitter.Fitter
-        current fitter object containing a model and parameter covariance matrix
-    toas: pint.toa.TOAs
-        TOAs to calculate models
-    Nmodels: int, optional
-        number of random models to calculate
-    keep_models: bool, optional
-        whether to keep and return the individual random models (slower)
-    params: list, optional
-        if specified, selects only those parameters to vary.  Default ('all') is to use all parameters other than Offset
-
-    Returns
-    -------
-    dphase : np.ndarray
-        phase difference with respect to input model, size is [Nmodels, len(toas)]
-    random_models : list, optional
-        list of random models (each is a :class:`pint.models.timing_model.TimingModel`)
-
-    Example
-    -------
-    >>> from pint.models import get_model_and_toas
-    >>> from pint import fitter, toa
-    >>> import pint.utils
-    >>> import io
-    >>>
-    >>> # the locations of these may vary
-    >>> timfile = "tests/datafile/NGC6440E.tim"
-    >>> parfile = "tests/datafile/NGC6440E.par"
-    >>> m, t = get_model_and_toas(parfile, timfile)
-    >>> # fit the model to the data
-    >>> f = fitter.WLSFitter(toas=t, model=m)
-    >>> f.fit_toas()
-    >>>
-    >>> # make fake TOAs starting at the end of the
-    >>> # current data and going out 100 days
-    >>> tnew = toa.make_fake_toas(t.get_mjds().max().value,
-    >>>                           t.get_mjds().max().value+100, 50, model=f.model)
-    >>> # now make random models
-    >>> dphase, mrand = pint.utils.calculate_random_models(f, tnew, Nmodels=100)
-
-
-    Note
-    ----
-    To calculate new TOAs, you can use :func:`~pint.toa.make_fake_toas`
-
-    or similar
-    """
-    Nmjd = len(toas)
-    phases_i = np.zeros((Nmodels, Nmjd))
-    phases_f = np.zeros((Nmodels, Nmjd))
-
-    cov_matrix = fitter.parameter_covariance_matrix
-    # this is a list of the parameter names in the order they appear in the coviarance matrix
-    param_names = cov_matrix.get_label_names(axis=0)
-    # this is a dictionary with the parameter values, but it might not be in the same order
-    # and it leaves out the Offset parameter
-    param_values = fitter.model.get_params_dict("free", "value")
-    mean_vector = np.array([param_values[x] for x in param_names if not x == "Offset"])
-    if params == "all":
-        # remove the first column and row (absolute phase)
-        if param_names[0] == "Offset":
-            cov_matrix = cov_matrix.get_label_matrix(param_names[1:])
-            fac = fitter.fac[1:]
-            param_names = param_names[1:]
-        else:
-            fac = fitter.fac
-    else:
-        # only select some parameters
-        # need to also select from the fac array and the mean_vector array
-        idx, labels = cov_matrix.get_label_slice(params)
-        cov_matrix = cov_matrix.get_label_matrix(params)
-        index = idx[0].flatten()
-        fac = fitter.fac[index]
-        # except mean_vector does not have the 'Offset' entry
-        # so may need to subtract 1
-        if param_names[0] == "Offset":
-            mean_vector = mean_vector[index - 1]
-        else:
-            mean_vector = mean_vector[index]
-        param_names = cov_matrix.get_label_names(axis=0)
-
-    f_rand = deepcopy(fitter)
-
-    # scale by fac
-    mean_vector = mean_vector * fac
-    scaled_cov_matrix = ((cov_matrix.matrix * fac).T * fac).T
-    random_models = []
-    for imodel in range(Nmodels):
-        # create a set of randomized parameters based on mean vector and covariance matrix
-        rparams_num = np.random.multivariate_normal(mean_vector, scaled_cov_matrix)
-        # scale params back to real units
-        for j in range(len(mean_vector)):
-            rparams_num[j] /= fac[j]
-        rparams = OrderedDict(zip(param_names, rparams_num))
-        f_rand.set_params(rparams)
-        phase = f_rand.model.phase(toas, abs_phase=True)
-        phases_i[imodel] = phase.int
-        phases_f[imodel] = phase.frac
-        if keep_models:
-            random_models.append(f_rand.model)
-            f_rand = deepcopy(fitter)
-    phases = phases_i + phases_f
-    phases0 = fitter.model.phase(toas, abs_phase=True)
-    dphase = phases - (phases0.int + phases0.frac)
-    if keep_models:
-        return dphase, random_models
-    else:
-        return dphase
 
 
 def list_parameters(class_=None):
