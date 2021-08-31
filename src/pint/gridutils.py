@@ -14,7 +14,7 @@ import pint.utils
 
 log = logging.getLogger(__name__)
 
-__all__ = ["grid_chisq", "plot_grid_chisq"]
+__all__ = ["grid_chisq", "grid_chisq_derived", "plot_grid_chisq"]
 
 
 def _grid_docol(ftr, par1_name, par1, par2_name, par2_grid):
@@ -126,11 +126,7 @@ def grid_chisq(ftr, parnames, parvalues, ncpu=None, printprogress=True):
 
 
 def grid_chisq_derived(
-    ftr,
-    parnames,
-    parfuncs,
-    gridvalues,
-    printprogress=True,
+    ftr, parnames, parfuncs, gridvalues, printprogress=True,
 ):
     """Compute chisq over a grid of two parameters, serial version
 
@@ -184,7 +180,7 @@ def grid_chisq_derived(
 
     # Restore saved model
     ftr.model = savemod
-    return chi2
+    return chi2, out
 
 
 def plot_grid_chisq(
