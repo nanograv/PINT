@@ -2,8 +2,9 @@
 import copy
 import multiprocessing
 import os
-from multiprocessing import Process, Queue
-from pathos.multiprocessing import ProcessingPool as Pool
+import logging
+
+# from multiprocessing import Process, Queue
 
 import astropy.constants as const
 import astropy.units as u
@@ -11,7 +12,9 @@ import numpy as np
 
 import pint.utils
 
-__all__ = ["grid_chisq", "grid_chisq_mp", "plot_grid_chisq"]
+log = logging.getLogger(__name__)
+
+__all__ = ["grid_chisq", "plot_grid_chisq"]
 
 
 def _grid_docol(ftr, par1_name, par1, par2_name, par2_grid):
@@ -42,12 +45,10 @@ def _grid_doonefit(ftr, parnames, parvalues):
     return myftr.fit_toas()
 
 
-def grid_chisq_mp(ftr, parnames, parvalues, ncpu=None):
-    """Compute chisq over a grid of two parameters, multiprocessing version
+def grid_chisq(ftr, parnames, parvalues, ncpu=None, printprogress=True):
+    """Compute chisq over a grid of two parameters, serial version
 
-    Use pathos's multiprocessing package to do a parallel computation of
-    chisq over 2-D grid of parameters.  Need this instead of stock python because
-    of unpicklable objects.
+    Computation of chisq over 2-D grid of parameters.
 
     Parameters
     ----------
@@ -58,56 +59,32 @@ def grid_chisq_mp(ftr, parnames, parvalues, ncpu=None):
     parvalues : list
         List of parameter values to grid over (each should be array of Quantity)
     ncpu : int, optional
-        Number of processes to use in parallel. Default is number of CPUs available
-
-    Returns
-    -------
-    array : 2-D array of chisq values with par1 varying in columns and par2 varying in rows
-    """
-
-    if ncpu is None:
-        # Use al available CPUs
-        ncpu = multiprocessing.cpu_count()
-
-    pool = Pool(ncpu)
-    out = np.meshgrid(*parvalues)
-    chi2 = np.zeros(out[0].shape)
-    it = np.nditer(out[0], flags=["multi_index"])
-
-    # First create all the processes and put them in a pool
-    results = pool.map(
-        _grid_doonefit,
-        (ftr,) * len(out[0].flatten()),
-        (parnames,) * len(out[0].flatten()),
-        list(zip(*[x.flatten() for x in out])),
-    )
-    for j, x in enumerate(it):
-        chi2[it.multi_index] = results[j]
-
-    return chi2
-
-
-def grid_chisq(ftr, parnames, parvalues, printprogress=True):
-    """Compute chisq over a grid of two parameters, serial version
-
-    Single-threaded computation of chisq over 2-D grid of parameters.
-
-    Parameters
-    ----------
-    ftr
-        The base fitter to use.
-    parnames : list
-        Names of the parameters to grid over
-    parvalues : list
-        List of parameter values to grid over (each should be array of Quantity)
+        Number of processes to use in parallel. Default is number of CPUs available.
+        If `ncpu` is 1, then use single-threaded version
     printprogress : bool, optional
         Print indications of progress
 
     Returns
     -------
-    array : 2-D array of chisq values 
+    array : 2-D array of chisq values
 
+    Notes
+    -----
+    Uses pathos's multiprocessing package to do a parallel computation of
+    chisq over 2-D grid of parameters.  Need this instead of stock python because
+    of unpicklable objects in python >=3.8
     """
+    if ncpu is None or ncpu > 1:
+        try:
+            from pathos.multiprocessing import ProcessingPool as Pool
+
+            if ncpu is None:
+                # Use al available CPUs
+                ncpu = multiprocessing.cpu_count()
+            pool = Pool(ncpu)
+        except ImportError:
+            log.warning("pathos module not found; using single processor version")
+            ncpu = 1
 
     # Save the current model so we can tweak it for gridding, then restore it at the end
     savemod = ftr.model
@@ -122,15 +99,26 @@ def grid_chisq(ftr, parnames, parvalues, printprogress=True):
     out = np.meshgrid(*parvalues)
     chi2 = np.zeros(out[0].shape)
     it = np.nditer(out[0], flags=["multi_index"])
-    for x in it:
-        for parnum, parname in enumerate(parnames):
-            getattr(ftr.model, parname).quantity = out[parnum][it.multi_index]
-        chi2[it.multi_index] = ftr.fit_toas()
-        if printprogress:
-            print(".", end="")
+    if ncpu > 1:
+        # First create all the processes and put them in a pool
+        results = pool.map(
+            _grid_doonefit,
+            (ftr,) * len(out[0].flatten()),
+            (parnames,) * len(out[0].flatten()),
+            list(zip(*[x.flatten() for x in out])),
+        )
+        for j, x in enumerate(it):
+            chi2[it.multi_index] = results[j]
+    else:
+        for x in it:
+            for parnum, parname in enumerate(parnames):
+                getattr(ftr.model, parname).quantity = out[parnum][it.multi_index]
+            chi2[it.multi_index] = ftr.fit_toas()
+            if printprogress:
+                print(".", end="")
 
-    if printprogress:
-        print("")
+        if printprogress:
+            print("")
 
     # Restore saved model
     ftr.model = savemod
@@ -138,7 +126,11 @@ def grid_chisq(ftr, parnames, parvalues, printprogress=True):
 
 
 def grid_chisq_derived(
-    ftr, parnames, parfuncs, gridvalues, printprogress=True,
+    ftr,
+    parnames,
+    parfuncs,
+    gridvalues,
+    printprogress=True,
 ):
     """Compute chisq over a grid of two parameters, serial version
 
