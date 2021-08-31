@@ -15,18 +15,17 @@ log = logging.getLogger(__name__)
 __all__ = ["grid_chisq", "grid_chisq_derived", "plot_grid_chisq"]
 
 
-def _grid_docol(ftr, par1_name, par1, par2_name, par2_grid):
+def _grid_docolfit(ftr, par1_name, par1_values, parnames, parvalues):
     """Worker process that computes one row of the chisq grid"""
-    chisq = np.zeros(len(par2_grid))
-    for jj, par2 in enumerate(par2_grid):
+    chisq = np.zeros(len(par1_values))
+    for jj, par1 in enumerate(par1_values):
         # Make a full copy of the fitter to work with
         myftr = copy.deepcopy(ftr)
-        # Freeze the two params we are going to grid over and set their values
-        # All other unfrozen parameters will be fitted for at each grid point
+        for parname, parvalue in zip(parnames, parvalues):
+            getattr(myftr.model, parname).frozen = True
+            getattr(myftr.model, parname).quantity = parvalue
         getattr(myftr.model, par1_name).frozen = True
-        getattr(myftr.model, par2_name).frozen = True
         getattr(myftr.model, par1_name).quantity = par1
-        getattr(myftr.model, par2_name).quantity = par2
         chisq[jj] = myftr.fit_toas()
     return chisq
 
@@ -41,6 +40,46 @@ def _grid_doonefit(ftr, parnames, parvalues):
         getattr(myftr.model, parname).frozen = True
         getattr(myftr.model, parname).quantity = parvalue
     return myftr.fit_toas()
+
+
+def grid_chisq_col(ftr, parnames, parvalues, ncpu=None):
+    if ncpu is None or ncpu > 1:
+        try:
+            from pathos.multiprocessing import ProcessingPool as Pool
+
+            if ncpu is None:
+                # Use al available CPUs
+                ncpu = multiprocessing.cpu_count()
+            pool = Pool(ncpu)
+        except ImportError:
+            log.warning("pathos module not found; using single processor version")
+            ncpu = 1
+    # Save the current model so we can tweak it for gridding, then restore it at the end
+    savemod = ftr.model
+    gridmod = copy.deepcopy(ftr.model)
+    ftr.model = gridmod
+
+    # Freeze the  params we are going to grid over
+    for parname in parnames:
+        getattr(ftr.model, parname).frozen = True
+    # All other unfrozen parameters will be fitted for at each grid point
+    out = np.meshgrid(*parvalues[:-1])
+    chi2 = np.zeros(out[0].shape + (len(parvalues[-1]),))
+    print(out[0].shape)
+    print(chi2.shape)
+    print(np.meshgrid(*parvalues)[0].shape)
+    nrep = len(out[0].flatten())
+    results = pool.map(
+        _grid_docolfit,
+        (ftr,) * nrep,
+        (parnames[-1],) * nrep,
+        (parvalues[-1],) * nrep,
+        (parnames[:-1],) * nrep,
+        list(zip(*[x.flatten() for x in out])),
+    )
+    for i, j in enumerate(np.ndindex(out[0].shape)):
+        chi2[j] = results[i]
+    return chi2
 
 
 def grid_chisq(ftr, parnames, parvalues, ncpu=None, printprogress=True):
