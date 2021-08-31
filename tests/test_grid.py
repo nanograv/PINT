@@ -1,15 +1,17 @@
+import io
+import os
+import tempfile
+
 import astropy.units as u
+import numpy as np
+
+import pint.config
+import pint.gridutils
+import pint.models.parameter as param
+import pint.residuals
+from pint.fitter import GLSFitter
 from pint.models.model_builder import get_model, get_model_and_toas
 from pint.toa import get_TOAs
-import pint.residuals
-import io
-import numpy as np
-import tempfile
-import os
-import pint.config
-from pint.fitter import GLSFitter
-import pint.models.parameter as param
-import pint.gridutils
 
 
 def test_grid_singleprocessor():
@@ -120,7 +122,27 @@ def test_grid_3param():
     assert np.isclose(bestfit, chi2grid.min())
 
 
-def test_grid_derived():
+def test_grid_derived_singleprocessor():
+    parfile = pint.config.examplefile("NGC6440E.par")
+    timfile = pint.config.examplefile("NGC6440E.tim")
+    m, t = get_model_and_toas(parfile, timfile)
+
+    f = GLSFitter(t, m)
+    bestfit = f.fit_toas()
+
+    F0 = np.linspace(
+        f.model.F0.quantity - 3 * f.model.F0.uncertainty,
+        f.model.F0.quantity + 3 * f.model.F0.uncertainty,
+        15,
+    )
+    tau = np.linspace(8.1, 8.3, 13) * 100 * u.Myr
+    chi2grid_tau, params = pint.gridutils.grid_chisq_derived(
+        f, ("F0", "F1"), (lambda x, y: x, lambda x, y: -x / 2 / y), (F0, tau), ncpu=1,
+    )
+    assert np.isclose(bestfit, chi2grid_tau.min(), atol=1)
+
+
+def test_grid_derived_multiprocessor():
     parfile = pint.config.examplefile("NGC6440E.par")
     timfile = pint.config.examplefile("NGC6440E.tim")
     m, t = get_model_and_toas(parfile, timfile)
@@ -137,6 +159,4 @@ def test_grid_derived():
     chi2grid_tau, params = pint.gridutils.grid_chisq_derived(
         f, ("F0", "F1"), (lambda x, y: x, lambda x, y: -x / 2 / y), (F0, tau),
     )
-    print(bestfit)
-    print(chi2grid_tau.min())
     assert np.isclose(bestfit, chi2grid_tau.min(), atol=1)
