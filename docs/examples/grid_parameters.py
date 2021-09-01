@@ -21,7 +21,7 @@
 # 4. Determine $\chi^2$ over a grid of 2 parameters
 # 5. Plot the contours of $\chi^2$ over that grid, and compare the 1D and 2D confidence regions
 
-# %%
+# %% tags=[]
 import astropy.units as u
 import numpy as np
 import copy
@@ -35,7 +35,6 @@ from pint.models.model_builder import get_model, get_model_and_toas
 from pint.toa import get_TOAs
 import matplotlib.pyplot as plt
 from astropy.visualization import quantity_support
-
 quantity_support()
 import scipy.stats
 
