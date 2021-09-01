@@ -1,3 +1,4 @@
+"""Test chi^2 gridding routines"""
 import io
 import os
 import tempfile
@@ -20,7 +21,8 @@ def test_grid_singleprocessor():
     m, t = get_model_and_toas(parfile, timfile)
 
     f = GLSFitter(t, m)
-    bestfit = f.fit_toas()
+    f.fit_toas()
+    bestfit = f.resids.chi2
 
     F0 = np.linspace(
         f.model.F0.quantity - 3 * f.model.F0.uncertainty,
@@ -44,7 +46,8 @@ def test_grid_multiprocessor():
     m, t = get_model_and_toas(parfile, timfile)
 
     f = GLSFitter(t, m)
-    bestfit = f.fit_toas()
+    f.fit_toas()
+    bestfit = f.resids.chi2
 
     F0 = np.linspace(
         f.model.F0.quantity - 3 * f.model.F0.uncertainty,
@@ -68,7 +71,8 @@ def test_grid_oneparam():
     m, t = get_model_and_toas(parfile, timfile)
 
     f = GLSFitter(t, m)
-    bestfit = f.fit_toas()
+    f.fit_toas()
+    bestfit = f.resids.chi2
 
     F0 = np.linspace(
         f.model.F0.quantity - 5 * f.model.F0.uncertainty,
@@ -100,7 +104,8 @@ def test_grid_3param():
     modelcomponent.add_param(p, setup=True)
     m.validate()
     f = GLSFitter(t, m)
-    bestfit = f.fit_toas()
+    f.fit_toas()
+    bestfit = f.resids.chi2
 
     F0 = np.linspace(
         f.model.F0.quantity - 3 * f.model.F0.uncertainty,
@@ -128,7 +133,8 @@ def test_grid_derived_singleprocessor():
     m, t = get_model_and_toas(parfile, timfile)
 
     f = GLSFitter(t, m)
-    bestfit = f.fit_toas()
+    f.fit_toas()
+    bestfit = f.resids.chi2
 
     F0 = np.linspace(
         f.model.F0.quantity - 3 * f.model.F0.uncertainty,
@@ -148,7 +154,8 @@ def test_grid_derived_multiprocessor():
     m, t = get_model_and_toas(parfile, timfile)
 
     f = GLSFitter(t, m)
-    bestfit = f.fit_toas()
+    f.fit_toas()
+    bestfit = f.resids.chi2
 
     F0 = np.linspace(
         f.model.F0.quantity - 3 * f.model.F0.uncertainty,
