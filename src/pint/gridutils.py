@@ -1,9 +1,9 @@
 """Tools for building chi-squared grids."""
+import concurrent.futures
 import copy
 import logging
 import multiprocessing
 import os
-import concurrent.futures
 
 import astropy.constants as const
 import astropy.units as u
