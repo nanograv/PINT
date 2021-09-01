@@ -35,6 +35,7 @@ from pint.models.model_builder import get_model, get_model_and_toas
 from pint.toa import get_TOAs
 import matplotlib.pyplot as plt
 from astropy.visualization import quantity_support
+
 quantity_support()
 import scipy.stats
 
