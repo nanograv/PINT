@@ -178,7 +178,7 @@ def grid_chisq_derived(
     chi2 = np.zeros(grid[0].shape)
     out = []
     # convert the gridded values to the actual parameter values
-    for j in range(len(gridvalues)):
+    for j in range(len(parfuncs)):
         out.append(parfuncs[j](*grid))
 
     if ncpu > 1:
