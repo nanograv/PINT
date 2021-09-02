@@ -42,8 +42,8 @@ def grid_chisq(
     ftr,
     parnames,
     parvalues,
-    ncpu=None,
     executor=concurrent.futures.ProcessPoolExecutor,
+    ncpu=None,
     chunksize=1,
     printprogress=True,
 ):
@@ -57,11 +57,12 @@ def grid_chisq(
         Names of the parameters to grid over
     parvalues : list
         List of parameter values to grid over (each should be 1D array of astropy.units.Quantity)
+    executor : concurrent.futures.Executor or None, optional
+        Executor object to run multiple processes in parallel
+        If None, will run single-processor version
     ncpu : int, optional
-        Number of processes to use in parallel. Default is number of CPUs available.
-        If `ncpu` is 1, then use single-threaded version
-    executor : concurrent.futures.Executor
-        Executor object to run multiple processes in parallel (if `ncpu` is None or >1)
+        If an existing Executor is not supplied, one will be created with this number of workers.
+        If 1, will run single-processor version
     chunksize : int
         Size of the chunks for :class:`concurrent.futures.ProcessPoolExecutor` parallel execution.
         Ignored for :class:`concurrent.futures.ThreadPoolExecutor`
@@ -71,11 +72,57 @@ def grid_chisq(
     Returns
     -------
     np.ndarray : array of chisq values
+
+    Example
+    -------
+    >>> import astropy.units as u
+    >>> import numpy as np
+
+    >>> import pint.config
+    >>> import pint.gridutils
+    >>> from pint.fitter import WLSFitter
+    >>> from pint.models.model_builder import get_model, get_model_and_toas
+
+    # Load in a basic dataset
+    >>> parfile = pint.config.examplefile("NGC6440E.par")
+    >>> timfile = pint.config.examplefile("NGC6440E.tim")
+    >>> m, t = get_model_and_toas(parfile, timfile)
+
+    >>> f = WLSFitter(t, m)
+    # find the best-fit
+    >>> f.fit_toas()
+    >>> bestfit = f.resids.chi2
+
+    # We'll do something like 3-sigma around the best-fit values of  F0
+    >>> F0 = np.linspace(f.model.F0.quantity - 3 * f.model.F0.uncertainty,f.model.F0.quantity + 3 * f.model.F0.uncertainty,25)
+    >>> chi2_F0 = pint.gridutils.grid_chisq(f, ("F0",), (F0,))
+
+    Notes
+    -----
+    By default, it will create :class:`~concurrent.futures.ProcessPoolExecutor`
+    with ``max_workers`` equal to the desired number of cpus.
+    However, if you are running this as a script you may need something like:
+
+    import multiprocessing
+    if __name__ == "__main__":
+        multiprocessing.freeze_support()
+        ...
+        grid_chisq(...)
+
+    If an instantiated :class:`~concurrent.futures.Executor` is passed instead, it will be used as-is.
     """
-    if ncpu is None or ncpu > 1:
+
+    if isinstance(executor, concurrent.futures.Executor):
+        # the executor has already been created
+        executor = executor
+    elif isinstance(executor, type):
+        # it's a type of executor to instantiate.  See if we know how to do it
         if ncpu is None:
-            # Use al available CPUs
             ncpu = multiprocessing.cpu_count()
+        if ncpu > 1:
+            executor = executor(max_workers=ncpu)
+        else:
+            executor = None
 
     # Save the current model so we can tweak it for gridding, then restore it at the end
     savemod = ftr.model
@@ -89,8 +136,10 @@ def grid_chisq(
     # All other unfrozen parameters will be fitted for at each grid point
     out = np.meshgrid(*parvalues)
     chi2 = np.zeros(out[0].shape)
-    if ncpu > 1:
-        with executor(max_workers=ncpu) as e:
+    if executor is not None:
+        print(out[0].shape)
+        print(chi2.shape)
+        with executor as e:
             result = e.map(
                 doonefit,
                 (ftr,) * len(out[0].flatten()),
@@ -124,8 +173,8 @@ def grid_chisq_derived(
     parnames,
     parfuncs,
     gridvalues,
-    ncpu=None,
     executor=concurrent.futures.ProcessPoolExecutor,
+    ncpu=None,
     chunksize=1,
     printprogress=True,
 ):
@@ -141,11 +190,12 @@ def grid_chisq_derived(
         List of functions to convert `gridvalues` to quantities accessed through `parnames`
     gridvalues : list
         List of underlying grid values to grid over (each should be 1D array of astropy.units.Quantity)
+    executor : concurrent.futures.Executor or None, optional
+        Executor object to run multiple processes in parallel
+        If None, will run single-processor version
     ncpu : int, optional
-        Number of processes to use in parallel. Default is number of CPUs available.
-        If `ncpu` is 1, then use single-threaded version
-    executor : concurrent.futures.Executor
-        Executor object to run multiple processes in parallel (if `ncpu` is None or >1)
+        If an existing Executor is not supplied, one will be created with this number of workers.
+        If 1, will run single-processor version
     chunksize : int
         Size of the chunks for :class:`concurrent.futures.ProcessPoolExecutor` parallel execution.
         Ignored for :class:`concurrent.futures.ThreadPoolExecutor`
@@ -157,12 +207,21 @@ def grid_chisq_derived(
     np.ndarray : array of chisq values
     parvalues : list of np.ndarray
         Parameter values computed from `gridvalues` and `parfuncs`
-    """
 
-    if ncpu is None or ncpu > 1:
-        if ncpu is None:
-            # Use al available CPUs
-            ncpu = multiprocessing.cpu_count()
+    Notes
+    -----
+    By default, it will create :class:`~concurrent.futures.ProcessPoolExecutor`
+    with ``max_workers`` equal to the desired number of cpus.
+    However, if you are running this as a script you may need something like:
+
+    import multiprocessing
+    if __name__ == "__main__":
+        multiprocessing.freeze_support()
+        ...
+        grid_chisq_derived(...)
+
+    If an instantiated :class:`~concurrent.futures.Executor` is passed instead, it will be used as-is.
+    """
 
     # Save the current model so we can tweak it for gridding, then restore it at the end
     savemod = ftr.model
@@ -181,8 +240,8 @@ def grid_chisq_derived(
     for j in range(len(parfuncs)):
         out.append(parfuncs[j](*grid))
 
-    if ncpu > 1:
-        with executor(max_workers=ncpu) as e:
+    if executor is not None:
+        with executor as e:
             result = e.map(
                 doonefit,
                 (ftr,) * len(out[0].flatten()),
