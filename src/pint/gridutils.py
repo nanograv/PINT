@@ -56,7 +56,7 @@ def grid_chisq(
     parnames : list
         Names of the parameters to grid over
     parvalues : list
-        List of parameter values to grid over (each should be 1D array of astropy.units.Quantity)
+        List of parameter values to grid over (each should be 1D array of :class:`astropy.units.Quantity`)
     executor : concurrent.futures.Executor or None, optional
         Executor object to run multiple processes in parallel
         If None, will run single-processor version
@@ -77,22 +77,18 @@ def grid_chisq(
     -------
     >>> import astropy.units as u
     >>> import numpy as np
-
     >>> import pint.config
     >>> import pint.gridutils
     >>> from pint.fitter import WLSFitter
     >>> from pint.models.model_builder import get_model, get_model_and_toas
-
     # Load in a basic dataset
     >>> parfile = pint.config.examplefile("NGC6440E.par")
     >>> timfile = pint.config.examplefile("NGC6440E.tim")
     >>> m, t = get_model_and_toas(parfile, timfile)
-
     >>> f = WLSFitter(t, m)
     # find the best-fit
     >>> f.fit_toas()
     >>> bestfit = f.resids.chi2
-
     # We'll do something like 3-sigma around the best-fit values of  F0
     >>> F0 = np.linspace(f.model.F0.quantity - 3 * f.model.F0.uncertainty,f.model.F0.quantity + 3 * f.model.F0.uncertainty,25)
     >>> chi2_F0 = pint.gridutils.grid_chisq(f, ("F0",), (F0,))
@@ -101,13 +97,14 @@ def grid_chisq(
     -----
     By default, it will create :class:`~concurrent.futures.ProcessPoolExecutor`
     with ``max_workers`` equal to the desired number of cpus.
-    However, if you are running this as a script you may need something like:
+    However, if you are running this as a script you may need something like::
 
-    import multiprocessing
-    if __name__ == "__main__":
-        multiprocessing.freeze_support()
-        ...
-        grid_chisq(...)
+        import multiprocessing
+
+        if __name__ == "__main__":
+            multiprocessing.freeze_support()
+            ...
+            grid_chisq(...)
 
     If an instantiated :class:`~concurrent.futures.Executor` is passed instead, it will be used as-is.
     """
@@ -212,7 +209,7 @@ def grid_chisq_derived(
     -----
     By default, it will create :class:`~concurrent.futures.ProcessPoolExecutor`
     with ``max_workers`` equal to the desired number of cpus.
-    However, if you are running this as a script you may need something like:
+    However, if you are running this as a script you may need something like::
 
     import multiprocessing
     if __name__ == "__main__":
