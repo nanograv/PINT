@@ -169,11 +169,7 @@ def test_grid_derived_singleprocessor():
     )
     tau = np.linspace(8.1, 8.3, 13) * 100 * u.Myr
     chi2grid_tau, params = pint.gridutils.grid_chisq_derived(
-        f,
-        ("F0", "F1"),
-        (lambda x, y: x, lambda x, y: -x / 2 / y),
-        (F0, tau),
-        ncpu=1,
+        f, ("F0", "F1"), (lambda x, y: x, lambda x, y: -x / 2 / y), (F0, tau), ncpu=1,
     )
     assert np.isclose(bestfit, chi2grid_tau.min(), atol=1)
 
@@ -194,10 +190,7 @@ def test_grid_derived_multiprocessor():
     )
     tau = np.linspace(8.1, 8.3, 13) * 100 * u.Myr
     chi2grid_tau, params = pint.gridutils.grid_chisq_derived(
-        f,
-        ("F0", "F1"),
-        (lambda x, y: x, lambda x, y: -x / 2 / y),
-        (F0, tau),
+        f, ("F0", "F1"), (lambda x, y: x, lambda x, y: -x / 2 / y), (F0, tau),
     )
     assert np.isclose(bestfit, chi2grid_tau.min(), atol=1)
 
