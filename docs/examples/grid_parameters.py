@@ -119,7 +119,8 @@ ax.legend()
 chi2grid = pint.gridutils.grid_chisq(f, ("F0", "F1"), (F0, F1))
 
 # %% [markdown]
-# We want to plot contour levels appropriate for the joint confidence contours with 2 parameters.  This is discussed many places (e.g., https://ned.ipac.caltech.edu/level5/Wall2/Wal3_4.html).  Rather than look up the values in a table we will compute them ourselves.
+# We want to plot contour levels appropriate for the joint confidence contours with 2 parameters.  This is discussed many places (e.g., https://ned.ipac.caltech.edu/level5/Wall2/Wal3_4.html, or Chapter 15.6 of Numerical Recipes in C - in particular look at Figure 15.6.4).  
+# Rather than look up the values in a table we will compute them ourselves.
 #
 # The goal is to find $x$ such that the CDF of the $\chi^2_\nu$ (for $\nu=2$ parameters) distribution evaluated at $x$ is equal to the desired confidence interval.
 #
