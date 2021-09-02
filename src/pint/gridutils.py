@@ -219,6 +219,17 @@ def grid_chisq_derived(
 
     If an instantiated :class:`~concurrent.futures.Executor` is passed instead, it will be used as-is.
     """
+    if isinstance(executor, concurrent.futures.Executor):
+        # the executor has already been created
+        executor = executor
+    elif isinstance(executor, type):
+        # it's a type of executor to instantiate.  See if we know how to do it
+        if ncpu is None:
+            ncpu = multiprocessing.cpu_count()
+        if ncpu > 1:
+            executor = executor(max_workers=ncpu)
+        else:
+            executor = None
 
     # Save the current model so we can tweak it for gridding, then restore it at the end
     savemod = ftr.model
