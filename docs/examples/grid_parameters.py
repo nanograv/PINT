@@ -30,7 +30,7 @@ import pint.config
 import pint.gridutils
 import pint.models.parameter as param
 import pint.residuals
-from pint.fitter import GLSFitter
+from pint.fitter import WLSFitter
 from pint.models.model_builder import get_model, get_model_and_toas
 from pint.toa import get_TOAs
 import matplotlib.pyplot as plt
@@ -47,7 +47,7 @@ parfile = pint.config.examplefile("NGC6440E.par")
 timfile = pint.config.examplefile("NGC6440E.tim")
 m, t = get_model_and_toas(parfile, timfile)
 
-f = GLSFitter(t, m)
+f = WLSFitter(t, m)
 # find the best-fit
 f.fit_toas()
 bestfit = f.resids.chi2
