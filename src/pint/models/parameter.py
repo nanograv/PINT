@@ -1521,7 +1521,7 @@ class maskParameter(floatParameter):
         # {key_name: (keyvalue parse function, keyvalue length)}
         # Move this to some other places.
         self.key_identifier = {
-            "mjd": (_identity_function, 2),
+            "mjd": (float, 2),
             "freq": (_return_frequency_asquantity, 2),
             "name": (str, 1),
             "tel": (_get_observatory_name, 1),
