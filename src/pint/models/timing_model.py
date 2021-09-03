@@ -1833,18 +1833,13 @@ class TimingModel:
                     newstr += "{:14s} {:>28s}".format(pn, str(par.quantity))
                     if otherpar is not None and otherpar.quantity is not None:
                         newstr += " {:>28s}\n".format(str(otherpar.quantity))
-                    else:
-                        newstr += " {:>28s}\n".format("Missing")
-                    try:
                         if otherpar.quantity != par.quantity:
                             log.info(
                                 "Parameter %s not fit, but has changed between these models"
                                 % par.name
                             )
-                    except AttributeError:
-                        log.warning(
-                            "Comparison par file is missing parameter {}".format(pn)
-                        )
+                    else:
+                        newstr += " {:>28s}\n".format("Missing")
                 else:
                     # If fitted, print both values with uncertainties
                     if par.units == u.hourangle:
