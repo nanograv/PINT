@@ -355,7 +355,7 @@ def main(argv=None):
 
     # Plot the scaled prior probability alongside the initial gaussian probability distribution and the histogrammed samples
     ftr.plot_priors(
-        chains, burnin, scale=True, file=ftr.model.PSR.value + "_priors_scaled.png"
+        chains, burnin, scale=True, plotfile=ftr.model.PSR.value + "_priors_scaled.png"
     )
 
     # Make a phaseogram with the 50th percentile values

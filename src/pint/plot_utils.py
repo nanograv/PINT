@@ -187,7 +187,7 @@ def plot_priors(
     burnin=100,
     bins=100,
     scale=False,
-    file=False,
+    plotfile=None,
 ):
     """Plot of priors and the post-MCMC histogrammed samples
     
@@ -197,17 +197,32 @@ def plot_priors(
     
     Parameters
     ----------
+    model : a pint timing model instance
+        The initial timing model for fitting
     chains : dict
         Post MCMC integration chains that contain the fitter keys and post
-        MCMC samples which are histogrammed
+        MCMC samples which are histogrammed. Thinning the samples from the
+        chains is not supported. Can be created using 
+        :meth:`pint.sampler.EmceeSampler.chains_to_dict`
     maxpost_fitvals : list, optional
-        The maximum posterier values returned from MCMC integration
+        The maximum posterier values returned from MCMC integration for each
+        fitter key. Plots a vertical dashed line to denote the maximum 
+        posterior value in relation to the histogrammed samples. If the 
+        values are not provided, then the lines are not plotted
     fitvals : list, optional
-        The original parameter fit values
+        The original parameter fit values. Plots vertical dashed lines to 
+        denote the original parameter fit values in relation to the 
+        histogrammed samples. If the values are not provided, then the 
+        lines are not plotted. 
     burnin : int
         The number of steps that are the burnin in the MCMC integration
     bins : int
         Number of bins used in the histogram
+    scale : bool
+        If true, the priors will be scaled to the peak of the histograms.
+        Otherwise, the priors will be plotted independent of the histograms.
+    plotfile : optional
+        Name of the plotfile to be saved
     """
     keys = []
     values = []
@@ -275,5 +290,8 @@ def plot_priors(
             handles, labels = axs[0].get_legend_handles_labels()
             axs[i].set_axis_off()
             axs[i].legend(handles, labels)
-    if file:
-        fig.savefig(file)
+    if plotfile is not None:
+        plt.savefig(plotfile)
+        plt.close()
+    else:
+        plt.show()

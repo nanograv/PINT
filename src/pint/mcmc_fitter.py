@@ -434,7 +434,7 @@ class MCMCFitter(Fitter):
             plt.savefig(self.model.PSR.value + "_htest_v_wgtcut_unweighted.png")
         plt.close()
 
-    def plot_priors(self, chains, burnin, bins=100, scale=False, file=False):
+    def plot_priors(self, chains, burnin, bins=100, scale=False, plotfile=None):
         plot_utils.plot_priors(
             self.model,
             chains,
@@ -443,7 +443,7 @@ class MCMCFitter(Fitter):
             burnin=burnin,
             bins=bins,
             scale=scale,
-            file=file,
+            plotfile=plotfile,
         )
 
 
