@@ -29,7 +29,5 @@ def test_pickle_prefixparameter():
 
 
 def test_pickle_maskparameter():
-    m = get_model(
-        "tests/datafile/J1713+0747_NANOGrav_11yv0.gls.par",
-    )
+    m = get_model("tests/datafile/J1713+0747_NANOGrav_11yv0.gls.par",)
     s = pickle.dumps(m)
