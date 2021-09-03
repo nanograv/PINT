@@ -8,6 +8,10 @@ from pint.models.parameter import prefixParameter
 from pint.models.timing_model import DelayComponent, MissingParameter
 
 
+def _description_frequency_dependent_coefficients(x):
+    return "%d term of frequency dependent  coefficients" % x
+
+
 class FD(DelayComponent):
     """A timing model for frequency evolution of pulsar profiles.
 
@@ -33,10 +37,11 @@ class FD(DelayComponent):
                 units="second",
                 value=0.0,
                 description="Coefficient of delay as a polynomial function of log-frequency",
-                descriptionTplt=lambda x: (
-                    "%d term of frequency" " dependent  coefficients" % x
-                ),
-                unitTplt=lambda x: "second",
+                # descriptionTplt=lambda x: (
+                #    "%d term of frequency" " dependent  coefficients" % x
+                # ),
+                descriptionTplt=_description_frequency_dependent_coefficients,
+                # unitTplt=lambda x: "second",
                 type_match="float",
             )
         )
@@ -91,8 +96,7 @@ class FD(DelayComponent):
         return FD_delay * self.FD1.units
 
     def d_delay_FD_d_FDX(self, toas, param, acc_delay=None):
-        """This is a derivative function for FD parameter
-        """
+        """This is a derivative function for FD parameter"""
         tbl = toas.table
         try:
             bfreq = self._parent.barycentric_radio_freq(toas)

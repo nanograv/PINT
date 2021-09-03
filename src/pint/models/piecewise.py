@@ -7,6 +7,34 @@ from pint.models.timing_model import MissingParameter, PhaseComponent
 from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
 
 
+def _description_solution_epochstart(x):
+    return ("Start epoch of solution piece %d" % x,)
+
+
+def _description_solution_epochstop(x):
+    return ("Stop epoch of solution piece %d" % x,)
+
+
+def _description_solution_epoch(x):
+    return ("Epoch of solution piece %d" % x,)
+
+
+def _description_solution_startphase(x):
+    return ("Starting phase of solution piece %d" % x,)
+
+
+def _description_solution_frequency(x):
+    return "Frequency of solution piece %d" % x
+
+
+def _description_solution_frequencyderivative(x):
+    return "Frequency-derivative of solution piece %d " % x
+
+
+def _description_solution_secondfrequencyderivative(x):
+    return "Second frequency-derivative of solution piece %d " % x
+
+
 class PiecewiseSpindown(PhaseComponent):
     """Pulsar spin-down piecewise solution.
 
@@ -26,8 +54,9 @@ class PiecewiseSpindown(PhaseComponent):
             prefixParameter(
                 name="PWSTART_1",
                 units="MJD",
-                unit_template=lambda x: "MJD",
-                description_template=lambda x: "Epoch of solution piece %d" % x,
+                # unit_template=lambda x: "MJD",
+                # description_template=lambda x: "Epoch of solution piece %d" % x,
+                description_template=_description_solution_epochstart,
                 parameter_type="MJD",
                 time_scale="tdb",
             )
@@ -37,8 +66,9 @@ class PiecewiseSpindown(PhaseComponent):
             prefixParameter(
                 name="PWSTOP_1",
                 units="MJD",
-                unit_template=lambda x: "MJD",
-                description_template=lambda x: "Epoch of solution piece %d" % x,
+                # unit_template=lambda x: "MJD",
+                # description_template=lambda x: "Epoch of solution piece %d" % x,
+                description_template=_description_solution_epochstop,
                 parameter_type="MJD",
                 time_scale="tdb",
             )
@@ -47,8 +77,9 @@ class PiecewiseSpindown(PhaseComponent):
             prefixParameter(
                 name="PWEP_1",
                 units="MJD",
-                unit_template=lambda x: "MJD",
-                description_template=lambda x: "Epoch of solution piece %d" % x,
+                # unit_template=lambda x: "MJD",
+                # description_template=lambda x: "Epoch of solution piece %d" % x,
+                description_template=_description_solution_epoch,
                 parameter_type="MJD",
                 time_scale="tdb",
             )
@@ -58,9 +89,10 @@ class PiecewiseSpindown(PhaseComponent):
                 name="PWPH_1",
                 units="",
                 value=0.0,
-                description_template=lambda x: "Starting phase of solution piece %d"
-                % x,
-                unit_template=lambda x: "",
+                # description_template=lambda x: "Starting phase of solution piece %d"
+                #% x,
+                description_template=_description_solution_startphase,
+                # unit_template=lambda x: "",
                 type_match="float",
                 uncertainty=1,
             )
@@ -70,8 +102,9 @@ class PiecewiseSpindown(PhaseComponent):
                 name="PWF0_1",
                 units="Hz",
                 value=0.0,
-                description_template=lambda x: "Frequency of solution piece %d" % x,
-                unit_template=lambda x: "Hz",
+                # description_template=lambda x: "Frequency of solution piece %d" % x,
+                description_template=_description_solution_frequency,
+                # unit_template=lambda x: "Hz",
                 type_match="float",
             )
         )
@@ -80,9 +113,10 @@ class PiecewiseSpindown(PhaseComponent):
                 name="PWF1_1",
                 units="Hz/s",
                 value=0.0,
-                description_template=lambda x: "Frequency-derivative of solution piece"
-                " %d " % x,
-                unit_template=lambda x: "Hz/s",
+                # description_template=lambda x: "Frequency-derivative of solution piece"
+                # " %d " % x,
+                description_template=_description_solution_frequencyderivative,
+                # unit_template=lambda x: "Hz/s",
             )
         )
         self.add_param(
@@ -90,10 +124,11 @@ class PiecewiseSpindown(PhaseComponent):
                 name="PWF2_1",
                 units="Hz/s^2",
                 value=0.0,
-                description_template=lambda x: "Second frequency-"
-                "derivative of solution piece"
-                " %d " % x,
-                unit_template=lambda x: "Hz/s^2",
+                # description_template=lambda x: "Second frequency-"
+                # "derivative of solution piece"
+                # " %d " % x,
+                description_template=_description_solution_secondfrequencyderivative,
+                # unit_template=lambda x: "Hz/s^2",
             )
         )
 
