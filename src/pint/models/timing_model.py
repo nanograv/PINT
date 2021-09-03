@@ -1835,10 +1835,15 @@ class TimingModel:
                         newstr += " {:>28s}\n".format(str(otherpar.quantity))
                     else:
                         newstr += " {:>28s}\n".format("Missing")
-                    if otherpar.quantity != par.quantity:
-                        log.info(
-                            "Parameter %s not fit, but has changed between these models"
-                            % par.name
+                    try:
+                        if otherpar.quantity != par.quantity:
+                            log.info(
+                                "Parameter %s not fit, but has changed between these models"
+                                % par.name
+                            )
+                    except AttributeError:
+                        log.warning(
+                            "Comparison par file is missing parameter {}".format(pn)
                         )
                 else:
                     # If fitted, print both values with uncertainties
