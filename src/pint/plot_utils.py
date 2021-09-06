@@ -197,7 +197,7 @@ def plot_priors(
     
     Parameters
     ----------
-    model : a pint timing model instance
+    model : pint.models.timing_model.TimingModel
         The initial timing model for fitting
     chains : dict
         Post MCMC integration chains that contain the fitter keys and post
