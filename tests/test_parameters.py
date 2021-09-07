@@ -524,16 +524,8 @@ def test_set_uncertainty_bogus_raises(p):
         boolParameter(name="FISH"),
         intParameter(name="FISH"),
         strParameter(name="FISH"),
-        pytest.param(
-            maskParameter(name="JUMP"),
-            # marks=pytest.mark.xfail(reason="maskParameter uses lambdas internally."),
-        ),
-        pytest.param(
-            prefixParameter(name="F0"),
-            # marks=pytest.mark.xfail(
-            #    reason="prefixParameter uses lambda functions for formatting help and defining units"
-            # ),
-        ),
+        pytest.param(maskParameter(name="JUMP"),),
+        pytest.param(prefixParameter(name="F0"),),
         pairParameter(name="WEAVE"),
         AngleParameter(name="BEND"),
     ],
