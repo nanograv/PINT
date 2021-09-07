@@ -8,10 +8,6 @@ from pint.models.parameter import prefixParameter
 from pint.models.timing_model import DelayComponent, MissingParameter
 
 
-def _description_frequency_dependent_coefficients(x):
-    return "%d term of frequency dependent  coefficients" % x
-
-
 class FD(DelayComponent):
     """A timing model for frequency evolution of pulsar profiles.
 
@@ -25,6 +21,10 @@ class FD(DelayComponent):
     .. paramtable::
         :class: pint.models.frequency_dependent.FD
     """
+
+    @classmethod
+    def _description_template(cls x):
+        return "%d term of frequency dependent coefficients" % x
 
     register = True
     category = "frequency_dependent"
@@ -40,7 +40,7 @@ class FD(DelayComponent):
                 # descriptionTplt=lambda x: (
                 #    "%d term of frequency" " dependent  coefficients" % x
                 # ),
-                descriptionTplt=_description_frequency_dependent_coefficients,
+                descriptionTplt=self.__class__._description_template,
                 # unitTplt=lambda x: "second",
                 type_match="float",
             )
