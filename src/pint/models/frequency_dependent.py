@@ -23,7 +23,7 @@ class FD(DelayComponent):
     """
 
     @classmethod
-    def _description_template(cls x):
+    def _description_template(cls, x):
         return "%d term of frequency dependent coefficients" % x
 
     register = True
