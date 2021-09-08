@@ -102,6 +102,24 @@ def grid_chisq(
             grid_chisq(...)
 
     If an instantiated :class:`~concurrent.futures.Executor` is passed instead, it will be used as-is.
+
+
+    The behavior for different combinations of `executor` and `ncpu` is:
+    +-----------------+--------+------------------------+
+    | `executor`      | `ncpu` | result                 |
+    +=================+========+========================+
+    | existing object | any    | uses existing executor |
+    +-----------------+--------+------------------------+
+    | None	      | 1      | uses single-processor  |
+    +-----------------+--------+------------------------+
+    | None	      | None   | creates default        |
+    |                 |        | executor with          |
+    |                 |        | ``cpu_count`` workers  |
+    +-----------------+--------+------------------------+
+    | None	      | >1     | creates default        |
+    |                 |        | executor with desired  |
+    |                 |        | number of workers      |
+    +-----------------+--------+------------------------+
     """
 
     if isinstance(executor, concurrent.futures.Executor):
@@ -210,6 +228,23 @@ def grid_chisq_derived(
         grid_chisq_derived(...)
 
     If an instantiated :class:`~concurrent.futures.Executor` is passed instead, it will be used as-is.
+
+    The behavior for different combinations of `executor` and `ncpu` is:
+    +-----------------+--------+------------------------+
+    | `executor`      | `ncpu` | result                 |
+    +=================+========+========================+
+    | existing object | any    | uses existing executor |
+    +-----------------+--------+------------------------+
+    | None	      | 1      | uses single-processor  |
+    +-----------------+--------+------------------------+
+    | None	      | None   | creates default        |
+    |                 |        | executor with          |
+    |                 |        | ``cpu_count`` workers  |
+    +-----------------+--------+------------------------+
+    | None	      | >1     | creates default        |
+    |                 |        | executor with desired  |
+    |                 |        | number of workers      |
+    +-----------------+--------+------------------------+
     """
     if isinstance(executor, concurrent.futures.Executor):
         # the executor has already been created
