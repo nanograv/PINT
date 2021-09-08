@@ -315,5 +315,5 @@ plt.grid()
 # %% [markdown]
 # ### Print out the summary
 
-# %%
+# %% tags=[]
 f.print_summary()

@@ -1,20 +1,19 @@
-# model_builder.py
-# Defines the automatic timing model generator interface
+import logging
 import os
 import tempfile
 from collections import Counter, defaultdict
 
-from astropy import log
-
+from pint.models.parameter import maskParameter
 from pint.models.timing_model import (
+    DEFAULT_ORDER,
     Component,
     TimingModel,
     ignore_prefix,
-    DEFAULT_ORDER,
 )
-from pint.models.parameter import maskParameter
-from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
 from pint.toa import get_TOAs
+from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
+
+log = logging.getLogger(__name__)
 
 __all__ = ["get_model"]
 

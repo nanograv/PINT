@@ -1,12 +1,13 @@
-import os
+"""Tools for building chi-squared grids."""
 import copy
 import multiprocessing
+import os
 from multiprocessing import Process, Queue
 
+import astropy.constants as const
 import astropy.units as u
 import numpy as np
-from astropy import log
-import astropy.constants as const
+
 import pint.utils
 
 __all__ = ["grid_chisq", "grid_chisq_mp", "plot_grid_chisq"]

@@ -1,5 +1,6 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore::DeprecationWarning
 import argparse
+import logging
 import os
 import sys
 
@@ -8,7 +9,6 @@ import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize as op
-from astropy import log
 from astropy.coordinates import SkyCoord
 from scipy.stats import norm, uniform
 
@@ -25,6 +25,8 @@ from pint.models.priors import (
     UniformUnboundedRV,
 )
 from pint.observatory.satellite_obs import get_satellite_observatory
+
+log = logging.getLogger(__name__)
 
 __all__ = ["read_gaussfitfile", "marginalize_over_phase", "main"]
 # log.setLevel('DEBUG')

@@ -9,7 +9,7 @@ from glob import glob
 from hypothesis import given
 from hypothesis.strategies import integers, floats, sampled_from
 from hypothesis.extra.numpy import arrays
-from pint import toa
+from pint import toa, simulation
 from pint.observatory import bipm_default
 from pint.models import get_model, get_model_and_toas
 from pinttestdata import datadir
@@ -263,9 +263,9 @@ def test_load_multiple(tmpdir):
     m = get_model(StringIO(simplepar))
 
     fakes = [
-        toa.make_fake_toas(55000, 55500, 10, model=m, obs="ao"),
-        toa.make_fake_toas(56000, 56500, 10, model=m, obs="gbt"),
-        toa.make_fake_toas(57000, 57500, 10, model=m, obs="@"),
+        simulation.make_fake_toas_uniform(55000, 55500, 10, model=m, obs="ao"),
+        simulation.make_fake_toas_uniform(56000, 56500, 10, model=m, obs="gbt"),
+        simulation.make_fake_toas_uniform(57000, 57500, 10, model=m, obs="@"),
     ]
 
     filenames = [os.path.join(tmpdir, f"t{i+1}.tim") for i in range(len(fakes))]
@@ -282,9 +282,9 @@ def test_pickle_multiple(tmpdir):
     m = get_model(StringIO(simplepar))
 
     fakes = [
-        toa.make_fake_toas(55000, 55500, 10, model=m, obs="ao"),
-        toa.make_fake_toas(56000, 56500, 10, model=m, obs="gbt"),
-        toa.make_fake_toas(57000, 57500, 10, model=m, obs="@"),
+        simulation.make_fake_toas_uniform(55000, 55500, 10, model=m, obs="ao"),
+        simulation.make_fake_toas_uniform(56000, 56500, 10, model=m, obs="gbt"),
+        simulation.make_fake_toas_uniform(57000, 57500, 10, model=m, obs="@"),
     ]
 
     filenames = [os.path.join(tmpdir, f"t{i+1}.tim") for i in range(len(fakes))]
@@ -308,9 +308,9 @@ def test_pickle_multiple(tmpdir):
 def test_merge_indices():
     m = get_model(StringIO(simplepar))
     fakes = [
-        toa.make_fake_toas(55000, 55500, 5, model=m, obs="ao"),
-        toa.make_fake_toas(56000, 56500, 10, model=m, obs="gbt"),
-        toa.make_fake_toas(57000, 57500, 15, model=m, obs="@"),
+        simulation.make_fake_toas_uniform(55000, 55500, 5, model=m, obs="ao"),
+        simulation.make_fake_toas_uniform(56000, 56500, 10, model=m, obs="gbt"),
+        simulation.make_fake_toas_uniform(57000, 57500, 15, model=m, obs="@"),
     ]
     toas = toa.merge_TOAs(fakes)
     check_indices_contiguous(toas)
@@ -319,9 +319,9 @@ def test_merge_indices():
 def test_merge_indices_excised():
     m = get_model(StringIO(simplepar))
     fakes = [
-        toa.make_fake_toas(55000, 55500, 5, model=m, obs="ao"),
-        toa.make_fake_toas(56000, 56500, 10, model=m, obs="gbt"),
-        toa.make_fake_toas(57000, 57500, 15, model=m, obs="@"),
+        simulation.make_fake_toas_uniform(55000, 55500, 5, model=m, obs="ao"),
+        simulation.make_fake_toas_uniform(56000, 56500, 10, model=m, obs="gbt"),
+        simulation.make_fake_toas_uniform(57000, 57500, 15, model=m, obs="@"),
     ]
     fakes_excised = [f[1:-1] for f in fakes]
     toas = toa.merge_TOAs(fakes)
@@ -336,7 +336,7 @@ def test_merge_indices_excised():
 
 def test_renumber_subset():
     m = get_model(StringIO(simplepar))
-    toas = toa.make_fake_toas(55000, 55500, 10, model=m, obs="ao")
+    toas = simulation.make_fake_toas_uniform(55000, 55500, 10, model=m, obs="ao")
 
     sub = toas[1:-1]
     assert 0 not in sub.table["index"]
@@ -347,7 +347,7 @@ def test_renumber_subset():
 
 def test_renumber_order():
     m = get_model(StringIO(simplepar))
-    toas = toa.make_fake_toas(55000, 55500, 10, model=m, obs="ao")
+    toas = simulation.make_fake_toas_uniform(55000, 55500, 10, model=m, obs="ao")
     rev = toas[::-1]
     assert np.all(rev.table["index"] == np.arange(len(rev))[::-1])
     rev.renumber()
@@ -363,9 +363,9 @@ def test_renumber_order():
 def test_renumber_subset_reordered():
     m = get_model(StringIO(simplepar))
     fakes = [
-        toa.make_fake_toas(55000, 55500, 5, model=m, obs="ao"),
-        toa.make_fake_toas(56000, 56500, 10, model=m, obs="gbt"),
-        toa.make_fake_toas(57000, 57500, 15, model=m, obs="@"),
+        simulation.make_fake_toas_uniform(55000, 55500, 5, model=m, obs="ao"),
+        simulation.make_fake_toas_uniform(56000, 56500, 10, model=m, obs="gbt"),
+        simulation.make_fake_toas_uniform(57000, 57500, 15, model=m, obs="@"),
     ]
     fakes_excised = [f[1:-1] for f in fakes]
     toas_excised = toa.merge_TOAs(fakes_excised)

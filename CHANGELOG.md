@@ -9,6 +9,8 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Now ensures T2CMETHOD is IAU2000B if it is set at all; likewise DILATEFREQ and TIMEEPH (PR #970)
 - Merging TOAs objects now ensures that their index columns don't overlap (PR #1029)
 - change_dmepoch now works even if DMEPOCH is not set (PR #1025)
+- Fixed factor of 2 error in d_phase_d_toa() (PR #1129)
+- Fixed change_binary_epoch (PR #1120)
 ### Added
 - DownhillWLSFitter, DownhillGLSFitter, WidebandDownhillFitter are new Fitters that are more careful about convergence than the existing ones (PR #975)
 - Fitters have a .is_wideband boolean attribute (PR #975)
@@ -18,9 +20,14 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - New function utils.info_string() to return information about the PINT run (user, version, OS, optional comments).  This is run during TOA output to tim file or model output to par file by default, but can be suppressed by setting include_info=False (PR #1069)
 - New functions for calculations of post-Keplerian parameters (PR #1088)
 - New tutorial for simulating data and making a mass-mass plot (PR #1096)
+- Added better axis scaling to pintk (PR #1116)
 ### Changed
 - get_groups() is renamed to get_clusters() and is no longer automatically called during TOA creation.  Can still be run manually, with the gap specified.  Addition of a clusters column to the TOA.table object is optional (PR #1070)
 - Some functions from utils.py are now in derived_quantities.py (PR #1102)
+- Data for tutorials etc. and clock files are now installed properly, with locations retrievable at runtime (PR #1103)
+- Changed from using astropy logging to python logging (PR #1093)
+- Code coverage reports are now informational and don't cause CI to fail (PRs #1085, #1087)
+- API for TOA flags significantly changes, now only hold strings and allow fancy indexing (PR #1074)
 
 ## [0.8.2] - 2021-01-27
 ### Fixed

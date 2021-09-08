@@ -1,12 +1,10 @@
 """Ground-based fixed observatories."""
-# topo_obs.py
-# Code for dealing with "standard" ground-based observatories.
+import logging
 import os
 
 import astropy.constants as c
 import astropy.units as u
 import numpy
-from astropy import log
 from astropy.coordinates import EarthLocation
 
 from pint import JD_MJD
@@ -17,6 +15,8 @@ from pint.observatory.clock_file import ClockFile
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import get_tdb_tt_ephem_geocenter, objPosVel_wrt_SSB
 from pint.utils import has_astropy_unit
+
+log = logging.getLogger(__name__)
 
 
 class TopoObs(Observatory):

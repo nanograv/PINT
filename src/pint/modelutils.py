@@ -1,5 +1,9 @@
-from astropy import log
+import logging
 from pint.models.astrometry import AstrometryEquatorial, AstrometryEcliptic
+
+log = logging.getLogger(__name__)
+
+# FIXME: shouldn't this be in the AstrometryEquatorial and AstrometryEcliptic classes?
 
 
 def model_ecliptic_to_equatorial(model, force=False):

@@ -1,13 +1,11 @@
 """Astrometric models for describing pulsar sky positions."""
-# astrometry.py
-# Defines Astrometry timing model class
+import logging
 import sys
 
 import astropy.constants as const
 import astropy.coordinates as coords
 import astropy.units as u
 import numpy as np
-from astropy import log
 from astropy.time import Time
 
 from pint import ls
@@ -20,6 +18,8 @@ from pint.models.parameter import (
 from pint.models.timing_model import DelayComponent, MissingParameter
 from pint.pulsar_ecliptic import OBL, PulsarEcliptic
 from pint.utils import add_dummy_distance, remove_dummy_distance
+
+log = logging.getLogger(__name__)
 
 astropy_version = sys.modules["astropy"].__version__
 mas_yr = u.mas / u.yr
@@ -253,8 +253,8 @@ class AstrometryEquatorial(Astrometry):
             floatParameter(
                 name="PMRA",
                 units="mas/year",
-                value=0.0,
                 description="Proper motion in RA",
+                value=0.0,
             )
         )
 
@@ -262,8 +262,8 @@ class AstrometryEquatorial(Astrometry):
             floatParameter(
                 name="PMDEC",
                 units="mas/year",
-                value=0.0,
                 description="Proper motion in DEC",
+                value=0.0,
             )
         )
         self.set_special_params(["RAJ", "DECJ", "PMRA", "PMDEC"])
@@ -280,7 +280,9 @@ class AstrometryEquatorial(Astrometry):
             if getattr(self, p).value is None:
                 raise MissingParameter("Astrometry", p)
         # Check for POSEPOCH
-        if self.POSEPOCH.quantity is None:
+        if (
+            self.PMRA.quantity != 0 or self.PMDEC.quantity != 0
+        ) and self.POSEPOCH.quantity is None:
             if self._parent.PEPOCH.quantity is None:
                 raise MissingParameter(
                     "AstrometryEquatorial",
@@ -288,7 +290,6 @@ class AstrometryEquatorial(Astrometry):
                     "POSEPOCH or PEPOCH are required if PM is set.",
                 )
             else:
-                log.warning("POSEPOCH not found; using PEPOCH unless set explicitly!")
                 self.POSEPOCH.quantity = self._parent.PEPOCH.quantity
 
     def print_par(self):
@@ -318,7 +319,7 @@ class AstrometryEquatorial(Astrometry):
         Returns
         -------
         position
-        ICRS SkyCoord object optionally with proper motion applied
+            ICRS SkyCoord object optionally with proper motion applied
 
         If epoch (MJD) is specified, proper motion is included to return
         the position at the given epoch.
@@ -517,9 +518,9 @@ class AstrometryEcliptic(Astrometry):
             floatParameter(
                 name="PMELONG",
                 units="mas/year",
-                value=0.0,
                 description="Proper motion in ecliptic longitude",
                 aliases=["PMLAMBDA"],
+                value=0.0,
             )
         )
 
@@ -527,9 +528,9 @@ class AstrometryEcliptic(Astrometry):
             floatParameter(
                 name="PMELAT",
                 units="mas/year",
-                value=0.0,
                 description="Proper motion in ecliptic latitude",
                 aliases=["PMBETA"],
+                value=0.0,
             )
         )
 
@@ -556,7 +557,9 @@ class AstrometryEcliptic(Astrometry):
             if getattr(self, p).value is None:
                 raise MissingParameter("AstrometryEcliptic", p)
         # Check for POSEPOCH
-        if self.POSEPOCH.quantity is None:
+        if (
+            self.PMELONG.value != 0 or self.PMELAT.value != 0
+        ) and self.POSEPOCH.quantity is None:
             if self._parent.PEPOCH.quantity is None:
                 raise MissingParameter(
                     "Astrometry",
@@ -564,7 +567,6 @@ class AstrometryEcliptic(Astrometry):
                     "POSEPOCH or PEPOCH are required if PM is set.",
                 )
             else:
-                log.warning("POSEPOCH not found; using PEPOCH unless set explicitly!")
                 self.POSEPOCH.quantity = self._parent.PEPOCH.quantity
 
     def barycentric_radio_freq(self, toas):
@@ -592,7 +594,6 @@ class AstrometryEcliptic(Astrometry):
 
         If epoch (MJD) is specified, proper motion is included to return
         the position at the given epoch.
-
         """
         try:
             obliquity = OBL[self.ECL.value]
@@ -602,6 +603,7 @@ class AstrometryEcliptic(Astrometry):
                 "Check your pint/datafile/ecliptic.dat file."
             )
         if epoch is None or (self.PMELONG.value == 0.0 and self.PMELAT.value == 0.0):
+            # Compute only once
             return coords.SkyCoord(
                 obliquity=obliquity,
                 lon=self.ELONG.quantity,
@@ -612,6 +614,7 @@ class AstrometryEcliptic(Astrometry):
                 frame=PulsarEcliptic,
             )
         else:
+            # Compute for each time because there is proper motion
             if isinstance(epoch, Time):
                 newepoch = epoch
             else:
@@ -628,9 +631,7 @@ class AstrometryEcliptic(Astrometry):
         return pos_ecl.transform_to(coords.ICRS)
 
     def coords_as_GAL(self, epoch=None):
-        """Return the pulsar's galactic coordinates as an astropy coordinate object.
-
-        """
+        """Return the pulsar's galactic coordinates as an astropy coordinate object."""
         pos_ecl = self.get_psr_coords(epoch=epoch)
         return pos_ecl.transform_to(coords.Galactic)
 
@@ -647,7 +648,7 @@ class AstrometryEcliptic(Astrometry):
         return pos_ecl
 
     def get_d_delay_quantities_ecliptical(self, toas):
-        """Calculate values needed for many d_delay_d_param functions """
+        """Calculate values needed for many d_delay_d_param functions."""
         # TODO: Move all these calculations in a separate class for elegance
         rd = dict()
         # From the earth_ra dec to earth_elong and elat
@@ -678,7 +679,7 @@ class AstrometryEcliptic(Astrometry):
         return result
 
     def d_delay_astrometry_d_ELONG(self, toas, param="", acc_delay=None):
-        """Calculate the derivative wrt RAJ
+        """Calculate the derivative wrt RAJ.
 
         For the RAJ and DEC derivatives, use the following approximate model for
         the pulse delay. (Inner-product between two Cartesian vectors)

@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 import os
 from copy import deepcopy
 
@@ -10,7 +9,7 @@ import numpy as np
 import astropy.units as u
 
 from pint.models import get_model, get_model_and_toas
-from pint import fitter, toa
+from pint import fitter, toa, simulation
 from pinttestdata import datadir
 import pint.models.parameter as param
 from pint import ls
@@ -30,15 +29,15 @@ def test_random_models():
 
     # this contains TOAs up through 54200
     # make new ones starting there
-    tnew = toa.make_fake_toas(54200, 59000, 59000 - 54200, f.model)
-    dphase, mrand = utils.calculate_random_models(f, tnew, Nmodels=100)
+    tnew = simulation.make_fake_toas_uniform(54200, 59000, 59000 - 54200, f.model)
+    dphase, mrand = simulation.calculate_random_models(f, tnew, Nmodels=100)
 
     # this is a bit stochastic, but I see typically < 0.14 cycles
     # for the uncertainty at 59000
     assert np.all(dphase.std(axis=0) < 0.2)
 
     # redo it with only F0 free
-    dphase_F, mrand_F = utils.calculate_random_models(
+    dphase_F, mrand_F = simulation.calculate_random_models(
         f, tnew, Nmodels=100, params=["F0"]
     )
 
