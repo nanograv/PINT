@@ -339,7 +339,7 @@ class DispersionDMX(Dispersion):
         self.delay_funcs_component += [self.DMX_dispersion_delay]
 
     def add_DMX_range(self, mjd_start, mjd_end, index=None, dmx=0, frozen=True):
-        """ Add DMX range to a dispersion model with specified start/end MJDs and DMX.
+        """Add DMX range to a dispersion model with specified start/end MJDs and DMX.
 
         Parameters
         ----------
@@ -386,9 +386,7 @@ class DispersionDMX(Dispersion):
                 name="DMX_" + i,
                 units="pc cm^-3",
                 value=dmx,
-                unit_template=lambda x: "pc cm^-3",
                 description="Dispersion measure variation",
-                description_template=lambda x: "Dispersion measure",
                 parameter_type="float",
                 frozen=frozen,
             )
@@ -397,9 +395,7 @@ class DispersionDMX(Dispersion):
             prefixParameter(
                 name="DMXR1_" + i,
                 units="MJD",
-                unit_template=lambda x: "MJD",
                 description="Beginning of DMX interval",
-                description_template=lambda x: "Beginning of DMX interval",
                 parameter_type="MJD",
                 time_scale="utc",
                 value=mjd_start,
@@ -409,9 +405,7 @@ class DispersionDMX(Dispersion):
             prefixParameter(
                 name="DMXR2_" + i,
                 units="MJD",
-                unit_template=lambda x: "MJD",
                 description="End of DMX interval",
-                description_template=lambda x: "End of DMX interval",
                 parameter_type="MJD",
                 time_scale="utc",
                 value=mjd_end,

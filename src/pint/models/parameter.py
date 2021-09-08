@@ -36,6 +36,7 @@ from pint.observatory import get_observatory
 from pint.pulsar_mjd import (
     Time,
     data2longdouble,
+    quantity2longdouble_withunit,
     fortran_float,
     str2longdouble,
     time_from_longdouble,
@@ -46,6 +47,57 @@ from pint.toa_select import TOASelect
 from pint.utils import split_prefixed_name
 
 log = logging.getLogger(__name__)
+
+
+def _identity_function(x):
+    """A function to just return the input argument
+
+    A replacement for::
+
+        lambda x: x
+
+    which is needed below.
+
+    Parameters
+    ----------
+    x
+
+    Returns
+    -------
+    x
+    """
+
+    return x
+
+
+def _get_observatory_name(o):
+    """Return observatory name only from an telescope code
+
+    Parameters
+    ----------
+    o : str or unicode
+        Input telescope code
+
+    Returns
+    -------
+    str
+    """
+    return get_observatory(str(o)).name
+
+
+def _return_frequency_asquantity(f):
+    """Return frequency as a quantity (MHz assumed)
+
+    Parameters
+    ----------
+    f : float
+
+    Returns
+    -------
+    astropy.units.Quantity
+    """
+
+    return u.Quantity(f, u.MHz, copy=False)
 
 
 class Parameter:
@@ -606,11 +658,11 @@ class floatParameter(Parameter):
         """
         # Check long_double
         if not self._long_double:
-            setfunc_with_unit = lambda x: x
-            setfunc_no_unit = lambda x: fortran_float(x)
+            setfunc_with_unit = _identity_function
+            setfunc_no_unit = fortran_float
         else:
-            setfunc_with_unit = lambda x: data2longdouble(x.to(x.unit).value) * x.unit
-            setfunc_no_unit = lambda x: data2longdouble(x)
+            setfunc_with_unit = quantity2longdouble_withunit
+            setfunc_no_unit = data2longdouble
 
         # First try to use astropy unit conversion
         try:
@@ -1135,6 +1187,8 @@ class prefixParameter:
         >>> description_template = lambda x: 'This is the description of parameter %d'%x
         >>> unit_template = lambda x: 'second^%d'%x
 
+    Although it is best to avoid using lambda functions
+
     Parameters
     ----------
     parameter_type : str, optional
@@ -1164,7 +1218,6 @@ class prefixParameter:
         Set float type quantity and value in numpy long doubles.
     time_scale : str, optional
         Time scale for MJDParameter class.
-
     """
 
     def __init__(
@@ -1212,16 +1265,18 @@ class prefixParameter:
         input_units = units
         input_description = description
         self.prefix_aliases = [] if prefix_aliases is None else prefix_aliases
-        # set templates, the templates should be a lambda function and input is
+        # set templates, the templates should be a named function and input is
         # the index of prefix parameter.
-        if self.unit_template is None:
-            self.unit_template = lambda x: input_units
-        if self.description_template is None:
-            self.description_template = lambda x: input_description
 
         # Set the description and units for the parameter compostion.
-        real_units = self.unit_template(self.index)
-        real_description = self.description_template(self.index)
+        if self.unit_template is not None:
+            real_units = self.unit_template(self.index)
+        else:
+            real_units = input_units
+        if self.description_template is not None:
+            real_description = self.description_template(self.index)
+        else:
+            real_description = input_description
         aliases = []
         for pa in self.prefix_aliases:
             aliases.append(pa + self.idxfmt)
@@ -1466,10 +1521,10 @@ class maskParameter(floatParameter):
         # {key_name: (keyvalue parse function, keyvalue length)}
         # Move this to some other places.
         self.key_identifier = {
-            "mjd": (lambda x: time.Time(x, format="mjd").mjd, 2),
-            "freq": (lambda x: u.Quantity(x, u.MHz, copy=False), 2),
+            "mjd": (float, 2),
+            "freq": (_return_frequency_asquantity, 2),
             "name": (str, 1),
-            "tel": (lambda x: get_observatory(str(x)).name, 1),
+            "tel": (_get_observatory_name, 1),
         }
 
         if not isinstance(key_value, (list, tuple)):
