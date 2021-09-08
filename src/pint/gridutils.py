@@ -39,13 +39,7 @@ def doonefit(ftr, parnames, parvalues):
 
 
 def grid_chisq(
-    ftr,
-    parnames,
-    parvalues,
-    executor=concurrent.futures.ProcessPoolExecutor,
-    ncpu=None,
-    chunksize=1,
-    printprogress=True,
+    ftr, parnames, parvalues, executor=None, ncpu=None, chunksize=1, printprogress=True,
 ):
     """Compute chisq over a grid of parameters
 
@@ -59,10 +53,11 @@ def grid_chisq(
         List of parameter values to grid over (each should be 1D array of :class:`astropy.units.Quantity`)
     executor : concurrent.futures.Executor or None, optional
         Executor object to run multiple processes in parallel
-        If None, will run single-processor version
+        If None, will use default :class:`concurrent.futures.ProcessPoolExecutor`, unless overridden by ``ncpu=1``
     ncpu : int, optional
         If an existing Executor is not supplied, one will be created with this number of workers.
         If 1, will run single-processor version
+        If None, will use :func:`multiprocessing.cpu_count`
     chunksize : int
         Size of the chunks for :class:`concurrent.futures.ProcessPoolExecutor` parallel execution.
         Ignored for :class:`concurrent.futures.ThreadPoolExecutor`
@@ -112,14 +107,11 @@ def grid_chisq(
     if isinstance(executor, concurrent.futures.Executor):
         # the executor has already been created
         executor = executor
-    elif isinstance(executor, type):
-        # it's a type of executor to instantiate.  See if we know how to do it
+    elif executor is None and (ncpu is None or ncpu > 1):
+        # make the default type of Executor
         if ncpu is None:
             ncpu = multiprocessing.cpu_count()
-        if ncpu > 1:
-            executor = executor(max_workers=ncpu)
-        else:
-            executor = None
+        executor = concurrent.futures.ProcessPoolExecutor(max_workers=ncpu)
 
     # Save the current model so we can tweak it for gridding, then restore it at the end
     savemod = ftr.model
@@ -133,9 +125,8 @@ def grid_chisq(
     # All other unfrozen parameters will be fitted for at each grid point
     out = np.meshgrid(*parvalues)
     chi2 = np.zeros(out[0].shape)
+    # at this point, if the executor is None then run single-processor version
     if executor is not None:
-        print(out[0].shape)
-        print(chi2.shape)
         with executor as e:
             result = e.map(
                 doonefit,
@@ -170,7 +161,7 @@ def grid_chisq_derived(
     parnames,
     parfuncs,
     gridvalues,
-    executor=concurrent.futures.ProcessPoolExecutor,
+    executor=None,
     ncpu=None,
     chunksize=1,
     printprogress=True,
@@ -189,10 +180,11 @@ def grid_chisq_derived(
         List of underlying grid values to grid over (each should be 1D array of astropy.units.Quantity)
     executor : concurrent.futures.Executor or None, optional
         Executor object to run multiple processes in parallel
-        If None, will run single-processor version
+        If None, will use default :class:`concurrent.futures.ProcessPoolExecutor`, unless overridden by ``ncpu=1``
     ncpu : int, optional
         If an existing Executor is not supplied, one will be created with this number of workers.
         If 1, will run single-processor version
+        If None, will use :func:`multiprocessing.cpu_count`
     chunksize : int
         Size of the chunks for :class:`concurrent.futures.ProcessPoolExecutor` parallel execution.
         Ignored for :class:`concurrent.futures.ThreadPoolExecutor`
@@ -222,14 +214,11 @@ def grid_chisq_derived(
     if isinstance(executor, concurrent.futures.Executor):
         # the executor has already been created
         executor = executor
-    elif isinstance(executor, type):
-        # it's a type of executor to instantiate.  See if we know how to do it
+    elif executor is None and (ncpu is None or ncpu > 1):
+        # make the default type of Executor
         if ncpu is None:
             ncpu = multiprocessing.cpu_count()
-        if ncpu > 1:
-            executor = executor(max_workers=ncpu)
-        else:
-            executor = None
+        executor = concurrent.futures.ProcessPoolExecutor(max_workers=ncpu)
 
     # Save the current model so we can tweak it for gridding, then restore it at the end
     savemod = ftr.model
@@ -248,6 +237,7 @@ def grid_chisq_derived(
     for j in range(len(parfuncs)):
         out.append(parfuncs[j](*grid))
 
+    # at this point, if the executor is None then run single-processor version
     if executor is not None:
         with executor as e:
             result = e.map(
