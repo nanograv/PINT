@@ -1,8 +1,8 @@
 import logging
 
 import numpy as np
-
 from pinttestdata import datadir
+
 from pint.templates import lcfitters, lcprimitives, lctemplate
 
 

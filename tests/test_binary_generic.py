@@ -1,17 +1,17 @@
 """Tests of PINT generic binary model """
 
 import logging
-from os.path import basename, join
-from glob import glob
 import unittest
-import pytest
+from glob import glob
+from os.path import basename, join
 from warnings import warn
 
-from pint.models.model_builder import get_model
-from pint.models.timing_model import MissingParameter, TimingModel, Component
-from utils import verify_stand_alone_binary_parameter_updates
+import pytest
 from pinttestdata import datadir
+from utils import verify_stand_alone_binary_parameter_updates
 
+from pint.models.model_builder import get_model
+from pint.models.timing_model import Component, MissingParameter, TimingModel
 
 bad_trouble = ["J1923+2515_NANOGrav_9yv1.gls.par", "J1744-1134.basic.ecliptic.par"]
 

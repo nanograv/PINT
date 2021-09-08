@@ -5,10 +5,10 @@ import unittest
 import astropy.time as time
 import astropy.units as u
 import numpy as np
-
-import pint.toa as t
-import pint.models as m
 from pinttestdata import datadir
+
+import pint.models as m
+import pint.toa as t
 
 
 class TestOrbitPhase(unittest.TestCase):

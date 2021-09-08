@@ -6,6 +6,7 @@ from copy import deepcopy
 import astropy.units as u
 import numpy as np
 import pytest
+from astropy.time import Time
 from numpy.testing import assert_allclose
 from pinttestdata import datadir
 
@@ -13,7 +14,7 @@ from pint.models import (
     DEFAULT_ORDER,
     AstrometryEquatorial,
     BinaryELL1,
-    DelayJump,
+    PhaseJump,
     Spindown,
     TimingModel,
     Wave,
@@ -88,23 +89,31 @@ class TestModelBuilding:
             "TestTimingModel", [BinaryELL1(), AstrometryEquatorial(), Spindown()]
         )
 
-        tm.add_component(DelayJump(), validate=False)
+        tm.add_component(PhaseJump(), validate=False)
         # Test link
         # TODO may be add a get_component function
-        cp = tm.components["DelayJump"]
+        cp = tm.components["PhaseJump"]
         assert cp._parent == tm
 
         # Test order
-        cp_pos = tm.DelayComponent_list.index(cp)
-        assert cp_pos == 2
+        # Wait why do we know this should be number 1?
+        cp_pos = tm.PhaseComponent_list.index(cp)
+        assert cp_pos == 1
 
         print(cp.params)
         print(cp.get_prefix_mapping_component("JUMP"))
         print(id(cp), "test")
         add_jumps = [
-            ("JUMP", {"value": 0.1, "key": "mjd", "key_value": [55000, 56000]}),
-            ("JUMP", {"value": 0.2, "key": "freq", "key_value": [1440, 2000]}),
-            ("JUMP", {"value": 0.3, "key": "tel", "key_value": "ao"}),
+            ("JUMP", {"value": 0.1, "flag": "mjd", "flag_value": [55000, 56000],},),
+            (
+                "JUMP",
+                {
+                    "value": 0.2,
+                    "flag": "freq",
+                    "flag_value": [1440 * u.MHz, 2000 * u.MHz],
+                },
+            ),
+            ("JUMP", {"value": 0.3, "flag": "tel", "flag_value": "ao"}),
         ]
 
         for jp in add_jumps:
@@ -113,9 +122,9 @@ class TestModelBuilding:
             p_vals = jp[1]
             par = p.maskParameter(
                 name=p_name,
-                key=p_vals["key"],
+                flag=p_vals["flag"],
                 value=p_vals["value"],
-                key_value=p_vals["key_value"],
+                flag_value=p_vals["flag_value"],
                 units=u.s,
             )
             print("test", par.name)
@@ -131,18 +140,16 @@ class TestModelBuilding:
         jump1 = getattr(tm, "JUMP1")
         jump2 = getattr(tm, "JUMP2")
         jump3 = getattr(tm, "JUMP3")
-        assert jump1.key == "mjd"
-        assert jump2.key == "freq"
-        assert jump3.key == "tel"
-        # Check jump value
+        assert jump1.flag == "mjd"
+        assert jump2.flag == "freq"
+        assert jump3.flag == "tel"
         assert jump1.value == 0.1
         assert jump2.value == 0.2
         assert jump3.value == 0.3
-        # Check jump key value
-        assert jump1.key_value == [55000, 56000]
-        assert jump2.key_value == [1440 * u.MHz, 2000 * u.MHz]
-        assert jump3.key_value == ["arecibo"]
-        assert tm.jumps == ["JUMP1", "JUMP2", "JUMP3"]
+        assert jump1.flag_value == (55000, 56000)
+        assert jump2.flag_value == (1440 * u.MHz, 2000 * u.MHz)
+        assert jump3.flag_value == "arecibo"
+        assert len(tm.jumps) == 3
 
     def test_remove_component(self):
         tm = TimingModel(
@@ -153,7 +160,7 @@ class TestModelBuilding:
 
         # test remove by name
         tm.remove_component("BinaryELL1")
-        assert "BinaryELL1" not in tm.components.keys()
+        assert "BinaryELL1" not in tm.components
         assert remove_cp not in tm.DelayComponent_list
 
         # test remove by component
@@ -163,7 +170,7 @@ class TestModelBuilding:
 
         remove_cp2 = tm2.components["BinaryELL1"]
         tm2.remove_component(remove_cp2)
-        assert "BinaryELL1" not in tm2.components.keys()
+        assert "BinaryELL1" not in tm2.components
         assert remove_cp2 not in tm2.DelayComponent_list
 
     def test_free_params(self):
@@ -333,8 +340,12 @@ def test_jump_flags_to_params(timfile_jumps, timfile_nojumps, model_0437):
     m.jump_flags_to_params(t)
     assert "PhaseJump" in m.components
     assert len(m.components["PhaseJump"].jumps) == 2
-    assert "JUMP1" in m.components["PhaseJump"].jumps
-    assert "JUMP2" in m.components["PhaseJump"].jumps
+    assert ("jump", "1") in [
+        (j.flag, j.flag_value) for j in m.components["PhaseJump"].jumps
+    ]
+    assert ("jump", "2") in [
+        (j.flag, j.flag_value) for j in m.components["PhaseJump"].jumps
+    ]
 
 
 def test_supports_rm():

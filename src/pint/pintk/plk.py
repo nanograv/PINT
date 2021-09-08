@@ -13,6 +13,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 import pint.pintk.pulsar as pulsar
 import pint.pintk.colormodes as cm
+import pint.models.parameter
 
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
@@ -61,41 +62,23 @@ plotlabels = {
 helpstring = """The following interactions are currently supported by the Plk pane in the PINTkinter GUI:
 
 Left click:     Select a point
-
 Right click:    Delete a point
-
 r:              Reset the pane - undo all deletions, selections, etc.
-
 k:              (K)orrect the pane - rescale the axes
-
 f:              Perform a fit on the selected points
-
 d:              Delete the highlighted points
-
 u:              Undo the most recent selection
-
 c:              Clear highlighter from map
-
 j:              Jump the selected points, or unjump them if already jumped
-
 v:              Jump all TOA groups except those selected
-
 i:              Print the prefit model as of this moment
-
 o:              Print the postfit model as of this moment (if it exists)
-
 p:              Print info about highlighted points (or all, if none are selected)
-
 m:              Print the range of MJDs with the highest density of TOAs
-
 +:              Increase pulse number for selected points
-
 -:              Decrease pulse number for selected points
-
 >:              Increase pulse number for all points to the right of selection
-
 <:              Decrease pulse number for all points to the right of selection
-
 h:              Print help
 """
 
@@ -162,10 +145,15 @@ class PlkFitBoxesWidget(tk.Frame):
             self.compGrids.append([])
             for pp, par in enumerate(showpars):
                 self.parVars[par] = tk.IntVar()
+                pm = getattr(model, par)
+                if isinstance(pm, pint.models.parameter.maskParameter):
+                    par_text = f"{pm.origin_name} {pm.key} {pm.key_value}"
+                else:
+                    par_text = par
                 self.compGrids[ii].append(
                     tk.Checkbutton(
                         self,
-                        text=par,
+                        text=par_text,
                         variable=self.parVars[par],
                         command=lambda p=par: self.changedFitCheckBox(p),
                     )
@@ -553,7 +541,6 @@ class PlkWidget(tk.Frame):
         if self.psr is not None:
             self.psr.update_resids()
             self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
-            self.jumped = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
             self.actionsWidget.setFitButtonText("Fit")
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.randomboxWidget.addRandomCheckbox(self)
@@ -567,16 +554,8 @@ class PlkWidget(tk.Frame):
 
     def setPulsar(self, psr, updates):
         self.psr = psr
-        # self.selected & self.jumped = boolean arrays, len = all_toas, True = selected/jumped
+        # self.selected boolean array, len = all_toas, True = selected
         self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
-        self.jumped = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
-        # update jumped with any jump params already in the file
-        for param in self.psr.prefit_model.params:
-            if (
-                param.startswith("JUMP")
-                and getattr(self.psr.prefit_model, param).frozen == False
-            ):
-                self.updateJumped(getattr(self.psr.prefit_model, param).name)
         self.update_callbacks = updates
 
         if not hasattr(self, "base_state"):
@@ -587,7 +566,6 @@ class PlkWidget(tk.Frame):
                 self.psr.selected_toas.table["flags"]
             )
             self.base_state.selected = copy.deepcopy(self.selected)
-            self.base_state.jumped = copy.deepcopy(self.jumped)
             self.state_stack.append(self.base_state)
 
         self.fitboxesWidget.setCallbacks(self.fitboxChecked)
@@ -628,8 +606,6 @@ class PlkWidget(tk.Frame):
         getattr(self.psr.prefit_model, parchanged).frozen = not newstate
         if self.psr.fitted:
             getattr(self.psr.postfit_model, parchanged).frozen = not newstate
-        if parchanged.startswith("JUMP"):
-            self.updateJumped(parchanged)
         self.call_updates()
         self.updatePlot(keepAxes=True)
 
@@ -647,9 +623,6 @@ class PlkWidget(tk.Frame):
         fit the selected points using the current pre-fit model
         """
         if not self.psr is None:
-            # check jumps wont cancel fit, if so, exit here
-            if self.check_jump_invalid() == True:
-                return None
             if self.psr.fitted:
                 # append the current state to the state stack
                 self.current_state.psr = copy.deepcopy(self.psr)
@@ -659,7 +632,6 @@ class PlkWidget(tk.Frame):
                 self.current_state.t_flags = copy.deepcopy(
                     self.psr.selected_toas.table["flags"]
                 )
-                self.current_state.jumped = copy.deepcopy(self.jumped)
                 self.state_stack.append(copy.deepcopy(self.current_state))
             self.psr.fit(self.selected)
             self.current_state.selected = copy.deepcopy(self.selected)
@@ -669,13 +641,6 @@ class PlkWidget(tk.Frame):
             self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             xid, yid = self.xyChoiceWidget.plotIDs()
             self.xyChoiceWidget.setChoice(xid=xid, yid="post-fit")
-            self.jumped = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
-            for param in self.psr.prefit_model.params:
-                if (
-                    param.startswith("JUMP")
-                    and getattr(self.psr.prefit_model, param).frozen == False
-                ):
-                    self.updateJumped(getattr(self.psr.prefit_model, param).name)
             self.updatePlot(keepAxes=False)
         self.call_updates()
 
@@ -691,13 +656,6 @@ class PlkWidget(tk.Frame):
         self.psr.all_toas.table["flags"] = copy.deepcopy(self.base_state.ft_flags)
         self.psr.selected_toas.table["flags"] = copy.deepcopy(self.base_state.t_flags)
         self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
-        self.jumped = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
-        for param in self.psr.prefit_model.params:
-            if (
-                param.startswith("JUMP")
-                and getattr(self.psr.prefit_model, param).frozen == False
-            ):
-                self.updateJumped(param)
         self.actionsWidget.setFitButtonText("Fit")
         self.fitboxesWidget.addFitCheckBoxes(self.base_state.psr.prefit_model)
         self.randomboxWidget.addRandomCheckbox(self)
@@ -726,7 +684,8 @@ class PlkWidget(tk.Frame):
                     % filename
                 )
             fout.close()
-        except:
+        except Exception as e:
+            log.error(f"Exception occurred: {e}")
             if filename == () or filename == "":
                 print("Write Par cancelled.")
             else:
@@ -744,7 +703,8 @@ class PlkWidget(tk.Frame):
         try:
             log.info("Choose output file %s" % filename)
             self.psr.all_toas.write_TOA_file(filename, format="TEMPO2")
-        except:
+        except Exception as e:
+            log.error(f"Exception occurred: {e}")
             if filename == () or filename == "":
                 print("Write Tim cancelled.")
             else:
@@ -759,7 +719,6 @@ class PlkWidget(tk.Frame):
             self.psr = copy.deepcopy(c_state.psr)
             self.psr.all_toas.table["flags"] = copy.deepcopy(c_state.ft_flags)
             self.psr.selected_toas.table["flags"] = copy.deepcopy(c_state.t_flags)
-            self.jumped = copy.deepcopy(c_state.jumped)
             self.selected = copy.deepcopy(c_state.selected)
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.randomboxWidget.addRandomCheckbox(self)
@@ -896,15 +855,15 @@ class PlkWidget(tk.Frame):
                 self.plkAx2x.yaxis.set_major_locator(
                     mpl.ticker.FixedLocator(self.plkAxes.get_yticks() * f0)
                 )
-            except:
-                pass
+            except Exception as e:
+                log.error(f"Exception occurred: {e}")
         else:
             self.plkAxes.set_ylabel(plotlabels[self.yid])
 
         self.plkAxes.set_title(self.psr.name, y=1.1)
 
         # plot random models
-        if self.psr.fitted == True and self.randomboxWidget.getRandomModel() == 1:
+        if self.psr.fitted and self.randomboxWidget.getRandomModel() == 1:
             log.info("plotting random models")
             f_toas = self.psr.fake_toas
             print("Computing random models based on parameter covariance matrix...")
@@ -973,8 +932,8 @@ class PlkWidget(tk.Frame):
                 f0x = r.get_PSR_freq().to(u.MHz).value
                 header += " %16s" % plotlabels[self.xid][1]
                 xf = True
-            except:
-                pass
+            except Exception as e:
+                log.error(f"Exception occurred: {e}")
         else:
             header += " %16s" % plotlabels[self.xid]
         if self.yid in ["pre-fit", "post-fit"]:
@@ -988,8 +947,8 @@ class PlkWidget(tk.Frame):
                 f0y = r.get_PSR_freq().to(u.MHz).value
                 header += " %16s" % plotlabels[self.yid][1]
                 yf = True
-            except:
-                pass
+            except Exception as e:
+                log.error(f"Exception occurred: {e}")
         else:
             header += "%12s" % plotlabels[self.yid]
 
@@ -1003,8 +962,8 @@ class PlkWidget(tk.Frame):
             self.psr.selected_toas.table["flags"]
             keys = True
             header += "%18s" % "Flags"
-        except:
-            pass
+        except Exception as e:
+            log.error(f"Exception occurred: {e}")
 
         print(header)
         print("-" * len(header))
@@ -1028,7 +987,8 @@ class PlkWidget(tk.Frame):
                             line += (
                                 " %1s" % self.psr.selected_toas.table["flags"][i][key]
                             )
-                        except:
+                        except Exception as e:
+                            log.error(f"Exception occurred: {e}")
                             line += (
                                 " %16.8g"
                                 % self.psr.selected_toas.table["flags"][i][key]
@@ -1041,7 +1001,8 @@ class PlkWidget(tk.Frame):
                             line2 += (
                                 " %1s" % self.psr.selected_toas.table["flags"][i][key]
                             )
-                        except:
+                        except Exception as e:
+                            log.error(f"Exception occurred: {e}")
                             line2 += (
                                 " %16.8g"
                                 % self.psr.selected_toas.table["flags"][i][key]
@@ -1120,45 +1081,6 @@ class PlkWidget(tk.Frame):
 
         return ind
 
-    def check_jump_invalid(self):
-        """checks if jumps will cancel the attempted fit"""
-        if "PhaseJump" not in self.psr.prefit_model.components:
-            return False
-        fit_jumps = []
-        for param in self.psr.prefit_model.params:
-            if getattr(
-                self.psr.prefit_model, param
-            ).frozen == False and param.startswith("JUMP"):
-                fit_jumps.append(int(param[4:]))
-        jumps = [
-            "jump" in dict.keys() and any(np.in1d(dict["jump"], fit_jumps))
-            for dict in self.psr.selected_toas.table["flags"]
-        ]
-        if all(jumps):
-            log.warn(
-                "toas being fit must not all be jumped. Remove or uncheck at least one jump in the selected toas before fitting."
-            )
-            return True
-
-    def updateJumped(self, jump_name):
-        """update self.jumped for the jump given"""
-        # if removing a jump, add_jump returns a boolean array rather than a name
-        if type(jump_name) == list:
-            self.jumped[jump_name] = False
-            return None
-        elif type(jump_name) != str:
-            log.error(
-                jump_name,
-                "Return value for the jump name is not a string, jumps not updated",
-            )
-            return None
-        num = jump_name[4:]  # string value
-        jump_select = [
-            True if ("jump" in dict.keys() and num in dict["jump"]) else False
-            for dict in self.psr.all_toas.table["flags"]
-        ]
-        self.jumped[jump_select] = ~self.jumped[jump_select]
-
     def canvasClickEvent(self, event):
         """
         Call this function when the figure/canvas is clicked
@@ -1201,64 +1123,48 @@ class PlkWidget(tk.Frame):
         """
         if event.inaxes == self.plkAxes:
             ind = self.coordToPoint(event.xdata, event.ydata)
-            if ind is not None:
-                # TODO: right click to delete doesn't work, needs to be reinstated
-                if event.button == 3:
-                    # Right click is delete
-                    # if the point is jumped, tell the user to delete the jump first
-                    jumped_copy = copy.deepcopy(self.jumped)
-                    for (
-                        param
-                    ) in self.psr.prefit_model.params:  # check for jumps in file
-                        if (
-                            param.startswith("JUMP")
-                            and getattr(self.psr.prefit_model, param).frozen == True
-                        ):
-                            self.updateJumped(param)
-                    all_jumped = copy.deepcopy(self.jumped)
-                    self.jumped = jumped_copy
-                    # check if point to be deleted is jumped
-                    if all_jumped[ind] == True:
-                        log.warn(
-                            "cannot delete jumped toas. Delete interfering jumps before deleting toas."
+            if ind is None:
+                return
+            # TODO: right click to delete doesn't work, needs to be reinstated
+            if event.button == 3:
+                # Right click is delete
+                # create boolean array to readjust all_toas without point to be deleted
+                toas_to_delete = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
+                toas_to_delete[ind] = True
+                # FIXME: we now have TOAs indexing for deletion, not sure what all this
+                # table_selects business is
+                self.psr.all_toas.table = self.psr.all_toas.table[
+                    ~toas_to_delete
+                ].group_by("obs")
+                # adjust selected_toas to make sure it excludes toa to be deleted
+                self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
+                if hasattr(self.psr.all_toas, "table_selects"):
+                    for i in range(len(self.psr.all_toas.table_selects)):
+                        self.psr.all_toas.table_selects[
+                            i
+                        ] = self.psr.all_toas.table_selects[i][
+                            ~toas_to_delete
+                        ].group_by(
+                            "obs"
                         )
-                        return None
-                    # create boolean array to readjust all_toas without point to be deleted
-                    toas_to_delete = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
-                    toas_to_delete[ind] = True
-                    self.psr.all_toas.table = self.psr.all_toas.table[
-                        ~toas_to_delete
-                    ].group_by("obs")
-                    # adjust selected_toas to make sure it excludes toa to be deleted
+                # update jumps and rest of graph
+                # FIXME: why forget the selection completely?
+                self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
+                self.psr.update_resids()
+                self.updatePlot(keepAxes=True)
+                self.call_updates()
+            elif event.button == 1:
+                # Left click is select
+                self.selected[ind] = not self.selected[ind]
+                self.updatePlot(keepAxes=True)
+                # if point is being selected (instead of unselected) or
+                # point is unselected but other points remain selected
+                if self.selected[ind] or any(self.selected):
+                    # update selected_toas object w/ selected points
                     self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
-                    if hasattr(self.psr.all_toas, "table_selects"):
-                        for i in range(len(self.psr.all_toas.table_selects)):
-                            self.psr.all_toas.table_selects[
-                                i
-                            ] = self.psr.all_toas.table_selects[i][
-                                ~toas_to_delete
-                            ].group_by(
-                                "obs"
-                            )
-                    # update jumps and rest of graph
-                    self.jumped = self.jumped[~toas_to_delete]
-                    print(self.jumped)
-                    self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
+                    self.psr.selected_toas.select(self.selected)
                     self.psr.update_resids()
-                    self.updatePlot(keepAxes=True)
                     self.call_updates()
-                if event.button == 1:
-                    # Left click is select
-                    self.selected[ind] = not self.selected[ind]
-                    self.updatePlot(keepAxes=True)
-                    # if point is being selected (instead of unselected) or
-                    # point is unselected but other points remain selected
-                    if self.selected[ind] or any(self.selected):
-                        # update selected_toas object w/ selected points
-                        self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
-                        self.psr.selected_toas.select(self.selected)
-                        self.psr.update_resids()
-                        self.call_updates()
 
     def clickAndDrag(self, event):
         """
@@ -1287,7 +1193,8 @@ class PlkWidget(tk.Frame):
         A key is pressed. Handle all the shortcuts here
         """
         fkey = event.key
-        xpos, ypos = event.xdata, event.ydata
+        # Position of key press ignored
+        # xpos, ypos = event.xdata, event.ydata
         ukey = ord(fkey[-1])
 
         if ukey == ord("r"):
@@ -1325,22 +1232,8 @@ class PlkWidget(tk.Frame):
                 self.call_updates()
                 log.info("Pulse numbers to the right of selection decreased.")
         elif ukey == ord("d"):
-            # if any of the points are jumped, tell the user to delete the jump(s) first
-            jumped_copy = copy.deepcopy(self.jumped)
-            for param in self.psr.prefit_model.params:
-                if (
-                    param.startswith("JUMP")
-                    and getattr(self.psr.prefit_model, param).frozen == True
-                ):
-                    self.updateJumped(param)
-            all_jumped = copy.deepcopy(self.jumped)
-            self.jumped = jumped_copy
-            if True in [a and b for a, b in zip(self.selected, all_jumped)]:
-                log.warn(
-                    "cannot delete jumped toas. Delete interfering jumps before deleting toas."
-                )
-                return None
-            # Delete the selected points
+            # FIXME: now we have self.psr.all_toas[~self.selected] - directly acting on TOAs
+            # but I'm not sure what all the other stuff here is supposed to do?
             self.psr.all_toas.table = self.psr.all_toas.table[~self.selected].group_by(
                 "obs"
             )
@@ -1352,7 +1245,6 @@ class PlkWidget(tk.Frame):
                     ] = self.psr.all_toas.table_selects[i][~self.selected].group_by(
                         "obs"
                     )
-            self.jumped = self.jumped[~self.selected]
             self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
             self.psr.update_resids()
             self.updatePlot(keepAxes=True)
@@ -1360,39 +1252,16 @@ class PlkWidget(tk.Frame):
         elif ukey == ord("u"):
             self.unselect()
         elif ukey == ord("j"):
-            # jump the selected points, or unjump if already jumped
-            jump_name = self.psr.add_jump(self.selected)
-            self.updateJumped(jump_name)
+            self.psr.add_jump(self.selected)
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.randomboxWidget.addRandomCheckbox(self)
             self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             self.updatePlot(keepAxes=True)
             self.call_updates()
         elif ukey == ord("v"):
-            # jump all groups except the one(s) selected, or jump all groups if none selected
-            jumped_copy = copy.deepcopy(self.jumped)
-            for param in self.psr.prefit_model.params:
-                if (
-                    param.startswith("JUMP")
-                    and getattr(self.psr.prefit_model, param).frozen == True
-                ):
-                    self.updateJumped(param)
-            all_jumped = copy.deepcopy(self.jumped)
-            self.jumped = jumped_copy
-            groups = list(self.psr.all_toas.table["groups"])
-            # jump each group, check doesn't overlap with existing jumps and selected
-            for num in np.arange(max(groups) + 1):
-                group_bool = [
-                    num == group for group in self.psr.all_toas.table["groups"]
-                ]
-                if True in [
-                    a and b for a, b in zip(group_bool, self.selected)
-                ] or True in [a and b for a, b in zip(group_bool, all_jumped)]:
-                    continue
-                self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
-                self.psr.selected_toas.select(group_bool)
-                jump_name = self.psr.add_jump(group_bool)
-                self.updateJumped(jump_name)
+            # FIXME: jump all groups except the one(s) selected, or jump all groups if none selected
+            # Easiest just to walk through all groups and ise .add_jump for each iff they do not
+            # intersect with the selected; what to do with overlapping/identical JUMPs?
             self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
             if (
                 self.selected is not None
@@ -1406,7 +1275,8 @@ class PlkWidget(tk.Frame):
             self.updatePlot(keepAxes=True)
             self.call_updates()
         elif ukey == ord("c"):
-            self.selected = np.zeros(self.psr.selected_toas.ntoas, dtype=bool)
+            # FIXME: how does this differ from unselect()?
+            self.selected = np.zeros(len(self.psr.all_toas), dtype=bool)
             self.updatePlot(keepAxes=True)
         elif ukey == ord("i"):
             log.info("PREFIT MODEL")

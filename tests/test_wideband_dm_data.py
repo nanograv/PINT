@@ -9,13 +9,13 @@ import astropy.units as u
 import numpy as np
 import pytest
 from astropy.time import TimeDelta
-from pinttestdata import datadir
 from numpy.testing import assert_allclose
+from pinttestdata import datadir
 
+from pint.fitter import WidebandTOAFitter
 from pint.models import get_model
 from pint.residuals import Residuals, WidebandTOAResiduals
 from pint.toa import get_TOAs
-from pint.fitter import WidebandTOAFitter
 
 os.chdir(datadir)
 
@@ -118,7 +118,7 @@ class TestDMData:
         dm_jump_value = self.model.jump_dm(self.toas)
         dm_jump_map = {}
         for dmj in self.dm_jump_params:
-            dm_jump_map[dmj.key_value[0]] = dmj
+            dm_jump_map[dmj.flag_value] = dmj
         for be in all_backends:
             assert all(
                 dm_jump_value[self.toa_backends == be] == -dm_jump_map[be].quantity
@@ -148,7 +148,7 @@ class TestDMData:
         for dmj_param in self.dm_jump_params:
             # test derivative function in the dmjump component
             d_dm_d_dmjump = self.model.d_dm_d_dmjump(self.toas, dmj_param.name)
-            be = dmj_param.key_value
+            be = dmj_param.flag_value
             # The derivative of dm with respect to dm jump is -1 for the jumped
             # TOAs/DM data, the others are zero
             assert all(d_dm_d_dmjump[self.toa_backends == be] == -1.0 * u.Unit(""))

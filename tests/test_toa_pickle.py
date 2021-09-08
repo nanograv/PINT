@@ -13,8 +13,7 @@ from pinttestdata import datadir
 
 import pint.models
 import pint.toa
-from pint import toa
-from pint import simulation
+from pint import simulation, toa
 
 
 @pytest.fixture

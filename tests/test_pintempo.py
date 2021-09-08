@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 import os
 import sys
-
 from io import StringIO
 
-from pint.scripts import pintempo
 from pinttestdata import datadir
+
+from pint.scripts import pintempo
 
 parfile = os.path.join(datadir, "NGC6440E.par")
 timfile = os.path.join(datadir, "NGC6440E.tim")

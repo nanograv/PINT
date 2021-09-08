@@ -5,11 +5,11 @@ import unittest
 import astropy.units as u
 import numpy as np
 from astropy.tests.helper import assert_quantity_allclose
+from pinttestdata import datadir, testdir
 
 import pint.models.model_builder as mb
 import pint.toa as toa
 from pint.residuals import Residuals
-from pinttestdata import datadir, testdir
 
 
 class Test_CHIME_data(unittest.TestCase):

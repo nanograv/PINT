@@ -5,6 +5,7 @@ import emcee
 import numpy as np
 import numpy.random
 from numpy.testing import assert_array_equal
+from pinttestdata import datadir, testdir
 
 import pint.fermi_toas as fermi
 import pint.models
@@ -12,7 +13,6 @@ import pint.toa as toa
 from pint.mcmc_fitter import MCMCFitter, MCMCFitterBinnedTemplate
 from pint.sampler import EmceeSampler
 from pint.scripts.event_optimize import marginalize_over_phase, read_gaussfitfile
-from pinttestdata import datadir, testdir
 
 
 def test_sampler():

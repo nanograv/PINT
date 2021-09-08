@@ -865,11 +865,11 @@ class TimingModel:
         """
         comps = self.components
         if isinstance(component, str):
-            if component not in list(comps.keys()):
+            if component not in comps:
                 raise AttributeError("No '%s' in the timing model." % component)
             comp = comps[component]
         else:  # When component is an component instance.
-            if component not in list(comps.values()):
+            if component not in comps.values():
                 raise AttributeError(
                     "No '%s' in the timing model." % component.__class__.__name__
                 )
@@ -1328,84 +1328,65 @@ class TimingModel:
 
         return result
 
-    def jump_flags_to_params(self, toas):
+    def jump_flags_to_params(self, toas, flag="jump"):
         """Convert jump flags in toas.table["flags"] (loaded in .tim file) to jump parameters in the model.
-
-        The flag processed is ``jump``.
-        """
-        from . import jump
-
-        # check if any TOAs are jumped
-        jumped = ["jump" in flag_dict.keys() for flag_dict in toas.table["flags"]]
-        if not any(jumped):
-            log.info("No jump flags to process from .tim file")
-            return None
-        for flag_dict in toas.table["flags"][jumped]:
-            # add PhaseJump object if model does not have one already
-            if "PhaseJump" not in self.components:
-                log.info("PhaseJump component added")
-                a = jump.PhaseJump()
-                a.setup()
-                self.add_component(a)
-                self.remove_param("JUMP1")
-            # take jumps in TOA table and add them as parameters to the model
-            for num in flag_dict["jump"]:
-                if "JUMP" + str(num) not in self.params:
-                    param = maskParameter(
-                        name="JUMP",
-                        index=num,
-                        key="-tim_jump",
-                        key_value=num,
-                        value=0.0,
-                        units="second",
-                        uncertainty=0.0,
-                    )
-                    self.add_param_from_top(param, "PhaseJump")
-                    getattr(self, param.name).frozen = False
-                flag_dict["tim_jump"] = str(
-                    num
-                )  # this is the value select_toa_mask uses
-        self.components["PhaseJump"].setup()
-
-    def delete_jump_and_flags(self, toa_table, jump_num):
-        """Delete jump object from PhaseJump and remove its flags from TOA table
-        (helper function for pintk).
 
         Parameters
         ----------
-        toa_table: list or None
-            The TOA table which must be modified. In pintk (pulsar.py), for the
-            prefit model, this will be all_toas.table["flags"].
-            For the postfit model, it will be None (one set of TOA tables for both
-            models).
-        jump_num: int
-            Specifies the index of the jump to be deleted.
+        toas : pint.toa.TOAs
+            The set of TOAs to extract jumps from.
+        flag : str
+            The flag to use; ``jump`` is produced when ``JUMP`` lines are
+            encountered in legacy ``.tim`` files. One ``JUMP`` parameter
+            will be introduced for each value associated with this flag.
         """
-        # remove jump of specified index
-        self.remove_param("JUMP" + str(jump_num))
+        from . import jump
 
-        # remove jump flags from selected TOA tables
-        if toa_table is not None:
-            for d in toa_table:
-                if "jump" in d:
-                    index_list = d["jump"].split(",")
-                    if str(jump_num) in index_list:
-                        del index_list[index_list.index(str(jump_num))]
-                        if not index_list:
-                            del d["jump"]
-                        else:
-                            d["jump"] = ",".join(index_list)
-
-        # if last jump deleted, remove PhaseJump object from model
-        if (
-            self.components["PhaseJump"].get_number_of_jumps() == 1
-        ):  # means last jump just deleted
-            comp_list = getattr(self, "PhaseComponent_list")
-            for item in comp_list:
-                if isinstance(item, pint.models.jump.PhaseJump):
-                    self.remove_component(item)
-            return
+        new_jumps = []
+        # check if any TOAs are jumped
+        jumped = set(toas[flag])
+        if "" in jumped:
+            jumped.remove("")
+        if not jumped:
+            log.info("No jump flags to process from .tim file")
+            return new_jumps
+        if "PhaseJump" not in self.components:
+            log.info("PhaseJump component added")
+            a = jump.PhaseJump()
+            self.add_component(a, setup=False)
+            self.remove_param("JUMP1")
+            a.setup()
+        for pm in self.jumps:
+            if pm.flag == "-" + flag:
+                if pm.flag_value in jumped:
+                    jumped.remove(pm.flag_value)
+        if not jumped:
+            log.info("All JUMPs appear to already be present.")
+            return new_jumps
+        used_indices = set()
+        for pm in self.jumps:
+            used_indices.add(pm.index)
+        next_free_index = 1
+        while next_free_index in used_indices:
+            next_free_index += 1
+        for j in jumped:
+            param = maskParameter(
+                name="JUMP",
+                index=next_free_index,
+                flag=flag,
+                flag_value=j,
+                value=0.0,
+                units="second",
+                uncertainty=0.0,
+                frozen=False,
+            )
+            self.add_param_from_top(param, "PhaseJump")
+            used_indices.add(next_free_index)
+            while next_free_index in used_indices:
+                next_free_index += 1
+            new_jumps.append(param.name)
         self.components["PhaseJump"].setup()
+        return new_jumps
 
     def get_barycentric_toas(self, toas, cutoff_component=""):
         """Conveniently calculate the barycentric TOAs.
@@ -2264,7 +2245,7 @@ class TimingModel:
             if "TNEQ" in str(par.name) or par.frozen:
                 continue
             if len(par.select_toa_mask(toas)) == 0:
-                bad_parameters.append(f"'{maskpar}, {par.key}, {par.key_value}'")
+                bad_parameters.append(f"'{maskpar}, {par.flag}, {par.flag_value}'")
         for c in self.components.values():
             try:
                 c.validate_toas(toas)
@@ -2587,7 +2568,7 @@ class Component(object, metaclass=ModelMeta):
         """
         pn = self.match_param_aliases(param)
 
-        if pn not in list(self.deriv_funcs.keys()):
+        if pn not in self.deriv_funcs:
             self.deriv_funcs[pn] = [func]
         else:
             # TODO:

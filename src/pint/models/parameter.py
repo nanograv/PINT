@@ -25,7 +25,7 @@ import logging
 import numbers
 from warnings import warn
 
-import astropy.time as time
+import astropy.time
 import astropy.units as u
 import numpy as np
 from astropy.coordinates.angles import Angle
@@ -42,7 +42,7 @@ from pint.pulsar_mjd import (
     time_to_longdouble,
     time_to_mjd_string,
 )
-from pint.toa_select import TOASelect
+from pint.toa import FlagDict
 from pint.utils import split_prefixed_name
 
 log = logging.getLogger(__name__)
@@ -476,7 +476,7 @@ class floatParameter(Parameter):
     ----------
     name : str
         The name of the parameter.
-    value : number, str, or astropy.units.Quantity
+    value : number or str or astropy.units.Quantity
         The input parameter float value.
     units : str or astropy.units.Quantity
         Parameter default unit. Parameter .value and .uncertainty_value attribute
@@ -851,7 +851,7 @@ class MJDParameter(Parameter):
     ----------
     name : str
         The name of the parameter.
-    value : astropy Time, str, float in mjd, str in mjd.
+    value : astropy.time.Time or str or float in mjd or str in mjd.
         The input parameter MJD value.
     description : str, optional
         A short description of what this parameter means.
@@ -901,7 +901,7 @@ class MJDParameter(Parameter):
             continuous=continuous,
             aliases=aliases,
         )
-        self.value_type = time.Time
+        self.value_type = astropy.time.Time
         self.paramType = "MJDParameter"
         self.special_arg += ["time_scale"]
 
@@ -959,8 +959,10 @@ class MJDParameter(Parameter):
             val = np.longdouble(val)
             result = time_from_longdouble(val, self.time_scale)
         elif isinstance(val, (str, bytes)):
-            result = Time(val, scale=self.time_scale, format="pulsar_mjd_string")
-        elif isinstance(val, time.Time):
+            result = astropy.time.Time(
+                val, scale=self.time_scale, format="pulsar_mjd_string"
+            )
+        elif isinstance(val, astropy.time.Time):
             result = val
         else:
             raise ValueError(
@@ -1403,7 +1405,7 @@ class maskParameter(floatParameter):
     parameters can be distinguished within the
     :class:`pint.models.timing_model.TimingModel` object. For example::
 
-        >>> p = maskParameter(name='JUMP', index=2, key="-fe", key_value="G430")
+        >>> p = maskParameter(name='JUMP', index=2, flag="-fe", flag_value="G430")
         >>> p.name
         'JUMP2'
 
@@ -1451,8 +1453,8 @@ class maskParameter(floatParameter):
         self,
         name,
         index=1,
-        key=None,
-        key_value=[],
+        flag=None,
+        flag_value=None,
         value=None,
         long_double=False,
         units=None,
@@ -1463,39 +1465,9 @@ class maskParameter(floatParameter):
         aliases=[],
     ):
         self.is_mask = True
-        # {key_name: (keyvalue parse function, keyvalue length)}
-        # Move this to some other places.
-        self.key_identifier = {
-            "mjd": (lambda x: time.Time(x, format="mjd").mjd, 2),
-            "freq": (lambda x: u.Quantity(x, u.MHz, copy=False), 2),
-            "name": (str, 1),
-            "tel": (lambda x: get_observatory(str(x)).name, 1),
-        }
 
-        if not isinstance(key_value, (list, tuple)):
-            key_value = [key_value]
-
-        # Check key and key value
-        key_value_parser = str
-        if key is not None:
-            if key.lower() in self.key_identifier.keys():
-                key_info = self.key_identifier[key.lower()]
-                if len(key_value) != key_info[1]:
-                    errmsg = f"key {key} takes {key_info[1]} element(s)."
-                    raise ValueError(errmsg)
-                key_value_parser = key_info[0]
-            else:
-                if not key.startswith("-"):
-                    raise ValueError(
-                        "A key to a TOA flag requires a leading '-'."
-                        " Legal keywords that don't require a leading '-' "
-                        "are MJD, FREQ, NAME, TEL."
-                    )
-        self.key = key
-        self.key_value = [
-            key_value_parser(k) for k in key_value
-        ]  # retains string format from .par file to ensure correct data type for comparison
-        self.key_value.sort()
+        self.flag = flag
+        self.flag_value = flag_value
         self.index = index
         name_param = name + str(index)
         self.origin_name = name
@@ -1523,13 +1495,97 @@ class maskParameter(floatParameter):
             self.aliases.append(name)
         self.is_prefix = True
 
+    allowed_non_flags = {"mjd", "freq", "name", "tel"}
+    wants_two_values = {"mjd", "freq"}
+
+    @staticmethod
+    def validate(flag, flag_value):
+        """Verify that flag_value is an appropriate type and return it.
+
+        This incidentally converts lists to tuples and mildly normalizes values
+        but does not otherwise convert the value (for example it does not attempt
+        to parse strings).
+        """
+        if flag is None:
+            if flag_value is not None:
+                raise ValueError("Cannot associate a value with no flag")
+        if flag == "mjd":
+            start, end = sorted(flag_value)
+            if not isinstance(start, (int, float, np.longdouble)) or not isinstance(
+                end, (int, float, np.longdouble)
+            ):
+                raise ValueError(
+                    f"When selecting by MJD one must supply a "
+                    f"pair of numbers not {flag_value}"
+                )
+            return float(start), float(end)
+        elif flag == "freq":
+            low, high = sorted(flag_value)
+            if not isinstance(low, u.Quantity) or not isinstance(high, u.Quantity):
+                raise ValueError(
+                    f"When selecting by frequency one must supply a "
+                    f"pair of Quantities not {flag_value}"
+                )
+            return low.to(u.MHz), high.to(u.MHz)
+        elif flag == "tel":
+            return get_observatory(flag_value).name
+        else:
+            FlagDict.check_allowed_value(flag, flag_value)
+            return flag_value
+
+    @staticmethod
+    def convert(flag, flag_value):
+        """Convert flag_value strings to the appropriate form for the flag."""
+        if flag == "mjd":
+            start, end = flag_value
+            return (
+                float(start),
+                float(end),
+            )
+        elif flag == "freq":
+            start, end = flag_value
+            return float(start) * u.MHz, float(end) * u.MHz
+        else:
+            return flag_value
+
+    @property
+    def flag(self):
+        return self._flag
+
+    @flag.setter
+    def flag(self, flag):
+        if flag is None:
+            self._flag = None
+        elif not isinstance(flag, str):
+            raise ValueError(
+                f"maskParameters can only select on strings not {repr(flag)}"
+            )
+        else:
+            flag = flag.lower()
+            FlagDict.check_allowed_key(flag)
+            self._flag = flag
+
+    @property
+    def flag_value(self):
+        return self._flag_value
+
+    @flag_value.setter
+    def flag_value(self, flag_value):
+        if flag_value is None:
+            self._flag_value = None
+        else:
+            self._flag_value = maskParameter.validate(self.flag, flag_value)
+
     def __repr__(self):
         out = self.__class__.__name__ + "(" + self.name
-        if self.key is not None:
-            out += " " + self.key
-        if self.key_value is not None:
-            for kv in self.key_value:
-                out += " " + str(kv)
+        if self.flag is not None:
+            out += " " + self.flag
+        if self.flag_value is not None:
+            if isinstance(self.flag_value, str):
+                out += " " + self.flag_value
+            else:
+                for kv in self.flag_value:
+                    out += " " + str(kv)
         if self.quantity is not None:
             out += " " + self.str_quantity(self.quantity)
         else:
@@ -1553,6 +1609,11 @@ class maskParameter(floatParameter):
     def from_parfile_line(self, line):
         """Read mask parameter line (e.g. JUMP).
 
+        This operates on an existing maskParameter object, ``self``, and
+        requires that ``self.name`` match the parameter name on the par file
+        line. ``self.units`` is used to determine the units that values
+        and uncertainties are converted to.
+
         Returns
         -------
         bool
@@ -1560,18 +1621,24 @@ class maskParameter(floatParameter):
 
         Notes
         -----
-        The accepted format::
+        The accepted formats for most flags::
 
-            NAME key key_value parameter_value
-            NAME key key_value parameter_value fit_flag
-            NAME key key_value parameter_value fit_flag uncertainty
-            NAME key key_value parameter_value uncertainty
-            NAME key key_value1 key_value2 parameter_value
-            NAME key key_value1 key_value2 parameter_value fit_flag
-            NAME key key_value1 key_value2 parameter_value fit_flag uncertainty
-            NAME key key_value1 key_value2 parameter_value uncertainty
+            NAME -flag flag_value parameter_value
+            NAME -flag flag_value parameter_value fit_flag
+            NAME -flag flag_value parameter_value fit_flag uncertainty
+            NAME -flag flag_value parameter_value uncertainty
+
+        If the flag is one of MJD or FREQ then::
+
+            NAME flag flag_value1 flag_value2 parameter_value
+            NAME flag flag_value1 flag_value2 parameter_value fit_flag
+            NAME flag flag_value1 flag_value2 parameter_value fit_flag uncertainty
+            NAME flag flag_value1 flag_value2 parameter_value uncertainty
 
         where NAME is the name for this class as reported by ``self.name_matches``.
+
+        The cases here are distinguished by the fact that ``fit_flag`` must be ``0`` or ``1``
+        while an uncertainty must be a floating-point number.
         """
         k = line.split()
         if not k:
@@ -1582,75 +1649,77 @@ class maskParameter(floatParameter):
             return False
 
         try:
-            self.key = k[1]
+            flag = k[1].lower()
         except IndexError:
             raise ValueError(
-                "{}: No key found on timfile line {!r}".format(self.name, line)
+                "{}: No flag found on timfile line {!r}".format(self.name, line)
             )
+        if flag in self.allowed_non_flags:
+            self.flag = flag
+        elif not flag.startswith("-"):
+            raise ValueError(
+                f"Flags must be indicated with -, and the only "
+                f"non-flags allowed are {maskParameter.allowed_non_flags}."
+            )
+        else:
+            # Strip leading -
+            self.flag = flag[1:]
 
-        key_value_info = self.key_identifier.get(self.key.lower(), (str, 1))
-        len_key_v = key_value_info[1]
-        if len(k) < 3 + len_key_v:
+        if flag in self.wants_two_values:
+            flag_value_str = k[2], k[3]
+            len_flag_v = 2
+        else:
+            flag_value_str = k[2]
+            len_flag_v = 1
+        self.flag_value = maskParameter.convert(self.flag, flag_value_str)
+        if len(k) < 3 + len_flag_v:
             raise ValueError(
                 "{}: Expected at least {} entries on timfile line {!r}".format(
-                    self.name, 3 + len_key_v, line
+                    self.name, 3 + len_flag_v, line
                 )
             )
+        self.value = str2longdouble(k[2 + len_flag_v])
 
-        for ii in range(len_key_v):
-            if key_value_info[0] != str:
-                try:
-                    kval = float(k[2 + ii])
-                except ValueError:
-                    kval = k[2 + ii]
+        k_left = k[3 + len_flag_v :]
+        if not k_left:
+            pass
+        elif len(k_left) == 1:
+            if k_left[0] in ("0", "1"):
+                self.frozen = not int(k_left[0])
             else:
-                kval = k[2 + ii]
-            if ii > len(self.key_value) - 1:
-                self.key_value.append(key_value_info[0](kval))
-            else:
-                self.key_value[ii] = key_value_info[0](kval)
-        if len(k) >= 3 + len_key_v:
-            self.value = k[2 + len_key_v]
-        if len(k) >= 4 + len_key_v:
-            try:
-                fit_flag = int(k[3 + len_key_v])
-                if fit_flag == 0:
-                    self.frozen = True
-                    ucty = 0.0
-                elif fit_flag == 1:
-                    self.frozen = False
-                    ucty = 0.0
-                else:
-                    ucty = fit_flag
-            except ValueError:
-                try:
-                    str2longdouble(k[3 + len_key_v])
-                    ucty = k[3 + len_key_v]
-                except ValueError:
-                    errmsg = "Unidentified string " + k[3 + len_key_v] + " in"
-                    errmsg += " parfile line " + k
-                    raise ValueError(errmsg)
-
-            if len(k) >= 5 + len_key_v:
-                ucty = k[4 + len_key_v]
-            self.uncertainty = self._set_uncertainty(ucty)
+                self.uncertainty = str2longdouble(k_left[0]) * self.units
+        elif len(k_left) == 2:
+            self.frozen = not int(k_left[0])
+            self.uncertainty = str2longdouble(k_left[1]) * self.units
+        else:
+            raise ValueError(f"Line has too many elements to parse: {k}")
         return True
 
     def as_parfile_line(self):
         if self.quantity is None:
+            # Parameter is not set so don't output anything
             return ""
         if self.use_alias is None:
             name = self.origin_name
         else:
             name = self.use_alias
-        line = "%-15s %s " % (name, self.key)
-        for kv in self.key_value:
-            if isinstance(kv, time.Time):
-                line += f"{time_to_mjd_string(kv)} "
-            elif isinstance(kv, u.Quantity):
-                line += f"{kv.value} "
+        if self.flag in self.allowed_non_flags:
+            flag = self.flag
+        else:
+            flag = "-" + self.flag
+        line = "%-15s %s " % (name, flag)
+        if isinstance(self.flag_value, str):
+            line += self.flag_value
+        else:
+            start, end = self.flag_value
+            if isinstance(start, float):
+                line += f"{start} {end} "
+            elif isinstance(start, u.Quantity):
+                line += f"{start.to_value(u.MHz)} {end.to_value(u.MHz)} "
             else:
-                line += f"{kv} "
+                raise ValueError(
+                    f"Unexpected format in self.flag_value: {self.flag_value}"
+                )
         line += "%25s" % self.str_quantity(self.quantity)
         if self.uncertainty is not None:
             line += " %d %s" % (0 if self.frozen else 1, str(self.uncertainty_value))
@@ -1672,8 +1741,8 @@ class maskParameter(floatParameter):
             new_mask_param = maskParameter(
                 name=self.origin_name,
                 index=index,
-                key=self.key,
-                key_value=self.key_value,
+                flag=self.flag,
+                flag_value=self.flag_value,
                 value=self.value,
                 long_double=self.long_double,
                 units=self.units,
@@ -1690,55 +1759,40 @@ class maskParameter(floatParameter):
 
         Parameter
         ---------
-        toas: :class:`pint.toas.TOAs`
+        toas: pint.toas.TOAs
 
         Returns
         -------
         array
             An array of TOA indices selected by the mask.
         """
-        column_match = {
-            "mjd": "mjd_float",
-            "freq": "freq",
-            "tel": "obs",
-        }
-        if len(self.key_value) == 1:
-            if not hasattr(self, "toa_selector"):
-                self.toa_selector = TOASelect(is_range=False, use_hash=True)
-            condition = {self.name: self.key_value[0]}
-        elif len(self.key_value) == 2:
-            if not hasattr(self, "toa_selector"):
-                self.toa_selector = TOASelect(is_range=True, use_hash=True)
-            condition = {self.name: tuple(self.key_value)}
-        elif len(self.key_value) == 0:
-            return np.array([], dtype=int)
+        if self.flag == "mjd":
+            start, end = self.flag_value
+            c = toas.table["mjd_float"] >= start
+            c &= toas.table["mjd_float"] <= end
+            r = np.nonzero(c)[0]
+        elif self.flag == "freq":
+            low, high = self.flag_value
+            c = toas.table["freq"] >= low
+            c &= toas.table["freq"] <= high
+            r = np.nonzero(c)[0]
+        elif self.flag == "tel":
+            c = toas.table["obs"] == self.flag_value
+            r = np.nonzero(c)[0]
         else:
-            raise ValueError(
-                "Parameter %s has more key values than "
-                "expected.(Expect 1 or 2 key values)" % self.name
-            )
-        # get the table columns
-        # TODO Right now it is only supports mjd, freq, tel, and flagkeys,
-        # We need to consider some more complicated situation
-        if self.key.startswith("-"):
-            key = self.key[1::]
-        else:
-            key = self.key
-
-        tbl = toas.table
-        if (
-            self.key.lower() not in column_match
-        ):  # This only works for the one with flags.
-            # The flags are recomputed every time. If don't
-            # recompute, flags can only be added to the toa table once and then never update,
-            # making it impossible to add additional jump parameters after the par file is read in (pintk)
-            flag_col = [x.get(key, None) for x in tbl["flags"]]
-            tbl[key] = flag_col
-            col = tbl[key]
-        else:
-            col = tbl[column_match[key.lower()]]
-        select_idx = self.toa_selector.get_select_index(condition, col)
-        return select_idx[self.name]
+            r = []
+            if self.flag is not None:
+                if self.flag.startswith("-"):
+                    flag = self.flag[1:]
+                else:
+                    # only "name" is allowed here
+                    flag = self.flag
+                if self.flag_value is not None:
+                    for i, f in enumerate(toas.table["flags"]):
+                        if str(f.get(flag, "")) == self.flag_value:
+                            r.append(i)
+            r = np.array(r, dtype=int)
+        return r
 
 
 class pairParameter(floatParameter):

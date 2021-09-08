@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 import os
 import unittest
+from io import StringIO
 
 import numpy as np
 import pytest
-from io import StringIO
+from pinttestdata import datadir
 
 import pint.scripts.pintk as pintk
-from pinttestdata import datadir
 
 parfile = os.path.join(datadir, "NGC6440E.par")
 timfile = os.path.join(datadir, "NGC6440E.tim")

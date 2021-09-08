@@ -142,6 +142,10 @@ class Observatory:
         import pint.observatory.observatories  # noqa
         import pint.observatory.special_locations  # noqa
 
+        if not isinstance(name, str):
+            raise ValueError(
+                f"Observatories can only be looked up with strings not {repr(name)}"
+            )
         if name == "":
             raise KeyError("No observatory name or code provided")
 

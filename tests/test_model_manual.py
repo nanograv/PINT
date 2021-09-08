@@ -1,17 +1,18 @@
 """Test model building and structure for simple models."""
 
+from collections import defaultdict
 from glob import glob
 from os.path import basename, join
-from collections import defaultdict
-import pytest
 
 import astropy.units as u
+import pytest
+from pinttestdata import datadir
+
 from pint.models.astrometry import AstrometryEquatorial
 from pint.models.dispersion_model import DispersionDM, DispersionDMX
-from pint.models.spindown import Spindown
 from pint.models.model_builder import UnknownBinaryModel, get_model, get_model_new
-from pint.models.timing_model import MissingParameter, TimingModel, Component
-from pinttestdata import datadir
+from pint.models.spindown import Spindown
+from pint.models.timing_model import Component, MissingParameter, TimingModel
 
 
 @pytest.fixture

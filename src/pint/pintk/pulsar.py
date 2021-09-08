@@ -64,8 +64,6 @@ class Pulsar:
     """
 
     def __init__(self, parfile=None, timfile=None, ephem=None):
-        super(Pulsar, self).__init__()
-
         log.info("STARTING LOADING OF PULSAR %s" % str(parfile))
 
         if parfile is not None and timfile is not None:
@@ -88,11 +86,7 @@ class Pulsar:
             self.all_toas = get_TOAs(self.timfile, planets=True)
 
         # turns pre-existing jump flags in toas.table['flags'] into parameters in parfile
-        # TODO: fix jump_flags_to_params
         self.prefit_model.jump_flags_to_params(self.all_toas)
-        # adds flags to toas.table for existing jump parameters from .par file
-        if "PhaseJump" in self.prefit_model.components:
-            self.prefit_model.jump_params_to_flags(self.all_toas)
         self.selected_toas = copy.deepcopy(self.all_toas)
         print("prefit_model.as_parfile():")
         print(self.prefit_model.as_parfile())
@@ -112,7 +106,25 @@ class Pulsar:
     def name(self):
         return getattr(self.prefit_model, "PSR").value
 
+    @property
+    def jumped(self):
+        """Boolean array indicating which TOAs are affected by a JUMP.
+
+        This reports only those affected by unfrozen jumps, and the boolean
+        array matches ``self.all_toas``.
+        """
+        jumped = np.zeros(len(self.all_toas), dtype=bool)
+        # FIXME: prefit or postfit?
+        model = self.prefit_model
+        if hasattr(model, "jumps"):
+            for pm in model.jumps:
+                if not pm.frozen:
+                    jumped[pm.select_toa_mask(self.all_toas)] = True
+            log.info(f"Model jumps {jumped.sum()} of {len(jumped)} TOAs.")
+        return jumped
+
     def __getitem__(self, key):
+        # FIXME: why use this instead of just looking it up in prefit_model?
         try:
             return getattr(self.prefit_model, key)
         except AttributeError:
@@ -284,75 +296,83 @@ class Pulsar:
         self.update_resids()
 
     def add_jump(self, selected):
-        """
-        jump the toas selected or unjump them if already jumped
+        """Jump the toas selected or unjump them if already jumped.
 
-        :param selected: boolean array to apply to toas, True = selected toa
+        This uses the ``-gui_jump`` flag.
+
+        Possible cases:
+
+        - No TOAs are part of any GUI jump: add a GUI jump flag and parameter for
+          these TOAs.
+        - All TOAs are part of the same GUI jump: remove the flag from these TOAs;
+          if no TOAs remain for the GUI jump, remove the parameter.
+        - TOAs are a mix of different GUI jumps, or some are GUI jumped and some
+          are not: raise an exception.
+
+        Parameter
+        ---------
+        selected: boolean array
+            Which TOAs to apply to.
         """
-        # TODO: split into two functions
+
         if "PhaseJump" not in self.prefit_model.components:
-            # if no PhaseJump component, add one
             log.info("PhaseJump component added")
             a = pint.models.jump.PhaseJump()
             a.setup()
             self.prefit_model.add_component(a)
-            retval = self.prefit_model.add_jump_and_flags(
+
+        log.info("Trying to add a jump from the GUI")
+        gui_jump_flags = set()
+        for f in self.all_toas.table["flags"][selected]:
+            gui_jump_flags.add(f.get("gui_jump", None))
+        log.info(f"GUI jump flags present: {gui_jump_flags}")
+        if None in gui_jump_flags:
+            if len(gui_jump_flags) > 1:
+                raise ValueError("Some TOAs are already jumped")
+            # No jumps, add some!
+            log.info("Adding a GUI jump for these TOAs")
+            new_name = self.prefit_model.add_jump_and_flags(
                 self.all_toas.table["flags"][selected]
             )
-            if self.fitted:
-                self.postfit_model.add_component(a)
-            return retval
-        # if gets here, has at least one jump param already
-        # if doesnt overlap or cancel, add the param
-        numjumps = self.prefit_model.components["PhaseJump"].get_number_of_jumps()
-        if numjumps == 0:
-            log.warn(
-                "There are no jumps (maskParameter objects) in PhaseJump. Please delete the PhaseJump object and try again. "
+            log.info(
+                f"Added new GUI jump parameter {getattr(self.prefit_model, new_name)}"
             )
-            return None
-        # delete jump if perfectly overlaps any existing jump
-        for num in range(1, numjumps + 1):
-            # create boolean array corresponding to TOAs to be jumped
-            toas_jumped = [
-                "jump" in dict.keys() and str(num) in dict["jump"]
-                for dict in self.all_toas.table["flags"]
-            ]
-            if np.array_equal(toas_jumped, selected):
-                # if current jump exactly matches selected, remove it
-                self.prefit_model.delete_jump_and_flags(
-                    self.all_toas.table["flags"], num
+        else:
+            if len(gui_jump_flags) > 1:
+                raise ValueError("TOAs are from different GUI jumps")
+            (the_value,) = gui_jump_flags
+            log.info(f"All TOAs appear JUMPed with {the_value}, removing flags")
+            for f in self.all_toas.table["flags"][selected]:
+                del gui_jump_flags["gui_jump"]
+            param_to_zap = None
+            for (k, kv), pm in self.prefit_model.jumps:
+                if k == "-gui_jump" and kv == the_value:
+                    param_to_zap = pm
+                    break
+            else:
+                raise ValueError(
+                    f"Unable to find JUMP parameter for -gui_jump {the_value}"
                 )
-                if self.fitted:
-                    self.postfit_model.delete_jump_and_flags(None, num)
-                log.info("removed param", "JUMP" + str(num))
-                return toas_jumped
-        # if here, then doesn't match anything
-        # add jump flags to selected TOAs at their perspective indices in the TOA tables
-        retval = self.prefit_model.add_jump_and_flags(
-            self.all_toas.table["flags"][selected]
-        )
-        if (
-            self.fitted
-            and not self.prefit_model.components["PhaseJump"]
-            == self.postfit_model.components["PhaseJump"]
-        ):
-            param = self.prefit_model.components[
-                "PhaseJump"
-            ].get_jump_param_objects()  # array of jump objects
-            self.postfit_model.add_param_from_top(
-                param[-1], "PhaseJump"
-            )  # add last (newest) jump
-            getattr(self.postfit_model, param[-1].name).frozen = False
-            self.postfit_model.components["PhaseJump"].setup()
-        return retval
+            if len(param_to_zap.select_toa_mask(self.all_toas)) == 0:
+                # Parameter no longer selects any TOAs
+                log.info(
+                    f"No remaining TOAs appear JUMPed with {the_value}, removing {param_to_zap}"
+                )
+                self.prefit_model.remove_param(param_to_zap.name)
 
     def fit(self, selected, iters=1):
-        """
-        Run a fit using the specified fitter
-        """
+        """Run a fit using the specified fitter."""
         # Select all the TOAs if none are explicitly set
         if not any(selected):
             selected = ~selected
+
+        if "PhaseJump" in self.prefit_model.components:
+            # Modifies jump flags. If attempted fit (selected)
+            # A) contains only jumps, don't do the fit and return an error
+            # B) excludes a jump, turn that jump off
+            # C) partially contains a jump, redefine that jump only with the overlap
+
+            self.prefit_model.tidy_jumps_for_fit(self.selected_toas)
 
         if self.fitted:
             self.prefit_model = self.postfit_model

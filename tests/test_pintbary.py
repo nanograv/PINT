@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 import sys
 import unittest
+from io import StringIO
 
 import numpy as np
-from io import StringIO
 
 import pint.scripts.pintbary as pintbary
 

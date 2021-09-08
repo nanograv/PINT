@@ -2,13 +2,13 @@
 import os
 
 import astropy.units as u
+from pinttestdata import datadir
 
 import pint.fitter
 import pint.models
-from pint.models.model_builder import get_model
 import pint.residuals
 import pint.toa
-from pinttestdata import datadir
+from pint.models.model_builder import get_model
 
 
 def test_barytoa():

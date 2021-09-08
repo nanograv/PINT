@@ -2,9 +2,9 @@ from io import StringIO
 
 import numpy as np
 import pytest
-from hypothesis import given, assume
-from hypothesis.strategies import slices, integers, booleans, one_of, lists
-from hypothesis.extra.numpy import arrays, array_shapes
+from hypothesis import assume, given
+from hypothesis.extra.numpy import array_shapes, arrays
+from hypothesis.strategies import booleans, integers, lists, one_of, slices
 
 from pint.toa import get_TOAs
 

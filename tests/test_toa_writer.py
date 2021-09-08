@@ -1,14 +1,15 @@
-from io import StringIO
 import os
 import os.path
-import pytest
+from io import StringIO
 
-from pint.models import get_model
-from pint import toa, simulation
-from pinttestdata import datadir
-from astropy.time import Time
-import numpy as np
 import astropy.units as u
+import numpy as np
+import pytest
+from astropy.time import Time
+from pinttestdata import datadir
+
+from pint import simulation, toa
+from pint.models import get_model
 
 
 def test_roundtrip_bary_toa_Tempo2format(tmpdir):
@@ -141,7 +142,7 @@ DILATEFREQ          N
 """
 
 
-def test_tim_writing_order():
+def test_tim_writing_order(tmpdir):
     m = get_model(StringIO(simplepar))
     fakes = [
         simulation.make_fake_toas_uniform(55000, 56000, 5, model=m, obs="ao"),
@@ -153,7 +154,8 @@ def test_tim_writing_order():
 
     o = StringIO()
     toas.write_TOA_file(o, order_by_index=False)
-    toas.write_TOA_file("test.tim", order_by_index=False)
+    # make sure we can write to an actual file I guess?
+    toas.write_TOA_file(os.path.join(tmpdir, "test.tim"), order_by_index=False)
     obs = [
         ln.split()[4]
         for ln in o.getvalue().split("\n")[1:]

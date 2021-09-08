@@ -1,19 +1,18 @@
 """Various tests for the maskParameter"""
 
+import copy
 import os
-import pytest
 from io import StringIO
+
 import astropy
-import astropy.time as time
 import astropy.units as u
 import numpy as np
+import pytest
+from pinttestdata import datadir
 
 from pint.models.model_builder import get_model
 from pint.models.parameter import maskParameter
 from pint.toa import get_TOAs
-from pinttestdata import datadir
-
-import copy
 
 
 @pytest.fixture
@@ -24,9 +23,9 @@ def toas():
 
 
 def test_mjd_mask(toas):
-    mp = maskParameter("test1", key="mjd", key_value=[54000, 54100])
-    assert mp.key == "mjd"
-    assert mp.key_value == [54000, 54100]
+    mp = maskParameter("test1", flag="mjd", flag_value=[54000, 54100],)
+    assert mp.flag == "mjd"
+    assert mp.flag_value == (54000, 54100)
     assert mp.value == None
     select_toas = mp.select_toa_mask(toas)
     assert len(select_toas) > 0
@@ -36,83 +35,91 @@ def test_mjd_mask(toas):
     assert np.all(select_toas == raw_selection[0])
     assert np.all(toas.table["mjd_float"][select_toas] <= 54100)
     assert np.all(toas.table["mjd_float"][select_toas] >= 54000)
-    mp_str_keyval = maskParameter("test2", key="mjd", key_value=["54000", "54100"])
-    assert mp_str_keyval.key_value == [54000, 54100]
-    mp_value_switch = maskParameter("test1", key="mjd", key_value=[54100, 54000])
-    assert mp_value_switch.key_value == [54000, 54100]
     with pytest.raises(ValueError):
-        mp_str_keyval = maskParameter("test2", key="mjd", key_value=["54000"])
+        maskParameter(
+            "test2", flag="mjd", flag_value=["54000", "54100"],
+        )
+    mp_value_switch = maskParameter("test1", flag="mjd", flag_value=[54100, 54000],)
+    assert mp_value_switch.flag_value == (54000, 54100,)
+    with pytest.raises(ValueError):
+        maskParameter("test2", flag="mjd", flag_value=[54000])
 
 
 def test_freq_mask(toas):
-    mp = maskParameter("test2", key="freq", key_value=[1400, 1430])
-    assert mp.key_value == [1400 * u.MHz, 1430 * u.MHz]
+    mp = maskParameter("test2", flag="freq", flag_value=[1400 * u.MHz, 1430 * u.MHz])
+    assert mp.flag_value == (1400 * u.MHz, 1430 * u.MHz)
     select_toas = mp.select_toa_mask(toas)
     assert len(select_toas) > 0
     raw_selection = np.where(
         (toas.table["freq"] <= 1430 * u.MHz) * (toas.table["freq"] >= 1400 * u.MHz)
     )
     assert np.all(select_toas == raw_selection[0])
-    mp_str = maskParameter("test2", key="freq", key_value=["1400", "2000"])
-    assert mp_str.key_value == [1400 * u.MHz, 2000 * u.MHz]
-    mp_switch = maskParameter("test2", key="freq", key_value=[2000, 1400])
-    assert mp_switch.key_value == [1400 * u.MHz, 2000 * u.MHz]
-    mp_quantity = maskParameter(
-        "test2", key="freq", key_value=[2000 * u.MHz, 1400 * u.MHz]
-    )
-    assert mp_quantity.key_value == [1400 * u.MHz, 2000 * u.MHz]
     with pytest.raises(ValueError):
-        mp_wrong_keyvalue = maskParameter("test2", key="freq", key_value=[1400])
+        maskParameter("test2", flag="freq", flag_value=["1400", "2000"])
+    mp_switch = maskParameter(
+        "test2", flag="freq", flag_value=[2000 * u.MHz, 1400 * u.MHz]
+    )
+    assert mp_switch.flag_value == (1400 * u.MHz, 2000 * u.MHz)
+    mp_quantity = maskParameter(
+        "test2", flag="freq", flag_value=[2000 * u.MHz, 1400 * u.MHz]
+    )
+    assert mp_quantity.flag_value == (1400 * u.MHz, 2000 * u.MHz)
+    with pytest.raises(ValueError):
+        maskParameter("test2", flag="freq", flag_value=[1400 * u.MHz])
 
 
 def test_tel_mask(toas):
-    mp_ao = maskParameter("test2", key="tel", key_value="ao")
-    assert mp_ao.key_value == ["arecibo"]
+    mp_ao = maskParameter("test2", flag="tel", flag_value="ao")
+    assert mp_ao.flag_value == "arecibo"
     select_toas = mp_ao.select_toa_mask(toas)
     assert len(select_toas) > 0
     raw_selection = np.where(toas.table["obs"] == "arecibo")
     assert np.all(select_toas == raw_selection[0])
-    mp_gbt = maskParameter("test2", key="tel", key_value=["gbt"])
-    assert mp_gbt.key_value == ["gbt"]
+    mp_gbt = maskParameter("test2", flag="tel", flag_value="gbt")
+    assert mp_gbt.flag_value == "gbt"
     select_toas = mp_gbt.select_toa_mask(toas)
     assert np.all(toas.table["obs"][select_toas] == "gbt")
-    mp_special_obs1 = maskParameter("test2", key="tel", key_value="@")
-    assert mp_special_obs1.key_value == ["barycenter"]
-    mp_special_obs2 = maskParameter("test2", key="tel", key_value=0)
-    assert mp_special_obs2.key_value == ["geocenter"]
+    mp_special_obs1 = maskParameter("test2", flag="tel", flag_value="@")
+    assert mp_special_obs1.flag_value == "barycenter"
+    mp_special_obs2 = maskParameter("test2", flag="tel", flag_value="0")
+    assert mp_special_obs2.flag_value == "geocenter"
     with pytest.raises(ValueError):
-        mp_wrong_keyvalue = maskParameter("test2", key="tel", key_value=["gbt", "ao"])
+        maskParameter("test2", flag="tel", flag_value=["gbt", "ao"])
 
 
 def test_name_mask(toas):
     # Not sure about the use case for name mask
     mp_name = maskParameter(
-        "test2", key="name", key_value="53393.000009.3.000.000.9y.x.ff"
+        "test2", flag="name", flag_value="53393.000009.3.000.000.9y.x.ff"
     )
-    assert mp_name.key_value == ["53393.000009.3.000.000.9y.x.ff"]
+    assert mp_name.flag_value == "53393.000009.3.000.000.9y.x.ff"
     select_toas = mp_name.select_toa_mask(toas)
     assert len(select_toas) > 0
-    raw_selection = np.where(toas.table["name"] == "53393.000009.3.000.000.9y.x.ff")
-    assert np.all(select_toas == raw_selection[0])
+    raw_selection = []
+    for i, f in enumerate(toas.table["flags"]):
+        if f["name"] == "53393.000009.3.000.000.9y.x.ff":
+            raw_selection.append(i)
+    assert np.all(select_toas == raw_selection)
     with pytest.raises(ValueError):
-        mp_wrong_keyvalue = maskParameter(
-            "test2", key="name", key_value=["name1", "name2"]
-        )
+        maskParameter("test2", flag="name", flag_value=["name1", "name2"])
 
 
 def test_flag_mask(toas):
-    mp_flag = maskParameter("test2", key="-fe", key_value=430)
-    assert mp_flag.key_value == ["430"]
-    mp_flag2 = maskParameter("test2", key="-fe", key_value="430")
-    assert mp_flag2.key_value == ["430"]
     with pytest.raises(ValueError):
-        mp_wrong_key = maskParameter("test2", key="fe", key_value="430")
-    mp_flag3 = maskParameter("test2", key="-fe", key_value="L-wide")
-    assert mp_flag3.key_value == ["L-wide"]
+        maskParameter("test2", flag="fe", flag_value=430)
+    mp_flag2 = maskParameter("test2", flag="fe", flag_value="430")
+    assert mp_flag2.flag_value == "430"
+    with pytest.raises(ValueError):
+        maskParameter("test2", flag="-fe", flag_value="430")
+    mp_flag3 = maskParameter("test2", flag="fe", flag_value="L-wide")
+    assert mp_flag3.flag_value == "L-wide"
     select_toas = mp_flag3.select_toa_mask(toas)
     assert len(select_toas) > 0
-    raw_selection = np.where(toas.table["fe"] == "L-wide")
-    assert np.all(select_toas == raw_selection[0])
+    raw_selection = []
+    for i, f in enumerate(toas.table["flags"]):
+        if f["fe"] == "L-wide":
+            raw_selection.append(i)
+    assert np.all(select_toas == raw_selection)
 
 
 def test_read_from_par(toas):

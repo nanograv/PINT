@@ -1,11 +1,12 @@
-from io import StringIO
 import re
+from io import StringIO
 
 import astropy.units as u
 import numpy as np
 import pytest
 from hypothesis import given, settings
-from hypothesis.strategies import lists, tuples, one_of, from_regex, just
+from hypothesis.strategies import from_regex, just, lists, one_of, tuples
+
 from pint.toa import get_TOAs
 
 basic_tim_header = "FORMAT 1\n"

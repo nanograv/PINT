@@ -1,19 +1,18 @@
 """Tests for clustering and flagging"""
+import copy
 import logging
 import os
 import unittest
-import pytest
-import copy
 
 import astropy.units as u
 import numpy as np
+import pytest
+from pinttestdata import datadir
 
 import pint.models.model_builder as mb
 import pint.toa as toa
+from pint.models import PhaseJump, parameter as p
 from pint.residuals import Residuals
-from pinttestdata import datadir
-from pint.models import parameter as p
-from pint.models import PhaseJump
 
 
 class SimpleSetup:
@@ -42,7 +41,7 @@ def test_jump_by_cluster(setup_NGC6440E):
     setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
     cp = setup_NGC6440E.m.components["PhaseJump"]
     par = p.maskParameter(
-        name="JUMP", key="mjd", value=0.2, key_value=[54099, 54100], units=u.s
+        name="JUMP", flag="mjd", value=0.2, flag_value=[54099, 54100], units=u.s
     )
     # this should be the last group of any TOAs
     cp.add_param(par, setup=True)
@@ -55,14 +54,10 @@ def test_jump_by_cluster(setup_NGC6440E):
     m_copy.add_component(PhaseJump(), validate=False)
     cp_copy = m_copy.components["PhaseJump"]
     par_copy = p.maskParameter(
-        name="JUMP", key="-toacluster", value=0.2, key_value=41, units=u.s
+        name="JUMP", flag="toacluster", value=0.2, flag_value="41", units=u.s
     )
     # this should be identical to the cluster above
     cp_copy.add_param(par_copy, setup=True)
     assert set(cp.JUMP1.select_toa_mask(setup_NGC6440E.t)) == set(
         cp_copy.JUMP1.select_toa_mask(setup_NGC6440E.t)
     )
-
-
-if __name__ == "__main__":
-    pass

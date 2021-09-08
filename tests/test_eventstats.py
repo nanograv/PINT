@@ -1,8 +1,8 @@
 #!/usr/bin/env python
+import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 
 import pint.eventstats as es
-import numpy as np
 
 
 def test_sig2sigma():

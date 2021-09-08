@@ -1,11 +1,11 @@
 import os
-import pytest
 
-from astropy.time import Time
 import numpy as np
+import pytest
+from astropy.time import Time
+from pinttestdata import datadir
 
 from pint.observatory.satellite_obs import get_satellite_observatory
-from pinttestdata import datadir
 
 
 def test_good_calls():

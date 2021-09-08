@@ -4,11 +4,11 @@
 import os
 import sys
 import unittest
-
 from io import StringIO
 
-from pint.scripts import event_optimize
 from pinttestdata import datadir
+
+from pint.scripts import event_optimize
 
 parfile = os.path.join(datadir, "PSRJ0030+0451_psrcat.par")
 eventfile = os.path.join(

@@ -2,17 +2,17 @@
 import os
 from copy import deepcopy
 
+import astropy.units as u
+
 # import matplotlib
 # matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
 import pytest
-import astropy.units as u
+from pinttestdata import datadir
 
 import pint.models as tm
-from pint import fitter, toa, simulation
-from pinttestdata import datadir
 import pint.models.parameter as param
-from pint import ls
+from pint import fitter, ls, simulation, toa
 from pint.models import get_model, get_model_and_toas
 
 

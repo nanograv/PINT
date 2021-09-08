@@ -2,9 +2,10 @@
 import os
 import unittest
 
+from pinttestdata import datadir
+
 import pint.models
 import pint.toa
-from pinttestdata import datadir
 
 parfile = os.path.join(datadir, "NGC6440E.par")
 timfile = os.path.join(datadir, "zerophase.tim")
