@@ -15,9 +15,10 @@ import numpy as np
 import pint.fitter
 import pint.models
 from pint.pulsar_mjd import Time
-from pint.random_models import random_models
+from pint.simulation import make_fake_toas_uniform, calculate_random_models
 from pint.residuals import Residuals
 from pint.toa import get_TOAs
+from pint.phase import Phase
 
 log = logging.getLogger(__name__)
 
@@ -436,14 +437,22 @@ class Pulsar:
             redge = (nowish - maxMJD) / spanMJDs
             if redge < 0.0:
                 redge = 0.0
-        f_toas, rs, mrands = random_models(
-            f,
-            rs_mean=rs_mean,
-            redge_multiplier=redge,
-            ledge_multiplier=ledge,
-            npoints=npoints,
-            iter=10,
+        f_toas = make_fake_toas_uniform(
+            minMJD - spanMJDs * ledge, maxMJD + spanMJDs * redge, npoints, f.model
         )
+        rs = calculate_random_models(
+            f, f_toas, Nmodels=10, keep_models=False, return_time=True
+        )
+
+        # subtract the mean residual of each random model from the respective residual set
+        # based ONLY on the mean of the random residuals in the real data range
+        start_index = np.where(abs(f_toas.get_mjds() - minMJD) < 1 * u.d)
+        end_index = np.where(abs(f_toas.get_mjds() - maxMJD) < 1 * u.d)
+        for i in range(len(rs)):
+            # use start_index[0][0] since np.where returns np.array([], dtype), extract index from list in array
+            rs_mean = rs[i][start_index[0][0] : end_index[0][0]].mean()
+            rs[i][:] = [resid - rs_mean for resid in rs[i]]
+
         self.random_resids = rs
         self.fake_toas = f_toas
 

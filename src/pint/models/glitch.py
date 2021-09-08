@@ -20,6 +20,34 @@ class Glitch(PhaseComponent):
         :class: pint.models.glitch.Glitch
     """
 
+    @classmethod
+    def _description_glitch_phase(cls, x):
+        return "Phase change for glitch %d" % x
+
+    @classmethod
+    def _description_glitch_epoch(cls, x):
+        return "Epoch of glitch %d" % x
+
+    @classmethod
+    def _description_glitch_frequencychange(cls, x):
+        return ("Permanent frequency change for glitch %d" % x,)
+
+    @classmethod
+    def _description_glitch_frequencyderivativechange(cls, x):
+        return ("Permanent frequency-derivative change for glitch %d" % x,)
+
+    @classmethod
+    def _description_glitch_frequencysecondderivativechange(cls, x):
+        return ("Permanent second frequency-derivative change for glitch %d" % x,)
+
+    @classmethod
+    def _description_decaying_frequencychange(cls, x):
+        return "Decaying frequency change for glitch %d " % x
+
+    @classmethod
+    def _description_decaytimeconstant(cls, x):
+        return "Decay time constant for glitch %d" % x
+
     register = True
     category = "glitch"
 
@@ -31,8 +59,7 @@ class Glitch(PhaseComponent):
                 name="GLPH_1",
                 units="pulse phase",
                 value=0.0,
-                description_template=lambda x: "Phase change for glitch %d" % x,
-                unit_template=lambda x: "pulse phase",
+                description_template=self._description_glitch_phase,
                 type_match="float",
             )
         )
@@ -40,8 +67,7 @@ class Glitch(PhaseComponent):
             prefixParameter(
                 name="GLEP_1",
                 units="MJD",
-                unit_template=lambda x: "MJD",
-                description_template=lambda x: "Epoch of glitch %d" % x,
+                description_template=self._description_glitch_epoch,
                 parameter_type="MJD",
                 time_scale="tdb",
             )
@@ -51,9 +77,7 @@ class Glitch(PhaseComponent):
                 name="GLF0_1",
                 units="Hz",
                 value=0.0,
-                description_template=lambda x: "Permanent frequency change"
-                " for glitch %d" % x,
-                unit_template=lambda x: "Hz",
+                description_template=self._description_glitch_frequencychange,
                 type_match="float",
             )
         )
@@ -62,10 +86,7 @@ class Glitch(PhaseComponent):
                 name="GLF1_1",
                 units="Hz/s",
                 value=0.0,
-                description_template=lambda x: "Permanent frequency-"
-                "derivative change for glitch"
-                " %d " % x,
-                unit_template=lambda x: "Hz/s",
+                description_template=self._description_glitch_frequencyderivativechange,
             )
         )
         self.add_param(
@@ -73,10 +94,7 @@ class Glitch(PhaseComponent):
                 name="GLF2_1",
                 units="Hz/s^2",
                 value=0.0,
-                description_template=lambda x: "Permanent second frequency-"
-                "derivative change for glitch"
-                " %d " % x,
-                unit_template=lambda x: "Hz/s^2",
+                description_template=self._description_glitch_frequencysecondderivativechange,
             )
         )
         self.add_param(
@@ -84,9 +102,7 @@ class Glitch(PhaseComponent):
                 name="GLF0D_1",
                 units="Hz",
                 value=0.0,
-                description_template=lambda x: "Decaying frequency change "
-                "for glitch %d " % x,
-                unit_template=lambda x: "Hz",
+                description_template=self._description_decaying_frequencychange,
                 type_match="float",
             )
         )
@@ -96,9 +112,7 @@ class Glitch(PhaseComponent):
                 name="GLTD_1",
                 units="day",
                 value=0.0,
-                description_template=lambda x: "Decay time constant for"
-                " glitch %d" % x,
-                unit_template=lambda x: "day",
+                description_template=self._description_decaytimeconstant,
                 type_match="float",
             )
         )
@@ -133,8 +147,7 @@ class Glitch(PhaseComponent):
                 )
 
     def validate(self):
-        """ Validate parameters input.
-        """
+        """Validate parameters input."""
         super().validate()
         for idx in set(self.glitch_indices):
             if not hasattr(self, "GLEP_%d" % idx):

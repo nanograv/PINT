@@ -80,9 +80,7 @@ def zero_residuals(ts, model, maxiter=10, tolerance=1 * u.ns):
         )
 
 
-def update_fake_toa_clock(
-    ts, model, include_bipm=False, include_gps=True,
-):
+def update_fake_toa_clock(ts, model, include_bipm=False, include_gps=True):
     """Update the clock settings (corrections, etc) for fake TOAs
 
     Parameters
@@ -132,9 +130,7 @@ def update_fake_toa_clock(
     )
 
 
-def make_fake_toas(
-    ts, model, add_noise=False, name="fake",
-):
+def make_fake_toas(ts, model, add_noise=False, name="fake"):
     """Make toas from an array of times
 
     Can include alternating frequencies if fed an array of frequencies,
@@ -353,9 +349,7 @@ def make_fake_toas_fromMJDs(
     return make_fake_toas(ts, model=model, add_noise=add_noise, name=name)
 
 
-def make_fake_toas_fromtim(
-    timfile, model, add_noise=False, name="fake",
-):
+def make_fake_toas_fromtim(timfile, model, add_noise=False, name="fake"):
     """Make fake toas with the same times as an input tim file
 
     Can include alternating frequencies if fed an array of frequencies,
@@ -386,7 +380,9 @@ def make_fake_toas_fromtim(
     return make_fake_toas(input_ts, model=model, add_noise=add_noise, name=name)
 
 
-def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params="all"):
+def calculate_random_models(
+    fitter, toas, Nmodels=100, keep_models=True, return_time=False, params="all"
+):
     """
     Calculates random models based on the covariance matrix of the `fitter` object.
 
@@ -445,6 +441,7 @@ def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params=
     Nmjd = len(toas)
     phases_i = np.zeros((Nmodels, Nmjd))
     phases_f = np.zeros((Nmodels, Nmjd))
+    freqs = np.zeros((Nmodels, Nmjd), dtype=np.float128) * u.Hz
 
     cov_matrix = fitter.parameter_covariance_matrix
     # this is a list of the parameter names in the order they appear in the coviarance matrix
@@ -493,12 +490,18 @@ def calculate_random_models(fitter, toas, Nmodels=100, keep_models=True, params=
         phase = f_rand.model.phase(toas, abs_phase=True)
         phases_i[imodel] = phase.int
         phases_f[imodel] = phase.frac
+        r = pint.residuals.Residuals(toas, f_rand.model)
+        freqs[imodel] = r.get_PSR_freq(calctype="taylor")
         if keep_models:
             random_models.append(f_rand.model)
             f_rand = deepcopy(fitter)
     phases = phases_i + phases_f
     phases0 = fitter.model.phase(toas, abs_phase=True)
     dphase = phases - (phases0.int + phases0.frac)
+
+    if return_time:
+        dphase /= freqs
+
     if keep_models:
         return dphase, random_models
     else:
