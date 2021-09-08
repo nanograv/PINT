@@ -54,7 +54,7 @@ class PiecewiseSpindown(PhaseComponent):
             prefixParameter(
                 name="PWSTART_1",
                 units="MJD",
-                description_template=self.__class__._description_solution_epochstart,
+                description_template=self._description_solution_epochstart,
                 parameter_type="MJD",
                 time_scale="tdb",
             )
@@ -64,7 +64,7 @@ class PiecewiseSpindown(PhaseComponent):
             prefixParameter(
                 name="PWSTOP_1",
                 units="MJD",
-                description_template=self.__class__._description_solution_epochstop,
+                description_template=self._description_solution_epochstop,
                 parameter_type="MJD",
                 time_scale="tdb",
             )
@@ -73,7 +73,7 @@ class PiecewiseSpindown(PhaseComponent):
             prefixParameter(
                 name="PWEP_1",
                 units="MJD",
-                description_template=self.__class__._description_solution_epoch,
+                description_template=self._description_solution_epoch,
                 parameter_type="MJD",
                 time_scale="tdb",
             )
@@ -83,7 +83,7 @@ class PiecewiseSpindown(PhaseComponent):
                 name="PWPH_1",
                 units="",
                 value=0.0,
-                description_template=self.__class__._description_solution_startphase,
+                description_template=self._description_solution_startphase,
                 type_match="float",
                 uncertainty=1,
             )
@@ -93,7 +93,7 @@ class PiecewiseSpindown(PhaseComponent):
                 name="PWF0_1",
                 units="Hz",
                 value=0.0,
-                description_template=self.__class__._description_solution_frequency,
+                description_template=self._description_solution_frequency,
                 type_match="float",
             )
         )
@@ -102,7 +102,7 @@ class PiecewiseSpindown(PhaseComponent):
                 name="PWF1_1",
                 units="Hz/s",
                 value=0.0,
-                description_template=self.__class__._description_solution_frequencyderivative,
+                description_template=self._description_solution_frequencyderivative,
             )
         )
         self.add_param(
@@ -110,7 +110,7 @@ class PiecewiseSpindown(PhaseComponent):
                 name="PWF2_1",
                 units="Hz/s^2",
                 value=0.0,
-                description_template=self.__class__._description_solution_secondfrequencyderivative,
+                description_template=self._description_solution_secondfrequencyderivative,
             )
         )
 

@@ -40,7 +40,7 @@ class FD(DelayComponent):
                 # descriptionTplt=lambda x: (
                 #    "%d term of frequency" " dependent  coefficients" % x
                 # ),
-                descriptionTplt=self.__class__._description_template,
+                descriptionTplt=self._description_template,
                 # unitTplt=lambda x: "second",
                 type_match="float",
             )

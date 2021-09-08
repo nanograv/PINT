@@ -59,7 +59,7 @@ class Glitch(PhaseComponent):
                 name="GLPH_1",
                 units="pulse phase",
                 value=0.0,
-                description_template=self.__class__._description_glitch_phase,
+                description_template=self._description_glitch_phase,
                 type_match="float",
             )
         )
@@ -67,7 +67,7 @@ class Glitch(PhaseComponent):
             prefixParameter(
                 name="GLEP_1",
                 units="MJD",
-                description_template=self.__class__._description_glitch_epoch,
+                description_template=self._description_glitch_epoch,
                 parameter_type="MJD",
                 time_scale="tdb",
             )
@@ -77,7 +77,7 @@ class Glitch(PhaseComponent):
                 name="GLF0_1",
                 units="Hz",
                 value=0.0,
-                description_template=self.__class__._description_glitch_frequencychange,
+                description_template=self._description_glitch_frequencychange,
                 type_match="float",
             )
         )
@@ -86,7 +86,7 @@ class Glitch(PhaseComponent):
                 name="GLF1_1",
                 units="Hz/s",
                 value=0.0,
-                description_template=self.__class__._description_glitch_frequencyderivativechange,
+                description_template=self._description_glitch_frequencyderivativechange,
             )
         )
         self.add_param(
@@ -94,7 +94,7 @@ class Glitch(PhaseComponent):
                 name="GLF2_1",
                 units="Hz/s^2",
                 value=0.0,
-                description_template=self.__class__._description_glitch_frequencysecondderivativechange,
+                description_template=self._description_glitch_frequencysecondderivativechange,
             )
         )
         self.add_param(
@@ -102,7 +102,7 @@ class Glitch(PhaseComponent):
                 name="GLF0D_1",
                 units="Hz",
                 value=0.0,
-                description_template=self.__class__._description_decaying_frequencychange,
+                description_template=self._description_decaying_frequencychange,
                 type_match="float",
             )
         )
@@ -112,7 +112,7 @@ class Glitch(PhaseComponent):
                 name="GLTD_1",
                 units="day",
                 value=0.0,
-                description_template=self.__class__._description_decaytimeconstant,
+                description_template=self._description_decaytimeconstant,
                 type_match="float",
             )
         )
