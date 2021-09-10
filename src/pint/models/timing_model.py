@@ -2656,18 +2656,20 @@ class AllComponents:
 
     This object stores and manages the instances of component classes with class
     attribute .register = True. This includes the PINT built-in components and
-    user defined components instances without any valid parameter values (
-    parameters are initialized when a component instance gets constructed,
-    however, the parameter values are unknown to the components at the moment).
-    Thus, runing `.validate()` function will fail. This class is designed for
-    helping model building and parameter seraching, not for direct data
-    analysis.
+    user defined components and there is no need to import the component class.
+    This class constructs the available component instances, but without any
+    valid parameter values (parameters are initialized when a component instance
+    gets constructed, however, the parameter values are unknown to the components
+    at the moment). Thus, runing `.validate()` function in the component instance
+    will fail. This class is designed for helping model building and parameter
+    seraching, not for direct data analysis.
 
     Note
     ----
     This is a low level class for managing all the components. To build a timing
     model, we recommend to use the subclass `models.model_builder.ModelBuilder`,
-    where higher level interface are provided.
+    where higher level interface are provided. If one wants to use this class
+    directly, one has to construct the instance separately.
     """
 
     def __init__(self):
@@ -2782,7 +2784,7 @@ class AllComponents:
 
     @lazyproperty
     def category_component_map(self):
-        """Return the mapping from category to component.
+        """A dictionary mapping category to component name.
 
         Return
         ------
@@ -2799,7 +2801,7 @@ class AllComponents:
 
     @lazyproperty
     def component_category_map(self):
-        """Return the mapping from component to category.
+        """A dictionary mapping component name to category.
 
         Return
         ------

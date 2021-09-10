@@ -336,11 +336,7 @@ display(tm.components["Spindown"].params)
 
 # %%
 f1 = p.prefixParameter(
-    parameter_type="float",
-    name="F1",
-    value=0.0,
-    units=u.Hz / (u.s),
-    longdouble=True,
+    parameter_type="float", name="F1", value=0.0, units=u.Hz / (u.s), longdouble=True
 )
 
 f2 = p.prefixParameter(
