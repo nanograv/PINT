@@ -2784,7 +2784,7 @@ class AllComponents:
 
     @lazyproperty
     def category_component_map(self):
-        """A dictionary mapping category to component name.
+        """A dictionary mapping category to a list of component names.
 
         Return
         ------
@@ -2801,7 +2801,7 @@ class AllComponents:
 
     @lazyproperty
     def component_category_map(self):
-        """A dictionary mapping component name to category.
+        """A dictionary mapping component name to its category name.
 
         Return
         ------
