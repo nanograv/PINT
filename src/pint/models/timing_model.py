@@ -2701,6 +2701,38 @@ class AllComponents:
                 p2c_map[ap].append("timing_model")
         return p2c_map
 
+    def _check_alias_conflict(self, alias, param_name, alias_map):
+        """Check if a aliase has conflict in the alias map.
+
+        This function checks if an alias already have record in the alias_map.
+        If there is a record, it will check if the record matches the given
+        paramter name, `param_name`. If not match, it will raise a AliasConflict
+        error.
+
+        Parameter
+        ---------
+        alias: str
+            The alias name that needs to check if it has entry in the alias_map.
+        param_name: str
+            The parameter name that a alias is going to be mapped to.
+
+        Raise
+        -----
+        AliasConflict
+            When the input alias has a record in the aliases map, but the record
+            does not match the input parameter name that is going to be mapped
+            to the input alias.
+        """
+        if alias in alias_map.keys():
+            if param_name == alias_map[alias]:
+                return
+            else:
+                raise AliasConflict(
+                    f"Alias {alias} has been used by" f" parameter {param_name}."
+                )
+        else:
+            return
+
     @lazyproperty
     def _param_alias_map(self):
         """Return the aliases map of all parameters
@@ -2717,16 +2749,19 @@ class AllComponents:
             for p in cp.params:
                 par = getattr(cp, p)
                 # Check if an existing record
-                alias = self._add_alias_to_map(p, p, alias)
+                self._check_alias_conflict(p, p, alias)
+                alias[p] = p
                 for als in par.aliases:
-                    alias = self._add_alias_to_map(als, p, alias)
+                    self._check_alias_conflict(als, p, alias)
+                    alias[als] = p
         tm = TimingModel()
         for tp in tm.params:
             par = getattr(tm, tp)
-            alias = self._add_alias_to_map(tp, tp, alias)
+            self._check_alias_conflict(tp, tp, alias)
             alias[tp] = tp
             for als in par.aliases:
-                alias = self._add_alias_to_map(als, tp, alias)
+                self._check_alias_conflict(als, tp, alias)
+                alias[als] = tp
         return alias
 
     @lazyproperty
@@ -2797,20 +2832,6 @@ class AllComponents:
             if len(cps) == 1:
                 component_special_params[cps[0]].append(param)
         return component_special_params
-
-    def _add_alias_to_map(self, alias, param_name, alias_map):
-        """Add one alias to the alias-parameter map.
-        """
-        if alias in alias_map.keys():
-            if param_name == alias_map[alias]:
-                return alias_map
-            else:
-                raise AliasConflict(
-                    f"Alias {alias} has been used by" f" parameter {param_name}."
-                )
-        else:
-            alias_map[alias] = param_name
-        return alias_map
 
     def search_binary_components(self, system_name):
         """Search the pulsar binary component based on given name.

@@ -104,11 +104,11 @@ class Spindown(PhaseComponent):
 
     def F_description(self, n):
         """Template function for description"""
-        return "Spin-frequency %d derivative" % n #if n else "Spin-frequency"
+        return "Spin-frequency %d derivative" % n  # if n else "Spin-frequency"
 
     def F_unit(self, n):
         """Template function for unit"""
-        return "Hz/s^%d" % n #if n else "Hz"
+        return "Hz/s^%d" % n  # if n else "Hz"
 
     def get_spin_terms(self):
         """Return a list of the spin term values in the model: [F0, F1, ..., FN]."""

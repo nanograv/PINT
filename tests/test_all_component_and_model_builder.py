@@ -44,7 +44,7 @@ class SubsetModel(PhaseComponent):
     def __init__(self):
         super(SubsetModel, self).__init__()
         self.add_param(floatParameter(name="F0", value=0.0, unit="1/s"))
-        #self.add_param(floatParameter(name="F1", value=0.0, unit="1/s^2"))
+        # self.add_param(floatParameter(name="F1", value=0.0, unit="1/s^2"))
 
 
 @pytest.fixture
@@ -128,13 +128,13 @@ def test_aliases_mapping():
 
     # Test if the param_alias_map is passed by pointer
     # Testing the private function for building the aliases map
-    mb._add_alias_to_map("TESTAX", "TESTAXX", mb._param_alias_map)
-    assert "TESTAX" in mb._param_alias_map
+    mb._check_alias_conflict("TESTAX", "TESTAXX", mb._param_alias_map)
+    # assert "TESTAX" in mb._param_alias_map
     # Test existing entry
     # When adding an existing alias to the map. The mapped value should be the
     # same, otherwrise it will fail.
-    mb._add_alias_to_map("F0", "F0", mb._param_alias_map)
-    assert mb._param_alias_map["F0"] == "F0"
+    mb._check_alias_conflict("F0", "F0", mb._param_alias_map)
+    # assert mb._param_alias_map["F0"] == "F0"
     # Test repeatable_params with differnt indices.
     for rp in mb.repeatable_param:
         pint_par, first_init_par = mb.alias_to_pint_param(rp)
@@ -168,7 +168,7 @@ def test_conflict_alias():
     mb = AllComponents()
     # Test conflict parameter alias name
     with pytest.raises(AliasConflict):
-        mb._add_alias_to_map("F0", "F1", mb._param_alias_map)
+        mb._check_alias_conflict("F0", "F1", mb._param_alias_map)
 
 
 def test_conflict_alias_in_component():
