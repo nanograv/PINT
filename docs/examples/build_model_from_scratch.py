@@ -147,7 +147,6 @@ params = {
     "RAJ": ("17:48:52.75", 1, 0.05 * pint.hourangle_second),
     "DECJ": ("-20:21:29.0", 1, 0.4 * u.arcsec),
     "F0": (61.485476554 * u.Hz, 1, 5e-10 * u.Hz),
-    "F1": (-1.181e-15 * u.Hz / u.s, 1, 1e-18 * u.Hz / u.s),
     "PEPOCH": (Time(53750.000000, format="mjd", scale="tdb"),),
     "POSEPOCH": (Time(53750.000000, format="mjd", scale="tdb"),),
     "TZRMJD": (Time(53801.38605120074849, format="mjd", scale="tdb"),),
@@ -330,11 +329,20 @@ display(tm.params)
 display(tm.components["Spindown"].params)
 
 # %% [markdown]
-# Let us add `F2` to the model. `F2` needs a very high precision, we use longdouble=True flag to specify the `F2` value to be a longdouble type.
+# Let us add `F1` and `F2` to the model. Both `F1` and `F2` needs a very high
+# precision, we use longdouble=True flag to specify the `F2` value to be a longdouble type.
 #
 # Note, if we add `F3` directly without `F2`, the validation will fail.
 
 # %%
+f1 = p.prefixParameter(
+    parameter_type="float",
+    name="F1",
+    value=0.0,
+    units=u.Hz / (u.s),
+    longdouble=True,
+)
+
 f2 = p.prefixParameter(
     parameter_type="float",
     name="F2",
@@ -344,6 +352,7 @@ f2 = p.prefixParameter(
 )
 
 # %%
+tm.components["Spindown"].add_param(f1, setup=True)
 tm.components["Spindown"].add_param(f2, setup=True)
 
 # %%
@@ -356,6 +365,8 @@ display(tm.params)
 # Now `F2` can be used in the timing model.
 
 # %%
+tm.F1.quantity = -1.181e-15 * u.Hz / u.s
+tm.F1.uncertainty = 1e-18 * u.Hz / u.s
 tm.F2.quantity = 2e-10 * u.Hz / u.s ** 2
 display(tm.F2)
 

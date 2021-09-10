@@ -90,7 +90,7 @@ class Spindown(PhaseComponent):
             if getattr(self, p).value is None:
                 raise MissingParameter("Spindown", p)
         # Check continuity
-        self._parent.get_prefix_list("F", start_index=1)
+        self._parent.get_prefix_list("F", start_index=0)
         # If F1 is set, we need PEPOCH
         if hasattr(self, "F1") and self.F1.value != 0.0:
             if self.PEPOCH.value is None:
@@ -100,7 +100,7 @@ class Spindown(PhaseComponent):
 
     @property
     def F_terms(self):
-        return [f"F{i}" for i in range(1 + len(self._parent.get_prefix_list("F", 1)))]
+        return [f"F{i}" for i in range(len(self._parent.get_prefix_list("F", 0)))]
 
     def F_description(self, n):
         """Template function for description"""
@@ -112,7 +112,7 @@ class Spindown(PhaseComponent):
 
     def get_spin_terms(self):
         """Return a list of the spin term values in the model: [F0, F1, ..., FN]."""
-        return [self.F0.quantity] + self._parent.get_prefix_list("F", start_index=1)
+        return self._parent.get_prefix_list("F", start_index=0)
 
     def get_dt(self, toas, delay):
         """Return dt, the time from the phase 0 epoch to each TOA.  The
