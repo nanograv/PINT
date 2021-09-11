@@ -240,7 +240,7 @@ def plot_priors(
         values[i] = values[i][burnin:].flatten()
         x_range.append(np.linspace(values[i].min(), values[i].max(), num=bins))
         priors.append(getattr(model, keys[i]).prior.pdf(x_range[i]))
-        a, x = np.histogram(values[i], bins=bins,density = True)
+        a, x = np.histogram(values[i], bins=bins, density=True)
         counts.append(a)
 
     fig, axs = plt.subplots(len(keys), figsize=(8, 11), constrained_layout=True)
@@ -259,31 +259,33 @@ def plot_priors(
                 -2 * values[i].std(), color="b", linestyle="--", label="2 sigma"
             )
             axs[i].axvline(2 * values[i].std(), color="b", linestyle="--")
-            axs[i].hist(values[i]-values[i].mean(), bins=bins, density=True, label="Samples")
+            axs[i].hist(
+                values[i] - values[i].mean(), bins=bins, density=True, label="Samples"
+            )
             if scale:
                 axs[i].plot(
-                    x_range[i]-values[i].mean(),
+                    x_range[i] - values[i].mean(),
                     priors[i] * counts[i].max() / priors[i].max(),
                     label="Prior Probability",
                     color="g",
                 )
             else:
                 axs[i].plot(
-                    x_range[i]-values[i].mean(),
+                    x_range[i] - values[i].mean(),
                     priors[i],
                     label="Prior Probability",
                     color="g",
                 )
             if maxpost_fitvals is not None:
                 axs[i].axvline(
-                    maxpost_fitvals[i]-values[i].mean(),
+                    maxpost_fitvals[i] - values[i].mean(),
                     color="c",
                     linestyle="--",
                     label="Maximum Likelihood Value",
                 )
             if fitvals is not None:
                 axs[i].axvline(
-                    fitvals[i]-values[i].mean(),
+                    fitvals[i] - values[i].mean(),
                     color="m",
                     linestyle="--",
                     label="Original Parameter Fit Value",
