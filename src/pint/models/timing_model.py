@@ -2342,6 +2342,11 @@ class Component(object, metaclass=ModelMeta):
     @property_exists
     def aliases_map(self):
         """Return all the aliases and map to the PINT parameter name.
+
+        This property returns a dictionary from the current in timing model
+        parameters' aliase to the pint defined parameter names. For the aliases
+        of a prefixed parameter, the aliase with an existing prefix index maps
+        to the PINT defined parameter name with the same index.
         """
         ali_map = {}
         for p in self.params:

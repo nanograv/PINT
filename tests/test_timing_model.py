@@ -349,3 +349,11 @@ def test_assumes_dmepoch_equals_pepoch():
     t = make_fake_toas_uniform(57000, 59000, 10, m_assume)
 
     assert_allclose(m_assume.dm_value(t), m_given.dm_value(t))
+
+
+def test_prefixed_aliases():
+    m = get_model(io.StringIO("\n".join([par_base, "T2EFAC -fe L_band 10"
+                                                 , "T2EFAC -fe 430 11"])))
+    assert m.aliases_map['T2EFAC2'] == 'EFAC2'
+    with pytest.raises(KeyError):
+        m.aliases_map['T2EFAC18']
