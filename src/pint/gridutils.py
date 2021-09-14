@@ -67,7 +67,7 @@ def grid_chisq(
         Size of the chunks for :class:`concurrent.futures.ProcessPoolExecutor` parallel execution.
         Ignored for :class:`concurrent.futures.ThreadPoolExecutor`
     printprogress : bool, optional
-        Print indications of progress
+        Print indications of progress (requires :mod:`tqdm`)
 
     Returns
     -------
@@ -150,27 +150,36 @@ def grid_chisq(
     chi2 = np.zeros(out[0].shape)
     # at this point, if the executor is None then run single-processor version
     if executor is not None:
-        if printprogress and tqdm is not None:
-            barwrapper = lambda x: list(tqdm(x, total=len(out[0].flatten())))
-        else:
-            barwrapper = lambda x: x
         with executor as e:
-            result = barwrapper(
-                e.map(
+            if printprogress and tqdm is not None:
+                result = list(
+                    tqdm(
+                        e.map(
+                            doonefit,
+                            (ftr,) * len(out[0].flatten()),
+                            (parnames,) * len(out[0].flatten()),
+                            list(zip(*[x.flatten() for x in out])),
+                            chunksize=chunksize,
+                        ),
+                        total=len(out[0].flatten()),
+                        ascii=True,
+                    )
+                )
+            else:
+                result = e.map(
                     doonefit,
                     (ftr,) * len(out[0].flatten()),
                     (parnames,) * len(out[0].flatten()),
                     list(zip(*[x.flatten() for x in out])),
                     chunksize=chunksize,
                 )
-            )
         it = np.ndindex(chi2.shape)
         for i, r in zip(it, result):
             chi2[i] = r
     else:
         it = np.ndindex(out[0].shape)
         if printprogress and tqdm is not None:
-            it = tqdm(it, total=len(out[0].flatten()))
+            it = tqdm(it, total=len(out[0].flatten()), ascii=True)
         for i in it:
             for parnum, parname in enumerate(parnames):
                 getattr(ftr.model, parname).quantity = out[parnum][i]
@@ -215,7 +224,7 @@ def grid_chisq_derived(
         Size of the chunks for :class:`concurrent.futures.ProcessPoolExecutor` parallel execution.
         Ignored for :class:`concurrent.futures.ThreadPoolExecutor`
     printprogress : bool, optional
-        Print indications of progress
+        Print indications of progress (requires :mod:`tqdm`)
 
     Returns
     -------
@@ -282,27 +291,37 @@ def grid_chisq_derived(
 
     # at this point, if the executor is None then run single-processor version
     if executor is not None:
-        if printprogress and tqdm is not None:
-            barwrapper = lambda x: list(tqdm(x, total=len(out[0].flatten())))
-        else:
-            barwrapper = lambda x: x
         with executor as e:
-            result = barwrapper(
-                e.map(
+            if printprogress and tqdm is not None:
+                result = list(
+                    tqdm(
+                        e.map(
+                            doonefit,
+                            (ftr,) * len(out[0].flatten()),
+                            (parnames,) * len(out[0].flatten()),
+                            list(zip(*[x.flatten() for x in out])),
+                            chunksize=chunksize,
+                        ),
+                        total=len(out[0].flatten()),
+                        ascii=True,
+                    )
+                )
+            else:
+                result = e.map(
                     doonefit,
                     (ftr,) * len(out[0].flatten()),
                     (parnames,) * len(out[0].flatten()),
                     list(zip(*[x.flatten() for x in out])),
                     chunksize=chunksize,
                 )
-            )
+
         it = np.ndindex(chi2.shape)
         for i, r in zip(it, result):
             chi2[i] = r
     else:
         it = np.ndindex(grid[0].shape)
         if printprogress and tqdm is not None:
-            it = tqdm(it, total=len(grid[0].flatten()))
+            it = tqdm(it, total=len(grid[0].flatten()), ascii=True)
         for i in it:
             for parnum, parname in enumerate(parnames):
                 getattr(ftr.model, parname).quantity = out[parnum][i]
