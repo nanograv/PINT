@@ -177,7 +177,7 @@ class Parameter:
         self.name = name  # name of the parameter
         # The input parameter from parfile, which can be an alias of the parameter
         # TODO give a better name and make it easy to access.
-        self._parfile_name = name 
+        self._parfile_name = name
         self.units = units  # Default unit
         self.quantity = value  # The value of parameter, internal storage
         self.prior = prior

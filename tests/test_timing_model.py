@@ -352,8 +352,9 @@ def test_assumes_dmepoch_equals_pepoch():
 
 
 def test_prefixed_aliases_in_component():
-    m = get_model(io.StringIO("\n".join([par_base, "T2EFAC -fe L_band 10"
-                                                 , "T2EFAC -fe 430 11"])))
-    assert m.components['ScaleToaError'].aliases_map['T2EFAC2'] == 'EFAC2'
+    m = get_model(
+        io.StringIO("\n".join([par_base, "T2EFAC -fe L_band 10", "T2EFAC -fe 430 11"]))
+    )
+    assert m.components["ScaleToaError"].aliases_map["T2EFAC2"] == "EFAC2"
     with pytest.raises(KeyError):
-        m.components['ScaleToaError'].aliases_map['T2EFAC18']
+        m.components["ScaleToaError"].aliases_map["T2EFAC18"]
