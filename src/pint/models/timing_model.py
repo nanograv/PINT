@@ -2346,7 +2346,8 @@ class Component(object, metaclass=ModelMeta):
         This property returns a dictionary from the current in timing model
         parameters' aliase to the pint defined parameter names. For the aliases
         of a prefixed parameter, the aliase with an existing prefix index maps
-        to the PINT defined parameter name with the same index.
+        to the PINT defined parameter name with the same index. Behind the scenes,
+        the indexed parameter adds the indexed aliase to its aliase list.  
         """
         ali_map = {}
         for p in self.params:
