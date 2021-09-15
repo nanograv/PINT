@@ -14,6 +14,8 @@ try:
 except ModuleNotFoundError:
     tqdm = None
 
+from astropy.utils.console import ProgressBar
+
 import pint.utils
 
 log = logging.getLogger(__name__)
