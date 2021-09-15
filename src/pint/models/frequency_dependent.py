@@ -22,6 +22,10 @@ class FD(DelayComponent):
         :class: pint.models.frequency_dependent.FD
     """
 
+    @classmethod
+    def _description_template(cls, x):
+        return "%d term of frequency dependent coefficients" % x
+
     register = True
     category = "frequency_dependent"
 
@@ -33,10 +37,11 @@ class FD(DelayComponent):
                 units="second",
                 value=0.0,
                 description="Coefficient of delay as a polynomial function of log-frequency",
-                descriptionTplt=lambda x: (
-                    "%d term of frequency" " dependent  coefficients" % x
-                ),
-                unitTplt=lambda x: "second",
+                # descriptionTplt=lambda x: (
+                #    "%d term of frequency" " dependent  coefficients" % x
+                # ),
+                descriptionTplt=self._description_template,
+                # unitTplt=lambda x: "second",
                 type_match="float",
             )
         )
@@ -91,8 +96,7 @@ class FD(DelayComponent):
         return FD_delay * self.FD1.units
 
     def d_delay_FD_d_FDX(self, toas, param, acc_delay=None):
-        """This is a derivative function for FD parameter
-        """
+        """This is a derivative function for FD parameter"""
         tbl = toas.table
         try:
             bfreq = self._parent.barycentric_radio_freq(toas)

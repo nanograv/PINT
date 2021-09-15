@@ -16,9 +16,8 @@ from pinttestdata import datadir
 class TestFD(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        os.chdir(datadir)
-        cls.parf = "test_FD.par"
-        cls.timf = "test_FD.simulate.pint_corrected"
+        cls.parf = os.path.join(datadir, "test_FD.par")
+        cls.timf = os.path.join(datadir, "test_FD.simulate.pint_corrected")
         cls.FDm = mb.get_model(cls.parf)
         cls.toas = toa.get_TOAs(cls.timf, include_bipm=False)
         # libstempo result
