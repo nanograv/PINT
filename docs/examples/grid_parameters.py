@@ -8,9 +8,9 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.11.2
 #   kernelspec:
-#     display_name: Python [conda env:pintdev]
+#     display_name: Python 3
 #     language: python
-#     name: conda-env-pintdev-py
+#     name: python3
 # ---
 
 # %% [markdown]
@@ -53,7 +53,18 @@ f.fit_toas()
 bestfit = f.resids.chi2
 
 # %% [markdown]
-# We'll do something like 3-sigma around the best-fit values of $F0$ and $F1$
+# What are the free parameters?
+
+# %%
+f.model.free_params
+
+# %% [markdown]
+# So we were fitting for RA, Dec, $F0$, $F1$, and $DM$.  
+#
+# We'll do something like 3-sigma around the best-fit value of $F0$, fitting for RA, Dec, $F1$ and $DM$ at each grid point.
+
+# %% [markdown]
+# # 1D Grid
 
 # %%
 F0 = np.linspace(
@@ -61,21 +72,21 @@ F0 = np.linspace(
     f.model.F0.quantity + 3 * f.model.F0.uncertainty,
     25,
 )
-F1 = np.linspace(
-    f.model.F1.quantity - 3 * f.model.F1.uncertainty,
-    f.model.F1.quantity + 3 * f.model.F1.uncertainty,
-    27,
-)
-
-# %% [markdown]
-# # 1D Grid
 
 # %%
 # Do a 1D "grid"  Make sure that the parameters are supplied as tuples with length 1
 chi2_F0 = pint.gridutils.grid_chisq(f, ("F0",), (F0,))
 
 # %%
-# find the uncertainty by looking where Delta chi^2=1
+# We can now just do a quick plot to look at the results
+fig, ax = plt.subplots(figsize=(16, 9))
+ax.plot(F0 - f.model.F0.quantity, chi2_F0, label="$\chi^2$ curve")
+ax.set_xlabel("$\Delta F_0$ (Hz)", fontsize=24)
+ax.set_ylabel("$\chi^2$", fontsize=24)
+
+# %%
+# We can go a little further.
+# For instance, we can find the uncertainty by looking where Delta chi^2=1
 F0_delta_chi2 = np.interp(
     1,
     chi2_F0[F0 >= f.model.F0.quantity] - chi2_F0.min(),
@@ -100,7 +111,6 @@ ax.plot(
     "g--",
     label="$\Delta \chi^2=1$",
 )
-# ax.errorbar(0,0,xerr=f.model.F0.uncertainty,yerr=f.model.F1.uncertainty,fmt='ro')
 ax.set_xlabel("$\Delta F_0$ (Hz)", fontsize=24)
 ax.set_ylabel("$\chi^2$", fontsize=24)
 ax.set_ylim([59, 69])
@@ -113,9 +123,14 @@ ax.legend()
 # # 2D Grid
 
 # %% [markdown]
-# Now, compute a 2D grid of $\chi^2(F0,F1)$
+# Now, compute a 2D grid of $\chi^2(F0,F1)$, so we'll also set up a grid of $F1$ to search over
 
 # %% tags=[]
+F1 = np.linspace(
+    f.model.F1.quantity - 3 * f.model.F1.uncertainty,
+    f.model.F1.quantity + 3 * f.model.F1.uncertainty,
+    27,
+)
 chi2grid = pint.gridutils.grid_chisq(f, ("F0", "F1"), (F0, F1))
 
 # %% [markdown]
@@ -138,8 +153,8 @@ CIs = (scipy.stats.norm().cdf(nsigma) - 0.5) * 2
 print(f"Confidence intervals for {nsigma} sigma: {CIs}")
 # chi^2 random variable for 2 parameters
 rv = scipy.stats.chi2(2)
-x = np.linspace(0, 20)
-contour_levels = np.interp(CIs, rv.cdf(x), x)
+# the ppf = Percent point function is the inverse of the CDF
+contour_levels = rv.ppf(CIs)
 print(f"Contour levels for {nsigma} sigma and 2 parameters: {contour_levels}")
 
 # %% [markdown]
@@ -153,8 +168,7 @@ CIs = (scipy.stats.norm().cdf(nsigma) - 0.5) * 2
 print(f"Confidence intervals for {nsigma} sigma: {CIs}")
 # chi^2 random variable for 2 parameters
 rv = scipy.stats.chi2(1)
-x = np.linspace(0, 20)
-contour_levels_1param = np.interp(CIs, rv.cdf(x), x)
+contour_levels_1param = rv.ppf(CIs)
 print(f"Contour levels for {nsigma} sigma and 1 parameter: {contour_levels_1param}")
 
 # %%
