@@ -332,17 +332,40 @@ def test_grid_3param_prefix_multiprocessor():
 @pytest.mark.parametrize(
     "fitter", [GLSFitter, WLSFitter, DownhillWLSFitter, DownhillGLSFitter]
 )
-def test_grid_fitters(fitter):
+def test_grid_fitters_singleprocessor(fitter):
     parfile = pint.config.examplefile("NGC6440E.par")
     timfile = pint.config.examplefile("NGC6440E.tim")
     m, t = get_model_and_toas(parfile, timfile)
     f = fitter(t, m)
-    bestfit = f.fit_toas()
+    f.fit_toas()
+    bestfit = f.resids.chi2
     F0 = np.linspace(
         f.model.F0.quantity - 3 * f.model.F0.uncertainty,
         f.model.F0.quantity + 3 * f.model.F0.uncertainty,
         7,
     )
-    chi2grid = pint.gridutils.grid_chisq(f, ("F0",), (F0,), printprogress=True, ncpu=1)
+    chi2grid = pint.gridutils.grid_chisq(f, ("F0",), (F0,), printprogress=False, ncpu=1)
+
+    assert np.isclose(bestfit, chi2grid.min())
+
+
+@pytest.mark.parametrize(
+    "fitter", [GLSFitter, WLSFitter, DownhillWLSFitter, DownhillGLSFitter]
+)
+def test_grid_fitters_multiprocessor(fitter):
+    parfile = pint.config.examplefile("NGC6440E.par")
+    timfile = pint.config.examplefile("NGC6440E.tim")
+    m, t = get_model_and_toas(parfile, timfile)
+    f = fitter(t, m)
+    f.fit_toas()
+    bestfit = f.resids.chi2
+    F0 = np.linspace(
+        f.model.F0.quantity - 3 * f.model.F0.uncertainty,
+        f.model.F0.quantity + 3 * f.model.F0.uncertainty,
+        7,
+    )
+    chi2grid = pint.gridutils.grid_chisq(
+        f, ("F0",), (F0,), printprogress=False, ncpu=ncpu
+    )
 
     assert np.isclose(bestfit, chi2grid.min())
