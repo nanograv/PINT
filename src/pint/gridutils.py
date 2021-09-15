@@ -69,7 +69,7 @@ def grid_chisq(
         Size of the chunks for :class:`concurrent.futures.ProcessPoolExecutor` parallel execution.
         Ignored for :class:`concurrent.futures.ThreadPoolExecutor`
     printprogress : bool, optional
-        Print indications of progress (requires :mod:`tqdm`)
+        Print indications of progress (requires :mod:`tqdm` for `ncpu`>1)
 
     Returns
     -------
@@ -179,10 +179,14 @@ def grid_chisq(
         for i, r in zip(it, result):
             chi2[i] = r
     else:
-        it = np.ndindex(out[0].shape)
-        if printprogress and tqdm is not None:
-            it = tqdm(it, total=len(out[0].flatten()), ascii=True)
-        for i in it:
+        indices = list(np.ndindex(out[0].shape))
+        if printprogress:
+            if tqdm is not None:
+                indices = tqdm(indices, ascii=True)
+            else:
+                indices = ProgressBar(indices)
+            
+        for i in indices:
             for parnum, parname in enumerate(parnames):
                 getattr(ftr.model, parname).quantity = out[parnum][i]
             ftr.fit_toas()
@@ -210,7 +214,7 @@ def grid_chisq_derived(
     ftr : pint.fitter.Fitter
         The base fitter to use.
     parnames : list
-        Names of the parameters to grid over
+        Names of the parameters (available in `ftr`) to grid over
     parfuncs : list
         List of functions to convert `gridvalues` to quantities accessed through `parnames`
     gridvalues : list
@@ -226,13 +230,35 @@ def grid_chisq_derived(
         Size of the chunks for :class:`concurrent.futures.ProcessPoolExecutor` parallel execution.
         Ignored for :class:`concurrent.futures.ThreadPoolExecutor`
     printprogress : bool, optional
-        Print indications of progress (requires :mod:`tqdm`)
+        Print indications of progress (requires :mod:`tqdm` for `ncpu`>1)
 
     Returns
     -------
     np.ndarray : array of chisq values
     parvalues : list of np.ndarray
         Parameter values computed from `gridvalues` and `parfuncs`
+
+
+    Example
+    -------
+    >>> import astropy.units as u
+    >>> import numpy as np
+    >>> import pint.config
+    >>> import pint.gridutils
+    >>> from pint.fitter import WLSFitter
+    >>> from pint.models.model_builder import get_model, get_model_and_toas
+    # Load in a basic dataset
+    >>> parfile = pint.config.examplefile("NGC6440E.par")
+    >>> timfile = pint.config.examplefile("NGC6440E.tim")
+    >>> m, t = get_model_and_toas(parfile, timfile)
+    >>> f = WLSFitter(t, m)
+    # find the best-fit
+    >>> f.fit_toas()
+    >>> bestfit = f.resids.chi2
+    # do a grid for F0 and tau
+    >>> F0 = np.linspace(f.model.F0.quantity - 3 * f.model.F0.uncertainty,f.model.F0.quantity + 3 * f.model.F0.uncertainty,15,)
+    >>> tau = np.linspace(8.1, 8.3, 13) * 100 * u.Myr
+    >>> chi2grid_tau, params = pint.gridutils.grid_chisq_derived(f,("F0", "F1"),(lambda x, y: x, lambda x, y: -x / 2 / y),(F0, tau))
 
     Notes
     -----
@@ -321,10 +347,14 @@ def grid_chisq_derived(
         for i, r in zip(it, result):
             chi2[i] = r
     else:
-        it = np.ndindex(grid[0].shape)
-        if printprogress and tqdm is not None:
-            it = tqdm(it, total=len(grid[0].flatten()), ascii=True)
-        for i in it:
+        indices = list(np.ndindex(grid[0].shape))
+        if printprogress:
+            if tqdm is not None:
+                indices = tqdm(indices, ascii=True)
+            else:
+                indices = ProgressBar(indices)
+            
+        for i in indices:
             for parnum, parname in enumerate(parnames):
                 getattr(ftr.model, parname).quantity = out[parnum][i]
             ftr.fit_toas()
