@@ -187,7 +187,6 @@ def plot_priors(
     burnin=100,
     bins=100,
     scale=False,
-    plotfile=None,
 ):
     """Plot of priors and the post-MCMC histogrammed samples
     
@@ -225,8 +224,6 @@ def plot_priors(
         might not be apparent on the same plot due to one being significantly
         larger than the other. The scaling is for visual purposes to clearly 
         plot the priors with the samples
-    plotfile : optional
-        Name of the plotfile to be saved
     """
     keys = []
     values = []
@@ -294,8 +291,3 @@ def plot_priors(
             handles, labels = axs[0].get_legend_handles_labels()
             axs[i].set_axis_off()
             axs[i].legend(handles, labels)
-    if plotfile is not None:
-        plt.savefig(plotfile)
-        plt.close()
-    else:
-        plt.show()
