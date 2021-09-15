@@ -59,7 +59,7 @@ bestfit = f.resids.chi2
 f.model.free_params
 
 # %% [markdown]
-# So we were fitting for RA, Dec, $F0$, $F1$, and $DM$.  
+# So we were fitting for RA, Dec, $F0$, $F1$, and $DM$.
 #
 # We'll do something like 3-sigma around the best-fit value of $F0$, fitting for RA, Dec, $F1$ and $DM$ at each grid point.
 

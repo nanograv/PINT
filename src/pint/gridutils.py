@@ -185,7 +185,7 @@ def grid_chisq(
                 indices = tqdm(indices, ascii=True)
             else:
                 indices = ProgressBar(indices)
-            
+
         for i in indices:
             for parnum, parname in enumerate(parnames):
                 getattr(ftr.model, parname).quantity = out[parnum][i]
@@ -353,7 +353,7 @@ def grid_chisq_derived(
                 indices = tqdm(indices, ascii=True)
             else:
                 indices = ProgressBar(indices)
-            
+
         for i in indices:
             for parnum, parname in enumerate(parnames):
                 getattr(ftr.model, parname).quantity = out[parnum][i]
