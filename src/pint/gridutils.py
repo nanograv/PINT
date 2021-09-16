@@ -4,6 +4,7 @@ import copy
 import logging
 import multiprocessing
 import os
+import subprocess
 
 import astropy.constants as const
 import astropy.units as u
@@ -22,6 +23,8 @@ log = logging.getLogger(__name__)
 
 __all__ = ["doonefit", "grid_chisq", "grid_chisq_derived", "plot_grid_chisq"]
 
+def hostinfo():
+    return subprocess.check_output('uname -a', shell=True)
 
 def doonefit(ftr, parnames, parvalues):
     """Worker process that computes one fit with specified parameters fixed
@@ -36,12 +39,16 @@ def doonefit(ftr, parnames, parvalues):
     """
     # Make a full copy of the fitter to work with
     myftr = copy.deepcopy(ftr)
+    parstrings = []
     for parname, parvalue in zip(parnames, parvalues):
         # Freeze the  params we are going to grid over and set their values
         # All other unfrozen parameters will be fitted for at each grid point
         getattr(myftr.model, parname).frozen = True
         getattr(myftr.model, parname).quantity = parvalue
+        parstrings.append(f"{parname} = {parvalue}")
     myftr.fit_toas()
+
+    print(f"Computed chi^2={myftr.resids.chi2} for {','.join(parstrings)} on {hostinfo()}")
     return myftr.resids.chi2
 
 
