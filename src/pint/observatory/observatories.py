@@ -228,11 +228,13 @@ TopoObs(
     "chime",
     tempo_code="y",
     itoa_code="CH",
-    itrf_xyz=[-2058795.0, -3621559.0, 4814280.0],
-    origin="""The Canadian HI Mapping Experiment.
+    itrf_xyz=[-2059166.313, -3621302.972, 4814304.113],
+    origin="""The Canadian Hydrogen Intensity Mapping Experiment.
 
-    Origin of this data is unknown but as of 2021 June 8 this value agrees exactly with
-    the value used by TEMPO2 and TEMPO.
+    Origin of these coordinates are from surveyor reports of the CHIME site
+    (circa 2019 & 2020) and technical documents on the dimensions of the telescope
+    structure (circa 2015). Results were compiled in January 2021. The coordinates
+    are relative to the GRS80 ellipsoid.
     """,
 )
 TopoObs(
