@@ -23,8 +23,10 @@ log = logging.getLogger(__name__)
 
 __all__ = ["doonefit", "grid_chisq", "grid_chisq_derived", "plot_grid_chisq"]
 
+
 def hostinfo():
-    return subprocess.check_output('uname -a', shell=True)
+    return subprocess.check_output("uname -a", shell=True)
+
 
 def doonefit(ftr, parnames, parvalues):
     """Worker process that computes one fit with specified parameters fixed
@@ -48,7 +50,9 @@ def doonefit(ftr, parnames, parvalues):
         parstrings.append(f"{parname} = {parvalue}")
     myftr.fit_toas()
 
-    print(f"Computed chi^2={myftr.resids.chi2} for {','.join(parstrings)} on {hostinfo()}")
+    log.debug(
+        f"Computed chi^2={myftr.resids.chi2} for {','.join(parstrings)} on {hostinfo()}"
+    )
     return myftr.resids.chi2
 
 
