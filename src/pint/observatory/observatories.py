@@ -2,7 +2,6 @@
 
 These observatories are registered when this file is imported. As a result it
 cannot be imported until TopoObs has successfully been imported.
-
 """
 from pint.observatory.topo_obs import TopoObs
 
@@ -10,6 +9,14 @@ TopoObs(
     "gbt",
     tempo_code="1",
     itoa_code="GB",
+    itrf_xyz=[882589.289, -4924872.368, 3943729.418]
+    origin="""The Robert C. Byrd Green Bank Telescope.
+
+    This data was obtained by Joe Swiggum from Ryan Lynch in 2021 September.
+    """,
+)
+TopoObs(
+    "gbt_pre_2021",
     itrf_xyz=[882589.65, -4924872.32, 3943729.348],
     origin="""The Robert C. Byrd Green Bank Telescope.
 
