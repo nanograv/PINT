@@ -9,7 +9,7 @@ TopoObs(
     "gbt",
     tempo_code="1",
     itoa_code="GB",
-    itrf_xyz=[882589.289, -4924872.368, 3943729.418]
+    itrf_xyz=[882589.289, -4924872.368, 3943729.418],
     origin="""The Robert C. Byrd Green Bank Telescope.
 
     This data was obtained by Joe Swiggum from Ryan Lynch in 2021 September.

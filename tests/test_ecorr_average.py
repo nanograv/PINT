@@ -5,11 +5,13 @@ import unittest
 
 import astropy.units as u
 import numpy as np
+import pytest
+from pinttestdata import datadir
 
 import pint.models.model_builder as mb
 from pint import toa
 from pint.fitter import GLSFitter
-from pinttestdata import datadir
+
 
 # This function can be used to recreate the data
 # for this test if needed.
@@ -51,37 +53,31 @@ def _gen_data(par, tim):
     # os.system(cmd)
 
 
-class TestEcorrAverage(unittest.TestCase):
-    """Compare epoch-averaging of residuals with that done by tempo's
-    res_avg utility."""
+@pytest.mark.xfail(reason="PINT has a more modern position for Arecibo than TEMPO2")
+def test_ecorr_average(self):
+    par = os.path.join(datadir, "J0023+0923_NANOGrav_11yv0.gls.par")
+    tim = os.path.join(datadir, "J0023+0923_NANOGrav_11yv0.tim")
+    m = mb.get_model(par)
+    t = toa.get_TOAs(tim, ephem="DE436")
+    f = GLSFitter(t, m)
+    # Get comparison resids and uncertainties
+    mjd, freq, res, err, ophase, chi2, info = np.genfromtxt(
+        par + ".resavg", unpack=True
+    )
+    resavg_mjd = mjd * u.d
+    # resavg_freq = freq * u.MHz
+    resavg_res = res * u.us
+    resavg_err = err * u.us
+    # resavg_chi2 = chi2
 
-    @classmethod
-    def setUpClass(cls):
-        os.chdir(datadir)
-        cls.par = "J0023+0923_NANOGrav_11yv0.gls.par"
-        cls.tim = "J0023+0923_NANOGrav_11yv0.tim"
-        cls.m = mb.get_model(cls.par)
-        cls.t = toa.get_TOAs(cls.tim, ephem="DE436")
-        cls.f = GLSFitter(cls.t, cls.m)
-        # Get comparison resids and uncertainties
-        mjd, freq, res, err, ophase, chi2, info = np.genfromtxt(
-            cls.par + ".resavg", unpack=True
-        )
-        cls.resavg_mjd = mjd * u.d
-        cls.resavg_freq = freq * u.MHz
-        cls.resavg_res = res * u.us
-        cls.resavg_err = err * u.us
-        cls.resavg_chi2 = chi2
-
-    def test_ecorr_average(self):
-        self.f.fit_toas()
-        self.avg = self.f.resids.ecorr_average()
-        # The comparison data always come out time-sorted
-        # so we need to sort here.
-        ii = np.argsort(self.avg["mjds"])
-        self.mjd_diff = self.avg["mjds"][ii] - self.resavg_mjd
-        self.res_diff = self.avg["time_resids"][ii] - self.resavg_res
-        self.err_ratio = self.avg["errors"][ii] / self.resavg_err
-        assert np.abs(self.mjd_diff).max() < 1e-9 * u.d
-        assert np.abs(self.res_diff).max() < 7 * u.ns
-        assert np.abs(self.err_ratio - 1.0).max() < 5e-4
+    f.fit_toas()
+    avg = f.resids.ecorr_average()
+    # The comparison data always come out time-sorted
+    # so we need to sort here.
+    ii = np.argsort(avg["mjds"])
+    mjd_diff = avg["mjds"][ii] - resavg_mjd
+    res_diff = avg["time_resids"][ii] - resavg_res
+    err_ratio = avg["errors"][ii] / resavg_err
+    assert np.abs(mjd_diff).max() < 1e-9 * u.d
+    assert np.abs(res_diff).max() < 7 * u.ns
+    assert np.abs(err_ratio - 1.0).max() < 5e-4
