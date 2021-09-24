@@ -538,17 +538,18 @@ class AstrometryEquatorial(Astrometry):
         m_ecl.PMELAT.quantity = c.pm_lat
 
         # use fake proper motions to convert uncertainties on ELONG, ELAT
+        # assume that ELONG uncertainty does not include cos(ELAT)
         dt = 1 * u.yr
         c = coords.SkyCoord(
             ra=self.RAJ.quantity,
             dec=self.DECJ.quantity,
             obstime=self.POSEPOCH.quantity,
-            pm_ra_cosdec=self.DECJ.uncertainty / dt,
+            pm_ra_cosdec=self.RAJ.uncertainty * np.cos(self.DECJ.quantity) / dt,
             pm_dec=self.DECJ.uncertainty / dt,
             frame=coords.ICRS,
         )
         c_ECL = c.transform_to(PulsarEcliptic(ecl=ecl))
-        m_ecl.ELONG.uncertainty = c_ECL.pm_lon_coslat * dt
+        m_ecl.ELONG.uncertainty = c_ECL.pm_lon_coslat * dt / np.cos(c_ECL.lat)
         m_ecl.ELAT.uncertainty = c_ECL.pm_lat * dt
         # use fake proper motions to convert uncertainties on proper motion
         c = coords.SkyCoord(
@@ -945,18 +946,19 @@ class AstrometryEcliptic(Astrometry):
         m_eq.PMDEC.quantity = c.pm_dec
 
         # use fake proper motions to convert uncertainties on RA,Dec
+        # assume that RA uncertainty does not include cos(Dec)
         dt = 1 * u.yr
         c = coords.SkyCoord(
             lon=self.ELONG.quantity,
             lat=self.ELAT.quantity,
             obliquity=OBL[self.ECL.value],
             obstime=self.POSEPOCH.quantity,
-            pm_lon_coslat=self.ELONG.uncertainty / dt,
+            pm_lon_coslat=self.ELONG.uncertainty * np.cos(self.ELAT.quantity) / dt,
             pm_lat=self.ELAT.uncertainty / dt,
             frame=PulsarEcliptic,
         )
         c_ICRS = c.transform_to(coords.ICRS)
-        m_eq.RAJ.uncertainty = c_ICRS.pm_ra_cosdec * dt
+        m_eq.RAJ.uncertainty = c_ICRS.pm_ra_cosdec * dt / np.cos(c_ICRS.dec)
         m_eq.DECJ.uncertainty = c_ICRS.pm_dec * dt
         # use fake proper motions to convert uncertainties on proper motion
         c = coords.SkyCoord(
