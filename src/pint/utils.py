@@ -1607,4 +1607,3 @@ def list_parameters(class_=None):
                         )
                     results[n]["classes"].append(class_)
         return sorted(results.values(), key=lambda d: d["name"])
-
