@@ -2,7 +2,6 @@
 
 These observatories are registered when this file is imported. As a result it
 cannot be imported until TopoObs has successfully been imported.
-
 """
 from pint.observatory.topo_obs import TopoObs
 
@@ -10,6 +9,14 @@ TopoObs(
     "gbt",
     tempo_code="1",
     itoa_code="GB",
+    itrf_xyz=[882589.289, -4924872.368, 3943729.418],
+    origin="""The Robert C. Byrd Green Bank Telescope.
+
+    This data was obtained by Joe Swiggum from Ryan Lynch in 2021 September.
+    """,
+)
+TopoObs(
+    "gbt_pre_2021",
     itrf_xyz=[882589.65, -4924872.32, 3943729.348],
     origin="""The Robert C. Byrd Green Bank Telescope.
 
@@ -22,11 +29,22 @@ TopoObs(
     tempo_code="3",
     itoa_code="AO",
     aliases=["aoutc"],
+    itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
+    origin="""The Arecibo telescope.
+
+    These are the coordinates used for VLBI as of March 2020 (MJD 58919). They are based on
+    a fiducial position at MJD 52275 plus a (continental) drift velocity of
+    [0.0099, 0.0045, 0.0101] m/yr. This data was obtained from Ben Perera in September 2021.
+    """,
+)
+TopoObs(
+    "arecibo_pre_2021",
     itrf_xyz=[2390490.0, -5564764.0, 1994727.0],
     origin="""The Arecibo telescope.
 
     The origin of this data is unknown but as of 2021 June 8 it agrees exactly with
-    the values used by TEMPO and TEMPO2.
+    the values used by TEMPO and TEMPO2. It is preserved to facilitate comparisons with
+    the more modern position measurement.
     """,
 )
 TopoObs(
@@ -75,6 +93,16 @@ TopoObs(
     tempo_code="8",
     itoa_code="JB",
     aliases=["jbdfb", "jbroach", "jbafb", "jbodfb", "jboafb", "jboroach"],
+    itrf_xyz=[3822625.769, -154105.255, 5086486.256],
+    origin="""The Lovell telescope at Jodrell Bank.
+
+    These are the coordinates used for VLBI as of March 2020 (MJD 58919). They are based on
+    a fiducial position at MJD 50449 plus a (continental) drift velocity of
+    [-0.0117, 0.0170, 0.0093] m/yr. This data was obtained from Ben Perera in September 2021.
+    """,
+)
+TopoObs(
+    "jodrell_pre_2021",
     itrf_xyz=[3822626.04, -154105.65, 5086486.04],
     origin="""The Lovell telescope at Jodrell Bank.
 
@@ -115,6 +143,19 @@ TopoObs(
     tempo_code="g",
     itoa_code="EF",
     aliases=["eff"],
+    clock_fmt="tempo2",
+    clock_dir="TEMPO2",
+    clock_file="eff2gps.clk",
+    itrf_xyz=[4033947.146, 486990.898, 4900431.067],
+    origin="""The Effelsberg radio telescope.
+
+    These are the coordinates used for VLBI as of March 2020 (MJD 58919). They are based on
+    a fiducial position at MJD 56658 plus a (continental) drift velocity of
+    [-0.0144, 0.0167, 0.0106] m/yr. This data was obtained from Ben Perera in September 2021.
+    """,
+)
+TopoObs(
+    "effelsberg_pre_2021",
     clock_fmt="tempo2",
     clock_dir="TEMPO2",
     clock_file="eff2gps.clk",
