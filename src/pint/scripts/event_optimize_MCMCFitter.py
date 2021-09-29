@@ -353,6 +353,11 @@ def main(argv=None):
     except ImportError:
         pass
 
+    # Plot the scaled prior probability alongside the initial gaussian probability distribution and the histogrammed samples
+    ftr.plot_priors(chains, burnin, scale=True)
+    plt.savefig(ftr.model.PSR.value + "_priors.png")
+    plt.close()
+
     # Make a phaseogram with the 50th percentile values
     # ftr.set_params(dict(zip(ftr.fitkeys, np.percentile(samples, 50, axis=0))))
     # Make a phaseogram with the best MCMC result
