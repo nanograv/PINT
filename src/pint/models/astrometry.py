@@ -539,6 +539,8 @@ class AstrometryEquatorial(Astrometry):
 
         # use fake proper motions to convert uncertainties on ELONG, ELAT
         # assume that ELONG uncertainty does not include cos(ELAT)
+        # and that the RA uncertainty does not include cos(DEC)
+        # put it in here as pm_ra_cosdec since astropy complains otherwise
         dt = 1 * u.yr
         c = coords.SkyCoord(
             ra=self.RAJ.quantity,
@@ -552,6 +554,7 @@ class AstrometryEquatorial(Astrometry):
         m_ecl.ELONG.uncertainty = c_ECL.pm_lon_coslat * dt / np.cos(c_ECL.lat)
         m_ecl.ELAT.uncertainty = c_ECL.pm_lat * dt
         # use fake proper motions to convert uncertainties on proper motion
+        # assume that the PM_RA _does_ include cos(DEC)
         c = coords.SkyCoord(
             ra=self.RAJ.quantity,
             dec=self.DECJ.quantity,
@@ -947,6 +950,8 @@ class AstrometryEcliptic(Astrometry):
 
         # use fake proper motions to convert uncertainties on RA,Dec
         # assume that RA uncertainty does not include cos(Dec)
+        # and neither does the ELONG uncertainty
+        # put it in as pm_lon_coslat since astropy complains otherwise
         dt = 1 * u.yr
         c = coords.SkyCoord(
             lon=self.ELONG.quantity,
@@ -961,6 +966,7 @@ class AstrometryEcliptic(Astrometry):
         m_eq.RAJ.uncertainty = c_ICRS.pm_ra_cosdec * dt / np.cos(c_ICRS.dec)
         m_eq.DECJ.uncertainty = c_ICRS.pm_dec * dt
         # use fake proper motions to convert uncertainties on proper motion
+        # assume that PMELONG uncertainty includes cos(DEC)
         c = coords.SkyCoord(
             lon=self.ELONG.quantity,
             lat=self.ELAT.quantity,
