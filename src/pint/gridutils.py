@@ -121,7 +121,6 @@ def grid_chisq(
 
     If an instantiated :class:`~concurrent.futures.Executor` is passed instead, it will be used as-is.
 
-
     The behavior for different combinations of `executor` and `ncpu` is:
     +-----------------+--------+------------------------+
     | `executor`      | `ncpu` | result                 |
@@ -138,6 +137,13 @@ def grid_chisq(
     |                 |        | executor with desired  |
     |                 |        | number of workers      |
     +-----------------+--------+------------------------+
+
+    Other ``Executors`` can be found for different computing environments:
+    * [1]_ for MPI
+    * [2]_ for SLURM or Condor
+
+    .. [1] https://mpi4py.readthedocs.io/en/stable/mpi4py.futures.html#mpipoolexecutor
+    .. [2] https://github.com/sampsyo/clusterfutures
     """
 
     if isinstance(executor, concurrent.futures.Executor):
@@ -301,6 +307,13 @@ def grid_chisq_derived(
     |                 |        | executor with desired  |
     |                 |        | number of workers      |
     +-----------------+--------+------------------------+
+
+    Other ``Executors`` can be found for different computing environments:
+    * [1]_ for MPI
+    * [2]_ for SLURM or Condor
+
+    .. [1] https://mpi4py.readthedocs.io/en/stable/mpi4py.futures.html#mpipoolexecutor
+    .. [2] https://github.com/sampsyo/clusterfutures
     """
     if isinstance(executor, concurrent.futures.Executor):
         # the executor has already been created
