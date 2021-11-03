@@ -194,7 +194,9 @@ class TempoClockFile(ClockFile):
             # Parse MJD
             try:
                 mjd = float(l[0:9])
-                if mjd < 39000 or mjd > 100000:
+                # allow mjd=0 to pass, since that is often used
+                # for effectively null clock files
+                if (mjd < 39000 and mjd != 0) or mjd > 100000:
                     mjd = None
             except (ValueError, IndexError):
                 mjd = None
