@@ -71,7 +71,7 @@ def test_ECL_to_ICRS():
 
 def test_ECL_to_ICRS_uncertainties():
     # start with ECL model, fit with both models
-    # compare uncertainties
+    # compare parameter values and uncertainties
     model_ECL = get_model(io.StringIO(modelstring_ECL))
 
     toas = pint.simulation.make_fake_toas_uniform(
@@ -84,8 +84,10 @@ def test_ECL_to_ICRS_uncertainties():
 
     m1 = fit_ECL.model
     m2 = fit_ICRS.model.as_ECL()
-    # do a generous test here since the uncertainties could change
+
     for p in ("ELONG", "ELAT", "PMELONG", "PMELAT"):
+        assert np.isclose(m1.__getitem__(p).value, m2.__getitem__(p).value)
+        # do a generous test here since the uncertainties could change
         assert np.isclose(
             m1.__getitem__(p).uncertainty, m2.__getitem__(p).uncertainty, rtol=0.5
         )
@@ -93,8 +95,7 @@ def test_ECL_to_ICRS_uncertainties():
 
 def test_ICRS_to_ECL_uncertainties():
     # start with ICRS model, fit with both models
-    # compare uncertainties
-
+    # compare parameter values and uncertainties
     model_ICRS = get_model(io.StringIO(modelstring_ICRS))
 
     toas = pint.simulation.make_fake_toas_uniform(
@@ -107,8 +108,10 @@ def test_ICRS_to_ECL_uncertainties():
 
     m1 = fit_ICRS.model
     m2 = fit_ECL.model.as_ICRS()
-    # do a generous test here since the uncertainties could change
+
     for p in ("RAJ", "DECJ", "PMRA", "PMDEC"):
+        assert np.isclose(m1.__getitem__(p).value, m2.__getitem__(p).value)
+        # do a generous test here since the uncertainties could change
         assert np.isclose(
             m1.__getitem__(p).uncertainty, m2.__getitem__(p).uncertainty, rtol=0.5
         )
