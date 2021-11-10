@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.11.2
+#       jupytext_version: 1.13.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -64,7 +64,7 @@ f.model.free_params
 # We'll do something like 3-sigma around the best-fit value of $F0$, fitting for RA, Dec, $F1$ and $DM$ at each grid point.
 
 # %% [markdown]
-# # 1D Grid
+# ## 1D Grid
 
 # %%
 F0 = np.linspace(
@@ -120,7 +120,7 @@ ax.legend()
 # From the above you can see that the calculated uncertainties on $F0$ from the model fit agree with where $\Delta \chi^2=1$, which is what we would expect for a single parameter.
 
 # %% [markdown]
-# # 2D Grid
+# ## 2D Grid
 
 # %% [markdown]
 # Now, compute a 2D grid of $\chi^2(F0,F1)$, so we'll also set up a grid of $F1$ to search over
@@ -215,7 +215,7 @@ f.parameter_correlation_matrix
 # It's also clear that the joint confidence region (solid blue contours) are significantly bigger than the single parameter region (green dashed contours).
 
 # %% [markdown]
-# # Changing PEPOCH
+# ## Changing PEPOCH
 
 # %% [markdown]
 # To have minimal covariance between $F0$ and $F1$, we want PEPOCH to be close to the mean time of the TOAs (ideally the weighted mean).  Is it close now?
