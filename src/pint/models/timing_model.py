@@ -2306,6 +2306,62 @@ class TimingModel:
         for p in self.params:
             yield p
 
+    def as_ECL(self, epoch=None, ecl="IERS2010"):
+        """Return TimingModel in PulsarEcliptic frame.
+
+        Parameters
+        ----------
+        epoch : `astropy.time.Time` or Float, optional
+            new epoch for position.  If Float, MJD(TDB) is assumed.
+            Note that uncertainties are not adjusted.
+        ecl : str, optional
+            Obliquity for PulsarEcliptic frame
+
+        Returns
+        -------
+        pint.models.timing_model.TimingModel
+            In PulsarEcliptic frame
+        """
+        if "AstrometryEquatorial" in self.components:
+            astrometry_model_type = "AstrometryEquatorial"
+        elif "AstrometryEcliptic" in self.components:
+            astrometry_model_type = "AstrometryEcliptic"
+        astrometry_model_component = self.components[astrometry_model_type]
+        new_astrometry_model_component = astrometry_model_component.as_ECL(
+            epoch=epoch, ecl=ecl
+        )
+        new_model = copy.deepcopy(self)
+        new_model.remove_component(astrometry_model_type)
+        new_model.add_component(new_astrometry_model_component)
+        return new_model
+
+    def as_ICRS(self, epoch=None):
+        """Return TimingModel in ICRS frame.
+
+        Parameters
+        ----------
+        epoch : `astropy.time.Time` or Float, optional
+            new epoch for position.  If Float, MJD(TDB) is assumed.
+            Note that uncertainties are not adjusted.
+
+        Returns
+        -------
+        pint.models.timing_model.TimingModel
+            In ICRS frame
+        """
+        if "AstrometryEquatorial" in self.components:
+            astrometry_model_type = "AstrometryEquatorial"
+        elif "AstrometryEcliptic" in self.components:
+            astrometry_model_type = "AstrometryEcliptic"
+        astrometry_model_component = self.components[astrometry_model_type]
+        new_astrometry_model_component = astrometry_model_component.as_ICRS(
+            epoch=epoch,
+        )
+        new_model = copy.deepcopy(self)
+        new_model.remove_component(astrometry_model_type)
+        new_model.add_component(new_astrometry_model_component)
+        return new_model
+
 
 class ModelMeta(abc.ABCMeta):
     """Ensure timing model registration.
