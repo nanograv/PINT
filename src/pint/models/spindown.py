@@ -32,27 +32,39 @@ class Spindown(PhaseComponent):
 
     def __init__(self):
         super().__init__()
+        # self.add_param(
+        #     floatParameter(
+        #         name="F0",
+        #         value=0.0,
+        #         units="Hz",
+        #         description="Spin-frequency",
+        #         long_double=True,
+        #     )
+        # )
         self.add_param(
-            floatParameter(
+            prefixParameter(
                 name="F0",
                 value=0.0,
                 units="Hz",
-                description="Spin-frequency",
-                long_double=True,
-            )
-        )
-        self.add_param(
-            prefixParameter(
-                name="F1",
-                value=0.0,
-                units="Hz/s^1",
-                description="Spindown-rate",
+                description="Spindown-frequency",
                 unit_template=self.F_unit,
                 description_template=self.F_description,
                 type_match="float",
                 long_double=True,
             )
         )
+        # self.add_param(
+        #     prefixParameter(
+        #         name="F1",
+        #         value=0.0,
+        #         units="Hz/s^1",
+        #         description="Spindown-rate",
+        #         unit_template=self.F_unit,
+        #         description_template=self.F_description,
+        #         type_match="float",
+        #         long_double=True,
+        #     )
+        # )
         self.add_param(
             MJDParameter(
                 name="PEPOCH",
@@ -66,6 +78,8 @@ class Spindown(PhaseComponent):
 
     def setup(self):
         super().setup()
+        self.num_spin_terms = len(self.F_terms)
+        # Add derivative functions
         for fp in list(self.get_prefix_mapping_component("F").values()) + ["F0"]:
             self.register_deriv_funcs(self.d_phase_d_F, fp)
 
@@ -76,7 +90,7 @@ class Spindown(PhaseComponent):
             if getattr(self, p).value is None:
                 raise MissingParameter("Spindown", p)
         # Check continuity
-        self._parent.get_prefix_list("F", start_index=1)
+        self._parent.get_prefix_list("F", start_index=0)
         # If F1 is set, we need PEPOCH
         if hasattr(self, "F1") and self.F1.value != 0.0:
             if self.PEPOCH.value is None:
@@ -86,19 +100,19 @@ class Spindown(PhaseComponent):
 
     @property
     def F_terms(self):
-        return [f"F{i}" for i in range(1 + len(self._parent.get_prefix_list("F", 1)))]
+        return [f"F{i}" for i in range(len(self._parent.get_prefix_list("F", 0)))]
 
     def F_description(self, n):
-        """Template function for description."""
-        return "Spin-frequency %d derivative" % n if n else "Spin-frequency"
+        """Template function for description"""
+        return "Spin-frequency %d derivative" % n  # if n else "Spin-frequency"
 
     def F_unit(self, n):
-        """Template function for unit."""
-        return "Hz/s^%d" % n if n else "Hz"
+        """Template function for unit"""
+        return "Hz/s^%d" % n  # if n else "Hz"
 
     def get_spin_terms(self):
         """Return a list of the spin term values in the model: [F0, F1, ..., FN]."""
-        return [self.F0.quantity] + self._parent.get_prefix_list("F", start_index=1)
+        return self._parent.get_prefix_list("F", start_index=0)
 
     def get_dt(self, toas, delay):
         """Return dt, the time from the phase 0 epoch to each TOA.  The

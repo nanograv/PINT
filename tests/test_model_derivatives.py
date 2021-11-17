@@ -118,22 +118,22 @@ def get_model_and_toas(parfile):
             "A1DOT",  # Scaling weirdness
         ]
     ]
-    + [("B1855+09_NANOGrav_12yv3.wb.gls.par", param) for param in ["M2", "SINI",]]
+    + [("B1855+09_NANOGrav_12yv3.wb.gls.par", param) for param in ["M2", "SINI"]]
     + [
         ("J0023+0923_NANOGrav_11yv0.gls.par", param)
         for param in ["FB0", "FB1", "FB2", "FB3", "FD1", "JUMP1"]
     ]
-    + [("J0613-0200_NANOGrav_9yv1_ELL1H.gls.par", param) for param in ["H3", "H4",]]
+    + [("J0613-0200_NANOGrav_9yv1_ELL1H.gls.par", param) for param in ["H3", "H4"]]
     + [
         ("J0613-0200_NANOGrav_9yv1_ELL1H_STIG.gls.par", param)
-        for param in ["H3", "STIGMA",]
+        for param in ["H3", "STIGMA"]
     ]
     + [
         (
             "J1713+0747_NANOGrav_11yv0.gls.par",
             param,
         )  # DDK; also A1DOT doesn't need rescaling
-        for param in ["PB", "A1", "ECC", "T0", "M2", "KIN", "KOM", "PX", "A1DOT",]
+        for param in ["PB", "A1", "ECC", "T0", "M2", "KIN", "KOM", "PX", "A1DOT"]
     ],
 )
 def test_derivative_equals_numerical(parfile, param):

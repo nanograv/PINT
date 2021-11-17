@@ -25,12 +25,12 @@ def test_no_f1():
 
 
 def test_missing_f1():
-    m = get_model(StringIO("\n".join([par_base, "F2 0"])))
-    assert m.F1.value == 0
+    with pytest.raises(ValueError):
+        m = get_model(StringIO("\n".join([par_base, "F2 0"])))
 
 
 def test_removed_f1():
-    m = get_model(StringIO(par_base))
+    m = get_model(StringIO("\n".join([par_base, "F1 0"])))
     assert m.F1.value == 0
     m.remove_param("F1")
     m.validate()

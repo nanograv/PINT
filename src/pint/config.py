@@ -3,11 +3,7 @@
 import os
 import pkg_resources
 
-__all__ = [
-    "datadir",
-    "examplefile",
-    "runtimefile",
-]
+__all__ = ["datadir", "examplefile", "runtimefile"]
 
 # location of tim, par files installed via pkg_resources
 def datadir():

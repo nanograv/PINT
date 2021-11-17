@@ -171,6 +171,7 @@ def binary_model(request):
 
 def test_change_binary_epoch(binary_model):
     model = binary_model
+    print("timing model", model.params)
     t0 = Time(56000, scale="tdb", format="mjd")
 
     model_kind = model.binary_model_name

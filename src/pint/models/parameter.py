@@ -175,6 +175,9 @@ class Parameter:
     ):
 
         self.name = name  # name of the parameter
+        # The input parameter from parfile, which can be an alias of the parameter
+        # TODO give a better name and make it easy to access.
+        self._parfile_name = name
         self.units = units  # Default unit
         self.quantity = value  # The value of parameter, internal storage
         self.prior = prior
@@ -188,7 +191,6 @@ class Parameter:
         self.paramType = "Not specified"  # Type of parameter. Here is general type
         self.valueType = None
         self.special_arg = []
-
         self.use_alias = use_alias
 
     @property
@@ -360,6 +362,10 @@ class Parameter:
             raise NotImplementedError()
 
     @property
+    def repeatable(self):
+        return False
+
+    @property
     def prior(self):
         """prior distribution for this parameter.
 
@@ -489,8 +495,8 @@ class Parameter:
                     str2longdouble(k[2])
                     ucty = k[2]
                 except ValueError:
-                    errmsg = "Unidentified string " + k[2] + " in"
-                    errmsg += " parfile line " + k
+                    errmsg = f"Unidentified string '{k[2]}' in"
+                    errmsg += f" parfile line " + " ".join(k)
                     raise ValueError(errmsg)
 
             if len(k) >= 4:
@@ -1238,7 +1244,7 @@ class prefixParameter:
         scale_factor=None,
         scale_threshold=None,
         time_scale="utc",
-        **kwargs,  # FIXME: why is this here?
+        **kwargs,
     ):
         # Split prefixed name, if the name is not in the prefixed format, error
         # will be raised
@@ -1301,6 +1307,10 @@ class prefixParameter:
         self.time_scale = time_scale
 
     @property
+    def repeatable(self):
+        return self.param_comp.repeatable
+
+    @property
     def units(self):
         return self.param_comp.units
 
@@ -1355,6 +1365,14 @@ class prefixParameter:
     @aliases.setter
     def aliases(self, a):
         self.param_comp.aliases = a
+
+    @property
+    def use_alias(self):
+        return self.param_comp.use_alias
+
+    @use_alias.setter
+    def use_alias(self, a):
+        self.param_comp.use_alias = a
 
     @property
     def continuous(self):
@@ -1568,7 +1586,7 @@ class maskParameter(floatParameter):
             uncertainty=uncertainty,
             frozen=frozen,
             continuous=continuous,
-            aliases=idx_aliases,
+            aliases=idx_aliases + aliases,
             long_double=long_double,
         )
 
@@ -1577,6 +1595,7 @@ class maskParameter(floatParameter):
         if index == 1:
             self.aliases.append(name)
         self.is_prefix = True
+        self._parfile_name = self.origin_name
 
     def __repr__(self):
         out = self.__class__.__name__ + "(" + self.name
@@ -1597,6 +1616,10 @@ class maskParameter(floatParameter):
         out += ")"
 
         return out
+
+    @property
+    def repeatable(self):
+        return True
 
     def name_matches(self, name):
         if super().name_matches(name):
@@ -1752,11 +1775,7 @@ class maskParameter(floatParameter):
         array
             An array of TOA indices selected by the mask.
         """
-        column_match = {
-            "mjd": "mjd_float",
-            "freq": "freq",
-            "tel": "obs",
-        }
+        column_match = {"mjd": "mjd_float", "freq": "freq", "tel": "obs"}
         if len(self.key_value) == 1:
             if not hasattr(self, "toa_selector"):
                 self.toa_selector = TOASelect(is_range=False, use_hash=True)
@@ -1794,6 +1813,30 @@ class maskParameter(floatParameter):
             col = tbl[column_match[key.lower()]]
         select_idx = self.toa_selector.get_select_index(condition, col)
         return select_idx[self.name]
+
+    def compare_key_value(self, other_param):
+        """Compare if the key and value are the same with the other parameter.
+
+        Parameter
+        ---------
+        other_param: maskParameter
+            The parameter to compare.
+        Return
+        ------
+        bool:
+            If the key and value are the same, return True, otherwise False.
+        Raises
+        ------
+        ValueError:
+            If the parameter to compare does not have 'key' or 'key_value'.
+        """
+        if not (hasattr(other_param, "key") or hasattr(other_param, "key_value")):
+            raise ValueError("Parameter to compare does not have `key` or `key_value`.")
+        if self.key != other_param.key:
+            return False
+        if self.key_value != other_param.key_value:
+            return False
+        return True
 
 
 class pairParameter(floatParameter):

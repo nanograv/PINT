@@ -9,8 +9,13 @@ import astropy.units as u
 from pint.models.astrometry import AstrometryEquatorial
 from pint.models.dispersion_model import DispersionDM, DispersionDMX
 from pint.models.spindown import Spindown
-from pint.models.model_builder import UnknownBinaryModel, get_model, get_model_new
-from pint.models.timing_model import MissingParameter, TimingModel, Component
+from pint.models.model_builder import get_model
+from pint.models.timing_model import (
+    MissingParameter,
+    TimingModel,
+    Component,
+    UnknownBinaryModel,
+)
 from pinttestdata import datadir
 
 
@@ -58,21 +63,16 @@ par_template = parfile + "\n" + "BINARY {}\n"
 
 
 binary_models = [
-    (get_model, "BT", pytest.raises(MissingParameter)),
-    (get_model, "ELL1", pytest.raises(MissingParameter)),
-    (get_model, "ELL1H", pytest.raises(MissingParameter)),
-    (get_model_new, "BT", pytest.raises(MissingParameter)),
-    (get_model_new, "ELL1", pytest.raises(MissingParameter)),
-    (get_model_new, "ELL1H", pytest.raises(MissingParameter)),
-    (get_model, "T2", pytest.raises(UnknownBinaryModel)),
-    (get_model, "ELLL1", pytest.raises(UnknownBinaryModel)),
-    (get_model_new, "T2", pytest.raises(UnknownBinaryModel)),
-    (get_model_new, "ELLL1", pytest.raises(UnknownBinaryModel)),
+    ("BT", pytest.raises(MissingParameter)),
+    ("ELL1", pytest.raises(MissingParameter)),
+    ("ELL1H", pytest.raises(MissingParameter)),
+    ("T2", pytest.raises(UnknownBinaryModel)),
+    ("ELLL1", pytest.raises(UnknownBinaryModel)),
 ]
 
 
-@pytest.mark.parametrize("func, name, expectation", binary_models)
-def test_valid_model(tmp_dir, func, name, expectation):
+@pytest.mark.parametrize("name, expectation", binary_models)
+def test_valid_model(tmp_dir, name, expectation):
     """Check handling of bogus binary models.
 
     Note that ``get_model_new`` currently reports different errors
@@ -83,45 +83,19 @@ def test_valid_model(tmp_dir, func, name, expectation):
     with open(fn, "w") as f:
         f.write(par_template.format(name))
     with expectation:
-        func(f.name)
-
-
-def test_compare_get_model_new_and_old():
-    m_new = get_model_new(parfile)
-    m_old = get_model(parfile)
-    assert set(m_new.get_params_mapping().keys()) == set(
-        m_old.get_params_mapping().keys()
-    )
-    assert set(m_new.components.keys()) == set(m_old.components.keys())
+        get_model(f.name)
 
 
 @pytest.mark.xfail(
     reason="This parfile includes both ecliptic and equatorial coordinates"
 )
-@pytest.mark.parametrize("gm", [get_model, get_model_new])
-def test_ecliptic(gm):
+def test_ecliptic():
     parfile = join(datadir, "J1744-1134.basic.ecliptic.par")
-    m = gm(parfile)
+    m = get_model(parfile)
     assert "AstrometryEcliptic" in m.components
 
 
 bad_trouble = ["J1923+2515_NANOGrav_9yv1.gls.par", "J1744-1134.basic.ecliptic.par"]
-
-
-@pytest.mark.parametrize("parfile", glob(join(datadir, "*.par")))
-def test_compare_get_model_new_and_old_all_parfiles(parfile):
-    if basename(parfile) in bad_trouble:
-        pytest.skip("This parfile is unclear")
-    try:
-        m_old = get_model(parfile)
-    except (ValueError, IOError, MissingParameter) as e:
-        pytest.skip("Existing code raised an exception {}".format(e))
-    m_new = get_model_new(parfile)
-
-    assert set(m_new.components.keys()) == set(m_old.components.keys())
-    assert set(m_new.get_params_mapping().keys()) == set(
-        m_old.get_params_mapping().keys()
-    )
 
 
 # @pytest.mark.xfail(reason="inexact conversions")
@@ -153,7 +127,6 @@ def test_simple_manual():
     )
     tm.setup()
     assert "F0" in tm.phase_deriv_funcs.keys()
-    assert "F1" in tm.phase_deriv_funcs.keys()
     assert "RAJ" in tm.delay_deriv_funcs.keys()
     assert "DECJ" in tm.delay_deriv_funcs.keys()
 
