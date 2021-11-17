@@ -293,7 +293,9 @@ new = ax.contour(
     colors="k",
     linestyles=":",
 )
-ax.errorbar(0, 0, xerr=f.model.F0.uncertainty, yerr=f.model.F1.uncertainty, fmt="ro")
+ax.errorbar(
+    0, 0, xerr=f.model.F0.uncertainty.value, yerr=f.model.F1.uncertainty.value, fmt="ro"
+)
 ax.set_xlabel("$\Delta F_0$ (Hz)", fontsize=24)
 ax.set_ylabel("$\Delta F_1$ (Hz/s)", fontsize=24)
 old_artists, _ = old.legend_elements()
