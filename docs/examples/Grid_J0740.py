@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.11.2
+#       jupytext_version: 1.13.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -14,7 +14,7 @@
 # ---
 
 # %% [markdown]
-# # Grid PSR J0740
+# # Grid PSR J0740 over distance, companion mass, cos i with PBDOT constraint and derived parameters
 
 # %% [markdown]
 # Try to reproduce Figure 6 from [Fonseca et al. 2021, ApJ, 915, L12](https://ui.adsabs.harvard.edu/abs/2021ApJ...915L..12F/abstract)
