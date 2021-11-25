@@ -4,8 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.8.4] 2021-10-06
 ### Fixed
+- 0.8.3 was tagged without an updated CHANGELOG. This fixes that.
 - Now ensures T2CMETHOD is IAU2000B if it is set at all; likewise DILATEFREQ and TIMEEPH (PR #970)
 - Merging TOAs objects now ensures that their index columns don't overlap (PR #1029)
 - change_dmepoch now works even if DMEPOCH is not set (PR #1025)
@@ -22,6 +23,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - New tutorial for simulating data and making a mass-mass plot (PR #1096)
 - Added better axis scaling to pintk (PR #1116)
 ### Changed
+- Changed observatory coordinates for CHIME, AO, EFF, and JB (PRs #1143, #1145)
 - get_groups() is renamed to get_clusters() and is no longer automatically called during TOA creation.  Can still be run manually, with the gap specified.  Addition of a clusters column to the TOA.table object is optional (PR #1070)
 - Some functions from utils.py are now in derived_quantities.py (PR #1102)
 - Data for tutorials etc. and clock files are now installed properly, with locations retrievable at runtime (PR #1103)
