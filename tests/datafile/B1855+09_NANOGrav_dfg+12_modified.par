@@ -32,7 +32,7 @@ CLK            TT(TAI)
 MODE 1
 UNITS          TDB
 T2CMETHOD      TEMPO
-NE_SW          0.000
+#NE_SW          0.000
 CORRECT_TROPOSPHERE  N
 EPHEM          DE405
 NITS           1

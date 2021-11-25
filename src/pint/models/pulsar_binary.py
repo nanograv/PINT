@@ -12,7 +12,7 @@ from astropy.time import Time
 from pint import ls
 from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
 from pint.models.stand_alone_psr_binaries import binary_orbits as bo
-from pint.models.timing_model import DelayComponent, MissingParameter
+from pint.models.timing_model import DelayComponent, MissingParameter, UnknownParameter
 from pint.utils import taylor_horner_deriv
 
 log = logging.getLogger(__name__)
@@ -307,7 +307,7 @@ class PulsarBinary(DelayComponent):
             if hasattr(self._parent, par) or set(alias).intersection(self.params):
                 try:
                     pint_bin_name = self._parent.match_param_aliases(par)
-                except ValueError:
+                except UnknownParameter:
                     if par in self.internal_params:
                         pint_bin_name = par
                 binObjpar = getattr(self._parent, pint_bin_name)
@@ -340,7 +340,17 @@ class PulsarBinary(DelayComponent):
         return self.binary_instance.d_binarydelay_d_par(param)
 
     def print_par(self):
-        result = "BINARY {0}\n".format(self.binary_model_name)
+        if self._parent is not None:
+            # Check if the binary name are the same as BINARY parameter
+            if self._parent.BINARY.value != self.binary_model_name:
+                raise TimingModelError(
+                    f"Parameter BINARY {self._parent.BINARY.value}"
+                    f" does not match the binary"
+                    f" component {self.binary_model_name}"
+                )
+            result = self._parent.BINARY.as_parfile_line()
+        else:
+            result = "BINARY {0}\n".format(self.binary_model_name)
         for p in self.params:
             par = getattr(self, p)
             if par.quantity is not None:

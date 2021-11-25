@@ -1040,7 +1040,11 @@ class ModelState:
         new_model = copy.deepcopy(self.model)
         for p, s in zip(self.params, step * lambda_):
             try:
-                log.debug(f"Adjusting {getattr(self.model, p)} by {s}")
+                try:
+                    log.debug(f"Adjusting {getattr(self.model, p)} by {s}")
+                except ValueError:
+                    # I don't know why this fails with multiprocessing, but bypass if it does
+                    pass
                 pm = getattr(new_model, p)
                 if pm.value is None:
                     pm.value = 0
@@ -1189,7 +1193,11 @@ class DownhillFitter(Fitter):
         )
         for p, e in zip(self.current_state.params, self.errors):
             try:
-                log.debug(f"Setting {getattr(self.model, p)} uncertainty to {e}")
+                try:
+                    log.debug(f"Setting {getattr(self.model, p)} uncertainty to {e}")
+                except ValueError:
+                    # I don't know why this fails with multiprocessing, but bypass if it does
+                    pass
                 pm = getattr(self.model, p)
             except AttributeError:
                 if p != "Offset":

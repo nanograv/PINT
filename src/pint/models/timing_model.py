@@ -37,6 +37,8 @@ from warnings import warn
 import astropy.time as time
 import astropy.units as u
 import numpy as np
+from astropy import log
+from astropy.utils.decorators import lazyproperty
 from scipy.optimize import brentq
 
 import pint
@@ -49,6 +51,7 @@ from pint.models.parameter import (
     intParameter,
     maskParameter,
     strParameter,
+    prefixParameter,
 )
 from pint.phase import Phase
 from pint.toa import TOAs
@@ -60,9 +63,12 @@ __all__ = [
     "DEFAULT_ORDER",
     "TimingModel",
     "Component",
+    "AllComponents",
     "TimingModelError",
     "MissingParameter",
     "MissingTOAs",
+    "MissingBinaryError",
+    "UnknownBinaryModel",
 ]
 # Parameters or lines in parfiles we don't understand but shouldn't
 # complain about. These are still passed to components so that they
@@ -80,7 +86,6 @@ ignore_params = set(
         "TZRSITE",
         "NITS",
         "IBOOT",
-        "BINARY",
         "CHI2R",
         "MODE",
         "PLANET_SHAPIRO2",
@@ -294,6 +299,14 @@ class TimingModel:
             "",
         )
         self.add_param_from_top(
+            strParameter(
+                name="BINARY",
+                description="The Pulsar System/Binary model to use.",
+                value=None,
+            ),
+            "",
+        )
+        self.add_param_from_top(
             boolParameter(
                 name="DILATEFREQ",
                 value=False,
@@ -353,6 +366,7 @@ class TimingModel:
             self.T2CMETHOD.value = "IAU2000B"
         if self.UNITS.value not in [None, "TDB"]:
             raise ValueError("PINT only supports 'UNITS TDB'")
+
         for cp in self.components.values():
             cp.validate()
 
@@ -457,13 +471,36 @@ class TimingModel:
             )
 
     def match_param_aliases(self, alias):
-        """Return the parameter corresponding to this alias."""
-        for p in self.params:
+        """Return PINT parameter name corresponding to this alias.
+
+        Parameters
+        ----------
+        alias: str
+           Parameter's alias.
+
+        Return
+        ------
+        str
+            PINT parameter name corresponding to the input alias.
+        """
+        # Search the top level first.
+        for p in self.top_level_params:
             if p == alias:
                 return p
             if alias in getattr(self, p).aliases:
                 return p
-        raise ValueError("{} is not recognized as a parameter or alias".format(alias))
+        # if not in the top level, check parameters.
+        pint_par = None
+        for cp in self.components.values():
+            try:
+                pint_par = cp.match_param_aliases(alias)
+            except UnknownParameter:
+                continue
+            return pint_par
+
+        raise UnknownParameter(
+            "{} is not recognized as a parameter or alias".format(alias)
+        )
 
     def get_params_dict(self, which="free", kind="quantity"):
         """Return a dict mapping parameter names to values.
@@ -508,7 +545,7 @@ class TimingModel:
         # plain float to Quantities. No idea why.
         for k, v in fitp.items():
             p = getattr(self, k)
-            if isinstance(v, Parameter):
+            if isinstance(v, (Parameter, prefixParameter)):
                 if v.value is None:
                     raise ValueError("Parameter {} is unset".format(v))
                 p.value = v.value
@@ -899,7 +936,11 @@ class TimingModel:
             comp_list = getattr(self, comp_type + "_list")
             cur_cps = []
             for cp in comp_list:
-                cur_cps.append((order.index(cp.category), cp))
+                # If component order is not defined.
+                cp_order = (
+                    order.index(cp.category) if cp.category in order else len(order) + 1
+                )
+                cur_cps.append((cp_order, cp))
             # Check if the component has been added already.
             if component.__class__ in (x.__class__ for x in comp_list):
                 log.warning(
@@ -947,26 +988,26 @@ class TimingModel:
         cp, co_order, host, cp_type = self.map_component(component)
         host.remove(cp)
 
-    def _locate_param_host(self, components, param):
-        """Search for the parameter host component.
+    def _locate_param_host(self, param):
+        """Search for the parameter host component in the timing model.
 
         Parameters
         ----------
-        components: list
-            Searching component list.
         param: str
             Target parameter.
 
         Return
         ------
-        List of tuples. The first element is the component object that have the
-        target parameter, the second one is the parameter object. If it is a
-        prefix-style parameter, it will return one example of such parameter.
+        list of tuples
+           All possible components that host the target parameter.  The first
+           element is the component object that have the target parameter, the
+           second one is the parameter object. If it is a prefix-style parameter
+           , it will return one example of such parameter.
         """
         result_comp = []
-        for cp in components:
+        for cp_name, cp in self.components.items():
             if param in cp.params:
-                result_comp.append((cp, getattr(cp, param)))
+                result_comp.append((cp_name, cp, getattr(cp, param)))
             else:
                 # search for prefixed parameter
                 prefixs = cp.param_prefixs
@@ -976,7 +1017,7 @@ class TimingModel:
                     prefix = param
 
                 if prefix in prefixs.keys():
-                    result_comp.append(cp, getattr(cp, prefixs[param][0]))
+                    result_comp.append(cp_name, cp, getattr(cp, prefixs[param][0]))
 
         return result_comp
 
@@ -1059,13 +1100,11 @@ class TimingModel:
            A dictionary with prefix pararameter real index as key and parameter
            name as value.
         """
-        parnames = [x for x in self.params if x.startswith(prefix)]
-        mapping = dict()
-        for parname in parnames:
-            par = getattr(self, parname)
-            if par.is_prefix and par.prefix == prefix:
-                mapping[par.index] = parname
-        return mapping
+        for cp in self.components.values():
+            mapping = cp.get_prefix_mapping_component(prefix)
+            if len(mapping) != 0:
+                return mapping
+        raise ValueError("Can not find prefix `{}`".format(prefix))
 
     def get_prefix_list(self, prefix, start_index=0):
         """Return the Quantities associated with a sequence of prefix parameters.
@@ -2047,110 +2086,6 @@ class TimingModel:
         if verbosity != "check":
             return s.split("\n")
 
-    def read_parfile(self, file, validate=True):
-        """Read values from the specified parfile into the model parameters.
-
-        Parameters
-        ----------
-        file : str or list or file-like
-            The parfile to read from. May be specified as a filename,
-            a list of lines, or a readable file-like object.
-        """
-        repeat_param = defaultdict(int)
-        param_map = self.get_params_mapping()
-        comps = self.components.copy()
-        comps["timing_model"] = self
-        wants_tcb = None
-        stray_lines = []
-        for li in interesting_lines(lines_of(file), comments=("#", "C ")):
-            k = li.split()
-            name = k[0].upper()
-
-            if name == "UNITS":
-                if name in repeat_param:
-                    raise ValueError("UNITS is repeated in par file")
-                else:
-                    repeat_param[name] += 1
-                if len(k) > 1 and k[1] == "TDB":
-                    wants_tcb = False
-                else:
-                    wants_tcb = li
-                self.UNITS.value = k[1]
-                continue
-
-            if name == "EPHVER":
-                if len(k) > 1 and k[1] != "2" and wants_tcb is None:
-                    wants_tcb = li
-                log.warning("EPHVER %s does nothing in PINT" % k[1])
-                # actually people expect EPHVER 5 to work
-                # even though it's supposed to imply TCB which doesn't
-                continue
-
-            if name == "START":
-                if name in repeat_param:
-                    raise ValueError("START is repeated in par file")
-                self.START.value = k[1]
-                continue
-
-            if name == "FINISH":
-                if name in repeat_param:
-                    raise ValueError("FINISH is repeated in par file")
-                self.FINISH.value = k[1]
-                continue
-
-            repeat_param[name] += 1
-            if repeat_param[name] > 1:
-                k[0] = k[0] + str(repeat_param[name])
-                li = " ".join(k)
-
-            used = []
-            for p, c in param_map.items():
-                if getattr(comps[c], p).from_parfile_line(li):
-                    used.append((c, p))
-            if len(used) > 1:
-                log.warning(
-                    "More than one component made use of par file "
-                    "line {!r}: {}".format(li, used)
-                )
-            if used:
-                continue
-
-            if name in ignore_params:
-                log.debug("Ignoring parfile line '%s'" % (li,))
-                continue
-
-            try:
-                prefix, f, v = split_prefixed_name(name)
-                if prefix in ignore_prefix:
-                    log.debug("Ignoring prefix parfile line '%s'" % (li,))
-                    continue
-            except PrefixError:
-                pass
-
-            stray_lines.append(li)
-
-        if wants_tcb:
-            raise ValueError(
-                "Only UNITS TDB supported by PINT but parfile has {}".format(wants_tcb)
-            )
-        if stray_lines:
-            for l in stray_lines:
-                log.warning("Unrecognized parfile line {!r}".format(l))
-            for name, param in getattr(self, "discarded_components", []):
-                log.warning(
-                    "Model component {} was rejected because we "
-                    "didn't find parameter {}".format(name, param)
-                )
-            # Disable here for now. TODO  need to modified.
-            # log.info("Final object: {}".format(repr(self)))
-
-        self.setup()
-        # The "validate" functions contain tests for required parameters or
-        # combinations of parameters, etc, that can only be done
-        # after the entire parfile is read
-        if validate:
-            self.validate()
-
     def use_aliases(self, reset_to_default=True, alias_translation=None):
         """Set the parameters to use aliases as specified upon writing.
 
@@ -2212,6 +2147,8 @@ class TimingModel:
         cates_comp = self.get_components_by_category()
         printed_cate = []
         for p in self.top_level_params:
+            if p == "BINARY":  # Will print the Binary model name in the binary section
+                continue
             result_begin += getattr(self, p).as_parfile_line()
         for cat in start_order:
             if cat in list(cates_comp.keys()):
@@ -2305,6 +2242,62 @@ class TimingModel:
     def __iter__(self):
         for p in self.params:
             yield p
+
+    def as_ECL(self, epoch=None, ecl="IERS2010"):
+        """Return TimingModel in PulsarEcliptic frame.
+
+        Parameters
+        ----------
+        epoch : `astropy.time.Time` or Float, optional
+            new epoch for position.  If Float, MJD(TDB) is assumed.
+            Note that uncertainties are not adjusted.
+        ecl : str, optional
+            Obliquity for PulsarEcliptic frame
+
+        Returns
+        -------
+        pint.models.timing_model.TimingModel
+            In PulsarEcliptic frame
+        """
+        if "AstrometryEquatorial" in self.components:
+            astrometry_model_type = "AstrometryEquatorial"
+        elif "AstrometryEcliptic" in self.components:
+            astrometry_model_type = "AstrometryEcliptic"
+        astrometry_model_component = self.components[astrometry_model_type]
+        new_astrometry_model_component = astrometry_model_component.as_ECL(
+            epoch=epoch, ecl=ecl
+        )
+        new_model = copy.deepcopy(self)
+        new_model.remove_component(astrometry_model_type)
+        new_model.add_component(new_astrometry_model_component)
+        return new_model
+
+    def as_ICRS(self, epoch=None):
+        """Return TimingModel in ICRS frame.
+
+        Parameters
+        ----------
+        epoch : `astropy.time.Time` or Float, optional
+            new epoch for position.  If Float, MJD(TDB) is assumed.
+            Note that uncertainties are not adjusted.
+
+        Returns
+        -------
+        pint.models.timing_model.TimingModel
+            In ICRS frame
+        """
+        if "AstrometryEquatorial" in self.components:
+            astrometry_model_type = "AstrometryEquatorial"
+        elif "AstrometryEcliptic" in self.components:
+            astrometry_model_type = "AstrometryEcliptic"
+        astrometry_model_component = self.components[astrometry_model_type]
+        new_astrometry_model_component = astrometry_model_component.as_ICRS(
+            epoch=epoch,
+        )
+        new_model = copy.deepcopy(self)
+        new_model.remove_component(astrometry_model_type)
+        new_model.add_component(new_astrometry_model_component)
+        return new_model
 
 
 class ModelMeta(abc.ABCMeta):
@@ -2402,27 +2395,23 @@ class Component(object, metaclass=ModelMeta):
                     prefixs[par.prefix].append(p)
         return prefixs
 
-    def get_prefix_mapping(self, prefix):
-        """Get the index mapping for the prefix parameters.
+    @property_exists
+    def aliases_map(self):
+        """Return all the aliases and map to the PINT parameter name.
 
-        Parameters
-        ----------
-        prefix : str
-           Name of prefix.
-
-        Returns
-        -------
-        dict
-           A dictionary with prefix pararameter real index as key and parameter
-           name as value.
+        This property returns a dictionary from the current in timing model
+        parameters' aliase to the pint defined parameter names. For the aliases
+        of a prefixed parameter, the aliase with an existing prefix index maps
+        to the PINT defined parameter name with the same index. Behind the scenes,
+        the indexed parameter adds the indexed aliase to its aliase list.  
         """
-        parnames = [x for x in self.params if x.startswith(prefix)]
-        mapping = dict()
-        for parname in parnames:
-            par = getattr(self, parname)
-            if par.is_prefix and par.prefix == prefix:
-                mapping[par.index] = parname
-        return mapping
+        ali_map = {}
+        for p in self.params:
+            par = getattr(self, p)
+            ali_map[p] = p
+            for ali in par.aliases:
+                ali_map[ali] = p
+        return ali_map
 
     def add_param(self, param, deriv_func=None, setup=False):
         """Add a parameter to the Component.
@@ -2563,16 +2552,57 @@ class Component(object, metaclass=ModelMeta):
             par = getattr(self, parname)
             if par.is_prefix and par.prefix == prefix:
                 mapping[par.index] = parname
-        return mapping
+        return OrderedDict(sorted(mapping.items()))
 
     def match_param_aliases(self, alias):
-        """Return the parameter corresponding to this alias."""
-        for p in self.params:
-            if p == alias:
-                return p
-            if alias in getattr(self, p).aliases:
-                return p
-        raise ValueError("{} is not recognized as a parameter or alias".format(p))
+        """Return the parameter corresponding to this alias.
+
+        Parameter
+        ---------
+        alias: str
+            Alias name.
+
+        Note
+        ----
+        This function only searches the parameter aliases within the current
+        component. If one wants to search the aliases in the scope of TimingModel,
+        please use :py:meth:`TimingModel.match_param_aliase`.
+        """
+        pname = self.aliases_map.get(alias, None)
+        # Split the alias prefix, see if it is a perfix alias
+        try:
+            prefix, idx_str, idx = split_prefixed_name(alias)
+        except PrefixError:  # Not a prefixed name
+            if pname is not None:
+                par = getattr(self, pname)
+                if par.is_prefix:
+                    raise UnknownParameter(
+                        f"Prefix {alias} maps to mulitple parameters"
+                        ". Please specify the index as well."
+                    )
+            else:
+                # Not a prefix, not an alias
+                raise UnknownParameter(f"Unknown parameter name or alias {alias}")
+        # When the alias is a prefixed name but not in the parameter list yet
+        if pname is None:
+            prefix_pname = self.aliases_map.get(prefix, None)
+            if prefix_pname:
+                par = getattr(self, prefix_pname)
+                if par.is_prefix:
+                    raise UnknownParameter(
+                        f"Found a similar prefixed parameter '{prefix_pname}'"
+                        f" But parameter {par.prefix}{idx} need to be added"
+                        f" to the model."
+                    )
+                else:
+                    raise UnknownParameter(
+                        f"{par} is not a prefixed parameter, howere the input"
+                        f" {alias} has index with it."
+                    )
+            else:
+                raise UnknownParameter(f"Unknown parameter name or alias {alias}")
+        else:
+            return pname
 
     def register_deriv_funcs(self, func, param):
         """Register the derivative function in to the deriv_func dictionaries.
@@ -2683,6 +2713,311 @@ class PhaseComponent(Component):
         self.phase_derivs_wrt_delay = []
 
 
+class AllComponents:
+    """ A class for the components pool.
+
+    This object stores and manages the instances of component classes with class
+    attribute .register = True. This includes the PINT built-in components and
+    user defined components and there is no need to import the component class.
+    This class constructs the available component instances, but without any
+    valid parameter values (parameters are initialized when a component instance
+    gets constructed, however, the parameter values are unknown to the components
+    at the moment). Thus, runing `.validate()` function in the component instance
+    will fail. This class is designed for helping model building and parameter
+    seraching, not for direct data analysis.
+
+    Note
+    ----
+    This is a low level class for managing all the components. To build a timing
+    model, we recommend to use the subclass `models.model_builder.ModelBuilder`,
+    where higher level interface are provided. If one wants to use this class
+    directly, one has to construct the instance separately.
+    """
+
+    def __init__(self):
+        self.components = {}
+        for k, v in Component.component_types.items():
+            self.components[k] = v()
+
+    @lazyproperty
+    def param_component_map(self):
+        """Return the parameter to component map.
+
+        This property returns the all PINT defined parameters to their host
+        components. The parameter aliases are not included in this map. If
+        searching the host component for a parameter alias, pleaase use
+        `alias_to_pint_param` method to translate the alias to PINT parameter
+        name first.
+        """
+        p2c_map = defaultdict(list)
+        for k, cp in self.components.items():
+            for p in cp.params:
+                p2c_map[p].append(k)
+                # Add alias
+                par = getattr(cp, p)
+                for ap in par.aliases:
+                    p2c_map[ap].append(k)
+        tm = TimingModel()
+        for tp in tm.params:
+            p2c_map[tp].append("timing_model")
+            par = getattr(tm, tp)
+            for ap in par.aliases:
+                p2c_map[ap].append("timing_model")
+        return p2c_map
+
+    def _check_alias_conflict(self, alias, param_name, alias_map):
+        """Check if a aliase has conflict in the alias map.
+
+        This function checks if an alias already have record in the alias_map.
+        If there is a record, it will check if the record matches the given
+        paramter name, `param_name`. If not match, it will raise a AliasConflict
+        error.
+
+        Parameter
+        ---------
+        alias: str
+            The alias name that needs to check if it has entry in the alias_map.
+        param_name: str
+            The parameter name that a alias is going to be mapped to.
+
+        Raise
+        -----
+        AliasConflict
+            When the input alias has a record in the aliases map, but the record
+            does not match the input parameter name that is going to be mapped
+            to the input alias.
+        """
+        if alias in alias_map.keys():
+            if param_name == alias_map[alias]:
+                return
+            else:
+                raise AliasConflict(
+                    f"Alias {alias} has been used by" f" parameter {param_name}."
+                )
+        else:
+            return
+
+    @lazyproperty
+    def _param_alias_map(self):
+        """Return the aliases map of all parameters
+
+        The returned map includes: 1. alias to PINT parameter name. 2. PINT
+        parameter name to pint parameter name. 3.prefix to PINT parameter name.
+
+        Notes
+        -----
+        Please use `alias_to_pint_param` method to map an alias to a PINT parameter.
+        """
+        alias = {}
+        for k, cp in self.components.items():
+            for p in cp.params:
+                par = getattr(cp, p)
+                # Check if an existing record
+                self._check_alias_conflict(p, p, alias)
+                alias[p] = p
+                for als in par.aliases:
+                    self._check_alias_conflict(als, p, alias)
+                    alias[als] = p
+        tm = TimingModel()
+        for tp in tm.params:
+            par = getattr(tm, tp)
+            self._check_alias_conflict(tp, tp, alias)
+            alias[tp] = tp
+            for als in par.aliases:
+                self._check_alias_conflict(als, tp, alias)
+                alias[als] = tp
+        return alias
+
+    @lazyproperty
+    def repeatable_param(self):
+        """Return the repeatable parameter map.
+        """
+        repeatable = []
+        for k, cp in self.components.items():
+            for p in cp.params:
+                par = getattr(cp, p)
+                if par.repeatable:
+                    repeatable.append(p)
+                    repeatable.append(par._parfile_name)
+                    # also add the aliases to the repeatable param
+                    for als in par.aliases:
+                        repeatable.append(als)
+        return set(repeatable)
+
+    @lazyproperty
+    def category_component_map(self):
+        """A dictionary mapping category to a list of component names.
+
+        Return
+        ------
+        dict
+            The mapping from categories to the componens belongs to the categore.
+            The key is the categore name, and the value is a list of all the
+            components in the categore.
+        """
+        category = defaultdict(list)
+        for k, cp in self.components.items():
+            cat = cp.category
+            category[cat].append(k)
+        return category
+
+    @lazyproperty
+    def component_category_map(self):
+        """A dictionary mapping component name to its category name.
+
+        Return
+        ------
+        dict
+            The mapping from components to its categore. The key is the component
+            name and the value is the component's category name.
+        """
+        cp_ca = {}
+        for k, cp in self.components.items():
+            cp_ca[k] = cp.category
+        return cp_ca
+
+    @lazyproperty
+    def component_unique_params(self):
+        """Return the parameters that are only present in one component.
+
+        Return
+        ------
+        dict
+            A mapping from a component name to a list of parameters are only
+            in this component.
+
+        Note
+        ----
+        This function only returns the PINT defined parameter name, not
+        including the aliases.
+        """
+        component_special_params = defaultdict(list)
+        for param, cps in self.param_component_map.items():
+            if len(cps) == 1:
+                component_special_params[cps[0]].append(param)
+        return component_special_params
+
+    def search_binary_components(self, system_name):
+        """Search the pulsar binary component based on given name.
+
+        Parameters
+        ----------
+        system_name : str
+            Searching name for the pulsar binary/system
+
+        Return
+        ------
+        The matching binary model component instance.
+
+        Raises
+        ------
+        UnknownBinaryModel
+            If the input binary model name does not match any PINT defined binary
+            model.
+        """
+        all_systems = self.category_component_map["pulsar_system"]
+        # Search the system name first
+        if system_name in all_systems:
+            return self.components[system_name]
+        else:  # search for the pulsar system aliases
+            for cp_name in all_systems:
+                if system_name == self.components[cp_name].binary_model_name:
+                    return self.components[cp_name]
+            raise UnknownBinaryModel(
+                f"Pulsar system/Binary model component"
+                f" {system_name} is not provided."
+            )
+
+    def alias_to_pint_param(self, alias):
+        """Translate a alias to a PINT parameter name.
+
+        This is a wrapper function over the property ``_param_alias_map``. It
+        also handles the indexed parameters (e.g., `pint.models.parameter.prefixParameter`
+        and `pint.models.parameter.maskParameter`) with and index beyond currently
+        initialized.
+
+        Parameters
+        ----------
+        alias : str
+            Alias name to be translated
+
+        Returns
+        -------
+        pint_par : str
+            PINT parameter name the given alias maps to. If there is no matching
+            PINT parameters, it will raise a `UnknownParameter` error.
+        first_init_par : str
+            The parameter name that is first initialized in a component. If the
+            paramere is non-indexable, it is the same as ``pint_par``, otherwrise
+            it returns the parameter with the first index. For example, the
+            ``first_init_par`` for 'T2EQUAD25' is 'EQUAD1'
+
+        Notes
+        -----
+        Providing a indexable parameter without the index attached, it returns
+        the PINT parameter with first index (i.e. ``0`` or ``1``). If with index,
+        the function returns the matched parameter with the index provided.
+        The index format has to match the PINT defined index format. For instance,
+        if PINT defines a parameter using leading-zero indexing, the provided
+        index has to use the same leading-zeros, otherwrise, returns a `UnknownParameter`
+        error.
+
+        Examples
+        --------
+        >>> from pint.models.timing_model import AllComponents
+        >>> ac = AllComponents()
+        >>> ac.alias_to_pint_param('RA')
+        ('RAJ', 'RAJ')
+
+        >>> ac.alias_to_pint_param('T2EQUAD')
+        ('EQUAD1', 'EQUAD1')
+
+        >>> ac.alias_to_pint_param('T2EQUAD25')
+        ('EQUAD25', 'EQUAD1')
+
+        >>> ac.alias_to_pint_param('DMX_0020')
+        ('DMX_0020', 'DMX_0001')
+
+        >>> ac.alias_to_pint_param('DMX20')
+        UnknownParameter: Can not find matching PINT parameter for 'DMX020'
+
+        """
+        pint_par = self._param_alias_map.get(alias, None)
+        # If it is not in the map, double check if it is a repeatable par.
+        if pint_par is None:
+            try:
+                prefix, idx_str, idx = split_prefixed_name(alias)
+                # assume the index 1 parameter is in the alias map
+                # count length of idx_str and dectect leading zeros
+                # TODO fix the case for searching `DMX`
+                num_lzero = len(idx_str) - len(str(idx))
+                if num_lzero > 0:  # Has leading zero
+                    fmt = len(idx_str)
+                else:
+                    fmt = 0
+                first_init_par = None
+                # Handle the case of start index from 0 and 1
+                for start_idx in [0, 1]:
+                    first_init_par_alias = prefix + "{1:0{0}}".format(fmt, start_idx)
+                    first_init_par = self._param_alias_map.get(
+                        first_init_par_alias, None
+                    )
+                    if first_init_par:
+                        # Find the first init par move to the next step
+                        pint_par = split_prefixed_name(first_init_par)[0] + idx_str
+                        break
+            except PrefixError:
+                pint_par = None
+
+        else:
+            first_init_par = pint_par
+        if pint_par is None:
+            raise UnknownParameter(
+                "Can not find matching PINT parameter for '{}'".format(alias)
+            )
+        return pint_par, first_init_par
+
+
 class TimingModelError(ValueError):
     """Generic base class for timing model errors."""
 
@@ -2714,3 +3049,27 @@ class MissingParameter(TimingModelError):
         if self.msg is not None:
             result += "\n  " + self.msg
         return result
+
+
+class AliasConflict(TimingModelError):
+    """If the same alias is used for different parameters."""
+
+    pass
+
+
+class UnknownParameter(TimingModelError):
+    """ Signal that a parameter name does not match any PINT parameters and their aliases. """
+
+    pass
+
+
+class UnknownBinaryModel(TimingModelError):
+    """Signal that the par file requested a binary model no in PINT."""
+
+    pass
+
+
+class MissingBinaryError(TimingModelError):
+    """Error for missing BINARY parameter."""
+
+    pass

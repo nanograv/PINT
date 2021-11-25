@@ -77,9 +77,7 @@ analytic = np.sqrt(
 # %%
 plt.plot(tnew.get_mjds(), dphase.std(axis=0), label="All Free")
 tnew.get_mjds() - f.model.PEPOCH.value * u.d
-plt.plot(
-    tnew.get_mjds(), analytic, label="Analytic",
-)
+plt.plot(tnew.get_mjds(), analytic, label="Analytic")
 plt.xlabel("MJD")
 plt.ylabel("Phase Uncertainty (cycles)")
 plt.legend()

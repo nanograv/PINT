@@ -107,9 +107,7 @@ def test_noise_addition_EQUAD():
     r = pint.residuals.Residuals(toas, model)
     # need a generous rtol because of the small statistics
     assert np.isclose(
-        r.calc_time_resids().std(),
-        np.sqrt((1 * u.us) ** 2 + (5 * u.us) ** 2),
-        rtol=0.2,
+        r.calc_time_resids().std(), np.sqrt((1 * u.us) ** 2 + (5 * u.us) ** 2), rtol=0.2
     )
 
 
@@ -128,7 +126,7 @@ def test_zima():
     t = get_TOAs(outfile.name)
     r = pint.residuals.Residuals(t, m)
     # need a generous rtol because of the small statistics
-    assert np.isclose(r.calc_time_resids().std(), 1 * u.us, rtol=0.5,)
+    assert np.isclose(r.calc_time_resids().std(), 1 * u.us, rtol=0.5)
 
 
 def test_fake_fromMJDs():
@@ -170,7 +168,7 @@ def test_fake_from_timfile():
     r_sim = pint.residuals.Residuals(t_sim, f.model)
     # need a generous rtol because of the small statistics
     assert np.isclose(
-        r.calc_time_resids().std(), r_sim.calc_time_resids().std(), rtol=2,
+        r.calc_time_resids().std(), r_sim.calc_time_resids().std(), rtol=2
     )
 
 

@@ -46,6 +46,7 @@ from pint.utils import (
     open_or_use,
     taylor_horner,
     taylor_horner_deriv,
+    list_parameters,
 )
 
 
@@ -717,8 +718,12 @@ def test_taylor_horner_equals_deriv(x, coeffs):
 
 @pytest.mark.parametrize(
     "x, result, n",
-    [(1 * u.s, 1 * u.m, 5), (1 * u.s, 1 * u.m, 1), (1 * u.km ** 2, 1 * u.m, 3),],
+    [(1 * u.s, 1 * u.m, 5), (1 * u.s, 1 * u.m, 1), (1 * u.km ** 2, 1 * u.m, 3)],
 )
 def test_taylor_horner_units_ok(x, result, n):
     coeffs = [result / x ** i for i in range(n + 1)]
     taylor_horner(x, coeffs) + result
+
+
+def test_list_parameters():
+    list_parameters()
