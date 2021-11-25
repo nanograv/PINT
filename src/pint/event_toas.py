@@ -16,6 +16,7 @@ __all__ = [
     "load_NuSTAR_TOAs",
     "load_NICER_TOAs",
     "load_RXTE_TOAs",
+    "load_Swift_TOAs",
     "load_XMM_TOAs",
 ]
 
@@ -342,3 +343,6 @@ def load_XMM_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
 
 def load_NuSTAR_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
     return load_event_TOAs(eventname, "nustar", minmjd=minmjd, maxmjd=maxmjd)
+
+def load_Swift_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
+    return load_event_TOAs(eventname, "swift", minmjd=minmjd, maxmjd=maxmjd)
