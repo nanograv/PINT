@@ -1,0 +1,18 @@
+# PINT built-in parfile format
+
+tempo:
+  head: MODE 1
+
+tempo2:
+  A1DOT:
+    to_name: XDOT
+  STIGMA:
+    to_name: VARSIGMA
+  NHARMS:
+    to_value: 
+  EFAC:
+    to_name: T2EFAC
+  EQUAD:
+    to_name: T2EQUAD
+  ECL:
+    to_value: IERS2003

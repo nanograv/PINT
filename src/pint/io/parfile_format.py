@@ -28,5 +28,5 @@ class ParfileFormat:
                 "not have format {format}")
         self.format_name = format
 
-    def translate_name(self, pint_par):
-        return self.entry.get(pint_par, None)
+    def translate_format(self, pint_par):
+        param_entry = self.entry.get(pint_par, None)
