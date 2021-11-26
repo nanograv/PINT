@@ -8,8 +8,8 @@ tempo2:
     to_name: XDOT
   STIGMA:
     to_name: VARSIGMA
-  NHARMS:
-    to_value: 
+  NHARMS: 
+    to_type: int
   EFAC:
     to_name: T2EFAC
   EQUAD:
