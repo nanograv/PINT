@@ -58,12 +58,14 @@ class BinaryBTPiecewise(PulsarBinary):
 
 
     def add_group_range(self,group_start_mjd,group_end_mjd,frozen=True,j=None):
-        #print("hello from add group range")
         if group_end_mjd is not None and group_start_mjd is not None:
             if group_end_mjd < group_start_mjd:
                 raise ValueError("Starting MJD is greater than ending MJD.")
-        elif group_start_mjd != group_end_mjd:
-            raise ValueError("Only one MJD bound is set.")
+            elif j<0: 
+                raise ValueError(f"Invalid index for group: {j} should be greater than or equal to 0")
+            elif j>9999:
+                raise ValueError(f"Invalid index for group. Cannot index beyond 9999 (yet?)")
+            
         i = f"{int(j):04d}"  
         self.add_param(
         prefixParameter(
@@ -262,4 +264,56 @@ class BinaryBTPiecewise(PulsarBinary):
         if self.GAMMA.value is None:
             self.GAMMA.set("0")
             self.GAMMA.frozen = True             
+    
+    
+    def get_group_boundaries(self):
+        return self.binary_instance.get_group_boundaries()
+
+    def which_group_is_toa_in(self, toa):
+        barycentric_toa = self._parent.get_barycentric_toas(toa)
+        return self.binary_instance.toa_belongs_in_group(barycentric_toa)
+    
+    def get_number_of_groups(self):
+        return len(self.binary_instance.piecewise_parameter_information)
+    
+    def get_group_indexes(self):
+        group_indexes = []
+        for i in range(0,len(self.binary_instance.piecewise_parameter_information)):
+            group_indexes.append(self.binary_instance.piecewise_parameter_information[i][0])
+        return group_indexes
+    
+    def get_group_indexes_in_four_digit_format(self):
+        group_indexes = []
+        for i in range(0,len(self.binary_instance.piecewise_parameter_information)):
+            group_indexes.append(f"{int(self.binary_instance.piecewise_parameter_information[i][0]):04d}")
+        return group_indexes
         
+    def get_T0Xs_associated_with_toas(self,toas):
+        if hasattr(self.binary_instance,"group_index_array"):
+            temporary_storage = self.binary_instance.group_index_array
+        self.binary_instance.group_index_array = self.which_group_is_toa_in(toas)
+        barycentric_toa = self._parent.get_barycentric_toas(toas)
+        T0X_per_toa = self.binary_instance.piecewise_parameter_from_information_array(toas)[0]
+        if temporary_storage is not None:
+            self.binary_instance.group_index_array = temporary_storage
+        return T0X_per_toa
+    
+    def get_A1Xs_associated_with_toas(self,toas):
+        if hasattr(self.binary_instance,"group_index_array"):
+            temporary_storage = self.binary_instance.group_index_array
+        self.binary_instance.group_index_array = self.which_group_is_toa_in(toas)
+        barycentric_toa = self._parent.get_barycentric_toas(toas)
+        A1X_per_toa = self.binary_instance.piecewise_parameter_from_information_array(toas)[1]
+        if temporary_storage is not None:
+            self.binary_instance.group_index_array = temporary_storage
+        return A1X_per_toa
+    
+    def does_toa_reference_piecewise_parameter(self,toas,param):
+        #if hasattr(self.binary_instance,"group_index_array"):
+        #    temporary_storage = self.binary_instance.group_index_array
+        
+        self.binary_instance.group_index_array = self.which_group_is_toa_in(toas)
+        from_in_piece = self.binary_instance.in_piece(param)
+        #if temporary_storage is not None:
+        #    self.binary_instance.group_index_array = temporary_storage
+        return from_in_piece[0]
