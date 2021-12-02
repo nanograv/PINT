@@ -96,6 +96,9 @@ def create_mission_config():
             mission_config[mission].update(mission_config["generic"])
             mission_config[mission]["allow_local"] = True
 
+    # Fix chandra
+    mission_config["chandra"] = mission_config["axaf"]
+
     # Fix xte
     mission_config["xte"]["fits_columns"] = {"ecol": "PHA"}
     # The event extension is called in different ways for different data modes, but
@@ -318,7 +321,11 @@ def load_event_TOAs(eventname, mission, weights=None, minmjd=-np.inf, maxmjd=np.
     """
     # Load photon times from event file
 
-    extension = mission_config[mission]["fits_extension"]
+    try:
+        extension = mission_config[mission]["fits_extension"]
+    except ValueError:
+        log.warning("Mission name (TELESCOP) not recognized, using generic!")
+        extension = mission_config["generic"]["fits_extension"]
     return load_fits_TOAs(
         eventname,
         mission,
