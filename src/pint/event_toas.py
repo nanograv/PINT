@@ -97,7 +97,11 @@ def create_mission_config():
             mission_config[mission]["allow_local"] = True
 
     # Fix chandra
-    mission_config["chandra"] = mission_config["axaf"]
+    try:
+        mission_config["chandra"] = mission_config["axaf"]
+    except KeyError:
+        log.warning("AXAF configuration not found -- likely HEADAS envariable not set.")
+        pass
 
     # Fix xte
     mission_config["xte"]["fits_columns"] = {"ecol": "PHA"}
