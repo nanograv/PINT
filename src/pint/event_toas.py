@@ -16,6 +16,7 @@ __all__ = [
     "load_NuSTAR_TOAs",
     "load_NICER_TOAs",
     "load_RXTE_TOAs",
+    "load_Swift_TOAs",
     "load_XMM_TOAs",
 ]
 
@@ -94,6 +95,13 @@ def create_mission_config():
             mission_config[mission] = {}
             mission_config[mission].update(mission_config["generic"])
             mission_config[mission]["allow_local"] = True
+
+    # Fix chandra
+    try:
+        mission_config["chandra"] = mission_config["axaf"]
+    except KeyError:
+        log.warning("AXAF configuration not found -- likely HEADAS envariable not set.")
+        pass
 
     # Fix xte
     mission_config["xte"]["fits_columns"] = {"ecol": "PHA"}
@@ -317,7 +325,11 @@ def load_event_TOAs(eventname, mission, weights=None, minmjd=-np.inf, maxmjd=np.
     """
     # Load photon times from event file
 
-    extension = mission_config[mission]["fits_extension"]
+    try:
+        extension = mission_config[mission]["fits_extension"]
+    except ValueError:
+        log.warning("Mission name (TELESCOP) not recognized, using generic!")
+        extension = mission_config["generic"]["fits_extension"]
     return load_fits_TOAs(
         eventname,
         mission,
@@ -342,3 +354,7 @@ def load_XMM_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
 
 def load_NuSTAR_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
     return load_event_TOAs(eventname, "nustar", minmjd=minmjd, maxmjd=maxmjd)
+
+
+def load_Swift_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
+    return load_event_TOAs(eventname, "swift", minmjd=minmjd, maxmjd=maxmjd)

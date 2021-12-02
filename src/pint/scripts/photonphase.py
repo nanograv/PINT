@@ -17,6 +17,7 @@ from pint.plot_utils import phaseogram_binned
 from pint.pulsar_mjd import Time
 
 log = logging.getLogger(__name__)
+log.setLevel("INFO")
 
 __all__ = ["main"]
 
@@ -137,7 +138,7 @@ def main(argv=None):
         log.error(
             "Observatory not recognized. This probably means you need to provide an orbit file or barycenter the event file."
         )
-        sys.exit(1)
+        raise
 
     # Now convert to TOAs object and compute TDBs and posvels
     if len(tl) == 0:
