@@ -2124,7 +2124,7 @@ class TimingModel:
         *,
         include_info=True,
         comment=None,
-        format='pint'
+        format="pint",
     ):
         """Represent the entire model as a parfile string.
 
@@ -2187,7 +2187,7 @@ class TimingModel:
         # TODO this convert the parfile string to the new format, maybe not the
         # best way to do it. A better way is to change the foramt directly in the
         # parameter class.
-        if format != 'pint':
+        if format != "pint":
             out_str = convert_pint_to_tempo_parfile(out_str, format)
         return out_str
 
@@ -2303,9 +2303,7 @@ class TimingModel:
         elif "AstrometryEcliptic" in self.components:
             astrometry_model_type = "AstrometryEcliptic"
         astrometry_model_component = self.components[astrometry_model_type]
-        new_astrometry_model_component = astrometry_model_component.as_ICRS(
-            epoch=epoch,
-        )
+        new_astrometry_model_component = astrometry_model_component.as_ICRS(epoch=epoch)
         new_model = copy.deepcopy(self)
         new_model.remove_component(astrometry_model_type)
         new_model.add_component(new_astrometry_model_component)

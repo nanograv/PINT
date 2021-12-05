@@ -180,13 +180,7 @@ def phaseogram_binned(
 
 
 def plot_priors(
-    model,
-    chains,
-    maxpost_fitvals=None,
-    fitvals=None,
-    burnin=100,
-    bins=100,
-    scale=False,
+    model, chains, maxpost_fitvals=None, fitvals=None, burnin=100, bins=100, scale=False
 ):
     """Plot of priors and the post-MCMC histogrammed samples
     

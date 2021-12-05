@@ -57,7 +57,7 @@ def doonefit(ftr, parnames, parvalues):
 
 
 def grid_chisq(
-    ftr, parnames, parvalues, executor=None, ncpu=None, chunksize=1, printprogress=True,
+    ftr, parnames, parvalues, executor=None, ncpu=None, chunksize=1, printprogress=True
 ):
     """Compute chisq over a grid of parameters
 

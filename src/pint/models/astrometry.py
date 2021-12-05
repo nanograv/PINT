@@ -25,11 +25,7 @@ log = logging.getLogger(__name__)
 astropy_version = sys.modules["astropy"].__version__
 mas_yr = u.mas / u.yr
 
-__all__ = [
-    "AstrometryEquatorial",
-    "AstrometryEcliptic",
-    "Astrometry",
-]
+__all__ = ["AstrometryEquatorial", "AstrometryEcliptic", "Astrometry"]
 
 
 class Astrometry(DelayComponent):

@@ -25,12 +25,12 @@ def convert_pint_to_tempo_parfile(parfile_str, format):
     new_par : str
         The new parfile format string.
     """
-    par_lines = parfile_str.split('\n')
+    par_lines = parfile_str.split("\n")
     new_par = []
     for ii in range(len(par_lines)):
         entries = par_lines[ii].split(" ")
         if ii == 0:
-            if format == 'tempo2':
+            if format == "tempo2":
                 new_par.append("MODE 1")
         if "CHI2" in entries:
             continue
@@ -48,7 +48,7 @@ def convert_pint_to_tempo_parfile(parfile_str, format):
             entries[-1] = str(int(float(entries[-1])))
             new_entry = " ".join(entries)
             new_par.append(new_entry)
-        elif ("ECL" in entries) and (format == 'tempo2'):
+        elif ("ECL" in entries) and (format == "tempo2"):
             entries[-1] = "IERS2003"
             new_entry = " ".join(entries)
             new_par.append(new_entry)
@@ -60,10 +60,10 @@ def convert_pint_to_tempo_parfile(parfile_str, format):
             entries[0] = "T2EQUAD"
             new_entry = " ".join(entries)
             new_par.append(new_entry)
-        elif ("T2CMETHOD" in entries) and (format == 'tempo2'):
+        elif ("T2CMETHOD" in entries) and (format == "tempo2"):
             entries[0] = "#T2CMETHOD"
             new_entry = " ".join(entries)
             new_par.append(new_entry)
         else:
             new_par.append(par_lines[ii])
-    return '\n'.join(new_par)
+    return "\n".join(new_par)
