@@ -56,6 +56,8 @@ from pint.models.parameter import (
 from pint.phase import Phase
 from pint.toa import TOAs
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
+from pint.models.parfile_format import convert_pint_to_tempo_parfile
+
 
 log = logging.getLogger(__name__)
 
@@ -294,7 +296,7 @@ class TimingModel:
         self.add_param_from_top(
             strParameter(
                 name="T2CMETHOD",
-                description="Method for transforming from terrestrial to celestial frame (IAU2000B/TEMPO; PINT only supports ????)",
+                description="Method for transforming from terrestrial to celestial frame (IAU2000B/TEMPO; PINT only supports IAU2000B)",
             ),
             "",
         )
@@ -2122,6 +2124,7 @@ class TimingModel:
         *,
         include_info=True,
         comment=None,
+        format='pint'
     ):
         """Represent the entire model as a parfile string.
 
@@ -2135,6 +2138,9 @@ class TimingModel:
             Include information string if True
         comment : str, optional
             Additional comment string to include in parfile
+        format : str, optional
+            Parfile output format. PINT outputs the 'tempo', 'tempo2' and 'pint'
+            format. The defaul format is `pint`.
         """
         self.validate()
         if include_info:
@@ -2177,7 +2183,13 @@ class TimingModel:
                     result_middle += cpp.print_par()
                 printed_cate.append(cat)
 
-        return result_begin + result_middle + result_end
+        out_str = result_begin + result_middle + result_end
+        # TODO this convert the parfile string to the new format, maybe not the
+        # best way to do it. A better way is to change the foramt directly in the
+        # parameter class.
+        if format != 'pint':
+            out_str = convert_pint_to_tempo_parfile(out_str, format)
+        return out_str
 
     def validate_toas(self, toas):
         """Sanity check to verify that this model is compatible with these toas.
@@ -2403,7 +2415,7 @@ class Component(object, metaclass=ModelMeta):
         parameters' aliase to the pint defined parameter names. For the aliases
         of a prefixed parameter, the aliase with an existing prefix index maps
         to the PINT defined parameter name with the same index. Behind the scenes,
-        the indexed parameter adds the indexed aliase to its aliase list.  
+        the indexed parameter adds the indexed aliase to its aliase list.
         """
         ali_map = {}
         for p in self.params:
