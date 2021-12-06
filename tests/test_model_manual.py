@@ -111,7 +111,7 @@ def test_get_model_roundtrip(tmp_dir, parfile, format):
 
     fn = join(tmp_dir, "file.par")
     with open(fn, "w") as f:
-        f.write(m_old.as_parfile(format))
+        f.write(m_old.as_parfile(format=format))
     m_roundtrip = get_model(fn)
     assert set(m_roundtrip.get_params_mapping().keys()) == set(
         m_old.get_params_mapping().keys()
