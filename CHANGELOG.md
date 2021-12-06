@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+### Added
+- Added support for Chandra and Swift event data in photonphase.py
+### Fixed
+- Attempt to fix documentation build
+
 ## [0.8.4] 2021-10-06
 ### Fixed
 - 0.8.3 was tagged without an updated CHANGELOG. This fixes that.
