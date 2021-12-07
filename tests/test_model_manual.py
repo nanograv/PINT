@@ -100,7 +100,7 @@ bad_trouble = ["J1923+2515_NANOGrav_9yv1.gls.par", "J1744-1134.basic.ecliptic.pa
 
 # @pytest.mark.xfail(reason="inexact conversions")
 @pytest.mark.parametrize("parfile", glob(join(datadir, "*.par")))
-@pytest.mark.parametrize("format", ['pint', 'tempo', 'tempo2'])
+@pytest.mark.parametrize("format", ["pint", "tempo", "tempo2"])
 def test_get_model_roundtrip(tmp_dir, parfile, format):
     if basename(parfile) in bad_trouble:
         pytest.skip("This parfile is unclear")
