@@ -24,6 +24,32 @@ def convert_pint_to_tempo_parfile(parfile_str, format):
     -------
     new_par : str
         The new parfile format string.
+    Notes
+    -----
+    The parfile line changes from PINT to Tempo and Tempo2 format.
+    +-----------+----------------+----------------+
+    | PINT line | TEMPO line     | TEMPO2 line    |
+    +===========+================+================+
+    | Head      | Empty          | MODE 1         |
+    +-----------+----------------+----------------+
+    | CHI2      | No Change      | No Change      |
+    +-----------+----------------+----------------+
+    | SWM       | No Change      | No Change      |
+    +-----------+----------------+----------------+
+    | A1DOT     | name: XDOT     | name: XDOT     |
+    +-----------+----------------+----------------+
+    | STIGMA    | name: VARSIGMA | name: VARSIGMA |
+    +-----------+----------------+----------------+
+    | NHARMS    | type: int      | type: int      |
+    +-----------+----------------+----------------+
+    | ECL       | No Change      | value: IERS2003|
+    +-----------+----------------+----------------+
+    | EFAC      | name: T2EFAC   | name: T2EFAC   |
+    +-----------+----------------+----------------+
+    | EQUAD     | name: T2EQUAD  | name: T2EQUAD  |
+    +-----------+----------------+----------------+
+    | T2CMETHOD | No Change      | Comment out    |
+    +-----------+----------------+----------------+
     """
     par_lines = parfile_str.split("\n")
     new_par = []
