@@ -470,6 +470,30 @@ class TimingModel:
                 "Parameter(s) are familiar but not in the model: {}".format(params)
             )
 
+    @property_exists
+    def param_to_component_map(self):
+        """Return a dictionary maps from PINT parameters to their host components.
+
+        The keys are the name of the parameters in the timing model and the
+        values are the component names.
+
+        See Also
+        --------
+        AllComponents.param_component_map :
+            For all PINT built-in components' parameter to component map.    
+        """
+        param_comp_map = {}
+        for cp_name, cp in self.components.items():
+            for par in cp.params:
+                param_comp_map[par] = cp_name
+        # Check the timing model control parameters
+        # The parameters that are not in the model components should be the
+        # control parameters
+        rest_params = list(set(self.params) - set(param_comp_map.keys()))
+        for rp in rest_params:
+            param_comp_map[rp] = self.__class__.__name__
+        return param_comp_map
+
     def match_param_aliases(self, alias):
         """Return PINT parameter name corresponding to this alias.
 
@@ -2403,7 +2427,7 @@ class Component(object, metaclass=ModelMeta):
         parameters' aliase to the pint defined parameter names. For the aliases
         of a prefixed parameter, the aliase with an existing prefix index maps
         to the PINT defined parameter name with the same index. Behind the scenes,
-        the indexed parameter adds the indexed aliase to its aliase list.  
+        the indexed parameter adds the indexed aliase to its aliase list.
         """
         ali_map = {}
         for p in self.params:
