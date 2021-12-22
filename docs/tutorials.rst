@@ -46,8 +46,6 @@ have a few examples that may be useful.  These tutorials examples are in the for
    examples/Wideband_TOA_walkthrough.ipynb
    examples/Simulate_and_make_MassMass.ipynb
    examples/check_phase_connection.ipynb
-   examples/grid_parameters.ipynb
-   examples/Grid_J0740.ipynb
    examples-rendered/paper_validation_example.ipynb
 
 .. _`Time a Pulsar`: examples/time_a_pulsar.html
