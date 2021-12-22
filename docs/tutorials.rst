@@ -9,7 +9,7 @@ do. Quick common tasks are explained on the `PINT Wiki
 explanations of why things work this way, see the :ref:`Explanation`
 section. If you want details on a particular function that comes up,
 see the :ref:`Reference` section. More complicated tasks are discussed
-in the:ref:`How-tos`.
+in the :ref:`How-tos`.
 
 Data Files
 ----------
