@@ -80,13 +80,11 @@ def zero_residuals(ts, model, maxiter=10, tolerance=1 * u.ns):
         )
 
 
-def update_fake_toa_clock(ts, model, include_bipm=False, include_gps=True):
-    """Update the clock settings (corrections, etc) for fake TOAs
+def get_fake_toa_clock_versions(model, include_bipm=False, include_gps=True):
+    """Get the clock settings (corrections, etc) for fake TOAs
 
     Parameters
     ----------
-    ts : pint.toa.TOAs
-        Input TOAs (modified in-place)
     model : pint.models.timing_model.TimingModel
         current model
     include_bipm : bool, optional
@@ -120,14 +118,9 @@ def update_fake_toa_clock(ts, model, include_bipm=False, include_gps=True):
                 f'CLOCK = {model["CLOCK"].value} is not implemented. '
                 f"Using TT({bipm_default}) instead."
             )
-
-    ts.clock_corr_info.update(
-        {
-            "include_bipm": include_bipm,
+    return {"include_bipm": include_bipm,
             "bipm_version": bipm_version,
-            "include_gps": include_gps,
-        }
-    )
+            "include_gps": include_gps}
 
 
 def make_fake_toas(ts, model, add_noise=False, name="fake"):
@@ -252,17 +245,19 @@ def make_fake_toas_uniform(
         pint.toa.TOA(t.value, obs=obs, freq=f, scale=get_observatory(obs).timescale)
         for t, f in zip(times, freq_array)
     ]
-    ts = pint.toa.TOAs(toalist=t1)
-    ts.planets = model["PLANET_SHAPIRO"].value
-    ts.ephem = model["EPHEM"].value
-    update_fake_toa_clock(ts, model, include_bipm=include_bipm, include_gps=include_gps)
+    clk_version = get_fake_toa_clock_versions(model, include_bipm=include_bipm,
+                                              include_gps=include_gps)
+    ts = pint.toa.get_TOAs_list(toa_list=t1, ephem=model["EPHEM"].value,
+                                include_bipm=clk_version['include_bipm'],
+                                bipm_version=clk_version['bipm_version'],
+                                include_gps=clk_version['include_gps'],
+                                planets=model["PLANET_SHAPIRO"].value)
+
     ts.table["error"] = error
     if dm is not None:
         for f in ts.table["flags"]:
             f["pp_dm"] = str(dm.to_value(pint.dmu))
             f["pp_dme"] = str(dm_error.to_value(pint.dmu))
-    ts.compute_TDBs()
-    ts.compute_posvels()
     return make_fake_toas(ts, model=model, add_noise=add_noise, name=name)
 
 
@@ -335,17 +330,18 @@ def make_fake_toas_fromMJDs(
         pint.toa.TOA(t.value, obs=obs, freq=f, scale=get_observatory(obs).timescale)
         for t, f in zip(times, freq_array)
     ]
-    ts = pint.toa.TOAs(toalist=t1)
-    ts.planets = model["PLANET_SHAPIRO"].value
-    ts.ephem = model["EPHEM"].value
-    update_fake_toa_clock(ts, model, include_bipm=include_bipm, include_gps=include_gps)
+    clk_version = get_fake_toa_clock_versions(model, include_bipm=include_bipm,
+                                              include_gps=include_gps)
+    ts = pint.toa.get_TOAs_list(toa_list=t1, ephem=model["EPHEM"].value,
+                                include_bipm=clk_version['include_bipm'],
+                                bipm_version=clk_version['bipm_version'],
+                                include_gps=clk_version['include_gps'],
+                                planets=model["PLANET_SHAPIRO"].value)
     ts.table["error"] = error
     if dm is not None:
         for f in ts.table["flags"]:
             f["pp_dm"] = str(dm.to_value(pint.dmu))
             f["pp_dme"] = str(dm_error.to_value(pint.dmu))
-    ts.compute_TDBs()
-    ts.compute_posvels()
     return make_fake_toas(ts, model=model, add_noise=add_noise, name=name)
 
 
