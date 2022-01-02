@@ -133,7 +133,9 @@ def test_noise_addition_EQUAD():
     toas2 = roundtrip(toas, model)
     r2 = pint.residuals.Residuals(toas2, model)
     assert np.isclose(
-        r2.calc_time_resids().std(), np.sqrt((1 * u.us) ** 2 + (5 * u.us) ** 2), rtol=0.2
+        r2.calc_time_resids().std(),
+        np.sqrt((1 * u.us) ** 2 + (5 * u.us) ** 2),
+        rtol=0.2,
     )
 
 

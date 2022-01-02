@@ -118,9 +118,11 @@ def get_fake_toa_clock_versions(model, include_bipm=False, include_gps=True):
                 f'CLOCK = {model["CLOCK"].value} is not implemented. '
                 f"Using TT({bipm_default}) instead."
             )
-    return {"include_bipm": include_bipm,
-            "bipm_version": bipm_version,
-            "include_gps": include_gps}
+    return {
+        "include_bipm": include_bipm,
+        "bipm_version": bipm_version,
+        "include_gps": include_gps,
+    }
 
 
 def make_fake_toas(ts, model, add_noise=False, name="fake"):
@@ -245,13 +247,17 @@ def make_fake_toas_uniform(
         pint.toa.TOA(t.value, obs=obs, freq=f, scale=get_observatory(obs).timescale)
         for t, f in zip(times, freq_array)
     ]
-    clk_version = get_fake_toa_clock_versions(model, include_bipm=include_bipm,
-                                              include_gps=include_gps)
-    ts = pint.toa.get_TOAs_list(toa_list=t1, ephem=model["EPHEM"].value,
-                                include_bipm=clk_version['include_bipm'],
-                                bipm_version=clk_version['bipm_version'],
-                                include_gps=clk_version['include_gps'],
-                                planets=model["PLANET_SHAPIRO"].value)
+    clk_version = get_fake_toa_clock_versions(
+        model, include_bipm=include_bipm, include_gps=include_gps
+    )
+    ts = pint.toa.get_TOAs_list(
+        toa_list=t1,
+        ephem=model["EPHEM"].value,
+        include_bipm=clk_version["include_bipm"],
+        bipm_version=clk_version["bipm_version"],
+        include_gps=clk_version["include_gps"],
+        planets=model["PLANET_SHAPIRO"].value,
+    )
 
     ts.table["error"] = error
     if dm is not None:
@@ -330,13 +336,17 @@ def make_fake_toas_fromMJDs(
         pint.toa.TOA(t.value, obs=obs, freq=f, scale=get_observatory(obs).timescale)
         for t, f in zip(times, freq_array)
     ]
-    clk_version = get_fake_toa_clock_versions(model, include_bipm=include_bipm,
-                                              include_gps=include_gps)
-    ts = pint.toa.get_TOAs_list(toa_list=t1, ephem=model["EPHEM"].value,
-                                include_bipm=clk_version['include_bipm'],
-                                bipm_version=clk_version['bipm_version'],
-                                include_gps=clk_version['include_gps'],
-                                planets=model["PLANET_SHAPIRO"].value)
+    clk_version = get_fake_toa_clock_versions(
+        model, include_bipm=include_bipm, include_gps=include_gps
+    )
+    ts = pint.toa.get_TOAs_list(
+        toa_list=t1,
+        ephem=model["EPHEM"].value,
+        include_bipm=clk_version["include_bipm"],
+        bipm_version=clk_version["bipm_version"],
+        include_gps=clk_version["include_gps"],
+        planets=model["PLANET_SHAPIRO"].value,
+    )
     ts.table["error"] = error
     if dm is not None:
         for f in ts.table["flags"]:
