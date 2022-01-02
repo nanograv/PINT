@@ -1,3 +1,5 @@
+"""Tests for making fake TOAs"""
+import tempfile
 import astropy.units as u
 import pint.simulation
 from pint.models.model_builder import get_model, get_model_and_toas
@@ -10,6 +12,14 @@ import os
 import pint.config
 from pint.fitter import GLSFitter
 from pinttestdata import datadir, testdir
+
+
+def roundtrip(toas, model):
+    with tempfile.NamedTemporaryFile("wt") as f:
+        toas.write_TOA_file(f)
+        f.flush()
+        toas2 = get_TOAs(f.name, model=model)
+    return toas2
 
 
 def test_noise_addition():
@@ -34,6 +44,12 @@ def test_noise_addition():
     assert np.allclose(toas.get_errors(), 1 * u.us)
     # need a generous rtol because of the small statistics
     assert np.isclose(r.calc_time_resids().std(), 1 * u.us, rtol=0.2)
+    # Test round trip
+    toas2 = roundtrip(toas, model)
+    assert np.allclose(toas2.get_errors(), 1 * u.us)
+    r2 = pint.residuals.Residuals(toas2, model)
+    # need a generous rtol because of the small statistics
+    assert np.isclose(r2.calc_time_resids().std(), 1 * u.us, rtol=0.2)
 
 
 def test_multiple_freqs():
@@ -84,6 +100,10 @@ def test_noise_addition_EFAC():
     r = pint.residuals.Residuals(toas, model)
     # need a generous rtol because of the small statistics
     assert np.isclose(r.calc_time_resids().std(), 2 * 1 * u.us, rtol=0.2)
+    # Test round trip
+    toas2 = roundtrip(toas, model)
+    r2 = pint.residuals.Residuals(toas2, model)
+    assert np.isclose(r2.calc_time_resids().std(), 2 * 1 * u.us, rtol=0.2)
 
 
 def test_noise_addition_EQUAD():
@@ -108,6 +128,12 @@ def test_noise_addition_EQUAD():
     # need a generous rtol because of the small statistics
     assert np.isclose(
         r.calc_time_resids().std(), np.sqrt((1 * u.us) ** 2 + (5 * u.us) ** 2), rtol=0.2
+    )
+    # Test round trip
+    toas2 = roundtrip(toas, model)
+    r2 = pint.residuals.Residuals(toas2, model)
+    assert np.isclose(
+        r2.calc_time_resids().std(), np.sqrt((1 * u.us) ** 2 + (5 * u.us) ** 2), rtol=0.2
     )
 
 
@@ -151,6 +177,10 @@ def test_fake_fromMJDs():
 
     # need a generous rtol because of the small statistics
     assert np.isclose(r.calc_time_resids().std(), 1 * u.us, rtol=0.2)
+    # Test round trip
+    toas2 = roundtrip(toas, model)
+    r2 = pint.residuals.Residuals(toas2, model)
+    assert np.isclose(r2.calc_time_resids().std(), 1 * u.us, rtol=0.2)
 
 
 def test_fake_from_timfile():
@@ -169,6 +199,12 @@ def test_fake_from_timfile():
     # need a generous rtol because of the small statistics
     assert np.isclose(
         r.calc_time_resids().std(), r_sim.calc_time_resids().std(), rtol=2
+    )
+    # Test round trip
+    t_sim2 = roundtrip(t_sim, f.model)
+    r_sim2 = pint.residuals.Residuals(t_sim2, f.model)
+    assert np.isclose(
+        r.calc_time_resids().std(), r_sim2.calc_time_resids().std(), rtol=2
     )
 
 
