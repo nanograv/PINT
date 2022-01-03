@@ -461,19 +461,19 @@ class Parameter:
         if self.name == "CHI2" and not (format.lower() == "pint"):
             # no CHI2 for TEMPO/TEMPO2
             return ""
-        if self.name == "SWM" and not (format.lower() == "pint"):
+        elif self.name == "SWM" and not (format.lower() == "pint"):
             # no SWM for TEMPO/TEMPO2
             return ""
-        if self.name == "A1DOT" and not (format.lower() == "pint"):
+        elif self.name == "A1DOT" and not (format.lower() == "pint"):
             # change to XDOT for TEMPO/TEMPO2
             name = "XDOT"
-        if self.name == "STIGMA" and not (format.lower() == "pint"):
+        elif self.name == "STIGMA" and not (format.lower() == "pint"):
             # change to VARSIGMA for TEMPO/TEMPO2
             name = "VARSIGMA"
-        if self.name == "EFAC" and not (format.lower() == "pint"):
+        elif self.name == "EFAC" and not (format.lower() == "pint"):
             # change to T2EFAC for TEMPO/TEMPO2
             name = "T2EFAC"
-        if self.name == "EQUAD" and not (format.lower() == "pint"):
+        elif self.name == "EQUAD" and not (format.lower() == "pint"):
             # change to T2EQUAD for TEMPO/TEMPO2
             name = "T2EQUAD"
 
@@ -481,9 +481,10 @@ class Parameter:
         if self.name == "ECL" and format.lower() == "tempo2":
             # change ECL value to IERS2003 for TEMPO2
             line = "%-15s %25s" % (name, "IERS2003")
-        if self.name == "NHARMS" and not (format.lower() == "pint"):
+        elif self.name == "NHARMS" and not (format.lower() == "pint"):
             # convert NHARMS value to int
             line = "%-15s %25d" % (name, self.value)
+
         if self.uncertainty is not None:
             line += " %d %s" % (
                 0 if self.frozen else 1,
