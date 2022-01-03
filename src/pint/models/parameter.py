@@ -431,8 +431,26 @@ class Parameter:
             out += " (" + str(self.units) + ")"
         return out
 
-    def as_parfile_line(self):
-        """Return a parfile line giving the current state of the parameter."""
+    def as_parfile_line(self, format="pint"):
+        """Return a parfile line giving the current state of the parameter.
+
+        Parameters
+        ----------
+        format : str, optional
+             Parfile output format. PINT outputs the 'tempo', 'tempo2' and 'pint'
+             format. The defaul format is `pint`.
+
+        Returns
+        -------
+        str
+
+        Notes
+        -----
+        Format differences between tempo, tempo2, and pint at [1]_
+
+        .. [1] https://github.com/nanograv/PINT/wiki/PINT-vs.-TEMPO%282%29-par-file-changes
+        """
+        assert format.lower() in ["pint", "tempo", "tempo2"]
         # Don't print unset parameters
         if self.quantity is None:
             return ""
@@ -440,7 +458,32 @@ class Parameter:
             name = self.name
         else:
             name = self.use_alias
+        if self.name == "CHI2" and not (format.lower() == "pint"):
+            # no CHI2 for TEMPO/TEMPO2
+            return ""
+        if self.name == "SWM" and not (format.lower() == "pint"):
+            # no SWM for TEMPO/TEMPO2
+            return ""
+        if self.name == "A1DOT" and not (format.lower() == "pint"):
+            # change to XDOT for TEMPO/TEMPO2
+            name = "XDOT"
+        if self.name == "STIGMA" and not (format.lower() == "pint"):
+            # change to VARSIGMA for TEMPO/TEMPO2
+            name = "VARSIGMA"
+        if self.name == "EFAC" and not (format.lower() == "pint"):
+            # change to T2EFAC for TEMPO/TEMPO2
+            name = "T2EFAC"
+        if self.name == "EQUAD" and not (format.lower() == "pint"):
+            # change to T2EQUAD for TEMPO/TEMPO2
+            name = "T2EQUAD"
+
         line = "%-15s %25s" % (name, self.str_quantity(self.quantity))
+        if self.name == "ECL" and format.lower() == "tempo2":
+            # change ECL value to IERS2003 for TEMPO2
+            line = "%-15s %25s" % (name, "IERS2003")
+        if self.name == "NHARMS" and not (format.lower() == "pint"):
+            # convert NHARMS value to int
+            line = "%-15s %25d" % (name, self.value)
         if self.uncertainty is not None:
             line += " %d %s" % (
                 0 if self.frozen else 1,
@@ -448,6 +491,9 @@ class Parameter:
             )
         elif not self.frozen:
             line += " 1"
+        if self.name == "T2CMETHOD" and format.lower() == "tempo2":
+            # comment out T2CMETHOD for TEMPO2
+            line = "#" + line
         return line + "\n"
 
     def from_parfile_line(self, line):
@@ -1420,8 +1466,8 @@ class prefixParameter:
     def name_matches(self, name):
         return self.param_comp.name_matches(name)
 
-    def as_parfile_line(self):
-        return self.param_comp.as_parfile_line()
+    def as_parfile_line(self, format="pint"):
+        return self.param_comp.as_parfile_line(format=format)
 
     def help_line(self):
         return self.param_comp.help_line()
@@ -1714,7 +1760,7 @@ class maskParameter(floatParameter):
             self.uncertainty = self._set_uncertainty(ucty)
         return True
 
-    def as_parfile_line(self):
+    def as_parfile_line(self, format="pint"):
         if self.quantity is None:
             return ""
         if self.use_alias is None:
@@ -1936,7 +1982,7 @@ class pairParameter(floatParameter):
 
         return True
 
-    def as_parfile_line(self):
+    def as_parfile_line(self, format="pint"):
         quantity = self.quantity
         if self.quantity is None:
             return ""

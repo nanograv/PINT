@@ -162,12 +162,12 @@ class PiecewiseSpindown(PhaseComponent):
                 msg = "Piecewise solution end epoch is needed for Piece %d." % idx
                 raise MissingParameter("PiecewiseSpindown", "PWSTOP_%d" % idx, msg)
 
-    def print_par(self):
+    def print_par(self, format="pint"):
         result = ""
         for idx in set(self.pwsol_indices):
             for param in self.pwsol_prop:
                 par = getattr(self, param + "%d" % idx)
-                result += par.as_parfile_line()
+                result += par.as_parfile_line(format=format)
         return result
 
     def get_dt_and_affected(self, toas, delay, glepnm):

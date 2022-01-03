@@ -227,21 +227,21 @@ class DispersionDM(Dispersion):
         """This is a wrapper function for interacting with the TimingModel class"""
         return self.dispersion_type_delay(toas)
 
-    def print_par(self):
+    def print_par(self, format="pint"):
         # TODO we need to have a better design for print out the parameters in
         # an inhertance class.
         result = ""
         prefix_dm = list(self.get_prefix_mapping_component("DM").values())
         dms = ["DM"] + prefix_dm
         for dm in dms:
-            result += getattr(self, dm).as_parfile_line()
+            result += getattr(self, dm).as_parfile_line(format=format)
         if hasattr(self, "components"):
             all_params = self.components["DispersionDM"].params
         else:
             all_params = self.params
         for pm in all_params:
             if pm not in dms:
-                result += getattr(self, pm).as_parfile_line()
+                result += getattr(self, pm).as_parfile_line(format=format)
         return result
 
     def d_dm_d_DMs(
@@ -552,17 +552,17 @@ class DispersionDMX(Dispersion):
             dmx[v] = 1.0
         return dmx * (u.pc / u.cm ** 3) / (u.pc / u.cm ** 3)
 
-    def print_par(self):
+    def print_par(self, format="pint"):
         result = ""
         DMX_mapping = self.get_prefix_mapping_component("DMX_")
         DMXR1_mapping = self.get_prefix_mapping_component("DMXR1_")
         DMXR2_mapping = self.get_prefix_mapping_component("DMXR2_")
-        result += getattr(self, "DMX").as_parfile_line()
+        result += getattr(self, "DMX").as_parfile_line(format=format)
         sorted_list = sorted(DMX_mapping.keys())
         for ii in sorted_list:
-            result += getattr(self, DMX_mapping[ii]).as_parfile_line()
-            result += getattr(self, DMXR1_mapping[ii]).as_parfile_line()
-            result += getattr(self, DMXR2_mapping[ii]).as_parfile_line()
+            result += getattr(self, DMX_mapping[ii]).as_parfile_line(format=format)
+            result += getattr(self, DMXR1_mapping[ii]).as_parfile_line(format=format)
+            result += getattr(self, DMXR2_mapping[ii]).as_parfile_line(format=format)
         return result
 
 
