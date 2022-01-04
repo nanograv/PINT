@@ -43,6 +43,7 @@ from scipy.optimize import brentq
 
 import pint
 from pint.models.parameter import (
+    _parfile_formats,
     AngleParameter,
     MJDParameter,
     Parameter,
@@ -2137,10 +2138,14 @@ class TimingModel:
         comment : str, optional
             Additional comment string to include in parfile
         format : str, optional
-             Parfile output format. PINT outputs the 'tempo', 'tempo2' and 'pint'
-             format. The defaul format is `pint`.
+             Parfile output format. PINT outputs in 'tempo', 'tempo2' and 'pint'
+             formats. The defaul format is `pint`.
         """
-        assert format.lower() in ["pint", "tempo", "tempo2"]
+        assert (
+            format.lower() in _parfile_formats
+        ), "parfile format must be one of %s" % ", ".join(
+            ['"%s"' % x for x in _parfile_formats]
+        )
 
         self.validate()
         if include_info:
@@ -2152,6 +2157,7 @@ class TimingModel:
         result_middle = ""
         cates_comp = self.get_components_by_category()
         printed_cate = []
+        # make sure TEMPO2 format start with "MODE 1"
         if format.lower() == "tempo2":
             result_begin += "MODE 1\n"
         for p in self.top_level_params:
@@ -2160,6 +2166,7 @@ class TimingModel:
             result_begin += getattr(self, p).as_parfile_line(format=format)
         for cat in start_order:
             if cat in list(cates_comp.keys()):
+                # print("Starting: %s" % cat)
                 cp = cates_comp[cat]
                 for cpp in cp:
                     result_begin += cpp.print_par(format=format)
@@ -2169,6 +2176,7 @@ class TimingModel:
 
         for cat in last_order:
             if cat in list(cates_comp.keys()):
+                # print("Ending: %s" % cat)
                 cp = cates_comp[cat]
                 for cpp in cp:
                     result_end += cpp.print_par(format=format)
@@ -2707,7 +2715,7 @@ class Component(object, metaclass=ModelMeta):
         ----------
         format : str, optional
              Parfile output format. PINT outputs the 'tempo', 'tempo2' and 'pint'
-             format. The defaul format is `pint`.
+             format. The defaul format is `pint`.  Actual formatting done elsewhere.
 
         Returns
         -------

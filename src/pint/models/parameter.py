@@ -49,6 +49,11 @@ from pint.utils import split_prefixed_name
 log = logging.getLogger(__name__)
 
 
+# potential parfile formats
+# in one place for consistency
+_parfile_formats = ["pint", "tempo", "tempo2"]
+
+
 def _identity_function(x):
     """A function to just return the input argument
 
@@ -437,8 +442,8 @@ class Parameter:
         Parameters
         ----------
         format : str, optional
-             Parfile output format. PINT outputs the 'tempo', 'tempo2' and 'pint'
-             format. The defaul format is `pint`.
+             Parfile output format. PINT outputs in 'tempo', 'tempo2' and 'pint'
+             formats. The defaul format is `pint`.
 
         Returns
         -------
@@ -450,7 +455,12 @@ class Parameter:
 
         .. [1] https://github.com/nanograv/PINT/wiki/PINT-vs.-TEMPO%282%29-par-file-changes
         """
-        assert format.lower() in ["pint", "tempo", "tempo2"]
+        assert (
+            format.lower() in _parfile_formats
+        ), "parfile format must be one of %s" % ", ".join(
+            ['"%s"' % x for x in _parfile_formats]
+        )
+
         # Don't print unset parameters
         if self.quantity is None:
             return ""
@@ -458,6 +468,8 @@ class Parameter:
             name = self.name
         else:
             name = self.use_alias
+
+        # special cases for parameter names that change depending on format
         if self.name == "CHI2" and not (format.lower() == "pint"):
             # no CHI2 for TEMPO/TEMPO2
             return ""
@@ -470,14 +482,10 @@ class Parameter:
         elif self.name == "STIGMA" and not (format.lower() == "pint"):
             # change to VARSIGMA for TEMPO/TEMPO2
             name = "VARSIGMA"
-        elif self.name == "EFAC" and not (format.lower() == "pint"):
-            # change to T2EFAC for TEMPO/TEMPO2
-            name = "T2EFAC"
-        elif self.name == "EQUAD" and not (format.lower() == "pint"):
-            # change to T2EQUAD for TEMPO/TEMPO2
-            name = "T2EQUAD"
 
+        # standard output formatting
         line = "%-15s %25s" % (name, self.str_quantity(self.quantity))
+        # special cases for parameter values that change depending on format
         if self.name == "ECL" and format.lower() == "tempo2":
             # change ECL value to IERS2003 for TEMPO2
             line = "%-15s %25s" % (name, "IERS2003")
@@ -492,6 +500,7 @@ class Parameter:
             )
         elif not self.frozen:
             line += " 1"
+
         if self.name == "T2CMETHOD" and format.lower() == "tempo2":
             # comment out T2CMETHOD for TEMPO2
             line = "#" + line
@@ -1762,12 +1771,27 @@ class maskParameter(floatParameter):
         return True
 
     def as_parfile_line(self, format="pint"):
+        assert (
+            format.lower() in _parfile_formats
+        ), "parfile format must be one of %s" % ", ".join(
+            ['"%s"' % x for x in _parfile_formats]
+        )
+
         if self.quantity is None:
             return ""
         if self.use_alias is None:
             name = self.origin_name
         else:
             name = self.use_alias
+
+        # special cases for parameter names that change depending on format
+        if name == "EFAC" and not (format.lower() == "pint"):
+            # change to T2EFAC for TEMPO/TEMPO2
+            name = "T2EFAC"
+        elif name == "EQUAD" and not (format.lower() == "pint"):
+            # change to T2EQUAD for TEMPO/TEMPO2
+            name = "T2EQUAD"
+
         line = "%-15s %s " % (name, self.key)
         for kv in self.key_value:
             if isinstance(kv, time.Time):
