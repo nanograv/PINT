@@ -2141,10 +2141,9 @@ class TimingModel:
              Parfile output format. PINT outputs in 'tempo', 'tempo2' and 'pint'
              formats. The defaul format is `pint`.
         """
-        assert (
-            format.lower() in _parfile_formats
-        ), "parfile format must be one of %s" % ", ".join(
-            ['"%s"' % x for x in _parfile_formats]
+        assert format.lower() in _parfile_formats, (
+            "parfile format must be one of %s"
+            % ", ".join(['"%s"' % x for x in _parfile_formats])
         )
 
         self.validate()
