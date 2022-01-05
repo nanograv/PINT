@@ -25,7 +25,7 @@ def test_pickle_prefixparameter():
         longdouble=True,
         frozen=False,
     )
-    modelcomponent.add_param(p, setup=True)
+    modelcomponent.init_param(p, setup=True)
     m.validate()
     s = pickle.dumps(m)
 

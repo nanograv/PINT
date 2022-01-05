@@ -45,7 +45,7 @@ def test_jump_by_cluster(setup_NGC6440E):
         name="JUMP", key="mjd", value=0.2, key_value=[54099, 54100], units=u.s
     )
     # this should be the last group of any TOAs
-    cp.add_param(par, setup=True)
+    cp.init_param(par, setup=True)
 
     # add clusters to the TOAs
     clusters = setup_NGC6440E.t.get_clusters(2 * u.hr, add_column=False)
@@ -58,7 +58,7 @@ def test_jump_by_cluster(setup_NGC6440E):
         name="JUMP", key="-toacluster", value=0.2, key_value=41, units=u.s
     )
     # this should be identical to the cluster above
-    cp_copy.add_param(par_copy, setup=True)
+    cp_copy.init_param(par_copy, setup=True)
     assert set(cp.JUMP1.select_toa_mask(setup_NGC6440E.t)) == set(
         cp_copy.JUMP1.select_toa_mask(setup_NGC6440E.t)
     )

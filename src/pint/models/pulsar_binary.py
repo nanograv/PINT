@@ -66,12 +66,12 @@ class PulsarBinary(DelayComponent):
         self.binary_model_name = None
         self.barycentric_time = None
         self.binary_model_class = None
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="PB", units=u.day, description="Orbital period", long_double=True
             )
         )
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="PBDOT",
                 units=u.day / u.day,
@@ -81,14 +81,14 @@ class PulsarBinary(DelayComponent):
                 scale_threshold=1e-7,
             )
         )
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="A1", units=ls, description="Projected semi-major axis, a*sin(i)"
             )
         )
         # NOTE: the DOT here takes the value and times 1e-12, tempo/tempo2 can
         # take both.
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="A1DOT",
                 aliases=["XDOT"],
@@ -99,12 +99,12 @@ class PulsarBinary(DelayComponent):
                 scale_threshold=1e-7,
             )
         )
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="ECC", units="", aliases=["E"], description="Eccentricity"
             )
         )
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="EDOT",
                 units="1/s",
@@ -114,12 +114,12 @@ class PulsarBinary(DelayComponent):
                 scale_threshold=1e-7,
             )
         )
-        self.add_param(
+        self.init_param(
             MJDParameter(
                 name="T0", description="Epoch of periastron passage", time_scale="tdb"
             )
         )
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="OM",
                 units=u.deg,
@@ -127,7 +127,7 @@ class PulsarBinary(DelayComponent):
                 long_double=True,
             )
         )
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="OMDOT",
                 units="deg/year",
@@ -135,19 +135,19 @@ class PulsarBinary(DelayComponent):
                 long_double=True,
             )
         )
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="M2",
                 units=u.M_sun,
                 description="Mass of companian in the unit Sun mass",
             )
         )
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="SINI", units="", description="Sine of inclination angle"
             )
         )
-        self.add_param(
+        self.init_param(
             prefixParameter(
                 name="FB0",
                 value=None,

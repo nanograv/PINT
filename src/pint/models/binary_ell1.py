@@ -45,13 +45,13 @@ class BinaryELL1(PulsarBinary):
         self.binary_model_name = "ELL1"
         self.binary_model_class = ELL1model
 
-        self.add_param(
+        self.init_param(
             MJDParameter(
                 name="TASC", description="Epoch of ascending node", time_scale="tdb"
             )
         )
 
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="EPS1",
                 units="",
@@ -60,7 +60,7 @@ class BinaryELL1(PulsarBinary):
             )
         )
 
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="EPS2",
                 units="",
@@ -69,7 +69,7 @@ class BinaryELL1(PulsarBinary):
             )
         )
 
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="EPS1DOT",
                 units="1e-12/s",
@@ -78,7 +78,7 @@ class BinaryELL1(PulsarBinary):
             )
         )
 
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="EPS2DOT",
                 units="1e-12/s",
@@ -205,7 +205,7 @@ class BinaryELL1H(BinaryELL1):
         self.binary_model_name = "ELL1H"
         self.binary_model_class = ELL1Hmodel
 
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="H3",
                 units="second",
@@ -214,7 +214,7 @@ class BinaryELL1H(BinaryELL1):
             )
         )
 
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="H4",
                 units="second",
@@ -223,7 +223,7 @@ class BinaryELL1H(BinaryELL1):
             )
         )
 
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="STIGMA",
                 units="",
@@ -232,7 +232,7 @@ class BinaryELL1H(BinaryELL1):
                 aliases=["VARSIGMA"],
             )
         )
-        self.add_param(
+        self.init_param(
             intParameter(
                 name="NHARMS",
                 units="",

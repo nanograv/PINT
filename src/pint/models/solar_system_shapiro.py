@@ -36,7 +36,7 @@ class SolarSystemShapiro(DelayComponent):
 
     def __init__(self):
         super(SolarSystemShapiro, self).__init__()
-        self.add_param(
+        self.init_param(
             boolParameter(
                 name="PLANET_SHAPIRO",
                 value=False,

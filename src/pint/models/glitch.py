@@ -54,7 +54,7 @@ class Glitch(PhaseComponent):
     def __init__(self):
         super().__init__()
 
-        self.add_param(
+        self.init_param(
             prefixParameter(
                 name="GLPH_1",
                 units="pulse phase",
@@ -63,7 +63,7 @@ class Glitch(PhaseComponent):
                 type_match="float",
             )
         )
-        self.add_param(
+        self.init_param(
             prefixParameter(
                 name="GLEP_1",
                 units="MJD",
@@ -72,7 +72,7 @@ class Glitch(PhaseComponent):
                 time_scale="tdb",
             )
         )
-        self.add_param(
+        self.init_param(
             prefixParameter(
                 name="GLF0_1",
                 units="Hz",
@@ -81,7 +81,7 @@ class Glitch(PhaseComponent):
                 type_match="float",
             )
         )
-        self.add_param(
+        self.init_param(
             prefixParameter(
                 name="GLF1_1",
                 units="Hz/s",
@@ -89,7 +89,7 @@ class Glitch(PhaseComponent):
                 description_template=self._description_glitch_frequencyderivativechange,
             )
         )
-        self.add_param(
+        self.init_param(
             prefixParameter(
                 name="GLF2_1",
                 units="Hz/s^2",
@@ -97,7 +97,7 @@ class Glitch(PhaseComponent):
                 description_template=self._description_glitch_frequencysecondderivativechange,
             )
         )
-        self.add_param(
+        self.init_param(
             prefixParameter(
                 name="GLF0D_1",
                 units="Hz",
@@ -107,7 +107,7 @@ class Glitch(PhaseComponent):
             )
         )
 
-        self.add_param(
+        self.init_param(
             prefixParameter(
                 name="GLTD_1",
                 units="day",
@@ -140,7 +140,7 @@ class Glitch(PhaseComponent):
             for param in self.glitch_prop:
                 if not hasattr(self, param + "%d" % idx):
                     param0 = getattr(self, param + "1")
-                    self.add_param(param0.new_param(idx))
+                    self.init_param(param0.new_param(idx))
                     getattr(self, param + "%d" % idx).value = 0.0
                 self.register_deriv_funcs(
                     getattr(self, "d_phase_d_" + param[0:-1]), param + "%d" % idx

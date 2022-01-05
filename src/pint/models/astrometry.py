@@ -40,7 +40,7 @@ class Astrometry(DelayComponent):
 
     def __init__(self):
         super().__init__()
-        self.add_param(
+        self.init_param(
             MJDParameter(
                 name="POSEPOCH",
                 description="Reference epoch for position",
@@ -48,7 +48,7 @@ class Astrometry(DelayComponent):
             )
         )
 
-        self.add_param(
+        self.init_param(
             floatParameter(name="PX", units="mas", value=0.0, description="Parallax")
         )
 
@@ -241,7 +241,7 @@ class AstrometryEquatorial(Astrometry):
 
     def __init__(self):
         super().__init__()
-        self.add_param(
+        self.init_param(
             AngleParameter(
                 name="RAJ",
                 units="H:M:S",
@@ -250,7 +250,7 @@ class AstrometryEquatorial(Astrometry):
             )
         )
 
-        self.add_param(
+        self.init_param(
             AngleParameter(
                 name="DECJ",
                 units="D:M:S",
@@ -259,7 +259,7 @@ class AstrometryEquatorial(Astrometry):
             )
         )
 
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="PMRA",
                 units="mas/year",
@@ -268,7 +268,7 @@ class AstrometryEquatorial(Astrometry):
             )
         )
 
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="PMDEC",
                 units="mas/year",
@@ -588,7 +588,7 @@ class AstrometryEcliptic(Astrometry):
 
     def __init__(self):
         super().__init__()
-        self.add_param(
+        self.init_param(
             AngleParameter(
                 name="ELONG",
                 units="deg",
@@ -597,7 +597,7 @@ class AstrometryEcliptic(Astrometry):
             )
         )
 
-        self.add_param(
+        self.init_param(
             AngleParameter(
                 name="ELAT",
                 units="deg",
@@ -606,7 +606,7 @@ class AstrometryEcliptic(Astrometry):
             )
         )
 
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="PMELONG",
                 units="mas/year",
@@ -616,7 +616,7 @@ class AstrometryEcliptic(Astrometry):
             )
         )
 
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="PMELAT",
                 units="mas/year",
@@ -626,7 +626,7 @@ class AstrometryEcliptic(Astrometry):
             )
         )
 
-        self.add_param(
+        self.init_param(
             strParameter(
                 name="ECL",
                 value="IERS2010",

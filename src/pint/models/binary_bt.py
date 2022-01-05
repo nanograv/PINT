@@ -41,7 +41,7 @@ class BinaryBT(PulsarBinary):
         self.binary_model_name = "BT"
         self.binary_model_class = BTmodel
 
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="GAMMA",
                 value=0.0,

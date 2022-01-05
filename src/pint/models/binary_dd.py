@@ -30,7 +30,7 @@ class BinaryDD(PulsarBinary):
         super(BinaryDD, self).__init__()
         self.binary_model_name = "DD"
         self.binary_model_class = DDmodel
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="A0",
                 value=0.0,
@@ -39,7 +39,7 @@ class BinaryDD(PulsarBinary):
             )
         )
 
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="B0",
                 value=0.0,
@@ -48,7 +48,7 @@ class BinaryDD(PulsarBinary):
             )
         )
 
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="GAMMA",
                 value=0.0,
@@ -57,7 +57,7 @@ class BinaryDD(PulsarBinary):
             )
         )
 
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="DR",
                 value=0.0,
@@ -66,7 +66,7 @@ class BinaryDD(PulsarBinary):
             )
         )
 
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="DTH",
                 value=0.0,

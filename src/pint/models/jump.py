@@ -29,7 +29,7 @@ class DelayJump(DelayComponent):
 
     def __init__(self):
         super().__init__()
-        self.add_param(maskParameter(name="JUMP", units="second"))
+        self.init_param(maskParameter(name="JUMP", units="second"))
         self.delay_funcs_component += [self.jump_delay]
 
     def setup(self):
@@ -89,7 +89,7 @@ class PhaseJump(PhaseComponent):
 
     def __init__(self):
         super().__init__()
-        self.add_param(
+        self.init_param(
             maskParameter(
                 name="JUMP",
                 units="second",
@@ -207,7 +207,7 @@ class PhaseJump(PhaseComponent):
                 units="second",
                 frozen=False,
             )
-            self.add_param(param)
+            self.init_param(param)
         # otherwise add on jump with next index
         else:
             # first, search for TOAs already jumped in inputted selection - pintk does not allow jumps added through GUI to overlap with existing jumps
@@ -226,7 +226,7 @@ class PhaseJump(PhaseComponent):
                 units="second",
                 frozen=False,
             )
-            self.add_param(param)
+            self.init_param(param)
         ind = param.index
         name = param.name
         self.setup()

@@ -29,14 +29,14 @@ class Wave(PhaseComponent):
     def __init__(self):
         super(Wave, self).__init__()
 
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="WAVE_OM",
                 description="Base frequency of wave solution",
                 units="1/d",
             )
         )
-        self.add_param(
+        self.init_param(
             prefixParameter(
                 name="WAVE1",
                 units="s",
@@ -46,7 +46,7 @@ class Wave(PhaseComponent):
                 parameter_type="pair",
             )
         )
-        self.add_param(
+        self.init_param(
             MJDParameter(
                 name="WAVEEPOCH",
                 description="Reference epoch for wave solution",

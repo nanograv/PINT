@@ -821,7 +821,7 @@ class Fitter:
                     ).value = parameter[ii].value
                 # If not, add it to the model
                 else:
-                    fitter_copy.model.components[component[ii]].add_param(
+                    fitter_copy.model.components[component[ii]].init_param(
                         parameter[ii], setup=True
                     )
             # validate and setup model

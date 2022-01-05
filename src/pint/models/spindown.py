@@ -32,7 +32,7 @@ class Spindown(PhaseComponent):
 
     def __init__(self):
         super().__init__()
-        # self.add_param(
+        # self.init_param(
         #     floatParameter(
         #         name="F0",
         #         value=0.0,
@@ -41,7 +41,7 @@ class Spindown(PhaseComponent):
         #         long_double=True,
         #     )
         # )
-        self.add_param(
+        self.init_param(
             prefixParameter(
                 name="F0",
                 value=0.0,
@@ -53,7 +53,7 @@ class Spindown(PhaseComponent):
                 long_double=True,
             )
         )
-        # self.add_param(
+        # self.init_param(
         #     prefixParameter(
         #         name="F1",
         #         value=0.0,
@@ -65,7 +65,7 @@ class Spindown(PhaseComponent):
         #         long_double=True,
         #     )
         # )
-        self.add_param(
+        self.init_param(
             MJDParameter(
                 name="PEPOCH",
                 description="Reference epoch for spin-down",

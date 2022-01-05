@@ -31,7 +31,7 @@ class SimpleModel(PhaseComponent):
 
     def __init__(self):
         super(SimpleModel, self).__init__()
-        self.add_param(floatParameter(name="TESTPARAM", value=0.0, unit="s"))
+        self.init_param(floatParameter(name="TESTPARAM", value=0.0, unit="s"))
 
 
 class SubsetModel(PhaseComponent):
@@ -43,8 +43,8 @@ class SubsetModel(PhaseComponent):
 
     def __init__(self):
         super(SubsetModel, self).__init__()
-        self.add_param(floatParameter(name="F0", value=0.0, unit="1/s"))
-        # self.add_param(floatParameter(name="F1", value=0.0, unit="1/s^2"))
+        self.init_param(floatParameter(name="F0", value=0.0, unit="1/s"))
+        # self.init_param(floatParameter(name="F1", value=0.0, unit="1/s^2"))
 
 
 @pytest.fixture
@@ -59,17 +59,17 @@ def simple_model():
 
 @pytest.fixture
 def simple_model_overlap(simple_model):
-    simple_model.add_param(floatParameter(name="F0", aliases=[], value=0.0, unit="1/s"))
+    simple_model.init_param(floatParameter(name="F0", aliases=[], value=0.0, unit="1/s"))
     return simple_model
 
 
 @pytest.fixture
 def simple_model_alias_overlap():
     simple_model = SimpleModel()
-    simple_model.add_param(
+    simple_model.init_param(
         floatParameter(name="TESTPARAM2", aliases=["F0"], value=0.0, unit="1/s")
     )
-    simple_model.add_param(
+    simple_model.init_param(
         floatParameter(name="TESTPARAM3", aliases=["LAMBDA"], value=0.0, unit="deg")
     )
     return simple_model
@@ -114,7 +114,7 @@ def test_model_builder_class():
     # test for new components
     assert "SimpleModel" in mb.components
     simple_comp = mb.components["SimpleModel"]
-    simple_comp.add_param(
+    simple_comp.init_param(
         floatParameter(name="TESTPARAM2", aliases=["F0"], value=0.0, unit="s")
     )
 
@@ -182,7 +182,7 @@ def test_conflict_alias_in_component():
 
         def __init__(self):
             super(SimpleModel2, self).__init__()
-            self.add_param(
+            self.init_param(
                 floatParameter(name="TESTPARAMF0", aliases=["F0"], value=0.0, unit="s")
             )
 
@@ -407,7 +407,7 @@ def test_model_from_par_hassubset():
 
         def __init__(self):
             super(SubsetModel2, self).__init__()
-            self.add_param(floatParameter(name="F0", value=0.0, unit="1/s"))
+            self.init_param(floatParameter(name="F0", value=0.0, unit="1/s"))
 
     with pytest.raises(ComponentConflict):
         mb = ModelBuilder()

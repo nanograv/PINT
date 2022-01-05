@@ -50,7 +50,7 @@ class PiecewiseSpindown(PhaseComponent):
     def __init__(self):
         super().__init__()
 
-        self.add_param(
+        self.init_param(
             prefixParameter(
                 name="PWSTART_1",
                 units="MJD",
@@ -60,7 +60,7 @@ class PiecewiseSpindown(PhaseComponent):
             )
         )
 
-        self.add_param(
+        self.init_param(
             prefixParameter(
                 name="PWSTOP_1",
                 units="MJD",
@@ -69,7 +69,7 @@ class PiecewiseSpindown(PhaseComponent):
                 time_scale="tdb",
             )
         )
-        self.add_param(
+        self.init_param(
             prefixParameter(
                 name="PWEP_1",
                 units="MJD",
@@ -78,7 +78,7 @@ class PiecewiseSpindown(PhaseComponent):
                 time_scale="tdb",
             )
         )
-        self.add_param(
+        self.init_param(
             prefixParameter(
                 name="PWPH_1",
                 units="",
@@ -88,7 +88,7 @@ class PiecewiseSpindown(PhaseComponent):
                 uncertainty=1,
             )
         )
-        self.add_param(
+        self.init_param(
             prefixParameter(
                 name="PWF0_1",
                 units="Hz",
@@ -97,7 +97,7 @@ class PiecewiseSpindown(PhaseComponent):
                 type_match="float",
             )
         )
-        self.add_param(
+        self.init_param(
             prefixParameter(
                 name="PWF1_1",
                 units="Hz/s",
@@ -105,7 +105,7 @@ class PiecewiseSpindown(PhaseComponent):
                 description_template=self._description_solution_frequencyderivative,
             )
         )
-        self.add_param(
+        self.init_param(
             prefixParameter(
                 name="PWF2_1",
                 units="Hz/s^2",
@@ -138,7 +138,7 @@ class PiecewiseSpindown(PhaseComponent):
         #     for param in self.pwsol_prop:
         #         if not hasattr(self, param + "%d" % idx):
         #             param0 = getattr(self, param + "1")
-        #             self.add_param(param0.new_param(idx))
+        #             self.init_param(param0.new_param(idx))
         #             getattr(self, param + "%d" % idx).value = 0.0
         #         self.register_deriv_funcs(
         #             getattr(self, "d_phase_d_" + param[0:-1]), param + "%d" % idx

@@ -31,7 +31,7 @@ class FD(DelayComponent):
 
     def __init__(self):
         super().__init__()
-        self.add_param(
+        self.init_param(
             prefixParameter(
                 name="FD1",
                 units="second",
