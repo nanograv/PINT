@@ -1,4 +1,3 @@
-#!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore::DeprecationWarning
 import argparse
 import logging
 import os
@@ -27,15 +26,19 @@ def main(argv=None):
         default="pint",
     )
     parser.add_argument(
-        "-o", "--out", help=("Output filename [default=stdout]"), default=None,
+        "-o",
+        "--out",
+        help=("Output filename [default=stdout]"),
+        default=None,
     )
 
     args = parser.parse_args(argv)
 
     if not os.path.exists(args.input):
-        log.error(f'Cannot open "{args.input}" for reading')
+        log.error(f"Cannot open '{args.input}' for reading")
+        return
 
-    log.info(f'Reading "{args.input}"')
+    log.info(f"Reading '{args.input}'")
     model = get_model(args.input)
     output = model.as_parfile(format=args.format)
     if args.out is None:
@@ -44,6 +47,6 @@ def main(argv=None):
     else:
         with open(args.out, "w") as outfile:
             outfile.write(output)
-        log.info(f'Wrote to "{args.out}"')
+        log.info(f"Wrote to '{args.out}'")
 
     return
