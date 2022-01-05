@@ -26,10 +26,7 @@ def main(argv=None):
         default="pint",
     )
     parser.add_argument(
-        "-o",
-        "--out",
-        help=("Output filename [default=stdout]"),
-        default=None,
+        "-o", "--out", help=("Output filename [default=stdout]"), default=None,
     )
 
     args = parser.parse_args(argv)
