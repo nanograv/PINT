@@ -5,11 +5,10 @@ import os
 from pint.models import get_model
 from pint.models.parameter import _parfile_formats
 
+logging.basicConfig(level=logging.WARNING)
 log = logging.getLogger(__name__)
 
 __all__ = ["main"]
-
-# log.setLevel("INFO")
 
 
 def main(argv=None):
@@ -28,8 +27,15 @@ def main(argv=None):
     parser.add_argument(
         "-o", "--out", help=("Output filename [default=stdout]"), default=None,
     )
+    parser.add_argument(
+        "-v", "--verbosity", default=0, action="count", help="Increase output verbosity"
+    )
 
     args = parser.parse_args(argv)
+    if args.verbosity == 1:
+        log.setLevel("INFO")
+    elif args.verbosity >= 2:
+        log.setLevel("DEBUG")
 
     if not os.path.exists(args.input):
         log.error(f"Cannot open '{args.input}' for reading")
