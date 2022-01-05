@@ -455,9 +455,10 @@ class Parameter:
 
         .. [1] https://github.com/nanograv/PINT/wiki/PINT-vs.-TEMPO%282%29-par-file-changes
         """
-        assert format.lower() in _parfile_formats, (
-            "parfile format must be one of %s"
-            % ", ".join(['"%s"' % x for x in _parfile_formats])
+        assert (
+            format.lower() in _parfile_formats
+        ), "parfile format must be one of %s" % ", ".join(
+            ['"%s"' % x for x in _parfile_formats]
         )
 
         # Don't print unset parameters
@@ -486,8 +487,12 @@ class Parameter:
         line = "%-15s %25s" % (name, self.str_quantity(self.quantity))
         # special cases for parameter values that change depending on format
         if self.name == "ECL" and format.lower() == "tempo2":
-            # change ECL value to IERS2003 for TEMPO2
-            line = "%-15s %25s" % (name, "IERS2003")
+            if self.value != "IERS2003":
+                warn(
+                    f"Changing ECL from '{self.value}' to 'IERS2003'; please refit for consistent results"
+                )
+                # change ECL value to IERS2003 for TEMPO2
+                line = "%-15s %25s" % (name, "IERS2003")
         elif self.name == "NHARMS" and not (format.lower() == "pint"):
             # convert NHARMS value to int
             line = "%-15s %25d" % (name, self.value)
@@ -1770,9 +1775,10 @@ class maskParameter(floatParameter):
         return True
 
     def as_parfile_line(self, format="pint"):
-        assert format.lower() in _parfile_formats, (
-            "parfile format must be one of %s"
-            % ", ".join(['"%s"' % x for x in _parfile_formats])
+        assert (
+            format.lower() in _parfile_formats
+        ), "parfile format must be one of %s" % ", ".join(
+            ['"%s"' % x for x in _parfile_formats]
         )
 
         if self.quantity is None:
