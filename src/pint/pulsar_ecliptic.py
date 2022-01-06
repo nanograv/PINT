@@ -1,4 +1,5 @@
 import sys
+import numpy as np
 
 import astropy.coordinates as coord
 import astropy.units as u
@@ -98,3 +99,16 @@ def icrs_to_pulsarecliptic(from_coo, to_frame):
 )
 def pulsarecliptic_to_icrs(from_coo, to_frame):
     return icrs_to_pulsarecliptic(to_frame, from_coo).T
+
+
+# allow ECL -> ECL conversions to change obliquity
+@frame_transform_graph.transform(
+    coord.DynamicMatrixTransform,
+    PulsarEcliptic,
+    PulsarEcliptic,
+)
+def pulsarecliptic_to_pulsarecliptic(from_coo, to_frame):
+    return np.matmul(
+        icrs_to_pulsarecliptic(coord.ICRS, from_coo).T,
+        icrs_to_pulsarecliptic(coord.ICRS, to_frame),
+    )

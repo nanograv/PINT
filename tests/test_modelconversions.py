@@ -1,5 +1,6 @@
 import io
 import os
+import pytest
 
 import astropy.units as u
 import numpy as np
@@ -9,6 +10,7 @@ import pint.simulation
 from pint.fitter import WLSFitter
 from pint.models.model_builder import get_model, get_model_and_toas
 from pint.toa import get_TOAs
+from pint.pulsar_ecliptic import OBL, PulsarEcliptic
 
 modelstring_ECL = """
 PSR              B1855+09
@@ -55,6 +57,7 @@ def test_ICRS_to_ECL():
     r_ICRS = pint.residuals.Residuals(toas, model_ICRS)
     r_ECL = pint.residuals.Residuals(toas, model_ICRS.as_ECL())
     assert np.allclose(r_ECL.resids, r_ICRS.resids)
+    # assert model_ICRS.as_ECL(ecl).ECL.value == ecl
 
 
 def test_ECL_to_ICRS():
@@ -67,6 +70,19 @@ def test_ECL_to_ICRS():
     r_ECL = pint.residuals.Residuals(toas, model_ECL)
     r_ICRS = pint.residuals.Residuals(toas, model_ECL.as_ICRS())
     assert np.allclose(r_ECL.resids, r_ICRS.resids)
+
+
+def test_ECL_to_ECL():
+    # start with ECL model, get residuals with ECL model with differenct obliquity, compare
+    model_ECL = get_model(io.StringIO(modelstring_ECL))
+
+    toas = pint.simulation.make_fake_toas_uniform(
+        MJDStart, MJDStop, NTOA, model=model_ECL, error=1 * u.us, add_noise=True
+    )
+    r_ECL = pint.residuals.Residuals(toas, model_ECL)
+    r_ECL2 = pint.residuals.Residuals(toas, model_ECL.as_ECL(ecl="IERS2003"))
+    assert np.allclose(r_ECL.resids, r_ECL2.resids)
+    assert model_ECL.as_ECL(ecl="IERS2003").ECL.value == "IERS2003"
 
 
 def test_ECL_to_ICRS_uncertainties():
@@ -115,3 +131,37 @@ def test_ICRS_to_ECL_uncertainties():
         assert np.isclose(
             m1.__getitem__(p).uncertainty, m2.__getitem__(p).uncertainty, rtol=0.5
         )
+
+
+def test_ECL_to_ECL_uncertainties():
+    # start with ECL model, fit with both models
+    # compare parameter values and uncertainties
+    model_ECL = get_model(io.StringIO(modelstring_ECL))
+
+    toas = pint.simulation.make_fake_toas_uniform(
+        MJDStart, MJDStop, NTOA, model=model_ECL, error=1 * u.us, add_noise=True
+    )
+    fit_ECL = WLSFitter(toas, model_ECL)
+    fit_ECL2 = WLSFitter(toas, model_ECL.as_ECL(ecl="IERS2003"))
+    fit_ECL.fit_toas()
+    fit_ECL2.fit_toas()
+
+    m1 = fit_ECL.model
+    m2 = fit_ECL2.model.as_ECL(ecl="IERS2010")
+
+    for p in ("ELONG", "ELAT", "PMELONG", "PMELAT"):
+        assert np.isclose(m1.__getitem__(p).value, m2.__getitem__(p).value)
+        # do a generous test here since the uncertainties could change
+        assert np.isclose(
+            m1.__getitem__(p).uncertainty, m2.__getitem__(p).uncertainty, rtol=0.5
+        )
+
+@pytest.mark.parametrize("ecl", OBL.keys())
+def test_ECL_to_allECL(ecl):
+    model_ECL = get_model(io.StringIO(modelstring_ECL))
+    model_ECL2 = model_ECL.as_ECL(ecl=ecl)
+    coords_ECL2 = model_ECL2.get_psr_coords()
+    assert model_ECL2.ECL.value == ecl
+    # note that coord.separation() will transform between frames when needed
+    assert np.isclose(model_ECL.get_psr_coords().separation(coords_ECL2).arcsec,0)
+    
