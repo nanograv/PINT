@@ -103,9 +103,7 @@ def pulsarecliptic_to_icrs(from_coo, to_frame):
 
 # allow ECL -> ECL conversions to change obliquity
 @frame_transform_graph.transform(
-    coord.DynamicMatrixTransform,
-    PulsarEcliptic,
-    PulsarEcliptic,
+    coord.DynamicMatrixTransform, PulsarEcliptic, PulsarEcliptic,
 )
 def pulsarecliptic_to_pulsarecliptic(from_coo, to_frame):
     return np.matmul(

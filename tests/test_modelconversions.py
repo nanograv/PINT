@@ -156,6 +156,7 @@ def test_ECL_to_ECL_uncertainties():
             m1.__getitem__(p).uncertainty, m2.__getitem__(p).uncertainty, rtol=0.5
         )
 
+
 @pytest.mark.parametrize("ecl", OBL.keys())
 def test_ECL_to_allECL(ecl):
     model_ECL = get_model(io.StringIO(modelstring_ECL))
@@ -163,5 +164,4 @@ def test_ECL_to_allECL(ecl):
     coords_ECL2 = model_ECL2.get_psr_coords()
     assert model_ECL2.ECL.value == ecl
     # note that coord.separation() will transform between frames when needed
-    assert np.isclose(model_ECL.get_psr_coords().separation(coords_ECL2).arcsec,0)
-    
+    assert np.isclose(model_ECL.get_psr_coords().separation(coords_ECL2).arcsec, 0)
