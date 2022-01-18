@@ -63,9 +63,9 @@ class BinaryBT(PulsarBinary):
         # If any *DOT is set, we need T0
         for p in ("PBDOT", "OMDOT", "EDOT", "A1DOT"):
             if getattr(self, p).value is None:
-                getattr(self, p).set("0")
+                getattr(self, p).value = "0"
                 getattr(self, p).frozen = True
 
         if self.GAMMA.value is None:
-            self.GAMMA.set("0")
+            self.GAMMA.value = "0"
             self.GAMMA.frozen = True
