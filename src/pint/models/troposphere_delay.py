@@ -103,7 +103,7 @@ class TroposphereDelay(DelayComponent):
 
     def __init__(self):
         super().__init__()
-        self.add_param(
+        self.init_param(
             boolParameter(
                 name="CORRECT_TROPOSPHERE",
                 value="Y",

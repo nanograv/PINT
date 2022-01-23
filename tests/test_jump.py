@@ -99,7 +99,7 @@ def test_jump_params_to_flags(setup_NGC6440E):
     par = p.maskParameter(
         name="JUMP", key="freq", value=0.2, key_value=[1440, 1700], units=u.s
     )  # TOAs indexed 48, 49, 54 in NGC6440E are within this frequency range
-    cp.add_param(par, setup=True)
+    cp.init_param(par, setup=True)
 
     # sanity check - ensure no jump flags from initialization
     for i in range(setup_NGC6440E.t.ntoas):
@@ -127,7 +127,7 @@ def test_jump_params_to_flags(setup_NGC6440E):
     par2 = p.maskParameter(
         name="JUMP", key="freq", value=0.2, key_value=[1600, 1900], units=u.s
     )  # frequency range overlaps with par, 2nd jump will have common TOAs w/ 1st
-    cp.add_param(par2, setup=True)
+    cp.init_param(par2, setup=True)
     # add flags based off jumps added to model
     setup_NGC6440E.m.jump_params_to_flags(setup_NGC6440E.t)
     mask2 = par2.select_toa_mask(setup_NGC6440E.t)
@@ -146,7 +146,7 @@ def test_multijump_toa(setup_NGC6440E):
         name="JUMP", key="freq", value=0.2, key_value=[1440, 1700], units=u.s
     )  # TOAs indexed 48, 49, 54 in NGC6440E are within this frequency range
     selected_toa_ind = [48, 49, 54]
-    cp.add_param(par, setup=True)
+    cp.init_param(par, setup=True)
 
     # check that one can still add "gui jumps" to model-jumped TOAs
     cp.add_jump_and_flags(setup_NGC6440E.t.table["flags"][selected_toa_ind])

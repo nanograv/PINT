@@ -252,7 +252,7 @@ def test_grid_3param_prefix_singleprocessor():
         longdouble=True,
         frozen=False,
     )
-    modelcomponent.add_param(p, setup=True)
+    modelcomponent.init_param(p, setup=True)
     m.validate()
 
     f = WLSFitter(t, m)
@@ -296,7 +296,7 @@ def test_grid_3param_prefix_multiprocessor():
         longdouble=True,
         frozen=False,
     )
-    modelcomponent.add_param(p, setup=True)
+    modelcomponent.init_param(p, setup=True)
     m.validate()
 
     f = WLSFitter(t, m)

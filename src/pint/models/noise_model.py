@@ -48,7 +48,7 @@ class ScaleToaError(NoiseComponent):
     def __init__(self,):
         super().__init__()
         self.introduces_correlated_errors = False
-        self.add_param(
+        self.init_param(
             maskParameter(
                 name="EFAC",
                 units="",
@@ -58,7 +58,7 @@ class ScaleToaError(NoiseComponent):
             )
         )
 
-        self.add_param(
+        self.init_param(
             maskParameter(
                 name="EQUAD",
                 units="us",
@@ -69,7 +69,7 @@ class ScaleToaError(NoiseComponent):
             )
         )
 
-        self.add_param(
+        self.init_param(
             maskParameter(
                 name="TNEQ",
                 units=u.LogUnit(physical_unit=u.second),
@@ -119,7 +119,7 @@ class ScaleToaError(NoiseComponent):
                     EQUAD_par.key_value = tneq_par.key_value
                     EQUAD_par.quantity = tneq_par.quantity.to(u.us)
                 else:
-                    self.add_param(
+                    self.init_param(
                         maskParameter(
                             name="EQUAD",
                             units="us",
@@ -191,7 +191,7 @@ class ScaleDmError(NoiseComponent):
     def __init__(self,):
         super().__init__()
         self.introduces_correlated_errors = False
-        self.add_param(
+        self.init_param(
             maskParameter(
                 name="DMEFAC",
                 units="",
@@ -200,7 +200,7 @@ class ScaleDmError(NoiseComponent):
             )
         )
 
-        self.add_param(
+        self.init_param(
             maskParameter(
                 name="DMEQUAD",
                 units="pc / cm ^ 3",
@@ -298,7 +298,7 @@ class EcorrNoise(NoiseComponent):
     def __init__(self,):
         super().__init__()
         self.introduces_correlated_errors = True
-        self.add_param(
+        self.init_param(
             maskParameter(
                 name="ECORR",
                 units="us",
@@ -401,7 +401,7 @@ class PLRedNoise(NoiseComponent):
     def __init__(self,):
         super().__init__()
         self.introduces_correlated_errors = True
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="RNAMP",
                 units="",
@@ -409,7 +409,7 @@ class PLRedNoise(NoiseComponent):
                 description="Amplitude of powerlaw " "red noise.",
             )
         )
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="RNIDX",
                 units="",
@@ -418,7 +418,7 @@ class PLRedNoise(NoiseComponent):
             )
         )
 
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="TNRedAmp",
                 units="",
@@ -426,7 +426,7 @@ class PLRedNoise(NoiseComponent):
                 description="Amplitude of powerlaw " "red noise in tempo2 format",
             )
         )
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="TNRedGam",
                 units="",
@@ -434,7 +434,7 @@ class PLRedNoise(NoiseComponent):
                 description="Spectral index of powerlaw " "red noise in tempo2 format",
             )
         )
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="TNRedC",
                 units="",

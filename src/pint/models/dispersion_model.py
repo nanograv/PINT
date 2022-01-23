@@ -141,7 +141,7 @@ class DispersionDM(Dispersion):
 
     def __init__(self):
         super().__init__()
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="DM",
                 units="pc cm^-3",
@@ -150,7 +150,7 @@ class DispersionDM(Dispersion):
                 long_double=True,
             )
         )
-        self.add_param(
+        self.init_param(
             prefixParameter(
                 name="DM1",
                 units="pc cm^-3/yr^1",
@@ -161,7 +161,7 @@ class DispersionDM(Dispersion):
                 long_double=True,
             )
         )
-        self.add_param(
+        self.init_param(
             MJDParameter(
                 name="DMEPOCH", description="Epoch of DM measurement", time_scale="tdb"
             )
@@ -323,7 +323,7 @@ class DispersionDMX(Dispersion):
     def __init__(self):
         super().__init__()
         # DMX is for info output right now
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="DMX",
                 units="pc cm^-3",
@@ -381,7 +381,7 @@ class DispersionDMX(Dispersion):
                 % index
             )
 
-        self.add_param(
+        self.init_param(
             prefixParameter(
                 name="DMX_" + i,
                 units="pc cm^-3",
@@ -391,7 +391,7 @@ class DispersionDMX(Dispersion):
                 frozen=frozen,
             )
         )
-        self.add_param(
+        self.init_param(
             prefixParameter(
                 name="DMXR1_" + i,
                 units="MJD",
@@ -401,7 +401,7 @@ class DispersionDMX(Dispersion):
                 value=mjd_start,
             )
         )
-        self.add_param(
+        self.init_param(
             prefixParameter(
                 name="DMXR2_" + i,
                 units="MJD",
@@ -588,7 +588,7 @@ class DispersionJump(Dispersion):
         self.dm_value_funcs += [self.jump_dm]
         # Dispersion jump only model the dm values.
 
-        self.add_param(
+        self.init_param(
             maskParameter(
                 name="DMJUMP",
                 units="pc cm^-3",

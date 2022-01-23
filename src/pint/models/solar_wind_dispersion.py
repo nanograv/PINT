@@ -33,7 +33,7 @@ class SolarWindDispersion(Dispersion):
 
     def __init__(self):
         super().__init__()
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="NE_SW",
                 units="cm^-3",
@@ -42,7 +42,7 @@ class SolarWindDispersion(Dispersion):
                 description="Solar Wind density at 1 AU",
             )
         )
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="SWM",
                 value=0.0,

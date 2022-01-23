@@ -55,10 +55,10 @@ class IFunc(PhaseComponent):
     def __init__(self):
         super().__init__()
 
-        self.add_param(
+        self.init_param(
             floatParameter(name="SIFUNC", description="Type of interpolation", units="")
         )
-        self.add_param(
+        self.init_param(
             prefixParameter(
                 name="IFUNC1",
                 units="s",

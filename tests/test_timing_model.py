@@ -20,6 +20,7 @@ from pint.models import (
     get_model,
     parameter as p,
 )
+from pint.models.timing_model import UnknownParameter
 from pint.simulation import make_fake_toas_uniform
 from pint.toa import get_TOAs
 
@@ -119,7 +120,7 @@ class TestModelBuilding:
                 units=u.s,
             )
             print("test", par.name)
-            cp.add_param(par, setup=True)
+            cp.init_param(par, setup=True)
         # TODO add test component setup function. use jump1 right now, this
         # should be updated in the future.
         assert hasattr(cp, "JUMP1")
@@ -358,3 +359,62 @@ def test_prefixed_aliases_in_component():
     assert m.components["ScaleToaError"].aliases_map["T2EFAC2"] == "EFAC2"
     with pytest.raises(KeyError):
         m.components["ScaleToaError"].aliases_map["T2EFAC18"]
+
+
+def test_add_param_not_in_timingmodel():
+    m = get_model(io.StringIO(par_base))
+    assert 'FD' not in m.components.keys()
+    m.add_param('FD1')
+    assert 'FD' in m.components.keys()
+    assert hasattr(m, 'FD1')
+
+
+def test_add_param_in_timingmodel():
+    m = get_model(io.StringIO(par_base))
+    old_F0 = deepcopy(m.F0)
+    m.add_param('F0') # This should not change anything
+    for k in ['name', 'quantity', 'units', 'uncertainty', 'description',
+        'prefix_aliases', 'aliases']:
+        assert getattr(m.F0, k) == getattr(old_F0, k)
+
+
+def test_add_param_indexed():
+    m = get_model(io.StringIO(par_base))
+    m.add_param('DMX_0001')
+    assert 'DispersionDMX' in m.components.keys()
+    m.add_param('DMX_0002')
+    assert hasattr(m, 'DMX_0002')
+    m.add_param('DMX_0010')
+    assert hasattr(m, 'DMX_0010')
+    m.add_param('F2')
+    assert hasattr(m, 'F2')
+
+
+def test_add_not_builtin_model():
+    m = get_model(io.StringIO(par_base))
+    with pytest.raises(UnknownParameter):
+        m.add_param('TEST_WRONG_PARAM')
+
+
+def test_add_binary_using_non_unique_param():
+    m = get_model(io.StringIO(par_base))
+    with pytest.raises(RuntimeError, match='Please use `BINARY` parameter'):
+        m.add_param('PB')
+
+
+def test_add_non_unique_param():
+    m = get_model(io.StringIO(par_base))
+    # One example is the Astrometry class
+    m.remove_component('AstrometryEcliptic')
+    assert 'AstrometryEquatorial' not in m.components.keys()
+    with pytest.raises(RuntimeError, match='using `TimingModel.add_component`'):
+        m.add_param('PX')
+
+
+def test_add_repeat_param():
+    m = get_model(io.StringIO(par_base))
+    assert 'PhaseJump' not in m.components.keys()
+    m.add_param('JUMP')
+    assert 'PhaseJump' in m.components.keys()
+    assert hasattr(m, 'JUMP1') # need to change here in the future.
+    m.add_param('JUMP')

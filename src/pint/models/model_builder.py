@@ -470,7 +470,7 @@ class ModelBuilder:
                     )
                 # TODO need to create a beeter API for _loacte_param_host
                 host_component = timing_model._locate_param_host(first_init)
-                timing_model.add_param_from_top(
+                timing_model.init_param_from_top(
                     getattr(timing_model, first_init).new_param(index),
                     host_component[0][0],
                 )
@@ -526,7 +526,7 @@ class ModelBuilder:
                     else:
                         # No empty space, add a new parameter to the timing model.
                         host_component = timing_model._locate_param_host(pp)
-                        timing_model.add_param_from_top(temp_par, host_component[0][0])
+                        timing_model.init_param_from_top(temp_par, host_component[0][0])
 
         if setup:
             timing_model.setup()

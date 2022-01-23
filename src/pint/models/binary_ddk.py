@@ -50,12 +50,12 @@ class BinaryDDK(BinaryDD):
         self.binary_model_name = "DDK"
         self.binary_model_class = DDKmodel
 
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="KIN", value=0.0, units="deg", description="Inclination angle"
             )
         )
-        self.add_param(
+        self.init_param(
             floatParameter(
                 name="KOM",
                 value=0.0,
@@ -63,7 +63,7 @@ class BinaryDDK(BinaryDD):
                 description="The longitude of the ascending node",
             )
         )
-        self.add_param(
+        self.init_param(
             boolParameter(
                 name="K96",
                 description="Flag for Kopeikin binary model proper motion"

@@ -246,59 +246,59 @@ class TimingModel:
         self.name = name
         self.component_types = []
         self.top_level_params = []
-        self.add_param_from_top(
+        self.init_param_from_top(
             strParameter(
                 name="PSR", description="Source name", aliases=["PSRJ", "PSRB"]
             ),
             "",
         )
-        self.add_param_from_top(
+        self.init_param_from_top(
             strParameter(name="TRACK", description="Tracking Information"), ""
         )
-        self.add_param_from_top(
+        self.init_param_from_top(
             strParameter(name="EPHEM", description="Ephemeris to use"), ""
         )
-        self.add_param_from_top(
+        self.init_param_from_top(
             strParameter(name="CLOCK", description="Timescale to use", aliases=["CLK"]),
             "",
         )
-        self.add_param_from_top(
+        self.init_param_from_top(
             strParameter(name="UNITS", description="Units (TDB assumed)"), ""
         )
-        self.add_param_from_top(
+        self.init_param_from_top(
             MJDParameter(name="START", description="Start MJD for fitting"), ""
         )
-        self.add_param_from_top(
+        self.init_param_from_top(
             MJDParameter(name="FINISH", description="End MJD for fitting"), ""
         )
-        self.add_param_from_top(
+        self.init_param_from_top(
             floatParameter(
                 name="RM", description="Rotation measure", units=u.radian / u.m ** 2
             ),
             "",
         )
-        self.add_param_from_top(
+        self.init_param_from_top(
             strParameter(
                 name="INFO",
                 description="Tells TEMPO to write some extra information about frontend/backend combinations; -f is recommended",
             ),
             "",
         )
-        self.add_param_from_top(
+        self.init_param_from_top(
             strParameter(
                 name="TIMEEPH",
                 description="Time ephemeris to use for TDB conversion; for PINT, always FB90",
             ),
             "",
         )
-        self.add_param_from_top(
+        self.init_param_from_top(
             strParameter(
                 name="T2CMETHOD",
                 description="Method for transforming from terrestrial to celestial frame (IAU2000B/TEMPO; PINT only supports ????)",
             ),
             "",
         )
-        self.add_param_from_top(
+        self.init_param_from_top(
             strParameter(
                 name="BINARY",
                 description="The Pulsar System/Binary model to use.",
@@ -306,7 +306,7 @@ class TimingModel:
             ),
             "",
         )
-        self.add_param_from_top(
+        self.init_param_from_top(
             boolParameter(
                 name="DILATEFREQ",
                 value=False,
@@ -314,7 +314,7 @@ class TimingModel:
             ),
             "",
         )
-        self.add_param_from_top(
+        self.init_param_from_top(
             boolParameter(
                 name="DMDATA",
                 value=False,
@@ -322,13 +322,13 @@ class TimingModel:
             ),
             "",
         )
-        self.add_param_from_top(
+        self.init_param_from_top(
             intParameter(
                 name="NTOA", value=0, description="Number of TOAs used in the fitting"
             ),
             "",
         )
-        self.add_param_from_top(
+        self.init_param_from_top(
             floatParameter(
                 name="CHI2",
                 value=0.0,
@@ -469,6 +469,30 @@ class TimingModel:
             raise ValueError(
                 "Parameter(s) are familiar but not in the model: {}".format(params)
             )
+
+    @property_exists
+    def param_to_component_map(self):
+        """Return a dictionary maps from PINT parameters to their host components.
+
+        The keys are the name of the parameters in the timing model and the
+        values are the component names.
+
+        See Also
+        --------
+        AllComponents.param_component_map :
+            For all PINT built-in components' parameter to component map.
+        """
+        param_comp_map = {}
+        for cp_name, cp in self.components.items():
+            for par in cp.params:
+                param_comp_map[par] = cp_name
+        # Check the timing model control parameters
+        # The parameters that are not in the model components should be the
+        # control parameters
+        rest_params = list(set(self.params) - set(param_comp_map.keys()))
+        for rp in rest_params:
+            param_comp_map[rp] = self.__class__.__name__
+        return param_comp_map
 
     def match_param_aliases(self, alias):
         """Return PINT parameter name corresponding to this alias.
@@ -1029,13 +1053,13 @@ class TimingModel:
         # Convert from defaultdict to dict
         return dict(categorydict)
 
-    def add_param_from_top(self, param, target_component, setup=False):
-        """Add a parameter to a timing model component.
+    def init_param_from_top(self, param, target_component, setup=False):
+        """Initializes a parameter to a timing model component.
 
         Parameters
         ----------
-        param: str
-            Parameter name
+        param: pint.models.Parameter
+            Parameter class need to add.
         target_component: str
             Parameter host component name. If given as "" it would add
             parameter to the top level `TimingModel` class
@@ -1050,7 +1074,72 @@ class TimingModel:
                 raise AttributeError(
                     "Can not find component '%s' in " "timing model." % target_component
                 )
-            self.components[target_component].add_param(param, setup=setup)
+            self.components[target_component].init_param(param, setup=setup)
+
+    def add_param(self, param_name, setup=False):
+        """Adds a PINT available parameter to timing model.
+
+        This function adds a PINT available parameter(parameter is initialized
+        in the model components), if the parameter is not in the current timing
+        model. This happens mostly in two cases: 1) A parameter is initialized
+        in a component that has not been added to the timing model yet. This
+        funciton will add the component first. 2) A parameter is not initialized
+        but in a repeatable parameter family (e.g., JUMPs) which is in the
+        timing model already. If the parameter is in the current timing model,
+        it will return True.
+
+        Parameters
+        ----------
+        param_name: str
+            The name of the parameter.
+        setup: bool
+            If run setup after adding the parameter.
+
+        Return
+        ------
+        is_added: bool
+            If the parameter is successfully added.
+        """
+        status = False
+        # Search parameters that is in the timing model
+        try:
+            pint_name = self.match_param_aliases(param_name)
+            status = True
+        # Parameter is not in the timing model
+        except UnknownParameter:
+            # decide which case is it
+            all_comps = AllComponents()
+            pint_name, firstborn = all_comps.alias_to_pint_param(param_name)
+            if firstborn in self.params and pint_name not in self.params: # Case 2
+                # comp that is the timing model should be unique
+                comp = self.get_params_mapping()[firstborn]
+                comp_obj = self.components[comp]
+                # TODO the following parameters can be simplifed by future
+                # Parameter family
+                prefix, idx_str, idx = split_prefixed_name(pint_name)
+                param_obj = getattr(comp_obj, firstborn).new_param(idx)
+                self.init_param_from_top(param_obj, comp, setup=setup)
+                status = True
+            else: # Case1
+                comp = all_comps.param_component_map[firstborn]
+                comp_obj = all_comps.components[comp[0]]
+                # For the case that one parameter show up in more components
+                if len(comp) > 1:
+                    if comp_obj.category == "pulsar_system":
+                        raise RuntimeError("Please use `BINARY` parameter to"
+                            " add pulsar binary model")
+                    else:
+                        raise RuntimeError(f"Parameter {pint_name} is used by "
+                            f"components `{comp}`, please add your desired"
+                            f"component using `TimingModel.add_component` method.")
+                if firstborn != pint_name: # Indexed parameter with different index
+                    prefix, idx_str, idx = split_prefixed_name(pint_name)
+                    param_obj = getattr(comp_obj, firstborn).new_param(idx)
+                    comp.init_param(param_obj, setup=setup)
+                # Add component
+                self.add_component(comp_obj, setup=setup, validate=False)
+                status = True
+            return status
 
     def remove_param(self, param):
         """Remove a parameter from timing model.
@@ -1399,7 +1488,7 @@ class TimingModel:
                         units="second",
                         uncertainty=0.0,
                     )
-                    self.add_param_from_top(param, "PhaseJump")
+                    self.init_param_from_top(param, "PhaseJump")
                     getattr(self, param.name).frozen = False
                 flag_dict["tim_jump"] = str(
                     num
@@ -2403,7 +2492,7 @@ class Component(object, metaclass=ModelMeta):
         parameters' aliase to the pint defined parameter names. For the aliases
         of a prefixed parameter, the aliase with an existing prefix index maps
         to the PINT defined parameter name with the same index. Behind the scenes,
-        the indexed parameter adds the indexed aliase to its aliase list.  
+        the indexed parameter adds the indexed aliase to its aliase list.
         """
         ali_map = {}
         for p in self.params:
@@ -2413,8 +2502,8 @@ class Component(object, metaclass=ModelMeta):
                 ali_map[ali] = p
         return ali_map
 
-    def add_param(self, param, deriv_func=None, setup=False):
-        """Add a parameter to the Component.
+    def init_param(self, param, deriv_func=None, setup=False):
+        """Initial a parameter to the Component.
 
         The parameter is stored in an attribute on the Component object.
         Its name is also recorded in a list, ``self.params``.
