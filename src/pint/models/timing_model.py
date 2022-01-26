@@ -2149,6 +2149,7 @@ class TimingModel:
         self.validate()
         if include_info:
             info_string = pint.utils.info_string(prefix_string="# ", comment=comment)
+            info_string += f"\n# Format: {format.lower()}"
             result_begin = info_string + "\n"
         else:
             result_begin = ""
