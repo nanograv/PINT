@@ -455,9 +455,10 @@ class Parameter:
 
         .. [1] https://github.com/nanograv/PINT/wiki/PINT-vs.-TEMPO%282%29-par-file-changes
         """
-        assert format.lower() in _parfile_formats, (
-            "parfile format must be one of %s"
-            % ", ".join(['"%s"' % x for x in _parfile_formats])
+        assert (
+            format.lower() in _parfile_formats
+        ), "parfile format must be one of %s" % ", ".join(
+            ['"%s"' % x for x in _parfile_formats]
         )
 
         # Don't print unset parameters
@@ -495,6 +496,18 @@ class Parameter:
         elif self.name == "NHARMS" and not (format.lower() == "pint"):
             # convert NHARMS value to int
             line = "%-15s %25d" % (name, self.value)
+        elif self.name == "KIN" and format.lower() == "tempo":
+            # convert from DT92 convention to IAU
+            line = "%-15s %25s" % (name, self.str_quantity(180 * u.deg - self.quantity))
+            warn(
+                f"Changing KIN from DT92 convention to IAU: this will not be readable by PINT"
+            )
+        elif self.name == "KOM" and format.lower() == "tempo":
+            # convert from DT92 convention to IAU
+            line = "%-15s %25s" % (name, self.str_quantity(90 * u.deg - self.quantity))
+            warn(
+                f"Changing KOM from DT92 convention to IAU: this will not be readable by PINT"
+            )
 
         if self.uncertainty is not None:
             line += " %d %s" % (
@@ -1774,9 +1787,10 @@ class maskParameter(floatParameter):
         return True
 
     def as_parfile_line(self, format="pint"):
-        assert format.lower() in _parfile_formats, (
-            "parfile format must be one of %s"
-            % ", ".join(['"%s"' % x for x in _parfile_formats])
+        assert (
+            format.lower() in _parfile_formats
+        ), "parfile format must be one of %s" % ", ".join(
+            ['"%s"' % x for x in _parfile_formats]
         )
 
         if self.quantity is None:
