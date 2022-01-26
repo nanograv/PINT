@@ -455,10 +455,9 @@ class Parameter:
 
         .. [1] https://github.com/nanograv/PINT/wiki/PINT-vs.-TEMPO%282%29-par-file-changes
         """
-        assert (
-            format.lower() in _parfile_formats
-        ), "parfile format must be one of %s" % ", ".join(
-            ['"%s"' % x for x in _parfile_formats]
+        assert format.lower() in _parfile_formats, (
+            "parfile format must be one of %s"
+            % ", ".join(['"%s"' % x for x in _parfile_formats])
         )
 
         # Don't print unset parameters
@@ -1787,10 +1786,9 @@ class maskParameter(floatParameter):
         return True
 
     def as_parfile_line(self, format="pint"):
-        assert (
-            format.lower() in _parfile_formats
-        ), "parfile format must be one of %s" % ", ".join(
-            ['"%s"' % x for x in _parfile_formats]
+        assert format.lower() in _parfile_formats, (
+            "parfile format must be one of %s"
+            % ", ".join(['"%s"' % x for x in _parfile_formats])
         )
 
         if self.quantity is None:
