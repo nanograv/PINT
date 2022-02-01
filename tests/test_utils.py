@@ -1,11 +1,13 @@
 """Test basic functionality of the :module:`pint.utils`."""
+import os
 from itertools import product
 from tempfile import NamedTemporaryFile
 
-import pint
+import astropy.constants as c
 import astropy.units as u
 import numpy as np
 import pytest
+import scipy.stats
 from astropy.time import Time
 from hypothesis import assume, example, given
 from hypothesis.extra.numpy import array_shapes, arrays, scalar_dtypes
@@ -18,8 +20,13 @@ from hypothesis.strategies import (
     sampled_from,
     slices,
 )
-from numpy.testing import assert_array_equal
+from numdifftools import Derivative
+from numpy.testing import assert_allclose, assert_array_equal
+from pinttestdata import datadir
 
+import pint
+import pint.models as tm
+from pint import fitter, toa
 from pint.pulsar_mjd import (
     jds_to_mjds,
     jds_to_mjds_pulsar,
@@ -31,19 +38,16 @@ from pint.pulsar_mjd import (
     time_to_longdouble,
 )
 from pint.utils import (
+    FTest,
     PosVel,
+    dmxparse,
     interesting_lines,
     lines_of,
     open_or_use,
     taylor_horner,
-    dmxparse,
-    FTest,
+    taylor_horner_deriv,
+    list_parameters,
 )
-
-import pint.models as tm
-from pint import fitter, toa
-from pinttestdata import datadir
-import os
 
 
 def test_taylor_horner_basic():
@@ -550,30 +554,10 @@ def test_singleton_type(format_, type_):
     [
         ("mjd", 40000, 1e-10),
         ("pulsar_mjd", 40000, 1e-10),
-        pytest.param(
-            "mjd_long",
-            np.longdouble(40000) + np.longdouble(1e-10),
-            None,
-            marks=pytest.mark.xfail(reason="astropy limitations"),
-        ),
-        pytest.param(
-            "mjd_long",
-            np.longdouble(40000),
-            np.longdouble(1e-10),
-            marks=pytest.mark.xfail(reason="astropy limitations"),
-        ),
-        pytest.param(
-            "pulsar_mjd_long",
-            np.longdouble(40000) + np.longdouble(1e-10),
-            None,
-            marks=pytest.mark.xfail(reason="astropy limitations"),
-        ),
-        pytest.param(
-            "pulsar_mjd_long",
-            np.longdouble(40000),
-            np.longdouble(1e-10),
-            marks=pytest.mark.xfail(reason="astropy limitations"),
-        ),
+        ("mjd_long", np.longdouble(40000) + np.longdouble(1e-10), None),
+        ("mjd_long", np.longdouble(40000), np.longdouble(1e-10)),
+        ("pulsar_mjd_long", np.longdouble(40000) + np.longdouble(1e-10), None),
+        ("pulsar_mjd_long", np.longdouble(40000), np.longdouble(1e-10)),
         ("mjd_string", "40000.0000000001", None),
         ("pulsar_mjd_string", "40000.0000000001", None),
     ],
@@ -650,58 +634,6 @@ def test_pmtot():
         pmtot(m2)
 
 
-# Remove this xfail once our minimum numpy can bump up to 1.17, but this requires excluding Python 2
-@pytest.mark.xfail(
-    reason="numpy 1.16.* does not support isclose with units, fixed in 1.17"
-)
-def test_psr_utils():
-
-    from pint.utils import (
-        mass_funct,
-        mass_funct2,
-        pulsar_mass,
-        companion_mass,
-        pulsar_age,
-        pulsar_edot,
-        pulsar_B,
-        pulsar_B_lightcyl,
-    )
-
-    pb = 1.0 * u.d
-    x = 2.0 * pint.ls
-
-    # Mass function
-    assert np.isclose(mass_funct(pb, x), 0.008589595519643776 * u.solMass)
-
-    # Mass function, second form
-    assert np.isclose(
-        mass_funct2(1.4 * u.solMass, 0.2 * u.solMass, 60.0 * u.deg),
-        0.0020297470401197783 * u.solMass,
-    )
-
-    # Characteristic age
-    assert np.isclose(
-        pulsar_age(0.033 * u.Hz, -2.0e-15 * u.Hz / u.s), 261426.72446573884 * u.yr
-    )
-
-    # Edot
-    assert np.isclose(
-        pulsar_edot(0.033 * u.Hz, -2.0e-15 * u.Hz / u.s),
-        2.6055755618875905e30 * u.erg / u.s,
-    )
-
-    # B
-    assert np.isclose(
-        pulsar_B(0.033 * u.Hz, -2.0e-15 * u.Hz / u.s), 238722891596281.66 * u.G
-    )
-
-    # B_lc
-    assert np.isclose(
-        pulsar_B_lightcyl(0.033 * u.Hz, -2.0e-15 * u.Hz / u.s),
-        0.07774704753236616 * u.G,
-    )
-
-
 def test_ftest():
     """Test for FTest. Numbers from example test."""
     chi2_1 = 5116.3297879409574835
@@ -711,3 +643,87 @@ def test_ftest():
     ft = FTest(chi2_1, dof_1, chi2_2, dof_2)
     # Test against scipy F-CDF, hardcoded test value
     assert np.isclose(0.020000171879625623, ft)
+
+
+@pytest.mark.parametrize("dof_1,dof_2,seed", [(12, 9, 0), (101, 100, 0), (405, 400, 0)])
+def test_Ftest_statistical(dof_1, dof_2, seed):
+    """Verify that the F test reports about the right number of false positives.
+
+    The F test reports the probability that the chi-squared would decrease by the
+    observed amount even if the model is not actually a better fit. So this test
+    generates some fake data where the model isn't any better a fit, and asks
+    how often the F test probability is less than some threshold (say 0.01). This
+    should occur in about threshold fraction of trials. We check this against a
+    binomial distribution; by construction this test should fail for 2% of seeds,
+    so just retry with a different seed if it fails.
+    """
+    random = np.random.default_rng(0)
+    Fs = []
+    for i in range(10000):
+        x = random.standard_normal(dof_1)
+        Fs.append(FTest((x ** 2).sum(), dof_1, (x[:dof_2] ** 2).sum(), dof_2))
+    threshold = 0.01
+    assert (
+        scipy.stats.binom(len(Fs), threshold).ppf(0.01)
+        < sum(1 for F in Fs if F < threshold)
+        < scipy.stats.binom(len(Fs), threshold).ppf(0.99)
+    )
+
+
+def test_Ftest_chi2_increase():
+    assert FTest(100, 100, 101, 99) == 1
+
+
+def test_Ftest_dof_same():
+    assert np.isnan(FTest(100, 100, 100, 100))
+
+
+@pytest.mark.parametrize(
+    "x, coeffs, order",
+    [
+        (1.2, [2], 1),
+        (0.1, [2, 3], 1),
+        (-1, [2, 3, 5], 1),
+        (1.1, [2], 2),
+        (1.3, [2, 3, 4, 5], 2),
+        (1.3, [2, 3, 4, 5], 4),
+        (1.3, [2, 3, 4, 5, 6], 4),
+        (1.5, [2], 10),
+        (1.7, [2, 3, 4], 0),
+    ],
+)
+def test_taylor_horner_deriv(x, coeffs, order):
+    def f(x):
+        return taylor_horner(x, coeffs)
+
+    df = Derivative(f, n=order)
+    assert_allclose(df(x), taylor_horner_deriv(x, coeffs, order), atol=1e-11)
+
+
+@pytest.mark.parametrize(
+    "x, coeffs",
+    [
+        (1.2, [2]),
+        (0.1, [2, 3]),
+        (-1, [2, 3, 5]),
+        (1.1, [2]),
+        (1.3, [2, 3, 4, 5]),
+        (1.5, [2]),
+        (1.7, [2, 3, 4]),
+    ],
+)
+def test_taylor_horner_equals_deriv(x, coeffs):
+    assert_allclose(taylor_horner(x, coeffs), taylor_horner_deriv(x, coeffs, 0))
+
+
+@pytest.mark.parametrize(
+    "x, result, n",
+    [(1 * u.s, 1 * u.m, 5), (1 * u.s, 1 * u.m, 1), (1 * u.km ** 2, 1 * u.m, 3)],
+)
+def test_taylor_horner_units_ok(x, result, n):
+    coeffs = [result / x ** i for i in range(n + 1)]
+    taylor_horner(x, coeffs) + result
+
+
+def test_list_parameters():
+    list_parameters()

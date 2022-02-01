@@ -110,21 +110,21 @@ some_barycentered 999999.999 56403.000000000000000   1.000  @  -some argument -a
     do_roundtrip(get_TOAs(f, **k), **k)
 
 
-@settings(deadline=None, max_examples=10)
 @given(
     lists(
         tuples(
             from_regex(re.compile(r"[ \t]+", re.ASCII), fullmatch=True),
-            from_regex(re.compile(r"-\w*", re.ASCII), fullmatch=True).filter(
-                lambda t: t
+            from_regex(re.compile(r"-[a-zA-Z_]\w+", re.ASCII), fullmatch=True).filter(
+                lambda t: t.lower()
                 not in {
                     "-error",
                     "-freq",
                     "-scale",
-                    "-MJD",
+                    "-mjd",
                     "-flags",
                     "-obs",
                     "-clkcorr",
+                    "-to",  # FIXME: used in clock corrections? What does this do?
                 }
             ),
             from_regex(re.compile(r"[ \t]+", re.ASCII), fullmatch=True),
@@ -133,16 +133,16 @@ some_barycentered 999999.999 56403.000000000000000   1.000  @  -some argument -a
     ).map(lambda t: "".join(t))
 )
 def test_flags(s):
-    f = StringIO(
-        basic_tim_header
-        + """
-some_barycentered 999999.999 56400.000000000000000   1.000  @{}
-""".format(
-            s
-        )
-        + basic_tim
+    s = "\n".join(
+        [
+            basic_tim_header,
+            f"""some_barycentered 999999.999 56400.000000000000000   1.000  @{s}""",
+            basic_tim,
+        ]
     )
-    do_roundtrip(get_TOAs(f))
+    f = StringIO(s)
+    toas = get_TOAs(f)
+    do_roundtrip(toas)
 
 
 def test_pulse_number():

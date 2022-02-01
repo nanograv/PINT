@@ -4,11 +4,12 @@ import pytest
 import numpy as np
 import shutil
 from io import StringIO
+from glob import glob
 
 from hypothesis import given
-from hypothesis.strategies import integers, floats
+from hypothesis.strategies import integers, floats, sampled_from
 from hypothesis.extra.numpy import arrays
-from pint import toa
+from pint import toa, simulation
 from pint.observatory import bipm_default
 from pint.models import get_model, get_model_and_toas
 from pinttestdata import datadir
@@ -43,6 +44,21 @@ DILATEFREQ          N
 os.chdir(datadir)
 
 
+def check_indices_unique(toas):
+    ix = toas.table["index"].copy()
+    ix.sort()
+    assert not np.any(np.diff(ix) == 0)
+    assert toas.max_index >= ix[-1]
+
+
+def check_indices_contiguous(toas):
+    ix = toas.table["index"].copy()
+    ix.sort()
+    assert np.all(np.diff(ix) == 1)
+    assert toas.max_index == ix[-1]
+    assert ix[0] == 0
+
+
 class TestTOAReader(unittest.TestCase):
     def setUp(self):
         self.x = toa.TOAs("test1.tim")
@@ -65,13 +81,13 @@ class TestTOAReader(unittest.TestCase):
         assert self.x.table[0]["flags"]["info"] == "test1"
 
     def test_jump(self):
-        assert self.x.table[0]["flags"]["jump"] == 0
+        assert self.x.table[0]["flags"]["jump"] == "1"
 
     def test_info_2(self):
         assert self.x.table[3]["flags"]["info"] == "test2"
 
     def test_time(self):
-        assert self.x.table[3]["flags"]["to"] == 1.0
+        assert float(self.x.table[3]["flags"]["to"]) == 1.0
 
     def test_jump_2(self):
         assert "jump" not in self.x.table[4]["flags"]
@@ -80,7 +96,7 @@ class TestTOAReader(unittest.TestCase):
         assert "time" not in self.x.table[4]["flags"]
 
     def test_jump_3(self):
-        assert self.x.table[-1]["flags"]["jump"] == 1
+        assert self.x.table[-1]["flags"]["jump"] == "2"
 
     def test_obs(self):
         assert self.x.table[1]["obs"] == "gbt"
@@ -160,22 +176,44 @@ def test_toa_merge():
     assert len(nt.observatories) == 3
     assert nt.table.meta["filename"] == filenames
     assert nt.ntoas == ntoas
+    check_indices_contiguous(nt)
+    assert nt.check_hashes()
+
+
+def test_toa_merge_again():
+    filenames = ["NGC6440E.tim", "testtimes.tim", "parkes.toa"]
+    toas = [toa.get_TOAs(ff) for ff in filenames]
+    ntoas = sum([tt.ntoas for tt in toas])
+    nt = toa.merge_TOAs(toas)
     # The following tests merging with and already merged TOAs
     other = toa.get_TOAs("test1.tim")
     nt2 = toa.merge_TOAs([nt, other])
     assert len(nt2.filename) == 5
     assert nt2.ntoas == ntoas + 9
+    check_indices_contiguous(nt2)
+
+
+def test_toa_merge_again():
+    filenames = ["NGC6440E.tim", "testtimes.tim", "parkes.toa"]
+    toas = [toa.get_TOAs(ff) for ff in filenames]
+    ntoas = sum([tt.ntoas for tt in toas])
+    other = toa.get_TOAs("test1.tim")
     # check consecutive merging
     nt = toa.merge_TOAs(toas[:2])
     nt = toa.merge_TOAs([nt, toas[2]])
     nt = toa.merge_TOAs([nt, other])
     assert len(nt.filename) == 5
     assert nt.ntoas == ntoas + 9
-    # now test a failure if ephems are different
+    check_indices_contiguous(nt)
+    assert nt.check_hashes()
+
+
+def test_toa_merge_different_ephem():
+    filenames = ["NGC6440E.tim", "testtimes.tim", "parkes.toa"]
+    toas = [toa.get_TOAs(ff) for ff in filenames]
     toas[0].ephem = "DE436"
     with pytest.raises(TypeError):
         nt = toa.merge_TOAs(toas)
-    assert nt.check_hashes()
 
 
 def test_bipm_default():
@@ -209,15 +247,15 @@ def test_toas_read_list():
 
 
 @given(arrays(float, integers(1, 100), elements=floats(50000, 70000)))
-def test_numpy_groups(t):
+def test_numpy_clusterss(t):
     gap = 1
-    groups = toa._group_by_gaps(t, gap)
-    for i in range(np.amax(groups) + 1):
-        c = groups == i
-        in_group = np.sort(t[c])
-        assert np.all(np.diff(in_group) < gap)
+    clusters = toa._cluster_by_gaps(t, gap)
+    for i in range(np.amax(clusters) + 1):
+        c = clusters == i
+        in_cluster = np.sort(t[c])
+        assert np.all(np.diff(in_cluster) < gap)
 
-        for e in [in_group[0], in_group[-1]]:
+        for e in [in_cluster[0], in_cluster[-1]]:
             assert np.all(np.abs(t[~c] - e) >= gap)
 
 
@@ -225,9 +263,9 @@ def test_load_multiple(tmpdir):
     m = get_model(StringIO(simplepar))
 
     fakes = [
-        toa.make_fake_toas(55000, 55500, 10, model=m, obs="ao"),
-        toa.make_fake_toas(56000, 56500, 10, model=m, obs="gbt"),
-        toa.make_fake_toas(57000, 57500, 10, model=m, obs="@"),
+        simulation.make_fake_toas_uniform(55000, 55500, 10, model=m, obs="ao"),
+        simulation.make_fake_toas_uniform(56000, 56500, 10, model=m, obs="gbt"),
+        simulation.make_fake_toas_uniform(57000, 57500, 10, model=m, obs="@"),
     ]
 
     filenames = [os.path.join(tmpdir, f"t{i+1}.tim") for i in range(len(fakes))]
@@ -244,9 +282,9 @@ def test_pickle_multiple(tmpdir):
     m = get_model(StringIO(simplepar))
 
     fakes = [
-        toa.make_fake_toas(55000, 55500, 10, model=m, obs="ao"),
-        toa.make_fake_toas(56000, 56500, 10, model=m, obs="gbt"),
-        toa.make_fake_toas(57000, 57500, 10, model=m, obs="@"),
+        simulation.make_fake_toas_uniform(55000, 55500, 10, model=m, obs="ao"),
+        simulation.make_fake_toas_uniform(56000, 56500, 10, model=m, obs="gbt"),
+        simulation.make_fake_toas_uniform(57000, 57500, 10, model=m, obs="@"),
     ]
 
     filenames = [os.path.join(tmpdir, f"t{i+1}.tim") for i in range(len(fakes))]
@@ -265,3 +303,87 @@ def test_pickle_multiple(tmpdir):
     assert not toa.get_TOAs(
         filenames, model=m, usepickle=True, picklefilename=picklefilename
     ).was_pickled
+
+
+def test_merge_indices():
+    m = get_model(StringIO(simplepar))
+    fakes = [
+        simulation.make_fake_toas_uniform(55000, 55500, 5, model=m, obs="ao"),
+        simulation.make_fake_toas_uniform(56000, 56500, 10, model=m, obs="gbt"),
+        simulation.make_fake_toas_uniform(57000, 57500, 15, model=m, obs="@"),
+    ]
+    toas = toa.merge_TOAs(fakes)
+    check_indices_contiguous(toas)
+
+
+def test_merge_indices_excised():
+    m = get_model(StringIO(simplepar))
+    fakes = [
+        simulation.make_fake_toas_uniform(55000, 55500, 5, model=m, obs="ao"),
+        simulation.make_fake_toas_uniform(56000, 56500, 10, model=m, obs="gbt"),
+        simulation.make_fake_toas_uniform(57000, 57500, 15, model=m, obs="@"),
+    ]
+    fakes_excised = [f[1:-1] for f in fakes]
+    toas = toa.merge_TOAs(fakes)
+    toas_excised = toa.merge_TOAs(fakes_excised)
+    check_indices_unique(toas_excised)
+    for i in range(len(toas_excised)):
+        ix = toas_excised.table["index"][i]
+        match = toas.table[toas.table["index"] == ix]
+        assert len(match) == 1
+        assert match[0]["tdbld"] == toas_excised.table["tdbld"][i]
+
+
+def test_renumber_subset():
+    m = get_model(StringIO(simplepar))
+    toas = simulation.make_fake_toas_uniform(55000, 55500, 10, model=m, obs="ao")
+
+    sub = toas[1:-1]
+    assert 0 not in sub.table["index"]
+
+    sub.renumber()
+    assert np.all(sub.table["index"] == np.arange(len(sub)))
+
+
+def test_renumber_order():
+    m = get_model(StringIO(simplepar))
+    toas = simulation.make_fake_toas_uniform(55000, 55500, 10, model=m, obs="ao")
+    rev = toas[::-1]
+    assert np.all(rev.table["index"] == np.arange(len(rev))[::-1])
+    rev.renumber()
+    assert np.all(rev.table["index"] == np.arange(len(rev))[::-1])
+    rev.renumber(index_order=False)
+    assert np.all(rev.table["index"] == np.arange(len(rev)))
+
+    rev = toas[::-1]
+    rev.renumber(index_order=True)
+    assert np.all(rev.table["index"] == np.arange(len(rev))[::-1])
+
+
+def test_renumber_subset_reordered():
+    m = get_model(StringIO(simplepar))
+    fakes = [
+        simulation.make_fake_toas_uniform(55000, 55500, 5, model=m, obs="ao"),
+        simulation.make_fake_toas_uniform(56000, 56500, 10, model=m, obs="gbt"),
+        simulation.make_fake_toas_uniform(57000, 57500, 15, model=m, obs="@"),
+    ]
+    fakes_excised = [f[1:-1] for f in fakes]
+    toas_excised = toa.merge_TOAs(fakes_excised)
+
+    assert 0 not in toas_excised.table["index"]
+
+    toas_excised.renumber()
+    assert set(toas_excised.table["index"]) == set(range(len(toas_excised)))
+
+    toas_excised.renumber(index_order=False)
+    assert np.all(toas_excised.table["index"] == np.arange(len(toas_excised)))
+
+
+loadable_tims = [
+    tim for tim in glob("*.tim") if tim not in {"prefixtest.tim", "vela_wave.tim"}
+]
+
+
+@given(sampled_from(loadable_tims))
+def test_contiguous_on_load(tim):
+    check_indices_contiguous(toa.get_TOAs(tim))

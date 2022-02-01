@@ -86,8 +86,10 @@ class TestOrbitPhase(unittest.TestCase):
         omega = mJ0737.components["BinaryDD"].binary_instance.omega().value
         # Conjunction occurs when nu + OM == 90 deg
         assert np.isclose(
-            np.degrees(np.fmod(nu + omega, 2 * np.pi)), 90.0
+            np.degrees(np.remainder(nu + omega, 2 * np.pi)), 90.0
         ), "J0737 conjunction time gives bad true anomaly"
         # Now verify we can get 2 results from .conjunction
         x = mJ0737.conjunction([55586.0, 55586.2])
         assert len(x) == 2, "conjunction is not returning an array"
+        # make sure true anomaly before T0 is positive
+        assert mJ0737.orbital_phase(52000.0, anom="true").value > 0.0

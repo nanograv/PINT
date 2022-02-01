@@ -1,5 +1,6 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore::DeprecationWarning
 import argparse
+import logging
 import os
 import sys
 
@@ -8,7 +9,6 @@ import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize as op
-from astropy import log
 from astropy.coordinates import SkyCoord
 from scipy.stats import norm, uniform
 
@@ -25,6 +25,8 @@ from pint.models.priors import (
     UniformUnboundedRV,
 )
 from pint.observatory.satellite_obs import get_satellite_observatory
+
+log = logging.getLogger(__name__)
 
 __all__ = ["read_gaussfitfile", "marginalize_over_phase", "main"]
 # log.setLevel('DEBUG')
@@ -411,6 +413,17 @@ class emcee_fitter(Fitter):
             plt.savefig(ftr.model.PSR.value + "_htest_v_wgtcut_unweighted.png")
         plt.close()
 
+    def plot_priors(self, chains, burnin, bins=100, scale=False):
+        plot_utils.plot_priors(
+            self.model,
+            chains,
+            self.maxpost_fitvals,
+            self.fitvals,
+            burnin=burnin,
+            bins=bins,
+            scale=scale,
+        )
+
 
 def main(argv=None):
 
@@ -568,7 +581,7 @@ def main(argv=None):
             if (
                 tl[ii].mjd.value > minMJD
                 and tl[ii].mjd.value < maxMJD
-                and (weightcol is None or tl[ii].flags["weight"] > minWeight)
+                and (weightcol is None or float(tl[ii].flags["weight"]) > minWeight)
             )
         ]
         log.info("There are %d events we will use" % len(tl))
@@ -581,7 +594,7 @@ def main(argv=None):
 
     if weightcol is not None:
         if weightcol == "CALC":
-            weights = np.asarray([x["weight"] for x in ts.table["flags"]])
+            weights = np.asarray([float(x["weight"]) for x in ts.table["flags"]])
             log.info(
                 "Original weights have min / max weights %.3f / %.3f"
                 % (weights.min(), weights.max())
@@ -593,8 +606,8 @@ def main(argv=None):
                 # make the highest weight = 1, but keep min weight the same
                 weights = wmn + ((weights - wmn) * (1.0 - wmn) / (wmx - wmn))
             for ii, x in enumerate(ts.table["flags"]):
-                x["weight"] = weights[ii]
-        weights = np.asarray([x["weight"] for x in ts.table["flags"]])
+                x["weight"] = str(weights[ii])
+        weights = np.asarray([float(x["weight"]) for x in ts.table["flags"]])
         log.info(
             "There are %d events, with min / max weights %.3f / %.3f"
             % (len(weights), weights.min(), weights.max())
@@ -780,6 +793,11 @@ def main(argv=None):
         plt.close()
     except ImportError:
         pass
+
+    # Plot the scaled prior probability alongside the initial gaussian probability distribution and the histogrammed samples
+    ftr.plot_priors(chains, burnin, scale=True)
+    plt.savefig(ftr.model.PSR.value + "_priors.png")
+    plt.close()
 
     # Make a phaseogram with the 50th percentile values
     # ftr.set_params(dict(zip(ftr.fitkeys, np.percentile(samples, 50, axis=0))))

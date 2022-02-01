@@ -9,7 +9,7 @@ import re
 import pint.fitter
 from pint.models import get_model
 from pint.models.timing_model import MissingTOAs
-from pint.toa import make_fake_toas
+from pint.simulation import make_fake_toas_uniform
 
 par_base = """
 PSR J1234+5678
@@ -36,7 +36,7 @@ def test_dmx_no_toas():
             )
         )
     )
-    toas = make_fake_toas(57000, 57900, 10, model)
+    toas = make_fake_toas_uniform(57000, 57900, 10, model)
     with pytest.raises(MissingTOAs) as e:
         model.validate_toas(toas)
     assert e.value.parameter_names == ["DMX_0001"]
@@ -47,7 +47,7 @@ def test_dmx_no_toas():
 
 def test_jump_no_toas():
     model = get_model(io.StringIO("\n".join([par_base, "JUMP -fe L_wide 0"])))
-    toas = make_fake_toas(57000, 57900, 10, model)
+    toas = make_fake_toas_uniform(57000, 57900, 10, model)
     assert len(model.JUMP1.select_toa_mask(toas)) == 0
     model.JUMP1.frozen = True
     model.validate_toas(toas)
@@ -62,14 +62,22 @@ def test_jump_no_toas():
 
 def test_dm_barycentered():
     model = get_model(io.StringIO(par_base))
-    toas = make_fake_toas(57000, 57900, 10, model, obs="@", freq=np.inf)
+    toas = make_fake_toas_uniform(57000, 57900, 10, model, obs="@", freq=np.inf)
     model.free_params = ["F0", "DM"]
     fitter = pint.fitter.WLSFitter(toas, model)
     with pytest.warns(pint.fitter.DegeneracyWarning, match=".*degeneracy.*DM.*"):
         fitter.fit_toas()
 
 
-@pytest.mark.parametrize("Fitter", [pint.fitter.WLSFitter, pint.fitter.GLSFitter])
+@pytest.mark.parametrize(
+    "Fitter",
+    [
+        pint.fitter.WLSFitter,
+        pint.fitter.GLSFitter,
+        pint.fitter.DownhillWLSFitter,
+        pint.fitter.DownhillGLSFitter,
+    ],
+)
 def test_dmx_barycentered(Fitter):
     model = get_model(
         io.StringIO(
@@ -84,7 +92,7 @@ def test_dmx_barycentered(Fitter):
             )
         )
     )
-    toas = make_fake_toas(58000, 58900, 10, model, obs="@", freq=np.inf)
+    toas = make_fake_toas_uniform(58000, 58900, 10, model, obs="@", freq=np.inf)
     model.free_params = ["F0", "DM", "DMX_0001"]
     fitter = Fitter(toas, model)
     with pytest.warns(pint.fitter.DegeneracyWarning, match=r".*degeneracy.*DM\b"):
@@ -98,10 +106,20 @@ def test_dmx_barycentered(Fitter):
         assert not np.isnan(fitter.model[p].value)
 
 
-@pytest.mark.parametrize("Fitter", [pint.fitter.WLSFitter, pint.fitter.GLSFitter])
+@pytest.mark.parametrize(
+    "Fitter",
+    [
+        pint.fitter.WLSFitter,
+        pint.fitter.GLSFitter,
+        pint.fitter.DownhillWLSFitter,
+        pint.fitter.DownhillGLSFitter,
+    ],
+)
 def test_jump_everything(Fitter):
     model = get_model(io.StringIO("\n".join([par_base, "JUMP TEL barycenter 0"])))
-    toas = make_fake_toas(58000, 58900, 10, model, obs="barycenter", freq=np.inf)
+    toas = make_fake_toas_uniform(
+        58000, 58900, 10, model, obs="barycenter", freq=np.inf
+    )
     model.free_params = ["JUMP1", "F0"]
     fitter = Fitter(toas, model)
     with pytest.warns(pint.fitter.DegeneracyWarning, match=r".*degeneracy.*Offset\b"):
@@ -117,10 +135,12 @@ def test_jump_everything(Fitter):
 
 def test_jump_everything_wideband():
     model = get_model(io.StringIO("\n".join([par_base, "JUMP TEL barycenter 0"])))
-    toas = make_fake_toas(58000, 58900, 10, model, obs="barycenter", freq=np.inf)
+    toas = make_fake_toas_uniform(
+        58000, 58900, 10, model, obs="barycenter", freq=np.inf
+    )
     for f in toas.table["flags"]:
-        f["pp_dm"] = 15.0
-        f["pp_dme"] = 1e-4
+        f["pp_dm"] = "15.0"
+        f["pp_dme"] = "1e-4"
     model.free_params = ["JUMP1", "F0", "DM"]
     fitter = pint.fitter.WidebandTOAFitter(toas, model)
     with pytest.warns(pint.fitter.DegeneracyWarning, match=r".*degeneracy.*Offset\b"):
@@ -134,20 +154,38 @@ def test_jump_everything_wideband():
         assert not np.isnan(fitter.model[p].value)
 
 
+@pytest.mark.parametrize("param, value", [("ECORR", 0), ("EQUAD", 0), ("EFAC", 1)])
+def test_unused_noise_model_parameter(param, value):
+    model = get_model(io.StringIO("\n".join([par_base, f"{param} TEL ao {value}"])))
+    toas = make_fake_toas_uniform(
+        58000, 58900, 10, model, obs="barycenter", freq=np.inf
+    )
+    model.free_params = ["F0"]
+    fitter = pint.fitter.GLSFitter(toas, model)
+    with pytest.warns(UserWarning, match=param):
+        fitter.fit_toas()
+
+
 @pytest.mark.parametrize(
-    "Fitter", [pint.fitter.GLSFitter, pint.fitter.WidebandTOAFitter]
+    "Fitter",
+    [
+        pint.fitter.GLSFitter,
+        pint.fitter.WidebandTOAFitter,
+        pint.fitter.DownhillGLSFitter,
+        pint.fitter.WidebandDownhillFitter,
+    ],
 )
 def test_null_vector(Fitter):
     model = get_model(io.StringIO("\n".join([par_base])))
     model.free_params = ["ELONG", "ELAT"]
-    toas = make_fake_toas(
+    toas = make_fake_toas_uniform(
         58000,
         58900,
         10,
         model,
         obs="barycenter",
-        freq=1400.0,
-        dm=15.0,
+        freq=1400.0 * u.MHz,
+        dm=15.0 * u.pc / u.cm ** 3,
         dm_error=1e-4 * u.pc * u.cm ** -3,
     )
     fitter = Fitter(toas, model)
@@ -160,7 +198,15 @@ def test_null_vector(Fitter):
         assert not np.isnan(fitter.model[p].value)
 
 
-@pytest.mark.parametrize("Fitter", [pint.fitter.WLSFitter, pint.fitter.GLSFitter])
+@pytest.mark.parametrize(
+    "Fitter",
+    [
+        pint.fitter.WLSFitter,
+        pint.fitter.GLSFitter,
+        pint.fitter.DownhillGLSFitter,
+        pint.fitter.DownhillWLSFitter,
+    ],
+)
 def test_update_model_sets_things(Fitter):
     model = get_model(io.StringIO("\n".join([par_base, "JUMP TEL barycenter 0"])))
     model.INFO.value = "-f"
@@ -168,7 +214,10 @@ def test_update_model_sets_things(Fitter):
     model.TIMEEPH.value = "IF99"
     model.DILATEFREQ.value = True
     model.T2CMETHOD.value = "TEMPO"
-    toas = make_fake_toas(58000, 59000, 10, model, obs="barycenter", freq=np.inf)
+    model.use_aliases(reset_to_default=True)
+    toas = make_fake_toas_uniform(
+        58000, 59000, 10, model, obs="barycenter", freq=np.inf
+    )
     fitter = Fitter(toas, model)
     fitter.fit_toas()
     par_out = fitter.model.as_parfile()
@@ -179,9 +228,8 @@ def test_update_model_sets_things(Fitter):
     assert re.search(r"ECL *IERS2010", par_out)
     assert re.search(r"DILATEFREQ *N", par_out)
     assert re.search(r"INFO *-f", par_out)
-    assert re.search(r"NTOA *10.0", par_out)
-    assert re.search(r"CHI2 *\d+.\d+", par_out)
+    assert re.search(r"NTOA *10", par_out)
     assert re.search(r"EPHEM *DE421", par_out)
-    assert re.search(r"DMDATA *0.0", par_out)
+    assert re.search(r"DMDATA *N", par_out)
     assert re.search(r"START *58000.0", par_out)
     assert re.search(r"FINISH *59000.0", par_out)

@@ -24,7 +24,7 @@ class Dispersion(DelayComponent):
     """A base dispersion timing model."""
 
     def __init__(self):
-        super(Dispersion, self).__init__()
+        super().__init__()
         self.dm_value_funcs = []
         self.dm_deriv_funcs = {}
 
@@ -130,13 +130,17 @@ class DispersionDM(Dispersion):
     This model uses Taylor expansion to model DM variation over time. It
     can also be used for a constant DM.
 
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.dispersion_model.DispersionDM
     """
 
     register = True
     category = "dispersion_constant"
 
     def __init__(self):
-        super(DispersionDM, self).__init__()
+        super().__init__()
         self.add_param(
             floatParameter(
                 name="DM",
@@ -149,7 +153,6 @@ class DispersionDM(Dispersion):
         self.add_param(
             prefixParameter(
                 name="DM1",
-                value=0.0,
                 units="pc cm^-3/yr^1",
                 description="First order time derivative of the dispersion measure",
                 unit_template=self.DM_dervative_unit,
@@ -168,7 +171,7 @@ class DispersionDM(Dispersion):
         self.delay_funcs_component += [self.constant_dispersion_delay]
 
     def setup(self):
-        super(Dispersion, self).setup()
+        super().setup()
         base_dms = list(self.get_prefix_mapping_component("DM").values())
         base_dms += ["DM"]
 
@@ -178,15 +181,18 @@ class DispersionDM(Dispersion):
 
     def validate(self):
         """Validate the DM parameters input."""
-        super(Dispersion, self).validate()
+        super().validate()
         # If DM1 is set, we need DMEPOCH
-        if self.DM1.value != 0.0:
+        if self.DM1.value is not None and self.DM1.value != 0.0:
             if self.DMEPOCH.value is None:
-                raise MissingParameter(
-                    "Dispersion",
-                    "DMEPOCH",
-                    "DMEPOCH is required if DM1 or higher are set",
-                )
+                # Copy PEPOCH (PEPOCH must be set!)
+                self.DMEPOCH.value = self._parent.PEPOCH.value
+                if self.DMEPOCH.value is None:
+                    raise MissingParameter(
+                        "Dispersion",
+                        "DMEPOCH",
+                        "DMEPOCH or PEPOCH is required if DM1 or higher are set",
+                    )
 
     def DM_dervative_unit(self, n):
         return "pc cm^-3/yr^%d" % n if n else "pc cm^-3"
@@ -196,21 +202,23 @@ class DispersionDM(Dispersion):
 
     def get_DM_terms(self):
         """Return a list of the DM term values in the model: [DM, DM1, ..., DMn]"""
-        prefix_dm = list(self.get_prefix_mapping_component("DM").values())
-        dm_terms = [self.DM.quantity]
-        dm_terms += [getattr(self, x).quantity for x in prefix_dm]
-        return dm_terms
+        return [self.DM.quantity] + self._parent.get_prefix_list("DM", start_index=1)
 
     def base_dm(self, toas):
-        tbl = toas.table
-        dm = np.zeros(len(tbl))
+        dm = np.zeros(len(toas))
         dm_terms = self.get_DM_terms()
-        if self.DMEPOCH.value is None:
-            DMEPOCH = tbl["tdbld"][0]
-        else:
+        if any(t.value != 0 for t in dm_terms[1:]):
             DMEPOCH = self.DMEPOCH.value
-        dt = (tbl["tdbld"] - DMEPOCH) * u.day
-        dt_value = (dt.to(u.yr)).value
+            if DMEPOCH is None:
+                # Should be ruled out by validate()
+                raise ValueError(
+                    f"DMEPOCH not set but some derivatives are not zero: {dm_terms}"
+                )
+            else:
+                dt = (toas["tdbld"] - DMEPOCH) * u.day
+            dt_value = dt.to_value(u.yr)
+        else:
+            dt_value = np.zeros(len(toas), dtype=np.longdouble)
         dm_terms_value = [d.value for d in dm_terms]
         dm = taylor_horner(dt_value, dm_terms_value)
         return dm * self.DM.units
@@ -219,7 +227,7 @@ class DispersionDM(Dispersion):
         """This is a wrapper function for interacting with the TimingModel class"""
         return self.dispersion_type_delay(toas)
 
-    def print_par(self,):
+    def print_par(self):
         # TODO we need to have a better design for print out the parameters in
         # an inhertance class.
         result = ""
@@ -240,14 +248,7 @@ class DispersionDM(Dispersion):
         self, toas, param_name, acc_delay=None
     ):  # NOTE we should have a better name for this.)
         """Derivatives of DM wrt the DM taylor expansion parameters."""
-        tbl = toas.table
-        try:
-            bfreq = self._parent.barycentric_radio_freq(toas)
-        except AttributeError:
-            warn("Using topocentric frequency for dedispersion!")
-            bfreq = tbl["freq"]
         par = getattr(self, param_name)
-        unit = par.units
         if param_name == "DM":
             order = 0
         else:
@@ -257,10 +258,13 @@ class DispersionDM(Dispersion):
         dm_terms = np.longdouble(np.zeros(len(dms)))
         dm_terms[order] = np.longdouble(1.0)
         if self.DMEPOCH.value is None:
-            DMEPOCH = tbl["tdbld"][0]
+            if any(t.value != 0 for t in dms[1:]):
+                # Should be ruled out by validate()
+                raise ValueError(f"DMEPOCH is not set but {param_name} is not zero")
+            DMEPOCH = 0
         else:
             DMEPOCH = self.DMEPOCH.value
-        dt = (tbl["tdbld"] - DMEPOCH) * u.day
+        dt = (toas["tdbld"] - DMEPOCH) * u.day
         dt_value = (dt.to(u.yr)).value
         d_dm_d_dm_param = taylor_horner(dt_value, dm_terms) * (
             self.DM.units / par.units
@@ -281,12 +285,17 @@ class DispersionDM(Dispersion):
         else:
             new_epoch = Time(new_epoch, scale="tdb", format="mjd", precision=9)
 
+        dmterms = [0.0 * u.Unit("")] + self.get_DM_terms()
         if self.DMEPOCH.value is None:
-            raise ValueError("DMEPOCH is not currently set.")
+            if any(d.value != 0 for d in dmterms[2:]):
+                # Should be ruled out by validate()
+                raise ValueError(
+                    f"DMEPOCH not set but some DM derivatives are not zero: {dmterms}"
+                )
+            self.DMEPOCH.value = new_epoch
 
         dmepoch_ld = self.DMEPOCH.quantity.tdb.mjd_long
         dt = (new_epoch.tdb.mjd_long - dmepoch_ld) * u.day
-        dmterms = [0.0 * u.Unit("")] + self.get_DM_terms()
 
         for n in range(len(dmterms) - 1):
             cur_deriv = self.DM if n == 0 else getattr(self, "DM{}".format(n))
@@ -301,13 +310,18 @@ class DispersionDMX(Dispersion):
 
     This model lets the user specify time ranges and fit for a different
     DM value in each time range.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.dispersion_model.DispersionDMX
     """
 
     register = True
     category = "dispersion_dmx"
 
     def __init__(self):
-        super(DispersionDMX, self).__init__()
+        super().__init__()
         # DMX is for info output right now
         self.add_param(
             floatParameter(
@@ -325,7 +339,7 @@ class DispersionDMX(Dispersion):
         self.delay_funcs_component += [self.DMX_dispersion_delay]
 
     def add_DMX_range(self, mjd_start, mjd_end, index=None, dmx=0, frozen=True):
-        """ Add DMX range to a dispersion model with specified start/end MJDs and DMX.
+        """Add DMX range to a dispersion model with specified start/end MJDs and DMX.
 
         Parameters
         ----------
@@ -372,9 +386,7 @@ class DispersionDMX(Dispersion):
                 name="DMX_" + i,
                 units="pc cm^-3",
                 value=dmx,
-                unit_template=lambda x: "pc cm^-3",
                 description="Dispersion measure variation",
-                description_template=lambda x: "Dispersion measure",
                 parameter_type="float",
                 frozen=frozen,
             )
@@ -383,9 +395,7 @@ class DispersionDMX(Dispersion):
             prefixParameter(
                 name="DMXR1_" + i,
                 units="MJD",
-                unit_template=lambda x: "MJD",
                 description="Beginning of DMX interval",
-                description_template=lambda x: "Beginning of DMX interval",
                 parameter_type="MJD",
                 time_scale="utc",
                 value=mjd_start,
@@ -395,9 +405,7 @@ class DispersionDMX(Dispersion):
             prefixParameter(
                 name="DMXR2_" + i,
                 units="MJD",
-                unit_template=lambda x: "MJD",
                 description="End of DMX interval",
-                description_template=lambda x: "End of DMX interval",
                 parameter_type="MJD",
                 time_scale="utc",
                 value=mjd_end,
@@ -448,7 +456,7 @@ class DispersionDMX(Dispersion):
         return np.array(inds)
 
     def setup(self):
-        super(DispersionDMX, self).setup()
+        super().setup()
         # Get DMX mapping.
         # Register the DMX derivatives
         for prefix_par in self.get_params_of_type("prefixParameter"):
@@ -458,7 +466,7 @@ class DispersionDMX(Dispersion):
 
     def validate(self):
         """Validate the DMX parameters."""
-        super(DispersionDMX, self).validate()
+        super().validate()
         DMX_mapping = self.get_prefix_mapping_component("DMX_")
         DMXR1_mapping = self.get_prefix_mapping_component("DMXR1_")
         DMXR2_mapping = self.get_prefix_mapping_component("DMXR2_")
@@ -544,7 +552,7 @@ class DispersionDMX(Dispersion):
             dmx[v] = 1.0
         return dmx * (u.pc / u.cm ** 3) / (u.pc / u.cm ** 3)
 
-    def print_par(self,):
+    def print_par(self):
         result = ""
         DMX_mapping = self.get_prefix_mapping_component("DMX_")
         DMXR1_mapping = self.get_prefix_mapping_component("DMXR1_")
@@ -561,6 +569,11 @@ class DispersionDMX(Dispersion):
 class DispersionJump(Dispersion):
     """This class provides the contant offsets to the DM values.
 
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.dispersion_model.DispersionDMX
+
     Notes
     -----
     This DM jump is only for modeling the DM values, and will not apply to the
@@ -571,7 +584,7 @@ class DispersionJump(Dispersion):
     category = "dispersion_jump"
 
     def __init__(self):
-        super(DispersionJump, self).__init__()
+        super().__init__()
         self.dm_value_funcs += [self.jump_dm]
         # Dispersion jump only model the dm values.
 
@@ -585,7 +598,7 @@ class DispersionJump(Dispersion):
         )
 
     def setup(self):
-        super(DispersionJump, self).setup()
+        super().setup()
         self.dm_jumps = []
         for mask_par in self.get_params_of_type("maskParameter"):
             if mask_par.startswith("DMJUMP"):
@@ -599,7 +612,7 @@ class DispersionJump(Dispersion):
             self.register_deriv_funcs(self.d_delay_d_dmjump, j)
 
     def validate(self):
-        super(DispersionJump, self).validate()
+        super().validate()
 
     def jump_dm(self, toas):
         """Return the DM jump for each dm section collected by dmjump parameters.

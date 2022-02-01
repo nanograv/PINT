@@ -1,14 +1,18 @@
+"""Solar system ephemeris downloading and setting support."""
+import logging
 import os
 
-import astropy.coordinates as coor
+from astropy.utils.data import download_file
+import astropy.coordinates
 import astropy.units as u
 import numpy as np
-from astropy import log
 from astropy.utils.data import download_file
 from urllib.parse import urljoin
 
-from pint.config import datapath
+import pint.config
 from pint.utils import PosVel
+
+log = logging.getLogger(__name__)
 
 __all__ = ["objPosVel_wrt_SSB", "get_tdb_tt_ephem_geocenter"]
 
@@ -37,80 +41,17 @@ jpl_obj_code = {
     "pluto": 9,
 }
 
-_ephemeris_hits = {}
-_ephemeris_failures = set()
-
 
 def _load_kernel_link(ephem, link=None):
     if link == "":
         raise ValueError("Empty string is not a valid URL")
-    # NOTE: as of astropy 4 this should be able to be much simpler
 
-    if ephem in _ephemeris_hits:
-        # If we found it earlier just pull it from cache
-        coor.solar_system_ephemeris.set(_ephemeris_hits[ephem])
-        # Don't use log.info since this is using a cached version. No need to say it again
-        log.debug(
-            "Set solar system ephemeris to (cached) link {}".format(
-                _ephemeris_hits[ephem]
-            )
-        )
-        return
-
-    # FIXME: is link supposed to be a URL for the file or a directory?
-    search_list = [
-        urljoin(e, "{}.bsp".format(ephem))
-        for e in (([] if link is None else [link]) + ephemeris_mirrors)
-        if e not in _ephemeris_failures
-    ]
-    errors = []
-    for ephem_link in search_list:
-        try:
-            coor.solar_system_ephemeris.set(ephem_link)
-            _ephemeris_hits[ephem] = ephem_link
-            log.info(
-                "Set solar system ephemeris to link:\n\t{}".format(
-                    _ephemeris_hits[ephem]
-                )
-            )
-            return
-        except (ValueError, IOError) as e:
-            log.debug("Did not find '{}' because: {}, will retry".format(ephem_link, e))
-            # FIXME: detect which errors are worth retrying seconds later
-            # with a longer timeout and only retry those
-            errors.append((ephem_link, e, ""))
-    log.info("Retrying network requests with a longer timeout")
-    for ephem_link in search_list:
-        try:
-            log.debug("Re-trying to set astropy ephemeris to {0}".format(ephem_link))
-            download_file(ephem_link, timeout=300, cache=True)
-            log.debug("Only able to download '{}' on a second try".format(ephem_link))
-            coor.solar_system_ephemeris.set(ephem_link)
-            _ephemeris_hits[ephem] = ephem_link
-            log.info(
-                "Set solar system ephemeris to link (with long timeout) {}".format(
-                    _ephemeris_hits[ephem]
-                )
-            )
-            return
-        except (ValueError, IOError) as e:
-            log.info(
-                "Retry did not find '{}', blacklisting it now, because: {}".format(
-                    ephem_link, e
-                )
-            )
-            _ephemeris_failures.add(ephem_link)
-            errors.append((ephem_link, e, "retry"))
-    if errors:
-        raise IOError(
-            "Unable to retrieve ephemeris {} in spite of multiple tries: {}".format(
-                ephem, errors
-            )
-        ) from errors[0][1]
-    else:
-        raise ValueError(
-            "All urls we might download {} from have previously experienced errors."
-        )
+    mirrors = [m + f"{ephem}.bsp" for m in ephemeris_mirrors]
+    if link is not None:
+        mirrors = [link] + mirrors
+    astropy.coordinates.solar_system_ephemeris.set(
+        download_file(mirrors[0], cache=True, sources=mirrors)
+    )
 
 
 def _load_kernel_local(ephem, path):
@@ -121,14 +62,14 @@ def _load_kernel_local(ephem, path):
         custom_path = path
     search_list = [custom_path]
     try:
-        search_list.append(datapath(ephem_bsp))
+        search_list.append(pint.config.runtimefile(ephem_bsp))
     except FileNotFoundError:
-        # If not found in datapath, just continue. Error will be raised later if also not in "path"
+        # If not found in runtimefile path, just continue. Error will be raised later if also not in "path"
         pass
     for p in search_list:
         if os.path.exists(p):
             # .set() can accept a path to an ephemeris
-            coor.solar_system_ephemeris.set(ephem)
+            astropy.coordinates.solar_system_ephemeris.set(ephem)
             log.info("Set solar system ephemeris to local file:\n\t{}".format(ephem))
             return
     raise FileNotFoundError(
@@ -137,7 +78,7 @@ def _load_kernel_local(ephem, path):
 
 
 def load_kernel(ephem, path=None, link=None):
-    """Load the solar system ephemeris `ephem`
+    """Load the solar system ephemeris
 
     Ephemeris files may be obtained through astropy's internal
     collection (which primarily downloads them from the network
@@ -147,13 +88,17 @@ def load_kernel(ephem, path=None, link=None):
     be found a ValueError is raised.
 
     If a kernel must be obtained from the network, it is first looked
-    for in the location specified by `link`, then in a list mirrors
+    for in the location specified by ``link``, then in a list of mirrors
     of the JPL ephemeris collection.
+
+    If the ephemeris must be downloaded, it is downloaded using
+    :func:`astropy.utils.data.download_file`; it is thus stored
+    in the `Astropy cache <https://docs.astropy.org/en/stable/utils/data.html>`.
 
     Parameters
     ----------
     ephem : str
-        Short name of the ephemeris, for example `de421`. Case-insensitive.
+        Short name of the ephemeris, for example ``de421``. Case-insensitive.
     path : str, optional
         Load the ephemeris from the file specified in path, rather than
         requesting it from the network or astropy's collection of
@@ -181,10 +126,9 @@ def load_kernel(ephem, path=None, link=None):
                     path
                 )
             )
-            pass
     # Links are just suggestions, try just plain loading
     try:
-        coor.solar_system_ephemeris.set(ephem)
+        astropy.coordinates.solar_system_ephemeris.set(ephem)
         log.info("Set solar system ephemeris to {}".format(ephem))
         return
     except ValueError:
@@ -223,7 +167,7 @@ def objPosVel_wrt_SSB(objname, t, ephem, path=None, link=None):
     objname = objname.lower()
 
     load_kernel(ephem, path=path, link=link)
-    pos, vel = coor.get_body_barycentric_posvel(objname, t)
+    pos, vel = astropy.coordinates.get_body_barycentric_posvel(objname, t)
     return PosVel(pos.xyz, vel.xyz.to(u.km / u.second), origin="ssb", obj=objname)
 
 
@@ -293,7 +237,7 @@ def get_tdb_tt_ephem_geocenter(tt, ephem, path=None, link=None):
     https://ipnpr.jpl.nasa.gov/progress_report/42-196/196C.pdf page 6.
     """
     load_kernel(ephem, path=path, link=link)
-    kernel = coor.solar_system_ephemeris._kernel
+    kernel = astropy.coordinates.solar_system_ephemeris._kernel
     try:
         # JPL ID defines this column.
         seg = kernel[1000000000, 1000000001]

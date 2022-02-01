@@ -4,78 +4,79 @@ import unittest
 
 import astropy.units as u
 import numpy as np
+import pytest
+import test_derivative_utils as tdu
+from pinttestdata import datadir
 
 import pint.models.model_builder as mb
 import pint.toa as toa
-import test_derivative_utils as tdu
 from pint.residuals import Residuals
-from pinttestdata import datadir
+
+parfileJ0023 = os.path.join(datadir, "J0023+0923_NANOGrav_11yv0.gls.par")
+timJ0023 = os.path.join(datadir, "J0023+0923_NANOGrav_11yv0.tim")
 
 
-class TestFBX(unittest.TestCase):
-    """Compare delays and derivatives from the FBX parameterization with tempo
-    and PINT
-    """
+@pytest.fixture
+def toasJ0023():
+    return toa.get_TOAs(timJ0023, ephem="DE436", planets=False)
 
-    @classmethod
-    def setUpClass(self):
-        os.chdir(datadir)
-        self.parfileJ0023 = "J0023+0923_NANOGrav_11yv0.gls.par"
-        self.timJ0023 = "J0023+0923_NANOGrav_11yv0.tim"
-        self.toasJ0023 = toa.get_TOAs(self.timJ0023, ephem="DE436", planets=False)
-        self.modelJ0023 = mb.get_model(self.parfileJ0023)
-        # tempo result
-        self.ltres, self.ltbindelay = np.genfromtxt(
-            self.parfileJ0023 + ".tempo2_test", skip_header=1, unpack=True
-        )
 
-    def test_B1953_binary_delay(self):
-        # Calculate binary delays with PINT
-        pint_binary_delay = self.modelJ0023.binarymodel_delay(self.toasJ0023, None)
-        assert np.all(
-            np.abs(pint_binary_delay.value + self.ltbindelay) < 1e-9
-        ), "B1953 binary delay test failed."
+@pytest.fixture
+def modelJ0023():
+    return mb.get_model(parfileJ0023)
 
-    def test_J0023(self):
-        pint_resids_us = Residuals(
-            self.toasJ0023, self.modelJ0023, use_weighted_mean=False
-        ).time_resids.to(u.s)
-        assert np.all(
-            np.abs(pint_resids_us.value - self.ltres) < 1e-8
-        ), "J0023 residuals test failed."
 
-    def test_derivative(self):
-        testp = tdu.get_derivative_params(self.modelJ0023)
-        delay = self.modelJ0023.delay(self.toasJ0023)
-        for p in testp.keys():
-            print("Runing derivative for %s", "d_delay_d_" + p)
-            if p in ["EPS2", "EPS1"]:
-                testp[p] = 15
-            ndf = self.modelJ0023.d_phase_d_param_num(self.toasJ0023, p, testp[p])
-            adf = self.modelJ0023.d_phase_d_param(self.toasJ0023, delay, p)
-            diff = adf - ndf
-            if not np.all(diff.value) == 0.0:
-                mean_der = (adf + ndf) / 2.0
-                relative_diff = np.abs(diff) / np.abs(mean_der)
-                # print "Diff Max is :", np.abs(diff).max()
-                msg = (
-                    "Derivative test failed at d_delay_d_%s with max relative difference %lf"
-                    % (p, np.nanmax(relative_diff).value)
-                )
-                if p in ["PMELONG", "ELONG"]:
-                    tol = 2e-2
-                elif p in ["FB1"]:
-                    # paulr added this to make tests pass with oldest supported versions of numpy/astropy, but I don't know why it is needed
-                    # How should we decide what the acceptable tolerance is? This should not just be a random choice.
-                    tol = 0.002
-                elif p in ["FB2", "FB3"]:
-                    tol = 0.08
-                else:
-                    tol = 1e-3
-                print(
-                    "derivative relative diff for %s, %lf"
-                    % ("d_delay_d_" + p, np.nanmax(relative_diff).value)
-                )
-                assert np.nanmax(relative_diff) < tol, msg
+ltres, ltbindelay = np.genfromtxt(
+    parfileJ0023 + ".tempo2_test", skip_header=1, unpack=True
+)
+
+
+def test_J0023_binary_delay(modelJ0023, toasJ0023):
+    # Calculate binary delays with PINT
+    pint_binary_delay = modelJ0023.binarymodel_delay(toasJ0023, None)
+    assert np.all(np.abs(pint_binary_delay.value + ltbindelay) < 1e-9)
+
+
+@pytest.mark.xfail(reason="PINT has a more modern position for Arecibo than TEMPO2")
+def test_J0023(modelJ0023, toasJ0023):
+    pint_resids_us = Residuals(
+        toasJ0023, modelJ0023, use_weighted_mean=False
+    ).time_resids.to(u.s)
+    assert np.all(np.abs(pint_resids_us.value - ltres) < 1e-8)
+
+
+def test_derivative(modelJ0023, toasJ0023):
+    testp = tdu.get_derivative_params(modelJ0023)
+    delay = modelJ0023.delay(toasJ0023)
+    for p in testp.keys():
+        print("Runing derivative for %s", "d_delay_d_" + p)
+        if p in ["EPS2", "EPS1"]:
+            testp[p] = 15
+        ndf = modelJ0023.d_phase_d_param_num(toasJ0023, p, testp[p])
+        adf = modelJ0023.d_phase_d_param(toasJ0023, delay, p)
+        diff = adf - ndf
+        if not np.all(diff.value) == 0.0:
+            mean_der = (adf + ndf) / 2.0
+            relative_diff = np.abs(diff) / np.abs(mean_der)
+            # print "Diff Max is :", np.abs(diff).max()
+            msg = (
+                "Derivative test failed at d_delay_d_%s with max relative difference %lf"
+                % (p, np.nanmax(relative_diff).value)
+            )
+            if p in ["PMELONG", "ELONG"]:
+                tol = 2e-2
+            elif p in ["FB1"]:
+                # paulr added this to make tests pass with oldest supported versions of numpy/astropy, but I don't know why it is needed
+                # How should we decide what the acceptable tolerance is? This should not just be a random choice.
+                tol = 0.002
+            elif p in ["FB2", "FB3"]:
+                tol = 0.08
             else:
-                continue
+                tol = 1e-3
+            print(
+                "derivative relative diff for %s, %lf"
+                % ("d_delay_d_" + p, np.nanmax(relative_diff).value)
+            )
+            assert np.nanmax(relative_diff) < tol, msg
+        else:
+            continue

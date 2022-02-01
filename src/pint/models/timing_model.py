@@ -1,10 +1,35 @@
 """Timing model objects.
 
 Defines the basic timing model interface classes.
+
+A PINT timing model will be an instance of
+:class:`~pint.models.timing_model.TimingModel`. It will have a number of
+"components", each an instance of a subclass of
+:class:`~pint.models.timing_model.Component`. These components each
+implement some part of the timing model, whether astrometry (for
+example :class:`~pint.models.astrometry.AstrometryEcliptic`), noise
+modelling (for example :class:`~pint.models.noise_model.ScaleToaError`),
+interstellar dispersion (for example
+:class:`~pint.models.dispersion_model.DispersionDM`), or pulsar binary orbits.
+This last category is somewhat unusual in that the code for each model is
+divided into a PINT-facing side (for example
+:class:`~pint.models.binary_bt.BinaryBT`) and an internal model that does the
+actual computation (for example
+:class:`~pint.models.stand_alone_psr_binaries.BT_model.BTmodel`); the management of
+data passing between these two parts is carried out by
+:class:`~pint.models.pulsar_binary.PulsarBinary` and
+:class:`~pint.models.stand_alone_psr_binaries.binary_generic.PSR_BINARY`.
+
+To actually create a timing model, you almost certainly want to use
+:func:`~pint.models.model_builder.get_model`.
+
+See :ref:`Timing Models` for more details on how PINT's timing models work.
+
 """
 import abc
 import copy
 import inspect
+import logging
 from collections import OrderedDict, defaultdict
 from functools import wraps
 from warnings import warn
@@ -13,23 +38,38 @@ import astropy.time as time
 import astropy.units as u
 import numpy as np
 from astropy import log
+from astropy.utils.decorators import lazyproperty
 from scipy.optimize import brentq
 
 import pint
 from pint.models.parameter import (
     AngleParameter,
     MJDParameter,
+    Parameter,
     boolParameter,
     floatParameter,
-    Parameter,
+    intParameter,
     maskParameter,
     strParameter,
+    prefixParameter,
 )
 from pint.phase import Phase
 from pint.toa import TOAs
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
 
-__all__ = ["DEFAULT_ORDER", "TimingModel"]
+log = logging.getLogger(__name__)
+
+__all__ = [
+    "DEFAULT_ORDER",
+    "TimingModel",
+    "Component",
+    "AllComponents",
+    "TimingModelError",
+    "MissingParameter",
+    "MissingTOAs",
+    "MissingBinaryError",
+    "UnknownBinaryModel",
+]
 # Parameters or lines in parfiles we don't understand but shouldn't
 # complain about. These are still passed to components so that they
 # can use them if they want to.
@@ -46,7 +86,6 @@ ignore_params = set(
         "TZRSITE",
         "NITS",
         "IBOOT",
-        "BINARY",
         "CHI2R",
         "MODE",
         "PLANET_SHAPIRO2",
@@ -75,6 +114,8 @@ DEFAULT_ORDER = [
 
 
 class MissingTOAs(ValueError):
+    """Some parameter does not describe any TOAs."""
+
     def __init__(self, parameter_names):
         if isinstance(parameter_names, str):
             parameter_names = [parameter_names]
@@ -121,11 +162,12 @@ class TimingModel:
     """Timing model object built from Components.
 
     This object is the primary object to represent a timing model in PINT.  It
-    is normally constructed with :func:`pint.models.model_builder.get_model`,
-    and it contains a variety of Component objects, each representing a
+    is normally constructed with :func:`~pint.models.model_builder.get_model`,
+    and it contains a variety of :class:`~pint.models.timing_model.Component`
+    objects, each representing a
     physical process that either introduces delays in the pulse arrival time or
     introduces shifts in the pulse arrival phase.  These components have
-    parameters, described by :class:`pint.models.parameter.Parameter` objects,
+    parameters, described by :class:`~pint.models.parameter.Parameter` objects,
     and methods. Both the parameters and the methods are accessible through
     this object using attribute access, for example as ``model.F0`` or
     ``model.coords_as_GAL()``.
@@ -147,8 +189,18 @@ class TimingModel:
     various things like orbital phase, and barycentric versions of TOAs,
     as well as the various derivatives and matrices needed to support fitting.
 
+    TimingModel objects forward attribute lookups to their components, so
+    that you can access any method or attribute (in particular Parameters)
+    of any Component directly on the TimingModel object, for example as
+    ``model.F0``.
+
     TimingModel objects can be written out to ``.par`` files using
     :func:`pint.models.timing_model.TimingModel.as_parfile`.
+
+    PINT Parameters supported (here, rather than in any Component):
+
+    .. paramtable::
+        :class: pint.models.timing_model.TimingModel
 
     Parameters
     ----------
@@ -171,7 +223,7 @@ class TimingModel:
         - Derivatives of delay and phase respect to parameter for fitting toas.
 
     Each timing parameters are stored as TimingModel attribute in the type of
-    :class:`pint.models.parameter.Parameter` delay or phase and its derivatives are implemented
+    :class:`~pint.models.parameter.Parameter` delay or phase and its derivatives are implemented
     as TimingModel Methods.
 
     Attributes
@@ -220,6 +272,12 @@ class TimingModel:
             MJDParameter(name="FINISH", description="End MJD for fitting"), ""
         )
         self.add_param_from_top(
+            floatParameter(
+                name="RM", description="Rotation measure", units=u.radian / u.m ** 2
+            ),
+            "",
+        )
+        self.add_param_from_top(
             strParameter(
                 name="INFO",
                 description="Tells TEMPO to write some extra information about frontend/backend combinations; -f is recommended",
@@ -241,6 +299,14 @@ class TimingModel:
             "",
         )
         self.add_param_from_top(
+            strParameter(
+                name="BINARY",
+                description="The Pulsar System/Binary model to use.",
+                value=None,
+            ),
+            "",
+        )
+        self.add_param_from_top(
             boolParameter(
                 name="DILATEFREQ",
                 value=False,
@@ -249,20 +315,16 @@ class TimingModel:
             "",
         )
         self.add_param_from_top(
-            floatParameter(
+            boolParameter(
                 name="DMDATA",
-                value=0.0,
-                units="",
+                value=False,
                 description="Was the fit done using per-TOA DM information?",
             ),
             "",
         )
         self.add_param_from_top(
-            floatParameter(
-                name="NTOA",
-                value=0.0,
-                units="",
-                description="Number of TOAs used in the fitting",
+            intParameter(
+                name="NTOA", value=0, description="Number of TOAs used in the fitting"
             ),
             "",
         )
@@ -277,7 +339,7 @@ class TimingModel:
         )
 
         for cp in components:
-            self.add_component(cp, validate=False)
+            self.add_component(cp, setup=False, validate=False)
 
     def __repr__(self):
         return "{}(\n  {}\n)".format(
@@ -304,6 +366,7 @@ class TimingModel:
             self.T2CMETHOD.value = "IAU2000B"
         if self.UNITS.value not in [None, "TDB"]:
             raise ValueError("PINT only supports 'UNITS TDB'")
+
         for cp in self.components.values():
             cp.validate()
 
@@ -408,13 +471,36 @@ class TimingModel:
             )
 
     def match_param_aliases(self, alias):
-        """Return the parameter corresponding to this alias."""
-        for p in self.params:
+        """Return PINT parameter name corresponding to this alias.
+
+        Parameters
+        ----------
+        alias: str
+           Parameter's alias.
+
+        Return
+        ------
+        str
+            PINT parameter name corresponding to the input alias.
+        """
+        # Search the top level first.
+        for p in self.top_level_params:
             if p == alias:
                 return p
             if alias in getattr(self, p).aliases:
                 return p
-        raise ValueError("{} is not recognized as a parameter or alias".format(alias))
+        # if not in the top level, check parameters.
+        pint_par = None
+        for cp in self.components.values():
+            try:
+                pint_par = cp.match_param_aliases(alias)
+            except UnknownParameter:
+                continue
+            return pint_par
+
+        raise UnknownParameter(
+            "{} is not recognized as a parameter or alias".format(alias)
+        )
 
     def get_params_dict(self, which="free", kind="quantity"):
         """Return a dict mapping parameter names to values.
@@ -459,7 +545,7 @@ class TimingModel:
         # plain float to Quantities. No idea why.
         for k, v in fitp.items():
             p = getattr(self, k)
-            if isinstance(v, Parameter):
+            if isinstance(v, (Parameter, prefixParameter)):
                 if v.value is None:
                     raise ValueError("Parameter {} is unset".format(v))
                 p.value = v.value
@@ -545,7 +631,7 @@ class TimingModel:
             [x for x in self.components.keys() if x.startswith("Binary")][0]
         ]
         # Make sure that the binary instance has the binary params
-        b.update_binary_object()
+        b.update_binary_object(None)
         # Handle input times and update them in stand-alone binary models
         if isinstance(barytimes, TOAs):
             # If we pass the TOA table, then barycenter the TOAs
@@ -568,11 +654,11 @@ class TimingModel:
         elif anom.lower().startswith("ecc"):
             anoms = bbi.E()
         elif anom.lower() == "true":
-            anoms = bbi.nu()
+            anoms = bbi.nu()  # can be negative
         else:
             raise ValueError("anom='%s' is not a recognized type of anomaly" % anom)
         # Make sure all angles are between 0-2*pi
-        anoms = np.fmod(anoms.value, 2 * np.pi)
+        anoms = np.remainder(anoms.value, 2 * np.pi)
         if radians:  # return with radian units
             return anoms * u.rad
         else:  # return as unitless cycles from 0-1
@@ -610,7 +696,7 @@ class TimingModel:
 
         def funct(t):
             nu = self.orbital_phase(t, anom="true")
-            return np.fmod((nu + bbi.omega()).value, 2 * np.pi) - np.pi / 2
+            return np.remainder((nu + bbi.omega()).value, 2 * np.pi) - np.pi / 2
 
         # Handle the input time(s)
         if isinstance(baryMJD, time.Time):
@@ -628,7 +714,7 @@ class TimingModel:
             # Compute the true anomalies and omegas for those times
             nus = self.orbital_phase(ts, anom="true")
             omegas = bbi.omega()
-            x = np.fmod((nus + omegas).value, 2 * np.pi) - np.pi / 2
+            x = np.remainder((nus + omegas).value, 2 * np.pi) - np.pi / 2
             # find the lowest index where x is just below 0
             for lb in range(len(x)):
                 if x[lb] < 0 and x[lb + 1] > 0:
@@ -831,7 +917,9 @@ class TimingModel:
         order = host_list.index(comp)
         return comp, order, host_list, comp_type
 
-    def add_component(self, component, order=DEFAULT_ORDER, force=False, validate=True):
+    def add_component(
+        self, component, order=DEFAULT_ORDER, force=False, setup=True, validate=True
+    ):
         """Add a component into TimingModel.
 
         Parameters
@@ -848,7 +936,11 @@ class TimingModel:
             comp_list = getattr(self, comp_type + "_list")
             cur_cps = []
             for cp in comp_list:
-                cur_cps.append((order.index(cp.category), cp))
+                # If component order is not defined.
+                cp_order = (
+                    order.index(cp.category) if cp.category in order else len(order) + 1
+                )
+                cur_cps.append((cp_order, cp))
             # Check if the component has been added already.
             if component.__class__ in (x.__class__ for x in comp_list):
                 log.warning(
@@ -879,7 +971,8 @@ class TimingModel:
         new_comp_list = [c[1] for c in cur_cps]
         setattr(self, comp_type + "_list", new_comp_list)
         # Set up components
-        self.setup()
+        if setup:
+            self.setup()
         # Validate inputs
         if validate:
             self.validate()
@@ -895,26 +988,26 @@ class TimingModel:
         cp, co_order, host, cp_type = self.map_component(component)
         host.remove(cp)
 
-    def _locate_param_host(self, components, param):
-        """Search for the parameter host component.
+    def _locate_param_host(self, param):
+        """Search for the parameter host component in the timing model.
 
         Parameters
         ----------
-        components: list
-            Searching component list.
         param: str
             Target parameter.
 
         Return
         ------
-        List of tuples. The first element is the component object that have the
-        target parameter, the second one is the parameter object. If it is a
-        prefix-style parameter, it will return one example of such parameter.
+        list of tuples
+           All possible components that host the target parameter.  The first
+           element is the component object that have the target parameter, the
+           second one is the parameter object. If it is a prefix-style parameter
+           , it will return one example of such parameter.
         """
         result_comp = []
-        for cp in components:
+        for cp_name, cp in self.components.items():
             if param in cp.params:
-                result_comp.append((cp, getattr(cp, param)))
+                result_comp.append((cp_name, cp, getattr(cp, param)))
             else:
                 # search for prefixed parameter
                 prefixs = cp.param_prefixs
@@ -924,7 +1017,7 @@ class TimingModel:
                     prefix = param
 
                 if prefix in prefixs.keys():
-                    result_comp.append(cp, getattr(cp, prefixs[param][0]))
+                    result_comp.append(cp_name, cp, getattr(cp, prefixs[param][0]))
 
         return result_comp
 
@@ -968,7 +1061,7 @@ class TimingModel:
             The name of parameter to be removed.
         """
         param_map = self.get_params_mapping()
-        if param not in list(param_map.keys()):
+        if param not in param_map:
             raise AttributeError("Can not find '%s' in timing model." % param)
         if param_map[param] == "timing_model":
             delattr(self, param)
@@ -1007,13 +1100,60 @@ class TimingModel:
            A dictionary with prefix pararameter real index as key and parameter
            name as value.
         """
-        parnames = [x for x in self.params if x.startswith(prefix)]
-        mapping = dict()
-        for parname in parnames:
-            par = getattr(self, parname)
-            if par.is_prefix and par.prefix == prefix:
-                mapping[par.index] = parname
-        return mapping
+        for cp in self.components.values():
+            mapping = cp.get_prefix_mapping_component(prefix)
+            if len(mapping) != 0:
+                return mapping
+        raise ValueError("Can not find prefix `{}`".format(prefix))
+
+    def get_prefix_list(self, prefix, start_index=0):
+        """Return the Quantities associated with a sequence of prefix parameters.
+
+        Parameters
+        ----------
+        prefix : str
+            Name of prefix.
+        start_index : int
+            The index to start the sequence at (DM1, DM2, ... vs F0, F1, ...)
+
+        Returns
+        -------
+        list of astropy.units.Quantity
+            The ``.quantity`` associated with parameter prefix + start_index,
+            prefix + (start_index+1), ... up to the last that exists and is set.
+
+        Raises
+        ------
+        ValueError
+            If any prefix parameters exist outside the sequence that would be returned
+            (for example if there are DM1 and DM3 but not DM2, or F0 exists but start_index
+            was given as 1).
+        """
+        matches = {}
+        for p in self.params:
+            if not p.startswith(prefix):
+                continue
+            pm = getattr(self, p)
+            if not pm.is_prefix:
+                continue
+            if pm.quantity is None:
+                continue
+            if pm.prefix != prefix:
+                continue
+            matches[pm.index] = pm
+        r = []
+        i = start_index
+        while True:
+            try:
+                r.append(matches.pop(i).quantity)
+            except KeyError:
+                break
+            i += 1
+        if matches:
+            raise ValueError(
+                f"Unused prefix parameters for start_index {start_index}: {matches}"
+            )
+        return r
 
     def param_help(self):
         """Print help lines for all available parameters in model."""
@@ -1025,18 +1165,18 @@ class TimingModel:
     def delay(self, toas, cutoff_component="", include_last=True):
         """Total delay for the TOAs.
 
+        Return the total delay which will be subtracted from the given
+        TOA to get time of emission at the pulsar.
+
         Parameters
         ----------
-        toas: toa.table
+        toas: pint.toa.TOAs
             The toas for analysis delays.
         cutoff_component: str
             The delay component name that a user wants the calculation to stop
             at.
         include_last: bool
             If the cutoff delay component is included.
-
-        Return the total delay which will be subtracted from the given
-        TOA to get time of emission at the pulsar.
         """
         delay = np.zeros(toas.ntoas) * u.second
         if cutoff_component == "":
@@ -1057,7 +1197,11 @@ class TimingModel:
         return delay
 
     def phase(self, toas, abs_phase=False):
-        """Return the model-predicted pulse phase for the given TOAs."""
+        """Return the model-predicted pulse phase for the given TOAs.
+
+        This is the phase as observed at the observatory at the exact moment
+        specified in each TOA. The result is a :class:`pint.phase.Phase` object.
+        """
         # First compute the delays to "pulsar time"
         delay = self.delay(toas)
         phase = Phase(np.zeros(toas.ntoas), np.zeros(toas.ntoas))
@@ -1102,13 +1246,9 @@ class TimingModel:
         If there is no noise model component provided, a diagonal matrix with
         TOAs error as diagonal element will be returned.
         """
-        ntoa = toas.ntoas
-        tbl = toas.table
-        result = np.zeros((ntoa, ntoa))
-        # When there is no noise model.
-        if len(self.covariance_matrix_funcs) == 0:
-            result += np.diag(tbl["error"].quantity.to(u.s).value ** 2)
-            return result
+        result = np.zeros((len(toas), len(toas)))
+        if "ScaleToaError" not in self.components:
+            result += np.diag(toas.table["error"].quantity.to(u.s).value ** 2)
 
         for nf in self.covariance_matrix_funcs:
             result += nf(toas)
@@ -1120,15 +1260,16 @@ class TimingModel:
         If there is no noise model component provided, a diagonal matrix with
         TOAs error as diagonal element will be returned.
         """
-        dms, valid_dm = toas.get_flag_value("pp_dm")
-        dmes, valid_dme = toas.get_flag_value("pp_dme")
+        dms, valid_dm = toas.get_flag_value("pp_dm", as_type=float)
+        dmes, valid_dme = toas.get_flag_value("pp_dme", as_type=float)
         dms = np.array(dms)[valid_dm]
         n_dms = len(dms)
         dmes = np.array(dmes)[valid_dme]
         result = np.zeros((n_dms, n_dms))
         # When there is no noise model.
+        # FIXME: specifically when there is no DMEFAC
         if len(self.dm_covariance_matrix_funcs) == 0:
-            result += np.diag(dmes.value ** 2)
+            result += np.diag(dmes ** 2)
             return result
 
         for nf in self.dm_covariance_matrix_funcs:
@@ -1143,7 +1284,7 @@ class TimingModel:
 
         Parameters
         ----------
-        toas: `pint.toa.TOAs` object
+        toas: pint.toa.TOAs
             The input data object for TOAs uncertainty.
         """
         ntoa = toas.ntoas
@@ -1166,10 +1307,10 @@ class TimingModel:
 
         Parameters
         ----------
-        toas: `pint.toa.TOAs` object
+        toas: pint.toa.TOAs
             The input data object for DM uncertainty.
         """
-        dm_error, valid = toas.get_flag_value("pp_dme")
+        dm_error, valid = toas.get_flag_value("pp_dme", as_type=float)
         dm_error = np.array(dm_error)[valid] * u.pc / u.cm ** 3
         result = np.zeros(len(dm_error)) * u.pc / u.cm ** 3
         # When there is no noise model.
@@ -1229,65 +1370,80 @@ class TimingModel:
     def jump_flags_to_params(self, toas):
         """Convert jump flags in toas.table["flags"] (loaded in .tim file) to jump parameters in the model.
 
-        The flags processed are ``jump`` and ``gui_jump``.
+        The flag processed is ``jump``.
         """
         from . import jump
 
-        for flag_dict in toas.table["flags"]:
-            if "jump" in flag_dict.keys():
-                break
-            elif "gui_jump" in flag_dict.keys():
-                break
-            else:
-                log.info("No jump flags to process from .tim file")
-                return None
-        for flag_dict in toas.table["flags"]:
-            if "jump" in flag_dict.keys():
-                jump_nums = [
-                    flag_dict["jump"] if "jump" in flag_dict.keys() else np.nan
-                    for flag_dict in toas.table["flags"]
-                ]
-                if "PhaseJump" not in self.components:
-                    log.info("PhaseJump component added")
-                    a = jump.PhaseJump()
-                    a.setup()
-                    self.add_component(a)
-                    self.remove_param("JUMP1")
-                for num in np.arange(1, np.nanmax(jump_nums) + 1):
-                    if "JUMP" + str(int(num)) not in self.params:
-                        param = maskParameter(
-                            name="JUMP",
-                            index=int(num),
-                            key="jump",
-                            key_value=int(num),
-                            value=0.0,
-                            units="second",
-                            uncertainty=0.0,
-                        )
-                        self.add_param_from_top(param, "PhaseJump")
-                        getattr(self, param.name).frozen = False
-                if 0 in jump_nums:
-                    for flag_dict in toas.table["flags"]:
-                        if "jump" in flag_dict.keys() and flag_dict["jump"] == 0:
-                            flag_dict["jump"] = int(np.nanmax(jump_nums) + 1)
+        # check if any TOAs are jumped
+        jumped = ["jump" in flag_dict.keys() for flag_dict in toas.table["flags"]]
+        if not any(jumped):
+            log.info("No jump flags to process from .tim file")
+            return None
+        for flag_dict in toas.table["flags"][jumped]:
+            # add PhaseJump object if model does not have one already
+            if "PhaseJump" not in self.components:
+                log.info("PhaseJump component added")
+                a = jump.PhaseJump()
+                a.setup()
+                self.add_component(a)
+                self.remove_param("JUMP1")
+            # take jumps in TOA table and add them as parameters to the model
+            for num in flag_dict["jump"]:
+                if "JUMP" + str(num) not in self.params:
                     param = maskParameter(
                         name="JUMP",
-                        index=int(np.nanmax(jump_nums) + 1),
-                        key="jump",
-                        key_value=int(np.nanmax(jump_nums) + 1),
+                        index=num,
+                        key="-tim_jump",
+                        key_value=num,
                         value=0.0,
                         units="second",
                         uncertainty=0.0,
                     )
                     self.add_param_from_top(param, "PhaseJump")
                     getattr(self, param.name).frozen = False
-        # convert string list key_value from file into int list for jumps
-        # previously added thru pintk
-        for flag_dict in toas.table["flags"]:
-            if "gui_jump" in flag_dict.keys():
-                num = flag_dict["gui_jump"]
-                jump = getattr(self.components["PhaseJump"], "JUMP" + str(num))
-                jump.key_value = list(map(int, jump.key_value))
+                flag_dict["tim_jump"] = str(
+                    num
+                )  # this is the value select_toa_mask uses
+        self.components["PhaseJump"].setup()
+
+    def delete_jump_and_flags(self, toa_table, jump_num):
+        """Delete jump object from PhaseJump and remove its flags from TOA table
+        (helper function for pintk).
+
+        Parameters
+        ----------
+        toa_table: list or None
+            The TOA table which must be modified. In pintk (pulsar.py), for the
+            prefit model, this will be all_toas.table["flags"].
+            For the postfit model, it will be None (one set of TOA tables for both
+            models).
+        jump_num: int
+            Specifies the index of the jump to be deleted.
+        """
+        # remove jump of specified index
+        self.remove_param("JUMP" + str(jump_num))
+
+        # remove jump flags from selected TOA tables
+        if toa_table is not None:
+            for d in toa_table:
+                if "jump" in d:
+                    index_list = d["jump"].split(",")
+                    if str(jump_num) in index_list:
+                        del index_list[index_list.index(str(jump_num))]
+                        if not index_list:
+                            del d["jump"]
+                        else:
+                            d["jump"] = ",".join(index_list)
+
+        # if last jump deleted, remove PhaseJump object from model
+        if (
+            self.components["PhaseJump"].get_number_of_jumps() == 1
+        ):  # means last jump just deleted
+            comp_list = getattr(self, "PhaseComponent_list")
+            for item in comp_list:
+                if isinstance(item, pint.models.jump.PhaseJump):
+                    self.remove_component(item)
+            return
         self.components["PhaseJump"].setup()
 
     def get_barycentric_toas(self, toas, cutoff_component=""):
@@ -1303,7 +1459,7 @@ class TimingModel:
 
         Return
         ------
-        astropy.Quantity
+        astropy.units.Quantity
             Barycentered TOAs.
         """
         tbl = toas.table
@@ -1316,21 +1472,21 @@ class TimingModel:
         return tbl["tdbld"] * u.day - corr
 
     def d_phase_d_toa(self, toas, sample_step=None):
-        """Return the derivative of phase wrt TOA.
+        """Return the finite-difference derivative of phase wrt TOA.
 
         Parameters
         ----------
-        toas : PINT TOAs class
+        toas : pint.toa.TOAs
             The toas when the derivative of phase will be evaluated at.
-        sample_step : float optional
-            Finite difference steps. If not specified, it will take 1/10 of the
+        sample_step : float, optional
+            Finite difference steps. If not specified, it will take 1000 times the
             spin period.
-
         """
         copy_toas = copy.deepcopy(toas)
         if sample_step is None:
             pulse_period = 1.0 / (self.F0.quantity)
-            sample_step = pulse_period * 1000
+            sample_step = pulse_period * 2
+        # Note that sample_dt is applied cumulatively, so this evaulates phase at TOA-dt and TOA+dt
         sample_dt = [-sample_step, 2 * sample_step]
 
         sample_phase = []
@@ -1353,13 +1509,42 @@ class TimingModel:
 
         NOT implemented yet.
         """
-        pass
+        raise NotImplementedError
 
     def d_phase_d_param(self, toas, delay, param):
-        """Return the derivative of phase with respect to the parameter."""
+        """Return the derivative of phase with respect to the parameter.
+
+        This is the derivative of the phase observed at each TOA with
+        respect to each parameter. This is closely related to the derivative
+        of residuals with respect to each parameter, differing only by a
+        factor of the spin frequency and possibly a minus sign. See
+        :meth:`pint.models.timing_model.TimingModel.designmatrix` for a way
+        of evaluating many derivatives at once.
+
+        The calculation is done by combining the analytical derivatives
+        reported by all the components in the model.
+
+        Parameters
+        ----------
+        toas : pint.toa.TOAs
+            The TOAs at which the derivative should be evaluated.
+        delay : astropy.units.Quantity or None
+            The delay at the TOAs where the derivatives should be evaluated.
+            This permits certain optimizations in the derivative calculations;
+            the value should be ``self.delay(toas)``.
+        param : str
+            The name of the parameter to differentiate with respect to.
+
+        Returns
+        -------
+        astropy.units.Quantity
+            The derivative of observed phase with respect to the model parameter.
+        """
         # TODO need to do correct chain rule stuff wrt delay derivs, etc
         # Is it safe to assume that any param affecting delay only affects
         # phase indirectly (and vice-versa)??
+        if delay is None:
+            delay = self.delay(toas)
         par = getattr(self, param)
         result = np.longdouble(np.zeros(toas.ntoas)) / par.units
         phase_derivs = self.phase_deriv_funcs
@@ -1482,10 +1667,42 @@ class TimingModel:
     def designmatrix(self, toas, acc_delay=None, incfrozen=False, incoffset=True):
         """Return the design matrix.
 
-        The design matrix is the matrix with columns of d_phase_d_param/F0
-        or d_toa_d_param; it is used in fitting and calculating parameter
+        The design matrix is the matrix with columns of ``d_phase_d_param/F0``
+        or ``d_toa_d_param``; it is used in fitting and calculating parameter
         covariances.
 
+        The value of ``F0`` used here is the parameter value in the model.
+
+        The order of parameters that are included is that returned by
+        ``self.params``.
+
+        Parameters
+        ----------
+        toas : pint.toa.TOAs
+            The TOAs at which to compute the design matrix.
+        acc_delay
+            ???
+        incfrozen : bool
+            Whether to include frozen parameters in the design matrix
+        incoffset : bool
+            Whether to include the constant offset in the design matrix
+
+        Returns
+        -------
+        M : array
+            The design matrix, with shape (len(toas), len(self.free_params)+1)
+        names : list of str
+            The names of parameters in the corresponding parts of the design matrix
+        units : astropy.units.Unit
+            The units of the corresponding parts of the design matrix
+
+        Note
+        ----
+        Here we have negative sign here. Since in pulsar timing
+        the residuals are calculated as (Phase - int(Phase)), which is different
+        from the conventional definition of least square definition (Data - model)
+        We decide to add minus sign here in the design matrix, so the fitter
+        keeps the conventional way.
         """
         params = ["Offset"] if incoffset else []
         params += [
@@ -1493,7 +1710,7 @@ class TimingModel:
         ]
 
         F0 = self.F0.quantity  # 1/sec
-        ntoas = toas.ntoas
+        ntoas = len(toas)
         nparams = len(params)
         delay = self.delay(toas)
         units = []
@@ -1505,27 +1722,23 @@ class TimingModel:
         M = np.zeros((ntoas, nparams))
         for ii, param in enumerate(params):
             if param == "Offset":
-                M[:, ii] = 1.0
+                M[:, ii] = 1.0 / F0.value
                 units.append(u.s / u.s)
             else:
-                # NOTE Here we have negative sign here. Since in pulsar timing
-                # the residuals are calculated as (Phase - int(Phase)), which is different
-                # from the conventional definition of least square definition (Data - model)
-                # We decide to add minus sign here in the design matrix, so the fitter
-                # keeps the conventional way.
                 q = -self.d_phase_d_param(toas, delay, param)
-                M[:, ii] = q
-                units.append(u.Unit("") / getattr(self, param).units)
-        mask = []
-        for ii, un in enumerate(units):
-            if params[ii] == "Offset":
-                continue
-            units[ii] = un * u.second
-            mask.append(ii)
-        M[:, mask] /= F0.value
+                the_unit = u.Unit("") / getattr(self, param).units
+                M[:, ii] = q.to_value(the_unit) / F0.value
+                units.append(the_unit / F0.unit)
         return M, params, units
 
-    def compare(self, othermodel, nodmx=True, threshold_sigma=3.0, verbosity="max"):
+    def compare(
+        self,
+        othermodel,
+        nodmx=True,
+        threshold_sigma=3.0,
+        unc_rat_threshold=1.05,
+        verbosity="max",
+    ):
         """Print comparison with another model
 
         Parameters
@@ -1538,13 +1751,17 @@ class TimingModel:
         threshold_sigma : float
             Pulsar parameters for which diff_sigma > threshold will be printed
             with an exclamation point at the end of the line
+        unc_rat_threshold : float
+            Pulsar parameters for which the uncertainty has increased by a
+            factor of unc_rat_threshold will be printed with an asterisk at
+            the end of the line
         verbosity : string
             Dictates amount of information returned. Options include "max",
             "med", and "min", which have the following results:
                 "max"     - print all lines from both models whether they are fit or not (note that nodmx will override this); DEFAULT
                 "med"     - only print lines for parameters that are fit
                 "min"     - only print lines for fit parameters for which diff_sigma > threshold
-                "check"   - only print significant changes with astropy.log.warning, not as string (note that all other modes will still print this)
+                "check"   - only print significant changes with logging.warning, not as string (note that all other modes will still print this)
 
         Returns
         -------
@@ -1562,7 +1779,7 @@ class TimingModel:
 
         Note
         ----
-            Prints astropy.log warnings for parameters that have changed significantly
+            Prints logging warnings for parameters that have changed significantly
             and/or have increased in uncertainty.
         """
         import sys
@@ -1571,15 +1788,25 @@ class TimingModel:
         import uncertainties.umath as um
         from uncertainties import ufloat
 
+        if self.name != "":
+            model_name = self.name.split("/")[-1]
+        else:
+            model_name = "Model 1"
+        if othermodel.name != "":
+            other_model_name = othermodel.name.split("/")[-1]
+        else:
+            other_model_name = "Model 2"
+
         s = "{:14s} {:>28s} {:>28s} {:14s} {:14s}\n".format(
-            "PARAMETER", "Model 1", "Model 2 ", "Diff_Sigma1", "Diff_Sigma2"
+            "PARAMETER", model_name, other_model_name, "Diff_Sigma1", "Diff_Sigma2"
         )
         s += "{:14s} {:>28s} {:>28s} {:14s} {:14s}\n".format(
             "---------", "----------", "----------", "----------", "----------"
         )
         log.info("Comparing ephemerides for PSR %s" % self.PSR.value)
-        log.info("Threshold sigma = %f" % threshold_sigma)
-        log.info("Creating a copy of Model 2")
+        log.info("Threshold sigma = %2.2f" % threshold_sigma)
+        log.info("Threshold uncertainty ratio = %2.2f" % unc_rat_threshold)
+        log.info("Creating a copy of model from %s" % other_model_name)
         if verbosity == "max":
             log.info("Maximum verbosity - printing all parameters")
         elif verbosity == "med":
@@ -1589,7 +1816,7 @@ class TimingModel:
                 "Minimum verbosity - printing parameters that are fit and significantly changed"
             )
         elif verbosity == "check":
-            log.info("Check verbosity - only warnings/info with be displayed")
+            log.info("Check verbosity - only warnings/info will be displayed")
         othermodel = cp(othermodel)
 
         if (
@@ -1600,22 +1827,30 @@ class TimingModel:
                 self.POSEPOCH.value is not None
                 and self.POSEPOCH.value != othermodel.POSEPOCH.value
             ):
-                log.info("Updating POSEPOCH in Model 2 to match Model 1")
+                log.info(
+                    "Updating POSEPOCH in %s to match %s"
+                    % (other_model_name, model_name)
+                )
                 othermodel.change_posepoch(self.POSEPOCH.value)
         if "PEPOCH" in self.params_ordered and "PEPOCH" in othermodel.params_ordered:
             if (
                 self.PEPOCH.value is not None
                 and self.PEPOCH.value != othermodel.PEPOCH.value
             ):
-                log.info("Updating PEPOCH in Model 2 to match Model 1")
+                log.info(
+                    "Updating PEPOCH in %s to match %s" % (other_model_name, model_name)
+                )
                 othermodel.change_pepoch(self.PEPOCH.value)
         if "DMEPOCH" in self.params_ordered and "DMEPOCH" in othermodel.params_ordered:
             if (
                 self.DMEPOCH.value is not None
                 and self.DMEPOCH.value != othermodel.DMEPOCH.value
             ):
-                log.info("Updating DMEPOCH in Model 2 to match Model 1")
-                othermodel.change_posepoch(self.DMEPOCH.value)
+                log.info(
+                    "Updating DMEPOCH in %s to match %s"
+                    % (other_model_name, model_name)
+                )
+                othermodel.change_dmepoch(self.DMEPOCH.value)
         for pn in self.params_ordered:
             par = getattr(self, pn)
             if par.value is None:
@@ -1627,7 +1862,7 @@ class TimingModel:
                 otherpar = None
             if isinstance(par, strParameter):
                 newstr += "{:14s} {:>28s}".format(pn, par.value)
-                if otherpar is not None:
+                if otherpar is not None and otherpar.value is not None:
                     newstr += " {:>28s}\n".format(otherpar.value)
                 else:
                     newstr += " {:>28s}\n".format("Missing")
@@ -1635,8 +1870,13 @@ class TimingModel:
                 if par.frozen:
                     # If not fitted, just print both values
                     newstr += "{:14s} {:>28s}".format(pn, str(par.quantity))
-                    if otherpar is not None:
+                    if otherpar is not None and otherpar.quantity is not None:
                         newstr += " {:>28s}\n".format(str(otherpar.quantity))
+                        if otherpar.quantity != par.quantity:
+                            log.info(
+                                "Parameter %s not fit, but has changed between these models"
+                                % par.name
+                            )
                     else:
                         newstr += " {:>28s}\n".format("Missing")
                 else:
@@ -1664,9 +1904,9 @@ class TimingModel:
                                 newstr += " {:>28s}".format("Missing")
                     else:
                         newstr += " {:>28s}".format("Missing")
-                    try:
-                        diff = otherpar.value - par.value
-                        diff_sigma = diff / par.uncertainty.value
+                    if otherpar is not None and otherpar.quantity is not None:
+                        diff = otherpar.quantity - par.quantity
+                        diff_sigma = (diff / par.uncertainty).decompose()
                         if abs(diff_sigma) != np.inf:
                             newstr += " {:>10.2f}".format(diff_sigma)
                             if abs(diff_sigma) > threshold_sigma:
@@ -1675,19 +1915,22 @@ class TimingModel:
                                 newstr += "  "
                         else:
                             newstr += "           "
-                        diff_sigma2 = diff / otherpar.uncertainty.value
+                        diff_sigma2 = (diff / otherpar.uncertainty).decompose()
                         if abs(diff_sigma2) != np.inf:
                             newstr += " {:>10.2f}".format(diff_sigma2)
                             if abs(diff_sigma2) > threshold_sigma:
                                 newstr += " !"
-                    except (AttributeError, TypeError):
-                        pass
+                    # except (AttributeError, TypeError):
+                    #    pass
                     if otherpar is not None:
                         if (
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
                         ):
-                            if 1.01 * par.uncertainty < otherpar.uncertainty:
+                            if (
+                                unc_rat_threshold * par.uncertainty
+                                < otherpar.uncertainty
+                            ):
                                 newstr += " *"
                     newstr += "\n"
             else:
@@ -1705,33 +1948,47 @@ class TimingModel:
                         except (ValueError, AttributeError):
                             newstr += " {:28f}".format(otherpar.value)
                         if otherpar.value != par.value:
-                            sys.stdout.flush()
-                            if par.name == "START" or par.name == "FINISH":
+                            if par.name in ["START", "FINISH", "CHI2", "NTOA"]:
+                                if verbosity == "max":
+                                    log.info(
+                                        "Parameter %s has changed between these models"
+                                        % par.name
+                                    )
+                            elif isinstance(par, boolParameter):
+                                if otherpar.value is True:
+                                    status = "ON"
+                                else:
+                                    status = "OFF"
                                 log.info(
-                                    "Parameter %s not fit, but has changed between these models"
-                                    % par.name
+                                    "Parameter %s has changed between these models (turned %s in %s)"
+                                    % (par.name, status, other_model_name)
                                 )
                             else:
                                 log.warning(
                                     "Parameter %s not fit, but has changed between these models"
                                     % par.name
                                 )
-                            log.handlers[0].flush()
-                            newstr += " !"
+                                newstr += " !"
                         if (
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
                         ):
-                            if 1.01 * par.uncertainty < otherpar.uncertainty:
+                            if (
+                                par.uncertainty * unc_rat_threshold
+                                < otherpar.uncertainty
+                            ):
                                 newstr += " *"
                         newstr += "\n"
                     else:
                         newstr += " {:>28s}\n".format("Missing")
                 else:
                     # If fitted, print both values with uncertainties
-                    newstr += "{:14s} {:28SP}".format(
-                        pn, ufloat(par.value, par.uncertainty.value)
-                    )
+                    if par.uncertainty is not None:
+                        newstr += "{:14s} {:28SP}".format(
+                            pn, ufloat(par.value, par.uncertainty.value)
+                        )
+                    else:
+                        newstr += "{:14s} {:28f}".format(pn, float(par.value))
                     if otherpar is not None and otherpar.value is not None:
                         try:
                             newstr += " {:28SP}".format(
@@ -1746,55 +2003,55 @@ class TimingModel:
                     else:
                         newstr += " {:>28s}".format("Missing")
                     if "Missing" in newstr:
-                        ind = np.where(np.array(newstr.split()) == "Missing")[0][0]
-                        log.info("Parameter %s missing from model %i" % (par.name, ind))
-                    try:
-                        diff = otherpar.value - par.value
-                        diff_sigma = diff / par.uncertainty.value
-                        if abs(diff_sigma) != np.inf:
-                            newstr += " {:>10.2f}".format(diff_sigma)
-                            if abs(diff_sigma) > threshold_sigma:
-                                newstr += " !"
-                        else:
-                            newstr += "           "
-                        diff_sigma2 = diff / otherpar.uncertainty.value
-                        if abs(diff_sigma2) != np.inf:
-                            newstr += " {:>10.2f}".format(diff_sigma2)
-                            if abs(diff_sigma2) > threshold_sigma:
-                                newstr += " !"
-                    except (AttributeError, TypeError):
-                        pass
-                    if otherpar is not None:
+                        ind = np.where(np.array(newstr.split()) == "Missing")[0][0] - 1
+                        models = [model_name, other_model_name]
+                        log.info(
+                            "Parameter %s missing from %s" % (par.name, models[ind])
+                        )
+                    if otherpar is not None and otherpar.value is not None:
+                        try:
+                            diff = otherpar.value - par.value
+                            diff_sigma = diff / par.uncertainty.value
+                            if abs(diff_sigma) != np.inf:
+                                newstr += " {:>10.2f}".format(diff_sigma)
+                                if abs(diff_sigma) > threshold_sigma:
+                                    newstr += " !"
+                            else:
+                                newstr += "           "
+                            diff_sigma2 = diff / otherpar.uncertainty.value
+                            if abs(diff_sigma2) != np.inf:
+                                newstr += " {:>10.2f}".format(diff_sigma2)
+                                if abs(diff_sigma2) > threshold_sigma:
+                                    newstr += " !"
+                        except (AttributeError, TypeError):
+                            pass
                         if (
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
                         ):
-                            if par.uncertainty < otherpar.uncertainty:
+                            if (
+                                par.uncertainty * unc_rat_threshold
+                                < otherpar.uncertainty
+                            ):
                                 newstr += " *"
                     newstr += "\n"
 
             if "!" in newstr and not par.frozen:
                 try:
-                    sys.stdout.flush()
                     log.warning(
                         "Parameter %s has changed significantly (%f sigma)"
                         % (newstr.split()[0], float(newstr.split()[-2]))
                     )
-                    log.handlers[0].flush()
                 except ValueError:
-                    sys.stdout.flush()
                     log.warning(
                         "Parameter %s has changed significantly (%f sigma)"
                         % (newstr.split()[0], float(newstr.split()[-3]))
                     )
-                    log.handlers[0].flush()
             if "*" in newstr:
-                sys.stdout.flush()
                 log.warning(
                     "Uncertainty on parameter %s has increased (unc2/unc1 = %2.2f)"
                     % (newstr.split()[0], float(otherpar.uncertainty / par.uncertainty))
                 )
-                log.handlers[0].flush()
 
             if verbosity == "max":
                 s += newstr
@@ -1821,7 +2078,7 @@ class TimingModel:
                 otherpar = None
             if otherpar.value is None:
                 continue
-            log.info("Parameter %s missing from model 1" % opn)
+            log.info("Parameter %s missing from %s" % (opn, model_name))
             if verbosity == "max":
                 s += "{:14s} {:>28s}".format(opn, "Missing")
                 s += " {:>28s}".format(str(otherpar.quantity))
@@ -1829,123 +2086,69 @@ class TimingModel:
         if verbosity != "check":
             return s.split("\n")
 
-    def read_parfile(self, file, validate=True):
-        """Read values from the specified parfile into the model parameters.
+    def use_aliases(self, reset_to_default=True, alias_translation=None):
+        """Set the parameters to use aliases as specified upon writing.
 
         Parameters
         ----------
-        file : str or list or file-like
-            The parfile to read from. May be specified as a filename,
-            a list of lines, or a readable file-like object.
+        reset_to_default : bool
+            If True, forget what name was used for each parameter in the input par file.
+        alias_translation : dict or None
+            If not None, use this to map PINT parameter names to output names. This overrides
+            input names even if they are not otherwise being reset to default.
+            This is to allow compatibility with TEMPO/TEMPO2. The dictionary
+            ``pint.toa.tempo_aliases`` should provide a reasonable selection.
         """
-        repeat_param = defaultdict(int)
-        param_map = self.get_params_mapping()
-        comps = self.components.copy()
-        comps["timing_model"] = self
-        wants_tcb = None
-        stray_lines = []
-        for li in interesting_lines(lines_of(file), comments=("#", "C ")):
-            k = li.split()
-            name = k[0].upper()
-
-            if name == "UNITS":
-                if name in repeat_param:
-                    raise ValueError("UNITS is repeated in par file")
+        for p in self.params:
+            po = getattr(self, p)
+            if reset_to_default:
+                po.use_alias = None
+            if alias_translation is not None:
+                if hasattr(po, "origin_name"):
+                    try:
+                        po.use_alias = alias_translation[po.origin_name]
+                    except KeyError:
+                        pass
                 else:
-                    repeat_param[name] += 1
-                if len(k) > 1 and k[1] == "TDB":
-                    wants_tcb = False
-                else:
-                    wants_tcb = li
-                self.UNITS.value = k[1]
-                continue
-
-            if name == "EPHVER":
-                if len(k) > 1 and k[1] != "2" and wants_tcb is None:
-                    wants_tcb = li
-                log.warning("EPHVER %s does nothing in PINT" % k[1])
-                # actually people expect EPHVER 5 to work
-                # even though it's supposed to imply TCB which doesn't
-                continue
-
-            if name == "START":
-                if name in repeat_param:
-                    raise ValueError("START is repeated in par file")
-                self.START.value = k[1]
-                continue
-
-            if name == "FINISH":
-                if name in repeat_param:
-                    raise ValueError("FINISH is repeated in par file")
-                self.FINISH.value = k[1]
-                continue
-
-            repeat_param[name] += 1
-            if repeat_param[name] > 1:
-                k[0] = k[0] + str(repeat_param[name])
-                li = " ".join(k)
-
-            used = []
-            for p, c in param_map.items():
-                if getattr(comps[c], p).from_parfile_line(li):
-                    used.append((c, p))
-            if len(used) > 1:
-                log.warning(
-                    "More than one component made use of par file "
-                    "line {!r}: {}".format(li, used)
-                )
-            if used:
-                continue
-
-            if name in ignore_params:
-                log.debug("Ignoring parfile line '%s'" % (li,))
-                continue
-
-            try:
-                prefix, f, v = split_prefixed_name(name)
-                if prefix in ignore_prefix:
-                    log.debug("Ignoring prefix parfile line '%s'" % (li,))
-                    continue
-            except PrefixError:
-                pass
-
-            stray_lines.append(li)
-
-        if wants_tcb:
-            raise ValueError(
-                "Only UNITS TDB supported by PINT but parfile has {}".format(wants_tcb)
-            )
-        if stray_lines:
-            for l in stray_lines:
-                log.warning("Unrecognized parfile line {!r}".format(l))
-            for name, param in getattr(self, "discarded_components", []):
-                log.warning(
-                    "Model component {} was rejected because we "
-                    "didn't find parameter {}".format(name, param)
-                )
-            # Disable here for now. TODO  need to modified.
-            # log.info("Final object: {}".format(repr(self)))
-
-        self.setup()
-        # The "validate" functions contain tests for required parameters or
-        # combinations of parameters, etc, that can only be done
-        # after the entire parfile is read
-        if validate:
-            self.validate()
+                    try:
+                        po.use_alias = alias_translation[p]
+                    except KeyError:
+                        pass
 
     def as_parfile(
         self,
         start_order=["astrometry", "spindown", "dispersion"],
         last_order=["jump_delay"],
+        *,
+        include_info=True,
+        comment=None,
     ):
-        """Represent the entire model as a parfile string."""
+        """Represent the entire model as a parfile string.
+
+        Parameters
+        ----------
+        start_order : list
+            Categories to include at the beginning
+        last_order : list
+            Categories to include at the end
+        include_info : bool, optional
+            Include information string if True
+        comment : str, optional
+            Additional comment string to include in parfile
+        """
         self.validate()
-        result_begin = ""
+        if include_info:
+            info_string = pint.utils.info_string(prefix_string="# ", comment=comment)
+            result_begin = info_string + "\n"
+        else:
+            result_begin = ""
         result_end = ""
         result_middle = ""
         cates_comp = self.get_components_by_category()
         printed_cate = []
         for p in self.top_level_params:
+            if p == "BINARY":  # Will print the Binary model name in the binary section
+                continue
             result_begin += getattr(self, p).as_parfile_line()
         for cat in start_order:
             if cat in list(cates_comp.keys()):
@@ -2040,6 +2243,62 @@ class TimingModel:
         for p in self.params:
             yield p
 
+    def as_ECL(self, epoch=None, ecl="IERS2010"):
+        """Return TimingModel in PulsarEcliptic frame.
+
+        Parameters
+        ----------
+        epoch : `astropy.time.Time` or Float, optional
+            new epoch for position.  If Float, MJD(TDB) is assumed.
+            Note that uncertainties are not adjusted.
+        ecl : str, optional
+            Obliquity for PulsarEcliptic frame
+
+        Returns
+        -------
+        pint.models.timing_model.TimingModel
+            In PulsarEcliptic frame
+        """
+        if "AstrometryEquatorial" in self.components:
+            astrometry_model_type = "AstrometryEquatorial"
+        elif "AstrometryEcliptic" in self.components:
+            astrometry_model_type = "AstrometryEcliptic"
+        astrometry_model_component = self.components[astrometry_model_type]
+        new_astrometry_model_component = astrometry_model_component.as_ECL(
+            epoch=epoch, ecl=ecl
+        )
+        new_model = copy.deepcopy(self)
+        new_model.remove_component(astrometry_model_type)
+        new_model.add_component(new_astrometry_model_component)
+        return new_model
+
+    def as_ICRS(self, epoch=None):
+        """Return TimingModel in ICRS frame.
+
+        Parameters
+        ----------
+        epoch : `astropy.time.Time` or Float, optional
+            new epoch for position.  If Float, MJD(TDB) is assumed.
+            Note that uncertainties are not adjusted.
+
+        Returns
+        -------
+        pint.models.timing_model.TimingModel
+            In ICRS frame
+        """
+        if "AstrometryEquatorial" in self.components:
+            astrometry_model_type = "AstrometryEquatorial"
+        elif "AstrometryEcliptic" in self.components:
+            astrometry_model_type = "AstrometryEcliptic"
+        astrometry_model_component = self.components[astrometry_model_type]
+        new_astrometry_model_component = astrometry_model_component.as_ICRS(
+            epoch=epoch,
+        )
+        new_model = copy.deepcopy(self)
+        new_model.remove_component(astrometry_model_type)
+        new_model.add_component(new_astrometry_model_component)
+        return new_model
+
 
 class ModelMeta(abc.ABCMeta):
     """Ensure timing model registration.
@@ -2060,16 +2319,23 @@ class ModelMeta(abc.ABCMeta):
 
 
 class Component(object, metaclass=ModelMeta):
-    """A base class for timing model components."""
+    """Timing model components.
 
-    component_types = {}
-    """An index of all registered subtypes.
-
+    When such a class is defined, it registers itself in
+    ``Component.component_types`` so that it can be found and used
+    when parsing par files.
     Note that classes are registered when their modules are imported,
     so ensure all classes of interest are imported before this list
     is checked.
 
+    These objects can be constructed with no particular values, but
+    their `.setup()` and `.validate()` methods should be called
+    before using them to compute anything. These should check
+    parameter values for validity, raising an exception if
+    invalid parameter values are chosen.
     """
+
+    component_types = {}
 
     def __init__(self):
         self.params = []
@@ -2129,27 +2395,23 @@ class Component(object, metaclass=ModelMeta):
                     prefixs[par.prefix].append(p)
         return prefixs
 
-    def get_prefix_mapping(self, prefix):
-        """Get the index mapping for the prefix parameters.
+    @property_exists
+    def aliases_map(self):
+        """Return all the aliases and map to the PINT parameter name.
 
-        Parameters
-        ----------
-        prefix : str
-           Name of prefix.
-
-        Returns
-        -------
-        dict
-           A dictionary with prefix pararameter real index as key and parameter
-           name as value.
+        This property returns a dictionary from the current in timing model
+        parameters' aliase to the pint defined parameter names. For the aliases
+        of a prefixed parameter, the aliase with an existing prefix index maps
+        to the PINT defined parameter name with the same index. Behind the scenes,
+        the indexed parameter adds the indexed aliase to its aliase list.  
         """
-        parnames = [x for x in self.params if x.startswith(prefix)]
-        mapping = dict()
-        for parname in parnames:
-            par = getattr(self, parname)
-            if par.is_prefix and par.prefix == prefix:
-                mapping[par.index] = parname
-        return mapping
+        ali_map = {}
+        for p in self.params:
+            par = getattr(self, p)
+            ali_map[p] = p
+            for ali in par.aliases:
+                ali_map[ali] = p
+        return ali_map
 
     def add_param(self, param, deriv_func=None, setup=False):
         """Add a parameter to the Component.
@@ -2290,16 +2552,57 @@ class Component(object, metaclass=ModelMeta):
             par = getattr(self, parname)
             if par.is_prefix and par.prefix == prefix:
                 mapping[par.index] = parname
-        return mapping
+        return OrderedDict(sorted(mapping.items()))
 
     def match_param_aliases(self, alias):
-        """Return the parameter corresponding to this alias."""
-        for p in self.params:
-            if p == alias:
-                return p
-            if alias in getattr(self, p).aliases:
-                return p
-        raise ValueError("{} is not recognized as a parameter or alias".format(p))
+        """Return the parameter corresponding to this alias.
+
+        Parameter
+        ---------
+        alias: str
+            Alias name.
+
+        Note
+        ----
+        This function only searches the parameter aliases within the current
+        component. If one wants to search the aliases in the scope of TimingModel,
+        please use :py:meth:`TimingModel.match_param_aliase`.
+        """
+        pname = self.aliases_map.get(alias, None)
+        # Split the alias prefix, see if it is a perfix alias
+        try:
+            prefix, idx_str, idx = split_prefixed_name(alias)
+        except PrefixError:  # Not a prefixed name
+            if pname is not None:
+                par = getattr(self, pname)
+                if par.is_prefix:
+                    raise UnknownParameter(
+                        f"Prefix {alias} maps to mulitple parameters"
+                        ". Please specify the index as well."
+                    )
+            else:
+                # Not a prefix, not an alias
+                raise UnknownParameter(f"Unknown parameter name or alias {alias}")
+        # When the alias is a prefixed name but not in the parameter list yet
+        if pname is None:
+            prefix_pname = self.aliases_map.get(prefix, None)
+            if prefix_pname:
+                par = getattr(self, prefix_pname)
+                if par.is_prefix:
+                    raise UnknownParameter(
+                        f"Found a similar prefixed parameter '{prefix_pname}'"
+                        f" But parameter {par.prefix}{idx} need to be added"
+                        f" to the model."
+                    )
+                else:
+                    raise UnknownParameter(
+                        f"{par} is not a prefixed parameter, howere the input"
+                        f" {alias} has index with it."
+                    )
+            else:
+                raise UnknownParameter(f"Unknown parameter name or alias {alias}")
+        else:
+            return pname
 
     def register_deriv_funcs(self, func, param):
         """Register the derivative function in to the deriv_func dictionaries.
@@ -2410,6 +2713,311 @@ class PhaseComponent(Component):
         self.phase_derivs_wrt_delay = []
 
 
+class AllComponents:
+    """ A class for the components pool.
+
+    This object stores and manages the instances of component classes with class
+    attribute .register = True. This includes the PINT built-in components and
+    user defined components and there is no need to import the component class.
+    This class constructs the available component instances, but without any
+    valid parameter values (parameters are initialized when a component instance
+    gets constructed, however, the parameter values are unknown to the components
+    at the moment). Thus, runing `.validate()` function in the component instance
+    will fail. This class is designed for helping model building and parameter
+    seraching, not for direct data analysis.
+
+    Note
+    ----
+    This is a low level class for managing all the components. To build a timing
+    model, we recommend to use the subclass `models.model_builder.ModelBuilder`,
+    where higher level interface are provided. If one wants to use this class
+    directly, one has to construct the instance separately.
+    """
+
+    def __init__(self):
+        self.components = {}
+        for k, v in Component.component_types.items():
+            self.components[k] = v()
+
+    @lazyproperty
+    def param_component_map(self):
+        """Return the parameter to component map.
+
+        This property returns the all PINT defined parameters to their host
+        components. The parameter aliases are not included in this map. If
+        searching the host component for a parameter alias, pleaase use
+        `alias_to_pint_param` method to translate the alias to PINT parameter
+        name first.
+        """
+        p2c_map = defaultdict(list)
+        for k, cp in self.components.items():
+            for p in cp.params:
+                p2c_map[p].append(k)
+                # Add alias
+                par = getattr(cp, p)
+                for ap in par.aliases:
+                    p2c_map[ap].append(k)
+        tm = TimingModel()
+        for tp in tm.params:
+            p2c_map[tp].append("timing_model")
+            par = getattr(tm, tp)
+            for ap in par.aliases:
+                p2c_map[ap].append("timing_model")
+        return p2c_map
+
+    def _check_alias_conflict(self, alias, param_name, alias_map):
+        """Check if a aliase has conflict in the alias map.
+
+        This function checks if an alias already have record in the alias_map.
+        If there is a record, it will check if the record matches the given
+        paramter name, `param_name`. If not match, it will raise a AliasConflict
+        error.
+
+        Parameter
+        ---------
+        alias: str
+            The alias name that needs to check if it has entry in the alias_map.
+        param_name: str
+            The parameter name that a alias is going to be mapped to.
+
+        Raise
+        -----
+        AliasConflict
+            When the input alias has a record in the aliases map, but the record
+            does not match the input parameter name that is going to be mapped
+            to the input alias.
+        """
+        if alias in alias_map.keys():
+            if param_name == alias_map[alias]:
+                return
+            else:
+                raise AliasConflict(
+                    f"Alias {alias} has been used by" f" parameter {param_name}."
+                )
+        else:
+            return
+
+    @lazyproperty
+    def _param_alias_map(self):
+        """Return the aliases map of all parameters
+
+        The returned map includes: 1. alias to PINT parameter name. 2. PINT
+        parameter name to pint parameter name. 3.prefix to PINT parameter name.
+
+        Notes
+        -----
+        Please use `alias_to_pint_param` method to map an alias to a PINT parameter.
+        """
+        alias = {}
+        for k, cp in self.components.items():
+            for p in cp.params:
+                par = getattr(cp, p)
+                # Check if an existing record
+                self._check_alias_conflict(p, p, alias)
+                alias[p] = p
+                for als in par.aliases:
+                    self._check_alias_conflict(als, p, alias)
+                    alias[als] = p
+        tm = TimingModel()
+        for tp in tm.params:
+            par = getattr(tm, tp)
+            self._check_alias_conflict(tp, tp, alias)
+            alias[tp] = tp
+            for als in par.aliases:
+                self._check_alias_conflict(als, tp, alias)
+                alias[als] = tp
+        return alias
+
+    @lazyproperty
+    def repeatable_param(self):
+        """Return the repeatable parameter map.
+        """
+        repeatable = []
+        for k, cp in self.components.items():
+            for p in cp.params:
+                par = getattr(cp, p)
+                if par.repeatable:
+                    repeatable.append(p)
+                    repeatable.append(par._parfile_name)
+                    # also add the aliases to the repeatable param
+                    for als in par.aliases:
+                        repeatable.append(als)
+        return set(repeatable)
+
+    @lazyproperty
+    def category_component_map(self):
+        """A dictionary mapping category to a list of component names.
+
+        Return
+        ------
+        dict
+            The mapping from categories to the componens belongs to the categore.
+            The key is the categore name, and the value is a list of all the
+            components in the categore.
+        """
+        category = defaultdict(list)
+        for k, cp in self.components.items():
+            cat = cp.category
+            category[cat].append(k)
+        return category
+
+    @lazyproperty
+    def component_category_map(self):
+        """A dictionary mapping component name to its category name.
+
+        Return
+        ------
+        dict
+            The mapping from components to its categore. The key is the component
+            name and the value is the component's category name.
+        """
+        cp_ca = {}
+        for k, cp in self.components.items():
+            cp_ca[k] = cp.category
+        return cp_ca
+
+    @lazyproperty
+    def component_unique_params(self):
+        """Return the parameters that are only present in one component.
+
+        Return
+        ------
+        dict
+            A mapping from a component name to a list of parameters are only
+            in this component.
+
+        Note
+        ----
+        This function only returns the PINT defined parameter name, not
+        including the aliases.
+        """
+        component_special_params = defaultdict(list)
+        for param, cps in self.param_component_map.items():
+            if len(cps) == 1:
+                component_special_params[cps[0]].append(param)
+        return component_special_params
+
+    def search_binary_components(self, system_name):
+        """Search the pulsar binary component based on given name.
+
+        Parameters
+        ----------
+        system_name : str
+            Searching name for the pulsar binary/system
+
+        Return
+        ------
+        The matching binary model component instance.
+
+        Raises
+        ------
+        UnknownBinaryModel
+            If the input binary model name does not match any PINT defined binary
+            model.
+        """
+        all_systems = self.category_component_map["pulsar_system"]
+        # Search the system name first
+        if system_name in all_systems:
+            return self.components[system_name]
+        else:  # search for the pulsar system aliases
+            for cp_name in all_systems:
+                if system_name == self.components[cp_name].binary_model_name:
+                    return self.components[cp_name]
+            raise UnknownBinaryModel(
+                f"Pulsar system/Binary model component"
+                f" {system_name} is not provided."
+            )
+
+    def alias_to_pint_param(self, alias):
+        """Translate a alias to a PINT parameter name.
+
+        This is a wrapper function over the property ``_param_alias_map``. It
+        also handles the indexed parameters (e.g., `pint.models.parameter.prefixParameter`
+        and `pint.models.parameter.maskParameter`) with and index beyond currently
+        initialized.
+
+        Parameters
+        ----------
+        alias : str
+            Alias name to be translated
+
+        Returns
+        -------
+        pint_par : str
+            PINT parameter name the given alias maps to. If there is no matching
+            PINT parameters, it will raise a `UnknownParameter` error.
+        first_init_par : str
+            The parameter name that is first initialized in a component. If the
+            paramere is non-indexable, it is the same as ``pint_par``, otherwrise
+            it returns the parameter with the first index. For example, the
+            ``first_init_par`` for 'T2EQUAD25' is 'EQUAD1'
+
+        Notes
+        -----
+        Providing a indexable parameter without the index attached, it returns
+        the PINT parameter with first index (i.e. ``0`` or ``1``). If with index,
+        the function returns the matched parameter with the index provided.
+        The index format has to match the PINT defined index format. For instance,
+        if PINT defines a parameter using leading-zero indexing, the provided
+        index has to use the same leading-zeros, otherwrise, returns a `UnknownParameter`
+        error.
+
+        Examples
+        --------
+        >>> from pint.models.timing_model import AllComponents
+        >>> ac = AllComponents()
+        >>> ac.alias_to_pint_param('RA')
+        ('RAJ', 'RAJ')
+
+        >>> ac.alias_to_pint_param('T2EQUAD')
+        ('EQUAD1', 'EQUAD1')
+
+        >>> ac.alias_to_pint_param('T2EQUAD25')
+        ('EQUAD25', 'EQUAD1')
+
+        >>> ac.alias_to_pint_param('DMX_0020')
+        ('DMX_0020', 'DMX_0001')
+
+        >>> ac.alias_to_pint_param('DMX20')
+        UnknownParameter: Can not find matching PINT parameter for 'DMX020'
+
+        """
+        pint_par = self._param_alias_map.get(alias, None)
+        # If it is not in the map, double check if it is a repeatable par.
+        if pint_par is None:
+            try:
+                prefix, idx_str, idx = split_prefixed_name(alias)
+                # assume the index 1 parameter is in the alias map
+                # count length of idx_str and dectect leading zeros
+                # TODO fix the case for searching `DMX`
+                num_lzero = len(idx_str) - len(str(idx))
+                if num_lzero > 0:  # Has leading zero
+                    fmt = len(idx_str)
+                else:
+                    fmt = 0
+                first_init_par = None
+                # Handle the case of start index from 0 and 1
+                for start_idx in [0, 1]:
+                    first_init_par_alias = prefix + "{1:0{0}}".format(fmt, start_idx)
+                    first_init_par = self._param_alias_map.get(
+                        first_init_par_alias, None
+                    )
+                    if first_init_par:
+                        # Find the first init par move to the next step
+                        pint_par = split_prefixed_name(first_init_par)[0] + idx_str
+                        break
+            except PrefixError:
+                pint_par = None
+
+        else:
+            first_init_par = pint_par
+        if pint_par is None:
+            raise UnknownParameter(
+                "Can not find matching PINT parameter for '{}'".format(alias)
+            )
+        return pint_par, first_init_par
+
+
 class TimingModelError(ValueError):
     """Generic base class for timing model errors."""
 
@@ -2441,3 +3049,27 @@ class MissingParameter(TimingModelError):
         if self.msg is not None:
             result += "\n  " + self.msg
         return result
+
+
+class AliasConflict(TimingModelError):
+    """If the same alias is used for different parameters."""
+
+    pass
+
+
+class UnknownParameter(TimingModelError):
+    """ Signal that a parameter name does not match any PINT parameters and their aliases. """
+
+    pass
+
+
+class UnknownBinaryModel(TimingModelError):
+    """Signal that the par file requested a binary model no in PINT."""
+
+    pass
+
+
+class MissingBinaryError(TimingModelError):
+    """Error for missing BINARY parameter."""
+
+    pass

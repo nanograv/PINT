@@ -14,8 +14,13 @@ from pint.toa_select import TOASelect
 class SolarWindDispersion(Dispersion):
     """Dispersion due to the solar wind (basic model).
 
-    The model is a simple spherically-symmetric model that varies
-    only in its amplitude.
+    The model is a simple spherically-symmetric model that is fit
+    only in its constant amplitude.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.solar_wind_dispersion.SolarWindDispersion
 
     References
     ----------
@@ -74,6 +79,8 @@ class SolarWindDispersion(Dispersion):
 
         Uses equations 29, 30 of Edwards et al. 2006.
         """
+        if self.NE_SW.value == 0:
+            return np.zeros(len(toas)) * u.pc / u.cm ** 3
         if self.SWM.value == 0:
             solar_wind_geometry = self.solar_wind_geometry(toas)
             solar_wind_dm = self.NE_SW.quantity * solar_wind_geometry
@@ -86,6 +93,8 @@ class SolarWindDispersion(Dispersion):
 
     def solar_wind_delay(self, toas, acc_delay=None):
         """This is a wrapper function to compute solar wind dispersion delay."""
+        if self.NE_SW.value == 0:
+            return np.zeros(len(toas)) * u.s
         return self.dispersion_type_delay(toas)
 
     def d_dm_d_ne_sw(self, toas, param_name, acc_delay=None):

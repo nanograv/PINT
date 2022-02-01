@@ -1,16 +1,24 @@
 """Timing model absolute phase (TZRMJD, TZRSITE ...)"""
+import logging
+
 import astropy.units as u
-from astropy import log
 
 import pint.toa as toa
 from pint.models.parameter import MJDParameter, floatParameter, strParameter
 from pint.models.timing_model import MissingParameter, PhaseComponent
+
+log = logging.getLogger(__name__)
 
 
 class AbsPhase(PhaseComponent):
     """Absolute phase model.
 
     The model defines the absolute phase's reference time and observatory.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.absolute_phase.AbsPhase
 
     Note
     ----

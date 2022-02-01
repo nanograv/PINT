@@ -1,5 +1,6 @@
 """Work with Fermi TOAs."""
-from astropy import log
+import logging
+
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
 import astropy.units as u
@@ -8,6 +9,8 @@ import numpy as np
 import pint.toa as toa
 from pint.fits_utils import read_fits_event_mjds_tuples
 from pint.observatory import get_observatory
+
+log = logging.getLogger(__name__)
 
 __all__ = ["load_Fermi_TOAs"]
 
@@ -195,12 +198,21 @@ def load_Fermi_TOAs(
     )
     if weightcolumn is None:
         toalist = [
-            toa.TOA(m, obs=obs, scale=scale, energy=e, error=1.0 * u.us)
+            toa.TOA(
+                m, obs=obs, scale=scale, energy=str(e.to_value(u.MeV)), error=1.0 * u.us
+            )
             for m, e in zip(mjds, energies)
         ]
     else:
         toalist = [
-            toa.TOA(m, obs=obs, scale=scale, energy=e, weight=w, error=1.0 * u.us)
+            toa.TOA(
+                m,
+                obs=obs,
+                scale=scale,
+                energy=str(e.to_value(u.MeV)),
+                weight=str(w),
+                error=1.0 * u.us,
+            )
             for m, e, w in zip(mjds, energies, weights)
         ]
 

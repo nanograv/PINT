@@ -28,7 +28,7 @@ class TestD_phase_d_toa(unittest.TestCase):
         self.plc = Polycos()
         self.plc.read_polyco_file("B1855_polyco.dat", "tempo")
 
-    def TestD_phase_d_toa(self):
+    def testD_phase_d_toa(self):
         pint_d_phase_d_toa = self.modelB1855.d_phase_d_toa(self.toasB1855)
         mjd = np.array(
             [
@@ -39,7 +39,7 @@ class TestD_phase_d_toa(unittest.TestCase):
         tempo_d_phase_d_toa = self.plc.eval_spin_freq(mjd)
         diff = pint_d_phase_d_toa.value - tempo_d_phase_d_toa
         relative_diff = diff / tempo_d_phase_d_toa
-        assert np.all(relative_diff < 1e-8), "d_phae_d_toa test filed."
+        assert np.all(np.abs(relative_diff) < 1e-7), "d_phase_d_toa test failed."
 
 
 if __name__ == "__main__":

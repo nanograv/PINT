@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.10.2
+#       jupytext_version: 1.13.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -147,7 +147,6 @@ params = {
     "RAJ": ("17:48:52.75", 1, 0.05 * pint.hourangle_second),
     "DECJ": ("-20:21:29.0", 1, 0.4 * u.arcsec),
     "F0": (61.485476554 * u.Hz, 1, 5e-10 * u.Hz),
-    "F1": (-1.181e-15 * u.Hz / u.s, 1, 1e-18 * u.Hz / u.s),
     "PEPOCH": (Time(53750.000000, format="mjd", scale="tdb"),),
     "POSEPOCH": (Time(53750.000000, format="mjd", scale="tdb"),),
     "TZRMJD": (Time(53801.38605120074849, format="mjd", scale="tdb"),),
@@ -164,12 +163,13 @@ for name, info in params.items():
             par.frozen = False  # Frozen means not fit.
         par.uncertainty = info[2]
 # %% [markdown]
-# ### Validating the model
+# ### Set up and Validating the model
 #
-# Validating model checks if there is any important parameter values missing, and if the
-# parameters are assigned correctly. If there is anything not assigned correctly, it will raise an exception.
-
+# Setting up the model builds the necessary model attributes, and validating model checks if there is any
+# important parameter values missing, and if the parameters are assigned correctly. If there is anything
+# not assigned correctly, it will raise an exception.
 # %%
+tm.setup()
 tm.validate()
 # You should see all the assigned parameters.
 # Printing a TimingModel object shows the parfile representation
@@ -329,11 +329,16 @@ display(tm.params)
 display(tm.components["Spindown"].params)
 
 # %% [markdown]
-# Let us add `F2` to the model. `F2` needs a very high precision, we use longdouble=True flag to specify the `F2` value to be a longdouble type.
+# Let us add `F1` and `F2` to the model. Both `F1` and `F2` needs a very high
+# precision, we use longdouble=True flag to specify the `F2` value to be a longdouble type.
 #
 # Note, if we add `F3` directly without `F2`, the validation will fail.
 
 # %%
+f1 = p.prefixParameter(
+    parameter_type="float", name="F1", value=0.0, units=u.Hz / (u.s), longdouble=True
+)
+
 f2 = p.prefixParameter(
     parameter_type="float",
     name="F2",
@@ -343,6 +348,7 @@ f2 = p.prefixParameter(
 )
 
 # %%
+tm.components["Spindown"].add_param(f1, setup=True)
 tm.components["Spindown"].add_param(f2, setup=True)
 
 # %%
@@ -355,6 +361,8 @@ display(tm.params)
 # Now `F2` can be used in the timing model.
 
 # %%
+tm.F1.quantity = -1.181e-15 * u.Hz / u.s
+tm.F1.uncertainty = 1e-18 * u.Hz / u.s
 tm.F2.quantity = 2e-10 * u.Hz / u.s ** 2
 display(tm.F2)
 

@@ -11,17 +11,22 @@ These docstrings contain reference documentation; for tutorials, explanations,
 or how-to documentation, please see other sections of the online documentation.
 """
 
-import numpy as np
+import logging
+import os
+
 import astropy
 import astropy.constants as c
 import astropy.time as time
 import astropy.units as u
-from astropy import log
+import numpy as np
+import pkg_resources
 from astropy.units import si
+
 from pint.extern._version import get_versions
-from pint.pulsar_ecliptic import PulsarEcliptic  # ensure always loaded
-from pint.pulsar_mjd import PulsarMJD  # ensure always loaded
-import pint.pulsar_mjd
+from pint.pulsar_ecliptic import PulsarEcliptic
+from pint.pulsar_mjd import PulsarMJD, time_to_longdouble  # ensure always loaded
+
+log = logging.getLogger(__name__)
 
 __all__ = [
     "__version__",
@@ -82,7 +87,7 @@ Tneptune = Tsun / 19412.24
 
 # The Epoch J2000
 J2000 = time.Time("2000-01-01 12:00:00", scale="utc")
-J2000ld = pint.pulsar_mjd.time_to_longdouble(J2000)
+J2000ld = time_to_longdouble(J2000)
 JD_MJD = 2400000.5
 # PINT special units list
 pint_units = {

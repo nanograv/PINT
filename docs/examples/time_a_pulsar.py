@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.10.2
+#       jupytext_version: 1.13.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -16,7 +16,7 @@
 # %% [markdown]
 # # Time a pulsar
 #
-# This notebook walks through a simple pulsar timing session, as one might do with TEMPO/TEMPO2: load a `.par` file, load a `.tim` file, do a fit, plot the residuals before and after. This one also displays various additional information you might find useful, and also ignores but then plots TOAs with large uncertainties. Similar code is available as a standalone script at [`fit_NGC6440E.py`](https://github.com/nanograv/PINT/blob/master/docs/examples/fit_NGC6440E.py)
+# This notebook walks through a simple pulsar timing session, as one might do with TEMPO/TEMPO2: load a `.par` file, load a `.tim` file, do a fit, plot the residuals before and after. This one also displays various additional information you might find useful, and also ignores but then plots TOAs with large uncertainties. Similar code is available as a standalone script at [fit_NGC6440E.py](https://github.com/nanograv/PINT/blob/master/docs/examples/fit_NGC6440E.py)
 
 # %%
 import astropy.units as u
@@ -28,8 +28,10 @@ from pint.residuals import Residuals
 from pint.toa import get_TOAs
 
 # %%
-parfile = "NGC6440E.par"
-timfile = "NGC6440E.tim"
+import pint.config
+
+parfile = pint.config.examplefile("NGC6440E.par")
+timfile = pint.config.examplefile("NGC6440E.tim")
 
 # %%
 m, t_all = get_model_and_toas(parfile, timfile)
@@ -75,7 +77,7 @@ print("RMS in time is", f.resids.time_resids.std().to(u.us))
 
 # %%
 # Show the parameter correlation matrix
-corm = f.get_correlation_matrix(pretty_print=True)
+corm = f.get_parameter_correlation_matrix(pretty_print=True)
 
 # %%
 f.print_summary()

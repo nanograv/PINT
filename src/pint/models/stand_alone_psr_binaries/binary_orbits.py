@@ -7,8 +7,12 @@ import pint.utils as ut
 from pint.utils import taylor_horner, taylor_horner_deriv
 
 
-class orbits:
-    """This is a base class for implementing different parameterization of pulsar binary orbits."""
+class Orbit:
+    """Base class for implementing different parameterization of pulsar binary orbits.
+
+    It should be constructed with a ``parent`` class, so that parameter lookups can be
+    referred to the parent class by a custom ``__getattr__``.
+    """
 
     def __init__(self, orbit_name, parent, orbit_params=[]):
         self.name = orbit_name
@@ -16,64 +20,86 @@ class orbits:
         self.orbit_params = orbit_params
 
     def orbits(self):
+        """Orbital phase (number of orbits since T0)."""
         raise NotImplementedError
 
     def orbit_phase(self):
+        """Orbital phase (between zero and two pi)."""
         orbits = self.orbits()
         norbits = np.array(np.floor(orbits), dtype=np.compat.long)
         phase = (orbits - norbits) * 2 * np.pi * u.rad
         return phase
 
     def pbprime(self):
+        """Derivative of binary period with respect to time."""
         raise NotImplementedError
 
     def pbdot_orbit(self):
+        """Reported value of PBDOT."""
         raise NotImplementedError
 
     def d_orbits_d_par(self, par):
+        """Derivative of orbital phase with respect to some parameter.
+
+        Note
+        ----
+        This gives the derivative of ``orbit_phase``, that is, it is scaled by 2 pi
+        with respect to the derivative of ``orbits``.
+        """
         par_obj = getattr(self, par)
         try:
             func = getattr(self, "d_orbits_d_" + par)
-        except:
-            func = lambda: np.zeros(len(self.tt0)) * u.Unit("") / par_obj.unit
+        except AttributeError:
+
+            def func():
+                return np.zeros(len(self.tt0)) * u.Unit("") / par_obj.unit
+
         result = func()
         return result
 
     def d_pbprime_d_par(self, par):
+        """Derivative of binary period with respect to some parameter."""
         par_obj = getattr(self, par)
         try:
             func = getattr(self, "d_pbprime_d_" + par)
-        except:
-            func = lambda: np.zeros(len(self.tt0)) * u.day / par_obj.unit
+        except AttributeError:
+
+            def func():
+                return np.zeros(len(self.tt0)) * u.day / par_obj.unit
+
         result = func()
         return result
 
     def __getattr__(self, name):
         try:
-            return super(orbits, self).__getattribute__(name)
+            return super().__getattribute__(name)
         except AttributeError:
-            try:
-                p = super(orbits, self).__getattribute__("_parent")
-                if p is None:
-                    raise AttributeError(
-                        "'%s' object has no attribute '%s'."
-                        % (self.__class__.__name__, name)
-                    )
-                else:
-                    return self._parent.__getattribute__(name)
-            except:
+            p = super().__getattribute__("_parent")
+            if p is None:
                 raise AttributeError(
                     "'%s' object has no attribute '%s'."
                     % (self.__class__.__name__, name)
                 )
+            else:
+                return self._parent.__getattribute__(name)
 
 
-class OrbitPB(orbits):
+class OrbitPB(Orbit):
+    """Orbits using PB, PBDOT, XPBDOT.
+
+    PBDOT is just the conventional derivative of the binary period.
+
+    XPBDOT is something else, not completely clear what. It is added to PBDOT
+    when computing ``orbits`` and its derivative with respect to PB, but it is
+    subtracted from PBDOT when computing the derivative of orbits with respect
+    to T0. It is also not included when computing ``pbdot_orbit``.
+    """
+
     def __init__(self, parent, orbit_params=["PB", "PBDOT", "XPBDOT", "T0"]):
-        super(OrbitPB, self).__init__("orbitPB", parent, orbit_params)
+        super().__init__("orbitPB", parent, orbit_params)
 
-    def orbits(self,):
-        """Orbits using PB, PBDOT, XPBDOT"""
+    def orbits(self):
+        """Orbital phase (number of orbits since T0)."""
         PB = self.PB.to("second")
         PBDOT = self.PBDOT
         XPBDOT = self.XPBDOT
@@ -83,13 +109,15 @@ class OrbitPB(orbits):
         return orbits
 
     def pbprime(self):
+        """Derivative of binary period with respect to time."""
         return self.PB + self.PBDOT * self.tt0
 
     def pbdot_orbit(self):
+        """Reported value of PBDOT."""
         return self.PBDOT
 
     def d_orbits_d_T0(self):
-        """The derivitve of orbits respect to T0"""
+        """The derivatve of orbits with respect to T0."""
         PB = self.PB.to("second")
         PBDOT = self.PBDOT
         XPBDOT = self.XPBDOT
@@ -129,47 +157,52 @@ class OrbitPB(orbits):
         return result * u.Unit(self.PBDOT.unit)
 
 
-class OrbitFBX(orbits):
+class OrbitFBX(Orbit):
+    """Orbits expressed in terms of orbital frequency and its derivatives FB0, FB1, FB2..."""
+
     def __init__(self, parent, orbit_params=["FB0"]):
-        super(OrbitFBX, self).__init__("orbitFBX", parent, orbit_params)
+        super().__init__("orbitFBX", parent, orbit_params)
         # add the rest of FBX parameters.
+        indices = set()
         for k in self.binary_params:
-            if re.match(r"FB\d", k) is not None:
+            if re.match(r"FB\d+", k) is not None:
                 if k not in self.orbit_params:
                     self.orbit_params += [k]
+                    indices.add(int(k[2:]))
+        if indices != set(range(len(indices))):
+            raise ValueError(
+                f"Indices must be 0 up to some number k without gaps "
+                f"but are {indices}."
+            )
 
-    def orbits(self):
+    def _FBXs(self):
         FBXs = [0 * u.Unit("")]
         ii = 0
         while "FB" + str(ii) in self.orbit_params:
             FBXs.append(getattr(self, "FB" + str(ii)))
             ii += 1
-        orbits = taylor_horner(self.tt0, FBXs)
+        return FBXs
+
+    def orbits(self):
+        """Orbital phase (number of orbits since T0)."""
+        orbits = taylor_horner(self.tt0, self._FBXs())
         return orbits.decompose()
 
     def pbprime(self):
-        FBXs = [0 * u.Unit("")]
-        ii = 0
-        while "FB" + str(ii) in self.orbit_params:
-            FBXs.append(getattr(self, "FB" + str(ii)))
-            ii += 1
-        orbit_freq = taylor_horner_deriv(self.tt0, FBXs, 1)
+        """Derivative of binary period with respect to time."""
+        orbit_freq = taylor_horner_deriv(self.tt0, self._FBXs(), 1)
         return 1.0 / orbit_freq
 
     def pbdot_orbit(self):
-        FBXs = [0 * u.Unit("")]
-        ii = 0
-        while "FB" + str(ii) in self.orbit_params:
-            FBXs.append(getattr(self, "FB" + str(ii)))
-            ii += 1
-        orbit_freq_dot = taylor_horner_deriv(self.tt0, FBXs, 2)
+        """Reported value of PBDOT."""
+        orbit_freq_dot = taylor_horner_deriv(self.tt0, self._FBXs(), 2)
         return -(self.pbprime() ** 2) * orbit_freq_dot
 
     def d_orbits_d_par(self, par):
-        if re.match(r"FB\d", par) is not None:
+        if re.match(r"FB\d+", par) is not None:
             result = self.d_orbits_d_FBX(par)
         else:
-            result = super(OrbitFBX, self).d_orbits_d_par(par)
+            result = super().d_orbits_d_par(par)
         return result
 
     def d_orbits_d_FBX(self, FBX):
@@ -181,6 +214,7 @@ class OrbitFBX(orbits):
                 FBXs.append(0.0 * getattr(self, "FB" + str(ii)).unit)
             else:
                 FBXs.append(1.0 * getattr(self, "FB" + str(ii)).unit)
+                break
             ii += 1
         d_orbits = taylor_horner(self.tt0, FBXs) / par.unit
         return d_orbits.decompose() * 2 * np.pi * u.rad
@@ -194,13 +228,14 @@ class OrbitFBX(orbits):
                 FBXs.append(0.0 * getattr(self, "FB" + str(ii)).unit)
             else:
                 FBXs.append(1.0 * getattr(self, "FB" + str(ii)).unit)
+                break
             ii += 1
         d_FB = taylor_horner_deriv(self.tt0, FBXs, 1) / par.unit
         return -(self.pbprime() ** 2) * d_FB
 
     def d_pbprime_d_par(self, par):
         par_obj = getattr(self, par)
-        if re.match(r"FB\d", par) is not None:
+        if re.match(r"FB\d+", par) is not None:
             result = self.d_pbprime_d_FBX(par)
         else:
             result = np.zeros(len(self.tt0)) * u.second / par_obj.unit

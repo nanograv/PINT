@@ -316,6 +316,189 @@ are meant to be omitted from reading or have their time adjusted. We recommend
 use of the most flexible format, that defined by TEMPO2 and now also supported
 (to the extent that the engine permits) by TEMPO.
 
+Fitting
+-------
+
+A very common operation with PINT is fitting a timing model to timing data.
+Fundamentally this operation tries to adjust the model parameters to minimize
+the residuals produced when the model is applied to a set of TOAs. The result
+of this process is a set of best-fit model parameters, uncertainties on (and
+correlations between) these, and residuals from this best-fit model. This is
+carried out by constructing a :class:`pint.fitter.Fitter` object from
+a :class:`pint.toa.TOAs` object and
+a :class:`pint.models.timing_model.TimingModel` object and then running the
+:func:`pint.fitter.Fitter.fit_toas` method; there are several example notebooks
+that demonstrate this. Nevertheless there are some subtleties to how fitting
+works in PINT that we explain here.
+
+Timing noise and correlated errors
+''''''''''''''''''''''''''''''''''
+
+Precision pulsar timing requires a quite sophisticated model of the errors that
+appear in our measurement. While each TOA has an associated uncertainty
+estimate, in reality these can need to be adjusted to reflect unmodelled
+sources of error; PINT (and TEMPO and TEMPO2) provide two adjustments, EFAC and
+EQUAD. If these are set, and the claimed uncertainty is U, PINT will treat the
+uncertainty on a data point as
+:math:`\textrm{EFAC}\sqrt{U^2+\textrm{EQUAD}^2}`. We also expect a certain
+amount of correlation between measurements that were taken simultaneously but
+at different frequencies; this is parametrized by ECORR. More, the way we
+choose to handle "red" timing noise in pulsars is to treat it as a noise
+component that introduces long-term correlations in the timing measurements,
+where the amount of those correlations depends on the time between measurements
+and the spectrum of the timing noise. The introduction of correlations between
+the errors on TOAs requires a somewhat more complicated procedure for fitting
+models to TOAs, and even to simply measuring the goodness of fit of a model to
+TOAs.
+
+The most direct way of handling correlated errors between TOAs is by
+constructing a covariance matrix describing all the correlations between the
+measurements; a square root of this matrix can be computed using the Cholesky
+decomposition, and this square root can be used to transform the fitting
+problem into a conventional least-squares problem. This procedure is described
+in Coles_et_al_2011_ and implemented in PINT (via the ``full_cov=True`` option to
+fitters). Unfortunately this method requires a decomposition of a matrix that
+is the size of the number of TOAs by the number of TOAs; this can be very
+expensive in terms of memory and computation.
+
+Fortunately, Lentati_et_al_2013_ and van_Haasteren_and_Vallisneri_2015_ describe
+a method for using a low-rank approximation to the covariance matrix to remove
+the need to ever construct these very large matrices; the implementation in
+PINT follows the mathematics in the NANOGrav_9-year_ data analysis paper,
+Appendix C.
+
+The idea of this reduced-rank approach is to represent the correlations using
+basis functions - blocks of 1s for each set of residuals grouped by ECORR, or
+sinusoids for a red noise model - whose coefficients are added to the list of
+parameters to be fit. The linear least-squares fitting problem is then adjusted
+based on the prior estimates of the amplitudes of these basis functions (for
+example the ECORR value or the amplitude of sinusoids of that frequency in the
+timing model), and this modified least-squares fit is carried out. The best-fit
+combinations of these noise basis functions can be subtracted from the
+residuals to produce "whitened" residuals, and the goodness of fit can be
+described by taking the usual chi-squared of these whitened residuals and
+adding a term based on the sizes of the noise basis coefficients.
+
+Specifically the mathematics takes an approximate solution and models the residuals as
+
+.. math::
+
+    \delta t = M\epsilon + Fa + Uj + n
+
+where :math:`M` is the Jacobian matrix of the model (the derivative of each
+predicted TOA with respect to each model parameter, :math:`\epsilon` is an
+error in the model parameters, :math:`F` is a "Fourier design matrix", a set of
+sine and cosine functions at each of a range of frequencies, :math:`a` is the
+amplitudes of these basis functions in the red noise contribution, :math:`U` is
+a matrix of basis functions representing the ECORR blocks, :math:`j` is their
+coefficients, and :math:`n` is a vector of uncorrelated noise of amplitude
+coming from the adjusted TOA uncertainties. The NANOGrav_9-year_ paper gives
+expressions for the likelihood of such a representation, suitable for use in
+Bayesian fitting methods, but for PINT's fitters the goal is to find the
+maximum-likelihood values for :math:`\epsilon`, a corresponding set of
+residuals :math:`n`, and a goodness-of-fit statistic distributed as a :math:`\chi^2`
+distribution for some number of degrees of freedom.
+
+The paper develops this, constructing additional matrices
+
+.. math::
+
+    N_{ij} = E_i^2(\sigma_i^2+Q_i^2)\delta_{ij}
+
+    T = \begin{bmatrix} M & F & U \end{bmatrix}
+
+    b = \begin{bmatrix} \epsilon \\ a \\ j \end{bmatrix}
+
+    B = \begin{bmatrix} \infty & 0 & 0 \\ 0 & \phi & 0 \\ 0 & 0 & J \end{bmatrix}
+
+where :math:`N` is a diagonal matrix of the adjusted TOA uncertainties, and
+:math:`B` is a block matrix with diagonal matrices on the blocks; the
+:math:`\infty` is a diagonal matrix of infinities (we will be using
+:math:`B^{-1]`), while :math:`\phi` and :math:`J` are "weights" corresponding
+to the noise basis functions' expected amplitudes.
+
+They then construct the objects :math:`d = T^T N^{-1} \delta t` and
+:math:`\Sigma = (B^{-1} + T^T N^{-1} T)`. Then they say that the maximum
+likelihood values of :math:`b` and its uncertainties are given by
+
+.. math::
+
+    b = \Sigma^{-1} d
+
+    \textrm{cov}(b) = \Sigma^{-1}
+
+This is what is implemented in PINT's fitters, both the generalized
+least-squares fitter for narrowband data, and the fitter used for all wideband
+data (whether it has correlated errors or not).
+
+It is perhaps worth noting that if :math:`B^{-1}` were zero or omitted, these
+would be the equations for a linear least squares fit for :math:`b` to match
+:math:`\delta t` with variances represented in :math:`N`. The addition of
+:math:`B^{-1}` in :math:`\Sigma` is where our knowledge about the amplitudes of
+the noise basis functions is applied.
+
+The formula is not worked out in the NANOGrav_9-year_ data set paper, but if we
+want a goodness-of-fit statistic for a set of model parameters that correctly
+reflects both the mis-fit of the data and also the penalization of the noise
+components, we need to fix all the model parameters we care about, reducing
+:math:`M` to almost nothing (just a constant offset). So we compute residuals
+at the model parameters of interest, then we then do the fit as above,
+obtaining a maximum-likelihood :math:`b` and a set of whitened residuals
+:math:`n`. We then report, as our goodness of fit,
+
+.. math::
+
+    \chi_G^2 = n^T N n + b^T B^{-1} b
+
+.. _Coles_et_al_2011: https://ui.adsabs.harvard.edu/abs/2011MNRAS.418..561C/abstract
+.. _Lentati_et_al_2013: https://ui.adsabs.harvard.edu/abs/2013PhRvD..87j4021L/abstract
+.. _van_Haasteren_and_Vallisneri_2015: https://ui.adsabs.harvard.edu/abs/2015MNRAS.446.1170V/abstract
+.. _NANOGrav_9-year: https://ui.adsabs.harvard.edu/abs/2015ApJ...813...65N/abstract
+
+Fitting algorithms
+''''''''''''''''''
+
+PINT is designed to be able to offer several alternative algorithms to arrive
+at the best-fit model. This both because fitting can be a time-consuming
+process if a suboptimal algorithm is chosen, and because different kinds of
+model and data require different calculations - narrowband (TOA-only) versus
+wideband (TOA and DM measurements) and uncorrelated errors versus correlated
+errors.
+
+The TEMPO/TEMPO2 and default PINT fitting algorithms (:class:`pint.fitter.WidebandTOAFitter` for example), leaving aside the rank-reduced case, proceed like:
+
+1. Evaluate the model and its derivatives at the starting point :math:`x`, producing a set of residuals :math:`\delta y` and a Jacobian `M`.
+2. Compute :math:`\delta x` to minimize :math:`\left| M\delta x - \delta y \right|_C`, where :math:`\left| \cdot \right|_C` is the squared amplitude of a vector with respect to the data uncertainties/covariance :math:`C`.
+3. Update the starting point by :math:`\delta x`.
+
+TEMPO and TEMPO2 can check whether the predicted improvement of chi-squared, assuming the linear model is correct, is enough to warrant continuing; if so, they jump back to step 1 unless the maximum number of iterations is reached. PINT does not contain this check.
+
+This algorithm is the Gauss-Newton_algorithm_ for solving nonlinear
+least-squares problems, and even in one-complex-dimensional cases can exhibit
+convergence behaviour that is literally chaotic_. For TEMPO/TEMPO2 and PINT, the
+problem is that the model is never actually evaluated at the updated starting
+point before committing to it; it can be invalid (ECC > 1) or the step can be
+large enough that the derivative does not match the function and thus the
+chi-squared value after the step can be worse than the initial chi-squared.
+These issues particularly arise with poorly constrained parameters like M2 or
+SINI. Users experienced with pulsar timing are frequently all too familiar with
+this phenomenon and have a collection of tricks for evading it.
+
+PINT contains a slightly more sophisticated algorithm, implemented in
+:class:`pint.fitter.DownhillFitter`, that takes more careful steps:
+
+1. Evaluate the model and its derivatives at the starting point :math:`x`, producing a set of residuals :math:`\delta y` and a Jacobian `M`.
+2. Compute :math:`\delta x` to minimize :math:`\left| M\delta x - \delta y \right|_C`, where :math:`\left| \cdot \right|_C` is the squared amplitude of a vector with respect to the data uncertainties/covariance :math:`C`.
+3. Set :math:`\lambda` to 1.
+4. Evaluate the model at the starting point plus :math:`\lambda \delta x`. If this is invalid or worse than the starting point, divide :math:`\lambda` by two and repeat this step. If :math:`\lambda` is too small, accept the best point seen to date and exit without convergence.
+5. If the model improved but only slightly with :math:`\lambda=1`, exit with convergence. If the maximum number of iterations was reached, exit without convergence. Otherwise update the starting point and return to step 1.
+
+This ensures that PINT tries taking smaller steps if problems arise, and claims convergence only if a normal step worked. It does not solve the problems that arise if some parameters are nearly degenerate, enough to cause problems with the numerical linear algebra.
+
+As a rule, this kind of problem is addressed with the Levenberg-Marquardt algorithm, which operates on the same principle of taking reduced steps when the derivative appears not to match the function, but does so in a way that also reduces issues with degenerate parameters; unfortunately it is not clear how to adapt this problem to the rank-reduced case. Nevertheless PINT contains an implementation, in :class:`pint.fitter.WidebandLMFitter`, but it does not perform as well as one might hope in practice and must be considered experimental.
+
+.. _Gauss-Newton_algorithm: https://en.wikipedia.org/wiki/Gauss%E2%80%93Newton_algorithm
+.. _chaotic: https://en.wikipedia.org/wiki/Newton_fractal
 
 Coding Style
 ------------

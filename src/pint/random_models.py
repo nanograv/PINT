@@ -1,12 +1,16 @@
-"""Generate random models distributed like the results of a fit"""
+"""Generate random models distributed like the results of a fit."""
+
+import logging
 from collections import OrderedDict
 from copy import deepcopy
 
 import numpy as np
-from astropy import log
 
 import pint.toa as toa
+import pint.simulation as simulation
 from pint.phase import Phase
+
+log = logging.getLogger(__name__)
 
 __all__ = ["random_models"]
 # log.setLevel("INFO")
@@ -45,7 +49,7 @@ def random_models(
     params = fitter.model.get_params_dict("free", "num")
     mean_vector = params.values()
     # remove the first column and row (absolute phase)
-    cov_matrix = (((fitter.covariance_matrix[1:]).T)[1:]).T
+    cov_matrix = (((fitter.covariance_matrix.matrix[1:]).T)[1:]).T
     fac = fitter.fac[1:]
     f_rand = deepcopy(fitter)
     mrand = f_rand.model
@@ -61,13 +65,13 @@ def random_models(
     spanMJDs = maxMJD - minMJD
     # ledge and redge _multiplier control how far the fake toas extend
     # in either direction of the selected points
-    x = toa.make_fake_toas(
+    x = simulation.make_fake_toas_uniform(
         minMJD - spanMJDs * ledge_multiplier,
         maxMJD + spanMJDs * redge_multiplier,
         npoints,
         mrand,
     )
-    x2 = toa.make_fake_toas(minMJD, maxMJD, npoints, mrand)
+    x2 = simulation.make_fake_toas_uniform(minMJD, maxMJD, npoints, mrand)
 
     rss = []
     random_models = []

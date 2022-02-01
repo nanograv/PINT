@@ -1,13 +1,20 @@
 #!/usr/bin/env python
 import os
-import unittest
+import pickle
 import shutil
 import time
+import unittest
 
+import astropy.time
+import astropy.units as u
+import numpy as np
 import pytest
-
-from pint import toa
 from pinttestdata import datadir
+
+import pint.models
+import pint.toa
+from pint import toa
+from pint import simulation
 
 
 @pytest.fixture
@@ -114,3 +121,44 @@ def test_pickle_moved(temp_tim):
     with open(tt2, "at") as f:
         f.write("\n")
     assert not toa.get_TOAs(tt2, usepickle=True, picklefilename=tp).was_pickled
+
+
+def test_group_survives_pickle(tmpdir):
+    p = os.path.join(tmpdir, "test.pickle.gz")
+    test_model = pint.models.get_model(os.path.join(datadir, "NGC6440E.par"))
+    test_toas = simulation.make_fake_toas_uniform(58000, 59000, 5, model=test_model)
+    test_toas.adjust_TOAs(
+        astropy.time.TimeDelta((np.random.uniform(0, 1, size=(5,)) * u.d))
+    )
+
+    pint.toa.save_pickle(test_toas, p)
+    test_toas2 = pint.toa.load_pickle(p)
+    test_toas2.adjust_TOAs(
+        astropy.time.TimeDelta((np.random.uniform(0, 1, size=(5,)) * u.d))
+    )
+
+
+@pytest.mark.xfail(reason="astropy tables lose groupedness when pickled")
+def test_astropy_group_survives_pickle(tmpdir):
+    p = os.path.join(tmpdir, "test.pickle.gz")
+    test_model = pint.models.get_model(os.path.join(datadir, "NGC6440E.par"))
+    test_toas = simulation.make_fake_toas_uniform(58000, 59000, 5, model=test_model)
+
+    with open(p, "wb") as f:
+        pickle.dump(test_toas.table, f)
+
+    with open(p, "rb") as f:
+        new_table = pickle.load(f)
+
+    assert len(test_toas.table.groups.keys) == 1
+    assert len(new_table.groups.keys) == 1
+
+
+def test_group_survives_plain_pickle(tmpdir):
+    test_model = pint.models.get_model(os.path.join(datadir, "NGC6440E.par"))
+    test_toas = simulation.make_fake_toas_uniform(58000, 59000, 5, model=test_model)
+
+    new_toas = pickle.loads(pickle.dumps(test_toas))
+
+    assert len(test_toas.table.groups.keys) == 1
+    assert len(new_toas.table.groups.keys) == 1

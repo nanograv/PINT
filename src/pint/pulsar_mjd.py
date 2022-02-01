@@ -338,6 +338,27 @@ def data2longdouble(data):
         return np.longdouble(data)
 
 
+def quantity2longdouble_withunit(data):
+    """Return a astropy.units.Quantity containing a numpy long double scalar from a different dtype
+
+    Parameters
+    ----------
+    data : astropy.units.Quantity
+
+    Returns
+    -------
+    astropy.units.Quantity
+
+    See also
+    --------
+    :func:data2longdouble
+
+    """
+    unit = data.unit
+    data = np.longdouble(data.to_value(unit))
+    return data * unit
+
+
 def longdouble2str(x):
     """Convert numpy longdouble to string."""
     return repr(x)

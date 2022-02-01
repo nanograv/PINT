@@ -1,8 +1,9 @@
 """Solar system Shapiro delay."""
+import logging
+
 import astropy.constants as const
 import astropy.units as u
 import numpy
-from astropy import log
 
 from pint import (
     Tearth,
@@ -18,9 +19,17 @@ from pint import (
 from pint.models.parameter import boolParameter
 from pint.models.timing_model import DelayComponent
 
+log = logging.getLogger(__name__)
+
 
 class SolarSystemShapiro(DelayComponent):
-    """Shapiro delay due to light bending near Solar System objects."""
+    """Shapiro delay due to light bending near Solar System objects.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.solar_system_shapiro.SolarSystemShapiro
+    """
 
     register = True
     category = "solar_system_shapiro"
@@ -31,7 +40,7 @@ class SolarSystemShapiro(DelayComponent):
             boolParameter(
                 name="PLANET_SHAPIRO",
                 value=False,
-                description="Include planetary Shapiro delays (Y/N)",
+                description="Include planetary Shapiro delays",
             )
         )
         self.delay_funcs_component += [self.solar_system_shapiro_delay]
@@ -96,13 +105,14 @@ class SolarSystemShapiro(DelayComponent):
         # Start out with 0 delay with units of seconds
         tbl = toas.table
         delay = numpy.zeros(len(tbl))
+        # FIXME: is there any reason to use groups here? it's slow
         for ii, key in enumerate(tbl.groups.keys):
-            grp = tbl.groups[ii]
-            # obs = tbl.groups.keys[ii]["obs"]
-            loind, hiind = tbl.groups.indices[ii : ii + 2]
             if key["obs"].lower() == "barycenter":
                 log.debug("Skipping Shapiro delay for Barycentric TOAs")
                 continue
+            grp = tbl.groups[ii]
+            # obs = tbl.groups.keys[ii]["obs"]
+            loind, hiind = tbl.groups.indices[ii : ii + 2]
             psr_dir = self._parent.ssb_to_psb_xyz_ICRS(
                 epoch=grp["tdbld"].astype(numpy.float64)
             )

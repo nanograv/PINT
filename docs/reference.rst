@@ -17,5 +17,5 @@ Useful starting places:
 
    timingmodels
    command-line
-   api/pint
+   API reference <_autosummary/pint>
    coding-style

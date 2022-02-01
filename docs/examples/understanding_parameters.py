@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.10.2
+#       jupytext_version: 1.13.0
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -23,10 +23,13 @@ import pint.models.parameter as pp
 import astropy.units as u
 from astropy.coordinates.angles import Angle
 from astropy.time import Time
+import pint.config
 
 # %% {"jupyter": {"outputs_hidden": false}}
 # Load a model to play with
-model = pint.models.get_model("B1855+09_NANOGrav_dfg+12_TAI.par")
+model = pint.models.get_model(
+    pint.config.examplefile("B1855+09_NANOGrav_dfg+12_TAI.par")
+)
 
 # %% {"jupyter": {"outputs_hidden": false}}
 # This model has a large number of parameters of various types

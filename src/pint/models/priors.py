@@ -8,7 +8,6 @@ such as total proper motion, 2-d sky location, etc.
 """
 import numpy as np
 import scipy.stats
-from astropy import log
 from scipy.stats import norm, rv_continuous, rv_discrete, uniform
 
 

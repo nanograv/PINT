@@ -1,9 +1,11 @@
+"""Markov Chain Monte Carlo fitting."""
+
 import copy
+import logging
 
 import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
-from astropy import log
 from astropy.table import vstack
 from scipy.stats import norm, uniform
 
@@ -13,6 +15,8 @@ from pint.fitter import Fitter
 from pint.models.priors import Prior
 from pint.residuals import Residuals
 from pint.templates.lctemplate import LCTemplate
+
+log = logging.getLogger(__name__)
 
 __all__ = [
     "MCMCFitter",
@@ -429,6 +433,17 @@ class MCMCFitter(Fitter):
         else:
             plt.savefig(self.model.PSR.value + "_htest_v_wgtcut_unweighted.png")
         plt.close()
+
+    def plot_priors(self, chains, burnin, bins=100, scale=False):
+        plot_utils.plot_priors(
+            self.model,
+            chains,
+            self.maxpost_fitvals,
+            self.fitvals,
+            burnin=burnin,
+            bins=bins,
+            scale=scale,
+        )
 
 
 class MCMCFitterBinnedTemplate(MCMCFitter):

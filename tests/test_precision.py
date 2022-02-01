@@ -84,9 +84,6 @@ near_leap_sec_days = list(
     sorted([d - 1 for d in leap_sec_days] + [d + 1 for d in leap_sec_days])
 )
 
-settings.register_profile("relaxed", deadline=2000)
-settings.load_profile("relaxed")
-
 
 @composite
 def possible_leap_sec_days(draw):

@@ -6,8 +6,8 @@ from copy import deepcopy
 import astropy.units as u
 import numpy as np
 import pytest
+from numpy.testing import assert_allclose
 from pinttestdata import datadir
-from pint.toa import make_fake_toas
 
 from pint.models import (
     DEFAULT_ORDER,
@@ -20,11 +20,24 @@ from pint.models import (
     get_model,
     parameter as p,
 )
+from pint.simulation import make_fake_toas_uniform
+from pint.toa import get_TOAs
 
 
 @pytest.fixture
 def model_0437():
     return get_model(os.path.join(datadir, "J0437-4715.par"))
+
+
+@pytest.fixture
+def timfile_jumps():
+    os.chdir(datadir)
+    return get_TOAs("test1.tim")
+
+
+@pytest.fixture
+def timfile_nojumps():
+    return get_TOAs(os.path.join(datadir, "NGC6440E.tim"))
 
 
 class TestModelBuilding:
@@ -159,7 +172,7 @@ class TestModelBuilding:
         tm = TimingModel(
             "TestTimingModel", [BinaryELL1(), AstrometryEquatorial(), Spindown()]
         )
-        tfp = {"F0", "T0", "EPS1", "RAJ"}
+        tfp = {"F0", "TASC", "EPS1", "RAJ"}
         # Turn off the fit parameters
         for p in tm.params:
             par = getattr(tm, p)
@@ -174,9 +187,9 @@ class TestModelBuilding:
         )
 
         with pytest.raises(ValueError):
-            tm.free_params = ["F0", "T0", "EPS1", "RAJ", "CAPYBARA"]
+            tm.free_params = ["F0", "TASC", "EPS1", "RAJ", "CAPYBARA"]
 
-        tfp = {"F0", "T0", "EPS1", "RAJ"}
+        tfp = {"F0", "TASC", "EPS1", "RAJ"}
         tm.free_params = tfp
         assert set(tm.free_params) == tfp
 
@@ -297,10 +310,51 @@ def test_free_params(lines, param, exception):
 
 def test_pepoch_late():
     model = get_model(io.StringIO(par_base))
-    make_fake_toas(56000, 57000, 10, model=model)
+    make_fake_toas_uniform(56000, 57000, 10, model=model)
 
 
 def test_t2cmethod_corrected():
     with pytest.warns(UserWarning, match=".*T2CMETHOD.*"):
         model = get_model(io.StringIO("\n".join([par_base, "T2CMETHOD TEMPO"])))
     assert model.T2CMETHOD.value == "IAU2000B"
+
+
+def test_jump_flags_to_params(timfile_jumps, timfile_nojumps, model_0437):
+    # TOAs 9, 10, 11, and 12 have jump flags (JUMP2 on 9, JUMP1 on rest)
+    t = timfile_jumps
+    m = model_0437  # model with no jumps
+    t_nojump = timfile_nojumps
+    # sanity check
+    assert "PhaseJump" not in m.components
+    # check nothing changed when .tim file has no jumps
+    m.jump_flags_to_params(t_nojump)
+    assert "PhaseJump" not in m.components
+    # add jump parameters to model based off flags in TOA table
+    m.jump_flags_to_params(t)
+    assert "PhaseJump" in m.components
+    assert len(m.components["PhaseJump"].jumps) == 2
+    assert "JUMP1" in m.components["PhaseJump"].jumps
+    assert "JUMP2" in m.components["PhaseJump"].jumps
+
+
+def test_supports_rm():
+    m = get_model(io.StringIO("\n".join([par_base, "RM 10"])))
+    assert m.RM.value == 10
+
+
+def test_assumes_dmepoch_equals_pepoch():
+    m_assume = get_model(io.StringIO("\n".join([par_base, "DM1 1e-5"])))
+    m_given = get_model(io.StringIO("\n".join([par_base, "DMEPOCH 58000", "DM1 1e-5"])))
+
+    t = make_fake_toas_uniform(57000, 59000, 10, m_assume)
+
+    assert_allclose(m_assume.dm_value(t), m_given.dm_value(t))
+
+
+def test_prefixed_aliases_in_component():
+    m = get_model(
+        io.StringIO("\n".join([par_base, "T2EFAC -fe L_band 10", "T2EFAC -fe 430 11"]))
+    )
+    assert m.components["ScaleToaError"].aliases_map["T2EFAC2"] == "EFAC2"
+    with pytest.raises(KeyError):
+        m.components["ScaleToaError"].aliases_map["T2EFAC18"]

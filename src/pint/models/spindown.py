@@ -12,34 +12,59 @@ from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
 
 
 class Spindown(PhaseComponent):
-    """A simple timing model for an isolated pulsar."""
+    """A simple timing model for an isolated pulsar.
+
+    This represents the pulsar's spin as a Taylor series,
+    given its derivatives at time PEPOCH. Using more than
+    about twelve derivatives leads to hopeless numerical
+    instability, and probably has no physical significance.
+    It is probably worth investigating timing noise models
+    if this many derivatives are needed.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.spindown.Spindown
+    """
 
     register = True
     category = "spindown"
 
     def __init__(self):
-        super(Spindown, self).__init__()
+        super().__init__()
+        # self.add_param(
+        #     floatParameter(
+        #         name="F0",
+        #         value=0.0,
+        #         units="Hz",
+        #         description="Spin-frequency",
+        #         long_double=True,
+        #     )
+        # )
         self.add_param(
-            floatParameter(
+            prefixParameter(
                 name="F0",
                 value=0.0,
                 units="Hz",
-                description="Spin-frequency",
-                long_double=True,
-            )
-        )
-        self.add_param(
-            prefixParameter(
-                name="F1",
-                value=0.0,
-                units="Hz/s^1",
-                description="Spindown-rate",
+                description="Spindown-frequency",
                 unit_template=self.F_unit,
                 description_template=self.F_description,
                 type_match="float",
                 long_double=True,
             )
         )
+        # self.add_param(
+        #     prefixParameter(
+        #         name="F1",
+        #         value=0.0,
+        #         units="Hz/s^1",
+        #         description="Spindown-rate",
+        #         unit_template=self.F_unit,
+        #         description_template=self.F_description,
+        #         type_match="float",
+        #         long_double=True,
+        #     )
+        # )
         self.add_param(
             MJDParameter(
                 name="PEPOCH",
@@ -52,26 +77,22 @@ class Spindown(PhaseComponent):
         self.phase_derivs_wrt_delay += [self.d_spindown_phase_d_delay]
 
     def setup(self):
-        super(Spindown, self).setup()
-        self.num_spin_terms = len(self.F_terms) + 1
+        super().setup()
+        self.num_spin_terms = len(self.F_terms)
         # Add derivative functions
         for fp in list(self.get_prefix_mapping_component("F").values()) + ["F0"]:
             self.register_deriv_funcs(self.d_phase_d_F, fp)
 
     def validate(self):
-        super(Spindown, self).validate()
+        super().validate()
         # Check for required params
         for p in ("F0",):
             if getattr(self, p).value is None:
                 raise MissingParameter("Spindown", p)
         # Check continuity
-        sort_F_terms = sorted(self.F_terms)
-        F_in_order = list(range(1, max(self.F_terms) + 1))
-        if not sort_F_terms == F_in_order:
-            diff = list(set(F_in_order) - set(sort_F_terms))
-            raise MissingParameter("Spindown", "F%d" % diff[0])
+        self._parent.get_prefix_list("F", start_index=0)
         # If F1 is set, we need PEPOCH
-        if self.F1.value != 0.0:
+        if hasattr(self, "F1") and self.F1.value != 0.0:
             if self.PEPOCH.value is None:
                 raise MissingParameter(
                     "Spindown", "PEPOCH", "PEPOCH is required if F1 or higher are set"
@@ -79,20 +100,19 @@ class Spindown(PhaseComponent):
 
     @property
     def F_terms(self):
-        return list(self.get_prefix_mapping_component("F").keys())
+        return [f"F{i}" for i in range(len(self._parent.get_prefix_list("F", 0)))]
 
     def F_description(self, n):
         """Template function for description"""
-        return "Spin-frequency %d derivative" % n if n else "Spin-frequency"
+        return "Spin-frequency %d derivative" % n  # if n else "Spin-frequency"
 
     def F_unit(self, n):
         """Template function for unit"""
-        return "Hz/s^%d" % n if n else "Hz"
+        return "Hz/s^%d" % n  # if n else "Hz"
 
     def get_spin_terms(self):
-        """Return a list of the spin term values in the model: [F0, F1, ..., FN]
-        """
-        return [getattr(self, "F%d" % ii).quantity for ii in range(self.num_spin_terms)]
+        """Return a list of the spin term values in the model: [F0, F1, ..., FN]."""
+        return self._parent.get_prefix_list("F", start_index=0)
 
     def get_dt(self, toas, delay):
         """Return dt, the time from the phase 0 epoch to each TOA.  The
@@ -167,17 +187,13 @@ class Spindown(PhaseComponent):
             )
         self.PEPOCH.value = new_epoch
 
-    def print_par(self,):
+    def print_par(self):
         result = ""
-        f_terms = ["F%d" % ii for ii in range(self.num_spin_terms)]
+        f_terms = self.F_terms
         for ft in f_terms:
             par = getattr(self, ft)
             result += par.as_parfile_line()
-        if hasattr(self, "components"):
-            p_default = self.components["Spindown"].params
-        else:
-            p_default = self.params
-        for param in p_default:
+        for param in self.params:
             if param not in f_terms:
                 result += getattr(self, param).as_parfile_line()
         return result

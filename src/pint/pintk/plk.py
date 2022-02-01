@@ -2,31 +2,24 @@
 Interactive emulator of tempo2 plk
 """
 import copy
+import logging
 import os
 import sys
 
 import astropy.units as u
 import matplotlib as mpl
 import numpy as np
-from astropy import log
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 import pint.pintk.pulsar as pulsar
 import pint.pintk.colormodes as cm
 
-try:
-    # Python2
-    import Tkinter as tk
-    import tkFileDialog
-    import tkMessageBox
-except ImportError:
-    # Python3
-    import tkinter as tk
-    import tkinter.filedialog as tkFileDialog
-    import tkinter.messagebox as tkMessageBox
+import tkinter as tk
+import tkinter.filedialog as tkFileDialog
+import tkinter.messagebox as tkMessageBox
+from tkinter import ttk
 
-log.setLevel("INFO")
-log.debug("This should show up")
+log = logging.getLogger(__name__)
 
 try:
     from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
@@ -36,18 +29,19 @@ except ImportError:
     )
 
 
-log.debug(
-    "This should also show up. test click revert, turn params on and off, and prefit model"
-)
+# Where is this meant for? Maybe it belongs in application creation?
+# log.debug(
+#    "This should also show up. test click revert, turn params on and off, and prefit model"
+# )
 
 plotlabels = {
     "pre-fit": [
-        r"Pre-fit residual ($\mu$s)",
+        "Pre-fit residual",
         "Pre-fit residual (phase)",
         "Pre-fit residual (us)",
     ],
     "post-fit": [
-        r"Post-fit residual ($\mu$s)",
+        "Post-fit residual",
         "Post-fit residual (phase)",
         "Post-fit residual (us)",
     ],
@@ -243,10 +237,38 @@ class PlkRandomModelSelect(tk.Frame):
             widget.grid_forget()
 
     def changedRMCheckBox(self):
-        log.info("Random Models set to %d" % (self.var.get()))
+        if self.var.get() == 1:
+            log.debug("Random Models turned on.")
+        else:
+            log.debug("Random Models turned off.")
 
     def getRandomModel(self):
         return self.var.get()
+
+
+class PlkLogLevelSelect(tk.Frame):
+    """
+    Allows one to select the log output level in the terminal
+    """
+
+    def __init__(self, master):
+        tk.Frame.__init__(self, master)
+        self.logLabel = tk.Label(self, text="Minimum Log Level: ")
+        self.logLabel.pack()
+        self.logLevelSelect = ttk.Combobox(self)
+        self.logLevelSelect.pack()
+        self.logLevelSelect["values"] = ["DEBUG", "INFO", "WARNING", "ERROR"]
+        self.logLevelSelect["state"] = "readonly"  # user can't enter an option
+        self.logLevelSelect.current(2)  # automatically on WARNING level
+        # bind user log level selection to function changing log level
+        self.logLevelSelect.bind("<<ComboboxSelected>>", self.changeLogLevel)
+
+    def changeLogLevel(self, event):
+        newLevel = self.logLevelSelect.get()  # get current value
+        # FIXME: this adjusts the level for all logging
+        # we might want to make it PINT-specific, or even narrower
+        logging.getLogger().setLevel(str(newLevel))
+        log.info("Log level changed to " + str(newLevel))
 
 
 class PlkColorModeBoxes(tk.Frame):
@@ -486,6 +508,7 @@ class PlkWidget(tk.Frame):
         self.xyChoiceWidget = PlkXYChoiceWidget(master=self)
         self.actionsWidget = PlkActionsWidget(master=self)
         self.randomboxWidget = PlkRandomModelSelect(master=self)
+        self.logLevelWidget = PlkLogLevelSelect(master=self)
         self.colorModeWidget = PlkColorModeBoxes(master=self)
 
         self.plkDpi = 100
@@ -508,7 +531,6 @@ class PlkWidget(tk.Frame):
         self.plkAxes.clear()
         self.plkAxes.grid(True)
         self.plkAxes.set_xlabel("MJD")
-        self.plkAxes.set_ylabel("Residual ($\mu$s)")
         self.plkFig.tight_layout()
         self.plkToolbar.push_current()
         self.plkCanvas.draw()
@@ -518,6 +540,7 @@ class PlkWidget(tk.Frame):
         self.xyChoiceWidget.grid(row=2, column=0, sticky="nw")
         self.plkCanvas.get_tk_widget().grid(row=2, column=1, sticky="nesw")
         self.actionsWidget.grid(row=3, column=0, columnspan=2, sticky="W")
+        self.logLevelWidget.grid(row=3, column=1, sticky="E")
 
         self.grid_columnconfigure(1, weight=10)
         self.grid_columnconfigure(0, weight=1)
@@ -581,11 +604,15 @@ class PlkWidget(tk.Frame):
         self.colorModeWidget.addColorModeCheckbox(self.color_modes)
         self.xyChoiceWidget.setChoice()
         self.updatePlot(keepAxes=False)
+        self.plkToolbar.update()
 
-    def call_updates(self):
+    def call_updates(self, psr_update=False):
         if not self.update_callbacks is None:
             for ucb in self.update_callbacks:
-                ucb()
+                if psr_update:
+                    ucb(self.psr)
+                else:
+                    ucb()
 
     def updateGraphColors(self, color_mode):
         self.current_mode = color_mode
@@ -649,13 +676,14 @@ class PlkWidget(tk.Frame):
                     and getattr(self.psr.prefit_model, param).frozen == False
                 ):
                     self.updateJumped(getattr(self.psr.prefit_model, param).name)
-            self.updatePlot(keepAxes=True)
+            self.updatePlot(keepAxes=False)
         self.call_updates()
 
     def reset(self):
         """
         Reset all plot changes for this pulsar
         """
+        self.psr.use_pulse_numbers = False
         self.psr.reset_TOAs()
         self.psr.fitted = False
         self.psr = copy.deepcopy(self.base_state.psr)
@@ -679,7 +707,7 @@ class PlkWidget(tk.Frame):
         self.plkToolbar.update()
         self.current_state = State()
         self.state_stack = [self.base_state]
-        self.call_updates()
+        self.call_updates(psr_update=True)
 
     def writePar(self):
         """
@@ -699,7 +727,10 @@ class PlkWidget(tk.Frame):
                 )
             fout.close()
         except:
-            log.error("Could not save parfile to filename:\t%s" % filename)
+            if filename == () or filename == "":
+                print("Write Par cancelled.")
+            else:
+                log.error("Could not save parfile to filename:\t%s" % filename)
 
     def writeTim(self):
         """
@@ -714,7 +745,10 @@ class PlkWidget(tk.Frame):
             log.info("Choose output file %s" % filename)
             self.psr.all_toas.write_TOA_file(filename, format="TEMPO2")
         except:
-            log.error("Count not save file to filename:\t%s" % filename)
+            if filename == () or filename == "":
+                print("Write Tim cancelled.")
+            else:
+                log.error("Could not save file to filename:\t%s" % filename)
 
     def revert(self):
         """
@@ -783,6 +817,7 @@ class PlkWidget(tk.Frame):
         """
         Update the plot, given all the plotting info
         """
+        y_unit = self.yvals.unit
         if keepAxes:
             xmin, xmax = self.plkAxes.get_xlim()
             ymin, ymax = self.plkAxes.get_ylim()
@@ -801,6 +836,10 @@ class PlkWidget(tk.Frame):
                 ymin = yave - 1.10 * (yave - np.min(self.yvals - self.yerrs))
                 ymax = yave + 1.10 * (np.max(self.yvals + self.yerrs) - yave)
             xmin, xmax = xmin.value, xmax.value
+            # determine if y-axis units need scaling and scale accordingly
+            ymin, ymax = self.determine_yaxis_units(miny=ymin, maxy=ymax)
+            y_unit = ymin.unit
+            self.yvals = self.yvals.to(y_unit)
             ymin, ymax = ymin.value, ymax.value
 
         self.plkAxes.clear()
@@ -838,14 +877,19 @@ class PlkWidget(tk.Frame):
             self.plkAxes.set_xlabel(plotlabels[self.xid])
 
         if self.yid in ["pre-fit", "post-fit"]:
-            self.plkAxes.set_ylabel(plotlabels[self.yid][0])
+            self.plkAxes.set_ylabel(plotlabels[self.yid][0] + " (" + str(y_unit) + ")")
             try:
                 r = (
                     self.psr.prefit_resids
                     if self.yid == "pre-fit" or not self.psr.fitted
                     else self.psr.postfit_resids
                 )
-                f0 = r.get_PSR_freq().to(u.MHz).value
+                if y_unit == u.us:
+                    f0 = r.get_PSR_freq().to(u.MHz).value
+                elif y_unit == u.ms:
+                    f0 = r.get_PSR_freq().to(u.kHz).value
+                else:
+                    f0 = r.get_PSR_freq().to(u.Hz).value
                 self.plkAx2x.set_visible(True)
                 self.plkAx2x.set_ylabel(plotlabels[self.yid][1])
                 self.plkAx2x.set_ylim(ymin * f0, ymax * f0)
@@ -871,8 +915,27 @@ class PlkWidget(tk.Frame):
                 f_toas_plot = self.psr.fake_year()  # uses f_toas inside pulsar.py
             else:
                 f_toas_plot = f_toas.get_mjds()  # old implementation only used this
+            scale = 1
+            if self.yvals.unit == u.us:
+                scale = 10 ** 6
+            elif self.yvals.unit == u.ms:
+                scale = 10 ** 3
             for i in range(len(rs)):
-                self.plkAxes.plot(f_toas_plot, rs[i], "-k", alpha=0.3)
+                self.plkAxes.plot(f_toas_plot, rs[i] * scale, "-k", alpha=0.3)
+
+    def determine_yaxis_units(self, miny, maxy):
+        """Checks range of residuals and converts units if range sufficiently large/small."""
+        diff = maxy - miny
+        if diff > 0.2 * u.s:
+            maxy = maxy.to(u.s)
+            miny = miny.to(u.s)
+        elif diff > 0.2 * u.ms:
+            maxy = maxy.to(u.ms)
+            miny = miny.to(u.ms)
+        elif diff <= 0.2 * u.ms:
+            maxy = maxy.to(u.us)
+            miny = miny.to(u.us)
+        return miny, maxy
 
     def print_info(self):
         """
@@ -1068,7 +1131,7 @@ class PlkWidget(tk.Frame):
             ).frozen == False and param.startswith("JUMP"):
                 fit_jumps.append(int(param[4:]))
         jumps = [
-            True if "jump" in dict.keys() and dict["jump"] in fit_jumps else False
+            "jump" in dict.keys() and any(np.in1d(dict["jump"], fit_jumps))
             for dict in self.psr.selected_toas.table["flags"]
         ]
         if all(jumps):
@@ -1084,15 +1147,15 @@ class PlkWidget(tk.Frame):
             self.jumped[jump_name] = False
             return None
         elif type(jump_name) != str:
-            log.error(jump_name, "is not a string")
+            log.error(
+                jump_name,
+                "Return value for the jump name is not a string, jumps not updated",
+            )
             return None
-        num = int(jump_name[4:])
+        num = jump_name[4:]  # string value
         jump_select = [
-            num == jump_num
-            for jump_num in [
-                int(dict["jump"]) if "jump" in dict.keys() else np.nan
-                for dict in self.psr.all_toas.table["flags"]
-            ]
+            True if ("jump" in dict.keys() and num in dict["jump"]) else False
+            for dict in self.psr.all_toas.table["flags"]
         ]
         self.jumped[jump_select] = ~self.jumped[jump_select]
 
@@ -1248,8 +1311,7 @@ class PlkWidget(tk.Frame):
         elif ukey == ord(">"):
             if np.sum(self.selected) > 0:
                 selected = copy.deepcopy(self.selected)
-                ind = np.nonzero(selected)[0][0]
-                selected[ind:] = True
+                selected = ~selected
                 self.psr.add_phase_wrap(selected, 1)
                 self.updatePlot(keepAxes=False)
                 self.call_updates()
@@ -1257,8 +1319,7 @@ class PlkWidget(tk.Frame):
         elif ukey == ord("<"):
             if np.sum(self.selected) > 0:
                 selected = copy.deepcopy(self.selected)
-                ind = np.nonzero(selected)[0][0]
-                selected[ind:] = True
+                selected = ~selected
                 self.psr.add_phase_wrap(selected, -1)
                 self.updatePlot(keepAxes=False)
                 self.call_updates()

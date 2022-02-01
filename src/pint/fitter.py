@@ -32,7 +32,7 @@ Fitters in use::
     PMRA                                   0                              mas / yr
     PMDEC                                  0                              mas / yr
     F0                               61.4855          61.485476554373(18) Hz
-    F1                            -1.181e-15            -1.1813(14)×10⁻¹⁵ Hz / s
+    F1                            -1.181e-15            -1.1813(14)x10-15 Hz / s
     PEPOCH                             53750                              d
     CORRECT_TROPOSPHERE                    N                              None
     PLANET_SHAPIRO                         N                              None
@@ -55,31 +55,119 @@ Fitters in use::
 """
 import collections
 import copy
+import logging
 from warnings import warn
 
 import astropy.units as u
 import numpy as np
-import scipy.linalg as sl
+import scipy.linalg
 import scipy.optimize as opt
-from astropy import log
 
-import pint.residuals as pr
 import pint.utils
+import pint.derived_quantities
 from pint.models.parameter import AngleParameter, boolParameter, strParameter
 from pint.pint_matrix import (
+    CorrelationMatrix,
+    CovarianceMatrix,
     CovarianceMatrixMaker,
     DesignMatrixMaker,
     combine_covariance_matrix,
     combine_design_matrices_by_param,
     combine_design_matrices_by_quantity,
 )
+from pint.residuals import Residuals, WidebandTOAResiduals
 from pint.toa import TOAs
 from pint.utils import FTest
 
-__all__ = ["Fitter", "WLSFitter", "GLSFitter", "WidebandTOAFitter", "PowellFitter"]
+log = logging.getLogger(__name__)
+
+__all__ = [
+    "Fitter",
+    "WLSFitter",
+    "GLSFitter",
+    "WidebandTOAFitter",
+    "PowellFitter",
+    "DownhillFitter",
+    "DownhillWLSFitter",
+    "DownhillGLSFitter",
+    "WidebandDownhillFitter",
+    "WidebandLMFitter",
+    "ConvergenceFailure",
+    "StepProblem",
+    "MaxiterReached",
+]
+
+try:
+    from functools import cached_property
+except ImportError:
+    # not supported in python 3.7
+    # This is just the code from python 3.8
+    from _thread import RLock
+
+    _NOT_FOUND = object()
+
+    class cached_property:
+        def __init__(self, func):
+            self.func = func
+            self.attrname = None
+            self.__doc__ = func.__doc__
+            self.lock = RLock()
+
+        def __set_name__(self, owner, name):
+            if self.attrname is None:
+                self.attrname = name
+            elif name != self.attrname:
+                raise TypeError(
+                    "Cannot assign the same cached_property to two different names "
+                    f"({self.attrname!r} and {name!r})."
+                )
+
+        def __get__(self, instance, owner=None):
+            if instance is None:
+                return self
+            if self.attrname is None:
+                raise TypeError(
+                    "Cannot use cached_property instance without calling __set_name__ on it."
+                )
+            try:
+                cache = instance.__dict__
+            except AttributeError:  # not all objects have __dict__ (e.g. class defines slots)
+                msg = (
+                    f"No '__dict__' attribute on {type(instance).__name__!r} "
+                    f"instance to cache {self.attrname!r} property."
+                )
+                raise TypeError(msg) from None
+            val = cache.get(self.attrname, _NOT_FOUND)
+            if val is _NOT_FOUND:
+                with self.lock:
+                    # check if another thread filled cache while we awaited lock
+                    val = cache.get(self.attrname, _NOT_FOUND)
+                    if val is _NOT_FOUND:
+                        val = self.func(instance)
+                        try:
+                            cache[self.attrname] = val
+                        except TypeError:
+                            msg = (
+                                f"The '__dict__' attribute on {type(instance).__name__!r} instance "
+                                f"does not support item assignment for caching {self.attrname!r} property."
+                            )
+                            raise TypeError(msg) from None
+            return val
 
 
 class DegeneracyWarning(UserWarning):
+    pass
+
+
+class ConvergenceFailure(ValueError):
+    pass
+
+
+class MaxiterReached(ConvergenceFailure):
+    pass
+
+
+class StepProblem(ConvergenceFailure):
     pass
 
 
@@ -125,19 +213,19 @@ class Fitter:
         self.model_init = model
         self.track_mode = track_mode
         if residuals is None:
-            self.resids_init = pr.Residuals(
-                toas=toas, model=model, track_mode=self.track_mode
-            )
-            self.reset_model()
+            self.resids_init = self.make_resids(self.model_init)
         else:
             # residuals were provided, we're just going to use them
+            self.resids_init = residuals
             # probably using GLSFitter to compute a chi-squared
-            self.model = copy.deepcopy(self.model_init)
-            self.resids = residuals
-            self.fitresult = []
+        self.model = copy.deepcopy(self.model_init)
+        self.resids = copy.deepcopy(self.resids_init)
+        self.fitresult = []
         self.method = None
+        self.is_wideband = False
+        self.converged = False
 
-    def fit_toas(self, maxiter=None):
+    def fit_toas(self, maxiter=None, debug=False):
         """Run fitting operation.
 
         This method needs to be implemented by subclasses. All implemenations
@@ -156,7 +244,7 @@ class Fitter:
         """
 
         # Need to check that fit has been done first!
-        if not hasattr(self, "covariance_matrix"):
+        if not hasattr(self, "parameter_covariance_matrix"):
             log.warning(
                 "fit_toas() has not been run, so pre-fit and post-fit will be the same!"
             )
@@ -165,10 +253,7 @@ class Fitter:
         from uncertainties import ufloat
 
         # Check if Wideband or not
-        if self.resids.__class__.__name__ == "WidebandTOAResiduals":
-            is_wideband = True
-        else:
-            is_wideband = False
+        is_wideband = self.is_wideband
 
         # First, print fit quality metrics
         s = f"Fitted model using {self.method} method with {len(self.model.free_params)} free parameters to {self.toas.ntoas} TOAs\n"
@@ -231,7 +316,7 @@ class Fitter:
                         )
                 elif isinstance(par, boolParameter):
                     s += ("{:" + spacingName + "s} {:>20s} {:28s} {}\n").format(
-                        pn, prefitpar.print_quantity(prefitpar.value), "", par.units
+                        pn, prefitpar.str_quantity(prefitpar.value), "", par.units
                     )
                 else:
                     # Assume a numerical parameter
@@ -277,14 +362,14 @@ class Fitter:
         if hasattr(self.model, "F0"):
             F0 = self.model.F0.quantity
             if not self.model.F0.frozen:
-                p, perr = pint.utils.pferrs(F0, self.model.F0.uncertainty)
+                p, perr = pint.derived_quantities.pferrs(F0, self.model.F0.uncertainty)
                 s += "Period = {} +/- {}\n".format(p.to(u.s), perr.to(u.s))
             else:
                 s += "Period = {}\n".format((1.0 / F0).to(u.s))
         if hasattr(self.model, "F1"):
             F1 = self.model.F1.quantity
             if not any([self.model.F1.frozen, self.model.F0.frozen]):
-                p, perr, pd, pderr = pint.utils.pferrs(
+                p, perr, pd, pderr = pint.derived_quantities.pferrs(
                     F0, self.model.F0.uncertainty, F1, self.model.F1.uncertainty
                 )
                 s += "Pdot = {} +/- {}\n".format(
@@ -292,17 +377,18 @@ class Fitter:
                 )
                 brakingindex = 3
                 s += "Characteristic age = {:.4g} (braking index = {})\n".format(
-                    pint.utils.pulsar_age(F0, F1, n=brakingindex), brakingindex
+                    pint.derived_quantities.pulsar_age(F0, F1, n=brakingindex),
+                    brakingindex,
                 )
                 s += "Surface magnetic field = {:.3g}\n".format(
-                    pint.utils.pulsar_B(F0, F1)
+                    pint.derived_quantities.pulsar_B(F0, F1)
                 )
                 s += "Magnetic field at light cylinder = {:.4g}\n".format(
-                    pint.utils.pulsar_B_lightcyl(F0, F1)
+                    pint.derived_quantities.pulsar_B_lightcyl(F0, F1)
                 )
                 I_NS = I = 1.0e45 * u.g * u.cm ** 2
                 s += "Spindown Edot = {:.4g} (I={})\n".format(
-                    pint.utils.pulsar_edot(F0, F1, I=I_NS), I_NS
+                    pint.derived_quantities.pulsar_edot(F0, F1, I=I_NS), I_NS
                 )
 
         if hasattr(self.model, "PX"):
@@ -389,17 +475,17 @@ class Fitter:
                     )
                     fm = 4.0 * np.pi ** 2 * a1 ** 3 / (4.925490947e-6 * pbs ** 2)
                     s += "Mass function = {:SP} Msun\n".format(fm)
-                    mcmed = pint.utils.companion_mass(
+                    mcmed = pint.derived_quantities.companion_mass(
                         self.model.PB.quantity,
                         self.model.A1.quantity,
-                        inc=60.0 * u.deg,
-                        mpsr=1.4 * u.solMass,
+                        i=60.0 * u.deg,
+                        mp=1.4 * u.solMass,
                     )
-                    mcmin = pint.utils.companion_mass(
+                    mcmin = pint.derived_quantities.companion_mass(
                         self.model.PB.quantity,
                         self.model.A1.quantity,
-                        inc=90.0 * u.deg,
-                        mpsr=1.4 * u.solMass,
+                        i=90.0 * u.deg,
+                        mp=1.4 * u.solMass,
                     )
                     s += "Companion mass min, median (assuming Mpsr = 1.4 Msun) = {:.4f}, {:.4f} Msun\n".format(
                         mcmin, mcmed
@@ -419,7 +505,7 @@ class Fitter:
                                 um.asin(si) * 180.0 / np.pi
                             )
 
-                        psrmass = pint.utils.pulsar_mass(
+                        psrmass = pint.derived_quantities.pulsar_mass(
                             self.model.PB.quantity,
                             self.model.A1.quantity,
                             self.model.M2.quantity,
@@ -475,8 +561,6 @@ class Fitter:
             self.model.CLOCK.value = "TT(TAI)"
         else:
             self.model.CLOCK.value = f"TT({self.toas.clock_corr_info['bipm_version']})"
-        if chi2 is not None:
-            self.model.CHI2.value = chi2
 
     def reset_model(self):
         """Reset the current model to the initial model."""
@@ -489,28 +573,50 @@ class Fitter:
 
         Run after updating a model parameter.
         """
-        self.resids = pr.Residuals(
-            toas=self.toas, model=self.model, track_mode=self.track_mode
-        )
+        self.resids = self.make_resids(self.model)
+
+    def make_resids(self, model):
+        return Residuals(toas=self.toas, model=model, track_mode=self.track_mode)
 
     def get_designmatrix(self):
         """Return the model's design matrix for these TOAs."""
         return self.model.designmatrix(toas=self.toas, incfrozen=False, incoffset=True)
 
-    def get_covariance_matrix(self, with_phase=False, pretty_print=False, prec=3):
+    def get_parameter_covariance_matrix(
+        self, with_phase=False, pretty_print=False, prec=3
+    ):
         """Show the parameter covariance matrix post-fit.
 
         If with_phase, then show and return the phase column as well.
         If pretty_print, then also pretty-print on stdout the matrix.
         prec is the precision of the floating point results.
         """
-        if hasattr(self, "covariance_matrix"):
-            fps = list(self.model.free_params)
-            cm = self.covariance_matrix
-            if with_phase:
-                fps = ["PHASE"] + fps
-            else:
-                cm = cm[1:, 1:]
+        if hasattr(self, "parameter_covariance_matrix"):
+            if isinstance(self.parameter_covariance_matrix, np.ndarray):
+                # it's just a raw ndarray
+                fps = list(self.model.free_params)
+                cm = self.parameter_covariance_matrix
+                if with_phase:
+                    fps = ["PHASE"] + fps
+                else:
+                    cm = cm[1:, 1:]
+            elif isinstance(self.parameter_covariance_matrix, CovarianceMatrix):
+                if with_phase:
+                    return self.parameter_covariance_matrix.prettyprint(prec=prec)
+                    fps = self.parameter_covariance_matrix.get_label_names(axis=0)
+                    cm = self.parameter_covariance_matrix.matrix
+                else:
+                    # exclude that
+                    fps = [
+                        x
+                        for x in self.parameter_covariance_matrix.get_label_names(
+                            axis=0
+                        )
+                        if not x == "Offset"
+                    ]
+                    new_matrix = self.parameter_covariance_matrix.get_label_matrix(fps)
+                    print(new_matrix.prettyprint(prec=prec))
+                    return new_matrix
             if pretty_print:
                 lens = [max(len(fp) + 2, prec + 8) for fp in fps]
                 maxlen = max(lens)
@@ -532,20 +638,40 @@ class Fitter:
             log.error("You must run .fit_toas() before accessing the covariance matrix")
             raise AttributeError
 
-    def get_correlation_matrix(self, with_phase=False, pretty_print=False, prec=3):
+    def get_parameter_correlation_matrix(
+        self, with_phase=False, pretty_print=False, prec=3
+    ):
         """Show the parameter correlation matrix post-fit.
 
         If with_phase, then show and return the phase column as well.
         If pretty_print, then also pretty-print on stdout the matrix.
         prec is the precision of the floating point results.
         """
-        if hasattr(self, "correlation_matrix"):
-            fps = list(self.model.free_params)
-            cm = self.correlation_matrix
-            if with_phase:
-                fps = ["PHASE"] + fps
-            else:
-                cm = cm[1:, 1:]
+        if hasattr(self, "parameter_correlation_matrix"):
+            if isinstance(self.parameter_correlation_matrix, np.ndarray):
+                # it's just a raw ndarray
+                fps = list(self.model.free_params)
+                cm = self.parameter_correlation_matrix
+                if with_phase:
+                    fps = ["PHASE"] + fps
+                else:
+                    cm = cm[1:, 1:]
+            elif isinstance(self.parameter_correlation_matrix, CorrelationMatrix):
+                if with_phase:
+                    return self.parameter_correlation_matrix.prettyprint(prec=prec)
+                    fps = self.parameter_correlation_matrix.get_label_names(axis=0)
+                    cm = self.parameter_correlation_matrix.matrix
+                else:
+                    # exclude that
+                    fps = [
+                        x
+                        for x in self.parameter_correlation_matrix.get_label_names(
+                            axis=0
+                        )
+                        if not x == "Offset"
+                    ]
+                    new_matrix = self.parameter_correlation_matrix.get_label_matrix(fps)
+                    return new_matrix.prettyprint(prec=prec)
             if pretty_print:
                 lens = [max(len(fp) + 2, prec + 4) for fp in fps]
                 maxlen = max(lens)
@@ -627,10 +753,7 @@ class Fitter:
                 pc/cm^3 as an astropy quantity.
         """
         # Check if Wideband or not
-        if "Wideband" in self.__class__.__name__:
-            NB = False
-        else:
-            NB = True
+        NB = not self.is_wideband
         # Copy the fitter that we do not change the initial model and fitter
         fitter_copy = copy.deepcopy(self)
         # We need the original degrees of freedome and chi-squared value
@@ -664,6 +787,7 @@ class Fitter:
             fitter_copy.model.setup()
             # Now refit
             fitter_copy.fit_toas(maxiter=maxiter)
+            # FIXME: check convergence
             # Now get the new values
             dof_1 = fitter_copy.resids.dof
             chi2_1 = fitter_copy.resids.chi2
@@ -705,6 +829,7 @@ class Fitter:
             fitter_copy.model.setup()
             # Now refit
             fitter_copy.fit_toas(maxiter=maxiter)
+            # FIXME: check convergence
             # Now get the new values
             dof_2 = fitter_copy.resids.dof
             chi2_2 = fitter_copy.resids.chi2
@@ -833,6 +958,893 @@ class Fitter:
         """
         self.model.set_param_uncertainties(fitp)
 
+    @property
+    def covariance_matrix(self):
+        warn(
+            "This parameter is deprecated. Use `parameter_covariance_matrix` instead of `covariance_matrix`",
+            category=DeprecationWarning,
+        )
+        return self.parameter_covariance_matrix
+
+
+class InvalidModelParameters(ValueError):
+    pass
+
+
+class CorrelatedErrors(ValueError):
+    def __init__(self, model):
+        trouble_components = [
+            c.__class__.__name__
+            for c in model.NoiseComponent_list
+            if c.introduces_correlated_errors
+        ]
+        super().__init__(
+            f"Model has correlated errors and requires a GLS-based fitter; "
+            f"remove {trouble_components} if you want to use WLS"
+        )
+        self.trouble_components = trouble_components
+
+
+class ModelState:
+    """Record a model state and cache calculations
+
+    This class keeps track of a particular model state and all the associated
+    matrices - design matrices, singular value decompositions, what have you -
+    that are needed to compute a step and evaluate the quality of the fit.
+
+    These objects should be regarded as immutable but lazily evaluated.
+    """
+
+    def __init__(self, fitter, model):
+        self.fitter = fitter
+        self.model = model
+
+    @cached_property
+    def resids(self):
+        try:
+            return self.fitter.make_resids(self.model)
+        except ValueError as e:
+            raise InvalidModelParameters("Step landed at invalid point") from e
+
+    @cached_property
+    def chi2(self):
+        # there may be some shareable computation here
+        try:
+            return self.resids.chi2
+        except ValueError as e:
+            raise InvalidModelParameters("Cannot compute chi2") from e
+
+    @cached_property
+    def step(self):
+        raise NotImplementedError
+
+    @cached_property
+    def parameter_covariance_matrix(self):
+        raise NotImplementedError
+
+    @property
+    def covariance_matrix(self):
+        warn(
+            "This parameter is deprecated.  Use `parameter_covariance_matrix` instead of `covariance_matrix`",
+            category=DeprecationWarning,
+        )
+        return self.parameter_covariance_matrix
+
+    def predicted_chi2(self, step, lambda_):
+        """Predict the chi2 after taking a step based on the linear approximation"""
+        raise NotImplementedError
+
+    def take_step_model(self, step, lambda_=1):
+        """Make a new model reflecting the new parameters."""
+        # log.debug(f"Taking step {lambda_} * {list(zip(self.params, step))}")
+        new_model = copy.deepcopy(self.model)
+        for p, s in zip(self.params, step * lambda_):
+            try:
+                try:
+                    log.debug(f"Adjusting {getattr(self.model, p)} by {s}")
+                except ValueError:
+                    # I don't know why this fails with multiprocessing, but bypass if it does
+                    pass
+                pm = getattr(new_model, p)
+                if pm.value is None:
+                    pm.value = 0
+                pm.value += s
+                # getattr(new_model, p).value = getattr(self.model, p).value + s
+                # getattr(self.model, p) + s
+                # getattr(new_model, p).value = s
+            except AttributeError:
+                if p != "Offset":
+                    log.debug(f"Unexpected parameter {p}")
+        return new_model
+
+    def take_step(self, step, lambda_):
+        """Return a new state moved by lambda_*step."""
+        raise NotImplementedError
+
+
+class DownhillFitter(Fitter):
+    """Abstract base class for downhill fitters.
+
+    These fitters use the algorithm implemented here, in
+    :func:`pint.fitter.DownhillFitter.fit_toas` to work their way towards a
+    solution, keeping track of convergence. The linear algebra required by
+    various kinds of fitting is abstracted away into
+    :class:`pint.fitter.ModelState` objects so that this same code can be used
+    for correlated or uncorrelated TOA errors and narrowband or wideband TOAs.
+    """
+
+    def __init__(self, toas, model, track_mode=None, residuals=None):
+        super().__init__(
+            toas=toas, model=model, residuals=residuals, track_mode=track_mode
+        )
+        self.method = "downhill_checked"
+
+    def fit_toas(
+        self,
+        maxiter=20,
+        required_chi2_decrease=1e-2,
+        max_chi2_increase=1e-2,
+        min_lambda=1e-3,
+        debug=False,
+    ):
+        """Carry out a cautious downhill fit.
+
+        This tries to take the same steps as
+        :func:`pint.fitter.WLSFitter.fit_toas` or
+        :func:`pint.fitter.GLSFitter.fit_toas` or
+        :func:`pint.fitter.WidebandTOAFitter.fit_toas`.  At each step, it
+        checks whether the new model has a better ``chi2`` than the current
+        one; if the new model is invalid or worse than the current one, it
+        tries taking a shorter step in the same direction. This can exit if it
+        exceeds the maximum number of iterations or if improvement is not
+        possible even with very short steps, or it can exit successully if a
+        full-size step is taken and it does not decrease the ``chi2`` by much.
+
+        The attribute ``self.converged`` is set to True or False depending on
+        whether the process actually converged.
+
+        Parameters
+        ==========
+
+        maxiter : int
+            Abandon the process if this many successful steps have been taken.
+        required_chi2_decrease : float
+            A full-size step that makes less than this much improvement is taken
+            to indicate that the fitter has converged.
+        max_chi2_increase : float
+            If this is positive, consider taking steps that slightly worsen the chi2 in hopes
+            of eventually finding our way downhill.
+        min_lambda : float
+            If steps are shrunk by this factor and still don't result in improvement, abandon hope
+            of convergence and stop.
+        """
+        # setup
+        self.model.validate()
+        self.model.validate_toas(self.toas)
+        current_state = self.create_state()
+        best_state = current_state
+        self.converged = False
+        # algorithm
+        exception = None
+        for i in range(maxiter):
+            step = current_state.step
+            lambda_ = 1
+            chi2_decrease = 0
+            while True:
+                try:
+                    new_state = current_state.take_step(step, lambda_)
+                    chi2_decrease = current_state.chi2 - new_state.chi2
+                    if new_state.chi2 < best_state.chi2:
+                        best_state = new_state
+                    if chi2_decrease < -max_chi2_increase:
+                        raise InvalidModelParameters(
+                            f"chi2 increased from {current_state.chi2} to {new_state.chi2} "
+                            f"when trying to take a step with lambda {lambda_}"
+                        )
+                    else:
+                        log.info(
+                            f"Iteration {i}: "
+                            f"Updating state, chi2 goes down by {chi2_decrease} "
+                            f"from {current_state.chi2} "
+                            f"to {new_state.chi2}"
+                        )
+                        exception = None
+                        current_state = new_state
+                        break
+                except InvalidModelParameters as e:
+                    # This could be an exception evaluating new_state.chi2 or an increase in value
+                    # If bad parameter values escape, look in ModelState.resids for the except
+                    # that should catch them
+                    lambda_ /= 2
+                    log.info(f"Iteration {i}: Shortening step to {lambda_}: {e}")
+                    if lambda_ < min_lambda:
+                        log.warning(
+                            f"Unable to improve chi2 even with very small steps, stopping "
+                            f"but keeping best state, message was: {e}"
+                        )
+                        exception = e
+                        break
+            if (
+                -max_chi2_increase <= chi2_decrease < required_chi2_decrease
+                and lambda_ == 1
+            ):
+                log.info(
+                    f"Iteration {i}: chi2 does not improve, stopping; "
+                    f"decrease: {chi2_decrease}"
+                )
+                self.converged = True
+                break
+            if exception is not None:
+                break
+        else:
+            log.info(
+                f"Stopping because maxmum number of iterations ({maxiter}) reached"
+            )
+        self.current_state = best_state
+        # collect results
+        self.model = self.current_state.model
+        self.resids = self.current_state.resids
+        self.parameter_covariance_matrix = (
+            self.current_state.parameter_covariance_matrix
+        )
+        self.errors = np.sqrt(np.diag(self.parameter_covariance_matrix.matrix))
+        self.parameter_correlation_matrix = (
+            self.parameter_covariance_matrix.to_correlation_matrix()
+        )
+        for p, e in zip(self.current_state.params, self.errors):
+            try:
+                try:
+                    log.debug(f"Setting {getattr(self.model, p)} uncertainty to {e}")
+                except ValueError:
+                    # I don't know why this fails with multiprocessing, but bypass if it does
+                    pass
+                pm = getattr(self.model, p)
+            except AttributeError:
+                if p != "Offset":
+                    log.debug(f"Unexpected parameter {p}")
+            else:
+                pm.uncertainty = e * pm.units
+        self.update_model(self.current_state.chi2)
+        if exception is not None:
+            raise StepProblem(
+                "Unable to improve chi2 even with very small steps"
+            ) from exception
+        if not self.converged:
+            raise MaxiterReached(f"Convergence not detected after {maxiter} steps.")
+        return self.converged
+
+
+class WLSState(ModelState):
+    def __init__(self, fitter, model, threshold=None):
+        super().__init__(fitter, model)
+        self.threshold = threshold
+
+    @cached_property
+    def step(self):
+        # Define the linear system
+        M, params, units = self.model.designmatrix(
+            toas=self.fitter.toas, incfrozen=False, incoffset=True
+        )
+        # Get residuals and TOA uncertainties in seconds
+        Nvec = self.fitter.toas.get_errors().to(u.s).value
+        scaled_resids = self.resids.time_resids.to(u.s).value / Nvec
+
+        # "Whiten" design matrix and residuals by dividing by uncertainties
+        M = M / Nvec.reshape((-1, 1))
+
+        # For each column in design matrix except for col 0 (const. pulse
+        # phase), subtract the mean value, and scale by the column RMS.
+        # This helps avoid numerical problems later.  The scaling factors need
+        # to be saved to recover correct parameter units.
+        # NOTE, We remove subtract mean value here, since it did not give us a
+        # fast converge fitting.
+        # M[:,1:] -= M[:,1:].mean(axis=0)
+        fac = np.sqrt((M ** 2).mean(axis=0))
+        # fac[0] = 1.0
+        fac[fac == 0] = 1.0
+        M /= fac
+        # Singular value decomp of design matrix:
+        #   M = U s V^T
+        # Dimensions:
+        #   M, U are Ntoa x Nparam
+        #   s is Nparam x Nparam diagonal matrix encoded as 1-D vector
+        #   V^T is Nparam x Nparam
+        U, s, Vt = scipy.linalg.svd(M, full_matrices=False)
+        # Note, here we could do various checks like report
+        # matrix condition number or zero out low singular values.
+        # print 'log_10 cond=', np.log10(s.max()/s.min())
+        # Note, Check the threshold from data precision level.Borrowed from
+        # np Curve fit.
+        threshold = self.threshold
+        if threshold is None:
+            # M is float, not longdouble
+            # threshold = np.finfo(float).eps * max(M.shape)
+            threshold = 1e-14 * max(M.shape)
+
+        bad = np.where(s <= threshold * s[0])[0]
+        s[bad] = np.inf
+        for c in bad:
+            bad_col = Vt[c, :]
+            bad_col /= abs(bad_col).max()
+            bad_combination = " + ".join(
+                [
+                    f"{co}*{p}"
+                    for (co, p) in sorted(zip(bad_col, params))
+                    if abs(co) > threshold
+                ]
+            )
+            warn(
+                f"Parameter degeneracy; the following linear combination yields "
+                f"almost no change: {bad_combination}",
+                DegeneracyWarning,
+            )
+
+        self.M = M
+        self.U = U
+        self.Vt = Vt
+        self.s = s
+        self.fac = fac
+        self.params = params
+        self.units = units
+        self.scaled_resids = scaled_resids
+        # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
+        covariance_matrix_labels = {}
+        for i, (param, unit) in enumerate(zip(params, units)):
+            covariance_matrix_labels[param] = (i, i + 1, unit)
+        # covariance matrix is 2D and symmetric
+        covariance_matrix_labels = [covariance_matrix_labels] * 2
+        self.parameter_covariance_matrix_labels = covariance_matrix_labels
+
+        # The delta-parameter values
+        #   dpars = V s^-1 U^T r
+        # Scaling by fac recovers original units
+        return (Vt.T @ ((U.T @ scaled_resids) / s)) / fac
+
+    def take_step(self, step, lambda_=1):
+        return WLSState(
+            self.fitter, self.take_step_model(step, lambda_), threshold=self.threshold
+        )
+
+    @cached_property
+    def parameter_covariance_matrix(self):
+        # make sure we compute the SVD
+        self.step
+        # Sigma = np.dot(Vt.T / s, U.T)
+        # The post-fit parameter covariance matrix
+        #   Sigma = V s^-2 V^T
+        Sigma = np.dot(self.Vt.T / (self.s ** 2), self.Vt)
+        return CovarianceMatrix(
+            (Sigma / self.fac).T / self.fac, self.parameter_covariance_matrix_labels
+        )
+
+
+class DownhillWLSFitter(DownhillFitter):
+    """Fitter that uses the shortening-step procedure for WLS fits.
+
+    Most of the machinery here is in :class:`pint.fitter.WLSState`
+    or :class:`pint.fitter.DownhillFitter`.
+    """
+
+    def __init__(self, toas, model, track_mode=None, residuals=None):
+        if model.has_correlated_errors:
+            raise CorrelatedErrors(model)
+        super().__init__(
+            toas=toas, model=model, residuals=residuals, track_mode=track_mode
+        )
+        self.method = "downhill_wls"
+
+    def fit_toas(self, maxiter=10, threshold=None, debug=False, **kwargs):
+        """Fit TOAs.
+
+        This is mostly implemented in
+        :func:`pint.fitter.DownhillFitter.fit_toas`.
+
+        Parameters
+        ==========
+        maxiter : int
+            Abandon hope if convergence hasn't occurred after this many steps (successful or not).
+        threshold : float
+            Discard singular values less than this times the largest; this makes the linear algebra
+            a little more stable, but the Levenberg-Marquardt algorithm is supposed to do that anyway.
+        kwargs : dict
+            Any additional arguments are passed down to
+            :func:`pint.fitter.DownhillFitter.fit_toas`
+        """
+        self.threshold = threshold
+        super().fit_toas(maxiter=maxiter, debug=debug, **kwargs)
+
+    def create_state(self):
+        return WLSState(self, self.model)
+
+
+class GLSState(ModelState):
+    def __init__(self, fitter, model, full_cov=False, threshold=None):
+        super().__init__(fitter, model)
+        self.threshold = threshold
+        self.full_cov = full_cov
+
+    @cached_property
+    def step(self):
+        # Define the linear system
+        M, params, units = self.model.designmatrix(
+            toas=self.fitter.toas, incfrozen=False, incoffset=True
+        )
+        self.params = params
+        self.units = units
+        # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
+        covariance_matrix_labels = {}
+        for i, (param, unit) in enumerate(zip(params, units)):
+            covariance_matrix_labels[param] = (i, i + 1, unit)
+        # covariance matrix is 2D and symmetric
+        covariance_matrix_labels = [covariance_matrix_labels] * 2
+        self.parameter_covariance_matrix_labels = covariance_matrix_labels
+
+        residuals = self.resids.time_resids.to(u.s).value
+
+        # get any noise design matrices and weight vectors
+        if not self.full_cov:
+            Mn = self.model.noise_model_designmatrix(self.fitter.toas)
+            phi = self.model.noise_model_basis_weight(self.fitter.toas)
+            phiinv = np.zeros(M.shape[1])
+            if Mn is not None and phi is not None:
+                phiinv = np.concatenate((phiinv, 1 / phi))
+                M = np.hstack((M, Mn))
+
+        # normalize the design matrix
+        norm = np.sqrt(np.sum(M ** 2, axis=0))
+        for c in np.where(norm == 0)[0]:
+            warn(
+                f"Parameter degeneracy; the following parameter yields "
+                f"almost no change: {params[c]}",
+                DegeneracyWarning,
+            )
+        norm[norm == 0] = 1
+        M /= norm
+        self.M = M
+
+        # compute covariance matrices
+        if self.full_cov:
+            cov = self.model.toa_covariance_matrix(self.fitter.toas)
+            cf = scipy.linalg.cho_factor(cov)
+            cm = scipy.linalg.cho_solve(cf, M)
+            mtcm = np.dot(M.T, cm)
+            mtcy = np.dot(cm.T, residuals)
+
+        else:
+            phiinv /= norm ** 2
+            Nvec = (
+                self.model.scaled_toa_uncertainty(self.fitter.toas).to(u.s).value ** 2
+            )
+            cinv = 1 / Nvec
+            mtcm = np.dot(M.T, cinv[:, None] * M)
+            mtcm += np.diag(phiinv)
+            mtcy = np.dot(M.T, cinv * residuals)
+        log.debug(f"mtcm: {mtcm}")
+
+        U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
+        log.debug(f"s: {s}")
+
+        bad = np.where(s <= self.threshold * s[0])[0]
+        s[bad] = np.inf
+        for c in bad:
+            bad_col = Vt[c, :]
+            bad_col /= abs(bad_col).max()
+            bad_combination = " ".join(
+                [
+                    f"{p}"
+                    for (co, p) in sorted(zip(bad_col, params))
+                    if abs(co) > self.threshold
+                ]
+            )
+            warn(
+                f"Parameter degeneracy; the following combination of parameters yields "
+                f"almost no change: {bad_combination}",
+                DegeneracyWarning,
+            )
+
+        self.norm = norm
+        self.s, self.Vt = s, Vt
+        xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+        log.debug(f"norm: {norm}")
+        log.debug(f"xhat: {xhat}")
+        self.xhat = xhat
+        # newres = residuals - np.dot(M, xhat)
+
+        # compute absolute estimates, normalized errors, covariance matrix
+        return xhat / norm
+
+    def take_step(self, step, lambda_=1):
+        return GLSState(
+            self.fitter,
+            self.take_step_model(step, lambda_),
+            threshold=self.threshold,
+            full_cov=self.full_cov,
+        )
+
+    @cached_property
+    def parameter_covariance_matrix(self):
+        # make sure we compute the SVD
+        self.step
+        xvar = np.dot(self.Vt.T / self.s, self.Vt)
+        return CovarianceMatrix(
+            (xvar / self.norm).T / self.norm, self.parameter_covariance_matrix_labels
+        )
+
+
+class DownhillGLSFitter(DownhillFitter):
+    """Fitter that uses the shortening-step procedure for GLS fits.
+
+    Most of the machinery here is in :class:`pint.fitter.GLSState`
+    or :class:`pint.fitter.DownhillFitter`.
+    """
+
+    # FIXME: do something clever to efficiently compute chi-squared
+
+    def __init__(self, toas, model, track_mode=None, residuals=None):
+        if not model.has_correlated_errors:
+            log.info(
+                "Model does not appear to have correlated errors so the GLS fitter "
+                "is unnecessary; DownhillWLSFitter may be faster and more stable."
+            )
+        super().__init__(
+            toas=toas, model=model, residuals=residuals, track_mode=track_mode
+        )
+        self.method = "downhill_gls"
+        self.full_cov = False
+        self.threshold = 0
+
+    def create_state(self):
+        return GLSState(
+            self, self.model, full_cov=self.full_cov, threshold=self.threshold
+        )
+
+    def fit_toas(self, maxiter=10, threshold=0, full_cov=False, debug=False, **kwargs):
+        """Fit TOAs.
+
+        This is mostly implemented in
+        :func:`pint.fitter.DownhillFitter.fit_toas`.
+
+        Parameters
+        ==========
+        maxiter : int
+            Abandon hope if convergence hasn't occurred after this many steps (successful or not).
+        threshold : float
+            Discard singular values less than this times the largest; this makes the linear algebra
+            a little more stable, but the Levenberg-Marquardt algorithm is supposed to do that anyway.
+        full_cov : bool
+            If True, use the full TOA covariance matrix, which can be huge; if False, use the
+            rank-reduced approach (for which Levenberg-Marquardt may not make sense).
+        kwargs : dict
+            Any additional arguments are passed down to
+            :func:`pint.fitter.DownhillFitter.fit_toas`
+        """
+        self.threshold = threshold
+        self.full_cov = full_cov
+        r = super().fit_toas(maxiter=maxiter, debug=debug, **kwargs)
+        # FIXME: set up noise residuals et cetera
+        # Compute the noise realizations if possible
+        ntmpar = len(self.model.free_params)
+        if not self.full_cov:
+            noise_dims = self.model.noise_model_dimensions(self.toas)
+            noise_resids = {}
+            for comp in noise_dims:
+                # The first column of designmatrix is "offset", add 1 to match
+                # the indices of noise designmatrix
+                p0 = noise_dims[comp][0] + ntmpar + 1
+                p1 = p0 + noise_dims[comp][1]
+                noise_resids[comp] = (
+                    np.dot(
+                        self.current_state.M[:, p0:p1], self.current_state.xhat[p0:p1]
+                    )
+                    * u.s
+                )
+                if debug:
+                    setattr(
+                        self.resids,
+                        comp + "_M",
+                        (
+                            self.current_state.M[:, p0:p1],
+                            self.current_state.xhat[p0:p1],
+                        ),
+                    )
+                    setattr(self.resids, comp + "_M_index", (p0, p1))
+            self.resids.noise_resids = noise_resids
+            if debug:
+                setattr(self.resids, "norm", self.current_state.norm)
+
+        return r
+
+
+class WidebandState(ModelState):
+    def __init__(self, fitter, model, full_cov=False, threshold=None):
+        super().__init__(fitter, model)
+        self.threshold = threshold
+        self.full_cov = full_cov
+        self.add_args = {}  # for adding arguments to residual creation
+
+    @cached_property
+    def M_params_units_norm(self):
+        # Define the linear system
+        d_matrix = combine_design_matrices_by_quantity(
+            [
+                DesignMatrixMaker("toa", u.s)(
+                    self.fitter.toas, self.model, self.model.free_params, offset=True
+                ),
+                DesignMatrixMaker("dm", u.pc / u.cm ** 3)(
+                    self.fitter.toas, self.model, self.model.free_params, offset=True
+                ),
+            ]
+        )
+        M, params, units = (
+            d_matrix.matrix,
+            d_matrix.derivative_params,
+            d_matrix.param_units,
+        )
+        # get any noise design matrices and weight vectors
+        if not self.full_cov:
+            # We assume the fit date type is toa
+            Mn = DesignMatrixMaker("toa_noise", u.s)(self.fitter.toas, self.model)
+            phi = self.model.noise_model_basis_weight(self.fitter.toas)
+            phiinv = np.zeros(M.shape[1])
+            if Mn is not None and phi is not None:
+                phiinv = np.concatenate((phiinv, 1 / phi))
+                new_d_matrix = combine_design_matrices_by_param(d_matrix, Mn)
+                M, params, units = (
+                    new_d_matrix.matrix,
+                    new_d_matrix.derivative_params,
+                    new_d_matrix.param_units,
+                )
+
+        # normalize the design matrix
+        norm = np.sqrt(np.sum(M ** 2, axis=0))
+        ntmpar = len(self.model.free_params)
+        if M.shape[1] > ntmpar:
+            norm[ntmpar:] = 1
+        for c in np.where(norm == 0)[0]:
+            warn(
+                f"Parameter degeneracy; the following parameter yields "
+                f"almost no change: {params[c]}",
+                DegeneracyWarning,
+            )
+        norm[norm == 0] = 1
+        M /= norm
+        if not self.full_cov:
+            phiinv /= norm ** 2
+            self.phiinv = phiinv
+
+        return M, params, units, norm
+
+    @cached_property
+    def M(self):
+        return self.M_params_units_norm[0]
+
+    @cached_property
+    def params(self):
+        return self.M_params_units_norm[1]
+
+    @cached_property
+    def units(self):
+        return self.M_params_units_norm[2]
+
+    @cached_property
+    def norm(self):
+        return self.M_params_units_norm[3]
+
+    @cached_property
+    def mtcm_mtcy_mtcmplain(self):
+        # FIXME: ensure that TOAs are before DM
+        residuals = np.hstack(
+            (self.resids.toa.time_resids.to_value(u.s), self.resids.dm.resids_value)
+        )
+
+        # compute covariance matrices
+        if self.full_cov:
+            cov = combine_covariance_matrix(
+                [
+                    CovarianceMatrixMaker("toa", u.s)(self.fitter.toas, self.model),
+                    CovarianceMatrixMaker("dm", u.pc / u.cm ** 3)(
+                        self.fitter.toas, self.model
+                    ),
+                ]
+            ).matrix
+            cf = scipy.linalg.cho_factor(cov)
+            cm = scipy.linalg.cho_solve(cf, self.M)
+            mtcm = np.dot(self.M.T, cm)
+            mtcy = np.dot(cm.T, residuals)
+            mtcmplain = mtcm
+        else:
+            Nvec = (
+                np.hstack(
+                    [
+                        self.model.scaled_toa_uncertainty(self.fitter.toas).to_value(
+                            u.s
+                        )
+                        if hasattr(self.model, "scaled_toa_uncertainty")
+                        else self.resids.toa.get_errors().to_value(u.s),
+                        self.model.scaled_dm_uncertainty(self.fitter.toas).to_value(
+                            u.pc / u.cm ** 3
+                        )
+                        if hasattr(self.model, "scaled_dm_uncertainty")
+                        else self.resids.dm.get_dm_errors().to_value(u.pc / u.cm ** 3),
+                    ]
+                )
+                ** 2
+            )
+            cinv = 1 / Nvec
+            mtcm = np.dot(self.M.T, cinv[:, None] * self.M)
+            mtcmplain = mtcm
+            mtcm += np.diag(self.phiinv)
+            mtcy = np.dot(self.M.T, cinv * residuals)
+        return mtcm, mtcy, mtcmplain
+
+    @cached_property
+    def mtcm(self):
+        return self.mtcm_mtcy_mtcmplain[0]
+
+    @cached_property
+    def mtcy(self):
+        return self.mtcm_mtcy_mtcmplain[1]
+
+    @cached_property
+    def mtcmplain(self):
+        return self.mtcm_mtcy_mtcmplain[2]
+
+    @cached_property
+    def U_s_Vt_xhat(self):
+        U, s, Vt = scipy.linalg.svd(self.mtcm, full_matrices=False)
+
+        bad = np.where(s <= self.threshold * s[0])[0]
+        s[bad] = np.inf
+        for c in bad:
+            bad_col = Vt[c, :]
+            bad_col /= abs(bad_col).max()
+            bad_combination = " ".join(
+                [
+                    f"{co}*{p}"
+                    for (co, p) in reversed(sorted(zip(bad_col, self.params)))
+                    if abs(co) > self.threshold
+                ]
+            )
+            warn(
+                f"Parameter degeneracy; the following combination of parameters yields "
+                f"almost no change: {bad_combination}",
+                DegeneracyWarning,
+            )
+
+        xhat = np.dot(Vt.T, np.dot(U.T, self.mtcy) / s)
+        return U, s, Vt, xhat
+
+    @cached_property
+    def U(self):
+        return self.U_s_Vt_xhat[0]
+
+    @cached_property
+    def s(self):
+        return self.U_s_Vt_xhat[1]
+
+    @cached_property
+    def Vt(self):
+        return self.U_s_Vt_xhat[2]
+
+    @cached_property
+    def xhat(self):
+        return self.U_s_Vt_xhat[3]
+
+    @cached_property
+    def step(self):
+        # compute absolute estimates, normalized errors, covariance matrix
+        return self.xhat / self.norm
+
+    def take_step(self, step, lambda_=1):
+        return WidebandState(
+            self.fitter, self.take_step_model(step, lambda_), threshold=self.threshold
+        )
+
+    @cached_property
+    def parameter_covariance_matrix(self):
+        # make sure we compute the SVD
+        xvar = np.dot(self.Vt.T / self.s, self.Vt)
+        # is this the best place to do this?
+        covariance_matrix_labels = {}
+        for i, (param, unit) in enumerate(zip(self.params, self.units)):
+            covariance_matrix_labels[param] = (i, i + 1, unit)
+        # covariance matrix is 2D and symmetric
+        covariance_matrix_labels = [covariance_matrix_labels] * 2
+
+        return CovarianceMatrix(
+            (xvar / self.norm).T / self.norm, covariance_matrix_labels
+        )
+
+
+class WidebandDownhillFitter(DownhillFitter):
+    """Fitter that uses the shortening-step procedure for wideband GLS fits.
+
+    Most of the machinery here is in :class:`pint.fitter.WidebandState`
+    or :class:`pint.fitter.DownhillFitter`.
+    """
+
+    # FIXME: do something clever to efficiently compute chi-squared
+
+    def __init__(self, toas, model, track_mode=None, residuals=None, add_args=None):
+        self.method = "downhill_wideband"
+        self.full_cov = False
+        self.threshold = 0
+        self.add_args = {} if add_args is None else add_args
+        super().__init__(
+            toas=toas, model=model, residuals=residuals, track_mode=track_mode
+        )
+        self.is_wideband = True
+
+    def make_resids(self, model):
+        return WidebandTOAResiduals(
+            self.toas,
+            model,
+            toa_resid_args=self.add_args.get("toa", {}),
+            dm_resid_args=self.add_args.get("dm", {}),
+        )
+
+    def create_state(self):
+        return WidebandState(
+            self, self.model, full_cov=self.full_cov, threshold=self.threshold
+        )
+
+    def fit_toas(
+        self, maxiter=10, threshold=1e-14, full_cov=False, debug=False, **kwargs
+    ):
+        """Fit TOAs.
+
+        This is mostly implemented in
+        :func:`pint.fitter.DownhillFitter.fit_toas`.
+
+        Parameters
+        ==========
+        maxiter : int
+            Abandon hope if convergence hasn't occurred after this many steps (successful or not).
+        threshold : float
+            Discard singular values less than this times the largest; this makes the linear algebra
+            a little more stable, but the Levenberg-Marquardt algorithm is supposed to do that anyway.
+        full_cov : bool
+            If True, use the full TOA covariance matrix, which can be huge; if False, use the
+            rank-reduced approach (for which Levenberg-Marquardt may not make sense).
+        kwargs : dict
+            Any additional arguments are passed down to
+            :func:`pint.fitter.DownhillFitter.fit_toas`
+        """
+        self.threshold = threshold
+        self.full_cov = full_cov
+        # FIXME: set up noise residuals et cetera
+        r = super().fit_toas(maxiter=maxiter, debug=debug, **kwargs)
+        # Compute the noise realizations if possible
+        ntmpar = len(self.model.free_params)
+        if not self.full_cov:
+            noise_dims = self.model.noise_model_dimensions(self.toas)
+            noise_resids = {}
+            for comp in noise_dims:
+                # The first column of designmatrix is "offset", add 1 to match
+                # the indices of noise designmatrix
+                p0 = noise_dims[comp][0] + ntmpar + 1
+                p1 = p0 + noise_dims[comp][1]
+                noise_resids[comp] = (
+                    np.dot(
+                        self.current_state.M[:, p0:p1], self.current_state.xhat[p0:p1]
+                    )
+                    * u.s
+                )
+                if debug:
+                    setattr(
+                        self.resids,
+                        comp + "_M",
+                        (
+                            self.current_state.M[:, p0:p1],
+                            self.current_state.xhat[p0:p1],
+                        ),
+                    )
+                    setattr(self.resids, comp + "_M_index", (p0, p1))
+            self.resids.noise_resids = noise_resids
+            if debug:
+                setattr(self.resids, "norm", self.current_state.norm)
+        return r
+
 
 class PowellFitter(Fitter):
     """A fitter that demonstrates how to work with a generic fitting function.
@@ -846,12 +1858,10 @@ class PowellFitter(Fitter):
     """
 
     def __init__(self, toas, model, track_mode=None, residuals=None):
-        super(PowellFitter, self).__init__(
-            toas, model, residuals=residuals, track_mode=track_mode
-        )
+        super().__init__(toas, model, residuals=residuals, track_mode=track_mode)
         self.method = "Powell"
 
-    def fit_toas(self, maxiter=20):
+    def fit_toas(self, maxiter=20, debug=False):
         """Carry out the fitting procedure."""
         # check that params of timing model have necessary components
         self.model.validate()
@@ -894,12 +1904,12 @@ class WLSFitter(Fitter):
     """
 
     def __init__(self, toas, model, track_mode=None, residuals=None):
-        super(WLSFitter, self).__init__(
+        super().__init__(
             toas=toas, model=model, residuals=residuals, track_mode=track_mode
         )
         self.method = "weighted_least_square"
 
-    def fit_toas(self, maxiter=1, threshold=None):
+    def fit_toas(self, maxiter=1, threshold=None, debug=False):
         """Run a linear weighted least-squared fitting method.
 
         Parameters
@@ -947,7 +1957,7 @@ class WLSFitter(Fitter):
             #   M, U are Ntoa x Nparam
             #   s is Nparam x Nparam diagonal matrix encoded as 1-D vector
             #   V^T is Nparam x Nparam
-            U, s, Vt = sl.svd(M, full_matrices=False)
+            U, s, Vt = scipy.linalg.svd(M, full_matrices=False)
             # Note, here we could do various checks like report
             # matrix condition number or zero out low singular values.
             # print 'log_10 cond=', np.log10(s.max()/s.min())
@@ -966,7 +1976,7 @@ class WLSFitter(Fitter):
                 bad_combination = " + ".join(
                     [
                         f"{co}*{p}"
-                        for (co, p) in sorted(zip(bad_col, params))
+                        for (co, p) in reversed(sorted(zip(bad_col, params)))
                         if abs(co) > threshold
                     ]
                 )
@@ -986,9 +1996,23 @@ class WLSFitter(Fitter):
             errors = np.sqrt(np.diag(sigma_var))
             sigma_cov = (sigma_var / errors).T / errors
             # covariance matrix = variances in diagonal, used for gaussian random models
-            self.covariance_matrix = sigma_var
+            covariance_matrix = sigma_var
+            # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
+            covariance_matrix_labels = {}
+            for i, (param, unit) in enumerate(zip(params, units)):
+                covariance_matrix_labels[param] = (i, i + 1, unit)
+            # covariance matrix is 2D and symmetric
+            covariance_matrix_labels = [
+                covariance_matrix_labels
+            ] * covariance_matrix.ndim
+            self.parameter_covariance_matrix = CovarianceMatrix(
+                covariance_matrix, covariance_matrix_labels
+            )
+
             # correlation matrix = 1s in diagonal, use for comparison to tempo/tempo2 cov matrix
-            self.correlation_matrix = sigma_cov
+            self.parameter_correlation_matrix = CorrelationMatrix(
+                sigma_cov, covariance_matrix_labels
+            )
             self.fac = fac
             self.errors = errors
 
@@ -1022,12 +2046,12 @@ class GLSFitter(Fitter):
     """
 
     def __init__(self, toas=None, model=None, track_mode=None, residuals=None):
-        super(GLSFitter, self).__init__(
+        super().__init__(
             toas=toas, model=model, residuals=residuals, track_mode=track_mode
         )
         self.method = "generalized_least_square"
 
-    def fit_toas(self, maxiter=1, threshold=0, full_cov=False):
+    def fit_toas(self, maxiter=1, threshold=0, full_cov=False, debug=False):
         """Run a generalized least-squares fitting method.
 
         A first attempt is made to solve the fitting problem by Cholesky
@@ -1078,6 +2102,7 @@ class GLSFitter(Fitter):
 
             # Get residuals and TOA uncertainties in seconds
             if i == 0:
+                # Why is this here?
                 self.update_resids()
             residuals = self.resids.time_resids.to(u.s).value
 
@@ -1093,8 +2118,6 @@ class GLSFitter(Fitter):
             # normalize the design matrix
             norm = np.sqrt(np.sum(M ** 2, axis=0))
             ntmpar = len(fitp)
-            if M.shape[1] > ntmpar:
-                norm[ntmpar:] = 1
             for c in np.where(norm == 0)[0]:
                 warn(
                     f"Parameter degeneracy; the following parameter yields "
@@ -1107,28 +2130,31 @@ class GLSFitter(Fitter):
             # compute covariance matrices
             if full_cov:
                 cov = self.model.toa_covariance_matrix(self.toas)
-                cf = sl.cho_factor(cov)
-                cm = sl.cho_solve(cf, M)
+                cf = scipy.linalg.cho_factor(cov)
+                cm = scipy.linalg.cho_solve(cf, M)
                 mtcm = np.dot(M.T, cm)
                 mtcy = np.dot(cm.T, residuals)
 
             else:
+                phiinv /= norm ** 2
                 Nvec = self.model.scaled_toa_uncertainty(self.toas).to(u.s).value ** 2
                 cinv = 1 / Nvec
                 mtcm = np.dot(M.T, cinv[:, None] * M)
                 mtcm += np.diag(phiinv)
                 mtcy = np.dot(M.T, cinv * residuals)
 
+            log.debug(f"mtcm: {mtcm}")
             xhat, xvar = None, None
             if threshold <= 0:
                 try:
-                    c = sl.cho_factor(mtcm)
-                    xhat = sl.cho_solve(c, mtcy)
-                    xvar = sl.cho_solve(c, np.eye(len(mtcy)))
-                except sl.LinAlgError:
+                    c = scipy.linalg.cho_factor(mtcm)
+                    xhat = scipy.linalg.cho_solve(c, mtcy)
+                    xvar = scipy.linalg.cho_solve(c, np.eye(len(mtcy)))
+                except scipy.linalg.LinAlgError:
                     xhat, xvar = None, None
             if xhat is None:
-                U, s, Vt = sl.svd(mtcm, full_matrices=False)
+                U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
+                log.debug(f"s: {s}")
 
                 bad = np.where(s <= threshold * s[0])[0]
                 s[bad] = np.inf
@@ -1137,8 +2163,8 @@ class GLSFitter(Fitter):
                     bad_col /= abs(bad_col).max()
                     bad_combination = " ".join(
                         [
-                            f"{p}"
-                            for (co, p) in sorted(zip(bad_col, params))
+                            f"{co}*{p}"
+                            for (co, p) in reversed(sorted(zip(bad_col, params)))
                             if abs(co) > threshold
                         ]
                     )
@@ -1150,10 +2176,12 @@ class GLSFitter(Fitter):
 
                 xvar = np.dot(Vt.T / s, Vt)
                 xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+            log.debug(f"norm: {norm}")
+            log.debug(f"xhat: {xhat}")
             newres = residuals - np.dot(M, xhat)
             # compute linearized chisq
             if full_cov:
-                chi2 = np.dot(newres, sl.cho_solve(cf, newres))
+                chi2 = np.dot(newres, scipy.linalg.cho_solve(cf, newres))
             else:
                 chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
 
@@ -1161,8 +2189,20 @@ class GLSFitter(Fitter):
             dpars = xhat / norm
             errs = np.sqrt(np.diag(xvar)) / norm
             covmat = (xvar / norm).T / norm
-            self.covariance_matrix = covmat
-            self.correlation_matrix = (covmat / errs).T / errs
+            # self.covariance_matrix = covmat
+            # self.correlation_matrix = (covmat / errs).T / errs
+            # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
+            covariance_matrix_labels = {}
+            for i, (param, unit) in enumerate(zip(params, units)):
+                covariance_matrix_labels[param] = (i, i + 1, unit)
+            # covariance matrix is 2D and symmetric
+            covariance_matrix_labels = [covariance_matrix_labels] * covmat.ndim
+            self.parameter_covariance_matrix = CovarianceMatrix(
+                covmat, covariance_matrix_labels
+            )
+            self.parameter_correlation_matrix = CorrelationMatrix(
+                (covmat / errs).T / errs, covariance_matrix_labels
+            )
 
             for ii, pn in enumerate(fitp.keys()):
                 uind = params.index(pn)  # Index of designmatrix
@@ -1183,11 +2223,18 @@ class GLSFitter(Fitter):
             if not full_cov:
                 noise_dims = self.model.noise_model_dimensions(self.toas)
                 noise_resids = {}
-                for comp in noise_dims.keys():
-                    p0 = noise_dims[comp][0] + ntmpar
+                for comp in noise_dims:
+                    # The first column of designmatrix is "offset", add 1 to match
+                    # the indices of noise designmatrix
+                    p0 = noise_dims[comp][0] + ntmpar + 1
                     p1 = p0 + noise_dims[comp][1]
                     noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
+                    if debug:
+                        setattr(self.resids, comp + "_M", (M[:, p0:p1], xhat[p0:p1]))
+                        setattr(self.resids, comp + "_M_index", (p0, p1))
                 self.resids.noise_resids = noise_resids
+                if debug:
+                    setattr(self.resids, "norm", norm)
 
         self.update_model(chi2)
 
@@ -1232,7 +2279,9 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         if not isinstance(fit_data, (tuple, list)):
             fit_data = [fit_data]
         if not isinstance(fit_data[0], TOAs):
-            raise ValueError("The first data set should be a TOAs object.")
+            raise ValueError(
+                f"The first data set should be a TOAs object but is {fit_data[0]}."
+            )
         if len(fit_data_names) == 0:
             raise ValueError("Please specify the fit data.")
         if len(fit_data) > 1 and len(fit_data_names) != len(fit_data):
@@ -1264,17 +2313,18 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 CovarianceMatrixMaker(data_resids.residual_type, data_resids.unit)
             )
 
+        self.is_wideband = True
         self.method = "General_Data_Fitter"
 
     @property
     def toas(self):
         return self.fit_data[0]
 
-    def make_combined_residuals(self, add_args={}):
+    def make_combined_residuals(self, add_args={}, model=None):
         """Make the combined residuals between TOA residual and DM residual."""
-        return pr.WidebandTOAResiduals(
+        return WidebandTOAResiduals(
             self.toas,
-            self.model,
+            self.model if model is None else model,
             toa_resid_args=add_args.get("toa", {}),
             dm_resid_args=add_args.get("dm", {}),
         )
@@ -1285,9 +2335,9 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         self.update_resids()
         self.fitresult = []
 
-    def update_resids(self):
+    def make_resids(self, model):
         """Update the residuals. Run after updating a model parameter."""
-        self.resids = self.make_combined_residuals(self.additional_args)
+        return self.make_combined_residuals(add_args=self.additional_args, model=model)
 
     def get_designmatrix(self):
         design_matrixs = []
@@ -1332,7 +2382,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         else:
             raise ValueError("No method to access data error is provided.")
 
-    def scaled_all_sigma(self,):
+    def scaled_all_sigma(self):
         """Scale all data's uncertainty.
 
         If the function of scaled_`data`_sigma is not given, it will just
@@ -1368,7 +2418,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 scaled_sigmas_no_unit.append(scaled_sigma)
         return np.hstack(scaled_sigmas_no_unit)
 
-    def fit_toas(self, maxiter=1, threshold=0, full_cov=False):
+    def fit_toas(self, maxiter=1, threshold=0, full_cov=False, debug=False):
         """Carry out a generalized least-squares fitting procedure.
 
         The algorithm here is essentially the same as used in
@@ -1428,8 +2478,6 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             # normalize the design matrix
             norm = np.sqrt(np.sum(M ** 2, axis=0))
             ntmpar = len(fitp)
-            if M.shape[1] > ntmpar:
-                norm[ntmpar:] = 1
             for c in np.where(norm == 0)[0]:
                 warn(
                     f"Parameter degeneracy; the following parameter yields "
@@ -1442,12 +2490,13 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             # compute covariance matrices
             if full_cov:
                 cov = self.get_noise_covariancematrix().matrix
-                cf = sl.cho_factor(cov)
-                cm = sl.cho_solve(cf, M)
+                cf = scipy.linalg.cho_factor(cov)
+                cm = scipy.linalg.cho_solve(cf, M)
                 mtcm = np.dot(M.T, cm)
                 mtcy = np.dot(cm.T, residuals)
 
             else:
+                phiinv /= norm ** 2
                 Nvec = self.scaled_all_sigma() ** 2
 
                 cinv = 1 / Nvec
@@ -1458,13 +2507,13 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             xhat, xvar = None, None
             if threshold <= 0:
                 try:
-                    c = sl.cho_factor(mtcm)
-                    xhat = sl.cho_solve(c, mtcy)
-                    xvar = sl.cho_solve(c, np.eye(len(mtcy)))
-                except sl.LinAlgError:
+                    c = scipy.linalg.cho_factor(mtcm)
+                    xhat = scipy.linalg.cho_solve(c, mtcy)
+                    xvar = scipy.linalg.cho_solve(c, np.eye(len(mtcy)))
+                except scipy.linalg.LinAlgError:
                     xhat, xvar = None, None
             if xhat is None:
-                U, s, Vt = sl.svd(mtcm, full_matrices=False)
+                U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
 
                 bad = np.where(s <= threshold * s[0])[0]
                 s[bad] = np.inf
@@ -1473,8 +2522,8 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                     bad_col /= abs(bad_col).max()
                     bad_combination = " ".join(
                         [
-                            f"{p}"
-                            for (co, p) in sorted(zip(bad_col, params))
+                            f"{co}*{p}"
+                            for (co, p) in reversed(sorted(zip(bad_col, params)))
                             if abs(co) > threshold
                         ]
                     )
@@ -1489,7 +2538,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             newres = residuals - np.dot(M, xhat)
             # compute linearized chisq
             if full_cov:
-                chi2 = np.dot(newres, sl.cho_solve(cf, newres))
+                chi2 = np.dot(newres, scipy.linalg.cho_solve(cf, newres))
             else:
                 chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
 
@@ -1497,8 +2546,21 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             dpars = xhat / norm
             errs = np.sqrt(np.diag(xvar)) / norm
             covmat = (xvar / norm).T / norm
-            self.covariance_matrix = covmat
-            self.correlation_matrix = (covmat / errs).T / errs
+            # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
+            covariance_matrix_labels = {}
+            for i, (param, unit) in enumerate(zip(params, units)):
+                covariance_matrix_labels[param] = (i, i + 1, unit)
+            # covariance matrix is 2D and symmetric
+            covariance_matrix_labels = [covariance_matrix_labels] * covmat.ndim
+            self.parameter_covariance_matrix = CovarianceMatrix(
+                covmat, covariance_matrix_labels
+            )
+            self.parameter_correlation_matrix = CorrelationMatrix(
+                (covmat / errs).T / errs, covariance_matrix_labels
+            )
+
+            # self.covariance_matrix = covmat
+            # self.correlation_matrix = (covmat / errs).T / errs
 
             for ii, pn in enumerate(fitp.keys()):
                 uind = params.index(pn)  # Index of designmatrix
@@ -1520,12 +2582,225 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             if not full_cov:
                 noise_dims = self.model.noise_model_dimensions(self.toas)
                 noise_resids = {}
-                for comp in noise_dims.keys():
-                    p0 = noise_dims[comp][0] + ntmpar
+                for comp in noise_dims:
+                    # The first column of designmatrix is "offset", add 1 to match
+                    # the indices of noise designmatrix
+                    p0 = noise_dims[comp][0] + ntmpar + 1
                     p1 = p0 + noise_dims[comp][1]
                     noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
+                    if debug:
+                        setattr(self.resids, comp + "_M", (M[:, p0:p1], xhat[p0:p1]))
+                        setattr(self.resids, comp + "_M_index", (p0, p1))
                 self.resids.noise_resids = noise_resids
+                if debug:
+                    setattr(self.resids, "norm", norm)
 
         self.update_model(chi2)
 
         return chi2
+
+
+class LMFitter(Fitter):
+    def fit_toas(
+        self,
+        maxiter=50,
+        *,
+        min_chi2_decrease=1e-3,
+        lambda_factor_decrease=2,
+        lambda_factor_increase=3,
+        lambda_factor_invalid=10,
+        threshold=1e-14,
+        min_lambda=0.5,
+        debug=False,
+    ):
+        current_state = self.create_state()
+        try:
+            try:
+                current_state.chi2
+            except ValueError as e:
+                raise ValueError("Initial configuration is invalid") from e
+            self.converged = False
+            lambda_ = min_lambda
+            for i in range(maxiter):
+                lf = lambda_ if lambda_ > min_lambda else 0
+                # Attempt: do not scale the phiinv penalty factor by lambda
+                A = current_state.mtcm + lf * np.diag(np.diag(current_state.mtcmplain))
+                b = current_state.mtcy
+                ill_conditioned = False
+                if threshold is None:
+                    dx = scipy.linalg.solve(A, b, assume_a="pos")
+                else:
+                    U, s, Vt = scipy.linalg.svd(A, full_matrices=False)
+                    log.debug(
+                        f"Iteration {i}: Condition number for lambda_ = {lambda_} is {s[0]/s[-1]}"
+                    )
+
+                    bad = np.where(s <= threshold * s[0])[0]
+                    s[bad] = np.inf
+                    for c in bad:
+                        ill_conditioned = True
+                        # FIXME: maybe don't stop while ill-conditioned? Always try increasing lambda?
+                        bad_col = Vt[c, :]
+                        bad_col /= abs(bad_col).max()
+                        bad_combination = " ".join(
+                            [
+                                f"{co}*{p}"
+                                for (co, p) in reversed(
+                                    sorted(zip(bad_col, current_state.params))
+                                )
+                                if abs(co) > threshold
+                            ]
+                        )
+                        warn(
+                            f"Parameter degeneracy; the following combination of parameters yields "
+                            f"almost no change: {bad_combination}",
+                            DegeneracyWarning,
+                        )
+
+                    dx = np.dot(Vt.T, np.dot(U.T, b) / s)
+
+                step = dx / current_state.norm
+
+                # FIXME: catch problems due to non-invertibility?
+                # FIXME: predicted (linear) chi-squared decrease can check how well the
+                # derivative matches the function and guide changes in lambda_
+                # predicted_chi2 = current_state.predicted_chi2(dx)
+                log.debug(f"Iteration {i}: Trying step with lambda_ = {lambda_}")
+                new_state = current_state.take_step(step)
+                try:
+                    chi2_decrease = current_state.chi2 - new_state.chi2
+                    if chi2_decrease < -min_chi2_decrease:
+                        lambda_ *= (
+                            lambda_factor_increase
+                            if not ill_conditioned
+                            else lambda_factor_invalid
+                        )
+                        log.info(
+                            f"Iteration {i}: chi2 increased from {current_state.chi2} "
+                            f"to {new_state.chi2} increasing lambda to {lambda_}"
+                        )
+                    elif chi2_decrease < 0:
+                        log.info(
+                            f"Iteration {i}: chi2 increased but only by {-chi2_decrease}, stopping."
+                        )
+                        self.converged = True
+                        break
+                    elif chi2_decrease < min_chi2_decrease:
+                        log.info(
+                            f"Iteration {i}: chi2 decreased only by {chi2_decrease}, updating "
+                            f"state and stopping."
+                        )
+                        current_state = new_state
+                        self.converged = True
+                        break
+                    else:
+                        lambda_ = max(lambda_ / lambda_factor_decrease, min_lambda)
+                        log.info(
+                            f"Iteration {i}: Updating state, chi2 goes down by {chi2_decrease} "
+                            f"from {current_state.chi2} "
+                            f"to {new_state.chi2}; decreasing lambda to "
+                            f"{lambda_ if lambda_ > min_lambda else 0}"
+                        )
+                        current_state = new_state
+                except InvalidModelParameters as e:
+                    lambda_ *= lambda_factor_invalid
+                    log.info(
+                        f"Iteration {i}: Step too aggressive, increasing lambda_ "
+                        f"to {lambda_}: {e}"
+                    )
+            else:
+                log.warning(
+                    f"Maximum number of iterations ({maxiter}) reached, stopping "
+                    f"without convergence."
+                )
+            self.iterations = i
+        except KeyboardInterrupt:
+            # could be a finally I suppose? but I'm not sure we want to update if something
+            # seriou went wrong.
+            log.info("KeyboardInterrupt detected, updating Fitter")
+            self.update_from_state(current_state, debug=debug)
+            raise
+        self.update_from_state(current_state, debug=debug)
+        return self.converged
+
+
+class WidebandLMFitter(LMFitter):
+    """Fitter for wideband data based on Levenberg-Marquardt.
+
+    This should carry out a more reliable fitting process than the plain
+    WidebandTOAFitter, and a more efficient one than WidebandDownhillFitter.
+    Unfortunately it doesn't.
+    """
+
+    def __init__(self, toas, model, track_mode=None, residuals=None, add_args=None):
+        self.method = "downhill_wideband"
+        self.full_cov = False
+        self.threshold = 0
+        self.add_args = {} if add_args is None else add_args
+        super().__init__(
+            toas=toas, model=model, residuals=residuals, track_mode=track_mode
+        )
+        self.is_wideband = True
+
+    def make_resids(self, model):
+        return WidebandTOAResiduals(
+            self.toas,
+            model,
+            toa_resid_args=self.add_args.get("toa", {}),
+            dm_resid_args=self.add_args.get("dm", {}),
+        )
+
+    def create_state(self):
+        return WidebandState(
+            self, self.model, full_cov=self.full_cov, threshold=self.threshold
+        )
+
+    def fit_toas(self, maxiter=50, full_cov=False, debug=False, **kwargs):
+        self.full_cov = full_cov
+        # FIXME: set up noise residuals et cetera
+        return super().fit_toas(maxiter=maxiter, debug=debug, **kwargs)
+
+    def update_from_state(self, state, debug=False):
+        # Nicer not to keep this if we have a choice, it introduces reference cycles
+        self.current_state = state
+        self.model = state.model
+        self.resids = state.resids
+        self.parameter_covariance_matrix = state.parameter_covariance_matrix
+        self.errors = np.sqrt(np.diag(self.parameter_covariance_matrix.matrix))
+        for p, e in zip(state.params, self.errors):
+            try:
+                log.debug(f"Setting {getattr(self.model, p)} uncertainty to {e}")
+                pm = getattr(self.model, p)
+            except AttributeError:
+                if p != "Offset":
+                    log.debug(f"Unexpected parameter {p}")
+            else:
+                pm.uncertainty = e * pm.units
+        # self.parameter_correlation_matrix = (
+        #    self.parameter_covariance_matrix / self.errors
+        # ).T / self.errors
+        self.parameter_correlation_matrix = CorrelationMatrix(
+            (self.parameter_covariance_matrix.matrix / self.errors).T / self.errors,
+            self.parameter_covariance_matrix.axis_labels,
+        )
+
+        self.update_model(state.chi2)
+        # Compute the noise realizations if possible
+        ntmpar = len(self.model.free_params)
+        if not self.full_cov:
+            noise_dims = self.model.noise_model_dimensions(self.toas)
+            noise_resids = {}
+            for comp in noise_dims:
+                # The first column of designmatrix is "offset", add 1 to match
+                # the indices of noise designmatrix
+                p0 = noise_dims[comp][0] + ntmpar + 1
+                p1 = p0 + noise_dims[comp][1]
+                noise_resids[comp] = np.dot(state.M[:, p0:p1], state.xhat[p0:p1]) * u.s
+                if debug:
+                    setattr(
+                        self.resids, comp + "_M", (state.M[:, p0:p1], state.xhat[p0:p1])
+                    )
+                    setattr(self.resids, comp + "_M_index", (p0, p1))
+            self.resids.noise_resids = noise_resids
+            if debug:
+                setattr(self.resids, "norm", state.norm)

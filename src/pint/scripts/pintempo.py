@@ -8,6 +8,7 @@ specify '-f parfile' to those codes -- I mean, who runs TEMPO without a timing m
 This is currently just a stub and should be added to and expanded, as desired.
 """
 import argparse
+import logging
 import sys
 
 import astropy.units as u
@@ -16,6 +17,8 @@ from astropy import log
 import pint.fitter
 import pint.models
 import pint.residuals
+
+log = logging.getLogger(__name__)
 
 __all__ = ["main"]
 
@@ -52,6 +55,10 @@ def main(argv=None):
 
     # turns pre-existing jump flags in t.table['flags'] into parameters in parfile
     m.jump_flags_to_params(t)
+
+    # adds jump flags to t.table['flags'] for jump parameters already in parfile
+    if "PhaseJump" in m.components:
+        m.jump_params_to_flags(t)
 
     if m.TRACK.value == "-2":
         if "pn" in t.table.colnames:

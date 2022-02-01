@@ -1,12 +1,11 @@
-# clock_file.py
+"""Routines for reading various formats of clock file."""
 
-# Routines for reading various formats of clock file.
+import logging
 import os
 import warnings
 
 import astropy.units as u
 import numpy as np
-from astropy import log
 
 try:
     from erfa import ErfaWarning
@@ -14,6 +13,8 @@ except ImportError:
     from astropy._erfa import ErfaWarning
 
 from pint.pulsar_mjd import Time
+
+log = logging.getLogger(__name__)
 
 
 class ClockFileMeta(type):
@@ -193,7 +194,9 @@ class TempoClockFile(ClockFile):
             # Parse MJD
             try:
                 mjd = float(l[0:9])
-                if mjd < 39000 or mjd > 100000:
+                # allow mjd=0 to pass, since that is often used
+                # for effectively null clock files
+                if (mjd < 39000 and mjd != 0) or mjd > 100000:
                     mjd = None
             except (ValueError, IndexError):
                 mjd = None

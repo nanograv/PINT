@@ -3,15 +3,19 @@ import math
 import astropy.constants as const
 import astropy.units as u
 import numpy
+import pytest
 from astropy import log
+from pinttestdata import datadir
 
 from pint import erfautils, toa
 from pint.observatory import Observatory
 from pint.pulsar_mjd import Time
 from pint.utils import PosVel
-from pinttestdata import datadir
 
 
+@pytest.mark.xfail(
+    reason="PINT has a newer version of the Arecibo position than TEMPO2"
+)
 def test_times_against_tempo2():
     log.setLevel("ERROR")
     # for nice output info, set the following instead
@@ -81,7 +85,9 @@ def test_times_against_tempo2():
         # Ensure that the clock corrections are accurate to better than 0.1 ns
         assert (
             math.fabs(
-                (oclk * u.s + gps_utc * u.s - TOA["flags"]["clkcorr"]).to(u.ns).value
+                (oclk * u.s + gps_utc * u.s - float(TOA["flags"]["clkcorr"]) * u.s)
+                .to(u.ns)
+                .value
             )
             < 0.1
         )

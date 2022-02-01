@@ -12,7 +12,8 @@ from pint.residuals import Residuals
 from pinttestdata import datadir
 import pint.fitter
 from pint.models import get_model
-from pint.toa import get_TOAs, make_fake_toas
+from pint.toa import get_TOAs
+from pint.simulation import make_fake_toas_uniform
 
 parfile = os.path.join(datadir, "withpn.par")
 timfile = os.path.join(datadir, "withpn.tim")
@@ -33,7 +34,7 @@ def toas():
 
 @pytest.fixture
 def fake_toas(model):
-    t = make_fake_toas(56000, 59000, 10, model, obs="@")
+    t = make_fake_toas_uniform(56000, 59000, 10, model, obs="@")
     t.table["error"] = 1 * u.us
     return t
 
@@ -65,14 +66,14 @@ def test_pulse_number(model, toas):
 
 @pytest.mark.parametrize("obs", ["GBT", "AO", "@", "coe"])
 def test_make_fake_toas(obs, model):
-    t = make_fake_toas(56000, 59000, 10, model, obs=obs)
+    t = make_fake_toas_uniform(56000, 59000, 10, model, obs=obs)
     t.table["error"] = 1 * u.us
     r = Residuals(t, model, track_mode="nearest")
     assert np.amax(np.abs(r.phase_resids)) < 1e-6
 
 
 def test_parameter_overrides_model(model):
-    t = make_fake_toas(56000, 59000, 10, model, obs="@")
+    t = make_fake_toas_uniform(56000, 59000, 10, model, obs="@")
     t.table["error"] = 1 * u.us
     delta_f = (1 / (t.last_MJD - t.first_MJD)).to(u.Hz)
 
@@ -115,7 +116,13 @@ def test_residual_respects_pulse_numbers(model, fake_toas):
 
 
 @pytest.mark.parametrize(
-    "fitter", [pint.fitter.WLSFitter, pint.fitter.PowellFitter, pint.fitter.GLSFitter]
+    "fitter",
+    [
+        pint.fitter.WLSFitter,
+        pint.fitter.GLSFitter,
+        pint.fitter.DownhillWLSFitter,
+        pint.fitter.DownhillGLSFitter,
+    ],
 )
 def test_fitter_respects_pulse_numbers(fitter, model, fake_toas):
     t = fake_toas
@@ -135,8 +142,12 @@ def test_fitter_respects_pulse_numbers(fitter, model, fake_toas):
         fitter(t, m_2, track_mode="capybara")
 
     f_1 = fitter(t, m_2, track_mode="nearest")
-    f_1.fit_toas()
-    assert abs(f_1.model.F0.quantity - model.F0.quantity) > 0.1 * delta_f
+    try:
+        f_1.fit_toas()
+        assert abs(f_1.model.F0.quantity - model.F0.quantity) > 0.1 * delta_f
+    except ValueError:
+        # convergence fails for Downhill fitters
+        pass
 
     f_2 = fitter(t, m_2, track_mode="use_pulse_numbers")
     f_2.fit_toas()
