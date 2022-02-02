@@ -914,7 +914,6 @@ class AstrometryEcliptic(Astrometry):
 
         # change epoch only
         if ecl == self.ECL.value:
-            print("here")
             m = copy.deepcopy(self)
             if epoch is not None:
                 m.change_posepoch(epoch)
