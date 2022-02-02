@@ -17,6 +17,7 @@ except ModuleNotFoundError:
 
 from astropy.utils.console import ProgressBar
 
+from pint import fitter
 import pint.utils
 
 log = logging.getLogger(__name__)
@@ -48,8 +49,16 @@ def doonefit(ftr, parnames, parvalues):
         getattr(myftr.model, parname).frozen = True
         getattr(myftr.model, parname).quantity = parvalue
         parstrings.append(f"{parname} = {parvalue}")
-    myftr.fit_toas()
-
+    log.debug(
+        f"Running for {','.join(parstrings)} on {hostinfo()} at {log.name}"
+    )
+    try:
+        myftr.fit_toas()
+    except fitter.InvalidModelParameters:
+        warn(f"Fit may not be converged for {','.join(parstrings)}, but returning anyway")
+    except fitter.MaxiterReached:
+        warn(f"Max iterations reached for {','.join(parstrings)}: returning NaN")
+        return np.NaN
     log.debug(
         f"Computed chi^2={myftr.resids.chi2} for {','.join(parstrings)} on {hostinfo()}"
     )
