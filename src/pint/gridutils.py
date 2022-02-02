@@ -49,13 +49,13 @@ def doonefit(ftr, parnames, parvalues):
         getattr(myftr.model, parname).frozen = True
         getattr(myftr.model, parname).quantity = parvalue
         parstrings.append(f"{parname} = {parvalue}")
-    log.debug(
-        f"Running for {','.join(parstrings)} on {hostinfo()} at {log.name}"
-    )
+    log.debug(f"Running for {','.join(parstrings)} on {hostinfo()} at {log.name}")
     try:
         myftr.fit_toas()
     except fitter.InvalidModelParameters:
-        warn(f"Fit may not be converged for {','.join(parstrings)}, but returning anyway")
+        warn(
+            f"Fit may not be converged for {','.join(parstrings)}, but returning anyway"
+        )
     except fitter.MaxiterReached:
         warn(f"Max iterations reached for {','.join(parstrings)}: returning NaN")
         return np.NaN
