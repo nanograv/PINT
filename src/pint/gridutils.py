@@ -70,11 +70,13 @@ class WrappedFitter:
         try:
             myftr.fit_toas(**self.fitargs)
         except (fitter.InvalidModelParameters, fitter.StepProblem):
-            warn(
+            log.warning(
                 f"Fit may not be converged for {','.join(parstrings)}, but returning anyway"
             )
         except fitter.MaxiterReached:
-            warn(f"Max iterations reached for {','.join(parstrings)}: returning NaN")
+            log.warning(
+                f"Max iterations reached for {','.join(parstrings)}: returning NaN"
+            )
             return np.NaN
         log.debug(
             f"Computed chi^2={myftr.resids.chi2} for {','.join(parstrings)} on {hostinfo()}"
@@ -106,11 +108,11 @@ def doonefit(ftr, parnames, parvalues):
     try:
         myftr.fit_toas()
     except (fitter.InvalidModelParameters, fitter.StepProblem):
-        warn(
+        log.warning(
             f"Fit may not be converged for {','.join(parstrings)}, but returning anyway"
         )
     except fitter.MaxiterReached:
-        warn(f"Max iterations reached for {','.join(parstrings)}: returning NaN")
+        log.warning(f"Max iterations reached for {','.join(parstrings)}: returning NaN")
         return np.NaN
     log.debug(
         f"Computed chi^2={myftr.resids.chi2} for {','.join(parstrings)} on {hostinfo()}"
