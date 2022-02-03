@@ -5,6 +5,7 @@ import logging
 import multiprocessing
 import os
 import subprocess
+import functools
 
 import astropy.constants as const
 import astropy.units as u
@@ -27,6 +28,58 @@ __all__ = ["doonefit", "grid_chisq", "grid_chisq_derived", "plot_grid_chisq"]
 
 def hostinfo():
     return subprocess.check_output("uname -a", shell=True)
+
+
+class WrappedFitter:
+    """Worker class to compute one fit with specified parameters fixed but passing other parameters to fit_toas()"""
+
+    def __init__(self, ftr, **fitargs):
+        """Worker class to computes one fit with specified parameters fixed
+
+        Parameters
+        ----------
+        ftr : pint.fitter.Fitter
+        fitargs :
+            additional arguments pass to fit_toas()
+        """
+        self.ftr = ftr
+        self.fitargs = fitargs
+
+    def doonefit(self, parnames, parvalues):
+        """Worker process that computes one fit with specified parameters fixed
+
+        Parameters
+        ----------
+        parnames : list
+            Names of the parameters to grid over
+        parvalues : list
+            List of parameter values to grid over (each should be 1D array of astropy.units.Quantity)
+        """
+        # Make a full copy of the fitter to work with
+        myftr = copy.deepcopy(self.ftr)
+        parstrings = []
+        for parname, parvalue in zip(parnames, parvalues):
+            # Freeze the  params we are going to grid over and set their values
+            # All other unfrozen parameters will be fitted for at each grid point
+            getattr(myftr.model, parname).frozen = True
+            getattr(myftr.model, parname).quantity = parvalue
+            parstrings.append(f"{parname} = {parvalue}")
+            log.debug(
+                f"Running for {','.join(parstrings)} on {hostinfo()} at {log.name}"
+            )
+        try:
+            myftr.fit_toas(**self.fitargs)
+        except (fitter.InvalidModelParameters, fitter.StepProblem):
+            warn(
+                f"Fit may not be converged for {','.join(parstrings)}, but returning anyway"
+            )
+        except fitter.MaxiterReached:
+            warn(f"Max iterations reached for {','.join(parstrings)}: returning NaN")
+            return np.NaN
+        log.debug(
+            f"Computed chi^2={myftr.resids.chi2} for {','.join(parstrings)} on {hostinfo()}"
+        )
+        return myftr.resids.chi2
 
 
 def doonefit(ftr, parnames, parvalues):
@@ -52,7 +105,7 @@ def doonefit(ftr, parnames, parvalues):
     log.debug(f"Running for {','.join(parstrings)} on {hostinfo()} at {log.name}")
     try:
         myftr.fit_toas()
-    except fitter.InvalidModelParameters:
+    except (fitter.InvalidModelParameters, fitter.StepProblem):
         warn(
             f"Fit may not be converged for {','.join(parstrings)}, but returning anyway"
         )
@@ -66,7 +119,14 @@ def doonefit(ftr, parnames, parvalues):
 
 
 def grid_chisq(
-    ftr, parnames, parvalues, executor=None, ncpu=None, chunksize=1, printprogress=True,
+    ftr,
+    parnames,
+    parvalues,
+    executor=None,
+    ncpu=None,
+    chunksize=1,
+    printprogress=True,
+    **fitargs,
 ):
     """Compute chisq over a grid of parameters
 
@@ -90,6 +150,8 @@ def grid_chisq(
         Ignored for :class:`concurrent.futures.ThreadPoolExecutor`
     printprogress : bool, optional
         Print indications of progress (requires :mod:`tqdm` for `ncpu`>1)
+    fitargs :
+        additional arguments pass to fit_toas()
 
     Returns
     -------
@@ -154,7 +216,6 @@ def grid_chisq(
     .. [1] https://mpi4py.readthedocs.io/en/stable/mpi4py.futures.html#mpipoolexecutor
     .. [2] https://github.com/sampsyo/clusterfutures
     """
-
     if isinstance(executor, concurrent.futures.Executor):
         # the executor has already been created
         executor = executor
@@ -173,6 +234,8 @@ def grid_chisq(
     for parname in parnames:
         getattr(ftr.model, parname).frozen = True
 
+    wftr = WrappedFitter(ftr, **fitargs)
+
     # All other unfrozen parameters will be fitted for at each grid point
     out = np.meshgrid(*parvalues)
     chi2 = np.zeros(out[0].shape)
@@ -183,8 +246,7 @@ def grid_chisq(
                 result = list(
                     tqdm(
                         e.map(
-                            doonefit,
-                            (ftr,) * len(out[0].flatten()),
+                            wftr.doonefit,
                             (parnames,) * len(out[0].flatten()),
                             list(zip(*[x.flatten() for x in out])),
                             chunksize=chunksize,
@@ -195,8 +257,7 @@ def grid_chisq(
                 )
             else:
                 result = e.map(
-                    doonefit,
-                    (ftr,) * len(out[0].flatten()),
+                    wftr.doonefit,
                     (parnames,) * len(out[0].flatten()),
                     list(zip(*[x.flatten() for x in out])),
                     chunksize=chunksize,
@@ -215,7 +276,7 @@ def grid_chisq(
         for i in indices:
             for parnum, parname in enumerate(parnames):
                 getattr(ftr.model, parname).quantity = out[parnum][i]
-            ftr.fit_toas()
+            ftr.fit_toas(**fitargs)
             chi2[i] = ftr.resids.chi2
 
     # Restore saved model
@@ -232,6 +293,7 @@ def grid_chisq_derived(
     ncpu=None,
     chunksize=1,
     printprogress=True,
+    **fitargs,
 ):
     """Compute chisq over a grid of derived parameters
 
@@ -257,6 +319,8 @@ def grid_chisq_derived(
         Ignored for :class:`concurrent.futures.ThreadPoolExecutor`
     printprogress : bool, optional
         Print indications of progress (requires :mod:`tqdm` for `ncpu`>1)
+    fitargs :
+        additional arguments pass to fit_toas()
 
     Returns
     -------
@@ -342,6 +406,8 @@ def grid_chisq_derived(
     for parname in parnames:
         getattr(ftr.model, parname).frozen = True
 
+    wftr = WrappedFitter(ftr, **fitargs)
+
     # All other unfrozen parameters will be fitted for at each grid point
     grid = np.meshgrid(*gridvalues)
     chi2 = np.zeros(grid[0].shape)
@@ -357,8 +423,8 @@ def grid_chisq_derived(
                 result = list(
                     tqdm(
                         e.map(
-                            doonefit,
-                            (ftr,) * len(out[0].flatten()),
+                            wftr.doonefit,
+                            # (ftr,) * len(out[0].flatten()),
                             (parnames,) * len(out[0].flatten()),
                             list(zip(*[x.flatten() for x in out])),
                             chunksize=chunksize,
@@ -369,8 +435,8 @@ def grid_chisq_derived(
                 )
             else:
                 result = e.map(
-                    doonefit,
-                    (ftr,) * len(out[0].flatten()),
+                    wftr.doonefit,
+                    # (ftr,) * len(out[0].flatten()),
                     (parnames,) * len(out[0].flatten()),
                     list(zip(*[x.flatten() for x in out])),
                     chunksize=chunksize,
@@ -390,7 +456,7 @@ def grid_chisq_derived(
         for i in indices:
             for parnum, parname in enumerate(parnames):
                 getattr(ftr.model, parname).quantity = out[parnum][i]
-            ftr.fit_toas()
+            ftr.fit_toas(**fitargs)
             chi2[i] = ftr.resids.chi2
 
     # Restore saved model
