@@ -141,7 +141,7 @@ class Astrometry(DelayComponent):
         return delay * u.second
 
     def get_d_delay_quantities(self, toas):
-        """Calculate values needed for many d_delay_d_param functions """
+        """Calculate values needed for many d_delay_d_param functions"""
         # TODO: Move all these calculations in a separate class for elegance
         rd = dict()
 
@@ -536,6 +536,7 @@ class AstrometryEquatorial(Astrometry):
         m_ecl.ELAT.quantity = c.lat
         m_ecl.PMELONG.quantity = c.pm_lon_coslat
         m_ecl.PMELAT.quantity = c.pm_lat
+        m_ecl.ECL.value = ecl
 
         # use fake proper motions to convert uncertainties on ELONG, ELAT
         # assume that ELONG uncertainty does not include cos(ELAT)
@@ -733,7 +734,7 @@ class AstrometryEcliptic(Astrometry):
         `ecl` keyword, which should be one of the codes listed in `ecliptic.dat`.
         If `ecl` is left unspecified, the model's ECL parameter will be used.
         """
-        pos_ecl = self.get_psr_coords(epoch)
+        pos_ecl = self.get_psr_coords(epoch=epoch)
         if ecl is not None:
             pos_ecl = pos_ecl.transform_to(PulsarEcliptic(ecl=ecl))
         return pos_ecl
@@ -903,25 +904,72 @@ class AstrometryEcliptic(Astrometry):
         epoch : `astropy.time.Time` or Float, optional
             new epoch for position.  If Float, MJD(TDB) is assumed.
             Note that uncertainties are not adjusted.
+        ecl : str, optional
+            Obliquity for PulsarEcliptic frame
 
         Returns
         -------
         pint.models.astrometry.AstrometryEcliptic
-
-        Raises
-        ------
-        ValueError
-            If obliquity is already set and a different obliquity is requested
         """
-        if not (ecl == self.ECL.value):
-            raise ValueError(
-                "Cannot convert from obliquity '%s' to requested obliquity '%s'"
-                % (self.ECL.value, ecl)
-            )
-        m = copy.deepcopy(self)
-        if epoch is not None:
-            m.change_posepoch(epoch)
-        return m
+
+        # change epoch only
+        if ecl == self.ECL.value:
+            m = copy.deepcopy(self)
+            if epoch is not None:
+                m.change_posepoch(epoch)
+            return m
+
+        m_ecl = AstrometryEcliptic()
+
+        # transfer over parallax and POSEPOCH: don't need to change
+        m_ecl.PX = self.PX
+        m_ecl.POSEPOCH = self.POSEPOCH
+        # get ELONG, ELAT, PM
+        c = self.coords_as_ECL(epoch=epoch, ecl=ecl)
+        m_ecl.ELONG.quantity = c.lon
+        m_ecl.ELAT.quantity = c.lat
+        m_ecl.PMELONG.quantity = c.pm_lon_coslat
+        m_ecl.PMELAT.quantity = c.pm_lat
+        m_ecl.ECL.value = ecl
+
+        # use fake proper motions to convert uncertainties on ELONG, ELAT
+        # assume that ELONG uncertainty does not include cos(ELAT)
+        # and that the RA uncertainty does not include cos(DEC)
+        # put it in here as pm_ra_cosdec since astropy complains otherwise
+        dt = 1 * u.yr
+        c = coords.SkyCoord(
+            lon=self.ELONG.quantity,
+            lat=self.ELAT.quantity,
+            obliquity=OBL[self.ECL.value],
+            obstime=self.POSEPOCH.quantity,
+            pm_lon_coslat=self.ELONG.uncertainty * np.cos(self.ELAT.quantity) / dt,
+            pm_lat=self.ELAT.uncertainty / dt,
+            frame=PulsarEcliptic,
+        )
+        c_ECL = c.transform_to(PulsarEcliptic(ecl=ecl))
+        m_ecl.ELONG.uncertainty = c_ECL.pm_lon_coslat * dt / np.cos(c_ECL.lat)
+        m_ecl.ELAT.uncertainty = c_ECL.pm_lat * dt
+        # use fake proper motions to convert uncertainties on proper motion
+        # assume that PMELONG uncertainty includes cos(DEC)
+        c = coords.SkyCoord(
+            lon=self.ELONG.quantity,
+            lat=self.ELAT.quantity,
+            obliquity=OBL[self.ECL.value],
+            obstime=self.POSEPOCH.quantity,
+            pm_lon_coslat=self.PMELONG.uncertainty,
+            pm_lat=self.PMELAT.uncertainty,
+            frame=PulsarEcliptic,
+        )
+        c_ECL = c.transform_to(PulsarEcliptic(ecl=ecl))
+        m_ecl.PMELONG.uncertainty = c_ECL.pm_lon_coslat
+        m_ecl.PMELAT.uncertainty = c_ECL.pm_lat
+        # freeze comparable parameters
+        m_ecl.ELONG.frozen = self.ELONG.frozen
+        m_ecl.ELAT.frozen = self.ELAT.frozen
+        m_ecl.PMELONG.frozen = self.PMELONG.frozen
+        m_ecl.PMELAT.frozen = self.PMELAT.frozen
+
+        return m_ecl
 
     def as_ICRS(self, epoch=None):
         """Return pint.models.astrometry.Astrometry object in ICRS frame.
