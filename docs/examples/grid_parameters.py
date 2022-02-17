@@ -75,7 +75,7 @@ F0 = np.linspace(
 
 # %%
 # Do a 1D "grid"  Make sure that the parameters are supplied as tuples with length 1
-chi2_F0 = pint.gridutils.grid_chisq(f, ("F0",), (F0,))
+chi2_F0, _ = pint.gridutils.grid_chisq(f, ("F0",), (F0,))
 
 # %%
 # We can now just do a quick plot to look at the results
@@ -131,7 +131,7 @@ F1 = np.linspace(
     f.model.F1.quantity + 3 * f.model.F1.uncertainty,
     27,
 )
-chi2grid = pint.gridutils.grid_chisq(f, ("F0", "F1"), (F0, F1))
+chi2grid, _ = pint.gridutils.grid_chisq(f, ("F0", "F1"), (F0, F1))
 
 # %% [markdown]
 # We want to plot contour levels appropriate for the joint confidence contours with 2 parameters.  This is discussed many places (e.g., https://ned.ipac.caltech.edu/level5/Wall2/Wal3_4.html, or Chapter 15.6 of Numerical Recipes in C - in particular look at Figure 15.6.4).
@@ -272,7 +272,7 @@ new_F1 = np.linspace(
 )
 
 # %%
-new_chi2grid = pint.gridutils.grid_chisq(f, ("F0", "F1"), (new_F0, new_F1))
+new_chi2grid, _ = pint.gridutils.grid_chisq(f, ("F0", "F1"), (new_F0, new_F1))
 
 # %% [markdown]
 # Plot the new and old contours
