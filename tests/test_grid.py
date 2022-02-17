@@ -151,9 +151,7 @@ def test_grid_oneparam_existingexecutor():
         f.model.F0.quantity + 5 * f.model.F0.uncertainty,
         21,
     )
-    with concurrent.futures.ProcessPoolExecutor(
-        max_workers=ncpu,
-    ) as executor:
+    with concurrent.futures.ProcessPoolExecutor(max_workers=ncpu,) as executor:
         chi2grid, _ = pint.gridutils.grid_chisq(f, ("F0",), (F0,), executor=executor)
 
     assert np.isclose(bestfit, chi2grid.min())
@@ -235,11 +233,7 @@ def test_grid_derived_singleprocessor():
     )
     tau = np.linspace(8.1, 8.3, 13) * 100 * u.Myr
     chi2grid_tau, params, _ = pint.gridutils.grid_chisq_derived(
-        f,
-        ("F0", "F1"),
-        (lambda x, y: x, lambda x, y: -x / 2 / y),
-        (F0, tau),
-        ncpu=1,
+        f, ("F0", "F1"), (lambda x, y: x, lambda x, y: -x / 2 / y), (F0, tau), ncpu=1,
     )
     assert np.isclose(bestfit, chi2grid_tau.min(), atol=1)
 
