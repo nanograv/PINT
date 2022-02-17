@@ -346,7 +346,7 @@ with concurrent.futures.ProcessPoolExecutor() as executor:
     # PBDOT = cg.PBDOT(Mc, cosi, d)
     # note that all of those have the same input parameters,
     # even if they aren't needed for a specific calculation
-    chi2, params,_ = pint.gridutils.grid_chisq_derived(
+    chi2, params, _ = pint.gridutils.grid_chisq_derived(
         f,
         ("M2", "SINI", "PX", "PBDOT"),
         (lambda Mc, cosi, d: Mc, cg.sini, cg.parallax, cg.PBDOT),
