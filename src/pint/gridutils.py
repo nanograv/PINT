@@ -271,7 +271,8 @@ def grid_chisq(
     extraout = {}
     for extrapar in extraparnames:
         extraout[extrapar] = (
-            np.zeros(out[0].shape) * getattr(ftr.model, extrapar).quantity.unit
+            np.zeros(out[0].shape, dtype=getattr(ftr.model, extrapar).quantity.dtype)
+            * getattr(ftr.model, extrapar).quantity.unit
         )
 
     # at this point, if the executor is None then run single-processor version
@@ -463,7 +464,8 @@ def grid_chisq_derived(
     extraout = {}
     for extrapar in extraparnames:
         extraout[extrapar] = (
-            np.zeros(grid[0].shape) * getattr(ftr.model, extrapar).quantity.unit
+            np.zeros(grid[0].shape, dtype=getattr(ftr.model, extrapar).quantity.dtype)
+            * getattr(ftr.model, extrapar).quantity.unit
         )
 
     # at this point, if the executor is None then run single-processor version
