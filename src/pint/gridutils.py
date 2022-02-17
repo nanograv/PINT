@@ -45,7 +45,7 @@ class WrappedFitter:
         self.ftr = ftr
         self.fitargs = fitargs
 
-    def doonefit(self, parnames, parvalues):
+    def doonefit(self, parnames, parvalues, extraparnames=[]):
         """Worker process that computes one fit with specified parameters fixed
 
         Parameters
@@ -54,6 +54,13 @@ class WrappedFitter:
             Names of the parameters to grid over
         parvalues : list
             List of parameter values to grid over (each should be 1D array of astropy.units.Quantity)
+        extraparnames : list, optional
+            Names of other parameters to return
+
+        Returns
+        -------
+        chi2 : float
+        extraparvalues : list
         """
         # Make a full copy of the fitter to work with
         myftr = copy.deepcopy(self.ftr)
@@ -81,10 +88,13 @@ class WrappedFitter:
         log.debug(
             f"Computed chi^2={myftr.resids.chi2} for {','.join(parstrings)} on {hostinfo()}"
         )
-        return myftr.resids.chi2
+        extraparvalues = []
+        for extrapar in extraparnames:
+            extraparvalues.append(getattr(myftr.model, extrapar).quantity)
+        return myftr.resids.chi2, extraparvalues
 
 
-def doonefit(ftr, parnames, parvalues):
+def doonefit(ftr, parnames, parvalues, extraparnames=[]):
     """Worker process that computes one fit with specified parameters fixed
 
     Parameters
@@ -94,6 +104,13 @@ def doonefit(ftr, parnames, parvalues):
         Names of the parameters to grid over
     parvalues : list
         List of parameter values to grid over (each should be 1D array of astropy.units.Quantity)
+    extraparnames : list, optional
+        Names of other parameters to return
+
+    Returns
+    -------
+    chi2 : float
+    extraparvalues : list
     """
     # Make a full copy of the fitter to work with
     myftr = copy.deepcopy(ftr)
@@ -117,13 +134,18 @@ def doonefit(ftr, parnames, parvalues):
     log.debug(
         f"Computed chi^2={myftr.resids.chi2} for {','.join(parstrings)} on {hostinfo()}"
     )
-    return myftr.resids.chi2
+    extraparvalues = []
+    for extrapar in extraparnames:
+        extraparvalues.append(getattr(myftr.model, extrapar).quantity)
+
+    return myftr.resids.chi2, extraparvalues
 
 
 def grid_chisq(
     ftr,
     parnames,
     parvalues,
+    extraparnames=[],
     executor=None,
     ncpu=None,
     chunksize=1,
@@ -140,6 +162,8 @@ def grid_chisq(
         Names of the parameters to grid over
     parvalues : list
         List of parameter values to grid over (each should be 1D array of :class:`astropy.units.Quantity`)
+    extraparnames : list, optional
+        Names of other parameters to return
     executor : concurrent.futures.Executor or None, optional
         Executor object to run multiple processes in parallel
         If None, will use default :class:`concurrent.futures.ProcessPoolExecutor`, unless overridden by ``ncpu=1``
@@ -158,6 +182,8 @@ def grid_chisq(
     Returns
     -------
     np.ndarray : array of chisq values
+    extraout : dict of np.ndarray
+        Parameter values computed at each grid point for `extraparnames`
 
     Example
     -------
@@ -241,6 +267,13 @@ def grid_chisq(
     # All other unfrozen parameters will be fitted for at each grid point
     out = np.meshgrid(*parvalues)
     chi2 = np.zeros(out[0].shape)
+
+    extraout = {}
+    for extrapar in extraparnames:
+        extraout[extrapar] = (
+            np.zeros(grid[0].shape) * getattr(ftr.model, extrapar).quantity.unit
+        )
+
     # at this point, if the executor is None then run single-processor version
     if executor is not None:
         with executor as e:
@@ -251,6 +284,7 @@ def grid_chisq(
                             wftr.doonefit,
                             (parnames,) * len(out[0].flatten()),
                             list(zip(*[x.flatten() for x in out])),
+                            (extraparnames,) * len(out[0].flatten()),
                             chunksize=chunksize,
                         ),
                         total=len(out[0].flatten()),
@@ -262,11 +296,14 @@ def grid_chisq(
                     wftr.doonefit,
                     (parnames,) * len(out[0].flatten()),
                     list(zip(*[x.flatten() for x in out])),
+                    (extraparnames,) * len(out[0].flatten()),
                     chunksize=chunksize,
                 )
         it = np.ndindex(chi2.shape)
         for i, r in zip(it, result):
-            chi2[i] = r
+            chi2[i] = r[0]
+            for extrapar, extraparvalue in zip(extraparnames, r[1]):
+                extraout[extrapar][i] = extraparvalue
     else:
         indices = list(np.ndindex(out[0].shape))
         if printprogress:
@@ -280,10 +317,12 @@ def grid_chisq(
                 getattr(ftr.model, parname).quantity = out[parnum][i]
             ftr.fit_toas(**fitargs)
             chi2[i] = ftr.resids.chi2
+            for extrapar in extraparnames:
+                extraout[extrapar] = getattr(ftr.model, extrapar).quantity
 
     # Restore saved model
     ftr.model = savemod
-    return chi2
+    return chi2, extraout
 
 
 def grid_chisq_derived(
@@ -291,6 +330,7 @@ def grid_chisq_derived(
     parnames,
     parfuncs,
     gridvalues,
+    extraparnames=[],
     executor=None,
     ncpu=None,
     chunksize=1,
@@ -309,6 +349,8 @@ def grid_chisq_derived(
         List of functions to convert `gridvalues` to quantities accessed through `parnames`
     gridvalues : list
         List of underlying grid values to grid over (each should be 1D array of astropy.units.Quantity)
+    extraparnames : list, optional
+        Names of other parameters to return
     executor : concurrent.futures.Executor or None, optional
         Executor object to run multiple processes in parallel
         If None, will use default :class:`concurrent.futures.ProcessPoolExecutor`, unless overridden by ``ncpu=1``
@@ -329,7 +371,8 @@ def grid_chisq_derived(
     np.ndarray : array of chisq values
     parvalues : list of np.ndarray
         Parameter values computed from `gridvalues` and `parfuncs`
-
+    extraout : dict of np.ndarray
+        Parameter values computed at each grid point for `extraparnames`
 
     Example
     -------
@@ -417,6 +460,11 @@ def grid_chisq_derived(
     # convert the gridded values to the actual parameter values
     for j in range(len(parfuncs)):
         out.append(parfuncs[j](*grid))
+    extraout = {}
+    for extrapar in extraparnames:
+        extraout[extrapar] = (
+            np.zeros(grid[0].shape) * getattr(ftr.model, extrapar).quantity.unit
+        )
 
     # at this point, if the executor is None then run single-processor version
     if executor is not None:
@@ -429,6 +477,7 @@ def grid_chisq_derived(
                             # (ftr,) * len(out[0].flatten()),
                             (parnames,) * len(out[0].flatten()),
                             list(zip(*[x.flatten() for x in out])),
+                            (extraparnames,) * len(out[0].flatten()),
                             chunksize=chunksize,
                         ),
                         total=len(out[0].flatten()),
@@ -441,12 +490,15 @@ def grid_chisq_derived(
                     # (ftr,) * len(out[0].flatten()),
                     (parnames,) * len(out[0].flatten()),
                     list(zip(*[x.flatten() for x in out])),
+                    (extraparnames,) * len(out[0].flatten()),
                     chunksize=chunksize,
                 )
 
         it = np.ndindex(chi2.shape)
         for i, r in zip(it, result):
-            chi2[i] = r
+            chi2[i] = r[0]
+            for extrapar, extraparvalue in zip(extraparnames, r[1]):
+                extraout[extrapar][i] = extraparvalue
     else:
         indices = list(np.ndindex(grid[0].shape))
         if printprogress:
@@ -460,10 +512,12 @@ def grid_chisq_derived(
                 getattr(ftr.model, parname).quantity = out[parnum][i]
             ftr.fit_toas(**fitargs)
             chi2[i] = ftr.resids.chi2
+            for extrapar in extraparnames:
+                extraout[extrapar] = getattr(ftr.model, extrapar).quantity
 
     # Restore saved model
     ftr.model = savemod
-    return chi2, out
+    return chi2, out, extraout
 
 
 ##############################
