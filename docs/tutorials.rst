@@ -3,7 +3,13 @@
 Tutorials
 =========
 
-These are step-by-step guides you can follow to show you what PINT can do. If you want some explanations of why things work this way, see the :ref:`Explanation` section. If you want details on a particular function that comes up, see the :ref:`Reference` section. If you have a particular thing you want instructions on doing, see the :ref:`How-tos`.
+These are step-by-step guides you can follow to show you what PINT can
+do. Quick common tasks are explained on the `PINT Wiki
+<https://github.com/nanograv/PINT/wiki>`_. If you want some
+explanations of why things work this way, see the :ref:`Explanation`
+section. If you want details on a particular function that comes up,
+see the :ref:`Reference` section. More complicated tasks are discussed
+in the :ref:`How-tos`.
 
 Data Files
 ----------
@@ -30,7 +36,14 @@ Examples
 --------
    
 We don't really have any proper tutorials yet. But for the moment, we
-have a few examples that may be useful.  These tutorials examples are in the form of Jupyter notebooks, downloadable from a link at the top of each page. (Also available in the same place is a plain-python script version, in case this is more convenient.) You should be able to download these files and run them from anywhere convenient (provided ``PINT`` is installed). 
+have a few examples that may be useful.  These tutorials examples are
+in the form of Jupyter notebooks, downloadable from a link at the top
+of each page. (Also available in the same place is a plain-python
+script version, in case this is more convenient.) You should be able
+to download these files and run them from anywhere convenient
+(provided ``PINT`` is installed). Finally, there are additional
+notebooks you can download from the `PINT Wiki
+<https://github.com/nanograv/PINT/wiki>`_.
 
 .. toctree::
 
@@ -46,8 +59,6 @@ have a few examples that may be useful.  These tutorials examples are in the for
    examples/Wideband_TOA_walkthrough.ipynb
    examples/Simulate_and_make_MassMass.ipynb
    examples/check_phase_connection.ipynb
-   examples/grid_parameters.ipynb
-   examples/Grid_J0740.ipynb
    examples-rendered/paper_validation_example.ipynb
 
 .. _`Time a Pulsar`: examples/time_a_pulsar.html

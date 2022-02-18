@@ -187,15 +187,15 @@ class Spindown(PhaseComponent):
             )
         self.PEPOCH.value = new_epoch
 
-    def print_par(self):
+    def print_par(self, format="pint"):
         result = ""
         f_terms = self.F_terms
         for ft in f_terms:
             par = getattr(self, ft)
-            result += par.as_parfile_line()
+            result += par.as_parfile_line(format=format)
         for param in self.params:
             if param not in f_terms:
-                result += getattr(self, param).as_parfile_line()
+                result += getattr(self, param).as_parfile_line(format=format)
         return result
 
     def d_phase_d_F(self, toas, param, delay):

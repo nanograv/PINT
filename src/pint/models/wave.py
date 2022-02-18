@@ -83,15 +83,15 @@ class Wave(PhaseComponent):
             diff = list(set(wave_in_order) - set(self.wave_terms))
             raise MissingParameter("Wave", "WAVE%d" % diff[0])
 
-    def print_par(self):
+    def print_par(self, format="pint"):
         result = ""
         wave_terms = ["WAVE%d" % ii for ii in range(1, self.num_wave_terms + 1)]
 
-        result += self.WAVEEPOCH.as_parfile_line()
-        result += self.WAVE_OM.as_parfile_line()
+        result += self.WAVEEPOCH.as_parfile_line(format=format)
+        result += self.WAVE_OM.as_parfile_line(format=format)
         for ft in wave_terms:
             par = getattr(self, ft)
-            result += par.as_parfile_line()
+            result += par.as_parfile_line(format=format)
 
         return result
 

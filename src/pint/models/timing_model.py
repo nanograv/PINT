@@ -43,6 +43,7 @@ from scipy.optimize import brentq
 
 import pint
 from pint.models.parameter import (
+    _parfile_formats,
     AngleParameter,
     MJDParameter,
     Parameter,
@@ -2122,6 +2123,7 @@ class TimingModel:
         *,
         include_info=True,
         comment=None,
+        format="pint",
     ):
         """Represent the entire model as a parfile string.
 
@@ -2135,10 +2137,19 @@ class TimingModel:
             Include information string if True
         comment : str, optional
             Additional comment string to include in parfile
+        format : str, optional
+             Parfile output format. PINT outputs in 'tempo', 'tempo2' and 'pint'
+             formats. The defaul format is `pint`.
         """
+        assert format.lower() in _parfile_formats, (
+            "parfile format must be one of %s"
+            % ", ".join(['"%s"' % x for x in _parfile_formats])
+        )
+
         self.validate()
         if include_info:
             info_string = pint.utils.info_string(prefix_string="# ", comment=comment)
+            info_string += f"\n# Format: {format.lower()}"
             result_begin = info_string + "\n"
         else:
             result_begin = ""
@@ -2146,24 +2157,29 @@ class TimingModel:
         result_middle = ""
         cates_comp = self.get_components_by_category()
         printed_cate = []
+        # make sure TEMPO2 format start with "MODE 1"
+        if format.lower() == "tempo2":
+            result_begin += "MODE 1\n"
         for p in self.top_level_params:
             if p == "BINARY":  # Will print the Binary model name in the binary section
                 continue
-            result_begin += getattr(self, p).as_parfile_line()
+            result_begin += getattr(self, p).as_parfile_line(format=format)
         for cat in start_order:
             if cat in list(cates_comp.keys()):
+                # print("Starting: %s" % cat)
                 cp = cates_comp[cat]
                 for cpp in cp:
-                    result_begin += cpp.print_par()
+                    result_begin += cpp.print_par(format=format)
                 printed_cate.append(cat)
             else:
                 continue
 
         for cat in last_order:
             if cat in list(cates_comp.keys()):
+                # print("Ending: %s" % cat)
                 cp = cates_comp[cat]
                 for cpp in cp:
-                    result_end += cpp.print_par()
+                    result_end += cpp.print_par(format=format)
                 printed_cate.append(cat)
             else:
                 continue
@@ -2174,7 +2190,7 @@ class TimingModel:
             else:
                 cp = cates_comp[cat]
                 for cpp in cp:
-                    result_middle += cpp.print_par()
+                    result_middle += cpp.print_par(format=format)
                 printed_cate.append(cat)
 
         return result_begin + result_middle + result_end
@@ -2403,7 +2419,7 @@ class Component(object, metaclass=ModelMeta):
         parameters' aliase to the pint defined parameter names. For the aliases
         of a prefixed parameter, the aliase with an existing prefix index maps
         to the PINT defined parameter name with the same index. Behind the scenes,
-        the indexed parameter adds the indexed aliase to its aliase list.  
+        the indexed parameter adds the indexed aliase to its aliase list.
         """
         ali_map = {}
         for p in self.params:
@@ -2693,10 +2709,21 @@ class Component(object, metaclass=ModelMeta):
 
         return True
 
-    def print_par(self):
+    def print_par(self, format="pint"):
+        """
+        Parameters
+        ----------
+        format : str, optional
+             Parfile output format. PINT outputs the 'tempo', 'tempo2' and 'pint'
+             format. The defaul format is `pint`.  Actual formatting done elsewhere.
+
+        Returns
+        -------
+        str : formatted line for par file
+        """
         result = ""
         for p in self.params:
-            result += getattr(self, p).as_parfile_line()
+            result += getattr(self, p).as_parfile_line(format=format)
         return result
 
 
@@ -2714,7 +2741,7 @@ class PhaseComponent(Component):
 
 
 class AllComponents:
-    """ A class for the components pool.
+    """A class for the components pool.
 
     This object stores and manages the instances of component classes with class
     attribute .register = True. This includes the PINT built-in components and
@@ -2830,8 +2857,7 @@ class AllComponents:
 
     @lazyproperty
     def repeatable_param(self):
-        """Return the repeatable parameter map.
-        """
+        """Return the repeatable parameter map."""
         repeatable = []
         for k, cp in self.components.items():
             for p in cp.params:
@@ -3058,7 +3084,7 @@ class AliasConflict(TimingModelError):
 
 
 class UnknownParameter(TimingModelError):
-    """ Signal that a parameter name does not match any PINT parameters and their aliases. """
+    """Signal that a parameter name does not match any PINT parameters and their aliases."""
 
     pass
 
