@@ -3,6 +3,7 @@ import tempfile
 import copy
 from io import StringIO
 from collections import Counter, defaultdict
+import warnings
 from pint.models.parameter import maskParameter
 from astropy import log
 from astropy.utils.decorators import lazyproperty
@@ -108,8 +109,8 @@ class ModelBuilder:
         # Report unknown line
         for k, v in unknown_param.items():
             p_line = " ".join([k] + v)
-            # warnings.warn(f"Unrecognized parfile line '{p_line}'", UserWarning)
-            log.warning(f"Unrecognized parfile line '{p_line}'")
+            warnings.warn(f"Unrecognized parfile line '{p_line}'", UserWarning)
+            #log.warning(f"Unrecognized parfile line '{p_line}'")
         return tm
 
     def _validate_components(self):
