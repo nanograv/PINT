@@ -70,9 +70,7 @@ class WrappedFitter:
             getattr(myftr.model, parname).frozen = True
             getattr(myftr.model, parname).quantity = parvalue
             parstrings.append(f"{parname} = {parvalue}")
-            log.debug(
-                f"Running for {','.join(parstrings)} on {hostinfo()}"
-            )
+            log.debug(f"Running for {','.join(parstrings)} on {hostinfo()}")
         try:
             myftr.fit_toas(**self.fitargs)
         except (fitter.InvalidModelParameters, fitter.StepProblem):

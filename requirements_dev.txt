@@ -34,3 +34,4 @@ ipython
 pathlib2
 twine
 numdifftools
+loguru
