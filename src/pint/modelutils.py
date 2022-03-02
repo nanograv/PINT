@@ -1,7 +1,6 @@
-import logging
+from loguru import logger as log
 from pint.models.astrometry import AstrometryEquatorial, AstrometryEcliptic
 
-log = logging.getLogger(__name__)
 
 # FIXME: shouldn't this be in the AstrometryEquatorial and AstrometryEcliptic classes?
 

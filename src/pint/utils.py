@@ -31,7 +31,6 @@ has moved to :mod:`pint.simulation`.
 import configparser
 import datetime
 import getpass
-import logging
 import os
 import platform
 import re
@@ -40,6 +39,8 @@ from collections import OrderedDict
 from contextlib import contextmanager
 from copy import deepcopy
 from io import StringIO
+from warnings import warn
+from loguru import logger as log
 
 import astropy.constants as const
 import astropy.coordinates as coords
@@ -51,8 +52,6 @@ from scipy.special import fdtrc
 
 import pint
 import pint.pulsar_ecliptic
-
-log = logging.getLogger(__name__)
 
 __all__ = [
     "PosVel",

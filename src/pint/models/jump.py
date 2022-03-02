@@ -1,13 +1,12 @@
 """Phase jumps. """
-import logging
 
 import astropy.units as u
 import numpy
 
+from loguru import logger as log
+
 from pint.models.parameter import maskParameter
 from pint.models.timing_model import DelayComponent, MissingParameter, PhaseComponent
-
-log = logging.getLogger(__name__)
 
 
 class DelayJump(DelayComponent):

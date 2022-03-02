@@ -29,7 +29,6 @@ See :ref:`Timing Models` for more details on how PINT's timing models work.
 import abc
 import copy
 import inspect
-import logging
 from collections import OrderedDict, defaultdict
 from functools import wraps
 from warnings import warn
@@ -40,6 +39,7 @@ import numpy as np
 from astropy import log
 from astropy.utils.decorators import lazyproperty
 from scipy.optimize import brentq
+from loguru import logger as log
 
 import pint
 from pint.models.parameter import (
@@ -58,7 +58,6 @@ from pint.phase import Phase
 from pint.toa import TOAs
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
 
-log = logging.getLogger(__name__)
 
 __all__ = [
     "DEFAULT_ORDER",

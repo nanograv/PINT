@@ -1,4 +1,3 @@
-import logging
 import os
 import tempfile
 import copy
@@ -6,8 +5,8 @@ from io import StringIO
 from collections import Counter, defaultdict
 from pint.models.parameter import maskParameter
 from astropy import log
-import warnings
 from astropy.utils.decorators import lazyproperty
+from loguru import logger as log
 from pint.models.timing_model import (
     DEFAULT_ORDER,
     Component,
@@ -24,8 +23,6 @@ from pint.models.timing_model import (
 )
 from pint.toa import get_TOAs
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
-
-log = logging.getLogger(__name__)
 
 
 __all__ = ["ModelBuilder", "get_model", "get_model_and_toas"]
@@ -111,7 +108,8 @@ class ModelBuilder:
         # Report unknown line
         for k, v in unknown_param.items():
             p_line = " ".join([k] + v)
-            warnings.warn(f"Unrecognized parfile line '{p_line}'", UserWarning)
+            # warnings.warn(f"Unrecognized parfile line '{p_line}'", UserWarning)
+            log.warning(f"Unrecognized parfile line '{p_line}'")
         return tm
 
     def _validate_components(self):

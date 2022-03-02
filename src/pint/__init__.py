@@ -11,7 +11,6 @@ These docstrings contain reference documentation; for tutorials, explanations,
 or how-to documentation, please see other sections of the online documentation.
 """
 
-import logging
 import os
 
 import astropy
@@ -21,12 +20,12 @@ import astropy.units as u
 import numpy as np
 import pkg_resources
 from astropy.units import si
+from loguru import logger as log
 
 from pint.extern._version import get_versions
 from pint.pulsar_ecliptic import PulsarEcliptic
 from pint.pulsar_mjd import PulsarMJD, time_to_longdouble  # ensure always loaded
 
-log = logging.getLogger(__name__)
 
 __all__ = [
     "__version__",

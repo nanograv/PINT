@@ -1,16 +1,15 @@
 """Work with Fermi TOAs."""
-import logging
 
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
 import astropy.units as u
 import numpy as np
+from loguru import logger as log
 
 import pint.toa as toa
 from pint.fits_utils import read_fits_event_mjds_tuples
 from pint.observatory import get_observatory
 
-log = logging.getLogger(__name__)
 
 __all__ = ["load_Fermi_TOAs"]
 

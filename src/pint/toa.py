@@ -16,7 +16,6 @@ has moved to :mod:`pint.simulation`.
 import copy
 import gzip
 import hashlib
-import logging
 import os
 import pickle
 import re
@@ -35,6 +34,7 @@ from astropy.coordinates import (
     CartesianRepresentation,
     EarthLocation,
 )
+from loguru import logger as log
 
 import pint
 import pint.utils
@@ -46,8 +46,6 @@ from pint.pulsar_ecliptic import PulsarEcliptic
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 
-
-log = logging.getLogger(__name__)
 
 __all__ = [
     "TOAs",
