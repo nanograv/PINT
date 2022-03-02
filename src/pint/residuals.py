@@ -8,6 +8,7 @@ dispersion measures (:class:`pint.residuals.WidebandTOAResiduals`).
 """
 import collections
 import copy
+import warnings
 
 import astropy.units as u
 import numpy as np
@@ -18,6 +19,14 @@ from pint.models.dispersion_model import Dispersion
 from pint.phase import Phase
 from pint.utils import weighted_mean, taylor_horner_deriv
 
+warn_ = warnings.warn
+
+def warn(message, *args, **kwargs):
+    print(args)
+    log.warning(message)
+    warn_(message, *args, **kwargs)
+
+warnings.warn = warn
 
 __all__ = [
     "Residuals",
@@ -206,10 +215,10 @@ class Residuals:
     @property
     def chi2_reduced(self):
         """Reduced chi-squared."""
-        # warnings.warn("Please use reduced_chi2 instead.", DeprecationWarning)
-        log.warning(
-            "Do not use 'resids.chi2_reduced'. Please use 'resids.reduced_chi2' instead."
-        )
+        warnings.warn("Please use reduced_chi2 instead.", DeprecationWarning)
+        #log.warning(
+        #    "Do not use 'resids.chi2_reduced'. Please use 'resids.reduced_chi2' instead."
+        #)
 
         return self.chi2 / self.dof
 
