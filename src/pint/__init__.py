@@ -37,7 +37,12 @@ warn_ = warnings.warn
 
 
 def warn(message, *args, **kwargs):
-    log.warning(f"{args[0]} {message}")
+    if len(args) > 0:
+        log.warning(f"{args[0]} {message}")
+    elif "category" in kwargs:
+        log.warning(f"{kwargs['category']} {message}")
+    else:
+        log.warning(f"{message}")
     warn_(message, *args, **kwargs)
 
 
