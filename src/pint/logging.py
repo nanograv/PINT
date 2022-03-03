@@ -7,6 +7,9 @@ import sys
 import warnings
 from loguru import logger as log
 
+__all__ = [
+    LogFilter,
+]
 
 """
 Want loguru to capture warnings emitted by warnings.warn
@@ -94,6 +97,8 @@ class LogFilter:
 
 logfilter = LogFilter(onlyonce=["SSB obs pos \[\S+ \S+ \S+\] m"])
 
+# remove the default logger so we can put in one with a custom filter
+# this can be done elsewhere if more/different customization is needed
 log.remove()
 level = "DEBUG"
 if "LOGURU_LEVEL" in os.environ:
