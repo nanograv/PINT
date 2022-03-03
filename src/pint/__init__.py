@@ -116,7 +116,11 @@ class LogFilter:
 logfilter = LogFilter(onlyonce=["SSB obs pos \[\S+ \S+ \S+\] m"])
 
 log.remove()
-log.add(sys.stderr, level="DEBUG", filter=logfilter)
+level = "DEBUG"
+if "LOGURU_LEVEL" in os.environ:
+    level = os.environ["LOGURU_LEVEL"]
+
+log.add(sys.stderr, level=level, filter=logfilter)
 
 __all__ = [
     "__version__",
