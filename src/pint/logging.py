@@ -11,6 +11,12 @@ __all__ = [
     "LogFilter",
 ]
 
+# defaults
+# can be overridden using $LOGURU_LEVEL and $LOGURU_FORMAT
+# or just make a new logger
+level = "DEBUG"
+format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> - <level>{message}</level>"
+
 """
 Want loguru to capture warnings emitted by warnings.warn
 See https://loguru.readthedocs.io/en/stable/resources/recipes.html#capturing-standard-stdout-stderr-and-warnings
@@ -59,6 +65,7 @@ class LogFilter:
             "Adding columns .*": False,
             "Applying TT\(\S+\) to TT\(\S+\) clock correction \(\~27 us\)": False,
             "No pulse number flags found in the TOAs": False,
+            "SSB obs pos \[\S+ \S+ \S+\] m": False,
         }
         # add in any more defined on init
         if onlyonce is not None:
@@ -95,13 +102,17 @@ class LogFilter:
         return self.filter(record)
 
 
-logfilter = LogFilter(onlyonce=["SSB obs pos \[\S+ \S+ \S+\] m"])
+logfilter = LogFilter()
 
 # remove the default logger so we can put in one with a custom filter
 # this can be done elsewhere if more/different customization is needed
 log.remove()
-level = "DEBUG"
 if "LOGURU_LEVEL" in os.environ:
     level = os.environ["LOGURU_LEVEL"]
+if "LOGURU_FORMAT" in os.environ:
+    format = os.environ["LOGURU_FORMAT"]
 
-log.add(sys.stderr, level=level, filter=logfilter)
+# use colorize=True to force colors
+# otherwise the default selection turns them off e.g., for a Jupyter notebook
+# since it isn't a tty
+log.add(sys.stderr, level=level, filter=logfilter, format=format, colorize=True)
