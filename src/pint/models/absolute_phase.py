@@ -2,6 +2,7 @@
 import logging
 
 import astropy.units as u
+from astropy.table import Column
 
 import pint.toa as toa
 from pint.models.parameter import MJDParameter, floatParameter, strParameter
@@ -109,6 +110,8 @@ class AbsPhase(PhaseComponent):
             ephem=toas.ephem,
             planets=toas.planets,
         )
+        if "clusters" in toas.table.colnames:
+            tz.table.add_column(Column([-1], name="clusters"))
         self.tz_cache = tz
         self.tz_hash = hash((self.TZRMJD.value, self.TZRSITE.value, self.TZRFRQ.value))
         self.tz_clkc_info = clkc_info
@@ -117,7 +120,7 @@ class AbsPhase(PhaseComponent):
         return tz
 
     def make_TZR_toa(self, toas):
-        """ Calculate the TZRMJD if one not given.
+        """Calculate the TZRMJD if one not given.
 
         TZRMJD = first toa after PEPOCH.
         """

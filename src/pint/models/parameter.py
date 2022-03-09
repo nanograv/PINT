@@ -455,9 +455,10 @@ class Parameter:
 
         .. [1] https://github.com/nanograv/PINT/wiki/PINT-vs.-TEMPO%282%29-par-file-changes
         """
-        assert format.lower() in _parfile_formats, (
-            "parfile format must be one of %s"
-            % ", ".join(['"%s"' % x for x in _parfile_formats])
+        assert (
+            format.lower() in _parfile_formats
+        ), "parfile format must be one of %s" % ", ".join(
+            ['"%s"' % x for x in _parfile_formats]
         )
 
         # Don't print unset parameters
@@ -1552,11 +1553,11 @@ class maskParameter(floatParameter):
         'JUMP2'
 
     The selection criterion can be one of the parameters ``mjd``, ``freq``,
-    ``name``, ``tel`` representing the required columns of a ``.tim`` file, or
-    the name of a flag, starting with ``-``. If the selection criterion is
+    ``name``, ``tel`` representing the required columns of a ``.tim`` file, ``cluster``,
+    or the name of a flag, starting with ``-``. If the selection criterion is
     based on ``mjd`` or ``freq`` it is expected to be accompanied by a pair of
-    values that define a range; other criteria are expected to be accompanied
-    by a string that is matched exactly.
+    values that define a range; ``cluster`` is defined by an integer to match;
+    other criteria are expected to be accompanied by a string that is matched exactly.
 
     Parameters
     ----------
@@ -1614,6 +1615,7 @@ class maskParameter(floatParameter):
             "freq": (_return_frequency_asquantity, 2),
             "name": (str, 1),
             "tel": (_get_observatory_name, 1),
+            "cluster": (int, 1),
         }
 
         if not isinstance(key_value, (list, tuple)):
@@ -1633,7 +1635,7 @@ class maskParameter(floatParameter):
                     raise ValueError(
                         "A key to a TOA flag requires a leading '-'."
                         " Legal keywords that don't require a leading '-' "
-                        "are MJD, FREQ, NAME, TEL."
+                        "are MJD, FREQ, NAME, TEL, CLUSTER."
                     )
         self.key = key
         self.key_value = [
@@ -1786,9 +1788,10 @@ class maskParameter(floatParameter):
         return True
 
     def as_parfile_line(self, format="pint"):
-        assert format.lower() in _parfile_formats, (
-            "parfile format must be one of %s"
-            % ", ".join(['"%s"' % x for x in _parfile_formats])
+        assert (
+            format.lower() in _parfile_formats
+        ), "parfile format must be one of %s" % ", ".join(
+            ['"%s"' % x for x in _parfile_formats]
         )
 
         if self.quantity is None:
@@ -1860,7 +1863,12 @@ class maskParameter(floatParameter):
         array
             An array of TOA indices selected by the mask.
         """
-        column_match = {"mjd": "mjd_float", "freq": "freq", "tel": "obs"}
+        column_match = {
+            "mjd": "mjd_float",
+            "freq": "freq",
+            "tel": "obs",
+            "cluster": "clusters",
+        }
         if len(self.key_value) == 1:
             if not hasattr(self, "toa_selector"):
                 self.toa_selector = TOASelect(is_range=False, use_hash=True)
@@ -1877,7 +1885,7 @@ class maskParameter(floatParameter):
                 "expected.(Expect 1 or 2 key values)" % self.name
             )
         # get the table columns
-        # TODO Right now it is only supports mjd, freq, tel, and flagkeys,
+        # TODO Right now it is only supports mjd, freq, tel, cluster, and flagkeys,
         # We need to consider some more complicated situation
         if self.key.startswith("-"):
             key = self.key[1::]
@@ -1895,6 +1903,10 @@ class maskParameter(floatParameter):
             tbl[key] = flag_col
             col = tbl[key]
         else:
+            if column_match[key.lower()] not in tbl.colnames:
+                raise KeyError(
+                    "TOA table does not contain column '%s'" % column_match[key.lower()]
+                )
             col = tbl[column_match[key.lower()]]
         select_idx = self.toa_selector.get_select_index(condition, col)
         return select_idx[self.name]
