@@ -72,7 +72,11 @@ class LogFilter:
             for m in onlyonce:
                 self.onlyonce[m] = False
         # List of matching strings for messages never to be displayed
-        self.never = ["MatplotlibDeprecationWarning", "DeprecationWarning"]
+        self.never = [
+            "MatplotlibDeprecationWarning",
+            "DeprecationWarning",
+            "ProvisionalCompleterWarning",
+        ]
         # add in any more defined on init
         if never is not None:
             self.never += never
