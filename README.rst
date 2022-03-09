@@ -110,11 +110,12 @@ See the online documentation_.  Specifically:
   
 If you have tasks that aren't covered in the material above, you can
 email one of the people below:
+
 * Scott Ransom (sransom@nrao.edu)
 * Paul Ray (Paul.Ray@nrl.navy.mil)
 * David Kaplan (kaplan@uwm.edu)  
 
-Want to do something new?  Check out github `issues <https://github.com/nanograv/PINT/issues>`_.
+Want to do something new?  Submit a github `issue <https://github.com/nanograv/PINT/issues>`_.
   
 .. _documentation:   http://nanograv-pint.readthedocs.io/en/latest/
 
