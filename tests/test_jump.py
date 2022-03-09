@@ -13,7 +13,8 @@ import pint.toa as toa
 from pint.residuals import Residuals
 from pinttestdata import datadir
 from pint.models import parameter as p
-from pint.models import PhaseJump
+from pint.models import PhaseJump, DelayJump
+from pint import fitter
 
 
 class SimpleSetup:
@@ -92,7 +93,7 @@ def test_remove_jump_and_flags(setup_NGC6440E):
 
 
 def test_jump_params_to_flags(setup_NGC6440E):
-    """ Check jump_params_to_flags function. """
+    """Check jump_params_to_flags function."""
     setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
     cp = setup_NGC6440E.m.components["PhaseJump"]
 
@@ -162,6 +163,74 @@ def test_multijump_toa(setup_NGC6440E):
         assert "jump" in dict
     assert len(cp.jumps) == 1
     assert "JUMP1" in cp.jumps
+
+
+def test_jump_by_cluster(setup_NGC6440E):
+    t = setup_NGC6440E.t
+    m = setup_NGC6440E.m
+    # fit the nominal model
+    f = fitter.WLSFitter(toas=t, model=m)
+    f.fit_toas()
+    # group TOAs: find clusters with gaps of <2h
+    clusters = t.get_clusters(add_column=True)
+
+    # put in the pulse numbers based on the previous fit
+    t.compute_pulse_numbers(f.model)
+    # just for a test, add an offset to a set of TOAs
+    t["delta_pulse_number"][clusters == 3] += 3
+
+    # now fit without a jump
+    fnojump = fitter.WLSFitter(toas=t, model=m, track_mode="use_pulse_numbers")
+    fnojump.fit_toas()
+
+    mbackup = copy.deepcopy(m)
+    m.add_component(DelayJump(), validate=False)
+    # add the jump based on MJDs
+    par = p.maskParameter(
+        "JUMP",
+        key="mjd",
+        value=0.0,
+        key_value=[
+            t[clusters == 3].get_mjds().min().value,
+            t[clusters == 3].get_mjds().max().value,
+        ],
+        units=u.s,
+        frozen=False,
+    )
+    m.components["DelayJump"].add_param(par, setup=True)
+    fjump_mjds = fitter.WLSFitter(toas=t, model=m, track_mode="use_pulse_numbers")
+    fjump_mjds.fit_toas()
+
+    m = copy.deepcopy(mbackup)
+    m.add_component(DelayJump(), validate=False)
+    # add the jump based on the clusters
+    par = p.maskParameter(
+        "JUMP",
+        key="cluster",
+        value=0.0,
+        key_value=3,
+        units=u.s,
+        frozen=False,
+    )
+    m.components["DelayJump"].add_param(par, setup=True)
+    fjump_cluster = fitter.WLSFitter(toas=t, model=m, track_mode="use_pulse_numbers")
+    fjump_cluster.fit_toas()
+
+    m = copy.deepcopy(mbackup)
+    m.add_component(PhaseJump(), validate=False)
+    # add the jump based on flags
+    m.components["PhaseJump"].add_jump_and_flags(t.table["flags"][clusters == 3])
+    fjump_flag = fitter.WLSFitter(toas=t, model=m, track_mode="use_pulse_numbers")
+    fjump_flag.fit_toas()
+
+    assert len(fjump_mjds.model.JUMP1.select_toa_mask(t)) == len(
+        fjump_cluster.model.JUMP1.select_toa_mask(t)
+    )
+    assert len(fjump_mjds.model.JUMP1.select_toa_mask(t)) == len(
+        fjump_flag.model.JUMP1.select_toa_mask(t)
+    )
+    assert np.isclose(fjump_mjds.resids.calc_chi2(), fjump_cluster.resids.calc_chi2())
+    assert np.isclose(fjump_mjds.resids.calc_chi2(), fjump_flag.resids.calc_chi2())
 
 
 class TestJUMP(unittest.TestCase):
