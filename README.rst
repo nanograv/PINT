@@ -102,8 +102,20 @@ Complete installation instructions are availble here_.
 Using
 -----
 
-See the online documentation_.
+See the online documentation_.  Specifically:
 
+* `tutorials <https://nanograv-pint.readthedocs.io/en/latest/tutorials.html>`_
+* `API reference <https://nanograv-pint.readthedocs.io/en/latest/reference.html>`_
+* `How to's for common tasks <https://github.com/nanograv/PINT/wiki/How-To>`_
+  
+If you have tasks that aren't covered in the material above, you can
+email one of the people below:
+* Scott Ransom (sransom@nrao.edu)
+* Paul Ray (Paul.Ray@nrl.navy.mil)
+* David Kaplan (kaplan@uwm.edu)  
+
+Want to do something new?  Check out github `issues <https://github.com/nanograv/PINT/issues>`_.
+  
 .. _documentation:   http://nanograv-pint.readthedocs.io/en/latest/
 
 And for more details, please read and cite(!) the PINT paper_.
