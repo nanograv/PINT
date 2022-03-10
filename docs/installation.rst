@@ -24,11 +24,7 @@ For PINT versions 0.8 or later only Python 3.x will be supported.
 
 Your Python must have the package installation tool pip_ installed.  Also make sure your setuptools are up to date (e.g. ``pip install -U setuptools``).
 
-We highly recommend using the package isolation tool virtualenv_ and, if you are a bash user, the convenience functions
-in virtualenvwrapper_ are handy.  
-You probably
-need to  have these installed system-wide or in some other way.  Sorry. Try some
-Googling if you don't. 
+We highly recommend using an :ref:`anaconda<Install with Anaconda>` environment or the package isolation tool virtualenv_.
 
 TEMPO and Tempo2
 ''''''''''''''''
@@ -67,6 +63,9 @@ If you use `Anaconda <https://www.anaconda.com/products/individual>`_ environmen
 PINT is also available for Anaconda python under the `conda-forge <https://conda-forge.org>` channel:
 
     $ conda install -c conda-forge pint-pulsar
+
+**NOTE**: PINT requires `longdouble` arithmetic within `numpy`, which is currently not supported natively on M1 Macs (e.g., with the `ARM64 conda build <https://conda-forge.org/blog/posts/2020-10-29-macos-arm64/>`_).  So it may be better to install the standard `osx-64` build and rely on Rosetta.
+
 
 Install from Source
 -------------------
