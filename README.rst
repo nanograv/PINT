@@ -51,11 +51,13 @@ The primary reasons we are developing PINT are:
 * To make a system that is easy to extend and modify due to a good design
   and the use of a modern programming language, techniques, and libraries.
 
-IMPORTANT Note!
+IMPORTANT Notes!
 ---------------
 
 PINT has a naming conflict with the `pint <https://pypi.org/project/Pint/>`_ units package available from PyPI (i.e. using pip) and conda.  
 Do **NOT** ``pip install pint`` or ``conda install pint``!  See below!
+
+PINT requires `longdouble` arithmetic within `numpy`, which is currently not supported natively on M1 Macs (e.g., with the `ARM64 conda build <https://conda-forge.org/blog/posts/2020-10-29-macos-arm64/>`_).  So it may be better to install the standard `osx-64` build and rely on Rosetta.
 
 Installing
 ----------
