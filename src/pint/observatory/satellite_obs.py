@@ -135,6 +135,7 @@ def load_FPorbit(orbit_filename):
         log.debug("FPorbit TIMEREF {0}".format(timeref))
 
     mjds_TT = read_fits_event_mjds(hdulist[1])
+
     mjds_TT = mjds_TT * u.d
     log.debug("FPorbit spacing is {0}".format((mjds_TT[1] - mjds_TT[0]).to(u.s)))
     X = FPorbit_dat.field("X") * u.m
@@ -156,6 +157,13 @@ def load_FPorbit(orbit_filename):
     # Make sure table is sorted by time
     log.debug("Sorting FPorbit table")
     FPorbit_table.sort("MJD_TT")
+
+    good = np.diff(FPorbit_table["MJD_TT"]) > 0
+    if not np.all(good):
+        log.warning("The orbit table has duplicate entries. Please check.")
+        good = np.concatenate((good, [True]))
+        FPorbit_table = FPorbit_table[good]
+
     # Now delete any bad entries where the positions are 0.0
     idx = np.where(
         np.logical_and(FPorbit_table["X"] != 0.0, FPorbit_table["Y"] != 0.0)
