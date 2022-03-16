@@ -78,6 +78,9 @@ class WrappedFitter:
                 f"Max iterations reached for {','.join(parstrings)}: returning NaN"
             )
             return np.NaN
+        except Exception as e:
+            log.warning(f"Unexpected exception {e} for {','.join(parstrings)}: returning NaN")
+            return np.NaN
         log.debug(
             f"Computed chi^2={myftr.resids.chi2} for {','.join(parstrings)} on {hostinfo()}"
         )
