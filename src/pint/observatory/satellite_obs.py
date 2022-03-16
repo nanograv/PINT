@@ -403,7 +403,7 @@ class SatelliteObs(SpecialLocation):
             np.array([self.X(t.tt.mjd), self.Y(t.tt.mjd), self.Z(t.tt.mjd)])
             * self.FT2["X"].unit
         )
-        log.debug("[{0}] sat_pos_geo {1}".format(self.name, sat_pos_geo[:, 0]))
+        # log.debug("[{0}] sat_pos_geo {1}".format(self.name, sat_pos_geo[:, 0]))
         sat_vel_geo = (
             np.array([self.Vx(t.tt.mjd), self.Vy(t.tt.mjd), self.Vz(t.tt.mjd)])
             * self.FT2["Vx"].unit
