@@ -38,7 +38,34 @@ def test_grid_singleprocessor():
         7,
     )
 
-    chi2grid = pint.gridutils.grid_chisq(f, ("F0", "F1"), (F0, F1), ncpu=1)
+    chi2grid, _ = pint.gridutils.grid_chisq(f, ("F0", "F1"), (F0, F1), ncpu=1)
+
+    assert np.isclose(bestfit, chi2grid.min())
+
+
+def test_grid_extraparams_singleprocessor():
+    parfile = pint.config.examplefile("NGC6440E.par")
+    timfile = pint.config.examplefile("NGC6440E.tim")
+    m, t = get_model_and_toas(parfile, timfile)
+
+    f = WLSFitter(t, m)
+    f.fit_toas()
+    bestfit = f.resids.chi2
+
+    F0 = np.linspace(
+        f.model.F0.quantity - 3 * f.model.F0.uncertainty,
+        f.model.F0.quantity + 3 * f.model.F0.uncertainty,
+        5,
+    )
+    F1 = np.linspace(
+        f.model.F1.quantity - 3 * f.model.F1.uncertainty,
+        f.model.F1.quantity + 3 * f.model.F1.uncertainty,
+        7,
+    )
+
+    chi2grid, extraparams = pint.gridutils.grid_chisq(
+        f, ("F0", "F1"), (F0, F1), ("DM",), ncpu=1
+    )
 
     assert np.isclose(bestfit, chi2grid.min())
 
@@ -63,7 +90,7 @@ def test_grid_multiprocessor():
         7,
     )
 
-    chi2grid = pint.gridutils.grid_chisq(f, ("F0", "F1"), (F0, F1), ncpu=ncpu)
+    chi2grid, _ = pint.gridutils.grid_chisq(f, ("F0", "F1"), (F0, F1), ncpu=ncpu)
 
     assert np.isclose(bestfit, chi2grid.min())
 
@@ -83,7 +110,29 @@ def test_grid_oneparam():
         5,
     )
 
-    chi2grid = pint.gridutils.grid_chisq(f, ("F0",), (F0,), ncpu=ncpu)
+    chi2grid, _ = pint.gridutils.grid_chisq(f, ("F0",), (F0,), ncpu=ncpu)
+
+    assert np.isclose(bestfit, chi2grid.min())
+
+
+def test_grid_oneparam_extraparam():
+    parfile = pint.config.examplefile("NGC6440E.par")
+    timfile = pint.config.examplefile("NGC6440E.tim")
+    m, t = get_model_and_toas(parfile, timfile)
+
+    f = WLSFitter(t, m)
+    f.fit_toas()
+    bestfit = f.resids.chi2
+
+    F0 = np.linspace(
+        f.model.F0.quantity - 3 * f.model.F0.uncertainty,
+        f.model.F0.quantity + 3 * f.model.F0.uncertainty,
+        5,
+    )
+
+    chi2grid, extraparams = pint.gridutils.grid_chisq(
+        f, ("F0",), (F0,), ("DM",), ncpu=ncpu
+    )
 
     assert np.isclose(bestfit, chi2grid.min())
 
@@ -103,7 +152,7 @@ def test_grid_oneparam_existingexecutor():
         21,
     )
     with concurrent.futures.ProcessPoolExecutor(max_workers=ncpu,) as executor:
-        chi2grid = pint.gridutils.grid_chisq(f, ("F0",), (F0,), executor=executor)
+        chi2grid, _ = pint.gridutils.grid_chisq(f, ("F0",), (F0,), executor=executor)
 
     assert np.isclose(bestfit, chi2grid.min())
 
@@ -132,7 +181,7 @@ def test_grid_3param_singleprocessor():
         f.model.DM.quantity + 3 * f.model.DM.uncertainty,
         5,
     )
-    chi2grid = pint.gridutils.grid_chisq(f, ("F0", "F1", "DM"), (F0, F1, DM), ncpu=1)
+    chi2grid, _ = pint.gridutils.grid_chisq(f, ("F0", "F1", "DM"), (F0, F1, DM), ncpu=1)
 
     assert np.isclose(bestfit, chi2grid.min())
 
@@ -161,7 +210,9 @@ def test_grid_3param_multiprocessor():
         f.model.DM.quantity + 3 * f.model.DM.uncertainty,
         5,
     )
-    chi2grid = pint.gridutils.grid_chisq(f, ("F0", "F1", "DM"), (F0, F1, DM), ncpu=ncpu)
+    chi2grid, _ = pint.gridutils.grid_chisq(
+        f, ("F0", "F1", "DM"), (F0, F1, DM), ncpu=ncpu
+    )
 
     assert np.isclose(bestfit, chi2grid.min())
 
@@ -181,8 +232,34 @@ def test_grid_derived_singleprocessor():
         15,
     )
     tau = np.linspace(8.1, 8.3, 13) * 100 * u.Myr
-    chi2grid_tau, params = pint.gridutils.grid_chisq_derived(
+    chi2grid_tau, params, _ = pint.gridutils.grid_chisq_derived(
         f, ("F0", "F1"), (lambda x, y: x, lambda x, y: -x / 2 / y), (F0, tau), ncpu=1,
+    )
+    assert np.isclose(bestfit, chi2grid_tau.min(), atol=1)
+
+
+def test_grid_derived_extraparam_singleprocessor():
+    parfile = pint.config.examplefile("NGC6440E.par")
+    timfile = pint.config.examplefile("NGC6440E.tim")
+    m, t = get_model_and_toas(parfile, timfile)
+
+    f = WLSFitter(t, m)
+    f.fit_toas()
+    bestfit = f.resids.chi2
+
+    F0 = np.linspace(
+        f.model.F0.quantity - 3 * f.model.F0.uncertainty,
+        f.model.F0.quantity + 3 * f.model.F0.uncertainty,
+        15,
+    )
+    tau = np.linspace(8.1, 8.3, 13) * 100 * u.Myr
+    chi2grid_tau, params, extraparams = pint.gridutils.grid_chisq_derived(
+        f,
+        ("F0", "F1"),
+        (lambda x, y: x, lambda x, y: -x / 2 / y),
+        (F0, tau),
+        ("DM",),
+        ncpu=1,
     )
     assert np.isclose(bestfit, chi2grid_tau.min(), atol=1)
 
@@ -202,7 +279,7 @@ def test_grid_derived_multiprocessor():
         15,
     )
     tau = np.linspace(8.1, 8.3, 13) * 100 * u.Myr
-    chi2grid_tau, params = pint.gridutils.grid_chisq_derived(
+    chi2grid_tau, params, _ = pint.gridutils.grid_chisq_derived(
         f, ("F0", "F1"), (lambda x, y: x, lambda x, y: -x / 2 / y), (F0, tau), ncpu=ncpu
     )
     assert np.isclose(bestfit, chi2grid_tau.min(), atol=1)
@@ -225,11 +302,39 @@ def test_grid_derived_existingexecutor():
     tau = np.linspace(8.1, 8.3, 13) * 100 * u.Myr
 
     with concurrent.futures.ProcessPoolExecutor(max_workers=ncpu) as executor:
-        chi2grid_tau, params = pint.gridutils.grid_chisq_derived(
+        chi2grid_tau, params, _ = pint.gridutils.grid_chisq_derived(
             f,
             ("F0", "F1"),
             (lambda x, y: x, lambda x, y: -x / 2 / y),
             (F0, tau),
+            executor=executor,
+        )
+    assert np.isclose(bestfit, chi2grid_tau.min(), atol=1)
+
+
+def test_grid_derived_extraparam_existingexecutor():
+    parfile = pint.config.examplefile("NGC6440E.par")
+    timfile = pint.config.examplefile("NGC6440E.tim")
+    m, t = get_model_and_toas(parfile, timfile)
+
+    f = WLSFitter(t, m)
+    f.fit_toas()
+    bestfit = f.resids.chi2
+
+    F0 = np.linspace(
+        f.model.F0.quantity - 3 * f.model.F0.uncertainty,
+        f.model.F0.quantity + 3 * f.model.F0.uncertainty,
+        15,
+    )
+    tau = np.linspace(8.1, 8.3, 13) * 100 * u.Myr
+
+    with concurrent.futures.ProcessPoolExecutor(max_workers=ncpu) as executor:
+        chi2grid_tau, params, extraparams = pint.gridutils.grid_chisq_derived(
+            f,
+            ("F0", "F1"),
+            (lambda x, y: x, lambda x, y: -x / 2 / y),
+            (F0, tau),
+            ("DM",),
             executor=executor,
         )
     assert np.isclose(bestfit, chi2grid_tau.min(), atol=1)
@@ -274,7 +379,7 @@ def test_grid_3param_prefix_singleprocessor():
         f.model.F2.quantity + 3 * f.model.F2.uncertainty,
         5,
     )
-    chi2grid = pint.gridutils.grid_chisq(f, ("F0", "F1", "F2"), (F0, F1, F2), ncpu=1)
+    chi2grid, _ = pint.gridutils.grid_chisq(f, ("F0", "F1", "F2"), (F0, F1, F2), ncpu=1)
 
     assert np.isclose(bestfit, chi2grid.min())
 
@@ -318,7 +423,9 @@ def test_grid_3param_prefix_multiprocessor():
         f.model.F2.quantity + 3 * f.model.F2.uncertainty,
         5,
     )
-    chi2grid = pint.gridutils.grid_chisq(f, ("F0", "F1", "F2"), (F0, F1, F2), ncpu=ncpu)
+    chi2grid, _ = pint.gridutils.grid_chisq(
+        f, ("F0", "F1", "F2"), (F0, F1, F2), ncpu=ncpu
+    )
 
     assert np.isclose(bestfit, chi2grid.min())
 
@@ -338,7 +445,9 @@ def test_grid_fitters_singleprocessor(fitter):
         f.model.F0.quantity + 3 * f.model.F0.uncertainty,
         7,
     )
-    chi2grid = pint.gridutils.grid_chisq(f, ("F0",), (F0,), printprogress=False, ncpu=1)
+    chi2grid, _ = pint.gridutils.grid_chisq(
+        f, ("F0",), (F0,), printprogress=False, ncpu=1
+    )
 
     assert np.isclose(bestfit, chi2grid.min())
 
@@ -358,7 +467,7 @@ def test_grid_fitters_multiprocessor(fitter):
         f.model.F0.quantity + 3 * f.model.F0.uncertainty,
         7,
     )
-    chi2grid = pint.gridutils.grid_chisq(
+    chi2grid, _ = pint.gridutils.grid_chisq(
         f, ("F0",), (F0,), printprogress=False, ncpu=ncpu
     )
 

@@ -43,8 +43,9 @@ def test_infostring_in_parfile(setup_NGC6440E):
         ), f"Value of {p} does not match in new par file: ({getattr(newmodel, p).value} vs. {getattr(setup_NGC6440E.m, p).value})"
 
 
-def test_contents_of_infostring_parfile(setup_NGC6440E):
-    parfile = setup_NGC6440E.m.as_parfile(comment="test parfile writing")
+@pytest.mark.parametrize("format", ["pint", "tempo", "tempo2"])
+def test_contents_of_infostring_parfile(setup_NGC6440E, format):
+    parfile = setup_NGC6440E.m.as_parfile(format=format, comment="test parfile writing")
     f = io.StringIO(parfile)
     lines = f.readlines()
     info = {}
@@ -58,6 +59,7 @@ def test_contents_of_infostring_parfile(setup_NGC6440E):
     assert info["PINT_version"] == pint.__version__
     assert info["Host"] == platform.node()
     assert info["OS"] == platform.platform()
+    assert info["Format"] == format
 
 
 def test_infostring_in_timfile(setup_NGC6440E):

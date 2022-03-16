@@ -2,7 +2,7 @@ attrs>=19.2
 pip>=9.0.1
 setuptools>=41.0
 coverage>=4.3.4
-traitlets<5.0
+traitlets
 Sphinx>=2.2
 astropy>=4.0,!=4.0.1,!=4.0.1.post1
 #astropy-helpers>=1.3

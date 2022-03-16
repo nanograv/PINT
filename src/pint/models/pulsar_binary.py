@@ -339,7 +339,7 @@ class PulsarBinary(DelayComponent):
         self.update_binary_object(toas, acc_delay)
         return self.binary_instance.d_binarydelay_d_par(param)
 
-    def print_par(self):
+    def print_par(self, format="pint"):
         if self._parent is not None:
             # Check if the binary name are the same as BINARY parameter
             if self._parent.BINARY.value != self.binary_model_name:
@@ -348,13 +348,13 @@ class PulsarBinary(DelayComponent):
                     f" does not match the binary"
                     f" component {self.binary_model_name}"
                 )
-            result = self._parent.BINARY.as_parfile_line()
+            result = self._parent.BINARY.as_parfile_line(format=format)
         else:
             result = "BINARY {0}\n".format(self.binary_model_name)
         for p in self.params:
             par = getattr(self, p)
             if par.quantity is not None:
-                result += par.as_parfile_line()
+                result += par.as_parfile_line(format=format)
         return result
 
     def FBX_unit(self, n):
