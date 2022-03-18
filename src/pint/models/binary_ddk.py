@@ -127,16 +127,20 @@ class BinaryDDK(BinaryDD):
         These are given by where Eqn. 8 in Kopeikin (1996) is equal to the best-fit value.
 
         We first define the symmetry point where a1dot is zero:
-        :math:`KOM_0 = \tan^{-1} (\mu_\delta / \mu_alpha)`
+
+        :math:`KOM_0 = \\tan^{-1} (\mu_{\delta} / \mu_{alpha})`
 
         The solutions are then:
         
         :math:`(KIN, KOM)`
-        :math:`(KIN, 2KOM_0 - KOM - 180)`
-        :math:`(180-KIN, KOM+180)`
-        :math:`(180-KIN, 2KOM_0 - KOM)`
 
-        However, there is no guarantee that they will be between 0 and 360.
+        :math:`(KIN, 2KOM_0 - KOM - 180^{\ocirc})`
+
+        :math:`(180^{\ocirc}-KIN, KOM+180^{\ocirc})`
+
+        :math:`(180^{\ocirc}-KIN, 2KOM_0 - KOM)`
+
+        However, there is no guarantee that they will be between 0 and :math:`360^{\ocirc}`.
 
         Returns
         -------
