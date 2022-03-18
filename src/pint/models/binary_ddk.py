@@ -128,19 +128,19 @@ class BinaryDDK(BinaryDD):
 
         We first define the symmetry point where a1dot is zero:
 
-        :math:`KOM_0 = \\tan^{-1} (\mu_{\delta} / \mu_{\alpha})`
+        :math:`KOM_0 = \\tan^{-1} (\mu_{\delta} / \mu_{\\alpha})`
 
         The solutions are then:
         
         :math:`(KIN, KOM)`
 
-        :math:`(KIN, 2KOM_0 - KOM - 180^{\ocirc})`
+        :math:`(KIN, 2KOM_0 - KOM - 180^{\circ})`
 
-        :math:`(180^{\ocirc}-KIN, KOM+180^{\ocirc})`
+        :math:`(180^{\circ}-KIN, KOM+180^{\circ})`
 
-        :math:`(180^{\ocirc}-KIN, 2KOM_0 - KOM)`
+        :math:`(180^{\circ}-KIN, 2KOM_0 - KOM)`
 
-        However, there is no guarantee that they will be between 0 and :math:`360^{\ocirc}`.
+        However, there is no guarantee that they will be between 0 and :math:`360^{\circ}`.
 
         Returns
         -------
