@@ -128,7 +128,7 @@ class BinaryDDK(BinaryDD):
 
         We first define the symmetry point where a1dot is zero:
 
-        :math:`KOM_0 = \\tan^{-1} (\mu_{\delta} / \mu_{alpha})`
+        :math:`KOM_0 = \\tan^{-1} (\mu_{\delta} / \mu_{\alpha})`
 
         The solutions are then:
         
