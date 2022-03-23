@@ -109,9 +109,11 @@ See the online documentation_.  Specifically:
 * `tutorials <https://nanograv-pint.readthedocs.io/en/latest/tutorials.html>`_
 * `API reference <https://nanograv-pint.readthedocs.io/en/latest/reference.html>`_
 * `How to's for common tasks <https://github.com/nanograv/PINT/wiki/How-To>`_
+
+Are you a NANOGrav member?  Then join the #pint channel in the NANOGrav slack.
   
 If you have tasks that aren't covered in the material above, you can
-email one of the people below:
+email pint@nanograv.org or one of the people below:
 
 * Scott Ransom (sransom@nrao.edu)
 * Paul Ray (Paul.Ray@nrl.navy.mil)
