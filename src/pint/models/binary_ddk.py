@@ -140,7 +140,7 @@ class BinaryDDK(BinaryDD):
 
         :math:`(180^{\circ}-KIN, 2KOM_0 - KOM)`
 
-        However, there is no guarantee that they will be between 0 and :math:`360^{\circ}`.
+        All values will be between 0 and :math:`360^{\circ}`.
 
         Returns
         -------
@@ -153,8 +153,12 @@ class BinaryDDK(BinaryDD):
         # where Eqn. 8 in Kopeikin (1996) that is equal to 0
         KOM_zero = np.arctan2(self.PMDEC_DDK.quantity, self.PMRA_DDK.quantity).to(u.deg)
         # second one in the same banana
-        solutions += [(x0, 2 * (KOM_zero) - y0 - 180 * u.deg)]
+        solutions += [(x0, (2 * (KOM_zero) - y0 - 180 * u.deg) % (360 * u.deg))]
         # and the other banana
-        solutions += [(180 * u.deg - x0, 2 * (KOM_zero) - y0)]
-        solutions += [(180 * u.deg - x0, y0 + 180 * u.deg)]
+        solutions += [
+            ((180 * u.deg - x0) % (360 * u.deg), (2 * (KOM_zero) - y0) % (360 * u.deg))
+        ]
+        solutions += [
+            ((180 * u.deg - x0) % (360 * u.deg), (y0 + 180 * u.deg) % (360 * u.deg))
+        ]
         return solutions
