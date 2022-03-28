@@ -4,11 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.8.5] 2022-02-24
 ### Added
 - Added support for Chandra and Swift event data in photonphase.py
 ### Fixed
-- Attempt to fix documentation build
+- Attempt to fix documentation build by removing very slow notebooks
+- Improved compatibility with TEMPO/Tempo2 parfiles
+- Fixed handling of Swift and Chandra FITS files (PR #1157)
+- Cleaned up some deprecated usages
+### Changed
+- Gridding code now allows options to be supplied and other parameters to be returned (PR #1173)
 
 ## [0.8.4] 2021-10-06
 ### Fixed
