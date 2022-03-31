@@ -26,3 +26,49 @@ run_profile.py bench_MCMC.py
 
 # And example run of high_level_benchmark.py is below:
 
+ % python high_level_benchmark.py 
+python -m cProfile -o bench_load_TOAs_prof_summary bench_load_TOAs.py
+python -m cProfile -o bench_chisq_grid_prof_summary bench_chisq_grid.py
+python -m cProfile -o bench_chisq_grid_WLSFitter_prof_summary bench_chisq_grid_WLSFitter.py
+python -m cProfile -o bench_MCMC_prof_summary bench_MCMC.py
+
+Processor running this script: Intel(R) Core(TM) i7-6700K CPU @ 4.00GHz
+Python version: 3.9.7
+SciPy version: 1.7.1, AstroPy version: 4.3.1, NumPy version: 1.21.2
+PINT version: 0.8.4+166.g0d23b53c
+
+*******************************************************************
+OUTPUT FOR BENCH_LOAD_TOAS.PY:
+Total Time: 15.973 s
+               Function Time(s)
+   Construct TOA Object   0.030
+  Construct TOAs Object   2.766
+  toa.py:1248(__init__)   5.381
+Apply Clock Corrections   5.350
+           Compute TDBs   2.006
+        Compute Posvels   1.083
+
+*******************************************************************
+OUTPUT FOR BENCH_CHISQ_GRID.PY:
+Total Time: 181.281 s
+        Function Time(s)
+Get Designmatrix 123.870
+   Update Resids  21.085
+      Cho Factor   0.011
+       Cho Solve   0.018
+ Select TOA Mask  10.802
+
+*******************************************************************
+OUTPUT FOR BENCH_CHISQ_GRID_WLSFITTER.PY:
+Total Time: 176.437 s
+        Function Time(s)
+Get Designmatrix 121.546
+   Update Resids  21.527
+      Cho Factor   0.004
+       Cho Solve   0.005
+             svd   0.145
+ Select TOA Mask   8.598
+
+*******************************************************************
+OUTPUT FOR BENCH_MCMC.PY:
+Total Time: 12.974 s
