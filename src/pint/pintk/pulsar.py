@@ -447,11 +447,11 @@ class Pulsar:
 
         # subtract the mean residual of each random model from the respective residual set
         # based ONLY on the mean of the random residuals in the real data range
-        start_index = np.where((f_toas.get_mjds() - minMJD) >=  0 * u.d)[0][0]
-        end_index =   np.where((f_toas.get_mjds() - maxMJD) >= 0 * u.d)[0][0]
+        start_index = np.where((f_toas.get_mjds() - minMJD) >= 0 * u.d)[0][0]
+        end_index = np.where((f_toas.get_mjds() - maxMJD) >= 0 * u.d)[0][0]
 
         for i in range(len(rs)):
-            rs_mean = rs[i][start_index : end_index].mean()
+            rs_mean = rs[i][start_index:end_index].mean()
             rs[i][:] = [resid - rs_mean for resid in rs[i]]
 
         self.random_resids = rs
