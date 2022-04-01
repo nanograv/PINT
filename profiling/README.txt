@@ -7,9 +7,10 @@ To run the codes, there are a couple of prerequisites, besides just a working PI
 curl -O https://data.nanograv.org/static/data/J0740+6620.cfr+19.tim
 
 # Also, a couple of other packages are required:
-# First, you need the "dot" program, which is part of the graphviz package (try your package manager to install this)
-# Then use pip to install the following:
-pip install gprof2dot py-cpuinfo
+# First, if you want to run `run_profile.py` you need the "dot" program,
+# which is part of the graphviz package (try your package manager to install this)
+# It also uses the python packages gprof2dot and py-cpuinfo
+# Those should be installed if you did `pip install -r requirements_dev.txt`
 
 # Then to run to the top level benchmark suite, just run
 python high_level_benchmark.py

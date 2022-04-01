@@ -34,3 +34,5 @@ ipython
 pathlib2
 twine
 numdifftools
+gprof2dot
+py-cpuinfo
