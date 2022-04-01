@@ -35,3 +35,5 @@ pathlib2
 twine
 numdifftools
 click<=8.0.4
+gprof2dot
+py-cpuinfo

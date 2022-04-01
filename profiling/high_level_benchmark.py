@@ -82,7 +82,12 @@ if __name__ == "__main__":
     print()
 
     # display computer & software info
-    compID = cpuinfo.get_cpu_info()["brand"]
+    try:
+        compID = cpuinfo.get_cpu_info()["brand"]
+    except KeyError:
+        compID = cpuinfo.get_cpu_info()["brand_raw"]
+    else:
+        compID = "Unknown"
     print("Processor running this script: " + compID)
     pyversion = platform.python_version()
     spversion = scipy.__version__

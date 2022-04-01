@@ -270,7 +270,7 @@ class T2SpacecraftObs(SpecialLocation):
         if vel_geo.shape != vdim:
             raise ValueError(
                 "GCRS velocity vector has wrong shape: ",
-                vel.shape,
+                vel_geo.shape,
                 " instead of ",
                 vdim.shape,
             )
