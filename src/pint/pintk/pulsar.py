@@ -151,18 +151,14 @@ class Pulsar:
 
     def update_resids(self):
         # update the pre and post fit residuals using all_toas
-        if self.use_pulse_numbers:
-            self.prefit_resids = Residuals(
-                self.all_toas, self.prefit_model, track_mode="use_pulse_numbers"
+        track_mode = "use_pulse_numbers" if self.use_pulse_numbers else None
+        self.prefit_resids = Residuals(
+            self.all_toas, self.prefit_model, track_mode=track_mode
+        )
+        if self.fitted:
+            self.postfit_resids = Residuals(
+                self.all_toas, self.postfit_model, track_mode=track_mode
             )
-            if self.fitted:
-                self.postfit_resids = Residuals(
-                    self.all_toas, self.postfit_model, track_mode="use_pulse_numbers"
-                )
-        else:
-            self.prefit_resids = Residuals(self.all_toas, self.prefit_model)
-            if self.fitted:
-                self.postfit_resids = Residuals(self.all_toas, self.postfit_model)
 
     def orbitalphase(self):
         """

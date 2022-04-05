@@ -3,8 +3,6 @@ Interactive emulator of tempo2 plk
 """
 import copy
 import logging
-import os
-import sys
 
 import astropy.units as u
 import matplotlib as mpl
@@ -61,41 +59,23 @@ plotlabels = {
 helpstring = """The following interactions are currently supported by the Plk pane in the PINTkinter GUI:
 
 Left click:     Select a point
-
 Right click:    Delete a point
-
 r:              Reset the pane - undo all deletions, selections, etc.
-
 k:              (K)orrect the pane - rescale the axes
-
 f:              Perform a fit on the selected points
-
 d:              Delete the highlighted points
-
 u:              Undo the most recent selection
-
 c:              Clear highlighter from map
-
 j:              Jump the selected points, or unjump them if already jumped
-
 v:              Jump all TOA groups except those selected
-
 i:              Print the prefit model as of this moment
-
 o:              Print the postfit model as of this moment (if it exists)
-
 p:              Print info about highlighted points (or all, if none are selected)
-
 m:              Print the range of MJDs with the highest density of TOAs
-
 +:              Increase pulse number for selected points
-
 -:              Decrease pulse number for selected points
-
 >:              Increase pulse number for all points to the right of selection
-
 <:              Decrease pulse number for all points to the right of selection
-
 h:              Print help
 """
 
@@ -519,6 +499,13 @@ class PlkWidget(tk.Frame):
         self.plkCanvas.mpl_connect("motion_notify_event", self.canvasMotionEvent)
         self.plkCanvas.mpl_connect("key_press_event", self.canvasKeyEvent)
         self.plkToolbar = PlkToolbar(self.plkCanvas, tk.Frame(self))
+        # print(self.plkToolbar.toolitems)
+        # for k in self.plkToolbar.children:
+        #    print(k, self.plkToolbar.children[k].config("text")[-1])
+        # .children["!checkbutton2"] is the Zoom button
+        # print(self.plkToolbar.children["!checkbutton2"].config())
+        # self.plkToolbar.children["!checkbutton2"].config(command=my_function)
+        # print("zoom mode = '%s'" % self.plkToolbar.mode)
 
         self.plkAxes = self.plkFig.add_subplot(111)  # 111
         self.plkAx2x = self.plkAxes.twinx()
@@ -792,6 +779,9 @@ class PlkWidget(tk.Frame):
                 self.xvals = x
                 self.yvals = y
                 self.yerrs = yerr
+                ymin, ymax = self.determine_yaxis_units(miny=y.min(), maxy=y.max())
+                self.yvals = self.yvals.to(ymin.unit)
+                self.yerrs = self.yerrs.to(ymin.unit)
                 self.plotResiduals(keepAxes=keepAxes)
             else:
                 raise ValueError("Nothing to plot!")
@@ -1264,7 +1254,9 @@ class PlkWidget(tk.Frame):
         """
         Call this function when the mouse is clicked and dragged
         """
-        if event.inaxes == self.plkAxes:
+        # print("Clicking and dragging... '%s'" % self.plkToolbar.mode)
+        # The following is for a selection if not in zoom mode
+        if self.plkToolbar.mode != "zoom rect" and event.inaxes == self.plkAxes:
             xmin, xmax = self.pressEvent.xdata, event.xdata
             ymin, ymax = self.pressEvent.ydata, event.ydata
             if xmin > xmax:
@@ -1281,11 +1273,15 @@ class PlkWidget(tk.Frame):
                 self.psr.selected_toas.select(self.selected)
                 self.psr.update_resids()
                 self.call_updates()
+        else:
+            # This just removes the rectangle from the zoom click and drag
+            self.plkCanvas._tkcanvas.delete(self.brect)
 
     def canvasKeyEvent(self, event):
         """
         A key is pressed. Handle all the shortcuts here
         """
+        # print("you pressed {}".format(event.key))
         fkey = event.key
         xpos, ypos = event.xdata, event.ydata
         ukey = ord(fkey[-1])
