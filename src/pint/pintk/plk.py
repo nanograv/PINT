@@ -63,6 +63,7 @@ helpstring = """The following interactions are currently supported by the Plk pa
 Left click      Select a point (if close enough)
 Right click     Delete a point (if close enough)
   r             Reset the pane - undo all deletions, selections, etc.
+  z             Toggle from zoom to select mode or back
   k             (K)orrect the pane - rescale the axes
   f             Perform a fit on the selected points
   d             Delete the selected points
@@ -1313,7 +1314,6 @@ class PlkWidget(tk.Frame):
                             )
                     # update jumps and rest of graph
                     self.jumped = self.jumped[~toas_to_delete]
-                    print(self.jumped)
                     self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
                     self.psr.update_resids()
                     self.updatePlot(keepAxes=True)
@@ -1504,3 +1504,5 @@ class PlkWidget(tk.Frame):
             print(helpstring)
         elif ukey == ord("m"):
             print(self.psr.all_toas.get_highest_density_range())
+        elif ukey == ord("z"):
+            self.plkToolbar.zoom()

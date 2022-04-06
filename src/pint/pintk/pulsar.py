@@ -266,11 +266,9 @@ class Pulsar:
             "delta_pulse_number" not in self.all_toas.table.colnames
             or "delta_pulse_number" not in self.selected_toas.table.colnames
         ):
-            self.all_toas.table["delta_pulse_number"] = np.zeros(
-                len(self.all_toas.get_mjds())
-            )
+            self.all_toas.table["delta_pulse_number"] = np.zeros(self.all_toas.ntoas)
             self.selected_toas.table["delta_pulse_number"] = np.zeros(
-                len(self.selected_toas.get_mjds())
+                self.selected_toas.ntoas
             )
 
         # add phase wrap
@@ -369,20 +367,23 @@ class Pulsar:
         print(" Pre-Fit Weighted RMS:  %.8g us" % wrms.to(u.us).value)
         print("------------------------------------")
 
+        # Do the actual fit and mark things as being fit
         fitter.fit_toas(maxiter=1)
         self.postfit_model = fitter.model
-        self.postfit_resids = Residuals(self.all_toas, self.postfit_model)
         self.fitted = True
         self.f = fitter
-        self.write_fit_summary()
-
-        # TODO: delta_pulse_numbers need some work. They serve both for PHASE and -padd functions from the TOAs
-        # as well as for phase jumps added manually in the GUI. They really should not be zeroed out here because
-        # that will wipe out preexisting values
+        # Zero out all of the "delta_pulse_numbers" if they are set
         self.all_toas.table["delta_pulse_numbers"] = np.zeros(self.all_toas.ntoas)
         self.selected_toas.table["delta_pulse_number"] = np.zeros(
             self.selected_toas.ntoas
         )
+        # Re-calculate the pulse numbers here
+        self.all_toas.compute_pulse_numbers(self.postfit_model)
+        self.selected_toas.compute_pulse_numbers(self.postfit_model)
+        # Now compute the residuals using correct pulse numbers
+        self.postfit_resids = Residuals(self.all_toas, self.postfit_model)
+        # And print the summary
+        self.write_fit_summary()
 
         # plot the prefit without jumps
         pm_no_jumps = copy.deepcopy(self.prefit_model)
