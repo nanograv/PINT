@@ -58,25 +58,25 @@ plotlabels = {
 # Thus, it may be better to avoid designating the 't' key for any future functionality.
 helpstring = """The following interactions are currently supported by the Plk pane in the PINTkinter GUI:
 
-Left click:     Select a point
-Right click:    Delete a point
-r:              Reset the pane - undo all deletions, selections, etc.
-k:              (K)orrect the pane - rescale the axes
-f:              Perform a fit on the selected points
-d:              Delete the highlighted points
-u:              Undo the most recent selection
-c:              Clear highlighter from map
-j:              Jump the selected points, or unjump them if already jumped
-v:              Jump all TOA groups except those selected
-i:              Print the prefit model as of this moment
-o:              Print the postfit model as of this moment (if it exists)
-p:              Print info about highlighted points (or all, if none are selected)
-m:              Print the range of MJDs with the highest density of TOAs
-+:              Increase pulse number for selected points
--:              Decrease pulse number for selected points
->:              Increase pulse number for all points to the right of selection
-<:              Decrease pulse number for all points to the right of selection
-h:              Print help
+Left click      Select a point (if close enough)
+Right click     Delete a point (if close enough)
+  r             Reset the pane - undo all deletions, selections, etc.
+  k             (K)orrect the pane - rescale the axes
+  f             Perform a fit on the selected points
+  d             Delete the selected points
+  u             Undo the most recent selection
+  j             Jump the selected points, or unjump them if already jumped
+  v             Jump all TOA groups except those selected
+  i             Print the prefit model as of this moment
+  o             Print the postfit model as of this moment (if it exists)
+  c             Print the postfit parameter correlation matrix
+  p             Print info about highlighted points (or all, if none are selected)
+  m             Print the range of MJDs with the highest density of TOAs
+  +             Increase pulse number for selected points
+  -             Decrease pulse number for selected points
+  >             Increase pulse number for all points to the right of selection
+  <             Decrease pulse number for all points to the right of selection
+  h             Print help
 """
 
 clickDist = 0.0005
@@ -268,6 +268,9 @@ class PlkRandomModelSelect(tk.Frame):
             command=self.changedRMCheckBox,
         )
         checkbox.grid(row=1, column=1, sticky="N")
+        checkbox_ttp = CreateToolTip(
+            checkbox, "Display random timing models consistent with selected TOAs."
+        )
 
     def setCallbacks(self, boxChecked):
         """
@@ -498,10 +501,10 @@ class PlkActionsWidget(tk.Frame):
         Callback functions
         """
         self.fit_callback = fit
-        self.reset_callback = reset
+        self.revert_callback = revert
         self.writePar_callback = writePar
         self.writeTim_callback = writeTim
-        self.revert_callback = revert
+        self.reset_callback = reset
 
     def setFitButtonText(self, text):
         self.fitbutton.config(text=text)
@@ -509,6 +512,11 @@ class PlkActionsWidget(tk.Frame):
     def fit(self):
         if self.fit_callback is not None:
             self.fit_callback()
+
+    def revert(self):
+        if self.revert_callback is not None:
+            self.revert_callback()
+        log.info("Revert clicked")
 
     def writePar(self):
         if self.writePar_callback is not None:
@@ -524,11 +532,6 @@ class PlkActionsWidget(tk.Frame):
         if self.reset_callback is not None:
             self.reset_callback()
         log.info("Reset clicked")
-
-    def revert(self):
-        if self.revert_callback is not None:
-            self.revert_callback()
-        log.info("Revert clicked")
 
 
 class PlkWidget(tk.Frame):
@@ -1405,7 +1408,7 @@ class PlkWidget(tk.Frame):
             self.jumped = jumped_copy
             if True in [a and b for a, b in zip(self.selected, all_jumped)]:
                 log.warn(
-                    "cannot delete jumped toas. Delete interfering jumps before deleting toas."
+                    "Cannot delete jumped toas. Delete interfering jumps before deleting toas."
                 )
                 return None
             # Delete the selected points
@@ -1474,8 +1477,8 @@ class PlkWidget(tk.Frame):
             self.updatePlot(keepAxes=True)
             self.call_updates()
         elif ukey == ord("c"):
-            self.selected = np.zeros(self.psr.selected_toas.ntoas, dtype=bool)
-            self.updatePlot(keepAxes=True)
+            if self.psr.fitted:
+                print(self.psr.f.parameter_correlation_matrix.prettyprint())
         elif ukey == ord("i"):
             log.info("PREFIT MODEL")
             log.info(self.psr.prefit_model.as_parfile())

@@ -196,10 +196,12 @@ class Pulsar:
         Summarize fitting results
         """
         if self.fitted:
-            chi2 = self.postfit_resids.chi2
             wrms = self.postfit_resids.rms_weighted()
-            print("Post-Fit Chi2:\t\t%.8g" % chi2)
-            print("Post-Fit Weighted RMS:\t%.8g us" % wrms.to(u.us).value)
+            print("Post-Fit Chi2:          %.8g" % self.postfit_resids.chi2)
+            print("Post-Fit DOF:            %8d" % self.postfit_resids.dof)
+            print("Post-Fit Reduced-Chi2:  %.8g" % self.postfit_resids.reduced_chi2)
+            print("Post-Fit Weighted RMS:  %.8g us" % wrms.to(u.us).value)
+            print("------------------------------------")
             print(
                 "%19s  %24s\t%24s\t%16s  %16s  %16s"
                 % (
@@ -360,15 +362,18 @@ class Pulsar:
             fitter = pint.fitter.WLSFitter(self.selected_toas, self.prefit_model)
         elif self.fitter == Fitters.GLS:
             fitter = pint.fitter.GLSFitter(self.selected_toas, self.prefit_model)
-        chi2 = self.prefit_resids.chi2
         wrms = self.prefit_resids.rms_weighted()
-        print("Pre-Fit Chi2:\t\t%.8g" % chi2)
-        print("Pre-Fit Weighted RMS:\t%.8g us" % wrms.to(u.us).value)
+        print("------------------------------------")
+        print(" Pre-Fit Chi2:          %.8g" % self.prefit_resids.chi2)
+        print(" Pre-Fit reduced-Chi2:  %.8g" % self.prefit_resids.reduced_chi2)
+        print(" Pre-Fit Weighted RMS:  %.8g us" % wrms.to(u.us).value)
+        print("------------------------------------")
 
         fitter.fit_toas(maxiter=1)
         self.postfit_model = fitter.model
         self.postfit_resids = Residuals(self.all_toas, self.postfit_model)
         self.fitted = True
+        self.f = fitter
         self.write_fit_summary()
 
         # TODO: delta_pulse_numbers need some work. They serve both for PHASE and -padd functions from the TOAs
