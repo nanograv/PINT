@@ -18,6 +18,14 @@ import tkinter.messagebox as tkMessageBox
 from tkinter import ttk
 
 log = logging.getLogger(__name__)
+# Handler for console
+logger = logging.StreamHandler()
+# create formatter
+formatter = logging.Formatter("%(levelname)s (%(name)s): %(message)s")
+# add formatter to logger
+logger.setFormatter(formatter)
+# add logger to log
+log.addHandler(logger)
 
 try:
     from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
@@ -25,12 +33,6 @@ except ImportError:
     from matplotlib.backends.backend_tkagg import (
         NavigationToolbar2TkAgg as NavigationToolbar2Tk,
     )
-
-
-# Where is this meant for? Maybe it belongs in application creation?
-# log.debug(
-#    "This should also show up. test click revert, turn params on and off, and prefit model"
-# )
 
 plotlabels = {
     "pre-fit": [
@@ -311,9 +313,7 @@ class PlkLogLevelSelect(tk.Frame):
 
     def changeLogLevel(self, event):
         newLevel = self.logLevelSelect.get()  # get current value
-        # FIXME: this adjusts the level for all logging
-        # we might want to make it PINT-specific, or even narrower
-        logging.getLogger().setLevel(str(newLevel))
+        log.setLevel(newLevel)
         log.info("Log level changed to " + str(newLevel))
 
 
@@ -575,14 +575,14 @@ class PlkWidget(tk.Frame):
         self.plkCanvas.mpl_connect("motion_notify_event", self.canvasMotionEvent)
         self.plkCanvas.mpl_connect("key_press_event", self.canvasKeyEvent)
         self.plkToolbar = PlkToolbar(self.plkCanvas, tk.Frame(self))
+        # This makes the "Home" button reset the plot just like the 'k' key
+        self.plkToolbar.children["!button"].config(command=self.updatePlot)
         # print(self.plkToolbar.toolitems)
         # for k in self.plkToolbar.children:
         #    print(k, self.plkToolbar.children[k].config("text")[-1])
         # .children["!checkbutton2"] is the Zoom button
         # print(self.plkToolbar.children["!checkbutton2"].config())
-        # self.plkToolbar.children["!checkbutton2"].config(command=my_function)
         # print("zoom mode = '%s'" % self.plkToolbar.mode)
-
         self.plkAxes = self.plkFig.add_subplot(111)  # 111
         self.plkAx2x = self.plkAxes.twinx()
         self.plkAx2y = self.plkAxes.twiny()
@@ -1179,8 +1179,10 @@ class PlkWidget(tk.Frame):
             xmin, xmax, ymin, ymax = self.plkAxes.axis()
             dist = ((x - cx) / (xmax - xmin)) ** 2.0 + ((y - cy) / (ymax - ymin)) ** 2.0
             ind = np.argmin(dist)
-            # print('Closest point is %d:(%s, %s) at d=%f' % (ind, self.xvals[ind], self.yvals[ind], dist[ind]))
-
+            log.debug(
+                "Closest point is %d:(%s, %s) at d=%f"
+                % (ind, self.xvals[ind], self.yvals[ind], dist[ind])
+            )
             if dist[ind] > clickDist:
                 log.warn("Not close enough to a point")
                 ind = None
@@ -1230,6 +1232,7 @@ class PlkWidget(tk.Frame):
         """
         Call this function when the figure/canvas is clicked
         """
+        log.debug("You clicked in the canvas (button = %d)" % event.button)
         self.plkCanvas.get_tk_widget().focus_set()
         if event.inaxes == self.plkAxes:
             self.press = True
@@ -1266,6 +1269,7 @@ class PlkWidget(tk.Frame):
         """
         Call this function when the mouse is clicked but not moved
         """
+        log.debug("You stationary clicked (button = %d)" % event.button)
         if event.inaxes == self.plkAxes:
             ind = self.coordToPoint(event.xdata, event.ydata)
             if ind is not None:
@@ -1331,9 +1335,9 @@ class PlkWidget(tk.Frame):
         """
         Call this function when the mouse is clicked and dragged
         """
-        # print("Clicking and dragging... '%s'" % self.plkToolbar.mode)
+        log.debug("You clicked and dragged in mode '%s'" % self.plkToolbar.mode)
         # The following is for a selection if not in zoom mode
-        if self.plkToolbar.mode != "zoom rect" and event.inaxes == self.plkAxes:
+        if "zoom" not in self.plkToolbar.mode and event.inaxes == self.plkAxes:
             xmin, xmax = self.pressEvent.xdata, event.xdata
             ymin, ymax = self.pressEvent.ydata, event.ydata
             if xmin > xmax:
@@ -1358,7 +1362,7 @@ class PlkWidget(tk.Frame):
         """
         A key is pressed. Handle all the shortcuts here
         """
-        # print("you pressed {}".format(event.key))
+        log.debug("You pressed {}".format(event.key))
         fkey = event.key
         xpos, ypos = event.xdata, event.ydata
         ukey = ord(fkey[-1])
