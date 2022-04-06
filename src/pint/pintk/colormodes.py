@@ -76,12 +76,18 @@ class FreqMode(ColorMode):
         self.mode_name = "freq"
 
     def displayInfo(self):
-        log.info(
-            '"Frequency" mode selected\nBlue = < 500 MHz\nRed = 500-699 MHz\n'
-            + "Gray = 700-899 MHz\nCyan = 900-1099 MHz\nLight Green = 1100-1299"
-            + " MHz\nBurnt Orange = 1300-1499 MHz\nPink = 1500-1699 MHz\n"
-            + "Dark Green = 1700-1899 MHz\nMaroon = 1900-2099 MHz\nSky Blue = "
-            + "2100-2299 MHz\nLight Purple = >= 2300 MHz\nOrange = selected TOAs"
+        log.warning(
+            '"Frequency" mode selected\n'
+            + "  Red    <  300 MHz\n"
+            + "  Orange =  300-400  MHz\n"
+            + "  Yellow =  400 500  MHz\n"
+            + "  Green  =  500-700  MHz\n"
+            + "  Blue   =  700-1000 MHz\n"
+            + "  Indigo = 1000-1800 MHz\n"
+            + "  Violet = 1800-3000 MHz\n"
+            + "  Black  = 3000-8000 MHz\n"
+            + "  Grey   > 8000 MHz\n"
+            + "  Brown is for selected TOAs\n"
         )
 
     def plotColorMode(self):
@@ -90,40 +96,39 @@ class FreqMode(ColorMode):
         """
 
         colorGroups = [
-            "blue",
-            "red",
-            "gray",
-            "cyan",
-            "#00FF33",  # light green
-            "#CC6600",  # burnt orange
-            "#FF00FF",  # pink
-            "#006600",  # dark green
-            "#990000",  # maroon
-            "#0099FF",  # sky blue
-            "#6699FF",  # light purple
-            "orange",
+            "#ff0000",  # red
+            "#FFA500",  # orange
+            "#FFF133",  # yellow-ish
+            "#008000",  # green
+            "#0000ff",  # blue
+            "#4B0082",  # indigo
+            "#EE82EE",  # violet
+            "#000000",  # black
+            "#7E7E7E",  # grey
         ]
+        highfreqs = [300.0, 400.0, 500.0, 700.0, 1000.0, 1800.0, 3000.0, 8000.0]
 
         freqGroups = []
-        index = 0
-        for num in range(500, 2301, 200):
-            if num == 500:
+        for ii, highfreq in enumerate(highfreqs):
+            if ii == 0:
                 freqGroups.append(
-                    np.where(self.application.psr.all_toas.get_freqs().value < num)
+                    np.where(self.application.psr.all_toas.get_freqs().value < highfreq)
                 )
             else:
                 freqGroups.append(
                     np.where(
-                        (self.application.psr.all_toas.get_freqs().value < num)
-                        & (self.application.psr.all_toas.get_freqs().value >= num - 200)
+                        (self.application.psr.all_toas.get_freqs().value < highfreq)
+                        & (
+                            self.application.psr.all_toas.get_freqs().value
+                            >= highfreqs[ii - 1]
+                        )
                     )
                 )
-            index += 1
         freqGroups.append(
-            np.where(self.application.psr.all_toas.get_freqs().value >= 2300)
+            np.where(self.application.psr.all_toas.get_freqs().value >= highfreqs[-1])
         )
 
-        for index in range(11):
+        for index in range(len(freqGroups)):
             if self.application.yerrs is None:
                 self.application.plkAxes.scatter(
                     self.application.xvals[freqGroups[index]],
@@ -135,17 +140,16 @@ class FreqMode(ColorMode):
                 self.application.plotErrorbar(
                     freqGroups[index], color=colorGroups[index]
                 )
+        # The following is for selected TOAs
         if self.application.yerrs is None:
             self.application.plkAxes.scatter(
                 self.application.xvals[self.application.selected],
                 self.application.yvals[self.application.selected],
                 marker=".",
-                color=colorGroups[11],
+                color="#362511",  # brown
             )
         else:
-            self.application.plotErrorbar(
-                self.application.selected, color=colorGroups[11]
-            )
+            self.application.plotErrorbar(self.application.selected, color="#362511")
 
 
 class NameMode(ColorMode):

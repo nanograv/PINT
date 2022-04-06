@@ -437,6 +437,7 @@ class PlkXYChoiceWidget(tk.Frame):
         return self.xvar.get(), self.yvar.get()
 
     def updateChoice(self):
+        self.setChoice(xid=self.xvar.get(), yid=self.yvar.get())
         if self.updatePlot is not None:
             self.updatePlot()
 
@@ -848,15 +849,15 @@ class PlkWidget(tk.Frame):
             self.xid, self.yid = self.xyChoiceWidget.plotIDs()
 
             # Retrieve the data
-            x, xerr = self.psr_data_from_label(self.xid)
-            y, yerr = self.psr_data_from_label(self.yid)
+            x, self.xerrs = self.psr_data_from_label(self.xid)
+            y, self.yerrs = self.psr_data_from_label(self.yid)
             if x is not None and y is not None:
                 self.xvals = x
                 self.yvals = y
-                self.yerrs = yerr
-                ymin, ymax = self.determine_yaxis_units(miny=y.min(), maxy=y.max())
-                self.yvals = self.yvals.to(ymin.unit)
-                self.yerrs = self.yerrs.to(ymin.unit)
+                if "fit" in self.yid:
+                    ymin, ymax = self.determine_yaxis_units(miny=y.min(), maxy=y.max())
+                    self.yvals = self.yvals.to(ymin.unit)
+                    self.yerrs = self.yerrs.to(ymin.unit)
                 self.plotResiduals(keepAxes=keepAxes)
             else:
                 raise ValueError("Nothing to plot!")
@@ -902,9 +903,10 @@ class PlkWidget(tk.Frame):
                 ymax = yave + 1.10 * (np.max(self.yvals + self.yerrs) - yave)
             xmin, xmax = xmin.value, xmax.value
             # determine if y-axis units need scaling and scale accordingly
-            ymin, ymax = self.determine_yaxis_units(miny=ymin, maxy=ymax)
-            y_unit = ymin.unit
-            self.yvals = self.yvals.to(y_unit)
+            if "fit" in self.yid:
+                ymin, ymax = self.determine_yaxis_units(miny=ymin, maxy=ymax)
+                y_unit = ymin.unit
+                self.yvals = self.yvals.to(y_unit)
             ymin, ymax = ymin.value, ymax.value
 
         self.plkAxes.clear()
@@ -1480,12 +1482,16 @@ class PlkWidget(tk.Frame):
             if self.psr.fitted:
                 print(self.psr.f.parameter_correlation_matrix.prettyprint())
         elif ukey == ord("i"):
-            log.info("PREFIT MODEL")
-            log.info(self.psr.prefit_model.as_parfile())
+            print("\n" + "-" * 40)
+            print("Prefit model:")
+            print("-" * 40)
+            print(self.psr.prefit_model.as_parfile())
         elif ukey == ord("o"):
             if self.psr.fitted:
-                log.info("POSTFIT MODEL")
-                log.info(self.psr.postfit_model.as_parfile())
+                print("\n" + "-" * 40)
+                print("Postfit model:")
+                print("-" * 40)
+                print(self.psr.postfit_model.as_parfile())
             else:
                 log.warn("No postfit model to show")
         elif ukey == ord("p"):
