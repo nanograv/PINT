@@ -78,15 +78,15 @@ class FreqMode(ColorMode):
     def displayInfo(self):
         log.warning(
             '"Frequency" mode selected\n'
-            + "  Red    <  300 MHz\n"
-            + "  Orange =  300-400  MHz\n"
-            + "  Yellow =  400 500  MHz\n"
-            + "  Green  =  500-700  MHz\n"
-            + "  Blue   =  700-1000 MHz\n"
-            + "  Indigo = 1000-1800 MHz\n"
-            + "  Violet = 1800-3000 MHz\n"
-            + "  Black  = 3000-8000 MHz\n"
-            + "  Grey   > 8000 MHz\n"
+            + "  Dark Red <  300 MHz\n"
+            + "  Red      =  300-400  MHz\n"
+            + "  Orange   =  400-500  MHz\n"
+            + "  Yellow   =  500-700  MHz\n"
+            + "  Green    =  700-1000 MHz\n"
+            + "  Blue     = 1000-1800 MHz\n"
+            + "  Indigo   = 1800-3000 MHz\n"
+            + "  Black    = 3000-8000 MHz\n"
+            + "  Grey     > 8000 MHz\n"
             + "  Brown is for selected TOAs\n"
         )
 
@@ -96,13 +96,13 @@ class FreqMode(ColorMode):
         """
 
         colorGroups = [
-            "#ff0000",  # red
+            "#8C0000",  # dark red
+            "#FF0000",  # red
             "#FFA500",  # orange
             "#FFF133",  # yellow-ish
             "#008000",  # green
-            "#0000ff",  # blue
+            "#0000FF",  # blue
             "#4B0082",  # indigo
-            "#EE82EE",  # violet
             "#000000",  # black
             "#7E7E7E",  # grey
         ]
