@@ -31,9 +31,11 @@ class DefaultMode(ColorMode):
         self.mode_name = "default"
 
     def displayInfo(self):
-        log.info(
-            '"Default" mode selected\nBlue = default color\nOrange = '
-            + "selected TOAs\nRed = jumped TOAs"
+        print(
+            '"Default" mode selected\n'
+            + "  Blue   = default color\n"
+            + "  Orange = selected TOAs\n"
+            + "  Red    = jumped TOAs\n"
         )
 
     def plotColorMode(self):
@@ -76,7 +78,7 @@ class FreqMode(ColorMode):
         self.mode_name = "freq"
 
     def displayInfo(self):
-        log.warning(
+        print(
             '"Frequency" mode selected\n'
             + "  Dark Red <  300 MHz\n"
             + "  Red      =  300-400  MHz\n"
@@ -112,20 +114,18 @@ class FreqMode(ColorMode):
         for ii, highfreq in enumerate(highfreqs):
             if ii == 0:
                 freqGroups.append(
-                    np.where(self.application.psr.all_toas.get_freqs().value < highfreq)
+                    self.application.psr.all_toas.get_freqs().value < highfreq
                 )
             else:
                 freqGroups.append(
-                    np.where(
-                        (self.application.psr.all_toas.get_freqs().value < highfreq)
-                        & (
-                            self.application.psr.all_toas.get_freqs().value
-                            >= highfreqs[ii - 1]
-                        )
+                    (self.application.psr.all_toas.get_freqs().value < highfreq)
+                    & (
+                        self.application.psr.all_toas.get_freqs().value
+                        >= highfreqs[ii - 1]
                     )
                 )
         freqGroups.append(
-            np.where(self.application.psr.all_toas.get_freqs().value >= highfreqs[-1])
+            self.application.psr.all_toas.get_freqs().value >= highfreqs[-1]
         )
 
         for index in range(len(freqGroups)):
@@ -155,7 +155,7 @@ class FreqMode(ColorMode):
 class NameMode(ColorMode):
     """
     A class to manage the Frequency color mode, where TOAs are colored
-    according to their frequency.
+    according to their names in the TOA lines.
     """
 
     def __init__(self, application):
@@ -163,7 +163,7 @@ class NameMode(ColorMode):
         self.mode_name = "name"
 
     def displayInfo(self):
-        log.info('"Name" mode selected\nOrange = selected TOAs')
+        print('"Name" mode selected\n' + "  Orange = selected TOAs\n")
 
     def plotColorMode(self):
         """
@@ -183,7 +183,7 @@ class NameMode(ColorMode):
         index = 0
         for name in single_names:
             index += 1
-            freqGroups.append(np.where(all_names == name))
+            freqGroups.append(all_names == name)
             index += 1
 
         for index in range(N):
@@ -222,72 +222,102 @@ class ObsMode(ColorMode):
         super(ObsMode, self).__init__(application)
         self.mode_name = "obs"
 
+    def get_obs_mapping(self):
+        "This maps the obs names in the TOAs to our local subset"
+        tmp_obs = self.application.psr.all_toas.observatories
+        mapping = {}
+        for oo in tmp_obs:
+            if "stl" in oo:
+                mapping[oo] = "space"
+            elif oo.startswith("gb"):
+                mapping[oo] = "gb"
+            elif oo.startswith("jb"):
+                mapping[oo] = "jodrell"
+            elif "ncy" in oo:
+                mapping[oo] = "nancay"
+            else:
+                mapping[oo] = oo if oo in self.obs_colors else "other"
+        return mapping
+
+    obs_colors = {
+        "parkes": "red",
+        "gb": "green",  # this is any green bank obs
+        "jodrell": "cyan",
+        "arecibo": "blue",
+        "chime": "#CC6600",  # burnt orange
+        "gmrt": "#362511",  # brown
+        "vla": "#4B0082",  # indigo
+        "effelsberg": "#7C11AD",  # purple
+        "fast": "#00006B",  # dark blue
+        "nancay": "#52E222",  # light green
+        "srt": "#006D35",  # dark green
+        "wsrt": "#0091AE",  # light blue
+        "lofar": "#8C0000",  # dark red
+        "lwa": "#8C0000",  # dark red
+        "mwa": "#8C0000",  # dark red
+        "meerkat": "#E4008D",  # magenta
+        "barycenter": "black",
+        "geocenter": "#7E7E7E",  # grey
+        "space": "#E2E2E1",  # light grey
+        "other": "#FFF133",  # yellow-ish
+    }
+
+    obs_text = {
+        "parkes": "  Parkes = red",
+        "gb": "  Green Bank = green",
+        "jodrell": "  Jodrell = cyan",
+        "arecibo": "  Arecibo = blue",
+        "chime": "  CHIME = burnt orange",
+        "gmrt": "  GMRT = brown",
+        "vla": "  VLA = indigo",
+        "effelsberg": "  Effelsberg = purple",
+        "fast": "  FAST = dark blue",
+        "nancay": "  Nancay = light green",
+        "srt": "  SRT = dark green",
+        "wsrt": "  WSRT = light blue",
+        "lofar": "  LOFAR = dark red",
+        "lwa": "  LWA = dark red",
+        "mwa": "  MWA = dark red",
+        "meerkat": "  MeerKAT = magenta",
+        "barycenter": "  barycenter = black",
+        "geocenter": "  geocenter = grey",
+        "space": "  satellite = light grey",
+        "other": "  other = yellow-ish",
+    }
+
     def displayInfo(self):
-        log.info(
-            '"Observatory" mode selected\nBlue = barycenter, gmrt, and virgo'
-            + "\nRed = geocenter, wsrt, and lho\nGray = spacecenter, fast, and llo\n"
-            + "Cyan = gbt, mwa, and geo600\nLight Green = arecibo, lwa1, and kagra\n"
-            + "Burnt Orange = vla, ps1, and algonquin\nPink = parkes, hobart, and drao"
-            + "\nDark Green = jodrell, most, and acre\nMaroon = nancay and chime\n"
-            + "Sky Blue = ncyobs and magic\nLight Purple = effelsberg and lst\nOrange"
-            + " = selected TOAs"
-        )
+        outstr = '"Observatory" mode selected\n'
+        for obs in self.get_obs_mapping().values():
+            outstr += self.obs_text[obs] + "\n"
+        outstr += "  selected = orange\n"
+        print(outstr)
 
     def plotColorMode(self):
         """
         Plots application's residuals in proper color scheme.
         """
-        import pint.observatory as obs
-        import pint.observatory.topo_obs, pint.observatory.observatories
-
-        observatories = obs.Observatory.names()
-        colorGroups = [
-            "blue",
-            "red",
-            "gray",
-            "cyan",
-            "#00FF33",  # light green
-            "#CC6600",  # burnt orange
-            "#FF00FF",  # pink
-            "#006600",  # dark green
-            "#990000",  # maroon
-            "#0099FF",  # sky blue
-            "#6699FF",  # light purple
-            "orange",
-        ]
-
-        obsGroups = []
-        index = 0
-        for observatory in observatories:
-            # group toa indeces by observatory
-            obsGroups.append(
-                np.where(self.application.psr.all_toas.get_obss() == observatory)
-            )
-            index += 1
-
-        cindex = 0
-        for i in range(index):
-            if cindex == 11:  # max number of colors currently available
-                cindex = 0
+        obsmap = self.get_obs_mapping()
+        alltoas = self.application.psr.all_toas
+        for obs, ourobs in obsmap.items():
+            # group toa indices by observatory
+            toas = alltoas.get_obss() == obs
+            color = self.obs_colors[ourobs]
             if self.application.yerrs is None:
                 self.application.plkAxes.scatter(
-                    self.application.xvals[obsGroups[i]],
-                    self.application.yvals[obsGroups[i]],
+                    self.application.xvals[toas],
+                    self.application.yvals[toas],
                     marker=".",
-                    color=colorGroups[cindex],
+                    color=color,
                 )
             else:
-                self.application.plotErrorbar(obsGroups[i], color=colorGroups[cindex])
-            i += 1
-            cindex += 1
+                self.application.plotErrorbar(toas, color=color)
+        # Now handle the selected TOAs
         if self.application.yerrs is None:
             self.application.plkAxes.scatter(
                 self.application.xvals[self.application.selected],
                 self.application.yvals[self.application.selected],
                 marker=".",
-                color=colorGroups[11],
+                color="orange",
             )
         else:
-            self.application.plotErrorbar(
-                self.application.selected, color=colorGroups[11]
-            )
+            self.application.plotErrorbar(self.application.selected, color="orange")

@@ -18,14 +18,6 @@ import tkinter.messagebox as tkMessageBox
 from tkinter import ttk
 
 log = logging.getLogger(__name__)
-# Handler for console
-logger = logging.StreamHandler()
-# create formatter
-formatter = logging.Formatter("%(levelname)s (%(name)s): %(message)s")
-# add formatter to logger
-logger.setFormatter(formatter)
-# add logger to log
-log.addHandler(logger)
 
 try:
     from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
