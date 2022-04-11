@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 import argparse
-import logging
 
 import astropy.io.fits as pyfits
 import astropy.units as u
 import numpy as np
+from astropy import log
 from astropy.coordinates import SkyCoord
 
 import pint.models
@@ -16,8 +16,6 @@ from pint.fits_utils import read_fits_event_mjds_tuples
 from pint.observatory.satellite_obs import get_satellite_observatory
 from pint.plot_utils import phaseogram
 from pint.pulsar_mjd import Time
-
-log = logging.getLogger(__name__)
 
 __all__ = ["main"]
 
@@ -119,8 +117,7 @@ def main(argv=None):
     phss %= 1
     phases = phss.value
     mjds = ts.get_mjds()
-    weights, _ = ts.get_flag_value("weight", as_type=float)
-    weights = np.array(weights)
+    weights = np.array([w["weight"] for w in ts.table["flags"]])
     h = float(hmw(phases, weights))
     print("Htest : {0:.2f} ({1:.2f} sigma)".format(h, h2sig(h)))
     if args.plot:

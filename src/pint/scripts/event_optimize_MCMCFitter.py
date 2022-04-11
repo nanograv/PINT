@@ -1,12 +1,12 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore::DeprecationWarning
 import argparse
-import logging
 import os
 import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize as op
+from astropy import log
 from astropy.coordinates import SkyCoord
 
 import pint.fermi_toas as fermi
@@ -16,8 +16,6 @@ from pint.mcmc_fitter import MCMCFitterBinnedTemplate
 from pint.observatory.satellite_obs import get_satellite_observatory
 from pint.sampler import EmceeSampler
 from pint.scripts.event_optimize import marginalize_over_phase, read_gaussfitfile
-
-log = logging.getLogger(__name__)
 
 __all__ = ["main"]
 # log.setLevel('DEBUG')
@@ -352,11 +350,6 @@ def main(argv=None):
         plt.close()
     except ImportError:
         pass
-
-    # Plot the scaled prior probability alongside the initial gaussian probability distribution and the histogrammed samples
-    ftr.plot_priors(chains, burnin, scale=True)
-    plt.savefig(ftr.model.PSR.value + "_priors.png")
-    plt.close()
 
     # Make a phaseogram with the 50th percentile values
     # ftr.set_params(dict(zip(ftr.fitkeys, np.percentile(samples, 50, axis=0))))

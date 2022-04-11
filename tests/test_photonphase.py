@@ -4,7 +4,7 @@ import unittest
 
 import pytest
 
-import pint.scripts.photonphase as photonphase
+import photonphase
 from pinttestdata import datadir
 from astropy.io import fits
 import numpy as np
@@ -42,7 +42,7 @@ eventfile_nicer = os.path.join(datadir, "ngc300nicer_bary.evt")
 )
 def test_nicer_result_bary(capsys):
     "Check that barycentered NICER data is processed correctly."
-    cmd = "{0} {1}".format(eventfile_nicer, parfile_nicer)
+    cmd = " {0} {1}".format(eventfile_nicer, parfile_nicer)
     photonphase.main(cmd.split())
     out, err = capsys.readouterr()
     v = 0.0
@@ -127,6 +127,20 @@ def test_OrbPhase_column():
     hdul.close()
     os.remove(outfile)
 
+@pytest.mark.skipif(
+    "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
+)
+def test_nicer_result_bary_polyco(capsys):
+    "Check that barycentered NICER data is processed correctly with --polyco."
+    cmd = "--polycos {0} {1}".format(eventfile_nicer, parfile_nicer)
+    photonphase.main(cmd.split())
+    out, err = capsys.readouterr()
+    v = 0.0
+    for l in out.split("\n"):
+        if l.startswith("Htest"):
+            v = float(l.split()[2])
+    # Check that H-test is 216.67
+    assert abs(v - 216.67) < 1
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-import logging
 import sys
 
 import astropy.io.fits as pyfits
 import astropy.units as u
 import numpy as np
+from astropy import log
 
 import pint.models
 import pint.residuals
@@ -15,9 +15,7 @@ from pint.fits_utils import read_fits_event_mjds
 from pint.observatory.satellite_obs import get_satellite_observatory
 from pint.plot_utils import phaseogram_binned
 from pint.pulsar_mjd import Time
-
-log = logging.getLogger(__name__)
-log.setLevel("INFO")
+import polycos
 
 __all__ = ["main"]
 
@@ -96,6 +94,12 @@ def main(argv=None):
         help="Use TT(BIPM) instead of TT(TAI)",
     )
     #    parser.add_argument("--fix",help="Apply 1.0 second offset for NICER", action='store_true', default=False)
+    parser.add_argument(
+        "--polycos",
+        default=False,
+        action="store_true",
+        help="Use polycos to calculate phases; use when working with very large event files"
+    )
     args = parser.parse_args(argv)
 
     # If outfile is specified, that implies addphase
@@ -131,19 +135,20 @@ def main(argv=None):
                 "The orbit file is not recognized. It is likely that this mission is not supported. "
                 "Please barycenter the event file using the official mission tools before processing with PINT"
             )
-    # Read event file and return list of TOA objects
-    try:
-        tl = load_event_TOAs(args.eventfile, telescope, minmjd=minmjd, maxmjd=maxmjd)
-    except KeyError:
-        log.error(
-            "Observatory not recognized. This probably means you need to provide an orbit file or barycenter the event file."
-        )
-        raise
+    # Read event file and return list of TOA objects, if not using polycos
+    if args.polycos==False:
+        try:
+            tl = load_event_TOAs(args.eventfile, telescope, minmjd=minmjd, maxmjd=maxmjd)
+        except KeyError:
+            log.error(
+                "Observatory not recognized. This probably means you need to provide an orbit file or barycenter the event file."
+            )
+            sys.exit(1)
 
-    # Now convert to TOAs object and compute TDBs and posvels
-    if len(tl) == 0:
-        log.error("No TOAs, exiting!")
-        sys.exit(0)
+        # Now convert to TOAs object and compute TDBs and posvels
+        if len(tl) == 0:
+            log.error("No TOAs, exiting!")
+            sys.exit(0)
 
     # Read in model
     modelin = pint.models.get_model(args.parfile)
@@ -166,27 +171,67 @@ def main(argv=None):
         )
         raise ValueError("Model missing BINARY component.")
 
-    ts = toa.get_TOAs_list(
-        tl,
-        ephem=args.ephem,
-        include_bipm=args.use_bipm,
-        include_gps=args.use_gps,
-        planets=use_planets,
-        tdb_method=args.tdbmethod,
-    )
-    ts.filename = args.eventfile
-    #    if args.fix:
-    #        ts.adjust_TOAs(TimeDelta(np.ones(len(ts.table))*-1.0*u.s,scale='tt'))
+    # Use polycos to calculate pulse phases
+    if args.polycos:
+        log.info("Using polycos to get pulse phases.")
 
-    print(ts.get_summary())
-    mjds = ts.get_mjds()
-    print(mjds.min(), mjds.max())
+        if args.addorbphase:
+            raise ValueError("Cannot use orbphase with polycos.")
 
-    # Compute model phase for each TOA
-    iphss, phss = modelin.phase(ts, abs_phase=True)
-    phases = phss.value % 1
-    h = float(hm(phases))
-    print("Htest : {0:.2f} ({1:.2f} sigma)".format(h, h2sig(h)))
+        # Polycos parameters
+        segLength = 120 #in minutes
+        ncoeff = 10
+        obsfreq = 0
+
+        # Open event file and get start and end mjds
+        hdulist = pyfits.open(args.eventfile)
+        data = hdulist[1].data
+        mjds = read_fits_event_mjds(hdulist[1])
+        minmjd = min(mjds)
+        maxmjd = max(mjds)
+
+        # Check if event file is barycentered
+        if hdulist[1].header['TIMESYS'] != 'TDB':
+            raise ValueError("The event file has not been barycentered. Polycos can only be used with barycentered data.")
+
+        # Create polycos table
+        telescope_n = '@'
+        p = polycos.Polycos()
+        ptable = p.generate_polycos(
+            modelin, minmjd, maxmjd, telescope_n,
+            segLength, ncoeff, obsfreq)
+
+        # Calculate phases
+        phases = p.eval_phase(mjds)
+        rows = np.where(phases < 0)
+        for i in rows:
+            phases[i] += 1 
+        h = float(hm(phases))
+        print("Htest : {0:.2f} ({1:.2f} sigma)".format(h, h2sig(h)))
+
+    if args.polycos == False:
+        ts = toa.get_TOAs_list(
+            tl,
+            ephem=args.ephem,
+            include_bipm=args.use_bipm,
+            include_gps=args.use_gps,
+            planets=use_planets,
+            tdb_method=args.tdbmethod,
+        )
+        ts.filename = args.eventfile
+        #    if args.fix:
+        #        ts.adjust_TOAs(TimeDelta(np.ones(len(ts.table))*-1.0*u.s,scale='tt'))
+
+        print(ts.get_summary())
+        mjds = ts.get_mjds()
+        print(mjds.min(), mjds.max())
+
+        # Compute model phase for each TOA
+        iphss, phss = modelin.phase(ts, abs_phase=True)
+        phases = phss.value % 1
+        h = float(hm(phases))
+        print("Htest : {0:.2f} ({1:.2f} sigma)".format(h, h2sig(h)))
+    
     if args.plot:
         phaseogram_binned(mjds, phases, bins=100, plotfile=args.plotfile)
 
@@ -213,6 +258,8 @@ def main(argv=None):
         # Handle case where minMJD/maxMJD do not exceed length of events
         mjds_float = read_fits_event_mjds(hdulist[1])
         time_mask = np.logical_and((mjds_float > minmjd), (mjds_float < maxmjd))
+        if args.polycos:
+            time_mask = np.logical_and((mjds_float >= minmjd), (mjds_float <= maxmjd))
 
         if args.addphase:
             if time_mask.sum() != len(phases):

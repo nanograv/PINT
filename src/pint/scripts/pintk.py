@@ -2,7 +2,6 @@
 """Tkinter interactive interface for PINT pulsar timing tool"""
 import argparse
 import code
-import logging
 import os
 import sys
 
@@ -11,7 +10,7 @@ import numpy as np
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
 import tkinter.messagebox as tkMessageBox
-from tkinter import ttk
+from astropy import log
 
 from pint.pintk.paredit import ParWidget
 from pint.pintk.plk import PlkWidget, helpstring
@@ -19,6 +18,8 @@ from pint.pintk.pulsar import Pulsar
 from pint.pintk.timedit import TimWidget
 
 __all__ = ["main"]
+
+# log.setLevel("WARNING")
 
 
 class PINTk:
@@ -158,7 +159,6 @@ def main(argv=None):
     )
     args = parser.parse_args(argv)
 
-    logging.getLogger().setLevel("WARNING")
     root = tk.Tk()
     root.minsize(800, 600)
     if not args.test:
