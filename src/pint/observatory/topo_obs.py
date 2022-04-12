@@ -253,12 +253,12 @@ class TopoObs(Observatory):
             )
             tt2tai = 32.184 * 1e6 * u.us
             if self._bipm_clock is None:
-                try:
-                    log.info(
-                        "Observatory {0}, loading BIPM clock file \n\t{1}".format(
-                            self.name, self.bipm_fullpath
-                        )
+                log.info(
+                    "Observatory {0}, loading BIPM clock file \n\t{1}".format(
+                        self.name, self.bipm_fullpath
                     )
+                )
+                try:
                     self._bipm_clock = ClockFile.read(
                         self.bipm_fullpath, format="tempo2"
                     )
