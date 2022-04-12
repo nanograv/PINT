@@ -1375,12 +1375,15 @@ class TimingModel:
         """
         from . import jump
 
+        # Because JUMPS are handled serially, we need to do everything
+        # via index order and *not* by group_by("obs")
+        ix_tab = toas.table[np.argsort(toas.table["index"])]
         # check if any TOAs are jumped
-        jumped = ["jump" in flag_dict.keys() for flag_dict in toas.table["flags"]]
+        jumped = ["jump" in flag_dict.keys() for flag_dict in ix_tab["flags"]]
         if not any(jumped):
             log.info("No jump flags to process from .tim file")
             return None
-        for flag_dict in toas.table["flags"][jumped]:
+        for flag_dict in ix_tab["flags"][jumped]:
             # add PhaseJump object if model does not have one already
             if "PhaseJump" not in self.components:
                 log.info("PhaseJump component added")
@@ -1389,22 +1392,20 @@ class TimingModel:
                 self.add_component(a)
                 self.remove_param("JUMP1")
             # take jumps in TOA table and add them as parameters to the model
-            for num in flag_dict["jump"]:
-                if "JUMP" + str(num) not in self.params:
-                    param = maskParameter(
-                        name="JUMP",
-                        index=num,
-                        key="-tim_jump",
-                        key_value=num,
-                        value=0.0,
-                        units="second",
-                        uncertainty=0.0,
-                    )
-                    self.add_param_from_top(param, "PhaseJump")
-                    getattr(self, param.name).frozen = False
-                flag_dict["tim_jump"] = str(
-                    num
-                )  # this is the value select_toa_mask uses
+            num = flag_dict["jump"]
+            if "JUMP" + str(num) not in self.params:
+                param = maskParameter(
+                    name="JUMP",
+                    index=num,
+                    key="-tim_jump",
+                    key_value=num,
+                    value=0.0,
+                    units="second",
+                    uncertainty=0.0,
+                )
+                self.add_param_from_top(param, "PhaseJump")
+                getattr(self, param.name).frozen = False
+            flag_dict["tim_jump"] = str(num)  # this is the value select_toa_mask uses
         self.components["PhaseJump"].setup()
 
     def delete_jump_and_flags(self, toa_table, jump_num):
