@@ -88,7 +88,6 @@ class Pulsar:
             self.all_toas = get_TOAs(self.timfile, planets=True)
 
         # turns pre-existing jump flags in toas.table['flags'] into parameters in parfile
-        # TODO: fix jump_flags_to_params
         self.prefit_model.jump_flags_to_params(self.all_toas)
         # adds flags to toas.table for existing jump parameters from .par file
         if "PhaseJump" in self.prefit_model.components:
@@ -342,7 +341,7 @@ class Pulsar:
             self.postfit_model.components["PhaseJump"].setup()
         return retval
 
-    def fit(self, selected, iters=1):
+    def fit(self, selected, iters=1, compute_random=False):
         """
         Run a fit using the specified fitter
         """
@@ -391,73 +390,72 @@ class Pulsar:
             if param.startswith("JUMP"):
                 getattr(pm_no_jumps, param).value = 0.0
                 getattr(pm_no_jumps, param).frozen = True
-        self.prefit_resids_no_jumps = Residuals(self.selected_toas, pm_no_jumps)
+        self.prefit_resids_no_jumps = Residuals(self.all_toas, pm_no_jumps)
 
-        f = copy.deepcopy(fitter)
-        no_jumps = [
-            False if "jump" in dict.keys() else True for dict in f.toas.table["flags"]
-        ]
-        f.toas.select(no_jumps)
+        if compute_random:
+            f = copy.deepcopy(fitter)
+            no_jumps = [not ("jump" in dict) for dict in f.toas.table["flags"]]
+            f.toas.select(no_jumps)
 
-        selectedMJDs = self.selected_toas.get_mjds()
-        if all(no_jumps):
-            q = list(self.all_toas.get_mjds())
-            index = q.index(
-                [i for i in self.all_toas.get_mjds() if i > selectedMJDs.min()][0]
+            selectedMJDs = self.selected_toas.get_mjds()
+            if all(no_jumps):
+                q = list(self.all_toas.get_mjds())
+                index = q.index(
+                    [i for i in self.all_toas.get_mjds() if i > selectedMJDs.min()][0]
+                )
+                rs_mean = (
+                    Residuals(self.all_toas, f.model)
+                    .phase_resids[index : index + len(selectedMJDs)]
+                    .mean()
+                )
+            else:
+                rs_mean = self.prefit_resids_no_jumps.phase_resids[no_jumps].mean()
+
+            # determines how far on either side fake toas go
+            # TODO: hard limit on how far fake toas can go --> can get clkcorr
+            # errors if go before GBT existed, etc.
+            minMJD, maxMJD = selectedMJDs.min(), selectedMJDs.max()
+            spanMJDs = maxMJD - minMJD
+            if spanMJDs < 30 * u.d:
+                redge = ledge = 4
+                npoints = 400
+            elif spanMJDs < 90 * u.d:
+                redge = ledge = 2
+                npoints = 300
+            elif spanMJDs < 200 * u.d:
+                redge = ledge = 1
+                npoints = 300
+            elif spanMJDs < 400 * u.d:
+                redge = ledge = 0.5
+                npoints = 200
+            else:
+                redge = ledge = 1.0
+                npoints = 250
+            # Check to see if too recent
+            nowish = (Time.now().mjd - 40) * u.d
+            if maxMJD + spanMJDs * redge > nowish:
+                redge = (nowish - maxMJD) / spanMJDs
+                if redge < 0.0:
+                    redge = 0.0
+
+            f_toas = make_fake_toas_uniform(
+                minMJD - spanMJDs * ledge, maxMJD + spanMJDs * redge, npoints, f.model
             )
-            rs_mean = (
-                Residuals(self.all_toas, f.model)
-                .phase_resids[index : index + len(selectedMJDs)]
-                .mean()
+            rs = calculate_random_models(
+                f, f_toas, Nmodels=10, keep_models=False, return_time=True
             )
-        else:
-            rs_mean = self.prefit_resids_no_jumps.phase_resids[no_jumps].mean()
 
-        # determines how far on either side fake toas go
-        # TODO: hard limit on how far fake toas can go --> can get clkcorr
-        # errors if go before GBT existed, etc.
-        minMJD, maxMJD = selectedMJDs.min(), selectedMJDs.max()
-        spanMJDs = maxMJD - minMJD
-        if spanMJDs < 30 * u.d:
-            redge = ledge = 4
-            npoints = 400
-        elif spanMJDs < 90 * u.d:
-            redge = ledge = 2
-            npoints = 300
-        elif spanMJDs < 200 * u.d:
-            redge = ledge = 1
-            npoints = 300
-        elif spanMJDs < 400 * u.d:
-            redge = ledge = 0.5
-            npoints = 200
-        else:
-            redge = ledge = 1.0
-            npoints = 250
-        # Check to see if too recent
-        nowish = (Time.now().mjd - 40) * u.d
-        if maxMJD + spanMJDs * redge > nowish:
-            redge = (nowish - maxMJD) / spanMJDs
-            if redge < 0.0:
-                redge = 0.0
+            # subtract the mean residual of each random model from the respective residual set
+            # based ONLY on the mean of the random residuals in the real data range
+            start_index = np.where((f_toas.get_mjds() - minMJD) >= 0 * u.d)[0][0]
+            end_index = np.where((f_toas.get_mjds() - maxMJD) >= 0 * u.d)[0][0]
 
-        f_toas = make_fake_toas_uniform(
-            minMJD - spanMJDs * ledge, maxMJD + spanMJDs * redge, npoints, f.model
-        )
-        rs = calculate_random_models(
-            f, f_toas, Nmodels=10, keep_models=False, return_time=True
-        )
+            for i in range(len(rs)):
+                rs_mean = rs[i][start_index:end_index].mean()
+                rs[i][:] = [resid - rs_mean for resid in rs[i]]
 
-        # subtract the mean residual of each random model from the respective residual set
-        # based ONLY on the mean of the random residuals in the real data range
-        start_index = np.where((f_toas.get_mjds() - minMJD) >= 0 * u.d)[0][0]
-        end_index = np.where((f_toas.get_mjds() - maxMJD) >= 0 * u.d)[0][0]
-
-        for i in range(len(rs)):
-            rs_mean = rs[i][start_index:end_index].mean()
-            rs[i][:] = [resid - rs_mean for resid in rs[i]]
-
-        self.random_resids = rs
-        self.fake_toas = f_toas
+            self.random_resids = rs
+            self.fake_toas = f_toas
 
     def fake_year(self):
         """
