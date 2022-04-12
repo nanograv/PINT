@@ -47,10 +47,11 @@ to do with the messages, it would inevitably conflict with the needs of one of
 those users (we have seen this in NANOGrav notebooks, where conflicting
 configurations resulted in every message appearing twice). So if you are using
 PINT and the log messages don't look very nice, that's python's default log
-reporting. If you want to. most simply, set the log level that is reported
+reporting. If you want to, most simply, set the log level that is reported
 globally, you can::
 
     import logging
+    logging.basicConfig()
     logging.getLogger().setLevel("DEBUG")
 
 What PINT does do is ensure that every log message is handled based on the
@@ -59,6 +60,7 @@ hierarchical, passing messages up towards a global "root" logger. So to obtain
 debugging information from only :module:`pint.fitter`, you can::
 
     import logging
+    logging.basicConfig()
     logging.getLogger("pint.fitter").setLevel("DEBUG")
 
 
