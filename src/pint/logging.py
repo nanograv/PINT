@@ -15,7 +15,11 @@ __all__ = [
 # can be overridden using $LOGURU_LEVEL and $LOGURU_FORMAT
 # or just make a new logger
 level = "DEBUG"
-format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> - <level>{message}</level>"
+# a full format that might be useful as a reference:
+# format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> - <level>{message}</level>"
+format = "<level>{level: <8}</level> - <level>{message}</level>"
+# Other formatting:
+# https://loguru.readthedocs.io/en/stable/api/logger.html#color
 
 """
 Want loguru to capture warnings emitted by warnings.warn
@@ -43,12 +47,18 @@ class LogFilter:
     Others that will only be seen once.  Filtering of those is done on the basis of regex"""
 
     def __init__(self, onlyonce=None, never=None):
-        # Define regexs for messages that will only be seen once.  Use "\S+" for a variable that might change
-        # If a message comes through with a new value for that variable, it will be seen
-        # Make sure to escape other regex commands like ()
-        # Each message starts with state = False
-        # Once it has been emitted, that changes to a list of the messages so that it can keep track
-        # These are only suppressed when at level INFO or lower
+        """
+        Define regexs for messages that will only be seen once.  Use "\S+" for a variable that might change
+        If a message comes through with a new value for that variable, it will be seen
+        Make sure to escape other regex commands like ()
+        Each message starts with state = False
+        Once it has been emitted, that changes to a list of the messages so that it can keep track
+        These are only suppressed when issued at level INFO or lower (e.g., WARNINGs will always come through)
+
+        They should be defined as:
+        "Error message": False
+        where the `False` tracks whether or not the message has been issued at all
+        """
         self.onlyonce = {
             "Using EPHEM = \S+ for \S+ calculation": False,
             "Using CLOCK = \S+ from the given model": False,
@@ -60,12 +70,14 @@ class LogFilter:
             "Using EPHEM = \S+ for \S+ calculation.": False,
             "Planet PosVels will be calculated.": False,
             "Computing PosVels of observatories, Earth and planets, using \S+": False,
+            "Computing PosVels of observatories and Earth, using \S+": False,
             "Set solar system ephemeris to \S+": False,
             "Adding column \S+": False,
             "Adding columns .*": False,
             "Applying TT\(\S+\) to TT\(\S+\) clock correction \(\~27 us\)": False,
             "No pulse number flags found in the TOAs": False,
             "SSB obs pos \[\S+ \S+ \S+\] m": False,
+            "Column \S+ already exists. Removing...": False,
         }
         # add in any more defined on init
         if onlyonce is not None:
@@ -106,11 +118,15 @@ class LogFilter:
         return self.filter(record)
 
 
+# you can modify this instance to change the messages that are never seen/only seen once
 logfilter = LogFilter()
 
 # remove the default logger so we can put in one with a custom filter
 # this can be done elsewhere if more/different customization is needed
 log.remove()
+# Keep these here to see what is set at the enrivonment level
+# again, this isn't needed by default but if you are setting these explicitly
+# then it can be good to check
 if "LOGURU_LEVEL" in os.environ:
     level = os.environ["LOGURU_LEVEL"]
 if "LOGURU_FORMAT" in os.environ:
@@ -120,3 +136,24 @@ if "LOGURU_FORMAT" in os.environ:
 # otherwise the default selection turns them off e.g., for a Jupyter notebook
 # since it isn't a tty
 log.add(sys.stderr, level=level, filter=logfilter, format=format, colorize=True)
+
+
+"""
+If you want to customize more of this yourself (e.g., in a script)
+the minimal pieces would be:
+
+from loguru import logger as log
+
+
+
+
+If you want to include custom filtering and other elements:
+
+from loguru import logger as log
+import pint.logging
+
+logfilter = pint.logging.LogFilter()
+log.remove()
+log.add(sys.stderr, level=level, filter=logfilter, format=format, colorize=True)
+
+"""
