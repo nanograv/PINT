@@ -1141,7 +1141,7 @@ class DownhillFitter(Fitter):
                             f"when trying to take a step with lambda {lambda_}"
                         )
                     else:
-                        log.info(
+                        log.trace(
                             f"Iteration {i}: "
                             f"Updating state, chi2 goes down by {chi2_decrease} "
                             f"from {current_state.chi2} "
@@ -1155,7 +1155,7 @@ class DownhillFitter(Fitter):
                     # If bad parameter values escape, look in ModelState.resids for the except
                     # that should catch them
                     lambda_ /= 2
-                    log.info(f"Iteration {i}: Shortening step to {lambda_}: {e}")
+                    log.trace(f"Iteration {i}: Shortening step to {lambda_}: {e}")
                     if lambda_ < min_lambda:
                         log.warning(
                             f"Unable to improve chi2 even with very small steps, stopping "
@@ -1167,7 +1167,7 @@ class DownhillFitter(Fitter):
                 -max_chi2_increase <= chi2_decrease < required_chi2_decrease
                 and lambda_ == 1
             ):
-                log.info(
+                log.debug(
                     f"Iteration {i}: chi2 does not improve, stopping; "
                     f"decrease: {chi2_decrease}"
                 )
@@ -1176,7 +1176,7 @@ class DownhillFitter(Fitter):
             if exception is not None:
                 break
         else:
-            log.info(
+            log.debug(
                 f"Stopping because maxmum number of iterations ({maxiter}) reached"
             )
         self.current_state = best_state
@@ -2674,7 +2674,7 @@ class LMFitter(Fitter):
                             if not ill_conditioned
                             else lambda_factor_invalid
                         )
-                        log.info(
+                        log.trace(
                             f"Iteration {i}: chi2 increased from {current_state.chi2} "
                             f"to {new_state.chi2} increasing lambda to {lambda_}"
                         )
@@ -2685,7 +2685,7 @@ class LMFitter(Fitter):
                         self.converged = True
                         break
                     elif chi2_decrease < min_chi2_decrease:
-                        log.info(
+                        log.debug(
                             f"Iteration {i}: chi2 decreased only by {chi2_decrease}, updating "
                             f"state and stopping."
                         )
@@ -2694,7 +2694,7 @@ class LMFitter(Fitter):
                         break
                     else:
                         lambda_ = max(lambda_ / lambda_factor_decrease, min_lambda)
-                        log.info(
+                        log.debug(
                             f"Iteration {i}: Updating state, chi2 goes down by {chi2_decrease} "
                             f"from {current_state.chi2} "
                             f"to {new_state.chi2}; decreasing lambda to "
@@ -2703,7 +2703,7 @@ class LMFitter(Fitter):
                         current_state = new_state
                 except InvalidModelParameters as e:
                     lambda_ *= lambda_factor_invalid
-                    log.info(
+                    log.debug(
                         f"Iteration {i}: Step too aggressive, increasing lambda_ "
                         f"to {lambda_}: {e}"
                     )

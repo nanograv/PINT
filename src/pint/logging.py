@@ -1,4 +1,25 @@
 """Custom logging filter for PINT using `loguru`
+
+If you want to customize more of this yourself (e.g., in a script)
+the minimal pieces would be:
+
+from loguru import logger as log
+
+
+
+
+If you want to include custom filtering and other elements:
+
+from loguru import logger as log
+import pint.logging
+
+logfilter = pint.logging.LogFilter()
+log.remove()
+log.add(sys.stderr, level=level, filter=logfilter, format=format, colorize=True)
+
+
+Note that `loguru` does not allow you to change the properties of an existing logger.
+Instead it's better to remove it and make another (e.g., if you want to change the level)
 """
 
 import os
@@ -136,24 +157,3 @@ if "LOGURU_FORMAT" in os.environ:
 # otherwise the default selection turns them off e.g., for a Jupyter notebook
 # since it isn't a tty
 log.add(sys.stderr, level=level, filter=logfilter, format=format, colorize=True)
-
-
-"""
-If you want to customize more of this yourself (e.g., in a script)
-the minimal pieces would be:
-
-from loguru import logger as log
-
-
-
-
-If you want to include custom filtering and other elements:
-
-from loguru import logger as log
-import pint.logging
-
-logfilter = pint.logging.LogFilter()
-log.remove()
-log.add(sys.stderr, level=level, filter=logfilter, format=format, colorize=True)
-
-"""
