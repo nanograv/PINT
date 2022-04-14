@@ -73,29 +73,29 @@ class BinaryDDK(BinaryDD):
             )
         )
         self.remove_param("SINI")
-        self.internal_params += ["PMRA_DDK", "PMDEC_DDK"]
+        #self.internal_params += ["PMRA_DDK", "PMDEC_DDK"]
 
-    @property
-    def PMRA_DDK(self):
-        params = self._parent.get_params_as_ICRS()
-        par_obj = floatParameter(
-            name="PMRA",
-            units="mas/year",
-            value=params["PMRA"],
-            description="Proper motion in RA",
-        )
-        return par_obj
+    # @property
+    # def PMRA_DDK(self):
+    #     params = self._parent.get_params_as_ICRS()
+    #     par_obj = floatParameter(
+    #         name="PMRA",
+    #         units="mas/year",
+    #         value=params["PMRA"],
+    #         description="Proper motion in RA",
+    #     )
+    #     return par_obj
 
-    @property
-    def PMDEC_DDK(self):
-        params = self._parent.get_params_as_ICRS()
-        par_obj = floatParameter(
-            name="PMDEC",
-            units="mas/year",
-            value=params["PMDEC"],
-            description="Proper motion in DEC",
-        )
-        return par_obj
+    # @property
+    # def PMDEC_DDK(self):
+    #     params = self._parent.get_params_as_ICRS()
+    #     par_obj = floatParameter(
+    #         name="PMDEC",
+    #         units="mas/year",
+    #         value=params["PMDEC"],
+    #         description="Proper motion in DEC",
+    #     )
+    #     return par_obj
 
     def validate(self):
         """Validate parameters."""
