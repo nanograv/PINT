@@ -15,7 +15,7 @@ from pint.fits_utils import read_fits_event_mjds
 from pint.observatory.satellite_obs import get_satellite_observatory
 from pint.plot_utils import phaseogram_binned
 from pint.pulsar_mjd import Time
-import polycos
+import pint.polycos
 
 __all__ = ["main"]
 
