@@ -1,10 +1,22 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore::DeprecationWarning
 """PINT-based tool for making simulated TOAs."""
-import logging
 
 import astropy.units as u
 import numpy as np
 from astropy.time import TimeDelta
+import sys
+
+import pint.logging
+from loguru import logger as log
+
+log.remove()
+log.add(
+    sys.stderr,
+    level="WARNING",
+    colorize=True,
+    format=pint.logging.format,
+    filter=pint.logging.LogFilter(),
+)
 
 import pint.fitter
 import pint.models
@@ -12,11 +24,7 @@ import pint.toa as toa
 import pint.simulation
 import pint.residuals
 
-log = logging.getLogger(__name__)
-
 __all__ = ["main"]
-
-# log.setLevel("INFO")
 
 
 def main(argv=None):
@@ -75,7 +83,37 @@ def main(argv=None):
     parser.add_argument(
         "--format", help="The format of out put .tim file.", default="TEMPO2"
     )
+    parser.add_argument(
+        "-v", "--verbosity", default=0, action="count", help="Increase output verbosity"
+    )
     args = parser.parse_args(argv)
+    if args.verbosity == 1:
+        log.remove()
+        log.add(
+            sys.stderr,
+            level="INFO",
+            colorize=True,
+            format=pint.logging.format,
+            filter=pint.logging.LogFilter(),
+        )
+    elif args.verbosity >= 2:
+        log.remove()
+        log.add(
+            sys.stderr,
+            level="DEBUG",
+            colorize=True,
+            format=pint.logging.format,
+            filter=pint.logging.LogFilter(),
+        )
+    elif args.verbosity >= 3:
+        log.remove()
+        log.add(
+            sys.stderr,
+            level="TRACE",
+            colorize=True,
+            format=pint.logging.format,
+            filter=pint.logging.LogFilter(),
+        )
 
     log.info("Reading model from {0}".format(args.parfile))
     m = pint.models.get_model(args.parfile)
