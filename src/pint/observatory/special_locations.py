@@ -222,9 +222,9 @@ class T2SpacecraftObs(SpecialLocation):
             raise ValueError("TOA group table needed for SpacecraftObs get_gcrs")
 
         try:
-            x = np.array([flags["telx"] for flags in group["flags"]])
-            y = np.array([flags["tely"] for flags in group["flags"]])
-            z = np.array([flags["telz"] for flags in group["flags"]])
+            x = np.array([float(flags["telx"]) for flags in group["flags"]])
+            y = np.array([float(flags["tely"]) for flags in group["flags"]])
+            z = np.array([float(flags["telz"]) for flags in group["flags"]])
         except:
             log.error(
                 "Missing flag. TOA line should have telx,tely,telz flags for GCRS position in km."
@@ -252,9 +252,9 @@ class T2SpacecraftObs(SpecialLocation):
             raise ValueError("TOA group table needed for SpacecraftObs posvel_gcrs")
 
         try:
-            vx = np.array([flags["vx"] for flags in group["flags"]])
-            vy = np.array([flags["vy"] for flags in group["flags"]])
-            vz = np.array([flags["vz"] for flags in group["flags"]])
+            vx = np.array([float(flags["vx"]) for flags in group["flags"]])
+            vy = np.array([float(flags["vy"]) for flags in group["flags"]])
+            vz = np.array([float(flags["vz"]) for flags in group["flags"]])
         except:
             log.error(
                 "Missing flag. TOA line should have vx,vy,vz flags for GCRS velocity in km/s."
@@ -268,7 +268,7 @@ class T2SpacecraftObs(SpecialLocation):
         if vel_geo.shape != vdim:
             raise ValueError(
                 "GCRS velocity vector has wrong shape: ",
-                vel.shape,
+                vel_geo.shape,
                 " instead of ",
                 vdim.shape,
             )

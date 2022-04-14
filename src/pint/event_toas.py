@@ -14,6 +14,7 @@ __all__ = [
     "load_event_TOAs",
     "load_NuSTAR_TOAs",
     "load_NICER_TOAs",
+    "load_IXPE_TOAs",
     "load_RXTE_TOAs",
     "load_Swift_TOAs",
     "load_XMM_TOAs",
@@ -85,7 +86,7 @@ def create_mission_config():
         mission_config[mission]["fits_columns"] = cols
 
     # Allow local TOAs for those missions that have a load_<MISSION>_TOAs method
-    for mission in ["nustar", "nicer", "xte"]:
+    for mission in ["nustar", "nicer", "xte", "ixpe"]:
         try:
             # If mission was read from HEASARC, just update allow_local
             mission_config[mission]["allow_local"] = True
@@ -345,6 +346,10 @@ def load_RXTE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
 
 def load_NICER_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
     return load_event_TOAs(eventname, "nicer", minmjd=minmjd, maxmjd=maxmjd)
+
+
+def load_IXPE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
+    return load_event_TOAs(eventname, "ixpe", minmjd=minmjd, maxmjd=maxmjd)
 
 
 def load_XMM_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):

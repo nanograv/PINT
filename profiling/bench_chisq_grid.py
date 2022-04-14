@@ -33,7 +33,7 @@ chisq = thankftr.fit_toas()
 n = 3
 sini_grid = np.sin(np.linspace(86.25 * u.deg, 88.5 * u.deg, n))
 m2_grid = np.linspace(0.2 * u.solMass, 0.30 * u.solMass, n)
-thankftr_chi2grid = grid_chisq(thankftr, "M2", m2_grid, "SINI", sini_grid)
+thankftr_chi2grid = grid_chisq(thankftr, ("M2", "SINI"), (m2_grid, sini_grid), ncpu=1)
 
 print()
 print("Number of TOAs: " + str(thanktoas.ntoas))

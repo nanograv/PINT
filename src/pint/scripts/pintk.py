@@ -1,10 +1,8 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore:DeprecationWarning
 """Tkinter interactive interface for PINT pulsar timing tool"""
-import argparse
-import code
-import logging
-import os
 import sys
+import argparse
+import logging
 
 import numpy as np
 
@@ -152,13 +150,26 @@ def main(argv=None):
     parser.add_argument("--ephem", help="Ephemeris to use", default=None)
     parser.add_argument(
         "--test",
-        help="Build UI and exit. Just for unit testing...",
+        help="Build UI and exit. Just for unit testing.",
+        default=False,
+        action="store_true",
+    )
+    parser.add_argument(
+        "--debug",
+        help="Start everything with DEBUG level logging.",
         default=False,
         action="store_true",
     )
     args = parser.parse_args(argv)
 
-    logging.getLogger().setLevel("WARNING")
+    # create custom logger
+    logging.basicConfig(
+        stream=sys.stdout,
+        level="DEBUG" if args.debug else None,
+        format="%(levelname)s (%(name)s): %(message)s",
+    )
+    log = logging.getLogger(__name__)
+
     root = tk.Tk()
     root.minsize(800, 600)
     if not args.test:

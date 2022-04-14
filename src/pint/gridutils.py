@@ -73,22 +73,29 @@ class WrappedFitter:
             log.debug(f"Running for {','.join(parstrings)} on {hostinfo()}")
         try:
             myftr.fit_toas(**self.fitargs)
+            chi2 = myftr.resids.chi2
         except (fitter.InvalidModelParameters, fitter.StepProblem):
             log.warning(
                 f"Fit may not be converged for {','.join(parstrings)}, but returning anyway"
             )
+            chi2 = myftr.resids.chi2
         except fitter.MaxiterReached:
             log.warning(
                 f"Max iterations reached for {','.join(parstrings)}: returning NaN"
             )
-            return np.NaN
+            chi2 = np.NaN
+        except Exception as e:
+            log.warning(
+                f"Unexpected exception {e} for {','.join(parstrings)}: returning NaN"
+            )
+            chi2 = np.NaN
         log.debug(
             f"Computed chi^2={myftr.resids.chi2} for {','.join(parstrings)} on {hostinfo()}"
         )
         extraparvalues = []
         for extrapar in extraparnames:
             extraparvalues.append(getattr(myftr.model, extrapar).quantity)
-        return myftr.resids.chi2, extraparvalues
+        return chi2, extraparvalues
 
 
 def doonefit(ftr, parnames, parvalues, extraparnames=[]):
@@ -200,7 +207,7 @@ def grid_chisq(
     >>> bestfit = f.resids.chi2
     # We'll do something like 3-sigma around the best-fit values of  F0
     >>> F0 = np.linspace(f.model.F0.quantity - 3 * f.model.F0.uncertainty,f.model.F0.quantity + 3 * f.model.F0.uncertainty,25)
-    >>> chi2_F0 = pint.gridutils.grid_chisq(f, ("F0",), (F0,))
+    >>> chi2_F0,_ = pint.gridutils.grid_chisq(f, ("F0",), (F0,))
 
     Notes
     -----
@@ -519,9 +526,392 @@ def grid_chisq_derived(
     return chi2, out, extraout
 
 
+def tuple_chisq(
+    ftr,
+    parnames,
+    parvalues,
+    extraparnames=[],
+    executor=None,
+    ncpu=None,
+    chunksize=1,
+    printprogress=True,
+    **fitargs,
+):
+    """Compute chisq over a list of parameter tuples
+
+    Parameters
+    ----------
+    ftr : pint.fitter.Fitter
+        The base fitter to use.
+    parnames : list
+        Names of the parameters to grid over
+    parvalues : list
+        List of parameter values to grid over (each should be tuple of :class:`astropy.units.Quantity`)
+    extraparnames : list, optional
+        Names of other parameters to return
+    executor : concurrent.futures.Executor or None, optional
+        Executor object to run multiple processes in parallel
+        If None, will use default :class:`concurrent.futures.ProcessPoolExecutor`, unless overridden by ``ncpu=1``
+    ncpu : int, optional
+        If an existing Executor is not supplied, one will be created with this number of workers.
+        If 1, will run single-processor version
+        If None, will use :func:`multiprocessing.cpu_count`
+    chunksize : int
+        Size of the chunks for :class:`concurrent.futures.ProcessPoolExecutor` parallel execution.
+        Ignored for :class:`concurrent.futures.ThreadPoolExecutor`
+    printprogress : bool, optional
+        Print indications of progress (requires :mod:`tqdm` for `ncpu`>1)
+    fitargs :
+        additional arguments pass to fit_toas()
+
+    Returns
+    -------
+    np.ndarray : array of chisq values
+    extraout : dict of np.ndarray
+        Parameter values computed at each point for `extraparnames`
+
+    Example
+    -------
+    >>> import astropy.units as u
+    >>> import numpy as np
+    >>> import pint.config
+    >>> import pint.gridutils
+    >>> from pint.fitter import WLSFitter
+    >>> from pint.models.model_builder import get_model, get_model_and_toas
+    # Load in a basic dataset
+    >>> parfile = pint.config.examplefile("NGC6440E.par")
+    >>> timfile = pint.config.examplefile("NGC6440E.tim")
+    >>> m, t = get_model_and_toas(parfile, timfile)
+    >>> f = WLSFitter(t, m)
+    # find the best-fit
+    >>> f.fit_toas()
+    >>> bestfit = f.resids.chi2
+    # We'll do something like 3-sigma around the best-fit values of  F0
+    >>> F0 = np.linspace(f.model.F0.quantity - 3 * f.model.F0.uncertainty,f.model.F0.quantity + 3 * f.model.F0.uncertainty,25)
+    >>> F1 = np.ones(len(F0))*f.model.F1.quantity
+    >>> chi2_F0,extra = pint.gridutils.tuple_chisq(f, ("F0","F1",), parvalues, extraparnames=("DM",))
+
+    Notes
+    -----
+    By default, it will create :class:`~concurrent.futures.ProcessPoolExecutor`
+    with ``max_workers`` equal to the desired number of cpus.
+    However, if you are running this as a script you may need something like::
+
+        import multiprocessing
+
+        if __name__ == "__main__":
+            multiprocessing.freeze_support()
+            ...
+            tuple_chisq(...)
+
+    If an instantiated :class:`~concurrent.futures.Executor` is passed instead, it will be used as-is.
+
+    The behavior for different combinations of `executor` and `ncpu` is:
+    +-----------------+--------+------------------------+
+    | `executor`      | `ncpu` | result                 |
+    +=================+========+========================+
+    | existing object | any    | uses existing executor |
+    +-----------------+--------+------------------------+
+    | None	      | 1      | uses single-processor  |
+    +-----------------+--------+------------------------+
+    | None	      | None   | creates default        |
+    |                 |        | executor with          |
+    |                 |        | ``cpu_count`` workers  |
+    +-----------------+--------+------------------------+
+    | None	      | >1     | creates default        |
+    |                 |        | executor with desired  |
+    |                 |        | number of workers      |
+    +-----------------+--------+------------------------+
+
+    Other ``Executors`` can be found for different computing environments:
+    * [1]_ for MPI
+    * [2]_ for SLURM or Condor
+
+    .. [1] https://mpi4py.readthedocs.io/en/stable/mpi4py.futures.html#mpipoolexecutor
+    .. [2] https://github.com/sampsyo/clusterfutures
+    """
+    if isinstance(executor, concurrent.futures.Executor):
+        # the executor has already been created
+        executor = executor
+    elif executor is None and (ncpu is None or ncpu > 1):
+        # make the default type of Executor
+        if ncpu is None:
+            ncpu = multiprocessing.cpu_count()
+        executor = concurrent.futures.ProcessPoolExecutor(max_workers=ncpu)
+
+    # Save the current model so we can tweak it for gridding, then restore it at the end
+    savemod = ftr.model
+    gridmod = copy.deepcopy(ftr.model)
+    ftr.model = gridmod
+
+    # Freeze the  params we are going to grid over
+    for parname in parnames:
+        getattr(ftr.model, parname).frozen = True
+
+    wftr = WrappedFitter(ftr, **fitargs)
+
+    # All other unfrozen parameters will be fitted for at each grid point
+    chi2 = np.zeros(len(parvalues))
+
+    extraout = {}
+    for extrapar in extraparnames:
+        extraout[extrapar] = (
+            np.zeros(chi2.shape, dtype=getattr(ftr.model, extrapar).quantity.dtype)
+            * getattr(ftr.model, extrapar).quantity.unit
+        )
+
+    # at this point, if the executor is None then run single-processor version
+    if executor is not None:
+        with executor as e:
+            if printprogress and tqdm is not None:
+                result = list(
+                    tqdm(
+                        e.map(
+                            wftr.doonefit,
+                            (parnames,) * len(chi2),
+                            parvalues,
+                            (extraparnames,) * len(chi2),
+                            chunksize=chunksize,
+                        ),
+                        total=len(chi2),
+                        ascii=True,
+                    )
+                )
+            else:
+                result = e.map(
+                    wftr.doonefit,
+                    (parnames,) * len(chi2),
+                    parvalues,
+                    (extraparnames,) * len(chi2),
+                    chunksize=chunksize,
+                )
+        it = np.ndindex(chi2.shape)
+        for i, r in zip(it, result):
+            chi2[i] = r[0]
+            for extrapar, extraparvalue in zip(extraparnames, r[1]):
+                extraout[extrapar][i] = extraparvalue
+    else:
+        indices = list(np.ndindex(chi2.shape))
+        if printprogress:
+            if tqdm is not None:
+                indices = tqdm(indices, ascii=True)
+            else:
+                indices = ProgressBar(indices)
+
+        for i in indices:
+            for parnum, parname in enumerate(parnames):
+                getattr(ftr.model, parname).quantity = parvalues[i[0]][parnum]
+            ftr.fit_toas(**fitargs)
+            chi2[i[0]] = ftr.resids.chi2
+            for extrapar in extraparnames:
+                extraout[extrapar][i[0]] = getattr(ftr.model, extrapar).quantity
+
+    # Restore saved model
+    ftr.model = savemod
+    return chi2, extraout
+
+
+def tuple_chisq_derived(
+    ftr,
+    parnames,
+    parfuncs,
+    parvalues,
+    extraparnames=[],
+    executor=None,
+    ncpu=None,
+    chunksize=1,
+    printprogress=True,
+    **fitargs,
+):
+    """Compute chisq over a list of derived parameter tuples
+
+    Parameters
+    ----------
+    ftr : pint.fitter.Fitter
+        The base fitter to use.
+    parnames : list
+        Names of the parameters (available in `ftr`) to grid over
+    parfuncs : list
+        List of functions to convert `gridvalues` to quantities accessed through `parnames`
+    parvalues : list
+        List of underlying parameter values to fit (each should be a tuple of astropy.units.Quantity)
+    extraparnames : list, optional
+        Names of other parameters to return
+    executor : concurrent.futures.Executor or None, optional
+        Executor object to run multiple processes in parallel
+        If None, will use default :class:`concurrent.futures.ProcessPoolExecutor`, unless overridden by ``ncpu=1``
+    ncpu : int, optional
+        If an existing Executor is not supplied, one will be created with this number of workers.
+        If 1, will run single-processor version
+        If None, will use :func:`multiprocessing.cpu_count`
+    chunksize : int
+        Size of the chunks for :class:`concurrent.futures.ProcessPoolExecutor` parallel execution.
+        Ignored for :class:`concurrent.futures.ThreadPoolExecutor`
+    printprogress : bool, optional
+        Print indications of progress (requires :mod:`tqdm` for `ncpu`>1)
+    fitargs :
+        additional arguments pass to fit_toas()
+
+    Returns
+    -------
+    np.ndarray : array of chisq values
+    outparvalues : list of tuples
+        Parameter values computed from `parvalues` and `parfuncs`
+    extraout : dict of np.ndarray
+        Parameter values computed at each point for `extraparnames`
+
+    Example
+    -------
+    >>> import astropy.units as u
+    >>> import numpy as np
+    >>> import pint.config
+    >>> import pint.gridutils
+    >>> from pint.fitter import WLSFitter
+    >>> from pint.models.model_builder import get_model, get_model_and_toas
+    # Load in a basic dataset
+    >>> parfile = pint.config.examplefile("NGC6440E.par")
+    >>> timfile = pint.config.examplefile("NGC6440E.tim")
+    >>> m, t = get_model_and_toas(parfile, timfile)
+    >>> f = WLSFitter(t, m)
+    # find the best-fit
+    >>> f.fit_toas()
+    >>> bestfit = f.resids.chi2
+    # do a grid for F0 and tau
+    >>> F0 = np.linspace(f.model.F0.quantity - 3 * f.model.F0.uncertainty,f.model.F0.quantity + 3 * f.model.F0.uncertainty,15,)
+    # make sure it's the same length
+    >>> tau = np.linspace(8.1, 8.3, 15) * 100 * u.Myr
+    >>> parvalues = list(zip(F0,tau))
+    >>> chi2_tau, params, _ = pint.gridutils.tuple_chisq_derived(f,("F0", "F1"),(lambda x, y: x, lambda x, y: -x / 2 / y),(F0, tau))
+
+    Notes
+    -----
+    By default, it will create :class:`~concurrent.futures.ProcessPoolExecutor`
+    with ``max_workers`` equal to the desired number of cpus.
+    However, if you are running this as a script you may need something like::
+
+    import multiprocessing
+    if __name__ == "__main__":
+        multiprocessing.freeze_support()
+        ...
+        tuple_chisq_derived(...)
+
+    If an instantiated :class:`~concurrent.futures.Executor` is passed instead, it will be used as-is.
+
+    The behavior for different combinations of `executor` and `ncpu` is:
+    +-----------------+--------+------------------------+
+    | `executor`      | `ncpu` | result                 |
+    +=================+========+========================+
+    | existing object | any    | uses existing executor |
+    +-----------------+--------+------------------------+
+    | None	      | 1      | uses single-processor  |
+    +-----------------+--------+------------------------+
+    | None	      | None   | creates default        |
+    |                 |        | executor with          |
+    |                 |        | ``cpu_count`` workers  |
+    +-----------------+--------+------------------------+
+    | None	      | >1     | creates default        |
+    |                 |        | executor with desired  |
+    |                 |        | number of workers      |
+    +-----------------+--------+------------------------+
+
+    Other ``Executors`` can be found for different computing environments:
+    * [1]_ for MPI
+    * [2]_ for SLURM or Condor
+
+    .. [1] https://mpi4py.readthedocs.io/en/stable/mpi4py.futures.html#mpipoolexecutor
+    .. [2] https://github.com/sampsyo/clusterfutures
+    """
+    if isinstance(executor, concurrent.futures.Executor):
+        # the executor has already been created
+        executor = executor
+    elif executor is None and (ncpu is None or ncpu > 1):
+        # make the default type of Executor
+        if ncpu is None:
+            ncpu = multiprocessing.cpu_count()
+        executor = concurrent.futures.ProcessPoolExecutor(max_workers=ncpu)
+
+    # Save the current model so we can tweak it for gridding, then restore it at the end
+    savemod = ftr.model
+    gridmod = copy.deepcopy(ftr.model)
+    ftr.model = gridmod
+
+    # Freeze the params we are going to grid over
+    for parname in parnames:
+        getattr(ftr.model, parname).frozen = True
+
+    wftr = WrappedFitter(ftr, **fitargs)
+
+    # All other unfrozen parameters will be fitted for at each grid point
+    chi2 = np.zeros(len(parvalues))
+    out = []
+    # convert the tuples of values to the actual parameter values
+    for i in range(len(parvalues)):
+        out.append([f(*parvalues[i]) for f in parfuncs])
+
+    extraout = {}
+    for extrapar in extraparnames:
+        extraout[extrapar] = (
+            np.zeros(len(chi2), dtype=getattr(ftr.model, extrapar).quantity.dtype)
+            * getattr(ftr.model, extrapar).quantity.unit
+        )
+
+    # at this point, if the executor is None then run single-processor version
+    if executor is not None:
+        with executor as e:
+            if printprogress and tqdm is not None:
+                result = list(
+                    tqdm(
+                        e.map(
+                            wftr.doonefit,
+                            (parnames,) * len(chi2),
+                            out,
+                            (extraparnames,) * len(chi2),
+                            chunksize=chunksize,
+                        ),
+                        total=len(chi2),
+                        ascii=True,
+                    )
+                )
+            else:
+                result = e.map(
+                    wftr.doonefit,
+                    (parnames,) * len(chi2),
+                    out,
+                    (extraparnames,) * len(chi2),
+                    chunksize=chunksize,
+                )
+
+        it = np.ndindex(chi2.shape)
+        for i, r in zip(it, result):
+            chi2[i] = r[0]
+            for extrapar, extraparvalue in zip(extraparnames, r[1]):
+                extraout[extrapar][i] = extraparvalue
+    else:
+        indices = list(np.ndindex(chi2.shape))
+        if printprogress:
+            if tqdm is not None:
+                indices = tqdm(indices, ascii=True)
+            else:
+                indices = ProgressBar(indices)
+
+        for i in indices:
+            for parnum, parname in enumerate(parnames):
+                getattr(ftr.model, parname).quantity = out[i[0]][parnum]
+            ftr.fit_toas(**fitargs)
+            chi2[i[0]] = ftr.resids.chi2
+            for extrapar in extraparnames:
+                extraout[extrapar][i[0]] = getattr(ftr.model, extrapar).quantity
+
+    # Restore saved model
+    ftr.model = savemod
+    return chi2, out, extraout
+
+
 ##############################
 # WIP
 ##############################
+
+
 def _grid_docolfit(ftr, par1_name, par1_values, parnames, parvalues):
     """Worker process that computes one row of the chisq grid"""
     chisq = np.zeros(len(par1_values))

@@ -1,12 +1,14 @@
-import copy
 import os
 import tempfile
+import logging
 
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
 import tkinter.messagebox as tkMessageBox
 
 import pint.models
+
+log = logging.getLogger(__name__)
 
 
 class ParChoiceWidget(tk.Frame):
@@ -108,39 +110,39 @@ class ParActionsWidget(tk.Frame):
         self.centerT0_callback = centerT0
 
     def resetParfile(self):
+        log.debug("Reset clicked")
         if self.reset_callback is not None:
             self.reset_callback()
-        print("Reset clicked")
 
     def removeChanges(self):
+        log.debug("Remove clicked")
         if self.remove_callback is not None:
             self.remove_callback()
-        print("Remove clicked")
 
     def applyChanges(self):
+        log.debug("Apply clicked")
         if self.apply_callback is not None:
             self.apply_callback()
-        print("Apply clicked")
 
     def writePar(self):
+        log.debug("Write clicked")
         if self.write_callback is not None:
             self.write_callback()
-        print("Write clicked")
 
     def centerPEPOCH(self):
+        log.debug("Center PEPOCH clicked")
         if self.centerPE_callback is not None:
             self.centerPE_callback()
-        print("Center PEPOCH clicked")
 
     def centerPOSEPOCH(self):
+        log.debug("Center POSEPOCH clicked")
         if self.centerPO_callback is not None:
             self.centerPO_callback()
-        print("Center POSEPOCH clicked")
 
     def centerT0(self):
+        log.debug("Center T0 clicked")
         if self.centerT0_callback is not None:
             self.centerT0_callback()
-        print("Center T0 clicked")
 
 
 class ParWidget(tk.Frame):
@@ -210,7 +212,7 @@ class ParWidget(tk.Frame):
                 self.editor.delete("1.0", tk.END)
                 self.editor.insert("1.0", self.psr.postfit_model.as_parfile())
             else:
-                print("There is no postfit model yet!")
+                log.warning("There is no postfit model yet!")
                 self.choiceWidget.prefit.select()
         elif choice == "prefit":
             self.editor.delete("1.0", tk.END)
@@ -234,16 +236,16 @@ class ParWidget(tk.Frame):
             fout = open(filename, "w")
             fout.write(self.editor.get("1.0", "end-1c"))
             fout.close()
-            print("Saved parfile to %s" % filename)
+            log.info("Saved parfile to %s" % filename)
         except:
             if filename == () or filename == "":
-                print("Write Par cancelled.")
+                log.warning("Write Par cancelled.")
             else:
-                print("Could not save parfile to filename:\t%s" % filename)
+                log.warning("Could not save parfile to filename:\t%s" % filename)
 
     def centerPEPOCH(self):
         if not hasattr(self.psr.prefit_model, "PEPOCH"):
-            print("No PEPOCH to center.")
+            log.warning("No PEPOCH to center.")
             return
         mintime, maxtime = (
             self.psr.all_toas.get_mjds().min(),
@@ -258,7 +260,7 @@ class ParWidget(tk.Frame):
 
     def centerPOSEPOCH(self):
         if not hasattr(self.psr.prefit_model, "POSEPOCH"):
-            print("No POSEPOCH to center.")
+            log.warning("No POSEPOCH to center.")
             return
         mintime, maxtime = (
             self.psr.all_toas.get_mjds().min(),
@@ -273,7 +275,7 @@ class ParWidget(tk.Frame):
 
     def centerT0(self):
         if not hasattr(self.psr.prefit_model, "T0"):
-            print("No T0 to center.")
+            log.warning("No T0 to center.")
             return
         mintime, maxtime = (
             self.psr.all_toas.get_mjds().min(),

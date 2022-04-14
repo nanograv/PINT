@@ -221,14 +221,15 @@ def get_TOAs(
     if usepickle:
         try:
             t = load_pickle(timfile, picklefilename=picklefilename)
+            log.info(f"Reading TOAs from the picklefile for `{timfile}`")
         except IOError:
             # Pickle either did not exist or is out of date
             updatepickle = True
         else:
             if hasattr(t, "hashes"):
-                if not t.check_hashes(timfile):
+                if not t.check_hashes():
                     updatepickle = True
-                    log.info("Pickle based on files that have changed")
+                    log.warning("Pickle file is based on files that have changed")
             else:
                 # Only pre-v0.8 pickles lack hashes.
                 updatepickle = True

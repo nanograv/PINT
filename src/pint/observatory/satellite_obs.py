@@ -118,12 +118,22 @@ def load_FPorbit(orbit_filename):
 
     # TIMEREF should be 'LOCAL', since no delays are applied
 
-    timesys = FPorbit_hdr["TIMESYS"]
-    log.debug("FPorbit TIMESYS {0}".format(timesys))
-    timeref = FPorbit_hdr["TIMEREF"]
-    log.debug("FPorbit TIMEREF {0}".format(timeref))
+    if not "TIMESYS" in FPorbit_hdr:
+        log.warning("Keyword TIMESYS is missing. Assuming TT")
+        timesys = "TT"
+    else:
+        timesys = FPorbit_hdr["TIMESYS"]
+        log.debug("FPorbit TIMESYS {0}".format(timesys))
+
+    if not "TIMEREF" in FPorbit_hdr:
+        log.warning("Keyword TIMESYS is missing. Assuming TT")
+        timeref = "LOCAL"
+    else:
+        timeref = FPorbit_hdr["TIMEREF"]
+        log.debug("FPorbit TIMEREF {0}".format(timeref))
 
     mjds_TT = read_fits_event_mjds(hdulist[1])
+
     mjds_TT = mjds_TT * u.d
     log.debug("FPorbit spacing is {0}".format((mjds_TT[1] - mjds_TT[0]).to(u.s)))
     X = FPorbit_dat.field("X") * u.m
@@ -145,6 +155,13 @@ def load_FPorbit(orbit_filename):
     # Make sure table is sorted by time
     log.debug("Sorting FPorbit table")
     FPorbit_table.sort("MJD_TT")
+
+    good = np.diff(FPorbit_table["MJD_TT"]) > 0
+    if not np.all(good):
+        log.warning("The orbit table has duplicate entries. Please check.")
+        good = np.concatenate((good, [True]))
+        FPorbit_table = FPorbit_table[good]
+
     # Now delete any bad entries where the positions are 0.0
     idx = np.where(
         np.logical_and(FPorbit_table["X"] != 0.0, FPorbit_table["Y"] != 0.0)
@@ -257,6 +274,8 @@ def load_orbit(obs_name, orb_filename):
     if "fermi" in lower_name:
         return load_Fermi_FT2(orb_filename)
     elif "nicer" in lower_name:
+        return load_FPorbit(orb_filename)
+    elif "ixpe" in lower_name:
         return load_FPorbit(orb_filename)
     elif "xte" in lower_name:
         return load_FPorbit(orb_filename)
@@ -390,7 +409,7 @@ class SatelliteObs(SpecialLocation):
             np.array([self.X(t.tt.mjd), self.Y(t.tt.mjd), self.Z(t.tt.mjd)])
             * self.FT2["X"].unit
         )
-        log.debug("[{0}] sat_pos_geo {1}".format(self.name, sat_pos_geo[:, 0]))
+        # log.debug("[{0}] sat_pos_geo {1}".format(self.name, sat_pos_geo[:, 0]))
         sat_vel_geo = (
             np.array([self.Vx(t.tt.mjd), self.Vy(t.tt.mjd), self.Vz(t.tt.mjd)])
             * self.FT2["Vx"].unit
