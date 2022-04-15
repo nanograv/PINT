@@ -61,7 +61,7 @@ level = "INFO"
 # default level for scripts
 script_level = "WARNING"
 # a full format that might be useful as a reference:
-# format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> - <level>{message}</level>"
+# format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
 format = "<level>{level: <8}</level> ({name: <30}): <level>{message}</level>"
 debug_color = "<fg #b790d4><bold>"
 # Other formatting:
