@@ -30,16 +30,28 @@ class DDKmodel(DDmodel):
         super(DDKmodel, self).__init__()
         self.binary_name = "DDK"
         # Add parameter that specific for DD model, with default value and units
-        self.param_default_value.update(
-            {
-                "KIN": 0 * u.deg,
-                "PMELONG": 0 * u.mas / u.year,
-                "PMELAT": 0.5 * u.mas / u.year,
-                "PX": 0 * u.mas,
-                "KOM": 0 * u.deg,
-                "K96": True,
-            }
-        )
+        if "AstrometryEquatorial" in self.components:
+            self.param_default_value.update(
+                {
+                    "KIN": 0 * u.deg,
+                    "PMRA": 0 * u.mas / u.year,
+                    "PMDEC": 0.5 * u.mas / u.year,
+                    "PX": 0 * u.mas,
+                    "KOM": 0 * u.deg,
+                    "K96": True,
+                }
+            )
+        elif "AstrometryEcliptic" in self.compnents:
+            self.param_default_value.update(
+                {
+                    "KIN": 0 * u.deg,
+                    "PMELONG": 0 * u.mas / u.year,
+                    "PMELAT": 0.5 * u.mas / u.year,
+                    "PX": 0 * u.mas,
+                    "KOM": 0 * u.deg,
+                    "K96": True,
+                }
+            )
 
         # If any parameter has aliases, it should be updated
         # self.param_aliases.update({})
@@ -72,33 +84,36 @@ class DDKmodel(DDmodel):
 
     @psr_pos.setter
     def psr_pos(self, val):
-        """The pointing unit vector of a pulsar. alpha and delta described in
-        (Kopeikin 1995 L6 Eq10)
+        """The pointing unit vector of a pulsar.
+        long and lat are alpha and delta (if equatorial)
+        or elong and elat (if ecliptic)
+        described in
+        (Kopeikin 1995 Eq10)
         """
         self._psr_pos = val
         # it appears that this is the vector K0
         # K0 = (cos(alpha)*cos(delta), sin(alpha)*cos(delta), sin(delta))
         # in equatorial coords
-        self._sin_elat = self._psr_pos[:, 2]
-        self._cos_elat = np.cos(np.arcsin(self._sin_elat))
-        self._sin_elong = self._psr_pos[:, 1] / self._cos_elat
-        self._cos_elong = self._psr_pos[:, 0] / self._cos_elat
+        self._sin_lat = self._psr_pos[:, 2]
+        self._cos_lat = np.cos(np.arcsin(self._sin_lat))
+        self._sin_long = self._psr_pos[:, 1] / self._cos_lat
+        self._cos_long = self._psr_pos[:, 0] / self._cos_lat
 
     @property
-    def sin_elat(self):
-        return self._sin_elat
+    def sin_lat(self):
+        return self._sin_lat
 
     @property
-    def cos_elat(self):
-        return self._cos_elat
+    def cos_lat(self):
+        return self._cos_lat
 
     @property
-    def sin_elong(self):
-        return self._sin_elong
+    def sin_long(self):
+        return self._sin_long
 
     @property
-    def cos_elong(self):
-        return self._cos_elong
+    def cos_long(self):
+        return self._cos_long
 
     @property
     def SINI(self):
@@ -128,7 +143,7 @@ class DDKmodel(DDmodel):
         d_KIN = (-PMRA_DDK * sin(KOM) + PMDEC_DDK * cos(KOM)) * (t-T0)
         """
         d_KIN = (
-            -self.PMELONG * self.sin_KOM + self.PMELAT * self.cos_KOM
+            -self.PMLONG_DDK * self.sin_KOM + self.PMLAT_DDK * self.cos_KOM
         ) * self.tt0
         return d_KIN.to(self.KIN.unit)
 
@@ -145,7 +160,7 @@ class DDKmodel(DDmodel):
     def d_SINI_d_KOM(self):
         if self.K96:
             d_si_d_kom = (
-                (-self.PMELONG * self.cos_KOM - self.PMELAT * self.sin_KOM)
+                (-self.PMLONG_DDK * self.cos_KOM - self.PMLAT_DDK * self.sin_KOM)
                 * self.tt0
                 * np.cos(self.kin())
             )
@@ -157,7 +172,7 @@ class DDKmodel(DDmodel):
     def d_SINI_d_T0(self):
         if self.K96:
             d_si_d_kom = -(
-                -self.PMELONG * self.sin_KOM + self.PMELAT * self.cos_KOM
+                -self.PMLONG_DDK * self.sin_KOM + self.PMLAT_DDK * self.cos_KOM
             )
             return d_si_d_kom.to(u.Unit("") / self.T0.unit)
         else:
@@ -173,7 +188,7 @@ class DDKmodel(DDmodel):
 
     def d_kin_proper_motion_d_KOM(self):
         d_DKIN_d_KOM = (
-            -self.PMELONG * self.cos_KOM - self.PMELAT * self.sin_KOM
+            -self.PMLONG_DDK * self.cos_KOM - self.PMLAT_DDK * self.sin_KOM
         ) * self.tt0
         return d_DKIN_d_KOM.to(
             self.KIN.unit / self.KOM.unit, equivalencies=u.dimensionless_angles()
@@ -181,7 +196,7 @@ class DDKmodel(DDmodel):
 
     def d_kin_proper_motion_d_T0(self):
         d_DKIN_d_T0 = -1 * (
-            -self.PMELONG * self.sin_KOM + self.PMELAT * self.cos_KOM
+            -self.PMLONG_DDK * self.sin_KOM + self.PMLAT_DDK * self.cos_KOM
         )
         return d_DKIN_d_T0.to(
             self.KIN.unit / self.T0.unit, equivalencies=u.dimensionless_angles()
@@ -204,8 +219,8 @@ class DDKmodel(DDmodel):
         """The correction on a1 (projected semi-major axis)
         due to the pulsar proper motion
         (KOPEIKIN. 1996 Eq 8.)
-        d_x = a1 * cot(kin) * (-PMELONG * sin(KOM) + PMDEC_DDK * cos(KOM)) * (t-T0)
-        d_kin = (-PMELONG * sin(KOM) + PMDEC_DDK * cos(KOM)) * (t-T0)
+        d_x = a1 * cot(kin) * (-PMLONG_DDK * sin(KOM) + PMDEC_DDK * cos(KOM)) * (t-T0)
+        d_kin = (-PMLONG_DDK * sin(KOM) + PMDEC_DDK * cos(KOM)) * (t-T0)
         d_x = a1 * d_kin * cot(kin)
         """
         a1 = self.a1_k(False, False)
@@ -256,14 +271,14 @@ class DDKmodel(DDmodel):
         """The correction on omega (Longitude of periastron)
         due to the pulsar proper motion
         (KOPEIKIN. 1996 Eq 9.)
-        d_omega = csc(i) * (PMELONG * cos(KOM) + PMDEC_DDK * sin(KOM)) * (t-T0)
+        d_omega = csc(i) * (PMLONG_DDK * cos(KOM) + PMDEC_DDK * sin(KOM)) * (t-T0)
         """
         kin = self.kin()
         sin_kin = np.sin(kin)
         omega_dot = (
             1.0
             / sin_kin
-            * (self.PMELONG * self.cos_KOM + self.PMELAT * self.sin_KOM)
+            * (self.PMLONG_DDK * self.cos_KOM + self.PMLAT_DDK * self.sin_KOM)
         )
         return (omega_dot * self.tt0).to(self.OM.unit)
 
@@ -274,7 +289,7 @@ class DDKmodel(DDmodel):
         d_omega_dot = (
             -cos_kin
             / sin_kin ** 2
-            * (self.PMELONG * self.cos_KOM + self.PMELAT * self.sin_KOM)
+            * (self.PMLONG_DDK * self.cos_KOM + self.PMLAT_DDK * self.sin_KOM)
         )
         return (d_omega_dot * self.tt0).to(
             self.OM.unit / self.KIN.unit, equivalencies=u.dimensionless_angles()
@@ -289,8 +304,9 @@ class DDKmodel(DDmodel):
             -cos_kin
             / sin_kin ** 2
             * d_kin_d_KOM
-            * (self.PMELONG * self.cos_KOM + self.PMELAT * self.sin_KOM)
-            + (-self.PMELONG * self.sin_KOM + self.PMELAT * self.cos_KOM) / sin_kin
+            * (self.PMLONG_DDK * self.cos_KOM + self.PMLAT_DDK * self.sin_KOM)
+            + (-self.PMLONG_DDK * self.sin_KOM + self.PMLAT_DDK * self.cos_KOM)
+            / sin_kin
         )
         return (d_omega_dot * self.tt0).to(
             self.OM.unit / self.KOM.unit, equivalencies=u.dimensionless_angles()
@@ -304,7 +320,7 @@ class DDKmodel(DDmodel):
         # with u.set_enabled_equivalencies(u.dimensionless_angles()):
         d_omega_d_T0 = (
             -cos_kin / sin_kin ** 2 * d_kin_d_T0 * self.tt0 - 1.0 / sin_kin
-        ) * (self.PMELONG * self.cos_KOM + self.PMELAT * self.sin_KOM)
+        ) * (self.PMLONG_DDK * self.cos_KOM + self.PMLAT_DDK * self.sin_KOM)
         return d_omega_d_T0.to(self.OM.unit / self.T0.unit)
 
     # The code below is to implement the binary model parameter correction due
@@ -315,18 +331,16 @@ class DDKmodel(DDmodel):
         """
         Refernce: (Kopeikin 1995 Eq 15)
         """
-        return (
-            -self.obs_pos[:, 0] * self.sin_elong + self.obs_pos[:, 1] * self.cos_elong
-        )
+        return -self.obs_pos[:, 0] * self.sin_long + self.obs_pos[:, 1] * self.cos_long
 
     def delta_J0(self):
         """
         Reference: (Kopeikin 1995 Eq 16)
         """
         return (
-            -self.obs_pos[:, 0] * self.sin_elat * self.cos_elong
-            - self.obs_pos[:, 1] * self.sin_elat * self.sin_elong
-            + self.obs_pos[:, 2] * self.cos_elat
+            -self.obs_pos[:, 0] * self.sin_lat * self.cos_long
+            - self.obs_pos[:, 1] * self.sin_lat * self.sin_long
+            + self.obs_pos[:, 2] * self.cos_lat
         )
 
     def delta_sini_parallax(self):

@@ -31,9 +31,7 @@ class BinaryDDK(BinaryDD):
 
     Note
     ----
-    This model defines KOM with reference to celestial north regardless of the astrometry
-    model. This is incompatible with tempo2, which defines KOM with reference to ecliptic
-    north when using ecliptic coordinates.
+    This model defines KOM with reference to north, either equatorial or ecliptic depending on how the model is defined
 
     Parameters supported:
 
@@ -73,35 +71,31 @@ class BinaryDDK(BinaryDD):
             )
         )
         self.remove_param("SINI")
-        #self.internal_params += ["PMRA_DDK", "PMDEC_DDK"]
+        self.internal_params += ["PMLONG_DDK", "PMLAT_DDK"]
 
-    # @property
-    # def PMRA_DDK(self):
-    #     params = self._parent.get_params_as_ICRS()
-    #     par_obj = floatParameter(
-    #         name="PMRA",
-    #         units="mas/year",
-    #         value=params["PMRA"],
-    #         description="Proper motion in RA",
-    #     )
-    #     return par_obj
+    @property
+    def PMLONG_DDK(self):
+        if "AstrometryEquatorial" in self.components:
+            return self.PMRA
+        elif "AstrometryEcliptic" in self.components:
+            return self.PMELONG
 
-    # @property
-    # def PMDEC_DDK(self):
-    #     params = self._parent.get_params_as_ICRS()
-    #     par_obj = floatParameter(
-    #         name="PMDEC",
-    #         units="mas/year",
-    #         value=params["PMDEC"],
-    #         description="Proper motion in DEC",
-    #     )
-    #     return par_obj
+    @property
+    def PMLAT_DDK(self):
+        if "AstrometryEquatorial" in self.components:
+            return self.PMDEC
+        elif "AstrometryEcliptic" in self.components:
+            return self.PMELAT
 
     def validate(self):
         """Validate parameters."""
         super().validate()
-        if "PMRA" not in self._parent.params or "PMDEC" not in self._parent.params:
-            # Check ecliptic coordinates proper motion.
+        if "AstrometryEquatorial" in self.components:
+            if "PMRA" not in self._parent.params or "PMDEC" not in self._parent.params:
+                raise MissingParameter(
+                    "DDK", "DDK model needs proper motion parameters."
+                )
+        elif "AstrometryEcliptic" in self.components:
             if (
                 "PMELONG" not in self._parent.params
                 or "PMELAT" not in self._parent.params
@@ -117,8 +111,6 @@ class BinaryDDK(BinaryDD):
             raise MissingParameter(
                 "Binary_DDK", "PX", "DDK model needs PX from" "Astrometry."
             )
-        # Should we warn if the model is using ecliptic coordinates?
-        # Should we support KOM_PINT that works this way and KOM that works the way tempo2 does?
 
     def alternative_solutions(self):
         """Alternative Kopeikin solutions (potential local minima)

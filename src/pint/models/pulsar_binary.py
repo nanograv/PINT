@@ -294,12 +294,14 @@ class PulsarBinary(DelayComponent):
                 self.barycentric_time = tbl["tdbld"] * u.day - acc_delay
             updates["barycentric_toa"] = self.barycentric_time
             updates["obs_pos"] = tbl["ssb_obs_pos"].quantity
-            #updates["psr_pos"] = self._parent.ssb_to_psb_xyz_ICRS(
-            #    epoch=tbl["tdbld"].astype(np.float64)
-            #)
-            updates["psr_pos"] = self._parent.ssb_to_psb_xyz_ECL(
-                epoch=tbl["tdbld"].astype(np.float64)
-            )
+            if "AstrometryEquatorial" in self.components:
+                updates["psr_pos"] = self._parent.ssb_to_psb_xyz_ICRS(
+                    epoch=tbl["tdbld"].astype(np.float64)
+                )
+            elif "AstrometryEcliptic" in self.components:
+                updates["psr_pos"] = self._parent.ssb_to_psb_xyz_ECL(
+                    epoch=tbl["tdbld"].astype(np.float64)
+                )
         for par in self.binary_instance.binary_params:
             if par in self.binary_instance.param_aliases.keys():
                 alias = self.binary_instance.param_aliases[par]
