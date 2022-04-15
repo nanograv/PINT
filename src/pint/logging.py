@@ -1,30 +1,47 @@
-"""Custom logging filter for PINT using `loguru`
+"""Custom logging filter for PINT using ``loguru``.
 
 If you want to customize more of this yourself (e.g., in a script)
 the minimal pieces would be:
 
-from loguru import logger as log
-
-
-
+    >>> from loguru import logger as log
 
 If you want to include custom filtering and other elements:
 
-from loguru import logger as log
-import pint.logging
+    >>> from loguru import logger as log
+    >>> import pint.logging
+    >>> logfilter = pint.logging.LogFilter()
+    >>> log.remove()
+    >>> log.add(sys.stderr, level=level, filter=logfilter, format=format, colorize=True)
 
-logfilter = pint.logging.LogFilter()
-log.remove()
-log.add(sys.stderr, level=level, filter=logfilter, format=format, colorize=True)
+If you want to use command-line arguments to set the level you can do that like:
+
+    >>> parser.add_argument(
+    >>>     "--log-level",
+    >>>     type=str,
+    >>>     choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
+    >>>     default=pint.logging.script_level,
+    >>>     help="Logging level",
+    >>>     dest="loglevel",
+    >>> )
+    >>> args = parser.parse_args(argv)
+    >>> log.remove()
+    >>> log.add(
+    >>>     sys.stderr,
+    >>>     level=args.loglevel,
+    >>>     colorize=True,
+    >>>     format=pint.logging.format,
+    >>>     filter=pint.logging.LogFilter(),
+    >>> )
 
 
-Note that `loguru` does not allow you to change the properties of an existing logger.
-Instead it's better to remove it and make another (e.g., if you want to change the level)
+Note that ``loguru`` does not allow you to change the properties of an existing logger.
+Instead it's better to remove it and make another (e.g., if you want to change the level).
 
 Defaults can be changed with environment variables like:
-$LOGURU_LEVEL
-$LOGURU_FORMAT
-$LOGURU_DEBUG_COLOR
+``$LOGURU_LEVEL``, ``$LOGURU_FORMAT``, ``$LOGURU_DEBUG_COLOR``.
+
+See `loguru documentation <https://loguru.readthedocs.io/en/stable/>`_ for full set of options.
+
 """
 
 import os
@@ -44,20 +61,21 @@ level = "INFO"
 # default level for scripts
 script_level = "WARNING"
 # a full format that might be useful as a reference:
-# format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> - <level>{message}</level>"
+# format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
 format = "<level>{level: <8}</level> ({name: <30}): <level>{message}</level>"
 debug_color = "<fg #b790d4><bold>"
 # Other formatting:
 # https://loguru.readthedocs.io/en/stable/api/logger.html#color
 
-"""
-Want loguru to capture warnings emitted by warnings.warn
-See https://loguru.readthedocs.io/en/stable/resources/recipes.html#capturing-standard-stdout-stderr-and-warnings
-"""
+
 warn_ = warnings.warn
 
 
 def warn(message, *args, **kwargs):
+    """
+    Want ``loguru`` to capture warnings emitted by ``warnings.warn``.
+    See https://loguru.readthedocs.io/en/stable/resources/recipes.html#capturing-standard-stdout-stderr-and-warnings
+    """
     if len(args) > 0:
         log.warning(f"{args[0]} {message}")
     elif "category" in kwargs:
@@ -71,27 +89,31 @@ warnings.warn = warn
 
 
 class LogFilter:
-    """Custom logging filter for loguru.
+    """Custom logging filter for ``loguru``.
     Define some messages that are never seen (e.g., Deprecation Warnings).
-    Others that will only be seen once.  Filtering of those is done on the basis of regex"""
+    Others that will only be seen once.  Filtering of those is done on the basis of regular expressions."""
 
     def __init__(self, onlyonce=None, never=None):
         """
-        Define regexs for messages that will only be seen once.  Use "\S+" for a variable that might change
-        If a message comes through with a new value for that variable, it will be seen
-        Make sure to escape other regex commands like ()
-        Each message starts with state = False
-        Once it has been emitted, that changes to a list of the messages so that it can keep track
-        These are only suppressed when issued at level INFO or lower (e.g., WARNINGs will always come through)
+        Define regexs for messages that will only be seen once.  Use ``\S+`` for a variable that might change.
+        If a message comes through with a new value for that variable, it will be seen.
+
+        Make sure to escape other regex commands like ``()``.
+
+        Each message starts with ``state = False``.
+        Once it has been emitted, that changes to a list of the messages so that it can keep track.
+        These are only suppressed when issued at level ``INFO`` or lower (e.g., ``WARNING`` will always come through)
 
         They should be defined as:
-        "Error message": False
-        where the `False` tracks whether or not the message has been issued at all
+
+            >>> "Error message": False
+        
+        where the ``False`` tracks whether or not the message has been issued at all
 
         Parameters
         ----------
         onlyonce : list, optional
-            list of messages that should only be issued once if at WARNING or below
+            list of messages that should only be issued once if at ``INFO`` or below
         never : list, optional
             list of messages that should never be seen
         """
@@ -132,18 +154,18 @@ class LogFilter:
             self.never += never
 
     def filter(self, record):
-        """Filter the record based on record["message"] and record["level"]
-        If this returns False, the message is not seen
+        """Filter the record based on ``record["message"]`` and ``record["level"]``
+        If this returns ``False``, the message is not seen
 
         Parameters
         ----------
         record : dict
-            should contain record["message"] and record["level"]
+            should contain ``record["message"]`` and ``record["level"]``
 
         Returns
         -------
         bool
-            If True, message is seen.  If False, message is not seen
+            If ``True``, message is seen.  If ``False``, message is not seen
         """
         for m in self.never:
             if m in record["message"]:
