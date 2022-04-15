@@ -119,7 +119,7 @@ class Residuals:
                 self.track_mode = "nearest"
             elif "pulse_number" in self.toas.table.columns:
                 if np.any(np.isnan(toas.table["pulse_number"])):
-                    log.warn(
+                    log.warning(
                         "Some TOAs are missing pulse numbers, they will not be used."
                     )
                     self.track_mode = "nearest"
