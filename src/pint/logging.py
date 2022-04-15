@@ -20,6 +20,11 @@ log.add(sys.stderr, level=level, filter=logfilter, format=format, colorize=True)
 
 Note that `loguru` does not allow you to change the properties of an existing logger.
 Instead it's better to remove it and make another (e.g., if you want to change the level)
+
+Defaults can be changed with environment variables like:
+$LOGURU_LEVEL
+$LOGURU_FORMAT
+$LOGURU_DEBUG_COLOR
 """
 
 import os
@@ -32,13 +37,14 @@ __all__ = [
     "LogFilter",
 ]
 
-# defaults
-# can be overridden using $LOGURU_LEVEL and $LOGURU_FORMAT
+# defaults can be overridden using $LOGURU_LEVEL and $LOGURU_FORMAT
+# default for an individual level can be overridden by $LOGURU_DEBUG_COLOR etc
 # or just make a new logger
-level = "DEBUG"
+level = "INFO"
 # a full format that might be useful as a reference:
 # format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> - <level>{message}</level>"
-format = "<level>{level: <8}</level> - <level>{message}</level>"
+format = "<level>{level: <8}</level> ({name: <30}): <level>{message}</level>"
+debug_color = "<fg #b790d4><bold>"
 # Other formatting:
 # https://loguru.readthedocs.io/en/stable/api/logger.html#color
 
@@ -99,6 +105,7 @@ class LogFilter:
             "No pulse number flags found in the TOAs": False,
             "SSB obs pos \[\S+ \S+ \S+\] m": False,
             "Column \S+ already exists. Removing...": False,
+            "Skipping Shapiro delay for Barycentric TOAs": False,
         }
         # add in any more defined on init
         if onlyonce is not None:
@@ -157,3 +164,5 @@ if "LOGURU_FORMAT" in os.environ:
 # otherwise the default selection turns them off e.g., for a Jupyter notebook
 # since it isn't a tty
 log.add(sys.stderr, level=level, filter=logfilter, format=format, colorize=True)
+# change default DEBUG color
+log.level("DEBUG", color=debug_color)
