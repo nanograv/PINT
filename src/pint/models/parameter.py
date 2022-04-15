@@ -21,7 +21,6 @@ See :ref:`Supported Parameters` for an overview, including a table of all the
 parameters PINT understands.
 
 """
-import logging
 import numbers
 from warnings import warn
 
@@ -29,6 +28,8 @@ import astropy.time as time
 import astropy.units as u
 import numpy as np
 from astropy.coordinates.angles import Angle
+
+from loguru import logger as log
 
 from pint import pint_units
 from pint.models import priors
@@ -45,8 +46,6 @@ from pint.pulsar_mjd import (
 )
 from pint.toa_select import TOASelect
 from pint.utils import split_prefixed_name
-
-log = logging.getLogger(__name__)
 
 
 # potential parfile formats
@@ -487,7 +486,7 @@ class Parameter:
         # special cases for parameter values that change depending on format
         if self.name == "ECL" and format.lower() == "tempo2":
             if self.value != "IERS2003":
-                warn(
+                log.warning(
                     f"Changing ECL from '{self.value}' to 'IERS2003'; please refit for consistent results"
                 )
                 # change ECL value to IERS2003 for TEMPO2
@@ -498,13 +497,13 @@ class Parameter:
         elif self.name == "KIN" and format.lower() == "tempo":
             # convert from DT92 convention to IAU
             line = "%-15s %25s" % (name, self.str_quantity(180 * u.deg - self.quantity))
-            warn(
+            log.warning(
                 f"Changing KIN from DT92 convention to IAU: this will not be readable by PINT"
             )
         elif self.name == "KOM" and format.lower() == "tempo":
             # convert from DT92 convention to IAU
             line = "%-15s %25s" % (name, self.str_quantity(90 * u.deg - self.quantity))
-            warn(
+            log.warning(
                 f"Changing KOM from DT92 convention to IAU: this will not be readable by PINT"
             )
 

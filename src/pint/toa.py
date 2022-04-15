@@ -16,7 +16,6 @@ has moved to :mod:`pint.simulation`.
 import copy
 import gzip
 import hashlib
-import logging
 import os
 import pickle
 import re
@@ -35,6 +34,7 @@ from astropy.coordinates import (
     CartesianRepresentation,
     EarthLocation,
 )
+from loguru import logger as log
 
 import pint
 import pint.utils
@@ -46,8 +46,6 @@ from pint.pulsar_ecliptic import PulsarEcliptic
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 
-
-log = logging.getLogger(__name__)
 
 __all__ = [
     "TOAs",
@@ -188,7 +186,7 @@ def get_TOAs(
         # If the keyword args are set, override what is in the model
         if ephem is None and model["EPHEM"].value is not None:
             ephem = model["EPHEM"].value
-            log.info(f"Using EPHEM = {ephem} from the given model")
+            log.debug(f"Using EPHEM = {ephem} from the given model")
         if include_bipm is None and model["CLOCK"].value is not None:
             if model["CLOCK"].value == "TT(TAI)":
                 include_bipm = False
@@ -201,7 +199,7 @@ def get_TOAs(
                         include_bipm = True
                         if bipm_version is None:
                             bipm_version = cvers
-                            log.info(
+                            log.debug(
                                 f"Using CLOCK = {bipm_version} from the given model"
                             )
                     else:
@@ -216,21 +214,22 @@ def get_TOAs(
                 )
         if planets is None and model["PLANET_SHAPIRO"].value:
             planets = True
-            log.info("Using PLANET_SHAPIRO = True from the given model")
+            log.debug("Using PLANET_SHAPIRO = True from the given model")
 
     updatepickle = False
     recalc = False
     if usepickle:
         try:
             t = load_pickle(timfile, picklefilename=picklefilename)
+            log.info(f"Reading TOAs from the picklefile for `{timfile}`")
         except IOError:
             # Pickle either did not exist or is out of date
             updatepickle = True
         else:
             if hasattr(t, "hashes"):
-                if not t.check_hashes(timfile):
+                if not t.check_hashes():
                     updatepickle = True
-                    log.info("Pickle based on files that have changed")
+                    log.warning("Pickle file is based on files that have changed")
             else:
                 # Only pre-v0.8 pickles lack hashes.
                 updatepickle = True
@@ -297,7 +296,7 @@ def get_TOAs(
     if planets is None:
         planets = t.planets
     elif planets != t.planets:
-        log.info("Planet PosVels will be calculated.")
+        log.debug("Planet PosVels will be calculated.")
         recalc = True
         updatepickle = True
     if recalc or "ssb_obs_pos" not in t.table.colnames:
@@ -2035,7 +2034,7 @@ class TOAs:
                 # FIXME: could apply clock corrections to just the ones that don't have any
                 raise ValueError("Some TOAs have 'clkcorr' flag and some do not!")
         # An array of all the time corrections, one for each TOA
-        log.info(
+        log.debug(
             "Applying clock corrections (include_gps = {0}, include_bipm = {1})".format(
                 include_gps, include_bipm
             )
@@ -2098,12 +2097,12 @@ class TOAs:
             Solar System ephemeris to use for the computation. If not specified
             use the value in ``self.ephem``; if specified, replace ``self.ephem``.
         """
-        log.info("Computing TDB columns.")
+        log.debug("Computing TDB columns.")
         if "tdb" in self.table.colnames:
-            log.info("tdb column already exists. Deleting...")
+            log.debug("tdb column already exists. Deleting...")
             self.table.remove_column("tdb")
         if "tdbld" in self.table.colnames:
-            log.info("tdbld column already exists. Deleting...")
+            log.debug("tdbld column already exists. Deleting...")
             self.table.remove_column("tdbld")
 
         if ephem is None:
@@ -2123,7 +2122,7 @@ class TOAs:
                     "ephemeris {1}! Using TDB ephemeris.".format(ephem, self.ephem)
                 )
         self.ephem = ephem
-        log.info(f"Using EPHEM = {self.ephem} for TDB calculation.")
+        log.debug(f"Using EPHEM = {self.ephem} for TDB calculation.")
 
         # Compute in observatory groups
         tdbs = np.zeros_like(self.table["mjd"])
@@ -2210,26 +2209,26 @@ class TOAs:
         self.ephem = ephem
         self.planets = planets
         if planets:
-            log.info(
+            log.debug(
                 "Computing PosVels of observatories, Earth and planets, using {}".format(
                     ephem
                 )
             )
 
         else:
-            log.info(
+            log.debug(
                 "Computing PosVels of observatories and Earth, using {}".format(ephem)
             )
         # Remove any existing columns
         cols_to_remove = ["ssb_obs_pos", "ssb_obs_vel", "obs_sun_pos"]
         for c in cols_to_remove:
             if c in self.table.colnames:
-                log.info("Column {0} already exists. Removing...".format(c))
+                log.debug("Column {0} already exists. Removing...".format(c))
                 self.table.remove_column(c)
         for p in all_planets:
             name = "obs_" + p + "_pos"
             if name in self.table.colnames:
-                log.info("Column {0} already exists. Removing...".format(name))
+                log.debug("Column {0} already exists. Removing...".format(name))
                 self.table.remove_column(name)
 
         self.table.meta["ephem"] = ephem

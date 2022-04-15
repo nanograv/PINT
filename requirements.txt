@@ -7,3 +7,4 @@ matplotlib>=1.5.3
 emcee>=3.0.1
 corner>=2.0.1
 uncertainties
+loguru

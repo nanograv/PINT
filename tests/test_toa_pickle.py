@@ -112,15 +112,20 @@ def test_pickle_invalidated_time(temp_tim):
     assert not toa.get_TOAs(tt, usepickle=True).was_pickled
 
 
+# SMR changed the behavior of this so that if the .filename
+# in the picklefile does not exist, then the pickle is
+# invalidated.  The reason is that the previous behavior
+# caused pickling to always fail to be valid for .tim files
+# that had INCLUDE statements to load other .tim files.
 def test_pickle_moved(temp_tim):
     tt, tp = temp_tim
-    tt2 = tt + ".also.tim"
-    shutil.copy(tt, tt2)
+    # The following creates "test.tim.pickle.gz" from "test.tim"
     toa.get_TOAs(tt, usepickle=True, picklefilename=tp)
-    assert toa.get_TOAs(tt2, usepickle=True, picklefilename=tp).was_pickled
-    with open(tt2, "at") as f:
-        f.write("\n")
-    assert not toa.get_TOAs(tt2, usepickle=True, picklefilename=tp).was_pickled
+    # now remove "test.tim"
+    os.remove(tt)
+    # Should fail since the original file is gone
+    with pytest.raises(FileNotFoundError):
+        toa.get_TOAs(tt, usepickle=True, picklefilename=tp)
 
 
 def test_group_survives_pickle(tmpdir):

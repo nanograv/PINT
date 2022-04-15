@@ -1,7 +1,7 @@
 """FITS handling functions"""
-import logging
 
 import numpy as np
+from loguru import logger as log
 
 try:
     from erfa import DAYSEC as SECS_PER_DAY
@@ -10,7 +10,6 @@ except ImportError:
 
 from pint.pulsar_mjd import fortran_float
 
-log = logging.getLogger(__name__)
 
 __all__ = ["read_fits_event_mjds", "read_fits_event_mjds_tuples"]
 
