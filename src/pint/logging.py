@@ -113,6 +113,7 @@ class LogFilter:
             "SSB obs pos \[\S+ \S+ \S+\] m": False,
             "Column \S+ already exists. Removing...": False,
             "Skipping Shapiro delay for Barycentric TOAs": False,
+            "Special observatory location. No clock corrections applied.": False,
         }
         # add in any more defined on init
         if onlyonce is not None:
