@@ -1,4 +1,6 @@
 """The DDK model - Damour and Deruelle with kinematics."""
+import numpy as np
+from astropy import units as u
 from pint.models.binary_dd import BinaryDD
 from pint.models.parameter import boolParameter, floatParameter
 from pint.models.stand_alone_psr_binaries.DDK_model import DDKmodel
@@ -117,3 +119,46 @@ class BinaryDDK(BinaryDD):
             )
         # Should we warn if the model is using ecliptic coordinates?
         # Should we support KOM_PINT that works this way and KOM that works the way tempo2 does?
+
+    def alternative_solutions(self):
+        """Alternative Kopeikin solutions (potential local minima)
+
+        There are 4 potential local minima for a DDK model where a1dot is the same
+        These are given by where Eqn. 8 in Kopeikin (1996) is equal to the best-fit value.
+
+        We first define the symmetry point where a1dot is zero:
+
+        :math:`KOM_0 = \\tan^{-1} (\mu_{\delta} / \mu_{\\alpha})`
+
+        The solutions are then:
+        
+        :math:`(KIN, KOM)`
+
+        :math:`(KIN, 2KOM_0 - KOM - 180^{\circ})`
+
+        :math:`(180^{\circ}-KIN, KOM+180^{\circ})`
+
+        :math:`(180^{\circ}-KIN, 2KOM_0 - KOM)`
+
+        All values will be between 0 and :math:`360^{\circ}`.
+
+        Returns
+        -------
+        tuple :
+            tuple of (KIN,KOM) pairs for the four potential solutions
+        """
+        x0 = self.KIN.quantity
+        y0 = self.KOM.quantity
+        solutions = [(x0, y0)]
+        # where Eqn. 8 in Kopeikin (1996) that is equal to 0
+        KOM_zero = np.arctan2(self.PMDEC_DDK.quantity, self.PMRA_DDK.quantity).to(u.deg)
+        # second one in the same banana
+        solutions += [(x0, (2 * (KOM_zero) - y0 - 180 * u.deg) % (360 * u.deg))]
+        # and the other banana
+        solutions += [
+            ((180 * u.deg - x0) % (360 * u.deg), (2 * (KOM_zero) - y0) % (360 * u.deg))
+        ]
+        solutions += [
+            ((180 * u.deg - x0) % (360 * u.deg), (y0 + 180 * u.deg) % (360 * u.deg))
+        ]
+        return solutions

@@ -1,7 +1,9 @@
 import io
 import os
+import sys
 import warnings
 from copy import deepcopy
+from contextlib import redirect_stdout
 
 import astropy.units as u
 import numpy as np
@@ -335,6 +337,34 @@ def test_jump_flags_to_params(timfile_jumps, timfile_nojumps, model_0437):
     assert len(m.components["PhaseJump"].jumps) == 2
     assert "JUMP1" in m.components["PhaseJump"].jumps
     assert "JUMP2" in m.components["PhaseJump"].jumps
+
+
+def test_many_timfile_jumps():
+    m = get_model(io.StringIO(par_base))
+    pairs = 15
+    toas_per_jump = 3
+    t = make_fake_toas_uniform(56000, 57000, 5 + toas_per_jump * pairs, model=m)
+    # The following lets us write the fake TOAs to a string as a timfile
+    f = io.StringIO()
+    with redirect_stdout(f):
+        t.write_TOA_file(sys.stdout)
+    s = f.getvalue().splitlines()
+    toalist = []
+    toalist.append("\n".join(s[:11]) + "\n")  # there are now comment lines!
+    lo = 12
+    for ii in range(pairs):
+        toalist.append("\n".join(["JUMP"] + s[lo : lo + toas_per_jump] + ["JUMP\n"]))
+        lo += toas_per_jump
+    # read the TOAs
+    tt = get_TOAs(io.StringIO("".join(toalist)))
+    # convert the timfile JUMPs to params
+    m.jump_flags_to_params(tt)
+    assert "PhaseJump" in m.components
+    assert len(m.components["PhaseJump"].jumps) == pairs
+    assert "JUMP1" in m.components["PhaseJump"].jumps
+    assert "JUMP2" in m.components["PhaseJump"].jumps
+    assert "JUMP10" in m.components["PhaseJump"].jumps
+    assert "JUMP15" in m.components["PhaseJump"].jumps
 
 
 def test_supports_rm():

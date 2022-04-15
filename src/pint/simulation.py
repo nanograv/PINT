@@ -5,7 +5,8 @@ from copy import deepcopy
 
 import astropy.units as u
 import numpy as np
-from astropy import log, time
+from loguru import logger as log
+from astropy import time
 
 import pint.residuals
 import pint.toa

@@ -55,13 +55,13 @@ Fitters in use::
 """
 import collections
 import copy
-import logging
 from warnings import warn
 
 import astropy.units as u
 import numpy as np
 import scipy.linalg
 import scipy.optimize as opt
+from loguru import logger as log
 
 import pint.utils
 import pint.derived_quantities
@@ -79,7 +79,6 @@ from pint.residuals import Residuals, WidebandTOAResiduals
 from pint.toa import TOAs
 from pint.utils import FTest
 
-log = logging.getLogger(__name__)
 
 __all__ = [
     "Fitter",
@@ -1041,7 +1040,7 @@ class ModelState:
         for p, s in zip(self.params, step * lambda_):
             try:
                 try:
-                    log.debug(f"Adjusting {getattr(self.model, p)} by {s}")
+                    log.trace(f"Adjusting {getattr(self.model, p)} by {s}")
                 except ValueError:
                     # I don't know why this fails with multiprocessing, but bypass if it does
                     pass
@@ -1054,7 +1053,7 @@ class ModelState:
                 # getattr(new_model, p).value = s
             except AttributeError:
                 if p != "Offset":
-                    log.debug(f"Unexpected parameter {p}")
+                    log.warning(f"Unexpected parameter {p}")
         return new_model
 
     def take_step(self, step, lambda_):
@@ -1142,7 +1141,7 @@ class DownhillFitter(Fitter):
                             f"when trying to take a step with lambda {lambda_}"
                         )
                     else:
-                        log.info(
+                        log.trace(
                             f"Iteration {i}: "
                             f"Updating state, chi2 goes down by {chi2_decrease} "
                             f"from {current_state.chi2} "
@@ -1156,7 +1155,7 @@ class DownhillFitter(Fitter):
                     # If bad parameter values escape, look in ModelState.resids for the except
                     # that should catch them
                     lambda_ /= 2
-                    log.info(f"Iteration {i}: Shortening step to {lambda_}: {e}")
+                    log.trace(f"Iteration {i}: Shortening step to {lambda_}: {e}")
                     if lambda_ < min_lambda:
                         log.warning(
                             f"Unable to improve chi2 even with very small steps, stopping "
@@ -1168,7 +1167,7 @@ class DownhillFitter(Fitter):
                 -max_chi2_increase <= chi2_decrease < required_chi2_decrease
                 and lambda_ == 1
             ):
-                log.info(
+                log.debug(
                     f"Iteration {i}: chi2 does not improve, stopping; "
                     f"decrease: {chi2_decrease}"
                 )
@@ -1177,7 +1176,7 @@ class DownhillFitter(Fitter):
             if exception is not None:
                 break
         else:
-            log.info(
+            log.debug(
                 f"Stopping because maxmum number of iterations ({maxiter}) reached"
             )
         self.current_state = best_state
@@ -1194,14 +1193,14 @@ class DownhillFitter(Fitter):
         for p, e in zip(self.current_state.params, self.errors):
             try:
                 try:
-                    log.debug(f"Setting {getattr(self.model, p)} uncertainty to {e}")
+                    log.trace(f"Setting {getattr(self.model, p)} uncertainty to {e}")
                 except ValueError:
                     # I don't know why this fails with multiprocessing, but bypass if it does
                     pass
                 pm = getattr(self.model, p)
             except AttributeError:
                 if p != "Offset":
-                    log.debug(f"Unexpected parameter {p}")
+                    log.warning(f"Unexpected parameter {p}")
             else:
                 pm.uncertainty = e * pm.units
         self.update_model(self.current_state.chi2)
@@ -1419,10 +1418,10 @@ class GLSState(ModelState):
             mtcm = np.dot(M.T, cinv[:, None] * M)
             mtcm += np.diag(phiinv)
             mtcy = np.dot(M.T, cinv * residuals)
-        log.debug(f"mtcm: {mtcm}")
+        log.trace(f"mtcm: {mtcm}")
 
         U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
-        log.debug(f"s: {s}")
+        log.trace(f"s: {s}")
 
         bad = np.where(s <= self.threshold * s[0])[0]
         s[bad] = np.inf
@@ -1445,8 +1444,8 @@ class GLSState(ModelState):
         self.norm = norm
         self.s, self.Vt = s, Vt
         xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
-        log.debug(f"norm: {norm}")
-        log.debug(f"xhat: {xhat}")
+        log.trace(f"norm: {norm}")
+        log.trace(f"xhat: {xhat}")
         self.xhat = xhat
         # newres = residuals - np.dot(M, xhat)
 
@@ -2143,7 +2142,7 @@ class GLSFitter(Fitter):
                 mtcm += np.diag(phiinv)
                 mtcy = np.dot(M.T, cinv * residuals)
 
-            log.debug(f"mtcm: {mtcm}")
+            log.trace(f"mtcm: {mtcm}")
             xhat, xvar = None, None
             if threshold <= 0:
                 try:
@@ -2154,7 +2153,7 @@ class GLSFitter(Fitter):
                     xhat, xvar = None, None
             if xhat is None:
                 U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
-                log.debug(f"s: {s}")
+                log.trace(f"s: {s}")
 
                 bad = np.where(s <= threshold * s[0])[0]
                 s[bad] = np.inf
@@ -2176,8 +2175,8 @@ class GLSFitter(Fitter):
 
                 xvar = np.dot(Vt.T / s, Vt)
                 xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
-            log.debug(f"norm: {norm}")
-            log.debug(f"xhat: {xhat}")
+            log.trace(f"norm: {norm}")
+            log.trace(f"xhat: {xhat}")
             newres = residuals - np.dot(M, xhat)
             # compute linearized chisq
             if full_cov:
@@ -2631,7 +2630,7 @@ class LMFitter(Fitter):
                     dx = scipy.linalg.solve(A, b, assume_a="pos")
                 else:
                     U, s, Vt = scipy.linalg.svd(A, full_matrices=False)
-                    log.debug(
+                    log.trace(
                         f"Iteration {i}: Condition number for lambda_ = {lambda_} is {s[0]/s[-1]}"
                     )
 
@@ -2665,7 +2664,7 @@ class LMFitter(Fitter):
                 # FIXME: predicted (linear) chi-squared decrease can check how well the
                 # derivative matches the function and guide changes in lambda_
                 # predicted_chi2 = current_state.predicted_chi2(dx)
-                log.debug(f"Iteration {i}: Trying step with lambda_ = {lambda_}")
+                log.trace(f"Iteration {i}: Trying step with lambda_ = {lambda_}")
                 new_state = current_state.take_step(step)
                 try:
                     chi2_decrease = current_state.chi2 - new_state.chi2
@@ -2675,7 +2674,7 @@ class LMFitter(Fitter):
                             if not ill_conditioned
                             else lambda_factor_invalid
                         )
-                        log.info(
+                        log.trace(
                             f"Iteration {i}: chi2 increased from {current_state.chi2} "
                             f"to {new_state.chi2} increasing lambda to {lambda_}"
                         )
@@ -2686,7 +2685,7 @@ class LMFitter(Fitter):
                         self.converged = True
                         break
                     elif chi2_decrease < min_chi2_decrease:
-                        log.info(
+                        log.debug(
                             f"Iteration {i}: chi2 decreased only by {chi2_decrease}, updating "
                             f"state and stopping."
                         )
@@ -2695,7 +2694,7 @@ class LMFitter(Fitter):
                         break
                     else:
                         lambda_ = max(lambda_ / lambda_factor_decrease, min_lambda)
-                        log.info(
+                        log.debug(
                             f"Iteration {i}: Updating state, chi2 goes down by {chi2_decrease} "
                             f"from {current_state.chi2} "
                             f"to {new_state.chi2}; decreasing lambda to "
@@ -2704,7 +2703,7 @@ class LMFitter(Fitter):
                         current_state = new_state
                 except InvalidModelParameters as e:
                     lambda_ *= lambda_factor_invalid
-                    log.info(
+                    log.debug(
                         f"Iteration {i}: Step too aggressive, increasing lambda_ "
                         f"to {lambda_}: {e}"
                     )
@@ -2769,11 +2768,11 @@ class WidebandLMFitter(LMFitter):
         self.errors = np.sqrt(np.diag(self.parameter_covariance_matrix.matrix))
         for p, e in zip(state.params, self.errors):
             try:
-                log.debug(f"Setting {getattr(self.model, p)} uncertainty to {e}")
+                log.trace(f"Setting {getattr(self.model, p)} uncertainty to {e}")
                 pm = getattr(self.model, p)
             except AttributeError:
                 if p != "Offset":
-                    log.debug(f"Unexpected parameter {p}")
+                    log.warning(f"Unexpected parameter {p}")
             else:
                 pm.uncertainty = e * pm.units
         # self.parameter_correlation_matrix = (

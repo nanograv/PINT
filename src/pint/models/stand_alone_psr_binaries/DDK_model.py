@@ -1,15 +1,13 @@
 """Kopeikin corrected DD model."""
-import logging
 
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
+from loguru import logger as log
 
 from pint import GMsun, Tsun, ls
 
 from .DD_model import DDmodel
-
-log = logging.getLogger(__name__)
 
 
 class DDKmodel(DDmodel):

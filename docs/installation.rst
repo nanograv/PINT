@@ -24,11 +24,7 @@ For PINT versions 0.8 or later only Python 3.x will be supported.
 
 Your Python must have the package installation tool pip_ installed.  Also make sure your setuptools are up to date (e.g. ``pip install -U setuptools``).
 
-We highly recommend using the package isolation tool virtualenv_ and, if you are a bash user, the convenience functions
-in virtualenvwrapper_ are handy.  
-You probably
-need to  have these installed system-wide or in some other way.  Sorry. Try some
-Googling if you don't. 
+We highly recommend using an :ref:`Anaconda <install-with-anaconda>` environment or the package isolation tool virtualenv_.
 
 TEMPO and Tempo2
 ''''''''''''''''
@@ -60,13 +56,19 @@ to install it for just yourself (e.g. if you don't have permission to write in t
 virtualenv to work on PINT (using a virtualenv is highly recommended by the PINT developers).  In that case, you just activate your 
 virtualenv before running the ``pip`` command above.
 
+
+.. _anaconda:
+
 Install with Anaconda
 ---------------------
 
 If you use `Anaconda <https://www.anaconda.com/products/individual>`_ environments to manage your python packages, 
-PINT is also available for Anaconda python under the `conda-forge <https://conda-forge.org>` channel:
+PINT is also available for Anaconda python under the `conda-forge <https://conda-forge.org>`_ channel:
 
     $ conda install -c conda-forge pint-pulsar
+
+**NOTE**: PINT requires ``longdouble`` arithmetic within ``numpy``, which is currently not supported natively on M1 Macs (e.g., with the `ARM64 conda build <https://conda-forge.org/blog/posts/2020-10-29-macos-arm64/>`_).  So it may be better to install the standard ``osx-64`` build and rely on Rosetta.
+
 
 Install from Source
 -------------------

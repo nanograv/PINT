@@ -34,3 +34,7 @@ ipython
 pathlib2
 twine
 numdifftools
+loguru
+click<=8.0.4
+gprof2dot
+py-cpuinfo
