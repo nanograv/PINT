@@ -85,6 +85,13 @@ class LogFilter:
         They should be defined as:
         "Error message": False
         where the `False` tracks whether or not the message has been issued at all
+
+        Parameters
+        ----------
+        onlyonce : list, optional
+            list of messages that should only be issued once if at WARNING or below
+        never : list, optional
+            list of messages that should never be seen
         """
         self.onlyonce = {
             "Using EPHEM = \S+ for \S+ calculation": False,
@@ -124,6 +131,16 @@ class LogFilter:
     def filter(self, record):
         """Filter the record based on record["message"] and record["level"]
         If this returns False, the message is not seen
+
+        Parameters
+        ----------
+        record : dict
+            should contain record["message"] and record["level"]
+
+        Returns
+        -------
+        bool
+            If True, message is seen.  If False, message is not seen
         """
         for m in self.never:
             if m in record["message"]:
