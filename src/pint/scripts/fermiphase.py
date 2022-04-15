@@ -1,12 +1,23 @@
 #!/usr/bin/env python
 import argparse
-import logging
+import sys
 
 import astropy.io.fits as pyfits
 import astropy.units as u
 import numpy as np
 from astropy.coordinates import SkyCoord
 
+import pint.logging
+from loguru import logger as log
+
+log.remove()
+log.add(
+    sys.stderr,
+    level="WARNING",
+    colorize=True,
+    format=pint.logging.format,
+    filter=pint.logging.LogFilter(),
+)
 import pint.models
 import pint.residuals
 import pint.toa as toa
@@ -17,8 +28,6 @@ from pint.observatory.satellite_obs import get_satellite_observatory
 from pint.plot_utils import phaseogram
 from pint.pulsar_mjd import Time
 
-log = logging.getLogger(__name__)
-
 __all__ = ["main"]
 
 # log.setLevel('DEBUG')
@@ -27,7 +36,8 @@ __all__ = ["main"]
 def main(argv=None):
 
     parser = argparse.ArgumentParser(
-        description="Use PINT to compute H-test and plot Phaseogram from a Fermi FT1 event file."
+        description="Use PINT to compute H-test and plot Phaseogram from a Fermi FT1 event file.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument("eventfile", help="Fermi event FITS file name.")
     parser.add_argument("parfile", help="par file to construct model from")
@@ -44,9 +54,7 @@ def main(argv=None):
     parser.add_argument(
         "--plot", help="Show phaseogram plot.", action="store_true", default=False
     )
-    parser.add_argument(
-        "--plotfile", help="Output figure file name (default=None)", default=None
-    )
+    parser.add_argument("--plotfile", help="Output figure file name", default=None)
     parser.add_argument(
         "--maxMJD", help="Maximum MJD to include in analysis", default=None
     )
@@ -60,14 +68,28 @@ def main(argv=None):
     )
     parser.add_argument(
         "--planets",
-        help="Use planetary Shapiro delay in calculations (default=False)",
+        help="Use planetary Shapiro delay in calculations",
         default=False,
         action="store_true",
     )
+    parser.add_argument("--ephem", help="Planetary ephemeris to use", default="DE421")
     parser.add_argument(
-        "--ephem", help="Planetary ephemeris to use (default=DE421)", default="DE421"
+        "--log-level",
+        type=str,
+        choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
+        default="WARNING",
+        help="Logging level",
+        dest="loglevel",
     )
     args = parser.parse_args(argv)
+    log.remove()
+    log.add(
+        sys.stderr,
+        level=args.loglevel,
+        colorize=True,
+        format=pint.logging.format,
+        filter=pint.logging.LogFilter(),
+    )
 
     # If outfile is specified, that implies addphase
     if args.outfile is not None:
