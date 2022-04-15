@@ -94,6 +94,7 @@ class AbsPhase(PhaseComponent):
         # Otherwise we have to build the TOA and apply clock corrections
         # NOTE: Using TZRMJD.quantity.jd[1,2] so that the time scale can be properly
         # set to the TZRSITE default timescale (e.g. UTC for TopoObs and TDB for SSB)
+        log.debug("Creating and dealing with the single TZR_toa for absolute phase")
         TZR_toa = toa.TOA(
             (self.TZRMJD.quantity.jd1 - 2400000.5, self.TZRMJD.quantity.jd2),
             obs=self.TZRSITE.value,
@@ -106,6 +107,7 @@ class AbsPhase(PhaseComponent):
             ephem=toas.ephem,
             planets=toas.planets,
         )
+        log.debug("Done with TZR_toa")
         self.tz_cache = tz
         self.tz_hash = hash((self.TZRMJD.value, self.TZRSITE.value, self.TZRFRQ.value))
         self.tz_clkc_info = clkc_info
