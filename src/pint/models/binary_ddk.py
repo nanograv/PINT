@@ -1,6 +1,8 @@
 """The DDK model - Damour and Deruelle with kinematics."""
 import numpy as np
 from astropy import units as u
+from loguru import logger as log
+
 from pint.models.binary_dd import BinaryDD
 from pint.models.parameter import boolParameter, floatParameter
 from pint.models.stand_alone_psr_binaries.DDK_model import DDKmodel
@@ -91,11 +93,13 @@ class BinaryDDK(BinaryDD):
         """Validate parameters."""
         super().validate()
         if "AstrometryEquatorial" in self._parent.components:
+            log.debug("Validating DDK model in ICRS coordinates")
             if "PMRA" not in self._parent.params or "PMDEC" not in self._parent.params:
                 raise MissingParameter(
                     "DDK", "DDK model needs proper motion parameters."
                 )
         elif "AstrometryEcliptic" in self._parent.components:
+            log.debug("Validating DDK model in ECL coordinates")
             if (
                 "PMELONG" not in self._parent.params
                 or "PMELAT" not in self._parent.params
