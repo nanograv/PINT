@@ -30,28 +30,16 @@ class DDKmodel(DDmodel):
         super(DDKmodel, self).__init__()
         self.binary_name = "DDK"
         # Add parameter that specific for DD model, with default value and units
-        if "AstrometryEquatorial" in self.components:
-            self.param_default_value.update(
-                {
-                    "KIN": 0 * u.deg,
-                    "PMRA": 0 * u.mas / u.year,
-                    "PMDEC": 0.5 * u.mas / u.year,
-                    "PX": 0 * u.mas,
-                    "KOM": 0 * u.deg,
-                    "K96": True,
-                }
-            )
-        elif "AstrometryEcliptic" in self.compnents:
-            self.param_default_value.update(
-                {
-                    "KIN": 0 * u.deg,
-                    "PMELONG": 0 * u.mas / u.year,
-                    "PMELAT": 0.5 * u.mas / u.year,
-                    "PX": 0 * u.mas,
-                    "KOM": 0 * u.deg,
-                    "K96": True,
-                }
-            )
+        self.param_default_value.update(
+            {
+                "KIN": 0 * u.deg,
+                "PMLONG_DDK": 0 * u.mas / u.year,
+                "PMLAT_DDK": 0.5 * u.mas / u.year,
+                "PX": 0 * u.mas,
+                "KOM": 0 * u.deg,
+                "K96": True,
+            }
+        )
 
         # If any parameter has aliases, it should be updated
         # self.param_aliases.update({})

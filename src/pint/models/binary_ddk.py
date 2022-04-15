@@ -75,27 +75,27 @@ class BinaryDDK(BinaryDD):
 
     @property
     def PMLONG_DDK(self):
-        if "AstrometryEquatorial" in self.components:
-            return self.PMRA
-        elif "AstrometryEcliptic" in self.components:
-            return self.PMELONG
+        if "AstrometryEquatorial" in self._parent.components:
+            return self._parent.PMRA
+        elif "AstrometryEcliptic" in self._parent.components:
+            return self._parent.PMELONG
 
     @property
     def PMLAT_DDK(self):
-        if "AstrometryEquatorial" in self.components:
-            return self.PMDEC
-        elif "AstrometryEcliptic" in self.components:
-            return self.PMELAT
+        if "AstrometryEquatorial" in self._parent.components:
+            return self._parent.PMDEC
+        elif "AstrometryEcliptic" in self._parent.components:
+            return self._parent.PMELAT
 
     def validate(self):
         """Validate parameters."""
         super().validate()
-        if "AstrometryEquatorial" in self.components:
+        if "AstrometryEquatorial" in self._parent.components:
             if "PMRA" not in self._parent.params or "PMDEC" not in self._parent.params:
                 raise MissingParameter(
                     "DDK", "DDK model needs proper motion parameters."
                 )
-        elif "AstrometryEcliptic" in self.components:
+        elif "AstrometryEcliptic" in self._parent.components:
             if (
                 "PMELONG" not in self._parent.params
                 or "PMELAT" not in self._parent.params
@@ -118,7 +118,7 @@ class BinaryDDK(BinaryDD):
         There are 4 potential local minima for a DDK model where a1dot is the same
         These are given by where Eqn. 8 in Kopeikin (1996) is equal to the best-fit value.
 
-        We first define the symmetry point where a1dot is zero:
+        We first define the symmetry point where a1dot is zero (in equatorial coordinates):
 
         :math:`KOM_0 = \\tan^{-1} (\mu_{\delta} / \mu_{\\alpha})`
 
@@ -143,7 +143,9 @@ class BinaryDDK(BinaryDD):
         y0 = self.KOM.quantity
         solutions = [(x0, y0)]
         # where Eqn. 8 in Kopeikin (1996) that is equal to 0
-        KOM_zero = np.arctan2(self.PMDEC_DDK.quantity, self.PMRA_DDK.quantity).to(u.deg)
+        KOM_zero = np.arctan2(self.PMLAT_DDK.quantity, self.PMLONG_DDK.quantity).to(
+            u.deg
+        )
         # second one in the same banana
         solutions += [(x0, (2 * (KOM_zero) - y0 - 180 * u.deg) % (360 * u.deg))]
         # and the other banana
