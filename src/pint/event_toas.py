@@ -1,14 +1,13 @@
 """Generic function to load TOAs from events files."""
-import logging
 import os
 
 import astropy.io.fits as pyfits
 import numpy as np
+from loguru import logger as log
 
 import pint.toa as toa
 from pint.fits_utils import read_fits_event_mjds_tuples
 
-log = logging.getLogger(__name__)
 
 __all__ = [
     "load_fits_TOAs",

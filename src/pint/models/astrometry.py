@@ -1,6 +1,5 @@
 """Astrometric models for describing pulsar sky positions."""
 import copy
-import logging
 import sys
 
 import astropy.constants as const
@@ -8,6 +7,8 @@ import astropy.coordinates as coords
 import astropy.units as u
 import numpy as np
 from astropy.time import Time
+
+from loguru import logger as log
 
 from pint import ls
 from pint.models.parameter import (
@@ -20,7 +21,6 @@ from pint.models.timing_model import DelayComponent, MissingParameter
 from pint.pulsar_ecliptic import OBL, PulsarEcliptic
 from pint.utils import add_dummy_distance, remove_dummy_distance
 
-log = logging.getLogger(__name__)
 
 astropy_version = sys.modules["astropy"].__version__
 mas_yr = u.mas / u.yr

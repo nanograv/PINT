@@ -10,6 +10,10 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added computation of extra parameters in gridding
 - Added gridding based on tuples of parameters (not just regular mesh)
 - Added passing of extra parameters to gridding fitter
+### Fixed
+### Changed
+- Changed logging to use `loguru`
+
 
 ## [0.8.5] 2022-02-24
 ### Added

@@ -1,16 +1,15 @@
 """Pulsar timing noise models."""
 
 import copy
-import logging
 import warnings
 
 import astropy.units as u
 import numpy as np
 
+from loguru import logger as log
+
 from pint.models.parameter import floatParameter, maskParameter
 from pint.models.timing_model import Component
-
-log = logging.getLogger(__name__)
 
 
 class NoiseComponent(Component):

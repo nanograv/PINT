@@ -1,11 +1,11 @@
 """Routines for reading various formats of clock file."""
 
-import logging
 import os
 import warnings
 
 import astropy.units as u
 import numpy as np
+from loguru import logger as log
 
 try:
     from erfa import ErfaWarning
@@ -13,8 +13,6 @@ except ImportError:
     from astropy._erfa import ErfaWarning
 
 from pint.pulsar_mjd import Time
-
-log = logging.getLogger(__name__)
 
 
 class ClockFileMeta(type):
