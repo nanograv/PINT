@@ -77,7 +77,7 @@ def main(argv=None):
         "--log-level",
         type=str,
         choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
-        default="WARNING",
+        default=pint.logging.script_level,
         help="Logging level",
         dest="loglevel",
     )

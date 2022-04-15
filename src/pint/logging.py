@@ -41,6 +41,8 @@ __all__ = [
 # default for an individual level can be overridden by $LOGURU_DEBUG_COLOR etc
 # or just make a new logger
 level = "INFO"
+# default level for scripts
+script_level = "WARNING"
 # a full format that might be useful as a reference:
 # format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> - <level>{message}</level>"
 format = "<level>{level: <8}</level> ({name: <30}): <level>{message}</level>"
