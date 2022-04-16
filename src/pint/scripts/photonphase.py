@@ -4,7 +4,6 @@ import sys
 import astropy.io.fits as pyfits
 import astropy.units as u
 import numpy as np
-from astropy import log
 
 import pint.logging
 from loguru import logger as log
