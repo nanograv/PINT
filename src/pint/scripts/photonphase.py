@@ -231,8 +231,7 @@ def main(argv=None):
             phases[i] += 1 
         h = float(hm(phases))
         print("Htest : {0:.2f} ({1:.2f} sigma)".format(h, h2sig(h)))
-
-    if args.polycos == False:
+    else: # Normal mode, not polycos
         ts = toa.get_TOAs_list(
             tl,
             ephem=args.ephem,
