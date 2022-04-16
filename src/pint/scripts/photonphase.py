@@ -6,6 +6,17 @@ import astropy.units as u
 import numpy as np
 from astropy import log
 
+import pint.logging
+from loguru import logger as log
+
+log.remove()
+log.add(
+    sys.stderr,
+    level="WARNING",
+    colorize=True,
+    format=pint.logging.format,
+    filter=pint.logging.LogFilter(),
+)
 import pint.models
 import pint.residuals
 import pint.toa as toa
@@ -15,7 +26,7 @@ from pint.fits_utils import read_fits_event_mjds
 from pint.observatory.satellite_obs import get_satellite_observatory
 from pint.plot_utils import phaseogram_binned
 from pint.pulsar_mjd import Time
-import pint.polycos
+import pint.polycos as polycos
 
 __all__ = ["main"]
 
@@ -24,7 +35,8 @@ def main(argv=None):
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Use PINT to compute event phases and make plots of photon event files."
+        description="Use PINT to compute event phases and make plots of photon event files.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
         "eventfile",
@@ -38,9 +50,7 @@ def main(argv=None):
     parser.add_argument(
         "--minMJD", help="Minimum MJD to include in analysis", default=None
     )
-    parser.add_argument(
-        "--plotfile", help="Output figure file name (default=None)", default=None
-    )
+    parser.add_argument("--plotfile", help="Output figure file name", default=None)
     parser.add_argument(
         "--addphase",
         help="Write FITS file with added phase column",
@@ -70,9 +80,7 @@ def main(argv=None):
         help="Output FITS file name (default=same as eventfile)",
         default=None,
     )
-    parser.add_argument(
-        "--ephem", help="Planetary ephemeris to use (default=DE421)", default="DE421"
-    )
+    parser.add_argument("--ephem", help="Planetary ephemeris to use", default="DE421")
     parser.add_argument(
         "--tdbmethod",
         help="Method for computing TT to TDB (default=astropy)",
@@ -93,6 +101,14 @@ def main(argv=None):
         action="store_true",
         help="Use TT(BIPM) instead of TT(TAI)",
     )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
+        default="WARNING",
+        help="Logging level",
+        dest="loglevel",
+    )
     #    parser.add_argument("--fix",help="Apply 1.0 second offset for NICER", action='store_true', default=False)
     parser.add_argument(
         "--polycos",
@@ -101,6 +117,14 @@ def main(argv=None):
         help="Use polycos to calculate phases; use when working with very large event files"
     )
     args = parser.parse_args(argv)
+    log.remove()
+    log.add(
+        sys.stderr,
+        level=args.loglevel,
+        colorize=True,
+        format=pint.logging.format,
+        filter=pint.logging.LogFilter(),
+    )
 
     # If outfile is specified, that implies addphase
     if args.outfile is not None:

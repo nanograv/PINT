@@ -1,19 +1,29 @@
 import argparse
-import logging
 import os
+import sys
+
+import pint.logging
+from loguru import logger as log
+
+log.remove()
+log.add(
+    sys.stderr,
+    level="WARNING",
+    colorize=True,
+    format=pint.logging.format,
+    filter=pint.logging.LogFilter(),
+)
 
 from pint.models import get_model
 from pint.models.parameter import _parfile_formats
-
-logging.basicConfig(level=logging.WARNING)
-log = logging.getLogger(__name__)
 
 __all__ = ["main"]
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="PINT tool for command-line parfile format conversions"
+        description="PINT tool for command-line parfile format conversions",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument("input", help="Input parfile", type=str)
 
@@ -28,14 +38,22 @@ def main(argv=None):
         "-o", "--out", help=("Output filename [default=stdout]"), default=None,
     )
     parser.add_argument(
-        "-v", "--verbosity", default=0, action="count", help="Increase output verbosity"
+        "--log-level",
+        type=str,
+        choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
+        default="WARNING",
+        help="Logging level",
+        dest="loglevel",
     )
-
     args = parser.parse_args(argv)
-    if args.verbosity == 1:
-        log.setLevel("INFO")
-    elif args.verbosity >= 2:
-        log.setLevel("DEBUG")
+    log.remove()
+    log.add(
+        sys.stderr,
+        level=args.loglevel,
+        colorize=True,
+        format=pint.logging.format,
+        filter=pint.logging.LogFilter(),
+    )
 
     if not os.path.exists(args.input):
         log.error(f"Cannot open '{args.input}' for reading")

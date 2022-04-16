@@ -8,18 +8,16 @@ dispersion measures (:class:`pint.residuals.WidebandTOAResiduals`).
 """
 import collections
 import copy
-import logging
 import warnings
 
 import astropy.units as u
 import numpy as np
 from scipy.linalg import LinAlgError
+from loguru import logger as log
 
 from pint.models.dispersion_model import Dispersion
 from pint.phase import Phase
 from pint.utils import weighted_mean, taylor_horner_deriv
-
-log = logging.getLogger(__name__)
 
 __all__ = [
     "Residuals",
@@ -121,7 +119,7 @@ class Residuals:
                 self.track_mode = "nearest"
             elif "pulse_number" in self.toas.table.columns:
                 if np.any(np.isnan(toas.table["pulse_number"])):
-                    log.warn(
+                    log.warning(
                         "Some TOAs are missing pulse numbers, they will not be used."
                     )
                     self.track_mode = "nearest"
@@ -208,7 +206,11 @@ class Residuals:
     @property
     def chi2_reduced(self):
         """Reduced chi-squared."""
-        warnings.warn("Please use reduced_chi2 instead.", DeprecationWarning)
+        warnings.warn(
+            "Do not use 'residuals.chi2_reduced'. Please use 'residuals.reduced_chi2' instead.",
+            DeprecationWarning,
+        )
+
         return self.chi2 / self.dof
 
     def get_data_error(self, scaled=True):
@@ -406,7 +408,7 @@ class Residuals:
         correctly return infinity.
         """
         if self.model.has_correlated_errors:
-            log.debug("Using GLS fitter to compute residual chi2")
+            log.trace("Using GLS fitter to compute residual chi2")
             # Use GLS but don't actually fit
             from pint.fitter import GLSFitter
 

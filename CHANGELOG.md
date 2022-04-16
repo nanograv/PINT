@@ -11,6 +11,9 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added gridding based on tuples of parameters (not just regular mesh)
 - Added passing of extra parameters to gridding fitter
 - Added option to photonphase to compute phases using polycos
+### Fixed
+### Changed
+- Changed logging to use `loguru`
 
 ## [0.8.5] 2022-02-24
 ### Added

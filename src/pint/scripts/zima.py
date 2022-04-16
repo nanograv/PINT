@@ -1,10 +1,22 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore::DeprecationWarning
 """PINT-based tool for making simulated TOAs."""
-import logging
 
 import astropy.units as u
 import numpy as np
 from astropy.time import TimeDelta
+import sys
+
+import pint.logging
+from loguru import logger as log
+
+log.remove()
+log.add(
+    sys.stderr,
+    level="WARNING",
+    colorize=True,
+    format=pint.logging.format,
+    filter=pint.logging.LogFilter(),
+)
 
 import pint.fitter
 import pint.models
@@ -12,17 +24,16 @@ import pint.toa as toa
 import pint.simulation
 import pint.residuals
 
-log = logging.getLogger(__name__)
-
 __all__ = ["main"]
-
-# log.setLevel("INFO")
 
 
 def main(argv=None):
     import argparse
 
-    parser = argparse.ArgumentParser(description="PINT tool for simulating TOAs")
+    parser = argparse.ArgumentParser(
+        description="PINT tool for simulating TOAs",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     parser.add_argument("parfile", help="par file to read model from")
     parser.add_argument("timfile", help="Output TOA file name")
     parser.add_argument(
@@ -32,10 +43,7 @@ def main(argv=None):
         default=None,
     )
     parser.add_argument(
-        "--startMJD",
-        help="MJD of first fake TOA (default=56000.0)",
-        type=float,
-        default=56000.0,
+        "--startMJD", help="MJD of first fake TOA", type=float, default=56000.0,
     )
     parser.add_argument(
         "--ntoa", help="Number of fake TOAs to generate", type=int, default=100
@@ -43,17 +51,17 @@ def main(argv=None):
     parser.add_argument(
         "--duration", help="Span of TOAs to generate (days)", type=float, default=400.0
     )
-    parser.add_argument("--obs", help="Observatory code (default: GBT)", default="GBT")
+    parser.add_argument("--obs", help="Observatory code", default="GBT")
     parser.add_argument(
         "--freq",
-        help="Frequency for TOAs (MHz) (default: 1400)",
+        help="Frequency for TOAs (MHz)",
         nargs="+",
         type=float,
         default=1400.0,
     )
     parser.add_argument(
         "--error",
-        help="Random error to apply to each TOA (us, default=1.0)",
+        help="Random error to apply to each TOA (us)",
         type=float,
         default=1.0,
     )
@@ -65,7 +73,7 @@ def main(argv=None):
     )
     parser.add_argument(
         "--fuzzdays",
-        help="Standard deviation of 'fuzz' distribution (jd) (default: 0.0)",
+        help="Standard deviation of 'fuzz' distribution (jd)",
         type=float,
         default=0.0,
     )
@@ -75,7 +83,23 @@ def main(argv=None):
     parser.add_argument(
         "--format", help="The format of out put .tim file.", default="TEMPO2"
     )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
+        default=pint.logging.script_level,
+        help="Logging level",
+        dest="loglevel",
+    )
     args = parser.parse_args(argv)
+    log.remove()
+    log.add(
+        sys.stderr,
+        level=args.loglevel,
+        colorize=True,
+        format=pint.logging.format,
+        filter=pint.logging.LogFilter(),
+    )
 
     log.info("Reading model from {0}".format(args.parfile))
     m = pint.models.get_model(args.parfile)
