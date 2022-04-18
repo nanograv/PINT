@@ -195,7 +195,6 @@ class PhaseJump(PhaseComponent):
         ind = None  # index of jump
         name = None  # name of jump
         # check if this is first jump added
-        print("JUMPS:", self.jumps)
         if len(self.jumps) == 0 or (
             len(self.jumps) == 1 and getattr(self, "JUMP1").key is None
         ):

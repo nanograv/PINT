@@ -1172,7 +1172,6 @@ class PlkWidget(tk.Frame):
         """checks if jumps will cancel the attempted fit"""
         if "PhaseJump" not in self.psr.prefit_model.components:
             return False
-        print(self.psr.prefit_model)
         fit_jumps = [
             int(param[4:])
             for param in self.psr.prefit_model.params
