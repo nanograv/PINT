@@ -6,7 +6,6 @@ pre/post fit residuals, and other useful information.
 self.selected_toas = selected toas, self.all_toas = all toas in tim file
 """
 import copy
-import logging
 from enum import Enum
 
 import astropy.units as u
@@ -20,7 +19,9 @@ from pint.residuals import Residuals
 from pint.toa import get_TOAs
 from pint.phase import Phase
 
-log = logging.getLogger(__name__)
+import pint.logging
+from loguru import logger as log
+
 
 plot_labels = [
     "pre-fit",
@@ -66,32 +67,36 @@ class Pulsar:
     def __init__(self, parfile=None, timfile=None, ephem=None):
         super(Pulsar, self).__init__()
 
-        log.info("STARTING LOADING OF PULSAR %s" % str(parfile))
+        log.info(f"Loading pulsar parfile: {str(parfile)}")
 
-        if parfile is not None and timfile is not None:
-            self.parfile = parfile
-            self.timfile = timfile
-        else:
-            raise ValueError("No valid pulsar to load")
+        if parfile is None or timfile is None:
+            raise ValueError("No valid pulsar model and/or TOAs to load")
 
+        self.parfile = parfile
+        self.timfile = timfile
         self.prefit_model = pint.models.get_model(self.parfile)
 
         if ephem is not None:
-            # TODO: EPHEM overwrite message?
-            self.all_toas = get_TOAs(self.timfile, ephem=ephem, planets=True)
-            self.prefit_model.EPHEM.value = ephem
-        elif getattr(self.prefit_model, "EPHEM").value is not None:
-            self.all_toas = get_TOAs(
-                self.timfile, ephem=self.prefit_model.EPHEM.value, planets=True
+            log.info(
+                f"Overriding model ephemeris {self.prefit_model.EPHEM.value} with {ephem}"
             )
-        else:
-            self.all_toas = get_TOAs(self.timfile, planets=True)
-
+            self.prefit_model.EPHEM.value = ephem
+        self.all_toas = get_TOAs(
+            self.timfile,
+            model=self.prefit_model,
+            ephem=ephem,
+            planets=True,
+            usepickle=True,
+        )
+        # Make sure that if we used a model, that any phase jumps from
+        # the parfile have their flags updated in the TOA table
+        if "PhaseJump" in self.prefit_model.components:
+            self.prefit_model.jump_params_to_flags(self.all_toas)
         # turns pre-existing jump flags in toas.table['flags'] into parameters in parfile
         self.prefit_model.jump_flags_to_params(self.all_toas)
         # adds flags to toas.table for existing jump parameters from .par file
-        if "PhaseJump" in self.prefit_model.components:
-            self.prefit_model.jump_params_to_flags(self.all_toas)
+        # if "PhaseJump" in self.prefit_model.components:
+        #    self.prefit_model.jump_params_to_flags(self.all_toas)
         self.selected_toas = copy.deepcopy(self.all_toas)
         print("prefit_model.as_parfile():")
         print(self.prefit_model.as_parfile())
@@ -103,8 +108,13 @@ class Pulsar:
             "RMS PINT residuals are %.3f us\n"
             % self.prefit_resids.rms_weighted().to(u.us).value
         )
+        # Set of indices from original list that are deleted
+        # We use indices because of the grouping of TOAs by observatory
+        self.deleted = set([])
+        # TODO: would be good to be able to choose the fitter
         self.fitter = Fitters.WLS
         self.fitted = False
+        self.stashed = None
         self.use_pulse_numbers = False
 
     @property
@@ -138,6 +148,8 @@ class Pulsar:
         else:
             self.all_toas = get_TOAs(self.timfile, planets=True)
         self.selected_toas = copy.deepcopy(self.all_toas)
+        self.deleted = set([])
+        self.stashed = None
         self.update_resids()
 
     def resetAll(self):
@@ -147,6 +159,46 @@ class Pulsar:
         self.fitted = False
         self.use_pulse_numbers = False
         self.reset_TOAs()
+
+    def _delete_TOAs(self, toa_table):
+        toa_table.group_by("index")
+        del_inds = np.zeros(len(toa_table), dtype=bool)
+        # Set the indices of del_inds to true where the TOA indices are
+        for ii in self.deleted:  # There must be a better way
+            di = np.where(toa_table["index"] == ii)[0]
+            if len(di):
+                del_inds[di[0]] |= 1
+        if del_inds.sum() < len(toa_table):
+            return toa_table[~del_inds].group_by("obs")
+        else:
+            return None
+
+    def delete_TOAs(self, indices, selected):
+        # note: indices should be a list or an array
+        self.deleted |= set(indices)  # update the deleted indices
+        if selected is not None:
+            self.selected_toas.table = self._delete_TOAs(self.selected_toas.table)
+        # Now delete from all_toas
+        self.all_toas.table = self._delete_TOAs(self.all_toas.table)
+        if self.selected_toas.table is None:  # all selected were deleted
+            self.selected_toas = copy.deepcopy(self.all_toas)
+            selected = np.zeros(self.selected_toas.ntoas, dtype=bool)
+        else:
+            # Make a new selected list by adding a value if the table
+            # index at that position is not in the new indices to
+            # delete, with a value that is the same as the previous
+            # selected array
+            newselected = [
+                sel
+                for idx, sel in zip(self.all_toas.table["index"], selected)
+                if idx not in indices
+            ]
+            selected = np.asarray(newselected, dtype=bool)
+            self.selected_toas.table = self.all_toas.table[selected]
+        # delete the TOAs from the stashed list also
+        if self.stashed:
+            self.stashed.table = self._delete_TOAs(self.stashed.table)
+        return selected
 
     def update_resids(self):
         # update the pre and post fit residuals using all_toas
@@ -165,7 +217,7 @@ class Pulsar:
         an array of unitless quantities of zeros
         """
         if not self.prefit_model.is_binary:
-            log.warn("This is not a binary pulsar")
+            log.warning("This is not a binary pulsar")
             return u.Quantity(np.zeros(self.selected_toas.ntoas))
 
         toas = self.selected_toas
@@ -239,7 +291,7 @@ class Pulsar:
                         pass
                 print(line)
         else:
-            log.warn("Pulsar has not been fitted yet!")
+            log.warning("Pulsar has not been fitted yet!")
 
     def add_phase_wrap(self, selected, phase):
         """
@@ -248,7 +300,7 @@ class Pulsar:
         Turn on pulse number tracking in the model, if it isn't already
 
         :param selected: boolean array to apply to toas, True = selected toa
-        :param phase: phase diffeence to be added, i.e.  -0.5, +2, etc.
+        :param phase: phase difference to be added, i.e.  -0.5, +2, etc.
         """
         # Check if pulse numbers are in table already, if not, make the column
         if (
@@ -270,17 +322,14 @@ class Pulsar:
                 self.selected_toas.ntoas
             )
 
-        # add phase wrap
+        # add phase wrap and update
         self.all_toas.table["delta_pulse_number"][selected] += phase
-        self.selected_toas.table["delta_pulse_number"] += phase
-
         self.use_pulse_numbers = True
-
         self.update_resids()
 
     def add_jump(self, selected):
         """
-        jump the toas selected or unjump them if already jumped
+        jump the toas selected or un-jump them if already jumped
 
         :param selected: boolean array to apply to toas, True = selected toa
         """
@@ -298,10 +347,10 @@ class Pulsar:
                 self.postfit_model.add_component(a)
             return retval
         # if gets here, has at least one jump param already
-        # if doesnt overlap or cancel, add the param
+        # and iif it doesn't overlap or cancel, add the param
         numjumps = self.prefit_model.components["PhaseJump"].get_number_of_jumps()
         if numjumps == 0:
-            log.warn(
+            log.warning(
                 "There are no jumps (maskParameter objects) in PhaseJump. Please delete the PhaseJump object and try again. "
             )
             return None
@@ -319,7 +368,7 @@ class Pulsar:
                 )
                 if self.fitted:
                     self.postfit_model.delete_jump_and_flags(None, num)
-                log.info("removed param", "JUMP" + str(num))
+                log.info("removed param", f"JUMP{str(num)}")
                 return toas_jumped
         # if here, then doesn't match anything
         # add jump flags to selected TOAs at their perspective indices in the TOA tables
@@ -328,8 +377,8 @@ class Pulsar:
         )
         if (
             self.fitted
-            and not self.prefit_model.components["PhaseJump"]
-            == self.postfit_model.components["PhaseJump"]
+            and self.prefit_model.components["PhaseJump"]
+            != self.postfit_model.components["PhaseJump"]
         ):
             param = self.prefit_model.components[
                 "PhaseJump"
@@ -354,10 +403,13 @@ class Pulsar:
             self.prefit_resids = self.postfit_resids
 
         if self.fitter == Fitters.POWELL:
+            log.info("Using PowelFitter")
             fitter = pint.fitter.PowellFitter(self.selected_toas, self.prefit_model)
         elif self.fitter == Fitters.WLS:
+            log.info("Using WLSFitter")
             fitter = pint.fitter.WLSFitter(self.selected_toas, self.prefit_model)
         elif self.fitter == Fitters.GLS:
+            log.info("Using GLSFitter")
             fitter = pint.fitter.GLSFitter(self.selected_toas, self.prefit_model)
         wrms = self.prefit_resids.rms_weighted()
         print("------------------------------------")
@@ -394,7 +446,7 @@ class Pulsar:
 
         if compute_random:
             f = copy.deepcopy(fitter)
-            no_jumps = [not ("jump" in dict) for dict in f.toas.table["flags"]]
+            no_jumps = ["jump" not in dict for dict in f.toas.table["flags"]]
             f.toas.select(no_jumps)
 
             selectedMJDs = self.selected_toas.get_mjds()
@@ -435,9 +487,7 @@ class Pulsar:
             nowish = (Time.now().mjd - 40) * u.d
             if maxMJD + spanMJDs * redge > nowish:
                 redge = (nowish - maxMJD) / spanMJDs
-                if redge < 0.0:
-                    redge = 0.0
-
+                redge = max(redge, 0.0)
             f_toas = make_fake_toas_uniform(
                 minMJD - spanMJDs * ledge, maxMJD + spanMJDs * redge, npoints, f.model
             )
