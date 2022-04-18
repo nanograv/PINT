@@ -1,6 +1,5 @@
 import os
 import tempfile
-import logging
 
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
@@ -8,7 +7,8 @@ import tkinter.messagebox as tkMessageBox
 
 import pint.models
 
-log = logging.getLogger(__name__)
+import pint.logging
+from loguru import logger as log
 
 
 class ParChoiceWidget(tk.Frame):
