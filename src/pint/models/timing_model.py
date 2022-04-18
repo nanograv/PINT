@@ -3053,7 +3053,11 @@ class AllComponents:
                     )
                     if first_init_par:
                         # Find the first init par move to the next step
-                        pint_par = split_prefixed_name(first_init_par)[0] + str(idx)
+                        # Ensure compatibility with tempo-style "DM001"
+                        if "DM0" in alias:
+                            pint_par = split_prefixed_name(first_init_par)[0] + str(idx)
+                        else:
+                            pint_par = split_prefixed_name(first_init_par)[0] + idx_str
                         break
             except PrefixError:
                 pint_par = None
