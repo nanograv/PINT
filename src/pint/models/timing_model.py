@@ -3044,13 +3044,9 @@ class AllComponents:
                 for start_idx in [0, 1]:
                     # Ensure compatibility with tempo-style "DM001"
                     if "DM0" in alias:
-                        first_init_par_alias = prefix + "{1:0{0}}".format(
-                            fmt - 2, start_idx
-                        )
+                        first_init_par_alias = prefix + f"{start_idx:0{fmt-2}}"
                     else:
-                        first_init_par_alias = prefix + "{1:0{0}}".format(
-                            fmt, start_idx
-                        )
+                        first_init_par_alias = prefix + f"{start_idx:0{fmt}}"
                     first_init_par = self._param_alias_map.get(
                         first_init_par_alias, None
                     )

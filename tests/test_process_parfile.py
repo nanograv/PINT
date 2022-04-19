@@ -95,6 +95,18 @@ def test_parse_parfile_index_param():
     assert pint_dict["DMX_0025"] == ["2 1 3"]
 
 
+def test_parse_dm_derivs():
+    alias_par = base_par + "DM001 0 1 0\nDM002 1 1 0\nDM3 2 1 0"
+    m = ModelBuilder()
+    pint_dict, original_name, unknow = m._pintify_parfile(StringIO(alias_par))
+    assert pint_dict["DM1"] == ["0 1 0"]
+    assert original_name["DM1"] == "DM001"
+    assert pint_dict["DM2"] == ["1 1 0"]
+    assert original_name["DM2"] == "DM002"
+    assert pint_dict["DM3"] == ["2 1 0"]
+    assert original_name["DM3"] == "DM3"
+
+
 def test_pintify_parfile_alises():
     aliases_par = base_par.replace("ELONG", "LAMBDA")
     m = ModelBuilder()
