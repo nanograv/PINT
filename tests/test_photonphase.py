@@ -133,7 +133,10 @@ def test_OrbPhase_column():
 )
 def test_nicer_result_bary_polyco(capsys):
     "Check that barycentered NICER data is processed correctly with --polyco."
-    cmd = "--polycos {0} {1}".format(eventfile_nicer, parfile_nicer)
+    outfile = "polycos-photonphase-test.evt"
+    cmd = "--polycos --outfile {0} {1} {2}".format(
+        outfile, eventfile_nicer, parfile_nicer
+    )
     photonphase.main(cmd.split())
     out, err = capsys.readouterr()
     v = 0.0
@@ -142,6 +145,26 @@ def test_nicer_result_bary_polyco(capsys):
             v = float(l.split()[2])
     # Check that H-test is 216.67
     assert abs(v - 216.67) < 1
+
+    # Check that the phases are the same with and without polycos
+    assert os.path.exists(outfile)
+    hdul = fits.open(outfile)
+    cols = hdul[1].columns.names
+    assert "PULSE_PHASE" in cols
+    data = hdul[1].data
+    phases = data["PULSE_PHASE"]
+
+    outfile2 = "photonphase-test.evt"
+    cmd2 = "--outfile {0} {1} {2}".format(outfile2, eventfile_nicer, parfile_nicer)
+    photonphase.main(cmd2.split())
+    assert os.path.exists(outfile2)
+    hdul2 = fits.open(outfile2)
+    cols2 = hdul2[1].columns.names
+    assert "PULSE_PHASE" in cols2
+    data2 = hdul2[1].data
+    phases2 = data2["PULSE_PHASE"]
+
+    assert (phases - phases2).std() < 0.00001
 
 
 if __name__ == "__main__":
