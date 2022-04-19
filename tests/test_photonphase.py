@@ -127,6 +127,7 @@ def test_OrbPhase_column():
     hdul.close()
     os.remove(outfile)
 
+
 @pytest.mark.skipif(
     "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
 )
@@ -141,6 +142,7 @@ def test_nicer_result_bary_polyco(capsys):
             v = float(l.split()[2])
     # Check that H-test is 216.67
     assert abs(v - 216.67) < 1
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -113,7 +113,7 @@ def main(argv=None):
         "--polycos",
         default=False,
         action="store_true",
-        help="Use polycos to calculate phases; use when working with very large event files"
+        help="Use polycos to calculate phases; use when working with very large event files",
     )
     args = parser.parse_args(argv)
     log.remove()
@@ -159,9 +159,11 @@ def main(argv=None):
                 "Please barycenter the event file using the official mission tools before processing with PINT"
             )
     # Read event file and return list of TOA objects, if not using polycos
-    if args.polycos==False:
+    if args.polycos == False:
         try:
-            tl = load_event_TOAs(args.eventfile, telescope, minmjd=minmjd, maxmjd=maxmjd)
+            tl = load_event_TOAs(
+                args.eventfile, telescope, minmjd=minmjd, maxmjd=maxmjd
+            )
         except KeyError:
             log.error(
                 "Observatory not recognized. This probably means you need to provide an orbit file or barycenter the event file."
@@ -202,7 +204,7 @@ def main(argv=None):
             raise ValueError("Cannot use orbphase with polycos.")
 
         # Polycos parameters
-        segLength = 120 #in minutes
+        segLength = 120  # in minutes
         ncoeff = 10
         obsfreq = 0
 
@@ -214,24 +216,26 @@ def main(argv=None):
         maxmjd = max(mjds)
 
         # Check if event file is barycentered
-        if hdulist[1].header['TIMESYS'] != 'TDB':
-            raise ValueError("The event file has not been barycentered. Polycos can only be used with barycentered data.")
+        if hdulist[1].header["TIMESYS"] != "TDB":
+            raise ValueError(
+                "The event file has not been barycentered. Polycos can only be used with barycentered data."
+            )
 
         # Create polycos table
-        telescope_n = '@'
+        telescope_n = "@"
         p = polycos.Polycos()
         ptable = p.generate_polycos(
-            modelin, minmjd, maxmjd, telescope_n,
-            segLength, ncoeff, obsfreq)
+            modelin, minmjd, maxmjd, telescope_n, segLength, ncoeff, obsfreq
+        )
 
         # Calculate phases
         phases = p.eval_phase(mjds)
         rows = np.where(phases < 0)
         for i in rows:
-            phases[i] += 1 
+            phases[i] += 1
         h = float(hm(phases))
         print("Htest : {0:.2f} ({1:.2f} sigma)".format(h, h2sig(h)))
-    else: # Normal mode, not polycos
+    else:  # Normal mode, not polycos
         ts = toa.get_TOAs_list(
             tl,
             ephem=args.ephem,
@@ -253,7 +257,7 @@ def main(argv=None):
         phases = phss.value % 1
         h = float(hm(phases))
         print("Htest : {0:.2f} ({1:.2f} sigma)".format(h, h2sig(h)))
-    
+
     if args.plot:
         phaseogram_binned(mjds, phases, bins=100, plotfile=args.plotfile)
 
