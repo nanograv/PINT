@@ -93,14 +93,16 @@ class Pulsar:
         # turns pre-existing jump flags in toas.table['flags'] into parameters in parfile
         self.prefit_model.jump_flags_to_params(self.all_toas)
         self.selected_toas = copy.deepcopy(self.all_toas)
-        print("prefit_model.as_parfile():")
+        print("The prefit model as a parfile:")
         print(self.prefit_model.as_parfile())
+        # adds extra prefix params for fitting
+        self.add_model_params()
 
         self.all_toas.print_summary()
 
         self.prefit_resids = Residuals(self.selected_toas, self.prefit_model)
         print(
-            "RMS PINT residuals are %.3f us\n"
+            "RMS pre-fit PINT residuals are %.3f us\n"
             % self.prefit_resids.rms_weighted().to(u.us).value
         )
         # Set of indices from original list that are deleted
@@ -122,9 +124,7 @@ class Pulsar:
         try:
             return getattr(self.prefit_model, key)
         except AttributeError:
-            log.error(
-                "Parameter %s was not found in pulsar model %s" % (key, self.name)
-            )
+            log.error(f"Parameter {key} was not found in pulsar model {self.name}")
             return None
 
     def __contains__(self, key):
@@ -132,6 +132,7 @@ class Pulsar:
 
     def reset_model(self):
         self.prefit_model = pint.models.get_model(self.parfile)
+        self.add_model_params()
         self.postfit_model = None
         self.postfit_resids = None
         self.fitted = False
@@ -139,6 +140,12 @@ class Pulsar:
 
     def reset_TOAs(self):
         self.all_toas = get_TOAs(self.timfile, model=self.prefit_model, usepickle=True)
+        # Make sure that if we used a model, that any phase jumps from
+        # the parfile have their flags updated in the TOA table
+        if "PhaseJump" in self.prefit_model.components:
+            self.prefit_model.jump_params_to_flags(self.all_toas)
+        # turns pre-existing jump flags in toas.table['flags'] into parameters in parfile
+        self.prefit_model.jump_flags_to_params(self.all_toas)
         self.selected_toas = copy.deepcopy(self.all_toas)
         self.deleted = set([])
         self.stashed = None
@@ -233,6 +240,49 @@ class Pulsar:
         """
         t = Time(self.all_toas.get_mjds(), format="mjd")
         return np.asarray(t.decimalyear) << u.year
+
+    def add_model_params(self):
+        """This automatically adds the next available unfit prefix
+        parameters to the model so they show up on the GUI
+        """
+        m = self.prefit_model
+        # Add next spin freq deriv
+        if "Spindown" in m.components:
+            c = m.components["Spindown"]
+            n = len(c.get_prefix_mapping_component("F"))
+            if f"F{n-1}" in m.free_params and not hasattr(m, f"F{n}"):
+                c.add_param(m.F0.new_param(n), setup=True)
+                log.debug(f"Adding F{n} to prefit model")
+                p = getattr(m, f"F{n}")
+                p.quantity = 0.0 * p.units
+                p.frozen = True
+        # Add next orbital freq deriv
+        if "BinaryBT" in m.components:
+            c = m.components["BinaryBT"]
+            n = len(c.get_prefix_mapping_component("FB"))
+            if f"FB{n-1}" in m.free_params and not hasattr(m, f"FB{n}"):
+                c.add_param(m.FB0.new_param(n), setup=True)
+                log.debug(f"Adding FB{n} to prefit model")
+                p = getattr(m, f"FB{n}")
+                p.quantity = 0.0 * p.units
+                p.frozen = True
+        # Add dispersion expansion component
+        if "DispersionDM" in m.components:
+            c = m.components["DispersionDM"]
+            n = len(c.get_prefix_mapping_component("DM")) + 1
+            # DM1 is always added, but might be unset
+            if n == 2 and m.DM1.value is None:
+                p = m.DM1
+                p.quantity = 0.0 * p.units
+                p.frozen = True
+            if f"DM{n-1}" in m.free_params and not hasattr(m, f"DM{n}"):
+                c.add_param(m.DM1.new_param(n), setup=True)
+                log.debug(f"Adding DM{n} to prefit model")
+                p = getattr(m, f"DM{n}")
+                p.quantity = 0.0 * p.units
+                p.frozen = True
+        m.setup()  # Not sure if this is necessary
+        m.validate()
 
     def write_fit_summary(self):
         """
@@ -393,9 +443,10 @@ class Pulsar:
         if self.fitted:
             self.prefit_model = self.postfit_model
             self.prefit_resids = self.postfit_resids
+            self.add_model_params()
 
         if self.fitter == Fitters.POWELL:
-            log.info("Using PowelFitter")
+            log.info("Using PowellFitter")
             fitter = pint.fitter.PowellFitter(self.selected_toas, self.prefit_model)
         elif self.fitter == Fitters.WLS:
             log.info("Using WLSFitter")
@@ -436,6 +487,9 @@ class Pulsar:
                 getattr(pm_no_jumps, param).frozen = True
         self.prefit_resids_no_jumps = Residuals(self.all_toas, pm_no_jumps)
 
+        # adds extra prefix params for fitting
+        self.add_model_params()
+
     def random_models(self, selected):
         """Compute and plot random models
         """
@@ -460,7 +514,14 @@ class Pulsar:
             mjds = self.all_toas.get_mjds().value
             minallMJD, maxallMJD = mjds.min(), mjds.max()
             spanMJD = maxallMJD - minallMJD
-            Ntoas = 600
+            # want roughly 1 per day up to 3 years
+            if spanMJD < 1000:
+                Ntoas = min(400, int(spanMJD))
+            elif spanMJD < 4000:
+                Ntoas = min(750, int(spanMJD) / 2)
+            else:
+                Ntoas = min(1500, int(spanMJD) / 4)
+            log.debug(f"Generating {Ntoas} fake TOAs for the random models")
             # By default we will use TOAs from the TopoCenter.  This gets done only once.
             self.faketoas1 = make_fake_toas_uniform(
                 minallMJD - extra * spanMJD,

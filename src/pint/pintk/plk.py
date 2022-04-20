@@ -815,10 +815,11 @@ class PlkWidget(tk.Frame):
             if x is not None and y is not None:
                 self.xvals = x
                 self.yvals = y
-                if "fit" in self.yid:
+                if "fit" in self.yid and not hasattr(self, "y_unit"):
                     ymin, ymax = self.determine_yaxis_units(miny=y.min(), maxy=y.max())
-                    self.yvals = self.yvals.to(ymin.unit)
-                    self.yerrs = self.yerrs.to(ymin.unit)
+                    self.y_unit = ymin.unit
+                    self.yvals = self.yvals.to(self.y_unit)
+                    self.yerrs = self.yerrs.to(self.y_unit)
                 self.plotResiduals(keepAxes=keepAxes)
             else:
                 raise ValueError("Nothing to plot!")
@@ -844,7 +845,6 @@ class PlkWidget(tk.Frame):
         """
         Update the plot, given all the plotting info
         """
-        y_unit = self.yvals.unit
         if keepAxes:
             xmin, xmax = self.plkAxes.get_xlim()
             ymin, ymax = self.plkAxes.get_ylim()
@@ -863,12 +863,18 @@ class PlkWidget(tk.Frame):
                 ymin = yave - 1.10 * (yave - np.min(self.yvals - self.yerrs))
                 ymax = yave + 1.10 * (np.max(self.yvals + self.yerrs) - yave)
             xmin, xmax = xmin.value, xmax.value
-            # determine if y-axis units need scaling and scale accordingly
-            if "fit" in self.yid:
-                ymin, ymax = self.determine_yaxis_units(miny=ymin, maxy=ymax)
-                y_unit = ymin.unit
-                self.yvals = self.yvals.to(y_unit)
-            ymin, ymax = ymin.value, ymax.value
+
+        # determine if y-axis units need scaling and scale accordingly
+        if "fit" in self.yid:
+            # ymin, ymax = self.determine_yaxis_units(miny=ymin, maxy=ymax)
+            # self.y_unit = ymin.unit
+            if type(self.yvals) == u.quantity.Quantity:
+                self.yvals = self.yvals.to(self.y_unit)
+            if type(ymin) == u.quantity.Quantity:
+                ymin, ymax = ymin.to(self.y_unit).value, ymax.to(self.y_unit).value
+        else:
+            if type(ymin) == u.quantity.Quantity:
+                ymin, ymax = ymin.value, ymax.value
 
         self.plkAxes.clear()
         self.plkAx2x.clear()
@@ -905,16 +911,18 @@ class PlkWidget(tk.Frame):
             self.plkAxes.set_xlabel(plotlabels[self.xid])
 
         if self.yid in ["pre-fit", "post-fit"]:
-            self.plkAxes.set_ylabel(plotlabels[self.yid][0] + " (" + str(y_unit) + ")")
+            self.plkAxes.set_ylabel(
+                plotlabels[self.yid][0] + " (" + str(self.y_unit) + ")"
+            )
             try:
                 r = (
                     self.psr.prefit_resids
                     if self.yid == "pre-fit" or not self.psr.fitted
                     else self.psr.postfit_resids
                 )
-                if y_unit == u.us:
+                if self.y_unit == u.us:
                     f0 = r.get_PSR_freq().to(u.MHz).value
-                elif y_unit == u.ms:
+                elif self.y_unit == u.ms:
                     f0 = r.get_PSR_freq().to(u.kHz).value
                 else:
                     f0 = r.get_PSR_freq().to(u.Hz).value
