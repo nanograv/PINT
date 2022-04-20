@@ -14,9 +14,13 @@ import numpy as np
 import pint.fitter
 import pint.models
 from pint.pulsar_mjd import Time
-from pint.simulation import make_fake_toas_uniform, calculate_random_models
+from pint.simulation import (
+    make_fake_toas_uniform,
+    calculate_random_models,
+    zero_residuals,
+)
 from pint.residuals import Residuals
-from pint.toa import get_TOAs
+from pint.toa import get_TOAs, merge_TOAs
 from pint.phase import Phase
 
 import pint.logging
@@ -81,13 +85,7 @@ class Pulsar:
                 f"Overriding model ephemeris {self.prefit_model.EPHEM.value} with {ephem}"
             )
             self.prefit_model.EPHEM.value = ephem
-        self.all_toas = get_TOAs(
-            self.timfile,
-            model=self.prefit_model,
-            ephem=ephem,
-            planets=True,
-            usepickle=True,
-        )
+        self.all_toas = get_TOAs(self.timfile, model=self.prefit_model, usepickle=True)
         # Make sure that if we used a model, that any phase jumps from
         # the parfile have their flags updated in the TOA table
         if "PhaseJump" in self.prefit_model.components:
@@ -111,7 +109,9 @@ class Pulsar:
         # TODO: would be good to be able to choose the fitter
         self.fitter = Fitters.WLS
         self.fitted = False
-        self.stashed = None
+        self.stashed = None  # for temporarily stashing some TOAs
+        self.faketoas1 = None  # for random models
+        self.faketoas = None  # for random models
         self.use_pulse_numbers = False
 
     @property
@@ -138,12 +138,7 @@ class Pulsar:
         self.update_resids()
 
     def reset_TOAs(self):
-        if getattr(self.prefit_model, "EPHEM").value is not None:
-            self.all_toas = get_TOAs(
-                self.timfile, ephem=self.prefit_model.EPHEM.value, planets=True
-            )
-        else:
-            self.all_toas = get_TOAs(self.timfile, planets=True)
+        self.all_toas = get_TOAs(self.timfile, model=self.prefit_model, usepickle=True)
         self.selected_toas = copy.deepcopy(self.all_toas)
         self.deleted = set([])
         self.stashed = None
@@ -191,7 +186,7 @@ class Pulsar:
                 if idx not in indices
             ]
             selected = np.asarray(newselected, dtype=bool)
-            self.selected_toas.table = self.all_toas.table[selected]
+            self.selected_toas = self.all_toas[selected]
         # delete the TOAs from the stashed list also
         if self.stashed:
             self.stashed.table = self._delete_TOAs(self.stashed.table)
@@ -215,9 +210,9 @@ class Pulsar:
         """
         if not self.prefit_model.is_binary:
             log.warning("This is not a binary pulsar")
-            return u.Quantity(np.zeros(self.selected_toas.ntoas))
+            return u.Quantity(np.zeros(self.all_toas.ntoas))
 
-        toas = self.selected_toas
+        toas = self.all_toas
         if self.fitted:
             phase = self.postfit_model.orbital_phase(toas, anom="mean")
         else:
@@ -228,16 +223,16 @@ class Pulsar:
         """
         Return the day of the year for all the TOAs of this pulsar
         """
-        t = Time(self.selected_toas.get_mjds(), format="mjd")
+        t = Time(self.all_toas.get_mjds(), format="mjd")
         year = Time(np.floor(t.decimalyear), format="decimalyear")
-        return (t.mjd - year.mjd) * u.day
+        return np.asarray(t.mjd - year.mjd) << u.day
 
     def year(self):
         """
         Return the decimal year for all the TOAs of this pulsar
         """
-        t = Time(self.selected_toas.get_mjds(), format="mjd")
-        return (t.decimalyear) * u.year
+        t = Time(self.all_toas.get_mjds(), format="mjd")
+        return np.asarray(t.decimalyear) << u.year
 
     def write_fit_summary(self):
         """
@@ -421,7 +416,7 @@ class Pulsar:
         self.fitted = True
         self.f = fitter
         # Zero out all of the "delta_pulse_numbers" if they are set
-        self.all_toas.table["delta_pulse_numbers"] = np.zeros(self.all_toas.ntoas)
+        self.all_toas.table["delta_pulse_number"] = np.zeros(self.all_toas.ntoas)
         self.selected_toas.table["delta_pulse_number"] = np.zeros(
             self.selected_toas.ntoas
         )
@@ -441,73 +436,74 @@ class Pulsar:
                 getattr(pm_no_jumps, param).frozen = True
         self.prefit_resids_no_jumps = Residuals(self.all_toas, pm_no_jumps)
 
-        if compute_random:
-            f = copy.deepcopy(fitter)
-            no_jumps = ["jump" not in dict for dict in f.toas.table["flags"]]
-            f.toas.select(no_jumps)
-
-            selectedMJDs = self.selected_toas.get_mjds()
-            if all(no_jumps):
-                q = list(self.all_toas.get_mjds())
-                index = q.index(
-                    [i for i in self.all_toas.get_mjds() if i > selectedMJDs.min()][0]
-                )
-                rs_mean = (
-                    Residuals(self.all_toas, f.model)
-                    .phase_resids[index : index + len(selectedMJDs)]
-                    .mean()
-                )
-            else:
-                rs_mean = self.prefit_resids_no_jumps.phase_resids[no_jumps].mean()
-
-            # determines how far on either side fake toas go
-            # TODO: hard limit on how far fake toas can go --> can get clkcorr
-            # errors if go before GBT existed, etc.
-            minMJD, maxMJD = selectedMJDs.min(), selectedMJDs.max()
-            spanMJDs = maxMJD - minMJD
-            if spanMJDs < 30 * u.d:
-                redge = ledge = 4
-                npoints = 400
-            elif spanMJDs < 90 * u.d:
-                redge = ledge = 2
-                npoints = 300
-            elif spanMJDs < 200 * u.d:
-                redge = ledge = 1
-                npoints = 300
-            elif spanMJDs < 400 * u.d:
-                redge = ledge = 0.5
-                npoints = 200
-            else:
-                redge = ledge = 1.0
-                npoints = 250
-            # Check to see if too recent
-            nowish = (Time.now().mjd - 40) * u.d
-            if maxMJD + spanMJDs * redge > nowish:
-                redge = (nowish - maxMJD) / spanMJDs
-                redge = max(redge, 0.0)
-            f_toas = make_fake_toas_uniform(
-                minMJD - spanMJDs * ledge, maxMJD + spanMJDs * redge, npoints, f.model
-            )
-            rs = calculate_random_models(
-                f, f_toas, Nmodels=10, keep_models=False, return_time=True
+    def random_models(self, selected):
+        """Compute and plot random models
+        """
+        log.info("Computing random models based on parameter covariance matrix.")
+        if [p for p in self.postfit_model.free_params if p.startswith("DM")]:
+            log.warning(
+                "Fitting for DM while using random models can cause strange behavior."
             )
 
-            # subtract the mean residual of each random model from the respective residual set
-            # based ONLY on the mean of the random residuals in the real data range
-            start_index = np.where((f_toas.get_mjds() - minMJD) >= 0 * u.d)[0][0]
-            end_index = np.where((f_toas.get_mjds() - maxMJD) >= 0 * u.d)[0][0]
+        # These are the currently selected TOAs in the fit
+        sim_sel = copy.deepcopy(self.selected_toas)
+        # These are single TOAs from each cluster of TOAs
+        inds = np.zeros(sim_sel.ntoas, dtype=bool)
+        inds[np.unique(sim_sel.get_clusters(), return_index=True)[1]] |= True
+        sim_sel = sim_sel[inds]
+        # Get the range of MJDs we are using in the fit
+        mjds = sim_sel.get_mjds().value
+        minselMJD, maxselMJD = mjds.min(), mjds.max()
 
-            for i in range(len(rs)):
-                rs_mean = rs[i][start_index:end_index].mean()
-                rs[i][:] = [resid - rs_mean for resid in rs[i]]
+        extra = 0.1  # Fraction beyond TOAs to plot or calculate random models
+        if self.faketoas1 is None:
+            mjds = self.all_toas.get_mjds().value
+            minallMJD, maxallMJD = mjds.min(), mjds.max()
+            spanMJD = maxallMJD - minallMJD
+            Ntoas = 600
+            # By default we will use TOAs from the TopoCenter.  This gets done only once.
+            self.faketoas1 = make_fake_toas_uniform(
+                minallMJD - extra * spanMJD,
+                maxallMJD + extra * spanMJD,
+                Ntoas,
+                self.postfit_model,
+                obs="coe",
+                freq=1 * u.THz,  # effectively infinite frequency
+                include_bipm=sim_sel.clock_corr_info["include_bipm"],
+                include_gps=sim_sel.clock_corr_info["include_gps"],
+            )
+        self.faketoas1.compute_pulse_numbers(self.postfit_model)
 
-            self.random_resids = rs
-            self.fake_toas = f_toas
+        # Combine our TOAs
+        toas = merge_TOAs([sim_sel, self.faketoas1])
+        zero_residuals(toas, self.postfit_model)
+        toas.table.sort("tdbld")  # for plotting
 
-    def fake_year(self):
-        """
-        Function to support plotting of random models on multiple x-axes.
-        Return the decimal year for all the TOAs of this pulsar
-        """
-        t = Time(self.fake_toas.get_mjds(), format="mjd")
-        return (t.decimalyear) * u.year
+        # Get a selection array to select the non-fake TOAs
+        refs = np.asarray(toas.get_flag_value("name")[0]) != "fake"
+
+        # Compute the new random timing models
+        rs = calculate_random_models(
+            self.f, toas, Nmodels=15, keep_models=False, return_time=True,
+        )
+
+        # Get a selection array for the fake TOAs that covers the fit TOAs (plus extra)
+        mjds = toas.get_mjds().value
+        spanMJD = maxselMJD - minselMJD
+        toplot = np.bitwise_and(
+            mjds > (minselMJD - extra * spanMJD), mjds < (maxselMJD + extra * spanMJD)
+        )
+
+        # This is the mean of the reference resids for the selected TOAs
+        if selected.sum():  # shorthand for having some selected
+            ref_mean = self.postfit_resids.time_resids[selected][inds].mean()
+        else:
+            ref_mean = self.postfit_resids.time_resids[inds].mean()
+        # This is the means of the corresponding resids from the random models
+        ran_mean = rs[:, refs].mean(axis=1)
+        #  Now adjust each set of random resids so that the ran_mean == ref_mean
+        rs -= ran_mean[:, np.newaxis]
+        rs += ref_mean
+        # And store the key things for plotting
+        self.faketoas = toas
+        self.random_resids = rs

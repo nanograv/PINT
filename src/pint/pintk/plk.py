@@ -4,6 +4,7 @@ Interactive emulator of tempo2 plk
 import copy
 import sys
 
+from astropy.time import Time
 import astropy.units as u
 import matplotlib as mpl
 import numpy as np
@@ -697,9 +698,9 @@ class PlkWidget(tk.Frame):
                 self.current_state.psr = copy.deepcopy(self.psr)
                 self.current_state.selected = self.selected
                 self.state_stack.append(copy.deepcopy(self.current_state))
-            self.psr.fit(
-                self.selected, compute_random=self.randomboxWidget.getRandomModel() == 1
-            )
+            self.psr.fit(self.selected)
+            if self.randomboxWidget.getRandomModel():
+                self.psr.random_models(self.selected)
             self.current_state.selected = copy.deepcopy(self.selected)
             self.actionsWidget.setFitButtonText("Re-fit")
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
@@ -720,9 +721,6 @@ class PlkWidget(tk.Frame):
         self.psr.reset_TOAs()
         self.psr.fitted = False
         self.psr = copy.deepcopy(self.base_state.psr)
-        # must specifically copy flags because deepcopy doesn't work with numpy Tables
-        self.psr.all_toas.table["flags"] = copy.deepcopy(self.base_state.ft_flags)
-        self.psr.selected_toas.table["flags"] = copy.deepcopy(self.base_state.t_flags)
         self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
         self.jumped = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
         self.updateAllJumped()
@@ -951,16 +949,16 @@ class PlkWidget(tk.Frame):
 
         # plot random models
         if self.psr.fitted == True and self.randomboxWidget.getRandomModel() == 1:
-            log.info("plotting random models")
-            f_toas = self.psr.fake_toas
-            print("Computing random models based on parameter covariance matrix...")
+            log.info("Plotting random models")
+            f_toas = self.psr.faketoas
             rs = self.psr.random_resids
             # look at axes, allow random models to plot on x-axes other than MJD
             xid, yid = self.xyChoiceWidget.plotIDs()
             if xid == "year":
-                f_toas_plot = self.psr.fake_year()  # uses f_toas inside pulsar.py
+                t = Time(f_toas.get_mjds(), format="mjd")
+                f_toas_plot = np.asarray(t.decimalyear) << u.year
             else:
-                f_toas_plot = f_toas.get_mjds()  # old implementation only used this
+                f_toas_plot = f_toas.get_mjds()
             scale = 1
             if self.yvals.unit == u.us:
                 scale = 10 ** 6
@@ -1264,9 +1262,8 @@ class PlkWidget(tk.Frame):
         if event.inaxes == self.plkAxes:
             ind = self.coordToPoint(event.xdata, event.ydata)
             if ind is not None:
-                # TODO: right click to delete doesn't work, needs to be reinstated
                 if event.button == 3:
-                    # Right click is delete
+                    # Right click deletes closest TOA
                     # if the point is jumped, tell the user to delete the jump first
                     if ind in self.psr.all_toas.table["index"][self.jumped]:
                         log.warning(
@@ -1286,10 +1283,7 @@ class PlkWidget(tk.Frame):
                     # point is unselected but other points remain selected
                     if self.selected[ind] or any(self.selected):
                         # update selected_toas object w/ selected points
-                        self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
-                        self.psr.selected_toas.table = self.psr.all_toas.table[
-                            self.selected
-                        ]
+                        self.psr.selected_toas = self.psr.all_toas[self.selected]
                         self.psr.update_resids()
                         self.call_updates()
 
@@ -1312,8 +1306,7 @@ class PlkWidget(tk.Frame):
             self.updatePlot(keepAxes=True)
             self.plkCanvas._tkcanvas.delete(self.brect)
             if any(self.selected):
-                self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
-                self.psr.selected_toas.select(self.selected)
+                self.psr.selected_toas = self.psr.all_toas[self.selected]
                 self.psr.update_resids()
                 self.call_updates()
         else:
@@ -1409,17 +1402,15 @@ class PlkWidget(tk.Frame):
                     a and b for a, b in zip(group_bool, self.selected)
                 ] or True in [a and b for a, b in zip(group_bool, all_jumped)]:
                     continue
-                self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
-                self.psr.selected_toas.select(group_bool)
+                self.psr.selected_toas = self.psr.all_toas[group_bool]
                 jump_name = self.psr.add_jump(group_bool)
                 self.updateJumped(jump_name)
-            self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
             if (
                 self.selected is not None
                 and self.selected is not []
                 and all(self.selected) is not False
             ):
-                self.psr.selected_toas.table = self.all_toas.table[self.selected]
+                self.psr.selected_toas = self.all_toas[self.selected]
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.randomboxWidget.addRandomCheckbox(self)
             self.colorModeWidget.addColorModeCheckbox(self.color_modes)
