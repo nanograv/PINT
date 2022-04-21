@@ -66,8 +66,6 @@ class TestDDK(unittest.TestCase):
 
     def test_J1713_ECL_binary_delay(self):
         # Calculate delays with PINT
-        # NOTE tempo and PINT has different definition of parameter KOM. So lower the
-        # threshold
         pint_binary_delay = self.ECLmodelJ1713.binarymodel_delay(self.toasJ1713, None)
         assert np.all(np.abs(pint_binary_delay.value + self.ECLltbindelay) < 5e-6), (
             "DDK J1713 ECL BINARY DELAY TEST FAILED: max difference is %e"
@@ -76,8 +74,6 @@ class TestDDK(unittest.TestCase):
 
     def test_J1713_ICRS_binary_delay(self):
         # Calculate delays with PINT
-        # NOTE tempo and PINT has different definition of parameter KOM. So lower the
-        # threshold
         pint_binary_delay = self.ICRSmodelJ1713.binarymodel_delay(self.toasJ1713, None)
         assert np.all(np.abs(pint_binary_delay.value + self.ECLltbindelay) < 6e-6), (
             "DDK J1713 ICRS BINARY DELAY TEST FAILED: max difference is %e"
