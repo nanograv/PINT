@@ -42,73 +42,104 @@ temp_par_str = """
 
 
 class TestDDK(unittest.TestCase):
-    """Compare delays from the dd model with libstempo and PINT"""
+    """Compare delays from the ddk model with libstempo and PINT"""
 
     @classmethod
     def setUpClass(cls):
-        cls.parfileJ1713 = "J1713+0747_NANOGrav_11yv0.gls.par"
+        cls.parfileJ1713 = "J1713+0747_NANOGrav_11yv0_short.gls.par"
+        cls.ICRSparfileJ1713 = "J1713+0747_NANOGrav_11yv0_short.gls.ICRS.par"
         cls.timJ1713 = "J1713+0747_NANOGrav_11yv0_short.tim"
         cls.toasJ1713 = toa.get_TOAs(
             os.path.join(datadir, cls.timJ1713), ephem="DE421", planets=False
         )
         cls.toasJ1713.table.sort("index")
-        cls.modelJ1713 = mb.get_model(os.path.join(datadir, cls.parfileJ1713))
+        cls.ECLmodelJ1713 = mb.get_model(os.path.join(datadir, cls.parfileJ1713))
+        cls.ICRSmodelJ1713 = mb.get_model(os.path.join(datadir, cls.ICRSparfileJ1713))
         # libstempo result
-        cls.ltres, cls.ltbindelay = np.genfromtxt(
-            os.path.join(datadir, cls.parfileJ1713 + ".tempo_test"), unpack=True
+        # calculate using: datafile/make_J1713_libstempo.py
+        cls.ECLltres, cls.ECLltbindelay = np.genfromtxt(
+            os.path.join(datadir, cls.parfileJ1713 + ".libstempo"), unpack=True
+        )
+        cls.ICRSltres, cls.ICRSltbindelay = np.genfromtxt(
+            os.path.join(datadir, cls.ICRSparfileJ1713 + ".libstempo"), unpack=True
         )
 
-    def test_J1713_binary_delay(self):
+    def test_J1713_ECL_binary_delay(self):
         # Calculate delays with PINT
         # NOTE tempo and PINT has different definition of parameter KOM. So lower the
         # threshold
-        pint_binary_delay = self.modelJ1713.binarymodel_delay(self.toasJ1713, None)
-        assert np.all(
-            np.abs(pint_binary_delay.value + self.ltbindelay) < 5e-7
-        ), "DDK J1713 TEST FAILED"
+        pint_binary_delay = self.ECLmodelJ1713.binarymodel_delay(self.toasJ1713, None)
+        assert np.all(np.abs(pint_binary_delay.value + self.ECLltbindelay) < 5e-6), (
+            "DDK J1713 ECL BINARY DELAY TEST FAILED: max difference is %e"
+            % np.abs(pint_binary_delay.value + self.ECLltbindelay).max()
+        )
 
-    def test_J1713(self):
-        log = logging.getLogger("TestJ1713.test_J1713")
+    def test_J1713_ICRS_binary_delay(self):
+        # Calculate delays with PINT
+        # NOTE tempo and PINT has different definition of parameter KOM. So lower the
+        # threshold
+        pint_binary_delay = self.ICRSmodelJ1713.binarymodel_delay(self.toasJ1713, None)
+        assert np.all(np.abs(pint_binary_delay.value + self.ECLltbindelay) < 6e-6), (
+            "DDK J1713 ICRS BINARY DELAY TEST FAILED: max difference is %e"
+            % np.abs(pint_binary_delay.value + self.ICRSltbindelay).max()
+        )
+
+    def test_J1713_ECL(self):
         pint_resids_us = Residuals(
-            self.toasJ1713, self.modelJ1713, use_weighted_mean=False
+            self.toasJ1713, self.ECLmodelJ1713, use_weighted_mean=False
         ).time_resids.to(u.s)
-        diff = pint_resids_us.value - self.ltres
-        log.debug("Max diff %lf" % np.abs(diff - diff.mean()).max())
-        assert np.all(np.abs(diff - diff.mean()) < 5e-7), "DDK J1713 TEST FAILED"
+        diff = pint_resids_us.value - self.ECLltres
+        print("Max diff %e" % np.abs(diff - diff.mean()).max())
+        assert np.all(np.abs(diff - diff.mean()) < 5e-7), (
+            "DDK J1713 ECL RESIDUAL TEST FAILED: max difference is %e"
+            % np.abs(diff - diff.mean()).max()
+        )
+
+    def test_J1713_ICRS(self):
+        pint_resids_us = Residuals(
+            self.toasJ1713, self.ICRSmodelJ1713, use_weighted_mean=False
+        ).time_resids.to(u.s)
+        diff = pint_resids_us.value - self.ICRSltres
+        print("Max diff %e" % np.abs(diff - diff.mean()).max())
+        assert np.all(np.abs(diff - diff.mean()) < 5e-7), (
+            "DDK J1713 ICRS RESIDUAL TEST FAILED: max difference is %e"
+            % np.abs(diff - diff.mean()).max()
+        )
 
     def test_change_px(self):
-        self.modelJ1713.update_binary_object(toas=self.toasJ1713)
-        assert self.modelJ1713.binary_instance.PX.value == self.modelJ1713.PX.value
-        bdelay0 = self.modelJ1713.binary_instance.binary_delay()
-        b_time0 = self.modelJ1713.binary_instance.t
+        self.ECLmodelJ1713.update_binary_object(toas=self.toasJ1713)
+        assert (
+            self.ECLmodelJ1713.binary_instance.PX.value == self.ECLmodelJ1713.PX.value
+        )
+        bdelay0 = self.ECLmodelJ1713.binary_instance.binary_delay()
+        b_time0 = self.ECLmodelJ1713.binary_instance.t
         # Change PX value
-        self.modelJ1713.PX.value = 0.1
-        self.modelJ1713.update_binary_object(None)
-        b_time1 = self.modelJ1713.binary_instance.t
-        assert self.modelJ1713.binary_instance.PX.value == 0.1
+        self.ECLmodelJ1713.PX.value = 0.1
+        self.ECLmodelJ1713.update_binary_object(None)
+        b_time1 = self.ECLmodelJ1713.binary_instance.t
+        assert self.ECLmodelJ1713.binary_instance.PX.value == 0.1
         # The stand alone binary model's input time should not change
         assert np.all(b_time0 == b_time1)
         # Check if the time residual changed
-        bdelay1 = self.modelJ1713.binary_instance.binary_delay()
+        bdelay1 = self.ECLmodelJ1713.binary_instance.binary_delay()
         diff = bdelay0 - bdelay1
         assert np.all(diff != 0)
 
     def test_J1713_deriv(self):
-        log = logging.getLogger("TestJ1713.derivative_test")
-        testp = tdu.get_derivative_params(self.modelJ1713)
-        delay = self.modelJ1713.delay(self.toasJ1713)
+        testp = tdu.get_derivative_params(self.ECLmodelJ1713)
+        delay = self.ECLmodelJ1713.delay(self.toasJ1713)
         for p in testp.keys():
             # Only check the binary parameters
-            if p not in self.modelJ1713.binary_instance.binary_params:
+            if p not in self.ECLmodelJ1713.binary_instance.binary_params:
                 continue
             if p in ["PX", "PMRA", "PMDEC"]:
                 continue
-            par = getattr(self.modelJ1713, p)
+            par = getattr(self.ECLmodelJ1713, p)
             if isinstance(par, boolParameter):
                 continue
-            log.debug("Runing derivative for %s", "d_phase_d_" + p)
-            ndf = self.modelJ1713.d_phase_d_param_num(self.toasJ1713, p, testp[p])
-            adf = self.modelJ1713.d_phase_d_param(self.toasJ1713, delay, p)
+            print("Runing derivative for %s" % ("d_phase_d_" + p))
+            ndf = self.ECLmodelJ1713.d_phase_d_param_num(self.toasJ1713, p, testp[p])
+            adf = self.ECLmodelJ1713.d_phase_d_param(self.toasJ1713, delay, p)
             diff = adf - ndf
             if not np.all(diff.value) == 0.0:
                 mean_der = (adf + ndf) / 2.0
@@ -124,7 +155,7 @@ class TestDDK(unittest.TestCase):
                     tol = 0.04
                 else:
                     tol = 1e-3
-                log.debug(
+                print(
                     "derivative relative diff for %s, %lf"
                     % ("d_phase_d_" + p, np.nanmax(relative_diff).value)
                 )
@@ -133,16 +164,16 @@ class TestDDK(unittest.TestCase):
                 continue
 
     def test_K96(self):
-        modelJ1713 = copy.deepcopy(self.modelJ1713)
+        modelJ1713 = copy.deepcopy(self.ECLmodelJ1713)
         log = logging.getLogger("TestJ1713 Switch of K96")
         modelJ1713.K96.value = False
         res = Residuals(
             self.toasJ1713, modelJ1713, use_weighted_mean=False
         ).time_resids.to(u.s)
-        delay = self.modelJ1713.delay(self.toasJ1713)
+        delay = self.ECLmodelJ1713.delay(self.toasJ1713)
         testp = tdu.get_derivative_params(modelJ1713)
         for p in testp.keys():
-            self.modelJ1713.d_phase_d_param(self.toasJ1713, delay, p)
+            self.ECLmodelJ1713.d_phase_d_param(self.toasJ1713, delay, p)
 
 
 @pytest.mark.xfail(reason="model builder does not reject invalid parameters but should")
