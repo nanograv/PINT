@@ -15,7 +15,7 @@ from loguru import logger as log
 
 try:
     from tqdm import tqdm
-except:
+except ModuleNotFoundError:
     tqdm = np.asarray
 
 import pint.toa as toa
