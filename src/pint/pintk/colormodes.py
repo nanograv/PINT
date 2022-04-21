@@ -1,10 +1,9 @@
 """ Color modes for graphed pintk TOAs. """
-import logging
-
 import numpy as np
 import matplotlib
 
-log = logging.getLogger(__name__)
+import pint.logging
+from loguru import logger as log
 
 
 class ColorMode:

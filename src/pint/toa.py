@@ -258,15 +258,12 @@ def get_TOAs(
         else:
             t = merge_TOAs([TOAs(t) for t in timfile])
 
-        if isinstance(t.filename, str):
-            files = [t.filename]
-        else:
-            files = t.filename
+        files = [t.filename] if isinstance(t.filename, str) else t.filename
         if files is not None:
             t.hashes = {f: _compute_hash(f) for f in files}
         recalc = True
 
-    if not any(["clkcorr" in f for f in t.table["flags"]]):
+    if all("clkcorr" not in f for f in t.table["flags"]):
         if include_gps is None:
             include_gps = True
         if bipm_version is None:
@@ -778,19 +775,19 @@ def read_toa_file(filename, process_includes=True, cdict=None):
                 or (cdict["FMAX"] < newtoa.freq)
             ):
                 continue
-            else:
-                newtoa.error *= cdict["EFAC"]
-                newtoa.error = np.hypot(newtoa.error, cdict["EQUAD"])
-                if cdict["INFO"]:
-                    newtoa.flags["info"] = cdict["INFO"]
-                if cdict["JUMP"][0]:
-                    newtoa.flags["jump"] = str(cdict["JUMP"][1] + 1)
-                if cdict["PHASE"] != 0:
-                    newtoa.flags["phase"] = str(cdict["PHASE"])
-                if cdict["TIME"] != 0.0:
-                    newtoa.flags["to"] = str(cdict["TIME"])
-                toas.append(newtoa)
-                ntoas += 1
+            newtoa.error *= cdict["EFAC"]
+            newtoa.error = np.hypot(newtoa.error, cdict["EQUAD"])
+            if cdict["INFO"]:
+                newtoa.flags["info"] = cdict["INFO"]
+            if cdict["JUMP"][0]:
+                newtoa.flags["jump"] = str(cdict["JUMP"][1] + 1)
+                newtoa.flags["tim_jump"] = str(cdict["JUMP"][1] + 1)
+            if cdict["PHASE"] != 0:
+                newtoa.flags["phase"] = str(cdict["PHASE"])
+            if cdict["TIME"] != 0.0:
+                newtoa.flags["to"] = str(cdict["TIME"])
+            toas.append(newtoa)
+            ntoas += 1
 
     return toas, commands
 

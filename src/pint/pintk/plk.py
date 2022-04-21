@@ -2,8 +2,9 @@
 Interactive emulator of tempo2 plk
 """
 import copy
-import logging
+import sys
 
+from astropy.time import Time
 import astropy.units as u
 import matplotlib as mpl
 import numpy as np
@@ -17,7 +18,8 @@ import tkinter.filedialog as tkFileDialog
 import tkinter.messagebox as tkMessageBox
 from tkinter import ttk
 
-log = logging.getLogger(__name__)
+import pint.logging
+from loguru import logger as log
 
 try:
     from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
@@ -47,31 +49,28 @@ plotlabels = {
     "rounded MJD": r"MJD",
 }
 
-# Note to developers: the 't' key and the 'Shift' key produce the same selection number.
-# Selecting the 'Shift' key will enact any functionality intended for the 't' key.
-# Thus, it may be better to avoid designating the 't' key for any future functionality.
-helpstring = """The following interactions are currently supported by the Plk pane in the PINTkinter GUI:
+helpstring = """The following interactions are currently supported in the plotting pane in `pintk`:
 
-Left click      Select a point (if close enough)
-Right click     Delete a point (if close enough)
+Left click      Select a TOA (if close enough)
+Right click     Delete a TOA (if close enough)
   r             Reset the pane - undo all deletions, selections, etc.
-  z             Toggle from zoom to select mode or back
-  k             (K)orrect the pane - rescale the axes
-  f             Perform a fit on the selected points
-  d             Delete (permanently) the selected points
-  t             Stash (temporarily remove) or unstash the selected points
-  u             Undo the most recent selection
-  j             Jump the selected points, or unjump them if already jumped
+  z             Toggle from zoom mode to select mode or back
+  k             Correct the pane (i.e. rescale the axes and plot)
+  f             Perform a fit on the selected TOAs
+  d             Delete (permanently) the selected TOAs
+  t             Stash (temporarily remove) or un-stash the selected TOAs
+  u             Un-select the current selection
+  j             Jump the selected TOAs, or un-jump them if already jumped
   v             Jump all TOA groups except those selected
   i             Print the prefit model as of this moment
   o             Print the postfit model as of this moment (if it exists)
-  c             Print the postfit parameter correlation matrix
+  c             Print the postfit model parameter correlation matrix
   p             Print info about highlighted points (or all, if none are selected)
   m             Print the range of MJDs with the highest density of TOAs
-  +             Increase pulse number for selected points
-  -             Decrease pulse number for selected points
-  >             Increase pulse number for all points to the right of selection
-  <             Decrease pulse number for all points to the right of selection
+  + (or =)      Increase pulse number for selected TOAs
+  - (or _)      Decrease pulse number for selected TOAs
+  > (or .)      Increase pulse number for TOAs to the right (i.e. later) of selection
+  < (or ,)      Decrease pulse number for TOAs to the right (i.e. later) of selection
   h             Print help
 """
 
@@ -92,7 +91,7 @@ class CreateToolTip(object):
     """
 
     def __init__(self, widget, text="widget info"):
-        self.waittime = 500  # miliseconds
+        self.waittime = 500  # milliseconds
         self.wraplength = 180  # pixels
         self.widget = widget
         self.text = text
@@ -181,11 +180,12 @@ class PlkFitBoxesWidget(tk.Frame):
             showpars = [
                 p
                 for p in model.components[comp].params
-                if not p in pulsar.nofitboxpars
+                if p not in pulsar.nofitboxpars
                 and getattr(model, p).quantity is not None
             ]
+
             # Don't bother showing components without any fittable parameters
-            if len(showpars) == 0:
+            if not showpars:
                 continue
 
             self.compVisible.append(tk.IntVar())
@@ -242,7 +242,7 @@ class PlkFitBoxesWidget(tk.Frame):
     def changedFitCheckBox(self, par):
         if self.boxChecked is not None:
             self.boxChecked(par, bool(self.parVars[par].get()))
-        log.info("%s set to %d" % (par, self.parVars[par].get()))
+        log.info(f'{par} will {"" if self.parVars[par].get() else "not "}be fit')
 
 
 class PlkRandomModelSelect(tk.Frame):
@@ -307,8 +307,15 @@ class PlkLogLevelSelect(tk.Frame):
 
     def changeLogLevel(self, event):
         newLevel = self.logLevelSelect.get()  # get current value
-        log.setLevel(newLevel)
-        log.info("Log level changed to " + str(newLevel))
+        log.remove()
+        log.add(
+            sys.stderr,
+            level=newLevel,
+            colorize=True,
+            format=pint.logging.format,
+            filter=pint.logging.LogFilter(),
+        )
+        log.info(f"Log level changed to {str(newLevel)}")
 
 
 class PlkColorModeBoxes(tk.Frame):
@@ -323,10 +330,8 @@ class PlkColorModeBoxes(tk.Frame):
     def addColorModeCheckbox(self, colorModes):
         self.checkboxes = []
         self.checkboxStatus = tk.StringVar()
-        index = 0
-
         self.label = tk.Label(self, text="Color Modes")
-        for mode in colorModes:
+        for index, mode in enumerate(colorModes):
             self.checkboxes.append(
                 tk.Radiobutton(
                     self,
@@ -340,8 +345,6 @@ class PlkColorModeBoxes(tk.Frame):
             if mode.mode_name == "default":
                 # default mode should be selected at start-up
                 self.checkboxes[index].select()
-
-            index += 1
 
         self.updateLayout()
 
@@ -362,10 +365,8 @@ class PlkColorModeBoxes(tk.Frame):
     def updateLayout(self):
         self.clear_grid()
         self.label.grid(row=0, column=0)
-        rowCount = 1
-        for ii in range(len(self.checkboxes)):
+        for rowCount, ii in enumerate(range(len(self.checkboxes)), start=1):
             self.checkboxes[ii].grid(row=rowCount, column=0, sticky="W")
-            rowCount += 1
 
 
 class PlkXYChoiceWidget(tk.Frame):
@@ -439,7 +440,7 @@ class PlkXYChoiceWidget(tk.Frame):
 class PlkToolbar(NavigationToolbar2Tk):
     """
     A modification of the stock Matplotlib toolbar to perform the
-    necessary selections/unselections on points
+    necessary selections/un-selections on points
     """
 
     toolitems = [
@@ -532,19 +533,14 @@ class PlkActionsWidget(tk.Frame):
 class PlkWidget(tk.Frame):
     def __init__(self, master=None, **kwargs):
         tk.Frame.__init__(self, master)
-
         self.initPlk()
         self.initPlkLayout()
         self.current_state = State()
         self.state_stack = []
-
         self.update_callbacks = None
-
         self.press = False
         self.move = False
-
         self.psr = None
-
         self.color_modes = [
             cm.DefaultMode(self),
             cm.FreqMode(self),
@@ -634,12 +630,7 @@ class PlkWidget(tk.Frame):
         if not hasattr(self, "base_state"):
             self.base_state = State()
             self.base_state.psr = copy.deepcopy(self.psr)
-            self.base_state.ft_flags = copy.deepcopy(self.psr.all_toas.table["flags"])
-            self.base_state.t_flags = copy.deepcopy(
-                self.psr.selected_toas.table["flags"]
-            )
             self.base_state.selected = copy.deepcopy(self.selected)
-            self.base_state.jumped = copy.deepcopy(self.jumped)
             self.state_stack.append(self.base_state)
 
         self.fitboxesWidget.setCallbacks(self.fitboxChecked)
@@ -659,7 +650,7 @@ class PlkWidget(tk.Frame):
         self.plkToolbar.update()
 
     def call_updates(self, psr_update=False):
-        if not self.update_callbacks is None:
+        if self.update_callbacks is not None:
             for ucb in self.update_callbacks:
                 if psr_update:
                     ucb(self.psr)
@@ -698,24 +689,18 @@ class PlkWidget(tk.Frame):
         """
         fit the selected points using the current pre-fit model
         """
-        if not self.psr is None:
+        if self.psr is not None:
             # check jumps wont cancel fit, if so, exit here
-            if self.check_jump_invalid() == True:
+            if self.check_jump_invalid():
                 return None
             if self.psr.fitted:
                 # append the current state to the state stack
                 self.current_state.psr = copy.deepcopy(self.psr)
-                self.current_state.ft_flags = copy.deepcopy(
-                    self.psr.all_toas.table["flags"]
-                )
-                self.current_state.t_flags = copy.deepcopy(
-                    self.psr.selected_toas.table["flags"]
-                )
-                self.current_state.jumped = copy.deepcopy(self.jumped)
+                self.current_state.selected = self.selected
                 self.state_stack.append(copy.deepcopy(self.current_state))
-            self.psr.fit(
-                self.selected, compute_random=self.randomboxWidget.getRandomModel() == 1
-            )
+            self.psr.fit(self.selected)
+            if self.randomboxWidget.getRandomModel():
+                self.psr.random_models(self.selected)
             self.current_state.selected = copy.deepcopy(self.selected)
             self.actionsWidget.setFitButtonText("Re-fit")
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
@@ -736,9 +721,6 @@ class PlkWidget(tk.Frame):
         self.psr.reset_TOAs()
         self.psr.fitted = False
         self.psr = copy.deepcopy(self.base_state.psr)
-        # must specifically copy flags because deepcopy doesn't work with numpy Tables
-        self.psr.all_toas.table["flags"] = copy.deepcopy(self.base_state.ft_flags)
-        self.psr.selected_toas.table["flags"] = copy.deepcopy(self.base_state.t_flags)
         self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
         self.jumped = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
         self.updateAllJumped()
@@ -755,23 +737,22 @@ class PlkWidget(tk.Frame):
 
     def writePar(self):
         """
-        Write the fit parfile to a file
+        Write the fit parfile to ea file
         """
         filename = tkFileDialog.asksaveasfilename(title="Choose output par file")
         try:
-            fout = open(filename, "w")
-            if self.psr.fitted:
-                fout.write(self.psr.postfit_model.as_parfile())
-                log.info("Saved post-fit parfile to %s" % filename)
-            else:
-                fout.write(self.psr.prefit_model.as_parfile())
-                log.warn(
-                    "Pulsar has not been fitted! Saving pre-fit parfile to %s"
-                    % filename
-                )
-            fout.close()
+            with open(filename, "w") as fout:
+                if self.psr.fitted:
+                    fout.write(self.psr.postfit_model.as_parfile())
+                    log.info(f"Saved post-fit parfile to {filename}")
+                else:
+                    fout.write(self.psr.prefit_model.as_parfile())
+                    log.warning(
+                        f"Pulsar has not been fitted! Saving pre-fit parfile to {filename}"
+                    )
+
         except:
-            if filename == () or filename == "":
+            if filename in [(), ""]:
                 print("Write Par cancelled.")
             else:
                 log.error("Could not save parfile to filename:\t%s" % filename)
@@ -786,10 +767,10 @@ class PlkWidget(tk.Frame):
                 del dict["jump"]
         filename = tkFileDialog.asksaveasfilename(title="Choose output tim file")
         try:
-            log.info("Choose output file %s" % filename)
+            log.info(f"Choose output file {filename}")
             self.psr.all_toas.write_TOA_file(filename, format="TEMPO2")
         except:
-            if filename == () or filename == "":
+            if filename in [(), ""]:
                 print("Write Tim cancelled.")
             else:
                 log.error("Could not save file to filename:\t%s" % filename)
@@ -800,11 +781,10 @@ class PlkWidget(tk.Frame):
         """
         if len(self.state_stack) > 0 and self.psr.fitted and self.psr is not None:
             c_state = self.state_stack.pop()
-            self.psr = copy.deepcopy(c_state.psr)
-            self.psr.all_toas.table["flags"] = copy.deepcopy(c_state.ft_flags)
-            self.psr.selected_toas.table["flags"] = copy.deepcopy(c_state.t_flags)
-            self.jumped = copy.deepcopy(c_state.jumped)
-            self.selected = copy.deepcopy(c_state.selected)
+            self.psr = c_state.psr
+            self.selected = c_state.selected
+            self.selected = self.psr.delete_TOAs(self.psr.deleted, self.selected)
+            self.updateAllJumped()
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.randomboxWidget.addRandomCheckbox(self)
             self.colorModeWidget.addColorModeCheckbox(self.color_modes)
@@ -812,9 +792,9 @@ class PlkWidget(tk.Frame):
                 self.state_stack.append(self.base_state)
                 self.actionsWidget.setFitButtonText("Fit")
             self.psr.update_resids()
-            self.updatePlot(keepAxes=True)
+            self.updatePlot(keepAxes=False)
         else:
-            log.warn("No model to revert to")
+            log.warning("No model to revert to")
 
     def updatePlot(self, keepAxes=False):
         """
@@ -835,10 +815,11 @@ class PlkWidget(tk.Frame):
             if x is not None and y is not None:
                 self.xvals = x
                 self.yvals = y
-                if "fit" in self.yid:
+                if "fit" in self.yid and not hasattr(self, "y_unit"):
                     ymin, ymax = self.determine_yaxis_units(miny=y.min(), maxy=y.max())
-                    self.yvals = self.yvals.to(ymin.unit)
-                    self.yerrs = self.yerrs.to(ymin.unit)
+                    self.y_unit = ymin.unit
+                    self.yvals = self.yvals.to(self.y_unit)
+                    self.yerrs = self.yerrs.to(self.y_unit)
                 self.plotResiduals(keepAxes=keepAxes)
             else:
                 raise ValueError("Nothing to plot!")
@@ -864,7 +845,6 @@ class PlkWidget(tk.Frame):
         """
         Update the plot, given all the plotting info
         """
-        y_unit = self.yvals.unit
         if keepAxes:
             xmin, xmax = self.plkAxes.get_xlim()
             ymin, ymax = self.plkAxes.get_ylim()
@@ -883,12 +863,18 @@ class PlkWidget(tk.Frame):
                 ymin = yave - 1.10 * (yave - np.min(self.yvals - self.yerrs))
                 ymax = yave + 1.10 * (np.max(self.yvals + self.yerrs) - yave)
             xmin, xmax = xmin.value, xmax.value
-            # determine if y-axis units need scaling and scale accordingly
-            if "fit" in self.yid:
-                ymin, ymax = self.determine_yaxis_units(miny=ymin, maxy=ymax)
-                y_unit = ymin.unit
-                self.yvals = self.yvals.to(y_unit)
-            ymin, ymax = ymin.value, ymax.value
+
+        # determine if y-axis units need scaling and scale accordingly
+        if "fit" in self.yid:
+            # ymin, ymax = self.determine_yaxis_units(miny=ymin, maxy=ymax)
+            # self.y_unit = ymin.unit
+            if type(self.yvals) == u.quantity.Quantity:
+                self.yvals = self.yvals.to(self.y_unit)
+            if type(ymin) == u.quantity.Quantity:
+                ymin, ymax = ymin.to(self.y_unit).value, ymax.to(self.y_unit).value
+        else:
+            if type(ymin) == u.quantity.Quantity:
+                ymin, ymax = ymin.value, ymax.value
 
         self.plkAxes.clear()
         self.plkAx2x.clear()
@@ -925,16 +911,18 @@ class PlkWidget(tk.Frame):
             self.plkAxes.set_xlabel(plotlabels[self.xid])
 
         if self.yid in ["pre-fit", "post-fit"]:
-            self.plkAxes.set_ylabel(plotlabels[self.yid][0] + " (" + str(y_unit) + ")")
+            self.plkAxes.set_ylabel(
+                plotlabels[self.yid][0] + " (" + str(self.y_unit) + ")"
+            )
             try:
                 r = (
                     self.psr.prefit_resids
                     if self.yid == "pre-fit" or not self.psr.fitted
                     else self.psr.postfit_resids
                 )
-                if y_unit == u.us:
+                if self.y_unit == u.us:
                     f0 = r.get_PSR_freq().to(u.MHz).value
-                elif y_unit == u.ms:
+                elif self.y_unit == u.ms:
                     f0 = r.get_PSR_freq().to(u.kHz).value
                 else:
                     f0 = r.get_PSR_freq().to(u.Hz).value
@@ -969,16 +957,16 @@ class PlkWidget(tk.Frame):
 
         # plot random models
         if self.psr.fitted == True and self.randomboxWidget.getRandomModel() == 1:
-            log.info("plotting random models")
-            f_toas = self.psr.fake_toas
-            print("Computing random models based on parameter covariance matrix...")
+            log.info("Plotting random models")
+            f_toas = self.psr.faketoas
             rs = self.psr.random_resids
             # look at axes, allow random models to plot on x-axes other than MJD
             xid, yid = self.xyChoiceWidget.plotIDs()
             if xid == "year":
-                f_toas_plot = self.psr.fake_year()  # uses f_toas inside pulsar.py
+                t = Time(f_toas.get_mjds(), format="mjd")
+                f_toas_plot = np.asarray(t.decimalyear) << u.year
             else:
-                f_toas_plot = f_toas.get_mjds()  # old implementation only used this
+                f_toas_plot = f_toas.get_mjds()
             scale = 1
             if self.yvals.unit == u.us:
                 scale = 10 ** 6
@@ -1134,7 +1122,7 @@ class PlkWidget(tk.Frame):
             if self.psr.fitted:
                 data = self.psr.postfit_resids.time_resids.to(u.us)
             else:
-                log.warn("Pulsar has not been fitted yet! Giving pre-fit residuals")
+                log.warning("Pulsar has not been fitted yet! Giving pre-fit residuals")
                 data = self.psr.prefit_resids.time_resids.to(u.us)
             error = self.psr.all_toas.get_errors().to(u.us)
         elif label == "mjd":
@@ -1176,33 +1164,26 @@ class PlkWidget(tk.Frame):
             xmin, xmax, ymin, ymax = self.plkAxes.axis()
             dist = ((x - cx) / (xmax - xmin)) ** 2.0 + ((y - cy) / (ymax - ymin)) ** 2.0
             ind = np.argmin(dist)
+            index = self.psr.all_toas.table["index"][ind]
             log.debug(
-                "Closest point is %d:(%s, %s) at d=%f"
-                % (ind, self.xvals[ind], self.yvals[ind], dist[ind])
+                f"Closest: TOA index {index} (plot index {ind}): "
+                f"({self.xvals[ind]:.4f}, {self.yvals[ind]:.3g}) at d={dist[ind]:.3g}"
             )
             if dist[ind] > clickDist:
-                log.warn("Not close enough to a point")
+                log.warning("Not close enough to a point")
                 ind = None
-
-        return ind
+        return index
 
     def check_jump_invalid(self):
         """checks if jumps will cancel the attempted fit"""
         if "PhaseJump" not in self.psr.prefit_model.components:
             return False
-        fit_jumps = []
-        for param in self.psr.prefit_model.params:
-            if getattr(
-                self.psr.prefit_model, param
-            ).frozen == False and param.startswith("JUMP"):
-                fit_jumps.append(int(param[4:]))
-        jumps = [
-            "jump" in dict.keys() and any(np.in1d(dict["jump"], fit_jumps))
-            for dict in self.psr.selected_toas.table["flags"]
-        ]
-        if all(jumps):
-            log.warn(
-                "toas being fit must not all be jumped. Remove or uncheck at least one jump in the selected toas before fitting."
+        self.updateAllJumped()
+        sel = ~self.selected if self.selected.sum() == 0 else self.selected
+        if np.all(self.jumped[sel]):
+            log.warning(
+                "TOAs being fit must not all be jumped."
+                "Remove or uncheck at least one jump in the selected TOAs before fitting."
             )
             return True
 
@@ -1223,15 +1204,16 @@ class PlkWidget(tk.Frame):
             ("jump" in dict and dict["jump"] == num)
             for dict in self.psr.all_toas.table["flags"]
         ]
+        log.info(f"JUMP{num} contains {sum(jump_select)} TOAs for fit.")
         self.jumped[jump_select] = ~self.jumped[jump_select]
 
     def updateAllJumped(self):
-        """update self.jumped for all active JUMPs"""
+        """Update self.jumped for all active JUMPs"""
         self.jumped = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
         for param in self.psr.prefit_model.params:
             if (
                 param.startswith("JUMP")
-                and getattr(self.psr.prefit_model, param).frozen == True
+                and getattr(self.psr.prefit_model, param).frozen == False
             ):
                 self.updateJumped(param)
 
@@ -1280,40 +1262,16 @@ class PlkWidget(tk.Frame):
         if event.inaxes == self.plkAxes:
             ind = self.coordToPoint(event.xdata, event.ydata)
             if ind is not None:
-                # TODO: right click to delete doesn't work, needs to be reinstated
                 if event.button == 3:
-                    # Right click is delete
+                    # Right click deletes closest TOA
                     # if the point is jumped, tell the user to delete the jump first
-                    jumped_copy = copy.deepcopy(self.jumped)
-                    self.updateAllJumped()
-                    all_jumped = copy.deepcopy(self.jumped)
-                    self.jumped = jumped_copy
-                    # check if point to be deleted is jumped
-                    if all_jumped[ind] == True:
-                        log.warn(
-                            "cannot delete jumped toas. Delete interfering jumps before deleting toas."
+                    if ind in self.psr.all_toas.table["index"][self.jumped]:
+                        log.warning(
+                            "Cannot delete jumped TOAs. Delete interfering jumps before deleting TOAs."
                         )
                         return None
-                    # create boolean array to readjust all_toas without point to be deleted
-                    toas_to_delete = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
-                    toas_to_delete[ind] = True
-                    self.psr.all_toas.table = self.psr.all_toas.table[
-                        ~toas_to_delete
-                    ].group_by("obs")
-                    # adjust selected_toas to make sure it excludes toa to be deleted
-                    self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
-                    if hasattr(self.psr.all_toas, "table_selects"):
-                        for i in range(len(self.psr.all_toas.table_selects)):
-                            self.psr.all_toas.table_selects[
-                                i
-                            ] = self.psr.all_toas.table_selects[i][
-                                ~toas_to_delete
-                            ].group_by(
-                                "obs"
-                            )
-                    # update jumps and rest of graph
-                    self.jumped = self.jumped[~toas_to_delete]
-                    self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
+                    self.selected = self.psr.delete_TOAs([ind], self.selected)
+                    self.updateAllJumped()
                     self.psr.update_resids()
                     self.updatePlot(keepAxes=True)
                     self.call_updates()
@@ -1325,8 +1283,7 @@ class PlkWidget(tk.Frame):
                     # point is unselected but other points remain selected
                     if self.selected[ind] or any(self.selected):
                         # update selected_toas object w/ selected points
-                        self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
-                        self.psr.selected_toas.select(self.selected)
+                        self.psr.selected_toas = self.psr.all_toas[self.selected]
                         self.psr.update_resids()
                         self.call_updates()
 
@@ -1349,8 +1306,7 @@ class PlkWidget(tk.Frame):
             self.updatePlot(keepAxes=True)
             self.plkCanvas._tkcanvas.delete(self.brect)
             if any(self.selected):
-                self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
-                self.psr.selected_toas.select(self.selected)
+                self.psr.selected_toas = self.psr.all_toas[self.selected]
                 self.psr.update_resids()
                 self.call_updates()
         else:
@@ -1361,85 +1317,79 @@ class PlkWidget(tk.Frame):
         """
         A key is pressed. Handle all the shortcuts here
         """
-        log.debug("You pressed {}".format(event.key))
-        fkey = event.key
-        xpos, ypos = event.xdata, event.ydata
-        ukey = ord(fkey[-1])
+        log.debug("You pressed '{}'".format(event.key))
 
-        if ukey == ord("r"):
+        if event.key == "r":
             # Reset the pane
             self.reset()
-        elif ukey == ord("k"):
+        elif event.key == "k":
             # Rescale axes
             self.updatePlot(keepAxes=False)
-        elif ukey == ord("f"):
+        elif event.key == "f":
             self.fit()
-        elif ukey == ord("-"):
+        elif event.key == "-" or event.key == "_":
             self.psr.add_phase_wrap(self.selected, -1)
             self.updatePlot(keepAxes=False)
             self.call_updates()
             log.info("Pulse number for selected points decreased.")
-        elif ukey == ord("+"):
+        elif event.key == "+" or event.key == "=":
             self.psr.add_phase_wrap(self.selected, 1)
             self.updatePlot(keepAxes=False)
             self.call_updates()
             log.info("Pulse number for selected points increased.")
-        elif ukey == ord(">"):
+        elif event.key in [">", ".", "<", ","]:
             if np.sum(self.selected) > 0:
-                selected = copy.deepcopy(self.selected)
-                selected = ~selected
-                self.psr.add_phase_wrap(selected, 1)
+                later = (
+                    self.psr.selected_toas.get_mjds().max()
+                    < self.psr.all_toas.get_mjds()
+                )
+                if event.key in [">", "."]:
+                    self.psr.add_phase_wrap(later, 1)
+                    log.info(
+                        "Pulse numbers to the right (i.e. later in time) of selection were increased."
+                    )
+                else:
+                    self.psr.add_phase_wrap(later, -1)
+                    log.info(
+                        "Pulse numbers to the right (i.e. later in time) of selection were decreased."
+                    )
                 self.updatePlot(keepAxes=False)
                 self.call_updates()
-                log.info("Pulse numbers to the right of selection increased.")
-        elif ukey == ord("<"):
-            if np.sum(self.selected) > 0:
-                selected = copy.deepcopy(self.selected)
-                selected = ~selected
-                self.psr.add_phase_wrap(selected, -1)
-                self.updatePlot(keepAxes=False)
-                self.call_updates()
-                log.info("Pulse numbers to the right of selection decreased.")
-        elif ukey == ord("d"):
+        elif event.key == "d":
             # if any of the points are jumped, tell the user to delete the jump(s) first
             jumped_copy = copy.deepcopy(self.jumped)
             self.updateAllJumped()
             all_jumped = copy.deepcopy(self.jumped)
             self.jumped = jumped_copy
             if (self.selected & all_jumped).any():
-                log.warn(
-                    "Cannot delete jumped toas. Delete interfering jumps before deleting toas."
+                log.warning(
+                    "Cannot delete jumped TOAs. Delete interfering jumps before deleting TOAs."
                 )
                 return None
             # Delete the selected points
-            self.psr.all_toas.table = self.psr.all_toas.table[~self.selected].group_by(
-                "obs"
+            self.selected = self.psr.delete_TOAs(
+                self.psr.all_toas.table["index"][self.selected], self.selected
             )
-            self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
-            if hasattr(self.psr.all_toas, "table_selects"):
-                for i in range(len(self.psr.all_toas.table_selects)):
-                    self.psr.all_toas.table_selects[
-                        i
-                    ] = self.psr.all_toas.table_selects[i][~self.selected].group_by(
-                        "obs"
-                    )
-            self.jumped = self.jumped[~self.selected]
-            self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
+            self.updateAllJumped()
             self.psr.update_resids()
             self.updatePlot(keepAxes=True)
             self.call_updates()
-        elif ukey == ord("u"):
+        elif event.key == "u":
             self.unselect()
-        elif ukey == ord("j"):
+        elif event.key == "j":
             # jump the selected points, or unjump if already jumped
             jump_name = self.psr.add_jump(self.selected)
             self.updateJumped(jump_name)
+            print(f"New jump {jump_name} for {self.selected.sum()} toas.")
+            # undo the selection, since that is almost certainly what we want
+            self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
+            self.selected = np.zeros(self.psr.selected_toas.ntoas, dtype=bool)
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.randomboxWidget.addRandomCheckbox(self)
             self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             self.updatePlot(keepAxes=True)
             self.call_updates()
-        elif ukey == ord("v"):
+        elif event.key == "v":
             # jump all groups except the one(s) selected, or jump all groups if none selected
             jumped_copy = copy.deepcopy(self.jumped)
             self.updateAllJumped()
@@ -1455,33 +1405,31 @@ class PlkWidget(tk.Frame):
                     a and b for a, b in zip(group_bool, self.selected)
                 ] or True in [a and b for a, b in zip(group_bool, all_jumped)]:
                     continue
-                self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
-                self.psr.selected_toas.select(group_bool)
+                self.psr.selected_toas = self.psr.all_toas[group_bool]
                 jump_name = self.psr.add_jump(group_bool)
                 self.updateJumped(jump_name)
-            self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
             if (
                 self.selected is not None
                 and self.selected is not []
                 and all(self.selected) is not False
             ):
-                self.psr.selected_toas.select(self.selected)
+                self.psr.selected_toas = self.all_toas[self.selected]
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.randomboxWidget.addRandomCheckbox(self)
             self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             self.updatePlot(keepAxes=True)
             self.call_updates()
-        elif ukey == ord("t"):
+        elif event.key == "t":
             # Stash selected TOAs
-            if not hasattr(self.psr, "stashed") or hasattr(self.psr, "stashed") is None:
+            if self.psr.stashed is None:
                 # if any of the points are jumped, tell the user to delete the jump(s) first
                 jumped_copy = copy.deepcopy(self.jumped)
                 self.updateAllJumped()
                 all_jumped = copy.deepcopy(self.jumped)
                 self.jumped = jumped_copy
                 if (self.selected & all_jumped).any():
-                    log.warn(
-                        "Cannot stash jumped toas. Delete interfering jumps before stashing toas."
+                    log.warning(
+                        "Cannot stash jumped TOAs. Delete interfering jumps before stashing TOAs."
                     )
                     return None
                 # Delete the selected points
@@ -1500,27 +1448,31 @@ class PlkWidget(tk.Frame):
                 keepAxes=False
             )  # We often stash at beginning or end of array
             self.call_updates()
-        elif ukey == ord("c"):
+        elif event.key == "c":
             if self.psr.fitted:
-                print(self.psr.f.parameter_correlation_matrix.prettyprint())
-        elif ukey == ord("i"):
+                print(
+                    self.psr.fitter.get_parameter_correlation_matrix(
+                        pretty_print=True, prec=2
+                    )
+                )
+        elif event.key == "i":
             print("\n" + "-" * 40)
             print("Prefit model:")
             print("-" * 40)
             print(self.psr.prefit_model.as_parfile())
-        elif ukey == ord("o"):
+        elif event.key == "o":
             if self.psr.fitted:
                 print("\n" + "-" * 40)
                 print("Postfit model:")
                 print("-" * 40)
                 print(self.psr.postfit_model.as_parfile())
             else:
-                log.warn("No postfit model to show")
-        elif ukey == ord("p"):
+                log.warning("No postfit model to show")
+        elif event.key == "p":
             self.print_info()
-        elif ukey == ord("h"):
+        elif event.key == "h":
             print(helpstring)
-        elif ukey == ord("m"):
+        elif event.key == "m":
             print(self.psr.all_toas.get_highest_density_range())
-        elif ukey == ord("z"):
+        elif event.key == "z":
             self.plkToolbar.zoom()
