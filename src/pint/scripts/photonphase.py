@@ -222,6 +222,7 @@ def main(argv=None):
             )
 
         # Create polycos table
+        log.debug("Generating polycos")
         telescope_n = "@"
         p = polycos.Polycos()
         ptable = p.generate_polycos(
@@ -229,10 +230,9 @@ def main(argv=None):
         )
 
         # Calculate phases
+        log.debug("Evaluating polycos")
         phases = p.eval_phase(mjds)
-        rows = np.where(phases < 0)
-        for i in rows:
-            phases[i] += 1
+        phases[phases < 0] += 1.0
         h = float(hm(phases))
         print("Htest : {0:.2f} ({1:.2f} sigma)".format(h, h2sig(h)))
     else:  # Normal mode, not polycos
