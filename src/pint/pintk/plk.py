@@ -1455,7 +1455,11 @@ class PlkWidget(tk.Frame):
             self.call_updates()
         elif event.key == "c":
             if self.psr.fitted:
-                print(self.psr.f.parameter_correlation_matrix.prettyprint())
+                print(
+                    self.psr.fitter.get_parameter_correlation_matrix(
+                        pretty_print=True, prec=2
+                    )
+                )
         elif event.key == "i":
             print("\n" + "-" * 40)
             print("Prefit model:")

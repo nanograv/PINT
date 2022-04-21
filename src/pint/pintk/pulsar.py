@@ -22,6 +22,7 @@ from pint.simulation import (
 from pint.residuals import Residuals
 from pint.toa import get_TOAs, merge_TOAs
 from pint.phase import Phase
+from pint.utils import FTest
 
 import pint.logging
 from loguru import logger as log
@@ -56,7 +57,7 @@ nofitboxpars = [
 ]
 
 
-class Fitters(Enum):
+class FitMethods(Enum):
     POWELL = 0
     WLS = 1
     GLS = 2
@@ -109,7 +110,8 @@ class Pulsar:
         # We use indices because of the grouping of TOAs by observatory
         self.deleted = set([])
         # TODO: would be good to be able to choose the fitter
-        self.fitter = Fitters.WLS
+        self.fit_method = FitMethods.WLS
+        self.fitter = None
         self.fitted = False
         self.stashed = None  # for temporarily stashing some TOAs
         self.faketoas1 = None  # for random models
@@ -307,12 +309,7 @@ class Pulsar:
                 )
             )
             print("-" * 132)
-            fitparams = [
-                p
-                for p in self.prefit_model.params
-                if not getattr(self.prefit_model, p).frozen
-            ]
-            for key in fitparams:
+            for key in self.prefit_model.free_params:
                 line = "%8s " % key
                 pre = getattr(self.prefit_model, key)
                 post = getattr(self.postfit_model, key)
@@ -432,7 +429,7 @@ class Pulsar:
             self.postfit_model.components["PhaseJump"].setup()
         return retval
 
-    def fit(self, selected, iters=1, compute_random=False):
+    def fit(self, selected, iters=4, compute_random=False):
         """
         Run a fit using the specified fitter
         """
@@ -445,27 +442,34 @@ class Pulsar:
             self.prefit_resids = self.postfit_resids
             self.add_model_params()
 
-        if self.fitter == Fitters.POWELL:
+        # Have to change the fitter for each fit since TOAs and models change
+        if self.fit_method == FitMethods.POWELL:
             log.info("Using PowellFitter")
-            fitter = pint.fitter.PowellFitter(self.selected_toas, self.prefit_model)
-        elif self.fitter == Fitters.WLS:
-            log.info("Using WLSFitter")
-            fitter = pint.fitter.WLSFitter(self.selected_toas, self.prefit_model)
-        elif self.fitter == Fitters.GLS:
-            log.info("Using GLSFitter")
-            fitter = pint.fitter.GLSFitter(self.selected_toas, self.prefit_model)
+            self.fitter = pint.fitter.PowellFitter(
+                self.selected_toas, self.prefit_model
+            )
+        elif self.fit_method == FitMethods.WLS:
+            log.info("Using DownhillWLSFitter")
+            self.fitter = pint.fitter.DownhillWLSFitter(
+                self.selected_toas, self.prefit_model
+            )
+        elif self.fit_method == FitMethods.GLS:
+            log.info("Using DownhillGLSFitter")
+            self.fitter = pint.fitter.DownhillGLSFitter(
+                self.selected_toas, self.prefit_model
+            )
         wrms = self.prefit_resids.rms_weighted()
-        print("------------------------------------")
+
+        print("\n------------------------------------")
         print(" Pre-Fit Chi2:          %.8g" % self.prefit_resids.chi2)
         print(" Pre-Fit reduced-Chi2:  %.8g" % self.prefit_resids.reduced_chi2)
         print(" Pre-Fit Weighted RMS:  %.8g us" % wrms.to(u.us).value)
         print("------------------------------------")
 
         # Do the actual fit and mark things as being fit
-        fitter.fit_toas(maxiter=1)
-        self.postfit_model = fitter.model
+        self.fitter.fit_toas(maxiter=iters)
+        self.postfit_model = self.fitter.model
         self.fitted = True
-        self.f = fitter
         # Zero out all of the "delta_pulse_numbers" if they are set
         self.all_toas.table["delta_pulse_number"] = np.zeros(self.all_toas.ntoas)
         self.selected_toas.table["delta_pulse_number"] = np.zeros(
@@ -479,6 +483,26 @@ class Pulsar:
         # And print the summary
         self.write_fit_summary()
 
+        # Check to see if we should calculate an F-test
+        if (
+            hasattr(self, "lastfit")
+            and (len(self.postfit_model.free_params) > len(self.lastfit["free_params"]))
+            and (self.lastfit["ntoas"] == self.fitter.toas.ntoas)
+        ):
+            prob = FTest(
+                self.lastfit["chi2"],
+                self.lastfit["dof"],
+                self.postfit_resids.chi2,
+                self.postfit_resids.dof,
+            )
+            new_params = set(self.postfit_model.free_params) - set(
+                self.lastfit["free_params"]
+            )
+            print(
+                f"F-test comparing post- to pre-fit models for addition of {new_params}:\n"
+                f"  P = {prob:.3g} that the improvement is due to noise."
+            )
+
         # plot the prefit without jumps
         pm_no_jumps = copy.deepcopy(self.prefit_model)
         for param in pm_no_jumps.params:
@@ -486,6 +510,14 @@ class Pulsar:
                 getattr(pm_no_jumps, param).value = 0.0
                 getattr(pm_no_jumps, param).frozen = True
         self.prefit_resids_no_jumps = Residuals(self.all_toas, pm_no_jumps)
+
+        # Store some key params for possible F-testing
+        self.lastfit = {
+            "free_params": self.fitter.model.free_params,
+            "dof": self.postfit_resids.dof,
+            "chi2": self.postfit_resids.chi2,
+            "ntoas": self.fitter.toas.ntoas,
+        }
 
         # adds extra prefix params for fitting
         self.add_model_params()
