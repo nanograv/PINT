@@ -691,7 +691,7 @@ class PlkWidget(tk.Frame):
         """
         if self.psr is not None:
             # check jumps wont cancel fit, if so, exit here
-            if self.check_jump_invalid() == True:
+            if self.check_jump_invalid():
                 return None
             if self.psr.fitted:
                 # append the current state to the state stack
@@ -1178,17 +1178,9 @@ class PlkWidget(tk.Frame):
         """checks if jumps will cancel the attempted fit"""
         if "PhaseJump" not in self.psr.prefit_model.components:
             return False
-        fit_jumps = [
-            int(param[4:])
-            for param in self.psr.prefit_model.params
-            if getattr(self.psr.prefit_model, param).frozen == False
-            and param.startswith("JUMP")
-        ]
-        jumps = [
-            "jump" in dict.keys() and any(np.in1d(dict["jump"], fit_jumps))
-            for dict in self.psr.selected_toas.table["flags"]
-        ]
-        if all(jumps):
+        self.updateAllJumped()
+        sel = ~self.selected if self.selected.sum() == 0 else self.selected
+        if np.all(self.jumped[sel]):
             log.warning(
                 "TOAs being fit must not all be jumped."
                 "Remove or uncheck at least one jump in the selected TOAs before fitting."
@@ -1388,7 +1380,10 @@ class PlkWidget(tk.Frame):
             # jump the selected points, or unjump if already jumped
             jump_name = self.psr.add_jump(self.selected)
             self.updateJumped(jump_name)
-            print("New Jump", self.psr.all_toas.table["index"][self.jumped])
+            print(f"New jump {jump_name} for {self.selected.sum()} toas.")
+            # undo the selection, since that is almost certainly what we want
+            self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
+            self.selected = np.zeros(self.psr.selected_toas.ntoas, dtype=bool)
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.randomboxWidget.addRandomCheckbox(self)
             self.colorModeWidget.addColorModeCheckbox(self.color_modes)
