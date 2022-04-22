@@ -16,10 +16,12 @@ from loguru import logger as log
 try:
     from tqdm import tqdm
 except (ModuleNotFoundError, ImportError) as e:
+
     def tqdm(*args, **kwargs):
         if args:
             return args[0]
-        return kwargs.get('iterable', None)
+        return kwargs.get("iterable", None)
+
 
 import pint.toa as toa
 from pint.phase import Phase
