@@ -468,6 +468,7 @@ class Pulsar:
 
         # Do the actual fit and mark things as being fit
         self.fitter.fit_toas(maxiter=iters)
+        self.fitter.update_model()
         self.postfit_model = self.fitter.model
         self.fitted = True
         # Zero out all of the "delta_pulse_numbers" if they are set

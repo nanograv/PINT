@@ -690,7 +690,27 @@ class CovarianceMatrix(PintMatrix):
             raise ValueError("The input labels are not symmetric.")
         super(CovarianceMatrix, self).__init__(matrix, labels)
 
-    def prettyprint(self, prec=3, coordinatefirst=False):
+    def _color_from_value(self, x):
+        """Return color setting/un-setting codes
+
+        Parameters
+        ----------
+        x : float
+            the value of the parameter from the correlation matrix, +/-(0-1)
+        """
+        absx = abs(x)
+        if absx < 0.5:
+            return ("", "")  # white
+        elif absx < 0.9:
+            return ("\33[36m", "\33[0m")  # yellow
+        elif absx < 0.99:
+            return ("\33[93m", "\33[0m")  # orange
+        elif absx < 0.999:
+            return ("\33[91m", "\33[0m")  # red
+        else:
+            return ("\33[101m", "\33[0m")  # inverse-red
+
+    def prettyprint(self, prec=3, coordinatefirst=False, offset=False, usecolor=True):
         """
         Return a version of the array formatted for printing (with labels etc).
 
@@ -700,6 +720,10 @@ class CovarianceMatrix(PintMatrix):
             precision of floating-point output
         coordinatefirst : bool, optional
             whether or not the output should be re-ordered to put the coordinates first (after the Offset, if present)
+        offset : bool, optional
+            whether the absolute phase (i.e. "offset") should be shown
+        usecolor : bool, optional
+            use color for "problem" CorrelationMatrix params
 
         Return
         ------
@@ -711,10 +735,7 @@ class CovarianceMatrix(PintMatrix):
         if coordinatefirst:
             # reorder so that RAJ/DECJ (or other coordinate pairs?) are first in the output
             # but actually include the phase zero-point first if it's there
-            if "Offset" in fps:
-                offsetfirst = True
-            else:
-                offsetfirst = False
+            offsetfirst = "Offset" in fps
             if ("RAJ" in fps) and ("DECJ" in fps):
                 coordinates = ["RAJ", "DECJ"]
             elif ("ELONG" in fps) and ("ELAT" in fps):
@@ -746,7 +767,15 @@ class CovarianceMatrix(PintMatrix):
                 cm = self.matrix
         else:
             cm = self.matrix
-        lens = [max(len(fp) + 2, prec + 8) for fp in fps]
+        if offset == False:
+            nfps = fps.remove("Offset")
+            cm = self.get_label_matrix(fps).matrix
+        if self.matrix_type == "covariance":
+            base = "{0: {width}.{prec}e}"
+            lens = [max(len(fp) + 2, prec + 8) for fp in fps]
+        else:  # "correlation"
+            base = "{0: {width}.{prec}f}"
+            lens = [max(len(fp) + 2, prec + 4) for fp in fps]
         maxlen = max(lens)
         sout = "\nParameter {} matrix:\n".format(self.matrix_type)
         line = "{0:^{width}}".format("", width=maxlen)
@@ -756,7 +785,12 @@ class CovarianceMatrix(PintMatrix):
         for ii, fp1 in enumerate(fps):
             line = "{0:^{width}}".format(fp1, width=maxlen)
             for jj, (fp2, ln) in enumerate(zip(fps[: ii + 1], lens[: ii + 1])):
-                line += "{0: {width}.{prec}e}".format(cm[ii, jj], width=ln, prec=prec)
+                x = cm[ii, jj]
+                if ii == jj:
+                    oncolor = offcolor = ""
+                else:
+                    oncolor, offcolor = self._color_from_value(x)
+                line += oncolor + base.format(x, width=ln, prec=prec) + offcolor
             sout += line + "\n"
         sout += "\n"
         return sout

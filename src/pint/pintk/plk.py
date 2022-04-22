@@ -1450,10 +1450,8 @@ class PlkWidget(tk.Frame):
             self.call_updates()
         elif event.key == "c":
             if self.psr.fitted:
-                print(
-                    self.psr.fitter.get_parameter_correlation_matrix(
-                        pretty_print=True, prec=2
-                    )
+                self.psr.fitter.get_parameter_correlation_matrix(
+                    pretty_print=True, prec=3, usecolor=True
                 )
         elif event.key == "i":
             print("\n" + "-" * 40)
