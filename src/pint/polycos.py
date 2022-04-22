@@ -15,8 +15,11 @@ from loguru import logger as log
 
 try:
     from tqdm import tqdm
-except ModuleNotFoundError:
-    tqdm = np.asarray
+except (ModuleNotFoundError, ImportError) as e:
+    def tqdm(*args, **kwargs):
+        if args:
+            return args[0]
+        return kwargs.get('iterable', None)
 
 import pint.toa as toa
 from pint.phase import Phase
@@ -568,6 +571,7 @@ class Polycos:
         if method == "TEMPO":
             entryList = []
             # Using tempo1 method to create polycos
+            # If you want to disable the progress bar, add disable=True to the tqdm() call.
             for tmid in tqdm(tmids):
                 tStart = tmid - mjdSpan / 2
                 tStop = tmid + mjdSpan / 2
