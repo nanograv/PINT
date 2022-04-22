@@ -555,8 +555,6 @@ class Fitter:
         self.model.FINISH.value = self.toas.last_MJD
         self.model.NTOA.value = len(self.toas)
         self.model.EPHEM.value = self.toas.ephem
-        if chi2:
-            self.model.CHI2.value = self.resids.chi2
         self.model.DMDATA.value = hasattr(self.resids, "dm")
         if not self.toas.clock_corr_info["include_bipm"]:
             self.model.CLOCK.value = "TT(TAI)"
