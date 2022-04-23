@@ -66,7 +66,6 @@ __all__ = [
     "open_or_use",
     "lines_of",
     "interesting_lines",
-    "show_param_cov_matrix",
     "pmtot",
     "dmxparse",
     "dmxstats",
@@ -78,8 +77,21 @@ __all__ = [
     "add_dummy_distance",
     "remove_dummy_distance",
     "info_string",
+    "print_color_examples",
+    "colorize",
 ]
 
+COLOR_NAMES = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
+TEXT_ATTRIBUTES = [
+    "normal",
+    "bold",
+    "subdued",
+    "italic",
+    "underscore",
+    "blink",
+    "reverse",
+    "concealed",
+]
 
 # Actual exported tools
 
@@ -450,77 +462,6 @@ def interesting_lines(lines, comments=None):
         if ln.startswith(cc):
             continue
         yield ln
-
-
-def show_param_cov_matrix(matrix, params, name="Covariance Matrix", switchRD=False):
-    """function to print covariance matrices in a clean and easily readable way
-
-    :param matrix: matrix to be printed, should be square, list of lists
-    :param params: name of the parameters in the matrix, list
-    :param name: title to be printed above, default Covariance Matrix
-    :param switchRD: if True, switch the positions of RA and DEC to match setup of TEMPO cov. matrices
-
-    :return: string to be printed
-
-    Warning
-    -------
-    **DEPRECATED**.  Use :meth:`pint.pint_matrix.CovarianceMatrix.prettyprint` instead of :func:`show_param_cov_matrix`
-    """
-
-    warn(
-        "This method is deprecated. Use `parameter_covariance_matrix.prettyprint()` instead of `show_param_cov_matrix()`",
-        category=DeprecationWarning,
-    )
-
-    output = StringIO()
-    matrix = deepcopy(matrix)
-    try:
-        RAi = params.index("RAJ")
-    except:
-        RAi = None
-        switchRD = False
-    params1 = []
-    for param in params:
-        if len(param) < 3:
-            while len(param) != 3:
-                param = " " + param
-            params1.append(param)
-        elif len(param) > 3:
-            while len(param) != 3:
-                param = param[:-1]
-            params1.append(param)
-        else:
-            params1.append(param)
-    if switchRD:
-        # switch RA and DEC so cov matrix matches TEMPO
-        params1[RAi : RAi + 2] = [params1[RAi + 1], params1[RAi]]
-        i = 0
-        while i < 2:
-            RA = deepcopy(matrix[RAi])
-            matrix[RAi] = matrix[RAi + 1]
-            matrix[RAi + 1] = RA
-            matrix = matrix.T
-            i += 1
-    output.write(name + " switch RD = " + str(switchRD) + "\n")
-    output.write(" ")
-    for param in params1:
-        output.write("         " + param)
-    i = j = 0
-    while i < len(matrix):
-        output.write("\n" + params1[i] + " :: ")
-        while j <= i:
-            num = matrix[i][j]
-            if num < 0.001 and num > -0.001:
-                output.write("{0: 1.2e}".format(num) + "   : ")
-            else:
-                output.write("  " + "{0: 1.2f}".format(num) + "   : ")
-            j += 1
-        i += 1
-        j = 0
-    output.write("\b:\n")
-    contents = output.getvalue()
-    output.close()
-    return contents
 
 
 def pmtot(model):
@@ -1606,3 +1547,50 @@ def list_parameters(class_=None):
                         )
                     results[n]["classes"].append(class_)
         return sorted(results.values(), key=lambda d: d["name"])
+
+
+def colorize(text, fg_color, bg_color=None, attribute=None):
+    """Colorizes a string for printing on the terminal
+
+    Parameters
+    ----------
+    text : string
+        the text to colorize
+    fg_color : _type_
+        foreground color name
+    bg_color : _type_, optional
+        background color name, by default None
+    attribute : _type_, optional
+        text attribute, by default None
+
+    Returns
+    -------
+    string
+        the colorized string using the defined text attribute
+
+    The color names (fg or bg) are one of:
+        'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white'
+    The text attributes are one of:
+        'normal', 'bold', 'subdued', 'italic', 'underscore', 'blink', 'reverse', 'concealed'
+    """
+    COLOR_FORMAT = "\033[%dm\033[%d;%dm%s\033[0m"
+    FOREGROUND = dict(zip(COLOR_NAMES, list(range(30, 38))))
+    BACKGROUND = dict(zip(COLOR_NAMES, list(range(40, 48))))
+    ATTRIBUTE = dict(zip(TEXT_ATTRIBUTES, [0, 1, 2, 3, 4, 5, 7, 8]))
+    fg = FOREGROUND.get(fg_color, 39)
+    bg = BACKGROUND.get(bg_color, 49)
+    att = ATTRIBUTE.get(attribute, 0)
+    return COLOR_FORMAT % (att, bg, fg, text)
+
+
+def print_color_examples():
+    """This prints example terminal colors and attributes for the `colorize()` function
+    """
+    for att in TEXT_ATTRIBUTES:
+        for fg in COLOR_NAMES:
+            for bg in COLOR_NAMES:
+                print(
+                    colorize(f"{fg:>8} {att:<11}", fg, bg_color=bg, attribute=att),
+                    end="",
+                )
+            print("")

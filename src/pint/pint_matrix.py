@@ -8,6 +8,7 @@ from collections import OrderedDict
 from warnings import warn
 import copy
 
+import pint.utils as pu
 
 __all__ = [
     "PintMatrix",
@@ -690,25 +691,27 @@ class CovarianceMatrix(PintMatrix):
             raise ValueError("The input labels are not symmetric.")
         super(CovarianceMatrix, self).__init__(matrix, labels)
 
-    def _color_from_value(self, x):
+    def _colorize_from_value(self, x, base):
         """Return color setting/un-setting codes
 
         Parameters
         ----------
         x : float
             the value of the parameter from the correlation matrix, +/-(0-1)
+        base : string
+            the base text that will be formatted and colorized
         """
         absx = abs(x)
         if absx < 0.5:
-            return ("", "")  # white
+            return base  # default terminal text color
         elif absx < 0.9:
-            return ("\33[36m", "\33[0m")  # yellow
+            return pu.colorize(base, "green")
         elif absx < 0.99:
-            return ("\33[93m", "\33[0m")  # orange
+            return pu.colorize(base, "yellow")
         elif absx < 0.999:
-            return ("\33[91m", "\33[0m")  # red
+            return pu.colorize(base, "red")
         else:
-            return ("\33[101m", "\33[0m")  # inverse-red
+            return pu.colorize(base, "red", attribute="reverse")
 
     def prettyprint(self, prec=3, coordinatefirst=False, offset=False, usecolor=True):
         """
@@ -786,11 +789,12 @@ class CovarianceMatrix(PintMatrix):
             line = "{0:^{width}}".format(fp1, width=maxlen)
             for jj, (fp2, ln) in enumerate(zip(fps[: ii + 1], lens[: ii + 1])):
                 x = cm[ii, jj]
-                if ii == jj:
-                    oncolor = offcolor = ""
-                else:
-                    oncolor, offcolor = self._color_from_value(x)
-                line += oncolor + base.format(x, width=ln, prec=prec) + offcolor
+                text = (
+                    self._colorize_from_value(x, base)
+                    if usecolor and ii != jj
+                    else base
+                )
+                line += text.format(x, width=ln, prec=prec)
             sout += line + "\n"
         sout += "\n"
         return sout
