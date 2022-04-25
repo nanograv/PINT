@@ -2,7 +2,6 @@
 """Tkinter interactive interface for PINT pulsar timing tool"""
 import sys
 import argparse
-import logging
 
 import numpy as np
 
@@ -11,10 +10,22 @@ import tkinter.filedialog as tkFileDialog
 import tkinter.messagebox as tkMessageBox
 from tkinter import ttk
 
+import pint.logging
+from loguru import logger as log
+
+log.add(
+    sys.stderr,
+    level="WARNING",
+    colorize=True,
+    format=pint.logging.format,
+    filter=pint.logging.LogFilter(),
+)
+
 from pint.pintk.paredit import ParWidget
 from pint.pintk.plk import PlkWidget, helpstring
 from pint.pintk.pulsar import Pulsar
 from pint.pintk.timedit import TimWidget
+
 
 __all__ = ["main"]
 
@@ -155,23 +166,27 @@ def main(argv=None):
         action="store_true",
     )
     parser.add_argument(
-        "--debug",
-        help="Start everything with DEBUG level logging.",
-        default=False,
-        action="store_true",
+        "--log-level",
+        type=str,
+        choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
+        default="WARNING",
+        help="Logging level",
+        dest="loglevel",
     )
     args = parser.parse_args(argv)
 
-    # create custom logger
-    logging.basicConfig(
-        stream=sys.stdout,
-        level="DEBUG" if args.debug else None,
-        format="%(levelname)s (%(name)s): %(message)s",
-    )
-    log = logging.getLogger(__name__)
+    if args.loglevel != "WARNING":
+        log.remove()
+        log.add(
+            sys.stderr,
+            level=args.loglevel,
+            colorize=True,
+            format=pint.logging.format,
+            filter=pint.logging.LogFilter(),
+        )
 
     root = tk.Tk()
-    root.minsize(800, 600)
+    root.minsize(1000, 800)
     if not args.test:
         app = PINTk(root, parfile=args.parfile, timfile=args.timfile, ephem=args.ephem)
         root.protocol("WM_DELETE_WINDOW", root.destroy)
