@@ -12,16 +12,19 @@ from .DD_model import DDmodel
 
 class DDKmodel(DDmodel):
     """DDK model, a Kopeikin method corrected DD model.
-    The main difference is that DDK model considers the annual parallax of earth and
-    the proper motion of the pulsar.
-    effects on the pulsar binary parameters.
-    Speical parameters are:
+    The main difference is that DDK model considers the effects on the pulsar binary parametersfrom the  annual parallax of earth and    the proper motion of the pulsar.
+    
+    Special parameters are:
 
         KIN
-            the inclination angle
+            the inclination angle :math:`i`
         KOM
-            the longitude of the ascending node, Kopeikin (1995) Eq 9. OMEGA
+            the longitude of the ascending node, Kopeikin (1995) Eq 9. :math:`\Omega`
 
+    References
+    ----------
+        * `Kopeikin (1995), ApJ, 439, L5 <https://ui.adsabs.harvard.edu/abs/1995ApJ...439L...5K/abstract>`
+        * `Kopeikin (1996), ApJ, 467, L93 <https://ui.adsabs.harvard.edu/abs/1996ApJ...467L..93K/abstract>`
     """
 
     def __init__(self, t=None, input_params=None):
@@ -74,7 +77,7 @@ class DDKmodel(DDmodel):
         long and lat are alpha and delta (if equatorial)
         or elong and elat (if ecliptic)
         described in
-        (Kopeikin 1995 Eq10)
+        (Kopeikin 1995 Eq 10)
         """
         self._psr_pos = val
         # it appears that this is the vector K0
@@ -123,10 +126,11 @@ class DDKmodel(DDmodel):
     # Update binary parameters due to the pulser proper motion
 
     def delta_kin_proper_motion(self):
-        """The time dependent inclination angle.
-        (KOPEIKIN. 1996 Eq 10.)
-        ki = KIN + d_KIN
-        d_KIN = (-PMRA_DDK * sin(KOM) + PMDEC_DDK * cos(KOM)) * (t-T0)
+        """The time dependent inclination angle
+        (Kopeikin 1996 Eq 10):
+        
+        - :math:`ki = KIN + \delta_{KIN}`
+        - :math:`\delta_{KIN} = (-\mu_{long} \sin(KOM) + \mu_{lat} \cos(KOM)) (t-T_0)`
         """
         d_KIN = (
             -self.PMLONG_DDK * self.sin_KOM + self.PMLAT_DDK * self.cos_KOM
@@ -204,10 +208,11 @@ class DDKmodel(DDmodel):
     def delta_a1_proper_motion(self):
         """The correction on a1 (projected semi-major axis)
         due to the pulsar proper motion
-        (KOPEIKIN. 1996 Eq 8.)
-        d_x = a1 * cot(kin) * (-PMLONG_DDK * sin(KOM) + PMDEC_DDK * cos(KOM)) * (t-T0)
-        d_kin = (-PMLONG_DDK * sin(KOM) + PMDEC_DDK * cos(KOM)) * (t-T0)
-        d_x = a1 * d_kin * cot(kin)
+        (KOPEIKIN. 1996 Eq 8):
+        
+        - :math:`\delta_x = a_1 \cot(kin)  (-\mu_{long}\sin(KOM) + \mu_{lat}\cos(KOM)) (t-T_0)`
+        - :math:`\delta_{kin} = (-\mu_{long} \sin(KOM) + \mu_{lat} \cos(KOM)) (t-T_0)`
+        - :math:`\delta_x = a_1 \delta_{kin}  \cot(kin)`
         """
         a1 = self.a1_k(False, False)
         kin = self.kin()
@@ -256,8 +261,9 @@ class DDKmodel(DDmodel):
     def delta_omega_proper_motion(self):
         """The correction on omega (Longitude of periastron)
         due to the pulsar proper motion
-        (KOPEIKIN. 1996 Eq 9.)
-        d_omega = csc(i) * (PMLONG_DDK * cos(KOM) + PMDEC_DDK * sin(KOM)) * (t-T0)
+        (KOPEIKIN. 1996 Eq 9.):
+        
+        - :math:`\delta_{\Omega} = \csc(i) (\mu_{long}\cos(KOM) + \mu_{\lat} \sin(KOM)) (t-T_0)`
         """
         kin = self.kin()
         sin_kin = np.sin(kin)
@@ -315,7 +321,7 @@ class DDKmodel(DDmodel):
 
     def delta_I0(self):
         """
-        Refernce: (Kopeikin 1995 Eq 15)
+        Reference: (Kopeikin 1995 Eq 15)
         """
         return -self.obs_pos[:, 0] * self.sin_long + self.obs_pos[:, 1] * self.cos_long
 
@@ -332,14 +338,14 @@ class DDKmodel(DDmodel):
     def delta_sini_parallax(self):
         """Reference (Kopeikin 1995 Eq 18)
 
-        Computes::
+        Computes:
 
-            x_obs = ap * sini_obs/c
+        - :math:`x_obs = \frac{a_p  \sin(i)_{obs}}{c}`
 
-        Since ap and c will not be changed by parallax::
+        Since :math:`a_p` and :math:`c` will not be changed by parallax:
 
-            x_obs = ap /c *(sini_intrisic + delta_sini)
-            delta_sini = sini_intrisic * coti_intrisic / d * (deltaI0 * sin_kom - deltaJ0 * cos_kom)
+        - :math:`x_{obs} = \frac{a_p}{c}(\sin(i)_{\rm intrisic} + \delta_{\sin(i)})`
+        - :math:`\delta_{\sin(i)} = \sin(i)_{\rm intrisic}  \frac{\cot(i)_{\rm intrisic}}{d} (\delta_{I0} \sin KOM - \delta_{J0}  \cos KOM)`
         """
         PX_kpc = self.PX.to(u.kpc, equivalencies=u.parallax())
         delta_sini = (

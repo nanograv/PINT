@@ -23,8 +23,8 @@ class BinaryDDK(BinaryDD):
     It supports all the parameters defined in :class:`pint.models.pulsar_binary.PulsarBinary`
     and :class:`pint.models.pulsar_binary.BinaryDDK` plus:
 
-        - KIN - inclination angle (deg)
-        - KOM - the longitude of the ascending node, Kopeikin (1995) Eq 9. OMEGA (deg)
+        - KIN - inclination angle :math:`i` (deg)
+        - KOM - the longitude of the ascending node, Kopeikin (1995) Eq 9 :math:`\Omega` (deg)
         - K96 - flag for Kopeikin binary model proper motion correction
 
     It also removes:
@@ -42,7 +42,8 @@ class BinaryDDK(BinaryDD):
 
     References
     ----------
-    KOPEIKIN. 1995, 1996
+        * `Kopeikin (1995), ApJ, 439, L5 <https://ui.adsabs.harvard.edu/abs/1995ApJ...439L...5K/abstract>`
+        * `Kopeikin (1996), ApJ, 467, L93 <https://ui.adsabs.harvard.edu/abs/1996ApJ...467L..93K/abstract>`
     """
 
     register = True
