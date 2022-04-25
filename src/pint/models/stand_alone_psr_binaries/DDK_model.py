@@ -17,14 +17,17 @@ class DDKmodel(DDmodel):
     Special parameters are:
 
         KIN
-            the inclination angle :math:`i`
+            the inclination angle: :math:`i`
         KOM
-            the longitude of the ascending node, Kopeikin (1995) Eq 9. :math:`\Omega`
+            the longitude of the ascending node, Kopeikin (1995) Eq 9: :math:`\Omega`
 
     References
     ----------
-        * `Kopeikin (1995), ApJ, 439, L5 <https://ui.adsabs.harvard.edu/abs/1995ApJ...439L...5K/abstract>`
-        * `Kopeikin (1996), ApJ, 467, L93 <https://ui.adsabs.harvard.edu/abs/1996ApJ...467L..93K/abstract>`
+    - Kopeikin (1995), ApJ, 439, L5 [1]_
+    - Kopeikin (1996), ApJ, 467, L93 [2]_
+    
+    .. [1] https://ui.adsabs.harvard.edu/abs/1995ApJ...439L...5K/abstract
+    .. [2] https://ui.adsabs.harvard.edu/abs/1996ApJ...467L..93K/abstract
     """
 
     def __init__(self, t=None, input_params=None):
@@ -128,9 +131,13 @@ class DDKmodel(DDmodel):
     def delta_kin_proper_motion(self):
         """The time dependent inclination angle
         (Kopeikin 1996 Eq 10):
+
+        .. math::
         
-        - :math:`ki = KIN + \delta_{KIN}`
-        - :math:`\delta_{KIN} = (-\mu_{long} \sin(KOM) + \mu_{lat} \cos(KOM)) (t-T_0)`
+            ki = KIN + \delta_{KIN}
+            
+            \delta_{KIN} = (-\mu_{long} \sin(KOM) + \mu_{lat} \cos(KOM)) (t-T_0)
+            
         """
         d_KIN = (
             -self.PMLONG_DDK * self.sin_KOM + self.PMLAT_DDK * self.cos_KOM
@@ -208,11 +215,16 @@ class DDKmodel(DDmodel):
     def delta_a1_proper_motion(self):
         """The correction on a1 (projected semi-major axis)
         due to the pulsar proper motion
-        (KOPEIKIN. 1996 Eq 8):
+        (Kopeikin 1996 Eq 8):
+
+        .. math::
         
-        - :math:`\delta_x = a_1 \cot(kin)  (-\mu_{long}\sin(KOM) + \mu_{lat}\cos(KOM)) (t-T_0)`
-        - :math:`\delta_{kin} = (-\mu_{long} \sin(KOM) + \mu_{lat} \cos(KOM)) (t-T_0)`
-        - :math:`\delta_x = a_1 \delta_{kin}  \cot(kin)`
+            \delta_x = a_1 \cot(kin)  (-\mu_{long}\sin(KOM) + \mu_{lat}\cos(KOM)) (t-T_0)
+            
+            \delta_{kin} = (-\mu_{long} \sin(KOM) + \mu_{lat} \cos(KOM)) (t-T_0)
+
+            \delta_x = a_1 \delta_{kin}  \cot(kin)
+            
         """
         a1 = self.a1_k(False, False)
         kin = self.kin()
@@ -261,9 +273,12 @@ class DDKmodel(DDmodel):
     def delta_omega_proper_motion(self):
         """The correction on omega (Longitude of periastron)
         due to the pulsar proper motion
-        (KOPEIKIN. 1996 Eq 9.):
+        (Kopeikin 1996 Eq 9):
         
-        - :math:`\delta_{\Omega} = \csc(i) (\mu_{long}\cos(KOM) + \mu_{\lat} \sin(KOM)) (t-T_0)`
+        .. math::
+        
+            \delta_{\Omega} = \csc(i) (\mu_{long}\cos(KOM) + \mu_{lat} \sin(KOM)) (t-T_0)
+            
         """
         kin = self.kin()
         sin_kin = np.sin(kin)
@@ -321,12 +336,16 @@ class DDKmodel(DDmodel):
 
     def delta_I0(self):
         """
+        :math:`\Delta_{I0}`
+        
         Reference: (Kopeikin 1995 Eq 15)
         """
         return -self.obs_pos[:, 0] * self.sin_long + self.obs_pos[:, 1] * self.cos_long
 
     def delta_J0(self):
         """
+        :math:`\Delta_{J0}`
+
         Reference: (Kopeikin 1995 Eq 16)
         """
         return (
@@ -336,16 +355,20 @@ class DDKmodel(DDmodel):
         )
 
     def delta_sini_parallax(self):
-        """Reference (Kopeikin 1995 Eq 18)
+        """Reference (Kopeikin 1995 Eq 18).  Computes:
 
-        Computes:
-
-        - :math:`x_obs = \frac{a_p  \sin(i)_{obs}}{c}`
+        .. math::
+        
+            x_{obs} = \\frac{a_p  \sin(i)_{obs}}{c}
 
         Since :math:`a_p` and :math:`c` will not be changed by parallax:
 
-        - :math:`x_{obs} = \frac{a_p}{c}(\sin(i)_{\rm intrisic} + \delta_{\sin(i)})`
-        - :math:`\delta_{\sin(i)} = \sin(i)_{\rm intrisic}  \frac{\cot(i)_{\rm intrisic}}{d} (\delta_{I0} \sin KOM - \delta_{J0}  \cos KOM)`
+        .. math::
+        
+            x_{obs} = \\frac{a_p}{c}(\sin(i)_{\\rm intrisic} + \delta_{\sin(i)})
+            
+            \delta_{\sin(i)} = \sin(i)_{\\rm intrisic}  \\frac{\cot(i)_{\\rm intrisic}}{d} (\Delta_{I0} \sin KOM - \Delta_{J0}  \cos KOM)
+            
         """
         PX_kpc = self.PX.to(u.kpc, equivalencies=u.parallax())
         delta_sini = (
@@ -497,7 +520,7 @@ class DDKmodel(DDmodel):
         )
 
     def a1_k(self, proper_motion=True, parallax=True):
-        """A function to compute Kopeikin corrected projected semi-major axis.
+        """Compute Kopeikin corrected projected semi-major axis.
 
         Parameters
         ----------

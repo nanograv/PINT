@@ -42,8 +42,12 @@ class BinaryDDK(BinaryDD):
 
     References
     ----------
-        * `Kopeikin (1995), ApJ, 439, L5 <https://ui.adsabs.harvard.edu/abs/1995ApJ...439L...5K/abstract>`
-        * `Kopeikin (1996), ApJ, 467, L93 <https://ui.adsabs.harvard.edu/abs/1996ApJ...467L..93K/abstract>`
+    - Kopeikin (1995), ApJ, 439, L5 [1]_
+    - Kopeikin (1996), ApJ, 467, L93 [2]_
+    
+    .. [1] https://ui.adsabs.harvard.edu/abs/1995ApJ...439L...5K/abstract
+    .. [2] https://ui.adsabs.harvard.edu/abs/1996ApJ...467L..93K/abstract
+ 
     """
 
     register = True
