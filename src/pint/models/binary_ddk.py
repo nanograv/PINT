@@ -81,6 +81,10 @@ class BinaryDDK(BinaryDD):
             return self._parent.PMRA
         elif "AstrometryEcliptic" in self._parent.components:
             return self._parent.PMELONG
+        else:
+            raise TimingModelError(
+                "No valid AstrometryEcliptic or AstrometryEquatorial component found"
+            )
 
     @property
     def PMLAT_DDK(self):
@@ -88,6 +92,10 @@ class BinaryDDK(BinaryDD):
             return self._parent.PMDEC
         elif "AstrometryEcliptic" in self._parent.components:
             return self._parent.PMELAT
+        else:
+            raise TimingModelError(
+                "No valid AstrometryEcliptic or AstrometryEquatorial component found"
+            )
 
     def validate(self):
         """Validate parameters."""
@@ -107,6 +115,10 @@ class BinaryDDK(BinaryDD):
                 raise MissingParameter(
                     "DDK", "DDK model needs proper motion parameters."
                 )
+        else:
+            raise TimingModelError(
+                "No valid AstrometryEcliptic or AstrometryEquatorial component found"
+            )
 
         if hasattr(self._parent, "PX"):
             if self._parent.PX.value <= 0.0 or self._parent.PX.value is None:
