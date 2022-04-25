@@ -16,10 +16,17 @@ class DDKmodel(DDmodel):
     
     Special parameters are:
 
-        KIN
+       KIN
             the inclination angle: :math:`i`
-        KOM
+       KOM
             the longitude of the ascending node, Kopeikin (1995) Eq 9: :math:`\Omega`
+       K96
+            flag for Kopeikin binary model proper motion correction
+
+    It also removes:
+
+       SINI
+            use ``KIN`` instead
 
     References
     ----------

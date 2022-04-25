@@ -21,15 +21,19 @@ class BinaryDDK(BinaryDD):
     :class:`pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel`.
 
     It supports all the parameters defined in :class:`pint.models.pulsar_binary.PulsarBinary`
-    and :class:`pint.models.pulsar_binary.BinaryDDK` plus:
+    and :class:`pint.models.binary_dd.BinaryDD` plus:
 
-        - KIN - inclination angle :math:`i` (deg)
-        - KOM - the longitude of the ascending node, Kopeikin (1995) Eq 9 :math:`\Omega` (deg)
-        - K96 - flag for Kopeikin binary model proper motion correction
+       KIN
+            the inclination angle: :math:`i`
+       KOM
+            the longitude of the ascending node, Kopeikin (1995) Eq 9: :math:`\Omega`
+       K96
+            flag for Kopeikin binary model proper motion correction
 
     It also removes:
 
-        - SINI - use KIN instead
+       SINI
+            use ``KIN`` instead
 
     Note
     ----
@@ -82,6 +86,8 @@ class BinaryDDK(BinaryDD):
 
     @property
     def PMLONG_DDK(self):
+        """Proper motion in longitude (RA or ecliptic longitude)
+        """
         if "AstrometryEquatorial" in self._parent.components:
             return self._parent.PMRA
         elif "AstrometryEcliptic" in self._parent.components:
@@ -93,6 +99,8 @@ class BinaryDDK(BinaryDD):
 
     @property
     def PMLAT_DDK(self):
+        """Proper motion in latitude (Dec or ecliptic latitude)
+        """
         if "AstrometryEquatorial" in self._parent.components:
             return self._parent.PMDEC
         elif "AstrometryEcliptic" in self._parent.components:
