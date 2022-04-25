@@ -1550,28 +1550,30 @@ def list_parameters(class_=None):
 
 
 def colorize(text, fg_color, bg_color=None, attribute=None):
-    """Colorizes a string for printing on the terminal
+    """Colorizes a string (including unicode strings) for printing on the terminal
+
+    For an example of usage, as well as a demonstration as to what the
+    attributes and colors look like, check out :func:`~pint.utils.print_color_examples`
 
     Parameters
     ----------
     text : string
-        the text to colorize
+        The text to colorize. Can include unicode.
     fg_color : _type_
-        foreground color name
+        Foreground color name. The color names (fg or bg) are one of:
+        'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan',
+        or 'white'.
     bg_color : _type_, optional
-        background color name, by default None
+        Background color name, by default None. Same choices as for `fg_color`.
     attribute : _type_, optional
-        text attribute, by default None
+        Text attribute, by default None. The text attributes are one of:
+        'normal', 'bold', 'subdued', 'italic', 'underscore', 'blink',
+        'reverse', or 'concealed'.
 
     Returns
     -------
     string
-        the colorized string using the defined text attribute
-
-    The color names (fg or bg) are one of:
-        'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white'
-    The text attributes are one of:
-        'normal', 'bold', 'subdued', 'italic', 'underscore', 'blink', 'reverse', 'concealed'
+        The colorized string using the defined text attribute.
     """
     COLOR_FORMAT = "\033[%dm\033[%d;%dm%s\033[0m"
     FOREGROUND = dict(zip(COLOR_NAMES, list(range(30, 38))))
@@ -1584,7 +1586,7 @@ def colorize(text, fg_color, bg_color=None, attribute=None):
 
 
 def print_color_examples():
-    """This prints example terminal colors and attributes for the `colorize()` function
+    """Print example terminal colors and attributes for/using :func:`~pint.utils.colorize`
     """
     for att in TEXT_ATTRIBUTES:
         for fg in COLOR_NAMES:
