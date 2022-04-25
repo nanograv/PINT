@@ -13,6 +13,7 @@ import test_derivative_utils as tdu
 from astropy.time import Time
 from pinttestdata import datadir
 from utils import verify_stand_alone_binary_parameter_updates
+from loguru import logger as log
 
 import pint.models.model_builder as mb
 import pint.toa as toa
@@ -174,6 +175,22 @@ def test_remove_PX():
     m.remove_param("PX")
     with pytest.raises(MissingParameter):
         m.validate()
+
+
+def test_A1dot_warning():
+    log.remove()
+    outlog = StringIO()
+    log.add(outlog)
+    m = mb.get_model(StringIO(temp_par_str))
+    logcontents = outlog.getvalue()
+    assert "Using A1DOT" not in logcontents
+    outlog.close()
+    log.remove()
+    outlog = StringIO()
+    log.add(outlog)
+    m = mb.get_model(StringIO(temp_par_str + "\nA1DOT 2\n"))
+    logcontents = outlog.getvalue()
+    assert "Using A1DOT" in logcontents
 
 
 if __name__ == "__main__":

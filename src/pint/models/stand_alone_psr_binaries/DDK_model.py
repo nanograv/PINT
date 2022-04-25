@@ -50,7 +50,7 @@ class DDKmodel(DDmodel):
 
     def __setattr__(self, name, value):
         """Override the super() __setattr__ so that a warning can be issued when using A1DOT with this model"""
-        if name in ["A1DOT"]:
+        if name in ["A1DOT"] and value != 0:
             if not self.A1DOT_warning_issued:
                 log.warning("Using A1DOT with a DDK model is not advised.")
                 self.A1DOT_warning_issued = True
