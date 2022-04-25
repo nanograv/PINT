@@ -581,6 +581,21 @@ class Fitter:
         """Return the model's design matrix for these TOAs."""
         return self.model.designmatrix(toas=self.toas, incfrozen=False, incoffset=True)
 
+    def _get_corr_cov_matrix(
+        self, matrix_type, with_phase, pretty_print, prec, usecolor
+    ):
+        if hasattr(self, f"parameter_{matrix_type}_matrix"):
+            cm = getattr(self, f"parameter_{matrix_type}_matrix")
+            if not pretty_print:
+                return cm.prettyprint(prec=prec, offset=with_phase)
+            else:
+                print(cm.prettyprint(prec=prec, offset=with_phase, usecolor=usecolor))
+        else:
+            log.error(
+                f"You must run .fit_toas() before accessing the {matrix_type} matrix"
+            )
+            raise AttributeError
+
     def get_parameter_covariance_matrix(
         self, with_phase=False, pretty_print=False, prec=3
     ):
@@ -590,109 +605,23 @@ class Fitter:
         If pretty_print, then also pretty-print on stdout the matrix.
         prec is the precision of the floating point results.
         """
-        if hasattr(self, "parameter_covariance_matrix"):
-            if isinstance(self.parameter_covariance_matrix, np.ndarray):
-                # it's just a raw ndarray
-                fps = list(self.model.free_params)
-                cm = self.parameter_covariance_matrix
-                if with_phase:
-                    fps = ["PHASE"] + fps
-                else:
-                    cm = cm[1:, 1:]
-            elif isinstance(self.parameter_covariance_matrix, CovarianceMatrix):
-                if with_phase:
-                    return self.parameter_covariance_matrix.prettyprint(prec=prec)
-                    fps = self.parameter_covariance_matrix.get_label_names(axis=0)
-                    cm = self.parameter_covariance_matrix.matrix
-                else:
-                    # exclude that
-                    fps = [
-                        x
-                        for x in self.parameter_covariance_matrix.get_label_names(
-                            axis=0
-                        )
-                        if not x == "Offset"
-                    ]
-                    new_matrix = self.parameter_covariance_matrix.get_label_matrix(fps)
-                    print(new_matrix.prettyprint(prec=prec))
-                    return new_matrix
-            if pretty_print:
-                lens = [max(len(fp) + 2, prec + 8) for fp in fps]
-                maxlen = max(lens)
-                print("\nParameter covariance matrix:")
-                line = "{0:^{width}}".format("", width=maxlen)
-                for fp, ln in zip(fps, lens):
-                    line += "{0:^{width}}".format(fp, width=ln)
-                print(line)
-                for ii, fp1 in enumerate(fps):
-                    line = "{0:^{width}}".format(fp1, width=maxlen)
-                    for jj, (fp2, ln) in enumerate(zip(fps[: ii + 1], lens[: ii + 1])):
-                        line += "{0: {width}.{prec}e}".format(
-                            cm[ii, jj], width=ln, prec=prec
-                        )
-                    print(line)
-                print("\n")
-            return cm
-        else:
-            log.error("You must run .fit_toas() before accessing the covariance matrix")
-            raise AttributeError
+        return self._get_corr_cov_matrix(
+            "covariance", with_phase, pretty_print, prec, "False"
+        )
 
     def get_parameter_correlation_matrix(
-        self, with_phase=False, pretty_print=False, prec=3
+        self, with_phase=False, pretty_print=False, prec=3, usecolor=True
     ):
         """Show the parameter correlation matrix post-fit.
 
         If with_phase, then show and return the phase column as well.
         If pretty_print, then also pretty-print on stdout the matrix.
-        prec is the precision of the floating point results.
+        prec is the precision of the floating point results. If
+        usecolor is True, then pretty printing will have color.
         """
-        if hasattr(self, "parameter_correlation_matrix"):
-            if isinstance(self.parameter_correlation_matrix, np.ndarray):
-                # it's just a raw ndarray
-                fps = list(self.model.free_params)
-                cm = self.parameter_correlation_matrix
-                if with_phase:
-                    fps = ["PHASE"] + fps
-                else:
-                    cm = cm[1:, 1:]
-            elif isinstance(self.parameter_correlation_matrix, CorrelationMatrix):
-                if with_phase:
-                    return self.parameter_correlation_matrix.prettyprint(prec=prec)
-                    fps = self.parameter_correlation_matrix.get_label_names(axis=0)
-                    cm = self.parameter_correlation_matrix.matrix
-                else:
-                    # exclude that
-                    fps = [
-                        x
-                        for x in self.parameter_correlation_matrix.get_label_names(
-                            axis=0
-                        )
-                        if not x == "Offset"
-                    ]
-                    new_matrix = self.parameter_correlation_matrix.get_label_matrix(fps)
-                    return new_matrix.prettyprint(prec=prec)
-            if pretty_print:
-                lens = [max(len(fp) + 2, prec + 4) for fp in fps]
-                maxlen = max(lens)
-                print("\nParameter correlation matrix:")
-                line = "{0:^{width}}".format("", width=maxlen)
-                for fp, ln in zip(fps, lens):
-                    line += "{0:^{width}}".format(fp, width=ln)
-                print(line)
-                for ii, fp1 in enumerate(fps):
-                    line = "{0:^{width}}".format(fp1, width=maxlen)
-                    for jj, (fp2, ln) in enumerate(zip(fps, lens)):
-                        line += "{0:^{width}.{prec}f}".format(
-                            cm[ii, jj], width=ln, prec=prec
-                        )
-                    print(line)
-                print("\n")
-            return cm
-        else:
-            log.error(
-                "You must run .fit_toas() before accessing the correlation matrix"
-            )
-            raise AttributeError
+        return self._get_corr_cov_matrix(
+            "correlation", with_phase, pretty_print, prec, usecolor
+        )
 
     def ftest(self, parameter, component, remove=False, full_output=False, maxiter=1):
         """Compare the significance of adding/removing parameters to a timing model.

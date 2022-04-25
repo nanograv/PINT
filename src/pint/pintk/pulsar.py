@@ -468,6 +468,7 @@ class Pulsar:
 
         # Do the actual fit and mark things as being fit
         self.fitter.fit_toas(maxiter=iters)
+        self.fitter.update_model()
         self.postfit_model = self.fitter.model
         self.fitted = True
         # Zero out all of the "delta_pulse_numbers" if they are set
@@ -480,6 +481,8 @@ class Pulsar:
         self.selected_toas.compute_pulse_numbers(self.postfit_model)
         # Now compute the residuals using correct pulse numbers
         self.postfit_resids = Residuals(self.all_toas, self.postfit_model)
+        # Need this since it isn't updated using self.fitter.update_model()
+        self.fitter.model.CHI2.value = self.postfit_resids.chi2
         # And print the summary
         self.write_fit_summary()
 
