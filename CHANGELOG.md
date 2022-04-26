@@ -11,9 +11,12 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added gridding based on tuples of parameters (not just regular mesh)
 - Added passing of extra parameters to gridding fitter
 - Added option to photonphase to compute phases using polycos
+- New `colorize()` function in `pint.utils` which can be used for string and unicode output
 ### Fixed
+- Huge number of bugs and improvements to `pintk`, and some to `pintempo`
 ### Changed
 - Changed logging to use `loguru`
+- Changed to floating point format and added color for correlation matrix output
 
 ## [0.8.5] 2022-02-24
 ### Added
