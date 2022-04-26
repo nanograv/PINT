@@ -1440,6 +1440,8 @@ class PlkWidget(tk.Frame):
             else:  # unstash
                 self.psr.all_toas = copy.deepcopy(self.psr.stashed)
                 self.psr.stashed = None
+                if self.psr.fitted and self.psr.use_pulse_numbers:
+                    self.psr.all_toas.compute_pulse_numbers(self.psr.postfit_model)
             self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
             self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
             self.updateAllJumped()
