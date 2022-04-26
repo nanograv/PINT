@@ -1210,6 +1210,10 @@ class DownhillFitter(Fitter):
             raise MaxiterReached(f"Convergence not detected after {maxiter} steps.")
         return self.converged
 
+    @property
+    def fac(self):
+        return self.current_state.fac
+
 
 class WLSState(ModelState):
     def __init__(self, fitter, model, threshold=None):
@@ -1398,6 +1402,7 @@ class GLSState(ModelState):
         norm[norm == 0] = 1
         M /= norm
         self.M = M
+        self.fac = norm
 
         # compute covariance matrices
         if self.full_cov:
@@ -1608,6 +1613,7 @@ class WidebandState(ModelState):
         if not self.full_cov:
             phiinv /= norm ** 2
             self.phiinv = phiinv
+        self.fac = norm
 
         return M, params, units, norm
 
@@ -2122,6 +2128,7 @@ class GLSFitter(Fitter):
                     DegeneracyWarning,
                 )
             norm[norm == 0] = 1
+            self.fac = norm
             M /= norm
 
             # compute covariance matrices
@@ -2483,6 +2490,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 )
             norm[norm == 0] = 1
             M /= norm
+            self.fac = norm
 
             # compute covariance matrices
             if full_cov:
