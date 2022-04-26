@@ -550,9 +550,9 @@ class Pulsar:
             if spanMJD < 1000:
                 Ntoas = min(400, int(spanMJD))
             elif spanMJD < 4000:
-                Ntoas = min(750, int(spanMJD) / 2)
+                Ntoas = min(750, int(spanMJD) // 2)
             else:
-                Ntoas = min(1500, int(spanMJD) / 4)
+                Ntoas = min(1500, int(spanMJD) // 4)
             log.debug(f"Generating {Ntoas} fake TOAs for the random models")
             # By default we will use TOAs from the TopoCenter.  This gets done only once.
             self.faketoas1 = make_fake_toas_uniform(
@@ -577,7 +577,7 @@ class Pulsar:
 
         # Compute the new random timing models
         rs = calculate_random_models(
-            self.f, toas, Nmodels=15, keep_models=False, return_time=True,
+            self.fitter, toas, Nmodels=15, keep_models=False, return_time=True,
         )
 
         # Get a selection array for the fake TOAs that covers the fit TOAs (plus extra)
