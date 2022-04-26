@@ -321,13 +321,10 @@ class Pulsar:
                         line += "%16.8g  " % post.uncertainty.value
                     except:
                         line += "%18s" % ""
-                    try:
-                        diff = post.value - pre.value
-                        line += "%16.8g  " % diff
-                        if pre.uncertainty is not None:
-                            line += "%16.8g" % (diff / pre.uncertainty.value)
-                    except:
-                        pass
+                    diff = post.value - pre.value
+                    line += "%16.8g  " % diff
+                    if pre.uncertainty is not None and pre.uncertainty.value != 0.0:
+                        line += "%16.8g" % (diff / pre.uncertainty.value)
                 print(line)
         else:
             log.warning("Pulsar has not been fitted yet!")

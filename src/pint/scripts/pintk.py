@@ -13,6 +13,7 @@ from tkinter import ttk
 import pint.logging
 from loguru import logger as log
 
+log.remove()
 log.add(
     sys.stderr,
     level="WARNING",

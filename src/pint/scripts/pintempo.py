@@ -16,6 +16,7 @@ from astropy import log
 import pint.logging
 from loguru import logger as log
 
+log.remove()
 log.add(
     sys.stderr,
     level="WARNING",
