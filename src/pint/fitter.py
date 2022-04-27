@@ -190,7 +190,7 @@ class Fitter:
     The Fitter also caches a copy of the original model so it can be restored
     with ``reset_model()``.
 
-    Try :func:`fitter.Fitter.auto` to automatically get the appropriate fitter type
+    Try :func:`pint.fitter.Fitter.auto` to automatically get the appropriate fitter type
 
     Attributes
     ----------
