@@ -57,19 +57,13 @@ nofitboxpars = [
 ]
 
 
-class FitMethods(Enum):
-    POWELL = 0
-    WLS = 1
-    GLS = 2
-
-
 class Pulsar:
     """Wrapper class for a pulsar.
 
     Contains the toas, model, residuals, and fitter
     """
 
-    def __init__(self, parfile=None, timfile=None, ephem=None):
+    def __init__(self, parfile=None, timfile=None, ephem=None, fitter="GLSFitter"):
         super(Pulsar, self).__init__()
 
         log.info(f"Loading pulsar parfile: {str(parfile)}")
@@ -109,8 +103,7 @@ class Pulsar:
         # Set of indices from original list that are deleted
         # We use indices because of the grouping of TOAs by observatory
         self.deleted = set([])
-        # TODO: would be good to be able to choose the fitter
-        self.fit_method = FitMethods.WLS
+        self.fit_method = fitter
         self.fitter = None
         self.fitted = False
         self.stashed = None  # for temporarily stashing some TOAs
@@ -440,21 +433,11 @@ class Pulsar:
             self.add_model_params()
 
         # Have to change the fitter for each fit since TOAs and models change
-        if self.fit_method == FitMethods.POWELL:
-            log.info("Using PowellFitter")
-            self.fitter = pint.fitter.PowellFitter(
-                self.selected_toas, self.prefit_model
-            )
-        elif self.fit_method == FitMethods.WLS:
-            log.info("Using DownhillWLSFitter")
-            self.fitter = pint.fitter.DownhillWLSFitter(
-                self.selected_toas, self.prefit_model
-            )
-        elif self.fit_method == FitMethods.GLS:
-            log.info("Using DownhillGLSFitter")
-            self.fitter = pint.fitter.DownhillGLSFitter(
-                self.selected_toas, self.prefit_model
-            )
+        log.info(f"Using {self.fit_method}")
+        self.fitter = getattr(pint.fitter, self.fit_method)(
+            self.selected_toas, self.prefit_model
+        )
+
         wrms = self.prefit_resids.rms_weighted()
 
         print("\n------------------------------------")

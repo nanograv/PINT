@@ -34,7 +34,15 @@ __all__ = ["main"]
 class PINTk:
     """Main PINTk window."""
 
-    def __init__(self, master, parfile=None, timfile=None, ephem=None, **kwargs):
+    def __init__(
+        self,
+        master,
+        parfile=None,
+        timfile=None,
+        fitter="GLSFitter",
+        ephem=None,
+        **kwargs
+    ):
         self.master = master
         self.master.title("Tkinter interface to PINT")
 
@@ -47,7 +55,9 @@ class PINTk:
 
         self.createWidgets()
         if parfile is not None and timfile is not None:
-            self.openPulsar(parfile=parfile, timfile=timfile, ephem=ephem)
+            self.openPulsar(
+                parfile=parfile, timfile=timfile, fitter=fitter, ephem=ephem
+            )
 
         self.initUI()
         self.updateLayout()
@@ -115,8 +125,8 @@ class PINTk:
                 self.mainFrame.grid_columnconfigure(col, weight=1)
                 visible += 1
 
-    def openPulsar(self, parfile, timfile, ephem=None):
-        self.psr = Pulsar(parfile, timfile, ephem)
+    def openPulsar(self, parfile, timfile, fitter="GLSFitter", ephem=None):
+        self.psr = Pulsar(parfile, timfile, ephem, fitter=fitter)
         self.widgets["plk"].setPulsar(
             self.psr,
             updates=[self.widgets["par"].set_model, self.widgets["tim"].set_toas],
@@ -167,6 +177,23 @@ def main(argv=None):
         action="store_true",
     )
     parser.add_argument(
+        "-f",
+        "--fitter",
+        type=str,
+        choices=(
+            "WLSFitter",
+            "GLSFitter",
+            "WidebandTOAFitter",
+            "PowellFitter",
+            "DownhillWLSFitter",
+            "DownhillGLSFitter",
+            "WidebandDownhillFitter",
+            "WidebandLMFitter",
+        ),
+        default="GLSFitter",
+        help="PINT Fitter to use",
+    )
+    parser.add_argument(
         "--log-level",
         type=str,
         choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
@@ -189,7 +216,13 @@ def main(argv=None):
     root = tk.Tk()
     root.minsize(1000, 800)
     if not args.test:
-        app = PINTk(root, parfile=args.parfile, timfile=args.timfile, ephem=args.ephem)
+        app = PINTk(
+            root,
+            parfile=args.parfile,
+            timfile=args.timfile,
+            fitter=args.fitter,
+            ephem=args.ephem,
+        )
         root.protocol("WM_DELETE_WINDOW", root.destroy)
         tk.mainloop()
 
