@@ -92,6 +92,7 @@ nb_fitters = [
     "DownhillGLSFitter",
 ]
 
+
 class State:
     """class used by revert to save the state of the system before each fit"""
 
@@ -314,7 +315,7 @@ class PlkLogLevelSelect(tk.Frame):
         self.logLabel.pack()
         self.logLevelSelect = ttk.Combobox(self)
         self.logLevelSelect.pack()
-        self.logLevelSelect["values"] = list(log_levels.values())
+        self.logLevelSelect["values"] = ("TRACE", "DEBUG", "INFO", "WARNING", "ERROR")
         self.logLevelSelect["state"] = "readonly"  # user can't enter an option
         try:
             self.logLevelSelect.current(

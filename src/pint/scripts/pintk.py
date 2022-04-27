@@ -24,7 +24,7 @@ log.add(
 
 import pint
 from pint.pintk.paredit import ParWidget
-from pint.pintk.plk import PlkWidget, helpstring, log_levels
+from pint.pintk.plk import PlkWidget, helpstring
 from pint.pintk.pulsar import Pulsar
 from pint.pintk.timedit import TimWidget
 
@@ -40,7 +40,7 @@ class PINTk:
         master,
         parfile=None,
         timfile=None,
-        fitter="GLSFitter",    
+        fitter="GLSFitter",
         ephem=None,
         loglevel=None,
         **kwargs,
