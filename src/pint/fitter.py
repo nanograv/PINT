@@ -258,9 +258,7 @@ class Fitter:
                     toas, model, track_mode=track_mode, residuals=residuals, **kwargs
                 )
             else:
-                return WidebandTOAFitter(
-                    toas, model, track_mode=track_mode, residuals=residuals, **kwargs
-                )
+                return WidebandTOAFitter(toas, model, track_mode=track_mode, **kwargs)
         else:
             if model.has_correlated_errors:
                 if downhill:
