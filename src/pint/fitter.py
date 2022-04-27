@@ -6,7 +6,7 @@ the fit, adjust the model, and repeat the fit as necessary.
 The primary objects of interest will be :class:`pint.fitter.WLSFitter` for
 basic fitting, :class:`pint.fitter.GLSFitter` for fitting with noise models
 that imply correlated errors, and :class:`pint.fitter.WidebandTOAFitter` for
-TOAs that contain DM information.
+TOAs that contain DM information.  However, the Downhill fitter variants may offer better convergence.
 
 Fitters in use::
 
@@ -52,6 +52,10 @@ Fitters in use::
     Magnetic field at light cylinder = 4806 G
     Spindown Edot = 2.868e+33 erg / s (I=1e+45 cm2 g)
 
+To automatically select a fitter based on the properties of the data and model::
+
+    >>> fitter = Fitter.auto(toas, model)
+    
 """
 import collections
 import copy
@@ -82,7 +86,8 @@ from pint.utils import FTest
 
 __all__ = [
     "Fitter",
-    "auto" "WLSFitter",
+    "auto",
+    "WLSFitter",
     "GLSFitter",
     "WidebandTOAFitter",
     "PowellFitter",
@@ -184,6 +189,8 @@ class Fitter:
 
     The Fitter also caches a copy of the original model so it can be restored
     with ``reset_model()``.
+
+    Try :func:`fitter.Fitter.auto` to automatically get the appropriate fitter type
 
     Attributes
     ----------
