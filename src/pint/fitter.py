@@ -82,7 +82,7 @@ from pint.utils import FTest
 
 __all__ = [
     "Fitter",
-    "WLSFitter",
+    "auto" "WLSFitter",
     "GLSFitter",
     "WidebandTOAFitter",
     "PowellFitter",
@@ -223,6 +223,79 @@ class Fitter:
         self.method = None
         self.is_wideband = False
         self.converged = False
+
+    @classmethod
+    def auto(
+        self, toas, model, downhill=True, track_mode=None, residuals=None, **kwargs
+    ):
+        """Automatically return the proper :class:`pint.fitter.Fitter` object depending on the TOAs and model.  
+
+        In general the `downhill` fitters are to be preferred.  See https://github.com/nanograv/PINT/wiki/How-To#choose-a-fitter for the logic used.
+
+        Parameters
+        ----------
+        toas : a pint TOAs instance
+            The input toas.
+        model : a pint timing model instance
+            The initial timing model for fitting.
+        downhill : bool, optional
+            Whether or not to use the downhill fitter variant
+        track_mode : str, optional
+            How to handle phase wrapping. This is used when creating
+            :class:`pint.residuals.Residuals` objects, and its meaning is defined there.
+        residuals : :class:`pint.residuals.Residuals`
+            Initial residuals. This argument exists to support an optimization, where
+            ``GLSFitter`` is used to compute ``chi2`` for appropriate Residuals objects.
+        
+        Returns
+        -------
+        :class:`pint.fitter.Fitter` 
+            Returns appropriate subclass
+        """
+        if toas.wideband:
+            if downhill:
+                return WidebandDownhillFitter(
+                    toas, model, track_mode=track_mode, residuals=residuals, **kwargs
+                )
+            else:
+                return WidebandTOAFitter(
+                    toas, model, track_mode=track_mode, residuals=residuals, **kwargs
+                )
+        else:
+            if model.has_correlated_errors:
+                if downhill:
+                    return DownhillGLSFitter(
+                        toas,
+                        model,
+                        track_mode=track_mode,
+                        residuals=residuals,
+                        **kwargs,
+                    )
+                else:
+                    return GLSFitter(
+                        toas,
+                        model,
+                        track_mode=track_mode,
+                        residuals=residuals,
+                        **kwargs,
+                    )
+            else:
+                if downhill:
+                    return DownhillWLSFitter(
+                        toas,
+                        model,
+                        track_mode=track_mode,
+                        residuals=residuals,
+                        **kwargs,
+                    )
+                else:
+                    return WLSFitter(
+                        toas,
+                        model,
+                        track_mode=track_mode,
+                        residuals=residuals,
+                        **kwargs,
+                    )
 
     def fit_toas(self, maxiter=None, debug=False):
         """Run fitting operation.
