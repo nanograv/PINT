@@ -702,6 +702,7 @@ class PlkWidget(tk.Frame):
         self.fitterWidget.fitterSelect.current(
             self.fitterWidget.fitterSelect["values"].index(self.psr.fit_method)
         )
+        self.fitterWidget.fitter = self.psr.fit_method
         self.updatePlot(keepAxes=False)
         self.plkToolbar.update()
 
