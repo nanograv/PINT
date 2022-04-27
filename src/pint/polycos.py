@@ -11,6 +11,18 @@ from astropy.io import registry
 from astropy.time import Time
 from collections import OrderedDict
 
+from loguru import logger as log
+
+try:
+    from tqdm import tqdm
+except (ModuleNotFoundError, ImportError) as e:
+
+    def tqdm(*args, **kwargs):
+        if args:
+            return args[0]
+        return kwargs.get("iterable", None)
+
+
 import pint.toa as toa
 from pint.phase import Phase
 from pint.pulsar_mjd import data2longdouble
@@ -536,6 +548,13 @@ class Polycos:
         segLength = int(segLength)
         obsFreq = float(obsFreq)
 
+        # Use the planetary ephemeris specified in the model, if available.
+        if model.EPHEM.value is not None:
+            ephem = model.EPHEM.value
+        else:
+            log.info("No ephemeris specified in model, using DE421 to generate polycos")
+            ephem = "DE421"
+
         if maxha != 12.0:
             raise ValueError("Maximum hour angle != 12.0 is not supported.")
 
@@ -554,7 +573,8 @@ class Polycos:
         if method == "TEMPO":
             entryList = []
             # Using tempo1 method to create polycos
-            for tmid in tmids:
+            # If you want to disable the progress bar, add disable=True to the tqdm() call.
+            for tmid in tqdm(tmids):
                 tStart = tmid - mjdSpan / 2
                 tStop = tmid + mjdSpan / 2
                 nodes = np.linspace(tStart, tStop, numNodes)
@@ -564,7 +584,8 @@ class Polycos:
                         toa.TOA(
                             (np.modf(tmid)[1], np.modf(tmid)[0]), obs=obs, freq=obsFreq
                         )
-                    ]
+                    ],
+                    ephem=ephem,
                 )
 
                 refPhase = model.phase(toaMid, abs_phase=True)
@@ -579,7 +600,7 @@ class Polycos:
                     for toaNode in nodes
                 ]
 
-                toas = toa.get_TOAs_list(toaList)
+                toas = toa.get_TOAs_list(toaList, ephem=ephem)
 
                 ph = model.phase(toas, abs_phase=True)
                 dt = (nodes - tmid) * MIN_PER_DAY
