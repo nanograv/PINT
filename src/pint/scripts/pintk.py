@@ -22,6 +22,7 @@ log.add(
     filter=pint.logging.LogFilter(),
 )
 
+import pint
 from pint.pintk.paredit import ParWidget
 from pint.pintk.plk import PlkWidget, helpstring
 from pint.pintk.pulsar import Pulsar
@@ -41,7 +42,7 @@ class PINTk:
         timfile=None,
         fitter="GLSFitter",
         ephem=None,
-        **kwargs
+        **kwargs,
     ):
         self.master = master
         self.master.title("Tkinter interface to PINT")
@@ -159,7 +160,8 @@ class PINTk:
 
     def about(self):
         tkMessageBox.showinfo(
-            title="About PINTk", message="A Tkinter based graphical interface to PINT"
+            title="About PINTk",
+            message=f"A Tkinter based graphical interface to PINT (version={pint.__version__})",
         )
 
 
