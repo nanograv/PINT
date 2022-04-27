@@ -19,6 +19,7 @@ import tkinter.messagebox as tkMessageBox
 from tkinter import ttk
 
 import pint.logging
+import loguru._defaults
 from loguru import logger as log
 
 try:
@@ -75,6 +76,25 @@ Right click     Delete a TOA (if close enough)
 """
 
 clickDist = 0.0005
+
+# wideband and narrowband fitter options
+wb_fitters = [
+    "WidebandTOAFitter",
+    "WidebandDownhillFitter",
+    "WidebandLMFitter",
+]
+nb_fitters = [
+    "WLSFitter",
+    "GLSFitter",
+    "PowellFitter",
+    "DownhillWLSFitter",
+    "DownhillGLSFitter",
+]
+
+# get the mapping from log level number to name
+log_levels = {}
+for level in ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR"]:
+    log_levels[getattr(loguru._defaults, "LOGURU_" + level + "_NO")] = level
 
 
 class State:
@@ -299,9 +319,16 @@ class PlkLogLevelSelect(tk.Frame):
         self.logLabel.pack()
         self.logLevelSelect = ttk.Combobox(self)
         self.logLevelSelect.pack()
-        self.logLevelSelect["values"] = ["DEBUG", "INFO", "WARNING", "ERROR"]
+        self.logLevelSelect["values"] = list(log_levels.values())
         self.logLevelSelect["state"] = "readonly"  # user can't enter an option
-        self.logLevelSelect.current(2)  # automatically on WARNING level
+        # this seems clumsy, but we want to map from the level number (e.g., 10) to the name (e.g., WARNING)
+        # and then to the index of the level values in the dropdown
+        current_level = log_levels[
+            log._core.handlers[list(log._core.handlers.keys())[0]].levelno
+        ]
+        for i, k in enumerate(log_levels):
+            if log_levels[k] == current_level:
+                self.logLevelSelect.current(i)
         # bind user log level selection to function changing log level
         self.logLevelSelect.bind("<<ComboboxSelected>>", self.changeLogLevel)
 
@@ -329,20 +356,20 @@ class PlkFitterSelect(tk.Frame):
         self.fitterLabel.pack()
         self.fitterSelect = ttk.Combobox(self)
         self.fitterSelect.pack()
-        self.fitterSelect["values"] = [
-            "WLSFitter",
-            "GLSFitter",
-            "WidebandTOAFitter",
-            "PowellFitter",
-            "DownhillWLSFitter",
-            "DownhillGLSFitter",
-            "WidebandDownhillFitter",
-            "WidebandLMFitter",
-        ]
+        self.fitterSelect["values"] = []
         self.fitterSelect["state"] = "readonly"  # user can't enter an option
-        self.fitterSelect.current(1)  # automatically on GLS
+        # self.fitterSelect.current(1)  # automatically on GLS
         # bind user log level selection to function changing log level
         self.fitterSelect.bind("<<ComboboxSelected>>", self.changeFitter)
+        # self.fitter = self.fitterSelect.get()
+
+    def updateFitterChoices(self, wideband):
+        if wideband:
+            self.fitterSelect["values"] = wb_fitters
+            self.fitterSelect.current(0)
+        else:
+            self.fitterSelect["values"] = nb_fitters
+            self.fitterSelect.current(1)
         self.fitter = self.fitterSelect.get()
 
     def changeFitter(self, event):
@@ -645,6 +672,7 @@ class PlkWidget(tk.Frame):
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.randomboxWidget.addRandomCheckbox(self)
             self.colorModeWidget.addColorModeCheckbox(self.color_modes)
+            self.fitterWidget.updateFitterChoices(self.psr.all_toas.wideband)
             self.xyChoiceWidget.setChoice()
             self.updatePlot(keepAxes=True)
             self.plkToolbar.update()
@@ -680,6 +708,7 @@ class PlkWidget(tk.Frame):
         self.colorModeWidget.grid(row=2, column=0, columnspan=1, sticky="S")
         self.colorModeWidget.addColorModeCheckbox(self.color_modes)
         self.xyChoiceWidget.setChoice()
+        self.fitterWidget.updateFitterChoices(self.psr.all_toas.wideband)
         self.updatePlot(keepAxes=False)
         self.plkToolbar.update()
 

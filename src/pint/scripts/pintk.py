@@ -24,7 +24,7 @@ log.add(
 
 import pint
 from pint.pintk.paredit import ParWidget
-from pint.pintk.plk import PlkWidget, helpstring
+from pint.pintk.plk import PlkWidget, helpstring, log_levels
 from pint.pintk.pulsar import Pulsar
 from pint.pintk.timedit import TimWidget
 
@@ -205,7 +205,7 @@ def main(argv=None):
     parser.add_argument(
         "--log-level",
         type=str,
-        choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
+        choices=list(log_levels.values()),
         default="WARNING",
         help="Logging level",
         dest="loglevel",
