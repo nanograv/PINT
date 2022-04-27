@@ -356,8 +356,17 @@ class Fitter:
                             ufloat(par.value, par.uncertainty.value),
                             par.units,
                         )
+        s += "\n" + self.get_derived_params()
+        return s
+
+    def get_derived_params(self):
+        """Return a string with various derived parameters from the fitted model"""
+
+        import uncertainties.umath as um
+        from uncertainties import ufloat
+
         # Now print some useful derived parameters
-        s += "\nDerived Parameters:\n"
+        s = "Derived Parameters:\n"
         if hasattr(self.model, "F0"):
             F0 = self.model.F0.quantity
             if not self.model.F0.frozen:
@@ -374,21 +383,24 @@ class Fitter:
                 s += "Pdot = {} +/- {}\n".format(
                     pd.to(u.dimensionless_unscaled), pderr.to(u.dimensionless_unscaled)
                 )
-                brakingindex = 3
-                s += "Characteristic age = {:.4g} (braking index = {})\n".format(
-                    pint.derived_quantities.pulsar_age(F0, F1, n=brakingindex),
-                    brakingindex,
-                )
-                s += "Surface magnetic field = {:.3g}\n".format(
-                    pint.derived_quantities.pulsar_B(F0, F1)
-                )
-                s += "Magnetic field at light cylinder = {:.4g}\n".format(
-                    pint.derived_quantities.pulsar_B_lightcyl(F0, F1)
-                )
-                I_NS = I = 1.0e45 * u.g * u.cm ** 2
-                s += "Spindown Edot = {:.4g} (I={})\n".format(
-                    pint.derived_quantities.pulsar_edot(F0, F1, I=I_NS), I_NS
-                )
+                if F1.value < 0.0:  # spinning-down
+                    brakingindex = 3
+                    s += "Characteristic age = {:.4g} (braking index = {})\n".format(
+                        pint.derived_quantities.pulsar_age(F0, F1, n=brakingindex),
+                        brakingindex,
+                    )
+                    s += "Surface magnetic field = {:.3g}\n".format(
+                        pint.derived_quantities.pulsar_B(F0, F1)
+                    )
+                    s += "Magnetic field at light cylinder = {:.4g}\n".format(
+                        pint.derived_quantities.pulsar_B_lightcyl(F0, F1)
+                    )
+                    I_NS = I = 1.0e45 * u.g * u.cm ** 2
+                    s += "Spindown Edot = {:.4g} (I={})\n".format(
+                        pint.derived_quantities.pulsar_edot(F0, F1, I=I_NS), I_NS
+                    )
+                else:
+                    s += "Not computing Age, B, or Edot since F1 > 0.0\n"
 
         if hasattr(self.model, "PX"):
             if not self.model.PX.frozen:
@@ -400,14 +412,47 @@ class Fitter:
                 s += "Parallax distance = {:.3uP} pc\n".format(1.0 / px)
 
         # Now binary system derived parameters
-        binary = None
-        for x in self.model.components:
-            if x.startswith("Binary"):
-                binary = x
-        if binary is not None:
-            s += "\n"
-            s += "Binary model {}\n".format(binary)
+        if self.model.is_binary:
+            for x in self.model.components:
+                if x.startswith("Binary"):
+                    binary = x
 
+            s += "\nBinary model {}\n".format(binary)
+
+            btx = False
+            if (
+                hasattr(self.model, "FB0")
+                and self.model.FB0.quantity is not None
+                and self.model.FB0.value != 0.0
+            ):
+                btx = True
+                FB0 = self.model.FB0.quantity
+                if not self.model.FB0.frozen:
+                    p, perr = pint.derived_quantities.pferrs(
+                        FB0, self.model.FB0.uncertainty
+                    )
+                    s += "Orbital Period  (PB) = {} +/- {}\n".format(
+                        p.to(u.d), perr.to(u.d)
+                    )
+                else:
+                    s += "Orbital Period  (PB) = {}\n".format((1.0 / FB0).to(u.d))
+
+            if (
+                hasattr(self.model, "FB1")
+                and self.model.FB1.quantity is not None
+                and self.model.FB1.value != 0.0
+            ):
+                FB1 = self.model.FB1.quantity
+                if not any([self.model.FB1.frozen, self.model.FB0.frozen]):
+                    p, perr, pd, pderr = pint.derived_quantities.pferrs(
+                        FB0, self.model.FB0.uncertainty, FB1, self.model.FB1.uncertainty
+                    )
+                    s += "Orbital Pdot (PBDOT) = {} +/- {}\n".format(
+                        pd.to(u.dimensionless_unscaled),
+                        pderr.to(u.dimensionless_unscaled),
+                    )
+
+            ell1 = False
             if binary.startswith("BinaryELL1"):
                 if not any(
                     [
@@ -417,6 +462,7 @@ class Fitter:
                         self.model.PB.frozen,
                     ]
                 ):
+                    ell1 = True
                     eps1 = ufloat(
                         self.model.EPS1.quantity.value,
                         self.model.EPS1.uncertainty.value,
@@ -440,11 +486,11 @@ class Fitter:
                     om = um.atan2(eps1, eps2) * 180.0 / np.pi
                     if om < 0.0:
                         om += 360.0
-                    s += "OM  = {:P}\n".format(om)
+                    s += "OM  = {:P} deg\n".format(om)
                     t0 = tasc + pb * om / 360.0
                     s += "T0  = {:SP}\n".format(t0)
 
-                    if is_wideband:
+                    if self.is_wideband:
                         s += pint.utils.ELL1_check(
                             self.model.A1.quantity,
                             ecc.nominal_value,
@@ -462,58 +508,81 @@ class Fitter:
                         )
                     s += "\n"
 
-                # Masses and inclination
-                if not any([self.model.PB.frozen, self.model.A1.frozen]):
-                    pbs = ufloat(
-                        self.model.PB.quantity.to(u.s).value,
-                        self.model.PB.uncertainty.to(u.s).value,
-                    )
-                    a1 = ufloat(
-                        self.model.A1.quantity.to(pint.ls).value,
-                        self.model.A1.uncertainty.to(pint.ls).value,
-                    )
-                    fm = 4.0 * np.pi ** 2 * a1 ** 3 / (4.925490947e-6 * pbs ** 2)
-                    s += "Mass function = {:SP} Msun\n".format(fm)
-                    mcmed = pint.derived_quantities.companion_mass(
-                        self.model.PB.quantity,
-                        self.model.A1.quantity,
-                        i=60.0 * u.deg,
-                        mp=1.4 * u.solMass,
-                    )
-                    mcmin = pint.derived_quantities.companion_mass(
-                        self.model.PB.quantity,
-                        self.model.A1.quantity,
-                        i=90.0 * u.deg,
-                        mp=1.4 * u.solMass,
-                    )
-                    s += "Companion mass min, median (assuming Mpsr = 1.4 Msun) = {:.4f}, {:.4f} Msun\n".format(
-                        mcmin, mcmed
-                    )
+            # Masses and inclination
+            pb = p.to(u.d) if btx else self.model.PB.quantity
+            pberr = perr.to(u.d) if btx else self.model.PB.uncertainty
+            if not self.model.A1.frozen:
+                pbs = ufloat(pb.to(u.s).value, pberr.to(u.s).value,)
+                a1 = ufloat(
+                    self.model.A1.quantity.to(pint.ls).value,
+                    self.model.A1.uncertainty.to(pint.ls).value,
+                )
+                # This is the mass function, done explicitly so that we get
+                # uncertainty propagation automatically.
+                # TODO: derived quantities funcs should take uncertainties
+                fm = 4.0 * np.pi ** 2 * a1 ** 3 / (4.925490947e-6 * pbs ** 2)
+                s += "Mass function = {:SP} Msun\n".format(fm)
+                mcmed = pint.derived_quantities.companion_mass(
+                    pb, self.model.A1.quantity, i=60.0 * u.deg, mp=1.4 * u.solMass,
+                )
+                mcmin = pint.derived_quantities.companion_mass(
+                    pb, self.model.A1.quantity, i=90.0 * u.deg, mp=1.4 * u.solMass,
+                )
+                s += "Min / Median Companion mass (assuming Mpsr = 1.4 Msun) = {:.4f} / {:.4f} Msun\n".format(
+                    mcmin.value, mcmed.value
+                )
 
-                if hasattr(self.model, "SINI") and self.model.SINI.quantity is not None:
-                    try:
-                        # Put this in a try in case SINI is UNSET or an illegal value
-                        if not self.model.SINI.frozen:
-                            si = ufloat(
-                                self.model.SINI.quantity.value,
-                                self.model.SINI.uncertainty.value,
-                            )
-                            s += "From SINI in model:\n"
-                            s += "    cos(i) = {:SP}\n".format(um.sqrt(1 - si ** 2))
-                            s += "    i = {:SP} deg\n".format(
-                                um.asin(si) * 180.0 / np.pi
-                            )
+            if (
+                hasattr(self.model, "OMDOT")
+                and self.model.OMDOT.quantity is not None
+                and self.model.OMDOT.value != 0.0
+            ):
+                omdot = self.model.OMDOT.quantity
+                omdot_err = self.model.OMDOT.uncertainty
+                ecc = (
+                    ecc.n * u.dimensionless_unscaled
+                    if ell1
+                    else self.model.ECC.quantity
+                )
+                Mtot = pint.derived_quantities.omdot_to_mtot(omdot, pb, ecc)
+                # Assume that the uncertainty on OMDOT dominates the Mtot uncertainty
+                # This is probably a good assumption until we can get the uncertainties module
+                # to work with quantities.
+                Mtot_hi = pint.derived_quantities.omdot_to_mtot(
+                    omdot + omdot_err, pb, ecc,
+                )
+                Mtot_lo = pint.derived_quantities.omdot_to_mtot(
+                    omdot - omdot_err, pb, ecc,
+                )
+                Mtot_err = max(abs(Mtot_hi - Mtot), abs(Mtot - Mtot_lo))
+                mt = ufloat(Mtot.value, Mtot_err.value)
+                s += "Total mass, assuming GR, from OMDOT is {:SP} Msun\n".format(mt)
 
-                        psrmass = pint.derived_quantities.pulsar_mass(
-                            self.model.PB.quantity,
-                            self.model.A1.quantity,
-                            self.model.M2.quantity,
-                            np.arcsin(self.model.SINI.quantity),
+            if (
+                hasattr(self.model, "SINI")
+                and self.model.SINI.quantity is not None
+                and (self.model.SINI.value >= 0.0 and self.model.SINI.value < 1.0)
+            ):
+                try:
+                    # Put this in a try in case SINI is UNSET or an illegal value
+                    if not self.model.SINI.frozen:
+                        si = ufloat(
+                            self.model.SINI.quantity.value,
+                            self.model.SINI.uncertainty.value,
                         )
-                        s += "Pulsar mass (Shapiro Delay) = {}".format(psrmass)
-                    except (TypeError, ValueError):
-                        pass
+                        s += "From SINI in model:\n"
+                        s += "    cos(i) = {:SP}\n".format(um.sqrt(1 - si ** 2))
+                        s += "    i = {:SP} deg\n".format(um.asin(si) * 180.0 / np.pi)
 
+                    psrmass = pint.derived_quantities.pulsar_mass(
+                        pb,
+                        self.model.A1.quantity,
+                        self.model.M2.quantity,
+                        np.arcsin(self.model.SINI.quantity),
+                    )
+                    s += "Pulsar mass (Shapiro Delay) = {}".format(psrmass)
+                except (TypeError, ValueError):
+                    pass
         return s
 
     def print_summary(self):
