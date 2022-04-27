@@ -78,6 +78,20 @@ space           Print info about highlighted points (or all, if none are selecte
 
 clickDist = 0.0005
 
+# wideband and narrowband fitter options
+wb_fitters = [
+    "WidebandTOAFitter",
+    "WidebandDownhillFitter",
+    "WidebandLMFitter",
+]
+nb_fitters = [
+    "WLSFitter",
+    "GLSFitter",
+    "PowellFitter",
+    "DownhillWLSFitter",
+    "DownhillGLSFitter",
+]
+
 
 class State:
     """class used by revert to save the state of the system before each fit"""
@@ -301,7 +315,7 @@ class PlkLogLevelSelect(tk.Frame):
         self.logLabel.pack()
         self.logLevelSelect = ttk.Combobox(self)
         self.logLevelSelect.pack()
-        self.logLevelSelect["values"] = ["DEBUG", "INFO", "WARNING", "ERROR"]
+        self.logLevelSelect["values"] = ("TRACE", "DEBUG", "INFO", "WARNING", "ERROR")
         self.logLevelSelect["state"] = "readonly"  # user can't enter an option
         try:
             self.logLevelSelect.current(
@@ -323,6 +337,38 @@ class PlkLogLevelSelect(tk.Frame):
             filter=pint.logging.LogFilter(),
         )
         log.info(f"Log level changed to {str(newLevel)}")
+
+
+class PlkFitterSelect(tk.Frame):
+    """
+    Allows one to select the fitter
+    """
+
+    def __init__(self, master):
+        tk.Frame.__init__(self, master)
+        self.fitterLabel = tk.Label(self, text="Fitter: ")
+        self.fitterLabel.pack()
+        self.fitterSelect = ttk.Combobox(self)
+        self.fitterSelect.pack()
+        self.fitterSelect["values"] = []
+        self.fitterSelect["state"] = "readonly"  # user can't enter an option
+        # self.fitterSelect.current(1)  # automatically on GLS
+        # bind user log level selection to function changing log level
+        self.fitterSelect.bind("<<ComboboxSelected>>", self.changeFitter)
+        # self.fitter = self.fitterSelect.get()
+
+    def updateFitterChoices(self, wideband):
+        if wideband:
+            self.fitterSelect["values"] = wb_fitters
+            self.fitterSelect.current(0)
+        else:
+            self.fitterSelect["values"] = nb_fitters
+            self.fitterSelect.current(1)
+        self.fitter = self.fitterSelect.get()
+
+    def changeFitter(self, event):
+        self.fitter = self.fitterSelect.get()  # get current value
+        log.info(f"Selected {self.fitter}")
 
 
 class PlkColorModeBoxes(tk.Frame):
@@ -563,6 +609,7 @@ class PlkWidget(tk.Frame):
         self.actionsWidget = PlkActionsWidget(master=self)
         self.randomboxWidget = PlkRandomModelSelect(master=self)
         self.logLevelWidget = PlkLogLevelSelect(master=self)
+        self.fitterWidget = PlkFitterSelect(master=self)
         self.colorModeWidget = PlkColorModeBoxes(master=self)
 
         self.plkDpi = 100
@@ -601,7 +648,8 @@ class PlkWidget(tk.Frame):
         self.xyChoiceWidget.grid(row=2, column=0, sticky="nw")
         self.plkCanvas.get_tk_widget().grid(row=2, column=1, sticky="nesw")
         self.actionsWidget.grid(row=3, column=0, columnspan=2, sticky="W")
-        self.logLevelWidget.grid(row=3, column=1, sticky="E")
+        self.logLevelWidget.grid(row=3, column=2, sticky="E")
+        self.fitterWidget.grid(row=3, column=1, sticky="E")
 
         self.grid_columnconfigure(1, weight=10)
         self.grid_columnconfigure(0, weight=1)
@@ -619,6 +667,7 @@ class PlkWidget(tk.Frame):
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.randomboxWidget.addRandomCheckbox(self)
             self.colorModeWidget.addColorModeCheckbox(self.color_modes)
+            self.fitterWidget.updateFitterChoices(self.psr.all_toas.wideband)
             self.xyChoiceWidget.setChoice()
             self.updatePlot(keepAxes=True)
             self.plkToolbar.update()
@@ -654,6 +703,7 @@ class PlkWidget(tk.Frame):
         self.colorModeWidget.grid(row=2, column=0, columnspan=1, sticky="S")
         self.colorModeWidget.addColorModeCheckbox(self.color_modes)
         self.xyChoiceWidget.setChoice()
+        self.fitterWidget.updateFitterChoices(self.psr.all_toas.wideband)
         self.updatePlot(keepAxes=False)
         self.plkToolbar.update()
 
@@ -706,6 +756,7 @@ class PlkWidget(tk.Frame):
                 self.current_state.psr = copy.deepcopy(self.psr)
                 self.current_state.selected = self.selected
                 self.state_stack.append(copy.deepcopy(self.current_state))
+            self.psr.fit_method = self.fitterWidget.fitter
             self.psr.fit(self.selected)
             if self.randomboxWidget.getRandomModel():
                 self.psr.random_models(self.selected)
