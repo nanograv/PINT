@@ -40,8 +40,9 @@ class PINTk:
         master,
         parfile=None,
         timfile=None,
-        fitter="GLSFitter",
+        fitter="GLSFitter",    
         ephem=None,
+        loglevel=None,
         **kwargs,
     ):
         self.master = master
@@ -51,7 +52,7 @@ class PINTk:
         self.mainFrame.grid(row=0, column=0, sticky="nesw")
         self.master.grid_rowconfigure(0, weight=1)
         self.master.grid_columnconfigure(0, weight=1)
-
+        self.loglevel = loglevel
         self.maxcols = 2
 
         self.createWidgets()
@@ -105,7 +106,7 @@ class PINTk:
 
     def createWidgets(self):
         self.widgets = {
-            "plk": PlkWidget(master=self.mainFrame),
+            "plk": PlkWidget(master=self.mainFrame, loglevel=self.loglevel),
             "par": ParWidget(master=self.mainFrame),
             "tim": TimWidget(master=self.mainFrame),
         }
@@ -205,7 +206,7 @@ def main(argv=None):
     parser.add_argument(
         "--log-level",
         type=str,
-        choices=list(log_levels.values()),
+        choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
         default="WARNING",
         help="Logging level",
         dest="loglevel",
@@ -235,6 +236,7 @@ def main(argv=None):
             timfile=args.timfile,
             fitter=args.fitter,
             ephem=args.ephem,
+            loglevel=args.loglevel,
         )
         root.protocol("WM_DELETE_WINDOW", root.destroy)
         tk.mainloop()

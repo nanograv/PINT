@@ -19,7 +19,6 @@ import tkinter.messagebox as tkMessageBox
 from tkinter import ttk
 
 import pint.logging
-import loguru._defaults
 from loguru import logger as log
 
 try:
@@ -54,24 +53,26 @@ helpstring = """The following interactions are currently supported in the plotti
 
 Left click      Select a TOA (if close enough)
 Right click     Delete a TOA (if close enough)
-  r             Reset the pane - undo all deletions, selections, etc.
   z             Toggle from zoom mode to select mode or back
+  r             Reset the pane - undo all deletions, selections, etc.
   k             Correct the pane (i.e. rescale the axes and plot)
   f             Perform a fit on the selected TOAs
   d             Delete (permanently) the selected TOAs
   t             Stash (temporarily remove) or un-stash the selected TOAs
-  u             Un-select the current selection
+  u             Un-select all of the selected TOAs
   j             Jump the selected TOAs, or un-jump them if already jumped
   v             Jump all TOA groups except those selected
   i             Print the prefit model as of this moment
   o             Print the postfit model as of this moment (if it exists)
   c             Print the postfit model parameter correlation matrix
-  p             Print info about highlighted points (or all, if none are selected)
+  s             Print summary / derived parameters about the pulsar
   m             Print the range of MJDs with the highest density of TOAs
+space           Print info about highlighted points (or all, if none are selected)
   + (or =)      Increase pulse number for selected TOAs
   - (or _)      Decrease pulse number for selected TOAs
   > (or .)      Increase pulse number for TOAs to the right (i.e. later) of selection
   < (or ,)      Decrease pulse number for TOAs to the right (i.e. later) of selection
+  q             Quit
   h             Print help
 """
 
@@ -90,12 +91,6 @@ nb_fitters = [
     "DownhillWLSFitter",
     "DownhillGLSFitter",
 ]
-
-# get the mapping from log level number to name
-log_levels = {}
-for level in ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR"]:
-    log_levels[getattr(loguru._defaults, "LOGURU_" + level + "_NO")] = level
-
 
 class State:
     """class used by revert to save the state of the system before each fit"""
@@ -321,14 +316,12 @@ class PlkLogLevelSelect(tk.Frame):
         self.logLevelSelect.pack()
         self.logLevelSelect["values"] = list(log_levels.values())
         self.logLevelSelect["state"] = "readonly"  # user can't enter an option
-        # this seems clumsy, but we want to map from the level number (e.g., 10) to the name (e.g., WARNING)
-        # and then to the index of the level values in the dropdown
-        current_level = log_levels[
-            log._core.handlers[list(log._core.handlers.keys())[0]].levelno
-        ]
-        for i, k in enumerate(log_levels):
-            if log_levels[k] == current_level:
-                self.logLevelSelect.current(i)
+        try:
+            self.logLevelSelect.current(
+                self.logLevelSelect["values"].index(master.init_loglevel)
+            )
+        except ValueError:
+            self.logLevelSelect.current(2)  # Warning is default
         # bind user log level selection to function changing log level
         self.logLevelSelect.bind("<<ComboboxSelected>>", self.changeLogLevel)
 
@@ -592,6 +585,7 @@ class PlkActionsWidget(tk.Frame):
 class PlkWidget(tk.Frame):
     def __init__(self, master=None, **kwargs):
         tk.Frame.__init__(self, master)
+        self.init_loglevel = kwargs["loglevel"] if "loglevel" in kwargs else None
         self.initPlk()
         self.initPlkLayout()
         self.current_state = State()
@@ -1056,115 +1050,33 @@ class PlkWidget(tk.Frame):
     def print_info(self):
         """
         Write information about the current selection, or all points
-        Format is:
-        TOA_index   X_val   Y_val
-        flags
-
-        if flags:
-        TOA_index   X_val   Y_val   jump_key    flags
-
-        if residuals:
-        TOA_index   X_val   time_resid  phase_resid
-
-        if both:
-        TOA_index   X_val   time_resid  phase_resid    flags
         """
-        if np.sum(self.selected) == 0:
-            selected = np.ones(self.psr.selected_toas.ntoas, dtype=bool)
-        else:
-            selected = self.selected
+        # Select all the TOAs if not are selected
+        selected = self.selected if np.sum(self.selected) else ~self.selected
 
-        header = "%6s" % "TOA"
-
-        f0x, f0y = None, None
-        xf, yf = False, False
-        if self.xid in ["pre-fit", "post-fit"]:
-            header += " %16s" % plotlabels[self.xid][2]
-            try:
-                r = (
-                    self.psr.prefit_resids
-                    if self.xid == "pre-fit" or not self.psr.fitted
-                    else self.psr.postfit_resids
-                )
-                f0x = r.get_PSR_freq().to(u.MHz).value
-                header += " %16s" % plotlabels[self.xid][1]
-                xf = True
-            except:
-                pass
-        else:
-            header += " %16s" % plotlabels[self.xid]
-        if self.yid in ["pre-fit", "post-fit"]:
-            header += " %16s" % plotlabels[self.yid][2]
-            try:
-                r = (
-                    self.psr.prefit_resids
-                    if self.xid == "pre-fit" or not self.psr.fitted
-                    else self.psr.postfit_resids
-                )
-                f0y = r.get_PSR_freq().to(u.MHz).value
-                header += " %16s" % plotlabels[self.yid][1]
-                yf = True
-            except:
-                pass
-        else:
-            header += "%12s" % plotlabels[self.yid]
+        # xvals, yvals, index, obs, freq, error MJD flags
+        header = (
+            f"\n{self.xid: ^10} {self.yid: ^10} {'index': ^7} {'Obs': ^7} "
+            + f"{'Freq (MHz)': ^11} {'Error (us)': ^11} {'MJD': ^20}     flags"
+        )
+        print(header)
+        print("-" * (len(header) + 8))
 
         xs = self.xvals[selected].value
         ys = self.yvals[selected].value
         inds = self.psr.all_toas.table["index"][selected]
+        obss = self.psr.all_toas.table["obs"][selected]
+        freqs = self.psr.all_toas.table["freq"][selected]
+        errors = self.psr.all_toas.table["error"][selected]
+        MJDs = self.psr.all_toas.table["mjd_float"][selected]
+        flags = self.psr.all_toas.table["flags"][selected]
 
-        # see if flags to display
-        keys = False
-        try:
-            self.psr.selected_toas.table["flags"]
-            keys = True
-            header += "%18s" % "Flags"
-        except:
-            pass
-
-        print(header)
-        print("-" * len(header))
-
-        for i in range(len(xs)):
-            line = "%6d" % inds[i]
-            line += " %16.8g" % xs[i]
-            if xf:
-                line += " %16.8g" % (xs[i] * f0x)
-            line += " %16.8g" % ys[i]
-            if yf:
-                line += " %16.8g" % (ys[i] * f0y)
-            if keys:
-                n = 1  # incrementor
-                for key in self.psr.selected_toas.table["flags"][i].keys():
-                    if n == 1:
-                        # for first flag, add to existing line
-                        line += " %28s" % (key + ":")
-                        # try-except for determining proper string formatter - string or float value
-                        try:
-                            line += (
-                                " %1s" % self.psr.selected_toas.table["flags"][i][key]
-                            )
-                        except:
-                            line += (
-                                " %16.8g"
-                                % self.psr.selected_toas.table["flags"][i][key]
-                            )
-                        print(line)
-                    else:
-                        line2 = " %85s" % (key + ":")
-                        # try-except for determining proper string formatter - string or float value
-                        try:
-                            line2 += (
-                                " %1s" % self.psr.selected_toas.table["flags"][i][key]
-                            )
-                        except:
-                            line2 += (
-                                " %16.8g"
-                                % self.psr.selected_toas.table["flags"][i][key]
-                            )
-                            raise
-                        print(line2)
-                    n += 1
+        for x, y, ind, obs, freq, err, MJD, flag in zip(
+            xs, ys, inds, obss, freqs, errors, MJDs, flags
+        ):
+            print(
+                f"{x:^10.4f} {y:^10.4f} {ind:^7} {obs:^7} {freq:^11.4f} {err:^11.3f} {MJD:^20.15f} {flag}"
+            )
 
     def psr_data_from_label(self, label):
         """
@@ -1381,7 +1293,7 @@ class PlkWidget(tk.Frame):
         """
         A key is pressed. Handle all the shortcuts here
         """
-        log.debug("You pressed '{}'".format(event.key))
+        log.debug(f"You pressed '{event.key}'")
 
         if event.key == "r":
             # Reset the pane
@@ -1389,14 +1301,17 @@ class PlkWidget(tk.Frame):
         elif event.key == "k":
             # Rescale axes
             self.updatePlot(keepAxes=False)
+        elif event.key == "q":
+            log.info("Exiting.")
+            sys.exit()
         elif event.key == "f":
             self.fit()
-        elif event.key == "-" or event.key == "_":
+        elif event.key in ["-", "_"]:
             self.psr.add_phase_wrap(self.selected, -1)
             self.updatePlot(keepAxes=False)
             self.call_updates()
             log.info("Pulse number for selected points decreased.")
-        elif event.key == "+" or event.key == "=":
+        elif event.key in ["+", "="]:
             self.psr.add_phase_wrap(self.selected, 1)
             self.updatePlot(keepAxes=False)
             self.call_updates()
@@ -1475,7 +1390,7 @@ class PlkWidget(tk.Frame):
             if (
                 self.selected is not None
                 and self.selected is not []
-                and all(self.selected) is not False
+                and all(self.selected)
             ):
                 self.psr.selected_toas = self.all_toas[self.selected]
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
@@ -1519,6 +1434,9 @@ class PlkWidget(tk.Frame):
                 self.psr.fitter.get_parameter_correlation_matrix(
                     pretty_print=True, prec=3, usecolor=True
                 )
+        elif event.key == "s":
+            if self.psr.fitted:
+                print(self.psr.fitter.get_summary())
         elif event.key == "i":
             print("\n" + "-" * 40)
             print("Prefit model:")
@@ -1532,7 +1450,7 @@ class PlkWidget(tk.Frame):
                 print(self.psr.postfit_model.as_parfile())
             else:
                 log.warning("No postfit model to show")
-        elif event.key == "p":
+        elif event.key == " ":
             self.print_info()
         elif event.key == "h":
             print(helpstring)
