@@ -352,19 +352,14 @@ class PlkFitterSelect(tk.Frame):
         self.fitterSelect.pack()
         self.fitterSelect["values"] = []
         self.fitterSelect["state"] = "readonly"  # user can't enter an option
-        # self.fitterSelect.current(1)  # automatically on GLS
-        # bind user log level selection to function changing log level
+        # bind user fitter selection to function changing fitter
         self.fitterSelect.bind("<<ComboboxSelected>>", self.changeFitter)
-        # self.fitter = self.fitterSelect.get()
 
     def updateFitterChoices(self, wideband):
         if wideband:
             self.fitterSelect["values"] = wb_fitters
-            self.fitterSelect.current(0)
         else:
             self.fitterSelect["values"] = nb_fitters
-            self.fitterSelect.current(1)
-        self.fitter = self.fitterSelect.get()
 
     def changeFitter(self, event):
         self.fitter = self.fitterSelect.get()  # get current value
@@ -704,6 +699,9 @@ class PlkWidget(tk.Frame):
         self.colorModeWidget.addColorModeCheckbox(self.color_modes)
         self.xyChoiceWidget.setChoice()
         self.fitterWidget.updateFitterChoices(self.psr.all_toas.wideband)
+        self.fitterWidget.fitterSelect.current(
+            self.fitterWidget.fitterSelect["values"].index(self.psr.fit_method)
+        )
         self.updatePlot(keepAxes=False)
         self.plkToolbar.update()
 
