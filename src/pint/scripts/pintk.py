@@ -34,7 +34,9 @@ __all__ = ["main"]
 class PINTk:
     """Main PINTk window."""
 
-    def __init__(self, master, parfile=None, timfile=None, ephem=None, **kwargs):
+    def __init__(
+        self, master, parfile=None, timfile=None, ephem=None, loglevel=None, **kwargs
+    ):
         self.master = master
         self.master.title("Tkinter interface to PINT")
 
@@ -42,7 +44,7 @@ class PINTk:
         self.mainFrame.grid(row=0, column=0, sticky="nesw")
         self.master.grid_rowconfigure(0, weight=1)
         self.master.grid_columnconfigure(0, weight=1)
-
+        self.loglevel = loglevel
         self.maxcols = 2
 
         self.createWidgets()
@@ -94,7 +96,7 @@ class PINTk:
 
     def createWidgets(self):
         self.widgets = {
-            "plk": PlkWidget(master=self.mainFrame),
+            "plk": PlkWidget(master=self.mainFrame, loglevel=self.loglevel),
             "par": ParWidget(master=self.mainFrame),
             "tim": TimWidget(master=self.mainFrame),
         }
@@ -189,7 +191,13 @@ def main(argv=None):
     root = tk.Tk()
     root.minsize(1000, 800)
     if not args.test:
-        app = PINTk(root, parfile=args.parfile, timfile=args.timfile, ephem=args.ephem)
+        app = PINTk(
+            root,
+            parfile=args.parfile,
+            timfile=args.timfile,
+            ephem=args.ephem,
+            loglevel=args.loglevel,
+        )
         root.protocol("WM_DELETE_WINDOW", root.destroy)
         tk.mainloop()
 
