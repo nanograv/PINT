@@ -318,6 +318,38 @@ class PlkLogLevelSelect(tk.Frame):
         log.info(f"Log level changed to {str(newLevel)}")
 
 
+class PlkFitterSelect(tk.Frame):
+    """
+    Allows one to select the fitter
+    """
+
+    def __init__(self, master):
+        tk.Frame.__init__(self, master)
+        self.fitterLabel = tk.Label(self, text="Fitter: ")
+        self.fitterLabel.pack()
+        self.fitterSelect = ttk.Combobox(self)
+        self.fitterSelect.pack()
+        self.fitterSelect["values"] = [
+            "WLSFitter",
+            "GLSFitter",
+            "WidebandTOAFitter",
+            "PowellFitter",
+            "DownhillWLSFitter",
+            "DownhillGLSFitter",
+            "WidebandDownhillFitter",
+            "WidebandLMFitter",
+        ]
+        self.fitterSelect["state"] = "readonly"  # user can't enter an option
+        self.fitterSelect.current(1)  # automatically on GLS
+        # bind user log level selection to function changing log level
+        self.fitterSelect.bind("<<ComboboxSelected>>", self.changeFitter)
+        self.fitter = self.fitterSelect.get()
+
+    def changeFitter(self, event):
+        self.fitter = self.fitterSelect.get()  # get current value
+        log.info(f"Selected {self.fitter}")
+
+
 class PlkColorModeBoxes(tk.Frame):
     """
     Allows one to select the color mode for the plot's TOAs.
@@ -555,6 +587,7 @@ class PlkWidget(tk.Frame):
         self.actionsWidget = PlkActionsWidget(master=self)
         self.randomboxWidget = PlkRandomModelSelect(master=self)
         self.logLevelWidget = PlkLogLevelSelect(master=self)
+        self.fitterWidget = PlkFitterSelect(master=self)
         self.colorModeWidget = PlkColorModeBoxes(master=self)
 
         self.plkDpi = 100
@@ -593,7 +626,8 @@ class PlkWidget(tk.Frame):
         self.xyChoiceWidget.grid(row=2, column=0, sticky="nw")
         self.plkCanvas.get_tk_widget().grid(row=2, column=1, sticky="nesw")
         self.actionsWidget.grid(row=3, column=0, columnspan=2, sticky="W")
-        self.logLevelWidget.grid(row=3, column=1, sticky="E")
+        self.logLevelWidget.grid(row=3, column=2, sticky="E")
+        self.fitterWidget.grid(row=3, column=1, sticky="E")
 
         self.grid_columnconfigure(1, weight=10)
         self.grid_columnconfigure(0, weight=1)
@@ -698,6 +732,7 @@ class PlkWidget(tk.Frame):
                 self.current_state.psr = copy.deepcopy(self.psr)
                 self.current_state.selected = self.selected
                 self.state_stack.append(copy.deepcopy(self.current_state))
+            self.psr.fit_method = self.fitterWidget.fitter
             self.psr.fit(self.selected)
             if self.randomboxWidget.getRandomModel():
                 self.psr.random_models(self.selected)
