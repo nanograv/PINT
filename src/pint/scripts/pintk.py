@@ -196,6 +196,13 @@ def main(argv=None):
         help="PINT Fitter to use",
     )
     parser.add_argument(
+        "-v",
+        "--version",
+        default=False,
+        action="store_true",
+        help="Print version info and  exit.",
+    )
+    parser.add_argument(
         "--log-level",
         type=str,
         choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
@@ -204,6 +211,10 @@ def main(argv=None):
         dest="loglevel",
     )
     args = parser.parse_args(argv)
+
+    if args.version:
+        print(f"This is PINT version {pint.__version__}")
+        sys.exit(0)
 
     if args.loglevel != "WARNING":
         log.remove()
