@@ -19,6 +19,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Changed
 - Changed logging to use `loguru`
 - Changed to floating point format and added color for correlation matrix output
+- prefix parameters no longer inherit frozen status
 
 ## [0.8.5] 2022-02-24
 ### Added
