@@ -13,7 +13,9 @@ from pint.models.timing_model import Component
 
 
 class NoiseComponent(Component):
-    def __init__(self,):
+    def __init__(
+        self,
+    ):
         super().__init__()
         self.covariance_matrix_funcs = []
         self.scaled_toa_sigma_funcs = []  # Need to move this to a speical place.
@@ -44,7 +46,9 @@ class ScaleToaError(NoiseComponent):
     register = True
     category = "scale_toa_error"
 
-    def __init__(self,):
+    def __init__(
+        self,
+    ):
         super().__init__()
         self.introduces_correlated_errors = False
         self.add_param(
@@ -187,7 +191,9 @@ class ScaleDmError(NoiseComponent):
     register = True
     category = "scale_dm_error"
 
-    def __init__(self,):
+    def __init__(
+        self,
+    ):
         super().__init__()
         self.introduces_correlated_errors = False
         self.add_param(
@@ -268,7 +274,7 @@ class ScaleDmError(NoiseComponent):
         return sigma_scaled
 
     def dm_sigma_scaled_cov_matrix(self, toas):
-        scaled_sigma = self.scale_dm_sigma(toas).to_value(u.pc / u.cm ** 3) ** 2
+        scaled_sigma = self.scale_dm_sigma(toas).to_value(u.pc / u.cm**3) ** 2
         return np.diag(scaled_sigma)
 
 
@@ -294,7 +300,9 @@ class EcorrNoise(NoiseComponent):
     register = True
     category = "ecorr_noise"
 
-    def __init__(self,):
+    def __init__(
+        self,
+    ):
         super().__init__()
         self.introduces_correlated_errors = True
         self.add_param(
@@ -397,7 +405,9 @@ class PLRedNoise(NoiseComponent):
     register = True
     category = "pl_red_noise"
 
-    def __init__(self,):
+    def __init__(
+        self,
+    ):
         super().__init__()
         self.introduces_correlated_errors = True
         self.add_param(
@@ -448,7 +458,7 @@ class PLRedNoise(NoiseComponent):
     def get_pl_vals(self):
         nf = int(self.TNRedC.value) if self.TNRedC.value is not None else 30
         if self.TNRedAmp.value is not None and self.TNRedGam.value is not None:
-            amp, gam = 10 ** self.TNRedAmp.value, self.TNRedGam.value
+            amp, gam = 10**self.TNRedAmp.value, self.TNRedGam.value
         elif self.RNAMP.value is not None and self.RNIDX is not None:
             fac = (86400.0 * 365.24 * 1e6) / (2.0 * np.pi * np.sqrt(3.0))
             amp, gam = self.RNAMP.value / fac, -1 * self.RNIDX.value
@@ -540,4 +550,4 @@ def powerlaw(f, A=1e-16, gamma=5):
     """
 
     fyr = 1 / 3.16e7
-    return A ** 2 / 12.0 / np.pi ** 2 * fyr ** (gamma - 3) * f ** (-gamma)
+    return A**2 / 12.0 / np.pi**2 * fyr ** (gamma - 3) * f ** (-gamma)

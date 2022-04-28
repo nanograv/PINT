@@ -176,7 +176,9 @@ class TopoObs(Observatory):
         return os.path.join(os.getenv("TEMPO2"), "clock", fname)
 
     @property
-    def bipm_fullpath(self,):
+    def bipm_fullpath(
+        self,
+    ):
         """Returns full path to the TAI TT(BIPM) clock file.
 
         Will first try PINT data dirs, then fall back on $TEMPO2/clock.

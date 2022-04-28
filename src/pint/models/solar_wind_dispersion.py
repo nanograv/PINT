@@ -71,7 +71,7 @@ class SolarWindDispersion(Dispersion):
         """
         angle, r = self._parent.sun_angle(toas, also_distance=True)
         rho = np.pi - angle.value
-        solar_wind_geometry = const.au ** 2.0 * rho / (r * np.sin(rho))
+        solar_wind_geometry = const.au**2.0 * rho / (r * np.sin(rho))
         return solar_wind_geometry
 
     def solar_wind_dm(self, toas):
@@ -80,7 +80,7 @@ class SolarWindDispersion(Dispersion):
         Uses equations 29, 30 of Edwards et al. 2006.
         """
         if self.NE_SW.value == 0:
-            return np.zeros(len(toas)) * u.pc / u.cm ** 3
+            return np.zeros(len(toas)) * u.pc / u.cm**3
         if self.SWM.value == 0:
             solar_wind_geometry = self.solar_wind_geometry(toas)
             solar_wind_dm = self.NE_SW.quantity * solar_wind_geometry
@@ -89,7 +89,7 @@ class SolarWindDispersion(Dispersion):
             raise NotImplementedError(
                 "Solar Dispersion Delay not implemented for SWM %d" % self.SWM.value
             )
-        return solar_wind_dm.to(u.pc / u.cm ** 3)
+        return solar_wind_dm.to(u.pc / u.cm**3)
 
     def solar_wind_delay(self, toas, acc_delay=None):
         """This is a wrapper function to compute solar wind dispersion delay."""

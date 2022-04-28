@@ -183,7 +183,7 @@ class TestParameters(unittest.TestCase):
         )
 
     def test_set_new_units(self):
-        """Check whether we can set the units to non-standard ones """
+        """Check whether we can set the units to non-standard ones"""
         # Standard units
         units = u.Hz
         str_unit = "Hz"
@@ -224,19 +224,19 @@ class TestParameters(unittest.TestCase):
         )
 
     def set_units_fail(self):
-        """Setting the unit to a non-compatible unit should fail """
+        """Setting the unit to a non-compatible unit should fail"""
         self.m.RAJ.units = u.m
 
     def test_units(self):
-        """Test setting the units """
+        """Test setting the units"""
         self.assertRaises(u.UnitConversionError, self.set_units_fail)
 
     def set_num_to_unit(self):
-        """Try to set the numerical value to a unit """
+        """Try to set the numerical value to a unit"""
         self.m.RAJ.value = u.m
 
     def set_num_to_quantity(self):
-        """Try to set the numerical value to a quantity """
+        """Try to set the numerical value to a quantity"""
         self.m.RAJ.value = 1.0 * u.m
 
     def test_set_value(self):
@@ -293,7 +293,7 @@ class TestParameters(unittest.TestCase):
         self.assertEqual(self.m.PBDOT.quantity, 1e-11 * u.day / u.day)
 
     def test_prefix_value_to_num(self):
-        """Test setting the prefix parameter """
+        """Test setting the prefix parameter"""
         value = 51
         units = u.Hz
         self.mp.GLF0_2.value = value
@@ -554,8 +554,12 @@ def test_compare_key_value_list():
         boolParameter(name="FISH"),
         intParameter(name="FISH"),
         strParameter(name="FISH"),
-        pytest.param(maskParameter(name="JUMP"),),
-        pytest.param(prefixParameter(name="F0"),),
+        pytest.param(
+            maskParameter(name="JUMP"),
+        ),
+        pytest.param(
+            prefixParameter(name="F0"),
+        ),
         pairParameter(name="WEAVE"),
         AngleParameter(name="BEND"),
     ],

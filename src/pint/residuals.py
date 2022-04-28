@@ -283,7 +283,7 @@ class Residuals:
             else:
                 F0 = 1.0 / self.model.P0.quantity
                 if "PDOT" in self.model.params:
-                    F1 = -self.model.PDOT.quantity / self.model.P0.quantity ** 2
+                    F1 = -self.model.PDOT.quantity / self.model.P0.quantity**2
                 else:
                     F1 = 0 * u.Hz / u.s
                 fterms = [0.0 * u.dimensionless_unscaled, F0, F1]
@@ -541,7 +541,7 @@ class WidebandDMResiduals(Residuals):
         toas=None,
         model=None,
         residual_type="dm",
-        unit=u.pc / u.cm ** 3,
+        unit=u.pc / u.cm**3,
         subtract_mean=False,
         use_weighted_mean=True,
     ):
@@ -552,7 +552,7 @@ class WidebandDMResiduals(Residuals):
         self.unit = unit
         self.subtract_mean = subtract_mean
         self.use_weighted_mean = use_weighted_mean
-        self.base_unit = u.pc / u.cm ** 3
+        self.base_unit = u.pc / u.cm**3
         self.get_model_value = self.model.total_dm
         self.dm_data, self.dm_error, self.relevant_toas = self.get_dm_data()
         self._chi2 = None
@@ -614,7 +614,7 @@ class WidebandDMResiduals(Residuals):
                         "Some DM errors are zero - cannot calculate the "
                         "weighted residuals."
                     )
-                wm = np.average(resids, weights=1.0 / (self.dm_error ** 2))
+                wm = np.average(resids, weights=1.0 / (self.dm_error**2))
                 resids -= wm
         return resids
 
@@ -635,7 +635,7 @@ class WidebandDMResiduals(Residuals):
             raise ValueError(
                 "Some DM errors are zero - cannot calculate weighted RMS of residuals"
             )
-        w = 1.0 / (scaled_errors ** 2)
+        w = 1.0 / (scaled_errors**2)
 
         wmean, werr, wsdev = weighted_mean(self.resids, w, sdev=True)
         return wsdev

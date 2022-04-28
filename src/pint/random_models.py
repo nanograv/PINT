@@ -87,7 +87,7 @@ def random_models(
         # from calc_phase_resids in residuals
         rs -= Phase(0.0, rs2.frac.mean() - rs_mean)
         # TODO: use units here!
-        rs = ((rs.int + rs.frac).value / fitter.model.F0.value) * 10 ** 6
+        rs = ((rs.int + rs.frac).value / fitter.model.F0.value) * 10**6
         rss.append(rs)
         random_models.append(deepcopy(mrand))
 

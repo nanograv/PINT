@@ -7,7 +7,7 @@ from loguru import logger as log
 
 
 class ColorMode:
-    """ Base Class for color modes. """
+    """Base Class for color modes."""
 
     def __init__(self, application):
         self.application = application  # PLKWidget for pintk

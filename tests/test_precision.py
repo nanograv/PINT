@@ -719,7 +719,7 @@ def d2tf_nice(ndp, days):
         hmsf = hmsf.view(_new_ihmsfs_dtype)
     h = hmsf["h"]
     m = hmsf["m"]
-    s = hmsf["s"] + hmsf["f"] / 10.0 ** ndp
+    s = hmsf["s"] + hmsf["f"] / 10.0**ndp
 
     return sgn, h, m, s
 
@@ -754,8 +754,8 @@ def decimalify(i, f):
 
 
 def assert_closer_than_ns(i_f, i_f_2, amt):
-    d = decimalify(*i_f) * 86400 * 10 ** 9
-    d_2 = decimalify(*i_f_2) * 86400 * 10 ** 9
+    d = decimalify(*i_f) * 86400 * 10**9
+    d_2 = decimalify(*i_f_2) * 86400 * 10**9
     assert abs(d_2 - d) < amt
 
 
@@ -824,8 +824,8 @@ def test_mjds_to_str(i_f):
     i, f = i_f
     with decimal.localcontext(decimal.Context(prec=40)):
         s = mjds_to_str(i, f)
-        d = Decimal(s) * 86400 * 10 ** 9
-        d2 = decimalify(i, f) * 86400 * 10 ** 9
+        d = Decimal(s) * 86400 * 10**9
+        d2 = decimalify(i, f) * 86400 * 10**9
         assert abs(d2 - d) < 1
 
 

@@ -54,10 +54,10 @@ def test_taylor_horner_basic():
     """Check basic calculation against schoolbook formula."""
     assert taylor_horner(2.0, [10]) == 10
     assert taylor_horner(2.0, [10, 3]) == 10 + 3 * 2.0
-    assert taylor_horner(2.0, [10, 3, 4]) == 10 + 3 * 2.0 + 4 * 2.0 ** 2 / 2.0
+    assert taylor_horner(2.0, [10, 3, 4]) == 10 + 3 * 2.0 + 4 * 2.0**2 / 2.0
     assert taylor_horner(
         2.0, [10, 3, 4, 12]
-    ) == 10 + 3 * 2.0 + 4 * 2.0 ** 2 / 2.0 + 12 * 2.0 ** 3 / (3.0 * 2.0)
+    ) == 10 + 3 * 2.0 + 4 * 2.0**2 / 2.0 + 12 * 2.0**3 / (3.0 * 2.0)
 
 
 contents = """Random text file
@@ -661,7 +661,7 @@ def test_Ftest_statistical(dof_1, dof_2, seed):
     Fs = []
     for i in range(10000):
         x = random.standard_normal(dof_1)
-        Fs.append(FTest((x ** 2).sum(), dof_1, (x[:dof_2] ** 2).sum(), dof_2))
+        Fs.append(FTest((x**2).sum(), dof_1, (x[:dof_2] ** 2).sum(), dof_2))
     threshold = 0.01
     assert (
         scipy.stats.binom(len(Fs), threshold).ppf(0.01)
@@ -718,10 +718,10 @@ def test_taylor_horner_equals_deriv(x, coeffs):
 
 @pytest.mark.parametrize(
     "x, result, n",
-    [(1 * u.s, 1 * u.m, 5), (1 * u.s, 1 * u.m, 1), (1 * u.km ** 2, 1 * u.m, 3)],
+    [(1 * u.s, 1 * u.m, 5), (1 * u.s, 1 * u.m, 1), (1 * u.km**2, 1 * u.m, 3)],
 )
 def test_taylor_horner_units_ok(x, result, n):
-    coeffs = [result / x ** i for i in range(n + 1)]
+    coeffs = [result / x**i for i in range(n + 1)]
     taylor_horner(x, coeffs) + result
 
 

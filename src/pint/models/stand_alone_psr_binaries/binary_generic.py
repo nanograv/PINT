@@ -91,7 +91,9 @@ class PSR_BINARY:
 
     """
 
-    def __init__(self,):
+    def __init__(
+        self,
+    ):
         # Necessary parameters for all binary model
         self.binary_name = None
         self.param_default_value = {
@@ -382,7 +384,7 @@ class PSR_BINARY:
         return U * u.rad
 
     def get_tt0(self, barycentricTOA):
-        """ tt0 = barycentricTOA - T0 """
+        """tt0 = barycentricTOA - T0"""
         if barycentricTOA is None or self.T0 is None:
             tt0 = None
             return tt0
@@ -393,7 +395,7 @@ class PSR_BINARY:
         return tt0
 
     def ecc(self):
-        """Calculate ecctricity with EDOT """
+        """Calculate ecctricity with EDOT"""
         ECC = self.ECC
         EDOT = self.EDOT
         return ECC + (self.tt0 * EDOT).decompose()
@@ -494,7 +496,7 @@ class PSR_BINARY:
     ###############################################
 
     def E(self):
-        """Eccentric Anomaly """
+        """Eccentric Anomaly"""
         if not hasattr(self, "_E") or self._E is None:
             self._E = self.compute_eccentric_anomaly(self.ecc(), self.M())
         return self._E
@@ -550,7 +552,7 @@ class PSR_BINARY:
                 return np.zeros(len(self.tt0)) * E.unit / par_obj.unit
 
     def nu(self):
-        """True anomaly  (Ae) """
+        """True anomaly  (Ae)"""
         if not hasattr(self, "_nu") or self._nu is None:
             ecc = self.ecc()
             nu = 2 * np.arctan(
@@ -675,15 +677,15 @@ class PSR_BINARY:
             return np.longdouble(np.zeros(len(self.tt0))) * self.OM.unit / par_obj.unit
 
     def d_omega_d_OM(self):
-        """dOmega/dOM = 1 """
+        """dOmega/dOM = 1"""
         return np.longdouble(np.ones((len(self.tt0)))) * u.Unit("")
 
     def d_omega_d_OMDOT(self):
-        """dOmega/dOMDOT = tt0 """
+        """dOmega/dOMDOT = tt0"""
         return self.tt0
 
     def d_omega_d_T0(self):
-        """dOmega/dPB = dnu/dPB*k+dk/dPB*nu """
+        """dOmega/dPB = dnu/dPB*k+dk/dPB*nu"""
         result = np.empty(len(self.tt0))
         result.fill(-self.EDOT.value)
         return result * u.Unit(self.EDOT.unit)

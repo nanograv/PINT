@@ -131,7 +131,7 @@ class BTmodel(PSR_BINARY):
         omega = self.omega()
         ecc = self.ecc()
         E = self.E()
-        num = a1 * np.cos(omega) * np.sqrt(1 - ecc ** 2) * np.cos(E) - a1 * np.sin(
+        num = a1 * np.cos(omega) * np.sqrt(1 - ecc**2) * np.cos(E) - a1 * np.sin(
             omega
         ) * np.sin(E)
         den = 1.0 - ecc * np.cos(E)

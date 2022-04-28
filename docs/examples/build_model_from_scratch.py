@@ -211,9 +211,9 @@ display(tm.DelayComponent_list)
 # The DM value can be set as we set the parameters above.
 
 # %%
-tm.DM.quantity = 223.9 * u.pc / u.cm ** 3
+tm.DM.quantity = 223.9 * u.pc / u.cm**3
 tm.DM.frozen = False  # Frozen means not fit.
-tm.DM.uncertainty = 0.3 * u.pc / u.cm ** 3
+tm.DM.uncertainty = 0.3 * u.pc / u.cm**3
 
 # %% [markdown]
 # Run validate again and just make sure everything is setup good.
@@ -270,7 +270,7 @@ print(tm.components["DispersionDMX"].params)
 # %%
 # Add prefix parameters
 dmx_0003 = p.prefixParameter(
-    parameter_type="float", name="DMX_0003", value=None, units=u.pc / u.cm ** 3
+    parameter_type="float", name="DMX_0003", value=None, units=u.pc / u.cm**3
 )
 
 tm.components["DispersionDMX"].add_param(dmx_0003, setup=True)
@@ -363,7 +363,7 @@ display(tm.params)
 # %%
 tm.F1.quantity = -1.181e-15 * u.Hz / u.s
 tm.F1.uncertainty = 1e-18 * u.Hz / u.s
-tm.F2.quantity = 2e-10 * u.Hz / u.s ** 2
+tm.F2.quantity = 2e-10 * u.Hz / u.s**2
 display(tm.F2)
 
 # %%
