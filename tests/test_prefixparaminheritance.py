@@ -39,4 +39,3 @@ def test_prefixparaminheritance_unfrozen():
     m = get_model(io.StringIO(input_par + "\nF2 0 1\nF3 0 1"))
     assert not m.F2.frozen
     assert not m.F3.frozen
-
