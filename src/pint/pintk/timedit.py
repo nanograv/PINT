@@ -140,7 +140,7 @@ class TimWidget(tk.Frame):
             else:
                 time_out = time
             asfile += pint.toa.format_toa_line(
-                time_out, err, freq, obs_obj, name="pint", flags=flags, format="TEMPO2"
+                time_out, err, freq, obs_obj, name="pint", flags=flags, format="TEMPO2"                
             )
         if pnChange:
             for flags in toas.table["flags"]:
