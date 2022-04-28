@@ -1,5 +1,4 @@
 import os
-import tempfile
 import copy
 from io import StringIO
 from collections import Counter, defaultdict
@@ -576,12 +575,8 @@ def get_model(parfile, allow_name_mixing=False):
         model.name = parfile
         return model
     else:
-        with tempfile.TemporaryDirectory() as td:
-            fn = os.path.join(td, "temp.par")
-            with open(fn, "wt") as f:
-                f.write(contents)
-            tm = model_builder(fn, allow_name_mixing)
-            return tm
+        tm = model_builder(StringIO(contents), allow_name_mixing)
+        return tm
 
 
 def get_model_and_toas(
