@@ -261,14 +261,23 @@ class Fitter:
         """
         if toas.wideband:
             if downhill:
+                log.info(
+                    f"For wideband TOAs and downhill fitter, returning 'WidebandDownhillFitter'"
+                )
                 return WidebandDownhillFitter(
                     toas, model, track_mode=track_mode, residuals=residuals, **kwargs
                 )
             else:
+                log.info(
+                    f"For wideband TOAs and non-downhill fitter, returning 'WidebandTOAFitter'"
+                )
                 return WidebandTOAFitter(toas, model, track_mode=track_mode, **kwargs)
         else:
             if model.has_correlated_errors:
                 if downhill:
+                    log.info(
+                        f"For narrowband TOAs with correlated errors and downhill fitter, returning 'DownhillGLSFitter'"
+                    )
                     return DownhillGLSFitter(
                         toas,
                         model,
@@ -277,6 +286,9 @@ class Fitter:
                         **kwargs,
                     )
                 else:
+                    log.info(
+                        f"For narrowband TOAs with correlated errors and non-downhill fitter, returning 'GLSFitter'"
+                    )
                     return GLSFitter(
                         toas,
                         model,
@@ -286,6 +298,9 @@ class Fitter:
                     )
             else:
                 if downhill:
+                    log.info(
+                        f"For narrowband TOAs without correlated errors and downhill fitter, returning 'DownhillWLSFitter'"
+                    )
                     return DownhillWLSFitter(
                         toas,
                         model,
@@ -294,6 +309,9 @@ class Fitter:
                         **kwargs,
                     )
                 else:
+                    log.info(
+                        f"For narrowband TOAs without correlated errors and non-downhill fitter, returning 'WLSFitter'"
+                    )
                     return WLSFitter(
                         toas,
                         model,
