@@ -140,7 +140,7 @@ class TimWidget(tk.Frame):
             else:
                 time_out = time
             asfile += pint.toa.format_toa_line(
-                time_out, err, freq, obs_obj, name="pint", flags=flags, format="TEMPO2"                
+                time_out, err, freq, obs_obj, name="pint", flags=flags, format="TEMPO2"
             )
         if pnChange:
             for flags in toas.table["flags"]:
@@ -149,7 +149,7 @@ class TimWidget(tk.Frame):
         self.editor.insert("1.0", asfile)
 
     def applyChanges(self):
-        text = self.editor.get("1.0", "end-1c"))
+        text = self.editor.get("1.0", "end-1c")
         self.psr.selected_toas = pint.toa.get_TOAs(io.StringIO(text))
         self.call_updates()
 
