@@ -37,7 +37,7 @@ class BinaryDDK(BinaryDD):
 
     Note
     ----
-    This model defines KOM with reference to north, either equatorial or ecliptic depending on how the model is defined
+    This model defines KOM with reference to north, either equatorial or ecliptic depending on how the model is defined.  Using this model at the ~10ns level needs to be verified.
 
     Parameters supported:
 
@@ -121,6 +121,9 @@ class BinaryDDK(BinaryDD):
                 )
         elif "AstrometryEcliptic" in self._parent.components:
             log.debug("Validating DDK model in ECL coordinates")
+            log.warning(
+                "Using the DDK model in ECL coordinates has not been verified below ~30 ns"
+            )
             if (
                 "PMELONG" not in self._parent.params
                 or "PMELAT" not in self._parent.params

@@ -28,6 +28,11 @@ class DDKmodel(DDmodel):
        SINI
             use ``KIN`` instead
 
+    Notes
+    -----
+    This model defines KOM with reference to north, either equatorial or ecliptic depending on how the model is defined.  Using this model with ECL coordinates at the ~10ns level needs to be verified.
+
+
     References
     ----------
     - Kopeikin (1995), ApJ, 439, L5 [1]_

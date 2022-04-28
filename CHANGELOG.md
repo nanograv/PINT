@@ -13,6 +13,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Fixed
 ### Changed
 - Changed logging to use `loguru`
+- DDK model will now use ICRS or ECL coordinates depending on what the input model is
 
 
 ## [0.8.5] 2022-02-24
