@@ -1249,15 +1249,15 @@ class AngleParameter(Parameter):
 class prefixParameter:
     """Families of parameters identified by a prefix like ``DMX_0123``.
 
-    Create a prefix parameter, is like create a normal parameter. But the
-    name should be in the format of prefix and index. For example DMX_0001 or
-    F22. Appropriate units will be inferred,
+    Creating a ``prefixParameter`` is like creating a normal parameter, except that the
+    name should be in the format of prefix and index. For example, ``DMX_0001`` or
+    ``F22``. Appropriate units will be inferred.
 
     To create a prefix parameter with the same prefix but different index, just
-    use the :meth:`pint.parameter.prefixParameter.new_param` method. It will return a new prefix parameter with the
-    same setup but the index. Some parameters' unit and description will
+    use the :meth:`pint.models.parameter.prefixParameter.new_param` method. It will return a new ``prefixParameter`` with the
+    same setup but a new index. Some  units and descriptions will
     be changed once the index has been changed. The new parameter will not inherit the ``frozen`` status of its parent by default.  In order to get the right units
-    and description, ``.unitTplt`` and ``.descriptionTplt`` should be provided. If
+    and description, ``.unit_template`` and ``.description_template`` should be provided. If
     not the new prefix parameter will use the same units and description with
     the old one. A typical description and units template is like::
 
