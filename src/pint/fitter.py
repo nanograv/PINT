@@ -55,13 +55,13 @@ Fitters in use::
 """
 import collections
 import copy
-import logging
 from warnings import warn
 
 import astropy.units as u
 import numpy as np
 import scipy.linalg
 import scipy.optimize as opt
+from loguru import logger as log
 
 import pint.utils
 import pint.derived_quantities
@@ -79,7 +79,6 @@ from pint.residuals import Residuals, WidebandTOAResiduals
 from pint.toa import TOAs
 from pint.utils import FTest
 
-log = logging.getLogger(__name__)
 
 __all__ = [
     "Fitter",
@@ -357,8 +356,17 @@ class Fitter:
                             ufloat(par.value, par.uncertainty.value),
                             par.units,
                         )
+        s += "\n" + self.get_derived_params()
+        return s
+
+    def get_derived_params(self):
+        """Return a string with various derived parameters from the fitted model"""
+
+        import uncertainties.umath as um
+        from uncertainties import ufloat
+
         # Now print some useful derived parameters
-        s += "\nDerived Parameters:\n"
+        s = "Derived Parameters:\n"
         if hasattr(self.model, "F0"):
             F0 = self.model.F0.quantity
             if not self.model.F0.frozen:
@@ -375,21 +383,24 @@ class Fitter:
                 s += "Pdot = {} +/- {}\n".format(
                     pd.to(u.dimensionless_unscaled), pderr.to(u.dimensionless_unscaled)
                 )
-                brakingindex = 3
-                s += "Characteristic age = {:.4g} (braking index = {})\n".format(
-                    pint.derived_quantities.pulsar_age(F0, F1, n=brakingindex),
-                    brakingindex,
-                )
-                s += "Surface magnetic field = {:.3g}\n".format(
-                    pint.derived_quantities.pulsar_B(F0, F1)
-                )
-                s += "Magnetic field at light cylinder = {:.4g}\n".format(
-                    pint.derived_quantities.pulsar_B_lightcyl(F0, F1)
-                )
-                I_NS = I = 1.0e45 * u.g * u.cm ** 2
-                s += "Spindown Edot = {:.4g} (I={})\n".format(
-                    pint.derived_quantities.pulsar_edot(F0, F1, I=I_NS), I_NS
-                )
+                if F1.value < 0.0:  # spinning-down
+                    brakingindex = 3
+                    s += "Characteristic age = {:.4g} (braking index = {})\n".format(
+                        pint.derived_quantities.pulsar_age(F0, F1, n=brakingindex),
+                        brakingindex,
+                    )
+                    s += "Surface magnetic field = {:.3g}\n".format(
+                        pint.derived_quantities.pulsar_B(F0, F1)
+                    )
+                    s += "Magnetic field at light cylinder = {:.4g}\n".format(
+                        pint.derived_quantities.pulsar_B_lightcyl(F0, F1)
+                    )
+                    I_NS = I = 1.0e45 * u.g * u.cm**2
+                    s += "Spindown Edot = {:.4g} (I={})\n".format(
+                        pint.derived_quantities.pulsar_edot(F0, F1, I=I_NS), I_NS
+                    )
+                else:
+                    s += "Not computing Age, B, or Edot since F1 > 0.0\n"
 
         if hasattr(self.model, "PX"):
             if not self.model.PX.frozen:
@@ -401,14 +412,47 @@ class Fitter:
                 s += "Parallax distance = {:.3uP} pc\n".format(1.0 / px)
 
         # Now binary system derived parameters
-        binary = None
-        for x in self.model.components:
-            if x.startswith("Binary"):
-                binary = x
-        if binary is not None:
-            s += "\n"
-            s += "Binary model {}\n".format(binary)
+        if self.model.is_binary:
+            for x in self.model.components:
+                if x.startswith("Binary"):
+                    binary = x
 
+            s += "\nBinary model {}\n".format(binary)
+
+            btx = False
+            if (
+                hasattr(self.model, "FB0")
+                and self.model.FB0.quantity is not None
+                and self.model.FB0.value != 0.0
+            ):
+                btx = True
+                FB0 = self.model.FB0.quantity
+                if not self.model.FB0.frozen:
+                    p, perr = pint.derived_quantities.pferrs(
+                        FB0, self.model.FB0.uncertainty
+                    )
+                    s += "Orbital Period  (PB) = {} +/- {}\n".format(
+                        p.to(u.d), perr.to(u.d)
+                    )
+                else:
+                    s += "Orbital Period  (PB) = {}\n".format((1.0 / FB0).to(u.d))
+
+            if (
+                hasattr(self.model, "FB1")
+                and self.model.FB1.quantity is not None
+                and self.model.FB1.value != 0.0
+            ):
+                FB1 = self.model.FB1.quantity
+                if not any([self.model.FB1.frozen, self.model.FB0.frozen]):
+                    p, perr, pd, pderr = pint.derived_quantities.pferrs(
+                        FB0, self.model.FB0.uncertainty, FB1, self.model.FB1.uncertainty
+                    )
+                    s += "Orbital Pdot (PBDOT) = {} +/- {}\n".format(
+                        pd.to(u.dimensionless_unscaled),
+                        pderr.to(u.dimensionless_unscaled),
+                    )
+
+            ell1 = False
             if binary.startswith("BinaryELL1"):
                 if not any(
                     [
@@ -418,6 +462,7 @@ class Fitter:
                         self.model.PB.frozen,
                     ]
                 ):
+                    ell1 = True
                     eps1 = ufloat(
                         self.model.EPS1.quantity.value,
                         self.model.EPS1.uncertainty.value,
@@ -436,16 +481,16 @@ class Fitter:
                         self.model.PB.uncertainty.to(u.d).value,
                     )
                     s += "Conversion from ELL1 parameters:\n"
-                    ecc = um.sqrt(eps1 ** 2 + eps2 ** 2)
+                    ecc = um.sqrt(eps1**2 + eps2**2)
                     s += "ECC = {:P}\n".format(ecc)
                     om = um.atan2(eps1, eps2) * 180.0 / np.pi
                     if om < 0.0:
                         om += 360.0
-                    s += "OM  = {:P}\n".format(om)
+                    s += "OM  = {:P} deg\n".format(om)
                     t0 = tasc + pb * om / 360.0
                     s += "T0  = {:SP}\n".format(t0)
 
-                    if is_wideband:
+                    if self.is_wideband:
                         s += pint.utils.ELL1_check(
                             self.model.A1.quantity,
                             ecc.nominal_value,
@@ -463,58 +508,94 @@ class Fitter:
                         )
                     s += "\n"
 
-                # Masses and inclination
-                if not any([self.model.PB.frozen, self.model.A1.frozen]):
-                    pbs = ufloat(
-                        self.model.PB.quantity.to(u.s).value,
-                        self.model.PB.uncertainty.to(u.s).value,
-                    )
-                    a1 = ufloat(
-                        self.model.A1.quantity.to(pint.ls).value,
-                        self.model.A1.uncertainty.to(pint.ls).value,
-                    )
-                    fm = 4.0 * np.pi ** 2 * a1 ** 3 / (4.925490947e-6 * pbs ** 2)
-                    s += "Mass function = {:SP} Msun\n".format(fm)
-                    mcmed = pint.derived_quantities.companion_mass(
-                        self.model.PB.quantity,
-                        self.model.A1.quantity,
-                        i=60.0 * u.deg,
-                        mp=1.4 * u.solMass,
-                    )
-                    mcmin = pint.derived_quantities.companion_mass(
-                        self.model.PB.quantity,
-                        self.model.A1.quantity,
-                        i=90.0 * u.deg,
-                        mp=1.4 * u.solMass,
-                    )
-                    s += "Companion mass min, median (assuming Mpsr = 1.4 Msun) = {:.4f}, {:.4f} Msun\n".format(
-                        mcmin, mcmed
-                    )
+            # Masses and inclination
+            pb = p.to(u.d) if btx else self.model.PB.quantity
+            pberr = perr.to(u.d) if btx else self.model.PB.uncertainty
+            if not self.model.A1.frozen:
+                pbs = ufloat(
+                    pb.to(u.s).value,
+                    pberr.to(u.s).value,
+                )
+                a1 = ufloat(
+                    self.model.A1.quantity.to(pint.ls).value,
+                    self.model.A1.uncertainty.to(pint.ls).value,
+                )
+                # This is the mass function, done explicitly so that we get
+                # uncertainty propagation automatically.
+                # TODO: derived quantities funcs should take uncertainties
+                fm = 4.0 * np.pi**2 * a1**3 / (4.925490947e-6 * pbs**2)
+                s += "Mass function = {:SP} Msun\n".format(fm)
+                mcmed = pint.derived_quantities.companion_mass(
+                    pb,
+                    self.model.A1.quantity,
+                    i=60.0 * u.deg,
+                    mp=1.4 * u.solMass,
+                )
+                mcmin = pint.derived_quantities.companion_mass(
+                    pb,
+                    self.model.A1.quantity,
+                    i=90.0 * u.deg,
+                    mp=1.4 * u.solMass,
+                )
+                s += "Min / Median Companion mass (assuming Mpsr = 1.4 Msun) = {:.4f} / {:.4f} Msun\n".format(
+                    mcmin.value, mcmed.value
+                )
 
-                if hasattr(self.model, "SINI") and self.model.SINI.quantity is not None:
-                    try:
-                        # Put this in a try in case SINI is UNSET or an illegal value
-                        if not self.model.SINI.frozen:
-                            si = ufloat(
-                                self.model.SINI.quantity.value,
-                                self.model.SINI.uncertainty.value,
-                            )
-                            s += "From SINI in model:\n"
-                            s += "    cos(i) = {:SP}\n".format(um.sqrt(1 - si ** 2))
-                            s += "    i = {:SP} deg\n".format(
-                                um.asin(si) * 180.0 / np.pi
-                            )
+            if (
+                hasattr(self.model, "OMDOT")
+                and self.model.OMDOT.quantity is not None
+                and self.model.OMDOT.value != 0.0
+            ):
+                omdot = self.model.OMDOT.quantity
+                omdot_err = self.model.OMDOT.uncertainty
+                ecc = (
+                    ecc.n * u.dimensionless_unscaled
+                    if ell1
+                    else self.model.ECC.quantity
+                )
+                Mtot = pint.derived_quantities.omdot_to_mtot(omdot, pb, ecc)
+                # Assume that the uncertainty on OMDOT dominates the Mtot uncertainty
+                # This is probably a good assumption until we can get the uncertainties module
+                # to work with quantities.
+                Mtot_hi = pint.derived_quantities.omdot_to_mtot(
+                    omdot + omdot_err,
+                    pb,
+                    ecc,
+                )
+                Mtot_lo = pint.derived_quantities.omdot_to_mtot(
+                    omdot - omdot_err,
+                    pb,
+                    ecc,
+                )
+                Mtot_err = max(abs(Mtot_hi - Mtot), abs(Mtot - Mtot_lo))
+                mt = ufloat(Mtot.value, Mtot_err.value)
+                s += "Total mass, assuming GR, from OMDOT is {:SP} Msun\n".format(mt)
 
-                        psrmass = pint.derived_quantities.pulsar_mass(
-                            self.model.PB.quantity,
-                            self.model.A1.quantity,
-                            self.model.M2.quantity,
-                            np.arcsin(self.model.SINI.quantity),
+            if (
+                hasattr(self.model, "SINI")
+                and self.model.SINI.quantity is not None
+                and (self.model.SINI.value >= 0.0 and self.model.SINI.value < 1.0)
+            ):
+                try:
+                    # Put this in a try in case SINI is UNSET or an illegal value
+                    if not self.model.SINI.frozen:
+                        si = ufloat(
+                            self.model.SINI.quantity.value,
+                            self.model.SINI.uncertainty.value,
                         )
-                        s += "Pulsar mass (Shapiro Delay) = {}".format(psrmass)
-                    except (TypeError, ValueError):
-                        pass
+                        s += "From SINI in model:\n"
+                        s += "    cos(i) = {:SP}\n".format(um.sqrt(1 - si**2))
+                        s += "    i = {:SP} deg\n".format(um.asin(si) * 180.0 / np.pi)
 
+                    psrmass = pint.derived_quantities.pulsar_mass(
+                        pb,
+                        self.model.A1.quantity,
+                        self.model.M2.quantity,
+                        np.arcsin(self.model.SINI.quantity),
+                    )
+                    s += "Pulsar mass (Shapiro Delay) = {}".format(psrmass)
+                except (TypeError, ValueError):
+                    pass
         return s
 
     def print_summary(self):
@@ -582,6 +663,21 @@ class Fitter:
         """Return the model's design matrix for these TOAs."""
         return self.model.designmatrix(toas=self.toas, incfrozen=False, incoffset=True)
 
+    def _get_corr_cov_matrix(
+        self, matrix_type, with_phase, pretty_print, prec, usecolor
+    ):
+        if hasattr(self, f"parameter_{matrix_type}_matrix"):
+            cm = getattr(self, f"parameter_{matrix_type}_matrix")
+            if not pretty_print:
+                return cm.prettyprint(prec=prec, offset=with_phase)
+            else:
+                print(cm.prettyprint(prec=prec, offset=with_phase, usecolor=usecolor))
+        else:
+            log.error(
+                f"You must run .fit_toas() before accessing the {matrix_type} matrix"
+            )
+            raise AttributeError
+
     def get_parameter_covariance_matrix(
         self, with_phase=False, pretty_print=False, prec=3
     ):
@@ -591,109 +687,23 @@ class Fitter:
         If pretty_print, then also pretty-print on stdout the matrix.
         prec is the precision of the floating point results.
         """
-        if hasattr(self, "parameter_covariance_matrix"):
-            if isinstance(self.parameter_covariance_matrix, np.ndarray):
-                # it's just a raw ndarray
-                fps = list(self.model.free_params)
-                cm = self.parameter_covariance_matrix
-                if with_phase:
-                    fps = ["PHASE"] + fps
-                else:
-                    cm = cm[1:, 1:]
-            elif isinstance(self.parameter_covariance_matrix, CovarianceMatrix):
-                if with_phase:
-                    return self.parameter_covariance_matrix.prettyprint(prec=prec)
-                    fps = self.parameter_covariance_matrix.get_label_names(axis=0)
-                    cm = self.parameter_covariance_matrix.matrix
-                else:
-                    # exclude that
-                    fps = [
-                        x
-                        for x in self.parameter_covariance_matrix.get_label_names(
-                            axis=0
-                        )
-                        if not x == "Offset"
-                    ]
-                    new_matrix = self.parameter_covariance_matrix.get_label_matrix(fps)
-                    print(new_matrix.prettyprint(prec=prec))
-                    return new_matrix
-            if pretty_print:
-                lens = [max(len(fp) + 2, prec + 8) for fp in fps]
-                maxlen = max(lens)
-                print("\nParameter covariance matrix:")
-                line = "{0:^{width}}".format("", width=maxlen)
-                for fp, ln in zip(fps, lens):
-                    line += "{0:^{width}}".format(fp, width=ln)
-                print(line)
-                for ii, fp1 in enumerate(fps):
-                    line = "{0:^{width}}".format(fp1, width=maxlen)
-                    for jj, (fp2, ln) in enumerate(zip(fps[: ii + 1], lens[: ii + 1])):
-                        line += "{0: {width}.{prec}e}".format(
-                            cm[ii, jj], width=ln, prec=prec
-                        )
-                    print(line)
-                print("\n")
-            return cm
-        else:
-            log.error("You must run .fit_toas() before accessing the covariance matrix")
-            raise AttributeError
+        return self._get_corr_cov_matrix(
+            "covariance", with_phase, pretty_print, prec, "False"
+        )
 
     def get_parameter_correlation_matrix(
-        self, with_phase=False, pretty_print=False, prec=3
+        self, with_phase=False, pretty_print=False, prec=3, usecolor=True
     ):
         """Show the parameter correlation matrix post-fit.
 
         If with_phase, then show and return the phase column as well.
         If pretty_print, then also pretty-print on stdout the matrix.
-        prec is the precision of the floating point results.
+        prec is the precision of the floating point results. If
+        usecolor is True, then pretty printing will have color.
         """
-        if hasattr(self, "parameter_correlation_matrix"):
-            if isinstance(self.parameter_correlation_matrix, np.ndarray):
-                # it's just a raw ndarray
-                fps = list(self.model.free_params)
-                cm = self.parameter_correlation_matrix
-                if with_phase:
-                    fps = ["PHASE"] + fps
-                else:
-                    cm = cm[1:, 1:]
-            elif isinstance(self.parameter_correlation_matrix, CorrelationMatrix):
-                if with_phase:
-                    return self.parameter_correlation_matrix.prettyprint(prec=prec)
-                    fps = self.parameter_correlation_matrix.get_label_names(axis=0)
-                    cm = self.parameter_correlation_matrix.matrix
-                else:
-                    # exclude that
-                    fps = [
-                        x
-                        for x in self.parameter_correlation_matrix.get_label_names(
-                            axis=0
-                        )
-                        if not x == "Offset"
-                    ]
-                    new_matrix = self.parameter_correlation_matrix.get_label_matrix(fps)
-                    return new_matrix.prettyprint(prec=prec)
-            if pretty_print:
-                lens = [max(len(fp) + 2, prec + 4) for fp in fps]
-                maxlen = max(lens)
-                print("\nParameter correlation matrix:")
-                line = "{0:^{width}}".format("", width=maxlen)
-                for fp, ln in zip(fps, lens):
-                    line += "{0:^{width}}".format(fp, width=ln)
-                print(line)
-                for ii, fp1 in enumerate(fps):
-                    line = "{0:^{width}}".format(fp1, width=maxlen)
-                    for jj, (fp2, ln) in enumerate(zip(fps, lens)):
-                        line += "{0:^{width}.{prec}f}".format(
-                            cm[ii, jj], width=ln, prec=prec
-                        )
-                    print(line)
-                print("\n")
-            return cm
-        else:
-            log.error(
-                "You must run .fit_toas() before accessing the correlation matrix"
-            )
-            raise AttributeError
+        return self._get_corr_cov_matrix(
+            "correlation", with_phase, pretty_print, prec, usecolor
+        )
 
     def ftest(self, parameter, component, remove=False, full_output=False, maxiter=1):
         """Compare the significance of adding/removing parameters to a timing model.
@@ -1041,7 +1051,7 @@ class ModelState:
         for p, s in zip(self.params, step * lambda_):
             try:
                 try:
-                    log.debug(f"Adjusting {getattr(self.model, p)} by {s}")
+                    log.trace(f"Adjusting {getattr(self.model, p)} by {s}")
                 except ValueError:
                     # I don't know why this fails with multiprocessing, but bypass if it does
                     pass
@@ -1054,7 +1064,7 @@ class ModelState:
                 # getattr(new_model, p).value = s
             except AttributeError:
                 if p != "Offset":
-                    log.debug(f"Unexpected parameter {p}")
+                    log.warning(f"Unexpected parameter {p}")
         return new_model
 
     def take_step(self, step, lambda_):
@@ -1142,7 +1152,7 @@ class DownhillFitter(Fitter):
                             f"when trying to take a step with lambda {lambda_}"
                         )
                     else:
-                        log.info(
+                        log.trace(
                             f"Iteration {i}: "
                             f"Updating state, chi2 goes down by {chi2_decrease} "
                             f"from {current_state.chi2} "
@@ -1156,7 +1166,7 @@ class DownhillFitter(Fitter):
                     # If bad parameter values escape, look in ModelState.resids for the except
                     # that should catch them
                     lambda_ /= 2
-                    log.info(f"Iteration {i}: Shortening step to {lambda_}: {e}")
+                    log.trace(f"Iteration {i}: Shortening step to {lambda_}: {e}")
                     if lambda_ < min_lambda:
                         log.warning(
                             f"Unable to improve chi2 even with very small steps, stopping "
@@ -1168,7 +1178,7 @@ class DownhillFitter(Fitter):
                 -max_chi2_increase <= chi2_decrease < required_chi2_decrease
                 and lambda_ == 1
             ):
-                log.info(
+                log.debug(
                     f"Iteration {i}: chi2 does not improve, stopping; "
                     f"decrease: {chi2_decrease}"
                 )
@@ -1177,7 +1187,7 @@ class DownhillFitter(Fitter):
             if exception is not None:
                 break
         else:
-            log.info(
+            log.debug(
                 f"Stopping because maxmum number of iterations ({maxiter}) reached"
             )
         self.current_state = best_state
@@ -1194,14 +1204,14 @@ class DownhillFitter(Fitter):
         for p, e in zip(self.current_state.params, self.errors):
             try:
                 try:
-                    log.debug(f"Setting {getattr(self.model, p)} uncertainty to {e}")
+                    log.trace(f"Setting {getattr(self.model, p)} uncertainty to {e}")
                 except ValueError:
                     # I don't know why this fails with multiprocessing, but bypass if it does
                     pass
                 pm = getattr(self.model, p)
             except AttributeError:
                 if p != "Offset":
-                    log.debug(f"Unexpected parameter {p}")
+                    log.warning(f"Unexpected parameter {p}")
             else:
                 pm.uncertainty = e * pm.units
         self.update_model(self.current_state.chi2)
@@ -1212,6 +1222,10 @@ class DownhillFitter(Fitter):
         if not self.converged:
             raise MaxiterReached(f"Convergence not detected after {maxiter} steps.")
         return self.converged
+
+    @property
+    def fac(self):
+        return self.current_state.fac
 
 
 class WLSState(ModelState):
@@ -1239,7 +1253,7 @@ class WLSState(ModelState):
         # NOTE, We remove subtract mean value here, since it did not give us a
         # fast converge fitting.
         # M[:,1:] -= M[:,1:].mean(axis=0)
-        fac = np.sqrt((M ** 2).mean(axis=0))
+        fac = np.sqrt((M**2).mean(axis=0))
         # fac[0] = 1.0
         fac[fac == 0] = 1.0
         M /= fac
@@ -1312,7 +1326,7 @@ class WLSState(ModelState):
         # Sigma = np.dot(Vt.T / s, U.T)
         # The post-fit parameter covariance matrix
         #   Sigma = V s^-2 V^T
-        Sigma = np.dot(self.Vt.T / (self.s ** 2), self.Vt)
+        Sigma = np.dot(self.Vt.T / (self.s**2), self.Vt)
         return CovarianceMatrix(
             (Sigma / self.fac).T / self.fac, self.parameter_covariance_matrix_labels
         )
@@ -1391,7 +1405,7 @@ class GLSState(ModelState):
                 M = np.hstack((M, Mn))
 
         # normalize the design matrix
-        norm = np.sqrt(np.sum(M ** 2, axis=0))
+        norm = np.sqrt(np.sum(M**2, axis=0))
         for c in np.where(norm == 0)[0]:
             warn(
                 f"Parameter degeneracy; the following parameter yields "
@@ -1401,6 +1415,7 @@ class GLSState(ModelState):
         norm[norm == 0] = 1
         M /= norm
         self.M = M
+        self.fac = norm
 
         # compute covariance matrices
         if self.full_cov:
@@ -1411,7 +1426,7 @@ class GLSState(ModelState):
             mtcy = np.dot(cm.T, residuals)
 
         else:
-            phiinv /= norm ** 2
+            phiinv /= norm**2
             Nvec = (
                 self.model.scaled_toa_uncertainty(self.fitter.toas).to(u.s).value ** 2
             )
@@ -1419,10 +1434,10 @@ class GLSState(ModelState):
             mtcm = np.dot(M.T, cinv[:, None] * M)
             mtcm += np.diag(phiinv)
             mtcy = np.dot(M.T, cinv * residuals)
-        log.debug(f"mtcm: {mtcm}")
+        log.trace(f"mtcm: {mtcm}")
 
         U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
-        log.debug(f"s: {s}")
+        log.trace(f"s: {s}")
 
         bad = np.where(s <= self.threshold * s[0])[0]
         s[bad] = np.inf
@@ -1445,8 +1460,8 @@ class GLSState(ModelState):
         self.norm = norm
         self.s, self.Vt = s, Vt
         xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
-        log.debug(f"norm: {norm}")
-        log.debug(f"xhat: {xhat}")
+        log.trace(f"norm: {norm}")
+        log.trace(f"xhat: {xhat}")
         self.xhat = xhat
         # newres = residuals - np.dot(M, xhat)
 
@@ -1570,7 +1585,7 @@ class WidebandState(ModelState):
                 DesignMatrixMaker("toa", u.s)(
                     self.fitter.toas, self.model, self.model.free_params, offset=True
                 ),
-                DesignMatrixMaker("dm", u.pc / u.cm ** 3)(
+                DesignMatrixMaker("dm", u.pc / u.cm**3)(
                     self.fitter.toas, self.model, self.model.free_params, offset=True
                 ),
             ]
@@ -1596,7 +1611,7 @@ class WidebandState(ModelState):
                 )
 
         # normalize the design matrix
-        norm = np.sqrt(np.sum(M ** 2, axis=0))
+        norm = np.sqrt(np.sum(M**2, axis=0))
         ntmpar = len(self.model.free_params)
         if M.shape[1] > ntmpar:
             norm[ntmpar:] = 1
@@ -1609,8 +1624,9 @@ class WidebandState(ModelState):
         norm[norm == 0] = 1
         M /= norm
         if not self.full_cov:
-            phiinv /= norm ** 2
+            phiinv /= norm**2
             self.phiinv = phiinv
+        self.fac = norm
 
         return M, params, units, norm
 
@@ -1642,7 +1658,7 @@ class WidebandState(ModelState):
             cov = combine_covariance_matrix(
                 [
                     CovarianceMatrixMaker("toa", u.s)(self.fitter.toas, self.model),
-                    CovarianceMatrixMaker("dm", u.pc / u.cm ** 3)(
+                    CovarianceMatrixMaker("dm", u.pc / u.cm**3)(
                         self.fitter.toas, self.model
                     ),
                 ]
@@ -1662,10 +1678,10 @@ class WidebandState(ModelState):
                         if hasattr(self.model, "scaled_toa_uncertainty")
                         else self.resids.toa.get_errors().to_value(u.s),
                         self.model.scaled_dm_uncertainty(self.fitter.toas).to_value(
-                            u.pc / u.cm ** 3
+                            u.pc / u.cm**3
                         )
                         if hasattr(self.model, "scaled_dm_uncertainty")
-                        else self.resids.dm.get_dm_errors().to_value(u.pc / u.cm ** 3),
+                        else self.resids.dm.get_dm_errors().to_value(u.pc / u.cm**3),
                     ]
                 )
                 ** 2
@@ -1947,7 +1963,7 @@ class WLSFitter(Fitter):
             # NOTE, We remove subtract mean value here, since it did not give us a
             # fast converge fitting.
             # M[:,1:] -= M[:,1:].mean(axis=0)
-            fac = np.sqrt((M ** 2).mean(axis=0))
+            fac = np.sqrt((M**2).mean(axis=0))
             # fac[0] = 1.0
             fac[fac == 0] = 1.0
             M /= fac
@@ -1988,7 +2004,7 @@ class WLSFitter(Fitter):
             # Sigma = np.dot(Vt.T / s, U.T)
             # The post-fit parameter covariance matrix
             #   Sigma = V s^-2 V^T
-            Sigma = np.dot(Vt.T / (s ** 2), Vt)
+            Sigma = np.dot(Vt.T / (s**2), Vt)
             # Parameter uncertainties. Scale by fac recovers original units.
             errs = np.sqrt(np.diag(Sigma)) / fac
             # covariance matrix stuff (for randomized models in pintk)
@@ -2116,7 +2132,7 @@ class GLSFitter(Fitter):
                     M = np.hstack((M, Mn))
 
             # normalize the design matrix
-            norm = np.sqrt(np.sum(M ** 2, axis=0))
+            norm = np.sqrt(np.sum(M**2, axis=0))
             ntmpar = len(fitp)
             for c in np.where(norm == 0)[0]:
                 warn(
@@ -2125,6 +2141,7 @@ class GLSFitter(Fitter):
                     DegeneracyWarning,
                 )
             norm[norm == 0] = 1
+            self.fac = norm
             M /= norm
 
             # compute covariance matrices
@@ -2136,14 +2153,14 @@ class GLSFitter(Fitter):
                 mtcy = np.dot(cm.T, residuals)
 
             else:
-                phiinv /= norm ** 2
+                phiinv /= norm**2
                 Nvec = self.model.scaled_toa_uncertainty(self.toas).to(u.s).value ** 2
                 cinv = 1 / Nvec
                 mtcm = np.dot(M.T, cinv[:, None] * M)
                 mtcm += np.diag(phiinv)
                 mtcy = np.dot(M.T, cinv * residuals)
 
-            log.debug(f"mtcm: {mtcm}")
+            log.trace(f"mtcm: {mtcm}")
             xhat, xvar = None, None
             if threshold <= 0:
                 try:
@@ -2154,7 +2171,7 @@ class GLSFitter(Fitter):
                     xhat, xvar = None, None
             if xhat is None:
                 U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
-                log.debug(f"s: {s}")
+                log.trace(f"s: {s}")
 
                 bad = np.where(s <= threshold * s[0])[0]
                 s[bad] = np.inf
@@ -2176,8 +2193,8 @@ class GLSFitter(Fitter):
 
                 xvar = np.dot(Vt.T / s, Vt)
                 xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
-            log.debug(f"norm: {norm}")
-            log.debug(f"xhat: {xhat}")
+            log.trace(f"norm: {norm}")
+            log.trace(f"xhat: {xhat}")
             newres = residuals - np.dot(M, xhat)
             # compute linearized chisq
             if full_cov:
@@ -2476,7 +2493,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                     )
 
             # normalize the design matrix
-            norm = np.sqrt(np.sum(M ** 2, axis=0))
+            norm = np.sqrt(np.sum(M**2, axis=0))
             ntmpar = len(fitp)
             for c in np.where(norm == 0)[0]:
                 warn(
@@ -2486,6 +2503,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 )
             norm[norm == 0] = 1
             M /= norm
+            self.fac = norm
 
             # compute covariance matrices
             if full_cov:
@@ -2496,7 +2514,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 mtcy = np.dot(cm.T, residuals)
 
             else:
-                phiinv /= norm ** 2
+                phiinv /= norm**2
                 Nvec = self.scaled_all_sigma() ** 2
 
                 cinv = 1 / Nvec
@@ -2631,7 +2649,7 @@ class LMFitter(Fitter):
                     dx = scipy.linalg.solve(A, b, assume_a="pos")
                 else:
                     U, s, Vt = scipy.linalg.svd(A, full_matrices=False)
-                    log.debug(
+                    log.trace(
                         f"Iteration {i}: Condition number for lambda_ = {lambda_} is {s[0]/s[-1]}"
                     )
 
@@ -2665,7 +2683,7 @@ class LMFitter(Fitter):
                 # FIXME: predicted (linear) chi-squared decrease can check how well the
                 # derivative matches the function and guide changes in lambda_
                 # predicted_chi2 = current_state.predicted_chi2(dx)
-                log.debug(f"Iteration {i}: Trying step with lambda_ = {lambda_}")
+                log.trace(f"Iteration {i}: Trying step with lambda_ = {lambda_}")
                 new_state = current_state.take_step(step)
                 try:
                     chi2_decrease = current_state.chi2 - new_state.chi2
@@ -2675,7 +2693,7 @@ class LMFitter(Fitter):
                             if not ill_conditioned
                             else lambda_factor_invalid
                         )
-                        log.info(
+                        log.trace(
                             f"Iteration {i}: chi2 increased from {current_state.chi2} "
                             f"to {new_state.chi2} increasing lambda to {lambda_}"
                         )
@@ -2686,7 +2704,7 @@ class LMFitter(Fitter):
                         self.converged = True
                         break
                     elif chi2_decrease < min_chi2_decrease:
-                        log.info(
+                        log.debug(
                             f"Iteration {i}: chi2 decreased only by {chi2_decrease}, updating "
                             f"state and stopping."
                         )
@@ -2695,7 +2713,7 @@ class LMFitter(Fitter):
                         break
                     else:
                         lambda_ = max(lambda_ / lambda_factor_decrease, min_lambda)
-                        log.info(
+                        log.debug(
                             f"Iteration {i}: Updating state, chi2 goes down by {chi2_decrease} "
                             f"from {current_state.chi2} "
                             f"to {new_state.chi2}; decreasing lambda to "
@@ -2704,7 +2722,7 @@ class LMFitter(Fitter):
                         current_state = new_state
                 except InvalidModelParameters as e:
                     lambda_ *= lambda_factor_invalid
-                    log.info(
+                    log.debug(
                         f"Iteration {i}: Step too aggressive, increasing lambda_ "
                         f"to {lambda_}: {e}"
                     )
@@ -2769,11 +2787,11 @@ class WidebandLMFitter(LMFitter):
         self.errors = np.sqrt(np.diag(self.parameter_covariance_matrix.matrix))
         for p, e in zip(state.params, self.errors):
             try:
-                log.debug(f"Setting {getattr(self.model, p)} uncertainty to {e}")
+                log.trace(f"Setting {getattr(self.model, p)} uncertainty to {e}")
                 pm = getattr(self.model, p)
             except AttributeError:
                 if p != "Offset":
-                    log.debug(f"Unexpected parameter {p}")
+                    log.warning(f"Unexpected parameter {p}")
             else:
                 pm.uncertainty = e * pm.units
         # self.parameter_correlation_matrix = (

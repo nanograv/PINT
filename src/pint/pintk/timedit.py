@@ -1,4 +1,3 @@
-import copy
 import os
 import tempfile
 
@@ -8,6 +7,9 @@ import tkinter.filedialog as tkFileDialog
 import tkinter.messagebox as tkMessageBox
 
 import pint
+
+import pint.logging
+from loguru import logger as log
 
 
 class TimActionsWidget(tk.Frame):
@@ -44,24 +46,24 @@ class TimActionsWidget(tk.Frame):
         self.write_callback = writeTim
 
     def resetTimfile(self):
+        log.debug("Reset clicked")
         if self.reset_callback is not None:
             self.reset_callback()
-        print("Reset clicked")
 
     def removeChanges(self):
+        log.debug("Remove clicked")
         if self.remove_callback is not None:
             self.remove_callback()
-        print("Remove clicked")
 
     def applyChanges(self):
+        log.debug("Apply clicked")
         if self.apply_callback is not None:
             self.apply_callback()
-        print("Apply clicked")
 
     def writeTim(self):
+        log.debug("Write clicked")
         if self.write_callback is not None:
             self.write_callback()
-        print("Write clicked")
 
 
 class TimWidget(tk.Frame):
@@ -161,9 +163,9 @@ class TimWidget(tk.Frame):
             fout = open(filename, "w")
             fout.write(self.editor.get("1.0", "end-1c"))
             fout.close()
-            print("Saved timfile to %s" % filename)
+            log.info("Saved timfile to %s" % filename)
         except:
             if filename == () or filename == "":
-                print("Write Tim cancelled.")
+                log.warning("Write Tim cancelled.")
             else:
-                print("Could not save timfile to filename:\t%s" % filename)
+                log.warning("Could not save timfile to filename:\t%s" % filename)

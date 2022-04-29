@@ -21,7 +21,6 @@ See :ref:`Supported Parameters` for an overview, including a table of all the
 parameters PINT understands.
 
 """
-import logging
 import numbers
 from warnings import warn
 
@@ -29,6 +28,8 @@ import astropy.time as time
 import astropy.units as u
 import numpy as np
 from astropy.coordinates.angles import Angle
+
+from loguru import logger as log
 
 from pint import pint_units
 from pint.models import priors
@@ -45,8 +46,6 @@ from pint.pulsar_mjd import (
 )
 from pint.toa_select import TOASelect
 from pint.utils import split_prefixed_name
-
-log = logging.getLogger(__name__)
 
 
 # potential parfile formats
@@ -455,9 +454,10 @@ class Parameter:
 
         .. [1] https://github.com/nanograv/PINT/wiki/PINT-vs.-TEMPO%282%29-par-file-changes
         """
-        assert format.lower() in _parfile_formats, (
-            "parfile format must be one of %s"
-            % ", ".join(['"%s"' % x for x in _parfile_formats])
+        assert (
+            format.lower() in _parfile_formats
+        ), "parfile format must be one of %s" % ", ".join(
+            ['"%s"' % x for x in _parfile_formats]
         )
 
         # Don't print unset parameters
@@ -487,7 +487,7 @@ class Parameter:
         # special cases for parameter values that change depending on format
         if self.name == "ECL" and format.lower() == "tempo2":
             if self.value != "IERS2003":
-                warn(
+                log.warning(
                     f"Changing ECL from '{self.value}' to 'IERS2003'; please refit for consistent results"
                 )
                 # change ECL value to IERS2003 for TEMPO2
@@ -498,13 +498,13 @@ class Parameter:
         elif self.name == "KIN" and format.lower() == "tempo":
             # convert from DT92 convention to IAU
             line = "%-15s %25s" % (name, self.str_quantity(180 * u.deg - self.quantity))
-            warn(
+            log.warning(
                 f"Changing KIN from DT92 convention to IAU: this will not be readable by PINT"
             )
         elif self.name == "KOM" and format.lower() == "tempo":
             # convert from DT92 convention to IAU
             line = "%-15s %25s" % (name, self.str_quantity(90 * u.deg - self.quantity))
-            warn(
+            log.warning(
                 f"Changing KOM from DT92 convention to IAU: this will not be readable by PINT"
             )
 
@@ -949,7 +949,7 @@ class intParameter(Parameter):
             except ValueError:
                 fval = float(val)
                 ival = int(fval)
-                if ival != fval and abs(fval) < 2 ** 52:
+                if ival != fval and abs(fval) < 2**52:
                     raise ValueError(
                         f"Value {val} does not appear to be an integer "
                         f"but parameter {self.name} stores only integers."
@@ -958,7 +958,7 @@ class intParameter(Parameter):
         else:
             ival = int(val)
             fval = float(val)
-            if ival != fval and abs(fval) < 2 ** 52:
+            if ival != fval and abs(fval) < 2**52:
                 raise ValueError(
                     f"Value {val} does not appear to be an integer "
                     f"but parameter {self.name} stores only integers."
@@ -1787,9 +1787,10 @@ class maskParameter(floatParameter):
         return True
 
     def as_parfile_line(self, format="pint"):
-        assert format.lower() in _parfile_formats, (
-            "parfile format must be one of %s"
-            % ", ".join(['"%s"' % x for x in _parfile_formats])
+        assert (
+            format.lower() in _parfile_formats
+        ), "parfile format must be one of %s" % ", ".join(
+            ['"%s"' % x for x in _parfile_formats]
         )
 
         if self.quantity is None:

@@ -1,19 +1,17 @@
 """Generate random models distributed like the results of a fit."""
 
-import logging
 from collections import OrderedDict
 from copy import deepcopy
 
 import numpy as np
+from loguru import logger as log
 
 import pint.toa as toa
 import pint.simulation as simulation
 from pint.phase import Phase
 
-log = logging.getLogger(__name__)
 
 __all__ = ["random_models"]
-# log.setLevel("INFO")
 
 
 def random_models(
@@ -89,7 +87,7 @@ def random_models(
         # from calc_phase_resids in residuals
         rs -= Phase(0.0, rs2.frac.mean() - rs_mean)
         # TODO: use units here!
-        rs = ((rs.int + rs.frac).value / fitter.model.F0.value) * 10 ** 6
+        rs = ((rs.int + rs.frac).value / fitter.model.F0.value) * 10**6
         rss.append(rs)
         random_models.append(deepcopy(mrand))
 

@@ -28,9 +28,15 @@ jupytext
 pdbpp
 tox
 pre-commit
-black>=19.0a0,<20.0a0
+typed-ast>=1.5.0
+#black>=19.0a0,<20.0a0
+black>=22.0
 pygments
 ipython
 pathlib2
 twine
 numdifftools
+loguru
+# click<=8.0.4
+gprof2dot
+py-cpuinfo

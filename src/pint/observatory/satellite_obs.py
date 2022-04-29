@@ -1,6 +1,5 @@
 """Observatories at special (non-Earth) locations."""
 
-import logging
 
 import astropy.io.fits as pyfits
 import astropy.units as u
@@ -9,33 +8,32 @@ from astropy.coordinates import EarthLocation
 from astropy.table import Table, vstack
 from scipy.interpolate import InterpolatedUnivariateSpline
 import numpy as np
+from loguru import logger as log
 
 from pint.fits_utils import read_fits_event_mjds
 from pint.observatory.special_locations import SpecialLocation
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 from pint.utils import PosVel
 
-log = logging.getLogger(__name__)
-
 
 def load_Fermi_FT2(ft2_filename):
     """Load data from a Fermi FT2 file
 
-        The contents of the FT2 file are described here:
-        https://fermi.gsfc.nasa.gov/ssc/data/analysis/documentation/Cicerone/Cicerone_Data/LAT_Data_Columns.html#SpacecraftFile
-        The coordinates are X, Y, Z in the ECI (Earth-Centered Inertial)
-        frame. I (@paulray) **believe** this is the same as astropy's GCRS
-        <http://docs.astropy.org/en/stable/api/astropy.coordinates.GCRS.html>,
-        but this should be confirmed.
+    The contents of the FT2 file are described here:
+    https://fermi.gsfc.nasa.gov/ssc/data/analysis/documentation/Cicerone/Cicerone_Data/LAT_Data_Columns.html#SpacecraftFile
+    The coordinates are X, Y, Z in the ECI (Earth-Centered Inertial)
+    frame. I (@paulray) **believe** this is the same as astropy's GCRS
+    <http://docs.astropy.org/en/stable/api/astropy.coordinates.GCRS.html>,
+    but this should be confirmed.
 
-        Parameters
-        ----------
-        ft2_filename : str
-            Name of file to load
+    Parameters
+    ----------
+    ft2_filename : str
+        Name of file to load
 
-        Returns
-        -------
-        astropy Table containing Time, x, y, z, v_x, v_y, v_z data
+    Returns
+    -------
+    astropy Table containing Time, x, y, z, v_x, v_y, v_z data
 
     """
     # Load photon times from FT1 file
@@ -120,12 +118,22 @@ def load_FPorbit(orbit_filename):
 
     # TIMEREF should be 'LOCAL', since no delays are applied
 
-    timesys = FPorbit_hdr["TIMESYS"]
-    log.debug("FPorbit TIMESYS {0}".format(timesys))
-    timeref = FPorbit_hdr["TIMEREF"]
-    log.debug("FPorbit TIMEREF {0}".format(timeref))
+    if not "TIMESYS" in FPorbit_hdr:
+        log.warning("Keyword TIMESYS is missing. Assuming TT")
+        timesys = "TT"
+    else:
+        timesys = FPorbit_hdr["TIMESYS"]
+        log.debug("FPorbit TIMESYS {0}".format(timesys))
+
+    if not "TIMEREF" in FPorbit_hdr:
+        log.warning("Keyword TIMESYS is missing. Assuming TT")
+        timeref = "LOCAL"
+    else:
+        timeref = FPorbit_hdr["TIMEREF"]
+        log.debug("FPorbit TIMEREF {0}".format(timeref))
 
     mjds_TT = read_fits_event_mjds(hdulist[1])
+
     mjds_TT = mjds_TT * u.d
     log.debug("FPorbit spacing is {0}".format((mjds_TT[1] - mjds_TT[0]).to(u.s)))
     X = FPorbit_dat.field("X") * u.m
@@ -147,6 +155,13 @@ def load_FPorbit(orbit_filename):
     # Make sure table is sorted by time
     log.debug("Sorting FPorbit table")
     FPorbit_table.sort("MJD_TT")
+
+    good = np.diff(FPorbit_table["MJD_TT"]) > 0
+    if not np.all(good):
+        log.warning("The orbit table has duplicate entries. Please check.")
+        good = np.concatenate((good, [True]))
+        FPorbit_table = FPorbit_table[good]
+
     # Now delete any bad entries where the positions are 0.0
     idx = np.where(
         np.logical_and(FPorbit_table["X"] != 0.0, FPorbit_table["Y"] != 0.0)
@@ -228,7 +243,7 @@ def load_nustar_orbit(orb_filename):
 
 
 def load_orbit(obs_name, orb_filename):
-    """ Generalized function to load one or more orbit files.
+    """Generalized function to load one or more orbit files.
 
     Parameters
     ----------
@@ -259,6 +274,8 @@ def load_orbit(obs_name, orb_filename):
     if "fermi" in lower_name:
         return load_Fermi_FT2(orb_filename)
     elif "nicer" in lower_name:
+        return load_FPorbit(orb_filename)
+    elif "ixpe" in lower_name:
         return load_FPorbit(orb_filename)
     elif "xte" in lower_name:
         return load_FPorbit(orb_filename)
@@ -314,7 +331,7 @@ class SatelliteObs(SpecialLocation):
         return self._geocenter
 
     def _check_bounds(self, t):
-        """ Ensure t is within maxextrap of the closest S/C measurement.
+        """Ensure t is within maxextrap of the closest S/C measurement.
 
         The purpose is to catch cases where there is missing S/C orbital
         information.  A common case would be providing an "FT2" file that
@@ -392,7 +409,7 @@ class SatelliteObs(SpecialLocation):
             np.array([self.X(t.tt.mjd), self.Y(t.tt.mjd), self.Z(t.tt.mjd)])
             * self.FT2["X"].unit
         )
-        log.debug("[{0}] sat_pos_geo {1}".format(self.name, sat_pos_geo[:, 0]))
+        # log.debug("[{0}] sat_pos_geo {1}".format(self.name, sat_pos_geo[:, 0]))
         sat_vel_geo = (
             np.array([self.Vx(t.tt.mjd), self.Vy(t.tt.mjd), self.Vz(t.tt.mjd)])
             * self.FT2["Vx"].unit
@@ -402,7 +419,7 @@ class SatelliteObs(SpecialLocation):
 
 
 def get_satellite_observatory(name, ft2name, **kwargs):
-    """ Factory to get/instantiate a SatelliteObs.""
+    """Factory to get/instantiate a SatelliteObs.""
 
     Parameters
     ----------

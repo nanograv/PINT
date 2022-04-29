@@ -1,14 +1,11 @@
 """Timing model absolute phase (TZRMJD, TZRSITE ...)"""
-import logging
-
 import astropy.units as u
 from astropy.table import Column
+from loguru import logger as log
 
 import pint.toa as toa
 from pint.models.parameter import MJDParameter, floatParameter, strParameter
 from pint.models.timing_model import MissingParameter, PhaseComponent
-
-log = logging.getLogger(__name__)
 
 
 class AbsPhase(PhaseComponent):
@@ -98,6 +95,7 @@ class AbsPhase(PhaseComponent):
         # Otherwise we have to build the TOA and apply clock corrections
         # NOTE: Using TZRMJD.quantity.jd[1,2] so that the time scale can be properly
         # set to the TZRSITE default timescale (e.g. UTC for TopoObs and TDB for SSB)
+        log.debug("Creating and dealing with the single TZR_toa for absolute phase")
         TZR_toa = toa.TOA(
             (self.TZRMJD.quantity.jd1 - 2400000.5, self.TZRMJD.quantity.jd2),
             obs=self.TZRSITE.value,
@@ -110,8 +108,10 @@ class AbsPhase(PhaseComponent):
             ephem=toas.ephem,
             planets=toas.planets,
         )
+
         if "clusters" in toas.table.colnames:
             tz.table.add_column(Column([-1], name="clusters"))
+        log.debug("Done with TZR_toa")
         self.tz_cache = tz
         self.tz_hash = hash((self.TZRMJD.value, self.TZRSITE.value, self.TZRFRQ.value))
         self.tz_clkc_info = clkc_info

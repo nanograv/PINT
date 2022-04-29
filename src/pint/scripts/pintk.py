@@ -1,10 +1,7 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore:DeprecationWarning
 """Tkinter interactive interface for PINT pulsar timing tool"""
-import argparse
-import code
-import logging
-import os
 import sys
+import argparse
 
 import numpy as np
 
@@ -13,10 +10,24 @@ import tkinter.filedialog as tkFileDialog
 import tkinter.messagebox as tkMessageBox
 from tkinter import ttk
 
+import pint.logging
+from loguru import logger as log
+
+log.remove()
+log.add(
+    sys.stderr,
+    level="WARNING",
+    colorize=True,
+    format=pint.logging.format,
+    filter=pint.logging.LogFilter(),
+)
+
+import pint
 from pint.pintk.paredit import ParWidget
 from pint.pintk.plk import PlkWidget, helpstring
 from pint.pintk.pulsar import Pulsar
 from pint.pintk.timedit import TimWidget
+
 
 __all__ = ["main"]
 
@@ -24,7 +35,16 @@ __all__ = ["main"]
 class PINTk:
     """Main PINTk window."""
 
-    def __init__(self, master, parfile=None, timfile=None, ephem=None, **kwargs):
+    def __init__(
+        self,
+        master,
+        parfile=None,
+        timfile=None,
+        fitter="GLSFitter",
+        ephem=None,
+        loglevel=None,
+        **kwargs,
+    ):
         self.master = master
         self.master.title("Tkinter interface to PINT")
 
@@ -32,12 +52,14 @@ class PINTk:
         self.mainFrame.grid(row=0, column=0, sticky="nesw")
         self.master.grid_rowconfigure(0, weight=1)
         self.master.grid_columnconfigure(0, weight=1)
-
+        self.loglevel = loglevel
         self.maxcols = 2
 
         self.createWidgets()
         if parfile is not None and timfile is not None:
-            self.openPulsar(parfile=parfile, timfile=timfile, ephem=ephem)
+            self.openPulsar(
+                parfile=parfile, timfile=timfile, fitter=fitter, ephem=ephem
+            )
 
         self.initUI()
         self.updateLayout()
@@ -84,7 +106,7 @@ class PINTk:
 
     def createWidgets(self):
         self.widgets = {
-            "plk": PlkWidget(master=self.mainFrame),
+            "plk": PlkWidget(master=self.mainFrame, loglevel=self.loglevel),
             "par": ParWidget(master=self.mainFrame),
             "tim": TimWidget(master=self.mainFrame),
         }
@@ -105,8 +127,8 @@ class PINTk:
                 self.mainFrame.grid_columnconfigure(col, weight=1)
                 visible += 1
 
-    def openPulsar(self, parfile, timfile, ephem=None):
-        self.psr = Pulsar(parfile, timfile, ephem)
+    def openPulsar(self, parfile, timfile, fitter="GLSFitter", ephem=None):
+        self.psr = Pulsar(parfile, timfile, ephem, fitter=fitter)
         self.widgets["plk"].setPulsar(
             self.psr,
             updates=[self.widgets["par"].set_model, self.widgets["tim"].set_toas],
@@ -139,7 +161,8 @@ class PINTk:
 
     def about(self):
         tkMessageBox.showinfo(
-            title="About PINTk", message="A Tkinter based graphical interface to PINT"
+            title="About PINTk",
+            message=f"A Tkinter based graphical interface to PINT (version={pint.__version__})",
         )
 
 
@@ -152,17 +175,69 @@ def main(argv=None):
     parser.add_argument("--ephem", help="Ephemeris to use", default=None)
     parser.add_argument(
         "--test",
-        help="Build UI and exit. Just for unit testing...",
+        help="Build UI and exit. Just for unit testing.",
         default=False,
         action="store_true",
     )
+    parser.add_argument(
+        "-f",
+        "--fitter",
+        type=str,
+        choices=(
+            "WLSFitter",
+            "GLSFitter",
+            "WidebandTOAFitter",
+            "PowellFitter",
+            "DownhillWLSFitter",
+            "DownhillGLSFitter",
+            "WidebandDownhillFitter",
+            "WidebandLMFitter",
+        ),
+        default="GLSFitter",
+        help="PINT Fitter to use",
+    )
+    parser.add_argument(
+        "-v",
+        "--version",
+        default=False,
+        action="store_true",
+        help="Print version info and  exit.",
+    )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
+        default="WARNING",
+        help="Logging level",
+        dest="loglevel",
+    )
     args = parser.parse_args(argv)
 
-    logging.getLogger().setLevel("WARNING")
+    if args.version:
+        print(f"This is PINT version {pint.__version__}")
+        sys.exit(0)
+
+    if args.loglevel != "WARNING":
+        log.remove()
+        log.add(
+            sys.stderr,
+            level=args.loglevel,
+            colorize=True,
+            format=pint.logging.format,
+            filter=pint.logging.LogFilter(),
+        )
+
     root = tk.Tk()
-    root.minsize(800, 600)
+    root.minsize(1000, 800)
     if not args.test:
-        app = PINTk(root, parfile=args.parfile, timfile=args.timfile, ephem=args.ephem)
+        app = PINTk(
+            root,
+            parfile=args.parfile,
+            timfile=args.timfile,
+            fitter=args.fitter,
+            ephem=args.ephem,
+            loglevel=args.loglevel,
+        )
         root.protocol("WM_DELETE_WINDOW", root.destroy)
         tk.mainloop()
 

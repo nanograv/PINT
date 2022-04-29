@@ -1,10 +1,9 @@
 """Approximate binary model for small eccentricity."""
-import logging
-from warnings import warn
-
 import astropy.units as u
 import numpy as np
 from astropy.time import Time
+
+from loguru import logger as log
 
 from pint.models.parameter import MJDParameter, floatParameter, intParameter
 from pint.models.pulsar_binary import PulsarBinary
@@ -13,8 +12,6 @@ from pint.models.stand_alone_psr_binaries.ELL1_model import ELL1model
 from pint.models.stand_alone_psr_binaries.ELL1H_model import ELL1Hmodel
 from pint.models.timing_model import MissingParameter, TimingModelError
 from pint.utils import taylor_horner_deriv
-
-log = logging.getLogger(__name__)
 
 
 class BinaryELL1(PulsarBinary):
@@ -137,18 +134,18 @@ class BinaryELL1(PulsarBinary):
         else:
             PB = 1.0 / self.FB0.quantity
             try:
-                PBDOT = -self.FB1.quantity / self.FB0.quantity ** 2
+                PBDOT = -self.FB1.quantity / self.FB0.quantity**2
             except AttributeError:
                 PBDOT = 0.0 * u.Unit("")
 
         # Find closest periapsis time and reassign T0
         tasc_ld = self.TASC.quantity.tdb.mjd_long
         dt = (new_epoch.tdb.mjd_long - tasc_ld) * u.day
-        d_orbits = dt / PB - PBDOT * dt ** 2 / (2.0 * PB ** 2)
+        d_orbits = dt / PB - PBDOT * dt**2 / (2.0 * PB**2)
         n_orbits = np.round(d_orbits.to(u.Unit("")))
         if n_orbits == 0:
             return
-        dt_integer_orbits = PB * n_orbits + PB * PBDOT * n_orbits ** 2 / 2.0
+        dt_integer_orbits = PB * n_orbits + PB * PBDOT * n_orbits**2 / 2.0
         self.TASC.quantity = self.TASC.quantity + dt_integer_orbits
 
         if hasattr(self, "FB2") and self.FB2.value is not None:

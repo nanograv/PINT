@@ -85,7 +85,7 @@ def model_eccentric_toas_wb():
                 model_eccentric,
                 freq=1000 * u.MHz,
                 obs="@",
-                dm=10 * u.pc / u.cm ** 3,
+                dm=10 * u.pc / u.cm**3,
             ),
             make_fake_toas_uniform(
                 57000,
@@ -94,7 +94,7 @@ def model_eccentric_toas_wb():
                 model_eccentric,
                 freq=2000 * u.MHz,
                 obs="@",
-                dm=10 * u.pc / u.cm ** 3,
+                dm=10 * u.pc / u.cm**3,
             ),
         ]
     )

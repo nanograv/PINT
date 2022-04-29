@@ -1,15 +1,13 @@
 """Kopeikin corrected DD model."""
-import logging
 
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
+from loguru import logger as log
 
 from pint import GMsun, Tsun, ls
 
 from .DD_model import DDmodel
-
-log = logging.getLogger(__name__)
 
 
 class DDKmodel(DDmodel):
@@ -270,7 +268,7 @@ class DDKmodel(DDmodel):
         cos_kin = np.cos(kin)
         d_omega_dot = (
             -cos_kin
-            / sin_kin ** 2
+            / sin_kin**2
             * (self.PMRA_DDK * self.cos_KOM + self.PMDEC_DDK * self.sin_KOM)
         )
         return (d_omega_dot * self.tt0).to(
@@ -284,7 +282,7 @@ class DDKmodel(DDmodel):
         d_kin_d_KOM = self.d_kin_proper_motion_d_KOM()
         d_omega_dot = (
             -cos_kin
-            / sin_kin ** 2
+            / sin_kin**2
             * d_kin_d_KOM
             * (self.PMRA_DDK * self.cos_KOM + self.PMDEC_DDK * self.sin_KOM)
             + (-self.PMRA_DDK * self.sin_KOM + self.PMDEC_DDK * self.cos_KOM) / sin_kin
@@ -300,7 +298,7 @@ class DDKmodel(DDmodel):
         d_kin_d_T0 = self.d_kin_proper_motion_d_T0()
         # with u.set_enabled_equivalencies(u.dimensionless_angles()):
         d_omega_d_T0 = (
-            -cos_kin / sin_kin ** 2 * d_kin_d_T0 * self.tt0 - 1.0 / sin_kin
+            -cos_kin / sin_kin**2 * d_kin_d_T0 * self.tt0 - 1.0 / sin_kin
         ) * (self.PMRA_DDK * self.cos_KOM + self.PMDEC_DDK * self.sin_KOM)
         return d_omega_d_T0.to(self.OM.unit / self.T0.unit)
 
@@ -401,7 +399,7 @@ class DDKmodel(DDmodel):
         # with u.set_enabled_equivalencies(u.dimensionless_angles()):
         d_delta_a1_d_KOM = (
             d_a1_d_kom / tan_kin / PX_kpc * kom_projection
-            - a1 * d_kin_d_kom / PX_kpc / sin_kin ** 2 * kom_projection
+            - a1 * d_kin_d_kom / PX_kpc / sin_kin**2 * kom_projection
             + a1
             / tan_kin
             / PX_kpc
@@ -425,7 +423,7 @@ class DDKmodel(DDmodel):
         kom_projection = self.delta_I0() * self.sin_KOM - self.delta_J0() * self.cos_KOM
         # with u.set_enabled_equivalencies(u.dimensionless_angles()):
         d_delta_a1_d_T0 = (
-            d_a1_d_T0 / tan_kin / PX_kpc - a1 * d_kin_d_T0 / PX_kpc / sin_kin ** 2
+            d_a1_d_T0 / tan_kin / PX_kpc - a1 * d_kin_d_T0 / PX_kpc / sin_kin**2
         ) * kom_projection
         return d_delta_a1_d_T0.to(a1.unit / self.T0.unit)
 
@@ -450,7 +448,7 @@ class DDKmodel(DDmodel):
         cos_kin = np.cos(kin)
         PX_kpc = self.PX.to(u.kpc, equivalencies=u.parallax())
         kom_projection = self.delta_I0() * self.cos_KOM + self.delta_J0() * self.sin_KOM
-        d_delta_omega_d_KIN = cos_kin / sin_kin ** 2 / PX_kpc * kom_projection
+        d_delta_omega_d_KIN = cos_kin / sin_kin**2 / PX_kpc * kom_projection
         return d_delta_omega_d_KIN.to(
             self.OM.unit / kin.unit, equivalencies=u.dimensionless_angles()
         )
@@ -463,7 +461,7 @@ class DDKmodel(DDmodel):
         kom_projection = self.delta_I0() * self.cos_KOM + self.delta_J0() * self.sin_KOM
         d_kin_d_KOM = self.d_kin_d_par("KOM")
         d_delta_omega_d_KOM = (
-            cos_kin / sin_kin ** 2 / PX_kpc * d_kin_d_KOM * kom_projection
+            cos_kin / sin_kin**2 / PX_kpc * d_kin_d_KOM * kom_projection
             - 1.0
             / sin_kin
             / PX_kpc
@@ -481,7 +479,7 @@ class DDKmodel(DDmodel):
         kom_projection = self.delta_I0() * self.cos_KOM + self.delta_J0() * self.sin_KOM
         d_kin_d_T0 = self.d_kin_d_par("T0")
         d_delta_omega_d_T0 = (
-            cos_kin / sin_kin ** 2 / PX_kpc * d_kin_d_T0 * kom_projection
+            cos_kin / sin_kin**2 / PX_kpc * d_kin_d_T0 * kom_projection
         )
         return d_delta_omega_d_T0.to(
             self.OM.unit / self.T0.unit, equivalencies=u.dimensionless_angles()

@@ -1,5 +1,4 @@
 """Observatory position and velocity calculation."""
-import logging
 
 try:
     import erfa
@@ -14,11 +13,11 @@ import numpy as np
 from astropy import table
 from astropy.utils.data import clear_download_cache, download_file, is_url_in_cache
 from astropy.utils.iers import IERS_B, IERS_B_URL, IERS_Auto, earth_orientation_table
+from loguru import logger as log
 
 from pint.pulsar_mjd import Time
 from pint.utils import PosVel
 
-log = logging.getLogger(__name__)
 
 __all__ = ["get_iers_up_to_date", "gcrs_posvel_from_itrf", "old_gcrs_posvel_from_itrf"]
 
@@ -54,9 +53,7 @@ def get_iers_up_to_date(mjd=Time.now().mjd - 45.0):
 
 # This version is outdated since astropy now includes IERS_Auto (see improved version above)
 def get_iers_b_up_to_date(mjd):
-    """Update the IERS B table to include MJD if necessary
-
-    """
+    """Update the IERS B table to include MJD if necessary"""
     if Time.now().mjd <= mjd:
         raise ValueError("IERS B data requested for future MJD {}".format(mjd))
     might_be_old = is_url_in_cache(IERS_B_URL)

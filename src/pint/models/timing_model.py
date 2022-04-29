@@ -29,7 +29,6 @@ See :ref:`Timing Models` for more details on how PINT's timing models work.
 import abc
 import copy
 import inspect
-import logging
 from collections import OrderedDict, defaultdict
 from functools import wraps
 from warnings import warn
@@ -40,6 +39,7 @@ import numpy as np
 from astropy import log
 from astropy.utils.decorators import lazyproperty
 from scipy.optimize import brentq
+from loguru import logger as log
 
 import pint
 from pint.models.parameter import (
@@ -58,7 +58,6 @@ from pint.phase import Phase
 from pint.toa import TOAs
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
 
-log = logging.getLogger(__name__)
 
 __all__ = [
     "DEFAULT_ORDER",
@@ -274,7 +273,7 @@ class TimingModel:
         )
         self.add_param_from_top(
             floatParameter(
-                name="RM", description="Rotation measure", units=u.radian / u.m ** 2
+                name="RM", description="Rotation measure", units=u.radian / u.m**2
             ),
             "",
         )
@@ -1270,7 +1269,7 @@ class TimingModel:
         # When there is no noise model.
         # FIXME: specifically when there is no DMEFAC
         if len(self.dm_covariance_matrix_funcs) == 0:
-            result += np.diag(dmes ** 2)
+            result += np.diag(dmes**2)
             return result
 
         for nf in self.dm_covariance_matrix_funcs:
@@ -1312,8 +1311,8 @@ class TimingModel:
             The input data object for DM uncertainty.
         """
         dm_error, valid = toas.get_flag_value("pp_dme", as_type=float)
-        dm_error = np.array(dm_error)[valid] * u.pc / u.cm ** 3
-        result = np.zeros(len(dm_error)) * u.pc / u.cm ** 3
+        dm_error = np.array(dm_error)[valid] * u.pc / u.cm**3
+        result = np.zeros(len(dm_error)) * u.pc / u.cm**3
         # When there is no noise model.
         if len(self.scaled_dm_uncertainty_funcs) == 0:
             result += dm_error
@@ -1324,22 +1323,16 @@ class TimingModel:
         return result
 
     def noise_model_designmatrix(self, toas):
-        result = []
         if len(self.basis_funcs) == 0:
             return None
-
-        for nf in self.basis_funcs:
-            result.append(nf(toas)[0])
-        return np.hstack([r for r in result])
+        result = [nf(toas)[0] for nf in self.basis_funcs]
+        return np.hstack(list(result))
 
     def noise_model_basis_weight(self, toas):
-        result = []
         if len(self.basis_funcs) == 0:
             return None
-
-        for nf in self.basis_funcs:
-            result.append(nf(toas)[1])
-        return np.hstack([r for r in result])
+        result = [nf(toas)[1] for nf in self.basis_funcs]
+        return np.hstack(list(result))
 
     def noise_model_dimensions(self, toas):
         """Number of basis functions for each noise model component.
@@ -1360,9 +1353,7 @@ class TimingModel:
                 bfs = nc.basis_funcs
                 if len(bfs) == 0:
                     continue
-                nbf = 0
-                for bf in bfs:
-                    nbf += len(bf(toas)[1])
+                nbf = sum(len(bf(toas)[1]) for bf in bfs)
                 result[nc.category] = (ntot, nbf)
                 ntot += nbf
 
@@ -1372,15 +1363,38 @@ class TimingModel:
         """Convert jump flags in toas.table["flags"] (loaded in .tim file) to jump parameters in the model.
 
         The flag processed is ``jump``.
+
+        Note:  this method should be called *before* the PhaseJump mathod jump_params_to_flags()
         """
         from . import jump
 
-        # check if any TOAs are jumped
-        jumped = ["jump" in flag_dict.keys() for flag_dict in toas.table["flags"]]
-        if not any(jumped):
+        tjvals, idxs = toas.get_flag_value("tim_jump")
+        Ntimjumps = len({int(n) for n in tjvals if n is not None})
+        if not Ntimjumps:
             log.info("No jump flags to process from .tim file")
             return None
-        for flag_dict in toas.table["flags"][jumped]:
+        log.info(f"There are {Ntimjumps} JUMPs from the timfile.")
+        # The number of parfile-based JUMPs we have
+        Nparjumps = (
+            self.components["PhaseJump"].get_number_of_jumps()
+            if "PhaseJump" in self.components
+            else 0
+        )
+        log.info(f"There are {Nparjumps} JUMPs from the model.")
+        if Nparjumps:
+            # Check to see if there are already tim-file jumps defined.
+            # If so, we will change their numbers so that the parfile ones
+            # are first in numerical order
+            log.debug(f"Increasing the timfile JUMP numbers by {Nparjumps}")
+            for idx in idxs:
+                snum = str(int(tjvals[idx]) + Nparjumps)
+                toas.table[idx]["flags"]["jump"] = snum
+                toas.table[idx]["flags"]["tim_jump"] = snum
+        # Because JUMPS are handled serially, we need to do everything
+        # via index order and *not* by group_by("obs")
+        ix_tab = toas.table[np.argsort(toas.table["index"])]
+        jumped = ["jump" in fd for fd in ix_tab["flags"]]
+        for flag_dict in ix_tab["flags"][jumped]:
             # add PhaseJump object if model does not have one already
             if "PhaseJump" not in self.components:
                 log.info("PhaseJump component added")
@@ -1389,22 +1403,20 @@ class TimingModel:
                 self.add_component(a)
                 self.remove_param("JUMP1")
             # take jumps in TOA table and add them as parameters to the model
-            for num in flag_dict["jump"]:
-                if "JUMP" + str(num) not in self.params:
-                    param = maskParameter(
-                        name="JUMP",
-                        index=num,
-                        key="-tim_jump",
-                        key_value=num,
-                        value=0.0,
-                        units="second",
-                        uncertainty=0.0,
-                    )
-                    self.add_param_from_top(param, "PhaseJump")
-                    getattr(self, param.name).frozen = False
-                flag_dict["tim_jump"] = str(
-                    num
-                )  # this is the value select_toa_mask uses
+            num = flag_dict["jump"]
+            if f"JUMP{str(num)}" not in self.params:
+                param = maskParameter(
+                    name="JUMP",
+                    index=num,
+                    key="-tim_jump",
+                    key_value=num,
+                    value=0.0,
+                    units="second",
+                    uncertainty=0.0,
+                )
+                self.add_param_from_top(param, "PhaseJump")
+                getattr(self, param.name).frozen = False
+            flag_dict["tim_jump"] = str(num)  # this is the value select_toa_mask uses
         self.components["PhaseJump"].setup()
 
     def delete_jump_and_flags(self, toa_table, jump_num):
@@ -1651,7 +1663,7 @@ class TimingModel:
     def d_dm_d_param(self, data, param):
         """Return the derivative of dm with respect to the parameter."""
         par = getattr(self, param)
-        result = np.zeros(len(data)) << (u.pc / u.cm ** 3 / par.units)
+        result = np.zeros(len(data)) << (u.pc / u.cm**3 / par.units)
         dm_df = self.dm_derivs.get(param, None)
         if dm_df is None:
             if param not in self.params:  # Maybe add differentitable params
@@ -2141,9 +2153,10 @@ class TimingModel:
              Parfile output format. PINT outputs in 'tempo', 'tempo2' and 'pint'
              formats. The defaul format is `pint`.
         """
-        assert format.lower() in _parfile_formats, (
-            "parfile format must be one of %s"
-            % ", ".join(['"%s"' % x for x in _parfile_formats])
+        assert (
+            format.lower() in _parfile_formats
+        ), "parfile format must be one of %s" % ", ".join(
+            ['"%s"' % x for x in _parfile_formats]
         )
 
         self.validate()

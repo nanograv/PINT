@@ -1,12 +1,10 @@
 """Delay due to Earth's troposphere"""
-import logging
-from warnings import warn
-
 import astropy.constants as const
 import astropy.units as u
 import numpy as np
 import scipy.interpolate
 from astropy.coordinates import AltAz, SkyCoord
+from loguru import logger as log
 
 import pint.utils as ut
 from pint.models.parameter import boolParameter
@@ -14,8 +12,6 @@ from pint.models.timing_model import DelayComponent
 from pint.observatory import get_observatory
 from pint.observatory.topo_obs import TopoObs
 from pint.toa_select import TOASelect
-
-log = logging.getLogger(__name__)
 
 
 class TroposphereDelay(DelayComponent):
@@ -130,15 +126,13 @@ class TroposphereDelay(DelayComponent):
             array[-1] = array[-2]
 
     def _get_target_altitude(self, obs, grp, radec):
-        """convert the sky coordinates of the target to the angular altitude at each TOA
-        """
+        """convert the sky coordinates of the target to the angular altitude at each TOA"""
         transformAltaz = AltAz(location=obs, obstime=grp["mjd"])
         alt = radec.transform_to(transformAltaz).alt  # * u.deg
         return alt
 
     def _get_target_skycoord(self):
-        """return the sky coordinates for the target, either from equatorial or ecliptic coordinates
-        """
+        """return the sky coordinates for the target, either from equatorial or ecliptic coordinates"""
         try:
             radec = SkyCoord(
                 self._parent.RAJ.value * self._parent.RAJ.units,
@@ -230,8 +224,7 @@ class TroposphereDelay(DelayComponent):
         return isValid
 
     def delay_model(self, alt, lat, H, mjd):
-        """validate the observed altitudes, then combine dry and wet delays
-        """
+        """validate the observed altitudes, then combine dry and wet delays"""
         # make sure the altitudes are reasonable values, warn if not
         altIsValid = self._validate_altitudes(alt)
 
@@ -245,8 +238,7 @@ class TroposphereDelay(DelayComponent):
         return delay
 
     def pressure_from_altitude(self, H):
-        """From CRC Handbook Chapter 14 page 19 US Standard Atmosphere
-        """
+        """From CRC Handbook Chapter 14 page 19 US Standard Atmosphere"""
         gph = self.EARTH_R * H / (self.EARTH_R + H)  # geopotential height
         if gph > 11 * u.km:
             warn("Pressure approximation invalid for elevations above 11 km")
@@ -255,16 +247,14 @@ class TroposphereDelay(DelayComponent):
         return P
 
     def zenith_delay(self, lat, H):
-        """Calculate the hydrostatic zenith delay
-        """
+        """Calculate the hydrostatic zenith delay"""
         p = self.pressure_from_altitude(H)
         return (p / (43.921 * u.kPa)) / (
             const.c.value * (1 - 0.00266 * np.cos(2 * lat) - 0.00028 * H.value)
         )
 
     def wet_zenith_delay(self):
-        """ calculate the wet delay at zenith
-        """
+        """calculate the wet delay at zenith"""
         return 0.0  # this method will be updated in the future to
         # either allow explicit specification of the wet zenith delay
         # or approximate it from weather data
@@ -286,8 +276,7 @@ class TroposphereDelay(DelayComponent):
         raise ValueError("Invaid latitude: %s must be between -90 and 90 degrees" % lat)
 
     def mapping_function(self, alt, lat, H, mjd):
-        """this implements the Niell mapping function for hydrostatic delays
-        """
+        """this implements the Niell mapping function for hydrostatic delays"""
 
         yearFraction = self._get_year_fraction_fast(mjd, lat)
         """
@@ -360,7 +349,7 @@ class TroposphereDelay(DelayComponent):
 
     @staticmethod
     def _interp(x, xn, yn):
-        """ vectorized 1d interpolation for 2 points only"""
+        """vectorized 1d interpolation for 2 points only"""
         # return (x - xn[0]) * (yn[1] - yn[0]) / (xn[1] - xn[0]) + yn[0]
         f = scipy.interpolate.interp1d(xn, yn)
         return f(x)

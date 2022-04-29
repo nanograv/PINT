@@ -39,7 +39,7 @@ def wideband_fake():
         )
     )
     toas = make_fake_toas_uniform(
-        57000, 59000, 40, model=model, error=1 * u.us, dm=10 * u.pc / u.cm ** 3
+        57000, 59000, 40, model=model, error=1 * u.us, dm=10 * u.pc / u.cm**3
     )
     toas.compute_pulse_numbers(model)
     np.random.seed(0)
@@ -84,7 +84,7 @@ class TestResidualBuilding:
             toas=self.toa, model=self.model, residual_type="dm", subtract_mean=True
         )
         assert len(dm_res_nomean.resids) == self.toa.ntoas
-        weight = 1.0 / (dm_res.dm_error ** 2)
+        weight = 1.0 / (dm_res.dm_error**2)
         wm = np.average(dm_res.resids, weights=weight)
         assert np.all(dm_res.resids - wm == dm_res_nomean.resids)
         dm_res_noweight = Residuals(
@@ -104,7 +104,7 @@ class TestResidualBuilding:
 
         assert len(cb_residuals._combined_resids) == 2 * self.toa.ntoas
         assert cb_residuals.unit["toa"] == u.s
-        assert cb_residuals.unit["dm"] == u.pc / u.cm ** 3
+        assert cb_residuals.unit["dm"] == u.pc / u.cm**3
         assert cb_chi2 == phase_res.chi2 + dm_res.chi2
         with pytest.raises(AttributeError):
             cb_residuals.dof
@@ -161,7 +161,7 @@ def test_residuals_fake_wideband():
         )
     )
     toas = make_fake_toas_uniform(
-        57000, 59000, 20, model=model, error=1 * u.us, dm=10 * u.pc / u.cm ** 3
+        57000, 59000, 20, model=model, error=1 * u.us, dm=10 * u.pc / u.cm**3
     )
     r = WidebandTOAResiduals(toas, model)
     e = r.toa.get_data_error(scaled=True)

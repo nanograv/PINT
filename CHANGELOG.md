@@ -4,11 +4,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [Unreleased]
+### Added
+- Added computation of other Kopeikin solutions (`solutions = model.alternative_solutions()`)
+- Added computation of extra parameters in gridding
+- Added gridding based on tuples of parameters (not just regular mesh)
+- Added passing of extra parameters to gridding fitter
+- Added option to photonphase to compute phases using polycos
+- New `colorize()` function in `pint.utils` which can be used for string and unicode output
+- Split out get_derived_params() from get_summary() in fitter.py.  Can be used other places.
+### Fixed
+- Huge number of bugs and improvements to `pintk`, and some to `pintempo`
+- Multiple bug fixes in get_summary()/get_derived_params(), especially for binary calculations
+### Changed
+- Changed logging to use `loguru`
+- Changed to floating point format and added color for correlation matrix output
+
+## [0.8.5] 2022-02-24
 ### Added
 - Added support for Chandra and Swift event data in photonphase.py
 ### Fixed
-- Attempt to fix documentation build
+- Attempt to fix documentation build by removing very slow notebooks
+- Improved compatibility with TEMPO/Tempo2 parfiles
+- Fixed handling of Swift and Chandra FITS files (PR #1157)
+- Cleaned up some deprecated usages
+### Changed
+- Gridding code now allows options to be supplied and other parameters to be returned (PR #1173)
 
 ## [0.8.4] 2021-10-06
 ### Fixed

@@ -1,6 +1,5 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore::DeprecationWarning
 import argparse
-import logging
 import os
 import sys
 
@@ -8,7 +7,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize as op
 from astropy.coordinates import SkyCoord
+import pint.logging
+from loguru import logger as log
 
+log.remove()
+log.add(
+    sys.stderr,
+    level="WARNING",
+    colorize=True,
+    format=pint.logging.format,
+    filter=pint.logging.LogFilter(),
+)
 import pint.fermi_toas as fermi
 import pint.models
 import pint.toa as toa
@@ -17,10 +26,8 @@ from pint.observatory.satellite_obs import get_satellite_observatory
 from pint.sampler import EmceeSampler
 from pint.scripts.event_optimize import marginalize_over_phase, read_gaussfitfile
 
-log = logging.getLogger(__name__)
 
 __all__ = ["main"]
-# log.setLevel('DEBUG')
 # np.seterr(all='raise')
 
 # initialization values
@@ -32,7 +39,8 @@ numcalls = 0
 def main(argv=None):
 
     parser = argparse.ArgumentParser(
-        description="PINT tool for MCMC optimization of timing models using event data."
+        description="PINT tool for MCMC optimization of timing models using event data.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
     parser.add_argument("eventfile", help="event file to use")
@@ -41,29 +49,29 @@ def main(argv=None):
     parser.add_argument("--ft2", help="Path to FT2 file.", default=None)
     parser.add_argument(
         "--weightcol",
-        help="name of weight column (or 'CALC' to have them computed",
+        help="name of weight column (or 'CALC' to have them computed)",
         default=None,
     )
     parser.add_argument(
-        "--nwalkers", help="Number of MCMC walkers (def 200)", type=int, default=200
+        "--nwalkers", help="Number of MCMC walkers", type=int, default=200
     )
     parser.add_argument(
         "--burnin",
-        help="Number of MCMC steps for burn in (def 100)",
+        help="Number of MCMC steps for burn in ",
         type=int,
         default=100,
     )
     parser.add_argument(
         "--nsteps",
-        help="Number of MCMC steps to compute (def 1000)",
+        help="Number of MCMC steps to compute",
         type=int,
         default=1000,
     )
     parser.add_argument(
-        "--minMJD", help="Earliest MJD to use (def 54680)", type=float, default=54680.0
+        "--minMJD", help="Earliest MJD to use", type=float, default=54680.0
     )
     parser.add_argument(
-        "--maxMJD", help="Latest MJD to use (def 57250)", type=float, default=57250.0
+        "--maxMJD", help="Latest MJD to use", type=float, default=57250.0
     )
     parser.add_argument(
         "--phs", help="Starting phase offset [0-1] (def is to measure)", type=float
@@ -73,7 +81,7 @@ def main(argv=None):
     )
     parser.add_argument(
         "--minWeight",
-        help="Minimum weight to include (def 0.05)",
+        help="Minimum weight to include",
         type=float,
         default=0.05,
     )
@@ -113,11 +121,25 @@ def main(argv=None):
         default=False,
         action="store_true",
     )
-
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
+        default=pint.logging.script_level,
+        help="Logging level",
+        dest="loglevel",
+    )
     global nwalkers, nsteps, ftr
 
     args = parser.parse_args(argv)
-
+    log.remove()
+    log.add(
+        sys.stderr,
+        level=args.loglevel,
+        colorize=True,
+        format=pint.logging.format,
+        filter=pint.logging.LogFilter(),
+    )
     eventfile = args.eventfile
     parfile = args.parfile
     gaussianfile = args.gaussianfile

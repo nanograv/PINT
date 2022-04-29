@@ -1,7 +1,9 @@
 import io
 import os
+import sys
 import warnings
 from copy import deepcopy
+from contextlib import redirect_stdout
 
 import astropy.units as u
 import numpy as np
@@ -335,6 +337,55 @@ def test_jump_flags_to_params(timfile_jumps, timfile_nojumps, model_0437):
     assert len(m.components["PhaseJump"].jumps) == 2
     assert "JUMP1" in m.components["PhaseJump"].jumps
     assert "JUMP2" in m.components["PhaseJump"].jumps
+
+
+def test_many_timfile_jumps():
+    m = get_model(io.StringIO(par_base))
+    pairs = 15
+    toas_per_jump = 3
+    t = make_fake_toas_uniform(56000, 57000, 5 + toas_per_jump * pairs, model=m)
+    # The following lets us write the fake TOAs to a string as a timfile
+    f = io.StringIO()
+    with redirect_stdout(f):
+        t.write_TOA_file(sys.stdout)
+    s = f.getvalue().splitlines()
+    toalist = ["\n".join(s[:11]) + "\n"]
+    lo = 12
+    for _ in range(pairs):
+        toalist.append("\n".join(["JUMP"] + s[lo : lo + toas_per_jump] + ["JUMP\n"]))
+        lo += toas_per_jump
+    # read the TOAs
+    tt = get_TOAs(io.StringIO("".join(toalist)))
+    # convert the timfile JUMPs to params
+    m.jump_flags_to_params(tt)
+    assert "PhaseJump" in m.components
+    assert len(m.components["PhaseJump"].jumps) == pairs
+    assert "JUMP1" in m.components["PhaseJump"].jumps
+    assert "JUMP2" in m.components["PhaseJump"].jumps
+    assert "JUMP10" in m.components["PhaseJump"].jumps
+    assert "JUMP15" in m.components["PhaseJump"].jumps
+
+
+def test_parfile_and_timfile_jumps(timfile_jumps):
+    # TOAs 9, 10, 11, and 12 have jump flags (JUMP2 on 9, JUMP1 on rest)
+    t = timfile_jumps
+    m = get_model(io.StringIO(par_base + "JUMP MJD 55729 55730 0.0 1\n"))
+    # turns pre-existing jump flags in t.table['flags'] into parameters in parfile
+    m.jump_flags_to_params(t)
+    assert "PhaseJump" in m.components
+    # adds jump flags to t.table['flags'] for jump parameters already in parfile
+    m.jump_params_to_flags(t)
+    fs, idxs = t.get_flag_value("tim_jump")
+    assert len(idxs) == 4
+    assert fs[5] == "3"  # These were both boosted because of the parfile JUMP
+    assert fs[6] == "2"
+    fs, idxs = t.get_flag_value("jump")
+    assert len(idxs) == 5
+    assert fs[5] in [
+        "3,1",
+        "1,3",
+    ]
+    assert fs[4] == "1"
 
 
 def test_supports_rm():

@@ -8,18 +8,16 @@ dispersion measures (:class:`pint.residuals.WidebandTOAResiduals`).
 """
 import collections
 import copy
-import logging
 import warnings
 
 import astropy.units as u
 import numpy as np
 from scipy.linalg import LinAlgError
+from loguru import logger as log
 
 from pint.models.dispersion_model import Dispersion
 from pint.phase import Phase
 from pint.utils import weighted_mean, taylor_horner_deriv
-
-log = logging.getLogger(__name__)
 
 __all__ = [
     "Residuals",
@@ -121,7 +119,7 @@ class Residuals:
                 self.track_mode = "nearest"
             elif "pulse_number" in self.toas.table.columns:
                 if np.any(np.isnan(toas.table["pulse_number"])):
-                    log.warn(
+                    log.warning(
                         "Some TOAs are missing pulse numbers, they will not be used."
                     )
                     self.track_mode = "nearest"
@@ -208,7 +206,11 @@ class Residuals:
     @property
     def chi2_reduced(self):
         """Reduced chi-squared."""
-        warnings.warn("Please use reduced_chi2 instead.", DeprecationWarning)
+        warnings.warn(
+            "Do not use 'residuals.chi2_reduced'. Please use 'residuals.reduced_chi2' instead.",
+            DeprecationWarning,
+        )
+
         return self.chi2 / self.dof
 
     def get_data_error(self, scaled=True):
@@ -281,7 +283,7 @@ class Residuals:
             else:
                 F0 = 1.0 / self.model.P0.quantity
                 if "PDOT" in self.model.params:
-                    F1 = -self.model.PDOT.quantity / self.model.P0.quantity ** 2
+                    F1 = -self.model.PDOT.quantity / self.model.P0.quantity**2
                 else:
                     F1 = 0 * u.Hz / u.s
                 fterms = [0.0 * u.dimensionless_unscaled, F0, F1]
@@ -406,7 +408,7 @@ class Residuals:
         correctly return infinity.
         """
         if self.model.has_correlated_errors:
-            log.debug("Using GLS fitter to compute residual chi2")
+            log.trace("Using GLS fitter to compute residual chi2")
             # Use GLS but don't actually fit
             from pint.fitter import GLSFitter
 
@@ -539,7 +541,7 @@ class WidebandDMResiduals(Residuals):
         toas=None,
         model=None,
         residual_type="dm",
-        unit=u.pc / u.cm ** 3,
+        unit=u.pc / u.cm**3,
         subtract_mean=False,
         use_weighted_mean=True,
     ):
@@ -550,7 +552,7 @@ class WidebandDMResiduals(Residuals):
         self.unit = unit
         self.subtract_mean = subtract_mean
         self.use_weighted_mean = use_weighted_mean
-        self.base_unit = u.pc / u.cm ** 3
+        self.base_unit = u.pc / u.cm**3
         self.get_model_value = self.model.total_dm
         self.dm_data, self.dm_error, self.relevant_toas = self.get_dm_data()
         self._chi2 = None
@@ -612,7 +614,7 @@ class WidebandDMResiduals(Residuals):
                         "Some DM errors are zero - cannot calculate the "
                         "weighted residuals."
                     )
-                wm = np.average(resids, weights=1.0 / (self.dm_error ** 2))
+                wm = np.average(resids, weights=1.0 / (self.dm_error**2))
                 resids -= wm
         return resids
 
@@ -633,7 +635,7 @@ class WidebandDMResiduals(Residuals):
             raise ValueError(
                 "Some DM errors are zero - cannot calculate weighted RMS of residuals"
             )
-        w = 1.0 / (scaled_errors ** 2)
+        w = 1.0 / (scaled_errors**2)
 
         wmean, werr, wsdev = weighted_mean(self.resids, w, sdev=True)
         return wsdev

@@ -1,6 +1,5 @@
 """An interface for pint compatible to the interface of libstempo."""
 import collections
-import logging
 import time
 from collections import OrderedDict
 
@@ -8,6 +7,7 @@ import astropy.constants as ac
 import astropy.coordinates.angles as ang
 import astropy.units as u
 import numpy as np
+from loguru import logger as log
 
 import pint.models as pm
 import pint.toa as pt
@@ -15,7 +15,6 @@ from pint import fitter
 from pint.utils import has_astropy_unit
 from pint.residuals import Residuals
 
-log = logging.getLogger(__name__)
 
 __all__ = ["PINTPar", "PINTPulsar"]
 
@@ -29,17 +28,17 @@ u.lts = u.def_unit(["lightsecond", "ls", "lts"], ac.c * u.s)
 map_units = {
     "F0": u.Hz,
     "F1": u.Hz / u.s,
-    "F2": u.Hz / u.s ** 2,
-    "F3": u.Hz / u.s ** 3,
-    "F4": u.Hz / u.s ** 4,
-    "F5": u.Hz / u.s ** 5,
-    "F6": u.Hz / u.s ** 6,
-    "F7": u.Hz / u.s ** 7,
-    "F8": u.Hz / u.s ** 8,
-    "F9": u.Hz / u.s ** 9,
-    "F10": u.Hz / u.s ** 10,
-    "F11": u.Hz / u.s ** 11,
-    "F12": u.Hz / u.s ** 12,
+    "F2": u.Hz / u.s**2,
+    "F3": u.Hz / u.s**3,
+    "F4": u.Hz / u.s**4,
+    "F5": u.Hz / u.s**5,
+    "F6": u.Hz / u.s**6,
+    "F7": u.Hz / u.s**7,
+    "F8": u.Hz / u.s**8,
+    "F9": u.Hz / u.s**9,
+    "F10": u.Hz / u.s**10,
+    "F11": u.Hz / u.s**11,
+    "F12": u.Hz / u.s**12,
     "RAJ": u.rad,
     "DECJ": u.rad,
     "ELONG": u.deg,
@@ -71,8 +70,8 @@ map_units = {
     # DTHETA, XOMDOT
     "SIN1": u.dimensionless_unscaled,
     # DR, A0, B0, BP, BPP, AFAC
-    "DM": u.cm ** -3 * u.pc,
-    "DM1": u.cm ** -3 * u.pc * u.yr ** -1,  # how many should we do?
+    "DM": u.cm**-3 * u.pc,
+    "DM1": u.cm**-3 * u.pc * u.yr**-1,  # how many should we do?
     "POSEPOCH": u.day,
     "T0": u.day,
     "TASC": u.day,
@@ -179,9 +178,13 @@ class PINTPulsar:
             Whether or not we are using the 'units' interface of libstempo
         """
         if warnings:
-            logging.getLogger().setLevel("INFO")
+            # logging.getLogger().setLevel("INFO")
+            log.remove()
+            log.add(level="INFO")
         else:
-            logging.getLogger().setLevel("ERROR")
+            # logging.getLogger().setLevel("ERROR")
+            log.remove()
+            log.add(level="ERROR")
 
         self.loadparfile(parfile)
 

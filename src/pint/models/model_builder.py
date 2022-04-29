@@ -1,13 +1,13 @@
-import logging
 import os
 import tempfile
 import copy
 from io import StringIO
 from collections import Counter, defaultdict
+import warnings
 from pint.models.parameter import maskParameter
 from astropy import log
-import warnings
 from astropy.utils.decorators import lazyproperty
+from loguru import logger as log
 from pint.models.timing_model import (
     DEFAULT_ORDER,
     Component,
@@ -24,8 +24,6 @@ from pint.models.timing_model import (
 )
 from pint.toa import get_TOAs
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
-
-log = logging.getLogger(__name__)
 
 
 __all__ = ["ModelBuilder", "get_model", "get_model_and_toas"]
@@ -112,6 +110,7 @@ class ModelBuilder:
         for k, v in unknown_param.items():
             p_line = " ".join([k] + v)
             warnings.warn(f"Unrecognized parfile line '{p_line}'", UserWarning)
+            # log.warning(f"Unrecognized parfile line '{p_line}'")
         return tm
 
     def _validate_components(self):
@@ -535,8 +534,7 @@ class ModelBuilder:
         return timing_model
 
     def _report_conflict(self, conflict_graph):
-        """Report conflict components
-        """
+        """Report conflict components"""
         for k, v in conflict_graph.items():
             # Put all the conflict components together from the graph
             cf_cps = list(v)

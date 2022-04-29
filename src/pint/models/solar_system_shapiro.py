@@ -1,9 +1,9 @@
 """Solar system Shapiro delay."""
-import logging
 
 import astropy.constants as const
 import astropy.units as u
 import numpy
+from loguru import logger as log
 
 from pint import (
     Tearth,
@@ -18,8 +18,6 @@ from pint import (
 )
 from pint.models.parameter import boolParameter
 from pint.models.timing_model import DelayComponent
-
-log = logging.getLogger(__name__)
 
 
 class SolarSystemShapiro(DelayComponent):
@@ -77,7 +75,7 @@ class SolarSystemShapiro(DelayComponent):
           T_obj : mass of object in seconds (GM/c^3)
         """
         # TODO: numpy.sum currently loses units in some cases...
-        r = (numpy.sqrt(numpy.sum(obj_pos ** 2, axis=1))) * obj_pos.unit
+        r = (numpy.sqrt(numpy.sum(obj_pos**2, axis=1))) * obj_pos.unit
         rcostheta = numpy.sum(obj_pos * psr_dir, axis=1)
         # This is the 2nd to last term from Eqn 4.6 in Backer &
         # Hellings, ARAA, 1986 with gamma = 1 (as defined by GR).  We

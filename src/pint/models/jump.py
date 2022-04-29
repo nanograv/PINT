@@ -1,13 +1,12 @@
 """Phase jumps. """
-import logging
 
 import astropy.units as u
 import numpy
 
+from loguru import logger as log
+
 from pint.models.parameter import maskParameter
 from pint.models.timing_model import DelayComponent, MissingParameter, PhaseComponent
-
-log = logging.getLogger(__name__)
 
 
 class DelayJump(DelayComponent):
@@ -34,10 +33,11 @@ class DelayJump(DelayComponent):
 
     def setup(self):
         super().setup()
-        self.jumps = []
-        for mask_par in self.get_params_of_type("maskParameter"):
-            if mask_par.startswith("JUMP"):
-                self.jumps.append(mask_par)
+        self.jumps = [
+            mask_par
+            for mask_par in self.get_params_of_type("maskParameter")
+            if mask_par.startswith("JUMP")
+        ]
         for j in self.jumps:
             self.register_deriv_funcs(self.d_delay_d_jump, j)
 
@@ -100,10 +100,11 @@ class PhaseJump(PhaseComponent):
 
     def setup(self):
         super().setup()
-        self.jumps = []
-        for mask_par in self.get_params_of_type("maskParameter"):
-            if mask_par.startswith("JUMP"):
-                self.jumps.append(mask_par)
+        self.jumps = [
+            mask_par
+            for mask_par in self.get_params_of_type("maskParameter")
+            if mask_par.startswith("JUMP")
+        ]
         for j in self.jumps:
             # prevents duplicates from being added to phase_deriv_funcs
             if j in self.deriv_funcs.keys():
@@ -149,8 +150,7 @@ class PhaseJump(PhaseComponent):
         Returns a list of the maskParameter objects representing the jumps
         in this PhaseJump object.
         """
-        jump_obs = [getattr(self, jump) for jump in self.jumps]
-        return jump_obs
+        return [getattr(self, jump) for jump in self.jumps]
 
     def jump_params_to_flags(self, toas):
         """Take jumps created from .par file and add appropriate flags to toa table.
@@ -196,7 +196,7 @@ class PhaseJump(PhaseComponent):
         name = None  # name of jump
         # check if this is first jump added
         if len(self.jumps) == 0 or (
-            len(self.jumps) == 1 and getattr(self, "JUMP1").key == None
+            len(self.jumps) == 1 and getattr(self, "JUMP1").key is None
         ):
             param = maskParameter(
                 name="JUMP",
@@ -207,14 +207,16 @@ class PhaseJump(PhaseComponent):
                 units="second",
                 frozen=False,
             )
-            self.add_param(param)
         # otherwise add on jump with next index
         else:
-            # first, search for TOAs already jumped in inputted selection - pintk does not allow jumps added through GUI to overlap with existing jumps
+            # first, search for TOAs already jumped in inputted selection
+            # - pintk does not allow jumps added through GUI to overlap
+            # with existing jumps
             for d in toa_table:
                 if "gui_jump" in d.keys():
                     log.warning(
-                        "The selected toa(s) overlap an existing jump. Remove all interfering jumps before attempting to jump these toas."
+                        "The selected toa(s) overlap an existing jump."
+                        "Remove all interfering jumps before attempting to jump these toas."
                     )
                     return None
             param = maskParameter(
@@ -226,10 +228,11 @@ class PhaseJump(PhaseComponent):
                 units="second",
                 frozen=False,
             )
-            self.add_param(param)
+        self.add_param(param)
         ind = param.index
         name = param.name
         self.setup()
         for dict1 in toa_table:
+            dict1["jump"] = str(ind)
             dict1["gui_jump"] = str(ind)
         return name

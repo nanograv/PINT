@@ -102,8 +102,7 @@ class ELL1BaseModel(PSR_BINARY):
     # orbit phase in the range [0,1], So Phi can be computed by M(). But
     # the attribute .orbits_func needs to be set as orbits_ELL1
     def Phi(self):
-        """Orbit phase in ELL1 model. Using TASC
-        """
+        """Orbit phase in ELL1 model. Using TASC"""
         phase = self.M()
         return phase
 
@@ -115,8 +114,7 @@ class ELL1BaseModel(PSR_BINARY):
         return orbits
 
     def d_Phi_d_TASC(self):
-        """dPhi/dTASC
-        """
+        """dPhi/dTASC"""
         PB = self.pb().to("second")
         PBDOT = self.pbdot()
         ttasc = self.ttasc()
@@ -125,14 +123,14 @@ class ELL1BaseModel(PSR_BINARY):
     def d_Phi_d_par(self, par):
         """The derivative of Phi with respect to parameter
 
-         Parameters
-         ----------
-         par : string
-               parameter name
+        Parameters
+        ----------
+        par : string
+              parameter name
 
-         Returns
-         -------
-         Derivitve of Phi respect to par
+        Returns
+        -------
+        Derivitve of Phi respect to par
         """
         if par not in self.binary_params:
             errorMesg = par + " is not in binary parameter list."
@@ -180,8 +178,7 @@ class ELL1BaseModel(PSR_BINARY):
         return d_Dre_d_par
 
     def Drep(self):
-        """ dDre/dPhi
-        """
+        """dDre/dPhi"""
         a1 = self.a1()
         eps1 = self.eps1()
         eps2 = self.eps2()
@@ -282,7 +279,7 @@ class ELL1BaseModel(PSR_BINARY):
         return d_Drepp_d_par
 
     def delayR(self):
-        """ELL1 Roemer delay in proper time. Ch. Lange,1 F. Camilo, 2001 eq. A6 """
+        """ELL1 Roemer delay in proper time. Ch. Lange,1 F. Camilo, 2001 eq. A6"""
         Phi = self.Phi()
         return (
             self.a1()
@@ -317,7 +314,7 @@ class ELL1BaseModel(PSR_BINARY):
         nhat = 2 * np.pi / self.pb()
         return (
             Dre
-            * (1 - nhat * Drep + (nhat * Drep) ** 2 + 1.0 / 2 * nhat ** 2 * Dre * Drepp)
+            * (1 - nhat * Drep + (nhat * Drep) ** 2 + 1.0 / 2 * nhat**2 * Dre * Drepp)
         ).decompose()
 
     def nhat(self):
@@ -342,8 +339,8 @@ class ELL1BaseModel(PSR_BINARY):
         nhat = 2 * np.pi / self.pb()
 
         d_delayI_d_Dre = (
-            1 - nhat * Drep + (nhat * Drep) ** 2 + 1.0 / 2 * nhat ** 2 * Dre * Drepp
-        ) + Dre * 1.0 / 2 * nhat ** 2 * Drepp
+            1 - nhat * Drep + (nhat * Drep) ** 2 + 1.0 / 2 * nhat**2 * Dre * Drepp
+        ) + Dre * 1.0 / 2 * nhat**2 * Drepp
         d_delayI_d_Drep = -Dre * nhat + 2 * (nhat * Drep) * nhat * Dre
         d_delayI_d_Drepp = 1.0 / 2 * (nhat * Dre) ** 2
         d_delayI_d_nhat = Dre * (-Drep + 2 * (nhat * Drep) * Drep + nhat * Dre * Drepp)
@@ -374,8 +371,7 @@ class ELL1BaseModel(PSR_BINARY):
 
 
 class ELL1model(ELL1BaseModel):
-    """ This is a ELL1 model using M2 and SINI as the Shapiro delay parameters.
-    """
+    """This is a ELL1 model using M2 and SINI as the Shapiro delay parameters."""
 
     def __init__(self):
         super(ELL1model, self).__init__()
@@ -384,8 +380,7 @@ class ELL1model(ELL1BaseModel):
         self.d_binarydelay_d_par_funcs = [self.d_ELL1delay_d_par]
 
     def delayS(self):
-        """ELL1 Shaprio delay. Ch. Lange,1 F. Camilo, 2001 eq. A16
-        """
+        """ELL1 Shaprio delay. Ch. Lange,1 F. Camilo, 2001 eq. A16"""
         TM2 = self.TM2()
         Phi = self.Phi()
         sDelay = -2 * TM2 * np.log(1 - self.SINI * np.sin(Phi))

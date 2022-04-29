@@ -16,8 +16,7 @@ from pinttestdata import datadir
 
 
 class TestParfileWriting(unittest.TestCase):
-    """This is a unit test class for parfile writing.
-    """
+    """This is a unit test class for parfile writing."""
 
     @classmethod
     def setUpClass(cls):

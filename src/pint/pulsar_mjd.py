@@ -426,7 +426,7 @@ def jds_to_mjds_pulsar(jd1, jd2):
         hmsf["h"] / 24.0
         + hmsf["m"] / 1440.0
         + hmsf["s"] / 86400.0
-        + hmsf["f"] / 86400.0 / 10 ** _digits,
+        + hmsf["f"] / 86400.0 / 10**_digits,
     )
 
 
@@ -478,8 +478,8 @@ def _str_to_mjds(s):
             fmjd = np.longdouble("0." + fmjd_s)
             if ss.startswith("-"):
                 fmjd = -fmjd
-            imjd *= 10 ** expon
-            fmjd *= 10 ** expon
+            imjd *= 10**expon
+            fmjd *= 10**expon
     else:
         mjd_s = ss.split(".")
         # If input was given as an integer, add floating "0"
