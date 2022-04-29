@@ -26,7 +26,9 @@ class BinaryDD(PulsarBinary):
 
     register = True
 
-    def __init__(self,):
+    def __init__(
+        self,
+    ):
         super(BinaryDD, self).__init__()
         self.binary_model_name = "DD"
         self.binary_model_class = DDmodel
@@ -76,8 +78,7 @@ class BinaryDD(PulsarBinary):
         )
 
     def validate(self):
-        """ Validate the input parameters.
-        """
+        """Validate the input parameters."""
         super().validate()
         self.check_required_params(["T0", "A1"])
         # If any *DOT is set, we need T0

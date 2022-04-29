@@ -6,7 +6,7 @@ import pint.observatory
 
 
 class TestObservatoryMetadata(unittest.TestCase):
-    """ Test handling of observatory metadata"""
+    """Test handling of observatory metadata"""
 
     @classmethod
     def setUpClass(cls):

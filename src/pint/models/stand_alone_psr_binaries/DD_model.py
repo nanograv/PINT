@@ -133,7 +133,7 @@ class DDmodel(PSR_BINARY):
             )
 
     def d_omega_d_OM(self):
-        """dOmega/dOM = 1 """
+        """dOmega/dOM = 1"""
         return np.ones(len(self.tt0), dtype=np.longdouble) * u.Unit("")
 
     def d_omega_d_OMDOT(self):
@@ -265,7 +265,7 @@ class DDmodel(PSR_BINARY):
         """
         eTheta = self.eTheta()
         cosOmg = np.cos(self.omega())
-        return self.a1() / c.c * (1 - eTheta ** 2) ** 0.5 * cosOmg
+        return self.a1() / c.c * (1 - eTheta**2) ** 0.5 * cosOmg
 
     def d_beta_d_par(self, par):
         """Derivative.
@@ -297,9 +297,9 @@ class DDmodel(PSR_BINARY):
         d_omega_d_par = self.d_omega_d_par(par)
         d_eTheta_d_par = self.d_eTheta_d_par(par)
 
-        d_beta_d_a1 = 1.0 / c.c * (1 - eTheta ** 2) ** 0.5 * cosOmg
-        d_beta_d_omega = -a1 / c.c * (1 - eTheta ** 2) ** 0.5 * sinOmg
-        d_beta_d_eTheta = a1 / c.c * (-eTheta) / np.sqrt(1 - eTheta ** 2) * cosOmg
+        d_beta_d_a1 = 1.0 / c.c * (1 - eTheta**2) ** 0.5 * cosOmg
+        d_beta_d_omega = -a1 / c.c * (1 - eTheta**2) ** 0.5 * sinOmg
+        d_beta_d_eTheta = a1 / c.c * (-eTheta) / np.sqrt(1 - eTheta**2) * cosOmg
         with u.set_enabled_equivalencies(u.dimensionless_angles()):
             return (
                 d_beta_d_a1 * d_a1_d_par
@@ -331,7 +331,7 @@ class DDmodel(PSR_BINARY):
         eTheta = self.eTheta()
         cosOmg = np.cos(self.omega())
         d_a1_d_A1 = self.d_a1_d_A1()
-        return d_a1_d_A1 / c.c * (1 - eTheta ** 2) ** 0.5 * cosOmg
+        return d_a1_d_A1 / c.c * (1 - eTheta**2) ** 0.5 * cosOmg
 
     def d_beta_d_A1DOT(self):
         """Derivative.
@@ -343,7 +343,7 @@ class DDmodel(PSR_BINARY):
         eTheta = self.eTheta()
         cosOmg = np.cos(self.omega())
         d_a1_d_A1DOT = self.d_a1_d_A1DOT()
-        return d_a1_d_A1DOT / c.c * (1 - eTheta ** 2) ** 0.5 * cosOmg
+        return d_a1_d_A1DOT / c.c * (1 - eTheta**2) ** 0.5 * cosOmg
 
     def d_beta_d_T0(self):
         """Derivative.
@@ -355,7 +355,7 @@ class DDmodel(PSR_BINARY):
         eTheta = self.eTheta()
         cosOmg = np.cos(self.omega())
         d_a1_d_T0 = self.d_a1_d_T0()
-        return d_a1_d_T0 / c.c * (1 - eTheta ** 2) ** 0.5 * cosOmg
+        return d_a1_d_T0 / c.c * (1 - eTheta**2) ** 0.5 * cosOmg
 
     def d_beta_d_ECC(self):
         """Derivative.
@@ -375,8 +375,8 @@ class DDmodel(PSR_BINARY):
                 a1
                 / c.c
                 * (
-                    (-eTheta) / np.sqrt(1 - eTheta ** 2) * cosOmg
-                    - (1 - eTheta ** 2) ** 0.5 * sinOmg * self.d_omega_d_par("ECC")
+                    (-eTheta) / np.sqrt(1 - eTheta**2) * cosOmg
+                    - (1 - eTheta**2) ** 0.5 * sinOmg * self.d_omega_d_par("ECC")
                 )
             )
 
@@ -397,8 +397,8 @@ class DDmodel(PSR_BINARY):
                 a1
                 / c.c
                 * (
-                    (-eTheta) / np.sqrt(1 - eTheta ** 2) * cosOmg * self.tt0
-                    - (1 - eTheta ** 2) ** 0.5 * sinOmg * self.d_omega_d_par("EDOT")
+                    (-eTheta) / np.sqrt(1 - eTheta**2) * cosOmg * self.tt0
+                    - (1 - eTheta**2) ** 0.5 * sinOmg * self.d_omega_d_par("EDOT")
                 )
             )
 
@@ -412,7 +412,7 @@ class DDmodel(PSR_BINARY):
         eTheta = self.eTheta()
         cosOmg = np.cos(self.omega())
 
-        return self.a1() / c.c * (-eTheta) / np.sqrt(1 - eTheta ** 2) * cosOmg
+        return self.a1() / c.c * (-eTheta) / np.sqrt(1 - eTheta**2) * cosOmg
 
     ##################################################
     def Dre(self):
@@ -622,13 +622,13 @@ class DDmodel(PSR_BINARY):
                 1
                 - nHat * Drep
                 + (nHat * Drep) ** 2
-                + 1.0 / 2 * nHat ** 2 * Dre * Drepp
-                - 1.0 / 2 * e * sinE / (1 - e * cosE) * nHat ** 2 * Dre * Drep
+                + 1.0 / 2 * nHat**2 * Dre * Drepp
+                - 1.0 / 2 * e * sinE / (1 - e * cosE) * nHat**2 * Dre * Drep
             )
         ).decompose()
 
     def d_delayI_d_par(self, par):
-        """Derivative on delay inverse.  """
+        """Derivative on delay inverse."""
         e = self.ecc()
         sE = np.sin(self.E())
         cE = np.cos(self.E())
@@ -650,21 +650,21 @@ class DDmodel(PSR_BINARY):
             x = -1.0 / 2.0 * e * sE / oneMeccTcosE  # -1/2*e*sin(E)/(1-e*cos(E))
 
             dx_dpar = (
-                -sE / (2 * oneMeccTcosE ** 2) * decc_dpar
-                + e * (e - cE) / (2 * oneMeccTcosE ** 2) * dE_dpar
+                -sE / (2 * oneMeccTcosE**2) * decc_dpar
+                + e * (e - cE) / (2 * oneMeccTcosE**2) * dE_dpar
             )
 
             diDelay_dDre = (
                 1
                 + (Drep * nHat) ** 2
-                + Dre * Drepp * nHat ** 2
+                + Dre * Drepp * nHat**2
                 + Drep * nHat * (2 * Dre * nHat * x - 1)
             )
             diDelay_dDrep = Dre * nHat * (2 * Drep * nHat + Dre * nHat * x - 1)
             diDelay_dDrepp = (Dre * nHat) ** 2 / 2
             diDelay_dnhat = Dre * (
                 -Drep
-                + 2 * Drep ** 2 * nHat
+                + 2 * Drep**2 * nHat
                 + nHat * Dre * Drepp
                 + 2 * x * nHat * Dre * Drep
             )
@@ -697,7 +697,7 @@ class DDmodel(PSR_BINARY):
             * np.log(
                 1
                 - e * cE
-                - self.SINI * (sOmega * (cE - e) + (1 - e ** 2) ** 0.5 * cOmega * sE)
+                - self.SINI * (sOmega * (cE - e) + (1 - e**2) ** 0.5 * cOmega * sE)
             )
         )
         return sDelay
@@ -723,7 +723,7 @@ class DDmodel(PSR_BINARY):
         logNum = (
             1
             - e * cE
-            - self.SINI * (sOmega * (cE - e) + (1 - e ** 2) ** 0.5 * cOmega * sE)
+            - self.SINI * (sOmega * (cE - e) + (1 - e**2) ** 0.5 * cOmega * sE)
         )
         with u.set_enabled_equivalencies(u.dimensionless_angles()):
             dTM2_dpar = self.prtl_der("TM2", par)
@@ -733,7 +733,7 @@ class DDmodel(PSR_BINARY):
                 -2
                 * TM2
                 / logNum
-                * (-cE - self.SINI * (-e * cOmega * sE / np.sqrt(1 - e ** 2) - sOmega))
+                * (-cE - self.SINI * (-e * cOmega * sE / np.sqrt(1 - e**2) - sOmega))
             )
             dE_dpar = self.prtl_der("E", par)
             dsDelay_dE = (
@@ -742,7 +742,7 @@ class DDmodel(PSR_BINARY):
                 / logNum
                 * (
                     e * sE
-                    - self.SINI * (np.sqrt(1 - e ** 2) * cE * cOmega - sE * sOmega)
+                    - self.SINI * (np.sqrt(1 - e**2) * cE * cOmega - sE * sOmega)
                 )
             )
             domega_dpar = self.prtl_der("omega", par)
@@ -751,14 +751,14 @@ class DDmodel(PSR_BINARY):
                 * TM2
                 / logNum
                 * self.SINI
-                * ((cE - e) * cOmega - np.sqrt(1 - e ** 2) * sE * sOmega)
+                * ((cE - e) * cOmega - np.sqrt(1 - e**2) * sE * sOmega)
             )
             dSINI_dpar = self.prtl_der("SINI", par)
             dsDelay_dSINI = (
                 -2
                 * TM2
                 / logNum
-                * (-((1 - e ** 2) ** 0.5) * cOmega * sE - (cE - e) * sOmega)
+                * (-((1 - e**2) ** 0.5) * cOmega * sE - (cE - e) * sOmega)
             )
             return (
                 dTM2_dpar * dsDelay_dTM2
@@ -858,7 +858,7 @@ class DDmodel(PSR_BINARY):
         return self.delayInverse() + self.delayS() + self.delayA()
 
     def d_DDdelay_d_par(self, par):
-        """Full DD model delay derivtive """
+        """Full DD model delay derivtive"""
         with u.set_enabled_equivalencies(u.dimensionless_angles()):
             return (
                 self.d_delayI_d_par(par)

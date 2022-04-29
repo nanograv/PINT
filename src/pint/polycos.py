@@ -144,7 +144,7 @@ class PolycoEntry:
         return freq
 
     def evalfreqderiv(self, t):
-        """ Return the frequency derivative at time t."""
+        """Return the frequency derivative at time t."""
         dt = (data2longdouble(t) - self.tmid.value) * MIN_PER_DAY
         s = data2longdouble(0.0)
         for i in range(2, self.ncoeff):

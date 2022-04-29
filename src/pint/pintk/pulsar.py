@@ -535,8 +535,7 @@ class Pulsar:
         self.add_model_params()
 
     def random_models(self, selected):
-        """Compute and plot random models
-        """
+        """Compute and plot random models"""
         log.info("Computing random models based on parameter covariance matrix.")
         if [p for p in self.postfit_model.free_params if p.startswith("DM")]:
             log.warning(
@@ -589,7 +588,11 @@ class Pulsar:
 
         # Compute the new random timing models
         rs = calculate_random_models(
-            self.fitter, toas, Nmodels=15, keep_models=False, return_time=True,
+            self.fitter,
+            toas,
+            Nmodels=15,
+            keep_models=False,
+            return_time=True,
         )
 
         # Get a selection array for the fake TOAs that covers the fit TOAs (plus extra)

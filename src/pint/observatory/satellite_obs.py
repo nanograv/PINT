@@ -19,21 +19,21 @@ from pint.utils import PosVel
 def load_Fermi_FT2(ft2_filename):
     """Load data from a Fermi FT2 file
 
-        The contents of the FT2 file are described here:
-        https://fermi.gsfc.nasa.gov/ssc/data/analysis/documentation/Cicerone/Cicerone_Data/LAT_Data_Columns.html#SpacecraftFile
-        The coordinates are X, Y, Z in the ECI (Earth-Centered Inertial)
-        frame. I (@paulray) **believe** this is the same as astropy's GCRS
-        <http://docs.astropy.org/en/stable/api/astropy.coordinates.GCRS.html>,
-        but this should be confirmed.
+    The contents of the FT2 file are described here:
+    https://fermi.gsfc.nasa.gov/ssc/data/analysis/documentation/Cicerone/Cicerone_Data/LAT_Data_Columns.html#SpacecraftFile
+    The coordinates are X, Y, Z in the ECI (Earth-Centered Inertial)
+    frame. I (@paulray) **believe** this is the same as astropy's GCRS
+    <http://docs.astropy.org/en/stable/api/astropy.coordinates.GCRS.html>,
+    but this should be confirmed.
 
-        Parameters
-        ----------
-        ft2_filename : str
-            Name of file to load
+    Parameters
+    ----------
+    ft2_filename : str
+        Name of file to load
 
-        Returns
-        -------
-        astropy Table containing Time, x, y, z, v_x, v_y, v_z data
+    Returns
+    -------
+    astropy Table containing Time, x, y, z, v_x, v_y, v_z data
 
     """
     # Load photon times from FT1 file
@@ -243,7 +243,7 @@ def load_nustar_orbit(orb_filename):
 
 
 def load_orbit(obs_name, orb_filename):
-    """ Generalized function to load one or more orbit files.
+    """Generalized function to load one or more orbit files.
 
     Parameters
     ----------
@@ -331,7 +331,7 @@ class SatelliteObs(SpecialLocation):
         return self._geocenter
 
     def _check_bounds(self, t):
-        """ Ensure t is within maxextrap of the closest S/C measurement.
+        """Ensure t is within maxextrap of the closest S/C measurement.
 
         The purpose is to catch cases where there is missing S/C orbital
         information.  A common case would be providing an "FT2" file that
@@ -419,7 +419,7 @@ class SatelliteObs(SpecialLocation):
 
 
 def get_satellite_observatory(name, ft2name, **kwargs):
-    """ Factory to get/instantiate a SatelliteObs.""
+    """Factory to get/instantiate a SatelliteObs.""
 
     Parameters
     ----------

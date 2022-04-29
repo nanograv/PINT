@@ -77,19 +77,19 @@ class ELL1Hmodel(ELL1BaseModel):
         return self.delayI() + self.delayS()
 
     def get_SINI_from_STIGMA(self):
-        return 2 * self.STIGMA / (1 + self.STIGMA ** 2)
+        return 2 * self.STIGMA / (1 + self.STIGMA**2)
 
     def get_TM2_from_H3_STIGMA(self):
-        return self.H3 / self.STIGMA ** 3
+        return self.H3 / self.STIGMA**3
 
     def get_SINI_from_H3_H4(self):
-        return 2 * self.H3 * self.H4 / (self.H3 ** 2 + self.H4 ** 2)
+        return 2 * self.H3 * self.H4 / (self.H3**2 + self.H4**2)
 
     def get_TM2_from_H3_H4(self):
         return (self.H3) ** 4 / (self.H4) ** 3
 
     def _ELL1H_fourier_basis(self, k, derivative=False):
-        """Select the fourier basis and part of the coefficent depend on the parity of the harmonics k """
+        """Select the fourier basis and part of the coefficent depend on the parity of the harmonics k"""
         if k % 2 == 0:
             pwr = (k + 2) / 2
             if not derivative:
@@ -135,7 +135,7 @@ class ELL1Hmodel(ELL1BaseModel):
             # a0 is -1 * np.log(1 + stigma ** 2)
             # But the in the fourier seises it is a0/2
             return (
-                -1.0 * np.log(1 + stigma ** 2) * stigma ** (-factor_out_power),
+                -1.0 * np.log(1 + stigma**2) * stigma ** (-factor_out_power),
                 basis_func,
             )
 
@@ -160,7 +160,7 @@ class ELL1Hmodel(ELL1BaseModel):
             # a0 is -1 * np.log(1 + stigma ** 2)
             # But the in the fourier seises it is a0/2
             return (
-                -2.0 / (1 + stigma ** 2.0) * stigma ** (1 - factor_out_power),
+                -2.0 / (1 + stigma**2.0) * stigma ** (1 - factor_out_power),
                 basis_func,
             )
 
@@ -233,7 +233,7 @@ class ELL1Hmodel(ELL1BaseModel):
     def d_ELL1H_fourier_harms_d_par(
         self, selected_harms, phi, stigma, par, factor_out_power=0
     ):
-        """This is a overall derivative  function.  """
+        """This is a overall derivative  function."""
         # Find the right derivative  function for fourier components
         df_name = "d_fourier_component_d_" + par.lower()
         par_obj = getattr(self, par)
@@ -269,7 +269,7 @@ class ELL1Hmodel(ELL1BaseModel):
         return ds
 
     def d_delayS3p_H3_STIGMA_approximate_d_H3(self, H3, stigma, end_harm=6):
-        """derivative  of delayS3p_H3_STIGMA with respect to H3 """
+        """derivative  of delayS3p_H3_STIGMA with respect to H3"""
         Phi = self.Phi()
         selected_harms = np.arange(3, end_harm + 1)
         sum_fharms = self.ELL1H_shapiro_delay_fourier_harms(
@@ -278,7 +278,7 @@ class ELL1Hmodel(ELL1BaseModel):
         return -2.0 * sum_fharms
 
     def d_delayS3p_H3_STIGMA_approximate_d_STIGMA(self, H3, stigma, end_harm=6):
-        """derivative  of delayS3p_H3_STIGMA with respect to STIGMA """
+        """derivative  of delayS3p_H3_STIGMA with respect to STIGMA"""
         Phi = self.Phi()
         selected_harms = np.arange(3, end_harm + 1)
         sum_d_fharms = self.d_ELL1H_fourier_harms_d_par(
@@ -287,7 +287,7 @@ class ELL1Hmodel(ELL1BaseModel):
         return -2.0 * H3 * sum_d_fharms
 
     def d_delayS3p_H3_STIGMA_approximate_d_Phi(self, H3, stigma, end_harm=6):
-        """derivative  of delayS3p_H3_STIGMA with respect to Phi """
+        """derivative  of delayS3p_H3_STIGMA with respect to Phi"""
         Phi = self.Phi()
         selected_harms = np.arange(3, end_harm + 1)
         sum_d_fharms = self.d_ELL1H_fourier_harms_d_par(
@@ -301,11 +301,11 @@ class ELL1Hmodel(ELL1BaseModel):
         exact format defined in the P. Freire and N. Wex 2010 paper Eq (28).
         """
         Phi = self.Phi()
-        lognum = 1 + stigma ** 2 - 2 * stigma * np.sin(Phi)
+        lognum = 1 + stigma**2 - 2 * stigma * np.sin(Phi)
         ds = (
             -2
             * H3
-            / stigma ** 3
+            / stigma**3
             * (
                 np.log(lognum)
                 + 2 * stigma * np.sin(Phi)
@@ -320,10 +320,10 @@ class ELL1Hmodel(ELL1BaseModel):
         exact format with respect to H3
         """
         Phi = self.Phi()
-        lognum = 1 + stigma ** 2 - 2 * stigma * np.sin(Phi)
+        lognum = 1 + stigma**2 - 2 * stigma * np.sin(Phi)
         d_ds_d_h3 = (
             -2
-            / stigma ** 3
+            / stigma**3
             * (
                 np.log(lognum)
                 + 2 * stigma * np.sin(Phi)
@@ -338,16 +338,16 @@ class ELL1Hmodel(ELL1BaseModel):
         exact format with respect to STIGMA
         """
         Phi = self.Phi()
-        lognum = 1 + stigma ** 2 - 2 * stigma * np.sin(Phi)
+        lognum = 1 + stigma**2 - 2 * stigma * np.sin(Phi)
         d_ds_d_stigma = (
             -2
             * H3
-            / stigma ** 4
+            / stigma**4
             * (
                 -3 * np.log(lognum)
                 + 2 * stigma * (stigma - np.sin(Phi)) / lognum
                 - 4 * stigma * np.sin(Phi)
-                + stigma ** 2 * np.cos(Phi)
+                + stigma**2 * np.cos(Phi)
             )
         )
         return d_ds_d_stigma
@@ -358,43 +358,43 @@ class ELL1Hmodel(ELL1BaseModel):
         exact format with respect to STIGMA
         """
         Phi = self.Phi()
-        lognum = 1 + stigma ** 2 - 2 * stigma * np.sin(Phi)
+        lognum = 1 + stigma**2 - 2 * stigma * np.sin(Phi)
         d_ds_d_Phi = (
             -4
             * H3
-            / stigma ** 2
+            / stigma**2
             * (-np.cos(Phi) / lognum + np.cos(Phi) + stigma * np.sin(2 * Phi))
         )
         return d_ds_d_Phi
 
     def delayS_H3_STIGMA_exact(self, H3, stigma, end_harm=None):
-        """P. Freire and N. Wex 2010 paper Eq (29) """
+        """P. Freire and N. Wex 2010 paper Eq (29)"""
         Phi = self.Phi()
-        lognum = 1 + stigma ** 2 - 2 * stigma * np.sin(Phi)
-        ds = -2 * H3 / stigma ** 3 * np.log(lognum)
+        lognum = 1 + stigma**2 - 2 * stigma * np.sin(Phi)
+        ds = -2 * H3 / stigma**3 * np.log(lognum)
         return ds
 
     def d_delayS_H3_STIGMA_exact_d_H3(self, H3, stigma, end_harm=None):
         Phi = self.Phi()
-        lognum = 1 + stigma ** 2 - 2 * stigma * np.sin(Phi)
-        d_ds_d_h3 = -2 / stigma ** 3 * np.log(lognum)
+        lognum = 1 + stigma**2 - 2 * stigma * np.sin(Phi)
+        d_ds_d_h3 = -2 / stigma**3 * np.log(lognum)
         return d_ds_d_h3
 
     def d_delayS_H3_STIGMA_exact_d_STIGMA(self, H3, stigma, end_harm=None):
         Phi = self.Phi()
-        lognum = 1 + stigma ** 2 - 2 * stigma * np.sin(Phi)
+        lognum = 1 + stigma**2 - 2 * stigma * np.sin(Phi)
         d_ds_d_stigma = (
             -2
             * H3
-            / stigma ** 4
+            / stigma**4
             * (-3 * np.log(lognum) + 2 * stigma * (stigma - np.sin(Phi)) / lognum)
         )
         return d_ds_d_stigma
 
     def d_delayS_H3_STIGMA_exact_d_Phi(self, H3, stigma, end_harm=None):
         Phi = self.Phi()
-        lognum = 1 + stigma ** 2 - 2 * stigma * np.sin(Phi)
-        d_ds_d_Phi = 4 * H3 / stigma ** 2 * (np.cos(Phi) / lognum)
+        lognum = 1 + stigma**2 - 2 * stigma * np.sin(Phi)
+        d_ds_d_Phi = 4 * H3 / stigma**2 * (np.cos(Phi) / lognum)
         return d_ds_d_Phi
 
     def d_delayS_d_par(self, par):

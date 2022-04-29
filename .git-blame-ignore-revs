@@ -20,3 +20,5 @@
 
 # Blacken code base
 ef448d5271e7ce4a2de912dd2a76a629e7a569cb
+# blacken with black version 22
+b1d93c708b314444fecd1722438cec6f91f028d6

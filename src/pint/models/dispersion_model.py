@@ -17,7 +17,7 @@ from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
 
 # This value is cited from Duncan Lorimer, Michael Kramer, Handbook of Pulsar
 # Astronomy, Second edition, Page 86, Note 1
-DMconst = 1.0 / 2.41e-4 * u.MHz * u.MHz * u.s * u.cm ** 3 / u.pc
+DMconst = 1.0 / 2.41e-4 * u.MHz * u.MHz * u.s * u.cm**3 / u.pc
 
 
 class Dispersion(DelayComponent):
@@ -93,10 +93,10 @@ class Dispersion(DelayComponent):
             warn("Using topocentric frequency for dedispersion!")
             bfreq = toas.table["freq"]
         param_unit = getattr(self, param_name).units
-        d_dm_d_dmparam = np.zeros(toas.ntoas) * u.pc / u.cm ** 3 / param_unit
+        d_dm_d_dmparam = np.zeros(toas.ntoas) * u.pc / u.cm**3 / param_unit
         for df in self.dm_deriv_funcs[param_name]:
             d_dm_d_dmparam += df(toas, param_name)
-        return DMconst * d_dm_d_dmparam / bfreq ** 2.0
+        return DMconst * d_dm_d_dmparam / bfreq**2.0
 
     def register_dm_deriv_funcs(self, func, param):
         """Register the derivative function in to the deriv_func dictionaries.
@@ -550,7 +550,7 @@ class DispersionDMX(Dispersion):
         dmx = np.zeros(len(tbl))
         for k, v in select_idx.items():
             dmx[v] = 1.0
-        return dmx * (u.pc / u.cm ** 3) / (u.pc / u.cm ** 3)
+        return dmx * (u.pc / u.cm**3) / (u.pc / u.cm**3)
 
     def print_par(self, format="pint"):
         result = ""

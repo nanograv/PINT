@@ -92,7 +92,7 @@ class NormAngles:
         return ok and (sum(norms) <= (1 + eps))
 
     def _get_angles(self, norms):
-        """ Determine the n-sphere angles from a set of normalizations."""
+        """Determine the n-sphere angles from a set of normalizations."""
         sines = sum(norms) ** 0.5
         if sines > 1:
             if abs(sines - 1) < 1e-12:
@@ -128,25 +128,25 @@ class NormAngles:
         return [p for (p, b) in zip(self.pnames, self.free) if b]
 
     def set_errors(self, errs):
-        """ errs an array with the 1-sigma error estimates with shape
-            equal to the number of free parameters."""
+        """errs an array with the 1-sigma error estimates with shape
+        equal to the number of free parameters."""
         self.errors[:] = 0.0
         self.errors[self.free] = errs
 
     def get_errors(self, free=True, propagate=True):
-        """ Get errors on components.  If specified, propagate errors from
-            the internal angle parameters to the external normalizations.
+        """Get errors on components.  If specified, propagate errors from
+        the internal angle parameters to the external normalizations.
         """
         # TODO -- consider using finite difference instead
         if not propagate:
             return self.errors[self.free] if free else self.errors
         g = self.gradient() ** 2
-        g *= self.errors ** 2
+        g *= self.errors**2
         errors = g.sum(axis=1) ** 0.5
         return errors[self.free] if free else errors
 
     def get_bounds(self):
-        """ Angles are always [0,pi/2). """
+        """Angles are always [0,pi/2)."""
         return np.asarray([[0, pi / 2] for i in range(self.dim)])[self.free]
 
     def sanity_checks(self, eps=1e-6):
@@ -154,20 +154,20 @@ class NormAngles:
         return t1
 
     def __call__(self, log10_ens=3):
-        """ Return the squared value of the Cartesian coordinates.
+        """Return the squared value of the Cartesian coordinates.
 
-            E.g., for a 4-sphere, return
-            x0^2 = sin^2(a)*cos^2(b)
-            x1^2 = sin^2(a)*sin^2(b)*cos^2(c)
-            x2^2 = sin^2(a)*sin^2(b)*sin^2(c)*cos^2(d)
-            x3^2 = sin^2(a)*sin^2(b)*sin^2(c)*sin^2(d)
+        E.g., for a 4-sphere, return
+        x0^2 = sin^2(a)*cos^2(b)
+        x1^2 = sin^2(a)*sin^2(b)*cos^2(c)
+        x2^2 = sin^2(a)*sin^2(b)*sin^2(c)*cos^2(d)
+        x3^2 = sin^2(a)*sin^2(b)*sin^2(c)*sin^2(d)
 
-            Recall that the normalization is *also* given as an angle,
-            s.t. the vector lies within the unit sphere.
+        Recall that the normalization is *also* given as an angle,
+        s.t. the vector lies within the unit sphere.
 
-            These values are guaranteed to satisfy the constraint of
-            a sum <= unity and so are suitable for normalizations of
-            a light curve.
+        These values are guaranteed to satisfy the constraint of
+        a sum <= unity and so are suitable for normalizations of
+        a light curve.
         """
         p = self.p
         m = sin(p[0])  # normalization
@@ -176,29 +176,29 @@ class NormAngles:
             norms[i - 1] = m * cos(p[i])
             m *= sin(p[i])
         norms[self.dim - 1] = m
-        return norms ** 2
+        return norms**2
 
     def gradient(self, log10_ens=3, free=False):
-        """ Return a matrix giving the value of the partial derivative
-            of the ith normalization with respect to the jth angle, i.e.
+        """Return a matrix giving the value of the partial derivative
+        of the ith normalization with respect to the jth angle, i.e.
 
-            M_ij = dn_i/dphi_j
+        M_ij = dn_i/dphi_j
 
-            This is the relevant quantity because it is the angles that are
-            actually fit for, so this allows the application of the chain
-            rule.
+        This is the relevant quantity because it is the angles that are
+        actually fit for, so this allows the application of the chain
+        rule.
 
-            Because of the way the normalizations are defined, the ith
-            normalization only depends on the (i+1)th first angles, so
-            the upper half of M_ij is zero (see break statement below).
+        Because of the way the normalizations are defined, the ith
+        normalization only depends on the (i+1)th first angles, so
+        the upper half of M_ij is zero (see break statement below).
 
-            For taking higher derivatives, it is convenient to express
-            the derivative as so:
-            -d(cos^2(x)) = d(sin^2(x)) = sin(2x)
-            So that any non-zero derivative can be expressed by taking
-            the norm, dividing by sin^2/cos^2 as appropriate, and
-            multiplying by +/- sin(2x).  Then higher derivatives simply
-            pop out a factor of +/-2 and toggle sin/cos.
+        For taking higher derivatives, it is convenient to express
+        the derivative as so:
+        -d(cos^2(x)) = d(sin^2(x)) = sin(2x)
+        So that any non-zero derivative can be expressed by taking
+        the norm, dividing by sin^2/cos^2 as appropriate, and
+        multiplying by +/- sin(2x).  Then higher derivatives simply
+        pop out a factor of +/-2 and toggle sin/cos.
         """
         m = np.zeros([self.dim, self.dim], dtype=float)
         n = self()
@@ -223,16 +223,16 @@ class NormAngles:
         return m
 
     def hessian(self, log10_ens=3, free=False):
-        """ Return a matrix giving the value of the 2nd partial derivative
-            of the ith normalization with respect to the jth and kth
-            angles,
+        """Return a matrix giving the value of the 2nd partial derivative
+        of the ith normalization with respect to the jth and kth
+        angles,
 
-            M_ijk = dn2_i/dphi_j/dphi_k
+        M_ijk = dn2_i/dphi_j/dphi_k
 
-            See above notes for gradient.  In general, the cases are
+        See above notes for gradient.  In general, the cases are
 
-            j < k <= i; just calculate as gradient, getting two sin(2x) terms
-            j = k <= i; in this case, pick up a single 2*cos(2x) instead
+        j < k <= i; just calculate as gradient, getting two sin(2x) terms
+        j = k <= i; in this case, pick up a single 2*cos(2x) instead
 
 
         """
@@ -275,11 +275,11 @@ class NormAngles:
         return m
 
     def get_total(self):
-        """ Return the amplitude of all norms."""
+        """Return the amplitude of all norms."""
         return sin(self.p[0]) ** 2
 
     def set_total(self, val):
-        """ Set overall normalization of the represented components."""
+        """Set overall normalization of the represented components."""
         norms = self()
         self.p = self._get_angles(norms * (val / norms.sum()))
 
@@ -294,8 +294,8 @@ class NormAngles:
         self.p = self._get_angles(norms)
 
     def eval_string(self):
-        """ Return a string that can be evaled to instantiate a nearly-
-            identical object."""
+        """Return a string that can be evaled to instantiate a nearly-
+        identical object."""
         t = self()
         if len(t.shape) > 1:
             t = t[:, 0]  # handle e-dep
@@ -308,7 +308,7 @@ class NormAngles:
         )
 
     def dict_string(self):
-        """ Round down to avoid input errors w/ normalization."""
+        """Round down to avoid input errors w/ normalization."""
         t = self()
         if len(t.shape) > 1:
             t = t[:, 0]  # handle e-dep
@@ -316,7 +316,7 @@ class NormAngles:
         def pretty_list(l, places=6, round_down=True):
             if round_down:
                 r = np.round(l, decimals=places)
-                r[r > np.asarray(l)] -= 10 ** -places
+                r[r > np.asarray(l)] -= 10**-places
             else:
                 r = l
             fmt = "%." + "%d" % places + "f"
@@ -339,8 +339,7 @@ class NormAngles:
 
 
 def numerical_gradient(norms, delta=1e-3):
-    """ Check the accuracy of analytic version.  (HINT -- it checks out.)
-    """
+    """Check the accuracy of analytic version.  (HINT -- it checks out.)"""
     rvals = np.empty((norms.dim, norms.dim))
     p = norms.p.copy()
     for i in range(norms.dim):
@@ -379,6 +378,6 @@ def numerical_hessian(norms, delta=1e-3):
             lolo = norms()
             norms.p[:] = p
 
-            rvals[:, i, j] = (hihi + lolo - hilo - lohi) / (4 * delta ** 2)
+            rvals[:, i, j] = (hihi + lolo - hilo - lohi) / (4 * delta**2)
             rvals[:, j, i] = rvals[:, i, j]
     return rvals

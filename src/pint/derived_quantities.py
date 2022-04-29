@@ -29,7 +29,7 @@ __all__ = [
 
 
 @u.quantity_input(
-    p=[u.Hz, u.s], pd=[u.Hz / u.s, u.s / u.s], pdd=[u.Hz / u.s ** 2, u.s / u.s ** 2]
+    p=[u.Hz, u.s], pd=[u.Hz / u.s, u.s / u.s], pdd=[u.Hz / u.s**2, u.s / u.s**2]
 )
 def p_to_f(p, pd, pdd=None):
     """Converts P, Pdot to F, Fdot (or vice versa)
@@ -68,7 +68,7 @@ def p_to_f(p, pd, pdd=None):
         if pdd == 0.0:
             fdd = 0.0
         else:
-            fdd = 2.0 * pd * pd / (p ** 3.0) - pdd / (p * p)
+            fdd = 2.0 * pd * pd / (p**3.0) - pdd / (p * p)
         return [f, fd, fdd]
 
 
@@ -115,12 +115,12 @@ def pferrs(porf, porferr, pdorfd=None, pdorfderr=None):
         :math:`\sigma_{\dot f}` or :math:`\sigma_{\dot P}`
     """
     if pdorfd is None:
-        return [1.0 / porf, porferr / porf ** 2.0]
+        return [1.0 / porf, porferr / porf**2.0]
     else:
-        forperr = porferr / porf ** 2.0
+        forperr = porferr / porf**2.0
         fdorpderr = np.sqrt(
-            (4.0 * pdorfd ** 2.0 * porferr ** 2.0) / porf ** 6.0
-            + pdorfderr ** 2.0 / porf ** 4.0
+            (4.0 * pdorfd**2.0 * porferr**2.0) / porf**6.0
+            + pdorfderr**2.0 / porf**4.0
         )
         [forp, fdorpd] = p_to_f(porf, pdorfd)
         return [forp, forperr, fdorpd, fdorpderr]
@@ -169,8 +169,8 @@ def pulsar_age(f: u.Hz, fdot: u.Hz / u.s, n=3, fo=1e99 * u.Hz):
     return (-f / ((n - 1.0) * fdot) * (1.0 - (f / fo) ** (n - 1.0))).to(u.yr)
 
 
-@u.quantity_input(I=u.g * u.cm ** 2)
-def pulsar_edot(f: u.Hz, fdot: u.Hz / u.s, I=1.0e45 * u.g * u.cm ** 2):
+@u.quantity_input(I=u.g * u.cm**2)
+def pulsar_edot(f: u.Hz, fdot: u.Hz / u.s, I=1.0e45 * u.g * u.cm**2):
     """Compute pulsar spindown energy loss rate
 
     Return the pulsar `Edot` (:math:`\dot E`, in erg/s) given the spin frequency `f` and
@@ -202,7 +202,7 @@ def pulsar_edot(f: u.Hz, fdot: u.Hz / u.s, I=1.0e45 * u.g * u.cm ** 2):
     -----
     Calculates :math:`\dot E = -4\pi^2  I  f  \dot f`
     """
-    return (-4.0 * np.pi ** 2 * I * f * fdot).to(u.erg / u.s)
+    return (-4.0 * np.pi**2 * I * f * fdot).to(u.erg / u.s)
 
 
 @u.quantity_input
@@ -287,7 +287,7 @@ def mass_funct(pb: u.d, x: u.cm):
     """Compute binary mass function from period and semi-major axis
 
     Can handle scalar or array inputs.
-    
+
     Parameters
     ----------
     pb : astropy.units.Quantity
@@ -319,7 +319,7 @@ def mass_funct(pb: u.d, x: u.cm):
 
     .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.34 (RHS)
     """
-    fm = 4.0 * np.pi ** 2 * x ** 3 / (const.G * pb ** 2)
+    fm = 4.0 * np.pi**2 * x**3 / (const.G * pb**2)
     return fm.to(u.solMass)
 
 
@@ -359,7 +359,7 @@ def mass_funct2(mp: u.Msun, mc: u.Msun, i: u.deg):
 
     .. math::
         f(m_p, m_c) = \\frac{m_c^3\sin^3 i}{(m_c + m_p)^2}
-        
+
     See [2]_
 
     .. [2] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.34 (LHS)
@@ -432,7 +432,7 @@ def pulsar_mass(pb: u.d, x: u.cm, mc: u.Msun, i: u.deg):
     ca = massfunct
     cb = 2 * massfunct * mc
 
-    return ((-cb + np.sqrt(4 * massfunct * mc ** 3 * sini ** 3)) / (2 * ca)).to(u.Msun)
+    return ((-cb + np.sqrt(4 * massfunct * mc**3 * sini**3)) / (2 * ca)).to(u.Msun)
 
 
 @u.quantity_input(inc=u.deg, mpsr=u.solMass)
@@ -507,23 +507,23 @@ def companion_mass(pb: u.d, x: u.cm, i=60.0 * u.deg, mp=1.4 * u.solMass):
 
     # solution
     sini = np.sin(i)
-    a = sini ** 3
+    a = sini**3
     # delta0 = b ** 2 - 3 * a * c
     # delta0 is always > 0
-    delta0 = massfunct ** 2 + 6 * mp * massfunct * a
+    delta0 = massfunct**2 + 6 * mp * massfunct * a
     # delta1 is always <0
     # delta1 = 2 * b ** 3 - 9 * a * b * c + 27 * a ** 2 * d
     delta1 = (
-        -2 * massfunct ** 3
-        - 18 * a * mp * massfunct ** 2
-        - 27 * a ** 2 * massfunct * mp ** 2
+        -2 * massfunct**3
+        - 18 * a * mp * massfunct**2
+        - 27 * a**2 * massfunct * mp**2
     )
     # Q**2 is always > 0, so this is never a problem
     # in terms of complex numbers
     # Q = np.sqrt(delta1**2 - 4*delta0**3)
     Q = np.sqrt(
-        108 * a ** 3 * mp ** 3 * massfunct ** 3
-        + 729 * a ** 4 * mp ** 4 * massfunct ** 2
+        108 * a**3 * mp**3 * massfunct**3
+        + 729 * a**4 * mp**4 * massfunct**2
     )
     # this could be + or - Q
     # pick the - branch since delta1 is <0 so that delta1 - Q is never near 0
@@ -546,7 +546,7 @@ def pbdot(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
     pbdot (:math:`\dot P_B`) is the change in the binary orbital period
     due to emission of gravitational waves.
     Can handle scalar or array inputs.
-    
+
     Parameters
     ----------
     mp : astropy.units.Quantity
@@ -577,7 +577,7 @@ def pbdot(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
     .. math::
         \dot P_b = -\\frac{192\pi}{5}T_{\odot}^{5/3} \\left(\\frac{P_b}{2\pi}\\right)^{-5/3}
         f(e)\\frac{m_p m_c}{(m_p+m_c)^{1/3}}
-        
+
     with
 
     .. math::
@@ -590,9 +590,9 @@ def pbdot(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
     .. [5] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.52
 
     """
-    f = (1 + (73.0 / 24) * e ** 2 + (37.0 / 96) * e ** 4) / (1 - e ** 2) ** (7.0 / 2)
+    f = (1 + (73.0 / 24) * e**2 + (37.0 / 96) * e**4) / (1 - e**2) ** (7.0 / 2)
     value = (
-        (const.G / const.c ** 3) ** (5.0 / 3)
+        (const.G / const.c**3) ** (5.0 / 3)
         * (pb / (2 * np.pi)) ** (-5.0 / 3)
         * (-192 * np.pi / 5)
         * f
@@ -608,9 +608,9 @@ def gamma(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
     gamma (:math:`\gamma`) is the amplitude of the modification in arrival times caused by the varying
     gravitational redshift of the companion and time dilation in an elliptical orbit.  The time delay is
-    :math:`\gamma \sin E`, where :math:`E` is the eccentric anomaly.  
+    :math:`\gamma \sin E`, where :math:`E` is the eccentric anomaly.
     Can handle scalar or array inputs.
-    
+
     Parameters
     ----------
     mp : astropy.units.Quantity
@@ -649,7 +649,7 @@ def gamma(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
     """
     value = (
-        (const.G / const.c ** 3) ** (2.0 / 3)
+        (const.G / const.c**3) ** (2.0 / 3)
         * (pb / (2 * np.pi)) ** (1.0 / 3)
         * e
         * (mc * (mp + 2 * mc))
@@ -664,7 +664,7 @@ def omdot(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
     omdot (:math:`\dot \omega`) is the relativistic advance of periastron.
     Can handle scalar or array inputs.
-    
+
     Parameters
     ----------
     mp : astropy.units.Quantity
@@ -696,7 +696,7 @@ def omdot(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
         \dot \omega = 3T_{\odot}^{2/3} \\left(\\frac{P_b}{2\pi}\\right)^{-5/3}
         \\frac{1}{1-e^2}(m_p+m_c)^{2/3}
-        
+
     with :math:`T_\odot = GM_\odot c^{-3}`.
 
     More details in :ref:`Timing Models`.  Also see [7]_.
@@ -707,8 +707,8 @@ def omdot(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
     value = (
         3
         * (pb / (2 * np.pi)) ** (-5.0 / 3)
-        * (1 / (1 - e ** 2))
-        * (const.G * (mp + mc) / const.c ** 3) ** (2.0 / 3)
+        * (1 / (1 - e**2))
+        * (const.G * (mp + mc) / const.c**3) ** (2.0 / 3)
     )
     return value.to(u.deg / u.yr, equivalencies=u.dimensionless_angles())
 
@@ -733,7 +733,7 @@ def omdot_to_mtot(omdot: u.deg / u.yr, pb: u.d, e: u.dimensionless_unscaled):
 
     Returns
     -------
-    mtot : astropy.units.Quantity    
+    mtot : astropy.units.Quantity
         In ``u.Msun``
 
     Raises
@@ -751,7 +751,7 @@ def omdot_to_mtot(omdot: u.deg / u.yr, pb: u.d, e: u.dimensionless_unscaled):
 
         \dot \omega = 3T_{\odot}^{2/3} \\left(\\frac{P_b}{2\pi}\\right)^{-5/3}
         \\frac{1}{1-e^2}(m_p+m_c)^{2/3}
-        
+
     to calculate :math:`m_{\\rm tot} = m_p + m_c`,
     with :math:`T_\odot = GM_\odot c^{-3}`.
 
@@ -765,9 +765,9 @@ def omdot_to_mtot(omdot: u.deg / u.yr, pb: u.d, e: u.dimensionless_unscaled):
                 omdot
                 / (
                     3
-                    * (const.G / const.c ** 3) ** (2.0 / 3)
+                    * (const.G / const.c**3) ** (2.0 / 3)
                     * (pb / (2 * np.pi)) ** (-5.0 / 3)
-                    * (1 - e ** 2) ** (-1)
+                    * (1 - e**2) ** (-1)
                 )
             )
         )
@@ -783,7 +783,7 @@ def a1sini(mp, mc, pb, i=90 * u.deg):
     projection (:math:`\sin i`) of just the pulsar's orbit (:math:`m_c/(m_p+m_c)`
     times the full semi-major axis), which is what pulsar timing measures.
     Can handle scalar or array inputs.
-    
+
     Parameters
     ----------
     mp : astropy.units.Quantity
@@ -856,10 +856,10 @@ def shklovskii_factor(pmtot: u.mas / u.yr, D: u.kpc):
 
     Notes
     -----
-    .. [10] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.12        
+    .. [10] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.12
     """
     # This uses the small angle approximation that sin(x) = x, so we need to
     # make our angle dimensionless.
     with u.set_enabled_equivalencies(u.dimensionless_angles()):
-        a_s = (D * pmtot ** 2 / const.c).to(u.s ** -1)
+        a_s = (D * pmtot**2 / const.c).to(u.s**-1)
     return a_s

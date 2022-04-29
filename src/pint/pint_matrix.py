@@ -87,7 +87,7 @@ class PintMatrix:
         Parameters
         ----------
         k: int (optional)
-            Diagonal in question. The default is 0. Use k>0 for diagonals above the main diagonal, and k<0 for diagonals below the main diagonal.            
+            Diagonal in question. The default is 0. Use k>0 for diagonals above the main diagonal, and k<0 for diagonals below the main diagonal.
 
         Returns
         -------
@@ -855,7 +855,7 @@ class CovarianceMatrixMaker:
         func = getattr(model, self.cov_func_name)
         M = func(data)
         label = [
-            {self.covariance_quantity: (0, M.shape[0], self.quantity_unit ** 2)}
+            {self.covariance_quantity: (0, M.shape[0], self.quantity_unit**2)}
         ] * 2
         return CovarianceMatrix(M, label)
 
