@@ -205,7 +205,12 @@ def test_jump_by_cluster(setup_NGC6440E):
     m.add_component(DelayJump(), validate=False)
     # add the jump based on the clusters
     par = p.maskParameter(
-        "JUMP", key="cluster", value=0.0, key_value=3, units=u.s, frozen=False,
+        "JUMP",
+        key="cluster",
+        value=0.0,
+        key_value=3,
+        units=u.s,
+        frozen=False,
     )
     m.components["DelayJump"].add_param(par, setup=True)
     fjump_cluster = fitter.WLSFitter(toas=t, model=m, track_mode="use_pulse_numbers")
