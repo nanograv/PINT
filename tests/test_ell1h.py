@@ -166,8 +166,7 @@ def test_M2_error():
 
 
 def test_no_H3_H4(toasJ0613):
-    """ Test no H3 and H4 in model.
-    """
+    """Test no H3 and H4 in model."""
     no_H3_H4 = simple_par.replace("H4 2.0262048E-7  1       1.1276173E-7", "")
     no_H3_H4 = no_H3_H4.replace("H3 2.7507208E-7  1       1.5114416E-7", "")
     no_H3_H4_model = get_model(StringIO(no_H3_H4))
@@ -179,8 +178,8 @@ def test_no_H3_H4(toasJ0613):
 
 
 def test_H3_and_H4_non_zero(toasJ0613):
-    """ Testing if the different H3, H4 combination breaks the fitting. the
-        fitting result will not be checked here.
+    """Testing if the different H3, H4 combination breaks the fitting. the
+    fitting result will not be checked here.
     """
     simple_model = get_model(StringIO(simple_par))
 

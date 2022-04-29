@@ -9,14 +9,14 @@ from pint.utils import PrefixError
 
 
 def test_startMJD_greaterThan_endMJD():
-    """ Check for error when start MJD is larger than end MJD. """
+    """Check for error when start MJD is larger than end MJD."""
     dm_mod = DispersionDMX()
     with pytest.raises(ValueError):
         dm_mod.add_DMX_range(58100, 58000, 3, 1, frozen=False)
 
 
 def test_only_one_MJD():
-    """ Check for error when one of the MJDs is None and the other isn't. """
+    """Check for error when one of the MJDs is None and the other isn't."""
     dm_mod = DispersionDMX()
     with pytest.raises(ValueError):
         dm_mod.add_DMX_range(None, 58000, 3, 1, frozen=False)
@@ -25,7 +25,7 @@ def test_only_one_MJD():
 
 
 def test_duplicate_index():
-    """ Check for error when a duplicate DMX index is used. """
+    """Check for error when a duplicate DMX index is used."""
     dm_mod = DispersionDMX()
     dm_mod.add_DMX_range(58000, 58100, 3, 1, frozen=False)
     with pytest.raises(ValueError):
@@ -33,7 +33,7 @@ def test_duplicate_index():
 
 
 def test_remove_nonexistent_index():
-    """ Check for error when a unused DMX index is removed. """
+    """Check for error when a unused DMX index is removed."""
     dm_mod = DispersionDMX()
     index = 3
     with pytest.raises(ValueError):
@@ -41,7 +41,7 @@ def test_remove_nonexistent_index():
 
 
 def test_unusual_index():
-    """ Check for appropriate results for negative and floating point indices. """
+    """Check for appropriate results for negative and floating point indices."""
     dm_mod = DispersionDMX()
     dmx = 1.0
     mjd_start = 58000.0
@@ -105,7 +105,7 @@ def test_dynamic_index():
 
 
 def test_add_DMX():
-    """ Check that the DMX model contains the DMX events after they are added. """
+    """Check that the DMX model contains the DMX events after they are added."""
     dm_mod = DispersionDMX()
     index = 3
     dmx = 1.0
@@ -126,7 +126,7 @@ def test_add_DMX():
 
 
 def test_remove_DMX():
-    """Check the DMX model no longer has the DMX components after they are removed. """
+    """Check the DMX model no longer has the DMX components after they are removed."""
     dm_mod = DispersionDMX()
     index = 3
     dmx = 1.0

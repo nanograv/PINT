@@ -83,10 +83,10 @@ class RandomInclinationPrior(rv_continuous):
         super(RandomInclinationPrior, self).__init__(**kwargs)
 
     def _pdf(self, v):
-        return v / (1 - v ** 2) ** 0.5
+        return v / (1 - v**2) ** 0.5
 
     def _logpdf(self, v):
-        return np.log(v) - 0.5 * np.log(1 - v ** 2)
+        return np.log(v) - 0.5 * np.log(1 - v**2)
 
 
 class UniformUnboundedRV(rv_continuous):
@@ -133,7 +133,7 @@ class GaussianRV_gen(rv_continuous):
     """
 
     def _pdf(self, x):
-        ret = np.exp(-(x ** 2) / 2) / np.sqrt(2 * np.pi)
+        ret = np.exp(-(x**2) / 2) / np.sqrt(2 * np.pi)
         return ret
 
 

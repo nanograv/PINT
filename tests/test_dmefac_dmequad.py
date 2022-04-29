@@ -35,7 +35,7 @@ def test_model():
 
 def test_no_efact_noequad(test_toas, test_model):
     scale_sigma = test_model.scale_dm_sigma(test_toas)
-    assert np.all(scale_sigma == 0.01 * u.pc / u.cm ** 3)
+    assert np.all(scale_sigma == 0.01 * u.pc / u.cm**3)
 
 
 def test_only_one_efact(test_toas, test_model):
@@ -46,8 +46,8 @@ def test_only_one_efact(test_toas, test_model):
     scale_sigma = test_model.scale_dm_sigma(test_toas)
     mask = test_model.DMEFAC1.select_toa_mask(test_toas)
     rest = list(set(range(test_toas.ntoas)).symmetric_difference(mask))
-    assert np.all(scale_sigma[mask] == 0.1 * u.pc / u.cm ** 3)
-    assert np.all(scale_sigma[rest] == 0.01 * u.pc / u.cm ** 3)
+    assert np.all(scale_sigma[mask] == 0.1 * u.pc / u.cm**3)
+    assert np.all(scale_sigma[rest] == 0.01 * u.pc / u.cm**3)
 
 
 def test_only_one_equad(test_toas, test_model):
@@ -58,11 +58,11 @@ def test_only_one_equad(test_toas, test_model):
     scale_sigma = test_model.scale_dm_sigma(test_toas)
     mask = test_model.DMEQUAD1.select_toa_mask(test_toas)
     scaled_value = (
-        np.sqrt(0.01 ** 2 + test_model.DMEQUAD1.value ** 2) * u.pc / u.cm ** 3
+        np.sqrt(0.01**2 + test_model.DMEQUAD1.value**2) * u.pc / u.cm**3
     )
     rest = list(set(range(test_toas.ntoas)).symmetric_difference(mask))
     assert np.isclose(scale_sigma[mask], scaled_value).any()
-    assert np.all(scale_sigma[rest] == 0.01 * u.pc / u.cm ** 3)
+    assert np.all(scale_sigma[rest] == 0.01 * u.pc / u.cm**3)
 
 
 def test_only_one_equad_one_efact_same_backend(test_toas, test_model):
@@ -79,13 +79,13 @@ def test_only_one_equad_one_efact_same_backend(test_toas, test_model):
     assert np.all(mask1 == mask2)
     scaled_value = (
         test_model.DMEFAC1.value
-        * np.sqrt(0.01 ** 2 + test_model.DMEQUAD1.value ** 2)
+        * np.sqrt(0.01**2 + test_model.DMEQUAD1.value**2)
         * u.pc
-        / u.cm ** 3
+        / u.cm**3
     )
     rest = list(set(range(test_toas.ntoas)).symmetric_difference(mask1))
     assert np.isclose(scale_sigma[mask1], scaled_value).any()
-    assert np.all(scale_sigma[rest] == 0.01 * u.pc / u.cm ** 3)
+    assert np.all(scale_sigma[rest] == 0.01 * u.pc / u.cm**3)
 
 
 def test_only_one_equad_one_efact_different_backend(test_toas, test_model):
@@ -99,12 +99,12 @@ def test_only_one_equad_one_efact_different_backend(test_toas, test_model):
     scale_sigma = test_model.scale_dm_sigma(test_toas)
     mask1 = test_model.DMEFAC1.select_toa_mask(test_toas)
     mask2 = test_model.DMEQUAD1.select_toa_mask(test_toas)
-    scaled_value1 = test_model.DMEFAC1.value * 0.01 * u.pc / u.cm ** 3
+    scaled_value1 = test_model.DMEFAC1.value * 0.01 * u.pc / u.cm**3
     scaled_value2 = (
-        np.sqrt(0.01 ** 2 + test_model.DMEQUAD1.value ** 2) * u.pc / u.cm ** 3
+        np.sqrt(0.01**2 + test_model.DMEQUAD1.value**2) * u.pc / u.cm**3
     )
     assert np.isclose(scale_sigma[mask1], scaled_value1).any()
     assert np.isclose(scale_sigma[mask2], scaled_value2).any()
     rest1 = list(set(range(test_toas.ntoas)).symmetric_difference(mask1))
     rest2 = list(set(rest1).symmetric_difference(mask2))
-    assert np.all(scale_sigma[rest2] == 0.01 * u.pc / u.cm ** 3)
+    assert np.all(scale_sigma[rest2] == 0.01 * u.pc / u.cm**3)

@@ -1239,6 +1239,8 @@ class TOAs:
         different names for the same observatory or the same name
         for different observatories. There is a dictionary ``tempo_aliases``
         available to use names as compatible with TEMPO as possible.
+    wideband : bool
+        Whether the TOAs also have wideband DM information
     """
 
     def __init__(self, toafile=None, toalist=None):
@@ -1501,6 +1503,20 @@ class TOAs:
     def last_MJD(self):
         """The last MJD, in :class:`~astropy.time.Time` format."""
         return self.get_mjds(high_precision=True).max()
+
+    @property
+    def wideband(self):
+        """Whether or not the data have wideband TOA values"""
+        return self.is_wideband()
+
+    def is_wideband(self):
+        """Whether or not the data have wideband TOA values"""
+
+        # there may be a more elegant way to do this
+        dm_data, valid_data = self.get_flag_value("pp_dm", as_type=float)
+        if valid_data == []:
+            return False
+        return True
 
     def get_all_flags(self):
         """Return a list of all the flags used by any TOA."""

@@ -189,11 +189,11 @@ def plot_priors(
     scale=False,
 ):
     """Plot of priors and the post-MCMC histogrammed samples
-    
+
     Show binned samples, prior probability distribution and an initial
     gaussian probability distribution plotted with 2 sigma, maximum
     posterior and original fit values marked.
-    
+
     Parameters
     ----------
     model : pint.models.timing_model.TimingModel
@@ -201,18 +201,18 @@ def plot_priors(
     chains : dict
         Post MCMC integration chains that contain the fitter keys and post
         MCMC samples, which are histogrammed and normalized. Thinning the
-        samples from the chains is not supported. Can be created using 
+        samples from the chains is not supported. Can be created using
         :meth:`pint.sampler.EmceeSampler.chains_to_dict`
     maxpost_fitvals : list, optional
         The maximum posterier values returned from MCMC integration for each
-        fitter key. Plots a vertical dashed line to denote the maximum 
-        posterior value in relation to the histogrammed samples. If the 
+        fitter key. Plots a vertical dashed line to denote the maximum
+        posterior value in relation to the histogrammed samples. If the
         values are not provided, then the lines are not plotted
     fitvals : list, optional
-        The original parameter fit values. Plots vertical dashed lines to 
-        denote the original parameter fit values in relation to the 
-        histogrammed samples. If the values are not provided, then the 
-        lines are not plotted. 
+        The original parameter fit values. Plots vertical dashed lines to
+        denote the original parameter fit values in relation to the
+        histogrammed samples. If the values are not provided, then the
+        lines are not plotted.
     burnin : int
         The number of steps that are the burnin in the MCMC integration
     bins : int
@@ -222,7 +222,7 @@ def plot_priors(
         If False, the priors will be plotted independent of the histograms.
         In certain cases, such as broad priors, the priors or histograms
         might not be apparent on the same plot due to one being significantly
-        larger than the other. The scaling is for visual purposes to clearly 
+        larger than the other. The scaling is for visual purposes to clearly
         plot the priors with the samples
     """
     keys = []

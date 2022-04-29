@@ -43,7 +43,10 @@ def main(argv=None):
         default=None,
     )
     parser.add_argument(
-        "--startMJD", help="MJD of first fake TOA", type=float, default=56000.0,
+        "--startMJD",
+        help="MJD of first fake TOA",
+        type=float,
+        default=56000.0,
     )
     parser.add_argument(
         "--ntoa", help="Number of fake TOAs to generate", type=int, default=100

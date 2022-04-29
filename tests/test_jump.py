@@ -92,7 +92,7 @@ def test_remove_jump_and_flags(setup_NGC6440E):
 
 
 def test_jump_params_to_flags(setup_NGC6440E):
-    """ Check jump_params_to_flags function. """
+    """Check jump_params_to_flags function."""
     setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
     cp = setup_NGC6440E.m.components["PhaseJump"]
 

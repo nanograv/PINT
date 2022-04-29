@@ -16,6 +16,7 @@ from astropy import log
 import pint.logging
 from loguru import logger as log
 
+log.remove()
 log.add(
     sys.stderr,
     level="WARNING",
@@ -97,10 +98,12 @@ def main(argv=None):
 
     log.info("Fitting...")
     if args.gls:
-        f = pint.fitter.GLSFitter(t, m)
+        f = pint.fitter.DownhillGLSFitter(t, m)
     else:
-        f = pint.fitter.WLSFitter(t, m)
+        f = pint.fitter.DownhillWLSFitter(t, m)
     f.fit_toas()
+    f.update_model()
+    f.model.CHI2.value = f.resids.chi2
 
     # Print fit summary
     print(

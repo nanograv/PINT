@@ -101,7 +101,7 @@ def main(argv=None):
         # Should check if 12:13:14.2 syntax is used and support that as well!
         m.RAJ.quantity = Angle(args.ra)
         m.DECJ.quantity = Angle(args.dec)
-        m.DM.quantity = args.dm * u.parsec / u.cm ** 3
+        m.DM.quantity = args.dm * u.parsec / u.cm**3
 
     tdbtimes = m.get_barycentric_toas(ts)
 

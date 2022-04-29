@@ -57,19 +57,13 @@ nofitboxpars = [
 ]
 
 
-class FitMethods(Enum):
-    POWELL = 0
-    WLS = 1
-    GLS = 2
-
-
 class Pulsar:
     """Wrapper class for a pulsar.
 
     Contains the toas, model, residuals, and fitter
     """
 
-    def __init__(self, parfile=None, timfile=None, ephem=None):
+    def __init__(self, parfile=None, timfile=None, ephem=None, fitter="GLSFitter"):
         super(Pulsar, self).__init__()
 
         log.info(f"Loading pulsar parfile: {str(parfile)}")
@@ -109,8 +103,7 @@ class Pulsar:
         # Set of indices from original list that are deleted
         # We use indices because of the grouping of TOAs by observatory
         self.deleted = set([])
-        # TODO: would be good to be able to choose the fitter
-        self.fit_method = FitMethods.WLS
+        self.fit_method = fitter
         self.fitter = None
         self.fitted = False
         self.stashed = None  # for temporarily stashing some TOAs
@@ -321,13 +314,10 @@ class Pulsar:
                         line += "%16.8g  " % post.uncertainty.value
                     except:
                         line += "%18s" % ""
-                    try:
-                        diff = post.value - pre.value
-                        line += "%16.8g  " % diff
-                        if pre.uncertainty is not None:
-                            line += "%16.8g" % (diff / pre.uncertainty.value)
-                    except:
-                        pass
+                    diff = post.value - pre.value
+                    line += "%16.8g  " % diff
+                    if pre.uncertainty is not None and pre.uncertainty.value != 0.0:
+                        line += "%16.8g" % (diff / pre.uncertainty.value)
                 print(line)
         else:
             log.warning("Pulsar has not been fitted yet!")
@@ -443,21 +433,11 @@ class Pulsar:
             self.add_model_params()
 
         # Have to change the fitter for each fit since TOAs and models change
-        if self.fit_method == FitMethods.POWELL:
-            log.info("Using PowellFitter")
-            self.fitter = pint.fitter.PowellFitter(
-                self.selected_toas, self.prefit_model
-            )
-        elif self.fit_method == FitMethods.WLS:
-            log.info("Using DownhillWLSFitter")
-            self.fitter = pint.fitter.DownhillWLSFitter(
-                self.selected_toas, self.prefit_model
-            )
-        elif self.fit_method == FitMethods.GLS:
-            log.info("Using DownhillGLSFitter")
-            self.fitter = pint.fitter.DownhillGLSFitter(
-                self.selected_toas, self.prefit_model
-            )
+        log.info(f"Using {self.fit_method}")
+        self.fitter = getattr(pint.fitter, self.fit_method)(
+            self.selected_toas, self.prefit_model
+        )
+
         wrms = self.prefit_resids.rms_weighted()
 
         print("\n------------------------------------")
@@ -468,6 +448,7 @@ class Pulsar:
 
         # Do the actual fit and mark things as being fit
         self.fitter.fit_toas(maxiter=iters)
+        self.fitter.update_model()
         self.postfit_model = self.fitter.model
         self.fitted = True
         # Zero out all of the "delta_pulse_numbers" if they are set
@@ -480,6 +461,8 @@ class Pulsar:
         self.selected_toas.compute_pulse_numbers(self.postfit_model)
         # Now compute the residuals using correct pulse numbers
         self.postfit_resids = Residuals(self.all_toas, self.postfit_model)
+        # Need this since it isn't updated using self.fitter.update_model()
+        self.fitter.model.CHI2.value = self.postfit_resids.chi2
         # And print the summary
         self.write_fit_summary()
 
@@ -523,8 +506,7 @@ class Pulsar:
         self.add_model_params()
 
     def random_models(self, selected):
-        """Compute and plot random models
-        """
+        """Compute and plot random models"""
         log.info("Computing random models based on parameter covariance matrix.")
         if [p for p in self.postfit_model.free_params if p.startswith("DM")]:
             log.warning(
@@ -550,9 +532,9 @@ class Pulsar:
             if spanMJD < 1000:
                 Ntoas = min(400, int(spanMJD))
             elif spanMJD < 4000:
-                Ntoas = min(750, int(spanMJD) / 2)
+                Ntoas = min(750, int(spanMJD) // 2)
             else:
-                Ntoas = min(1500, int(spanMJD) / 4)
+                Ntoas = min(1500, int(spanMJD) // 4)
             log.debug(f"Generating {Ntoas} fake TOAs for the random models")
             # By default we will use TOAs from the TopoCenter.  This gets done only once.
             self.faketoas1 = make_fake_toas_uniform(
@@ -577,7 +559,11 @@ class Pulsar:
 
         # Compute the new random timing models
         rs = calculate_random_models(
-            self.f, toas, Nmodels=15, keep_models=False, return_time=True,
+            self.fitter,
+            toas,
+            Nmodels=15,
+            keep_models=False,
+            return_time=True,
         )
 
         # Get a selection array for the fake TOAs that covers the fit TOAs (plus extra)

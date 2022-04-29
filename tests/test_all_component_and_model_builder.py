@@ -23,8 +23,7 @@ from pinttestdata import datadir
 
 
 class SimpleModel(PhaseComponent):
-    """Very simple test model component
-    """
+    """Very simple test model component"""
 
     register = True
     category = "simple_test"
@@ -35,8 +34,7 @@ class SimpleModel(PhaseComponent):
 
 
 class SubsetModel(PhaseComponent):
-    """Test model component hosting the parameters which are a subset of spindown.
-    """
+    """Test model component hosting the parameters which are a subset of spindown."""
 
     register = False  # This has to be false, otherwrise all test will fail.
     category = "simple_test"
@@ -105,8 +103,7 @@ pint_dict_base = {
 
 
 def test_model_builder_class():
-    """Test if AllComponents collected components information correctly
-    """
+    """Test if AllComponents collected components information correctly"""
     mb = AllComponents()
     category = mb.category_component_map
     assert set(mb.param_component_map["PX"]) == set(category["astrometry"])
@@ -120,8 +117,7 @@ def test_model_builder_class():
 
 
 def test_aliases_mapping():
-    """Test if aliases gets mapped correclty
-    """
+    """Test if aliases gets mapped correclty"""
     mb = AllComponents()
     # all alases should be mapped to the components
     assert set(mb._param_alias_map.keys()) == set(mb.param_component_map.keys())
@@ -163,8 +159,7 @@ def test_aliases_mapping():
 
 
 def test_conflict_alias():
-    """Test if model builder detects the alais conflict.
-    """
+    """Test if model builder detects the alais conflict."""
     mb = AllComponents()
     # Test conflict parameter alias name
     with pytest.raises(AliasConflict):
@@ -174,8 +169,7 @@ def test_conflict_alias():
 def test_conflict_alias_in_component():
     # Define conflict alais from component class
     class SimpleModel2(PhaseComponent):
-        """Very simple test model component
-        """
+        """Very simple test model component"""
 
         register = True
         category = "simple_test"
@@ -193,8 +187,7 @@ def test_conflict_alias_in_component():
 
 
 def test_overlap_component(simple_model_overlap, simple_model_alias_overlap):
-    """Test if model builder detects the overlap component correctly.
-    """
+    """Test if model builder detects the overlap component correctly."""
     mb = ModelBuilder()
     # Test overlap
     overlap = mb._get_component_param_overlap(simple_model_overlap)
@@ -227,8 +220,7 @@ def test_overlap_component(simple_model_overlap, simple_model_alias_overlap):
 
 
 def test_subset_component(sub_set_model):
-    """Test if model builder detects the subset component.
-    """
+    """Test if model builder detects the subset component."""
     mb = ModelBuilder()
     # Test subset
     superset = mb._is_subset_component(sub_set_model)
@@ -236,8 +228,7 @@ def test_subset_component(sub_set_model):
 
 
 def test_model_fillup(test_timing_model):
-    """Test model value fill up
-    """
+    """Test model value fill up"""
     mb = ModelBuilder()
     tm = mb._setup_model(test_timing_model, pint_dict_base, validate=False)
     assert tm.PSR.value == "J1234+5678"
@@ -294,8 +285,7 @@ def test_model_fillup_prefix_adding_spin_freq(test_timing_model):
 
 
 def test_model_from_par():
-    """Test Get model from test par file.
-    """
+    """Test Get model from test par file."""
     test_par1 = """
     PSR              B1855+09
     LAMBDA   286.8634893301156  1     0.0000000165859
@@ -394,13 +384,11 @@ def test_model_from_par():
 
 
 def test_model_from_par_hassubset():
-    """Test Get model from test par file with a subset component.
-    """
+    """Test Get model from test par file with a subset component."""
     # Define a subset parameter model that is registered. So the metaclass can
     # catch it.
     class SubsetModel2(PhaseComponent):
-        """Test model component hosting the parameters which are a subset of spindown.
-        """
+        """Test model component hosting the parameters which are a subset of spindown."""
 
         register = True
         category = "simple_test"

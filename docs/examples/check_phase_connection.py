@@ -71,7 +71,7 @@ dt = tnew.get_mjds() - f.model.PEPOCH.value * u.d
 
 # %%
 analytic = np.sqrt(
-    (f.model.F0.uncertainty * dt) ** 2 + (0.5 * f.model.F1.uncertainty * dt ** 2) ** 2
+    (f.model.F0.uncertainty * dt) ** 2 + (0.5 * f.model.F1.uncertainty * dt**2) ** 2
 ).decompose()
 
 # %%
