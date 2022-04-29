@@ -235,7 +235,7 @@ class Fitter:
     def auto(
         self, toas, model, downhill=True, track_mode=None, residuals=None, **kwargs
     ):
-        """Automatically return the proper :class:`pint.fitter.Fitter` object depending on the TOAs and model.  
+        """Automatically return the proper :class:`pint.fitter.Fitter` object depending on the TOAs and model.
 
         In general the `downhill` fitters are to be preferred.  See https://github.com/nanograv/PINT/wiki/How-To#choose-a-fitter for the logic used.
 
@@ -253,10 +253,10 @@ class Fitter:
         residuals : :class:`pint.residuals.Residuals`
             Initial residuals. This argument exists to support an optimization, where
             ``GLSFitter`` is used to compute ``chi2`` for appropriate Residuals objects.
-        
+
         Returns
         -------
-        :class:`pint.fitter.Fitter` 
+        :class:`pint.fitter.Fitter`
             Returns appropriate subclass
         """
         if toas.wideband:
