@@ -92,7 +92,7 @@ def test_remove_jump_and_flags(setup_NGC6440E):
 
 
 def test_jump_params_to_flags(setup_NGC6440E):
-    """ Check jump_params_to_flags function. """
+    """Check jump_params_to_flags function."""
     setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
     cp = setup_NGC6440E.m.components["PhaseJump"]
 
@@ -153,7 +153,7 @@ def test_multijump_toa(setup_NGC6440E):
     # add flags based off jumps added to model
     setup_NGC6440E.m.jump_params_to_flags(setup_NGC6440E.t)
     for dict in setup_NGC6440E.t.table["flags"][selected_toa_ind]:
-        assert dict["jump"] == "1,2"
+        assert dict["jump"] in ["1,2", "2,1"]
         assert dict["gui_jump"] == "2"
     assert len(cp.jumps) == 2
 

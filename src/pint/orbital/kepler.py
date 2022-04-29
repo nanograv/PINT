@@ -37,9 +37,9 @@ def true_from_eccentric(e, eccentric_anomaly):
         np.sqrt(1 - e) * np.cos(eccentric_anomaly / 2),
     )
     true_anomaly_de = np.sin(eccentric_anomaly) / (
-        np.sqrt(1 - e ** 2) * (1 - e * np.cos(eccentric_anomaly))
+        np.sqrt(1 - e**2) * (1 - e * np.cos(eccentric_anomaly))
     )
-    true_anomaly_prime = np.sqrt(1 - e ** 2) / (1 - e * np.cos(eccentric_anomaly))
+    true_anomaly_prime = np.sqrt(1 - e**2) / (1 - e * np.cos(eccentric_anomaly))
     return true_anomaly, true_anomaly_de, true_anomaly_prime
 
 
@@ -78,7 +78,7 @@ def mass(a, pb):
     The units are a in light seconds, binary period in seconds,
     and mass in solar masses.
     """
-    return 4 * np.pi ** 2 * a ** 3 * pb ** (-2) / G
+    return 4 * np.pi**2 * a**3 * pb ** (-2) / G
 
 
 def mass_partials(a, pb):
@@ -97,7 +97,7 @@ def btx_parameters(asini, pb, eps1, eps2, tasc):
     om = np.arctan2(eps1, eps2)
     true_anomaly = -om  # True anomaly at the ascending node
     eccentric_anomaly = np.arctan2(
-        np.sqrt(1 - e ** 2) * np.sin(true_anomaly), e + np.cos(true_anomaly)
+        np.sqrt(1 - e**2) * np.sin(true_anomaly), e + np.cos(true_anomaly)
     )
     mean_anomaly = eccentric_anomaly - e * np.sin(eccentric_anomaly)
     t0 = tasc - mean_anomaly * pb / (2 * np.pi)
@@ -160,24 +160,24 @@ def kepler_2d(params, t):
     if e == 0:
         d_om = np.array([0, 0, 0, 0, 0, 0])
     else:
-        d_om = np.array([0, 0, eps2 / e ** 2, -eps1 / e ** 2, 0, 0])
+        d_om = np.array([0, 0, eps2 / e**2, -eps1 / e**2, 0, 0])
     # return om, d_om
 
     true_anomaly_0 = -om
     d_true_anomaly_0 = -d_om
 
     eccentric_anomaly_0 = np.arctan2(
-        np.sqrt(1 - e ** 2) * np.sin(true_anomaly_0), e + np.cos(true_anomaly_0)
+        np.sqrt(1 - e**2) * np.sin(true_anomaly_0), e + np.cos(true_anomaly_0)
     )
     d_eccentric_anomaly_0 = (
         d_e
         * (
             -(1 + e * np.cos(true_anomaly_0))
             * np.sin(true_anomaly_0)
-            / (np.sqrt(1 - e ** 2) * (e * np.cos(true_anomaly_0) + 1) ** 2)
+            / (np.sqrt(1 - e**2) * (e * np.cos(true_anomaly_0) + 1) ** 2)
         )
         + d_true_anomaly_0
-        * (np.sqrt(1 - e ** 2) * (1 + e * np.cos(true_anomaly_0)))
+        * (np.sqrt(1 - e**2) * (1 + e * np.cos(true_anomaly_0)))
         / (e * np.cos(true_anomaly_0) + 1) ** 2
     )
 
@@ -191,7 +191,7 @@ def kepler_2d(params, t):
 
     mean_anomaly = 2 * np.pi * t / pb + mean_anomaly_0
     d_mean_anomaly = (
-        2 * np.pi * np.array([0, -t / pb ** 2, 0, 0, -(pb ** (-1)), pb ** (-1)])
+        2 * np.pi * np.array([0, -t / pb**2, 0, 0, -(pb ** (-1)), pb ** (-1)])
         + d_mean_anomaly_0
     )
     # return mean_anomaly, d_mean_anomaly
@@ -232,17 +232,11 @@ def kepler_2d(params, t):
 
     d_true_anomaly = true_anomaly_de * d_e + true_anomaly_prime * d_eccentric_anomaly
     d_true_anomaly_prime = (
-        (
-            (np.cos(eccentric_anomaly) - e)
-            / (np.sqrt(1 - e ** 2) * (1 - e * np.cos(eccentric_anomaly)) ** 2)
-        )
-        * d_e
-        - e
-        * np.sqrt(1 - e ** 2)
-        * np.sin(eccentric_anomaly)
-        / (1 - e * np.cos(eccentric_anomaly)) ** 2
-        * d_eccentric_anomaly
-    )
+        (np.cos(eccentric_anomaly) - e)
+        / (np.sqrt(1 - e**2) * (1 - e * np.cos(eccentric_anomaly)) ** 2)
+    ) * d_e - e * np.sqrt(1 - e**2) * np.sin(eccentric_anomaly) / (
+        1 - e * np.cos(eccentric_anomaly)
+    ) ** 2 * d_eccentric_anomaly
     d_true_anomaly_dot = (
         d_true_anomaly_prime * eccentric_anomaly_dot
         + true_anomaly_prime * d_eccentric_anomaly_dot
@@ -251,11 +245,11 @@ def kepler_2d(params, t):
     # return true_anomaly_prime, d_true_anomaly_prime
     # return true_anomaly_dot, d_true_anomaly_dot
 
-    r = a * (1 - e ** 2) / (1 + e * np.cos(true_anomaly))
+    r = a * (1 - e**2) / (1 + e * np.cos(true_anomaly))
     r_prime = (
         a
         * e
-        * (1 - e ** 2)
+        * (1 - e**2)
         * np.sin(true_anomaly)
         / (1 + e * np.cos(true_anomaly)) ** 2
     )
@@ -265,7 +259,7 @@ def kepler_2d(params, t):
         d_a * r / a
         - a
         * d_e
-        * ((1 + e ** 2) * np.cos(true_anomaly) + 2 * e)
+        * ((1 + e**2) * np.cos(true_anomaly) + 2 * e)
         / (1 + e * np.cos(true_anomaly)) ** 2
         + r_prime * d_true_anomaly
     )
@@ -273,12 +267,12 @@ def kepler_2d(params, t):
         d_a * r_prime / a
         + a
         * d_e
-        * (-e * (1 + e ** 2) * np.cos(true_anomaly) - 3 * e ** 2 + 1)
+        * (-e * (1 + e**2) * np.cos(true_anomaly) - 3 * e**2 + 1)
         * np.sin(true_anomaly)
         / (1 + e * np.cos(true_anomaly)) ** 3
         + a
         * e
-        * (1 - e ** 2)
+        * (1 - e**2)
         * (e * (np.sin(true_anomaly) ** 2 + 1) + np.cos(true_anomaly))
         / (1 + e * np.cos(true_anomaly)) ** 3
         * d_true_anomaly
@@ -338,20 +332,20 @@ def inverse_kepler_2d(xv, m, t):
     r = np.hypot(xv[0], xv[1])
     eps2, eps1 = np.array([xv[3], -xv[2]]) * h / mu - xv[:2] / r
     e = np.hypot(eps1, eps2)
-    p = h ** 2 / mu
-    a = p / (1 - e ** 2)
-    pb = 2 * np.pi * (a ** 3 / mu) ** (0.5)
+    p = h**2 / mu
+    a = p / (1 - e**2)
+    pb = 2 * np.pi * (a**3 / mu) ** (0.5)
 
     om = np.arctan2(eps1, eps2)
     true_anomaly = np.arctan2(xv[1], xv[0]) - om
     eccentric_anomaly = np.arctan2(
-        np.sqrt(1 - e ** 2) * np.sin(true_anomaly), e + np.cos(true_anomaly)
+        np.sqrt(1 - e**2) * np.sin(true_anomaly), e + np.cos(true_anomaly)
     )
     mean_anomaly = eccentric_anomaly - e * np.sin(eccentric_anomaly)
 
     true_anomaly_0 = -om
     eccentric_anomaly_0 = np.arctan2(
-        np.sqrt(1 - e ** 2) * np.sin(true_anomaly_0), e + np.cos(true_anomaly_0)
+        np.sqrt(1 - e**2) * np.sin(true_anomaly_0), e + np.cos(true_anomaly_0)
     )
     mean_anomaly_0 = eccentric_anomaly_0 - e * np.sin(eccentric_anomaly_0)
 
@@ -538,7 +532,7 @@ def kepler_two_body(params, t):
 
     a_c = a / q
     a_tot = a + a_c
-    d_a_c = d_a / q - a * d_q / q ** 2
+    d_a_c = d_a / q - a * d_q / q**2
     d_a_tot = d_a + d_a_c
 
     m_tot, m_tot_prime = mass_partials(a_tot, pb)
@@ -566,7 +560,7 @@ def kepler_two_body(params, t):
     d_xv = d_xv_tot / (1 + 1.0 / q) + xv_tot[:, None] * d_q[None, :] / (1 + q) ** 2
 
     xv_c = -xv / q
-    d_xv_c = -d_xv / q + xv[:, None] * d_q[None, :] / q ** 2
+    d_xv_c = -d_xv / q + xv[:, None] * d_q[None, :] / q**2
 
     xv[:3] += x_cm  # FIXME: when, if t is actually t0?
     xv[3:] += v_cm

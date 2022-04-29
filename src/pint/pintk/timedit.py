@@ -1,6 +1,5 @@
 import os
 import tempfile
-import logging
 
 import astropy.time
 import tkinter as tk
@@ -9,7 +8,8 @@ import tkinter.messagebox as tkMessageBox
 
 import pint
 
-log = logging.getLogger(__name__)
+import pint.logging
+from loguru import logger as log
 
 
 class TimActionsWidget(tk.Frame):

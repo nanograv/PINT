@@ -103,7 +103,7 @@ class LCTemplate:
         return self._cache[order]
 
     def set_cache(self, order=0):
-        """ Populate the cache with *point* values.
+        """Populate the cache with *point* values.
 
         Previous implementation used an average (poor person's integration)
         but I think it makes more sense to use points and interpolation as
@@ -187,8 +187,7 @@ class LCTemplate:
         )
 
     def get_free_mask(self):
-        """ Return a mask with True if parameters are free, else False.
-        """
+        """Return a mask with True if parameters are free, else False."""
         return np.append(
             np.concatenate([prim.free for prim in self.primitives]), self.norms.free
         )
@@ -247,12 +246,12 @@ class LCTemplate:
         return self.primitives[0].get_location()
 
     def get_amplitudes(self, log10_ens=3):
-        """ Return maximum amplitude of a component."""
+        """Return maximum amplitude of a component."""
         ampls = [p(p.get_location(), log10_ens) for p in self.primitives]
         return self.norms(log10_ens) * np.asarray(ampls)
 
     def get_code(self):
-        """ Return a short string encoding the components in the template."""
+        """Return a short string encoding the components in the template."""
         return "/".join((p.shortname for p in self.primitives))
 
     def norm(self):
@@ -277,17 +276,17 @@ class LCTemplate:
         return self(np.arange(0, 1, resolution)).max()
 
     def _get_scales(self, phases, log10_ens=3):
-        """ Method to allow abstraction for setting amplitudes for each
-            peak.  Trivial in typical cases, but important for linked
-            components, e.g. the bridge pedestal.
+        """Method to allow abstraction for setting amplitudes for each
+        peak.  Trivial in typical cases, but important for linked
+        components, e.g. the bridge pedestal.
         """
         rvals = np.zeros_like(phases)
         norms = self.norms(log10_ens)
         return rvals, norms, norms.sum(axis=0)
 
     def __call__(self, phases, log10_ens=3, suppress_bg=False, use_cache=False):
-        """ Evaluate template at the provided phases and (if provided)
-            energies.  If "suppress_bg" is set, ignore the DC component."""
+        """Evaluate template at the provided phases and (if provided)
+        energies.  If "suppress_bg" is set, ignore the DC component."""
         if use_cache:
             return self.eval_cache(phases, order=0)
         rvals, norms, norm = self._get_scales(phases, log10_ens)
@@ -298,7 +297,7 @@ class LCTemplate:
         return (1.0 - norm) + rvals
 
     def derivative(self, phases, log10_ens=3, order=1, use_cache=False):
-        """ Return the derivative of the template with respect to pulse
+        """Return the derivative of the template with respect to pulse
         phase (as opposed to the gradient of the template with respect to
         some of the template parameters)."""
 
@@ -311,12 +310,12 @@ class LCTemplate:
         return rvals
 
     def single_component(self, index, phases, log10_ens=3):
-        """ Evaluate a single component of template."""
+        """Evaluate a single component of template."""
         n = self.norms(log10_ens)[index]
         return self.primitives[index](phases, log10_ens) * n
 
     def single_component(self, index, phases, log10_ens=3, add_bg=False):
-        """ Evaluate a single component of template."""
+        """Evaluate a single component of template."""
         n = self.norms(log10_ens)
         rvals = self.primitives[index](phases, log10_ens) * n[index]
         if add_bg:
@@ -344,8 +343,8 @@ class LCTemplate:
         return r
 
     def gradient_derivative(self, phases, log10_ens=3, free=False):
-        """ Return d/dphi(gradient).  This is the derivative with respect
-            to pulse phase of the gradient with respect to the parameters.
+        """Return d/dphi(gradient).  This is the derivative with respect
+        to pulse phase of the gradient with respect to the parameters.
         """
         free_mask = self.get_free_mask()
         nparam = len(free_mask)
@@ -378,7 +377,7 @@ class LCTemplate:
         return check_gradient(self, atol=atol, rtol=rtol, quiet=quiet)
 
     def hessian(self, phases, log10_ens=3, free=True):
-        """ Return the hessian of the primitive and normaliation angles.
+        """Return the hessian of the primitive and normaliation angles.
 
         The primitives components are not coupled due to the additive form
         of the template.  However, because each normalization depends on
@@ -439,16 +438,16 @@ class LCTemplate:
         return r
 
     def delta(self, index=None):
-        """ Return radio lag -- reckoned by default as the posittion of the            first peak following phase 0."""
+        """Return radio lag -- reckoned by default as the posittion of the            first peak following phase 0."""
         if (index is not None) and (index <= (len(self.primitives))):
             return self[index].get_location(error=True)
         return self.Delta(delta=True)
 
     def Delta(self, delta=False):
-        """ Report peak separation -- reckoned by default as the distance
-            between the first and final component locations.
+        """Report peak separation -- reckoned by default as the distance
+        between the first and final component locations.
 
-            delta [False] -- if True, return the first peak position"""
+        delta [False] -- if True, return the first peak position"""
         if len(self.primitives) == 1:
             return -1, 0
         prim0, prim1 = self[0], self[-1]
@@ -461,7 +460,7 @@ class LCTemplate:
         p2, e2 = prim1.get_location(error=True)
         if delta:
             return p1, e1
-        return (p2 - p1, (e1 ** 2 + e2 ** 2) ** 0.5)
+        return (p2 - p1, (e1**2 + e2**2) ** 0.5)
 
     def _sorted_prims(self):
         def cmp(p1, p2):
@@ -490,8 +489,8 @@ class LCTemplate:
         return s0 + s1
 
     def prof_string(self, outputfile=None):
-        """ Return a string compatible with the format used by pygaussfit.
-            Assume all primitives are gaussians."""
+        """Return a string compatible with the format used by pygaussfit.
+        Assume all primitives are gaussians."""
         rstrings = []
         dashes = "-" * 25
         norm, errnorm = 0, 0
@@ -504,7 +503,7 @@ class LCTemplate:
             errnorm += ampl[1] ** 2
             for st, va in zip(["phas", "fwhm", "ampl"], [phas, fwhm, ampl]):
                 rstrings += ["%s%d = %.5f +/- %.5f" % (st, nprim + 1, va[0], va[1])]
-        const = "const = %.5f +/- %.5f" % (1 - norm, errnorm ** 0.5)
+        const = "const = %.5f +/- %.5f" % (1 - norm, errnorm**0.5)
         rstring = [dashes] + [const] + rstrings + [dashes]
         if outputfile is not None:
             f = open(outputfile, "w")
@@ -514,23 +513,23 @@ class LCTemplate:
         return "\n".join(rstring)
 
     def random(self, n, weights=None, return_partition=False, randomize_partition=True):
-        """ Return n pseudo-random variables drawn from the distribution
-            given by this light curve template.
+        """Return n pseudo-random variables drawn from the distribution
+        given by this light curve template.
 
-            Uses a mulitinomial to divvy the n phases up amongs the various
-            components, which then each generate MC phases from their own
-            distributions.
+        Uses a mulitinomial to divvy the n phases up amongs the various
+        components, which then each generate MC phases from their own
+        distributions.
 
-            If a vector of weights is provided, the weight in interpreted
-            as the probability that a photon comes from the template.  A
-            random check is done according to this probability to
-            determine whether to draw the photon from the template or from
-            a uniform distribution.
+        If a vector of weights is provided, the weight in interpreted
+        as the probability that a photon comes from the template.  A
+        random check is done according to this probability to
+        determine whether to draw the photon from the template or from
+        a uniform distribution.
 
-            By default, the partition of light curve components is
-            randomized, i.e. there is no time or weight dependence.  If not
-            randomized, the partition have components sorted by their
-            their overall amplitude (decreasing).
+        By default, the partition of light curve components is
+        randomized, i.e. there is no time or weight dependence.  If not
+        randomized, the partition have components sorted by their
+        their overall amplitude (decreasing).
         """
 
         # compatibility with energy-dependent calls
@@ -589,13 +588,13 @@ class LCTemplate:
         return rvals
 
     def swap_primitive(self, index, ptype=LCLorentzian):
-        """ Swap the specified primitive for a new one with the parameters
-           that match the old one as closely as possible."""
+        """Swap the specified primitive for a new one with the parameters
+        that match the old one as closely as possible."""
         self.primitives[index] = convert_primitive(self.primitives[index], ptype)
 
     def delete_primitive(self, index):
-        """ [Convenience] -- return a new LCTemplate with the specified
-            LCPrimitive removed and renormalized."""
+        """[Convenience] -- return a new LCTemplate with the specified
+        LCPrimitive removed and renormalized."""
         norms, prims = self.norms, self.primitives
         if len(prims) == 1:
             raise ValueError("Template only has a single primitive.")
@@ -609,8 +608,8 @@ class LCTemplate:
         return lct
 
     def add_primitive(self, prim, norm=0.1):
-        """ [Convenience] -- return a new LCTemplate with the specified
-            LCPrimitive added and renormalized."""
+        """[Convenience] -- return a new LCTemplate with the specified
+        LCPrimitive added and renormalized."""
         norms, prims = self.norms, self.primitives
         nprims = [prim] + [deepcopy(prims[i]) for i in range(len(prims))]
         nnorms = np.asarray([norm] + [norms()[i] for i in range(len(prims))])
@@ -620,11 +619,11 @@ class LCTemplate:
         return lct
 
     def order_primitives(self, indices, zeropt=0, order_by_amplitude=False):
-        """ Order the primitives specified by the indices by position.
-            x0 specifies an alternative zeropt.
+        """Order the primitives specified by the indices by position.
+        x0 specifies an alternative zeropt.
 
-            If specified, the peaks will instead be ordered by descending
-            maximum amplitude."""
+        If specified, the peaks will instead be ordered by descending
+        maximum amplitude."""
 
         def dist(index):
             p = self.primitives[index]
@@ -662,8 +661,8 @@ class LCTemplate:
         return self
 
     def get_eval_string(self):
-        """ Return a string that can be "eval"ed to make a cloned set of
-            primitives and template. """
+        """Return a string that can be "eval"ed to make a cloned set of
+        primitives and template."""
         ps = "\n".join(
             ("p%d = %s" % (i, p.eval_string()) for i, p in enumerate(self.primitives))
         )
@@ -676,9 +675,9 @@ class LCTemplate:
         return min((p.closest_to_peak(phases) for p in self.primitives))
 
     def mean_value(self, phases, log10_ens=None, weights=None, bins=20):
-        """ Compute the mean value of the profile over the codomain of
-            phases.  Mean is taken over energy and is unweighted unless
-            a set of weights are provided."""
+        """Compute the mean value of the profile over the codomain of
+        phases.  Mean is taken over energy and is unweighted unless
+        a set of weights are provided."""
         if (log10_ens is None) or (not self.is_energy_dependent()):
             return self(phases)
         if weights is None:
@@ -709,7 +708,7 @@ class LCTemplate:
         return rvals
 
     def align_peak(self, phi=0, dphi=0.001):
-        """ Adjust such that template peak arrives within dphi of phi."""
+        """Adjust such that template peak arrives within dphi of phi."""
         self.mark_cache_dirty()
         nbin = int(1.0 / dphi) + 1
         # This shifts the first primitive to peak at phase 0.0
@@ -757,23 +756,23 @@ class LCTemplate:
 
 
 class LCBridgeTemplate(LCTemplate):
-    """ A light curve template specialized to the "typical" shape of a
-        gamma-ray pulsar, viz. two peaks linked by a bridge.  The bridge
-        is implemented as a pedestal connecting the modes of two specific
-        peaks, and the only free parameter associated with it is its
-        normalization (from which its amplituded is determimned).
+    """A light curve template specialized to the "typical" shape of a
+    gamma-ray pulsar, viz. two peaks linked by a bridge.  The bridge
+    is implemented as a pedestal connecting the modes of two specific
+    peaks, and the only free parameter associated with it is its
+    normalization (from which its amplituded is determimned).
     """
 
     def has_bridge(self):
         return True
 
     def __init__(self, primitives, norms=None):
-        """ primitives -- a list of LCPrimitive instances of len >= 2; the
-                last two components are interpreted as P1 and P2
-            norms -- either an instance of NormAngles, or a tuple of
-                relative amplitudes for the primitive components; should
-                have one extra parameter for the bridge component; the
-                first component is interpreted as the pedestal nor
+        """primitives -- a list of LCPrimitive instances of len >= 2; the
+            last two components are interpreted as P1 and P2
+        norms -- either an instance of NormAngles, or a tuple of
+            relative amplitudes for the primitive components; should
+            have one extra parameter for the bridge component; the
+            first component is interpreted as the pedestal nor
         """
         if norms is None:
             norms = np.ones(len(primitives) + 1) / (len(primitives + 1))
@@ -786,9 +785,9 @@ class LCBridgeTemplate(LCTemplate):
             raise ValueError("Require n_primitive+1 norm components.")
 
     def _get_scales(self, phases, log10_ens=3):
-        """ Return the scale factor for p1, p2, and the pedestal such that
-            the pedestal has the correct normalization and p1, p2, and the
-            pedestal form a smooth, continuous curve.
+        """Return the scale factor for p1, p2, and the pedestal such that
+        the pedestal has the correct normalization and p1, p2, and the
+        pedestal form a smooth, continuous curve.
         """
         all_norms = self.norms(log10_ens)
         nped, norms = all_norms[0], all_norms[1:]
@@ -846,7 +845,7 @@ class LCBridgeTemplate(LCTemplate):
         # return s0+s1
 
     def single_component(self, index, phases, log10_ens=3):
-        """ Evaluate a single component of template."""
+        """Evaluate a single component of template."""
         # this needs to be done in some sane way, not sure if ideal exists
         # so best guess is to compute the pedestal offset and add that on
         # to the inner peak, trusting that it will itself be plotted to
@@ -916,7 +915,7 @@ def get_gauss1(pulse_frac=1, x1=0.5, width1=0.01):
 
 
 def get_2pb(pulse_frac=0.9, lorentzian=False):
-    """ Convenience function to get a 2 Lorentzian + Gaussian bridge template."""
+    """Convenience function to get a 2 Lorentzian + Gaussian bridge template."""
     prim = LCLorentzian if lorentzian else LCGaussian
     p1 = prim(p=[0.03, 0.1])
     b = LCGaussian(p=[0.15, 0.3])
@@ -928,8 +927,8 @@ def get_2pb(pulse_frac=0.9, lorentzian=False):
 
 
 def make_twoside_gaussian(one_side_gaussian):
-    """ Make a two-sided gaussian with the same initial shape as the
-        input one-sided gaussian."""
+    """Make a two-sided gaussian with the same initial shape as the
+    input one-sided gaussian."""
     g2 = LCGaussian2()
     g1 = one_side_gaussian
     g2.p[0] = g2.p[1] = g1.p[0]
@@ -940,7 +939,7 @@ def make_twoside_gaussian(one_side_gaussian):
 class GaussianPrior:
     def __init__(self, locations, widths, mod, mask=None):
         self.x0 = np.where(mod, np.mod(locations, 1), locations)
-        self.s0 = np.asarray(widths) * 2 ** 0.5
+        self.s0 = np.asarray(widths) * 2**0.5
         self.mod = np.asarray(mod)
         if mask is None:
             self.mask = np.asarray([True] * len(locations))
@@ -951,7 +950,7 @@ class GaussianPrior:
             self.mod = self.mod[self.mask]
 
     def __len__(self):
-        """ Return number of parameters with a prior."""
+        """Return number of parameters with a prior."""
         return self.mask.sum()
 
     def __call__(self, parameters):
@@ -967,12 +966,12 @@ class GaussianPrior:
         parameters = parameters[self.mask]
         parameters = np.where(self.mod, np.mod(parameters, 1), parameters)
         rvals = np.zeros(len(self.mask))
-        rvals[self.mask] = 2 * (parameters - self.x0) / self.s0 ** 2
+        rvals[self.mask] = 2 * (parameters - self.x0) / self.s0**2
         return rvals
 
 
 def prim_io(template):
-    """ Read files and build LCPrimitives. """
+    """Read files and build LCPrimitives."""
 
     def read_gaussian(toks):
         primitives = []

@@ -8,17 +8,26 @@ specify '-f parfile' to those codes -- I mean, who runs TEMPO without a timing m
 This is currently just a stub and should be added to and expanded, as desired.
 """
 import argparse
-import logging
 import sys
 
 import astropy.units as u
 from astropy import log
 
+import pint.logging
+from loguru import logger as log
+
+log.remove()
+log.add(
+    sys.stderr,
+    level="WARNING",
+    colorize=True,
+    format=pint.logging.format,
+    filter=pint.logging.LogFilter(),
+)
+
 import pint.fitter
 import pint.models
 import pint.residuals
-
-log = logging.getLogger(__name__)
 
 __all__ = ["main"]
 
@@ -43,7 +52,25 @@ def main(argv=None):
     parser.add_argument(
         "--gls", help="Fit using GLS fitter", action="store_true", default=False
     )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
+        default="WARNING",
+        help="Logging level",
+        dest="loglevel",
+    )
     args = parser.parse_args(argv)
+
+    if args.loglevel != "WARNING":
+        log.remove()
+        log.add(
+            sys.stderr,
+            level=args.loglevel,
+            colorize=True,
+            format=pint.logging.format,
+            filter=pint.logging.LogFilter(),
+        )
 
     log.info("Reading model from {0}".format(args.parfile))
     m = pint.models.get_model(args.parfile)
@@ -71,10 +98,12 @@ def main(argv=None):
 
     log.info("Fitting...")
     if args.gls:
-        f = pint.fitter.GLSFitter(t, m)
+        f = pint.fitter.DownhillGLSFitter(t, m)
     else:
-        f = pint.fitter.WLSFitter(t, m)
+        f = pint.fitter.DownhillWLSFitter(t, m)
     f.fit_toas()
+    f.update_model()
+    f.model.CHI2.value = f.resids.chi2
 
     # Print fit summary
     print(

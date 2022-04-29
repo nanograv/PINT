@@ -534,8 +534,7 @@ class ModelBuilder:
         return timing_model
 
     def _report_conflict(self, conflict_graph):
-        """Report conflict components
-        """
+        """Report conflict components"""
         for k, v in conflict_graph.items():
             # Put all the conflict components together from the graph
             cf_cps = list(v)

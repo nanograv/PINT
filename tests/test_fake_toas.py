@@ -184,7 +184,7 @@ def test_fake_highF1():
 
 
 def test_fake_DMfit():
-    """ fit only for DM with fake TOAs
+    """fit only for DM with fake TOAs
     compare the variance of that result against the uncertainties
     """
     parfile = pint.config.examplefile("NGC6440E.par")
@@ -202,7 +202,7 @@ def test_fake_DMfit():
 
     N = 30
 
-    DMs = np.zeros(N) * u.pc / u.cm ** 3
+    DMs = np.zeros(N) * u.pc / u.cm**3
     for iter in range(N):
         t_fake = pint.simulation.make_fake_toas(t, m, add_noise=True)
         f_fake = GLSFitter(t_fake, m)

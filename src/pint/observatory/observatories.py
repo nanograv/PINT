@@ -127,7 +127,7 @@ TopoObs(
 )
 TopoObs(
     "ncyobs",
-    aliases=["nuppi"],
+    aliases=["nuppi", "w"],
     itrf_xyz=[4324165.81, 165927.11, 4670132.83],
     clock_fmt="tempo2",
     clock_file=["ncyobs2obspm.clk", "obspm2gps.clk"],

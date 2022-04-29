@@ -56,10 +56,16 @@ def main(argv=None):
         "--nwalkers", help="Number of MCMC walkers", type=int, default=200
     )
     parser.add_argument(
-        "--burnin", help="Number of MCMC steps for burn in ", type=int, default=100,
+        "--burnin",
+        help="Number of MCMC steps for burn in ",
+        type=int,
+        default=100,
     )
     parser.add_argument(
-        "--nsteps", help="Number of MCMC steps to compute", type=int, default=1000,
+        "--nsteps",
+        help="Number of MCMC steps to compute",
+        type=int,
+        default=1000,
     )
     parser.add_argument(
         "--minMJD", help="Earliest MJD to use", type=float, default=54680.0
@@ -74,7 +80,10 @@ def main(argv=None):
         "--phserr", help="Error on starting phase", type=float, default=0.03
     )
     parser.add_argument(
-        "--minWeight", help="Minimum weight to include", type=float, default=0.05,
+        "--minWeight",
+        help="Minimum weight to include",
+        type=float,
+        default=0.05,
     )
     parser.add_argument(
         "--wgtexp",

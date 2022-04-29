@@ -132,18 +132,18 @@ class OrbitPB(Orbit):
             2
             * np.pi
             * u.rad
-            * ((PBDOT + XPBDOT) * self.tt0 ** 2 / PB ** 3 - self.tt0 / PB ** 2)
+            * ((PBDOT + XPBDOT) * self.tt0**2 / PB**3 - self.tt0 / PB**2)
         )
 
     def d_orbits_d_PBDOT(self):
         """dM/dPBDOT this could be a generic function"""
         PB = self.PB.to("second")
-        return -np.pi * u.rad * self.tt0 ** 2 / PB ** 2
+        return -np.pi * u.rad * self.tt0**2 / PB**2
 
     def d_orbits_d_XPBDOT(self):
         """dM/dPBDOT this could be a generic function"""
         PB = self.PB.to("second")
-        return -np.pi * u.rad * self.tt0 ** 2 / PB ** 2
+        return -np.pi * u.rad * self.tt0**2 / PB**2
 
     def d_pbprime_d_PB(self):
         return np.ones(len(self.tt0)) * u.Unit("")

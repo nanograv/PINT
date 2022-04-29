@@ -11,7 +11,7 @@ from pinttestdata import datadir
 
 
 class TestCompare(unittest.TestCase):
-    """ Test model comparison method """
+    """Test model comparison method"""
 
     def test_paramchange(self):
 

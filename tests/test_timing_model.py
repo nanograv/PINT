@@ -349,10 +349,9 @@ def test_many_timfile_jumps():
     with redirect_stdout(f):
         t.write_TOA_file(sys.stdout)
     s = f.getvalue().splitlines()
-    toalist = []
-    toalist.append("\n".join(s[:11]) + "\n")  # there are now comment lines!
+    toalist = ["\n".join(s[:11]) + "\n"]
     lo = 12
-    for ii in range(pairs):
+    for _ in range(pairs):
         toalist.append("\n".join(["JUMP"] + s[lo : lo + toas_per_jump] + ["JUMP\n"]))
         lo += toas_per_jump
     # read the TOAs
@@ -365,6 +364,28 @@ def test_many_timfile_jumps():
     assert "JUMP2" in m.components["PhaseJump"].jumps
     assert "JUMP10" in m.components["PhaseJump"].jumps
     assert "JUMP15" in m.components["PhaseJump"].jumps
+
+
+def test_parfile_and_timfile_jumps(timfile_jumps):
+    # TOAs 9, 10, 11, and 12 have jump flags (JUMP2 on 9, JUMP1 on rest)
+    t = timfile_jumps
+    m = get_model(io.StringIO(par_base + "JUMP MJD 55729 55730 0.0 1\n"))
+    # turns pre-existing jump flags in t.table['flags'] into parameters in parfile
+    m.jump_flags_to_params(t)
+    assert "PhaseJump" in m.components
+    # adds jump flags to t.table['flags'] for jump parameters already in parfile
+    m.jump_params_to_flags(t)
+    fs, idxs = t.get_flag_value("tim_jump")
+    assert len(idxs) == 4
+    assert fs[5] == "3"  # These were both boosted because of the parfile JUMP
+    assert fs[6] == "2"
+    fs, idxs = t.get_flag_value("jump")
+    assert len(idxs) == 5
+    assert fs[5] in [
+        "3,1",
+        "1,3",
+    ]
+    assert fs[4] == "1"
 
 
 def test_supports_rm():

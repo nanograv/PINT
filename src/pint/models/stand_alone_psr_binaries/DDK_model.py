@@ -13,7 +13,7 @@ from .DD_model import DDmodel
 class DDKmodel(DDmodel):
     """DDK model, a Kopeikin method corrected DD model.
     The main difference is that DDK model considers the effects on the pulsar binary parametersfrom the  annual parallax of earth and    the proper motion of the pulsar.
-    
+
     Special parameters are:
 
        KIN
@@ -37,7 +37,7 @@ class DDKmodel(DDmodel):
     ----------
     - Kopeikin (1995), ApJ, 439, L5 [1]_
     - Kopeikin (1996), ApJ, 467, L93 [2]_
-    
+
     .. [1] https://ui.adsabs.harvard.edu/abs/1995ApJ...439L...5K/abstract
     .. [2] https://ui.adsabs.harvard.edu/abs/1996ApJ...467L..93K/abstract
     """
@@ -145,11 +145,11 @@ class DDKmodel(DDmodel):
         (Kopeikin 1996 Eq 10):
 
         .. math::
-        
+
             ki = KIN + \delta_{KIN}
-            
+
             \delta_{KIN} = (-\mu_{long} \sin(KOM) + \mu_{lat} \cos(KOM)) (t-T_0)
-            
+
         """
         d_KIN = (
             -self.PMLONG_DDK * self.sin_KOM + self.PMLAT_DDK * self.cos_KOM
@@ -230,13 +230,13 @@ class DDKmodel(DDmodel):
         (Kopeikin 1996 Eq 8):
 
         .. math::
-        
+
             \delta_x = a_1 \cot(kin)  (-\mu_{long}\sin(KOM) + \mu_{lat}\cos(KOM)) (t-T_0)
-            
+
             \delta_{kin} = (-\mu_{long} \sin(KOM) + \mu_{lat} \cos(KOM)) (t-T_0)
 
             \delta_x = a_1 \delta_{kin}  \cot(kin)
-            
+
         """
         a1 = self.a1_k(False, False)
         kin = self.kin()
@@ -286,11 +286,11 @@ class DDKmodel(DDmodel):
         """The correction on omega (Longitude of periastron)
         due to the pulsar proper motion
         (Kopeikin 1996 Eq 9):
-        
+
         .. math::
-        
+
             \delta_{\Omega} = \csc(i) (\mu_{long}\cos(KOM) + \mu_{lat} \sin(KOM)) (t-T_0)
-            
+
         """
         kin = self.kin()
         sin_kin = np.sin(kin)
@@ -307,7 +307,7 @@ class DDKmodel(DDmodel):
         cos_kin = np.cos(kin)
         d_omega_dot = (
             -cos_kin
-            / sin_kin ** 2
+            / sin_kin**2
             * (self.PMLONG_DDK * self.cos_KOM + self.PMLAT_DDK * self.sin_KOM)
         )
         return (d_omega_dot * self.tt0).to(
@@ -321,7 +321,7 @@ class DDKmodel(DDmodel):
         d_kin_d_KOM = self.d_kin_proper_motion_d_KOM()
         d_omega_dot = (
             -cos_kin
-            / sin_kin ** 2
+            / sin_kin**2
             * d_kin_d_KOM
             * (self.PMLONG_DDK * self.cos_KOM + self.PMLAT_DDK * self.sin_KOM)
             + (-self.PMLONG_DDK * self.sin_KOM + self.PMLAT_DDK * self.cos_KOM)
@@ -338,7 +338,7 @@ class DDKmodel(DDmodel):
         d_kin_d_T0 = self.d_kin_proper_motion_d_T0()
         # with u.set_enabled_equivalencies(u.dimensionless_angles()):
         d_omega_d_T0 = (
-            -cos_kin / sin_kin ** 2 * d_kin_d_T0 * self.tt0 - 1.0 / sin_kin
+            -cos_kin / sin_kin**2 * d_kin_d_T0 * self.tt0 - 1.0 / sin_kin
         ) * (self.PMLONG_DDK * self.cos_KOM + self.PMLAT_DDK * self.sin_KOM)
         return d_omega_d_T0.to(self.OM.unit / self.T0.unit)
 
@@ -349,7 +349,7 @@ class DDKmodel(DDmodel):
     def delta_I0(self):
         """
         :math:`\Delta_{I0}`
-        
+
         Reference: (Kopeikin 1995 Eq 15)
         """
         return -self.obs_pos[:, 0] * self.sin_long + self.obs_pos[:, 1] * self.cos_long
@@ -370,17 +370,17 @@ class DDKmodel(DDmodel):
         """Reference (Kopeikin 1995 Eq 18).  Computes:
 
         .. math::
-        
+
             x_{obs} = \\frac{a_p  \sin(i)_{obs}}{c}
 
         Since :math:`a_p` and :math:`c` will not be changed by parallax:
 
         .. math::
-        
+
             x_{obs} = \\frac{a_p}{c}(\sin(i)_{\\rm intrisic} + \delta_{\sin(i)})
-            
+
             \delta_{\sin(i)} = \sin(i)_{\\rm intrisic}  \\frac{\cot(i)_{\\rm intrisic}}{d} (\Delta_{I0} \sin KOM - \Delta_{J0}  \cos KOM)
-            
+
         """
         PX_kpc = self.PX.to(u.kpc, equivalencies=u.parallax())
         delta_sini = (
@@ -445,7 +445,7 @@ class DDKmodel(DDmodel):
         # with u.set_enabled_equivalencies(u.dimensionless_angles()):
         d_delta_a1_d_KOM = (
             d_a1_d_kom / tan_kin / PX_kpc * kom_projection
-            - a1 * d_kin_d_kom / PX_kpc / sin_kin ** 2 * kom_projection
+            - a1 * d_kin_d_kom / PX_kpc / sin_kin**2 * kom_projection
             + a1
             / tan_kin
             / PX_kpc
@@ -469,7 +469,7 @@ class DDKmodel(DDmodel):
         kom_projection = self.delta_I0() * self.sin_KOM - self.delta_J0() * self.cos_KOM
         # with u.set_enabled_equivalencies(u.dimensionless_angles()):
         d_delta_a1_d_T0 = (
-            d_a1_d_T0 / tan_kin / PX_kpc - a1 * d_kin_d_T0 / PX_kpc / sin_kin ** 2
+            d_a1_d_T0 / tan_kin / PX_kpc - a1 * d_kin_d_T0 / PX_kpc / sin_kin**2
         ) * kom_projection
         return d_delta_a1_d_T0.to(a1.unit / self.T0.unit)
 
@@ -494,7 +494,7 @@ class DDKmodel(DDmodel):
         cos_kin = np.cos(kin)
         PX_kpc = self.PX.to(u.kpc, equivalencies=u.parallax())
         kom_projection = self.delta_I0() * self.cos_KOM + self.delta_J0() * self.sin_KOM
-        d_delta_omega_d_KIN = cos_kin / sin_kin ** 2 / PX_kpc * kom_projection
+        d_delta_omega_d_KIN = cos_kin / sin_kin**2 / PX_kpc * kom_projection
         return d_delta_omega_d_KIN.to(
             self.OM.unit / kin.unit, equivalencies=u.dimensionless_angles()
         )
@@ -507,7 +507,7 @@ class DDKmodel(DDmodel):
         kom_projection = self.delta_I0() * self.cos_KOM + self.delta_J0() * self.sin_KOM
         d_kin_d_KOM = self.d_kin_d_par("KOM")
         d_delta_omega_d_KOM = (
-            cos_kin / sin_kin ** 2 / PX_kpc * d_kin_d_KOM * kom_projection
+            cos_kin / sin_kin**2 / PX_kpc * d_kin_d_KOM * kom_projection
             - 1.0
             / sin_kin
             / PX_kpc
@@ -525,7 +525,7 @@ class DDKmodel(DDmodel):
         kom_projection = self.delta_I0() * self.cos_KOM + self.delta_J0() * self.sin_KOM
         d_kin_d_T0 = self.d_kin_d_par("T0")
         d_delta_omega_d_T0 = (
-            cos_kin / sin_kin ** 2 / PX_kpc * d_kin_d_T0 * kom_projection
+            cos_kin / sin_kin**2 / PX_kpc * d_kin_d_T0 * kom_projection
         )
         return d_delta_omega_d_T0.to(
             self.OM.unit / self.T0.unit, equivalencies=u.dimensionless_angles()

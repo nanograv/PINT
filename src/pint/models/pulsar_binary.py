@@ -402,18 +402,18 @@ class PulsarBinary(DelayComponent):
         else:
             PB = 1.0 / self.FB0.quantity
             try:
-                PBDOT = -self.FB1.quantity / self.FB0.quantity ** 2
+                PBDOT = -self.FB1.quantity / self.FB0.quantity**2
             except AttributeError:
                 PBDOT = 0.0 * u.Unit("")
 
         # Find closest periapsis time and reassign T0
         t0_ld = self.T0.quantity.tdb.mjd_long
         dt = (new_epoch.tdb.mjd_long - t0_ld) * u.day
-        d_orbits = dt / PB - PBDOT * dt ** 2 / (2.0 * PB ** 2)
+        d_orbits = dt / PB - PBDOT * dt**2 / (2.0 * PB**2)
         n_orbits = np.round(d_orbits.to(u.Unit("")))
         if n_orbits == 0:
             return
-        dt_integer_orbits = PB * n_orbits + PB * PBDOT * n_orbits ** 2 / 2.0
+        dt_integer_orbits = PB * n_orbits + PB * PBDOT * n_orbits**2 / 2.0
         self.T0.quantity = self.T0.quantity + dt_integer_orbits
 
         try:
