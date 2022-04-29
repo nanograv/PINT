@@ -48,10 +48,10 @@ class BinaryDDK(BinaryDD):
     ----------
     - Kopeikin (1995), ApJ, 439, L5 [1]_
     - Kopeikin (1996), ApJ, 467, L93 [2]_
-    
+
     .. [1] https://ui.adsabs.harvard.edu/abs/1995ApJ...439L...5K/abstract
     .. [2] https://ui.adsabs.harvard.edu/abs/1996ApJ...467L..93K/abstract
- 
+
     """
 
     register = True
@@ -88,8 +88,7 @@ class BinaryDDK(BinaryDD):
 
     @property
     def PMLONG_DDK(self):
-        """Proper motion in longitude (RA or ecliptic longitude)
-        """
+        """Proper motion in longitude (RA or ecliptic longitude)"""
         if "AstrometryEquatorial" in self._parent.components:
             return self._parent.PMRA
         elif "AstrometryEcliptic" in self._parent.components:
@@ -101,8 +100,7 @@ class BinaryDDK(BinaryDD):
 
     @property
     def PMLAT_DDK(self):
-        """Proper motion in latitude (Dec or ecliptic latitude)
-        """
+        """Proper motion in latitude (Dec or ecliptic latitude)"""
         if "AstrometryEquatorial" in self._parent.components:
             return self._parent.PMDEC
         elif "AstrometryEcliptic" in self._parent.components:
