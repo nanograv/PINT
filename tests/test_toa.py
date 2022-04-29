@@ -14,8 +14,7 @@ from pint.simulation import make_fake_toas_uniform
 
 
 class TestTOA(unittest.TestCase):
-    """Test of TOA class
-    """
+    """Test of TOA class"""
 
     def setUp(self):
         self.MJD = 57000
@@ -50,8 +49,7 @@ class TestTOA(unittest.TestCase):
 
 
 class TestTOAs(unittest.TestCase):
-    """Test of TOAs class
-    """
+    """Test of TOAs class"""
 
     def setUp(self):
         self.freq = 1440.012345678 * u.MHz

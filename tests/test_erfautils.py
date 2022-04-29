@@ -32,8 +32,8 @@ def test_compare_erfautils_astropy():
     posvel = erfautils.old_gcrs_posvel_from_itrf(loc, t, obsname=o)
     astropy_posvel = erfautils.astropy_gcrs_posvel_from_itrf(loc, t, obsname=o)
     dopv = astropy_posvel - posvel
-    dpos = np.sqrt((dopv.pos ** 2).sum(axis=0))
-    dvel = np.sqrt((dopv.vel ** 2).sum(axis=0))
+    dpos = np.sqrt((dopv.pos**2).sum(axis=0))
+    dvel = np.sqrt((dopv.vel**2).sum(axis=0))
     assert len(dpos) == len(mjds)
     # This is just above the level of observed difference
     assert dpos.max() < 0.05 * u.m, "position difference of %s" % dpos.max().to(u.m)

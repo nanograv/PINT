@@ -42,7 +42,7 @@ import pint.simulation
 # %%
 def plot_contour(mp, mc, quantity, target, uncertainty, color, nsigma=3, **kwargs):
     """Plot two lines at +/-nsigma * the uncertainty to illustrate a constraint.
-    
+
     Parameters
     ----------
     mp : astropy.units.Quantity
@@ -63,7 +63,7 @@ def plot_contour(mp, mc, quantity, target, uncertainty, color, nsigma=3, **kwarg
     Returns
     -------
     `~.contour.QuadContourSet`
-        See :func:`matplotlib.pyplot.contour`        
+        See :func:`matplotlib.pyplot.contour`
     """
     return plt.contour(
         mp.value,
@@ -79,9 +79,9 @@ def plot_fill(
     mp, mc, quantity, target, uncertainty, cmap, alpha=0.2, nsigma_max=3, **kwargs
 ):
     """Fill a region with a color map to illustrate a constraint.
-    
+
     Outside of nsigma_max * uncertainty, constraint is not shown.
-    
+
     Parameters
     ----------
     mp : astropy.units.Quantity
@@ -104,7 +104,7 @@ def plot_fill(
     Returns
     -------
     `~matplotlib.image.AxesImage`
-        See :func:`matplotlib.pyplot.imshow`        
+        See :func:`matplotlib.pyplot.imshow`
     """
     z = np.fabs((quantity - target) / uncertainty)
     z[z >= nsigma_max] = np.nan
@@ -121,9 +121,9 @@ def plot_fill(
 def get_plot_xy(mp, mc, quantity, target, uncertainty, mp_to_plot, nsigma=3):
     """A helper function to find the point in the quantity array that is nsigma * uncertainty away
     from the target value at mp=mp_to_plot
-        
+
     returns mp,mc to plot a text label
-    
+
     Parameters
     ----------
     mp : astropy.units.Quantity
@@ -282,7 +282,7 @@ beta = (d / R0) * np.cos(b) - np.cos(l)
 # Nice & Taylor (1995), Eqn. 5
 # https://ui.adsabs.harvard.edu/abs/1995ApJ...441..429N/abstract
 a_dot_n = (
-    -np.cos(b) * (Theta0 ** 2 / R0) * (np.cos(l) + beta / (np.sin(l) ** 2 + beta ** 2))
+    -np.cos(b) * (Theta0**2 / R0) * (np.cos(l) + beta / (np.sin(l) ** 2 + beta**2))
 )
 # Galactic acceleration contribution to PBDOT
 PBDOT_gal = (fit.model.PB.quantity * a_dot_n / c.c).decompose()
@@ -314,7 +314,7 @@ gamma_pred = pint.derived_quantities.gamma(
 sini_pred = (
     pint.derived_quantities.mass_funct(fit.model.PB.quantity, fit.model.A1.quantity)
     * (Mp + Mc) ** 2
-    / Mc ** 3
+    / Mc**3
 ) ** (1.0 / 3)
 
 plt.figure(figsize=(16, 16))
@@ -347,7 +347,7 @@ plt.text(x.value, y.value, "$\dot \omega$", fontsize=fontsize, color="m")
 # make sure we correct it for the kinematic terms
 PBDOT_corr = fit.model.PBDOT.quantity - PBDOT_gal - PBDOT_shk
 # also add the error from the distance uncertainty in quadrature
-PBDOT_uncertainty = np.sqrt(fit.model.PBDOT.uncertainty ** 2 + PBDOT_err ** 2)
+PBDOT_uncertainty = np.sqrt(fit.model.PBDOT.uncertainty**2 + PBDOT_err**2)
 plot_contour(mp, mc, pbdot_pred, PBDOT_corr, PBDOT_uncertainty, "g", linestyles="--")
 plot_fill(mp, mc, pbdot_pred, PBDOT_corr, PBDOT_uncertainty, cmap=cm.Greens_r)
 x, y = get_plot_xy(mp, mc, pbdot_pred, PBDOT_corr, PBDOT_uncertainty, 1.15 * u.Msun, -3)

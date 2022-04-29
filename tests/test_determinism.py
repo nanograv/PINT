@@ -96,7 +96,7 @@ def test_raw_emcee():
         s = numpy.random.mtrand.RandomState(0)
 
         def log_prob(x, ivar):
-            return -0.5 * np.sum(ivar * x ** 2)
+            return -0.5 * np.sum(ivar * x**2)
 
         ndim, nwalkers = 5, 100
         ivar = 1.0 / np.random.rand(ndim)

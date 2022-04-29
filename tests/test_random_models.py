@@ -57,7 +57,8 @@ def test_random_models(fitter):
 
 
 @pytest.mark.parametrize(
-    "fitter", [pint.fitter.WidebandTOAFitter, pint.fitter.WidebandDownhillFitter],
+    "fitter",
+    [pint.fitter.WidebandTOAFitter, pint.fitter.WidebandDownhillFitter],
 )
 def test_random_models_wb(fitter):
     model = get_model(os.path.join(datadir, "J1614-2230_NANOGrav_12yv3.wb.gls.par"))

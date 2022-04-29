@@ -53,8 +53,7 @@ class BinaryBT(PulsarBinary):
         self.remove_param("SINI")
 
     def validate(self):
-        """ Validate BT model parameters
-        """
+        """Validate BT model parameters"""
         super().validate()
         for p in ("T0", "A1"):
             if getattr(self, p).value is None:

@@ -17,7 +17,7 @@ def get_tempo_result(parfile, timfile):
     ----------
     A file named as parfile name ends with '.tempo_test' stored residuals in the
     first column
-  """
+    """
     t1_toas = t1u.read_toa_file(timfile)
     t1u.run_tempo(t1_toas, parfile)
     t1_resids = t1_toas.get_resids(units="phase")

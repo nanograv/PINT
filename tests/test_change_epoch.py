@@ -63,7 +63,7 @@ def test_change_dmepoch():
     epoch_diff = (t0.mjd_long - model.DMEPOCH.quantity.mjd_long) * u.day
     DM_at_t0 = model.DM.quantity + model.DM1.quantity * epoch_diff.to(u.s)
     model.change_dmepoch(t0)
-    assert np.abs(model.DM.quantity - DM_at_t0) < 1e-8 * u.pc / u.cm ** 3
+    assert np.abs(model.DM.quantity - DM_at_t0) < 1e-8 * u.pc / u.cm**3
 
 
 def test_change_dmepoch_times(times):
@@ -71,7 +71,7 @@ def test_change_dmepoch_times(times):
     model = models.get_model(parfile)
     dms = model.base_dm(times)
     model.change_dmepoch(Time(56000, scale="tdb", format="mjd"))
-    assert np.all(np.abs(model.base_dm(times) - dms) < 1e-8 * u.pc / u.cm ** 3)
+    assert np.all(np.abs(model.base_dm(times) - dms) < 1e-8 * u.pc / u.cm**3)
 
 
 def test_change_dmepoch_unset(times):
@@ -89,7 +89,7 @@ def test_change_dmepoch_unset(times):
     )
     dms = model.base_dm(times)
     model.change_dmepoch(Time(56000, scale="tdb", format="mjd"))
-    assert np.all(np.abs(model.base_dm(times) - dms) < 1e-8 * u.pc / u.cm ** 3)
+    assert np.all(np.abs(model.base_dm(times) - dms) < 1e-8 * u.pc / u.cm**3)
 
 
 def test_change_dmepoch_unset_exception(times):
@@ -188,7 +188,7 @@ def test_change_binary_epoch(binary_model):
     else:
         PB = 1.0 / model.FB0.quantity
         try:
-            PBDOT = -model.FB1.quantity / model.FB0.quantity ** 2
+            PBDOT = -model.FB1.quantity / model.FB0.quantity**2
         except AttributeError:
             PBDOT = 0.0 * u.Unit("")
 

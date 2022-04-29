@@ -53,9 +53,7 @@ def get_iers_up_to_date(mjd=Time.now().mjd - 45.0):
 
 # This version is outdated since astropy now includes IERS_Auto (see improved version above)
 def get_iers_b_up_to_date(mjd):
-    """Update the IERS B table to include MJD if necessary
-
-    """
+    """Update the IERS B table to include MJD if necessary"""
     if Time.now().mjd <= mjd:
         raise ValueError("IERS B data requested for future MJD {}".format(mjd))
     might_be_old = is_url_in_cache(IERS_B_URL)

@@ -1028,9 +1028,9 @@ class PlkWidget(tk.Frame):
                 f_toas_plot = f_toas.get_mjds()
             scale = 1
             if self.yvals.unit == u.us:
-                scale = 10 ** 6
+                scale = 10**6
             elif self.yvals.unit == u.ms:
-                scale = 10 ** 3
+                scale = 10**3
             for i in range(len(rs)):
                 self.plkAxes.plot(f_toas_plot, rs[i] * scale, "-k", alpha=0.3)
 
