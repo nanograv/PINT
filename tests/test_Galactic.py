@@ -95,7 +95,7 @@ class TestGalactic(unittest.TestCase):
 
         then apply the space motion to the equatorial object & convert to Galactic
         compare that to the Galactic object w/ space motion
-        
+
         """
 
         # make a test SkyCoord object
@@ -144,7 +144,7 @@ class TestGalactic(unittest.TestCase):
 
         then apply the space motion to the ecliptic object & convert to Galactic
         compare that to the Galactic object w/ space motion
-        
+
         """
 
         # make a test SkyCoord object

@@ -25,7 +25,7 @@ SECSPERDAY = 86400.0
 
 
 def shifted(m, delta=0.5):
-    """ Produce a copy of a binned profile shifted in phase by delta."""
+    """Produce a copy of a binned profile shifted in phase by delta."""
     f = np.fft.fft(m, axis=-1)
     n = f.shape[-1]
     arg = np.fft.fftfreq(n) * (n * np.pi * 2.0j * delta)
@@ -33,17 +33,17 @@ def shifted(m, delta=0.5):
 
 
 def weighted_light_curve(nbins, phases, weights, normed=False, phase_shift=0):
-    """ Return a set of bins, values, and errors to represent a
-        weighted light curve."""
+    """Return a set of bins, values, and errors to represent a
+    weighted light curve."""
     bins = np.linspace(0 + phase_shift, 1 + phase_shift, nbins + 1)
     counts = np.histogram(phases, bins=bins, density=False)[0]
     w1 = (np.histogram(phases, bins=bins, weights=weights, density=False)[0]).astype(
         float
     )
     w2 = (
-        np.histogram(phases, bins=bins, weights=weights ** 2, density=False)[0]
+        np.histogram(phases, bins=bins, weights=weights**2, density=False)[0]
     ).astype(float)
-    errors = np.where(counts > 1, w2 ** 0.5, counts)
+    errors = np.where(counts > 1, w2**0.5, counts)
     norm = w1.sum() / nbins if normed else 1.0
     return bins, w1 / norm, errors / norm
 
@@ -58,20 +58,20 @@ def LCFitter(
     binned_ebins=8,
     phase_shift=0,
 ):
-    """ Factory class for light curve fitters.  Based on whether weights
-        or energies are supplied in addition to photon phases, the
-        appropriate fitter class is returned.
-        Arguments:
-        template -- an instance of LCTemplate
-        phases   -- list of photon phases
+    """Factory class for light curve fitters.  Based on whether weights
+    or energies are supplied in addition to photon phases, the
+    appropriate fitter class is returned.
+    Arguments:
+    template -- an instance of LCTemplate
+    phases   -- list of photon phases
 
-        Keyword arguments:
-        weights      [None] optional photon weights
-        log10_ens    [None] optional photon energies (log10(E/MeV))
-        times        [None] optional photon arrival times
-        binned_bins  [100]  phase bins to use in binned likelihood
-        binned_ebins [8]    energy bins to use in binned likelihood
-        phase_shift  [0]    set this if a phase shift has been applied
+    Keyword arguments:
+    weights      [None] optional photon weights
+    log10_ens    [None] optional photon energies (log10(E/MeV))
+    times        [None] optional photon arrival times
+    binned_bins  [100]  phase bins to use in binned likelihood
+    binned_ebins [8]    energy bins to use in binned likelihood
+    phase_shift  [0]    set this if a phase shift has been applied
     """
     kwargs = dict(
         times=np.asarray(times), binned_bins=binned_bins, phase_shift=phase_shift
@@ -97,7 +97,7 @@ class UnweightedLCFitter:
         return False
 
     def _hist_setup(self):
-        """ Setup data for chi-squared and binned likelihood."""
+        """Setup data for chi-squared and binned likelihood."""
         h = hm(self.phases)
         nbins = 25
         if h > 100:
@@ -111,7 +111,7 @@ class UnweightedLCFitter:
         x = ((hist[1][1:] + hist[1][:-1]) / 2.0)[hist[0] > 0]
         counts = (hist[0][hist[0] > 0]).astype(float)
         y = counts / counts.sum() * nbins
-        yerr = counts ** 0.5 / counts.sum() * nbins
+        yerr = counts**0.5 / counts.sum() * nbins
         self.chistuff = x, y, yerr
         # now set up binning for binned likelihood
         nbins = self.binned_bins + 1
@@ -139,7 +139,7 @@ class UnweightedLCFitter:
         return -(self.counts * np.log(t(self.counts_centers))).sum()
 
     def __call__(self):
-        """ Shortcut for log likelihood at current param values."""
+        """Shortcut for log likelihood at current param values."""
         return self.loglikelihood(self.template.get_parameters())
 
     def unbinned_gradient(self, p, *args):
@@ -219,7 +219,7 @@ class UnweightedLCFitter:
             grad_func = self.gradient
 
         if overall_position_first:
-            """ do a brute force scan over profile down to <1mP."""
+            """do a brute force scan over profile down to <1mP."""
 
             def logl(phase):
                 self.template.set_overall_phase(phase)
@@ -331,12 +331,12 @@ class UnweightedLCFitter:
         dombest = min(dom, key=logl)
         ph1 = fmin(logl, [dombest], full_output=True, disp=0)[0][0]
         delta = 0.01
-        d2 = (logl(ph1 + delta) - 2 * logl(ph1) + logl(ph1 - delta)) / delta ** 2
+        d2 = (logl(ph1 + delta) - 2 * logl(ph1) + logl(ph1 - delta)) / delta**2
         self.template.set_overall_phase(ph1)
-        return ph1 - ph0, d2 ** -0.5
+        return ph1 - ph0, d2**-0.5
 
     def fit_background(self, unbinned=True):
-        """ Fit the background level, holding the ratios of the pulsed
+        """Fit the background level, holding the ratios of the pulsed
         components fixed but varying their total normalization."""
 
         self._set_unbinned(unbinned)
@@ -427,7 +427,7 @@ class UnweightedLCFitter:
         return fit
 
     def hess_errors(self, use_gradient=True):
-        """ Set errors from hessian.  Fit should be called first..."""
+        """Set errors from hessian.  Fit should be called first..."""
         p = self.template.get_parameters()
         nump = len(p)
         self.cov_matrix = np.zeros([nump, nump], dtype=float)
@@ -451,7 +451,7 @@ class UnweightedLCFitter:
             if np.all(d > 0):
                 self.cov_matrix = c1
                 # attempt to refine
-                h2 = hessian(self.template, self.loglikelihood, delt=d ** 0.5)
+                h2 = hessian(self.template, self.loglikelihood, delt=d**0.5)
                 try:
                     c2 = scipy.linalg.inv(h2)
                 except scipy.linalg.LinAlgError:
@@ -507,8 +507,8 @@ class UnweightedLCFitter:
         s = self.template.prof_string(outputfile=outputfile)
 
     def remove_component(self, index, steps=5, fit_kwargs={}):
-        """ Gradually remove a component from a model by refitting and
-            return new LCTemplate object."""
+        """Gradually remove a component from a model by refitting and
+        return new LCTemplate object."""
         if len(self.template) == 1:
             raise ValueError(
                 "Template only has one component -- removing it would be madness!"
@@ -559,7 +559,7 @@ class UnweightedLCFitter:
             weights=weights,
         )
         if weights is not None:
-            bg_level = 1 - (weights ** 2).sum() / weights.sum()
+            bg_level = 1 - (weights**2).sum() / weights.sum()
             axes.axhline(bg_level, color="k")
             # cod = template(dom)*(1-bg_level)+bg_level
             # axes.plot(dom,cod,color='blue')
@@ -607,7 +607,7 @@ class UnweightedLCFitter:
         pl.errorbar(
             x=(edges[1:] + edges[:-1]) / 2,
             y=counts - cod,
-            yerr=counts ** 0.5,
+            yerr=counts**0.5,
             ls=" ",
             marker="o",
             color="red",
@@ -618,9 +618,9 @@ class UnweightedLCFitter:
         pl.grid(True)
 
     def __getstate__(self):
-        """ Cannot pickle self.loglikelihood and self.gradient since
-            these are instancemethod objects.
-            See: http://mail.python.org/pipermail/python-list/2000-October/054610.html """
+        """Cannot pickle self.loglikelihood and self.gradient since
+        these are instancemethod objects.
+        See: http://mail.python.org/pipermail/python-list/2000-October/054610.html"""
         result = self.__dict__.copy()
         del result["loglikelihood"]
         del result["gradient"]
@@ -632,10 +632,10 @@ class UnweightedLCFitter:
         self.gradient = self.unbinned_gradient
 
     def aic(self, template=None):
-        """ Return the Akaike information criterion for the current state.
+        """Return the Akaike information criterion for the current state.
 
-            Note the sense of the statistic is such that more negative
-            implies a better fit."""
+        Note the sense of the statistic is such that more negative
+        implies a better fit."""
         if template is not None:
             template, self.template = self.template, template
         else:
@@ -646,13 +646,13 @@ class UnweightedLCFitter:
         return ts
 
     def bic(self, template=None):
-        """ Return the Bayesian information criterion for the current state.
+        """Return the Bayesian information criterion for the current state.
 
-            Note the sense of the statistic is such that more negative
-            implies a better fit.
+        Note the sense of the statistic is such that more negative
+        implies a better fit.
 
-            This should work for energy-dependent templates provided the
-            template and fitter match types."""
+        This should work for energy-dependent templates provided the
+        template and fitter match types."""
         if template is not None:
             template, self.template = self.template, template
         else:
@@ -669,7 +669,7 @@ class UnweightedLCFitter:
 
 class WeightedLCFitter(UnweightedLCFitter):
     def _hist_setup(self):
-        """ Setup binning for a quick chi-squared fit."""
+        """Setup binning for a quick chi-squared fit."""
         h = hmw(self.phases, self.weights)
         nbins = 25
         if h > 100:
@@ -681,7 +681,7 @@ class WeightedLCFitter(UnweightedLCFitter):
         )
         mask = counts > 0
         N = counts.sum()
-        self.bg_level = 1 - (self.weights ** 2).sum() / N
+        self.bg_level = 1 - (self.weights**2).sum() / N
         x = (bins[1:] + bins[:-1]) / 2
         y = counts / N * nbins
         yerr = errors / N * nbins
@@ -766,7 +766,7 @@ class WeightedLCFitter(UnweightedLCFitter):
 
 
 class ChiSqLCFitter:
-    """ Fit binned data with a gaussian likelihood."""
+    """Fit binned data with a gaussian likelihood."""
 
     def __init__(self, template, x, y, yerr, log10_ens=3, **kwargs):
         self.template = template
@@ -860,7 +860,7 @@ def hessian(m, mf, *args, **kwargs):
                 - mf(xhyl, m, *args)
                 - mf(xlyh, m, *args)
                 + mf(xlyl, m, *args)
-            ) / (p[i] * p[j] * 4 * delt ** 2)
+            ) / (p[i] * p[j] * 4 * delt**2)
 
     mf(
         p0, m, *args
@@ -869,7 +869,7 @@ def hessian(m, mf, *args, **kwargs):
 
 
 def get_errors(template, total, n=100):
-    """ This is, I think, for making MC estimates of TOA errors."""
+    """This is, I think, for making MC estimates of TOA errors."""
     from scipy.optimize import fmin
 
     ph0 = template.get_location()
@@ -893,13 +893,13 @@ def get_errors(template, total, n=100):
         mean += logl(phi0 + delta, ph) - logl(phi0, ph)
         errors[i] = (
             logl(phi0 + delta, ph) - fopt * 2 + logl(phi0 - delta, ph)
-        ) / delta ** 2
+        ) / delta**2
         my_delta = errors[i] ** -0.5
         errors_r[i] = (
             logl(phi0 + my_delta, ph) - fopt * 2 + logl(phi0 - my_delta, ph)
-        ) / my_delta ** 2
+        ) / my_delta**2
     print("Mean: %.2f" % (mean / n))
-    return fitvals - ph0, errors ** -0.5, errors_r ** -0.5
+    return fitvals - ph0, errors**-0.5, errors_r**-0.5
 
 
 def make_err_plot(template, totals=[10, 20, 50, 100, 500], n=1000):
@@ -919,7 +919,7 @@ def make_err_plot(template, totals=[10, 20, 50, 100, 500], n=1000):
             density=True,
             label="N = %d" % tot,
         )
-    g = lambda x: (np.pi * 2) ** -0.5 * np.exp(-(x ** 2) / 2)
+    g = lambda x: (np.pi * 2) ** -0.5 * np.exp(-(x**2) / 2)
     dom = np.linspace(-5, 5, 101)
     pl.plot(dom, g(dom), color="k")
     pl.legend()
@@ -927,10 +927,10 @@ def make_err_plot(template, totals=[10, 20, 50, 100, 500], n=1000):
 
 
 def approx_gradient(fitter, eps=1e-6):
-    """ Numerically approximate the gradient of an instance of one of the
-        light curve fitters.
+    """Numerically approximate the gradient of an instance of one of the
+    light curve fitters.
 
-        TODO -- potentially merge this with the code in lcprimitives"""
+    TODO -- potentially merge this with the code in lcprimitives"""
     func = fitter.template
     orig_p = func.get_parameters(free=True).copy()
     g = np.zeros([len(orig_p)])
@@ -952,17 +952,17 @@ def approx_gradient(fitter, eps=1e-6):
 
 
 def hess_from_grad(grad, par, step=1e-3, iterations=2):
-    """ Use gradient to compute hessian.  Proceed iteratively to take steps
-        roughly equal to the 1-sigma errors.
+    """Use gradient to compute hessian.  Proceed iteratively to take steps
+    roughly equal to the 1-sigma errors.
 
-        The initial step can be:
-            [scalar] use the same step for the initial iteration
-            [array] specify a step for each parameters.
-        """
+    The initial step can be:
+        [scalar] use the same step for the initial iteration
+        [array] specify a step for each parameters.
+    """
 
     def mdet(M):
-        """ Return determinant of M.
-            Use a Laplace cofactor expansion along first row."""
+        """Return determinant of M.
+        Use a Laplace cofactor expansion along first row."""
         n = M.shape[0]
         if n == 2:
             return M[0, 0] * M[1, 1] - M[0, 1] * M[1, 0]
@@ -977,7 +977,7 @@ def hess_from_grad(grad, par, step=1e-3, iterations=2):
         return rvals
 
     def minv(M):
-        """ Return inverse of M, using cofactor expansion."""
+        """Return inverse of M, using cofactor expansion."""
         n = M.shape[0]
         C = np.empty_like(M)
         for i in range(n):

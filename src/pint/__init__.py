@@ -63,7 +63,7 @@ __version__ = get_versions()["version"]
 ls = u.def_unit("ls", c.c * 1.0 * u.s)
 
 # DM unit (pc cm^-3)
-dmu = u.def_unit("dmu", u.pc * u.cm ** -3)
+dmu = u.def_unit("dmu", u.pc * u.cm**-3)
 
 # define equivalency for astropy units
 light_second_equivalency = [(ls, si.second, lambda x: x, lambda x: x)]
@@ -72,10 +72,10 @@ hourangle_second = u.def_unit("hourangle_second", u.hourangle / np.longdouble(36
 
 # Following are from here:
 # http://ssd.jpl.nasa.gov/?constants (grabbed on 30 Dec 2013)
-GMsun = 1.32712440018e20 * u.m ** 3 / u.s ** 2
+GMsun = 1.32712440018e20 * u.m**3 / u.s**2
 
 # Solar mass in time units (sec)
-Tsun = (GMsun / c.c ** 3).to(u.s)
+Tsun = (GMsun / c.c**3).to(u.s)
 
 # Planet system(!) masses in time units
 Tmercury = Tsun / 6023600.0

@@ -185,8 +185,8 @@ def test_null_vector(Fitter):
         model,
         obs="barycenter",
         freq=1400.0 * u.MHz,
-        dm=15.0 * u.pc / u.cm ** 3,
-        dm_error=1e-4 * u.pc * u.cm ** -3,
+        dm=15.0 * u.pc / u.cm**3,
+        dm_error=1e-4 * u.pc * u.cm**-3,
     )
     fitter = Fitter(toas, model)
     with pytest.warns(

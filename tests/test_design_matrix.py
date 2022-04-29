@@ -28,7 +28,7 @@ class TestDesignMatrix:
         self.test_param_lite = ["F0", "ELONG", "ELAT", "DMX_0023", "JUMP1", "DMJUMP2"]
         self.phase_designmatrix_maker = DesignMatrixMaker("phase", u.Unit(""))
         self.toa_designmatrix_maker = DesignMatrixMaker("toa", u.s)
-        self.dm_designmatrix_maker = DesignMatrixMaker("dm", u.pc / u.cm ** 3)
+        self.dm_designmatrix_maker = DesignMatrixMaker("dm", u.pc / u.cm**3)
         self.noise_designmatrix_maker = DesignMatrixMaker("toa_noise", u.s)
 
     def test_make_phase_designmatrix(self):

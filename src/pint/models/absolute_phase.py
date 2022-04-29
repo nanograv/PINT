@@ -116,7 +116,7 @@ class AbsPhase(PhaseComponent):
         return tz
 
     def make_TZR_toa(self, toas):
-        """ Calculate the TZRMJD if one not given.
+        """Calculate the TZRMJD if one not given.
 
         TZRMJD = first toa after PEPOCH.
         """

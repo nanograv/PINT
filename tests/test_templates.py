@@ -7,11 +7,11 @@ from pint.templates import lcfitters, lcprimitives, lctemplate
 
 
 def gauss(x, x0, s):
-    return 1.0 / s / (2 * np.pi) ** 0.5 * np.exp(-0.5 * (x - x0) ** 2 / s ** 2)
+    return 1.0 / s / (2 * np.pi) ** 0.5 * np.exp(-0.5 * (x - x0) ** 2 / s**2)
 
 
 def test_prim_gauss_definition():
-    """ Make sure objects adequately implement mathematical intent."""
+    """Make sure objects adequately implement mathematical intent."""
 
     # instantiate a basic gaussian with known parameters and make sure
     # it "looks" like a gaussian.  Remember that these are wrapped, so
@@ -42,7 +42,7 @@ def test_prim_gauss_wrapping():
 
 
 def test_template_basic_functionality():
-    """ Make sure objects adequately implement mathematical intent."""
+    """Make sure objects adequately implement mathematical intent."""
 
     # a template should *always* have total normalization set to 1
     lct = lctemplate.get_gauss2(
@@ -62,7 +62,7 @@ def test_template_basic_functionality():
 
 
 def test_template_string_representation():
-    """ Exercise print functions."""
+    """Exercise print functions."""
     lct = lctemplate.get_gauss2(
         pulse_frac=0.6, x1=0.5, x2=0.48, ratio=0.25 / 0.35, width1=0.01, width2=0.01
     )
@@ -99,7 +99,7 @@ def test_template_simulation():
 
 
 def test_simple_fit_unbinned():
-    """ Make sure objects adequately implement mathematical intent."""
+    """Make sure objects adequately implement mathematical intent."""
 
     lct = lctemplate.get_gauss2()
 
@@ -133,7 +133,7 @@ Delta   : 0.4486 +\- 0.0016
 
 
 def test_simple_fit_binned():
-    """ Make sure objects adequately implement mathematical intent."""
+    """Make sure objects adequately implement mathematical intent."""
 
     lct = lctemplate.get_gauss2()
 

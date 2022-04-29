@@ -147,7 +147,7 @@ def test_flags(s):
 
 def test_pulse_number():
     t = get_TOAs(StringIO(basic_tim_header + basic_tim))
-    t.table["pulse_number"] = np.random.randint(10 ** 9, size=t.ntoas)
+    t.table["pulse_number"] = np.random.randint(10**9, size=t.ntoas)
     do_roundtrip(t)
 
 

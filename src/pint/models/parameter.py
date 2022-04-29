@@ -454,9 +454,10 @@ class Parameter:
 
         .. [1] https://github.com/nanograv/PINT/wiki/PINT-vs.-TEMPO%282%29-par-file-changes
         """
-        assert format.lower() in _parfile_formats, (
-            "parfile format must be one of %s"
-            % ", ".join(['"%s"' % x for x in _parfile_formats])
+        assert (
+            format.lower() in _parfile_formats
+        ), "parfile format must be one of %s" % ", ".join(
+            ['"%s"' % x for x in _parfile_formats]
         )
 
         # Don't print unset parameters
@@ -948,7 +949,7 @@ class intParameter(Parameter):
             except ValueError:
                 fval = float(val)
                 ival = int(fval)
-                if ival != fval and abs(fval) < 2 ** 52:
+                if ival != fval and abs(fval) < 2**52:
                     raise ValueError(
                         f"Value {val} does not appear to be an integer "
                         f"but parameter {self.name} stores only integers."
@@ -957,7 +958,7 @@ class intParameter(Parameter):
         else:
             ival = int(val)
             fval = float(val)
-            if ival != fval and abs(fval) < 2 ** 52:
+            if ival != fval and abs(fval) < 2**52:
                 raise ValueError(
                     f"Value {val} does not appear to be an integer "
                     f"but parameter {self.name} stores only integers."
@@ -1789,9 +1790,10 @@ class maskParameter(floatParameter):
         return True
 
     def as_parfile_line(self, format="pint"):
-        assert format.lower() in _parfile_formats, (
-            "parfile format must be one of %s"
-            % ", ".join(['"%s"' % x for x in _parfile_formats])
+        assert (
+            format.lower() in _parfile_formats
+        ), "parfile format must be one of %s" % ", ".join(
+            ['"%s"' % x for x in _parfile_formats]
         )
 
         if self.quantity is None:

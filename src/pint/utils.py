@@ -490,11 +490,11 @@ def pmtot(model):
     """
 
     if "AstrometryEcliptic" in model.components.keys():
-        return np.sqrt(model.PMELONG.quantity ** 2 + model.PMELAT.quantity ** 2).to(
+        return np.sqrt(model.PMELONG.quantity**2 + model.PMELAT.quantity**2).to(
             u.mas / u.yr
         )
     elif "AstrometryEquatorial" in model.components.keys():
-        return np.sqrt(model.PMRA.quantity ** 2 + model.PMDEC.quantity ** 2).to(
+        return np.sqrt(model.PMRA.quantity**2 + model.PMDEC.quantity**2).to(
             u.mas / u.yr
         )
     else:
@@ -672,7 +672,7 @@ def dmx_ranges_old(
                 parameter_type="float",
                 name="DMX_{:04d}".format(ii + 1),
                 value=0.0,
-                units=u.pc / u.cm ** 3,
+                units=u.pc / u.cm**3,
                 frozen=False,
             )
             dmx_comp.add_param(dmx_par, setup=True)
@@ -783,7 +783,7 @@ def dmx_ranges(toas, divide_freq=1000.0 * u.MHz, binwidth=15.0 * u.d, verbose=Fa
                 parameter_type="float",
                 name="DMX_{:04d}".format(ii + 1),
                 value=0.0,
-                units=u.pc / u.cm ** 3,
+                units=u.pc / u.cm**3,
                 frozen=False,
             )
             dmx_comp.add_param(dmx_par, setup=True)
@@ -1060,7 +1060,7 @@ def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
         wmean = float(inputmean)
     # how should error be calculated?
     if calcerr:
-        werr2 = (weights ** 2 * (arr - wmean) ** 2).sum()
+        werr2 = (weights**2 * (arr - wmean) ** 2).sum()
         werr = np.sqrt(werr2) / wtot
     else:
         werr = 1.0 / np.sqrt(wtot)
@@ -1103,7 +1103,7 @@ def ELL1_check(
         If outstring is True then returns a string summary instead.
 
     """
-    lhs = A1 / const.c * E ** 2.0
+    lhs = A1 / const.c * E**2.0
     rhs = TRES / np.sqrt(NTOA)
     if outstring:
         s = "Checking applicability of ELL1 model -- \n"
@@ -1586,8 +1586,7 @@ def colorize(text, fg_color, bg_color=None, attribute=None):
 
 
 def print_color_examples():
-    """Print example terminal colors and attributes for/using :func:`~pint.utils.colorize`
-    """
+    """Print example terminal colors and attributes for/using :func:`~pint.utils.colorize`"""
     for att in TEXT_ATTRIBUTES:
         for fg in COLOR_NAMES:
             for bg in COLOR_NAMES:

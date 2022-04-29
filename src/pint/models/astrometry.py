@@ -102,7 +102,7 @@ class Astrometry(DelayComponent):
         else:
             osv = -tbl["ssb_obs_pos"].quantity.copy()
         psr_vec = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"])
-        r = (osv ** 2).sum(axis=1) ** 0.5
+        r = (osv**2).sum(axis=1) ** 0.5
         osv /= r[:, None]
         cos = (osv * psr_vec).sum(axis=1)
         if also_distance:
@@ -136,7 +136,7 @@ class Astrometry(DelayComponent):
                     * tbl["ssb_obs_pos"].unit ** 2
                 )
                 delay[c] += (
-                    (0.5 * (re_sqr / L) * (1.0 - re_dot_L ** 2 / re_sqr)).to(ls).value
+                    (0.5 * (re_sqr / L) * (1.0 - re_dot_L**2 / re_sqr)).to(ls).value
                 )
         return delay * u.second
 
@@ -158,7 +158,7 @@ class Astrometry(DelayComponent):
         ssb_psr = self.ssb_to_psb_xyz_ICRS(epoch=np.array(rd["epoch"]))
 
         # Cartesian coordinates, and derived quantities
-        rd["ssb_obs_r"] = np.sqrt(np.sum(ssb_obs ** 2, axis=1))
+        rd["ssb_obs_r"] = np.sqrt(np.sum(ssb_obs**2, axis=1))
         rd["ssb_obs_z"] = ssb_obs[:, 2]
         rd["ssb_obs_xy"] = np.sqrt(ssb_obs[:, 0] ** 2 + ssb_obs[:, 1] ** 2)
         rd["ssb_obs_x"] = ssb_obs[:, 0]
@@ -202,7 +202,7 @@ class Astrometry(DelayComponent):
         rd = self.get_d_delay_quantities(toas)
 
         px_r = np.sqrt(rd["ssb_obs_r"] ** 2 - rd["in_psr_obs"] ** 2)
-        dd_dpx = 0.5 * (px_r ** 2 / (u.AU * const.c)) * (u.mas / u.radian)
+        dd_dpx = 0.5 * (px_r**2 / (u.AU * const.c)) * (u.mas / u.radian)
 
         # We want to return sec / mas
         return dd_dpx.decompose(u.si.bases) / u.mas

@@ -1240,7 +1240,7 @@ class TOAs:
         for different observatories. There is a dictionary ``tempo_aliases``
         available to use names as compatible with TEMPO as possible.
     wideband : bool
-        Whether the TOAs also have wideband DM information 
+        Whether the TOAs also have wideband DM information
     """
 
     def __init__(self, toafile=None, toalist=None):

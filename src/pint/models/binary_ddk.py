@@ -47,7 +47,9 @@ class BinaryDDK(BinaryDD):
 
     register = True
 
-    def __init__(self,):
+    def __init__(
+        self,
+    ):
         super(BinaryDDK, self).__init__()
         self.binary_model_name = "DDK"
         self.binary_model_class = DDKmodel
@@ -131,7 +133,7 @@ class BinaryDDK(BinaryDD):
         :math:`KOM_0 = \\tan^{-1} (\mu_{\delta} / \mu_{\\alpha})`
 
         The solutions are then:
-        
+
         :math:`(KIN, KOM)`
 
         :math:`(KIN, 2KOM_0 - KOM - 180^{\circ})`
