@@ -6,7 +6,7 @@ the fit, adjust the model, and repeat the fit as necessary.
 The primary objects of interest will be :class:`pint.fitter.WLSFitter` for
 basic fitting, :class:`pint.fitter.GLSFitter` for fitting with noise models
 that imply correlated errors, and :class:`pint.fitter.WidebandTOAFitter` for
-TOAs that contain DM information.
+TOAs that contain DM information.  However, the Downhill fitter variants may offer better convergence.
 
 Fitters in use::
 
@@ -52,6 +52,10 @@ Fitters in use::
     Magnetic field at light cylinder = 4806 G
     Spindown Edot = 2.868e+33 erg / s (I=1e+45 cm2 g)
 
+To automatically select a fitter based on the properties of the data and model::
+
+    >>> fitter = Fitter.auto(toas, model)
+    
 """
 import collections
 import copy
@@ -82,6 +86,7 @@ from pint.utils import FTest
 
 __all__ = [
     "Fitter",
+    "auto",
     "WLSFitter",
     "GLSFitter",
     "WidebandTOAFitter",
@@ -185,6 +190,8 @@ class Fitter:
     The Fitter also caches a copy of the original model so it can be restored
     with ``reset_model()``.
 
+    Try :func:`pint.fitter.Fitter.auto` to automatically get the appropriate fitter type
+
     Attributes
     ----------
     model : :class:`pint.models.timing_model.TimingModel`
@@ -223,6 +230,95 @@ class Fitter:
         self.method = None
         self.is_wideband = False
         self.converged = False
+
+    @classmethod
+    def auto(
+        self, toas, model, downhill=True, track_mode=None, residuals=None, **kwargs
+    ):
+        """Automatically return the proper :class:`pint.fitter.Fitter` object depending on the TOAs and model.
+
+        In general the `downhill` fitters are to be preferred.  See https://github.com/nanograv/PINT/wiki/How-To#choose-a-fitter for the logic used.
+
+        Parameters
+        ----------
+        toas : a pint TOAs instance
+            The input toas.
+        model : a pint timing model instance
+            The initial timing model for fitting.
+        downhill : bool, optional
+            Whether or not to use the downhill fitter variant
+        track_mode : str, optional
+            How to handle phase wrapping. This is used when creating
+            :class:`pint.residuals.Residuals` objects, and its meaning is defined there.
+        residuals : :class:`pint.residuals.Residuals`
+            Initial residuals. This argument exists to support an optimization, where
+            ``GLSFitter`` is used to compute ``chi2`` for appropriate Residuals objects.
+
+        Returns
+        -------
+        :class:`pint.fitter.Fitter`
+            Returns appropriate subclass
+        """
+        if toas.wideband:
+            if downhill:
+                log.info(
+                    f"For wideband TOAs and downhill fitter, returning 'WidebandDownhillFitter'"
+                )
+                return WidebandDownhillFitter(
+                    toas, model, track_mode=track_mode, residuals=residuals, **kwargs
+                )
+            else:
+                log.info(
+                    f"For wideband TOAs and non-downhill fitter, returning 'WidebandTOAFitter'"
+                )
+                return WidebandTOAFitter(toas, model, track_mode=track_mode, **kwargs)
+        else:
+            if model.has_correlated_errors:
+                if downhill:
+                    log.info(
+                        f"For narrowband TOAs with correlated errors and downhill fitter, returning 'DownhillGLSFitter'"
+                    )
+                    return DownhillGLSFitter(
+                        toas,
+                        model,
+                        track_mode=track_mode,
+                        residuals=residuals,
+                        **kwargs,
+                    )
+                else:
+                    log.info(
+                        f"For narrowband TOAs with correlated errors and non-downhill fitter, returning 'GLSFitter'"
+                    )
+                    return GLSFitter(
+                        toas,
+                        model,
+                        track_mode=track_mode,
+                        residuals=residuals,
+                        **kwargs,
+                    )
+            else:
+                if downhill:
+                    log.info(
+                        f"For narrowband TOAs without correlated errors and downhill fitter, returning 'DownhillWLSFitter'"
+                    )
+                    return DownhillWLSFitter(
+                        toas,
+                        model,
+                        track_mode=track_mode,
+                        residuals=residuals,
+                        **kwargs,
+                    )
+                else:
+                    log.info(
+                        f"For narrowband TOAs without correlated errors and non-downhill fitter, returning 'WLSFitter'"
+                    )
+                    return WLSFitter(
+                        toas,
+                        model,
+                        track_mode=track_mode,
+                        residuals=residuals,
+                        **kwargs,
+                    )
 
     def fit_toas(self, maxiter=None, debug=False):
         """Run fitting operation.

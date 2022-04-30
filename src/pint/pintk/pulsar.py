@@ -103,7 +103,18 @@ class Pulsar:
         # Set of indices from original list that are deleted
         # We use indices because of the grouping of TOAs by observatory
         self.deleted = set([])
-        self.fit_method = fitter
+        if fitter == "auto":
+            self.fit_method = self.getDefaultFitter(downhill=False)
+            log.info(
+                f"Since wideband={self.all_toas.wideband} and correlated={self.prefit_model.has_correlated_errors}, selecting fitter={self.fit_method}"
+            )
+        elif fitter == "downhill":
+            self.fit_method = self.getDefaultFitter(downhill=True)
+            log.info(
+                f"Since wideband={self.all_toas.wideband} and correlated={self.prefit_model.has_correlated_errors}, selecting Downhill fitter={self.fit_method}"
+            )
+        else:
+            self.fit_method = fitter
         self.fitter = None
         self.fitted = False
         self.stashed = None  # for temporarily stashing some TOAs
@@ -418,6 +429,24 @@ class Pulsar:
             getattr(self.postfit_model, param[-1].name).frozen = False
             self.postfit_model.components["PhaseJump"].setup()
         return retval
+
+    def getDefaultFitter(self, downhill=False):
+        if self.all_toas.wideband:
+            if downhill:
+                return "WidebandDownhillFitter"
+            else:
+                return "WidebandTOAFitter"
+        else:
+            if self.prefit_model.has_correlated_errors:
+                if downhill:
+                    return "DownhillGLSFitter"
+                else:
+                    return "GLSFitter"
+            else:
+                if downhill:
+                    return "DownhillWLSFitter"
+                else:
+                    return "WLSFitter"
 
     def fit(self, selected, iters=4, compute_random=False):
         """

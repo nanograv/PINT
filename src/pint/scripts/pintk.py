@@ -40,7 +40,7 @@ class PINTk:
         master,
         parfile=None,
         timfile=None,
-        fitter="GLSFitter",
+        fitter="auto",
         ephem=None,
         loglevel=None,
         **kwargs,
@@ -127,7 +127,7 @@ class PINTk:
                 self.mainFrame.grid_columnconfigure(col, weight=1)
                 visible += 1
 
-    def openPulsar(self, parfile, timfile, fitter="GLSFitter", ephem=None):
+    def openPulsar(self, parfile, timfile, fitter="auto", ephem=None):
         self.psr = Pulsar(parfile, timfile, ephem, fitter=fitter)
         self.widgets["plk"].setPulsar(
             self.psr,
@@ -184,6 +184,8 @@ def main(argv=None):
         "--fitter",
         type=str,
         choices=(
+            "auto",
+            "downhill",
             "WLSFitter",
             "GLSFitter",
             "WidebandTOAFitter",
@@ -193,8 +195,8 @@ def main(argv=None):
             "WidebandDownhillFitter",
             "WidebandLMFitter",
         ),
-        default="GLSFitter",
-        help="PINT Fitter to use",
+        default="auto",
+        help="PINT Fitter to use [default='auto'].  'auto' will choose WLS/GLS/WidebandTOA depending on TOA/model properties.  'downhill' will do the same for Downhill versions.",
     )
     parser.add_argument(
         "-v",
