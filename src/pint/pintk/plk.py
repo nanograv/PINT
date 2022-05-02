@@ -1317,7 +1317,7 @@ class PlkWidget(tk.Frame):
             self.call_updates()
             log.info("Pulse number for selected points increased.")
         elif event.key in [">", ".", "<", ","]:
-            if np.sum(self.selected) > 0:
+            if np.sum(self.selected):
                 later = (
                     self.psr.selected_toas.get_mjds().max()
                     < self.psr.all_toas.get_mjds()
