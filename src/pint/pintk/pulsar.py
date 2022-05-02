@@ -212,7 +212,7 @@ class Pulsar:
         self.prefit_resids = Residuals(
             self.all_toas, self.prefit_model, track_mode=track_mode
         )
-        if self.selected_toas.ntoas != self.all_toas.ntoas:
+        if self.selected_toas.ntoas and self.selected_toas.ntoas != self.all_toas.ntoas:
             self.selected_prefit_resids = Residuals(
                 self.selected_toas, self.prefit_model, track_mode=track_mode
             )
