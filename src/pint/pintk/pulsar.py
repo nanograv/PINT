@@ -606,7 +606,6 @@ class Pulsar:
         # Combine our TOAs
         toas = merge_TOAs([sim_sel, self.faketoas1])
         zero_residuals(toas, self.postfit_model)
-        toas.table.sort("tdbld")  # for plotting
 
         # Get a selection array to select the non-fake TOAs
         refs = np.asarray(toas.get_flag_value("name")[0]) != "fake"

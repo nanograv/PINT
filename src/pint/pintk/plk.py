@@ -1014,7 +1014,11 @@ class PlkWidget(tk.Frame):
         self.plkAxes.set_title(self.psr.name, y=1.1)
 
         # plot random models
-        if self.psr.fitted == True and self.randomboxWidget.getRandomModel() == 1:
+        if (
+            self.randomboxWidget.getRandomModel() == 1
+            and self.psr.fitted == True
+            and hasattr(self.psr, "random_resids")
+        ):
             log.info("Plotting random models")
             f_toas = self.psr.faketoas
             rs = self.psr.random_resids
@@ -1030,8 +1034,13 @@ class PlkWidget(tk.Frame):
                 scale = 10**6
             elif self.yvals.unit == u.ms:
                 scale = 10**3
+            # Want to plot things in sorted order
+            sort_inds = np.argsort(f_toas_plot)
+            f_toas_plot = f_toas_plot[sort_inds]
             for i in range(len(rs)):
-                self.plkAxes.plot(f_toas_plot, rs[i] * scale, "-k", alpha=0.3)
+                self.plkAxes.plot(
+                    f_toas_plot, rs[i][sort_inds] * scale, "-k", alpha=0.3
+                )
 
     def determine_yaxis_units(self, miny, maxy):
         """Checks range of residuals and converts units if range sufficiently large/small."""
