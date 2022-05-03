@@ -75,6 +75,7 @@ debug_color = "<fg #b790d4><bold>"
 # filter  warnings globally like
 # ErfaWarning: ERFA function "pmsafe" yielded 89 of "distance overridden (Note 6)"
 # these don't get emitted by the logger but still get through the warn() function
+# would be better to find where these are emitted
 warnings.filterwarnings(
     "ignore",
     message='ERFA function "pmsafe" yielded',
