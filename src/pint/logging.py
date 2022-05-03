@@ -78,7 +78,7 @@ def warn(message, *args, **kwargs):
     """
     # print(f"message={message} args={args} kwargs={kwargs}")
     # check to see if a standard warning filter has already been inserted that would catch whatever this is
-    # this isn't the exact same implementation as the standard filter
+    # this isn't the exact same implementation as the standard filter because we don't get all of the relevant pieces
     # but it works for ignoring
     for filter in warnings.filters:
         action, msg, cat, mod, ln = filter
@@ -93,6 +93,18 @@ def warn(message, *args, **kwargs):
             and (
                 len(args) > 0
                 and ((msg is None or msg.match(message)) and issubclass(args[0], cat))
+            )
+            and action == "ignore"
+        ):
+            return
+        if (
+            (mod is not None)
+            and (
+                "category" in kwargs
+                and (
+                    (msg is None or msg.match(message))
+                    and mod.match(kwargs["category"])
+                )
             )
             and action == "ignore"
         ):
