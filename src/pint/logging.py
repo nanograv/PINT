@@ -50,6 +50,11 @@ import sys
 import warnings
 from loguru import logger as log
 
+try:
+    from erfa import ErfaWarning
+except ImportError:
+    from astropy._erfa import ErfaWarning
+
 __all__ = [
     "LogFilter",
 ]
@@ -67,7 +72,14 @@ debug_color = "<fg #b790d4><bold>"
 # Other formatting:
 # https://loguru.readthedocs.io/en/stable/api/logger.html#color
 
-
+# filter  warnings globally like
+# ErfaWarning: ERFA function "pmsafe" yielded 89 of "distance overridden (Note 6)"
+# these don't get emitted by the logger but still get through the warn() function
+warnings.filterwarnings(
+    "ignore",
+    message='ERFA function "pmsafe" yielded',
+    category=ErfaWarning,
+)
 warn_ = warnings.warn
 
 
@@ -102,6 +114,7 @@ def warn(message, *args, **kwargs):
         log.warning(f"{kwargs['category']} {message}")
     else:
         log.warning(f"{message}")
+    warn_(message, *args, **kwargs)
 
 
 warnings.warn = warn
