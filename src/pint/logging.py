@@ -97,18 +97,6 @@ def warn(message, *args, **kwargs):
             and action == "ignore"
         ):
             return
-        if (
-            (mod is not None)
-            and (
-                "category" in kwargs
-                and (
-                    (msg is None or msg.match(message))
-                    and mod.match(kwargs["category"])
-                )
-            )
-            and action == "ignore"
-        ):
-            return
     if len(args) > 0:
         log.warning(f"{args[0]} {message}")
     elif "category" in kwargs:
