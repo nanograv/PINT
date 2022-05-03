@@ -76,8 +76,6 @@ def warn(message, *args, **kwargs):
     Want ``loguru`` to capture warnings emitted by ``warnings.warn``.
     See https://loguru.readthedocs.io/en/stable/resources/recipes.html#capturing-standard-stdout-stderr-and-warnings
     """
-    print(f"message={message} args={args} kwargs={kwargs}")
-    print(args[0].__class__)
     # check to see if a standard warning filter has already been inserted that would catch whatever this is
     # this isn't the exact same implementation as the standard filter because we don't get all of the relevant pieces
     # but it works for ignoring
