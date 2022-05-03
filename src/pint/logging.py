@@ -112,7 +112,7 @@ class LogFilter:
     Define some messages that are never seen (e.g., Deprecation Warnings).
     Others that will only be seen once.  Filtering of those is done on the basis of regular expressions."""
 
-    def __init__(self, onlyonce=None, never=None, onlyonce_level="WARNING"):
+    def __init__(self, onlyonce=None, never=None, onlyonce_level="INFO"):
         """
         Define regexs for messages that will only be seen once.  Use ``\S+`` for a variable that might change.
         If a message comes through with a new value for that variable, it will be seen.
@@ -159,6 +159,7 @@ class LogFilter:
             "Column \S+ already exists. Removing...": False,
             "Skipping Shapiro delay for Barycentric TOAs": False,
             "Special observatory location. No clock corrections applied.": False,
+            "DDK model uses KIN as inclination angle. SINI will not be used. This happens every time a DDK model is constructed.": False,
         }
         # add in any more defined on init
         if onlyonce is not None:
