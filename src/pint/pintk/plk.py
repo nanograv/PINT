@@ -802,11 +802,11 @@ class PlkWidget(tk.Frame):
             with open(filename, "w") as fout:
                 if self.psr.fitted:
                     fout.write(self.psr.postfit_model.as_parfile(format=format))
-                    log.info(f"Saved post-fit parfile to {filename}")
+                    log.info(f"Saved post-fit parfile to {filename} in {format} format")
                 else:
                     fout.write(self.psr.prefit_model.as_parfile(format=format))
                     log.warning(
-                        f"Pulsar has not been fitted! Saving pre-fit parfile to {filename}"
+                        f"Pulsar has not been fitted! Saving pre-fit parfile to {filename} in {format} format"
                     )
 
         except:
