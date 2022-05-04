@@ -74,6 +74,18 @@ class PINTk:
         self.fileMenu.add_command(label="Open par/tim", command=self.openParTim)
         self.fileMenu.add_command(label="Switch model", command=self.switchModel)
         self.fileMenu.add_command(label="Switch TOAs", command=self.switchTOAs)
+        parfile_submenu = tk.Menu(self.fileMenu)
+        parfile_submenu.add_command(
+            label="Write par (pint format)", command=self.writeParPINT
+        )
+        parfile_submenu.add_command(
+            label="Write par (tempo2 format)", command=self.writeParTempo2
+        )
+        parfile_submenu.add_command(
+            label="Write par (tempo format)", command=self.writeParTempo
+        )
+        self.fileMenu.add_cascade(label="Write par...", menu=parfile_submenu)
+        self.fileMenu.add_command(label="Write tim", command=self.writeTim)
         self.fileMenu.add_command(label="Exit", command=top.destroy)
         self.menuBar.add_cascade(label="File", menu=self.fileMenu)
 
@@ -154,6 +166,18 @@ class PINTk:
         parfile = tkFileDialog.askopenfilename(title="Open par file")
         timfile = tkFileDialog.askopenfilename(title="Open tim file")
         self.openPulsar(parfile, timfile)
+
+    def writeParPINT(self):
+        self.widgets["plk"].writePar(format="pint")
+
+    def writeParTempo(self):
+        self.widgets["plk"].writePar(format="tempo")
+
+    def writeParTempo2(self):
+        self.widgets["plk"].writePar(format="tempo2")
+
+    def writeTim(self):
+        self.widgets["plk"].writeTim()
 
     def toggle(self, key):
         self.active[key].set((self.active[key].get() + 1) % 2)

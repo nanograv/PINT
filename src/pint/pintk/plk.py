@@ -793,7 +793,7 @@ class PlkWidget(tk.Frame):
         self.state_stack = [self.base_state]
         self.call_updates(psr_update=True)
 
-    def writePar(self):
+    def writePar(self, format="pint"):
         """
         Write the fit parfile to ea file
         """
@@ -801,10 +801,10 @@ class PlkWidget(tk.Frame):
         try:
             with open(filename, "w") as fout:
                 if self.psr.fitted:
-                    fout.write(self.psr.postfit_model.as_parfile())
+                    fout.write(self.psr.postfit_model.as_parfile(format=format))
                     log.info(f"Saved post-fit parfile to {filename}")
                 else:
-                    fout.write(self.psr.prefit_model.as_parfile())
+                    fout.write(self.psr.prefit_model.as_parfile(format=format))
                     log.warning(
                         f"Pulsar has not been fitted! Saving pre-fit parfile to {filename}"
                     )
