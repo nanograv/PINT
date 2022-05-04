@@ -71,7 +71,12 @@ class PINTk:
         top["menu"] = self.menuBar
 
         self.fileMenu = tk.Menu(self.menuBar)
-        self.fileMenu.add_command(label="Open par/tim", command=self.openParTim)
+        self.fileMenu.add_command(
+            label="Open par/tim",
+            command=self.openParTim,
+            underline=0,
+            accelerator="Ctrl+O",
+        )
         self.fileMenu.add_command(label="Switch model", command=self.switchModel)
         self.fileMenu.add_command(label="Switch TOAs", command=self.switchTOAs)
         parfile_submenu = tk.Menu(self.fileMenu)
@@ -93,35 +98,42 @@ class PINTk:
             label="Write tim (tempo format)", command=self.writeTimTempo
         )
         self.fileMenu.add_cascade(label="Write tim...", menu=timfile_submenu)
-        self.fileMenu.add_command(label="Exit", command=top.destroy)
-        self.menuBar.add_cascade(label="File", menu=self.fileMenu)
+        self.fileMenu.add_command(label="Exit", command=top.destroy, accelerator="q")
+        self.menuBar.add_cascade(label="File", menu=self.fileMenu, underline=0)
 
         self.viewMenu = tk.Menu(self.menuBar)
         self.viewMenu.add_checkbutton(
-            label="Plk (C-p)", command=self.updateLayout, variable=self.active["plk"]
+            label="Plk",
+            command=self.updateLayout,
+            variable=self.active["plk"],
+            accelerator="Ctrl+p",
         )
         self.viewMenu.add_checkbutton(
-            label="Model Editor (C-m)",
+            label="Model Editor",
             command=self.updateLayout,
             variable=self.active["par"],
+            accelerator="Ctrl+m",
         )
         self.viewMenu.add_checkbutton(
-            label="TOAs Editor (C-t)",
+            label="TOAs Editor",
             command=self.updateLayout,
             variable=self.active["tim"],
+            accelerator="Ctrl+t",
         )
         self.menuBar.add_cascade(label="View", menu=self.viewMenu)
 
         self.helpMenu = tk.Menu(self.menuBar)
         self.helpMenu.add_command(label="About", command=self.about)
-        self.helpMenu.add_command(label="Plk Help", command=lambda: print(helpstring))
+        self.helpMenu.add_command(
+            label="PINTk Help", command=lambda: print(helpstring), accelerator="h"
+        )
         self.menuBar.add_cascade(label="Help", menu=self.helpMenu)
 
         # Key bindings
         top.bind("<Control-p>", lambda e: self.toggle("plk"))
         top.bind("<Control-m>", lambda e: self.toggle("par"))
         top.bind("<Control-t>", lambda e: self.toggle("tim"))
-        top.bind("<Control-o>", lambda e: self.openParTim)
+        top.bind("<Control-o>", lambda e: self.openParTim())
 
     def createWidgets(self):
         self.widgets = {

@@ -516,7 +516,7 @@ class PlkActionsWidget(tk.Frame):
         self.initPlkActions()
 
     def initPlkActions(self):
-        self.fitbutton = tk.Button(self, text="Fit", command=self.fit)
+        self.fitbutton = tk.Button(self, text="Fit", command=self.fit, underline=0)
         self.fitbutton.grid(row=0, column=0)
         fitbutton_ttp = CreateToolTip(
             self.fitbutton, "Fit the selected TOAs to the current model."
@@ -534,7 +534,7 @@ class PlkActionsWidget(tk.Frame):
         button3_ttp = CreateToolTip(
             button3, "Write the current TOAs table to a .tim file of your choice."
         )
-        button4 = tk.Button(self, text="Reset", command=self.reset)
+        button4 = tk.Button(self, text="Reset", command=self.reset, underline=0)
         button4.grid(row=0, column=4)
         button4_ttp = CreateToolTip(
             button4, "Reset everything to the beginning of the session.  Be Careful!"
