@@ -2,6 +2,7 @@
 Interactive emulator of tempo2 plk
 """
 import copy
+import os
 import sys
 
 from astropy.time import Time
@@ -91,6 +92,8 @@ nb_fitters = [
     "DownhillWLSFitter",
     "DownhillGLSFitter",
 ]
+
+icon_img = os.path.join(os.path.split(__file__)[0], "psr_only.gif")
 
 
 class State:

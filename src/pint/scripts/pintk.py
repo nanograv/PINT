@@ -287,6 +287,9 @@ def main(argv=None):
             loglevel=args.loglevel,
         )
         root.protocol("WM_DELETE_WINDOW", root.destroy)
+        img = tk.Image("photo", file=pint.pintk.plk.icon_img)
+
+        root.tk.call("wm", "iconphoto", root._w, img)
         tk.mainloop()
 
 
