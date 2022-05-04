@@ -508,7 +508,7 @@ class Parameter:
                 f"Changing KOM from DT92 convention to IAU: this will not be readable by PINT"
             )
         elif self.name == "DMDATA" and not format.lower() == "pint":
-            line = "%-15s %d" % (self.value, int(self.value))
+            line = "%-15s %d" % (self.name, int(self.value))
 
         if self.uncertainty is not None:
             line += " %d %s" % (

@@ -95,6 +95,14 @@ def test_ECL():
             assert l.split()[-1] == "IERS2003"
 
 
+def test_DMDATA():
+    """Should be an integer for TEMPO/TEMPO2"""
+    m = get_model(os.path.join(datadir, "J0030+0451_post.par"))
+    for l in m.as_parfile(format="tempo").split("\n"):
+        if "DMDATA" in l:
+            assert isinstance(int(l.split()[-1]), int)
+
+
 def test_formats():
     m = get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
     with pytest.raises(AssertionError):
