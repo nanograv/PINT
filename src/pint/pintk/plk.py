@@ -815,7 +815,7 @@ class PlkWidget(tk.Frame):
             else:
                 log.error("Could not save parfile to filename:\t%s" % filename)
 
-    def writeTim(self):
+    def writeTim(self, format="tempo2"):
         """
         Write the current timfile to a file
         """
@@ -826,7 +826,8 @@ class PlkWidget(tk.Frame):
         filename = tkFileDialog.asksaveasfilename(title="Choose output tim file")
         try:
             log.info(f"Choose output file {filename}")
-            self.psr.all_toas.write_TOA_file(filename, format="TEMPO2")
+            self.psr.all_toas.write_TOA_file(filename, format=format)
+            log.info(f"Wrote TOAs to {filename} with format {format}")
         except:
             if filename in [(), ""]:
                 print("Write Tim cancelled.")

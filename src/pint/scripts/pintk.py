@@ -85,7 +85,14 @@ class PINTk:
             label="Write par (tempo format)", command=self.writeParTempo
         )
         self.fileMenu.add_cascade(label="Write par...", menu=parfile_submenu)
-        self.fileMenu.add_command(label="Write tim", command=self.writeTim)
+        timfile_submenu = tk.Menu(self.fileMenu)
+        timfile_submenu.add_command(
+            label="Write tim (tempo2 format)", command=self.writeTimTempo2
+        )
+        timfile_submenu.add_command(
+            label="Write tim (tempo format)", command=self.writeTimTempo
+        )
+        self.fileMenu.add_cascade(label="Write tim...", menu=timfile_submenu)
         self.fileMenu.add_command(label="Exit", command=top.destroy)
         self.menuBar.add_cascade(label="File", menu=self.fileMenu)
 
@@ -176,8 +183,11 @@ class PINTk:
     def writeParTempo2(self):
         self.widgets["plk"].writePar(format="tempo2")
 
-    def writeTim(self):
-        self.widgets["plk"].writeTim()
+    def writeTimTempo(self):
+        self.widgets["plk"].writeTim(format="tempo")
+
+    def writeTimTempo2(self):
+        self.widgets["plk"].writeTim(format="tempo2")
 
     def toggle(self, key):
         self.active[key].set((self.active[key].get() + 1) % 2)
