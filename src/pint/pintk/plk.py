@@ -93,7 +93,7 @@ nb_fitters = [
     "DownhillGLSFitter",
 ]
 
-icon_img = os.path.join(os.path.split(__file__)[0], "psr_only.gif")
+icon_img = os.path.join(os.path.split(__file__)[0], "PINT_LOGO_128trans.gif")
 
 
 class State:
