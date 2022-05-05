@@ -71,38 +71,69 @@ class PINTk:
         top["menu"] = self.menuBar
 
         self.fileMenu = tk.Menu(self.menuBar)
-        self.fileMenu.add_command(label="Open par/tim", command=self.openParTim)
+        self.fileMenu.add_command(
+            label="Open par/tim",
+            command=self.openParTim,
+            underline=0,
+            accelerator="Ctrl+O",
+        )
         self.fileMenu.add_command(label="Switch model", command=self.switchModel)
         self.fileMenu.add_command(label="Switch TOAs", command=self.switchTOAs)
-        self.fileMenu.add_command(label="Exit", command=top.destroy)
-        self.menuBar.add_cascade(label="File", menu=self.fileMenu)
+        parfile_submenu = tk.Menu(self.fileMenu)
+        parfile_submenu.add_command(
+            label="Write par (pint format)", command=self.writeParPINT
+        )
+        parfile_submenu.add_command(
+            label="Write par (tempo2 format)", command=self.writeParTempo2
+        )
+        parfile_submenu.add_command(
+            label="Write par (tempo format)", command=self.writeParTempo
+        )
+        self.fileMenu.add_cascade(label="Write par...", menu=parfile_submenu)
+        timfile_submenu = tk.Menu(self.fileMenu)
+        timfile_submenu.add_command(
+            label="Write tim (tempo2 format)", command=self.writeTimTempo2
+        )
+        timfile_submenu.add_command(
+            label="Write tim (tempo format)", command=self.writeTimTempo
+        )
+        self.fileMenu.add_cascade(label="Write tim...", menu=timfile_submenu)
+        self.fileMenu.add_command(label="Exit", command=top.destroy, accelerator="q")
+        self.menuBar.add_cascade(label="File", menu=self.fileMenu, underline=0)
 
         self.viewMenu = tk.Menu(self.menuBar)
         self.viewMenu.add_checkbutton(
-            label="Plk (C-p)", command=self.updateLayout, variable=self.active["plk"]
+            label="Plk",
+            command=self.updateLayout,
+            variable=self.active["plk"],
+            accelerator="Ctrl+p",
         )
         self.viewMenu.add_checkbutton(
-            label="Model Editor (C-m)",
+            label="Model Editor",
             command=self.updateLayout,
             variable=self.active["par"],
+            accelerator="Ctrl+m",
         )
         self.viewMenu.add_checkbutton(
-            label="TOAs Editor (C-t)",
+            label="TOAs Editor",
             command=self.updateLayout,
             variable=self.active["tim"],
+            accelerator="Ctrl+t",
         )
         self.menuBar.add_cascade(label="View", menu=self.viewMenu)
 
         self.helpMenu = tk.Menu(self.menuBar)
         self.helpMenu.add_command(label="About", command=self.about)
-        self.helpMenu.add_command(label="Plk Help", command=lambda: print(helpstring))
+        self.helpMenu.add_command(
+            label="PINTk Help", command=lambda: print(helpstring), accelerator="h"
+        )
         self.menuBar.add_cascade(label="Help", menu=self.helpMenu)
 
         # Key bindings
         top.bind("<Control-p>", lambda e: self.toggle("plk"))
         top.bind("<Control-m>", lambda e: self.toggle("par"))
         top.bind("<Control-t>", lambda e: self.toggle("tim"))
-        top.bind("<Control-o>", lambda e: self.openParTim)
+        top.bind("<Control-o>", lambda e: self.openParTim())
 
     def createWidgets(self):
         self.widgets = {
@@ -154,6 +185,21 @@ class PINTk:
         parfile = tkFileDialog.askopenfilename(title="Open par file")
         timfile = tkFileDialog.askopenfilename(title="Open tim file")
         self.openPulsar(parfile, timfile)
+
+    def writeParPINT(self):
+        self.widgets["plk"].writePar(format="pint")
+
+    def writeParTempo(self):
+        self.widgets["plk"].writePar(format="tempo")
+
+    def writeParTempo2(self):
+        self.widgets["plk"].writePar(format="tempo2")
+
+    def writeTimTempo(self):
+        self.widgets["plk"].writeTim(format="tempo")
+
+    def writeTimTempo2(self):
+        self.widgets["plk"].writeTim(format="tempo2")
 
     def toggle(self, key):
         self.active[key].set((self.active[key].get() + 1) % 2)
@@ -241,6 +287,9 @@ def main(argv=None):
             loglevel=args.loglevel,
         )
         root.protocol("WM_DELETE_WINDOW", root.destroy)
+        img = tk.Image("photo", file=pint.pintk.plk.icon_img)
+
+        root.tk.call("wm", "iconphoto", root._w, img)
         tk.mainloop()
 
 
