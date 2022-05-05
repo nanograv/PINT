@@ -2,6 +2,7 @@
 Interactive emulator of tempo2 plk
 """
 import copy
+import os
 import sys
 
 from astropy.time import Time
@@ -91,6 +92,8 @@ nb_fitters = [
     "DownhillWLSFitter",
     "DownhillGLSFitter",
 ]
+
+icon_img = os.path.join(os.path.split(__file__)[0], "PINT_LOGO_128trans.gif")
 
 
 class State:
@@ -516,7 +519,7 @@ class PlkActionsWidget(tk.Frame):
         self.initPlkActions()
 
     def initPlkActions(self):
-        self.fitbutton = tk.Button(self, text="Fit", command=self.fit)
+        self.fitbutton = tk.Button(self, text="Fit", command=self.fit, underline=0)
         self.fitbutton.grid(row=0, column=0)
         fitbutton_ttp = CreateToolTip(
             self.fitbutton, "Fit the selected TOAs to the current model."
@@ -534,7 +537,7 @@ class PlkActionsWidget(tk.Frame):
         button3_ttp = CreateToolTip(
             button3, "Write the current TOAs table to a .tim file of your choice."
         )
-        button4 = tk.Button(self, text="Reset", command=self.reset)
+        button4 = tk.Button(self, text="Reset", command=self.reset, underline=0)
         button4.grid(row=0, column=4)
         button4_ttp = CreateToolTip(
             button4, "Reset everything to the beginning of the session.  Be Careful!"
@@ -793,7 +796,7 @@ class PlkWidget(tk.Frame):
         self.state_stack = [self.base_state]
         self.call_updates(psr_update=True)
 
-    def writePar(self):
+    def writePar(self, format="pint"):
         """
         Write the fit parfile to ea file
         """
@@ -801,21 +804,21 @@ class PlkWidget(tk.Frame):
         try:
             with open(filename, "w") as fout:
                 if self.psr.fitted:
-                    fout.write(self.psr.postfit_model.as_parfile())
-                    log.info(f"Saved post-fit parfile to {filename}")
+                    fout.write(self.psr.postfit_model.as_parfile(format=format))
+                    log.info(f"Saved post-fit parfile to {filename} in {format} format")
                 else:
-                    fout.write(self.psr.prefit_model.as_parfile())
+                    fout.write(self.psr.prefit_model.as_parfile(format=format))
                     log.warning(
-                        f"Pulsar has not been fitted! Saving pre-fit parfile to {filename}"
+                        f"Pulsar has not been fitted! Saving pre-fit parfile to {filename} in {format} format"
                     )
 
         except:
             if filename in [(), ""]:
                 print("Write Par cancelled.")
             else:
-                log.error("Could not save parfile to filename:\t%s" % filename)
+                log.error(f"Could not save parfile to filename:\t{filename}")
 
-    def writeTim(self):
+    def writeTim(self, format="tempo2"):
         """
         Write the current timfile to a file
         """
@@ -826,12 +829,13 @@ class PlkWidget(tk.Frame):
         filename = tkFileDialog.asksaveasfilename(title="Choose output tim file")
         try:
             log.info(f"Choose output file {filename}")
-            self.psr.all_toas.write_TOA_file(filename, format="TEMPO2")
+            self.psr.all_toas.write_TOA_file(filename, format=format)
+            log.info(f"Wrote TOAs to {filename} with format {format}")
         except:
             if filename in [(), ""]:
                 print("Write Tim cancelled.")
             else:
-                log.error("Could not save file to filename:\t%s" % filename)
+                log.error(f"Could not save file to filename:\t{filename}")
 
     def revert(self):
         """
@@ -1014,11 +1018,7 @@ class PlkWidget(tk.Frame):
         self.plkAxes.set_title(self.psr.name, y=1.1)
 
         # plot random models
-        if (
-            self.randomboxWidget.getRandomModel() == 1
-            and self.psr.fitted == True
-            and hasattr(self.psr, "random_resids")
-        ):
+        if self.psr.fitted == True and self.randomboxWidget.getRandomModel() == 1:
             log.info("Plotting random models")
             f_toas = self.psr.faketoas
             rs = self.psr.random_resids
@@ -1034,13 +1034,8 @@ class PlkWidget(tk.Frame):
                 scale = 10**6
             elif self.yvals.unit == u.ms:
                 scale = 10**3
-            # Want to plot things in sorted order
-            sort_inds = np.argsort(f_toas_plot)
-            f_toas_plot = f_toas_plot[sort_inds]
             for i in range(len(rs)):
-                self.plkAxes.plot(
-                    f_toas_plot, rs[i][sort_inds] * scale, "-k", alpha=0.3
-                )
+                self.plkAxes.plot(f_toas_plot, rs[i] * scale, "-k", alpha=0.3)
 
     def determine_yaxis_units(self, miny, maxy):
         """Checks range of residuals and converts units if range sufficiently large/small."""
@@ -1206,7 +1201,7 @@ class PlkWidget(tk.Frame):
         """
         Call this function when the figure/canvas is clicked
         """
-        log.debug("You clicked in the canvas (button = %d)" % event.button)
+        log.debug(f"You clicked in the canvas (button = {event.button})")
         self.plkCanvas.get_tk_widget().focus_set()
         if event.inaxes == self.plkAxes:
             self.press = True
@@ -1243,7 +1238,7 @@ class PlkWidget(tk.Frame):
         """
         Call this function when the mouse is clicked but not moved
         """
-        log.debug("You stationary clicked (button = %d)" % event.button)
+        log.debug(f"You stationary clicked (button = {event.button})")
         if event.inaxes == self.plkAxes:
             ind = self.coordToPoint(event.xdata, event.ydata)
             if ind is not None:
@@ -1276,7 +1271,7 @@ class PlkWidget(tk.Frame):
         """
         Call this function when the mouse is clicked and dragged
         """
-        log.debug("You clicked and dragged in mode '%s'" % self.plkToolbar.mode)
+        log.debug(f"You clicked and dragged in mode '{self.plkToolbar.mode}'")
         # The following is for a selection if not in zoom mode
         if "zoom" not in self.plkToolbar.mode and event.inaxes == self.plkAxes:
             xmin, xmax = self.pressEvent.xdata, event.xdata
@@ -1326,7 +1321,7 @@ class PlkWidget(tk.Frame):
             self.call_updates()
             log.info("Pulse number for selected points increased.")
         elif event.key in [">", ".", "<", ","]:
-            if np.sum(self.selected):
+            if np.sum(self.selected) > 0:
                 later = (
                     self.psr.selected_toas.get_mjds().max()
                     < self.psr.all_toas.get_mjds()
