@@ -185,7 +185,6 @@ class LogFilter:
             "DeprecationWarning",
             "ProvisionalCompleterWarning",
             "deprecated in Matplotlib",
-            'ERFA function "pmsafe" yielded \d+ of "distance overridden \(Note 6\)"',
         ]
         # add in any more defined on init
         if never is not None:
