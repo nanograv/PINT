@@ -816,7 +816,7 @@ class PlkWidget(tk.Frame):
             if filename in [(), ""]:
                 print("Write Par cancelled.")
             else:
-                log.error("Could not save parfile to filename:\t%s" % filename)
+                log.error(f"Could not save parfile to filename:\t{filename}")
 
     def writeTim(self, format="tempo2"):
         """
@@ -835,7 +835,7 @@ class PlkWidget(tk.Frame):
             if filename in [(), ""]:
                 print("Write Tim cancelled.")
             else:
-                log.error("Could not save file to filename:\t%s" % filename)
+                log.error(f"Could not save file to filename:\t{filename}")
 
     def revert(self):
         """
@@ -1201,7 +1201,7 @@ class PlkWidget(tk.Frame):
         """
         Call this function when the figure/canvas is clicked
         """
-        log.debug("You clicked in the canvas (button = %d)" % event.button)
+        log.debug(f"You clicked in the canvas (button = {event.button})")
         self.plkCanvas.get_tk_widget().focus_set()
         if event.inaxes == self.plkAxes:
             self.press = True
@@ -1238,7 +1238,7 @@ class PlkWidget(tk.Frame):
         """
         Call this function when the mouse is clicked but not moved
         """
-        log.debug("You stationary clicked (button = %d)" % event.button)
+        log.debug(f"You stationary clicked (button = {event.button})")
         if event.inaxes == self.plkAxes:
             ind = self.coordToPoint(event.xdata, event.ydata)
             if ind is not None:
@@ -1271,7 +1271,7 @@ class PlkWidget(tk.Frame):
         """
         Call this function when the mouse is clicked and dragged
         """
-        log.debug("You clicked and dragged in mode '%s'" % self.plkToolbar.mode)
+        log.debug(f"You clicked and dragged in mode '{self.pltToolbar.mode}'")
         # The following is for a selection if not in zoom mode
         if "zoom" not in self.plkToolbar.mode and event.inaxes == self.plkAxes:
             xmin, xmax = self.pressEvent.xdata, event.xdata
