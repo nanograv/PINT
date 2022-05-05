@@ -1271,7 +1271,7 @@ class PlkWidget(tk.Frame):
         """
         Call this function when the mouse is clicked and dragged
         """
-        log.debug(f"You clicked and dragged in mode '{self.pltToolbar.mode}'")
+        log.debug(f"You clicked and dragged in mode '{self.plkToolbar.mode}'")
         # The following is for a selection if not in zoom mode
         if "zoom" not in self.plkToolbar.mode and event.inaxes == self.plkAxes:
             xmin, xmax = self.pressEvent.xdata, event.xdata
