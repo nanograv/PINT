@@ -15,6 +15,8 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Split out get_derived_params() from get_summary() in fitter.py.  Can be used other places.
 - `pintk` can now automatically select the right fitter, and can otherwise specify fitter from the command-line or a dropdown
 - automatic fitter selection available with standard API as well
+- added tempo(2) par/tim output to `pintk` 
+- added icon to `pintk`
 ### Fixed
 - Huge number of bugs and improvements to `pintk`, and some to `pintempo`
 - Multiple bug fixes in get_summary()/get_derived_params(), especially for binary calculations
