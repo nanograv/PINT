@@ -1201,9 +1201,9 @@ def add_dummy_distance(c, distance=1 * u.kpc):
             "No proper motions available for %r: returning coordinates unchanged" % c
         )
         return c
-    if c.obstime is None:
-        log.warning("No obstime available for %r: returning coordinates unchanged" % c)
-        return c
+    # if c.obstime is None:
+    #    log.warning("No obstime available for %r: returning coordinates unchanged" % c)
+    #    return c
 
     if isinstance(c.frame, coords.builtin_frames.icrs.ICRS):
         if hasattr(c, "pm_ra_cosdec"):
@@ -1280,10 +1280,6 @@ def remove_dummy_distance(c):
             "No proper motions available for %r: returning coordinates unchanged" % c
         )
         return c
-    if c.obstime is None:
-        log.warning("No obstime available for %r: returning coordinates unchanged" % c)
-        return c
-
     if isinstance(c.frame, coords.builtin_frames.icrs.ICRS):
         if hasattr(c, "pm_ra_cosdec"):
 

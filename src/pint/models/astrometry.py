@@ -1,6 +1,7 @@
 """Astrometric models for describing pulsar sky positions."""
 import copy
 import sys
+import warnings
 
 import astropy.constants as const
 import astropy.coordinates as coords
@@ -9,6 +10,11 @@ import numpy as np
 from astropy.time import Time
 
 from loguru import logger as log
+
+try:
+    from erfa import ErfaWarning
+except ImportError:
+    from astropy._erfa import ErfaWarning
 
 from pint import ls
 from pint.models.parameter import (
@@ -350,9 +356,11 @@ class AstrometryEquatorial(Astrometry):
             else:
                 newepoch = Time(epoch, scale="tdb", format="mjd")
             position_now = add_dummy_distance(self.get_psr_coords())
-            position_then = remove_dummy_distance(
-                position_now.apply_space_motion(new_obstime=newepoch)
-            )
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", ErfaWarning)
+                position_then = remove_dummy_distance(
+                    position_now.apply_space_motion(new_obstime=newepoch)
+                )
             return position_then
 
     def coords_as_ICRS(self, epoch=None):
