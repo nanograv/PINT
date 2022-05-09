@@ -211,3 +211,34 @@ def test_fitsummary_binary():
     f.model.free_params = ["PB", "A1", "SINI"]
     f.fit_toas()
     f.print_summary()
+
+
+def test_fitselector():
+    # WB
+    par = os.path.join(datadir, "B1855+09_NANOGrav_12yv3.wb.gls.par")
+    tim = os.path.join(datadir, "B1855+09_NANOGrav_12yv3.wb.tim")
+
+    m, t = get_model_and_toas(par, tim)
+    f = fitter.Fitter.auto(t, m, downhill=True)
+    assert isinstance(f, fitter.WidebandDownhillFitter)
+    f = fitter.Fitter.auto(t, m, downhill=False)
+    assert isinstance(f, fitter.WidebandTOAFitter)
+
+    # correlated errors
+    m, t = get_model_and_toas(
+        os.path.join(datadir, "J0023+0923_NANOGrav_11yv0.gls.par"),
+        os.path.join(datadir, "J0023+0923_NANOGrav_11yv0.tim"),
+    )
+    f = fitter.Fitter.auto(t, m, downhill=True)
+    assert isinstance(f, fitter.DownhillGLSFitter)
+    f = fitter.Fitter.auto(t, m, downhill=False)
+    assert isinstance(f, fitter.GLSFitter)
+
+    # uncorrelated errors
+    m, t = get_model_and_toas(
+        os.path.join(datadir, "NGC6440E.par"), os.path.join(datadir, "NGC6440E.tim")
+    )
+    f = fitter.Fitter.auto(t, m, downhill=True)
+    assert isinstance(f, fitter.DownhillWLSFitter)
+    f = fitter.Fitter.auto(t, m, downhill=False)
+    assert isinstance(f, fitter.WLSFitter)
