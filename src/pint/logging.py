@@ -81,7 +81,8 @@ debug_color = "<fg #b790d4><bold>"
 #    message='ERFA function "pmsafe" yielded',
 #    category=ErfaWarning,
 # )
-warn_ = warnings.warn
+warn_ = warnings.showwarning
+warning_onceregistry = {}
 
 
 def warn(message, *args, **kwargs):
@@ -92,11 +93,19 @@ def warn(message, *args, **kwargs):
     # check to see if a standard warning filter has already been inserted that would catch whatever this is
     # this isn't the exact same implementation as the standard filter because we don't get all of the relevant pieces
     # but it works for ignoring
+    category = None
+    if isinstance(message, Warning):
+        message_text = str(message)
+        category = message.__class__
+    else:
+        message_text = message
+        if isinstance(args[0], Warning):
+            category = args[0]
     for filter in warnings.filters:
         action, msg, cat, mod, ln = filter
         if (
             (msg is not None)
-            and (msg.match(message) and len(args) == 0)
+            and (msg.match(message_text) and len(args) == 0)
             and action == "ignore"
         ):
             return
@@ -104,21 +113,30 @@ def warn(message, *args, **kwargs):
             (cat is not None)
             and (
                 (len(args) > 0 and isinstance(args[0], type))
-                and ((msg is None or msg.match(message)) and issubclass(args[0], cat))
+                and (
+                    (msg is None or msg.match(message_text))
+                    and issubclass(args[0], cat)
+                )
             )
             and action == "ignore"
         ):
             return
+        if action == "once":
+            oncekey = (message_text, category)
+            if warning_onceregistry.get(oncekey):
+                return
+            warning_onceregistry[oncekey] = 1
     if len(args) > 0:
-        log.warning(f"{args[0]} {message}")
+        arg_string = " ".join([str(x) for x in args if x is not None])
+        log.warning(f"{arg_string}: {message_text}")
     elif "category" in kwargs:
-        log.warning(f"{kwargs['category']} {message}")
+        log.warning(f"{kwargs['category']} {message_text}")
     else:
-        log.warning(f"{message}")
+        log.warning(f"{message_text}")
     warn_(message, *args, **kwargs)
 
 
-warnings.warn = warn
+warnings.showwarning = warn
 
 
 class LogFilter:
