@@ -286,6 +286,11 @@ class PlkRandomModelSelect(tk.Frame):
         checkbox_ttp = CreateToolTip(
             checkbox, "Display random timing models consistent with selected TOAs."
         )
+        if "zoom" in master.plkToolbar.mode:
+            self.modeLabel = tk.Label(master, text="Mode: Zoom")
+        else:
+            self.modeLabel = tk.Label(master, text="Mode: Select")
+        self.modeLabel.grid(row=1, column=1, sticky="S")
 
     def setCallbacks(self, boxChecked):
         """
@@ -305,6 +310,12 @@ class PlkRandomModelSelect(tk.Frame):
 
     def getRandomModel(self):
         return self.var.get()
+
+    def changeMode(self, mode):
+        if "zoom" in mode:
+            self.modeLabel.config(text="Mode: Zoom")
+        else:
+            self.modeLabel.config(text="Mode: Select")
 
 
 class PlkLogLevelSelect(tk.Frame):
@@ -1462,3 +1473,4 @@ class PlkWidget(tk.Frame):
             print(self.psr.all_toas.get_highest_density_range())
         elif event.key == "z":
             self.plkToolbar.zoom()
+            self.randomboxWidget.changeMode(self.plkToolbar.mode)
