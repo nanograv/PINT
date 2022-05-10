@@ -52,7 +52,7 @@ The primary reasons we are developing PINT are:
   and the use of a modern programming language, techniques, and libraries.
 
 IMPORTANT Notes!
----------------
+----------------
 
 PINT has a naming conflict with the `pint <https://pypi.org/project/Pint/>`_ units package available from PyPI (i.e. using pip) and conda.  
 Do **NOT** ``pip install pint`` or ``conda install pint``!  See below!
