@@ -95,12 +95,22 @@ def test_ECL():
             assert l.split()[-1] == "IERS2003"
 
 
-def test_DMDATA():
+def test_DMDATA_N():
     """Should be an integer for TEMPO/TEMPO2"""
     m = get_model(os.path.join(datadir, "J0030+0451_post.par"))
     for l in m.as_parfile(format="tempo").split("\n"):
         if "DMDATA" in l:
-            assert isinstance(int(l.split()[-1]), int)
+            # this should be a 0 or a 1
+            dmdata = int(l.split()[-1])
+
+
+def test_DMDATA_Y():
+    """Should be an integer for TEMPO/TEMPO2"""
+    m = get_model(os.path.join(datadir, "B1855+09_NANOGrav_12yv3.wb.gls.par"))
+    for l in m.as_parfile(format="tempo").split("\n"):
+        if "DMDATA" in l:
+            # this should be a 0 or a 1
+            dmdata = int(l.split()[-1])
 
 
 def test_formats():
