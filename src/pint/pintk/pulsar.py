@@ -473,8 +473,10 @@ class Pulsar:
         wrms = self.selected_resids.rms_weighted()
         print("Selected TOAs:           %8d" % self.selected_toas.ntoas)
         print("Selected Chi2:          %.8g" % self.selected_resids.chi2)
-        print("Selected DOF:            %8d" % self.selected_resids.dof)
-        print("Selected Reduced-Chi2:  %.8g" % self.selected_resids.reduced_chi2)
+        print(
+            "Selected Chi2/Ntoa:     %.8g"
+            % (self.selected_resids.chi2 / self.selected_toas.ntoas)
+        )
         print("Selected Weighted RMS:  %.8g us" % wrms.to(u.us).value)
         print("------------------------------------")
 
