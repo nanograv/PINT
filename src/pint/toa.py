@@ -1658,7 +1658,7 @@ class TOAs:
         add_column : bool, optional
             Whether or not to add a ``clusters`` column to the TOA table (default: False)
         add_flag : str, optional
-            If not ``None``, will add a flag with that name to the TOA table (default: None)
+            If not ``None``, will add a flag with that name to the TOA table whose value is the cluster number (as a string, starting at 0) (default: None)
 
         Returns
         -------
