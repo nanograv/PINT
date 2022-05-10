@@ -48,7 +48,9 @@ def test_jump_by_cluster(setup_NGC6440E):
     cp.add_param(par, setup=True)
 
     # add clusters to the TOAs
-    clusters = setup_NGC6440E.t.get_clusters(2 * u.hr, add_column=False, add_flag=True)
+    clusters = setup_NGC6440E.t.get_clusters(
+        2 * u.hr, add_column=False, add_flag="cluster"
+    )
 
     m_copy.add_component(PhaseJump(), validate=False)
     cp_copy = m_copy.components["PhaseJump"]
