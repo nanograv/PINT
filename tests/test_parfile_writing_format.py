@@ -100,8 +100,9 @@ def test_DMDATA_N():
     m = get_model(os.path.join(datadir, "J0030+0451_post.par"))
     for l in m.as_parfile(format="tempo").split("\n"):
         if "DMDATA" in l:
-            # this should be a 0 or a 1
+            # this should be a 0
             dmdata = int(l.split()[-1])
+            assert dmdata == 0
 
 
 def test_DMDATA_Y():
@@ -109,8 +110,9 @@ def test_DMDATA_Y():
     m = get_model(os.path.join(datadir, "B1855+09_NANOGrav_12yv3.wb.gls.par"))
     for l in m.as_parfile(format="tempo").split("\n"):
         if "DMDATA" in l:
-            # this should be a 0 or a 1
+            # this should be a  1
             dmdata = int(l.split()[-1])
+            assert dmdata == 1
 
 
 def test_formats():
