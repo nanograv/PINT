@@ -69,6 +69,7 @@ Right click     Delete a TOA (if close enough)
   s             Print summary / derived parameters about the pulsar
   m             Print the range of MJDs with the highest density of TOAs
 space           Print info about highlighted points (or all, if none are selected)
+  x             Print chi^2 and rms info about highlighted points (or all, if none are selected)
   + (or =)      Increase pulse number for selected TOAs
   - (or _)      Decrease pulse number for selected TOAs
   > (or .)      Increase pulse number for TOAs to the right (i.e. later) of selection
@@ -1092,6 +1093,13 @@ class PlkWidget(tk.Frame):
             print(
                 f"{x:^10.4f} {y:^10.4f} {ind:^7} {obs:^7} {freq:^11.4f} {err:^11.3f} {MJD:^20.15f} {flag}"
             )
+        self.print_chi2()
+
+    def print_chi2(self):
+        """Print chi^2 about just the selected points"""
+        # Select all the TOAs if not are selected
+        selected = self.selected if np.sum(self.selected) else ~self.selected
+        self.psr.print_chi2(selected)
 
     def psr_data_from_label(self, label):
         """
@@ -1467,6 +1475,8 @@ class PlkWidget(tk.Frame):
                 log.warning("No postfit model to show")
         elif event.key == " ":
             self.print_info()
+        elif event.key == "x":
+            self.print_chi2()
         elif event.key == "h":
             print(helpstring)
         elif event.key == "m":
