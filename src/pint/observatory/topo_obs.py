@@ -80,6 +80,8 @@ class TopoObs(Observatory):
         Documentation of the origin/author/date for the information
     overwrite : bool, optional
         set True to force overwriting of previous observatory definition
+    bogus_last_correction : bool, optional
+        Clock correction files include a bogus last correction
     """ % bipm_default
 
     def __init__(
@@ -97,6 +99,7 @@ class TopoObs(Observatory):
         bipm_version=bipm_default,
         origin=None,
         overwrite=False,
+        bogus_last_correction=False,
     ):
         # ITRF coordinates are required
         if itrf_xyz is None:
@@ -139,6 +142,7 @@ class TopoObs(Observatory):
         self.include_bipm = include_bipm
         self.bipm_version = bipm_version
         self._bipm_clock = None
+        self.bogus_last_correction = bogus_last_correction
 
         self.tempo_code = tempo_code
         if aliases is None:
@@ -256,7 +260,10 @@ class TopoObs(Observatory):
                 )
                 self._clock.append(
                     ClockFile.read(
-                        clock_file, format=self.clock_fmt, obscode=self.tempo_code
+                        clock_file,
+                        format=self.clock_fmt,
+                        obscode=self.tempo_code,
+                        bogus_last_correction=self.bogus_last_correction,
                     )
                 )
 
