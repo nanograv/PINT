@@ -152,17 +152,60 @@ class TestObservatory(unittest.TestCase):
             site.get_TDBs(self.test_time, method="ephemeris", ephem="de436")
 
 
-@pytest.mark.parametrize("observatory", list(pint.observatory.Observatory._registry.keys()))
+@pytest.mark.parametrize(
+    "observatory", list(pint.observatory.Observatory._registry.keys())
+)
+def test_can_try_to_compute_corrections(observatory):
+    # Many of these should emit warnings
+    get_observatory(observatory).clock_corrections(Time(57600, format="mjd"))
+
+
+@pytest.mark.parametrize(
+    "observatory", ["gbt", "ao", "vla", "jodrell", "wsrt", "parkes"]
+)
 def test_can_compute_corrections(observatory):
-    if observatory == "gmrt":
-        pytest.xfail("No GMRT clock file in the TEMPO2 runtime for us to import")
-    if observatory in { "mwa", "lwa1", "ps1", "hobart", "gb300", "lofar", "shao", "pico_veleta", "princeton", "srt", "vla_site", "northern_cross" }:
-        pytest.xfail("TEMPO-format time corrections not available in PINT")
-    o = get_observatory(observatory)
+    get_observatory(observatory).clock_corrections(
+        Time(55600, format="mjd"), limits="error"
+    )
+
+
+def test_missing_clock_gives_exception_nonexistent():
+    o = TopoObs(
+        "arecibo_bogus",
+        clock_file="nonexistent.dat",
+        itoa_code="W",
+        itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
+        overwrite=True,
+    )
+
+    with pytest.raises(RuntimeError):
+        o.clock_corrections(Time(57600, format="mjd"), limits="error")
+
+
+def test_missing_clock_gives_exception_no_data():
+    o = TopoObs(
+        "arecibo_bogus",
+        itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
+        overwrite=True,
+    )
+
+    with pytest.raises(RuntimeError):
+        o.clock_corrections(Time(57600, format="mjd"), limits="error")
+
+
+def test_missing_clock_runs():
+    o = TopoObs(
+        "arecibo_bogus",
+        clock_file="nonexistent.dat",
+        itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
+        overwrite=True,
+    )
     o.clock_corrections(Time(57600, format="mjd"))
 
+
 def test_observatories_registered():
-    assert len(pint.observatory.Observatory._registry)>5
+    assert len(pint.observatory.Observatory._registry) > 5
+
 
 def test_gbt_registered():
     get_observatory("gbt")

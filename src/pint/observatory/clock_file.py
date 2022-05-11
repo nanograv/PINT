@@ -70,15 +70,25 @@ class ClockFile(object, metaclass=ClockFileMeta):
         return self._clock
 
     def evaluate(self, t, limits="warn"):
-        """Evaluate the clock corrections at the times t (given as an
+        """Evaluate the clock corrections at the times t.
+
+        it is (given as an
         array-valued Time object).  By default, values are linearly
         interpolated but this could be overridden by derived classes
         if needed.  The first/last values will be applied to times outside
         the data range.  If limits=='warn' this will also issue a warning.
         If limits=='error' an exception will be raised."""
 
+        if len(self.time) == 0:
+            msg = f"No data points in clock file '{self.filename}'"
+            if limits == "warn":
+                log.warning(msg)
+                return np.zeros_like(t) * u.us
+            elif limits == "error":
+                raise RuntimeError(msg)
+
         if np.any(t < self.time[0]) or np.any(t > self.time[-1]):
-            msg = "Data points out of range in clock file '%s'" % self.filename
+            msg = f"Data points out of range in clock file '{self.filename}'"
             if limits == "warn":
                 log.warning(msg)
             elif limits == "error":
@@ -99,7 +109,13 @@ class Tempo2ClockFile(ClockFile):
                 self.format, filename
             )
         )
-        mjd, clk, self.header = self.load_tempo2_clock_file(filename)
+        try:
+            mjd, clk, self.header = self.load_tempo2_clock_file(filename)
+        except (FileNotFoundError, OSError):
+            log.error(f"TEMPO2-style clock correction file {filename} not found")
+            mjd = np.array([], dtype=float)
+            clk = np.array([], dtype=float)
+            self.header = None
         # NOTE Clock correction file has a time far in the future as ending point
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", ErfaWarning)
@@ -116,7 +132,7 @@ class Tempo2ClockFile(ClockFile):
         hdrline = f.readline().rstrip()
         try:
             mjd, clk = np.loadtxt(f, usecols=(0, 1), unpack=True)
-        except:
+        except (FileNotFoundError, ValueError):
             log.error("Failed loading clock file {0}".format(f))
             raise
         if not np.all(mjd[:-1] <= mjd[1:]):
@@ -135,11 +151,16 @@ class TempoClockFile(ClockFile):
         self.filename = filename
         self.obscode = obscode
         log.debug(
-            "Loading {0} observatory ({1}) clock correction file {2}".format(
-                self.format, obscode, filename
-            )
+            f"Loading {self.format} observatory ({obscode}) clock correction file {filename}"
         )
-        mjd, clk = self.load_tempo1_clock_file(filename, site=obscode)
+        try:
+            mjd, clk = self.load_tempo1_clock_file(filename, site=obscode)
+        except (FileNotFoundError, OSError):
+            log.error(
+                f"TEMPO-style clock correction file {filename} for site {obscode} not found"
+            )
+            mjd = np.array([], dtype=float)
+            clk = np.array([], dtype=float)
         # NOTE Clock correction file has a time far in the future as ending point
         # We are swithing off astropy warning only for gps correction.
         with warnings.catch_warnings():
@@ -155,7 +176,8 @@ class TempoClockFile(ClockFile):
 
     @staticmethod
     def load_tempo1_clock_file(filename, site=None):
-        """
+        """Load a TEMPO format clock file for a site
+
         Given the specified full path to the tempo1-format clock file,
         will return two numpy arrays containing the MJDs and the clock
         corrections (us).  All computations here are done as in tempo, with
@@ -165,8 +187,10 @@ class TempoClockFile(ClockFile):
         INCLUDE statments are processed.
 
         If the 'site' argument is set to an appropriate one-character tempo
-        site code, only values for that site will be returned, otherwise all
-        values found in the file will be returned.
+        site code, only values for that site will be returned. If the 'site'
+        argument is None, the file is assumed to contain only clock corrections
+        for the desired telescope, so all values found in the file will be returned
+        but INCLUDEs will *not* be processed.
         """
         # TODO we might want to handle 'f' flags by inserting addtional
         # entries so that interpolation routines will give the right result.
@@ -180,13 +204,14 @@ class TempoClockFile(ClockFile):
             # Process INCLUDE
             # Assumes included file is in same dir as this one
             if l.startswith("INCLUDE"):
-                clkdir = os.path.dirname(os.path.abspath(filename))
-                filename1 = os.path.join(clkdir, l.split()[1])
-                mjds1, clkcorrs1 = TempoClockFile.load_tempo1_clock_file(
-                    filename1, site=site
-                )
-                mjds.extend(mjds1)
-                clkcorrs.extend(clkcorrs1)
+                if site is not None:
+                    clkdir = os.path.dirname(os.path.abspath(filename))
+                    filename1 = os.path.join(clkdir, l.split()[1])
+                    mjds1, clkcorrs1 = TempoClockFile.load_tempo1_clock_file(
+                        filename1, site=site
+                    )
+                    mjds.extend(mjds1)
+                    clkcorrs.extend(clkcorrs1)
                 continue
 
             # Parse MJD

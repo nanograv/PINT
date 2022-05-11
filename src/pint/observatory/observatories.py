@@ -268,7 +268,7 @@ TopoObs(
     "chime",
     tempo_code="y",
     itoa_code="CH",
-    clock_file="time_chime",
+    clock_file="time_chime.dat",
     itrf_xyz=[-2059166.313, -3621302.972, 4814304.113],
     origin="""The Canadian Hydrogen Intensity Mapping Experiment.
 
@@ -480,7 +480,7 @@ TopoObs(
     aliases=["gb140"],
     itoa_code="G1",
     tempo_code="a",
-    clock_file="time_gb140",
+    clock_file="time_gb140.dat",
     itrf_xyz=[882872.57, -4924552.73, 3944154.92],
     origin="""The Green Bank 140-foot telescope.
 
@@ -495,7 +495,7 @@ TopoObs(
     aliases=["gb853"],
     tempo_code="b",
     itoa_code="G8",
-    clock_file="time_gb853",
+    clock_file="time_gb853.dat",
     itrf_xyz=[882315.33, -4925191.41, 3943414.05],
     origin="""The Green Bank 85-3 telescope.
 
