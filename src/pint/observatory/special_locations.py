@@ -105,38 +105,53 @@ class SpecialLocation(Observatory):
         )
         return os.path.join(os.getenv("TEMPO2"), "clock", fname)
 
+    def _load_gps_clock(self):
+        if self._gps_clock is None:
+            log.info(
+                "Observatory {0}, loading GPS clock file {1}".format(
+                    self.name, self.gps_fullpath
+                )
+            )
+            self._gps_clock = ClockFile.read(self.gps_fullpath, format="tempo2")
+
+    def _load_bipm_clock(self):
+        if self._bipm_clock is None:
+            try:
+                log.info(
+                    "Observatory {0}, loading BIPM clock file {1}".format(
+                        self.name, self.bipm_fullpath
+                    )
+                )
+                self._bipm_clock = ClockFile.read(
+                    self.bipm_fullpath, format="tempo2"
+                )
+            except:
+                raise ValueError(
+                    "Can not find TT BIPM file '%s'. " % self.bipm_version
+                )
+
     def clock_corrections(self, t, limits="warn"):
         corr = np.zeros(t.shape) * u.s
         if self.include_gps:
             log.info("Applying GPS to UTC clock correction (~few nanoseconds)")
-            if self._gps_clock is None:
-                log.info(
-                    "Observatory {0}, loading GPS clock file {1}".format(
-                        self.name, self.gps_fullpath
-                    )
-                )
-                self._gps_clock = ClockFile.read(self.gps_fullpath, format="tempo2")
+            self._load_gps_clock()
             corr += self._gps_clock.evaluate(t, limits=limits)
         if self.include_bipm:
             log.info("Applying TT(TAI) to TT(BIPM) clock correction (~27 us)")
+            self._load_bipm_clock()
             tt2tai = 32.184 * 1e6 * u.us
-            if self._bipm_clock is None:
-                try:
-                    log.info(
-                        "Observatory {0}, loading BIPM clock file {1}".format(
-                            self.name, self.bipm_fullpath
-                        )
-                    )
-                    self._bipm_clock = ClockFile.read(
-                        self.bipm_fullpath, format="tempo2"
-                    )
-                except:
-                    raise ValueError(
-                        "Can not find TT BIPM file '%s'. " % self.bipm_version
-                    )
             corr += self._bipm_clock.evaluate(t, limits=limits) - tt2tai
         return corr
 
+    def last_clock_correction_mjd(self):
+        t = np.inf
+        if self.include_gps:
+            self._load_gps_clock()
+            t = min(t, self._gps_clock.last_correction_mjd())
+        if self.include_bipm:
+            self._load_bipm_clock()
+            t = min(t, self._bipm_clock.last_correction_mjd())
+        return t
 
 class BarycenterObs(SpecialLocation):
     """Observatory-derived class for the solar system barycenter.  Time
@@ -173,6 +188,8 @@ class BarycenterObs(SpecialLocation):
         log.info("Special observatory location. No clock corrections applied.")
         return np.zeros(t.shape) * u.s
 
+    def last_clock_correction_mjd(self):
+        return np.inf
 
 class GeocenterObs(SpecialLocation):
     """Observatory-derived class for the Earth geocenter."""

@@ -228,6 +228,9 @@ class Observatory:
         # TOA metadata which may be necessary in some cases.
         raise NotImplementedError
 
+    def last_clock_correction_mjd(self):
+        return np.inf
+
     def get_TDBs(self, t, method="default", ephem=None, options=None):
         """This is a high level function for converting TOAs to TDB time scale.
 
