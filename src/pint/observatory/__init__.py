@@ -218,7 +218,7 @@ class Observatory:
         astropy.time.Time()."""
         raise NotImplementedError
 
-    def clock_corrections(self, t):
+    def clock_corrections(self, t, limits="warn"):
         """Given an array-valued Time, return the clock corrections
         as a numpy array, with units.  These values are to be added to the
         raw TOAs in order to refer them to the timescale specified by

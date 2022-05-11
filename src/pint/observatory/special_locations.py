@@ -105,7 +105,7 @@ class SpecialLocation(Observatory):
         )
         return os.path.join(os.getenv("TEMPO2"), "clock", fname)
 
-    def clock_corrections(self, t):
+    def clock_corrections(self, t, limits="warn"):
         corr = np.zeros(t.shape) * u.s
         if self.include_gps:
             log.info("Applying GPS to UTC clock correction (~few nanoseconds)")
@@ -116,7 +116,7 @@ class SpecialLocation(Observatory):
                     )
                 )
                 self._gps_clock = ClockFile.read(self.gps_fullpath, format="tempo2")
-            corr += self._gps_clock.evaluate(t)
+            corr += self._gps_clock.evaluate(t, limits=limits)
         if self.include_bipm:
             log.info("Applying TT(TAI) to TT(BIPM) clock correction (~27 us)")
             tt2tai = 32.184 * 1e6 * u.us
@@ -134,7 +134,7 @@ class SpecialLocation(Observatory):
                     raise ValueError(
                         "Can not find TT BIPM file '%s'. " % self.bipm_version
                     )
-            corr += self._bipm_clock.evaluate(t) - tt2tai
+            corr += self._bipm_clock.evaluate(t, limits=limits) - tt2tai
         return corr
 
 
