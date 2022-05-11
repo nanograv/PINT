@@ -552,3 +552,49 @@ def compare_tempo_obsys_dat(tempodir=None):
             # Check ITOA code?
             # Check time corrections?
     return report
+
+
+def check_for_new_clock_files_in_tempo12_repos():
+    import astropy.utils.data
+
+    tempo_repo = "https://raw.githubusercontent.com/nanograv/tempo/master/clock/"
+    tempo2_repo = "https://bitbucket.org/psrsoft/tempo2/raw/master/T2runtime/clock/"
+    for a, o in Observatory._registry.items():
+        if not hasattr(o, "clock_file"):
+            log.info(f"Skipping bogus clock file for observatory {a}")
+            continue
+        if o.clock_file is None or o.clock_file == "time.dat":
+            log.info(f"Skipping bogus clock file for observatory {a}: {o.clock_file}")
+            continue
+        if isinstance(o.clock_fullpath, str):
+            cfs = [o.clock_fullpath]
+        else:
+            cfs = o.clock_fullpath
+        for clock_file in cfs:
+            if not os.path.isfile(clock_file):
+                log.info(
+                    f"Skipping unreadable clock file for observatory {a}: {clock_file}"
+                )
+                continue
+            f = open(clock_file).read()
+            # m = Time(o.get_last_clock_correction_mjd(), format="mjd")
+            if o.clock_fmt == "tempo":
+                bu = tempo_repo
+            elif o.clock_fmt == "tempo2":
+                bu = tempo2_repo
+            else:
+                raise ValueError(f"Mystery format {o.clock_fmt} for observatory {a}")
+            u = bu + os.path.basename(clock_file)
+            log.info(f"Downloading clock file for observatory {a} from {u}")
+            try:
+                wfn = astropy.utils.data.download_file(u, cache=True)
+            except IOError as e:
+                log.error(f"Unable to download {a} from {u}: {e}")
+                continue
+            wf = open(wfn).read()
+            wfl = wf.strip().split("\n")
+            fl = f.strip().split("\n")
+            if wfl != fl:
+                print(
+                    f"Clock file for {a} has changed: {len(fl)} lines in PINT, {len(wfl)} on web"
+                )
