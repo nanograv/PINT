@@ -6,6 +6,8 @@ import numpy as np
 import pytest
 from pint.pulsar_mjd import Time
 
+import pint.observatory
+import pint.observatory.observatories
 from pint.observatory import get_observatory
 from pint.observatory.topo_obs import TopoObs
 from pinttestdata import datadir
@@ -148,3 +150,19 @@ class TestObservatory(unittest.TestCase):
             site.get_TDBs(self.test_time, method="Unknown_method")
         with self.assertRaises(ValueError):
             site.get_TDBs(self.test_time, method="ephemeris", ephem="de436")
+
+
+@pytest.mark.parametrize("observatory", list(pint.observatory.Observatory._registry.keys()))
+def test_can_compute_corrections(observatory):
+    if observatory == "gmrt":
+        pytest.xfail("No GMRT clock file in the TEMPO2 runtime for us to import")
+    if observatory in { "mwa", "lwa1", "ps1", "hobart", "gb300", "lofar", "shao", "pico_veleta", "princeton", "srt", "vla_site", "northern_cross" }:
+        pytest.xfail("TEMPO-format time corrections not available in PINT")
+    o = get_observatory(observatory)
+    o.clock_corrections(Time(57600, format="mjd"))
+
+def test_observatories_registered():
+    assert len(pint.observatory.Observatory._registry)>5
+
+def test_gbt_registered():
+    get_observatory("gbt")
