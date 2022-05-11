@@ -122,13 +122,9 @@ class SpecialLocation(Observatory):
                         self.name, self.bipm_fullpath
                     )
                 )
-                self._bipm_clock = ClockFile.read(
-                    self.bipm_fullpath, format="tempo2"
-                )
+                self._bipm_clock = ClockFile.read(self.bipm_fullpath, format="tempo2")
             except:
-                raise ValueError(
-                    "Can not find TT BIPM file '%s'. " % self.bipm_version
-                )
+                raise ValueError("Can not find TT BIPM file '%s'. " % self.bipm_version)
 
     def clock_corrections(self, t, limits="warn"):
         corr = np.zeros(t.shape) * u.s
@@ -152,6 +148,7 @@ class SpecialLocation(Observatory):
             self._load_bipm_clock()
             t = min(t, self._bipm_clock.last_correction_mjd())
         return t
+
 
 class BarycenterObs(SpecialLocation):
     """Observatory-derived class for the solar system barycenter.  Time
@@ -190,6 +187,7 @@ class BarycenterObs(SpecialLocation):
 
     def last_clock_correction_mjd(self):
         return np.inf
+
 
 class GeocenterObs(SpecialLocation):
     """Observatory-derived class for the Earth geocenter."""
