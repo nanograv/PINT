@@ -9,6 +9,7 @@ TopoObs(
     "gbt",
     tempo_code="1",
     itoa_code="GB",
+    clock_file="time_gbt.dat",
     itrf_xyz=[882589.289, -4924872.368, 3943729.418],
     origin="""The Robert C. Byrd Green Bank Telescope.
 
@@ -17,6 +18,7 @@ TopoObs(
 )
 TopoObs(
     "gbt_pre_2021",
+    clock_file="time_gbt.dat",
     itrf_xyz=[882589.65, -4924872.32, 3943729.348],
     origin="""The Robert C. Byrd Green Bank Telescope.
 
@@ -28,6 +30,7 @@ TopoObs(
     "arecibo",
     tempo_code="3",
     itoa_code="AO",
+    clock_file="time_ao.dat",
     aliases=["aoutc"],
     itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
     origin="""The Arecibo telescope.
@@ -40,6 +43,7 @@ TopoObs(
 TopoObs(
     "arecibo_pre_2021",
     itrf_xyz=[2390490.0, -5564764.0, 1994727.0],
+    clock_file="time_ao.dat",
     origin="""The Arecibo telescope.
 
     The origin of this data is unknown but as of 2021 June 8 it agrees exactly with
@@ -51,6 +55,7 @@ TopoObs(
     "vla",
     tempo_code="6",
     itoa_code="VL",
+    clock_file="time_vla.dat",
     aliases=["jvla"],
     itrf_xyz=[-1601192.0, -5041981.4, 3554871.4],
     origin="""The Jansky Very Large Array.
@@ -90,6 +95,7 @@ TopoObs(
     "jodrell",
     tempo_code="8",
     itoa_code="JB",
+    clock_file="time_jb.dat",
     aliases=["jbdfb", "jbroach", "jbafb", "jbodfb", "jboafb", "jboroach"],
     itrf_xyz=[3822625.769, -154105.255, 5086486.256],
     origin="""The Lovell telescope at Jodrell Bank.
@@ -101,6 +107,7 @@ TopoObs(
 )
 TopoObs(
     "jodrell_pre_2021",
+    clock_file="time_jb.dat",
     itrf_xyz=[3822626.04, -154105.65, 5086486.04],
     origin="""The Lovell telescope at Jodrell Bank.
 
@@ -193,6 +200,7 @@ TopoObs(
     "fast",
     tempo_code="k",
     itoa_code="FA",
+    clock_file="time_fast.dat",
     itrf_xyz=[-1668557.0, 5506838.0, 2744934.0],
     origin="""The FAST radio telescope in China.
 
@@ -260,6 +268,7 @@ TopoObs(
     "chime",
     tempo_code="y",
     itoa_code="CH",
+    clock_file="time_chime",
     itrf_xyz=[-2059166.313, -3621302.972, 4814304.113],
     origin="""The Canadian Hydrogen Intensity Mapping Experiment.
 
@@ -471,6 +480,7 @@ TopoObs(
     aliases=["gb140"],
     itoa_code="G1",
     tempo_code="a",
+    clock_file="time_gb140",
     itrf_xyz=[882872.57, -4924552.73, 3944154.92],
     origin="""The Green Bank 140-foot telescope.
 
@@ -485,6 +495,7 @@ TopoObs(
     aliases=["gb853"],
     tempo_code="b",
     itoa_code="G8",
+    clock_file="time_gb853",
     itrf_xyz=[882315.33, -4925191.41, 3943414.05],
     origin="""The Green Bank 85-3 telescope.
 
