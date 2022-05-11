@@ -3,7 +3,7 @@ import os
 
 import astropy.constants as c
 import astropy.units as u
-import numpy
+import numpy as np
 from astropy.coordinates import EarthLocation
 from loguru import logger as log
 
@@ -105,7 +105,7 @@ class TopoObs(Observatory):
         # Convert coords to standard format.  If no units are given, assume
         # meters.
         if not has_astropy_unit(itrf_xyz):
-            xyz = numpy.array(itrf_xyz) * u.m
+            xyz = np.array(itrf_xyz) * u.m
         else:
             xyz = itrf_xyz.to(u.m)
 
@@ -217,16 +217,32 @@ class TopoObs(Observatory):
     def earth_location_itrf(self, time=None):
         return self._loc_itrf
 
-    def clock_corrections(self, t, limits="warn"):
-        """Compute the total clock corrections,
+    def _load_gps_clock(self):
+        if self._gps_clock is None:
+            log.info(
+                "Observatory {0}, loading GPS clock file {1}".format(
+                    self.name, self.gps_fullpath
+                )
+            )
+            self._gps_clock = ClockFile.read(self.gps_fullpath, format="tempo2")
 
-        Parameters
-        ----------
-        t : astropy.time.Time
-            The time when the clock correcions are applied.
-        """
-        # Read clock file if necessary
-        # TODO provide some method for re-reading the clock file?
+    def _load_bipm_clock(self):
+        if self._bipm_clock is None:
+            try:
+                log.info(
+                    "Observatory {0}, loading BIPM clock file {1}".format(
+                        self.name, self.bipm_fullpath
+                    )
+                )
+                self._bipm_clock = ClockFile.read(
+                    self.bipm_fullpath, format="tempo2"
+                )
+            except Exception as e:
+                raise ValueError(
+                    f"Can not find TT BIPM file for version '{self.bipm_version}'."
+                ) from e
+
+    def _load_clock_corrections(self):
         if self._clock is None:
             clock_files = (
                 self.clock_fullpath
@@ -245,6 +261,18 @@ class TopoObs(Observatory):
                         clock_file, format=self.clock_fmt, obscode=self.tempo_code
                     )
                 )
+
+    def clock_corrections(self, t, limits="warn"):
+        """Compute the total clock corrections,
+
+        Parameters
+        ----------
+        t : astropy.time.Time
+            The time when the clock correcions are applied.
+        """
+        # Read clock file if necessary
+        # TODO provide some method for re-reading the clock file?
+        self._load_clock_corrections()
         if not self._clock:
             msg = f"No clock corrections found for observatory {self.name} taken from file {c.filename}"
             if limits == "warn":
@@ -260,13 +288,7 @@ class TopoObs(Observatory):
 
         if self.include_gps:
             log.info("Applying GPS to UTC clock correction (~few nanoseconds)")
-            if self._gps_clock is None:
-                log.info(
-                    "Observatory {0}, loading GPS clock file \n\t{1}".format(
-                        self.name, self.gps_fullpath
-                    )
-                )
-                self._gps_clock = ClockFile.read(self.gps_fullpath, format="tempo2")
+            self._load_gps_clock()
             corr += self._gps_clock.evaluate(t, limits=limits)
 
         if self.include_bipm:
@@ -274,22 +296,24 @@ class TopoObs(Observatory):
                 f"Applying TT(TAI) to TT({self.bipm_version}) clock correction (~27 us)"
             )
             tt2tai = 32.184 * 1e6 * u.us
-            if self._bipm_clock is None:
-                log.info(
-                    "Observatory {0}, loading BIPM clock file \n\t{1}".format(
-                        self.name, self.bipm_fullpath
-                    )
-                )
-                try:
-                    self._bipm_clock = ClockFile.read(
-                        self.bipm_fullpath, format="tempo2"
-                    )
-                except Exception as e:
-                    raise ValueError(
-                        f"Can not find TT BIPM file for version '{self.bipm_version}'."
-                    ) from e
+            self._load_bipm_clock()
             corr += self._bipm_clock.evaluate(t, limits=limits) - tt2tai
         return corr
+
+    def last_clock_correction_mjd(self):
+        t = np.inf
+        self._load_clock_corrections()
+        if not self._clock:
+            return -np.inf
+        for clock in self._clock:
+            t = min(t, clock.last_correction_mjd())
+        if self.include_gps:
+            self._load_gps_clock()
+            t = min(t, self._gps_clock.last_correction_mjd())
+        if self.include_bipm:
+            self._load_bipm_clock()
+            t = min(t, self._bipm_clock.last_correction_mjd())
+        return t
 
     def _get_TDB_ephem(self, t, ephem):
         """Read the ephem TDB-TT column.
@@ -310,7 +334,7 @@ class TopoObs(Observatory):
         # NOTE
         # Moyer (1981) and Murray (1983), with fundamental arguments adapted
         # from Simon et al. 1994.
-        topo_time_corr = numpy.sum(
+        topo_time_corr = np.sum(
             earth_pv.vel / c.c * obs_geocenter_pv.pos / c.c, axis=0
         )
         topo_tdb_tt = geo_tdb_tt - topo_time_corr

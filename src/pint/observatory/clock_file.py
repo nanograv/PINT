@@ -17,8 +17,10 @@ from pint.pulsar_mjd import Time
 
 class ClockFileMeta(type):
     """Metaclass that provides a registry for different clock file formats.
+
     ClockFile implementations should define a 'format' class member giving
-    the name of the format."""
+    the name of the format.
+    """
 
     def __init__(cls, name, bases, members):
         regname = "_formats"
@@ -30,7 +32,9 @@ class ClockFileMeta(type):
 
 
 class ClockFile(object, metaclass=ClockFileMeta):
-    """The ClockFile class provides a way to read various formats of clock
+    """A clock correction file in one of several formats.
+
+    The ClockFile class provides a way to read various formats of clock
     files.  It will provide the clock information from the file as arrays
     of times and clock correction values via the ClockFile.time and
     ClockFile.clock properties.  The file should be initially read using the
@@ -57,7 +61,10 @@ class ClockFile(object, metaclass=ClockFileMeta):
     @classmethod
     def read(cls, filename, format="tempo", **kwargs):
         if format in cls._formats.keys():
-            return cls._formats[format](filename, **kwargs)
+            r = cls._formats[format](filename, **kwargs)
+            if not np.all(np.diff(r.time.mjd)>=0):
+                raise ValueError(f"Clock file f{filename} in format f{format} appears to be out of order")
+            return r
         else:
             raise ValueError("clock file format '%s' not defined" % format)
 
@@ -72,12 +79,12 @@ class ClockFile(object, metaclass=ClockFileMeta):
     def evaluate(self, t, limits="warn"):
         """Evaluate the clock corrections at the times t.
 
-        it is (given as an
-        array-valued Time object).  By default, values are linearly
+        t is given as an array-valued Time object.  By default, values are linearly
         interpolated but this could be overridden by derived classes
         if needed.  The first/last values will be applied to times outside
         the data range.  If limits=='warn' this will also issue a warning.
-        If limits=='error' an exception will be raised."""
+        If limits=='error' an exception will be raised.
+        """
 
         if len(self.time) == 0:
             msg = f"No data points in clock file '{self.filename}'"
@@ -96,6 +103,12 @@ class ClockFile(object, metaclass=ClockFileMeta):
 
         # Can't pass Times directly to np.interp.  This should be OK:
         return np.interp(t.mjd, self.time.mjd, self.clock.to(u.us).value) * u.us
+
+    def last_correction_mjd(self):
+        if len(self.time) == 0:
+            return -np.inf
+        else:
+            return self.time[-1].mjd
 
 
 class Tempo2ClockFile(ClockFile):
@@ -124,10 +137,13 @@ class Tempo2ClockFile(ClockFile):
 
     @staticmethod
     def load_tempo2_clock_file(filename):
-        """Reads a tempo2-format clock file.  Returns three values:
+        """Read a tempo2-format clock file.
+
+        Returns three values:
         (mjd, clk, hdrline).  The first two are float arrays of MJD and
         clock corrections (seconds).  hdrline is the first line of the file
-        that specifies the two clock scales connected by the file."""
+        that specifies the two clock scales connected by the file.
+        """
         f = open(filename, "r")
         hdrline = f.readline().rstrip()
         try:
