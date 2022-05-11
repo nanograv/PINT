@@ -234,9 +234,7 @@ class TopoObs(Observatory):
                         self.name, self.bipm_fullpath
                     )
                 )
-                self._bipm_clock = ClockFile.read(
-                    self.bipm_fullpath, format="tempo2"
-                )
+                self._bipm_clock = ClockFile.read(self.bipm_fullpath, format="tempo2")
             except Exception as e:
                 raise ValueError(
                     f"Can not find TT BIPM file for version '{self.bipm_version}'."
@@ -334,9 +332,7 @@ class TopoObs(Observatory):
         # NOTE
         # Moyer (1981) and Murray (1983), with fundamental arguments adapted
         # from Simon et al. 1994.
-        topo_time_corr = np.sum(
-            earth_pv.vel / c.c * obs_geocenter_pv.pos / c.c, axis=0
-        )
+        topo_time_corr = np.sum(earth_pv.vel / c.c * obs_geocenter_pv.pos / c.c, axis=0)
         topo_tdb_tt = geo_tdb_tt - topo_time_corr
         result = Time(
             t.tt.jd1 - JD_MJD,

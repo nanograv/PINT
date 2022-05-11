@@ -62,8 +62,10 @@ class ClockFile(object, metaclass=ClockFileMeta):
     def read(cls, filename, format="tempo", **kwargs):
         if format in cls._formats.keys():
             r = cls._formats[format](filename, **kwargs)
-            if not np.all(np.diff(r.time.mjd)>=0):
-                raise ValueError(f"Clock file f{filename} in format f{format} appears to be out of order")
+            if not np.all(np.diff(r.time.mjd) >= 0):
+                raise ValueError(
+                    f"Clock file f{filename} in format f{format} appears to be out of order"
+                )
             return r
         else:
             raise ValueError("clock file format '%s' not defined" % format)

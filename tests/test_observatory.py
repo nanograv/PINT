@@ -161,19 +161,18 @@ def test_can_try_to_compute_corrections(observatory):
 
 
 good_observatories = ["gbt", "ao", "vla", "jodrell", "wsrt", "parkes"]
-@pytest.mark.parametrize(
-    "observatory", good_observatories
-)
+
+
+@pytest.mark.parametrize("observatory", good_observatories)
 def test_can_compute_corrections(observatory):
     get_observatory(observatory).clock_corrections(
         Time(55600, format="mjd"), limits="error"
     )
-@pytest.mark.parametrize(
-    "observatory", good_observatories
-)
+
+
+@pytest.mark.parametrize("observatory", good_observatories)
 def test_last_mjd(observatory):
     assert get_observatory(observatory).last_clock_correction_mjd() > 55600
-
 
 
 def test_missing_clock_gives_exception_nonexistent():
