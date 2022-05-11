@@ -643,6 +643,6 @@ def get_model_and_toas(
         usepickle=usepickle,
         tdb_method=tdb_method,
         picklefilename=picklefilename,
-        limits=limits,
+        limits="warn",
     )
     return mm, tt

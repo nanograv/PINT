@@ -169,7 +169,7 @@ class BarycenterObs(SpecialLocation):
             origin="ssb",
         )
 
-    def clock_corrections(self, t):
+    def clock_corrections(self, t, limits="warn"):
         log.info("Special observatory location. No clock corrections applied.")
         return np.zeros(t.shape) * u.s
 
