@@ -555,6 +555,16 @@ def compare_tempo_obsys_dat(tempodir=None):
 
 
 def check_for_new_clock_files_in_tempo12_repos():
+    """Try to determine whether PINT's clock files are up to date.
+
+    This iterates through all observatories for which PINT has clock corrections
+    and checks the clock corrections PINT is using against those in the
+    TEMPO/TEMPO2 repositories. Ones that differ are reported, along with
+    a little context.
+
+    The web versions are actually downloaded into the astropy cache, so
+    optional automated updates would be possible.
+    """
     import astropy.utils.data
 
     tempo_repo = "https://raw.githubusercontent.com/nanograv/tempo/master/clock/"
