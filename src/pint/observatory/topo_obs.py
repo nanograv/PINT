@@ -24,6 +24,16 @@ class TopoObs(Observatory):
     correction files are read and computed, observatory coordinates are specified in
     ITRF XYZ, etc.
 
+    In order for PINT to be able to actually find a clock file, you have several options:
+
+    * Specify ``clock_file`` and ``clock_fmt=tempo2``
+    * Specify ``clock_file`` and ``clock_fmt=tempo``
+    * Specify ``clock_fmt=tempo2`` and ``tempo_code`` and have your clock file listed in ``time.dat`` with an ``INLCUDE`` statement
+
+    If PINT cannot find a clock file, you will (by default) get a warning and no
+    clock corrections. Calling code can request that missing clock corrections
+    raise an exception.
+
     Parameters
     ----------
 
@@ -79,7 +89,7 @@ class TopoObs(Observatory):
         itoa_code=None,
         aliases=None,
         itrf_xyz=None,
-        clock_file="time.dat",
+        clock_file="",
         clock_dir="PINT",
         clock_fmt="tempo",
         include_gps=True,
@@ -118,7 +128,7 @@ class TopoObs(Observatory):
 
         # If using TEMPO time.dat we need to know the 1-char tempo-style
         # observatory code.
-        if clock_dir == "TEMPO" and clock_file == "time.dat" and tempo_code is None:
+        if clock_fmt == "tempo" and clock_file == "time.dat" and tempo_code is None:
             raise ValueError("No tempo_code set for observatory '%s'" % name)
 
         # GPS corrections
@@ -207,7 +217,7 @@ class TopoObs(Observatory):
     def earth_location_itrf(self, time=None):
         return self._loc_itrf
 
-    def clock_corrections(self, t):
+    def clock_corrections(self, t, limits="warn"):
         """Compute the total clock corrections,
 
         Parameters
@@ -236,19 +246,17 @@ class TopoObs(Observatory):
                     )
                 )
         if not self._clock:
-            raise ValueError(
-                f"No clock corrections found for observatory {self.name} taken from file {self.clock_file}"
-            )
-        for c in self._clock:
-            if len(c.clock) == 0:
-                raise ValueError(
-                    f"No clock corrections found for observatory {self.name} taken from file {c.filename}"
-                )
-
-        log.info("Applying observatory clock corrections.")
-        corr = self._clock[0].evaluate(t)
-        for clock in self._clock[1:]:
-            corr += clock.evaluate(t)
+            msg = f"No clock corrections found for observatory {self.name} taken from file {c.filename}"
+            if limits == "warn":
+                log.warning(msg)
+                corr = np.zeros_like(t) * u.us
+            elif limits == "error":
+                raise RuntimeError(msg)
+        else:
+            log.info("Applying observatory clock corrections.")
+            corr = self._clock[0].evaluate(t, limits=limits)
+            for clock in self._clock[1:]:
+                corr += clock.evaluate(t, limits=limits)
 
         if self.include_gps:
             log.info("Applying GPS to UTC clock correction (~few nanoseconds)")
@@ -259,7 +267,7 @@ class TopoObs(Observatory):
                     )
                 )
                 self._gps_clock = ClockFile.read(self.gps_fullpath, format="tempo2")
-            corr += self._gps_clock.evaluate(t)
+            corr += self._gps_clock.evaluate(t, limits=limits)
 
         if self.include_bipm:
             log.info(
@@ -280,7 +288,7 @@ class TopoObs(Observatory):
                     raise ValueError(
                         f"Can not find TT BIPM file for version '{self.bipm_version}'."
                     ) from e
-            corr += self._bipm_clock.evaluate(t) - tt2tai
+            corr += self._bipm_clock.evaluate(t, limits=limits) - tt2tai
         return corr
 
     def _get_TDB_ephem(self, t, ephem):
