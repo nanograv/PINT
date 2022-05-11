@@ -236,10 +236,14 @@ class TopoObs(Observatory):
                     )
                 )
         if not self._clock:
-            raise ValueError(f"No clock corrections found for observatory {self.name} taken from file {self.clock_file}")
+            raise ValueError(
+                f"No clock corrections found for observatory {self.name} taken from file {self.clock_file}"
+            )
         for c in self._clock:
-            if len(c.clock)==0:
-                raise ValueError(f"No clock corrections found for observatory {self.name} taken from file {c.filename}")
+            if len(c.clock) == 0:
+                raise ValueError(
+                    f"No clock corrections found for observatory {self.name} taken from file {c.filename}"
+                )
 
         log.info("Applying observatory clock corrections.")
         corr = self._clock[0].evaluate(t)
