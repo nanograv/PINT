@@ -5,6 +5,7 @@ import os
 import re
 import unittest
 from io import StringIO
+import warnings
 
 import astropy.units as u
 import numpy as np
@@ -178,19 +179,16 @@ def test_remove_PX():
 
 
 def test_A1dot_warning():
-    log.remove()
-    outlog = StringIO()
-    log.add(outlog)
-    m = mb.get_model(StringIO(temp_par_str))
-    logcontents = outlog.getvalue()
-    assert "Using A1DOT" not in logcontents
-    outlog.close()
-    log.remove()
-    outlog = StringIO()
-    log.add(outlog)
-    m = mb.get_model(StringIO(temp_par_str + "\nA1DOT 2\n"))
-    logcontents = outlog.getvalue()
-    assert "Using A1DOT" in logcontents
+    # should not have a warning
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", message="Using A1DOT")
+        m = mb.get_model(StringIO(temp_par_str))
+
+    # and this should not have a warning
+    with pytest.warns(
+        UserWarning, match=r"Using A1DOT with a DDK model is not advised."
+    ):
+        m = mb.get_model(StringIO(temp_par_str + "\nA1DOT 2\n"))
 
 
 if __name__ == "__main__":

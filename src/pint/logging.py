@@ -67,6 +67,8 @@ debug_color = "<fg #b790d4><bold>"
 # Other formatting:
 # https://loguru.readthedocs.io/en/stable/api/logger.html#color
 
+# add "once" filter for this warning
+warnings.filterwarnings("once", message="Using A1DOT with a DDK model is not advised.")
 
 warn_ = warnings.warn
 
