@@ -117,7 +117,7 @@ class Tempo2ClockFile(ClockFile):
 
     format = "tempo2"
 
-    def __init__(self, filename, **kwargs):
+    def __init__(self, filename, bogus_last_correction=False, **kwargs):
         self.filename = filename
         log.debug(
             "Loading {0} observatory clock correction file {1}".format(
@@ -131,9 +131,16 @@ class Tempo2ClockFile(ClockFile):
             mjd = np.array([], dtype=float)
             clk = np.array([], dtype=float)
             self.header = None
-        # NOTE Clock correction file has a time far in the future as ending point
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", ErfaWarning)
+        if bogus_last_correction and len(mjd):
+            mjd = mjd[:-1]
+            clk = clk[:-1]
+        if False:
+            # No longer needed with bogus time removal
+            # NOTE Clock correction file has a time far in the future as ending point
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", ErfaWarning)
+                self._time = Time(mjd, format="pulsar_mjd", scale="utc")
+        else:
             self._time = Time(mjd, format="pulsar_mjd", scale="utc")
         self._clock = clk * u.s
 
@@ -165,7 +172,7 @@ class TempoClockFile(ClockFile):
 
     format = "tempo"
 
-    def __init__(self, filename, obscode=None, **kwargs):
+    def __init__(self, filename, obscode=None, bogus_last_correction=False, **kwargs):
         self.filename = filename
         self.obscode = obscode
         log.debug(
@@ -179,17 +186,26 @@ class TempoClockFile(ClockFile):
             )
             mjd = np.array([], dtype=float)
             clk = np.array([], dtype=float)
-        # NOTE Clock correction file has a time far in the future as ending point
-        # We are swithing off astropy warning only for gps correction.
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", ErfaWarning)
-            try:
-                self._time = Time(mjd, format="pulsar_mjd", scale="utc")
-            except ValueError:
-                log.error(
-                    "Filename {0}, site {1}: Bad MJD {2}".format(filename, obscode, mjd)
-                )
-                raise
+        if bogus_last_correction and len(mjd):
+            mjd = mjd[:-1]
+            clk = clk[:-1]
+        if False:
+            # No longer needed with bogus MJD removal
+            # NOTE Clock correction file has a time far in the future as ending point
+            # We are swithing off astropy warning only for gps correction.
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", ErfaWarning)
+                try:
+                    self._time = Time(mjd, format="pulsar_mjd", scale="utc")
+                except ValueError:
+                    log.error(
+                        "Filename {0}, site {1}: Bad MJD {2}".format(
+                            filename, obscode, mjd
+                        )
+                    )
+                    raise
+        else:
+            self._time = Time(mjd, format="pulsar_mjd", scale="utc")
         self._clock = clk * u.us
 
     @staticmethod
@@ -276,4 +292,11 @@ class TempoClockFile(ClockFile):
             mjds.append(mjd)
             clkcorrs.append(clkcorr2 - clkcorr1)
 
+        # Deal with filthy habit of sticking 99999 on otherwise good
+        # clock correction files
+        if mjds[-1] == 99999:
+            # Check it's not a two-component 0-99999 file
+            if len(mjds) > 2 or mjds[0] != 0:
+                mjds = mjds[:-1]
+                clkcorrs = clkcorrs[:-1]
         return mjds, clkcorrs

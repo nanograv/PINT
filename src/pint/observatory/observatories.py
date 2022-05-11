@@ -97,6 +97,7 @@ TopoObs(
     itoa_code="JB",
     clock_file="time_jb.dat",
     aliases=["jbdfb", "jbroach", "jbafb", "jbodfb", "jboafb", "jboroach"],
+    bogus_last_correction=True,
     itrf_xyz=[3822625.769, -154105.255, 5086486.256],
     origin="""The Lovell telescope at Jodrell Bank.
 
@@ -149,6 +150,7 @@ TopoObs(
     clock_fmt="tempo2",
     clock_file="eff2gps.clk",
     itrf_xyz=[4033947.146, 486990.898, 4900431.067],
+    bogus_last_correction=True,
     origin="""The Effelsberg radio telescope.
 
     These are the coordinates used for VLBI as of March 2020 (MJD 58919). They are based on
@@ -161,6 +163,7 @@ TopoObs(
     clock_fmt="tempo2",
     clock_file="eff2gps.clk",
     itrf_xyz=[4033949.5, 486989.4, 4900430.8],
+    bogus_last_correction=True,
     origin="""The Effelsberg radio telescope.
 
     The origin of this data is unknown but as of 2021 June 8 it agrees exactly with
@@ -258,6 +261,7 @@ TopoObs(
     itrf_xyz=[-4483311.64, 2648815.92, -3671909.31],
     clock_fmt="tempo2",
     clock_file="mo2gps.clk",
+    bogus_last_correction=True,
     origin="""The Molonglo Observatory Synthesis Telescope.
 
     Origin of this data is unknown but as of 2021 June 8 this value agrees exactly with
