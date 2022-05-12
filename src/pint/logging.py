@@ -9,9 +9,21 @@ If you want to include custom filtering and other elements:
 
     >>> from loguru import logger as log
     >>> import pint.logging
+    >>> import sys
     >>> logfilter = pint.logging.LogFilter()
     >>> log.remove()
-    >>> log.add(sys.stderr, level=level, filter=logfilter, format=format, colorize=True)
+    >>> log.add(sys.stderr, level=level, filter=logfilter, format=pint.logging.format, colorize=True)
+
+`level` can be any of the existing ``loguru`` levels: ``TRACE``, ``DEBUG``, ``INFO``, ``WARNING``, ``ERROR``, or you can define new ones.
+
+The format can be something new, or you can use :py:data:`pint.logging.format`.  A full format that might be useful as a reference is::
+    
+    format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
+
+while the default for this module is::
+
+    format = "<level>{level: <8}</level> ({name: <30}): <level>{message}</level>"
+
 
 If you want to use command-line arguments to set the level you can do that like:
 
@@ -55,9 +67,7 @@ try:
 except ImportError:
     from astropy._erfa import ErfaWarning
 
-__all__ = [
-    "LogFilter",
-]
+__all__ = ["LogFilter", "format"]
 
 # defaults can be overridden using $LOGURU_LEVEL and $LOGURU_FORMAT
 # default for an individual level can be overridden by $LOGURU_DEBUG_COLOR etc
@@ -136,6 +146,7 @@ def warn(message, *args, **kwargs):
     warn_(message, *args, **kwargs)
 
 
+# if this is not used, then the default warning mechanism is not overridden. There may be times when that is desired
 warnings.showwarning = warn
 
 

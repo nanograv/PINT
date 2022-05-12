@@ -478,8 +478,8 @@ class TimingModel:
         alias: str
            Parameter's alias.
 
-        Return
-        ------
+        Returns
+        -------
         str
             PINT parameter name corresponding to the input alias.
         """
@@ -2401,8 +2401,8 @@ class Component(object, metaclass=ModelMeta):
 
         This function collects the non-frozen parameters.
 
-        Return
-        ------
+        Returns
+        -------
         A list of free parameters.
         """
         free_param = []
@@ -2586,8 +2586,8 @@ class Component(object, metaclass=ModelMeta):
     def match_param_aliases(self, alias):
         """Return the parameter corresponding to this alias.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         alias: str
             Alias name.
 

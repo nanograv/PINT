@@ -1907,14 +1907,16 @@ class maskParameter(floatParameter):
     def compare_key_value(self, other_param):
         """Compare if the key and value are the same with the other parameter.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         other_param: maskParameter
             The parameter to compare.
+
         Return
         ------
         bool:
             If the key and value are the same, return True, otherwise False.
+
         Raises
         ------
         ValueError:
