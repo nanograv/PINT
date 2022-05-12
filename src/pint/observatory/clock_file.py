@@ -81,11 +81,26 @@ class ClockFile(object, metaclass=ClockFileMeta):
     def evaluate(self, t, limits="warn"):
         """Evaluate the clock corrections at the times t.
 
-        t is given as an array-valued Time object.  By default, values are linearly
+        By default, values are linearly
         interpolated but this could be overridden by derived classes
         if needed.  The first/last values will be applied to times outside
         the data range.  If limits=='warn' this will also issue a warning.
         If limits=='error' an exception will be raised.
+
+        Parameters
+        ----------
+        t : astropy.time.Time
+            An array-valued Time object specifying the times at which to evaluate the
+            clock correction.
+        limits : "warn" or "error"
+            If "error", raise an exception if times outside the range in the clock
+            file are presented (or if the clock file is empty); if "warn", extrapolate
+            by returning the value at the nearest endpoint but emit a warning.
+
+        Returns
+        -------
+        corrections : astropy.units.Quantity
+            The corrections in units of microseconds.
         """
 
         if len(self.time) == 0:
