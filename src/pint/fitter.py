@@ -1336,9 +1336,7 @@ class WLSState(ModelState):
             toas=self.fitter.toas, incfrozen=False, incoffset=True
         )
         # Get residuals and TOA uncertainties in seconds
-        Nvec = (
-            self.model.scaled_toa_uncertainty(self.fitter.toas).to(u.s).value
-        )
+        Nvec = self.model.scaled_toa_uncertainty(self.fitter.toas).to(u.s).value
         scaled_resids = self.resids.time_resids.to(u.s).value / Nvec
 
         # "Whiten" design matrix and residuals by dividing by uncertainties
@@ -2049,9 +2047,7 @@ class WLSFitter(Fitter):
             # Get residuals and TOA uncertainties in seconds
             self.update_resids()
             residuals = self.resids.time_resids.to(u.s).value
-            Nvec = (
-                self.model.scaled_toa_uncertainty(self.toas).to(u.s).value
-            )
+            Nvec = self.model.scaled_toa_uncertainty(self.toas).to(u.s).value
 
             # "Whiten" design matrix and residuals by dividing by uncertainties
             M = M / Nvec.reshape((-1, 1))
