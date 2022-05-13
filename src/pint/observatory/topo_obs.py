@@ -16,6 +16,10 @@ from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import get_tdb_tt_ephem_geocenter, objPosVel_wrt_SSB
 from pint.utils import has_astropy_unit
 
+# These are global because they are, well, literally global
+_gps_clock = None
+_bipm_clock = None
+
 
 class TopoObs(Observatory):
     """Observatories that are at a fixed location on the surface of the Earth.
@@ -136,7 +140,6 @@ class TopoObs(Observatory):
 
         # GPS corrections
         self.include_gps = include_gps
-        self._gps_clock = None
 
         # BIPM corrections
         self.include_bipm = include_bipm
@@ -159,8 +162,8 @@ class TopoObs(Observatory):
         """Returns the full path to the clock file."""
         if self.clock_dir == "PINT":
             if self._multiple_clock_files:
-                return [runtimefile(f) for f in self.clock_file]
-            return runtimefile(self.clock_file)
+                return [(runtimefile(f) if f else "") for f in self.clock_file]
+            return runtimefile(self.clock_file) if self.clock_file else ""
         elif self.clock_dir == "TEMPO":
             # Technically should read $TEMPO/tempo.cfg and get clock file
             # location from CLKDIR line...
@@ -179,9 +182,17 @@ class TopoObs(Observatory):
             dir = os.path.join(TEMPO2_dir, "clock")
         else:
             dir = self.clock_dir
+
+        def join(dir, f):
+            if f:
+                return os.path.join(dir, f)
+            else:
+                return ""
+
         if self._multiple_clock_files:
-            return [os.path.join(dir, f) for f in self.clock_file]
-        return os.path.join(dir, self.clock_file)
+            return [join(dir, f) for f in self.clock_file]
+        else:
+            return join(dir, self.clock_file)
 
     @property
     def gps_fullpath(self):
@@ -222,23 +233,19 @@ class TopoObs(Observatory):
         return self._loc_itrf
 
     def _load_gps_clock(self):
-        if self._gps_clock is None:
-            log.info(
-                "Observatory {0}, loading GPS clock file {1}".format(
-                    self.name, self.gps_fullpath
-                )
-            )
-            self._gps_clock = ClockFile.read(self.gps_fullpath, format="tempo2")
+        global _gps_clock
+        if _gps_clock is None:
+            log.info("Loading GPS clock file {1}".format(self.name, self.gps_fullpath))
+            _gps_clock = ClockFile.read(self.gps_fullpath, format="tempo2")
 
     def _load_bipm_clock(self):
-        if self._bipm_clock is None:
+        global _bipm_clock
+        if _bipm_clock is None:
             try:
                 log.info(
-                    "Observatory {0}, loading BIPM clock file {1}".format(
-                        self.name, self.bipm_fullpath
-                    )
+                    "Loading BIPM clock file {1}".format(self.name, self.bipm_fullpath)
                 )
-                self._bipm_clock = ClockFile.read(self.bipm_fullpath, format="tempo2")
+                _bipm_clock = ClockFile.read(self.bipm_fullpath, format="tempo2")
             except Exception as e:
                 raise ValueError(
                     f"Can not find TT BIPM file for version '{self.bipm_version}'."
@@ -253,11 +260,9 @@ class TopoObs(Observatory):
             )
             self._clock = []
             for clock_file in clock_files:
-                log.info(
-                    "Observatory {0}, loading clock file \n\t{1}".format(
-                        self.name, clock_file
-                    )
-                )
+                if clock_file == "":
+                    continue
+                log.info(f"Observatory {self.name}, loading clock file {clock_file}")
                 self._clock.append(
                     ClockFile.read(
                         clock_file,
@@ -279,7 +284,7 @@ class TopoObs(Observatory):
         # TODO provide some method for re-reading the clock file?
         self._load_clock_corrections()
         if not self._clock:
-            msg = f"No clock corrections found for observatory {self.name} taken from file {c.filename}"
+            msg = f"No clock corrections found for observatory {self.name} taken from file {self.clock_file}"
             if limits == "warn":
                 log.warning(msg)
                 corr = np.zeros_like(t) * u.us
@@ -294,7 +299,7 @@ class TopoObs(Observatory):
         if self.include_gps:
             log.info("Applying GPS to UTC clock correction (~few nanoseconds)")
             self._load_gps_clock()
-            corr += self._gps_clock.evaluate(t, limits=limits)
+            corr += _gps_clock.evaluate(t, limits=limits)
 
         if self.include_bipm:
             log.info(
@@ -302,7 +307,7 @@ class TopoObs(Observatory):
             )
             tt2tai = 32.184 * 1e6 * u.us
             self._load_bipm_clock()
-            corr += self._bipm_clock.evaluate(t, limits=limits) - tt2tai
+            corr += _bipm_clock.evaluate(t, limits=limits) - tt2tai
         return corr
 
     def last_clock_correction_mjd(self):
@@ -319,10 +324,10 @@ class TopoObs(Observatory):
             t = min(t, clock.last_correction_mjd())
         if self.include_gps:
             self._load_gps_clock()
-            t = min(t, self._gps_clock.last_correction_mjd())
+            t = min(t, _gps_clock.last_correction_mjd())
         if self.include_bipm:
             self._load_bipm_clock()
-            t = min(t, self._bipm_clock.last_correction_mjd())
+            t = min(t, _bipm_clock.last_correction_mjd())
         return t
 
     def _get_TDB_ephem(self, t, ephem):
