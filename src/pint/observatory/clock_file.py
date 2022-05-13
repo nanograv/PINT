@@ -134,11 +134,7 @@ class Tempo2ClockFile(ClockFile):
 
     def __init__(self, filename, bogus_last_correction=False, **kwargs):
         self.filename = filename
-        log.debug(
-            "Loading {0} observatory clock correction file {1}".format(
-                self.format, filename
-            )
-        )
+        log.debug(f"Loading {self.format} observatory clock correction file {filename}")
         try:
             mjd, clk, self.header = self.load_tempo2_clock_file(filename)
         except (FileNotFoundError, OSError):

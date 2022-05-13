@@ -1,9 +1,11 @@
 """Machinery to support PINT's list of observatories."""
 
+import sys
 import os
 import textwrap
 from collections import defaultdict
 from io import StringIO
+import warnings
 
 import astropy.constants as const
 import astropy.coordinates
@@ -559,7 +561,7 @@ def compare_tempo_obsys_dat(tempodir=None):
     return report
 
 
-def check_for_new_clock_files_in_tempo12_repos():
+def check_for_new_clock_files_in_tempo12_repos(update_download=True, show_diff=100):
     """Try to determine whether PINT's clock files are up to date.
 
     This iterates through all observatories for which PINT has clock corrections
@@ -569,17 +571,28 @@ def check_for_new_clock_files_in_tempo12_repos():
 
     The web versions are actually downloaded into the astropy cache, so
     optional automated updates would be possible.
+
+    This function is still a prototype
     """
+    import collections
+    import difflib
     import astropy.utils.data
 
-    tempo_repo = "https://raw.githubusercontent.com/nanograv/tempo/master/clock/"
-    tempo2_repo = "https://bitbucket.org/psrsoft/tempo2/raw/master/T2runtime/clock/"
+    # Ensure all observatories are loaded and warnings are emitted
+    clock_files = collections.defaultdict(list)
     for a, o in Observatory._registry.items():
         if not hasattr(o, "clock_file"):
-            log.info(f"Skipping bogus clock file for observatory {a}")
+            log.debug(f"Skipping bogus clock file for observatory {a}")
             continue
+        try:
+            # Ensure clock corrections are loaded and suppress some warnings
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                o.clock_corrections(Time(99999, format="mjd"), limits="error")
+        except RuntimeError:
+            pass
         if o.clock_file is None or o.clock_file == "time.dat":
-            log.info(f"Skipping bogus clock file for observatory {a}: {o.clock_file}")
+            log.debug(f"Skipping bogus clock file for observatory {a}: {o.clock_file}")
             continue
         if isinstance(o.clock_fullpath, str):
             cfs = [o.clock_fullpath]
@@ -587,29 +600,81 @@ def check_for_new_clock_files_in_tempo12_repos():
             cfs = o.clock_fullpath
         for clock_file in cfs:
             if not os.path.isfile(clock_file):
-                log.info(
+                log.debug(
                     f"Skipping unreadable clock file for observatory {a}: {clock_file}"
                 )
                 continue
-            f = open(clock_file).read()
-            # m = Time(o.get_last_clock_correction_mjd(), format="mjd")
-            if o.clock_fmt == "tempo":
-                bu = tempo_repo
-            elif o.clock_fmt == "tempo2":
-                bu = tempo2_repo
-            else:
-                raise ValueError(f"Mystery format {o.clock_fmt} for observatory {a}")
-            u = bu + os.path.basename(clock_file)
-            log.info(f"Downloading clock file for observatory {a} from {u}")
+            clock_files[clock_file].append(o)
+
+    tempo_repo = "https://raw.githubusercontent.com/nanograv/tempo/master/clock/"
+    tempo2_repo = "https://bitbucket.org/psrsoft/tempo2/raw/master/T2runtime/clock/"
+    for clock_file, obs in clock_files.items():
+        names = [o.name for o in obs]
+        if len(names) == 1:
+            names = names[0]
+        base = os.path.basename(clock_file)
+        o = obs[0]
+        f = open(clock_file).read()
+        if o.clock_fmt == "tempo":
+            bu = tempo_repo
+        elif o.clock_fmt == "tempo2":
+            bu = tempo2_repo
+        else:
+            raise ValueError(f"Mystery format {o.clock_fmt} for observatory {a}")
+        u = bu + base
+        log.info(f"Downloading clock file {base} for observatory {names} from {u}")
+        try:
+            wfn = astropy.utils.data.download_file(
+                u, cache="update" if update_download else True
+            )
+        except IOError as e:
+            log.error(f"Unable to download {base} from {u}: {e}")
+            continue
+        wf = open(wfn).read()
+        wfl = wf.splitlines(keepends=True)
+        fl = f.splitlines(keepends=True)
+        if wfl != fl:
+            print(
+                f"Clock file {base} has changed: {len(fl)} lines in PINT, {len(wfl)} on web"
+            )
+            if show_diff:
+                print(" " * 4 + f"Differences:")
+                diff = list(difflib.unified_diff(fl, wfl))
+                if len(diff) <= show_diff:
+                    for l in diff:
+                        sys.stdout.write(" " * 8 + l)
+                else:
+                    print(" " * 8 + f"{len(diff)} lines omitted")
+            print(" " * 4 + f"Observatory file is in {wfn}")
+
+
+def list_last_correction_mjds():
+    """Print out a list of the last MJD each clock correction is good for.
+
+    Each observatory lists the clock files it uses and their last dates,
+    and a combined last date for the observatory. The last date for the
+    observatory is also limited by the date ranges covered by GPS and BIPM
+    tables, if appropriate.
+
+    Observatories for which PINT doesn't know how to find the clock corrections
+    are not listed. Observatories for which PINT knows where the clock correction
+    should be but can't find it are listed as MISSING.
+    """
+    for n in Observatory.names():
+        o = get_observatory(n)
+        if not hasattr(o, "clock_file"):
+            continue
+        m = o.last_clock_correction_mjd()
+        if not o.clock_file:
+            continue
+        try:
+            print(f"{n:<24} {Time(m, format='mjd').iso}")
+        except (ValueError, TypeError):
+            print(f"{n:<24} MISSING")
+        for c in o._clock:
             try:
-                wfn = astropy.utils.data.download_file(u, cache=True)
-            except IOError as e:
-                log.error(f"Unable to download {a} from {u}: {e}")
-                continue
-            wf = open(wfn).read()
-            wfl = wf.strip().split("\n")
-            fl = f.strip().split("\n")
-            if wfl != fl:
                 print(
-                    f"Clock file for {a} has changed: {len(fl)} lines in PINT, {len(wfl)} on web"
+                    f"    {os.path.basename(c.filename):<20} {Time(c.last_correction_mjd(), format='mjd').iso}"
                 )
+            except (ValueError, TypeError):
+                print(f"    {os.path.basename(c.filename):<20} MISSING")

@@ -227,7 +227,10 @@ function :func:`pint.observatory.Observatory.last_clock_correction_mjd` checks
 when clock corrections are valid for. For most telescopes, this combines the
 per-telescope clock correction with PINT's global GPS and BIPM clock
 corrections (both of which cannot be reliably extrapolated too far into the
-future).
+future). PINT provides two convenience functions,
+:func:`pint.observatory.list_last_correction_mjds` and
+:func:`pint.observatory.check_for_new_clock_files_in_tempo12_repos`, that will
+help you check the state of your clock corrections.
 
 If you need clock files that are not in PINT, either more recent versions or
 clock files for telescopes not included in PINT, you will have to modify PINT's
