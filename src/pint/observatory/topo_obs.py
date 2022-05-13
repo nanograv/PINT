@@ -306,6 +306,11 @@ class TopoObs(Observatory):
         return corr
 
     def last_clock_correction_mjd(self):
+        """Return the MJD of the last clock correction.
+
+        Combines constraints based on Earth orientation parameters and on the
+        available clock corrections specific to the telescope.
+        """
         t = np.inf
         self._load_clock_corrections()
         if not self._clock:

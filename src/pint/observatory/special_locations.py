@@ -140,6 +140,10 @@ class SpecialLocation(Observatory):
         return corr
 
     def last_clock_correction_mjd(self):
+        """Return the MJD of the last available clock correction.
+
+        Returns ``np.inf`` if no clock corrections are relevant.
+        """
         t = np.inf
         if self.include_gps:
             self._load_gps_clock()

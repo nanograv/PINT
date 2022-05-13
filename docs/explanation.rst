@@ -207,21 +207,51 @@ accuracy.
 Clock corrections
 '''''''''''''''''
 
-Not all the data that PINT uses is easily accessible for programs to
-download. Observatory clock corrections, for example, may need to be
-obtained from the observatory through various means (often talking to a
-support scientist). We intend that PINT should notify you when this is
-necessary, but be aware that you may obtain reduced accuracy if you
-have old clock correction files.
+Not all the data that PINT uses is easily accessible for programs to download.
+Observatory clock corrections, for example, may need to be obtained from the
+observatory through various means (often talking to a support scientist). PINT
+tries to include all clock correction files from the TEMPO and TEMPO2
+repositories, and we intend to update the PINT source as these are updated.
+PINT should notify you when your clock files are out of date for the data you
+are using; be aware that you may obtain reduced accuracy if you have old clock
+correction files.
 
-The PINT distribution includes some clock files, but these are not necessarily
-up-to-date enough. They normally live in the ``src/datafiles/`` directory with
-names like ``time_gbt.dat``. There is a ``README.md`` in there describing some
-ways to update your clock files. PINT is also capable of using clock files from
-a TEMPO or TEMPO2 installation, if you have the ``TEMPO`` or ``TEMPO2``
-environment variables set. You can see what clock file your corrections are
-coming from with a command like
-``pint.observatory.get_observatory("GBT").clock_fullpath``.
+Normally, if you try to do some operation that requires unavailable clock
+corrections, PINT will emit a warning but continue. If you want to be stricter,
+you can specify ``limit="error"`` to various functions like
+:func:`pint.toa.get_TOAs`.
+
+If you need to check how up to date your clock corrections are, you can use
+something like ``get_observatory("gbt").last_clock_correction_mjd()``: the
+function :func:`pint.observatory.Observatory.last_clock_correction_mjd` checks
+when clock corrections are valid for. For most telescopes, this combines the
+per-telescope clock correction with PINT's global GPS and BIPM clock
+corrections (both of which cannot be reliably extrapolated too far into the
+future).
+
+If you need clock files that are not in PINT, either more recent versions or
+clock files for telescopes not included in PINT, you will have to modify PINT's
+source code. (This is not an ideal situation!) You have two options:
+
+#. Simply replace a clock correction file in the PINT version you are using.
+   The file PINT is using may be deep in a virtualenv directory somewhere, but
+   you should be able to locate it with
+   ``get_observatory("gbt").clock_fullpath``. If you replace this file, you
+   should see updated clock corrections.
+
+#. Modify ``src/pint/observatory/observatories.py`` so that the observatory you
+   are interested in points to the correct clock file. (You may have to redo
+   ``pip install`` for PINT to make this take effect.) If you set
+   ``clock_dir="TEMPO"`` or ``clock_dir="TEMPO2"`` then PINT will look in the
+   clock directory referenced by your environment variables ``$TEMPO`` or
+   ``$TEMPO2`` (and nowhere else; it will no longer find clock corrections for
+   this observatory that are included with PINT). You can also specify a
+   specific directory as ``clock_dir="/home/burnell/clock-files/"``. Editing
+   this file also allows you to choose between TEMPO- and TEMPO2-format clock
+   corrections with the ``clock_fmt`` argument.
+
+The PINT developers recognize that the situation regarding clock corrections is
+not ideal.  Possible more flexible and powerful options are under discussion.
 
 Structure of Pulsar Timing Data Formats
 ---------------------------------------
