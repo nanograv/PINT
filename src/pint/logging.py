@@ -1,18 +1,25 @@
 """Custom logging filter for PINT using ``loguru``.
 
+To use this do::
+
+    import pint.logging
+    pint.logging.setup()
+
+You can optionally pass the desired logging level to the :func:`pint.logging.setup` function.
+
 If you want to customize more of this yourself (e.g., in a script)
 the minimal pieces would be:
 
-    >>> from loguru import logger as log
+    from loguru import logger as log
 
 If you want to include custom filtering and other elements:
 
-    >>> from loguru import logger as log
-    >>> import pint.logging
-    >>> import sys
-    >>> logfilter = pint.logging.LogFilter()
-    >>> log.remove()
-    >>> log.add(sys.stderr, level=level, filter=logfilter, format=pint.logging.format, colorize=True)
+    from loguru import logger as log
+    import pint.logging
+    import sys
+    logfilter = pint.logging.LogFilter()
+    log.remove()
+    log.add(sys.stderr, level=level, filter=logfilter, format=pint.logging.format, colorize=True)
 
 `level` can be any of the existing ``loguru`` levels: ``TRACE``, ``DEBUG``, ``INFO``, ``WARNING``, ``ERROR``, or you can define new ones.
 
@@ -27,23 +34,23 @@ while the default for this module is::
 
 If you want to use command-line arguments to set the level you can do that like:
 
-    >>> parser.add_argument(
-    >>>     "--log-level",
-    >>>     type=str,
-    >>>     choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
-    >>>     default=pint.logging.script_level,
-    >>>     help="Logging level",
-    >>>     dest="loglevel",
-    >>> )
-    >>> args = parser.parse_args(argv)
-    >>> log.remove()
-    >>> log.add(
-    >>>     sys.stderr,
-    >>>     level=args.loglevel,
-    >>>     colorize=True,
-    >>>     format=pint.logging.format,
-    >>>     filter=pint.logging.LogFilter(),
-    >>> )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
+        default=pint.logging.script_level,
+        help="Logging level",
+        dest="loglevel",
+    )
+    args = parser.parse_args(argv)
+    log.remove()
+    log.add(
+        sys.stderr,
+        level=args.loglevel,
+        colorize=True,
+        format=pint.logging.format,
+        filter=pint.logging.LogFilter(),
+    )
 
 
 Note that ``loguru`` does not allow you to change the properties of an existing logger.
@@ -67,14 +74,11 @@ try:
 except ImportError:
     from astropy._erfa import ErfaWarning
 
-__all__ = ["LogFilter", "format"]
+__all__ = ["LogFilter", "setup", "format"]
 
 # defaults can be overridden using $LOGURU_LEVEL and $LOGURU_FORMAT
 # default for an individual level can be overridden by $LOGURU_DEBUG_COLOR etc
 # or just make a new logger
-level = "INFO"
-# default level for scripts
-script_level = "WARNING"
 # a full format that might be useful as a reference:
 # format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
 format = "<level>{level: <8}</level> ({name: <30}): <level>{message}</level>"
@@ -97,7 +101,10 @@ warning_onceregistry = {}
 
 def warn(message, *args, **kwargs):
     """
-    Want ``loguru`` to capture warnings emitted by ``warnings.warn``.
+    Function to allow ``loguru`` to capture warnings emitted by :func:`warnings.warn`.
+
+    Also look at the existing :data:`warnings.filters` to see if warnings should be ignored or only seen once.
+
     See https://loguru.readthedocs.io/en/stable/resources/recipes.html#capturing-standard-stdout-stderr-and-warnings
     """
     # check to see if a standard warning filter has already been inserted that would catch whatever this is
@@ -144,10 +151,6 @@ def warn(message, *args, **kwargs):
     else:
         log.warning(f"{message_text}")
     warn_(message, *args, **kwargs)
-
-
-# if this is not used, then the default warning mechanism is not overridden. There may be times when that is desired
-warnings.showwarning = warn
 
 
 class LogFilter:
@@ -256,23 +259,68 @@ class LogFilter:
         return self.filter(record)
 
 
-# you can modify this instance to change the messages that are never seen/only seen once
-logfilter = LogFilter()
+def setup(
+    level="INFO",
+    sink=sys.stderr,
+    format=format,
+    debug_color=debug_color,
+    capturewarnings=True,
+    removeprior=True,
+):
+    """
+    Setup the PINT logging using ``loguru``
 
-# remove the default logger so we can put in one with a custom filter
-# this can be done elsewhere if more/different customization is needed
-log.remove()
-# Keep these here to see what is set at the enrivonment level
-# again, this isn't needed by default but if you are setting these explicitly
-# then it can be good to check
-if "LOGURU_LEVEL" in os.environ:
-    level = os.environ["LOGURU_LEVEL"]
-if "LOGURU_FORMAT" in os.environ:
-    format = os.environ["LOGURU_FORMAT"]
+    This involves removing previous loggers and adding a new one at the requested level
 
-# use colorize=True to force colors
-# otherwise the default selection turns them off e.g., for a Jupyter notebook
-# since it isn't a tty
-log.add(sys.stderr, level=level, filter=logfilter, format=format, colorize=True)
-# change default DEBUG color
-log.level("DEBUG", color=debug_color)
+    Parameters
+    ----------
+    level : str, optional
+        Logging level, unless overridden by ``$LOGURU_LEVEL``
+    sink : file-like object, str, or other object accepted by :py:meth:`loguru.Logger.add`, optional
+        Destination for the logging messages
+    format : str, optional
+        Format string for the logging messages, unless overridden by ``$LOGURU_FORMAT``
+    debug_color : str, optional
+        Color to override the default ``DEBUG`` color
+    capturewarnings : bool, optional
+        Whether or not messages emitted by :func:`warnings.warn` should be included in the logging output
+    removeprior : bool, optional
+        Whether or not to remove prior loggers
+
+    Returns
+    -------
+    int
+            An identifier associated with the added sink and which should be used to
+            remove it.
+
+    """
+
+    # if this is not used, then the default warning mechanism is not overridden. There may be times when that is desired
+    if capturewarnings:
+        warnings.showwarning = warn
+
+    # you can modify this instance to change the messages that are never seen/only seen once
+    logfilter = LogFilter()
+
+    # remove the default logger so we can put in one with a custom filter
+    # this can be done elsewhere if more/different customization is needed
+    if removeprior:
+        log.remove()
+    # Keep these here to see what is set at the enrivonment level
+    # again, this isn't needed by default but if you are setting these explicitly
+    # then it can be good to check
+    if "LOGURU_LEVEL" in os.environ:
+        level = os.environ["LOGURU_LEVEL"]
+    if "LOGURU_FORMAT" in os.environ:
+        format = os.environ["LOGURU_FORMAT"]
+
+    # use colorize=True to force colors
+    # otherwise the default selection turns them off e.g., for a Jupyter notebook
+    # since it isn't a tty
+    loghandler = log.add(
+        sink, level=level, filter=logfilter, format=format, colorize=True
+    )
+    # change default DEBUG color
+    log.level("DEBUG", color=debug_color)
+
+    return loghandler
