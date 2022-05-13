@@ -2,6 +2,9 @@
 import os
 import unittest
 from os.path import join
+from io import StringIO
+import copy
+import numpy as np
 
 import astropy.units as u
 import pytest
@@ -87,3 +90,83 @@ def test_compare_downhill_wb(full_cov, wb):
         pass
 
     assert abs(wb.resids.chi2 - dwb.resids.chi2) < 0.01
+
+
+@pytest.fixture
+def m_t():
+    model = get_model(
+        StringIO(
+            """
+                PSR J1234+5678
+                ELAT 0
+                ELONG 0
+                F0 1 1
+                F1 0 1
+                DM 10
+                PEPOCH 56000
+                EFAC mjd 55000 56000 1
+                EFAC mjd 56000 57000 2
+            """
+        )
+    )
+    toas = make_fake_toas_uniform(
+        55000, 57000, 20, model=model, add_noise=True, dm=10 * u.pc / u.cm**3
+    )
+    return model, toas
+
+
+@pytest.mark.parametrize(
+    "fitter",
+    [
+        WLSFitter,
+        DownhillWLSFitter,
+        GLSFitter,
+        DownhillGLSFitter,
+        WidebandTOAFitter,
+        WidebandDownhillFitter,
+    ],
+)
+def test_step_different_with_efacs(fitter, m_t):
+    m, t = m_t
+    f = fitter(t, m)
+    try:
+        f.fit_toas(maxiter=1)
+    except MaxiterReached:
+        pass
+    m2 = copy.deepcopy(m)
+    m2.EFAC1.value = 1
+    m2.EFAC2.value = 1
+    f2 = fitter(t, m2)
+    try:
+        f2.fit_toas(maxiter=1)
+    except MaxiterReached:
+        pass
+    for p in m.free_params:
+        assert getattr(f.model, p).value != getattr(f2.model, p).value
+
+
+@pytest.mark.parametrize(
+    "fitter1, fitter2",
+    [
+        (WLSFitter, DownhillWLSFitter),
+        (GLSFitter, DownhillGLSFitter),
+        (WidebandTOAFitter, WidebandDownhillFitter),
+    ],
+)
+def test_downhill_same_step(fitter1, fitter2, m_t):
+    m, t = m_t
+    f1 = fitter1(t, m)
+    f2 = fitter2(t, m)
+    try:
+        f1.fit_toas(maxiter=1)
+    except MaxiterReached:
+        pass
+    try:
+        f2.fit_toas(maxiter=1)
+    except MaxiterReached:
+        pass
+    for p in m.free_params:
+        assert np.isclose(
+            getattr(f1.model, p).value - getattr(f1.model_init, p).value,
+            getattr(f2.model, p).value - getattr(f2.model_init, p).value,
+        )

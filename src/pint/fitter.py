@@ -1709,7 +1709,8 @@ class WidebandState(ModelState):
 
         # normalize the design matrix
         norm = np.sqrt(np.sum(M**2, axis=0))
-        ntmpar = len(self.model.free_params)
+        # The fixed offset is an unlisted parameter
+        ntmpar = len(self.model.free_params)+1
         if M.shape[1] > ntmpar:
             norm[ntmpar:] = 1
         for c in np.where(norm == 0)[0]:
@@ -1752,6 +1753,8 @@ class WidebandState(ModelState):
 
         # compute covariance matrices
         if self.full_cov:
+            # FIXME: does this handle EFAC? needs scaled_toa_uncertainty
+            # rather than get_errors
             cov = combine_covariance_matrix(
                 [
                     CovarianceMatrixMaker("toa", u.s)(self.fitter.toas, self.model),
@@ -1771,14 +1774,10 @@ class WidebandState(ModelState):
                     [
                         self.model.scaled_toa_uncertainty(self.fitter.toas).to_value(
                             u.s
-                        )
-                        if hasattr(self.model, "scaled_toa_uncertainty")
-                        else self.resids.toa.get_errors().to_value(u.s),
+                        ),
                         self.model.scaled_dm_uncertainty(self.fitter.toas).to_value(
                             u.pc / u.cm**3
                         )
-                        if hasattr(self.model, "scaled_dm_uncertainty")
-                        else self.resids.dm.get_dm_errors().to_value(u.pc / u.cm**3),
                     ]
                 )
                 ** 2
