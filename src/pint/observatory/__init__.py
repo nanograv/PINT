@@ -572,7 +572,16 @@ def check_for_new_clock_files_in_tempo12_repos(update_download=True, show_diff=1
     The web versions are actually downloaded into the astropy cache, so
     optional automated updates would be possible.
 
-    This function is still a prototype
+    This function is still a prototype.
+
+    Parameters
+    ----------
+    update_download : bool
+        If True, download new versions even if there are versions in the
+        astropy cache. (they might be old.)
+    show_diff : int
+        Show the difference between local and remote files if it is less than
+        this many lines. (Huge diffs are probably just more correction data.)
     """
     import collections
     import difflib
