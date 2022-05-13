@@ -83,6 +83,8 @@ __all__ = ["LogFilter", "setup", "format"]
 # format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
 format = "<level>{level: <8}</level> ({name: <30}): <level>{message}</level>"
 debug_color = "<fg #b790d4><bold>"
+# default level to be used in scripts
+script_level = "WARNING"
 # Other formatting:
 # https://loguru.readthedocs.io/en/stable/api/logger.html#color
 
