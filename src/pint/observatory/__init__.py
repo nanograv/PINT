@@ -112,6 +112,7 @@ class Observatory:
 
     @classmethod
     def names(cls):
+        """List all observatories known to PINT."""
         return cls._registry.keys()
 
     # Note, name and aliases are not currently intended to be changed
@@ -229,6 +230,10 @@ class Observatory:
         raise NotImplementedError
 
     def last_clock_correction_mjd(self):
+        """Return the MJD of the last available clock correction.
+
+        Returns ``np.inf`` if no clock corrections are relevant.
+        """
         return np.inf
 
     def get_TDBs(self, t, method="default", ephem=None, options=None):
