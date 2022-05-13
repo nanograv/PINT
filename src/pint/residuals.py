@@ -381,7 +381,7 @@ class Residuals:
 
         See Also
         --------
-        :meth:`pint.residuals.get_PSR_freq`
+        :meth:`pint.residuals.Residuals.get_PSR_freq`
         """
         assert calctype.lower() in ["modelf0", "taylor", "numerical"]
         if self.phase_resids is None:
