@@ -146,6 +146,34 @@ def test_step_different_with_efacs(fitter, m_t):
 
 
 @pytest.mark.parametrize(
+    "fitter",
+    [
+        GLSFitter,
+        DownhillGLSFitter,
+        WidebandTOAFitter,
+        WidebandDownhillFitter,
+    ],
+)
+def test_step_different_with_efacs_full_cov(fitter, m_t):
+    m, t = m_t
+    f = fitter(t, m)
+    try:
+        f.fit_toas(maxiter=1, full_cov=True)
+    except MaxiterReached:
+        pass
+    m2 = copy.deepcopy(m)
+    m2.EFAC1.value = 1
+    m2.EFAC2.value = 1
+    f2 = fitter(t, m2)
+    try:
+        f2.fit_toas(maxiter=1, full_cov=True)
+    except MaxiterReached:
+        pass
+    for p in m.free_params:
+        assert getattr(f.model, p).value != getattr(f2.model, p).value
+
+
+@pytest.mark.parametrize(
     "fitter1, fitter2",
     [
         (WLSFitter, DownhillWLSFitter),
