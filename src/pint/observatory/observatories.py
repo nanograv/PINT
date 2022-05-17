@@ -110,6 +110,7 @@ TopoObs(
     "jodrell_pre_2021",
     clock_file="time_jb.dat",
     itrf_xyz=[3822626.04, -154105.65, 5086486.04],
+    bogus_last_correction=True,
     origin="""The Lovell telescope at Jodrell Bank.
 
     The origin of this data is unknown but as of 2021 June 8 it agrees exactly with
@@ -122,7 +123,7 @@ TopoObs(
     itoa_code="NC",
     aliases=["ncy"],
     clock_fmt="tempo2",
-    clock_file="ncy2gps.clk",
+    clock_file=[],
     itrf_xyz=[4324165.81, 165927.11, 4670132.83],
     origin="""The Nançay radio telescope.
 
@@ -272,7 +273,7 @@ TopoObs(
     "chime",
     tempo_code="y",
     itoa_code="CH",
-    clock_file="time_chime.dat",
+    clock_file=[],
     itrf_xyz=[-2059166.313, -3621302.972, 4814304.113],
     origin="""The Canadian Hydrogen Intensity Mapping Experiment.
 
@@ -501,6 +502,7 @@ TopoObs(
     itoa_code="G8",
     clock_file="time_gb853.dat",
     itrf_xyz=[882315.33, -4925191.41, 3943414.05],
+    bogus_last_correction=True,
     origin="""The Green Bank 85-3 telescope.
 
     Imported from TEMPO2 observatories.dat 2021 June 7.""",
