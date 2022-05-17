@@ -20,6 +20,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Fixed
 - Huge number of bugs and improvements to `pintk`, and some to `pintempo`
 - Multiple bug fixes in get_summary()/get_derived_params(), especially for binary calculations
+- DMDATA now an integer for tempo/tempo2 parfile output
 ### Changed
 - Changed logging to use `loguru`
 - Changed to floating point format and added color for correlation matrix output

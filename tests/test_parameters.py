@@ -2,6 +2,7 @@ import copy
 import os
 import pickle
 import unittest
+import io
 
 import astropy.time as time
 import astropy.units as u
@@ -429,6 +430,26 @@ class TestParameters(unittest.TestCase):
             self.assertAlmostEqual(
                 fitter.model.FINISH.value, fitter.toas.last_MJD.value, places=9
             )
+
+    def test_START_FINISH_notfrozen(self):
+        """
+        check that when the START/FINISH parameters
+        are added as unfrozen it warns and fixes
+        """
+
+        # check initialization after fitting for .par file without START/FINISH
+        with open("NGC6440E.par") as f:
+            s = f.read()
+        s += "START 54000 1\nFINISH 55000 1\n"
+        # make sure that it warns
+        with pytest.warns(UserWarning, match=r"cannot be unfrozen"):
+            m = get_model(io.StringIO(s))
+
+        self.assertTrue(hasattr(m, "START"))
+        self.assertTrue(hasattr(m, "FINISH"))
+        # make sure that it freezes
+        self.assertEqual(m.START.frozen, True)
+        self.assertEqual(m.FINISH.frozen, True)
 
 
 @pytest.mark.parametrize(
