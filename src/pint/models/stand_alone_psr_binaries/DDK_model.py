@@ -12,7 +12,8 @@ from .DD_model import DDmodel
 
 class DDKmodel(DDmodel):
     """DDK model, a Kopeikin method corrected DD model.
-    The main difference is that DDK model considers the effects on the pulsar binary parametersfrom the  annual parallax of earth and    the proper motion of the pulsar.
+
+    The main difference is that DDK model considers the effects on the pulsar binary parametersfrom the annual parallax of earth and the proper motion of the pulsar.
 
     Special parameters are:
 
