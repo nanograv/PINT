@@ -303,11 +303,4 @@ class TempoClockFile(ClockFile):
             mjds.append(mjd)
             clkcorrs.append(clkcorr2 - clkcorr1)
 
-        # Deal with filthy habit of sticking 99999 on otherwise good
-        # clock correction files
-        if mjds[-1] == 99999:
-            # Check it's not a two-component 0-99999 file
-            if len(mjds) > 2 or mjds[0] != 0:
-                mjds = mjds[:-1]
-                clkcorrs = clkcorrs[:-1]
         return mjds, clkcorrs
