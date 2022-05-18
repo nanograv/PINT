@@ -15,10 +15,13 @@ from pinttestdata import datadir
 from utils import verify_stand_alone_binary_parameter_updates
 
 import pint.models.model_builder as mb
+from pint.models import get_model
+import pint.simulation
 import pint.toa as toa
 from pint.models.parameter import boolParameter
 from pint.models.timing_model import MissingParameter, TimingModelError
 from pint.residuals import Residuals
+import pint.fitter
 
 temp_par_str = """
     PSR  J1713+0747
@@ -170,6 +173,46 @@ class TestDDK(unittest.TestCase):
         testp = tdu.get_derivative_params(modelJ1713)
         for p in testp.keys():
             self.ECLmodelJ1713.d_phase_d_param(self.toasJ1713, delay, p)
+
+
+def test_ddk_ECL_ICRS():
+    mECL = get_model(StringIO(temp_par_str + "\n KIN  71.969  1               0.562"))
+    print(
+        f"Simulated TOAs in ECL with (KIN,KOM) = ({mECL.KIN.quantity},{mECL.KOM.quantity})"
+    )
+    tECL = pint.simulation.make_fake_toas_uniform(
+        50000, 60000, 100, mECL, error=0.5 * u.us, add_noise=True
+    )
+    prefit = Residuals(tECL, mECL)
+    print(f"Prefit chi^2 in ECL {prefit.calc_chi2()}")
+    # get proper motion vector and normalize
+    pm_ECL = np.array(
+        [mECL.coords_as_ECL().pm_lon_coslat.value, mECL.coords_as_ECL().pm_lat.value]
+    )
+    pm_ECL /= np.sqrt(np.dot(pm_ECL, pm_ECL))
+
+    mICRS = mECL.as_ICRS()
+    pm_ICRS = np.array(
+        [mICRS.coords_as_ICRS().pm_ra_cosdec.value, mICRS.coords_as_ICRS().pm_dec.value]
+    )
+    pm_ICRS /= np.sqrt(np.dot(pm_ICRS, pm_ICRS))
+    # get the angle between proper motion vectors, which should be the difference between KOMs
+    angle = np.arccos(np.dot(pm_ECL, pm_ICRS)) * u.rad
+
+    rICRS = Residuals(tECL, mICRS)
+    print(
+        f"Prefit chi^2 in ICRS with the same KOM ({mICRS.KOM.quantity}) {rICRS.calc_chi2()}"
+    )
+    mICRS_newKOM = copy.deepcopy(mICRS)
+    mICRS_newKOM.KOM.quantity -= angle
+    rICRS_newKOM = Residuals(tECL, mICRS_newKOM)
+    print(
+        f"Change KOM by {angle.to(u.deg)} to {mICRS_newKOM.KOM.quantity}, now chi^2 in ICRS is {rICRS_newKOM.calc_chi2()}"
+    )
+    # fitting with the wrong KOM should be bad
+    assert rICRS.calc_chi2() - prefit.calc_chi2() > 10
+    # and with the new KOM they should be close
+    assert np.abs(rICRS_newKOM.calc_chi2() - prefit.calc_chi2()) < 2
 
 
 @pytest.mark.xfail(reason="model builder does not reject invalid parameters but should")
