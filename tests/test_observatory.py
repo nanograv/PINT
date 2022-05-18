@@ -118,7 +118,7 @@ class TestObservatory(unittest.TestCase):
             "Fake1", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
         )
         with pytest.raises(RuntimeError):
-            site.clock_corrections(self.test_time)
+            site.clock_corrections(self.test_time, limits="error")
 
     def test_no_tempo_but_tempo_clock_requested(self):
         if os.getenv("TEMPO") is not None:
@@ -138,7 +138,7 @@ class TestObservatory(unittest.TestCase):
             "Fake1", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
         )
         with pytest.raises(RuntimeError):
-            site.clock_corrections(self.test_time)
+            site.clock_corrections(self.test_time, limits="error")
 
     def test_wrong_TDB_method(self):
         site = get_observatory(
