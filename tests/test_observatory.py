@@ -160,7 +160,9 @@ def test_can_try_to_compute_corrections(observatory):
     get_observatory(observatory).clock_corrections(Time(57600, format="mjd"))
 
 
-good_observatories = ["gbt", "ao", "vla", "jodrell", "wsrt", "parkes"]
+# Some of these now require TEMPO2 clock files
+# good_observatories = ["gbt", "ao", "vla", "jodrell", "wsrt", "parkes"]
+good_observatories = ["gbt", "ao", "vla", "jodrell"]
 
 
 @pytest.mark.parametrize("observatory", good_observatories)
