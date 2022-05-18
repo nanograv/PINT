@@ -12,6 +12,7 @@ from loguru import logger as log
 from pint.pulsar_mjd import Time
 from pint.utils import lines_of, open_or_use
 from pint.observatory.global_clock_corrections import get_clock_correction_file
+from pint.pulsar_mjd import Time
 
 
 class ClockFileMeta(type):
@@ -650,8 +651,10 @@ class TempoClockFile(ClockFile):
         self._time = Time(mjds, format="pulsar_mjd", scale="utc")
         self._clock = clkcorrs * u.us
 
+
 class GlobalClockFile(ClockFile):
     """Clock file obtained from a global repository."""
+
     # FIXME: fall back to built-in?
 
     def __init__(self, filename, format="tempo", **kwargs):
@@ -685,7 +688,7 @@ class GlobalClockFile(ClockFile):
         corrections : astropy.units.Quantity
             The corrections in units of microseconds.
         """
-        if np.any(t>self.clock_file.time[-1]):
+        if np.any(t > self.clock_file.time[-1]):
             f = get_clock_correction_file(self.filename)
             self.clock_file = ClockFile.read(f, format=self.format, **self.kwargs)
         return self.clock_file.evaluate(t, limits=limits)

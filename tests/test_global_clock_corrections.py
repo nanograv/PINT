@@ -1,11 +1,13 @@
-import pytest
-import time
 import os
+import time
+
+import pytest
 from astropy.utils.data import clear_download_cache
 
 from pint.observatory.global_clock_corrections import get_file
 
 # FIXME: this should be less painful with fixtures somehow
+
 
 def test_not_existing(tmp_path):
     url_base = tmp_path.as_uri() + "/"

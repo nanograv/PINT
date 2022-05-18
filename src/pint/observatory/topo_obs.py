@@ -258,9 +258,7 @@ class TopoObs(Observatory):
     def _load_clock_corrections(self):
         if self._clock is None:
             clock_files = (
-                self.clock_file
-                if self._multiple_clock_files
-                else [self.clock_file]
+                self.clock_file if self._multiple_clock_files else [self.clock_file]
             )
             clock_fullpaths = (
                 self.clock_fullpath
@@ -271,7 +269,9 @@ class TopoObs(Observatory):
             for clock_file, clock_fullpath in zip(clock_files, clock_fullpaths):
                 if clock_file == "":
                     continue
-                log.info(f"Observatory {self.name}, loading global clock file {clock_file}")
+                log.info(
+                    f"Observatory {self.name}, loading global clock file {clock_file}"
+                )
                 try:
                     self._clock.append(
                         GlobalClockFile(
@@ -283,14 +283,15 @@ class TopoObs(Observatory):
                     )
                 except KeyError:
                     # Observatory isn't in the global index
-                    log.error(f"Observatory file {clock_file} not listed in global index, falling back to local file {clock_fullpath}")
+                    log.error(
+                        f"Observatory file {clock_file} not listed in global index, falling back to local file {clock_fullpath}"
+                    )
                     ClockFile.read(
                         clock_fullpath,
                         format=self.clock_fmt,
                         obscode=self.tempo_code,
                         bogus_last_correction=self.bogus_last_correction,
                     )
-
 
     def clock_corrections(self, t, limits="warn"):
         """Compute the total clock corrections,

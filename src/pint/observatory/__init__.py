@@ -1,11 +1,11 @@
 """Machinery to support PINT's list of observatories."""
 
-import sys
 import os
+import sys
 import textwrap
+import warnings
 from collections import defaultdict
 from io import StringIO
-import warnings
 
 import astropy.coordinates
 import astropy.units as u
@@ -15,7 +15,6 @@ from loguru import logger as log
 
 from pint.pulsar_mjd import Time
 from pint.utils import interesting_lines
-
 
 # Include any files that define observatories here.  This will start
 # with the standard distribution files, then will read any system- or
@@ -583,6 +582,7 @@ def check_for_new_clock_files_in_tempo12_repos(update_download=True, show_diff=1
     """
     import collections
     import difflib
+
     import astropy.utils.data
 
     # Importing this module triggers loading all observatories

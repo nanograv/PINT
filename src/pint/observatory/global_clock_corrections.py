@@ -4,13 +4,15 @@ The goal is for PINT (and other programs) to be able to download up-to-date
 observatory clock corrections from a central location, which observatories
 or third parties will update as new clock correction data becomes available.
 """
-from pathlib import Path
-import warnings
-from loguru import logger as log
-from pint.pulsar_mjd import Time
-from astropy.utils.data import download_file
 import collections
 import time
+import warnings
+from pathlib import Path
+
+from astropy.utils.data import download_file
+from loguru import logger as log
+
+from pint.pulsar_mjd import Time
 
 global_clock_correction_url_base = (
     "https://raw.githubusercontent.com/aarchiba/pulsar-clock-corrections/main/"
@@ -22,7 +24,7 @@ global_clock_correction_url_base = (
 global_clock_correction_url_mirrors = [global_clock_correction_url_base]
 
 index_name = "index.txt"
-index_update_interval_days = 7
+index_update_interval_days = 0.01
 
 
 def get_file(
@@ -71,7 +73,9 @@ def get_file(
                 raise FileNotFoundError(name)
 
     if download_policy == "if_missing" and local_file is not None:
-        log.trace(f"File {name} found and returned due to download policy {download_policy}")
+        log.trace(
+            f"File {name} found and returned due to download policy {download_policy}"
+        )
 
     if download_policy == "if_expired" and local_file is not None:
         # FIXME: will update_interval_days=np.inf work with unit conversion?
@@ -79,13 +83,17 @@ def get_file(
         now = time.time()
         if now - file_time < update_interval_days * 86400:
             # Not expired
-            log.trace(f"File {name} found and returned due to download policy {download_policy} and recentness")
+            log.trace(
+                f"File {name} found and returned due to download policy {download_policy} and recentness"
+            )
             return local_file
 
     # By this point we know we need a new file but we want it to wind up in
     # the cache
     log.info(f"File {name} to be downloaded due to download policy {download_policy}")
-    return download_file(remote_url, cache="update", sources=mirror_urls, pkgname="PINT")
+    return download_file(
+        remote_url, cache="update", sources=mirror_urls, pkgname="PINT"
+    )
 
 
 IndexEntry = collections.namedtuple(
@@ -101,7 +109,11 @@ class Index:
             url_mirrors = global_clock_correction_url_mirrors
 
         index_file = get_file(
-            index_name, index_update_interval_days, download_policy=download_policy, url_base=url_base, url_mirrors=url_mirrors
+            index_name,
+            index_update_interval_days,
+            download_policy=download_policy,
+            url_base=url_base,
+            url_mirrors=url_mirrors,
         )
         self.files = {}
         for l in open(index_file).readlines():
@@ -122,7 +134,9 @@ class Index:
 _the_index = None
 
 
-def get_clock_correction_file(filename, download_policy="if_expired", url_base=None, url_mirrors=None):
+def get_clock_correction_file(
+    filename, download_policy="if_expired", url_base=None, url_mirrors=None
+):
     """Obtain a current version of the clock correction file."""
 
     if url_base is None:
@@ -131,8 +145,15 @@ def get_clock_correction_file(filename, download_policy="if_expired", url_base=N
         url_mirrors = global_clock_correction_url_mirrors
 
     # FIXME: cache/share the index object?
-    index = Index(download_policy=download_policy, url_base=url_base, url_mirrors=url_mirrors)
+    index = Index(
+        download_policy=download_policy, url_base=url_base, url_mirrors=url_mirrors
+    )
 
     details = index.files[filename]
-    return get_file(details.file, update_interval_days=details.update_interval_days, download_policy=download_policy, url_base=url_base, url_mirrors=url_mirrors)
-
+    return get_file(
+        details.file,
+        update_interval_days=details.update_interval_days,
+        download_policy=download_policy,
+        url_base=url_base,
+        url_mirrors=url_mirrors,
+    )
