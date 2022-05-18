@@ -3,6 +3,14 @@
 The goal is for PINT (and other programs) to be able to download up-to-date
 observatory clock corrections from a central location, which observatories
 or third parties will update as new clock correction data becomes available.
+
+The global repository is currently hosted on github. Available clock correction
+files and their updating requirements are listed in a file there called index.txt.
+This too is checked occasionally for updates.
+
+The downloaded files are stored in the Astropy cache with ``pkgname="PINT"``;
+to clear out old files you will want to do
+``astropy.utils.data.clear_download_cache(pkgname="PINT")``.
 """
 import collections
 import time
@@ -137,7 +145,27 @@ _the_index = None
 def get_clock_correction_file(
     filename, download_policy="if_expired", url_base=None, url_mirrors=None
 ):
-    """Obtain a current version of the clock correction file."""
+    """Obtain a current version of the clock correction file.
+
+    The clock correction file is looked up in the index downloaded from the
+    repository; unknown clock correction files trigger a KeyError. Known
+    ones use the index's information about when they expire.
+
+    Parameters
+    ----------
+    name : str
+        The name of the file within the repository.
+    download_policy : str
+        When to try downloading from the Net. Options are: "always", "never",
+        "if_expired" (if the cached version is older than update_interval_days),
+        or "if_missing" (only if nothing is currently available).
+    url_base : str or None
+        If provided, override the repository location stored in the source code.
+        Useful mostly for testing.
+    url_mirrors : list of str or None
+        If provided, override the repository mirrors stored in the source code.
+        Useful mostly for testing.
+    """
 
     if url_base is None:
         url_base = global_clock_correction_url_base

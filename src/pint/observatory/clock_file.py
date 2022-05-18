@@ -87,11 +87,10 @@ class ClockFile(metaclass=ClockFileMeta):
     def evaluate(self, t, limits="warn"):
         """Evaluate the clock corrections at the times t.
 
-        By default, values are linearly
-        interpolated but this could be overridden by derived classes
-        if needed.  The first/last values will be applied to times outside
-        the data range.  If limits=='warn' this will also issue a warning.
-        If limits=='error' an exception will be raised.
+        If values past the end are encountered, check for new clock corrections
+        in the global repository. Delegates the actual computation to the
+        included ClockFile object; anything still not covered is treated
+        according to ``limits``.
 
         Parameters
         ----------
@@ -653,7 +652,16 @@ class TempoClockFile(ClockFile):
 
 
 class GlobalClockFile(ClockFile):
-    """Clock file obtained from a global repository."""
+    """Clock file obtained from a global repository.
+
+    These clock files are downloaded from a global repository; if a TOA
+    is encountered past the end of the current version, the code will
+    reach out to the global repository looking for a new version.
+
+    This supports both TEMPO- and TEMPO2-format files; just instantiate the
+    object with appropriate arguments and it will call
+    :func:`pint.observatory.ClockFile.read` with the right arguments.
+    """
 
     # FIXME: fall back to built-in?
 
