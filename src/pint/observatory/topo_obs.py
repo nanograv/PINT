@@ -169,22 +169,26 @@ class TopoObs(Observatory):
             # location from CLKDIR line...
             TEMPO_dir = os.getenv("TEMPO")
             if TEMPO_dir is None:
-                raise RuntimeError(
-                    f"Cannot find TEMPO path from the enviroment, needed for {self.name} clock corrections."
+                log.error(
+                    f"Cannot find TEMPO path from the enviroment; needed by observatory {self.name}."
                 )
-            dir = os.path.join(TEMPO_dir, "clock")
+                dir = ""
+            else:
+                dir = os.path.join(TEMPO_dir, "clock")
         elif self.clock_dir == "TEMPO2":
             TEMPO2_dir = os.getenv("TEMPO2")
             if TEMPO2_dir is None:
-                raise RuntimeError(
-                    f"Cannot find TEMPO2 path from the enviroment, needed for {self.name} clock corrections."
+                log.error(
+                    f"Cannot find TEMPO2 path from the enviroment; needed by observatory {self.name}."
                 )
-            dir = os.path.join(TEMPO2_dir, "clock")
+                dir = ""
+            else:
+                dir = os.path.join(TEMPO2_dir, "clock")
         else:
             dir = self.clock_dir
 
         def join(dir, f):
-            if f:
+            if f and dir:
                 return os.path.join(dir, f)
             else:
                 return ""
