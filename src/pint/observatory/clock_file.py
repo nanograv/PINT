@@ -11,6 +11,7 @@ from loguru import logger as log
 
 from pint.pulsar_mjd import Time
 from pint.utils import lines_of, open_or_use
+from pint.observatory.global_clock_corrections import get_clock_correction_file
 
 
 class ClockFileMeta(type):
@@ -64,7 +65,7 @@ class ClockFile(metaclass=ClockFileMeta):
 
     @classmethod
     def read(cls, filename, format="tempo", **kwargs):
-        if format in cls._formats.keys():
+        if format in cls._formats:
             r = cls._formats[format](filename, **kwargs)
             if not np.all(np.diff(r.time.mjd) >= 0):
                 raise ValueError(
@@ -648,3 +649,54 @@ class TempoClockFile(ClockFile):
         # FIXME: using Time may make loading clock corrections slow
         self._time = Time(mjds, format="pulsar_mjd", scale="utc")
         self._clock = clkcorrs * u.us
+
+class GlobalClockFile(ClockFile):
+    """Clock file obtained from a global repository."""
+    # FIXME: fall back to built-in?
+
+    def __init__(self, filename, format="tempo", **kwargs):
+        self.filename = filename
+        self.format = format
+        self.kwargs = kwargs
+        f = get_clock_correction_file(self.filename, download_policy="if_missing")
+        self.clock_file = ClockFile.read(f, self.format, **kwargs)
+
+    def evaluate(self, t, limits="warn"):
+        """Evaluate the clock corrections at the times t.
+
+        By default, values are linearly
+        interpolated but this could be overridden by derived classes
+        if needed.  The first/last values will be applied to times outside
+        the data range.  If limits=='warn' this will also issue a warning.
+        If limits=='error' an exception will be raised.
+
+        Parameters
+        ----------
+        t : astropy.time.Time
+            An array-valued Time object specifying the times at which to evaluate the
+            clock correction.
+        limits : "warn" or "error"
+            If "error", raise an exception if times outside the range in the clock
+            file are presented (or if the clock file is empty); if "warn", extrapolate
+            by returning the value at the nearest endpoint but emit a warning.
+
+        Returns
+        -------
+        corrections : astropy.units.Quantity
+            The corrections in units of microseconds.
+        """
+        if np.any(t>self.clock_file.time[-1]):
+            f = get_clock_correction_file(self.filename)
+            self.clock_file = ClockFile.read(f, format=self.format, **self.kwargs)
+        return self.clock_file.evaluate(t, limits=limits)
+
+    @property
+    def time(self):
+        return self.clock_file.time
+
+    @property
+    def clock(self):
+        return self.clock_file.clock
+
+    def last_clock_correction_mjd(self):
+        return self.clock_file.last_clock_correction_mjd()

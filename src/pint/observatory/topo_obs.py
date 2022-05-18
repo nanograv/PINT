@@ -11,7 +11,7 @@ from pint import JD_MJD
 from pint.config import runtimefile
 from pint.erfautils import gcrs_posvel_from_itrf
 from pint.observatory import Observatory, bipm_default
-from pint.observatory.clock_file import ClockFile
+from pint.observatory.clock_file import ClockFile, GlobalClockFile
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import get_tdb_tt_ephem_geocenter, objPosVel_wrt_SSB
 from pint.utils import has_astropy_unit
@@ -258,23 +258,39 @@ class TopoObs(Observatory):
     def _load_clock_corrections(self):
         if self._clock is None:
             clock_files = (
+                self.clock_file
+                if self._multiple_clock_files
+                else [self.clock_file]
+            )
+            clock_fullpaths = (
                 self.clock_fullpath
                 if self._multiple_clock_files
                 else [self.clock_fullpath]
             )
             self._clock = []
-            for clock_file in clock_files:
+            for clock_file, clock_fullpath in zip(clock_files, clock_fullpaths):
                 if clock_file == "":
                     continue
-                log.info(f"Observatory {self.name}, loading clock file {clock_file}")
-                self._clock.append(
+                log.info(f"Observatory {self.name}, loading global clock file {clock_file}")
+                try:
+                    self._clock.append(
+                        GlobalClockFile(
+                            clock_file,
+                            format=self.clock_fmt,
+                            obscode=self.tempo_code,
+                            bogus_last_correction=self.bogus_last_correction,
+                        )
+                    )
+                except KeyError:
+                    # Observatory isn't in the global index
+                    log.error(f"Observatory file {clock_file} not listed in global index, falling back to local file {clock_fullpath}")
                     ClockFile.read(
-                        clock_file,
+                        clock_fullpath,
                         format=self.clock_fmt,
                         obscode=self.tempo_code,
                         bogus_last_correction=self.bogus_last_correction,
                     )
-                )
+
 
     def clock_corrections(self, t, limits="warn"):
         """Compute the total clock corrections,
