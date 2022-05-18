@@ -24,7 +24,6 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - automatic fitter selection available with standard API as well
 - added tempo(2) par/tim output to `pintk` 
 - added icon to `pintk`
-- Added all clock files from TEMPO/TEMPO2 into PINT's runtime directory
 - Added the limits="warn" or limits="error" to get_TOAs to select handling of uncorrected TOAs
 - Added functions in pint.observatory to request the status of PINT's available clock corrections
 - Added the ability to query clock correction files or observatories for their last corrected MJD
@@ -44,6 +43,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Clock correction files are now checked for being in order (necessary for PINT's interpolation to function)
 - Observatories using TEMPO-format clock files now refer to the clock file (for example time_ao.dat) rather than via time.dat
 - Observatories that don't use clock corrections (for example CHIME uses GPS time directly) just use an empty list of clock correction files rather than files containing only zeros
+- Updated Jodrell clock corrections to include post-1997
 
 ## [0.8.5] 2022-02-24
 ### Added
