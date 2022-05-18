@@ -70,6 +70,7 @@ TopoObs(
     itoa_code="MK",
     clock_fmt="tempo2",
     clock_file="mk2utc.clk",
+    clock_dir="TEMPO2",
     itrf_xyz=[5109360.133, 2006852.586, -3238948.127],
     origin="""MEERKAT, used in timing mode.
 
@@ -84,6 +85,7 @@ TopoObs(
     aliases=["pks"],
     clock_fmt="tempo2",
     clock_file="pks2gps.clk",
+    clock_dir="TEMPO2",
     itrf_xyz=[-4554231.5, 2816759.1, -3454036.3],
     origin="""The Parkes radio telescope.
 
@@ -129,6 +131,8 @@ TopoObs(
 
     The origin of this data is unknown but as of 2021 June 8 it agrees exactly with
     the values used by TEMPO and TEMPO2.
+
+    This telescope appears to require zero clock corrections to GPS.
     """,
 )
 TopoObs(
@@ -137,6 +141,7 @@ TopoObs(
     itrf_xyz=[4324165.81, 165927.11, 4670132.83],
     clock_fmt="tempo2",
     clock_file=["ncyobs2obspm.clk", "obspm2gps.clk"],
+    clock_dir="TEMPO2",
     origin="""The Nançay radio telescope with the NUPPI back-end.
 
     The origin of this data is unknown but as of 2021 June 8 it agrees exactly with
@@ -150,6 +155,7 @@ TopoObs(
     aliases=["eff"],
     clock_fmt="tempo2",
     clock_file="eff2gps.clk",
+    clock_dir="TEMPO2",
     itrf_xyz=[4033947.146, 486990.898, 4900431.067],
     bogus_last_correction=True,
     origin="""The Effelsberg radio telescope.
@@ -191,6 +197,7 @@ TopoObs(
     itoa_code="WS",
     clock_fmt="tempo2",
     clock_file="wsrt2gps.clk",
+    clock_dir="TEMPO2",
     itrf_xyz=[3828445.659, 445223.600, 5064921.5677],
     origin="""The Westerbork Synthesis Radio Telescope.
 
@@ -262,6 +269,7 @@ TopoObs(
     itrf_xyz=[-4483311.64, 2648815.92, -3671909.31],
     clock_fmt="tempo2",
     clock_file="mo2gps.clk",
+    clock_dir="TEMPO2",
     bogus_last_correction=True,
     origin="""The Molonglo Observatory Synthesis Telescope.
 
