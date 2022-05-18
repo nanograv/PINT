@@ -199,12 +199,13 @@ def test_ddk_ECL_ICRS():
     # get the angle between proper motion vectors, which should be the difference between KOMs
     angle = np.arccos(np.dot(pm_ECL, pm_ICRS)) * u.rad
 
+    new_KOM = mICRS.KOM.quantity
+    mICRS.KOM.quantity = mECL.KOM.quantity
     rICRS = Residuals(tECL, mICRS)
     print(
         f"Prefit chi^2 in ICRS with the same KOM ({mICRS.KOM.quantity}) {rICRS.calc_chi2()}"
     )
-    mICRS_newKOM = copy.deepcopy(mICRS)
-    mICRS_newKOM.KOM.quantity -= angle
+    mICRS_newKOM = mECL.as_ICRS()
     rICRS_newKOM = Residuals(tECL, mICRS_newKOM)
     print(
         f"Change KOM by {angle.to(u.deg)} to {mICRS_newKOM.KOM.quantity}, now chi^2 in ICRS is {rICRS_newKOM.calc_chi2()}"
@@ -213,6 +214,10 @@ def test_ddk_ECL_ICRS():
     assert rICRS.calc_chi2() - prefit.calc_chi2() > 10
     # and with the new KOM they should be close
     assert np.abs(rICRS_newKOM.calc_chi2() - prefit.calc_chi2()) < 2
+
+    # check that round-trip is OK
+    mECL_transformed = mICRS_newKOM.as_ECL()
+    assert np.isclose(mECL_transformed.KOM.quantity, mECL.KOM.quantity)
 
 
 @pytest.mark.xfail(reason="model builder does not reject invalid parameters but should")

@@ -36,8 +36,9 @@ from warnings import warn
 import astropy.time as time
 import astropy.units as u
 import numpy as np
-from astropy import log
 from astropy.utils.decorators import lazyproperty
+import astropy.coordinates as coords
+from pint.pulsar_ecliptic import OBL, PulsarEcliptic
 from scipy.optimize import brentq
 from loguru import logger as log
 
@@ -2287,6 +2288,11 @@ class TimingModel:
         -------
         pint.models.timing_model.TimingModel
             In PulsarEcliptic frame
+
+        Notes
+        -----
+        For the ``DDK`` model, the ``KOM`` vector is also transformed
+
         """
         if "AstrometryEquatorial" in self.components:
             astrometry_model_type = "AstrometryEquatorial"
@@ -2299,6 +2305,22 @@ class TimingModel:
         new_model = copy.deepcopy(self)
         new_model.remove_component(astrometry_model_type)
         new_model.add_component(new_astrometry_model_component)
+
+        if "BinaryDDK" in self.components and "AstrometryEquatorial" in self.components:
+            c = coords.SkyCoord(
+                lon=new_model.ELONG.quantity,
+                lat=new_model.ELAT.quantity,
+                obstime=self.POSEPOCH.quantity,
+                pm_lon_coslat=np.sin(self.KOM.quantity) * u.mas / u.yr,
+                pm_lat=np.cos(self.KOM.quantity) * u.mas / u.yr,
+                obliquity=OBL[new_model.ECL.value],
+                frame=PulsarEcliptic,
+            )
+            c_ICRS = c.transform_to(coords.ICRS)
+            new_model.KOM.quantity = (
+                np.arctan2(c_ICRS.pm_ra_cosdec.value, c_ICRS.pm_dec.value) * u.rad
+            ).to(self.KOM.units)
+
         return new_model
 
     def as_ICRS(self, epoch=None):
@@ -2314,6 +2336,10 @@ class TimingModel:
         -------
         pint.models.timing_model.TimingModel
             In ICRS frame
+
+        Notes
+        -----
+        For the ``DDK`` model, the ``KOM`` vector is also transformed
         """
         if "AstrometryEquatorial" in self.components:
             astrometry_model_type = "AstrometryEquatorial"
@@ -2326,6 +2352,21 @@ class TimingModel:
         new_model = copy.deepcopy(self)
         new_model.remove_component(astrometry_model_type)
         new_model.add_component(new_astrometry_model_component)
+
+        if "BinaryDDK" in self.components and "AstrometryEcliptic" in self.components:
+            c = coords.SkyCoord(
+                ra=new_model.RAJ.quantity,
+                dec=new_model.DECJ.quantity,
+                obstime=self.POSEPOCH.quantity,
+                pm_ra_cosdec=np.sin(self.KOM.quantity) * u.mas / u.yr,
+                pm_dec=np.cos(self.KOM.quantity) * u.mas / u.yr,
+                frame=coords.ICRS,
+            )
+            c_ECL = c.transform_to(PulsarEcliptic(ecl=self.ECL.value))
+            new_model.KOM.quantity = (
+                np.arctan2(c_ECL.pm_lon_coslat.value, c_ECL.pm_lat.value) * u.rad
+            ).to(self.KOM.units)
+
         return new_model
 
 
