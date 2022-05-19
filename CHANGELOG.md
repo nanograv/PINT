@@ -7,8 +7,17 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## Unreleased
 ### Added
 - Warning when A1DOT parameter used with DDK model
+- Added the limits="warn" or limits="error" to get_TOAs to select handling of uncorrected TOAs
+- Added functions in pint.observatory to request the status of PINT's available clock corrections
+- Added the ability to query clock correction files or observatories for their last corrected MJD
 ### Fixed
 ### Changed
+- Clock correction files that are entirely missing are handled the same way as TOAs past the end of a clock correction file
+- Observatory objects can now note that their clock correction files include a bogus "99999" (or similar) entry at the end
+- Clock correction files are now checked for being in order (necessary for PINT's interpolation to function)
+- Observatories using TEMPO-format clock files now refer to the clock file (for example time_ao.dat) rather than via time.dat
+- Observatories that don't use clock corrections (for example CHIME uses GPS time directly) just use an empty list of clock correction files rather than files containing only zeros
+- Updated Jodrell clock corrections to include post-1997
 
 ## [0.8.6 == 0.8.7] 2022-05-10
 ### Added
@@ -23,10 +32,6 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - automatic fitter selection available with standard API as well
 - added tempo(2) par/tim output to `pintk` 
 - added icon to `pintk`
-- Added the limits="warn" or limits="error" to get_TOAs to select handling of uncorrected TOAs
-- Added functions in pint.observatory to request the status of PINT's available clock corrections
-- Added the ability to query clock correction files or observatories for their last corrected MJD
-
 ### Fixed
 - Huge number of bugs and improvements to `pintk`, and some to `pintempo`
 - Multiple bug fixes in get_summary()/get_derived_params(), especially for binary calculations
@@ -36,13 +41,6 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Changed to floating point format and added color for correlation matrix output
 - prefix parameters no longer inherit frozen status
 - Updated clock files for GBT (`time_gbt.dat`) and GPS to UTC conversion (`gps2utc.clk`) with new entries
-- No telescopes depend on TEMPO or TEMPO2 clock correction files any longer
-- Clock correction files that are entirely missing are handled the same way as TOAs past the end of a clock correction file
-- Observatory objects can now note that their clock correction files include a bogus "99999" (or similar) entry at the end
-- Clock correction files are now checked for being in order (necessary for PINT's interpolation to function)
-- Observatories using TEMPO-format clock files now refer to the clock file (for example time_ao.dat) rather than via time.dat
-- Observatories that don't use clock corrections (for example CHIME uses GPS time directly) just use an empty list of clock correction files rather than files containing only zeros
-- Updated Jodrell clock corrections to include post-1997
 
 ## [0.8.5] 2022-02-24
 ### Added
