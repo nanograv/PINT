@@ -1,4 +1,5 @@
 """The DDK model - Damour and Deruelle with kinematics."""
+import warnings
 import numpy as np
 from astropy import units as u
 from loguru import logger as log
@@ -143,6 +144,9 @@ class BinaryDDK(BinaryDD):
             raise MissingParameter(
                 "Binary_DDK", "PX", "DDK model needs PX from" "Astrometry."
             )
+
+        if "A1DOT" in self.params and self.A1DOT.value != 0:
+            warnings.warn("Using A1DOT with a DDK model is not advised.")
 
     def alternative_solutions(self):
         """Alternative Kopeikin solutions (potential local minima)
