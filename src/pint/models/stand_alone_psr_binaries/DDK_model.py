@@ -4,6 +4,7 @@ import astropy.constants as c
 import astropy.units as u
 import numpy as np
 from loguru import logger as log
+import warnings
 
 from pint import GMsun, Tsun, ls
 
@@ -129,7 +130,7 @@ class DDKmodel(DDmodel):
 
     @SINI.setter
     def SINI(self, val):
-        log.warning(
+        warnings.warn(
             "DDK model uses KIN as inclination angle. SINI will not be "
             "used. This happens every time a DDK model is constructed."
         )
