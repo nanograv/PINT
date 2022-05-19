@@ -3,7 +3,6 @@
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
-import warnings
 from loguru import logger as log
 
 from pint import GMsun, Tsun, ls
@@ -26,8 +25,6 @@ class DDKmodel(DDmodel):
     """
 
     def __init__(self, t=None, input_params=None):
-        # this is a kludge to just issue the warning once
-        self.A1DOT_warning_issued = False
         super(DDKmodel, self).__init__()
         self.binary_name = "DDK"
         # Add parameter that specific for DD model, with default value and units
@@ -48,12 +45,6 @@ class DDKmodel(DDmodel):
         # Remove unused parameter SINI
         del self.param_default_value["SINI"]
         self.set_param_values()
-
-    def __setattr__(self, name, value):
-        """Override the super() __setattr__ so that a warning can be issued when using A1DOT with this model"""
-        if name in ["A1DOT"] and value != 0:
-            warnings.warn("Using A1DOT with a DDK model is not advised.")
-        super().__setattr__(name, value)
 
     @property
     def KOM(self):

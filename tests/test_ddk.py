@@ -184,7 +184,7 @@ def test_A1dot_warning():
         warnings.filterwarnings("error", message="Using A1DOT")
         m = mb.get_model(StringIO(temp_par_str))
 
-    # and this should not have a warning
+    # and this should have a warning
     with pytest.warns(
         UserWarning, match=r"Using A1DOT with a DDK model is not advised."
     ):

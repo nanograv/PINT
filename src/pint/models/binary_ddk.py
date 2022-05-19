@@ -1,4 +1,5 @@
 """The DDK model - Damour and Deruelle with kinematics."""
+import warnings
 import numpy as np
 from astropy import units as u
 from pint.models.binary_dd import BinaryDD
@@ -119,6 +120,9 @@ class BinaryDDK(BinaryDD):
             raise MissingParameter(
                 "Binary_DDK", "PX", "DDK model needs PX from" "Astrometry."
             )
+
+        if "A1DOT" in self.params and self.A1DOT.value != 0:
+            warnings.warn("Using A1DOT with a DDK model is not advised.")
         # Should we warn if the model is using ecliptic coordinates?
         # Should we support KOM_PINT that works this way and KOM that works the way tempo2 does?
 
