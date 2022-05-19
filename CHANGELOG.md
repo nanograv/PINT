@@ -13,6 +13,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added option to photonphase to compute phases using polycos
 - New `colorize()` function in `pint.utils` which can be used for string and unicode output
 - Split out get_derived_params() from get_summary() in fitter.py.  Can be used other places.
+- Warning when A1DOT is used with a DDK model
 ### Fixed
 - Huge number of bugs and improvements to `pintk`, and some to `pintempo`
 - Multiple bug fixes in get_summary()/get_derived_params(), especially for binary calculations
