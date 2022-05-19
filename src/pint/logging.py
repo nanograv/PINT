@@ -50,6 +50,11 @@ import sys
 import warnings
 from loguru import logger as log
 
+try:
+    from erfa import ErfaWarning
+except ImportError:
+    from astropy._erfa import ErfaWarning
+
 __all__ = [
     "LogFilter",
 ]
@@ -78,6 +83,26 @@ def warn(message, *args, **kwargs):
     Want ``loguru`` to capture warnings emitted by ``warnings.warn``.
     See https://loguru.readthedocs.io/en/stable/resources/recipes.html#capturing-standard-stdout-stderr-and-warnings
     """
+    # check to see if a standard warning filter has already been inserted that would catch whatever this is
+    # this isn't the exact same implementation as the standard filter because we don't get all of the relevant pieces
+    # but it works for ignoring
+    for filter in warnings.filters:
+        action, msg, cat, mod, ln = filter
+        if (
+            (msg is not None)
+            and (msg.match(message) and len(args) == 0)
+            and action == "ignore"
+        ):
+            return
+        if (
+            (cat is not None)
+            and (
+                (len(args) > 0 and isinstance(args[0], type))
+                and ((msg is None or msg.match(message)) and issubclass(args[0], cat))
+            )
+            and action == "ignore"
+        ):
+            return
     if len(args) > 0:
         log.warning(f"{args[0]} {message}")
     elif "category" in kwargs:
@@ -95,7 +120,7 @@ class LogFilter:
     Define some messages that are never seen (e.g., Deprecation Warnings).
     Others that will only be seen once.  Filtering of those is done on the basis of regular expressions."""
 
-    def __init__(self, onlyonce=None, never=None):
+    def __init__(self, onlyonce=None, never=None, onlyonce_level="INFO"):
         """
         Define regexs for messages that will only be seen once.  Use ``\S+`` for a variable that might change.
         If a message comes through with a new value for that variable, it will be seen.
@@ -104,20 +129,22 @@ class LogFilter:
 
         Each message starts with ``state = False``.
         Once it has been emitted, that changes to a list of the messages so that it can keep track.
-        These are only suppressed when issued at level ``INFO`` or lower (e.g., ``WARNING`` will always come through)
+        These are only suppressed when issued at level `onlyonce_level` or lower (e.g., if `onlyonce_level` is ``INFO``, then ``WARNING`` will always come through)
 
         They should be defined as:
 
             >>> "Error message": False
 
-        where the ``False`` tracks whether or not the message has been issued at all
+        where the ``False`` tracks whether or not the message has been issued at all.
 
         Parameters
         ----------
         onlyonce : list, optional
-            list of messages that should only be issued once if at ``INFO`` or below
+            list of messages that should only be issued once if at ``INFO`` or below.  Checked using ``re.match``, so must match from beginning of message.
         never : list, optional
-            list of messages that should never be seen
+            list of messages that should never be seen.  Checked using ``re.search``, so can match anywhere in message.
+        onlyonce_level : str, optional
+            level below which messages will only be shown once
         """
         self.onlyonce = {
             "Using EPHEM = \S+ for \S+ calculation": False,
@@ -140,24 +167,28 @@ class LogFilter:
             "Column \S+ already exists. Removing...": False,
             "Skipping Shapiro delay for Barycentric TOAs": False,
             "Special observatory location. No clock corrections applied.": False,
+            "DDK model uses KIN as inclination angle. SINI will not be used. This happens every time a DDK model is constructed.": False,
         }
         # add in any more defined on init
         if onlyonce is not None:
             for m in onlyonce:
                 self.onlyonce[m] = False
-        # List of matching strings for messages never to be displayed
+        # List of partial matching strings for messages never to be displayed
         self.never = [
             "MatplotlibDeprecationWarning",
             "DeprecationWarning",
             "ProvisionalCompleterWarning",
+            "deprecated in Matplotlib",
         ]
         # add in any more defined on init
         if never is not None:
             self.never += never
 
+        self.onlyonce_level = onlyonce_level
+
     def filter(self, record):
         """Filter the record based on ``record["message"]`` and ``record["level"]``
-        If this returns ``False``, the message is not seen
+        If this returns s,``False``, the message is not seen
 
         Parameters
         ----------
@@ -170,10 +201,10 @@ class LogFilter:
             If ``True``, message is seen.  If ``False``, message is not seen
         """
         for m in self.never:
-            if m in record["message"]:
+            if re.search(m, record["message"]):
                 return False
         # display all warnings and above
-        if record["level"].no >= log.level("WARNING").no:
+        if record["level"].no < log.level(self.onlyonce_level).no:
             return True
         for m in self.onlyonce:
             if re.match(m, record["message"]):

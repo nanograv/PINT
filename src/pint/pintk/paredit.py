@@ -1,5 +1,5 @@
 import os
-import tempfile
+import io
 
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
@@ -219,15 +219,11 @@ class ParWidget(tk.Frame):
             self.editor.insert("1.0", self.psr.prefit_model.as_parfile())
 
     def applyChanges(self):
-        pfilename = tempfile.mkstemp()[1]
-        pfile = open(pfilename, "w")
-        pfile.write(self.editor.get("1.0", "end-1c"))
-        pfile.close()
+        text = self.editor.get("1.0", "end-1c")
         if self.psr.fitted:
             # if pulsar already fitted, add changes to postfit model as well
-            self.psr.postfit_model = pint.models.get_model(pfilename)
-        self.psr.prefit_model = pint.models.get_model(pfilename)
-        os.remove(pfilename)
+            self.psr.postfit_model = pint.models.get_model(io.StringIO(text))
+        self.psr.prefit_model = pint.models.get_model(io.StringIO(text))
         self.call_updates()
 
     def writePar(self):

@@ -1,5 +1,5 @@
 import os
-import tempfile
+import io
 
 import astropy.time
 import tkinter as tk
@@ -149,12 +149,8 @@ class TimWidget(tk.Frame):
         self.editor.insert("1.0", asfile)
 
     def applyChanges(self):
-        tfilename = tempfile.mkstemp()[1]
-        tfile = open(tfilename, "w")
-        tfile.write(self.editor.get("1.0", "end-1c"))
-        tfile.close()
-        self.psr.selected_toas = pint.toa.get_TOAs(tfilename)
-        os.remove(tfilename)
+        text = self.editor.get("1.0", "end-1c")
+        self.psr.selected_toas = pint.toa.get_TOAs(io.StringIO(text))
         self.call_updates()
 
     def writeTim(self):

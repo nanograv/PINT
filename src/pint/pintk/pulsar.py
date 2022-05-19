@@ -95,7 +95,8 @@ class Pulsar:
 
         self.all_toas.print_summary()
 
-        self.prefit_resids = Residuals(self.selected_toas, self.prefit_model)
+        self.prefit_resids = Residuals(self.all_toas, self.prefit_model)
+        self.selected_prefit_resids = self.prefit_resids
         print(
             "RMS pre-fit PINT residuals are %.3f us\n"
             % self.prefit_resids.rms_weighted().to(u.us).value
@@ -103,7 +104,18 @@ class Pulsar:
         # Set of indices from original list that are deleted
         # We use indices because of the grouping of TOAs by observatory
         self.deleted = set([])
-        self.fit_method = fitter
+        if fitter == "auto":
+            self.fit_method = self.getDefaultFitter(downhill=False)
+            log.info(
+                f"Since wideband={self.all_toas.wideband} and correlated={self.prefit_model.has_correlated_errors}, selecting fitter={self.fit_method}"
+            )
+        elif fitter == "downhill":
+            self.fit_method = self.getDefaultFitter(downhill=True)
+            log.info(
+                f"Since wideband={self.all_toas.wideband} and correlated={self.prefit_model.has_correlated_errors}, selecting Downhill fitter={self.fit_method}"
+            )
+        else:
+            self.fit_method = fitter
         self.fitter = None
         self.fitted = False
         self.stashed = None  # for temporarily stashing some TOAs
@@ -200,6 +212,12 @@ class Pulsar:
         self.prefit_resids = Residuals(
             self.all_toas, self.prefit_model, track_mode=track_mode
         )
+        if self.selected_toas.ntoas and self.selected_toas.ntoas != self.all_toas.ntoas:
+            self.selected_prefit_resids = Residuals(
+                self.selected_toas, self.prefit_model, track_mode=track_mode
+            )
+        else:
+            self.selected_prefit_resids = self.prefit_resids
         if self.fitted:
             self.postfit_resids = Residuals(
                 self.all_toas, self.postfit_model, track_mode=track_mode
@@ -284,10 +302,13 @@ class Pulsar:
         Summarize fitting results
         """
         if self.fitted:
-            wrms = self.postfit_resids.rms_weighted()
-            print("Post-Fit Chi2:          %.8g" % self.postfit_resids.chi2)
-            print("Post-Fit DOF:            %8d" % self.postfit_resids.dof)
-            print("Post-Fit Reduced-Chi2:  %.8g" % self.postfit_resids.reduced_chi2)
+            wrms = self.selected_postfit_resids.rms_weighted()
+            print("Post-Fit Chi2:          %.8g" % self.selected_postfit_resids.chi2)
+            print("Post-Fit DOF:            %8d" % self.selected_postfit_resids.dof)
+            print(
+                "Post-Fit Reduced-Chi2:  %.8g"
+                % self.selected_postfit_resids.reduced_chi2
+            )
             print("Post-Fit Weighted RMS:  %.8g us" % wrms.to(u.us).value)
             print("------------------------------------")
             print(
@@ -419,12 +440,30 @@ class Pulsar:
             self.postfit_model.components["PhaseJump"].setup()
         return retval
 
+    def getDefaultFitter(self, downhill=False):
+        if self.all_toas.wideband:
+            if downhill:
+                return "WidebandDownhillFitter"
+            else:
+                return "WidebandTOAFitter"
+        else:
+            if self.prefit_model.has_correlated_errors:
+                if downhill:
+                    return "DownhillGLSFitter"
+                else:
+                    return "GLSFitter"
+            else:
+                if downhill:
+                    return "DownhillWLSFitter"
+                else:
+                    return "WLSFitter"
+
     def fit(self, selected, iters=4, compute_random=False):
         """
         Run a fit using the specified fitter
         """
         # Select all the TOAs if none are explicitly set
-        if not any(selected):
+        if not np.any(selected):
             selected = ~selected
 
         if self.fitted:
@@ -432,17 +471,23 @@ class Pulsar:
             self.prefit_resids = self.postfit_resids
             self.add_model_params()
 
+        if self.selected_toas.ntoas != self.all_toas.ntoas:
+            self.selected_prefit_resids = Residuals(
+                self.selected_toas, self.prefit_model
+            )
+        else:
+            self.selected_prefit_resids = self.prefit_resids
+
         # Have to change the fitter for each fit since TOAs and models change
         log.info(f"Using {self.fit_method}")
         self.fitter = getattr(pint.fitter, self.fit_method)(
             self.selected_toas, self.prefit_model
         )
 
-        wrms = self.prefit_resids.rms_weighted()
-
+        wrms = self.selected_prefit_resids.rms_weighted()
         print("\n------------------------------------")
-        print(" Pre-Fit Chi2:          %.8g" % self.prefit_resids.chi2)
-        print(" Pre-Fit reduced-Chi2:  %.8g" % self.prefit_resids.reduced_chi2)
+        print(" Pre-Fit Chi2:          %.8g" % self.selected_prefit_resids.chi2)
+        print(" Pre-Fit reduced-Chi2:  %.8g" % self.selected_prefit_resids.reduced_chi2)
         print(" Pre-Fit Weighted RMS:  %.8g us" % wrms.to(u.us).value)
         print("------------------------------------")
 
@@ -451,18 +496,27 @@ class Pulsar:
         self.fitter.update_model()
         self.postfit_model = self.fitter.model
         self.fitted = True
+
         # Zero out all of the "delta_pulse_numbers" if they are set
-        self.all_toas.table["delta_pulse_number"] = np.zeros(self.all_toas.ntoas)
-        self.selected_toas.table["delta_pulse_number"] = np.zeros(
-            self.selected_toas.ntoas
-        )
+        if np.any(self.all_toas.table["delta_pulse_number"]):
+            self.all_toas.table["delta_pulse_number"] = np.zeros(self.all_toas.ntoas)
+            self.selected_toas.table["delta_pulse_number"] = np.zeros(
+                self.selected_toas.ntoas
+            )
         # Re-calculate the pulse numbers here
         self.all_toas.compute_pulse_numbers(self.postfit_model)
         self.selected_toas.compute_pulse_numbers(self.postfit_model)
-        # Now compute the residuals using correct pulse numbers
+
+        # Compute the residuals using correct pulse numbers
         self.postfit_resids = Residuals(self.all_toas, self.postfit_model)
+        self.selected_postfit_resids = (
+            self.postfit_resids
+            if np.all(selected)
+            else Residuals(self.selected_toas, self.postfit_model)
+        )
+
         # Need this since it isn't updated using self.fitter.update_model()
-        self.fitter.model.CHI2.value = self.postfit_resids.chi2
+        self.fitter.model.CHI2.value = self.selected_postfit_resids.chi2
         # And print the summary
         self.write_fit_summary()
 
@@ -475,8 +529,8 @@ class Pulsar:
             prob = FTest(
                 self.lastfit["chi2"],
                 self.lastfit["dof"],
-                self.postfit_resids.chi2,
-                self.postfit_resids.dof,
+                self.selected_postfit_resids.chi2,
+                self.selected_postfit_resids.dof,
             )
             new_params = set(self.postfit_model.free_params) - set(
                 self.lastfit["free_params"]
@@ -497,8 +551,8 @@ class Pulsar:
         # Store some key params for possible F-testing
         self.lastfit = {
             "free_params": self.fitter.model.free_params,
-            "dof": self.postfit_resids.dof,
-            "chi2": self.postfit_resids.chi2,
+            "dof": self.selected_postfit_resids.dof,
+            "chi2": self.selected_postfit_resids.chi2,
             "ntoas": self.fitter.toas.ntoas,
         }
 
@@ -552,7 +606,6 @@ class Pulsar:
         # Combine our TOAs
         toas = merge_TOAs([sim_sel, self.faketoas1])
         zero_residuals(toas, self.postfit_model)
-        toas.table.sort("tdbld")  # for plotting
 
         # Get a selection array to select the non-fake TOAs
         refs = np.asarray(toas.get_flag_value("name")[0]) != "fake"
