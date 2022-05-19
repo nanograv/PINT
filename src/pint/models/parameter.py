@@ -507,6 +507,8 @@ class Parameter:
             log.warning(
                 f"Changing KOM from DT92 convention to IAU: this will not be readable by PINT"
             )
+        elif self.name == "DMDATA" and not format.lower() == "pint":
+            line = "%-15s %d" % (self.name, int(self.value))
 
         if self.uncertainty is not None:
             line += " %d %s" % (
@@ -1249,15 +1251,15 @@ class AngleParameter(Parameter):
 class prefixParameter:
     """Families of parameters identified by a prefix like ``DMX_0123``.
 
-    Create a prefix parameter, is like create a normal parameter. But the
-    name should be in the format of prefix and index. For example DMX_0001 or
-    F22. Appropriate units will be inferred,
+    Creating a ``prefixParameter`` is like creating a normal parameter, except that the
+    name should be in the format of prefix and index. For example, ``DMX_0001`` or
+    ``F22``. Appropriate units will be inferred.
 
     To create a prefix parameter with the same prefix but different index, just
-    use the ``.new_param`` method. It will return a new prefix parameter with the
-    same setup but the index. Some parameters' unit and description will
-    be changed once the index has been changed. In order to get the right units
-    and description, ``.unitTplt`` and ``.descriptionTplt`` should be provided. If
+    use the :meth:`pint.models.parameter.prefixParameter.new_param` method. It will return a new ``prefixParameter`` with the
+    same setup but a new index. Some  units and descriptions will
+    be changed once the index has been changed. The new parameter will not inherit the ``frozen`` status of its parent by default.  In order to get the right units
+    and description, ``.unit_template`` and ``.description_template`` should be provided. If
     not the new prefix parameter will use the same units and description with
     the old one. A typical description and units template is like::
 
@@ -1500,13 +1502,15 @@ class prefixParameter:
     def prefix_matches(self, prefix):
         return (prefix == self.prefix) or (prefix in self.prefix_aliases)
 
-    def new_param(self, index):
+    def new_param(self, index, inheritfrozen=False):
         """Get one prefix parameter with the same type.
 
         Parameters
         ----------
         index : int
             index of prefixed parameter.
+        inheritfrozen : bool, optional
+            whether or not the parameter should inherit the "frozen" status of the base parameter
 
         Returns
         -------
@@ -1528,6 +1532,8 @@ class prefixParameter:
             "parameter_type",
         ]:
             if hasattr(self, key):
+                if (key == "frozen") and not (inheritfrozen):
+                    continue
                 kws[key] = getattr(self, key)
 
         newpfx = prefixParameter(name=new_name, **kws)

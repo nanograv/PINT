@@ -4,7 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## Unreleased
+### Added
+- Warning when A1DOT parameter used with DDK model
+### Fixed
+### Changed
+
+## [0.8.6 == 0.8.7] 2022-05-10
 ### Added
 - Added computation of other Kopeikin solutions (`solutions = model.alternative_solutions()`)
 - Added computation of extra parameters in gridding
@@ -13,13 +19,18 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added option to photonphase to compute phases using polycos
 - New `colorize()` function in `pint.utils` which can be used for string and unicode output
 - Split out get_derived_params() from get_summary() in fitter.py.  Can be used other places.
-- Warning when A1DOT is used with a DDK model
+- `pintk` can now automatically select the right fitter, and can otherwise specify fitter from the command-line or a dropdown
+- automatic fitter selection available with standard API as well
+- added tempo(2) par/tim output to `pintk` 
+- added icon to `pintk`
 ### Fixed
 - Huge number of bugs and improvements to `pintk`, and some to `pintempo`
 - Multiple bug fixes in get_summary()/get_derived_params(), especially for binary calculations
+- DMDATA now an integer for tempo/tempo2 parfile output
 ### Changed
 - Changed logging to use `loguru`
 - Changed to floating point format and added color for correlation matrix output
+- prefix parameters no longer inherit frozen status
 - Updated clock files for GBT (`time_gbt.dat`) and GPS to UTC conversion (`gps2utc.clk`) with new entries
 
 ## [0.8.5] 2022-02-24
