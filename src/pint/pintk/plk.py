@@ -96,6 +96,9 @@ nb_fitters = [
 
 icon_img = os.path.join(os.path.split(__file__)[0], "PINT_LOGO_128trans.gif")
 
+# foreground text for labels etc
+foreground = "black"
+
 
 class State:
     """class used by revert to save the state of the system before each fit"""
@@ -215,6 +218,7 @@ class PlkFitBoxesWidget(tk.Frame):
                     text=comp,
                     variable=self.compVisible[ii],
                     command=self.updateLayout,
+                    fg=foreground,
                 )
             )
 
@@ -282,15 +286,16 @@ class PlkRandomModelSelect(tk.Frame):
             text="Random Models",
             variable=self.var,
             command=self.changedRMCheckBox,
+            fg=foreground,
         )
         checkbox.grid(row=1, column=1, sticky="N")
         checkbox_ttp = CreateToolTip(
             checkbox, "Display random timing models consistent with selected TOAs."
         )
         if "zoom" in master.plkToolbar.mode:
-            self.modeLabel = tk.Label(master, text="Mode: Zoom")
+            self.modeLabel = tk.Label(master, text="Mode: Zoom", fg=foreground)
         else:
-            self.modeLabel = tk.Label(master, text="Mode: Select")
+            self.modeLabel = tk.Label(master, text="Mode: Select", fg=foreground)
         self.modeLabel.grid(row=1, column=1, sticky="S")
 
     def setCallbacks(self, boxChecked):
@@ -314,9 +319,9 @@ class PlkRandomModelSelect(tk.Frame):
 
     def changeMode(self, mode):
         if "zoom" in mode:
-            self.modeLabel.config(text="Mode: Zoom")
+            self.modeLabel.config(text="Mode: Zoom", fg=foreground)
         else:
-            self.modeLabel.config(text="Mode: Select")
+            self.modeLabel.config(text="Mode: Select", fg=foreground)
 
 
 class PlkLogLevelSelect(tk.Frame):
@@ -326,7 +331,7 @@ class PlkLogLevelSelect(tk.Frame):
 
     def __init__(self, master):
         tk.Frame.__init__(self, master)
-        self.logLabel = tk.Label(self, text="Minimum Log Level: ")
+        self.logLabel = tk.Label(self, text="Minimum Log Level: ", fg=foreground)
         self.logLabel.pack()
         self.logLevelSelect = ttk.Combobox(self)
         self.logLevelSelect.pack()
@@ -361,7 +366,7 @@ class PlkFitterSelect(tk.Frame):
 
     def __init__(self, master):
         tk.Frame.__init__(self, master)
-        self.fitterLabel = tk.Label(self, text="Fitter: ")
+        self.fitterLabel = tk.Label(self, text="Fitter: ", fg=foreground)
         self.fitterLabel.pack()
         self.fitterSelect = ttk.Combobox(self)
         self.fitterSelect.pack()
@@ -393,7 +398,7 @@ class PlkColorModeBoxes(tk.Frame):
     def addColorModeCheckbox(self, colorModes):
         self.checkboxes = []
         self.checkboxStatus = tk.StringVar()
-        self.label = tk.Label(self, text="Color Modes")
+        self.label = tk.Label(self, text="Color Modes", fg=foreground)
         for index, mode in enumerate(colorModes):
             self.checkboxes.append(
                 tk.Radiobutton(
@@ -402,6 +407,7 @@ class PlkColorModeBoxes(tk.Frame):
                     variable=self.checkboxStatus,
                     value=mode.mode_name,
                     command=lambda m=mode: self.applyChanges(m),
+                    fg=foreground,
                 )
             )
 
@@ -448,9 +454,9 @@ class PlkXYChoiceWidget(tk.Frame):
     def initPlkXYChoice(self):
         labellength = 3
 
-        label = tk.Label(self, text="X")
+        label = tk.Label(self, text="X", fg=foreground)
         label.grid(row=0, column=1)
-        label = tk.Label(self, text="Y")
+        label = tk.Label(self, text="Y", fg=foreground)
         label.grid(row=0, column=2)
 
         self.grid_columnconfigure(0, weight=3)
@@ -461,7 +467,7 @@ class PlkXYChoiceWidget(tk.Frame):
         self.ybuttons = []
 
         for ii, choice in enumerate(pulsar.plot_labels):
-            label = tk.Label(self, text=choice)
+            label = tk.Label(self, text=choice, fg=foreground)
             label.grid(row=ii + 1, column=0)
 
             self.xbuttons.append(
