@@ -9,6 +9,7 @@ import tkinter as tk
 import tkinter.filedialog as tkFileDialog
 import tkinter.messagebox as tkMessageBox
 from tkinter import ttk
+import matplotlib as mpl
 
 import pint.logging
 from loguru import logger as log
@@ -208,7 +209,7 @@ class PINTk:
     def about(self):
         tkMessageBox.showinfo(
             title="About PINTk",
-            message=f"A Tkinter based graphical interface to PINT (version={pint.__version__})",
+            message=f"A Tkinter based graphical interface to PINT (version={pint.__version__}), using matplotlib (version={mpl.__version__}) and the {mpl.get_backend()} backend",
         )
 
 
@@ -249,7 +250,7 @@ def main(argv=None):
         "--version",
         action="version",
         help="Print version info and  exit.",
-        version=f"This is PINT version {pint.__version__}",
+        version=f"This is PINT version {pint.__version__}, using matplotlib (version={mpl.__version__})",
     )
     parser.add_argument(
         "--log-level",
