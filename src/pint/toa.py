@@ -1637,7 +1637,7 @@ class TOAs:
             raise AttributeError("No DM error is provided.")
         return np.array(result)[valid] * pint.dmu
 
-    def get_clusters(self, gap_limit=2 * u.h, add_column=False):
+    def get_clusters(self, gap_limit=2 * u.h, add_column=False, add_flag=None):
         """Identify toas within gap limit (default 2h = 0.0833d)
         of each other as the same cluster.
 
@@ -1646,8 +1646,8 @@ class TOAs:
         starts and continues until another such gap is found.
 
         Cluster info can be added as a ``clusters`` column to the
-        :attr:`pint.toa.TOAs.table` object if `add_column` is True.
-        In that case  ``self.table.meta['cluster_gap']``  will be set to the
+        :attr:`pint.toa.TOAs.table` object if `add_column` is True.  Cluster info can also be added as a flag with name specified.
+        In those cases  ``self.table.meta['cluster_gap']``  will be set to the
         `gap_limit`.  If the desired clustering corresponds to that in
         :attr:`pint.toa.TOAs.table` then that column is returned.
 
@@ -1657,6 +1657,8 @@ class TOAs:
             The minimum size of gap to create a new group. Defaults to two hours.
         add_column : bool, optional
             Whether or not to add a ``clusters`` column to the TOA table (default: False)
+        add_flag : str, optional
+            If not ``None``, will add a flag with that name to the TOA table whose value is the cluster number (as a string, starting at 0) (default: None)
 
         Returns
         -------
@@ -1675,6 +1677,13 @@ class TOAs:
             if add_column:
                 self.table.add_column(clusters, name="clusters")
                 self.table.meta["cluster_gap"] = gap_limit
+                log.debug(f"Added 'clusters' column to TOA table with gap={gap_limit}")
+            if add_flag is not None:
+                for i in range(len(clusters)):
+                    self.table["flags"][i][add_flag] = str(clusters[i])
+                self.table.meta["cluster_gap"] = gap_limit
+                log.debug(f"Added '{add_flag}' flag to TOA table with gap={gap_limit}")
+
             return clusters
 
         else:

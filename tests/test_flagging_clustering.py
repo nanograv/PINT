@@ -48,20 +48,41 @@ def test_jump_by_cluster(setup_NGC6440E):
     cp.add_param(par, setup=True)
 
     # add clusters to the TOAs
-    clusters = setup_NGC6440E.t.get_clusters(2 * u.hr, add_column=False)
-    for i, v in zip(np.arange(len(setup_NGC6440E.t)), clusters):
-        setup_NGC6440E.t.table[i]["flags"]["toacluster"] = str(v)
+    clusters = setup_NGC6440E.t.get_clusters(
+        2 * u.hr, add_column=False, add_flag="cluster"
+    )
 
     m_copy.add_component(PhaseJump(), validate=False)
     cp_copy = m_copy.components["PhaseJump"]
     par_copy = p.maskParameter(
-        name="JUMP", key="-toacluster", value=0.2, key_value=41, units=u.s
+        name="JUMP", key="-cluster", value=0.2, key_value=41, units=u.s
     )
     # this should be identical to the cluster above
     cp_copy.add_param(par_copy, setup=True)
     assert set(cp.JUMP1.select_toa_mask(setup_NGC6440E.t)) == set(
         cp_copy.JUMP1.select_toa_mask(setup_NGC6440E.t)
     )
+
+
+def test_jump_by_cluster_invalidflags(setup_NGC6440E):
+
+    # add clusters to the TOAs
+    t = copy.deepcopy(setup_NGC6440E.t)
+    with pytest.raises(ValueError):
+        clusters = t.get_clusters(
+            2 * u.hr,
+            add_column=False,
+            add_flag=True,
+        )
+
+    # add clusters to the TOAs
+    t = copy.deepcopy(setup_NGC6440E.t)
+    with pytest.raises(ValueError):
+        clusters = t.get_clusters(
+            2 * u.hr,
+            add_column=False,
+            add_flag=1,
+        )
 
 
 if __name__ == "__main__":
