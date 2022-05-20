@@ -72,6 +72,7 @@ class TestDDK(unittest.TestCase):
     def test_J1713_ECL_binary_delay(self):
         # Calculate delays with PINT
         pint_binary_delay = self.ECLmodelJ1713.binarymodel_delay(self.toasJ1713, None)
+        print(f"{np.abs(pint_binary_delay.value + self.ECLltbindelay).max()}")
         assert np.all(np.abs(pint_binary_delay.value + self.ECLltbindelay) < 5e-6), (
             "DDK J1713 ECL BINARY DELAY TEST FAILED: max difference is %e"
             % np.abs(pint_binary_delay.value + self.ECLltbindelay).max()
@@ -80,6 +81,7 @@ class TestDDK(unittest.TestCase):
     def test_J1713_ICRS_binary_delay(self):
         # Calculate delays with PINT
         pint_binary_delay = self.ICRSmodelJ1713.binarymodel_delay(self.toasJ1713, None)
+        print(f"{np.abs(pint_binary_delay.value + self.ECLltbindelay).max()}")
         assert np.all(np.abs(pint_binary_delay.value + self.ECLltbindelay) < 6e-6), (
             "DDK J1713 ICRS BINARY DELAY TEST FAILED: max difference is %e"
             % np.abs(pint_binary_delay.value + self.ICRSltbindelay).max()
@@ -91,7 +93,7 @@ class TestDDK(unittest.TestCase):
         ).time_resids.to(u.s)
         diff = pint_resids_us.value - self.ECLltres
         print("Max diff %e" % np.abs(diff - diff.mean()).max())
-        assert np.all(np.abs(diff - diff.mean()) < 5e-7), (
+        assert np.all(np.abs(diff - diff.mean()) < 5e-8), (
             "DDK J1713 ECL RESIDUAL TEST FAILED: max difference is %e"
             % np.abs(diff - diff.mean()).max()
         )
@@ -102,7 +104,7 @@ class TestDDK(unittest.TestCase):
         ).time_resids.to(u.s)
         diff = pint_resids_us.value - self.ICRSltres
         print("Max diff %e" % np.abs(diff - diff.mean()).max())
-        assert np.all(np.abs(diff - diff.mean()) < 5e-7), (
+        assert np.all(np.abs(diff - diff.mean()) < 5e-8), (
             "DDK J1713 ICRS RESIDUAL TEST FAILED: max difference is %e"
             % np.abs(diff - diff.mean()).max()
         )
@@ -215,7 +217,7 @@ def test_ddk_ECL_ICRS():
     # fitting with the wrong KOM should be bad
     assert rICRS.calc_chi2() - prefit.calc_chi2() > 10
     # and with the new KOM they should be close
-    assert np.abs(rICRS_newKOM.calc_chi2() - prefit.calc_chi2()) < 2
+    assert np.isclose(rICRS_newKOM.calc_chi2(), prefit.calc_chi2())
 
     # check that round-trip is OK
     mECL_transformed = mICRS_newKOM.as_ECL()

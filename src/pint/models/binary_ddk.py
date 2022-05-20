@@ -18,6 +18,15 @@ class BinaryDDK(BinaryDD):
     of the system from Earth, the finite size of the system, and the
     interaction of these with the proper motion.
 
+    From Kopeikin (1995) this includes :math:`\Delta_{\pi M}` (Equation 17), the mixed annual-orbital parallax term, which changes :math:`a_1` and :math:`\omega`
+    (:meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_a1_parallax` and :meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_omega_parallax`).
+
+    It does not include :math:`\Delta_{\pi P}`, the pure pulsar orbital parallax term (Equation 14).
+
+    From Kopeikin (1996) this includes apparent changes in :math:`\omega`, :math:`a_1`, and :math:`i` due to the proper motion
+    (:meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_omega_proper_motion`, :meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_a1_proper_motion`,
+    :meth:`~pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel.delta_kin_proper_motion`) (Equations 8, 9, 10).
+
     The actual calculations for this are done in
     :class:`pint.models.stand_alone_psr_binaries.DDK_model.DDKmodel`.
 
@@ -38,7 +47,7 @@ class BinaryDDK(BinaryDD):
 
     Note
     ----
-    This model defines KOM with reference to north, either equatorial or ecliptic depending on how the model is defined.  Using this model at the ~10ns level needs to be verified.
+    This model defines KOM with reference to north, either equatorial or ecliptic depending on how the model is defined.
 
     Parameters supported:
 
@@ -122,9 +131,6 @@ class BinaryDDK(BinaryDD):
                 )
         elif "AstrometryEcliptic" in self._parent.components:
             log.debug("Validating DDK model in ECL coordinates")
-            log.warning(
-                "Using the DDK model in ECL coordinates has not been verified below ~30 ns"
-            )
             if (
                 "PMELONG" not in self._parent.params
                 or "PMELAT" not in self._parent.params

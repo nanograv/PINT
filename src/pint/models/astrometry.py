@@ -63,13 +63,19 @@ class Astrometry(DelayComponent):
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
         return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
 
-    def ssb_to_psb_xyz_ECL(self, epoch=None):
+    def ssb_to_psb_xyz_ECL(self, epoch=None, ecl=None):
         """Returns unit vector(s) from SSB to pulsar system barycenter under Ecliptic coordinates.
 
         If epochs (MJD) are given, proper motion is included in the calculation.
+
+        Parameters
+        ----------
+        epoch : float, optional
+        ecl : str, optional
+            Obliquity (IERS2010 by default)
         """
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
-        return self.coords_as_ECL(epoch=epoch).cartesian.xyz.transpose()
+        return self.coords_as_ECL(epoch=epoch, ecl=ecl).cartesian.xyz.transpose()
 
     def sun_angle(self, toas, heliocenter=True, also_distance=False):
         """Compute the pulsar-observatory-Sun angle.
