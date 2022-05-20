@@ -247,9 +247,9 @@ def main(argv=None):
     parser.add_argument(
         "-v",
         "--version",
-        default=False,
-        action="store_true",
+        action="version",
         help="Print version info and  exit.",
+        version=f"This is PINT version {pint.__version__}",
     )
     parser.add_argument(
         "--log-level",
@@ -260,10 +260,6 @@ def main(argv=None):
         dest="loglevel",
     )
     args = parser.parse_args(argv)
-
-    if args.version:
-        print(f"This is PINT version {pint.__version__}")
-        sys.exit(0)
 
     if args.loglevel != "WARNING":
         log.remove()
