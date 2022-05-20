@@ -8,6 +8,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Added
 - Warning when A1DOT parameter used with DDK model
 ### Fixed
+- WLS fitters no longer ignore EFAC/EQUAD (bug #1226)
 ### Changed
 
 ## [0.8.6 == 0.8.7] 2022-05-10
