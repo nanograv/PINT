@@ -286,7 +286,7 @@ def setup(
     usecolors : bool, optional
         Should it use colors at all
     colors : dict, optional
-        Color to override the default values for any specified key
+        Dict of ``level``, ``format`` pairs to override the color/format settings for any level
     capturewarnings : bool, optional
         Whether or not messages emitted by :func:`warnings.warn` should be included in the logging output
     removeprior : bool, optional
