@@ -265,7 +265,8 @@ def setup(
     level="INFO",
     sink=sys.stderr,
     format=format,
-    debug_color=debug_color,
+    usecolors=True,
+    colors={"DEBUG": debug_color},
     capturewarnings=True,
     removeprior=True,
 ):
@@ -282,8 +283,10 @@ def setup(
         Destination for the logging messages
     format : str, optional
         Format string for the logging messages, unless overridden by ``$LOGURU_FORMAT``
-    debug_color : str, optional
-        Color to override the default ``DEBUG`` color
+    usecolors : bool, optional
+        Should it use colors at all
+    colors : dict, optional
+        Color to override the default values for any specified key
     capturewarnings : bool, optional
         Whether or not messages emitted by :func:`warnings.warn` should be included in the logging output
     removeprior : bool, optional
@@ -320,9 +323,14 @@ def setup(
     # otherwise the default selection turns them off e.g., for a Jupyter notebook
     # since it isn't a tty
     loghandler = log.add(
-        sink, level=level, filter=logfilter, format=format, colorize=True
+        sink,
+        level=level,
+        filter=logfilter,
+        format=format,
+        colorize=usecolors,
     )
-    # change default DEBUG color
-    log.level("DEBUG", color=debug_color)
+    # change default colors
+    for level in colors:
+        log.level(level, color=debug_color)
 
     return loghandler
