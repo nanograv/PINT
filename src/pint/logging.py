@@ -282,7 +282,7 @@ def setup(
     sink : file-like object, str, or other object accepted by :py:meth:`loguru.Logger.add`, optional
         Destination for the logging messages
     format : str, optional
-        Format string for the logging messages, unless overridden by ``$LOGURU_FORMAT``
+        Format string for the logging messages, unless overridden by ``$LOGURU_FORMAT``.  See `loguru documentation <https://loguru.readthedocs.io/en/stable/>`_ for full set of options
     filter : callable, optional
         Should be a ``LogFilter`` or similar which returns ``True`` if a message will be seen and ``False`` otherwise.
         The default instance can be modified to change the messages that are never seen/only seen once
@@ -300,6 +300,15 @@ def setup(
     int
         An identifier associated with the added sink and which should be used to
         remove it.
+
+    Example
+    -------
+
+        >>> import pint.logging
+        >>> import sys
+        >>> format = "<level>{level: <8}</level> ({name: <30}): <level>{message}</level>"
+        # turn off colors if your terminal does not play well with them
+        >>> pint.logging.setup(level="DEBUG", sink=sys.stderr, format=format, filter=pint.logging.LogFilter(), usecolors=False)
 
     """
 
