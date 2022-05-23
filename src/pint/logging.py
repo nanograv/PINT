@@ -103,7 +103,6 @@ def showwarning(message, category, filename, lineno, file=None, line=None):
     # check to see if a standard warning filter has already been inserted that would catch whatever this is
     # this isn't the exact same implementation as the standard filter because we don't get all of the relevant pieces
     # but it works for ignoring
-    print(f"{message} {category}")
     if isinstance(message, Warning):
         message_text = str(message)
         category = message.__class__
