@@ -153,7 +153,7 @@ class LogFilter:
 
         They should be defined as:
 
-            >>> "Error message": False
+            r"Error message": False
 
         where the ``False`` tracks whether or not the message has been issued at all.
 
