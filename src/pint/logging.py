@@ -131,7 +131,8 @@ def showwarning(message, category, filename, lineno, file=None, line=None):
     # turn the warning into text.
     arg_string = f"{filename}:{lineno} {category.__name__}"
     log.warning(f"{arg_string}: {message_text}")
-    showwarning_(message, category, filename, lineno, file=file, line=line)
+    # I don't think we need to re-emit the message
+    # showwarning_(message, category, filename, lineno, file=file, line=line)
 
 
 class LogFilter:
