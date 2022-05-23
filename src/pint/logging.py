@@ -88,6 +88,7 @@ script_level = "WARNING"
 # https://loguru.readthedocs.io/en/stable/api/logger.html#color
 
 showwarning_ = warnings.showwarning
+warning_onceregistry = {}
 # add "once" filter for this warning
 warnings.filterwarnings("once", message="Using A1DOT with a DDK model is not advised.")
 
@@ -96,18 +97,37 @@ def showwarning(message, category, filename, lineno, file=None, line=None):
     """
     Function to allow ``loguru`` to capture warnings emitted by :func:`warnings.warn`.
 
-    These should have already passed any warning filters so we don't have to replicate that.
+    Also look at the existing :data:`warnings.filters` to see if warnings should be ignored or only seen once (most messages are already filtered, but some aren't)
 
     See https://loguru.readthedocs.io/en/stable/resources/recipes.html#capturing-standard-stdout-stderr-and-warnings
     """
-    # check to see if a standard warning filter has already been inserted that would catch whatever this is
-    # this isn't the exact same implementation as the standard filter because we don't get all of the relevant pieces
-    # but it works for ignoring
     if isinstance(message, Warning):
         message_text = str(message)
         category = message.__class__
     else:
         message_text = message
+    # take action according to standard warning filters
+    # this isn't the exact same implementation as the standard filter because we don't get all of the relevant pieces
+    # but it works for ignoring
+    for filter in warnings.filters:
+        action, msg, cat, mod, ln = filter
+        if (msg is not None) and (msg.match(message_text)) and action == "ignore":
+            # if it matches an "ignore" message
+            return
+        # matching based on category
+        if (
+            (cat is not None)
+            and ((msg is None or msg.match(message_text)) and issubclass(category, cat))
+            and action == "ignore"
+        ):
+            return
+        # only issue once, just based on text matching.  construct a key for future matching
+        # mostly follows python warnings module
+        if action == "once":
+            oncekey = (message_text, category)
+            if warning_onceregistry.get(oncekey):
+                return
+            warning_onceregistry[oncekey] = 1
     # turn the warning into text.
     arg_string = f"{filename}:{lineno} {category.__name__}"
     log.warning(f"{arg_string}: {message_text}")
