@@ -62,10 +62,22 @@ class TestDDK(unittest.TestCase):
         cls.ICRSmodelJ1713 = mb.get_model(os.path.join(datadir, cls.ICRSparfileJ1713))
         # libstempo result
         # calculate using: datafile/make_J1713_libstempo.py
-        cls.ECLltres, cls.ECLltbindelay = np.genfromtxt(
+        (
+            cls.ECLltt,
+            cls.ECLltdt,
+            cls.ECLltf,
+            cls.ECLltres,
+            cls.ECLltbindelay,
+        ) = np.genfromtxt(
             os.path.join(datadir, cls.parfileJ1713 + ".libstempo"), unpack=True
         )
-        cls.ICRSltres, cls.ICRSltbindelay = np.genfromtxt(
+        (
+            cls.ICRSltt,
+            cls.ICRSltdt,
+            cls.ICRSltf,
+            cls.ICRSltres,
+            cls.ICRSltbindelay,
+        ) = np.genfromtxt(
             os.path.join(datadir, cls.ICRSparfileJ1713 + ".libstempo"), unpack=True
         )
 

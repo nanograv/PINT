@@ -10,12 +10,16 @@ parfiles = [
 ]
 for parfile in parfiles:
     psr = T.tempopulsar(parfile=parfile, timfile=timJ1713)
-    x = np.array([psr.residuals(), psr.binarydelay()])
+    x = np.array(
+        [psr.toas(), psr.toaerrs, psr.freqs, psr.residuals(), psr.binarydelay()]
+    )
     fout = open(parfile + ".libstempo", "w")
     fout.write(
         "# Created using libstempo on %s\n" % datetime.datetime.now().isoformat()
     )
-    fout.write("# Residual BinaryDelay\n")
+    fout.write("# TOA TOAerr FrequencyResidual BinaryDelay\n")
     for i in range(psr.nobs):
-        fout.write("%e %e\n" % (x[0, i], x[1, i]))
+        fout.write(
+            "%.10f %f %f %e %e\n" % (x[0, i], x[1, i], x[2, i], x[3, i], x[4, i])
+        )
     fout.close()
