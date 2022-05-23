@@ -92,6 +92,7 @@ warning_onceregistry = {}
 # add "once" filter for this warning
 warnings.filterwarnings("once", message="Using A1DOT with a DDK model is not advised.")
 
+
 def warn(message, *args, **kwargs):
     """
     Function to allow ``loguru`` to capture warnings emitted by :func:`warnings.warn`.
