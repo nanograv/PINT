@@ -93,7 +93,7 @@ warning_onceregistry = {}
 warnings.filterwarnings("once", message="Using A1DOT with a DDK model is not advised.")
 
 
-def warn(message, *args, **kwargs):
+def showwarning(message, category, filename, lineno, file=None, line=None):
     """
     Function to allow ``loguru`` to capture warnings emitted by :func:`warnings.warn`.
 
@@ -104,47 +104,35 @@ def warn(message, *args, **kwargs):
     # check to see if a standard warning filter has already been inserted that would catch whatever this is
     # this isn't the exact same implementation as the standard filter because we don't get all of the relevant pieces
     # but it works for ignoring
-    category = None
     if isinstance(message, Warning):
         message_text = str(message)
         category = message.__class__
     else:
         message_text = message
-        if isinstance(args[0], Warning):
-            category = args[0]
+    # take action according to standard warning filters
     for filter in warnings.filters:
         action, msg, cat, mod, ln = filter
-        if (
-            (msg is not None)
-            and (msg.match(message_text) and len(args) == 0)
-            and action == "ignore"
-        ):
+        if (msg is not None) and (msg.match(message_text)) and action == "ignore":
+            # if it matches an "ignore" message
             return
+        # matching based on category
         if (
             (cat is not None)
-            and (
-                (len(args) > 0 and isinstance(args[0], type))
-                and (
-                    (msg is None or msg.match(message_text))
-                    and issubclass(args[0], cat)
-                )
-            )
+            and ((msg is None or msg.match(message_text)) and issubclass(category, cat))
             and action == "ignore"
         ):
             return
+        # only issue once, just based on text matching.  construct a key for future matching
+        # mostly follows python warnings module
         if action == "once":
             oncekey = (message_text, category)
             if warning_onceregistry.get(oncekey):
                 return
             warning_onceregistry[oncekey] = 1
-    if len(args) > 0:
-        arg_string = " ".join([str(x) for x in args if x is not None])
-        log.warning(f"{arg_string}: {message_text}")
-    elif "category" in kwargs:
-        log.warning(f"{kwargs['category']} {message_text}")
-    else:
-        log.warning(f"{message_text}")
-    warn_(message, *args, **kwargs)
+    # turn the warning into text.
+    arg_string = f"{filename}:{lineno} {category.__name__}"
+    log.warning(f"{arg_string}: {message_text}")
+    warn_(message, category, filename, lineno, file=file, line=line)
 
 
 class LogFilter:
@@ -307,7 +295,7 @@ def setup(
 
     # if this is not used, then the default warning mechanism is not overridden. There may be times when that is desired
     if capturewarnings:
-        warnings.showwarning = warn
+        warnings.showwarning = showwarning
 
     # remove the default logger so we can put in one with a custom filter
     # this can be done elsewhere if more/different customization is needed
