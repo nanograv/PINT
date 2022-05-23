@@ -5,6 +5,7 @@ import os
 import re
 import unittest
 from io import StringIO
+import warnings
 
 import astropy.units as u
 import numpy as np
@@ -13,6 +14,7 @@ import test_derivative_utils as tdu
 from astropy.time import Time
 from pinttestdata import datadir
 from utils import verify_stand_alone_binary_parameter_updates
+from loguru import logger as log
 
 import pint.models.model_builder as mb
 import pint.toa as toa
@@ -174,6 +176,19 @@ def test_remove_PX():
     m.remove_param("PX")
     with pytest.raises(MissingParameter):
         m.validate()
+
+
+def test_A1dot_warning():
+    # should not have a warning
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", message="Using A1DOT")
+        m = mb.get_model(StringIO(temp_par_str))
+
+    # and this should have a warning
+    with pytest.warns(
+        UserWarning, match=r"Using A1DOT with a DDK model is not advised."
+    ):
+        m = mb.get_model(StringIO(temp_par_str + "\nA1DOT 2\n"))
 
 
 if __name__ == "__main__":

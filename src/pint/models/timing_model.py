@@ -366,6 +366,12 @@ class TimingModel:
             self.T2CMETHOD.value = "IAU2000B"
         if self.UNITS.value not in [None, "TDB"]:
             raise ValueError("PINT only supports 'UNITS TDB'")
+        if not self.START.frozen:
+            warn("START cannot be unfrozen...setting START.frozen to True")
+            self.START.frozen = True
+        if not self.FINISH.frozen:
+            warn("FINISH cannot be unfrozen...setting FINISH.frozen to True")
+            self.FINISH.frozen = True
 
         for cp in self.components.values():
             cp.validate()

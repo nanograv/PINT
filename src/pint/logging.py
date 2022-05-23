@@ -87,18 +87,10 @@ script_level = "WARNING"
 # Other formatting:
 # https://loguru.readthedocs.io/en/stable/api/logger.html#color
 
-# filter  warnings globally like
-# ErfaWarning: ERFA function "pmsafe" yielded 89 of "distance overridden (Note 6)"
-# these don't get emitted by the logger but still get through the warn() function
-# would be better to find where these are emitted
-# warnings.filterwarnings(
-#    "ignore",
-#    message='ERFA function "pmsafe" yielded',
-#    category=ErfaWarning,
-# )
 warn_ = warnings.showwarning
 warning_onceregistry = {}
-
+# add "once" filter for this warning
+warnings.filterwarnings("once", message="Using A1DOT with a DDK model is not advised.")
 
 def warn(message, *args, **kwargs):
     """
