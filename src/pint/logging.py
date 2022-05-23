@@ -5,10 +5,9 @@ To use this do::
     import pint.logging
     pint.logging.setup()
 
-You can optionally pass the desired logging level to the :func:`pint.logging.setup` function.
+You can optionally pass the desired logging level to the :func:`pint.logging.setup` function, formats, custom filters, colors, etc.  See documentation for :func:`pint.logging.setup`.
 
-If you want to customize more of this yourself (e.g., in a script)
-the minimal pieces would be:
+If you want to customize even more of this yourself (e.g., in a script) the minimal pieces would be:
 
     from loguru import logger as log
 
@@ -265,6 +264,7 @@ def setup(
     level="INFO",
     sink=sys.stderr,
     format=format,
+    filter=LogFilter(),
     usecolors=True,
     colors={"DEBUG": debug_color},
     capturewarnings=True,
@@ -283,6 +283,9 @@ def setup(
         Destination for the logging messages
     format : str, optional
         Format string for the logging messages, unless overridden by ``$LOGURU_FORMAT``
+    filter : callable, optional
+        Should be a ``LogFilter`` or similar which returns ``True`` if a message will be seen and ``False`` otherwise.
+        The default instance can be modified to change the messages that are never seen/only seen once
     usecolors : bool, optional
         Should it use colors at all
     colors : dict, optional
@@ -295,17 +298,14 @@ def setup(
     Returns
     -------
     int
-            An identifier associated with the added sink and which should be used to
-            remove it.
+        An identifier associated with the added sink and which should be used to
+        remove it.
 
     """
 
     # if this is not used, then the default warning mechanism is not overridden. There may be times when that is desired
     if capturewarnings:
         warnings.showwarning = warn
-
-    # you can modify this instance to change the messages that are never seen/only seen once
-    logfilter = LogFilter()
 
     # remove the default logger so we can put in one with a custom filter
     # this can be done elsewhere if more/different customization is needed
@@ -325,7 +325,7 @@ def setup(
     loghandler = log.add(
         sink,
         level=level,
-        filter=logfilter,
+        filter=filter,
         format=format,
         colorize=usecolors,
     )
