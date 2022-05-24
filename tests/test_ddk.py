@@ -57,11 +57,12 @@ class TestDDK(unittest.TestCase):
         cls.toasJ1713 = toa.get_TOAs(
             os.path.join(datadir, cls.timJ1713), ephem="DE421", planets=False
         )
-        cls.toasJ1713.table.sort("index")
+        index = cls.toasJ1713.table["index"]
         cls.ECLmodelJ1713 = mb.get_model(os.path.join(datadir, cls.parfileJ1713))
         cls.ICRSmodelJ1713 = mb.get_model(os.path.join(datadir, cls.ICRSparfileJ1713))
         # libstempo result
         # calculate using: datafile/make_J1713_libstempo.py
+        # make sure to sort to agree with the grouped TOAs
         (
             cls.ECLltt,
             cls.ECLltdt,
@@ -70,7 +71,9 @@ class TestDDK(unittest.TestCase):
             cls.ECLltbindelay,
         ) = np.genfromtxt(
             os.path.join(datadir, cls.parfileJ1713 + ".libstempo"), unpack=True
-        )
+        )[
+            :, index
+        ]
         (
             cls.ICRSltt,
             cls.ICRSltdt,
@@ -79,7 +82,9 @@ class TestDDK(unittest.TestCase):
             cls.ICRSltbindelay,
         ) = np.genfromtxt(
             os.path.join(datadir, cls.ICRSparfileJ1713 + ".libstempo"), unpack=True
-        )
+        )[
+            :, index
+        ]
 
     def test_J1713_ECL_binary_delay(self):
         # Calculate delays with PINT
@@ -105,7 +110,7 @@ class TestDDK(unittest.TestCase):
         ).time_resids.to(u.s)
         diff = pint_resids_us.value - self.ECLltres
         print("Max diff %e" % np.abs(diff - diff.mean()).max())
-        assert np.all(np.abs(diff - diff.mean()) < 5e-8), (
+        assert np.all(np.abs(diff - diff.mean()) < 2e-8), (
             "DDK J1713 ECL RESIDUAL TEST FAILED: max difference is %e"
             % np.abs(diff - diff.mean()).max()
         )
@@ -116,7 +121,7 @@ class TestDDK(unittest.TestCase):
         ).time_resids.to(u.s)
         diff = pint_resids_us.value - self.ICRSltres
         print("Max diff %e" % np.abs(diff - diff.mean()).max())
-        assert np.all(np.abs(diff - diff.mean()) < 5e-8), (
+        assert np.all(np.abs(diff - diff.mean()) < 2e-8), (
             "DDK J1713 ICRS RESIDUAL TEST FAILED: max difference is %e"
             % np.abs(diff - diff.mean()).max()
         )
