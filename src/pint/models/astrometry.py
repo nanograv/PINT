@@ -1017,8 +1017,8 @@ class AstrometryEcliptic(Astrometry):
             frame=PulsarEcliptic,
         )
         c_ICRS = c.transform_to(coords.ICRS)
-        m_eq.RAJ.uncertainty = c_ICRS.pm_ra_cosdec * dt / np.cos(c_ICRS.dec)
-        m_eq.DECJ.uncertainty = c_ICRS.pm_dec * dt
+        m_eq.RAJ.uncertainty = np.abs(c_ICRS.pm_ra_cosdec * dt / np.cos(c_ICRS.dec))
+        m_eq.DECJ.uncertainty = np.abs(c_ICRS.pm_dec * dt)
         # use fake proper motions to convert uncertainties on proper motion
         # assume that PMELONG uncertainty includes cos(DEC)
         c = coords.SkyCoord(
@@ -1031,8 +1031,8 @@ class AstrometryEcliptic(Astrometry):
             frame=PulsarEcliptic,
         )
         c_ICRS = c.transform_to(coords.ICRS)
-        m_eq.PMRA.uncertainty = c_ICRS.pm_ra_cosdec
-        m_eq.PMDEC.uncertainty = c_ICRS.pm_dec
+        m_eq.PMRA.uncertainty = np.abs(c_ICRS.pm_ra_cosdec)
+        m_eq.PMDEC.uncertainty = np.abs(c_ICRS.pm_dec)
         # freeze comparable parameters
         m_eq.RAJ.frozen = self.ELONG.frozen
         m_eq.DECJ.frozen = self.ELAT.frozen
