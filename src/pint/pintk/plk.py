@@ -98,6 +98,7 @@ icon_img = os.path.join(os.path.split(__file__)[0], "PINT_LOGO_128trans.gif")
 
 # foreground text for labels etc
 foreground = "black"
+background = "#E9E9E9"
 
 
 class State:
@@ -176,6 +177,7 @@ class PlkFitBoxesWidget(tk.Frame):
 
     def __init__(self, master=None, **kwargs):
         tk.Frame.__init__(self, master)
+        self.configure(bg=background)
         self.boxChecked = None
         self.maxcols = 8
 
@@ -219,6 +221,7 @@ class PlkFitBoxesWidget(tk.Frame):
                     variable=self.compVisible[ii],
                     command=self.updateLayout,
                     fg=foreground,
+                    bg=background,
                 )
             )
 
@@ -231,6 +234,8 @@ class PlkFitBoxesWidget(tk.Frame):
                         text=par,
                         variable=self.parVars[par],
                         command=lambda p=par: self.changedFitCheckBox(p),
+                        bg=background,
+                        fg=foreground,
                     )
                 )
                 if par in fitparams:
@@ -276,6 +281,7 @@ class PlkRandomModelSelect(tk.Frame):
 
     def __init__(self, master=None, **kwargs):
         tk.Frame.__init__(self, master)
+        self.configure(bg=background)
         self.boxChecked = None
         self.var = tk.IntVar()
 
@@ -287,15 +293,20 @@ class PlkRandomModelSelect(tk.Frame):
             variable=self.var,
             command=self.changedRMCheckBox,
             fg=foreground,
+            bg=background,
         )
         checkbox.grid(row=1, column=1, sticky="N")
         checkbox_ttp = CreateToolTip(
             checkbox, "Display random timing models consistent with selected TOAs."
         )
         if "zoom" in master.plkToolbar.mode:
-            self.modeLabel = tk.Label(master, text="Mode: Zoom", fg=foreground)
+            self.modeLabel = tk.Label(
+                master, text="Mode: Zoom", fg=foreground, bg=background
+            )
         else:
-            self.modeLabel = tk.Label(master, text="Mode: Select", fg=foreground)
+            self.modeLabel = tk.Label(
+                master, text="Mode: Select", fg=foreground, bg=background
+            )
         self.modeLabel.grid(row=1, column=1, sticky="S")
 
     def setCallbacks(self, boxChecked):
@@ -319,9 +330,9 @@ class PlkRandomModelSelect(tk.Frame):
 
     def changeMode(self, mode):
         if "zoom" in mode:
-            self.modeLabel.config(text="Mode: Zoom", fg=foreground)
+            self.modeLabel.config(text="Mode: Zoom", fg=foreground, bg=background)
         else:
-            self.modeLabel.config(text="Mode: Select", fg=foreground)
+            self.modeLabel.config(text="Mode: Select", fg=foreground, bg=background)
 
 
 class PlkLogLevelSelect(tk.Frame):
@@ -331,7 +342,10 @@ class PlkLogLevelSelect(tk.Frame):
 
     def __init__(self, master):
         tk.Frame.__init__(self, master)
-        self.logLabel = tk.Label(self, text="Minimum Log Level: ", fg=foreground)
+        self.configure(bg=background)
+        self.logLabel = tk.Label(
+            self, text="Minimum Log Level: ", fg=foreground, bg=background
+        )
         self.logLabel.pack()
         self.logLevelSelect = ttk.Combobox(self)
         self.logLevelSelect.pack()
@@ -366,7 +380,8 @@ class PlkFitterSelect(tk.Frame):
 
     def __init__(self, master):
         tk.Frame.__init__(self, master)
-        self.fitterLabel = tk.Label(self, text="Fitter: ", fg=foreground)
+        self.configure(bg=background)
+        self.fitterLabel = tk.Label(self, text="Fitter: ", fg=foreground, bg=background)
         self.fitterLabel.pack()
         self.fitterSelect = ttk.Combobox(self)
         self.fitterSelect.pack()
@@ -393,12 +408,13 @@ class PlkColorModeBoxes(tk.Frame):
 
     def __init__(self, master=None, **kwargs):
         tk.Frame.__init__(self, master)
+        self.configure(bg=background)
         self.boxChecked = None
 
     def addColorModeCheckbox(self, colorModes):
         self.checkboxes = []
         self.checkboxStatus = tk.StringVar()
-        self.label = tk.Label(self, text="Color Modes", fg=foreground)
+        self.label = tk.Label(self, text="Color Modes", fg=foreground, bg=background)
         for index, mode in enumerate(colorModes):
             self.checkboxes.append(
                 tk.Radiobutton(
@@ -408,6 +424,7 @@ class PlkColorModeBoxes(tk.Frame):
                     value=mode.mode_name,
                     command=lambda m=mode: self.applyChanges(m),
                     fg=foreground,
+                    bg=background,
                 )
             )
 
@@ -445,7 +462,7 @@ class PlkXYChoiceWidget(tk.Frame):
 
     def __init__(self, master=None, **kwargs):
         tk.Frame.__init__(self, master)
-
+        self.configure(bg=background)
         self.xvar = tk.StringVar()
         self.yvar = tk.StringVar()
 
@@ -454,9 +471,9 @@ class PlkXYChoiceWidget(tk.Frame):
     def initPlkXYChoice(self):
         labellength = 3
 
-        label = tk.Label(self, text="X", fg=foreground)
+        label = tk.Label(self, text="X", fg=foreground, bg=background)
         label.grid(row=0, column=1)
-        label = tk.Label(self, text="Y", fg=foreground)
+        label = tk.Label(self, text="Y", fg=foreground, bg=background)
         label.grid(row=0, column=2)
 
         self.grid_columnconfigure(0, weight=3)
@@ -467,19 +484,27 @@ class PlkXYChoiceWidget(tk.Frame):
         self.ybuttons = []
 
         for ii, choice in enumerate(pulsar.plot_labels):
-            label = tk.Label(self, text=choice, fg=foreground)
+            label = tk.Label(self, text=choice, fg=foreground, bg=background)
             label.grid(row=ii + 1, column=0)
 
             self.xbuttons.append(
                 tk.Radiobutton(
-                    self, variable=self.xvar, value=choice, command=self.updateChoice
+                    self,
+                    variable=self.xvar,
+                    value=choice,
+                    command=self.updateChoice,
+                    bg=background,
                 )
             )
             self.xbuttons[ii].grid(row=ii + 1, column=1)
 
             self.ybuttons.append(
                 tk.Radiobutton(
-                    self, variable=self.yvar, value=choice, command=self.updateChoice
+                    self,
+                    variable=self.yvar,
+                    value=choice,
+                    command=self.updateChoice,
+                    bg=background,
                 )
             )
             self.ybuttons[ii].grid(row=ii + 1, column=2)
@@ -526,6 +551,7 @@ class PlkActionsWidget(tk.Frame):
 
     def __init__(self, master=None, **kwargs):
         tk.Frame.__init__(self, master)
+        # self.configure(bg=background)
 
         self.fit_callback = None
         self.clearAll_callback = None
@@ -537,25 +563,57 @@ class PlkActionsWidget(tk.Frame):
         self.initPlkActions()
 
     def initPlkActions(self):
-        self.fitbutton = tk.Button(self, text="Fit", command=self.fit, underline=0)
+        self.fitbutton = tk.Button(
+            self,
+            text="Fit",
+            command=self.fit,
+            underline=0,
+            bg=background,
+            fg=foreground,
+        )
         self.fitbutton.grid(row=0, column=0)
         fitbutton_ttp = CreateToolTip(
             self.fitbutton, "Fit the selected TOAs to the current model."
         )
-        button1 = tk.Button(self, text="Revert", command=self.revert)
+        button1 = tk.Button(
+            self,
+            text="Revert",
+            command=self.revert,
+            bg=background,
+            fg=foreground,
+        )
         button1.grid(row=0, column=1)
         button1_ttp = CreateToolTip(button1, "Undo the last model fit.")
-        button2 = tk.Button(self, text="Write par", command=self.writePar)
+        button2 = tk.Button(
+            self,
+            text="Write par",
+            command=self.writePar,
+            bg=background,
+            fg=foreground,
+        )
         button2.grid(row=0, column=2)
         button2_ttp = CreateToolTip(
             button2, "Write the post-fit parfile to a file of your choice."
         )
-        button3 = tk.Button(self, text="Write tim", command=self.writeTim)
+        button3 = tk.Button(
+            self,
+            text="Write tim",
+            command=self.writeTim,
+            bg=background,
+            fg=foreground,
+        )
         button3.grid(row=0, column=3)
         button3_ttp = CreateToolTip(
             button3, "Write the current TOAs table to a .tim file of your choice."
         )
-        button4 = tk.Button(self, text="Reset", command=self.reset, underline=0)
+        button4 = tk.Button(
+            self,
+            text="Reset",
+            command=self.reset,
+            underline=0,
+            bg=background,
+            fg=foreground,
+        )
         button4.grid(row=0, column=4)
         button4_ttp = CreateToolTip(
             button4, "Reset everything to the beginning of the session.  Be Careful!"
@@ -602,6 +660,7 @@ class PlkActionsWidget(tk.Frame):
 class PlkWidget(tk.Frame):
     def __init__(self, master=None, **kwargs):
         tk.Frame.__init__(self, master)
+        self.configure(bg=background)
         self.init_loglevel = kwargs["loglevel"] if "loglevel" in kwargs else None
         self.initPlk()
         self.initPlkLayout()
