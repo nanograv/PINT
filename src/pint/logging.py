@@ -89,15 +89,13 @@ script_level = "WARNING"
 
 showwarning_ = warnings.showwarning
 warning_onceregistry = {}
-# add "once" filter for this warning
-warnings.filterwarnings("once", message="Using A1DOT with a DDK model is not advised.")
 
 
 def showwarning(message, category, filename, lineno, file=None, line=None):
     """
     Function to allow ``loguru`` to capture warnings emitted by :func:`warnings.warn`.
 
-    Also look at the existing :data:`warnings.filters` to see if warnings should be ignored or only seen once (most messages are already filtered, but some aren't)
+    Also look at the existing :data:`warnings.filters` to see if warnings should be ignored or only seen once (most messages are already filtered, but some aren't, especially in older python)
 
     See https://loguru.readthedocs.io/en/stable/resources/recipes.html#capturing-standard-stdout-stderr-and-warnings
     """
