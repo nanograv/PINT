@@ -471,6 +471,7 @@ class Pulsar:
         self.selected_resids = Residuals(self.selected_toas, self.prefit_model)
 
         wrms = self.selected_resids.rms_weighted()
+        print("------------------------------------")
         print("Selected TOAs:           %8d" % self.selected_toas.ntoas)
         print("Selected Chi2:          %.8g" % self.selected_resids.chi2)
         print(
