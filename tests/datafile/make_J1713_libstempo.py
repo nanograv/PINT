@@ -5,10 +5,11 @@ import datetime
 timJ1713 = "J1713+0747_NANOGrav_11yv0_short.tim"
 # one file in ICRS, one in ECL
 parfiles = [
-    "J1713+0747_NANOGrav_11yv0_short.gls.ICRS.par",
     "J1713+0747_NANOGrav_11yv0_short.gls.par",
+    "J1713+0747_NANOGrav_11yv0_short.gls.ICRS.par",
 ]
 for parfile in parfiles:
+    print(f"Parfile {parfile}")
     psr = T.tempopulsar(parfile=parfile, timfile=timJ1713)
     x = np.array(
         [psr.toas(), psr.toaerrs, psr.freqs, psr.residuals(), psr.binarydelay()]

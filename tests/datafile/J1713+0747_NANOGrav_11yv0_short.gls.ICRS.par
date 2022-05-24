@@ -5,6 +5,7 @@
 # OS: macOS-10.16-x86_64-i386-64bit
 # Format: pint
 PSR                            J1713+0747
+MODE                                    1
 EPHEM                               DE421
 CLK                          TT(BIPM2015)
 UNITS                                 TDB
