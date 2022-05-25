@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import pint.toa as toa
 import pint.simulation as simulation
 from pint.models import get_model
-from pylab import *
 from copy import deepcopy
 import io
 import pytest

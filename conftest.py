@@ -26,3 +26,8 @@ default = (
     else "interactive"
 )  # noqa: E501
 hypothesis.settings.load_profile(os.environ.get("HYPOTHESIS_PROFILE", default))
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers", "remote_data: mark test as requiring data from the network"
+    )
