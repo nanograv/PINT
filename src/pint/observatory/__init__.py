@@ -586,6 +586,10 @@ def check_for_new_clock_files_in_tempo12_repos(update_download=True, show_diff=1
     import collections
     import difflib
     import astropy.utils.data
+    # Importing this module triggers loading all observatories
+    import pint.observatory.observatories
+    import pint.observatory.topo_obs
+    import pint.observatory.special_locations
 
     # Ensure all observatories are loaded and warnings are emitted
     clock_files = collections.defaultdict(list)
@@ -656,6 +660,7 @@ def check_for_new_clock_files_in_tempo12_repos(update_download=True, show_diff=1
                 else:
                     print(" " * 8 + f"{len(diff)} lines omitted")
             print(" " * 4 + f"Observatory file is in {wfn}")
+            print(" " * 8 + f"downloaded from {u}")
 
 
 def list_last_correction_mjds():
@@ -670,6 +675,11 @@ def list_last_correction_mjds():
     are not listed. Observatories for which PINT knows where the clock correction
     should be but can't find it are listed as MISSING.
     """
+    # Importing this module triggers loading all observatories
+    import pint.observatory.observatories
+    import pint.observatory.topo_obs
+    import pint.observatory.special_locations
+
     for n in Observatory.names():
         o = get_observatory(n)
         if not hasattr(o, "clock_file"):
