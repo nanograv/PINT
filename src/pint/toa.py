@@ -289,7 +289,7 @@ def get_TOAs(
     t.table = t.table.group_by("obs")
     if recalc or "tdb" not in t.table.colnames:
         t.compute_TDBs(method=tdb_method, ephem=ephem)
-
+        log.debug(f"TDB on reading: {t.table[0]['tdb'].tdb.mjd_long:.20f}")
     if planets is None:
         planets = t.planets
     elif planets != t.planets:
@@ -302,7 +302,11 @@ def get_TOAs(
     if usepickle and updatepickle:
         log.info("Pickling TOAs.")
         save_pickle(t, picklefilename=picklefilename)
-    return t
+    log.debug(f"TDB on return: {t.table[0]['tdb'].tdb.mjd_long:.20f}")
+    print(f"{t.table[0]['tdb'].tdb.mjd_long:.20f}")
+    tdb = copy.deepcopy(t.table[0]["tdb"].tdb.mjd_long)
+    print(f"{tdb:.20f}")
+    return t, tdb
 
 
 def load_pickle(toafilename, picklefilename=None):
@@ -2139,7 +2143,7 @@ class TOAs:
         log.debug(f"Using EPHEM = {self.ephem} for TDB calculation.")
 
         # Compute in observatory groups
-        tdbs = np.zeros_like(self.table["mjd"])
+        tdbs = np.zeros_like(self.table["mjd"].data)
         for obs, grp in self.get_obs_groups():
             site = get_observatory(obs)
             if isinstance(site, TopoObs):
@@ -2148,6 +2152,9 @@ class TOAs:
                 # a Time from a list (or Column) of Times throws away the location information
                 grpmjds = time.Time(
                     self.table[grp]["mjd"], location=self.table[grp]["mjd"][0].location
+                )
+                log.debug(
+                    f"{obs} site={site} grp={grp} grpmjds={grpmjds} locations={grpmjds.location} location={self.table[grp]['mjd'][0].location}"
                 )
             else:
                 # Grab locations for each TOA
@@ -2169,7 +2176,7 @@ class TOAs:
 
             grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem)
             tdbs[grp] = np.asarray([t for t in grptdbs])
-
+            log.debug(f"TDBs: {grptdbs} {tdbs} {tdbs[0].tdb.mjd_long:.20f}")
         # Now add the new columns to the table
         col_tdb = table.Column(name="tdb", data=tdbs)
         col_tdbld = table.Column(name="tdbld", data=[t.tdb.mjd_long for t in tdbs])
