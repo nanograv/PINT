@@ -2138,7 +2138,7 @@ class TOAs:
         log.debug(f"Using EPHEM = {self.ephem} for TDB calculation.")
 
         # Compute in observatory groups
-        tdbs = np.zeros_like(self.table["mjd"].data)
+        tdbs = np.zeros_like(self.table["mjd"])
         for obs, grp in self.get_obs_groups():
             site = get_observatory(obs)
             if isinstance(site, TopoObs):
@@ -2168,6 +2168,9 @@ class TOAs:
 
             grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem)
             tdbs[grp] = np.asarray([t for t in grptdbs])
+            log.debug(
+                f"obs={obs} grpmjds={grpmjds[0].value:.15f} grptdbs={grptdbs[0].value:.20f}  tdbs={tdbs[0].value:.20f}"
+            )
         # Now add the new columns to the table
         col_tdb = table.Column(name="tdb", data=tdbs)
         col_tdbld = table.Column(name="tdbld", data=[t.tdb.mjd_long for t in tdbs])
