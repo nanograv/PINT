@@ -289,7 +289,6 @@ def get_TOAs(
     t.table = t.table.group_by("obs")
     if recalc or "tdb" not in t.table.colnames:
         t.compute_TDBs(method=tdb_method, ephem=ephem)
-        log.debug(f"TDB on reading: {t.table[0]['tdb'].tdb.mjd_long:.20f}")
     if planets is None:
         planets = t.planets
     elif planets != t.planets:
@@ -302,11 +301,7 @@ def get_TOAs(
     if usepickle and updatepickle:
         log.info("Pickling TOAs.")
         save_pickle(t, picklefilename=picklefilename)
-    log.debug(f"TDB on return: {t.table[0]['tdb'].tdb.mjd_long:.20f}")
-    print(f"{t.table[0]['tdb'].tdb.mjd_long:.20f}")
-    tdb = copy.deepcopy(t.table[0]["tdb"].tdb.mjd_long)
-    print(f"{tdb:.20f}")
-    return t, tdb
+    return t
 
 
 def load_pickle(toafilename, picklefilename=None):
@@ -2153,9 +2148,6 @@ class TOAs:
                 grpmjds = time.Time(
                     self.table[grp]["mjd"], location=self.table[grp]["mjd"][0].location
                 )
-                log.debug(
-                    f"{obs} site={site} grp={grp} grpmjds={grpmjds} locations={grpmjds.location} location={self.table[grp]['mjd'][0].location}"
-                )
             else:
                 # Grab locations for each TOA
                 # It is crazy that I have to deconstruct the locations like
@@ -2176,7 +2168,6 @@ class TOAs:
 
             grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem)
             tdbs[grp] = np.asarray([t for t in grptdbs])
-            log.debug(f"TDBs: {grptdbs} {tdbs} {tdbs[0].tdb.mjd_long:.20f}")
         # Now add the new columns to the table
         col_tdb = table.Column(name="tdb", data=tdbs)
         col_tdbld = table.Column(name="tdbld", data=[t.tdb.mjd_long for t in tdbs])
