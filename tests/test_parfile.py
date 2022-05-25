@@ -32,7 +32,7 @@ def demo_parfile():
     print()
 
 
-params = tm.get_model(parfile).params
+params = sorted(tm.get_model(parfile).params)
 params.remove("TZRMJD")
 params.append(pytest.param("TZRMJD", marks=pytest.mark.xfail(reason="Bug #519")))
 

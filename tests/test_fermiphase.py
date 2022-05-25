@@ -39,9 +39,10 @@ def test_GEO_Htest_result():
             if l.startswith("Htest"):
                 v = float(l.split()[2])
         # Check that H-test falls in right range for this portion of data
-        assert ((v > 550) and (v < 600))
+        assert (v > 550) and (v < 600)
     finally:
         sys.stdout = saved_stdout
+
 
 @pytest.mark.skipif(
     "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
@@ -71,7 +72,7 @@ def test_process_and_accuracy():
     # if the "2 mus" problem exists, the scatter in these values will
     # be 4-5 mus, whereas if everything is OK it should be few 100 ns
     # require range in TOAs to be less than 200ns
-    assert ((resids_mus.max() - resids_mus.min()) < 0.2)
+    assert (resids_mus.max() - resids_mus.min()) < 0.2
     # require absolute phase to be within 500 ns; NB this relies on
     # GBT clock corrections since the TZR is referenced there
-    assert (max(abs(resids_mus)) < 0.5)
+    assert max(abs(resids_mus)) < 0.5

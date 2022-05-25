@@ -10,7 +10,6 @@ import pint.scripts.zima as zima
 from pinttestdata import datadir, testdir
 
 
-
 def test_result(tmp_path):
     parfile = os.path.join(datadir, "NGC6440E.par")
     timfile = tmp_path / "fake_testzima.tim"

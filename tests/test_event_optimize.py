@@ -13,11 +13,13 @@ import pytest
 from pint.scripts import event_optimize
 from pinttestdata import datadir
 
+
 @pytest.mark.skip(reason="Doesn't actually test much of anything and is slow")
 def test_result(tmp_path):
     parfile = os.path.join(datadir, "PSRJ0030+0451_psrcat.par")
     eventfile_orig = os.path.join(
-        datadir, "J0030+0451_P8_15.0deg_239557517_458611204_ft1weights_GEO_wt.gt.0.4.fits"
+        datadir,
+        "J0030+0451_P8_15.0deg_239557517_458611204_ft1weights_GEO_wt.gt.0.4.fits",
     )
     temfile = os.path.join(datadir, "templateJ0030.3gauss")
     eventfile = tmp_path / "event.fits"
