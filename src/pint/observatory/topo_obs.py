@@ -18,7 +18,6 @@ from pint.utils import has_astropy_unit
 
 # These are global because they are, well, literally global
 _gps_clock = None
-_bipm_clock = None
 
 
 class TopoObs(Observatory):
@@ -239,20 +238,19 @@ class TopoObs(Observatory):
     def _load_gps_clock(self):
         global _gps_clock
         if _gps_clock is None:
-            log.info("Loading GPS clock file {1}".format(self.name, self.gps_fullpath))
-            _gps_clock = ClockFile.read(self.gps_fullpath, format="tempo2")
+            log.info(f"Loading GPS clock file {self.gps_fullpath} for {self.name}")
+            _gps_clock = ClockFile.read(
+                self.gps_fullpath, format="tempo2", bogus_last_correction=True
+            )
 
     def _load_bipm_clock(self):
-        global _bipm_clock
-        if _bipm_clock is None:
+        if self._bipm_clock is None:
             try:
-                log.info(
-                    "Loading BIPM clock file {1}".format(self.name, self.bipm_fullpath)
-                )
-                _bipm_clock = ClockFile.read(self.bipm_fullpath, format="tempo2")
+                log.info("Loading BIPM clock file {self.bipm_fullpath} for {self.name}")
+                self._bipm_clock = ClockFile.read(self.bipm_fullpath, format="tempo2")
             except Exception as e:
                 raise ValueError(
-                    f"Can not find TT BIPM file for version '{self.bipm_version}'."
+                    f"Cannot find TT BIPM file for version '{self.bipm_version}'."
                 ) from e
 
     def _load_clock_corrections(self):
@@ -311,7 +309,7 @@ class TopoObs(Observatory):
             )
             tt2tai = 32.184 * 1e6 * u.us
             self._load_bipm_clock()
-            corr += _bipm_clock.evaluate(t, limits=limits) - tt2tai
+            corr += self._bipm_clock.evaluate(t, limits=limits) - tt2tai
         return corr
 
     def last_clock_correction_mjd(self):
@@ -331,7 +329,7 @@ class TopoObs(Observatory):
             t = min(t, _gps_clock.last_correction_mjd())
         if self.include_bipm:
             self._load_bipm_clock()
-            t = min(t, _bipm_clock.last_correction_mjd())
+            t = min(t, self._bipm_clock.last_correction_mjd())
         return t
 
     def _get_TDB_ephem(self, t, ephem):
