@@ -102,10 +102,10 @@ eventfile_nicer_binary = os.path.join(
 @pytest.mark.skipif(
     "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
 )
-def test_OrbPhase_column():
+def test_OrbPhase_column(tmp_path):
     "Verify that the ORBIT_PHASE column is calculated and added correctly"
 
-    outfile = "photonphase-test.evt"
+    outfile = tmp_path / "photonphase-test.evt"
     cmd = "--addorbphase --outfile {0} {1} {2}".format(
         outfile, eventfile_nicer_binary, parfile_nicer_binary
     )
@@ -131,9 +131,9 @@ def test_OrbPhase_column():
 @pytest.mark.skipif(
     "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
 )
-def test_nicer_result_bary_polyco(capsys):
+def test_nicer_result_bary_polyco(capsys, tmp_path):
     "Check that barycentered NICER data is processed correctly with --polyco."
-    outfile = "polycos-photonphase-test.evt"
+    outfile = tmp_path / "polycos-photonphase-test.evt"
     cmd = "--polycos --outfile {0} {1} {2}".format(
         outfile, eventfile_nicer, parfile_nicer
     )
@@ -154,7 +154,7 @@ def test_nicer_result_bary_polyco(capsys):
     data = hdul[1].data
     phases = data["PULSE_PHASE"]
 
-    outfile2 = "photonphase-test.evt"
+    outfile2 = tmp_path / "photonphase-test.evt"
     cmd2 = "--outfile {0} {1} {2}".format(outfile2, eventfile_nicer, parfile_nicer)
     photonphase.main(cmd2.split())
     assert os.path.exists(outfile2)
