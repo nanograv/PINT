@@ -145,14 +145,11 @@ class Tempo2ClockFile(ClockFile):
         if bogus_last_correction and len(mjd):
             mjd = mjd[:-1]
             clk = clk[:-1]
-        if False:
-            # No longer needed with bogus time removal
-            # NOTE Clock correction file has a time far in the future as ending point
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", ErfaWarning)
-                self._time = Time(mjd, format="pulsar_mjd", scale="utc")
-        else:
-            self._time = Time(mjd, format="pulsar_mjd", scale="utc")
+        while len(mjd) and mjd[0] == 0:
+            # Zap leading zeros
+            mjd = mjd[1:]
+            clk = clk[1:]
+        self._time = Time(mjd, format="pulsar_mjd", scale="utc")
         self._clock = clk * u.s
 
     @staticmethod
@@ -200,23 +197,12 @@ class TempoClockFile(ClockFile):
         if bogus_last_correction and len(mjd):
             mjd = mjd[:-1]
             clk = clk[:-1]
-        if False:
-            # No longer needed with bogus MJD removal
-            # NOTE Clock correction file has a time far in the future as ending point
-            # We are swithing off astropy warning only for gps correction.
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", ErfaWarning)
-                try:
-                    self._time = Time(mjd, format="pulsar_mjd", scale="utc")
-                except ValueError:
-                    log.error(
-                        "Filename {0}, site {1}: Bad MJD {2}".format(
-                            filename, obscode, mjd
-                        )
-                    )
-                    raise
-        else:
-            self._time = Time(mjd, format="pulsar_mjd", scale="utc")
+        while len(mjd) and mjd[0] == 0:
+            # Zap leading zeros
+            mjd = mjd[1:]
+            clk = clk[1:]
+        # FIXME: using Time may make loading clock corrections slow
+        self._time = Time(mjd, format="pulsar_mjd", scale="utc")
         self._clock = clk * u.us
 
     @staticmethod

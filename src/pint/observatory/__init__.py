@@ -615,8 +615,9 @@ def check_for_new_clock_files_in_tempo12_repos(update_download=True, show_diff=1
                 continue
             clock_files[clock_file].append(o)
 
-    tempo_repo = "https://raw.githubusercontent.com/nanograv/tempo/master/clock/"
-    tempo2_repo = "https://bitbucket.org/psrsoft/tempo2/raw/master/T2runtime/clock/"
+    tempo_repo = "https://sourceforge.net/p/tempo/tempo/ci/master/tree/clock/{}?format=raw"
+    #tempo_repo = "https://raw.githubusercontent.com/nanograv/tempo/master/clock/"
+    tempo2_repo = "https://bitbucket.org/psrsoft/tempo2/raw/master/T2runtime/clock/{}"
     for clock_file, obs in clock_files.items():
         names = [o.name for o in obs]
         if len(names) == 1:
@@ -630,7 +631,7 @@ def check_for_new_clock_files_in_tempo12_repos(update_download=True, show_diff=1
             bu = tempo2_repo
         else:
             raise ValueError(f"Mystery format {o.clock_fmt} for observatory {a}")
-        u = bu + base
+        u = bu.format(base)
         log.info(f"Downloading clock file {base} for observatory {names} from {u}")
         try:
             wfn = astropy.utils.data.download_file(
