@@ -608,7 +608,11 @@ def main(argv=None):
         ts.filename = eventfile
         ts.compute_TDBs()
         ts.compute_posvels(ephem="DE421", planets=False)
-        toa.save_pickle(ts)
+        # FIXME: writes to the TOA directory unconditionally
+        try:
+            toa.save_pickle(ts)
+        except IOError:
+            pass
 
     if weightcol is not None:
         if weightcol == "CALC":
