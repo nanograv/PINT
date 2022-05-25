@@ -9,6 +9,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Warning when A1DOT parameter used with DDK model
 ### Fixed
 ### Changed
+- DDK model will now use ICRS or ECL coordinates depending on what the input model is
 
 ## [0.8.6 == 0.8.7] 2022-05-10
 ### Added
@@ -29,7 +30,6 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - DMDATA now an integer for tempo/tempo2 parfile output
 ### Changed
 - Changed logging to use `loguru`
-- DDK model will now use ICRS or ECL coordinates depending on what the input model is
 - Changed to floating point format and added color for correlation matrix output
 - prefix parameters no longer inherit frozen status
 - Updated clock files for GBT (`time_gbt.dat`) and GPS to UTC conversion (`gps2utc.clk`) with new entries
