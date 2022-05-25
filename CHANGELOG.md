@@ -8,6 +8,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Added
 - Warning when A1DOT parameter used with DDK model
 ### Fixed
+- WLS fitters no longer ignore EFAC/EQUAD (bug #1226)
 ### Changed
 - DDK model will now use ICRS or ECL coordinates depending on what the input model is
 
