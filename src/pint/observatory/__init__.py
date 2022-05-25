@@ -586,6 +586,7 @@ def check_for_new_clock_files_in_tempo12_repos(update_download=True, show_diff=1
     import collections
     import difflib
     import astropy.utils.data
+
     # Importing this module triggers loading all observatories
     import pint.observatory.observatories
     import pint.observatory.topo_obs
@@ -619,8 +620,10 @@ def check_for_new_clock_files_in_tempo12_repos(update_download=True, show_diff=1
                 continue
             clock_files[clock_file].append(o)
 
-    tempo_repo = "https://sourceforge.net/p/tempo/tempo/ci/master/tree/clock/{}?format=raw"
-    #tempo_repo = "https://raw.githubusercontent.com/nanograv/tempo/master/clock/"
+    tempo_repo = (
+        "https://sourceforge.net/p/tempo/tempo/ci/master/tree/clock/{}?format=raw"
+    )
+    # tempo_repo = "https://raw.githubusercontent.com/nanograv/tempo/master/clock/"
     tempo2_repo = "https://bitbucket.org/psrsoft/tempo2/raw/master/T2runtime/clock/{}"
     for clock_file, obs in clock_files.items():
         names = [o.name for o in obs]
