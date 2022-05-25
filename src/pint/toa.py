@@ -832,7 +832,7 @@ def build_table(toas, filename=None):
             "delta_pulse_number",
         ),
         meta={"filename": filename},
-    ).group_by("obs")
+    )  # .group_by("obs")
 
 
 def _cluster_by_gaps(t, gap):
@@ -1124,18 +1124,14 @@ class TOAs:
     corrections and the resulting TOAs object may not be set up the way one
     would normally expect.
 
-    The contents are stored in an :class:`astropy.table.Table`; this can be used to
-    access the contained information but the data may not be in the order you
-    expect: internally it is grouped by observatory (sorted by the observatory
-    object). Not all columns of the table are computed automatically, as their
+    The contents are stored in an :class:`astropy.table.Table`. Not all columns of the table are computed automatically, as their
     computation can be expensive. Methods of this class are available to
     populate these additional columns. Methods that return data from the columns
     do so in the internal order.
 
     TOAs objects can accept indices that are boolean, list-of-integer, or
     slice, to produce a new TOAs object containing a subset of the TOAs in the
-    original.  Note that the result is still grouped by the ``obs`` column, so
-    slices cannot reverse the order. For example, to obtain a new TOAs object
+    original.  For example, to obtain a new TOAs object
     containing the entries above 1 GHz:
 
     >>> t[t.table['freq'] > 1*u.GHz]
@@ -1210,8 +1206,7 @@ class TOAs:
     Attributes
     ----------
     table : astropy.table.Table
-        The data for all the TOAs. It is grouped by ``obs``, that is, it is
-        not in the same order as the original TOAs.
+        The data for all the TOAs.
     commands : list of str
         "Commands" that were written in the file; these will have affected
         how some or all TOAs were interpreted during loading.
@@ -1300,8 +1295,7 @@ class TOAs:
         result in selecting those TOAs (though not necessarily in that order),
         a list/array of Booleans will result in selecting those TOAs for which
         the list/array has True, and a slice will select the corresponding
-        slice of TOAs (again, the required grouping by observatory may mean
-        that reordering TOAs will not work as expected).
+        slice of TOAs.
 
         Both a column and subset can be selected at once by forming a tuple, as in
         ``toas["fish", ::10]``; this will result in selecting that subset of the
@@ -1342,8 +1336,8 @@ class TOAs:
             if isinstance(index, np.ndarray) and index.dtype == bool:
                 r = copy.deepcopy(self)
                 r.table = r.table[index]
-                if len(r.table) > 0:
-                    r.table = r.table.group_by("obs")
+                # if len(r.table) > 0:
+                #    r.table = r.table.group_by("obs")
                 return r
             elif (
                 isinstance(index, np.ndarray)
@@ -1352,14 +1346,14 @@ class TOAs:
             ):
                 r = copy.deepcopy(self)
                 r.table = r.table[index]
-                if len(r.table) > 0:
-                    r.table = r.table.group_by("obs")
+                # if len(r.table) > 0:
+                #    r.table = r.table.group_by("obs")
                 return r
             elif isinstance(index, slice):
                 r = copy.deepcopy(self)
                 r.table = r.table[index]
-                if len(r.table) > 0:
-                    r.table = r.table.group_by("obs")
+                # if len(r.table) > 0:
+                #    r.table = r.table.group_by("obs")
                 return r
             elif isinstance(index, int):
                 raise ValueError("TOAs do not support extraction of TOA objects (yet?)")
@@ -1479,8 +1473,8 @@ class TOAs:
         # Normal unpickling behaviour
         self.__dict__.update(state)
         # Astropy tables lose their group_by
-        if self.table.groups.keys is None:
-            self.table = self.table.group_by("obs")
+        # if self.table.groups.keys is None:
+        #    self.table = self.table.group_by("obs")
         if not hasattr(self, "max_index"):
             self.max_index = np.maximum.reduce(self.table["index"])
 
@@ -1555,6 +1549,10 @@ class TOAs:
     def get_obss(self):
         """Return a numpy array of the observatories for each TOA."""
         return self.table["obs"]
+
+    def get_obs_groups(self):
+        """Return an iterator over the different observatories"""
+        return pint.utils.GroupIterator(self["obs"])
 
     def get_pulse_numbers(self):
         """Return a numpy array of the pulse numbers for each TOA if they exist."""
@@ -1759,8 +1757,8 @@ class TOAs:
             self.table_selects.append(copy.deepcopy(self.table))
             # Our TOA table must be grouped by observatory for phase calcs
             self.table = self.table[selectarray]
-            if len(self.table) > 0:
-                self.table = self.table.group_by("obs")
+            # if len(self.table) > 0:
+            #    self.table = self.table.group_by("obs")
         else:
             raise ValueError("TOA selection not implemented for TOA lists.")
 
@@ -1792,14 +1790,13 @@ class TOAs:
         s += f"Number of observatories: {len(self.observatories)} {list(self.observatories)}\n"
         s += f"MJD span:  {self.first_MJD.mjd:.3f} to {self.last_MJD.mjd:.3f}\n"
         s += f"Date span: {self.first_MJD.iso} to {self.last_MJD.iso}\n"
-        for ii, key in enumerate(self.table.groups.keys):
-            grp = self.table.groups[ii]
-            s += f"{key['obs']} TOAs ({len(grp)}):\n"
-            s += f"  Min freq:      {np.min(grp['freq'].to(u.MHz)):.3f}\n"
-            s += f"  Max freq:      {np.max(grp['freq'].to(u.MHz)):.3f}\n"
-            s += f"  Min error:     {np.min(grp['error'].to(u.us)):.3g}\n"
-            s += f"  Max error:     {np.max(grp['error'].to(u.us)):.3g}\n"
-            s += f"  Median error:  {np.median(grp['error'].to(u.us)):.3g}\n"
+        for obs, grp in self.get_obs_groups():
+            s += f"{obs} TOAs ({len(grp)}):\n"
+            s += f"  Min freq:      {np.min(self['freq'][grp].to(u.MHz)):.3f}\n"
+            s += f"  Max freq:      {np.max(self['freq'][grp].to(u.MHz)):.3f}\n"
+            s += f"  Min error:     {np.min(self['error'][grp].to(u.us)):.3g}\n"
+            s += f"  Max error:     {np.max(self['error'][grp].to(u.us)):.3g}\n"
+            s += f"  Median error:  {np.median(self['error'][grp].to(u.us)):.3g}\n"
         return s
 
     def print_summary(self):
@@ -1901,7 +1898,7 @@ class TOAs:
         index_order : bool
             If True, preserve the order of the index column, but renumber so
             there are no gaps. If False, number according to the order TOAs
-            occur in the object (they will be grouped by observatory).
+            occur in the object.
 
         Returns
         =======
@@ -1949,9 +1946,7 @@ class TOAs:
         order_by_index : bool
             If True, write the TOAs in the order specified in the "index" column
             (which is usually the same as the original file);
-            if False, write them in the order they occur in the TOAs object
-            (which is usually the same as the original file except that all the
-            TOAs associated with each observatory have been grouped).
+            if False, write them in the order they occur in the TOAs object.
         include_info : bool, optional
             Include information string if True
         comment : str, optional
@@ -2063,18 +2058,15 @@ class TOAs:
         )
         corr = np.zeros(self.ntoas) * u.s
         times = self.table["mjd"]
-        for ii, key in enumerate(self.table.groups.keys):
-            grp = self.table.groups[ii]
-            obs = self.table.groups.keys[ii]["obs"]
+        for obs, grp in self.get_obs_groups():
             site = get_observatory(
                 obs,
                 include_gps=include_gps,
                 include_bipm=include_bipm,
                 bipm_version=bipm_version,
             )
-            loind, hiind = self.table.groups.indices[ii : ii + 2]
             # First apply any TIME statements
-            for jj in range(loind, hiind):
+            for jj in grp:
                 if "to" in flags[jj]:
                     # TIME commands are in sec
                     # SUGGESTION(@paulray): These time correction units should
@@ -2084,12 +2076,12 @@ class TOAs:
                     corr[jj] = float(flags[jj]["to"]) * u.s
                     times[jj] += time.TimeDelta(corr[jj])
 
-            gcorr = site.clock_corrections(time.Time(grp["mjd"]))
-            for jj, cc in enumerate(gcorr):
-                grp["mjd"][jj] += time.TimeDelta(cc)
-            corr[loind:hiind] += gcorr
+            gcorr = site.clock_corrections(time.Time(self["mjd"][grp]))
+            corr[grp] += gcorr
             # Now update the flags with the clock correction used
-            for jj in range(loind, hiind):
+            # it would be preferable to do this with array operations but I get `NotImplemented` errors when I do so
+            for jj in grp:
+                self["mjd"][jj] += corr[jj]
                 if corr[jj] != 0:
                     flags[jj]["clkcorr"] = str(corr[jj].to_value(u.s))
         # Update clock correction info
@@ -2148,16 +2140,15 @@ class TOAs:
 
         # Compute in observatory groups
         tdbs = np.zeros_like(self.table["mjd"])
-        for ii, key in enumerate(self.table.groups.keys):
-            grp = self.table.groups[ii]
-            obs = self.table.groups.keys[ii]["obs"]
-            loind, hiind = self.table.groups.indices[ii : ii + 2]
+        for obs, grp in self.get_obs_groups():
             site = get_observatory(obs)
             if isinstance(site, TopoObs):
                 # For TopoObs, it is safe to assume that all TOAs have same location
                 # I think we should report to astropy that initializing
                 # a Time from a list (or Column) of Times throws away the location information
-                grpmjds = time.Time(grp["mjd"], location=grp["mjd"][0].location)
+                grpmjds = time.Time(
+                    self.table[grp]["mjd"], location=self.table[grp]["mjd"][0].location
+                )
             else:
                 # Grab locations for each TOA
                 # It is crazy that I have to deconstruct the locations like
@@ -2165,19 +2156,19 @@ class TOAs:
                 # of locations contained in it.
                 # Is there a more efficient way to convert a list of EarthLocations
                 # into a single EarthLocation object with an array of values internally?
-                loclist = [t.location for t in grp["mjd"]]
+                loclist = [t.location for t in self.table[grp]["mjd"]]
                 if loclist[0] is None:
-                    grpmjds = time.Time(grp["mjd"], location=None)
+                    grpmjds = time.Time(self.table[grp]["mjd"], location=None)
                 else:
                     locs = EarthLocation(
                         np.array([loc.x.value for loc in loclist]) * u.m,
                         np.array([loc.y.value for loc in loclist]) * u.m,
                         np.array([loc.z.value for loc in loclist]) * u.m,
                     )
-                    grpmjds = time.Time(grp["mjd"], location=locs)
+                    grpmjds = time.Time(self.table[grp]["mjd"], location=locs)
 
             grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem)
-            tdbs[loind:hiind] = np.asarray([t for t in grptdbs])
+            tdbs[grp] = np.asarray([t for t in grptdbs])
 
         # Now add the new columns to the table
         col_tdb = table.Column(name="tdb", data=tdbs)
@@ -2284,29 +2275,26 @@ class TOAs:
                 )
 
         # Now step through in observatory groups
-        for ii, key in enumerate(self.table.groups.keys):
-            grp = self.table.groups[ii]
-            obs = self.table.groups.keys[ii]["obs"]
-            loind, hiind = self.table.groups.indices[ii : ii + 2]
+        for obs, grp in self.get_obs_groups():
             site = get_observatory(obs)
-            tdb = time.Time(grp["tdb"], precision=9)
+            tdb = time.Time(self.table[grp]["tdb"], precision=9)
 
             if isinstance(site, T2SpacecraftObs):
-                ssb_obs = site.posvel(tdb, ephem, group=grp)
+                ssb_obs = site.posvel(tdb, ephem, group=self.table[grp])
             else:
                 ssb_obs = site.posvel(tdb, ephem)
 
             log.debug("SSB obs pos {0}".format(ssb_obs.pos[:, 0]))
-            ssb_obs_pos[loind:hiind, :] = ssb_obs.pos.T.to(u.km)
-            ssb_obs_vel[loind:hiind, :] = ssb_obs.vel.T.to(u.km / u.s)
+            ssb_obs_pos[grp, :] = ssb_obs.pos.T.to(u.km)
+            ssb_obs_vel[grp, :] = ssb_obs.vel.T.to(u.km / u.s)
             sun_obs = objPosVel_wrt_SSB("sun", tdb, ephem) - ssb_obs
-            obs_sun_pos[loind:hiind, :] = sun_obs.pos.T.to(u.km)
+            obs_sun_pos[grp, :] = sun_obs.pos.T.to(u.km)
             if planets:
                 for p in all_planets:
                     name = "obs_" + p + "_pos"
                     dest = p
                     pv = objPosVel_wrt_SSB(dest, tdb, ephem) - ssb_obs
-                    plan_poss[name][loind:hiind, :] = pv.pos.T.to(u.km)
+                    plan_poss[name][grp, :] = pv.pos.T.to(u.km)
         cols_to_add = [ssb_obs_pos, ssb_obs_vel, obs_sun_pos]
         if planets:
             cols_to_add += plan_poss.values()
@@ -2337,15 +2325,11 @@ class TOAs:
         self.obliquity = obliquity
         ephem = self.ephem
         # Now step through in observatory groups
-        for ii, key in enumerate(self.table.groups.keys):
-            grp = self.table.groups[ii]
-            obs = self.table.groups.keys[ii]["obs"]
-            loind, hiind = self.table.groups.indices[ii : ii + 2]
+        for obs, grp in self.get_obs_groups():
             site = get_observatory(obs)
-            tdb = time.Time(grp["tdb"], precision=9)
-
+            tdb = time.Time(self["tdb"][grp], precision=9)
             if isinstance(site, T2SpacecraftObs):
-                ssb_obs = site.posvel(tdb, ephem, grp)
+                ssb_obs = site.posvel(tdb, ephem, self.table[grp])
             else:
                 ssb_obs = site.posvel(tdb, ephem)
 
@@ -2362,7 +2346,7 @@ class TOAs:
             )
             coord = coord.transform_to(PulsarEcliptic(obliquity=obliquity))
             # get velocity vector from coordinate frame
-            ssb_obs_vel_ecl[loind:hiind, :] = coord.velocity.d_xyz.T.to(u.km / u.s)
+            ssb_obs_vel_ecl[grp, :] = coord.velocity.d_xyz.T.to(u.km / u.s)
         col = ssb_obs_vel_ecl
         log.debug("Adding column " + col.name)
         self.table.add_column(col)
@@ -2384,7 +2368,7 @@ def merge_TOAs(TOAs_list):
     Returns
     -------
     :class:`pint.toa.TOAs`
-        A new TOAs instance with all the combined and grouped TOAs
+        A new TOAs instance with all the combined TOAs
     """
     # Check each TOA object for consistency
     ephems = [tt.ephem for tt in TOAs_list]
@@ -2443,5 +2427,5 @@ def merge_TOAs(TOAs_list):
     # This sets a flag that indicates that we have merged TOAs instances
     nt.merged = True
     # Now we need to re-arrange and group the tables
-    nt.table = nt.table.group_by("obs")
+    # nt.table = nt.table.group_by("obs")
     return nt
