@@ -2057,8 +2057,6 @@ class TOAs:
             )
         )
         corr = np.zeros(self.ntoas) * u.s
-        times = self.table["mjd"]
-        t0 = copy.deepcopy(times[0])
         for obs, grp in self.get_obs_groups():
             site = get_observatory(
                 obs,
