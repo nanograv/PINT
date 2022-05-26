@@ -1557,7 +1557,7 @@ class TOAs:
 
     def get_obs_groups(self):
         """Return an iterator over the different observatories"""
-        return pint.utils.GroupIterator(self["obs"])
+        return pint.utils.group_iterator(self["obs"])
 
     def get_pulse_numbers(self):
         """Return a numpy array of the pulse numbers for each TOA if they exist."""

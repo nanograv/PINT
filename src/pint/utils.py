@@ -79,7 +79,7 @@ __all__ = [
     "info_string",
     "print_color_examples",
     "colorize",
-    "GroupIterator",
+    "group_iterator",
 ]
 
 COLOR_NAMES = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
@@ -1598,7 +1598,7 @@ def print_color_examples():
             print("")
 
 
-class GroupIterator:
+def group_iterator(items):
     """An iterator to step over identical items in a :class:`numpy.ndarray`
 
     Example
@@ -1607,27 +1607,9 @@ class GroupIterator:
     For each iteration it gives the observatory name and the indices that correspond to it
 
         t = pint.toa.get_TOAs("grouptest.tim")
-        I = GroupIterator(t["obs"])
-        for o, i in I:
+        for o, i in group_iterator(t["obs"]):
             print(f"{o} {i}")
 
     """
-
-    def __init__(self, items):
-        self.items = items
-        self.unique_items = np.unique(items)
-        self.indices = []
-        for item in self.unique_items:
-            self.indices.append(np.where(self.items == item)[0])
-
-    def __iter__(self):
-        self.index = 0
-        return self
-
-    def __next__(self):
-        if self.index < len(self.unique_items):
-            out = self.unique_items[self.index], self.indices[self.index]
-            self.index += 1
-            return out
-        else:
-            raise StopIteration
+    for item in np.unique(items):
+        yield item, np.where(items == item)[0]
