@@ -1144,6 +1144,11 @@ class TOAs:
 
     >>> t['high', t['freq'] > 1*u.GHz] = "1"
 
+    TOAs are grouped by observatory by default, but this is just a convention.  To iterate over all observatory groups:
+
+    >>> for obs,idx in t.get_obs_groups():
+
+
     .. list-table:: Columns in ``.table``
        :widths: 15 85
        :header-rows: 1
