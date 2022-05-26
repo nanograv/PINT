@@ -13,6 +13,7 @@ except ImportError:
     from astropy._erfa import ErfaWarning
 
 from pint.pulsar_mjd import Time
+from pint.utils import open_or_use, lines_of
 
 
 class ClockFileMeta(type):
@@ -31,7 +32,7 @@ class ClockFileMeta(type):
         super(ClockFileMeta, cls).__init__(name, bases, members)
 
 
-class ClockFile(object, metaclass=ClockFileMeta):
+class ClockFile(metaclass=ClockFileMeta):
     """A clock correction file in one of several formats.
 
     The ClockFile class provides a way to read various formats of clock
@@ -127,6 +128,13 @@ class ClockFile(object, metaclass=ClockFileMeta):
         else:
             return self.time[-1].mjd
 
+class ConstructedClockFile(ClockFile):
+
+    # No format set because these can't be read
+
+    def __init__(self, mjd, clock, **kwargs):
+        self._time = Time(mjd, format="pulsar_mjd", scale="utc")
+        self._clock = clock.to(u.us)
 
 class Tempo2ClockFile(ClockFile):
 
@@ -161,14 +169,41 @@ class Tempo2ClockFile(ClockFile):
         clock corrections (seconds).  hdrline is the first line of the file
         that specifies the two clock scales connected by the file.
         """
-        f = open(filename, "r")
-        hdrline = f.readline().rstrip()
-        try:
-            mjd, clk = np.loadtxt(f, usecols=(0, 1), unpack=True)
-        except (FileNotFoundError, ValueError):
-            log.error("Failed loading clock file {0}".format(f))
-            raise
+        with open_or_use(filename, "r") as f:
+            hdrline = f.readline().rstrip()
+            try:
+                mjd, clk = np.loadtxt(f, usecols=(0, 1), unpack=True)
+            except (FileNotFoundError, ValueError):
+                log.error("Failed loading clock file {0}".format(f))
+                raise
         return mjd, clk, hdrline
+
+
+def merged_mjds(clocks, threshold=0):
+    mjds = np.sort(np.concatenate([c.time.mjd for c in clocks] + [np.array([1e10])]))
+    mjds = mjds[:-1][np.diff(mjds) > threshold]
+    start = max([c.time.mjd[0] for c in clocks])
+    end = min([c.time.mjd[-1] for c in clocks])
+    i = np.searchsorted(mjds, start)
+    j = np.searchsorted(mjds, end, side="right")
+    return mjds[i : j]
+
+
+def write_tempo2_clock_file(filename, hdrline, clocks, comments=None):
+    if not hdrline.startswith("#"):
+        raise ValueError(f"Header line must start with #: {hdrline!r}")
+    if isinstance(clocks, ClockFile):
+        clocks = [clocks]
+    mjds = merged_mjds(clocks)
+    times = Time(mjds, format="pulsar_mjd", scale="utc")
+    corr = np.zeros(len(mjds)) * u.s
+    for c in clocks:
+        corr += c.evaluate(times)
+    a = np.array([mjds, corr]).T
+    header = hdrline.strip() + "\n"
+    if comments is not None:
+        header += comments
+    np.savetxt(filename, a, header=header)
 
 
 class TempoClockFile(ClockFile):
@@ -222,7 +257,7 @@ class TempoClockFile(ClockFile):
         # entries so that interpolation routines will give the right result.
         mjds = []
         clkcorrs = []
-        for l in open(filename).readlines():
+        for l in lines_of(filename):
             # Ignore comment lines
             if l.startswith("#"):
                 continue
