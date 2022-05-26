@@ -158,8 +158,8 @@ def test_tttai():
     assert y.clock_corr_info["include_bipm"] == False
 
 
-def test_toa_check_hashes(tmpdir):
-    tf = os.path.join(tmpdir, "file.tim")
+def test_toa_check_hashes(tmp_path):
+    tf = tmp_path / "file.tim"
     shutil.copy("NGC6440E.tim", tf)
     t = toa.get_TOAs(tf)
     assert t.check_hashes()
@@ -259,7 +259,7 @@ def test_numpy_clusterss(t):
             assert np.all(np.abs(t[~c] - e) >= gap)
 
 
-def test_load_multiple(tmpdir):
+def test_load_multiple(tmp_path):
     m = get_model(StringIO(simplepar))
 
     fakes = [
@@ -268,7 +268,7 @@ def test_load_multiple(tmpdir):
         simulation.make_fake_toas_uniform(57000, 57500, 10, model=m, obs="@"),
     ]
 
-    filenames = [os.path.join(tmpdir, f"t{i+1}.tim") for i in range(len(fakes))]
+    filenames = [tmp_path / f"t{i+1}.tim" for i in range(len(fakes))]
 
     for t, f in zip(fakes, filenames):
         t.write_TOA_file(f, format="tempo2")
@@ -278,7 +278,7 @@ def test_load_multiple(tmpdir):
     assert merged == toa.get_TOAs(filenames, model=m)
 
 
-def test_pickle_multiple(tmpdir):
+def test_pickle_multiple(tmp_path):
     m = get_model(StringIO(simplepar))
 
     fakes = [
@@ -287,8 +287,8 @@ def test_pickle_multiple(tmpdir):
         simulation.make_fake_toas_uniform(57000, 57500, 10, model=m, obs="@"),
     ]
 
-    filenames = [os.path.join(tmpdir, f"t{i+1}.tim") for i in range(len(fakes))]
-    picklefilename = os.path.join(tmpdir, "t.pickle.gz")
+    filenames = [tmp_path / f"t{i+1}.tim" for i in range(len(fakes))]
+    picklefilename = tmp_path / "t.pickle.gz"
 
     for t, f in zip(fakes, filenames):
         t.write_TOA_file(f, format="tempo2")

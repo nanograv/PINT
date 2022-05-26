@@ -7,7 +7,7 @@ import pytest
 import pint.models as tm
 from pinttestdata import testdir, datadir
 
-parfile = os.path.join(datadir, "J1744-1134.basic.par")
+parfile = datadir / "J1744-1134.basic.par"
 
 
 def demo_parfile():
