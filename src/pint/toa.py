@@ -2425,4 +2425,6 @@ def merge_TOAs(TOAs_list):
         nt.hashes.update(tt.hashes)
     # This sets a flag that indicates that we have merged TOAs instances
     nt.merged = True
+    nt.table = nt.table.group_by("obs")
+
     return nt
