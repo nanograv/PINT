@@ -158,4 +158,3 @@ def test_nicer_result_bary_polyco(capsys, tmp_path):
     phases2 = data2["PULSE_PHASE"]
 
     assert (phases - phases2).std() < 0.00001
-

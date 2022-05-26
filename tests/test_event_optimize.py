@@ -16,7 +16,10 @@ from pinttestdata import datadir
 
 def test_result(tmp_path):
     parfile = datadir / "PSRJ0030+0451_psrcat.par"
-    eventfile_orig = datadir / "J0030+0451_P8_15.0deg_239557517_458611204_ft1weights_GEO_wt.gt.0.4.fits"
+    eventfile_orig = (
+        datadir
+        / "J0030+0451_P8_15.0deg_239557517_458611204_ft1weights_GEO_wt.gt.0.4.fits"
+    )
     temfile = datadir / "templateJ0030.3gauss"
     eventfile = tmp_path / "event.fits"
     # We will write a pickle next to this file, let's make sure it's not under tests/

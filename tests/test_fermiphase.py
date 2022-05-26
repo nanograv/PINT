@@ -16,7 +16,9 @@ from pint.observatory.satellite_obs import get_satellite_observatory
 from pinttestdata import datadir
 
 parfile = datadir / "PSRJ0030+0451_psrcat.par"
-eventfile = datadir / "J0030+0451_P8_15.0deg_239557517_458611204_ft1weights_GEO_wt.gt.0.4.fits"
+eventfile = (
+    datadir / "J0030+0451_P8_15.0deg_239557517_458611204_ft1weights_GEO_wt.gt.0.4.fits"
+)
 
 eventfileraw = datadir / "J0030+0451_w323_ft1weights.fits"
 ft2file = datadir / "lat_spacecraft_weekly_w323_p202_v001.fits"
