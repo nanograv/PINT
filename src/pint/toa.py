@@ -286,7 +286,6 @@ def get_TOAs(
             log.info("Ephem changed, recalculation needed")
         recalc = True
         updatepickle = True
-    # t.table = t.table.group_by("obs")
     if recalc or "tdb" not in t.table.colnames:
         t.compute_TDBs(method=tdb_method, ephem=ephem)
     if planets is None:
@@ -2425,6 +2424,4 @@ def merge_TOAs(TOAs_list):
         nt.hashes.update(tt.hashes)
     # This sets a flag that indicates that we have merged TOAs instances
     nt.merged = True
-    # Now we need to re-arrange and group the tables
-    # nt.table = nt.table.group_by("obs")
     return nt
