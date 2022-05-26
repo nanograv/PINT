@@ -90,7 +90,7 @@ def warn(message, *args, **kwargs):
         action, msg, cat, mod, ln = filter
         if (
             (msg is not None)
-            and (msg.match(message) and len(args) == 0)
+            and (msg.match(str(message)) and len(args) == 0)
             and action == "ignore"
         ):
             return
@@ -98,7 +98,10 @@ def warn(message, *args, **kwargs):
             (cat is not None)
             and (
                 (len(args) > 0 and isinstance(args[0], type))
-                and ((msg is None or msg.match(message)) and issubclass(args[0], cat))
+                and (
+                    (msg is None or msg.match(str(message)))
+                    and issubclass(args[0], cat)
+                )
             )
             and action == "ignore"
         ):

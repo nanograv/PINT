@@ -1,17 +1,15 @@
 """Solar system ephemeris downloading and setting support."""
 import os
+from urllib.parse import urljoin
 
-from astropy.utils.data import download_file
 import astropy.coordinates
 import astropy.units as u
 import numpy as np
 from astropy.utils.data import download_file
-from urllib.parse import urljoin
 from loguru import logger as log
 
 import pint.config
 from pint.utils import PosVel
-
 
 __all__ = ["objPosVel_wrt_SSB", "get_tdb_tt_ephem_geocenter"]
 
@@ -22,6 +20,8 @@ ephemeris_mirrors = [
     "https://data.nanograv.org/static/data/ephem/",
     "ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/",
     "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/a_old_versions/",
+    # DE440 is here, officially
+    "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/",
 ]
 
 jpl_obj_code = {
@@ -51,6 +51,7 @@ def _load_kernel_link(ephem, link=None):
     astropy.coordinates.solar_system_ephemeris.set(
         download_file(mirrors[0], cache=True, sources=mirrors)
     )
+    log.info(f"Set solar system ephemeris to {ephem} from download")
 
 
 def _load_kernel_local(ephem, path):
@@ -121,17 +122,18 @@ def load_kernel(ephem, path=None, link=None):
             return
         except OSError:
             log.info(
-                "Failed to load local solar system ephemeris kernel {}, falling back on astropy".format(
-                    path
-                )
+                f"Failed to load local solar system ephemeris kernel {path}, falling back on astropy"
             )
     # Links are just suggestions, try just plain loading
+    # Astropy may download something here, not from nanograv
     try:
         astropy.coordinates.solar_system_ephemeris.set(ephem)
-        log.info("Set solar system ephemeris to {}".format(ephem))
+        log.info(f"Set solar system ephemeris to {ephem} through astropy")
         return
-    except ValueError:
+    except (ValueError, OSError):
         # Just means it wasn't a standard astropy ephemeris
+        # or astropy can't access it (because astropy doesn't know about
+        # the nanograv mirrors)
         pass
     # If this raises an exception our last hope is gone so let it propagate
     _load_kernel_link(ephem, link=link)

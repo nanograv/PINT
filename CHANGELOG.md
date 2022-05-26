@@ -12,6 +12,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added the ability to query clock correction files or observatories for their last corrected MJD
 - Added an example showing how to check the status of your clock corrections
 ### Fixed
+- WLS fitters no longer ignore EFAC/EQUAD (bug #1226)
 ### Changed
 - Clock correction files that are entirely missing are handled the same way as TOAs past the end of a clock correction file
 - Observatory objects can now note that their clock correction files include a bogus "99999" (or similar) entry at the end

@@ -25,10 +25,13 @@ jobs:
         include:
           - os: ubuntu-latest
             python: '3.8'
-            tox_env: 'py38-test-cov'
+            tox_env: 'ephemeris_connection'
           - os: ubuntu-latest
             python: '3.8'
-            tox_env: 'ephemeris_connection'
+            tox_env: 'black'
+          - os: ubuntu-latest
+            python: '3.8'
+            tox_env: 'py38-test-cov'
           - os: ubuntu-latest
             python: '3.8'
             tox_env: 'notebooks'
@@ -38,7 +41,6 @@ jobs:
           - os: ubuntu-latest
             python: '3.8'
             tox_env: 'py38-test-alldeps-cov'
-            use_remote_data: true
           - os: macos-latest
             python: '3.7'
             tox_env: 'py37-test'
@@ -48,9 +50,6 @@ jobs:
           - os: ubuntu-latest
             python: '3.7'
             tox_env: 'oldestdeps'
-          - os: ubuntu-latest
-            python: '3.8'
-            tox_env: 'black'
 #          - os: ubuntu-latest
 #            python: '3.8'
 #            tox_env: 'codestyle'
@@ -79,11 +78,7 @@ jobs:
         python -c "import setuptools; print(f'setuptools {setuptools.__version__}')"
         python -c "import tox; print(f'tox {tox.__version__}')"
     - name: Run tests
-      if: "! matrix.use_remote_data"
       run: tox -e ${{ matrix.tox_env }}
-    - name: Run tests with remote data
-      if: "matrix.use_remote_data"
-      run: tox -e ${{ matrix.tox_env }} -- --remote-data=any
     - name: Upload coverage to codecov
       if: "endsWith(matrix.tox_env, '-cov')"
       uses: codecov/codecov-action@v2

@@ -55,7 +55,7 @@ Fitters in use::
 To automatically select a fitter based on the properties of the data and model::
 
     >>> fitter = Fitter.auto(toas, model)
-    
+
 """
 import collections
 import copy
@@ -1336,7 +1336,7 @@ class WLSState(ModelState):
             toas=self.fitter.toas, incfrozen=False, incoffset=True
         )
         # Get residuals and TOA uncertainties in seconds
-        Nvec = self.fitter.toas.get_errors().to(u.s).value
+        Nvec = self.model.scaled_toa_uncertainty(self.fitter.toas).to(u.s).value
         scaled_resids = self.resids.time_resids.to(u.s).value / Nvec
 
         # "Whiten" design matrix and residuals by dividing by uncertainties
@@ -1350,7 +1350,6 @@ class WLSState(ModelState):
         # fast converge fitting.
         # M[:,1:] -= M[:,1:].mean(axis=0)
         fac = np.sqrt((M**2).mean(axis=0))
-        # fac[0] = 1.0
         fac[fac == 0] = 1.0
         M /= fac
         # Singular value decomp of design matrix:
@@ -1371,6 +1370,7 @@ class WLSState(ModelState):
             # threshold = np.finfo(float).eps * max(M.shape)
             threshold = 1e-14 * max(M.shape)
 
+        log.trace(f"Singular values for fit are {s}")
         bad = np.where(s <= threshold * s[0])[0]
         s[bad] = np.inf
         for c in bad:
@@ -1523,6 +1523,7 @@ class GLSState(ModelState):
 
         else:
             phiinv /= norm**2
+            # Why are we scaling residuals by the *square* of the uncertainty?
             Nvec = (
                 self.model.scaled_toa_uncertainty(self.fitter.toas).to(u.s).value ** 2
             )
@@ -1708,7 +1709,8 @@ class WidebandState(ModelState):
 
         # normalize the design matrix
         norm = np.sqrt(np.sum(M**2, axis=0))
-        ntmpar = len(self.model.free_params)
+        # The fixed offset is an unlisted parameter
+        ntmpar = len(self.model.free_params) + 1
         if M.shape[1] > ntmpar:
             norm[ntmpar:] = 1
         for c in np.where(norm == 0)[0]:
@@ -1770,14 +1772,10 @@ class WidebandState(ModelState):
                     [
                         self.model.scaled_toa_uncertainty(self.fitter.toas).to_value(
                             u.s
-                        )
-                        if hasattr(self.model, "scaled_toa_uncertainty")
-                        else self.resids.toa.get_errors().to_value(u.s),
+                        ),
                         self.model.scaled_dm_uncertainty(self.fitter.toas).to_value(
                             u.pc / u.cm**3
-                        )
-                        if hasattr(self.model, "scaled_dm_uncertainty")
-                        else self.resids.dm.get_dm_errors().to_value(u.pc / u.cm**3),
+                        ),
                     ]
                 )
                 ** 2
@@ -2046,7 +2044,7 @@ class WLSFitter(Fitter):
             # Get residuals and TOA uncertainties in seconds
             self.update_resids()
             residuals = self.resids.time_resids.to(u.s).value
-            Nvec = self.toas.get_errors().to(u.s).value
+            Nvec = self.model.scaled_toa_uncertainty(self.toas).to(u.s).value
 
             # "Whiten" design matrix and residuals by dividing by uncertainties
             M = M / Nvec.reshape((-1, 1))
