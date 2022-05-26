@@ -2058,7 +2058,6 @@ class TOAs:
         )
         corr = np.zeros(self.ntoas) * u.s
         times = self.table["mjd"]
-        log.debug(f"times[0] = {times[0].value:.20f}")
         t0 = copy.deepcopy(times[0])
         for obs, grp in self.get_obs_groups():
             site = get_observatory(
