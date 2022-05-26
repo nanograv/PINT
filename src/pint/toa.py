@@ -286,7 +286,7 @@ def get_TOAs(
             log.info("Ephem changed, recalculation needed")
         recalc = True
         updatepickle = True
-    t.table = t.table.group_by("obs")
+    # t.table = t.table.group_by("obs")
     if recalc or "tdb" not in t.table.colnames:
         t.compute_TDBs(method=tdb_method, ephem=ephem)
     if planets is None:
@@ -301,6 +301,7 @@ def get_TOAs(
     if usepickle and updatepickle:
         log.info("Pickling TOAs.")
         save_pickle(t, picklefilename=picklefilename)
+    t.table = t.table.group_by("obs")
     return t
 
 
@@ -2057,6 +2058,8 @@ class TOAs:
         )
         corr = np.zeros(self.ntoas) * u.s
         times = self.table["mjd"]
+        log.debug(f"times[0] = {times[0].value:.20f}")
+        t0 = copy.deepcopy(times[0])
         for obs, grp in self.get_obs_groups():
             site = get_observatory(
                 obs,
@@ -2073,14 +2076,16 @@ class TOAs:
                     # correction should have units.
                     # @aarchiba: flags should store strings only
                     corr[jj] = float(flags[jj]["to"]) * u.s
-                    times[jj] += time.TimeDelta(corr[jj])
+                    self["mjd"][jj] += time.TimeDelta(corr[jj])
 
             gcorr = site.clock_corrections(time.Time(self["mjd"][grp]))
+            # it would be preferable to do this with array operations but I get `NotImplemented` errors when I do so
+            for jj, cc in zip(grp, gcorr):
+                self["mjd"][jj] += time.TimeDelta(cc)
+
             corr[grp] += gcorr
             # Now update the flags with the clock correction used
-            # it would be preferable to do this with array operations but I get `NotImplemented` errors when I do so
             for jj in grp:
-                self["mjd"][jj] += corr[jj]
                 if corr[jj] != 0:
                     flags[jj]["clkcorr"] = str(corr[jj].to_value(u.s))
         # Update clock correction info
@@ -2136,7 +2141,6 @@ class TOAs:
                 )
         self.ephem = ephem
         log.debug(f"Using EPHEM = {self.ephem} for TDB calculation.")
-
         # Compute in observatory groups
         tdbs = np.zeros_like(self.table["mjd"])
         for obs, grp in self.get_obs_groups():
@@ -2168,9 +2172,6 @@ class TOAs:
 
             grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem)
             tdbs[grp] = np.asarray([t for t in grptdbs])
-            log.debug(
-                f"obs={obs} grpmjds={grpmjds[0].value:.15f} grptdbs={grptdbs[0].value:.20f}  tdbs={tdbs[0].value:.20f}"
-            )
         # Now add the new columns to the table
         col_tdb = table.Column(name="tdb", data=tdbs)
         col_tdbld = table.Column(name="tdbld", data=[t.tdb.mjd_long for t in tdbs])
