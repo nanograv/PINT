@@ -9,19 +9,20 @@ from pinttestdata import datadir
 from astropy.io import fits
 import numpy as np
 
-parfile = os.path.join(datadir, "J1513-5908_PKS_alldata_white.par")
-eventfile = os.path.join(datadir, "B1509_RXTE_short.fits")
-orbfile = os.path.join(datadir, "FPorbit_Day6223")
+parfile = datadir / "J1513-5908_PKS_alldata_white.par"
+eventfile = datadir / "B1509_RXTE_short.fits"
+orbfile = datadir / "FPorbit_Day6223"
 
 
 @pytest.mark.skipif(
     "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
 )
-def test_rxte_result(capsys):
+def test_rxte_result(capsys, tmp_path):
     "Test that processing RXTE data with orbit file gives correct result"
-    cmd = "--minMJD 55576.640 --maxMJD 55576.645 --plot --plotfile photontest.png --outfile photontest.fits {0} {1} --orbfile={2} ".format(
-        eventfile, parfile, orbfile
-    )
+
+    plotfile = tmp_path / "photontest.png"
+    outfile = tmp_path / "photontest.fits"
+    cmd = f"--minMJD 55576.640 --maxMJD 55576.645 --plot --plotfile {plotfile} --outfile {outfile} {eventfile} {parfile} --orbfile={orbfile} "
     photonphase.main(cmd.split())
     out, err = capsys.readouterr()
     v = 0.0
@@ -32,9 +33,9 @@ def test_rxte_result(capsys):
     assert abs(v - 87.5) < 1
 
 
-parfile_nicer = os.path.join(datadir, "ngc300nicer.par")
-parfile_nicerbad = os.path.join(datadir, "ngc300nicernoTZR.par")
-eventfile_nicer = os.path.join(datadir, "ngc300nicer_bary.evt")
+parfile_nicer = datadir / "ngc300nicer.par"
+parfile_nicerbad = datadir / "ngc300nicernoTZR.par"
+eventfile_nicer = datadir / "ngc300nicer_bary.evt"
 
 
 @pytest.mark.skipif(
@@ -42,7 +43,7 @@ eventfile_nicer = os.path.join(datadir, "ngc300nicer_bary.evt")
 )
 def test_nicer_result_bary(capsys):
     "Check that barycentered NICER data is processed correctly."
-    cmd = " {0} {1}".format(eventfile_nicer, parfile_nicer)
+    cmd = f" {eventfile_nicer} {parfile_nicer}"
     photonphase.main(cmd.split())
     out, err = capsys.readouterr()
     v = 0.0
@@ -53,16 +54,14 @@ def test_nicer_result_bary(capsys):
     assert abs(v - 216.67) < 1
 
 
-parfile_nicer_topo = os.path.join(datadir, "sgr1830.par")
-orbfile_nicer_topo = os.path.join(datadir, "sgr1830.orb")
-eventfile_nicer_topo = os.path.join(datadir, "sgr1830kgfilt.evt")
+parfile_nicer_topo = datadir / "sgr1830.par"
+orbfile_nicer_topo = datadir / "sgr1830.orb"
+eventfile_nicer_topo = datadir / "sgr1830kgfilt.evt"
 
 # TODO -- should add explicit check for absolute phase
 def test_nicer_result_topo(capsys):
     "Check that topocentric NICER data and orbit files are processed correctly."
-    cmd = "--minMJD 59132.780 --maxMJD 59132.782 --orbfile {0} {1} {2}".format(
-        orbfile_nicer_topo, eventfile_nicer_topo, parfile_nicer_topo
-    )
+    cmd = f"--minMJD 59132.780 --maxMJD 59132.782 --orbfile {orbfile_nicer_topo} {eventfile_nicer_topo} {parfile_nicer_topo}"
     photonphase.main(cmd.split())
     out, err = capsys.readouterr()
     v = 0.0
@@ -89,14 +88,12 @@ def test_AbsPhase_exception():
 def test_OrbPhase_exception():
     "Verify that trying to add ORBIT_PHASE column with no BINARY parameter in the par file raises exception"
     with pytest.raises(ValueError):
-        cmd = "--addorbphase {0} {1}".format(eventfile_nicer, parfile_nicer)
+        cmd = f"--addorbphase {eventfile_nicer} {parfile_nicer}"
         photonphase.main(cmd.split())
 
 
-parfile_nicer_binary = os.path.join(datadir, "PSR_J0218+4232.par")
-eventfile_nicer_binary = os.path.join(
-    datadir, "J0218_nicer_2070030405_cleanfilt_cut_bary.evt"
-)
+parfile_nicer_binary = datadir / "PSR_J0218+4232.par"
+eventfile_nicer_binary = datadir / "J0218_nicer_2070030405_cleanfilt_cut_bary.evt"
 
 
 @pytest.mark.skipif(
@@ -106,9 +103,7 @@ def test_OrbPhase_column(tmp_path):
     "Verify that the ORBIT_PHASE column is calculated and added correctly"
 
     outfile = tmp_path / "photonphase-test.evt"
-    cmd = "--addorbphase --outfile {0} {1} {2}".format(
-        outfile, eventfile_nicer_binary, parfile_nicer_binary
-    )
+    cmd = f"--addorbphase --outfile {outfile} {eventfile_nicer_binary} {parfile_nicer_binary}"
     photonphase.main(cmd.split())
 
     # Check that output file got made
@@ -134,9 +129,7 @@ def test_OrbPhase_column(tmp_path):
 def test_nicer_result_bary_polyco(capsys, tmp_path):
     "Check that barycentered NICER data is processed correctly with --polyco."
     outfile = tmp_path / "polycos-photonphase-test.evt"
-    cmd = "--polycos --outfile {0} {1} {2}".format(
-        outfile, eventfile_nicer, parfile_nicer
-    )
+    cmd = f"--polycos --outfile {outfile} {eventfile_nicer} {parfile_nicer}"
     photonphase.main(cmd.split())
     out, err = capsys.readouterr()
     v = 0.0
@@ -166,6 +159,3 @@ def test_nicer_result_bary_polyco(capsys, tmp_path):
 
     assert (phases - phases2).std() < 0.00001
 
-
-if __name__ == "__main__":
-    unittest.main()
