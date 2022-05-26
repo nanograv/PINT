@@ -832,7 +832,7 @@ def build_table(toas, filename=None):
             "delta_pulse_number",
         ),
         meta={"filename": filename},
-    )  # .group_by("obs")
+    )
 
 
 def _cluster_by_gaps(t, gap):
@@ -1336,8 +1336,6 @@ class TOAs:
             if isinstance(index, np.ndarray) and index.dtype == bool:
                 r = copy.deepcopy(self)
                 r.table = r.table[index]
-                # if len(r.table) > 0:
-                #    r.table = r.table.group_by("obs")
                 return r
             elif (
                 isinstance(index, np.ndarray)
@@ -1346,14 +1344,10 @@ class TOAs:
             ):
                 r = copy.deepcopy(self)
                 r.table = r.table[index]
-                # if len(r.table) > 0:
-                #    r.table = r.table.group_by("obs")
                 return r
             elif isinstance(index, slice):
                 r = copy.deepcopy(self)
                 r.table = r.table[index]
-                # if len(r.table) > 0:
-                #    r.table = r.table.group_by("obs")
                 return r
             elif isinstance(index, int):
                 raise ValueError("TOAs do not support extraction of TOA objects (yet?)")
@@ -1473,8 +1467,8 @@ class TOAs:
         # Normal unpickling behaviour
         self.__dict__.update(state)
         # Astropy tables lose their group_by
-        # if self.table.groups.keys is None:
-        #    self.table = self.table.group_by("obs")
+        if self.table.groups.keys is None:
+            self.table = self.table.group_by("obs")
         if not hasattr(self, "max_index"):
             self.max_index = np.maximum.reduce(self.table["index"])
 
@@ -1652,7 +1646,7 @@ class TOAs:
         Parameters
         ----------
         gap_limit : astropy.units.Quantity, optional
-            The minimum size of gap to create a new group. Defaults to two hours.
+            The minimum size of gap to create a new cluster. Defaults to two hours.
         add_column : bool, optional
             Whether or not to add a ``clusters`` column to the TOA table (default: False)
         add_flag : str, optional
@@ -1755,10 +1749,7 @@ class TOAs:
             if not hasattr(self, "table_selects"):
                 self.table_selects = []
             self.table_selects.append(copy.deepcopy(self.table))
-            # Our TOA table must be grouped by observatory for phase calcs
             self.table = self.table[selectarray]
-            # if len(self.table) > 0:
-            #    self.table = self.table.group_by("obs")
         else:
             raise ValueError("TOA selection not implemented for TOA lists.")
 
