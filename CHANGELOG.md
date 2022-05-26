@@ -10,6 +10,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Fixed
 - WLS fitters no longer ignore EFAC/EQUAD (bug #1226)
 ### Changed
+- DDK model will now use ICRS or ECL coordinates depending on what the input model is
 
 ## [0.8.6 == 0.8.7] 2022-05-10
 ### Added
