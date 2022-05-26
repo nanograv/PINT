@@ -20,6 +20,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Observatories using TEMPO-format clock files now refer to the clock file (for example time_ao.dat) rather than via time.dat
 - Observatories that don't use clock corrections (for example CHIME uses GPS time directly) just use an empty list of clock correction files rather than files containing only zeros
 - Updated Jodrell clock corrections to include post-1997
+- DDK model will now use ICRS or ECL coordinates depending on what the input model is
 
 ## [0.8.6 == 0.8.7] 2022-05-10
 ### Added

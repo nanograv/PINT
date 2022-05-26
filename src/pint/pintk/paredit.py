@@ -9,6 +9,7 @@ import pint.models
 
 import pint.logging
 from loguru import logger as log
+import pint.pintk.plk
 
 
 class ParChoiceWidget(tk.Frame):
@@ -19,6 +20,7 @@ class ParChoiceWidget(tk.Frame):
 
     def __init__(self, master=None):
         tk.Frame.__init__(self, master)
+        self.configure(bg=pint.pintk.plk.background)
 
         self.choose_callback = None
         self.initLayout()
@@ -31,6 +33,8 @@ class ParChoiceWidget(tk.Frame):
             command=self.choose,
             variable=self.choice,
             value="prefit",
+            bg=pint.pintk.plk.background,
+            fg=pint.pintk.plk.foreground,
         )
         self.prefit.select()
         self.prefit.grid(row=0, column=0)
@@ -41,6 +45,8 @@ class ParChoiceWidget(tk.Frame):
             command=self.choose,
             variable=self.choice,
             value="postfit",
+            bg=pint.pintk.plk.background,
+            fg=pint.pintk.plk.foreground,
         )
         self.postfit.grid(row=0, column=1)
 
@@ -58,6 +64,7 @@ class ParActionsWidget(tk.Frame):
 
     def __init__(self, master=None):
         tk.Frame.__init__(self, master)
+        self.configure(bg=pint.pintk.plk.background)
 
         self.reset_callback = None
         self.remove_callback = None
@@ -70,25 +77,60 @@ class ParActionsWidget(tk.Frame):
         self.initLayout()
 
     def initLayout(self):
-        button = tk.Button(self, text="Reset Model", command=self.resetParfile)
+        button = tk.Button(
+            self,
+            text="Reset Model",
+            command=self.resetParfile,
+            fg=pint.pintk.plk.foreground,
+        )
         button.grid(row=0, column=0)
 
-        button = tk.Button(self, text="Remove Changes", command=self.removeChanges)
+        button = tk.Button(
+            self,
+            text="Remove Changes",
+            command=self.removeChanges,
+            fg=pint.pintk.plk.foreground,
+        )
         button.grid(row=0, column=1)
 
-        button = tk.Button(self, text="Apply Changes", command=self.applyChanges)
+        button = tk.Button(
+            self,
+            text="Apply Changes",
+            command=self.applyChanges,
+            fg=pint.pintk.plk.foreground,
+        )
         button.grid(row=0, column=2)
 
-        button = tk.Button(self, text="Write Par", command=self.writePar)
+        button = tk.Button(
+            self,
+            text="Write Par",
+            command=self.writePar,
+            fg=pint.pintk.plk.foreground,
+        )
         button.grid(row=0, column=3)
 
-        button = tk.Button(self, text="Center PEPOCH", command=self.centerPEPOCH)
+        button = tk.Button(
+            self,
+            text="Center PEPOCH",
+            command=self.centerPEPOCH,
+            fg=pint.pintk.plk.foreground,
+        )
         button.grid(row=0, column=4)
 
-        button = tk.Button(self, text="Center POSEPOCH", command=self.centerPOSEPOCH)
+        button = tk.Button(
+            self,
+            text="Center POSEPOCH",
+            command=self.centerPOSEPOCH,
+            fg=pint.pintk.plk.foreground,
+        )
         button.grid(row=1, column=1)
 
-        button = tk.Button(self, text="Center T0", command=self.centerT0)
+        button = tk.Button(
+            self,
+            text="Center T0",
+            command=self.centerT0,
+            fg=pint.pintk.plk.foreground,
+        )
         button.grid(row=1, column=2)
 
     def setCallbacks(
@@ -152,6 +194,7 @@ class ParWidget(tk.Frame):
 
     def __init__(self, master=None):
         tk.Frame.__init__(self, master)
+        self.configure(bg=pint.pintk.plk.background)
 
         self.psr = None
         self.update_callbacks = None

@@ -458,6 +458,29 @@ class Pulsar:
                 else:
                     return "WLSFitter"
 
+    def print_chi2(self, selected):
+        # Select all the TOAs if none are explicitly set
+        if not np.any(selected):
+            selected = ~selected
+
+        if self.fitted:
+            self.prefit_model = self.postfit_model
+            self.prefit_resids = self.postfit_resids
+            self.add_model_params()
+
+        self.selected_resids = Residuals(self.selected_toas, self.prefit_model)
+
+        wrms = self.selected_resids.rms_weighted()
+        print("------------------------------------")
+        print("Selected TOAs:           %8d" % self.selected_toas.ntoas)
+        print("Selected Chi2:          %.8g" % self.selected_resids.chi2)
+        print(
+            "Selected Chi2/Ntoa:     %.8g"
+            % (self.selected_resids.chi2 / self.selected_toas.ntoas)
+        )
+        print("Selected Weighted RMS:  %.8g us" % wrms.to(u.us).value)
+        print("------------------------------------")
+
     def fit(self, selected, iters=4, compute_random=False):
         """
         Run a fit using the specified fitter
