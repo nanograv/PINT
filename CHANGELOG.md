@@ -12,6 +12,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - WLS fitters no longer ignore EFAC/EQUAD (bug #1226)
 ### Changed
 - Removed requirement to keep TOAs grouped
+- DDK model will now use ICRS or ECL coordinates depending on what the input model is
 
 ## [0.8.6 == 0.8.7] 2022-05-10
 ### Added

@@ -10,6 +10,7 @@ import pint
 
 import pint.logging
 from loguru import logger as log
+import pint.pintk.plk
 
 
 class TimActionsWidget(tk.Frame):
@@ -19,6 +20,8 @@ class TimActionsWidget(tk.Frame):
 
     def __init__(self, master=None):
         tk.Frame.__init__(self, master)
+        self.configure(bg=pint.pintk.plk.background)
+
         self.reset_callback = None
         self.remove_callback = None
         self.apply_callback = None
@@ -27,16 +30,40 @@ class TimActionsWidget(tk.Frame):
         self.initLayout()
 
     def initLayout(self):
-        button = tk.Button(self, text="Reset TOAs", command=self.resetTimfile)
+        button = tk.Button(
+            self,
+            text="Reset TOAs",
+            command=self.resetTimfile,
+            bg=pint.pintk.plk.background,
+            fg=pint.pintk.plk.foreground,
+        )
         button.grid(row=0, column=0)
 
-        button = tk.Button(self, text="Remove Changes", command=self.removeChanges)
+        button = tk.Button(
+            self,
+            text="Remove Changes",
+            command=self.removeChanges,
+            bg=pint.pintk.plk.background,
+            fg=pint.pintk.plk.foreground,
+        )
         button.grid(row=0, column=1)
 
-        button = tk.Button(self, text="Apply Changes", command=self.applyChanges)
+        button = tk.Button(
+            self,
+            text="Apply Changes",
+            command=self.applyChanges,
+            bg=pint.pintk.plk.background,
+            fg=pint.pintk.plk.foreground,
+        )
         button.grid(row=0, column=2)
 
-        button = tk.Button(self, text="Write Tim", command=self.writeTim)
+        button = tk.Button(
+            self,
+            text="Write Tim",
+            command=self.writeTim,
+            bg=pint.pintk.plk.background,
+            fg=pint.pintk.plk.foreground,
+        )
         button.grid(row=0, column=3)
 
     def setCallbacks(self, resetTimfile, removeChanges, applyChanges, writeTim):
@@ -73,6 +100,9 @@ class TimWidget(tk.Frame):
 
     def __init__(self, master=None):
         tk.Frame.__init__(self, master)
+        self.configure(
+            bg=pint.pintk.plk.background,
+        )
 
         self.psr = None
         self.update_callbacks = None
