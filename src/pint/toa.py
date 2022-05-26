@@ -412,6 +412,7 @@ def get_TOAs_list(
         t.compute_TDBs(method=tdb_method, ephem=ephem)
     if "ssb_obs_pos" not in t.table.colnames:
         t.compute_posvels(ephem, planets)
+    t.table = t.table.group_by("obs")
     return t
 
 
