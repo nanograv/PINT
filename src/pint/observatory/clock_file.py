@@ -64,7 +64,7 @@ class ClockFile(object, metaclass=ClockFileMeta):
             r = cls._formats[format](filename, **kwargs)
             if not np.all(np.diff(r.time.mjd) >= 0):
                 raise ValueError(
-                    f"Clock file f{filename} in format f{format} appears to be out of order"
+                    f"Clock file {filename} in format {format} appears to be out of order"
                 )
             return r
         else:
@@ -168,11 +168,6 @@ class Tempo2ClockFile(ClockFile):
         except (FileNotFoundError, ValueError):
             log.error("Failed loading clock file {0}".format(f))
             raise
-        if not np.all(mjd[:-1] <= mjd[1:]):
-            log.error(
-                "Clock file {} is invalid. MJDs must be in order!".format(filename)
-            )
-            raise RuntimeError
         return mjd, clk, hdrline
 
 
