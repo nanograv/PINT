@@ -7,9 +7,11 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## Unreleased
 ### Added
 - Warning when A1DOT parameter used with DDK model
+- Iterator to loop over observatories for TOAs
 ### Fixed
 - WLS fitters no longer ignore EFAC/EQUAD (bug #1226)
 ### Changed
+- Removed requirement to keep TOAs grouped
 
 ## [0.8.6 == 0.8.7] 2022-05-10
 ### Added
