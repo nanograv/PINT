@@ -34,7 +34,7 @@ For example, the file ``NGC6440E.par`` from the
 
 Examples
 --------
-   
+
 We don't really have any proper tutorials yet. But for the moment, we
 have a few examples that may be useful.  These tutorials examples are
 in the form of Jupyter notebooks, downloadable from a link at the top
@@ -51,6 +51,7 @@ notebooks you can download from the `PINT Wiki
    examples/time_a_pulsar.ipynb
    examples/PINT_walkthrough.ipynb
    examples/fit_NGC6440E.ipynb
+   examples/check_clock_corrections.ipynb
    examples/understanding_timing_models.ipynb
    examples/understanding_parameters.ipynb
    examples/build_model_from_scratch.ipynb

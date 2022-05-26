@@ -115,6 +115,7 @@ def get_TOAs(
     usepickle=False,
     tdb_method="default",
     picklefilename=None,
+    limits="warn",
 ):
     """Load and prepare TOAs for PINT use.
 
@@ -176,6 +177,8 @@ def get_TOAs(
         Filename to use for caching loaded file. Defaults to adding ``.pickle.gz`` to the
         filename of the timfile, if there is one and only one. If no filename is available,
         or multiple filenames are provided, a specific filename must be provided.
+    limits : "warn" or "error"
+        What to do when encountering TOAs for which clock corrections are not available.
 
     Returns
     -------
@@ -275,6 +278,7 @@ def get_TOAs(
             include_gps=include_gps,
             include_bipm=include_bipm,
             bipm_version=bipm_version,
+            limits=limits,
         )
 
     if ephem is None:
@@ -390,6 +394,7 @@ def get_TOAs_list(
     commands=None,
     filename=None,
     hashes=None,
+    limits="warn",
 ):
     """Load TOAs from a list of TOA objects.
 
@@ -407,6 +412,7 @@ def get_TOAs_list(
             include_gps=include_gps,
             include_bipm=include_bipm,
             bipm_version=bipm_version,
+            limits=limits,
         )
     if "tdb" not in t.table.colnames:
         t.compute_TDBs(method=tdb_method, ephem=ephem)
@@ -2016,7 +2022,11 @@ class TOAs:
             outf.close()
 
     def apply_clock_corrections(
-        self, include_bipm=True, bipm_version=bipm_default, include_gps=True
+        self,
+        include_bipm=True,
+        bipm_version=bipm_default,
+        include_gps=True,
+        limits="warn",
     ):
         """Apply observatory clock corrections and TIME statments.
 
@@ -2077,6 +2087,7 @@ class TOAs:
                 self["mjd"][jj] += time.TimeDelta(cc)
 
             corr[grp] += gcorr
+
             # Now update the flags with the clock correction used
             for jj in grp:
                 if corr[jj] != 0:
