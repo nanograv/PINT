@@ -3,13 +3,15 @@ from io import StringIO
 import astropy.units as u
 import numpy as np
 import pytest
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_equal, assert_allclose
 
+from pint.observatory import get_observatory
 from pint.observatory.clock_file import (
     ClockFile,
     ConstructedClockFile,
     merged_mjds,
     write_tempo2_clock_file,
+    write_tempo_clock_file,
 )
 
 
@@ -57,3 +59,45 @@ def test_tempo2_round_trip(basic_clock):
     assert_array_equal(
         read_clock.clock.to_value(u.us), basic_clock.clock.to_value(u.us)
     )
+
+
+def test_tempo2_round_trip_arecibo():
+    ao = get_observatory("arecibo")
+    ao.last_clock_correction_mjd()
+    clock = ao._clock[0]
+
+    hdrline = "# fake conversion test"
+
+    f = StringIO()
+    write_tempo2_clock_file(f, hdrline=hdrline, clocks=clock)
+    read_clock = ClockFile.read(StringIO(f.getvalue()), format="tempo2")
+
+    assert_allclose(read_clock.time.mjd, clock.time.mjd)
+    assert_allclose(read_clock.clock.to_value(u.us), clock.clock.to_value(u.us))
+
+
+def test_tempo_round_trip(basic_clock):
+    obscode = "["
+    f = StringIO()
+    write_tempo_clock_file(f, obscode=obscode, clocks=basic_clock)
+    read_clock = ClockFile.read(StringIO(f.getvalue()), format="tempo")
+
+    assert_array_equal(read_clock.time.mjd, basic_clock.time.mjd)
+    assert_array_equal(
+        read_clock.clock.to_value(u.us), basic_clock.clock.to_value(u.us)
+    )
+
+
+def test_tempo_round_trip_arecibo():
+    ao = get_observatory("arecibo")
+    ao.last_clock_correction_mjd()
+    clock = ao._clock[0]
+
+    obscode = "1"
+
+    f = StringIO()
+    write_tempo_clock_file(f, obscode=obscode, clocks=clock)
+    read_clock = ClockFile.read(StringIO(f.getvalue()), format="tempo")
+
+    assert_allclose(read_clock.time.mjd, clock.time.mjd)
+    assert_allclose(read_clock.clock.to_value(u.us), clock.clock.to_value(u.us))

@@ -2,6 +2,7 @@
 
 import os
 import warnings
+from textwrap import dedent
 
 import astropy.units as u
 import numpy as np
@@ -128,6 +129,7 @@ class ClockFile(metaclass=ClockFileMeta):
         else:
             return self.time[-1].mjd
 
+
 class ConstructedClockFile(ClockFile):
 
     # No format set because these can't be read
@@ -135,6 +137,7 @@ class ConstructedClockFile(ClockFile):
     def __init__(self, mjd, clock, **kwargs):
         self._time = Time(mjd, format="pulsar_mjd", scale="utc")
         self._clock = clock.to(u.us)
+
 
 class Tempo2ClockFile(ClockFile):
 
@@ -180,26 +183,86 @@ class Tempo2ClockFile(ClockFile):
 
 
 def merged_mjds(clocks, threshold=0):
+    """Combine the sampling times of two clock correction files
+
+    Parameters
+    ----------
+    threshold : float
+        Merge any times that differ by less than this.
+    """
     mjds = np.sort(np.concatenate([c.time.mjd for c in clocks] + [np.array([1e10])]))
     mjds = mjds[:-1][np.diff(mjds) > threshold]
     start = max([c.time.mjd[0] for c in clocks])
     end = min([c.time.mjd[-1] for c in clocks])
     i = np.searchsorted(mjds, start)
     j = np.searchsorted(mjds, end, side="right")
-    return mjds[i : j]
+    return mjds[i:j]
 
 
-def write_tempo2_clock_file(filename, hdrline, clocks, comments=None):
-    if not hdrline.startswith("#"):
-        raise ValueError(f"Header line must start with #: {hdrline!r}")
-    if isinstance(clocks, ClockFile):
-        clocks = [clocks]
-    mjds = merged_mjds(clocks)
+def merge_clocks(clocks, threshold=0):
+    """Compute clock correction information for a combination of clocks.
+
+    This does not correctly handle discontinuities specified by repeated
+    MJDs:
+
+        50000 1.0
+        50001 2.0
+        50001 -1.0
+        50002 0.0
+
+    The standard interpolator should treat that as a discontinuity, but
+    the merging process is not capable of replicating this.
+
+    Parameters
+    ----------
+    threshold : float
+        Merge any times that differ by less than this.
+
+    Returns
+    -------
+    mjds, corr : array of float
+        The MJDs and clock correction values for the combination
+    """
+    mjds = merged_mjds(clocks, threshold=threshold)
     times = Time(mjds, format="pulsar_mjd", scale="utc")
     corr = np.zeros(len(mjds)) * u.s
     for c in clocks:
         corr += c.evaluate(times)
-    a = np.array([mjds, corr]).T
+    return mjds, corr
+
+
+def write_tempo2_clock_file(filename, hdrline, clocks, comments=None):
+    """Write clock corrections as a TEMPO2-format clock correction file.
+
+    Parameters
+    ----------
+    filename : str or pathlib.Path or file-like
+        The destination
+    hdrline : str
+        The first line of the file. Should start with `#` and consist
+        of a pair of timescales, like `UTC(AO) UTC(GPS)` that this clock
+        file transforms between.
+    clocks : ClockFile or list of ClockFile
+        One or more ClockFile objects to write out. If more than one, their
+        corrections are merged before writing.
+    comments : str
+        Additional comments to include. Lines should probably start with `#`
+        so they will be interpreted as comments. This field frequently
+        contains details of the origin of the file, or at least the
+        commands used to convert it from its original format.
+    """
+    if not hdrline.startswith("#"):
+        raise ValueError(f"Header line must start with #: {hdrline!r}")
+    if isinstance(clocks, ClockFile):
+        clocks = [clocks]
+    if len(clocks) > 1:
+        # FIXME: needs separate testing!
+        mjds, corr = merge_clocks(clocks)
+    else:
+        mjds = clocks[0].time.mjd
+        corr = clocks[0].clock
+    # TEMPO2 writes seconds
+    a = np.array([mjds, corr.to_value(u.s)]).T
     header = hdrline.strip() + "\n"
     if comments is not None:
         header += comments
@@ -320,3 +383,66 @@ class TempoClockFile(ClockFile):
             clkcorrs.append(clkcorr2 - clkcorr1)
 
         return mjds, clkcorrs
+
+
+def write_tempo_clock_file(filename, obscode, clocks, comments=None):
+    """Write clock corrections as a TEMPO-format clock correction file.
+
+    Parameters
+    ----------
+    filename : str or pathlib.Path or file-like
+        The destination
+    obscode : str
+        The TEMPO observatory code. TEMPO effectively concatenates
+        all its clock corrections and uses this field to determine
+        which observatory the clock corrections are relevant to.
+        TEMPO observatory codes are case-insensitive one-character values agreed upon
+        by convention and occurring in tim files. PINT recognizes
+        these as aliases of observatories for which they are agreed upon,
+        and an Observatory object contains a field that can be used to
+        retrieve this.
+    clocks : ClockFile or list of ClockFile
+        One or more ClockFile objects to write out. If more than one, their
+        corrections are merged before writing.
+    comments : str
+        Additional comments to include. These will be included below the headings
+        and each line should be prefaced with `#` to avoid conflicting with the
+        clock corrections.
+    """
+    if not isinstance(obscode, str) or len(obscode) != 1:
+        raise ValueError(
+            "Invalid TEMPO obscode {obscode!r}, should be one printable character"
+        )
+    if isinstance(clocks, ClockFile):
+        clocks = [clocks]
+    if len(clocks) > 1:
+        # FIXME: needs separate testing!
+        mjds, corr = merge_clocks(clocks)
+    else:
+        mjds = clocks[0].time.mjd
+        corr = clocks[0].clock
+    # TEMPO writes microseconds
+    a = np.array([mjds, corr.to_value(u.us)]).T
+    with open_or_use(filename) as f:
+        f.write(
+            dedent(
+                """\
+               MJD       EECO-REF    NIST-REF NS      DATE    COMMENTS
+            =========    ========    ======== ==    ========  ========
+            """
+            )
+        )
+        if comments is not None:
+            f.write(comments.strip())
+            f.write("\n")
+        # Do not use EECO-REF column as TEMPO does a weird subtraction thing
+        for mjd, corr in a:
+            # 0:9 for MJD
+            # 9:21 for clkcorr1 (do not use)
+            # 21:33 for clkcorr2
+            # 34 for obscode
+            # Extra stuff ignored
+            # FIXME: always use C locale
+            date = Time(mjd, format="pulsar_mjd").datetime.strftime("%d-%b-%y")
+            eeco = 0.0
+            f.write(f"{mjd:8.2f}{eeco:12.1}{corr:12.3f} {obscode}    {date}\n")
