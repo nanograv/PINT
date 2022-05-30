@@ -1,4 +1,5 @@
 from io import StringIO
+from textwrap import dedent
 
 import astropy.units as u
 import numpy as np
@@ -10,8 +11,6 @@ from pint.observatory import get_observatory
 from pint.observatory.clock_file import (
     ClockFile,
     ConstructedClockFile,
-    write_tempo2_clock_file,
-    write_tempo_clock_file,
 )
 
 
@@ -139,15 +138,24 @@ def test_merge_mjds_trims_range_mixed():
 
 
 def test_tempo2_round_trip(basic_clock):
-    hdrline = "# fake conversion test"
+    hdrline = "# FAKE1 FAKE2"
     f = StringIO()
-    write_tempo2_clock_file(f, hdrline=hdrline, clock=basic_clock)
+    basic_clock.write_tempo2_clock_file(f, hdrline=hdrline)
     read_clock = ClockFile.read(StringIO(f.getvalue()), format="tempo2")
 
     assert_array_equal(read_clock.time.mjd, basic_clock.time.mjd)
     assert_array_equal(
         read_clock.clock.to_value(u.us), basic_clock.clock.to_value(u.us)
     )
+
+
+loadable_observatories = ["gbt", "arecibo", "fast", "gb140", "gb853", "jb", "wsrt"]
+
+
+@pytest.mark.parametrize("obs", loadable_observatories)
+def ensure_can_read(obs):
+    o = get_observatory(obs)
+    o.last_clock_correction_mjd()
 
 
 def test_tempo2_round_trip_arecibo():
@@ -158,7 +166,7 @@ def test_tempo2_round_trip_arecibo():
     hdrline = "# fake conversion test"
 
     f = StringIO()
-    write_tempo2_clock_file(f, hdrline=hdrline, clock=clock)
+    clock.write_tempo2_clock_file(f, hdrline=hdrline)
     read_clock = ClockFile.read(StringIO(f.getvalue()), format="tempo2")
 
     assert_allclose(read_clock.time.mjd, clock.time.mjd)
@@ -168,7 +176,7 @@ def test_tempo2_round_trip_arecibo():
 def test_tempo_round_trip(basic_clock):
     obscode = "["
     f = StringIO()
-    write_tempo_clock_file(f, obscode=obscode, clock=basic_clock)
+    basic_clock.write_tempo_clock_file(f, obscode=obscode)
     read_clock = ClockFile.read(StringIO(f.getvalue()), format="tempo")
 
     assert_array_equal(read_clock.time.mjd, basic_clock.time.mjd)
@@ -185,8 +193,47 @@ def test_tempo_round_trip_arecibo():
     obscode = "1"
 
     f = StringIO()
-    write_tempo_clock_file(f, obscode=obscode, clock=clock)
+    clock.write_tempo_clock_file(f, obscode=obscode)
     read_clock = ClockFile.read(StringIO(f.getvalue()), format="tempo")
 
     assert_allclose(read_clock.time.mjd, clock.time.mjd)
     assert_allclose(read_clock.clock.to_value(u.us), clock.clock.to_value(u.us))
+
+
+def test_tempo2_round_trip_comments():
+    contents = dedent(
+        """\
+        # FAKE1 FAKE2 3 header comments
+        # Initial comments
+        # covering several lines
+        50000 0.000001 And some text
+        50001 0.000001
+        # A commenty line
+        50001 0.000001 same-line text
+        # and a commenty line
+        """
+    )
+    c = ClockFile.read(StringIO(contents), format="tempo2")
+    o = StringIO()
+    c.write_tempo2_clock_file(o)
+    assert o.getvalue() == contents
+
+
+def test_tempo_round_trip_comments():
+    contents = dedent(
+        """\
+           MJD       EECO-REF    NIST-REF NS      DATE    COMMENTS
+        =========    ========    ======== ==    ========  ========
+        # Initial comments
+        # covering several lines
+         50000.00       0.000       1.000 1    10-Oct-95  And some text
+         50001.00       0.000       1.000 1    11-Oct-95
+        # A commenty line
+         50002.00       0.000       1.000 1    12-Oct-95  same-line text
+        # and a commenty line
+        """
+    )
+    c = ClockFile.read(StringIO(contents), format="tempo")
+    o = StringIO()
+    c.write_tempo_clock_file(o, obscode="1")
+    assert o.getvalue() == contents
