@@ -143,10 +143,8 @@ def test_tempo2_round_trip(basic_clock):
     basic_clock.write_tempo2_clock_file(f, hdrline=hdrline)
     read_clock = ClockFile.read(StringIO(f.getvalue()), format="tempo2")
 
-    assert_array_equal(read_clock.time.mjd, basic_clock.time.mjd)
-    assert_array_equal(
-        read_clock.clock.to_value(u.us), basic_clock.clock.to_value(u.us)
-    )
+    assert_allclose(read_clock.time.mjd, basic_clock.time.mjd)
+    assert_allclose(read_clock.clock.to_value(u.us), basic_clock.clock.to_value(u.us))
 
 
 loadable_observatories = ["gbt", "arecibo", "fast", "gb140", "gb853", "jb", "wsrt"]
@@ -206,10 +204,10 @@ def test_tempo2_round_trip_comments():
         # FAKE1 FAKE2 3 header comments
         # Initial comments
         # covering several lines
-        50000 0.000001 And some text
-        50001 0.000001
+        50000.00000 0.000001000000 And some text
+        50001.00000 0.000002000000
         # A commenty line
-        50001 0.000001 same-line text
+        50002.00000 0.000003000000 same-line text
         # and a commenty line
         """
     )

@@ -287,17 +287,27 @@ class ClockFile(metaclass=ClockFileMeta):
         # Also any line that doesn't start with two floats is ignored
         # decreasing forbidden
         if hdrline is None:
+            # Assume this was a TEMPO2-format file and use the header
             hdrline = self.header
         if not hdrline.startswith("#"):
             raise ValueError(f"Header line must start with #: {hdrline!r}")
-        mjds = self.time.mjd
-        corr = self.clock
-        # TEMPO2 writes seconds
-        a = np.array([mjds, corr.to_value(u.s)]).T
-        header = hdrline.strip() + "\n"
-        if comments is not None:
-            header += comments
-        np.savetxt(filename, a, header=header)
+        with open_or_use(filename) as f:
+            f.write(hdrline.rstrip())
+            f.write("\n")
+            if self.leading_comment is not None:
+                f.write(self.leading_comment.rstrip())
+                f.write("\n")
+            comments = self.comments if self.comments else [""] * len(self.time)
+
+            for mjd, corr, comment in zip(
+                self.time.mjd, self.clock.to_value(u.s), comments
+            ):
+                f.write(f"{mjd:.5f} {corr:.12f}")
+                if comment:
+                    if not comment.startswith("\n"):
+                        f.write(" ")
+                    f.write(comment.rstrip())
+                f.write("\n")
 
 
 class ConstructedClockFile(ClockFile):
@@ -324,7 +334,7 @@ class Tempo2ClockFile(ClockFile):
     clkcorr_re = re.compile(
         r"\s*([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eEdD][-+]?\d+)?)"
         r"\s+([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eEdD][-+]?\d+)?)"
-        r"(.*)"
+        r" ?(.*)"
     )
 
     def __init__(self, filename, bogus_last_correction=False, **kwargs):
@@ -334,7 +344,7 @@ class Tempo2ClockFile(ClockFile):
         try:
             mjd = []
             clk = []
-            self.leading_comment = ""
+            self.leading_comment = None
             self.comments = []
             with open_or_use(filename) as f:
                 hdrline = f.readline()
@@ -352,11 +362,14 @@ class Tempo2ClockFile(ClockFile):
 
                 def add_comment(s):
                     if self.comments:
-                        self.comments[-1] = "\n".join([self.comments[-1], s.strip()])
+                        if self.comments[-1] is None:
+                            self.comments[-1] = s.rstrip()
+                        else:
+                            self.comments[-1] += "\n" + s.rstrip()
+                    elif self.leading_comment is None:
+                        self.leading_comment = s.rstrip()
                     else:
-                        self.leading_comment = "\n".join(
-                            [self.leading_comment, s.strip()]
-                        )
+                        self.leading_comment += "\n" + s.rstrip()
 
                 for line in f.readlines():
                     if line.startswith("#"):
@@ -370,6 +383,7 @@ class Tempo2ClockFile(ClockFile):
                         continue
                     mjd.append(float(m.group(1)))
                     clk.append(float(m.group(2)))
+                    self.comments.append(None)
                     if m.group(3) is not None:
                         # Anything else on the line is a comment too
                         add_comment(m.group(3))
