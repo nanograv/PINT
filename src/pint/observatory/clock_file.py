@@ -129,14 +129,86 @@ class ClockFile(metaclass=ClockFileMeta):
         else:
             return self.time[-1].mjd
 
+    @staticmethod
+    def merge(clocks, *, trim=True):
+        """Compute clock correction information for a combination of clocks.
+
+        Note that clock correction files can specify discontinuities by
+        repeating MJDs. This merged object should accurately propagate these
+        discontinuities.
+
+        Parameters
+        ----------
+        trim : bool
+            Whether to trim the resulting clock file to the MJD range
+            covered by both input clock files.
+
+        Returns
+        -------
+        ClockFile
+            A merged ClockFile object.
+        """
+        all_mjds = []
+        all_discontinuities = set()
+        for c in clocks:
+            mjds = c._time.mjd
+            all_mjds.append(mjds)
+            all_discontinuities.update(mjds[:-1][np.diff(mjds) == 0])
+        mjds = np.unique(np.concatenate(all_mjds))
+        r = np.ones(len(mjds), dtype=int)
+        for m in all_discontinuities:
+            i = np.searchsorted(mjds, m)
+            r[i] = 2
+        mjds = np.repeat(mjds, r)
+
+        times = Time(mjds, format="pulsar_mjd", scale="utc")
+        corr = np.zeros(len(mjds)) * u.s
+        for c in clocks:
+            # Interpolate everywhere
+            this_corr = c.evaluate(times)
+            # Find locations of left sides of discontinuities
+            z = np.diff(c._time.mjd) == 0
+            # Looking for the left end of a run of equal values
+            zl = z.copy()
+            zl[1:] &= ~z[:-1]
+            ixl = np.where(zl)[0]
+            # Fix discontinuities
+            this_corr[np.searchsorted(mjds, c._time.mjd[ixl], side="left")] = c._clock[
+                ixl
+            ]
+
+            zr = z.copy()
+            zr[:-1] &= ~z[1:]
+            ixr = np.where(zr)[0]
+            # Fix discontinuities
+            this_corr[np.searchsorted(mjds, c._time.mjd[ixr], side="right")] = c._clock[
+                ixr + 1
+            ]
+            corr += this_corr
+        if trim:
+            b = max([c._time.mjd[0] for c in clocks])
+            e = min([c._time.mjd[-1] for c in clocks])
+            l = np.searchsorted(times.mjd, b)
+            r = np.searchsorted(times.mjd, e, side="right")
+            times = times[l:r]
+            corr = corr[l:r]
+        return ConstructedClockFile(
+            mjd=times.mjd,
+            clock=corr,
+            filename=f"Merged from {[c.filename for c in clocks]}",
+        )
+
 
 class ConstructedClockFile(ClockFile):
 
     # No format set because these can't be read
 
-    def __init__(self, mjd, clock, **kwargs):
+    def __init__(self, mjd, clock, filename=None, **kwargs):
+        if len(mjd) != len(clock):
+            raise ValueError(f"MJDs have {len(mjd)} entries but clock has {len(clock)}")
         self._time = Time(mjd, format="pulsar_mjd", scale="utc")
         self._clock = clock.to(u.us)
+        self.filename = "Constructed" if filename is None else filename
 
 
 class Tempo2ClockFile(ClockFile):
@@ -182,56 +254,7 @@ class Tempo2ClockFile(ClockFile):
         return mjd, clk, hdrline
 
 
-def merged_mjds(clocks, threshold=0):
-    """Combine the sampling times of two clock correction files
-
-    Parameters
-    ----------
-    threshold : float
-        Merge any times that differ by less than this.
-    """
-    mjds = np.sort(np.concatenate([c.time.mjd for c in clocks] + [np.array([1e10])]))
-    mjds = mjds[:-1][np.diff(mjds) > threshold]
-    start = max([c.time.mjd[0] for c in clocks])
-    end = min([c.time.mjd[-1] for c in clocks])
-    i = np.searchsorted(mjds, start)
-    j = np.searchsorted(mjds, end, side="right")
-    return mjds[i:j]
-
-
-def merge_clocks(clocks, threshold=0):
-    """Compute clock correction information for a combination of clocks.
-
-    This does not correctly handle discontinuities specified by repeated
-    MJDs:
-
-        50000 1.0
-        50001 2.0
-        50001 -1.0
-        50002 0.0
-
-    The standard interpolator should treat that as a discontinuity, but
-    the merging process is not capable of replicating this.
-
-    Parameters
-    ----------
-    threshold : float
-        Merge any times that differ by less than this.
-
-    Returns
-    -------
-    mjds, corr : array of float
-        The MJDs and clock correction values for the combination
-    """
-    mjds = merged_mjds(clocks, threshold=threshold)
-    times = Time(mjds, format="pulsar_mjd", scale="utc")
-    corr = np.zeros(len(mjds)) * u.s
-    for c in clocks:
-        corr += c.evaluate(times)
-    return mjds, corr
-
-
-def write_tempo2_clock_file(filename, hdrline, clocks, comments=None):
+def write_tempo2_clock_file(filename, hdrline, clock, comments=None):
     """Write clock corrections as a TEMPO2-format clock correction file.
 
     Parameters
@@ -242,9 +265,8 @@ def write_tempo2_clock_file(filename, hdrline, clocks, comments=None):
         The first line of the file. Should start with `#` and consist
         of a pair of timescales, like `UTC(AO) UTC(GPS)` that this clock
         file transforms between.
-    clocks : ClockFile or list of ClockFile
-        One or more ClockFile objects to write out. If more than one, their
-        corrections are merged before writing.
+    clock : ClockFile
+        ClockFile object to write out.
     comments : str
         Additional comments to include. Lines should probably start with `#`
         so they will be interpreted as comments. This field frequently
@@ -253,14 +275,8 @@ def write_tempo2_clock_file(filename, hdrline, clocks, comments=None):
     """
     if not hdrline.startswith("#"):
         raise ValueError(f"Header line must start with #: {hdrline!r}")
-    if isinstance(clocks, ClockFile):
-        clocks = [clocks]
-    if len(clocks) > 1:
-        # FIXME: needs separate testing!
-        mjds, corr = merge_clocks(clocks)
-    else:
-        mjds = clocks[0].time.mjd
-        corr = clocks[0].clock
+    mjds = clock.time.mjd
+    corr = clock.clock
     # TEMPO2 writes seconds
     a = np.array([mjds, corr.to_value(u.s)]).T
     header = hdrline.strip() + "\n"
@@ -318,6 +334,15 @@ class TempoClockFile(ClockFile):
         """
         # TODO we might want to handle 'f' flags by inserting addtional
         # entries so that interpolation routines will give the right result.
+        # The way TEMPO interprets 'f' flags is that an MJD with an 'f' flag
+        # gives the constant clock correction value for at most a day either side.
+        # If the sought-after clock correction is within a day of two different
+        # 'f' values, the nearest is used.
+        # https://github.com/nanograv/tempo/blob/618afb2e901d3e4b8324d4ba12777c055e128696/src/clockcor.f#L79
+        # This could be (roughly) implemented by splicing in additional clock correction points
+        # between 'f' values or +- 1 day.
+        # (The deviation would be that in gaps you get an interpolated value rather than
+        # an error message.)
         mjds = []
         clkcorrs = []
         for l in lines_of(filename):
@@ -385,7 +410,7 @@ class TempoClockFile(ClockFile):
         return mjds, clkcorrs
 
 
-def write_tempo_clock_file(filename, obscode, clocks, comments=None):
+def write_tempo_clock_file(filename, obscode, clock, comments=None):
     """Write clock corrections as a TEMPO-format clock correction file.
 
     Parameters
@@ -401,9 +426,8 @@ def write_tempo_clock_file(filename, obscode, clocks, comments=None):
         these as aliases of observatories for which they are agreed upon,
         and an Observatory object contains a field that can be used to
         retrieve this.
-    clocks : ClockFile or list of ClockFile
-        One or more ClockFile objects to write out. If more than one, their
-        corrections are merged before writing.
+    clock : ClockFile
+        ClockFile object to write out.
     comments : str
         Additional comments to include. These will be included below the headings
         and each line should be prefaced with `#` to avoid conflicting with the
@@ -413,14 +437,8 @@ def write_tempo_clock_file(filename, obscode, clocks, comments=None):
         raise ValueError(
             "Invalid TEMPO obscode {obscode!r}, should be one printable character"
         )
-    if isinstance(clocks, ClockFile):
-        clocks = [clocks]
-    if len(clocks) > 1:
-        # FIXME: needs separate testing!
-        mjds, corr = merge_clocks(clocks)
-    else:
-        mjds = clocks[0].time.mjd
-        corr = clocks[0].clock
+    mjds = clock.time.mjd
+    corr = clock.clock
     # TEMPO writes microseconds
     a = np.array([mjds, corr.to_value(u.us)]).T
     with open_or_use(filename) as f:
