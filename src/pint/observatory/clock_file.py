@@ -204,7 +204,7 @@ class ClockFile(metaclass=ClockFileMeta):
             filename=f"Merged from {[c.filename for c in clocks]}",
         )
 
-    def write_tempo_clock_file(self, filename, obscode, extra_comments=None):
+    def write_tempo_clock_file(self, filename, obscode, extra_comment=None):
         """Write clock corrections as a TEMPO-format clock correction file.
 
         Parameters
@@ -233,13 +233,20 @@ class ClockFile(metaclass=ClockFileMeta):
         corr = self.clock.to_value(u.us)
         comments = self.comments if self.comments else [""] * len(self.clock)
         # TEMPO writes microseconds
+        if extra_comment is not None:
+            if self.leading_comment is not None:
+                leading_comment = extra_comment.rstrip() + "\n" + self.leading_comment
+            else:
+                leading_comment = extra_comment.rstrip()
+        else:
+            leading_comment = self.leading_comment
         with open_or_use(filename, "wt") as f:
             f.write(tempo_standard_header)
             if extra_comments is not None:
                 f.write(extra_comments.strip())
                 f.write("\n")
-            if self.leading_comment is not None:
-                f.write(self.leading_comment)
+            if leading_comment is not None:
+                f.write(leading_comment)
                 f.write("\n")
             # Do not use EECO-REF column as TEMPO does a weird subtraction thing
             for mjd, corr, comment in zip(mjds, corr, comments):
@@ -260,7 +267,7 @@ class ClockFile(metaclass=ClockFileMeta):
                         f.write(f"  {comment}".rstrip())
                 f.write("\n")
 
-    def write_tempo2_clock_file(self, filename, hdrline=None, comments=None):
+    def write_tempo2_clock_file(self, filename, hdrline=None, extra_comment=None):
         """Write clock corrections as a TEMPO2-format clock correction file.
 
         Parameters
@@ -291,11 +298,18 @@ class ClockFile(metaclass=ClockFileMeta):
             hdrline = self.header
         if not hdrline.startswith("#"):
             raise ValueError(f"Header line must start with #: {hdrline!r}")
+        if extra_comment is not None:
+            if self.leading_comment is not None:
+                leading_comment = extra_comment.rstrip() + "\n" + self.leading_comment
+            else:
+                leading_comment = extra_comment.rstrip()
+        else:
+            leading_comment = self.leading_comment
         with open_or_use(filename, "wt") as f:
             f.write(hdrline.rstrip())
             f.write("\n")
-            if self.leading_comment is not None:
-                f.write(self.leading_comment.rstrip())
+            if leading_comment is not None:
+                f.write(leading_comment.rstrip())
                 f.write("\n")
             comments = self.comments if self.comments else [""] * len(self.time)
 
