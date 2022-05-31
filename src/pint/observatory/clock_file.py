@@ -410,6 +410,12 @@ tempo_standard_header = dedent(
     =========    ========    ======== ==    ========  ========
     """
 )
+tempo_standard_header_res = [
+    re.compile(
+        r"\s*MJD\s+EECO-REF\s+NIST-REF\s+NS\s+DATE\s+COMMENTS\s*", flags=re.IGNORECASE
+    ),
+    re.compile(r"\s*=+\s+=+\s+=+\s+=+\s+=+\s+=+\s*"),
+]
 
 
 class TempoClockFile(ClockFile):
@@ -482,12 +488,10 @@ class TempoClockFile(ClockFile):
                     add_comment(l)
                     continue
 
-                if seen_header < 2:
-                    if [w.upper() for w in l.split()] != tempo_standard_header.split(
-                        "\n"
-                    )[seen_header].split():
+                if seen_header < len(tempo_standard_header_res):
+                    if not tempo_standard_header_res[seen_header].match(l):
                         raise ValueError(
-                            "TEMPO-format clock files should start with a standard header"
+                            f"TEMPO-format clock files should start with a standard header, unable to recognize line {l!r}"
                         )
                     else:
                         seen_header += 1
@@ -561,7 +565,7 @@ class TempoClockFile(ClockFile):
                 f"TEMPO-style clock correction file {filename} for site {obscode} not found"
             )
         if bogus_last_correction and len(mjds):
-            mjd = mjd[:-1]
+            mjds = mjds[:-1]
             clkcorrs = clkcorrs[:-1]
             # FIXME: do something sensible with comments!
         while len(mjds) and mjds[0] == 0:
