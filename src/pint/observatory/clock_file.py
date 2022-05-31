@@ -233,7 +233,7 @@ class ClockFile(metaclass=ClockFileMeta):
         corr = self.clock.to_value(u.us)
         comments = self.comments if self.comments else [""] * len(self.clock)
         # TEMPO writes microseconds
-        with open_or_use(filename) as f:
+        with open_or_use(filename, "wt") as f:
             f.write(tempo_standard_header)
             if extra_comments is not None:
                 f.write(extra_comments.strip())
@@ -291,7 +291,7 @@ class ClockFile(metaclass=ClockFileMeta):
             hdrline = self.header
         if not hdrline.startswith("#"):
             raise ValueError(f"Header line must start with #: {hdrline!r}")
-        with open_or_use(filename) as f:
+        with open_or_use(filename, "wt") as f:
             f.write(hdrline.rstrip())
             f.write("\n")
             if self.leading_comment is not None:
@@ -488,29 +488,23 @@ class TempoClockFile(ClockFile):
                     add_comment(l)
                     continue
 
-                if seen_header < len(tempo_standard_header_res):
-                    if not tempo_standard_header_res[seen_header].match(l):
-                        raise ValueError(
-                            f"TEMPO-format clock files should start with a standard header, unable to recognize line {l!r}"
-                        )
-                    else:
-                        seen_header += 1
-                        continue
+                # TEMPO has very, ah, flexible notions of what is an acceptable file
+                # https://sourceforge.net/p/tempo/tempo/ci/master/tree/src/newsrc.f#l272
+                # Any line that starts with "MJD" or "=====" is assumed to be part of the header.
+                # TEMPO describes this as a "commonly used header format".
+                ls = l.split()
+                if ls and ls[0].upper().startswith("MJD"):
+                    # Header line. Do we preserve it?
+                    continue
+                if ls and ls[0].startswith("====="):
+                    # Header line. Do we preserve it?
+                    continue
 
                 # Process INCLUDE
                 # Assumes included file is in same dir as this one
                 if l.startswith("INCLUDE"):
                     # Bleurgh. What do we do with comments?
                     raise NotImplementedError
-                    if site is not None:
-                        clkdir = os.path.dirname(os.path.abspath(filename))
-                        filename1 = os.path.join(clkdir, l.split()[1])
-                        mjds1, clkcorrs1 = TempoClockFile.load_tempo1_clock_file(
-                            filename1, site=site
-                        )
-                        mjds.extend(mjds1)
-                        clkcorrs.extend(clkcorrs1)
-                    continue
 
                 # Parse MJD
                 try:

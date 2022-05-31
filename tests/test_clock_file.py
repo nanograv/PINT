@@ -147,6 +147,26 @@ def test_tempo2_round_trip(basic_clock):
     assert_allclose(read_clock.clock.to_value(u.us), basic_clock.clock.to_value(u.us))
 
 
+def test_tempo2_round_trip_file(basic_clock, tmp_path):
+    f = tmp_path / "fake.clk"
+    hdrline = "# FAKE1 FAKE2"
+    basic_clock.write_tempo2_clock_file(str(f), hdrline=hdrline)
+    read_clock = ClockFile.read(str(f), format="tempo2")
+
+    assert_allclose(read_clock.time.mjd, basic_clock.time.mjd)
+    assert_allclose(read_clock.clock.to_value(u.us), basic_clock.clock.to_value(u.us))
+
+
+def test_tempo_round_trip_file(basic_clock, tmp_path):
+    f = tmp_path / "fake.clk"
+    obscode = "{"
+    basic_clock.write_tempo_clock_file(str(f), obscode=obscode)
+    read_clock = ClockFile.read(str(f), format="tempo")
+
+    assert_allclose(read_clock.time.mjd, basic_clock.time.mjd)
+    assert_allclose(read_clock.clock.to_value(u.us), basic_clock.clock.to_value(u.us))
+
+
 loadable_observatories = ["gbt", "arecibo", "fast", "gb140", "gb853", "jb", "wsrt"]
 
 
