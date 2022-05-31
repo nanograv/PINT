@@ -362,6 +362,7 @@ class JumpMode(ColorMode):
         return model.get_jump_param_objects()
 
     jump_colors = named_colors
+    selected_color = "orange"
 
     def displayInfo(self):
         outstr = '"Jump" mode selected\n'
@@ -375,7 +376,7 @@ class JumpMode(ColorMode):
             if jump.key_value is not None:
                 outstr += " " + " ".join(jump.key_value)
             outstr += f" = {color_name}\n"
-        outstr += "  selected = orange\n"
+        outstr += f"  selected = {selected_color}\n"
         print(outstr)
 
     def plotColorMode(self):
@@ -404,7 +405,9 @@ class JumpMode(ColorMode):
                 self.application.xvals[self.application.selected],
                 self.application.yvals[self.application.selected],
                 marker=".",
-                color="orange",
+                color=selected_color,
             )
         else:
-            self.application.plotErrorbar(self.application.selected, color="orange")
+            self.application.plotErrorbar(
+                self.application.selected, color=selected_color
+            )
