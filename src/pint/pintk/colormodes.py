@@ -320,3 +320,85 @@ class ObsMode(ColorMode):
             )
         else:
             self.application.plotErrorbar(self.application.selected, color="orange")
+
+
+class JumpMode(ColorMode):
+    """
+    A class to manage the Jump color mode, where TOAs are colored
+    according to their jump.
+    """
+
+    def __init__(self, application):
+        super(JumpMode, self).__init__(application)
+        self.mode_name = "jump"
+
+    def get_jumps(self):
+        if self.application.psr.fitted:
+            model = self.application.psr.postfit_model
+        else:
+            model = self.application.psr.prefit_model
+        return model.get_jump_param_objects()
+
+    jump_colors = [
+        ["red", "red"],
+        ["green", "green"],  # this is any green bank obs
+        ["cyan", "cyan"],
+        ["blue", "blue"],
+        ["burnt orange", "#CC6600"],  # burnt orange
+        ["brown", "#362511"],  # brown
+        ["indigo", "#4B0082"],  # indigo
+        ["purple", "#7C11AD"],  # purple
+        ["dark blue", "#00006B"],  # dark blue
+        ["light green", "#52E222"],  # light green
+        ["dark green", "#006D35"],  # dark green
+        ["light blue", "#0091AE"],  # light blue
+        ["dark red", "#8C0000"],  # dark red
+        ["magenta", "#E4008D"],  # magenta
+        ["black", "black"],
+        ["grey", "#7E7E7E"],  # grey
+        ["light grey", "#E2E2E1"],  # light grey
+        ["yellow-ish", "#FFF133"],  # yellow-ish
+    ]
+
+    def displayInfo(self):
+        outstr = '"Jump" mode selected\n'
+        for jumpnum, jump in enumerate(self.get_jumps()):
+            color_number = jumpnum % len(self.jump_colors)
+            outstr += f"{jump.name}"
+            if jump.key is not None:
+                outstr += f" {jump.key}"
+            if jump.key_value is not None:
+                outstr += " " + " ".join(jump.key_value)
+            outstr += f" = {self.jump_colors[color_number][0]}\n"
+        outstr += "  selected = orange\n"
+        print(outstr)
+
+    def plotColorMode(self):
+        """
+        Plots application's residuals in proper color scheme.
+        """
+        alltoas = self.application.psr.all_toas
+        for jumpnum, jump in enumerate(self.get_jumps()):
+            color_number = jumpnum % len(self.jump_colors)
+            # group toa indices by observatory
+            toas = jump.select_toa_mask(alltoas)
+            color = self.jump_colors[color_number][1]
+            if self.application.yerrs is None:
+                self.application.plkAxes.scatter(
+                    self.application.xvals[toas],
+                    self.application.yvals[toas],
+                    marker=".",
+                    color=color,
+                )
+            else:
+                self.application.plotErrorbar(toas, color=color)
+        # Now handle the selected TOAs
+        if self.application.yerrs is None:
+            self.application.plkAxes.scatter(
+                self.application.xvals[self.application.selected],
+                self.application.yvals[self.application.selected],
+                marker=".",
+                color="orange",
+            )
+        else:
+            self.application.plotErrorbar(self.application.selected, color="orange")

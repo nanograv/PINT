@@ -675,6 +675,7 @@ class PlkWidget(tk.Frame):
             cm.FreqMode(self),
             cm.ObsMode(self),
             cm.NameMode(self),
+            cm.JumpMode(self),
         ]
         self.current_mode = "default"
 
