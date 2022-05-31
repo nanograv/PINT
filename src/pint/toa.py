@@ -2081,7 +2081,7 @@ class TOAs:
                     corr[jj] = float(flags[jj]["to"]) * u.s
                     self["mjd"][jj] += time.TimeDelta(corr[jj])
 
-            gcorr = site.clock_corrections(time.Time(self["mjd"][grp]))
+            gcorr = site.clock_corrections(time.Time(self["mjd"][grp]), limits=limits)
             # it would be preferable to do this with array operations but I get `NotImplemented` errors when I do so
             for jj, cc in zip(grp, gcorr):
                 self["mjd"][jj] += time.TimeDelta(cc)
