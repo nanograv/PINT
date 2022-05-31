@@ -242,11 +242,8 @@ class ClockFile(metaclass=ClockFileMeta):
             leading_comment = self.leading_comment
         with open_or_use(filename, "wt") as f:
             f.write(tempo_standard_header)
-            if extra_comments is not None:
-                f.write(extra_comments.strip())
-                f.write("\n")
             if leading_comment is not None:
-                f.write(leading_comment)
+                f.write(leading_comment.strip())
                 f.write("\n")
             # Do not use EECO-REF column as TEMPO does a weird subtraction thing
             for mjd, corr, comment in zip(mjds, corr, comments):
