@@ -5,6 +5,27 @@ import matplotlib
 import pint.logging
 from loguru import logger as log
 
+named_colors = {
+    "red": "red",
+    "green": "green",  # this is any green bank obs
+    "cyan": "cyan",
+    "blue": "blue",
+    "burnt orange": "#CC6600",  # burnt orange
+    "brown": "#362511",  # brown
+    "indigo": "#4B0082",  # indigo
+    "purple": "#7C11AD",  # purple
+    "dark blue": "#00006B",  # dark blue
+    "light green": "#52E222",  # light green
+    "dark green": "#006D35",  # dark green
+    "light blue": "#0091AE",  # light blue
+    "dark red": "#8C0000",  # dark red
+    "magenta": "#E4008D",  # magenta
+    "black": "black",
+    "grey": "#7E7E7E",  # grey
+    "light grey": "#E2E2E1",  # light grey
+    "yellow-ish": "#FFF133",  # yellow-ish
+}
+
 
 class ColorMode:
     """Base Class for color modes."""
@@ -339,37 +360,19 @@ class JumpMode(ColorMode):
             model = self.application.psr.prefit_model
         return model.get_jump_param_objects()
 
-    jump_colors = [
-        ["red", "red"],
-        ["green", "green"],  # this is any green bank obs
-        ["cyan", "cyan"],
-        ["blue", "blue"],
-        ["burnt orange", "#CC6600"],  # burnt orange
-        ["brown", "#362511"],  # brown
-        ["indigo", "#4B0082"],  # indigo
-        ["purple", "#7C11AD"],  # purple
-        ["dark blue", "#00006B"],  # dark blue
-        ["light green", "#52E222"],  # light green
-        ["dark green", "#006D35"],  # dark green
-        ["light blue", "#0091AE"],  # light blue
-        ["dark red", "#8C0000"],  # dark red
-        ["magenta", "#E4008D"],  # magenta
-        ["black", "black"],
-        ["grey", "#7E7E7E"],  # grey
-        ["light grey", "#E2E2E1"],  # light grey
-        ["yellow-ish", "#FFF133"],  # yellow-ish
-    ]
+    jump_colors = named_colors
 
     def displayInfo(self):
         outstr = '"Jump" mode selected\n'
         for jumpnum, jump in enumerate(self.get_jumps()):
             color_number = jumpnum % len(self.jump_colors)
+            color_name = list(self.jump_colors)[color_number]
             outstr += f"{jump.name}"
             if jump.key is not None:
                 outstr += f" {jump.key}"
             if jump.key_value is not None:
                 outstr += " " + " ".join(jump.key_value)
-            outstr += f" = {self.jump_colors[color_number][0]}\n"
+            outstr += f" = {color_name}\n"
         outstr += "  selected = orange\n"
         print(outstr)
 
@@ -380,9 +383,10 @@ class JumpMode(ColorMode):
         alltoas = self.application.psr.all_toas
         for jumpnum, jump in enumerate(self.get_jumps()):
             color_number = jumpnum % len(self.jump_colors)
-            # group toa indices by observatory
+            color_name = list(self.jump_colors)[color_number]
             toas = jump.select_toa_mask(alltoas)
-            color = self.jump_colors[color_number][1]
+            color = self.jump_colors[color_name]
+            # group toa indices by jump
             if self.application.yerrs is None:
                 self.application.plkAxes.scatter(
                     self.application.xvals[toas],
