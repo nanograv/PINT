@@ -24,6 +24,7 @@ named_colors = {
     "grey": "#7E7E7E",  # grey
     "light grey": "#E2E2E1",  # light grey
     "yellow-ish": "#FFF133",  # yellow-ish
+    "orange": "#FFA500",
 }
 
 
@@ -118,15 +119,15 @@ class FreqMode(ColorMode):
         """
 
         colorGroups = [
-            "#8C0000",  # dark red
-            "#FF0000",  # red
-            "#FFA500",  # orange
-            "#FFF133",  # yellow-ish
-            "#008000",  # green
-            "#0000FF",  # blue
-            "#4B0082",  # indigo
-            "#000000",  # black
-            "#7E7E7E",  # grey
+            named_colors["dark red"],  # dark red
+            named_colors["red"],  # red
+            named_colors["orange"],  # orange
+            named_colors["yellow-ish"],  # yellow-ish
+            named_colors["green"],  # green
+            named_colors["blue"],  # blue
+            named_colors["indigo"],  # indigo
+            named_colors["black"],  # black
+            named_colors["grey"],  # grey
         ]
         highfreqs = [300.0, 400.0, 500.0, 700.0, 1000.0, 1800.0, 3000.0, 8000.0]
 
@@ -260,26 +261,26 @@ class ObsMode(ColorMode):
         return mapping
 
     obs_colors = {
-        "parkes": "red",
-        "gb": "green",  # this is any green bank obs
-        "jodrell": "cyan",
-        "arecibo": "blue",
-        "chime": "#CC6600",  # burnt orange
-        "gmrt": "#362511",  # brown
-        "vla": "#4B0082",  # indigo
-        "effelsberg": "#7C11AD",  # purple
-        "fast": "#00006B",  # dark blue
-        "nancay": "#52E222",  # light green
-        "srt": "#006D35",  # dark green
-        "wsrt": "#0091AE",  # light blue
-        "lofar": "#8C0000",  # dark red
-        "lwa": "#8C0000",  # dark red
-        "mwa": "#8C0000",  # dark red
-        "meerkat": "#E4008D",  # magenta
-        "barycenter": "black",
-        "geocenter": "#7E7E7E",  # grey
-        "space": "#E2E2E1",  # light grey
-        "other": "#FFF133",  # yellow-ish
+        "parkes": named_colors["red"],
+        "gb": named_colors["green"],  # this is any green bank obs
+        "jodrell": named_colors["cyan"],
+        "arecibo": named_colors["blue"],
+        "chime": named_colors["burnt orange"],
+        "gmrt": named_colors["brown"],
+        "vla": named_colors["indigo"],
+        "effelsberg": named_colors["purple"],
+        "fast": named_colors["dark blue"],
+        "nancay": named_colors["light green"],
+        "srt": named_colors["dark green"],
+        "wsrt": named_colors["light blue"],
+        "lofar": named_colors["dark red"],
+        "lwa": named_colors["dark red"],
+        "mwa": named_colors["dark red"],
+        "meerkat": named_colors["magenta"],
+        "barycenter": named_colors["black"],
+        "geocenter": named_colors["grey"],
+        "space": named_colors["light grey"],
+        "other": named_colors["yellow-ish"],
     }
 
     obs_text = {
@@ -365,7 +366,8 @@ class JumpMode(ColorMode):
     def displayInfo(self):
         outstr = '"Jump" mode selected\n'
         for jumpnum, jump in enumerate(self.get_jumps()):
-            color_number = jumpnum % len(self.jump_colors)
+            # only use the number of colors - 1 to preserve orange for selected
+            color_number = jumpnum % (len(self.jump_colors) - 1)
             color_name = list(self.jump_colors)[color_number]
             outstr += f"{jump.name}"
             if jump.key is not None:
@@ -382,7 +384,7 @@ class JumpMode(ColorMode):
         """
         alltoas = self.application.psr.all_toas
         for jumpnum, jump in enumerate(self.get_jumps()):
-            color_number = jumpnum % len(self.jump_colors)
+            color_number = jumpnum % (len(self.jump_colors) - 1)
             color_name = list(self.jump_colors)[color_number]
             toas = jump.select_toa_mask(alltoas)
             color = self.jump_colors[color_name]
