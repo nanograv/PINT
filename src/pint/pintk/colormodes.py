@@ -299,13 +299,15 @@ class ObsMode(ColorMode):
             obs_name = "MeerKAT"
         else:
             obs_name = obs.upper()
-        obs_text[obs] = f"  {obs_name} = {obs_colors[obs].replace('xkcd:','')}"
+        obs_text[
+            obs
+        ] = f"  {obs_colors[obs].replace('xkcd:','').capitalize()} = {obs_name}"
 
     def displayInfo(self):
         outstr = '"Observatory" mode selected\n'
         for obs in self.get_obs_mapping().values():
             outstr += self.obs_text[obs].replace("xkcd", "") + "\n"
-        outstr += f"  selected = {self.selected_color}\n"
+        outstr += f"  {self.selected_color.capitalize()} = selected\n"
         print(outstr)
 
     def plotColorMode(self):
@@ -373,13 +375,16 @@ class JumpMode(ColorMode):
             # only use the number of colors - 1 to preserve orange for selected
             color_number = jumpnum % (len(self.jump_colors) - 1)
             color_name = self.jump_colors[color_number]
+            outstr += f"  {color_name.replace('xkcd:','').capitalize()} = "
             outstr += f"{jump.name}"
             if jump.key is not None:
                 outstr += f" {jump.key}"
             if jump.key_value is not None:
                 outstr += " " + " ".join(jump.key_value)
-            outstr += f" = {color_name.replace('xkcd:','')}\n"
-        outstr += f"  selected = {self.selected_color}\n"
+            outstr += "\n"
+        outstr += (
+            f"  {self.selected_color.replace('xkcd:','').capitalize()} = selected\n"
+        )
         print(outstr)
 
     def plotColorMode(self):
