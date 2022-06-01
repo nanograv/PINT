@@ -2062,7 +2062,9 @@ class TOAs:
                 include_gps, include_bipm
             )
         )
-        corr = np.zeros(self.ntoas) * u.s
+        corrections = np.zeros(self.ntoas) * u.s
+        # values of "-to" flags
+        time_statements = self.get_flag_value("to", 0, float)[0] * u.s
         for obs, grp in self.get_obs_groups():
             site = get_observatory(
                 obs,
@@ -2070,28 +2072,14 @@ class TOAs:
                 include_bipm=include_bipm,
                 bipm_version=bipm_version,
             )
-            # First apply any TIME statements
+            clock_corrections = site.clock_corrections(
+                time.Time(self["mjd"][grp]), limits=limits
+            )
+            corrections[grp] = time_statements[grp] + clock_corrections
             for jj in grp:
-                if "to" in flags[jj]:
-                    # TIME commands are in sec
-                    # SUGGESTION(@paulray): These time correction units should
-                    # be applied in the parser, not here. In the table the time
-                    # correction should have units.
-                    # @aarchiba: flags should store strings only
-                    corr[jj] = float(flags[jj]["to"]) * u.s
-                    self["mjd"][jj] += time.TimeDelta(corr[jj])
-
-            gcorr = site.clock_corrections(time.Time(self["mjd"][grp]), limits=limits)
-            # it would be preferable to do this with array operations but I get `NotImplemented` errors when I do so
-            for jj, cc in zip(grp, gcorr):
-                self["mjd"][jj] += time.TimeDelta(cc)
-
-            corr[grp] += gcorr
-
-            # Now update the flags with the clock correction used
-            for jj in grp:
-                if corr[jj] != 0:
-                    flags[jj]["clkcorr"] = str(corr[jj].to_value(u.s))
+                self["mjd"][jj] += time.TimeDelta(corrections[jj])
+                if corrections[jj] != 0:
+                    flags[jj]["clkcorr"] = str(corrections[jj].to_value(u.s))
         # Update clock correction info
         self.clock_corr_info.update(
             {
