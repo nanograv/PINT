@@ -587,3 +587,15 @@ def test_compare_key_value_list():
 )
 def test_parameter_can_be_pickled(p):
     pickle.dumps(p)
+
+
+def test_add_remove_param():
+    m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
+    t = toa.get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
+    FD4 = p.prefixParameter(parameter_type="float", name="FD4", value=0.0, units=u.s)
+    m.add_param_from_top(FD4, "FD")
+    assert len(m.components["FD"].params) == 4
+    f = fitter.GLSFitter(toas=t, model=m)
+    m.remove_param("FD4")
+    assert len(m.components["FD"].params) == 3
+    f = fitter.GLSFitter(toas=t, model=m)

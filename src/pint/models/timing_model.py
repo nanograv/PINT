@@ -1075,6 +1075,7 @@ class TimingModel:
         else:
             target_component = param_map[param]
             self.components[target_component].remove_param(param)
+        self.setup()
 
     def get_params_mapping(self):
         """Report whick component each parameter name comes from."""
