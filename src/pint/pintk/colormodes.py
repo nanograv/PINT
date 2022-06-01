@@ -284,35 +284,28 @@ class ObsMode(ColorMode):
         "space": "xkcd:light grey",
         "other": "xkcd:yellow",
     }
+    selected_color = "orange"
 
-    obs_text = {
-        "parkes": "  Parkes = red",
-        "gb": "  Green Bank = green",
-        "jodrell": "  Jodrell = cyan",
-        "arecibo": "  Arecibo = blue",
-        "chime": "  CHIME = burnt orange",
-        "gmrt": "  GMRT = brown",
-        "vla": "  VLA = indigo",
-        "effelsberg": "  Effelsberg = purple",
-        "fast": "  FAST = dark blue",
-        "nancay": "  Nancay = light green",
-        "srt": "  SRT = dark green",
-        "wsrt": "  WSRT = light blue",
-        "lofar": "  LOFAR = dark red",
-        "lwa": "  LWA = dark red",
-        "mwa": "  MWA = dark red",
-        "meerkat": "  MeerKAT = magenta",
-        "barycenter": "  barycenter = black",
-        "geocenter": "  geocenter = grey",
-        "space": "  satellite = light grey",
-        "other": "  other = yellow",
-    }
+    obs_text = {}
+    for obs in obs_colors:
+        # try to get all of the capitalization special cases right
+        if obs in ["parkes", "jodrell", "arecibo", "nancay", "effelsberg"]:
+            obs_name = obs.capitalize()
+        elif obs in ["barycenter", "geocenter", "space", "other"]:
+            obs_name = obs
+        elif obs in ["gb"]:
+            obs_name = "Green Bank"
+        elif obs in ["meerkat"]:
+            obs_name = "MeerKAT"
+        else:
+            obs_name = obs.upper()
+        obs_text[obs] = f"  {obs_name} = {obs_colors[obs].replace('xkcd:','')}"
 
     def displayInfo(self):
         outstr = '"Observatory" mode selected\n'
         for obs in self.get_obs_mapping().values():
             outstr += self.obs_text[obs].replace("xkcd", "") + "\n"
-        outstr += "  selected = orange\n"
+        outstr += f"  selected = {self.selected_color}\n"
         print(outstr)
 
     def plotColorMode(self):
@@ -340,10 +333,12 @@ class ObsMode(ColorMode):
                 self.application.xvals[self.application.selected],
                 self.application.yvals[self.application.selected],
                 marker=".",
-                color="orange",
+                color=self.selected_color,
             )
         else:
-            self.application.plotErrorbar(self.application.selected, color="orange")
+            self.application.plotErrorbar(
+                self.application.selected, color=self.selected_color
+            )
 
 
 class JumpMode(ColorMode):
