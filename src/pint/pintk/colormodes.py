@@ -50,7 +50,7 @@ class DefaultMode(ColorMode):
     """
 
     def __init__(self, application):
-        super(DefaultMode, self).__init__(application)
+        super().__init__(application)
         self.mode_name = "default"
 
     def displayInfo(self):
@@ -97,7 +97,7 @@ class FreqMode(ColorMode):
     """
 
     def __init__(self, application):
-        super(FreqMode, self).__init__(application)
+        super().__init__(application)
         self.mode_name = "freq"
 
     def displayInfo(self):
@@ -182,7 +182,7 @@ class NameMode(ColorMode):
     """
 
     def __init__(self, application):
-        super(NameMode, self).__init__(application)
+        super().__init__(application)
         self.mode_name = "name"
 
     def displayInfo(self):
@@ -242,7 +242,7 @@ class ObsMode(ColorMode):
     """
 
     def __init__(self, application):
-        super(ObsMode, self).__init__(application)
+        super().__init__(application)
         self.mode_name = "obs"
 
     def get_obs_mapping(self):
@@ -345,14 +345,23 @@ class JumpMode(ColorMode):
     """Mode to color points according to jump"""
 
     def __init__(self, application):
-        super(JumpMode, self).__init__(application)
+        super().__init__(application)
         self.mode_name = "jump"
 
     def get_jumps(self):
+        """Return the jump objects for the `psr` model or an empty list
+
+        Returns
+        -------
+        list :
+            List of jump objects
+        """
         if self.application.psr.fitted:
             model = self.application.psr.postfit_model
         else:
             model = self.application.psr.prefit_model
+        if not "PhaseJump" in model.components:
+            return []
         return model.get_jump_param_objects()
 
     jump_colors = named_colors
