@@ -1,31 +1,33 @@
 """ Color modes for graphed pintk TOAs. """
 import numpy as np
 import matplotlib
+import matplotlib.colors
 
 import pint.logging
 from loguru import logger as log
 
-named_colors = {
-    "red": "red",
-    "green": "green",  # this is any green bank obs
-    "cyan": "cyan",
-    "blue": "blue",
-    "burnt orange": "#CC6600",  # burnt orange
-    "brown": "#362511",  # brown
-    "indigo": "#4B0082",  # indigo
-    "purple": "#7C11AD",  # purple
-    "dark blue": "#00006B",  # dark blue
-    "light green": "#52E222",  # light green
-    "dark green": "#006D35",  # dark green
-    "light blue": "#0091AE",  # light blue
-    "dark red": "#8C0000",  # dark red
-    "magenta": "#E4008D",  # magenta
-    "black": "black",
-    "grey": "#7E7E7E",  # grey
-    "light grey": "#E2E2E1",  # light grey
-    "yellow-ish": "#FFF133",  # yellow-ish
-    "orange": "#FFA500",
-}
+# subset of other colors to allow users to distinguish between them
+named_colors = [
+    "xkcd:red",
+    "xkcd:green",
+    "xkcd:cyan",
+    "xkcd:blue",
+    "xkcd:burnt orange",
+    "xkcd:brown",
+    "xkcd:indigo",
+    "xkcd:purple",
+    "xkcd:dark blue",
+    "xkcd:light green",
+    "xkcd:dark green",
+    "lxkcd:ight blue",
+    "xkcd:dark red",
+    "xkcd:magenta",
+    "xkcd:black",
+    "xkcd:grey",
+    "xkcd:light grey",
+    "xkcd:yellow",
+    "xkcd:orange",
+]
 
 
 class ColorMode:
@@ -119,15 +121,15 @@ class FreqMode(ColorMode):
         """
 
         colorGroups = [
-            named_colors["dark red"],  # dark red
-            named_colors["red"],  # red
-            named_colors["orange"],  # orange
-            named_colors["yellow-ish"],  # yellow-ish
-            named_colors["green"],  # green
-            named_colors["blue"],  # blue
-            named_colors["indigo"],  # indigo
-            named_colors["black"],  # black
-            named_colors["grey"],  # grey
+            "xkcd:dark red",  # dark red
+            "xkcd:red",  # red
+            "xkcd:orange",  # orange
+            "xkcd:yellow",  # yellow
+            "xkcd:green",  # green
+            "xkcd:blue",  # blue
+            "xkcd:indigo",  # indigo
+            "xkcd:black",  # black
+            "xkcd:grey",  # grey
         ]
         highfreqs = [300.0, 400.0, 500.0, 700.0, 1000.0, 1800.0, 3000.0, 8000.0]
 
@@ -261,26 +263,26 @@ class ObsMode(ColorMode):
         return mapping
 
     obs_colors = {
-        "parkes": named_colors["red"],
-        "gb": named_colors["green"],  # this is any green bank obs
-        "jodrell": named_colors["cyan"],
-        "arecibo": named_colors["blue"],
-        "chime": named_colors["burnt orange"],
-        "gmrt": named_colors["brown"],
-        "vla": named_colors["indigo"],
-        "effelsberg": named_colors["purple"],
-        "fast": named_colors["dark blue"],
-        "nancay": named_colors["light green"],
-        "srt": named_colors["dark green"],
-        "wsrt": named_colors["light blue"],
-        "lofar": named_colors["dark red"],
-        "lwa": named_colors["dark red"],
-        "mwa": named_colors["dark red"],
-        "meerkat": named_colors["magenta"],
-        "barycenter": named_colors["black"],
-        "geocenter": named_colors["grey"],
-        "space": named_colors["light grey"],
-        "other": named_colors["yellow-ish"],
+        "parkes": "xkcd:red",
+        "gb": "xkcd:green",  # this is any green bank obs
+        "jodrell": "xkcd:cyan",
+        "arecibo": "xkcd:blue",
+        "chime": "xkcd:burnt orange",
+        "gmrt": "xkcd:brown",
+        "vla": "xkcd:indigo",
+        "effelsberg": "xkcd:purple",
+        "fast": "xkcd:dark blue",
+        "nancay": "xkcd:light green",
+        "srt": "xkcd:dark green",
+        "wsrt": "xkcd:light blue",
+        "lofar": "xkcd:dark red",
+        "lwa": "xkcd:dark red",
+        "mwa": "xkcd:dark red",
+        "meerkat": "xkcd:magenta",
+        "barycenter": "xkcd:black",
+        "geocenter": "xkcd:grey",
+        "space": "xkcd:light grey",
+        "other": "xkcd:yellow",
     }
 
     obs_text = {
@@ -303,13 +305,13 @@ class ObsMode(ColorMode):
         "barycenter": "  barycenter = black",
         "geocenter": "  geocenter = grey",
         "space": "  satellite = light grey",
-        "other": "  other = yellow-ish",
+        "other": "  other = yellow",
     }
 
     def displayInfo(self):
         outstr = '"Observatory" mode selected\n'
         for obs in self.get_obs_mapping().values():
-            outstr += self.obs_text[obs] + "\n"
+            outstr += self.obs_text[obs].replace("xkcd", "") + "\n"
         outstr += "  selected = orange\n"
         print(outstr)
 
@@ -359,20 +361,20 @@ class JumpMode(ColorMode):
         return model.get_jump_param_objects()
 
     jump_colors = named_colors
-    selected_color = "orange"
+    selected_color = "xkcd:orange"
 
     def displayInfo(self):
         outstr = '"Jump" mode selected\n'
         for jumpnum, jump in enumerate(self.get_jumps()):
             # only use the number of colors - 1 to preserve orange for selected
             color_number = jumpnum % (len(self.jump_colors) - 1)
-            color_name = list(self.jump_colors)[color_number]
+            color_name = self.jump_colors[color_number]
             outstr += f"{jump.name}"
             if jump.key is not None:
                 outstr += f" {jump.key}"
             if jump.key_value is not None:
                 outstr += " " + " ".join(jump.key_value)
-            outstr += f" = {color_name}\n"
+            outstr += f" = {color_name.replace('xkcd:','')}\n"
         outstr += f"  selected = {self.selected_color}\n"
         print(outstr)
 
@@ -381,19 +383,18 @@ class JumpMode(ColorMode):
         alltoas = self.application.psr.all_toas
         for jumpnum, jump in enumerate(self.get_jumps()):
             color_number = jumpnum % (len(self.jump_colors) - 1)
-            color_name = list(self.jump_colors)[color_number]
+            color_name = self.jump_colors[color_number]
             toas = jump.select_toa_mask(alltoas)
-            color = self.jump_colors[color_name]
             # group toa indices by jump
             if self.application.yerrs is None:
                 self.application.plkAxes.scatter(
                     self.application.xvals[toas],
                     self.application.yvals[toas],
                     marker=".",
-                    color=color,
+                    color=color_name,
                 )
             else:
-                self.application.plotErrorbar(toas, color=color)
+                self.application.plotErrorbar(toas, color=color_name)
         # Now handle the selected TOAs
         if self.application.yerrs is None:
             self.application.plkAxes.scatter(
