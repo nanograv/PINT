@@ -2,6 +2,7 @@
 
 import os
 import re
+from pathlib import Path
 from textwrap import dedent
 
 import astropy.units as u
@@ -9,7 +10,7 @@ import numpy as np
 from loguru import logger as log
 
 from pint.pulsar_mjd import Time
-from pint.utils import open_or_use, lines_of
+from pint.utils import lines_of, open_or_use
 
 
 class ClockFileMeta(type):
@@ -505,6 +506,7 @@ class TempoClockFile(ClockFile):
         mjds = []
         clkcorrs = []
         self.comments = []
+        seen_obscodes = set()
 
         def add_comment(s):
             if self.comments:
@@ -551,9 +553,29 @@ class TempoClockFile(ClockFile):
 
                 # Process INCLUDE
                 # Assumes included file is in same dir as this one
-                if l.startswith("INCLUDE"):
-                    # Bleurgh. What do we do with comments?
-                    raise NotImplementedError
+                ls = l.split()
+                if ls and ls[0].upper() == "INCLUDE" and process_includes:
+                    # Find the new file, if possible
+                    if isinstance(filename, str):
+                        fn = Path(filename)
+                    elif isinstance(filename, Path):
+                        fn = filename
+                    else:
+                        raise ValueError(
+                            f"Don't know how to process INCLUDE statement in {filename}"
+                        )
+                    # Construct a TEMPO-format clock file object
+                    ifn = fn.parent / ls[1]
+                    ic = TempoClockFile(ifn, obscode=obscode)
+                    # Splice in that object, handling leading and in-line comments
+                    if self.leading_comment is None:
+                        if ic.leading_comment is not None:
+                            self.leading_comment = ic.leading_comment
+                    else:
+                        self.leading_comment += "\n" + ic.leading_comment
+                    mjds.extend(ic._time.mjds)
+                    clkcorrs.extend(ic._clock)
+                    self.comments.extend(ic.comments)
 
                 # Parse MJD
                 try:
@@ -582,6 +604,13 @@ class TempoClockFile(ClockFile):
                 if (obscode is not None) and (obscode.lower() != csite):
                     continue
                 # FIXME: f flag(?) in l[36]?
+                if csite is not None:
+                    seen_obscodes.add(csite)
+                    if len(seen_obscodes) > 1:
+                        raise ValueError(
+                            f"TEMPO-format file {filename} contains multiple "
+                            f"observatory codes: {seen_obscodes}"
+                        )
 
                 # Need MJD and at least one of the two clkcorrs
                 if mjd is None:

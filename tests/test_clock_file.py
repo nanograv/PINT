@@ -273,6 +273,7 @@ def test_leading_comment_tempo2():
     )
     assert c.leading_comment == "# Initial comments from c"
 
+
 def test_leading_comment_tempo():
     c = ClockFile.read(
         StringIO(
