@@ -273,6 +273,23 @@ def test_leading_comment_tempo2():
     )
     assert c.leading_comment == "# Initial comments from c"
 
+def test_leading_comment_tempo():
+    c = ClockFile.read(
+        StringIO(
+            dedent(
+                """\
+           MJD       EECO-REF    NIST-REF NS      DATE    COMMENTS
+        =========    ========    ======== ==    ========  ========
+        # Initial comments
+         50000.00       0.000       1.000 1    10-Oct-95  And some text
+         50001.00       0.000       1.000 1    11-Oct-95
+        """
+            )
+        ),
+        format="tempo",
+    )
+    assert c.leading_comment == "# Initial comments"
+
 
 def test_merge_comments():
     c1 = ClockFile.read(
