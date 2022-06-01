@@ -400,9 +400,9 @@ class JumpMode(ColorMode):
                 self.application.xvals[self.application.selected],
                 self.application.yvals[self.application.selected],
                 marker=".",
-                color=selected_color,
+                color=self.selected_color,
             )
         else:
             self.application.plotErrorbar(
-                self.application.selected, color=selected_color
+                self.application.selected, color=self.selected_color
             )
