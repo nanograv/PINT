@@ -255,3 +255,84 @@ def test_tempo_round_trip_comments():
     o = StringIO()
     c.write_tempo_clock_file(o, obscode="1")
     assert o.getvalue() == contents
+
+
+def test_leading_comment_tempo2():
+    c = ClockFile.read(
+        StringIO(
+            dedent(
+                """\
+        # FAKE1 FAKE2 3 c header comments
+        # Initial comments from c
+        50000.00000 0.000001000000 And some text
+        50001.00000 0.000002000000
+        """
+            )
+        ),
+        format="tempo2",
+    )
+    assert c.leading_comment == "# Initial comments from c"
+
+
+def test_merge_comments():
+    c1 = ClockFile.read(
+        StringIO(
+            dedent(
+                """\
+        # FAKE1 FAKE2 3 c1 header comments
+        # Initial comments from c1
+        # covering several lines
+        50000.00000 0.000001000000 And some text
+        50001.00000 0.000002000000
+        50002.00000 0.000002000000
+        # A commenty line
+        50003.00000 0.000003000000 same-line text
+        # and a commenty line
+        60000.00000 0.000000000000
+        """
+            )
+        ),
+        format="tempo2",
+    )
+    c2 = ClockFile.read(
+        StringIO(
+            dedent(
+                """\
+        # FAKE2 FAKE3 3 c2 header comments
+        # Initial comments from c2
+        # covering several lines
+        50000.00000 0.000001000000 From c2
+        50001.00000 0.000002000000
+        50002.00000 0.000002000000
+        55000.00000 0.000003000000 The beginning of a jump
+        55000.00000 0.000000000000 The end of a jump
+        60000.00000 0.000000000000
+        """
+            )
+        ),
+        format="tempo2",
+    )
+
+    m = ClockFile.merge([c1, c2])
+    o = StringIO()
+    m.write_tempo2_clock_file(o, hdrline="# FAKE1 FAKE3")
+    contents = dedent(
+        """\
+        # FAKE1 FAKE3
+        # Initial comments from c1
+        # covering several lines
+        # Initial comments from c2
+        # covering several lines
+        50000.00000 0.000002000000 And some text
+        # From c2
+        50001.00000 0.000004000000
+        50002.00000 0.000004000000
+        # A commenty line
+        50003.00000 0.000005000200 same-line text
+        # and a commenty line
+        55000.00000 0.000004500450 The beginning of a jump
+        55000.00000 0.000001500450 The end of a jump
+        60000.00000 0.000000000000
+        """
+    )
+    assert o.getvalue() == contents

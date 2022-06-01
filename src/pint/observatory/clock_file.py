@@ -198,11 +198,39 @@ class ClockFile(metaclass=ClockFileMeta):
             ir = np.searchsorted(times.mjd, e, side="right")
             times = times[il:ir]
             corr = corr[il:ir]
-        return ConstructedClockFile(
+
+        comments = []
+        indices = [0] * len(clocks)
+        for m in times.mjd:
+            com = ""
+            for i, c in enumerate(clocks):
+                while indices[i] < len(c._time) and c._time.mjd[indices[i]] < m:
+                    indices[i] += 1
+                if indices[i] < len(c._time) and c._time.mjd[indices[i]] == m:
+                    if com == "":
+                        com = c.comments[indices[i]]
+                    elif c.comments[indices[i]] != "":
+                        com += "\n# " + c.comments[indices[i]]
+                    # bump up by 1 in case this is a repeated MJD
+                    indices[i] += 1
+            comments.append(com)
+        r = ConstructedClockFile(
             mjd=times.mjd,
             clock=corr,
+            comments=comments,
             filename=f"Merged from {[c.filename for c in clocks]}",
         )
+
+        leading_comment = None
+        for c in clocks:
+            if c.leading_comment is not None:
+                if leading_comment is None:
+                    leading_comment = c.leading_comment
+                else:
+                    leading_comment += "\n" + c.leading_comment
+        r.leading_comment = leading_comment
+
+        return r
 
     def write_tempo_clock_file(self, filename, obscode, extra_comment=None):
         """Write clock corrections as a TEMPO-format clock correction file.
@@ -325,14 +353,21 @@ class ConstructedClockFile(ClockFile):
 
     # No format set because these can't be read
 
-    def __init__(self, mjd, clock, filename=None, **kwargs):
+    def __init__(
+        self, mjd, clock, comments=None, leading_comment=None, filename=None, **kwargs
+    ):
         super().__init__()
         if len(mjd) != len(clock):
             raise ValueError(f"MJDs have {len(mjd)} entries but clock has {len(clock)}")
         self._time = Time(mjd, format="pulsar_mjd", scale="utc")
         self._clock = clock.to(u.us)
         self.filename = "Constructed" if filename is None else filename
-        self.comments = None
+        if comments is None:
+            self.comments = [""] * len(self._time)
+        else:
+            self.comments = comments
+            if len(comments) != len(mjd):
+                raise ValueError("Comments list does not match time array")
         self.leading_comment = None
 
 
@@ -357,32 +392,35 @@ class Tempo2ClockFile(ClockFile):
             clk = []
             self.leading_comment = None
             self.comments = []
-            with open_or_use(filename) as f:
-                hdrline = f.readline()
-                m = self.hdrline_re.match(hdrline)
-                if not m:
-                    raise ValueError(
-                        f"Header line must start with # and contain two time scales: {hdrline!r}"
-                    )
-                self.header = hdrline
-                self.timescale_from = m.group(1)
-                self.timescale_to = m.group(2)
-                self.badness = 1 if m.group(3) is None else int(m.group(3))
-                # Extra stuff on the hdrline <shrug />
-                self.hdrline_extra = "" if m.group(4) is None else m.group(4)
 
-                def add_comment(s):
-                    if self.comments:
-                        if self.comments[-1] is None:
-                            self.comments[-1] = s.rstrip()
-                        else:
-                            self.comments[-1] += "\n" + s.rstrip()
-                    elif self.leading_comment is None:
-                        self.leading_comment = s.rstrip()
+            def add_comment(s):
+                if self.comments:
+                    if self.comments[-1] is None:
+                        self.comments[-1] = s.rstrip()
                     else:
-                        self.leading_comment += "\n" + s.rstrip()
+                        self.comments[-1] += "\n" + s.rstrip()
+                elif self.leading_comment is None:
+                    self.leading_comment = s.rstrip()
+                else:
+                    self.leading_comment += "\n" + s.rstrip()
 
-                for line in f.readlines():
+            with open_or_use(filename) as f:
+                hdrline = None
+                for line in f:
+                    if hdrline is None:
+                        hdrline = line
+                        m = self.hdrline_re.match(hdrline)
+                        if not m:
+                            raise ValueError(
+                                f"Header line must start with # and contain two time scales: {hdrline!r}"
+                            )
+                        self.header = hdrline
+                        self.timescale_from = m.group(1)
+                        self.timescale_to = m.group(2)
+                        self.badness = 1 if m.group(3) is None else int(m.group(3))
+                        # Extra stuff on the hdrline <shrug />
+                        self.hdrline_extra = "" if m.group(4) is None else m.group(4)
+                        continue
                     if line.startswith("#"):
                         add_comment(line)
                         continue
