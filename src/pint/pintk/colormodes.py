@@ -345,10 +345,7 @@ class ObsMode(ColorMode):
 
 
 class JumpMode(ColorMode):
-    """
-    A class to manage the Jump color mode, where TOAs are colored
-    according to their jump.
-    """
+    """Mode to color points according to jump"""
 
     def __init__(self, application):
         super(JumpMode, self).__init__(application)
@@ -376,13 +373,11 @@ class JumpMode(ColorMode):
             if jump.key_value is not None:
                 outstr += " " + " ".join(jump.key_value)
             outstr += f" = {color_name}\n"
-        outstr += f"  selected = {selected_color}\n"
+        outstr += f"  selected = {self.selected_color}\n"
         print(outstr)
 
     def plotColorMode(self):
-        """
-        Plots application's residuals in proper color scheme.
-        """
+        """Plot the points with the desired coloring"""
         alltoas = self.application.psr.all_toas
         for jumpnum, jump in enumerate(self.get_jumps()):
             color_number = jumpnum % (len(self.jump_colors) - 1)
