@@ -406,11 +406,11 @@ def grid_chisq_derived(
     with ``max_workers`` equal to the desired number of cpus.
     However, if you are running this as a script you may need something like::
 
-    import multiprocessing
-    if __name__ == "__main__":
-        multiprocessing.freeze_support()
-        ...
-        grid_chisq_derived(...)
+        import multiprocessing
+        if __name__ == "__main__":
+            multiprocessing.freeze_support()
+            ...
+            grid_chisq_derived(...)
 
     If an instantiated :class:`~concurrent.futures.Executor` is passed instead, it will be used as-is.
 
@@ -789,11 +789,11 @@ def tuple_chisq_derived(
     with ``max_workers`` equal to the desired number of cpus.
     However, if you are running this as a script you may need something like::
 
-    import multiprocessing
-    if __name__ == "__main__":
-        multiprocessing.freeze_support()
-        ...
-        tuple_chisq_derived(...)
+        import multiprocessing
+        if __name__ == "__main__":
+            multiprocessing.freeze_support()
+            ...
+            tuple_chisq_derived(...)
 
     If an instantiated :class:`~concurrent.futures.Executor` is passed instead, it will be used as-is.
 

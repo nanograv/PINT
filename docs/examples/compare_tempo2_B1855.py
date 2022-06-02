@@ -1,6 +1,10 @@
 """Various tests to assess the performance of the B1855+09."""
 import pint.models.model_builder as mb
 import pint.toa as toa
+import pint.logging
+
+# setup logging
+pint.logging.setup(level="INFO")
 
 # import matplotlib
 # matplotlib.use('TKAgg')

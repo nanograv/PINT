@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.0
+#       jupytext_version: 1.13.8
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -34,6 +34,10 @@ import pint.fitter
 from pint.models import get_model
 import pint.derived_quantities
 import pint.simulation
+import pint.logging
+
+# setup the logging
+pint.logging.setup(level="INFO")
 
 
 # %% [markdown]

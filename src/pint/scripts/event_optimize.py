@@ -13,14 +13,8 @@ from scipy.stats import norm, uniform
 import pint.logging
 from loguru import logger as log
 
-log.remove()
-log.add(
-    sys.stderr,
-    level="WARNING",
-    colorize=True,
-    format=pint.logging.format,
-    filter=pint.logging.LogFilter(),
-)
+pint.logging.setup(level=pint.logging.script_level)
+
 import pint.fermi_toas as fermi
 import pint.models
 import pint.plot_utils as plot_utils
