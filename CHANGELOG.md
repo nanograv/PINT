@@ -4,12 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.8.8] 2022-05-26
 ### Added
 - Warning when A1DOT parameter used with DDK model
+- Added the limits="warn" or limits="error" to get_TOAs to select handling of uncorrected TOAs
+- Added functions in pint.observatory to request the status of PINT's available clock corrections
+- Added the ability to query clock correction files or observatories for their last corrected MJD
+- Added an example showing how to check the status of your clock corrections
 ### Fixed
 - WLS fitters no longer ignore EFAC/EQUAD (bug #1226)
 ### Changed
+- Clock correction files that are entirely missing are handled the same way as TOAs past the end of a clock correction file
+- Observatory objects can now note that their clock correction files include a bogus "99999" (or similar) entry at the end
+- Clock correction files are now checked for being in order (necessary for PINT's interpolation to function)
+- Observatories using TEMPO-format clock files now refer to the clock file (for example time_ao.dat) rather than via time.dat
+- Observatories that don't use clock corrections (for example CHIME uses GPS time directly) just use an empty list of clock correction files rather than files containing only zeros
+- Updated Jodrell clock corrections to include post-1997
+- DDK model will now use ICRS or ECL coordinates depending on what the input model is
 
 ## [0.8.6 == 0.8.7] 2022-05-10
 ### Added

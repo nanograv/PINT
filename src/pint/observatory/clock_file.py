@@ -17,8 +17,10 @@ from pint.pulsar_mjd import Time
 
 class ClockFileMeta(type):
     """Metaclass that provides a registry for different clock file formats.
+
     ClockFile implementations should define a 'format' class member giving
-    the name of the format."""
+    the name of the format.
+    """
 
     def __init__(cls, name, bases, members):
         regname = "_formats"
@@ -30,7 +32,9 @@ class ClockFileMeta(type):
 
 
 class ClockFile(object, metaclass=ClockFileMeta):
-    """The ClockFile class provides a way to read various formats of clock
+    """A clock correction file in one of several formats.
+
+    The ClockFile class provides a way to read various formats of clock
     files.  It will provide the clock information from the file as arrays
     of times and clock correction values via the ClockFile.time and
     ClockFile.clock properties.  The file should be initially read using the
@@ -57,7 +61,12 @@ class ClockFile(object, metaclass=ClockFileMeta):
     @classmethod
     def read(cls, filename, format="tempo", **kwargs):
         if format in cls._formats.keys():
-            return cls._formats[format](filename, **kwargs)
+            r = cls._formats[format](filename, **kwargs)
+            if not np.all(np.diff(r.time.mjd) >= 0):
+                raise ValueError(
+                    f"Clock file {filename} in format {format} appears to be out of order"
+                )
+            return r
         else:
             raise ValueError("clock file format '%s' not defined" % format)
 
@@ -70,15 +79,40 @@ class ClockFile(object, metaclass=ClockFileMeta):
         return self._clock
 
     def evaluate(self, t, limits="warn"):
-        """Evaluate the clock corrections at the times t (given as an
-        array-valued Time object).  By default, values are linearly
+        """Evaluate the clock corrections at the times t.
+
+        By default, values are linearly
         interpolated but this could be overridden by derived classes
         if needed.  The first/last values will be applied to times outside
         the data range.  If limits=='warn' this will also issue a warning.
-        If limits=='error' an exception will be raised."""
+        If limits=='error' an exception will be raised.
+
+        Parameters
+        ----------
+        t : astropy.time.Time
+            An array-valued Time object specifying the times at which to evaluate the
+            clock correction.
+        limits : "warn" or "error"
+            If "error", raise an exception if times outside the range in the clock
+            file are presented (or if the clock file is empty); if "warn", extrapolate
+            by returning the value at the nearest endpoint but emit a warning.
+
+        Returns
+        -------
+        corrections : astropy.units.Quantity
+            The corrections in units of microseconds.
+        """
+
+        if len(self.time) == 0:
+            msg = f"No data points in clock file '{self.filename}'"
+            if limits == "warn":
+                log.warning(msg)
+                return np.zeros_like(t) * u.us
+            elif limits == "error":
+                raise RuntimeError(msg)
 
         if np.any(t < self.time[0]) or np.any(t > self.time[-1]):
-            msg = "Data points out of range in clock file '%s'" % self.filename
+            msg = f"Data points out of range in clock file '{self.filename}'"
             if limits == "warn":
                 log.warning(msg)
             elif limits == "error":
@@ -87,43 +121,53 @@ class ClockFile(object, metaclass=ClockFileMeta):
         # Can't pass Times directly to np.interp.  This should be OK:
         return np.interp(t.mjd, self.time.mjd, self.clock.to(u.us).value) * u.us
 
+    def last_correction_mjd(self):
+        if len(self.time) == 0:
+            return -np.inf
+        else:
+            return self.time[-1].mjd
+
 
 class Tempo2ClockFile(ClockFile):
 
     format = "tempo2"
 
-    def __init__(self, filename, **kwargs):
+    def __init__(self, filename, bogus_last_correction=False, **kwargs):
         self.filename = filename
-        log.debug(
-            "Loading {0} observatory clock correction file {1}".format(
-                self.format, filename
-            )
-        )
-        mjd, clk, self.header = self.load_tempo2_clock_file(filename)
-        # NOTE Clock correction file has a time far in the future as ending point
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", ErfaWarning)
-            self._time = Time(mjd, format="pulsar_mjd", scale="utc")
+        log.debug(f"Loading {self.format} observatory clock correction file {filename}")
+        try:
+            mjd, clk, self.header = self.load_tempo2_clock_file(filename)
+        except (FileNotFoundError, OSError):
+            log.error(f"TEMPO2-style clock correction file {filename} not found")
+            mjd = np.array([], dtype=float)
+            clk = np.array([], dtype=float)
+            self.header = None
+        if bogus_last_correction and len(mjd):
+            mjd = mjd[:-1]
+            clk = clk[:-1]
+        while len(mjd) and mjd[0] == 0:
+            # Zap leading zeros
+            mjd = mjd[1:]
+            clk = clk[1:]
+        self._time = Time(mjd, format="pulsar_mjd", scale="utc")
         self._clock = clk * u.s
 
     @staticmethod
     def load_tempo2_clock_file(filename):
-        """Reads a tempo2-format clock file.  Returns three values:
+        """Read a tempo2-format clock file.
+
+        Returns three values:
         (mjd, clk, hdrline).  The first two are float arrays of MJD and
         clock corrections (seconds).  hdrline is the first line of the file
-        that specifies the two clock scales connected by the file."""
+        that specifies the two clock scales connected by the file.
+        """
         f = open(filename, "r")
         hdrline = f.readline().rstrip()
         try:
             mjd, clk = np.loadtxt(f, usecols=(0, 1), unpack=True)
-        except:
+        except (FileNotFoundError, ValueError):
             log.error("Failed loading clock file {0}".format(f))
             raise
-        if not np.all(mjd[:-1] <= mjd[1:]):
-            log.error(
-                "Clock file {} is invalid. MJDs must be in order!".format(filename)
-            )
-            raise RuntimeError
         return mjd, clk, hdrline
 
 
@@ -131,31 +175,35 @@ class TempoClockFile(ClockFile):
 
     format = "tempo"
 
-    def __init__(self, filename, obscode=None, **kwargs):
+    def __init__(self, filename, obscode=None, bogus_last_correction=False, **kwargs):
         self.filename = filename
         self.obscode = obscode
         log.debug(
-            "Loading {0} observatory ({1}) clock correction file {2}".format(
-                self.format, obscode, filename
-            )
+            f"Loading {self.format} observatory ({obscode}) clock correction file {filename}"
         )
-        mjd, clk = self.load_tempo1_clock_file(filename, site=obscode)
-        # NOTE Clock correction file has a time far in the future as ending point
-        # We are swithing off astropy warning only for gps correction.
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", ErfaWarning)
-            try:
-                self._time = Time(mjd, format="pulsar_mjd", scale="utc")
-            except ValueError:
-                log.error(
-                    "Filename {0}, site {1}: Bad MJD {2}".format(filename, obscode, mjd)
-                )
-                raise
+        try:
+            mjd, clk = self.load_tempo1_clock_file(filename, site=obscode)
+        except (FileNotFoundError, OSError):
+            log.error(
+                f"TEMPO-style clock correction file {filename} for site {obscode} not found"
+            )
+            mjd = np.array([], dtype=float)
+            clk = np.array([], dtype=float)
+        if bogus_last_correction and len(mjd):
+            mjd = mjd[:-1]
+            clk = clk[:-1]
+        while len(mjd) and mjd[0] == 0:
+            # Zap leading zeros
+            mjd = mjd[1:]
+            clk = clk[1:]
+        # FIXME: using Time may make loading clock corrections slow
+        self._time = Time(mjd, format="pulsar_mjd", scale="utc")
         self._clock = clk * u.us
 
     @staticmethod
     def load_tempo1_clock_file(filename, site=None):
-        """
+        """Load a TEMPO format clock file for a site
+
         Given the specified full path to the tempo1-format clock file,
         will return two numpy arrays containing the MJDs and the clock
         corrections (us).  All computations here are done as in tempo, with
@@ -165,8 +213,10 @@ class TempoClockFile(ClockFile):
         INCLUDE statments are processed.
 
         If the 'site' argument is set to an appropriate one-character tempo
-        site code, only values for that site will be returned, otherwise all
-        values found in the file will be returned.
+        site code, only values for that site will be returned. If the 'site'
+        argument is None, the file is assumed to contain only clock corrections
+        for the desired telescope, so all values found in the file will be returned
+        but INCLUDEs will *not* be processed.
         """
         # TODO we might want to handle 'f' flags by inserting addtional
         # entries so that interpolation routines will give the right result.
@@ -180,13 +230,14 @@ class TempoClockFile(ClockFile):
             # Process INCLUDE
             # Assumes included file is in same dir as this one
             if l.startswith("INCLUDE"):
-                clkdir = os.path.dirname(os.path.abspath(filename))
-                filename1 = os.path.join(clkdir, l.split()[1])
-                mjds1, clkcorrs1 = TempoClockFile.load_tempo1_clock_file(
-                    filename1, site=site
-                )
-                mjds.extend(mjds1)
-                clkcorrs.extend(clkcorrs1)
+                if site is not None:
+                    clkdir = os.path.dirname(os.path.abspath(filename))
+                    filename1 = os.path.join(clkdir, l.split()[1])
+                    mjds1, clkcorrs1 = TempoClockFile.load_tempo1_clock_file(
+                        filename1, site=site
+                    )
+                    mjds.extend(mjds1)
+                    clkcorrs.extend(clkcorrs1)
                 continue
 
             # Parse MJD

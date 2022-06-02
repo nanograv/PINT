@@ -6,6 +6,8 @@ import numpy as np
 import pytest
 from pint.pulsar_mjd import Time
 
+import pint.observatory
+import pint.observatory.observatories
 from pint.observatory import get_observatory
 from pint.observatory.topo_obs import TopoObs
 from pinttestdata import datadir
@@ -116,7 +118,7 @@ class TestObservatory(unittest.TestCase):
             "Fake1", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
         )
         with pytest.raises(RuntimeError):
-            site.clock_corrections(self.test_time)
+            site.clock_corrections(self.test_time, limits="error")
 
     def test_no_tempo_but_tempo_clock_requested(self):
         if os.getenv("TEMPO") is not None:
@@ -136,7 +138,7 @@ class TestObservatory(unittest.TestCase):
             "Fake1", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
         )
         with pytest.raises(RuntimeError):
-            site.clock_corrections(self.test_time)
+            site.clock_corrections(self.test_time, limits="error")
 
     def test_wrong_TDB_method(self):
         site = get_observatory(
@@ -148,3 +150,70 @@ class TestObservatory(unittest.TestCase):
             site.get_TDBs(self.test_time, method="Unknown_method")
         with self.assertRaises(ValueError):
             site.get_TDBs(self.test_time, method="ephemeris", ephem="de436")
+
+
+@pytest.mark.parametrize(
+    "observatory", list(pint.observatory.Observatory._registry.keys())
+)
+def test_can_try_to_compute_corrections(observatory):
+    # Many of these should emit warnings
+    get_observatory(observatory).clock_corrections(Time(57600, format="mjd"))
+
+
+# Some of these now require TEMPO2 clock files
+# good_observatories = ["gbt", "ao", "vla", "jodrell", "wsrt", "parkes"]
+good_observatories = ["gbt", "ao", "vla", "jodrell"]
+
+
+@pytest.mark.parametrize("observatory", good_observatories)
+def test_can_compute_corrections(observatory):
+    get_observatory(observatory).clock_corrections(
+        Time(55600, format="mjd"), limits="error"
+    )
+
+
+@pytest.mark.parametrize("observatory", good_observatories)
+def test_last_mjd(observatory):
+    assert get_observatory(observatory).last_clock_correction_mjd() > 55600
+
+
+def test_missing_clock_gives_exception_nonexistent():
+    o = TopoObs(
+        "arecibo_bogus",
+        clock_file="nonexistent.dat",
+        itoa_code="W",
+        itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
+        overwrite=True,
+    )
+
+    with pytest.raises(RuntimeError):
+        o.clock_corrections(Time(57600, format="mjd"), limits="error")
+
+
+def test_missing_clock_gives_exception_no_data():
+    o = TopoObs(
+        "arecibo_bogus",
+        itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
+        overwrite=True,
+    )
+
+    with pytest.raises(RuntimeError):
+        o.clock_corrections(Time(57600, format="mjd"), limits="error")
+
+
+def test_missing_clock_runs():
+    o = TopoObs(
+        "arecibo_bogus",
+        clock_file="nonexistent.dat",
+        itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
+        overwrite=True,
+    )
+    o.clock_corrections(Time(57600, format="mjd"))
+
+
+def test_observatories_registered():
+    assert len(pint.observatory.Observatory._registry) > 5
+
+
+def test_gbt_registered():
+    get_observatory("gbt")
