@@ -5,7 +5,7 @@ To use this do::
     import pint.logging
     pint.logging.setup()
 
-You can optionally pass the desired logging level to the :func:`pint.logging.setup` function, formats, custom filters, colors, etc.  
+You can optionally pass the desired logging level to the :func:`~pint.logging.setup` function, formats, custom filters, colors, etc.  
 See documentation for :func:`pint.logging.setup`.
 
 `level` can be any of the existing ``loguru`` levels: ``TRACE``, ``DEBUG``, ``INFO``, ``WARNING``, ``ERROR``, or you can define new ones.
@@ -18,17 +18,9 @@ while the default for this module is::
 
     format = "<level>{level: <8}</level> ({name: <30}): <level>{message}</level>"
 
+If you want to use command-line arguments in a script to set the level you can do that like::
 
-If you want to use command-line arguments to set the level you can do that like:
-
-    parser.add_argument(
-        "--log-level",
-        type=str,
-        choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
-        default=pint.logging.script_level,
-        help="Logging level",
-        dest="loglevel",
-    )
+    parser.add_argument("--log-level",type=str,choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),default=pint.logging.script_level,help="Logging level",dest="loglevel")
     args = parser.parse_args(argv)
     pint.logging.setup(level=args.loglevel)
 
