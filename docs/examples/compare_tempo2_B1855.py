@@ -2,6 +2,7 @@
 import pint.models.model_builder as mb
 import pint.toa as toa
 import pint.logging
+
 # setup logging
 pint.logging.setup(level="INFO")
 

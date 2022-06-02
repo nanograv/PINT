@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import astropy.units as u
 from scipy.stats import norm, uniform
 import pint.logging
+
 # setup logging
 pint.logging.setup(level="INFO")
 
