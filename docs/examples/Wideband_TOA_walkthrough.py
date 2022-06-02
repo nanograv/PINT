@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.0
+#       jupytext_version: 1.13.8
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -29,6 +29,10 @@ from pint.fitter import WidebandTOAFitter
 from pint.models import get_model_and_toas
 from pint.toa import get_TOAs
 import pint.config
+import pint.logging
+
+# setup logging
+pint.logging.setup(level="INFO")
 
 quantity_support()
 

@@ -7,6 +7,9 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## Unreleased
 ### Changed
 - model.phase() now defaults to abs_phase=True when TZR* params are in the model
+### Added
+- logging now needs to be setup explicitly
+### Fixed
 
 ## [0.8.8] 2022-05-26
 ### Added

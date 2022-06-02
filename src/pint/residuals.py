@@ -219,8 +219,8 @@ class Residuals:
         This returns the uncertainties on the time residuals, optionally scaled
         by the noise model.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         scaled: bool, optional
             If errors get scaled by the noise model.
         """
@@ -381,7 +381,7 @@ class Residuals:
 
         See Also
         --------
-        :meth:`pint.residuals.get_PSR_freq`
+        :meth:`pint.residuals.Residuals.get_PSR_freq`
         """
         assert calctype.lower() in ["modelf0", "taylor", "numerical"]
         if self.phase_resids is None:
@@ -590,8 +590,8 @@ class WidebandDMResiduals(Residuals):
     def get_data_error(self, scaled=True):
         """Get data errors.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         scaled: bool, optional
             If errors get scaled by the noise model.
         """
@@ -778,8 +778,8 @@ class WidebandTOAResiduals(CombinedResiduals):
 
     This class inherits the ``.chi2`` property from :class:`pint.residuals.CombinedResiduals`.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     toas: :class:`pint.toa.TOAs`, optional
         The input TOAs object. Default: None
     model: :class:`pint.models.timing_model.TimingModel`, optional
