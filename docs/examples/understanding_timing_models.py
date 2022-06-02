@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.0
+#       jupytext_version: 1.13.8
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -23,6 +23,10 @@
 from pint.models import get_model
 from pint.models.timing_model import Component
 import pint.config
+import pint.logging
+
+# setup logging
+pint.logging.setup(level="INFO")
 
 # %% [markdown]
 # One can build a timing model via `get_model()` method. This will read the par file and instantiate all the delay and phase components, using the default ordering.

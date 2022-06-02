@@ -1,6 +1,9 @@
 """Various tests to assess the performance of the J0623-0200."""
 import pint.models.model_builder as mb
 import pint.toa as toa
+import pint.logging
+# setup logging
+pint.logging.setup(level="INFO")
 
 # import matplotlib
 # matplotlib.use('TKAgg')

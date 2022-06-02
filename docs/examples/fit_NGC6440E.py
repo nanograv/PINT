@@ -8,7 +8,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.0
+#       jupytext_version: 1.13.8
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -38,6 +38,10 @@ import pint.fitter
 import pint.residuals
 import pint.toa
 from pint.models import get_model, get_model_and_toas
+import pint.logging
+
+# setup logging
+pint.logging.setup(level="INFO")
 
 # %%
 import pint.config

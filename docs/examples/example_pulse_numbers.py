@@ -10,6 +10,9 @@ import matplotlib.pyplot as plt
 from astropy.visualization import quantity_support
 from astropy import log
 import pint.config
+import pint.logging
+# setup logging
+pint.logging.setup(level="INFO")
 
 quantity_support()
 
