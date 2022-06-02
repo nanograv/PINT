@@ -5,20 +5,8 @@ To use this do::
     import pint.logging
     pint.logging.setup()
 
-You can optionally pass the desired logging level to the :func:`pint.logging.setup` function, formats, custom filters, colors, etc.  See documentation for :func:`pint.logging.setup`.
-
-If you want to customize even more of this yourself (e.g., in a script) the minimal pieces would be:
-
-    from loguru import logger as log
-
-If you want to include custom filtering and other elements:
-
-    from loguru import logger as log
-    import pint.logging
-    import sys
-    logfilter = pint.logging.LogFilter()
-    log.remove()
-    log.add(sys.stderr, level=level, filter=logfilter, format=pint.logging.format, colorize=True)
+You can optionally pass the desired logging level to the :func:`pint.logging.setup` function, formats, custom filters, colors, etc.  
+See documentation for :func:`pint.logging.setup`.
 
 `level` can be any of the existing ``loguru`` levels: ``TRACE``, ``DEBUG``, ``INFO``, ``WARNING``, ``ERROR``, or you can define new ones.
 
@@ -42,15 +30,7 @@ If you want to use command-line arguments to set the level you can do that like:
         dest="loglevel",
     )
     args = parser.parse_args(argv)
-    log.remove()
-    log.add(
-        sys.stderr,
-        level=args.loglevel,
-        colorize=True,
-        format=pint.logging.format,
-        filter=pint.logging.LogFilter(),
-    )
-
+    pint.logging.setup(level=args.loglevel)
 
 Note that ``loguru`` does not allow you to change the properties of an existing logger.
 Instead it's better to remove it and make another (e.g., if you want to change the level).
