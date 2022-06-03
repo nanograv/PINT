@@ -87,17 +87,19 @@ class TestTOAs(unittest.TestCase):
 
         toas = TOAs(toalist=[t1, t2, t3])
 
-        assert toas.table["obs"][0] == site1.name
-        assert toas.table["mjd"][0] == t1.mjd
-        assert toas.table["obs"][1] == site2.name
-        assert toas.table["mjd"][1] == t2.mjd
-        assert toas.table["obs"][2] == site3.name
-        assert toas.table["mjd"][2] == t3.mjd
+        # Table will be grouped by observatories, and will be sorted by the
+        # observatory so the TOA order will be different
+        assert toas.table["obs"][0] == site2.name
+        assert toas.table["mjd"][0] == t2.mjd
+        assert toas.table["obs"][1] == site3.name
+        assert toas.table["mjd"][1] == t3.mjd
+        assert toas.table["obs"][2] == site1.name
+        assert toas.table["mjd"][2] == t1.mjd
 
         # obs in time object
-        assert toas.table["mjd"][0].location == site1.earth_location_itrf()
-        assert toas.table["mjd"][1].location == site2.earth_location_itrf()
-        assert toas.table["mjd"][2].location == site3.earth_location_itrf()
+        assert toas.table["mjd"][0].location == site2.earth_location_itrf()
+        assert toas.table["mjd"][1].location == site3.earth_location_itrf()
+        assert toas.table["mjd"][2].location == site1.earth_location_itrf()
 
 
 def test_toa_summary():
