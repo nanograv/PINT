@@ -432,6 +432,14 @@ class PlkColorModeBoxes(tk.Frame):
                 # default mode should be selected at start-up
                 self.checkboxes[index].select()
 
+            if mode.mode_name == "jump":
+                if self.master.psr.fitted:
+                    model = self.master.psr.postfit_model
+                else:
+                    model = self.master.psr.prefit_model
+                if not "PhaseJump" in model.components:
+                    self.checkboxes[index].configure(state="disabled")
+
         self.updateLayout()
 
     def setCallbacks(self, boxChecked):
@@ -675,6 +683,7 @@ class PlkWidget(tk.Frame):
             cm.FreqMode(self),
             cm.ObsMode(self),
             cm.NameMode(self),
+            cm.JumpMode(self),
         ]
         self.current_mode = "default"
 

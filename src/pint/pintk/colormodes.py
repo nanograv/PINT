@@ -1,9 +1,33 @@
 """ Color modes for graphed pintk TOAs. """
 import numpy as np
 import matplotlib
+import matplotlib.colors
 
 import pint.logging
 from loguru import logger as log
+
+# subset of other colors to allow users to distinguish between them
+named_colors = [
+    "xkcd:red",
+    "xkcd:green",
+    "xkcd:cyan",
+    "xkcd:blue",
+    "xkcd:burnt orange",
+    "xkcd:brown",
+    "xkcd:indigo",
+    "xkcd:purple",
+    "xkcd:dark blue",
+    "xkcd:light green",
+    "xkcd:dark green",
+    "lxkcd:ight blue",
+    "xkcd:dark red",
+    "xkcd:magenta",
+    "xkcd:black",
+    "xkcd:grey",
+    "xkcd:light grey",
+    "xkcd:yellow",
+    "xkcd:orange",
+]
 
 
 class ColorMode:
@@ -26,7 +50,7 @@ class DefaultMode(ColorMode):
     """
 
     def __init__(self, application):
-        super(DefaultMode, self).__init__(application)
+        super().__init__(application)
         self.mode_name = "default"
 
     def displayInfo(self):
@@ -73,7 +97,7 @@ class FreqMode(ColorMode):
     """
 
     def __init__(self, application):
-        super(FreqMode, self).__init__(application)
+        super().__init__(application)
         self.mode_name = "freq"
 
     def displayInfo(self):
@@ -97,15 +121,15 @@ class FreqMode(ColorMode):
         """
 
         colorGroups = [
-            "#8C0000",  # dark red
-            "#FF0000",  # red
-            "#FFA500",  # orange
-            "#FFF133",  # yellow-ish
-            "#008000",  # green
-            "#0000FF",  # blue
-            "#4B0082",  # indigo
-            "#000000",  # black
-            "#7E7E7E",  # grey
+            "xkcd:dark red",  # dark red
+            "xkcd:red",  # red
+            "xkcd:orange",  # orange
+            "xkcd:yellow",  # yellow
+            "xkcd:green",  # green
+            "xkcd:blue",  # blue
+            "xkcd:indigo",  # indigo
+            "xkcd:black",  # black
+            "xkcd:grey",  # grey
         ]
         highfreqs = [300.0, 400.0, 500.0, 700.0, 1000.0, 1800.0, 3000.0, 8000.0]
 
@@ -158,7 +182,7 @@ class NameMode(ColorMode):
     """
 
     def __init__(self, application):
-        super(NameMode, self).__init__(application)
+        super().__init__(application)
         self.mode_name = "name"
 
     def displayInfo(self):
@@ -218,7 +242,7 @@ class ObsMode(ColorMode):
     """
 
     def __init__(self, application):
-        super(ObsMode, self).__init__(application)
+        super().__init__(application)
         self.mode_name = "obs"
 
     def get_obs_mapping(self):
@@ -239,56 +263,51 @@ class ObsMode(ColorMode):
         return mapping
 
     obs_colors = {
-        "parkes": "red",
-        "gb": "green",  # this is any green bank obs
-        "jodrell": "cyan",
-        "arecibo": "blue",
-        "chime": "#CC6600",  # burnt orange
-        "gmrt": "#362511",  # brown
-        "vla": "#4B0082",  # indigo
-        "effelsberg": "#7C11AD",  # purple
-        "fast": "#00006B",  # dark blue
-        "nancay": "#52E222",  # light green
-        "srt": "#006D35",  # dark green
-        "wsrt": "#0091AE",  # light blue
-        "lofar": "#8C0000",  # dark red
-        "lwa": "#8C0000",  # dark red
-        "mwa": "#8C0000",  # dark red
-        "meerkat": "#E4008D",  # magenta
-        "barycenter": "black",
-        "geocenter": "#7E7E7E",  # grey
-        "space": "#E2E2E1",  # light grey
-        "other": "#FFF133",  # yellow-ish
+        "parkes": "xkcd:red",
+        "gb": "xkcd:green",  # this is any green bank obs
+        "jodrell": "xkcd:cyan",
+        "arecibo": "xkcd:blue",
+        "chime": "xkcd:burnt orange",
+        "gmrt": "xkcd:brown",
+        "vla": "xkcd:indigo",
+        "effelsberg": "xkcd:purple",
+        "fast": "xkcd:dark blue",
+        "nancay": "xkcd:light green",
+        "srt": "xkcd:dark green",
+        "wsrt": "xkcd:light blue",
+        "lofar": "xkcd:dark red",
+        "lwa": "xkcd:dark red",
+        "mwa": "xkcd:dark red",
+        "meerkat": "xkcd:magenta",
+        "barycenter": "xkcd:black",
+        "geocenter": "xkcd:grey",
+        "space": "xkcd:light grey",
+        "other": "xkcd:yellow",
     }
+    selected_color = "orange"
 
-    obs_text = {
-        "parkes": "  Parkes = red",
-        "gb": "  Green Bank = green",
-        "jodrell": "  Jodrell = cyan",
-        "arecibo": "  Arecibo = blue",
-        "chime": "  CHIME = burnt orange",
-        "gmrt": "  GMRT = brown",
-        "vla": "  VLA = indigo",
-        "effelsberg": "  Effelsberg = purple",
-        "fast": "  FAST = dark blue",
-        "nancay": "  Nancay = light green",
-        "srt": "  SRT = dark green",
-        "wsrt": "  WSRT = light blue",
-        "lofar": "  LOFAR = dark red",
-        "lwa": "  LWA = dark red",
-        "mwa": "  MWA = dark red",
-        "meerkat": "  MeerKAT = magenta",
-        "barycenter": "  barycenter = black",
-        "geocenter": "  geocenter = grey",
-        "space": "  satellite = light grey",
-        "other": "  other = yellow-ish",
-    }
+    obs_text = {}
+    for obs in obs_colors:
+        # try to get all of the capitalization special cases right
+        if obs in ["parkes", "jodrell", "arecibo", "nancay", "effelsberg"]:
+            obs_name = obs.capitalize()
+        elif obs in ["barycenter", "geocenter", "space", "other"]:
+            obs_name = obs
+        elif obs in ["gb"]:
+            obs_name = "Green Bank"
+        elif obs in ["meerkat"]:
+            obs_name = "MeerKAT"
+        else:
+            obs_name = obs.upper()
+        obs_text[
+            obs
+        ] = f"  {obs_colors[obs].replace('xkcd:','').capitalize()} = {obs_name}"
 
     def displayInfo(self):
         outstr = '"Observatory" mode selected\n'
         for obs in self.get_obs_mapping().values():
-            outstr += self.obs_text[obs] + "\n"
-        outstr += "  selected = orange\n"
+            outstr += self.obs_text[obs].replace("xkcd", "") + "\n"
+        outstr += f"  {self.selected_color.capitalize()} = selected\n"
         print(outstr)
 
     def plotColorMode(self):
@@ -316,7 +335,84 @@ class ObsMode(ColorMode):
                 self.application.xvals[self.application.selected],
                 self.application.yvals[self.application.selected],
                 marker=".",
-                color="orange",
+                color=self.selected_color,
             )
         else:
-            self.application.plotErrorbar(self.application.selected, color="orange")
+            self.application.plotErrorbar(
+                self.application.selected, color=self.selected_color
+            )
+
+
+class JumpMode(ColorMode):
+    """Mode to color points according to jump"""
+
+    def __init__(self, application):
+        super().__init__(application)
+        self.mode_name = "jump"
+
+    def get_jumps(self):
+        """Return the jump objects for the `psr` model or an empty list
+
+        Returns
+        -------
+        list :
+            List of jump objects
+        """
+        if self.application.psr.fitted:
+            model = self.application.psr.postfit_model
+        else:
+            model = self.application.psr.prefit_model
+        if not "PhaseJump" in model.components:
+            return []
+        return model.get_jump_param_objects()
+
+    jump_colors = named_colors
+    selected_color = "xkcd:orange"
+
+    def displayInfo(self):
+        outstr = '"Jump" mode selected\n'
+        for jumpnum, jump in enumerate(self.get_jumps()):
+            # only use the number of colors - 1 to preserve orange for selected
+            color_number = jumpnum % (len(self.jump_colors) - 1)
+            color_name = self.jump_colors[color_number]
+            outstr += f"  {color_name.replace('xkcd:','').capitalize()} = "
+            outstr += f"{jump.name}"
+            if jump.key is not None:
+                outstr += f" {jump.key}"
+            if jump.key_value is not None:
+                outstr += " " + " ".join(jump.key_value)
+            outstr += "\n"
+        outstr += (
+            f"  {self.selected_color.replace('xkcd:','').capitalize()} = selected\n"
+        )
+        print(outstr)
+
+    def plotColorMode(self):
+        """Plot the points with the desired coloring"""
+        alltoas = self.application.psr.all_toas
+        for jumpnum, jump in enumerate(self.get_jumps()):
+            color_number = jumpnum % (len(self.jump_colors) - 1)
+            color_name = self.jump_colors[color_number]
+            toas = jump.select_toa_mask(alltoas)
+            # group toa indices by jump
+            if self.application.yerrs is None:
+                self.application.plkAxes.scatter(
+                    self.application.xvals[toas],
+                    self.application.yvals[toas],
+                    marker=".",
+                    color=color_name,
+                )
+            else:
+                self.application.plotErrorbar(toas, color=color_name)
+        # Now handle the selected TOAs
+        if self.application.yerrs is None:
+            self.application.plkAxes.scatter(
+                self.application.xvals[self.application.selected],
+                self.application.yvals[self.application.selected],
+                marker=".",
+                color=self.selected_color,
+            )
+        else:
+            self.application.plotErrorbar(
+                self.application.selected, color=self.selected_color
+            )

@@ -7,6 +7,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## Unreleased
 ### Added
 - logging now needs to be setup explicitly
+- Color-by-jump mode for pintk
 ### Fixed
 ### Changed
 
