@@ -2075,6 +2075,7 @@ class TOAs:
             clock_corrections = site.clock_corrections(
                 time.Time(self["mjd"][grp]), limits=limits
             )
+            # combine the clock corrections with any "-to" statements
             corrections[grp] = time_statements[grp] + clock_corrections
             for jj in grp:
                 self["mjd"][jj] += time.TimeDelta(corrections[jj])
