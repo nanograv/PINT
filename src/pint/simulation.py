@@ -168,7 +168,6 @@ def make_fake_toas(ts, model, add_noise=False, name="fake"):
     for f in tsim.table["flags"]:
         f["name"] = name
 
-    tsim.table = tsim.table.group_by("obs")
     return tsim
 
 
