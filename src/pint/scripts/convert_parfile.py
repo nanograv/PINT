@@ -5,14 +5,7 @@ import sys
 import pint.logging
 from loguru import logger as log
 
-log.remove()
-log.add(
-    sys.stderr,
-    level="WARNING",
-    colorize=True,
-    format=pint.logging.format,
-    filter=pint.logging.LogFilter(),
-)
+pint.logging.setup(level=pint.logging.script_level)
 
 from pint.models import get_model
 from pint.models.parameter import _parfile_formats

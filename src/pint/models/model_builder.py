@@ -37,13 +37,13 @@ class ComponentConflict(ValueError):
 def parse_parfile(parfile):
     """Function for parsing .par file or .par style StringIO.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     parfile: str or file-like object
         Input .par file name or string contents.
 
-    Return
-    ------
+    Returns
+    -------
     dict:
         Parameter and its associated lines. The key is the parameter name and
         the value is a list of the lines associated to the parameter name.
@@ -77,8 +77,8 @@ class ModelBuilder:
     def __call__(self, parfile, allow_name_mixing=False):
         """Callable object for making a timing model from .par file.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         parfile: str or file-like object
             Input .par file name or string contents
 
@@ -88,8 +88,8 @@ class ModelBuilder:
             T2EFAC and EFAC, both of them maps to PINT parameter EFAC, present
             in the parfile at the same time.
 
-        Return
-        ------
+        Returns
+        -------
         pint.models.timing_model.TimingModel
             The result timing model based on the input .parfile or file object.
         """
@@ -147,6 +147,7 @@ class ModelBuilder:
         ----------
         components: pint.models.timing_model.Component
             The component to be checked.
+
         Returns
         -------
         overlap : dict
@@ -285,14 +286,14 @@ class ModelBuilder:
     def choose_model(self, param_inpar):
         """Choose the model components based on the parfile.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         param_inpar: dict
             Dictionary of the unique parameters in .par file with the key is the
         parfile line. :func:`parse_parfile` returns this dictionary.
 
-        Return
-        ------
+        Returns
+        -------
         list
             List of selected components.
         dict

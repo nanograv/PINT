@@ -6,18 +6,14 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 
 ## Unreleased
 ### Added
-- Iterator to loop over observatories for TOAs
+- logging now needs to be setup explicitly
+- Color-by-jump mode for pintk
 ### Fixed
 ### Changed
-- Removed requirement to keep TOAs grouped
-
 
 ## [0.8.8] 2022-05-26
 ### Added
 - Warning when A1DOT parameter used with DDK model
-### Fixed
-- WLS fitters no longer ignore EFAC/EQUAD (bug #1226)
-### Changed
 - Added the limits="warn" or limits="error" to get_TOAs to select handling of uncorrected TOAs
 - Added functions in pint.observatory to request the status of PINT's available clock corrections
 - Added the ability to query clock correction files or observatories for their last corrected MJD

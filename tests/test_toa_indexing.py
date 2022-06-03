@@ -74,6 +74,7 @@ def test_getitem_where(a):
     assert len(s) == len(a)
     assert set(s.get_mjds()) == set(m[a])
     if len(s) > 0:
+        assert np.all(s.table["mjd_float"] == s.table.group_by("obs")["mjd_float"])
         toas.get_summary()
 
 
@@ -84,6 +85,7 @@ def test_getitem_slice(c):
     s = toas[c]
     assert set(s.get_mjds()) == set(m[c])
     if len(s) > 0:
+        assert np.all(s.table["mjd_float"] == s.table.group_by("obs")["mjd_float"])
         toas.get_summary()
 
 

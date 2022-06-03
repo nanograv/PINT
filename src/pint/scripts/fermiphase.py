@@ -10,14 +10,8 @@ from astropy.coordinates import SkyCoord
 import pint.logging
 from loguru import logger as log
 
-log.remove()
-log.add(
-    sys.stderr,
-    level="WARNING",
-    colorize=True,
-    format=pint.logging.format,
-    filter=pint.logging.LogFilter(),
-)
+pint.logging.setup(level=pint.logging.script_level)
+
 import pint.models
 import pint.residuals
 import pint.toa as toa

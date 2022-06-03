@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.0
+#       jupytext_version: 1.13.8
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -24,6 +24,10 @@
 
 # %%
 import astropy.units as u  # Astropy units is a very useful module.
+import pint.logging
+
+# setup logging
+pint.logging.setup(level="INFO")
 from pint.models import (
     parameter as p,
 )  # We would like to add parameters to the model, so we need parameter module.

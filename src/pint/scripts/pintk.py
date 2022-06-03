@@ -14,14 +14,7 @@ import matplotlib as mpl
 import pint.logging
 from loguru import logger as log
 
-log.remove()
-log.add(
-    sys.stderr,
-    level="WARNING",
-    colorize=True,
-    format=pint.logging.format,
-    filter=pint.logging.LogFilter(),
-)
+pint.logging.setup(level=pint.logging.script_level)
 
 import pint
 from pint.pintk.paredit import ParWidget
@@ -263,14 +256,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     if args.loglevel != "WARNING":
-        log.remove()
-        log.add(
-            sys.stderr,
-            level=args.loglevel,
-            colorize=True,
-            format=pint.logging.format,
-            filter=pint.logging.LogFilter(),
-        )
+        pint.logging.setup(level=args.loglevel)
 
     root = tk.Tk()
     root.minsize(1000, 800)

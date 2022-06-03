@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.0
+#       jupytext_version: 1.13.8
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -36,6 +36,10 @@ from __future__ import print_function, division
 import numpy as np
 import astropy.units as u
 from pprint import pprint
+import pint.logging
+
+# setup the logging
+pint.logging.setup(level="INFO")
 
 # %%
 # %matplotlib inline

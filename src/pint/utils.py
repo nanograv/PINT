@@ -79,7 +79,6 @@ __all__ = [
     "info_string",
     "print_color_examples",
     "colorize",
-    "group_iterator",
 ]
 
 COLOR_NAMES = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
@@ -1202,9 +1201,6 @@ def add_dummy_distance(c, distance=1 * u.kpc):
             "No proper motions available for %r: returning coordinates unchanged" % c
         )
         return c
-    if c.obstime is None:
-        log.warning("No obstime available for %r: returning coordinates unchanged" % c)
-        return c
 
     if isinstance(c.frame, coords.builtin_frames.icrs.ICRS):
         if hasattr(c, "pm_ra_cosdec"):
@@ -1281,10 +1277,6 @@ def remove_dummy_distance(c):
             "No proper motions available for %r: returning coordinates unchanged" % c
         )
         return c
-    if c.obstime is None:
-        log.warning("No obstime available for %r: returning coordinates unchanged" % c)
-        return c
-
     if isinstance(c.frame, coords.builtin_frames.icrs.ICRS):
         if hasattr(c, "pm_ra_cosdec"):
 
@@ -1596,20 +1588,3 @@ def print_color_examples():
                     end="",
                 )
             print("")
-
-
-def group_iterator(items):
-    """An iterator to step over identical items in a :class:`numpy.ndarray`
-
-    Example
-    -------
-    This will step over all of the observatories in the TOAs.
-    For each iteration it gives the observatory name and the indices that correspond to it
-
-        t = pint.toa.get_TOAs("grouptest.tim")
-        for o, i in group_iterator(t["obs"]):
-            print(f"{o} {i}")
-
-    """
-    for item in np.unique(items):
-        yield item, np.where(items == item)[0]
