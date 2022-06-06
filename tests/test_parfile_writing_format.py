@@ -262,5 +262,5 @@ def test_roundtrip(par, format):
     m = get_model(os.path.join(datadir, par))
     m2 = get_model(StringIO(m.as_parfile(format=format)))
     # FIXME: check some things aren't changed
-    #for p in m.params:
+    # for p in m.params:
     #    assert getattr(m, p).value == getattr(m2, p).value

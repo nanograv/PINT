@@ -505,9 +505,7 @@ class TimingModel:
                 continue
             return pint_par
 
-        raise UnknownParameter(
-            f"{alias} is not recognized as a parameter or alias"
-        )
+        raise UnknownParameter(f"{alias} is not recognized as a parameter or alias")
 
     def get_params_dict(self, which="free", kind="quantity"):
         """Return a dict mapping parameter names to values.
