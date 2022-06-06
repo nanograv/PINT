@@ -431,7 +431,7 @@ class DispersionDMX(Dispersion):
             or isinstance(index, np.int64)
         ):
             indices = [index]
-        elif not isinstance(index, list) and not isinstance(index, np.ndarray):
+        elif not isinstance(index, (list, np.ndarray)):
             raise TypeError(
                 f"index must be a float, int, list, or array - not {type(index)}"
             )
