@@ -430,14 +430,14 @@ def _toa_format(line, fmt="Unknown"):
         return "Princeton"
     elif (
         line.startswith("C ")
-        or line.startswith("c ") # FIXME: This matches the re above!
+        or line.startswith("c ")  # FIXME: This matches the re above!
         or line.startswith("#")
         or line.startswith("CC ")
     ):
         return "Comment"
     elif line.upper().lstrip().startswith(toa_commands):
         return "Command"
-    elif re.match(r"^\s*$", line): # FIXME: what about empty lines?
+    elif re.match(r"^\s*$", line):  # FIXME: what about empty lines?
         return "Blank"
     elif re.match(r"^ ", line) and len(line) > 41 and line[41] == ".":
         return "Parkes"
@@ -529,7 +529,9 @@ def _parse_TOA_line(line, fmt="Unknown"):
     elif fmt in ["Blank", "Comment"]:
         pass
     else:
-        raise RuntimeError(f"Unable to identify TOA format for line {line!r}, expecting {fmt}")
+        raise RuntimeError(
+            f"Unable to identify TOA format for line {line!r}, expecting {fmt}"
+        )
     return MJD, d
 
 
