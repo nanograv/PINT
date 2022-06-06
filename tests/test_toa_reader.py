@@ -169,7 +169,11 @@ def test_toa_check_hashes(tmp_path):
 
 
 def test_toa_merge():
-    filenames = [datadir / "NGC6440E.tim", datadir / "testtimes.tim", datadir / "parkes.toa"]
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+        datadir / "parkes.toa",
+    ]
     toas = [toa.get_TOAs(ff) for ff in filenames]
     ntoas = sum([tt.ntoas for tt in toas])
     nt = toa.merge_TOAs(toas)
@@ -181,7 +185,11 @@ def test_toa_merge():
 
 
 def test_toa_merge_again():
-    filenames = [datadir / "NGC6440E.tim", datadir / "testtimes.tim", datadir / "parkes.toa"]
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+        datadir / "parkes.toa",
+    ]
     toas = [toa.get_TOAs(ff) for ff in filenames]
     ntoas = sum([tt.ntoas for tt in toas])
     nt = toa.merge_TOAs(toas)
@@ -194,7 +202,11 @@ def test_toa_merge_again():
 
 
 def test_toa_merge_again():
-    filenames = [datadir / "NGC6440E.tim", datadir / "testtimes.tim", datadir / "parkes.toa"]
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+        datadir / "parkes.toa",
+    ]
     toas = [toa.get_TOAs(ff) for ff in filenames]
     ntoas = sum([tt.ntoas for tt in toas])
     other = toa.get_TOAs(datadir / "test1.tim")
@@ -209,7 +221,11 @@ def test_toa_merge_again():
 
 
 def test_toa_merge_different_ephem():
-    filenames = [datadir / "NGC6440E.tim", datadir / "testtimes.tim", datadir / "parkes.toa"]
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+        datadir / "parkes.toa",
+    ]
     toas = [toa.get_TOAs(ff) for ff in filenames]
     toas[0].ephem = "DE436"
     with pytest.raises(TypeError):
@@ -380,7 +396,9 @@ def test_renumber_subset_reordered():
 
 
 loadable_tims = [
-    tim for tim in datadir.glob("*.tim") if tim not in {datadir / "prefixtest.tim", datadir / "vela_wave.tim"}
+    tim
+    for tim in datadir.glob("*.tim")
+    if tim not in {datadir / "prefixtest.tim", datadir / "vela_wave.tim"}
 ]
 
 
