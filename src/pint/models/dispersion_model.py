@@ -431,10 +431,12 @@ class DispersionDMX(Dispersion):
             or isinstance(index, np.int64)
         ):
             indices = [index]
-        elif not isinstance(index, list) or not isinstance(index, np.ndarray):
+        elif not isinstance(index, list) and not isinstance(index, np.ndarray):
             raise TypeError(
                 f"index must be a float, int, list, or array - not {type(index)}"
             )
+        else:
+            indices = index
         for index in indices:
             index_rf = f"{int(index):04d}"
             for prefix in ["DMX_", "DMXR1_", "DMXR2_"]:
