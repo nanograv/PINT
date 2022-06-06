@@ -8,7 +8,7 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.13.8
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -321,3 +321,12 @@ plt.grid()
 
 # %% tags=[]
 f.print_summary()
+
+# %% [markdown]
+# ### Write out a par file for the result
+
+# %%
+with open("/tmp/output.par", "wt") as of:
+    p = f.model.as_parfile()
+    of.write(p)
+    print(p)

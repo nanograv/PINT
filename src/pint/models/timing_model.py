@@ -397,7 +397,7 @@ class TimingModel:
             except AttributeError:
                 continue
         raise AttributeError(
-            "Attribute {} not found in TimingModel or any Component".format(name)
+            f"Attribute {name} not found in TimingModel or any Component"
         )
 
     @property_exists
@@ -474,7 +474,7 @@ class TimingModel:
             params_true.discard(p)
         if params_true:
             raise ValueError(
-                "Parameter(s) are familiar but not in the model: {}".format(params)
+                f"Parameter(s) are familiar but not in the model: {params}"
             )
 
     def match_param_aliases(self, alias):
@@ -506,7 +506,7 @@ class TimingModel:
             return pint_par
 
         raise UnknownParameter(
-            "{} is not recognized as a parameter or alias".format(alias)
+            f"{alias} is not recognized as a parameter or alias"
         )
 
     def get_params_dict(self, which="free", kind="quantity"):
@@ -540,7 +540,7 @@ class TimingModel:
             elif kind == "uncertainty":
                 c[p] = q.uncertainty_value
             else:
-                raise ValueError("Unknown kind '{}'".format(kind))
+                raise ValueError(f"Unknown kind {kind!r}")
         return c
 
     def set_param_values(self, fitp):
@@ -554,7 +554,7 @@ class TimingModel:
             p = getattr(self, k)
             if isinstance(v, (Parameter, prefixParameter)):
                 if v.value is None:
-                    raise ValueError("Parameter {} is unset".format(v))
+                    raise ValueError(f"Parameter {v} is unset")
                 p.value = v.value
             elif isinstance(v, u.Quantity):
                 p.value = v.to_value(p.units)
@@ -851,7 +851,7 @@ class TimingModel:
         for cp in list(self.components.values()):
             if hasattr(cp, name):
                 return cp
-        raise AttributeError("{} not found in any component".format(name))
+        raise AttributeError(f"{name} not found in any component")
 
     def get_component_type(self, component):
         """Identify the component object's type.
@@ -1111,7 +1111,7 @@ class TimingModel:
             mapping = cp.get_prefix_mapping_component(prefix)
             if len(mapping) != 0:
                 return mapping
-        raise ValueError("Can not find prefix `{}`".format(prefix))
+        raise ValueError(f"Can not find prefix {prefix!r}")
 
     def get_prefix_list(self, prefix, start_index=0):
         """Return the Quantities associated with a sequence of prefix parameters.
@@ -1674,7 +1674,7 @@ class TimingModel:
         dm_df = self.dm_derivs.get(param, None)
         if dm_df is None:
             if param not in self.params:  # Maybe add differentitable params
-                raise AttributeError("Parameter {} does not exist".format(param))
+                raise AttributeError(f"Parameter {param} does not exist")
             else:
                 return result
 
@@ -2160,11 +2160,8 @@ class TimingModel:
              Parfile output format. PINT outputs in 'tempo', 'tempo2' and 'pint'
              formats. The defaul format is `pint`.
         """
-        assert (
-            format.lower() in _parfile_formats
-        ), "parfile format must be one of %s" % ", ".join(
-            ['"%s"' % x for x in _parfile_formats]
-        )
+        if not format.lower() in _parfile_formats:
+            raise ValueError(f"parfile format must be one of {_parfile_formats}")
 
         self.validate()
         if include_info:
