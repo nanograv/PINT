@@ -242,8 +242,15 @@ First make sure you are on the PINT master branch in the ``nanograv/PINT`` repos
 
    git push origin
 
-Now wait 15 minutes and check that travis-ci says that the build is OK, before tagging! If needed, push any bug fixes.
-When tagging, always use "annotated tags" by specifying ``-a``::
+Now wait 15 minutes and check that travis-ci says that the build is OK, before tagging! 
+If needed, push any bug fixes.
+
+Next, check the CHANGELOG and make sure all the significant changes from PRs since the last 
+release have been documented.
+Then, change the # Unreleased section of the CHANGELOG to the version number you are about 
+to tag and commit, but don't yet push.
+
+When tagging, always use "annotated tags" by specifying ``-a``, so do these commands to tag and push::
 
    git tag -a 0.5.1 -m "PINT version 0.5.1"
    git push origin --tags
@@ -258,6 +265,12 @@ You must be on a clean, tagged, version of the nanograv/master branch. Then you 
 
 This will build the distribution source and wheel packages and use ``twine`` to upload to PyPI.
 
+Doing this will also trigger conda-forge_ to create a new PR for this release. Once this passes tests, 
+it will need to be merged.
+
+
+As a last step, go to the Releases_ tab on github and Draft a new release.
+
 
 .. _GitHub: https://github.com/nanograv/PINT
 .. _investigate: https://realpython.com/python-debugging-pdb/
@@ -265,3 +278,5 @@ This will build the distribution source and wheel packages and use ``twine`` to 
 .. _rebase: https://git-scm.com/book/en/v2/Git-Branching-Rebasing
 .. _`Dang it, git!`: https://dangitgit.com/
 .. _`git choose-your-own-adventure`: http://sethrobertson.github.io/GitFixUm/fixup.html
+.. _conda-forge: https://github.com/conda-forge/pint-pulsar-feedstock
+.. _Releases: https://github.com/nanograv/PINT/releases
