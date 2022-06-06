@@ -9,18 +9,14 @@ from io import StringIO
 import pint.scripts.zima as zima
 from pinttestdata import datadir, testdir
 
-parfile = os.path.join(datadir, "NGC6440E.par")
-timfile = os.path.join(datadir, "fake_testzima.tim")
 
-
-class TestZima(unittest.TestCase):
-    def test_result(self):
-        saved_stdout, sys.stdout = sys.stdout, StringIO("_")
+def test_result(tmp_path):
+    parfile = os.path.join(datadir, "NGC6440E.par")
+    timfile = tmp_path / "fake_testzima.tim"
+    saved_stdout, sys.stdout = sys.stdout, StringIO("_")
+    try:
         cmd = "{0} {1}".format(parfile, timfile)
         zima.main(cmd.split())
         lines = sys.stdout.getvalue()
+    finally:
         sys.stdout = saved_stdout
-
-
-if __name__ == "__main__":
-    unittest.main()

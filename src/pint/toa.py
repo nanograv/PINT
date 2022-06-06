@@ -22,6 +22,7 @@ import re
 import warnings
 from collections import OrderedDict
 from collections.abc import MutableMapping
+from pathlib import Path
 
 import astropy.table as table
 import astropy.time as time
@@ -256,12 +257,12 @@ def get_TOAs(
                 log.info("Pickle contains wrong bipm_version")
                 updatepickle = True
     if not usepickle or updatepickle:
-        if isinstance(timfile, str) or hasattr(timfile, "readlines"):
+        if isinstance(timfile, (str, Path)) or hasattr(timfile, "readlines"):
             t = TOAs(timfile)
         else:
             t = merge_TOAs([TOAs(t) for t in timfile])
 
-        files = [t.filename] if isinstance(t.filename, str) else t.filename
+        files = [t.filename] if isinstance(t.filename, (str, Path)) else t.filename
         if files is not None:
             t.hashes = {f: _compute_hash(f) for f in files}
         recalc = True
@@ -374,8 +375,8 @@ def save_pickle(toas, picklefilename=None):
             "TOAs object was merged from multiple files, please provide a filename."
         )
     elif toas.filename is not None:
-        if isinstance(toas.filename, str):
-            picklefilename = toas.filename + ".pickle.gz"
+        if isinstance(toas.filename, (str, Path)):
+            picklefilename = str(toas.filename) + ".pickle.gz"
         else:
             picklefilename = toas.filename[0] + ".pickle.gz"
     else:
@@ -688,7 +689,7 @@ def read_toa_file(filename, process_includes=True, cdict=None):
         if this function is called on an already existing and
         processed TOAs object.
     """
-    if isinstance(filename, str):
+    if isinstance(filename, (str, Path)):
         with open(filename, "r") as f:
             return read_toa_file(f, process_includes=process_includes, cdict=cdict)
     else:
@@ -1265,7 +1266,7 @@ class TOAs:
         if (toalist is not None) and (toafile is not None):
             raise ValueError("Cannot initialize TOAs from both file and list.")
 
-        if isinstance(toafile, str):
+        if isinstance(toafile, (str, Path)):
             toalist, self.commands = read_toa_file(toafile)
             # Check to see if there were any INCLUDEs:
             inc_fns = [x[0][1] for x in self.commands if x[0][0].upper() == "INCLUDE"]
@@ -1724,7 +1725,7 @@ class TOAs:
         """
         if self.filename is None:
             return True
-        elif isinstance(self.filename, str):
+        elif isinstance(self.filename, (str, Path)):
             filenames = [self.filename]
         else:
             filenames = self.filename
@@ -1733,7 +1734,7 @@ class TOAs:
             timfiles = filenames
         elif hasattr(timfile, "readlines"):
             return True
-        elif isinstance(timfile, str):
+        elif isinstance(timfile, (str, Path)):
             timfiles = [timfile]
         else:
             timfiles = list(timfile)

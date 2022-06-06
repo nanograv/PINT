@@ -41,6 +41,7 @@ from copy import deepcopy
 from io import StringIO
 from warnings import warn
 from loguru import logger as log
+from pathlib import Path
 
 import astropy.constants as const
 import astropy.coordinates as coords
@@ -413,7 +414,7 @@ def open_or_use(f, mode="r"):
     a subclass of ``str`` will be passed through untouched.
 
     """
-    if isinstance(f, (str, bytes)):
+    if isinstance(f, (str, bytes, Path)):
         with open(f, mode) as fl:
             yield fl
     else:
