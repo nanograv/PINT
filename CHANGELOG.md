@@ -18,6 +18,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added functions in pint.observatory to request the status of PINT's available clock corrections
 - Added the ability to query clock correction files or observatories for their last corrected MJD
 - Added an example showing how to check the status of your clock corrections
+- Added the ability to write clock files in TEMPO or TEMPO2 format
 ### Fixed
 - WLS fitters no longer ignore EFAC/EQUAD (bug #1226)
 ### Changed
