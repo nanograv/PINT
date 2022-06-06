@@ -62,9 +62,9 @@ favour of changes to the actual contents::
 How To Build and Test From the Command Line
 ===========================================
 
-To run the whole test suite::
+To run the whole test suite (on all the cores of your machine)::
 
-   pytest
+   pytest -n auto
 
 To run tests on just one file::
 
@@ -118,7 +118,7 @@ requirements, so no IPython)::
 
 To automatically run black on all of PINT's code::
 
-   black src/
+   black src/ tests/
 
 Under ``examples/`` there are a few Jupyter notebooks. These actually get
 incorporated into the online documentation (you may have seen them). To avoid
@@ -228,8 +228,8 @@ Tagging
 
 The current version string is available as ``pint.__version__``
 
-PINT uses MAJOR.MINOR.PATCH versioning inspired by, but not strictly following, Semantic Versioning. 
-PINT uses versioneer.py to make sure that ``pint.__version__`` is available in the code for version checking. 
+PINT uses MAJOR.MINOR.PATCH versioning inspired by, but not strictly following, Semantic Versioning.
+PINT uses versioneer.py to make sure that ``pint.__version__`` is available in the code for version checking.
 This constructs the version string from git using tags and commit hashes.
 
 To create a new tagged version of PINT (assuming you are going from 0.5.0 to 0.5.1):
@@ -251,7 +251,7 @@ When tagging, always use "annotated tags" by specifying ``-a``::
 Releasing
 '''''''''
 
-To release, you need to have your PyPI API token in ``~/.pypirc``. 
+To release, you need to have your PyPI API token in ``~/.pypirc``.
 You must be on a clean, tagged, version of the nanograv/master branch. Then you can just::
 
    make release

@@ -9,6 +9,9 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - model.phase() now defaults to abs_phase=True when TZR* params are in the model
 ### Added
 - logging now needs to be setup explicitly
+- Color-by-jump mode for pintk
+- `pytest-xdist` now allows `pytest -n auto` to use all cores on the machine to run tests in parallel; `make test` now does this.
+- Added the ability to write clock files in TEMPO or TEMPO2 format
 ### Fixed
 
 ## [0.8.8] 2022-05-26

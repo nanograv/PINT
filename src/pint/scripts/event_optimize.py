@@ -606,7 +606,11 @@ def main(argv=None):
         # Now convert to TOAs object and compute TDBs and posvels
         ts = toa.get_TOAs_list(tl, ephem="DE421", planets=False)
         ts.filename = eventfile
-        toa.save_pickle(ts)
+        # FIXME: writes to the TOA directory unconditionally
+        try:
+            toa.save_pickle(ts)
+        except IOError:
+            pass
 
     if weightcol is not None:
         if weightcol == "CALC":
