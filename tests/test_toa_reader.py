@@ -421,3 +421,29 @@ def test_include_directory(tmp_path):
         toa.get_TOAs(str(Path(datadir) / "test1.tim"))
     finally:
         os.chdir(d)
+
+def test_chained_include_directories(tmp_path):
+    t1 = tmp_path / "test.tim"
+    b = tmp_path / "b"
+    b.mkdir()
+    t1.write_text("""
+        FORMAT 1
+
+        toa1 1404.000 55336.989701997555466   3.469  gbt  -fe Rcvr1_2 -be GASP -f Rcvr1_2_GASP -bw 4 -tobs 1740.3
+
+        INCLUDE b/test2.tim
+    """)
+    (b/"test2.tim").write_text("""
+        FORMAT 1
+
+        toa2 1404.000 55337.989701997555466   3.469  gbt  -fe Rcvr1_2 -be GASP -f Rcvr1_2_GASP -bw 4 -tobs 1740.3
+
+        INCLUDE ../test3.tim
+    """)
+    (tmp_path/"test3.tim").write_text("""
+        FORMAT 1
+
+        toa3 1404.000 55338.989701997555466   3.469  gbt  -fe Rcvr1_2 -be GASP -f Rcvr1_2_GASP -bw 4 -tobs 1740.3
+    """)
+
+    assert len(toa.get_TOAs(str(t1))) == 3
