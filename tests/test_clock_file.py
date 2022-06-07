@@ -171,9 +171,31 @@ loadable_observatories = ["gbt", "arecibo", "fast", "gb140", "gb853", "jb", "wsr
 
 
 @pytest.mark.parametrize("obs", loadable_observatories)
-def ensure_can_read(obs):
+def test_can_read(obs):
     o = get_observatory(obs)
     o.last_clock_correction_mjd()
+
+
+@pytest.mark.parametrize(
+    "obs,mjd",
+    [
+        ("gbt", 59730),
+        ("ao", 59070),
+        ("fast", 58740),
+        ("vla", 59270),
+        ("meerkat", 59260),
+        ("parkes", 58690),
+        ("jodrell", 59520),
+        ("effelsberg", 57190),
+        ("wsrt", 57200),
+        ("most", 58360),
+        ("gb140", 51390),
+        ("gb853", 50680),
+    ],
+)
+def test_corrections_cover(obs, mjd):
+    o = get_observatory(obs)
+    o.clock_corrections(Time(mjd, format="pulsar_mjd"), limits="error")
 
 
 def test_tempo2_round_trip_arecibo():
