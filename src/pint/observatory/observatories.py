@@ -97,7 +97,8 @@ TopoObs(
     "jodrell",
     tempo_code="8",
     itoa_code="JB",
-    clock_file="time_jb.dat",
+    clock_fmt="tempo2",
+    clock_file="jb2gps.clk",
     aliases=["jbdfb", "jbroach", "jbafb", "jbodfb", "jboafb", "jboroach"],
     bogus_last_correction=True,
     itrf_xyz=[3822625.769, -154105.255, 5086486.256],
@@ -110,7 +111,8 @@ TopoObs(
 )
 TopoObs(
     "jodrell_pre_2021",
-    clock_file="time_jb.dat",
+    clock_fmt="tempo2",
+    clock_file="jb2gps.clk",
     itrf_xyz=[3822626.04, -154105.65, 5086486.04],
     bogus_last_correction=True,
     origin="""The Lovell telescope at Jodrell Bank.
