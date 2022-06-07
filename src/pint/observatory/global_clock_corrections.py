@@ -23,7 +23,7 @@ from loguru import logger as log
 from pint.pulsar_mjd import Time
 
 global_clock_correction_url_base = (
-    "https://raw.githubusercontent.com/aarchiba/pulsar-clock-corrections/main/"
+    "https://raw.githubusercontent.com/nanograv/pulsar-clock-corrections/main/"
 )
 
 # These are mirrors that have (presumed) identical data but might be available when
@@ -92,7 +92,8 @@ def get_file(
         if now - file_time < update_interval_days * 86400:
             # Not expired
             log.trace(
-                f"File {name} found and returned due to download policy {download_policy} and recentness"
+                f"File {name} found and returned due to "
+                f"download policy {download_policy} and recentness"
             )
             return local_file
 
@@ -105,7 +106,7 @@ def get_file(
 
 
 IndexEntry = collections.namedtuple(
-    "IndexEntry", ["file", "format", "update_interval_days", "extra"]
+    "IndexEntry", ["file", "update_interval_days", "invalid_if_older_than", "extra"]
 )
 
 
@@ -124,15 +125,19 @@ class Index:
             url_mirrors=url_mirrors,
         )
         self.files = {}
-        for l in open(index_file).readlines():
-            l = l.strip()
-            if l.startswith("#"):
+        for line in open(index_file):
+            line = line.strip()
+            if line.startswith("#"):
                 continue
-            e = l.split(maxsplit=3)
+            e = line.split(maxsplit=3)
+            if e[2] == "---":
+                date = None
+            else:
+                date = Time(e[2], format="iso")
             t = IndexEntry(
                 file=e[0],
-                format=e[1],
-                update_interval_days=float(e[2]),
+                update_interval_days=float(e[1]),
+                invalid_if_older_than=date,
                 extra=e[3] if len(e) > 3 else "",
             )
             file = Path(t.file).name

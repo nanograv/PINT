@@ -702,6 +702,14 @@ class GlobalClockFile(ClockFile):
         return self.clock_file.evaluate(t, limits=limits)
 
     @property
+    def leading_comment(self):
+        return self.clock_file.leading_comment
+
+    @property
+    def comments(self):
+        return self.clock_file.comments
+
+    @property
     def time(self):
         return self.clock_file.time
 
