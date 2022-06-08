@@ -196,7 +196,10 @@ class TimingModel:
     ``model.F0``.
 
     TimingModel objects can be written out to ``.par`` files using
-    :func:`pint.models.timing_model.TimingModel.as_parfile`.
+    :func:`pint.models.timing_model.TimingModel.write_parfile` or .
+    :func:`pint.models.timing_model.TimingModel.as_parfile`::
+
+        >>> model.write_parfile("output.par")
 
     PINT Parameters supported (here, rather than in any Component):
 
@@ -274,7 +277,7 @@ class TimingModel:
         )
         self.add_param_from_top(
             floatParameter(
-                name="RM", description="Rotation measure", units=u.radian / u.m**2
+                name="RM", description="Rotation measure", units=u.radian / u.m ** 2
             ),
             "",
         )
@@ -1274,7 +1277,7 @@ class TimingModel:
         # When there is no noise model.
         # FIXME: specifically when there is no DMEFAC
         if len(self.dm_covariance_matrix_funcs) == 0:
-            result += np.diag(dmes**2)
+            result += np.diag(dmes ** 2)
             return result
 
         for nf in self.dm_covariance_matrix_funcs:
@@ -1316,8 +1319,8 @@ class TimingModel:
             The input data object for DM uncertainty.
         """
         dm_error, valid = toas.get_flag_value("pp_dme", as_type=float)
-        dm_error = np.array(dm_error)[valid] * u.pc / u.cm**3
-        result = np.zeros(len(dm_error)) * u.pc / u.cm**3
+        dm_error = np.array(dm_error)[valid] * u.pc / u.cm ** 3
+        result = np.zeros(len(dm_error)) * u.pc / u.cm ** 3
         # When there is no noise model.
         if len(self.scaled_dm_uncertainty_funcs) == 0:
             result += dm_error
@@ -1668,7 +1671,7 @@ class TimingModel:
     def d_dm_d_param(self, data, param):
         """Return the derivative of dm with respect to the parameter."""
         par = getattr(self, param)
-        result = np.zeros(len(data)) << (u.pc / u.cm**3 / par.units)
+        result = np.zeros(len(data)) << (u.pc / u.cm ** 3 / par.units)
         dm_df = self.dm_derivs.get(param, None)
         if dm_df is None:
             if param not in self.params:  # Maybe add differentitable params
@@ -2210,6 +2213,45 @@ class TimingModel:
 
         return result_begin + result_middle + result_end
 
+    def write_parfile(
+        self,
+        filename,
+        start_order=["astrometry", "spindown", "dispersion"],
+        last_order=["jump_delay"],
+        *,
+        include_info=True,
+        comment=None,
+        format="pint",
+    ):
+        """Write the entire model as a parfile.
+
+        Parameters
+        ----------
+        filename : str or Path or file-like
+            The destination to write the parfile to
+        start_order : list
+            Categories to include at the beginning
+        last_order : list
+            Categories to include at the end
+        include_info : bool, optional
+            Include information string if True
+        comment : str, optional
+            Additional comment string to include in parfile
+        format : str, optional
+             Parfile output format. PINT outputs in 'tempo', 'tempo2' and 'pint'
+             formats. The defaul format is `pint`.
+        """
+        with open_or_use(filename, "wt") as f:
+            f.write(
+                self.as_parfile(
+                    start_order=start_order,
+                    last_order=last_order,
+                    include_info=include_info,
+                    comment=comment,
+                    format=format,
+                )
+            )
+
     def validate_toas(self, toas):
         """Sanity check to verify that this model is compatible with these toas.
 
@@ -2347,9 +2389,7 @@ class TimingModel:
         elif "AstrometryEcliptic" in self.components:
             astrometry_model_type = "AstrometryEcliptic"
         astrometry_model_component = self.components[astrometry_model_type]
-        new_astrometry_model_component = astrometry_model_component.as_ICRS(
-            epoch=epoch,
-        )
+        new_astrometry_model_component = astrometry_model_component.as_ICRS(epoch=epoch)
         new_model = copy.deepcopy(self)
         new_model.remove_component(astrometry_model_type)
         new_model.add_component(new_astrometry_model_component)

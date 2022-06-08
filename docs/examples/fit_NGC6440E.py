@@ -137,9 +137,7 @@ plt.grid()
 plt.show()
 
 # %%
-with open("/tmp/output.par", "wt") as of:
-    p = f.model.as_parfile()
-    of.write(p)
-    print(p)
+f.model.write_parfile("/tmp/output.par", "wt")
+print(f.model.as_parfile())
 
 # %%

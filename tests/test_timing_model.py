@@ -381,10 +381,7 @@ def test_parfile_and_timfile_jumps(timfile_jumps):
     assert fs[6] == "2"
     fs, idxs = t.get_flag_value("jump")
     assert len(idxs) == 5
-    assert fs[5] in [
-        "3,1",
-        "1,3",
-    ]
+    assert fs[5] in ["3,1", "1,3"]
     assert fs[4] == "1"
 
 
@@ -409,3 +406,15 @@ def test_prefixed_aliases_in_component():
     assert m.components["ScaleToaError"].aliases_map["T2EFAC2"] == "EFAC2"
     with pytest.raises(KeyError):
         m.components["ScaleToaError"].aliases_map["T2EFAC18"]
+
+
+def test_writing_equals_string(model_0437):
+    f = StringIO()
+    model_0437.write_parfile(f)
+    assert f.getvalue() == model_0437.as_parfile()
+
+
+def test_writing_to_file_equals_string(tmp_path, model_0437):
+    p = tmp_path / "file.par"
+    model_0437.write_parfile(p)
+    assert p.read_text() == model_0437.as_parfile()

@@ -250,10 +250,8 @@ plt.grid()
 # Now let's save (and print) the post-fit par file. We'll request a more TEMPO2-compatible file, though we could have requested a more TEMPO-style file or a more native PINT format. These differ only slightly, just as much as needed to be read by the three pieces of software. PINT can read all three variants.
 
 # %%
-with open("/tmp/output.par", "wt") as of:
-    p = f.model.as_parfile(format="tempo2")
-    of.write(p)
-    print(p)
+f.model.write_parfile("/tmp/output.par", format="tempo2")
+print(f.model.as_parfile(format="tempo2"))
 
 # %% [markdown]
 # ## Other interesting things

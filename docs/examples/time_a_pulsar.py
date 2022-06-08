@@ -124,10 +124,8 @@ plt.legend(loc="upper left")
 plt.show()
 
 # %%
-with open("/tmp/output.par", "wt") as of:
-    p = f.model.as_parfile(format="tempo2")
-    of.write(p)
-    print(p)
+f.model.write_parfile("/tmp/output.par", "wt")
+print(f.model.as_parfile())
 
 # %%
 
