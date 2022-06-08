@@ -2153,6 +2153,8 @@ class TimingModel:
     ):
         """Represent the entire model as a parfile string.
 
+        See also :func:`pint.models.TimingModel.write_parfile`.
+
         Parameters
         ----------
         start_order : list
@@ -2230,6 +2232,8 @@ class TimingModel:
         format="pint",
     ):
         """Write the entire model as a parfile.
+
+        See also :func:`pint.models.TimingModel.as_parfile`.
 
         Parameters
         ----------
