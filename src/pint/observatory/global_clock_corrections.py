@@ -41,6 +41,7 @@ def get_file(
     download_policy="if_expired",
     url_base=None,
     url_mirrors=None,
+    invalid_if_older_than=None,
 ):
     """Obtain a local file pointing to a current version of name.
 
@@ -60,6 +61,8 @@ def get_file(
     url_mirrors : list of str or None
         If provided, override the repository mirrors stored in the source code.
         Useful mostly for testing.
+    invalid_if_older_than : astropy.time.Time or None
+        Re-download the file if the cached version is older than this.
     """
 
     log.trace(f"File {name} requested")
@@ -84,6 +87,18 @@ def get_file(
         log.trace(
             f"File {name} found and returned due to download policy {download_policy}"
         )
+
+    if local_file is not None:
+        file_time = Path(local_file).stat().st_mtime
+        if (
+            invalid_if_older_than is not None
+            and Time(file_time, format="unix") < invalid_if_older_than
+        ):
+            log.trace(
+                f"File {name} found but re-downloaded because "
+                f"it is older than {invalid_if_older_than}"
+            )
+            local_file = None
 
     if download_policy == "if_expired" and local_file is not None:
         # FIXME: will update_interval_days=np.inf work with unit conversion?
@@ -189,4 +204,5 @@ def get_clock_correction_file(
         download_policy=download_policy,
         url_base=url_base,
         url_mirrors=url_mirrors,
+        invalid_if_older_than=details.invalid_if_older_than,
     )

@@ -27,11 +27,28 @@ __all__ = [
     "get_observatory",
     "compare_t2_observatories_dat",
     "compare_tempo_obsys_dat",
+    "list_last_correction_mjds",
+    "update_clock_files",
+    "ClockCorrectionError",
+    "NoClockCorrections",
+    "ClockCorrectionOutOfRange",
 ]
 
 # The default BIPM to use if not explicitly specified
 # This should be the most recent BPIM file in the datafiles directory
 bipm_default = "BIPM2019"
+
+
+class ClockCorrectionError(RuntimeError):
+    pass
+
+
+class NoClockCorrections(ClockCorrectionError):
+    pass
+
+
+class ClockCorrectionOutOfRange(ClockCorrectionError):
+    pass
 
 
 class Observatory:
@@ -699,3 +716,53 @@ def list_last_correction_mjds():
                 )
             except (ValueError, TypeError):
                 print(f"    {os.path.basename(c.filename):<20} MISSING")
+
+
+def export_clock_files(directory):
+    """Write current versions of all clock files to a given directory.
+
+    This records the versions currently in use. Global clock corrections
+    that are in the cache and recent enough to cover the MJDs you have
+    been using will not be updated as a result of this function.
+    """
+    # Importing this module triggers loading all observatories
+    import pint.observatory.observatories
+    import pint.observatory.topo_obs
+    import pint.observatory.special_locations
+
+    for n in Observatory.names():
+        o = get_observatory(n)
+        if not hasattr(o, "clock_file"):
+            continue
+        o.last_clock_correction_mjd()
+        if not o.clock_file:
+            continue
+        for c in o._clock:
+            # FIXME: make sure directory is a Path
+            c.export(directory / c.filename)
+
+
+def update_clock_files():
+    """Obtain an up-to-date version of all clock files.
+
+    This up-to-date version will be stored in the Astropy cache;
+    you can then export or otherwise preserve the Astropy cache
+    so it can be pre-loaded on systems that might not have
+    network access.
+    """
+    # FIXME: allow forced downloads for non-expired files
+
+    # Importing this module triggers loading all observatories
+    import pint.observatory.observatories
+    import pint.observatory.topo_obs
+    import pint.observatory.special_locations
+
+    t = Time.now()
+    for n in Observatory.names():
+        o = get_observatory(n)
+        if not hasattr(o, "clock_file"):
+            continue
+        try:
+            o.clock_corrections(t, limits="error")
+        except ClockCorrectionOutOfRange:
+            pass

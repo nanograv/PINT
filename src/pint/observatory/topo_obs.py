@@ -238,9 +238,10 @@ class TopoObs(Observatory):
     def _load_gps_clock(self):
         global _gps_clock
         if _gps_clock is None:
-            log.info(f"Loading GPS clock file {self.gps_fullpath} for {self.name}")
-            _gps_clock = ClockFile.read(
-                self.gps_fullpath, format="tempo2", bogus_last_correction=True
+            log.info(f"Loading global GPS clock file for {self.name}")
+            _gps_clock = GlobalClockFile(
+                "gps2utc.clk",
+                format="tempo2",
             )
 
     def _load_bipm_clock(self):

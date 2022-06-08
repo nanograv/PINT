@@ -13,6 +13,7 @@ from pint.pulsar_mjd import Time
 from pint.utils import lines_of, open_or_use
 from pint.observatory.global_clock_corrections import get_clock_correction_file
 from pint.pulsar_mjd import Time
+from pint.observatory import NoClockCorrections, ClockCorrectionOutOfRange
 
 
 class ClockFileMeta(type):
@@ -114,14 +115,14 @@ class ClockFile(metaclass=ClockFileMeta):
                 log.warning(msg)
                 return np.zeros_like(t) * u.us
             elif limits == "error":
-                raise RuntimeError(msg)
+                raise NoClockCorrections(msg)
 
         if np.any(t < self.time[0]) or np.any(t > self.time[-1]):
             msg = f"Data points out of range in clock file '{self.filename}'"
             if limits == "warn":
                 log.warning(msg)
             elif limits == "error":
-                raise RuntimeError(msg)
+                raise ClockCorrectionOutOfRange(msg)
 
         # Can't pass Times directly to np.interp.  This should be OK:
         return np.interp(t.mjd, self.time.mjd, self.clock.to(u.us).value) * u.us
@@ -455,6 +456,7 @@ class Tempo2ClockFile(ClockFile):
         self._clock = clk * u.s
 
 
+# FIXME: `NIST-REF` could be replaced by the two timescales in actual use
 tempo_standard_header = dedent(
     """\
        MJD       EECO-REF    NIST-REF NS      DATE    COMMENTS
@@ -530,9 +532,8 @@ class TempoClockFile(ClockFile):
             # https://github.com/nanograv/tempo/blob/618afb2e901d3e4b8324d4ba12777c055e128696/src/clockcor.f#L79
             # This could be (roughly) implemented by splicing in additional clock correction points
             # between 'f' values or +- 1 day.
-            # (The deviation would be that in gaps you get an interpolated value rather than
-            # an error message.)
-            seen_header = 0
+            # (The deviation would be that in gaps you get an interpolated value
+            # rather than an error message.)
 
             for l in lines_of(filename):
                 # Ignore comment lines
@@ -540,10 +541,12 @@ class TempoClockFile(ClockFile):
                     add_comment(l)
                     continue
 
+                # FIXME: the header *could* contain to and from timescale information
                 # TEMPO has very, ah, flexible notions of what is an acceptable file
                 # https://sourceforge.net/p/tempo/tempo/ci/master/tree/src/newsrc.f#l272
-                # Any line that starts with "MJD" or "=====" is assumed to be part of the header.
-                # TEMPO describes this as a "commonly used header format".
+                # Any line that starts with "MJD" or "=====" is assumed to be
+                # part of the header.  TEMPO describes this as a
+                # "commonly used header format".
                 ls = l.split()
                 if ls and ls[0].upper().startswith("MJD"):
                     # Header line. Do we preserve it?
@@ -635,7 +638,8 @@ class TempoClockFile(ClockFile):
                 add_comment(l[50:])
         except (FileNotFoundError, OSError):
             log.error(
-                f"TEMPO-style clock correction file {filename} for site {obscode} not found"
+                f"TEMPO-style clock correction file {filename} "
+                f"for site {obscode} not found"
             )
         if bogus_last_correction and len(mjds):
             mjds = mjds[:-1]
@@ -719,3 +723,11 @@ class GlobalClockFile(ClockFile):
 
     def last_clock_correction_mjd(self):
         return self.clock_file.last_clock_correction_mjd()
+
+    def export(self, filename):
+        """Write this clock correction file to the specified location."""
+        # FIXME: all ClockFiles should support `export`, then this is easy
+        with open_or_use(filename, "wt") as f:
+            # FIXME: get_ may pull in an updated clock file
+            # f.write(get_clock_correction_file(self.filename).read_text())
+            pass

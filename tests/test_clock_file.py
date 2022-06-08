@@ -179,7 +179,9 @@ def test_can_read(obs):
 @pytest.mark.parametrize(
     "obs,mjd",
     [
-        ("gbt", 59730),
+        # This is all the observatories PINT knows about clock corrections for
+        # And a day towards the end of what's in the global repository
+        ("gbt", 59690),
         ("ao", 59070),
         ("fast", 58740),
         ("vla", 59270),
