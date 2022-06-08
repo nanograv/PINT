@@ -1,4 +1,4 @@
-"""Routines for reading various formats of clock file."""
+"""Routines for reading and writing various formats of clock file."""
 
 import os
 import re
@@ -14,6 +14,14 @@ from pint.utils import lines_of, open_or_use
 from pint.observatory.global_clock_corrections import get_clock_correction_file
 from pint.pulsar_mjd import Time
 from pint.observatory import NoClockCorrections, ClockCorrectionOutOfRange
+
+__all__ = [
+    "ClockFile",
+    "ClockFileMeta",
+    "TempoClockFile",
+    "Tempo2ClockFile",
+    "ConstructedClockFile",
+]
 
 
 class ClockFileMeta(type):
@@ -57,7 +65,12 @@ class ClockFile(metaclass=ClockFileMeta):
         [ -3.14000000e-06  -3.13900000e-06  -3.15200000e-06 ...,   1.80000000e-08
            2.10000000e-08   2.30000000e-08] s
 
+    Clock correction file objects preserve the comments in the original file,
+    and can be written in TEMPO or TEMPO2 format.
     """
+
+    # FIXME: there should only be the ClockFile class, and if there's a registry
+    # it's of functions that are able to read files and produce ClockFile objects.
 
     def __init__(self):
         # FIXME: require filename?
@@ -67,6 +80,12 @@ class ClockFile(metaclass=ClockFileMeta):
 
     @classmethod
     def read(cls, filename, format="tempo", **kwargs):
+        """Read file, selecting an appropriate subclass based on format.
+
+        You can also simply construct a clock file object of the appropriate type,
+        :class:`pint.observatory.clock_file.Tempo2ClockFile` or
+        :class:`pint.observatory.clock_file.TempoClockFile`.
+        """
         if format in cls._formats:
             r = cls._formats[format](filename, **kwargs)
             if not np.all(np.diff(r.time.mjd) >= 0):
@@ -128,6 +147,7 @@ class ClockFile(metaclass=ClockFileMeta):
         return np.interp(t.mjd, self.time.mjd, self.clock.to(u.us).value) * u.us
 
     def last_correction_mjd(self):
+        """Last MJD for which corrections are available."""
         if len(self.time) == 0:
             return -np.inf
         else:
@@ -305,8 +325,9 @@ class ClockFile(metaclass=ClockFileMeta):
         hdrline : str
             The first line of the file. Should start with `#` and consist
             of a pair of timescales, like `UTC(AO) UTC(GPS)` that this clock
-            file transforms between.
-        comments : str
+            file transforms between. If no value is provided, the value of
+            ``self.header`` is used.
+        extra_comment : str
             Additional comments to include. Lines should probably start with `#`
             so they will be interpreted as comments. This field frequently
             contains details of the origin of the file, or at least the
@@ -353,11 +374,33 @@ class ClockFile(metaclass=ClockFileMeta):
 
 
 class ConstructedClockFile(ClockFile):
+    """Clock file constructed from arrays.
+
+    Parameters
+    ----------
+    mjd : np.ndarray
+        The MJDs at which clock corrections are measured.
+    clock : astropy.units.Quantity
+        The clock corrections at those MJDs
+    comments : list of str or None
+        The comments following each clock correction; should match ``mjd``
+        and ``clock`` in length.
+    leading_comment : str
+        A comment to put at the top of the file.
+    header : str
+        A header to include, if output in TEMPO2 format.
+    """
 
     # No format set because these can't be read
 
     def __init__(
-        self, mjd, clock, comments=None, leading_comment=None, filename=None, **kwargs
+        self,
+        mjd,
+        clock,
+        comments=None,
+        leading_comment=None,
+        filename=None,
+        header=None,
     ):
         super().__init__()
         if len(mjd) != len(clock):
@@ -371,10 +414,12 @@ class ConstructedClockFile(ClockFile):
             self.comments = comments
             if len(comments) != len(mjd):
                 raise ValueError("Comments list does not match time array")
-        self.leading_comment = None
+        self.leading_comment = leading_comment
+        self.header = header
 
 
 class Tempo2ClockFile(ClockFile):
+    """A clock file originally in TEMPO2 format."""
 
     format = "tempo2"
 
@@ -472,7 +517,7 @@ tempo_standard_header_res = [
 
 
 class TempoClockFile(ClockFile):
-    """Load a TEMPO format clock file for a site
+    """A TEMPO format clock file.
 
     Given the specified full path to the tempo1-format clock file,
     will return two numpy arrays containing the MJDs and the clock
@@ -491,6 +536,7 @@ class TempoClockFile(ClockFile):
 
     format = "tempo"
 
+    # FIXME: use kwargs?
     def __init__(
         self,
         filename,

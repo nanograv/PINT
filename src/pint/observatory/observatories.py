@@ -1,7 +1,18 @@
 """Definitions for standard observatories.
 
-These observatories are registered when this file is imported. As a result it
-cannot be imported until TopoObs has successfully been imported.
+The observatories created here are automatically registered in PINT's
+list of observatories when this file is imported. Their clock corrections
+are not loaded until they are needed.
+
+The easiest way to add another observatory to PINT is to add an entry here, listing
+its canonical name, any aliases, a location, and (if appropriate) a clock correction
+file.
+
+If you have your own code working with a new or custom observatory that hasn't been
+added to PINT, simply creating a :class:`pint.observatory.topo_obs.TopoObs` object
+with the above information will register it with PINT. After the object has been
+created, loading any ``.tim`` files that reference it will correctly use
+the new object.
 """
 from pint.observatory.topo_obs import TopoObs
 

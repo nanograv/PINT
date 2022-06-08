@@ -1,4 +1,21 @@
-"""Machinery to support PINT's list of observatories."""
+"""Machinery to support PINT's list of observatories.
+
+This code maintains a registry of observatories known to PINT.
+Observatories are added to the registry when the objects are created.
+For the observatories defined in PINT, these objects are created
+when the relevant module is imported.
+
+If you want to ensure that all PINT's observatories are available
+to your interpreter, you can run::
+
+    >>> import pint.observatory.observatories
+    >>> import pint.observatory.topo_obs
+    >>> import pint.observatory.special_locations
+
+Normal use of :func:`pint.toa.get_TOAs` will ensure that this has
+been done, but if you are using a different part of PINT these
+imports may be necessary.
+"""
 
 import os
 import sys
@@ -54,14 +71,23 @@ class ClockCorrectionOutOfRange(ClockCorrectionError):
 class Observatory:
     """Observatory locations and related site-dependent properties
 
-    For example, TOA time scales, clock corrections.
-    Any new Observtory that is declared will be automatically added to
-    a registry that is keyed on observatory name.  Aside from their initial
-    declaration (for examples, see pint/observatory/observatories.py),
-    Observatory instances should generally be accessed only via the
-    Observatory.get() function.  This will query the registry based on
-    observatory name (and any defined aliases).  A list of all registered
-    names can be returned via Observatory.names().
+    For example, TOA time scales, clock corrections.  Any new Observtory that
+    is declared will be automatically added to a registry that is keyed on
+    observatory name.  Aside from their initial declaration (for examples, see
+    ``pint/observatory/observatories.py``), Observatory instances should
+    generally be obtained only via the :func:`pint.observatory.Observatory.get`
+    function.  This will query the registry based on observatory name (and any
+    defined aliases).  A list of all registered names can be returned via
+    :func:`pint.observatory.Observatory.names`.
+
+    Observatories have names and aliases that are used in ``.tim`` and ``.par``
+    files to select them. They also have positions (possibly varying, in the
+    case of satellite observatories) and may have associated clock corrections
+    to relate times observed at the observatory clock to global time scales.
+
+    Terrestrial observatories are generally instances of the
+    :class:`pint.observatory.topo_obs.TopoObs` class, which has a fixed
+    position.
     """
 
     # This is a dict containing all defined Observatory instances,
@@ -573,112 +599,6 @@ def compare_tempo_obsys_dat(tempodir=None):
             # Check ITOA code?
             # Check time corrections?
     return report
-
-
-def check_for_new_clock_files_in_tempo12_repos(update_download=True, show_diff=100):
-    """Try to determine whether PINT's clock files are up to date.
-
-    This iterates through all observatories for which PINT has clock corrections
-    and checks the clock corrections PINT is using against those in the
-    TEMPO/TEMPO2 repositories. Ones that differ are reported, along with
-    a little context.
-
-    The web versions are actually downloaded into the astropy cache, so
-    optional automated updates would be possible.
-
-    This function is still a prototype.
-
-    Parameters
-    ----------
-    update_download : bool
-        If True, download new versions even if there are versions in the
-        astropy cache. (they might be old.)
-    show_diff : int
-        Show the difference between local and remote files if it is less than
-        this many lines. (Huge diffs are probably just more correction data.)
-    """
-    import collections
-    import difflib
-
-    import astropy.utils.data
-
-    # Importing this module triggers loading all observatories
-    import pint.observatory.observatories
-    import pint.observatory.topo_obs
-    import pint.observatory.special_locations
-
-    # Ensure all observatories are loaded and warnings are emitted
-    clock_files = collections.defaultdict(list)
-    for a, o in Observatory._registry.items():
-        if not hasattr(o, "clock_file"):
-            log.debug(f"Skipping bogus clock file for observatory {a}")
-            continue
-        try:
-            # Ensure clock corrections are loaded and suppress some warnings
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                o.clock_corrections(Time(99999, format="mjd"), limits="error")
-        except RuntimeError:
-            pass
-        if o.clock_file is None or o.clock_file == "time.dat":
-            log.debug(f"Skipping bogus clock file for observatory {a}: {o.clock_file}")
-            continue
-        if isinstance(o.clock_fullpath, str):
-            cfs = [o.clock_fullpath]
-        else:
-            cfs = o.clock_fullpath
-        for clock_file in cfs:
-            if not os.path.isfile(clock_file):
-                log.debug(
-                    f"Skipping unreadable clock file for observatory {a}: {clock_file}"
-                )
-                continue
-            clock_files[clock_file].append(o)
-
-    tempo_repo = (
-        "https://sourceforge.net/p/tempo/tempo/ci/master/tree/clock/{}?format=raw"
-    )
-    # tempo_repo = "https://raw.githubusercontent.com/nanograv/tempo/master/clock/"
-    tempo2_repo = "https://bitbucket.org/psrsoft/tempo2/raw/master/T2runtime/clock/{}"
-    for clock_file, obs in clock_files.items():
-        names = [o.name for o in obs]
-        if len(names) == 1:
-            names = names[0]
-        base = os.path.basename(clock_file)
-        o = obs[0]
-        f = open(clock_file).read()
-        if o.clock_fmt == "tempo":
-            bu = tempo_repo
-        elif o.clock_fmt == "tempo2":
-            bu = tempo2_repo
-        else:
-            raise ValueError(f"Mystery format {o.clock_fmt} for observatory {a}")
-        u = bu.format(base)
-        log.info(f"Downloading clock file {base} for observatory {names} from {u}")
-        try:
-            wfn = astropy.utils.data.download_file(
-                u, cache="update" if update_download else True
-            )
-        except IOError as e:
-            log.error(f"Unable to download {base} from {u}: {e}")
-            continue
-        wf = open(wfn).read()
-        wfl = wf.splitlines(keepends=True)
-        fl = f.splitlines(keepends=True)
-        if wfl != fl:
-            print(
-                f"Clock file {base} has changed: {len(fl)} lines in PINT, {len(wfl)} on web"
-            )
-            if show_diff:
-                print(" " * 4 + f"Differences:")
-                diff = list(difflib.unified_diff(fl, wfl))
-                if len(diff) <= show_diff:
-                    for l in diff:
-                        sys.stdout.write(" " * 8 + l)
-                else:
-                    print(" " * 8 + f"{len(diff)} lines omitted")
-            print(" " * 4 + f"Observatory file is in {wfn}")
-            print(" " * 8 + f"downloaded from {u}")
 
 
 def list_last_correction_mjds():

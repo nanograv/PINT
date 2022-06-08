@@ -57,12 +57,6 @@ class TopoObs(Observatory):
         List of other aliases for the observatory name.
     clock_file : str, optional
         Name of the clock correction file.
-    clock_dir : str, optional
-        Location of the clock file.  Special values
-        'TEMPO', 'TEMPO2', or 'PINT' mean to use the
-        standard directory for the package.  Otherwise
-        can be set to a full path to the directory
-        containing the clock_file.  Default='TEMPO'
     clock_fmt : str, optional
         Format of clock file (see ClockFile class for allowed
         values).
@@ -95,7 +89,6 @@ class TopoObs(Observatory):
         aliases=None,
         itrf_xyz=None,
         clock_file="",
-        clock_dir="PINT",
         clock_fmt="tempo",
         include_gps=True,
         include_bipm=True,
@@ -128,7 +121,6 @@ class TopoObs(Observatory):
         # corrections for this site are requested.
         self.clock_file = clock_file
         self._multiple_clock_files = not isinstance(clock_file, str)
-        self.clock_dir = clock_dir
         self.clock_fmt = clock_fmt
         self._clock = None  # The ClockFile object, will be read on demand
 
@@ -159,43 +151,9 @@ class TopoObs(Observatory):
     @property
     def clock_fullpath(self):
         """Returns the full path to the clock file."""
-        if self.clock_dir == "PINT":
-            if self._multiple_clock_files:
-                return [(runtimefile(f) if f else "") for f in self.clock_file]
-            return runtimefile(self.clock_file) if self.clock_file else ""
-        elif self.clock_dir == "TEMPO":
-            # Technically should read $TEMPO/tempo.cfg and get clock file
-            # location from CLKDIR line...
-            TEMPO_dir = os.getenv("TEMPO")
-            if TEMPO_dir is None:
-                log.error(
-                    f"Cannot find TEMPO path from the enviroment; needed by observatory {self.name}."
-                )
-                dir = ""
-            else:
-                dir = os.path.join(TEMPO_dir, "clock")
-        elif self.clock_dir == "TEMPO2":
-            TEMPO2_dir = os.getenv("TEMPO2")
-            if TEMPO2_dir is None:
-                log.error(
-                    f"Cannot find TEMPO2 path from the enviroment; needed by observatory {self.name}."
-                )
-                dir = ""
-            else:
-                dir = os.path.join(TEMPO2_dir, "clock")
-        else:
-            dir = self.clock_dir
-
-        def join(dir, f):
-            if f and dir:
-                return os.path.join(dir, f)
-            else:
-                return ""
-
         if self._multiple_clock_files:
-            return [join(dir, f) for f in self.clock_file]
-        else:
-            return join(dir, self.clock_file)
+            return [(runtimefile(f) if f else "") for f in self.clock_file]
+        return runtimefile(self.clock_file) if self.clock_file else ""
 
     @property
     def gps_fullpath(self):
