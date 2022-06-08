@@ -11,6 +11,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - `pytest-xdist` now allows `pytest -n auto` to use all cores on the machine to run tests in parallel; `make test` now does this.
 - Added the ability to write clock files in TEMPO or TEMPO2 format
 - Added examples of how to write a par file to tutorials
+- Added `TimingModel.write_parfile()`
 ### Fixed
 ### Changed
 
