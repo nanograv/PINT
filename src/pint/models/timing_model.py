@@ -57,7 +57,13 @@ from pint.models.parameter import (
 )
 from pint.phase import Phase
 from pint.toa import TOAs
-from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
+from pint.utils import (
+    PrefixError,
+    interesting_lines,
+    lines_of,
+    split_prefixed_name,
+    open_or_use,
+)
 
 
 __all__ = [
@@ -277,7 +283,7 @@ class TimingModel:
         )
         self.add_param_from_top(
             floatParameter(
-                name="RM", description="Rotation measure", units=u.radian / u.m ** 2
+                name="RM", description="Rotation measure", units=u.radian / u.m**2
             ),
             "",
         )
@@ -1277,7 +1283,7 @@ class TimingModel:
         # When there is no noise model.
         # FIXME: specifically when there is no DMEFAC
         if len(self.dm_covariance_matrix_funcs) == 0:
-            result += np.diag(dmes ** 2)
+            result += np.diag(dmes**2)
             return result
 
         for nf in self.dm_covariance_matrix_funcs:
@@ -1319,8 +1325,8 @@ class TimingModel:
             The input data object for DM uncertainty.
         """
         dm_error, valid = toas.get_flag_value("pp_dme", as_type=float)
-        dm_error = np.array(dm_error)[valid] * u.pc / u.cm ** 3
-        result = np.zeros(len(dm_error)) * u.pc / u.cm ** 3
+        dm_error = np.array(dm_error)[valid] * u.pc / u.cm**3
+        result = np.zeros(len(dm_error)) * u.pc / u.cm**3
         # When there is no noise model.
         if len(self.scaled_dm_uncertainty_funcs) == 0:
             result += dm_error
@@ -1671,7 +1677,7 @@ class TimingModel:
     def d_dm_d_param(self, data, param):
         """Return the derivative of dm with respect to the parameter."""
         par = getattr(self, param)
-        result = np.zeros(len(data)) << (u.pc / u.cm ** 3 / par.units)
+        result = np.zeros(len(data)) << (u.pc / u.cm**3 / par.units)
         dm_df = self.dm_derivs.get(param, None)
         if dm_df is None:
             if param not in self.params:  # Maybe add differentitable params

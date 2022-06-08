@@ -409,12 +409,12 @@ def test_prefixed_aliases_in_component():
 
 
 def test_writing_equals_string(model_0437):
-    f = StringIO()
-    model_0437.write_parfile(f)
-    assert f.getvalue() == model_0437.as_parfile()
+    f = io.StringIO()
+    model_0437.write_parfile(f, include_info=False)
+    assert f.getvalue() == model_0437.as_parfile(include_info=False)
 
 
 def test_writing_to_file_equals_string(tmp_path, model_0437):
     p = tmp_path / "file.par"
-    model_0437.write_parfile(p)
-    assert p.read_text() == model_0437.as_parfile()
+    model_0437.write_parfile(p, include_info=False)
+    assert p.read_text() == model_0437.as_parfile(include_info=False)

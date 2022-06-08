@@ -165,7 +165,7 @@ class PeriodSpindown(PhaseComponent):
     # d_xxx_d_xxxx
     @property
     def d_F0_d_P0(self):
-        return -1.0 / self.P0.quantity ** 2
+        return -1.0 / self.P0.quantity**2
 
     @property
     def F1(self):
@@ -179,7 +179,7 @@ class PeriodSpindown(PhaseComponent):
 
     @property
     def d_F1_d_P0(self):
-        return self.P1.quantity * 2.0 / self.P0.quantity ** 3
+        return self.P1.quantity * 2.0 / self.P0.quantity**3
 
     @property
     def d_F1_d_P1(self):
@@ -194,7 +194,7 @@ class PeriodSpindown(PhaseComponent):
     def spindown_phase_period(self, toas, delay):
         """Spindown phase using P0 and P1"""
         dt = self.get_dt(toas, delay)
-        return self.F0.quantity * dt + 0.5 * self.F1.quantity * dt ** 2
+        return self.F0.quantity * dt + 0.5 * self.F1.quantity * dt**2
 
     def d_spindown_phase_period_d_delay(self, toas, delay):
         """This is part of the derivative chain for the parameters in the delay term."""
@@ -203,11 +203,11 @@ class PeriodSpindown(PhaseComponent):
 
     def d_phase_d_P0(self, toas, param, delay):
         dt = self.get_dt(toas, delay)
-        return self.d_F0_d_P0 * dt + 0.5 * self.d_F1_d_P0 * dt ** 2
+        return self.d_F0_d_P0 * dt + 0.5 * self.d_F1_d_P0 * dt**2
 
     def d_phase_d_P1(self, toas, param, delay):
         dt = self.get_dt(toas, delay)
-        return 0.5 * self.d_F1_d_P1 * dt ** 2
+        return 0.5 * self.d_F1_d_P1 * dt**2
 
 
 # %% [markdown]
