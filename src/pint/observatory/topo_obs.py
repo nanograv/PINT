@@ -16,6 +16,7 @@ from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import get_tdb_tt_ephem_geocenter, objPosVel_wrt_SSB
 from pint.utils import has_astropy_unit
 
+__all__ = ["TopoObs"]
 # These are global because they are, well, literally global
 _gps_clock = None
 
@@ -79,7 +80,7 @@ class TopoObs(Observatory):
         set True to force overwriting of previous observatory definition
     bogus_last_correction : bool, optional
         Clock correction files include a bogus last correction
-    """ % bipm_default
+    """
 
     def __init__(
         self,
