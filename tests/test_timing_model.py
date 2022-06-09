@@ -415,6 +415,31 @@ def test_resorting_toas_chi2_match(timfile_nojumps, sortkey):
     assert np.isclose(r.calc_chi2(), rsort.calc_chi2(), atol=1e-14)
 
 
+def test_shuffle_toas_residuals_match(timfile_nojumps):
+    m = get_model(os.path.join(datadir, "NGC6440E.par"))
+    t = timfile_nojumps
+    r = pint.residuals.Residuals(t, m, subtract_mean=False)
+    tcopy = deepcopy(t)
+    i = np.arange(len(t))
+    np.random.shuffle(i)
+    tcopy.table = tcopy.table[i]
+    rsort = pint.residuals.Residuals(tcopy, m, subtract_mean=False)
+    assert np.all(r.time_resids[i] == rsort.time_resids)
+
+
+def test_shuffle_toas_chi2_match(timfile_nojumps):
+    m = get_model(os.path.join(datadir, "NGC6440E.par"))
+    t = timfile_nojumps
+    r = pint.residuals.Residuals(t, m, subtract_mean=False)
+    tcopy = deepcopy(t)
+    i = np.arange(len(t))
+    np.random.shuffle(i)
+    tcopy.table = tcopy.table[i]
+    rsort = pint.residuals.Residuals(tcopy, m, subtract_mean=False)
+    # the differences seem to be related to floating point math
+    assert np.isclose(r.calc_chi2(), rsort.calc_chi2(), atol=1e-14)
+
+
 def test_supports_rm():
     m = get_model(io.StringIO("\n".join([par_base, "RM 10"])))
     assert m.RM.value == 10
