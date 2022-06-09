@@ -390,31 +390,28 @@ def test_parfile_and_timfile_jumps(timfile_jumps):
     assert fs[4] == "1"
 
 
-def test_resorting_toas(timfile_nojumps):
+@pytest.mark.parametrize("sortkey", ["freq", "mjd_float"])
+def test_resorting_toas_residuals_match(timfile_nojumps, sortkey):
     m = get_model(os.path.join(datadir, "NGC6440E.par"))
     t = timfile_nojumps
-    r = pint.residuals.Residuals(t, m)
+    r = pint.residuals.Residuals(t, m, subtract_mean=False)
     tcopy = deepcopy(t)
-    # sort by frequency
-    i = np.argsort(t.table["freq"])
-    i0 = np.where(i == 0)[0][0]
-    # make sure the first index is the same
-    # otherwise there are very small differences
-    i[[0, i0]] = i[[i0, 0]]
+    i = np.argsort(t.table[sortkey])
     tcopy.table = tcopy.table[i]
-    rsort = pint.residuals.Residuals(tcopy, m)
+    rsort = pint.residuals.Residuals(tcopy, m, subtract_mean=False)
+    assert np.all(r.time_resids[i] == rsort.time_resids)
+
+
+@pytest.mark.parametrize("sortkey", ["freq", "mjd_float"])
+def test_resorting_toas_chi2_match(timfile_nojumps, sortkey):
+    m = get_model(os.path.join(datadir, "NGC6440E.par"))
+    t = timfile_nojumps
+    r = pint.residuals.Residuals(t, m, subtract_mean=False)
+    tcopy = deepcopy(t)
+    i = np.argsort(t.table[sortkey])
+    tcopy.table = tcopy.table[i]
+    rsort = pint.residuals.Residuals(tcopy, m, subtract_mean=False)
     assert r.calc_chi2() == rsort.calc_chi2()
-    # sort by MJD
-    tcopy = deepcopy(t)
-    i = np.argsort(t.table["mjd_float"])
-    i0 = np.where(i == 0)[0][0]
-    # make sure the first index is the same
-    # otherwise there are very small differences
-    i[[0, i0]] = i[[i0, 0]]
-    tcopy.table = tcopy.table[i]
-    rsort = pint.residuals.Residuals(tcopy, m)
-    # seems like these should be identical
-    assert np.isclose(r.calc_chi2(), rsort.calc_chi2(), atol=1e-13)
 
 
 def test_supports_rm():
