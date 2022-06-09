@@ -1203,7 +1203,7 @@ class TimingModel:
                 delay += df(toas, delay)
         return delay
 
-    def phase(self, toas, abs_phase=False):
+    def phase(self, toas, abs_phase=None):
         """Return the model-predicted pulse phase for the given TOAs.
 
         This is the phase as observed at the observatory at the exact moment
@@ -1216,6 +1216,13 @@ class TimingModel:
         for pf in self.phase_funcs:
             phase += Phase(pf(toas, delay))
 
+        # abs_phase defaults to True if AbsPhase is in the model, otherwise to
+        # False.  Of course, if you manually set it, it will use that setting.
+        if abs_phase is None:
+            if "AbsPhase" in list(self.components.keys()):
+                abs_phase = True
+            else:
+                abs_phase = False
         # If the absolute phase flag is on, use the TZR parameters to compute
         # the absolute phase.
         if abs_phase:
@@ -1514,7 +1521,7 @@ class TimingModel:
             dt_array = [dt.value] * copy_toas.ntoas * dt._unit
             deltaT = time.TimeDelta(dt_array)
             copy_toas.adjust_TOAs(deltaT)
-            phase = self.phase(copy_toas)
+            phase = self.phase(copy_toas, abs_phase=False)
             sample_phase.append(phase)
         # Use finite difference method.
         # phase'(t) = (phase(t+h)-phase(t-h))/2+ 1/6*F2*h^2 + ..
@@ -1627,7 +1634,7 @@ class TimingModel:
         )
         for ii, val in enumerate(parv):
             par.value = val
-            ph = self.phase(toas)
+            ph = self.phase(toas, abs_phase=False)
             phase_i[:, ii] = ph.int
             phase_f[:, ii] = ph.frac
         res_i = -phase_i[:, 0] + phase_i[:, 1]
