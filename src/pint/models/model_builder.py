@@ -443,12 +443,10 @@ class ModelBuilder:
         validate : bool, optional
             Whether to run the validate funciotn in the timing model.
         """
-        ### This is a little weird. When would original_name be None if there are entries like F0:F0?
-        # if original_name is not None:
-        #    use_alias = True
-        # else:
-        #    use_alias = False
-        use_alias = True
+        if original_name is not None:
+            use_alias = True
+        else:
+            use_alias = False
         for pp, v in pint_param_dict.items():
             try:
                 par = getattr(timing_model, pp)
@@ -478,10 +476,6 @@ class ModelBuilder:
             # Fill up the values
             param_line = len(v)
             if param_line < 2:
-                # if use_alias:  # Use the input alias as input
-                #    name = original_name[pp]
-                # else:
-                #    name = pp
                 name = pp
                 par.from_parfile_line(" ".join([name] + v))
             else:  # For the repeatable parameters

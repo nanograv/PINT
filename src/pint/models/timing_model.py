@@ -3035,16 +3035,21 @@ class AllComponents:
                 # assume the index 1 parameter is in the alias map
                 # count length of idx_str and dectect leading zeros
                 # TODO fix the case for searching `DMX`
+                num_lzero = len(idx_str) - len(str(idx))
+                if num_lzero > 0:  # Has leading zero
+                    fmt = len(idx_str)
+                else:
+                    fmt = 0
                 first_init_par = None
                 # Handle the case of start index from 0 and 1
                 for start_idx in [0, 1]:
-                    first_init_par_alias = prefix + f"{start_idx:0{0}}"
+                    first_init_par_alias = prefix + f"{start_idx:0{fmt}}"
                     first_init_par = self._param_alias_map.get(
                         first_init_par_alias, None
                     )
                     if first_init_par:
                         # Find the first init par move to the next step
-                        pint_par = split_prefixed_name(first_init_par)[0] + str(idx)
+                        pint_par = split_prefixed_name(first_init_par)[0] + idx_str
                         break
             except PrefixError:
                 pint_par = None
