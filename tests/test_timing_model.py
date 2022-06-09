@@ -368,8 +368,8 @@ def test_many_timfile_jumps():
 
 def test_parfile_and_timfile_jumps(timfile_jumps):
     t = timfile_jumps
-    print(t.table)
-    # t.table.group_by("obs")
+    # this test assumes things have been grouped by observatory to associate the jumps with specific TOA indices
+    t.table = t.table.group_by("obs")
     m = get_model(io.StringIO(par_base + "JUMP MJD 55729 55730 0.0 1\n"))
     # turns pre-existing jump flags in t.table['flags'] into parameters in parfile
     m.jump_flags_to_params(t)
@@ -377,7 +377,6 @@ def test_parfile_and_timfile_jumps(timfile_jumps):
     # adds jump flags to t.table['flags'] for jump parameters already in parfile
     m.jump_params_to_flags(t)
     fs, idxs = t.get_flag_value("tim_jump")
-    print(fs, idxs)
     assert len(idxs) == 4
     assert fs[5] == "3"  # These were both boosted because of the parfile JUMP
     assert fs[6] == "2"
