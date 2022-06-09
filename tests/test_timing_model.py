@@ -411,7 +411,8 @@ def test_resorting_toas_chi2_match(timfile_nojumps, sortkey):
     i = np.argsort(t.table[sortkey])
     tcopy.table = tcopy.table[i]
     rsort = pint.residuals.Residuals(tcopy, m, subtract_mean=False)
-    assert r.calc_chi2() == rsort.calc_chi2()
+    # the differences seem to be related to floating point math
+    assert np.isclose(r.calc_chi2(), rsort.calc_chi2(), atol=1e-14)
 
 
 def test_supports_rm():
