@@ -1148,13 +1148,17 @@ class TOAs:
 
     >>> t['high', t['freq'] > 1*u.GHz] = "1"
 
-    TOAs used to be grouped by observatory if desired, but currently are not.  To iterate over all observatory groups:
+    TOAs used to be grouped by observatory, but currently are not.  To iterate over all observatory groups:
 
     >>> for obs,idx in t.get_obs_groups():
 
     Or to actually reorder the TOAs by observatory:
 
     >>> t.table.group_by("obs")
+
+    Other sorting is fine too:
+
+    >>> t.table.sort("freq")
 
 
     .. list-table:: Columns in ``.table``
@@ -2345,7 +2349,7 @@ class TOAs:
         self.table.add_column(col)
 
 
-def merge_TOAs(TOAs_list, group=False):
+def merge_TOAs(TOAs_list):
     """Merge a list of TOAs instances and return a new combined TOAs instance
 
     In order for a merge to work, each TOAs instance needs to have
