@@ -1,21 +1,23 @@
 import os
-import unittest
-import pytest
-import numpy as np
 import shutil
-from io import StringIO
+import unittest
 from glob import glob
+from io import StringIO
+from pathlib import Path
 
-from hypothesis import given
-from hypothesis.strategies import integers, floats, sampled_from
-from hypothesis.extra.numpy import arrays
-from pint import toa, simulation
-from pint.observatory import bipm_default
-from pint.models import get_model, get_model_and_toas
-from pinttestdata import datadir
+import numpy as np
+import pytest
 
 # For this test, turn off the check for the age of the IERS A table
 from astropy.utils.iers import conf
+from hypothesis import given
+from hypothesis.extra.numpy import arrays
+from hypothesis.strategies import floats, integers, sampled_from
+from pinttestdata import datadir
+
+from pint import simulation, toa
+from pint.models import get_model, get_model_and_toas
+from pint.observatory import bipm_default
 
 conf.auto_max_age = None
 
@@ -405,3 +407,50 @@ loadable_tims = [
 @given(sampled_from(loadable_tims))
 def test_contiguous_on_load(tim):
     check_indices_contiguous(toa.get_TOAs(tim))
+
+
+def test_include_directory(tmp_path):
+    d = Path.cwd()
+    try:
+        os.chdir(datadir)
+        # "test1.tim" has "INCLUDE test2.tim"
+        # This should work
+        toa.get_TOAs(str(Path(datadir) / "test1.tim"))
+        os.chdir(tmp_path)
+        # This should also work
+        toa.get_TOAs(str(Path(datadir) / "test1.tim"))
+    finally:
+        os.chdir(d)
+
+
+def test_chained_include_directories(tmp_path):
+    t1 = tmp_path / "test.tim"
+    b = tmp_path / "b"
+    b.mkdir()
+    t1.write_text(
+        """
+        FORMAT 1
+
+        toa1 1404.000 55336.989701997555466   3.469  gbt  -fe Rcvr1_2 -be GASP -f Rcvr1_2_GASP -bw 4 -tobs 1740.3
+
+        INCLUDE b/test2.tim
+    """
+    )
+    (b / "test2.tim").write_text(
+        """
+        FORMAT 1
+
+        toa2 1404.000 55337.989701997555466   3.469  gbt  -fe Rcvr1_2 -be GASP -f Rcvr1_2_GASP -bw 4 -tobs 1740.3
+
+        INCLUDE ../test3.tim
+    """
+    )
+    (tmp_path / "test3.tim").write_text(
+        """
+        FORMAT 1
+
+        toa3 1404.000 55338.989701997555466   3.469  gbt  -fe Rcvr1_2 -be GASP -f Rcvr1_2_GASP -bw 4 -tobs 1740.3
+    """
+    )
+
+    assert len(toa.get_TOAs(str(t1))) == 3
