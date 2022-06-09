@@ -24,6 +24,7 @@ from pint.models import (
 )
 from pint.simulation import make_fake_toas_uniform
 from pint.toa import get_TOAs
+import pint.residuals
 
 
 @pytest.fixture
@@ -387,6 +388,33 @@ def test_parfile_and_timfile_jumps(timfile_jumps):
         "1,3",
     ]
     assert fs[4] == "1"
+
+
+def test_resorting_toas(timfile_nojumps):
+    m = get_model(os.path.join(datadir, "NGC6440E.par"))
+    t = timfile_nojumps
+    r = pint.residuals.Residuals(t, m)
+    tcopy = deepcopy(t)
+    # sort by frequency
+    i = np.argsort(t.table["freq"])
+    i0 = np.where(i == 0)[0][0]
+    # make sure the first index is the same
+    # otherwise there are very small differences
+    i[[0, i0]] = i[[i0, 0]]
+    tcopy.table = tcopy.table[i]
+    rsort = pint.residuals.Residuals(tcopy, m)
+    assert r.calc_chi2() == rsort.calc_chi2()
+    # sort by MJD
+    tcopy = deepcopy(t)
+    i = np.argsort(t.table["mjd_float"])
+    i0 = np.where(i == 0)[0][0]
+    # make sure the first index is the same
+    # otherwise there are very small differences
+    i[[0, i0]] = i[[i0, 0]]
+    tcopy.table = tcopy.table[i]
+    rsort = pint.residuals.Residuals(tcopy, m)
+    # seems like these should be identical
+    assert np.isclose(r.calc_chi2(), rsort.calc_chi2(), atol=1e-13)
 
 
 def test_supports_rm():
