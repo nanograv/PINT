@@ -115,6 +115,7 @@ def get_TOAs(
     usepickle=False,
     tdb_method="default",
     picklefilename=None,
+    group=False,
     limits="warn",
 ):
     """Load and prepare TOAs for PINT use.
@@ -177,6 +178,8 @@ def get_TOAs(
         Filename to use for caching loaded file. Defaults to adding ``.pickle.gz`` to the
         filename of the timfile, if there is one and only one. If no filename is available,
         or multiple filenames are provided, a specific filename must be provided.
+    group : bool
+        Whether to group the TOAs by observatory or preserve the original order
     limits : "warn" or "error"
         What to do when encountering TOAs for which clock corrections are not available.
 
@@ -304,7 +307,8 @@ def get_TOAs(
     if usepickle and updatepickle:
         log.info("Pickling TOAs.")
         save_pickle(t, picklefilename=picklefilename)
-    t.table = t.table.group_by("obs")
+    if group:
+        t.table = t.table.group_by("obs")
     return t
 
 
@@ -394,6 +398,7 @@ def get_TOAs_list(
     commands=None,
     filename=None,
     hashes=None,
+    group=False,
     limits="warn",
 ):
     """Load TOAs from a list of TOA objects.
@@ -418,7 +423,8 @@ def get_TOAs_list(
         t.compute_TDBs(method=tdb_method, ephem=ephem)
     if "ssb_obs_pos" not in t.table.colnames:
         t.compute_posvels(ephem, planets)
-    t.table = t.table.group_by("obs")
+    if group:
+        t.table = t.table.group_by("obs")
     return t
 
 
@@ -1150,7 +1156,7 @@ class TOAs:
 
     >>> t['high', t['freq'] > 1*u.GHz] = "1"
 
-    TOAs are grouped by observatory by default, but this is just a convention.  To iterate over all observatory groups:
+    TOAs can be grouped by observatory if desired, but by default are not.  To iterate over all observatory groups:
 
     >>> for obs,idx in t.get_obs_groups():
 
@@ -2346,7 +2352,7 @@ class TOAs:
         self.table.add_column(col)
 
 
-def merge_TOAs(TOAs_list):
+def merge_TOAs(TOAs_list, group=False):
     """Merge a list of TOAs instances and return a new combined TOAs instance
 
     In order for a merge to work, each TOAs instance needs to have
@@ -2358,6 +2364,8 @@ def merge_TOAs(TOAs_list):
     Parameters
     ----------
     TOAs_list : list of TOAs instances
+    group : bool
+        Whether to group the TOAs by observatory or preserve the original order
 
     Returns
     -------
@@ -2420,6 +2428,7 @@ def merge_TOAs(TOAs_list):
         nt.hashes.update(tt.hashes)
     # This sets a flag that indicates that we have merged TOAs instances
     nt.merged = True
-    nt.table = nt.table.group_by("obs")
+    if group:
+        nt.table = nt.table.group_by("obs")
 
     return nt
