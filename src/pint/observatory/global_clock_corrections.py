@@ -23,7 +23,7 @@ from loguru import logger as log
 from pint.pulsar_mjd import Time
 
 global_clock_correction_url_base = (
-    "https://raw.githubusercontent.com/nanograv/pulsar-clock-corrections/main/"
+    "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/"
 )
 
 # These are mirrors that have (presumed) identical data but might be available when
