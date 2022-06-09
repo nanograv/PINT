@@ -591,7 +591,6 @@ def get_model_and_toas(
     tdb_method="default",
     picklefilename=None,
     allow_name_mixing=False,
-    group=False,
     limits="warn",
 ):
     """Load a timing model and a related TOAs, using model commands as needed
@@ -627,8 +626,6 @@ def get_model_and_toas(
         same parameter. For example, if this flag is true, one can have
         T2EFAC and EFAC, both of them maps to PINT parameter EFAC, present
         in the parfile at the same time.
-    group : bool
-        Whether to group the TOAs by observatory or preserve the original order
     limits : "warn" or "error"
         What to do when encountering TOAs for which clock corrections are not available.
 
@@ -648,7 +645,6 @@ def get_model_and_toas(
         usepickle=usepickle,
         tdb_method=tdb_method,
         picklefilename=picklefilename,
-        group=group,
         limits=limits,
     )
     return mm, tt

@@ -74,7 +74,7 @@ class TestTOAs(unittest.TestCase):
         assert toas.table["mjd"][0].precision == 9
         assert toas.table["mjd"][0].location is not None
 
-    def test_mulit_obs(self):
+    def test_multiple_observatories_stay_attached(self):
         obs1 = "gbt"
         obs2 = "ao"
         obs3 = "barycenter"

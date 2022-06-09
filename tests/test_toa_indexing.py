@@ -24,40 +24,33 @@ n_tim = len(tim.split("\n")) - 2
 
 @pytest.mark.parametrize("high_precision", [True, False])
 def test_get_TOAs(high_precision):
-    toas = get_TOAs(StringIO(tim), ephem="de421", group=True)
+    toas = get_TOAs(StringIO(tim), ephem="de421")
     m = toas.get_mjds(high_precision=high_precision)
     assert isinstance(m, np.ndarray)
-    assert not np.all(
-        np.diff(m) > 0
-    ), "returned values should be grouped by observatory"
     assert len(m) == n_tim
 
 
 @given(arrays(bool, n_tim))
 def test_select(c):
-    toas = get_TOAs(StringIO(tim), ephem="de421", group=True)
+    toas = get_TOAs(StringIO(tim), ephem="de421")
     m = toas.get_mjds()
     assert len(toas) == len(c)
     toas.select(c)
     assert len(toas) == np.sum(c)
     assert np.all(toas.get_mjds() == m[c])
     if len(toas) > 0:
-        assert np.all(
-            toas.table["mjd_float"] == toas.table.group_by("obs")["mjd_float"]
-        )
         toas.get_summary()
 
 
 @given(arrays(bool, n_tim))
 def test_getitem_boolean(c):
-    toas = get_TOAs(StringIO(tim), ephem="de421", group=True)
+    toas = get_TOAs(StringIO(tim), ephem="de421")
     m = toas.get_mjds()
     assert len(toas) == len(c)
     s = toas[c]
     assert len(s) == np.sum(c)
     assert np.all(s.get_mjds() == m[c])
     if len(s) > 0:
-        assert np.all(s.table["mjd_float"] == s.table.group_by("obs")["mjd_float"])
         toas.get_summary()
 
 
@@ -68,7 +61,7 @@ def test_getitem_boolean(c):
     )
 )
 def test_getitem_where(a):
-    toas = get_TOAs(StringIO(tim), ephem="de421", group=True)
+    toas = get_TOAs(StringIO(tim), ephem="de421")
     m = toas.get_mjds()
     s = toas[a]
     assert len(s) == len(a)
@@ -79,7 +72,7 @@ def test_getitem_where(a):
 
 @given(slices(n_tim))
 def test_getitem_slice(c):
-    toas = get_TOAs(StringIO(tim), ephem="de421", group=True)
+    toas = get_TOAs(StringIO(tim), ephem="de421")
     m = toas.get_mjds()
     s = toas[c]
     assert set(s.get_mjds()) == set(m[c])
