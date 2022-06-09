@@ -24,7 +24,7 @@ n_tim = len(tim.split("\n")) - 2
 
 @pytest.mark.parametrize("high_precision", [True, False])
 def test_get_TOAs(high_precision):
-    toas = get_TOAs(StringIO(tim), ephem="de421")
+    toas = get_TOAs(StringIO(tim), ephem="de421", group=True)
     m = toas.get_mjds(high_precision=high_precision)
     assert isinstance(m, np.ndarray)
     assert not np.all(
@@ -35,7 +35,7 @@ def test_get_TOAs(high_precision):
 
 @given(arrays(bool, n_tim))
 def test_select(c):
-    toas = get_TOAs(StringIO(tim), ephem="de421")
+    toas = get_TOAs(StringIO(tim), ephem="de421", group=True)
     m = toas.get_mjds()
     assert len(toas) == len(c)
     toas.select(c)
@@ -50,7 +50,7 @@ def test_select(c):
 
 @given(arrays(bool, n_tim))
 def test_getitem_boolean(c):
-    toas = get_TOAs(StringIO(tim), ephem="de421")
+    toas = get_TOAs(StringIO(tim), ephem="de421", group=True)
     m = toas.get_mjds()
     assert len(toas) == len(c)
     s = toas[c]
@@ -68,7 +68,7 @@ def test_getitem_boolean(c):
     )
 )
 def test_getitem_where(a):
-    toas = get_TOAs(StringIO(tim), ephem="de421")
+    toas = get_TOAs(StringIO(tim), ephem="de421", group=True)
     m = toas.get_mjds()
     s = toas[a]
     assert len(s) == len(a)
@@ -79,7 +79,7 @@ def test_getitem_where(a):
 
 @given(slices(n_tim))
 def test_getitem_slice(c):
-    toas = get_TOAs(StringIO(tim), ephem="de421")
+    toas = get_TOAs(StringIO(tim), ephem="de421", group=True)
     m = toas.get_mjds()
     s = toas[c]
     assert set(s.get_mjds()) == set(m[c])
