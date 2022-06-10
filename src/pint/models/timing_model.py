@@ -57,7 +57,13 @@ from pint.models.parameter import (
 )
 from pint.phase import Phase
 from pint.toa import TOAs
-from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
+from pint.utils import (
+    PrefixError,
+    interesting_lines,
+    lines_of,
+    split_prefixed_name,
+    open_or_use,
+)
 
 
 __all__ = [
@@ -196,7 +202,10 @@ class TimingModel:
     ``model.F0``.
 
     TimingModel objects can be written out to ``.par`` files using
-    :func:`pint.models.timing_model.TimingModel.as_parfile`.
+    :func:`pint.models.timing_model.TimingModel.write_parfile` or .
+    :func:`pint.models.timing_model.TimingModel.as_parfile`::
+
+        >>> model.write_parfile("output.par")
 
     PINT Parameters supported (here, rather than in any Component):
 
@@ -397,7 +406,7 @@ class TimingModel:
             except AttributeError:
                 continue
         raise AttributeError(
-            "Attribute {} not found in TimingModel or any Component".format(name)
+            f"Attribute {name} not found in TimingModel or any Component"
         )
 
     @property_exists
@@ -474,7 +483,7 @@ class TimingModel:
             params_true.discard(p)
         if params_true:
             raise ValueError(
-                "Parameter(s) are familiar but not in the model: {}".format(params)
+                f"Parameter(s) are familiar but not in the model: {params}"
             )
 
     def match_param_aliases(self, alias):
@@ -505,9 +514,7 @@ class TimingModel:
                 continue
             return pint_par
 
-        raise UnknownParameter(
-            "{} is not recognized as a parameter or alias".format(alias)
-        )
+        raise UnknownParameter(f"{alias} is not recognized as a parameter or alias")
 
     def get_params_dict(self, which="free", kind="quantity"):
         """Return a dict mapping parameter names to values.
@@ -540,7 +547,7 @@ class TimingModel:
             elif kind == "uncertainty":
                 c[p] = q.uncertainty_value
             else:
-                raise ValueError("Unknown kind '{}'".format(kind))
+                raise ValueError(f"Unknown kind {kind!r}")
         return c
 
     def set_param_values(self, fitp):
@@ -554,7 +561,7 @@ class TimingModel:
             p = getattr(self, k)
             if isinstance(v, (Parameter, prefixParameter)):
                 if v.value is None:
-                    raise ValueError("Parameter {} is unset".format(v))
+                    raise ValueError(f"Parameter {v} is unset")
                 p.value = v.value
             elif isinstance(v, u.Quantity):
                 p.value = v.to_value(p.units)
@@ -851,7 +858,7 @@ class TimingModel:
         for cp in list(self.components.values()):
             if hasattr(cp, name):
                 return cp
-        raise AttributeError("{} not found in any component".format(name))
+        raise AttributeError(f"{name} not found in any component")
 
     def get_component_type(self, component):
         """Identify the component object's type.
@@ -1111,7 +1118,7 @@ class TimingModel:
             mapping = cp.get_prefix_mapping_component(prefix)
             if len(mapping) != 0:
                 return mapping
-        raise ValueError("Can not find prefix `{}`".format(prefix))
+        raise ValueError(f"Can not find prefix {prefix!r}")
 
     def get_prefix_list(self, prefix, start_index=0):
         """Return the Quantities associated with a sequence of prefix parameters.
@@ -1681,7 +1688,7 @@ class TimingModel:
         dm_df = self.dm_derivs.get(param, None)
         if dm_df is None:
             if param not in self.params:  # Maybe add differentitable params
-                raise AttributeError("Parameter {} does not exist".format(param))
+                raise AttributeError(f"Parameter {param} does not exist")
             else:
                 return result
 
@@ -2153,6 +2160,8 @@ class TimingModel:
     ):
         """Represent the entire model as a parfile string.
 
+        See also :func:`pint.models.TimingModel.write_parfile`.
+
         Parameters
         ----------
         start_order : list
@@ -2167,11 +2176,8 @@ class TimingModel:
              Parfile output format. PINT outputs in 'tempo', 'tempo2' and 'pint'
              formats. The defaul format is `pint`.
         """
-        assert (
-            format.lower() in _parfile_formats
-        ), "parfile format must be one of %s" % ", ".join(
-            ['"%s"' % x for x in _parfile_formats]
-        )
+        if not format.lower() in _parfile_formats:
+            raise ValueError(f"parfile format must be one of {_parfile_formats}")
 
         self.validate()
         if include_info:
@@ -2221,6 +2227,47 @@ class TimingModel:
                 printed_cate.append(cat)
 
         return result_begin + result_middle + result_end
+
+    def write_parfile(
+        self,
+        filename,
+        start_order=["astrometry", "spindown", "dispersion"],
+        last_order=["jump_delay"],
+        *,
+        include_info=True,
+        comment=None,
+        format="pint",
+    ):
+        """Write the entire model as a parfile.
+
+        See also :func:`pint.models.TimingModel.as_parfile`.
+
+        Parameters
+        ----------
+        filename : str or Path or file-like
+            The destination to write the parfile to
+        start_order : list
+            Categories to include at the beginning
+        last_order : list
+            Categories to include at the end
+        include_info : bool, optional
+            Include information string if True
+        comment : str, optional
+            Additional comment string to include in parfile
+        format : str, optional
+             Parfile output format. PINT outputs in 'tempo', 'tempo2' and 'pint'
+             formats. The defaul format is `pint`.
+        """
+        with open_or_use(filename, "wt") as f:
+            f.write(
+                self.as_parfile(
+                    start_order=start_order,
+                    last_order=last_order,
+                    include_info=include_info,
+                    comment=comment,
+                    format=format,
+                )
+            )
 
     def validate_toas(self, toas):
         """Sanity check to verify that this model is compatible with these toas.
@@ -2359,9 +2406,7 @@ class TimingModel:
         elif "AstrometryEcliptic" in self.components:
             astrometry_model_type = "AstrometryEcliptic"
         astrometry_model_component = self.components[astrometry_model_type]
-        new_astrometry_model_component = astrometry_model_component.as_ICRS(
-            epoch=epoch,
-        )
+        new_astrometry_model_component = astrometry_model_component.as_ICRS(epoch=epoch)
         new_model = copy.deepcopy(self)
         new_model.remove_component(astrometry_model_type)
         new_model.add_component(new_astrometry_model_component)
