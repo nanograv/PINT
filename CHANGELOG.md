@@ -7,6 +7,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## Unreleased
 ### Changed
 - model.phase() now defaults to abs_phase=True when TZR* params are in the model
+- TOAs no longer need to be grouped by observatory
 ### Added
 - logging now needs to be setup explicitly
 - Color-by-jump mode for pintk
@@ -14,6 +15,8 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added the ability to write clock files in TEMPO or TEMPO2 format
 - Added examples of how to write a par file to tutorials
 - Added `TimingModel.write_parfile()`
+- Added generator for iterating over like items in an array
+- Added iterator to iterate over observatory groups
 ### Fixed
 - INCLUDE lines in tim files are now relative to the location of the tim file (bug #1269)
 ### Changed
