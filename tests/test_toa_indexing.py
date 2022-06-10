@@ -28,6 +28,7 @@ def test_get_TOAs(high_precision):
     m = toas.get_mjds(high_precision=high_precision)
     assert isinstance(m, np.ndarray)
     assert len(m) == n_tim
+    assert np.all(np.diff(m) > 0)
 
 
 @given(arrays(bool, n_tim))
@@ -76,6 +77,7 @@ def test_getitem_slice(c):
     m = toas.get_mjds()
     s = toas[c]
     assert set(s.get_mjds()) == set(m[c])
+    assert (toas[c].get_mjds() == toas.get_mjds()[c]).all()
     if len(s) > 0:
         toas.get_summary()
 

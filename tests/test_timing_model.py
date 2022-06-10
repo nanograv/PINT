@@ -8,6 +8,8 @@ from contextlib import redirect_stdout
 import astropy.units as u
 import numpy as np
 import pytest
+from hypothesis import given
+from hypothesis.strategies import permutations
 from numpy.testing import assert_allclose
 from pinttestdata import datadir
 
@@ -41,6 +43,9 @@ def timfile_jumps():
 @pytest.fixture
 def timfile_nojumps():
     return get_TOAs(os.path.join(datadir, "NGC6440E.tim"))
+
+
+len_timfile_nojumps = len(get_TOAs(os.path.join(datadir, "NGC6440E.tim")))
 
 
 class TestModelBuilding:
@@ -387,54 +392,45 @@ def test_parfile_and_timfile_jumps(timfile_jumps):
     assert fs[4] == "1"
 
 
-@pytest.mark.parametrize("sortkey", ["freq", "mjd_float"])
-def test_resorting_toas_residuals_match(timfile_nojumps, sortkey):
-    m = get_model(os.path.join(datadir, "NGC6440E.par"))
-    t = timfile_nojumps
-    r = pint.residuals.Residuals(t, m, subtract_mean=False)
-    tcopy = deepcopy(t)
-    i = np.argsort(t.table[sortkey])
-    tcopy.table = tcopy.table[i]
-    rsort = pint.residuals.Residuals(tcopy, m, subtract_mean=False)
-    assert np.all(r.time_resids[i] == rsort.time_resids)
+class TestTOAOrder:
+    def setup(self):
+        self.parfile = os.path.join(datadir, "NGC6440E.par")
+        self.timfile = os.path.join(datadir, "NGC6440E.tim")
+        self.model = get_model(self.parfile)
+        self.t = get_TOAs(self.timfile)
+        self.r = pint.residuals.Residuals(self.t, self.model, subtract_mean=False)
 
+    @pytest.mark.parametrize("sortkey", ["freq", "mjd_float"])
+    def test_resorting_toas_residuals_match(self, sortkey):
+        tcopy = deepcopy(self.t)
+        i = np.argsort(self.t.table[sortkey])
+        tcopy.table = tcopy.table[i]
+        rsort = pint.residuals.Residuals(tcopy, self.model, subtract_mean=False)
+        assert np.all(self.r.time_resids[i] == rsort.time_resids)
 
-@pytest.mark.parametrize("sortkey", ["freq", "mjd_float"])
-def test_resorting_toas_chi2_match(timfile_nojumps, sortkey):
-    m = get_model(os.path.join(datadir, "NGC6440E.par"))
-    t = timfile_nojumps
-    r = pint.residuals.Residuals(t, m, subtract_mean=False)
-    tcopy = deepcopy(t)
-    i = np.argsort(t.table[sortkey])
-    tcopy.table = tcopy.table[i]
-    rsort = pint.residuals.Residuals(tcopy, m, subtract_mean=False)
-    # the differences seem to be related to floating point math
-    assert np.isclose(r.calc_chi2(), rsort.calc_chi2(), atol=1e-14)
+    @pytest.mark.parametrize("sortkey", ["freq", "mjd_float"])
+    def test_resorting_toas_chi2_match(self, sortkey):
+        tcopy = deepcopy(self.t)
+        i = np.argsort(self.t.table[sortkey])
+        tcopy.table = tcopy.table[i]
+        rsort = pint.residuals.Residuals(tcopy, self.model, subtract_mean=False)
+        # the differences seem to be related to floating point math
+        assert np.isclose(self.r.calc_chi2(), rsort.calc_chi2(), atol=1e-14)
 
+    @given(permutations(np.arange(len_timfile_nojumps)))
+    def test_shuffle_toas_residuals_match(self, permute):
+        tcopy = deepcopy(self.t)
+        tcopy.table = tcopy.table[permute]
+        rsort = pint.residuals.Residuals(tcopy, self.model, subtract_mean=False)
+        assert np.all(self.r.time_resids[permute] == rsort.time_resids)
 
-def test_shuffle_toas_residuals_match(timfile_nojumps):
-    m = get_model(os.path.join(datadir, "NGC6440E.par"))
-    t = timfile_nojumps
-    r = pint.residuals.Residuals(t, m, subtract_mean=False)
-    tcopy = deepcopy(t)
-    i = np.arange(len(t))
-    np.random.shuffle(i)
-    tcopy.table = tcopy.table[i]
-    rsort = pint.residuals.Residuals(tcopy, m, subtract_mean=False)
-    assert np.all(r.time_resids[i] == rsort.time_resids)
-
-
-def test_shuffle_toas_chi2_match(timfile_nojumps):
-    m = get_model(os.path.join(datadir, "NGC6440E.par"))
-    t = timfile_nojumps
-    r = pint.residuals.Residuals(t, m, subtract_mean=False)
-    tcopy = deepcopy(t)
-    i = np.arange(len(t))
-    np.random.shuffle(i)
-    tcopy.table = tcopy.table[i]
-    rsort = pint.residuals.Residuals(tcopy, m, subtract_mean=False)
-    # the differences seem to be related to floating point math
-    assert np.isclose(r.calc_chi2(), rsort.calc_chi2(), atol=1e-14)
+    @given(permutations(np.arange(len_timfile_nojumps)))
+    def test_shuffle_toas_chi2_match(self, permute):
+        tcopy = deepcopy(self.t)
+        tcopy.table = tcopy.table[permute]
+        rsort = pint.residuals.Residuals(tcopy, self.model, subtract_mean=False)
+        # the differences seem to be related to floating point math
+        assert np.isclose(self.r.calc_chi2(), rsort.calc_chi2(), atol=1e-14)
 
 
 def test_supports_rm():
