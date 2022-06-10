@@ -10,7 +10,7 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.13.8
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -135,5 +135,9 @@ plt.xlabel("MJD")
 plt.ylabel("Residual (us)")
 plt.grid()
 plt.show()
+
+# %%
+f.model.write_parfile("/tmp/output.par", "wt")
+print(f.model.as_parfile())
 
 # %%

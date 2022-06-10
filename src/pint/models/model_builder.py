@@ -1,12 +1,15 @@
 import os
 import copy
+import warnings
 from io import StringIO
 from collections import Counter, defaultdict
-import warnings
-from pint.models.parameter import maskParameter
+from pathlib import Path
+
 from astropy import log
 from astropy.utils.decorators import lazyproperty
 from loguru import logger as log
+
+from pint.models.parameter import maskParameter
 from pint.models.timing_model import (
     DEFAULT_ORDER,
     Component,
@@ -239,7 +242,7 @@ class ModelBuilder:
         original_name_map = defaultdict(list)
         unknown_param = defaultdict(list)
         repeating = Counter()
-        if isinstance(parfile, (str, StringIO)):
+        if isinstance(parfile, (str, StringIO, Path)):
             parfile_dict = parse_parfile(parfile)
         else:
             parfile_dict = parfile

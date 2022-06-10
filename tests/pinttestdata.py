@@ -5,7 +5,9 @@
 # dir for this to work.
 
 import os
+from pathlib import Path
 
 # Location of this file and the test data scripts
-testdir = os.path.dirname(os.path.abspath(__file__))
-datadir = os.path.join(testdir, "datafile")
+# testdir = os.path.dirname(os.path.abspath(__file__))
+testdir = Path(__file__).resolve().parent
+datadir = testdir / "datafile"

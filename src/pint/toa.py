@@ -16,12 +16,11 @@ has moved to :mod:`pint.simulation`.
 import copy
 import gzip
 import hashlib
-import os
 import pickle
 import re
 import warnings
-from collections import OrderedDict
 from collections.abc import MutableMapping
+from pathlib import Path
 
 import astropy.table as table
 import astropy.time as time
@@ -45,7 +44,6 @@ from pint.phase import Phase
 from pint.pulsar_ecliptic import PulsarEcliptic
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
-
 
 __all__ = [
     "TOAs",
@@ -256,12 +254,12 @@ def get_TOAs(
                 log.info("Pickle contains wrong bipm_version")
                 updatepickle = True
     if not usepickle or updatepickle:
-        if isinstance(timfile, str) or hasattr(timfile, "readlines"):
+        if isinstance(timfile, (str, Path)) or hasattr(timfile, "readlines"):
             t = TOAs(timfile)
         else:
             t = merge_TOAs([TOAs(t) for t in timfile])
 
-        files = [t.filename] if isinstance(t.filename, str) else t.filename
+        files = [t.filename] if isinstance(t.filename, (str, Path)) else t.filename
         if files is not None:
             t.hashes = {f: _compute_hash(f) for f in files}
         recalc = True
@@ -372,8 +370,8 @@ def save_pickle(toas, picklefilename=None):
             "TOAs object was merged from multiple files, please provide a filename."
         )
     elif toas.filename is not None:
-        if isinstance(toas.filename, str):
-            picklefilename = toas.filename + ".pickle.gz"
+        if isinstance(toas.filename, (str, Path)):
+            picklefilename = str(toas.filename) + ".pickle.gz"
         else:
             picklefilename = toas.filename[0] + ".pickle.gz"
     else:
@@ -430,14 +428,14 @@ def _toa_format(line, fmt="Unknown"):
         return "Princeton"
     elif (
         line.startswith("C ")
-        or line.startswith("c ")
-        or line[0] == "#"
+        or line.startswith("c ")  # FIXME: This matches the re above!
+        or line.startswith("#")
         or line.startswith("CC ")
     ):
         return "Comment"
-    elif line.upper().startswith(toa_commands):
+    elif line.upper().lstrip().startswith(toa_commands):
         return "Command"
-    elif re.match(r"^\s+$", line):
+    elif re.match(r"^\s*$", line):  # FIXME: what about empty lines?
         return "Blank"
     elif re.match(r"^ ", line) and len(line) > 41 and line[41] == ".":
         return "Parkes"
@@ -526,6 +524,12 @@ def _parse_TOA_line(line, fmt="Unknown"):
         d["obs"] = get_observatory(line[79].upper()).name
     elif fmt == "ITOA":
         raise RuntimeError("TOA format '%s' not implemented yet" % fmt)
+    elif fmt in ["Blank", "Comment"]:
+        pass
+    else:
+        raise RuntimeError(
+            f"Unable to identify TOA format for line {line!r}, expecting {fmt}"
+        )
     return MJD, d
 
 
@@ -668,7 +672,7 @@ def format_toa_line(
     return out
 
 
-def read_toa_file(filename, process_includes=True, cdict=None):
+def read_toa_file(filename, process_includes=True, cdict=None, dir=None):
     """Read TOAs from the given filename into a list.
 
     Will process INCLUDEd files unless process_includes is False.
@@ -685,12 +689,25 @@ def read_toa_file(filename, process_includes=True, cdict=None):
         new TOAs. Used recursively; note that surprises may ensue
         if this function is called on an already existing and
         processed TOAs object.
+    dir : str or Path
+        This is the directory where the TOA file is found. INCLUDE
+        statements are relative to this directory. If None, it is
+        assumed to be the directory part of ``filename``, if that
+        is a path rather than a file-like object. If None and ``filename``
+        is a file-like object, the directory is assumed to be the
+        current directory.
     """
-    if isinstance(filename, str):
+    if isinstance(filename, (str, Path)):
+        if dir is None:
+            dir = Path(filename).parent
         with open(filename, "r") as f:
-            return read_toa_file(f, process_includes=process_includes, cdict=cdict)
+            return read_toa_file(
+                f, process_includes=process_includes, cdict=cdict, dir=dir
+            )
     else:
         f = filename
+        if dir is None:
+            dir = Path(".")
 
     ntoas = 0
     toas = []
@@ -757,13 +774,17 @@ def read_toa_file(filename, process_includes=True, cdict=None):
                 # Save FORMAT in a tmp
                 fmt = cdict["FORMAT"]
                 cdict["FORMAT"] = "Unknown"
-                log.info("Processing included TOA file {0}".format(d["Command"][1]))
-                new_toas, new_commands = read_toa_file(d["Command"][1], cdict=cdict)
+                include_filename = Path(dir) / d["Command"][1]
+                d["Command"][1] = str(include_filename)
+                # Make filename relative to directory the parent file is in
+                log.info(f"Processing included TOA file {include_filename}")
+                new_toas, new_commands = read_toa_file(include_filename, cdict=cdict)
                 toas.extend(new_toas)
                 commands.extend(new_commands)
                 # re-set FORMAT
                 cdict["FORMAT"] = fmt
             else:
+                log.warning(f"Unknown command {cmd} in line {line}")
                 continue
         if cdict["SKIP"] or d["format"] in ("Blank", "Unknown", "Comment", "Command"):
             continue
@@ -1271,7 +1292,7 @@ class TOAs:
         if (toalist is not None) and (toafile is not None):
             raise ValueError("Cannot initialize TOAs from both file and list.")
 
-        if isinstance(toafile, str):
+        if isinstance(toafile, (str, Path)):
             toalist, self.commands = read_toa_file(toafile)
             # Check to see if there were any INCLUDEs:
             inc_fns = [x[0][1] for x in self.commands if x[0][0].upper() == "INCLUDE"]
@@ -1724,7 +1745,7 @@ class TOAs:
         """
         if self.filename is None:
             return True
-        elif isinstance(self.filename, str):
+        elif isinstance(self.filename, (str, Path)):
             filenames = [self.filename]
         else:
             filenames = self.filename
@@ -1733,7 +1754,7 @@ class TOAs:
             timfiles = filenames
         elif hasattr(timfile, "readlines"):
             return True
-        elif isinstance(timfile, str):
+        elif isinstance(timfile, (str, Path)):
             timfiles = [timfile]
         else:
             timfiles = list(timfile)

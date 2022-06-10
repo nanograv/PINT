@@ -5,10 +5,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+### Changed
+- model.phase() now defaults to abs_phase=True when TZR* params are in the model
 ### Added
 - logging now needs to be setup explicitly
 - Color-by-jump mode for pintk
+- `pytest-xdist` now allows `pytest -n auto` to use all cores on the machine to run tests in parallel; `make test` now does this.
+- Added the ability to write clock files in TEMPO or TEMPO2 format
+- Added examples of how to write a par file to tutorials
+- Added `TimingModel.write_parfile()`
 ### Fixed
+- INCLUDE lines in tim files are now relative to the location of the tim file (bug #1269)
 ### Changed
 
 ## [0.8.8] 2022-05-26

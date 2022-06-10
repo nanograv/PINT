@@ -104,7 +104,7 @@ def test_simple_fit_unbinned():
     lct = lctemplate.get_gauss2()
 
     # load in simulated phases
-    ph = np.loadtxt(datadir + "/template_phases.asc")
+    ph = np.loadtxt(datadir / "template_phases.asc")
     lcf = lcfitters.LCFitter(lct, ph)
     lcf.fit(unbinned=True, estimate_errors=True)
     expected_val = r"""
@@ -138,7 +138,7 @@ def test_simple_fit_binned():
     lct = lctemplate.get_gauss2()
 
     # load in simulated phases
-    ph = np.loadtxt(datadir + "/template_phases.asc")
+    ph = np.loadtxt(datadir / "template_phases.asc")
     lcf = lcfitters.LCFitter(lct, ph)
     lcf.fit(unbinned=False, estimate_errors=True)
     expected_val = r"""

@@ -1,0 +1,26 @@
+# Created: 2022-05-25T14:16:05.798011
+# PINT_version: 0.8.7+39.g1c56b74d.dirty
+# User: Anne Archibald (naa280)
+# Host: halley
+# OS: Linux-5.4.0-109-generic-x86_64-with-glibc2.27
+# Format: pint
+PSRJ                           J0030+0451
+UNITS                                 TDB
+DILATEFREQ                              N
+DMDATA                                  N
+NTOA                                    0
+CHI2                                  0.0
+RAJ                      0:30:27.43030000
+DECJ                     4:51:39.74000000
+PMRA                                 -5.3
+PMDEC                                -2.0
+PX                                    0.0
+POSEPOCH           52079.0000000000000000
+F0                  205.53069927486877724 1 1e-07
+F1              -4.2977329980814427957e-16 1 1e-18
+PEPOCH             50984.4000000000000000
+PLANET_SHAPIRO                          N
+DM                                  4.333
+TZRMJD             56000.0000000000000000
+TZRSITE                                 1
+TZRFRQ                             1400.0

@@ -259,7 +259,7 @@ def load_orbit(obs_name, orb_filename):
         A table containing entries MJD_TT, X, Y, Z, Vx, Vy, Vz
     """
 
-    if orb_filename.startswith("@"):
+    if str(orb_filename).startswith("@"):
         # Read multiple orbit files names
         orb_list = []
         fnames = [ll.strip() for ll in open(orb_filename[1:]).readlines()]

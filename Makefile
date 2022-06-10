@@ -50,7 +50,7 @@ lint: ## check style with flake8
 	flake8 --ignore=E265,E226 pint tests
 
 test: ## run tests quickly with the default Python
-		cd tests && pytest --ff --durations=20
+		pytest -n auto --ff --durations=20
 
 coverage: ## check code coverage quickly with the default Python
 		pytest tests --cov=pint
