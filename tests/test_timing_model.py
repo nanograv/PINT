@@ -9,8 +9,10 @@ import astropy.units as u
 import numpy as np
 import pytest
 from hypothesis import given
-from hypothesis.strategies import permutations
+from hypothesis.strategies import permutations, composite
 from numpy.testing import assert_allclose
+from pint import toa
+from pint.observatory import compare_t2_observatories_dat
 from pinttestdata import datadir
 
 from pint.models import (
@@ -392,45 +394,58 @@ def test_parfile_and_timfile_jumps(timfile_jumps):
     assert fs[4] == "1"
 
 
-class TestTOAOrder:
-    def setup(self):
-        self.parfile = os.path.join(datadir, "NGC6440E.par")
-        self.timfile = os.path.join(datadir, "NGC6440E.tim")
-        self.model = get_model(self.parfile)
-        self.t = get_TOAs(self.timfile)
-        self.r = pint.residuals.Residuals(self.t, self.model, subtract_mean=False)
+class TOAOrderSetup:
+    parfile = os.path.join(datadir, "NGC6440E.par")
+    timfile = os.path.join(datadir, "NGC6440E.tim")
+    model = get_model(parfile)
+    t = get_TOAs(timfile)
+    r = pint.residuals.Residuals(t, model, subtract_mean=False)
 
-    @pytest.mark.parametrize("sortkey", ["freq", "mjd_float"])
-    def test_resorting_toas_residuals_match(self, sortkey):
-        tcopy = deepcopy(self.t)
-        i = np.argsort(self.t.table[sortkey])
-        tcopy.table = tcopy.table[i]
-        rsort = pint.residuals.Residuals(tcopy, self.model, subtract_mean=False)
-        assert np.all(self.r.time_resids[i] == rsort.time_resids)
+    @classmethod
+    @composite
+    def toas_and_order(draw, cls):
+        # note that draw must come before cls
+        n = len(cls.t)
+        ix = draw(permutations(np.arange(n)))
+        return cls.t, ix
 
-    @pytest.mark.parametrize("sortkey", ["freq", "mjd_float"])
-    def test_resorting_toas_chi2_match(self, sortkey):
-        tcopy = deepcopy(self.t)
-        i = np.argsort(self.t.table[sortkey])
-        tcopy.table = tcopy.table[i]
-        rsort = pint.residuals.Residuals(tcopy, self.model, subtract_mean=False)
-        # the differences seem to be related to floating point math
-        assert np.isclose(self.r.calc_chi2(), rsort.calc_chi2(), atol=1e-14)
 
-    @given(permutations(np.arange(len_timfile_nojumps)))
-    def test_shuffle_toas_residuals_match(self, permute):
-        tcopy = deepcopy(self.t)
-        tcopy.table = tcopy.table[permute]
-        rsort = pint.residuals.Residuals(tcopy, self.model, subtract_mean=False)
-        assert np.all(self.r.time_resids[permute] == rsort.time_resids)
+@given(TOAOrderSetup.toas_and_order())
+def test_shuffle_toas_residuals_match(t_and_permute):
+    toas, ix = t_and_permute
+    tcopy = deepcopy(toas)
+    tcopy.table = tcopy.table[ix]
+    rsort = pint.residuals.Residuals(tcopy, TOAOrderSetup.model, subtract_mean=False)
+    assert np.all(TOAOrderSetup.r.time_resids[ix] == rsort.time_resids)
 
-    @given(permutations(np.arange(len_timfile_nojumps)))
-    def test_shuffle_toas_chi2_match(self, permute):
-        tcopy = deepcopy(self.t)
-        tcopy.table = tcopy.table[permute]
-        rsort = pint.residuals.Residuals(tcopy, self.model, subtract_mean=False)
-        # the differences seem to be related to floating point math
-        assert np.isclose(self.r.calc_chi2(), rsort.calc_chi2(), atol=1e-14)
+
+@given(TOAOrderSetup.toas_and_order())
+def test_shuffle_toas_chi2_match(t_and_permute):
+    toas, ix = t_and_permute
+    tcopy = deepcopy(toas)
+    tcopy.table = tcopy.table[ix]
+    rsort = pint.residuals.Residuals(tcopy, TOAOrderSetup.model, subtract_mean=False)
+    # the differences seem to be related to floating point math
+    assert np.isclose(TOAOrderSetup.r.calc_chi2(), rsort.calc_chi2(), atol=1e-14)
+
+
+@pytest.mark.parametrize("sortkey", ["freq", "mjd_float"])
+def test_resorting_toas_residuals_match(sortkey):
+    tcopy = deepcopy(TOAOrderSetup.t)
+    i = np.argsort(TOAOrderSetup.t.table[sortkey])
+    tcopy.table = tcopy.table[i]
+    rsort = pint.residuals.Residuals(tcopy, TOAOrderSetup.model, subtract_mean=False)
+    assert np.all(TOAOrderSetup.r.time_resids[i] == rsort.time_resids)
+
+
+@pytest.mark.parametrize("sortkey", ["freq", "mjd_float"])
+def test_resorting_toas_chi2_match(sortkey):
+    tcopy = deepcopy(TOAOrderSetup.t)
+    i = np.argsort(TOAOrderSetup.t.table[sortkey])
+    tcopy.table = tcopy.table[i]
+    rsort = pint.residuals.Residuals(tcopy, TOAOrderSetup.model, subtract_mean=False)
+    # the differences seem to be related to floating point math
+    assert np.isclose(TOAOrderSetup.r.calc_chi2(), rsort.calc_chi2(), atol=1e-14)
 
 
 def test_supports_rm():
