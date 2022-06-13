@@ -306,7 +306,7 @@ class emcee_fitter(Fitter):
         # the posterior if the prior is not finite
         lnprior = self.lnprior(theta)
         if not np.isfinite(lnprior):
-            return -np.inf
+            return -np.inf, -np.inf, -np.inf
 
         # Call PINT to compute the phases
         phases = self.get_event_phases()
@@ -320,7 +320,7 @@ class emcee_fitter(Fitter):
                 log.info("  %8s: %25.15g" % (name, val))
             maxpost = lnpost
             self.maxpost_fitvals = theta
-        return lnpost
+        return lnpost, lnprior, lnlikelihood
 
     def minimize_func(self, theta):
         """
@@ -519,6 +519,12 @@ def main(argv=None):
         help="Logging level",
         dest="loglevel",
     )
+    parser.add_argument(
+        "--numcores",
+        type=int,
+        default=1.0,
+        help="The number of cores used for multiprocessing",
+    )
 
     global nwalkers, nsteps, ftr
 
@@ -555,6 +561,7 @@ def main(argv=None):
     minWeight = args.minWeight
     do_opt_first = args.doOpt
     wgtexp = args.wgtexp
+    numcores = args.numcores
 
     # Read in initial model
     modelin = pint.models.get_model(parfile)
@@ -759,16 +766,17 @@ def main(argv=None):
     import emcee
 
     # Following are for parallel processing tests...
-    if 0:
+    if numcores != 1:
 
-        def unwrapped_lnpost(theta, ftr=ftr):
+        def unwrapped_lnpost(theta):
             return ftr.lnposterior(theta)
 
         import pathos.multiprocessing as mp
 
-        pool = mp.ProcessPool(nodes=8)
+        pool = mp.ProcessPool(nodes=numcores)
+        dtype = [("lnprior", float), ("lnlikelihood", float)]
         sampler = emcee.EnsembleSampler(
-            nwalkers, ndim, unwrapped_lnpost, pool=pool, args=[ftr]
+            nwalkers, ndim, unwrapped_lnpost, blobs_dtype=dtype, pool=pool
         )
     else:
         sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior)
@@ -799,6 +807,15 @@ def main(argv=None):
 
     # Make the triangle plot.
     samples = sampler.chain[:, burnin:, :].reshape((-1, ndim))
+
+    if numcores != 1:
+        blobs = sampler.get_blobs()
+        lnprior_samps = blobs["lnprior"]
+        lnlikelihood_samps = blobs["lnlikelihood"]
+        lnpost_samps = lnprior_samps + lnlikelihood_samps
+        ind = np.unravel_index(np.argmax(lnpost_samps), lnpost_samps.shape)
+        ftr.maxpost_fitvals = [chains[ii][ind] for ii in ftr.fitkeys]
+
     try:
         import corner
 
