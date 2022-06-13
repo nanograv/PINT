@@ -1120,8 +1120,11 @@ class PlkWidget(tk.Frame):
                 scale = 10**6
             elif self.yvals.unit == u.ms:
                 scale = 10**3
+            # Want to plot things in sorted order so that lines are smooth
+            sort_inds = np.argsort(f_toas_plot)
+            f_toas_plot = f_toas_plot[sort_inds]
             for i in range(len(rs)):
-                self.plkAxes.plot(f_toas_plot, rs[i] * scale, "-k", alpha=0.3)
+                self.plkAxes.plot(f_toas_plot, rs[i][sort_inds] * scale, "-k", alpha=0.3)
 
     def determine_yaxis_units(self, miny, maxy):
         """Checks range of residuals and converts units if range sufficiently large/small."""
