@@ -52,8 +52,8 @@ __all__ = [
 ]
 
 # The default BIPM to use if not explicitly specified
-# This should be the most recent BPIM file in the datafiles directory
-bipm_default = "BIPM2019"
+# FIXME: this should be auto-detected by checking the index file to see what's available
+bipm_default = "BIPM2021"
 
 
 class ClockCorrectionError(RuntimeError):

@@ -6,19 +6,24 @@ import astropy.units as u
 import numpy as np
 from astropy.coordinates import EarthLocation
 from loguru import logger as log
+from pathlib import Path
 
 from pint import JD_MJD
 from pint.config import runtimefile
 from pint.erfautils import gcrs_posvel_from_itrf
 from pint.observatory import Observatory, bipm_default
-from pint.observatory.clock_file import ClockFile, GlobalClockFile
+from pint.observatory.clock_file import ClockFile, GlobalClockFile, ConstructedClockFile
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import get_tdb_tt_ephem_geocenter, objPosVel_wrt_SSB
 from pint.utils import has_astropy_unit
+from pint.observatory.global_clock_corrections import Index, get_clock_correction_file
 
-__all__ = ["TopoObs"]
+pint_env_var = "PINT_CLOCK_OVERRIDE"
+
+__all__ = ["TopoObs", "find_clock_file"]
 # These are global because they are, well, literally global
 _gps_clock = None
+_bipm_clock_versions = {}
 
 
 class TopoObs(Observatory):
@@ -61,6 +66,11 @@ class TopoObs(Observatory):
     clock_fmt : str, optional
         Format of clock file (see ClockFile class for allowed
         values).
+    clock_dir : str or pathlib.Path, optional
+        Where to look for the clock files. "PINT", the default, means to use
+        PINT's usual seach approach; "TEMPO" or "TEMPO2" mean to look in those
+        programs' usual location (pointed to by their environment variables),
+        while a path means to look in that specific directory.
     include_gps : bool, optional
         Set False to disable UTC(GPS)->UTC clock correction.
     include_bipm : bool, optional
@@ -72,8 +82,9 @@ class TopoObs(Observatory):
         http://www.bipm.org/en/bipm-services/timescales/time-ftp/ttbipm.html
     bipm_version : str, optional
         Set the version of TT BIPM clock correction file to
-        use, the default is %s.  It has to be in the format
-        like 'BIPM2015'
+        use, the default is the most recent available.
+        It should be a string like 'BIPM2015' to select the file
+        'tai2tt_bipm2015.clk'.
     origin : str, optional
         Documentation of the origin/author/date for the information
     overwrite : bool, optional
@@ -85,12 +96,14 @@ class TopoObs(Observatory):
     def __init__(
         self,
         name,
+        *,
         tempo_code=None,
         itoa_code=None,
         aliases=None,
         itrf_xyz=None,
         clock_file="",
         clock_fmt="tempo",
+        clock_dir=None,
         include_gps=True,
         include_bipm=True,
         bipm_version=bipm_default,
@@ -123,7 +136,8 @@ class TopoObs(Observatory):
         self.clock_file = clock_file
         self._multiple_clock_files = not isinstance(clock_file, str)
         self.clock_fmt = clock_fmt
-        self._clock = None  # The ClockFile object, will be read on demand
+        self.clock_dir = clock_dir
+        self._clock = None  # The ClockFile objects, will be read on demand
 
         # If using TEMPO time.dat we need to know the 1-char tempo-style
         # observatory code.
@@ -134,9 +148,9 @@ class TopoObs(Observatory):
         self.include_gps = include_gps
 
         # BIPM corrections
+        # WARNING: `get_observatory` changes these after construction
         self.include_bipm = include_bipm
         self.bipm_version = bipm_version
-        self._bipm_clock = None
         self.bogus_last_correction = bogus_last_correction
 
         self.tempo_code = tempo_code
@@ -150,44 +164,6 @@ class TopoObs(Observatory):
         super(TopoObs, self).__init__(name, aliases=aliases)
 
     @property
-    def clock_fullpath(self):
-        """Returns the full path to the clock file."""
-        if self._multiple_clock_files:
-            return [(runtimefile(f) if f else "") for f in self.clock_file]
-        return runtimefile(self.clock_file) if self.clock_file else ""
-
-    @property
-    def gps_fullpath(self):
-        """Returns full path to the GPS-UTC clock file.  Will first try PINT
-        data dirs, then fall back on $TEMPO2/clock."""
-        fname = "gps2utc.clk"
-        fullpath = runtimefile(fname)
-        if fullpath is not None:
-            return fullpath
-        return os.path.join(os.getenv("TEMPO2"), "clock", fname)
-
-    @property
-    def bipm_fullpath(
-        self,
-    ):
-        """Returns full path to the TAI TT(BIPM) clock file.
-
-        Will first try PINT data dirs, then fall back on $TEMPO2/clock.
-        """
-        fname = "tai2tt_" + self.bipm_version.lower() + ".clk"
-        try:
-            fullpath = runtimefile(fname)
-            return fullpath
-        except FileNotFoundError:
-            try:
-                return os.path.join(os.getenv("TEMPO2"), "clock", fname)
-            except OSError as e:
-                if e.errno == 2:  # File not found
-                    return None
-                else:
-                    raise
-
-    @property
     def timescale(self):
         return "utc"
 
@@ -198,60 +174,47 @@ class TopoObs(Observatory):
         global _gps_clock
         if _gps_clock is None:
             log.info(f"Loading global GPS clock file for {self.name}")
-            _gps_clock = GlobalClockFile(
+            _gps_clock = find_clock_file(
                 "gps2utc.clk",
                 format="tempo2",
+                clock_dir=self.clock_dir,
             )
+            if len(_gps_clock.time) == 0:
+                raise RuntimeError("Unable to obtain GPS to UTC clock corrections")
 
     def _load_bipm_clock(self):
-        if self._bipm_clock is None:
+        bipm_version = self.bipm_version.lower()
+        if bipm_version not in _bipm_clock_versions:
             try:
                 log.info(
-                    f"Loading BIPM clock file {self.bipm_fullpath} for {self.name}"
+                    f"Loading BIPM clock version {bipm_version} " f"for {self.name}"
                 )
-                self._bipm_clock = ClockFile.read(self.bipm_fullpath, format="tempo2")
+                # FIXME: error handling?
+                _bipm_clock_versions[bipm_version] = find_clock_file(
+                    f"tai2tt_{bipm_version}.clk",
+                    format="tempo2",
+                    clock_dir=self.clock_dir,
+                )
             except Exception as e:
                 raise ValueError(
-                    f"Cannot find TT BIPM file for version '{self.bipm_version}'."
+                    f"Cannot find TT BIPM file for version '{bipm_version}'."
                 ) from e
+            if len(_bipm_clock_versions[bipm_version].time) == 0:
+                raise RuntimeError(
+                    f"Unable to obtain BIPM {bipm_version} clock corrections"
+                )
 
     def _load_clock_corrections(self):
         if self._clock is None:
+            # FIXME: handle other clock_dir values
+            # FIXME: handle ""
             clock_files = (
                 self.clock_file if self._multiple_clock_files else [self.clock_file]
             )
-            clock_fullpaths = (
-                self.clock_fullpath
-                if self._multiple_clock_files
-                else [self.clock_fullpath]
-            )
-            self._clock = []
-            for clock_file, clock_fullpath in zip(clock_files, clock_fullpaths):
-                if clock_file == "":
-                    continue
-                log.info(
-                    f"Observatory {self.name}, loading global clock file {clock_file}"
-                )
-                try:
-                    self._clock.append(
-                        GlobalClockFile(
-                            clock_file,
-                            format=self.clock_fmt,
-                            obscode=self.tempo_code,
-                            bogus_last_correction=self.bogus_last_correction,
-                        )
-                    )
-                except KeyError:
-                    # Observatory isn't in the global index
-                    log.error(
-                        f"Observatory file {clock_file} not listed in global index, falling back to local file {clock_fullpath}"
-                    )
-                    ClockFile.read(
-                        clock_fullpath,
-                        format=self.clock_fmt,
-                        obscode=self.tempo_code,
-                        bogus_last_correction=self.bogus_last_correction,
-                    )
+            self._clock = [
+                find_clock_file(c, format=self.clock_fmt, clock_dir=self.clock_dir)
+                for c in clock_files
+            ]
 
     def clock_corrections(self, t, limits="warn"):
         """Compute the total clock corrections,
@@ -289,7 +252,12 @@ class TopoObs(Observatory):
             )
             tt2tai = 32.184 * 1e6 * u.us
             self._load_bipm_clock()
-            corr += self._bipm_clock.evaluate(t, limits=limits) - tt2tai
+            corr += (
+                _bipm_clock_versions[self.bipm_version.lower()].evaluate(
+                    t, limits=limits
+                )
+                - tt2tai
+            )
         return corr
 
     def last_clock_correction_mjd(self):
@@ -309,7 +277,9 @@ class TopoObs(Observatory):
             t = min(t, _gps_clock.last_correction_mjd())
         if self.include_bipm:
             self._load_bipm_clock()
-            t = min(t, self._bipm_clock.last_correction_mjd())
+            t = min(
+                t, _bipm_clock_versions[self.bipm_version.lower()].last_correction_mjd()
+            )
         return t
 
     def _get_TDB_ephem(self, t, ephem):
@@ -367,3 +337,123 @@ class TopoObs(Observatory):
             self.earth_location_itrf(), t, obsname=self.name
         )
         return obs_geocenter_pv + earth_pv
+
+
+# FIXME: is clock_file the right place for this? The rest of the file isn't very
+# PINT-specific but this is. Maybe in topo_obs - does that cover all the clock files
+# we need?
+def find_clock_file(
+    name, format, bogus_last_correction=False, url_base=None, clock_dir=None
+):
+    """Locate and return a ClockFile in one of several places.
+
+    PINT looks for clock files in three places, in order:
+
+    1. The directory ``$PINT_CLOCK_OVERRIDE``
+    2. The global clock correction repository on the Internet (or a locally cached copy)
+    3. The directory ``pint.config.runtimefile('.')``
+
+    The first place the file is found is the one use; this allows you to force PINT to
+    use your own files in place of those in the global repository.
+
+    Parameters
+    ----------
+    name : str
+        The name of the file, for example ``time_ao.dat``.
+    format : "tempo" or "tempo2"
+        The format of the file; this also determines where in the global repository
+        to look for it.
+    bogus_last_correction : bool
+        Whether the file contains a far-future value to help other programs'
+        interpolation cope.
+    url_base : str or None
+        Override the usual location to look for global clock corrections
+        (mostly useful for testing)
+    clock_dir : str or pathlib.Path or None
+        If None or "PINT", use the above procedure; if "TEMPO" or "TEMPO2" use
+        those programs' customary locations; if a path, look there specifically.
+
+    Returns
+    -------
+    ClockFile
+    """
+    if clock_dir is None or clock_dir.upper() == "PINT":
+        # Don't try loading it from a specific path
+        p = None
+    elif clock_dir.lower() == "tempo":
+        if "TEMPO" not in os.environ:
+            raise RuntimeError(
+                f"TEMPO environment variable not set but clock file {name} "
+                f"is supposed to be in the directory it points to"
+            )
+        p = Path(os.environ["TEMPO"]) / "clock" / name
+    elif clock_dir.lower() == "tempo2":
+        if "TEMPO2" not in os.environ:
+            raise RuntimeError(
+                f"TEMPO2 environment variable not set but clock file {name} "
+                f"is supposed to be in the directory it points to"
+            )
+        # Look in the TEMPO2 directory and nowhere else
+        p = Path(os.environ["TEMPO2"]) / "clock" / name
+    else:
+        # assume it's a path and look in there
+        p = Path(clock_dir) / name
+    if p is not None:
+        log.info("Loading clock file {p} from specified location")
+        return ClockFile.read(
+            p, format=format, bogus_last_correction=bogus_last_correction
+        )
+
+    # FIXME: implement clock_dir
+    env_clock = None
+    global_clock = None
+    local_clock = None
+    if pint_env_var in os.environ:
+        loc = Path(os.environ[pint_env_var]) / name
+        if loc.exists():
+            # FIXME: more arguments?
+            env_clock = ClockFile.read(
+                loc, format=format, bogus_last_correction=bogus_last_correction
+            )
+            # Could just return this but we want to emit
+            # a warning with an appropriate level of forcefulness
+    index = Index(url_base=url_base)
+    if name in index.files:
+        global_clock = GlobalClockFile(
+            name,
+            format=format,
+            bogus_last_correction=bogus_last_correction,
+            url_base=url_base,
+        )
+    loc = Path(runtimefile(name))
+    if loc.exists():
+        local_clock = ClockFile.read(
+            loc, format=format, bogus_last_correction=bogus_last_correction
+        )
+
+    if env_clock is not None:
+        if global_clock is not None:
+            # FIXME: if we're not going to use the values from the global clock
+            # we could have saved downloading and parsing it
+            log.warning(
+                f"Clock file from {env_clock.filename} overrides global clock "
+                f"file {name} because of {pint_env_var}"
+            )
+        else:
+            log.info(f"Using clock file from {env_clock.filename}")
+        return env_clock
+    elif global_clock is not None:
+        log.info(f"Using global clock file for {name}")
+        return global_clock
+    elif local_clock is not None:
+        log.info(f"Using local clock file for {name}")
+        return local_clock
+    else:
+        # Null clock file should return warnings/exceptions if ever you try to
+        # look up a data point in it
+        log.info(f"No clock file for {name}")
+        return ConstructedClockFile(
+            mjd=[],
+            clock=np.array([]) * u.us,
+            leading_comment=f"# Couldn't find file {name}",
+        )

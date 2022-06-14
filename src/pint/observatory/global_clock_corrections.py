@@ -68,8 +68,11 @@ def get_file(
     log.trace(f"File {name} requested")
     if url_base is None:
         url_base = global_clock_correction_url_base
-    if url_mirrors is None:
-        url_mirrors = global_clock_correction_url_mirrors
+        if url_mirrors is None:
+            url_mirrors = global_clock_correction_url_mirrors
+    else:
+        if url_mirrors is None:
+            url_mirrors = [url_base]
     local_file = None
     remote_url = url_base + name
     mirror_urls = [u + name for u in url_mirrors]
@@ -127,11 +130,6 @@ IndexEntry = collections.namedtuple(
 
 class Index:
     def __init__(self, download_policy="if_expired", url_base=None, url_mirrors=None):
-        if url_base is None:
-            url_base = global_clock_correction_url_base
-        if url_mirrors is None:
-            url_mirrors = global_clock_correction_url_mirrors
-
         index_file = get_file(
             index_name,
             index_update_interval_days,
@@ -143,6 +141,8 @@ class Index:
         for line in open(index_file):
             line = line.strip()
             if line.startswith("#"):
+                continue
+            if not line:
                 continue
             e = line.split(maxsplit=3)
             if e[2] == "---":
@@ -186,11 +186,6 @@ def get_clock_correction_file(
         If provided, override the repository mirrors stored in the source code.
         Useful mostly for testing.
     """
-
-    if url_base is None:
-        url_base = global_clock_correction_url_base
-    if url_mirrors is None:
-        url_mirrors = global_clock_correction_url_mirrors
 
     # FIXME: cache/share the index object?
     index = Index(

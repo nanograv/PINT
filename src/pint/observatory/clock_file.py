@@ -9,11 +9,11 @@ import astropy.units as u
 import numpy as np
 from loguru import logger as log
 
+import pint.config
+from pint.observatory import ClockCorrectionOutOfRange, NoClockCorrections
+from pint.observatory.global_clock_corrections import Index, get_clock_correction_file
 from pint.pulsar_mjd import Time
 from pint.utils import lines_of, open_or_use
-from pint.observatory.global_clock_corrections import get_clock_correction_file
-from pint.pulsar_mjd import Time
-from pint.observatory import NoClockCorrections, ClockCorrectionOutOfRange
 
 __all__ = [
     "ClockFile",
@@ -715,11 +715,20 @@ class GlobalClockFile(ClockFile):
 
     # FIXME: fall back to built-in?
 
-    def __init__(self, filename, format="tempo", **kwargs):
+    def __init__(
+        self, filename, format="tempo", url_base=None, url_mirrors=None, **kwargs
+    ):
         self.filename = filename
         self.format = format
         self.kwargs = kwargs
-        f = get_clock_correction_file(self.filename, download_policy="if_missing")
+        self.url_base = url_base
+        self.url_mirrors = url_mirrors
+        f = get_clock_correction_file(
+            self.filename,
+            download_policy="if_missing",
+            url_base=self.url_base,
+            url_mirrors=self.url_mirrors,
+        )
         self.clock_file = ClockFile.read(f, self.format, **kwargs)
 
     def evaluate(self, t, limits="warn"):
@@ -747,7 +756,9 @@ class GlobalClockFile(ClockFile):
             The corrections in units of microseconds.
         """
         if np.any(t > self.clock_file.time[-1]):
-            f = get_clock_correction_file(self.filename)
+            f = get_clock_correction_file(
+                self.filename, url_base=self.url_base, url_mirrors=self.url_mirrors
+            )
             self.clock_file = ClockFile.read(f, format=self.format, **self.kwargs)
         return self.clock_file.evaluate(t, limits=limits)
 
