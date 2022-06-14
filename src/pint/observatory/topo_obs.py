@@ -5,11 +5,12 @@ import astropy.constants as c
 import astropy.units as u
 import numpy as np
 from astropy.coordinates import EarthLocation
+import astropy.time
 from loguru import logger as log
 
 from pint import JD_MJD
 from pint.config import runtimefile
-from pint.erfautils import gcrs_posvel_from_itrf
+from pint.erfautils import gcrs_posvel_from_itrf, get_iers_up_to_date
 from pint.observatory import Observatory, bipm_default
 from pint.observatory.clock_file import ClockFile
 from pint.pulsar_mjd import Time
@@ -18,6 +19,10 @@ from pint.utils import has_astropy_unit
 
 # These are global because they are, well, literally global
 _gps_clock = None
+# have the IERS-B data been downloaded?
+_IERSB_download = False
+# has the lead-second file been downloaded?
+_leapsecond_download = False
 
 
 class TopoObs(Observatory):
@@ -235,6 +240,20 @@ class TopoObs(Observatory):
     def earth_location_itrf(self, time=None):
         return self._loc_itrf
 
+    def _load_iersb(self):
+        global _IERSB_download
+        if not _IERSB_download:
+            log.debug("Running get_iers_up_to_date() to update IERS B table")
+            get_iers_up_to_date()
+            _IERSB_download = True
+
+    def _load_leapsecond(self):
+        global _leapsecond_download
+        if not _leapsecond_download:
+            log.debug("Checking for updated leapseconds")
+            astropy.time.update_leap_seconds()
+            _leapsecond_download = True
+
     def _load_gps_clock(self):
         global _gps_clock
         if _gps_clock is None:
@@ -282,8 +301,12 @@ class TopoObs(Observatory):
         t : astropy.time.Time
             The time when the clock correcions are applied.
         """
+
         # Read clock file if necessary
+        # and download (if necessary) IERS-B and leapsecond files
         # TODO provide some method for re-reading the clock file?
+        self._load_iersb()
+        self._load_leapsecond()
         self._load_clock_corrections()
         if not self._clock:
             msg = f"No clock corrections found for observatory {self.name} taken from file {self.clock_file}"
