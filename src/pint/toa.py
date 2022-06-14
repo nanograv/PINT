@@ -2070,6 +2070,17 @@ class TOAs:
 
         A description of how PINT handles clock corrections and timescales is here:
         https://github.com/nanograv/PINT/wiki/Clock-Corrections-and-Timescales-in-PINT
+
+        Parameters
+        ----------
+        include_bipm : bool
+            Whether or not to include BIPM correction
+        bipm_version : str
+            BIPM version to use.  The format must be 'BIPMXXXX' where XXXX is a year.
+        include_gps : bool
+            Whether or not to include GPS corrections
+        limits : "warn" or "error"
+            What to do when encountering TOAs for which clock corrections are not available.
         """
         # First make sure that we haven't already applied clock corrections
         flags = self.table["flags"]
