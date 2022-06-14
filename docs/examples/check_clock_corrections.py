@@ -36,6 +36,3 @@ log.add(sys.stderr, level="WARNING", filter=logfilter, colorize=True)
 pint.observatory.list_last_correction_mjds()
 
 # %%
-pint.observatory.check_for_new_clock_files_in_tempo12_repos()
-
-# %%
