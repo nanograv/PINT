@@ -287,7 +287,7 @@ class TopoObs(Observatory):
             self._load_gps_clock()
             t = min(t, _gps_clock.last_correction_mjd())
         if self.include_bipm:
-            self._load_bipm_clock()
+            self._load_bipm_clock(self.bipm_version)
             t = min(
                 t, _bipm_clock_versions[self.bipm_version.lower()].last_correction_mjd()
             )
