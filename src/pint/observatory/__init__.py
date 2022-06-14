@@ -10,6 +10,7 @@ import warnings
 import astropy.constants as const
 import astropy.coordinates
 import astropy.units as u
+import astropy.time
 import numpy as np
 from astropy.coordinates import EarthLocation
 from loguru import logger as log
@@ -17,7 +18,12 @@ from loguru import logger as log
 import pint.solar_system_ephemerides as sse
 from pint.pulsar_mjd import Time
 from pint.utils import interesting_lines
+from pint.erfautils import get_iers_up_to_date
 
+# have the IERS-B data been downloaded?
+_IERSB_download = False
+# has the lead-second file been downloaded?
+_leapsecond_download = False
 
 # Include any files that define observatories here.  This will start
 # with the standard distribution files, then will read any system- or
@@ -146,6 +152,10 @@ class Observatory:
 
         if name == "":
             raise KeyError("No observatory name or code provided")
+
+        # and download (if necessary) IERS-B and leapsecond files
+        cls._load_iersb()
+        cls._load_leapsecond()
 
         # Be case-insensitive
         name = name.lower()
@@ -304,6 +314,22 @@ class Observatory:
         This column is provided by DE4XXt version of ephemeris.
         """
         raise NotImplementedError
+
+    @classmethod
+    def _load_iersb(self):
+        global _IERSB_download
+        if not _IERSB_download:
+            log.debug("Running get_iers_up_to_date() to update IERS B table")
+            get_iers_up_to_date()
+            _IERSB_download = True
+
+    @classmethod
+    def _load_leapsecond(self):
+        global _leapsecond_download
+        if not _leapsecond_download:
+            log.debug("Checking for updated leapseconds")
+            astropy.time.update_leap_seconds()
+            _leapsecond_download = True
 
     def posvel(self, t, ephem, group=None):
         """Return observatory position and velocity for the given times.
