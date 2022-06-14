@@ -7,11 +7,12 @@ import pytest
 from astropy.time import Time
 from numpy.testing import assert_allclose, assert_array_equal
 
-from pint.observatory import get_observatory
+from pint.observatory import get_observatory, bipm_default
 from pint.observatory.clock_file import (
     ClockFile,
     ConstructedClockFile,
 )
+from pint.observatory.topo_obs import export_all_clock_files
 
 
 def t(mjd):
@@ -378,3 +379,42 @@ def test_merge_comments():
         """
     )
     assert o.getvalue() == contents
+
+
+def test_export_clock_file(tmp_path):
+    contents = dedent(
+        """\
+        # FAKE1 FAKE3
+        # Initial comments from c1
+        # covering several lines
+        # Initial comments from c2
+        # covering several lines
+        50000.00000 0.000002000000 And some text
+        # From c2
+        50001.00000 0.000004000000
+        50002.00000 0.000004000000
+        # A commenty line
+        50003.00000 0.000005000200 same-line text
+        # and a commenty line
+        55000.00000 0.000004500450 The beginning of a jump
+        55000.00000 0.000001500450 The end of a jump
+        60000.00000 0.000000000000
+        """
+    )
+    clock_path = tmp_path / "file.clk"
+    clock_path.write_text(contents)
+    target_dir = tmp_path / "a"
+    target_dir.mkdir()
+    target_file = target_dir / "other-file.clk"
+    c = ClockFile.read(clock_path, format="tempo2")
+    c.export(target_file)
+    assert target_file.read_text() == contents
+
+
+def test_export_all_gbt(tmp_path):
+    o = get_observatory("gbt")
+    o.last_clock_correction_mjd()
+    export_all_clock_files(tmp_path)
+    assert (tmp_path / "time_gbt.dat").exists()
+    assert (tmp_path / "gps2utc.clk").exists()
+    assert (tmp_path / f"tai2tt_{bipm_default.lower()}.clk").exists()

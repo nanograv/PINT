@@ -11,7 +11,7 @@ from pathlib import Path
 from pint import JD_MJD
 from pint.config import runtimefile
 from pint.erfautils import gcrs_posvel_from_itrf
-from pint.observatory import Observatory, bipm_default
+from pint.observatory import Observatory, bipm_default, get_observatory
 from pint.observatory.clock_file import ClockFile, GlobalClockFile, ConstructedClockFile
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import get_tdb_tt_ephem_geocenter, objPosVel_wrt_SSB
@@ -20,7 +20,7 @@ from pint.observatory.global_clock_corrections import Index, get_clock_correctio
 
 pint_env_var = "PINT_CLOCK_OVERRIDE"
 
-__all__ = ["TopoObs", "find_clock_file"]
+__all__ = ["TopoObs", "find_clock_file", "export_all_clock_files"]
 # These are global because they are, well, literally global
 _gps_clock = None
 _bipm_clock_versions = {}
@@ -161,7 +161,7 @@ class TopoObs(Observatory):
                 aliases.append(code)
 
         self.origin = origin
-        super(TopoObs, self).__init__(name, aliases=aliases)
+        super().__init__(name, aliases=aliases)
 
     @property
     def timescale(self):
@@ -457,3 +457,37 @@ def find_clock_file(
             clock=np.array([]) * u.us,
             leading_comment=f"# Couldn't find file {name}",
         )
+
+
+def export_all_clock_files(directory):
+    """Export all clock files PINT is using.
+
+    This will export all the clock files PINT is using - every clock file used
+    by any observatory, as well as those relating to BIPM time scales that have
+    been used in this invocation of PINT. Clock files will not be updated and
+    new ones will not be downloaded before this export.
+
+    You should be able to set PINT_CLOCK_OVERRIDE to a directory constructed
+    in this way in order to ensure that specifically these versions of the
+    clock files are used.
+
+    Parameters
+    ----------
+    directory : str or pathlib.Path
+        Where to put the files.
+    """
+    # Importing this module triggers loading all observatories
+    import pint.observatory.observatories
+    import pint.observatory.topo_obs
+    import pint.observatory.special_locations
+
+    directory = Path(directory)
+    if _gps_clock is not None:
+        _gps_clock.export(directory / Path(_gps_clock.filename).name)
+    for version, clock in _bipm_clock_versions.items():
+        clock.export(directory / Path(clock.filename).name)
+    for name in Observatory.names():
+        o = get_observatory(name)
+        if hasattr(o, "_clock") and o._clock is not None:
+            for clock in o._clock:
+                clock.export(directory / Path(clock.filename).name)

@@ -372,6 +372,14 @@ class ClockFile(metaclass=ClockFileMeta):
                     f.write(comment.rstrip())
                 f.write("\n")
 
+    def export(self, filename):
+        """Write this clock correction file to the specified location."""
+        # FIXME: fall back to writing the clock file using .write_...?
+        contents = Path(self.filename).read_text()
+        with open_or_use(filename, "wt") as f:
+            # FIXME: get_ may pull in an updated clock file
+            f.write(contents)
+
 
 class ConstructedClockFile(ClockFile):
     """Clock file constructed from arrays.
@@ -713,8 +721,6 @@ class GlobalClockFile(ClockFile):
     :func:`pint.observatory.ClockFile.read` with the right arguments.
     """
 
-    # FIXME: fall back to built-in?
-
     def __init__(
         self, filename, format="tempo", url_base=None, url_mirrors=None, **kwargs
     ):
@@ -783,8 +789,5 @@ class GlobalClockFile(ClockFile):
 
     def export(self, filename):
         """Write this clock correction file to the specified location."""
-        # FIXME: all ClockFiles should support `export`, then this is easy
-        with open_or_use(filename, "wt") as f:
-            # FIXME: get_ may pull in an updated clock file
-            # f.write(get_clock_correction_file(self.filename).read_text())
-            pass
+        # Only the inner file knows where it is actually stored
+        self.clock_file.export(filename)

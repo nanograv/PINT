@@ -8,9 +8,9 @@ The global repository is currently hosted on github. Available clock correction
 files and their updating requirements are listed in a file there called index.txt.
 This too is checked occasionally for updates.
 
-The downloaded files are stored in the Astropy cache with ``pkgname="PINT"``;
+The downloaded files are stored in the Astropy cache,
 to clear out old files you will want to do
-``astropy.utils.data.clear_download_cache(pkgname="PINT")``.
+``astropy.utils.data.clear_download_cache()``.
 """
 import collections
 import time
@@ -79,10 +79,10 @@ def get_file(
 
     if download_policy != "always":
         try:
-            local_file = download_file(
-                remote_url, cache=True, sources=[], pkgname="PINT"
-            )
+            local_file = download_file(remote_url, cache=True, sources=[])
+            log.trace(f"file {remote_url} found in cache at path: {local_file}")
         except KeyError:
+            log.trace(f"file {remote_url} not found in cache")
             if download_policy == "never":
                 raise FileNotFoundError(name)
 
@@ -90,6 +90,7 @@ def get_file(
         log.trace(
             f"File {name} found and returned due to download policy {download_policy}"
         )
+        return local_file
 
     if local_file is not None:
         file_time = Path(local_file).stat().st_mtime
@@ -117,10 +118,10 @@ def get_file(
 
     # By this point we know we need a new file but we want it to wind up in
     # the cache
-    log.info(f"File {name} to be downloaded due to download policy {download_policy}")
-    return download_file(
-        remote_url, cache="update", sources=mirror_urls, pkgname="PINT"
+    log.info(
+        f"File {name} to be downloaded due to download policy {download_policy}: {remote_url}"
     )
+    return download_file(remote_url, cache="update", sources=mirror_urls)
 
 
 IndexEntry = collections.namedtuple(
