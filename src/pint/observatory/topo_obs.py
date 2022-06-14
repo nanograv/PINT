@@ -11,7 +11,14 @@ from pathlib import Path
 from pint import JD_MJD
 from pint.config import runtimefile
 from pint.erfautils import gcrs_posvel_from_itrf
-from pint.observatory import Observatory, bipm_default, get_observatory
+from pint.observatory import (
+    Observatory,
+    bipm_default,
+    get_observatory,
+    ClockCorrectionError,
+    NoClockCorrections,
+    ClockCorrectionOutOfRange,
+)
 from pint.observatory.clock_file import ClockFile, GlobalClockFile, ConstructedClockFile
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import get_tdb_tt_ephem_geocenter, objPosVel_wrt_SSB
@@ -180,10 +187,12 @@ class TopoObs(Observatory):
                 clock_dir=self.clock_dir,
             )
             if len(_gps_clock.time) == 0:
-                raise RuntimeError("Unable to obtain GPS to UTC clock corrections")
+                raise NoClockCorrections(
+                    "Unable to obtain GPS to UTC clock corrections"
+                )
 
-    def _load_bipm_clock(self):
-        bipm_version = self.bipm_version.lower()
+    def _load_bipm_clock(self, bipm_version):
+        bipm_version = bipm_version.lower()
         if bipm_version not in _bipm_clock_versions:
             try:
                 log.info(
@@ -200,7 +209,7 @@ class TopoObs(Observatory):
                     f"Cannot find TT BIPM file for version '{bipm_version}'."
                 ) from e
             if len(_bipm_clock_versions[bipm_version].time) == 0:
-                raise RuntimeError(
+                raise NoClockCorrections(
                     f"Unable to obtain BIPM {bipm_version} clock corrections"
                 )
 
@@ -226,19 +235,21 @@ class TopoObs(Observatory):
         """
 
         # Read clock file if necessary
-        # TODO provide some method for re-reading the clock file?
+        corr = np.zeros_like(t) * u.us
         self._load_clock_corrections()
         if not self._clock:
-            msg = f"No clock corrections found for observatory {self.name} taken from file {self.clock_file}"
-            if limits == "warn":
-                log.warning(msg)
-                corr = np.zeros_like(t) * u.us
-            elif limits == "error":
-                raise RuntimeError(msg)
+            if self.clock_file:
+                msg = f"No clock corrections found for observatory {self.name} taken from file {self.clock_file}"
+                if limits == "warn":
+                    log.warning(msg)
+                    corr = np.zeros_like(t) * u.us
+                elif limits == "error":
+                    raise NoClockCorrections(msg)
+            else:
+                log.info(f"Observatory {self.name} requires no clock corrections.")
         else:
             log.info("Applying observatory clock corrections.")
-            corr = self._clock[0].evaluate(t, limits=limits)
-            for clock in self._clock[1:]:
+            for clock in self._clock:
                 corr += clock.evaluate(t, limits=limits)
 
         if self.include_gps:
@@ -251,7 +262,7 @@ class TopoObs(Observatory):
                 f"Applying TT(TAI) to TT({self.bipm_version}) clock correction (~27 us)"
             )
             tt2tai = 32.184 * 1e6 * u.us
-            self._load_bipm_clock()
+            self._load_bipm_clock(self.bipm_version)
             corr += (
                 _bipm_clock_versions[self.bipm_version.lower()].evaluate(
                     t, limits=limits
@@ -382,14 +393,14 @@ def find_clock_file(
         p = None
     elif clock_dir.lower() == "tempo":
         if "TEMPO" not in os.environ:
-            raise RuntimeError(
+            raise NoClockCorrections(
                 f"TEMPO environment variable not set but clock file {name} "
                 f"is supposed to be in the directory it points to"
             )
         p = Path(os.environ["TEMPO"]) / "clock" / name
     elif clock_dir.lower() == "tempo2":
         if "TEMPO2" not in os.environ:
-            raise RuntimeError(
+            raise NoClockCorrections(
                 f"TEMPO2 environment variable not set but clock file {name} "
                 f"is supposed to be in the directory it points to"
             )

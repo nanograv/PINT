@@ -662,20 +662,33 @@ def export_clock_files(directory):
             c.export(directory / c.filename)
 
 
-def update_clock_files():
+def update_clock_files(bipm_versions=None):
     """Obtain an up-to-date version of all clock files.
 
     This up-to-date version will be stored in the Astropy cache;
     you can then export or otherwise preserve the Astropy cache
     so it can be pre-loaded on systems that might not have
     network access.
+
+    Parameters
+    ----------
+    bipm_versions : list of str or None
+        Include these versions of the BIPM TAI to TT clock corrections
+        in addition to whatever is in use. Typical values look like
+        "BIPM2019".
     """
     # FIXME: allow forced downloads for non-expired files
+    # FIXME: what to do about GPS and BIPM files?
 
     # Importing this module triggers loading all observatories
     import pint.observatory.observatories
     import pint.observatory.topo_obs
     import pint.observatory.special_locations
+
+    if bipm_versions is not None:
+        o = get_observatory("arecibo")
+        for v in bipm_versions:
+            o._load_bipm_clock(v)
 
     t = Time.now()
     for n in Observatory.names():
@@ -686,3 +699,5 @@ def update_clock_files():
             o.clock_corrections(t, limits="error")
         except ClockCorrectionOutOfRange:
             pass
+        except NoClockCorrections:
+            log.info(f"Observatory {n} has no clock corrections")

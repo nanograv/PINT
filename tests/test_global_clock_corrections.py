@@ -4,7 +4,7 @@ import time
 import pytest
 from astropy.utils.data import clear_download_cache
 
-from pint.observatory.global_clock_corrections import get_file
+from pint.observatory.global_clock_corrections import get_file, update_all
 
 # FIXME: this should be less painful with fixtures somehow
 
@@ -67,3 +67,7 @@ def test_update_needed(tmp_path):
     fn.write_text(new_contents)
     df = get_file(test_file_name, url_base=url_base, url_mirrors=url_mirrors)
     assert open(df).read() == new_contents
+
+
+def test_update_all_runs(tmp_path):
+    update_all(tmp_path)

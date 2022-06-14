@@ -7,7 +7,7 @@ import pytest
 from astropy.time import Time
 from numpy.testing import assert_allclose, assert_array_equal
 
-from pint.observatory import get_observatory, bipm_default
+from pint.observatory import get_observatory, bipm_default, update_clock_files
 from pint.observatory.clock_file import (
     ClockFile,
     ConstructedClockFile,
@@ -418,3 +418,9 @@ def test_export_all_gbt(tmp_path):
     assert (tmp_path / "time_gbt.dat").exists()
     assert (tmp_path / "gps2utc.clk").exists()
     assert (tmp_path / f"tai2tt_{bipm_default.lower()}.clk").exists()
+
+
+def test_update_clock_files(tmp_path):
+    update_clock_files()
+    export_all_clock_files(tmp_path)
+    assert (tmp_path / "wsrt2gps.clk").exists()

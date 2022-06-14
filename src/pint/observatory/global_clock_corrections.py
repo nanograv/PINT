@@ -160,9 +160,6 @@ class Index:
             self.files[file] = t
 
 
-_the_index = None
-
-
 def get_clock_correction_file(
     filename, download_policy="if_expired", url_base=None, url_mirrors=None
 ):
@@ -202,3 +199,37 @@ def get_clock_correction_file(
         url_mirrors=url_mirrors,
         invalid_if_older_than=details.invalid_if_older_than,
     )
+
+
+def update_all(
+    export_to=None, download_policy="if_expired", url_base=None, url_mirrors=None
+):
+    """Download and update all clock corrections in the index.
+
+    You can also export them all to a directory.
+
+    Parameters
+    ----------
+    export_to : str or pathlib.Path, optional
+        If provided, write all files to this directory.
+    download_policy : str
+        Under what conditions to download a new file.
+    url_base : str, optional
+        The location of the global repository. Useful for debugging.
+    url_mirrors : list of str, optional
+        A list of places to look for the content. Useful for debugging.
+    """
+    index = Index(
+        download_policy=download_policy, url_base=url_base, url_mirrors=url_mirrors
+    )
+    for filename, details in index.files.items():
+        f = get_file(
+            details.file,
+            update_interval_days=details.update_interval_days,
+            download_policy=download_policy,
+            url_base=url_base,
+            url_mirrors=url_mirrors,
+            invalid_if_older_than=details.invalid_if_older_than,
+        )
+        if export_to is not None:
+            (Path(export_to) / filename).write_text(Path(f).read_text())

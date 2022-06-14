@@ -375,7 +375,13 @@ class ClockFile(metaclass=ClockFileMeta):
     def export(self, filename):
         """Write this clock correction file to the specified location."""
         # FIXME: fall back to writing the clock file using .write_...?
-        contents = Path(self.filename).read_text()
+        try:
+            contents = Path(self.filename).read_text()
+        except IOError:
+            if len(self.time) > 0:
+                log.info(f"Unable to load original clock file for {self}")
+                # FIXME: use write? Do we know what format we should be in?
+            return
         with open_or_use(filename, "wt") as f:
             # FIXME: get_ may pull in an updated clock file
             f.write(contents)
