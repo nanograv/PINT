@@ -62,19 +62,19 @@ def sandbox(tmp_path):
         os.environ = e
 
 
-def test_can_find_in_repo(sandbox):
+def test_can_find_in_repo(sandbox, temp_cache):
     c = find_clock_file(sandbox.name, format="tempo2", url_base=sandbox.repo_uri)
     assert c.time.mjd[0] == sandbox.repo_clock.time.mjd[0]
 
 
-def test_pint_env_overrides(sandbox):
+def test_pint_env_overrides(sandbox, temp_cache):
     os.environ["PINT_CLOCK_OVERRIDE"] = sandbox.override_dir
     c = find_clock_file(sandbox.name, format="tempo2", url_base=sandbox.repo_uri)
     assert c.time.mjd[0] == sandbox.override_clock.time.mjd[0]
     # FIXME: how to test that a warning is emitted?
 
 
-def test_obeys_clock_dir(sandbox):
+def test_obeys_clock_dir(sandbox, temp_cache):
     os.environ["TEMPO2"] = str(sandbox.t2_dir)
     c = find_clock_file(
         sandbox.name, format="tempo2", clock_dir="tempo2", url_base=sandbox.repo_uri

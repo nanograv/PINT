@@ -20,6 +20,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Clock files are now searched for in the online global repository
 - You can export the clock files you are using with `export_all_clock_corrections()`
 - You can request that all your clock files be updated and loaded into the cache with `update_clock_files()` 
+- The `temp_cache` fixture that runs tests with an empty, scratch Astropy cache
 ### Fixed
 - INCLUDE lines in tim files are now relative to the location of the tim file (bug #1269)
 ### Changed
