@@ -419,6 +419,15 @@ def test_export_all_gbt(tmp_path):
     assert (tmp_path / "gps2utc.clk").exists()
     assert (tmp_path / f"tai2tt_{bipm_default.lower()}.clk").exists()
 
+    # I'd like to check that this isn't exported unless it's been used
+    # but it's cached in the global TopoObs object (separate from the
+    # Astropy cache)
+    # assert not (tmp_path / "time_ao.dat").exists()
+
+
+def test_update_clock_files_str(tmp_path):
+    export_all_clock_files(str(tmp_path))
+
 
 def test_update_clock_files(tmp_path):
     update_clock_files()

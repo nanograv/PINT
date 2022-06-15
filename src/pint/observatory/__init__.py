@@ -23,6 +23,7 @@ import textwrap
 import warnings
 from collections import defaultdict
 from io import StringIO
+from pathlib import Path
 
 import astropy.coordinates
 import astropy.units as u
@@ -636,30 +637,6 @@ def list_last_correction_mjds():
                 )
             except (ValueError, TypeError):
                 print(f"    {os.path.basename(c.filename):<20} MISSING")
-
-
-def export_clock_files(directory):
-    """Write current versions of all clock files to a given directory.
-
-    This records the versions currently in use. Global clock corrections
-    that are in the cache and recent enough to cover the MJDs you have
-    been using will not be updated as a result of this function.
-    """
-    # Importing this module triggers loading all observatories
-    import pint.observatory.observatories
-    import pint.observatory.topo_obs
-    import pint.observatory.special_locations
-
-    for n in Observatory.names():
-        o = get_observatory(n)
-        if not hasattr(o, "clock_file"):
-            continue
-        o.last_clock_correction_mjd()
-        if not o.clock_file:
-            continue
-        for c in o._clock:
-            # FIXME: make sure directory is a Path
-            c.export(directory / c.filename)
 
 
 def update_clock_files(bipm_versions=None):

@@ -19,7 +19,11 @@
 # In order to do precision pulsar timing, it is necessary to know how the observatory clocks differ from a global time standard so that TOAs can be corrected. This requires PINT to have access to a record of measured differences. This record needs to be updated when new data is available. This notebook demonstrates how you can check the status of the clock corrections in your version of PINT. The version in the documentation also records the state of the PINT distribution at the moment the documentation was generated (which is when the code was last changed).
 
 # %%
+import tempfile
+from glob import glob
+
 import pint.observatory
+import pint.observatory.topo_obs
 
 # %%
 # hide annoying INFO messages
@@ -35,4 +39,13 @@ log.add(sys.stderr, level="WARNING", filter=logfilter, colorize=True)
 # %%
 pint.observatory.list_last_correction_mjds()
 
+# %% [markdown]
+# Let's export the clock corrections as they currently stand so we can save
+# these exact versions for reproducibility purposes.
+#
 # %%
+
+d = tempfile.mkdtemp()
+pint.observatory.topo_obs.export_all_clock_files(d)
+for f in sorted(glob(d + "/*")):
+    print(f)
