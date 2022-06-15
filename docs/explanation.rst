@@ -210,10 +210,10 @@ Clock corrections
 Not all the data that PINT uses is easily accessible for programs to download.
 Observatory clock corrections, for example, may need to be obtained from the
 observatory through various means (often talking to a support scientist). PINT
-tries to include all clock correction files from the TEMPO and TEMPO2
-repositories, and we intend to update the PINT source as these are updated.
-PINT should notify you when your clock files are out of date for the data you
-are using; be aware that you may obtain reduced accuracy if you have old clock
+uses a global repository, https://ipta.github.io/pulsar-clock-corrections/ to
+retrieve up-to-date clock corrections for all telescopes it knows about.  PINT
+should notify you when your clock files are out of date for the data you are
+using; be aware that you may obtain reduced accuracy if you have old clock
 correction files.
 
 Normally, if you try to do some operation that requires unavailable clock
@@ -232,15 +232,15 @@ future). PINT provides two convenience functions,
 :func:`pint.observatory.check_for_new_clock_files_in_tempo12_repos`, that will
 help you check the state of your clock corrections.
 
-If you need clock files that are not in PINT, either more recent versions or
-clock files for telescopes not included in PINT, you will have to modify PINT's
-source code. (This is not an ideal situation!) You have two options:
+If you need clock files that are not in the global repository, perhaps more
+recent versions or clock files for telescopes not included in the global
+repository or specific versions for reproducibility, you have several options:
 
-#. Simply replace a clock correction file in the PINT version you are using.
-   The file PINT is using may be deep in a virtualenv directory somewhere, but
-   you should be able to locate it with
-   ``get_observatory("gbt").clock_fullpath``. If you replace this file, you
-   should see updated clock corrections.
+#. Set the environment variable ``PINT_CLOCK_OVERRIDE`` to point to a directory
+   that contains clock files. Any clock file found there will supersede the
+   version found in the global repository. You can also use
+   :func:`pint.observatory.export_clock_files` to export the clock files you
+   are currently using to a directory for use in this way later.
 
 #. Modify ``src/pint/observatory/observatories.py`` so that the observatory you
    are interested in points to the correct clock file. (You may have to redo
@@ -253,8 +253,13 @@ source code. (This is not an ideal situation!) You have two options:
    this file also allows you to choose between TEMPO- and TEMPO2-format clock
    corrections with the ``clock_fmt`` argument.
 
-The PINT developers recognize that the situation regarding clock corrections is
-not ideal.  Possible more flexible and powerful options are under discussion.
+#. Create a new observatory in your own code. This involves creating a new
+   :class:`pint.observatory.topo_obs.TopoObs` object like those in
+   ``src/pint/observatory/observatories.py``. As long as this object is created
+   before you read in any TOAs that need it, and as long as its name does not
+   overlap with any existing observatory, you should be able to create your
+   custom observatory and point the clock correction files to the right place
+   as above.
 
 Structure of Pulsar Timing Data Formats
 ---------------------------------------
