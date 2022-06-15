@@ -18,10 +18,7 @@ from loguru import logger as log
 import pint.solar_system_ephemerides as sse
 from pint.pulsar_mjd import Time
 from pint.utils import interesting_lines
-from pint.erfautils import get_iers_up_to_date
 
-# have the IERS-B data been downloaded?
-_IERSB_download = False
 # has the lead-second file been downloaded?
 _leapsecond_download = False
 
@@ -153,8 +150,7 @@ class Observatory:
         if name == "":
             raise KeyError("No observatory name or code provided")
 
-        # and download (if necessary) IERS-B and leapsecond files
-        cls._load_iersb()
+        # and download (if necessary) leapsecond files
         cls._load_leapsecond()
 
         # Be case-insensitive
@@ -314,14 +310,6 @@ class Observatory:
         This column is provided by DE4XXt version of ephemeris.
         """
         raise NotImplementedError
-
-    @classmethod
-    def _load_iersb(self):
-        global _IERSB_download
-        if not _IERSB_download:
-            log.debug("Running get_iers_up_to_date() to update IERS B table")
-            get_iers_up_to_date()
-            _IERSB_download = True
 
     @classmethod
     def _load_leapsecond(self):

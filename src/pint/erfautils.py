@@ -19,37 +19,7 @@ from pint.pulsar_mjd import Time
 from pint.utils import PosVel
 
 
-__all__ = ["get_iers_up_to_date", "gcrs_posvel_from_itrf", "old_gcrs_posvel_from_itrf"]
-
-
-def get_iers_up_to_date(mjd=Time.now().mjd - 45.0):
-    """
-    Update the IERS B table to include MJD (defaults to 45 days ago) and open IERS_Auto
-
-    """
-
-    # First clear the IERS_Auto table
-    IERS_Auto.iers_table = None
-
-    if mjd > Time.now().mjd:
-        raise ValueError("IERS B data requested for future MJD {}".format(mjd))
-    might_be_old = is_url_in_cache(IERS_B_URL)
-    iers_b = IERS_B.open(download_file(IERS_B_URL, cache=True))
-    if might_be_old and iers_b[-1]["MJD"].to_value(u.d) < mjd:
-        # Try wiping the download and re-downloading
-        log.info("IERS B Table appears to be old. Attempting to re-download.")
-        clear_download_cache(IERS_B_URL)
-        iers_b = IERS_B.open(download_file(IERS_B_URL, cache=True))
-    if iers_b[-1]["MJD"].to_value(u.d) < mjd:
-        log.warning("IERS B data not yet available for MJD {}".format(mjd))
-
-    # Now open IERS_Auto with no argument, so it should use the IERS_B that we just made sure was up to date
-    iers_auto = IERS_Auto.open()
-
-    if astropy.version.major >= 4:
-        # Tell astropy to use this table for all future transformations
-        earth_orientation_table.set(iers_auto)
-
+__all__ = ["gcrs_posvel_from_itrf", "old_gcrs_posvel_from_itrf"]
 
 SECS_PER_DAY = erfa.DAYSEC
 # Earth rotation rate in radians per UT1 second

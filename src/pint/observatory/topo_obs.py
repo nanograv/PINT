@@ -10,7 +10,7 @@ from loguru import logger as log
 
 from pint import JD_MJD
 from pint.config import runtimefile
-from pint.erfautils import gcrs_posvel_from_itrf, get_iers_up_to_date
+from pint.erfautils import gcrs_posvel_from_itrf
 from pint.observatory import Observatory, bipm_default
 from pint.observatory.clock_file import ClockFile
 from pint.pulsar_mjd import Time
@@ -247,7 +247,9 @@ class TopoObs(Observatory):
     def _load_bipm_clock(self):
         if self._bipm_clock is None:
             try:
-                log.info("Loading BIPM clock file {self.bipm_fullpath} for {self.name}")
+                log.info(
+                    f"Loading BIPM clock file {self.bipm_fullpath} for {self.name}"
+                )
                 self._bipm_clock = ClockFile.read(self.bipm_fullpath, format="tempo2")
             except Exception as e:
                 raise ValueError(
