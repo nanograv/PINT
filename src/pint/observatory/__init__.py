@@ -6,7 +6,7 @@ For the observatories defined in PINT, these objects are created
 when the relevant module is imported.
 
 PINT's built-in observatories are loaded when anyone imports the modules
-:mod:`pint.observatory.observatories`, and
+:mod:`pint.observatory.observatories` and
 :mod:`pint.observatory.special_locations`. This automatically happens
 when you call :func:`pint.observatory.Observatory.get`,
 :func:`pint.observatory.get_observatory`, or
@@ -15,9 +15,9 @@ Satellite observatories are somewhat different, as they cannot be
 created until the user supplies an orbit file. Once created, they will
 appear in the list of known observatories.
 
-Normal use of :func:`pint.toa.get_TOAs` will ensure that this has
-been done, but if you are using a different part of PINT these
-imports may be necessary.
+Normal use of :func:`pint.toa.get_TOAs` will ensure that all imports have been
+done, but if you are using a different subset of PINT these imports may be
+necessary.
 """
 
 import os
