@@ -17,6 +17,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Fixed
 - INCLUDE lines in tim files are now relative to the location of the tim file (bug #1269)
 ### Changed
+- Required version of python updated to 3.8
 
 ## [0.8.8] 2022-05-26
 ### Added
