@@ -317,7 +317,7 @@ class SatelliteObs(SpecialLocation):
         self.Vz = InterpolatedUnivariateSpline(tt, self.FT2["Vz"], ext="extrapolate")
         self._geocenter = EarthLocation.from_geocentric(0.0 * u.m, 0.0 * u.m, 0.0 * u.m)
         self._maxextrap = maxextrap
-        super(SatelliteObs, self).__init__(name=name, overwrite=overwrite)
+        super().__init__(name=name, overwrite=overwrite)
 
     @property
     def timescale(self):
