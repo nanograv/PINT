@@ -6,11 +6,12 @@ For the observatories defined in PINT, these objects are created
 when the relevant module is imported.
 
 PINT's built-in observatories are loaded when anyone imports the modules
-:mod:`pint.observatory.observatories`, and
+:mod:`pint.observatory.observatories`,
+:mod:`pint.observatory.satellite_observatories`, and
 :mod:`pint.observatory.special_locations`. This automatically happens
 when you call :func:`pint.observatory.Observatory.get`,
 :func:`pint.observatory.get_observatory`, or
-:fun:`pint.observatory.Observatory.names`.
+:func:`pint.observatory.Observatory.names`.
 
 Normal use of :func:`pint.toa.get_TOAs` will ensure that this has
 been done, but if you are using a different part of PINT these
@@ -163,8 +164,9 @@ class Observatory:
     def names(cls):
         """List all observatories known to PINT."""
         # Importing this module triggers loading all observatories
-        import pint.observatory.observatories
-        import pint.observatory.special_locations
+        import pint.observatory.observatories  # noqa
+        import pint.observatory.special_locations  # noqa
+        import pint.observatory.satellite_observatories  # noqa
 
         return cls._registry.keys()
 
@@ -194,6 +196,7 @@ class Observatory:
         # needs to exist before that file is imported.
         import pint.observatory.observatories  # noqa
         import pint.observatory.special_locations  # noqa
+        import pint.observatory.satellite_observatories  # noqa
 
         if name == "":
             raise KeyError("No observatory name or code provided")
