@@ -2,7 +2,6 @@
 import argparse
 import os
 import sys
-import pathos.multiprocessing as mp
 
 import astropy.table
 import astropy.units as u
@@ -13,6 +12,7 @@ from astropy.coordinates import SkyCoord
 from scipy.stats import norm, uniform
 import pint.logging
 from loguru import logger as log
+import pathos.multiprocessing as mp
 
 pint.logging.setup(level=pint.logging.script_level)
 
@@ -777,10 +777,11 @@ def main(argv=None):
             sampler = emcee.EnsembleSampler(
                 nwalkers, ndim, unwrapped_lnpost, blobs_dtype=dtype, pool=pool
             )
+            sampler.run_mcmc(pos, nsteps)
     else:
         sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior)
-    # The number is the number of points in the chain
-    sampler.run_mcmc(pos, nsteps)
+        # The number is the number of points in the chain
+        sampler.run_mcmc(pos, nsteps)
 
     def chains_to_dict(names, sampler):
         chains = [sampler.chain[:, :, ii].T for ii in range(len(names))]
