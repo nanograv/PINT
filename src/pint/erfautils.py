@@ -19,7 +19,7 @@ from pint.pulsar_mjd import Time
 from pint.utils import PosVel
 
 
-__all__ = ["gcrs_posvel_from_itrf", "old_gcrs_posvel_from_itrf"]
+__all__ = ["gcrs_posvel_from_itrf"]
 
 SECS_PER_DAY = erfa.DAYSEC
 # Earth rotation rate in radians per UT1 second
