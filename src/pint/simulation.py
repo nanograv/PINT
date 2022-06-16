@@ -186,6 +186,7 @@ def make_fake_toas_uniform(
     name="fake",
     include_bipm=False,
     include_gps=True,
+    mask: np.ndarray = None
 ):
     """Make evenly spaced toas
 
@@ -239,8 +240,10 @@ def make_fake_toas_uniform(
     --------
     :func:`make_fake_toas`
     """
-
-    times = np.linspace(startMJD, endMJD, ntoas, dtype=np.longdouble) * u.d
+    if mask is not None:
+        times = np.linspace(startMJD, endMJD, ntoas, dtype=np.longdouble)[mask] * u.d
+    else:
+        times = np.linspace(startMJD, endMJD, ntoas, dtype=np.longdouble) * u.d
     if fuzz > 0:
         # apply some fuzz to the dates
         fuzz = np.random.normal(scale=fuzz.to_value(u.d), size=len(times)) * u.d
