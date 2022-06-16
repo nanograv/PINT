@@ -5,12 +5,17 @@ cannot be imported until TopoObs has successfully been imported.
 """
 
 import json
+import os
 
 import pint.config
 from pint.observatory.topo_obs import TopoObs
 from pint.observatory import bipm_default
 
 observatories_json = pint.config.runtimefile("observatories.json")
+
+pint_env_var = "PINT_OBS_OVERRIDE"
+
+__all__ = ["observatories_json", "read_observatories"]
 
 
 def get_default_value(entry, key, default=None):
@@ -47,13 +52,36 @@ default_keywords = {
     "bogus_last_correction": False,
 }
 
-# read in the JSON file
-observatories = json.load(open(observatories_json))
-for obsname in observatories:
-    keywords = {}
-    for keyword in default_keywords:
-        keywords[keyword] = get_default_value(
-            observatories[obsname], keyword, default_keywords[keyword]
-        )
-    # create the object, which will also register it
-    TopoObs(name=obsname, **keywords)
+
+def read_observatories(filename=observatories_json, overwrite=False):
+    """Read observatory definitions from JSON and create TopoObs objects, registering them
+
+    Set `overwrite` to ``True`` if you want to re-read a file with updated definitions
+
+    Parameters
+    ----------
+    filename : str, optional
+    overwrite : bool, optional
+        Whether a new instance of an existing observatory should overwrite the existing one.
+
+
+    """
+    # read in the JSON file
+    observatories = json.load(open(filename))
+    for obsname in observatories:
+        keywords = {}
+        for keyword in default_keywords:
+            keywords[keyword] = get_default_value(
+                observatories[obsname], keyword, default_keywords[keyword]
+            )
+        if overwrite:
+            keywords["overwrite"] = True
+        # create the object, which will also register it
+        TopoObs(name=obsname, **keywords)
+
+
+# read the observaatories, with the potential to override the filename from the environment variable
+if pint_env_var in os.environ:
+    read_observatories(os.environ[pint_env_var])
+else:
+    read_observatories()
