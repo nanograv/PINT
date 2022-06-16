@@ -19,8 +19,6 @@ import pint.solar_system_ephemerides as sse
 from pint.pulsar_mjd import Time
 from pint.utils import interesting_lines
 
-# has the lead-second file been downloaded?
-_leapsecond_download = False
 
 # Include any files that define observatories here.  This will start
 # with the standard distribution files, then will read any system- or
@@ -149,9 +147,6 @@ class Observatory:
 
         if name == "":
             raise KeyError("No observatory name or code provided")
-
-        # and download (if necessary) leapsecond files
-        cls._load_leapsecond()
 
         # Be case-insensitive
         name = name.lower()
@@ -310,14 +305,6 @@ class Observatory:
         This column is provided by DE4XXt version of ephemeris.
         """
         raise NotImplementedError
-
-    @classmethod
-    def _load_leapsecond(self):
-        global _leapsecond_download
-        if not _leapsecond_download:
-            log.debug("Checking for updated leapseconds")
-            astropy.time.update_leap_seconds()
-            _leapsecond_download = True
 
     def posvel(self, t, ephem, group=None):
         """Return observatory position and velocity for the given times.
