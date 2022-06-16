@@ -1476,18 +1476,18 @@ class PlkWidget(tk.Frame):
             self.updateAllJumped()
             all_jumped = copy.deepcopy(self.jumped)
             self.jumped = jumped_copy
-            groups = list(self.psr.all_toas.table["groups"])
-            # jump each group, check doesn't overlap with existing jumps and selected
-            for num in np.arange(max(groups) + 1):
-                group_bool = [
-                    num == group for group in self.psr.all_toas.table["groups"]
+            clusters = list(self.psr.all_toas.table["clusters"])
+            # jump each cluster, check doesn't overlap with existing jumps and selected
+            for num in np.arange(max(clusters) + 1):
+                cluster_bool = [
+                    num == cluster for cluster in self.psr.all_toas.table["clusters"]
                 ]
                 if True in [
-                    a and b for a, b in zip(group_bool, self.selected)
-                ] or True in [a and b for a, b in zip(group_bool, all_jumped)]:
+                    a and b for a, b in zip(cluster_bool, self.selected)
+                ] or True in [a and b for a, b in zip(cluster_bool, all_jumped)]:
                     continue
-                self.psr.selected_toas = self.psr.all_toas[group_bool]
-                jump_name = self.psr.add_jump(group_bool)
+                self.psr.selected_toas = self.psr.all_toas[cluster_bool]
+                jump_name = self.psr.add_jump(cluster_bool)
                 self.updateJumped(jump_name)
             if (
                 self.selected is not None
