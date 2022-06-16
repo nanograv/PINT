@@ -62,7 +62,7 @@ Right click     Delete a TOA (if close enough)
   t             Stash (temporarily remove) or un-stash the selected TOAs
   u             Un-select all of the selected TOAs
   j             Jump the selected TOAs, or un-jump them if already jumped
-  v             Jump all TOA groups except those selected
+  v             Jump all TOA clusters except those selected
   i             Print the prefit model as of this moment
   o             Print the postfit model as of this moment (if it exists)
   c             Print the postfit model parameter correlation matrix
@@ -1471,7 +1471,7 @@ class PlkWidget(tk.Frame):
             self.updatePlot(keepAxes=True)
             self.call_updates()
         elif event.key == "v":
-            # jump all groups except the one(s) selected, or jump all groups if none selected
+            # jump all clusters except the one(s) selected, or jump all clusters if none selected
             jumped_copy = copy.deepcopy(self.jumped)
             self.updateAllJumped()
             all_jumped = copy.deepcopy(self.jumped)
