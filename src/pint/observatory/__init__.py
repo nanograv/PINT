@@ -7,15 +7,12 @@ from collections import defaultdict
 from io import StringIO
 import warnings
 
-import astropy.constants as const
 import astropy.coordinates
 import astropy.units as u
-import astropy.time
 import numpy as np
 from astropy.coordinates import EarthLocation
 from loguru import logger as log
 
-import pint.solar_system_ephemerides as sse
 from pint.pulsar_mjd import Time
 from pint.utils import interesting_lines
 

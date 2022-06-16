@@ -5,7 +5,6 @@ import astropy.constants as c
 import astropy.units as u
 import numpy as np
 from astropy.coordinates import EarthLocation
-import astropy.time
 from loguru import logger as log
 
 from pint import JD_MJD
