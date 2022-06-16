@@ -5,12 +5,12 @@ Observatories are added to the registry when the objects are created.
 For the observatories defined in PINT, these objects are created
 when the relevant module is imported.
 
-If you want to ensure that all PINT's observatories are available
-to your interpreter, you can run::
-
-    >>> import pint.observatory.observatories
-    >>> import pint.observatory.topo_obs
-    >>> import pint.observatory.special_locations
+PINT's built-in observatories are loaded when anyone imports the modules
+:mod:`pint.observatory.observatories`, and
+:mod:`pint.observatory.special_locations`. This automatically happens
+when you call :func:`pint.observatory.Observatory.get`,
+:func:`pint.observatory.get_observatory`, or
+:fun:`pint.observatory.Observatory.names`.
 
 Normal use of :func:`pint.toa.get_TOAs` will ensure that this has
 been done, but if you are using a different part of PINT these
@@ -58,14 +58,20 @@ bipm_default = "BIPM2021"
 
 
 class ClockCorrectionError(RuntimeError):
+    """Unspecified error doing clock correction."""
+
     pass
 
 
 class NoClockCorrections(ClockCorrectionError):
+    """Clock corrections are expected but none are available."""
+
     pass
 
 
 class ClockCorrectionOutOfRange(ClockCorrectionError):
+    """Clock corrections are available but the requested time is not covered."""
+
     pass
 
 
@@ -156,6 +162,10 @@ class Observatory:
     @classmethod
     def names(cls):
         """List all observatories known to PINT."""
+        # Importing this module triggers loading all observatories
+        import pint.observatory.observatories
+        import pint.observatory.special_locations
+
         return cls._registry.keys()
 
     # Note, name and aliases are not currently intended to be changed
@@ -364,7 +374,7 @@ def get_observatory(
     """Convenience function to get observatory object with options.
 
     This function will simply call the ``Observatory.get`` method but
-    will manually set options after the method is called.
+    will manually modify the global observatory object after the method is called.
 
     If the observatory is not present in the PINT list, will fallback to astropy
 
@@ -614,11 +624,6 @@ def list_last_correction_mjds():
     are not listed. Observatories for which PINT knows where the clock correction
     should be but can't find it are listed as MISSING.
     """
-    # Importing this module triggers loading all observatories
-    import pint.observatory.observatories
-    import pint.observatory.topo_obs
-    import pint.observatory.special_locations
-
     for n in Observatory.names():
         o = get_observatory(n)
         if not hasattr(o, "clock_file"):
@@ -656,11 +661,6 @@ def update_clock_files(bipm_versions=None):
     """
     # FIXME: allow forced downloads for non-expired files
     # FIXME: what to do about GPS and BIPM files?
-
-    # Importing this module triggers loading all observatories
-    import pint.observatory.observatories
-    import pint.observatory.topo_obs
-    import pint.observatory.special_locations
 
     if bipm_versions is not None:
         o = get_observatory("arecibo")

@@ -487,11 +487,6 @@ def export_all_clock_files(directory):
     directory : str or pathlib.Path
         Where to put the files.
     """
-    # Importing this module triggers loading all observatories
-    import pint.observatory.observatories
-    import pint.observatory.topo_obs
-    import pint.observatory.special_locations
-
     directory = Path(directory)
     if _gps_clock is not None:
         _gps_clock.export(directory / Path(_gps_clock.filename).name)
