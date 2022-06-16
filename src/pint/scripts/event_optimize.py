@@ -2,6 +2,7 @@
 import argparse
 import os
 import sys
+import pathos.multiprocessing as mp
 
 import astropy.table
 import astropy.units as u
@@ -522,8 +523,8 @@ def main(argv=None):
     parser.add_argument(
         "--numcores",
         type=int,
-        default=1.0,
-        help="The number of cores used for multiprocessing",
+        default=mp.cpu_count(),
+        help="The maximum number of cores used for multiprocessing",
     )
 
     global nwalkers, nsteps, ftr
@@ -771,13 +772,11 @@ def main(argv=None):
         def unwrapped_lnpost(theta):
             return ftr.lnposterior(theta)
 
-        import pathos.multiprocessing as mp
-
-        pool = mp.ProcessPool(nodes=numcores)
-        dtype = [("lnprior", float), ("lnlikelihood", float)]
-        sampler = emcee.EnsembleSampler(
-            nwalkers, ndim, unwrapped_lnpost, blobs_dtype=dtype, pool=pool
-        )
+        with mp.ProcessPool(nodes=numcores) as pool:
+            dtype = [("lnprior", float), ("lnlikelihood", float)]
+            sampler = emcee.EnsembleSampler(
+                nwalkers, ndim, unwrapped_lnpost, blobs_dtype=dtype, pool=pool
+            )
     else:
         sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior)
     # The number is the number of points in the chain
