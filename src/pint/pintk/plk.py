@@ -1515,9 +1515,7 @@ class PlkWidget(tk.Frame):
                     return None
                 # Delete the selected points
                 self.psr.stashed = copy.deepcopy(self.psr.all_toas)
-                self.psr.all_toas.table = self.psr.all_toas.table[
-                    ~self.selected
-                ].group_by("obs")
+                self.psr.all_toas.table = self.psr.all_toas.table[~self.selected]
             else:  # unstash
                 self.psr.all_toas = copy.deepcopy(self.psr.stashed)
                 self.psr.stashed = None

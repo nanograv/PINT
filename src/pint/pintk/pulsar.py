@@ -81,6 +81,9 @@ class Pulsar:
             )
             self.prefit_model.EPHEM.value = ephem
         self.all_toas = get_TOAs(self.timfile, model=self.prefit_model, usepickle=True)
+        # by default PINT no longer groups by observatory, but PINTK wants that
+        self.all_toas.table = self.all_toas.table.group_by("obs")
+        print(self.all_toas.table["groups"])
         # Make sure that if we used a model, that any phase jumps from
         # the parfile have their flags updated in the TOA table
         if "PhaseJump" in self.prefit_model.components:
@@ -102,7 +105,6 @@ class Pulsar:
             % self.prefit_resids.rms_weighted().to(u.us).value
         )
         # Set of indices from original list that are deleted
-        # We use indices because of the grouping of TOAs by observatory
         self.deleted = set([])
         if fitter == "auto":
             self.fit_method = self.getDefaultFitter(downhill=False)
@@ -167,13 +169,7 @@ class Pulsar:
         self.reset_TOAs()
 
     def _delete_TOAs(self, toa_table):
-        toa_table.group_by("index")
-        del_inds = np.zeros(len(toa_table), dtype=bool)
-        # Set the indices of del_inds to true where the TOA indices are
-        for ii in self.deleted:  # There must be a better way
-            di = np.where(toa_table["index"] == ii)[0]
-            if len(di):
-                del_inds[di[0]] |= 1
+        del_inds = np.in1d(toa_table["index"], np.array(list(self.deleted)))
         if del_inds.sum() < len(toa_table):
             return toa_table[~del_inds].group_by("obs")
         else:
