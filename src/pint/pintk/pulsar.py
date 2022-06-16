@@ -82,6 +82,7 @@ class Pulsar:
             self.prefit_model.EPHEM.value = ephem
         self.all_toas = get_TOAs(self.timfile, model=self.prefit_model, usepickle=True)
         self.all_toas.table.sort("index")
+        self.all_toas.get_clusters(add_column=True)
         # Make sure that if we used a model, that any phase jumps from
         # the parfile have their flags updated in the TOA table
         if "PhaseJump" in self.prefit_model.components:
