@@ -130,6 +130,16 @@ IndexEntry = collections.namedtuple(
 
 
 class Index:
+    """Index of files available from the global repository.
+
+    The list is obtained by downloading (via the cache) the file ``index.txt``
+    from the repository. The result is stored in a dictionary ``index.files`` that
+    maps filenames (like ``gps2utc.clk`` to IndexEntry objects describing those
+    files. These entries contain information about expiry and validity of the file.
+
+    For parameter meanings see :func:`pint.observatory.global_clock_corrections.get_file`.
+    """
+
     def __init__(self, download_policy="if_expired", url_base=None, url_mirrors=None):
         index_file = get_file(
             index_name,
@@ -207,6 +217,13 @@ def update_all(
     """Download and update all clock corrections in the index.
 
     You can also export them all to a directory.
+
+    This includes all the files in the repository, regardless of what
+    PINT knows about them. (For example, the repository probably
+    includes the file `leap.sec` but PINT does not use it.) If you want to
+    download only the clock correction files that PINT uses,
+    see :func:`pint.observatory.update_clock_files`.
+
 
     Parameters
     ----------

@@ -1,4 +1,9 @@
-"""Ground-based fixed observatories."""
+"""Ground-based fixed observatories.
+
+These observatories have fixed positions that affect the data they record, but
+they also often have their own reference clocks, and therefore we need to
+correct for any drift in those clocks.
+"""
 import os
 
 import astropy.constants as c
@@ -28,6 +33,7 @@ from pint.observatory.global_clock_corrections import Index, get_clock_correctio
 pint_env_var = "PINT_CLOCK_OVERRIDE"
 
 __all__ = ["TopoObs", "find_clock_file", "export_all_clock_files"]
+
 # These are global because they are, well, literally global
 _gps_clock = None
 _bipm_clock_versions = {}
@@ -40,11 +46,12 @@ class TopoObs(Observatory):
     correction files are read and computed, observatory coordinates are specified in
     ITRF XYZ, etc.
 
-    In order for PINT to be able to actually find a clock file, you have several options:
+    PINT can look for clock files in one of several ways, depending on how the
+    ``clock_dir`` variable is set:
 
-    * Specify ``clock_file`` and ``clock_fmt=tempo2``
-    * Specify ``clock_file`` and ``clock_fmt=tempo``
-    * Specify ``clock_fmt=tempo2`` and ``tempo_code`` and have your clock file listed in ``time.dat`` with an ``INLCUDE`` statement
+    * ``clock_dir="PINT"`` - clock files are looked for in ``$PINT_CLOCK_OVERRIDE``, or failing that, in a global clock correction repository
+    * ``clock_dir="TEMPO"`` or ``clock_dir="TEMPO2"`` - clock files are looked for under ``$TEMPO`` or ``$TEMPO2``
+    * ``clock_dir`` is a specific directory
 
     If PINT cannot find a clock file, you will (by default) get a warning and no
     clock corrections. Calling code can request that missing clock corrections

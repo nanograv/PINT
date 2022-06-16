@@ -46,10 +46,11 @@ from pint.utils import interesting_lines
 __all__ = [
     "Observatory",
     "get_observatory",
-    "compare_t2_observatories_dat",
-    "compare_tempo_obsys_dat",
     "list_last_correction_mjds",
     "update_clock_files",
+    "compare_t2_observatories_dat",
+    "compare_tempo_obsys_dat",
+    "earth_location_distance",
     "ClockCorrectionError",
     "NoClockCorrections",
     "ClockCorrectionOutOfRange",
@@ -404,6 +405,7 @@ def get_observatory(
 
 
 def earth_location_distance(loc1, loc2):
+    """Compute the distance between two EarthLocations."""
     return (
         sum((u.Quantity(loc1.to_geocentric()) - u.Quantity(loc2.to_geocentric())) ** 2)
     ) ** 0.5
@@ -641,7 +643,8 @@ def list_last_correction_mjds():
         for c in o._clock:
             try:
                 print(
-                    f"    {os.path.basename(c.filename):<20} {Time(c.last_correction_mjd(), format='mjd').iso}"
+                    f"    {os.path.basename(c.filename):<20}"
+                    f" {Time(c.last_correction_mjd(), format='mjd').iso}"
                 )
             except (ValueError, TypeError):
                 print(f"    {os.path.basename(c.filename):<20} MISSING")
@@ -654,6 +657,10 @@ def update_clock_files(bipm_versions=None):
     you can then export or otherwise preserve the Astropy cache
     so it can be pre-loaded on systems that might not have
     network access.
+
+    This updates only the clock files that PINT knows how to use. To
+    grab everything in the repository you can use
+    :func:`pint.observatory.global_clock_corrections.update_all`.
 
     Parameters
     ----------
