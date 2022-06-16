@@ -18,45 +18,11 @@ pint_env_var = "PINT_OBS_OVERRIDE"
 __all__ = ["observatories_json", "read_observatories"]
 
 
-def get_default_value(entry, key, default=None):
-    """Return default value if key is not in entry.  Otherwise return entry[key]
-
-    Parameters
-    ----------
-    entry : dict
-    key : str
-    default :
-
-    Returns
-    -------
-        value for assignment
-    """
-
-    return default if not key in entry else entry[key]
-
-
-# Default values for instantiating a new TopoObs object
-# They will be overridden by any values set in the JSON file
-default_keywords = {
-    "tempo_code": None,
-    "itoa_code": None,
-    "aliases": None,
-    "itrf_xyz": None,
-    "clock_file": "",
-    "clock_dir": "PINT",
-    "clock_fmt": "tempo",
-    "include_gps": True,
-    "include_bipm": True,
-    "bipm_version": bipm_default,
-    "origin": None,
-    "bogus_last_correction": False,
-}
-
-
 def read_observatories(filename=observatories_json, overwrite=False):
-    """Read observatory definitions from JSON and create TopoObs objects, registering them
+    """Read observatory definitions from JSON and create :class:`pint.observatory.topo_obs.TopoObs` objects, registering them
 
-    Set `overwrite` to ``True`` if you want to re-read a file with updated definitions
+    Set `overwrite` to ``True`` if you want to re-read a file with updated definitions.
+    If `overwrite` is ``False`` and you attempt to add an existing observatory, an exception is raised.
 
     Parameters
     ----------
@@ -64,16 +30,12 @@ def read_observatories(filename=observatories_json, overwrite=False):
     overwrite : bool, optional
         Whether a new instance of an existing observatory should overwrite the existing one.
 
-
     """
     # read in the JSON file
     observatories = json.load(open(filename))
     for obsname in observatories:
-        keywords = {}
-        for keyword in default_keywords:
-            keywords[keyword] = get_default_value(
-                observatories[obsname], keyword, default_keywords[keyword]
-            )
+        keywords = observatories[obsname]
+
         if overwrite:
             keywords["overwrite"] = True
         # create the object, which will also register it
