@@ -33,17 +33,16 @@ def read_observatories(filename=observatories_json, overwrite=False):
     """
     # read in the JSON file
     observatories = json.load(open(filename))
-    for obsname in observatories:
-        keywords = observatories[obsname]
+    for obsname, obsdict in observatories.item():
 
         if overwrite:
-            keywords["overwrite"] = True
+            obsdict["overwrite"] = True
         # create the object, which will also register it
-        TopoObs(name=obsname, **keywords)
+        TopoObs(name=obsname, **obsdict)
 
 
-# read the observaatories, with the potential to override the filename from the environment variable
+# read the observatories
+read_observatories()
+# potentially override any defined here
 if pint_env_var in os.environ:
-    read_observatories(os.environ[pint_env_var])
-else:
-    read_observatories()
+    read_observatories(os.environ[pint_env_var], overwrite=True)
