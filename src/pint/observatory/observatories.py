@@ -9,7 +9,6 @@ from pathlib import Path
 
 import pint.config
 from pint.observatory.topo_obs import TopoObs
-from pint.observatory import bipm_default
 
 observatories_json = pint.config.runtimefile("observatories.json")
 
@@ -26,7 +25,7 @@ def read_observatories(filename=observatories_json, overwrite=False):
 
     Parameters
     ----------
-    filename : str, optional
+    filename : str or file-like object, optional
     overwrite : bool, optional
         Whether a new instance of an existing observatory should overwrite the existing one.
 
@@ -41,9 +40,9 @@ def read_observatories(filename=observatories_json, overwrite=False):
         f = open(filename, "r")
     elif hasattr(filename, "read"):
         f = filename
-
     contents = f.read()
     observatories = json.loads(contents)
+
     for obsname, obsdict in observatories.items():
 
         if overwrite:
