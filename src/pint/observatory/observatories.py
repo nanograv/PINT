@@ -182,7 +182,7 @@ TopoObs(
     tempo_code="r",
     itoa_code="GM",
     clock_fmt="tempo2",
-    clock_file="gmrt2gps.clk",
+    clock_file=[],
     itrf_xyz=[1656342.30, 5797947.77, 2073243.16],
     origin="""The Giant Metrewave Radio Telescope.
 

@@ -246,7 +246,9 @@ class TopoObs(Observatory):
     def _load_bipm_clock(self):
         if self._bipm_clock is None:
             try:
-                log.info("Loading BIPM clock file {self.bipm_fullpath} for {self.name}")
+                log.info(
+                    f"Loading BIPM clock file {self.bipm_fullpath} for {self.name}"
+                )
                 self._bipm_clock = ClockFile.read(self.bipm_fullpath, format="tempo2")
             except Exception as e:
                 raise ValueError(
@@ -282,6 +284,7 @@ class TopoObs(Observatory):
         t : astropy.time.Time
             The time when the clock correcions are applied.
         """
+
         # Read clock file if necessary
         # TODO provide some method for re-reading the clock file?
         self._load_clock_corrections()
