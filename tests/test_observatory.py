@@ -1,5 +1,7 @@
 #!/usr/bin/env python
+import io
 import os
+from pathlib import Path
 import unittest
 
 import numpy as np
@@ -8,6 +10,7 @@ from pint.pulsar_mjd import Time
 
 import pint.observatory
 import pint.observatory.observatories
+from pint.observatory.observatories import read_observatories
 from pint.observatory import get_observatory
 from pint.observatory.topo_obs import TopoObs
 from pinttestdata import datadir
@@ -217,3 +220,32 @@ def test_observatories_registered():
 
 def test_gbt_registered():
     get_observatory("gbt")
+
+
+@pytest.mark.parametrize("overwrite", [True, False])
+def test_observatory_override(overwrite):
+    gbt_orig = get_observatory("gbt")
+    # just like the original GBT, but ITRF Y is positive here, and negative in the real one
+    wronggbt = r"""
+    {
+        "gbt": {
+        "tempo_code": "1",
+        "itoa_code": "GB",
+        "clock_file": "time_gbt.dat",
+        "itrf_xyz": [
+            882589.289,
+            4924872.368,
+            3943729.418
+        ],
+        "origin": "The Robert C. Byrd Green Bank Telescope.\nThis data was obtained by Joe Swiggum from Ryan Lynch in 2021 September.\n"
+        }
+    }
+    """
+    if not overwrite:
+        with pytest.raises(ValueError):
+            read_observatories(io.StringIO(wronggbt), overwrite=overwrite)
+    else:
+        read_observatories(io.StringIO(wronggbt), overwrite=overwrite)
+        newgbt = get_observatory("gbt")
+        assert newgbt._loc_itrf.y > 0
+        assert newgbt._loc_itrf.y != gbt_orig._loc_itrf.y
