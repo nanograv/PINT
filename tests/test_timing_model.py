@@ -394,61 +394,6 @@ def test_parfile_and_timfile_jumps(timfile_jumps):
     assert fs[4] == "1"
 
 
-class TOAOrderSetup:
-    pulsar = "NGC6440E"
-    parfile = os.path.join(datadir, f"{pulsar}.par")
-    timfile = os.path.join(datadir, f"{pulsar}.tim")
-    model = get_model(parfile)
-    t = get_TOAs(timfile)
-    r = pint.residuals.Residuals(t, model, subtract_mean=False)
-
-    @classmethod
-    @composite
-    def toas_and_order(draw, cls):
-        # note that draw must come before cls
-        n = len(cls.t)
-        ix = draw(permutations(np.arange(n)))
-        return cls.t, ix
-
-
-@given(TOAOrderSetup.toas_and_order())
-def test_shuffle_toas_residuals_match(t_and_permute):
-    toas, ix = t_and_permute
-    tcopy = deepcopy(toas)
-    tcopy.table = tcopy.table[ix]
-    rsort = pint.residuals.Residuals(tcopy, TOAOrderSetup.model, subtract_mean=False)
-    assert np.all(TOAOrderSetup.r.time_resids[ix] == rsort.time_resids)
-
-
-@given(TOAOrderSetup.toas_and_order())
-def test_shuffle_toas_chi2_match(t_and_permute):
-    toas, ix = t_and_permute
-    tcopy = deepcopy(toas)
-    tcopy.table = tcopy.table[ix]
-    rsort = pint.residuals.Residuals(tcopy, TOAOrderSetup.model, subtract_mean=False)
-    # the differences seem to be related to floating point math
-    assert np.isclose(TOAOrderSetup.r.calc_chi2(), rsort.calc_chi2(), atol=1e-14)
-
-
-@pytest.mark.parametrize("sortkey", ["freq", "mjd_float"])
-def test_resorting_toas_residuals_match(sortkey):
-    tcopy = deepcopy(TOAOrderSetup.t)
-    i = np.argsort(TOAOrderSetup.t.table[sortkey])
-    tcopy.table = tcopy.table[i]
-    rsort = pint.residuals.Residuals(tcopy, TOAOrderSetup.model, subtract_mean=False)
-    assert np.all(TOAOrderSetup.r.time_resids[i] == rsort.time_resids)
-
-
-@pytest.mark.parametrize("sortkey", ["freq", "mjd_float"])
-def test_resorting_toas_chi2_match(sortkey):
-    tcopy = deepcopy(TOAOrderSetup.t)
-    i = np.argsort(TOAOrderSetup.t.table[sortkey])
-    tcopy.table = tcopy.table[i]
-    rsort = pint.residuals.Residuals(tcopy, TOAOrderSetup.model, subtract_mean=False)
-    # the differences seem to be related to floating point math
-    assert np.isclose(TOAOrderSetup.r.calc_chi2(), rsort.calc_chi2(), atol=1e-14)
-
-
 def test_supports_rm():
     m = get_model(io.StringIO("\n".join([par_base, "RM 10"])))
     assert m.RM.value == 10
