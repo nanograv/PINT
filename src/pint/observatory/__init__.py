@@ -115,6 +115,14 @@ class Observatory:
         """List all observatories known to PINT."""
         return cls._registry.keys()
 
+    @classmethod
+    def names_and_aliases(cls):
+        """List all observatories and their aliases"""
+        s = {}
+        for oname, obs in cls._registry.items():
+            s[oname] = obs.aliases
+        return s
+
     # Note, name and aliases are not currently intended to be changed
     # after initialization.  If we want to allow this, we could add
     # setter methods that update the registries appropriately.
