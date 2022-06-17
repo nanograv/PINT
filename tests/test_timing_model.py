@@ -395,8 +395,9 @@ def test_parfile_and_timfile_jumps(timfile_jumps):
 
 
 class TOAOrderSetup:
-    parfile = os.path.join(datadir, "NGC6440E.par")
-    timfile = os.path.join(datadir, "NGC6440E.tim")
+    pulsar = "NGC6440E"
+    parfile = os.path.join(datadir, f"{pulsar}.par")
+    timfile = os.path.join(datadir, f"{pulsar}.tim")
     model = get_model(parfile)
     t = get_TOAs(timfile)
     r = pint.residuals.Residuals(t, model, subtract_mean=False)
