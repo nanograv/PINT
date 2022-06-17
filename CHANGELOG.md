@@ -7,6 +7,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## Unreleased
 ### Changed
 - model.phase() now defaults to abs_phase=True when TZR* params are in the model
+- removed explicit download of IERS and leapsecond data (handled now by astropy)
 ### Added
 - logging now needs to be setup explicitly
 - Color-by-jump mode for pintk
