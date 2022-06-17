@@ -1,11 +1,11 @@
 """Standard observatories read in from observatories.json
 
-These observatories are registered when this file is imported. As a result it
-cannot be imported until TopoObs has successfully been imported.
+These observatories are registered when this file is imported. 
 """
 
 import json
 import os
+from pathlib import Path
 
 import pint.config
 from pint.observatory.topo_obs import TopoObs
@@ -37,7 +37,13 @@ def read_observatories(filename=observatories_json, overwrite=False):
 
     """
     # read in the JSON file
-    observatories = json.load(open(filename))
+    if isinstance(filename, (str, Path)):
+        f = open(filename, "r")
+    elif hasattr(filename, "read"):
+        f = filename
+
+    contents = f.read()
+    observatories = json.loads(contents)
     for obsname, obsdict in observatories.items():
 
         if overwrite:
