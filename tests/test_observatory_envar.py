@@ -4,6 +4,7 @@ import pytest
 import importlib
 
 import pint.observatory.observatories
+import pint.observatory.special_locations
 import pint.observatory
 
 
@@ -49,13 +50,16 @@ def sandbox(tmp_path):
         yield o
     finally:
         os.environ = e
-        pint.observatory.Observatory._registry = reg
+        pint.observatory.Observatory.clear_registry()
+        importlib.reload(pint.observatory.observatories)
+        importlib.reload(pint.observatory.special_locations)
 
 
 def test_override_gbt(sandbox):
     pint.observatory.Observatory.clear_registry()
     os.environ["PINT_OBS_OVERRIDE"] = str(sandbox.override_file)
     importlib.reload(pint.observatory.observatories)
+    importlib.reload(pint.observatory.special_locations)
 
     newgbt = pint.observatory.Observatory.get("gbt")
     assert newgbt._loc_itrf.y > 0
@@ -65,6 +69,16 @@ def test_is_gbt_ok(sandbox):
     pint.observatory.Observatory.clear_registry()
 
     importlib.reload(pint.observatory.observatories)
+    importlib.reload(pint.observatory.special_locations)
 
     newgbt = pint.observatory.Observatory.get("gbt")
     assert newgbt._loc_itrf.y < 0
+
+
+def test_is_ssb_ok(sandbox):
+    pint.observatory.Observatory.clear_registry()
+
+    importlib.reload(pint.observatory.observatories)
+    importlib.reload(pint.observatory.special_locations)
+
+    ssb = pint.observatory.Observatory.get("ssb")
