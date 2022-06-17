@@ -1,6 +1,10 @@
 import os
-
+import sys
 import pytest
+import importlib
+
+import pint.observatory.observatories
+import pint.observatory
 
 
 @pytest.fixture
@@ -10,11 +14,12 @@ def sandbox(tmp_path):
 
     o = Sandbox()
     e = os.environ.copy()
+
     try:
         del os.environ["PINT_OBS_OVERRIDE"]
     except KeyError:
         pass
-
+    reg = pint.observatory.Observatory._registry.copy()
     o.override_dir = tmp_path / "override"
     o.override_dir.mkdir()
 
@@ -44,12 +49,22 @@ def sandbox(tmp_path):
         yield o
     finally:
         os.environ = e
+        pint.observatory.Observatory._registry = reg
 
 
 def test_override_gbt(sandbox):
+    pint.observatory.Observatory.clear_registry()
     os.environ["PINT_OBS_OVERRIDE"] = str(sandbox.override_file)
-    import pint.observatory.observatories
-    from pint.observatory import get_observatory
+    importlib.reload(pint.observatory.observatories)
 
-    newgbt = get_observatory("gbt")
+    newgbt = pint.observatory.Observatory.get("gbt")
     assert newgbt._loc_itrf.y > 0
+
+
+def test_is_gbt_ok(sandbox):
+    pint.observatory.Observatory.clear_registry()
+
+    importlib.reload(pint.observatory.observatories)
+
+    newgbt = pint.observatory.Observatory.get("gbt")
+    assert newgbt._loc_itrf.y < 0

@@ -222,6 +222,12 @@ def test_gbt_registered():
     get_observatory("gbt")
 
 
+def test_is_gbt_still_ok():
+
+    gbt = get_observatory("gbt")
+    assert gbt._loc_itrf.y < 0
+
+
 @pytest.mark.parametrize("overwrite", [True, False])
 def test_observatory_override(overwrite):
     gbt_orig = get_observatory("gbt")
