@@ -111,6 +111,11 @@ class Observatory:
             o._aliases = obs_aliases
 
     @classmethod
+    def clear_registry(cls):
+        cls._registry = {}
+        cls._alias_map = {}
+
+    @classmethod
     def names(cls):
         """List all observatories known to PINT."""
         return cls._registry.keys()
