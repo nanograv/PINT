@@ -33,7 +33,7 @@ def read_observatories(filename=observatories_json, overwrite=False):
     """
     # read in the JSON file
     observatories = json.load(open(filename))
-    for obsname, obsdict in observatories.item():
+    for obsname, obsdict in observatories.items():
 
         if overwrite:
             obsdict["overwrite"] = True
