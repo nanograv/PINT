@@ -30,6 +30,11 @@ def read_observatories(filename=observatories_json, overwrite=False):
     overwrite : bool, optional
         Whether a new instance of an existing observatory should overwrite the existing one.
 
+    Raises
+    ------
+    ValueError
+        If an attempt is made to add an existing observatory with ``overwrite=False``
+
     """
     # read in the JSON file
     observatories = json.load(open(filename))
