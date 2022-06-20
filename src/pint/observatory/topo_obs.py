@@ -5,11 +5,15 @@ they also often have their own reference clocks, and therefore we need to
 correct for any drift in those clocks.
 
 These observatories are registered when this file is imported.   
-The standard behavior is given by :func:`pint.observatory.observatories.read_observatories_from_usual_locations`, which:
+The standard behavior is given by :func:`pint.observatory.topo_obs.load_observatories_from_usual_locations`, which:
 
 * Clears any existing observatories from the registry
 * Loads the standard observatories 
-* Loads any observatories present in $PINT_OBS_OVERRIDE, overwriting those already present
+* Loads any observatories present in ``$PINT_OBS_OVERRIDE``, overwriting those already present
+
+See Also
+--------
+:mod:`pint.observatory.special_locations`
 """
 import os
 import json
@@ -51,8 +55,8 @@ __all__ = [
     "find_clock_file",
     "export_all_clock_files",
     "observatories_json",
-    "read_observatories",
-    "read_observatories_from_usual_locations",
+    "load_observatories",
+    "load_observatories_from_usual_locations",
 ]
 
 # These are global because they are, well, literally global
@@ -532,8 +536,8 @@ def export_all_clock_files(directory):
                 clock.export(directory / Path(clock.filename).name)
 
 
-def read_observatories(filename=observatories_json, overwrite=False):
-    """Read observatory definitions from JSON and create :class:`pint.observatory.topo_obs.TopoObs` objects, registering them
+def load_observatories(filename=observatories_json, overwrite=False):
+    """Load observatory definitions from JSON and create :class:`pint.observatory.topo_obs.TopoObs` objects, registering them
 
     Set `overwrite` to ``True`` if you want to re-read a file with updated definitions.
     If `overwrite` is ``False`` and you attempt to add an existing observatory, an exception is raised.
@@ -571,8 +575,8 @@ def read_observatories(filename=observatories_json, overwrite=False):
         TopoObs(name=obsname, **obsdict)
 
 
-def read_observatories_from_usual_locations(clear=False):
-    """Re-read from the default JSON file as well as $PINT_OBS_OVERRIDE, optionally clearing the registry
+def load_observatories_from_usual_locations(clear=False):
+    """Load observatories from the default JSON file as well as ``$PINT_OBS_OVERRIDE``, optionally clearing the registry
 
     Parameters
     ----------
@@ -582,10 +586,10 @@ def read_observatories_from_usual_locations(clear=False):
     if clear:
         Observatory.clear_registry()
     # read the observatories
-    read_observatories()
+    load_observatories()
     # potentially override any defined here
     if pint_obs_env_var in os.environ:
-        read_observatories(os.environ[pint_obs_env_var], overwrite=True)
+        load_observatories(os.environ[pint_obs_env_var], overwrite=True)
 
 
-read_observatories_from_usual_locations()
+load_observatories_from_usual_locations()

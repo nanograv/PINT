@@ -10,7 +10,8 @@ PINT's built-in observatories are loaded when anyone imports the modules
 :mod:`pint.observatory.special_locations`. This automatically happens
 when you call :func:`pint.observatory.Observatory.get`,
 :func:`pint.observatory.get_observatory`, or
-:func:`pint.observatory.Observatory.names`.
+:func:`pint.observatory.Observatory.names` 
+(:func:`pint.observatory.Observatory.names_and_aliases` to include aliases).
 Satellite observatories are somewhat different, as they cannot be
 created until the user supplies an orbit file. Once created, they will
 appear in the list of known observatories.
@@ -89,7 +90,8 @@ class Observatory:
     generally be obtained only via the :func:`pint.observatory.Observatory.get`
     function.  This will query the registry based on observatory name (and any
     defined aliases).  A list of all registered names can be returned via
-    :func:`pint.observatory.Observatory.names`.
+    :func:`pint.observatory.Observatory.names`, or a list of names and aliases
+    can be returned via :func:`pint.observatory.Observatory.names_and_aliases`.
 
     Observatories have names and aliases that are used in ``.tim`` and ``.par``
     files to select them. They also have positions (possibly varying, in the
@@ -165,6 +167,7 @@ class Observatory:
 
     @classmethod
     def clear_registry(cls):
+        """Clear registry for ground-based observatories."""
         cls._registry = {}
         cls._alias_map = {}
 

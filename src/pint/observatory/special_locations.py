@@ -2,6 +2,12 @@
 
 Special "site" locations (eg, barycenter) which do not need clock
 corrections or much else done.
+
+Can be loaded using :func:`pint.observatory.special_locations.load_special_locations`
+
+See Also
+--------
+:mod:`pint.observatory.topo_obs`
 """
 import os
 
@@ -18,6 +24,8 @@ from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 from pint.utils import PosVel
 
 from . import Observatory
+
+__all__ = ["load_special_locations"]
 
 
 class SpecialLocation(Observatory):
@@ -315,8 +323,15 @@ class T2SpacecraftObs(SpecialLocation):
         return geo_posvel + stl_posvel
 
 
-# Need to initialize one of each so that it gets added to the list
-BarycenterObs("barycenter", aliases=["@", "ssb", "bary", "bat"])
-GeocenterObs("geocenter", aliases=["0", "o", "coe", "geo"])
-T2SpacecraftObs("stl_geo", aliases=["STL_GEO"])
-# TODO -- BIPM issue
+def load_special_locations():
+    """Load :class:`~pint.observatory.special_locations.BarycenterObs`, :class:`~pint.observatory.special_locations.GeocenterObs`,
+    and :class:`~pint.observatory.special_locations.T2SpacecraftObs` into observatory registry."""
+    # Need to initialize one of each so that it gets added to the list
+    BarycenterObs("barycenter", aliases=["@", "ssb", "bary", "bat"])
+    GeocenterObs("geocenter", aliases=["0", "o", "coe", "geo"])
+    T2SpacecraftObs("stl_geo", aliases=["STL_GEO"])
+    # TODO -- BIPM issue
+
+
+# run this on import
+load_special_locations()
