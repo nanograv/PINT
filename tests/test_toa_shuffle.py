@@ -94,7 +94,13 @@ class TOALineOrderSetup:
     with open(timfile) as f:
         lines = f.readlines()
     preamble = lines[0]
-    datalines = np.array([x for x in lines[1:] if not x.startswith("C")])
+    datalines = np.array(
+        [
+            x
+            for x in lines[1:]
+            if not (x.startswith("C") or x.startswith("#") or len(x.strip()) == 0)
+        ]
+    )
     clkcorr = t.get_flag_value("clkcorr", 0, np.float64)[0] * u.s
 
     @classmethod
