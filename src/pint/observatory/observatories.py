@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 
 import pint.config
+import pint.observatory
 from pint.observatory.topo_obs import TopoObs
 
 observatories_json = pint.config.runtimefile("observatories.json")
@@ -51,8 +52,14 @@ def read_observatories(filename=observatories_json, overwrite=False):
         TopoObs(name=obsname, **obsdict)
 
 
-# read the observatories
-read_observatories()
-# potentially override any defined here
-if pint_env_var in os.environ:
-    read_observatories(os.environ[pint_env_var], overwrite=True)
+def read_observatories_from_usual_locations():
+    """Clear observatory registry, and then re-read from the default JSON file as well as $PINT_OBS_OVERRIDE"""
+    pint.observatory.Observatory.clear_registry()
+    # read the observatories
+    read_observatories()
+    # potentially override any defined here
+    if pint_env_var in os.environ:
+        read_observatories(os.environ[pint_env_var], overwrite=True)
+
+
+read_observatories_from_usual_locations()
