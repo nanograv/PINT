@@ -1,14 +1,14 @@
 """Observatories at special (non-Earth) locations."""
 
 
+import astropy.constants as const
 import astropy.io.fits as pyfits
 import astropy.units as u
-import astropy.constants as const
+import numpy as np
 from astropy.coordinates import EarthLocation
 from astropy.table import Table, vstack
-from scipy.interpolate import InterpolatedUnivariateSpline
-import numpy as np
 from loguru import logger as log
+from scipy.interpolate import InterpolatedUnivariateSpline
 
 from pint.fits_utils import read_fits_event_mjds
 from pint.observatory.special_locations import SpecialLocation
@@ -317,7 +317,7 @@ class SatelliteObs(SpecialLocation):
         self.Vz = InterpolatedUnivariateSpline(tt, self.FT2["Vz"], ext="extrapolate")
         self._geocenter = EarthLocation.from_geocentric(0.0 * u.m, 0.0 * u.m, 0.0 * u.m)
         self._maxextrap = maxextrap
-        super(SatelliteObs, self).__init__(name=name, overwrite=overwrite)
+        super().__init__(name=name, overwrite=overwrite)
 
     @property
     def timescale(self):
