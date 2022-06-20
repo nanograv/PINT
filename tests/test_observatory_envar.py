@@ -65,11 +65,26 @@ def test_override_gbt(sandbox):
     assert newgbt._loc_itrf.y > 0
 
 
+def test_override_gbt_loadfunction(sandbox):
+    os.environ["PINT_OBS_OVERRIDE"] = str(sandbox.override_file)
+    pint.observatory.observatories.read_observatories_from_usual_locations()
+
+    newgbt = pint.observatory.Observatory.get("gbt")
+    assert newgbt._loc_itrf.y > 0
+
+
 def test_is_gbt_ok(sandbox):
     pint.observatory.Observatory.clear_registry()
 
     importlib.reload(pint.observatory.observatories)
     importlib.reload(pint.observatory.special_locations)
+
+    newgbt = pint.observatory.Observatory.get("gbt")
+    assert newgbt._loc_itrf.y < 0
+
+
+def test_is_gbt_ok_loadfunction(sandbox):
+    pint.observatory.observatories.read_observatories_from_usual_locations()
 
     newgbt = pint.observatory.Observatory.get("gbt")
     assert newgbt._loc_itrf.y < 0
