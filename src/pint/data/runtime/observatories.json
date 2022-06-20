@@ -65,7 +65,6 @@
         "itoa_code": "MK",
         "clock_fmt": "tempo2",
         "clock_file": "mk2utc.clk",
-        "clock_dir": "TEMPO2",
         "itrf_xyz": [
             5109360.133,
             2006852.586,
@@ -81,7 +80,6 @@
         ],
         "clock_fmt": "tempo2",
         "clock_file": "pks2gps.clk",
-        "clock_dir": "TEMPO2",
         "itrf_xyz": [
             -4554231.5,
             2816759.1,
@@ -146,7 +144,6 @@
         ],
         "clock_fmt": "tempo2",
         "clock_file": "[ncyobs2obspm.clk, obspm2gps.clk]",
-        "clock_dir": "TEMPO2",
         "origin": "The Nan\u00e7ay radio telescope with the NUPPI back-end.\nThe origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
     },
     "effelsberg": {
@@ -157,7 +154,6 @@
         ],
         "clock_fmt": "tempo2",
         "clock_file": "eff2gps.clk",
-        "clock_dir": "TEMPO2",
         "itrf_xyz": [
             4033947.146,
             486990.898,
@@ -197,7 +193,6 @@
         "itoa_code": "WS",
         "clock_fmt": "tempo2",
         "clock_file": "wsrt2gps.clk",
-        "clock_dir": "TEMPO2",
         "itrf_xyz": [
             3828445.659,
             445223.6,
@@ -266,7 +261,6 @@
         ],
         "clock_fmt": "tempo2",
         "clock_file": "mo2gps.clk",
-        "clock_dir": "TEMPO2",
         "bogus_last_correction": true,
         "origin": "The Molonglo Observatory Synthesis Telescope.\nOrigin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2.\n"
     },
