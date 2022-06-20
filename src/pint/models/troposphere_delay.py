@@ -6,12 +6,10 @@ import scipy.interpolate
 from astropy.coordinates import AltAz, SkyCoord
 from loguru import logger as log
 
-import pint.utils as ut
 from pint.models.parameter import boolParameter
 from pint.models.timing_model import DelayComponent
 from pint.observatory import get_observatory
 from pint.observatory.topo_obs import TopoObs
-from pint.toa_select import TOASelect
 
 
 class TroposphereDelay(DelayComponent):

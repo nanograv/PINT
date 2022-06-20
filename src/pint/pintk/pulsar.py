@@ -6,7 +6,6 @@ pre/post fit residuals, and other useful information.
 self.selected_toas = selected toas, self.all_toas = all toas in tim file
 """
 import copy
-from enum import Enum
 
 import astropy.units as u
 import numpy as np
@@ -21,7 +20,6 @@ from pint.simulation import (
 )
 from pint.residuals import Residuals
 from pint.toa import get_TOAs, merge_TOAs
-from pint.phase import Phase
 from pint.utils import FTest
 
 import pint.logging

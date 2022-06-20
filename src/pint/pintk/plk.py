@@ -16,7 +16,6 @@ import pint.pintk.colormodes as cm
 
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
-import tkinter.messagebox as tkMessageBox
 from tkinter import ttk
 
 import pint.logging
