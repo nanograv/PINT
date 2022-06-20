@@ -86,3 +86,33 @@ def test_resorting_toas_chi2_match(sortkey):
     rsort = pint.residuals.Residuals(tcopy, TOAOrderSetup.model, subtract_mean=False)
     # the differences seem to be related to floating point math
     assert np.isclose(TOAOrderSetup.r.calc_chi2(), rsort.calc_chi2(), atol=1e-14)
+
+
+class TOALineOrderSetup:
+    timfile = os.path.join(datadir, "shuffletest.tim")
+    t = toa.get_TOAs(timfile)
+    with open(timfile) as f:
+        lines = f.readlines()
+    preamble = lines[0]
+    datalines = np.array([x for x in lines[1:] if not x.startswith("C")])
+    clkcorr = t.get_flag_value("clkcorr", 0, np.float64)[0] * u.s
+
+    @classmethod
+    @composite
+    def toas_and_order(draw, cls):
+        # note that draw must come before cls
+        n = len(cls.t)
+        ix = draw(permutations(np.arange(n)))
+        return ix
+
+
+@given(TOALineOrderSetup.toas_and_order())
+def test_shuffle_toas_clock_corr(permute):
+    ix = permute
+    f = io.StringIO(
+        TOALineOrderSetup.preamble
+        + "".join([str(x) for x in TOALineOrderSetup.datalines[ix]])
+    )
+    t = toa.get_TOAs(f)
+    clkcorr = t.get_flag_value("clkcorr", 0, np.float64)[0] * u.s
+    assert (clkcorr == TOALineOrderSetup.clkcorr[ix]).all()
