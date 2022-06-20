@@ -17,7 +17,11 @@
             -4924872.32,
             3943729.348
         ],
-        "origin": "The Robert C. Byrd Green Bank Telescope.\nThe origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
+        "origin": [
+            "The Robert C. Byrd Green Bank Telescope.",
+            "The origin of this data is unknown but as of 2021 June 8 it agrees exactly with",
+            "the values used by TEMPO and TEMPO2."
+        ]
     },
     "arecibo": {
         "tempo_code": "3",

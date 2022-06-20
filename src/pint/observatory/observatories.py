@@ -44,6 +44,9 @@ def read_observatories(filename=observatories_json, overwrite=False):
     ValueError
         If an attempt is made to add an existing observatory with ``overwrite=False``
 
+    Notes
+    -----
+    If the ``origin`` field is a list of strings, they will be joined together with newlines.
     """
     # read in the JSON file
     if isinstance(filename, (str, Path)):
@@ -54,7 +57,9 @@ def read_observatories(filename=observatories_json, overwrite=False):
     observatories = json.loads(contents)
 
     for obsname, obsdict in observatories.items():
-
+        if "origin" in obsdict:
+            if isinstance(obsdict["origin"], list):
+                obsdict["origin"] = "\n".join(obsdict["origin"])
         if overwrite:
             obsdict["overwrite"] = True
         # create the object, which will also register it
