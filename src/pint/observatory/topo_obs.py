@@ -177,6 +177,11 @@ class TopoObs(Observatory):
         self.origin = origin
         super().__init__(name, aliases=aliases)
 
+    def __repr__(self):
+        aliases = [f"'{x}'" for x in self.aliases]
+        s = f"TopoObs '{self.name}' ({','.join(aliases)}) at [{self._loc_itrf.x}, {self._loc_itrf.y} {self._loc_itrf.z}]:\n{self.origin}"
+        return s
+
     @property
     def timescale(self):
         return "utc"
