@@ -154,6 +154,7 @@ def test_fake_fromMJDs():
 
 
 def test_fake_from_timfile():
+    # FIXME: this file is unnecessarily huge
     m, t = get_model_and_toas(
         pint.config.examplefile("B1855+09_NANOGrav_9yv1.gls.par"),
         pint.config.examplefile("B1855+09_NANOGrav_9yv1.tim"),

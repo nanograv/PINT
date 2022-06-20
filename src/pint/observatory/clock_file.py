@@ -1,4 +1,4 @@
-"""Routines for reading various formats of clock file."""
+"""Routines for reading and writing various formats of clock file."""
 
 import os
 import re
@@ -9,8 +9,19 @@ import astropy.units as u
 import numpy as np
 from loguru import logger as log
 
+import pint.config
+from pint.observatory import ClockCorrectionOutOfRange, NoClockCorrections
+from pint.observatory.global_clock_corrections import Index, get_clock_correction_file
 from pint.pulsar_mjd import Time
 from pint.utils import lines_of, open_or_use
+
+__all__ = [
+    "ClockFile",
+    "ClockFileMeta",
+    "TempoClockFile",
+    "Tempo2ClockFile",
+    "ConstructedClockFile",
+]
 
 
 class ClockFileMeta(type):
@@ -54,7 +65,12 @@ class ClockFile(metaclass=ClockFileMeta):
         [ -3.14000000e-06  -3.13900000e-06  -3.15200000e-06 ...,   1.80000000e-08
            2.10000000e-08   2.30000000e-08] s
 
+    Clock correction file objects preserve the comments in the original file,
+    and can be written in TEMPO or TEMPO2 format.
     """
+
+    # FIXME: there should only be the ClockFile class, and if there's a registry
+    # it's of functions that are able to read files and produce ClockFile objects.
 
     def __init__(self):
         # FIXME: require filename?
@@ -64,7 +80,13 @@ class ClockFile(metaclass=ClockFileMeta):
 
     @classmethod
     def read(cls, filename, format="tempo", **kwargs):
-        if format in cls._formats.keys():
+        """Read file, selecting an appropriate subclass based on format.
+
+        You can also simply construct a clock file object of the appropriate type,
+        :class:`pint.observatory.clock_file.Tempo2ClockFile` or
+        :class:`pint.observatory.clock_file.TempoClockFile`.
+        """
+        if format in cls._formats:
             r = cls._formats[format](filename, **kwargs)
             if not np.all(np.diff(r.time.mjd) >= 0):
                 raise ValueError(
@@ -85,11 +107,10 @@ class ClockFile(metaclass=ClockFileMeta):
     def evaluate(self, t, limits="warn"):
         """Evaluate the clock corrections at the times t.
 
-        By default, values are linearly
-        interpolated but this could be overridden by derived classes
-        if needed.  The first/last values will be applied to times outside
-        the data range.  If limits=='warn' this will also issue a warning.
-        If limits=='error' an exception will be raised.
+        If values past the end are encountered, check for new clock corrections
+        in the global repository. Delegates the actual computation to the
+        included ClockFile object; anything still not covered is treated
+        according to ``limits``.
 
         Parameters
         ----------
@@ -113,19 +134,20 @@ class ClockFile(metaclass=ClockFileMeta):
                 log.warning(msg)
                 return np.zeros_like(t) * u.us
             elif limits == "error":
-                raise RuntimeError(msg)
+                raise NoClockCorrections(msg)
 
         if np.any(t < self.time[0]) or np.any(t > self.time[-1]):
             msg = f"Data points out of range in clock file '{self.filename}'"
             if limits == "warn":
                 log.warning(msg)
             elif limits == "error":
-                raise RuntimeError(msg)
+                raise ClockCorrectionOutOfRange(msg)
 
         # Can't pass Times directly to np.interp.  This should be OK:
         return np.interp(t.mjd, self.time.mjd, self.clock.to(u.us).value) * u.us
 
     def last_correction_mjd(self):
+        """Last MJD for which corrections are available."""
         if len(self.time) == 0:
             return -np.inf
         else:
@@ -303,8 +325,9 @@ class ClockFile(metaclass=ClockFileMeta):
         hdrline : str
             The first line of the file. Should start with `#` and consist
             of a pair of timescales, like `UTC(AO) UTC(GPS)` that this clock
-            file transforms between.
-        comments : str
+            file transforms between. If no value is provided, the value of
+            ``self.header`` is used.
+        extra_comment : str
             Additional comments to include. Lines should probably start with `#`
             so they will be interpreted as comments. This field frequently
             contains details of the origin of the file, or at least the
@@ -349,13 +372,49 @@ class ClockFile(metaclass=ClockFileMeta):
                     f.write(comment.rstrip())
                 f.write("\n")
 
+    def export(self, filename):
+        """Write this clock correction file to the specified location."""
+        # FIXME: fall back to writing the clock file using .write_...?
+        try:
+            contents = Path(self.filename).read_text()
+        except IOError:
+            if len(self.time) > 0:
+                log.info(f"Unable to load original clock file for {self}")
+                # FIXME: use write? Do we know what format we should be in?
+            return
+        with open_or_use(filename, "wt") as f:
+            # FIXME: get_ may pull in an updated clock file
+            f.write(contents)
+
 
 class ConstructedClockFile(ClockFile):
+    """Clock file constructed from arrays.
+
+    Parameters
+    ----------
+    mjd : np.ndarray
+        The MJDs at which clock corrections are measured.
+    clock : astropy.units.Quantity
+        The clock corrections at those MJDs
+    comments : list of str or None
+        The comments following each clock correction; should match ``mjd``
+        and ``clock`` in length.
+    leading_comment : str
+        A comment to put at the top of the file.
+    header : str
+        A header to include, if output in TEMPO2 format.
+    """
 
     # No format set because these can't be read
 
     def __init__(
-        self, mjd, clock, comments=None, leading_comment=None, filename=None, **kwargs
+        self,
+        mjd,
+        clock,
+        comments=None,
+        leading_comment=None,
+        filename=None,
+        header=None,
     ):
         super().__init__()
         if len(mjd) != len(clock):
@@ -369,10 +428,12 @@ class ConstructedClockFile(ClockFile):
             self.comments = comments
             if len(comments) != len(mjd):
                 raise ValueError("Comments list does not match time array")
-        self.leading_comment = None
+        self.leading_comment = leading_comment
+        self.header = header
 
 
 class Tempo2ClockFile(ClockFile):
+    """A clock file originally in TEMPO2 format."""
 
     format = "tempo2"
 
@@ -454,6 +515,7 @@ class Tempo2ClockFile(ClockFile):
         self._clock = clk * u.s
 
 
+# FIXME: `NIST-REF` could be replaced by the two timescales in actual use
 tempo_standard_header = dedent(
     """\
        MJD       EECO-REF    NIST-REF NS      DATE    COMMENTS
@@ -469,7 +531,7 @@ tempo_standard_header_res = [
 
 
 class TempoClockFile(ClockFile):
-    """Load a TEMPO format clock file for a site
+    """A TEMPO format clock file.
 
     Given the specified full path to the tempo1-format clock file,
     will return two numpy arrays containing the MJDs and the clock
@@ -488,6 +550,7 @@ class TempoClockFile(ClockFile):
 
     format = "tempo"
 
+    # FIXME: use kwargs?
     def __init__(
         self,
         filename,
@@ -529,9 +592,8 @@ class TempoClockFile(ClockFile):
             # https://github.com/nanograv/tempo/blob/618afb2e901d3e4b8324d4ba12777c055e128696/src/clockcor.f#L79
             # This could be (roughly) implemented by splicing in additional clock correction points
             # between 'f' values or +- 1 day.
-            # (The deviation would be that in gaps you get an interpolated value rather than
-            # an error message.)
-            seen_header = 0
+            # (The deviation would be that in gaps you get an interpolated value
+            # rather than an error message.)
 
             for l in lines_of(filename):
                 # Ignore comment lines
@@ -539,10 +601,12 @@ class TempoClockFile(ClockFile):
                     add_comment(l)
                     continue
 
+                # FIXME: the header *could* contain to and from timescale information
                 # TEMPO has very, ah, flexible notions of what is an acceptable file
                 # https://sourceforge.net/p/tempo/tempo/ci/master/tree/src/newsrc.f#l272
-                # Any line that starts with "MJD" or "=====" is assumed to be part of the header.
-                # TEMPO describes this as a "commonly used header format".
+                # Any line that starts with "MJD" or "=====" is assumed to be
+                # part of the header.  TEMPO describes this as a
+                # "commonly used header format".
                 ls = l.split()
                 if ls and ls[0].upper().startswith("MJD"):
                     # Header line. Do we preserve it?
@@ -634,7 +698,8 @@ class TempoClockFile(ClockFile):
                 add_comment(l[50:])
         except (FileNotFoundError, OSError):
             log.error(
-                f"TEMPO-style clock correction file {filename} for site {obscode} not found"
+                f"TEMPO-style clock correction file {filename} "
+                f"for site {obscode} not found"
             )
         if bogus_last_correction and len(mjds):
             mjds = mjds[:-1]
@@ -648,3 +713,87 @@ class TempoClockFile(ClockFile):
         # FIXME: using Time may make loading clock corrections slow
         self._time = Time(mjds, format="pulsar_mjd", scale="utc")
         self._clock = clkcorrs * u.us
+
+
+class GlobalClockFile(ClockFile):
+    """Clock file obtained from a global repository.
+
+    These clock files are downloaded from a global repository; if a TOA
+    is encountered past the end of the current version, the code will
+    reach out to the global repository looking for a new version.
+
+    This supports both TEMPO- and TEMPO2-format files; just instantiate the
+    object with appropriate arguments and it will call
+    :func:`pint.observatory.ClockFile.read` with the right arguments.
+    """
+
+    def __init__(
+        self, filename, format="tempo", url_base=None, url_mirrors=None, **kwargs
+    ):
+        self.filename = filename
+        self.format = format
+        self.kwargs = kwargs
+        self.url_base = url_base
+        self.url_mirrors = url_mirrors
+        f = get_clock_correction_file(
+            self.filename,
+            download_policy="if_missing",
+            url_base=self.url_base,
+            url_mirrors=self.url_mirrors,
+        )
+        self.clock_file = ClockFile.read(f, self.format, **kwargs)
+
+    def evaluate(self, t, limits="warn"):
+        """Evaluate the clock corrections at the times t.
+
+        By default, values are linearly
+        interpolated but this could be overridden by derived classes
+        if needed.  The first/last values will be applied to times outside
+        the data range.  If limits=='warn' this will also issue a warning.
+        If limits=='error' an exception will be raised.
+
+        Parameters
+        ----------
+        t : astropy.time.Time
+            An array-valued Time object specifying the times at which to evaluate the
+            clock correction.
+        limits : "warn" or "error"
+            If "error", raise an exception if times outside the range in the clock
+            file are presented (or if the clock file is empty); if "warn", extrapolate
+            by returning the value at the nearest endpoint but emit a warning.
+
+        Returns
+        -------
+        corrections : astropy.units.Quantity
+            The corrections in units of microseconds.
+        """
+        if np.any(t > self.clock_file.time[-1]):
+            f = get_clock_correction_file(
+                self.filename, url_base=self.url_base, url_mirrors=self.url_mirrors
+            )
+            self.clock_file = ClockFile.read(f, format=self.format, **self.kwargs)
+        return self.clock_file.evaluate(t, limits=limits)
+
+    @property
+    def leading_comment(self):
+        return self.clock_file.leading_comment
+
+    @property
+    def comments(self):
+        return self.clock_file.comments
+
+    @property
+    def time(self):
+        return self.clock_file.time
+
+    @property
+    def clock(self):
+        return self.clock_file.clock
+
+    def last_clock_correction_mjd(self):
+        return self.clock_file.last_clock_correction_mjd()
+
+    def export(self, filename):
+        """Write this clock correction file to the specified location."""
+        # Only the inner file knows where it is actually stored
+        self.clock_file.export(filename)
