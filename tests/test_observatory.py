@@ -9,8 +9,8 @@ import pytest
 from pint.pulsar_mjd import Time
 
 import pint.observatory
-import pint.observatory.observatories
-from pint.observatory.observatories import read_observatories
+import pint.observatory.topo_obs
+from pint.observatory.topo_obs import read_observatories
 from pint.observatory import get_observatory
 from pint.observatory.topo_obs import TopoObs
 from pinttestdata import datadir

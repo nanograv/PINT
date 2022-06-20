@@ -3,7 +3,7 @@ import sys
 import pytest
 import importlib
 
-import pint.observatory.observatories
+import pint.observatory.topo_obs
 import pint.observatory.special_locations
 import pint.observatory
 
@@ -51,14 +51,14 @@ def sandbox(tmp_path):
     finally:
         os.environ = e
         pint.observatory.Observatory.clear_registry()
-        importlib.reload(pint.observatory.observatories)
+        importlib.reload(pint.observatory.topo_obs)
         importlib.reload(pint.observatory.special_locations)
 
 
 def test_override_gbt(sandbox):
     pint.observatory.Observatory.clear_registry()
     os.environ["PINT_OBS_OVERRIDE"] = str(sandbox.override_file)
-    importlib.reload(pint.observatory.observatories)
+    importlib.reload(pint.observatory.topo_obs)
     importlib.reload(pint.observatory.special_locations)
 
     newgbt = pint.observatory.Observatory.get("gbt")
@@ -67,7 +67,7 @@ def test_override_gbt(sandbox):
 
 def test_override_gbt_loadfunction(sandbox):
     os.environ["PINT_OBS_OVERRIDE"] = str(sandbox.override_file)
-    pint.observatory.observatories.read_observatories_from_usual_locations(clear=True)
+    pint.observatory.topo_obs.read_observatories_from_usual_locations(clear=True)
     # still need this to get the special locations
     importlib.reload(pint.observatory.special_locations)
 
@@ -78,7 +78,7 @@ def test_override_gbt_loadfunction(sandbox):
 def test_is_gbt_ok(sandbox):
     pint.observatory.Observatory.clear_registry()
 
-    importlib.reload(pint.observatory.observatories)
+    importlib.reload(pint.observatory.topo_obs)
     importlib.reload(pint.observatory.special_locations)
 
     newgbt = pint.observatory.Observatory.get("gbt")
@@ -86,7 +86,7 @@ def test_is_gbt_ok(sandbox):
 
 
 def test_is_gbt_ok_loadfunction(sandbox):
-    pint.observatory.observatories.read_observatories_from_usual_locations(clear=True)
+    pint.observatory.topo_obs.read_observatories_from_usual_locations(clear=True)
     # still need this to get the special locations
     importlib.reload(pint.observatory.special_locations)
 
@@ -97,7 +97,7 @@ def test_is_gbt_ok_loadfunction(sandbox):
 def test_is_ssb_ok(sandbox):
     pint.observatory.Observatory.clear_registry()
 
-    importlib.reload(pint.observatory.observatories)
+    importlib.reload(pint.observatory.topo_obs)
     importlib.reload(pint.observatory.special_locations)
 
     ssb = pint.observatory.Observatory.get("ssb")

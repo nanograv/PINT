@@ -1,10 +1,18 @@
-"""Ground-based fixed observatories.
+"""Ground-based fixed observatories read in from ``observatories.json``.
 
 These observatories have fixed positions that affect the data they record, but
 they also often have their own reference clocks, and therefore we need to
 correct for any drift in those clocks.
+
+These observatories are registered when this file is imported.   
+The standard behavior is given by :func:`pint.observatory.observatories.read_observatories_from_usual_locations`, which:
+
+* Clears any existing observatories from the registry
+* Loads the standard observatories 
+* Loads any observatories present in $PINT_OBS_OVERRIDE, overwriting those already present
 """
 import os
+import json
 
 import astropy.constants as c
 import astropy.units as u
@@ -30,9 +38,22 @@ from pint.solar_system_ephemerides import get_tdb_tt_ephem_geocenter, objPosVel_
 from pint.utils import has_astropy_unit
 from pint.observatory.global_clock_corrections import Index, get_clock_correction_file
 
-pint_env_var = "PINT_CLOCK_OVERRIDE"
+# environment variables that can override clock location and observatory location
+pint_clock_env_var = "PINT_CLOCK_OVERRIDE"
+pint_obs_env_var = "PINT_OBS_OVERRIDE"
 
-__all__ = ["TopoObs", "find_clock_file", "export_all_clock_files"]
+# where to look for observatory data
+observatories_json = runtimefile("observatories.json")
+
+
+__all__ = [
+    "TopoObs",
+    "find_clock_file",
+    "export_all_clock_files",
+    "observatories_json",
+    "read_observatories",
+    "read_observatories_from_usual_locations",
+]
 
 # These are global because they are, well, literally global
 _gps_clock = None
@@ -431,8 +452,8 @@ def find_clock_file(
     env_clock = None
     global_clock = None
     local_clock = None
-    if pint_env_var in os.environ:
-        loc = Path(os.environ[pint_env_var]) / name
+    if pint_clock_env_var in os.environ:
+        loc = Path(os.environ[pint_clock_env_var]) / name
         if loc.exists():
             # FIXME: more arguments?
             env_clock = ClockFile.read(
@@ -460,7 +481,7 @@ def find_clock_file(
             # we could have saved downloading and parsing it
             log.warning(
                 f"Clock file from {env_clock.filename} overrides global clock "
-                f"file {name} because of {pint_env_var}"
+                f"file {name} because of {pint_clock_env_var}"
             )
         else:
             log.info(f"Using clock file from {env_clock.filename}")
@@ -509,3 +530,62 @@ def export_all_clock_files(directory):
         if hasattr(o, "_clock") and o._clock is not None:
             for clock in o._clock:
                 clock.export(directory / Path(clock.filename).name)
+
+
+def read_observatories(filename=observatories_json, overwrite=False):
+    """Read observatory definitions from JSON and create :class:`pint.observatory.topo_obs.TopoObs` objects, registering them
+
+    Set `overwrite` to ``True`` if you want to re-read a file with updated definitions.
+    If `overwrite` is ``False`` and you attempt to add an existing observatory, an exception is raised.
+
+    Parameters
+    ----------
+    filename : str or file-like object, optional
+    overwrite : bool, optional
+        Whether a new instance of an existing observatory should overwrite the existing one.
+
+    Raises
+    ------
+    ValueError
+        If an attempt is made to add an existing observatory with ``overwrite=False``
+
+    Notes
+    -----
+    If the ``origin`` field is a list of strings, they will be joined together with newlines.
+    """
+    # read in the JSON file
+    if isinstance(filename, (str, Path)):
+        f = open(filename, "r")
+    elif hasattr(filename, "read"):
+        f = filename
+    contents = f.read()
+    observatories = json.loads(contents)
+
+    for obsname, obsdict in observatories.items():
+        if "origin" in obsdict:
+            if isinstance(obsdict["origin"], list):
+                obsdict["origin"] = "\n".join(obsdict["origin"])
+        if overwrite:
+            obsdict["overwrite"] = True
+        # create the object, which will also register it
+        TopoObs(name=obsname, **obsdict)
+
+
+def read_observatories_from_usual_locations(clear=False):
+    """Re-read from the default JSON file as well as $PINT_OBS_OVERRIDE, optionally clearing the registry
+
+    Parameters
+    ----------
+    clear : bool, optional
+        Whether or not to clear existing objects in advance
+    """
+    if clear:
+        Observatory.clear_registry()
+    # read the observatories
+    read_observatories()
+    # potentially override any defined here
+    if pint_obs_env_var in os.environ:
+        read_observatories(os.environ[pint_obs_env_var], overwrite=True)
+
+
+read_observatories_from_usual_locations()

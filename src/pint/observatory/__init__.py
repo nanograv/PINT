@@ -6,7 +6,7 @@ For the observatories defined in PINT, these objects are created
 when the relevant module is imported.
 
 PINT's built-in observatories are loaded when anyone imports the modules
-:mod:`pint.observatory.observatories` and
+:mod:`pint.observatory.topo_obs` and
 :mod:`pint.observatory.special_locations`. This automatically happens
 when you call :func:`pint.observatory.Observatory.get`,
 :func:`pint.observatory.get_observatory`, or
@@ -85,7 +85,7 @@ class Observatory:
     For example, TOA time scales, clock corrections.  Any new Observtory that
     is declared will be automatically added to a registry that is keyed on
     observatory name.  Aside from their initial declaration (for examples, see
-    ``pint/observatory/observatories.py``), Observatory instances should
+    ``pint/data/runtimefile/observatories.json``), Observatory instances should
     generally be obtained only via the :func:`pint.observatory.Observatory.get`
     function.  This will query the registry based on observatory name (and any
     defined aliases).  A list of all registered names can be returned via
@@ -172,7 +172,7 @@ class Observatory:
     def names(cls):
         """List all observatories known to PINT."""
         # Importing this module triggers loading all observatories
-        import pint.observatory.observatories  # noqa
+        import pint.observatory.topo_obs  # noqa
         import pint.observatory.special_locations  # noqa
 
         return cls._registry.keys()
@@ -209,7 +209,7 @@ class Observatory:
         # Ensure that the observatory list has been read
         # We can't do this in the import section above because this class
         # needs to exist before that file is imported.
-        import pint.observatory.observatories  # noqa
+        import pint.observatory.topo_obs  # noqa
         import pint.observatory.special_locations  # noqa
 
         if name == "":
@@ -428,7 +428,7 @@ def compare_t2_observatories_dat(t2dir=None):
     """Read a tempo2 observatories.dat file and compare with PINT
 
     Produces a report including lines that can be added to PINT's
-    observatories.py to add any observatories unknown to PINT.
+    observatories.json to add any observatories unknown to PINT.
 
     Parameters
     ==========
@@ -514,7 +514,7 @@ def compare_tempo_obsys_dat(tempodir=None):
     """Read a tempo obsys.dat file and compare with PINT
 
     Produces a report including lines that can be added to PINT's
-    observatories.py to add any observatories unknown to PINT.
+    observatories.json to add any observatories unknown to PINT.
 
     Parameters
     ==========
