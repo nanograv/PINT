@@ -66,9 +66,16 @@ def read_observatories(filename=observatories_json, overwrite=False):
         TopoObs(name=obsname, **obsdict)
 
 
-def read_observatories_from_usual_locations():
-    """Clear observatory registry, and then re-read from the default JSON file as well as $PINT_OBS_OVERRIDE"""
-    pint.observatory.Observatory.clear_registry()
+def read_observatories_from_usual_locations(clear=False):
+    """Re-read from the default JSON file as well as $PINT_OBS_OVERRIDE, optionally clearing the registry
+
+    Parameters
+    ----------
+    clear : bool, optional
+        Whether or not to clear existing objects in advance
+    """
+    if clear:
+        pint.observatory.Observatory.clear_registry()
     # read the observatories
     read_observatories()
     # potentially override any defined here
