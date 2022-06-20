@@ -1,6 +1,11 @@
 """Standard observatories read in from observatories.json
 
-These observatories are registered when this file is imported. 
+These observatories are registered when this file is imported.   
+The standard behavior is given by :func:`pint.observatory.observatories.read_observatories_from_usual_locations`, which:
+
+* Clears any existing observatories from the registry
+* Loads the standard observatories 
+* Loads any observatories present in $PINT_OBS_OVERRIDE, overwriting those already present
 """
 
 import json
@@ -15,7 +20,11 @@ observatories_json = pint.config.runtimefile("observatories.json")
 
 pint_env_var = "PINT_OBS_OVERRIDE"
 
-__all__ = ["observatories_json", "read_observatories"]
+__all__ = [
+    "observatories_json",
+    "read_observatories",
+    "read_observatories_from_usual_locations",
+]
 
 
 def read_observatories(filename=observatories_json, overwrite=False):
