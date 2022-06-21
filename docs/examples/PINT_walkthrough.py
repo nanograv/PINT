@@ -32,10 +32,11 @@
 # Note:  The first time TOAs get read in, lots of processing (can) happen, which can take some time. However, a  "pickle" file can be saved, so the next time the same file is loaded (if nothing has changed), the TOAs will be loaded from the pickle file, which is much faster.
 
 # %%
-from __future__ import print_function, division
+import tempfile
 import numpy as np
 import astropy.units as u
 from pprint import pprint
+from glob import glob
 import pint.logging
 
 # setup the logging
@@ -262,4 +263,14 @@ print(f.model.as_parfile(format="tempo2"))
 # %%
 pprint(m.get_barycentric_toas(t))
 
+# %% [markdown]
+# Let's export the clock corrections as they currently stand so we can save
+# these exact versions for reproducibility purposes.
+#
 # %%
+import pint.observatory.topo_obs
+
+d = tempfile.mkdtemp()
+pint.observatory.topo_obs.export_all_clock_files(d)
+for f in sorted(glob(d + "/*")):
+    print(f)

@@ -199,10 +199,13 @@ def get_TOAs(
                     if ctype == "TT" and cvers.startswith("BIPM"):
                         include_bipm = True
                         if bipm_version is None:
-                            bipm_version = cvers
-                            log.debug(
-                                f"Using CLOCK = {bipm_version} from the given model"
-                            )
+                            if cvers == "BIPM":
+                                bipm_version = bipm_default
+                            else:
+                                bipm_version = cvers
+                                log.debug(
+                                    f"Using CLOCK = {bipm_version} from the given model"
+                                )
                     else:
                         log.warning(
                             f'CLOCK = {model["CLOCK"].value} is not implemented. '

@@ -238,7 +238,7 @@ def test_bipm_default():
     m, t = get_model_and_toas(
         StringIO(simplepar.replace("BIPM2017", "BIPM")), datadir / "test1.tim"
     )
-    assert t.clock_corr_info["bipm_version"] == "BIPM"
+    assert t.clock_corr_info["bipm_version"] == bipm_default
 
 
 def test_toas_comparison():
