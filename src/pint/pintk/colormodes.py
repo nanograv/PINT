@@ -19,7 +19,7 @@ named_colors = [
     "xkcd:dark blue",
     "xkcd:light green",
     "xkcd:dark green",
-    "lxkcd:light blue",
+    "xkcd:light blue",
     "xkcd:dark red",
     "xkcd:magenta",
     "xkcd:black",
