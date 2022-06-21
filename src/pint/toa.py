@@ -199,10 +199,13 @@ def get_TOAs(
                     if ctype == "TT" and cvers.startswith("BIPM"):
                         include_bipm = True
                         if bipm_version is None:
-                            bipm_version = cvers
-                            log.debug(
-                                f"Using CLOCK = {bipm_version} from the given model"
-                            )
+                            if cvers == "BIPM":
+                                bipm_version = bipm_default
+                            else:
+                                bipm_version = cvers
+                                log.debug(
+                                    f"Using CLOCK = {bipm_version} from the given model"
+                                )
                     else:
                         log.warning(
                             f'CLOCK = {model["CLOCK"].value} is not implemented. '
@@ -1028,14 +1031,6 @@ class TOA:
         >>> print a
         54567.876876876876876:  4.500 us error from 'GBT' at 1400.0000 MHz {'backend': 'GUPPI'}
 
-    What happens if IERS data is not available for the date::
-
-        >>> a = TOA((154567, 0.876876876876876), 4.5, freq=1400.0,
-        ...         obs="GBT", backend="GUPPI")
-
-        Traceback (most recent call last):
-          omitted
-        IndexError: (some) times are outside of range covered by IERS table.
     """
 
     def __init__(
@@ -2136,7 +2131,7 @@ class TOAs:
         """Compute and add TDB and TDB long double columns to the TOA table.
 
         This routine creates new columns 'tdb' and 'tdbld' in a TOA table
-        for TDB times, using the Observatory locations and IERS A Earth
+        for TDB times, using the Observatory locations and IERS Earth
         rotation corrections for UT1.
 
         If these columns are already present, delete and replace them.

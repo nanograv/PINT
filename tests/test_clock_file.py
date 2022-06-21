@@ -7,11 +7,12 @@ import pytest
 from astropy.time import Time
 from numpy.testing import assert_allclose, assert_array_equal
 
-from pint.observatory import get_observatory
+from pint.observatory import get_observatory, bipm_default, update_clock_files
 from pint.observatory.clock_file import (
     ClockFile,
     ConstructedClockFile,
 )
+from pint.observatory.topo_obs import export_all_clock_files
 
 
 def t(mjd):
@@ -171,9 +172,33 @@ loadable_observatories = ["gbt", "arecibo", "fast", "gb140", "gb853", "jb", "wsr
 
 
 @pytest.mark.parametrize("obs", loadable_observatories)
-def ensure_can_read(obs):
+def test_can_read(obs):
     o = get_observatory(obs)
     o.last_clock_correction_mjd()
+
+
+@pytest.mark.parametrize(
+    "obs,mjd",
+    [
+        # This is all the observatories PINT knows about clock corrections for
+        # And a day towards the end of what's in the global repository
+        ("gbt", 59690),
+        ("ao", 59070),
+        ("fast", 58740),
+        ("vla", 59270),
+        ("meerkat", 59260),
+        ("parkes", 58690),
+        ("jodrell", 59520),
+        ("effelsberg", 57190),
+        ("wsrt", 57200),
+        ("most", 58360),
+        ("gb140", 51390),
+        ("gb853", 50680),
+    ],
+)
+def test_corrections_cover(obs, mjd):
+    o = get_observatory(obs)
+    o.clock_corrections(Time(mjd, format="pulsar_mjd"), limits="error")
 
 
 def test_tempo2_round_trip_arecibo():
@@ -354,3 +379,57 @@ def test_merge_comments():
         """
     )
     assert o.getvalue() == contents
+
+
+def test_export_clock_file(tmp_path):
+    contents = dedent(
+        """\
+        # FAKE1 FAKE3
+        # Initial comments from c1
+        # covering several lines
+        # Initial comments from c2
+        # covering several lines
+        50000.00000 0.000002000000 And some text
+        # From c2
+        50001.00000 0.000004000000
+        50002.00000 0.000004000000
+        # A commenty line
+        50003.00000 0.000005000200 same-line text
+        # and a commenty line
+        55000.00000 0.000004500450 The beginning of a jump
+        55000.00000 0.000001500450 The end of a jump
+        60000.00000 0.000000000000
+        """
+    )
+    clock_path = tmp_path / "file.clk"
+    clock_path.write_text(contents)
+    target_dir = tmp_path / "a"
+    target_dir.mkdir()
+    target_file = target_dir / "other-file.clk"
+    c = ClockFile.read(clock_path, format="tempo2")
+    c.export(target_file)
+    assert target_file.read_text() == contents
+
+
+def test_export_all_gbt(tmp_path):
+    o = get_observatory("gbt")
+    o.last_clock_correction_mjd()
+    export_all_clock_files(tmp_path)
+    assert (tmp_path / "time_gbt.dat").exists()
+    assert (tmp_path / "gps2utc.clk").exists()
+    assert (tmp_path / f"tai2tt_{bipm_default.lower()}.clk").exists()
+
+    # I'd like to check that this isn't exported unless it's been used
+    # but it's cached in the global TopoObs object (separate from the
+    # Astropy cache)
+    # assert not (tmp_path / "time_ao.dat").exists()
+
+
+def test_update_clock_files_str(tmp_path):
+    export_all_clock_files(str(tmp_path))
+
+
+def test_update_clock_files(tmp_path):
+    update_clock_files()
+    export_all_clock_files(tmp_path)
+    assert (tmp_path / "wsrt2gps.clk").exists()
