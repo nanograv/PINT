@@ -4,6 +4,7 @@ from copy import deepcopy
 
 import numpy as np
 import pytest
+import time
 
 from hypothesis import given
 from hypothesis.strategies import (
@@ -17,6 +18,12 @@ from pinttestdata import datadir
 from pint import simulation, toa
 import pint.residuals
 from pint.models import get_model, get_model_and_toas
+
+shuffletoas = """FORMAT 1
+test 1234.0 54321 0 pks
+test2 888 59055 0 meerkat
+test3 350 59000 0 gbt
+"""
 
 
 class TOAOrderSetup:
@@ -89,11 +96,12 @@ def test_resorting_toas_chi2_match(sortkey):
 
 
 class TOALineOrderSetup:
-    timfile = os.path.join(datadir, "shuffletest.tim")
+    timfile = io.StringIO(shuffletoas)
     t = toa.get_TOAs(timfile)
-    with open(timfile) as f:
-        lines = f.readlines()
+    timfile.seek(0)
+    lines = timfile.readlines()
     preamble = lines[0]
+    # string any comments or blank lines to make sure the datalines correspond to the TOAs
     datalines = np.array(
         [
             x
@@ -114,11 +122,10 @@ class TOALineOrderSetup:
 
 @given(TOALineOrderSetup.toas_and_order())
 def test_shuffle_toas_clock_corr(permute):
-    ix = permute
     f = io.StringIO(
         TOALineOrderSetup.preamble
-        + "".join([str(x) for x in TOALineOrderSetup.datalines[ix]])
+        + "".join([str(x) for x in TOALineOrderSetup.datalines[permute]])
     )
     t = toa.get_TOAs(f)
     clkcorr = t.get_flag_value("clkcorr", 0, np.float64)[0] * u.s
-    assert (clkcorr == TOALineOrderSetup.clkcorr[ix]).all()
+    assert (clkcorr == TOALineOrderSetup.clkcorr[permute]).all()
