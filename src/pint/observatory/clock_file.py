@@ -22,7 +22,7 @@ __all__ = [
 
 
 class ClockFile:
-    """A clock correction file in one of several formats.
+    """A clock correction file.
 
     The ClockFile class provides a way to read various formats of clock
     files.  It will provide the clock information from the file as arrays
@@ -49,19 +49,36 @@ class ClockFile:
     Clock correction file objects preserve the comments in the original file,
     and can be written in TEMPO or TEMPO2 format.
 
+    If you want to provide a new clock correction file format, you should
+    write a function that can read it and return an appropriate ClockFile
+    object. It should take a filename, Path, or file-like object as its
+    first argument, and probably at least a ``friendly_name`` keyword argument.
+    You would then add it to ``ClockFile._formats`` as something like
+    ``ClockFile._formats["haiku"] = my_read_haiku_function``. Then
+    ``ClockFile.read(filename, format="haiku", ...)`` will call
+    ``my_read_haiku_function(filename, ...)``.
+
     Parameters
     ----------
     mjd : np.ndarray
         The MJDs at which clock corrections are measured
     clock : astropy.units.Quantity
-        The clock corrections at those MJDs
+        The clock corrections at those MJDs (units of time)
     comments : list of str or None
         The comments following each clock correction; should match ``mjd``
-        and ``clock`` in length.
+        and ``clock`` in length. If not provided, a list of empty comments
+        is used. The first line of these strings are normally on the same
+        line as the corresponding clock correction, while any subsequent
+        lines occur between it and the next and should probably start with
+        ``# ``.
     leading_comment : str
-        A comment to put at the top of the file.
+        A comment to put at the top of the file. Lines should probably start
+        with ``# ``.
     filename : str or None
         If present, a file that can be read to reproduce this data.
+    friendly_name : str or None
+        A descriptive file name, in case the filename is long or uninformative.
+        If not provided defaults to the filename.
     header : str
         A header to include, if output in TEMPO2 format.
     """
@@ -100,7 +117,10 @@ class ClockFile:
 
     @classmethod
     def read(cls, filename, format="tempo", **kwargs):
-        """Read file, selecting an appropriate subclass based on format."""
+        """Read file, selecting an appropriate subclass based on format.
+
+        Any additional keyword arguments are passed to the appropriate reader function.
+        """
         if format in cls._formats:
             return cls._formats[format](filename, **kwargs)
         else:
@@ -108,6 +128,11 @@ class ClockFile:
 
     @classmethod
     def null(cls, *, filename=None, friendly_name=None):
+        """Construct a null clock correction file.
+
+        This has no clock corrections, and can be used to handle
+        conditions where a file is expected but not available.
+        """
         return cls(
             mjd=np.array([]),
             clock=np.array([]) * u.s,
@@ -118,10 +143,12 @@ class ClockFile:
 
     @property
     def time(self):
+        """An astropy.time.Time recording the dates of clock corrections."""
         return self._time
 
     @property
     def clock(self):
+        """An astropy.units.Quantity recording the amounts of clock correction."""
         return self._clock
 
     def evaluate(self, t, limits="warn"):
@@ -147,7 +174,6 @@ class ClockFile:
         corrections : astropy.units.Quantity
             The corrections in units of microseconds.
         """
-
         if len(self.time) == 0:
             msg = f"No data points in clock file '{self.friendly_name}'"
             if limits == "warn":
@@ -417,6 +443,23 @@ clkcorr_re = re.compile(
 
 
 def read_tempo2_clock_file(filename, bogus_last_correction=False, friendly_name=None):
+    """Read a TEMPO2-format clock file.
+
+    This function can also be accessed through
+    :func:`pint.observatory.clock_file.ClockFile.read` with the
+    ``format="tempo2"`` argument.
+
+    Parameters
+    ----------
+    filename : str or pathlib.Path or file-like
+        The location to obtain the file from.
+    bogus_last_correction : bool
+        If True, the last correction value in the file is a placeholder, normally
+        far in the future, and not an actual measurement.
+    friendly_name : str or None
+        A human-readable name for this file, for use in error reporting.
+        If not provided, will default to ``filename``.
+    """
     log.debug(f"Loading TEMPO2-format observatory clock correction file {filename}")
     try:
         mjd = []
@@ -519,21 +562,39 @@ def read_tempo_clock_file(
     process_includes=True,
     friendly_name=None,
 ):
-    """A TEMPO format clock file.
+    """Read a TEMPO-format clock file.
 
-    Given the specified full path to the tempo1-format clock file,
-    will return two numpy arrays containing the MJDs and the clock
-    corrections (us).  All computations here are done as in tempo, with
+    This function can also be accessed through
+    :func:`pint.observatory.clock_file.ClockFile.read` with the
+    ``format="tempo2"`` argument.
+
+    All computations here are done as in tempo, with
     the exception of the 'F' flag (to disable interpolation), which
     is currently not implemented.
 
     INCLUDE statments are processed.
 
-    If the 'site' argument is set to an appropriate one-character tempo
-    site code, only values for that site will be returned. If the 'site'
-    argument is None, the file is assumed to contain only clock corrections
-    for the desired telescope, so all values found in the file will be returned
-    but INCLUDEs will *not* be processed.
+
+    Parameters
+    ----------
+    filename : str or pathlib.Path or file-like
+        The location to obtain the file from.
+    obscode : str or None
+        If the ``obscode`` argument is set to an appropriate one-character tempo
+        site code, only values for that site will be returned. If the ``obscode``
+        argument is None, the file is assumed to contain only clock corrections
+        for the desired telescope, so all values found in the file will be returned
+        but INCLUDEs will *not* be processed.
+    bogus_last_correction : bool
+        If True, the last correction value in the file is a placeholder, normally
+        far in the future, and not an actual measurement.
+    process_includes : bool
+        If True, also read data from any INCLUDE statements. Requires the ``obscode``
+        argument to distinguish data from any other telescopes that might be in the
+        same system of files.
+    friendly_name : str or None
+        A human-readable name for this file, for use in error reporting.
+        If not provided, will default to ``filename``.
     """
 
     leading_comment = None
@@ -736,8 +797,11 @@ class GlobalClockFile(ClockFile):
             url_base=self.url_base,
             url_mirrors=self.url_mirrors,
         )
-        self.clock_file = ClockFile.read(f, self.format, **kwargs)
-        self.clock_file.friendly_name = self.friendly_name
+        self.clock_file = ClockFile.read(
+            f, self.format, friendly_name=self.friendly_name, **kwargs
+        )
+
+    # FIXME: add update method?
 
     def evaluate(self, t, limits="warn"):
         """Evaluate the clock corrections at the times t.
@@ -768,7 +832,9 @@ class GlobalClockFile(ClockFile):
                 self.filename, url_base=self.url_base, url_mirrors=self.url_mirrors
             )
             # FIXME: don't reload unless we actually got something new
-            self.clock_file = ClockFile.read(f, format=self.format, **self.kwargs)
+            self.clock_file = ClockFile.read(
+                f, format=self.format, friendly_name=self.friendly_name, **self.kwargs
+            )
             self.clock_file.friendly_name = self.friendly_name
         return self.clock_file.evaluate(t, limits=limits)
 
@@ -788,8 +854,7 @@ class GlobalClockFile(ClockFile):
     def clock(self):
         return self.clock_file.clock
 
-    def last_clock_correction_mjd(self):
-        return self.clock_file.last_clock_correction_mjd()
+    # FIXME: do we need last_correction_mjd to try an update?
 
     def export(self, filename):
         """Write this clock correction file to the specified location."""
