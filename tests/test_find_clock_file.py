@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from astropy.time import Time
 
-from pint.observatory.clock_file import ClockFile, ConstructedClockFile
+from pint.observatory.clock_file import ClockFile
 from pint.observatory.topo_obs import find_clock_file
 
 
@@ -25,7 +25,7 @@ def sandbox(tmp_path):
     o.repo_dir = tmp_path / "repo"
     o.repo_dir.mkdir()
     o.clocks = [
-        ConstructedClockFile(mjd=np.array([50000 + i, 59000]), clock=np.zeros(2) * u.us)
+        ClockFile(mjd=np.array([50000 + i, 59000]), clock=np.zeros(2) * u.us)
         for i in range(10)
     ]
     o.name = "fake.clk"

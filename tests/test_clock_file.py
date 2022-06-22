@@ -10,7 +10,6 @@ from numpy.testing import assert_allclose, assert_array_equal
 from pint.observatory import get_observatory, bipm_default, update_clock_files
 from pint.observatory.clock_file import (
     ClockFile,
-    ConstructedClockFile,
 )
 from pint.observatory.topo_obs import export_all_clock_files
 
@@ -21,7 +20,7 @@ def t(mjd):
 
 @pytest.fixture
 def basic_clock():
-    return ConstructedClockFile(
+    return ClockFile(
         mjd=np.array([50000, 55000, 60000]), clock=np.array([1.0, 2.0, -1.0]) * u.us
     )
 
@@ -32,8 +31,8 @@ def test_merge_clocks_values():
     b = np.array([50000, 55000, 60000])
     bv = np.array([0, 0, 1]) * u.us
 
-    ca = ConstructedClockFile(mjd=a, clock=av)
-    cb = ConstructedClockFile(mjd=b, clock=bv)
+    ca = ClockFile(mjd=a, clock=av)
+    cb = ClockFile(mjd=b, clock=bv)
 
     m = ClockFile.merge([ca, cb])
 
@@ -50,8 +49,8 @@ def test_merge_clocks_values_repeat():
     b = np.array([50000, 55000, 55000, 60000])
     bv = np.array([0, 0, 1, 1]) * u.us
 
-    ca = ConstructedClockFile(mjd=a, clock=av)
-    cb = ConstructedClockFile(mjd=b, clock=bv)
+    ca = ClockFile(mjd=a, clock=av)
+    cb = ClockFile(mjd=b, clock=bv)
 
     m = ClockFile.merge([ca, cb])
 
@@ -68,8 +67,8 @@ def test_merge_clocks_values_repeat_more():
     b = np.array([50000, 55000, 55000, 55000, 55000, 60000])
     bv = np.array([0, 0, 7, 8, 1, 1]) * u.us
 
-    ca = ConstructedClockFile(mjd=a, clock=av)
-    cb = ConstructedClockFile(mjd=b, clock=bv)
+    ca = ClockFile(mjd=a, clock=av)
+    cb = ClockFile(mjd=b, clock=bv)
 
     m = ClockFile.merge([ca, cb])
 
@@ -86,8 +85,8 @@ def test_merge_clocks_preserves_discontinuities():
     b = np.array([50000, 55000, 55000, 60000])
     bv = np.array([0, 0, 1, 1]) * u.us
 
-    ca = ConstructedClockFile(mjd=a, clock=av)
-    cb = ConstructedClockFile(mjd=b, clock=bv)
+    ca = ClockFile(mjd=a, clock=av)
+    cb = ClockFile(mjd=b, clock=bv)
 
     m = ClockFile.merge([ca, cb])
 
@@ -99,8 +98,8 @@ def test_merge_mjds_trims_range():
     a = np.array([50000, 60000])
     b = np.array([40000, 55000, 61000])
 
-    ca = ConstructedClockFile(mjd=a, clock=np.zeros_like(a) * u.s)
-    cb = ConstructedClockFile(mjd=b, clock=np.zeros_like(b) * u.s)
+    ca = ClockFile(mjd=a, clock=np.zeros_like(a) * u.s)
+    cb = ClockFile(mjd=b, clock=np.zeros_like(b) * u.s)
 
     m = ClockFile.merge([ca, cb])
     assert_array_equal(m.time.mjd, np.array([50000, 55000, 60000]))
@@ -110,8 +109,8 @@ def test_merge_mjds_trims_range_repeat_beginning():
     a = np.array([50000, 50000, 60000])
     b = np.array([40000, 55000, 61000])
 
-    ca = ConstructedClockFile(mjd=a, clock=np.zeros_like(a) * u.s)
-    cb = ConstructedClockFile(mjd=b, clock=np.zeros_like(b) * u.s)
+    ca = ClockFile(mjd=a, clock=np.zeros_like(a) * u.s)
+    cb = ClockFile(mjd=b, clock=np.zeros_like(b) * u.s)
 
     m = ClockFile.merge([ca, cb])
     assert_array_equal(m.time.mjd, np.array([50000, 50000, 55000, 60000]))
@@ -121,8 +120,8 @@ def test_merge_mjds_trims_range_repeat_end():
     a = np.array([50000, 60000, 60000])
     b = np.array([40000, 55000, 61000])
 
-    ca = ConstructedClockFile(mjd=a, clock=np.zeros_like(a) * u.s)
-    cb = ConstructedClockFile(mjd=b, clock=np.zeros_like(b) * u.s)
+    ca = ClockFile(mjd=a, clock=np.zeros_like(a) * u.s)
+    cb = ClockFile(mjd=b, clock=np.zeros_like(b) * u.s)
 
     m = ClockFile.merge([ca, cb])
     assert_array_equal(m.time.mjd, np.array([50000, 55000, 60000, 60000]))
@@ -132,8 +131,8 @@ def test_merge_mjds_trims_range_mixed():
     a = np.array([50000, 61000])
     b = np.array([40000, 55000, 60000])
 
-    ca = ConstructedClockFile(mjd=a, clock=np.zeros_like(a) * u.s)
-    cb = ConstructedClockFile(mjd=b, clock=np.zeros_like(b) * u.s)
+    ca = ClockFile(mjd=a, clock=np.zeros_like(a) * u.s)
+    cb = ClockFile(mjd=b, clock=np.zeros_like(b) * u.s)
     m = ClockFile.merge([ca, cb])
     assert_array_equal(m.time.mjd, np.array([50000, 55000, 60000]))
 
@@ -336,6 +335,7 @@ def test_merge_comments():
             )
         ),
         format="tempo2",
+        friendly_name="c1",
     )
     c2 = ClockFile.read(
         StringIO(
@@ -354,6 +354,7 @@ def test_merge_comments():
             )
         ),
         format="tempo2",
+        friendly_name="c2",
     )
 
     m = ClockFile.merge([c1, c2])
@@ -362,6 +363,7 @@ def test_merge_comments():
     contents = dedent(
         """\
         # FAKE1 FAKE3
+        # Merged from ['c1', 'c2']
         # Initial comments from c1
         # covering several lines
         # Initial comments from c2
