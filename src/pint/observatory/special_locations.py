@@ -3,7 +3,8 @@
 Special "site" locations (eg, barycenter) which do not need clock
 corrections or much else done.
 
-Can be loaded using :func:`pint.observatory.special_locations.load_special_locations`
+Can be loaded using :func:`pint.observatory.special_locations.load_special_locations`, which is run on import.  
+Otherwise it only needs to be run if :func:`pint.observatory.Observatory.clear_registry` is run.
 
 See Also
 --------
@@ -25,7 +26,13 @@ from pint.utils import PosVel
 
 from . import Observatory
 
-__all__ = ["load_special_locations"]
+__all__ = [
+    "SpecialLocation",
+    "BarycenterObs",
+    "GeocenterObs",
+    "T2SpacecraftObs",
+    "load_special_locations",
+]
 
 
 class SpecialLocation(Observatory):
@@ -325,7 +332,8 @@ class T2SpacecraftObs(SpecialLocation):
 
 def load_special_locations():
     """Load :class:`~pint.observatory.special_locations.BarycenterObs`, :class:`~pint.observatory.special_locations.GeocenterObs`,
-    and :class:`~pint.observatory.special_locations.T2SpacecraftObs` into observatory registry."""
+    and :class:`~pint.observatory.special_locations.T2SpacecraftObs` into observatory registry.
+    """
     # Need to initialize one of each so that it gets added to the list
     BarycenterObs("barycenter", aliases=["@", "ssb", "bary", "bat"])
     GeocenterObs("geocenter", aliases=["0", "o", "coe", "geo"])

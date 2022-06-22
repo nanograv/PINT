@@ -11,6 +11,8 @@ The standard behavior is given by :func:`pint.observatory.topo_obs.load_observat
 * Loads the standard observatories 
 * Loads any observatories present in ``$PINT_OBS_OVERRIDE``, overwriting those already present
 
+This is run on import.  Otherwise it only needs to be run if :func:`pint.observatory.Observatory.clear_registry` is run.
+
 See Also
 --------
 :mod:`pint.observatory.special_locations`
@@ -39,7 +41,7 @@ from pint.observatory import (
 from pint.observatory.clock_file import ClockFile, GlobalClockFile, ConstructedClockFile
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import get_tdb_tt_ephem_geocenter, objPosVel_wrt_SSB
-from pint.utils import has_astropy_unit
+from pint.utils import has_astropy_unit, open_or_use
 from pint.observatory.global_clock_corrections import Index, get_clock_correction_file
 
 # environment variables that can override clock location and observatory location
@@ -558,12 +560,8 @@ def load_observatories(filename=observatories_json, overwrite=False):
     If the ``origin`` field is a list of strings, they will be joined together with newlines.
     """
     # read in the JSON file
-    if isinstance(filename, (str, Path)):
-        f = open(filename, "r")
-    elif hasattr(filename, "read"):
-        f = filename
-    contents = f.read()
-    observatories = json.loads(contents)
+    with open_or_use(filename, "r") as f:
+        observatories = json.load(f)
 
     for obsname, obsdict in observatories.items():
         if "origin" in obsdict:
