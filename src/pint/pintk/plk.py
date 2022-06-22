@@ -16,7 +16,6 @@ import pint.pintk.colormodes as cm
 
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
-import tkinter.messagebox as tkMessageBox
 from tkinter import ttk
 
 import pint.logging
@@ -62,7 +61,7 @@ Right click     Delete a TOA (if close enough)
   t             Stash (temporarily remove) or un-stash the selected TOAs
   u             Un-select all of the selected TOAs
   j             Jump the selected TOAs, or un-jump them if already jumped
-  v             Jump all TOA groups except those selected
+  v             Jump all TOA clusters except those selected
   i             Print the prefit model as of this moment
   o             Print the postfit model as of this moment (if it exists)
   c             Print the postfit model parameter correlation matrix
@@ -1471,23 +1470,23 @@ class PlkWidget(tk.Frame):
             self.updatePlot(keepAxes=True)
             self.call_updates()
         elif event.key == "v":
-            # jump all groups except the one(s) selected, or jump all groups if none selected
+            # jump all clusters except the one(s) selected, or jump all clusters if none selected
             jumped_copy = copy.deepcopy(self.jumped)
             self.updateAllJumped()
             all_jumped = copy.deepcopy(self.jumped)
             self.jumped = jumped_copy
-            groups = list(self.psr.all_toas.table["groups"])
-            # jump each group, check doesn't overlap with existing jumps and selected
-            for num in np.arange(max(groups) + 1):
-                group_bool = [
-                    num == group for group in self.psr.all_toas.table["groups"]
+            clusters = list(self.psr.all_toas.table["clusters"])
+            # jump each cluster, check doesn't overlap with existing jumps and selected
+            for num in np.arange(max(clusters) + 1):
+                cluster_bool = [
+                    num == cluster for cluster in self.psr.all_toas.table["clusters"]
                 ]
                 if True in [
-                    a and b for a, b in zip(group_bool, self.selected)
-                ] or True in [a and b for a, b in zip(group_bool, all_jumped)]:
+                    a and b for a, b in zip(cluster_bool, self.selected)
+                ] or True in [a and b for a, b in zip(cluster_bool, all_jumped)]:
                     continue
-                self.psr.selected_toas = self.psr.all_toas[group_bool]
-                jump_name = self.psr.add_jump(group_bool)
+                self.psr.selected_toas = self.psr.all_toas[cluster_bool]
+                jump_name = self.psr.add_jump(cluster_bool)
                 self.updateJumped(jump_name)
             if (
                 self.selected is not None
@@ -1515,9 +1514,7 @@ class PlkWidget(tk.Frame):
                     return None
                 # Delete the selected points
                 self.psr.stashed = copy.deepcopy(self.psr.all_toas)
-                self.psr.all_toas.table = self.psr.all_toas.table[
-                    ~self.selected
-                ].group_by("obs")
+                self.psr.all_toas.table = self.psr.all_toas.table[~self.selected]
             else:  # unstash
                 self.psr.all_toas = copy.deepcopy(self.psr.stashed)
                 self.psr.stashed = None
