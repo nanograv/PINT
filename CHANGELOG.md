@@ -7,6 +7,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## Unreleased
 ### Changed
 - model.phase() now defaults to abs_phase=True when TZR* params are in the model
+- TOAs no longer need to be grouped by observatory
 - removed explicit download of IERS and leapsecond data (handled now by astropy)
 - The default version of TT(BIPM) uses BIPM2021
 ### Added
@@ -16,6 +17,8 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added the ability to write clock files in TEMPO or TEMPO2 format
 - Added examples of how to write a par file to tutorials
 - Added `TimingModel.write_parfile()`
+- Added generator for iterating over like items in an array
+- Added iterator to iterate over observatory groups
 - Clock files are now searched for in the directory PINT_CLOCK_OVERRIDE
 - Clock files are now searched for in the online global repository
 - You can export the clock files you are using with `export_all_clock_corrections()`

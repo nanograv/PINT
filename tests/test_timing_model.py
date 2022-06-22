@@ -8,7 +8,11 @@ from contextlib import redirect_stdout
 import astropy.units as u
 import numpy as np
 import pytest
+from hypothesis import given
+from hypothesis.strategies import permutations, composite
 from numpy.testing import assert_allclose
+from pint import toa
+from pint.observatory import compare_t2_observatories_dat
 from pinttestdata import datadir
 
 from pint.models import (
@@ -24,6 +28,7 @@ from pint.models import (
 )
 from pint.simulation import make_fake_toas_uniform
 from pint.toa import get_TOAs
+import pint.residuals
 
 
 @pytest.fixture
@@ -40,6 +45,9 @@ def timfile_jumps():
 @pytest.fixture
 def timfile_nojumps():
     return get_TOAs(os.path.join(datadir, "NGC6440E.tim"))
+
+
+len_timfile_nojumps = len(get_TOAs(os.path.join(datadir, "NGC6440E.tim")))
 
 
 class TestModelBuilding:
@@ -367,8 +375,9 @@ def test_many_timfile_jumps():
 
 
 def test_parfile_and_timfile_jumps(timfile_jumps):
-    # TOAs 9, 10, 11, and 12 have jump flags (JUMP2 on 9, JUMP1 on rest)
     t = timfile_jumps
+    # this test assumes things have been grouped by observatory to associate the jumps with specific TOA indices
+    t.table = t.table.group_by("obs")
     m = get_model(io.StringIO(par_base + "JUMP MJD 55729 55730 0.0 1\n"))
     # turns pre-existing jump flags in t.table['flags'] into parameters in parfile
     m.jump_flags_to_params(t)
