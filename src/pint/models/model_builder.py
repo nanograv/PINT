@@ -594,6 +594,7 @@ def get_model_and_toas(
     tdb_method="default",
     picklefilename=None,
     allow_name_mixing=False,
+    limits="warn",
 ):
     """Load a timing model and a related TOAs, using model commands as needed
 
@@ -647,6 +648,6 @@ def get_model_and_toas(
         usepickle=usepickle,
         tdb_method=tdb_method,
         picklefilename=picklefilename,
-        limits="warn",
+        limits=limits,
     )
     return mm, tt
