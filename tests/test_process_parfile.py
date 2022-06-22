@@ -110,6 +110,8 @@ def test_parse_dm_derivs():
     assert original_name["DM3"] == "DM3"
     assert pint_dict["DMX_0001"] == ["0 1 0"]
     assert pint_dict["DMX_0016"] == ["1 1 0"]
+    assert "DM1" in pint_dict.keys()
+    assert "DM001" not in pint_dict.keys()
 
 
 def test_pintify_parfile_alises():
