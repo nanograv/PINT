@@ -476,7 +476,10 @@ class ModelBuilder:
             # Fill up the values
             param_line = len(v)
             if param_line < 2:
-                name = pp
+                if use_alias:
+                    name = original_name[pp]
+                else:
+                    name = pp
                 par.from_parfile_line(" ".join([name] + v))
             else:  # For the repeatable parameters
                 lines = copy.deepcopy(v)  # Line queue.

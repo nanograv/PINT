@@ -583,8 +583,10 @@ class Parameter:
 
     def name_matches(self, name):
         """Whether or not the parameter name matches the provided name"""
-        return (name == self.name.upper()) or (
-            name in [x.upper() for x in self.aliases]
+        return (
+            (name == self.name.upper())
+            or (name in [x.upper() for x in self.aliases])
+            or (name.replace("0", "") == self.name.upper())
         )
 
     def set(self, value):
