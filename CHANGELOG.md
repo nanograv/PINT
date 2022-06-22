@@ -5,10 +5,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
-### Changed
-- model.phase() now defaults to abs_phase=True when TZR* params are in the model
-- removed explicit download of IERS and leapsecond data (handled now by astropy)
-- The default version of TT(BIPM) uses BIPM2021
 ### Added
 - logging now needs to be setup explicitly
 - Color-by-jump mode for pintk
@@ -24,7 +20,11 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Fixed
 - INCLUDE lines in tim files are now relative to the location of the tim file (bug #1269)
 ### Changed
+- model.phase() now defaults to abs_phase=True when TZR* params are in the model
+- removed explicit download of IERS and leapsecond data (handled now by astropy)
+- The default version of TT(BIPM) uses BIPM2021
 - Required version of python updated to 3.8
+- Moved observatories to JSON file.  Changed way observatories are loaded/overloaded
 
 ## [0.8.8] 2022-05-26
 ### Added
