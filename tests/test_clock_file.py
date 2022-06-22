@@ -7,7 +7,12 @@ import pytest
 from astropy.time import Time
 from numpy.testing import assert_allclose, assert_array_equal
 
-from pint.observatory import get_observatory, bipm_default, update_clock_files
+from pint.observatory import (
+    get_observatory,
+    bipm_default,
+    update_clock_files,
+    ClockCorrectionOutOfRange,
+)
 from pint.observatory.clock_file import (
     ClockFile,
 )
@@ -21,7 +26,9 @@ def t(mjd):
 @pytest.fixture
 def basic_clock():
     return ClockFile(
-        mjd=np.array([50000, 55000, 60000]), clock=np.array([1.0, 2.0, -1.0]) * u.us
+        mjd=np.array([50000, 55000, 60000]),
+        clock=np.array([1.0, 2.0, -1.0]) * u.us,
+        friendly_name="basic_clock",
     )
 
 
@@ -435,3 +442,9 @@ def test_update_clock_files(tmp_path):
     update_clock_files()
     export_all_clock_files(tmp_path)
     assert (tmp_path / "wsrt2gps.clk").exists()
+
+
+def test_out_of_range_message_has_helpful_name(basic_clock):
+    with pytest.raises(ClockCorrectionOutOfRange) as excinfo:
+        basic_clock.evaluate(Time(60001, format="mjd"), limits="error")
+    assert "basic_clock" in str(excinfo.value)
