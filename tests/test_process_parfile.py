@@ -9,6 +9,7 @@ from io import StringIO
 
 from pint.models.model_builder import ModelBuilder, parse_parfile, TimingModelError
 
+from pint.models import get_model
 
 base_par = """
 PSR J1234+5678
@@ -95,23 +96,40 @@ def test_parse_parfile_index_param():
     assert pint_dict["DMX_0025"] == ["2 1 3"]
 
 
+dm_deriv_lines = """
+            PSR J1234+5678
+            ELAT 0 1 2
+            ELONG 0 1 3
+            F0 1 1 5
+            DM 10 0 3
+            PEPOCH 57000
+            DM001 0 1 0
+            DM002 1 1 0
+            DM3 2 1 0
+            DM010 3 1 0
+            DMX_0001 0 1 0
+            DMXR1_0001 59000
+            DMXR2_0001 59001
+            """
+
+
 def test_parse_dm_derivs():
-    alias_par = (
-        base_par
-        + "DM001 0 1 0\nDM002 1 1 0\nDM3 2 1 0\nDMX_0001 0 1 0\nDMXR1_0001 59000\nDMXR2_0001 59001\nDMX_0016 1 1 0\nDMXR1_0016 59002\nDMXR2_0016 59003"
-    )
-    m = ModelBuilder()
-    pint_dict, original_name, unknow = m._pintify_parfile(StringIO(alias_par))
-    assert pint_dict["DM1"] == ["0 1 0"]
+    dm_deriv_par = StringIO(dm_deriv_lines)
+    m = get_model(dm_deriv_par)
+    assert m.DM.value == 10.0
+    assert m.DM1.value == 0.0
+    assert m.DM3.value == 2.0
+    assert m.DM10.value == 3.0
+    assert m.DMX_0001.value == 0.0
+
+
+def test_name_check_dm_derivs():
+    dm_deriv_par = StringIO(dm_deriv_lines)
+    mb = ModelBuilder()
+    pint_dict, original_name, unknow = mb._pintify_parfile(dm_deriv_par)
     assert original_name["DM1"] == "DM001"
-    assert pint_dict["DM2"] == ["1 1 0"]
-    assert original_name["DM2"] == "DM002"
-    assert pint_dict["DM3"] == ["2 1 0"]
     assert original_name["DM3"] == "DM3"
-    assert pint_dict["DMX_0001"] == ["0 1 0"]
-    assert pint_dict["DMX_0016"] == ["1 1 0"]
-    assert "DM1" in pint_dict.keys()
-    assert "DM001" not in pint_dict.keys()
+    assert original_name["DM10"] == "DM010"
 
 
 def test_pintify_parfile_alises():
