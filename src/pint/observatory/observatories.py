@@ -80,7 +80,7 @@ TopoObs(
     tempo_code="m",
     itoa_code="MK",
     clock_fmt="tempo2",
-    clock_file="mk2utc.clk",
+    clock_file="mk2utc_observatory.clk",
     itrf_xyz=[5109360.133, 2006852.586, -3238948.127],
     origin="""MEERKAT, used in timing mode.
 
