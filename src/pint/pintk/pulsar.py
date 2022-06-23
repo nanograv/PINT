@@ -598,14 +598,16 @@ class Pulsar:
             mjds = self.all_toas.get_mjds().value
             minallMJD, maxallMJD = mjds.min(), mjds.max()
             spanMJD = maxallMJD - minallMJD
-            # want roughly 1 per day up to 3 years
+            # Select appropriate number of fake TOAs to generate.
             if spanMJD < 1000:
-                Ntoas = min(400, int(spanMJD))
+                Ntoas = 400
             elif spanMJD < 4000:
-                Ntoas = min(750, int(spanMJD) // 2)
+                Ntoas = 750
             else:
-                Ntoas = min(1500, int(spanMJD) // 4)
-            log.debug(f"Generating {Ntoas} fake TOAs for the random models")
+                Ntoas = 1500
+            log.debug(
+                f"Generating {Ntoas} fake TOAs for the random models over MJD {minallMJD - extra * spanMJD} to {minallMJD + extra * spanMJD}"
+            )
             # By default we will use TOAs from the TopoCenter.  This gets done only once.
             self.faketoas1 = make_fake_toas_uniform(
                 minallMJD - extra * spanMJD,

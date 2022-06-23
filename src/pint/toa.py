@@ -231,9 +231,15 @@ def get_TOAs(
             updatepickle = True
         else:
             if hasattr(t, "hashes"):
-                if not t.check_hashes():
+                try:
+                    if not t.check_hashes():
+                        updatepickle = True
+                        log.warning("Pickle file is based on files that have changed")
+                except FileNotFoundError:
                     updatepickle = True
-                    log.warning("Pickle file is based on files that have changed")
+                    log.warning(
+                        "FileNotFoundError when trying to check pickle hashes. Recomputing pickle."
+                    )
             else:
                 # Only pre-v0.8 pickles lack hashes.
                 updatepickle = True
