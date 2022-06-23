@@ -589,12 +589,14 @@ def test_parameter_can_be_pickled(p):
     pickle.dumps(p)
 
 
-def test_add_remove_param():
+def test_add_remove_param_setup_success():
+    """Checks that add_param and remove_param don't require m.setup() to be run prior to constructing a fitter"""
     m = get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
     t = get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
     FD4 = prefixParameter(parameter_type="float", name="FD4", value=0.0, units=u.s)
     m.add_param_from_top(FD4, "FD")
     assert len(m.components["FD"].params) == 4
+    """Fitter construction used to fail after remove_param without m.setup(). Test this:"""
     f = pint.fitter.GLSFitter(toas=t, model=m)
     m.remove_param("FD4")
     assert len(m.components["FD"].params) == 3
