@@ -232,9 +232,8 @@ def test_DM001_vs_DM1_pint_tempo_read_write():
     assert any(
         l.startswith("DM2") for l in model.as_parfile(format="tempo2").split("\n")
     )
-    assert any(
-        l.startswith("DM2") for l in model.as_parfile(format="pint").split("\n")
-    )
+    assert any(l.startswith("DM2") for l in model.as_parfile(format="pint").split("\n"))
+
 
 def test_NHARMS():
     model = get_model(
