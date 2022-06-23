@@ -40,12 +40,10 @@ def test_sampler():
         tl = fermi.load_Fermi_TOAs(
             eventfile, weightcolumn=weightcol, minweight=minWeight
         )
-        ts = toa.TOAs(toalist=tl)
+        ts = toa.get_TOAs_list(tl, ephem="DE421", planets=False)
         # Introduce a small error so that residuals can be calculated
         ts.table["error"] = 1.0
         ts.filename = eventfile
-        ts.compute_TDBs()
-        ts.compute_posvels(ephem="DE421", planets=False)
 
         weights, _ = ts.get_flag_value("weight", as_type=float)
         weights = np.array(weights)

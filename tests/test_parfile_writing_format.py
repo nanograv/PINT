@@ -3,6 +3,10 @@ import unittest
 import pytest
 from io import StringIO
 
+import pytest
+from hypothesis import given
+from hypothesis.strategies import sampled_from
+
 from pint.models import get_model, get_model_and_toas
 from pint import fitter
 from pinttestdata import datadir
@@ -95,6 +99,9 @@ def test_ECL():
             assert l.split()[-1] == "IERS2003"
 
 
+@pytest.mark.xfail(
+    message="This file exists only as spurious output from a different test."
+)
 def test_DMDATA_N():
     """Should be an integer for TEMPO/TEMPO2"""
     m = get_model(os.path.join(datadir, "J0030+0451_post.par"))
@@ -117,7 +124,7 @@ def test_DMDATA_Y():
 
 def test_formats():
     m = get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         s = m.as_parfile(format="nottempo")
 
 
@@ -221,11 +228,6 @@ def test_NHARMS():
     model = get_model(
         StringIO(
             """
-        # Created: 2021-09-28T21:53:53.494561
-        # PINT_version: 0.8.3
-        # User: jpg00017
-        # Host: tmmcm107.hpc.wvu.edu
-        # OS: Linux-3.10.0-1160.24.1.el7.x86_64-x86_64-with-glibc2.31
         PSR                            J1802-2124
         EPHEM                               DE440
         CLOCK                        TT(BIPM2019)
@@ -234,8 +236,6 @@ def test_NHARMS():
         FINISH             58945.5403619002087731
         DILATEFREQ                              N
         DMDATA                                  N
-        NTOA                                 7486
-        CHI2                    7423.861574964089
         ELONG                 270.486526147922007 1 0.00000012082526951556
         ELAT                    2.037373400788321 1 0.00000314425302204301
         PMELONG                -1.826189745727688 1 0.4777024218759009
@@ -251,8 +251,11 @@ def test_NHARMS():
         NE_SW                                 0.0
         SWM                                   0.0
         DM                  149.60232712555309087
+<<<<<<< HEAD
         DM1                                   0.0
         DMEPOCH            58314.0000000000000000
+=======
+>>>>>>> master
         BINARY ELL1H
         PB                  0.6988892433285496519 1 2.306950233730408576e-11
         A1                      3.718865580010016 1 5.10696441177697e-07
@@ -266,20 +269,29 @@ def test_NHARMS():
         TZRMJD             58133.7623761140993056
         TZRSITE                                GB
         TZRFRQ                           1455.314
-        JUMP            -fe Rcvr_800    -8.756145657132816e-05 1 8.10943477015656e-07
-        EFAC            -f Rcvr1_2_GUPPI          1.11383940850175
-        EQUAD           -f Rcvr1_2_GUPPI       0.48300872464422495
-        EFAC            -f Rcvr_800_GUPPI         1.078261304920897
-        EQUAD           -f Rcvr_800_GUPPI      0.005978124184979209
-        ECORR           -f Rcvr1_2_GUPPI        0.6424434213096708
-        ECORR           -f Rcvr_800_GUPPI         4.740888311524382
-        RNAMP                  1.5164580721961418
-        RNIDX                 -1.3814382392008375
         """
         )
     )
-    for l in model.as_parfile(format="tempo").split("\n"):
-        if l.startswith("NHARMS"):
-            d = l.split()
+    for line in model.as_parfile(format="tempo").split("\n"):
+        if line.startswith("NHARMS"):
+            d = line.split()
             # it should be an integer
-            assert not "." in d[-1]
+            assert "." not in d[-1]
+
+
+sensible_pars = [
+    "B1855+09_NANOGrav_9yv1.gls.par",
+    "NGC6440E.par",
+    "B1855+09_NANOGrav_dfg+12_TAI.par",
+    "B1855+09_NANOGrav_dfg+12_TAI.par",
+    "J0613-0200_NANOGrav_9yv1.gls.par",
+]
+
+
+@given(sampled_from(sensible_pars), sampled_from(["pint", "tempo", "tempo2"]))
+def test_roundtrip(par, format):
+    m = get_model(os.path.join(datadir, par))
+    m2 = get_model(StringIO(m.as_parfile(format=format)))
+    # FIXME: check some things aren't changed
+    # for p in m.params:
+    #    assert getattr(m, p).value == getattr(m2, p).value

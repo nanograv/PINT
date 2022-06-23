@@ -6,9 +6,9 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.0
+#       jupytext_version: 1.13.8
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -43,6 +43,10 @@ import astropy.units as u
 from pint.models.timing_model import TimingModel, Component, PhaseComponent
 import pint.models.parameter as p
 import pint.config
+import pint.logging
+
+# setup the logging
+pint.logging.setup(level="INFO")
 
 
 # %% [markdown]
@@ -317,3 +321,10 @@ plt.grid()
 
 # %% tags=[]
 f.print_summary()
+
+# %% [markdown]
+# ### Write out a par file for the result
+
+# %%
+f.model.write_parfile("/tmp/output.par")
+print(f.model.as_parfile())

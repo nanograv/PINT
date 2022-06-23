@@ -9,18 +9,12 @@ import tkinter as tk
 import tkinter.filedialog as tkFileDialog
 import tkinter.messagebox as tkMessageBox
 from tkinter import ttk
+import matplotlib as mpl
 
 import pint.logging
 from loguru import logger as log
 
-log.remove()
-log.add(
-    sys.stderr,
-    level="WARNING",
-    colorize=True,
-    format=pint.logging.format,
-    filter=pint.logging.LogFilter(),
-)
+pint.logging.setup(level=pint.logging.script_level)
 
 import pint
 from pint.pintk.paredit import ParWidget
@@ -208,7 +202,7 @@ class PINTk:
     def about(self):
         tkMessageBox.showinfo(
             title="About PINTk",
-            message=f"A Tkinter based graphical interface to PINT (version={pint.__version__})",
+            message=f"A Tkinter based graphical interface to PINT (version={pint.__version__}), using matplotlib (version={mpl.__version__}) and the {mpl.get_backend()} backend",
         )
 
 
@@ -247,9 +241,9 @@ def main(argv=None):
     parser.add_argument(
         "-v",
         "--version",
-        default=False,
-        action="store_true",
+        action="version",
         help="Print version info and  exit.",
+        version=f"This is PINT version {pint.__version__}, using matplotlib (version={mpl.__version__})",
     )
     parser.add_argument(
         "--log-level",
@@ -261,19 +255,8 @@ def main(argv=None):
     )
     args = parser.parse_args(argv)
 
-    if args.version:
-        print(f"This is PINT version {pint.__version__}")
-        sys.exit(0)
-
     if args.loglevel != "WARNING":
-        log.remove()
-        log.add(
-            sys.stderr,
-            level=args.loglevel,
-            colorize=True,
-            format=pint.logging.format,
-            filter=pint.logging.LogFilter(),
-        )
+        pint.logging.setup(level=args.loglevel)
 
     root = tk.Tk()
     root.minsize(1000, 800)

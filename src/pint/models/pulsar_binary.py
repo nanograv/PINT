@@ -7,6 +7,7 @@ as PINT timing models.
 import astropy.units as u
 import numpy as np
 from astropy.time import Time
+from astropy.coordinates import SkyCoord
 from loguru import logger as log
 
 from pint import ls
@@ -14,6 +15,7 @@ from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
 from pint.models.stand_alone_psr_binaries import binary_orbits as bo
 from pint.models.timing_model import DelayComponent, MissingParameter, UnknownParameter
 from pint.utils import taylor_horner_deriv
+from pint.pulsar_ecliptic import PulsarEcliptic
 
 
 class PulsarBinary(DelayComponent):
@@ -269,6 +271,11 @@ class PulsarBinary(DelayComponent):
             the standard barycentering. The stand alone binary receives the
             input TOAs - acc_delay.
 
+        Notes
+        -----
+        The values for ``obs_pos`` (the observatory position wrt the Solar System Barycenter) and ``psr_pos``
+        (the pulsar position wrt the Solar System Barycenter) are both computed in the same reference frame, ICRS or ECL depending on the model.
+
         Warns
         -----
         If passing 'None' to 'toa' argument, the stand alone binary model will use
@@ -291,10 +298,25 @@ class PulsarBinary(DelayComponent):
             else:
                 self.barycentric_time = tbl["tdbld"] * u.day - acc_delay
             updates["barycentric_toa"] = self.barycentric_time
-            updates["obs_pos"] = tbl["ssb_obs_pos"].quantity
-            updates["psr_pos"] = self._parent.ssb_to_psb_xyz_ICRS(
-                epoch=tbl["tdbld"].astype(np.float64)
-            )
+            if "AstrometryEquatorial" in self._parent.components:
+                # it's already in ICRS
+                updates["obs_pos"] = tbl["ssb_obs_pos"].quantity
+                updates["psr_pos"] = self._parent.ssb_to_psb_xyz_ICRS(
+                    epoch=tbl["tdbld"].astype(np.float64)
+                )
+            elif "AstrometryEcliptic" in self._parent.components:
+                # convert from ICRS to ECL
+                obs_pos = SkyCoord(
+                    tbl["ssb_obs_pos"].quantity,
+                    representation_type="cartesian",
+                    frame="icrs",
+                )
+                updates["obs_pos"] = obs_pos.transform_to(
+                    PulsarEcliptic(ecl=self._parent.ECL.value)
+                ).cartesian.xyz.transpose()
+                updates["psr_pos"] = self._parent.ssb_to_psb_xyz_ECL(
+                    epoch=tbl["tdbld"].astype(np.float64), ecl=self._parent.ECL.value
+                )
         for par in self.binary_instance.binary_params:
             if par in self.binary_instance.param_aliases.keys():
                 alias = self.binary_instance.param_aliases[par]

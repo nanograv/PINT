@@ -8,7 +8,11 @@ from contextlib import redirect_stdout
 import astropy.units as u
 import numpy as np
 import pytest
+from hypothesis import given
+from hypothesis.strategies import permutations, composite
 from numpy.testing import assert_allclose
+from pint import toa
+from pint.observatory import compare_t2_observatories_dat
 from pinttestdata import datadir
 
 from pint.models import (
@@ -24,6 +28,7 @@ from pint.models import (
 )
 from pint.simulation import make_fake_toas_uniform
 from pint.toa import get_TOAs
+import pint.residuals
 
 
 @pytest.fixture
@@ -40,6 +45,9 @@ def timfile_jumps():
 @pytest.fixture
 def timfile_nojumps():
     return get_TOAs(os.path.join(datadir, "NGC6440E.tim"))
+
+
+len_timfile_nojumps = len(get_TOAs(os.path.join(datadir, "NGC6440E.tim")))
 
 
 class TestModelBuilding:
@@ -367,8 +375,9 @@ def test_many_timfile_jumps():
 
 
 def test_parfile_and_timfile_jumps(timfile_jumps):
-    # TOAs 9, 10, 11, and 12 have jump flags (JUMP2 on 9, JUMP1 on rest)
     t = timfile_jumps
+    # this test assumes things have been grouped by observatory to associate the jumps with specific TOA indices
+    t.table = t.table.group_by("obs")
     m = get_model(io.StringIO(par_base + "JUMP MJD 55729 55730 0.0 1\n"))
     # turns pre-existing jump flags in t.table['flags'] into parameters in parfile
     m.jump_flags_to_params(t)
@@ -381,10 +390,7 @@ def test_parfile_and_timfile_jumps(timfile_jumps):
     assert fs[6] == "2"
     fs, idxs = t.get_flag_value("jump")
     assert len(idxs) == 5
-    assert fs[5] in [
-        "3,1",
-        "1,3",
-    ]
+    assert fs[5] in ["3,1", "1,3"]
     assert fs[4] == "1"
 
 
@@ -409,3 +415,15 @@ def test_prefixed_aliases_in_component():
     assert m.components["ScaleToaError"].aliases_map["T2EFAC2"] == "EFAC2"
     with pytest.raises(KeyError):
         m.components["ScaleToaError"].aliases_map["T2EFAC18"]
+
+
+def test_writing_equals_string(model_0437):
+    f = io.StringIO()
+    model_0437.write_parfile(f, include_info=False)
+    assert f.getvalue() == model_0437.as_parfile(include_info=False)
+
+
+def test_writing_to_file_equals_string(tmp_path, model_0437):
+    p = tmp_path / "file.par"
+    model_0437.write_parfile(p, include_info=False)
+    assert p.read_text() == model_0437.as_parfile(include_info=False)

@@ -13,14 +13,8 @@ from scipy.stats import norm, uniform
 import pint.logging
 from loguru import logger as log
 
-log.remove()
-log.add(
-    sys.stderr,
-    level="WARNING",
-    colorize=True,
-    format=pint.logging.format,
-    filter=pint.logging.LogFilter(),
-)
+pint.logging.setup(level=pint.logging.script_level)
+
 import pint.fermi_toas as fermi
 import pint.models
 import pint.plot_utils as plot_utils
@@ -610,11 +604,13 @@ def main(argv=None):
         ]
         log.info("There are %d events we will use" % len(tl))
         # Now convert to TOAs object and compute TDBs and posvels
-        ts = toa.TOAs(toalist=tl)
+        ts = toa.get_TOAs_list(tl, ephem="DE421", planets=False)
         ts.filename = eventfile
-        ts.compute_TDBs()
-        ts.compute_posvels(ephem="DE421", planets=False)
-        toa.save_pickle(ts)
+        # FIXME: writes to the TOA directory unconditionally
+        try:
+            toa.save_pickle(ts)
+        except IOError:
+            pass
 
     if weightcol is not None:
         if weightcol == "CALC":

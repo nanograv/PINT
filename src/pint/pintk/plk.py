@@ -16,7 +16,6 @@ import pint.pintk.colormodes as cm
 
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
-import tkinter.messagebox as tkMessageBox
 from tkinter import ttk
 
 import pint.logging
@@ -62,13 +61,14 @@ Right click     Delete a TOA (if close enough)
   t             Stash (temporarily remove) or un-stash the selected TOAs
   u             Un-select all of the selected TOAs
   j             Jump the selected TOAs, or un-jump them if already jumped
-  v             Jump all TOA groups except those selected
+  v             Jump all TOA clusters except those selected
   i             Print the prefit model as of this moment
   o             Print the postfit model as of this moment (if it exists)
   c             Print the postfit model parameter correlation matrix
   s             Print summary / derived parameters about the pulsar
   m             Print the range of MJDs with the highest density of TOAs
 space           Print info about highlighted points (or all, if none are selected)
+  x             Print chi^2 and rms info about highlighted points (or all, if none are selected)
   + (or =)      Increase pulse number for selected TOAs
   - (or _)      Decrease pulse number for selected TOAs
   > (or .)      Increase pulse number for TOAs to the right (i.e. later) of selection
@@ -94,6 +94,10 @@ nb_fitters = [
 ]
 
 icon_img = os.path.join(os.path.split(__file__)[0], "PINT_LOGO_128trans.gif")
+
+# foreground text for labels etc
+foreground = "black"
+background = "#E9E9E9"
 
 
 class State:
@@ -172,6 +176,7 @@ class PlkFitBoxesWidget(tk.Frame):
 
     def __init__(self, master=None, **kwargs):
         tk.Frame.__init__(self, master)
+        self.configure(bg=background)
         self.boxChecked = None
         self.maxcols = 8
 
@@ -214,6 +219,8 @@ class PlkFitBoxesWidget(tk.Frame):
                     text=comp,
                     variable=self.compVisible[ii],
                     command=self.updateLayout,
+                    fg=foreground,
+                    bg=background,
                 )
             )
 
@@ -226,6 +233,8 @@ class PlkFitBoxesWidget(tk.Frame):
                         text=par,
                         variable=self.parVars[par],
                         command=lambda p=par: self.changedFitCheckBox(p),
+                        bg=background,
+                        fg=foreground,
                     )
                 )
                 if par in fitparams:
@@ -271,6 +280,7 @@ class PlkRandomModelSelect(tk.Frame):
 
     def __init__(self, master=None, **kwargs):
         tk.Frame.__init__(self, master)
+        self.configure(bg=background)
         self.boxChecked = None
         self.var = tk.IntVar()
 
@@ -281,11 +291,22 @@ class PlkRandomModelSelect(tk.Frame):
             text="Random Models",
             variable=self.var,
             command=self.changedRMCheckBox,
+            fg=foreground,
+            bg=background,
         )
         checkbox.grid(row=1, column=1, sticky="N")
         checkbox_ttp = CreateToolTip(
             checkbox, "Display random timing models consistent with selected TOAs."
         )
+        if "zoom" in master.plkToolbar.mode:
+            self.modeLabel = tk.Label(
+                master, text="Mode: Zoom", fg=foreground, bg=background
+            )
+        else:
+            self.modeLabel = tk.Label(
+                master, text="Mode: Select", fg=foreground, bg=background
+            )
+        self.modeLabel.grid(row=1, column=1, sticky="S")
 
     def setCallbacks(self, boxChecked):
         """
@@ -306,6 +327,12 @@ class PlkRandomModelSelect(tk.Frame):
     def getRandomModel(self):
         return self.var.get()
 
+    def changeMode(self, mode):
+        if "zoom" in mode:
+            self.modeLabel.config(text="Mode: Zoom", fg=foreground, bg=background)
+        else:
+            self.modeLabel.config(text="Mode: Select", fg=foreground, bg=background)
+
 
 class PlkLogLevelSelect(tk.Frame):
     """
@@ -314,7 +341,10 @@ class PlkLogLevelSelect(tk.Frame):
 
     def __init__(self, master):
         tk.Frame.__init__(self, master)
-        self.logLabel = tk.Label(self, text="Minimum Log Level: ")
+        self.configure(bg=background)
+        self.logLabel = tk.Label(
+            self, text="Minimum Log Level: ", fg=foreground, bg=background
+        )
         self.logLabel.pack()
         self.logLevelSelect = ttk.Combobox(self)
         self.logLevelSelect.pack()
@@ -349,7 +379,8 @@ class PlkFitterSelect(tk.Frame):
 
     def __init__(self, master):
         tk.Frame.__init__(self, master)
-        self.fitterLabel = tk.Label(self, text="Fitter: ")
+        self.configure(bg=background)
+        self.fitterLabel = tk.Label(self, text="Fitter: ", fg=foreground, bg=background)
         self.fitterLabel.pack()
         self.fitterSelect = ttk.Combobox(self)
         self.fitterSelect.pack()
@@ -376,12 +407,13 @@ class PlkColorModeBoxes(tk.Frame):
 
     def __init__(self, master=None, **kwargs):
         tk.Frame.__init__(self, master)
+        self.configure(bg=background)
         self.boxChecked = None
 
     def addColorModeCheckbox(self, colorModes):
         self.checkboxes = []
         self.checkboxStatus = tk.StringVar()
-        self.label = tk.Label(self, text="Color Modes")
+        self.label = tk.Label(self, text="Color Modes", fg=foreground, bg=background)
         for index, mode in enumerate(colorModes):
             self.checkboxes.append(
                 tk.Radiobutton(
@@ -390,12 +422,22 @@ class PlkColorModeBoxes(tk.Frame):
                     variable=self.checkboxStatus,
                     value=mode.mode_name,
                     command=lambda m=mode: self.applyChanges(m),
+                    fg=foreground,
+                    bg=background,
                 )
             )
 
             if mode.mode_name == "default":
                 # default mode should be selected at start-up
                 self.checkboxes[index].select()
+
+            if mode.mode_name == "jump":
+                if self.master.psr.fitted:
+                    model = self.master.psr.postfit_model
+                else:
+                    model = self.master.psr.prefit_model
+                if not "PhaseJump" in model.components:
+                    self.checkboxes[index].configure(state="disabled")
 
         self.updateLayout()
 
@@ -427,7 +469,7 @@ class PlkXYChoiceWidget(tk.Frame):
 
     def __init__(self, master=None, **kwargs):
         tk.Frame.__init__(self, master)
-
+        self.configure(bg=background)
         self.xvar = tk.StringVar()
         self.yvar = tk.StringVar()
 
@@ -436,9 +478,9 @@ class PlkXYChoiceWidget(tk.Frame):
     def initPlkXYChoice(self):
         labellength = 3
 
-        label = tk.Label(self, text="X")
+        label = tk.Label(self, text="X", fg=foreground, bg=background)
         label.grid(row=0, column=1)
-        label = tk.Label(self, text="Y")
+        label = tk.Label(self, text="Y", fg=foreground, bg=background)
         label.grid(row=0, column=2)
 
         self.grid_columnconfigure(0, weight=3)
@@ -449,19 +491,27 @@ class PlkXYChoiceWidget(tk.Frame):
         self.ybuttons = []
 
         for ii, choice in enumerate(pulsar.plot_labels):
-            label = tk.Label(self, text=choice)
+            label = tk.Label(self, text=choice, fg=foreground, bg=background)
             label.grid(row=ii + 1, column=0)
 
             self.xbuttons.append(
                 tk.Radiobutton(
-                    self, variable=self.xvar, value=choice, command=self.updateChoice
+                    self,
+                    variable=self.xvar,
+                    value=choice,
+                    command=self.updateChoice,
+                    bg=background,
                 )
             )
             self.xbuttons[ii].grid(row=ii + 1, column=1)
 
             self.ybuttons.append(
                 tk.Radiobutton(
-                    self, variable=self.yvar, value=choice, command=self.updateChoice
+                    self,
+                    variable=self.yvar,
+                    value=choice,
+                    command=self.updateChoice,
+                    bg=background,
                 )
             )
             self.ybuttons[ii].grid(row=ii + 1, column=2)
@@ -508,6 +558,7 @@ class PlkActionsWidget(tk.Frame):
 
     def __init__(self, master=None, **kwargs):
         tk.Frame.__init__(self, master)
+        # self.configure(bg=background)
 
         self.fit_callback = None
         self.clearAll_callback = None
@@ -519,25 +570,57 @@ class PlkActionsWidget(tk.Frame):
         self.initPlkActions()
 
     def initPlkActions(self):
-        self.fitbutton = tk.Button(self, text="Fit", command=self.fit, underline=0)
+        self.fitbutton = tk.Button(
+            self,
+            text="Fit",
+            command=self.fit,
+            underline=0,
+            bg=background,
+            fg=foreground,
+        )
         self.fitbutton.grid(row=0, column=0)
         fitbutton_ttp = CreateToolTip(
             self.fitbutton, "Fit the selected TOAs to the current model."
         )
-        button1 = tk.Button(self, text="Revert", command=self.revert)
+        button1 = tk.Button(
+            self,
+            text="Revert",
+            command=self.revert,
+            bg=background,
+            fg=foreground,
+        )
         button1.grid(row=0, column=1)
         button1_ttp = CreateToolTip(button1, "Undo the last model fit.")
-        button2 = tk.Button(self, text="Write par", command=self.writePar)
+        button2 = tk.Button(
+            self,
+            text="Write par",
+            command=self.writePar,
+            bg=background,
+            fg=foreground,
+        )
         button2.grid(row=0, column=2)
         button2_ttp = CreateToolTip(
             button2, "Write the post-fit parfile to a file of your choice."
         )
-        button3 = tk.Button(self, text="Write tim", command=self.writeTim)
+        button3 = tk.Button(
+            self,
+            text="Write tim",
+            command=self.writeTim,
+            bg=background,
+            fg=foreground,
+        )
         button3.grid(row=0, column=3)
         button3_ttp = CreateToolTip(
             button3, "Write the current TOAs table to a .tim file of your choice."
         )
-        button4 = tk.Button(self, text="Reset", command=self.reset, underline=0)
+        button4 = tk.Button(
+            self,
+            text="Reset",
+            command=self.reset,
+            underline=0,
+            bg=background,
+            fg=foreground,
+        )
         button4.grid(row=0, column=4)
         button4_ttp = CreateToolTip(
             button4, "Reset everything to the beginning of the session.  Be Careful!"
@@ -584,6 +667,7 @@ class PlkActionsWidget(tk.Frame):
 class PlkWidget(tk.Frame):
     def __init__(self, master=None, **kwargs):
         tk.Frame.__init__(self, master)
+        self.configure(bg=background)
         self.init_loglevel = kwargs["loglevel"] if "loglevel" in kwargs else None
         self.initPlk()
         self.initPlkLayout()
@@ -598,6 +682,7 @@ class PlkWidget(tk.Frame):
             cm.FreqMode(self),
             cm.ObsMode(self),
             cm.NameMode(self),
+            cm.JumpMode(self),
         ]
         self.current_mode = "default"
 
@@ -1034,8 +1119,13 @@ class PlkWidget(tk.Frame):
                 scale = 10**6
             elif self.yvals.unit == u.ms:
                 scale = 10**3
+            # Want to plot things in sorted order so that lines are smooth
+            sort_inds = np.argsort(f_toas_plot)
+            f_toas_plot = f_toas_plot[sort_inds]
             for i in range(len(rs)):
-                self.plkAxes.plot(f_toas_plot, rs[i] * scale, "-k", alpha=0.3)
+                self.plkAxes.plot(
+                    f_toas_plot, rs[i][sort_inds] * scale, "-k", alpha=0.3
+                )
 
     def determine_yaxis_units(self, miny, maxy):
         """Checks range of residuals and converts units if range sufficiently large/small."""
@@ -1081,6 +1171,13 @@ class PlkWidget(tk.Frame):
             print(
                 f"{x:^10.4f} {y:^10.4f} {ind:^7} {obs:^7} {freq:^11.4f} {err:^11.3f} {MJD:^20.15f} {flag}"
             )
+        self.print_chi2()
+
+    def print_chi2(self):
+        """Print chi^2 about just the selected points"""
+        # Select all the TOAs if not are selected
+        selected = self.selected if np.sum(self.selected) else ~self.selected
+        self.psr.print_chi2(selected)
 
     def psr_data_from_label(self, label):
         """
@@ -1373,23 +1470,23 @@ class PlkWidget(tk.Frame):
             self.updatePlot(keepAxes=True)
             self.call_updates()
         elif event.key == "v":
-            # jump all groups except the one(s) selected, or jump all groups if none selected
+            # jump all clusters except the one(s) selected, or jump all clusters if none selected
             jumped_copy = copy.deepcopy(self.jumped)
             self.updateAllJumped()
             all_jumped = copy.deepcopy(self.jumped)
             self.jumped = jumped_copy
-            groups = list(self.psr.all_toas.table["groups"])
-            # jump each group, check doesn't overlap with existing jumps and selected
-            for num in np.arange(max(groups) + 1):
-                group_bool = [
-                    num == group for group in self.psr.all_toas.table["groups"]
+            clusters = list(self.psr.all_toas.table["clusters"])
+            # jump each cluster, check doesn't overlap with existing jumps and selected
+            for num in np.arange(max(clusters) + 1):
+                cluster_bool = [
+                    num == cluster for cluster in self.psr.all_toas.table["clusters"]
                 ]
                 if True in [
-                    a and b for a, b in zip(group_bool, self.selected)
-                ] or True in [a and b for a, b in zip(group_bool, all_jumped)]:
+                    a and b for a, b in zip(cluster_bool, self.selected)
+                ] or True in [a and b for a, b in zip(cluster_bool, all_jumped)]:
                     continue
-                self.psr.selected_toas = self.psr.all_toas[group_bool]
-                jump_name = self.psr.add_jump(group_bool)
+                self.psr.selected_toas = self.psr.all_toas[cluster_bool]
+                jump_name = self.psr.add_jump(cluster_bool)
                 self.updateJumped(jump_name)
             if (
                 self.selected is not None
@@ -1417,9 +1514,7 @@ class PlkWidget(tk.Frame):
                     return None
                 # Delete the selected points
                 self.psr.stashed = copy.deepcopy(self.psr.all_toas)
-                self.psr.all_toas.table = self.psr.all_toas.table[
-                    ~self.selected
-                ].group_by("obs")
+                self.psr.all_toas.table = self.psr.all_toas.table[~self.selected]
             else:  # unstash
                 self.psr.all_toas = copy.deepcopy(self.psr.stashed)
                 self.psr.stashed = None
@@ -1456,9 +1551,12 @@ class PlkWidget(tk.Frame):
                 log.warning("No postfit model to show")
         elif event.key == " ":
             self.print_info()
+        elif event.key == "x":
+            self.print_chi2()
         elif event.key == "h":
             print(helpstring)
         elif event.key == "m":
             print(self.psr.all_toas.get_highest_density_range())
         elif event.key == "z":
             self.plkToolbar.zoom()
+            self.randomboxWidget.changeMode(self.plkToolbar.mode)

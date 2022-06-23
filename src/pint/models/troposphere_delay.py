@@ -6,12 +6,10 @@ import scipy.interpolate
 from astropy.coordinates import AltAz, SkyCoord
 from loguru import logger as log
 
-import pint.utils as ut
 from pint.models.parameter import boolParameter
 from pint.models.timing_model import DelayComponent
 from pint.observatory import get_observatory
 from pint.observatory.topo_obs import TopoObs
-from pint.toa_select import TOASelect
 
 
 class TroposphereDelay(DelayComponent):
@@ -161,10 +159,8 @@ class TroposphereDelay(DelayComponent):
 
             # the only python for loop is to iterate through the unique observatory locations
             # all other math is computed through numpy
-            for ii, key in enumerate(tbl.groups.keys):
-                grp = tbl.groups[ii]
-                loind, hiind = tbl.groups.indices[ii : ii + 2]
-                obsobj = get_observatory(tbl.groups.keys[ii]["obs"])
+            for key, grp in toas.get_obs_groups():
+                obsobj = get_observatory(key)
 
                 # exclude non topocentric observations
                 if not isinstance(obsobj, TopoObs):
@@ -176,12 +172,12 @@ class TroposphereDelay(DelayComponent):
 
                 obs = obsobj.earth_location_itrf()
 
-                alt = self._get_target_altitude(obs, grp, radec)
+                alt = self._get_target_altitude(obs, tbl[grp], radec)
 
                 # now actually calculate the atmospheric delay based on the models
 
-                delay[loind:hiind] = self.delay_model(
-                    alt, obs.lat, obs.height, grp["tdbld"]
+                delay[grp] = self.delay_model(
+                    alt, obs.lat, obs.height, tbl[grp]["tdbld"]
                 )
         return delay * u.s
 

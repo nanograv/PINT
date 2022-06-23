@@ -1,21 +1,41 @@
-"""Machinery to support PINT's list of observatories."""
+"""Machinery to support PINT's list of observatories.
+
+This code maintains a registry of observatories known to PINT.
+Observatories are added to the registry when the objects are created.
+For the observatories defined in PINT, these objects are created
+when the relevant module is imported.
+
+PINT's built-in observatories are loaded when anyone imports the modules
+:mod:`pint.observatory.observatories` and
+:mod:`pint.observatory.special_locations`. This automatically happens
+when you call :func:`pint.observatory.Observatory.get`,
+:func:`pint.observatory.get_observatory`, or
+:func:`pint.observatory.Observatory.names`.
+Satellite observatories are somewhat different, as they cannot be
+created until the user supplies an orbit file. Once created, they will
+appear in the list of known observatories.
+
+Normal use of :func:`pint.toa.get_TOAs` will ensure that all imports have been
+done, but if you are using a different subset of PINT these imports may be
+necessary.
+"""
 
 import os
+import sys
 import textwrap
+import warnings
 from collections import defaultdict
 from io import StringIO
+from pathlib import Path
 
-import astropy.constants as const
 import astropy.coordinates
 import astropy.units as u
 import numpy as np
 from astropy.coordinates import EarthLocation
 from loguru import logger as log
 
-import pint.solar_system_ephemerides as sse
 from pint.pulsar_mjd import Time
 from pint.utils import interesting_lines
-
 
 # Include any files that define observatories here.  This will start
 # with the standard distribution files, then will read any system- or
@@ -26,26 +46,59 @@ from pint.utils import interesting_lines
 __all__ = [
     "Observatory",
     "get_observatory",
+    "list_last_correction_mjds",
+    "update_clock_files",
     "compare_t2_observatories_dat",
     "compare_tempo_obsys_dat",
+    "earth_location_distance",
+    "ClockCorrectionError",
+    "NoClockCorrections",
+    "ClockCorrectionOutOfRange",
 ]
 
 # The default BIPM to use if not explicitly specified
-# This should be the most recent BPIM file in the datafiles directory
-bipm_default = "BIPM2019"
+# FIXME: this should be auto-detected by checking the index file to see what's available
+bipm_default = "BIPM2021"
+
+
+class ClockCorrectionError(RuntimeError):
+    """Unspecified error doing clock correction."""
+
+    pass
+
+
+class NoClockCorrections(ClockCorrectionError):
+    """Clock corrections are expected but none are available."""
+
+    pass
+
+
+class ClockCorrectionOutOfRange(ClockCorrectionError):
+    """Clock corrections are available but the requested time is not covered."""
+
+    pass
 
 
 class Observatory:
     """Observatory locations and related site-dependent properties
 
-    For example, TOA time scales, clock corrections.
-    Any new Observtory that is declared will be automatically added to
-    a registry that is keyed on observatory name.  Aside from their initial
-    declaration (for examples, see pint/observatory/observatories.py),
-    Observatory instances should generally be accessed only via the
-    Observatory.get() function.  This will query the registry based on
-    observatory name (and any defined aliases).  A list of all registered
-    names can be returned via Observatory.names().
+    For example, TOA time scales, clock corrections.  Any new Observtory that
+    is declared will be automatically added to a registry that is keyed on
+    observatory name.  Aside from their initial declaration (for examples, see
+    ``pint/observatory/observatories.py``), Observatory instances should
+    generally be obtained only via the :func:`pint.observatory.Observatory.get`
+    function.  This will query the registry based on observatory name (and any
+    defined aliases).  A list of all registered names can be returned via
+    :func:`pint.observatory.Observatory.names`.
+
+    Observatories have names and aliases that are used in ``.tim`` and ``.par``
+    files to select them. They also have positions (possibly varying, in the
+    case of satellite observatories) and may have associated clock corrections
+    to relate times observed at the observatory clock to global time scales.
+
+    Terrestrial observatories are generally instances of the
+    :class:`pint.observatory.topo_obs.TopoObs` class, which has a fixed
+    position.
     """
 
     # This is a dict containing all defined Observatory instances,
@@ -112,6 +165,11 @@ class Observatory:
 
     @classmethod
     def names(cls):
+        """List all observatories known to PINT."""
+        # Importing this module triggers loading all observatories
+        import pint.observatory.observatories  # noqa
+        import pint.observatory.special_locations  # noqa
+
         return cls._registry.keys()
 
     # Note, name and aliases are not currently intended to be changed
@@ -218,7 +276,7 @@ class Observatory:
         astropy.time.Time()."""
         raise NotImplementedError
 
-    def clock_corrections(self, t):
+    def clock_corrections(self, t, limits="warn"):
         """Given an array-valued Time, return the clock corrections
         as a numpy array, with units.  These values are to be added to the
         raw TOAs in order to refer them to the timescale specified by
@@ -227,6 +285,13 @@ class Observatory:
         # table in addition to Time objects.  This will allow access to extra
         # TOA metadata which may be necessary in some cases.
         raise NotImplementedError
+
+    def last_clock_correction_mjd(self):
+        """Return the MJD of the last available clock correction.
+
+        Returns ``np.inf`` if no clock corrections are relevant.
+        """
+        return np.inf
 
     def get_TDBs(self, t, method="default", ephem=None, options=None):
         """This is a high level function for converting TOAs to TDB time scale.
@@ -313,7 +378,7 @@ def get_observatory(
     """Convenience function to get observatory object with options.
 
     This function will simply call the ``Observatory.get`` method but
-    will manually set options after the method is called.
+    will manually modify the global observatory object after the method is called.
 
     If the observatory is not present in the PINT list, will fallback to astropy
 
@@ -340,6 +405,7 @@ def get_observatory(
 
 
 def earth_location_distance(loc1, loc2):
+    """Compute the distance between two EarthLocations."""
     return (
         sum((u.Quantity(loc1.to_geocentric()) - u.Quantity(loc2.to_geocentric())) ** 2)
     ) ** 0.5
@@ -549,3 +615,76 @@ def compare_tempo_obsys_dat(tempodir=None):
             # Check ITOA code?
             # Check time corrections?
     return report
+
+
+def list_last_correction_mjds():
+    """Print out a list of the last MJD each clock correction is good for.
+
+    Each observatory lists the clock files it uses and their last dates,
+    and a combined last date for the observatory. The last date for the
+    observatory is also limited by the date ranges covered by GPS and BIPM
+    tables, if appropriate.
+
+    Observatories for which PINT doesn't know how to find the clock corrections
+    are not listed. Observatories for which PINT knows where the clock correction
+    should be but can't find it are listed as MISSING.
+    """
+    for n in Observatory.names():
+        o = get_observatory(n)
+        if not hasattr(o, "clock_file"):
+            continue
+        m = o.last_clock_correction_mjd()
+        if not o.clock_file:
+            continue
+        try:
+            print(f"{n:<24} {Time(m, format='mjd').iso}")
+        except (ValueError, TypeError):
+            print(f"{n:<24} MISSING")
+        for c in o._clock:
+            try:
+                print(
+                    f"    {os.path.basename(c.filename):<20}"
+                    f" {Time(c.last_correction_mjd(), format='mjd').iso}"
+                )
+            except (ValueError, TypeError):
+                print(f"    {os.path.basename(c.filename):<20} MISSING")
+
+
+def update_clock_files(bipm_versions=None):
+    """Obtain an up-to-date version of all clock files.
+
+    This up-to-date version will be stored in the Astropy cache;
+    you can then export or otherwise preserve the Astropy cache
+    so it can be pre-loaded on systems that might not have
+    network access.
+
+    This updates only the clock files that PINT knows how to use. To
+    grab everything in the repository you can use
+    :func:`pint.observatory.global_clock_corrections.update_all`.
+
+    Parameters
+    ----------
+    bipm_versions : list of str or None
+        Include these versions of the BIPM TAI to TT clock corrections
+        in addition to whatever is in use. Typical values look like
+        "BIPM2019".
+    """
+    # FIXME: allow forced downloads for non-expired files
+    # FIXME: what to do about GPS and BIPM files?
+
+    if bipm_versions is not None:
+        o = get_observatory("arecibo")
+        for v in bipm_versions:
+            o._load_bipm_clock(v)
+
+    t = Time.now()
+    for n in Observatory.names():
+        o = get_observatory(n)
+        if not hasattr(o, "clock_file"):
+            continue
+        try:
+            o.clock_corrections(t, limits="error")
+        except ClockCorrectionOutOfRange:
+            pass
+        except NoClockCorrections:
+            log.info(f"Observatory {n} has no clock corrections")

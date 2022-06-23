@@ -77,7 +77,7 @@ def get_model_and_toas(parfile):
                 obs="ao",
             )
             toas = pint.toa.merge_TOAs([toas1, toas2])
-            phase = model.phase(toas)
+            phase = model.phase(toas, abs_phase=False)
         _cached_toas[parfile] = model, toas, phase
     return copy.deepcopy(_cached_toas[parfile])
 
@@ -154,7 +154,7 @@ def test_derivative_equals_numerical(parfile, param):
         with quiet():
             warnings.simplefilter("ignore")
             try:
-                dphase = m.phase(toas) - phase
+                dphase = m.phase(toas, abs_phase=False) - phase
             except ValueError:
                 return np.nan * np.zeros_like(phase.frac)
         return dphase.int + dphase.frac

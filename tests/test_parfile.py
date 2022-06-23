@@ -5,10 +5,9 @@ import tempfile
 import pytest
 
 import pint.models as tm
-from pinttestdata import testdir
+from pinttestdata import testdir, datadir
 
-datadir = os.path.join(testdir, "datafile")
-parfile = os.path.join(datadir, "J1744-1134.basic.par")
+parfile = datadir / "J1744-1134.basic.par"
 
 
 def demo_parfile():
@@ -32,7 +31,7 @@ def demo_parfile():
     print()
 
 
-params = tm.get_model(parfile).params
+params = sorted(tm.get_model(parfile).params)
 params.remove("TZRMJD")
 params.append(pytest.param("TZRMJD", marks=pytest.mark.xfail(reason="Bug #519")))
 
