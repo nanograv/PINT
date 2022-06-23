@@ -9,6 +9,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - model.phase() now defaults to abs_phase=True when TZR* params are in the model
 - removed explicit download of IERS and leapsecond data (handled now by astropy)
 - The default version of TT(BIPM) uses BIPM2021
+- ClockFile no longer uses metaclass magic or many subclasses, and have friendly names for use in messages
 ### Added
 - logging now needs to be setup explicitly
 - Color-by-jump mode for pintk
