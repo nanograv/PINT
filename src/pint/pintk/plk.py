@@ -1249,7 +1249,7 @@ class PlkWidget(tk.Frame):
             if dist[ind] > clickDist:
                 log.warning("Not close enough to a point")
                 ind = None
-        return index
+        return ind
 
     def check_jump_invalid(self):
         """checks if jumps will cancel the attempted fit"""
