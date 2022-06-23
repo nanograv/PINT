@@ -229,6 +229,10 @@ def get_TOAs(
         except IOError:
             # Pickle either did not exist or is out of date
             updatepickle = True
+        except TypeError:
+            # Probably a file rather than a filename
+            usepickle = False
+            pass
         else:
             if hasattr(t, "hashes"):
                 if not t.check_hashes():

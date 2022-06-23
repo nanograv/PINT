@@ -67,3 +67,13 @@ def test_fit_summary(tmp_path, capsys):
     assert not re.search(r"Post-Fit Chi2:\s*[0-9.]+ +us", captured_fit_summary.out)
     assert re.search(r"Post-Fit Weighted RMS:\s*[0-9.]+ +us", captured_fit_summary.out)
     assert re.search(r"\s*JUMP", captured_fit_summary.out)
+
+
+def test_load_stringio():
+    pint.pintk.pulsar.Pulsar(parfile=StringIO(par), timfile=StringIO(tim))
+
+
+def test_delete_last_toa_bug_1290():
+    p = pint.pintk.pulsar.Pulsar(parfile=StringIO(par), timfile=StringIO(tim))
+    p.delete_TOAs([1], None)
+    # Too many notions of "selected" I don't know how to replicate

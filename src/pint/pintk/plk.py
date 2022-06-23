@@ -1332,9 +1332,7 @@ class PlkWidget(tk.Frame):
         self.move = False
 
     def stationaryClick(self, event):
-        """
-        Call this function when the mouse is clicked but not moved
-        """
+        """Call this function when the mouse is clicked but not moved."""
         log.debug(f"You stationary clicked (button = {event.button})")
         if event.inaxes == self.plkAxes:
             ind = self.coordToPoint(event.xdata, event.ydata)
@@ -1342,6 +1340,7 @@ class PlkWidget(tk.Frame):
                 if event.button == 3:
                     # Right click deletes closest TOA
                     # if the point is jumped, tell the user to delete the jump first
+                    # FIXME: why?
                     if ind in self.psr.all_toas.table["index"][self.jumped]:
                         log.warning(
                             "Cannot delete jumped TOAs. Delete interfering jumps before deleting TOAs."

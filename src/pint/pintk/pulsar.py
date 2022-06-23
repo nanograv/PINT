@@ -61,9 +61,7 @@ class Pulsar:
     Contains the toas, model, residuals, and fitter
     """
 
-    def __init__(self, parfile=None, timfile=None, ephem=None, fitter="GLSFitter"):
-        super(Pulsar, self).__init__()
-
+    def __init__(self, parfile=None, timfile=None, ephem=None, fitter="auto"):
         log.info(f"Loading pulsar parfile: {str(parfile)}")
 
         if parfile is None or timfile is None:
@@ -173,6 +171,8 @@ class Pulsar:
             return None
 
     def delete_TOAs(self, indices, selected):
+        """Delete certain TOAs."""
+
         # note: indices should be a list or an array
         self.deleted |= set(indices)  # update the deleted indices
         if selected is not None:
@@ -200,7 +200,7 @@ class Pulsar:
         return selected
 
     def update_resids(self):
-        # update the pre and post fit residuals using all_toas
+        """update the pre and post fit residuals using all_toas."""
         track_mode = "use_pulse_numbers" if self.use_pulse_numbers else None
         self.prefit_resids = Residuals(
             self.all_toas, self.prefit_model, track_mode=track_mode
@@ -217,7 +217,8 @@ class Pulsar:
             )
 
     def orbitalphase(self):
-        """
+        """Calculate orbital phase.
+
         For a binary pulsar, calculate the orbital phase. Otherwise, return
         an array of unitless quantities of zeros
         """
@@ -233,23 +234,21 @@ class Pulsar:
         return phase / (2 * np.pi * u.rad)
 
     def dayofyear(self):
-        """
-        Return the day of the year for all the TOAs of this pulsar
-        """
+        """Return the day of the year for all the TOAs of this pulsar."""
         t = Time(self.all_toas.get_mjds(), format="mjd")
         year = Time(np.floor(t.decimalyear), format="decimalyear")
         return np.asarray(t.mjd - year.mjd) << u.day
 
     def year(self):
-        """
-        Return the decimal year for all the TOAs of this pulsar
-        """
+        """Return the decimal year for all the TOAs of this pulsar."""
         t = Time(self.all_toas.get_mjds(), format="mjd")
         return np.asarray(t.decimalyear) << u.year
 
     def add_model_params(self):
-        """This automatically adds the next available unfit prefix
-        parameters to the model so they show up on the GUI
+        """Add next available prefix parameters to model.
+
+        This automatically adds the next available unfit prefix
+        parameters to the model so they show up on the GUI.
         """
         m = self.prefit_model
         # Add next spin freq deriv
@@ -291,9 +290,7 @@ class Pulsar:
         m.validate()
 
     def write_fit_summary(self):
-        """
-        Summarize fitting results
-        """
+        """Summarize fitting results."""
         if self.fitted:
             wrms = self.selected_postfit_resids.rms_weighted()
             print("Post-Fit Chi2:          %.8g" % self.selected_postfit_resids.chi2)
@@ -475,9 +472,7 @@ class Pulsar:
         print("------------------------------------")
 
     def fit(self, selected, iters=4, compute_random=False):
-        """
-        Run a fit using the specified fitter
-        """
+        """Run a fit using the specified fitter."""
         # Select all the TOAs if none are explicitly set
         if not np.any(selected):
             selected = ~selected
