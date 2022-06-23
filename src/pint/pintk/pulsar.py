@@ -368,8 +368,7 @@ class Pulsar:
         self.update_resids()
 
     def add_jump(self, selected):
-        """
-        jump the toas selected or un-jump them if already jumped
+        """Jump the toas selected or un-jump them if already jumped.
 
         :param selected: boolean array to apply to toas, True = selected toa
         """
