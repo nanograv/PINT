@@ -601,12 +601,14 @@ def test_fitter_construction_success_after_remove_param():
     f = pint.fitter.GLSFitter(toas=t, model=m)
 
 
-def test_correct_param_numbers_after_add_or_remove_param():
-    """Checks that the number of parameters in some component after add_param or remove_param is correct. This is just to be safe after seeing the bug described in test_fitter_construction_success_after_remove_param() when removing parameters."""
+def test_correct_number_of_params_and_FD_terms_after_add_or_remove_param():
+    """Checks that the number of parameters in some component after add_param or remove_param is correct. Similarly checks that len(m.get_prefix_mapping('FD')) (i.e. num_FD_terms) is correct after seeing a bug where the length didn't change after FD param removal (see #1260)."""
     m = get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
     t = get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
     FD4 = prefixParameter(parameter_type="float", name="FD4", value=0.0, units=u.s)
     m.add_param_from_top(FD4, "FD")
     assert len(m.components["FD"].params) == 4
+    assert len(m.get_prefix_mapping("FD")) == 4
     m.remove_param("FD4")
     assert len(m.components["FD"].params) == 3
+    assert len(m.get_prefix_mapping("FD")) == 3
