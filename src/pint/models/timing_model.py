@@ -3137,7 +3137,7 @@ class AllComponents:
                 first_init_par = None
                 # Handle the case of start index from 0 and 1
                 for start_idx in [0, 1]:
-                    first_init_par_alias = prefix + "{1:0{0}}".format(fmt, start_idx)
+                    first_init_par_alias = prefix + f"{start_idx:0{fmt}}"
                     first_init_par = self._param_alias_map.get(
                         first_init_par_alias, None
                     )

@@ -23,6 +23,7 @@ parameters PINT understands.
 """
 import numbers
 from warnings import warn
+import re
 
 import astropy.time as time
 import astropy.units as u
@@ -583,8 +584,10 @@ class Parameter:
 
     def name_matches(self, name):
         """Whether or not the parameter name matches the provided name"""
-        return (name == self.name.upper()) or (
-            name in [x.upper() for x in self.aliases]
+        return (
+            (name == self.name.upper())
+            or (name in [x.upper() for x in self.aliases])
+            or (split_prefixed_name(name) == split_prefixed_name(self.name.upper()))
         )
 
     def set(self, value):
