@@ -584,12 +584,11 @@ class Parameter:
 
     def name_matches(self, name):
         """Whether or not the parameter name matches the provided name"""
-        if (
+        return (
             (name == self.name.upper())
             or (name in [x.upper() for x in self.aliases])
             or (split_prefixed_name(name) == split_prefixed_name(self.name.upper()))
-        ):
-            return True
+        )
 
     def set(self, value):
         """Deprecated - just assign to .value."""
