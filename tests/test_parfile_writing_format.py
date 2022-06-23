@@ -199,7 +199,7 @@ def test_EQUAD():
 
 
 def test_DM001_vs_DM1_pint_tempo_read_write():
-    """PINT should write out DMn. Tempo(2) can accept DMn or DM00n, so should write it out however the user inputs it."""
+    """Ensure all parfile formats write out DMn the way it was read in. May want to change later."""
     model = get_model(
         StringIO(
             """
@@ -218,11 +218,23 @@ def test_DM001_vs_DM1_pint_tempo_read_write():
     assert "DM1" in model.params
     assert "DM10" in model.params
     assert any(
+        l.startswith("DM0010") for l in model.as_parfile(format="tempo").split("\n")
+    )
+    assert any(
         l.startswith("DM0010") for l in model.as_parfile(format="tempo2").split("\n")
     )
-    # assert any(l.startswith("DM0010") for l in model.as_parfile(format="tempo").split("\n"))
-    # assert any(l.startswith("DM10") for l in model.as_parfile(format="pint").split("\n"))
-
+    assert any(
+        l.startswith("DM0010") for l in model.as_parfile(format="pint").split("\n")
+    )
+    assert any(
+        l.startswith("DM2") for l in model.as_parfile(format="tempo").split("\n")
+    )
+    assert any(
+        l.startswith("DM2") for l in model.as_parfile(format="tempo2").split("\n")
+    )
+    assert any(
+        l.startswith("DM2") for l in model.as_parfile(format="pint").split("\n")
+    )
 
 def test_NHARMS():
     model = get_model(
@@ -251,11 +263,8 @@ def test_NHARMS():
         NE_SW                                 0.0
         SWM                                   0.0
         DM                  149.60232712555309087
-<<<<<<< HEAD
         DM1                                   0.0
         DMEPOCH            58314.0000000000000000
-=======
->>>>>>> master
         BINARY ELL1H
         PB                  0.6988892433285496519 1 2.306950233730408576e-11
         A1                      3.718865580010016 1 5.10696441177697e-07
