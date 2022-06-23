@@ -5,10 +5,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+### Changed
+- model.phase() now defaults to abs_phase=True when TZR* params are in the model
+- TOAs no longer need to be grouped by observatory
+- removed explicit download of IERS and leapsecond data (handled now by astropy)
+- The default version of TT(BIPM) uses BIPM2021
+- model.setup() now gets called automatically after removing a parameter as part of remove_param
 ### Added
 - logging now needs to be setup explicitly
+- Color-by-jump mode for pintk
+- `pytest-xdist` now allows `pytest -n auto` to use all cores on the machine to run tests in parallel; `make test` now does this.
+- Added the ability to write clock files in TEMPO or TEMPO2 format
+- Added examples of how to write a par file to tutorials
+- Added `TimingModel.write_parfile()`
+- Added generator for iterating over like items in an array
+- Added iterator to iterate over observatory groups
+- Clock files are now searched for in the directory PINT_CLOCK_OVERRIDE
+- Clock files are now searched for in the online global repository
+- You can export the clock files you are using with `export_all_clock_corrections()`
+- You can request that all your clock files be updated and loaded into the cache with `update_clock_files()` 
+- The `temp_cache` fixture that runs tests with an empty, scratch Astropy cache
 ### Fixed
+- INCLUDE lines in tim files are now relative to the location of the tim file (bug #1269)
 ### Changed
+- Required version of python updated to 3.8
 
 ## [0.8.8] 2022-05-26
 ### Added
