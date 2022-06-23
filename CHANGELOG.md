@@ -26,6 +26,8 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - The `temp_cache` fixture that runs tests with an empty, scratch Astropy cache
 ### Fixed
 - INCLUDE lines in tim files are now relative to the location of the tim file (bug #1269)
+- jump_flags_to_params now works if some JUMPs are present, never modifies the TOAs, and is idempotent
+- jump_params_to_flags is now idempotent and unconditionally sets the -jump flag to a correct state
 ### Changed
 - Required version of python updated to 3.8
 
