@@ -1458,7 +1458,7 @@ class TimingModel:
 
         # if last jump deleted, remove PhaseJump object from model
         if (
-            self.components["PhaseJump"].get_number_of_jumps() == 1
+            self.components["PhaseJump"].get_number_of_jumps() == 0
         ):  # means last jump just deleted
             comp_list = getattr(self, "PhaseComponent_list")
             for item in comp_list:
