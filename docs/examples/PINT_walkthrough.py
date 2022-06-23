@@ -8,7 +8,7 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.13.8
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -32,10 +32,11 @@
 # Note:  The first time TOAs get read in, lots of processing (can) happen, which can take some time. However, a  "pickle" file can be saved, so the next time the same file is loaded (if nothing has changed), the TOAs will be loaded from the pickle file, which is much faster.
 
 # %%
-from __future__ import print_function, division
+import tempfile
 import numpy as np
 import astropy.units as u
 from pprint import pprint
+from glob import glob
 import pint.logging
 
 # setup the logging
@@ -247,6 +248,13 @@ plt.ylabel("Residual (us)")
 plt.grid()
 
 # %% [markdown]
+# Now let's save (and print) the post-fit par file. We'll request a more TEMPO2-compatible file, though we could have requested a more TEMPO-style file or a more native PINT format. These differ only slightly, just as much as needed to be read by the three pieces of software. PINT can read all three variants.
+
+# %%
+f.model.write_parfile("/tmp/output.par", format="tempo2")
+print(f.model.as_parfile(format="tempo2"))
+
+# %% [markdown]
 # ## Other interesting things
 
 # %% [markdown]
@@ -255,4 +263,14 @@ plt.grid()
 # %%
 pprint(m.get_barycentric_toas(t))
 
+# %% [markdown]
+# Let's export the clock corrections as they currently stand so we can save
+# these exact versions for reproducibility purposes.
+#
 # %%
+import pint.observatory.topo_obs
+
+d = tempfile.mkdtemp()
+pint.observatory.topo_obs.export_all_clock_files(d)
+for f in sorted(glob(d + "/*")):
+    print(f)

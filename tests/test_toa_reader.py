@@ -1,21 +1,23 @@
 import os
-import unittest
-import pytest
-import numpy as np
 import shutil
-from io import StringIO
+import unittest
 from glob import glob
+from io import StringIO
+from pathlib import Path
 
-from hypothesis import given
-from hypothesis.strategies import integers, floats, sampled_from
-from hypothesis.extra.numpy import arrays
-from pint import toa, simulation
-from pint.observatory import bipm_default
-from pint.models import get_model, get_model_and_toas
-from pinttestdata import datadir
+import numpy as np
+import pytest
 
 # For this test, turn off the check for the age of the IERS A table
 from astropy.utils.iers import conf
+from hypothesis import given
+from hypothesis.extra.numpy import arrays
+from hypothesis.strategies import floats, integers, sampled_from
+from pinttestdata import datadir
+
+from pint import simulation, toa
+from pint.models import get_model, get_model_and_toas
+from pint.observatory import bipm_default
 
 conf.auto_max_age = None
 
@@ -61,13 +63,13 @@ def check_indices_contiguous(toas):
 
 class TestTOAReader(unittest.TestCase):
     def setUp(self):
-        self.x = toa.TOAs("test1.tim")
+        self.x = toa.TOAs(datadir / "test1.tim")
         self.x.apply_clock_corrections()
         self.x.compute_TDBs()
         self.x.table.sort("index")
 
     def test_read_parkes(self):
-        ts = toa.get_TOAs("parkes.toa")
+        ts = toa.get_TOAs(datadir / "parkes.toa")
         assert "barycenter" in ts.observatories
         assert ts.ntoas == 8
 
@@ -114,7 +116,7 @@ class TestTOAReader(unittest.TestCase):
 def test_model_override1():
     parstr = StringIO(simplepar)
     m = get_model(parstr)
-    y = toa.get_TOAs("test1.tim", model=m)
+    y = toa.get_TOAs(datadir / "test1.tim", model=m)
     assert y.ephem == "DE436"
     assert y.planets is True
     assert y.clock_corr_info["bipm_version"] == "BIPM2017"
@@ -122,7 +124,7 @@ def test_model_override1():
 
 def test_model_override2():
     parstr = StringIO(simplepar)
-    m, y = get_model_and_toas(parstr, "test1.tim")
+    m, y = get_model_and_toas(parstr, datadir / "test1.tim")
     assert y.ephem == "DE436"
     assert y.planets is True
     assert y.clock_corr_info["bipm_version"] == "BIPM2017"
@@ -130,7 +132,7 @@ def test_model_override2():
 
 def test_model_override_override2():
     parstr = StringIO(simplepar)
-    m, y = get_model_and_toas(parstr, "test1.tim", ephem="DE405")
+    m, y = get_model_and_toas(parstr, datadir / "test1.tim", ephem="DE405")
     assert y.ephem == "DE405"
 
 
@@ -138,7 +140,7 @@ def test_model_override_override():
     parstr = StringIO(simplepar)
     m = get_model(parstr)
     y = toa.get_TOAs(
-        "test1.tim",
+        datadir / "test1.tim",
         model=m,
         ephem="DE405",
         planets=False,
@@ -154,13 +156,13 @@ def test_tttai():
     # This checks to make sure that CLOCK TT(TAI) is handled correctly
     parstr = StringIO(simplepar.replace("BIPM2017", "TAI"))
     m = get_model(parstr)
-    y = toa.get_TOAs("test1.tim", model=m)
+    y = toa.get_TOAs(datadir / "test1.tim", model=m)
     assert y.clock_corr_info["include_bipm"] == False
 
 
-def test_toa_check_hashes(tmpdir):
-    tf = os.path.join(tmpdir, "file.tim")
-    shutil.copy("NGC6440E.tim", tf)
+def test_toa_check_hashes(tmp_path):
+    tf = tmp_path / "file.tim"
+    shutil.copy(datadir / "NGC6440E.tim", tf)
     t = toa.get_TOAs(tf)
     assert t.check_hashes()
     with open(tf, "at") as f:
@@ -169,7 +171,11 @@ def test_toa_check_hashes(tmpdir):
 
 
 def test_toa_merge():
-    filenames = ["NGC6440E.tim", "testtimes.tim", "parkes.toa"]
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+        datadir / "parkes.toa",
+    ]
     toas = [toa.get_TOAs(ff) for ff in filenames]
     ntoas = sum([tt.ntoas for tt in toas])
     nt = toa.merge_TOAs(toas)
@@ -181,12 +187,16 @@ def test_toa_merge():
 
 
 def test_toa_merge_again():
-    filenames = ["NGC6440E.tim", "testtimes.tim", "parkes.toa"]
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+        datadir / "parkes.toa",
+    ]
     toas = [toa.get_TOAs(ff) for ff in filenames]
     ntoas = sum([tt.ntoas for tt in toas])
     nt = toa.merge_TOAs(toas)
     # The following tests merging with and already merged TOAs
-    other = toa.get_TOAs("test1.tim")
+    other = toa.get_TOAs(datadir / "test1.tim")
     nt2 = toa.merge_TOAs([nt, other])
     assert len(nt2.filename) == 5
     assert nt2.ntoas == ntoas + 9
@@ -194,10 +204,14 @@ def test_toa_merge_again():
 
 
 def test_toa_merge_again():
-    filenames = ["NGC6440E.tim", "testtimes.tim", "parkes.toa"]
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+        datadir / "parkes.toa",
+    ]
     toas = [toa.get_TOAs(ff) for ff in filenames]
     ntoas = sum([tt.ntoas for tt in toas])
-    other = toa.get_TOAs("test1.tim")
+    other = toa.get_TOAs(datadir / "test1.tim")
     # check consecutive merging
     nt = toa.merge_TOAs(toas[:2])
     nt = toa.merge_TOAs([nt, toas[2]])
@@ -209,7 +223,11 @@ def test_toa_merge_again():
 
 
 def test_toa_merge_different_ephem():
-    filenames = ["NGC6440E.tim", "testtimes.tim", "parkes.toa"]
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+        datadir / "parkes.toa",
+    ]
     toas = [toa.get_TOAs(ff) for ff in filenames]
     toas[0].ephem = "DE436"
     with pytest.raises(TypeError):
@@ -218,30 +236,30 @@ def test_toa_merge_different_ephem():
 
 def test_bipm_default():
     m, t = get_model_and_toas(
-        StringIO(simplepar.replace("BIPM2017", "BIPM")), "test1.tim"
+        StringIO(simplepar.replace("BIPM2017", "BIPM")), datadir / "test1.tim"
     )
-    assert t.clock_corr_info["bipm_version"] == "BIPM"
+    assert t.clock_corr_info["bipm_version"] == bipm_default
 
 
 def test_toas_comparison():
     parstr = StringIO(simplepar)
     m = get_model(parstr)
-    x = toa.get_TOAs("test1.tim", model=m)
-    y = toa.get_TOAs("test1.tim", model=m)
+    x = toa.get_TOAs(datadir / "test1.tim", model=m)
+    y = toa.get_TOAs(datadir / "test1.tim", model=m)
     assert x == y
 
 
 def test_toas_comparison_unequal():
     parstr = StringIO(simplepar)
     m = get_model(parstr)
-    x = toa.get_TOAs("test1.tim", model=m, ephem="de436")
-    y = toa.get_TOAs("test1.tim", model=m)
+    x = toa.get_TOAs(datadir / "test1.tim", model=m, ephem="de436")
+    y = toa.get_TOAs(datadir / "test1.tim", model=m)
     assert x != y
 
 
 def test_toas_read_list():
-    x = toa.get_TOAs("test1.tim")
-    toas, commands = toa.read_toa_file("test1.tim")
+    x = toa.get_TOAs(datadir / "test1.tim")
+    toas, commands = toa.read_toa_file(datadir / "test1.tim")
     y = toa.get_TOAs_list(toas, commands=commands, filename=x.filename, hashes=x.hashes)
     assert x == y
 
@@ -259,7 +277,7 @@ def test_numpy_clusterss(t):
             assert np.all(np.abs(t[~c] - e) >= gap)
 
 
-def test_load_multiple(tmpdir):
+def test_load_multiple(tmp_path):
     m = get_model(StringIO(simplepar))
 
     fakes = [
@@ -268,7 +286,7 @@ def test_load_multiple(tmpdir):
         simulation.make_fake_toas_uniform(57000, 57500, 10, model=m, obs="@"),
     ]
 
-    filenames = [os.path.join(tmpdir, f"t{i+1}.tim") for i in range(len(fakes))]
+    filenames = [tmp_path / f"t{i+1}.tim" for i in range(len(fakes))]
 
     for t, f in zip(fakes, filenames):
         t.write_TOA_file(f, format="tempo2")
@@ -278,7 +296,7 @@ def test_load_multiple(tmpdir):
     assert merged == toa.get_TOAs(filenames, model=m)
 
 
-def test_pickle_multiple(tmpdir):
+def test_pickle_multiple(tmp_path):
     m = get_model(StringIO(simplepar))
 
     fakes = [
@@ -287,8 +305,8 @@ def test_pickle_multiple(tmpdir):
         simulation.make_fake_toas_uniform(57000, 57500, 10, model=m, obs="@"),
     ]
 
-    filenames = [os.path.join(tmpdir, f"t{i+1}.tim") for i in range(len(fakes))]
-    picklefilename = os.path.join(tmpdir, "t.pickle.gz")
+    filenames = [tmp_path / f"t{i+1}.tim" for i in range(len(fakes))]
+    picklefilename = tmp_path / "t.pickle.gz"
 
     for t, f in zip(fakes, filenames):
         t.write_TOA_file(f, format="tempo2")
@@ -380,10 +398,59 @@ def test_renumber_subset_reordered():
 
 
 loadable_tims = [
-    tim for tim in glob("*.tim") if tim not in {"prefixtest.tim", "vela_wave.tim"}
+    tim
+    for tim in datadir.glob("*.tim")
+    if tim not in {datadir / "prefixtest.tim", datadir / "vela_wave.tim"}
 ]
 
 
 @given(sampled_from(loadable_tims))
 def test_contiguous_on_load(tim):
     check_indices_contiguous(toa.get_TOAs(tim))
+
+
+def test_include_directory(tmp_path):
+    d = Path.cwd()
+    try:
+        os.chdir(datadir)
+        # "test1.tim" has "INCLUDE test2.tim"
+        # This should work
+        toa.get_TOAs(str(Path(datadir) / "test1.tim"))
+        os.chdir(tmp_path)
+        # This should also work
+        toa.get_TOAs(str(Path(datadir) / "test1.tim"))
+    finally:
+        os.chdir(d)
+
+
+def test_chained_include_directories(tmp_path):
+    t1 = tmp_path / "test.tim"
+    b = tmp_path / "b"
+    b.mkdir()
+    t1.write_text(
+        """
+        FORMAT 1
+
+        toa1 1404.000 55336.989701997555466   3.469  gbt  -fe Rcvr1_2 -be GASP -f Rcvr1_2_GASP -bw 4 -tobs 1740.3
+
+        INCLUDE b/test2.tim
+    """
+    )
+    (b / "test2.tim").write_text(
+        """
+        FORMAT 1
+
+        toa2 1404.000 55337.989701997555466   3.469  gbt  -fe Rcvr1_2 -be GASP -f Rcvr1_2_GASP -bw 4 -tobs 1740.3
+
+        INCLUDE ../test3.tim
+    """
+    )
+    (tmp_path / "test3.tim").write_text(
+        """
+        FORMAT 1
+
+        toa3 1404.000 55338.989701997555466   3.469  gbt  -fe Rcvr1_2 -be GASP -f Rcvr1_2_GASP -bw 4 -tobs 1740.3
+    """
+    )
+
+    assert len(toa.get_TOAs(str(t1))) == 3

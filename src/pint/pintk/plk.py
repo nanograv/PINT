@@ -16,7 +16,6 @@ import pint.pintk.colormodes as cm
 
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
-import tkinter.messagebox as tkMessageBox
 from tkinter import ttk
 
 import pint.logging
@@ -62,7 +61,7 @@ Right click     Delete a TOA (if close enough)
   t             Stash (temporarily remove) or un-stash the selected TOAs
   u             Un-select all of the selected TOAs
   j             Jump the selected TOAs, or un-jump them if already jumped
-  v             Jump all TOA groups except those selected
+  v             Jump all TOA clusters except those selected
   i             Print the prefit model as of this moment
   o             Print the postfit model as of this moment (if it exists)
   c             Print the postfit model parameter correlation matrix
@@ -432,6 +431,14 @@ class PlkColorModeBoxes(tk.Frame):
                 # default mode should be selected at start-up
                 self.checkboxes[index].select()
 
+            if mode.mode_name == "jump":
+                if self.master.psr.fitted:
+                    model = self.master.psr.postfit_model
+                else:
+                    model = self.master.psr.prefit_model
+                if not "PhaseJump" in model.components:
+                    self.checkboxes[index].configure(state="disabled")
+
         self.updateLayout()
 
     def setCallbacks(self, boxChecked):
@@ -675,6 +682,7 @@ class PlkWidget(tk.Frame):
             cm.FreqMode(self),
             cm.ObsMode(self),
             cm.NameMode(self),
+            cm.JumpMode(self),
         ]
         self.current_mode = "default"
 
@@ -1111,8 +1119,13 @@ class PlkWidget(tk.Frame):
                 scale = 10**6
             elif self.yvals.unit == u.ms:
                 scale = 10**3
+            # Want to plot things in sorted order so that lines are smooth
+            sort_inds = np.argsort(f_toas_plot)
+            f_toas_plot = f_toas_plot[sort_inds]
             for i in range(len(rs)):
-                self.plkAxes.plot(f_toas_plot, rs[i] * scale, "-k", alpha=0.3)
+                self.plkAxes.plot(
+                    f_toas_plot, rs[i][sort_inds] * scale, "-k", alpha=0.3
+                )
 
     def determine_yaxis_units(self, miny, maxy):
         """Checks range of residuals and converts units if range sufficiently large/small."""
@@ -1457,23 +1470,23 @@ class PlkWidget(tk.Frame):
             self.updatePlot(keepAxes=True)
             self.call_updates()
         elif event.key == "v":
-            # jump all groups except the one(s) selected, or jump all groups if none selected
+            # jump all clusters except the one(s) selected, or jump all clusters if none selected
             jumped_copy = copy.deepcopy(self.jumped)
             self.updateAllJumped()
             all_jumped = copy.deepcopy(self.jumped)
             self.jumped = jumped_copy
-            groups = list(self.psr.all_toas.table["groups"])
-            # jump each group, check doesn't overlap with existing jumps and selected
-            for num in np.arange(max(groups) + 1):
-                group_bool = [
-                    num == group for group in self.psr.all_toas.table["groups"]
+            clusters = list(self.psr.all_toas.table["clusters"])
+            # jump each cluster, check doesn't overlap with existing jumps and selected
+            for num in np.arange(max(clusters) + 1):
+                cluster_bool = [
+                    num == cluster for cluster in self.psr.all_toas.table["clusters"]
                 ]
                 if True in [
-                    a and b for a, b in zip(group_bool, self.selected)
-                ] or True in [a and b for a, b in zip(group_bool, all_jumped)]:
+                    a and b for a, b in zip(cluster_bool, self.selected)
+                ] or True in [a and b for a, b in zip(cluster_bool, all_jumped)]:
                     continue
-                self.psr.selected_toas = self.psr.all_toas[group_bool]
-                jump_name = self.psr.add_jump(group_bool)
+                self.psr.selected_toas = self.psr.all_toas[cluster_bool]
+                jump_name = self.psr.add_jump(cluster_bool)
                 self.updateJumped(jump_name)
             if (
                 self.selected is not None
@@ -1501,9 +1514,7 @@ class PlkWidget(tk.Frame):
                     return None
                 # Delete the selected points
                 self.psr.stashed = copy.deepcopy(self.psr.all_toas)
-                self.psr.all_toas.table = self.psr.all_toas.table[
-                    ~self.selected
-                ].group_by("obs")
+                self.psr.all_toas.table = self.psr.all_toas.table[~self.selected]
             else:  # unstash
                 self.psr.all_toas = copy.deepcopy(self.psr.stashed)
                 self.psr.stashed = None

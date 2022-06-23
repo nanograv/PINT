@@ -8,7 +8,7 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.13.8
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -67,11 +67,8 @@ plt.ylabel("Residual (phase)")
 plt.grid()
 
 # %%
-f = pint.fitter.WLSFitter(t, m)
-# f = pint.fitter.PowellFitter(t, m)
+f = pint.fitter.DownhillWLSFitter(t, m)
 f.fit_toas()
-# f = pint.fitter.GLSFitter(t, m)
-# f.fit_toas(full_cov=True)
 
 # %%
 # Print some basic params
@@ -125,5 +122,11 @@ plt.legend(loc="upper left")
 
 # %%
 plt.show()
+
+# %%
+f.model.write_parfile("/tmp/output.par", "wt")
+print(f.model.as_parfile())
+
+# %%
 
 # %%

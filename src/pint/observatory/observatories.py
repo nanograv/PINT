@@ -1,7 +1,18 @@
 """Definitions for standard observatories.
 
-These observatories are registered when this file is imported. As a result it
-cannot be imported until TopoObs has successfully been imported.
+The observatories created here are automatically registered in PINT's
+list of observatories when this file is imported. Their clock corrections
+are not loaded until they are needed.
+
+The easiest way to add another observatory to PINT is to add an entry here, listing
+its canonical name, any aliases, a location, and (if appropriate) a clock correction
+file.
+
+If you have your own code working with a new or custom observatory that hasn't been
+added to PINT, simply creating a :class:`pint.observatory.topo_obs.TopoObs` object
+with the above information will register it with PINT. After the object has been
+created, loading any ``.tim`` files that reference it will correctly use
+the new object.
 """
 from pint.observatory.topo_obs import TopoObs
 
@@ -70,7 +81,6 @@ TopoObs(
     itoa_code="MK",
     clock_fmt="tempo2",
     clock_file="mk2utc.clk",
-    clock_dir="TEMPO2",
     itrf_xyz=[5109360.133, 2006852.586, -3238948.127],
     origin="""MEERKAT, used in timing mode.
 
@@ -85,7 +95,6 @@ TopoObs(
     aliases=["pks"],
     clock_fmt="tempo2",
     clock_file="pks2gps.clk",
-    clock_dir="TEMPO2",
     itrf_xyz=[-4554231.5, 2816759.1, -3454036.3],
     origin="""The Parkes radio telescope.
 
@@ -97,7 +106,8 @@ TopoObs(
     "jodrell",
     tempo_code="8",
     itoa_code="JB",
-    clock_file="time_jb.dat",
+    clock_fmt="tempo2",
+    clock_file="jb2gps.clk",
     aliases=["jbdfb", "jbroach", "jbafb", "jbodfb", "jboafb", "jboroach"],
     bogus_last_correction=True,
     itrf_xyz=[3822625.769, -154105.255, 5086486.256],
@@ -110,7 +120,8 @@ TopoObs(
 )
 TopoObs(
     "jodrell_pre_2021",
-    clock_file="time_jb.dat",
+    clock_fmt="tempo2",
+    clock_file="jb2gps.clk",
     itrf_xyz=[3822626.04, -154105.65, 5086486.04],
     bogus_last_correction=True,
     origin="""The Lovell telescope at Jodrell Bank.
@@ -141,7 +152,6 @@ TopoObs(
     itrf_xyz=[4324165.81, 165927.11, 4670132.83],
     clock_fmt="tempo2",
     clock_file=["ncyobs2obspm.clk", "obspm2gps.clk"],
-    clock_dir="TEMPO2",
     origin="""The Nançay radio telescope with the NUPPI back-end.
 
     The origin of this data is unknown but as of 2021 June 8 it agrees exactly with
@@ -155,7 +165,6 @@ TopoObs(
     aliases=["eff"],
     clock_fmt="tempo2",
     clock_file="eff2gps.clk",
-    clock_dir="TEMPO2",
     itrf_xyz=[4033947.146, 486990.898, 4900431.067],
     bogus_last_correction=True,
     origin="""The Effelsberg radio telescope.
@@ -182,7 +191,7 @@ TopoObs(
     tempo_code="r",
     itoa_code="GM",
     clock_fmt="tempo2",
-    clock_file="gmrt2gps.clk",
+    clock_file=[],
     itrf_xyz=[1656342.30, 5797947.77, 2073243.16],
     origin="""The Giant Metrewave Radio Telescope.
 
@@ -197,7 +206,6 @@ TopoObs(
     itoa_code="WS",
     clock_fmt="tempo2",
     clock_file="wsrt2gps.clk",
-    clock_dir="TEMPO2",
     itrf_xyz=[3828445.659, 445223.600, 5064921.5677],
     origin="""The Westerbork Synthesis Radio Telescope.
 
@@ -269,7 +277,6 @@ TopoObs(
     itrf_xyz=[-4483311.64, 2648815.92, -3671909.31],
     clock_fmt="tempo2",
     clock_file="mo2gps.clk",
-    clock_dir="TEMPO2",
     bogus_last_correction=True,
     origin="""The Molonglo Observatory Synthesis Telescope.
 

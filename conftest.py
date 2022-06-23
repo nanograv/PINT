@@ -1,5 +1,8 @@
 import os
 import hypothesis
+import pytest
+from astropy.utils.data import check_download_cache
+from astropy.config import paths
 
 # This setup is drawn from Astropy and might not be entirely relevant to us;
 # in particular we don't have a cron run for slow tests.
@@ -26,3 +29,16 @@ default = (
     else "interactive"
 )  # noqa: E501
 hypothesis.settings.load_profile(os.environ.get("HYPOTHESIS_PROFILE", default))
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers", "remote_data: mark test as requiring data from the network"
+    )
+
+
+@pytest.fixture
+def temp_cache(tmpdir):
+    with paths.set_temp_cache(tmpdir):
+        yield None
+        check_download_cache()

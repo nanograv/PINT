@@ -16,12 +16,11 @@ has moved to :mod:`pint.simulation`.
 import copy
 import gzip
 import hashlib
-import os
 import pickle
 import re
 import warnings
-from collections import OrderedDict
 from collections.abc import MutableMapping
+from pathlib import Path
 
 import astropy.table as table
 import astropy.time as time
@@ -45,7 +44,6 @@ from pint.phase import Phase
 from pint.pulsar_ecliptic import PulsarEcliptic
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
-
 
 __all__ = [
     "TOAs",
@@ -201,10 +199,13 @@ def get_TOAs(
                     if ctype == "TT" and cvers.startswith("BIPM"):
                         include_bipm = True
                         if bipm_version is None:
-                            bipm_version = cvers
-                            log.debug(
-                                f"Using CLOCK = {bipm_version} from the given model"
-                            )
+                            if cvers == "BIPM":
+                                bipm_version = bipm_default
+                            else:
+                                bipm_version = cvers
+                                log.debug(
+                                    f"Using CLOCK = {bipm_version} from the given model"
+                                )
                     else:
                         log.warning(
                             f'CLOCK = {model["CLOCK"].value} is not implemented. '
@@ -256,12 +257,12 @@ def get_TOAs(
                 log.info("Pickle contains wrong bipm_version")
                 updatepickle = True
     if not usepickle or updatepickle:
-        if isinstance(timfile, str) or hasattr(timfile, "readlines"):
+        if isinstance(timfile, (str, Path)) or hasattr(timfile, "readlines"):
             t = TOAs(timfile)
         else:
             t = merge_TOAs([TOAs(t) for t in timfile])
 
-        files = [t.filename] if isinstance(t.filename, str) else t.filename
+        files = [t.filename] if isinstance(t.filename, (str, Path)) else t.filename
         if files is not None:
             t.hashes = {f: _compute_hash(f) for f in files}
         recalc = True
@@ -290,10 +291,8 @@ def get_TOAs(
             log.info("Ephem changed, recalculation needed")
         recalc = True
         updatepickle = True
-    t.table = t.table.group_by("obs")
     if recalc or "tdb" not in t.table.colnames:
         t.compute_TDBs(method=tdb_method, ephem=ephem)
-
     if planets is None:
         planets = t.planets
     elif planets != t.planets:
@@ -374,8 +373,8 @@ def save_pickle(toas, picklefilename=None):
             "TOAs object was merged from multiple files, please provide a filename."
         )
     elif toas.filename is not None:
-        if isinstance(toas.filename, str):
-            picklefilename = toas.filename + ".pickle.gz"
+        if isinstance(toas.filename, (str, Path)):
+            picklefilename = str(toas.filename) + ".pickle.gz"
         else:
             picklefilename = toas.filename[0] + ".pickle.gz"
     else:
@@ -432,14 +431,14 @@ def _toa_format(line, fmt="Unknown"):
         return "Princeton"
     elif (
         line.startswith("C ")
-        or line.startswith("c ")
-        or line[0] == "#"
+        or line.startswith("c ")  # FIXME: This matches the re above!
+        or line.startswith("#")
         or line.startswith("CC ")
     ):
         return "Comment"
-    elif line.upper().startswith(toa_commands):
+    elif line.upper().lstrip().startswith(toa_commands):
         return "Command"
-    elif re.match(r"^\s+$", line):
+    elif re.match(r"^\s*$", line):  # FIXME: what about empty lines?
         return "Blank"
     elif re.match(r"^ ", line) and len(line) > 41 and line[41] == ".":
         return "Parkes"
@@ -528,6 +527,12 @@ def _parse_TOA_line(line, fmt="Unknown"):
         d["obs"] = get_observatory(line[79].upper()).name
     elif fmt == "ITOA":
         raise RuntimeError("TOA format '%s' not implemented yet" % fmt)
+    elif fmt in ["Blank", "Comment"]:
+        pass
+    else:
+        raise RuntimeError(
+            f"Unable to identify TOA format for line {line!r}, expecting {fmt}"
+        )
     return MJD, d
 
 
@@ -670,7 +675,7 @@ def format_toa_line(
     return out
 
 
-def read_toa_file(filename, process_includes=True, cdict=None):
+def read_toa_file(filename, process_includes=True, cdict=None, dir=None):
     """Read TOAs from the given filename into a list.
 
     Will process INCLUDEd files unless process_includes is False.
@@ -687,12 +692,25 @@ def read_toa_file(filename, process_includes=True, cdict=None):
         new TOAs. Used recursively; note that surprises may ensue
         if this function is called on an already existing and
         processed TOAs object.
+    dir : str or Path
+        This is the directory where the TOA file is found. INCLUDE
+        statements are relative to this directory. If None, it is
+        assumed to be the directory part of ``filename``, if that
+        is a path rather than a file-like object. If None and ``filename``
+        is a file-like object, the directory is assumed to be the
+        current directory.
     """
-    if isinstance(filename, str):
+    if isinstance(filename, (str, Path)):
+        if dir is None:
+            dir = Path(filename).parent
         with open(filename, "r") as f:
-            return read_toa_file(f, process_includes=process_includes, cdict=cdict)
+            return read_toa_file(
+                f, process_includes=process_includes, cdict=cdict, dir=dir
+            )
     else:
         f = filename
+        if dir is None:
+            dir = Path(".")
 
     ntoas = 0
     toas = []
@@ -759,13 +777,17 @@ def read_toa_file(filename, process_includes=True, cdict=None):
                 # Save FORMAT in a tmp
                 fmt = cdict["FORMAT"]
                 cdict["FORMAT"] = "Unknown"
-                log.info("Processing included TOA file {0}".format(d["Command"][1]))
-                new_toas, new_commands = read_toa_file(d["Command"][1], cdict=cdict)
+                include_filename = Path(dir) / d["Command"][1]
+                d["Command"][1] = str(include_filename)
+                # Make filename relative to directory the parent file is in
+                log.info(f"Processing included TOA file {include_filename}")
+                new_toas, new_commands = read_toa_file(include_filename, cdict=cdict)
                 toas.extend(new_toas)
                 commands.extend(new_commands)
                 # re-set FORMAT
                 cdict["FORMAT"] = fmt
             else:
+                log.warning(f"Unknown command {cmd} in line {line}")
                 continue
         if cdict["SKIP"] or d["format"] in ("Blank", "Unknown", "Comment", "Command"):
             continue
@@ -838,7 +860,7 @@ def build_table(toas, filename=None):
             "delta_pulse_number",
         ),
         meta={"filename": filename},
-    ).group_by("obs")
+    )
 
 
 def _cluster_by_gaps(t, gap):
@@ -1007,14 +1029,6 @@ class TOA:
         >>> print a
         54567.876876876876876:  4.500 us error from 'GBT' at 1400.0000 MHz {'backend': 'GUPPI'}
 
-    What happens if IERS data is not available for the date::
-
-        >>> a = TOA((154567, 0.876876876876876), 4.5, freq=1400.0,
-        ...         obs="GBT", backend="GUPPI")
-
-        Traceback (most recent call last):
-          omitted
-        IndexError: (some) times are outside of range covered by IERS table.
     """
 
     def __init__(
@@ -1130,18 +1144,14 @@ class TOAs:
     corrections and the resulting TOAs object may not be set up the way one
     would normally expect.
 
-    The contents are stored in an :class:`astropy.table.Table`; this can be used to
-    access the contained information but the data may not be in the order you
-    expect: internally it is grouped by observatory (sorted by the observatory
-    object). Not all columns of the table are computed automatically, as their
+    The contents are stored in an :class:`astropy.table.Table`. Not all columns of the table are computed automatically, as their
     computation can be expensive. Methods of this class are available to
     populate these additional columns. Methods that return data from the columns
     do so in the internal order.
 
     TOAs objects can accept indices that are boolean, list-of-integer, or
     slice, to produce a new TOAs object containing a subset of the TOAs in the
-    original.  Note that the result is still grouped by the ``obs`` column, so
-    slices cannot reverse the order. For example, to obtain a new TOAs object
+    original.  For example, to obtain a new TOAs object
     containing the entries above 1 GHz:
 
     >>> t[t.table['freq'] > 1*u.GHz]
@@ -1153,6 +1163,19 @@ class TOAs:
     TOAs objects also support assignment through these methods:
 
     >>> t['high', t['freq'] > 1*u.GHz] = "1"
+
+    TOAs used to be grouped by observatory, but currently are not.  To iterate over all observatory groups:
+
+    >>> for obs,idx in t.get_obs_groups():
+
+    Or to actually reorder the TOAs by observatory:
+
+    >>> t.table.group_by("obs")
+
+    Other sorting is fine too:
+
+    >>> t.table.sort("freq")
+
 
     .. list-table:: Columns in ``.table``
        :widths: 15 85
@@ -1216,8 +1239,7 @@ class TOAs:
     Attributes
     ----------
     table : astropy.table.Table
-        The data for all the TOAs. It is grouped by ``obs``, that is, it is
-        not in the same order as the original TOAs.
+        The data for all the TOAs.
     commands : list of str
         "Commands" that were written in the file; these will have affected
         how some or all TOAs were interpreted during loading.
@@ -1265,7 +1287,7 @@ class TOAs:
         if (toalist is not None) and (toafile is not None):
             raise ValueError("Cannot initialize TOAs from both file and list.")
 
-        if isinstance(toafile, str):
+        if isinstance(toafile, (str, Path)):
             toalist, self.commands = read_toa_file(toafile)
             # Check to see if there were any INCLUDEs:
             inc_fns = [x[0][1] for x in self.commands if x[0][0].upper() == "INCLUDE"]
@@ -1306,8 +1328,7 @@ class TOAs:
         result in selecting those TOAs (though not necessarily in that order),
         a list/array of Booleans will result in selecting those TOAs for which
         the list/array has True, and a slice will select the corresponding
-        slice of TOAs (again, the required grouping by observatory may mean
-        that reordering TOAs will not work as expected).
+        slice of TOAs.
 
         Both a column and subset can be selected at once by forming a tuple, as in
         ``toas["fish", ::10]``; this will result in selecting that subset of the
@@ -1348,8 +1369,6 @@ class TOAs:
             if isinstance(index, np.ndarray) and index.dtype == bool:
                 r = copy.deepcopy(self)
                 r.table = r.table[index]
-                if len(r.table) > 0:
-                    r.table = r.table.group_by("obs")
                 return r
             elif (
                 isinstance(index, np.ndarray)
@@ -1358,14 +1377,10 @@ class TOAs:
             ):
                 r = copy.deepcopy(self)
                 r.table = r.table[index]
-                if len(r.table) > 0:
-                    r.table = r.table.group_by("obs")
                 return r
             elif isinstance(index, slice):
                 r = copy.deepcopy(self)
                 r.table = r.table[index]
-                if len(r.table) > 0:
-                    r.table = r.table.group_by("obs")
                 return r
             elif isinstance(index, int):
                 raise ValueError("TOAs do not support extraction of TOA objects (yet?)")
@@ -1484,9 +1499,6 @@ class TOAs:
     def __setstate__(self, state):
         # Normal unpickling behaviour
         self.__dict__.update(state)
-        # Astropy tables lose their group_by
-        if self.table.groups.keys is None:
-            self.table = self.table.group_by("obs")
         if not hasattr(self, "max_index"):
             self.max_index = np.maximum.reduce(self.table["index"])
 
@@ -1561,6 +1573,10 @@ class TOAs:
     def get_obss(self):
         """Return a numpy array of the observatories for each TOA."""
         return self.table["obs"]
+
+    def get_obs_groups(self):
+        """Return an iterator over the different observatories"""
+        return pint.utils.group_iterator(self["obs"])
 
     def get_pulse_numbers(self):
         """Return a numpy array of the pulse numbers for each TOA if they exist."""
@@ -1660,7 +1676,7 @@ class TOAs:
         Parameters
         ----------
         gap_limit : astropy.units.Quantity, optional
-            The minimum size of gap to create a new group. Defaults to two hours.
+            The minimum size of gap to create a new cluster. Defaults to two hours.
         add_column : bool, optional
             Whether or not to add a ``clusters`` column to the TOA table (default: False)
         add_flag : str, optional
@@ -1724,7 +1740,7 @@ class TOAs:
         """
         if self.filename is None:
             return True
-        elif isinstance(self.filename, str):
+        elif isinstance(self.filename, (str, Path)):
             filenames = [self.filename]
         else:
             filenames = self.filename
@@ -1733,7 +1749,7 @@ class TOAs:
             timfiles = filenames
         elif hasattr(timfile, "readlines"):
             return True
-        elif isinstance(timfile, str):
+        elif isinstance(timfile, (str, Path)):
             timfiles = [timfile]
         else:
             timfiles = list(timfile)
@@ -1763,10 +1779,7 @@ class TOAs:
             if not hasattr(self, "table_selects"):
                 self.table_selects = []
             self.table_selects.append(copy.deepcopy(self.table))
-            # Our TOA table must be grouped by observatory for phase calcs
             self.table = self.table[selectarray]
-            if len(self.table) > 0:
-                self.table = self.table.group_by("obs")
         else:
             raise ValueError("TOA selection not implemented for TOA lists.")
 
@@ -1798,14 +1811,13 @@ class TOAs:
         s += f"Number of observatories: {len(self.observatories)} {list(self.observatories)}\n"
         s += f"MJD span:  {self.first_MJD.mjd:.3f} to {self.last_MJD.mjd:.3f}\n"
         s += f"Date span: {self.first_MJD.iso} to {self.last_MJD.iso}\n"
-        for ii, key in enumerate(self.table.groups.keys):
-            grp = self.table.groups[ii]
-            s += f"{key['obs']} TOAs ({len(grp)}):\n"
-            s += f"  Min freq:      {np.min(grp['freq'].to(u.MHz)):.3f}\n"
-            s += f"  Max freq:      {np.max(grp['freq'].to(u.MHz)):.3f}\n"
-            s += f"  Min error:     {np.min(grp['error'].to(u.us)):.3g}\n"
-            s += f"  Max error:     {np.max(grp['error'].to(u.us)):.3g}\n"
-            s += f"  Median error:  {np.median(grp['error'].to(u.us)):.3g}\n"
+        for obs, grp in self.get_obs_groups():
+            s += f"{obs} TOAs ({len(grp)}):\n"
+            s += f"  Min freq:      {np.min(self['freq'][grp].to(u.MHz)):.3f}\n"
+            s += f"  Max freq:      {np.max(self['freq'][grp].to(u.MHz)):.3f}\n"
+            s += f"  Min error:     {np.min(self['error'][grp].to(u.us)):.3g}\n"
+            s += f"  Max error:     {np.max(self['error'][grp].to(u.us)):.3g}\n"
+            s += f"  Median error:  {np.median(self['error'][grp].to(u.us)):.3g}\n"
         return s
 
     def print_summary(self):
@@ -1907,7 +1919,7 @@ class TOAs:
         index_order : bool
             If True, preserve the order of the index column, but renumber so
             there are no gaps. If False, number according to the order TOAs
-            occur in the object (they will be grouped by observatory).
+            occur in the object.
 
         Returns
         =======
@@ -1955,9 +1967,7 @@ class TOAs:
         order_by_index : bool
             If True, write the TOAs in the order specified in the "index" column
             (which is usually the same as the original file);
-            if False, write them in the order they occur in the TOAs object
-            (which is usually the same as the original file except that all the
-            TOAs associated with each observatory have been grouped).
+            if False, write them in the order they occur in the TOAs object.
         include_info : bool, optional
             Include information string if True
         comment : str, optional
@@ -2055,6 +2065,17 @@ class TOAs:
 
         A description of how PINT handles clock corrections and timescales is here:
         https://github.com/nanograv/PINT/wiki/Clock-Corrections-and-Timescales-in-PINT
+
+        Parameters
+        ----------
+        include_bipm : bool
+            Whether or not to include BIPM correction
+        bipm_version : str
+            BIPM version to use.  The format must be 'BIPMXXXX' where XXXX is a year.
+        include_gps : bool
+            Whether or not to include GPS corrections
+        limits : "warn" or "error"
+            What to do when encountering TOAs for which clock corrections are not available.
         """
         # First make sure that we haven't already applied clock corrections
         flags = self.table["flags"]
@@ -2071,37 +2092,24 @@ class TOAs:
                 include_gps, include_bipm
             )
         )
-        corr = np.zeros(self.ntoas) * u.s
-        times = self.table["mjd"]
-        for ii, key in enumerate(self.table.groups.keys):
-            grp = self.table.groups[ii]
-            obs = self.table.groups.keys[ii]["obs"]
+        corrections = np.zeros(self.ntoas) * u.s
+        # values of "-to" flags
+        time_statements = self.get_flag_value("to", 0, float)[0] * u.s
+        for obs, grp in self.get_obs_groups():
             site = get_observatory(
                 obs,
                 include_gps=include_gps,
                 include_bipm=include_bipm,
                 bipm_version=bipm_version,
             )
-            loind, hiind = self.table.groups.indices[ii : ii + 2]
-            # First apply any TIME statements
-            for jj in range(loind, hiind):
-                if "to" in flags[jj]:
-                    # TIME commands are in sec
-                    # SUGGESTION(@paulray): These time correction units should
-                    # be applied in the parser, not here. In the table the time
-                    # correction should have units.
-                    # @aarchiba: flags should store strings only
-                    corr[jj] = float(flags[jj]["to"]) * u.s
-                    times[jj] += time.TimeDelta(corr[jj])
-
-            gcorr = site.clock_corrections(time.Time(grp["mjd"]), limits=limits)
-            for jj, cc in enumerate(gcorr):
-                grp["mjd"][jj] += time.TimeDelta(cc)
-            corr[loind:hiind] += gcorr
-            # Now update the flags with the clock correction used
-            for jj in range(loind, hiind):
-                if corr[jj] != 0:
-                    flags[jj]["clkcorr"] = str(corr[jj].to_value(u.s))
+            clock_corrections = site.clock_corrections(
+                time.Time(self["mjd"][grp]), limits=limits
+            )
+            corrections[grp] = time_statements[grp] + clock_corrections
+            for jj in grp:
+                self["mjd"][jj] += time.TimeDelta(corrections[jj])
+                if corrections[jj] != 0:
+                    flags[jj]["clkcorr"] = str(corrections[jj].to_value(u.s))
         # Update clock correction info
         self.clock_corr_info.update(
             {
@@ -2115,7 +2123,7 @@ class TOAs:
         """Compute and add TDB and TDB long double columns to the TOA table.
 
         This routine creates new columns 'tdb' and 'tdbld' in a TOA table
-        for TDB times, using the Observatory locations and IERS A Earth
+        for TDB times, using the Observatory locations and IERS Earth
         rotation corrections for UT1.
 
         If these columns are already present, delete and replace them.
@@ -2155,19 +2163,17 @@ class TOAs:
                 )
         self.ephem = ephem
         log.debug(f"Using EPHEM = {self.ephem} for TDB calculation.")
-
         # Compute in observatory groups
         tdbs = np.zeros_like(self.table["mjd"])
-        for ii, key in enumerate(self.table.groups.keys):
-            grp = self.table.groups[ii]
-            obs = self.table.groups.keys[ii]["obs"]
-            loind, hiind = self.table.groups.indices[ii : ii + 2]
+        for obs, grp in self.get_obs_groups():
             site = get_observatory(obs)
             if isinstance(site, TopoObs):
                 # For TopoObs, it is safe to assume that all TOAs have same location
                 # I think we should report to astropy that initializing
                 # a Time from a list (or Column) of Times throws away the location information
-                grpmjds = time.Time(grp["mjd"], location=grp["mjd"][0].location)
+                grpmjds = time.Time(
+                    self.table[grp]["mjd"], location=self.table[grp]["mjd"][0].location
+                )
             else:
                 # Grab locations for each TOA
                 # It is crazy that I have to deconstruct the locations like
@@ -2175,20 +2181,19 @@ class TOAs:
                 # of locations contained in it.
                 # Is there a more efficient way to convert a list of EarthLocations
                 # into a single EarthLocation object with an array of values internally?
-                loclist = [t.location for t in grp["mjd"]]
+                loclist = [t.location for t in self.table[grp]["mjd"]]
                 if loclist[0] is None:
-                    grpmjds = time.Time(grp["mjd"], location=None)
+                    grpmjds = time.Time(self.table[grp]["mjd"], location=None)
                 else:
                     locs = EarthLocation(
                         np.array([loc.x.value for loc in loclist]) * u.m,
                         np.array([loc.y.value for loc in loclist]) * u.m,
                         np.array([loc.z.value for loc in loclist]) * u.m,
                     )
-                    grpmjds = time.Time(grp["mjd"], location=locs)
+                    grpmjds = time.Time(self.table[grp]["mjd"], location=locs)
 
             grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem)
-            tdbs[loind:hiind] = np.asarray([t for t in grptdbs])
-
+            tdbs[grp] = np.asarray([t for t in grptdbs])
         # Now add the new columns to the table
         col_tdb = table.Column(name="tdb", data=tdbs)
         col_tdbld = table.Column(name="tdbld", data=[t.tdb.mjd_long for t in tdbs])
@@ -2294,29 +2299,26 @@ class TOAs:
                 )
 
         # Now step through in observatory groups
-        for ii, key in enumerate(self.table.groups.keys):
-            grp = self.table.groups[ii]
-            obs = self.table.groups.keys[ii]["obs"]
-            loind, hiind = self.table.groups.indices[ii : ii + 2]
+        for obs, grp in self.get_obs_groups():
             site = get_observatory(obs)
-            tdb = time.Time(grp["tdb"], precision=9)
+            tdb = time.Time(self.table[grp]["tdb"], precision=9)
 
             if isinstance(site, T2SpacecraftObs):
-                ssb_obs = site.posvel(tdb, ephem, group=grp)
+                ssb_obs = site.posvel(tdb, ephem, group=self.table[grp])
             else:
                 ssb_obs = site.posvel(tdb, ephem)
 
             log.debug("SSB obs pos {0}".format(ssb_obs.pos[:, 0]))
-            ssb_obs_pos[loind:hiind, :] = ssb_obs.pos.T.to(u.km)
-            ssb_obs_vel[loind:hiind, :] = ssb_obs.vel.T.to(u.km / u.s)
+            ssb_obs_pos[grp, :] = ssb_obs.pos.T.to(u.km)
+            ssb_obs_vel[grp, :] = ssb_obs.vel.T.to(u.km / u.s)
             sun_obs = objPosVel_wrt_SSB("sun", tdb, ephem) - ssb_obs
-            obs_sun_pos[loind:hiind, :] = sun_obs.pos.T.to(u.km)
+            obs_sun_pos[grp, :] = sun_obs.pos.T.to(u.km)
             if planets:
                 for p in all_planets:
                     name = "obs_" + p + "_pos"
                     dest = p
                     pv = objPosVel_wrt_SSB(dest, tdb, ephem) - ssb_obs
-                    plan_poss[name][loind:hiind, :] = pv.pos.T.to(u.km)
+                    plan_poss[name][grp, :] = pv.pos.T.to(u.km)
         cols_to_add = [ssb_obs_pos, ssb_obs_vel, obs_sun_pos]
         if planets:
             cols_to_add += plan_poss.values()
@@ -2347,15 +2349,11 @@ class TOAs:
         self.obliquity = obliquity
         ephem = self.ephem
         # Now step through in observatory groups
-        for ii, key in enumerate(self.table.groups.keys):
-            grp = self.table.groups[ii]
-            obs = self.table.groups.keys[ii]["obs"]
-            loind, hiind = self.table.groups.indices[ii : ii + 2]
+        for obs, grp in self.get_obs_groups():
             site = get_observatory(obs)
-            tdb = time.Time(grp["tdb"], precision=9)
-
+            tdb = time.Time(self["tdb"][grp], precision=9)
             if isinstance(site, T2SpacecraftObs):
-                ssb_obs = site.posvel(tdb, ephem, grp)
+                ssb_obs = site.posvel(tdb, ephem, self.table[grp])
             else:
                 ssb_obs = site.posvel(tdb, ephem)
 
@@ -2372,7 +2370,7 @@ class TOAs:
             )
             coord = coord.transform_to(PulsarEcliptic(obliquity=obliquity))
             # get velocity vector from coordinate frame
-            ssb_obs_vel_ecl[loind:hiind, :] = coord.velocity.d_xyz.T.to(u.km / u.s)
+            ssb_obs_vel_ecl[grp, :] = coord.velocity.d_xyz.T.to(u.km / u.s)
         col = ssb_obs_vel_ecl
         log.debug("Adding column " + col.name)
         self.table.add_column(col)
@@ -2394,7 +2392,7 @@ def merge_TOAs(TOAs_list):
     Returns
     -------
     :class:`pint.toa.TOAs`
-        A new TOAs instance with all the combined and grouped TOAs
+        A new TOAs instance with all the combined TOAs
     """
     # Check each TOA object for consistency
     ephems = [tt.ephem for tt in TOAs_list]
@@ -2452,6 +2450,5 @@ def merge_TOAs(TOAs_list):
         nt.hashes.update(tt.hashes)
     # This sets a flag that indicates that we have merged TOAs instances
     nt.merged = True
-    # Now we need to re-arrange and group the tables
-    nt.table = nt.table.group_by("obs")
+
     return nt
