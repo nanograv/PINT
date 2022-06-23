@@ -589,15 +589,24 @@ def test_parameter_can_be_pickled(p):
     pickle.dumps(p)
 
 
-def test_add_remove_param_setup_success():
-    """Checks that add_param and remove_param don't require m.setup() to be run prior to constructing a fitter"""
+def test_fitter_construction_success_after_remove_param():
+    """Checks that add_param and remove_param don't require m.setup() to be run prior to constructing a fitter. This addresses issue #1260."""
+    m = get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
+    t = get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
+    FD4 = prefixParameter(parameter_type="float", name="FD4", value=0.0, units=u.s)
+    """Fitter construction used to fail after remove_param without m.setup(). Test this (for both adding and removing, just to be safe):"""
+    m.add_param_from_top(FD4, "FD")
+    f = pint.fitter.GLSFitter(toas=t, model=m)
+    m.remove_param("FD4")
+    f = pint.fitter.GLSFitter(toas=t, model=m)
+
+
+def test_correct_param_numbers_after_add_or_remove_param():
+    """Checks that the number of parameters in some component after add_param or remove_param is correct. This is just to be safe after seeing the bug described in test_fitter_construction_success_after_remove_param() when removing parameters."""
     m = get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
     t = get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
     FD4 = prefixParameter(parameter_type="float", name="FD4", value=0.0, units=u.s)
     m.add_param_from_top(FD4, "FD")
     assert len(m.components["FD"].params) == 4
-    """Fitter construction used to fail after remove_param without m.setup(). Test this:"""
-    f = pint.fitter.GLSFitter(toas=t, model=m)
     m.remove_param("FD4")
     assert len(m.components["FD"].params) == 3
-    f = pint.fitter.GLSFitter(toas=t, model=m)
