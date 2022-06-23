@@ -1083,6 +1083,7 @@ class TimingModel:
         else:
             target_component = param_map[param]
             self.components[target_component].remove_param(param)
+        self.setup()
 
     def get_params_mapping(self):
         """Report whick component each parameter name comes from."""
@@ -1471,7 +1472,7 @@ class TimingModel:
 
         # if last jump deleted, remove PhaseJump object from model
         if (
-            self.components["PhaseJump"].get_number_of_jumps() == 1
+            self.components["PhaseJump"].get_number_of_jumps() == 0
         ):  # means last jump just deleted
             comp_list = getattr(self, "PhaseComponent_list")
             for item in comp_list:

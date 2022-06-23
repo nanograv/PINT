@@ -6,10 +6,11 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 
 ## Unreleased
 ### Changed
-- model.phase() now defaults to abs_phase=True when TZR* params are in the model
+- `model.phase()` now defaults to `abs_phase=True` when TZR* params are in the model
 - TOAs no longer need to be grouped by observatory
 - removed explicit download of IERS and leapsecond data (handled now by astropy)
 - The default version of TT(BIPM) uses BIPM2021
+- `model.setup()` now gets called automatically after removing a parameter as part of `remove_param`
 ### Added
 - logging now needs to be setup explicitly
 - Color-by-jump mode for pintk
