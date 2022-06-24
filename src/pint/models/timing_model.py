@@ -1382,68 +1382,89 @@ class TimingModel:
         return result
 
     def jump_flags_to_params(self, toas):
-        """Convert jump flags in toas.table["flags"] (loaded in .tim file) to jump parameters in the model.
+        """Add JUMP parameters corresponding to tim_jump flags.
 
-        The flag processed is ``jump``.
+        When a ``.tim`` file contains pairs of JUMP lines, the user's expectation
+        is that the TOAs between each pair of flags will be affected by a JUMP, even
+        if that JUMP does not appear in the ``.par`` file. (This is how TEMPO works.)
+        In PINT, those TOAs have a flag attached, `-tim_jump N`, where N is a
+        number that is different for each JUMPed set of TOAs. The goal of this function
+        is to add JUMP parameters to the model corresponding to these.
 
-        Note:  this method should be called *before* the PhaseJump mathod jump_params_to_flags()
+        Some complexities arise: TOAs may also have `-tim_jump` flags associated
+        with them, just as flags, for example if such a ``.tim`` file were exported
+        in PINT-native format and then reloaded. And models may already have JUMPs
+        associated with some or all ``tim_jump`` values.
+
+        This function looks at all the ``tim_jump`` values and adds JUMP parameters
+        for any that do not have any. It does not change the TOAs object it is passed.
         """
         from . import jump
 
         tjvals, idxs = toas.get_flag_value("tim_jump")
-        Ntimjumps = len({int(n) for n in tjvals if n is not None})
-        if not Ntimjumps:
+        tim_jump_values = set(tjvals)
+        tim_jump_values.remove(None)
+        if not tim_jump_values:
             log.info("No jump flags to process from .tim file")
             return None
-        log.info(f"There are {Ntimjumps} JUMPs from the timfile.")
-        # The number of parfile-based JUMPs we have
-        Nparjumps = (
-            self.components["PhaseJump"].get_number_of_jumps()
-            if "PhaseJump" in self.components
-            else 0
-        )
-        log.info(f"There are {Nparjumps} JUMPs from the model.")
-        if Nparjumps:
-            # Check to see if there are already tim-file jumps defined.
-            # If so, we will change their numbers so that the parfile ones
-            # are first in numerical order
-            log.debug(f"Increasing the timfile JUMP numbers by {Nparjumps}")
-            for idx in idxs:
-                snum = str(int(tjvals[idx]) + Nparjumps)
-                toas.table[idx]["flags"]["jump"] = snum
-                toas.table[idx]["flags"]["tim_jump"] = snum
-        # Because JUMPS are handled serially, we need to do everything
-        # via index order and *not* by group_by("obs")
-        ix_tab = toas.table[np.argsort(toas.table["index"])]
-        jumped = ["jump" in fd for fd in ix_tab["flags"]]
-        for flag_dict in ix_tab["flags"][jumped]:
-            # add PhaseJump object if model does not have one already
-            if "PhaseJump" not in self.components:
-                log.info("PhaseJump component added")
-                a = jump.PhaseJump()
-                a.setup()
-                self.add_component(a)
-                self.remove_param("JUMP1")
-            # take jumps in TOA table and add them as parameters to the model
-            num = flag_dict["jump"]
-            if f"JUMP{str(num)}" not in self.params:
-                param = maskParameter(
-                    name="JUMP",
-                    index=num,
-                    key="-tim_jump",
-                    key_value=num,
-                    value=0.0,
-                    units="second",
-                    uncertainty=0.0,
-                )
-                self.add_param_from_top(param, "PhaseJump")
-                getattr(self, param.name).frozen = False
-            flag_dict["tim_jump"] = str(num)  # this is the value select_toa_mask uses
+        log.info(f"There are {len(tim_jump_values)} JUMPs from the timfile.")
+
+        if "PhaseJump" not in self.components:
+            log.info("PhaseJump component added")
+            a = jump.PhaseJump()
+            a.setup()
+            self.add_component(a)
+            self.remove_param("JUMP1")
+            a.setup()
+
+        used_indices = set()
+        for p in self.get_jump_param_objects():
+            if p.key == "-tim_jump":
+                used_indices.add(p.index)
+                (tjv,) = p.key_value
+                if tjv in tim_jump_values:
+                    log.info(f"JUMP -tim_jump {tjv} already exists")
+                    tim_jump_values.remove(tjv)
+        if used_indices:
+            num = max(used_indices) + 1
+        else:
+            num = 1
+
+        if not tim_jump_values:
+            log.info(f"All tim_jump values have corresponding JUMPs")
+            return
+
+        # FIXME: arrange for these to be in a sensible order (might not be integers
+        # but if they are then lexicographical order is not wanted)
+        t_j_v = set()
+        for v in tim_jump_values:
+            try:
+                vi = int(v)
+            except ValueError:
+                vi = v
+            t_j_v.add(vi)
+        for v in sorted(t_j_v):
+            # Now we need to add a JUMP for each of these
+            log.info(f"Adding JUMP -tim_jump {v}")
+            param = maskParameter(
+                name="JUMP",
+                index=num,
+                key="-tim_jump",
+                key_value=v,
+                value=0.0,
+                units="second",
+                uncertainty=0.0,
+            )
+            self.add_param_from_top(param, "PhaseJump")
+            getattr(self, param.name).frozen = False
+            num += 1
+
         self.components["PhaseJump"].setup()
 
     def delete_jump_and_flags(self, toa_table, jump_num):
-        """Delete jump object from PhaseJump and remove its flags from TOA table
-        (helper function for pintk).
+        """Delete jump object from PhaseJump and remove its flags from TOA table.
+
+        This is a helper function for pintk.
 
         Parameters
         ----------
