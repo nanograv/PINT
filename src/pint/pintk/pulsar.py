@@ -6,7 +6,6 @@ pre/post fit residuals, and other useful information.
 self.selected_toas = selected toas, self.all_toas = all toas in tim file
 """
 import copy
-from enum import Enum
 
 import astropy.units as u
 import numpy as np
@@ -21,7 +20,6 @@ from pint.simulation import (
 )
 from pint.residuals import Residuals
 from pint.toa import get_TOAs, merge_TOAs
-from pint.phase import Phase
 from pint.utils import FTest
 
 import pint.logging
@@ -81,6 +79,8 @@ class Pulsar:
             )
             self.prefit_model.EPHEM.value = ephem
         self.all_toas = get_TOAs(self.timfile, model=self.prefit_model, usepickle=True)
+        self.all_toas.table.sort("index")
+        self.all_toas.get_clusters(add_column=True)
         # Make sure that if we used a model, that any phase jumps from
         # the parfile have their flags updated in the TOA table
         if "PhaseJump" in self.prefit_model.components:
@@ -102,7 +102,6 @@ class Pulsar:
             % self.prefit_resids.rms_weighted().to(u.us).value
         )
         # Set of indices from original list that are deleted
-        # We use indices because of the grouping of TOAs by observatory
         self.deleted = set([])
         if fitter == "auto":
             self.fit_method = self.getDefaultFitter(downhill=False)
@@ -167,15 +166,9 @@ class Pulsar:
         self.reset_TOAs()
 
     def _delete_TOAs(self, toa_table):
-        toa_table.group_by("index")
-        del_inds = np.zeros(len(toa_table), dtype=bool)
-        # Set the indices of del_inds to true where the TOA indices are
-        for ii in self.deleted:  # There must be a better way
-            di = np.where(toa_table["index"] == ii)[0]
-            if len(di):
-                del_inds[di[0]] |= 1
+        del_inds = np.in1d(toa_table["index"], np.array(list(self.deleted)))
         if del_inds.sum() < len(toa_table):
-            return toa_table[~del_inds].group_by("obs")
+            return toa_table[~del_inds]
         else:
             return None
 
@@ -605,14 +598,16 @@ class Pulsar:
             mjds = self.all_toas.get_mjds().value
             minallMJD, maxallMJD = mjds.min(), mjds.max()
             spanMJD = maxallMJD - minallMJD
-            # want roughly 1 per day up to 3 years
+            # Select appropriate number of fake TOAs to generate.
             if spanMJD < 1000:
-                Ntoas = min(400, int(spanMJD))
+                Ntoas = 400
             elif spanMJD < 4000:
-                Ntoas = min(750, int(spanMJD) // 2)
+                Ntoas = 750
             else:
-                Ntoas = min(1500, int(spanMJD) // 4)
-            log.debug(f"Generating {Ntoas} fake TOAs for the random models")
+                Ntoas = 1500
+            log.debug(
+                f"Generating {Ntoas} fake TOAs for the random models over MJD {minallMJD - extra * spanMJD} to {minallMJD + extra * spanMJD}"
+            )
             # By default we will use TOAs from the TopoCenter.  This gets done only once.
             self.faketoas1 = make_fake_toas_uniform(
                 minallMJD - extra * spanMJD,

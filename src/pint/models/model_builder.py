@@ -440,7 +440,7 @@ class ModelBuilder:
         pint_param_dict: dict
             Pintified parfile dictionary which can be aquired by
             :meth:`ModelBuilder._pintify_parfile`
-        origin_name : dict, optional
+        original_name : dict, optional
             A map from PINT name to the original input name.
         setup : bool, optional
             Whether to run the setup function in the timing model.
@@ -451,7 +451,6 @@ class ModelBuilder:
             use_alias = True
         else:
             use_alias = False
-
         for pp, v in pint_param_dict.items():
             try:
                 par = getattr(timing_model, pp)
@@ -481,7 +480,7 @@ class ModelBuilder:
             # Fill up the values
             param_line = len(v)
             if param_line < 2:
-                if use_alias:  # Use the input alias as input
+                if use_alias:
                     name = original_name[pp]
                 else:
                     name = pp
@@ -594,6 +593,7 @@ def get_model_and_toas(
     tdb_method="default",
     picklefilename=None,
     allow_name_mixing=False,
+    limits="warn",
 ):
     """Load a timing model and a related TOAs, using model commands as needed
 
@@ -647,6 +647,6 @@ def get_model_and_toas(
         usepickle=usepickle,
         tdb_method=tdb_method,
         picklefilename=picklefilename,
-        limits="warn",
+        limits=limits,
     )
     return mm, tt

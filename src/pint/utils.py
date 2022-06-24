@@ -80,6 +80,7 @@ __all__ = [
     "info_string",
     "print_color_examples",
     "colorize",
+    "group_iterator",
 ]
 
 COLOR_NAMES = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
@@ -281,7 +282,7 @@ def has_astropy_unit(x):
 # Define prefix parameter pattern
 prefix_pattern = [
     re.compile(r"^([a-zA-Z]*\d+[a-zA-Z]+)(\d+)$"),  # For the prefix like T2EFAC2
-    re.compile(r"^([a-zA-Z]+)(\d+)$"),  # For the prefix like F12
+    re.compile(r"^([a-zA-Z]+)0*(\d+)$"),  # For the prefix like F12
     re.compile(r"^([a-zA-Z0-9]+_)(\d+)$"),  # For the prefix like DMXR1_3
     # re.compile(r'([a-zA-Z]\d[a-zA-Z]+)(\d+)'),  # for prefixes like PLANET_SHAPIRO2?
 ]
@@ -1589,3 +1590,20 @@ def print_color_examples():
                     end="",
                 )
             print("")
+
+
+def group_iterator(items):
+    """An iterator to step over identical items in a :class:`numpy.ndarray`
+
+    Example
+    -------
+    This will step over all of the observatories in the TOAs.
+    For each iteration it gives the observatory name and the indices that correspond to it
+
+        t = pint.toa.get_TOAs("grouptest.tim")
+        for o, i in group_iterator(t["obs"]):
+            print(f"{o} {i}")
+
+    """
+    for item in np.unique(items):
+        yield item, np.where(items == item)[0]
