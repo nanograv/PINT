@@ -4,12 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.9.0] 2022-06-24
 ### Changed
-- model.phase() now defaults to abs_phase=True when TZR* params are in the model
+- `model.phase()` now defaults to `abs_phase=True` when TZR* params are in the model
 - TOAs no longer need to be grouped by observatory
 - removed explicit download of IERS and leapsecond data (handled now by astropy)
 - The default version of TT(BIPM) uses BIPM2021
+- ClockFile no longer uses metaclass magic or many subclasses, and have friendly names for use in messages
+- `model.setup()` now gets called automatically after removing a parameter as part of `remove_param`
 ### Added
 - logging now needs to be setup explicitly
 - Color-by-jump mode for pintk
@@ -25,7 +27,10 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - You can request that all your clock files be updated and loaded into the cache with `update_clock_files()` 
 - The `temp_cache` fixture that runs tests with an empty, scratch Astropy cache
 ### Fixed
+- Selecting of TOAs in `pintk` was broken if some TOAs were deleted (bug #1290)
 - INCLUDE lines in tim files are now relative to the location of the tim file (bug #1269)
+- jump_flags_to_params now works if some JUMPs are present, never modifies the TOAs, and is idempotent
+- jump_params_to_flags is now idempotent and unconditionally sets the -jump flag to a correct state
 ### Changed
 - Required version of python updated to 3.8
 
