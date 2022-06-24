@@ -778,7 +778,7 @@ def main(argv=None):
                     nwalkers, ndim, unwrapped_lnpost, blobs_dtype=dtype, pool=pool
                 )
                 sampler.run_mcmc(pos, nsteps)
-            
+
             pool.close()
             pool.join()
         except ImportError:
