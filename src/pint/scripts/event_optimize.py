@@ -12,7 +12,6 @@ from astropy.coordinates import SkyCoord
 from scipy.stats import norm, uniform
 import pint.logging
 from loguru import logger as log
-import pathos.multiprocessing as mp
 
 pint.logging.setup(level=pint.logging.script_level)
 
@@ -521,10 +520,10 @@ def main(argv=None):
         dest="loglevel",
     )
     parser.add_argument(
-        "--numcores",
-        type=int,
-        default=mp.cpu_count(),
-        help="The maximum number of cores used for multiprocessing",
+        "--multicores",
+        help="Run event optimize on all cores",
+        default=False,
+        action="store_true",
     )
 
     global nwalkers, nsteps, ftr
@@ -562,7 +561,6 @@ def main(argv=None):
     minWeight = args.minWeight
     do_opt_first = args.doOpt
     wgtexp = args.wgtexp
-    numcores = args.numcores
 
     # Read in initial model
     modelin = pint.models.get_model(parfile)
@@ -767,16 +765,25 @@ def main(argv=None):
     import emcee
 
     # Following are for parallel processing tests...
-    if numcores != 1:
+    if args.multicores:
+        try:
+            import pathos.multiprocessing as mp
 
-        def unwrapped_lnpost(theta):
-            return ftr.lnposterior(theta)
+            def unwrapped_lnpost(theta):
+                return ftr.lnposterior(theta)
 
-        with mp.ProcessPool(nodes=numcores) as pool:
-            dtype = [("lnprior", float), ("lnlikelihood", float)]
-            sampler = emcee.EnsembleSampler(
-                nwalkers, ndim, unwrapped_lnpost, blobs_dtype=dtype, pool=pool
-            )
+            with mp.ProcessPool(nodes=mp.cpu_count()) as pool:
+                dtype = [("lnprior", float), ("lnlikelihood", float)]
+                sampler = emcee.EnsembleSampler(
+                    nwalkers, ndim, unwrapped_lnpost, blobs_dtype=dtype, pool=pool
+                )
+                sampler.run_mcmc(pos, nsteps)
+            
+            pool.close()
+            pool.join()
+        except ImportError:
+            log.info("module not available, using single core")
+            sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior)
             sampler.run_mcmc(pos, nsteps)
     else:
         sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior)
@@ -808,13 +815,16 @@ def main(argv=None):
     # Make the triangle plot.
     samples = sampler.chain[:, burnin:, :].reshape((-1, ndim))
 
-    if numcores != 1:
-        blobs = sampler.get_blobs()
-        lnprior_samps = blobs["lnprior"]
-        lnlikelihood_samps = blobs["lnlikelihood"]
-        lnpost_samps = lnprior_samps + lnlikelihood_samps
-        ind = np.unravel_index(np.argmax(lnpost_samps), lnpost_samps.shape)
-        ftr.maxpost_fitvals = [chains[ii][ind] for ii in ftr.fitkeys]
+    if args.multicores:
+        try:
+            blobs = sampler.get_blobs()
+            lnprior_samps = blobs["lnprior"]
+            lnlikelihood_samps = blobs["lnlikelihood"]
+            lnpost_samps = lnprior_samps + lnlikelihood_samps
+            ind = np.unravel_index(np.argmax(lnpost_samps), lnpost_samps.shape)
+            ftr.maxpost_fitvals = [chains[ii][ind] for ii in ftr.fitkeys]
+        except IndexError:
+            pass
 
     try:
         import corner

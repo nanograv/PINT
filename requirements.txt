@@ -8,4 +8,3 @@ emcee>=3.0.1
 corner>=2.0.1
 uncertainties
 loguru
-pathos
