@@ -10,6 +10,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - TOAs no longer need to be grouped by observatory
 - removed explicit download of IERS and leapsecond data (handled now by astropy)
 - The default version of TT(BIPM) uses BIPM2021
+- ClockFile no longer uses metaclass magic or many subclasses, and have friendly names for use in messages
 - `model.setup()` now gets called automatically after removing a parameter as part of `remove_param`
 ### Added
 - logging now needs to be setup explicitly

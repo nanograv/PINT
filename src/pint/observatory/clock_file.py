@@ -17,31 +17,12 @@ from pint.utils import lines_of, open_or_use
 
 __all__ = [
     "ClockFile",
-    "ClockFileMeta",
-    "TempoClockFile",
-    "Tempo2ClockFile",
-    "ConstructedClockFile",
+    "GlobalClockFile",
 ]
 
 
-class ClockFileMeta(type):
-    """Metaclass that provides a registry for different clock file formats.
-
-    ClockFile implementations should define a 'format' class member giving
-    the name of the format.
-    """
-
-    def __init__(cls, name, bases, members):
-        regname = "_formats"
-        if not hasattr(cls, regname):
-            setattr(cls, regname, {})
-        if "format" in members:
-            getattr(cls, regname)[cls.format] = cls
-        super().__init__(name, bases, members)
-
-
-class ClockFile(metaclass=ClockFileMeta):
-    """A clock correction file in one of several formats.
+class ClockFile:
+    """A clock correction file.
 
     The ClockFile class provides a way to read various formats of clock
     files.  It will provide the clock information from the file as arrays
@@ -67,41 +48,107 @@ class ClockFile(metaclass=ClockFileMeta):
 
     Clock correction file objects preserve the comments in the original file,
     and can be written in TEMPO or TEMPO2 format.
+
+    If you want to provide a new clock correction file format, you should
+    write a function that can read it and return an appropriate ClockFile
+    object. It should take a filename, Path, or file-like object as its
+    first argument, and probably at least a ``friendly_name`` keyword argument.
+    You would then add it to ``ClockFile._formats`` as something like
+    ``ClockFile._formats["haiku"] = my_read_haiku_function``. Then
+    ``ClockFile.read(filename, format="haiku", ...)`` will call
+    ``my_read_haiku_function(filename, ...)``.
+
+    Parameters
+    ----------
+    mjd : np.ndarray
+        The MJDs at which clock corrections are measured
+    clock : astropy.units.Quantity
+        The clock corrections at those MJDs (units of time)
+    comments : list of str or None
+        The comments following each clock correction; should match ``mjd``
+        and ``clock`` in length. If not provided, a list of empty comments
+        is used. The first line of these strings are normally on the same
+        line as the corresponding clock correction, while any subsequent
+        lines occur between it and the next and should probably start with
+        ``# ``.
+    leading_comment : str
+        A comment to put at the top of the file. Lines should probably start
+        with ``# ``.
+    filename : str or None
+        If present, a file that can be read to reproduce this data.
+    friendly_name : str or None
+        A descriptive file name, in case the filename is long or uninformative.
+        If not provided defaults to the filename.
+    header : str
+        A header to include, if output in TEMPO2 format.
     """
 
-    # FIXME: there should only be the ClockFile class, and if there's a registry
-    # it's of functions that are able to read files and produce ClockFile objects.
+    _formats = {}
 
-    def __init__(self):
-        # FIXME: require filename?
-        self._time = None
-        self._clock = None
-        self.comments = None
+    def __init__(
+        self,
+        mjd,
+        clock,
+        *,
+        filename=None,
+        friendly_name=None,
+        comments=None,
+        header=None,
+        leading_comment=None,
+    ):
+        self.filename = filename
+        self.friendly_name = self.filename if friendly_name is None else friendly_name
+        if len(mjd) != len(clock):
+            raise ValueError(f"MJDs have {len(mjd)} entries but clock has {len(clock)}")
+        self._time = Time(mjd, format="pulsar_mjd", scale="utc")
+        if not np.all(np.diff(self._time.mjd) >= 0):
+            raise ValueError(
+                f"Clock file {self.friendly_name} appears to be out of order"
+            )
+        self._clock = clock.to(u.us)
+        if comments is None:
+            self.comments = [""] * len(self._time)
+        else:
+            self.comments = comments
+            if len(comments) != len(mjd):
+                raise ValueError("Comments list does not match time array")
+        self.leading_comment = "" if leading_comment is None else leading_comment
+        self.header = header
 
     @classmethod
     def read(cls, filename, format="tempo", **kwargs):
         """Read file, selecting an appropriate subclass based on format.
 
-        You can also simply construct a clock file object of the appropriate type,
-        :class:`pint.observatory.clock_file.Tempo2ClockFile` or
-        :class:`pint.observatory.clock_file.TempoClockFile`.
+        Any additional keyword arguments are passed to the appropriate reader function.
         """
         if format in cls._formats:
-            r = cls._formats[format](filename, **kwargs)
-            if not np.all(np.diff(r.time.mjd) >= 0):
-                raise ValueError(
-                    f"Clock file {filename} in format {format} appears to be out of order"
-                )
-            return r
+            return cls._formats[format](filename, **kwargs)
         else:
             raise ValueError("clock file format '%s' not defined" % format)
 
+    @classmethod
+    def null(cls, *, filename=None, friendly_name=None):
+        """Construct a null clock correction file.
+
+        This has no clock corrections, and can be used to handle
+        conditions where a file is expected but not available.
+        """
+        return cls(
+            mjd=np.array([]),
+            clock=np.array([]) * u.s,
+            filename=filename,
+            friendly_name=friendly_name,
+            leading_comment="# No clock file available",
+        )
+
     @property
     def time(self):
+        """An astropy.time.Time recording the dates of clock corrections."""
         return self._time
 
     @property
     def clock(self):
+        """An astropy.units.Quantity recording the amounts of clock correction."""
         return self._clock
 
     def evaluate(self, t, limits="warn"):
@@ -127,9 +174,8 @@ class ClockFile(metaclass=ClockFileMeta):
         corrections : astropy.units.Quantity
             The corrections in units of microseconds.
         """
-
         if len(self.time) == 0:
-            msg = f"No data points in clock file '{self.filename}'"
+            msg = f"No data points in clock file '{self.friendly_name}'"
             if limits == "warn":
                 log.warning(msg)
                 return np.zeros_like(t) * u.us
@@ -137,7 +183,7 @@ class ClockFile(metaclass=ClockFileMeta):
                 raise NoClockCorrections(msg)
 
         if np.any(t < self.time[0]) or np.any(t > self.time[-1]):
-            msg = f"Data points out of range in clock file '{self.filename}'"
+            msg = f"Data points out of range in clock file '{self.friendly_name}'"
             if limits == "warn":
                 log.warning(msg)
             elif limits == "error":
@@ -237,23 +283,22 @@ class ClockFile(metaclass=ClockFileMeta):
                     # bump up by 1 in case this is a repeated MJD
                     indices[i] += 1
             comments.append(com)
-        r = ConstructedClockFile(
-            mjd=times.mjd,
-            clock=corr,
-            comments=comments,
-            filename=f"Merged from {[c.filename for c in clocks]}",
-        )
 
-        leading_comment = None
+        leading_comment = f"# Merged from {[c.friendly_name for c in clocks]}"
         for c in clocks:
             if c.leading_comment is not None:
                 if leading_comment is None:
                     leading_comment = c.leading_comment
                 else:
                     leading_comment += "\n" + c.leading_comment
-        r.leading_comment = leading_comment
 
-        return r
+        return ClockFile(
+            mjd=times.mjd,
+            clock=corr,
+            comments=comments,
+            leading_comment=leading_comment,
+            friendly_name=f"Merged from {[c.filename for c in clocks]}",
+        )
 
     def write_tempo_clock_file(self, filename, obscode, extra_comment=None):
         """Write clock corrections as a TEMPO-format clock correction file.
@@ -383,137 +428,117 @@ class ClockFile(metaclass=ClockFileMeta):
                 # FIXME: use write? Do we know what format we should be in?
             return
         with open_or_use(filename, "wt") as f:
-            # FIXME: get_ may pull in an updated clock file
             f.write(contents)
 
 
-class ConstructedClockFile(ClockFile):
-    """Clock file constructed from arrays.
+# TEMPO2
+
+hdrline_re = re.compile(r"#\s*(\S+)\s+(\S+)\s+(\d+)?(.*)")
+# This horror is based on https://docs.python.org/3/library/re.html#simulating-scanf
+clkcorr_re = re.compile(
+    r"\s*([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eEdD][-+]?\d+)?)"
+    r"\s+([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eEdD][-+]?\d+)?)"
+    r" ?(.*)"
+)
+
+
+def read_tempo2_clock_file(filename, bogus_last_correction=False, friendly_name=None):
+    """Read a TEMPO2-format clock file.
+
+    This function can also be accessed through
+    :func:`pint.observatory.clock_file.ClockFile.read` with the
+    ``format="tempo2"`` argument.
 
     Parameters
     ----------
-    mjd : np.ndarray
-        The MJDs at which clock corrections are measured.
-    clock : astropy.units.Quantity
-        The clock corrections at those MJDs
-    comments : list of str or None
-        The comments following each clock correction; should match ``mjd``
-        and ``clock`` in length.
-    leading_comment : str
-        A comment to put at the top of the file.
-    header : str
-        A header to include, if output in TEMPO2 format.
+    filename : str or pathlib.Path or file-like
+        The location to obtain the file from.
+    bogus_last_correction : bool
+        If True, the last correction value in the file is a placeholder, normally
+        far in the future, and not an actual measurement.
+    friendly_name : str or None
+        A human-readable name for this file, for use in error reporting.
+        If not provided, will default to ``filename``.
     """
+    log.debug(f"Loading TEMPO2-format observatory clock correction file {filename}")
+    try:
+        mjd = []
+        clk = []
+        leading_comment = None
+        comments = []
 
-    # No format set because these can't be read
+        def add_comment(s):
+            nonlocal leading_comment
+            if comments:
+                if comments[-1] is None:
+                    comments[-1] = s.rstrip()
+                else:
+                    comments[-1] += "\n" + s.rstrip()
+            elif leading_comment is None:
+                leading_comment = s.rstrip()
+            else:
+                leading_comment += "\n" + s.rstrip()
 
-    def __init__(
-        self,
+        with open_or_use(filename) as f:
+            hdrline = None
+            for line in f:
+                if hdrline is None:
+                    hdrline = line
+                    m = hdrline_re.match(hdrline)
+                    if not m:
+                        raise ValueError(
+                            f"Header line must start with # and contain two time scales: {hdrline!r}"
+                        )
+                    header = hdrline
+                    # FIXME: explicit support of from/to timescales and badness?
+                    timescale_from = m.group(1)
+                    timescale_to = m.group(2)
+                    badness = 1 if m.group(3) is None else int(m.group(3))
+                    # Extra stuff on the hdrline <shrug />
+                    hdrline_extra = "" if m.group(4) is None else m.group(4)
+                    continue
+                if line.startswith("#"):
+                    add_comment(line)
+                    continue
+                m = clkcorr_re.match(line)
+                if m is None:
+                    # Anything that doesn't match is a comment, what fun!
+                    # This is what T2 does, using sscanf
+                    add_comment(line)
+                    continue
+                mjd.append(float(m.group(1)))
+                clk.append(float(m.group(2)))
+                comments.append(None)
+                if m.group(3) is not None:
+                    # Anything else on the line is a comment too
+                    add_comment(m.group(3))
+        clk = np.array(clk)
+    except (FileNotFoundError, OSError):
+        log.error(f"TEMPO2-style clock correction file {filename} not found")
+        mjd = np.array([], dtype=float)
+        clk = np.array([], dtype=float)
+        header = None
+    if bogus_last_correction and len(mjd):
+        mjd = mjd[:-1]
+        clk = clk[:-1]
+        comments = comments[:-1]
+    while len(mjd) and mjd[0] == 0:
+        # Zap leading zeros
+        mjd = mjd[1:]
+        clk = clk[1:]
+        comments = comments[1:]
+    return ClockFile(
         mjd,
-        clock,
-        comments=None,
-        leading_comment=None,
-        filename=None,
-        header=None,
-    ):
-        super().__init__()
-        if len(mjd) != len(clock):
-            raise ValueError(f"MJDs have {len(mjd)} entries but clock has {len(clock)}")
-        self._time = Time(mjd, format="pulsar_mjd", scale="utc")
-        self._clock = clock.to(u.us)
-        self.filename = "Constructed" if filename is None else filename
-        if comments is None:
-            self.comments = [""] * len(self._time)
-        else:
-            self.comments = comments
-            if len(comments) != len(mjd):
-                raise ValueError("Comments list does not match time array")
-        self.leading_comment = leading_comment
-        self.header = header
-
-
-class Tempo2ClockFile(ClockFile):
-    """A clock file originally in TEMPO2 format."""
-
-    format = "tempo2"
-
-    hdrline_re = re.compile(r"#\s*(\S+)\s+(\S+)\s+(\d+)?(.*)")
-    # This horror is based on https://docs.python.org/3/library/re.html#simulating-scanf
-    clkcorr_re = re.compile(
-        r"\s*([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eEdD][-+]?\d+)?)"
-        r"\s+([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eEdD][-+]?\d+)?)"
-        r" ?(.*)"
+        clk * u.s,
+        filename=filename,
+        comments=comments,
+        leading_comment=leading_comment,
+        header=header,
+        friendly_name=friendly_name,
     )
 
-    def __init__(self, filename, bogus_last_correction=False, **kwargs):
-        super().__init__()
-        self.filename = filename
-        log.debug(f"Loading {self.format} observatory clock correction file {filename}")
-        try:
-            mjd = []
-            clk = []
-            self.leading_comment = None
-            self.comments = []
 
-            def add_comment(s):
-                if self.comments:
-                    if self.comments[-1] is None:
-                        self.comments[-1] = s.rstrip()
-                    else:
-                        self.comments[-1] += "\n" + s.rstrip()
-                elif self.leading_comment is None:
-                    self.leading_comment = s.rstrip()
-                else:
-                    self.leading_comment += "\n" + s.rstrip()
-
-            with open_or_use(filename) as f:
-                hdrline = None
-                for line in f:
-                    if hdrline is None:
-                        hdrline = line
-                        m = self.hdrline_re.match(hdrline)
-                        if not m:
-                            raise ValueError(
-                                f"Header line must start with # and contain two time scales: {hdrline!r}"
-                            )
-                        self.header = hdrline
-                        self.timescale_from = m.group(1)
-                        self.timescale_to = m.group(2)
-                        self.badness = 1 if m.group(3) is None else int(m.group(3))
-                        # Extra stuff on the hdrline <shrug />
-                        self.hdrline_extra = "" if m.group(4) is None else m.group(4)
-                        continue
-                    if line.startswith("#"):
-                        add_comment(line)
-                        continue
-                    m = self.clkcorr_re.match(line)
-                    if m is None:
-                        # Anything that doesn't match is a comment, what fun!
-                        # This is what T2 does, using sscanf
-                        add_comment(line)
-                        continue
-                    mjd.append(float(m.group(1)))
-                    clk.append(float(m.group(2)))
-                    self.comments.append(None)
-                    if m.group(3) is not None:
-                        # Anything else on the line is a comment too
-                        add_comment(m.group(3))
-            clk = np.array(clk)
-        except (FileNotFoundError, OSError):
-            log.error(f"TEMPO2-style clock correction file {filename} not found")
-            mjd = np.array([], dtype=float)
-            clk = np.array([], dtype=float)
-            self.header = None
-        if bogus_last_correction and len(mjd):
-            mjd = mjd[:-1]
-            clk = clk[:-1]
-        while len(mjd) and mjd[0] == 0:
-            # Zap leading zeros
-            mjd = mjd[1:]
-            clk = clk[1:]
-        self._time = Time(mjd, format="pulsar_mjd", scale="utc")
-        self._clock = clk * u.s
-
+ClockFile._formats["tempo2"] = read_tempo2_clock_file
 
 # FIXME: `NIST-REF` could be replaced by the two timescales in actual use
 tempo_standard_header = dedent(
@@ -530,189 +555,206 @@ tempo_standard_header_res = [
 ]
 
 
-class TempoClockFile(ClockFile):
-    """A TEMPO format clock file.
+def read_tempo_clock_file(
+    filename,
+    obscode=None,
+    bogus_last_correction=False,
+    process_includes=True,
+    friendly_name=None,
+):
+    """Read a TEMPO-format clock file.
 
-    Given the specified full path to the tempo1-format clock file,
-    will return two numpy arrays containing the MJDs and the clock
-    corrections (us).  All computations here are done as in tempo, with
+    This function can also be accessed through
+    :func:`pint.observatory.clock_file.ClockFile.read` with the
+    ``format="tempo2"`` argument.
+
+    All computations here are done as in tempo, with
     the exception of the 'F' flag (to disable interpolation), which
     is currently not implemented.
 
     INCLUDE statments are processed.
 
-    If the 'site' argument is set to an appropriate one-character tempo
-    site code, only values for that site will be returned. If the 'site'
-    argument is None, the file is assumed to contain only clock corrections
-    for the desired telescope, so all values found in the file will be returned
-    but INCLUDEs will *not* be processed.
+
+    Parameters
+    ----------
+    filename : str or pathlib.Path or file-like
+        The location to obtain the file from.
+    obscode : str or None
+        If the ``obscode`` argument is set to an appropriate one-character tempo
+        site code, only values for that site will be returned. If the ``obscode``
+        argument is None, the file is assumed to contain only clock corrections
+        for the desired telescope, so all values found in the file will be returned
+        but INCLUDEs will *not* be processed.
+    bogus_last_correction : bool
+        If True, the last correction value in the file is a placeholder, normally
+        far in the future, and not an actual measurement.
+    process_includes : bool
+        If True, also read data from any INCLUDE statements. Requires the ``obscode``
+        argument to distinguish data from any other telescopes that might be in the
+        same system of files.
+    friendly_name : str or None
+        A human-readable name for this file, for use in error reporting.
+        If not provided, will default to ``filename``.
     """
 
-    format = "tempo"
+    leading_comment = None
+    log.debug(f"Loading TEMPO observatory ({obscode}) clock correction file {filename}")
+    mjds = []
+    clkcorrs = []
+    comments = []
+    seen_obscodes = set()
 
-    # FIXME: use kwargs?
-    def __init__(
-        self,
-        filename,
-        obscode=None,
-        bogus_last_correction=False,
-        process_includes=True,
-        **kwargs,
-    ):
-        super().__init__()
-        self.filename = filename
-        self.obscode = obscode
-        self.leading_comment = None
-        log.debug(
-            f"Loading {self.format} observatory ({obscode}) clock correction file {filename}"
-        )
-        mjds = []
-        clkcorrs = []
-        self.comments = []
-        seen_obscodes = set()
-
-        def add_comment(s):
-            if self.comments:
-                if self.comments[-1] is None:
-                    self.comments[-1] = s.rstrip()
-                else:
-                    self.comments[-1] += "\n" + s.rstrip()
-            elif self.leading_comment is None:
-                self.leading_comment = s.rstrip()
+    def add_comment(s):
+        nonlocal leading_comment
+        if comments:
+            if comments[-1] is None:
+                comments[-1] = s.rstrip()
             else:
-                self.leading_comment += "\n" + s.rstrip()
+                comments[-1] += "\n" + s.rstrip()
+        elif leading_comment is None:
+            leading_comment = s.rstrip()
+        else:
+            leading_comment += "\n" + s.rstrip()
 
-        try:
-            # TODO we might want to handle 'f' flags by inserting addtional
-            # entries so that interpolation routines will give the right result.
-            # The way TEMPO interprets 'f' flags is that an MJD with an 'f' flag
-            # gives the constant clock correction value for at most a day either side.
-            # If the sought-after clock correction is within a day of two different
-            # 'f' values, the nearest is used.
-            # https://github.com/nanograv/tempo/blob/618afb2e901d3e4b8324d4ba12777c055e128696/src/clockcor.f#L79
-            # This could be (roughly) implemented by splicing in additional clock correction points
-            # between 'f' values or +- 1 day.
-            # (The deviation would be that in gaps you get an interpolated value
-            # rather than an error message.)
+    try:
+        # TODO we might want to handle 'f' flags by inserting addtional
+        # entries so that interpolation routines will give the right result.
+        # The way TEMPO interprets 'f' flags is that an MJD with an 'f' flag
+        # gives the constant clock correction value for at most a day either side.
+        # If the sought-after clock correction is within a day of two different
+        # 'f' values, the nearest is used.
+        # https://github.com/nanograv/tempo/blob/618afb2e901d3e4b8324d4ba12777c055e128696/src/clockcor.f#L79
+        # This could be (roughly) implemented by splicing in additional clock correction points
+        # between 'f' values or +- 1 day.
+        # (The deviation would be that in gaps you get an interpolated value
+        # rather than an error message.)
 
-            for l in lines_of(filename):
-                # Ignore comment lines
-                if l.startswith("#"):
-                    add_comment(l)
-                    continue
+        for l in lines_of(filename):
+            # Ignore comment lines
+            if l.startswith("#"):
+                add_comment(l)
+                continue
 
-                # FIXME: the header *could* contain to and from timescale information
-                # TEMPO has very, ah, flexible notions of what is an acceptable file
-                # https://sourceforge.net/p/tempo/tempo/ci/master/tree/src/newsrc.f#l272
-                # Any line that starts with "MJD" or "=====" is assumed to be
-                # part of the header.  TEMPO describes this as a
-                # "commonly used header format".
-                ls = l.split()
-                if ls and ls[0].upper().startswith("MJD"):
-                    # Header line. Do we preserve it?
-                    continue
-                if ls and ls[0].startswith("====="):
-                    # Header line. Do we preserve it?
-                    continue
+            # FIXME: the header *could* contain to and from timescale information
+            # TEMPO has very, ah, flexible notions of what is an acceptable file
+            # https://sourceforge.net/p/tempo/tempo/ci/master/tree/src/newsrc.f#l272
+            # Any line that starts with "MJD" or "=====" is assumed to be
+            # part of the header.  TEMPO describes this as a
+            # "commonly used header format".
+            ls = l.split()
+            if ls and ls[0].upper().startswith("MJD"):
+                # Header line. Do we preserve it?
+                continue
+            if ls and ls[0].startswith("====="):
+                # Header line. Do we preserve it?
+                continue
 
-                # Process INCLUDE
-                # Assumes included file is in same dir as this one
-                ls = l.split()
-                if ls and ls[0].upper() == "INCLUDE" and process_includes:
-                    # Find the new file, if possible
-                    if isinstance(filename, str):
-                        fn = Path(filename)
-                    elif isinstance(filename, Path):
-                        fn = filename
-                    else:
-                        raise ValueError(
-                            f"Don't know how to process INCLUDE statement in {filename}"
-                        )
-                    # Construct a TEMPO-format clock file object
-                    ifn = fn.parent / ls[1]
-                    ic = TempoClockFile(ifn, obscode=obscode)
-                    # Splice in that object, handling leading and in-line comments
-                    if self.leading_comment is None:
-                        if ic.leading_comment is not None:
-                            self.leading_comment = ic.leading_comment
-                    else:
-                        self.leading_comment += "\n" + ic.leading_comment
-                    mjds.extend(ic._time.mjds)
-                    clkcorrs.extend(ic._clock)
-                    self.comments.extend(ic.comments)
+            # Process INCLUDE
+            # Assumes included file is in same dir as this one
+            ls = l.split()
+            if ls and ls[0].upper() == "INCLUDE" and process_includes:
+                # Find the new file, if possible
+                if isinstance(filename, str):
+                    fn = Path(filename)
+                elif isinstance(filename, Path):
+                    fn = filename
+                else:
+                    raise ValueError(
+                        f"Don't know how to process INCLUDE statement in {filename}"
+                    )
+                # Construct a TEMPO-format clock file object
+                ifn = fn.parent / ls[1]
+                ic = read_tempo_clock_file(ifn, obscode=obscode)
+                # Splice in that object, handling leading and in-line comments
+                if leading_comment is None:
+                    if ic.leading_comment is not None:
+                        leading_comment = ic.leading_comment
+                else:
+                    leading_comment += "\n" + ic.leading_comment
+                mjds.extend(ic._time.mjds)
+                clkcorrs.extend(ic._clock)
+                comments.extend(ic.comments)
 
-                # Parse MJD
-                try:
-                    mjd = float(l[0:9])
-                    # allow mjd=0 to pass, since that is often used
-                    # for effectively null clock files
-                    if (mjd < 39000 and mjd != 0) or mjd > 100000:
-                        mjd = None
-                except (ValueError, IndexError):
+            # Parse MJD
+            try:
+                mjd = float(l[0:9])
+                # allow mjd=0 to pass, since that is often used
+                # for effectively null clock files
+                if (mjd < 39000 and mjd != 0) or mjd > 100000:
                     mjd = None
-                # Parse two clkcorr values
-                try:
-                    clkcorr1 = float(l[9:21])
-                except (ValueError, IndexError):
-                    clkcorr1 = None
-                try:
-                    clkcorr2 = float(l[21:33])
-                except (ValueError, IndexError):
-                    clkcorr2 = None
+            except (ValueError, IndexError):
+                mjd = None
+            # Parse two clkcorr values
+            try:
+                clkcorr1 = float(l[9:21])
+            except (ValueError, IndexError):
+                clkcorr1 = None
+            try:
+                clkcorr2 = float(l[21:33])
+            except (ValueError, IndexError):
+                clkcorr2 = None
 
-                # Site code on clock file line must match
-                try:
-                    csite = l[34].lower()
-                except IndexError:
-                    csite = None
-                if (obscode is not None) and (obscode.lower() != csite):
-                    continue
-                # FIXME: f flag(?) in l[36]?
-                if csite is not None:
-                    seen_obscodes.add(csite)
-                    if len(seen_obscodes) > 1:
-                        raise ValueError(
-                            f"TEMPO-format file {filename} contains multiple "
-                            f"observatory codes: {seen_obscodes}"
-                        )
+            # Site code on clock file line must match
+            try:
+                csite = l[34].lower()
+            except IndexError:
+                csite = None
+            if (obscode is not None) and (obscode.lower() != csite):
+                continue
+            # FIXME: f flag(?) in l[36]?
+            if csite is not None:
+                seen_obscodes.add(csite)
+                if len(seen_obscodes) > 1:
+                    raise ValueError(
+                        f"TEMPO-format file {filename} contains multiple "
+                        f"observatory codes: {seen_obscodes}"
+                    )
 
-                # Need MJD and at least one of the two clkcorrs
-                if mjd is None:
-                    add_comment(l)
-                    continue
-                if (clkcorr1 is None) and (clkcorr2 is None):
-                    add_comment(l)
-                    continue
-                # If one of the clkcorrs is missing, it defaults to zero
-                if clkcorr1 is None:
-                    clkcorr1 = 0.0
-                if clkcorr2 is None:
-                    clkcorr2 = 0.0
-                # This adjustment is hard-coded in tempo:
-                if clkcorr1 > 800.0:
-                    clkcorr1 -= 818.8
-                # Add the value to the list
-                mjds.append(mjd)
-                clkcorrs.append(clkcorr2 - clkcorr1)
-                self.comments.append(None)
-                add_comment(l[50:])
-        except (FileNotFoundError, OSError):
-            log.error(
-                f"TEMPO-style clock correction file {filename} "
-                f"for site {obscode} not found"
-            )
-        if bogus_last_correction and len(mjds):
-            mjds = mjds[:-1]
-            clkcorrs = clkcorrs[:-1]
-            # FIXME: do something sensible with comments!
-        while len(mjds) and mjds[0] == 0:
-            # Zap leading zeros
-            mjds = mjds[1:]
-            clkcorrs = clkcorrs[1:]
-            # FIXME: do something sensible with comments!
-        # FIXME: using Time may make loading clock corrections slow
-        self._time = Time(mjds, format="pulsar_mjd", scale="utc")
-        self._clock = clkcorrs * u.us
+            # Need MJD and at least one of the two clkcorrs
+            if mjd is None:
+                add_comment(l)
+                continue
+            if (clkcorr1 is None) and (clkcorr2 is None):
+                add_comment(l)
+                continue
+            # If one of the clkcorrs is missing, it defaults to zero
+            if clkcorr1 is None:
+                clkcorr1 = 0.0
+            if clkcorr2 is None:
+                clkcorr2 = 0.0
+            # This adjustment is hard-coded in tempo:
+            if clkcorr1 > 800.0:
+                clkcorr1 -= 818.8
+            # Add the value to the list
+            mjds.append(mjd)
+            clkcorrs.append(clkcorr2 - clkcorr1)
+            comments.append(None)
+            add_comment(l[50:])
+    except (FileNotFoundError, OSError):
+        log.error(
+            f"TEMPO-style clock correction file {filename} "
+            f"for site {obscode} not found"
+        )
+    if bogus_last_correction and len(mjds):
+        mjds = mjds[:-1]
+        clkcorrs = clkcorrs[:-1]
+        comments = comments[:-1]
+    while len(mjds) and mjds[0] == 0:
+        # Zap leading zeros
+        mjds = mjds[1:]
+        clkcorrs = clkcorrs[1:]
+        comments = comments[1:]
+    return ClockFile(
+        mjds,
+        clkcorrs * u.us,
+        filename=filename,
+        comments=comments,
+        leading_comment=leading_comment,
+        friendly_name=friendly_name,
+    )
+
+
+ClockFile._formats["tempo"] = read_tempo_clock_file
 
 
 class GlobalClockFile(ClockFile):
@@ -725,12 +767,26 @@ class GlobalClockFile(ClockFile):
     This supports both TEMPO- and TEMPO2-format files; just instantiate the
     object with appropriate arguments and it will call
     :func:`pint.observatory.ClockFile.read` with the right arguments.
+
+    Parameters
+    ----------
+    filename : str
+        The name of the file in the global repository
+    format : str
+        The name of the format of the file, probably "tempo" or "tempo2"
+    url_base : str or None
+        Location of the global repository (useful for testing)
+    url_mirrors : list of str or None
+        Mirrors of the global repository (useful for testing)
     """
 
     def __init__(
         self, filename, format="tempo", url_base=None, url_mirrors=None, **kwargs
     ):
+        # FIXME: should we use super here?
+        # I think it'll break because of all the properties
         self.filename = filename
+        self.friendly_name = filename
         self.format = format
         self.kwargs = kwargs
         self.url_base = url_base
@@ -741,7 +797,11 @@ class GlobalClockFile(ClockFile):
             url_base=self.url_base,
             url_mirrors=self.url_mirrors,
         )
-        self.clock_file = ClockFile.read(f, self.format, **kwargs)
+        self.clock_file = ClockFile.read(
+            f, self.format, friendly_name=self.friendly_name, **kwargs
+        )
+
+    # FIXME: add update method?
 
     def evaluate(self, t, limits="warn"):
         """Evaluate the clock corrections at the times t.
@@ -771,7 +831,11 @@ class GlobalClockFile(ClockFile):
             f = get_clock_correction_file(
                 self.filename, url_base=self.url_base, url_mirrors=self.url_mirrors
             )
-            self.clock_file = ClockFile.read(f, format=self.format, **self.kwargs)
+            # FIXME: don't reload unless we actually got something new
+            self.clock_file = ClockFile.read(
+                f, format=self.format, friendly_name=self.friendly_name, **self.kwargs
+            )
+            self.clock_file.friendly_name = self.friendly_name
         return self.clock_file.evaluate(t, limits=limits)
 
     @property
@@ -790,8 +854,7 @@ class GlobalClockFile(ClockFile):
     def clock(self):
         return self.clock_file.clock
 
-    def last_clock_correction_mjd(self):
-        return self.clock_file.last_clock_correction_mjd()
+    # FIXME: do we need last_correction_mjd to try an update?
 
     def export(self, filename):
         """Write this clock correction file to the specified location."""
