@@ -585,18 +585,19 @@ def compare_tempo_obsys_dat(tempodir=None):
                     -convert_angle(y), convert_angle(x), z * u.m
                 )
                 x, y, z = (a.to_value(u.m) for a in loc.to_geocentric())
+            name = obsnam.replace(" ", "_")
             topo_obs_entry = textwrap.dedent(
                 f"""
-                '{obsnam.replace(" ","_")}': {
-                    'itoa_code': '{itoa_code}',
-                    'tempo_code': '{tempo_code}',
-                    'itrf_xyz': [
+                "{name}": {
+                    "itrf_xyz": [
                         {x}, 
                         {y}, 
                         {z}
-                    ]
+                    ],
+                    "tempo_code": "{tempo_code}",
+                    "itoa_code": "{itoa_code}"
                 }
-                """         
+                """
             )
             try:
                 obs = get_observatory(itoa_code)
