@@ -1230,26 +1230,23 @@ class PlkWidget(tk.Frame):
 
     def coordToPoint(self, cx, cy):
         """
-        Given a set of x-y coordinates, get the TOA index closest to it
+        Given a set of x-y coordinates, get the TOA index (i.e. current TOA table row) closest to it
         """
         ind = None
-
         if self.psr is not None:
             x = self.xvals.value
             y = self.yvals.value
-
             xmin, xmax, ymin, ymax = self.plkAxes.axis()
             dist = ((x - cx) / (xmax - xmin)) ** 2.0 + ((y - cy) / (ymax - ymin)) ** 2.0
             ind = np.argmin(dist)
-            index = self.psr.all_toas.table["index"][ind]
             log.debug(
-                f"Closest: TOA index {index} (plot index {ind}): "
+                f"Closest: TOA index {self.psr.all_toas.table['index'][ind]} (plot index {ind}): "
                 f"({self.xvals[ind]:.4f}, {self.yvals[ind]:.3g}) at d={dist[ind]:.3g}"
             )
             if dist[ind] > clickDist:
                 log.warning("Not close enough to a point")
                 ind = None
-        return index
+        return ind
 
     def check_jump_invalid(self):
         """checks if jumps will cancel the attempted fit"""

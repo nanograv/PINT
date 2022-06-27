@@ -155,15 +155,21 @@ class PhaseJump(PhaseComponent):
     def jump_params_to_flags(self, toas):
         """Take jumps created from .par file and add appropriate flags to toa table.
 
-        This function was made specifically with pintk in mind for a way to properly
-        load jump flags at the same time a .par file with jumps is loaded (like how
-        jump_flags_to_params loads jumps from .tim files).
+        This function was made specifically with pintk in mind so as to maintain
+        a ``-jump`` flag on each TOA that is affected by any JUMP in the model,
+        listing the numbers of all JUMPs affecting that TOA.
+
+        This function wipes all ``-jump`` flags and reinitializes them to reflect
+        the actual situation.
 
         Parameters
         ----------
         toas: TOAs object
             The TOAs which contain the TOA table to be modified
         """
+        log.info(f"Initial TOAs {toas['jump']=}")
+        toas["jump"] = ""
+        log.info(f"Wiped TOAs {toas['jump']=}")
         # for every jump, set appropriate flag for TOAs it jumps
         for jump_par in self.get_jump_param_objects():
             # find TOAs jump applies to
@@ -172,12 +178,12 @@ class PhaseJump(PhaseComponent):
             for d in toas.table["flags"][mask]:
                 if "jump" in d:
                     index_list = d["jump"].split(",")
-                    if str(jump_par.index) in index_list:
-                        continue
                     index_list.append(str(jump_par.index))
                     d["jump"] = ",".join(index_list)
                 else:
                     d["jump"] = str(jump_par.index)
+                log.info(f"Set up on {jump_par=} {d=}")
+            log.info(f"TOAs {toas['jump']=}")
 
     def add_jump_and_flags(self, toa_table):
         """Add jump object to PhaseJump and appropriate flags to TOA tables.
