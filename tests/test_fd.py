@@ -23,10 +23,6 @@ class TestFD(unittest.TestCase):
         # libstempo result
         cls.ltres, cls.ltbindelay = np.genfromtxt(cls.parf + ".tempo_test", unpack=True)
 
-    @pytest.mark.skipif(
-        "TEMPO2" not in os.environ,
-        reason="Needs TEMPO2 clock files, but TEMPO2 envariable not set",
-    )
     def test_FD(self):
         print("Testing FD module.")
         rs = (
@@ -42,10 +38,6 @@ class TestFD(unittest.TestCase):
         # Those two clock correction difference are causing the trouble.
         assert np.all(resDiff < 5e-6), "PINT and tempo Residual difference is too big. "
 
-    @pytest.mark.skipif(
-        "TEMPO2" not in os.environ,
-        reason="Needs TEMPO2 clock files, but TEMPO2 envariable not set",
-    )
     def test_inf_freq(self):
         test_toas = copy.deepcopy(self.toas)
         test_toas.table["freq"][0:5] = np.inf * u.MHz
@@ -61,7 +53,3 @@ class TestFD(unittest.TestCase):
             "FD component is not handling infinite frequency right when doning"
             + " derivatives."
         )
-
-
-if __name__ == "__main__":
-    pass

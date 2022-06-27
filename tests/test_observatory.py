@@ -77,69 +77,6 @@ class TestObservatory(unittest.TestCase):
         with pytest.raises(KeyError):
             get_observatory("Wrong_name")
 
-    def test_clock_correction_file_not_available(self):
-        if os.getenv("TEMPO2") is None:
-            pytest.skip("TEMPO2 environment variable is not set, can't run this test")
-        # observatory clock correction path expections.
-        fake_obs = TopoObs(
-            "Fake1",
-            tempo_code="?",
-            itoa_code="FK",
-            clock_fmt="tempo2",
-            clock_file="fake2gps.clk",
-            clock_dir="TEMPO2",
-            itrf_xyz=[0.00, 0.0, 0.0],
-            overwrite=True,
-        )
-        site = get_observatory(
-            "Fake1", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
-        )
-        try:
-            site.clock_corrections(self.test_time)
-        except (OSError, IOError) as e:
-            assert e.errno == 2
-            assert os.path.basename(e.filename) == "fake2gps.clk"
-
-    def test_no_tempo2_but_tempo2_clock_requested(self):
-        if os.getenv("TEMPO2") is not None:
-            pytest.skip("TEMPO2 environment variable is set, can't run this test")
-        # observatory clock correction path expections.
-        fake_obs = TopoObs(
-            "Fake1",
-            tempo_code="?",
-            itoa_code="FK",
-            clock_fmt="tempo2",
-            clock_file="fake2gps.clk",
-            clock_dir="TEMPO2",
-            itrf_xyz=[0.00, 0.0, 0.0],
-            overwrite=True,
-        )
-        site = get_observatory(
-            "Fake1", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
-        )
-        with pytest.raises(RuntimeError):
-            site.clock_corrections(self.test_time, limits="error")
-
-    def test_no_tempo_but_tempo_clock_requested(self):
-        if os.getenv("TEMPO") is not None:
-            pytest.skip("TEMPO environment variable is set, can't run this test")
-        # observatory clock correction path expections.
-        fake_obs = TopoObs(
-            "Fake1",
-            tempo_code="?",
-            itoa_code="FK",
-            clock_fmt="tempo",
-            clock_file="fake2gps.clk",
-            clock_dir="TEMPO",
-            itrf_xyz=[0.00, 0.0, 0.0],
-            overwrite=True,
-        )
-        site = get_observatory(
-            "Fake1", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
-        )
-        with pytest.raises(RuntimeError):
-            site.clock_corrections(self.test_time, limits="error")
-
     def test_wrong_TDB_method(self):
         site = get_observatory(
             "ao", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
@@ -160,9 +97,7 @@ def test_can_try_to_compute_corrections(observatory):
     get_observatory(observatory).clock_corrections(Time(57600, format="mjd"))
 
 
-# Some of these now require TEMPO2 clock files
-# good_observatories = ["gbt", "ao", "vla", "jodrell", "wsrt", "parkes"]
-good_observatories = ["gbt", "ao", "vla", "jodrell"]
+good_observatories = ["gbt", "ao", "vla", "jodrell", "wsrt", "parkes"]
 
 
 @pytest.mark.parametrize("observatory", good_observatories)
@@ -217,3 +152,9 @@ def test_observatories_registered():
 
 def test_gbt_registered():
     get_observatory("gbt")
+
+
+# Perhaps these should be in test_find_clock_file.py? Needs to be able to wipe the registry
+# FIXME: add test for what happens when a clock correction file is not available
+# FIXME: add test for what happens when a clock correction is supposed to be in $TEMPO2 but $TEMPO2 is not set
+# FIXME: ditto $TEMPO
