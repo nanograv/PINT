@@ -124,7 +124,7 @@
             "ncy"
         ],
         "clock_fmt": "tempo2",
-        "clock_file": "[]",
+        "clock_file": "",
         "itrf_xyz": [
             4324165.81,
             165927.11,
@@ -143,7 +143,10 @@
             4670132.83
         ],
         "clock_fmt": "tempo2",
-        "clock_file": "[ncyobs2obspm.clk, obspm2gps.clk]",
+        "clock_file": [
+            "ncyobs2obspm.clk",
+            "obspm2gps.clk"
+        ],
         "origin": "The Nan\u00e7ay radio telescope with the NUPPI back-end.\nThe origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
     },
     "effelsberg": {
@@ -177,7 +180,7 @@
         "tempo_code": "r",
         "itoa_code": "GM",
         "clock_fmt": "tempo2",
-        "clock_file": "gmrt2gps.clk",
+        "clock_file": "",
         "itrf_xyz": [
             1656342.3,
             5797947.77,
@@ -267,7 +270,7 @@
     "chime": {
         "tempo_code": "y",
         "itoa_code": "CH",
-        "clock_file": "[]",
+        "clock_file": "",
         "itrf_xyz": [
             -2059166.313,
             -3621302.972,
