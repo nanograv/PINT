@@ -8,7 +8,7 @@ from pint.pulsar_mjd import Time
 
 import pint.observatory
 import pint.observatory.observatories
-from pint.observatory import get_observatory, Observatory
+from pint.observatory import get_observatory, Observatory, NoClockCorrections
 from pint.observatory.topo_obs import TopoObs
 from pinttestdata import datadir
 
@@ -94,11 +94,8 @@ class TestObservatory(unittest.TestCase):
             site = get_observatory(
                 "Fake1", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
             )
-            try:
+            with pytest.raises(NoClockCorrections):
                 site.clock_corrections(self.test_time)
-            except (OSError, IOError) as e:
-                assert e.errno == 2
-                assert os.path.basename(e.filename) == "fake2gps.clk"
         finally:
             Observatory._registry = r
 
