@@ -40,7 +40,8 @@ from glob import glob
 import pint.logging
 
 # setup the logging
-pint.logging.setup(level="INFO")
+# let's have it give a bit more detail in this case
+pint.logging.setup(level="DEBUG")
 
 # %%
 # %matplotlib inline
