@@ -154,7 +154,9 @@ def test_gbt_registered():
     get_observatory("gbt")
 
 
-# Perhaps these should be in test_find_clock_file.py? Needs to be able to wipe the registry
+# All these cases are partially tested in tests/test_find_clock_file.py
+# In each case you come back with a zero-length clock file, which will
+# give warnings or errrors based on limits="error"
 # FIXME: add test for what happens when a clock correction file is not available
 # FIXME: add test for what happens when a clock correction is supposed to be in $TEMPO2 but $TEMPO2 is not set
 # FIXME: ditto $TEMPO

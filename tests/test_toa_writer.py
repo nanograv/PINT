@@ -107,7 +107,7 @@ def test_roundtrip_ncyobs_toa_Tempo2format(tmp_path):
     assert np.abs(ts.table["tdb"][0] - ts2.table["tdb"][0]) < 1.0e-15 * u.d
 
 
-def test_roundtrip_ncyobs_toa_TEMPOformat():
+def test_roundtrip_ncyobs_toa_TEMPOformat(tmp_path):
     # Create a barycentric TOA
     t1time = Time(58534.0, 0.0928602471130208, format="mjd", scale="utc")
     t1 = toa.TOA(t1time, obs="ncyobs", freq=0.0)
@@ -115,7 +115,7 @@ def test_roundtrip_ncyobs_toa_TEMPOformat():
     # This is an observatory that can't be represented in TEMPO format
     # so it should raise an exception
     with pytest.raises(ValueError):
-        ts.write_TOA_file("testncyobs.tim", format="TEMPO")
+        ts.write_TOA_file(tmp_path / "testncyobs.tim", format="TEMPO")
 
 
 simplepar = """
