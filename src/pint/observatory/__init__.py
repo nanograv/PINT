@@ -467,11 +467,16 @@ def compare_t2_observatories_dat(t2dir=None):
             full_name, short_name = full_name.lower(), short_name.lower()
             topo_obs_entry = textwrap.dedent(
                 f"""
-                TopoObs(
-                    name='{full_name}',
-                    aliases=['{short_name}'],
-                    itrf_xyz=[{x}, {y}, {z}],
-                )
+                "{full_name}": {
+                    "aliases": [
+                        "{short_name}"
+                    ],
+                    "itrf_xyz": [
+                        {x}, 
+                        {y}, 
+                        {z}
+                    ]
+                }
                 """
             )
             try:
