@@ -38,7 +38,7 @@ from pint.observatory import (
     NoClockCorrections,
     ClockCorrectionOutOfRange,
 )
-from pint.observatory.clock_file import ClockFile, GlobalClockFile, ConstructedClockFile
+from pint.observatory.clock_file import ClockFile, GlobalClockFile
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import get_tdb_tt_ephem_geocenter, objPosVel_wrt_SSB
 from pint.utils import has_astropy_unit, open_or_use
@@ -451,7 +451,10 @@ def find_clock_file(
     if p is not None:
         log.info("Loading clock file {p} from specified location")
         return ClockFile.read(
-            p, format=format, bogus_last_correction=bogus_last_correction
+            p,
+            format=format,
+            bogus_last_correction=bogus_last_correction,
+            friendly_name=name,
         )
 
     # FIXME: implement clock_dir
@@ -463,7 +466,10 @@ def find_clock_file(
         if loc.exists():
             # FIXME: more arguments?
             env_clock = ClockFile.read(
-                loc, format=format, bogus_last_correction=bogus_last_correction
+                loc,
+                format=format,
+                bogus_last_correction=bogus_last_correction,
+                friendly_name=name,
             )
             # Could just return this but we want to emit
             # a warning with an appropriate level of forcefulness
@@ -478,7 +484,10 @@ def find_clock_file(
     loc = Path(runtimefile(name))
     if loc.exists():
         local_clock = ClockFile.read(
-            loc, format=format, bogus_last_correction=bogus_last_correction
+            loc,
+            format=format,
+            bogus_last_correction=bogus_last_correction,
+            friendly_name=name,
         )
 
     if env_clock is not None:
@@ -502,11 +511,7 @@ def find_clock_file(
         # Null clock file should return warnings/exceptions if ever you try to
         # look up a data point in it
         log.info(f"No clock file for {name}")
-        return ConstructedClockFile(
-            mjd=[],
-            clock=np.array([]) * u.us,
-            leading_comment=f"# Couldn't find file {name}",
-        )
+        return ClockFile.null(friendly_name=name)
 
 
 def export_all_clock_files(directory):

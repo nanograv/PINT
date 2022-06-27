@@ -35,9 +35,7 @@ class TestClockcorrection(unittest.TestCase):
 
     def test_wsrt_parsed_correctly_with_text_columns(self):
         # Issue here is the wsrt clock file has text columns, which used to cause np.loadtxt to crash
-        cf = ClockFile.read(
-            path.join(datadir, "wsrt2gps.clk"), format="tempo2", obscode="i"
-        )
+        cf = ClockFile.read(path.join(datadir, "wsrt2gps.clk"), format="tempo2")
 
         t = Time(51189.5, scale="utc", format="mjd")
         e = cf.evaluate(t)

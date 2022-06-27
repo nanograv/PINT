@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from astropy.time import Time
 
-from pint.observatory.clock_file import ClockFile, ConstructedClockFile
+from pint.observatory.clock_file import ClockFile
 from pint.observatory.topo_obs import find_clock_file
 
 
@@ -25,7 +25,7 @@ def sandbox(tmp_path):
     o.repo_dir = tmp_path / "repo"
     o.repo_dir.mkdir()
     o.clocks = [
-        ConstructedClockFile(mjd=np.array([50000 + i, 59000]), clock=np.zeros(2) * u.us)
+        ClockFile(mjd=np.array([50000 + i, 59000]), clock=np.zeros(2) * u.us)
         for i in range(10)
     ]
     o.name = "fake.clk"
@@ -68,7 +68,7 @@ def test_can_find_in_repo(sandbox, temp_cache):
 
 
 def test_pint_env_overrides(sandbox, temp_cache):
-    os.environ["PINT_CLOCK_OVERRIDE"] = sandbox.override_dir
+    os.environ["PINT_CLOCK_OVERRIDE"] = str(sandbox.override_dir)
     c = find_clock_file(sandbox.name, format="tempo2", url_base=sandbox.repo_uri)
     assert c.time.mjd[0] == sandbox.override_clock.time.mjd[0]
     # FIXME: how to test that a warning is emitted?
