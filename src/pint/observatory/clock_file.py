@@ -420,6 +420,8 @@ class ClockFile:
     def export(self, filename):
         """Write this clock correction file to the specified location."""
         # FIXME: fall back to writing the clock file using .write_...?
+        if self.filename is None:
+            raise ValueError("No file backing this clock correction object")
         try:
             contents = Path(self.filename).read_text()
         except IOError:
@@ -429,6 +431,9 @@ class ClockFile:
             return
         with open_or_use(filename, "wt") as f:
             f.write(contents)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.friendly_name=}, {len(self.time)=})"
 
 
 # TEMPO2
