@@ -10,9 +10,11 @@ to use PINT. Please feel free to change this by writing more.
 .. toctree::
 
    installation
+   user-questions
+   common-timing-workflow
+   simple-python-pint-tools
    contributing
    development-setup
    editing-documentation
    working-with-notebooks
    controlling-logging
-   user-questions
