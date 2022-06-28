@@ -40,8 +40,8 @@ from glob import glob
 import pint.logging
 
 # setup the logging
-# let's have it give a bit more detail in this case
-pint.logging.setup(level="DEBUG")
+# let's have it give less detail
+pint.logging.setup(level="WARNING")
 
 # %%
 # %matplotlib inline
@@ -75,7 +75,11 @@ print(a)
 import pint.toa as toa
 import pint.config
 
+# maybe we want extra logging info here to see what happens when we load TOAs
+pint.logging.setup(level="DEBUG")
 t = toa.get_TOAs(pint.config.examplefile("NGC6440E.tim"), usepickle=False)
+# but then turn back to "WARNING" later
+pint.logging.setup(level="WARNING")
 
 # %%
 #  You can print a summary of the loaded TOAs
