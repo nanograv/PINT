@@ -1152,7 +1152,7 @@
             -173759.585,
             5077751.313
         ],
-        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
+        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7.  However, it is likely incorrect (shows up as north of Greenland)."
     },
     "tabley": {
         "aliases": [
