@@ -147,6 +147,7 @@
             "ncyobs2obspm.clk",
             "obspm2gps.clk"
         ],
+        "bogus_last_correction": true,
         "origin": "The Nan\u00e7ay radio telescope with the NUPPI back-end.\nThe origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
     },
     "effelsberg": {
