@@ -13,9 +13,10 @@ import pint.observatory.topo_obs
 from pint.observatory.topo_obs import (
     load_observatories,
     load_observatories_from_usual_locations,
+    TopoObs,
 )
+from pint.observatory.special_locations import load_special_locations
 from pint.observatory import get_observatory
-from pint.observatory.topo_obs import TopoObs
 from pinttestdata import datadir
 
 
@@ -258,5 +259,6 @@ def test_observatory_override(overwrite):
         newgbt = get_observatory("gbt")
         assert newgbt._loc_itrf.y > 0
         assert newgbt._loc_itrf.y != gbt_orig._loc_itrf.y
-    # put back in the original location
+    # put back in the original observatories
     load_observatories_from_usual_locations(clear=True)
+    load_special_locations()
