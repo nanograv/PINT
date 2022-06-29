@@ -668,11 +668,11 @@ def list_last_correction_mjds():
         for c in o._clock:
             try:
                 print(
-                    f"    {os.path.basename(c.filename):<20}"
+                    f"    {c.friendly_name:<20}"
                     f" {Time(c.last_correction_mjd(), format='mjd').iso}"
                 )
             except (ValueError, TypeError):
-                print(f"    {os.path.basename(c.filename):<20} MISSING")
+                print(f"    {c.friendly_name:<20} MISSING")
 
 
 def update_clock_files(bipm_versions=None):
