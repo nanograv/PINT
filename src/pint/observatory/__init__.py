@@ -183,6 +183,9 @@ class Observatory:
     @classmethod
     def names_and_aliases(cls):
         """List all observatories and their aliases"""
+        import pint.observatory.topo_obs  # noqa
+        import pint.observatory.special_locations  # noqa
+
         s = {}
         for oname, obs in cls._registry.items():
             s[oname] = obs.aliases
