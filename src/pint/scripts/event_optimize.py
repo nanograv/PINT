@@ -758,6 +758,13 @@ def main(argv=None):
 
     import emcee
 
+    # Setting up a backend to save the chains into an h5 file
+    try:
+        backend = emcee.backends.HDFBackend(ftr.model.PSR.value + "_chains.h5")
+        backend.reset(nwalkers, ndim)
+    except ImportError:
+        backend = None
+
     # Following are for parallel processing tests...
     if 0:
 
@@ -768,10 +775,12 @@ def main(argv=None):
 
         pool = mp.ProcessPool(nodes=8)
         sampler = emcee.EnsembleSampler(
-            nwalkers, ndim, unwrapped_lnpost, pool=pool, args=[ftr]
+            nwalkers, ndim, unwrapped_lnpost, pool=pool, args=[ftr], backend=backend
         )
     else:
-        sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior)
+        sampler = emcee.EnsembleSampler(
+            nwalkers, ndim, ftr.lnposterior, backend=backend
+        )
     # The number is the number of points in the chain
     sampler.run_mcmc(pos, nsteps)
 
