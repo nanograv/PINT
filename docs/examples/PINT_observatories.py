@@ -28,6 +28,7 @@ import pint.observatory
 
 # %% [markdown]
 # What observatories are present in PINT?  How can we identify them?  They have both default names and aliases.
+# (Note: if these don't show up on the `readthedocs` server, you can run this locally or in your own notebook)
 
 # %%
 for name, aliases in pint.observatory.Observatory.names_and_aliases().items():
