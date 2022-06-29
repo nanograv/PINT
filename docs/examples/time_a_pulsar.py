@@ -28,8 +28,11 @@ from pint.residuals import Residuals
 from pint.toa import get_TOAs
 import pint.logging
 
-# setup logging
 pint.logging.setup(level="INFO")
+
+# %% [markdown]
+#
+# We want to load a parameter file and some TOAs. For the purposes of this notebook, we'll load in ones that are included with PINT; the `pint.config.examplefile()` calls return the path to where those files are in the PINT distribution. If you wanted to use your own files, you would probably know their filenames and could just set `parfile="myfile.par"` and `timfile="myfile.tim"`.
 
 # %%
 import pint.config
@@ -37,18 +40,21 @@ import pint.config
 parfile = pint.config.examplefile("NGC6440E.par")
 timfile = pint.config.examplefile("NGC6440E.tim")
 
+# %% [markdown]
+# Let's load the par and tim files. We could load them separately with the `get_model` and `get_TOAs` functions, but the parfile may contain information about how to interpret the TOAs, so it is convenient to load the two together so that the TOAs take into account details in the par file.
+
 # %%
 m, t_all = get_model_and_toas(parfile, timfile)
 m
+
+# %% [markdown]
+# There are many messages here. As a rule messages marked `INFO` can safely be ignored, they are simply informational; take a look at them if something unexpected happens. Messages marked `WARNING` or `ERROR` are more serious. (These messages are emitted by the python `logger` module and can be suppressed or written to a log file if they are annoying.)
 
 # %%
 t_all.print_summary()
 
 # %% [markdown]
-# There are many messages here. As a rule messages marked `INFO` can safely be ignored, they are simply informational; take a look at them if something unexpected happens. Messages marked `WARNING` or `ERROR` are more serious. (These messages are emitted by the python `logger` module and can be suppressed or written to a log file if they are annoying.)
-
-# %% [markdown]
-# Let's discard the data points with uncertainties $>30\,\mu\text{s}$ - uncertainty estimation is not always reliable when the signal-to-noise is low.
+# We could proceed immediately to plotting residuals or fitting the par file, but some of thode uncertainties seem a little large. Let's discard the data points with uncertainties $>30\,\mu\text{s}$ - uncertainty estimation is not always reliable when the signal-to-noise is low.
 
 # %%
 error_ok = t_all.table["error"] <= 30 * u.us
@@ -126,7 +132,3 @@ plt.show()
 # %%
 f.model.write_parfile("/tmp/output.par", "wt")
 print(f.model.as_parfile())
-
-# %%
-
-# %%
