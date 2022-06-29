@@ -8,7 +8,7 @@ from pint.pulsar_mjd import Time
 
 import pint.observatory
 import pint.observatory.observatories
-from pint.observatory import get_observatory
+from pint.observatory import get_observatory, Observatory, NoClockCorrections
 from pint.observatory.topo_obs import TopoObs
 from pinttestdata import datadir
 
@@ -78,67 +78,68 @@ class TestObservatory(unittest.TestCase):
             get_observatory("Wrong_name")
 
     def test_clock_correction_file_not_available(self):
-        if os.getenv("TEMPO2") is None:
-            pytest.skip("TEMPO2 environment variable is not set, can't run this test")
-        # observatory clock correction path expections.
-        fake_obs = TopoObs(
-            "Fake1",
-            tempo_code="?",
-            itoa_code="FK",
-            clock_fmt="tempo2",
-            clock_file="fake2gps.clk",
-            clock_dir="TEMPO2",
-            itrf_xyz=[0.00, 0.0, 0.0],
-            overwrite=True,
-        )
-        site = get_observatory(
-            "Fake1", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
-        )
+        r = Observatory._registry.copy()
         try:
-            site.clock_corrections(self.test_time)
-        except (OSError, IOError) as e:
-            assert e.errno == 2
-            assert os.path.basename(e.filename) == "fake2gps.clk"
+            # observatory clock correction path expections.
+            TopoObs(
+                "Fake1",
+                tempo_code="?",
+                itoa_code="FK",
+                clock_fmt="tempo2",
+                clock_file="fake2gps.clk",
+                clock_dir="TEMPO2",
+                itrf_xyz=[0.00, 0.0, 0.0],
+                overwrite=True,
+            )
+            site = get_observatory(
+                "Fake1", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
+            )
+            with pytest.raises(NoClockCorrections):
+                site.clock_corrections(self.test_time)
+        finally:
+            Observatory._registry = r
 
     def test_no_tempo2_but_tempo2_clock_requested(self):
-        if os.getenv("TEMPO2") is not None:
-            pytest.skip("TEMPO2 environment variable is set, can't run this test")
-        # observatory clock correction path expections.
-        fake_obs = TopoObs(
-            "Fake1",
-            tempo_code="?",
-            itoa_code="FK",
-            clock_fmt="tempo2",
-            clock_file="fake2gps.clk",
-            clock_dir="TEMPO2",
-            itrf_xyz=[0.00, 0.0, 0.0],
-            overwrite=True,
-        )
-        site = get_observatory(
-            "Fake1", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
-        )
-        with pytest.raises(RuntimeError):
-            site.clock_corrections(self.test_time, limits="error")
+        r = Observatory._registry.copy()
+        try:
+            fake_obs = TopoObs(
+                "Fake1",
+                tempo_code="?",
+                itoa_code="FK",
+                clock_fmt="tempo2",
+                clock_file="fake2gps.clk",
+                clock_dir="TEMPO2",
+                itrf_xyz=[0.00, 0.0, 0.0],
+                overwrite=True,
+            )
+            site = get_observatory(
+                "Fake1", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
+            )
+            with pytest.raises(RuntimeError):
+                site.clock_corrections(self.test_time, limits="error")
+        finally:
+            Observatory._registry = r
 
     def test_no_tempo_but_tempo_clock_requested(self):
-        if os.getenv("TEMPO") is not None:
-            pytest.skip("TEMPO environment variable is set, can't run this test")
-        # observatory clock correction path expections.
-        fake_obs = TopoObs(
-            "Fake1",
-            tempo_code="?",
-            itoa_code="FK",
-            clock_fmt="tempo",
-            clock_file="fake2gps.clk",
-            clock_dir="TEMPO",
-            itrf_xyz=[0.00, 0.0, 0.0],
-            overwrite=True,
-        )
-        site = get_observatory(
-            "Fake1", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
-        )
-        with pytest.raises(RuntimeError):
-            site.clock_corrections(self.test_time, limits="error")
+        r = Observatory._registry.copy()
+        try:
+            fake_obs = TopoObs(
+                "Fake1",
+                tempo_code="?",
+                itoa_code="FK",
+                clock_fmt="tempo",
+                clock_file="fake2gps.clk",
+                clock_dir="TEMPO",
+                itrf_xyz=[0.00, 0.0, 0.0],
+                overwrite=True,
+            )
+            site = get_observatory(
+                "Fake1", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
+            )
+            with pytest.raises(RuntimeError):
+                site.clock_corrections(self.test_time, limits="error")
+        finally:
+            Observatory._registry = r
 
     def test_wrong_TDB_method(self):
         site = get_observatory(
@@ -178,37 +179,32 @@ def test_last_mjd(observatory):
 
 
 def test_missing_clock_gives_exception_nonexistent():
-    o = TopoObs(
-        "arecibo_bogus",
-        clock_file="nonexistent.dat",
-        itoa_code="W",
-        itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
-        overwrite=True,
-    )
+    r = Observatory._registry.copy()
+    try:
+        o = TopoObs(
+            "arecibo_bogus",
+            clock_file="nonexistent.dat",
+            itoa_code="W",
+            itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
+            overwrite=True,
+        )
 
-    with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError):
+            o.clock_corrections(Time(57600, format="mjd"), limits="error")
+    finally:
+        Observatory._registry = r
+
+
+def test_no_clock_means_no_corrections():
+    r = Observatory._registry.copy()
+    try:
+        o = TopoObs(
+            "arecibo_bogus",
+            itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
+        )
         o.clock_corrections(Time(57600, format="mjd"), limits="error")
-
-
-def test_missing_clock_gives_exception_no_data():
-    o = TopoObs(
-        "arecibo_bogus",
-        itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
-        overwrite=True,
-    )
-
-    with pytest.raises(RuntimeError):
-        o.clock_corrections(Time(57600, format="mjd"), limits="error")
-
-
-def test_missing_clock_runs():
-    o = TopoObs(
-        "arecibo_bogus",
-        clock_file="nonexistent.dat",
-        itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
-        overwrite=True,
-    )
-    o.clock_corrections(Time(57600, format="mjd"))
+    finally:
+        Observatory._registry = r
 
 
 def test_observatories_registered():
@@ -217,3 +213,7 @@ def test_observatories_registered():
 
 def test_gbt_registered():
     get_observatory("gbt")
+
+
+def test_list_last_correction_mjds_runs():
+    pint.observatory.list_last_correction_mjds()
