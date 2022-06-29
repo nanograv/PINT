@@ -9,7 +9,6 @@ import pytest
 from pint.pulsar_mjd import Time
 
 import pint.observatory
-<<<<<<< HEAD
 import pint.observatory.topo_obs
 from pint.observatory.topo_obs import (
     load_observatories,
@@ -17,12 +16,7 @@ from pint.observatory.topo_obs import (
     TopoObs,
 )
 from pint.observatory.special_locations import load_special_locations
-from pint.observatory import get_observatory
-=======
-import pint.observatory.observatories
 from pint.observatory import get_observatory, Observatory, NoClockCorrections
-from pint.observatory.topo_obs import TopoObs
->>>>>>> 496144ad56465cb980141db09adedac0e32d55d3
 from pinttestdata import datadir
 
 
@@ -264,6 +258,7 @@ def test_observatory_override(overwrite):
     # put back in the original observatories
     load_observatories_from_usual_locations(clear=True)
     load_special_locations()
+
 
 def test_list_last_correction_mjds_runs():
     pint.observatory.list_last_correction_mjds()
