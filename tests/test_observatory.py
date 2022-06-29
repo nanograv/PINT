@@ -94,7 +94,6 @@ class TestObservatory(unittest.TestCase):
                 itoa_code="FK",
                 clock_fmt="tempo2",
                 clock_file="fake2gps.clk",
-                clock_dir="TEMPO2",
                 itrf_xyz=[0.00, 0.0, 0.0],
                 overwrite=True,
             )
@@ -102,7 +101,7 @@ class TestObservatory(unittest.TestCase):
                 "Fake1", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
             )
             with pytest.raises(NoClockCorrections):
-                site.clock_corrections(self.test_time)
+                site.clock_corrections(self.test_time, limits="error")
         finally:
             Observatory._registry = r
 
