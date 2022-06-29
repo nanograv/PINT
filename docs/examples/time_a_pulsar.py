@@ -49,12 +49,24 @@ m
 
 # %% [markdown]
 # There are many messages here. As a rule messages marked `INFO` can safely be ignored, they are simply informational; take a look at them if something unexpected happens. Messages marked `WARNING` or `ERROR` are more serious. (These messages are emitted by the python `logger` module and can be suppressed or written to a log file if they are annoying.)
+#
+# Let's just print out a quick summary.
 
 # %%
 t_all.print_summary()
 
+# %%
+rs = Residuals(t_all, m).phase_resids
+xt = t_all.get_mjds()
+plt.figure()
+plt.plot(xt, rs, "x")
+plt.title("%s Pre-Fit Timing Residuals" % m.PSR.value)
+plt.xlabel("MJD")
+plt.ylabel("Residual (phase)")
+plt.grid()
+
 # %% [markdown]
-# We could proceed immediately to plotting residuals or fitting the par file, but some of thode uncertainties seem a little large. Let's discard the data points with uncertainties $>30\,\mu\text{s}$ - uncertainty estimation is not always reliable when the signal-to-noise is low.
+# We could proceed immediately to fitting the par file, but some of those uncertainties seem a little large. Let's discard the data points with uncertainties $>30\,\mu\text{s}$ - uncertainty estimation is not always reliable when the signal-to-noise is low.
 
 # %%
 error_ok = t_all.table["error"] <= 30 * u.us
@@ -62,7 +74,6 @@ t = t_all[error_ok]
 t.print_summary()
 
 # %%
-# These are pre-fit residuals
 rs = Residuals(t, m).phase_resids
 xt = t.get_mjds()
 plt.figure()
@@ -71,6 +82,9 @@ plt.title("%s Pre-Fit Timing Residuals" % m.PSR.value)
 plt.xlabel("MJD")
 plt.ylabel("Residual (phase)")
 plt.grid()
+
+# %% [markdown]
+# Now let's fit the par file to the residuals.
 
 # %%
 f = pint.fitter.DownhillWLSFitter(t, m)
