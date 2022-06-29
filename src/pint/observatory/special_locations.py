@@ -331,13 +331,15 @@ class T2SpacecraftObs(SpecialLocation):
 
 
 def load_special_locations():
-    """Load :class:`~pint.observatory.special_locations.BarycenterObs`, :class:`~pint.observatory.special_locations.GeocenterObs`,
+    """Load Barycenter, Geocenter, and other special locations into observatory registry.
+
+    Loads :class:`~pint.observatory.special_locations.BarycenterObs`, :class:`~pint.observatory.special_locations.GeocenterObs`,
     and :class:`~pint.observatory.special_locations.T2SpacecraftObs` into observatory registry.
     """
     # Need to initialize one of each so that it gets added to the list
-    BarycenterObs("barycenter", aliases=["@", "ssb", "bary", "bat"])
-    GeocenterObs("geocenter", aliases=["0", "o", "coe", "geo"])
-    T2SpacecraftObs("stl_geo", aliases=["STL_GEO"])
+    BarycenterObs("barycenter", aliases=["@", "ssb", "bary", "bat"], overwrite=True)
+    GeocenterObs("geocenter", aliases=["0", "o", "coe", "geo"], overwrite=True)
+    T2SpacecraftObs("stl_geo", aliases=["STL_GEO"], overwrite=True)
     # TODO -- BIPM issue
 
 

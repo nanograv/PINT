@@ -50,9 +50,7 @@ def sandbox(tmp_path):
         yield o
     finally:
         os.environ = e
-        pint.observatory.Observatory.clear_registry()
-        importlib.reload(pint.observatory.topo_obs)
-        importlib.reload(pint.observatory.special_locations)
+        pint.observatory.topo_obs.load_observatories_from_usual_locations(clear=True)
 
 
 def test_override_gbt(sandbox):

@@ -581,6 +581,8 @@ def load_observatories(filename=observatories_json, overwrite=False):
 def load_observatories_from_usual_locations(clear=False):
     """Load observatories from the default JSON file as well as ``$PINT_OBS_OVERRIDE``, optionally clearing the registry
 
+    Running with ``clear=True`` will return PINT to the state it is on import.  Running with ``clear=False`` may result in conflicting definitions if observatories have already been imported.
+
     Parameters
     ----------
     clear : bool, optional
