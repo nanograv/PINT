@@ -12,6 +12,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - The default version of TT(BIPM) uses BIPM2021
 - ClockFile no longer uses metaclass magic or many subclasses, and have friendly names for use in messages
 - `model.setup()` now gets called automatically after removing a parameter as part of `remove_param`
+- Cleaned up handling of telescopes with no clock files so they don't emit ERROR messages
 ### Added
 - logging now needs to be setup explicitly
 - Color-by-jump mode for pintk

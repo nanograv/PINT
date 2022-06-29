@@ -420,6 +420,8 @@ class ClockFile:
     def export(self, filename):
         """Write this clock correction file to the specified location."""
         # FIXME: fall back to writing the clock file using .write_...?
+        if self.filename is None:
+            raise ValueError("No file backing this clock correction object")
         try:
             contents = Path(self.filename).read_text()
         except IOError:
@@ -429,6 +431,9 @@ class ClockFile:
             return
         with open_or_use(filename, "wt") as f:
             f.write(contents)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.friendly_name=}, {len(self.time)=})"
 
 
 # TEMPO2
@@ -460,7 +465,9 @@ def read_tempo2_clock_file(filename, bogus_last_correction=False, friendly_name=
         A human-readable name for this file, for use in error reporting.
         If not provided, will default to ``filename``.
     """
-    log.debug(f"Loading TEMPO2-format observatory clock correction file {filename}")
+    log.debug(
+        f"Loading TEMPO2-format observatory clock correction file {filename} with {bogus_last_correction=}"
+    )
     try:
         mjd = []
         clk = []
@@ -598,7 +605,9 @@ def read_tempo_clock_file(
     """
 
     leading_comment = None
-    log.debug(f"Loading TEMPO observatory ({obscode}) clock correction file {filename}")
+    log.debug(
+        f"Loading TEMPO observatory ({obscode}) clock correction file {filename} with {bogus_last_correction=}"
+    )
     mjds = []
     clkcorrs = []
     comments = []
@@ -788,6 +797,7 @@ class GlobalClockFile(ClockFile):
         self.filename = filename
         self.friendly_name = filename
         self.format = format
+        log.debug(f"Global clock file {self.friendly_name} saving {kwargs=}")
         self.kwargs = kwargs
         self.url_base = url_base
         self.url_mirrors = url_mirrors
