@@ -2468,7 +2468,7 @@ class ModelMeta(abc.ABCMeta):
         super().__init__(name, bases, dct)
 
 
-class Component(object, metaclass=ModelMeta):
+class Component(metaclass=ModelMeta):
     """Timing model components.
 
     When such a class is defined, it registers itself in
