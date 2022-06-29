@@ -64,7 +64,7 @@
         "tempo_code": "m",
         "itoa_code": "MK",
         "clock_fmt": "tempo2",
-        "clock_file": "mk2utc.clk",
+        "clock_file": "mk2utc_observatory.clk",
         "itrf_xyz": [
             5109360.133,
             2006852.586,
@@ -90,7 +90,8 @@
     "jodrell": {
         "tempo_code": "8",
         "itoa_code": "JB",
-        "clock_file": "time_jb.dat",
+        "clock_file": "jb2gps.clk",
+        "clock_fmt": "tempo2",
         "aliases": [
             "jbdfb",
             "jbroach",
@@ -108,7 +109,8 @@
         "origin": "The Lovell telescope at Jodrell Bank.\nThese are the coordinates used for VLBI as of March 2020 (MJD 58919). They are based on\na fiducial position at MJD 50449 plus a (continental) drift velocity of\n[-0.0117, 0.0170, 0.0093] m/yr. This data was obtained from Ben Perera in September 2021.\n"
     },
     "jodrell_pre_2021": {
-        "clock_file": "time_jb.dat",
+        "clock_file": "jb2gps.clk",
+        "clock_fmt": "tempo2",
         "itrf_xyz": [
             3822626.04,
             -154105.65,
