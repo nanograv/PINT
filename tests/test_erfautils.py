@@ -87,7 +87,7 @@ def test_IERS_B_all_in_IERS_Auto():
     assert_equal(A["dX_2000A_B"][i_A], B["dX_2000A"])
 
 
-@pytest.mark.xfail(reason="IERS changes old values in new versions of the B table")
+# @pytest.mark.xfail(reason="IERS changes old values in new versions of the B table")
 def test_IERS_B_agree_with_IERS_Auto_dX():
     A = IERS_Auto.open()
     B = IERS_B.open(download_file(IERS_B_URL, cache=True))
@@ -118,7 +118,7 @@ def test_IERS_B_agree_with_IERS_Auto_dX():
         )
 
 
-@pytest.mark.xfail(reason="IERS changes old values in new versions of the B table")
+# @pytest.mark.xfail(reason="IERS changes old values in new versions of the B table")
 def test_IERS_B_agree_with_IERS_Auto():
     A = IERS_Auto.open()
     B = IERS_B.open(download_file(IERS_B_URL, cache=True))
@@ -151,7 +151,7 @@ def test_IERS_B_agree_with_IERS_Auto():
         )
 
 
-@pytest.mark.xfail(reason="disagreement in current astropy")
+# @pytest.mark.xfail(reason="disagreement in current astropy")
 def test_IERS_B_builtin_agree_with_IERS_Auto_dX():
     A = IERS_Auto.open()
     B = IERS_B.open(IERS_B_FILE)

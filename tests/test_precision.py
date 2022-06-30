@@ -238,7 +238,6 @@ def test_time_construction_jds_exact(scale, i_f):
     assert (jd1, jd2) == (jd1_t, jd2_t)
 
 
-@pytest.mark.xfail(reason="astropy bug #9327; fixed in 3.2.2")
 @given(reasonable_mjd())
 @example(i_f=(40000, -4.440892098500627e-16))
 @example(i_f=(43143, 9.313492199680697e-10))
@@ -252,7 +251,6 @@ def test_time_construction_mjds_preserved(i_f):
     assert (abs((jd1 - jd1_t) + (jd2 - jd2_t)) * u.day).to(u.ns) < 1 * u.ns
 
 
-@pytest.mark.xfail(reason="astropy bug #9327; fixed in 3.2.2")
 @given(reasonable_mjd())
 @example(i_f=(40000, -4.440892098500627e-16))
 @example(i_f=(43143, 9.313492199680697e-10))
@@ -282,7 +280,6 @@ def test_time_to_longdouble_via_jd(scale, i_f):
     assert (abs(time_to_longdouble(t) - ld) * u.day).to(u.ns) < 1 * u.ns
 
 
-@pytest.mark.xfail(reason="astropy bug #9327; fixed in 3.2.2")
 @given(reasonable_mjd())
 @example(i_f=(43143, 9.313492199680697e-10))
 @example(i_f=(40000, -4.440892098500627e-16))
