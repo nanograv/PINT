@@ -230,6 +230,7 @@ class TopoObs(Observatory):
             self._clock = [
                 find_clock_file(c, format=self.clock_fmt, clock_dir=self.clock_dir)
                 for c in clock_files
+                if c != ""
             ]
 
     def clock_corrections(self, t, limits="warn"):
@@ -395,17 +396,17 @@ def find_clock_file(
     -------
     ClockFile
     """
-    if clock_dir is None or clock_dir.upper() == "PINT":
+    if clock_dir is None or str(clock_dir).upper() == "PINT":
         # Don't try loading it from a specific path
         p = None
-    elif clock_dir.lower() == "tempo":
+    elif str(clock_dir).lower() == "tempo":
         if "TEMPO" not in os.environ:
             raise NoClockCorrections(
                 f"TEMPO environment variable not set but clock file {name} "
                 f"is supposed to be in the directory it points to"
             )
         p = Path(os.environ["TEMPO"]) / "clock" / name
-    elif clock_dir.lower() == "tempo2":
+    elif str(clock_dir).lower() == "tempo2":
         if "TEMPO2" not in os.environ:
             raise NoClockCorrections(
                 f"TEMPO2 environment variable not set but clock file {name} "
@@ -425,7 +426,6 @@ def find_clock_file(
             friendly_name=name,
         )
 
-    # FIXME: implement clock_dir
     env_clock = None
     global_clock = None
     local_clock = None
@@ -478,8 +478,7 @@ def find_clock_file(
     else:
         # Null clock file should return warnings/exceptions if ever you try to
         # look up a data point in it
-        log.info(f"No clock file for {name}")
-        return ClockFile.null(friendly_name=name)
+        raise NoClockCorrections(f"No clock file for {name}")
 
 
 def export_all_clock_files(directory):

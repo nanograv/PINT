@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+### Changed
+- No tests now change based on $TEMPO or $TEMPO2
+- SpecialLocations no longer support GPS or BIPM corrections (it was broken anyway)
+### Added
+### Fixed
+
 ## [0.9.0] 2022-06-24
 ### Changed
 - `model.phase()` now defaults to `abs_phase=True` when TZR* params are in the model

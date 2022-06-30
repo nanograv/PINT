@@ -126,21 +126,6 @@ class ClockFile:
         else:
             raise ValueError("clock file format '%s' not defined" % format)
 
-    @classmethod
-    def null(cls, *, filename=None, friendly_name=None):
-        """Construct a null clock correction file.
-
-        This has no clock corrections, and can be used to handle
-        conditions where a file is expected but not available.
-        """
-        return cls(
-            mjd=np.array([]),
-            clock=np.array([]) * u.s,
-            filename=filename,
-            friendly_name=friendly_name,
-            leading_comment="# No clock file available",
-        )
-
     @property
     def time(self):
         """An astropy.time.Time recording the dates of clock corrections."""
@@ -514,10 +499,9 @@ def read_tempo2_clock_file(filename, bogus_last_correction=False, friendly_name=
                     add_comment(m.group(3))
         clk = np.array(clk)
     except (FileNotFoundError, OSError):
-        log.error(f"TEMPO2-style clock correction file {filename} not found")
-        mjd = np.array([], dtype=float)
-        clk = np.array([], dtype=float)
-        header = None
+        raise NoClockCorrections(
+            f"TEMPO2-style clock correction file {filename} not found"
+        )
     if bogus_last_correction and len(mjd):
         mjd = mjd[:-1]
         clk = clk[:-1]
@@ -681,6 +665,7 @@ def read_tempo_clock_file(
                 # allow mjd=0 to pass, since that is often used
                 # for effectively null clock files
                 if (mjd < 39000 and mjd != 0) or mjd > 100000:
+                    log.info(f"Disregarding suspicious MJD {mjd} in TEMPO clock file")
                     mjd = None
             except (ValueError, IndexError):
                 mjd = None
@@ -731,7 +716,7 @@ def read_tempo_clock_file(
             comments.append(None)
             add_comment(l[50:])
     except (FileNotFoundError, OSError):
-        log.error(
+        raise NoClockCorrections(
             f"TEMPO-style clock correction file {filename} "
             f"for site {obscode} not found"
         )

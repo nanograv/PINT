@@ -7,6 +7,7 @@ from astropy.time import Time
 
 from pint.observatory.clock_file import ClockFile
 from pint.observatory.topo_obs import find_clock_file
+from pint.observatory import NoClockCorrections
 
 
 @pytest.fixture
@@ -18,6 +19,14 @@ def sandbox(tmp_path):
     e = os.environ.copy()
     try:
         del os.environ["PINT_CLOCK_OVERRIDE"]
+    except KeyError:
+        pass
+    try:
+        del os.environ["TEMPO"]
+    except KeyError:
+        pass
+    try:
+        del os.environ["TEMPO2"]
     except KeyError:
         pass
     o.override_dir = tmp_path / "override"
@@ -74,12 +83,22 @@ def test_pint_env_overrides(sandbox, temp_cache):
     # FIXME: how to test that a warning is emitted?
 
 
-def test_obeys_clock_dir(sandbox, temp_cache):
+def test_obeys_clock_dir_tempo2(sandbox, temp_cache):
     os.environ["TEMPO2"] = str(sandbox.t2_dir)
     c = find_clock_file(
         sandbox.name, format="tempo2", clock_dir="tempo2", url_base=sandbox.repo_uri
     )
     assert c.time.mjd[0] == sandbox.t2_clock.time.mjd[0]
+
+
+def test_obeys_clock_dir_specific(sandbox, temp_cache):
+    c = find_clock_file(
+        sandbox.name,
+        format="tempo2",
+        clock_dir=sandbox.override_dir,
+        url_base=sandbox.repo_uri,
+    )
+    assert c.time.mjd[0] == sandbox.override_clock.time.mjd[0]
 
 
 # FIXME: how to test fallback to the runtime dir?
@@ -97,18 +116,28 @@ def test_can_find_known_files(name, format):
     c.evaluate(Time(59000, format="pulsar_mjd"), limits="error")
 
 
-def test_tempo2_file_nonexistent_yields_zero_length(sandbox):
+def test_tempo2_file_nonexistent_raises(sandbox):
     os.environ["TEMPO2"] = str(sandbox.override_dir)
-    c = find_clock_file("nonexistent.clk", format="tempo2", clock_dir="tempo2")
-    assert len(c.time) == 0
+    with pytest.raises(NoClockCorrections):
+        find_clock_file("nonexistent.clk", format="tempo2", clock_dir="tempo2")
 
 
-def test_tempo_file_nonexistent_yields_zero_length(sandbox):
+def test_tempo_file_nonexistent_raises(sandbox):
     os.environ["TEMPO"] = str(sandbox.override_dir)
-    c = find_clock_file("nonexistent.dat", format="tempo", clock_dir="tempo")
-    assert len(c.time) == 0
+    with pytest.raises(NoClockCorrections):
+        find_clock_file("nonexistent.dat", format="tempo", clock_dir="tempo")
 
 
-def test_nonexistent_in_repo_yields_zero_length(sandbox, temp_cache):
-    c = find_clock_file("nonexistent.clk", format="tempo2", url_base=sandbox.repo_uri)
-    assert len(c.time) == 0
+def test_nonexistent_in_repo_raises(sandbox, temp_cache):
+    with pytest.raises(NoClockCorrections):
+        find_clock_file("nonexistent.clk", format="tempo2", url_base=sandbox.repo_uri)
+
+
+def test_nonexistent_specific_path_raises(sandbox, tmp_path):
+    with pytest.raises(NoClockCorrections):
+        find_clock_file(
+            "nonexistent.clk",
+            clock_dir=tmp_path,
+            format="tempo2",
+            url_base=sandbox.repo_uri,
+        )

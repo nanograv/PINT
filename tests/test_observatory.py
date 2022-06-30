@@ -5,88 +5,99 @@ import unittest
 import numpy as np
 import pytest
 from pint.pulsar_mjd import Time
+import astropy.units as u
 
 import pint.observatory
 import pint.observatory.observatories
-from pint.observatory import get_observatory
+from pint.observatory import get_observatory, NoClockCorrections, Observatory
 from pint.observatory.topo_obs import TopoObs
 from pinttestdata import datadir
 
+tobs = ["aro", "ao", "chime", "drao"]
 
-class TestObservatory(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        os.chdir(datadir)
-        cls.test_obs = ["aro", "ao", "chime", "drao"]
-        cls.test_time = Time(
-            np.linspace(55000, 58000, num=100), scale="utc", format="pulsar_mjd"
-        )
 
-    def test_get_obs(self):
-        for tobs in self.test_obs:
-            site = get_observatory(
-                tobs, include_gps=False, include_bipm=True, bipm_version="BIPM2015"
-            )
-            assert site, "Observatory {} did not initialize correctly".format(tobs)
+@pytest.fixture
+def test_time():
+    return Time(np.linspace(55000, 58000, num=100), scale="utc", format="pulsar_mjd")
 
-    def test_different_bipm(self):
-        for tobs in self.test_obs:
-            site = get_observatory(
-                tobs, include_gps=False, include_bipm=True, bipm_version="BIPM2019"
-            )
-            assert site, "BIPM2019 is not a valid BIPM choice"
 
-    def test_clock_corr(self):
-        for tobs in self.test_obs:
-            site = get_observatory(
-                tobs, include_gps=True, include_bipm=True, bipm_version="BIPM2015"
-            )
-            clock_corr = site.clock_corrections(self.test_time)
-            assert len(clock_corr) == len(self.test_time)
-            # Test one time
-            clock_corr1 = site.clock_corrections(self.test_time[0])
-            assert clock_corr1.shape == ()
+@pytest.mark.parametrize("tobs", tobs)
+def test_get_obs(tobs):
+    site = get_observatory(
+        tobs, include_gps=False, include_bipm=True, bipm_version="BIPM2015"
+    )
+    assert site
 
-    def test_get_TDBs(self):
-        for tobs in self.test_obs:
-            site = get_observatory(
-                tobs, include_gps=True, include_bipm=True, bipm_version="BIPM2015"
-            )
-            # Test default TDB calculation
-            tdbs = site.get_TDBs(self.test_time)
-            assert len(tdbs) == len(self.test_time)
-            tdb1 = site.get_TDBs(self.test_time[0])
-            assert tdb1.shape == (1,)
 
-            # Test TDB calculation from ephemeris
-            tdbs = site.get_TDBs(self.test_time, method="ephemeris", ephem="de430t")
-            assert len(tdbs) == len(self.test_time)
-            tdb1 = site.get_TDBs(self.test_time[0], method="ephemeris", ephem="de430t")
-            assert tdb1.shape == (1,)
+@pytest.mark.parametrize("tobs", tobs)
+def test_different_bipm(tobs):
+    site = get_observatory(
+        tobs, include_gps=False, include_bipm=True, bipm_version="BIPM2019"
+    )
+    assert site
 
-    def test_positions(self):
-        for tobs in self.test_obs:
-            site = get_observatory(
-                tobs, include_gps=True, include_bipm=True, bipm_version="BIPM2015"
-            )
-            posvel = site.posvel(self.test_time, ephem="de436")
-            assert posvel.pos.shape == (3, len(self.test_time))
-            assert posvel.vel.shape == (3, len(self.test_time))
 
-    def test_wrong_name(self):
-        with pytest.raises(KeyError):
-            get_observatory("Wrong_name")
+@pytest.mark.parametrize("tobs", tobs)
+def test_clock_corr_shape(tobs, test_time):
+    site = get_observatory(
+        tobs, include_gps=True, include_bipm=True, bipm_version="BIPM2015"
+    )
+    clock_corr = site.clock_corrections(test_time)
+    assert len(clock_corr) == len(test_time)
+    clock_corr1 = site.clock_corrections(test_time[0])
+    assert clock_corr1.shape == ()
 
-    def test_wrong_TDB_method(self):
-        site = get_observatory(
-            "ao", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
-        )
-        with self.assertRaises(ValueError):
-            site.get_TDBs(self.test_time, method="ephemeris")
-        with self.assertRaises(ValueError):
-            site.get_TDBs(self.test_time, method="Unknown_method")
-        with self.assertRaises(ValueError):
-            site.get_TDBs(self.test_time, method="ephemeris", ephem="de436")
+
+@pytest.mark.parametrize("tobs", tobs)
+def test_get_TDBs(tobs, test_time):
+    site = get_observatory(
+        tobs, include_gps=True, include_bipm=True, bipm_version="BIPM2015"
+    )
+    # Test default TDB calculation
+    tdbs = site.get_TDBs(test_time)
+    assert len(tdbs) == len(test_time)
+    tdb1 = site.get_TDBs(test_time[0])
+    assert tdb1.shape == (1,)
+
+
+@pytest.mark.parametrize("tobs", tobs)
+def test_get_TDBs_ephemeris(tobs, test_time):
+    site = get_observatory(
+        tobs, include_gps=True, include_bipm=True, bipm_version="BIPM2015"
+    )
+
+    # Test TDB calculation from ephemeris
+    tdbs = site.get_TDBs(test_time, method="ephemeris", ephem="de430t")
+    assert len(tdbs) == len(test_time)
+    tdb1 = site.get_TDBs(test_time[0], method="ephemeris", ephem="de430t")
+    assert tdb1.shape == (1,)
+
+
+@pytest.mark.parametrize("tobs", tobs)
+def test_positions_shape(tobs, test_time):
+    site = get_observatory(
+        tobs, include_gps=True, include_bipm=True, bipm_version="BIPM2015"
+    )
+    posvel = site.posvel(test_time, ephem="de436")
+    assert posvel.pos.shape == (3, len(test_time))
+    assert posvel.vel.shape == (3, len(test_time))
+
+
+def test_wrong_TDB_method_raises(test_time):
+    site = get_observatory(
+        "ao", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
+    )
+    with pytest.raises(ValueError):
+        site.get_TDBs(test_time, method="ephemeris")
+    with pytest.raises(ValueError):
+        site.get_TDBs(test_time, method="Unknown_method")
+    with pytest.raises(ValueError):
+        site.get_TDBs(test_time, method="ephemeris", ephem="de436")
+
+
+def test_wrong_name():
+    with pytest.raises(KeyError):
+        get_observatory("Wrong_name")
 
 
 @pytest.mark.parametrize(
@@ -113,37 +124,54 @@ def test_last_mjd(observatory):
 
 
 def test_missing_clock_gives_exception_nonexistent():
-    o = TopoObs(
-        "arecibo_bogus",
-        clock_file="nonexistent.dat",
-        itoa_code="W",
-        itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
-        overwrite=True,
-    )
+    r = Observatory._registry.copy()
+    try:
+        o = TopoObs(
+            "arecibo_bogus",
+            clock_file="nonexistent.dat",
+            itoa_code="W",
+            itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
+            overwrite=True,
+        )
 
-    with pytest.raises(RuntimeError):
-        o.clock_corrections(Time(57600, format="mjd"), limits="error")
+        with pytest.raises(NoClockCorrections):
+            o.clock_corrections(Time(57600, format="mjd"), limits="error")
+    finally:
+        Observatory._registry = r
 
 
-def test_missing_clock_gives_exception_no_data():
-    o = TopoObs(
-        "arecibo_bogus",
-        itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
-        overwrite=True,
-    )
+def test_no_clock_required_ok():
+    r = Observatory._registry.copy()
+    try:
+        o = TopoObs(
+            "arecibo_bogus",
+            itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
+            overwrite=True,
+            include_gps=False,
+            include_bipm=False,
+        )
 
-    with pytest.raises(RuntimeError):
-        o.clock_corrections(Time(57600, format="mjd"), limits="error")
+        assert (
+            o.clock_corrections(Time(57600, format="mjd"), limits="error").to_value(u.s)
+            == 0
+        )
+    finally:
+        Observatory._registry = r
 
 
 def test_missing_clock_runs():
-    o = TopoObs(
-        "arecibo_bogus",
-        clock_file="nonexistent.dat",
-        itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
-        overwrite=True,
-    )
-    o.clock_corrections(Time(57600, format="mjd"))
+    r = Observatory._registry.copy()
+    try:
+        o = TopoObs(
+            "arecibo_bogus",
+            clock_file="nonexistent.dat",
+            itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
+            overwrite=True,
+        )
+        with pytest.raises(NoClockCorrections):
+            o.clock_corrections(Time(57600, format="mjd"))
+    finally:
+        Observatory._registry = r
 
 
 def test_observatories_registered():
