@@ -206,7 +206,7 @@ class TopoObs(Observatory):
 
     def __repr__(self):
         aliases = [f"'{x}'" for x in self.aliases]
-        s = f"TopoObs '{self.name}' ({','.join(aliases)}) at [{self._loc_itrf.x}, {self._loc_itrf.y} {self._loc_itrf.z}]:\n{self.origin}"
+        s = f"TopoObs('{self.name}' ({','.join(aliases)}) at [{self._loc_itrf.x}, {self._loc_itrf.y} {self._loc_itrf.z}]:\n{self.origin})"
         return s
 
     @property
@@ -402,10 +402,13 @@ def find_clock_file(
     name, format, bogus_last_correction=False, url_base=None, clock_dir=None
 ):
     """Locate and return a ClockFile in one of several places.
+
     PINT looks for clock files in three places, in order:
+
     1. The directory ``$PINT_CLOCK_OVERRIDE``
     2. The global clock correction repository on the Internet (or a locally cached copy)
     3. The directory ``pint.config.runtimefile('.')``
+
     The first place the file is found is the one use; this allows you to force PINT to
     use your own files in place of those in the global repository.
     Parameters
