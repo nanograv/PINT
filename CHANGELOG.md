@@ -39,10 +39,6 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - jump_flags_to_params now works if some JUMPs are present, never modifies the TOAs, and is idempotent
 - jump_params_to_flags is now idempotent and unconditionally sets the -jump flag to a correct state
 ### Changed
-- TOAs no longer need to be grouped by observatory
-- model.phase() now defaults to abs_phase=True when TZR* params are in the model
-- removed explicit download of IERS and leapsecond data (handled now by astropy)
-- The default version of TT(BIPM) uses BIPM2021
 - Required version of python updated to 3.8
 
 ## [0.8.8] 2022-05-26
