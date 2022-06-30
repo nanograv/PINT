@@ -1863,7 +1863,7 @@ class TOAs:
 
         # Remove pn from dictionary to prevent redundancies
         for flags in self.table["flags"]:
-            del flags["pn"]
+            flags.pop("pn", None)
 
     def compute_pulse_numbers(self, model):
         """Set pulse numbers (in TOA table column pulse_numbers) based on model.
