@@ -20,6 +20,27 @@ from pint.observatory import get_observatory, Observatory, NoClockCorrections
 from pinttestdata import datadir
 
 
+@pytest.fixture
+def sandbox():
+    class Sandbox:
+        pass
+
+    o = Sandbox()
+    e = os.environ.copy()
+
+    try:
+        del os.environ["PINT_OBS_OVERRIDE"]
+    except KeyError:
+        pass
+    reg = pint.observatory.Observatory._registry.copy()
+    try:
+        yield o
+    finally:
+        os.environ = e
+        pint.observatory.topo_obs.load_observatories_from_usual_locations(clear=True)
+        pint.observatory.special_locations.load_special_locations()
+
+
 class TestObservatory(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -228,7 +249,7 @@ def test_is_gbt_still_ok():
 
 
 @pytest.mark.parametrize("overwrite", [True, False])
-def test_observatory_override(overwrite):
+def test_observatory_override(sandbox, overwrite):
     gbt_orig = get_observatory("gbt")
     # just like the original GBT, but ITRF Y is positive here, and negative in the real one
     wronggbt = r"""
@@ -246,6 +267,7 @@ def test_observatory_override(overwrite):
         }
     }
     """
+
     if not overwrite:
         with pytest.raises(ValueError):
             load_observatories(io.StringIO(wronggbt), overwrite=overwrite)
@@ -254,9 +276,6 @@ def test_observatory_override(overwrite):
         newgbt = get_observatory("gbt")
         assert newgbt._loc_itrf.y > 0
         assert newgbt._loc_itrf.y != gbt_orig._loc_itrf.y
-    # put back in the original observatories
-    load_observatories_from_usual_locations(clear=True)
-    load_special_locations()
 
 
 def test_list_last_correction_mjds_runs():
