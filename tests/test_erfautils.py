@@ -87,7 +87,7 @@ def test_IERS_B_all_in_IERS_Auto():
     assert_equal(A["dX_2000A_B"][i_A], B["dX_2000A"])
 
 
-# @pytest.mark.xfail(reason="IERS changes old values in new versions of the B table")
+@pytest.mark.xfail(reason="IERS changes old values in new versions of the B table")
 def test_IERS_B_agree_with_IERS_Auto_dX():
     A = IERS_Auto.open()
     B = IERS_B.open(download_file(IERS_B_URL, cache=True))

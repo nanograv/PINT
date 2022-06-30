@@ -156,7 +156,7 @@ def test_SINI_raises():
 def test_M2_raises():
     """M2 is not a valid parameter for ELL1H"""
     M2_par = simple_par + "\nM2 1.0 1 0.1"
-    with pytest.raises(ValueError):
+    with pytest.raises(AttributeError):
         get_model(StringIO(M2_par))
 
 
