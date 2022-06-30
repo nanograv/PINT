@@ -206,11 +206,9 @@ See :class:`pint.models.parameter.maskParameter` documentation on the ways to se
 Choose a fitter
 ---------------
 
-See :mod:`pint.fitter` documentation, but to summarize:
+Use :func:`pint.fitter.Fitter.auto`::
 
-- If you have wideband data, :class:`pint.fitter.WidebandDownhillFitter`
-- If you have narrowband data with red noise or ECORRs, :class:`pint.fitter.DownhillGLSFitter`
-- If you have narrowband data with neither red noise nor ECORRs, :class:`pint.fitter.DownhillWLSFitter`
+    f = pint.fitter.Fitter.auto(toas, model)
 
 Include logging in a script
 ---------------------------

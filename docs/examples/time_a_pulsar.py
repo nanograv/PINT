@@ -84,10 +84,10 @@ plt.ylabel("Residual (phase)")
 plt.grid()
 
 # %% [markdown]
-# Now let's fit the par file to the residuals.
+# Now let's fit the par file to the residuals, using the `auto` function to pick the right fitter for our data.
 
 # %%
-f = pint.fitter.DownhillWLSFitter(t, m)
+f = pint.fitter.Fitter.auto(t, m)
 f.fit_toas()
 
 # %%
