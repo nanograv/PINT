@@ -31,8 +31,9 @@ global_clock_correction_url_base = (
 # checked.
 global_clock_correction_url_mirrors = [global_clock_correction_url_base]
 
+# PINT will check the index if it is more than this old
 index_name = "index.txt"
-index_update_interval_days = 0.01
+index_update_interval_days = 1
 
 
 def get_file(
