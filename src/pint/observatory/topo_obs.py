@@ -411,6 +411,7 @@ def find_clock_file(
 
     The first place the file is found is the one use; this allows you to force PINT to
     use your own files in place of those in the global repository.
+
     Parameters
     ----------
     name : str
