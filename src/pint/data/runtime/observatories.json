@@ -282,9 +282,6 @@
         "origin": "The Canadian Hydrogen Intensity Mapping Experiment.\nOrigin of these coordinates are from surveyor reports of the CHIME site\n(circa 2019 & 2020) and technical documents on the dimensions of the telescope\nstructure (circa 2015). Results were compiled in January 2021. The coordinates\nare relative to the GRS80 ellipsoid.\n"
     },
     "magic": {
-        "aliases": [
-            "magic"
-        ],
         "include_bipm": false,
         "itrf_xyz": [
             5326878.7967,
@@ -294,15 +291,13 @@
         "origin": "MAGIC (a ground-based gamma-ray telescope).\nOrigin of this data is unknown.\n"
     },
     "lst": {
-        "aliases": [
-            "lst"
-        ],
         "include_bipm": false,
         "itrf_xyz": [
             5326832.7629,
             -1719636.1588,
             3051795.1913
-        ]
+        ],
+        "origin": "Large Size Telescope Cherenkov facility. \nOrigin of this data is unknown.\n"
     },
     "virgo": {
         "aliases": [
@@ -382,10 +377,6 @@
     },
     "drao": {
         "itoa_code": "DR",
-        "aliases": [
-            "drao",
-            "DRAO"
-        ],
         "itrf_xyz": [
             -2058897.5725006417,
             -3621371.264826613,
@@ -525,9 +516,6 @@
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "gb300": {
-        "aliases": [
-            "gb300"
-        ],
         "tempo_code": "9",
         "itoa_code": "G3",
         "itrf_xyz": [
@@ -538,9 +526,6 @@
         "origin": "The Green Bank 300-foot telescope.\nImported from TEMPO2 observatories.dat 2021 June 7."
     },
     "gb140": {
-        "aliases": [
-            "gb140"
-        ],
         "itoa_code": "G1",
         "tempo_code": "a",
         "clock_file": "time_gb140.dat",
@@ -552,9 +537,6 @@
         "origin": "The Green Bank 140-foot telescope.\nNote that PINT used to accept 'G1' as an alias for the GEO600 gravitational-wave\nobservatory but that conflicted with what TEMPO accepted for this telescope\nso that has been removed.\nImported from TEMPO2 observatories.dat 2021 June 7."
     },
     "gb853": {
-        "aliases": [
-            "gb853"
-        ],
         "tempo_code": "b",
         "itoa_code": "G8",
         "clock_file": "time_gb853.dat",
@@ -612,9 +594,6 @@
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "lofar": {
-        "aliases": [
-            "lofar"
-        ],
         "tempo_code": "t",
         "itoa_code": "LF",
         "itrf_xyz": [
@@ -1087,9 +1066,6 @@
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "shao": {
-        "aliases": [
-            "shao"
-        ],
         "tempo_code": "s",
         "itoa_code": "SH",
         "itrf_xyz": [
@@ -1113,26 +1089,20 @@
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "iar1": {
-        "aliases": [
-            "iar1"
-        ],
         "itrf_xyz": [
             2765357.08,
             -4449628.98,
             -3625726.47
         ],
-        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
+        "origin": "Argentine Institute for Radio Astronomy.  Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "iar2": {
-        "aliases": [
-            "iar2"
-        ],
         "itrf_xyz": [
             2765322.49,
             -4449569.52,
             -3625825.14
         ],
-        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
+        "origin": "Argentine Institute for Radio Astronomy.  Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "kat-7": {
         "aliases": [
@@ -1158,47 +1128,38 @@
     },
     "tabley": {
         "aliases": [
-            "tabley"
+            "pickmere"
         ],
         "itrf_xyz": [
             3817176.557,
             -162921.17,
             5089462.046
         ],
-        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
+        "origin": "Part of MERLIN.  Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "darnhall": {
-        "aliases": [
-            "darnhall"
-        ],
         "itrf_xyz": [
             3828714.504,
             -169458.987,
             5080647.749
         ],
-        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
+        "origin": "Part of MERLIN.  Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "knockin": {
-        "aliases": [
-            "knockin"
-        ],
         "itrf_xyz": [
             3859711.492,
             -201995.082,
             5056134.285
         ],
-        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
+        "origin": "Part of MERLIN.  Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "defford": {
-        "aliases": [
-            "defford"
-        ],
         "itrf_xyz": [
             3923069.135,
             -146804.404,
             5009320.57
         ],
-        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
+        "origin": "Part of MERLIN.  Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "cambridge": {
         "aliases": [
@@ -1212,9 +1173,6 @@
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "princeton": {
-        "aliases": [
-            "princeton"
-        ],
         "tempo_code": "5",
         "itoa_code": "PR",
         "itrf_xyz": [
@@ -1225,9 +1183,6 @@
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "hamburg": {
-        "aliases": [
-            "hamburg"
-        ],
         "itrf_xyz": [
             3788815.62,
             1131748.336,
@@ -1302,12 +1257,9 @@
             -33779.7127,
             634844.9454
         ],
-        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
+        "origin": "Ghana Radio Astronomy Observatory.  Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "srt": {
-        "aliases": [
-            "srt"
-        ],
         "tempo_code": "z",
         "itoa_code": "SR",
         "itrf_xyz": [
