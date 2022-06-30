@@ -398,8 +398,9 @@ def get_observatory(
 
     This function will simply call the ``Observatory.get`` method but
     will manually modify the global observatory object after the method is called.
+    Name-matching is case-insensitive.
 
-    If the observatory is not present in the PINT list, will fallback to astropy
+    If the observatory is not present in the PINT list, will fallback to astropy.
 
     Parameters
     ----------
