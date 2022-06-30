@@ -2,16 +2,16 @@
 import os
 import unittest
 
+import astropy.units as u
 import numpy as np
 import pytest
-from pint.pulsar_mjd import Time
-import astropy.units as u
+from pinttestdata import datadir
 
 import pint.observatory
 import pint.observatory.observatories
-from pint.observatory import get_observatory, NoClockCorrections, Observatory
+from pint.observatory import NoClockCorrections, Observatory, get_observatory
 from pint.observatory.topo_obs import TopoObs
-from pinttestdata import datadir
+from pint.pulsar_mjd import Time
 
 tobs = ["aro", "ao", "chime", "drao"]
 

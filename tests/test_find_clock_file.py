@@ -5,9 +5,9 @@ import numpy as np
 import pytest
 from astropy.time import Time
 
+from pint.observatory import NoClockCorrections
 from pint.observatory.clock_file import ClockFile
 from pint.observatory.topo_obs import find_clock_file
-from pint.observatory import NoClockCorrections
 
 
 @pytest.fixture
