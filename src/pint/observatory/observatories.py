@@ -152,6 +152,7 @@ TopoObs(
     itrf_xyz=[4324165.81, 165927.11, 4670132.83],
     clock_fmt="tempo2",
     clock_file=["ncyobs2obspm.clk", "obspm2gps.clk"],
+    bogus_last_correction=True,
     origin="""The Nançay radio telescope with the NUPPI back-end.
 
     The origin of this data is unknown but as of 2021 June 8 it agrees exactly with

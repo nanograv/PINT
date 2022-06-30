@@ -228,7 +228,12 @@ class TopoObs(Observatory):
                 self.clock_file if self._multiple_clock_files else [self.clock_file]
             )
             self._clock = [
-                find_clock_file(c, format=self.clock_fmt, clock_dir=self.clock_dir)
+                find_clock_file(
+                    c,
+                    format=self.clock_fmt,
+                    clock_dir=self.clock_dir,
+                    bogus_last_correction=self.bogus_last_correction,
+                )
                 for c in clock_files
                 if c != ""
             ]
@@ -396,6 +401,8 @@ def find_clock_file(
     -------
     ClockFile
     """
+    if name == "":
+        raise ValueError("No filename supplied to find_clock_file")
     if clock_dir is None or str(clock_dir).upper() == "PINT":
         # Don't try loading it from a specific path
         p = None
@@ -470,7 +477,7 @@ def find_clock_file(
             log.info(f"Using clock file from {env_clock.filename}")
         return env_clock
     elif global_clock is not None:
-        log.info(f"Using global clock file for {name}")
+        log.info(f"Using global clock file for {name} with {bogus_last_correction=}")
         return global_clock
     elif local_clock is not None:
         log.info(f"Using local clock file for {name}")
@@ -507,4 +514,5 @@ def export_all_clock_files(directory):
         o = get_observatory(name)
         if hasattr(o, "_clock") and o._clock is not None:
             for clock in o._clock:
-                clock.export(directory / Path(clock.filename).name)
+                if clock.filename is not None:
+                    clock.export(directory / Path(clock.filename).name)

@@ -620,6 +620,7 @@ class Pulsar:
                 include_gps=sim_sel.clock_corr_info["include_gps"],
             )
         self.faketoas1.compute_pulse_numbers(self.postfit_model)
+        self.faketoas1.get_clusters(add_column=True)
 
         # Combine our TOAs
         toas = merge_TOAs([sim_sel, self.faketoas1])

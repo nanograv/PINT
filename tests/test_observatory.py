@@ -139,7 +139,7 @@ def test_missing_clock_gives_exception_nonexistent():
         Observatory._registry = r
 
 
-def test_no_clock_required_ok():
+def test_no_clock_means_no_corrections():
     r = Observatory._registry.copy()
     try:
         o = TopoObs(
@@ -182,3 +182,7 @@ def test_observatories_registered():
 
 def test_gbt_registered():
     get_observatory("gbt")
+
+
+def test_list_last_correction_mjds_runs():
+    pint.observatory.list_last_correction_mjds()
