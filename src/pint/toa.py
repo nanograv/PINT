@@ -446,7 +446,12 @@ def _toa_format(line, fmt="Unknown"):
         return "Command"
     elif re.match(r"^\s*$", line):  # FIXME: what about empty lines?
         return "Blank"
-    elif re.match(r"^ ", line) and len(line) > 41 and line[41] == ".":
+    elif (
+        re.match(r"^ ", line)
+        and len(line) > 41
+        and line[41] == "."
+        and not fmt == "Tempo2"
+    ):
         return "Parkes"
     elif len(line) > 80 or fmt == "Tempo2":
         return "Tempo2"
