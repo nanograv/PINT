@@ -131,7 +131,6 @@ def test_missing_clock_gives_exception_nonexistent():
             clock_file="nonexistent.dat",
             itoa_code="W",
             itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
-            overwrite=True,
         )
 
         with pytest.raises(NoClockCorrections):
@@ -146,7 +145,6 @@ def test_no_clock_required_ok():
         o = TopoObs(
             "arecibo_bogus",
             itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
-            overwrite=True,
             include_gps=False,
             include_bipm=False,
         )
@@ -159,19 +157,23 @@ def test_no_clock_required_ok():
         Observatory._registry = r
 
 
-def test_missing_clock_runs():
+@pytest.mark.parametrize("var", ["TEMPO", "TEMPO2"])
+def test_missing_env_raises(var):
     r = Observatory._registry.copy()
+    e = os.environ.copy()
     try:
+        os.environ.pop(var, None)
         o = TopoObs(
             "arecibo_bogus",
             clock_file="nonexistent.dat",
+            clock_dir=var,
             itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
-            overwrite=True,
         )
         with pytest.raises(NoClockCorrections):
             o.clock_corrections(Time(57600, format="mjd"))
     finally:
         Observatory._registry = r
+        os.environ = e
 
 
 def test_observatories_registered():
@@ -180,11 +182,3 @@ def test_observatories_registered():
 
 def test_gbt_registered():
     get_observatory("gbt")
-
-
-# All these cases are partially tested in tests/test_find_clock_file.py
-# In each case you come back with a zero-length clock file, which will
-# give warnings or errrors based on limits="error"
-# FIXME: add test for what happens when a clock correction file is not available
-# FIXME: add test for what happens when a clock correction is supposed to be in $TEMPO2 but $TEMPO2 is not set
-# FIXME: ditto $TEMPO
