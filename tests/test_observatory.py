@@ -1,5 +1,7 @@
 #!/usr/bin/env python
+import io
 import os
+from pathlib import Path
 import unittest
 
 import numpy as np
@@ -7,10 +9,35 @@ import pytest
 from pint.pulsar_mjd import Time
 
 import pint.observatory
-import pint.observatory.observatories
+import pint.observatory.topo_obs
+from pint.observatory.topo_obs import (
+    load_observatories,
+    load_observatories_from_usual_locations,
+    TopoObs,
+)
+from pint.observatory.special_locations import load_special_locations
 from pint.observatory import get_observatory, Observatory, NoClockCorrections
-from pint.observatory.topo_obs import TopoObs
 from pinttestdata import datadir
+
+
+@pytest.fixture
+def sandbox():
+    class Sandbox:
+        pass
+
+    o = Sandbox()
+    e = os.environ.copy()
+
+    try:
+        del os.environ["PINT_OBS_OVERRIDE"]
+    except KeyError:
+        pass
+    reg = pint.observatory.Observatory._registry.copy()
+    try:
+        yield o
+    finally:
+        os.environ = e
+        pint.observatory.Observatory._registry = reg
 
 
 class TestObservatory(unittest.TestCase):
@@ -87,7 +114,6 @@ class TestObservatory(unittest.TestCase):
                 itoa_code="FK",
                 clock_fmt="tempo2",
                 clock_file="fake2gps.clk",
-                clock_dir="TEMPO2",
                 itrf_xyz=[0.00, 0.0, 0.0],
                 overwrite=True,
             )
@@ -95,7 +121,7 @@ class TestObservatory(unittest.TestCase):
                 "Fake1", include_gps=True, include_bipm=True, bipm_version="BIPM2015"
             )
             with pytest.raises(NoClockCorrections):
-                site.clock_corrections(self.test_time)
+                site.clock_corrections(self.test_time, limits="error")
         finally:
             Observatory._registry = r
 
@@ -213,6 +239,42 @@ def test_observatories_registered():
 
 def test_gbt_registered():
     get_observatory("gbt")
+
+
+def test_is_gbt_still_ok():
+
+    gbt = get_observatory("gbt")
+    assert gbt._loc_itrf.y < 0
+
+
+@pytest.mark.parametrize("overwrite", [True, False])
+def test_observatory_override(sandbox, overwrite):
+    gbt_orig = get_observatory("gbt")
+    # just like the original GBT, but ITRF Y is positive here, and negative in the real one
+    wronggbt = r"""
+    {
+        "gbt": {
+        "tempo_code": "1",
+        "itoa_code": "GB",
+        "clock_file": "time_gbt.dat",
+        "itrf_xyz": [
+            882589.289,
+            4924872.368,
+            3943729.418
+        ],
+        "origin": "The Robert C. Byrd Green Bank Telescope.\nThis data was obtained by Joe Swiggum from Ryan Lynch in 2021 September.\n"
+        }
+    }
+    """
+
+    if not overwrite:
+        with pytest.raises(ValueError):
+            load_observatories(io.StringIO(wronggbt), overwrite=overwrite)
+    else:
+        load_observatories(io.StringIO(wronggbt), overwrite=overwrite)
+        newgbt = get_observatory("gbt")
+        assert newgbt._loc_itrf.y > 0
+        assert newgbt._loc_itrf.y != gbt_orig._loc_itrf.y
 
 
 def test_list_last_correction_mjds_runs():
