@@ -100,9 +100,29 @@ class Prior:
     def sample(self):
         cube = np.random.rand(len(self.params))
         return self.prior_transform(cube)
+    
+    def get_info_dict(self):
+        if self.dist == 'custom':
+            return self.info
+        else:
+            info_dict = dict()
+            if self.dist == 'uniform':
+                for par, min_val, max_val in zip(self.params, self.mins, self.maxs):
+                    info_dict[par] = {  'dist' : 'uniform',
+                                        'min'  : min_val,
+                                        'max'  : max_val
+                                    }
+            elif self.dist == 'normal':
+                for par, mean, std in zip(self.params, self.means, self.stds):
+                    info_dict[par] = {  'dist' : 'normal',
+                                        'mean' : mean,
+                                        'std'  : std
+                                    }
+            
+            return info_dict
 
 class SPNTA:
-    def __init__(self, model : pint.models.TimingModel, toas : pint.toa.TOAs, prior_dist='uniform', prior_width=1, **kwargs):
+    def __init__(self, model : pint.models.TimingModel, toas : pint.toa.TOAs, prior_dist='uniform', prior_width=1, prior_info=None):
         self.model = model
         self.toas = toas
 
@@ -116,7 +136,7 @@ class SPNTA:
         if prior_dist is None:
             self.prior = None
         else:
-            self.prior = Prior(model, prior_dist, **kwargs)
+            self.prior = Prior(model, prior_dist, width=prior_width, info=prior_info)
             self.lnprior = self.prior.lnprior
             self.prior_transform = self.prior.prior_transform
 
