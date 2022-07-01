@@ -1639,6 +1639,37 @@ class TOAs:
             result.append(val)
         return result, valid_index
 
+    def set_flag_values(self, flagname, flagvalues):
+        """Set the requested TOA flag values to TOAs
+
+        Parameters
+        ----------
+        flagname : str
+            Name of flag to add/modify
+        flagvalues : str, int, float, or np.ndarray
+            Scalar or array of values.  If array, should match length of TOAs.  All values are converted to string before storing.
+        """
+        assert np.isscalar(flagvalues) or (len(flagvalues) == self.ntoas)
+        for ii in range(self.ntoas):
+            if np.isscalar(flagvalues):
+                if not np.isnan(flagvalues):
+                    self.table["flags"][ii][flagname] = str(flagvalues)
+            else:
+                if not np.isnan(flagvalues[ii]):
+                    self.table["flags"][ii][flagname] = str(flagvalues[ii])
+
+    def delete_flag(self, flagname):
+        """Delete the requested flag from TOAs
+
+        Parameters
+        ----------
+        flagname : str
+            Name of flag to add/modify
+        """
+        for ii in range(self.ntoas):
+            if flagname in self.table["flags"][ii]:
+                del self.table["flags"][ii][flagname]
+
     def get_dms(self):
         """Get the Wideband DM data.
 
@@ -1700,7 +1731,7 @@ class TOAs:
             or (gap_limit != self.table.meta["cluster_gap"])
         ):
             clusters = _cluster_by_gaps(
-                self.get_mjds().to_value(u.d), gap_limit.to_value(u.d)
+                self.get_mjds().to_value(su.d), gap_limit.to_value(u.d)
             )
             if add_column:
                 self.table.add_column(clusters, name="clusters")
@@ -1998,10 +2029,12 @@ class TOAs:
         pnChange = False
         if "pulse_number" in self.table.colnames:
             pnChange = True
-            for i in range(len(self.table["flags"])):
-                pn = self.table["pulse_number"][i]
-                if not np.isnan(pn):
-                    self.table["flags"][i]["pn"] = str(pn)
+            self.set_flag_values("pn", self.table["pulse_number"])
+
+        dpnChange = False
+        if "delta_pulse_number" in self.table.columns:
+            dpnChange = True
+            self.set_flag_values("padd", self.table["delta_pulse_number"])
 
         if order_by_index:
             ix = np.argsort(self.table["index"])
@@ -2037,11 +2070,10 @@ class TOAs:
 
         # If pulse numbers were added to flags, remove them again
         if pnChange:
-            for flags in self.table["flags"]:
-                try:
-                    del flags["pn"]
-                except KeyError:
-                    pass
+            self.delete_flag("pn")
+        # Same for delta pulse numbers
+        if dpnChange:
+            self.delete_flag("padd")
 
         if not handle:
             outf.close()
