@@ -115,12 +115,18 @@ class SPNTA:
             self.prior = None
         else:
             self.prior = Prior(model, prior_method, **kwargs)
+            self.lnprior = self.prior.lnprior
+            self.prior_transform = self.prior.prior_transform
 
     def _decide_likelihood_method(self):
         if 'NoiseComponent' not in self.model.component_types:
             return 'wls'
         else:
-            return 'wls_wn'
+            correlated_errors_present = np.any([nc.introduces_correlated_errors for nc in self.model.NoiseComponent_list])
+            if not correlated_errors_present:
+                return 'wls_wn'
+            else:
+                raise NotImplementedError("Likelihood function for correlated noise is not implemented yet.")
     
     def _wls_lnlikelihood(self, params):
         params_dict = dict(zip(self.free_params, params))
@@ -143,9 +149,4 @@ class SPNTA:
             return self._wls_wn_lnlikelihood(params)
         else:
             raise NotImplementedError(f"Likelihood function for method {self.likelihood_method} not implemented yet.")
-        
-    def lnprior(self, params):
-        return self.prior.lnprior(params)
-    
-    def prior_transform(self, cube):
-        return self.prior.prior_transform(cube)
+
