@@ -1870,13 +1870,13 @@ class TOAs:
         Removes the pulse numbers from the flags.
         """
         # First get any PHASE commands
-        dphs = np.array(self.get_flag_value("phase", 0, float))
+        dphs = np.array(self.get_flag_value("phase", 0, float)[0], dtype=np.float64)
         # Then add any -padd flag values
-        dphs += np.array(self.get_flag_value("padd", 0, float))
+        dphs += np.array(self.get_flag_value("padd", 0, float)[0], dtype=np.float64)
         self.table["delta_pulse_number"] += dphs
 
         # Then, add pulse_number as a table column if possible
-        pns = np.array(self.get_flag_value("pn", np.nan, float))
+        pns = np.array(self.get_flag_value("pn", np.nan, float)[0])
         if np.all(np.isnan(pns)):
             raise ValueError("No pulse numbers found")
         self.table["pulse_number"] = pns
