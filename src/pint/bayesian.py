@@ -122,6 +122,9 @@ class SPNTA:
             self.lnprior = self.prior.lnprior
             self.prior_transform = self.prior.prior_transform
 
+        # eager initialization.
+        _ = self.lnlikelihood(self.initial_params)
+
     def _decide_likelihood_method(self):
         if 'NoiseComponent' not in self.model.component_types:
             return 'wls'
