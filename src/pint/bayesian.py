@@ -1,10 +1,9 @@
 import numpy as np
+import scipy.special
 
 import pint.models
 import pint.toa
 import pint.residuals
-
-import scipy.special
 
 class Prior:
     def __init__(self, model : pint.models.TimingModel, method : str, **kwargs):
@@ -101,6 +100,10 @@ class Prior:
                 raise ValueError("Invalid method.")
         return param_vals
 
+    def sample(self):
+        cube = np.random.rand(len(self.params))
+        return self.prior_transform(cube)
+
 class SPNTA:
     def __init__(self, model : pint.models.TimingModel, toas : pint.toa.TOAs, prior_method='uniform', **kwargs):
         self.model = model
@@ -108,9 +111,10 @@ class SPNTA:
 
         self._model = model
         self.free_params = model.free_params
+        self.initial_params = np.array([getattr(model,param).value for param in self.free_params])
 
         self.likelihood_method = self._decide_likelihood_method()
-        
+
         if prior_method is None:
             self.prior = None
         else:
@@ -140,7 +144,7 @@ class SPNTA:
         res = pint.residuals.Residuals(self.toas, self.model)
         chi2 = res.calc_chi2()
         sigmas = self.model.scaled_toa_uncertainty(self.toas).to('s').value
-        return -chi2/2 - np.log(sigmas)
+        return -chi2/2 - np.sum(np.log(sigmas))
     
     def lnlikelihood(self, params):
         if self.likelihood_method == 'wls':
