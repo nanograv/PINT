@@ -6,42 +6,39 @@ import pint.toa
 import pint.residuals
 
 class Prior:
-    def __init__(self, model : pint.models.TimingModel, method : str, **kwargs):
+    def __init__(self, model : pint.models.TimingModel, dist : str, width=1, info=None):
         self.params = model.free_params
-        self.method = method
-        if self.method in ['uniform', 'normal']:
+        self.dist = dist
+        if self.dist in ['uniform', 'normal']:
             values = np.array([getattr(model,param).value for param in self.params])
             uncertainties = np.array([getattr(model,param).uncertainty.value for param in self.params])
             
             if np.any(uncertainties==0):
-                raise ValueError("All fitting parameters must have non-zero uncertainties for this method to work. Update uncertainties in the par file or use method='custom'.")
+                raise ValueError("All fitting parameters must have non-zero uncertainties for this method to work. Update uncertainties in the par file or use dist='custom'.")
             
-            if 'sigma' in kwargs:
-                self.sigma = kwargs['sigma']  
-            else:
-                self.sigma = 1
+            self.width = width
 
-            if self.method == 'uniform':
-                self.mins = values - self.sigma*uncertainties
-                self.maxs = values + self.sigma*uncertainties
+            if self.dist == 'uniform':
+                self.mins = values - self.width*uncertainties
+                self.maxs = values + self.width*uncertainties
                 self.spans = self.maxs - self.mins
             else:
                 self.means = values
-                self.stds  = self.sigma*uncertainties
+                self.stds  = self.width*uncertainties
                                     
-        elif self.method == 'custom':
-            self.info = kwargs['info']
-            self._validate_custom_info(self.info)
+        elif self.dist == 'custom':
+            self.info = info
+            #self._validate_custom_info(self.info)
 
         else: 
-            raise ValueError("Invalid method.")
+            raise ValueError("Invalid dist.")
     
     def lnprior(self, params):
-        if self.method == 'uniform':
+        if self.dist == 'uniform':
             return self._uniform_lnprior(params)
-        elif self.method == 'normal':
+        elif self.dist == 'normal':
             return self._normal_lnprior(params)
-        elif self.method == 'custom':
+        elif self.dist == 'custom':
             return self._custom_lnprior(params)
 
     def _uniform_lnprior(self, params):
@@ -51,31 +48,31 @@ class Prior:
             return -np.inf
     
     def _normal_lnprior(self, params):
-        return -0.5*((params - self.means)/self.stds)**2
+        return np.sum(-0.5*((params - self.means)/self.stds)**2)
 
     def _custom_lnprior(self, params):
         lnp = 0
         for param_label, param_val in zip(self.params, params):
-            if self.info[param_label]['method'] == 'uniform':
+            if self.info[param_label]['dist'] == 'uniform':
                 param_min = self.info[param_label]['min']
                 param_max = self.info[param_label]['max']
                 if not (param_val>=param_min and param_val<=param_max):
                     return -np.inf
-            elif self.info[param_label]['method'] == 'normal':
+            elif self.info[param_label]['dist'] == 'normal':
                 mean = self.info[param_label]['mean']
                 std = self.info[param_label]['std']
                 lnp += -0.5*((param_val - mean)/std)**2
             else:
-                raise ValueError("Invalid method.")
+                raise ValueError("Invalid dist.")
         
         return lnp
 
     def prior_transform(self, cube):
-        if self.method == 'uniform':
+        if self.dist == 'uniform':
             return self._uniform_prior_transform(cube)
-        elif self.method == 'normal':
+        elif self.dist == 'normal':
             return self._normal_prior_transform(cube)
-        elif self.method == 'custom':
+        elif self.dist == 'custom':
             return self._custom_prior_transform(cube)
     
     def _uniform_prior_transform(self, cube):
@@ -87,17 +84,17 @@ class Prior:
     def _custom_prior_transform(self, cube):
         param_vals = np.empty_like(cube)
         for idx, param_label in enumerate(self.params):
-            if self.info[param_label]['method'] == 'uniform':
+            if self.info[param_label]['dist'] == 'uniform':
                 param_min = self.info[param_label]['min']
                 param_max = self.info[param_label]['max']
                 param_span = param_max - param_min
                 param_vals[idx] = param_min + param_span*cube[idx]
-            elif self.info[param_label]['method'] == 'normal':
+            elif self.info[param_label]['dist'] == 'normal':
                 mean = self.info[param_label]['mean']
                 std = self.info[param_label]['std']
                 param_vals[idx] = mean + std * scipy.special.ndtri(cube[idx])
             else:
-                raise ValueError("Invalid method.")
+                raise ValueError("Invalid dist.")
         return param_vals
 
     def sample(self):
@@ -105,7 +102,7 @@ class Prior:
         return self.prior_transform(cube)
 
 class SPNTA:
-    def __init__(self, model : pint.models.TimingModel, toas : pint.toa.TOAs, prior_method='uniform', **kwargs):
+    def __init__(self, model : pint.models.TimingModel, toas : pint.toa.TOAs, prior_dist='uniform', prior_width=1, **kwargs):
         self.model = model
         self.toas = toas
 
@@ -116,10 +113,10 @@ class SPNTA:
 
         self.likelihood_method = self._decide_likelihood_method()
 
-        if prior_method is None:
+        if prior_dist is None:
             self.prior = None
         else:
-            self.prior = Prior(model, prior_method, **kwargs)
+            self.prior = Prior(model, prior_dist, **kwargs)
             self.lnprior = self.prior.lnprior
             self.prior_transform = self.prior.prior_transform
 
