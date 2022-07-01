@@ -1731,7 +1731,7 @@ class TOAs:
             or (gap_limit != self.table.meta["cluster_gap"])
         ):
             clusters = _cluster_by_gaps(
-                self.get_mjds().to_value(su.d), gap_limit.to_value(u.d)
+                self.get_mjds().to_value(u.d), gap_limit.to_value(u.d)
             )
             if add_column:
                 self.table.add_column(clusters, name="clusters")
