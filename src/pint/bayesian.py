@@ -112,6 +112,7 @@ class SPNTA:
         self._model = model
         self.free_params = model.free_params
         self.initial_params = np.array([getattr(model,param).value for param in self.free_params])
+        self.ndim = len(self.free_params)
 
         self.likelihood_method = self._decide_likelihood_method()
 
