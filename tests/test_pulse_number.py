@@ -161,3 +161,14 @@ def test_partial_pulse_numbers(model, toas):
     toas_2.table["pulse_number"][1] = np.nan
     r2 = Residuals(toas_2, model, track_mode="use_pulse_numbers")
     assert_almost_equal(r.time_resids[2:].value, r2.time_resids[2:].value)
+
+
+def test_save_delta_pulse_number(model, toas):
+    toas.compute_pulse_numbers(model)
+    toas["delta_pulse_number"][:10] += 1
+    outtim = StringIO()
+    toas.write_TOA_file(outtim)
+    outtim.seek(0)
+    newtoas = get_TOAs(outtim)
+    assert (newtoas[:10]["delta_pulse_number"] == 1).all()
+    assert (newtoas[10:]["delta_pulse_number"] == 0).all()
