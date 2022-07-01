@@ -154,3 +154,10 @@ class SPNTA:
         else:
             raise NotImplementedError(f"Likelihood function for method {self.likelihood_method} not implemented yet.")
 
+    def lnposterior(self, params):
+        lnp = self.lnprior(params)
+
+        if np.isfinite(lnp):
+            return lnp + self.lnlikelihood(params)
+        else:
+            return lnp
