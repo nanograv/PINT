@@ -1870,31 +1870,20 @@ class TOAs:
         Removes the pulse numbers from the flags.
         """
         # First get any PHASE commands
-        dphs = np.asarray(
-            [
-                float(flags["phase"]) if "phase" in flags else 0.0
-                for flags in self.table["flags"]
-            ]
-        )
+        dphs = np.array(self.get_flag_value("phase", 0, float))
         # Then add any -padd flag values
-        dphs += np.asarray(
-            [
-                float(flags["padd"]) if "padd" in flags else 0.0
-                for flags in self.table["flags"]
-            ]
-        )
+        dphs += np.array(self.get_flag_value("padd", 0, float))
         self.table["delta_pulse_number"] += dphs
 
         # Then, add pulse_number as a table column if possible
-        pns = [float(flags.get("pn", np.nan)) for flags in self.table["flags"]]
+        pns = np.array(self.get_flag_value("pn", np.nan, float))
         if np.all(np.isnan(pns)):
             raise ValueError("No pulse numbers found")
         self.table["pulse_number"] = pns
         self.table["pulse_number"].unit = u.dimensionless_unscaled
 
         # Remove pn from dictionary to prevent redundancies
-        for flags in self.table["flags"]:
-            del flags["pn"]
+        self.delete_flag("pn")
 
     def compute_pulse_numbers(self, model):
         """Set pulse numbers (in TOA table column pulse_numbers) based on model.
