@@ -2021,7 +2021,10 @@ class TOAs:
             self.set_flag_values("pn", self.table["pulse_number"])
 
         dpnChange = False
-        if "delta_pulse_number" in self.table.columns:
+        if (
+            "delta_pulse_number" in self.table.columns
+            and (self.table["delta_pulse_number"] != 0).any()
+        ):
             dpnChange = True
             self.set_flag_values("padd", self.table["delta_pulse_number"])
 
