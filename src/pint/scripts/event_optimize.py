@@ -519,6 +519,11 @@ def main(argv=None):
         help="Logging level",
         dest="loglevel",
     )
+    parser.add_argument(
+        "--backendpath",
+        type=str,
+        help="File path to save the h5 chains file",
+    )
 
     global nwalkers, nsteps, ftr
 
@@ -555,6 +560,7 @@ def main(argv=None):
     minWeight = args.minWeight
     do_opt_first = args.doOpt
     wgtexp = args.wgtexp
+    backendpath = args.backendpath
 
     # Read in initial model
     modelin = pint.models.get_model(parfile)
@@ -760,7 +766,12 @@ def main(argv=None):
 
     # Setting up a backend to save the chains into an h5 file
     try:
-        backend = emcee.backends.HDFBackend(ftr.model.PSR.value + "_chains.h5")
+        if backendpath:
+            backend = emcee.backends.HDFBackend(
+                os.path.join(backendpath, ftr.model.PSR.value + "_chains.h5")
+            )
+        else:
+            backend = emcee.backends.HDFBackend(ftr.model.PSR.value + "_chains.h5")
         backend.reset(nwalkers, ndim)
     except ImportError:
         backend = None
