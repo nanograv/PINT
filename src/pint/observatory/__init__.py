@@ -6,11 +6,12 @@ For the observatories defined in PINT, these objects are created
 when the relevant module is imported.
 
 PINT's built-in observatories are loaded when anyone imports the modules
-:mod:`pint.observatory.observatories` and
+:mod:`pint.observatory.topo_obs` and
 :mod:`pint.observatory.special_locations`. This automatically happens
 when you call :func:`pint.observatory.Observatory.get`,
 :func:`pint.observatory.get_observatory`, or
-:func:`pint.observatory.Observatory.names`.
+:func:`pint.observatory.Observatory.names` 
+(:func:`pint.observatory.Observatory.names_and_aliases` to include aliases).
 Satellite observatories are somewhat different, as they cannot be
 created until the user supplies an orbit file. Once created, they will
 appear in the list of known observatories.
@@ -85,11 +86,12 @@ class Observatory:
     For example, TOA time scales, clock corrections.  Any new Observtory that
     is declared will be automatically added to a registry that is keyed on
     observatory name.  Aside from their initial declaration (for examples, see
-    ``pint/observatory/observatories.py``), Observatory instances should
+    ``pint/data/runtimefile/observatories.json``), Observatory instances should
     generally be obtained only via the :func:`pint.observatory.Observatory.get`
     function.  This will query the registry based on observatory name (and any
     defined aliases).  A list of all registered names can be returned via
-    :func:`pint.observatory.Observatory.names`.
+    :func:`pint.observatory.Observatory.names`, or a list of names and aliases
+    can be returned via :func:`pint.observatory.Observatory.names_and_aliases`.
 
     Observatories have names and aliases that are used in ``.tim`` and ``.par``
     files to select them. They also have positions (possibly varying, in the
@@ -164,13 +166,30 @@ class Observatory:
             o._aliases = obs_aliases
 
     @classmethod
+    def clear_registry(cls):
+        """Clear registry for ground-based observatories."""
+        cls._registry = {}
+        cls._alias_map = {}
+
+    @classmethod
     def names(cls):
         """List all observatories known to PINT."""
         # Importing this module triggers loading all observatories
-        import pint.observatory.observatories  # noqa
+        import pint.observatory.topo_obs  # noqa
         import pint.observatory.special_locations  # noqa
 
         return cls._registry.keys()
+
+    @classmethod
+    def names_and_aliases(cls):
+        """List all observatories and their aliases"""
+        import pint.observatory.topo_obs  # noqa
+        import pint.observatory.special_locations  # noqa
+
+        s = {}
+        for oname, obs in cls._registry.items():
+            s[oname] = obs.aliases
+        return s
 
     # Note, name and aliases are not currently intended to be changed
     # after initialization.  If we want to allow this, we could add
@@ -196,7 +215,7 @@ class Observatory:
         # Ensure that the observatory list has been read
         # We can't do this in the import section above because this class
         # needs to exist before that file is imported.
-        import pint.observatory.observatories  # noqa
+        import pint.observatory.topo_obs  # noqa
         import pint.observatory.special_locations  # noqa
 
         if name == "":
@@ -379,8 +398,9 @@ def get_observatory(
 
     This function will simply call the ``Observatory.get`` method but
     will manually modify the global observatory object after the method is called.
+    Name-matching is case-insensitive.
 
-    If the observatory is not present in the PINT list, will fallback to astropy
+    If the observatory is not present in the PINT list, will fallback to astropy.
 
     Parameters
     ----------
@@ -415,7 +435,7 @@ def compare_t2_observatories_dat(t2dir=None):
     """Read a tempo2 observatories.dat file and compare with PINT
 
     Produces a report including lines that can be added to PINT's
-    observatories.py to add any observatories unknown to PINT.
+    observatories.json to add any observatories unknown to PINT.
 
     Parameters
     ==========
@@ -451,11 +471,16 @@ def compare_t2_observatories_dat(t2dir=None):
             full_name, short_name = full_name.lower(), short_name.lower()
             topo_obs_entry = textwrap.dedent(
                 f"""
-                TopoObs(
-                    name='{full_name}',
-                    aliases=['{short_name}'],
-                    itrf_xyz=[{x}, {y}, {z}],
-                )
+                "{full_name}": {
+                    "aliases": [
+                        "{short_name}"
+                    ],
+                    "itrf_xyz": [
+                        {x}, 
+                        {y}, 
+                        {z}
+                    ]
+                }
                 """
             )
             try:
@@ -501,7 +526,7 @@ def compare_tempo_obsys_dat(tempodir=None):
     """Read a tempo obsys.dat file and compare with PINT
 
     Produces a report including lines that can be added to PINT's
-    observatories.py to add any observatories unknown to PINT.
+    observatories.json to add any observatories unknown to PINT.
 
     Parameters
     ==========
@@ -564,14 +589,18 @@ def compare_tempo_obsys_dat(tempodir=None):
                     -convert_angle(y), convert_angle(x), z * u.m
                 )
                 x, y, z = (a.to_value(u.m) for a in loc.to_geocentric())
+            name = obsnam.replace(" ", "_")
             topo_obs_entry = textwrap.dedent(
                 f"""
-                TopoObs(
-                    name='{obsnam.replace(" ","_")}',
-                    tempo_code='{tempo_code}',
-                    itoa_code='{itoa_code}',
-                    itrf_xyz=[{x}, {y}, {z}],
-                )
+                "{name}": {
+                    "itrf_xyz": [
+                        {x}, 
+                        {y}, 
+                        {z}
+                    ],
+                    "tempo_code": "{tempo_code}",
+                    "itoa_code": "{itoa_code}"
+                }
                 """
             )
             try:
