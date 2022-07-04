@@ -8,6 +8,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Changed
 - index.txt is only checked at most once a day
 - Moved observatories to JSON file.  Changed way observatories are loaded/overloaded
+- Split Jodrell Bank observatory based on backend to get correct clock files
 ### Added
 ### Fixed
 
