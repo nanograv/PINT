@@ -62,7 +62,7 @@ __all__ = [
 # FIXME: this should be auto-detected by checking the index file to see what's available
 bipm_default = "BIPM2021"
 
-pint_obs_env_var = "PINT_OBS_OVERRIDE"
+pint_clock_env_var = "PINT_CLOCK_OVERRIDE"
 
 
 class ClockCorrectionError(RuntimeError):

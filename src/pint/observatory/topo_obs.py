@@ -17,9 +17,9 @@ See Also
 --------
 :mod:`pint.observatory.special_locations`
 """
+import json
 import os
 from pathlib import Path
-import json
 
 import astropy.constants as c
 import astropy.units as u
@@ -29,21 +29,22 @@ from loguru import logger as log
 
 import pint.observatory
 from pint import JD_MJD
+from pint.config import runtimefile
 from pint.erfautils import gcrs_posvel_from_itrf
 from pint.observatory import (
     NoClockCorrections,
     Observatory,
     bipm_default,
-    get_observatory,
     find_clock_file,
+    get_observatory,
 )
+from pint.observatory.global_clock_corrections import Index, get_clock_correction_file
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import get_tdb_tt_ephem_geocenter, objPosVel_wrt_SSB
 from pint.utils import has_astropy_unit, open_or_use
-from pint.observatory.global_clock_corrections import Index, get_clock_correction_file
 
 # environment variables that can override clock location and observatory location
-pint_clock_env_var = "PINT_CLOCK_OVERRIDE"
+pint_obs_env_var = "PINT_OBS_OVERRIDE"
 
 # where to look for observatory data
 observatories_json = runtimefile("observatories.json")
