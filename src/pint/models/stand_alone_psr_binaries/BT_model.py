@@ -81,7 +81,7 @@ class BTmodel(PSR_BINARY):
     """
 
     def __init__(self, t=None, input_params=None):
-        super(BTmodel, self).__init__()
+        super().__init__()
         self.binary_name = "BT"
         self.binary_params = list(self.param_default_value.keys())
         self.set_param_values()  # Set parameters to default values.
