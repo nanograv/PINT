@@ -67,7 +67,7 @@ class EmceeSampler(MCMCSampler):
     """
 
     def __init__(self, nwalkers):
-        super(EmceeSampler, self).__init__()
+        super().__init__()
         self.method = "Emcee"
         self.nwalkers = nwalkers
         self.sampler = None

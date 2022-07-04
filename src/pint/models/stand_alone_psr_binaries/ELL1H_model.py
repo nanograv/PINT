@@ -25,7 +25,7 @@ class ELL1Hmodel(ELL1BaseModel):
     """
 
     def __init__(self):
-        super(ELL1Hmodel, self).__init__()
+        super().__init__()
         self.binary_name = "ELL1H"
         self.param_default_value.update(
             {

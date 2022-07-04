@@ -68,7 +68,7 @@ class Phase(namedtuple("Phase", "int frac")):
         index = ff >= 0.5
         ff[index] -= 1.0
         ii[index] += 1
-        return super(Phase, cls).__new__(cls, ii, ff)
+        return super().__new__(cls, ii, ff)
 
     def __neg__(self):
         # TODO: add type check for __neg__ and __add__

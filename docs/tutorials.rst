@@ -60,6 +60,7 @@ notebooks you can download from the `PINT Wiki
    examples/Wideband_TOA_walkthrough.ipynb
    examples/Simulate_and_make_MassMass.ipynb
    examples/check_phase_connection.ipynb
+   examples/PINT_observatories.ipynb
    examples-rendered/paper_validation_example.ipynb
 
 .. _`Time a Pulsar`: examples/time_a_pulsar.html
