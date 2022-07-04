@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+### Changed
+### Added
+### Fixed
+- Ensure Fitters work with ELL1 even on Astropy 4 (bug #1316)
+
 ## [0.9.0] 2022-06-24
 ### Changed
 - `model.phase()` now defaults to `abs_phase=True` when TZR* params are in the model
