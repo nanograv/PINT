@@ -255,8 +255,11 @@ def test_unitless_ell1h_bug_1316():
     PEPOCH 57000
     F0 1
     BINARY ELL1
-    PB 1
-    TASC 57000
+    PB 1 1
+    A1 4 1
+    TASC 57000 1
+    EPS1 0 1
+    EPS2 0 1
     """
         )
     )
