@@ -8,6 +8,8 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Changed
 - No tests now change based on $TEMPO or $TEMPO2
 - SpecialLocations no longer support GPS or BIPM corrections (it was broken anyway)
+- index.txt is only checked at most once a day
+- Moved observatories to JSON file.  Changed way observatories are loaded/overloaded
 ### Added
 ### Fixed
 

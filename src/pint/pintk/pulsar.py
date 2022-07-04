@@ -62,7 +62,7 @@ class Pulsar:
     """
 
     def __init__(self, parfile=None, timfile=None, ephem=None, fitter="GLSFitter"):
-        super(Pulsar, self).__init__()
+        super().__init__()
 
         log.info(f"Loading pulsar parfile: {str(parfile)}")
 
