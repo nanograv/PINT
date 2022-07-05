@@ -172,3 +172,18 @@ def test_save_delta_pulse_number(model, toas):
     newtoas = get_TOAs(outtim)
     assert (newtoas[:10]["delta_pulse_number"] == 1).all()
     assert (newtoas[10:]["delta_pulse_number"] == 0).all()
+
+
+def test_get_pulse_numbers(model, toas):
+    toas.compute_pulse_numbers(model)
+    pn_column = toas.get_pulse_numbers()
+
+    toas.set_flag_values("pn", pn_column)
+    # this should raise an error since both the column and flag are present
+    with pytest.raises(ValueError):
+        pn_flag = toas.get_pulse_numbers()
+
+    del toas.table["pulse_number"]
+    # now it should be OK
+    pn_flag = toas.get_pulse_numbers()
+    assert (pn_column == pn_flag).all()
