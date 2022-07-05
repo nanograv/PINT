@@ -10,6 +10,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Moved observatories to JSON file.  Changed way observatories are loaded/overloaded
 ### Added
 ### Fixed
+- TOA flags are properly deepcopy'd when desired
 
 ## [0.9.0] 2022-06-24
 ### Changed
