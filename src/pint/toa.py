@@ -1508,6 +1508,17 @@ class TOAs:
         if not hasattr(self, "max_index"):
             self.max_index = np.maximum.reduce(self.table["index"])
 
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            setattr(result, k, copy.deepcopy(v, memo))
+        # need to explicitly add in the flags
+        for i in range(len(self)):
+            result.table[i]["flags"] = copy.deepcopy(self.table[i]["flags"])
+        return result
+
     @property
     def ntoas(self):
         """The number of TOAs. Also available as len(toas)."""
