@@ -1590,9 +1590,7 @@ class TOAs:
         if "pn" in self.table["flags"][0]:
             if "pulse_number" in self.table.colnames:
                 raise ValueError("Pulse number cannot be both a column and a TOA flag")
-            return np.array(
-                float(flags.get("pn", np.nan)) for flags in self.table["flags"]
-            )
+            return np.array(self.get_flag_value("pn", np.nan, float)[0])
         elif "pulse_number" in self.table.colnames:
             return self.table["pulse_number"]
         else:
@@ -2014,58 +2012,59 @@ class TOAs:
             outf.write(info_string + "\n")
 
         # Add pulse numbers to flags temporarily if there is a pulse number column
+        # do this on a copy so as to leave the TOAs in a useful state
         # FIXME: everywhere else the pulse number column is called pulse_number not pn
-        pnChange = False
-        if "pulse_number" in self.table.colnames:
-            pnChange = True
-            self.set_flag_values("pn", self.table["pulse_number"])
+        try:
+            toacopy = copy.deepcopy(self)
+            pnChange = False
+            if "pulse_number" in toacopy.table.colnames:
+                pnChange = True
+                toacopy.set_flag_values("pn", toacopy.table["pulse_number"])
 
-        dpnChange = False
-        if (
-            "delta_pulse_number" in self.table.columns
-            and (self.table["delta_pulse_number"] != 0).any()
-        ):
-            dpnChange = True
-            self.set_flag_values("padd", self.table["delta_pulse_number"])
+            dpnChange = False
+            if (
+                "delta_pulse_number" in toacopy.table.columns
+                and (toacopy.table["delta_pulse_number"] != 0).any()
+            ):
+                dpnChange = True
+                toacopy.set_flag_values("padd", toacopy.table["delta_pulse_number"])
 
-        if order_by_index:
-            ix = np.argsort(self.table["index"])
-        else:
-            ix = np.arange(len(self))
-        for (toatime, toaerr, freq, obs, flags) in zip(
-            self.table["mjd"][ix],
-            self.table["error"][ix].quantity,
-            self.table["freq"][ix].quantity,
-            self.table["obs"][ix],
-            self.table["flags"][ix],
-        ):
-            obs_obj = Observatory.get(obs)
+            if order_by_index:
+                ix = np.argsort(toacopy.table["index"])
+            else:
+                ix = np.arange(len(toacopy))
+            for (toatime, toaerr, freq, obs, flags) in zip(
+                toacopy.table["mjd"][ix],
+                toacopy.table["error"][ix].quantity,
+                toacopy.table["freq"][ix].quantity,
+                toacopy.table["obs"][ix],
+                toacopy.table["flags"][ix],
+            ):
+                obs_obj = Observatory.get(obs)
 
-            flags = flags.copy()
-            toatime_out = toatime
-            if "clkcorr" in flags:
-                toatime_out -= time.TimeDelta(float(flags["clkcorr"]) * u.s)
-            out_str = (
-                "C " if isinstance(commentflag, str) and (commentflag in flags) else ""
-            )
-            out_str += format_toa_line(
-                toatime_out,
-                toaerr,
-                freq,
-                obs_obj,
-                name=flags.pop("name", name),
-                flags=flags,
-                format=format,
-                alias_translation=self.alias_translation,
-            )
-            outf.write(out_str)
+                flags = flags.copy()
+                toatime_out = toatime
+                if "clkcorr" in flags:
+                    toatime_out -= time.TimeDelta(float(flags["clkcorr"]) * u.s)
+                out_str = (
+                    "C "
+                    if isinstance(commentflag, str) and (commentflag in flags)
+                    else ""
+                )
+                out_str += format_toa_line(
+                    toatime_out,
+                    toaerr,
+                    freq,
+                    obs_obj,
+                    name=flags.pop("name", name),
+                    flags=flags,
+                    format=format,
+                    alias_translation=toacopy.alias_translation,
+                )
+                outf.write(out_str)
 
-        # If pulse numbers were added to flags, remove them again
-        if pnChange:
-            self.delete_flag("pn")
-        # Same for delta pulse numbers
-        if dpnChange:
-            self.delete_flag("padd")
+        finally:
+            del toacopy
 
         if not handle:
             outf.close()
