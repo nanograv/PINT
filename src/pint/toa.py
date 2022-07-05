@@ -2016,17 +2016,15 @@ class TOAs:
         # FIXME: everywhere else the pulse number column is called pulse_number not pn
         try:
             toacopy = copy.deepcopy(self)
-            pnChange = False
+            # have to deepcopy the flags separately
+            for i in range(len(self)):
+                toacopy.table[i]["flags"] = copy.deepcopy(self.table[i]["flags"])
             if "pulse_number" in toacopy.table.colnames:
-                pnChange = True
                 toacopy.set_flag_values("pn", toacopy.table["pulse_number"])
-
-            dpnChange = False
             if (
                 "delta_pulse_number" in toacopy.table.columns
                 and (toacopy.table["delta_pulse_number"] != 0).any()
             ):
-                dpnChange = True
                 toacopy.set_flag_values("padd", toacopy.table["delta_pulse_number"])
 
             if order_by_index:
