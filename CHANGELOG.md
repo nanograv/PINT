@@ -6,6 +6,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 
 ## Unreleased
 ### Changed
+- Ensure Fitters work with ELL1 even on Astropy 4 (bug #1316)
 - index.txt is only checked at most once a day
 - Moved observatories to JSON file.  Changed way observatories are loaded/overloaded
 ### Added

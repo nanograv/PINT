@@ -67,6 +67,7 @@ import scipy.linalg
 import scipy.optimize as opt
 from loguru import logger as log
 
+import pint
 import pint.utils
 import pint.derived_quantities
 from pint.models.parameter import AngleParameter, boolParameter, strParameter
@@ -550,59 +551,54 @@ class Fitter:
 
             ell1 = False
             if binary.startswith("BinaryELL1"):
-                if not any(
-                    [
-                        self.model.EPS1.frozen,
-                        self.model.EPS2.frozen,
-                        self.model.TASC.frozen,
-                        self.model.PB.frozen,
-                    ]
-                ):
-                    ell1 = True
-                    eps1 = ufloat(
-                        self.model.EPS1.quantity.value,
-                        self.model.EPS1.uncertainty.value,
-                    )
-                    eps2 = ufloat(
-                        self.model.EPS2.quantity.value,
-                        self.model.EPS2.uncertainty.value,
-                    )
-                    tasc = ufloat(
-                        # This is a time in MJD
-                        self.model.TASC.quantity.mjd,
-                        self.model.TASC.uncertainty.to(u.d).value,
-                    )
-                    pb = ufloat(
-                        self.model.PB.quantity.to(u.d).value,
-                        self.model.PB.uncertainty.to(u.d).value,
-                    )
-                    s += "Conversion from ELL1 parameters:\n"
-                    ecc = um.sqrt(eps1**2 + eps2**2)
-                    s += "ECC = {:P}\n".format(ecc)
-                    om = um.atan2(eps1, eps2) * 180.0 / np.pi
-                    if om < 0.0:
-                        om += 360.0
-                    s += "OM  = {:P} deg\n".format(om)
-                    t0 = tasc + pb * om / 360.0
-                    s += "T0  = {:SP}\n".format(t0)
+                ell1 = True
+                eps1 = ufloat(
+                    self.model.EPS1.quantity.value,
+                    self.model.EPS1.uncertainty.value,
+                )
+                eps2 = ufloat(
+                    self.model.EPS2.quantity.value,
+                    self.model.EPS2.uncertainty.value,
+                )
+                tasc = ufloat(
+                    # This is a time in MJD
+                    self.model.TASC.quantity.mjd,
+                    self.model.TASC.uncertainty.to(u.d).value,
+                )
+                pb = ufloat(
+                    self.model.PB.quantity.to(u.d).value,
+                    self.model.PB.uncertainty.to(u.d).value,
+                )
+                s += "Conversion from ELL1 parameters:\n"
+                ecc = um.sqrt(eps1**2 + eps2**2)
+                s += "ECC = {:P}\n".format(ecc)
+                om = um.atan2(eps1, eps2) * 180.0 / np.pi
+                if om < 0.0:
+                    om += 360.0
+                s += "OM  = {:P} deg\n".format(om)
+                t0 = tasc + pb * om / 360.0
+                s += "T0  = {:SP}\n".format(t0)
 
-                    if self.is_wideband:
-                        s += pint.utils.ELL1_check(
-                            self.model.A1.quantity,
-                            ecc.nominal_value,
-                            self.resids.toa.rms_weighted(),
-                            self.toas.ntoas,
-                            outstring=True,
-                        )
-                    else:
-                        s += pint.utils.ELL1_check(
-                            self.model.A1.quantity,
-                            ecc.nominal_value,
-                            self.resids.rms_weighted(),
-                            self.toas.ntoas,
-                            outstring=True,
-                        )
-                    s += "\n"
+                a1 = self.model.A1.quantity
+                if a1 is None:
+                    a1 = 0 * pint.ls
+                if self.is_wideband:
+                    s += pint.utils.ELL1_check(
+                        a1,
+                        ecc.nominal_value * u.s / u.s,
+                        self.resids.toa.rms_weighted(),
+                        self.toas.ntoas,
+                        outstring=True,
+                    )
+                else:
+                    s += pint.utils.ELL1_check(
+                        a1,
+                        ecc.nominal_value * u.s / u.s,
+                        self.resids.rms_weighted(),
+                        self.toas.ntoas,
+                        outstring=True,
+                    )
+                s += "\n"
 
             # Masses and inclination
             pb = p.to(u.d) if btx else self.model.PB.quantity
