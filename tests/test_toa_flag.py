@@ -101,7 +101,7 @@ def test_flag_set_partialarray():
 def test_flag_delete():
     t = toa.get_TOAs(io.StringIO(s))
     t.set_flag_values("test", 1)
-    t.delete_flag("test")
+    t["test"] = ""
     for i in range(t.ntoas):
         assert not "test" in t["flags"][i]
 
@@ -109,7 +109,7 @@ def test_flag_delete():
 def test_flag_partialdelete():
     t = toa.get_TOAs(io.StringIO(s))
     t.set_flag_values("test", 1)
-    t[:2].delete_flag("test")
+    t[:2]["test"] = ""
     for i in range(t.ntoas):
         if i < 2:
             assert not "test" in t["flags"][i]

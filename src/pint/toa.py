@@ -1656,18 +1656,6 @@ class TOAs:
                 if not np.isnan(flagvalues[ii]):
                     self.table["flags"][ii][flagname] = str(flagvalues[ii])
 
-    def delete_flag(self, flagname):
-        """Delete the requested flag from TOAs
-
-        Parameters
-        ----------
-        flagname : str
-            Name of flag to add/modify
-        """
-        for ii in range(self.ntoas):
-            if flagname in self.table["flags"][ii]:
-                del self.table["flags"][ii][flagname]
-
     def get_dms(self):
         """Get the Wideband DM data.
 
@@ -1881,7 +1869,7 @@ class TOAs:
         self.table["pulse_number"].unit = u.dimensionless_unscaled
 
         # Remove pn from dictionary to prevent redundancies
-        self.delete_flag("pn")
+        self["pn"] = ""
 
     def compute_pulse_numbers(self, model):
         """Set pulse numbers (in TOA table column pulse_numbers) based on model.
@@ -2062,7 +2050,7 @@ class TOAs:
                 outf.write(out_str)
 
         finally:
-            del toacopy
+            pass
 
         if not handle:
             outf.close()
