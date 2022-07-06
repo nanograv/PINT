@@ -33,7 +33,7 @@ class SolarSystemShapiro(DelayComponent):
     category = "solar_system_shapiro"
 
     def __init__(self):
-        super(SolarSystemShapiro, self).__init__()
+        super().__init__()
         self.add_param(
             boolParameter(
                 name="PLANET_SHAPIRO",
@@ -42,12 +42,6 @@ class SolarSystemShapiro(DelayComponent):
             )
         )
         self.delay_funcs_component += [self.solar_system_shapiro_delay]
-
-    def setup(self):
-        super(SolarSystemShapiro, self).setup()
-
-    def validate(self):
-        super(SolarSystemShapiro, self).validate()
 
     # Put masses in a convenient dictionary
     _ss_mass_sec = {

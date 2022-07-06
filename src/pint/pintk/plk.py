@@ -106,7 +106,7 @@ class State:
     pass
 
 
-class CreateToolTip(object):
+class CreateToolTip:
     """
     create a tooltip for a given widget
 
