@@ -11,6 +11,7 @@ import astropy.units as u
 from pint.models import get_model
 from pint.fitter import WidebandTOAFitter
 import pint.fitter
+import pint.residuals
 from pint.toa import get_TOAs
 from pinttestdata import datadir
 
@@ -34,28 +35,36 @@ def toas():
 def test_copy_toa_object(toas):
     toa_copy = copy.deepcopy(toas)
 
-    assert sys.getsizeof(toas) == sys.getsizeof(toa_copy)
-    assert id(toas) != id(toa_copy)
+    assert toas == toa_copy
+    assert toas is not toa_copy
     assert toas.ntoas == toa_copy.ntoas
     assert all(toas.table["mjd"] == toa_copy.table["mjd"])
-    assert not (toas.table is toa_copy.table)
-    assert not (toas.table[0]["flags"] is toa_copy.table[0]["flags"])
+    assert toas.table is not toa_copy.table
+    assert toas.table[0]["flags"] is not toa_copy.table[0]["flags"]
+    for c in toas.table.colnames:
+        assert toas.table[c] is not toa_copy.table[c]
 
 
 def test_copy_model_object(model):
     model_copy = copy.deepcopy(model)
 
-    assert sys.getsizeof(model) == sys.getsizeof(model_copy)
-    assert id(model) != id(model_copy)
+    assert model is not model_copy
     assert len(model.params) == len(model_copy.params)
-    assert list(model.components.keys()) == list(model_copy.components.keys())
+    assert (model.components.keys()) == (model_copy.components.keys())
+    for p in model.params:
+        assert getattr(model, p) is not getattr(model_copy, p)
+
+
+def test_copy_residuals(model, toas):
+    r = pint.residuals.Residuals(toas, model)
+    r_copy = copy.deepcopy(r)
+    assert r is not r_copy
 
 
 def test_copy_fitter_object(model, toas):
     fitter = pint.fitter.Fitter(toas, model)
     fitter_copy = copy.deepcopy(fitter)
-    assert sys.getsizeof(fitter) == sys.getsizeof(fitter_copy)
-    assert not (fitter is fitter_copy)
+    assert fitter is not fitter_copy
 
 
 def test_copy_wideband_fitter_object():
@@ -64,8 +73,7 @@ def test_copy_wideband_fitter_object():
     fitter = WidebandTOAFitter([toas], model, additional_args={})
     fitter_copy = copy.deepcopy(fitter)
 
-    assert sys.getsizeof(fitter) == sys.getsizeof(fitter_copy)
-    assert id(fitter) != id(fitter_copy)
+    assert fitter is not fitter_copy
     assert len(fitter.designmatrix_makers) == len(fitter_copy.designmatrix_makers)
     for ii in range(len(fitter.designmatrix_makers)):
         assert (
