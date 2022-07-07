@@ -1862,7 +1862,7 @@ class TOAs:
         self.table["delta_pulse_number"] += dphs
 
         # Then, add pulse_number as a table column if possible
-        pns = np.array(self.get_flag_value("pn", np.nan, float)[0])
+        pns = np.array(self.get_flag_value("pn", np.nan, int)[0])
         if np.all(np.isnan(pns)):
             raise ValueError("No pulse numbers found")
         self.table["pulse_number"] = pns
@@ -1870,6 +1870,8 @@ class TOAs:
 
         # Remove pn from dictionary to prevent redundancies
         self["pn"] = ""
+        # same for padd
+        self["padd"] = ""
 
     def compute_pulse_numbers(self, model):
         """Set pulse numbers (in TOA table column pulse_numbers) based on model.
