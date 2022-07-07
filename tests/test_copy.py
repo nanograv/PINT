@@ -8,6 +8,7 @@ import copy
 import sys
 
 import astropy.units as u
+from astropy.table import Table
 from pint.models import get_model
 from pint.fitter import WidebandTOAFitter
 import pint.fitter
@@ -75,12 +76,40 @@ def test_copy_wideband_fitter_object():
 
     assert fitter is not fitter_copy
     assert len(fitter.designmatrix_makers) == len(fitter_copy.designmatrix_makers)
-    for ii in range(len(fitter.designmatrix_makers)):
-        assert (
-            fitter.designmatrix_makers[ii].derivative_quantity
-            == fitter_copy.designmatrix_makers[ii].derivative_quantity
-        )
-        assert (
-            fitter.designmatrix_makers[ii].quantity_unit
-            == fitter_copy.designmatrix_makers[ii].quantity_unit
-        )
+    for orig, copied in zip(
+        fitter.designmatrix_makers, fitter_copy.designmatrix_makers
+    ):
+        assert orig.derivative_quantity == copied.derivative_quantity
+        assert orig.quantity_unit == copied.quantity_unit
+
+
+@pytest.mark.xfail
+def test_astropy_table_copy():
+    """Related to https://github.com/astropy/astropy/issues/13435
+
+    columns with dtype=object are not deep copied properly
+    Xfail test as a reminder to remove relevant code from TOAs.__deepcopy__() when this is fixed in all of our dependencies
+    """
+
+    class X:
+        def __init__(self, value):
+            self.value = value
+
+        def __repr__(self):
+            return str(self.value)
+
+    a = np.array([1, 4, 5], dtype=np.int32)
+    b = [2.0, 5.0, 8.5]
+    c = ["x", "y", "z"]
+    d = [10, 20, 30] * u.m / u.s
+    e = [X(1), X(2), X(3)]
+
+    t = Table(
+        [a, b, c, d, e],
+        names=("a", "b", "c", "d", "e"),
+        meta={"name": "first table"},
+    )
+    t_copy = copy.deepcopy(t)
+
+    for cname in t.colnames:
+        assert t[0][cname] is not t_copy[0][cname]
