@@ -11,7 +11,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Moved observatories to JSON file.  Changed way observatories are loaded/overloaded
 ### Added
 ### Fixed
-- TOA flags are properly deepcopy'd when desired
+- TOA flags are properly deepcopy'd when desired (to deal with [astropy bug](https://github.com/astropy/astropy/issues/13435))
 
 ## [0.9.0] 2022-06-24
 ### Changed
