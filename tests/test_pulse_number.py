@@ -165,13 +165,15 @@ def test_partial_pulse_numbers(model, toas):
 
 def test_save_delta_pulse_number(model, toas):
     toas.compute_pulse_numbers(model)
-    toas["delta_pulse_number"][:10] += 1
+    toas["delta_pulse_number"][:10] = 1
+    toas["delta_pulse_number"][10:20] = -1
     outtim = StringIO()
     toas.write_TOA_file(outtim)
     outtim.seek(0)
     newtoas = get_TOAs(outtim)
     assert (newtoas[:10]["delta_pulse_number"] == 1).all()
-    assert (newtoas[10:]["delta_pulse_number"] == 0).all()
+    assert (newtoas[10:20]["delta_pulse_number"] == -1).all()
+    assert (newtoas[20:]["delta_pulse_number"] == 0).all()
     assert (toas["delta_pulse_number"] == newtoas["delta_pulse_number"]).all()
 
 
