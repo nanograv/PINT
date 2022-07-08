@@ -172,6 +172,7 @@ def test_save_delta_pulse_number(model, toas):
     newtoas = get_TOAs(outtim)
     assert (newtoas[:10]["delta_pulse_number"] == 1).all()
     assert (newtoas[10:]["delta_pulse_number"] == 0).all()
+    assert (toas["delta_pulse_number"] == newtoas["delta_pulse_number"]).all()
 
 
 def test_get_pulse_numbers(model, toas):
