@@ -1437,7 +1437,7 @@ class TOAs:
         ``toas["a_flag"]`` has to produce a newly allocated array, and
         modifying it cannot affect the flags on the original object.
         Unfortunately ``toas["a_flag"][7] = "value"`` will appear to work but
-        will do nothing. Use ``toas["a_flag", 7] = "value"`` instead.
+        will do nothing. Use ``toas["a_flag", 7] = "value"`` instead.  Flag values will be converted to strings.
         """
         column = None
         subset = None
@@ -1462,11 +1462,12 @@ class TOAs:
             else:
                 self.table[column][subset] = value
         else:
-            if isinstance(value, str):
+            # dealing with flags
+            if np.isscalar(value):
                 if subset is None:
                     for f in self.table["flags"]:
                         if value:
-                            f[column] = value
+                            f[column] = str(value)
                         else:
                             try:
                                 del f[column]
@@ -1475,7 +1476,7 @@ class TOAs:
                 elif isinstance(subset, int):
                     f = self.table["flags"][subset]
                     if value:
-                        f[column] = value
+                        f[column] = str(value)
                     else:
                         try:
                             del f[column]
@@ -1484,17 +1485,21 @@ class TOAs:
                 else:
                     for f in self.table["flags"][subset]:
                         if value:
-                            f[column] = value
+                            f[column] = str(value)
                         else:
                             try:
                                 del f[column]
                             except KeyError:
                                 pass
             else:
-                # FIXME: error if value is the wrong length
-                # FIXME: sensible error if value is a float or some other non-string non-iterable
-                for f, v in zip(self.table["flags", subset], value):
-                    f[column] = v
+                if subset is None:
+                    subset = range(len(self))
+                if len(subset) != len(value):
+                    raise ValueError(
+                        "Length of flag values must be equal to length of TOA subset"
+                    )
+                for i in subset:
+                    self[column, i] = str(value[i])
 
     def __eq__(self, other):
         sd, od = self.__dict__.copy(), other.__dict__.copy()
@@ -1647,25 +1652,6 @@ class TOAs:
                     val = as_type(val)
             result.append(val)
         return result, valid_index
-
-    def set_flag_values(self, flagname, flagvalues):
-        """Set the requested TOA flag values to TOAs
-
-        Parameters
-        ----------
-        flagname : str
-            Name of flag to add/modify
-        flagvalues : str, int, float, or np.ndarray
-            Scalar or array of values.  If array, should match length of TOAs.  All values are converted to string before storing.
-        """
-        assert np.isscalar(flagvalues) or (len(flagvalues) == self.ntoas)
-        for ii in range(self.ntoas):
-            if np.isscalar(flagvalues):
-                if not np.isnan(flagvalues):
-                    self.table["flags"][ii][flagname] = str(flagvalues)
-            else:
-                if not np.isnan(flagvalues[ii]):
-                    self.table["flags"][ii][flagname] = str(flagvalues[ii])
 
     def get_dms(self):
         """Get the Wideband DM data.
@@ -2017,12 +2003,12 @@ class TOAs:
         # FIXME: everywhere else the pulse number column is called pulse_number not pn
         toacopy = copy.deepcopy(self)
         if "pulse_number" in toacopy.table.colnames:
-            toacopy.set_flag_values("pn", toacopy.table["pulse_number"])
+            toacopy["pn"] = toacopy.table["pulse_number"]
         if (
             "delta_pulse_number" in toacopy.table.columns
             and (toacopy.table["delta_pulse_number"] != 0).any()
         ):
-            toacopy.set_flag_values("padd", toacopy.table["delta_pulse_number"])
+            toacopy["padd"] = toacopy.table["delta_pulse_number"]
 
         if order_by_index:
             ix = np.argsort(toacopy.table["index"])

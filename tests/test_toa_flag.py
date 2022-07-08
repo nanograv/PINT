@@ -75,32 +75,38 @@ uwl_191207_024252.0000_0000.rf.pTF 1102.00000000 58824.11892727732292840 25.1070
 
 def test_flag_set_scalar():
     t = toa.get_TOAs(io.StringIO(s))
-    t.set_flag_values("test", 1)
+    t["test"] = str(1)
     for i in range(t.ntoas):
         assert t["flags"][i]["test"] == "1"
 
 
 def test_flag_set_array():
     t = toa.get_TOAs(io.StringIO(s))
-    t.set_flag_values("test", np.ones(len(t)))
+    t["test"] = np.arange(len(t))
     for i in range(t.ntoas):
-        assert float(t["flags"][i]["test"]) == 1
+        assert float(t["test", i]) == i
+
+
+def test_flag_set_wrongarray():
+    t = toa.get_TOAs(io.StringIO(s))
+    with pytest.raises(ValueError):
+        t["test"] = np.arange(2 * len(t))
 
 
 def test_flag_set_partialarray():
     t = toa.get_TOAs(io.StringIO(s))
     # only set a few elements and make sure that only those are set
-    t[:2].set_flag_values("test", np.ones(2))
+    t[:2, "test"] = "1"
     for i in range(t.ntoas):
         if i < 2:
-            assert float(t["flags"][i]["test"]) == 1
+            assert float(t["test", i]) == 1
         else:
             assert not "test" in t["flags"][i]
 
 
 def test_flag_delete():
     t = toa.get_TOAs(io.StringIO(s))
-    t.set_flag_values("test", 1)
+    t["test"] = "1"
     t["test"] = ""
     for i in range(t.ntoas):
         assert not "test" in t["flags"][i]
@@ -108,10 +114,10 @@ def test_flag_delete():
 
 def test_flag_partialdelete():
     t = toa.get_TOAs(io.StringIO(s))
-    t.set_flag_values("test", 1)
-    t[:2]["test"] = ""
+    t["test"] = "1"
+    t[:2, "test"] = ""
     for i in range(t.ntoas):
         if i < 2:
             assert not "test" in t["flags"][i]
         else:
-            assert float(t["flags"][i]["test"]) == 1
+            assert float(t["test", i]) == 1

@@ -181,7 +181,7 @@ def test_get_pulse_numbers(model, toas):
     toas.compute_pulse_numbers(model)
     pn_column = toas.get_pulse_numbers()
 
-    toas.set_flag_values("pn", pn_column)
+    toas["pn"] = pn_column
     # this should raise an error since both the column and flag are present
     with pytest.raises(ValueError):
         pn_flag = toas.get_pulse_numbers()
