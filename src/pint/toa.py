@@ -2004,55 +2004,46 @@ class TOAs:
         # Add pulse numbers to flags temporarily if there is a pulse number column
         # do this on a copy so as to leave the TOAs in a useful state
         # FIXME: everywhere else the pulse number column is called pulse_number not pn
-        try:
-            toacopy = copy.deepcopy(self)
-            # have to deepcopy the flags separately
-            for i in range(len(self)):
-                toacopy.table[i]["flags"] = copy.deepcopy(self.table[i]["flags"])
-            if "pulse_number" in toacopy.table.colnames:
-                toacopy.set_flag_values("pn", toacopy.table["pulse_number"])
-            if (
-                "delta_pulse_number" in toacopy.table.columns
-                and (toacopy.table["delta_pulse_number"] != 0).any()
-            ):
-                toacopy.set_flag_values("padd", toacopy.table["delta_pulse_number"])
+        toacopy = copy.deepcopy(self)
+        if "pulse_number" in toacopy.table.colnames:
+            toacopy.set_flag_values("pn", toacopy.table["pulse_number"])
+        if (
+            "delta_pulse_number" in toacopy.table.columns
+            and (toacopy.table["delta_pulse_number"] != 0).any()
+        ):
+            toacopy.set_flag_values("padd", toacopy.table["delta_pulse_number"])
 
-            if order_by_index:
-                ix = np.argsort(toacopy.table["index"])
-            else:
-                ix = np.arange(len(toacopy))
-            for (toatime, toaerr, freq, obs, flags) in zip(
-                toacopy.table["mjd"][ix],
-                toacopy.table["error"][ix].quantity,
-                toacopy.table["freq"][ix].quantity,
-                toacopy.table["obs"][ix],
-                toacopy.table["flags"][ix],
-            ):
-                obs_obj = Observatory.get(obs)
+        if order_by_index:
+            ix = np.argsort(toacopy.table["index"])
+        else:
+            ix = np.arange(len(toacopy))
+        for (toatime, toaerr, freq, obs, flags) in zip(
+            toacopy.table["mjd"][ix],
+            toacopy.table["error"][ix].quantity,
+            toacopy.table["freq"][ix].quantity,
+            toacopy.table["obs"][ix],
+            toacopy.table["flags"][ix],
+        ):
+            obs_obj = Observatory.get(obs)
 
-                flags = flags.copy()
-                toatime_out = toatime
-                if "clkcorr" in flags:
-                    toatime_out -= time.TimeDelta(float(flags["clkcorr"]) * u.s)
-                out_str = (
-                    "C "
-                    if isinstance(commentflag, str) and (commentflag in flags)
-                    else ""
-                )
-                out_str += format_toa_line(
-                    toatime_out,
-                    toaerr,
-                    freq,
-                    obs_obj,
-                    name=flags.pop("name", name),
-                    flags=flags,
-                    format=format,
-                    alias_translation=toacopy.alias_translation,
-                )
-                outf.write(out_str)
-
-        finally:
-            pass
+            flags = flags.copy()
+            toatime_out = toatime
+            if "clkcorr" in flags:
+                toatime_out -= time.TimeDelta(float(flags["clkcorr"]) * u.s)
+            out_str = (
+                "C " if isinstance(commentflag, str) and (commentflag in flags) else ""
+            )
+            out_str += format_toa_line(
+                toatime_out,
+                toaerr,
+                freq,
+                obs_obj,
+                name=flags.pop("name", name),
+                flags=flags,
+                format=format,
+                alias_translation=toacopy.alias_translation,
+            )
+            outf.write(out_str)
 
         if not handle:
             outf.close()
