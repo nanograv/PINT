@@ -2465,10 +2465,10 @@ class ModelMeta(abc.ABCMeta):
         if "register" in dct:
             if cls.register:
                 getattr(cls, regname)[name] = cls
-        super(ModelMeta, cls).__init__(name, bases, dct)
+        super().__init__(name, bases, dct)
 
 
-class Component(object, metaclass=ModelMeta):
+class Component(metaclass=ModelMeta):
     """Timing model components.
 
     When such a class is defined, it registers itself in
@@ -2863,13 +2863,13 @@ class Component(object, metaclass=ModelMeta):
 
 class DelayComponent(Component):
     def __init__(self):
-        super(DelayComponent, self).__init__()
+        super().__init__()
         self.delay_funcs_component = []
 
 
 class PhaseComponent(Component):
     def __init__(self):
-        super(PhaseComponent, self).__init__()
+        super().__init__()
         self.phase_funcs_component = []
         self.phase_derivs_wrt_delay = []
 
@@ -3199,7 +3199,7 @@ class MissingParameter(TimingModelError):
     """
 
     def __init__(self, module, param, msg=None):
-        super(MissingParameter, self).__init__(msg)
+        super().__init__(msg)
         self.module = module
         self.param = param
         self.msg = msg

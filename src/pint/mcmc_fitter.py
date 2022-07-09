@@ -139,9 +139,7 @@ class MCMCFitter(Fitter):
     """
 
     def __init__(self, toas, model, sampler, **kwargs):
-        super(MCMCFitter, self).__init__(
-            toas, model, track_mode=kwargs.get("track_mode", None)
-        )
+        super().__init__(toas, model, track_mode=kwargs.get("track_mode", None))
         self.toas = toas
         self.model_init = model
         self.use_resids = kwargs.get("resids", True)
@@ -451,7 +449,7 @@ class MCMCFitterBinnedTemplate(MCMCFitter):
     """
 
     def __init__(self, toas, model, sampler, **kwargs):
-        super(MCMCFitterBinnedTemplate, self).__init__(toas, model, sampler, **kwargs)
+        super().__init__(toas, model, sampler, **kwargs)
 
     def set_template(self, template):
         """
@@ -495,9 +493,7 @@ class MCMCFitterAnalyticTemplate(MCMCFitter):
     """
 
     def __init__(self, toas, model, sampler, template, **kwargs):
-        super(MCMCFitterAnalyticTemplate, self).__init__(
-            toas, model, sampler, template=template, **kwargs
-        )
+        super().__init__(toas, model, sampler, template=template, **kwargs)
 
     def set_template(self, template):
         """
