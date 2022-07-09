@@ -1760,9 +1760,14 @@ class TimingModel:
         We decide to add minus sign here in the design matrix, so the fitter
         keeps the conventional way.
         """
+
+        noise_params = [param for noise_comp in self.NoiseComponent_list 
+                              for param in noise_comp.params]
+
         params = ["Offset"] if incoffset else []
         params += [
-            par for par in self.params if incfrozen or not getattr(self, par).frozen
+            par for par in self.params if (incfrozen or not getattr(self, par).frozen)
+                                          and par not in noise_params
         ]
 
         F0 = self.F0.quantity  # 1/sec
