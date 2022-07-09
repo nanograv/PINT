@@ -550,6 +550,11 @@ class TimingModel:
                 raise ValueError(f"Unknown kind {kind!r}")
         return c
 
+    def get_params_of_component_type(self, component_type):
+        component_type_list = getattr(self, "{}_list".format(component_type))
+        return [param for component in component_type_list
+                      for param in component.params]
+
     def set_param_values(self, fitp):
         """Set the model parameters to the value contained in the input dict.
 
@@ -1761,8 +1766,7 @@ class TimingModel:
         keeps the conventional way.
         """
 
-        noise_params = [param for noise_comp in self.NoiseComponent_list 
-                              for param in noise_comp.params]
+        noise_params = self.get_params_of_component_type("NoiseComponent")
 
         params = ["Offset"] if incoffset else []
         params += [
