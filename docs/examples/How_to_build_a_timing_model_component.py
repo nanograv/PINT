@@ -123,7 +123,7 @@ class PeriodSpindown(PhaseComponent):
         # Add reference epoch time.
         self.add_param(
             p.MJDParameter(
-                name="PEPOCH_P0",
+                name="PEPOCH",
                 description="Reference epoch for spin-down",
                 time_scale="tdb",
             )
@@ -188,7 +188,11 @@ class PeriodSpindown(PhaseComponent):
     def get_dt(self, toas, delay):
         """dt from the toas to the reference time."""
         # toas.table['tdbld'] stores the tdb time in longdouble.
-        return (toas.table["tdbld"] - self.PEPOCH_P0.value) * u.day - delay
+        return (toas.table["tdbld"] - self.PEPOCH.value) * u.day - delay
+
+    def get_spin_terms(self):
+        """Return a list of the spin term values in the model: [F0, F1, ..., FN]."""
+        return [self.F0.quantity, self.F1.quantity]
 
     # Defining the phase function, which is added to the self.phase_funcs_component
     def spindown_phase_period(self, toas, delay):
@@ -222,7 +226,7 @@ par_string = """
              DECJ      -20:21:29.0  1 0.4
              P0        0.016264003404474613 1 0
              P1        3.123955D-19 1 0
-             PEPOCH_P0     53750.000000
+             PEPOCH        53750.000000
              POSEPOCH      53750.000000
              DM              223.9  1 0.3
              SOLARN0               0.00
