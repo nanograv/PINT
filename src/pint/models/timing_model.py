@@ -60,9 +60,12 @@ from pint.phase import Phase
 from pint.toa import TOAs
 from pint.utils import (
     PrefixError,
+    interesting_lines,
+    lines_of,
     split_prefixed_name,
     open_or_use,
     colorize,
+    taylor_horner
 )
 
 
@@ -1531,6 +1534,57 @@ class TimingModel:
             return
         self.components["PhaseJump"].setup()
 
+    def get_spin_freq(self, times, calctype="modelF0"):
+        """Return barycentric pulsar rotational frequency in Hz at specific times
+
+        Parameters
+        ----------
+        times : float or long double MJD (can be array), astropy.Time object, TOAs
+            The times (barycentric, inf freq) at which to compute the spin frequency
+        calctype : {'modelF0', 'numerical', 'taylor'}
+            Type of calculation:
+                "modelF0" means a constant ``F0`` from the timing model
+                "numerical" uses the numerical derivative ``d_phase_d_toa()``
+                    This option requires times to be a TOAs object
+                "taylor" uses a Taylor series to compute the frequencies
+
+        Returns
+        -------
+        freq : astropy.units.Quantity (can be array)
+            The spin frequency in Hz at each barycentric time
+
+        Note
+        ----
+        "numerical" is significantly slower, but is much more exact, and
+        """
+        calc = calctype.lower()
+        assert calc in ["modelf0", "taylor", "numerical"]
+
+        if calc == "modelf0":
+            return self.F0.quantity
+
+        # ToDo: How does this handle Glitch or Piecewise models?
+        if calc == "numerical":
+            assert isinstance(times, TOAs)
+            return self.d_phase_d_toa(times)
+
+        # Handle various types of input times for "taylor" calc
+        if isinstance(times, TOAs):
+            # If we pass the TOA table, then barycenter the TOAs
+            bts = self.get_barycentric_toas(times)  # have units of days
+        elif isinstance(times, time.Time):
+            if times.scale == "tdb":
+                bts = np.asarray(times.mjd_long) << u.d
+            else:
+                raise ValueError("times as Time instance in needs scale=='tdb'")
+        elif isinstance(times, MJDParameter):
+            bts = np.asarray(times.value) << u.d  # .value is always a MJD long double
+        else:
+            bts = np.asarray(times) << u.d
+        dts = bts - (self.PEPOCH.value << u.d)
+        fterms = self.get_spin_terms()
+        return taylor_horner(dts, fterms).to(u.Hz)
+
     def get_barycentric_toas(self, toas, cutoff_component=""):
         """Conveniently calculate the barycentric TOAs.
 
@@ -1749,14 +1803,16 @@ class TimingModel:
             )
         return result
 
-    def designmatrix(self, toas, acc_delay=None, incfrozen=False, incoffset=True):
+    def designmatrix(self, toas, incfrozen=False, incoffset=True, calctype="taylor"):
         """Return the design matrix.
 
-        The design matrix is the matrix with columns of ``d_phase_d_param/F0``
-        or ``d_toa_d_param``; it is used in fitting and calculating parameter
-        covariances.
+        The design matrix is the matrix with columns of
+        ``d_phase_d_param/F0`` or ``d_toa_d_param`` (or possibly
+        ``d_phase_d_param`` if calctype==``phase``); it is used in fitting
+        and calculating parameter covariances.
 
-        The value of ``F0`` used here is the parameter value in the model.
+        If calctype is not ``phase``, then it computes the local spin freq
+        by default via the ``taylor`` method.
 
         The order of parameters that are included is that returned by
         ``self.params``.
@@ -1765,29 +1821,36 @@ class TimingModel:
         ----------
         toas : pint.toa.TOAs
             The TOAs at which to compute the design matrix.
-        acc_delay
-            ???
         incfrozen : bool
             Whether to include frozen parameters in the design matrix
         incoffset : bool
             Whether to include the constant offset in the design matrix
+        calctype : {'modelF0', 'numerical', 'taylor'}
+            Type of calculation (for ``.get_spin_freq()``):
+                "modelF0" means a constant ``F0`` from the timing model
+                "numerical" uses the numerical derivative ``d_phase_d_toa()``
+                    This option requires times to be a TOAs object
+                "taylor" uses a Taylor series to compute the frequencies
+                "phase" return the matrix in terms of phase, not time
 
         Returns
         -------
         M : array
-            The design matrix, with shape (len(toas), len(self.free_params)+1)
-        names : list of str
-            The names of parameters in the corresponding parts of the design matrix
+            The design matrix, with shape (len(toas),
+            len(self.free_params)+incoffset)
+        names : list of strings
+            The names of parameters in the corresponding parts of the
+            design matrix
         units : astropy.units.Unit
             The units of the corresponding parts of the design matrix
 
         Note
         ----
-        Here we have negative sign here. Since in pulsar timing
-        the residuals are calculated as (Phase - int(Phase)), which is different
-        from the conventional definition of least square definition (Data - model)
-        We decide to add minus sign here in the design matrix, so the fitter
-        keeps the conventional way.
+        We return the negative of the ``d_phase_d_param()`` since in
+        pulsar timing the residuals are calculated as (Phase -
+        int(Phase)), which is different from the conventional definition
+        of least square definition (Data - model).  Including the negative
+        here allows the fitter to keep the standard convention.
         """
 
         noise_params = self.get_params_of_component_type("NoiseComponent")
@@ -1805,26 +1868,27 @@ class TimingModel:
             if (incfrozen or not getattr(self, par).frozen) and par not in noise_params
         ]
 
-        F0 = self.F0.quantity  # 1/sec
-        ntoas = len(toas)
-        nparams = len(params)
+        # This is either ones if we want the derivs in phase rather than
+        # time, or it is the spin freq calculated by the chosen method
+        norm = (
+            self.get_spin_freq(toas, calctype)
+            if calctype != "phase"
+            else (np.ones(toas.ntoas) << u.dimensionless_unscaled)
+        )
         delay = self.delay(toas)
         units = []
-        # Apply all delays ?
-        # tt = toas['tdbld']
-        # for df in self.delay_funcs:
-        #    tt -= df(toas)
 
-        M = np.zeros((ntoas, nparams))
+        # SMR: Wouldn't it be better to have this in thetransposed shape?
+        M = np.zeros((toas.ntoas, len(params)), dtype=float)
         for ii, param in enumerate(params):
             if param == "Offset":
-                M[:, ii] = 1.0 / F0.value
-                units.append(u.s / u.s)
+                M[:, ii] = 1.0 / norm.value
+                units.append(u.Unit("") / norm.unit)
             else:
                 q = -self.d_phase_d_param(toas, delay, param)
                 the_unit = u.Unit("") / getattr(self, param).units
-                M[:, ii] = q.to_value(the_unit) / F0.value
-                units.append(the_unit / F0.unit)
+                M[:, ii] = q.to_value(the_unit) / norm.value
+                units.append(the_unit / norm.unit)
         return M, params, units
 
     def compare(
