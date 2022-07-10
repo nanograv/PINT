@@ -1558,14 +1558,18 @@ class TimingModel:
         "numerical" is significantly slower, but is much more exact, and
         """
         calc = calctype.lower()
-        assert calc in ["modelf0", "taylor", "numerical"]
+        if calc not in ["modelf0", "taylor", "numerical"]:
+            raise ValueError(
+                "calctype must be one of ['modelf0', 'taylor'', 'numerical']"
+            )
 
         if calc == "modelf0":
             return self.F0.quantity
 
         # ToDo: How does this handle Glitch or Piecewise models?
         if calc == "numerical":
-            assert isinstance(times, TOAs)
+            if not isinstance(times, TOAs):
+                raise TypeError("times must be TOAs when using calctype='numerical'")
             return self.d_phase_d_toa(times)
 
         # Handle various types of input times for "taylor" calc
