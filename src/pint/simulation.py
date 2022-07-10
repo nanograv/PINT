@@ -444,12 +444,12 @@ def make_random_models(fitter, Nmodels=100, params="all"):
     scaled_cov_matrix = ((cov_matrix.matrix * fac).T * fac).T
     random_models = []
     for _ in range(Nmodels):
-        f_rand = deepcopy(fitter)
+        m_rand = deepcopy(fitter.model)
         # create a set of randomized parameters based on mean vector and covariance matrix
         # dividing by fac brings us back to real units
         rparams = np.random.multivariate_normal(mean_vector, scaled_cov_matrix) / fac
-        f_rand.set_params(dict(zip(param_names, rparams)))
-        random_models.append(f_rand.model)
+        m_rand.set_param_values(dict(zip(param_names, rparams)))
+        random_models.append(m_rand)
     return random_models
 
 
