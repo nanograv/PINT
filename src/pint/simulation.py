@@ -8,9 +8,9 @@ import numpy as np
 from loguru import logger as log
 from astropy import time
 
-import pint.residuals as pr
 import pint.toa
 import pint.models
+from pint.residuals import Residuals
 from pint.observatory import Observatory, bipm_default, get_observatory
 
 __all__ = [
@@ -70,7 +70,7 @@ def zero_residuals(ts, model, maxiter=10, tolerance=None):
         else:
             tolerance = 5 * u.us
     for i in range(maxiter):
-        r = pr.Residuals(ts, model, track_mode="use_pulse_numbers")
+        r = Residuals(ts, model, track_mode="use_pulse_numbers")
         resids = r.calc_time_resids(calctype="taylor")
         if maxresid is not None and (np.abs(resids).max() > maxresid):
             log.warning(
@@ -477,9 +477,9 @@ def compute_random_model_resids_exact(fitter, models, toas, return_time=False):
     """
     resids = np.zeros((len(models), toas.ntoas), dtype=np.float)
     # These are the reference residuals from the reference model
-    r0 = pr.Residuals(toas, fitter.model, subtract_mean=False)
+    r0 = Residuals(toas, fitter.model, subtract_mean=False)
     for ii, model in enumerate(models):
-        rn = pr.Residuals(toas, model, subtract_mean=False)
+        rn = Residuals(toas, model, subtract_mean=False)
         resids[ii] = (
             rn.time_resids - r0.time_resids
             if return_time
