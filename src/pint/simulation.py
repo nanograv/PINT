@@ -387,8 +387,7 @@ def make_fake_toas_fromtim(timfile, model, add_noise=False, name="fake"):
 
 
 def make_random_models(fitter, Nmodels=100, params="all"):
-    """
-    Create random models based on the covariance matrix of fitter
+    """Create random models based on the covariance matrix of fitter.
 
     Parameters
     ----------
@@ -454,8 +453,7 @@ def make_random_models(fitter, Nmodels=100, params="all"):
 
 
 def compute_random_model_resids_exact(fitter, models, toas, return_time=False):
-    """
-    Calculate residuals from random models exactly
+    """Calculate residuals from random models exactly.
 
     Parameters
     ----------
@@ -491,8 +489,7 @@ def compute_random_model_resids_exact(fitter, models, toas, return_time=False):
 
 
 def compute_random_model_resids_fast(fitter, models, toas, return_time=False):
-    """
-    Calculate residuals from random models using the design matrix
+    """Calculate residuals from random models using the design matrix.
 
     Parameters
     ----------
@@ -546,8 +543,7 @@ def calculate_random_models(
     params="all",
     fast_method=True,
 ):
-    """
-    Calculates random model residuals based on the parameter covariance matrix
+    """Calculates random model residuals based on the parameter covariance matrix.
 
     Parameters
     ----------
