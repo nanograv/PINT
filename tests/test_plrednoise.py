@@ -57,7 +57,3 @@ def test_read_PLRedNoise_params(modelJ0023p0923):
         assert ( hasattr(modelJ0023p0923, param) 
                  and getattr(modelJ0023p0923,param).quantity is not None
             ), "Parameter {} was not read correctly.".format(param)
-
-if __name__ == "__main__":
-    pass
-
