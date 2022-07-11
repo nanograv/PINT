@@ -6,9 +6,6 @@ import pytest
 
 import pint.models.model_builder as mb
 
-# This parfile also contains DM noise parameters.
-# This not implemented in PINT yet. The expected
-# behavior is that these parameters will be ignored.
 parfile_contents = """
     PSRJ           J0023+0923
     RAJ             00:23:16.8790858         1  0.00002408141295805134   
