@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 import os
+from io import StringIO
 from copy import deepcopy
 from io import StringIO
 
@@ -243,3 +244,26 @@ def test_fitselector():
     assert isinstance(f, fitter.DownhillWLSFitter)
     f = fitter.Fitter.auto(t, m, downhill=False)
     assert isinstance(f, fitter.WLSFitter)
+
+
+def test_unitless_ell1h_bug_1316():
+    m = get_model(
+        StringIO(
+            """
+    PSR J1234+5678
+    ELAT 0
+    ELONG 0
+    PEPOCH 57000
+    F0 1
+    BINARY ELL1
+    PB 1 1
+    A1 4 1
+    TASC 57000 1
+    EPS1 0 1
+    EPS2 0 1
+    """
+        )
+    )
+    t = simulation.make_fake_toas_uniform(56000, 59000, 16, m)
+    f = fitter.Fitter.auto(t, m)
+    f.get_derived_params()

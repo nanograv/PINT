@@ -130,7 +130,16 @@ def test_can_try_to_compute_corrections(observatory):
     get_observatory(observatory).clock_corrections(Time(57600, format="mjd"))
 
 
-good_observatories = ["gbt", "ao", "vla", "jodrell", "wsrt", "parkes"]
+good_observatories = [
+    "gbt",
+    "ao",
+    "vla",
+    "jodrell",
+    "jbroach",
+    "jbdfb",
+    "wsrt",
+    "parkes",
+]
 
 
 @pytest.mark.parametrize("observatory", good_observatories)

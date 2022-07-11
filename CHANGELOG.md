@@ -7,10 +7,14 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## Unreleased
 ### Changed
 - No tests now change based on $TEMPO or $TEMPO2
+- Ensure Fitters work with ELL1 even on Astropy 4 (bug #1316)
 - index.txt is only checked at most once a day
 - Moved observatories to JSON file.  Changed way observatories are loaded/overloaded
+- Split Jodrell Bank observatory based on backend to get correct clock files
 ### Added
+- delta_pulse_number column is now saved to -padd flag on TOA write
 ### Fixed
+- TOA flags are properly deepcopy'd when desired (to deal with [astropy bug](https://github.com/astropy/astropy/issues/13435))
 
 ## [0.9.0] 2022-06-24
 ### Changed
