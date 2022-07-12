@@ -1,29 +1,29 @@
 #! /usr/bin/env python
+import copy
 import os
 import unittest
-from os.path import join
 from io import StringIO
-import copy
-import numpy as np
+from os.path import join
 
 import astropy.units as u
+import numpy as np
 import pytest
 from pinttestdata import datadir
 
 import pint
 from pint.fitter import (
     ConvergenceFailure,
-    MaxiterReached,
     DownhillGLSFitter,
     DownhillWLSFitter,
     GLSFitter,
+    MaxiterReached,
     WidebandDownhillFitter,
     WidebandTOAFitter,
     WLSFitter,
 )
 from pint.models.model_builder import get_model
-from pint.toa import get_TOAs
 from pint.simulation import make_fake_toas_uniform
+from pint.toa import get_TOAs
 
 
 @pytest.fixture

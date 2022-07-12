@@ -1,10 +1,10 @@
 #! /usr/bin/env python
 import io
-
-import numpy as np
-import astropy.units as u
-import pytest
 import re
+
+import astropy.units as u
+import numpy as np
+import pytest
 
 import pint.fitter
 from pint.models import get_model

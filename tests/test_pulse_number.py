@@ -1,19 +1,19 @@
 #!/usr/bin/python
-from io import StringIO
 import os
-import pytest
 from copy import deepcopy
+from io import StringIO
 
 import numpy as np
+import pytest
 from astropy import units as u
 from numpy.testing import assert_almost_equal
-
-from pint.residuals import Residuals
 from pinttestdata import datadir
+
 import pint.fitter
 from pint.models import get_model
-from pint.toa import get_TOAs
+from pint.residuals import Residuals
 from pint.simulation import make_fake_toas_uniform
+from pint.toa import get_TOAs
 
 parfile = os.path.join(datadir, "withpn.par")
 timfile = os.path.join(datadir, "withpn.tim")
@@ -25,11 +25,11 @@ def model():
 
 
 @pytest.fixture
-def toas():
+def toas(pickle_dir):
     # The scope="module" setting ensures the TOAs object will be created
     # only once for the whole module, which will save time but might
     # allow accidental modifications done in one test to affect other tests.
-    return get_TOAs(timfile)
+    return get_TOAs(timfile, usepickle=True, picklefilename=pickle_dir)
 
 
 @pytest.fixture

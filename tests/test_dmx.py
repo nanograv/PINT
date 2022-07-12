@@ -4,11 +4,11 @@ import unittest
 
 import astropy.units as u
 import numpy as np
+from pinttestdata import datadir
 
 import pint.toa as toa
 from pint import residuals
 from pint.models import model_builder as mb
-from pinttestdata import datadir
 
 
 class TestDMX(unittest.TestCase):

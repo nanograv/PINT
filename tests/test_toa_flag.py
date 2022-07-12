@@ -4,8 +4,9 @@
 import os
 import unittest
 
-import pint.toa as toa
 from pinttestdata import datadir
+
+import pint.toa as toa
 
 
 class TestToaFlag(unittest.TestCase):

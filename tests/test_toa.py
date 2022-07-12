@@ -9,8 +9,8 @@ from pinttestdata import datadir
 
 from pint.models import get_model
 from pint.observatory import get_observatory
-from pint.toa import TOA, TOAs
 from pint.simulation import make_fake_toas_uniform
+from pint.toa import TOA, TOAs
 
 
 class TestTOA(unittest.TestCase):

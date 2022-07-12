@@ -3,13 +3,12 @@
 """
 import os
 import tempfile
-
-import pytest
 from io import StringIO
 
-from pint.models.model_builder import ModelBuilder, parse_parfile, TimingModelError
+import pytest
 
 from pint.models import get_model
+from pint.models.model_builder import ModelBuilder, TimingModelError, parse_parfile
 
 base_par = """
 PSR J1234+5678

@@ -2,19 +2,19 @@ import io
 import os
 import sys
 import warnings
-from copy import deepcopy
 from contextlib import redirect_stdout
+from copy import deepcopy
 
 import astropy.units as u
 import numpy as np
 import pytest
 from hypothesis import given
-from hypothesis.strategies import permutations, composite
+from hypothesis.strategies import composite, permutations
 from numpy.testing import assert_allclose
-from pint import toa
-from pint.observatory import compare_t2_observatories_dat
 from pinttestdata import datadir
 
+import pint.residuals
+from pint import toa
 from pint.models import (
     DEFAULT_ORDER,
     AstrometryEquatorial,
@@ -26,9 +26,9 @@ from pint.models import (
     get_model,
     parameter as p,
 )
+from pint.observatory import compare_t2_observatories_dat
 from pint.simulation import make_fake_toas_uniform
 from pint.toa import get_TOAs
-import pint.residuals
 
 
 @pytest.fixture

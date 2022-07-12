@@ -1,6 +1,8 @@
-import tempo_utils as t1u
-from pint.utils import longdouble2str
 import argparse
+
+import tempo_utils as t1u
+
+from pint.utils import longdouble2str
 
 
 def get_tempo_result(parfile, timfile):

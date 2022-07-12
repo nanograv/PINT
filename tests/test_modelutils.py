@@ -4,13 +4,12 @@ import unittest
 
 import astropy.units as u
 import numpy as np
+from pinttestdata import datadir
 
 import pint.toa as toa
 from pint.models import get_model
+from pint.modelutils import model_ecliptic_to_equatorial, model_equatorial_to_ecliptic
 from pint.residuals import Residuals
-from pinttestdata import datadir
-
-from pint.modelutils import model_equatorial_to_ecliptic, model_ecliptic_to_equatorial
 
 
 class TestEcliptic(unittest.TestCase):

@@ -13,8 +13,8 @@ from scipy.linalg import block_diag, cho_factor, cho_solve, cholesky
 import pint.fitter
 from pint.models import get_model
 from pint.models.timing_model import MissingTOAs
-from pint.toa import merge_TOAs
 from pint.simulation import make_fake_toas_uniform
+from pint.toa import merge_TOAs
 
 par_eccentric = """
 PSR J1234+5678

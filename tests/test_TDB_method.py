@@ -3,9 +3,9 @@ import os
 import unittest
 
 import numpy as np
+from pinttestdata import datadir
 
 import pint.toa as toa
-from pinttestdata import datadir
 
 
 class TestTDBMethod(unittest.TestCase):

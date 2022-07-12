@@ -1,23 +1,23 @@
 #!/usr/bin/env python
 import io
 import os
-from pathlib import Path
 import unittest
+from pathlib import Path
 
 import numpy as np
 import pytest
-from pint.pulsar_mjd import Time
+from pinttestdata import datadir
 
 import pint.observatory
 import pint.observatory.topo_obs
+from pint.observatory import NoClockCorrections, Observatory, get_observatory
+from pint.observatory.special_locations import load_special_locations
 from pint.observatory.topo_obs import (
+    TopoObs,
     load_observatories,
     load_observatories_from_usual_locations,
-    TopoObs,
 )
-from pint.observatory.special_locations import load_special_locations
-from pint.observatory import get_observatory, Observatory, NoClockCorrections
-from pinttestdata import datadir
+from pint.pulsar_mjd import Time
 
 
 @pytest.fixture

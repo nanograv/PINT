@@ -1,8 +1,8 @@
 import copy
+import io
 import os
 import pickle
 import unittest
-import io
 
 import astropy.time as time
 import astropy.units as u

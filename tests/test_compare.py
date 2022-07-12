@@ -1,13 +1,15 @@
-import numpy as np
+import io
+import os
 import unittest
+from copy import deepcopy as cp
+
 import astropy
 import astropy.units as u
+import numpy as np
+from pinttestdata import datadir
+
 import pint
 import pint.models as mod
-import os
-import io
-from copy import deepcopy as cp
-from pinttestdata import datadir
 
 
 class TestCompare(unittest.TestCase):

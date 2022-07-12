@@ -1,15 +1,14 @@
 import os
 import unittest
-import pytest
 from io import StringIO
 
 import pytest
 from hypothesis import given
 from hypothesis.strategies import sampled_from
-
-from pint.models import get_model, get_model_and_toas
-from pint import fitter
 from pinttestdata import datadir
+
+from pint import fitter
+from pint.models import get_model, get_model_and_toas
 
 
 def test_SWM():

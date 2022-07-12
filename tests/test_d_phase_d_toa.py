@@ -8,10 +8,11 @@ try:
 except ImportError:
     from astropy._erfa import DJM0
 
+from pinttestdata import datadir, testdir
+
 import pint.toa as toa
 from pint.models import model_builder as mb
 from pint.polycos import Polycos
-from pinttestdata import datadir, testdir
 
 
 class TestD_phase_d_toa(unittest.TestCase):

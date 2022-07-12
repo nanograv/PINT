@@ -1,17 +1,18 @@
 """ Test for pint object copying
 """
 
-import os
-import pytest
-import numpy as np
 import copy
+import os
 import sys
 
 import astropy.units as u
-from pint.models import get_model
-from pint.fitter import WidebandTOAFitter
-from pint.toa import get_TOAs
+import numpy as np
+import pytest
 from pinttestdata import datadir
+
+from pint.fitter import WidebandTOAFitter
+from pint.models import get_model
+from pint.toa import get_TOAs
 
 os.chdir(datadir)
 

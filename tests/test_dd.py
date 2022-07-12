@@ -4,12 +4,12 @@ import unittest
 
 import astropy.units as u
 import numpy as np
+from pinttestdata import datadir
+from utils import verify_stand_alone_binary_parameter_updates
 
 import pint.models.model_builder as mb
 import pint.toa as toa
-from utils import verify_stand_alone_binary_parameter_updates
 from pint.residuals import Residuals
-from pinttestdata import datadir
 
 
 class TestDD(unittest.TestCase):

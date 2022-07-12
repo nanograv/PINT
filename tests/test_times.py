@@ -16,7 +16,7 @@ from pint.utils import PosVel
 @pytest.mark.xfail(
     reason="PINT has a newer version of the Arecibo position than TEMPO2"
 )
-def test_times_against_tempo2():
+def test_times_against_tempo2(pickle_dir):
     log.setLevel("ERROR")
     # for nice output info, set the following instead
     # log.setLevel('INFO')
@@ -24,7 +24,12 @@ def test_times_against_tempo2():
     ls = u.def_unit("ls", const.c * 1.0 * u.s)
 
     log.info("Reading TOAs into PINT")
-    ts = toa.get_TOAs(datadir + "/testtimes.tim", include_bipm=False, usepickle=False)
+    ts = toa.get_TOAs(
+        datadir + "/testtimes.tim",
+        include_bipm=False,
+        usepickle=True,
+        picklefilename=pickle_dir,
+    )
     if log.level < 25:
         ts.print_summary()
     ts.table.sort("index")

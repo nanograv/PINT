@@ -2,22 +2,21 @@
 import logging
 import os
 import unittest
-import pytest
+from io import StringIO
 from warnings import warn
 
 import astropy.units as u
 import numpy as np
+import pytest
+import test_derivative_utils as tdu
+from pinttestdata import datadir
+from utils import verify_stand_alone_binary_parameter_updates
 
 import pint.fitter as ff
+import pint.toa as toa
 from pint.models import get_model
 from pint.models.timing_model import TimingModelError
-import pint.toa as toa
-import test_derivative_utils as tdu
-from utils import verify_stand_alone_binary_parameter_updates
 from pint.residuals import Residuals
-from pinttestdata import datadir
-from io import StringIO
-
 
 os.chdir(datadir)
 

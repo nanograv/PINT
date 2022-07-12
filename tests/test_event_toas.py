@@ -1,9 +1,13 @@
 import os
-import pytest
 
-from pint.event_toas import read_mission_info_from_heasoft, create_mission_config
-from pint.event_toas import load_fits_TOAs
+import pytest
 from pinttestdata import datadir
+
+from pint.event_toas import (
+    create_mission_config,
+    load_fits_TOAs,
+    read_mission_info_from_heasoft,
+)
 
 
 def test_xselect_mdb_is_found_headas(monkeypatch, tmp_path):

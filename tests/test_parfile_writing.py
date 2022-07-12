@@ -2,16 +2,16 @@
 import numbers
 import os
 from io import StringIO
-import pytest
 
 import astropy.units as u
 import numpy as np
+import pytest
+from pinttestdata import datadir
 
 import pint.models.model_builder as mb
 import pint.models.parameter as mp
 import pint.toa as toa
 from pint.residuals import Residuals
-from pinttestdata import datadir
 
 
 def test_parfile_write(tmp_path):

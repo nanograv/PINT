@@ -3,15 +3,15 @@ import concurrent.futures
 import io
 import multiprocessing
 import os
-import pytest
 
 import astropy.units as u
 import numpy as np
+import pytest
 
 import pint.config
 import pint.gridutils
 import pint.models.parameter as param
-from pint.fitter import GLSFitter, WLSFitter, DownhillWLSFitter, DownhillGLSFitter
+from pint.fitter import DownhillGLSFitter, DownhillWLSFitter, GLSFitter, WLSFitter
 from pint.models.model_builder import get_model_and_toas
 
 # for multi-core tests, don't use all available CPUs

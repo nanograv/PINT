@@ -1,14 +1,15 @@
-from io import StringIO
 import os
 import os.path
-import pytest
+from io import StringIO
 
-from pint.models import get_model
-from pint import toa, simulation
-from pinttestdata import datadir
-from astropy.time import Time
-import numpy as np
 import astropy.units as u
+import numpy as np
+import pytest
+from astropy.time import Time
+from pinttestdata import datadir
+
+from pint import simulation, toa
+from pint.models import get_model
 
 
 def test_roundtrip_bary_toa_Tempo2format(tmpdir):

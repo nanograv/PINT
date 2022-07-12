@@ -1,35 +1,41 @@
 """Tests for clustering and flagging"""
+import copy
 import logging
 import os
 import unittest
-import pytest
-import copy
 
 import astropy.units as u
 import numpy as np
+import pytest
+from pinttestdata import datadir
 
 import pint.models.model_builder as mb
 import pint.toa as toa
+from pint.models import PhaseJump, parameter as p
 from pint.residuals import Residuals
-from pinttestdata import datadir
-from pint.models import parameter as p
-from pint.models import PhaseJump
 
 
 class SimpleSetup:
-    def __init__(self, par, tim):
+    def __init__(self, par, tim, pickle_dir):
         self.par = par
         self.tim = tim
         self.m = mb.get_model(self.par)
         self.t = toa.get_TOAs(
-            self.tim, ephem="DE405", planets=False, include_bipm=False
+            self.tim,
+            ephem="DE405",
+            planets=False,
+            include_bipm=False,
+            usepickle=True,
+            picklefilename=pickle_dir,
         )
 
 
 @pytest.fixture
-def setup_NGC6440E():
+def setup_NGC6440E(pickle_dir):
     return SimpleSetup(
-        os.path.join(datadir, "NGC6440E.par"), os.path.join(datadir, "NGC6440E.tim")
+        os.path.join(datadir, "NGC6440E.par"),
+        os.path.join(datadir, "NGC6440E.tim"),
+        pickle_dir,
     )
 
 

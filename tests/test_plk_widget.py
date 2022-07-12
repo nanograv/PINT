@@ -1,7 +1,9 @@
+from tkinter import Frame
+
 import astropy.units as u
 import pytest
+
 from pint.pintk.plk import PlkWidget
-from tkinter import Frame
 
 
 @pytest.fixture

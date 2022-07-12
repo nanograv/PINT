@@ -1,15 +1,17 @@
+import io
+import os
+import tempfile
+
 import astropy.units as u
+import numpy as np
+from pinttestdata import datadir, testdir
+
+import pint.config
+import pint.residuals
 import pint.simulation
+from pint.fitter import GLSFitter
 from pint.models.model_builder import get_model, get_model_and_toas
 from pint.toa import get_TOAs
-import pint.residuals
-import io
-import numpy as np
-import tempfile
-import os
-import pint.config
-from pint.fitter import GLSFitter
-from pinttestdata import datadir, testdir
 
 
 def test_noise_addition():

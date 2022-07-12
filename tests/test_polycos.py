@@ -1,12 +1,14 @@
 """Test polycos."""
 
-import pytest
-import numpy as np
-from pint.polycos import Polycos
-from pint.models import get_model
-import pint.toa as toa
-from pinttestdata import datadir
 from pathlib import Path
+
+import numpy as np
+import pytest
+from pinttestdata import datadir
+
+import pint.toa as toa
+from pint.models import get_model
+from pint.polycos import Polycos
 
 
 @pytest.fixture

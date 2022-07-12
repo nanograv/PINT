@@ -4,26 +4,26 @@ import logging
 import os
 import re
 import unittest
-from io import StringIO
 import warnings
+from io import StringIO
 
 import astropy.units as u
 import numpy as np
 import pytest
 import test_derivative_utils as tdu
 from astropy.time import Time
+from loguru import logger as log
 from pinttestdata import datadir
 from utils import verify_stand_alone_binary_parameter_updates
-from loguru import logger as log
 
+import pint.fitter
 import pint.models.model_builder as mb
-from pint.models import get_model
 import pint.simulation
 import pint.toa as toa
+from pint.models import get_model
 from pint.models.parameter import boolParameter
 from pint.models.timing_model import MissingParameter, TimingModelError
 from pint.residuals import Residuals
-import pint.fitter
 
 temp_par_str = """
     PSR  J1713+0747

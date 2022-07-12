@@ -8,14 +8,12 @@ from astropy.time import Time
 from numpy.testing import assert_allclose, assert_array_equal
 
 from pint.observatory import (
-    get_observatory,
-    bipm_default,
-    update_clock_files,
     ClockCorrectionOutOfRange,
+    bipm_default,
+    get_observatory,
+    update_clock_files,
 )
-from pint.observatory.clock_file import (
-    ClockFile,
-)
+from pint.observatory.clock_file import ClockFile
 from pint.observatory.topo_obs import export_all_clock_files
 
 

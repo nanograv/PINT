@@ -1,6 +1,7 @@
+import datetime
+
 import libstempo as T
 import numpy as np
-import datetime
 
 timJ1713 = "J1713+0747_NANOGrav_11yv0_short.tim"
 # one file in ICRS, one in ECL
