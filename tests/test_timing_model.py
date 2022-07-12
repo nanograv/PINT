@@ -33,21 +33,20 @@ from pint.toa import get_TOAs
 
 @pytest.fixture
 def model_0437():
-    return get_model(os.path.join(datadir, "J0437-4715.par"))
+    return get_model(datadir / "J0437-4715.par")
 
 
 @pytest.fixture
-def timfile_jumps():
-    os.chdir(datadir)
-    return get_TOAs("test1.tim")
+def timfile_jumps(pickle_dir):
+    return get_TOAs(datadir / "test1.tim", picklefilename=pickle_dir)
 
 
 @pytest.fixture
-def timfile_nojumps():
-    return get_TOAs(os.path.join(datadir, "NGC6440E.tim"))
+def timfile_nojumps(pickle_dir):
+    return get_TOAs(datadir / "NGC6440E.tim", picklefilename=pickle_dir)
 
 
-len_timfile_nojumps = len(get_TOAs(os.path.join(datadir, "NGC6440E.tim")))
+# len_timfile_nojumps = len(get_TOAs(os.path.join(datadir, "NGC6440E.tim")))
 
 
 class TestModelBuilding:
