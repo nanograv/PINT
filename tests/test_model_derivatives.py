@@ -152,7 +152,6 @@ def test_derivative_equals_numerical(parfile, param):
         else:
             p.value = value * p.units
         with quiet():
-            warnings.simplefilter("ignore")
             try:
                 dphase = m.phase(toas, abs_phase=False) - phase
             except ValueError:

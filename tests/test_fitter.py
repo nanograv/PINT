@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 import os
-from io import StringIO
 from copy import deepcopy
+from io import StringIO
 
 import astropy.units as u
 

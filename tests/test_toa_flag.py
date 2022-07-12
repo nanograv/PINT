@@ -1,13 +1,13 @@
 """Various tests to assess the performance of TOA get_flag_value."""
 
 
+import copy
+import io
 import os
 import unittest
-import io
+
 import numpy as np
 import pytest
-import copy
-
 from pinttestdata import datadir
 
 import pint.toa as toa

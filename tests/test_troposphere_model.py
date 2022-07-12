@@ -34,7 +34,7 @@ def setup(pickle_dir):
         os.path.join(datadir, "NGC6440E.tim"), picklefilename=pickle_dir
     )
     with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
+        warnings.filterwarnings("ignore", message=r".*T2CMETHOD.*")
         s.model = pint.models.get_model(os.path.join(datadir, "NGC6440E.par"))
         s.modelWithTD = pint.models.get_model(os.path.join(datadir, "NGC6440E.par"))
         s.modelWithTD.CORRECT_TROPOSPHERE.value = True

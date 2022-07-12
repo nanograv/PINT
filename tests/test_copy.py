@@ -25,8 +25,7 @@ timfile = os.path.join(datadir, "NGC6440E.tim")
 @pytest.fixture
 def model():
     with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        # suppress T2CMETHOD warning
+        warnings.filterwarnings("ignore", message=r".*T2CMETHOD.*")
         return get_model(parfile)
 
 
@@ -74,7 +73,9 @@ def test_copy_fitter_object(model, toas):
 
 
 def test_copy_wideband_fitter_object():
-    model = get_model(os.path.join(datadir, "J1614-2230_NANOGrav_12yv3.wb.gls.par"))
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=r".*T2CMETHOD.*")
+        model = get_model(os.path.join(datadir, "J1614-2230_NANOGrav_12yv3.wb.gls.par"))
     toas = get_TOAs(os.path.join(datadir, "J1614-2230_NANOGrav_12yv3.wb.tim"))
     fitter = WidebandTOAFitter([toas], model, additional_args={})
     fitter_copy = copy.deepcopy(fitter)
