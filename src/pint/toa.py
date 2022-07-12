@@ -1451,7 +1451,7 @@ class TOAs:
         ``toas["a_flag"]`` has to produce a newly allocated array, and
         modifying it cannot affect the flags on the original object.
         Unfortunately ``toas["a_flag"][7] = "value"`` will appear to work but
-        will do nothing. Use ``toas["a_flag", 7] = "value"`` instead.
+        will do nothing. Use ``toas["a_flag", 7] = "value"`` instead.  Flag values will be converted to strings.
         """
         column = None
         subset = None
@@ -1476,11 +1476,12 @@ class TOAs:
             else:
                 self.table[column][subset] = value
         else:
-            if isinstance(value, str):
+            # dealing with flags
+            if np.isscalar(value):
                 if subset is None:
                     for f in self.table["flags"]:
                         if value:
-                            f[column] = value
+                            f[column] = str(value)
                         else:
                             try:
                                 del f[column]
@@ -1489,7 +1490,7 @@ class TOAs:
                 elif isinstance(subset, int):
                     f = self.table["flags"][subset]
                     if value:
-                        f[column] = value
+                        f[column] = str(value)
                     else:
                         try:
                             del f[column]
@@ -1498,17 +1499,21 @@ class TOAs:
                 else:
                     for f in self.table["flags"][subset]:
                         if value:
-                            f[column] = value
+                            f[column] = str(value)
                         else:
                             try:
                                 del f[column]
                             except KeyError:
                                 pass
             else:
-                # FIXME: error if value is the wrong length
-                # FIXME: sensible error if value is a float or some other non-string non-iterable
-                for f, v in zip(self.table["flags", subset], value):
-                    f[column] = v
+                if subset is None:
+                    subset = range(len(self))
+                if len(subset) != len(value):
+                    raise ValueError(
+                        "Length of flag values must be equal to length of TOA subset"
+                    )
+                for i in subset:
+                    self[column, i] = str(value[i])
 
     def __eq__(self, other):
         sd, od = self.__dict__.copy(), other.__dict__.copy()
@@ -1521,6 +1526,17 @@ class TOAs:
         self.__dict__.update(state)
         if not hasattr(self, "max_index"):
             self.max_index = np.maximum.reduce(self.table["index"])
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            setattr(result, k, copy.deepcopy(v, memo))
+        # need to explicitly add in the flags
+        for i in range(len(self)):
+            result.table[i]["flags"] = copy.deepcopy(self.table[i]["flags"])
+        return result
 
     @property
     def ntoas(self):
@@ -1604,9 +1620,7 @@ class TOAs:
         if "pn" in self.table["flags"][0]:
             if "pulse_number" in self.table.colnames:
                 raise ValueError("Pulse number cannot be both a column and a TOA flag")
-            return np.array(
-                float(flags.get("pn", np.nan)) for flags in self.table["flags"]
-            )
+            return np.array(self.get_flag_value("pn", np.nan, float)[0])
         elif "pulse_number" in self.table.colnames:
             return self.table["pulse_number"]
         else:
@@ -1853,31 +1867,22 @@ class TOAs:
         Removes the pulse numbers from the flags.
         """
         # First get any PHASE commands
-        dphs = np.asarray(
-            [
-                float(flags["phase"]) if "phase" in flags else 0.0
-                for flags in self.table["flags"]
-            ]
-        )
+        dphs = np.array(self.get_flag_value("phase", 0, float)[0], dtype=np.float64)
         # Then add any -padd flag values
-        dphs += np.asarray(
-            [
-                float(flags["padd"]) if "padd" in flags else 0.0
-                for flags in self.table["flags"]
-            ]
-        )
+        dphs += np.array(self.get_flag_value("padd", 0, float)[0], dtype=np.float64)
         self.table["delta_pulse_number"] += dphs
 
         # Then, add pulse_number as a table column if possible
-        pns = [float(flags.get("pn", np.nan)) for flags in self.table["flags"]]
+        pns = np.array(self.get_flag_value("pn", np.nan, float)[0])
         if np.all(np.isnan(pns)):
             raise ValueError("No pulse numbers found")
         self.table["pulse_number"] = pns
         self.table["pulse_number"].unit = u.dimensionless_unscaled
 
         # Remove pn from dictionary to prevent redundancies
-        for flags in self.table["flags"]:
-            del flags["pn"]
+        self["pn"] = ""
+        # same for padd
+        self["padd"] = ""
 
     def compute_pulse_numbers(self, model):
         """Set pulse numbers (in TOA table column pulse_numbers) based on model.
@@ -2008,25 +2013,27 @@ class TOAs:
             outf.write(info_string + "\n")
 
         # Add pulse numbers to flags temporarily if there is a pulse number column
+        # do this on a copy so as to leave the TOAs in a useful state
         # FIXME: everywhere else the pulse number column is called pulse_number not pn
-        pnChange = False
-        if "pulse_number" in self.table.colnames:
-            pnChange = True
-            for i in range(len(self.table["flags"])):
-                pn = self.table["pulse_number"][i]
-                if not np.isnan(pn):
-                    self.table["flags"][i]["pn"] = str(pn)
+        toacopy = copy.deepcopy(self)
+        if "pulse_number" in toacopy.table.colnames:
+            toacopy["pn"] = toacopy.table["pulse_number"]
+        if (
+            "delta_pulse_number" in toacopy.table.columns
+            and (toacopy.table["delta_pulse_number"] != 0).any()
+        ):
+            toacopy["padd"] = toacopy.table["delta_pulse_number"]
 
         if order_by_index:
-            ix = np.argsort(self.table["index"])
+            ix = np.argsort(toacopy.table["index"])
         else:
-            ix = np.arange(len(self))
+            ix = np.arange(len(toacopy))
         for (toatime, toaerr, freq, obs, flags) in zip(
-            self.table["mjd"][ix],
-            self.table["error"][ix].quantity,
-            self.table["freq"][ix].quantity,
-            self.table["obs"][ix],
-            self.table["flags"][ix],
+            toacopy.table["mjd"][ix],
+            toacopy.table["error"][ix].quantity,
+            toacopy.table["freq"][ix].quantity,
+            toacopy.table["obs"][ix],
+            toacopy.table["flags"][ix],
         ):
             obs_obj = Observatory.get(obs)
 
@@ -2045,17 +2052,9 @@ class TOAs:
                 name=flags.pop("name", name),
                 flags=flags,
                 format=format,
-                alias_translation=self.alias_translation,
+                alias_translation=toacopy.alias_translation,
             )
             outf.write(out_str)
-
-        # If pulse numbers were added to flags, remove them again
-        if pnChange:
-            for flags in self.table["flags"]:
-                try:
-                    del flags["pn"]
-                except KeyError:
-                    pass
 
         if not handle:
             outf.close()
