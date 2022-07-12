@@ -4,6 +4,7 @@ import os
 import re
 from pathlib import Path
 from textwrap import dedent
+from warnings import warn
 
 import astropy.units as u
 import numpy as np
@@ -13,7 +14,7 @@ import pint.config
 from pint.observatory import ClockCorrectionOutOfRange, NoClockCorrections
 from pint.observatory.global_clock_corrections import Index, get_clock_correction_file
 from pint.pulsar_mjd import Time
-from pint.utils import lines_of, open_or_use
+from pint.utils import compute_hash, lines_of, open_or_use
 
 __all__ = [
     "ClockFile",
@@ -95,9 +96,11 @@ class ClockFile:
         comments=None,
         header=None,
         leading_comment=None,
+        valid_beyond_ends=False,
     ):
         self.filename = filename
         self.friendly_name = self.filename if friendly_name is None else friendly_name
+        self.valid_beyond_ends = valid_beyond_ends
         if len(mjd) != len(clock):
             raise ValueError(f"MJDs have {len(mjd)} entries but clock has {len(clock)}")
         self._time = Time(mjd, format="pulsar_mjd", scale="utc")
@@ -174,18 +177,20 @@ class ClockFile:
         corrections : astropy.units.Quantity
             The corrections in units of microseconds.
         """
-        if len(self.time) == 0:
+        if not self.valid_beyond_ends and len(self.time) == 0:
             msg = f"No data points in clock file '{self.friendly_name}'"
             if limits == "warn":
-                log.warning(msg)
+                warn(msg)
                 return np.zeros_like(t) * u.us
             elif limits == "error":
                 raise NoClockCorrections(msg)
 
-        if np.any(t < self.time[0]) or np.any(t > self.time[-1]):
+        if not self.valid_beyond_ends and (
+            np.any(t < self.time[0]) or np.any(t > self.time[-1])
+        ):
             msg = f"Data points out of range in clock file '{self.friendly_name}'"
             if limits == "warn":
-                log.warning(msg)
+                warn(msg)
             elif limits == "error":
                 raise ClockCorrectionOutOfRange(msg)
 
@@ -807,11 +812,45 @@ class GlobalClockFile(ClockFile):
             url_base=self.url_base,
             url_mirrors=self.url_mirrors,
         )
+        self.f = f
+        self.hash = compute_hash(f)
         self.clock_file = ClockFile.read(
             f, self.format, friendly_name=self.friendly_name, **kwargs
         )
 
-    # FIXME: add update method?
+    def update(self):
+        """Download a new version of a clock file if appropriate.
+
+        An update is appropriate if the last-downloaded version is older than
+        the update frequency specified in ``index.txt``. This function should not
+        be called unless data outside the range available in the already present
+        clock file is requested, or if the user explicitly requests a new version.
+        """
+        # FIXME: allow user to force an update? by passing an appropriate
+        # download policy to get_clock_correction_file, presumably
+        mtime = self.f.stat().st_mtime
+        f = get_clock_correction_file(
+            self.filename, url_base=self.url_base, url_mirrors=self.url_mirrors
+        )
+        if f == self.f and f.stat().st_mtime == mtime:
+            # Nothing changed
+            pass
+        else:
+            self.f = f
+            h = compute_hash(f)
+            if h == self.hash:
+                # Nothing changed but we got it from the Net
+                pass
+            else:
+                # Actual new data (probably)!
+                self.hash = h
+                self.clock_file = ClockFile.read(
+                    f,
+                    format=self.format,
+                    friendly_name=self.friendly_name,
+                    **self.kwargs,
+                )
+                self.clock_file.friendly_name = self.friendly_name
 
     def evaluate(self, t, limits="warn"):
         """Evaluate the clock corrections at the times t.
@@ -838,14 +877,7 @@ class GlobalClockFile(ClockFile):
             The corrections in units of microseconds.
         """
         if np.any(t > self.clock_file.time[-1]):
-            f = get_clock_correction_file(
-                self.filename, url_base=self.url_base, url_mirrors=self.url_mirrors
-            )
-            # FIXME: don't reload unless we actually got something new
-            self.clock_file = ClockFile.read(
-                f, format=self.format, friendly_name=self.friendly_name, **self.kwargs
-            )
-            self.clock_file.friendly_name = self.friendly_name
+            self.update()
         return self.clock_file.evaluate(t, limits=limits)
 
     @property
