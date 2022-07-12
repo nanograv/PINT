@@ -452,7 +452,9 @@ clkcorr_re = re.compile(
 )
 
 
-def read_tempo2_clock_file(filename, bogus_last_correction=False, friendly_name=None):
+def read_tempo2_clock_file(
+    filename, bogus_last_correction=False, friendly_name=None, valid_beyond_ends=False
+):
     """Read a TEMPO2-format clock file.
 
     This function can also be accessed through
@@ -469,6 +471,8 @@ def read_tempo2_clock_file(filename, bogus_last_correction=False, friendly_name=
     friendly_name : str or None
         A human-readable name for this file, for use in error reporting.
         If not provided, will default to ``filename``.
+    valid_beyond_ends : bool
+        Whether to consider the file valid past the ends of the data it contains.
     """
     log.debug(
         f"Loading TEMPO2-format observatory clock correction file {filename} with {bogus_last_correction=}"
@@ -547,6 +551,7 @@ def read_tempo2_clock_file(filename, bogus_last_correction=False, friendly_name=
         leading_comment=leading_comment,
         header=header,
         friendly_name=friendly_name,
+        valid_beyond_ends=valid_beyond_ends,
     )
 
 
@@ -573,6 +578,7 @@ def read_tempo_clock_file(
     bogus_last_correction=False,
     process_includes=True,
     friendly_name=None,
+    valid_beyond_ends=False,
 ):
     """Read a TEMPO-format clock file.
 
@@ -607,6 +613,8 @@ def read_tempo_clock_file(
     friendly_name : str or None
         A human-readable name for this file, for use in error reporting.
         If not provided, will default to ``filename``.
+    valid_beyond_ends : bool
+        Whether to consider the file valid past the ends of the data it contains.
     """
 
     leading_comment = None
@@ -765,6 +773,7 @@ def read_tempo_clock_file(
         comments=comments,
         leading_comment=leading_comment,
         friendly_name=friendly_name,
+        valid_beyond_ends=valid_beyond_ends,
     )
 
 
