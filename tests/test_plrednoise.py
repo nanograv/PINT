@@ -44,10 +44,10 @@ def modelJ0023p0923():
     return mb.get_model(io.StringIO(parfile_contents))
 
 def test_read_PLRedNoise_component(modelJ0023p0923):
-    assert ('PLRedNoise' in modelJ0023p0923.components)
+    assert 'PLRedNoise' in modelJ0023p0923.components
 
 def test_read_PLRedNoise_component_type(modelJ0023p0923):
-    assert (modelJ0023p0923.components['PLRedNoise'] in modelJ0023p0923.NoiseComponent_list)
+    assert modelJ0023p0923.components['PLRedNoise'] in modelJ0023p0923.NoiseComponent_list
 
 def test_read_PLRedNoise_params(modelJ0023p0923):
     params = ['TNREDAMP', 'TNREDGAM', 'TNREDC']
