@@ -1881,6 +1881,7 @@ class TimingModel:
         ):
             if (
                 self.POSEPOCH.value is not None
+                and othermodel.POSEPOCH.value is not None
                 and self.POSEPOCH.value != othermodel.POSEPOCH.value
             ):
                 log.info(
@@ -1962,7 +1963,10 @@ class TimingModel:
                         newstr += " {:>28s}".format("Missing")
                     if otherpar is not None and otherpar.quantity is not None:
                         diff = otherpar.quantity - par.quantity
-                        diff_sigma = (diff / par.uncertainty).decompose()
+                        if par.uncertainty is not None:
+                            diff_sigma = (diff / par.uncertainty).decompose()
+                        else:
+                            diff_sigma = np.inf
                         if abs(diff_sigma) != np.inf:
                             newstr += " {:>10.2f}".format(diff_sigma)
                             if abs(diff_sigma) > threshold_sigma:
@@ -1971,7 +1975,10 @@ class TimingModel:
                                 newstr += "  "
                         else:
                             newstr += "           "
-                        diff_sigma2 = (diff / otherpar.uncertainty).decompose()
+                        if otherpar.uncertainty is not None:
+                            diff_sigma2 = (diff / otherpar.uncertainty).decompose()
+                        else:
+                            diff_sigma2 = np.inf
                         if abs(diff_sigma2) != np.inf:
                             newstr += " {:>10.2f}".format(diff_sigma2)
                             if abs(diff_sigma2) > threshold_sigma:
@@ -2139,6 +2146,14 @@ class TimingModel:
                 s += "{:14s} {:>28s}".format(opn, "Missing")
                 s += " {:>28s}".format(str(otherpar.quantity))
                 s += "\n"
+        separation = self.get_psr_coords().separation(othermodel.get_psr_coords())
+        if separation < 60 * u.arcsec:
+            s += "{:14s} {:>28f} arcsec".format("Separation", separation.arcsec)
+        elif separation < 60 * u.arcmin:
+            s += "{:14s} {:>28f} arcmin".format("Separation", separation.arcmin)
+        else:
+            s += "{:14s} {:>28f} deg".format("Separation", separation.deg)
+
         if verbosity != "check":
             return s.split("\n")
 
