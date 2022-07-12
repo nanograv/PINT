@@ -4,19 +4,18 @@
 import copy
 import os
 import sys
+import warnings
 
 import astropy.units as u
 import numpy as np
 import pytest
+from astropy.table import Table
 from pinttestdata import datadir
 
-from pint.fitter import WidebandTOAFitter
-from pint.models import get_model
-from astropy.table import Table
-from pint.models import get_model
-from pint.fitter import WidebandTOAFitter
 import pint.fitter
 import pint.residuals
+from pint.fitter import WidebandTOAFitter
+from pint.models import get_model
 from pint.toa import get_TOAs
 
 parfile = os.path.join(datadir, "NGC6440E.par")
@@ -25,7 +24,10 @@ timfile = os.path.join(datadir, "NGC6440E.tim")
 
 @pytest.fixture
 def model():
-    return get_model(parfile)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        # suppress T2CMETHOD warning
+        return get_model(parfile)
 
 
 @pytest.fixture
