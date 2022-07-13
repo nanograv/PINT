@@ -2155,7 +2155,7 @@ class TimingModel:
                 )
             if "diff2" in modifier[pn] and not par.frozen:
                 log.warning(
-                    "Parameter %s has changed significantly (%f sigma2)"
+                    "Parameter %s has changed significantly (%s sigma2)"
                     % (parameter[pn], diff2[pn])
                 )
 
@@ -2245,11 +2245,21 @@ class TimingModel:
                 sout = f"{p:<{longest_parameter+pad}} {v1:>{longest_value1+pad}} {v2:>{longest_value2+pad}} {d1:>{longest_diff1+pad}} {d2:>{longest_diff2+pad}}"
                 if "change" in m or "diff1" in m or "diff2" in m:
                     sout += " !"
-                    if usecolor:
-                        sout = colorize(sout, "red")
                 if "unc_rat" in m:
                     sout += " *"
-                    if usecolor:
+                if usecolor:
+                    if (
+                        "change" in m
+                        or "diff1" in m
+                        or "diff2" in m
+                        and not "unc_rat" in m
+                    ):
+                        sout = colorize(sout, "red")
+                    elif (
+                        "change" in m or "diff1" in m or "diff2" in m and "unc_rat" in m
+                    ):
+                        sout = colorize(sout, "red", bg_color="green")
+                    elif "unc_rat" in m:
                         sout = colorize(sout, bg_color="green")
             elif output == "markdown":
                 sout = [p.strip(), v1.strip(), v2.strip(), d1.strip(), d2.strip()]
@@ -2259,7 +2269,7 @@ class TimingModel:
                         for x in sout
                     ]
                 if "unc_rat" in m:
-                    sout = [f"==*{x}*==" if len(x) > 0 else x for x in sout]
+                    sout = [f"<mark>{x}</mark>" if len(x) > 0 else x for x in sout]
                 sout = " | ".join(sout).strip()
             if verbosity == "max":
                 s.append(sout)
