@@ -1891,19 +1891,19 @@ class TimingModel:
         diff2["TITLE"] = "Diff_Sigma2"
         modifier["TITLE"] = []
         log.info("Comparing ephemerides for PSR %s" % self.PSR.value)
-        log.info("Threshold sigma = %2.2f" % threshold_sigma)
-        log.info("Threshold uncertainty ratio = %2.2f" % unc_rat_threshold)
-        log.info("Creating a copy of model from %s" % other_model_name)
+        log.debug("Threshold sigma = %2.2f" % threshold_sigma)
+        log.debug("Threshold uncertainty ratio = %2.2f" % unc_rat_threshold)
+        log.debug("Creating a copy of model from %s" % other_model_name)
         if verbosity == "max":
-            log.info("Maximum verbosity - printing all parameters")
+            log.debug("Maximum verbosity - printing all parameters")
         elif verbosity == "med":
-            log.info("Medium verbosity - printing parameters that are fit")
+            log.debug("Medium verbosity - printing parameters that are fit")
         elif verbosity == "min":
-            log.info(
+            log.debug(
                 "Minimum verbosity - printing parameters that are fit and significantly changed"
             )
         elif verbosity == "check":
-            log.info("Check verbosity - only warnings/info will be displayed")
+            log.debug("Check verbosity - only warnings/info will be displayed")
         othermodel = copy.deepcopy(othermodel)
 
         if (
