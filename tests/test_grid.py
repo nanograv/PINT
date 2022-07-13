@@ -1,8 +1,6 @@
-"""Test chi^2 gridding routines"""
+"""Test chi^2 gridding routines."""
 import concurrent.futures
-import io
-import multiprocessing
-import os
+import warnings
 
 import astropy.units as u
 import numpy as np
@@ -18,10 +16,17 @@ from pint.models.model_builder import get_model_and_toas
 ncpu = 2
 
 
-def test_grid_singleprocessor():
+@pytest.fixture
+def m_t(pickle_dir):
     parfile = pint.config.examplefile("NGC6440E.par")
     timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=r".*T2CMETHOD.*")
+        return get_model_and_toas(parfile, timfile, picklefilename=pickle_dir)
+
+
+def test_grid_singleprocessor(m_t):
+    m, t = m_t
 
     f = WLSFitter(t, m)
     f.fit_toas()
@@ -43,10 +48,8 @@ def test_grid_singleprocessor():
     assert np.isclose(bestfit, chi2grid.min())
 
 
-def test_grid_extraparams_singleprocessor():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
+def test_grid_extraparams_singleprocessor(m_t):
+    m, t = m_t
 
     f = WLSFitter(t, m)
     f.fit_toas()
@@ -70,10 +73,8 @@ def test_grid_extraparams_singleprocessor():
     assert np.isclose(bestfit, chi2grid.min())
 
 
-def test_grid_multiprocessor():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
+def test_grid_multiprocessor(m_t):
+    m, t = m_t
 
     f = WLSFitter(t, m)
     f.fit_toas()
@@ -95,10 +96,8 @@ def test_grid_multiprocessor():
     assert np.isclose(bestfit, chi2grid.min())
 
 
-def test_grid_oneparam():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
+def test_grid_oneparam(m_t):
+    m, t = m_t
 
     f = WLSFitter(t, m)
     f.fit_toas()
@@ -115,10 +114,8 @@ def test_grid_oneparam():
     assert np.isclose(bestfit, chi2grid.min())
 
 
-def test_grid_oneparam_extraparam():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
+def test_grid_oneparam_extraparam(m_t):
+    m, t = m_t
 
     f = WLSFitter(t, m)
     f.fit_toas()
@@ -137,10 +134,8 @@ def test_grid_oneparam_extraparam():
     assert np.isclose(bestfit, chi2grid.min())
 
 
-def test_grid_oneparam_existingexecutor():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
+def test_grid_oneparam_existingexecutor(m_t):
+    m, t = m_t
 
     f = WLSFitter(t, m)
     f.fit_toas()
@@ -159,10 +154,8 @@ def test_grid_oneparam_existingexecutor():
     assert np.isclose(bestfit, chi2grid.min())
 
 
-def test_grid_3param_singleprocessor():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
+def test_grid_3param_singleprocessor(m_t):
+    m, t = m_t
 
     f = WLSFitter(t, m)
     f.fit_toas()
@@ -188,10 +181,8 @@ def test_grid_3param_singleprocessor():
     assert np.isclose(bestfit, chi2grid.min())
 
 
-def test_grid_3param_multiprocessor():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
+def test_grid_3param_multiprocessor(m_t):
+    m, t = m_t
 
     f = WLSFitter(t, m)
     f.fit_toas()
@@ -219,10 +210,8 @@ def test_grid_3param_multiprocessor():
     assert np.isclose(bestfit, chi2grid.min())
 
 
-def test_grid_derived_singleprocessor():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
+def test_grid_derived_singleprocessor(m_t):
+    m, t = m_t
 
     f = WLSFitter(t, m)
     f.fit_toas()
@@ -244,10 +233,8 @@ def test_grid_derived_singleprocessor():
     assert np.isclose(bestfit, chi2grid_tau.min(), atol=1)
 
 
-def test_grid_derived_extraparam_singleprocessor():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
+def test_grid_derived_extraparam_singleprocessor(m_t):
+    m, t = m_t
 
     f = WLSFitter(t, m)
     f.fit_toas()
@@ -270,10 +257,8 @@ def test_grid_derived_extraparam_singleprocessor():
     assert np.isclose(bestfit, chi2grid_tau.min(), atol=1)
 
 
-def test_grid_derived_multiprocessor():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
+def test_grid_derived_multiprocessor(m_t):
+    m, t = m_t
 
     f = WLSFitter(t, m)
     f.fit_toas()
@@ -291,10 +276,8 @@ def test_grid_derived_multiprocessor():
     assert np.isclose(bestfit, chi2grid_tau.min(), atol=1)
 
 
-def test_grid_derived_existingexecutor():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
+def test_grid_derived_existingexecutor(m_t):
+    m, t = m_t
 
     f = WLSFitter(t, m)
     f.fit_toas()
@@ -318,10 +301,8 @@ def test_grid_derived_existingexecutor():
     assert np.isclose(bestfit, chi2grid_tau.min(), atol=1)
 
 
-def test_grid_derived_extraparam_existingexecutor():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
+def test_grid_derived_extraparam_existingexecutor(m_t):
+    m, t = m_t
 
     f = WLSFitter(t, m)
     f.fit_toas()
@@ -346,10 +327,8 @@ def test_grid_derived_extraparam_existingexecutor():
     assert np.isclose(bestfit, chi2grid_tau.min(), atol=1)
 
 
-def test_grid_3param_prefix_singleprocessor():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
+def test_grid_3param_prefix_singleprocessor(m_t):
+    m, t = m_t
 
     # add a F2 to the model
     modelcomponent = m.components["Spindown"]
@@ -390,10 +369,8 @@ def test_grid_3param_prefix_singleprocessor():
     assert np.isclose(bestfit, chi2grid.min())
 
 
-def test_grid_3param_prefix_multiprocessor():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
+def test_grid_3param_prefix_multiprocessor(m_t):
+    m, t = m_t
 
     # add a F2 to the model
     modelcomponent = m.components["Spindown"]
@@ -439,10 +416,8 @@ def test_grid_3param_prefix_multiprocessor():
 @pytest.mark.parametrize(
     "fitter", [GLSFitter, WLSFitter, DownhillWLSFitter, DownhillGLSFitter]
 )
-def test_grid_fitters_singleprocessor(fitter):
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
+def test_grid_fitters_singleprocessor(fitter, m_t):
+    m, t = m_t
     f = fitter(t, m)
     f.fit_toas()
     bestfit = f.resids.chi2
@@ -461,10 +436,8 @@ def test_grid_fitters_singleprocessor(fitter):
 @pytest.mark.parametrize(
     "fitter", [GLSFitter, WLSFitter, DownhillWLSFitter, DownhillGLSFitter]
 )
-def test_grid_fitters_multiprocessor(fitter):
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
+def test_grid_fitters_multiprocessor(fitter, m_t):
+    m, t = m_t
     f = fitter(t, m)
     f.fit_toas()
     bestfit = f.resids.chi2
@@ -480,10 +453,8 @@ def test_grid_fitters_multiprocessor(fitter):
     assert np.isclose(bestfit, chi2grid.min())
 
 
-def test_tuple_fit():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
+def test_tuple_fit(m_t):
+    m, t = m_t
 
     f = WLSFitter(t, m)
     # find the best-fit
@@ -512,10 +483,8 @@ def test_tuple_fit():
     assert np.isclose(extra["DM"][3], f.model.DM.quantity)
 
 
-def test_derived_tuple_fit():
-    parfile = pint.config.examplefile("NGC6440E.par")
-    timfile = pint.config.examplefile("NGC6440E.tim")
-    m, t = get_model_and_toas(parfile, timfile)
+def test_derived_tuple_fit(m_t):
+    m, t = m_t
 
     f = WLSFitter(t, m)
     # find the best-fit

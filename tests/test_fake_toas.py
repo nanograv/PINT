@@ -113,7 +113,7 @@ def test_noise_addition_EQUAD():
     )
 
 
-def test_zima():
+def test_zima(pickle_dir):
     parfile = pint.config.examplefile("NGC6440E.par")
     outfile = tempfile.NamedTemporaryFile(suffix="tim")
 
@@ -125,7 +125,7 @@ def test_zima():
 
     os.system(zima_command)
 
-    t = get_TOAs(outfile.name)
+    t = get_TOAs(outfile.name, picklefilename=pickle_dir)
     r = pint.residuals.Residuals(t, m)
     # need a generous rtol because of the small statistics
     assert np.isclose(r.calc_time_resids().std(), 1 * u.us, rtol=0.5)

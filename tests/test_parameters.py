@@ -3,6 +3,7 @@ import io
 import os
 import pickle
 import unittest
+import warnings
 
 import astropy.time as time
 import astropy.units as u
@@ -141,9 +142,10 @@ def test_units_consistent():
 class TestParameters(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        os.chdir(datadir)
-        cls.m = get_model("B1855+09_NANOGrav_dfg+12_modified.par")
-        cls.mp = get_model("prefixtest.par")
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message=r".*T2CMETHOD.*")
+            cls.m = get_model(datadir / "B1855+09_NANOGrav_dfg+12_modified.par")
+            cls.mp = get_model(datadir / "prefixtest.par")
 
     def test_RAJ(self):
         """Check whether the value and units of RAJ parameter are ok"""
@@ -391,46 +393,6 @@ class TestParameters(unittest.TestCase):
                 fitter.model.FINISH.value, fitter.toas.last_MJD.value, places=9
             )
 
-    def test_START_FINISH_not_in_par(self):
-        """
-        Check that START/FINISH parameters are added and set up when not
-        in input file.
-        """
-        # check initialization after fitting for .par file without START/FINISH
-        m = get_model("NGC6440E.par")
-        t = get_TOAs("NGC6440E.tim")
-
-        start_postval = 53478.2858714192  # from Tempo2
-        finish_postval = 54187.5873241699  # from Tempo2
-
-        self.assertTrue(hasattr(m, "START"))
-        self.assertTrue(hasattr(m, "FINISH"))
-
-        # fit toas and compare with expected/Tempo2 (for WLS) values
-        fitters = [
-            pint.fitter.WLSFitter(toas=t, model=m),
-            pint.fitter.GLSFitter(toas=t, model=m),
-        ]
-        for fitter in fitters:
-            fitter.fit_toas()
-            self.assertTrue(hasattr(fitter.model, "START"))
-            self.assertTrue(hasattr(fitter.model, "FINISH"))
-            self.assertEqual(fitter.model.START.frozen, True)
-            self.assertEqual(fitter.model.FINISH.frozen, True)
-            if fitter.method == "weighted_least_square":
-                self.assertAlmostEqual(
-                    fitter.model.START.value, start_postval, places=9
-                )
-                self.assertAlmostEqual(
-                    fitter.model.FINISH.value, finish_postval, places=9
-                )
-            self.assertAlmostEqual(
-                fitter.model.START.value, fitter.toas.first_MJD.value, places=9
-            )
-            self.assertAlmostEqual(
-                fitter.model.FINISH.value, fitter.toas.last_MJD.value, places=9
-            )
-
     def test_START_FINISH_notfrozen(self):
         """
         check that when the START/FINISH parameters
@@ -450,6 +412,40 @@ class TestParameters(unittest.TestCase):
         # make sure that it freezes
         self.assertEqual(m.START.frozen, True)
         self.assertEqual(m.FINISH.frozen, True)
+
+
+@pytest.mark.parametrize("fitter_type", [pint.fitter.WLSFitter, pint.fitter.GLSFitter])
+def test_START_FINISH_not_in_par(pickle_dir, fitter_type):
+    """
+    Check that START/FINISH parameters are added and set up when not
+    in input file.
+    """
+    # check initialization after fitting for .par file without START/FINISH
+    m = get_model("NGC6440E.par")
+    t = get_TOAs("NGC6440E.tim", picklefilename=pickle_dir)
+
+    start_postval = 53478.2858714192  # from Tempo2
+    finish_postval = 54187.5873241699  # from Tempo2
+
+    assert hasattr(m, "START")
+    assert hasattr(m, "FINISH")
+
+    # fit toas and compare with expected/Tempo2 (for WLS) values
+    fitter = fitter_type(toas=t, model=m)
+    fitter.fit_toas()
+    assert hasattr(fitter.model, "START")
+    assert hasattr(fitter.model, "FINISH")
+    assert fitter.model.START.frozen
+    assert fitter.model.FINISH.frozen
+    if fitter.method == "weighted_least_square":
+        assert np.isclose(fitter.model.START.value, start_postval, atol=1e-9, rtol=0)
+        assert np.isclose(fitter.model.FINISH.value, finish_postval, atol=1e-9, rtol=0)
+    assert np.isclose(
+        fitter.model.START.value, fitter.toas.first_MJD.value, atol=1e-9, rtol=0
+    )
+    assert np.isclose(
+        fitter.model.FINISH.value, fitter.toas.last_MJD.value, atol=1e-9, rtol=0
+    )
 
 
 @pytest.mark.parametrize(
@@ -589,22 +585,23 @@ def test_parameter_can_be_pickled(p):
     pickle.dumps(p)
 
 
-def test_fitter_construction_success_after_remove_param():
+def test_fitter_construction_success_after_remove_param(pickle_dir):
     """Checks that add_param and remove_param don't require m.setup() to be run prior to constructing a fitter. This addresses issue #1260."""
     m = get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
-    t = get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
+    t = get_TOAs(
+        os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"), picklefilename=pickle_dir
+    )
     FD4 = prefixParameter(parameter_type="float", name="FD4", value=0.0, units=u.s)
     """Fitter construction used to fail after remove_param without m.setup(). Test this (for both adding and removing, just to be safe):"""
     m.add_param_from_top(FD4, "FD")
-    f = pint.fitter.GLSFitter(toas=t, model=m)
+    pint.fitter.GLSFitter(toas=t, model=m)
     m.remove_param("FD4")
-    f = pint.fitter.GLSFitter(toas=t, model=m)
+    pint.fitter.GLSFitter(toas=t, model=m)
 
 
 def test_correct_number_of_params_and_FD_terms_after_add_or_remove_param():
     """Checks that the number of parameters in some component after add_param or remove_param is correct. Similarly checks that len(m.get_prefix_mapping('FD')) (i.e. num_FD_terms) is correct after seeing a bug where the length didn't change after FD param removal (see #1260)."""
     m = get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
-    t = get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
     FD4 = prefixParameter(parameter_type="float", name="FD4", value=0.0, units=u.s)
     m.add_param_from_top(FD4, "FD")
     assert len(m.components["FD"].params) == 4

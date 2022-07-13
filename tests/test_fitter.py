@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 import os
+import warnings
 from copy import deepcopy
 from io import StringIO
 
@@ -17,9 +18,10 @@ from pint import fitter, ls, simulation, toa
 from pint.models import get_model, get_model_and_toas
 
 
-@pytest.mark.xfail
 def test_fitter_basic():
-    m = tm.get_model(os.path.join(datadir, "NGC6440E.par"))
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=r".*T2CMETHOD.*")
+        m = tm.get_model(datadir / "NGC6440E.par")
     m.fit_params = ["F0", "F1"]
     e = 1 * u.us
     t = simulation.make_fake_toas_uniform(56000, 59000, 16, m, error=e)
@@ -30,26 +32,28 @@ def test_fitter_basic():
 
     f_1 = fitter.WLSFitter(toas=t, model=m)
     f_1.fit_toas()
-    assert abs(f_1.model.F0 - m.F0) < dF0
+    assert abs(f_1.model.F0.quantity - m.F0.quantity) < dF0
 
     m_2 = deepcopy(m)
     m_2.F0.quantity += 2 * dF0
-    assert abs(m_2.F0 - m.F0) > dF0
+    assert abs(m_2.F0.quantity - m.F0.quantity) > dF0
     f_2 = fitter.WLSFitter(toas=t, model=m_2)
     f_2.fit_toas()
-    assert abs(f_2.model.F0 - m.F0) < dF0
+    assert abs(f_2.model.F0.quantity - m.F0.quantity) < dF0
 
 
 @pytest.mark.skipif(
     "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
 )
-def test_fitter():
+def test_fitter(pickle_dir):
     # Get model
 
-    m = tm.get_model(os.path.join(datadir, "NGC6440E.par"))
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=r".*T2CMETHOD.*")
+        m = tm.get_model(datadir / "NGC6440E.par")
 
     # Get TOAs
-    t = toa.TOAs(os.path.join(datadir, "NGC6440E.tim"))
+    t = toa.get_TOAs(datadir / "NGC6440E.tim", picklefilename=pickle_dir)
     t.apply_clock_corrections(include_bipm=False)
     t.compute_TDBs()
     try:
@@ -201,12 +205,14 @@ def test_ftest_wb():
     assert isinstance(Ftest_dict["ft"], float) or isinstance(Ftest_dict["ft"], bool)
 
 
-def test_fitsummary_binary():
+def test_fitsummary_binary(pickle_dir):
     """Test fitter print_summary() when an ELL1 binary is fit"""
     par = os.path.join(datadir, "B1855+09_NANOGrav_12yv3.wb.gls.par")
     tim = os.path.join(datadir, "B1855+09_NANOGrav_dfg+12.tim")
 
-    m, t = get_model_and_toas(par, tim)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=r".*T2CMETHOD.*")
+        m, t = get_model_and_toas(par, tim, picklefilename=pickle_dir)
 
     f = fitter.WLSFitter(t, m)
     f.model.free_params = ["PB", "A1", "SINI"]
@@ -214,31 +220,42 @@ def test_fitsummary_binary():
     f.print_summary()
 
 
-def test_fitselector():
+def test_fitselector_wb(pickle_dir):
     # WB
-    par = os.path.join(datadir, "B1855+09_NANOGrav_12yv3.wb.gls.par")
-    tim = os.path.join(datadir, "B1855+09_NANOGrav_12yv3.wb.tim")
+    par = datadir / "B1855+09_NANOGrav_12yv3.wb.gls.par"
+    tim = datadir / "B1855+09_NANOGrav_12yv3.wb.tim"
 
-    m, t = get_model_and_toas(par, tim)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=r".*T2CMETHOD.*")
+        m, t = get_model_and_toas(par, tim, picklefilename=pickle_dir)
     f = fitter.Fitter.auto(t, m, downhill=True)
     assert isinstance(f, fitter.WidebandDownhillFitter)
     f = fitter.Fitter.auto(t, m, downhill=False)
     assert isinstance(f, fitter.WidebandTOAFitter)
 
+
+def test_fitselector_gls(pickle_dir):
     # correlated errors
     m, t = get_model_and_toas(
-        os.path.join(datadir, "J0023+0923_NANOGrav_11yv0.gls.par"),
-        os.path.join(datadir, "J0023+0923_NANOGrav_11yv0.tim"),
+        datadir / "J0023+0923_NANOGrav_11yv0.gls.par",
+        datadir / "J0023+0923_NANOGrav_11yv0.tim",
+        picklefilename=pickle_dir,
     )
     f = fitter.Fitter.auto(t, m, downhill=True)
     assert isinstance(f, fitter.DownhillGLSFitter)
     f = fitter.Fitter.auto(t, m, downhill=False)
     assert isinstance(f, fitter.GLSFitter)
 
+
+def test_fitselector_wls(pickle_dir):
     # uncorrelated errors
-    m, t = get_model_and_toas(
-        os.path.join(datadir, "NGC6440E.par"), os.path.join(datadir, "NGC6440E.tim")
-    )
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=r".*T2CMETHOD.*")
+        m, t = get_model_and_toas(
+            datadir / "NGC6440E.par",
+            datadir / "NGC6440E.tim",
+            picklefilename=pickle_dir,
+        )
     f = fitter.Fitter.auto(t, m, downhill=True)
     assert isinstance(f, fitter.DownhillWLSFitter)
     f = fitter.Fitter.auto(t, m, downhill=False)
