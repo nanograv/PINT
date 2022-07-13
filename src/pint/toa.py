@@ -110,7 +110,7 @@ def get_TOAs(
     include_gps=None,
     planets=None,
     model=None,
-    usepickle=False,
+    usepickle=None,
     tdb_method="default",
     picklefilename=None,
     limits="warn",
@@ -166,8 +166,10 @@ def get_TOAs(
         If a valid timing model is passed, model commands (such as BIPM version,
         planet shapiro delay, and solar system ephemeris) that affect TOA loading
         are applied.
-    usepickle : bool
-        Whether to try to use pickle-based caching of loaded clock-corrected TOAs objects.
+    usepickle : bool or None
+        Whether to try to use pickle-based caching of loaded clock-corrected
+        TOAs objects. If None, setting picklefilename will trigger use of
+        pickles; to suppress this supply False.
     tdb_method : str
         Which method to use for the clock correction to TDB. See
         :func:`pint.observatory.Observatory.get_TDBs` for details.
@@ -222,6 +224,8 @@ def get_TOAs(
 
     updatepickle = False
     recalc = False
+    if usepickle is None:
+        usepickle = picklefilename is not None
     if usepickle:
         try:
             t = load_pickle(timfile, picklefilename=picklefilename)

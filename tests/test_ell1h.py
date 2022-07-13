@@ -44,13 +44,23 @@ simple_par = """
 
 
 @pytest.fixture(scope="module")
-def toasJ0613():
-    return toa.get_TOAs("J0613-0200_NANOGrav_9yv1.tim", ephem="DE421", planets=False)
+def toasJ0613(pickle_dir):
+    return toa.get_TOAs(
+        "J0613-0200_NANOGrav_9yv1.tim",
+        ephem="DE421",
+        planets=False,
+        picklefilename=pickle_dir,
+    )
 
 
 @pytest.fixture(scope="module")
-def toasJ1853():
-    return toa.get_TOAs("J1853+1303_NANOGrav_11yv0.tim", ephem="DE421", planets=False)
+def toasJ1853(pickle_dir):
+    return toa.get_TOAs(
+        "J1853+1303_NANOGrav_11yv0.tim",
+        ephem="DE421",
+        planets=False,
+        picklefilename=pickle_dir,
+    )
 
 
 @pytest.fixture
