@@ -1843,6 +1843,8 @@ class TimingModel:
             Prints logging warnings for parameters that have changed significantly
             and/or have increased in uncertainty.
         """
+        assert verbosity.lower() in ["max", "med", "min", "check"]
+        verbosity = verbosity.lower()
 
         if self.name != "":
             model_name = self.name.split("/")[-1]
