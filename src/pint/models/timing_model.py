@@ -1877,13 +1877,13 @@ class TimingModel:
         else:
             other_model_name = "Model 2"
 
+        # 5 columns of the output, + a way to keep track of values/uncertainties that have changed a lot
         parameter = {}
         value1 = {}
         value2 = {}
         diff1 = {}
         diff2 = {}
         modifier = {}
-        frozen = {}
         parameter["TITLE"] = "PARAMETER"
         value1["TITLE"] = model_name
         value2["TITLE"] = other_model_name
