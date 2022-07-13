@@ -1832,20 +1832,36 @@ class TimingModel:
         str
             Human readable comparison, for printing.
             Formatted as a five column table with titles of
-            ``PARAMETER NAME | Model 1 | Model 2 | Diff_Sigma1 | Diff_Sigma2``
-            where Model 1/2 refer to self and othermodel Timing Model objects,
-            and Diff_SigmaX is the difference in a given parameter as reported by the two models,
+            ``PARAMETER NAME | Model1 | Model2 | Diff_Sigma1 | Diff_Sigma2``
+            where ``ModelX`` refer to self and othermodel Timing Model objects,
+            and ``Diff_SigmaX`` is the difference in a given parameter as reported by the two models,
             normalized by the uncertainty in model X. If model X has no reported uncertainty,
-            nothing will be printed. When either Diff_Sigma value is greater than threshold_sigma,
-            an exclamation point (!) will be appended to the line. If the uncertainty in the first model
-            if smaller than the second, an asterisk (*) will be appended to the line. Also, astropy
-            warnings and info statements will be printed.  If ``output="markdown"`` then will be formatted as markdown
+            nothing will be printed.
 
+            If ``output="text"``, when either ``Diff_SigmaX`` value is greater than ``threshold_sigma``,
+            an exclamation point (``!``) will be appended to the line and color will be added if ``usecolor=True``. If the uncertainty in the first model
+            if smaller than the second, an asterisk (``*``) will be appended to the line and color will be added if ``usecolor=True``.
+
+            If ``output="markdown"`` then will be formatted as a markdown table with bold, colored, and highlighted text as appropriate.
+
+            For both output formats, warnings and info statements will be printed.
 
         Note
         ----
             Prints logging warnings for parameters that have changed significantly
             and/or have increased in uncertainty.
+
+        Examples
+        --------
+        To use this in a Jupyter notebook with and without markdown:
+        >>> from pint.models import get_model
+        >>> import pint.logging
+        >>> from IPython.display import display_markdown
+        >>> pint.logging.setup(level="WARNING")
+        >>> m1 = get_model(<file1>)
+        >>> m2 = get_model(<file2>)
+        >>> print(m1.compare(m2))
+        >>> display_markdown(m1.compare(m2, output="markdown"))
         """
         assert verbosity.lower() in ["max", "med", "min", "check"]
         verbosity = verbosity.lower()
