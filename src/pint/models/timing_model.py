@@ -63,6 +63,7 @@ from pint.utils import (
     lines_of,
     split_prefixed_name,
     open_or_use,
+    colorize,
 )
 
 
@@ -1794,6 +1795,7 @@ class TimingModel:
         threshold_sigma=3.0,
         unc_rat_threshold=1.05,
         verbosity="max",
+        usecolor=True,
     ):
         """Print comparison with another model
 
@@ -1804,20 +1806,22 @@ class TimingModel:
         nodmx : bool
             If True (which is the default), don't print the DMX parameters in
             the comparison
-        threshold_sigma : float
+        threshold_sigma : float, optional
             Pulsar parameters for which diff_sigma > threshold will be printed
             with an exclamation point at the end of the line
-        unc_rat_threshold : float
+        unc_rat_threshold : float, optional
             Pulsar parameters for which the uncertainty has increased by a
             factor of unc_rat_threshold will be printed with an asterisk at
             the end of the line
-        verbosity : string
+        verbosity : string, optional
             Dictates amount of information returned. Options include "max",
             "med", and "min", which have the following results:
                 "max"     - print all lines from both models whether they are fit or not (note that nodmx will override this); DEFAULT
                 "med"     - only print lines for parameters that are fit
                 "min"     - only print lines for fit parameters for which diff_sigma > threshold
                 "check"   - only print significant changes with logging.warning, not as string (note that all other modes will still print this)
+        usecolor : bool, optional
+            Use colors on the output to complement use of "!" and "*"
 
         Returns
         -------
@@ -2110,11 +2114,16 @@ class TimingModel:
                         "Parameter %s has changed significantly (%f sigma)"
                         % (newstr.split()[0], float(newstr.split()[-3]))
                     )
+                if usecolor:
+                    newstr = colorize(newstr, "red")
+
             if "*" in newstr:
                 log.warning(
                     "Uncertainty on parameter %s has increased (unc2/unc1 = %2.2f)"
                     % (newstr.split()[0], float(otherpar.uncertainty / par.uncertainty))
                 )
+                if usecolor:
+                    newstr = colorize(newstr, bg_color="cyan")
 
             if verbosity == "max":
                 s += newstr
