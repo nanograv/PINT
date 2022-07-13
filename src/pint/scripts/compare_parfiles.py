@@ -51,10 +51,10 @@ def main(argv=None):
         "--comparison",
         choices=["max", "med", "min", "check"],
         default="max",
-        help=""""max"     - print all lines from both models whether they are fit or not (note that nodmx will override this); DEFAULT
-                "med"     - only print lines for parameters that are fit
-                "min"     - only print lines for fit parameters for which diff_sigma > threshold
-                "check"   - only print significant changes with logging.warning, not as string (note that all other modes will still print this))""",
+        help=""""max"     - print all lines from both models whether they are fit or not (note that nodmx will override this);
+                "med"     - only print lines for parameters that are fit;
+                "min"     - only print lines for fit parameters for which diff_sigma > threshold;
+                "check"   - only print significant changes with logging.warning, not as string (note that all other modes will still print this)""",
     )
     parser.add_argument(
         "--log-level",
