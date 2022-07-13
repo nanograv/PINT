@@ -70,14 +70,12 @@ def main(argv=None):
     m1 = get_model(args.input1)
     m2 = get_model(args.input2)
     print(
-        "\n".join(
-            m1.compare(
-                m2,
-                nodmx=not args.dmx,
-                threshold_sigma=args.sigma,
-                unc_rat_threshold=args.uncertainty_ratio,
-                verbosity=args.comparison,
-                usecolor=not args.nocolor,
-            )
+        m1.compare(
+            m2,
+            nodmx=not args.dmx,
+            threshold_sigma=args.sigma,
+            unc_rat_threshold=args.uncertainty_ratio,
+            verbosity=args.comparison,
+            usecolor=not args.nocolor,
         )
     )

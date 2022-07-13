@@ -1797,6 +1797,7 @@ class TimingModel:
         unc_rat_threshold=1.05,
         verbosity="max",
         usecolor=True,
+        output="text",
     ):
         """Print comparison with another model
 
@@ -1823,20 +1824,23 @@ class TimingModel:
                 "check"   - only print significant changes with logging.warning, not as string (note that all other modes will still print this)
         usecolor : bool, optional
             Use colors on the output to complement use of "!" and "*"
+        output : string, optional
+            One of "text" or "markdown"
 
         Returns
         -------
         str
             Human readable comparison, for printing.
             Formatted as a five column table with titles of
-            PARAMETER NAME | Model 1 | Model 2 | Diff_Sigma1 | Diff_Sigma2
+            ``PARAMETER NAME | Model 1 | Model 2 | Diff_Sigma1 | Diff_Sigma2``
             where Model 1/2 refer to self and othermodel Timing Model objects,
             and Diff_SigmaX is the difference in a given parameter as reported by the two models,
             normalized by the uncertainty in model X. If model X has no reported uncertainty,
             nothing will be printed. When either Diff_Sigma value is greater than threshold_sigma,
             an exclamation point (!) will be appended to the line. If the uncertainty in the first model
             if smaller than the second, an asterisk (*) will be appended to the line. Also, astropy
-            warnings and info statements will be printed.
+            warnings and info statements will be printed.  If ``output="markdown"`` then will be formatted as markdown
+
 
         Note
         ----
@@ -1845,6 +1849,8 @@ class TimingModel:
         """
         assert verbosity.lower() in ["max", "med", "min", "check"]
         verbosity = verbosity.lower()
+        assert output.lower() in ["text", "markdown"]
+        output = output.lower()
 
         if self.name != "":
             model_name = self.name.split("/")[-1]
@@ -2184,22 +2190,61 @@ class TimingModel:
         longest_value2 = len(max(value2.values(), key=len))
         longest_diff1 = len(max(diff1.values(), key=len))
         longest_diff2 = len(max(diff2.values(), key=len))
-        for i, param in enumerate(parameter):
+        param = "TITLE"
+        if output == "text":
+            p = parameter[param]
+            v1 = value1[param]
+            v2 = value2[param]
+            d1 = diff1[param]
+            d2 = diff2[param]
+            s.append(
+                f"{p:<{longest_parameter+pad}} {v1:>{longest_value1+pad}} {v2:>{longest_value2+pad}} {d1:>{longest_diff1+pad}} {d2:>{longest_diff2+pad}}"
+            )
+            p = "-" * longest_parameter
+            v1 = "-" * longest_value1
+            v2 = "-" * longest_value2
+            d1 = "-" * longest_diff1
+            d2 = "-" * longest_diff2
+            s.append(
+                f"{p:<{longest_parameter+pad}} {v1:>{longest_value1+pad}} {v2:>{longest_value2+pad}} {d1:>{longest_diff1+pad}} {d2:>{longest_diff2+pad}}"
+            )
+        elif output == "markdown":
+            p = parameter[param]
+            v1 = value1[param]
+            v2 = value2[param]
+            d1 = diff1[param]
+            d2 = diff2[param]
+            s.append(f"| {p} | {v1} | {v2} | {d1} | {d2} |")
+            s.append(f" :--- | ---: | ---: | ---: | ---: |")
+        for param in parameter:
+            if param == "TITLE":
+                continue
             p = parameter[param]
             v1 = value1[param]
             v2 = value2[param]
             d1 = diff1[param]
             d2 = diff2[param]
             m = modifier[param]
-            sout = f"{p:<{longest_parameter+pad}} {v1:>{longest_value1+pad}} {v2:>{longest_value2+pad}} {d1:>{longest_diff1+pad}} {d2:>{longest_diff2+pad}}"
-            if "change" in m or "diff1" in m or "diff2" in m:
-                sout += " !"
-                if usecolor:
-                    sout = colorize(sout, "red")
-            if "unc_rat" in m:
-                sout += " *"
-                if usecolor:
-                    sout = colorize(sout, bg_color="green")
+            if output == "text":
+                sout = f"{p:<{longest_parameter+pad}} {v1:>{longest_value1+pad}} {v2:>{longest_value2+pad}} {d1:>{longest_diff1+pad}} {d2:>{longest_diff2+pad}}"
+                if "change" in m or "diff1" in m or "diff2" in m:
+                    sout += " !"
+                    if usecolor:
+                        sout = colorize(sout, "red")
+                if "unc_rat" in m:
+                    sout += " *"
+                    if usecolor:
+                        sout = colorize(sout, bg_color="green")
+            elif output == "markdown":
+                sout = [p.strip(), v1.strip(), v2.strip(), d1.strip(), d2.strip()]
+                if "change" in m or "diff1" in m or "diff2" in m:
+                    sout = [
+                        f"<span style='color:red'>**{x}**</span>" if len(x) > 0 else x
+                        for x in sout
+                    ]
+                if "unc_rat" in m:
+                    sout = [f"==*{x}*==" if len(x) > 0 else x for x in sout]
+                sout = " | ".join(sout).strip()
             if verbosity == "max":
                 s.append(sout)
             elif verbosity == "med" and len(d1) > 0:
@@ -2208,17 +2253,9 @@ class TimingModel:
             elif verbosity == "min" and len(m) > 0:
                 # has a modifier
                 s.append(sout)
-            if i == 0:
-                p = "-" * longest_parameter
-                v1 = "-" * longest_value1
-                v2 = "-" * longest_value2
-                d1 = "-" * longest_diff1
-                d2 = "-" * longest_diff2
-                s.append(
-                    f"{p:<{longest_parameter+pad}} {v1:>{longest_value1+pad}} {v2:>{longest_value2+pad}} {d1:>{longest_diff1+pad}} {d2:>{longest_diff2+pad}}"
-                )
+
         if verbosity != "check":
-            return s
+            return "\n".join(s)
 
     def use_aliases(self, reset_to_default=True, alias_translation=None):
         """Set the parameters to use aliases as specified upon writing.
