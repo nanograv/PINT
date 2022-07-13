@@ -1853,15 +1853,17 @@ class TimingModel:
 
         Examples
         --------
-        To use this in a Jupyter notebook with and without markdown:
-        >>> from pint.models import get_model
-        >>> import pint.logging
-        >>> from IPython.display import display_markdown
-        >>> pint.logging.setup(level="WARNING")
-        >>> m1 = get_model(<file1>)
-        >>> m2 = get_model(<file2>)
-        >>> print(m1.compare(m2))
-        >>> display_markdown(m1.compare(m2, output="markdown"))
+        To use this in a Jupyter notebook with and without markdown::
+
+            >>> from pint.models import get_model
+            >>> import pint.logging
+            >>> from IPython.display import display_markdown
+            >>> pint.logging.setup(level="WARNING")
+            >>> m1 = get_model(<file1>)
+            >>> m2 = get_model(<file2>)
+            >>> print(m1.compare(m2))
+            >>> display_markdown(m1.compare(m2, output="markdown"))
+
         """
         assert verbosity.lower() in ["max", "med", "min", "check"]
         verbosity = verbosity.lower()

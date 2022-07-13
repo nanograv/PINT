@@ -57,6 +57,9 @@ def main(argv=None):
                 "check"   - only print significant changes with logging.warning, not as string (note that all other modes will still print this)""",
     )
     parser.add_argument(
+        "--format", default="text", choices=["text", "markdown"], help="Output format"
+    )
+    parser.add_argument(
         "--log-level",
         type=str,
         choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
@@ -77,5 +80,6 @@ def main(argv=None):
             unc_rat_threshold=args.uncertainty_ratio,
             verbosity=args.comparison,
             usecolor=not args.nocolor,
+            output=args.format,
         )
     )
