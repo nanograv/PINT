@@ -20,7 +20,14 @@ def main(argv=None):
     parser.add_argument("input1", help="First input parfile", type=str)
     parser.add_argument("input2", help="Second input parfile", type=str)
     parser.add_argument(
-        "--nodmx", type=bool, default=True, help="Do not print DMX parameters"
+        "--dmx", default=False, action="store_true", help="Print DMX parameters"
+    )
+    parser.add_argument(
+        "--no-dmx",
+        dest="dmx",
+        default=False,
+        action="store_false",
+        help="Do not print DMX parameters",
     )
     parser.add_argument(
         "--sigma",
@@ -66,7 +73,7 @@ def main(argv=None):
         "\n".join(
             m1.compare(
                 m2,
-                nodmx=args.nodmx,
+                nodmx=not args.dmx,
                 threshold_sigma=args.sigma,
                 unc_rat_threshold=args.uncertainty_ratio,
                 verbosity=args.comparison,

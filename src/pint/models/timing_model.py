@@ -32,6 +32,7 @@ import inspect
 from collections import OrderedDict, defaultdict
 from functools import wraps
 from warnings import warn
+from uncertainties import ufloat
 
 import astropy.time as time
 import astropy.units as u
@@ -1842,11 +1843,6 @@ class TimingModel:
             Prints logging warnings for parameters that have changed significantly
             and/or have increased in uncertainty.
         """
-        import sys
-        from copy import deepcopy as cp
-
-        import uncertainties.umath as um
-        from uncertainties import ufloat
 
         if self.name != "":
             model_name = self.name.split("/")[-1]
@@ -1877,7 +1873,7 @@ class TimingModel:
             )
         elif verbosity == "check":
             log.info("Check verbosity - only warnings/info will be displayed")
-        othermodel = cp(othermodel)
+        othermodel = copy.deepcopy(othermodel)
 
         if (
             "POSEPOCH" in self.params_ordered
