@@ -2,11 +2,9 @@
 
 import copy
 import io
-from collections import defaultdict
 from glob import glob
 from os.path import basename, join
 
-import astropy.units as u
 import numpy as np
 import pytest
 from pinttestdata import datadir
@@ -19,7 +17,6 @@ from pint.models.timing_model import (
     Component,
     PhaseComponent,
     TimingModel,
-    UnknownBinaryModel,
 )
 from pint.utils import PrefixError, split_prefixed_name
 

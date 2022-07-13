@@ -1,6 +1,5 @@
 """Various tests to assess the performance of parfile writing."""
 import numbers
-import os
 from io import StringIO
 
 import astropy.units as u
@@ -15,8 +14,8 @@ from pint.residuals import Residuals
 
 
 def test_parfile_write(tmp_path, pickle_dir):
-    parfileB1855 = os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par")
-    timB1855 = os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim")
+    parfileB1855 = datadir / "B1855+09_NANOGrav_9yv1.gls.par"
+    timB1855 = datadir / "B1855+09_NANOGrav_9yv1.tim"
     toasB1855 = toa.get_TOAs(
         timB1855,
         ephem="DE421",

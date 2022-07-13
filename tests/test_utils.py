@@ -605,9 +605,9 @@ def test_time_from_mjd_string_rejects_other_formats():
 def test_dmxparse_runs(pickle_dir):
     """Test for dmxparse function."""
     # FIXME: what does this actually check?
-    m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
+    m = tm.get_model(datadir / "B1855+09_NANOGrav_9yv1.gls.par")
     t = toa.get_TOAs(
-        os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"),
+        datadir / "B1855+09_NANOGrav_9yv1.tim",
         usepickle=True,
         picklefilename=pickle_dir,
     )
@@ -620,9 +620,9 @@ def test_dmxparse_runs_wls(pickle_dir):
     """Test for dmxparse function."""
     # Check exception handling
     # FIXME: what does this actually check?
-    m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_dfg+12_DMX.par"))
+    m = tm.get_model(datadir / "B1855+09_NANOGrav_dfg+12_DMX.par")
     t = toa.get_TOAs(
-        os.path.join(datadir, "B1855+09_NANOGrav_dfg+12.tim"),
+        datadir / "B1855+09_NANOGrav_dfg+12.tim",
         usepickle=True,
         picklefilename=pickle_dir,
     )

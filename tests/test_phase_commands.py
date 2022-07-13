@@ -16,7 +16,7 @@ timfile = os.path.join(datadir, "NGC6440E_PHASETEST.tim")
 
 def test_phase_commands(pickle_dir):
     model = pint.models.get_model(parfile)
-    toas = pint.toa.get_TOAs(timfile, picklefile=pickle_dir)
+    toas = pint.toa.get_TOAs(timfile, picklefilename=pickle_dir)
     # This TOA has PHASE -0.3. Check that
     assert np.isclose(float(toas.table[32]["flags"]["phase"]), -0.3)
     # This TOA should have PHASE 0.2 and -padd -0.2

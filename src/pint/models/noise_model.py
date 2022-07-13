@@ -160,8 +160,8 @@ class ScaleToaError(NoiseComponent):
             if np.any(mask):
                 sigma_scaled[mask] = np.hypot(sigma_scaled[mask], equad.quantity)
             else:
-                # Is this really a problem? Was a warning, downgrading to info
-                log.info(f"EQUAD {equad} has no TOAs")
+                # Is this really a problem?
+                warnings.warn(f"EQUAD {equad} has no TOAs")
                 pass
         for efac_name in self.EFACs:
             efac = getattr(self, efac_name)
@@ -169,8 +169,8 @@ class ScaleToaError(NoiseComponent):
             if np.any(mask):
                 sigma_scaled[mask] *= efac.quantity
             else:
-                # Is this really a problem? Was a warning, downgrading to info
-                log.info(f"EFAC {efac} has no TOAs")
+                # Is this really a problem?
+                warnings.warn(f"EFAC {efac} has no TOAs")
                 pass
         return sigma_scaled
 
