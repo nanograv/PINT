@@ -1866,7 +1866,7 @@ class TimingModel:
             >>> m2 = get_model(<file2>)
             >>> print(m1.compare(m2))
             >>> display_markdown(m1.compare(m2, format="markdown"), raw=True)
-            
+
         Make sure to use ``raw=True`` to get the markdown output in a notebook.
 
         """
