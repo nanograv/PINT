@@ -1793,11 +1793,12 @@ class TimingModel:
         self,
         othermodel,
         nodmx=True,
+        convertcoordinates=True,
         threshold_sigma=3.0,
         unc_rat_threshold=1.05,
         verbosity="max",
         usecolor=True,
-        output="text",
+        format="text",
     ):
         """Print comparison with another model
 
@@ -1805,9 +1806,11 @@ class TimingModel:
         ----------
         othermodel
             TimingModel object to compare to
-        nodmx : bool
-            If True (which is the default), don't print the DMX parameters in
+        nodmx : bool, optional
+            If True, don't print the DMX parameters in
             the comparison
+        convertcoordinates : bool, optional
+            Convert coordinates from ICRS<->ECL to make models consistent
         threshold_sigma : float, optional
             Pulsar parameters for which diff_sigma > threshold will be printed
             with an exclamation point at the end of the line
@@ -1824,7 +1827,7 @@ class TimingModel:
                 "check"   - only print significant changes with logging.warning, not as string (note that all other modes will still print this)
         usecolor : bool, optional
             Use colors on the output to complement use of "!" and "*"
-        output : string, optional
+        format : string, optional
             One of "text" or "markdown"
 
         Returns
@@ -1838,11 +1841,11 @@ class TimingModel:
             normalized by the uncertainty in model X. If model X has no reported uncertainty,
             nothing will be printed.
 
-            If ``output="text"``, when either ``Diff_SigmaX`` value is greater than ``threshold_sigma``,
+            If ``format="text"``, when either ``Diff_SigmaX`` value is greater than ``threshold_sigma``,
             an exclamation point (``!``) will be appended to the line and color will be added if ``usecolor=True``. If the uncertainty in the first model
             if smaller than the second, an asterisk (``*``) will be appended to the line and color will be added if ``usecolor=True``.
 
-            If ``output="markdown"`` then will be formatted as a markdown table with bold, colored, and highlighted text as appropriate.
+            If ``format="markdown"`` then will be formatted as a markdown table with bold, colored, and highlighted text as appropriate.
 
             For both output formats, warnings and info statements will be printed.
 
@@ -1862,13 +1865,13 @@ class TimingModel:
             >>> m1 = get_model(<file1>)
             >>> m2 = get_model(<file2>)
             >>> print(m1.compare(m2))
-            >>> display_markdown(m1.compare(m2, output="markdown"), raw=True)
+            >>> display_markdown(m1.compare(m2, format="markdown"), raw=True)
 
         """
         assert verbosity.lower() in ["max", "med", "min", "check"]
         verbosity = verbosity.lower()
-        assert output.lower() in ["text", "markdown"]
-        output = output.lower()
+        assert format.lower() in ["text", "markdown"]
+        format = format.lower()
 
         if self.name != "":
             model_name = self.name.split("/")[-1]
@@ -1941,6 +1944,31 @@ class TimingModel:
                     % (other_model_name, model_name)
                 )
                 othermodel.change_dmepoch(self.DMEPOCH.value)
+        if (
+            "AstrometryEquatorial" in self.components
+            and "AstrometryEcliptic" in othermodel.components
+        ):
+            if convertcoordinatess:
+                log.warning(f"Converting {other_model_name} from ECL to ICRS")
+                othermodel = othermodel.as_ICRS()
+            else:
+                log.warning(
+                    f"{model_name} is in ICRS coordinates but {other_model_name} is in ECL coordinates and convertcoordinates=False"
+                )
+        elif (
+            "AstrometryEcliptic" in self.components
+            and "AstrometryEquatorial" in othermodel.components
+        ):
+            if convertcoordinates:
+                log.warning(
+                    f"Converting {other_model_name} from ICRS to ECL({self.ECL.value})"
+                )
+                othermodel = othermodel.as_ECL(ecl=self.ECL.value)
+            else:
+                log.warning(
+                    f"{model_name} is in ECL({self.ECL.value}) coordinates but {other_model_name} is in ICRS coordinates and convertcoordinates=False"
+                )
+
         for pn in self.params_ordered:
             par = getattr(self, pn)
             if par.value is None:
@@ -2182,12 +2210,12 @@ class TimingModel:
                 continue
             log.info("Parameter %s missing from %s" % (opn, model_name))
             if verbosity == "max":
-                parameter[pn] = str(opn)
-                value1[pn] = "Missing"
-                value2[pn] = str(otherpar.quantity)
-                diff1[pn] = ""
-                diff2[pn] = ""
-                modifier[pn] = []
+                parameter[opn] = str(opn)
+                value1[opn] = "Missing"
+                value2[opn] = str(otherpar.quantity)
+                diff1[opn] = ""
+                diff2[opn] = ""
+                modifier[opn] = []
         separation = self.get_psr_coords().separation(othermodel.get_psr_coords())
         pn = "SEPARATION"
         parameter[pn] = "SEPARATION"
@@ -2209,7 +2237,7 @@ class TimingModel:
         longest_diff1 = len(max(diff1.values(), key=len))
         longest_diff2 = len(max(diff2.values(), key=len))
         param = "TITLE"
-        if output == "text":
+        if format == "text":
             p = parameter[param]
             v1 = value1[param]
             v2 = value2[param]
@@ -2226,7 +2254,7 @@ class TimingModel:
             s.append(
                 f"{p:<{longest_parameter+pad}} {v1:>{longest_value1+pad}} {v2:>{longest_value2+pad}} {d1:>{longest_diff1+pad}} {d2:>{longest_diff2+pad}}"
             )
-        elif output == "markdown":
+        elif format == "markdown":
             p = parameter[param]
             v1 = value1[param]
             v2 = value2[param]
@@ -2243,7 +2271,7 @@ class TimingModel:
             d1 = diff1[param]
             d2 = diff2[param]
             m = modifier[param]
-            if output == "text":
+            if format == "text":
                 sout = f"{p:<{longest_parameter+pad}} {v1:>{longest_value1+pad}} {v2:>{longest_value2+pad}} {d1:>{longest_diff1+pad}} {d2:>{longest_diff2+pad}}"
                 if "change" in m or "diff1" in m or "diff2" in m:
                     sout += " !"
@@ -2263,7 +2291,7 @@ class TimingModel:
                         sout = colorize(sout, "red", bg_color="green")
                     elif "unc_rat" in m:
                         sout = colorize(sout, bg_color="green")
-            elif output == "markdown":
+            elif format == "markdown":
                 sout = [p.strip(), v1.strip(), v2.strip(), d1.strip(), d2.strip()]
                 if "change" in m or "diff1" in m or "diff2" in m:
                     sout = [

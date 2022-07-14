@@ -123,7 +123,7 @@ powfit.print_summary()
 # There also a convenience function for pretty printing a comparison of two models with the differences measured in sigma.
 
 # %%
-display_markdown(wlsfit.model.compare(powfit.model, output="markdown"), raw=True)
+display_markdown(wlsfit.model.compare(powfit.model, format="markdown"), raw=True)
 
 # %% [markdown]
 # ## Generalized Least Squares fitter

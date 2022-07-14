@@ -30,6 +30,19 @@ def main(argv=None):
         help="Do not print DMX parameters",
     )
     parser.add_argument(
+        "--convertcoordinates",
+        default=True,
+        action="store_true",
+        help="Convert coordinates to make models consistent",
+    )
+    parser.add_argument(
+        "--no-convertcoordinates",
+        dest="convertcoordinates",
+        default=False,
+        action="store_false",
+        help="Do not convert coordinates to make models consistent",
+    )
+    parser.add_argument(
         "--sigma",
         default=3,
         type=float,
@@ -76,10 +89,11 @@ def main(argv=None):
         m1.compare(
             m2,
             nodmx=not args.dmx,
+            convertcoordinates=args.convertcoordinates,
             threshold_sigma=args.sigma,
             unc_rat_threshold=args.uncertainty_ratio,
             verbosity=args.comparison,
             usecolor=not args.nocolor,
-            output=args.format,
+            format=args.format,
         )
     )
