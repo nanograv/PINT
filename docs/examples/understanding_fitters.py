@@ -23,7 +23,6 @@
 from __future__ import print_function, division
 import numpy as np
 import astropy.units as u
-from IPython.display import display_markdown
 
 # %%
 import pint.toa
@@ -123,7 +122,7 @@ powfit.print_summary()
 # There also a convenience function for pretty printing a comparison of two models with the differences measured in sigma.
 
 # %%
-display_markdown(wlsfit.model.compare(powfit.model, format="markdown"), raw=True)
+print(wlsfit.model.compare(powfit.model))
 
 # %% [markdown]
 # ## Generalized Least Squares fitter

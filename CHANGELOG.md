@@ -12,7 +12,6 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Split Jodrell Bank observatory based on backend to get correct clock files
 ### Added
 - delta_pulse_number column is now saved to -padd flag on TOA write
-- command-line utility to compare parfiles
 ### Fixed
 - TOA flags are properly deepcopy'd when desired (to deal with [astropy bug](https://github.com/astropy/astropy/issues/13435))
 

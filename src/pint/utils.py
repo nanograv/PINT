@@ -1544,7 +1544,7 @@ def list_parameters(class_=None):
         return sorted(results.values(), key=lambda d: d["name"])
 
 
-def colorize(text, fg_color=None, bg_color=None, attribute=None):
+def colorize(text, fg_color, bg_color=None, attribute=None):
     """Colorizes a string (including unicode strings) for printing on the terminal
 
     For an example of usage, as well as a demonstration as to what the
@@ -1554,7 +1554,7 @@ def colorize(text, fg_color=None, bg_color=None, attribute=None):
     ----------
     text : string
         The text to colorize. Can include unicode.
-    fg_color : _type_, optional
+    fg_color : _type_
         Foreground color name. The color names (fg or bg) are one of:
         'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan',
         or 'white'.
