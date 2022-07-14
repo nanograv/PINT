@@ -1862,7 +1862,7 @@ class TimingModel:
             >>> m1 = get_model(<file1>)
             >>> m2 = get_model(<file2>)
             >>> print(m1.compare(m2))
-            >>> display_markdown(m1.compare(m2, output="markdown"))
+            >>> display_markdown(m1.compare(m2, output="markdown"), raw=True)
 
         """
         assert verbosity.lower() in ["max", "med", "min", "check"]
