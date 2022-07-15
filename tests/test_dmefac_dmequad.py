@@ -2,13 +2,12 @@
 """
 from io import StringIO
 
+import astropy.units as u
 import numpy as np
 import pytest
-import astropy.units as u
 
-from pint.toa import get_TOAs
 from pint.models.noise_model import ScaleDmError
-
+from pint.toa import get_TOAs
 
 tim = """FORMAT 1
 fake 1400 54000 1.0 gbt -pp_dm 57.0 -pp_dme 0.01 -fe Rcvr_800

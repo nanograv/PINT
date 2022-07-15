@@ -1,15 +1,15 @@
 #! /usr/bin/env python
 import os
 import unittest
-import pytest
 
 import astropy.units as u
+import pytest
+from pinttestdata import datadir
 
 import pint.fitter
 import pint.models
 import pint.residuals
 import pint.toa
-from pinttestdata import datadir
 
 # Not included in the test here, but as a sanity check I used this same
 # ephemeris to phase up Fermi data, and it looks good.

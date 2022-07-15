@@ -1,21 +1,13 @@
-import os
-from copy import deepcopy
+import warnings
 
-# import matplotlib
-# matplotlib.use('TKAgg')
-import matplotlib.pyplot as plt
-import pytest
 import numpy as np
-import astropy.units as u
+import pytest
+from pinttestdata import datadir
 
+import pint.fitter
+from pint import simulation
 from pint.models import get_model, get_model_and_toas
 from pint.toa import get_TOAs
-import pint.fitter
-from pint import toa, simulation
-from pinttestdata import datadir
-import pint.models.parameter as param
-from pint import ls
-from pint import utils
 
 
 @pytest.mark.parametrize(
@@ -27,11 +19,15 @@ from pint import utils
         pint.fitter.DownhillGLSFitter,
     ],
 )
-def test_random_models(fitter):
+def test_random_models(fitter, pickle_dir):
     # Get model and TOAs
-    m, t = get_model_and_toas(
-        os.path.join(datadir, "NGC6440E.par"), os.path.join(datadir, "NGC6440E.tim")
-    )
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=r".*T2CMETHOD.*")
+        m, t = get_model_and_toas(
+            datadir / "NGC6440E.par",
+            datadir / "NGC6440E.tim",
+            picklefilename=pickle_dir,
+        )
 
     f = fitter(toas=t, model=m)
     # Do a 4-parameter fit
@@ -60,12 +56,15 @@ def test_random_models(fitter):
     "fitter",
     [pint.fitter.WidebandTOAFitter, pint.fitter.WidebandDownhillFitter],
 )
-def test_random_models_wb(fitter):
-    model = get_model(os.path.join(datadir, "J1614-2230_NANOGrav_12yv3.wb.gls.par"))
+def test_random_models_wb(fitter, pickle_dir):
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=r".*T2CMETHOD.*")
+        model = get_model(datadir / "J1614-2230_NANOGrav_12yv3.wb.gls.par")
     toas = get_TOAs(
-        os.path.join(datadir, "J1614-2230_NANOGrav_12yv3.wb.tim"),
+        datadir / "J1614-2230_NANOGrav_12yv3.wb.tim",
         ephem="DE436",
         bipm_version="BIPM2015",
+        picklefilename=pickle_dir,
     )
     f = fitter(toas, model)
     # Do a 4-parameter fit

@@ -1,19 +1,18 @@
+import io
 import logging
 import os
-import io
+import tempfile
 
 import astropy.units as u
 import numpy as np
 import pytest
-import tempfile
-
-from pint.models import get_model
-import pint.toa as toa
-import pint.simulation as simulation
 import test_derivative_utils as tdu
-from pint.residuals import Residuals
 from pinttestdata import datadir
 
+import pint.simulation as simulation
+import pint.toa as toa
+from pint.models import get_model
+from pint.residuals import Residuals
 
 stigma_template = """
 PSR              FAKE

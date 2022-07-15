@@ -1,20 +1,22 @@
 """ Test for pint object copying
 """
 
-import os
-import pytest
-import numpy as np
 import copy
+import os
 import sys
+import warnings
 
 import astropy.units as u
+import numpy as np
+import pytest
 from astropy.table import Table
-from pint.models import get_model
-from pint.fitter import WidebandTOAFitter
+from pinttestdata import datadir
+
 import pint.fitter
 import pint.residuals
+from pint.fitter import WidebandTOAFitter
+from pint.models import get_model
 from pint.toa import get_TOAs
-from pinttestdata import datadir
 
 parfile = os.path.join(datadir, "NGC6440E.par")
 timfile = os.path.join(datadir, "NGC6440E.tim")
@@ -22,15 +24,17 @@ timfile = os.path.join(datadir, "NGC6440E.tim")
 
 @pytest.fixture
 def model():
-    return get_model(parfile)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=r".*T2CMETHOD.*")
+        return get_model(parfile)
 
 
 @pytest.fixture
-def toas():
+def toas(pickle_dir):
     # The scope="module" setting ensures the TOAs object will be created
     # only once for the whole module, which will save time but might
     # allow accidental modifications done in one test to affect other tests.
-    return get_TOAs(timfile)
+    return get_TOAs(timfile, picklefilename=pickle_dir)
 
 
 def test_copy_toa_object(toas):
@@ -68,9 +72,11 @@ def test_copy_fitter_object(model, toas):
     assert fitter is not fitter_copy
 
 
-def test_copy_wideband_fitter_object():
-    model = get_model(os.path.join(datadir, "J1614-2230_NANOGrav_12yv3.wb.gls.par"))
-    toas = get_TOAs(os.path.join(datadir, "J1614-2230_NANOGrav_12yv3.wb.tim"))
+def test_copy_wideband_fitter_object(pickle_dir):
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=r".*T2CMETHOD.*")
+        model = get_model(datadir / "J1614-2230_NANOGrav_12yv3.wb.gls.par")
+    toas = get_TOAs(datadir / "J1614-2230_NANOGrav_12yv3.wb.tim")
     fitter = WidebandTOAFitter([toas], model, additional_args={})
     fitter_copy = copy.deepcopy(fitter)
 

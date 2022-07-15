@@ -1,5 +1,5 @@
-import unittest
 import io
+import unittest
 
 from pint.models import get_model
 

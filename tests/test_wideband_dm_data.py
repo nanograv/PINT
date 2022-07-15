@@ -9,13 +9,13 @@ import astropy.units as u
 import numpy as np
 import pytest
 from astropy.time import TimeDelta
-from pinttestdata import datadir
 from numpy.testing import assert_allclose
+from pinttestdata import datadir
 
+from pint.fitter import WidebandTOAFitter
 from pint.models import get_model
 from pint.residuals import Residuals, WidebandTOAResiduals
 from pint.toa import get_TOAs
-from pint.fitter import WidebandTOAFitter
 
 os.chdir(datadir)
 
@@ -87,82 +87,89 @@ def wb_toas_all(wb_model):
     return toas
 
 
-class TestDMData:
-    def setup(self):
-        self.model = get_model("J1614-2230_NANOGrav_12yv3.wb.gls.par")
-        self.toas = get_TOAs("J1614-2230_NANOGrav_12yv3.wb.tim")
-        toa_backends, valid_flags = self.toas.get_flag_value("fe")
-        self.toa_backends = np.array(toa_backends)
-        self.dm_jump_params = [
-            getattr(self.model, x)
-            for x in self.model.params
-            if (x.startswith("DMJUMP"))
+@pytest.fixture
+def setup(pickle_dir):
+    class Setup:
+        pass
+
+    s = Setup()
+    s.model = get_model(datadir / "J1614-2230_NANOGrav_12yv3.wb.gls.par")
+    s.toas = get_TOAs(
+        datadir / "J1614-2230_NANOGrav_12yv3.wb.tim", picklefilename=pickle_dir
+    )
+    toa_backends, valid_flags = s.toas.get_flag_value("fe")
+    s.toa_backends = np.array(toa_backends)
+    s.dm_jump_params = [
+        getattr(s.model, x) for x in s.model.params if (x.startswith("DMJUMP"))
+    ]
+    return s
+
+
+def test_data_reading(setup):
+    dm_data_raw, valid = setup.toas.get_flag_value("pp_dm")
+    # For this input, the DM number should be the same with the TOA number.
+    dm_data = np.array(dm_data_raw)[valid]
+    assert len(valid) == setup.toas.ntoas
+    assert len(dm_data) == setup.toas.ntoas
+    assert dm_data.mean != 0.0
+
+
+def test_dm_modelcomponent(setup):
+    assert "DispersionJump" in setup.model.components.keys()
+    assert "ScaleDmError" in setup.model.components.keys()
+    assert "SolarWindDispersion" in setup.model.components.keys()
+
+
+def test_dm_jumps(setup):
+    # First get the toas for jump
+    all_backends = list(set(setup.toa_backends))
+    dm_jump_value = setup.model.jump_dm(setup.toas)
+    dm_jump_map = {}
+    for dmj in setup.dm_jump_params:
+        dm_jump_map[dmj.key_value[0]] = dmj
+    for be in all_backends:
+        assert all(dm_jump_value[setup.toa_backends == be] == -dm_jump_map[be].quantity)
+
+    r = WidebandTOAResiduals(
+        setup.toas, setup.model, dm_resid_args=dict(subtract_mean=False)
+    )
+
+    model2 = deepcopy(setup.model)
+    for i, be in enumerate(all_backends):
+        dm_jump_map[be].value += i + 1
+
+    r2 = WidebandTOAResiduals(
+        setup.toas, model2, dm_resid_args=dict(subtract_mean=False)
+    )
+
+    delta_dm = r2.dm.resids_value - r.dm.resids_value
+    delta_dm_intended = np.zeros_like(delta_dm)
+    for i, be in enumerate(all_backends):
+        delta_dm_intended[setup.toa_backends == be] = -(i + 1)
+    assert np.allclose(delta_dm, delta_dm_intended)
+
+
+def test_dmjump_derivative(setup):
+    # This test is designe to test the dm jump derivatives.
+    # First get the toas for jump
+    for dmj_param in setup.dm_jump_params:
+        # test derivative function in the dmjump component
+        d_dm_d_dmjump = setup.model.d_dm_d_dmjump(setup.toas, dmj_param.name)
+        be = dmj_param.key_value
+        # The derivative of dm with respect to dm jump is -1 for the jumped
+        # TOAs/DM data, the others are zero
+        assert all(d_dm_d_dmjump[setup.toa_backends == be] == -1.0 * u.Unit(""))
+        assert all(d_dm_d_dmjump[setup.toa_backends != be] == 0.0 * u.Unit(""))
+        d_delay_d_dmjump = setup.model.d_delay_d_dmjump(setup.toas, dmj_param.name)
+        # The derivative of delay with respect to dm jump is 0.
+        assert all(d_delay_d_dmjump == 0.0 * (u.s / dmj_param.units))
+        # Test the registered functions in the timing model.
+        # When constructing the design matrixes, the registered function
+        # will be called.
+        assert setup.model.delay_deriv_funcs[dmj_param.name] == [
+            setup.model.d_delay_d_dmjump
         ]
-
-    def test_data_reading(self):
-        dm_data_raw, valid = self.toas.get_flag_value("pp_dm")
-        # For this input, the DM number should be the same with the TOA number.
-        dm_data = np.array(dm_data_raw)[valid]
-        assert len(valid) == self.toas.ntoas
-        assert len(dm_data) == self.toas.ntoas
-        assert dm_data.mean != 0.0
-
-    def test_dm_modelcomponent(self):
-        assert "DispersionJump" in self.model.components.keys()
-        assert "ScaleDmError" in self.model.components.keys()
-        assert "SolarWindDispersion" in self.model.components.keys()
-
-    def test_dm_jumps(self):
-        # First get the toas for jump
-        all_backends = list(set(self.toa_backends))
-        dm_jump_value = self.model.jump_dm(self.toas)
-        dm_jump_map = {}
-        for dmj in self.dm_jump_params:
-            dm_jump_map[dmj.key_value[0]] = dmj
-        for be in all_backends:
-            assert all(
-                dm_jump_value[self.toa_backends == be] == -dm_jump_map[be].quantity
-            )
-
-        r = WidebandTOAResiduals(
-            self.toas, self.model, dm_resid_args=dict(subtract_mean=False)
-        )
-
-        model2 = deepcopy(self.model)
-        for i, be in enumerate(all_backends):
-            dm_jump_map[be].value += i + 1
-
-        r2 = WidebandTOAResiduals(
-            self.toas, model2, dm_resid_args=dict(subtract_mean=False)
-        )
-
-        delta_dm = r2.dm.resids_value - r.dm.resids_value
-        delta_dm_intended = np.zeros_like(delta_dm)
-        for i, be in enumerate(all_backends):
-            delta_dm_intended[self.toa_backends == be] = -(i + 1)
-        assert np.allclose(delta_dm, delta_dm_intended)
-
-    def test_dmjump_derivative(self):
-        # This test is designe to test the dm jump derivatives.
-        # First get the toas for jump
-        for dmj_param in self.dm_jump_params:
-            # test derivative function in the dmjump component
-            d_dm_d_dmjump = self.model.d_dm_d_dmjump(self.toas, dmj_param.name)
-            be = dmj_param.key_value
-            # The derivative of dm with respect to dm jump is -1 for the jumped
-            # TOAs/DM data, the others are zero
-            assert all(d_dm_d_dmjump[self.toa_backends == be] == -1.0 * u.Unit(""))
-            assert all(d_dm_d_dmjump[self.toa_backends != be] == 0.0 * u.Unit(""))
-            d_delay_d_dmjump = self.model.d_delay_d_dmjump(self.toas, dmj_param.name)
-            # The derivative of delay with respect to dm jump is 0.
-            assert all(d_delay_d_dmjump == 0.0 * (u.s / dmj_param.units))
-            # Test the registered functions in the timing model.
-            # When constructing the design matrixes, the registered function
-            # will be called.
-            assert self.model.delay_deriv_funcs[dmj_param.name] == [
-                self.model.d_delay_d_dmjump
-            ]
-            assert self.model.dm_derivs[dmj_param.name] == [self.model.d_dm_d_dmjump]
+        assert setup.model.dm_derivs[dmj_param.name] == [setup.model.d_dm_d_dmjump]
 
 
 def test_wideband_residuals(wb_model, wb_toas):

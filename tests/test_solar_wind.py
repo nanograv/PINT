@@ -1,23 +1,15 @@
 """ Test for pint solar wind module
 """
 
-import os
 from io import StringIO
-import pytest
+
 import numpy as np
-from numpy.testing import assert_allclose
-import copy
-import sys
-
-import astropy.units as u
+import pytest
 from astropy.time import Time
-from pint.models import get_model
-from pint.fitter import WidebandTOAFitter
-from pint.toa import get_TOAs
-from pint.simulation import make_fake_toas_uniform
-from pinttestdata import datadir
+from numpy.testing import assert_allclose
 
-os.chdir(datadir)
+from pint.models import get_model
+from pint.simulation import make_fake_toas_uniform
 
 par = """
 PSR J1234+5678

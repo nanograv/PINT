@@ -110,7 +110,7 @@ def get_TOAs(
     include_gps=None,
     planets=None,
     model=None,
-    usepickle=False,
+    usepickle=None,
     tdb_method="default",
     picklefilename=None,
     limits="warn",
@@ -166,12 +166,14 @@ def get_TOAs(
         If a valid timing model is passed, model commands (such as BIPM version,
         planet shapiro delay, and solar system ephemeris) that affect TOA loading
         are applied.
-    usepickle : bool
-        Whether to try to use pickle-based caching of loaded clock-corrected TOAs objects.
+    usepickle : bool or None
+        Whether to try to use pickle-based caching of loaded clock-corrected
+        TOAs objects. If None, setting picklefilename will trigger use of
+        pickles; to suppress this supply False.
     tdb_method : str
         Which method to use for the clock correction to TDB. See
         :func:`pint.observatory.Observatory.get_TDBs` for details.
-    picklefilename : str or None
+    picklefilename : Path or str or None
         Filename to use for caching loaded file. Defaults to adding ``.pickle.gz`` to the
         filename of the timfile, if there is one and only one. If no filename is available,
         or multiple filenames are provided, a specific filename must be provided.
@@ -222,6 +224,8 @@ def get_TOAs(
 
     updatepickle = False
     recalc = False
+    if usepickle is None:
+        usepickle = picklefilename is not None
     if usepickle:
         try:
             t = load_pickle(timfile, picklefilename=picklefilename)
@@ -322,7 +326,7 @@ def load_pickle(toafilename, picklefilename=None):
     toafilename : str
         Base filename of the TOAs; pickles will be searched for with
         ".pickle.gz", ".pickle", or just this filename.
-    picklefilename : str, optional
+    picklefilename : str or Path, optional
         Explicit filename to use.
 
     Returns
@@ -334,11 +338,17 @@ def load_pickle(toafilename, picklefilename=None):
     IOError
         If no pickle is found.
     """
-    picklefilenames = (
-        [toafilename + ext for ext in (".pickle.gz", ".pickle", "")]
-        if picklefilename is None
-        else [picklefilename]
-    )
+    if picklefilename is None:
+        picklefilenames = [toafilename + ext for ext in (".pickle.gz", ".pickle", "")]
+    else:
+        picklefilename = Path(picklefilename)
+        if picklefilename.is_dir():
+            picklefilenames = [
+                picklefilename / (Path(toafilename).name + ext)
+                for ext in (".pickle.gz", ".pickle", "")
+            ]
+        else:
+            picklefilenames = [picklefilename]
 
     lf = None
     for fn in picklefilenames:
@@ -372,6 +382,12 @@ def save_pickle(toas, picklefilename=None):
     """
     # Save the PINT version used to create this pickle file
     toas.pintversion = pint.__version__
+    pickle_dir = None
+    if picklefilename is not None:
+        picklefilename = Path(picklefilename)
+        if picklefilename.is_dir():
+            pickle_dir = picklefilename
+            picklefilename = None
     if picklefilename is not None:
         pass
     elif toas.merged:
@@ -382,9 +398,11 @@ def save_pickle(toas, picklefilename=None):
         if isinstance(toas.filename, (str, Path)):
             picklefilename = str(toas.filename) + ".pickle.gz"
         else:
-            picklefilename = toas.filename[0] + ".pickle.gz"
+            picklefilename = str(toas.filename[0]) + ".pickle.gz"
     else:
         raise ValueError("TOA pickle method needs a (single) filename.")
+    if pickle_dir is not None:
+        picklefilename = pickle_dir / Path(picklefilename).name
     with gzip.open(picklefilename, "wb") as f:
         pickle.dump(toas, f)
 

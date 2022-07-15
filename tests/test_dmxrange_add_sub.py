@@ -1,8 +1,10 @@
 """Test functions for adding and removing DMX ranges."""
 
-import pytest
 import io
+
 import numpy as np
+import pytest
+
 from pint.models import get_model
 from pint.models.dispersion_model import DispersionDM, DispersionDMX
 from pint.utils import PrefixError

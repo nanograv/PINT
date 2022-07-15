@@ -2,19 +2,19 @@ import io
 import os
 import sys
 import warnings
-from copy import deepcopy
 from contextlib import redirect_stdout
+from copy import deepcopy
 
 import astropy.units as u
 import numpy as np
 import pytest
 from hypothesis import given
-from hypothesis.strategies import permutations, composite
+from hypothesis.strategies import composite, permutations
 from numpy.testing import assert_allclose
-from pint import toa
-from pint.observatory import compare_t2_observatories_dat
 from pinttestdata import datadir
 
+import pint.residuals
+from pint import toa
 from pint.models import (
     DEFAULT_ORDER,
     AstrometryEquatorial,
@@ -26,33 +26,32 @@ from pint.models import (
     get_model,
     parameter as p,
 )
+from pint.observatory import compare_t2_observatories_dat
 from pint.simulation import make_fake_toas_uniform
 from pint.toa import get_TOAs
-import pint.residuals
 
 
 @pytest.fixture
 def model_0437():
-    return get_model(os.path.join(datadir, "J0437-4715.par"))
+    return get_model(datadir / "J0437-4715.par")
 
 
 @pytest.fixture
-def timfile_jumps():
-    os.chdir(datadir)
-    return get_TOAs("test1.tim")
+def timfile_jumps(pickle_dir):
+    return get_TOAs(datadir / "test1.tim", picklefilename=pickle_dir)
 
 
 @pytest.fixture
-def timfile_nojumps():
-    return get_TOAs(os.path.join(datadir, "NGC6440E.tim"))
+def timfile_nojumps(pickle_dir):
+    return get_TOAs(datadir / "NGC6440E.tim", picklefilename=pickle_dir)
 
 
-len_timfile_nojumps = len(get_TOAs(os.path.join(datadir, "NGC6440E.tim")))
+# len_timfile_nojumps = len(get_TOAs(os.path.join(datadir, "NGC6440E.tim")))
 
 
 class TestModelBuilding:
     def setup(self):
-        self.parfile = os.path.join(datadir, "J0437-4715.par")
+        self.parfile = datadir / "J0437-4715.par"
 
     def test_from_par(self):
         tm = get_model(self.parfile)

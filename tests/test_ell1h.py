@@ -1,26 +1,17 @@
 """Tests of ELL1H model """
 import logging
-import os
-import unittest
-import pytest
-from warnings import warn
+from io import StringIO
 
 import astropy.units as u
 import numpy as np
+import pytest
+import test_derivative_utils as tdu
+from pinttestdata import datadir
 
 import pint.fitter as ff
-from pint.models import get_model
-from pint.models.timing_model import TimingModelError
 import pint.toa as toa
-import test_derivative_utils as tdu
-from utils import verify_stand_alone_binary_parameter_updates
+from pint.models import get_model
 from pint.residuals import Residuals
-from pinttestdata import datadir
-from io import StringIO
-
-
-os.chdir(datadir)
-
 
 simple_par = """
       PSR    J0613-0200
@@ -45,34 +36,44 @@ simple_par = """
 
 
 @pytest.fixture(scope="module")
-def toasJ0613():
-    return toa.get_TOAs("J0613-0200_NANOGrav_9yv1.tim", ephem="DE421", planets=False)
+def toasJ0613(pickle_dir):
+    return toa.get_TOAs(
+        datadir / "J0613-0200_NANOGrav_9yv1.tim",
+        ephem="DE421",
+        planets=False,
+        picklefilename=pickle_dir,
+    )
 
 
 @pytest.fixture(scope="module")
-def toasJ1853():
-    return toa.get_TOAs("J1853+1303_NANOGrav_11yv0.tim", ephem="DE421", planets=False)
+def toasJ1853(pickle_dir):
+    return toa.get_TOAs(
+        datadir / "J1853+1303_NANOGrav_11yv0.tim",
+        ephem="DE421",
+        planets=False,
+        picklefilename=pickle_dir,
+    )
 
 
 @pytest.fixture
 def modelJ0613():
-    return get_model("J0613-0200_NANOGrav_9yv1_ELL1H.gls.par")
+    return get_model(datadir / "J0613-0200_NANOGrav_9yv1_ELL1H.gls.par")
 
 
 @pytest.fixture
 def modelJ1853():
-    return get_model("J1853+1303_NANOGrav_11yv0.gls.par")
+    return get_model(datadir / "J1853+1303_NANOGrav_11yv0.gls.par")
 
 
 @pytest.fixture()
 def modelJ0613_STIG():
-    return get_model("J0613-0200_NANOGrav_9yv1_ELL1H_STIG.gls.par")
+    return get_model(datadir / "J0613-0200_NANOGrav_9yv1_ELL1H_STIG.gls.par")
 
 
 @pytest.fixture()
 def tempo2_res():
-    parfileJ1853 = "J1853+1303_NANOGrav_11yv0.gls.par"
-    return np.genfromtxt(parfileJ1853 + ".tempo2_test", skip_header=1, unpack=True)
+    parfileJ1853 = datadir / "J1853+1303_NANOGrav_11yv0.gls.par"
+    return np.genfromtxt(str(parfileJ1853) + ".tempo2_test", skip_header=1, unpack=True)
 
 
 def test_J1853(toasJ1853, modelJ1853, tempo2_res):

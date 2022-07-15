@@ -160,14 +160,18 @@ class ScaleToaError(NoiseComponent):
             if np.any(mask):
                 sigma_scaled[mask] = np.hypot(sigma_scaled[mask], equad.quantity)
             else:
+                # Is this really a problem?
                 warnings.warn(f"EQUAD {equad} has no TOAs")
+                pass
         for efac_name in self.EFACs:
             efac = getattr(self, efac_name)
             mask = efac.select_toa_mask(toas)
             if np.any(mask):
                 sigma_scaled[mask] *= efac.quantity
             else:
+                # Is this really a problem?
                 warnings.warn(f"EFAC {efac} has no TOAs")
+                pass
         return sigma_scaled
 
     def sigma_scaled_cov_matrix(self, toas):

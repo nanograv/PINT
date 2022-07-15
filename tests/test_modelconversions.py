@@ -1,16 +1,16 @@
 import io
 import os
-import pytest
 
 import astropy.units as u
 import numpy as np
+import pytest
 
 import pint.residuals
 import pint.simulation
 from pint.fitter import WLSFitter
 from pint.models.model_builder import get_model, get_model_and_toas
-from pint.toa import get_TOAs
 from pint.pulsar_ecliptic import OBL, PulsarEcliptic
+from pint.toa import get_TOAs
 
 modelstring_ECL = """
 PSR              B1855+09

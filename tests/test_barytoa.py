@@ -2,22 +2,21 @@
 import os
 
 import astropy.units as u
+from pinttestdata import datadir
 
 import pint.fitter
 import pint.models
-from pint.models.model_builder import get_model
 import pint.residuals
 import pint.toa
-from pinttestdata import datadir
+from pint.models.model_builder import get_model
 
 
-def test_barytoa():
-    os.chdir(datadir)
+def test_barytoa(pickle_dir):
     # This par file has a very simple model in it
-    m = get_model("slug.par")
+    m = get_model(datadir / "slug.par")
 
     # This .tim file has TOAs at the barycenter, and at infinite frequency
-    t = pint.toa.get_TOAs("slug.tim")
+    t = pint.toa.get_TOAs(datadir / "slug.tim", picklefilename=pickle_dir)
 
     rs = pint.residuals.Residuals(t, m).time_resids
 

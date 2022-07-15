@@ -502,46 +502,35 @@ class Polycos:
         method="TEMPO",
         numNodes=20,
     ):
-        """
-        Generate the polyco data.
+        """Generate the polyco data.
+
+        This function replaces anything in ``self`` with a freshly
+        generated polyco table.
 
         Parameters
         ----------
-        model : TimingModel
+        model : pint.models.TimingModel
             TimingModel to generate the Polycos with parameters
             setup.
-
-        mjdStart : float / numpy longdouble
+        mjdStart : float or np.longdouble
             Start time of polycos in mjd
-
-        mjdEnd : float / numpy longdouble
+        mjdEnd : float or np.longdouble
             Ending time of polycos in mjd
-
         obs : str
             Observatory code
-
         segLength : int
             Length of polyco segement [minutes]
-
         ncoeff : int
             Number of coefficents
-
         obsFreq : float
             Observing frequency [MHz]
-
         maxha : float optional. Default 12.0
             Maximum hour angle. Only 12.0 is supported for now.
-
         method : string optional ["TEMPO", "TEMPO2", ...] Default TEMPO
             Method to generate polycos. Only the TEMPO method is supported for now.
-
         numNodes : int optional. Default 20
             Number of nodes for fitting. It cannot be less then the number of
             coefficents.
-
-        Return
-        ---------
-        A polyco table.
         """
         mjdStart = data2longdouble(mjdStart)
         mjdEnd = data2longdouble(mjdEnd)

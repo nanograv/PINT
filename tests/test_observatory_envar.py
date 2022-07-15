@@ -1,11 +1,12 @@
+import importlib
 import os
 import sys
-import pytest
-import importlib
 
-import pint.observatory.topo_obs
-import pint.observatory.special_locations
+import pytest
+
 import pint.observatory
+import pint.observatory.special_locations
+import pint.observatory.topo_obs
 
 
 @pytest.fixture

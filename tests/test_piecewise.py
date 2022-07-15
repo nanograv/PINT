@@ -5,14 +5,14 @@ import unittest
 import astropy.units as u
 import numpy as np
 import pytest
+from pinttestdata import datadir
 
 import pint.fitter
 import pint.models
 import pint.residuals
 import pint.toa
-from pinttestdata import datadir
-from pint.models.timing_model import MissingParameter
 from pint import fitter, toa
+from pint.models.timing_model import MissingParameter
 
 parfile = os.path.join(datadir, "piecewise.par")
 parfile2 = os.path.join(datadir, "piecewise_twocomps.par")

@@ -1,22 +1,28 @@
 """Test polycos."""
 
-import pytest
-import numpy as np
-from pint.polycos import Polycos
-from pint.models import get_model
-import pint.toa as toa
-from pinttestdata import datadir
+import tempfile
+import warnings
 from pathlib import Path
+
+import numpy as np
+import pytest
+from hypothesis import given, settings
+from hypothesis.strategies import sampled_from
+from pinttestdata import datadir
+
+import pint.toa as toa
+from pint.models import get_model
+from pint.polycos import Polycos
 
 
 @pytest.fixture
 def polyco_file():
-    return Path(datadir) / "B1855_polyco.dat"
+    return datadir / "B1855_polyco.dat"
 
 
 @pytest.fixture
 def par_file():
-    return Path(datadir) / "B1855+09_polycos.par"
+    return datadir / "B1855+09_polycos.par"
 
 
 def test_polycos_basic(polyco_file):
@@ -50,7 +56,7 @@ def test_find_entry(polyco_file):
 
     for t in [54999.8, 55000.8, 55001.8, np.linspace(54999, 55002, 1000)]:
         with pytest.raises(ValueError):
-            _ = p.find_entry(t)
+            p.find_entry(t)
 
 
 def test_read_write_round_trip(tmpdir, polyco_file):
@@ -69,26 +75,40 @@ def test_read_write_round_trip(tmpdir, polyco_file):
 
 
 def test_generate_polycos_maxha_error(par_file):
-    model = get_model(str(par_file))
+    model = get_model(par_file)
     p = Polycos()
     with pytest.raises(ValueError):
         p.generate_polycos(model, 55000, 55002, "ao", 144, 12, 400.0, maxha=8)
 
 
-@pytest.mark.parametrize("obs", ["ao", "gbt", "@", "coe"])
-@pytest.mark.parametrize("obsfreq", [1400.0, 400.0])
-@pytest.mark.parametrize("nspan, ncoeff", [(144, 12), (72, 9)])
-def test_generate_polycos(tmpdir, par_file, obs, obsfreq, nspan, ncoeff):
-    output_polyco = tmpdir / "B1855_polyco_round_trip_from_par.dat"
+# FIXME: try different par files?
+@settings(max_examples=2)
+@given(
+    sampled_from(["NGC6440E.par", "B1855+09_polycos.par"]),
+    sampled_from(["ao", "gbt", "@", "coe"]),
+    sampled_from([1400.0, 400.0, 99999.0]),
+    sampled_from([(144, 12), (72, 9)]),
+)
+def test_generate_polycos_agrees_with_model_phase(
+    par,
+    obs,
+    obsfreq,
+    nspan_ncoeff,
+):
+    nspan, ncoeff = nspan_ncoeff
     mjd_start, mjd_end = 55000.0, 55001.0
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=r".*T2CMETHOD.*")
+        model = get_model(datadir / par)
+    with tempfile.TemporaryDirectory() as tmpdir_str:
+        tmpdir = Path(tmpdir_str)
+        output_polyco = tmpdir / "B1855_polyco_round_trip_from_par.dat"
 
-    model = get_model(str(par_file))
-
-    p = Polycos()
-    p.generate_polycos(model, mjd_start, mjd_end, obs, nspan, ncoeff, obsfreq)
-    p.write_polyco_file(output_polyco)
-    q = Polycos()
-    q.read_polyco_file(output_polyco)
+        p = Polycos()
+        p.generate_polycos(model, mjd_start, mjd_end, obs, nspan, ncoeff, obsfreq)
+        p.write_polyco_file(output_polyco)
+        q = Polycos()
+        q.read_polyco_file(output_polyco)
 
     mjds = np.linspace(mjd_start, mjd_end, 51)
 

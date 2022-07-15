@@ -1,8 +1,12 @@
 import os
+import shutil
+import tempfile
+from pathlib import Path
+
 import hypothesis
 import pytest
-from astropy.utils.data import check_download_cache
 from astropy.config import paths
+from astropy.utils.data import check_download_cache
 
 # This setup is drawn from Astropy and might not be entirely relevant to us;
 # in particular we don't have a cron run for slow tests.
@@ -42,3 +46,9 @@ def temp_cache(tmpdir):
     with paths.set_temp_cache(tmpdir):
         yield None
         check_download_cache()
+
+
+@pytest.fixture(scope="session")
+def pickle_dir():
+    with tempfile.TemporaryDirectory(prefix="pytest-pickles-") as d:
+        yield Path(d)

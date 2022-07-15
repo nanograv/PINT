@@ -9,9 +9,9 @@ from io import StringIO
 from pathlib import Path
 
 import pytest
+from pinttestdata import datadir
 
 from pint.scripts import event_optimize
-from pinttestdata import datadir
 
 
 def test_result(tmp_path):

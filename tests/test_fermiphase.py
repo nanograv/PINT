@@ -5,15 +5,14 @@ from io import StringIO
 from pathlib import Path
 
 import pytest
-
 from astropy.io import fits
+from pinttestdata import datadir
 
 import pint.models
 import pint.scripts.fermiphase as fermiphase
 import pint.toa as toa
 from pint.fermi_toas import load_Fermi_TOAs
 from pint.observatory.satellite_obs import get_satellite_observatory
-from pinttestdata import datadir
 
 parfile = datadir / "PSRJ0030+0451_psrcat.par"
 eventfile = (

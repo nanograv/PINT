@@ -3,9 +3,9 @@ import os
 import unittest
 
 import numpy as np
-from pint.pulsar_mjd import Time
-
 from pinttestdata import datadir
+
+from pint.pulsar_mjd import Time
 
 
 class TestPsrMjd(unittest.TestCase):

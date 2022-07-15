@@ -8,13 +8,13 @@ from glob import glob
 import numdifftools
 import numpy as np
 import pytest
+from astropy import units as u
 from hypothesis import HealthCheck, Verbosity, assume, given, settings
 from hypothesis.strategies import composite, floats, integers, sampled_from
 from numpy.testing import assert_allclose
-from astropy import units as u
 
-import pint.toa
 import pint.simulation
+import pint.toa
 from pint.models import get_model
 
 
@@ -152,7 +152,6 @@ def test_derivative_equals_numerical(parfile, param):
         else:
             p.value = value * p.units
         with quiet():
-            warnings.simplefilter("ignore")
             try:
                 dphase = m.phase(toas, abs_phase=False) - phase
             except ValueError:

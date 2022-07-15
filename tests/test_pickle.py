@@ -1,13 +1,14 @@
 """Test pickle-ability of timing models"""
+import os
+import pickle
+
 import astropy.units as u
 import numpy as np
-import os
+from pinttestdata import datadir
 
 import pint.config
 import pint.models.parameter as param
 from pint.models.model_builder import get_model
-from pinttestdata import datadir
-import pickle
 
 
 def test_pickle_prefixparameter():

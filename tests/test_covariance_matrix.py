@@ -1,16 +1,14 @@
 """ Various of tests for the pint covariance.
 """
 
-import pytest
 import os
 
-import numpy as np
 import astropy.units as u
-from pint.pint_matrix import CovarianceMatrix, combine_covariance_matrix
-
+import numpy as np
+import pytest
 from pinttestdata import datadir
 
-os.chdir(datadir)
+from pint.pint_matrix import CovarianceMatrix, combine_covariance_matrix
 
 
 class TestCovarianceMatrix:

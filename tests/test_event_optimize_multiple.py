@@ -4,7 +4,6 @@
 import os
 import sys
 import unittest
-
 from io import StringIO
 
 from pinttestdata import datadir

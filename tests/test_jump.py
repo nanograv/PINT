@@ -1,19 +1,18 @@
 """Tests for jump model component """
+import copy
 import logging
 import os
 import unittest
-import pytest
-import copy
 
 import astropy.units as u
 import numpy as np
+import pytest
+from pinttestdata import datadir
 
 import pint.models.model_builder as mb
 import pint.toa as toa
+from pint.models import PhaseJump, parameter as p
 from pint.residuals import Residuals
-from pinttestdata import datadir
-from pint.models import parameter as p
-from pint.models import PhaseJump
 
 
 class SimpleSetup:

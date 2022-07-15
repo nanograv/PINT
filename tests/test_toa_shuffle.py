@@ -1,22 +1,17 @@
 import io
 import os
+import time
 from copy import deepcopy
 
 import numpy as np
 import pytest
-import time
-
-from hypothesis import given
-from hypothesis.strategies import (
-    composite,
-    permutations,
-)
 from astropy import units as u
-
+from hypothesis import given
+from hypothesis.strategies import composite, permutations
 from pinttestdata import datadir
 
-from pint import simulation, toa
 import pint.residuals
+from pint import simulation, toa
 from pint.models import get_model, get_model_and_toas
 
 shuffletoas = """FORMAT 1

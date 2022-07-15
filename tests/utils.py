@@ -1,10 +1,11 @@
 """Utililty functions for the tests"""
 import logging
 import os
-from io import StringIO
 import unittest
-import pytest
 import warnings
+from io import StringIO
+
+import pytest
 
 
 def verify_stand_alone_binary_parameter_updates(m):

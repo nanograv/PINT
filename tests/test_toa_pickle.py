@@ -13,8 +13,7 @@ from pinttestdata import datadir
 
 import pint.models
 import pint.toa
-from pint import toa
-from pint import simulation
+from pint import simulation, toa
 
 
 @pytest.fixture
@@ -23,28 +22,6 @@ def temp_tim(tmpdir):
     shutil.copy(os.path.join(datadir, "test2.tim"), tt)
     tp = os.path.join(tmpdir, "test.tim.pickle.gz")
     return tt, tp
-
-
-class TestTOAReader(unittest.TestCase):
-    def setUp(self):
-        os.chdir(datadir)
-        # First, read the TOAs from the tim file.
-        # This should also create the pickle file.
-        try:
-            os.remove("test1.tim.pickle.gz")
-            os.remove("test1.tim.pickle")
-        except OSError:
-            pass
-        tt = toa.get_TOAs("test1.tim", usepickle=False, include_bipm=False)
-        self.numtoas = tt.ntoas
-        del tt
-        # Now read them from the pickle
-        self.t = toa.get_TOAs("test1.tim", usepickle=True, include_bipm=False)
-
-    def test_pickle(self):
-        # Initially this just checks that the same number
-        # of TOAs came out of the pickle as went in.
-        assert self.t.ntoas == self.numtoas
 
 
 def test_pickle_created(temp_tim):
@@ -57,6 +34,13 @@ def test_pickle_works(temp_tim):
     tt, tp = temp_tim
     toa.get_TOAs(tt, usepickle=True)
     toa.get_TOAs(tt, usepickle=True)
+
+
+def test_pickle_recovers_number_of_toas(temp_tim):
+    tt, tp = temp_tim
+    t1 = toa.get_TOAs(tt, usepickle=True)
+    t2 = toa.get_TOAs(tt, usepickle=True)
+    assert len(t1) == len(t2)
 
 
 def test_pickle_used(temp_tim):
@@ -126,3 +110,20 @@ def test_pickle_moved(temp_tim):
     # Should fail since the original file is gone
     with pytest.raises(FileNotFoundError):
         toa.get_TOAs(tt, usepickle=True, picklefilename=tp)
+
+
+def test_pickle_dir_works(tmp_path):
+    a = tmp_path / "a"
+    a.mkdir()
+
+    b = tmp_path / "b"
+    b.mkdir()
+
+    shutil.copy(datadir / "test2.tim", a)
+    toa.get_TOAs(a / "test2.tim", usepickle=True, picklefilename=b)
+
+    assert len(list(a.iterdir())) == 1
+    assert len(list(b.iterdir())) == 1
+
+    t = toa.get_TOAs(a / "test2.tim", usepickle=True, picklefilename=b)
+    assert t.was_pickled

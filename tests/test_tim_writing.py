@@ -1,11 +1,12 @@
-from io import StringIO
 import re
+from io import StringIO
 
 import astropy.units as u
 import numpy as np
 import pytest
 from hypothesis import given, settings
-from hypothesis.strategies import lists, tuples, one_of, from_regex, just
+from hypothesis.strategies import from_regex, just, lists, one_of, tuples
+
 from pint.toa import get_TOAs
 
 basic_tim_header = "FORMAT 1\n"
@@ -125,6 +126,7 @@ some_barycentered 999999.999 56403.000000000000000   1.000  @  -some argument -a
                     "-obs",
                     "-clkcorr",
                     "-to",  # FIXME: used in clock corrections? What does this do?
+                    "-pn",  # pulse number has special interpretation
                 }
             ),
             from_regex(re.compile(r"[ \t]+", re.ASCII), fullmatch=True),

@@ -1,23 +1,28 @@
 """Various tests to assess the performance of parfile writing."""
 import numbers
-import os
 from io import StringIO
-import pytest
 
 import astropy.units as u
 import numpy as np
+import pytest
+from pinttestdata import datadir
 
 import pint.models.model_builder as mb
 import pint.models.parameter as mp
 import pint.toa as toa
 from pint.residuals import Residuals
-from pinttestdata import datadir
 
 
-def test_parfile_write(tmp_path):
-    parfileB1855 = os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par")
-    timB1855 = os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim")
-    toasB1855 = toa.get_TOAs(timB1855, ephem="DE421", planets=False, include_bipm=False)
+def test_parfile_write(tmp_path, pickle_dir):
+    parfileB1855 = datadir / "B1855+09_NANOGrav_9yv1.gls.par"
+    timB1855 = datadir / "B1855+09_NANOGrav_9yv1.tim"
+    toasB1855 = toa.get_TOAs(
+        timB1855,
+        ephem="DE421",
+        planets=False,
+        include_bipm=False,
+        picklefilename=pickle_dir,
+    )
     modelB1855 = mb.get_model(parfileB1855)
     out_parfile = tmp_path / "test_parfile_write.par"
     # change parameter value

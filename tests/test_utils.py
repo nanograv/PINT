@@ -43,10 +43,10 @@ from pint.utils import (
     dmxparse,
     interesting_lines,
     lines_of,
+    list_parameters,
     open_or_use,
     taylor_horner,
     taylor_horner_deriv,
-    list_parameters,
 )
 
 
@@ -602,19 +602,33 @@ def test_time_from_mjd_string_rejects_other_formats():
         time_from_mjd_string("58000", format="cxcsec")
 
 
-def test_dmxparse():
+def test_dmxparse_runs(pickle_dir):
     """Test for dmxparse function."""
-    m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
-    t = toa.get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
+    # FIXME: what does this actually check?
+    m = tm.get_model(datadir / "B1855+09_NANOGrav_9yv1.gls.par")
+    t = toa.get_TOAs(
+        datadir / "B1855+09_NANOGrav_9yv1.tim",
+        usepickle=True,
+        picklefilename=pickle_dir,
+    )
     f = fitter.GLSFitter(toas=t, model=m)
     f.fit_toas()
-    dmx = dmxparse(f, save=False)
+    dmxparse(f, save=False)
+
+
+def test_dmxparse_runs_wls(pickle_dir):
+    """Test for dmxparse function."""
     # Check exception handling
-    m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_dfg+12_DMX.par"))
-    t = toa.get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_dfg+12.tim"))
+    # FIXME: what does this actually check?
+    m = tm.get_model(datadir / "B1855+09_NANOGrav_dfg+12_DMX.par")
+    t = toa.get_TOAs(
+        datadir / "B1855+09_NANOGrav_dfg+12.tim",
+        usepickle=True,
+        picklefilename=pickle_dir,
+    )
     f = fitter.WLSFitter(toas=t, model=m)
     f.fit_toas()
-    dmx = dmxparse(f, save=False)
+    dmxparse(f, save=False)
 
 
 def test_pmtot():

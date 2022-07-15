@@ -1,15 +1,17 @@
+import io
+import os
+import tempfile
+
 import astropy.units as u
+import numpy as np
+from pinttestdata import datadir, testdir
+
+import pint.config
+import pint.residuals
 import pint.simulation
+from pint.fitter import GLSFitter
 from pint.models.model_builder import get_model, get_model_and_toas
 from pint.toa import get_TOAs
-import pint.residuals
-import io
-import numpy as np
-import tempfile
-import os
-import pint.config
-from pint.fitter import GLSFitter
-from pinttestdata import datadir, testdir
 
 
 def test_noise_addition():
@@ -111,7 +113,7 @@ def test_noise_addition_EQUAD():
     )
 
 
-def test_zima():
+def test_zima(pickle_dir):
     parfile = pint.config.examplefile("NGC6440E.par")
     outfile = tempfile.NamedTemporaryFile(suffix="tim")
 
@@ -123,7 +125,7 @@ def test_zima():
 
     os.system(zima_command)
 
-    t = get_TOAs(outfile.name)
+    t = get_TOAs(outfile.name, picklefilename=pickle_dir)
     r = pint.residuals.Residuals(t, m)
     # need a generous rtol because of the small statistics
     assert np.isclose(r.calc_time_resids().std(), 1 * u.us, rtol=0.5)

@@ -1,25 +1,24 @@
 """Test model builder using variance input"""
 
-from collections import defaultdict
-import pytest
+import copy
 import io
 from glob import glob
-import copy
 from os.path import basename, join
+
 import numpy as np
-import astropy.units as u
-from pint.models.timing_model import (
-    TimingModel,
-    PhaseComponent,
-    Component,
-    AllComponents,
-    AliasConflict,
-    UnknownBinaryModel,
-)
-from pint.models.model_builder import ModelBuilder, ComponentConflict, get_model
-from pint.models.parameter import floatParameter
-from pint.utils import split_prefixed_name, PrefixError
+import pytest
 from pinttestdata import datadir
+
+from pint.models.model_builder import ComponentConflict, ModelBuilder, get_model
+from pint.models.parameter import floatParameter
+from pint.models.timing_model import (
+    AliasConflict,
+    AllComponents,
+    Component,
+    PhaseComponent,
+    TimingModel,
+)
+from pint.utils import PrefixError, split_prefixed_name
 
 
 class SimpleModel(PhaseComponent):

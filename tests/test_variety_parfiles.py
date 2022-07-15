@@ -1,16 +1,16 @@
 """Various test for the bad par files"""
-import pytest
-from io import StringIO
 import warnings
+from io import StringIO
 
+import pytest
+
+from pint.models.model_builder import get_model
 from pint.models.timing_model import (
-    TimingModelError,
-    UnknownBinaryModel,
     MissingBinaryError,
     MissingParameter,
+    TimingModelError,
+    UnknownBinaryModel,
 )
-from pint.models.model_builder import get_model
-
 
 base_par = """
 PSR J1234+5678

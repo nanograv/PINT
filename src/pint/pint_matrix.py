@@ -227,7 +227,7 @@ class PintMatrix:
         DEPRECATED - use get_label(..., axis=axis)
         """
         warn(
-            "This method is deprecated. Use `parameter_covariance_matrix.get_label(..., axis=axis)[0]` instead of `parameter_covariance_matrix.get_label_along_axis(...)",
+            "This method is deprecated. Use `parameter_covariance_matrix.get_label(..., axis=axis)[0]` instead of `parameter_covariance_matrix.get_label_along_axis(axis, ...)",
             category=DeprecationWarning,
         )
         label_in_one_axis = self.axis_labels[axis]
@@ -615,7 +615,7 @@ def combine_design_matrices_by_param(matrix1, matrix2, padding=0.0):
     append_offset = matrix1.shape[0]
     base_matrix = matrix1.matrix
     for d_quantity in matrix2.derivative_quantity:
-        quantity_label = matrix2.get_label_along_axis(0, d_quantity)
+        quantity_label = matrix2.get_label(d_quantity, axis=0)[0]
         if d_quantity in base_quantity_index.keys():
             # Check quantity size
             d_quantity_size = quantity_label[3] - quantity_label[2]
@@ -658,7 +658,7 @@ def combine_design_matrices_by_param(matrix1, matrix2, padding=0.0):
     new_matrix.fill(padding)
     # Fill up the new_matrix with matrix2
     for quantity, new_idx in new_quantity_index.items():
-        old_idx = matrix2.get_label_along_axis(0, d_quantity)[2:4]
+        old_idx = matrix2.get_label(d_quantity, axis=0)[0][2:4]
         new_matrix[new_idx[0] : new_idx[1], :] = matrix2.matrix[
             old_idx[0] : old_idx[1], :
         ]

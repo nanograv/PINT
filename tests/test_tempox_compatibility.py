@@ -1,11 +1,12 @@
-from io import StringIO
 import re
+from io import StringIO
 
 import astropy.units as u
 import numpy as np
 import pytest
-from pint.models import get_model
+
 import pint.toa
+from pint.models import get_model
 
 par_basic = """
 PSR J1234+5678
