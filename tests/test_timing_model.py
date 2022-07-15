@@ -51,7 +51,7 @@ def timfile_nojumps(pickle_dir):
 
 class TestModelBuilding:
     def setup(self):
-        self.parfile = os.path.join(datadir, "J0437-4715.par")
+        self.parfile = datadir / "J0437-4715.par"
 
     def test_from_par(self):
         tm = get_model(self.parfile)

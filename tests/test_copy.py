@@ -72,11 +72,11 @@ def test_copy_fitter_object(model, toas):
     assert fitter is not fitter_copy
 
 
-def test_copy_wideband_fitter_object():
+def test_copy_wideband_fitter_object(pickle_dir):
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message=r".*T2CMETHOD.*")
-        model = get_model(os.path.join(datadir, "J1614-2230_NANOGrav_12yv3.wb.gls.par"))
-    toas = get_TOAs(os.path.join(datadir, "J1614-2230_NANOGrav_12yv3.wb.tim"))
+        model = get_model(datadir / "J1614-2230_NANOGrav_12yv3.wb.gls.par")
+    toas = get_TOAs(datadir / "J1614-2230_NANOGrav_12yv3.wb.tim")
     fitter = WidebandTOAFitter([toas], model, additional_args={})
     fitter_copy = copy.deepcopy(fitter)
 

@@ -12,12 +12,11 @@ from pint.models.model_builder import get_model
 
 
 def test_barytoa(pickle_dir):
-    os.chdir(datadir)
     # This par file has a very simple model in it
-    m = get_model("slug.par")
+    m = get_model(datadir / "slug.par")
 
     # This .tim file has TOAs at the barycenter, and at infinite frequency
-    t = pint.toa.get_TOAs("slug.tim", picklefilename=pickle_dir)
+    t = pint.toa.get_TOAs(datadir / "slug.tim", picklefilename=pickle_dir)
 
     rs = pint.residuals.Residuals(t, m).time_resids
 

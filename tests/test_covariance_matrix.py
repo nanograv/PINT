@@ -10,8 +10,6 @@ from pinttestdata import datadir
 
 from pint.pint_matrix import CovarianceMatrix, combine_covariance_matrix
 
-os.chdir(datadir)
-
 
 class TestCovarianceMatrix:
     """Test for covariance matrix"""

@@ -398,7 +398,7 @@ def save_pickle(toas, picklefilename=None):
         if isinstance(toas.filename, (str, Path)):
             picklefilename = str(toas.filename) + ".pickle.gz"
         else:
-            picklefilename = toas.filename[0] + ".pickle.gz"
+            picklefilename = str(toas.filename[0]) + ".pickle.gz"
     else:
         raise ValueError("TOA pickle method needs a (single) filename.")
     if pickle_dir is not None:

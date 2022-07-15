@@ -126,6 +126,7 @@ some_barycentered 999999.999 56403.000000000000000   1.000  @  -some argument -a
                     "-obs",
                     "-clkcorr",
                     "-to",  # FIXME: used in clock corrections? What does this do?
+                    "-pn",  # pulse number has special interpretation
                 }
             ),
             from_regex(re.compile(r"[ \t]+", re.ASCII), fullmatch=True),
