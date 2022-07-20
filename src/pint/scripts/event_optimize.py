@@ -520,6 +520,12 @@ def main(argv=None):
         dest="loglevel",
     )
     parser.add_argument(
+        "--backend",
+        help="Save chains to a h5 file",
+        default=False,
+        action="store_true",      
+    )
+    parser.add_argument(
         "--backendpath",
         type=str,
         help="File path to save the h5 chains file",
@@ -765,15 +771,18 @@ def main(argv=None):
     import emcee
 
     # Setting up a backend to save the chains into an h5 file
-    try:
-        if backendpath:
-            backend = emcee.backends.HDFBackend(
-                os.path.join(backendpath, ftr.model.PSR.value + "_chains.h5")
-            )
-        else:
-            backend = emcee.backends.HDFBackend(ftr.model.PSR.value + "_chains.h5")
-        backend.reset(nwalkers, ndim)
-    except ImportError:
+    if args.backend:
+        try:
+            if backendpath:
+                backend_file = os.path.join(backendpath, ftr.model.PSR.value + "_chains.h5")
+            else:
+                backend_file = ftr.model.PSR.value + "_chains.h5"
+            
+            backend = emcee.backends.HDFBackend(backend_file)
+            backend.reset(nwalkers, ndim)
+        except ImportError:
+            backend = None
+    else:
         backend = None
 
     # Following are for parallel processing tests...
