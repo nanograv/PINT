@@ -15,6 +15,7 @@ import emcee.backends
 from pint.scripts import event_optimize
 from pinttestdata import datadir
 
+
 def test_result(tmp_path):
     parfile = datadir / "PSRJ0030+0451_psrcat.par"
     eventfile_orig = (
@@ -38,6 +39,7 @@ def test_result(tmp_path):
         os.chdir(p)
         sys.stdout = saved_stdout
 
+
 def test_backend(tmp_path):
     parfile = datadir / "PSRJ0030+0451_psrcat.par"
     eventfile_orig = (
@@ -52,7 +54,7 @@ def test_backend(tmp_path):
     p = Path.cwd()
     saved_stdout, sys.stdout = (sys.stdout, StringIO("_"))
     try:
-        samples=None
+        samples = None
         os.chdir(tmp_path)
         # Running without backend
         cmd = f"{eventfile} {parfile} {temfile} --weightcol=PSRJ0030+0451 --minWeight=0.9 --nwalkers=10 --nsteps=50 --burnin=10"
@@ -61,7 +63,7 @@ def test_backend(tmp_path):
         cmd = f"{eventfile} {parfile} {temfile} --weightcol=PSRJ0030+0451 --minWeight=0.9 --nwalkers=10 --nsteps=50 --burnin=10 --backend"
         event_optimize.main(cmd.split())
 
-        reader = emcee.backends.HDFBackend('J0030+0451_chains.h5')
+        reader = emcee.backends.HDFBackend("J0030+0451_chains.h5")
         samples = reader.get_chain(discard=10)
         assert samples is not None
 

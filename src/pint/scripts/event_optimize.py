@@ -523,7 +523,7 @@ def main(argv=None):
         "--backend",
         help="Save chains to a h5 file",
         default=False,
-        action="store_true",      
+        action="store_true",
     )
     parser.add_argument(
         "--backendpath",
@@ -774,10 +774,12 @@ def main(argv=None):
     if args.backend:
         try:
             if backendpath:
-                backend_file = os.path.join(backendpath, ftr.model.PSR.value + "_chains.h5")
+                backend_file = os.path.join(
+                    backendpath, ftr.model.PSR.value + "_chains.h5"
+                )
             else:
                 backend_file = ftr.model.PSR.value + "_chains.h5"
-            
+
             backend = emcee.backends.HDFBackend(backend_file)
             backend.reset(nwalkers, ndim)
         except ImportError:
