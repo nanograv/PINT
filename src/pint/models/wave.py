@@ -27,7 +27,7 @@ class Wave(PhaseComponent):
     category = "wave"
 
     def __init__(self):
-        super(Wave, self).__init__()
+        super().__init__()
 
         self.add_param(
             floatParameter(
@@ -56,12 +56,12 @@ class Wave(PhaseComponent):
         self.phase_funcs_component += [self.wave_phase]
 
     def setup(self):
-        super(Wave, self).setup()
+        super().setup()
         self.wave_terms = list(self.get_prefix_mapping_component("WAVE").keys())
         self.num_wave_terms = len(self.wave_terms)
 
     def validate(self):
-        super(Wave, self).validate()
+        super().validate()
         self.setup()
         if self.WAVEEPOCH.quantity is None:
             if self.PEPOCH.quantity is None:

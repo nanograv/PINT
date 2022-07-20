@@ -55,7 +55,7 @@ class DDKmodel(DDmodel):
     """
 
     def __init__(self, t=None, input_params=None):
-        super(DDKmodel, self).__init__()
+        super().__init__()
         self.binary_name = "DDK"
         # Add parameter that specific for DD model, with default value and units
         self.param_default_value.update(
@@ -553,7 +553,7 @@ class DDKmodel(DDmodel):
         parallax: boolean, optional, default True
             Flag for parallax correction
         """
-        a1 = super(DDKmodel, self).a1()
+        a1 = super().a1()
         corr_funs = [self.delta_a1_proper_motion, self.delta_a1_parallax]
         mask = [proper_motion, parallax]
         for ii, cf in enumerate(corr_funs):
@@ -568,7 +568,7 @@ class DDKmodel(DDmodel):
             return self.a1_k(proper_motion=False)
 
     def d_a1_k_d_par(self, par, proper_motion=True, parallax=True):
-        result = super(DDKmodel, self).d_a1_d_par(par)
+        result = super().d_a1_d_par(par)
         ko_func_name = ["d_delta_a1_proper_motion_d_", "d_delta_a1_parallax_d_"]
         for ii, flag in enumerate([proper_motion, parallax]):
             if flag:
@@ -595,7 +595,7 @@ class DDKmodel(DDmodel):
         parallax: boolean, optional, default True
             Flag for parallax correction
         """
-        omega = super(DDKmodel, self).omega()
+        omega = super().omega()
         corr_funs = [self.delta_omega_proper_motion, self.delta_omega_parallax]
         mask = [proper_motion, parallax]
         for ii, cf in enumerate(corr_funs):
@@ -610,7 +610,7 @@ class DDKmodel(DDmodel):
             return self.omega_k(proper_motion=False)
 
     def d_omega_k_d_par(self, par, proper_motion=True, parallax=True):
-        result = super(DDKmodel, self).d_omega_d_par(par)
+        result = super().d_omega_d_par(par)
         ko_func_name = ["d_delta_omega_proper_motion_d_", "d_delta_omega_parallax_d_"]
         for ii, flag in enumerate([proper_motion, parallax]):
             if flag:

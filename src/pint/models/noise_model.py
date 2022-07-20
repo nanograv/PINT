@@ -429,7 +429,7 @@ class PLRedNoise(NoiseComponent):
 
         self.add_param(
             floatParameter(
-                name="TNRedAmp",
+                name="TNREDAMP",
                 units="",
                 aliases=[],
                 description="Amplitude of powerlaw " "red noise in tempo2 format",
@@ -437,7 +437,7 @@ class PLRedNoise(NoiseComponent):
         )
         self.add_param(
             floatParameter(
-                name="TNRedGam",
+                name="TNREDGAM",
                 units="",
                 aliases=[],
                 description="Spectral index of powerlaw " "red noise in tempo2 format",
@@ -445,7 +445,7 @@ class PLRedNoise(NoiseComponent):
         )
         self.add_param(
             floatParameter(
-                name="TNRedC",
+                name="TNREDC",
                 units="",
                 aliases=[],
                 description="Number of red noise frequencies.",
@@ -456,9 +456,9 @@ class PLRedNoise(NoiseComponent):
         self.basis_funcs += [self.pl_rn_basis_weight_pair]
 
     def get_pl_vals(self):
-        nf = int(self.TNRedC.value) if self.TNRedC.value is not None else 30
-        if self.TNRedAmp.value is not None and self.TNRedGam.value is not None:
-            amp, gam = 10**self.TNRedAmp.value, self.TNRedGam.value
+        nf = int(self.TNREDC.value) if self.TNREDC.value is not None else 30
+        if self.TNREDAMP.value is not None and self.TNREDGAM.value is not None:
+            amp, gam = 10**self.TNREDAMP.value, self.TNREDGAM.value
         elif self.RNAMP.value is not None and self.RNIDX is not None:
             fac = (86400.0 * 365.24 * 1e6) / (2.0 * np.pi * np.sqrt(3.0))
             amp, gam = self.RNAMP.value / fac, -1 * self.RNIDX.value
@@ -470,7 +470,7 @@ class PLRedNoise(NoiseComponent):
         A Fourier design matrix contains the sine and cosine basis_functions
         in a Fourier series expansion.
         The weights used are the power-law PSD values at frequencies n/T,
-        where n is in [1, TNRedC] and T is the total observing duration of
+        where n is in [1, TNREDC] and T is the total observing duration of
         the dataset.
 
         """

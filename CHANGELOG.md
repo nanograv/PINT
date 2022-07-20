@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+### Changed
+- Ensure Fitters work with ELL1 even on Astropy 4 (bug #1316)
+- index.txt is only checked at most once a day
+- Moved observatories to JSON file.  Changed way observatories are loaded/overloaded
+- Split Jodrell Bank observatory based on backend to get correct clock files
+### Added
+- delta_pulse_number column is now saved to -padd flag on TOA write
+- command-line utility to compare parfiles
+### Fixed
+- TOA flags are properly deepcopy'd when desired (to deal with [astropy bug](https://github.com/astropy/astropy/issues/13435))
+
 ## [0.9.0] 2022-06-24
 ### Changed
 - `model.phase()` now defaults to `abs_phase=True` when TZR* params are in the model

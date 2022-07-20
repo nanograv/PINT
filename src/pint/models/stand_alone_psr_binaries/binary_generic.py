@@ -36,7 +36,7 @@ class PSR_BINARY:
         >>> class foo(PSR_BINARY):
                 def __init__(self):
                     # This is to initialize the mother class attributes.
-                    super(foo, self).__init__()
+                    super().__init__()
                     self.binary_name = 'foo'
                     # Add parameter that specific for my_binary, with default value and units
                     self.param_default_value.update({'A0':0*u.second,'B0':0*u.second,
