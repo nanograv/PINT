@@ -17,7 +17,7 @@ class ELL1BaseModel(PSR_BINARY):
     """
 
     def __init__(self):
-        super(ELL1BaseModel, self).__init__()
+        super().__init__()
         self.binary_name = "ELL1Base"
         self.param_default_value.update(
             {
@@ -374,7 +374,7 @@ class ELL1model(ELL1BaseModel):
     """This is a ELL1 model using M2 and SINI as the Shapiro delay parameters."""
 
     def __init__(self):
-        super(ELL1model, self).__init__()
+        super().__init__()
         self.binary_name = "ELL1"
         self.binary_delay_funcs = [self.ELL1delay]
         self.d_binarydelay_d_par_funcs = [self.d_ELL1delay_d_par]

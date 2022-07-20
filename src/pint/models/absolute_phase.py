@@ -27,7 +27,7 @@ class AbsPhase(PhaseComponent):
     category = "absolute_phase"
 
     def __init__(self):
-        super(AbsPhase, self).__init__()
+        super().__init__()
         self.add_param(
             MJDParameter(
                 name="TZRMJD", description="Epoch of the zero phase.", time_scale="utc"
@@ -48,10 +48,10 @@ class AbsPhase(PhaseComponent):
         self.tz_cache = None
 
     def setup(self):
-        super(AbsPhase, self).setup()
+        super().setup()
 
     def validate(self):
-        super(AbsPhase, self).validate()
+        super().validate()
         # Make sure the cached TOA is cleared
         self.tz_cache = None
         # Check input Parameters

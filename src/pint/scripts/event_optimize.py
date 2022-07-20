@@ -44,7 +44,7 @@ class custom_timing(
     pint.models.spindown.Spindown, pint.models.astrometry.AstrometryEcliptic
 ):
     def __init__(self, parfile):
-        super(custom_timing, self).__init__()
+        super().__init__()
         self.read_parfile(parfile)
 
 
@@ -259,7 +259,7 @@ class emcee_fitter(Fitter):
     def __init__(
         self, toas=None, model=None, template=None, weights=None, phs=0.5, phserr=0.03
     ):
-        # super(emcee_fitter, self).__init__(model=model, toas=toas)
+        # super().__init__(model=model, toas=toas)
         self.toas = toas
         self.model = model
         self.template = template

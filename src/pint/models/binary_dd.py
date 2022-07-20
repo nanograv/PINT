@@ -29,7 +29,7 @@ class BinaryDD(PulsarBinary):
     def __init__(
         self,
     ):
-        super(BinaryDD, self).__init__()
+        super().__init__()
         self.binary_model_name = "DD"
         self.binary_model_class = DDmodel
         self.add_param(
