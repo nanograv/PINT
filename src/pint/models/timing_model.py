@@ -1774,7 +1774,9 @@ class TimingModel:
         """
 
         noise_params = self.get_params_of_component_type("NoiseComponent")
-        unfrozen_noise_params = [param for param in noise_params if not param.frozen]
+        unfrozen_noise_params = [
+            param for param in noise_params if not getattr(self, param).frozen
+        ]
 
         if incnoise and len(unfrozen_noise_params) > 0:
             raise NotImplementedError(
