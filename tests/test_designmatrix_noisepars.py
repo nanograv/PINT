@@ -14,7 +14,7 @@ def model_and_toas():
 
 def _test_designmatrix(model, toas):
     try:
-        # This should raise a NotImplementedError
+        # This should raise a NotImplementedError rather than an AttributeError.
         M = model.designmatrix(toas)
     except NotImplementedError:
         pass
