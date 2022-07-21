@@ -553,10 +553,14 @@ class TimingModel:
         return c
 
     def get_params_of_component_type(self, component_type):
-        component_type_list = getattr(self, "{}_list".format(component_type))
-        return [
-            param for component in component_type_list for param in component.params
-        ]
+        component_type_list_str = "{}_list".format(component_type)
+        if hasattr(self, component_type_list_str):
+            component_type_list = getattr(self, component_type_list_str)
+            return [
+                param for component in component_type_list for param in component.params
+            ]
+        else:
+            return []
 
     def set_param_values(self, fitp):
         """Set the model parameters to the value contained in the input dict.
