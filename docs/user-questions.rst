@@ -243,3 +243,12 @@ assuming you are using ``argparse``.  Note that ``loguru`` doesn't let you
 change existing loggers: you should just remove and add (which the
 :func:`pint.logging.setup` function does).
 
+Make PINT stop reporting a particular warning
+---------------------------------------------
+
+If PINT keeps emitting a warning you know is irrelevant from somewhere inside your code, you can disable that specific warning coming from that place. For example if you are reading a par file with ``T2CMETHOD`` set but you know that's fine, you can shut off the message about ``T2CMETHOD`` while you're loading the file::
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=r".*T2CMETHOD.*")
+        model = get_model(os.path.join(datadir, "J1614-2230_NANOGrav_12yv3.wb.gls.par"))
+
