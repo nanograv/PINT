@@ -617,7 +617,7 @@ class TimingModel:
         barytimes: Time, TOAs, array-like, or float
             MJD barycentric time(s). The times to compute the
             orbital phases.  Needs to be a barycentric time in TDB.
-            If a TOAs instance is passed, the barycenting will happen
+            If a TOAs instance is passed, the barycentering will happen
             automatically.  If an astropy Time object is passed, it must
             be in scale='tdb'.  If an array-like object is passed or
             a simple float, the time must be in MJD format.

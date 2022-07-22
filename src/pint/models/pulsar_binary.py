@@ -355,7 +355,7 @@ class PulsarBinary(DelayComponent):
         return self.binary_instance.binary_delay()
 
     def d_binary_delay_d_xxxx(self, toas, param, acc_delay):
-        """Return the binary model delay derivtives."""
+        """Return the binary model delay derivatives."""
         self.update_binary_object(toas, acc_delay)
         return self.binary_instance.d_binarydelay_d_par(param)
 
