@@ -37,7 +37,7 @@ def random_models(
     iter
         how many random models will be computed, default 1
     npoints
-        how many fake toas will be reated for the random lines, default 100
+        how many fake toas will be related for the random lines, default 100
 
     Returns
     -------
