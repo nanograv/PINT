@@ -108,7 +108,7 @@ class PosVel:
     and velocities respectively.
 
     The coordinates are generally assumed to be aligned with ICRF (J2000),
-    i.e. they are in an intertial, not earth-rotating frame
+    i.e. they are in an inertial, not earth-rotating frame
 
     The 'obj' and 'origin' components are strings that can optionally
     be used to specify names for endpoints of the vectors.  If present,
