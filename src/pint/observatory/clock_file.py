@@ -579,7 +579,7 @@ def read_tempo_clock_file(
     the exception of the 'F' flag (to disable interpolation), which
     is currently not implemented.
 
-    INCLUDE statments are processed.
+    INCLUDE statements are processed.
 
 
     Parameters
@@ -626,7 +626,7 @@ def read_tempo_clock_file(
             leading_comment += "\n" + s.rstrip()
 
     try:
-        # TODO we might want to handle 'f' flags by inserting addtional
+        # TODO we might want to handle 'f' flags by inserting additional
         # entries so that interpolation routines will give the right result.
         # The way TEMPO interprets 'f' flags is that an MJD with an 'f' flag
         # gives the constant clock correction value for at most a day either side.

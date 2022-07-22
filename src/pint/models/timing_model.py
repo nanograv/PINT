@@ -322,7 +322,7 @@ class TimingModel:
             boolParameter(
                 name="DILATEFREQ",
                 value=False,
-                description="Whether or not TEMPO2 should apply gravitational redshift and time dilation to obseerving frequency (Y/N; PINT only supports N)",
+                description="Whether or not TEMPO2 should apply gravitational redshift and time dilation to observing frequency (Y/N; PINT only supports N)",
             ),
             "",
         )

@@ -105,7 +105,7 @@ class BinaryELL1(PulsarBinary):
 
         TASC will be changed to the epoch of the ascending node closest to the
         supplied epoch, and the Laplace parameters (EPS1, EPS2) and projected
-        semimajor axis (A1 or X) will be updated according to the specified
+        semi-major axis (A1 or X) will be updated according to the specified
         EPS1DOT, EPS2DOT, and A1DOT or XDOT, if present.
 
         Note that derivatives of binary orbital frequency higher than the first
