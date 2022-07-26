@@ -6,7 +6,7 @@ from pint.residuals import Residuals
 
 
 class BayesianTiming:
-    def __init__(self, model, toas):
+    def __init__(self, model, toas, use_pulse_numbers=False):
         self.model = model
         self.toas = toas
 
@@ -17,6 +17,8 @@ class BayesianTiming:
         self._validate_priors()
 
         self.likelihood_method = self._decide_likelihood_method()
+
+        self.track_mode = "use_pulse_numbers" if use_pulse_numbers else "nearest"
 
     def _validate_priors(self):
         for param in self.params:
@@ -81,13 +83,13 @@ class BayesianTiming:
     def _wls_lnlikelihood(self, params):
         params_dict = dict(zip(self.param_labels, params))
         self.model.set_param_values(params_dict)
-        res = Residuals(self.toas, self.model)
+        res = Residuals(self.toas, self.model, track_mode=self.track_mode)
         return -res.calc_chi2() / 2
 
     def _wls_wn_lnlikelihood(self, params):
         params_dict = dict(zip(self.param_labels, params))
         self.model.set_param_values(params_dict)
-        res = Residuals(self.toas, self.model)
+        res = Residuals(self.toas, self.model, track_mode=self.track_mode)
         chi2 = res.calc_chi2()
         sigmas = self.model.scaled_toa_uncertainty(self.toas).to("s").value
         return -chi2 / 2 - np.sum(np.log(sigmas))
@@ -100,3 +102,6 @@ class BayesianTiming:
 
     def scaled_lnlikelihood(self, cube):
         return self.lnlikelihood(self.prior_transform(cube))
+
+    def scale_samples(self, cubes):
+        return np.array(list(map(self.prior_transform, cubes)))
