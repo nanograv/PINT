@@ -114,3 +114,7 @@ class BayesianTiming:
 
     def scale_samples(self, cubes):
         return np.array(list(map(self.prior_transform, cubes)))
+
+    def mcmc_initial_samples(self, npts, shrink=1):
+        initial_sample_cubes = shrink * np.random.rand(npts, self.nparams)
+        return self.scale_samples(initial_sample_cubes)
