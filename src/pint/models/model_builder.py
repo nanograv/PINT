@@ -66,6 +66,7 @@ class ModelBuilder:
     It first maps the provided parameter names to the PINT defined parameter
     names, if they are in the PINT parameter aliases list. Then, the
     ModelBuilder selects model components based on the following rules:
+
         * The components in the :py:attr:`~default_components` list will be selected.
         * When a component get mapped uniquely by the given parameters.
         * The pulsar binary component will be selected by the 'BINARY' parameter.
@@ -293,7 +294,7 @@ class ModelBuilder:
         ----------
         param_inpar: dict
             Dictionary of the unique parameters in .par file with the key is the
-        parfile line. :func:`parse_parfile` returns this dictionary.
+            parfile line. :func:`parse_parfile` returns this dictionary.
 
         Returns
         -------
@@ -310,10 +311,12 @@ class ModelBuilder:
         Note
         ----
         The selection algorithm:
+
             #. Look at the BINARY in the par file and catche the indicated binary model
             #. Translate para file parameters to the pint parameter name
             #. Go over the parameter-component map and pick up the components based
                on the parameters in parfile.
+
                 #. Select the components that have its unique parameters in the parfile.
                    In other words, select the components that have one parameter to
                    on component mapping.
