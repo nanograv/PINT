@@ -50,6 +50,7 @@ res = nestle.sample(
 )
 
 
+# Plot the posterior.
 fig = corner.corner(
     res.samples,
     weights=res.weights,
