@@ -1,4 +1,5 @@
 import io
+from lib2to3.pytree import convert
 import pint.models.model_builder as mb
 import pytest
 
@@ -51,4 +52,17 @@ def model_ICRS():
 def test_model_compare(model_ECL, model_ICRS):
     comparison1 = model_ECL.compare(model_ICRS)
     comparison2 = model_ICRS.compare(model_ECL)
+
     assert isinstance(comparison1, str) and isinstance(comparison2, str)
+
+
+def test_model_compare_convert_coord_y(model_ECL, model_ICRS):
+    comparison1y = model_ECL.compare(model_ICRS, convertcoordinates=True)
+    comparison2y = model_ICRS.compare(model_ECL, convertcoordinates=True)
+    assert isinstance(comparison1y, str) and isinstance(comparison2y, str)
+
+
+def test_model_compare_convert_coord_n(model_ECL, model_ICRS):
+    comparison1n = model_ECL.compare(model_ICRS, convertcoordinates=False)
+    comparison2n = model_ICRS.compare(model_ECL, convertcoordinates=False)
+    assert isinstance(comparison1n, str) and isinstance(comparison2n, str)
