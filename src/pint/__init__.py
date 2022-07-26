@@ -103,12 +103,3 @@ pint_units = {
     "pulse phase": u.dimensionless_unscaled,
     "hourangle_second": hourangle_second,
 }
-
-import astropy.version
-
-if astropy.version.major < 4:
-    log.warning(
-        "Using astropy version {}. To get most recent IERS data, upgrade to astropy >= 4.0".format(
-            astropy.__version__
-        )
-    )
