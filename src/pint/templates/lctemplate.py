@@ -776,7 +776,7 @@ class LCBridgeTemplate(LCTemplate):
         """
         if norms is None:
             norms = np.ones(len(primitives) + 1) / (len(primitives + 1))
-        super(LCBridgeTemplate, self).__init__(primitives, norms)
+        super().__init__(primitives, norms)
         self.p1 = self.primitives[-2]
         self.p2 = self.primitives[-1]
 
@@ -835,7 +835,7 @@ class LCBridgeTemplate(LCTemplate):
         raise NotImplementedError()
 
     def __str__(self):
-        s = super(LCBridgeTemplate, self).__str__()
+        s = super().__str__()
         return "TODO: Add pedestal stuff! \n\n" + s
         # prims = self.primitives
         # s0 = str(self.norms)

@@ -343,7 +343,7 @@ class DesignMatrix(PintMatrix):
     """
 
     def __init__(self, matrix, labels):
-        super(DesignMatrix, self).__init__(matrix, labels)
+        super().__init__(matrix, labels)
 
     @property
     def param_units(self):
@@ -689,7 +689,7 @@ class CovarianceMatrix(PintMatrix):
         # Check if the labels are symmetric
         if len(labels[0]) != len(labels[1]):
             raise ValueError("The input labels are not symmetric.")
-        super(CovarianceMatrix, self).__init__(matrix, labels)
+        super().__init__(matrix, labels)
 
     def _colorize_from_value(self, x, base):
         """Return color setting/un-setting codes

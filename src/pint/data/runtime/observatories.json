@@ -92,12 +92,21 @@
         "itoa_code": "JB",
         "clock_file": "jb2gps.clk",
         "clock_fmt": "tempo2",
+        "bogus_last_correction": true,
+        "itrf_xyz": [
+            3822625.769,
+            -154105.255,
+            5086486.256
+        ],
+        "origin": "The Lovell telescope at Jodrell Bank.\nThese are the coordinates used for VLBI as of March 2020 (MJD 58919). They are based on\na fiducial position at MJD 50449 plus a (continental) drift velocity of\n[-0.0117, 0.0170, 0.0093] m/yr. This data was obtained from Ben Perera in September 2021.\nNote that any actual instrument - DFB, Roach, AFB - requires a different observatory code to obtain the correct clock files."
+    },
+    "jbroach": {
+        "clock_file": [
+            "jbroach2jb.clk",
+            "jb2gps.clk"
+        ],
+        "clock_fmt": "tempo2",
         "aliases": [
-            "jbdfb",
-            "jbroach",
-            "jbafb",
-            "jbodfb",
-            "jboafb",
             "jboroach"
         ],
         "bogus_last_correction": true,
@@ -106,7 +115,56 @@
             -154105.255,
             5086486.256
         ],
-        "origin": "The Lovell telescope at Jodrell Bank.\nThese are the coordinates used for VLBI as of March 2020 (MJD 58919). They are based on\na fiducial position at MJD 50449 plus a (continental) drift velocity of\n[-0.0117, 0.0170, 0.0093] m/yr. This data was obtained from Ben Perera in September 2021.\n"
+        "origin": [
+            "The Lovell telescope at Jodrell Bank.",
+            "These are the coordinates used for VLBI as of March 2020 (MJD 58919). They are based on",
+            "a fiducial position at MJD 50449 plus a (continental) drift velocity of",
+            "[-0.0117, 0.0170, 0.0093] m/yr. This data was obtained from Ben Perera in September 2021.",
+            "This data is for the Roach instrument - a different clock file is required for this instrument to accommodate recorded instrumental delays."
+        ]
+    },
+    "jbdfb": {
+        "clock_file": [
+            "jbdfb2jb.clk",
+            "jb2gps.clk"
+        ],
+        "clock_fmt": "tempo2",
+        "aliases": [
+            "jbodfb"
+        ],
+        "bogus_last_correction": true,
+        "itrf_xyz": [
+            3822625.769,
+            -154105.255,
+            5086486.256
+        ],
+        "origin": [
+            "The Lovell telescope at Jodrell Bank.",
+            "These are the coordinates used for VLBI as of March 2020 (MJD 58919). They are based on",
+            "a fiducial position at MJD 50449 plus a (continental) drift velocity of",
+            "[-0.0117, 0.0170, 0.0093] m/yr. This data was obtained from Ben Perera in September 2021.",
+            "This data is for the DFB instrument - a different clock file is required for this instrument to accommodate recorded instrumental delays."
+        ]
+    },
+    "jbafb": {
+        "clock_file": "",
+        "clock_fmt": "tempo2",
+        "aliases": [
+            "jboafb"
+        ],
+        "bogus_last_correction": true,
+        "itrf_xyz": [
+            3822625.769,
+            -154105.255,
+            5086486.256
+        ],
+        "origin": [
+            "The Lovell telescope at Jodrell Bank.",
+            "These are the coordinates used for VLBI as of March 2020 (MJD 58919). They are based on",
+            "a fiducial position at MJD 50449 plus a (continental) drift velocity of",
+            "[-0.0117, 0.0170, 0.0093] m/yr. This data was obtained from Ben Perera in September 2021.",
+            "This data is for the AFB instrument - This doesn't require any clock corrections."
+        ]
     },
     "jodrell_pre_2021": {
         "clock_file": "jb2gps.clk",

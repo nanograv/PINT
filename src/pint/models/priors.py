@@ -80,7 +80,7 @@ class RandomInclinationPrior(rv_continuous):
     def __init__(self, **kwargs):
         kwargs["a"] = 0
         kwargs["b"] = 1
-        super(RandomInclinationPrior, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def _pdf(self, v):
         return v / (1 - v**2) ** 0.5
