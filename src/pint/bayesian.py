@@ -10,18 +10,22 @@ class BayesianTiming:
         self.model = model
         self.toas = toas
 
-        self._validate_priors()
-
         self.param_labels = self.model.free_params
         self.params = [getattr(model, par) for par in self.param_labels]
         self.nparams = len(self.param_labels)
 
-        self.lnlikelihood_method = self._decide_likelihood_method()
+        self._validate_priors()
+
+        self.likelihood_method = self._decide_likelihood_method()
 
     def _validate_priors(self):
         for param in self.params:
             if not hasattr(param, "prior") or param.prior is None:
                 raise AttributeError(f"Prior is not set for parameter {param.name}.")
+            if isinstance(param.prior._rv, UniformUnboundedRV):
+                raise NotImplementedError(
+                    f"Unbounded uniform priors are not supported. (param : {param.name})"
+                )
 
     def _decide_likelihood_method(self):
         if "NoiseComponent" not in self.model.component_types:
@@ -59,7 +63,9 @@ class BayesianTiming:
 
     def prior_transform(self, cube):
         """Basic implementation of prior transform for a factorized prior."""
-        result = np.array([param.prior.ppf(x) for x, param in zip(cube, self.params)])
+        result = np.array(
+            [param.prior._rv.ppf(x) for x, param in zip(cube, self.params)]
+        )
         return result
 
     def lnlikelihood(self, params):
@@ -73,13 +79,13 @@ class BayesianTiming:
             )
 
     def _wls_lnlikelihood(self, params):
-        params_dict = dict(zip(self.free_params, params))
+        params_dict = dict(zip(self.param_labels, params))
         self.model.set_param_values(params_dict)
         res = Residuals(self.toas, self.model)
         return -res.calc_chi2() / 2
 
     def _wls_wn_lnlikelihood(self, params):
-        params_dict = dict(zip(self.free_params, params))
+        params_dict = dict(zip(self.param_labels, params))
         self.model.set_param_values(params_dict)
         res = Residuals(self.toas, self.model)
         chi2 = res.calc_chi2()
