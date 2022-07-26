@@ -1,3 +1,5 @@
+from cmath import isnan
+from re import L
 from pint.models.priors import UniformUnboundedRV
 import numpy as np
 from scipy.stats import rv_continuous, uniform, norm
@@ -79,6 +81,13 @@ class BayesianTiming:
             raise NotImplementedError(
                 f"Likelihood function for method {self.likelihood_method} not implemented yet."
             )
+
+    def lnposterior(self, params):
+        lnpr = self.lnprior(params)
+        if np.isnan(lnpr):
+            return -np.inf
+        else:
+            return lnpr + self.lnlikelihood(params)
 
     def _wls_lnlikelihood(self, params):
         params_dict = dict(zip(self.param_labels, params))
