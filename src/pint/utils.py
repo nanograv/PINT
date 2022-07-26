@@ -1598,11 +1598,11 @@ def group_iterator(items):
     Example
     -------
     This will step over all of the observatories in the TOAs.
-    For each iteration it gives the observatory name and the indices that correspond to it
+    For each iteration it gives the observatory name and the indices that correspond to it:
 
-        t = pint.toa.get_TOAs("grouptest.tim")
-        for o, i in group_iterator(t["obs"]):
-            print(f"{o} {i}")
+        >>> t = pint.toa.get_TOAs("grouptest.tim")
+        >>> for o, i in group_iterator(t["obs"]):
+        >>>     print(f"{o} {i}")
 
     """
     for item in np.unique(items):

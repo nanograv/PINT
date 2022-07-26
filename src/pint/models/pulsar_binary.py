@@ -13,7 +13,12 @@ from loguru import logger as log
 from pint import ls
 from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
 from pint.models.stand_alone_psr_binaries import binary_orbits as bo
-from pint.models.timing_model import DelayComponent, MissingParameter, UnknownParameter
+from pint.models.timing_model import (
+    DelayComponent,
+    MissingParameter,
+    TimingModelError,
+    UnknownParameter,
+)
 from pint.utils import taylor_horner_deriv
 from pint.pulsar_ecliptic import PulsarEcliptic
 

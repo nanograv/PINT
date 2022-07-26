@@ -1821,6 +1821,7 @@ class TimingModel:
         verbosity : string, optional
             Dictates amount of information returned. Options include "max",
             "med", and "min", which have the following results:
+
                 "max"     - print all lines from both models whether they are fit or not (note that nodmx will override this); DEFAULT
                 "med"     - only print lines for parameters that are fit
                 "min"     - only print lines for fit parameters for which diff_sigma > threshold
