@@ -89,17 +89,17 @@ class TopoObs(Observatory):
 
     name : str
         The name of the observatory
-    itrf_xyz : astropy.units.Quantity or array-like
+    itrf_xyz : ~astropy.units.Quantity or array-like
         IRTF site coordinates (len-3 array).  Can include
         astropy units.  If no units are given, meters are
         assumed.
-    lat : astropy.units.Quantity or float, optional
+    lat : ~astropy.units.Quantity or float, optional
         Earth East longitude.  Can be anything that initialises an
-        `~astropy.coordinates.Angle` object (if float, in degrees).
-    lon : astropy.units.Quantity or float, optional
+        :class:`~astropy.coordinates.Angle` object (if float, in degrees).
+    lon : ~astropy.units.Quantity or float, optional
         Earth latitude.  Can be anything that initialises an
-        `~astropy.coordinates.Angle` object (if float, in degrees).
-    alt : `~astropy.units.Quantity` ['length'] or float, optional
+        :class:`~astropy.coordinates.Angle` object (if float, in degrees).
+    alt : ~astropy.units.Quantity ['length'] or float, optional
         Height above reference ellipsoid (if float, in meters; default: 0).
     tempo_code : str, optional
         1-character tempo code for the site.  Will be
@@ -142,7 +142,7 @@ class TopoObs(Observatory):
 
     Note
     ----
-    Either ``itrf_xyz`` or ``lat``,``lon``,``alt`` must be specified
+    Either ``itrf_xyz`` or ``lat``, ``lon``, ``alt`` must be specified
 
     """
 
