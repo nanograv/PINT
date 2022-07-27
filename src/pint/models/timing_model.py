@@ -1951,7 +1951,7 @@ class TimingModel:
             "AstrometryEquatorial" in self.components
             and "AstrometryEcliptic" in othermodel.components
         ):
-            if convertcoordinatess:
+            if convertcoordinates:
                 log.warning(f"Converting {other_model_name} from ECL to ICRS")
                 othermodel = othermodel.as_ICRS()
             else:
