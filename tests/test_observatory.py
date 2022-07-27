@@ -3,9 +3,12 @@ import io
 import os
 from pathlib import Path
 import unittest
+import json
 
 import numpy as np
 import pytest
+from astropy import units as u
+
 from pint.pulsar_mjd import Time
 
 import pint.observatory
@@ -288,3 +291,28 @@ def test_json_observatory_output(sandbox):
 
     for p in gbt_orig.__dict__:
         assert getattr(gbt_orig, p) == getattr(gbt_reload, p)
+
+
+def test_json_observatory_output_latlon(sandbox):
+    gbt_orig = get_observatory("gbt")
+    gbt_dict = gbt_orig.as_dict
+    # remove ITRF
+    del gbt_dict["gbt"]["itrf_xyz"]
+    # add in geodetic
+    gbt_dict["gbt"]["lat"] = gbt_orig.lat.value
+    gbt_dict["gbt"]["lon"] = gbt_orig.lon.value
+    gbt_dict["gbt"]["alt"] = gbt_orig.alt.value
+    load_observatories(io.StringIO(json.dumps(gbt_dict)), overwrite=True)
+    gbt_reload = get_observatory("gbt")
+
+    for p in gbt_orig.__dict__:
+        if not p == "_loc_itrf":
+            # everything else should be identical
+            assert getattr(gbt_orig, p) == getattr(gbt_reload, p)
+    # check distance separately to allow for precision
+    distance = np.sqrt(
+        (gbt_orig.x - gbt_reload.x) ** 2
+        + (gbt_orig.y - gbt_reload.y) ** 2
+        + (gbt_orig.z - gbt_reload.z) ** 2
+    )
+    assert distance < 1 * u.m

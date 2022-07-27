@@ -269,8 +269,8 @@ class TopoObs(Observatory):
         return self._loc_itrf.to_geodetic()
 
     @property
-    def as_json(self):
-        """Return a JSON string"""
+    def as_dict(self):
+        """Return as a dict with limited/changed info"""
         # is this better than the builtin __dict__ method and then updating some values?
         output = {}
         output["itrf_xyz"] = [x.to_value(u.m) for x in self.geocentric]
@@ -295,7 +295,11 @@ class TopoObs(Observatory):
             output[p] = getattr(self, p)
         if self.origin is not None and len(self.origin) > 0:
             output["origin"] = self.origin
-        return json.dumps({self.name: output})
+        return {self.name: output}
+
+    @property
+    def as_json(self):
+        return json.dumps(self.as_dict)
 
     def earth_location_itrf(self, time=None):
         return self._loc_itrf
