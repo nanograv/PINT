@@ -1,4 +1,5 @@
-from pint.models.priors import UniformUnboundedRV
+from scipy.stats import uniform, norm
+from pint.models.priors import UniformUnboundedRV, Prior
 from pint.residuals import Residuals
 from pint.logging import log
 
@@ -17,6 +18,9 @@ class BayesianTiming:
     use_pulse_numbers : bool, optional
         How to handle phase wrapping. If True, will use the pulse numbers from the toas object
         while creating :class:`pint.residuals.Residuals` objects. Otherwise will use the nearest integer.
+    prior_info : dict, optional
+        A dict containing the prior information on free parameters. This parameter supersedes any priors
+        present in the model.
 
     Notes
     -----
@@ -25,13 +29,23 @@ class BayesianTiming:
     * Sampling over white noise parameters is supported, but sampling red noise parameters is not yet implemented.
     """
 
-    def __init__(self, model, toas, use_pulse_numbers=False):
+    def __init__(self, model, toas, use_pulse_numbers=False, prior_info=None):
         self.model = model
         self.toas = toas
 
         self.param_labels = self.model.free_params
         self.params = [getattr(model, par) for par in self.param_labels]
         self.nparams = len(self.param_labels)
+
+        if prior_info is not None:
+            for par in prior_info.keys():
+                distr = prior_info[par]["distr"]
+                if distr == "uniform":
+                    pmax, pmin = prior_info[par]["pmax"], prior_info[par]["pmin"]
+                    getattr(self.model, par).prior = Prior(uniform(pmin, pmax - pmin))
+                elif distr == "normal":
+                    mu, sigma = prior_info[par]["mu"], prior_info[par]["sigma"]
+                    getattr(self.model, par).prior = Prior(norm(mu, sigma))
 
         self._validate_priors()
 
