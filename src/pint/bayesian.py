@@ -1,5 +1,6 @@
 from pint.models.priors import UniformUnboundedRV
 from pint.residuals import Residuals
+from pint.logging import log
 
 import numpy as np
 
@@ -60,7 +61,7 @@ class BayesianTiming:
                 ]
             )
             if not correlated_errors_present:
-                return "wls_wn"
+                return "wls"
             else:
                 raise NotImplementedError(
                     "Likelihood function for correlated noise is not implemented yet."
@@ -107,11 +108,10 @@ class BayesianTiming:
         return result
 
     def lnlikelihood(self, params):
-        """The Log-likelihood function. If the free parameters do not contain any noise parameters,
-        this is simply equal to -chisq/2 where chisq is the weighted least-squares metric. If the
-        free parameters contain uncorrelated noise parameters, this is equal to -chisq/2 plus the
-        normalization term containing the noise parameters. If the the free parameters contain
-        correlated noise parameters, this is equal to -chisq/2 plus the normalization term where chisq
+        """The Log-likelihood function. If the model does not contain any noise components or
+        if the model contains only uncorrelated noise components, this is equal to -chisq/2 plus the
+        normalization term containing the noise parameters. If the the model contains
+        correlated noise, this is equal to -chisq/2 plus the normalization term where chisq
         is the generalized least-squares metric (Not Implemented yet). For reference, see, e.g.,
             https://doi.org/10.1093/mnras/stt2122
 
@@ -123,12 +123,12 @@ class BayesianTiming:
         """
         if self.likelihood_method == "wls":
             return self._wls_lnlikelihood(params)
-        elif self.likelihood_method == "wls_wn":
-            return self._wls_wn_lnlikelihood(params)
-        else:
+        elif self.likelihood_method == "gls":
             raise NotImplementedError(
-                f"Likelihood function for method {self.likelihood_method} not implemented yet."
+                f"Likelihood function for method gls not implemented yet."
             )
+        else:
+            raise ValueError(f"Unknown likelihood method '{self.likelihood_method}'.")
 
     def lnposterior(self, params):
         """Log-posterior function. If the prior evaluates to zero, the likelihood is not evaluated.
@@ -146,12 +146,6 @@ class BayesianTiming:
             return lnpr + self.lnlikelihood(params)
 
     def _wls_lnlikelihood(self, params):
-        params_dict = dict(zip(self.param_labels, params))
-        self.model.set_param_values(params_dict)
-        res = Residuals(self.toas, self.model, track_mode=self.track_mode)
-        return -res.calc_chi2() / 2
-
-    def _wls_wn_lnlikelihood(self, params):
         params_dict = dict(zip(self.param_labels, params))
         self.model.set_param_values(params_dict)
         res = Residuals(self.toas, self.model, track_mode=self.track_mode)
