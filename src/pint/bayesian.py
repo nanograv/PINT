@@ -1,13 +1,29 @@
-from cmath import isnan
-from re import L
 from pint.models.priors import UniformUnboundedRV
-import numpy as np
-from scipy.stats import rv_continuous, uniform, norm
-from scipy.special import ndtri
 from pint.residuals import Residuals
+
+import numpy as np
 
 
 class BayesianTiming:
+    """A wrapper around the PINT API that provides lnprior, prior_transform, lnlikelihood, and lnposterior functions.
+    This interface can be used to draw posterior samples using the sampler of your choice.
+
+    Parameters
+    ----------
+    model : :class:`pint.models.TimingModel`
+        The best-fit values stored in this object are not used.
+    toas : a :class:`pint.toa.TOAs` instance. Contains the input toas.
+    use_pulse_numbers : bool, optional
+        How to handle phase wrapping. If True, will use the pulse numbers from the toas object
+        while creating :class:`pint.residuals.Residuals` objects. Otherwise will use the nearest integer.
+
+    Notes
+    -----
+    * The `prior` attribute of each free parameter in the `model` object should be set to an instance of
+      :class:`pint.models.priors.Prior`.
+    * Sampling over white noise parameters is supported, but sampling red noise parameters is not yet implemented.
+    """
+
     def __init__(self, model, toas, use_pulse_numbers=False):
         self.model = model
         self.toas = toas
@@ -114,7 +130,3 @@ class BayesianTiming:
 
     def scale_samples(self, cubes):
         return np.array(list(map(self.prior_transform, cubes)))
-
-    def mcmc_initial_samples(self, npts, shrink=1):
-        initial_sample_cubes = shrink * np.random.rand(npts, self.nparams)
-        return self.scale_samples(initial_sample_cubes)
