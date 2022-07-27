@@ -34,6 +34,8 @@ class BayesianTiming:
 
         self._validate_priors()
 
+        # Simple weighted least-squares (wls), Weighted least squares with normalization term for white noise (wls_wn),
+        # or Generalized least-squares with normalization term (gls). gls is not implemented yet.
         self.likelihood_method = self._decide_likelihood_method()
 
         self.track_mode = "use_pulse_numbers" if use_pulse_numbers else "nearest"
@@ -65,7 +67,15 @@ class BayesianTiming:
                 )
 
     def lnprior(self, params):
-        """Basic implementation of a factorized log prior."""
+        """Basic implementation of a factorized log prior.
+        More complex priors must be separately implemented
+
+        Args:
+            params (array-like): Parameters
+
+        Returns:
+            float: Value of the log-prior at params
+        """
         if len(params) != self.nparams:
             raise IndexError(
                 f"The number of input parameters ({len(params)}) should be the same as the number of free parameters ({self.nparams})."
@@ -82,13 +92,35 @@ class BayesianTiming:
         return lnsum
 
     def prior_transform(self, cube):
-        """Basic implementation of prior transform for a factorized prior."""
+        """Basic implementation of prior transform for a factorized prior.
+        More complex prior transforms must be separately implemented
+
+        Args:
+            cube (array-like): Sample drawn from a uniform distribution defined in a nparams-dimensional unit hypercube.
+
+        Returns:
+            ndarray : Sample drawn from the prior distribution
+        """
         result = np.array(
             [param.prior._rv.ppf(x) for x, param in zip(cube, self.params)]
         )
         return result
 
     def lnlikelihood(self, params):
+        """The Log-likelihood function. If the free parameters do not contain any noise parameters,
+        this is simply equal to -chisq/2 where chisq is the weighted least-squares metric. If the
+        free parameters contain uncorrelated noise parameters, this is equal to -chisq/2 plus the
+        normalization term containing the noise parameters. If the the free parameters contain
+        correlated noise parameters, this is equal to -chisq/2 plus the normalization term where chisq
+        is the generalized least-squares metric (Not Implemented yet). For reference, see, e.g.,
+            https://doi.org/10.1093/mnras/stt2122
+
+        Args:
+            params (array-like): Parameters
+
+        Returns:
+            float: The value of the log-likelihood at params
+        """
         if self.likelihood_method == "wls":
             return self._wls_lnlikelihood(params)
         elif self.likelihood_method == "wls_wn":
@@ -99,6 +131,14 @@ class BayesianTiming:
             )
 
     def lnposterior(self, params):
+        """Log-posterior function. If the prior evaluates to zero, the likelihood is not evaluated.
+
+        Args:
+            params (array-like): Parameters
+
+        Returns:
+            float: The value of the log-posterior at params
+        """
         lnpr = self.lnprior(params)
         if np.isnan(lnpr):
             return -np.inf
