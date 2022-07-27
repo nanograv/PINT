@@ -290,7 +290,8 @@ def test_json_observatory_output(sandbox):
     gbt_reload = get_observatory("gbt")
 
     for p in gbt_orig.__dict__:
-        assert getattr(gbt_orig, p) == getattr(gbt_reload, p)
+        if not p in ["_clock"]:
+            assert getattr(gbt_orig, p) == getattr(gbt_reload, p)
 
 
 def test_json_observatory_output_latlon(sandbox):
@@ -306,7 +307,7 @@ def test_json_observatory_output_latlon(sandbox):
     gbt_reload = get_observatory("gbt")
 
     for p in gbt_orig.__dict__:
-        if not p == "_loc_itrf":
+        if not p in ["_loc_itrf", "_clock"]:
             # everything else should be identical
             assert getattr(gbt_orig, p) == getattr(gbt_reload, p)
     # check distance separately to allow for precision
