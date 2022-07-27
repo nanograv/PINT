@@ -184,6 +184,10 @@ class TopoObs(Observatory):
             self._loc_itrf = EarthLocation.from_geocentric(*xyz)
         elif lat is not None and lon is not None and alt is not None:
             self._loc_itrf = EarthLocation.from_geodetic(lat=lat, lon=lon, height=alt)
+        else:
+            raise ValueError(
+                f"Must supply lat/lon/alt for observatory '{name}' if ITRF coordinates not present"
+            )
 
         #
         # Save clock file info, the data will be read only if clock
@@ -299,6 +303,7 @@ class TopoObs(Observatory):
 
     @property
     def as_json(self):
+        """Return as a JSON string"""
         return json.dumps(self.as_dict)
 
     def earth_location_itrf(self, time=None):

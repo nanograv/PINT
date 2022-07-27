@@ -316,3 +316,19 @@ def test_json_observatory_output_latlon(sandbox):
         + (gbt_orig.z - gbt_reload.z) ** 2
     )
     assert distance < 1 * u.m
+
+
+def test_json_observatory_output_latlon_and_itrf(sandbox):
+    gbt_orig = get_observatory("gbt")
+    gbt_dict = gbt_orig.as_dict
+    # add in geodetic
+    gbt_dict["gbt"]["lat"] = gbt_orig.lat.value
+    gbt_dict["gbt"]["lon"] = gbt_orig.lon.value
+    gbt_dict["gbt"]["alt"] = gbt_orig.alt.value
+    with pytest.raises(ValueError):
+        load_observatories(io.StringIO(json.dumps(gbt_dict)), overwrite=True)
+
+    del gbt_dict["gbt"]["itrf_xyz"]
+    del gbt_dict["gbt"]["lat"]
+    with pytest.raises(ValueError):
+        load_observatories(io.StringIO(json.dumps(gbt_dict)), overwrite=True)
