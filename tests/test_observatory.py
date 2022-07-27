@@ -279,3 +279,12 @@ def test_observatory_override(sandbox, overwrite):
 
 def test_list_last_correction_mjds_runs():
     pint.observatory.list_last_correction_mjds()
+
+
+def test_json_observatory_output(sandbox):
+    gbt_orig = get_observatory("gbt")
+    load_observatories(io.StringIO(gbt_orig.as_json), overwrite=True)
+    gbt_reload = get_observatory("gbt")
+
+    for p in gbt_orig.__dict__:
+        assert getattr(gbt_orig, p) == getattr(gbt_reload, p)

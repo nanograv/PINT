@@ -142,6 +142,9 @@ class TopoObs(Observatory):
         itoa_code=None,
         aliases=None,
         itrf_xyz=None,
+        lat=None,
+        lon=None,
+        alt=None,
         clock_file="",
         clock_fmt="tempo",
         clock_dir=None,
@@ -152,26 +155,37 @@ class TopoObs(Observatory):
         overwrite=False,
         bogus_last_correction=False,
     ):
-        # ITRF coordinates are required
-        if itrf_xyz is None:
-            raise ValueError("ITRF coordinates not given for observatory '%s'" % name)
-
-        # Convert coords to standard format.  If no units are given, assume
-        # meters.
-        if not has_astropy_unit(itrf_xyz):
-            xyz = np.array(itrf_xyz) * u.m
-        else:
-            xyz = itrf_xyz.to(u.m)
-
-        # Check for correct array dims
-        if xyz.shape != (3,):
+        if lat is None and lon is None and alt is None and itrf_xyz is None:
             raise ValueError(
-                "Incorrect coordinate dimensions for observatory '%s'" % (name)
+                "ITRF coordinates or lat/lon/alt are required for observatory '%s'"
+                % name
             )
 
-        # Convert to astropy EarthLocation, ensuring use of ITRF geocentric coordinates
-        self._loc_itrf = EarthLocation.from_geocentric(*xyz)
+        if itrf_xyz is not None and (
+            lat is not None and lon is not None and alt is not None
+        ):
+            raise ValueError(
+                f"Cannot supply both ITRF coordinates and lat/lon/alt for observatory '{name}'"
+            )
 
+        if itrf_xyz is not None:
+            # Convert coords to standard format.  If no units are given, assume
+            # meters.
+            if not has_astropy_unit(itrf_xyz):
+                xyz = np.array(itrf_xyz) * u.m
+            else:
+                xyz = itrf_xyz.to(u.m)
+            # Check for correct array dims
+            if xyz.shape != (3,):
+                raise ValueError(
+                    "Incorrect coordinate dimensions for observatory '%s'" % (name)
+                )
+            # Convert to astropy EarthLocation, ensuring use of ITRF geocentric coordinates
+            self._loc_itrf = EarthLocation.from_geocentric(*xyz)
+        elif lat is not None and lon is not None and alt is not None:
+            self._loc_itrf = EarthLocation.from_geodetic(lat=lat, lon=lon, height=alt)
+
+        #
         # Save clock file info, the data will be read only if clock
         # corrections for this site are requested.
         self.clock_file = clock_file
@@ -195,6 +209,7 @@ class TopoObs(Observatory):
         self.bogus_last_correction = bogus_last_correction
 
         self.tempo_code = tempo_code
+        self.itoa_code = itoa_code
         if aliases is None:
             aliases = []
         for code in (tempo_code, itoa_code):
@@ -212,6 +227,75 @@ class TopoObs(Observatory):
     @property
     def timescale(self):
         return "utc"
+
+    @property
+    def x(self):
+        """The X component of the geocentric coordinates."""
+        return self._loc_itrf.x
+
+    @property
+    def y(self):
+        """The Y component of the geocentric coordinates."""
+        return self._loc_itrf.y
+
+    @property
+    def z(self):
+        """The Z component of the geocentric coordinates."""
+        return self._loc_itrf.z
+
+    @property
+    def geocentric(self):
+        """Convert to a tuple with X, Y, and Z as quantities"""
+        return self._loc_itrf.to_geocentric()
+
+    @property
+    def lat(self):
+        """Latitude of the location, for the default ellipsoid."""
+        return self._loc_itrf.lat
+
+    @property
+    def lon(self):
+        """Longitude of the location, for the default ellipsoid."""
+        return self._loc_itrf.lon
+
+    @property
+    def alt(self):
+        """Altitude of the location, for the default ellipsoid."""
+        return self._loc_itrf.height
+
+    @property
+    def geodetic(self):
+        """Convert to geodetic coordinates for the default ellipsoid."""
+        return self._loc_itrf.to_geodetic()
+
+    @property
+    def as_json(self):
+        """Return a JSON string"""
+        # is this better than the builtin __dict__ method and then updating some values?
+        output = {}
+        output["itrf_xyz"] = [x.to_value(u.m) for x in self.geocentric]
+        if len(self.aliases) > 0:
+            output["aliases"] = self.aliases
+        if self.tempo_code is not None:
+            output["tempo_code"] = self.tempo_code
+        if self.itoa_code is not None:
+            output["itoa_code"] = self.itoa_code
+        if self.clock_file is not None and len(self.clock_file) > 0:
+            output["clock_file"] = self.clock_file
+        if self.clock_fmt is not None and len(self.clock_fmt) > 0:
+            output["clock_fmt"] = self.clock_fmt
+        if self.clock_dir is not None:
+            output["clock_dir"] = self.clock_dir
+        for p in [
+            "include_gps",
+            "include_bipm",
+            "bipm_version",
+            "bogus_last_correction",
+        ]:
+            output[p] = getattr(self, p)
+        if self.origin is not None and len(self.origin) > 0:
+            output["origin"] = self.origin
+        return json.dumps({self.name: output})
 
     def earth_location_itrf(self, time=None):
         return self._loc_itrf
