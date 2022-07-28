@@ -1,7 +1,8 @@
 """Test basic functionality of the :module:`pint.utils`."""
 import os
 from itertools import product
-from tempfile import NamedTemporaryFile
+from pathlib import Path
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 import astropy.constants as c
 import astropy.units as u
@@ -12,6 +13,7 @@ from astropy.time import Time
 from hypothesis import assume, example, given
 from hypothesis.extra.numpy import array_shapes, arrays, scalar_dtypes
 from hypothesis.strategies import (
+    binary,
     composite,
     floats,
     integers,
@@ -19,6 +21,7 @@ from hypothesis.strategies import (
     one_of,
     sampled_from,
     slices,
+    tuples,
 )
 from numdifftools import Derivative
 from numpy.testing import assert_allclose, assert_array_equal
@@ -40,13 +43,14 @@ from pint.pulsar_mjd import (
 from pint.utils import (
     FTest,
     PosVel,
+    compute_hash,
     dmxparse,
     interesting_lines,
     lines_of,
+    list_parameters,
     open_or_use,
     taylor_horner,
     taylor_horner_deriv,
-    list_parameters,
 )
 
 
@@ -727,3 +731,37 @@ def test_taylor_horner_units_ok(x, result, n):
 
 def test_list_parameters():
     list_parameters()
+
+
+@given(
+    tuples(binary(max_size=1_000_000), binary(max_size=1_000_000)).filter(
+        lambda t: t[0] != t[1]
+    )
+)
+def test_compute_hash_detects_changes(a_b):
+    a, b = a_b
+    with TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+
+        f = tmp_path / "file"
+        f.write_bytes(a)
+        h_a = compute_hash(f)
+        f.write_bytes(b)
+        h_b = compute_hash(f)
+        assert h_a != h_b
+
+
+@given(binary(max_size=1_000_000))
+def test_compute_hash_accepts_no_change(a):
+    with TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+
+        f = tmp_path / "file"
+        f.write_bytes(a)
+        h_a = compute_hash(f)
+
+        g = tmp_path / "file2"
+        g.write_bytes(a)
+        h_b = compute_hash(g)
+
+    assert h_a == h_b

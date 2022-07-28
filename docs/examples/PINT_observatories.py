@@ -44,7 +44,7 @@ print(gbt)
 # The observatory also includes info on things like the clock file:
 
 # %%
-print(f"GBT clock file is named '{gbt.clock_file}'")
+print(f"GBT clock file is named '{gbt.clock_files}'")
 
 # %% [markdown]
 # Some special locations are also present, like the solar system barycenter.  You can access explicitly through the `pint.observatory.special_locations` module, but if you just try to get one it will automatically import what is needed
