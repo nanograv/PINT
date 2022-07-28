@@ -311,11 +311,7 @@ def test_json_observatory_output_latlon(sandbox):
             # everything else should be identical
             assert getattr(gbt_orig, p) == getattr(gbt_reload, p)
     # check distance separately to allow for precision
-    distance = np.sqrt(
-        (gbt_orig.x - gbt_reload.x) ** 2
-        + (gbt_orig.y - gbt_reload.y) ** 2
-        + (gbt_orig.z - gbt_reload.z) ** 2
-    )
+    distance = gbt_orig.separation(gbt_reload)
     assert distance < 1 * u.m
 
 

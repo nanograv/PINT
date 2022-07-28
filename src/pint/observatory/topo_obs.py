@@ -318,6 +318,40 @@ class TopoObs(Observatory):
         """Return as a JSON string"""
         return json.dumps(self.as_dict)
 
+    def separation(self, other, method="cartesian"):
+        """Return separation between two TopoObs objects
+
+        Parameters
+        ----------
+        other : TopoObs
+        method : str, optional
+            Method to compute separation.  Either "cartesian" or "geodesic"
+
+        Returns
+        -------
+        astropy.quantity.Quantity
+
+        Note
+        ----
+        "geodesic" method assumes a spherical Earth and ignores altitudes
+        """
+        assert method.lower() in ["cartesian", "geodesic"]
+        assert isinstance(other, TopoObs)
+
+        if method.lower() == "cartesian":
+            return np.sqrt(
+                (self.x - other.x) ** 2
+                + (self.y - other.y) ** 2
+                + (self.z - other.z) ** 2
+            )
+        elif method.lower() == "geodesic":
+            # this assumes a spherical Earth
+            dsigma = np.arccos(
+                np.sin(self.lat) * np.sin(other.lat)
+                + np.cos(self.lat) * np.cos(other.lat) * np.cos(self.lon - other.lon)
+            )
+            return (c.R_earth * dsigma).to(u.m, equivalencies=u.dimensionless_angles())
+
     def earth_location_itrf(self, time=None):
         return self._loc_itrf
 
