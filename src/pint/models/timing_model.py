@@ -553,6 +553,16 @@ class TimingModel:
         return c
 
     def get_params_of_component_type(self, component_type):
+        """Get a list of parameters belonging to a component type.
+
+        Parameters
+        ----------
+        component_type : "PhaseComponent", "DelayComponent", "NoiseComponent"
+
+        Returns
+        -------
+        list
+        """
         component_type_list_str = "{}_list".format(component_type)
         if hasattr(self, component_type_list_str):
             component_type_list = getattr(self, component_type_list_str)
