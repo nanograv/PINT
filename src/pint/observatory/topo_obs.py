@@ -37,6 +37,7 @@ from pint.observatory import (
     ClockCorrectionError,
     NoClockCorrections,
     ClockCorrectionOutOfRange,
+    earth_location_distance,
 )
 from pint.observatory.clock_file import ClockFile, GlobalClockFile
 from pint.pulsar_mjd import Time
@@ -314,11 +315,7 @@ class TopoObs(Observatory):
         assert isinstance(other, TopoObs)
 
         if method.lower() == "cartesian":
-            return np.sqrt(
-                (self.x - other.x) ** 2
-                + (self.y - other.y) ** 2
-                + (self.z - other.z) ** 2
-            )
+            return earth_location_distance(self.location, other.location)
         elif method.lower() == "geodesic":
             # this assumes a spherical Earth
             dsigma = np.arccos(

@@ -183,6 +183,141 @@ not (this is a particular concern when working with X-ray or gamma-ray data).
 .. _TAI: https://www.bipm.org/en/bipm-services/timescales/tai.html
 .. _wiki: https://github.com/nanograv/PINT/wiki/Clock-Corrections-and-Timescales-in-PINT
 
+Observatories
+-------------
+
+PINT comes with a number of defined observatories.  Those on the surface of the Earth are :class:`~pint.observatory.topo_obs.TopoObs` 
+instances.  It can also pull in observatories from ``astropy``, 
+and you can define your own.  Observatories are generally referenced when reading TOA files, but can also be accessed directly::
+
+  import pint.observatory
+  gbt = pint.observatory.get_observatory("gbt")  
+
+Observatory definitions
+'''''''''''''''''''''''
+
+Observatory definitions are included in ``pint.config.runtimefile("observatories.json")``.  To see the existing names::
+
+  import pint.observatory
+  observatories = pint.observatory.Observatory.names_and_aliases()
+
+will return a dictionary giving all of the names (primary keys) and potential aliases (values).
+
+The observatory data are stored in JSON format.  A simple example is::
+
+    "gbt": {
+        "tempo_code": "1",
+        "itoa_code": "GB",
+        "clock_file": "time_gbt.dat",
+        "itrf_xyz": [
+            882589.289,
+            -4924872.368,
+            3943729.418
+        ],
+        "origin": "The Robert C. Byrd Green Bank Telescope.\nThis data was obtained by Joe Swiggum from Ryan Lynch in 2021 September.\n"
+    }
+
+The observatory is defined by its name (``gbt``) and its position.  This can be given as geocentric coordinates in the 
+International_Terrestrial_Reference_System_ (ITRF) through the ``itrf_xyz`` triple (units as ``m``), or geodetic coordinates 
+(WGS84_ assumed) through ``lat``, ``lon``, ``alt`` 
+(units are ``deg`` and ``m``).  Conversion is done through Astropy_EarthLocation_.
+
+Other attributes are optional.  Here we have also specified the ``tempo_code`` and ``itoa_code``, and a human-readable ``origin`` string.
+
+A more complex/complete example is::
+
+  "jbroach": {
+        "clock_file": [
+            {
+                "name": "jbroach2jb.clk",
+                "valid_beyond_ends": true
+            },
+            "jb2gps.clk"
+        ],
+        "clock_fmt": "tempo2",
+        "aliases": [
+            "jboroach"
+        ],
+        "bogus_last_correction": true,
+        "itrf_xyz": [
+            3822625.769,
+            -154105.255,
+            5086486.256
+        ],
+        "origin": [
+            "The Lovell telescope at Jodrell Bank.",
+            "These are the coordinates used for VLBI as of March 2020 (MJD 58919). They are based on",
+            "a fiducial position at MJD 50449 plus a (continental) drift velocity of",
+            "[-0.0117, 0.0170, 0.0093] m/yr. This data was obtained from Ben Perera in September 2021.",
+            "This data is for the Roach instrument - a different clock file is required for this instrument to accommodate recorded instrumental delays."
+        ]
+    }
+
+Here we have included additional explicit ``aliases``, specified the clock format via ``clock_fmt``, and specified that the last entry in the 
+clock file is bogus (``bogus_last_correction``).  There are two clock files included in ``clock_file``:
+
+* ``jbroach2jb.clk`` (where we also specify that it is ``valid_beyond_ends``)
+* ``jb2gps.clk``
+
+These are combined to reference this particular telescope/instrument combination.
+
+Adding New Observatories
+''''''''''''''''''''''''
+
+In addition to modifying ``pint.config.runtimefile("observatories.json")``, there are other ways to add new observatories.  
+
+1. You can define them pythonically:
+::
+
+    import pint.observatory.topo_obs
+    import astropy.coordinates
+    newobs = pint.observatory.topo_obs.TopoObs("newobs", location=astropy.coordinates.EarthLocation.of_site("keck"), origin="another way to get Keck")
+
+This can be done by specifying the ITRF coordinates, (``lat``, ``lon``, ``alt``), or a :class:`~astropy.coordinates.EarthLocation` instance.
+
+2. You can include them just for the duration of your python session:
+::
+
+    import io
+    from pint.observatory.topo_obs import load_observatories
+    # GBT but no clock file
+    fakeGBT = r"""{
+        "gbt": {
+            "tempo_code": "1",
+            "itoa_code": "GB",
+            "clock_file": "",
+            "itrf_xyz": [
+                882589.289,
+                -4924872.368,
+                3943729.418
+            ],
+            "origin": "The Robert C. Byrd Green Bank Telescope.\nThis data was obtained by Joe Swiggum from Ryan Lynch in 2021 September.\nHowever this has no clock correction"
+        }
+        }"""
+    load_observatories(io.StringIO(fakeGBT), overwrite=True)
+
+Note that since we are overwriting an existing observatory (rather than defining a completely new one) we specify ``overwrite=True``.  
+**Make sure you do this before you load any TOAs.**
+
+3. You can define them in a different file on disk.  If you took the JSON above and put it into a file ``/home/user/anothergbt.json``, 
+you could then do::
+
+    export $PINT_OBS_OVERRIDE=/home/user/anothergbt.json
+
+(or the equivalent in your shell of choice) before you start any PINT scripts.  By default this will overwrite any existing definitions.
+
+4. You can rely on ``astropy``.  For instance:
+::
+
+    import pint.observatory
+    keck = pint.observatory.Observatory.get("keck")
+
+will find Keck.  :func:`astropy.coordinates.EarthLocation.get_site_names` will return a list of potential observatories.
+
+.. _International_Terrestrial_Reference_System: https://en.wikipedia.org/wiki/International_Terrestrial_Reference_System_and_Frame
+.. _WGS84: https://en.wikipedia.org/wiki/World_Geodetic_System#WGS84
+.. _Astropy_EarthLocation: https://docs.astropy.org/en/stable/api/astropy.coordinates.EarthLocation.html
+
 External Data
 -------------
 
