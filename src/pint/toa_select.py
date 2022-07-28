@@ -13,8 +13,8 @@ class TOASelect:
     Parameters
     ----------
     is_range: bool
-        If this toa seclection a range selection.
-    use_hash: bool, optional [defualt: False]
+        Is this toa selection a range selection.
+    use_hash: bool, optional [default: False]
         If use hash for caching.
 
     Note
@@ -23,7 +23,7 @@ class TOASelect:
         - Ranged condition in the format of {'DMX_0001':(54000, 54001), ...}
         - Key condition in the format of {'JUMP1': 'L-wide', ...}
 
-    Putting an object as condition will slow the process dramtically.
+    Putting an object as condition will slow the process dramatically.
 
     """
 
@@ -56,7 +56,7 @@ class TOASelect:
             new = set(new_cond.items())
             # Get the condition entries have not been changed
             unchg = set.intersection(old, new)
-            # Get the conditon entries have been changed
+            # Get the condition entries have been changed
             chg = new - old
             condition_chg = dict(chg)
             condition_unchg = dict(unchg)
@@ -104,7 +104,7 @@ class TOASelect:
 
     def get_select_range(self, condition, column):
         """
-        A function get the selected toa index via a range comparision.
+        A function get the selected toa index via a range comparison.
         """
         result = {}
         for k, v in condition.items():
