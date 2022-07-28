@@ -322,7 +322,7 @@ class TimingModel:
             boolParameter(
                 name="DILATEFREQ",
                 value=False,
-                description="Whether or not TEMPO2 should apply gravitational redshift and time dilation to obseerving frequency (Y/N; PINT only supports N)",
+                description="Whether or not TEMPO2 should apply gravitational redshift and time dilation to observing frequency (Y/N; PINT only supports N)",
             ),
             "",
         )
@@ -627,7 +627,7 @@ class TimingModel:
         barytimes: Time, TOAs, array-like, or float
             MJD barycentric time(s). The times to compute the
             orbital phases.  Needs to be a barycentric time in TDB.
-            If a TOAs instance is passed, the barycenting will happen
+            If a TOAs instance is passed, the barycentering will happen
             automatically.  If an astropy Time object is passed, it must
             be in scale='tdb'.  If an array-like object is passed or
             a simple float, the time must be in MJD format.
@@ -1849,6 +1849,7 @@ class TimingModel:
         verbosity : string, optional
             Dictates amount of information returned. Options include "max",
             "med", and "min", which have the following results:
+
                 "max"     - print all lines from both models whether they are fit or not (note that nodmx will override this); DEFAULT
                 "med"     - only print lines for parameters that are fit
                 "min"     - only print lines for fit parameters for which diff_sigma > threshold
@@ -1978,7 +1979,7 @@ class TimingModel:
             "AstrometryEquatorial" in self.components
             and "AstrometryEcliptic" in othermodel.components
         ):
-            if convertcoordinatess:
+            if convertcoordinates:
                 log.warning(f"Converting {other_model_name} from ECL to ICRS")
                 othermodel = othermodel.as_ICRS()
             else:
