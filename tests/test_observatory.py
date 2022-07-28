@@ -1,26 +1,28 @@
 #!/usr/bin/env python
 import io
 import os
-from pathlib import Path
 import unittest
 import json
+from pathlib import Path
 
+import astropy.units as u
 import numpy as np
 import pytest
 from astropy import units as u
 
 from pint.pulsar_mjd import Time
+from pinttestdata import datadir
 
 import pint.observatory
 import pint.observatory.topo_obs
+from pint.observatory import NoClockCorrections, Observatory, get_observatory
+from pint.observatory.special_locations import load_special_locations
 from pint.observatory.topo_obs import (
+    TopoObs,
     load_observatories,
     load_observatories_from_usual_locations,
-    TopoObs,
 )
-from pint.observatory.special_locations import load_special_locations
-from pint.observatory import get_observatory, Observatory, NoClockCorrections
-from pinttestdata import datadir
+from pint.pulsar_mjd import Time
 
 
 @pytest.fixture
@@ -231,7 +233,8 @@ def test_no_clock_means_no_corrections():
             "arecibo_bogus",
             itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
         )
-        o.clock_corrections(Time(57600, format="mjd"), limits="error")
+        with pytest.raises(RuntimeError):
+            o.clock_corrections(Time(57600, format="mjd"), limits="error")
     finally:
         Observatory._registry = r
 
@@ -329,3 +332,9 @@ def test_json_observatory_output_latlon_and_itrf(sandbox):
     del gbt_dict["gbt"]["lat"]
     with pytest.raises(ValueError):
         load_observatories(io.StringIO(json.dumps(gbt_dict)), overwrite=True)
+
+
+def test_valid_past_end():
+    o = pint.observatory.get_observatory("jbroach")
+    o.last_clock_correction_mjd()
+    o.clock_corrections(o._clock[0].time[-1] + 1 * u.d, limits="error")

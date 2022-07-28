@@ -14,7 +14,6 @@ to clear out old files you will want to do
 """
 import collections
 import time
-import warnings
 from pathlib import Path
 
 from astropy.utils.data import download_file
@@ -46,6 +45,9 @@ def get_file(
 ):
     """Obtain a local file pointing to a current version of name.
 
+    The mtime of the returned file will record when the data was last obtained
+    from the internet.
+
     Parameters
     ----------
     name : str
@@ -64,8 +66,12 @@ def get_file(
         Useful mostly for testing.
     invalid_if_older_than : astropy.time.Time or None
         Re-download the file if the cached version is older than this.
-    """
 
+    Returns
+    -------
+    pathlib.Path
+        The location of the file.
+    """
     log.trace(f"File {name} requested")
     if url_base is None:
         url_base = global_clock_correction_url_base
@@ -80,7 +86,7 @@ def get_file(
 
     if download_policy != "always":
         try:
-            local_file = download_file(remote_url, cache=True, sources=[])
+            local_file = Path(download_file(remote_url, cache=True, sources=[]))
             log.trace(f"file {remote_url} found in cache at path: {local_file}")
         except KeyError:
             log.trace(f"file {remote_url} not found in cache")
@@ -120,9 +126,10 @@ def get_file(
     # By this point we know we need a new file but we want it to wind up in
     # the cache
     log.info(
-        f"File {name} to be downloaded due to download policy {download_policy}: {remote_url}"
+        f"File {name} to be downloaded due to download policy "
+        f"{download_policy}: {remote_url}"
     )
-    return download_file(remote_url, cache="update", sources=mirror_urls)
+    return Path(download_file(remote_url, cache="update", sources=mirror_urls))
 
 
 IndexEntry = collections.namedtuple(

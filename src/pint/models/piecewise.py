@@ -237,7 +237,7 @@ class PiecewiseSpindown(PhaseComponent):
             order = 0
         # order = idxv + 1
         fterms = self.get_spin_terms(idxv)
-        # make the choosen fterms 1 others 0
+        # make the chosen fterms 1 others 0
         fterms = [ft * np.longdouble(0.0) / unit for ft in fterms]
         fterms[order] += np.longdouble(1.0)
         glepnm = f"PWEP_{idxf}"
