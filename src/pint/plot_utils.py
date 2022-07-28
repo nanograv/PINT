@@ -2,6 +2,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from pint.models.priors import GaussianBoundedRV
+import astropy
+import astropy.units as u
 
 __all__ = ["phaseogram", "phaseogram_binned", "plot_priors"]
 
@@ -20,6 +22,9 @@ def phaseogram(
     plotfile=None,
 ):
     """Make a nice 2-panel phaseogram"""
+    # If mjds have no units, assume days
+    if type(mjds) != astropy.units.quantity.Quantity:
+        mjds = mjds * u.d
     years = (mjds.value - 51544.0) / 365.25 + 2000.0
     phss = phases + rotate
     phss[phss > 1.0] -= 1.0
@@ -87,7 +92,10 @@ def phaseogram_binned(
     """
     Make a nice 2-panel phaseogram
     """
-    years = (mjds.value - 51544.0) / 365.25 + 2000.0
+    # If mjds have no units, assume days
+    if type(mjds) != astropy.units.quantity.Quantity:
+        mjds = mjds * u.d
+    years = (mjds.to(u.d).value - 51544.0) / 365.25 + 2000.0
     phss = phases + rotate
     phss[phss >= 1.0] -= 1.0
     plt.figure(figsize=(width, 8))
