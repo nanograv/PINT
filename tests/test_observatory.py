@@ -287,6 +287,12 @@ def test_list_last_correction_mjds_runs():
     pint.observatory.list_last_correction_mjds()
 
 
+def test_TopoObs_EarthLocation(sandbox):
+    gbt_orig = get_observatory("gbt")
+    gbt_new = TopoObs(name="gbt_new", location=gbt_orig.location)
+    assert gbt_orig.separation(gbt_new) < 1 * u.cm
+
+
 def test_json_observatory_output(sandbox):
     gbt_orig = get_observatory("gbt")
     load_observatories(io.StringIO(gbt_orig.as_json), overwrite=True)
