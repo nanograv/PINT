@@ -14,6 +14,8 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - delta_pulse_number column is now saved to -padd flag on TOA write
 - command-line utility to compare parfiles
 - FD_delay_frequency function to easily access the FD model's excess delay
+- Can initialize observatories with lat/lon/altitude
+- Can output observatories as JSON
 ### Fixed
 - TOA flags are properly deepcopy'd when desired (to deal with [astropy bug](https://github.com/astropy/astropy/issues/13435))
 
