@@ -196,12 +196,9 @@ and you can define your own.  Observatories are generally referenced when readin
 Observatory definitions
 '''''''''''''''''''''''
 
-Observatory definitions are included in ``pint.config.runtimefile("observatories.json")``.  To see the existing names::
-
-  import pint.observatory
-  observatories = pint.observatory.Observatory.names_and_aliases()
-
-will return a dictionary giving all of the names (primary keys) and potential aliases (values).
+Observatory definitions are included in ``pint.config.runtimefile("observatories.json")``.  
+To see the existing names, :func:`pint.observatory.Observatory.names_and_aliases` will 
+return a dictionary giving all of the names (primary keys) and potential aliases (values).
 
 The observatory data are stored in JSON format.  A simple example is::
 
@@ -266,6 +263,7 @@ Adding New Observatories
 ''''''''''''''''''''''''
 
 In addition to modifying ``pint.config.runtimefile("observatories.json")``, there are other ways to add new observatories.  
+**Make sure you define any new observatory before you load any TOAs.**
 
 1. You can define them pythonically:
 ::
@@ -298,7 +296,6 @@ This can be done by specifying the ITRF coordinates, (``lat``, ``lon``, ``alt``)
     load_observatories(io.StringIO(fakeGBT), overwrite=True)
 
 Note that since we are overwriting an existing observatory (rather than defining a completely new one) we specify ``overwrite=True``.  
-**Make sure you do this before you load any TOAs.**
 
 3. You can define them in a different file on disk.  If you took the JSON above and put it into a file ``/home/user/anothergbt.json``, 
 you could then do::
