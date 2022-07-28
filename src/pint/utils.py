@@ -31,6 +31,7 @@ has moved to :mod:`pint.simulation`.
 import configparser
 import datetime
 import getpass
+import hashlib
 import os
 import platform
 import re
@@ -39,9 +40,8 @@ from collections import OrderedDict
 from contextlib import contextmanager
 from copy import deepcopy
 from io import StringIO
-from warnings import warn
-from loguru import logger as log
 from pathlib import Path
+from warnings import warn
 
 import astropy.constants as const
 import astropy.coordinates as coords
@@ -49,6 +49,7 @@ import astropy.coordinates.angles as angles
 import astropy.units as u
 import numpy as np
 import scipy.optimize.zeros as zeros
+from loguru import logger as log
 from scipy.special import fdtrc
 
 import pint
@@ -81,6 +82,7 @@ __all__ = [
     "print_color_examples",
     "colorize",
     "group_iterator",
+    "compute_hash",
 ]
 
 COLOR_NAMES = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
@@ -1607,3 +1609,32 @@ def group_iterator(items):
     """
     for item in np.unique(items):
         yield item, np.where(items == item)[0]
+
+
+def compute_hash(filename):
+    """Compute a unique hash of a file.
+
+    This is designed to keep around to detect changes, not to be
+    cryptographically robust. It uses the SHA256 algorithm, which
+    is known to be vulnerable to a length-extension attack.
+
+    Parameter
+    ---------
+    f : str or Path or file-like
+        The source of input. If file-like, it should return ``bytes`` not ``str`` -
+        that is, the file should be opened in binary mode.
+
+    Returns
+    -------
+    bytes
+        A cryptographic hash of the input.
+    """
+    h = hashlib.sha256()
+    with open_or_use(filename, "rb") as f:
+        # Reading in larger chunks saves looping without using
+        # huge amounts of memory; and multiples of the hash
+        # function block size are more efficient.
+        blocks = 128
+        while block := f.read(blocks * h.block_size):
+            h.update(block)
+    return h.digest()

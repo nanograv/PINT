@@ -25,6 +25,7 @@
 # %%
 import astropy.units as u  # Astropy units is a very useful module.
 import pint.logging
+from IPython.core.display_functions import display
 
 # setup logging
 pint.logging.setup(level="INFO")
