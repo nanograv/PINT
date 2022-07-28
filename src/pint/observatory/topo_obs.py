@@ -89,7 +89,8 @@ class TopoObs(Observatory):
 
     name : str
         The name of the observatory
-    itrf_xyz : ~astropy.units.Quantity or array-like
+    location : ~astropy.coordinates.EarthLocation, optional
+    itrf_xyz : ~astropy.units.Quantity or array-like, optional
         IRTF site coordinates (len-3 array).  Can include
         astropy units.  If no units are given, meters are
         assumed.
@@ -144,7 +145,7 @@ class TopoObs(Observatory):
 
     Note
     ----
-    Either ``itrf_xyz`` or ``lat``, ``lon``, ``alt`` must be specified
+    One of ``locaation``, ``itrf_xyz``, or (``lat``, ``lon``, ``alt``) must be specified
 
     """
 
@@ -155,6 +156,7 @@ class TopoObs(Observatory):
         tempo_code=None,
         itoa_code=None,
         aliases=None,
+        location=None,
         itrf_xyz=None,
         lat=None,
         lon=None,
@@ -169,20 +171,24 @@ class TopoObs(Observatory):
         overwrite=False,
         bogus_last_correction=False,
     ):
-        if lat is None and lon is None and alt is None and itrf_xyz is None:
+
+        input = [
+            location is not None,
+            itrf_xyz is not None,
+            (lat is not None and lon is not None and alt is not None),
+        ]
+        if sum(input) == 0:
             raise ValueError(
-                "ITRF coordinates or lat/lon/alt are required for observatory '%s'"
+                "EarthLocation, ITRF coordinates, or lat/lon/alt are required for observatory '%s'"
                 % name
             )
-
-        if itrf_xyz is not None and (
-            lat is not None and lon is not None and alt is not None
-        ):
+        if sum(input) > 1:
             raise ValueError(
-                f"Cannot supply both ITRF coordinates and lat/lon/alt for observatory '{name}'"
+                f"Cannot supply more than one of EarthLocation, ITRF coordinates, and lat/lon/alt for observatory '{name}'"
             )
-
-        if itrf_xyz is not None:
+        if location is not None:
+            self.location = location
+        elif itrf_xyz is not None:
             # Convert coords to standard format.  If no units are given, assume
             # meters.
             if not has_astropy_unit(itrf_xyz):
@@ -195,15 +201,10 @@ class TopoObs(Observatory):
                     "Incorrect coordinate dimensions for observatory '%s'" % (name)
                 )
             # Convert to astropy EarthLocation, ensuring use of ITRF geocentric coordinates
-            self._loc_itrf = EarthLocation.from_geocentric(*xyz)
+            self.location = EarthLocation.from_geocentric(*xyz)
         elif lat is not None and lon is not None and alt is not None:
-            self._loc_itrf = EarthLocation.from_geodetic(lat=lat, lon=lon, height=alt)
-        else:
-            raise ValueError(
-                f"Must supply lat/lon/alt for observatory '{name}' if ITRF coordinates not present"
-            )
+            self.location = EarthLocation.from_geodetic(lat=lat, lon=lon, height=alt)
 
-        #
         # Save clock file info, the data will be read only if clock
         # corrections for this site are requested.
         if isinstance(clock_file, str):
@@ -241,52 +242,22 @@ class TopoObs(Observatory):
 
     def __repr__(self):
         aliases = [f"'{x}'" for x in self.aliases]
-        s = f"TopoObs('{self.name}' ({','.join(aliases)}) at [{self._loc_itrf.x}, {self._loc_itrf.y} {self._loc_itrf.z}]:\n{self.origin})"
+        s = f"TopoObs('{self.name}' ({','.join(aliases)}) at [{self.x}, {self.y} {self.z}]:\n{self.origin})"
         return s
 
     @property
     def timescale(self):
         return "utc"
 
-    @property
-    def x(self):
-        """The X component of the geocentric coordinates."""
-        return self._loc_itrf.x
-
-    @property
-    def y(self):
-        """The Y component of the geocentric coordinates."""
-        return self._loc_itrf.y
-
-    @property
-    def z(self):
-        """The Z component of the geocentric coordinates."""
-        return self._loc_itrf.z
-
-    @property
-    def geocentric(self):
-        """Convert to a tuple with X, Y, and Z as quantities"""
-        return self._loc_itrf.to_geocentric()
-
-    @property
-    def lat(self):
-        """Latitude of the location, for the default ellipsoid."""
-        return self._loc_itrf.lat
-
-    @property
-    def lon(self):
-        """Longitude of the location, for the default ellipsoid."""
-        return self._loc_itrf.lon
-
-    @property
-    def alt(self):
-        """Altitude of the location, for the default ellipsoid."""
-        return self._loc_itrf.height
-
-    @property
-    def geodetic(self):
-        """Convert to geodetic coordinates for the default ellipsoid."""
-        return self._loc_itrf.to_geodetic()
+    def __getattr__(self, name):
+        if name in self.__dict__:
+            return self.__dict__[name]
+        else:
+            # this isn't necessary, but let's allow "alt" as an alias to "height"
+            if name != "alt":
+                return getattr(self.location, name)
+            else:
+                return getattr(self.location, "height")
 
     @property
     def as_dict(self):
@@ -357,7 +328,7 @@ class TopoObs(Observatory):
             return (c.R_earth * dsigma).to(u.m, equivalencies=u.dimensionless_angles())
 
     def earth_location_itrf(self, time=None):
-        return self._loc_itrf
+        return self.location
 
     def _load_gps_clock(self):
         global _gps_clock

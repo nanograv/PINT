@@ -250,7 +250,7 @@ def test_gbt_registered():
 def test_is_gbt_still_ok():
 
     gbt = get_observatory("gbt")
-    assert gbt._loc_itrf.y < 0
+    assert gbt.y < 0
 
 
 @pytest.mark.parametrize("overwrite", [True, False])
@@ -279,8 +279,8 @@ def test_observatory_override(sandbox, overwrite):
     else:
         load_observatories(io.StringIO(wronggbt), overwrite=overwrite)
         newgbt = get_observatory("gbt")
-        assert newgbt._loc_itrf.y > 0
-        assert newgbt._loc_itrf.y != gbt_orig._loc_itrf.y
+        assert newgbt.y > 0
+        assert newgbt.y != gbt_orig.y
 
 
 def test_list_last_correction_mjds_runs():
@@ -310,7 +310,7 @@ def test_json_observatory_output_latlon(sandbox):
     gbt_reload = get_observatory("gbt")
 
     for p in gbt_orig.__dict__:
-        if not p in ["_loc_itrf", "_clock"]:
+        if not p in ["location", "_clock"]:
             # everything else should be identical
             assert getattr(gbt_orig, p) == getattr(gbt_reload, p)
     # check distance separately to allow for precision
