@@ -259,7 +259,8 @@ clock file is bogus (``bogus_last_correction``).  There are two clock files incl
 * ``jbroach2jb.clk`` (where we also specify that it is ``valid_beyond_ends``)
 * ``jb2gps.clk``
 
-These are combined to reference this particular telescope/instrument combination.
+These are combined to reference this particular telescope/instrument combination.  For the full set of options, see :class:`~pint.observatory.topo_obs.TopoObs`.
+
 
 Adding New Observatories
 ''''''''''''''''''''''''
