@@ -300,8 +300,8 @@ class TopoObs(Observatory):
             output["tempo_code"] = self.tempo_code
         if self.itoa_code is not None:
             output["itoa_code"] = self.itoa_code
-        if self.clock_file is not None and len(self.clock_file) > 0:
-            output["clock_file"] = self.clock_file
+        if self.clock_files is not None and len(self.clock_files) > 0:
+            output["clock_file"] = self.clock_files
         if self.clock_fmt is not None and len(self.clock_fmt) > 0:
             output["clock_fmt"] = self.clock_fmt
         if self.clock_dir is not None:
