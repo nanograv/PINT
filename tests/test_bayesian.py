@@ -1,7 +1,6 @@
 """Tests for the bayesian interface."""
 
 import io
-from typing_extensions import assert_type
 import pytest
 import numpy as np
 
