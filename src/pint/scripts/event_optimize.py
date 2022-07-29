@@ -521,9 +521,15 @@ def main(argv=None):
     )
     parser.add_argument(
         "--multicores",
-        help="Run event optimize on all cores",
+        help="Run event optimize on multiple cores",
         default=False,
         action="store_true",
+    )
+    parser.add_argument(
+        "--ncores",
+        help="The number of cores for parallel processing",
+        type=int,
+        default=8,
     )
 
     global nwalkers, nsteps, ftr
@@ -561,6 +567,7 @@ def main(argv=None):
     minWeight = args.minWeight
     do_opt_first = args.doOpt
     wgtexp = args.wgtexp
+    ncores = args.ncores
 
     # Read in initial model
     modelin = pint.models.get_model(parfile)
@@ -764,6 +771,8 @@ def main(argv=None):
 
     import emcee
 
+    dtype = [("lnprior", float), ("lnlikelihood", float)]
+
     # Following are for parallel processing tests...
     if args.multicores:
         try:
@@ -772,7 +781,7 @@ def main(argv=None):
             def unwrapped_lnpost(theta):
                 return ftr.lnposterior(theta)
 
-            with mp.ProcessPool(nodes=mp.cpu_count()) as pool:
+            with mp.ProcessPool(nodes=ncores) as pool:
                 dtype = [("lnprior", float), ("lnlikelihood", float)]
                 sampler = emcee.EnsembleSampler(
                     nwalkers, ndim, unwrapped_lnpost, blobs_dtype=dtype, pool=pool
@@ -782,11 +791,15 @@ def main(argv=None):
             pool.close()
             pool.join()
         except ImportError:
-            log.info("module not available, using single core")
-            sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior)
+            log.info("pathos module not available, using single core")
+            sampler = emcee.EnsembleSampler(
+                nwalkers, ndim, ftr.lnposterior, blobs_dtype=dtype
+            )
             sampler.run_mcmc(pos, nsteps)
     else:
-        sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior)
+        sampler = emcee.EnsembleSampler(
+            nwalkers, ndim, ftr.lnposterior, blobs_dtype=dtype
+        )
         # The number is the number of points in the chain
         sampler.run_mcmc(pos, nsteps)
 
@@ -815,16 +828,12 @@ def main(argv=None):
     # Make the triangle plot.
     samples = sampler.chain[:, burnin:, :].reshape((-1, ndim))
 
-    if args.multicores:
-        try:
-            blobs = sampler.get_blobs()
-            lnprior_samps = blobs["lnprior"]
-            lnlikelihood_samps = blobs["lnlikelihood"]
-            lnpost_samps = lnprior_samps + lnlikelihood_samps
-            ind = np.unravel_index(np.argmax(lnpost_samps), lnpost_samps.shape)
-            ftr.maxpost_fitvals = [chains[ii][ind] for ii in ftr.fitkeys]
-        except IndexError:
-            pass
+    blobs = sampler.get_blobs()
+    lnprior_samps = blobs["lnprior"]
+    lnlikelihood_samps = blobs["lnlikelihood"]
+    lnpost_samps = lnprior_samps + lnlikelihood_samps
+    ind = np.unravel_index(np.argmax(lnpost_samps), lnpost_samps.shape)
+    ftr.maxpost_fitvals = [chains[ii][ind] for ii in ftr.fitkeys]
 
     try:
         import corner
