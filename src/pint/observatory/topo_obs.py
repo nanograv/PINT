@@ -4,11 +4,11 @@ These observatories have fixed positions that affect the data they record, but
 they also often have their own reference clocks, and therefore we need to
 correct for any drift in those clocks.
 
-These observatories are registered when this file is imported.   
+These observatories are registered when this file is imported.
 The standard behavior is given by :func:`pint.observatory.topo_obs.load_observatories_from_usual_locations`, which:
 
 * Clears any existing observatories from the registry
-* Loads the standard observatories 
+* Loads the standard observatories
 * Loads any observatories present in ``$PINT_OBS_OVERRIDE``, overwriting those already present
 
 This is run on import.  Otherwise it only needs to be run if :func:`pint.observatory.Observatory.clear_registry` is run.
@@ -91,8 +91,8 @@ class TopoObs(Observatory):
         The name of the observatory
     itrf_xyz : astropy.units.Quantity or array-like
         IRTF site coordinates (len-3 array).  Can include
-       astropy units.  If no units are given, meters are
-       assumed.
+        astropy units.  If no units are given, meters are
+        assumed.
 
     tempo_code : str, optional
         1-character tempo code for the site.  Will be
@@ -102,8 +102,10 @@ class TopoObs(Observatory):
         2-character ITOA code.  Will be added to aliases.
     aliases : list of str, optional
         List of other aliases for the observatory name.
-    clock_file : str, optional
-        Name of the clock correction file.
+    clock_file : str or list of str or list of dict or None
+        Name of the clock correction file. Can be a list of strings,
+        for multiple clock files, or a list of dictionaries if it is
+        desired to specify additional keyword arguments to the ClockFile objects.
     clock_fmt : str, optional
         Format of clock file (see ClockFile class for allowed
         values).
@@ -174,8 +176,10 @@ class TopoObs(Observatory):
 
         # Save clock file info, the data will be read only if clock
         # corrections for this site are requested.
-        self.clock_file = clock_file
-        self._multiple_clock_files = not isinstance(clock_file, str)
+        if isinstance(clock_file, str):
+            self.clock_files = [clock_file]
+        else:
+            self.clock_files = clock_file
         self.clock_fmt = clock_fmt
         self.clock_dir = clock_dir
         self._clock = None  # The ClockFile objects, will be read on demand
@@ -254,21 +258,22 @@ class TopoObs(Observatory):
 
     def _load_clock_corrections(self):
         if self._clock is None:
-            # FIXME: handle other clock_dir values
-            # FIXME: handle ""
-            clock_files = (
-                self.clock_file if self._multiple_clock_files else [self.clock_file]
-            )
-            self._clock = [
-                find_clock_file(
-                    c,
-                    format=self.clock_fmt,
-                    clock_dir=self.clock_dir,
-                    bogus_last_correction=self.bogus_last_correction,
+            self._clock = []
+            for cf in self.clock_files:
+                if cf == "":
+                    continue
+                kwargs = dict(bogus_last_correction=self.bogus_last_correction)
+                if isinstance(cf, dict):
+                    kwargs.update(cf)
+                    cf = kwargs.pop("name")
+                self._clock.append(
+                    find_clock_file(
+                        cf,
+                        format=self.clock_fmt,
+                        clock_dir=self.clock_dir,
+                        **kwargs,
+                    )
                 )
-                for c in clock_files
-                if c != ""
-            ]
 
     def clock_corrections(self, t, limits="warn"):
         """Compute the total clock corrections,
@@ -283,8 +288,8 @@ class TopoObs(Observatory):
         corr = np.zeros_like(t) * u.us
         self._load_clock_corrections()
         if not self._clock:
-            if self.clock_file:
-                msg = f"No clock corrections found for observatory {self.name} taken from file {self.clock_file}"
+            if self.clock_files:
+                msg = f"No clock corrections found for observatory {self.name} taken from file {self.clock_files}"
                 if limits == "warn":
                     log.warning(msg)
                     corr = np.zeros_like(t) * u.us
@@ -399,7 +404,7 @@ class TopoObs(Observatory):
 # PINT-specific but this is. Maybe in topo_obs - does that cover all the clock files
 # we need?
 def find_clock_file(
-    name, format, bogus_last_correction=False, url_base=None, clock_dir=None
+    name, format, bogus_last_correction=False, url_base=None, clock_dir=None, **kwargs
 ):
     """Locate and return a ClockFile in one of several places.
 
@@ -463,6 +468,7 @@ def find_clock_file(
             format=format,
             bogus_last_correction=bogus_last_correction,
             friendly_name=name,
+            **kwargs,
         )
 
     # FIXME: implement clock_dir
@@ -478,6 +484,7 @@ def find_clock_file(
                 format=format,
                 bogus_last_correction=bogus_last_correction,
                 friendly_name=name,
+                **kwargs,
             )
             # Could just return this but we want to emit
             # a warning with an appropriate level of forcefulness
@@ -488,6 +495,7 @@ def find_clock_file(
             format=format,
             bogus_last_correction=bogus_last_correction,
             url_base=url_base,
+            **kwargs,
         )
     loc = Path(runtimefile(name))
     if loc.exists():
@@ -496,6 +504,7 @@ def find_clock_file(
             format=format,
             bogus_last_correction=bogus_last_correction,
             friendly_name=name,
+            **kwargs,
         )
 
     if env_clock is not None:

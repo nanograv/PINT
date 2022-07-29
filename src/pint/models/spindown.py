@@ -149,7 +149,7 @@ class Spindown(PhaseComponent):
         return phs.to(u.dimensionless_unscaled)
 
     def change_pepoch(self, new_epoch, toas=None, delay=None):
-        """Move PEPOCH to a new time and change the related paramters.
+        """Move PEPOCH to a new time and change the related parameters.
 
         Parameters
         ----------
@@ -171,7 +171,7 @@ class Spindown(PhaseComponent):
             if toas is None or delay is None:
                 raise ValueError(
                     "`PEPOCH` is not in the model, thus, 'toa' and"
-                    " 'delay' shoule be givne."
+                    " 'delay' should be given."
                 )
             tbl = toas.table
             phsepoch_ld = (tbl["tdb"][0] - delay[0]).tdb.mjd_long

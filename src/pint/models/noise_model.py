@@ -18,12 +18,12 @@ class NoiseComponent(Component):
     ):
         super().__init__()
         self.covariance_matrix_funcs = []
-        self.scaled_toa_sigma_funcs = []  # Need to move this to a speical place.
+        self.scaled_toa_sigma_funcs = []  # Need to move this to a special place.
         self.scaled_dm_sigma_funcs = []
         # TODO This works right now. But if we want to expend noise model, we
         # need to think about the design now. If we do not define the list
         # here and calling the same name from other component, it will get
-        # it from the component that hosts it. It has the risk to dulicate
+        # it from the component that hosts it. It has the risk to duplicate
         # the list elements.
         self.dm_covariance_matrix_funcs_component = []
         self.basis_funcs = []
@@ -39,7 +39,7 @@ class ScaleToaError(NoiseComponent):
 
     Note
     ----
-    Ref: NanoGrav 11 yrs data
+    Ref: NANOGrav 11 yrs data
 
     """
 
@@ -185,7 +185,7 @@ class ScaleDmError(NoiseComponent):
 
     Note
     ----
-    Ref: NanoGrav 12.5 yrs wideband data
+    Ref: NANOGrav 12.5 yrs wideband data
     """
 
     register = True
@@ -293,7 +293,7 @@ class EcorrNoise(NoiseComponent):
 
     Note
     ----
-    Ref: NanoGrav 11 yrs data
+    Ref: NANOGrav 11 yrs data
 
     """
 
@@ -398,7 +398,7 @@ class PLRedNoise(NoiseComponent):
 
     Note
     ----
-    Ref: NanoGrav 11 yrs data
+    Ref: NANOGrav 11 yrs data
 
     """
 

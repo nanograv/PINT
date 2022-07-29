@@ -159,7 +159,7 @@ class PhaseJump(PhaseComponent):
         a ``-jump`` flag on each TOA that is affected by any JUMP in the model,
         listing the numbers of all JUMPs affecting that TOA.
 
-        This function wipes all ``-jump`` flags and reinitializes them to reflect
+        This function wipes all ``-jump`` flags and re-initializes them to reflect
         the actual situation.
 
         Parameters

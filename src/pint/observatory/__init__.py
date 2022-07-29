@@ -83,7 +83,7 @@ class ClockCorrectionOutOfRange(ClockCorrectionError):
 class Observatory:
     """Observatory locations and related site-dependent properties
 
-    For example, TOA time scales, clock corrections.  Any new Observtory that
+    For example, TOA time scales, clock corrections.  Any new Observatory that
     is declared will be automatically added to a registry that is keyed on
     observatory name.  Aside from their initial declaration (for examples, see
     ``pint/data/runtimefile/observatories.json``), Observatory instances should
@@ -112,7 +112,7 @@ class Observatory:
     _alias_map = {}
 
     def __new__(cls, name, *args, **kwargs):
-        # Generates a new Observtory object instance, and adds it
+        # Generates a new Observatory object instance, and adds it
         # it the registry, using name as the key.  Name must be unique,
         # a new instance with a given name will over-write the existing
         # one only if overwrite=True
@@ -272,7 +272,7 @@ class Observatory:
         which uses ERFA (IAU SOFA).
 
         The time argument is ignored for observatories with static
-        positions. For moving observaties (e.g. spacecraft), it
+        positions. For moving observatories (e.g. spacecraft), it
         should be specified (as an astropy Time) and the position
         at that time will be returned.
         """
@@ -347,7 +347,7 @@ class Observatory:
             t = Time([t])
         if t.scale == "tdb":
             return t
-        # Check the method. This pattern is from numpy minize
+        # Check the method. This pattern is from numpy minimize
         if callable(method):
             meth = "_custom"
         else:
@@ -382,7 +382,7 @@ class Observatory:
     def posvel(self, t, ephem, group=None):
         """Return observatory position and velocity for the given times.
 
-        Postion is relative to solar system barycenter; times are
+        Position is relative to solar system barycenter; times are
         (astropy array-valued Time objects).
         """
         # TODO this and derived methods should be changed to accept a TOA
