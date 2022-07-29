@@ -71,6 +71,7 @@ __all__ = [
     "lines_of",
     "interesting_lines",
     "pmtot",
+    "dmxselections",
     "dmxparse",
     "dmxstats",
     "dmx_ranges_old",
