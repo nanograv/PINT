@@ -9,13 +9,12 @@ from io import StringIO
 from pathlib import Path
 
 import pytest
-import unittest
 import emcee.backends
 
 from pint.scripts import event_optimize
 from pinttestdata import datadir
 
-# @unittest.skip
+
 def test_result(tmp_path):
     parfile = datadir / "PSRJ0030+0451_psrcat.par"
     eventfile_orig = (
@@ -54,6 +53,8 @@ def test_backend(tmp_path):
     p = Path.cwd()
     saved_stdout, sys.stdout = (sys.stdout, StringIO("_"))
     try:
+        import h5py
+
         samples = None
         os.chdir(tmp_path)
         # Running with backend
@@ -65,7 +66,8 @@ def test_backend(tmp_path):
         reader = emcee.backends.HDFBackend("J0030+0451_chains.h5")
         samples = reader.get_chain(discard=10)
         assert samples is not None
-
+    except ImportError:
+        pass
     finally:
         os.chdir(p)
         sys.stdout = saved_stdout

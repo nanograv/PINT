@@ -783,6 +783,7 @@ def main(argv=None):
             backend = emcee.backends.HDFBackend(backend_file)
             backend.reset(nwalkers, ndim)
         except ImportError:
+            log.warning("h5py package not installed. Backend set to None")
             backend = None
     else:
         backend = None
