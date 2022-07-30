@@ -360,7 +360,7 @@ class MCMCFitter(Fitter):
         self, weights=None, bins=100, rotate=0.0, size=5, alpha=0.25, plotfile=None
     ):
         """Make a nice 2-panel phaseogram for the current model"""
-        mjds = self.toas.table["tdbld"].quantity
+        mjds = self.toas.table["tdbld"].value
         phss = self.get_event_phases()
         plot_utils.phaseogram(
             mjds,

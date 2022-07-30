@@ -5,6 +5,7 @@ from pint.models.priors import GaussianBoundedRV
 import astropy
 import astropy.units as u
 import astropy.time
+from loguru import logger as log
 
 __all__ = ["phaseogram", "phaseogram_binned", "plot_priors"]
 
@@ -36,7 +37,7 @@ def phaseogram(
         Phases for each photon, assumes range is [0,1)
 
     """
-    # If mjds is a Time() then pull out the MJD values and make a quantity
+    # If mjds_in is a Time() then pull out the MJD values and make a quantity
     if type(mjds_in) == astropy.time.core.Time:
         mjds = mjds_in.mjd * u.d
     # If mjds_in have no units, assume days
@@ -47,7 +48,7 @@ def phaseogram(
 
     years = (mjds.to(u.d).value - 51544.0) / 365.25 + 2000.0
     phss = phases + rotate
-    phss[phss > 1.0] -= 1.0
+    phss[phss >= 1.0] -= 1.0
     plt.figure(figsize=(width, 8))
     ax1 = plt.subplot2grid((3, 1), (0, 0))
     ax2 = plt.subplot2grid((3, 1), (1, 0), rowspan=2)
