@@ -10,7 +10,7 @@ __all__ = ["phaseogram", "phaseogram_binned", "plot_priors"]
 
 
 def phaseogram(
-    mjds,
+    mjds_in,
     phases,
     weights=None,
     title=None,
@@ -29,7 +29,7 @@ def phaseogram(
 
     Parameters
     ----------
-    mjds : array or astropy.units.Quantity or astropy.time.Time
+    mjds_in : array or astropy.units.Quantity or astropy.time.Time
         Assumes units of days if bare numerical array, otherwise
         will convert Quantity or Time into days.
     phases : array
@@ -37,11 +37,13 @@ def phaseogram(
 
     """
     # If mjds is a Time() then pull out the MJD values and make a quantity
-    if type(mjds) == astropy.time.core.Time:
-        mjds = mjds.mjd * u.d
-    # If mjds have no units, assume days
-    elif type(mjds) != astropy.units.quantity.Quantity:
-        mjds = mjds * u.d
+    if type(mjds_in) == astropy.time.core.Time:
+        mjds = mjds_in.mjd * u.d
+    # If mjds_in have no units, assume days
+    elif type(mjds_in) != astropy.units.quantity.Quantity:
+        mjds = mjds_in * u.d
+    else:
+        mjds = mjds_in
 
     years = (mjds.to(u.d).value - 51544.0) / 365.25 + 2000.0
     phss = phases + rotate
@@ -95,7 +97,7 @@ def phaseogram(
 
 
 def phaseogram_binned(
-    mjds,
+    mjds_in,
     phases,
     weights=None,
     title=None,
@@ -115,19 +117,21 @@ def phaseogram_binned(
 
     Parameters
     ----------
-    mjds : array or astropy.units.Quantity or astropy.time.Time
+    mjds_in : array or astropy.units.Quantity or astropy.time.Time
         Assumes units of days if bare numerical array, otherwise
         will convert Quantity or Time into days.
     phases : array
         Phases for each photon, assumes range is [0,1)
 
     """
-    # If mjds is a Time() then pull out the MJD values and make a quantity
-    if type(mjds) == astropy.time.core.Time:
-        mjds = mjds.mjd * u.d
-    # If mjds have no units, assume days
-    elif type(mjds) != astropy.units.quantity.Quantity:
-        mjds = mjds * u.d
+    # If mjds_in is a Time() then pull out the MJD values and make a quantity
+    if type(mjds_in) == astropy.time.core.Time:
+        mjds = mjds_in.mjd * u.d
+    # If mjds_in has no units, assume days
+    elif type(mjds_in) != astropy.units.quantity.Quantity:
+        mjds = mjds_in * u.d
+    else:
+        mjds = mjds_in
 
     years = (mjds.to(u.d).value - 51544.0) / 365.25 + 2000.0
     phss = phases + rotate
