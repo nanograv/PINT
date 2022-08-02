@@ -891,29 +891,29 @@ def dmxparse(fitter, save=False):
     Parameters
     ----------
     fitter
-        PINT fitter used to get timing residuals, must have already run GLS fit
+        PINT fitter used to get timing residuals, must have already run a fit
     save : bool or str or file-like object, optional
-        if not False or None, saves output to specified file in the format of the TEMPO version.
+        If not False or None, saves output to specified file in the format of the TEMPO version.
 
     Returns
     -------
     dict :
 
-        dmxs : mean-subtraced dmx values
+        ``dmxs`` : mean-subtraced dmx values
 
-        dmx_verrs : dmx variance errors
+        ``dmx_verrs`` : dmx variance errors
 
-        dmxeps : center mjds of the dmx bins
+        ``dmxeps`` : center mjds of the dmx bins
 
-        r1s : lower mjd bounds on the dmx bins
+        ``r1s`` : lower mjd bounds on the dmx bins
 
-        r2s : upper mjd bounds on the dmx bins
+        ``r2s`` : upper mjd bounds on the dmx bins
 
-        bins : dmx bins
+        ``bins`` : dmx bins
 
-        mean_dmx : mean dmx value
+        ``mean_dmx`` : mean dmx value
 
-        avg_dm_err : uncertainty in average dmx
+        ``avg_dm_err`` : uncertainty in average dmx
 
     Raises
     ------
