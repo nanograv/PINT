@@ -11,8 +11,11 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - index.txt is only checked at most once a day
 - Moved observatories to JSON file.  Changed way observatories are loaded/overloaded
 - Split Jodrell Bank observatory based on backend to get correct clock files
+- Clock files can be marked as being valid past the end of the data they contain
 ### Added
 - delta_pulse_number column is now saved to -padd flag on TOA write
+- command-line utility to compare parfiles
+- FD_delay_frequency function to easily access the FD model's excess delay
 ### Fixed
 - TOA flags are properly deepcopy'd when desired (to deal with [astropy bug](https://github.com/astropy/astropy/issues/13435))
 

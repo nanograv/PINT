@@ -242,7 +242,7 @@ repository or specific versions for reproducibility, you have several options:
    :func:`pint.observatory.export_clock_files` to export the clock files you
    are currently using to a directory for use in this way later.
 
-#. Modify ``src/pint/observatory/observatories.py`` so that the observatory you
+#. Modify ``src/pint/data/runtime/observatories.json`` so that the observatory you
    are interested in points to the correct clock file. (You may have to redo
    ``pip install`` for PINT to make this take effect.) If you set
    ``clock_dir="TEMPO"`` or ``clock_dir="TEMPO2"`` then PINT will look in the
@@ -255,7 +255,7 @@ repository or specific versions for reproducibility, you have several options:
 
 #. Create a new observatory in your own code. This involves creating a new
    :class:`pint.observatory.topo_obs.TopoObs` object like those in
-   ``src/pint/observatory/observatories.py``. As long as this object is created
+   ``src/pint/data/runtime/observatories.json``. As long as this object is created
    before you read in any TOAs that need it, and as long as its name does not
    overlap with any existing observatory, you should be able to create your
    custom observatory and point the clock correction files to the right place

@@ -102,7 +102,10 @@
     },
     "jbroach": {
         "clock_file": [
-            "jbroach2jb.clk",
+            {
+                "name": "jbroach2jb.clk",
+                "valid_beyond_ends": true
+            },
             "jb2gps.clk"
         ],
         "clock_fmt": "tempo2",
@@ -125,7 +128,10 @@
     },
     "jbdfb": {
         "clock_file": [
-            "jbdfb2jb.clk",
+            {
+                "name": "jbdfb2jb.clk",
+                "valid_beyond_ends": true
+            },
             "jb2gps.clk"
         ],
         "clock_fmt": "tempo2",

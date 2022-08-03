@@ -1,3 +1,4 @@
+import warnings
 from io import StringIO
 from textwrap import dedent
 
@@ -437,12 +438,34 @@ def test_update_clock_files_str(tmp_path):
 
 
 def test_update_clock_files(tmp_path):
-    update_clock_files()
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=r".*dubious year.*")
+        update_clock_files()
     export_all_clock_files(tmp_path)
     assert (tmp_path / "wsrt2gps.clk").exists()
+
+
+def test_out_of_range_raises_exception(basic_clock):
+    with pytest.raises(ClockCorrectionOutOfRange) as excinfo:
+        basic_clock.evaluate(Time(60001, format="mjd"), limits="error")
 
 
 def test_out_of_range_message_has_helpful_name(basic_clock):
     with pytest.raises(ClockCorrectionOutOfRange) as excinfo:
         basic_clock.evaluate(Time(60001, format="mjd"), limits="error")
     assert "basic_clock" in str(excinfo.value)
+
+
+def test_out_of_range_emits_warning(basic_clock):
+    with pytest.warns(UserWarning, match="basic_clock"):
+        basic_clock.evaluate(Time(60001, format="mjd"))
+
+
+def test_out_of_range_allowed():
+    basic_clock = ClockFile(
+        mjd=np.array([50000, 55000, 60000]),
+        clock=np.array([1.0, 2.0, -1.0]) * u.us,
+        friendly_name="basic_clock",
+        valid_beyond_ends=True,
+    )
+    basic_clock.evaluate(Time(60001, format="mjd"), limits="error")

@@ -436,7 +436,7 @@ class DesignMatrixMaker:
 
 
 class PhaseDesignMatrixMaker(DesignMatrixMaker):
-    """A specific class for makeing phase design matrix."""
+    """A specific class for making phase design matrix."""
 
     def __call__(self, data, model, derivative_params, offset=True, offset_padding=1.0):
         """Create the phase design matrix.
@@ -599,7 +599,7 @@ def combine_design_matrices_by_param(matrix1, matrix2, padding=0.0):
     # init the quantity axis.
     axis_labels = copy.deepcopy(matrix1.axis_labels)
 
-    # Get the base matrix labels and indcies.
+    # Get the base matrix labels and indices.
     base_params = matrix1.derivative_params
     base_quantity_index = matrix1.axis_labels[0]
 
@@ -653,7 +653,7 @@ def combine_design_matrices_by_param(matrix1, matrix2, padding=0.0):
         )
 
     # Combine matrix
-    # make default new matrix with the rigth size
+    # make default new matrix with the right size
     new_matrix = np.zeros((base_matrix.shape[0], matrix2.shape[1]))
     new_matrix.fill(padding)
     # Fill up the new_matrix with matrix2

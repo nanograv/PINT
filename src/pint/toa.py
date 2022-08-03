@@ -96,12 +96,6 @@ tempo_aliases = {
 }
 
 
-def _compute_hash(filename):
-    h = hashlib.sha256()
-    h.update(open(filename, "rb").read())
-    return h.digest()
-
-
 def get_TOAs(
     timfile,
     ephem=None,
@@ -270,7 +264,7 @@ def get_TOAs(
 
         files = [t.filename] if isinstance(t.filename, (str, Path)) else t.filename
         if files is not None:
-            t.hashes = {f: _compute_hash(f) for f in files}
+            t.hashes = {f: pint.utils.compute_hash(f) for f in files}
         recalc = True
 
     if all("clkcorr" not in f for f in t.table["flags"]):
@@ -1777,7 +1771,7 @@ class TOAs:
             return False
 
         for t, f in zip(timfiles, filenames):
-            if _compute_hash(t) != self.hashes[f]:
+            if pint.utils.compute_hash(t) != self.hashes[f]:
                 return False
         return True
 

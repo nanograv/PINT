@@ -11,8 +11,8 @@ from pint.observatory import NoClockCorrections, Observatory, get_observatory
 from pint.pulsar_mjd import Time
 import pint.observatory.topo_obs
 from pint.observatory.topo_obs import (
-    load_observatories,
     TopoObs,
+    load_observatories,
 )
 
 tobs = ["aro", "ao", "chime", "drao"]
@@ -253,3 +253,9 @@ def test_observatory_override(sandbox, overwrite):
 
 def test_list_last_correction_mjds_runs():
     pint.observatory.list_last_correction_mjds()
+
+
+def test_valid_past_end():
+    o = pint.observatory.get_observatory("jbroach")
+    o.last_clock_correction_mjd()
+    o.clock_corrections(o._clock[0].time[-1] + 1 * u.d, limits="error")

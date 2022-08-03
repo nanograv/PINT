@@ -117,7 +117,7 @@ def _load_bipm_clock(bipm_version):
 class Observatory:
     """Observatory locations and related site-dependent properties
 
-    For example, TOA time scales, clock corrections.  Any new Observtory that
+    For example, TOA time scales, clock corrections.  Any new Observatory that
     is declared will be automatically added to a registry that is keyed on
     observatory name.  Aside from their initial declaration (for examples, see
     ``pint/data/runtimefile/observatories.json``), Observatory instances should
@@ -146,7 +146,7 @@ class Observatory:
     _alias_map = {}
 
     def __new__(cls, name, *args, **kwargs):
-        # Generates a new Observtory object instance, and adds it
+        # Generates a new Observatory object instance, and adds it
         # it the registry, using name as the key.  Name must be unique,
         # a new instance with a given name will over-write the existing
         # one only if overwrite=True
@@ -336,7 +336,7 @@ class Observatory:
         which uses ERFA (IAU SOFA).
 
         The time argument is ignored for observatories with static
-        positions. For moving observaties (e.g. spacecraft), it
+        positions. For moving observatories (e.g. spacecraft), it
         should be specified (as an astropy Time) and the position
         at that time will be returned.
         """
@@ -432,7 +432,7 @@ class Observatory:
             t = Time([t])
         if t.scale == "tdb":
             return t
-        # Check the method. This pattern is from numpy minize
+        # Check the method. This pattern is from numpy minimize
         if callable(method):
             meth = "_custom"
         else:
@@ -467,7 +467,7 @@ class Observatory:
     def posvel(self, t, ephem, group=None):
         """Return observatory position and velocity for the given times.
 
-        Postion is relative to solar system barycenter; times are
+        Position is relative to solar system barycenter; times are
         (astropy array-valued Time objects).
         """
         # TODO this and derived methods should be changed to accept a TOA
@@ -806,7 +806,12 @@ def update_clock_files(bipm_versions=None):
 
 # Both topo_obs and special_locations need this
 def find_clock_file(
-    name, format, bogus_last_correction=False, url_base=None, clock_dir=None
+    name,
+    format,
+    bogus_last_correction=False,
+    url_base=None,
+    clock_dir=None,
+    valid_beyond_ends=False,
 ):
     """Locate and return a ClockFile in one of several places.
 
@@ -835,6 +840,9 @@ def find_clock_file(
     clock_dir : str or pathlib.Path or None
         If None or "PINT", use the above procedure; if "TEMPO" or "TEMPO2" use
         those programs' customary locations; if a path, look there specifically.
+    valid_beyond_ends : bool
+        If False, emit a warning or exception when evaluating the clock file past
+        the ends of the data it contains.
 
     Returns
     -------
@@ -877,6 +885,7 @@ def find_clock_file(
             format=format,
             bogus_last_correction=bogus_last_correction,
             friendly_name=name,
+            valid_beyond_ends=valid_beyond_ends,
         )
 
     env_clock = None
@@ -891,6 +900,7 @@ def find_clock_file(
                 format=format,
                 bogus_last_correction=bogus_last_correction,
                 friendly_name=name,
+                valid_beyond_ends=valid_beyond_ends,
             )
             # Could just return this but we want to emit
             # a warning with an appropriate level of forcefulness
@@ -901,6 +911,7 @@ def find_clock_file(
             format=format,
             bogus_last_correction=bogus_last_correction,
             url_base=url_base,
+            valid_beyond_ends=valid_beyond_ends,
         )
     loc = Path(runtimefile(name))
     if loc.exists():
@@ -909,6 +920,7 @@ def find_clock_file(
             format=format,
             bogus_last_correction=bogus_last_correction,
             friendly_name=name,
+            valid_beyond_ends=valid_beyond_ends,
         )
 
     if env_clock is not None:

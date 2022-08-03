@@ -24,7 +24,7 @@ class Phase(namedtuple("Phase", "int frac")):
 
         Constructs a Phase object.
         Can be initialized with arrays or a scalar Quantity.
-        Can take inputs as plain numerical types, or dimensionaless Quantitys
+        Can take inputs as plain numerical types, or dimensionless Quantitys
         Accepts either floating point argument (arg1) or pair of arguments with integer (arg1) and fractional (arg2) parts separate
         Scalars are converted to length 1 arrays so `Phase.int` and `Phase.frac` are always arrays
 
@@ -40,7 +40,7 @@ class Phase(namedtuple("Phase", "int frac")):
         if not hasattr(arg1, "unit"):
             arg1 = u.Quantity(arg1)
         else:
-            # This will raise an exception if the argument has any unit not convertable to Unit(dimensionless)
+            # This will raise an exception if the argument has any unit not convertible to Unit(dimensionless)
             arg1 = arg1.to(u.dimensionless_unscaled)
         #  If arg is scalar, convert to an array of length 1
         if arg1.shape == ():

@@ -2,15 +2,16 @@
 import copy
 import os
 import unittest
-import pytest
+from io import StringIO
 
 import astropy.units as u
 import numpy as np
+import pytest
+from pinttestdata import datadir
 
 import pint.models.model_builder as mb
 import pint.residuals
 import pint.toa as toa
-from pinttestdata import datadir
 
 
 class TestFD(unittest.TestCase):
@@ -43,13 +44,51 @@ class TestFD(unittest.TestCase):
         test_toas.table["freq"][0:5] = np.inf * u.MHz
         fd_delay = self.FDm.components["FD"].FD_delay(test_toas)
         assert np.all(
-            np.isfinite
+            np.isfinite(fd_delay)
         ), "FD component is not handling infinite frequency right."
         assert np.all(
             fd_delay[0:5].value == 0.0
         ), "FD component did not compute infinite frequency delay right"
         d_d_d_fd = self.FDm.d_delay_FD_d_FDX(test_toas, "FD1")
-        assert np.all(np.isfinite), (
+        assert np.all(np.isfinite(d_d_d_fd)), (
             "FD component is not handling infinite frequency right when doning"
             + " derivatives."
         )
+
+
+@pytest.fixture
+def fd_sample():
+    return mb.get_model(
+        StringIO(
+            """
+        PSR J1234+5678
+        F0 1
+        PEPOCH 57000
+        ELAT 0
+        ELONG 0
+        DM 10
+        FD1 0
+        FD2 -1
+    """
+        )
+    )
+
+
+def test_fd_frequency_infinite_no_effect(fd_sample):
+    assert fd_sample.FD_delay_frequency(np.array([np.inf]) * u.MHz) == 0
+
+
+def test_fd_frequency_ghz_no_effect(fd_sample):
+    assert fd_sample.FD_delay_frequency(np.array([1]) * u.GHz) == 0
+
+
+def test_fd_frequency_finite_varying(fd_sample):
+    delays = fd_sample.FD_delay_frequency(np.array([1, 2]) * u.GHz)
+    assert delays[0] != delays[1]
+
+
+def test_fd_frequency_convexity_fd2(fd_sample):
+    delays = fd_sample.FD_delay_frequency(np.array([0.5, 1, 2]) * u.GHz)
+    # Because FD2 < 0 we expect
+    assert delays[0] < delays[1]
+    assert delays[1] > delays[2]
