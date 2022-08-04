@@ -228,7 +228,6 @@ class TopoObs(Observatory):
             if code is not None:
                 aliases.append(code)
 
-
         self.origin = origin
 
     def __repr__(self):
