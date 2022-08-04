@@ -405,7 +405,9 @@ class TopoObs(Observatory):
             else:
                 log.info(f"Observatory {self.name} requires no clock corrections.")
         else:
-            log.info("Applying observatory clock corrections.")
+            log.info(
+                f"Applying observatory clock corrections for observatory='{self.name}'."
+            )
             for clock in self._clock:
                 corr += clock.evaluate(t, limits=limits)
 
