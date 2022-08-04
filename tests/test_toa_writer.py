@@ -83,42 +83,40 @@ def test_roundtrip_topo_toa_TEMPOformat(tmpdir):
     assert np.abs(ts.table["tdb"][0] - ts2.table["tdb"][0]) < 1.0e-15 * u.d
 
 
-# Comment out because TEMPO2 distro doesn't include gmrt2gps.clk so far
-# def test_roundtrip_gmrt_toa_Tempo2format(self):
-#     if os.getenv("TEMPO2") is None:
-#         pytest.skip("TEMPO2 evnironment variable is not set, can't run this test")
-#     # Create a barycentric TOA
-#     t1time = Time(58534.0, 0.0928602471130208, format="mjd", scale="utc")
-#     t1 = toa.TOA(t1time, obs="gmrt", freq=0.0)
-#     ts = toa.get_TOAs_list([t1], ephem="DE421")
-#     ts.write_TOA_file("testgmrt.tim", format="Tempo2")
-#     ts2 = toa.get_TOAs("testgmrt.tim")
-#     print(ts.table, ts2.table)
-#     assert np.abs(ts.table["mjd"][0] - ts2.table["mjd"][0]) < 1.0e-15 * u.d
-#     assert np.abs(ts.table["tdb"][0] - ts2.table["tdb"][0]) < 1.0e-15 * u.d
-# def test_roundtrip_ncyobs_toa_Tempo2format(self):
-#     if os.getenv("TEMPO2") is None:
-#         pytest.skip("TEMPO2 evnironment variable is not set, can't run this test")
-#     # Create a barycentric TOA
-#     t1time = Time(58534.0, 0.0928602471130208, format="mjd", scale="utc")
-#     t1 = toa.TOA(t1time, obs="ncyobs", freq=0.0)
-#     ts = toa.get_TOAs_list([t1], ephem="DE421")
-#     ts.write_TOA_file("testncyobs.tim", format="Tempo2")
-#     ts2 = toa.get_TOAs("testncyobs.tim")
-#     print(ts.table, ts2.table)
-#     assert np.abs(ts.table["mjd"][0] - ts2.table["mjd"][0]) < 1.0e-15*u.d
-#     assert np.abs(ts.table["tdb"][0] - ts2.table["tdb"][0]) < 1.0e-15*u.d
-# def test_roundtrip_ncyobs_toa_TEMPOformat(self):
-#     if os.getenv("TEMPO2") is None:
-#         pytest.skip("TEMPO2 evnironment variable is not set, can't run this test")
-#     # Create a barycentric TOA
-#     t1time = Time(58534.0, 0.0928602471130208, format="mjd", scale="utc")
-#     t1 = toa.TOA(t1time, obs="ncyobs", freq=0.0)
-#     ts = toa.get_TOAs_list([t1], ephem="DE421")
-#     # This is an observatory that can't be represented in TEMPO format
-#     # so it should raise an exception
-#     with pytest.raises(ValueError):
-#         ts.write_TOA_file("testncyobs.tim", format="TEMPO")
+def test_roundtrip_gmrt_toa_Tempo2format(tmp_path):
+    # Create a barycentric TOA
+    t1time = Time(58534.0, 0.0928602471130208, format="mjd", scale="utc")
+    t1 = toa.TOA(t1time, obs="gmrt", freq=0.0)
+    ts = toa.get_TOAs_list([t1], ephem="DE421")
+    ts.write_TOA_file(tmp_path / "testgmrt.tim", format="Tempo2")
+    ts2 = toa.get_TOAs(tmp_path / "testgmrt.tim")
+    print(ts.table, ts2.table)
+    assert np.abs(ts.table["mjd"][0] - ts2.table["mjd"][0]) < 1.0e-15 * u.d
+    assert np.abs(ts.table["tdb"][0] - ts2.table["tdb"][0]) < 1.0e-15 * u.d
+
+
+def test_roundtrip_ncyobs_toa_Tempo2format(tmp_path):
+    # Create a barycentric TOA
+    t1time = Time(58534.0, 0.0928602471130208, format="mjd", scale="utc")
+    t1 = toa.TOA(t1time, obs="ncyobs", freq=0.0)
+    ts = toa.get_TOAs_list([t1], ephem="DE421")
+    ts.write_TOA_file(tmp_path / "testncyobs.tim", format="Tempo2")
+    ts2 = toa.get_TOAs(tmp_path / "testncyobs.tim")
+    print(ts.table, ts2.table)
+    assert np.abs(ts.table["mjd"][0] - ts2.table["mjd"][0]) < 1.0e-15 * u.d
+    assert np.abs(ts.table["tdb"][0] - ts2.table["tdb"][0]) < 1.0e-15 * u.d
+
+
+def test_roundtrip_ncyobs_toa_TEMPOformat(tmp_path):
+    # Create a barycentric TOA
+    t1time = Time(58534.0, 0.0928602471130208, format="mjd", scale="utc")
+    t1 = toa.TOA(t1time, obs="ncyobs", freq=0.0)
+    ts = toa.get_TOAs_list([t1], ephem="DE421")
+    # This is an observatory that can't be represented in TEMPO format
+    # so it should raise an exception
+    with pytest.raises(ValueError):
+        ts.write_TOA_file(tmp_path / "testncyobs.tim", format="TEMPO")
+
 
 simplepar = """
 PSR              1748-2021E

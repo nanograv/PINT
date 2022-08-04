@@ -224,9 +224,10 @@ def test_residuals_wideband_chi2(wideband_fake):
 
 
 # @pytest.mark.xfail()
-@pytest.mark.parametrize(
-    "full_cov", [pytest.param(True, marks=pytest.mark.xfail), False]
-)
+# @pytest.mark.parametrize(
+#    "full_cov", [pytest.param(True, marks=pytest.mark.xfail), False]
+# )
+@pytest.mark.parametrize("full_cov", [True, False])
 def test_gls_chi2_reasonable(full_cov):
     model = get_model(
         StringIO(
@@ -251,7 +252,7 @@ def test_gls_chi2_reasonable(full_cov):
     assert_allclose(fit_chi2, f.resids.calc_chi2(full_cov=full_cov))
 
 
-@pytest.mark.xfail(reason="numerical instability maybe?")
+# @pytest.mark.xfail(reason="numerical instability maybe?")
 def test_gls_chi2_full_cov():
     model = get_model(
         StringIO(
