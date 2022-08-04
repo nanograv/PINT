@@ -395,33 +395,95 @@ class Polycos:
     Polyco is a fast phase calculator. It fits a set of data using polynomials.
     """
 
-    def __init__(self):
-        self.fileName = None
-        self.fileFormat = None
-        self.polycoTable = None
-        self.polycoFormat = [
-            {
-                "format": "tempo",
-                "read_method": tempo_polyco_table_reader,
-                "write_method": tempo_polyco_table_writer,
-            }
-        ]
+    # default formats
+    _polycoFormats = [
+        {
+            "format": "tempo",
+            "read_method": tempo_polyco_table_reader,
+            "write_method": tempo_polyco_table_writer,
+        }
+    ]
+    # loaded formats
+    polycoFormats = []
 
-        # Register the table built-in reading and writing format
-        for fmt in self.polycoFormat:
-            if fmt["format"] not in registry.get_formats()["Format"]:
-                if fmt["read_method"] is not None:
-                    registry.register_reader(
-                        fmt["format"], table.Table, fmt["read_method"]
-                    )
+    @classmethod
+    def _register(cls, formatlist=_polycoFormats):
+        """
+        Register the table built-in reading and writing format
 
-                if fmt["write_method"] is not None:
-                    registry.register_writer(
-                        fmt["format"], table.Table, fmt["write_method"]
-                    )
+        Formats get added to the ``astropy.io`` registry
 
+        Parameters
+        ----------
+        formatlist : list, optional
+            Each entry should be a ``dict`` with entries ``format``, ``read_method``, ``write_method``
+
+        """
+        for fmt in formatlist:
+            if fmt["read_method"] is not None and fmt["write_method"] is None:
+                cls.add_polyco_file_format(fmt["format"], "r", fmt["read_method"], None)
+            elif fmt["read_method"] is None and fmt["write_method"] is not None:
+                cls.add_polyco_file_format(
+                    fmt["format"], "w", None, fmt["write_method"]
+                )
+            elif fmt["read_method"] is not None and fmt["write_method"] is not None:
+                cls.add_polyco_file_format(
+                    fmt["format"], "rw", fmt["read_method"], fmt["write_method"]
+                )
+
+    def __new__(cls, filename=None, format="tempo"):
+        polyco = super().__new__(cls)
+        polyco._register()
+        return polyco
+
+    def __init__(self, filename=None, format="tempo"):
+        """Initialize polycos from a file
+
+        Parameters
+        ---------
+        filename : str or Path or file-like
+            The name of the input polyco file.
+        format : str, optional
+            The format of the file. Default is 'tempo'.
+
+        """
+        self.fileName = filename
+
+        if filename is not None:
+            if format not in [f["format"] for f in self.polycoFormats]:
+                raise ValueError(
+                    "Unknown polyco file format '" + format + "'\n"
+                    "Please use function 'Polyco.add_polyco_file_format()'"
+                    " to register the format\n"
+                )
+            else:
+                self.fileFormat = format
+
+            self.polycoTable = table.Table.read(filename, format=format)
+            if len(self.polycoTable) == 0:
+                raise ValueError("Zero polycos found for table")
+
+    @classmethod
+    def read(cls, filename, format="tempo"):
+        """Read polyco file to a table.
+
+        Parameters
+        ---------
+        filename : str or Path or file-like
+            The name of the input polyco file.
+        format : str, optional
+            The format of the file. Default is 'tempo'.
+
+        Return
+        ---------
+        Polycos
+
+        """
+        return Polycos(filename, format=format)
+
+    @classmethod
     def add_polyco_file_format(
-        self, formatName, methodMood, readMethod=None, writeMethod=None
+        cls, formatName, methodMood, readMethod=None, writeMethod=None
     ):
         """
         Add a polyco file format and its reading/writing method to the class.
@@ -443,11 +505,10 @@ class Polycos:
         """
         # Check if the format already exist.
         if (
-            formatName in [f["format"] for f in self.polycoFormat]
+            formatName in [f["format"] for f in cls.polycoFormats]
             or formatName in registry.get_formats()["Format"]
         ):
-            errorMssg = "Format name '" + formatName + "' is already exist. "
-            raise ValueError(errorMssg)
+            return
 
         pFormat = {"format": formatName}
 
@@ -485,7 +546,39 @@ class Polycos:
                 pFormat["format"], table.Table, pFormat["write_method"]
             )
 
-        self.polycoFormat.append(pFormat)
+        cls.polycoFormats.append(pFormat)
+
+    def read_polyco_file(self, filename, format="tempo"):
+        """Read polyco file to a table.
+
+        Included for backward compatibility.  It is better to use :meth:`pint.polyco.Polyco.read()`.
+
+        Parameters
+        ---------
+        filename : str or Path or file-like
+            The name of the input polyco file.
+        format : str, optional
+            The format of the file. Default is 'tempo'.
+
+        Return
+        ---------
+        Polycos
+
+        """
+        self.fileName = filename
+
+        if format not in [f["format"] for f in self.polycoFormats]:
+            raise ValueError(
+                "Unknown polyco file format '" + format + "'\n"
+                "Please use function 'Polyco.add_polyco_file_format()'"
+                " to register the format\n"
+            )
+        else:
+            self.fileFormat = format
+
+        self.polycoTable = table.Table.read(filename, format=format)
+        if len(self.polycoTable) == 0:
+            raise ValueError("Zero polycos found for table")
 
     def generate_polycos(
         self,
@@ -655,36 +748,6 @@ class Polycos:
         else:
             raise NotImplementedError("Only TEMPO method has been implemented.")
 
-    def read_polyco_file(self, filename, format="tempo"):
-        """Read polyco file from one type of format to a table.
-
-        Parameters
-        ---------
-        filename : str or Path or file-like
-            The name of the input polyco file.
-        format : str
-            The format of the file. Default is 'tempo'.
-
-        Return
-        ---------
-        Polycos
-
-        """
-        self.fileName = filename
-
-        if format not in [f["format"] for f in self.polycoFormat]:
-            raise ValueError(
-                "Unknown polyco file format '" + format + "'\n"
-                "Please use function 'self.add_polyco_file_format()'"
-                " to register the format\n"
-            )
-        else:
-            self.fileFormat = format
-
-        self.polycoTable = table.Table.read(filename, format=format)
-        if len(self.polycoTable) == 0:
-            raise ValueError("Zero polycos found for table")
-
     def write_polyco_file(self, filename="polyco.dat", format="tempo"):
         """Write Polyco table to a file.
 
@@ -696,7 +759,7 @@ class Polycos:
             The format of the file. Default is 'tempo'.
         """
 
-        if format not in [f["format"] for f in self.polycoFormat]:
+        if format not in [f["format"] for f in self.polycoFormats]:
             raise ValueError(
                 "Unknown polyco file format '" + format + "'\n"
                 "Please use function 'self.add_polyco_file_format()'"
