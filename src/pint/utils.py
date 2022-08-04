@@ -35,6 +35,7 @@ import hashlib
 import os
 import platform
 import re
+import sys
 import textwrap
 from collections import OrderedDict
 from contextlib import contextmanager
@@ -54,6 +55,7 @@ from scipy.special import fdtrc
 
 import pint
 import pint.pulsar_ecliptic
+from pint.toa_select import TOASelect
 
 __all__ = [
     "PosVel",
@@ -69,6 +71,7 @@ __all__ = [
     "lines_of",
     "interesting_lines",
     "pmtot",
+    "dmxselections",
     "dmxparse",
     "dmxstats",
     "dmx_ranges_old",
@@ -813,46 +816,71 @@ def dmx_ranges(toas, divide_freq=1000.0 * u.MHz, binwidth=15.0 * u.d, verbose=Fa
     return mask, dmx_comp
 
 
-def dmxstats(fitter):
-    """Run dmxparse in python using PINT objects and results.
+def dmxselections(model, toas):
+    """Map DMX selections to TOAs
+
+    Parameters
+    ----------
+    model : pint.models.TimingModel
+    toas : pint.toa.TOAs
+
+    Returns
+    -------
+    dict :
+        keys are DMX indices, values are the TOAs selected for each index
+    """
+    toas_selector = TOASelect(is_range=True)
+    DMX_mapping = model.get_prefix_mapping("DMX_")
+    DMXR1_mapping = model.get_prefix_mapping("DMXR1_")
+    DMXR2_mapping = model.get_prefix_mapping("DMXR2_")
+    condition = {}
+    for ii in DMX_mapping:
+        r1 = getattr(model, DMXR1_mapping[ii]).quantity
+        r2 = getattr(model, DMXR2_mapping[ii]).quantity
+        condition[DMX_mapping[ii]] = (r1.mjd, r2.mjd)
+    select_idx = toas_selector.get_select_index(condition, toas["mjd_float"])
+    return select_idx
+
+
+def dmxstats(model, toas, file=sys.stdout):
+    """Print DMX statistics
 
     Based off dmxparse by P. Demorest (https://github.com/nanograv/tempo/tree/master/util/dmxparse)
 
     Parameters
     ----------
-    fitter
-        PINT fitter used to get timing residuals, must have already run GLS fit
+    model : pint.models.TimingModel
+    toas : pint.toa.TOAs
+    file : a file-like object (stream); defaults to the current sys.stdout
     """
-
-    model = fitter.model
-    mjds = fitter.toas.get_mjds()
-    freqs = fitter.toas.table["freq"]
-    ii = 1
-    while hasattr(model, "DMX_{:04d}".format(ii)):
-        mmask = np.logical_and(
-            mjds.value > getattr(model, "DMXR1_{:04d}".format(ii)).value,
-            mjds.value < getattr(model, "DMXR2_{:04d}".format(ii)).value,
-        )
-        if np.any(mmask):
-            mjds_in_bin = mjds[mmask]
-            freqs_in_bin = freqs[mmask]
-            span = (mjds_in_bin.max() - mjds_in_bin.min()).to(u.d)
-            # Warning: min() and max() seem to strip the units
-            freqspan = freqs_in_bin.max() - freqs_in_bin.min()
+    mjds = toas.get_mjds()
+    freqs = toas.table["freq"]
+    selected = np.zeros(len(toas), dtype=np.bool8)
+    DMX_mapping = model.get_prefix_mapping("DMX_")
+    select_idx = dmxselections(model, toas)
+    for ii in DMX_mapping:
+        if f"DMX_{ii:04d}" in select_idx:
+            selection = select_idx[f"DMX_{ii:04d}"]
+            selected[selection] = True
             print(
                 "DMX_{:04d}: NTOAS={:5d}, MJDSpan={:14.4f}, FreqSpan={:8.3f}-{:8.3f}".format(
-                    ii, mmask.sum(), span, freqs_in_bin.min(), freqs_in_bin.max()
-                )
+                    ii,
+                    len(selection),
+                    (mjds[selection].max() - mjds[selection.min()]),
+                    freqs[selection].min() * u.MHz,
+                    freqs[selection].max() * u.MHz,
+                ),
+                file=file,
             )
         else:
             print(
                 "DMX_{:04d}: NTOAS={:5d}, MJDSpan={:14.4f}, FreqSpan={:8.3f}-{:8.3f}".format(
-                    ii, mmask.sum(), 0 * u.d, 0 * u.MHz, 0 * u.MHz
-                )
+                    ii, 0, 0 * u.d, 0 * u.MHz, 0 * u.MHz
+                ),
+                file=file,
             )
-        ii += 1
-
-    return
+    if not np.all(selected):
+        print(f"{(1-selected).sum()} TOAs not selected in any DMX window", file=file)
 
 
 def dmxparse(fitter, save=False):
@@ -863,69 +891,57 @@ def dmxparse(fitter, save=False):
     Parameters
     ----------
     fitter
-        PINT fitter used to get timing residuals, must have already run GLS fit
-    save : bool
-        if True saves output to text file in the format of the TEMPO version.
-        If not output save file is desired, save = False (which is the default)
-        Output file name is dmxparse.out
+        PINT fitter used to get timing residuals, must have already run a fit
+    save : bool or str or file-like object, optional
+        If not False or None, saves output to specified file in the format of the TEMPO version.
 
     Returns
     -------
-    dictionary
+    dict :
 
-        dmxs : mean-subtraced dmx values
+        ``dmxs`` : mean-subtraced dmx values
 
-        dmx_verrs : dmx variance errors
+        ``dmx_verrs`` : dmx variance errors
 
-        dmxeps : center mjds of the dmx bins
+        ``dmxeps`` : center mjds of the dmx bins
 
-        r1s : lower mjd bounds on the dmx bins
+        ``r1s`` : lower mjd bounds on the dmx bins
 
-        r2s : upper mjd bounds on the dmx bins
+        ``r2s`` : upper mjd bounds on the dmx bins
 
-        bins : dmx bins
+        ``bins`` : dmx bins
 
-        mean_dmx : mean dmx value
+        ``mean_dmx`` : mean dmx value
 
-        avg_dm_err : uncertainty in average dmx
+        ``avg_dm_err`` : uncertainty in average dmx
 
     Raises
     ------
-    RuntimeError : If the model has no DMX parameters, or if there is a parsing problem
+    RuntimeError
+        If the model has no DMX parameters, or if there is a parsing problem
 
     """
     # We get the DMX values, errors, and mjds (same as in getting the DMX values for DMX v. time)
     # Get number of DMX epochs
-    dmx_epochs = []
-    for p in fitter.model.params:
-        if "DMX_" in p:
-            dmx_epochs.append(p.split("_")[-1])
-    # Check to make sure that there are DMX values in the model
-    if not dmx_epochs:
+    try:
+        DMX_mapping = fitter.model.get_prefix_mapping("DMX_")
+    except ValueError:
         raise RuntimeError("No DMX values in model!")
+    dmx_epochs = [f"{x:04d}" for x in DMX_mapping.keys()]
+    DMX_keys = list(DMX_mapping.values())
+    DMXs = np.zeros(len(dmx_epochs))
+    DMX_Errs = np.zeros(len(dmx_epochs))
+    DMX_R1 = np.zeros(len(dmx_epochs))
+    DMX_R2 = np.zeros(len(dmx_epochs))
+    mask_idxs = np.zeros(len(dmx_epochs), dtype=np.bool8)
     # Get DMX values (will be in units of 10^-3 pc cm^-3)
-    DMX_keys = []
-    DMXs = []
-    DMX_Errs = []
-    DMX_R1 = []
-    DMX_R2 = []
-    DMX_center_MJD = []
-    mask_idxs = []
-    for ii in dmx_epochs:
-        DMX_keys.append("DMX_{:}".format(ii))
-        DMXs.append(getattr(fitter.model, "DMX_{:}".format(ii)).value)
-        mask_idxs.append(getattr(fitter.model, "DMX_{:}".format(ii)).frozen)
-        DMX_Errs.append(getattr(fitter.model, "DMX_{:}".format(ii)).uncertainty_value)
-        dmxr1 = getattr(fitter.model, "DMXR1_{:}".format(ii)).value
-        dmxr2 = getattr(fitter.model, "DMXR2_{:}".format(ii)).value
-        DMX_R1.append(dmxr1)
-        DMX_R2.append(dmxr2)
-        DMX_center_MJD.append((dmxr1 + dmxr2) / 2)
-    DMXs = np.array(DMXs)
-    DMX_Errs = np.array(DMX_Errs)
-    DMX_R1 = np.array(DMX_R1)
-    DMX_R2 = np.array(DMX_R2)
-    DMX_center_MJD = np.array(DMX_center_MJD)
+    for ii, epoch in enumerate(dmx_epochs):
+        DMXs[ii] = getattr(fitter.model, "DMX_{:}".format(epoch)).value
+        mask_idxs[ii] = getattr(fitter.model, "DMX_{:}".format(epoch)).frozen
+        DMX_Errs[ii] = getattr(fitter.model, "DMX_{:}".format(epoch)).uncertainty_value
+        DMX_R1[ii] = getattr(fitter.model, "DMXR1_{:}".format(epoch)).value
+        DMX_R2[ii] = getattr(fitter.model, "DMXR1_{:}".format(epoch)).value
+    DMX_center_MJD = (DMX_R1 + DMX_R2) / 2
     # If any value need to be masked, do it
     if True in mask_idxs:
         log.warning(
@@ -968,11 +984,10 @@ def dmxparse(fitter, save=False):
         DMX_vErrs = DMX_Errs
     # Check we have the right number of params
     if len(DMXs) != len(DMX_Errs) or len(DMXs) != len(DMX_vErrs):
-        log.error("ERROR! Number of DMX entries do not match!")
         raise RuntimeError("Number of DMX entries do not match!")
 
     # Output the results'
-    if save:
+    if save is not None and save:
         DMX = "DMX"
         lines = []
         lines.append("# Mean %s value = %+.6e \n" % (DMX, DMX_mean))
@@ -993,9 +1008,8 @@ def dmxparse(fitter, save=False):
                     DMX_keys[k],
                 )
             )
-        with open("dmxparse.out", "w") as dmxout:
+        with open_or_use(save, mode="w") as dmxout:
             dmxout.writelines(lines)
-            dmxout.close()
     # return the new mean subtracted values
     mean_sub_DMXs = DMXs - DMX_mean
 
