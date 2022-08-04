@@ -26,6 +26,7 @@ except (ModuleNotFoundError, ImportError) as e:
 import pint.toa as toa
 from pint.phase import Phase
 from pint.pulsar_mjd import data2longdouble
+from pint.utils import open_or_use
 
 MONTHS = [
     "Jan",
@@ -208,7 +209,7 @@ def tempo_polyco_table_reader(filename):
     """
     entries = []
 
-    with open(filename, "r") as f:
+    with open_or_use(filename, "r") as f:
         line = f.readline()
 
         while line != "":
@@ -333,62 +334,59 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
         err = "Empty polyco table! Please make sure polycoTable has data."
         raise ValueError(err)
 
-    f = open(filename, "w")
+    with open_or_use(filename, "w") as f:
+        for table_entry in polycoTable:
+            psr_name = table_entry["psr"]
+            if psr_name[0] == "J":
+                psr_name = psr_name[1:]
 
-    for table_entry in polycoTable:
-        psr_name = table_entry["psr"]
-        if psr_name[0] == "J":
-            psr_name = psr_name[1:]
-
-        spec1 = "{:10.10s} {:>9.9s}{:11.2f}{:20.11f}{:21.6f} {:6.3f}{:7.3f}\n"
-        line1 = spec1.format(
-            psr_name,
-            table_entry["date"],
-            table_entry["utc"],
-            table_entry["tmid"],
-            table_entry["dm"],
-            table_entry["doppler"],
-            table_entry["logrms"],
-        )
-
-        entry = table_entry["entry"]
-        ph = entry.rphase
-        ph_frac = ph.frac[0].value + (ph.frac[0] < 0)
-        excess = ph_frac - np.round(ph_frac, 6)
-
-        rphstr_frac = "{:.6f}".format(np.round(ph_frac, 6))[1:]
-        rphstr_int = "{:13d}".format(int(ph.int[0]) - (ph.frac[0] < 0))
-
-        try:
-            bin_phase = "{:7.4f}{:9.4f}".format(
-                table_entry["binary_phase"], table_entry["f_orbit"]
+            spec1 = "{:10.10s} {:>9.9s}{:11.2f}{:20.11f}{:21.6f} {:6.3f}{:7.3f}\n"
+            line1 = spec1.format(
+                psr_name,
+                table_entry["date"],
+                table_entry["utc"],
+                table_entry["tmid"],
+                table_entry["dm"],
+                table_entry["doppler"],
+                table_entry["logrms"],
             )
-        except KeyError:
-            bin_phase = ""
 
-        spec2 = "{:20s} {:17.12f}{:>5s}{:5d}{:5d}{:10.3f}{:16s}\n"
-        line2 = spec2.format(
-            rphstr_int + rphstr_frac,
-            entry.f0,
-            table_entry["obs"],
-            table_entry["mjd_span"],
-            entry.ncoeff,
-            table_entry["obsfreq"],
-            bin_phase,
-        )
+            entry = table_entry["entry"]
+            ph = entry.rphase
+            ph_frac = ph.frac[0].value + (ph.frac[0] < 0)
+            excess = ph_frac - np.round(ph_frac, 6)
 
-        coeffs = entry.coeffs
-        coeffs[0] += excess
+            rphstr_frac = "{:.6f}".format(np.round(ph_frac, 6))[1:]
+            rphstr_int = "{:13d}".format(int(ph.int[0]) - (ph.frac[0] < 0))
 
-        coeff_block = ""
-        for i, coeff in enumerate(coeffs):
-            coeff_block += "{:25.17e}".format(coeff)
-            if (i + 1) % 3 == 0:
-                coeff_block += "\n"
+            try:
+                bin_phase = "{:7.4f}{:9.4f}".format(
+                    table_entry["binary_phase"], table_entry["f_orbit"]
+                )
+            except KeyError:
+                bin_phase = ""
 
-        f.write(line1 + line2 + coeff_block)
+            spec2 = "{:20s} {:17.12f}{:>5s}{:5d}{:5d}{:10.3f}{:16s}\n"
+            line2 = spec2.format(
+                rphstr_int + rphstr_frac,
+                entry.f0,
+                table_entry["obs"],
+                table_entry["mjd_span"],
+                entry.ncoeff,
+                table_entry["obsfreq"],
+                bin_phase,
+            )
 
-    f.close()
+            coeffs = entry.coeffs
+            coeffs[0] += excess
+
+            coeff_block = ""
+            for i, coeff in enumerate(coeffs):
+                coeff_block += "{:25.17e}".format(coeff)
+                if (i + 1) % 3 == 0:
+                    coeff_block += "\n"
+
+            f.write(line1 + line2 + coeff_block)
 
 
 class Polycos:
