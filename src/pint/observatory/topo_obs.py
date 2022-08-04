@@ -37,9 +37,6 @@ from pint.observatory import (
     bipm_default,
     find_clock_file,
     get_observatory,
-    ClockCorrectionError,
-    NoClockCorrections,
-    ClockCorrectionOutOfRange,
     earth_location_distance,
 )
 from pint.observatory.global_clock_corrections import Index, get_clock_correction_file
@@ -142,7 +139,7 @@ class TopoObs(Observatory):
 
     Note
     ----
-    One of ``locaation``, ``itrf_xyz``, or (``lat``, ``lon``, ``alt``) must be specified
+    One of ``location``, ``itrf_xyz``, or (``lat``, ``lon``, ``alt``) must be specified
 
     """
 
@@ -229,6 +226,7 @@ class TopoObs(Observatory):
                 aliases.append(code)
 
         self.origin = origin
+        super().__init__(name, aliases=aliases)
 
     def __repr__(self):
         aliases = [f"'{x}'" for x in self.aliases]
