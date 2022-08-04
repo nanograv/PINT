@@ -16,7 +16,7 @@ Or, to generate polycos from a timing model:
     >>> from pint.models import get_model
     >>> from pint.polycos import Polycos
     >>> m = get_model(filename)
-    >>> p =Polycos.generate_polycos(model, 50000, 50001, "AO", 144, 12, 1400)
+    >>> p = Polycos.generate_polycos(model, 50000, 50001, "AO", 144, 12, 1400)
 
 """
 import astropy.table as table
@@ -130,7 +130,17 @@ class PolycoEntry:
         )
 
     def evalabsphase(self, t):
-        """Return the phase at time t, computed with this polyco entry"""
+        """Return the phase at time t, computed with this polyco entry
+
+        Parameters
+        ----------
+        t : float or np.ndarray
+            Input times
+
+        Returns
+        -------
+        pint.phase.Phase
+        """
         dt = (data2longdouble(t) - self.tmid.value) * MIN_PER_DAY
         # Compute polynomial by factoring out the dt's
         phase = Phase(
@@ -147,11 +157,32 @@ class PolycoEntry:
         return phase
 
     def evalphase(self, t):
-        """Return the phase at time t, computed with this polyco entry"""
+        """Return the phase at time t, computed with this polyco entry
+
+        Parameters
+        ----------
+        t : float or np.ndarray
+            Input times
+
+        Returns
+        -------
+        pint.phase.Phase
+        """
         return self.evalabsphase(t).frac
 
     def evalfreq(self, t):
-        """Return the freq at time t, computed with this polyco entry"""
+        """Return the freq at time t, computed with this polyco entry
+
+        Parameters
+        ----------
+        t : float or np.ndarray
+            Input times
+
+        Returns
+        -------
+        np.ndarray
+            Frequency (in Hz)
+        """
         dt = (data2longdouble(t) - self.tmid.value) * MIN_PER_DAY
         s = data2longdouble(0.0)
         for i in range(1, self.ncoeff):
@@ -160,7 +191,18 @@ class PolycoEntry:
         return freq
 
     def evalfreqderiv(self, t):
-        """Return the frequency derivative at time t."""
+        """Return the frequency derivative at time t.
+
+        Parameters
+        ----------
+        t : float or np.ndarray
+            Input times
+
+        Returns
+        -------
+        np.ndarray
+            Frequency derivative (in Hz/s)
+        """
         dt = (data2longdouble(t) - self.tmid.value) * MIN_PER_DAY
         s = data2longdouble(0.0)
         for i in range(2, self.ncoeff):
@@ -208,6 +250,7 @@ def tempo_polyco_table_reader(filename):
     One polyco file could include more then one entry.
 
     The pulse phase and frequency at time T are then calculated as::
+
 
         DT = (T-TMID)*1440
         PHASE = RPHASE + DT*60*F0 + COEFF(1) + DT*COEFF(2) + DT^2*COEFF(3) + ....
@@ -624,37 +667,26 @@ class Polycos:
         Parameters
         ----------
         model : TimingModel
-            TimingModel to generate the Polycos with parameters
-            setup.
-
+            TimingModel to generate the Polycos
         mjdStart : float, np.longdouble
             Start time of polycos in mjd
-
         mjdEnd : float, np.longdouble
             Ending time of polycos in mjd
-
         obs : str
             Observatory code
-
         segLength : int
             Length of polyco segement [minutes]
-
         ncoeff : int
             Number of coefficents
-
         obsFreq : float
             Observing frequency [MHz]
-
         maxha : float, optional.
-            Maximum hour angle. Default 12.0 Only 12.0 is supported for now.
-
+            Maximum hour angle. Default 12.0. Only 12.0 is supported for now.
         method : string, optional
             Method to generate polycos. Only the ``TEMPO`` method is supported for now.
-
         numNodes : int, optional
             Number of nodes for fitting. It cannot be less then the number of
             coefficents. Default: 20
-
         progress : bool, optional
             Whether or not to show the progress bar during calculation
 
@@ -815,6 +847,18 @@ class Polycos:
         return start_idx
 
     def eval_phase(self, t):
+        """Polyco evaluation of fractional phase
+
+        Parameters
+        ---------
+        t: numpy.ndarray or a single number.
+           An time array in MJD. Time sample should be in order
+
+        Returns
+        ---------
+        np.ndarray
+             Fractional phase
+        """
         if not isinstance(t, np.ndarray) and not isinstance(t, list):
             t = np.array([t])
         return self.eval_abs_phase(t).frac
@@ -830,7 +874,7 @@ class Polycos:
 
         Returns
         ---------
-        out: pint.phase.Phase
+        pint.phase.Phase
              Polyco evaluated absolute phase for t.
 
         Notes
@@ -870,11 +914,11 @@ class Polycos:
         Parameters
         ---------
         t: numpy.ndarray, float
-           An time array in MJD. Time sample should be in order
+           An time array in MJD. Time samples should be in order
 
         Returns
         ---------
-        out: np.array
+        np.ndarray
              Polyco evaluated spin frequency [Hz] at time t.
 
         Notes

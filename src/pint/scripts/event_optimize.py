@@ -276,7 +276,7 @@ class emcee_fitter(Fitter):
         """
         Return pulse phases based on the current model
         """
-        phss = self.model.phase(self.toas)[1]
+        phss = self.model.phase(self.toas).frac
         return phss.value % 1
 
     def lnprior(self, theta):
