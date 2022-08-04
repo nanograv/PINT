@@ -323,8 +323,8 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
     ---------
     polycoTable: astropy table
         Polycos style table
-    filename : str
-        Name of the output poloco file. Default is 'polyco.dat'.
+    filename : str or Path or file-like
+        Destination for the output polyco file. Default is 'polyco.dat'.
 
     References
     ----------
@@ -660,14 +660,14 @@ class Polycos:
 
         Parameters
         ---------
-        filename : str
-            The name of the polyco file.
+        filename : str or Path or file-like
+            The name of the input polyco file.
         format : str
             The format of the file. Default is 'tempo'.
 
         Return
         ---------
-        Polycos Table with read_in data.
+        Polycos
 
         """
         self.fileName = filename
