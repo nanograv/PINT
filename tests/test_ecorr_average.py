@@ -53,6 +53,7 @@ def _gen_data(par, tim):
     # os.system(cmd)
 
 
+@pytest.mark.skip(reason="Slow and also xfail")
 @pytest.mark.xfail(reason="PINT has a more modern position for Arecibo than TEMPO2")
 def test_ecorr_average():
     par = os.path.join(datadir, "J0023+0923_NANOGrav_11yv0.gls.par")

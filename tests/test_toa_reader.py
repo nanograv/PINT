@@ -10,7 +10,7 @@ import pytest
 
 # For this test, turn off the check for the age of the IERS A table
 from astropy.utils.iers import conf
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis.extra.numpy import arrays
 from hypothesis.strategies import floats, integers, sampled_from
 from pinttestdata import datadir
@@ -404,7 +404,9 @@ loadable_tims = [
 ]
 
 
+# This is slow and not very helpful
 @given(sampled_from(loadable_tims))
+@settings(max_examples=1)
 def test_contiguous_on_load(tim):
     check_indices_contiguous(toa.get_TOAs(tim))
 
