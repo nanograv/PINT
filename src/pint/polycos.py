@@ -1,8 +1,15 @@
 """Polynomial coefficients for phase prediction
 
-This program is designed to predict the pulsar's phase and pulse-period over a
-given interval using polynomial expansion. The return will be some necessary
-information and the polynomial coefficients
+Polycos designed to predict the pulsar's phase and pulse-period over a
+given interval using polynomial expansions. 
+
+Example
+-------
+
+    >>> from pint.polycos import Polycos
+    >>> p = Polycos.read(filename)
+    >>> p.eval_abs_phase(mjds)
+
 """
 import astropy.table as table
 import astropy.units as u
@@ -389,20 +396,23 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
             f.write(line1 + line2 + coeff_block)
 
 
+# default formats
+# need to define them here rather than at the top so that the reader/writer functions are defined
+_polycoFormats = [
+    {
+        "format": "tempo",
+        "read_method": tempo_polyco_table_reader,
+        "write_method": tempo_polyco_table_writer,
+    }
+]
+
+
 class Polycos:
     """A class for polycos model.
 
-    Polyco is a fast phase calculator. It fits a set of data using polynomials.
+    Polyco is a fast phase calculator. It fits a set of data using polynomials and can predict phases at points in between.
     """
 
-    # default formats
-    _polycoFormats = [
-        {
-            "format": "tempo",
-            "read_method": tempo_polyco_table_reader,
-            "write_method": tempo_polyco_table_writer,
-        }
-    ]
     # loaded formats
     polycoFormats = []
 
@@ -430,11 +440,6 @@ class Polycos:
                 cls.add_polyco_file_format(
                     fmt["format"], "rw", fmt["read_method"], fmt["write_method"]
                 )
-
-    def __new__(cls, filename=None, format="tempo"):
-        polyco = super().__new__(cls)
-        polyco._register()
-        return polyco
 
     def __init__(self, filename=None, format="tempo"):
         """Initialize polycos from a file
@@ -579,6 +584,12 @@ class Polycos:
         self.polycoTable = table.Table.read(filename, format=format)
         if len(self.polycoTable) == 0:
             raise ValueError("Zero polycos found for table")
+
+    def __len__(self):
+        return len(self.polycoTable)
+
+    def __getitem__(self, item):
+        return self.polycoTable[item]
 
     def generate_polycos(
         self,
@@ -868,3 +879,7 @@ class Polycos:
         )
 
         return spinFreq
+
+
+# load the default registry on import
+Polycos._register()
