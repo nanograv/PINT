@@ -215,6 +215,13 @@ class TopoObs(Observatory):
         if clock_fmt == "tempo" and clock_file == "time.dat" and tempo_code is None:
             raise ValueError("No tempo_code set for observatory '%s'" % name)
 
+        # GPS corrections
+        self.include_gps = include_gps
+
+        # BIPM corrections
+        # WARNING: `get_observatory` changes these after construction
+        self.include_bipm = include_bipm
+        self.bipm_version = bipm_version
         self.bogus_last_correction = bogus_last_correction
 
         self.tempo_code = tempo_code
@@ -226,7 +233,14 @@ class TopoObs(Observatory):
                 aliases.append(code)
 
         self.origin = origin
-        super().__init__(name, aliases=aliases)
+        super().__init__(
+            name,
+            aliases=aliases,
+            include_gps=include_gps,
+            include_bipm=include_bipm,
+            bipm_version=bipm_version,
+            overwrite=overwrite,
+        )
 
     def __repr__(self):
         aliases = [f"'{x}'" for x in self.aliases]
