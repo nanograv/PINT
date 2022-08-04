@@ -343,7 +343,7 @@ class emcee_fitter(Fitter):
         """
         Make a nice 2-panel phaseogram for the current model
         """
-        mjds = self.toas.table["tdbld"].quantity
+        mjds = self.toas.table["tdbld"].data
         phss = self.get_event_phases()
         plot_utils.phaseogram(
             mjds,
