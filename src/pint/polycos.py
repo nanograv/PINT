@@ -5,10 +5,18 @@ given interval using polynomial expansions.
 
 Example
 -------
+Read in polycos, predict phases:
 
     >>> from pint.polycos import Polycos
     >>> p = Polycos.read(filename)
     >>> p.eval_abs_phase(mjds)
+
+Or, to generate polycos from a timing model:
+
+    >>> from pint.models import get_model
+    >>> from pint.polycos import Polycos
+    >>> m = get_model(filename)
+    >>> p =Polycos.generate_polycos(model, 50000, 50001, "AO", 144, 12, 1400)
 
 """
 import astropy.table as table
@@ -210,6 +218,10 @@ def tempo_polyco_table_reader(filename):
     filename : str
         Name of the input poloco file.
 
+    Returns
+    -------
+    astropy.table.Table
+
     References
     ----------
     http://tempo.sourceforge.net/ref_man_sections/tz-polyco.txt
@@ -328,7 +340,7 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
 
     Parameters
     ---------
-    polycoTable: astropy table
+    polycoTable: astropy.table.Table
         Polycos style table
     filename : str or Path or file-like
         Destination for the output polyco file. Default is 'polyco.dat'.
@@ -591,8 +603,9 @@ class Polycos:
     def __getitem__(self, item):
         return self.polycoTable[item]
 
+    @classmethod
     def generate_polycos(
-        self,
+        cls,
         model,
         mjdStart,
         mjdEnd,
@@ -603,6 +616,7 @@ class Polycos:
         maxha=12.0,
         method="TEMPO",
         numNodes=20,
+        progress=True,
     ):
         """
         Generate the polyco data.
@@ -613,10 +627,10 @@ class Polycos:
             TimingModel to generate the Polycos with parameters
             setup.
 
-        mjdStart : float / numpy longdouble
+        mjdStart : float, np.longdouble
             Start time of polycos in mjd
 
-        mjdEnd : float / numpy longdouble
+        mjdEnd : float, np.longdouble
             Ending time of polycos in mjd
 
         obs : str
@@ -631,19 +645,22 @@ class Polycos:
         obsFreq : float
             Observing frequency [MHz]
 
-        maxha : float optional. Default 12.0
-            Maximum hour angle. Only 12.0 is supported for now.
+        maxha : float, optional.
+            Maximum hour angle. Default 12.0 Only 12.0 is supported for now.
 
-        method : string optional ["TEMPO", "TEMPO2", ...] Default TEMPO
-            Method to generate polycos. Only the TEMPO method is supported for now.
+        method : string, optional
+            Method to generate polycos. Only the ``TEMPO`` method is supported for now.
 
-        numNodes : int optional. Default 20
+        numNodes : int, optional
             Number of nodes for fitting. It cannot be less then the number of
-            coefficents.
+            coefficents. Default: 20
+
+        progress : bool, optional
+            Whether or not to show the progress bar during calculation
 
         Return
         ---------
-        A polyco table.
+        Polycos
         """
         mjdStart = data2longdouble(mjdStart)
         mjdEnd = data2longdouble(mjdEnd)
@@ -676,7 +693,7 @@ class Polycos:
             entryList = []
             # Using tempo1 method to create polycos
             # If you want to disable the progress bar, add disable=True to the tqdm() call.
-            for tmid in tqdm(tmids):
+            for tmid in tqdm(tmids, disable=not progress):
                 tStart = tmid - mjdSpan / 2
                 tStop = tmid + mjdSpan / 2
                 nodes = np.linspace(tStart, tStop, numNodes)
@@ -751,11 +768,11 @@ class Polycos:
                 entryList.append(entry_dict)
 
             pTable = table.Table(entryList, meta={"name": "Polyco Data Table"})
-
-            self.polycoTable = pTable
-            if len(self.polycoTable) == 0:
+            out = cls()
+            out.polycoTable = pTable
+            if len(out.polycoTable) == 0:
                 raise ValueError("Zero polycos found for table")
-
+            return out
         else:
             raise NotImplementedError("Only TEMPO method has been implemented.")
 
@@ -813,10 +830,15 @@ class Polycos:
 
         Returns
         ---------
-        out: PINT Phase class
+        out: pint.phase.Phase
              Polyco evaluated absolute phase for t.
 
-        phase = refPh + DT*60*F0 + COEFF(1) + COEFF(2)*DT + COEFF(3)*DT**2 + ...
+        Notes
+        -----
+        .. math::
+
+            \\phi = \\phi_0 + 60 \\Delta T f_0 + COEFF[1] + COEFF[2] \Delta T + COEFF[3] \Delta T^2 + \\ldots
+
         """
         if not isinstance(t, (np.ndarray, list)):
             t = np.array([t])
@@ -847,15 +869,19 @@ class Polycos:
 
         Parameters
         ---------
-        t: numpy.ndarray or a single number.
+        t: numpy.ndarray, float
            An time array in MJD. Time sample should be in order
 
         Returns
         ---------
-        out: numpy array of long double frequencies in Hz
-             Polyco evaluated spin frequency at time t.
+        out: np.array
+             Polyco evaluated spin frequency [Hz] at time t.
 
-        FREQ(Hz) = F0 + (1/60)*(COEFF(2) + 2*DT*COEFF(3) + 3*DT^2*COEFF(4) + ...)
+        Notes
+        -----
+        .. math::
+
+            f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left(COEFF[2] + 2 \\delta T COEFF[3] + 3 \\Delta T^2 COEFF[4] + \\ldots\\right)
         """
         if not isinstance(t, np.ndarray) and not isinstance(t, list):
             t = np.array([t])

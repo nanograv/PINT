@@ -67,9 +67,8 @@ def test_read_write_round_trip(tmpdir, polyco_file):
 
 def test_generate_polycos_maxha_error(par_file):
     model = get_model(str(par_file))
-    p = Polycos()
     with pytest.raises(ValueError):
-        p.generate_polycos(model, 55000, 55002, "ao", 144, 12, 400.0, maxha=8)
+        p = Polycos.generate_polycos(model, 55000, 55002, "ao", 144, 12, 400.0, maxha=8)
 
 
 @pytest.mark.parametrize("obs", ["ao", "gbt", "@", "coe"])
@@ -81,8 +80,7 @@ def test_generate_polycos(tmpdir, par_file, obs, obsfreq, nspan, ncoeff):
 
     model = get_model(str(par_file))
 
-    p = Polycos()
-    p.generate_polycos(model, mjd_start, mjd_end, obs, nspan, ncoeff, obsfreq)
+    p = Polycos.generate_polycos(model, mjd_start, mjd_end, obs, nspan, ncoeff, obsfreq)
     p.write_polyco_file(str(output_polyco))
     q = Polycos(str(output_polyco))
 

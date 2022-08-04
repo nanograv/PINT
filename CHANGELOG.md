@@ -11,6 +11,9 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Moved observatories to JSON file.  Changed way observatories are loaded/overloaded
 - Split Jodrell Bank observatory based on backend to get correct clock files
 - Clock files can be marked as being valid past the end of the data they contain
+- Polycos can be written/read from Path or Stream objects
+- Polyco format registration now done once as a class method
+- Polyco reading/generation from timing model done as class methods
 ### Added
 - delta_pulse_number column is now saved to -padd flag on TOA write
 - command-line utility to compare parfiles
