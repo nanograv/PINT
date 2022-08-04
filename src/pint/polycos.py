@@ -234,8 +234,8 @@ def tempo_polyco_table_reader(filename):
                 52-72   DM
                 74-79   Doppler shift due to earth motion (10^-4)
                 80-86   Log_10 of fit rms residual in periods
-         2       1-20   Reference Phase (RPHASE)
-                21-38   Reference rotation frequency (F0)
+         2       1-20   Reference Phase (RPHASE or :math:`\\phi_0`)
+                21-38   Reference rotation frequency (:math:`f_0`)
                 39-43   Observatory number
                 44-49   Data span (minutes)
                 50-54   Number of coefficients
@@ -251,10 +251,13 @@ def tempo_polyco_table_reader(filename):
 
     The pulse phase and frequency at time T are then calculated as::
 
+    .. math::
 
-        DT = (T-TMID)*1440
-        PHASE = RPHASE + DT*60*F0 + COEFF(1) + DT*COEFF(2) + DT^2*COEFF(3) + ....
-        FREQ(Hz) = F0 + (1/60)*(COEFF(2) + 2*DT*COEFF(3) + 3*DT^2*COEFF(4) + ....)
+        \\Delta T = 1440(T-T_{\\rm mid})
+
+        \\phi = \\phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
+
+        f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \\ldots \\right)
 
     Parameters
     ----------
@@ -361,8 +364,8 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
                 52-72   DM
                 74-79   Doppler shift due to earth motion (10^-4)
                 80-86   Log_10 of fit rms residual in periods
-         2       1-20   Reference Phase (RPHASE)
-                21-38   Reference rotation frequency (F0)
+         2       1-20   Reference Phase (RPHASE or :math:`\\phi_0`)
+                21-38   Reference rotation frequency (:math:`f_0`)
                 39-43   Observatory number
                 44-49   Data span (minutes)
                 50-54   Number of coefficients
@@ -377,9 +380,13 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
 
     The pulse phase and frequency at time T are then calculated as::
 
-        DT = (T-TMID)*1440
-        PHASE = RPHASE + DT*60*F0 + COEFF(1) + DT*COEFF(2) + DT^2*COEFF(3) + ....
-        FREQ(Hz) = F0 + (1/60)*(COEFF(2) + 2*DT*COEFF(3) + 3*DT^2*COEFF(4) + ....)
+    .. math::
+
+        \\Delta T = 1440(T-T_{\\rm mid})
+
+        \\phi = \\phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
+
+        f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \\ldots \\right)
 
     Parameters
     ---------
@@ -554,15 +561,19 @@ class Polycos:
         formatName : str
             The name for the format.
         methodMood : str
-            ['r','w','rw']. 'r'  represent as reading
-                            'w'  represent as writting
-                            'rw' represent as reading and writting
-        readMethod : method
+            One of ['r','w','rw'].
+        readMethod : function
             The method for reading the file format.
-        writeMethod : method
+        writeMethod : function
             The method for writting the file to disk.
 
+        Notes
+        -----
+        The read/write methods should correspond to what are needed by :meth:`astropy.io.registry.register_reader` and
+        :meth:`astropy.io.registry.register_writer`, respectively
+
         """
+        assert methodMood.lower() in ["r", "w", "rw"]
         # Check if the format already exist.
         if (
             formatName in [f["format"] for f in cls.polycoFormats]
