@@ -638,7 +638,7 @@ class Polycos:
     def read_polyco_file(self, filename, format="tempo"):
         """Read polyco file to a table.
 
-        Included for backward compatibility.  It is better to use :meth:`pint.polycos.Polyco.read`.
+        Included for backward compatibility.  It is better to use :meth:`pint.polycos.Polycos.read`.
 
         Parameters
         ---------
