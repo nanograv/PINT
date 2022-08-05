@@ -402,7 +402,7 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
     ----------
     polycoTable: astropy.table.Table
         Polycos style table
-    filename : str or Path or file-like
+    filename : str or pathlib.Path or file-like
         Destination for the output polyco file. Default is 'polyco.dat'.
 
     References
@@ -518,7 +518,7 @@ class Polycos:
 
         Parameters
         ---------
-        filename : str or Path or file-like
+        filename : str or pathlib.Path or file-like
             The name of the input polyco file.
         format : str, optional
             The format of the file. Default is 'tempo'.
@@ -546,7 +546,7 @@ class Polycos:
 
         Parameters
         ---------
-        filename : str or Path or file-like
+        filename : str or pathlib.Path or file-like
             The name of the input polyco file.
         format : str, optional
             The format of the file. Default is 'tempo'.
@@ -571,7 +571,7 @@ class Polycos:
         formatName : str
             The name for the format.
         methodMood : str
-            One of ['r','w','rw'].
+            One of ['r', 'w', 'rw'].
         readMethod : function
             The method for reading the file format.
         writeMethod : function
@@ -632,11 +632,11 @@ class Polycos:
     def read_polyco_file(self, filename, format="tempo"):
         """Read polyco file to a table.
 
-        Included for backward compatibility.  It is better to use :meth:`pint.polyco.Polyco.read()`.
+        Included for backward compatibility.  It is better to use :meth:`pint.polycos.Polyco.read`.
 
         Parameters
         ---------
-        filename : str or Path or file-like
+        filename : str or pathlib.Path or file-like
             The name of the input polyco file.
         format : str, optional
             The format of the file. Default is 'tempo'.
