@@ -146,22 +146,17 @@ def test_J0613_STIG(toasJ0613, modelJ0613_STIG):
     f.fit_toas()
 
 
-@pytest.mark.xfail(
-    reason="model builder does not reject unrecognized parameters but should"
-)
-def test_SINI_error():
-    """Test SINI and M2 error."""
+def test_SINI_raises():
+    """SINI is not a valid parameter for ELL1H"""
     SINI_par = simple_par.replace("H3 2.7507208E-7", "SINI 0.8")
     with pytest.raises(ValueError):
         get_model(StringIO(SINI_par))
 
 
-@pytest.mark.xfail(
-    reason="model builder does not reject unrecognized parameters but should"
-)
-def test_M2_error():
+def test_M2_raises():
+    """M2 is not a valid parameter for ELL1H"""
     M2_par = simple_par + "\nM2 1.0 1 0.1"
-    with pytest.raises(ValueError):
+    with pytest.raises(AttributeError):
         get_model(StringIO(M2_par))
 
 
