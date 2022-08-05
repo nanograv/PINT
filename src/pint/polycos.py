@@ -530,7 +530,7 @@ class Polycos:
         self.fileName = filename
 
         if filename is not None:
-            log.debug(f"Reading polycos from '{filename}'")
+            log.info(f"Reading polycos from '{filename}'")
             if format not in [f["format"] for f in self.polycoFormats]:
                 raise ValueError(
                     "Unknown polyco file format '" + format + "'\n"
