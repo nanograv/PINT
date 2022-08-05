@@ -693,7 +693,7 @@ class Polycos:
             Observing frequency [MHz]
         maxha : float, optional.
             Maximum hour angle. Default 12.0. Only 12.0 is supported for now.
-        method : string, optional
+        method : str, optional
             Method to generate polycos. Only the ``TEMPO`` method is supported for now.
         numNodes : int, optional
             Number of nodes for fitting. It cannot be less then the number of
@@ -862,7 +862,7 @@ class Polycos:
 
         Parameters
         ---------
-        t: numpy.ndarray or a single number.
+        t: numpy.ndarray or float
            An time array in MJD. Time sample should be in order
 
         Returns
@@ -880,7 +880,7 @@ class Polycos:
 
         Parameters
         ---------
-        t: numpy.ndarray or a single number.
+        t: numpy.ndarray or float
            An time array in MJD. Time sample should be in order
 
         Returns
@@ -892,7 +892,7 @@ class Polycos:
         -----
         .. math::
 
-            \\phi = \\phi_0 + 60 \\Delta T f_0 + COEFF[1] + COEFF[2] \Delta T + COEFF[3] \Delta T^2 + \\ldots
+            \\phi = \\phi_0 + 60 \\Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
 
         """
         if not isinstance(t, (np.ndarray, list)):
@@ -936,7 +936,7 @@ class Polycos:
         -----
         .. math::
 
-            f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left(COEFF[2] + 2 \\delta T COEFF[3] + 3 \\Delta T^2 COEFF[4] + \\ldots\\right)
+            f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left(COEFF[2] + 2 \\Delta T COEFF[3] + 3 \\Delta T^2 COEFF[4] + \\ldots\\right)
         """
         if not isinstance(t, np.ndarray) and not isinstance(t, list):
             t = np.array([t])

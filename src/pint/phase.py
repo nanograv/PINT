@@ -8,7 +8,7 @@ class Phase(namedtuple("Phase", "int frac")):
     """
     Class representing pulse phase as integer (.int) and fractional (.frac) parts.
 
-    The phase values are dimensionless :class:`~astropy.quantity.Quantity` (``u.dimensionless_unscaled == u.Unit("") == Unit(dimensionless)``)
+    The phase values are dimensionless :class:`~astropy.units.Quantity` (``u.dimensionless_unscaled == u.Unit("") == Unit(dimensionless)``)
 
     Ensures that the fractional part stays in [-0.5, 0.5)
 
@@ -23,22 +23,23 @@ class Phase(namedtuple("Phase", "int frac")):
         """Create new Phase object
 
         Constructs a Phase object.
-        Can be initialized with arrays or a scalar :class:`~astropy.quantity.Quantity` (dimensionless).
+        Can be initialized with arrays or a scalar :class:`~astropy.units.Quantity` (dimensionless).
 
         Accepts either floating point argument (``arg1``) or pair of arguments with integer (``arg1``) and fractional (``arg2``) parts separate
-        Scalars are converted to length 1 arrays so `Phase.int` and `Phase.frac` are always arrays
+        Scalars are converted to length 1 arrays so ``Phase.int`` and ``Phase.frac`` are always arrays
 
         Parameters
         ----------
-        arg1 : array or astropy.quantity.Quantity
+        arg1 : np.ndarray or astropy.units.Quantity
             Quantity should be dimensionless
-        arg2 : array or astropy.quantity.Quantity
+        arg2 : np.ndarray or astropy.units.Quantity
             Quantity should be dimensionless
 
         Returns
         -------
         Phase
-            pulse phase object with arrays of dimensionless :class:`~astropy.quantity.Quantity` objects as the int and frac parts
+            pulse phase object with arrays of dimensionless :class:`~astropy.units.Quantity`
+            objects as the ``int`` and ``frac`` parts
         """
         if not hasattr(arg1, "unit"):
             arg1 = u.Quantity(arg1)
