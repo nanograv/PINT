@@ -6,7 +6,7 @@ import numpy
 
 class Phase(namedtuple("Phase", "int frac")):
     """
-    Class representing pulse phase as integer (.int) and fractional (.frac) parts.
+    Class representing pulse phase as integer (``.int``) and fractional (``.frac``) parts.
 
     The phase values are dimensionless :class:`~astropy.units.Quantity` (``u.dimensionless_unscaled == u.Unit("") == Unit(dimensionless)``)
 
@@ -22,7 +22,6 @@ class Phase(namedtuple("Phase", "int frac")):
     def __new__(cls, arg1, arg2=None):
         """Create new Phase object
 
-        Constructs a Phase object.
         Can be initialized with arrays or a scalar :class:`~astropy.units.Quantity` (dimensionless).
 
         Accepts either floating point argument (``arg1``) or pair of arguments with integer (``arg1``) and fractional (``arg2``) parts separate
@@ -30,9 +29,9 @@ class Phase(namedtuple("Phase", "int frac")):
 
         Parameters
         ----------
-        arg1 : np.ndarray or astropy.units.Quantity
+        arg1 : numpy.ndarray or astropy.units.Quantity
             Quantity should be dimensionless
-        arg2 : np.ndarray or astropy.units.Quantity
+        arg2 : numpy.ndarray or astropy.units.Quantity
             Quantity should be dimensionless
 
         Returns

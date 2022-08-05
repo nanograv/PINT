@@ -1,10 +1,20 @@
 """Polynomial coefficients for phase prediction
 
 Polycos designed to predict the pulsar's phase and pulse-period over a
-given interval using polynomial expansions. 
+given interval using polynomial expansions.   
 
-Example
--------
+The pulse phase and frequency at time T are then calculated as::
+
+.. math::
+
+    \\Delta T = 1440(T-T_{\\rm mid})
+
+    \\phi = \\phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
+
+    f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \\ldots \\right)
+
+Examples
+--------
 Read in polycos, predict phases:
 
     >>> from pint.polycos import Polycos
@@ -134,7 +144,7 @@ class PolycoEntry:
 
         Parameters
         ----------
-        t : float or np.ndarray
+        t : float or numpy.ndarray
             Input times
 
         Returns
@@ -161,7 +171,7 @@ class PolycoEntry:
 
         Parameters
         ----------
-        t : float or np.ndarray
+        t : float or numpy.ndarray
             Input times
 
         Returns
@@ -175,12 +185,12 @@ class PolycoEntry:
 
         Parameters
         ----------
-        t : float or np.ndarray
+        t : float or numpy.ndarray
             Input times
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
             Frequency (in Hz)
         """
         dt = (data2longdouble(t) - self.tmid.value) * MIN_PER_DAY
@@ -195,12 +205,12 @@ class PolycoEntry:
 
         Parameters
         ----------
-        t : float or np.ndarray
+        t : float or numpy.ndarray
             Input times
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
             Frequency derivative (in Hz/s)
         """
         dt = (data2longdouble(t) - self.tmid.value) * MIN_PER_DAY
@@ -234,8 +244,8 @@ def tempo_polyco_table_reader(filename):
                 52-72   DM
                 74-79   Doppler shift due to earth motion (10^-4)
                 80-86   Log_10 of fit rms residual in periods
-         2       1-20   Reference Phase (RPHASE or :math:`\\phi_0`)
-                21-38   Reference rotation frequency (:math:`f_0`)
+         2       1-20   Reference Phase (RPHASE)
+                21-38   Reference rotation frequency (F0)
                 39-43   Observatory number
                 44-49   Data span (minutes)
                 50-54   Number of coefficients
@@ -364,8 +374,8 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
                 52-72   DM
                 74-79   Doppler shift due to earth motion (10^-4)
                 80-86   Log_10 of fit rms residual in periods
-         2       1-20   Reference Phase (RPHASE or :math:`\\phi_0`)
-                21-38   Reference rotation frequency (:math:`f_0`)
+         2       1-20   Reference Phase (RPHASE)
+                21-38   Reference rotation frequency (F0)
                 39-43   Observatory number
                 44-49   Data span (minutes)
                 50-54   Number of coefficients
@@ -389,7 +399,7 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
         f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \\ldots \\right)
 
     Parameters
-    ---------
+    ----------
     polycoTable: astropy.table.Table
         Polycos style table
     filename : str or Path or file-like
@@ -693,7 +703,7 @@ class Polycos:
             Observing frequency [MHz]
         maxha : float, optional.
             Maximum hour angle. Default 12.0. Only 12.0 is supported for now.
-        method : str, optional
+        method : string, optional
             Method to generate polycos. Only the ``TEMPO`` method is supported for now.
         numNodes : int, optional
             Number of nodes for fitting. It cannot be less then the number of
@@ -862,12 +872,12 @@ class Polycos:
 
         Parameters
         ---------
-        t: numpy.ndarray or float
+        t: numpy.ndarray or a single number.
            An time array in MJD. Time sample should be in order
 
         Returns
         ---------
-        np.ndarray
+        numpy.ndarray
              Fractional phase
         """
         if not isinstance(t, np.ndarray) and not isinstance(t, list):
@@ -880,7 +890,7 @@ class Polycos:
 
         Parameters
         ---------
-        t: numpy.ndarray or float
+        t: numpy.ndarray or a single number.
            An time array in MJD. Time sample should be in order
 
         Returns
@@ -890,9 +900,11 @@ class Polycos:
 
         Notes
         -----
+        Calculates phase according to:
+
         .. math::
 
-            \\phi = \\phi_0 + 60 \\Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
+            \\phi = \\phi_0 + 60 \\Delta T f_0 + COEFF[1] + COEFF[2] \Delta T + COEFF[3] \Delta T^2 + \\ldots
 
         """
         if not isinstance(t, (np.ndarray, list)):
@@ -929,14 +941,16 @@ class Polycos:
 
         Returns
         ---------
-        np.ndarray
+        numpy.ndarray
              Polyco evaluated spin frequency [Hz] at time t.
 
         Notes
         -----
+        Calculates frequency according to:
+
         .. math::
 
-            f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left(COEFF[2] + 2 \\Delta T COEFF[3] + 3 \\Delta T^2 COEFF[4] + \\ldots\\right)
+            f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left(COEFF[2] + 2 \\delta T COEFF[3] + 3 \\Delta T^2 COEFF[4] + \\ldots\\right)
         """
         if not isinstance(t, np.ndarray) and not isinstance(t, list):
             t = np.array([t])
