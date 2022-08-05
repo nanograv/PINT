@@ -3,7 +3,7 @@
 Polycos designed to predict the pulsar's phase and pulse-period over a
 given interval using polynomial expansions.   
 
-The pulse phase and frequency at time T are then calculated as::
+The pulse phase and frequency at time T are then calculated as:
 
 .. math::
 
@@ -27,7 +27,10 @@ Or, to generate polycos from a timing model:
     >>> from pint.polycos import Polycos
     >>> m = get_model(filename)
     >>> p = Polycos.generate_polycos(model, 50000, 50001, "AO", 144, 12, 1400)
-
+  
+References
+----------
+http://tempo.sourceforge.net/ref_man_sections/tz-polyco.txt
 """
 import astropy.table as table
 import astropy.units as u
@@ -259,7 +262,7 @@ def tempo_polyco_table_reader(filename):
 
     One polyco file could include more then one entry.
 
-    The pulse phase and frequency at time T are then calculated as::
+    The pulse phase and frequency at time T are then calculated as:
 
     .. math::
 
@@ -388,7 +391,7 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
 
     One polyco file could include more then one entry.
 
-    The pulse phase and frequency at time T are then calculated as::
+    The pulse phase and frequency at time T are then calculated as:
 
     .. math::
 
@@ -503,15 +506,12 @@ class Polycos:
         """
         for fmt in formatlist:
             if fmt["read_method"] is not None and fmt["write_method"] is None:
-                log.debug(f"Registering Polyco format '{fmt['format']}' with mode='r'")
                 cls.add_polyco_file_format(fmt["format"], "r", fmt["read_method"], None)
             elif fmt["read_method"] is None and fmt["write_method"] is not None:
-                log.debug(f"Registering Polyco format '{fmt['format']}' with mode='w'")
                 cls.add_polyco_file_format(
                     fmt["format"], "w", None, fmt["write_method"]
                 )
             elif fmt["read_method"] is not None and fmt["write_method"] is not None:
-                log.debug(f"Registering Polyco format '{fmt['format']}' with mode='rw'")
                 cls.add_polyco_file_format(
                     fmt["format"], "rw", fmt["read_method"], fmt["write_method"]
                 )
@@ -856,7 +856,23 @@ class Polycos:
         self.polycoTable.write(filename, format=format)
 
     def find_entry(self, t):
-        """Find the right entry for the input time."""
+        """Find the right entry for the input time.
+
+        Parameters
+        ---------
+        t: numpy.ndarray or float
+           A time array in MJD.
+
+        Returns
+        -------
+        numpy.ndarray
+            Indices corresponding to the desired time(s)
+
+        Raises
+        ------
+        ValueError
+            If the input time(s) are not covered by the polycos
+        """
         if not isinstance(t, (np.ndarray, list)):
             t = np.array([t])
 
@@ -878,13 +894,17 @@ class Polycos:
 
         Parameters
         ---------
-        t: numpy.ndarray or a single number.
+        t: numpy.ndarray or float
            An time array in MJD. Time sample should be in order
 
         Returns
         ---------
         numpy.ndarray
              Fractional phase
+
+        Notes
+        -----
+        Returns fractional part of :meth:`pint.polycos.Polycos.eval_abs_phase`
         """
         if not isinstance(t, np.ndarray) and not isinstance(t, list):
             t = np.array([t])
@@ -896,7 +916,7 @@ class Polycos:
 
         Parameters
         ---------
-        t: numpy.ndarray or a single number.
+        t: numpy.ndarray or float
            An time array in MJD. Time sample should be in order
 
         Returns
@@ -912,6 +932,7 @@ class Polycos:
 
             \\phi = \\phi_0 + 60 \\Delta T f_0 + COEFF[1] + COEFF[2] \Delta T + COEFF[3] \Delta T^2 + \\ldots
 
+        Calculation done using :meth:`pint.polycos.PolycoEntry.evalabsphase`
         """
         if not isinstance(t, (np.ndarray, list)):
             t = np.array([t])
@@ -942,7 +963,7 @@ class Polycos:
 
         Parameters
         ---------
-        t: numpy.ndarray, float
+        t: numpy.ndarray or float
            An time array in MJD. Time samples should be in order
 
         Returns
@@ -956,30 +977,50 @@ class Polycos:
 
         .. math::
 
-            f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left(COEFF[2] + 2 \\delta T COEFF[3] + 3 \\Delta T^2 COEFF[4] + \\ldots\\right)
+            f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left(COEFF[2] + 2 \\Delta T COEFF[3] + 3 \\Delta T^2 COEFF[4] + \\ldots\\right)
+
+        Calculation done using :meth:`pint.polycos.PolycoEntry.evalfreq`
         """
         if not isinstance(t, np.ndarray) and not isinstance(t, list):
             t = np.array([t])
 
         entryIndex = self.find_entry(t)
-        poly_result = data2longdouble(np.zeros(len(t)))
+        spinFreq = np.zeros(len(t), dtype=np.longdouble)
 
-        dt = (data2longdouble(t) - self.polycoTable[entryIndex]["tmid"]) * MIN_PER_DAY
-
-        for ii, (tt, eidx) in enumerate(zip(dt, entryIndex)):
-            coeffs = self.polycoTable["entry"][eidx].coeffs
-            coeffs = data2longdouble(range(len(coeffs))) * coeffs
-            coeffs = coeffs[::-1][:-1]
-            poly_result[ii] = np.polyval(coeffs, tt)
-        spinFreq = np.array(
-            [
-                self.polycoTable["entry"][eidx].f0
-                + poly_result[ii] / data2longdouble(60.0)
-                for ii, eidx in zip(range(len(t)), entryIndex)
-            ]
-        )
+        for i, idx in enumerate(entryIndex):
+            spinFreq[i] = self[idx]["entry"].evalfreq(t[i])
 
         return spinFreq
+
+    def eval_spin_freq_derivative(self, t):
+        """
+        Polyco evaluate spin frequency derivative for a time array.
+
+        Parameters
+        ---------
+        t: numpy.ndarray or float
+           An time array in MJD. Time samples should be in order
+
+        Returns
+        ---------
+        numpy.ndarray
+             Polyco evaluated spin frequency derivative [Hz/s] at time t.
+
+        Notes
+        -----
+
+        Calculation done using :meth:`pint.polycos.PolycoEntry.evalfreqderiv`
+        """
+        if not isinstance(t, np.ndarray) and not isinstance(t, list):
+            t = np.array([t])
+
+        entryIndex = self.find_entry(t)
+        spinFreqDeriv = np.zeros(len(t), dtype=np.longdouble)
+
+        for i, idx in enumerate(entryIndex):
+            spinFreqDeriv[i] = self[idx]["entry"].evalfreqderiv(t[i])
+
+        return spinFreqDeriv
 
 
 # load the default registry on import
