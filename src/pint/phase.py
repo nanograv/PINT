@@ -97,3 +97,7 @@ class Phase(namedtuple("Phase", "int frac")):
 
     def __getitem__(self, key):
         return Phase(self.int[key], self.frac[key])
+
+    @property
+    def quantity(self):
+        return self.int + self.frac

@@ -405,7 +405,7 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
     ----------
     polycoTable: astropy.table.Table
         Polycos style table
-    filename : str or pathlib.Path or file-like
+    filename : str or ~pathlib.Path or file-like
         Destination for the output polyco file. Default is 'polyco.dat'.
 
     References
@@ -521,7 +521,7 @@ class Polycos:
 
         Parameters
         ---------
-        filename : str or pathlib.Path or file-like
+        filename : str or ~pathlib.Path or file-like
             The name of the input polyco file.
         format : str, optional
             The format of the file. Default is 'tempo'.
@@ -550,7 +550,7 @@ class Polycos:
 
         Parameters
         ---------
-        filename : str or pathlib.Path or file-like
+        filename : str or ~pathlib.Path or file-like
             The name of the input polyco file.
         format : str, optional
             The format of the file. Default is 'tempo'.
@@ -642,7 +642,7 @@ class Polycos:
 
         Parameters
         ---------
-        filename : str or pathlib.Path or file-like
+        filename : str or ~pathlib.Path or file-like
             The name of the input polyco file.
         format : str, optional
             The format of the file. Default is 'tempo'.
@@ -709,7 +709,7 @@ class Polycos:
             Observing frequency [MHz]
         maxha : float, optional.
             Maximum hour angle. Default 12.0. Only 12.0 is supported for now.
-        method : string, optional
+        method : str, optional
             Method to generate polycos. Only the ``TEMPO`` method is supported for now.
         numNodes : int, optional
             Number of nodes for fitting. It cannot be less then the number of
