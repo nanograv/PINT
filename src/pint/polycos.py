@@ -503,12 +503,15 @@ class Polycos:
         """
         for fmt in formatlist:
             if fmt["read_method"] is not None and fmt["write_method"] is None:
+                log.debug(f"Registering Polyco format '{fmt['format']}' with mode='r'")
                 cls.add_polyco_file_format(fmt["format"], "r", fmt["read_method"], None)
             elif fmt["read_method"] is None and fmt["write_method"] is not None:
+                log.debug(f"Registering Polyco format '{fmt['format']}' with mode='w'")
                 cls.add_polyco_file_format(
                     fmt["format"], "w", None, fmt["write_method"]
                 )
             elif fmt["read_method"] is not None and fmt["write_method"] is not None:
+                log.debug(f"Registering Polyco format '{fmt['format']}' with mode='rw'")
                 cls.add_polyco_file_format(
                     fmt["format"], "rw", fmt["read_method"], fmt["write_method"]
                 )
@@ -527,6 +530,7 @@ class Polycos:
         self.fileName = filename
 
         if filename is not None:
+            log.debug(f"Reading polycos from '{filename}'")
             if format not in [f["format"] for f in self.polycoFormats]:
                 raise ValueError(
                     "Unknown polyco file format '" + format + "'\n"
@@ -599,6 +603,7 @@ class Polycos:
 
             pFormat["read_method"] = readMethod
             pFormat["write_method"] = writeMethod
+            log.debug(f"Registering Polyco format '{formatName}' with mode='r'")
             registry.register_reader(
                 pFormat["format"], table.Table, pFormat["read_method"]
             )
@@ -608,6 +613,7 @@ class Polycos:
 
             pFormat["read_method"] = readMethod
             pFormat["write_method"] = writeMethod
+            log.debug(f"Registering Polyco format '{formatName}' with mode='w'")
             registry.register_writer(
                 pFormat["format"], table.Table, pFormat["write_method"]
             )
@@ -619,7 +625,7 @@ class Polycos:
 
             pFormat["read_method"] = readMethod
             pFormat["write_method"] = writeMethod
-
+            log.debug(f"Registering Polyco format '{formatName}' with mode='rw'")
             registry.register_reader(
                 pFormat["format"], table.Table, pFormat["read_method"]
             )
