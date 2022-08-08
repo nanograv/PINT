@@ -350,16 +350,25 @@ def export_all_clock_files(directory):
     """
     directory = Path(directory)
     if pint.observatory._gps_clock is not None:
+        log.debug(
+            f"Exporting GPS clock file to {directory / Path(pint.observatory._gps_clock.filename).name}"
+        )
         pint.observatory._gps_clock.export(
             directory / Path(pint.observatory._gps_clock.filename).name
         )
     for version, clock in pint.observatory._bipm_clock_versions.items():
+        log.debug(
+            f"Exporting BIPM ({version}) clock file to {directory / Path(clock.filename).name}"
+        )
         clock.export(directory / Path(clock.filename).name)
     for name in Observatory.names():
         o = get_observatory(name)
         if hasattr(o, "_clock") and o._clock is not None:
             for clock in o._clock:
                 if clock.filename is not None:
+                    log.debug(
+                        f"Exporting clock file for {o.name} to {directory / Path(clock.filename).name}"
+                    )
                     clock.export(directory / Path(clock.filename).name)
 
 
