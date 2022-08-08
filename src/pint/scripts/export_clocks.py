@@ -47,4 +47,4 @@ def main(argv=None):
         obs = pint.observatory.get_observatory(obsname)
         obs._load_clock_corrections()
 
-    pint.observatory.topo_obs.export_all_clock_files(os.path.abspath(os.curdir))
+    pint.observatory.topo_obs.export_all_clock_files(args.directory)
