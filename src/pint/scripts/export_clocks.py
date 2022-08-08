@@ -17,6 +17,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(
         description="PINT tool for export clock files",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        epilog=f"Example: export_clocks -o clock_dir/ GBT Arecibo CHIME VLA",
     )
     parser.add_argument(
         "observatories", help="Observatories to export", type=str, nargs="+"
@@ -27,7 +28,7 @@ def main(argv=None):
         default=os.path.abspath(os.curdir),
         type=str,
         dest="directory",
-        help="Destination directory",
+        help="Destination directory (set $PINT_CLOCK_OVERRIDE to this value to look here first for clock files)",
     )
     parser.add_argument(
         "--log-level",
