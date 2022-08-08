@@ -241,8 +241,8 @@ def test_ddk_ECL_ICRS():
     assert np.isclose(mECL_transformed.KOM.quantity, mECL.KOM.quantity)
 
 
-@pytest.mark.xfail(reason="model builder does not reject invalid parameters but should")
-def test_sini_from_par():
+def test_sini_raises():
+    # SINI is not an allowed parameter for DDK
     test_par_str = temp_par_str + "\n SINI  0.8     1  0.562"
     with pytest.raises(ValueError):
         mb.get_model(StringIO(test_par_str))
