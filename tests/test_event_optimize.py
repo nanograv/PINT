@@ -12,13 +12,11 @@ import pytest
 import numpy as np
 import pickle
 import scipy.stats as stats
-import unittest
 
 from pint.scripts import event_optimize
 from pinttestdata import datadir
 
 
-@unittest.skip
 def test_result(tmp_path):
     parfile = datadir / "PSRJ0030+0451_psrcat.par"
     eventfile_orig = (
@@ -61,6 +59,7 @@ def test_parallel(tmp_path):
     event_optimize.maxpost = -9e99
     event_optimize.numcalls = 0
     try:
+        import pathos
         os.chdir(tmp_path)
         cmd = f"{eventfile} {parfile} {temfile} --weightcol=PSRJ0030+0451 --minWeight=0.9 --nwalkers=10 --nsteps=50 --burnin 10"
         event_optimize.main(cmd.split())
@@ -79,6 +78,8 @@ def test_parallel(tmp_path):
 
         for i in range(0, samples1.shape[1]):
             assert stats.ks_2samp(samples1[:, i], samples2[:, i])[1] == 1.0
+    except ImportError:
+        pass
     finally:
         os.chdir(p)
         sys.stdout = saved_stdout
