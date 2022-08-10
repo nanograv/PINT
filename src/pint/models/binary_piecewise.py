@@ -34,7 +34,6 @@ class BinaryBTPiecewise(PulsarBinary):
     register = True
 
     def __init__(self):
-        
         super(BinaryBTPiecewise, self).__init__()
         self.binary_model_name = "BT_piecewise"
         self.binary_model_class = BTpiecewise
@@ -52,12 +51,14 @@ class BinaryBTPiecewise(PulsarBinary):
         self.remove_param("SINI")
         self.T0.value=1
         self.A1.value=1
-        self.add_group_range(None, None, frozen=False, j=0)
+        self.add_group_range(50000, 51000, frozen=False, j=0)
         self.add_piecewise_param("T0","d",None,0)
         self.add_piecewise_param("A1","ls",None,0)
+        #self.set_special_params(["T0X_0000", "PieceLowerBound_0000", "PieceUpperBound_0000"])
 
 
     def add_group_range(self,group_start_mjd,group_end_mjd,frozen=True,j=None):
+        #print('hello from add range')
         if group_end_mjd is not None and group_start_mjd is not None:
             if group_end_mjd < group_start_mjd:
                 raise ValueError("Starting MJD is greater than ending MJD.")
@@ -69,7 +70,7 @@ class BinaryBTPiecewise(PulsarBinary):
         i = f"{int(j):04d}"  
         self.add_param(
         prefixParameter(
-            name="PieceLowerBound_{0}".format(i),
+            name="PLB_{0}".format(i),
             units="MJD",
             unit_template=lambda x: "MJD",
             description="Beginning of paramX interval",
@@ -81,7 +82,7 @@ class BinaryBTPiecewise(PulsarBinary):
         )
         self.add_param(
         prefixParameter(
-            name= "PieceUpperBound_{0}".format(i),
+            name= "PUB_{0}".format(i),
             units="MJD",
             unit_template=lambda x: "MJD",
             description="End of paramX interval",
@@ -92,8 +93,8 @@ class BinaryBTPiecewise(PulsarBinary):
         )
         )
         #print("going to binary_piecewise setup")
-        self.setup()
-        self.validate()
+        #self.setup()
+        #self.validate()
         
     def update_binary_object(self, toas=None, acc_delay=None):
         super().update_binary_object(toas=toas,acc_delay=acc_delay)
@@ -130,7 +131,7 @@ class BinaryBTPiecewise(PulsarBinary):
             )
         for index in indices:
             index_rf = f"{int(index):04d}"
-            for prefix in ["T0X_","A1X_", "PieceLowerBound_", "PieceUpperBound_"]:
+            for prefix in ["T0X_","A1X_", "PLB_", "PUB_"]:
                 self.remove_param(prefix + index_rf)
         self.setup()
         self.validate()
@@ -171,10 +172,17 @@ class BinaryBTPiecewise(PulsarBinary):
                 frozen=False,
             )
             )
-        self.setup()
+            
+
+        #self.setup()
+        
+        
+        
     
     def setup(self):
+        #print(self.PB)
         super(BinaryBTPiecewise, self).setup()
+        #print(self.PB)
         for bpar in self.params:
             self.register_deriv_funcs(self.d_binary_delay_d_xxxx, bpar)
         # Setup the model isinstance
@@ -182,14 +190,15 @@ class BinaryBTPiecewise(PulsarBinary):
         # Setup the FBX orbits if FB is set.
         # TODO this should use a smarter way to set up orbit.
         T0X_mapping = self.get_prefix_mapping_component("T0X_")
+        #print(T0X_mapping)
         T0Xs = {}
         A1X_mapping = self.get_prefix_mapping_component("A1X_")
         A1Xs = {}
-        XR1_mapping = self.get_prefix_mapping_component("PieceLowerBound_")
+        XR1_mapping = self.get_prefix_mapping_component("PLB_")
         XR1s = {}
-        XR2_mapping = self.get_prefix_mapping_component("PieceUpperBound_")
+        XR2_mapping = self.get_prefix_mapping_component("PUB_")
         XR2s = {}
-        
+        #print(f'XR2:{XR2_mapping.values()}')
         for t0n in T0X_mapping.values():
             #print("hello from T0 mapping")
             T0Xs[t0n] = getattr(self, t0n).quantity
@@ -216,22 +225,17 @@ class BinaryBTPiecewise(PulsarBinary):
         #
         for XR1n in XR1_mapping.values():
             #lower bound mapping
-            #print("hello from A1 mapping")
+            #print("hello from Lower bound mapping mapping")
             XR1s[XR1n] = getattr(self, XR1n).quantity
-        
-        #if None in XR1s.values():
-            #print("Group with non-defined XR1, applying default A1 to group")
-            #TODO set default A1 value
+
             
         if None not in XR1s.values():
-            #print(len(A1Xs.items()))
             for xr1_name, xr1_value in XR1s.items():
                 self.binary_instance.add_binary_params(xr1_name, xr1_value)
         
         for XR2n in XR2_mapping.values():
-            #print("hello from A1 mapping")
             XR2s[XR2n] = getattr(self, XR2n).quantity
-        
+        #print(XR1s)
         #if None in XR2s.values():
             #print("Group with non-defined XR2, applying default A1 to group")
             #TODO set default A1 value
