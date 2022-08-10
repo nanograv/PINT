@@ -23,9 +23,10 @@ class BTpiecewise(BTmodel):
                 self.update_input()
         self.binary_params = list(self.param_default_value.keys())
         #self.param_aliases.update({"T0X": ["T0X"], "A1X": ["A1X"]})
-        #print("goes via BT_piecewise")
+        
         
     def set_param_values(self, valDict=None):
+        #print(valDict)
         super().set_param_values(valDict=valDict)
         self.piecewise_parameter_loader(valDict=valDict)
     
@@ -45,23 +46,40 @@ class BTpiecewise(BTmodel):
             self.piecewise_parameter_information = [0,self.T0,self.A1,0*u.d,1e9*u.d]
         else:
             piece_index = []   #iniialise array used to count the number of pieces. Operates by seaching for "A1X_i/T0X_i" and appending i to the array. Can operate if pieces are given out of order. 
-            
+            #print(f"Should be the last trace :{valDict}")
             for key, value in valDict.items():   #Searches through updates for keys prefixes matching T0X/A1X, can be allowed to be more flexible with param+"X_" provided param is defined earlier. Arbitrary piecewise parameter model
+                
+                
                 if key[0:4]=="T0X_" or key[0:4] == "A1X_":
                     piece_index.append((key[4:8]))   #appends index to array
             piece_index= np.unique(piece_index)   #makes sure only one instance of each index is present returns order indeces
             for index in piece_index:   #looping through each index in order they are given (0 -> n)
                 param_pieces = []    #array to store specific piece i's information in the order [index,T0X,A1X,Group's lower edge, Group's upper edge,]
-                piece_number = int(index)
+                piece_number = f"{int(index):04d}" 
+                #print(piece_number)
                 param_pieces.append(piece_number)
-                string = ["T0X_"+index,"A1X_"+index,"PieceLowerBound_"+index,"PieceUpperBound_"+index]            
-                for i in range(0,len(string)):
-                    if string[i] in valDict:
-                        param_pieces.append(valDict[string[i]])
-                    elif string[i] not in valDict:
-                        attr = string[i][0:2]
-                        param_pieces.append(getattr(self, attr))
-                        #Raises error if range not defined as there is no Piece upper/lower bound in the model.
+                string = ["T0X_"+index,"A1X_"+index,"PLB_"+index,"PUB_"+index]
+                
+                #print(f"Should be the last trace :{valDict}")
+                
+                if string[0] not in param_pieces:
+                    for i in range(0,len(string)):
+                        #print(string[i])
+                        if string[i] in valDict:
+                            param_pieces.append(valDict[string[i]]) 
+                        elif string[i] not in valDict:
+                            attr = string[i][0:2]
+                            param_pieces.append(getattr(self, attr))
+                            #Raises error if range not defined as there is no Piece upper/lower bound in the model.
+                #string = ["PLB_"+index,"PUB_"+index]
+                #for i in range(0,len(string)):
+                #    #print(string[i])
+                #    if string[i] in valDict:
+                #        param_pieces.append(valDict[string[i]])
+                #    elif string[i] not in valDict:
+                #        attr = string[i][0:2]
+                #        param_pieces.append(getattr(self, attr))
+                
                 #print(param_pieces)
                 piecewise_parameter_information.append(param_pieces)
             self.valDict=valDict
@@ -112,41 +130,6 @@ class BTpiecewise(BTmodel):
         self.group_index_array = np.array(index)
         return self.group_index_array
             
-    #def print_toas_in_group(self):   #takes array sorted by lower group edge (requires groups to be chronologically ordered). Called from piece_parameter_loader, ordering operation occurs there
-    #    lower_bound = []   #seperates lower/upper bounds from 5 x n array of piece information
-    #    upper_bound = []
-    #    lower_index_temp = []
-    #    upper_index_temp = []
-    #    for i in range(0,len(self.piecewise_parameter_information)):   #loops through the array (len(...) = n)
-    #        if i == 0:  #for the first group, makes the lower bound slightly earlier than defined such that ambiguity of where first toa is, is accomodated
-    #            if len(self.piecewise_parameter_information)==1:
-    #                lower_bound.append(self.piecewise_parameter_information[i][3].value-1) #modified bounds for singular group
-    #                upper_bound.append(self.piecewise_parameter_information[i][4].value+1)  
-    #            else:
-    #                lower_bound.append(self.piecewise_parameter_information[i][3].value-1) #modified sorted lower bound to encompass the first toa
-    #                upper_bound.append(self.piecewise_parameter_information[i][4].value) 
-    #        elif i==len(self.piecewise_parameter_information)-1:  #for the last group, makes the upper bound slightly later than defined such that ambiguity of where last toa is, is accomodated
-    #            lower_bound.append(self.piecewise_parameter_information[i][3].value)
-    #            upper_bound.append(self.piecewise_parameter_information[i][4].value+1) #modified sorted upper bound to encompass the last toa
-    #        else:
-    #            lower_bound.append(self.piecewise_parameter_information[i][3].value) #append all other lower/upper bounds 
-    #            upper_bound.append(self.piecewise_parameter_information[i][4].value)
-    #    if hasattr(self._t, "value") is True:
-    #        lower_index = np.searchsorted(lower_bound,self._t.value)-1  #Assigns group index to each toa. toa will always be on the right/left of the lower/upper bound, hence the "-1" factor
-    #        upper_index = np.searchsorted(upper_bound,self._t.value) #For toas between groups i.e lower bound:(55000,55100), upper bound: (55050,55150) lower/upperindex of 55075 should be (0,1)
-    #    else:
-    #        lower_index = np.searchsorted(lower_bound,self._t)-1  #Assigns group index to each toa. toa will always be on the right/left of the lower/upper bound, hence the "-1" factor
-    #        upper_index = np.searchsorted(upper_bound,self._t) #For toas between groups i.e lower bound:(55000,55100), upper bound: (55050,55150) lower/upperindex of 55075 should be: 0
-    #    for i in lower_index: #this loop is to accomodate out of order groups
-    #        lower_index_temp.append(self.piecewise_parameter_information[i][0])
-    #    for i in upper_index:
-    #        if i > len(upper_bound)-1:
-    #            upper_index_temp.append(999)
-    #        else:
-    #            upper_index_temp.append(self.piecewise_parameter_information[i][0])
-    #    self.lower_index = np.array(lower_index_temp)
-    #    self.upper_index = np.array(upper_index_temp)
-    
     
     def toa_belongs_in_group(self,t):
         group_no = []
@@ -163,6 +146,7 @@ class BTpiecewise(BTmodel):
                 group_no.append(self.piecewise_parameter_information[index_no][0])
             else:
                 group_no.append(index_no)
+        #print(group_no)
         return group_no
         
     def get_group_boundaries(self):
@@ -212,6 +196,7 @@ class BTpiecewise(BTmodel):
             barycentricTOA = barycentricTOA * u.day
         #print(f"Unique T0s being used in tt0 calculation: {np.unique(T0)}\n")
         tt0 = (barycentricTOA - T0).to("second")
+        #print(f"piecewise tt0 being called, Calc'd with: {T0} ")
         return tt0
    
     
@@ -274,11 +259,12 @@ class BTpiecewise(BTmodel):
         if "_" in par:
             text = par.split("_")
             param = text[0]
-            toa_index = int(text[1])
+            toa_index = f"{int(text[1]):04d}"
         else:
             param = par
         if hasattr(self, "group_index_array"):
             group_indexes = np.array(self.group_index_array)
+            #print(toa_index)
             if param == "T0X":
                 ret = (group_indexes == toa_index)
                 return [ret,"T0X"]
