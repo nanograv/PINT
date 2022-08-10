@@ -20,6 +20,7 @@ See Also
 import json
 import os
 from pathlib import Path
+import copy
 
 import astropy.constants as c
 import astropy.units as u
@@ -264,30 +265,17 @@ class TopoObs(Observatory):
     @property
     def as_dict(self):
         """Return as a dict with limited/changed info"""
-        # is this better than the builtin __dict__ method and then updating some values?
-        output = {}
+        # start with the default __dict__
+        # copy some attributes to rename them and remove those that aren't needed for initialization
+        output = copy.deepcopy(self.__dict__)
+        output["aliases"] = output["_aliases"]
+        output["clock_file"] = output["clock_files"]
+        del output["_name"]
+        del output["_aliases"]
+        del output["_clock"]
+        del output["location"]
+        del output["clock_files"]
         output["itrf_xyz"] = [x.to_value(u.m) for x in self.geocentric]
-        if len(self.aliases) > 0:
-            output["aliases"] = self.aliases
-        if self.tempo_code is not None:
-            output["tempo_code"] = self.tempo_code
-        if self.itoa_code is not None:
-            output["itoa_code"] = self.itoa_code
-        if self.clock_files is not None and len(self.clock_files) > 0:
-            output["clock_file"] = self.clock_files
-        if self.clock_fmt is not None and len(self.clock_fmt) > 0:
-            output["clock_fmt"] = self.clock_fmt
-        if self.clock_dir is not None:
-            output["clock_dir"] = self.clock_dir
-        for p in [
-            "include_gps",
-            "include_bipm",
-            "bipm_version",
-            "bogus_last_correction",
-        ]:
-            output[p] = getattr(self, p)
-        if self.origin is not None and len(self.origin) > 0:
-            output["origin"] = self.origin
         return {self.name: output}
 
     @property
