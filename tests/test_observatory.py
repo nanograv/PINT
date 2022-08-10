@@ -278,7 +278,7 @@ def test_json_observatory_output(sandbox):
             assert getattr(gbt_orig, p) == getattr(gbt_reload, p)
 
 
-def test_json_observatory_output_latlon(sandbox):
+def test_json_observatory_input_latlon(sandbox):
     gbt_orig = get_observatory("gbt")
     gbt_dict = gbt_orig.as_dict
     # remove ITRF
@@ -299,7 +299,7 @@ def test_json_observatory_output_latlon(sandbox):
     assert distance < 1 * u.m
 
 
-def test_json_observatory_output_latlon_and_itrf(sandbox):
+def test_json_observatory_input_latlon_and_itrf_giveserror(sandbox):
     gbt_orig = get_observatory("gbt")
     gbt_dict = gbt_orig.as_dict
     # add in geodetic
