@@ -120,8 +120,10 @@ class PSR_BINARY:
                 "PEPOCH": np.longdouble(54000.0) * u.day,
             }
         )
+
         self.param_aliases = {"ECC": ["E"], "EDOT": ["ECCDOT"], "A1DOT": ["XDOT"]}
         self.binary_params = list(self.param_default_value.keys())
+        #print(f"list of default parameter keys: {list(self.param_default_value.keys())}\n _________________________________")
         self.inter_vars = ["E", "M", "nu", "ecc", "omega", "a1", "TM2"]
         self.cache_vars = ["E", "nu"]
         self.binary_delay_funcs = []
@@ -166,6 +168,7 @@ class PSR_BINARY:
         # update parameters
         d_list = ["barycentric_toa", "obs_pos", "psr_pos"]
         parameters = {}
+        #print(f"Update inputs from PSR_BINARY: {updates.items()}\n _________________________________")
         for key, value in updates.items():
             if key not in d_list:
                 parameters[key] = value
@@ -182,10 +185,14 @@ class PSR_BINARY:
         If the valDict is not provided, it will set parameter as default value
         """
         if valDict is None:
+            #print(f"From non-pint facing PSR_BINARY (No valDict- default parameters used): {self.param_default_value.keys()} \n _________________________________")
             for par in self.param_default_value.keys():
+                #print(f" Param, {par}, with value: {self.param_default_value[par]}")
                 setattr(self, par.upper(), self.param_default_value[par])
+            #self.T0X=1*u.d
         else:
             for par in valDict.keys():
+                #print(par)
                 if par not in self.binary_params:  # search for aliases
                     parname = self.search_alias(par)
                     if parname is None:
@@ -209,6 +216,7 @@ class PSR_BINARY:
                         val = valDict[par] * getattr(self, parname).unit
                 else:
                     val = valDict[par]
+                #print(f"Attempting to set {parname} with {val}")    
                 setattr(self, parname, val)
 
     def add_binary_params(self, parameter, defaultValue, unit=False):
@@ -412,6 +420,7 @@ class PSR_BINARY:
         return self.tt0
 
     def a1(self):
+        print(self.A1 + self.tt0 * self.A1DOT)
         return self.A1 + self.tt0 * self.A1DOT
 
     def d_a1_d_A1(self):

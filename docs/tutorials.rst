@@ -54,6 +54,7 @@ notebooks you can download from the `PINT Wiki
    examples/check_clock_corrections.ipynb
    examples/understanding_timing_models.ipynb
    examples/understanding_parameters.ipynb
+   examples/Varying_Parameters.ipynb
    examples/build_model_from_scratch.ipynb
    examples/How_to_build_a_timing_model_component.ipynb
    examples/understanding_fitters.ipynb
