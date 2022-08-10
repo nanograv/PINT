@@ -253,14 +253,11 @@ class TopoObs(Observatory):
         return "utc"
 
     def __getattr__(self, name):
-        if name in self.__dict__:
-            return self.__dict__[name]
+        # this isn't necessary, but let's allow "alt" as an alias to "height"
+        if name != "alt":
+            return getattr(self.location, name)
         else:
-            # this isn't necessary, but let's allow "alt" as an alias to "height"
-            if name != "alt":
-                return getattr(self.location, name)
-            else:
-                return getattr(self.location, "height")
+            return getattr(self.location, "height")
 
     @property
     def as_dict(self):
