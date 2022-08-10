@@ -60,6 +60,7 @@ def test_parallel(tmp_path):
     event_optimize.numcalls = 0
     try:
         import pathos
+
         os.chdir(tmp_path)
         cmd = f"{eventfile} {parfile} {temfile} --weightcol=PSRJ0030+0451 --minWeight=0.9 --nwalkers=10 --nsteps=50 --burnin 10"
         event_optimize.main(cmd.split())
