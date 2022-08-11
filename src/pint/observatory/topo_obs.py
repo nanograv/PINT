@@ -80,6 +80,8 @@ class TopoObs(Observatory):
     clock corrections. Calling code can request that missing clock corrections
     raise an exception.
 
+    Additional information can be accessed through the ``location`` attribute
+
     Parameters
     ----------
     name : str
@@ -155,7 +157,7 @@ class TopoObs(Observatory):
         itrf_xyz=None,
         lat=None,
         lon=None,
-        alt=None,
+        height=None,
         clock_file="",
         clock_fmt="tempo",
         clock_dir=None,
@@ -170,7 +172,7 @@ class TopoObs(Observatory):
         input = [
             location is not None,
             itrf_xyz is not None,
-            (lat is not None and lon is not None and alt is not None),
+            (lat is not None and lon is not None and height is not None),
         ]
         if sum(input) == 0:
             raise ValueError(
@@ -197,8 +199,8 @@ class TopoObs(Observatory):
                 )
             # Convert to astropy EarthLocation, ensuring use of ITRF geocentric coordinates
             self.location = EarthLocation.from_geocentric(*xyz)
-        elif lat is not None and lon is not None and alt is not None:
-            self.location = EarthLocation.from_geodetic(lat=lat, lon=lon, height=alt)
+        elif lat is not None and lon is not None and height is not None:
+            self.location = EarthLocation.from_geodetic(lat=lat, lon=lon, height=height)
 
         # Save clock file info, the data will be read only if clock
         # corrections for this site are requested.
@@ -245,19 +247,12 @@ class TopoObs(Observatory):
 
     def __repr__(self):
         aliases = [f"'{x}'" for x in self.aliases]
-        s = f"TopoObs('{self.name}' ({','.join(aliases)}) at [{self.x}, {self.y} {self.z}]:\n{self.origin})"
+        s = f"TopoObs('{self.name}' ({','.join(aliases)}) at [{self.location.x}, {self.location.y} {self.location.z}]:\n{self.origin})"
         return s
 
     @property
     def timescale(self):
         return "utc"
-
-    def __getattr__(self, name):
-        # this isn't necessary, but let's allow "alt" as an alias to "height"
-        if name != "alt":
-            return getattr(self.location, name)
-        else:
-            return getattr(self.location, "height")
 
     @property
     def as_dict(self):
@@ -272,7 +267,7 @@ class TopoObs(Observatory):
         del output["_clock"]
         del output["location"]
         del output["clock_files"]
-        output["itrf_xyz"] = [x.to_value(u.m) for x in self.geocentric]
+        output["itrf_xyz"] = [x.to_value(u.m) for x in self.location.geocentric]
         return {self.name: output}
 
     @property
@@ -305,8 +300,10 @@ class TopoObs(Observatory):
         elif method.lower() == "geodesic":
             # this assumes a spherical Earth
             dsigma = np.arccos(
-                np.sin(self.lat) * np.sin(other.lat)
-                + np.cos(self.lat) * np.cos(other.lat) * np.cos(self.lon - other.lon)
+                np.sin(self.location.lat) * np.sin(other.location.lat)
+                + np.cos(self.location.lat)
+                * np.cos(other.location.lat)
+                * np.cos(self.location.lon - other.location.lon)
             )
             return (c.R_earth * dsigma).to(u.m, equivalencies=u.dimensionless_angles())
 

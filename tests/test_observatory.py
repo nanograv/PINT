@@ -225,7 +225,7 @@ def test_gbt_registered():
 def test_is_gbt_still_ok():
 
     gbt = get_observatory("gbt")
-    assert gbt.y < 0
+    assert gbt.location.y < 0
 
 
 @pytest.mark.parametrize("overwrite", [True, False])
@@ -254,8 +254,8 @@ def test_observatory_override(sandbox, overwrite):
     else:
         load_observatories(io.StringIO(wronggbt), overwrite=overwrite)
         newgbt = get_observatory("gbt")
-        assert newgbt.y > 0
-        assert newgbt.y != gbt_orig.y
+        assert newgbt.location.y > 0
+        assert newgbt.location.y != gbt_orig.location.y
 
 
 def test_list_last_correction_mjds_runs():
@@ -284,9 +284,9 @@ def test_json_observatory_input_latlon(sandbox):
     # remove ITRF
     del gbt_dict["gbt"]["itrf_xyz"]
     # add in geodetic
-    gbt_dict["gbt"]["lat"] = gbt_orig.lat.value
-    gbt_dict["gbt"]["lon"] = gbt_orig.lon.value
-    gbt_dict["gbt"]["alt"] = gbt_orig.alt.value
+    gbt_dict["gbt"]["lat"] = gbt_orig.location.lat.value
+    gbt_dict["gbt"]["lon"] = gbt_orig.location.lon.value
+    gbt_dict["gbt"]["height"] = gbt_orig.location.height.value
     load_observatories(io.StringIO(json.dumps(gbt_dict)), overwrite=True)
     gbt_reload = get_observatory("gbt")
 
@@ -303,9 +303,9 @@ def test_json_observatory_input_latlon_and_itrf_giveserror(sandbox):
     gbt_orig = get_observatory("gbt")
     gbt_dict = gbt_orig.as_dict
     # add in geodetic
-    gbt_dict["gbt"]["lat"] = gbt_orig.lat.value
-    gbt_dict["gbt"]["lon"] = gbt_orig.lon.value
-    gbt_dict["gbt"]["alt"] = gbt_orig.alt.value
+    gbt_dict["gbt"]["lat"] = gbt_orig.location.lat.value
+    gbt_dict["gbt"]["lon"] = gbt_orig.location.lon.value
+    gbt_dict["gbt"]["height"] = gbt_orig.location.height.value
     with pytest.raises(ValueError):
         load_observatories(io.StringIO(json.dumps(gbt_dict)), overwrite=True)
 
