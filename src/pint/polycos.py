@@ -25,7 +25,7 @@ Or, to generate polycos from a timing model:
 
     >>> from pint.models import get_model
     >>> from pint.polycos import Polycos
-    >>> m = get_model(filename)
+    >>> model = get_model(filename)
     >>> p = Polycos.generate_polycos(model, 50000, 50001, "AO", 144, 12, 1400)
   
 References
