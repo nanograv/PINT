@@ -52,6 +52,7 @@ import numpy as np
 import scipy.optimize.zeros as zeros
 from loguru import logger as log
 from scipy.special import fdtrc
+from astropy.utils.iers import IERS_Auto
 
 import pint
 import pint.pulsar_ecliptic
@@ -1652,3 +1653,27 @@ def compute_hash(filename):
         while block := f.read(blocks * h.block_size):
             h.update(block)
     return h.digest()
+
+
+def preload_cache(extra_ephemerides=None):
+    """Ensure that all files PINT needs are in the Astropy cache.
+
+    This requests all clock corrections in the global repository, a list of
+    standard Solar System ephemerides, and up-to-date IERS tables. Once
+    complete, PINT should be able to function without an Internet connection.
+
+    Note that you may need to set some Astropy configuration options to prevent
+    Astropy from requesting new IERS data after a month.
+
+    For more information see http://docs.astropy.org/en/stable/utils/data.html#using-astropy-with-limited-or-no-internet-access
+    """
+    from pint.observatory.global_clock_corrections import update_all
+    from pint.solar_system_ephemerides import load_kernel
+
+    update_all()
+    IERS_Auto.open()
+    ephemerides = ["de430", "de405", "de421", "de430t", "de434", "de436", "de436t"]
+    if extra_ephemerides is not None:
+        ephemerides.extend(extra_ephemerides)
+    for e in ephemerides:
+        load_kernel(e)
