@@ -15,6 +15,18 @@ class Phase(namedtuple("Phase", "int frac")):
     SUGGESTION(@paulray): How about adding some documentation here
     describing why the fractional part is reduced to [-0.5,0.5) instead of [0,1).
 
+    Examples
+    --------
+
+        >>> from pint.phase import Phase
+        >>> import numpy as np
+        >>> p = Phase(np.arange(10),np.random.random(10))
+        >>> print(p.int)
+        >>> print(p.frac[:5])
+        >>> print(p[::2])
+        >>> i,f = p
+        >>> q = p.quantity
+
     """
 
     __slots__ = ()
