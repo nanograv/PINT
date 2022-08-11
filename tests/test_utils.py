@@ -6,6 +6,7 @@ from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 import astropy.constants as c
 import astropy.units as u
+import astropy.utils.data
 import numpy as np
 import pytest
 import scipy.stats
@@ -51,6 +52,7 @@ from pint.utils import (
     open_or_use,
     taylor_horner,
     taylor_horner_deriv,
+    preload_cache,
 )
 
 
@@ -765,3 +767,86 @@ def test_compute_hash_accepts_no_change(a):
         h_b = compute_hash(g)
 
     assert h_a == h_b
+
+
+def test_preload_cache_gives_all_expected_files():
+    # FIXME: set up temporary cache
+    preload_cache()
+    expected = [
+        "ftp://anonymous:mail%40astropy.org@gdc.cddis.eosdis.nasa.gov/pub/products/iers/finals2000A.all",
+        "ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/de200.bsp",
+        "http://data.astropy.org/coordinates/sites.json",
+        "http://hpiers.obspm.fr/iers/eop/eopc04/eopc04_IAU2000.62-now",
+        "https://data.nanograv.org/static/data/ephem/de405.bsp",
+        "https://data.nanograv.org/static/data/ephem/de421.bsp",
+        "https://data.nanograv.org/static/data/ephem/de430t.bsp",
+        "https://data.nanograv.org/static/data/ephem/de434.bsp",
+        "https://data.nanograv.org/static/data/ephem/de436.bsp",
+        "https://data.nanograv.org/static/data/ephem/de436t.bsp",
+        "https://datacenter.iers.org/data/9/finals2000A.all",
+        "https://hpiers.obspm.fr/iers/bul/bulc/Leap_Second.dat",
+        "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de430.bsp",
+        "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de432s.bsp",
+        "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440.bsp",
+        "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440s.bsp",
+        # "https://data.nanograv.org/static/data/ephem/de440.bsp",
+        # "https://maia.usno.navy.mil/ser7/finals2000A.all",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/ao2gps.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/ao2gps_tempo2.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/ao2nist.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/chime2gps.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/eff2gps.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/effix2gps.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/gbt2gps.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/gbt2gps_tempo2.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/gmrt2gps.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/gps2utc.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/gps2utc_c0p.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/gps2utc_cc.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/gps2utc_tempo2.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/jb2gps.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/jbdfb2jb.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/jbroach2jb.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/mk2utc.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/mk2utc_observatory.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/mo2gps.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/ncyobs2obspm.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/obspm2gps.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/pks2gps.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/srt2gps.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/tai2tt_bipm01.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/tai2tt_bipm05.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/tai2tt_bipm06.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/tai2tt_bipm2003.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/tai2tt_bipm2004.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/tai2tt_bipm2010.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/tai2tt_bipm2012.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/tai2tt_bipm2013.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/tai2tt_bipm2014.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/tai2tt_bipm2015.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/tai2tt_bipm2016.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/tai2tt_bipm2017.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/tai2tt_bipm2018.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/tai2tt_bipm2019.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/tai2tt_bipm2020.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/tai2tt_bipm2021.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/tai2tt_bipm92.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/vla2gps.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/vla2nist.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/T2runtime/clock/wsrt2gps.clk",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/index.txt",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/tempo/clock/leap.sec",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/tempo/clock/time_ao.dat",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/tempo/clock/time_fast.dat",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/tempo/clock/time_gb140.dat",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/tempo/clock/time_gb853.dat",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/tempo/clock/time_gbt.dat",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/tempo/clock/time_jb.dat",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/tempo/clock/time_nuppi.dat",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/tempo/clock/time_pks.dat",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/tempo/clock/time_vla.dat",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/tempo/clock/time_wsrt.dat",
+        "https://raw.githubusercontent.com/ipta/pulsar-clock-corrections/main/tempo/clock/ut1.dat",
+    ]
+    for k in expected:
+        assert k in astropy.utils.data.cache_contents()
