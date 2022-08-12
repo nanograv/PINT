@@ -208,7 +208,7 @@ class PSR_BINARY:
                     else:
                         val = valDict[par] * getattr(self, parname).unit
                 else:
-                    val = valDict[par] 
+                    val = valDict[par]
                 setattr(self, parname, val)
 
     def add_binary_params(self, parameter, defaultValue, unit=False):
