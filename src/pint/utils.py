@@ -1096,7 +1096,7 @@ def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
 def ELL1_check(
     A1: u.cm, E: u.dimensionless_unscaled, TRES: u.us, NTOA: int, outstring=True
 ):
-    """Check for validity of assumptions in ELL1 binary model
+    r"""Check for validity of assumptions in ELL1 binary model
 
     Checks whether the assumptions that allow ELL1 to be safely used are
     satisfied. To work properly, we should have:
@@ -1705,12 +1705,12 @@ def set_no_internet(mode="warn"):
     mode : 'warn' or 'ignore'
         What to do when files appear to be out of date
     """
-    # We use ExitStack here to "cheat" and make the effect of the context
-    # manager permanent
-    with ExitStack() as stack:
-        stack.enter_context(no_internet)
-        # Exit without finalizing the with statements
-        stack.pop_all()
+    import astropy.utils.data
+    import astropy.utils.iers
+
+    astropy.utils.data.conf.allow_internet = False
+    astropy.utils.iers.conf.auto_download = False
+    astropy.utils.iers.conf.iers_degraded_accuracy = "warn"
 
 
 @contextmanager
@@ -1728,11 +1728,10 @@ def no_internet(mode="warn"):
     mode : 'warn' or 'ignore'
         What to do when files appear to be out of date
     """
-    from astropy.utils.data import conf
+    import astropy.utils.data
     import astropy.utils.iers
 
-    with conf.set_temp("auto_download", False):
-        with conf.set_temp("allow_internet", False):
-            with astropy.ustils.iers.conf.set_temp("auto_download", False):
-                with astropy.ustils.iers.conf.set_temp("iers_degraded_accuracy", warn):
-                    yield
+    with astropy.utils.data.conf.set_temp("allow_internet", False):
+        with astropy.utils.iers.conf.set_temp("auto_download", False):
+            with astropy.utils.iers.conf.set_temp("iers_degraded_accuracy", "warn"):
+                yield

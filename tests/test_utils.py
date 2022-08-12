@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 import scipy.stats
 from astropy.time import Time
-from astropy.config import set_temp_cache
+from astropy.config import set_temp_cache, set_temp_config
 from hypothesis import assume, example, given
 from hypothesis.extra.numpy import array_shapes, arrays, scalar_dtypes
 from hypothesis.strategies import (
@@ -54,6 +54,8 @@ from pint.utils import (
     taylor_horner,
     taylor_horner_deriv,
     preload_cache,
+    no_internet,
+    set_no_internet,
 )
 
 
@@ -856,3 +858,18 @@ def test_preload_cache_gives_all_expected_files(tmp_path):
         ]
         for k in expected:
             assert k in astropy.utils.data.cache_contents()
+
+
+def test_no_internet_forbids_internet(tmp_path, monkeypatch):
+    monkeypatch.delattr("astropy.utils.data.download_file")
+    with set_temp_cache(tmp_path):
+        with no_internet():
+            with pytest.warns(astropy.utils.iers.IERSDegradedAccuracyWarning):
+                (Time.now() + 1 * u.year).utc.tai.ut1
+            assert not astropy.utils.data.cache_contents()
+
+
+def test_set_no_internet_works():
+    with set_temp_config():
+        set_no_internet()
+        assert not astropy.utils.data.conf.allow_internet
