@@ -90,8 +90,7 @@ class BTmodel(PSR_BINARY):
         if t is not None:
             self.t = t
         if input_params is not None:
-            self.update_input(param_dict=input_params)
-        
+            self.update_input(param_dict=input_params) 
 
     def delayL1(self):
         """First term of Blandford & Teukolsky (1976), ApJ, 205,
