@@ -13,6 +13,8 @@ import unittest
 from io import StringIO
 from pylab import *
 import pytest
+import pint.residuals
+import pint.simulation
 
 
 @pytest.fixture
@@ -63,20 +65,25 @@ def build_model():
 @pytest.fixture()
 def make_toas_to_go_with_two_piece_model(build_piecewise_model_with_two_pieces):
     #makes toas to go with the two non-overlapping, complete coverage model
-    m_piecewise = build_piecewise_model_with_two_pieces
-    toas = pint.toa.make_fake_toas(m_piecewise.START.value+1,m_piecewise.FINISH.value-1,20,m_piecewise) #slightly within group edges to make toas unambiguously contained within groups
+    m_piecewise = deepcopy(build_piecewise_model_with_two_pieces)
+    m_piecewise.setup()
+    toas = pint.simulation.make_fake_toas_uniform(m_piecewise.START.value+1,m_piecewise.FINISH.value-1,20,m_piecewise) #slightly within group edges to make toas unambiguously contained within groups
     return toas
 
 
 def get_toa_group_indexes(model,toas):
     #returns array of group indexes associated with each toa. (i.e. which group is each toa in)
+    model.setup()
     index = model.which_group_is_toa_in(toas)
     return index
 
 
 def get_number_of_groups(model):
     #returns number of groups
+    model.setup()
     number_of_groups = model.get_number_of_groups()
+    print(model.as_parfile())
+    print(model.get_number_of_groups())
     return number_of_groups
 
 
@@ -84,6 +91,8 @@ def get_number_of_groups(model):
 def build_piecewise_model_with_two_pieces(build_model):
     #takes the basic model frame and adds 2 non-ovelerlapping pieces to it
     piecewise_model = deepcopy(build_model)
+    piecewise_model.remove_range(0)
+    piecewise_model.setup()
     spacing = (piecewise_model.FINISH.value-piecewise_model.START.value)/2
     for i in range(0,2):
         piecewise_model.add_group_range(piecewise_model.START.value+spacing*i,piecewise_model.START.value+spacing*(i+1),j=i)
@@ -97,6 +106,7 @@ def test_add_piecewise_parameter(build_model):
     #checks by comparing parameter keys in both the old and new file. Should have the number of matches = number of parameters
     m_piecewise=deepcopy(build_model)
     n=10
+    m_piecewise.remove_range(0)
     for i in range(0,n):
         m_piecewise.add_group_range(m_piecewise.START.value+501*i,m_piecewise.START.value+1000*i,j=i)
         m_piecewise.add_piecewise_param("A1","ls",m_piecewise.A1.value+1,i)
@@ -126,6 +136,7 @@ def test_group_assignment_toas_unambiguously_within_group(build_piecewise_model_
     #operates by sorting the toas by MJD compared against a groups upper/lower edge.
     #operates with np.searchsorted so for 1 toa per group, each toa should be uniquely indexed after/before the lower/upper edge
     index = get_toa_group_indexes(build_piecewise_model_with_two_pieces , make_toas_to_go_with_two_piece_model)
+    print(index)
     should_be_ten_toas_in_each_group = [np.unique(index,return_counts = True)[1][0],np.unique(index,return_counts = True)[1][1]]
     expected_toas_in_each_group = [10,10]
     is_there_ten_toas_per_group = np.array_equal(should_be_ten_toas_in_each_group , expected_toas_in_each_group)
@@ -139,7 +150,10 @@ def test_paramX_per_toa_matches_corresponding_model_value(param, build_piecewise
     #Uses this array to apply T0X_i/A1X_i to corresponding indexes from group_index fn call. i.e. for T0X_i,T0X_j,T0X_k values and group_index return: [i,j,k] the output would be [T0X_i,T0X_j,T0X_k] 
     m_piecewise = build_piecewise_model_with_two_pieces
     toa = make_toas_to_go_with_two_piece_model
+    m_piecewise.setup()
+    rs = pint.residuals.Residuals(toa,m_piecewise)
     if param == "A1X":
+        
         paramX_per_toa = m_piecewise.get_A1Xs_associated_with_toas(toa)
         test_val = [m_piecewise.A1X_0000.quantity,m_piecewise.A1X_0001.quantity]
         should_toa_reference_piecewise_parameter = [m_piecewise.does_toa_reference_piecewise_parameter(toa,"A1X_0000"),m_piecewise.does_toa_reference_piecewise_parameter(toa,"A1X_0001")]
@@ -170,28 +184,34 @@ def add_groups_and_make_toas(build_model,build_piecewise_model_with_two_pieces,p
     spacing = (build_model.FINISH.value-build_model.START.value)/2
     if param == "non-overlapping complete group coverage":
         model = build_piecewise_model_with_two_pieces
+        model.setup()
+        #print(model.as_parfile())
         toas = make_generic_toas(model) 
         return model,toas
     elif param == "overlapping groups":
         model2 = build_model
+        model2.remove_range(0)
         model2.add_group_range(model2.START.value-1, model2.START.value + spacing + 100, j = 0)
         model2.add_group_range(model2.START.value+spacing-100, model2.FINISH.value + 1, j = 1)
         model2.add_piecewise_param("T0","d",model2.T0.value+1e-5,0)
         model2.add_piecewise_param("T0","d",model2.T0.value+2e-5,1)
         model2.add_piecewise_param("A1","ls",model2.A1.value+1e-5,0)
         model2.add_piecewise_param("A1","ls",model2.A1.value+2e-5,1)
+        model2.setup()
         toas = make_generic_toas(model2)
         return model2,toas
     elif param == "non-complete group coverage":
         model3 = build_model
+        model3.remove_range(0)
         model3.add_group_range(model3.START.value + spacing , model3.FINISH.value + 1 , j = 0)
         model3.add_piecewise_param("T0","d",model3.T0.value+1e-5,0)
+        model3.setup()
         toas = make_generic_toas(model3)
         return model3,toas
     
 def make_generic_toas(model):
     #makes toas to go with the edge cases
-    return pint.toa.make_fake_toas(model.START.value , model.FINISH.value-1 , 20 , model)
+    return pint.simulation.make_fake_toas_uniform(model.START.value , model.FINISH.value-1 , 20 , model)
 
 def convert_int_into_index(i):
     #converts i to 4-digit integer: 1->0001, 1010->1010
@@ -212,7 +232,7 @@ def return_truth_array_based_on_group_boundaries(model,barycentric_toa):
     boundaries = model.get_group_boundaries()
     upper_edge_of_lower_group = boundaries[1][0]
     lower_edge_of_upper_group = boundaries[0][1]
-    truth_array_comparison = [[barycentric_toa<=upper_edge_of_lower_group],[barycentric_toa>=lower_edge_of_upper_group]]
+    truth_array_comparison = [[barycentric_toa.value<=upper_edge_of_lower_group],[barycentric_toa.value>=lower_edge_of_upper_group]]
     return truth_array_comparison
 
 @pytest.mark.parametrize("param",["non-overlapping complete group coverage","overlapping groups", "non-complete group coverage"])
@@ -223,31 +243,46 @@ def test_does_toa_lie_in_group(build_model,build_piecewise_model_with_two_pieces
     if param == "non-overlapping complete group coverage":
         #Logic is toas lie in group 0:10 should all be True(/=1) [in the piece]. And false for toas out of the group. (T0X_0000 being used) 
         #and vice versa for the T0X_0001
+        
         are_toas_within_group_boundaries_mjd_method_per_parameter = return_truth_array_based_on_group_boundaries(m_piecewise,barycentric_toa)
+        
         is_toa_in_each_group = np.concatenate((is_toa_in_each_group[0],is_toa_in_each_group[1]))
+        
         are_toas_within_group_boundaries_mjd_method_per_parameter = np.concatenate((are_toas_within_group_boundaries_mjd_method_per_parameter[0][0] , are_toas_within_group_boundaries_mjd_method_per_parameter[1][0]))
+        
         does_in_piece_and_mjd_method_agree = np.array_equal(are_toas_within_group_boundaries_mjd_method_per_parameter,is_toa_in_each_group)
+        
         assert does_in_piece_and_mjd_method_agree
     
     elif param == "overlapping groups":
         #Test to check if the central 2 toas remain unallocated to a group after checking both groups in_piece property.
         #i.e. [T,T,F,F,F,F]+[F,F,F,F,T,T] = [T,T,F,F,T,T]. 
         #Reliant on the above test passing as doesn't catch [T,T,F,F,T,T]+[T,T,F,F,T,T] (this output would mean in_piece would just be checking if a toa belonged to any group)
+        
         are_toas_within_group_boundaries_mjd_method_per_parameter = return_truth_array_based_on_group_boundaries(m_piecewise,barycentric_toa)
-        where_toas_should_be_in_group_1 = np.where(are_toas_within_group_boundaries_mjd_method_per_parameter[0][0]!=are_toas_within_group_boundaries_mjd_method_per_parameter[1][0],are_toas_within_group_boundaries_mjd_method_per_parameter[0][0],are_toas_within_group_boundaries_mjd_method_per_parameter[0][0]!=are_toas_within_group_boundaries_mjd_method_per_parameter[1][0])
+        
+        where_toas_should_be_in_group_1 = np.where(are_toas_within_group_boundaries_mjd_method_per_parameter[0][0]!=are_toas_within_group_boundaries_mjd_method_per_parameter[1][0],are_toas_within_group_boundaries_mjd_method_per_parameter[0][0],are_toas_within_group_boundaries_mjd_method_per_parameter[0][0]!=are_toas_within_group_boundaries_mjd_method_per_parameter[1][0])        
         
         where_toas_should_be_in_group_2 = np.where(are_toas_within_group_boundaries_mjd_method_per_parameter[0][0]!=are_toas_within_group_boundaries_mjd_method_per_parameter[1][0] , are_toas_within_group_boundaries_mjd_method_per_parameter[1][0] , are_toas_within_group_boundaries_mjd_method_per_parameter[0][0]!=are_toas_within_group_boundaries_mjd_method_per_parameter[1][0])
+        
         is_toa_in_each_group = [is_toa_in_each_group[0],is_toa_in_each_group[1]]
+        
         are_toas_within_group_boundaries_mjd_method_per_parameter = [where_toas_should_be_in_group_1,where_toas_should_be_in_group_2]
+        
         does_in_piece_and_mjd_method_agree = np.array_equal(are_toas_within_group_boundaries_mjd_method_per_parameter, is_toa_in_each_group)
+        
         assert does_in_piece_and_mjd_method_agree
     
     elif param == "non-complete group coverage":
         #This test is performed to make sure toas that shouldn't be in any group are correctly being flagged. Only later half of toas should be in group. Distinct from the overlapping group test since its not ambiguous which group they belong to since they aren't in a group
+        
         boundaries = m_piecewise.get_group_boundaries()
+        
         lower_edge_of_group = boundaries[0][0]
-        are_toas_above_group_edge = [barycentric_toa>=lower_edge_of_group]
+        are_toas_above_group_edge = [barycentric_toa.value>=lower_edge_of_group]
+        
         do_in_piece_and_mjd_methods_of_assigning_groups_agree = np.array_equal(is_toa_in_each_group,are_toas_above_group_edge)
+        
         assert do_in_piece_and_mjd_methods_of_assigning_groups_agree
         
     
@@ -339,6 +374,10 @@ def test_d_delay_is_producing_correct_numbers(build_model,build_piecewise_model_
         parameter_string = parameter_string[0:2]
     
     derivative_unit = offset_size.unit
+    
+    m_piecewise.setup()
+    m_piecewise_plus_offset.setup()
+    m_piecewise_minus_offset.setup()
     
     plus_d_delay = get_d_delay_d_xxxx(toas,m_piecewise_plus_offset,parameter_string)
     minus_d_delay = get_d_delay_d_xxxx(toas,m_piecewise_minus_offset,parameter_string)

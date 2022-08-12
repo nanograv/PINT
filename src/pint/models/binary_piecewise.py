@@ -308,6 +308,8 @@ class BinaryBTPiecewise(PulsarBinary):
         self.binary_instance.group_index_array = self.which_group_is_toa_in(toas)
         barycentric_toa = self._parent.get_barycentric_toas(toas)
         A1X_per_toa = self.binary_instance.piecewise_parameter_from_information_array(toas)[1]
+
+        print(A1X_per_toa)
         if temporary_storage is not None:
             self.binary_instance.group_index_array = temporary_storage
         return A1X_per_toa

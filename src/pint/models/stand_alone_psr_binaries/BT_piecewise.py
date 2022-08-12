@@ -135,6 +135,7 @@ class BTpiecewise(BTmodel):
         group_no = []
         lower_edge, upper_edge = self.get_group_boundaries()
         for i in t:
+            #print(lower_edge)
             lower_bound = np.searchsorted(lower_edge,i)-1
             upper_bound = np.searchsorted(upper_edge,i)
             if lower_bound == upper_bound:
@@ -155,8 +156,8 @@ class BTpiecewise(BTmodel):
         #print("from get_group_boundaries")
         if hasattr(self,"piecewise_parameter_information"):
             for i in range(0, len(self.piecewise_parameter_information)):
-                lower_group_edge.append(self.piecewise_parameter_information[i][3])
-                upper_group_edge.append(self.piecewise_parameter_information[i][4])
+                lower_group_edge.append(self.piecewise_parameter_information[i][3].value)
+                upper_group_edge.append(self.piecewise_parameter_information[i][4].value)
             return [lower_group_edge, upper_group_edge]
     
     def a1(self):
