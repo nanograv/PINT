@@ -652,6 +652,9 @@ class Polycos:
         Polycos
 
         """
+        raise DeprecationWarning(
+            "Use `p=pint.polycos.Polycos.read()` rather than `p.read_polyco_file()`"
+        )
         self.fileName = filename
 
         if format not in [f["format"] for f in self.polycoFormats]:
