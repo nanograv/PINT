@@ -97,7 +97,7 @@ class TopoObs(Observatory):
     lon : ~astropy.units.Quantity or float, optional
         Earth latitude.  Can be anything that initialises an
         :class:`~astropy.coordinates.Angle` object (if float, in degrees).
-    alt : ~astropy.units.Quantity ['length'] or float, optional
+    height : ~astropy.units.Quantity ['length'] or float, optional
         Height above reference ellipsoid (if float, in meters; default: 0).
     tempo_code : str, optional
         1-character tempo code for the site.  Will be
@@ -142,7 +142,7 @@ class TopoObs(Observatory):
 
     Note
     ----
-    One of ``location``, ``itrf_xyz``, or (``lat``, ``lon``, ``alt``) must be specified
+    One of ``location``, ``itrf_xyz``, or (``lat``, ``lon``, ``height``) must be specified
 
     """
 
@@ -169,6 +169,9 @@ class TopoObs(Observatory):
         bogus_last_correction=False,
     ):
 
+        input = [lat is not None, lon is not None, height is not None]
+        if sum(input) > 0 and sum(input) < 3:
+            raise ValueError("All of lat, lon, height are required for observatory")
         input = [
             location is not None,
             itrf_xyz is not None,
@@ -176,12 +179,12 @@ class TopoObs(Observatory):
         ]
         if sum(input) == 0:
             raise ValueError(
-                "EarthLocation, ITRF coordinates, or lat/lon/alt are required for observatory '%s'"
+                "EarthLocation, ITRF coordinates, or lat/lon/height are required for observatory '%s'"
                 % name
             )
         if sum(input) > 1:
             raise ValueError(
-                f"Cannot supply more than one of EarthLocation, ITRF coordinates, and lat/lon/alt for observatory '{name}'"
+                f"Cannot supply more than one of EarthLocation, ITRF coordinates, and lat/lon/height for observatory '{name}'"
             )
         if location is not None:
             self.location = location
