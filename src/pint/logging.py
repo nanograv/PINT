@@ -20,9 +20,17 @@ while the default for this module is::
 
 If you want to use command-line arguments in a script to set the level you can do that like::
 
-    parser.add_argument("--log-level",type=str,choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),default=pint.logging.script_level,help="Logging level",dest="loglevel")
+    parser.add_argument("--log-level",type=str,choices=pint.logging.levels,default=pint.logging.script_level,help="Logging level",dest="loglevel")
+    parser.add_argument(
+        "-v", "--verbosity", default=0, action="count", help="Increase output verbosity"
+    )
+    parser.add_argument(
+        "-q", "--quiet", default=0, action="count", help="Decrease output verbosity"
+    )
     args = parser.parse_args(argv)
-    pint.logging.setup(level=args.loglevel)
+    pint.logging.setup(
+        level=pint.logging.get_level(args.loglevel, args.verbosity, args.quiet)
+    )
 
 Note that ``loguru`` does not allow you to change the properties of an existing logger.
 Instead it's better to remove it and make another (e.g., if you want to change the level).
