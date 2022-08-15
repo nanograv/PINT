@@ -62,6 +62,11 @@ script_level = "WARNING"
 showwarning_ = warnings.showwarning
 warning_onceregistry = {}
 
+# basic loguru level definitions from:
+# https://loguru.readthedocs.io/en/stable/api/logger.html
+# this is so we can map from increase/decrease of verbosity to level
+levels = ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+
 
 def showwarning(message, category, filename, lineno, file=None, line=None):
     """
