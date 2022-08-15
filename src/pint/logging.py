@@ -45,7 +45,7 @@ try:
 except ImportError:
     from astropy._erfa import ErfaWarning
 
-__all__ = ["LogFilter", "setup", "format"]
+__all__ = ["LogFilter", "setup", "format", "levels", "get_level"]
 
 # defaults can be overridden using $LOGURU_LEVEL and $LOGURU_FORMAT
 # default for an individual level can be overridden by $LOGURU_DEBUG_COLOR etc
@@ -299,3 +299,28 @@ def setup(
         log.level(level, color=debug_color)
 
     return loghandler
+
+
+def get_level(starting_level_name, verbosity, quietness):
+    """Get appropriate logging level given command-line input
+
+    Parameters
+    ----------
+    starting_level_name : str
+        Name of level to start with (e.g., "WARNING")
+    verbosity : int
+        Number of verbose levels requested
+    quietness : int
+        Number of quiet levels requested
+
+    Returns
+    -------
+    str
+        Name of level
+    """
+    starting_level = [i for i in range(len(levels)) if levels[i] == starting_level_name]
+    level = min(
+        max(starting_level[0] - verbosity + quietness, 0),
+        len(levels) - 1,
+    )
+    return levels[level]

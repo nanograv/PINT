@@ -88,16 +88,9 @@ def main(argv=None):
     )
 
     args = parser.parse_args(argv)
-    starting_level = [
-        i
-        for i in range(len(pint.logging.levels))
-        if pint.logging.levels[i] == args.loglevel
-    ]
-    level = min(
-        max(starting_level[0] - args.verbosity + args.quiet, 0),
-        len(pint.logging.levels) - 1,
+    pint.logging.setup(
+        level=pint.logging.get_level(args.loglevel, args.verbosity, args.quiet)
     )
-    pint.logging.setup(level=pint.logging.levels[level])
 
     m1 = get_model(args.input1)
     m2 = get_model(args.input2)
