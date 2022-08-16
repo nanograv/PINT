@@ -325,6 +325,17 @@ def get_level(starting_level_name, verbosity, quietness):
     -------
     str
         Name of level
+
+    Examples
+    --------
+
+        >>> parser.add_argument("--log-level",type=str, choices=pint.logging.levels,
+        default=pint.logging.script_level, help="Logging level",dest="loglevel")
+        >>> parser.add_argument("-v", "--verbosity", default=0, action="count", help="Increase output verbosity")
+        >>> parser.add_argument("-q", "--quiet", default=0, action="count", help="Decrease output verbosity")
+        >>> args = parser.parse_args(argv)
+        >>> pint.logging.setup(level=pint.logging.get_level(args.loglevel, args.verbosity, args.quiet))
+
     """
     starting_level = [i for i in range(len(levels)) if levels[i] == starting_level_name]
     level = min(
