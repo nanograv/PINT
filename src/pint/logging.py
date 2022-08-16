@@ -5,6 +5,13 @@ To use this do::
     import pint.logging
     pint.logging.setup()
 
+If you want to emit messages later in your code, set things up with::
+
+    from loguru import logger as log
+    log.info("INFO test")
+
+This can happen before or after the :func:`~pint.logging.setup`.
+
 You can optionally pass the desired logging level to the :func:`~pint.logging.setup` function, formats, custom filters, colors, etc.  
 See documentation for :func:`pint.logging.setup`.
 
