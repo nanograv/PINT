@@ -1337,7 +1337,7 @@ class TOAs:
 
         Parameter
         ---------
-        index : str or pair or list or array or slice
+        index : str or pair or list or array or slice or int
             How to choose what to select.
 
         Returns
@@ -1347,8 +1347,8 @@ class TOAs:
 
         Note
         ----
-        This function does not currently support extracting a single :class:`~pint.toa.TOA` object,
-        to use integer indexing a column must be selected.
+        This function does not currently support extracting a single :class:`~pint.toa.TOA` object.
+        To use integer indexing a column must be selected, or a table with length 1 will be returned.
         """
         column = None
         subset = None
@@ -1383,7 +1383,12 @@ class TOAs:
                 r.table = r.table[index]
                 return r
             elif isinstance(index, int):
-                raise ValueError("TOAs do not support extraction of TOA objects (yet?)")
+                log.warning(
+                    "TOAs do not support extraction of single TOA objects.  Returning TOAs of length 1"
+                )
+                r = copy.deepcopy(self)
+                r.table = r.table[[index]]
+                return r
             else:
                 raise ValueError("Unable to index TOAs with {}".format(index))
         elif column in self.table.columns:
