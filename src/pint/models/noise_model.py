@@ -345,6 +345,45 @@ class EcorrNoise(NoiseComponent):
             ecorrs.append(getattr(self, ecorr))
         return ecorrs
 
+    def get_basis(self, toas):
+        """Return a quantization matrix and ECORR weights.
+
+        A quantization matrix maps TOAs to observing epochs.
+        The weights used are the square of the ECORR values.
+
+        """
+        tbl = toas.table
+        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        ecorrs = self.get_ecorrs()
+        umats = []
+        for ec in ecorrs:
+            mask = ec.select_toa_mask(toas)
+            if np.any(mask):
+                umats.append(create_ecorr_quantization_matrix(t[mask]))
+            else:
+                warnings.warn(f"ECORR {ec} has no TOAs")
+                umats.append(np.zeros((0, 0)))
+        nc = sum(u.shape[1] for u in umats)
+        umat = np.zeros((len(t), nc))
+        nctot = 0
+        for ct, ec in enumerate(ecorrs):
+            mask = ec.select_toa_mask(toas)
+            nn = umats[ct].shape[1]
+            umat[mask, nctot : nn + nctot] = umats[ct]
+            nctot += nn
+        return umat
+
+    def get_weights(self, toas):
+        ecorrs = self.get_ecorrs()
+        nns = [get_ecorr_nweights(toas[ec.select_toa_mask(toas)]) for ec in ecorrs]
+        nc = sum(nns)
+        weight = np.zeros(nc)
+        nctot = 0
+        for ec, nn in ecorrs, nns:
+            weight[nctot : nn + nctot] = ec.quantity.to(u.s).value ** 2
+            nctot += nn
+        return weight
+
     def ecorr_basis_weight_pair(self, toas):
         """Return a quantization matrix and ECORR weights.
 
@@ -508,13 +547,13 @@ def get_ecorr_epochs(toas_table, dt=1, nmin=2):
 def get_ecorr_nweights(toas_table, dt=1, nmin=2):
     """Get the number of epochs associated with an ECORR.
     This is equal to the number of weights of that ECORR."""
-    return len(get_ecorr_epochs(toas_table, dt=1, nmin=2))
+    return len(get_ecorr_epochs(toas_table, dt=dt, nmin=nmin))
 
 
 def create_ecorr_quantization_matrix(toas_table, dt=1, nmin=2):
     """Create quantization matrix mapping TOAs to observing epochs."""
     # find only epochs with more than 1 TOA
-    bucket_ind2 = get_ecorr_epochs(toas_table, dt=1, nmin=2)
+    bucket_ind2 = get_ecorr_epochs(toas_table, dt=dt, nmin=nmin)
 
     U = np.zeros((len(toas_table), len(bucket_ind2)), "d")
     for i, l in enumerate(bucket_ind2):
