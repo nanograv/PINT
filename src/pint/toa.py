@@ -1383,7 +1383,7 @@ class TOAs:
                 r.table = r.table[index]
                 return r
             elif isinstance(index, int):
-                log.warning(
+                log.info(
                     "TOAs do not support extraction of single TOA objects.  Returning TOAs of length 1"
                 )
                 r = copy.deepcopy(self)
