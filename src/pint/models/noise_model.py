@@ -375,11 +375,12 @@ class EcorrNoise(NoiseComponent):
 
     def get_weights(self, toas):
         ecorrs = self.get_ecorrs()
-        nns = [get_ecorr_nweights(toas[ec.select_toa_mask(toas)]) for ec in ecorrs]
+        ts = (toas.table["tdbld"].quantity * u.day).to(u.s).value
+        nns = [get_ecorr_nweights(ts[ec.select_toa_mask(toas)]) for ec in ecorrs]
         nc = sum(nns)
         weight = np.zeros(nc)
         nctot = 0
-        for ec, nn in ecorrs, nns:
+        for ec, nn in zip(ecorrs, nns):
             weight[nctot : nn + nctot] = ec.quantity.to(u.s).value ** 2
             nctot += nn
         return weight
