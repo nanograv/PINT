@@ -23,7 +23,6 @@ class Phase(namedtuple("Phase", "int frac")):
         >>> p = Phase(np.arange(10),np.random.random(10))
         >>> print(p.int)
         >>> print(p.frac[:5])
-        >>> print(p[::2])
         >>> i,f = p
         >>> q = p.quantity
 
@@ -107,9 +106,10 @@ class Phase(namedtuple("Phase", "int frac")):
     def __rmul__(self, num):
         return self.__mul__(num)
 
-    def __getitem__(self, key):
-        return Phase(self.int[key], self.frac[key])
-
     @property
     def quantity(self):
         return self.int + self.frac
+
+    @property
+    def value(self):
+        return self.quantity.value
