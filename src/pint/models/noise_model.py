@@ -486,8 +486,8 @@ class PLRedNoise(NoiseComponent):
         return np.dot(Fmat * phi[None, :], Fmat.T)
 
 
-def create_ecorr_quantization_matrix(toas_table, dt=1, nmin=2):
-    """Create quantization matrix mapping TOAs to observing epochs."""
+def get_ecorr_epochs(toas_table, dt=1, nmin=2):
+    """Find only epochs with more than 1 TOA for applying ECORR."""
     isort = np.argsort(toas_table)
 
     bucket_ref = [toas_table[isort[0]]]
@@ -500,8 +500,21 @@ def create_ecorr_quantization_matrix(toas_table, dt=1, nmin=2):
             bucket_ref.append(toas_table[i])
             bucket_ind.append([i])
 
-    # find only epochs with more than 1 TOA
     bucket_ind2 = [ind for ind in bucket_ind if len(ind) >= nmin]
+
+    return bucket_ind2
+
+
+def get_ecorr_nweights(toas_table, dt=1, nmin=2):
+    """Get the number of epochs associated with an ECORR.
+    This is equal to the number of weights of that ECORR."""
+    return len(get_ecorr_epochs(toas_table, dt=1, nmin=2))
+
+
+def create_ecorr_quantization_matrix(toas_table, dt=1, nmin=2):
+    """Create quantization matrix mapping TOAs to observing epochs."""
+    # find only epochs with more than 1 TOA
+    bucket_ind2 = get_ecorr_epochs(toas_table, dt=1, nmin=2)
 
     U = np.zeros((len(toas_table), len(bucket_ind2)), "d")
     for i, l in enumerate(bucket_ind2):
