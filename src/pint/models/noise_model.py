@@ -359,7 +359,7 @@ class EcorrNoise(NoiseComponent):
         for ec in ecorrs:
             mask = ec.select_toa_mask(toas)
             if np.any(mask):
-                umats.append(create_quantization_matrix(t[mask]))
+                umats.append(create_ecorr_quantization_matrix(t[mask]))
             else:
                 warnings.warn(f"ECORR {ec} has no TOAs")
                 umats.append(np.zeros((0, 0)))
@@ -486,7 +486,7 @@ class PLRedNoise(NoiseComponent):
         return np.dot(Fmat * phi[None, :], Fmat.T)
 
 
-def create_quantization_matrix(toas_table, dt=1, nmin=2):
+def create_ecorr_quantization_matrix(toas_table, dt=1, nmin=2):
     """Create quantization matrix mapping TOAs to observing epochs."""
     isort = np.argsort(toas_table)
 
