@@ -346,11 +346,9 @@ class EcorrNoise(NoiseComponent):
         return ecorrs
 
     def get_basis(self, toas):
-        """Return a quantization matrix and ECORR weights.
+        """Return the quantization matrix for ECORR.
 
         A quantization matrix maps TOAs to observing epochs.
-        The weights used are the square of the ECORR values.
-
         """
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
@@ -373,47 +371,31 @@ class EcorrNoise(NoiseComponent):
             nctot += nn
         return umat
 
-    def get_weights(self, toas):
+    def get_weights(self, toas, nweights=None):
+        """Return the ECORR weights
+        The weights used are the square of the ECORR values.
+        """
         ecorrs = self.get_ecorrs()
-        ts = (toas.table["tdbld"].quantity * u.day).to(u.s).value
-        nns = [get_ecorr_nweights(ts[ec.select_toa_mask(toas)]) for ec in ecorrs]
-        nc = sum(nns)
-        weight = np.zeros(nc)
+        if nweights is None:
+            ts = (toas.table["tdbld"].quantity * u.day).to(u.s).value
+            nweights = [
+                get_ecorr_nweights(ts[ec.select_toa_mask(toas)]) for ec in ecorrs
+            ]
+        nc = sum(nweights)
+        weights = np.zeros(nc)
         nctot = 0
-        for ec, nn in zip(ecorrs, nns):
-            weight[nctot : nn + nctot] = ec.quantity.to(u.s).value ** 2
+        for ec, nn in zip(ecorrs, nweights):
+            weights[nctot : nn + nctot] = ec.quantity.to(u.s).value ** 2
             nctot += nn
-        return weight
+        return weights
 
     def ecorr_basis_weight_pair(self, toas):
         """Return a quantization matrix and ECORR weights.
 
         A quantization matrix maps TOAs to observing epochs.
         The weights used are the square of the ECORR values.
-
         """
-        tbl = toas.table
-        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
-        ecorrs = self.get_ecorrs()
-        umats = []
-        for ec in ecorrs:
-            mask = ec.select_toa_mask(toas)
-            if np.any(mask):
-                umats.append(create_ecorr_quantization_matrix(t[mask]))
-            else:
-                warnings.warn(f"ECORR {ec} has no TOAs")
-                umats.append(np.zeros((0, 0)))
-        nc = sum(u.shape[1] for u in umats)
-        umat = np.zeros((len(t), nc))
-        weight = np.zeros(nc)
-        nctot = 0
-        for ct, ec in enumerate(ecorrs):
-            mask = ec.select_toa_mask(toas)
-            nn = umats[ct].shape[1]
-            umat[mask, nctot : nn + nctot] = umats[ct]
-            weight[nctot : nn + nctot] = ec.quantity.to(u.s).value ** 2
-            nctot += nn
-        return (umat, weight)
+        return (self.get_basis(toas), self.get_weights(toas))
 
     def ecorr_cov_matrix(self, toas):
         """Full ECORR covariance matrix."""
@@ -546,7 +528,7 @@ def get_ecorr_epochs(toas_table, dt=1, nmin=2):
 
 
 def get_ecorr_nweights(toas_table, dt=1, nmin=2):
-    """Get the number of epochs associated with an ECORR.
+    """Get the number of epochs associated with each ECORR.
     This is equal to the number of weights of that ECORR."""
     return len(get_ecorr_epochs(toas_table, dt=dt, nmin=nmin))
 
