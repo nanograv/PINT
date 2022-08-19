@@ -486,6 +486,21 @@ class PLRedNoise(NoiseComponent):
             amp, gam = self.RNAMP.value / fac, -1 * self.RNIDX.value
         return (amp, gam, nf)
 
+    def get_basis(self, toas):
+        tbl = toas.table
+        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        nf = self.get_pl_vals()[2]
+        Fmat = create_fourier_design_matrix(t, nf)
+        return Fmat
+
+    def get_weights(self, toas):
+        tbl = toas.table
+        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        amp, gam, nf = self.get_pl_vals()
+        Ffreqs = get_rednoise_freqs(t, nf)
+        weights = powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
+        return weights
+
     def pl_rn_basis_weight_pair(self, toas):
         """Return a Fourier design matrix and red noise weights.
 
@@ -496,12 +511,7 @@ class PLRedNoise(NoiseComponent):
         the dataset.
 
         """
-        tbl = toas.table
-        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
-        amp, gam, nf = self.get_pl_vals()
-        Fmat, f = create_fourier_design_matrix(t, nf)
-        weight = powerlaw(f, amp, gam) * f[0]
-        return (Fmat, weight)
+        return (self.get_basis(toas), self.get_weights(toas))
 
     def pl_rn_cov_matrix(self, toas):
         Fmat, phi = self.pl_rn_basis_weight_pair(toas)
@@ -545,6 +555,21 @@ def create_ecorr_quantization_matrix(toas_table, dt=1, nmin=2):
     return U
 
 
+def get_rednoise_freqs(t, nmodes, Tspan=None):
+    if Tspan is not None:
+        T = Tspan
+    else:
+        T = t.max() - t.min()
+
+    f = np.linspace(1 / T, nmodes / T, nmodes)
+
+    Ffreqs = np.zeros(2 * nmodes)
+    Ffreqs[0::2] = f
+    Ffreqs[1::2] = f
+
+    return Ffreqs
+
+
 def create_fourier_design_matrix(t, nmodes, Tspan=None):
     """
     Construct fourier design matrix from eq 11 of Lentati et al, 2013
@@ -559,21 +584,12 @@ def create_fourier_design_matrix(t, nmodes, Tspan=None):
     N = len(t)
     F = np.zeros((N, 2 * nmodes))
 
-    if Tspan is not None:
-        T = Tspan
-    else:
-        T = t.max() - t.min()
+    Ffreqs = get_rednoise_freqs(t, nmodes, Tspan=Tspan)
 
-    f = np.linspace(1 / T, nmodes / T, nmodes)
+    F[:, ::2] = np.sin(2 * np.pi * t[:, None] * Ffreqs[0::2])
+    F[:, 1::2] = np.cos(2 * np.pi * t[:, None] * Ffreqs[1::2])
 
-    Ffreqs = np.zeros(2 * nmodes)
-    Ffreqs[0::2] = f
-    Ffreqs[1::2] = f
-
-    F[:, ::2] = np.sin(2 * np.pi * t[:, None] * f[None, :])
-    F[:, 1::2] = np.cos(2 * np.pi * t[:, None] * f[None, :])
-
-    return F, Ffreqs
+    return F
 
 
 def powerlaw(f, A=1e-16, gamma=5):
