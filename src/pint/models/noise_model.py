@@ -487,6 +487,9 @@ class PLRedNoise(NoiseComponent):
         return (amp, gam, nf)
 
     def get_basis(self, toas):
+        """Return a Fourier design matrix. See the documentation for
+        PLRedNoise.pl_rn_basis_weight_pair for details."""
+
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
         nf = self.get_pl_vals()[2]
@@ -494,6 +497,9 @@ class PLRedNoise(NoiseComponent):
         return Fmat
 
     def get_weights(self, toas):
+        """Return red noise weights. See the documentation for
+        PLRedNoise.pl_rn_basis_weight_pair for details."""
+
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
         amp, gam, nf = self.get_pl_vals()
@@ -556,6 +562,8 @@ def create_ecorr_quantization_matrix(toas_table, dt=1, nmin=2):
 
 
 def get_rednoise_freqs(t, nmodes, Tspan=None):
+    """Frequency components for creating the red noise basis matrix."""
+
     if Tspan is not None:
         T = Tspan
     else:
