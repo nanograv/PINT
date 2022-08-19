@@ -526,6 +526,9 @@ class PLRedNoise(NoiseComponent):
 
 def get_ecorr_epochs(toas_table, dt=1, nmin=2):
     """Find only epochs with more than 1 TOA for applying ECORR."""
+    if len(toas_table) == 0:
+        return []
+
     isort = np.argsort(toas_table)
 
     bucket_ref = [toas_table[isort[0]]]
