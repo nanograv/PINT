@@ -90,10 +90,12 @@ for idx, param_chain in enumerate(samples_emcee.T):
     plt.subplot(bt.nparams, 1, idx + 1)
     plt.plot(param_chain, label=bt.param_labels[idx])
     plt.legend()
+plt.show()
 
 # %%
 # Plot the posterior distribution.
 fig = corner.corner(samples_emcee, labels=bt.param_labels)
+plt.show()
 
 # %% [markdown]
 # ## Nested sampling with nestle
@@ -128,6 +130,7 @@ fig = corner.corner(
     labels=bt.param_labels,
     range=[0.999] * bt.nparams,
 )
+plt.show()
 
 # %% [markdown]
 # Let us create a new model with an EFAC applied to all toas (all TOAs in this dataset are from GBT).
@@ -173,6 +176,7 @@ fig2 = corner.corner(
     labels=bt2.param_labels,
     range=[0.999] * bt2.nparams,
 )
+plt.show()
 
 # %% [markdown]
 # Now let us look at the evidences and compute the Bayes factor.
