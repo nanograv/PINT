@@ -552,7 +552,7 @@ def get_ecorr_nweights(toas_table, dt=1, nmin=2):
 def create_ecorr_quantization_matrix(toas_table, dt=1, nmin=2):
     """Create quantization matrix mapping TOAs to observing epochs.
     Only epochs with more than 1 TOA are included."""
-    
+
     bucket_ind2 = get_ecorr_epochs(toas_table, dt=dt, nmin=nmin)
 
     U = np.zeros((len(toas_table), len(bucket_ind2)), "d")
