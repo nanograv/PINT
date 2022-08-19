@@ -86,8 +86,8 @@ samples_emcee = sampler.get_chain(flat=True, discard=100)
 # %%
 # Plot the MCMC chains to make sure that the burn-in has been removed properly.
 # Otherwise, go back and discard more points.
-for idx,param_chain in enumerate(samples_emcee.T):
-    plt.subplot(bt.nparams, 1, idx+1)
+for idx, param_chain in enumerate(samples_emcee.T):
+    plt.subplot(bt.nparams, 1, idx + 1)
     plt.plot(param_chain, label=bt.param_labels[idx])
     plt.legend()
 
@@ -96,7 +96,7 @@ for idx,param_chain in enumerate(samples_emcee.T):
 fig = corner.corner(samples_emcee, labels=bt.param_labels)
 
 # %% [markdown]
-# ## Nested sampling with nestle 
+# ## Nested sampling with nestle
 
 # %% [markdown]
 # Nested sampling computes the Bayesian evidence along with posterior samples. This allows us to do compare two models. Let us compare the model above with and without an EFAC.
@@ -186,5 +186,3 @@ print(f"Bayes factor : {bf} (in favor of no EFAC)")
 
 # %% [markdown]
 # The Bayes factor tells us that the EFAC is unncessary for this dataset.
-
-
