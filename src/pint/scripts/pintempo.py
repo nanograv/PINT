@@ -48,22 +48,22 @@ def main(argv=None):
     parser.add_argument(
         "--log-level",
         type=str,
-        choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
-        default="WARNING",
+        choices=pint.logging.levels,
+        default=pint.logging.script_level,
         help="Logging level",
         dest="loglevel",
     )
-    args = parser.parse_args(argv)
+    parser.add_argument(
+        "-v", "--verbosity", default=0, action="count", help="Increase output verbosity"
+    )
+    parser.add_argument(
+        "-q", "--quiet", default=0, action="count", help="Decrease output verbosity"
+    )
 
-    if args.loglevel != "WARNING":
-        log.remove()
-        log.add(
-            sys.stderr,
-            level=args.loglevel,
-            colorize=True,
-            format=pint.logging.format,
-            filter=pint.logging.LogFilter(),
-        )
+    args = parser.parse_args(argv)
+    pint.logging.setup(
+        level=pint.logging.get_level(args.loglevel, args.verbosity, args.quiet)
+    )
 
     log.info("Reading model from {0}".format(args.parfile))
     m = pint.models.get_model(args.parfile)
