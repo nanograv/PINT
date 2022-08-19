@@ -2,6 +2,7 @@ from scipy.stats import uniform, norm
 from pint.models.priors import UniformUnboundedRV, Prior
 from pint.residuals import Residuals
 from pint.logging import log
+from scipy.linalg import cho_factor, cho_solve
 
 import numpy as np
 
@@ -55,6 +56,19 @@ class BayesianTiming:
 
         self.track_mode = "use_pulse_numbers" if use_pulse_numbers else "nearest"
 
+        if self.likelihood_method == "gls":
+            self.correlated_noise_components = [
+                component
+                for component in model.NoiseComponent_list
+                if component.introduces_correlated_errors
+            ]
+
+            basis_matrices = [
+                component.get_basis(toas)
+                for component in self.correlated_noise_components
+            ]
+            self.correlated_noise_basis_matrix = np.concatenate(basis_matrices, axis=1)
+
     def _validate_priors(self):
         for param in self.params:
             if not hasattr(param, "prior") or param.prior is None:
@@ -77,9 +91,7 @@ class BayesianTiming:
             if not correlated_errors_present:
                 return "wls"
             else:
-                raise NotImplementedError(
-                    "Likelihood function for correlated noise is not implemented yet."
-                )
+                return "gls"
 
     def lnprior(self, params):
         """Basic implementation of a factorized log prior.
@@ -138,9 +150,7 @@ class BayesianTiming:
         if self.likelihood_method == "wls":
             return self._wls_lnlikelihood(params)
         elif self.likelihood_method == "gls":
-            raise NotImplementedError(
-                f"Likelihood function for method gls not implemented yet."
-            )
+            return self._gls_lnlikelihood(params)
         else:
             raise ValueError(f"Unknown likelihood method '{self.likelihood_method}'.")
 
@@ -164,8 +174,68 @@ class BayesianTiming:
         self.model.set_param_values(params_dict)
         res = Residuals(self.toas, self.model, track_mode=self.track_mode)
         chi2 = res.calc_chi2()
-        sigmas = self.model.scaled_toa_uncertainty(self.toas).to("s").value
+        sigmas = self.model.scaled_toa_uncertainty(self.toas).si.value
         return -chi2 / 2 - np.sum(np.log(sigmas))
+
+    def _gls_lnlikelihood(self, params):
+        params_dict = dict(zip(self.param_labels, params))
+        self.model.set_param_values(params_dict)
+        R = (
+            Residuals(self.toas, self.model, track_mode=self.track_mode)
+            .calc_time_resids()
+            .si.value
+        )
+        Cinv, logdetC = self._get_correlation_matrix_inverse_and_logdet()
+
+        gls_metric = np.dot(R, np.dot(Cinv, R))
+
+        return -0.5 * gls_metric - 0.5 * logdetC
+
+    def _get_correlated_noise_weights(self):
+        weight_vectors = [
+            component.get_weights(self.toas)
+            for component in self.correlated_noise_components
+        ]
+        return np.concatenate(weight_vectors)
+
+    def _get_correlation_matrix_inverse_and_logdet(self):
+        """Compute the inverse and log-determinant of the correlation matrix using
+        the Woodbury identity. (See, e.g., van Haasteren & Vallisneri 2014)
+
+        C = N + F Φ F^T
+        C^-1 = N^-1 - N^-1 F (Φ^-1 + F^T N^-1 F)^-1 F^T N^-1
+        det[C] = det[N] det[Φ] det[Φ^-1 + F^T N^-1 F]
+
+        where
+            N is the white noise covariance matrix (Ntoa x Ntoa, diagonal),
+            F is the correlated noise basis matrix (Ntoa x Nbasis),
+            Φ is the correlated noise weight matrix (Nbasis x Nbasis, diagonal),
+            C is the full correlation matrix (Ntoa x Ntoa)
+        """
+        N = self.model.scaled_toa_uncertainty(self.toas).si.value ** 2
+        F = self.correlated_noise_basis_matrix
+        Φ = self._get_correlated_noise_weights()
+
+        Ninv = np.diag(1 / N)
+        FT_Ninv = F.T / N
+        Ninv_F = FT_Ninv.T
+        Φinv = np.diag(1 / Φ)
+
+        A = Φinv + np.dot(FT_Ninv, F)
+
+        Acf = cho_factor(A)
+        Ainv_FT_Ninv = cho_solve(Acf, FT_Ninv)
+
+        Ninv_F_Ainv_FT_Ninv = np.dot(Ninv_F, Ainv_FT_Ninv)
+
+        Cinv = Ninv - Ninv_F_Ainv_FT_Ninv
+
+        logdetN = np.sum(np.log(N))
+        logdetΦ = np.sum(np.log(Φ))
+        logdetA = 2 * np.sum(np.log(Acf[0]))
+        logdetC = logdetN + logdetΦ + logdetA
+
+        return Cinv, logdetC
 
     def scaled_lnprior(self, cube):
         return self.lnprior(self.prior_transform(cube))
