@@ -18,7 +18,8 @@ import sys
 from packaging.version import parse
 
 import jupytext
-#import sphinx.ext.apidoc
+
+# import sphinx.ext.apidoc
 
 
 # If extensions (or modules to document with autodoc) are in another
@@ -76,7 +77,7 @@ autodoc_inherit_docstrings = True
 templates_path = ["_templates"]
 
 # The suffix of source filenames.
-#source_suffix = ".rst"
+# source_suffix = ".rst"
 
 # The encoding of source files.
 # source_encoding = 'utf-8-sig'
@@ -85,8 +86,8 @@ templates_path = ["_templates"]
 master_doc = "index"
 
 # General information about the project.
-project = u"pint"
-copyright = u"2017-2021 PINT Developers"
+project = "pint"
+copyright = "2017-2021 PINT Developers"
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
@@ -109,7 +110,18 @@ release = pint.__version__
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ["_build", "examples/.ipynb_checkpoints", "conf.py", "_ext"]
+# exclude some notebooks that take too long to run and are not needed for the docs bulid
+exclude_patterns = [
+    "_build",
+    "examples/.ipynb_checkpoints",
+    "examples/fit_NGC6440E_MCMC.py",
+    "examples/compare_tempo2_B1855.py",
+    "examples/compare_tempo2_B1855.py",
+    "examples/example_dmx_ranges.py",
+    "examples/example_pulse_numbers.py",
+    "conf.py",
+    "_ext",
+]
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -262,7 +274,7 @@ latex_elements = {
 # (source start file, target name, title, author, documentclass
 # [howto/manual]).
 latex_documents = [
-    ("index", "pint.tex", u"pint Documentation", u"PINT Developers", "manual")
+    ("index", "pint.tex", "pint Documentation", "PINT Developers", "manual")
 ]
 
 # The name of an image file (relative to this directory) to place at
@@ -290,7 +302,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [("index", "pint", u"pint Documentation", [u"PINT Developers"], 1)]
+man_pages = [("index", "pint", "pint Documentation", ["PINT Developers"], 1)]
 
 # If true, show URL addresses after external links.
 # man_show_urls = False
@@ -305,8 +317,8 @@ texinfo_documents = [
     (
         "index",
         "pint",
-        u"pint Documentation",
-        u"PINT Developers",
+        "pint Documentation",
+        "PINT Developers",
         "pint",
         "One line description of project.",
         "Miscellaneous",

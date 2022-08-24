@@ -18,5 +18,5 @@ class TestAbsPhase(unittest.TestCase):
 
         ph = model.phase(toas, abs_phase=True)
         # Check that integer and fractional phase values are very close to 0.0
-        self.assertAlmostEqual(ph[0].value, 0.0)
-        self.assertAlmostEqual(ph[1].value, 0.0)
+        self.assertAlmostEqual(ph.int.value, 0.0)
+        self.assertAlmostEqual(ph.frac.value, 0.0)
