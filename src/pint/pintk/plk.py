@@ -1343,10 +1343,10 @@ class PlkWidget(tk.Frame):
                         sudo_select_mask = np.zeros_like(self.selected).astype(bool)
                         sudo_select_mask[ind] = True
                         jumped_copy = copy.deepcopy(self.jumped)
-                        select_jump_stat = jumped_copy[~sudo_select_mask]
+                        unselect_jump_stat = jumped_copy[~sudo_select_mask]
                         self.selected = self.psr.delete_TOAs([self.psr.all_toas.table["index"][ind]], self.selected)
                         self.updateAllJumped()
-                        self.jumped = (select_jump_stat | self.jumped)
+                        self.jumped |= (unselect_jump_stat)
                         self.psr.update_resids()
                         self.updatePlot(keepAxes=True)
                         self.call_updates()
