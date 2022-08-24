@@ -15,6 +15,7 @@ to clear out old files you will want to do
 import collections
 import time
 from pathlib import Path
+from warnings import warn
 
 from astropy.utils.data import download_file
 from loguru import logger as log
@@ -129,7 +130,17 @@ def get_file(
         f"File {name} to be downloaded due to download policy "
         f"{download_policy}: {remote_url}"
     )
-    return Path(download_file(remote_url, cache="update", sources=mirror_urls))
+    try:
+        return Path(download_file(remote_url, cache="update", sources=mirror_urls))
+    except IOError as e:
+        if download_policy == "if_expired" and local_file is not None:
+            warn(
+                f"File {name} should be downloaded but {local_file} is being used "
+                f"because an error occurred: {e}"
+            )
+            return local_file
+        else:
+            raise
 
 
 IndexEntry = collections.namedtuple(
