@@ -1708,30 +1708,13 @@ def set_no_internet(mode="warn"):
     import astropy.utils.data
     import astropy.utils.iers
 
-    astropy.utils.data.conf.allow_internet = False
-    astropy.utils.iers.conf.auto_download = False
-    astropy.utils.iers.conf.iers_degraded_accuracy = "warn"
-
-
-@contextmanager
-def no_internet(mode="warn"):
-    """Run Astropy and PINT in a context without Internet access.
-
-    The sets up a number of Astropy configuration options. If you want to achieve
-    this effect without having to add this line to your scripts, you can create
-    an Astropy config file and edit it to contain these same options. See
-    https://docs.astropy.org/en/stable/config/index.html#astropy-config
-    for details of how to do this.
-
-    Parameters
-    ----------
-    mode : 'warn' or 'ignore'
-        What to do when files appear to be out of date
-    """
-    import astropy.utils.data
-    import astropy.utils.iers
-
-    with astropy.utils.data.conf.set_temp("allow_internet", False):
-        with astropy.utils.iers.conf.set_temp("auto_download", False):
-            with astropy.utils.iers.conf.set_temp("iers_degraded_accuracy", "warn"):
-                yield
+    if hasattr(astropy.utils.data.conf, "allow_internet"):
+        astropy.utils.data.conf.allow_internet = False
+    if hasattr(astropy.utils.iers.conf, "auto_download"):
+        astropy.utils.iers.conf.auto_download = False
+    else:
+        astropy.utils.iers.conf.remote_timeout = 0
+    if hasattr(astropy.utils.iers.conf, "iers_degraded_accuracy"):
+        astropy.utils.iers.conf.iers_degraded_accuracy = "warn"
+    else:
+        astropy.utils.iers.conf.auto_max_age = None

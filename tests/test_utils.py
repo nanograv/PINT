@@ -867,9 +867,3 @@ def test_no_internet_forbids_internet(tmp_path, monkeypatch):
             with pytest.warns(astropy.utils.iers.IERSDegradedAccuracyWarning):
                 (Time.now() + 1 * u.year).utc.tai.ut1
             assert not astropy.utils.data.cache_contents()
-
-
-def test_set_no_internet_works():
-    with set_temp_config():
-        set_no_internet()
-        assert not astropy.utils.data.conf.allow_internet
