@@ -1237,7 +1237,9 @@ class PlkWidget(tk.Frame):
             x = self.xvals.value
             y = self.yvals.value
             xmin, xmax, ymin, ymax = self.plkAxes.axis()
+            # tmp_clickDist = np.min(np.ediff1d(x)**2 + np.ediff1d(y)**2)
             dist = ((x - cx) / (xmax - xmin)) ** 2.0 + ((y - cy) / (ymax - ymin)) ** 2.0
+            # dist = ((x - cx)) ** 2.0 + ((y - cy)) ** 2.0
             ind = np.argmin(dist)
             log.debug(
                 f"Closest: TOA index {self.psr.all_toas.table['index'][ind]} (plot index {ind}): "
@@ -1338,17 +1340,18 @@ class PlkWidget(tk.Frame):
             if ind is not None:
                 if event.button == 3:
                     # Right click deletes closest TOA
-                    # if the point is jumped, tell the user to delete the jump first
-                    if ind in self.psr.all_toas.table["index"][self.jumped]:
-                        log.warning(
-                            "Cannot delete jumped TOAs. Delete interfering jumps before deleting TOAs."
-                        )
-                        return None
-                    self.selected = self.psr.delete_TOAs([ind], self.selected)
-                    self.updateAllJumped()
-                    self.psr.update_resids()
-                    self.updatePlot(keepAxes=True)
-                    self.call_updates()
+                    # But make sure you don't keep deleting toas on multiple clicks at the same site
+                    if not self.selected[self.psr.all_toas.table["index"][ind]]:
+                        sudo_select_mask = np.zeros_like(self.selected).astype(bool)
+                        sudo_select_mask[ind] = True
+                        jumped_copy = copy.deepcopy(self.jumped)
+                        select_jump_stat = jumped_copy[~sudo_select_mask]
+                        self.selected = self.psr.delete_TOAs([self.psr.all_toas.table["index"][ind]], self.selected)
+                        self.updateAllJumped()
+                        self.jumped = (select_jump_stat | self.jumped)
+                        self.psr.update_resids()
+                        self.updatePlot(keepAxes=True)
+                        self.call_updates()
                 if event.button == 1:
                     # Left click is select
                     self.selected[ind] = not self.selected[ind]
@@ -1433,21 +1436,16 @@ class PlkWidget(tk.Frame):
                 self.updatePlot(keepAxes=False)
                 self.call_updates()
         elif event.key == "d":
-            # if any of the points are jumped, tell the user to delete the jump(s) first
+            # Get the current state of jumped toas
             jumped_copy = copy.deepcopy(self.jumped)
-            self.updateAllJumped()
-            all_jumped = copy.deepcopy(self.jumped)
-            self.jumped = jumped_copy
-            if (self.selected & all_jumped).any():
-                log.warning(
-                    "Cannot delete jumped TOAs. Delete interfering jumps before deleting TOAs."
-                )
-                return None
+            unselect_jump_status = jumped_copy[~self.selected]
             # Delete the selected points
             self.selected = self.psr.delete_TOAs(
                 self.psr.all_toas.table["index"][self.selected], self.selected
             )
             self.updateAllJumped()
+            # Restore the jumps back
+            self.jumped |= unselect_jump_status
             self.psr.update_resids()
             self.updatePlot(keepAxes=True)
             self.call_updates()
