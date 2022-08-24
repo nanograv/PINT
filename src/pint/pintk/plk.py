@@ -1237,9 +1237,7 @@ class PlkWidget(tk.Frame):
             x = self.xvals.value
             y = self.yvals.value
             xmin, xmax, ymin, ymax = self.plkAxes.axis()
-            # tmp_clickDist = np.min(np.ediff1d(x)**2 + np.ediff1d(y)**2)
             dist = ((x - cx) / (xmax - xmin)) ** 2.0 + ((y - cy) / (ymax - ymin)) ** 2.0
-            # dist = ((x - cx)) ** 2.0 + ((y - cy)) ** 2.0
             ind = np.argmin(dist)
             log.debug(
                 f"Closest: TOA index {self.psr.all_toas.table['index'][ind]} (plot index {ind}): "
