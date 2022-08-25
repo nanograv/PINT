@@ -1742,9 +1742,7 @@ class TimingModel:
             )
         return result
 
-    def designmatrix(
-        self, toas, acc_delay=None, incfrozen=False, incoffset=True, incnoise=True
-    ):
+    def designmatrix(self, toas, acc_delay=None, incfrozen=False, incoffset=True):
         """Return the design matrix.
 
         The design matrix is the matrix with columns of ``d_phase_d_param/F0``
@@ -1766,8 +1764,6 @@ class TimingModel:
             Whether to include frozen parameters in the design matrix
         incoffset : bool
             Whether to include the constant offset in the design matrix
-        incnoise : bool
-            Whether to include noise parameters in the design matrix. incnoise=True is currently not implemented, and will raise an error if any of the noise parameters are unfrozen.
 
         Returns
         -------
@@ -1788,22 +1784,19 @@ class TimingModel:
         """
 
         noise_params = self.get_params_of_component_type("NoiseComponent")
-        unfrozen_noise_params = [
-            param for param in noise_params if not getattr(self, param).frozen
-        ]
+        # unfrozen_noise_params = [
+        #     param for param in noise_params if not getattr(self, param).frozen
+        # ]
 
-        if incnoise and len(unfrozen_noise_params) > 0:
-            raise NotImplementedError(
-                "The design matrix entries for noise parameters are not implemented. Freeze them before computing the design matrix or use incnoise=False."
-            )
-        else:
-            params = ["Offset"] if incoffset else []
-            params += [
-                par
-                for par in self.params
-                if (incfrozen or not getattr(self, par).frozen)
-                and par not in noise_params
-            ]
+        # The entries for any unfrozen noise parameters will not be
+        # included in the design matrix as they are not well-defined.
+
+        params = ["Offset"] if incoffset else []
+        params += [
+            par
+            for par in self.params
+            if (incfrozen or not getattr(self, par).frozen) and par not in noise_params
+        ]
 
         F0 = self.F0.quantity  # 1/sec
         ntoas = len(toas)
