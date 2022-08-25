@@ -1784,22 +1784,19 @@ class TimingModel:
         """
 
         noise_params = self.get_params_of_component_type("NoiseComponent")
-        unfrozen_noise_params = [
-            param for param in noise_params if not getattr(self, param).frozen
-        ]
+        # unfrozen_noise_params = [
+        #     param for param in noise_params if not getattr(self, param).frozen
+        # ]
 
-        if len(unfrozen_noise_params) > 0:
-            raise NotImplementedError(
-                "The design matrix entries for noise parameters are not implemented. Freeze them before computing the design matrix."
-            )
-        else:
-            params = ["Offset"] if incoffset else []
-            params += [
-                par
-                for par in self.params
-                if (incfrozen or not getattr(self, par).frozen)
-                and par not in noise_params
-            ]
+        # The entries for any unfrozen noise parameters will not be
+        # included in the design matrix as they are not well-defined.
+
+        params = ["Offset"] if incoffset else []
+        params += [
+            par
+            for par in self.params
+            if (incfrozen or not getattr(self, par).frozen) and par not in noise_params
+        ]
 
         F0 = self.F0.quantity  # 1/sec
         ntoas = len(toas)

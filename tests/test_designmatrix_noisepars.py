@@ -1,4 +1,3 @@
-import os
 import pytest
 
 from pint.models import get_model_and_toas
@@ -19,28 +18,16 @@ def test_designmatrix_no_free_noise_param(model_and_toas):
     M = model.designmatrix(toas)
 
 
-def test_designmatrix_noise_exception_free_efac(model_and_toas):
+def test_designmatrix_free_noise_params(model_and_toas):
     model, toas = model_and_toas
-    model.EFAC1.frozen = False
 
-    with pytest.raises(NotImplementedError):
-        # This should raise a NotImplementedError rather than an AttributeError.
+    for noiseparam in ["EFAC1", "EQUAD1", "ECORR1"]:
+        getattr(model, noiseparam).frozen = False
+
+        # This should work and ignore the unfrozen noise parameter
         M = model.designmatrix(toas)
 
+        assert noiseparam in model.free_params and noiseparam not in M[1]
 
-def test_designmatrix_noise_exception_free_equad(model_and_toas):
-    model, toas = model_and_toas
-    model.EQUAD1.frozen = False
-
-    with pytest.raises(NotImplementedError):
-        # This should raise a NotImplementedError rather than an AttributeError.
-        M = model.designmatrix(toas)
-
-
-def test_designmatrix_noise_exception_ecorr(model_and_toas):
-    model, toas = model_and_toas
-    model.ECORR1.frozen = False
-
-    with pytest.raises(NotImplementedError):
-        # This should raise a NotImplementedError rather than an AttributeError.
-        M = model.designmatrix(toas)
+        # Reset the model.
+        getattr(model, noiseparam).frozen = True
