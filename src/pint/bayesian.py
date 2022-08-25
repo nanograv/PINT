@@ -237,14 +237,14 @@ class BayesianTiming:
 
         return Cinv, logdetC
 
-    def scaled_lnprior(self, cube):
-        return self.lnprior(self.prior_transform(cube))
+    # def scaled_lnprior(self, cube):
+    #     return self.lnprior(self.prior_transform(cube))
 
-    def scaled_prior_transform(self, cube):
-        return cube
+    # def scaled_prior_transform(self, cube):
+    #     return cube
 
-    def scaled_lnlikelihood(self, cube):
-        return self.lnlikelihood(self.prior_transform(cube))
+    # def scaled_lnlikelihood(self, cube):
+    #     return self.lnlikelihood(self.prior_transform(cube))
 
-    def scale_samples(self, cubes):
-        return np.array(list(map(self.prior_transform, cubes)))
+    # def scale_samples(self, cubes):
+    #     return np.array(list(map(self.prior_transform, cubes)))
