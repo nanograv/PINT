@@ -232,7 +232,7 @@ class BayesianTiming:
 
         logdetN = np.sum(np.log(N))
         logdetΦ = np.sum(np.log(Φ))
-        logdetA = 2 * np.sum(np.log(Acf[0]))
+        logdetA = 2 * np.sum(np.log(np.diag(Acf[0])))
         logdetC = logdetN + logdetΦ + logdetA
 
         return Cinv, logdetC
