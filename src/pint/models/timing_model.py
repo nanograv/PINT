@@ -1742,9 +1742,7 @@ class TimingModel:
             )
         return result
 
-    def designmatrix(
-        self, toas, acc_delay=None, incfrozen=False, incoffset=True, incnoise=True
-    ):
+    def designmatrix(self, toas, acc_delay=None, incfrozen=False, incoffset=True):
         """Return the design matrix.
 
         The design matrix is the matrix with columns of ``d_phase_d_param/F0``
@@ -1766,8 +1764,6 @@ class TimingModel:
             Whether to include frozen parameters in the design matrix
         incoffset : bool
             Whether to include the constant offset in the design matrix
-        incnoise : bool
-            Whether to include noise parameters in the design matrix. incnoise=True is currently not implemented, and will raise an error if any of the noise parameters are unfrozen.
 
         Returns
         -------
@@ -1792,9 +1788,9 @@ class TimingModel:
             param for param in noise_params if not getattr(self, param).frozen
         ]
 
-        if incnoise and len(unfrozen_noise_params) > 0:
+        if len(unfrozen_noise_params) > 0:
             raise NotImplementedError(
-                "The design matrix entries for noise parameters are not implemented. Freeze them before computing the design matrix or use incnoise=False."
+                "The design matrix entries for noise parameters are not implemented. Freeze them before computing the design matrix."
             )
         else:
             params = ["Offset"] if incoffset else []
