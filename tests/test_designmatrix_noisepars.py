@@ -1,15 +1,15 @@
 import os
-import pint.models.model_builder as mb
-import pinttestdata
 import pytest
+
+from pint.models import get_model_and_toas
+from pinttestdata import datadir
 
 
 @pytest.fixture()
 def model_and_toas():
-    datadir = pinttestdata.datadir
-    parfile = os.path.join(datadir, "J1713+0747_NANOGrav_11yv0_short.gls.par")
-    timfile = os.path.join(datadir, "J1713+0747_NANOGrav_11yv0_short.tim")
-    return mb.get_model_and_toas(parfile, timfile)
+    parfile = os.path.join(datadir, "J1713+0747_small.gls.par")
+    timfile = os.path.join(datadir, "J1713+0747_small.tim")
+    return get_model_and_toas(parfile, timfile)
 
 
 def test_designmatrix_noise_exception_no_free_noise_param(model_and_toas):
