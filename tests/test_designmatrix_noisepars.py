@@ -25,9 +25,9 @@ def test_designmatrix_free_noise_params(model_and_toas):
         getattr(model, noiseparam).frozen = False
 
         # This should work and ignore the unfrozen noise parameter
-        M = model.designmatrix(toas)
+        M, M_params, M_units = model.designmatrix(toas)
 
-        assert noiseparam in model.free_params and noiseparam not in M[1]
+        assert noiseparam in model.free_params and noiseparam not in M_params
 
         # Reset the model.
         getattr(model, noiseparam).frozen = True
