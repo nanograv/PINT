@@ -113,3 +113,25 @@ def test_covariance_matrix(dataJ1713p0747_small):
         and np.allclose(C1inv, C2inv)
         and np.isclose(logdetC1, logdetC2)
     )
+
+
+def test_bayesian_timing_funcs(dataJ1713p0747_small):
+    model, toas = dataJ1713p0747_small
+
+    bt = BayesianTiming(model, toas)
+
+    nparams = bt.nparams
+    assert nparams == len(model.free_params)
+
+    test_cube = 0.5 * np.ones(nparams)
+    test_params = bt.prior_transform(test_cube)
+    assert np.all(np.isfinite(test_params))
+
+    lnpr = bt.lnprior(test_params)
+    assert np.isfinite(lnpr)
+
+    lnl = bt.lnlikelihood(test_params)
+    assert np.isfinite(lnl)
+
+    lnp = bt.lnposterior(test_params)
+    assert np.isfinite(lnp) and np.isclose(lnp, lnpr + lnl)
