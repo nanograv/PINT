@@ -2,13 +2,15 @@ from scipy.stats import uniform, norm
 from pint.models.priors import UniformUnboundedRV, Prior
 from pint.residuals import Residuals
 from scipy.linalg import cho_factor, cho_solve
+from copy import deepcopy
 
 import numpy as np
 
 
 class BayesianTiming:
-    """A wrapper around the PINT API that provides lnprior, prior_transform, lnlikelihood, and lnposterior functions.
-    This interface can be used to draw posterior samples using the sampler of your choice.
+    """A wrapper around the PINT API that provides lnprior, prior_transform,
+    lnlikelihood, and lnposterior functions. This interface can be used to
+    draw posterior samples using the sampler of your choice.
 
     Parameters
     ----------
@@ -16,20 +18,44 @@ class BayesianTiming:
         The best-fit values stored in this object are not used.
     toas : a :class:`pint.toa.TOAs` instance. Contains the input toas.
     use_pulse_numbers : bool, optional
-        How to handle phase wrapping. If True, will use the pulse numbers from the toas object
-        while creating :class:`pint.residuals.Residuals` objects. Otherwise will use the nearest integer.
+        How to handle phase wrapping. If True, will use the pulse numbers
+        from the toas object while creating :class:`pint.residuals.Residuals`
+        objects. Otherwise will use the nearest integer.
     prior_info : dict, optional
-        A dict containing the prior information on free parameters. This parameter supersedes any priors
-        present in the model.
+        A dict containing the prior information on free parameters. This parameter
+        supersedes any priors present in the model.
 
     Notes
     -----
-    * The `prior` attribute of each free parameter in the `model` object should be set to an instance of
-      :class:`pint.models.priors.Prior`.
+    > The `prior` attribute of each free parameter in the `model` object should
+      be set to an instance of :class:`pint.models.priors.Prior`.
+
+    > The parameters of BayesianTiming.model will change for every likelihood function
+      call. These parameters in general will not be the best-fit values. Hence, it is NOT
+      a good idea to save it as a par file.
+
+    > Currently, only uniform and normal distributions are supported in prior_info. More
+      general priors should be set directly in the TimingModel object before creating the
+      BayesianTiming object.
+      Here is an example prior_info object:
+        prior_info = {
+            "F0" : {
+                "distr" : "normal",
+                "mu"    : 1,
+                "sigma" : 0.00001
+            },
+            "EFAC1" : {
+                "distr" : "uniform",
+                "pmin"  : 0.5,
+                "pmax"  : 2.0
+            }
+        }
     """
 
     def __init__(self, model, toas, use_pulse_numbers=False, prior_info=None):
-        self.model = model
+        self.model = deepcopy(
+            model
+        )  # Make a deep copy to not mess up the original model.
         self.toas = toas
 
         self.param_labels = self.model.free_params
@@ -120,7 +146,8 @@ class BayesianTiming:
         More complex prior transforms must be separately implemented.
 
         Args:
-            cube (array-like): Sample drawn from a uniform distribution defined in a nparams-dimensional unit hypercube.
+            cube (array-like): Sample drawn from a uniform distribution defined in an
+            nparams-dimensional unit hypercube.
 
         Returns:
             ndarray : Sample drawn from the prior distribution
@@ -151,7 +178,8 @@ class BayesianTiming:
             raise ValueError(f"Unknown likelihood method '{self.likelihood_method}'.")
 
     def lnposterior(self, params):
-        """Log-posterior function. If the prior evaluates to zero, the likelihood is not evaluated.
+        """Log-posterior function. If the prior evaluates to zero, the likelihood
+        is not evaluated.
 
         Args:
             params (array-like): Parameters
@@ -233,6 +261,8 @@ class BayesianTiming:
             F is the correlated noise basis matrix (Ntoa x Nbasis),
             Φ is the correlated noise weight matrix (Nbasis x Nbasis, diagonal),
             C is the full correlation matrix (Ntoa x Ntoa)
+
+        Returns: tuple containing C^-1 (Ntoa x Ntoa) and log[det[C]] (float).
         """
         N = self.model.scaled_toa_uncertainty(self.toas).si.value ** 2
         F = (
