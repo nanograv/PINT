@@ -53,9 +53,8 @@ class BayesianTiming:
     """
 
     def __init__(self, model, toas, use_pulse_numbers=False, prior_info=None):
-        self.model = deepcopy(
-            model
-        )  # Make a deep copy to not mess up the original model.
+        # Make a deep copy to not mess up the original model.
+        self.model = deepcopy(model)
         self.toas = toas
 
         self.param_labels = self.model.free_params
@@ -74,8 +73,6 @@ class BayesianTiming:
 
         self._validate_priors()
 
-        # Simple weighted least-squares (wls), Weighted least squares with normalization term for white noise (wls_wn),
-        # or Generalized least-squares with normalization term (gls). gls is not implemented yet.
         self.likelihood_method = self._decide_likelihood_method()
 
         self.track_mode = "use_pulse_numbers" if use_pulse_numbers else "nearest"
@@ -102,6 +99,9 @@ class BayesianTiming:
                 )
 
     def _decide_likelihood_method(self):
+        """Weighted least squares with normalization term (wls), or Generalized
+        least-squares with normalization term (gls)."""
+
         if "NoiseComponent" not in self.model.component_types:
             return "wls"
         else:
