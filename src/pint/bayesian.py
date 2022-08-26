@@ -1,10 +1,11 @@
-from scipy.stats import uniform, norm
-from pint.models.priors import UniformUnboundedRV, Prior
-from pint.residuals import Residuals
-from scipy.linalg import cho_factor, cho_solve
 from copy import deepcopy
 
 import numpy as np
+from scipy.linalg import cho_factor, cho_solve
+from scipy.stats import norm, uniform
+
+from pint.models.priors import Prior, UniformUnboundedRV
+from pint.residuals import Residuals
 
 
 class BayesianTiming:
