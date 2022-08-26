@@ -74,6 +74,7 @@ start_points = (
 # Use longer chain_length for real runs. It is kept small here so that
 # the sampling finishes quickly (and because I know the burn in is short
 # because of the cheating priors above).
+print("Running emcee...")
 chain_length = 1000
 sampler.run_mcmc(
     start_points,
@@ -117,6 +118,7 @@ plt.show()
 # `dlogz` is the target accuracy in the computed Bayesian evidence.
 # Increasing `npoints` or decreasing `dlogz` gives more accurate results,
 # but at the cost of time.
+print("Running nestle...")
 result_nestle_1 = nestle.sample(
     bt.lnlikelihood,
     bt.prior_transform,
