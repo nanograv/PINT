@@ -45,6 +45,21 @@ def dataJ0613m0200_efac():
 
 
 @pytest.fixture()
+def dataJ0613m0200_rednoise():
+    parfile = examplefile("J0613-sim.par")
+    timfile = examplefile("J0613-sim.tim")
+    model, toas = get_model_and_toas(parfile, timfile)
+
+    parfile = str(model)
+    parfile += "TNREDAMP -20 1 1\n"  # A negligibly small amplitude
+    parfile += "TNREDGAM -2 1 1"
+    model = get_model(io.StringIO(parfile))
+    set_dummy_priors(model)
+
+    return model, toas
+
+
+@pytest.fixture()
 def dataJ1713p0747_small():
     parfile = datadir / "J1713+0747_small.gls.par"
     timfile = datadir / "J1713+0747_small.tim"
@@ -88,6 +103,23 @@ def test_lnlikelihood_unit_efac(dataJ0613m0200, dataJ0613m0200_efac):
     lnl1 = bt.lnlikelihood(maxlike_params)
 
     model, toas = dataJ0613m0200_efac
+    bt = BayesianTiming(model, toas)
+    maxlike_params = np.array([param.value for param in bt.params], dtype=float)
+    lnl2 = bt.lnlikelihood(maxlike_params)
+
+    assert np.isclose(lnl1, lnl2)
+
+
+def test_lnlikelihood_zero_rednoise(dataJ0613m0200, dataJ0613m0200_rednoise):
+    """Log likelihood with no red noise should be equal to that with RNAMP=0.
+    We use TNREDAMP=-20 here instead to avoid singularities.
+    """
+    model, toas = dataJ0613m0200
+    bt = BayesianTiming(model, toas)
+    maxlike_params = np.array([param.value for param in bt.params], dtype=float)
+    lnl1 = bt.lnlikelihood(maxlike_params)
+
+    model, toas = dataJ0613m0200_rednoise
     bt = BayesianTiming(model, toas)
     maxlike_params = np.array([param.value for param in bt.params], dtype=float)
     lnl2 = bt.lnlikelihood(maxlike_params)
