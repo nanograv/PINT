@@ -81,6 +81,7 @@ def test_white_noise(dataJ0613m0200_efac):
 
 
 def test_lnlikelihood_unit_efac(dataJ0613m0200, dataJ0613m0200_efac):
+    """Log likelihood with no EFAC should be equal to that with EFAC=1."""
     model, toas = dataJ0613m0200
     bt = BayesianTiming(model, toas)
     maxlike_params = np.array([param.value for param in bt.params], dtype=float)
@@ -95,6 +96,8 @@ def test_lnlikelihood_unit_efac(dataJ0613m0200, dataJ0613m0200_efac):
 
 
 def test_covariance_matrix(dataJ1713p0747_small):
+    """The inverse and logdet computed using Woodbury identity should be
+    the same as the brute force inverse and logdet."""
     model, toas = dataJ1713p0747_small
 
     bt = BayesianTiming(model, toas)

@@ -27,7 +27,6 @@ class BayesianTiming:
     -----
     * The `prior` attribute of each free parameter in the `model` object should be set to an instance of
       :class:`pint.models.priors.Prior`.
-    * Sampling over white noise parameters is supported, but sampling red noise parameters is not yet implemented.
     """
 
     def __init__(self, model, toas, use_pulse_numbers=False, prior_info=None):
@@ -63,11 +62,10 @@ class BayesianTiming:
                 if component.introduces_correlated_errors
             ]
 
-            basis_matrices = [
-                component.get_basis(toas)
-                for component in self.correlated_noise_components
-            ]
-            self.correlated_noise_basis_matrix = np.concatenate(basis_matrices, axis=1)
+            self.correlated_noise_basis_matrix = (
+                self._get_correlated_noise_basis_matrix()
+            )
+            self.recompute_correlated_noise_basis_matrix = False
 
     def _validate_priors(self):
         for param in self.params:
@@ -95,7 +93,7 @@ class BayesianTiming:
 
     def lnprior(self, params):
         """Basic implementation of a factorized log prior.
-        More complex priors must be separately implemented
+        More complex priors must be separately implemented.
 
         Args:
             params (array-like): Parameters
@@ -120,7 +118,7 @@ class BayesianTiming:
 
     def prior_transform(self, cube):
         """Basic implementation of prior transform for a factorized prior.
-        More complex prior transforms must be separately implemented
+        More complex prior transforms must be separately implemented.
 
         Args:
             cube (array-like): Sample drawn from a uniform distribution defined in a nparams-dimensional unit hypercube.
@@ -135,11 +133,10 @@ class BayesianTiming:
 
     def lnlikelihood(self, params):
         """The Log-likelihood function. If the model does not contain any noise components or
-        if the model contains only uncorrelated noise components, this is equal to -chisq/2 plus the
-        normalization term containing the noise parameters. If the the model contains
+        if the model contains only uncorrelated noise components, this is equal to -chisq/2
+        plus the normalization term containing the noise parameters. If the the model contains
         correlated noise, this is equal to -chisq/2 plus the normalization term where chisq
-        is the generalized least-squares metric (Not Implemented yet). For reference, see, e.g.,
-            https://doi.org/10.1093/mnras/stt2122
+        is the generalized least-squares metric. For reference, see, e.g., Lentati+ 2013.
 
         Args:
             params (array-like): Parameters
@@ -170,6 +167,16 @@ class BayesianTiming:
             return lnpr + self.lnlikelihood(params)
 
     def _wls_lnlikelihood(self, params):
+        """Implementation of Log-Likelihood function for uncorrelated noise only.
+        `wls' stands for weighted least squares. Also includes the normalization
+        term to enable sampling over white noise parameters (EFAC and EQUAD).
+
+        Args:
+            params (array-like): Parameters
+
+        Returns:
+            float: The value of the log-likelihood at params
+        """
         params_dict = dict(zip(self.param_labels, params))
         self.model.set_param_values(params_dict)
         res = Residuals(self.toas, self.model, track_mode=self.track_mode)
@@ -178,6 +185,15 @@ class BayesianTiming:
         return -chi2 / 2 - np.sum(np.log(sigmas))
 
     def _gls_lnlikelihood(self, params):
+        """Implementation of log-likelihood for correlated noise. `gls' stands for
+        generalized lease squares.
+
+        Args:
+            params (array-like): Parameters
+
+        Returns:
+            float: The value of the log-likelihood at params
+        """
         params_dict = dict(zip(self.param_labels, params))
         self.model.set_param_values(params_dict)
         R = (
@@ -198,6 +214,13 @@ class BayesianTiming:
         ]
         return np.concatenate(weight_vectors)
 
+    def _get_correlated_noise_basis_matrix(self):
+        basis_matrices = [
+            component.get_basis(self.toas)
+            for component in self.correlated_noise_components
+        ]
+        return np.concatenate(basis_matrices, axis=1)
+
     def _get_correlation_matrix_inverse_and_logdet(self):
         """Compute the inverse and log-determinant of the correlation matrix using
         the Woodbury identity. (See, e.g., van Haasteren & Vallisneri 2014)
@@ -213,7 +236,11 @@ class BayesianTiming:
             C is the full correlation matrix (Ntoa x Ntoa)
         """
         N = self.model.scaled_toa_uncertainty(self.toas).si.value ** 2
-        F = self.correlated_noise_basis_matrix
+        F = (
+            self.correlated_noise_basis_matrix
+            if not self.recompute_correlated_noise_basis_matrix
+            else self._get_correlated_noise_basis_matrix()
+        )
         Φ = self._get_correlated_noise_weights()
 
         Ninv = np.diag(1 / N)
@@ -236,15 +263,3 @@ class BayesianTiming:
         logdetC = logdetN + logdetΦ + logdetA
 
         return Cinv, logdetC
-
-    # def scaled_lnprior(self, cube):
-    #     return self.lnprior(self.prior_transform(cube))
-
-    # def scaled_prior_transform(self, cube):
-    #     return cube
-
-    # def scaled_lnlikelihood(self, cube):
-    #     return self.lnlikelihood(self.prior_transform(cube))
-
-    # def scale_samples(self, cubes):
-    #     return np.array(list(map(self.prior_transform, cubes)))
