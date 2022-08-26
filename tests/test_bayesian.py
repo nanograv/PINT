@@ -170,6 +170,7 @@ def test_covariance_matrix(dataJ1713p0747_small):
 
 
 def test_bayesian_timing_funcs(dataJ1713p0747_small):
+    """Test if the prior, likelihood and posterior functions work."""
     model, toas = dataJ1713p0747_small
 
     bt = BayesianTiming(model, toas)
