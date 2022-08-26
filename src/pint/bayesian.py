@@ -1,7 +1,6 @@
 from scipy.stats import uniform, norm
 from pint.models.priors import UniformUnboundedRV, Prior
 from pint.residuals import Residuals
-from pint.logging import log
 from scipy.linalg import cho_factor, cho_solve
 
 import numpy as np

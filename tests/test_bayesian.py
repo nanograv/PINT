@@ -108,4 +108,8 @@ def test_covariance_matrix(dataJ1713p0747_small):
 
     C2inv, logdetC2 = bt._get_correlation_matrix_inverse_and_logdet()
 
-    assert np.allclose(C1inv, C2inv) and np.isclose(logdetC1, logdetC2)
+    assert (
+        bt.likelihood_method == "gls"
+        and np.allclose(C1inv, C2inv)
+        and np.isclose(logdetC1, logdetC2)
+    )
