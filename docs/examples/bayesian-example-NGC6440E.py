@@ -2,8 +2,7 @@
 # # PINT Bayesian Interface Examples
 
 # %%
-from pint.models import get_model, get_model_and_toas, ScaleToaError
-from pint.models.parameter import maskParameter
+from pint.models import get_model, get_model_and_toas
 from pint.bayesian import BayesianTiming
 from pint.config import examplefile
 from pint.models.priors import Prior
@@ -14,7 +13,6 @@ import numpy as np
 import emcee
 import nestle
 import corner
-import sys
 import io
 import matplotlib.pyplot as plt
 
@@ -25,15 +23,18 @@ timfile = examplefile("NGC6440E.tim")
 model, toas = get_model_and_toas(parfile, timfile)
 
 # %%
-# This is optional, but the likelihood function behaves better if we have the pulse numbers.
-# Make sure that your timing solution is phase connected before doing this.
+# This is optional, but the likelihood function behaves better if
+# we have the pulse numbers. Make sure that your timing solution is
+# phase connected before doing this.
 toas.compute_pulse_numbers(model)
 
 # %%
 # Now set the priors.
 # I am cheating here by setting the priors around the maximum likelihood estimates.
-# In the real world, these priors should be informed by, e.g. previous timing solutions, VLBI localization etc.
-# Note that unbounded uniform priors don't work here.
+# This is a bad idea for real datasets and can bias the estimates. I am doing this
+# here just to make everything finish faster. In the real world, these priors should
+# be informed by, e.g. previous (independent) timing solutions, pulsar search results,
+# VLBI localization etc. Note that unbounded uniform priors don't work here.
 for par in model.free_params:
     param = getattr(model, par)
     param_min = float(param.value - 10 * param.uncertainty_value)
@@ -41,9 +42,9 @@ for par in model.free_params:
     param.prior = Prior(uniform(param_min, param_span))
 
 # %%
-# Now let us create a BayesianTiming object. This is a wrapper around the PINT API that
-# provides provides lnlikelihood, lnprior and prior_transform functions which can be passed
-# to a sampler of your choice.
+# Now let us create a BayesianTiming object. This is a wrapper around the
+# PINT API that provides provides lnlikelihood, lnprior and prior_transform
+# functions which can be passed to a sampler of your choice.
 bt = BayesianTiming(model, toas, use_pulse_numbers=True)
 
 # %%
@@ -70,7 +71,9 @@ start_points = (
 )
 
 # %%
-# Use longer chain_length for real runs. It is kept small here so that the sampling finishes quickly.
+# Use longer chain_length for real runs. It is kept small here so that
+# the sampling finishes quickly (and because I know the burn in is short
+# because of the cheating priors above).
 chain_length = 1000
 sampler.run_mcmc(
     start_points,
@@ -80,7 +83,7 @@ sampler.run_mcmc(
 
 # %%
 # Merge all the chains together after discarding the first 100 samples as 'burn-in'.
-# The burn-in should be decided after looking at the chains.
+# The burn-in should be decided after looking at the chains in the real world.
 samples_emcee = sampler.get_chain(flat=True, discard=100)
 
 # %%
@@ -101,7 +104,9 @@ plt.show()
 # ## Nested sampling with nestle
 
 # %% [markdown]
-# Nested sampling computes the Bayesian evidence along with posterior samples. This allows us to do compare two models. Let us compare the model above with and without an EFAC.
+# Nested sampling computes the Bayesian evidence along with posterior samples.
+# This allows us to do compare two models. Let us compare the model above with
+# and without an EFAC.
 
 # %%
 # Let us run the model without EFAC first. We can reuse the `bt` object from before.
@@ -110,7 +115,8 @@ plt.show()
 # method='multi' runs the MultiNest algorithm.
 # `npoints` is the number of live points.
 # `dlogz` is the target accuracy in the computed Bayesian evidence.
-# Increasing `npoints` or decreasing `dlogz` gives more accurate results, but slows down the sampling.
+# Increasing `npoints` or decreasing `dlogz` gives more accurate results,
+# but at the cost of time.
 result_nestle_1 = nestle.sample(
     bt.lnlikelihood,
     bt.prior_transform,
@@ -123,7 +129,8 @@ result_nestle_1 = nestle.sample(
 
 # %%
 # Plot the posterior
-# The nested samples come with weights, which must be taken into account while plotting.
+# The nested samples come with weights, which must be taken into account
+# while plotting.
 fig = corner.corner(
     result_nestle_1.samples,
     weights=result_nestle_1.weights,
@@ -133,7 +140,8 @@ fig = corner.corner(
 plt.show()
 
 # %% [markdown]
-# Let us create a new model with an EFAC applied to all toas (all TOAs in this dataset are from GBT).
+# Let us create a new model with an EFAC applied to all toas (all
+# TOAs in this dataset are from GBT).
 
 # %%
 parfile = str(model)  # casting the model to str gives the par file representation.
@@ -142,8 +150,9 @@ model2 = get_model(io.StringIO(parfile))
 
 # %%
 # Now set the priors.
-# Again, don't do this with real data. Use uninformative priors or priors motivated by previous experiments.
-# This is done here with the sole purpose of making the run finish fast.
+# Again, don't do this with real data. Use uninformative priors or priors
+# motivated by previous experiments. This is done here with the sole purpose
+# of making the run finish fast.
 for par in model2.free_params:
     param = getattr(model2, par)
     param_min = float(param.value - 10 * param.uncertainty_value)
