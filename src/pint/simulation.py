@@ -46,7 +46,7 @@ def _get_freq_array(base_frequencies, ntoas):
     return freq
 
 
-def zero_residuals(ts, model, maxiter=10, tolerance=1 * u.ns):
+def zero_residuals(ts, model, maxiter=10, tolerance=None):
     """Use a model to adjust a TOAs object, setting residuals to 0 iteratively.
 
     Parameters
@@ -58,10 +58,16 @@ def zero_residuals(ts, model, maxiter=10, tolerance=1 * u.ns):
     maxiter : int, optional
         maximum number of iterations allowed
     tolerance : astropy.units.Quantity
-        maximum allowed absolute deviation of residuals from 0
+        maximum allowed absolute deviation of residuals from 0; default is
+        1 nanosecond if operating in full precision or 5 us if not.
     """
     ts.compute_pulse_numbers(model)
     maxresid = None
+    if tolerance is None:
+        if pint.utils.check_longdouble_precision():
+            tolerance = 1 * u.ns
+        else:
+            tolerance = 5 * u.us
     for i in range(maxiter):
         r = pint.residuals.Residuals(ts, model, track_mode="use_pulse_numbers")
         resids = r.calc_time_resids(calctype="taylor")
@@ -75,14 +81,12 @@ def zero_residuals(ts, model, maxiter=10, tolerance=1 * u.ns):
         ts.adjust_TOAs(-time.TimeDelta(resids))
     else:
         raise ValueError(
-            "Unable to make fake residuals - left over errors are {}".format(
-                abs(resids).max()
-            )
+            f"Unable to make fake residuals - left over errors are {abs(resids).max()}"
         )
 
 
 def update_fake_toa_clock(ts, model, include_bipm=False, include_gps=True):
-    """Update the clock settings (corrections, etc) for fake TOAs
+    """Update the clock s:qettings (corrections, etc) for fake TOAs
 
     Parameters
     ----------
