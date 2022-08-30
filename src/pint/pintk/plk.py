@@ -981,7 +981,7 @@ class PlkWidget(tk.Frame):
         Tried using quantity_support and time_support, which plots x & yvals,
         but then yerrs fails - cannot find work-around in this case.
         """
-        
+
         self.plkAxes.errorbar(
             self.xvals[selected].value,
             self.yvals[selected],
@@ -1498,14 +1498,16 @@ class PlkWidget(tk.Frame):
             self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             self.updatePlot(keepAxes=True)
             self.call_updates()
-            
-            
-            
+
         elif event.key == "t":
             # Stash/unstash selected TOAs
-            
-            if np.all(~self.selected): # if no TOAs are selected, attempt to unstash all TOAs
-                if self.psr.stashed is None: # if there is nothing in the stash, do nothing
+
+            if np.all(
+                ~self.selected
+            ):  # if no TOAs are selected, attempt to unstash all TOAs
+                if (
+                    self.psr.stashed is None
+                ):  # if there is nothing in the stash, do nothing
                     return None
                 # otherwise, pull all TOAs out of the stash and set it to None
                 self.psr.all_toas = copy.deepcopy(self.psr.stashed)
@@ -1514,12 +1516,12 @@ class PlkWidget(tk.Frame):
                 self.updateAllJumped()
                 self.psr.update_resids()
 
-                self.updatePlot(
-                    keepAxes=False
-                )
+                self.updatePlot(keepAxes=False)
 
-            else: # if TOAs are selected, add them to the stash
-                if self.psr.stashed is None: # if there is nothing in the stash, copy current TOAs to stash
+            else:  # if TOAs are selected, add them to the stash
+                if (
+                    self.psr.stashed is None
+                ):  # if there is nothing in the stash, copy current TOAs to stash
                     jumped_copy = copy.deepcopy(self.jumped)
                     self.updateAllJumped()
                     all_jumped = copy.deepcopy(self.jumped)
@@ -1534,11 +1536,8 @@ class PlkWidget(tk.Frame):
 
                 else:  # if the stash isn't empty, append selected TOAs to stash
                     self.psr.stashed.table = vstack(
-                        [
-                            self.psr.stashed.table,
-                            self.psr.all_toas.table[self.selected]
-                        ]
-                                                   )
+                        [self.psr.stashed.table, self.psr.all_toas.table[self.selected]]
+                    )
 
                 if self.psr.fitted and self.psr.use_pulse_numbers:
                     self.psr.all_toas.compute_pulse_numbers(self.psr.postfit_model)
@@ -1553,10 +1552,8 @@ class PlkWidget(tk.Frame):
                     keepAxes=False
                 )  # We often stash at beginning or end of array
 
-
                 self.call_updates()
 
-            
         elif event.key == "c":
             if self.psr.fitted:
                 self.psr.fitter.get_parameter_correlation_matrix(
