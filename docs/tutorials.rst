@@ -35,15 +35,19 @@ For example, the file ``NGC6440E.par`` from the
 Examples
 --------
 
-We don't really have any proper tutorials yet. But for the moment, we
-have a few examples that may be useful.  These tutorials examples are
-in the form of Jupyter notebooks, downloadable from a link at the top
+These tutorials examples are
+in the form of `Jupyter <https://jupyter.org>`_ notebooks, downloadable from a link at the top
 of each page. (Also available in the same place is a plain-python
 script version, in case this is more convenient.) You should be able
 to download these files and run them from anywhere convenient
 (provided ``PINT`` is installed). Finally, there are additional
 notebooks you can download from the `PINT Wiki
-<https://github.com/nanograv/PINT/wiki>`_.
+<https://github.com/nanograv/PINT/wiki>`_ or the 
+`GitHub examples <https://github.com/nanograv/PINT/tree/master/docs/examples>`_ directory: these 
+are not included in the default build because they take too long, but you can download and run them yourself.
+
+.. The list below is just those that are built.  Other notebooks are excluded from the build
+.. Using the exclude_patterns list in conf.py
 
 .. toctree::
 

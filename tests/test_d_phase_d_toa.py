@@ -25,8 +25,7 @@ class TestD_phase_d_toa(unittest.TestCase):
         )
         self.modelB1855 = mb.get_model(self.parfileB1855)
         # Read tempo style polycos.
-        self.plc = Polycos()
-        self.plc.read_polyco_file("B1855_polyco.dat", "tempo")
+        self.plc = Polycos().read("B1855_polyco.dat", "tempo")
 
     def testD_phase_d_toa(self):
         pint_d_phase_d_toa = self.modelB1855.d_phase_d_toa(self.toasB1855)

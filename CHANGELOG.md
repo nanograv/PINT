@@ -10,6 +10,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Can initialize observatories with lat/lon/altitude
 - Can output observatories as JSON
 ### Fixed
+- global clock files now emit a warning instead of an exception if expired and the download fails
 
 ## [0.9.1] 2022-08-12
 ### Changed
@@ -19,10 +20,14 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Moved observatories to JSON file.  Changed way observatories are loaded/overloaded
 - Split Jodrell Bank observatory based on backend to get correct clock files
 - Clock files can be marked as being valid past the end of the data they contain
+- Polycos can be written/read from Path or Stream objects
+- Polyco format registration now done once as a class method
+- Polyco reading/generation from timing model done as class methods
 ### Added
 - delta_pulse_number column is now saved to -padd flag on TOA write
 - command-line utility to compare parfiles
 - FD_delay_frequency function to easily access the FD model's excess delay
+- scripts now have explicit setting of verbosity and `-q`/`-v` options
 ### Fixed
 - TOA flags are properly deepcopy'd when desired (to deal with [astropy bug](https://github.com/astropy/astropy/issues/13435))
 

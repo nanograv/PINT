@@ -276,7 +276,7 @@ class MCMCFitter(Fitter):
         """
         Return pulse phases based on the current model
         """
-        phases = self.model.phase(self.toas)[1]
+        phases = self.model.phase(self.toas).frac
         # ensure all positive
         return np.where(phases < 0.0, phases + 1.0, phases)
 
