@@ -270,7 +270,7 @@ def test_TopoObs_EarthLocation(sandbox):
 
 def test_json_observatory_output(sandbox):
     gbt_orig = get_observatory("gbt")
-    load_observatories(io.StringIO(gbt_orig.as_json), overwrite=True)
+    load_observatories(io.StringIO(gbt_orig.get_json()), overwrite=True)
     gbt_reload = get_observatory("gbt")
 
     for p in gbt_orig.__dict__:
@@ -280,7 +280,7 @@ def test_json_observatory_output(sandbox):
 
 def test_json_observatory_input_latlon(sandbox):
     gbt_orig = get_observatory("gbt")
-    gbt_dict = gbt_orig.as_dict
+    gbt_dict = gbt_orig.get_dict()
     # remove ITRF
     del gbt_dict["gbt"]["itrf_xyz"]
     # add in geodetic
@@ -301,7 +301,7 @@ def test_json_observatory_input_latlon(sandbox):
 
 def test_json_observatory_input_latlon_and_itrf_giveserror(sandbox):
     gbt_orig = get_observatory("gbt")
-    gbt_dict = gbt_orig.as_dict
+    gbt_dict = gbt_orig.get_dict()
     # add in geodetic
     gbt_dict["gbt"]["lat"] = gbt_orig.location.lat.value
     gbt_dict["gbt"]["lon"] = gbt_orig.location.lon.value

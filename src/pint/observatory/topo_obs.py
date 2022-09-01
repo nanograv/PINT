@@ -257,8 +257,7 @@ class TopoObs(Observatory):
     def timescale(self):
         return "utc"
 
-    @property
-    def as_dict(self):
+    def get_dict(self):
         """Return as a dict with limited/changed info"""
         # start with the default __dict__
         # copy some attributes to rename them and remove those that aren't needed for initialization
@@ -273,10 +272,9 @@ class TopoObs(Observatory):
         output["itrf_xyz"] = [x.to_value(u.m) for x in self.location.geocentric]
         return {self.name: output}
 
-    @property
-    def as_json(self):
+    def get_json(self):
         """Return as a JSON string"""
-        return json.dumps(self.as_dict)
+        return json.dumps(self.get_dict())
 
     def separation(self, other, method="cartesian"):
         """Return separation between two TopoObs objects
