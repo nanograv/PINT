@@ -1,4 +1,5 @@
 """Test basic functionality of the :module:`pint.utils`."""
+import io
 import os
 from itertools import product
 from pathlib import Path
@@ -619,6 +620,30 @@ def test_dmxparse():
     f = fitter.WLSFitter(toas=t, model=m)
     f.fit_toas()
     dmx = dmxparse(f, save=False)
+
+
+def test_dmxparse_write():
+    # check output
+    m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
+    t = toa.get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
+    f = fitter.GLSFitter(toas=t, model=m)
+    f.fit_toas()
+    w = io.StringIO()
+    dmx = dmxparse(f, save=w)
+    w.seek(0)
+    assert len(w.read()) > 0
+
+
+def test_dmxparse_write_default():
+    # check output to default filename
+    m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
+    t = toa.get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
+    f = fitter.GLSFitter(toas=t, model=m)
+    f.fit_toas()
+    dmx = dmxparse(f, save=True)
+    with open("dmxparse.out") as r:
+        assert len(r.read()) > 0
+    # os.remove("dmxparse.out")
 
 
 def test_pmtot():
