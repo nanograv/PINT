@@ -116,9 +116,8 @@ class SolarSystemShapiro(DelayComponent):
                             self._ss_mass_sec[pl],
                         )
             except KeyError:
-                log.error(
+                raise KeyError(
                     "Planet positions not found when trying to compute Solar System Shapiro delay. "
                     "Make sure that you include `planets=True` in your `get_TOAs()` call, or use `get_model_and_toas()`."
                 )
-                raise
         return delay * u.second
