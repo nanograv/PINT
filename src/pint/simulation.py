@@ -86,7 +86,7 @@ def zero_residuals(ts, model, maxiter=10, tolerance=None):
 
 
 def update_fake_toa_clock(ts, model, include_bipm=False, include_gps=True):
-    """Update the clock s:qettings (corrections, etc) for fake TOAs
+    """Update the clock settings (corrections, etc) for fake TOAs
 
     Parameters
     ----------
