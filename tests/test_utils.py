@@ -643,7 +643,7 @@ def test_dmxparse_write_default():
     dmx = dmxparse(f, save=True)
     with open("dmxparse.out") as r:
         assert len(r.read()) > 0
-    # os.remove("dmxparse.out")
+    os.remove("dmxparse.out")
 
 
 def test_pmtot():
