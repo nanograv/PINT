@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+### Changed
+### Added
+- Can initialize observatories with lat/lon/altitude
+- Can output observatories as JSON
+### Fixed
+
 ## [0.9.1] 2022-08-12
 ### Changed
 - No tests now change based on $TEMPO or $TEMPO2
@@ -16,8 +23,6 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - delta_pulse_number column is now saved to -padd flag on TOA write
 - command-line utility to compare parfiles
 - FD_delay_frequency function to easily access the FD model's excess delay
-- Can initialize observatories with lat/lon/altitude
-- Can output observatories as JSON
 ### Fixed
 - TOA flags are properly deepcopy'd when desired (to deal with [astropy bug](https://github.com/astropy/astropy/issues/13435))
 
