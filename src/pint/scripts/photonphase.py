@@ -95,29 +95,31 @@ def main(argv=None):
         help="Use TT(BIPM) instead of TT(TAI)",
     )
     parser.add_argument(
-        "--log-level",
-        type=str,
-        choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
-        default="WARNING",
-        help="Logging level",
-        dest="loglevel",
-    )
-    #    parser.add_argument("--fix",help="Apply 1.0 second offset for NICER", action='store_true', default=False)
-    parser.add_argument(
         "--polycos",
         default=False,
         action="store_true",
         help="Use polycos to calculate phases; use when working with very large event files",
     )
-    args = parser.parse_args(argv)
-    log.remove()
-    log.add(
-        sys.stderr,
-        level=args.loglevel,
-        colorize=True,
-        format=pint.logging.format,
-        filter=pint.logging.LogFilter(),
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        choices=pint.logging.levels,
+        default=pint.logging.script_level,
+        help="Logging level",
+        dest="loglevel",
     )
+    parser.add_argument(
+        "-v", "--verbosity", default=0, action="count", help="Increase output verbosity"
+    )
+    parser.add_argument(
+        "-q", "--quiet", default=0, action="count", help="Decrease output verbosity"
+    )
+
+    args = parser.parse_args(argv)
+    pint.logging.setup(
+        level=pint.logging.get_level(args.loglevel, args.verbosity, args.quiet)
+    )
+    #    parser.add_argument("--fix",help="Apply 1.0 second offset for NICER", action='store_true', default=False)
 
     # If outfile is specified, that implies addphase
     if args.outfile is not None:
