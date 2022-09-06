@@ -86,6 +86,9 @@ __all__ = [
     "colorize",
     "group_iterator",
     "compute_hash",
+    "PINTPrecisionError",
+    "check_longdouble_precision",
+    "require_longdouble_precision",
 ]
 
 COLOR_NAMES = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
@@ -101,6 +104,34 @@ TEXT_ATTRIBUTES = [
 ]
 
 # Actual exported tools
+
+
+class PINTPrecisionError(RuntimeError):
+    pass
+
+
+# A warning is emitted in pint.pulsar_mjd if sufficient precision is not available
+
+
+def check_longdouble_precision():
+    """Check whether long doubles have adequate precision.
+
+    Returns True if long doubles have enough precision to use PINT
+    for sub-microsecond timing on this machine.
+    """
+    return np.finfo(np.longdouble).eps < 2e-19
+
+
+def require_longdouble_precision():
+    """Raise an exception if long doubles do not have enough precision.
+
+    Raises RuntimeError if PINT cannot be run with high precision on this
+    machine.
+    """
+    if not check_longdouble_precision():
+        raise PINTPrecisionError(
+            f"PINT needs higher precision floating point than you have available. PINT uses the numpy longdouble type to represent modified Julian days, and this machine does not have sufficient numerical precision to represent sub-microsecond times with np.longdouble. On an M1 Mac you will need to use a Rosetta environment, or on a Windows machine you will need to us a different Python interpreter. Some PINT operations can work with reduced precision, but you have requested one that cannot."
+        )
 
 
 class PosVel:
