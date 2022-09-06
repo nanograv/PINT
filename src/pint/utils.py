@@ -924,7 +924,7 @@ def dmxparse(fitter, save=False):
     fitter
         PINT fitter used to get timing residuals, must have already run a fit
     save : bool or str or file-like object, optional
-        If not False or None, saves output to specified file in the format of the TEMPO version.
+        If not False or None, saves output to specified file in the format of the TEMPO version.  If ``True``, assumes output file is ``dmxparse.out``
 
     Returns
     -------
@@ -1019,6 +1019,8 @@ def dmxparse(fitter, save=False):
 
     # Output the results'
     if save is not None and save:
+        if isinstance(save, bool):
+            save = "dmxparse.out"
         DMX = "DMX"
         lines = []
         lines.append("# Mean %s value = %+.6e \n" % (DMX, DMX_mean))
@@ -1041,6 +1043,8 @@ def dmxparse(fitter, save=False):
             )
         with open_or_use(save, mode="w") as dmxout:
             dmxout.writelines(lines)
+            if isinstance(save, (str, Path)):
+                log.debug(f"Wrote dmxparse output to '{save}'")
     # return the new mean subtracted values
     mean_sub_DMXs = DMXs - DMX_mean
 
