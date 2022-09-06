@@ -44,6 +44,7 @@ except AttributeError:
     from string import maketrans
 
 
+# This check is implemented in pint.utils, but we want to avoid circular imports
 if np.finfo(np.longdouble).eps > 2e-19:
     import warnings
 

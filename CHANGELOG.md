@@ -9,8 +9,10 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Added
 - Can initialize observatories with lat/lon/altitude
 - Can output observatories as JSON
+- Can extract single TOAs as length=1 table
 ### Fixed
 - global clock files now emit a warning instead of an exception if expired and the download fails
+- dmxparse outputs to dmxparse.out if save=True
 
 ## [0.9.1] 2022-08-12
 ### Changed
