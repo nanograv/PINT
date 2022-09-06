@@ -59,14 +59,19 @@ def test_getitem_boolean(c):
     one_of(
         arrays(int, array_shapes(max_dims=1), elements=integers(0, n_tim - 1)),
         lists(integers(0, n_tim - 1)),
+        integers(0, n_tim - 1),
     )
 )
 def test_getitem_where(a):
     toas = get_TOAs(StringIO(tim), ephem="de421")
     m = toas.get_mjds()
     s = toas[a]
-    assert len(s) == len(a)
-    assert set(s.get_mjds()) == set(m[a])
+    if not isinstance(a, int):
+        assert len(s) == len(a)
+        assert set(s.get_mjds()) == set(m[a])
+    else:
+        assert len(s) == 1
+        assert set(s.get_mjds()) == set(m[[a]])
     if len(s) > 0:
         toas.get_summary()
 
