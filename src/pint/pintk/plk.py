@@ -22,6 +22,7 @@ from tkinter import ttk
 import pint.logging
 from loguru import logger as log
 
+
 try:
     from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 except ImportError:
@@ -59,7 +60,7 @@ Right click     Delete a TOA (if close enough)
   k             Correct the pane (i.e. rescale the axes and plot)
   f             Perform a fit on the selected TOAs
   d             Delete (permanently) the selected TOAs
-  t             Stash (temporarily remove) or un-stash the selected TOAs
+  t             Stash (temporarily remove) selected TOAs (or un-stash if nothing is selected) 
   u             Un-select all of the selected TOAs
   j             Jump the selected TOAs, or un-jump them if already jumped
   v             Jump all TOA clusters except those selected
@@ -1508,8 +1509,10 @@ class PlkWidget(tk.Frame):
                 if (
                     self.psr.stashed is None
                 ):  # if there is nothing in the stash, do nothing
+                    log.debug('Nothing in stash.')
                     return None
                 # otherwise, pull all TOAs out of the stash and set it to None
+                log.debug(f"Unstashing {len(self.psr.stashed)-len(self.psr.all_toas)} TOAs")
                 self.psr.all_toas = copy.deepcopy(self.psr.stashed)
                 self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
                 self.psr.stashed = None
@@ -1532,6 +1535,7 @@ class PlkWidget(tk.Frame):
                             "Cannot stash jumped TOAs. Delete interfering jumps before stashing TOAs."
                         )
                         return None
+                    log.debug(f"Stashing {sum(self.selected)} TOAs")
                     self.psr.stashed = copy.deepcopy(self.psr.all_toas)
 
                 else:  # if the stash isn't empty, append selected TOAs to stash
@@ -1539,6 +1543,7 @@ class PlkWidget(tk.Frame):
                         [self.psr.stashed.table, self.psr.all_toas.table[self.selected]]
                     )
 
+                    log.debug(f"Adding {sum(self.selected)} TOAs to stash (stash now contains {len(self.psr.stashed.table)} TOAs)")
                 if self.psr.fitted and self.psr.use_pulse_numbers:
                     self.psr.all_toas.compute_pulse_numbers(self.psr.postfit_model)
 
