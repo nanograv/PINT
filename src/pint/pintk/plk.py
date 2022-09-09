@@ -1509,10 +1509,12 @@ class PlkWidget(tk.Frame):
                 if (
                     self.psr.stashed is None
                 ):  # if there is nothing in the stash, do nothing
-                    log.debug('Nothing in stash.')
+                    log.debug("Nothing in stash.")
                     return None
                 # otherwise, pull all TOAs out of the stash and set it to None
-                log.debug(f"Unstashing {len(self.psr.stashed)-len(self.psr.all_toas)} TOAs")
+                log.debug(
+                    f"Unstashing {len(self.psr.stashed)-len(self.psr.all_toas)} TOAs"
+                )
                 self.psr.all_toas = copy.deepcopy(self.psr.stashed)
                 self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
                 self.psr.stashed = None
@@ -1543,7 +1545,9 @@ class PlkWidget(tk.Frame):
                         [self.psr.stashed.table, self.psr.all_toas.table[self.selected]]
                     )
 
-                    log.debug(f"Adding {sum(self.selected)} TOAs to stash (stash now contains {len(self.psr.stashed.table)} TOAs)")
+                    log.debug(
+                        f"Adding {sum(self.selected)} TOAs to stash (stash now contains {len(self.psr.stashed.table)} TOAs)"
+                    )
                 if self.psr.fitted and self.psr.use_pulse_numbers:
                     self.psr.all_toas.compute_pulse_numbers(self.psr.postfit_model)
 
