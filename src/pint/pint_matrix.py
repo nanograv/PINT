@@ -607,7 +607,7 @@ def combine_design_matrices_by_param(matrix1, matrix2, padding=0.0):
     for d_param in matrix2.derivative_params:
         if d_param in base_params:
             raise ValueError(
-                "Unable to combine the two design matrices as they have duplicated parameters."
+                f"Unable to combine the two design matrices as they have duplicated parameters. The duplicated parameter is {d_param}."
             )
     # check if input design matrix has same quantity and padding.
     new_quantity_index = {}
