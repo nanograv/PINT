@@ -486,9 +486,10 @@ class PLRedNoise(NoiseComponent):
             amp, gam = self.RNAMP.value / fac, -1 * self.RNIDX.value
         return (amp, gam, nf)
 
-    def get_basis(self, toas):
-        """Return a Fourier design matrix. See the documentation for
-        PLRedNoise.pl_rn_basis_weight_pair for details."""
+    def get_noise_basis(self, toas):
+        """Return a Fourier design matrix for red noise.
+
+        See the documentation for pl_rn_basis_weight_pair function for details."""
 
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
@@ -496,9 +497,10 @@ class PLRedNoise(NoiseComponent):
         Fmat = create_fourier_design_matrix(t, nf)
         return Fmat
 
-    def get_weights(self, toas):
-        """Return red noise weights. See the documentation for
-        PLRedNoise.pl_rn_basis_weight_pair for details."""
+    def get_noise_weights(self, toas):
+        """Return power law red noise weights.
+
+        See the documentation for pl_rn_basis_weight_pair for details."""
 
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
@@ -508,7 +510,7 @@ class PLRedNoise(NoiseComponent):
         return weights
 
     def pl_rn_basis_weight_pair(self, toas):
-        """Return a Fourier design matrix and red noise weights.
+        """Return a Fourier design matrix and power law red noise weights.
 
         A Fourier design matrix contains the sine and cosine basis_functions
         in a Fourier series expansion.
@@ -517,7 +519,7 @@ class PLRedNoise(NoiseComponent):
         the dataset.
 
         """
-        return (self.get_basis(toas), self.get_weights(toas))
+        return (self.get_noise_basis(toas), self.get_noise_weights(toas))
 
     def pl_rn_cov_matrix(self, toas):
         Fmat, phi = self.pl_rn_basis_weight_pair(toas)
