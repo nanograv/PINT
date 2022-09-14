@@ -103,6 +103,7 @@ def get_TOAs(
     bipm_version=None,
     include_gps=None,
     planets=None,
+    include_pn=True,
     model=None,
     usepickle=False,
     tdb_method="default",
@@ -156,6 +157,8 @@ def get_TOAs(
         Whether to apply Shapiro delays based on planet positions. Note that a
         long-standing TEMPO2 bug in this feature went unnoticed for years.
         Defaults to False.
+    include_pn : bool, optional
+        Whether or not to read in the 'pn' column (``pulse_number``)
     model : pint.models.timing_model.TimingModel or None
         If a valid timing model is passed, model commands (such as BIPM version,
         planet shapiro delay, and solar system ephemeris) that affect TOA loading
@@ -305,6 +308,9 @@ def get_TOAs(
     if usepickle and updatepickle:
         log.info("Pickling TOAs.")
         save_pickle(t, picklefilename=picklefilename)
+    if "pulse_number" in t.table.colnames and not include_pn:
+        log.warning(f"'pulse_number' column exists but not being read in")
+        del t.table["pulse_number"]
     return t
 
 
@@ -1951,6 +1957,7 @@ class TOAs:
         commentflag=None,
         order_by_index=True,
         *,
+        include_pn=True,
         include_info=True,
         comment=None,
     ):
@@ -1978,6 +1985,8 @@ class TOAs:
             If True, write the TOAs in the order specified in the "index" column
             (which is usually the same as the original file);
             if False, write them in the order they occur in the TOAs object.
+        include_pn : bool, optional
+            Include pulse numbers (if available)
         include_info : bool, optional
             Include information string if True
         comment : str, optional
@@ -2002,7 +2011,12 @@ class TOAs:
         # FIXME: everywhere else the pulse number column is called pulse_number not pn
         toacopy = copy.deepcopy(self)
         if "pulse_number" in toacopy.table.colnames:
-            toacopy["pn"] = toacopy.table["pulse_number"]
+            if include_pn:
+                toacopy["pn"] = toacopy.table["pulse_number"]
+            else:
+                log.warning(
+                    f"'pulse_number' column exists but it is not being written out"
+                )
         if (
             "delta_pulse_number" in toacopy.table.columns
             and (toacopy.table["delta_pulse_number"] != 0).any()
@@ -2422,8 +2436,11 @@ def merge_TOAs(TOAs_list):
         raise TypeError(f"merge_TOAs() cannot merge. Inconsistent planets: {planets}")
     num_cols = [len(tt.table.columns) for tt in TOAs_list]
     if len(set(num_cols)) > 1:
+        s = ""
+        for i, tt in enumerate(TOAs_list):
+            s += f"File {i} columns: {','.join(tt.table.colnames)}\n"
         raise TypeError(
-            f"merge_TOAs() cannot merge. Inconsistent numbers of table columns: {num_cols}"
+            f"merge_TOAs() cannot merge. Inconsistent numbers of table columns: {num_cols}\n{s}"
         )
     # Use a copy of the first TOAs instance as the base for the joined object
     nt = copy.deepcopy(TOAs_list[0])

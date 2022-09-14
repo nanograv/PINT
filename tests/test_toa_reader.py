@@ -4,6 +4,7 @@ import unittest
 from glob import glob
 from io import StringIO
 from pathlib import Path
+from webbrowser import get
 
 import numpy as np
 import pytest
@@ -232,6 +233,35 @@ def test_toa_merge_different_ephem():
     toas[0].ephem = "DE436"
     with pytest.raises(TypeError):
         nt = toa.merge_TOAs(toas)
+
+
+def test_toa_merge_different_columns():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+    ]
+    model = get_model(datadir / "NGC6440E.par")
+    # add a pulse_number column.  then the merge should fail
+    toas = [toa.get_TOAs(ff, model=model) for ff in filenames]
+    toas[0].compute_pulse_numbers(model)
+    with pytest.raises(TypeError):
+        nt = toa.merge_TOAs(toas)
+
+
+def test_toa_merge_different_columns_ignorepn():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+    ]
+    model = get_model(datadir / "NGC6440E.par")
+    # read and add pulse numbers
+    t = toa.get_TOAs(filenames[0], model=model)
+    t.compute_pulse_numbers(model)
+    f = StringIO()
+    t.write_TOA_file(f)
+    f.seek(0)
+    toas = [toa.get_TOAs(fname, include_pn=False) for fname in [f, filenames[1]]]
+    nt = toa.merge_TOAs(toas)
 
 
 def test_bipm_default():
