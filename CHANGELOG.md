@@ -13,6 +13,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Added
 ### Fixed
 - dmxparse outputs to dmxparse.out if save=True
+- Excluded noise parameters from the design matrix.
 
 ## [0.9.1] 2022-08-12
 ### Changed
