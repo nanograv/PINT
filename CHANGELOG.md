@@ -13,6 +13,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Added
 ### Fixed
 - dmxparse outputs to dmxparse.out if save=True
+- Split the computation of correlated noise basis matrix and weights into two functions.
 
 ## [0.9.1] 2022-08-12
 ### Changed
