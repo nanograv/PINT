@@ -2436,11 +2436,20 @@ def merge_TOAs(TOAs_list):
         raise TypeError(f"merge_TOAs() cannot merge. Inconsistent planets: {planets}")
     num_cols = [len(tt.table.columns) for tt in TOAs_list]
     if len(set(num_cols)) > 1:
-        s = ""
-        for i, tt in enumerate(TOAs_list):
-            s += f"File {i} columns: {','.join(tt.table.colnames)}\n"
+        columns = TOAs_list[0].table.colnames
+        for i, tt in enumerate(TOAs_list[1:]):
+            extra_columns = [x for x in tt.table.colnames if not x in columns]
+            missing_columns = [x for x in columns if not x in tt.table.colnames]
+            if len(extra_columns) > 0:
+                log.warning(
+                    f"File {i+1} has extra column(s): {','.join(extra_columns)}"
+                )
+            if len(missing_columns) > 0:
+                log.warning(
+                    f"File {i+1} has missing column(s): {','.join(missing_columns)}"
+                )
         raise TypeError(
-            f"merge_TOAs() cannot merge. Inconsistent numbers of table columns: {num_cols}\n{s}"
+            f"merge_TOAs() cannot merge. Inconsistent numbers of table columns: {num_cols}"
         )
     # Use a copy of the first TOAs instance as the base for the joined object
     nt = copy.deepcopy(TOAs_list[0])
@@ -2462,6 +2471,21 @@ def merge_TOAs(TOAs_list):
         t["index"] += start_index
         start_index += tt.max_index + 1
         tables.append(t)
+    # the astropy vstack will enforce having the same columns throughout
+    # but the error messages aren't very useful.
+    # This isn't an exhaustive check
+    # (it just checks everything against the first observation)
+    # but it should be more helpful
+    columns = tables[0].colnames
+    for i, tt in enumerate(tables[1:]):
+        extra_columns = [x for x in tt.table.colnames if not x in columns]
+        missing_columns = [x for x in columns if not x in tt.table.colnames]
+        if len(extra_columns) > 0:
+            log.warning(f"File {i+1} has extra column(s): {','.join(extra_columns)}")
+        if len(missing_columns) > 0:
+            log.warning(
+                f"File {i+1} has missing column(s): {','.join(missing_columns)}"
+            )
     nt.table = table.vstack(tables, join_type="exact", metadata_conflicts="silent")
     # Fix the table meta data about filenames
     nt.table.meta["filename"] = nt.filename

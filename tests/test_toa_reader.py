@@ -248,7 +248,7 @@ def test_toa_merge_different_columns():
         nt = toa.merge_TOAs(toas)
 
 
-def test_toa_merge_different_columns_ignorepn():
+def test_toa_merge_different_columns_ignorepn_onread():
     filenames = [
         datadir / "NGC6440E.tim",
         datadir / "testtimes.tim",
@@ -261,6 +261,22 @@ def test_toa_merge_different_columns_ignorepn():
     t.write_TOA_file(f)
     f.seek(0)
     toas = [toa.get_TOAs(fname, include_pn=False) for fname in [f, filenames[1]]]
+    nt = toa.merge_TOAs(toas)
+
+
+def test_toa_merge_different_columns_ignorepn_onwrite():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+    ]
+    model = get_model(datadir / "NGC6440E.par")
+    # read and add pulse numbers
+    t = toa.get_TOAs(filenames[0], model=model)
+    t.compute_pulse_numbers(model)
+    f = StringIO()
+    t.write_TOA_file(f, include_pn=False)
+    f.seek(0)
+    toas = [toa.get_TOAs(fname, include_pn=True) for fname in [f, filenames[1]]]
     nt = toa.merge_TOAs(toas)
 
 
