@@ -2478,8 +2478,8 @@ def merge_TOAs(TOAs_list):
     # but it should be more helpful
     columns = tables[0].colnames
     for i, tt in enumerate(tables[1:]):
-        extra_columns = [x for x in tt.table.colnames if not x in columns]
-        missing_columns = [x for x in columns if not x in tt.table.colnames]
+        extra_columns = [x for x in tt.colnames if not x in columns]
+        missing_columns = [x for x in columns if not x in tt.colnames]
         if len(extra_columns) > 0:
             log.warning(f"File {i+1} has extra column(s): {','.join(extra_columns)}")
         if len(missing_columns) > 0:
