@@ -10,10 +10,9 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Added
 ### Fixed
 - global clock files now emit a warning instead of an exception if expired and the download fails
-### Added
-### Fixed
 - dmxparse outputs to dmxparse.out if save=True
 - Split the computation of correlated noise basis matrix and weights into two functions.
+- Fixed bug in combining design matrices
 
 ## [0.9.1] 2022-08-12
 ### Changed
@@ -301,4 +300,4 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## [0.5.7] - 2020-03-16
 ### Added
 - First release using PyPI
-- Initial entry in CHANGELOG
+- Initial entry in CHANGELOG 
