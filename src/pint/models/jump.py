@@ -242,3 +242,32 @@ class PhaseJump(PhaseComponent):
             dict1["jump"] = str(ind)
             dict1["gui_jump"] = str(ind)
         return name
+
+    def delete_not_all_jump_toas(self, toa_table, jump_num):
+        """Unjumps a subset of jumped TOAs when the selected subset  doesn't exactly
+        overlap with all the TOAs in a given jump.
+        
+        Helper function for pintk. Mailny used when one wants to delete the jump from 
+        a subset of jumped TOAs.
+        
+        Parameters
+        ----------
+        toa_table: list object
+            The TOA table which must be modified. In pintk (pulsar.py), this will
+            be all_toas.table["flags"][selected]
+        
+        jump_num: int
+            jump that needs to be deleted from the TOAs"""
+
+        if toa_table is not None:
+            # This means there is overlap between selected TOAs and jump_num
+            for d in toa_table:
+                if "jump" in d:
+                    jumps_list = d["jump"].split(',')
+                    jump_ind = jumps_list.index(str(jump_num))
+                    del jumps_list[jump_ind]
+                    if not jumps_list:
+                        del d["jump"]
+                    else:
+                        d["jump"] = ','.join(jumps_list)
+        return
