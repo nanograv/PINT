@@ -9,6 +9,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Can extract single TOAs as length=1 table
 ### Added
 - Can ignore pulse_number column on TOA read or write (to help merging)
+- Can add in missing columns when merging unless told not to
 ### Fixed
 - global clock files now emit a warning instead of an exception if expired and the download fails
 ### Added
