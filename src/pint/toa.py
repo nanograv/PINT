@@ -1228,6 +1228,7 @@ class TOAs:
            :func:`pint.toa.TOAs.compute_pulse_numbers` or extracted from the
            ``pn`` entry in ``flags`` with
            :func:`pint.toa.TOAs.phase_columns_from_flags`.
+           If it is present for some TOAs but not all, missing values are filled with ``NaN``.
        * - ``delta_pulse_number``
          - number of turns to adjust pulse number by, compared to the model;
            ``PHASE`` statements in the ``.tim`` file or the ``padd`` entry in
