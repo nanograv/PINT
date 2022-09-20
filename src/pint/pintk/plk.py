@@ -1340,30 +1340,29 @@ class PlkWidget(tk.Frame):
                     # Right click deletes closest TOA
                     # Adapt to TOA index rather than plot index, they differ when TOAs are already deleted
                     toa_ind = self.psr.all_toas.table["index"][ind]
-                    if not self.selected[toa_ind]:
-                        sudo_select_mask = np.zeros_like(self.selected).astype(bool)
-                        sudo_select_mask[toa_ind] = True
-                        jumped_copy = copy.deepcopy(self.jumped)
-                        unselect_jump_stat = jumped_copy[~sudo_select_mask]
+                    sudo_select_mask = np.zeros_like(self.selected).astype(bool)
+                    sudo_select_mask[ind] = True
+                    jumped_copy = copy.deepcopy(self.jumped)
+                    unselect_jump_stat = jumped_copy[~sudo_select_mask]
 
-                        # Check if it is jumped
-                        if jumped_copy[toa_ind]:
-                            # Means its jumped, so unjump it
-                            jump_name = self.psr.add_jump(sudo_select_mask)
-                            self.updateJumped(jump_name)
-                            if type(jump_name) != list:
-                                log.error(f"Mistakenly added new jump {jump_name}")
-                            else:
-                                print(
-                                    f"Existing jump removed for {np.array(jump_name).astype(int).sum()} toas and deleted them"
-                                )
-                        # Now delete it
-                        self.selected = self.psr.delete_TOAs([toa_ind], self.selected)
-                        self.updateAllJumped()
-                        self.jumped |= unselect_jump_stat
-                        self.psr.update_resids()
-                        self.updatePlot(keepAxes=True)
-                        self.call_updates()
+                    # Check if it is jumped
+                    if jumped_copy[ind]:
+                        # Means its jumped, so unjump it
+                        jump_name = self.psr.add_jump(sudo_select_mask)
+                        self.updateJumped(jump_name)
+                        if type(jump_name) != list:
+                            log.error(f"Mistakenly added new jump {jump_name}")
+                        else:
+                            print(
+                                f"Existing jump removed for {np.array(jump_name).astype(int).sum()} toas and deleted them"
+                            )
+                    # Now delete it
+                    self.selected = self.psr.delete_TOAs([toa_ind], self.selected)
+                    self.updateAllJumped()
+                    self.jumped |= unselect_jump_stat
+                    self.psr.update_resids()
+                    self.updatePlot(keepAxes=True)
+                    self.call_updates()
                 if event.button == 1:
                     # Left click is select
                     self.selected[ind] = not self.selected[ind]
