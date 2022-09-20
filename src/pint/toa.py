@@ -310,7 +310,7 @@ def get_TOAs(
         save_pickle(t, picklefilename=picklefilename)
     if "pulse_number" in t.table.colnames and not include_pn:
         log.warning(f"'pulse_number' column exists but not being read in")
-        del t.table["pulse_number"]
+        t.remove_pulse_numbers()
     return t
 
 
@@ -1893,6 +1893,16 @@ class TOAs:
         phases = model.phase(self, abs_phase=True) + delta_pulse_numbers
         self.table["pulse_number"] = phases.int
         self.table["pulse_number"].unit = u.dimensionless_unscaled
+
+    def remove_pulse_numbers(self):
+        """Delete pulse numbers from TOA data"""
+
+        if "pulse_number" in self.table.colnames:
+            del self.table["pulse_number"]
+        else:
+            log.warning(
+                f"Requested deleting of pulse numbers, but they are not present"
+            )
 
     def adjust_TOAs(self, delta):
         """Apply a time delta to TOAs.
