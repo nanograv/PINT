@@ -2023,6 +2023,9 @@ class TOAs:
         if "pulse_number" in toacopy.table.colnames:
             if include_pn:
                 toacopy["pn"] = toacopy.table["pulse_number"]
+                # but delete those that are NaN
+                for i in np.where(np.isnan(self["pulse_number"]))[0]:
+                    del toacopy.table["flags"][i]["pn"]
             else:
                 log.warning(
                     f"'pulse_number' column exists but it is not being written out"
