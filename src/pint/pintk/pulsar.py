@@ -418,10 +418,12 @@ class Pulsar:
             # Has to be some overlap between jumps and selected TOAs
             elif np.any(toas_jumped & selected):
                 # if not, then they don't exactly match, delete the common subset
-                jumped_selected = (toas_jumped & selected)
-                # Post fit model and prefit model share the same TOA table, so as long as we 
+                jumped_selected = toas_jumped & selected
+                # Post fit model and prefit model share the same TOA table, so as long as we
                 # don't delete the jump altogether, modifying prefit model table flags is fine.
-                self.prefit_model.delete_not_all_jump_toas(self.all_toas.table["flags"][jumped_selected], num)
+                self.prefit_model.delete_not_all_jump_toas(
+                    self.all_toas.table["flags"][jumped_selected], num
+                )
                 return list(jumped_selected)
         # if here, then doesn't match anything
         # add jump flags to selected TOAs at their perspective indices in the TOA tables

@@ -1351,16 +1351,16 @@ class PlkWidget(tk.Frame):
                             # Means its jumped, so unjump it
                             jump_name = self.psr.add_jump(sudo_select_mask)
                             self.updateJumped(jump_name)
-                            if type(jump_name)!=list:
-                                log.error(
-                                    f"Mistakenly added new jump {jump_name}"
-                                )
+                            if type(jump_name) != list:
+                                log.error(f"Mistakenly added new jump {jump_name}")
                             else:
-                                print(f"Existing jump removed for {np.array(jump_name).astype(int).sum()} toas and deleted them")
+                                print(
+                                    f"Existing jump removed for {np.array(jump_name).astype(int).sum()} toas and deleted them"
+                                )
                         # Now delete it
                         self.selected = self.psr.delete_TOAs([toa_ind], self.selected)
                         self.updateAllJumped()
-                        self.jumped |= (unselect_jump_stat)
+                        self.jumped |= unselect_jump_stat
                         self.psr.update_resids()
                         self.updatePlot(keepAxes=True)
                         self.call_updates()
@@ -1458,12 +1458,12 @@ class PlkWidget(tk.Frame):
                 jump_name = self.psr.add_jump(self.selected)
                 self.updateJumped(jump_name)
                 # Here jump_name has to be a list
-                if type(jump_name)!=list:
-                    log.error(
-                        f"Mistakenly added new jump {jump_name}"
-                    )
+                if type(jump_name) != list:
+                    log.error(f"Mistakenly added new jump {jump_name}")
                 else:
-                    print(f"Existing jump removed for {np.array(jump_name).astype(int).sum()} toas and deleted them")
+                    print(
+                        f"Existing jump removed for {np.array(jump_name).astype(int).sum()} toas and deleted them"
+                    )
             # Delete the selected points
             self.selected = self.psr.delete_TOAs(
                 self.psr.all_toas.table["index"][self.selected], self.selected
@@ -1480,8 +1480,10 @@ class PlkWidget(tk.Frame):
             # jump the selected points, or unjump if already jumped
             jump_name = self.psr.add_jump(self.selected)
             self.updateJumped(jump_name)
-            if type(jump_name)==list:
-                print(f"Existing jump removed for {np.array(jump_name).astype(int).sum()} toas")
+            if type(jump_name) == list:
+                print(
+                    f"Existing jump removed for {np.array(jump_name).astype(int).sum()} toas"
+                )
             else:
                 print(f"New jump {jump_name} for {self.selected.sum()} toas.")
             # undo the selection, since that is almost certainly what we want
