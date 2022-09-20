@@ -397,7 +397,8 @@ class Pulsar:
                 "There are no jumps (maskParameter objects) in PhaseJump. Please delete the PhaseJump object and try again. "
             )
             return None
-        # delete jump if perfectly overlaps any existing jump
+        # delete the jump ad flags if the selected TOAs exactly overlap;
+        # else just delete the jump flag from the selected TOAs
         for num in range(1, numjumps + 1):
             # create boolean array corresponding to TOAs to be jumped
             toas_jumped = [
@@ -413,6 +414,15 @@ class Pulsar:
                     self.postfit_model.delete_jump_and_flags(None, num)
                 log.info("removed param", f"JUMP{str(num)}")
                 return toas_jumped
+
+            # Has to be some overlap between jumps and selected TOAs
+            elif np.any(toas_jumped & selected):
+                # if not, then they don't exactly match, delete the common subset
+                jumped_selected = (toas_jumped & selected)
+                # Post fit model and prefit model share the same TOA table, so as long as we 
+                # don't delete the jump altogether, modifying prefit model table flags is fine.
+                self.prefit_model.delete_not_all_jump_toas(self.all_toas.table["flags"][jumped_selected], num)
+                return list(jumped_selected)
         # if here, then doesn't match anything
         # add jump flags to selected TOAs at their perspective indices in the TOA tables
         retval = self.prefit_model.add_jump_and_flags(
