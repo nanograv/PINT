@@ -61,8 +61,9 @@ def two_comp_mc(n, w1, w2, loc, func):
 
 
 def approx_gradient(func, phases, log10_ens=None, eps=1e-6):
-    """Return a numerical gradient.  This works for both LCPrimitive and
-    LCTemplate objects.  HOW AWESOME!
+    """Return a numerical gradient for LCPrimitive and LCTemplate objects.
+
+    This is "dTemplate/dParam".
     """
     orig_p = func.get_parameters(free=False).copy()
     g = np.zeros([len(orig_p), len(phases)])
@@ -72,7 +73,7 @@ def approx_gradient(func, phases, log10_ens=None, eps=1e-6):
         p0 = orig_p.copy()
         p0[which] += eps
         func.set_parameters(p0, free=False)
-        return func(phases, log10_ens)
+        return func(phases, log10_ens=log10_ens)
 
     for i in range(len(orig_p)):
         # use a 4th-order central difference scheme
@@ -82,10 +83,10 @@ def approx_gradient(func, phases, log10_ens=None, eps=1e-6):
     func.set_parameters(orig_p, free=False)
     return g
 
+def approx_hessian(func, phases, log10_ens=None, eps=1e-5):
+    """Return a numerical hessian for LCPrimitive and LCTemplate objects.
 
-def approx_hessian(func, phases, log10_ens=None, eps=1e-4):
-    """Return a numerical hessian.  This works for both LCPrimitive and
-    LCTemplate objects.  HOW AWESOME!
+    This is d^2Template/dParam1dParam2.
     """
     orig_p = func.get_parameters(free=False).copy()
     g = np.zeros([len(orig_p), len(orig_p), len(phases)])
@@ -98,7 +99,7 @@ def approx_hessian(func, phases, log10_ens=None, eps=1e-4):
         p0[which1] += eps1
         p0[which2] += eps2
         func.set_parameters(p0, free=False)
-        return func(phases)
+        return func(phases,log10_ens=log10_ens)
 
     steps = np.asarray([[1, 1], [1, -1], [-1, 1], [-1, -1]]) * eps
     for i in range(len(orig_p)):
@@ -110,8 +111,25 @@ def approx_hessian(func, phases, log10_ens=None, eps=1e-4):
     func.set_parameters(orig_p, free=False)
     return g
 
+def approx_derivative(func, phases, log10_ens=None, order=1, eps=1e-7):
+    """Return numerical derivative for LCPrimitive and LCTemplate objects.
 
-def check_gradient(func, atol=1e-8, rtol=1e-5, quiet=False):
+    This is "dTemplate/dPhi."
+    """
+
+    if not ((order == 1) or (order == 2)):
+        raise NotImplementedError('Only 1st and 2nd derivs supported.')
+
+    phhi = np.mod(phases + eps,1)
+    Fhi = func(phhi,log10_ens=log10_ens)
+    phlo = np.mod(phases - eps,1)
+    Flo = func(phlo,log10_ens=log10_ens)
+    if order == 1:
+        return (Fhi-Flo)*(0.5/eps)
+    Fmid = func(phases,log10_ens=log10_ens)
+    return (Fhi+Flo-2*Fmid)*(1.0/eps**2)
+
+def check_gradient(func, n=1000, atol=1e-8, rtol=1e-5, quiet=False):
     """Test gradient function with a set of MC photons.
     This works with either LCPrimitive or LCTemplate objects.
 
@@ -119,30 +137,81 @@ def check_gradient(func, atol=1e-8, rtol=1e-5, quiet=False):
     a for the location-related parameters when the finite step
     causes the peak to shift from one side of an evaluation phase
     to the other."""
-    en = np.random.rand(1000) * 2 + 1  # 100 MeV to 10 GeV
-    ph = func.random(en)
+    en = np.random.rand(n) * 3 + 1  # 10 MeV to 10 GeV
+    ph = func.random(n,log10_ens=en)
     if hasattr(func, "closest_to_peak"):
         eps = min(1e-6, 0.2 * func.closest_to_peak(ph))
     else:
         eps = 1e-6
-    g1 = func.gradient(ph, en, free=False)
-    g2 = func.approx_gradient(ph, en, eps=eps)
+    g1 = func.gradient(ph, log10_ens=en, free=False)
+    g2 = func.approx_gradient(ph, log10_ens=en, eps=eps)
     anyfail = False
-    for i in range(g1.shape[0]):
+    for i in range(g1.shape[0]): # loop over params
         d1 = np.abs(g1[i] - g2[i])
-        a = np.argmax(d1)
-        fail = np.any(d1 > (atol + rtol * np.abs(g2)))
+        fail = np.any(d1 > (atol + rtol * np.abs(g2[i])))
         if not quiet:
             pass_string = "FAILED" if fail else "passed"
             print("%02d (%s) %.3g (abs)" % (i, pass_string, d1.max()))
         anyfail = anyfail or fail
     return not anyfail
 
+def check_derivative(func, n=1000, atol=1e-8, rtol=1e-5, order=1, eps=1e-7, quiet=False):
+    """Test derivative function with a set of MC photons.
+    This works with either LCPrimitive or LCTemplate objects.
+    """
+    en = np.random.rand(n) * 3 + 1  # 10 MeV to 10 GeV
+    ph = func.random(n,log10_ens=en)
+    g1 = func.derivative(ph, log10_ens=en, order=order)
+    g2 = func.approx_derivative(ph, log10_ens=en, eps=eps, order=order)
+    d1 = np.abs(g1-g2)
+    if order > 1:
+        print('Warning!  numerical 2nd derivatives are not very accurate and should be assessed subjectively.')
+    return not np.any(d1 > (atol + rtol * np.abs(g1)))
+
 
 class LCPrimitive:
-    """Base class for various components of a light curve.  All "analytic"
-    light curve models must inherit and must implement the three
-    'virtual' functions below."""
+    """Base class for various components of a light curve.  
+
+    All "analytic" light curve models must inherit and must implement 
+    the 'virtual' functions:
+        __call__ : evaluate the primitive at provided phases
+        gradient : evaluate the primitive derivative wrt the parameters
+        hwhm     : convert between internal parameters and empirical HWMM
+
+    Specialized class initialization is handled via inheriting init.
+    """
+
+    def __init__(self, **kwargs):
+        """Generally, class-specific setup work is performed in init.
+        Here, init is called and certain guaranteed default members
+        are established."""
+        self.init()
+        if not hasattr(self, "bounds"):
+            self.bounds = self._default_bounds()  # default
+        self.errors = np.zeros_like(self.p)
+        self.free = np.asarray([True] * len(self.p))
+        self.__dict__.update(kwargs)
+        self._asarrays()
+        (
+            self.gauss_prior_loc,
+            self.gauss_prior_width,
+            self.gauss_prior_enable,
+        ) = self._default_priors()
+        self.shift_mode = False
+
+    def __call__(self, phases):
+        raise NotImplementedError(
+            "Virtual function must be implemented by child class."
+        )
+
+    def num_parameters(self,free=True):
+        if free:
+            return np.sum(self.free)
+        return len(self.free)
+
+    def get_free_mask(self):
+        """Return a mask with True if parameters are free, else False."""
+        return self.free
 
     def is_energy_dependent(self):
         return False
@@ -156,11 +225,6 @@ class LCPrimitive:
         from copy import deepcopy
 
         return deepcopy(self)
-
-    def __call__(self, phases):
-        raise NotImplementedError(
-            "Virtual function must be implemented by child class."
-        )
 
     def integrate(self, x1=0, x2=1, log10_ens=3):
         """Base implemention with scipy quad."""
@@ -210,24 +274,6 @@ class LCPrimitive:
         enable = np.asarray([False] * len(self.p))
         return loc, width, enable
 
-    def __init__(self, **kwargs):
-        """Generally, class-specific setup work is performed in init.
-        Here, init is called and certain guaranteed default members
-        are established."""
-        self.init()
-        if not hasattr(self, "bounds"):
-            self.bounds = self._default_bounds()  # default
-        self.errors = np.zeros_like(self.p)
-        self.free = np.asarray([True] * len(self.p))
-        self.__dict__.update(kwargs)
-        self._asarrays()
-        (
-            self.gauss_prior_loc,
-            self.gauss_prior_width,
-            self.gauss_prior_enable,
-        ) = self._default_priors()
-        self.shift_mode = False
-
     def _make_p(self, log10_ens=3):
         """Internal method to return parameters appropriate for use
         in functional form."""
@@ -257,10 +303,14 @@ class LCPrimitive:
         return n
 
     def get_errors(self, free=True):
-        return self.errors[self.free]
+        if free:
+            return self.errors[self.free]
+        return self.errors
 
-    def get_bounds(self):
-        return self.bounds[self.free]
+    def get_bounds(self, free=True):
+        if free:
+            return np.asarray(self.bounds)[self.free]
+        return self.bounds
 
     def get_gauss_prior_parameters(self):
         mod_array = [False] * (len(self.p) - 1) + [True]
@@ -333,17 +383,19 @@ class LCPrimitive:
         """Return d^np(phi)/dphi^n, with n=order."""
         raise NotImplementedError("No derivative function found for this object.")
 
-    def random(self, n):
+    def random(self, n, log10_ens=3):
         """Default is accept/reject."""
         if n < 1:
             return 0
-        M = self(np.asarray([self.p[-1]]))  # peak amplitude
+        if hasattr(log10_ens,'__len__'):
+            assert(n==len(log10_ens))
+        M = self(self.p[-1],log10_ens=log10_ens) # TODO -- this needs test
         rvals = np.empty(n)
         position = 0
         rfunc = np.random.rand
         while True:
             cand_phases = rfunc(n)
-            cand_phases = cand_phases[rfunc(n) < self(cand_phases) / M]
+            cand_phases = cand_phases[rfunc(n) < self(cand_phases,log10_ens=log10_ens) / M]
             ncands = len(cand_phases)
             if ncands == 0:
                 continue
@@ -367,6 +419,9 @@ class LCPrimitive:
 
     def approx_gradient(self, phases, log10_ens=3, eps=1e-5):
         return approx_gradient(self, phases, log10_ens, eps=eps)
+
+    def approx_hessian(self, phases, log10_ens=None, eps=1e-5):
+        return approx_hessian(self, phases, log10_ens=log10_ens, eps=eps)
 
     def check_gradient(self, atol=1e-8, rtol=1e-5, quiet=False):
         return check_gradient(self, atol=atol, rtol=rtol, quiet=quiet)
@@ -544,14 +599,14 @@ class LCWrappedFunction(LCPrimitive):
         output : a num_parameter x num_parameter x len(phases) ndarray,
                  the num_parameter-dim^2 hessian at each phase
         """
-        results = self.base_hess(phases, log10_ens)
+        results = self.base_hess(phases, log10_ens=log10_ens)
         for i in range(1, MAXWRAPS + 1):
-            t = self.base_hess(phases, log10_ens, index=i)
-            t += self.base_hess(phases, log10_ens, index=-i)
+            t = self.base_hess(phases, log10_ens=log10_ens, index=i)
+            t += self.base_hess(phases, log10_ens=log10_ens, index=-i)
             results += t
             if (i >= MINWRAPS) and (np.all(t < WRAPEPS)):
                 break
-        gh = self._grad_hess(i, log10_ens)
+        gh = self._grad_hess(i, log10_ens=log10_ens)
         if gh is not None:
             raise NotImplementedError
             # for i in range(len(gn)):
@@ -647,7 +702,7 @@ class LCGaussian(LCWrappedFunction):
         return np.asarray([q * z * (3 - z2), q * (1 - z2)])
 
     def base_hess(self, phases, log10_ens=3, index=0):
-        e, width, x0 = self._make_p(log10_ens)
+        e, width, x0 = self._make_p(log10_ens=log10_ens)
         z = (phases + index - x0) / width
         f = (1.0 / (width * ROOT2PI)) * np.exp(-0.5 * z**2)
         q = f / width**2
@@ -676,10 +731,12 @@ class LCGaussian(LCWrappedFunction):
         z2 = (x2 + index - x0) / width
         return 0.5 * (erf(z2 / ROOT2) - erf(z1 / ROOT2))
 
-    def random(self, n):
-        if hasattr(n, "__len__"):
-            n = len(n)
-        return np.mod(norm.rvs(loc=self.p[-1], scale=self.p[0], size=n), 1)
+    def random(self, n, log10_ens=3):
+        if hasattr(log10_ens,'__len__') and len(log10_ens) != n:
+            raise ValueError(
+                    "Provided log10_ens vector does not match requested n.")
+        e, width, x0 = self._make_p(log10_ens)
+        return np.mod(norm.rvs(loc=x0, scale=width, size=n), 1)
 
 
 class LCGaussian2(LCWrappedFunction):

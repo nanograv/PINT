@@ -49,8 +49,26 @@ def test_template_basic_functionality():
         pulse_frac=0.6, x1=0.5, x2=0.48, ratio=0.25 / 0.35, width1=0.01, width2=0.01
     )
 
+    assert(lct.num_parameters()==6)
+    lct.freeze_parameters()
+    assert(lct.num_parameters()==0)
+    lct[0].free[0] = True
+    assert(lct.num_parameters()==1)
+    lct[-1].free[0] = True
+    assert(lct.num_parameters()==2)
+    assert(lct.num_parameters(free=False)==6)
+    b = np.asarray(lct.get_bounds())
+    assert(b.shape[0]==2)
+    assert(b.shape[1]==2)
+    b = np.asarray(lct.get_bounds(free=False))
+    assert(b.shape[0]==6)
+    assert(b.shape[1]==2)
+    assert(lct.num_parameters()==len(lct.get_parameters()))
+    lct.free_parameters()
+    assert(lct.num_parameters()==6)
+
     # check that instantiated template has same norm as input
-    assert abs(lct.norm() - (0.25 + 0.35)) < 1e-10
+    assert(abs(lct.norm() - (0.25 + 0.35)) < 1e-10)
 
     # check that that template correctly evaluates weighted sum of comps
     expected_val = (
@@ -58,7 +76,66 @@ def test_template_basic_functionality():
         + 0.35 * gauss(0.49, 0.48, 0.01)
         + (1 - 0.25 - 0.35)
     )
-    assert abs(lct(0.49) - expected_val) < 1e-6
+    assert(abs(lct(0.49) - expected_val) < 1e-6)
+
+    # check cdf
+    assert(lct.cdf(1)==1)
+    assert(lct.cdf(0)==0)
+
+    # test sorting components
+    lct.order_primitives(order=0) # sort by position, should swap them
+    assert(lct.primitives[0].get_location()==0.48)
+    assert(lct.primitives[1].get_location()==0.50)
+    assert(abs(lct.norms()[0]-0.35)<1e-10)
+    assert(abs(lct.norms()[1]-0.25)<1e-10)
+    lct = lctemplate.get_gauss2(
+        pulse_frac=0.6, x1=0.5, x2=0.48, ratio=0.25 / 0.35, 
+        width1=0.01, width2=0.01
+    )
+    lct.order_primitives(order=1) # sort by amplitude, should swap them
+    assert(lct.primitives[0].get_location()==0.48)
+    assert(lct.primitives[1].get_location()==0.50)
+    assert(abs(lct.norms()[0]-0.35)<1e-10)
+    assert(abs(lct.norms()[1]-0.25)<1e-10)
+    lct = lctemplate.get_gauss2(
+        pulse_frac=0.6, x1=0.5, x2=0.48, ratio=0.25 / 0.35, 
+        width1=0.01, width2=0.05
+    )
+    lct.order_primitives(order=1) # sort by amplitude, should do nothing
+    assert(lct.primitives[0].get_location()==0.50)
+    assert(lct.primitives[1].get_location()==0.48)
+    assert(abs(lct.norms()[1]-0.35)<1e-10)
+    assert(abs(lct.norms()[0]-0.25)<1e-10)
+    lct.order_primitives(order=2) # sort by norm, should swap
+    assert(lct.primitives[0].get_location()==0.48)
+    assert(lct.primitives[1].get_location()==0.50)
+    assert(abs(lct.norms()[0]-0.35)<1e-10)
+    assert(abs(lct.norms()[1]-0.25)<1e-10)
+
+
+
+def test_template_gradient():
+    """ Verify analytic gradient computation with numerical evaluation."""
+
+    lct = lctemplate.get_gauss2(
+        pulse_frac=0.6, x1=0.5, x2=0.48, ratio=0.25 / 0.35, width1=0.01, width2=0.01
+    )
+
+    # check that analytic gradient is equal to numerical gradient
+    assert(lct.check_gradient())
+
+    # check derivative too
+    assert(lct.check_derivative())
+
+    # check that nothing breaks when freezing a normalization angle
+    lct.norms.free[0] = False
+    assert(lct.check_gradient())
+
+    # check that nothing breaks when freezing a primitive parameter
+    lct[0].free[0] = False
+    assert(lct.check_gradient())
+    lct[0].free[:] = False
+    assert(lct.check_gradient())
 
 
 def test_template_string_representation():
@@ -93,6 +170,7 @@ Delta   : 0.0200 +\- 0.0000
 
 
 def test_template_simulation():
+    # TODO -- add energy dependence
     lct = lctemplate.get_gauss2()
     x = lct.random(100)
     assert (len(x) == 100) and (np.min(x) >= 0) and (np.max(x) < 1)
@@ -101,6 +179,10 @@ def test_template_simulation():
 def test_simple_fit_unbinned():
     """Make sure objects adequately implement mathematical intent."""
 
+    # TODO -- add a small DC component to this to avoid negative values in
+    # the log likelihood, which happen at floating point precision.  Another
+    # option would be to filter those at the template level, but that's
+    # probably expensive.
     lct = lctemplate.get_gauss2()
 
     # load in simulated phases

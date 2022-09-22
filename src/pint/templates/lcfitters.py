@@ -52,7 +52,7 @@ def LCFitter(
     template,
     phases,
     weights=None,
-    log10_ens=None,
+    log10_ens=3,
     times=1,
     binned_bins=1000,
     binned_ebins=8,
@@ -74,7 +74,8 @@ def LCFitter(
     phase_shift  [0]    set this if a phase shift has been applied
     """
     kwargs = dict(
-        times=np.asarray(times), binned_bins=binned_bins, phase_shift=phase_shift
+        times=np.asarray(times), binned_bins=binned_bins, 
+        phase_shift=phase_shift,log10_ens=log10_ens
     )
     if weights is None:
         kwargs["weights"] = None
@@ -87,6 +88,7 @@ class UnweightedLCFitter:
     def __init__(self, template, phases, **kwargs):
         self.template = template
         self.phases = np.asarray(phases)
+        self.log10_ens = kwargs['log10_ens']
         self.__dict__.update(kwargs)
         self._hist_setup()
         # default is unbinned likelihood
@@ -123,9 +125,9 @@ class UnweightedLCFitter:
         t = self.template
         params_ok = t.set_parameters(p)
         # if (not t.shift_mode) and np.any(p<0):
-        if (t.norm() > 1) or (not params_ok):
+        if not (t.norm_ok() and params_ok):
             return 2e20
-        rvals = -np.log(t(self.phases)).sum()
+        rvals = -np.log(t(self.phases,log10_ens=self.log10_ens)).sum()
         if np.isnan(rvals):
             return 2e20  # NB need to do better accounting of norm
         return rvals
@@ -134,7 +136,7 @@ class UnweightedLCFitter:
         t = self.template
         params_ok = t.set_parameters(p)
         # if (not t.shift_mode) and np.any(p<0):
-        if (t.norm() > 1) or (not params_ok):
+        if not (t.norm_ok() and params_ok):
             return 2e20
         return -(self.counts * np.log(t(self.counts_centers))).sum()
 
@@ -541,41 +543,56 @@ class UnweightedLCFitter:
         plot_components=False,
         template=None,
         line_color="blue",
+        comp_color=None,
+        plot_eavg=True,
+        log10_erange=None,
     ):
         import pylab as pl
+        if comp_color is None:
+            comp_color = line_color
 
         weights = self.weights
-        dom = np.linspace(0, 1, 1000)
+        log10_ens = self.log10_ens
+        phases = self.phases
+
         if template is None:
             template = self.template
+
+        plot_log_en = 3
+        if (log10_erange is not None) and (log10_ens is not None):
+            lo,hi = log10_erange
+            mask = (log10_ens >= lo) & (log10_ens < hi)
+            if weights is not None:
+                weights = weights[mask]
+            phases = phases[mask]
+            log10_ens = log10_ens[mask]
+            plot_log_en = 0.5*(lo+hi)
 
         if axes is None:
             fig = pl.figure(fignum)
             axes = fig.add_subplot(111)
 
         axes.hist(
-            self.phases,
+            phases,
             bins=np.linspace(0, 1, nbins + 1),
             histtype="step",
-            ec="red",
+            ec="C3",
             density=True,
             lw=1,
             weights=weights,
         )
+
         if weights is not None:
             bg_level = 1 - (weights**2).sum() / weights.sum()
             axes.axhline(bg_level, color="k")
-            # cod = template(dom)*(1-bg_level)+bg_level
-            # axes.plot(dom,cod,color='blue')
             x, w1, errors = weighted_light_curve(
-                nbins, self.phases, weights, normed=True
+                nbins, phases, weights, normed=True
             )
             x = (x[:-1] + x[1:]) / 2
             axes.errorbar(x, w1, yerr=errors, capsize=0, marker="", ls=" ", color="red")
         else:
             bg_level = 0
-            # axes.plot(dom,cod,color='blue',lw=1)
-            h = np.histogram(self.phases, bins=np.linspace(0, 1, nbins + 1))
+            h = np.histogram(phases, bins=np.linspace(0, 1, nbins + 1))
             x = (h[1][:-1] + h[1][1:]) / 2
             n = float(h[0].sum()) / nbins
             axes.errorbar(
@@ -585,18 +602,97 @@ class UnweightedLCFitter:
                 capsize=0,
                 marker="",
                 ls=" ",
-                color="red",
+                color="C3",
             )
-        cod = template(dom) * (1 - bg_level) + bg_level
+
+        def avg_energy(func):
+            if not plot_eavg:
+                return func(dom)
+            if not hasattr(log10_ens,'__len__'):
+                return func(dom)
+            h = np.histogram(log10_ens,weights=weights,bins=20)
+            wt = h[0] * (1./h[0].sum())
+            hc = 0.5*(h[1][:-1]+h[1][1:])
+            rvals = np.zeros_like(dom)
+            for x,w in zip(hc,wt):
+                rvals += w*func(dom,log10_ens=x)
+            return rvals
+
+        dom = np.linspace(0, 1, 1000)
+
+        cod = avg_energy(template) * (1 - bg_level) + bg_level
         axes.plot(dom, cod, color=line_color, lw=1)
         if plot_components:
             for i in range(len(template.primitives)):
-                cod = template.single_component(i, dom) * (1 - bg_level) + bg_level
-                axes.plot(dom, cod, color=line_color, lw=1, ls="--")
+                def f(ph,log10_ens=3):
+                    return template.single_component(i,dom,log10_ens=log10_ens)
+                cod = avg_energy(f) * (1-bg_level) + bg_level
+                axes.plot(dom, cod, color=comp_color, lw=1, ls="--")
         pl.axis([0, 1, pl.axis()[2], max(pl.axis()[3], cod.max() * 1.05)])
         axes.set_ylabel("Normalized Profile")
         axes.set_xlabel("Phase")
         axes.grid(True)
+
+    def plot_ebands(self, log10_ebands=[2,2+2.5/3,2+5.0/3,4.5], fignum=2,
+            plot_zoom=True,equalize_y=False,**plot_kwargs):
+
+        import pylab as pl
+        pl.close(fignum); pl.figure(fignum,(4+3*int(plot_zoom),9))
+        if 'fignum' in plot_kwargs:
+            plot_kwargs.pop('fignum')
+
+        nband = len(log10_ebands)-1
+        toggle = int(plot_zoom)
+        axes = []
+        axzooms = []
+        maxy = 0
+        for i in range(nband):
+            lo,hi = log10_ebands[i:i+2]
+            ax = pl.subplot(nband,1+toggle,i*(1+toggle)+1)
+            axes.append(ax)
+            plot_kwargs['log10_erange'] = [lo,hi]
+            plot_kwargs['axes'] = ax
+            self.plot(**plot_kwargs)
+            maxy = max(ax.axis()[-1],maxy)
+            if plot_zoom:
+                axzoom = pl.subplot(nband,1+toggle,i*(1+toggle)+2)
+                plot_kwargs['axes'] = axzoom
+                self.plot(**plot_kwargs)
+                axzoom.axis([0,1,0,1])
+                axzoom.set_ylabel('')
+                axzoom.tick_params(labelleft=False,labelright=True,
+                        labelbottom=i==(nband-1))
+                if i < (nband-1):
+                    axzoom.set_xlabel('')
+                axzooms.append(axzoom)
+            if i < (nband-1):
+                ax.tick_params(labelbottom=False)
+                ax.set_xlabel('')
+        if equalize_y:
+            for ax in axes:
+                old_axis = list(ax.axis())
+                old_axis[-1] = maxy
+                ax.axis(tuple(old_axis))
+
+        pl.tight_layout()
+        pl.subplots_adjust(hspace=0)
+        pl.subplots_adjust(wspace=0)
+
+    def get_ebands(self,nband=3):
+        if not hasattr(self.log10_ens,'__len__'):
+            return []
+        t = self.template(self.phases,log10_ens=self.log10_ens)
+        if self.weights is None:
+            logl = np.log(t)
+        else:
+            logl = np.log(1+self.weights*(t-1))
+        a = np.argsort(self.log10_ens)
+        logl = logl[a]
+        logl = np.cumsum(logl)
+        logl *= 1./logl[-1]
+        indices = np.searchsorted(logl,np.arange(nband)[1:]/nband)
+        return np.concatenate([[2],self.log10_ens[a][indices],[4.5]])
+
 
     def plot_residuals(self, nbins=50, fignum=3):
         import pylab as pl
@@ -693,9 +789,15 @@ class WeightedLCFitter(UnweightedLCFitter):
         # now set up binning for binned likelihood
         nbins = self.binned_bins
         bins = np.linspace(0 + self.phase_shift, 1 + self.phase_shift, nbins + 1)
+        # TODO -- revisit this slice approach and implement in a way that
+        # doesn't require sorting.  It seems very fragile.  Looking at the
+        # binned likelihood, we could keep the masks, select the weights,
+        # and broadcast the single template term.
         a = np.argsort(self.phases)
         self.phases = self.phases[a]
         self.weights = self.weights[a]
+        if hasattr(self.log10_ens,'__len__'):
+            self.log10_ens = self.log10_ens[a]
         self.counts_centers = []
         self.slices = []
         indices = np.arange(len(self.weights))
@@ -722,19 +824,16 @@ class WeightedLCFitter(UnweightedLCFitter):
     def unbinned_loglikelihood(self, p, *args):
         t = self.template
         params_ok = t.set_parameters(p)
-        if (t.norm() > 1) or (not params_ok):
-            # if (t.norm()>1) or (not t.shift_mode and np.any(p<0)):
+        if not (t.norm_ok() and params_ok):
             return 2e20
-        return -np.log(1 + self.weights * (t(self.phases) - 1)).sum()
-        # return -np.log(1+self.weights*(self.template(self.phases,suppress_bg=True)-1)).sum()
+        return -np.log(1 + self.weights * (t(self.phases,log10_ens=self.log10_ens) - 1)).sum()
 
     def binned_loglikelihood(self, p, *args):
         t = self.template
         params_ok = t.set_parameters(p)
-        # if (t.norm()>1) or (not t.shift_mode and np.any(p<0)):
-        if (t.norm() > 1) or (not params_ok):
+        if not (t.norm_ok() and params_ok):
             return 2e20
-        template_terms = t(self.counts_centers) - 1
+        template_terms = t(self.counts_centers,log10_ens=self.log10_ens) - 1
         phase_template_terms = np.empty_like(self.weights)
         for tt, sl in zip(template_terms, self.slices):
             phase_template_terms[sl] = tt
@@ -743,20 +842,20 @@ class WeightedLCFitter(UnweightedLCFitter):
     def unbinned_gradient(self, p, *args):
         t = self.template
         t.set_parameters(p)
-        if t.norm() > 1:
+        if not t.norm_ok():
             return np.ones_like(p) * 2e20
-        numer = self.weights * t.gradient(self.phases)
-        denom = 1 + self.weights * (t(self.phases) - 1)
+        numer = self.weights * t.gradient(self.phases,log10_ens=self.log10_ens)
+        denom = 1 + self.weights * (t(self.phases,log10_ens=self.log10_ens) - 1)
         return -(numer / denom).sum(axis=1)
 
     def binned_gradient(self, p, *args):
         t = self.template
-        t.set_parameters(p)
-        if t.norm() > 1:
+        param_ok = t.set_parameters(p)
+        if not (t.norm_ok() and param_ok):
             return np.ones_like(p) * 2e20
         nump = len(p)
-        template_terms = t(self.counts_centers) - 1
-        gradient_terms = t.gradient(self.counts_centers)
+        template_terms = t(self.counts_centers,log10_ens=self.log10_ens) - 1
+        gradient_terms = t.gradient(self.counts_centers,log10_ens=self.log10_ens)
         phase_template_terms = np.empty_like(self.weights)
         phase_gradient_terms = np.empty([nump, len(self.weights)])
         # distribute the central values to the unbinned phases/weights

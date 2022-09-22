@@ -35,7 +35,11 @@ class LCTemplate:
         self.shift_mode = np.any([p.shift_mode for p in self.primitives])
         if norms is None:
             norms = np.ones(len(primitives)) / len(primitives)
-        self.norms = norms if isinstance(norms, NormAngles) else NormAngles(norms)
+        if hasattr(norms,'_make_p'):
+            self.norms = norms
+        else:
+            self.norms = NormAngles(norms)
+        self._all = primitives + [self.norms]
         self._sanity_checks()
         self._cache = defaultdict(None)
         self._cache_dirty = defaultdict(lambda: True)
@@ -73,10 +77,7 @@ class LCTemplate:
         return False
 
     def __getitem__(self, index):
-        return self.primitives[index]
-
-    def __setitem__(self, index, value):
-        self.primitives[index] = value
+        return self._all[index]
 
     def __len__(self):
         return len(self.primitives)
@@ -180,6 +181,25 @@ class LCTemplate:
             self.norms.get_parameters(free),
         )
 
+    def num_parameters(self, free=True):
+        """ Return the total number of free parameters."""
+
+        nprim = sum((prim.num_parameters(free) for prim in self.primitives))
+        return nprim + self.norms.num_parameters(free)
+
+    def _set_all_free_or_fixed(self,freeze=True):
+        for prim in self.primitives:
+            prim.free[:] = not freeze
+        self.norms.free[:] = not freeze
+
+    def free_parameters(self):
+        """ Free all parameters. Convenience function."""
+        self._set_all_free_or_fixed(freeze=False)
+
+    def freeze_parameters(self):
+        """ Freeze all parameters. Convenience function."""
+        self._set_all_free_or_fixed(freeze=True)
+
     def get_errors(self, free=True):
         return np.append(
             np.concatenate([prim.get_errors(free) for prim in self.primitives]),
@@ -188,9 +208,8 @@ class LCTemplate:
 
     def get_free_mask(self):
         """Return a mask with True if parameters are free, else False."""
-        return np.append(
-            np.concatenate([prim.free for prim in self.primitives]), self.norms.free
-        )
+        m1 = np.concatenate([p.get_free_mask() for p in self.primitives])
+        return np.append(m1,self.norms.get_free_mask())
 
     def get_parameter_names(self, free=True):
         # I will no doubt hate myself in future for below comprehension
@@ -226,9 +245,9 @@ class LCTemplate:
         enables = np.append(np.concatenate(enables), t.astype(bool))
         return GaussianPrior(locs, widths, mods, mask=enables)
 
-    def get_bounds(self):
-        b1 = np.concatenate([prim.get_bounds() for prim in self.primitives])
-        b2 = self.norms.get_bounds()
+    def get_bounds(self,free=True):
+        b1 = np.concatenate([prim.get_bounds(free) for prim in self.primitives])
+        b2 = self.norms.get_bounds(free)
         return np.concatenate((b1, b2)).tolist()
 
     def set_overall_phase(self, ph):
@@ -256,6 +275,9 @@ class LCTemplate:
 
     def norm(self):
         return self.norms.get_total()
+
+    def norm_ok(self):
+        return self.norm() <= 1
 
     def integrate(self, phi1, phi2, log10_ens=3, suppress_bg=False):
         norms = self.norms(log10_ens)
@@ -291,7 +313,7 @@ class LCTemplate:
             return self.eval_cache(phases, order=0)
         rvals, norms, norm = self._get_scales(phases, log10_ens)
         for n, prim in zip(norms, self.primitives):
-            rvals += n * prim(phases, log10_ens)
+            rvals += n * prim(phases, log10_ens=log10_ens)
         if suppress_bg:
             return rvals / norm
         return (1.0 - norm) + rvals
@@ -304,48 +326,51 @@ class LCTemplate:
         if use_cache:
             return self.eval_cache(phases, order=order)
         rvals = np.zeros_like(phases)
-        norms = self.norms()
+        norms = self.norms(log10_ens=log10_ens)
         for n, prim in zip(norms, self.primitives):
-            rvals += n * prim.derivative(phases, log10_ens, order=order)
+            rvals += n * prim.derivative(phases, log10_ens=log10_ens, order=order)
         return rvals
-
-    def single_component(self, index, phases, log10_ens=3):
-        """Evaluate a single component of template."""
-        n = self.norms(log10_ens)[index]
-        return self.primitives[index](phases, log10_ens) * n
 
     def single_component(self, index, phases, log10_ens=3, add_bg=False):
         """Evaluate a single component of template."""
-        n = self.norms(log10_ens)
-        rvals = self.primitives[index](phases, log10_ens) * n[index]
+        n = self.norms(log10_ens=log10_ens)
+        rvals = self.primitives[index](phases, log10_ens=log10_ens) * n[index]
         if add_bg:
             return rvals + n.sum(axis=0)
         return rvals
 
     def gradient(self, phases, log10_ens=3, free=True):
-        r = np.empty([len(self.get_parameters(free=free)), len(phases)])
+        r = np.empty((self.num_parameters(free), len(phases)))
         c = 0
-        norms = self.norms()
-        prim_terms = np.empty([len(phases), len(self.primitives)])
+        norms = self.norms(log10_ens=log10_ens)
+        prim_terms = np.empty((len(self.primitives),len(phases)))
         for i, (norm, prim) in enumerate(zip(norms, self.primitives)):
             n = len(prim.get_parameters(free=free))
-            r[c : c + n, :] = norm * prim.gradient(phases, free=free)
+            r[c : c + n, :] = norm * prim.gradient(phases, log10_ens=log10_ens, free=free)
             c += n
-            prim_terms[:, i] = prim(phases) - 1
+            prim_terms[i] = prim(phases,log10_ens=log10_ens) - 1
         # handle case where no norm parameters are free
         if c == r.shape[0]:
             return r
-        m = self.norms.gradient(free=free)
-        # r[c:,:] = (prim_terms*m).sum(axis=1)
-        for j in range(m.shape[0]):
-            r[c, :] = (prim_terms * m[:, j]).sum(axis=1)
-            c += 1
+
+        # "prim_terms" are df/dn_i and have shape nnorm x nphase
+        # the output of gradient is the matrix M_ij or M_ijk, depending
+        # on whether or not there is energy dependence, which is
+        # dnorm_i/dnorm_angle_j (at energy k).  The sum is over the
+        # "internal parameter" norm_j, while the phase axis and norm_angle
+        # axis are retained.
+        m = self.norms.gradient(log10_ens=log10_ens,free=free)
+        if len(m.shape)==2:
+            m = m[...,None]
+        np.einsum('ij,ikj->kj',prim_terms,m,out=r[c:])
+        #r[c:] = np.sum(prim_terms*m,axis=1)
         return r
 
     def gradient_derivative(self, phases, log10_ens=3, free=False):
         """Return d/dphi(gradient).  This is the derivative with respect
         to pulse phase of the gradient with respect to the parameters.
         """
+        raise NotImplementedError() # is this used anymore?
         free_mask = self.get_free_mask()
         nparam = len(free_mask)
         nnorm_param = len(self.norms.p)
@@ -368,13 +393,19 @@ class LCTemplate:
         return rvals
 
     def approx_gradient(self, phases, log10_ens=None, eps=1e-5):
-        return approx_gradient(self, phases, log10_ens, eps=eps)
+        return approx_gradient(self, phases, log10_ens=log10_ens, eps=eps)
 
     def approx_hessian(self, phases, log10_ens=None, eps=1e-5):
-        return approx_hessian(self, phases, log10_ens, eps=eps)
+        return approx_hessian(self, phases, log10_ens=log10_ens, eps=eps)
 
-    def check_gradient(self, atol=1e-8, rtol=1e-5, quiet=False):
+    def approx_derivative(self, phases, log10_ens=None, order=1, eps=1e-7):
+        return approx_derivative(self, phases, log10_ens=log10_ens, order=order, eps=eps)
+
+    def check_gradient(self, atol=1e-7, rtol=1e-5, quiet=False):
         return check_gradient(self, atol=atol, rtol=rtol, quiet=quiet)
+
+    def check_derivative(self, atol=1e-7, rtol=1e-5, order=1, eps=1e-7, quiet=False):
+        return check_derivative(self, atol=atol, rtol=rtol, quiet=quiet, eps=1e-7, order=order)
 
     def hessian(self, phases, log10_ens=3, free=True):
         """Return the hessian of the primitive and normaliation angles.
@@ -400,18 +431,18 @@ class LCTemplate:
 
         free_mask = self.get_free_mask()
         nparam = len(free_mask)
-        nnorm_param = len(self.norms.p)
+        nnorm_param = self.norms.num_parameters()
         nprim_param = nparam - nnorm_param
         r = np.zeros([nparam, nparam, len(phases)])
 
-        norms = self.norms()
-        norm_grads = self.norms.gradient(phases, free=False)
+        norms = self.norms(log10_ens=log10_ens)
+        norm_grads = self.norms.gradient(log10_ens=log10_ens,free=False)
         prim_terms = np.empty([len(self.primitives), len(phases)])
 
         c = 0
         for i, prim in enumerate(self.primitives):
-            h = prim.hessian(phases, free=False)
-            pg = prim.gradient(phases, free=False)
+            h = prim.hessian(phases, log10_ens=log10_ens, free=False)
+            pg = prim.gradient(phases, log10_ens=log10_ens, free=False)
             n = len(prim.p)
             # put hessian in diagonal elements
             r[c : c + n, c : c + n, :] = norms[i] * h
@@ -422,11 +453,11 @@ class LCTemplate:
                 for k in range(nnorm_param):
                     r[nprim_param + k, c + j, :] = pg[j] * norm_grads[i, k]
                     r[c + j, nprim_param + k, :] = r[nprim_param + k, c + j, :]
-            prim_terms[i, :] = prim(phases) - 1
+            prim_terms[i, :] = prim(phases,log10_ens=log10_ens) - 1
             c += n
 
         # now put in normalization hessian
-        hnorm = self.norms.hessian()  # nnorm_param x nnorm_param x nnorm_param
+        hnorm = self.norms.hessian(log10_ens=log10_ens)  # nnorm_param x nnorm_param x nnorm_param
         for j in range(nnorm_param):
             for k in range(j, nnorm_param):
                 for i in range(nnorm_param):
@@ -450,7 +481,7 @@ class LCTemplate:
         delta [False] -- if True, return the first peak position"""
         if len(self.primitives) == 1:
             return -1, 0
-        prim0, prim1 = self[0], self[-1]
+        prim0, prim1 = self.primitives[0], self.primitives[-1]
         for p in self.primitives:
             if p.get_location() < prim0.get_location():
                 prim0 = p
@@ -484,8 +515,8 @@ class LCTemplate:
             + "\n"
         )
         if len(prims) > 1:
-            s1 += "\ndelta   : %.4f +\- %.4f" % self.delta()
-            s1 += "\nDelta   : %.4f +\- %.4f" % self.Delta()
+            s1 += "\ndelta   : %.4f +\\- %.4f" % self.delta()
+            s1 += "\nDelta   : %.4f +\\- %.4f" % self.Delta()
         return s0 + s1
 
     def prof_string(self, outputfile=None):
@@ -512,79 +543,83 @@ class LCTemplate:
                 f.write(s + "\n")
         return "\n".join(rstring)
 
-    def random(self, n, weights=None, return_partition=False, randomize_partition=True):
+    def random(self, n, weights=None, log10_ens=3, return_partition=False):
         """Return n pseudo-random variables drawn from the distribution
         given by this light curve template.
 
-        Uses a mulitinomial to divvy the n phases up amongs the various
-        components, which then each generate MC phases from their own
-        distributions.
+        For simplicity, if weights are not provided, unit weights are
+        assumed.  If energies are not provided, a vector of 1 GeV (3)
+        is assumed.
 
-        If a vector of weights is provided, the weight in interpreted
-        as the probability that a photon comes from the template.  A
-        random check is done according to this probability to
-        determine whether to draw the photon from the template or from
-        a uniform distribution.
+        Next, optionally using the weights and the energy vectors, the
+        probability for each realization to arise from the primitives or
+        the background is determined.  Those probabilities are used in a
+        multinomial to determine which component will generate each photon,
+        and finally using that partition the correct number of phases are
+        simulated from each component.
 
-        By default, the partition of light curve components is
-        randomized, i.e. there is no time or weight dependence.  If not
-        randomized, the partition have components sorted by their
-        their overall amplitude (decreasing).
+        Weights ("w") are interpreted as the probability to originate from
+        the source, which includes the DC component, so the total prob. to
+        be DC is (1-w) (background) + w*sum_prims (unpulsed).
         """
 
-        # compatibility with energy-dependent calls
-        if hasattr(n, "__len__"):
-            n = len(n)
+        n = int(round(n))
 
-        # edge case of uniform template
         if len(self.primitives) == 0:
             if return_partition:
                 return np.random.rand(n), [n]
             return np.random.rand(n)
 
-        n = int(round(n))
-        norms = self.norms()
-        norms = np.append(norms, [1 - sum(norms)])
-        rvals = np.empty(n)
-        partition = np.empty(n)  # record the index of each component
-        if weights is not None:
-            # perform a trial to see if each photon is from bg or template
+        # check weights
+        if weights is None:
+            weights = np.ones(n)
+        else:
             if len(weights) != n:
                 raise ValueError(
-                    "Provided weight vector does not provide a weight for each photon."
-                )
-            t = np.random.rand(n)
-            m = t <= weights
-            t_indices = np.arange(n)[m]  # indices to draw from templates (not bg)
-            n = m.sum()
-            rvals[~m] = np.random.rand(
-                len(m) - n
-            )  # assign uniform phases to the bg photons
-            partition[~m] = len(norms) - 1  # set partition to bg component (last)
+                    "Provided weight vector does not match requested n.")
+
+        # check energies
+        if hasattr(log10_ens,'__len__'):
+            if (len(log10_ens) != n):
+                raise ValueError(
+                    "Provided log10_ens vector does not match requested n.")
         else:
-            t_indices = np.arange(n)
+            log10_ens = np.full(n,log10_ens)
 
-        # TODO -- faster implementation for single component case
 
-        if randomize_partition:
-            t_indices = np.random.permutation(t_indices)
+        # first, calculate the energy dependent norm of each vector
+        norms = self.norms(log10_ens=log10_ens) # nnorm x nen array
+        N = norms.sum(axis=0)
+        nDC = weights*N
+        pDC = 1-nDC
+        partition_probs = np.append(norms/N*nDC,pDC[None,:],axis=0)
+        # now, draw a component for each bit of the partition
+        cpp = np.cumsum(partition_probs,axis=0)
+        assert(np.allclose(cpp[-1],1))
+        comps = np.full(n,len(self.primitives))
+        Q = np.random.rand(n)
+        for i in np.arange(len(self.primitives))[::-1]:
+            mask = Q < cpp[i]
+            comps[mask] = i
+        total = 0
+        rvals = np.empty(n)
+        rvals[:] = np.nan # TMP
 
-        # multinomial implementation -- draw from the template components
-        a = np.argsort(norms)[::-1]
-        boundaries = np.cumsum(norms[a])
-        components = np.searchsorted(boundaries, np.random.rand(n))
-        counter = 0
-        for mapped_comp, comp in zip(a, np.arange(len(norms))):
-            n = (components == comp).sum()
-            idx = t_indices[counter : counter + n]
-            if mapped_comp == len(norms) - 1:  # uniform
-                rvals[idx] = np.random.rand(n)
-            else:
-                rvals[idx] = self.primitives[mapped_comp].random(n)
-            partition[idx] = mapped_comp
-            counter += n
+        total = 0
+        for iprim,prim in enumerate(self.primitives):
+            mask = comps==iprim
+            total += mask.sum()
+            rvals[mask] = prim.random(mask.sum(),log10_ens=log10_ens[mask])
+
+        # DC component
+        mask = comps==len(self.primitives)
+        total += mask.sum()
+        rvals[mask] = np.random.rand(mask.sum())
+
+        assert(not np.any(np.isnan(rvals))) # TMP
+
         if return_partition:
-            return rvals, partition
+            return rvals, comps
         return rvals
 
     def swap_primitive(self, index, ptype=LCLorentzian):
@@ -593,69 +628,45 @@ class LCTemplate:
         self.primitives[index] = convert_primitive(self.primitives[index], ptype)
 
     def delete_primitive(self, index):
-        """[Convenience] -- return a new LCTemplate with the specified
-        LCPrimitive removed and renormalized."""
+        """ Return a new LCTemplate with the primitive at index removed.
+
+        The flux is renormalized to preserve the same pulsed ratio (in the
+        case of an energy-dependent template, at the pivot energy).
+        """
         norms, prims = self.norms, self.primitives
         if len(prims) == 1:
             raise ValueError("Template only has a single primitive.")
         if index < 0:
             index += len(prims)
-        nprims = [deepcopy(prims[i]) for i in range(len(prims)) if i != index]
-        nnorms = np.asarray([norms()[i] for i in range(len(prims)) if i != index])
-        norms_free = [norms.free[i] for i in range(len(prims)) if i != index]
-        lct = LCTemplate(nprims, nnorms * norms().sum() / nnorms.sum())
-        lct.norms.free[:] = norms_free
-        return lct
+        newprims = [deepcopy(p) for ip,p in enumerate(prims) if not index==ip]
+        newnorms = self.norms.delete_component(index)
+        return LCTemplate(nprims, newnorms)
 
     def add_primitive(self, prim, norm=0.1):
         """[Convenience] -- return a new LCTemplate with the specified
         LCPrimitive added and renormalized."""
         norms, prims = self.norms, self.primitives
-        nprims = [prim] + [deepcopy(prims[i]) for i in range(len(prims))]
-        nnorms = np.asarray([norm] + [norms()[i] for i in range(len(prims))])
-        norms_free = [True] + [norms.free[i] for i in range(len(prims))]
-        lct = LCTemplate(nprims, nnorms * norms().sum() / nnorms.sum())
-        lct.norms.free[:] = norms_free
-        return lct
+        nprims = [deepcopy(prims[i]) for i in range(len(prims))] + [prim]
+        nnorms = self.norms.add_component(norm)
+        return LCTemplate(nprims, nnorms)
 
-    def order_primitives(self, indices, zeropt=0, order_by_amplitude=False):
-        """Order the primitives specified by the indices by position.
-        x0 specifies an alternative zeropt.
+    def order_primitives(self, order=0):
+        """ Re-order components in place.
 
-        If specified, the peaks will instead be ordered by descending
-        maximum amplitude."""
-
-        def dist(index):
-            p = self.primitives[index]
-            if order_by_amplitude:
-                a = self.get_amplitudes()
-                return a.max() - a[index]
-            d = p.get_location() - zeropt
-            return d if (d > 0) else d + 1
-
-        if not hasattr(indices, "__len__"):
-            raise TypeError("indices must specify a list or array of indices")
-        if len(indices) < 2:
-            print("Found fewer than 2 indices, returning.")
-            return
-        norms, prims = self.norms(), self.primitives
-        norms_free = self.norms.free.copy()
-        for i in indices:
-            x0 = dist(i)
-            x1 = x0
-            swapj = i
-            for j in indices[i + 1 :]:
-                dj = dist(j)
-                if dj < x1:
-                    x1 = dj
-                    swapj = j
-            if x1 < x0:
-                j = swapj
-                prims[i], prims[j] = prims[j], prims[i]
-                norms[i], norms[j] = norms[j], norms[i]
-                norms_free[i], norms_free[j] = norms_free[j], norms_free[i]
-        self.norms = NormAngles(norms)  # this may be fragile
-        self.norms.free[:] = norms_free
+        order == 0: order by ascending position
+        order == 1: order by descending maximum amplitude
+        order == 2: order by descending normalization
+        """
+        if order == 0:
+            indices = np.argsort([p.get_location() for p in self.primitives])
+        elif order == 1:
+            indices = np.argsort(self.get_amplitudes())[::-1]
+        elif order == 2:
+            indices = np.argsort(self.norms())[::-1]
+        else:
+            raise NotImplementedError('Specified order not supported.')
+        self.primitives = [self.primitives[i] for i in indices]
+        self.norms.reorder_components(indices)
 
     def get_fixed_energy_version(self, log10_en=3):
         return self
