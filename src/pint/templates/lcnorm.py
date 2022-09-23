@@ -227,8 +227,15 @@ class NormAngles:
         else:
             m = np.zeros((self.dim, self.dim,p.shape[1]), dtype=float)
         s2p = np.sin(2 * p)
+        # TODO -- sometimes this produces a divide by zero (particularly
+        # the /sin(p) part).  Is it better to catch this?  It still
+        # blows up formally in the limit
         cp = -s2p / np.cos(p) ** 2 # = -2*tan(p)
         sp = s2p / np.sin(p) ** 2  # =  2*cot(p)
+        #mask = cp != 0
+        #sp = cp.copy()
+        #sp[sp==0] = -1e-20
+        #sp = -1./sp
         # loop over normalizations
         for i in range(self.dim):
             for j in range(self.dim):
@@ -356,9 +363,9 @@ class NormAngles:
     def reorder_components(self, indices):
         if (len(indices) != self.dim):
             raise ValueError('New indices do not match component count.')
-        self.p = self._get_angles(self()[indices])
-        self.free = self.free[indices]
-        self.errors = self.errors[indices]
+        self.p[:] = self._get_angles(self()[indices])
+        self.free[:] = self.free[indices]
+        self.errors[:] = self.errors[indices]
         # TODO -- I don't think just swapping the order will work for
         # slopes, probably need to use the gradient to convert!
         if self.is_energy_dependent():

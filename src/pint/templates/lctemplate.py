@@ -12,7 +12,8 @@ from copy import deepcopy
 import numpy as np
 
 from .lcnorm import NormAngles
-from .lcprimitives import *
+from .lcenorm import ENormAngles
+from .lceprimitives import *
 
 log = logging.getLogger(__name__)
 
@@ -39,7 +40,6 @@ class LCTemplate:
             self.norms = norms
         else:
             self.norms = NormAngles(norms)
-        self._all = primitives + [self.norms]
         self._sanity_checks()
         self._cache = defaultdict(None)
         self._cache_dirty = defaultdict(lambda: True)
@@ -71,15 +71,29 @@ class LCTemplate:
             raise ValueError("Must provide a normalization for each component.")
 
     def is_energy_dependent(self):
-        return False
+        c1 = np.any([p.is_energy_dependent() for p in self.primitives])
+        return c1 or self.norms.is_energy_dependent()
 
     def has_bridge(self):
         return False
 
     def __getitem__(self, index):
-        return self._all[index]
+        if index < 0:
+            index += len(self.primitives)+1
+        if index == len(self.primitives):
+            return self.norms
+        return self.primitives[index]
+
+    def __setitem__(self, index, value):
+        if index < 0:
+            index += len(self.primitives)+1
+        if index == len(self.primitives):
+            self.norms = value
+        else:
+            self.primitives[index] = value
 
     def __len__(self):
+        raise DeprecationWarning("I'd like to see if this is used.")
         return len(self.primitives)
 
     def copy(self):
@@ -401,7 +415,11 @@ class LCTemplate:
     def approx_derivative(self, phases, log10_ens=None, order=1, eps=1e-7):
         return approx_derivative(self, phases, log10_ens=log10_ens, order=order, eps=eps)
 
-    def check_gradient(self, atol=1e-7, rtol=1e-5, quiet=False):
+    def check_gradient(self, atol=1e-7, rtol=1e-5, quiet=False, seed=None):
+        if seed is not None:
+            # essentially set a known good state of the RNG to avoid any
+            # numerical issues interfering with the test
+            np.random.seed(seed)
         return check_gradient(self, atol=atol, rtol=rtol, quiet=quiet)
 
     def check_derivative(self, atol=1e-7, rtol=1e-5, order=1, eps=1e-7, quiet=False):
@@ -627,7 +645,7 @@ class LCTemplate:
         that match the old one as closely as possible."""
         self.primitives[index] = convert_primitive(self.primitives[index], ptype)
 
-    def delete_primitive(self, index):
+    def delete_primitive(self, index, inplace=False):
         """ Return a new LCTemplate with the primitive at index removed.
 
         The flux is renormalized to preserve the same pulsed ratio (in the
@@ -640,15 +658,23 @@ class LCTemplate:
             index += len(prims)
         newprims = [deepcopy(p) for ip,p in enumerate(prims) if not index==ip]
         newnorms = self.norms.delete_component(index)
-        return LCTemplate(nprims, newnorms)
+        if inplace:
+            self.primitives = newprims
+            self.norms = newnorms
+        else:
+            return LCTemplate(newprims, newnorms)
 
-    def add_primitive(self, prim, norm=0.1):
+    def add_primitive(self, prim, norm=0.1, inplace=False):
         """[Convenience] -- return a new LCTemplate with the specified
         LCPrimitive added and renormalized."""
         norms, prims = self.norms, self.primitives
         nprims = [deepcopy(prims[i]) for i in range(len(prims))] + [prim]
         nnorms = self.norms.add_component(norm)
-        return LCTemplate(nprims, nnorms)
+        if inplace:
+            self.norms = nnorms
+            self.primitives = nprims
+        else:
+            return LCTemplate(nprims, nnorms)
 
     def order_primitives(self, order=0):
         """ Re-order components in place.
@@ -670,6 +696,25 @@ class LCTemplate:
 
     def get_fixed_energy_version(self, log10_en=3):
         return self
+
+    def add_energy_dependence(self,index,slope_free=True):
+        comp = self[index]
+        if comp.is_energy_dependent():
+            return
+        if comp.name=='NormAngles':
+            # normalization
+            newcomp = ENormAngles(self.norms())
+        else:
+            # primitive
+            if comp.name == 'Gaussian':
+                constructor = LCEGaussian
+            else:
+                raise NotImplementedError('%s not supported.'%comp.name)
+            newcomp = constructor(p=comp.p)
+            newcomp.free[:] = comp.free
+        if not slope_free:
+            newcomp.slope_free[:] = False
+        self[index] = newcomp
 
     def get_eval_string(self):
         """Return a string that can be "eval"ed to make a cloned set of

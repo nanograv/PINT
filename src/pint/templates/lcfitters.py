@@ -632,6 +632,7 @@ class UnweightedLCFitter:
         axes.set_ylabel("Normalized Profile")
         axes.set_xlabel("Phase")
         axes.grid(True)
+        return bg_level
 
     def plot_ebands(self, log10_ebands=[2,2+2.5/3,2+5.0/3,4.5], fignum=2,
             plot_zoom=True,equalize_y=False,**plot_kwargs):
@@ -657,8 +658,8 @@ class UnweightedLCFitter:
             if plot_zoom:
                 axzoom = pl.subplot(nband,1+toggle,i*(1+toggle)+2)
                 plot_kwargs['axes'] = axzoom
-                self.plot(**plot_kwargs)
-                axzoom.axis([0,1,0,1])
+                bg_level = self.plot(**plot_kwargs)
+                axzoom.axis([0,1,bg_level-0.2,bg_level+1.0])
                 axzoom.set_ylabel('')
                 axzoom.tick_params(labelleft=False,labelright=True,
                         labelbottom=i==(nband-1))

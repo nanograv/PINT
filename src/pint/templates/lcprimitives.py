@@ -190,7 +190,7 @@ class LCPrimitive:
             self.bounds = self._default_bounds()  # default
         self.errors = np.zeros_like(self.p)
         self.free = np.asarray([True] * len(self.p))
-        self.__dict__.update(kwargs)
+        self.parse_kwargs(kwargs)
         self._asarrays()
         (
             self.gauss_prior_loc,
@@ -198,6 +198,14 @@ class LCPrimitive:
             self.gauss_prior_enable,
         ) = self._default_priors()
         self.shift_mode = False
+
+    def parse_kwargs(self,kwargs):
+        # acceptable keyword arguments, can be overriden by children
+        recognized_kwargs = ['p']
+        for key in kwargs.keys():
+            if key not in recognized_kwargs:
+                raise ValueError('kwarg %s not recognized'%key)
+        self.__dict__.update(kwargs)
 
     def __call__(self, phases):
         raise NotImplementedError(
@@ -361,10 +369,6 @@ class LCPrimitive:
         if error:
             return np.asarray([self.p[int(right)], self.errors[int(right)]]) * scale
         return self.p[int(right)] * scale
-
-    def get_gradient(self, phases, log10_ens=3):
-        raise DeprecationWarning()
-        return self.gradient(phases, log10_ens, free=True)
 
     def gradient(self, phases, log10_ens=3, free=False):
         """Return the gradient of the primitives wrt the parameters."""
