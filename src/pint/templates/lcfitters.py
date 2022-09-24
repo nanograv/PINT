@@ -546,6 +546,7 @@ class UnweightedLCFitter:
         comp_color=None,
         plot_eavg=True,
         log10_erange=None,
+        optimize_display_phase=True,
     ):
         import pylab as pl
         if comp_color is None:
@@ -557,6 +558,11 @@ class UnweightedLCFitter:
 
         if template is None:
             template = self.template
+
+        if optimize_display_phase:
+            template = template.copy()
+            dphi = template.get_display_point(do_rotate=True)
+            phases = np.mod(phases+dphi,1)
 
         plot_log_en = 3
         if (log10_erange is not None) and (log10_ens is not None):
@@ -634,15 +640,18 @@ class UnweightedLCFitter:
         axes.grid(True)
         return bg_level
 
-    def plot_ebands(self, log10_ebands=[2,2+2.5/3,2+5.0/3,4.5], fignum=2,
+    def plot_ebands(self, nband=4, fignum=2,
             plot_zoom=True,equalize_y=False,**plot_kwargs):
 
         import pylab as pl
-        pl.close(fignum); pl.figure(fignum,(4+3*int(plot_zoom),9))
+        pl.close(fignum)
+        fig = pl.figure(fignum,(4.5+4.5*int(plot_zoom),7))
         if 'fignum' in plot_kwargs:
             plot_kwargs.pop('fignum')
 
-        nband = len(log10_ebands)-1
+        log10_ebands = self.get_ebands(nband)
+        if len(log10_ebands)==0:
+            raise ValueError('No energy information available.')
         toggle = int(plot_zoom)
         axes = []
         axzooms = []
@@ -655,6 +664,7 @@ class UnweightedLCFitter:
             plot_kwargs['axes'] = ax
             self.plot(**plot_kwargs)
             maxy = max(ax.axis()[-1],maxy)
+            ax.text(0.03,ax.axis()[-1]*0.88,'%.2f--%.2f GeV'%(10**lo*1e-3,10**hi*1e-3))
             if plot_zoom:
                 axzoom = pl.subplot(nband,1+toggle,i*(1+toggle)+2)
                 plot_kwargs['axes'] = axzoom
@@ -664,17 +674,31 @@ class UnweightedLCFitter:
                 axzoom.tick_params(labelleft=False,labelright=True,
                         labelbottom=i==(nband-1))
                 if i < (nband-1):
-                    axzoom.set_xlabel('')
+                    pass
+                else:
+                    axzoom.set_xticks([0.2,0.4,0.6,0.8,1.0])
+                axzoom.set_xlabel('')
+                axzoom.set_ylabel('')
                 axzooms.append(axzoom)
             if i < (nband-1):
                 ax.tick_params(labelbottom=False)
-                ax.set_xlabel('')
+            ax.set_xlabel('')
+            ax.set_ylabel('')
         if equalize_y:
             for ax in axes:
                 old_axis = list(ax.axis())
                 old_axis[-1] = maxy
                 ax.axis(tuple(old_axis))
 
+        try:
+            fig.supylabel('Normalized Profile')
+            fig.supxlabel('Phase')
+        except AttributeError:
+            axes[-1].set_xlabel('Phase')
+            if len(axzooms) > 0:
+                axzooms[-1].set_xlabel('Phase')
+            for ax in axes:
+                ax.set_ylabel('Normalized Profile')
         pl.tight_layout()
         pl.subplots_adjust(hspace=0)
         pl.subplots_adjust(wspace=0)
@@ -692,8 +716,13 @@ class UnweightedLCFitter:
         logl = np.cumsum(logl)
         logl *= 1./logl[-1]
         indices = np.searchsorted(logl,np.arange(nband)[1:]/nband)
-        return np.concatenate([[2],self.log10_ens[a][indices],[4.5]])
-
+        indices = np.append(0,indices)
+        indices = np.append(indices,-1)
+        log10_ens = self.log10_ens[a][indices]
+        # round boundaries down/up to nearest 0.1
+        log10_ens[0] = np.floor(log10_ens[0]*10)*0.1
+        log10_ens[-1] = np.ceil(log10_ens[-1]*10)*0.1
+        return log10_ens
 
     def plot_residuals(self, nbins=50, fignum=3):
         import pylab as pl

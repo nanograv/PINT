@@ -10,6 +10,11 @@ from pint.templates import lcfitters, lcprimitives, lceprimitives, lcnorm, lceno
 def gauss(x, x0, s):
     return 1.0 / s / (2 * np.pi) ** 0.5 * np.exp(-0.5 * (x - x0) ** 2 / s**2)
 
+def default_template():
+    return lctemplate.get_gauss2(
+        pulse_frac=0.6, x1=0.5, x2=0.48, ratio=0.25 / 0.35, 
+        width1=0.01, width2=0.01
+    )
 
 def test_prim_gauss_definition():
     """Make sure objects adequately implement mathematical intent."""
@@ -50,10 +55,7 @@ def test_template_basic_functionality():
         lcg = lcprimitives.LCGaussian(bogus=3)
 
     # a template should *always* have total normalization set to 1
-    lct = lctemplate.get_gauss2(
-        pulse_frac=0.6, x1=0.5, x2=0.48, ratio=0.25 / 0.35, width1=0.01, width2=0.01
-    )
-
+    lct = default_template() # (x1=0.5,x2=0.48)
     assert(lct.num_parameters()==6)
     lct.freeze_parameters()
     assert(lct.num_parameters()==0)
@@ -85,11 +87,32 @@ def test_template_basic_functionality():
     )
     assert(abs(lct(0.49) - expected_val) < 1e-6)
 
-    # check cdf
+    # check rotation
+    lct.rotate(-0.1)
+    assert(lct.primitives[0].get_location()==0.4)
+    assert(lct.primitives[1].get_location()==0.38)
+
+    ## the optimal display point should roughly undo the above rotation
+    assert(lct.get_display_point()==0.2)
+
+    # check integration / cdf
+    lct = lctemplate.get_gauss2()
+    assert((lct.get_display_point()-0.15)<1e-10)
+    assert(np.all(lct.integrate([0.2,0.3],[0.2,0.3])==0))
+    assert(np.abs(lct.integrate(0.8,1.2)-(lct.integrate(0,0.2)+lct.integrate(0.8,1.0)))<1e-10)
+    assert(np.abs(lct.integrate(0.2,0.8)+lct.integrate(0.8,0.2))<1e-10)
+    assert(np.abs(lct.integrate(0.2,0.8)-0.4)<1e-10)
+    assert(np.abs(lct.integrate(0.0,0.2)-0.6)<1e-10)
+    assert(np.all(np.abs(lct.integrate([0.2,0.0],[0.8,0.2])-np.asarray([0.4,0.6]))<1e-10))
     assert(lct.cdf(1)==1)
     assert(lct.cdf(0)==0)
 
+
+
+def test_component_manipulation():
+
     # test sorting components
+    lct = default_template()
     lct.order_primitives(order=0) # sort by position, should swap them
     assert(lct[0].get_location()==0.48)
     assert(lct[1].get_location()==0.50)
@@ -118,6 +141,7 @@ def test_template_basic_functionality():
     assert(lct.primitives[1].get_location()==0.50)
     assert(abs(lct.norms()[0]-0.35)<1e-10)
     assert(abs(lct.norms()[1]-0.25)<1e-10)
+
 
     # test adding components
     # intention is that new component is "norm" of the pulsed flux, so it
@@ -151,11 +175,14 @@ def test_energy_dependence():
     lcg = lcprimitives.LCGaussian(p=[0.03,0.5])
     lcg2 = lcprimitives.LCGaussian(p=[0.04,0.8])
     lct0 = lctemplate.LCTemplate([lcg,lcg2],[0.4,0.35])
-    lct0.add_energy_dependence(0,slope_free=True)
+    lct0.add_energy_dependence(0,slope_free=False)
+    assert(not np.any(lct0.primitives[0].slope_free))
+    lct0[0].slope_free[:] = True
     lct0[0].slope[:] = [0.02,0.1]
-    lct0.add_energy_dependence(-1,slope_free=False)
+    lct0.add_energy_dependence(-1,slope_free=True)
+    assert(np.all(lct0.norms.slope_free))
     lct0[-1].slope[1] = 0.2
-    lct0[-1].slope_free[1] = True
+    lct0[-1].slope_free[0] = False
 
     lcg = lceprimitives.LCEGaussian(p=[0.03,0.5])
     lcg.slope[:] = [0.02,0.1]
@@ -190,9 +217,7 @@ def test_energy_dependence():
 def test_template_gradient():
     """ Verify analytic gradient computation with numerical evaluation."""
 
-    lct = lctemplate.get_gauss2(
-        pulse_frac=0.6, x1=0.5, x2=0.48, ratio=0.25 / 0.35, width1=0.01, width2=0.01
-    )
+    lct = default_template()
 
     # check that analytic gradient is equal to numerical gradient
     assert(lct.check_gradient(seed=0))
@@ -240,13 +265,6 @@ Delta   : 0.0200 +\- 0.0000
 """
 
     assert str(lct).strip() == expected_val.strip()
-
-
-def test_template_simulation():
-    # TODO -- add energy dependence
-    lct = lctemplate.get_gauss2()
-    x = lct.random(100)
-    assert (len(x) == 100) and (np.min(x) >= 0) and (np.max(x) < 1)
 
 
 def test_simple_fit_unbinned():

@@ -294,16 +294,34 @@ class LCTemplate:
         return self.norm() <= 1
 
     def integrate(self, phi1, phi2, log10_ens=3, suppress_bg=False):
-        norms = self.norms(log10_ens)
+        """ Integrate profile from phi1 to phi2.
+
+        NB that because of the phase modulo ambiguity, it is not uniquely
+        definite what the phi2 < phi1 case means:
+            integral(0.8,0.2) == -integral(0.2,0.8)
+            integral(0.8,1.2) == 1-integral(0.2,0.8)
+
+        To break the ambiguity, we support non-modulo phase here, so you
+        can just write integral(0.8,1.2) if that's what you mean.
+        """
+        phi1 = np.asarray(phi1)
+        phi2 = np.asarray(phi2)
+        if hasattr(log10_ens,'__len__'):
+            assert(len(log10_ens)==len(phi1))
+        try:
+            assert(len(phi1)==len(phi2))
+        except TypeError:
+            pass
+        norms = self.norms(log10_ens=log10_ens)
         t = norms.sum(axis=0)
         dphi = phi2 - phi1
-        rvals = np.zeros_like(t)
+        rvals = np.zeros(phi1.shape,dtype=float)
         for n, prim in zip(norms, self.primitives):
-            rvals += n * prim.integrate(phi1, phi2, log10_ens)
-        rvals.sum(axis=0)
+            rvals += n * prim.integrate(phi1, phi2, log10_ens=log10_ens)
         if suppress_bg:
-            return rvals / t
-        return (1 - t) * dphi + rvals
+            return rvals * (1./t)
+        else:
+            return (1 - t) * dphi + rvals
 
     def cdf(self, x, log10_ens=3):
         return self.integrate(0, x, log10_ens, suppress_bg=False)
@@ -712,8 +730,7 @@ class LCTemplate:
                 raise NotImplementedError('%s not supported.'%comp.name)
             newcomp = constructor(p=comp.p)
             newcomp.free[:] = comp.free
-        if not slope_free:
-            newcomp.slope_free[:] = False
+        newcomp.slope_free[:] = slope_free
         self[index] = newcomp
 
     def get_eval_string(self):
@@ -763,17 +780,31 @@ class LCTemplate:
         rvals /= w[0].sum()
         return rvals
 
-    def align_peak(self, phi=0, dphi=0.001):
-        """Adjust such that template peak arrives within dphi of phi."""
+    def rotate(self, dphi):
+        """Adjust the template by dphi."""
         self.mark_cache_dirty()
-        nbin = int(1.0 / dphi) + 1
-        # This shifts the first primitive to peak at phase 0.0
-        # Could instead use tallest primitive or some other feature
-        shift = -1.0 * self.primitives[0].get_location()
-        log.info("Shifting profile peak by {0}".format(shift))
+        log.info(f"Shifting template by {dphi}.")
         for prim in self.primitives:
-            new_location = (prim.get_location() + shift) % 1
+            new_location = (prim.get_location() + dphi) % 1
             prim.set_location(new_location)
+
+    def get_display_point(self,do_rotate=False):
+        # TODO -- need to fix this to scan all the way around, either
+        # from -0.5 to 0 or from 0.5 to 1.0, whichever -- see J0102
+        """ Return phase shift which optimizes the display of the profile.
+
+        This is determined by finding the 60% window which contains the
+        most flux and returning the left edge.  Rotating the profile such
+        that this edge is at phi=0.20 would then center this interval, so
+        the resulting phase shift would do that.
+        """
+        N = 50
+        dom = np.linspace(0,1,2*N+1)[:-1]
+        cod = self.integrate(dom,dom+0.6)
+        dphi = 0.20-dom[np.argmax(cod)]
+        if do_rotate:
+            self.rotate(dphi)
+        return dphi
 
     def write_profile(self, fname, nbin, integral=False, suppress_bg=False):
         """Write out a two-column tabular profile to file fname.
