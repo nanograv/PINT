@@ -13,6 +13,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Fixed
 - global clock files now emit a warning instead of an exception if expired and the download fails
 - dmxparse outputs to dmxparse.out if save=True
+- Split the computation of correlated noise basis matrix and weights into two functions.
 - Fixed bug in combining design matrices
 
 ## [0.9.1] 2022-08-12
