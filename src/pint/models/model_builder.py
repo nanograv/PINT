@@ -593,6 +593,7 @@ def get_model_and_toas(
     planets=None,
     usepickle=False,
     tdb_method="default",
+    include_pn=True,
     picklefilename=None,
     allow_name_mixing=False,
     limits="warn",
@@ -621,6 +622,8 @@ def get_model_and_toas(
     tdb_method : str
         Which method to use for the clock correction to TDB. See
         :func:`pint.observatory.Observatory.get_TDBs` for details.
+    include_pn : bool, optional
+        Whether or not to read in the 'pn' column (``pulse_number``)
     picklefilename : str or None
         Filename to use for caching loaded file. Defaults to adding ``.pickle.gz`` to the
         filename of the timfile, if there is one and only one. If no filename is available,
@@ -640,6 +643,7 @@ def get_model_and_toas(
     mm = get_model(parfile, allow_name_mixing)
     tt = get_TOAs(
         timfile,
+        include_pn=include_pn,
         model=mm,
         ephem=ephem,
         include_bipm=include_bipm,

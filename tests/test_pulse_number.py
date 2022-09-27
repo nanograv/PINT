@@ -64,6 +64,12 @@ def test_pulse_number(model, toas):
     assert "pulse_number" in toas.table.colnames
 
 
+def test_remove_pulse_number(model, toas):
+    assert "pulse_number" in toas.table.colnames
+    toas.remove_pulse_numbers()
+    assert "pulse_number" not in toas.table.colnames
+
+
 @pytest.mark.parametrize("obs", ["GBT", "AO", "@", "coe"])
 def test_make_fake_toas(obs, model):
     t = make_fake_toas_uniform(56000, 59000, 10, model, obs=obs)
