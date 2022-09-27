@@ -45,36 +45,6 @@ def dataJ0613m0200_efac():
 
 
 @pytest.fixture()
-def dataJ0613m0200_rednoise0():
-    parfile = examplefile("J0613-sim.par")
-    timfile = examplefile("J0613-sim.tim")
-    model, toas = get_model_and_toas(parfile, timfile)
-
-    parfile = str(model)
-    parfile += "TNREDAMP -20 1 1\n"  # A negligibly small amplitude
-    parfile += "TNREDGAM -2 1 1"
-    model = get_model(io.StringIO(parfile))
-    set_dummy_priors(model)
-
-    return model, toas
-
-
-@pytest.fixture()
-def dataJ0613m0200_rednoise1():
-    parfile = examplefile("J0613-sim.par")
-    timfile = examplefile("J0613-sim.tim")
-    model, toas = get_model_and_toas(parfile, timfile)
-
-    parfile = str(model)
-    parfile += "TNREDAMP -11 1 1\n"  # A non-negligible amplitude
-    parfile += "TNREDGAM -2 1 1"
-    model = get_model(io.StringIO(parfile))
-    set_dummy_priors(model)
-
-    return model, toas
-
-
-@pytest.fixture()
 def dataJ1713p0747_small():
     parfile = datadir / "J1713+0747_small.gls.par"
     timfile = datadir / "J1713+0747_small.tim"
@@ -123,50 +93,6 @@ def test_lnlikelihood_unit_efac(dataJ0613m0200, dataJ0613m0200_efac):
     lnl2 = bt.lnlikelihood(maxlike_params)
 
     assert np.isclose(lnl1, lnl2)
-
-
-def test_lnlikelihood_zero_rednoise(
-    dataJ0613m0200, dataJ0613m0200_rednoise0, dataJ0613m0200_rednoise1
-):
-    """Log likelihood with no red noise should be equal to that with RNAMP=0.
-    We use TNREDAMP=-20 here instead to avoid singularities.
-    """
-    model, toas = dataJ0613m0200
-    bt = BayesianTiming(model, toas)
-    maxlike_params = np.array([param.value for param in bt.params], dtype=float)
-    lnl1 = bt.lnlikelihood(maxlike_params)
-
-    model, toas = dataJ0613m0200_rednoise0
-    bt = BayesianTiming(model, toas)
-    maxlike_params = np.array([param.value for param in bt.params], dtype=float)
-    lnl2 = bt.lnlikelihood(maxlike_params)
-
-    model, toas = dataJ0613m0200_rednoise1
-    bt = BayesianTiming(model, toas)
-    maxlike_params = np.array([param.value for param in bt.params], dtype=float)
-    lnl3 = bt.lnlikelihood(maxlike_params)
-
-    assert np.isclose(lnl1, lnl2) and not np.isclose(lnl1, lnl3)
-
-
-def test_covariance_matrix(dataJ1713p0747_small):
-    """The inverse and logdet computed using Woodbury identity should be
-    the same as the brute force inverse and logdet."""
-    model, toas = dataJ1713p0747_small
-
-    bt = BayesianTiming(model, toas)
-
-    C1 = model.toa_covariance_matrix(toas)
-    C1inv = np.linalg.inv(C1)
-    signdetC1, logdetC1 = np.linalg.slogdet(C1)
-
-    C2inv, logdetC2 = bt._get_correlation_matrix_inverse_and_logdet()
-
-    assert (
-        bt.likelihood_method == "gls"
-        and np.allclose(C1inv, C2inv)
-        and np.isclose(logdetC1, logdetC2)
-    )
 
 
 def test_bayesian_timing_funcs(dataJ1713p0747_small):
