@@ -385,7 +385,7 @@ class TimingModel:
                     $ tempo2 -gr transform J1234+6789_tcb.par J1234+6789_tdb.par tdb 
                 """
             else:
-                error_message = f"PINT only supports 'UNITS TDB'. The given timescale {self.UNITS.value} is invalid."
+                error_message = f"PINT only supports 'UNITS TDB'. The given timescale '{self.UNITS.value}' is invalid."
             raise ValueError(error_message)
         if not self.START.frozen:
             warn("START cannot be unfrozen...setting START.frozen to True")
