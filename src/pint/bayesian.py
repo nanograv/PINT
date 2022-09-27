@@ -78,18 +78,6 @@ class BayesianTiming:
 
         self.track_mode = "use_pulse_numbers" if use_pulse_numbers else "nearest"
 
-        if self.likelihood_method == "gls":
-            self.correlated_noise_components = [
-                component
-                for component in model.NoiseComponent_list
-                if component.introduces_correlated_errors
-            ]
-
-            self.correlated_noise_basis_matrix = (
-                self._get_correlated_noise_basis_matrix()
-            )
-            self.recompute_correlated_noise_basis_matrix = False
-
     def _validate_priors(self):
         for param in self.params:
             if not hasattr(param, "prior") or param.prior is None:
