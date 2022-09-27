@@ -1509,10 +1509,10 @@ class PlkWidget(tk.Frame):
                 if (
                     self.psr.stashed is None
                 ):  # if there is nothing in the stash, do nothing
-                    log.debug("Nothing in stash.")
+                    log.warning("Nothing in stash.")
                     return None
                 # otherwise, pull all TOAs out of the stash and set it to None
-                log.debug(
+                log.warning(
                     f"Unstashing {len(self.psr.stashed)-len(self.psr.all_toas)} TOAs"
                 )
                 self.psr.all_toas = copy.deepcopy(self.psr.stashed)
@@ -1520,7 +1520,6 @@ class PlkWidget(tk.Frame):
                 self.psr.stashed = None
                 self.updateAllJumped()
                 self.psr.update_resids()
-
                 self.updatePlot(keepAxes=False)
 
             else:  # if TOAs are selected, add them to the stash
@@ -1537,16 +1536,12 @@ class PlkWidget(tk.Frame):
                             "Cannot stash jumped TOAs. Delete interfering jumps before stashing TOAs."
                         )
                         return None
-                    log.debug(f"Stashing {sum(self.selected)} TOAs")
+                    log.warning(f"Stashing {sum(self.selected)} TOAs")
                     self.psr.stashed = copy.deepcopy(self.psr.all_toas)
 
-                else:  # if the stash isn't empty, append selected TOAs to stash
-                    self.psr.stashed.table = vstack(
-                        [self.psr.stashed.table, self.psr.all_toas.table[self.selected]]
-                    )
-
-                    log.debug(
-                        f"Adding {sum(self.selected)} TOAs to stash (stash now contains {len(self.psr.stashed.table)} TOAs)"
+                else:  # if the stash isn't empty, remove selected from front-facing TOAs
+                    log.warning(
+                        f"Added {sum(self.selected)} TOAs to stash (stash now contains {len(self.psr.stashed.table)-len(self.psr.all_toas.table)+sum(self.selected)} TOAs)"
                     )
                 if self.psr.fitted and self.psr.use_pulse_numbers:
                     self.psr.all_toas.compute_pulse_numbers(self.psr.postfit_model)
