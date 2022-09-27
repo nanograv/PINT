@@ -7,6 +7,8 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## Unreleased
 ### Changed
 ### Added
+- Can ignore pulse_number column on TOA read or write (to help merging)
+- Can add in missing columns when merging unless told not to
 - Can initialize observatories with lat/lon/altitude
 - Can output observatories as JSON
 - Can extract single TOAs as length=1 table
