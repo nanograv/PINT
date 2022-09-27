@@ -1479,13 +1479,6 @@ class PlkWidget(tk.Frame):
             # jump the selected points, or unjump if already jumped
             jump_name = self.psr.add_jump(self.selected)
             self.updateJumped(jump_name)
-            if type(jump_name) == list:
-                print(
-                    f"Existing jump removed for {np.array(jump_name).astype(int).sum()} toas"
-                )
-            else:
-                print(f"New jump {jump_name} for {self.selected.sum()} toas.")
-            # undo the selection, since that is almost certainly what we want
             self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
             self.selected = np.zeros(self.psr.selected_toas.ntoas, dtype=bool)
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
