@@ -377,7 +377,16 @@ class TimingModel:
             warn("PINT only supports 'T2CMETHOD IAU2000B'")
             self.T2CMETHOD.value = "IAU2000B"
         if self.UNITS.value not in [None, "TDB"]:
-            raise ValueError("PINT only supports 'UNITS TDB'")
+            if self.UNITS.value == "TCB":
+                error_message = """The TCB timescale is not supported by PINT. (PINT only supports 'UNITS TDB'.)
+                See https://nanograv-pint.readthedocs.io/en/latest/explanation.html#time-scales for an explanation
+                on different timescales. The par file can be converted from TCB to TDB using the `transform`
+                plugin of TEMPO2 like so:
+                    $ tempo2 -gr transform J1234+6789_tcb.par J1234+6789_tdb.par tdb 
+                """
+            else:
+                error_message = "PINT only supports 'UNITS TDB'."
+            raise ValueError(error_message)
         if not self.START.frozen:
             warn("START cannot be unfrozen...setting START.frozen to True")
             self.START.frozen = True
