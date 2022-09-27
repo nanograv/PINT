@@ -424,7 +424,9 @@ class Pulsar:
                 self.prefit_model.delete_not_all_jump_toas(
                     self.all_toas.table["flags"][jumped_selected], num
                 )
-                log.info(f"Removing existing jump JUMP{str(num)} from {jumped_selected.astype(int).sum()} TOAs")
+                log.info(
+                    f"Removing existing jump JUMP{str(num)} from {jumped_selected.astype(int).sum()} TOAs"
+                )
                 return list(jumped_selected)
         # if here, then doesn't match anything
         # add jump flags to selected TOAs at their perspective indices in the TOA tables
