@@ -115,7 +115,10 @@ class BayesianTiming:
             if not correlated_errors_present:
                 return "wls"
             else:
-                return "gls"
+                raise NotImplementedError(
+                    "GLS likelihood for correlated noise is not yet implemented."
+                )
+                # return "gls"
 
     def lnprior(self, params):
         """Basic implementation of a factorized log prior.
@@ -174,7 +177,9 @@ class BayesianTiming:
         if self.likelihood_method == "wls":
             return self._wls_lnlikelihood(params)
         elif self.likelihood_method == "gls":
-            return self._gls_lnlikelihood(params)
+            raise NotImplementedError(
+                "GLS likelihood for correlated noise is not yet implemented."
+            )
         else:
             raise ValueError(f"Unknown likelihood method '{self.likelihood_method}'.")
 
@@ -211,85 +216,3 @@ class BayesianTiming:
         chi2 = res.calc_chi2()
         sigmas = self.model.scaled_toa_uncertainty(self.toas).si.value
         return -chi2 / 2 - np.sum(np.log(sigmas))
-
-    def _gls_lnlikelihood(self, params):
-        """Implementation of log-likelihood for correlated noise. `gls' stands for
-        generalized lease squares.
-
-        Args:
-            params (array-like): Parameters
-
-        Returns:
-            float: The value of the log-likelihood at params
-        """
-        params_dict = dict(zip(self.param_labels, params))
-        self.model.set_param_values(params_dict)
-        R = (
-            Residuals(self.toas, self.model, track_mode=self.track_mode)
-            .calc_time_resids()
-            .si.value
-        )
-        Cinv, logdetC = self._get_correlation_matrix_inverse_and_logdet()
-
-        gls_metric = np.dot(R, np.dot(Cinv, R))
-
-        return -0.5 * gls_metric - 0.5 * logdetC
-
-    def _get_correlated_noise_weights(self):
-        weight_vectors = [
-            component.get_weights(self.toas)
-            for component in self.correlated_noise_components
-        ]
-        return np.concatenate(weight_vectors)
-
-    def _get_correlated_noise_basis_matrix(self):
-        basis_matrices = [
-            component.get_basis(self.toas)
-            for component in self.correlated_noise_components
-        ]
-        return np.concatenate(basis_matrices, axis=1)
-
-    def _get_correlation_matrix_inverse_and_logdet(self):
-        """Compute the inverse and log-determinant of the correlation matrix using
-        the Woodbury identity. (See, e.g., van Haasteren & Vallisneri 2014)
-
-        C = N + F Φ F^T
-        C^-1 = N^-1 - N^-1 F (Φ^-1 + F^T N^-1 F)^-1 F^T N^-1
-        det[C] = det[N] det[Φ] det[Φ^-1 + F^T N^-1 F]
-
-        where
-            N is the white noise covariance matrix (Ntoa x Ntoa, diagonal),
-            F is the correlated noise basis matrix (Ntoa x Nbasis),
-            Φ is the correlated noise weight matrix (Nbasis x Nbasis, diagonal),
-            C is the full correlation matrix (Ntoa x Ntoa)
-
-        Returns: tuple containing C^-1 (Ntoa x Ntoa) and log[det[C]] (float).
-        """
-        N = self.model.scaled_toa_uncertainty(self.toas).si.value ** 2
-        F = (
-            self.correlated_noise_basis_matrix
-            if not self.recompute_correlated_noise_basis_matrix
-            else self._get_correlated_noise_basis_matrix()
-        )
-        Φ = self._get_correlated_noise_weights()
-
-        Ninv = np.diag(1 / N)
-        FT_Ninv = F.T / N
-        Ninv_F = FT_Ninv.T
-        Φinv = np.diag(1 / Φ)
-
-        A = Φinv + np.dot(FT_Ninv, F)
-
-        Acf = cho_factor(A)
-        Ainv_FT_Ninv = cho_solve(Acf, FT_Ninv)
-
-        Ninv_F_Ainv_FT_Ninv = np.dot(Ninv_F, Ainv_FT_Ninv)
-
-        Cinv = Ninv - Ninv_F_Ainv_FT_Ninv
-
-        logdetN = np.sum(np.log(N))
-        logdetΦ = np.sum(np.log(Φ))
-        logdetA = 2 * np.sum(np.log(np.diag(Acf[0])))
-        logdetC = logdetN + logdetΦ + logdetA
-
-        return Cinv, logdetC
