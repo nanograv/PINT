@@ -38,7 +38,7 @@ import re
 import sys
 import textwrap
 from collections import OrderedDict
-from contextlib import contextmanager
+from contextlib import contextmanager, ExitStack
 from copy import deepcopy
 from io import StringIO
 from pathlib import Path
@@ -52,6 +52,7 @@ import numpy as np
 import scipy.optimize.zeros as zeros
 from loguru import logger as log
 from scipy.special import fdtrc
+from astropy.utils.iers import IERS_Auto
 
 import pint
 import pint.pulsar_ecliptic
@@ -1130,7 +1131,7 @@ def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
 def ELL1_check(
     A1: u.cm, E: u.dimensionless_unscaled, TRES: u.us, NTOA: int, outstring=True
 ):
-    """Check for validity of assumptions in ELL1 binary model
+    r"""Check for validity of assumptions in ELL1 binary model
 
     Checks whether the assumptions that allow ELL1 to be safely used are
     satisfied. To work properly, we should have:
@@ -1687,3 +1688,68 @@ def compute_hash(filename):
         while block := f.read(blocks * h.block_size):
             h.update(block)
     return h.digest()
+
+
+def preload_cache(extra_ephemerides=None):
+    """Ensure that all files PINT needs are in the Astropy cache.
+
+    This requests all clock corrections in the global repository, a list of
+    standard Solar System ephemerides, and up-to-date IERS tables. Once
+    complete, PINT should be able to function without an Internet connection.
+
+    Note that you may need to set some Astropy configuration options to prevent
+    Astropy from requesting new IERS data after a month.
+
+    For more information see http://docs.astropy.org/en/stable/utils/data.html#using-astropy-with-limited-or-no-internet-access
+    """
+    from pint.observatory.global_clock_corrections import update_all
+    from pint.solar_system_ephemerides import load_kernel
+
+    update_all()
+    IERS_Auto.open()
+    ephemerides = [
+        "de200",
+        "de405",
+        "de421",
+        "de430",
+        "de430t",
+        "de432s",
+        "de434",
+        "de436",
+        "de436t",
+        "de440",
+        "de440s",
+    ]
+    if extra_ephemerides is not None:
+        ephemerides.extend(extra_ephemerides)
+    for e in ephemerides:
+        load_kernel(e)
+
+
+def set_no_internet(mode="warn"):
+    """Set Astropy and PINT to run without Internet access.
+
+    The sets up a number of Astropy configuration options. If you want to achieve
+    this effect without having to add this line to your scripts, you can create
+    an Astropy config file and edit it to contain these same options. See
+    https://docs.astropy.org/en/stable/config/index.html#astropy-config
+    for details of how to do this.
+
+    Parameters
+    ----------
+    mode : 'warn' or 'ignore'
+        What to do when files appear to be out of date
+    """
+    import astropy.utils.data
+    import astropy.utils.iers
+
+    if hasattr(astropy.utils.data.conf, "allow_internet"):
+        astropy.utils.data.conf.allow_internet = False
+    if hasattr(astropy.utils.iers.conf, "auto_download"):
+        astropy.utils.iers.conf.auto_download = False
+    else:
+        astropy.utils.iers.conf.remote_timeout = 0
+    if hasattr(astropy.utils.iers.conf, "iers_degraded_accuracy"):
+        astropy.utils.iers.conf.iers_degraded_accuracy = "warn"
+    else:
+        astropy.utils.iers.conf.auto_max_age = None
