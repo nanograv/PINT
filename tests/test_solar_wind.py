@@ -74,15 +74,13 @@ def test_solar_wind_generalmodel():
 def test_solar_wind_generalmodel_deriv():
     # default model
     model = get_model(StringIO("\n".join([par, "NE_SW 1"])))
-    # model with general power-law index
-    model2 = get_model(StringIO("\n".join([par, "NE_SWP 1"])))
+    # model with general power-law index but the default is p==2 (same as SWM==0)
+    model2 = get_model(StringIO("\n".join([par, "NE_SW 1\nSWM 1"])))
     toas = make_fake_toas_uniform(54000, 54000 + year, 13, model=model, obs="gbt")
 
     # these can differ by up to 15%
     assert np.allclose(
-        model2.components["SphericalSolarWindDispersion"]
-        .d_dm_d_ne_sw(toas, "NE_SWP")
-        .to(u.cm),
+        model2.components["SolarWindDispersion"].d_dm_d_ne_sw(toas, "NE_SW").to(u.cm),
         model.components["SolarWindDispersion"].d_dm_d_ne_sw(toas, "NE_SW").to(u.cm),
         rtol=0.2,
     )
