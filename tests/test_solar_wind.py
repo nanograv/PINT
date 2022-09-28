@@ -80,3 +80,17 @@ def test_solar_wind_generalmodel_deriv():
         model2.components["SolarWindDispersion"].d_dm_d_ne_sw(toas, "NE_SW").to(u.cm),
         model.components["SolarWindDispersion"].d_dm_d_ne_sw(toas, "NE_SW").to(u.cm),
     )
+
+
+def test_solar_wind_swm2():
+    # should fail for SWM != 0 or 1
+    model = get_model(StringIO("\n".join([par, "NE_SW 1\nSWM 2"])))
+    with pytest.raises(NotImplementedError):
+        toas = make_fake_toas_uniform(54000, 54000 + year, 13, model=model, obs="gbt")
+
+
+def test_solar_wind_generalmodel_p1():
+    # model with general power-law index
+    model = get_model(StringIO("\n".join([par, "NE_SW 1\nSWM 1\nSWP 1"])))
+    with pytest.raises(NotImplementedError):
+        toas = make_fake_toas_uniform(54000, 54000 + year, 13, model=model, obs="gbt")
