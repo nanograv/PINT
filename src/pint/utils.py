@@ -47,6 +47,7 @@ from warnings import warn
 import astropy.constants as const
 import astropy.coordinates as coords
 import astropy.coordinates.angles as angles
+from astropy.time import Time
 import astropy.units as u
 import numpy as np
 import scipy.optimize.zeros as zeros
@@ -89,6 +90,8 @@ __all__ = [
     "PINTPrecisionError",
     "check_longdouble_precision",
     "require_longdouble_precision",
+    "get_conjunction",
+    "divide_times",
 ]
 
 COLOR_NAMES = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
@@ -1687,3 +1690,99 @@ def compute_hash(filename):
         while block := f.read(blocks * h.block_size):
             h.update(block)
     return h.digest()
+
+
+def get_conjunction(coord, t0, precision="low", ecl="IERS2010"):
+    """
+    Find first time of Solar conjuction after t0
+
+    Offers a low-precision version (based on analytic expression of Solar longitude)
+    Or a higher-precision version (based on interpolating :func:`astropy.coordinates.get_sun`)
+
+    Parameters
+    ----------
+    coord : astropy.coordinates.SkyCoord
+    t0 : astropy.time.Time
+    precision : str, optional
+        "low" or "high" precision
+    ecl : str, optional
+        Obliquity for PulsarEcliptic coordinates
+
+    Returns
+    -------
+    astropy.time.Time
+    """
+    assert precision.lower() in ["low", "high"]
+
+    coord = coord.transform_to(pint.pulsar_ecliptic.PulsarEcliptic(ecl=ecl))
+
+    # low precision version
+    # use analytic form for Sun's ecliptic longitude
+    # and interpolate
+    tt = t0 + np.linspace(0, 365) * u.d
+    # Allen's Astrophysical Quantities
+    # Low precision solar coordinates (27.4.1)
+    # number of days since J2000
+    n = tt.jd - 2451545
+    # mean longitude of Sun, corrected for abberation
+    L = 280.460 * u.deg + 0.9854674 * u.deg * n
+    # Mean anomaly
+    g = 357.528 * u.deg + 0.9856003 * u.deg * n
+    # Ecliptic longitude
+    longitude = L + 1.915 * u.deg * np.sin(g) + 0.20 * u.deg * np.sin(2 * g)
+    dlongitude = longitude - coord.lon
+    dlongitude -= (dlongitude // (360 * u.deg)).max() * 360 * u.deg
+    conjunction = Time(np.interp(0, dlongitude.value, tt.mjd), format="mjd")
+    if precision.lower() == "low":
+        return conjunction
+    # do higher precision
+    # use astropy solar coordinates
+    # start with 10 days on either side of the low precision value
+    tt = conjunction + np.linspace(-10, 10) * u.d
+    elongation = coords.get_sun(tt).separation(coord)
+    # get min value and interpolate with a quadratic fit
+    j = np.where(elongation == elongation.min())[0][0]
+    x = tt.mjd[j - 3 : j + 4]
+    y = elongation.value[j - 3 : j + 4]
+    f = np.polyfit(x, y, 2)
+    conjunction = Time(-f[1] / 2 / f[0], format="mjd")
+
+    return conjunction
+
+
+def divide_times(t, t0, offset=0.5):
+    """
+    Divide input times into years relative to t0
+
+    Years are centered around the requested offset value
+
+    Parameters
+    ----------
+    t : astropy.time.Time
+    t0 : astropy.time.Time
+        Reference time
+    offset : float, optional
+        Offset value for division.  A value of 0.5 divides the results into intervals [-0.5,0.5].
+
+    Returns
+    -------
+    np.ndarray
+        Array of indices for division
+
+
+    Example
+    -------
+    Divide into years around each conjunction
+
+        >>> elongation = astropy.coordinates.get_sun(Time(t.get_mjds(), format="mjd")).separation(m.get_psr_coords())
+        >>> t0 = get_conjunction(m.get_psr_coords(), m.PEPOCH.quantity, precision="high")
+        >>> indices = divide_times(Time(t.get_mjds(), format="mjd"), t0)
+        >>> plt.clf()
+        >>> for i in np.unique(indices):
+                plt.plot(t.get_mjds()[indices == i], elongation[indices == i].value, ".")
+
+    """
+    dt = t - t0
+    values = (dt.to(u.yr).value + offset) // 1
+    indices = np.digitize(values, np.unique(values), right=True)
+    return indices
