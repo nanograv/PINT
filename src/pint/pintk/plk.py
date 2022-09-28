@@ -1353,7 +1353,7 @@ class PlkWidget(tk.Frame):
                         if type(jump_name) != list:
                             log.error(f"Mistakenly added new jump {jump_name}")
                         else:
-                            print(
+                            log.info(
                                 f"Existing jump removed for {np.array(jump_name).astype(int).sum()} toas and deleted them"
                             )
                     # Now delete it
@@ -1460,7 +1460,7 @@ class PlkWidget(tk.Frame):
                 if type(jump_name) != list:
                     log.error(f"Mistakenly added new jump {jump_name}")
                 else:
-                    print(
+                    log.info(
                         f"Existing jump removed for {np.array(jump_name).astype(int).sum()} toas and deleted them"
                     )
             # Delete the selected points

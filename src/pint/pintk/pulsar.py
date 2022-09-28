@@ -389,7 +389,6 @@ class Pulsar:
             if self.fitted:
                 self.postfit_model.add_component(a)
             log.info(f"New jump {retval} added for {selected.sum()} toas.")
-            print(f"New jump {retval} added for {selected.sum()} toas.")
             return retval
         # if gets here, has at least one jump param already
         # and iif it doesn't overlap or cancel, add the param
@@ -415,7 +414,6 @@ class Pulsar:
                 if self.fitted:
                     self.postfit_model.delete_jump_and_flags(None, num)
                 log.info("removed param", f"JUMP{str(num)}")
-                print("removed param", f"JUMP{str(num)}")
                 return toas_jumped
 
             # Has to be some overlap between jumps and selected TOAs
@@ -430,9 +428,6 @@ class Pulsar:
                 log.info(
                     f"Removing existing jump JUMP{str(num)} from {jumped_selected.astype(int).sum()} TOAs"
                 )
-                print(
-                    f"Removing existing jump JUMP{str(num)} from {jumped_selected.astype(int).sum()} TOAs"
-                )
                 return list(jumped_selected)
         # if here, then doesn't match anything
         # add jump flags to selected TOAs at their perspective indices in the TOA tables
@@ -440,7 +435,6 @@ class Pulsar:
             self.all_toas.table["flags"][selected]
         )
         log.info(f"New jump {retval} added for {selected.sum()} toas.")
-        print(f"New jump {retval} added for {selected.sum()} toas.")
         if (
             self.fitted
             and self.prefit_model.components["PhaseJump"]
