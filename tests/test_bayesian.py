@@ -10,7 +10,6 @@ from pint.bayesian import BayesianTiming
 from pint.models import get_model_and_toas, get_model
 from pint.config import examplefile
 from pint.models.priors import Prior
-from pinttestdata import datadir
 
 
 def set_dummy_priors(model):
@@ -22,18 +21,18 @@ def set_dummy_priors(model):
 
 
 @pytest.fixture()
-def dataJ0613m0200():
-    parfile = examplefile("J0613-sim.par")
-    timfile = examplefile("J0613-sim.tim")
+def data_NGC6440E():
+    parfile = examplefile("NGC6440E.par.good")
+    timfile = examplefile("NGC6440E.tim")
     model, toas = get_model_and_toas(parfile, timfile)
     set_dummy_priors(model)
     return model, toas
 
 
 @pytest.fixture()
-def dataJ0613m0200_efac():
-    parfile = examplefile("J0613-sim.par")
-    timfile = examplefile("J0613-sim.tim")
+def data_NGC6440E_efac():
+    parfile = examplefile("NGC6440E.par.good")
+    timfile = examplefile("NGC6440E.tim")
     model, toas = get_model_and_toas(parfile, timfile)
 
     parfile = str(model)
@@ -41,22 +40,13 @@ def dataJ0613m0200_efac():
     model = get_model(io.StringIO(parfile))
     set_dummy_priors(model)
 
-    return model, toas
-
-
-@pytest.fixture()
-def dataJ1713p0747_small():
-    parfile = datadir / "J1713+0747_small.gls.par"
-    timfile = datadir / "J1713+0747_small.tim"
-
-    model, toas = get_model_and_toas(parfile, timfile)
-    set_dummy_priors(model)
+    model.EFAC1.prior = Prior(uniform(0.1, 1.9))
 
     return model, toas
 
 
-def test_use_pulse_numbers(dataJ0613m0200):
-    model, toas = dataJ0613m0200
+def test_use_pulse_numbers(data_NGC6440E):
+    model, toas = data_NGC6440E
     toas.compute_pulse_numbers(model)
     bt = BayesianTiming(model, toas, use_pulse_numbers=True)
     maxlike_params = np.array([param.value for param in bt.params], dtype=float)
@@ -64,30 +54,30 @@ def test_use_pulse_numbers(dataJ0613m0200):
     assert not np.isnan(lnl)
 
 
-def test_no_noise(dataJ0613m0200):
-    model, toas = dataJ0613m0200
+def test_no_noise(data_NGC6440E):
+    model, toas = data_NGC6440E
     bt = BayesianTiming(model, toas)
     maxlike_params = np.array([param.value for param in bt.params], dtype=float)
     lnl = bt.lnlikelihood(maxlike_params)
     assert bt.likelihood_method == "wls" and not np.isnan(lnl)
 
 
-def test_white_noise(dataJ0613m0200_efac):
-    model, toas = dataJ0613m0200_efac
+def test_white_noise(data_NGC6440E_efac):
+    model, toas = data_NGC6440E_efac
     bt = BayesianTiming(model, toas)
     maxlike_params = np.array([param.value for param in bt.params], dtype=float)
     lnl = bt.lnlikelihood(maxlike_params)
     assert bt.likelihood_method == "wls" and not np.isnan(lnl)
 
 
-def test_lnlikelihood_unit_efac(dataJ0613m0200, dataJ0613m0200_efac):
+def test_lnlikelihood_unit_efac(data_NGC6440E, data_NGC6440E_efac):
     """Log likelihood with no EFAC should be equal to that with EFAC=1."""
-    model, toas = dataJ0613m0200
+    model, toas = data_NGC6440E
     bt = BayesianTiming(model, toas)
     maxlike_params = np.array([param.value for param in bt.params], dtype=float)
     lnl1 = bt.lnlikelihood(maxlike_params)
 
-    model, toas = dataJ0613m0200_efac
+    model, toas = data_NGC6440E_efac
     bt = BayesianTiming(model, toas)
     maxlike_params = np.array([param.value for param in bt.params], dtype=float)
     lnl2 = bt.lnlikelihood(maxlike_params)
@@ -95,9 +85,9 @@ def test_lnlikelihood_unit_efac(dataJ0613m0200, dataJ0613m0200_efac):
     assert np.isclose(lnl1, lnl2)
 
 
-def test_bayesian_timing_funcs(dataJ1713p0747_small):
+def test_bayesian_timing_funcs(data_NGC6440E_efac):
     """Test if the prior, likelihood and posterior functions work."""
-    model, toas = dataJ1713p0747_small
+    model, toas = data_NGC6440E_efac
 
     bt = BayesianTiming(model, toas)
 
