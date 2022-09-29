@@ -323,7 +323,7 @@ class SolarWindDispersionX(Dispersion):
     Parameters supported:
 
     .. paramtable::
-        :class: pint.models.dispersion_model.SolarWindDispersionX
+        :class: pint.models.solar_wind_dispersion.SolarWindDispersionX
 
     References
     ----------
