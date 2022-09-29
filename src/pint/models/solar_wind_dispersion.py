@@ -3,11 +3,13 @@ from warnings import warn
 
 import astropy.constants as const
 import astropy.units as u
+import astropy.time
 import numpy as np
 import scipy.special
 
 from pint.models.dispersion_model import Dispersion, DMconst
 from pint.models.parameter import floatParameter
+import pint.utils
 
 
 def _dm_p_int(b, z, p):
@@ -200,3 +202,54 @@ class SolarWindDispersion(Dispersion):
         if self.SWM.value == 1:
             result += getattr(self, "SWP").as_parfile_line(format=format)
         return result
+
+    def get_max_dm(self):
+        """Return approximate maximum DM from the Solar Wind (at conjunction)
+
+        Simplified model that assumes a circular orbit
+
+        Returns
+        -------
+        astropy.quantity.Quantity
+        """
+        coord = self._parent.get_psr_coords()
+        if self._parent.POSEPOCH.value is not None:
+            t0 = self._parent.POSEPOCH.quantity
+        elif self._parent.PEPOCH.value is not None:
+            t0 = self._parent.PEPOCH.quantity
+        else:
+            t0 = astropy.time.Time(50000, format="mjd")
+        # time and distance of conjunction
+        t0, elongation = pint.utils.get_conjunction(coord, t0, precision="high")
+        if self.SWM.value == 0:
+            r = 1 * u.AU
+            rho = (180 * u.deg - elongation).to(u.rad)
+            return (
+                self.NE_SW.quantity * (const.au**2.0 * rho / (r * np.sin(rho)))
+            ).to(u.pc / u.cm**3, equivalencies=u.dimensionless_angles())
+        elif self.SWM.value == 1:
+            p = self.SWP.value
+            theta = elongation
+            r = 1 * u.AU
+            # impact parameter
+            b = r * np.sin(theta)
+            # distance from the Earth to the impact point
+            z_sun = r * np.cos(theta)
+            # a big value for comparison
+            # this is what Enterprise uses
+            z_p = (1e14 * u.s * const.c).to(b.unit)
+            if p > 1:
+                solar_wind_geometry = (
+                    (1 / b.to_value(u.AU)) ** p
+                    * b
+                    * (_dm_p_int(b, z_p, p) - _dm_p_int(b, -z_sun, p))
+                )
+            else:
+                raise NotImplementedError(
+                    "Solar Dispersion Delay not implemented for power-law index p <= 1"
+                )
+            return (solar_wind_geometry * self.NE_SW.quantity).to(u.pc / u.cm**3)
+        else:
+            raise NotImplementedError(
+                "Solar Dispersion Delay not implemented for SWM %d" % self.SWM.value
+            )

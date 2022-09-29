@@ -1779,7 +1779,7 @@ def divide_times(t, t0, offset=0.5):
     Divide into years around each conjunction
 
         >>> elongation = astropy.coordinates.get_sun(Time(t.get_mjds(), format="mjd")).separation(m.get_psr_coords())
-        >>> t0 = get_conjunction(m.get_psr_coords(), m.PEPOCH.quantity, precision="high")
+        >>> t0 = get_conjunction(m.get_psr_coords(), m.PEPOCH.quantity, precision="high")[0]
         >>> indices = divide_times(Time(t.get_mjds(), format="mjd"), t0)
         >>> plt.clf()
         >>> for i in np.unique(indices):
