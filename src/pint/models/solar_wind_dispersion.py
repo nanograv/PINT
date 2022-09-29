@@ -382,7 +382,7 @@ class SolarWindDispersionX(Dispersion):
             )
         return solar_wind_geometry.to(u.pc)
 
-    def add_SWX_range(self, mjd_start, mjd_end, index=None, swx=0, swxp=2, frozen=True):
+    def add_swx_range(self, mjd_start, mjd_end, index=None, swx=0, swxp=2, frozen=True):
         """Add SWX range to a dispersion model with specified start/end MJD, SWX, and power-law index
 
         Parameters
@@ -469,7 +469,7 @@ class SolarWindDispersionX(Dispersion):
         self.validate()
         return index
 
-    def remove_SWX_range(self, index):
+    def remove_swx_range(self, index):
         """Removes all SWX parameters associated with a given index/list of indices.
 
         Parameters
