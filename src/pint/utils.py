@@ -1694,7 +1694,7 @@ def compute_hash(filename):
 
 def get_conjunction(coord, t0, precision="low", ecl="IERS2010"):
     """
-    Find first time of Solar conjuction after t0
+    Find first time of Solar conjuction after t0 and approximate elongation at conjunction
 
     Offers a low-precision version (based on analytic expression of Solar longitude)
     Or a higher-precision version (based on interpolating :func:`astropy.coordinates.get_sun`)
@@ -1711,7 +1711,11 @@ def get_conjunction(coord, t0, precision="low", ecl="IERS2010"):
     Returns
     -------
     astropy.time.Time
+        Time of conjunction
+    astropy.quantity.Quantity
+        Elongation at conjunction
     """
+
     assert precision.lower() in ["low", "high"]
 
     coord = coord.transform_to(pint.pulsar_ecliptic.PulsarEcliptic(ecl=ecl))
@@ -1734,7 +1738,7 @@ def get_conjunction(coord, t0, precision="low", ecl="IERS2010"):
     dlongitude -= (dlongitude // (360 * u.deg)).max() * 360 * u.deg
     conjunction = Time(np.interp(0, dlongitude.value, tt.mjd), format="mjd")
     if precision.lower() == "low":
-        return conjunction
+        return conjunction, coord.lat
     # do higher precision
     # use astropy solar coordinates
     # start with 10 days on either side of the low precision value
@@ -1747,7 +1751,7 @@ def get_conjunction(coord, t0, precision="low", ecl="IERS2010"):
     f = np.polyfit(x, y, 2)
     conjunction = Time(-f[1] / 2 / f[0], format="mjd")
 
-    return conjunction
+    return conjunction, coords.get_sun(conjunction).separation(coord)
 
 
 def divide_times(t, t0, offset=0.5):
