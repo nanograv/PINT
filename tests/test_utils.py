@@ -614,6 +614,8 @@ def test_dmxparse():
     f = fitter.GLSFitter(toas=t, model=m)
     f.fit_toas()
     dmx = dmxparse(f, save=False)
+    # make sure the start and end are not the same
+    assert ((dmx["r2s"] - dmx["r1s"] > 0)).all()
     # Check exception handling
     m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_dfg+12_DMX.par"))
     t = toa.get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_dfg+12.tim"))

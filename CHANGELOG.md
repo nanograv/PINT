@@ -18,6 +18,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Excluded noise parameters from the design matrix.
 - Split the computation of correlated noise basis matrix and weights into two functions.
 - Fixed bug in combining design matrices
+- Fixed bug in dmxparse
 
 ## [0.9.1] 2022-08-12
 ### Changed

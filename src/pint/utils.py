@@ -971,7 +971,7 @@ def dmxparse(fitter, save=False):
         mask_idxs[ii] = getattr(fitter.model, "DMX_{:}".format(epoch)).frozen
         DMX_Errs[ii] = getattr(fitter.model, "DMX_{:}".format(epoch)).uncertainty_value
         DMX_R1[ii] = getattr(fitter.model, "DMXR1_{:}".format(epoch)).value
-        DMX_R2[ii] = getattr(fitter.model, "DMXR1_{:}".format(epoch)).value
+        DMX_R2[ii] = getattr(fitter.model, "DMXR2_{:}".format(epoch)).value
     DMX_center_MJD = (DMX_R1 + DMX_R2) / 2
     # If any value need to be masked, do it
     if True in mask_idxs:
