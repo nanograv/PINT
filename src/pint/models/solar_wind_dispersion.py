@@ -54,10 +54,10 @@ class SolarWindDispersion(Dispersion):
 
     References
     ----------
-    Edwards et al. 2006, MNRAS, 372, 1549; Setion 2.5.4
-    Madison et al. 2019, ApJ, 872, 150; Section 3.1.
-    Hazboun et al. (2022, ApJ, 929, 39)
-    You et al. (2012, MNRAS, 422, 1160)
+    - Edwards et al. 2006, MNRAS, 372, 1549; Setion 2.5.4
+    - Madison et al. 2019, ApJ, 872, 150; Section 3.1.
+    - Hazboun et al. (2022, ApJ, 929, 39)
+    - You et al. (2012, MNRAS, 422, 1160)
     """
 
     register = True
@@ -327,10 +327,10 @@ class SolarWindDispersionX(Dispersion):
 
     References
     ----------
-    Edwards et al. 2006, MNRAS, 372, 1549; Setion 2.5.4
-    Madison et al. 2019, ApJ, 872, 150; Section 3.1.
-    Hazboun et al. (2022, ApJ, 929, 39)
-    You et al. (2012, MNRAS, 422, 1160)
+    - Edwards et al. 2006, MNRAS, 372, 1549; Setion 2.5.4
+    - Madison et al. 2019, ApJ, 872, 150; Section 3.1.
+    - Hazboun et al. (2022, ApJ, 929, 39)
+    - You et al. (2012, MNRAS, 422, 1160)
     """
 
     register = True
@@ -601,9 +601,10 @@ class SolarWindDispersionX(Dispersion):
         dm = np.zeros(len(tbl)) * self._parent.DM.units
         for k, v in select_idx.items():
             ne_sw = getattr(self, k).quantity
-            dm[v] = (self.solar_wind_geometry(toas[v], p=p[k]) * ne_sw).to(
-                u.pc / u.cm**3
-            )
+            if len(v) > 0:
+                dm[v] = (self.solar_wind_geometry(toas[v], p=p[k]) * ne_sw).to(
+                    u.pc / u.cm**3
+                )
         return dm
 
     def swx_delay(self, toas, acc_delay=None):
@@ -635,7 +636,8 @@ class SolarWindDispersionX(Dispersion):
             bfreq = tbl["freq"]
         deriv = np.zeros(len(tbl)) * u.pc
         for k, v in select_idx.items():
-            deriv[v] = self.solar_wind_geometry(toas[v], p=p)
+            if len(v) > 0:
+                deriv[v] = self.solar_wind_geometry(toas[v], p=p)
         return deriv
 
     def d_delay_d_swx(self, toas, param_name, acc_delay=None):
