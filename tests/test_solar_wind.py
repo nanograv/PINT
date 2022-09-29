@@ -60,14 +60,12 @@ def test_solar_wind_generalmodel():
     # default model
     model = get_model(StringIO("\n".join([par, "NE_SW 1"])))
     # model with general power-law index
-    model2 = get_model(StringIO("\n".join([par, "NE_SWP 1"])))
+    model2 = get_model(StringIO("\n".join([par, "NE_SW 1\nSWM 1"])))
     toas = make_fake_toas_uniform(54000, 54000 + year, 13, model=model, obs="gbt")
 
-    # these can differ by up to 15%
     assert np.allclose(
-        model2.components["SphericalSolarWindDispersion"].solar_wind_delay(toas),
+        model2.components["SolarWindDispersion"].solar_wind_delay(toas),
         model.components["SolarWindDispersion"].solar_wind_delay(toas),
-        rtol=0.2,
     )
 
 
@@ -78,9 +76,21 @@ def test_solar_wind_generalmodel_deriv():
     model2 = get_model(StringIO("\n".join([par, "NE_SW 1\nSWM 1"])))
     toas = make_fake_toas_uniform(54000, 54000 + year, 13, model=model, obs="gbt")
 
-    # these can differ by up to 15%
     assert np.allclose(
         model2.components["SolarWindDispersion"].d_dm_d_ne_sw(toas, "NE_SW").to(u.cm),
         model.components["SolarWindDispersion"].d_dm_d_ne_sw(toas, "NE_SW").to(u.cm),
-        rtol=0.2,
     )
+
+
+def test_solar_wind_swm2():
+    # should fail for SWM != 0 or 1
+    model = get_model(StringIO("\n".join([par, "NE_SW 1\nSWM 2"])))
+    with pytest.raises(NotImplementedError):
+        toas = make_fake_toas_uniform(54000, 54000 + year, 13, model=model, obs="gbt")
+
+
+def test_solar_wind_generalmodel_p1():
+    # model with general power-law index
+    model = get_model(StringIO("\n".join([par, "NE_SW 1\nSWM 1\nSWP 1"])))
+    with pytest.raises(NotImplementedError):
+        toas = make_fake_toas_uniform(54000, 54000 + year, 13, model=model, obs="gbt")

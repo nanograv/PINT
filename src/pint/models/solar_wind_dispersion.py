@@ -129,11 +129,14 @@ class SolarWindDispersion(Dispersion):
             b = r * np.sin(theta)
             # distance from the Earth to the impact point
             z_sun = r * np.cos(theta)
+            # a big value for comparison
+            # this is what Enterprise uses
+            z_p = (1e14 * u.s * const.c).to(b.unit)
             if p > 1:
                 solar_wind_geometry = (
                     (1 / b.to_value(u.AU)) ** p
                     * b
-                    * (_dm_p_int(b, 1e14 * u.cm, p) - _dm_p_int(b, -z_sun, p))
+                    * (_dm_p_int(b, z_p, p) - _dm_p_int(b, -z_sun, p))
                 )
             else:
                 raise NotImplementedError(
