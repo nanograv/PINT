@@ -588,8 +588,7 @@ class SolarWindDispersionX(Dispersion):
         dm = np.zeros(len(tbl)) * self._parent.DM.units
         for k, v in select_idx.items():
             ne_sw = getattr(self, k).quantity
-            print(f"NE_SW={ne_sw} p={p[k]} for {k}")
-            dm[v] = (self.solar_wind_geometry(toas, p=p[k]) * ne_sw).to(
+            dm[v] = (self.solar_wind_geometry(toas[v], p=p[k]) * ne_sw).to(
                 u.pc / u.cm**3
             )
         return dm
@@ -642,7 +641,6 @@ class SolarWindDispersionX(Dispersion):
         SWXP_mapping = self.get_prefix_mapping_component("SWXP_")
         SWXR1_mapping = self.get_prefix_mapping_component("SWXR1_")
         SWXR2_mapping = self.get_prefix_mapping_component("SWXR2_")
-        result += getattr(self, "SWX").as_parfile_line(format=format)
         sorted_list = sorted(SWX_mapping.keys())
         for ii in sorted_list:
             result += getattr(self, SWX_mapping[ii]).as_parfile_line(format=format)

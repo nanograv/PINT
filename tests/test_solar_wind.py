@@ -94,3 +94,25 @@ def test_solar_wind_generalmodel_p1():
     model = get_model(StringIO("\n".join([par, "NE_SW 1\nSWM 1\nSWP 1"])))
     with pytest.raises(NotImplementedError):
         toas = make_fake_toas_uniform(54000, 54000 + year, 13, model=model, obs="gbt")
+
+
+def test_swx():
+    # default model
+    model = get_model(StringIO("\n".join([par, "NE_SW 1"])))
+    # SWX model with a single segment to match the default model
+    model2 = get_model(
+        StringIO(
+            "\n".join(
+                [par, "SWX_0001 1\nSWXP_0001 2\nSWXR1_0001 53999\nSWXR2_0001 55000"]
+            )
+        )
+    )
+    toas = make_fake_toas_uniform(54000, 54000 + year, 13, model=model, obs="gbt")
+    assert np.allclose(model2.swx_dm(toas), model.solar_wind_dm(toas))
+    assert np.allclose(model2.swx_delay(toas), model.solar_wind_delay(toas))
+    assert np.allclose(
+        model2.d_dm_d_param(toas, "SWX_0001"), model.d_dm_d_param(toas, "NE_SW")
+    )
+    assert np.allclose(
+        model2.d_delay_d_param(toas, "SWX_0001"), model.d_delay_d_param(toas, "NE_SW")
+    )
