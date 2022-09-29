@@ -106,7 +106,7 @@ class SolarWindDispersion(Dispersion):
             rvec: radial vector from observatory to the center of the Sun
             pos: pulsar position
         For SWM==1:
-            Implements Eqn. 12 of Hazboun et al. (2022)
+            Implements Eqn. 11 of Hazboun et al. (2022)
 
         Parameters
         ----------
