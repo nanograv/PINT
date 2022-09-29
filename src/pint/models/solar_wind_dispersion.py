@@ -284,6 +284,7 @@ class SolarWindDispersion(Dispersion):
             ).to(u.pc / u.cm**3, equivalencies=u.dimensionless_angles())
         elif self.SWM.value == 1:
             p = self.SWP.value
+            # for the min
             theta = 180 * u.deg - elongation
             r = 1 * u.AU
             # impact parameter
@@ -516,6 +517,18 @@ class SolarWindDispersionX(Dispersion):
         # Register the SWX derivatives
         for prefix_par in self.get_params_of_type("prefixParameter"):
             if prefix_par.startswith("SWX_"):
+                # check to make sure power-law index is present
+                # if not, put in default
+                p_name = "SWXP_" + pint.utils.split_prefixed_name(prefix_par)[1]
+                if not hasattr(self, p_name):
+                    self.add_param(
+                        prefixParameter(
+                            name=p_name,
+                            value=2,
+                            description="Solar wind power-law index",
+                            parameter_type="float",
+                        )
+                    )
                 self.register_deriv_funcs(self.d_delay_d_swx, prefix_par)
                 self.register_dm_deriv_funcs(self.d_dm_d_swx, prefix_par)
 
@@ -648,3 +661,88 @@ class SolarWindDispersionX(Dispersion):
             result += getattr(self, SWXR1_mapping[ii]).as_parfile_line(format=format)
             result += getattr(self, SWXR2_mapping[ii]).as_parfile_line(format=format)
         return result
+
+    def get_max_dms(self):
+        """Return approximate maximum DMs for each segment from the Solar Wind (at conjunction)
+
+        Simplified model that assumes a circular orbit
+
+        Returns
+        -------
+        astropy.quantity.Quantity
+        """
+        SWX_mapping = self.get_prefix_mapping_component("SWX_")
+        SWXP_mapping = self.get_prefix_mapping_component("SWXP_")
+        SWXR1_mapping = self.get_prefix_mapping_component("SWXR1_")
+        sorted_list = sorted(SWX_mapping.keys())
+        dms = np.zeros(len(sorted_list)) * u.pc / u.cm**3
+        coord = self._parent.get_psr_coords()
+        for j, ii in enumerate(sorted_list):
+            r1 = getattr(self, SWXR1_mapping[ii]).quantity
+            p = getattr(self, SWXP_mapping[ii]).value
+            swx = getattr(self, SWX_mapping[ii]).quantity
+            t0, elongation = pint.utils.get_conjunction(coord, r1, precision="high")
+            theta = elongation
+            r = 1 * u.AU
+            # impact parameter
+            b = r * np.sin(theta)
+            # distance from the Earth to the impact point
+            z_sun = r * np.cos(theta)
+            # a big value for comparison
+            # this is what Enterprise uses
+            z_p = (1e14 * u.s * const.c).to(b.unit)
+            if p > 1:
+                solar_wind_geometry = (
+                    (1 / b.to_value(u.AU)) ** p
+                    * b
+                    * (_dm_p_int(b, z_p, p) - _dm_p_int(b, -z_sun, p))
+                )
+            else:
+                raise NotImplementedError(
+                    "Solar Dispersion Delay not implemented for power-law index p <= 1"
+                )
+            dms[j] = (solar_wind_geometry * swx).to(u.pc / u.cm**3)
+        return dms
+
+    def get_min_dms(self):
+        """Return approximate minimum DMs for each segment from the Solar Wind (at conjunction)
+
+        Simplified model that assumes a circular orbit
+
+        Returns
+        -------
+        astropy.quantity.Quantity
+        """
+        SWX_mapping = self.get_prefix_mapping_component("SWX_")
+        SWXP_mapping = self.get_prefix_mapping_component("SWXP_")
+        SWXR1_mapping = self.get_prefix_mapping_component("SWXR1_")
+        sorted_list = sorted(SWX_mapping.keys())
+        dms = np.zeros(len(sorted_list)) * u.pc / u.cm**3
+        coord = self._parent.get_psr_coords()
+        for j, ii in enumerate(sorted_list):
+            r1 = getattr(self, SWXR1_mapping[ii]).quantity
+            p = getattr(self, SWXP_mapping[ii]).value
+            swx = getattr(self, SWX_mapping[ii]).quantity
+            t0, elongation = pint.utils.get_conjunction(coord, r1, precision="high")
+            # for the min
+            theta = 180 * u.deg - elongation
+            r = 1 * u.AU
+            # impact parameter
+            b = r * np.sin(theta)
+            # distance from the Earth to the impact point
+            z_sun = r * np.cos(theta)
+            # a big value for comparison
+            # this is what Enterprise uses
+            z_p = (1e14 * u.s * const.c).to(b.unit)
+            if p > 1:
+                solar_wind_geometry = (
+                    (1 / b.to_value(u.AU)) ** p
+                    * b
+                    * (_dm_p_int(b, z_p, p) - _dm_p_int(b, -z_sun, p))
+                )
+            else:
+                raise NotImplementedError(
+                    "Solar Dispersion Delay not implemented for power-law index p <= 1"
+                )
+            dms[j] = (solar_wind_geometry * swx).to(u.pc / u.cm**3)
+        return dms
