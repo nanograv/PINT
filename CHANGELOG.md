@@ -12,6 +12,8 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Can initialize observatories with lat/lon/altitude
 - Can output observatories as JSON
 - Can extract single TOAs as length=1 table
+- SWM=1 models can be used
+- SWX models to fit the solar wind over various intervals
 ### Fixed
 - global clock files now emit a warning instead of an exception if expired and the download fails
 - dmxparse outputs to dmxparse.out if save=True
