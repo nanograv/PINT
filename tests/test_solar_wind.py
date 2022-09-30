@@ -11,10 +11,12 @@ import sys
 
 import astropy.units as u
 from astropy.time import Time
-from pint.models import get_model
-from pint.fitter import WidebandTOAFitter
+from pint.models import get_model, get_model_and_toas
+from pint.fitter import Fitter
 from pint.toa import get_TOAs
 from pint.simulation import make_fake_toas_uniform
+from pint.models.solar_wind_dispersion import SolarWindDispersionX
+from pinttestdata import datadir
 
 
 par = """
@@ -116,3 +118,35 @@ def test_swx():
     assert np.allclose(
         model2.d_delay_d_param(toas, "SWX_0001"), model.d_delay_d_param(toas, "NE_SW")
     )
+
+
+def test_swfits():
+    # default model and TOAs
+    model0, t = get_model_and_toas(
+        os.path.join(datadir, "2145_swfit.par"), os.path.join(datadir, "2145_swfit.tim")
+    )
+    # default SWM=0 model
+    model1 = copy.deepcopy(model0)
+    model1.SWM.value = 0
+    # SWM=1 model with p=2
+    model2 = copy.deepcopy(model0)
+    model2.SWM.value = 1
+    model2.SWP.value = 2
+    # SWX model
+    model3 = copy.deepcopy(model0)
+    model3.add_component(SolarWindDispersionX())
+    model3.remove_component("SolarWindDispersion")
+    model3.SWXR1_0001.value = t.get_mjds().min().value
+    model3.SWXR2_0001.value = t.get_mjds().max().value
+    model3.SWXP_0001.value = 2
+    model3.SWX_0001.value = 10
+
+    f1 = Fitter.auto(t, model1)
+    f2 = Fitter.auto(t, model2)
+    f3 = Fitter.auto(t, model3)
+
+    f1.fit_toas()
+    f2.fit_toas()
+    f3.fit_toas()
+    assert np.isclose(f1.model.NE_SW.value, f2.model.NE_SW.value)
+    assert np.isclose(f1.model.NE_SW.value, f3.model.SWX_0001.value)
