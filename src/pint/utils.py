@@ -1069,6 +1069,34 @@ def dmxparse(fitter, save=False):
     return dmx
 
 
+def get_prefix_timerange(model, prefixname):
+    """Get time range for a prefix quantity like DMX or SWX
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+    prefixname : str
+        Something like ``DMX_0001`` or ``SWX_0005``
+
+    Returns
+    -------
+    tuple
+        Each element is astropy.time.Time
+
+    Example
+    -------
+    To match a range between SWX and DMX, you can do:
+
+        >>> m.add_DMX_range(*(59077.33674631197, 59441.34020807681), index=1, frozen=False)
+
+    Which sets ``DMX_0001`` to cover the same time range as ``SWX_0002``
+    """
+    prefix, index, indexnum = split_prefixed_name(prefixname)
+    r1 = prefix.replace("_", "R1_") + index
+    r2 = prefix.replace("_", "R2_") + index
+    return getattr(model, r1).quantity, getattr(model, r2).quantity
+
+
 def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
     """Compute weighted mean of input values
 
