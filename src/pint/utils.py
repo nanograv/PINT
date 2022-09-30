@@ -974,7 +974,7 @@ def dmxparse(fitter, save=False):
         mask_idxs[ii] = getattr(fitter.model, "DMX_{:}".format(epoch)).frozen
         DMX_Errs[ii] = getattr(fitter.model, "DMX_{:}".format(epoch)).uncertainty_value
         DMX_R1[ii] = getattr(fitter.model, "DMXR1_{:}".format(epoch)).value
-        DMX_R2[ii] = getattr(fitter.model, "DMXR1_{:}".format(epoch)).value
+        DMX_R2[ii] = getattr(fitter.model, "DMXR2_{:}".format(epoch)).value
     DMX_center_MJD = (DMX_R1 + DMX_R2) / 2
     # If any value need to be masked, do it
     if True in mask_idxs:
@@ -1095,6 +1095,96 @@ def get_prefix_timerange(model, prefixname):
     r1 = prefix.replace("_", "R1_") + index
     r2 = prefix.replace("_", "R2_") + index
     return getattr(model, r1).quantity, getattr(model, r2).quantity
+
+
+def split_dmx(model, time):
+    """
+    Split an existing DMX bin at the desired time
+
+    Parameters
+    ----------
+    model : pint.models.timing_model.TimingModel
+    time : astropy.time.Time
+
+    Returns
+    -------
+    index : int
+        Index of existing bin that was split
+    newindex : int
+        Index of new bin that was added
+
+    """
+    try:
+        DMX_mapping = model.get_prefix_mapping("DMX_")
+    except ValueError:
+        raise RuntimeError("No DMX values in model!")
+    dmx_epochs = [f"{x:04d}" for x in DMX_mapping.keys()]
+    DMX_R1 = np.zeros(len(dmx_epochs))
+    DMX_R2 = np.zeros(len(dmx_epochs))
+    for ii, epoch in enumerate(dmx_epochs):
+        DMX_R1[ii] = getattr(model, "DMXR1_{:}".format(epoch)).value
+        DMX_R2[ii] = getattr(model, "DMXR2_{:}".format(epoch)).value
+    ii = np.where((time.mjd > DMX_R1) & (time.mjd < DMX_R2))[0]
+    if len(ii) == 0:
+        raise ValueError(f"Time {time} not in any DMX bins")
+    ii = ii[0]
+    index = int(dmx_epochs[ii])
+    t1 = DMX_R1[ii]
+    t2 = DMX_R2[ii]
+    print(f"{ii} {t1} {t2} {time}")
+    getattr(model, f"DMXR2_{index:04d}").value = time.mjd
+    newindex = model.add_DMX_range(
+        time.mjd,
+        t2,
+        dmx=getattr(model, f"DMX_{index:04d}").quantity,
+        frozen=getattr(model, f"DMX_{index:04d}").frozen,
+    )
+    return index, newindex
+
+
+def split_swx(model, time):
+    """
+    Split an existing SWX bin at the desired time
+
+    Parameters
+    ----------
+    model : pint.models.timing_model.TimingModel
+    time : astropy.time.Time
+
+    Returns
+    -------
+    index : int
+        Index of existing bin that was split
+    newindex : int
+        Index of new bin that was added
+
+    """
+    try:
+        SWX_mapping = model.get_prefix_mapping("SWX_")
+    except ValueError:
+        raise RuntimeError("No SWX values in model!")
+    swx_epochs = [f"{x:04d}" for x in SWX_mapping.keys()]
+    SWX_R1 = np.zeros(len(swx_epochs))
+    SWX_R2 = np.zeros(len(swx_epochs))
+    for ii, epoch in enumerate(swx_epochs):
+        SWX_R1[ii] = getattr(model, "SWXR1_{:}".format(epoch)).value
+        SWX_R2[ii] = getattr(model, "SWXR2_{:}".format(epoch)).value
+    ii = np.where((time.mjd > SWX_R1) & (time.mjd < SWX_R2))[0]
+    if len(ii) == 0:
+        raise ValueError(f"Time {time} not in any SWX bins")
+    ii = ii[0]
+    index = int(swx_epochs[ii])
+    t1 = SWX_R1[ii]
+    t2 = SWX_R2[ii]
+    print(f"{ii} {t1} {t2} {time}")
+    getattr(model, f"SWXR2_{index:04d}").value = time.mjd
+    newindex = model.add_swx_range(
+        time.mjd,
+        t2,
+        swx=getattr(model, f"SWX_{index:04d}").quantity,
+        frozen=getattr(model, f"SWX_{index:04d}").frozen,
+    )
+    return index, newindex
 
 
 def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
