@@ -1,10 +1,26 @@
 """Test if the split basis and weights functions for EcorrNoise and PLRedNoise
-give the same result as the old code."""
+and PLDMNoise give the same result as the old code."""
 
 import numpy as np
 import pytest
 from pint.config import examplefile
 from pint.models import get_model_and_toas
+from pint.models.timing_model import Component
+
+
+components = ["EcorrNoise", "PLRedNoise", "PLDMNoise"]
+
+
+def inject_DM_noise(model):
+    all_components = Component.component_types
+    noise_class = all_components["PLDMNoise"]
+    noise = noise_class()  # Make the DM noise instance.
+    model.add_component(noise, validate=False)
+    model["TNDMAMP"].quantity = 1e-13
+    model["TNDMGAM"].quantity = 1.2
+    model["TNDMC"].value = 30
+    model.validate()
+    return model
 
 
 @pytest.fixture()
@@ -12,10 +28,11 @@ def model_and_toas():
     parfile = examplefile("B1855+09_NANOGrav_9yv1.gls.par")
     timfile = examplefile("B1855+09_NANOGrav_9yv1.tim")
     model, toas = get_model_and_toas(parfile, timfile)
+    model = inject_DM_noise(model)
     return model, toas
 
 
-@pytest.mark.parametrize("component_label", ["EcorrNoise", "PLRedNoise"])
+@pytest.mark.parametrize("component_label", components)
 def test_noise_basis_shape(model_and_toas, component_label):
     """Test shape of basis matrix."""
 
@@ -28,7 +45,7 @@ def test_noise_basis_shape(model_and_toas, component_label):
     assert basis.shape == (len(toas), len(weights))
 
 
-@pytest.mark.parametrize("component_label", ["EcorrNoise", "PLRedNoise"])
+@pytest.mark.parametrize("component_label", components)
 def test_noise_weights_sign(model_and_toas, component_label):
     """Weights should be positive."""
 
@@ -41,7 +58,7 @@ def test_noise_weights_sign(model_and_toas, component_label):
     assert np.all(weights >= 0)
 
 
-@pytest.mark.parametrize("component_label", ["EcorrNoise", "PLRedNoise"])
+@pytest.mark.parametrize("component_label", components)
 def test_covariance_matrix_relation(model_and_toas, component_label):
     """Consistency between basis and weights and covariance matrix"""
 
