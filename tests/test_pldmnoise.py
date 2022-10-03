@@ -1,16 +1,22 @@
 """Tests to ensure that ModelBuilder is able to read PLDMNoise 
 component properly.
 
-To do:
-    - Add check that PLDMNoise reproduces same results as PLRedNoise given
-    monochromatic data
-    - Add test that fits out DM noise correctly in toy simulated dataset
+Tests that PLDMNoise reproduces same results as PLRedNoise using
+monochromatic data
+
+To do: Add test that fits out DM noise correctly in toy simulated dataset
 """
 
+import astropy.units as u
 import io
-import pytest
-
+import numpy as np
+import pint.fitter as fitters
 import pint.models.model_builder as mb
+from pint.models.model_builder import get_model
+from pint.models.timing_model import Component
+from pint.residuals import Residuals
+from pint.simulation import make_fake_toas_fromMJDs
+import pytest
 
 parfile_contents = """
     PSRJ           J0023+0923
@@ -71,3 +77,66 @@ def test_read_PLDMNoise_params(modelJ0023p0923):
             hasattr(modelJ0023p0923, param)
             and getattr(modelJ0023p0923, param).quantity is not None
         )
+
+
+def test_PLRedNoise_recovery():
+    # basic model, no EFAC or EQUAD
+    model = get_model(
+        io.StringIO(
+            """
+        PSRJ J1234+5678
+        ELAT 0 1
+        ELONG 0 1
+        DM 10 0
+        F0 1 1
+        PEPOCH 58000
+        POSEPOCH 58000
+        PMELONG 0 1
+        PMELAT 0 1
+        PX 0 1
+        TNEF mjd 57000 58000 1.0389
+        TNEQ mjd 57000 58000 -8.77109
+        TNRedAmp -11
+        TNRedGam 3
+        TNRedC 30
+        """
+        )
+    )
+
+    # simulate toas
+    MJDs = np.linspace(57001, 58000, 150, dtype=np.longdouble) * u.d
+    toas = make_fake_toas_fromMJDs(MJDs, model=model, error=1 * u.us, add_noise=True)
+
+    # fit model with red noise
+    f1 = fitters.DownhillGLSFitter(toas, model)
+    f1.fit_toas()
+    f1.model.validate()
+    f1.model.validate_toas(toas)
+    r1 = Residuals(toas, f1.model)
+
+    # remove red noise
+    A = model["TNREDAMP"].value
+    gam = model["TNREDGAM"].value
+    c = model["TNREDC"].value
+    model.remove_component("PLRedNoise")
+
+    # create and add PLDMNoise component
+    all_components = Component.component_types
+    noise_class = all_components["PLDMNoise"]
+    noise = noise_class()  # Make the dispersion instance.
+    model.add_component(noise, validate=False)
+    model["TNDMAMP"].quantity = A
+    model["TNDMGAM"].quantity = gam
+    model["TNDMC"].value = c
+    model.validate()
+
+    # refit model
+    f2 = fitters.DownhillGLSFitter(toas, model)
+    f2.fit_toas()
+    f2.model.validate()
+    f2.model.validate_toas(toas)
+    r2 = Residuals(toas, f2.model)
+
+    # check residuals are equivalent within error
+    diff = r2.time_resids.value - r1.time_resids.value
+    assert np.all(np.isclose(diff, 0, atol=1e-7))
