@@ -12,6 +12,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Can initialize observatories with lat/lon/altitude
 - Can output observatories as JSON
 - Can extract single TOAs as length=1 table
+- Added PLDMNoise component which allows modeling of stochastic DM variations as red noise with a power law spectrum
 ### Fixed
 - global clock files now emit a warning instead of an exception if expired and the download fails
 - dmxparse outputs to dmxparse.out if save=True
