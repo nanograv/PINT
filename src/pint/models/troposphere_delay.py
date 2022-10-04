@@ -237,7 +237,7 @@ class TroposphereDelay(DelayComponent):
         """From CRC Handbook Chapter 14 page 19 US Standard Atmosphere"""
         gph = self.EARTH_R * H / (self.EARTH_R + H)  # geopotential height
         if gph > 11 * u.km:
-            warn("Pressure approximation invalid for elevations above 11 km")
+            log.warning("Pressure approximation invalid for elevations above 11 km")
         T = 288.15 - 0.0065 * H.to(u.m).value  # temperature lapse
         P = 101.325 * (288.15 / T) ** -5.25575 * u.kPa
         return P
