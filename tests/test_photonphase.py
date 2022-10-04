@@ -38,9 +38,9 @@ parfile_nicerbad = datadir / "ngc300nicernoTZR.par"
 eventfile_nicer = datadir / "ngc300nicer_bary.evt"
 
 
-@pytest.mark.skipif(
-    "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
-)
+#@pytest.mark.skipif(
+#    "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
+#)
 def test_nicer_result_bary(capsys):
     "Check that barycentered NICER data is processed correctly."
     cmd = f" {eventfile_nicer} {parfile_nicer}"
