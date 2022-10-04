@@ -4,7 +4,10 @@ component properly.
 Tests that PLDMNoise reproduces same results as PLRedNoise using
 monochromatic data
 
-To do: Add test that fits out DM noise correctly in toy simulated dataset
+To do:
+    Add test that fits out DM noise correctly in toy simulated dataset
+    Add test that checks for same results between PINT and Tempo2/TempoNest
+    Add test that checks for same results between PINT and enterprise
 """
 
 import astropy.units as u
