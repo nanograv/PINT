@@ -118,6 +118,23 @@ def test_roundtrip_ncyobs_toa_TEMPOformat(tmp_path):
         ts.write_TOA_file(tmp_path / "testncyobs.tim", format="TEMPO")
 
 
+def test_write_pn_nan():
+    # NaN should not get written as flag in tim file
+    model = get_model(datadir / "NGC6440E.par")
+    # read and add pulse numbers
+    t = toa.get_TOAs(datadir / "NGC6440E.tim", model=model)
+    t.compute_pulse_numbers(model)
+    t["pulse_number"][10] = np.nan
+    f = StringIO()
+    t.write_TOA_file(f)
+    f.seek(0)
+    contents = f.read()
+    assert "nan" not in contents
+    f.seek(0)
+    t2 = toa.get_TOAs(f)
+    assert np.isnan(t2["pulse_number"][10])
+
+
 simplepar = """
 PSR              1748-2021E
 RAJ       17:48:52.75  1

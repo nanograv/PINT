@@ -1,0 +1,20 @@
+C Converted by make_release.py on Tue Nov 29 21:56:57 2016 by pdemores
+C Original filename: 'J1713+0747/J1713+0747.djn2.tim'
+C Commented 443 simultaneous GASP TOAs
+C Commented 121 simultaneous ASP TOAs
+MODE 1
+FORMAT 1
+C Additional cut TOAs can be included via:
+C INCLUDE J1713+0747_NANOGrav_11yv0.cut
+53393.000009.3.000.000.9y.x.ff 1430.000000 53393.561383615118386   0.178  ao  -fe L-wide -be ASP -f L-wide_ASP -bw 4 -tobs 240.97 -tmplt J1713+0747.L-wide.PUPPI.9y.x.sum.sm -gof 1.36 -nbin 2048 -nch 1 -chan 0 -subint 0 -snr 396.51 -wt 4 -proc 9y -pta NANOGrav -to -0.839e-6
+53393.000009.3.000.000.9y.x.ff 1426.000000 53393.561383617224115   0.194  ao  -fe L-wide -be ASP -f L-wide_ASP -bw 4 -tobs 240.97 -tmplt J1713+0747.L-wide.PUPPI.9y.x.sum.sm -gof 1.14 -nbin 2048 -nch 1 -chan 1 -subint 0 -snr 363.82 -wt 4 -proc 9y -pta NANOGrav -to -0.839e-6
+53393.000009.3.000.000.9y.x.ff 1422.000000 53393.561383619352581   0.198  ao  -fe L-wide -be ASP -f L-wide_ASP -bw 4 -tobs 240.97 -tmplt J1713+0747.L-wide.PUPPI.9y.x.sum.sm -gof 1.13 -nbin 2048 -nch 1 -chan 2 -subint 0 -snr 357.03 -wt 4 -proc 9y -pta NANOGrav -to -0.839e-6
+53393.000009.3.000.000.9y.x.ff 1418.000000 53393.561383621502336   0.207  ao  -fe L-wide -be ASP -f L-wide_ASP -bw 4 -tobs 240.97 -tmplt J1713+0747.L-wide.PUPPI.9y.x.sum.sm -gof 1.1 -nbin 2048 -nch 1 -chan 3 -subint 0 -snr 341.05 -wt 4 -proc 9y -pta NANOGrav -to -0.839e-6
+53393.000009.3.000.000.9y.x.ff 1414.000000 53393.561383623661847   0.230  ao  -fe L-wide -be ASP -f L-wide_ASP -bw 4 -tobs 240.97 -tmplt J1713+0747.L-wide.PUPPI.9y.x.sum.sm -gof 1.24 -nbin 2048 -nch 1 -chan 4 -subint 0 -snr 307.13 -wt 4 -proc 9y -pta NANOGrav -to -0.839e-6
+53393.000009.3.000.000.9y.x.ff 1410.000000 53393.561383625846755   0.150  ao  -fe L-wide -be ASP -f L-wide_ASP -bw 4 -tobs 240.97 -tmplt J1713+0747.L-wide.PUPPI.9y.x.sum.sm -gof 1.23 -nbin 2048 -nch 1 -chan 5 -subint 0 -snr 473.59 -wt 4 -proc 9y -pta NANOGrav -to -0.839e-6
+53393.000009.3.000.000.9y.x.ff 1406.000000 53393.561383628048693   0.125  ao  -fe L-wide -be ASP -f L-wide_ASP -bw 4 -tobs 240.97 -tmplt J1713+0747.L-wide.PUPPI.9y.x.sum.sm -gof 1.33 -nbin 2048 -nch 1 -chan 6 -subint 0 -snr 565.76 -wt 4 -proc 9y -pta NANOGrav -to -0.839e-6
+53393.000009.3.000.000.9y.x.ff 1402.000000 53393.561383630266169   0.137  ao  -fe L-wide -be ASP -f L-wide_ASP -bw 4 -tobs 240.97 -tmplt J1713+0747.L-wide.PUPPI.9y.x.sum.sm -gof 1.2 -nbin 2048 -nch 1 -chan 7 -subint 0 -snr 517 -wt 4 -proc 9y -pta NANOGrav -to -0.839e-6
+53393.000009.3.000.000.9y.x.ff 1398.000000 53393.561383632511265   0.135  ao  -fe L-wide -be ASP -f L-wide_ASP -bw 4 -tobs 240.97 -tmplt J1713+0747.L-wide.PUPPI.9y.x.sum.sm -gof 1.26 -nbin 2048 -nch 1 -chan 8 -subint 0 -snr 524.07 -wt 4 -proc 9y -pta NANOGrav -to -0.839e-6
+53393.000009.3.000.000.9y.x.ff 1394.000000 53393.561383634768089   0.159  ao  -fe L-wide -be ASP -f L-wide_ASP -bw 4 -tobs 240.97 -tmplt J1713+0747.L-wide.PUPPI.9y.x.sum.sm -gof 1.19 -nbin 2048 -nch 1 -chan 9 -subint 0 -snr 444.28 -wt 4 -proc 9y -pta NANOGrav -to -0.839e-6
+53393.000009.3.000.000.9y.x.ff 1390.000000 53393.561383637044842   0.177  ao  -fe L-wide -be ASP -f L-wide_ASP -bw 4 -tobs 240.97 -tmplt J1713+0747.L-wide.PUPPI.9y.x.sum.sm -gof 1.02 -nbin 2048 -nch 1 -chan 10 -subint 0 -snr 402.32 -wt 4 -proc 9y -pta NANOGrav -to -0.839e-6
+53393.000009.3.000.000.9y.x.ff 1386.000000 53393.561383639338558   0.181  ao  -fe L-wide -be ASP -f L-wide_ASP -bw 4 -tobs 240.97 -tmplt J1713+0747.L-wide.PUPPI.9y.x.sum.sm -gof 1.1 -nbin 2048 -nch 1 -chan 11 -subint 0 -snr 390.36 -wt 4 -proc 9y -pta NANOGrav -to -0.839e-6
