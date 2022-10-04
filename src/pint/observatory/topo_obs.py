@@ -20,6 +20,7 @@ See Also
 import json
 import os
 from pathlib import Path
+import copy
 
 import astropy.constants as c
 import astropy.units as u
@@ -37,6 +38,7 @@ from pint.observatory import (
     bipm_default,
     find_clock_file,
     get_observatory,
+    earth_location_distance,
 )
 from pint.observatory.global_clock_corrections import Index, get_clock_correction_file
 from pint.pulsar_mjd import Time
@@ -78,15 +80,25 @@ class TopoObs(Observatory):
     clock corrections. Calling code can request that missing clock corrections
     raise an exception.
 
+    Additional information can be accessed through the ``location`` attribute
+
     Parameters
     ----------
     name : str
         The name of the observatory
-    itrf_xyz : astropy.units.Quantity or array-like
+    location : ~astropy.coordinates.EarthLocation, optional
+    itrf_xyz : ~astropy.units.Quantity or array-like, optional
         IRTF site coordinates (len-3 array).  Can include
         astropy units.  If no units are given, meters are
         assumed.
-
+    lat : ~astropy.units.Quantity or float, optional
+        Earth East longitude.  Can be anything that initialises an
+        :class:`~astropy.coordinates.Angle` object (if float, in degrees).
+    lon : ~astropy.units.Quantity or float, optional
+        Earth latitude.  Can be anything that initialises an
+        :class:`~astropy.coordinates.Angle` object (if float, in degrees).
+    height : ~astropy.units.Quantity ['length'] or float, optional
+        Height above reference ellipsoid (if float, in meters; default: 0).
     tempo_code : str, optional
         1-character tempo code for the site.  Will be
         automatically added to aliases.  Note, this is
@@ -127,6 +139,11 @@ class TopoObs(Observatory):
         set True to force overwriting of previous observatory definition
     bogus_last_correction : bool, optional
         Clock correction files include a bogus last correction
+
+    Note
+    ----
+    One of ``location``, ``itrf_xyz``, or (``lat``, ``lon``, ``height``) must be specified
+
     """
 
     def __init__(
@@ -136,7 +153,11 @@ class TopoObs(Observatory):
         tempo_code=None,
         itoa_code=None,
         aliases=None,
+        location=None,
         itrf_xyz=None,
+        lat=None,
+        lon=None,
+        height=None,
         clock_file="",
         clock_fmt="tempo",
         clock_dir=None,
@@ -147,39 +168,42 @@ class TopoObs(Observatory):
         overwrite=False,
         bogus_last_correction=False,
     ):
-        if aliases is None:
-            aliases = []
-        for code in (tempo_code, itoa_code):
-            if code is not None:
-                aliases.append(code)
 
-        super().__init__(
-            name,
-            aliases=aliases,
-            include_gps=include_gps,
-            include_bipm=include_bipm,
-            bipm_version=bipm_version,
-            overwrite=overwrite,
-        )
-        # ITRF coordinates are required
-        if itrf_xyz is None:
-            raise ValueError("ITRF coordinates not given for observatory '%s'" % name)
-
-        # Convert coords to standard format.  If no units are given, assume
-        # meters.
-        if not has_astropy_unit(itrf_xyz):
-            xyz = np.array(itrf_xyz) * u.m
-        else:
-            xyz = itrf_xyz.to(u.m)
-
-        # Check for correct array dims
-        if xyz.shape != (3,):
+        input = [lat is not None, lon is not None, height is not None]
+        if sum(input) > 0 and sum(input) < 3:
+            raise ValueError("All of lat, lon, height are required for observatory")
+        input = [
+            location is not None,
+            itrf_xyz is not None,
+            (lat is not None and lon is not None and height is not None),
+        ]
+        if sum(input) == 0:
             raise ValueError(
-                "Incorrect coordinate dimensions for observatory '%s'" % (name)
+                "EarthLocation, ITRF coordinates, or lat/lon/height are required for observatory '%s'"
+                % name
             )
-
-        # Convert to astropy EarthLocation, ensuring use of ITRF geocentric coordinates
-        self._loc_itrf = EarthLocation.from_geocentric(*xyz)
+        if sum(input) > 1:
+            raise ValueError(
+                f"Cannot supply more than one of EarthLocation, ITRF coordinates, and lat/lon/height for observatory '{name}'"
+            )
+        if location is not None:
+            self.location = location
+        elif itrf_xyz is not None:
+            # Convert coords to standard format.  If no units are given, assume
+            # meters.
+            if not has_astropy_unit(itrf_xyz):
+                xyz = np.array(itrf_xyz) * u.m
+            else:
+                xyz = itrf_xyz.to(u.m)
+            # Check for correct array dims
+            if xyz.shape != (3,):
+                raise ValueError(
+                    "Incorrect coordinate dimensions for observatory '%s'" % (name)
+                )
+            # Convert to astropy EarthLocation, ensuring use of ITRF geocentric coordinates
+            self.location = EarthLocation.from_geocentric(*xyz)
+        elif lat is not None and lon is not None and height is not None:
+            self.location = EarthLocation.from_geodetic(lat=lat, lon=lon, height=height)
 
         # Save clock file info, the data will be read only if clock
         # corrections for this site are requested.
@@ -197,22 +221,95 @@ class TopoObs(Observatory):
         if clock_fmt == "tempo" and clock_file == "time.dat" and tempo_code is None:
             raise ValueError("No tempo_code set for observatory '%s'" % name)
 
+        # GPS corrections
+        self.include_gps = include_gps
+
+        # BIPM corrections
+        # WARNING: `get_observatory` changes these after construction
+        self.include_bipm = include_bipm
+        self.bipm_version = bipm_version
         self.bogus_last_correction = bogus_last_correction
 
         self.tempo_code = tempo_code
+        self.itoa_code = itoa_code
+        if aliases is None:
+            aliases = []
+        for code in (tempo_code, itoa_code):
+            if code is not None:
+                aliases.append(code)
+
         self.origin = origin
+        super().__init__(
+            name,
+            aliases=aliases,
+            include_gps=include_gps,
+            include_bipm=include_bipm,
+            bipm_version=bipm_version,
+            overwrite=overwrite,
+        )
 
     def __repr__(self):
         aliases = [f"'{x}'" for x in self.aliases]
-        s = f"TopoObs('{self.name}' ({','.join(aliases)}) at [{self._loc_itrf.x}, {self._loc_itrf.y} {self._loc_itrf.z}]:\n{self.origin})"
+        s = f"TopoObs('{self.name}' ({','.join(aliases)}) at [{self.location.x}, {self.location.y} {self.location.z}]:\n{self.origin})"
         return s
 
     @property
     def timescale(self):
         return "utc"
 
+    def get_dict(self):
+        """Return as a dict with limited/changed info"""
+        # start with the default __dict__
+        # copy some attributes to rename them and remove those that aren't needed for initialization
+        output = copy.deepcopy(self.__dict__)
+        output["aliases"] = output["_aliases"]
+        output["clock_file"] = output["clock_files"]
+        del output["_name"]
+        del output["_aliases"]
+        del output["_clock"]
+        del output["location"]
+        del output["clock_files"]
+        output["itrf_xyz"] = [x.to_value(u.m) for x in self.location.geocentric]
+        return {self.name: output}
+
+    def get_json(self):
+        """Return as a JSON string"""
+        return json.dumps(self.get_dict())
+
+    def separation(self, other, method="cartesian"):
+        """Return separation between two TopoObs objects
+
+        Parameters
+        ----------
+        other : TopoObs
+        method : str, optional
+            Method to compute separation.  Either "cartesian" or "geodesic"
+
+        Returns
+        -------
+        astropy.quantity.Quantity
+
+        Note
+        ----
+        "geodesic" method assumes a spherical Earth and ignores altitudes
+        """
+        assert method.lower() in ["cartesian", "geodesic"]
+        assert isinstance(other, TopoObs)
+
+        if method.lower() == "cartesian":
+            return earth_location_distance(self.location, other.location)
+        elif method.lower() == "geodesic":
+            # this assumes a spherical Earth
+            dsigma = np.arccos(
+                np.sin(self.location.lat) * np.sin(other.location.lat)
+                + np.cos(self.location.lat)
+                * np.cos(other.location.lat)
+                * np.cos(self.location.lon - other.location.lon)
+            )
+            return (c.R_earth * dsigma).to(u.m, equivalencies=u.dimensionless_angles())
+
     def earth_location_itrf(self, time=None):
-        return self._loc_itrf
+        return self.location
 
     def _load_clock_corrections(self):
         if self._clock is None:
@@ -256,7 +353,9 @@ class TopoObs(Observatory):
             else:
                 log.info(f"Observatory {self.name} requires no clock corrections.")
         else:
-            log.info("Applying observatory clock corrections.")
+            log.info(
+                f"Applying observatory clock corrections for observatory='{self.name}'."
+            )
             for clock in self._clock:
                 corr += clock.evaluate(t, limits=limits)
 
