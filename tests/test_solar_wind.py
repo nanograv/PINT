@@ -132,6 +132,7 @@ def test_swfits():
     model2 = copy.deepcopy(model0)
     model2.SWM.value = 1
     model2.SWP.value = 2
+    model2.SWP.frozen = True
     # SWX model
     model3 = copy.deepcopy(model0)
     model3.add_component(SolarWindDispersionX())
@@ -139,6 +140,7 @@ def test_swfits():
     model3.SWXR1_0001.value = t.get_mjds().min().value
     model3.SWXR2_0001.value = t.get_mjds().max().value
     model3.SWXP_0001.value = 2
+    model3.SWXP_0001.frozen = True
     model3.SWX_0001.value = 10
 
     f1 = Fitter.auto(t, model1)
