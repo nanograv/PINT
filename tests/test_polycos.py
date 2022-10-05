@@ -1,7 +1,6 @@
 """Test polycos."""
 
 import pytest
-import io
 import numpy as np
 from pint.polycos import Polycos
 from pint.models import get_model

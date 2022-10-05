@@ -1,4 +1,3 @@
-import unittest
 import io
 
 from pint.models import get_model
