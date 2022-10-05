@@ -150,3 +150,32 @@ def test_swfits():
     f3.fit_toas()
     assert np.isclose(f1.model.NE_SW.value, f2.model.NE_SW.value)
     assert np.isclose(f1.model.NE_SW.value, f3.model.SWX_0001.value)
+
+
+def test_swp_fit():
+    model = get_model(StringIO("\n".join([par, "NE_SW 1\nSWM 1\nSWP 2"])))
+    toas = make_fake_toas_uniform(54000, 54000 + 365, 153, model=model, obs="gbt")
+    for param in model.free_params:
+        getattr(model, param).frozen = True
+    model.SWP.value = 2.5
+    model.SWP.frozen = False
+    f = Fitter.auto(toas, model)
+    f.fit_toas()
+    assert np.isclose(f.model.SWP.value, 2, atol=0.5)
+
+
+def test_swxp_fit():
+    model = get_model(StringIO(par))
+    model.add_component(SolarWindDispersionX())
+    model.SWXR1_0001.value = 54000
+    model.SWXR2_0001.value = 54365
+    model.SWX_0001.value = 10
+    model.SWXP_0001.value = 2
+    toas = make_fake_toas_uniform(54000, 54000 + 365, 153, model=model, obs="gbt")
+    for param in model.free_params:
+        getattr(model, param).frozen = True
+    model.SWXP_0001.value = 2.5
+    model.SWXP_0001.frozen = False
+    f = Fitter.auto(toas, model)
+    f.fit_toas()
+    assert np.isclose(f.model.SWXP_0001.value, 2, atol=0.1)
