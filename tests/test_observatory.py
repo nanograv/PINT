@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 import io
 import os
-import unittest
 import json
-from pathlib import Path
 
 import astropy.units as u
 import numpy as np
@@ -11,7 +9,6 @@ import pytest
 from astropy import units as u
 
 from pint.pulsar_mjd import Time
-from pinttestdata import datadir
 
 import pint.observatory
 from pint.observatory import NoClockCorrections, Observatory, get_observatory
