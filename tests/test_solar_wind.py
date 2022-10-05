@@ -179,3 +179,27 @@ def test_swxp_fit():
     f = Fitter.auto(toas, model)
     f.fit_toas()
     assert np.isclose(f.model.SWXP_0001.value, 2, atol=0.1)
+
+
+def test_overlapping_swx():
+    model = get_model(StringIO(par))
+    model.add_component(SolarWindDispersionX())
+    model.SWXR1_0001.value = 54000
+    model.SWXR2_0001.value = 54365
+    model.SWX_0001.value = 10
+    model.SWXP_0001.value = 5
+    toas = make_fake_toas_uniform(54000, 54000 + 365, 150, model=model, obs="gbt")
+
+    dm = model.components["SolarWindDispersionX"].swx_dm(toas)
+
+    model2 = copy.deepcopy(model)
+    model3 = copy.deepcopy(model)
+
+    model2.add_swx_range(54000, 54180, swx=10, swxp=1.5)
+    dm2 = model2.components["SolarWindDispersionX"].swx_dm(toas)
+
+    model3.SWXR2_0001.value = 54180
+    model3.SWXP_0001.value = 1.5
+    dm3 = model3.components["SolarWindDispersionX"].swx_dm(toas)
+    dm3[toas.get_mjds() >= 54180 * u.d] = 0
+    assert np.allclose(dm2 - dm, dm3)
