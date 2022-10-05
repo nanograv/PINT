@@ -6,6 +6,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 
 ## Unreleased
 ### Changed
+- Minimum supported versions updated to numpy 1.18.5, matplotlib 3.2.0
 ### Added
 - Can ignore pulse_number column on TOA read or write (to help merging)
 - Can add in missing columns when merging unless told not to
@@ -19,6 +20,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Split the computation of correlated noise basis matrix and weights into two functions.
 - Fixed bug in combining design matrices
 - Fixed bug in dmxparse
+- Fixed bug in photonphase with polycos
 
 ## [0.9.1] 2022-08-12
 ### Changed

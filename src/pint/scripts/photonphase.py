@@ -227,7 +227,7 @@ def main(argv=None):
 
         # Calculate phases
         log.debug("Evaluating polycos")
-        phases = p.eval_phase(mjds)
+        phases = ptable.eval_phase(mjds)
         phases[phases < 0] += 1.0
         h = float(hm(phases))
         print("Htest : {0:.2f} ({1:.2f} sigma)".format(h, h2sig(h)))
