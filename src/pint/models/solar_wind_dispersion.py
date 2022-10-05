@@ -827,7 +827,7 @@ class SolarWindDispersionX(Dispersion):
         for k, v in select_idx.items():
             ne_sw = getattr(self, k).quantity
             if len(v) > 0:
-                dm[v] = (self.solar_wind_geometry(toas[v], p=p[k]) * ne_sw).to(
+                dm[v] += (self.solar_wind_geometry(toas[v], p=p[k]) * ne_sw).to(
                     u.pc / u.cm**3
                 )
         return dm
@@ -862,7 +862,7 @@ class SolarWindDispersionX(Dispersion):
         deriv = np.zeros(len(tbl)) * u.pc
         for k, v in select_idx.items():
             if len(v) > 0:
-                deriv[v] = self.solar_wind_geometry(toas[v], p=p)
+                deriv[v] += self.solar_wind_geometry(toas[v], p=p)
         return deriv
 
     def d_delay_d_swx(self, toas, param_name, acc_delay=None):
@@ -906,7 +906,7 @@ class SolarWindDispersionX(Dispersion):
         deriv = np.zeros(len(tbl)) * u.pc / u.cm**3
         for k, v in select_idx.items():
             if len(v) > 0:
-                deriv[v] = swx * self.d_solar_wind_geometry_d_swxp(toas[v], p=p)
+                deriv[v] += swx * self.d_solar_wind_geometry_d_swxp(toas[v], p=p)
         return deriv
 
     def d_delay_d_swxp(self, toas, param_name, acc_delay=None):
