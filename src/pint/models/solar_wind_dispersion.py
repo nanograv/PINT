@@ -165,11 +165,11 @@ class SolarWindDispersion(Dispersion):
     """Dispersion due to the solar wind (basic model).
 
     The model is a simple spherically-symmetric model that is fit
-    only in its constant amplitude.
+    in its constant amplitude.
 
     For ``SWM==0`` it assumes a power-law index of 2 (Edwards et al.)
 
-    For ``SWM==1`` it can have any power-law index (You et al., Hazboun et al.)
+    For ``SWM==1`` it can have any power-law index (You et al., Hazboun et al.), which can also be fit
 
     Parameters supported:
 
@@ -494,10 +494,10 @@ class SolarWindDispersionX(Dispersion):
     """This class provides a SWX model - multiple Solar Wind segments.
 
     This model lets the user specify time ranges and fit for a different
-    SWX (solar wind density at 1 AU) value in each time range.
+    SWX (solar wind density at 1 AU) value and SWXP (radial power-law index) in each time range.
 
-    Each segment can also have a different radial power-law index.  The default value of 2
-    corresponds to the Edwards et al. model.  Other values are for the You et al./Hazboun et al. model.
+    The default radial power-law index value of 2 corresponds to the Edwards et al. model.
+    Other values are for the You et al./Hazboun et al. model.
 
     Parameters supported:
 
@@ -612,9 +612,9 @@ class SolarWindDispersionX(Dispersion):
         swx : float
             Solar wind density at 1 AU
         swxp : float
-            Solar dinw power-law index
+            Solar wind power-law index
         frozen : bool
-            Indicates whether NE_SWX will be fit.
+            Indicates whether SWX and SWXP will be fit.
 
         Returns
         -------
@@ -658,6 +658,7 @@ class SolarWindDispersionX(Dispersion):
                 value=swxp,
                 description="Solar wind power-law index",
                 parameter_type="float",
+                frozen=frozen,
             )
         )
         self.add_param(
