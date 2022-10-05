@@ -8,8 +8,6 @@ import sys
 from io import StringIO
 from pathlib import Path
 
-import pytest
-
 from pint.scripts import event_optimize
 from pinttestdata import datadir
 

@@ -1,28 +1,11 @@
 """Test basic functionality of the :module:`pint.derived_quantities`."""
-import os
-from itertools import product
-from tempfile import NamedTemporaryFile
 
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
-import pytest
-import scipy.stats
-from astropy.time import Time
-from hypothesis import assume, example, given
-from hypothesis.extra.numpy import array_shapes, arrays, scalar_dtypes
-from hypothesis.strategies import (
-    composite,
-    floats,
-    integers,
-    just,
-    one_of,
-    sampled_from,
-    slices,
-)
-from numdifftools import Derivative
-from numpy.testing import assert_allclose, assert_array_equal
-from pinttestdata import datadir
+from hypothesis import given
+from hypothesis.extra.numpy import arrays
+from hypothesis.strategies import floats
 
 import pint
 from pint.derived_quantities import (

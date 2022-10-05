@@ -1,8 +1,6 @@
 #! /usr/bin/env python
 """Tests for par file parsing, pintify parfile and value fill up
 """
-import os
-import tempfile
 
 import pytest
 from io import StringIO

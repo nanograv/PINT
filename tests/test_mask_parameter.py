@@ -3,8 +3,6 @@
 import os
 import pytest
 from io import StringIO
-import astropy
-import astropy.time as time
 import astropy.units as u
 import numpy as np
 
@@ -12,8 +10,6 @@ from pint.models.model_builder import get_model
 from pint.models.parameter import maskParameter
 from pint.toa import get_TOAs
 from pinttestdata import datadir
-
-import copy
 
 
 @pytest.fixture

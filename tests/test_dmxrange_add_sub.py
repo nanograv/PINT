@@ -4,7 +4,7 @@ import pytest
 import io
 import numpy as np
 from pint.models import get_model
-from pint.models.dispersion_model import DispersionDM, DispersionDMX
+from pint.models.dispersion_model import DispersionDMX
 from pint.utils import PrefixError
 
 

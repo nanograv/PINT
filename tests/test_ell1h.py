@@ -1,19 +1,15 @@
 """Tests of ELL1H model """
 import logging
 import os
-import unittest
 import pytest
-from warnings import warn
 
 import astropy.units as u
 import numpy as np
 
 import pint.fitter as ff
 from pint.models import get_model
-from pint.models.timing_model import TimingModelError
 import pint.toa as toa
 import test_derivative_utils as tdu
-from utils import verify_stand_alone_binary_parameter_updates
 from pint.residuals import Residuals
 from pinttestdata import datadir
 from io import StringIO

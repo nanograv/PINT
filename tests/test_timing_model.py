@@ -8,11 +8,7 @@ from contextlib import redirect_stdout
 import astropy.units as u
 import numpy as np
 import pytest
-from hypothesis import given
-from hypothesis.strategies import permutations, composite
 from numpy.testing import assert_allclose
-from pint import toa
-from pint.observatory import compare_t2_observatories_dat
 from pinttestdata import datadir
 
 from pint.models import (

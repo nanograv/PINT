@@ -1,21 +1,13 @@
 import os
-from copy import deepcopy
 
-# import matplotlib
-# matplotlib.use('TKAgg')
-import matplotlib.pyplot as plt
 import pytest
 import numpy as np
-import astropy.units as u
 
 from pint.models import get_model, get_model_and_toas
 from pint.toa import get_TOAs
 import pint.fitter
-from pint import toa, simulation
+from pint import simulation
 from pinttestdata import datadir
-import pint.models.parameter as param
-from pint import ls
-from pint import utils
 
 
 @pytest.mark.parametrize(

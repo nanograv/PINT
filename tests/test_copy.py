@@ -5,7 +5,6 @@ import os
 import pytest
 import numpy as np
 import copy
-import sys
 
 import astropy.units as u
 from astropy.table import Table

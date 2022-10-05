@@ -1,18 +1,11 @@
 """Tests for adding info strings to parfiles and tim files"""
-import logging
 import os
-import unittest
 import pytest
-import copy
 import io
 import platform
 
-import astropy.units as u
-import numpy as np
-
 import pint.models.model_builder as mb
 import pint.toa as toa
-from pint.residuals import Residuals
 from pinttestdata import datadir
 import pint
 

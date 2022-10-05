@@ -1,7 +1,6 @@
 """ Various of tests for the general data fitter using wideband TOAs.
 """
 
-import pytest
 import os
 
 import numpy as np
