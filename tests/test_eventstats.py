@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from numpy.testing import assert_allclose, assert_equal
+from numpy.testing import assert_allclose
 
 import pint.eventstats as es
 import numpy as np

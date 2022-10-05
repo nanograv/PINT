@@ -9,7 +9,7 @@ import tempfile
 import os
 import pint.config
 from pint.fitter import GLSFitter
-from pinttestdata import datadir, testdir
+from pinttestdata import datadir
 
 
 def test_noise_addition():
