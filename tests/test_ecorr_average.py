@@ -1,7 +1,5 @@
 #! /usr/bin/env python
-import json
 import os
-import unittest
 
 import astropy.units as u
 import numpy as np
