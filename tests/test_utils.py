@@ -5,7 +5,6 @@ from itertools import product
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 
-import astropy.constants as c
 import astropy.units as u
 import numpy as np
 import pytest
@@ -28,7 +27,6 @@ from numdifftools import Derivative
 from numpy.testing import assert_allclose, assert_array_equal
 from pinttestdata import datadir
 
-import pint
 import pint.models as tm
 from pint import fitter, toa
 from pint.pulsar_mjd import (
