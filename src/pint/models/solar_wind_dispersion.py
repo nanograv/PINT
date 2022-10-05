@@ -350,13 +350,16 @@ class SolarWindDispersion(Dispersion):
             # this is what Enterprise uses
             z_p = (1e14 * u.s * const.c).to(b.unit)
             p = self.SWP.value
-            return (1 / b.to_value(u.AU)) ** p * (
-                b * _d_hypergeom_function_dp(b, z_sun, p)
-                + (b * np.sqrt(np.pi) / 2) * _d_gamma_function_dp(p)
-            ) - (1 / b.to_value(u.AU)) ** p * np.log(b.to_value(u.AU)) * (
-                b * _hypergeom_function(b, z_sun, p)
-                + (b * np.sqrt(np.pi) / 2) * _gamma_function(p)
-            )
+            if p > 1:
+                return (1 / b.to_value(u.AU)) ** p * (
+                    b * _d_hypergeom_function_dp(b, z_sun, p)
+                    + (b * np.sqrt(np.pi) / 2) * _d_gamma_function_dp(p)
+                ) - (1 / b.to_value(u.AU)) ** p * np.log(b.to_value(u.AU)) * (
+                    b * _hypergeom_function(b, z_sun, p)
+                    + (b * np.sqrt(np.pi) / 2) * _gamma_function(p)
+                )
+            else:
+                return np.inf * np.ones(len(toas)) * u.pc
         else:
             raise NotImplementedError(
                 "Solar Dispersion Delay not implemented for SWM %d" % self.SWM.value
@@ -589,13 +592,16 @@ class SolarWindDispersionX(Dispersion):
         # a big value for comparison
         # this is what Enterprise uses
         z_p = (1e14 * u.s * const.c).to(b.unit)
-        return (1 / b.to_value(u.AU)) ** p * (
-            b * _d_hypergeom_function_dp(b, z_sun, p)
-            + (b * np.sqrt(np.pi) / 2) * _d_gamma_function_dp(p)
-        ) - (1 / b.to_value(u.AU)) ** p * np.log(b.to_value(u.AU)) * (
-            b * _hypergeom_function(b, z_sun, p)
-            + (b * np.sqrt(np.pi) / 2) * _gamma_function(p)
-        )
+        if p > 1:
+            return (1 / b.to_value(u.AU)) ** p * (
+                b * _d_hypergeom_function_dp(b, z_sun, p)
+                + (b * np.sqrt(np.pi) / 2) * _d_gamma_function_dp(p)
+            ) - (1 / b.to_value(u.AU)) ** p * np.log(b.to_value(u.AU)) * (
+                b * _hypergeom_function(b, z_sun, p)
+                + (b * np.sqrt(np.pi) / 2) * _gamma_function(p)
+            )
+        else:
+            return np.inf * np.ones(len(toas)) * u.pc
 
     def add_swx_range(self, mjd_start, mjd_end, index=None, swx=0, swxp=2, frozen=True):
         """Add SWX range to a dispersion model with specified start/end MJD, SWX, and power-law index
