@@ -26,7 +26,8 @@ def _dm_p_int(b, z, p):
         Impact parameter
     z : astropy.quantity.Quantity
         distance from Earth to closest point to the Sun
-    p : power-law index
+    p : float
+        power-law index
 
     Returns
     -------
@@ -34,6 +35,129 @@ def _dm_p_int(b, z, p):
     """
     return (z / b) * scipy.special.hyp2f1(
         0.5, p / 2.0, 1.5, -((z**2) / b**2).decompose().value
+    )
+
+
+def _gamma_function(p):
+    """The second term in Eqn. 12 of Hazboun et al. involving Gamma functions
+    Note that this needs to be multiplied by b*sqrt(pi)/2
+
+    Parameters
+    ----------
+    p : float
+        power-law index
+
+    Returns
+    -------
+    float
+    """
+    return scipy.special.gamma(p / 2 - 0.5) / scipy.special.gamma(p / 2)
+
+
+def _d_gamma_function_dp(p):
+    """Derivative of the second term in Eqn. 12 of Hazboun et al. involving Gamma functions wrt p
+    Note that this needs to be multiplied by b*sqrt(pi)/2
+
+    Parameters
+    ----------
+    p : float
+        power-law index
+
+    Returns
+    -------
+    float
+    """
+    return scipy.special.gamma(p / 2 - 0.5) * scipy.special.polygamma(
+        0, p / 2 - 0.5
+    ) / 2 / scipy.special.gamma(p / 2) - scipy.special.gamma(
+        p / 2 - 0.5
+    ) * scipy.special.polygamma(
+        0, p / 2
+    ) / 2 / scipy.special.gamma(
+        p / 2
+    )
+
+
+def _hypergeom_function(b, z, p):
+    """The first term in Eqn. 12 of Hazboun et al. involving hypergeometric functions
+    Note that this needs to be multiplied by b
+
+    Parameters
+    ----------
+    b : astropy.quantity.Quantity
+        Impact parameter
+    z : astropy.quantity.Quantity
+        distance from Earth to closest point to the Sun
+    p : float
+        power-law index
+
+    Returns
+    -------
+    astropy.quantity.Quantity
+    """
+    theta = np.arctan2(b, z)
+    return (1 / np.tan(theta)) * scipy.special.hyp2f1(
+        0.5, p / 2.0, 1.5, -((1 / np.tan(theta)).value ** 2)
+    )
+
+
+def _d_hypergeom_function_dp(b, z, p):
+    """Derivative of the first term in Eqn. 12 of Hazboun et al. involving hypergeometric functions wrt p
+    Note that this needs to be multiplied by b
+
+    Parameters
+    ----------
+    b : astropy.quantity.Quantity
+        Impact parameter
+    z : astropy.quantity.Quantity
+        distance from Earth to closest point to the Sun
+    p : float
+        power-law index
+
+    Returns
+    -------
+    astropy.quantity.Quantity
+    """
+    theta = np.arctan2(b, z)
+    x = theta.to_value(u.rad) - np.pi / 2
+    # the result of a order 4,4 Pade expansion of
+    # cot(theta) * hypergeom([1/2, p/2],[3/2],-cot(theta)**2)
+    # near theta=Pi/2
+    # in Maple:
+    # with(numapprox):
+    # with(CodeGeneration):
+    # Python(simplify(subs(theta = x + Pi/2, diff(pade(cot(theta)*hypergeom([1/2, p/2], [3/2], -cot(theta)^2), theta = Pi/2, [4, 4]), p))));
+    return (
+        8580
+        * x**3
+        * (
+            (
+                p**4
+                - 0.76e2 / 0.11e2 * p**3
+                + 0.2996e4 / 0.429e3 * p**2
+                + 0.5248e4 / 0.429e3 * p
+                - 0.1984e4 / 0.429e3
+            )
+            * x**4
+            + 0.84e2
+            / 0.11e2
+            * (p**2 - 0.115e3 / 0.39e2 * p - 0.44e2 / 0.39e2)
+            * (p + 4)
+            * x**2
+            + 0.1960e4 / 0.143e3 * (p + 4) ** 2
+        )
+        / (
+            39 * x**4 * p**3
+            - 186 * x**4 * p**2
+            + 200 * x**4 * p
+            + 360 * x**2 * p**2
+            + 32 * x**4
+            - 480 * x**2 * p
+            - 1440 * x**2
+            + 840 * p
+            + 3360
+        )
+        ** 2
     )
 
 
@@ -98,6 +222,8 @@ class SolarWindDispersion(Dispersion):
         super().setup()
         self.register_dm_deriv_funcs(self.d_dm_d_ne_sw, "NE_SW")
         self.register_deriv_funcs(self.d_delay_d_ne_sw, "NE_SW")
+        self.register_dm_deriv_funcs(self.d_dm_d_swp, "SWP")
+        self.register_deriv_funcs(self.d_delay_d_swp, "SWP")
 
     def solar_wind_geometry(self, toas):
         """Return the geometry of solar wind dispersion.
@@ -125,7 +251,7 @@ class SolarWindDispersion(Dispersion):
 
         if swm == 0:
             angle, r = self._parent.sun_angle(toas, also_distance=True)
-            rho = np.pi - angle.value
+            rho = np.pi - angle.to_value(u.rad)
             solar_wind_geometry = const.au**2.0 * rho / (r * np.sin(rho))
             return solar_wind_geometry.to(u.pc)
         elif swm == 1:
@@ -196,6 +322,59 @@ class SolarWindDispersion(Dispersion):
             warn("Using topocentric frequency for dedispersion!")
             bfreq = toas.table["freq"]
         deriv = self.d_delay_d_dmparam(toas, "NE_SW")
+        deriv[bfreq < 1.0 * u.MHz] = 0.0
+        return deriv
+
+    def d_solar_wind_geometry_d_swp(self, toas, param_name, acc_delay=None):
+        """Derivative of solar_wind_geometry (path length) wrt power-law index p
+
+        The evaluation is done using Eqn. 12 in Hazboun et al. (2022).  The first term
+        involving hypergeometric functions (:func:`_hypergeom_function`)
+        has the derivative computed approximately using a Pade expansion (:func:`_d_hypergeom_function_dp`).
+        The second uses gamma functions (:func:`_gamma_function`) and has the derivative computed
+        using polygamma functions (:func:`_d_gamma_function_dp`).
+
+        """
+        if self.SWM.value == 0:
+            raise ValueError(
+                "Solar Wind power-law index not valid for SWM %d" % self.SWM.value
+            )
+        elif self.SWM.value == 1:
+            # get elongation angle, distance from Earth to Sun
+            theta, r = self._parent.sun_angle(toas, also_distance=True)
+            # impact parameter
+            b = r * np.sin(theta)
+            # distance from the Earth to the impact point
+            z_sun = r * np.cos(theta)
+            # a big value for comparison
+            # this is what Enterprise uses
+            z_p = (1e14 * u.s * const.c).to(b.unit)
+            p = self.SWP.value
+            return (1 / b.to_value(u.AU)) ** p * (
+                b * _d_hypergeom_function_dp(b, z_sun, p)
+                + (b * np.sqrt(np.pi) / 2) * _d_gamma_function_dp(p)
+            ) - (1 / b.to_value(u.AU)) ** p * np.log(b.to_value(u.AU)) * (
+                b * _hypergeom_function(b, z_sun, p)
+                + (b * np.sqrt(np.pi) / 2) * _gamma_function(p)
+            )
+        else:
+            raise NotImplementedError(
+                "Solar Dispersion Delay not implemented for SWM %d" % self.SWM.value
+            )
+
+    def d_dm_d_swp(self, toas, param_name, acc_delay=None):
+        d_geometry_dp = self.d_solar_wind_geometry_d_swp(
+            toas, param_name, acc_delay=acc_delay
+        )
+        return self.NE_SW.quantity * d_geometry_dp
+
+    def d_delay_d_swp(self, toas, param_name, acc_delay=None):
+        try:
+            bfreq = self._parent.barycentric_radio_freq(toas)
+        except AttributeError:
+            warn("Using topocentric frequency for dedispersion!")
+            bfreq = toas.table["freq"]
+        deriv = self.d_delay_d_dmparam(toas, "SWP")
         deriv[bfreq < 1.0 * u.MHz] = 0.0
         return deriv
 
@@ -382,6 +561,42 @@ class SolarWindDispersionX(Dispersion):
             )
         return solar_wind_geometry.to(u.pc)
 
+    def d_solar_wind_geometry_d_swxp(self, toas, p):
+        """Derivative of solar_wind_geometry (path length) wrt power-law index p
+
+        The evaluation is done using Eqn. 12 in Hazboun et al. (2022).  The first term
+        involving hypergeometric functions (:func:`_hypergeom_function`)
+        has the derivative computed approximately using a Pade expansion (:func:`_d_hypergeom_function_dp`).
+        The second uses gamma functions (:func:`_gamma_function`) and has the derivative computed
+        using polygamma functions (:func:`_d_gamma_function_dp`).
+
+        Parameters
+        ----------
+        toas : pint.toa.TOAs
+        p : float, optional
+            Radial power-law index
+
+        Returns
+        -------
+        astropy.quantity.Quantity
+        """
+        # get elongation angle, distance from Earth to Sun
+        theta, r = self._parent.sun_angle(toas, also_distance=True)
+        # impact parameter
+        b = r * np.sin(theta)
+        # distance from the Earth to the impact point
+        z_sun = r * np.cos(theta)
+        # a big value for comparison
+        # this is what Enterprise uses
+        z_p = (1e14 * u.s * const.c).to(b.unit)
+        return (1 / b.to_value(u.AU)) ** p * (
+            b * _d_hypergeom_function_dp(b, z_sun, p)
+            + (b * np.sqrt(np.pi) / 2) * _d_gamma_function_dp(p)
+        ) - (1 / b.to_value(u.AU)) ** p * np.log(b.to_value(u.AU)) * (
+            b * _hypergeom_function(b, z_sun, p)
+            + (b * np.sqrt(np.pi) / 2) * _gamma_function(p)
+        )
+
     def add_swx_range(self, mjd_start, mjd_end, index=None, swx=0, swxp=2, frozen=True):
         """Add SWX range to a dispersion model with specified start/end MJD, SWX, and power-law index
 
@@ -531,6 +746,9 @@ class SolarWindDispersionX(Dispersion):
                     )
                 self.register_deriv_funcs(self.d_delay_d_swx, prefix_par)
                 self.register_dm_deriv_funcs(self.d_dm_d_swx, prefix_par)
+            elif prefix_par.startswith("SWXP_"):
+                self.register_deriv_funcs(self.d_delay_d_swxp, prefix_par)
+                self.register_dm_deriv_funcs(self.d_dm_d_swxp, prefix_par)
 
     def validate(self):
         """Validate the SWX parameters."""
@@ -641,6 +859,50 @@ class SolarWindDispersionX(Dispersion):
         return deriv
 
     def d_delay_d_swx(self, toas, param_name, acc_delay=None):
+        try:
+            bfreq = self._parent.barycentric_radio_freq(toas)
+        except AttributeError:
+            warn("Using topocentric frequency for dedispersion!")
+            bfreq = toas.table["freq"]
+        deriv = self.d_delay_d_dmparam(toas, param_name)
+        deriv[bfreq < 1.0 * u.MHz] = 0.0
+        return deriv
+
+    def d_dm_d_swxp(self, toas, param_name, acc_delay=None):
+        condition = {}
+        tbl = toas.table
+        # still use the SWX selectors
+        if not hasattr(self, "swx_toas_selector"):
+            self.swx_toas_selector = TOASelect(is_range=True)
+        param = getattr(self, param_name)
+        swxp_index = param.index
+        SWX_mapping = self.get_prefix_mapping_component("SWX_")
+        SWXP_mapping = self.get_prefix_mapping_component("SWXP_")
+        SWXR1_mapping = self.get_prefix_mapping_component("SWXR1_")
+        SWXR2_mapping = self.get_prefix_mapping_component("SWXR2_")
+        swx = getattr(self, SWX_mapping[swxp_index]).quantity
+        p = getattr(self, SWXP_mapping[swxp_index]).value
+        r1 = getattr(self, SWXR1_mapping[swxp_index]).quantity
+        r2 = getattr(self, SWXR2_mapping[swxp_index]).quantity
+
+        swx_name = "SWX_" + pint.utils.split_prefixed_name(param_name)[1]
+        condition = {swx_name: (r1.mjd, r2.mjd)}
+        select_idx = self.swx_toas_selector.get_select_index(
+            condition, tbl["mjd_float"]
+        )
+
+        try:
+            bfreq = self._parent.barycentric_radio_freq(toas)
+        except AttributeError:
+            warn("Using topocentric frequency for dedispersion!")
+            bfreq = tbl["freq"]
+        deriv = np.zeros(len(tbl)) * u.pc / u.cm**3
+        for k, v in select_idx.items():
+            if len(v) > 0:
+                deriv[v] = swx * self.d_solar_wind_geometry_d_swxp(toas[v], p=p)
+        return deriv
+
+    def d_delay_d_swxp(self, toas, param_name, acc_delay=None):
         try:
             bfreq = self._parent.barycentric_radio_freq(toas)
         except AttributeError:
