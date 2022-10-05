@@ -14,9 +14,6 @@ eventfile = datadir / "B1509_RXTE_short.fits"
 orbfile = datadir / "FPorbit_Day6223"
 
 
-@pytest.mark.skipif(
-    "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
-)
 def test_rxte_result(capsys, tmp_path):
     "Test that processing RXTE data with orbit file gives correct result"
 
@@ -38,9 +35,6 @@ parfile_nicerbad = datadir / "ngc300nicernoTZR.par"
 eventfile_nicer = datadir / "ngc300nicer_bary.evt"
 
 
-@pytest.mark.skipif(
-    "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
-)
 def test_nicer_result_bary(capsys):
     "Check that barycentered NICER data is processed correctly."
     cmd = f" {eventfile_nicer} {parfile_nicer}"
@@ -72,9 +66,6 @@ def test_nicer_result_topo(capsys):
     assert abs(v - 183.21) < 1
 
 
-@pytest.mark.skipif(
-    "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
-)
 def test_AbsPhase_exception():
     "Verify that passing par file with no TZR* parameters raises exception"
     with pytest.raises(ValueError):
@@ -82,9 +73,6 @@ def test_AbsPhase_exception():
         photonphase.main(cmd.split())
 
 
-@pytest.mark.skipif(
-    "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
-)
 def test_OrbPhase_exception():
     "Verify that trying to add ORBIT_PHASE column with no BINARY parameter in the par file raises exception"
     with pytest.raises(ValueError):
@@ -96,9 +84,6 @@ parfile_nicer_binary = datadir / "PSR_J0218+4232.par"
 eventfile_nicer_binary = datadir / "J0218_nicer_2070030405_cleanfilt_cut_bary.evt"
 
 
-@pytest.mark.skipif(
-    "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
-)
 def test_OrbPhase_column(tmp_path):
     "Verify that the ORBIT_PHASE column is calculated and added correctly"
 
@@ -123,9 +108,6 @@ def test_OrbPhase_column(tmp_path):
     os.remove(outfile)
 
 
-@pytest.mark.skipif(
-    "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
-)
 def test_nicer_result_bary_polyco(capsys, tmp_path):
     "Check that barycentered NICER data is processed correctly with --polyco."
     outfile = tmp_path / "polycos-photonphase-test.evt"
