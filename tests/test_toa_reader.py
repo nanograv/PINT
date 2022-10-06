@@ -1,7 +1,6 @@
 import os
 import shutil
 import unittest
-from glob import glob
 from io import StringIO
 from pathlib import Path
 
@@ -10,6 +9,7 @@ import pytest
 
 # For this test, turn off the check for the age of the IERS A table
 from astropy.utils.iers import conf
+import astropy.table
 from hypothesis import given, settings
 from hypothesis.extra.numpy import arrays
 from hypothesis.strategies import floats, integers, sampled_from
@@ -232,6 +232,121 @@ def test_toa_merge_different_ephem():
     toas[0].ephem = "DE436"
     with pytest.raises(TypeError):
         nt = toa.merge_TOAs(toas)
+
+
+def test_toa_merge_different_columns_strict():
+    # merge with strict=True should fail with an error about pulse_number
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+    ]
+    model = get_model(datadir / "NGC6440E.par")
+    # add a pulse_number column.  then the merge should fail
+    toas = [toa.get_TOAs(ff, model=model) for ff in filenames]
+    toas[0].compute_pulse_numbers(model)
+    with pytest.raises(astropy.table.np_utils.TableMergeError) as exc:
+        nt = toa.merge_TOAs(toas, strict=True)
+    assert "pulse_number" in str(exc)
+
+
+def test_toa_merge_different_columns_notstrict():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+    ]
+    model = get_model(datadir / "NGC6440E.par")
+    # add a pulse_number column.  then the merge should fail
+    toas = [toa.get_TOAs(ff, model=model) for ff in filenames]
+    toas[0].compute_pulse_numbers(model)
+    nt = toa.merge_TOAs(toas, strict=False)
+
+
+def test_toa_merge_different_columns_TDB_notstrict():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+    ]
+    model = get_model(datadir / "NGC6440E.par")
+    toas = [toa.get_TOAs(ff, model=model) for ff in filenames]
+    # remove the tdb column
+    # merge should fail if strict
+    del toas[1].table["tdb"]
+    nt = toa.merge_TOAs(toas, strict=False)
+
+
+def test_toa_merge_different_columns_TDB_strict():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+    ]
+    model = get_model(datadir / "NGC6440E.par")
+    toas = [toa.get_TOAs(ff, model=model) for ff in filenames]
+    # remove the tdb column
+    # merge should fail if strict
+    del toas[1].table["tdb"]
+    with pytest.raises(astropy.table.np_utils.TableMergeError) as exc:
+        nt = toa.merge_TOAs(toas, strict=True)
+    assert "tdb" in str(exc)
+
+
+def test_toa_merge_different_columns_posvel_notstrict():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+    ]
+    model = get_model(datadir / "NGC6440E.par")
+    toas = [toa.get_TOAs(ff, model=model) for ff in filenames]
+    # remove the ssb_obs_pos column
+    # merge should fail if strict
+    del toas[1].table["ssb_obs_pos"]
+    nt = toa.merge_TOAs(toas, strict=False)
+
+
+def test_toa_merge_different_columns_posvel_strict():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+    ]
+    model = get_model(datadir / "NGC6440E.par")
+    toas = [toa.get_TOAs(ff, model=model) for ff in filenames]
+    # remove the ssb_obs_pos column
+    # merge should fail if strict
+    del toas[1].table["ssb_obs_pos"]
+    with pytest.raises(astropy.table.np_utils.TableMergeError) as exc:
+        nt = toa.merge_TOAs(toas, strict=True)
+    assert "ssb_obs_pos" in str(exc)
+
+
+def test_toa_merge_different_columns_ignorepn_onread():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+    ]
+    model = get_model(datadir / "NGC6440E.par")
+    # read and add pulse numbers
+    t = toa.get_TOAs(filenames[0], model=model)
+    t.compute_pulse_numbers(model)
+    f = StringIO()
+    t.write_TOA_file(f)
+    f.seek(0)
+    toas = [toa.get_TOAs(fname, include_pn=False) for fname in [f, filenames[1]]]
+    nt = toa.merge_TOAs(toas)
+
+
+def test_toa_merge_different_columns_ignorepn_onwrite():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+    ]
+    model = get_model(datadir / "NGC6440E.par")
+    # read and add pulse numbers
+    t = toa.get_TOAs(filenames[0], model=model)
+    t.compute_pulse_numbers(model)
+    f = StringIO()
+    t.write_TOA_file(f, include_pn=False)
+    f.seek(0)
+    toas = [toa.get_TOAs(fname, include_pn=True) for fname in [f, filenames[1]]]
+    nt = toa.merge_TOAs(toas)
 
 
 def test_bipm_default():

@@ -1,11 +1,7 @@
-import numpy as np
 import astropy.units as u
-from astropy.time import Time
-import matplotlib.pyplot as plt
 import pint.toa as toa
 import pint.simulation as simulation
 from pint.models import get_model
-from copy import deepcopy
 import io
 import pytest
 

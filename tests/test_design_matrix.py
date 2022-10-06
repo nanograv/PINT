@@ -1,6 +1,5 @@
 """ Test for pint design matrix"""
 import os
-import pytest
 import numpy as np
 
 from pint.models import get_model

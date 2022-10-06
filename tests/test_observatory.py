@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 import io
 import os
+import json
 
 import astropy.units as u
 import numpy as np
 import pytest
+from astropy import units as u
+
+from pint.pulsar_mjd import Time
 
 import pint.observatory
 from pint.observatory import NoClockCorrections, Observatory, get_observatory
@@ -218,7 +222,7 @@ def test_gbt_registered():
 def test_is_gbt_still_ok():
 
     gbt = get_observatory("gbt")
-    assert gbt._loc_itrf.y < 0
+    assert gbt.location.y < 0
 
 
 @pytest.mark.parametrize("overwrite", [True, False])
@@ -247,12 +251,65 @@ def test_observatory_override(sandbox, overwrite):
     else:
         load_observatories(io.StringIO(wronggbt), overwrite=overwrite)
         newgbt = get_observatory("gbt")
-        assert newgbt._loc_itrf.y > 0
-        assert newgbt._loc_itrf.y != gbt_orig._loc_itrf.y
+        assert newgbt.location.y > 0
+        assert newgbt.location.y != gbt_orig.location.y
 
 
 def test_list_last_correction_mjds_runs():
     pint.observatory.list_last_correction_mjds()
+
+
+def test_TopoObs_EarthLocation(sandbox):
+    gbt_orig = get_observatory("gbt")
+    gbt_new = TopoObs(name="gbt_new", location=gbt_orig.location)
+    assert gbt_orig.separation(gbt_new) < 1 * u.cm
+
+
+def test_json_observatory_output(sandbox):
+    gbt_orig = get_observatory("gbt")
+    load_observatories(io.StringIO(gbt_orig.get_json()), overwrite=True)
+    gbt_reload = get_observatory("gbt")
+
+    for p in gbt_orig.__dict__:
+        if not p in ["_clock"]:
+            assert getattr(gbt_orig, p) == getattr(gbt_reload, p)
+
+
+def test_json_observatory_input_latlon(sandbox):
+    gbt_orig = get_observatory("gbt")
+    gbt_dict = gbt_orig.get_dict()
+    # remove ITRF
+    del gbt_dict["gbt"]["itrf_xyz"]
+    # add in geodetic
+    gbt_dict["gbt"]["lat"] = gbt_orig.location.lat.value
+    gbt_dict["gbt"]["lon"] = gbt_orig.location.lon.value
+    gbt_dict["gbt"]["height"] = gbt_orig.location.height.value
+    load_observatories(io.StringIO(json.dumps(gbt_dict)), overwrite=True)
+    gbt_reload = get_observatory("gbt")
+
+    for p in gbt_orig.__dict__:
+        if not p in ["location", "_clock"]:
+            # everything else should be identical
+            assert getattr(gbt_orig, p) == getattr(gbt_reload, p)
+    # check distance separately to allow for precision
+    distance = gbt_orig.separation(gbt_reload)
+    assert distance < 1 * u.m
+
+
+def test_json_observatory_input_latlon_and_itrf_giveserror(sandbox):
+    gbt_orig = get_observatory("gbt")
+    gbt_dict = gbt_orig.get_dict()
+    # add in geodetic
+    gbt_dict["gbt"]["lat"] = gbt_orig.location.lat.value
+    gbt_dict["gbt"]["lon"] = gbt_orig.location.lon.value
+    gbt_dict["gbt"]["height"] = gbt_orig.location.height.value
+    with pytest.raises(ValueError):
+        load_observatories(io.StringIO(json.dumps(gbt_dict)), overwrite=True)
+
+    del gbt_dict["gbt"]["itrf_xyz"]
+    del gbt_dict["gbt"]["lat"]
+    with pytest.raises(ValueError):
+        load_observatories(io.StringIO(json.dumps(gbt_dict)), overwrite=True)
 
 
 def test_valid_past_end():

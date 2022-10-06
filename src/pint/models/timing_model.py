@@ -377,7 +377,16 @@ class TimingModel:
             warn("PINT only supports 'T2CMETHOD IAU2000B'")
             self.T2CMETHOD.value = "IAU2000B"
         if self.UNITS.value not in [None, "TDB"]:
-            raise ValueError("PINT only supports 'UNITS TDB'")
+            if self.UNITS.value == "TCB":
+                error_message = """The TCB timescale is not supported by PINT. (PINT only supports 'UNITS TDB'.)
+                See https://nanograv-pint.readthedocs.io/en/latest/explanation.html#time-scales for an explanation
+                on different timescales. The par file can be converted from TCB to TDB using the `transform`
+                plugin of TEMPO2 like so:
+                    $ tempo2 -gr transform J1234+6789_tcb.par J1234+6789_tdb.par tdb 
+                """
+            else:
+                error_message = f"PINT only supports 'UNITS TDB'. The given timescale '{self.UNITS.value}' is invalid."
+            raise ValueError(error_message)
         if not self.START.frozen:
             warn("START cannot be unfrozen...setting START.frozen to True")
             self.START.frozen = True
@@ -551,6 +560,26 @@ class TimingModel:
             else:
                 raise ValueError(f"Unknown kind {kind!r}")
         return c
+
+    def get_params_of_component_type(self, component_type):
+        """Get a list of parameters belonging to a component type.
+
+        Parameters
+        ----------
+        component_type : "PhaseComponent", "DelayComponent", "NoiseComponent"
+
+        Returns
+        -------
+        list
+        """
+        component_type_list_str = "{}_list".format(component_type)
+        if hasattr(self, component_type_list_str):
+            component_type_list = getattr(self, component_type_list_str)
+            return [
+                param for component in component_type_list for param in component.params
+            ]
+        else:
+            return []
 
     def set_param_values(self, fitp):
         """Set the model parameters to the value contained in the input dict.
@@ -1762,9 +1791,20 @@ class TimingModel:
         We decide to add minus sign here in the design matrix, so the fitter
         keeps the conventional way.
         """
+
+        noise_params = self.get_params_of_component_type("NoiseComponent")
+        # unfrozen_noise_params = [
+        #     param for param in noise_params if not getattr(self, param).frozen
+        # ]
+
+        # The entries for any unfrozen noise parameters will not be
+        # included in the design matrix as they are not well-defined.
+
         params = ["Offset"] if incoffset else []
         params += [
-            par for par in self.params if incfrozen or not getattr(self, par).frozen
+            par
+            for par in self.params
+            if (incfrozen or not getattr(self, par).frozen) and par not in noise_params
         ]
 
         F0 = self.F0.quantity  # 1/sec

@@ -1,18 +1,13 @@
 import io
-import re
 from copy import deepcopy
 
 import astropy.units as u
-import matplotlib.pyplot as plt
 import numpy as np
 import pytest
-from astropy import log
 from astropy.time import TimeDelta
-from scipy.linalg import block_diag, cho_factor, cho_solve, cholesky
 
 import pint.fitter
 from pint.models import get_model
-from pint.models.timing_model import MissingTOAs
 from pint.toa import merge_TOAs
 from pint.simulation import make_fake_toas_uniform
 

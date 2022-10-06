@@ -1,10 +1,10 @@
 """Test basic functionality of the :module:`pint.utils`."""
+import io
 import os
 from itertools import product
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 
-import astropy.constants as c
 import astropy.units as u
 import numpy as np
 import pytest
@@ -27,7 +27,6 @@ from numdifftools import Derivative
 from numpy.testing import assert_allclose, assert_array_equal
 from pinttestdata import datadir
 
-import pint
 import pint.models as tm
 from pint import fitter, toa
 from pint.pulsar_mjd import (
@@ -613,12 +612,38 @@ def test_dmxparse():
     f = fitter.GLSFitter(toas=t, model=m)
     f.fit_toas()
     dmx = dmxparse(f, save=False)
+    # make sure the start and end are not the same
+    assert ((dmx["r2s"] - dmx["r1s"] > 0)).all()
     # Check exception handling
     m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_dfg+12_DMX.par"))
     t = toa.get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_dfg+12.tim"))
     f = fitter.WLSFitter(toas=t, model=m)
     f.fit_toas()
     dmx = dmxparse(f, save=False)
+
+
+def test_dmxparse_write():
+    # check output
+    m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
+    t = toa.get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
+    f = fitter.GLSFitter(toas=t, model=m)
+    f.fit_toas()
+    w = io.StringIO()
+    dmx = dmxparse(f, save=w)
+    w.seek(0)
+    assert len(w.read()) > 0
+
+
+def test_dmxparse_write_default():
+    # check output to default filename
+    m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
+    t = toa.get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
+    f = fitter.GLSFitter(toas=t, model=m)
+    f.fit_toas()
+    dmx = dmxparse(f, save=True)
+    with open("dmxparse.out") as r:
+        assert len(r.read()) > 0
+    os.remove("dmxparse.out")
 
 
 def test_pmtot():

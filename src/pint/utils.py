@@ -86,6 +86,9 @@ __all__ = [
     "colorize",
     "group_iterator",
     "compute_hash",
+    "PINTPrecisionError",
+    "check_longdouble_precision",
+    "require_longdouble_precision",
 ]
 
 COLOR_NAMES = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
@@ -101,6 +104,34 @@ TEXT_ATTRIBUTES = [
 ]
 
 # Actual exported tools
+
+
+class PINTPrecisionError(RuntimeError):
+    pass
+
+
+# A warning is emitted in pint.pulsar_mjd if sufficient precision is not available
+
+
+def check_longdouble_precision():
+    """Check whether long doubles have adequate precision.
+
+    Returns True if long doubles have enough precision to use PINT
+    for sub-microsecond timing on this machine.
+    """
+    return np.finfo(np.longdouble).eps < 2e-19
+
+
+def require_longdouble_precision():
+    """Raise an exception if long doubles do not have enough precision.
+
+    Raises RuntimeError if PINT cannot be run with high precision on this
+    machine.
+    """
+    if not check_longdouble_precision():
+        raise PINTPrecisionError(
+            f"PINT needs higher precision floating point than you have available. PINT uses the numpy longdouble type to represent modified Julian days, and this machine does not have sufficient numerical precision to represent sub-microsecond times with np.longdouble. On an M1 Mac you will need to use a Rosetta environment, or on a Windows machine you will need to us a different Python interpreter. Some PINT operations can work with reduced precision, but you have requested one that cannot."
+        )
 
 
 class PosVel:
@@ -893,7 +924,7 @@ def dmxparse(fitter, save=False):
     fitter
         PINT fitter used to get timing residuals, must have already run a fit
     save : bool or str or file-like object, optional
-        If not False or None, saves output to specified file in the format of the TEMPO version.
+        If not False or None, saves output to specified file in the format of the TEMPO version.  If ``True``, assumes output file is ``dmxparse.out``
 
     Returns
     -------
@@ -940,7 +971,7 @@ def dmxparse(fitter, save=False):
         mask_idxs[ii] = getattr(fitter.model, "DMX_{:}".format(epoch)).frozen
         DMX_Errs[ii] = getattr(fitter.model, "DMX_{:}".format(epoch)).uncertainty_value
         DMX_R1[ii] = getattr(fitter.model, "DMXR1_{:}".format(epoch)).value
-        DMX_R2[ii] = getattr(fitter.model, "DMXR1_{:}".format(epoch)).value
+        DMX_R2[ii] = getattr(fitter.model, "DMXR2_{:}".format(epoch)).value
     DMX_center_MJD = (DMX_R1 + DMX_R2) / 2
     # If any value need to be masked, do it
     if True in mask_idxs:
@@ -988,6 +1019,8 @@ def dmxparse(fitter, save=False):
 
     # Output the results'
     if save is not None and save:
+        if isinstance(save, bool):
+            save = "dmxparse.out"
         DMX = "DMX"
         lines = []
         lines.append("# Mean %s value = %+.6e \n" % (DMX, DMX_mean))
@@ -1010,6 +1043,8 @@ def dmxparse(fitter, save=False):
             )
         with open_or_use(save, mode="w") as dmxout:
             dmxout.writelines(lines)
+            if isinstance(save, (str, Path)):
+                log.debug(f"Wrote dmxparse output to '{save}'")
     # return the new mean subtracted values
     mean_sub_DMXs = DMXs - DMX_mean
 

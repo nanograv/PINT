@@ -6,16 +6,38 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 
 ## Unreleased
 ### Changed
+- Minimum supported versions updated to numpy 1.18.5, matplotlib 3.2.0
+### Added
+- Can ignore pulse_number column on TOA read or write (to help merging)
+- Can add in missing columns when merging unless told not to
+- Can initialize observatories with lat/lon/altitude
+- Can output observatories as JSON
+- Can extract single TOAs as length=1 table
+### Fixed
+- global clock files now emit a warning instead of an exception if expired and the download fails
+- dmxparse outputs to dmxparse.out if save=True
+- Excluded noise parameters from the design matrix.
+- Split the computation of correlated noise basis matrix and weights into two functions.
+- Fixed bug in combining design matrices
+- Fixed bug in dmxparse
+- Fixed bug in photonphase with polycos
+
+## [0.9.1] 2022-08-12
+### Changed
 - No tests now change based on $TEMPO or $TEMPO2
 - Ensure Fitters work with ELL1 even on Astropy 4 (bug #1316)
 - index.txt is only checked at most once a day
 - Moved observatories to JSON file.  Changed way observatories are loaded/overloaded
 - Split Jodrell Bank observatory based on backend to get correct clock files
 - Clock files can be marked as being valid past the end of the data they contain
+- Polycos can be written/read from Path or Stream objects
+- Polyco format registration now done once as a class method
+- Polyco reading/generation from timing model done as class methods
 ### Added
 - delta_pulse_number column is now saved to -padd flag on TOA write
 - command-line utility to compare parfiles
 - FD_delay_frequency function to easily access the FD model's excess delay
+- scripts now have explicit setting of verbosity and `-q`/`-v` options
 ### Fixed
 - TOA flags are properly deepcopy'd when desired (to deal with [astropy bug](https://github.com/astropy/astropy/issues/13435))
 
@@ -286,4 +308,4 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## [0.5.7] - 2020-03-16
 ### Added
 - First release using PyPI
-- Initial entry in CHANGELOG
+- Initial entry in CHANGELOG 

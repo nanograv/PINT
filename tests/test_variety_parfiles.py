@@ -1,7 +1,6 @@
 """Various test for the bad par files"""
 import pytest
 from io import StringIO
-import warnings
 
 from pint.models.timing_model import (
     TimingModelError,

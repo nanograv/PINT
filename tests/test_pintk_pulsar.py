@@ -1,8 +1,6 @@
 import re
-from io import StringIO
 
 import numpy as np
-import pytest
 
 import pint.pintk.pulsar
 

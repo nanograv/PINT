@@ -1,11 +1,11 @@
 #! /usr/bin/env python
-import os
+
 import tempfile
 
 import pytest
 
 import pint.models as tm
-from pinttestdata import testdir, datadir
+from pinttestdata import datadir
 
 parfile = datadir / "J1744-1134.basic.par"
 

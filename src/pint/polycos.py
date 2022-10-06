@@ -1,8 +1,36 @@
 """Polynomial coefficients for phase prediction
 
-This program is designed to predict the pulsar's phase and pulse-period over a
-given interval using polynomial expansion. The return will be some necessary
-information and the polynomial coefficients
+Polycos designed to predict the pulsar's phase and pulse-period over a
+given interval using polynomial expansions.   
+
+The pulse phase and frequency at time T are then calculated as:
+
+.. math::
+
+    \\Delta T = 1440(T-T_{\\rm mid})
+
+    \\phi = \\phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
+
+    f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \\ldots \\right)
+
+Examples
+--------
+Read in polycos, predict phases:
+
+    >>> from pint.polycos import Polycos
+    >>> p = Polycos.read(filename)
+    >>> p.eval_abs_phase(mjds)
+
+Or, to generate polycos from a timing model:
+
+    >>> from pint.models import get_model
+    >>> from pint.polycos import Polycos
+    >>> model = get_model(filename)
+    >>> p = Polycos.generate_polycos(model, 50000, 50001, "AO", 144, 12, 1400)
+  
+References
+----------
+http://tempo.sourceforge.net/ref_man_sections/tz-polyco.txt
 """
 import astropy.table as table
 import astropy.units as u
@@ -26,6 +54,7 @@ except (ModuleNotFoundError, ImportError) as e:
 import pint.toa as toa
 from pint.phase import Phase
 from pint.pulsar_mjd import data2longdouble
+from pint.utils import open_or_use
 
 MONTHS = [
     "Jan",
@@ -114,7 +143,17 @@ class PolycoEntry:
         )
 
     def evalabsphase(self, t):
-        """Return the phase at time t, computed with this polyco entry"""
+        """Return the phase at time t, computed with this polyco entry
+
+        Parameters
+        ----------
+        t : float or numpy.ndarray
+            Input times
+
+        Returns
+        -------
+        pint.phase.Phase
+        """
         dt = (data2longdouble(t) - self.tmid.value) * MIN_PER_DAY
         # Compute polynomial by factoring out the dt's
         phase = Phase(
@@ -131,11 +170,32 @@ class PolycoEntry:
         return phase
 
     def evalphase(self, t):
-        """Return the phase at time t, computed with this polyco entry"""
+        """Return the phase at time t, computed with this polyco entry
+
+        Parameters
+        ----------
+        t : float or numpy.ndarray
+            Input times
+
+        Returns
+        -------
+        pint.phase.Phase
+        """
         return self.evalabsphase(t).frac
 
     def evalfreq(self, t):
-        """Return the freq at time t, computed with this polyco entry"""
+        """Return the freq at time t, computed with this polyco entry
+
+        Parameters
+        ----------
+        t : float or numpy.ndarray
+            Input times
+
+        Returns
+        -------
+        numpy.ndarray
+            Frequency (in Hz)
+        """
         dt = (data2longdouble(t) - self.tmid.value) * MIN_PER_DAY
         s = data2longdouble(0.0)
         for i in range(1, self.ncoeff):
@@ -144,7 +204,18 @@ class PolycoEntry:
         return freq
 
     def evalfreqderiv(self, t):
-        """Return the frequency derivative at time t."""
+        """Return the frequency derivative at time t.
+
+        Parameters
+        ----------
+        t : float or numpy.ndarray
+            Input times
+
+        Returns
+        -------
+        numpy.ndarray
+            Frequency derivative (in Hz/s)
+        """
         dt = (data2longdouble(t) - self.tmid.value) * MIN_PER_DAY
         s = data2longdouble(0.0)
         for i in range(2, self.ncoeff):
@@ -191,16 +262,24 @@ def tempo_polyco_table_reader(filename):
 
     One polyco file could include more then one entry.
 
-    The pulse phase and frequency at time T are then calculated as::
+    The pulse phase and frequency at time T are then calculated as:
 
-        DT = (T-TMID)*1440
-        PHASE = RPHASE + DT*60*F0 + COEFF(1) + DT*COEFF(2) + DT^2*COEFF(3) + ....
-        FREQ(Hz) = F0 + (1/60)*(COEFF(2) + 2*DT*COEFF(3) + 3*DT^2*COEFF(4) + ....)
+    .. math::
+
+        \\Delta T = 1440(T-T_{\\rm mid})
+
+        \\phi = \\phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
+
+        f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \\ldots \\right)
 
     Parameters
     ----------
     filename : str
         Name of the input poloco file.
+
+    Returns
+    -------
+    astropy.table.Table
 
     References
     ----------
@@ -208,7 +287,7 @@ def tempo_polyco_table_reader(filename):
     """
     entries = []
 
-    with open(filename, "r") as f:
+    with open_or_use(filename, "r") as f:
         line = f.readline()
 
         while line != "":
@@ -312,18 +391,22 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
 
     One polyco file could include more then one entry.
 
-    The pulse phase and frequency at time T are then calculated as::
+    The pulse phase and frequency at time T are then calculated as:
 
-        DT = (T-TMID)*1440
-        PHASE = RPHASE + DT*60*F0 + COEFF(1) + DT*COEFF(2) + DT^2*COEFF(3) + ....
-        FREQ(Hz) = F0 + (1/60)*(COEFF(2) + 2*DT*COEFF(3) + 3*DT^2*COEFF(4) + ....)
+    .. math::
+
+        \\Delta T = 1440(T-T_{\\rm mid})
+
+        \\phi = \\phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
+
+        f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \\ldots \\right)
 
     Parameters
-    ---------
-    polycoTable: astropy table
+    ----------
+    polycoTable: astropy.table.Table
         Polycos style table
-    filename : str
-        Name of the output poloco file. Default is 'polyco.dat'.
+    filename : str or ~pathlib.Path or file-like
+        Destination for the output polyco file. Default is 'polyco.dat'.
 
     References
     ----------
@@ -333,97 +416,155 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
         err = "Empty polyco table! Please make sure polycoTable has data."
         raise ValueError(err)
 
-    f = open(filename, "w")
+    with open_or_use(filename, "w") as f:
+        for table_entry in polycoTable:
+            psr_name = table_entry["psr"]
+            if psr_name[0] == "J":
+                psr_name = psr_name[1:]
 
-    for table_entry in polycoTable:
-        psr_name = table_entry["psr"]
-        if psr_name[0] == "J":
-            psr_name = psr_name[1:]
-
-        spec1 = "{:10.10s} {:>9.9s}{:11.2f}{:20.11f}{:21.6f} {:6.3f}{:7.3f}\n"
-        line1 = spec1.format(
-            psr_name,
-            table_entry["date"],
-            table_entry["utc"],
-            table_entry["tmid"],
-            table_entry["dm"],
-            table_entry["doppler"],
-            table_entry["logrms"],
-        )
-
-        entry = table_entry["entry"]
-        ph = entry.rphase
-        ph_frac = ph.frac[0].value + (ph.frac[0] < 0)
-        excess = ph_frac - np.round(ph_frac, 6)
-
-        rphstr_frac = "{:.6f}".format(np.round(ph_frac, 6))[1:]
-        rphstr_int = "{:13d}".format(int(ph.int[0]) - (ph.frac[0] < 0))
-
-        try:
-            bin_phase = "{:7.4f}{:9.4f}".format(
-                table_entry["binary_phase"], table_entry["f_orbit"]
+            spec1 = "{:10.10s} {:>9.9s}{:11.2f}{:20.11f}{:21.6f} {:6.3f}{:7.3f}\n"
+            line1 = spec1.format(
+                psr_name,
+                table_entry["date"],
+                table_entry["utc"],
+                table_entry["tmid"],
+                table_entry["dm"],
+                table_entry["doppler"],
+                table_entry["logrms"],
             )
-        except KeyError:
-            bin_phase = ""
 
-        spec2 = "{:20s} {:17.12f}{:>5s}{:5d}{:5d}{:10.3f}{:16s}\n"
-        line2 = spec2.format(
-            rphstr_int + rphstr_frac,
-            entry.f0,
-            table_entry["obs"],
-            table_entry["mjd_span"],
-            entry.ncoeff,
-            table_entry["obsfreq"],
-            bin_phase,
-        )
+            entry = table_entry["entry"]
+            ph = entry.rphase
+            ph_frac = ph.frac[0].value + (ph.frac[0] < 0)
+            excess = ph_frac - np.round(ph_frac, 6)
 
-        coeffs = entry.coeffs
-        coeffs[0] += excess
+            rphstr_frac = "{:.6f}".format(np.round(ph_frac, 6))[1:]
+            rphstr_int = "{:13d}".format(int(ph.int[0]) - (ph.frac[0] < 0))
 
-        coeff_block = ""
-        for i, coeff in enumerate(coeffs):
-            coeff_block += "{:25.17e}".format(coeff)
-            if (i + 1) % 3 == 0:
-                coeff_block += "\n"
+            try:
+                bin_phase = "{:7.4f}{:9.4f}".format(
+                    table_entry["binary_phase"], table_entry["f_orbit"]
+                )
+            except KeyError:
+                bin_phase = ""
 
-        f.write(line1 + line2 + coeff_block)
+            spec2 = "{:20s} {:17.12f}{:>5s}{:5d}{:5d}{:10.3f}{:16s}\n"
+            line2 = spec2.format(
+                rphstr_int + rphstr_frac,
+                entry.f0,
+                table_entry["obs"],
+                table_entry["mjd_span"],
+                entry.ncoeff,
+                table_entry["obsfreq"],
+                bin_phase,
+            )
 
-    f.close()
+            coeffs = entry.coeffs
+            coeffs[0] += excess
+
+            coeff_block = ""
+            for i, coeff in enumerate(coeffs):
+                coeff_block += "{:25.17e}".format(coeff)
+                if (i + 1) % 3 == 0:
+                    coeff_block += "\n"
+
+            f.write(line1 + line2 + coeff_block)
+
+
+# default formats
+# need to define them here rather than at the top so that the reader/writer functions are defined
+_polycoFormats = [
+    {
+        "format": "tempo",
+        "read_method": tempo_polyco_table_reader,
+        "write_method": tempo_polyco_table_writer,
+    }
+]
 
 
 class Polycos:
     """A class for polycos model.
 
-    Polyco is a fast phase calculator. It fits a set of data using polynomials.
+    Polyco is a fast phase calculator. It fits a set of data using polynomials and can predict phases at points in between.
     """
 
-    def __init__(self):
-        self.fileName = None
-        self.fileFormat = None
-        self.polycoTable = None
-        self.polycoFormat = [
-            {
-                "format": "tempo",
-                "read_method": tempo_polyco_table_reader,
-                "write_method": tempo_polyco_table_writer,
-            }
-        ]
+    # loaded formats
+    polycoFormats = []
 
-        # Register the table built-in reading and writing format
-        for fmt in self.polycoFormat:
-            if fmt["format"] not in registry.get_formats()["Format"]:
-                if fmt["read_method"] is not None:
-                    registry.register_reader(
-                        fmt["format"], table.Table, fmt["read_method"]
-                    )
+    @classmethod
+    def _register(cls, formatlist=_polycoFormats):
+        """
+        Register the table built-in reading and writing format
 
-                if fmt["write_method"] is not None:
-                    registry.register_writer(
-                        fmt["format"], table.Table, fmt["write_method"]
-                    )
+        Formats get added to the ``astropy.io`` registry
 
+        Parameters
+        ----------
+        formatlist : list, optional
+            Each entry should be a ``dict`` with entries ``format``, ``read_method``, ``write_method``
+
+        """
+        for fmt in formatlist:
+            if fmt["read_method"] is not None and fmt["write_method"] is None:
+                cls.add_polyco_file_format(fmt["format"], "r", fmt["read_method"], None)
+            elif fmt["read_method"] is None and fmt["write_method"] is not None:
+                cls.add_polyco_file_format(
+                    fmt["format"], "w", None, fmt["write_method"]
+                )
+            elif fmt["read_method"] is not None and fmt["write_method"] is not None:
+                cls.add_polyco_file_format(
+                    fmt["format"], "rw", fmt["read_method"], fmt["write_method"]
+                )
+
+    def __init__(self, filename=None, format="tempo"):
+        """Initialize polycos from a file
+
+        Parameters
+        ---------
+        filename : str or ~pathlib.Path or file-like
+            The name of the input polyco file.
+        format : str, optional
+            The format of the file. Default is 'tempo'.
+
+        """
+        self.fileName = filename
+
+        if filename is not None:
+            log.info(f"Reading polycos from '{filename}'")
+            if format not in [f["format"] for f in self.polycoFormats]:
+                raise ValueError(
+                    "Unknown polyco file format '" + format + "'\n"
+                    "Please use function 'Polyco.add_polyco_file_format()'"
+                    " to register the format\n"
+                )
+            else:
+                self.fileFormat = format
+
+            self.polycoTable = table.Table.read(filename, format=format)
+            if len(self.polycoTable) == 0:
+                raise ValueError("Zero polycos found for table")
+
+    @classmethod
+    def read(cls, filename, format="tempo"):
+        """Read polyco file to a table.
+
+        Parameters
+        ---------
+        filename : str or ~pathlib.Path or file-like
+            The name of the input polyco file.
+        format : str, optional
+            The format of the file. Default is 'tempo'.
+
+        Return
+        ---------
+        Polycos
+
+        """
+        return Polycos(filename, format=format)
+
+    @classmethod
     def add_polyco_file_format(
-        self, formatName, methodMood, readMethod=None, writeMethod=None
+        cls, formatName, methodMood, readMethod=None, writeMethod=None
     ):
         """
         Add a polyco file format and its reading/writing method to the class.
@@ -434,22 +575,25 @@ class Polycos:
         formatName : str
             The name for the format.
         methodMood : str
-            ['r','w','rw']. 'r'  represent as reading
-                            'w'  represent as writting
-                            'rw' represent as reading and writting
-        readMethod : method
+            One of ['r', 'w', 'rw'].
+        readMethod : function
             The method for reading the file format.
-        writeMethod : method
+        writeMethod : function
             The method for writting the file to disk.
 
+        Notes
+        -----
+        The read/write methods should correspond to what are needed by :meth:`astropy.io.registry.register_reader` and
+        :meth:`astropy.io.registry.register_writer`, respectively
+
         """
+        assert methodMood.lower() in ["r", "w", "rw"]
         # Check if the format already exist.
         if (
-            formatName in [f["format"] for f in self.polycoFormat]
+            formatName in [f["format"] for f in cls.polycoFormats]
             or formatName in registry.get_formats()["Format"]
         ):
-            errorMssg = "Format name '" + formatName + "' is already exist. "
-            raise ValueError(errorMssg)
+            return
 
         pFormat = {"format": formatName}
 
@@ -459,6 +603,7 @@ class Polycos:
 
             pFormat["read_method"] = readMethod
             pFormat["write_method"] = writeMethod
+            log.debug(f"Registering Polyco format '{formatName}' with mode='r'")
             registry.register_reader(
                 pFormat["format"], table.Table, pFormat["read_method"]
             )
@@ -468,6 +613,7 @@ class Polycos:
 
             pFormat["read_method"] = readMethod
             pFormat["write_method"] = writeMethod
+            log.debug(f"Registering Polyco format '{formatName}' with mode='w'")
             registry.register_writer(
                 pFormat["format"], table.Table, pFormat["write_method"]
             )
@@ -479,7 +625,7 @@ class Polycos:
 
             pFormat["read_method"] = readMethod
             pFormat["write_method"] = writeMethod
-
+            log.debug(f"Registering Polyco format '{formatName}' with mode='rw'")
             registry.register_reader(
                 pFormat["format"], table.Table, pFormat["read_method"]
             )
@@ -487,10 +633,52 @@ class Polycos:
                 pFormat["format"], table.Table, pFormat["write_method"]
             )
 
-        self.polycoFormat.append(pFormat)
+        cls.polycoFormats.append(pFormat)
 
+    def read_polyco_file(self, filename, format="tempo"):
+        """Read polyco file to a table.
+
+        Included for backward compatibility.  It is better to use :meth:`pint.polycos.Polycos.read`.
+
+        Parameters
+        ---------
+        filename : str or ~pathlib.Path or file-like
+            The name of the input polyco file.
+        format : str, optional
+            The format of the file. Default is 'tempo'.
+
+        Return
+        ---------
+        Polycos
+
+        """
+        raise DeprecationWarning(
+            "Use `p=pint.polycos.Polycos.read()` rather than `p.read_polyco_file()`"
+        )
+        self.fileName = filename
+
+        if format not in [f["format"] for f in self.polycoFormats]:
+            raise ValueError(
+                "Unknown polyco file format '" + format + "'\n"
+                "Please use function 'Polyco.add_polyco_file_format()'"
+                " to register the format\n"
+            )
+        else:
+            self.fileFormat = format
+
+        self.polycoTable = table.Table.read(filename, format=format)
+        if len(self.polycoTable) == 0:
+            raise ValueError("Zero polycos found for table")
+
+    def __len__(self):
+        return len(self.polycoTable)
+
+    def __getitem__(self, item):
+        return self.polycoTable[item]
+
+    @classmethod
     def generate_polycos(
-        self,
+        cls,
         model,
         mjdStart,
         mjdEnd,
@@ -501,6 +689,7 @@ class Polycos:
         maxha=12.0,
         method="TEMPO",
         numNodes=20,
+        progress=True,
     ):
         """
         Generate the polyco data.
@@ -508,40 +697,32 @@ class Polycos:
         Parameters
         ----------
         model : TimingModel
-            TimingModel to generate the Polycos with parameters
-            setup.
-
-        mjdStart : float / numpy longdouble
+            TimingModel to generate the Polycos
+        mjdStart : float, np.longdouble
             Start time of polycos in mjd
-
-        mjdEnd : float / numpy longdouble
+        mjdEnd : float, np.longdouble
             Ending time of polycos in mjd
-
         obs : str
             Observatory code
-
         segLength : int
             Length of polyco segement [minutes]
-
         ncoeff : int
             Number of coefficents
-
         obsFreq : float
             Observing frequency [MHz]
-
-        maxha : float optional. Default 12.0
-            Maximum hour angle. Only 12.0 is supported for now.
-
-        method : string optional ["TEMPO", "TEMPO2", ...] Default TEMPO
-            Method to generate polycos. Only the TEMPO method is supported for now.
-
-        numNodes : int optional. Default 20
+        maxha : float, optional.
+            Maximum hour angle. Default 12.0. Only 12.0 is supported for now.
+        method : str, optional
+            Method to generate polycos. Only the ``TEMPO`` method is supported for now.
+        numNodes : int, optional
             Number of nodes for fitting. It cannot be less then the number of
-            coefficents.
+            coefficents. Default: 20
+        progress : bool, optional
+            Whether or not to show the progress bar during calculation
 
         Return
         ---------
-        A polyco table.
+        Polycos
         """
         mjdStart = data2longdouble(mjdStart)
         mjdEnd = data2longdouble(mjdEnd)
@@ -574,7 +755,7 @@ class Polycos:
             entryList = []
             # Using tempo1 method to create polycos
             # If you want to disable the progress bar, add disable=True to the tqdm() call.
-            for tmid in tqdm(tmids):
+            for tmid in tqdm(tmids, disable=not progress):
                 tStart = tmid - mjdSpan / 2
                 tStop = tmid + mjdSpan / 2
                 nodes = np.linspace(tStart, tStop, numNodes)
@@ -649,43 +830,13 @@ class Polycos:
                 entryList.append(entry_dict)
 
             pTable = table.Table(entryList, meta={"name": "Polyco Data Table"})
-
-            self.polycoTable = pTable
-            if len(self.polycoTable) == 0:
+            out = cls()
+            out.polycoTable = pTable
+            if len(out.polycoTable) == 0:
                 raise ValueError("Zero polycos found for table")
-
+            return out
         else:
             raise NotImplementedError("Only TEMPO method has been implemented.")
-
-    def read_polyco_file(self, filename, format="tempo"):
-        """Read polyco file from one type of format to a table.
-
-        Parameters
-        ---------
-        filename : str
-            The name of the polyco file.
-        format : str
-            The format of the file. Default is 'tempo'.
-
-        Return
-        ---------
-        Polycos Table with read_in data.
-
-        """
-        self.fileName = filename
-
-        if format not in [f["format"] for f in self.polycoFormat]:
-            raise ValueError(
-                "Unknown polyco file format '" + format + "'\n"
-                "Please use function 'self.add_polyco_file_format()'"
-                " to register the format\n"
-            )
-        else:
-            self.fileFormat = format
-
-        self.polycoTable = table.Table.read(filename, format=format)
-        if len(self.polycoTable) == 0:
-            raise ValueError("Zero polycos found for table")
 
     def write_polyco_file(self, filename="polyco.dat", format="tempo"):
         """Write Polyco table to a file.
@@ -698,7 +849,7 @@ class Polycos:
             The format of the file. Default is 'tempo'.
         """
 
-        if format not in [f["format"] for f in self.polycoFormat]:
+        if format not in [f["format"] for f in self.polycoFormats]:
             raise ValueError(
                 "Unknown polyco file format '" + format + "'\n"
                 "Please use function 'self.add_polyco_file_format()'"
@@ -708,7 +859,23 @@ class Polycos:
         self.polycoTable.write(filename, format=format)
 
     def find_entry(self, t):
-        """Find the right entry for the input time."""
+        """Find the right entry for the input time.
+
+        Parameters
+        ---------
+        t: numpy.ndarray or float
+           A time array in MJD.
+
+        Returns
+        -------
+        numpy.ndarray
+            Indices corresponding to the desired time(s)
+
+        Raises
+        ------
+        ValueError
+            If the input time(s) are not covered by the polycos
+        """
         if not isinstance(t, (np.ndarray, list)):
             t = np.array([t])
 
@@ -726,6 +893,22 @@ class Polycos:
         return start_idx
 
     def eval_phase(self, t):
+        """Polyco evaluation of fractional phase
+
+        Parameters
+        ---------
+        t: numpy.ndarray or float
+           An time array in MJD. Time sample should be in order
+
+        Returns
+        ---------
+        numpy.ndarray
+             Fractional phase
+
+        Notes
+        -----
+        Returns fractional part of :meth:`pint.polycos.Polycos.eval_abs_phase`
+        """
         if not isinstance(t, np.ndarray) and not isinstance(t, list):
             t = np.array([t])
         return self.eval_abs_phase(t).frac
@@ -736,15 +919,23 @@ class Polycos:
 
         Parameters
         ---------
-        t: numpy.ndarray or a single number.
+        t: numpy.ndarray or float
            An time array in MJD. Time sample should be in order
 
         Returns
         ---------
-        out: PINT Phase class
+        pint.phase.Phase
              Polyco evaluated absolute phase for t.
 
-        phase = refPh + DT*60*F0 + COEFF(1) + COEFF(2)*DT + COEFF(3)*DT**2 + ...
+        Notes
+        -----
+        Calculates phase according to:
+
+        .. math::
+
+            \\phi = \\phi_0 + 60 \\Delta T f_0 + COEFF[1] + COEFF[2] \Delta T + COEFF[3] \Delta T^2 + \\ldots
+
+        Calculation done using :meth:`pint.polycos.PolycoEntry.evalabsphase`
         """
         if not isinstance(t, (np.ndarray, list)):
             t = np.array([t])
@@ -775,35 +966,65 @@ class Polycos:
 
         Parameters
         ---------
-        t: numpy.ndarray or a single number.
-           An time array in MJD. Time sample should be in order
+        t: numpy.ndarray or float
+           An time array in MJD. Time samples should be in order
 
         Returns
         ---------
-        out: numpy array of long double frequencies in Hz
-             Polyco evaluated spin frequency at time t.
+        numpy.ndarray
+             Polyco evaluated spin frequency [Hz] at time t.
 
-        FREQ(Hz) = F0 + (1/60)*(COEFF(2) + 2*DT*COEFF(3) + 3*DT^2*COEFF(4) + ...)
+        Notes
+        -----
+        Calculates frequency according to:
+
+        .. math::
+
+            f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left(COEFF[2] + 2 \\Delta T COEFF[3] + 3 \\Delta T^2 COEFF[4] + \\ldots\\right)
+
+        Calculation done using :meth:`pint.polycos.PolycoEntry.evalfreq`
         """
         if not isinstance(t, np.ndarray) and not isinstance(t, list):
             t = np.array([t])
 
         entryIndex = self.find_entry(t)
-        poly_result = data2longdouble(np.zeros(len(t)))
+        spinFreq = np.zeros(len(t), dtype=np.longdouble)
 
-        dt = (data2longdouble(t) - self.polycoTable[entryIndex]["tmid"]) * MIN_PER_DAY
-
-        for ii, (tt, eidx) in enumerate(zip(dt, entryIndex)):
-            coeffs = self.polycoTable["entry"][eidx].coeffs
-            coeffs = data2longdouble(range(len(coeffs))) * coeffs
-            coeffs = coeffs[::-1][:-1]
-            poly_result[ii] = np.polyval(coeffs, tt)
-        spinFreq = np.array(
-            [
-                self.polycoTable["entry"][eidx].f0
-                + poly_result[ii] / data2longdouble(60.0)
-                for ii, eidx in zip(range(len(t)), entryIndex)
-            ]
-        )
+        for i, idx in enumerate(entryIndex):
+            spinFreq[i] = self[idx]["entry"].evalfreq(t[i])
 
         return spinFreq
+
+    def eval_spin_freq_derivative(self, t):
+        """
+        Polyco evaluate spin frequency derivative for a time array.
+
+        Parameters
+        ---------
+        t: numpy.ndarray or float
+           An time array in MJD. Time samples should be in order
+
+        Returns
+        ---------
+        numpy.ndarray
+             Polyco evaluated spin frequency derivative [Hz/s] at time t.
+
+        Notes
+        -----
+
+        Calculation done using :meth:`pint.polycos.PolycoEntry.evalfreqderiv`
+        """
+        if not isinstance(t, np.ndarray) and not isinstance(t, list):
+            t = np.array([t])
+
+        entryIndex = self.find_entry(t)
+        spinFreqDeriv = np.zeros(len(t), dtype=np.longdouble)
+
+        for i, idx in enumerate(entryIndex):
+            spinFreqDeriv[i] = self[idx]["entry"].evalfreqderiv(t[i])
+
+        return spinFreqDeriv
+
+
+# load the default registry on import
+Polycos._register()

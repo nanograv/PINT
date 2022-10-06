@@ -1,7 +1,6 @@
 import os
 import re
 import unittest
-from io import StringIO
 
 import astropy.units as u
 from astropy.time import Time

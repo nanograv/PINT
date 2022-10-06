@@ -67,7 +67,7 @@ def test_backend(tmp_path):
         samples = reader.get_chain(discard=10)
         assert samples is not None
     except ImportError:
-        pass
+        pytest.skip
     finally:
         os.chdir(p)
         sys.stdout = saved_stdout

@@ -3,7 +3,6 @@ import re
 import sys
 from datetime import datetime
 from decimal import Decimal
-from itertools import product
 
 try:
     import erfa
@@ -14,7 +13,7 @@ import numpy as np
 import pytest
 from astropy.tests.helper import assert_quantity_allclose
 from astropy.time import Time
-from hypothesis import assume, example, given, settings
+from hypothesis import assume, example, given
 from hypothesis.strategies import (
     booleans,
     composite,
