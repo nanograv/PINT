@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# #!/usr/bin/env python
 # This test is DISABLED because event_optimize requires PRESTO to be installed
 # to get the fftfit module.  It can be run manually by people who have PRESTO
 # Actually it's not disabled? Unclear what the above is supposed to mean.
