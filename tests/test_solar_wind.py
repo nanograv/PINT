@@ -2,12 +2,14 @@
 """
 
 import os
+import copy
 from io import StringIO
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
 
 from astropy.time import Time
+from astropy import units as u
 from pint.models import get_model, get_model_and_toas
 from pint.fitter import Fitter
 from pint.toa import get_TOAs
