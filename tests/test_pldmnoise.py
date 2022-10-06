@@ -110,6 +110,10 @@ def test_PLRedNoise_recovery():
     MJDs = np.linspace(57001, 58000, 150, dtype=np.longdouble) * u.d
     toas = make_fake_toas_fromMJDs(MJDs, model=model, error=1 * u.us, add_noise=True)
 
+    # get red noise basis and weights
+    rn_basis = model.components["PLRedNoise"].get_noise_basis(toas)
+    rn_weights = model.components["PLRedNoise"].get_noise_weights(toas)
+
     # fit model with red noise
     f1 = fitters.DownhillGLSFitter(toas, model)
     f1.fit_toas()
@@ -133,6 +137,14 @@ def test_PLRedNoise_recovery():
     model["TNDMC"].value = c
     model.validate()
 
+    # get DM noise basis and weights
+    dm_basis = model.components["PLDMNoise"].get_noise_basis(toas)
+    # DM basis will be off by a constant factor, depending on frequency
+    # of the test data
+    D = (1400 / toas.get_freqs().value) ** 2
+    dm_basis_scaled = dm_basis / D[:, None]
+    dm_weights = model.components["PLDMNoise"].get_noise_weights(toas)
+
     # refit model
     f2 = fitters.DownhillGLSFitter(toas, model)
     f2.fit_toas()
@@ -140,6 +152,12 @@ def test_PLRedNoise_recovery():
     f2.model.validate_toas(toas)
     r2 = Residuals(toas, f2.model)
 
+    # check weights and basis are equivalent within error
+    basis_diff = rn_basis - dm_basis_scaled
+    weights_diff = rn_weights - dm_weights
+    assert np.all(np.isclose(basis_diff, 0, atol=1e-3))
+    assert np.all(np.isclose(weights_diff, 0))
+
     # check residuals are equivalent within error
-    diff = r2.time_resids.value - r1.time_resids.value
-    assert np.all(np.isclose(diff, 0, atol=1e-7))
+    rs_diff = r2.time_resids.value - r1.time_resids.value
+    assert np.all(np.isclose(rs_diff, 0, atol=1e-7))
