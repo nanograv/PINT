@@ -6,6 +6,7 @@ import os
 import sys
 
 from astropy.time import Time
+from astropy.table import vstack
 import astropy.units as u
 import matplotlib as mpl
 import numpy as np
@@ -16,11 +17,11 @@ import pint.pintk.colormodes as cm
 
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
-import tkinter.messagebox as tkMessageBox
 from tkinter import ttk
 
 import pint.logging
 from loguru import logger as log
+
 
 try:
     from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
@@ -59,10 +60,10 @@ Right click     Delete a TOA (if close enough)
   k             Correct the pane (i.e. rescale the axes and plot)
   f             Perform a fit on the selected TOAs
   d             Delete (permanently) the selected TOAs
-  t             Stash (temporarily remove) or un-stash the selected TOAs
+  t             Stash (temporarily remove) selected TOAs (or un-stash if nothing is selected) 
   u             Un-select all of the selected TOAs
   j             Jump the selected TOAs, or un-jump them if already jumped
-  v             Jump all TOA groups except those selected
+  v             Jump all TOA clusters except those selected
   i             Print the prefit model as of this moment
   o             Print the postfit model as of this moment (if it exists)
   c             Print the postfit model parameter correlation matrix
@@ -107,7 +108,7 @@ class State:
     pass
 
 
-class CreateToolTip(object):
+class CreateToolTip:
     """
     create a tooltip for a given widget
 
@@ -981,6 +982,7 @@ class PlkWidget(tk.Frame):
         Tried using quantity_support and time_support, which plots x & yvals,
         but then yerrs fails - cannot find work-around in this case.
         """
+
         self.plkAxes.errorbar(
             self.xvals[selected].value,
             self.yvals[selected],
@@ -1231,26 +1233,23 @@ class PlkWidget(tk.Frame):
 
     def coordToPoint(self, cx, cy):
         """
-        Given a set of x-y coordinates, get the TOA index closest to it
+        Given a set of x-y coordinates, get the TOA index (i.e. current TOA table row) closest to it
         """
         ind = None
-
         if self.psr is not None:
             x = self.xvals.value
             y = self.yvals.value
-
             xmin, xmax, ymin, ymax = self.plkAxes.axis()
             dist = ((x - cx) / (xmax - xmin)) ** 2.0 + ((y - cy) / (ymax - ymin)) ** 2.0
             ind = np.argmin(dist)
-            index = self.psr.all_toas.table["index"][ind]
             log.debug(
-                f"Closest: TOA index {index} (plot index {ind}): "
+                f"Closest: TOA index {self.psr.all_toas.table['index'][ind]} (plot index {ind}): "
                 f"({self.xvals[ind]:.4f}, {self.yvals[ind]:.3g}) at d={dist[ind]:.3g}"
             )
             if dist[ind] > clickDist:
                 log.warning("Not close enough to a point")
                 ind = None
-        return index
+        return ind
 
     def check_jump_invalid(self):
         """checks if jumps will cancel the attempted fit"""
@@ -1471,23 +1470,23 @@ class PlkWidget(tk.Frame):
             self.updatePlot(keepAxes=True)
             self.call_updates()
         elif event.key == "v":
-            # jump all groups except the one(s) selected, or jump all groups if none selected
+            # jump all clusters except the one(s) selected, or jump all clusters if none selected
             jumped_copy = copy.deepcopy(self.jumped)
             self.updateAllJumped()
             all_jumped = copy.deepcopy(self.jumped)
             self.jumped = jumped_copy
-            groups = list(self.psr.all_toas.table["groups"])
-            # jump each group, check doesn't overlap with existing jumps and selected
-            for num in np.arange(max(groups) + 1):
-                group_bool = [
-                    num == group for group in self.psr.all_toas.table["groups"]
+            clusters = list(self.psr.all_toas.table["clusters"])
+            # jump each cluster, check doesn't overlap with existing jumps and selected
+            for num in np.arange(max(clusters) + 1):
+                cluster_bool = [
+                    num == cluster for cluster in self.psr.all_toas.table["clusters"]
                 ]
                 if True in [
-                    a and b for a, b in zip(group_bool, self.selected)
-                ] or True in [a and b for a, b in zip(group_bool, all_jumped)]:
+                    a and b for a, b in zip(cluster_bool, self.selected)
+                ] or True in [a and b for a, b in zip(cluster_bool, all_jumped)]:
                     continue
-                self.psr.selected_toas = self.psr.all_toas[group_bool]
-                jump_name = self.psr.add_jump(group_bool)
+                self.psr.selected_toas = self.psr.all_toas[cluster_bool]
+                jump_name = self.psr.add_jump(cluster_bool)
                 self.updateJumped(jump_name)
             if (
                 self.selected is not None
@@ -1500,37 +1499,65 @@ class PlkWidget(tk.Frame):
             self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             self.updatePlot(keepAxes=True)
             self.call_updates()
+
         elif event.key == "t":
-            # Stash selected TOAs
-            if self.psr.stashed is None:
-                # if any of the points are jumped, tell the user to delete the jump(s) first
-                jumped_copy = copy.deepcopy(self.jumped)
-                self.updateAllJumped()
-                all_jumped = copy.deepcopy(self.jumped)
-                self.jumped = jumped_copy
-                if (self.selected & all_jumped).any():
-                    log.warning(
-                        "Cannot stash jumped TOAs. Delete interfering jumps before stashing TOAs."
-                    )
+            # Stash/unstash selected TOAs
+
+            if np.all(
+                ~self.selected
+            ):  # if no TOAs are selected, attempt to unstash all TOAs
+                if (
+                    self.psr.stashed is None
+                ):  # if there is nothing in the stash, do nothing
+                    log.debug("Nothing to stash/unstash.")
                     return None
-                # Delete the selected points
-                self.psr.stashed = copy.deepcopy(self.psr.all_toas)
-                self.psr.all_toas.table = self.psr.all_toas.table[
-                    ~self.selected
-                ].group_by("obs")
-            else:  # unstash
+                # otherwise, pull all TOAs out of the stash and set it to None
+                log.debug(
+                    f"Unstashing {len(self.psr.stashed)-len(self.psr.all_toas)} TOAs"
+                )
                 self.psr.all_toas = copy.deepcopy(self.psr.stashed)
+                self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
                 self.psr.stashed = None
+                self.updateAllJumped()
+                self.psr.update_resids()
+                self.updatePlot(keepAxes=False)
+
+            else:  # if TOAs are selected, add them to the stash
+                if (
+                    self.psr.stashed is None
+                ):  # if there is nothing in the stash, copy current TOAs to stash
+                    jumped_copy = copy.deepcopy(self.jumped)
+                    self.updateAllJumped()
+                    all_jumped = copy.deepcopy(self.jumped)
+                    self.jumped = jumped_copy
+                    if (self.selected & all_jumped).any():
+                        # if any of the points are jumped, tell the user to delete the jump(s) first
+                        log.warning(
+                            "Cannot stash jumped TOAs. Delete interfering jumps before stashing TOAs."
+                        )
+                        return None
+                    log.debug(f"Stashing {sum(self.selected)} TOAs")
+                    self.psr.stashed = copy.deepcopy(self.psr.all_toas)
+
+                else:  # if the stash isn't empty, remove selected from front-facing TOAs
+                    log.debug(
+                        f"Added {sum(self.selected)} TOAs to stash (stash now contains {len(self.psr.stashed.table)-len(self.psr.all_toas.table)+sum(self.selected)} TOAs)"
+                    )
                 if self.psr.fitted and self.psr.use_pulse_numbers:
                     self.psr.all_toas.compute_pulse_numbers(self.psr.postfit_model)
-            self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
-            self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
-            self.updateAllJumped()
-            self.psr.update_resids()
-            self.updatePlot(
-                keepAxes=False
-            )  # We often stash at beginning or end of array
-            self.call_updates()
+
+                # remove the newly-stashed TOAs from the front-facing TOAs
+                self.psr.all_toas.table = self.psr.all_toas.table[~self.selected]
+                self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
+                self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
+                self.updateAllJumped()
+                self.psr.update_resids()
+                self.updatePlot(
+                    keepAxes=False
+                )  # We often stash at beginning or end of array
+
+                self.call_updates()
+
         elif event.key == "c":
             if self.psr.fitted:
                 self.psr.fitter.get_parameter_correlation_matrix(

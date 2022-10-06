@@ -139,9 +139,7 @@ class MCMCFitter(Fitter):
     """
 
     def __init__(self, toas, model, sampler, **kwargs):
-        super(MCMCFitter, self).__init__(
-            toas, model, track_mode=kwargs.get("track_mode", None)
-        )
+        super().__init__(toas, model, track_mode=kwargs.get("track_mode", None))
         self.toas = toas
         self.model_init = model
         self.use_resids = kwargs.get("resids", True)
@@ -278,7 +276,7 @@ class MCMCFitter(Fitter):
         """
         Return pulse phases based on the current model
         """
-        phases = self.model.phase(self.toas)[1]
+        phases = self.model.phase(self.toas).frac
         # ensure all positive
         return np.where(phases < 0.0, phases + 1.0, phases)
 
@@ -362,7 +360,7 @@ class MCMCFitter(Fitter):
         self, weights=None, bins=100, rotate=0.0, size=5, alpha=0.25, plotfile=None
     ):
         """Make a nice 2-panel phaseogram for the current model"""
-        mjds = self.toas.table["tdbld"].quantity
+        mjds = self.toas.table["tdbld"].data
         phss = self.get_event_phases()
         plot_utils.phaseogram(
             mjds,
@@ -451,7 +449,7 @@ class MCMCFitterBinnedTemplate(MCMCFitter):
     """
 
     def __init__(self, toas, model, sampler, **kwargs):
-        super(MCMCFitterBinnedTemplate, self).__init__(toas, model, sampler, **kwargs)
+        super().__init__(toas, model, sampler, **kwargs)
 
     def set_template(self, template):
         """
@@ -495,9 +493,7 @@ class MCMCFitterAnalyticTemplate(MCMCFitter):
     """
 
     def __init__(self, toas, model, sampler, template, **kwargs):
-        super(MCMCFitterAnalyticTemplate, self).__init__(
-            toas, model, sampler, template=template, **kwargs
-        )
+        super().__init__(toas, model, sampler, template=template, **kwargs)
 
     def set_template(self, template):
         """

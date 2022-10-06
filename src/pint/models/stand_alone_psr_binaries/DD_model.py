@@ -33,7 +33,7 @@ class DDmodel(PSR_BINARY):
     """
 
     def __init__(self, t=None, input_params=None):
-        super(DDmodel, self).__init__()
+        super().__init__()
         self.binary_name = "DD"
         # Add parameter that specific for DD model, with default value and units
         self.param_default_value.update(

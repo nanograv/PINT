@@ -3,7 +3,6 @@ import logging
 import os
 import unittest
 import pytest
-import copy
 
 import astropy.units as u
 import numpy as np

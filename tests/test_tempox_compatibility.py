@@ -1,8 +1,6 @@
 from io import StringIO
 import re
 
-import astropy.units as u
-import numpy as np
 import pytest
 from pint.models import get_model
 import pint.toa
@@ -23,9 +21,12 @@ JUMP -tel ao 1
         ("EFAC", "EFAC"),
         ("EQUAD", "EQUAD"),
         ("ECORR", "ECORR"),
-        pytest.param("T2EFAC", "EFAC", marks=pytest.mark.xfail(reason="Bug #1019")),
-        pytest.param("T2EQUAD", "EQUAD", marks=pytest.mark.xfail(reason="Bug #1019")),
-        pytest.param("TNECORR", "ECORR", marks=pytest.mark.xfail(reason="Bug #1019")),
+        ("T2EFAC", "EFAC"),
+        ("T2EQUAD", "EQUAD"),
+        ("TNECORR", "ECORR"),
+        # pytest.param("T2EFAC", "EFAC", marks=pytest.mark.xfail(reason="Bug #1019")),
+        # pytest.param("T2EQUAD", "EQUAD", marks=pytest.mark.xfail(reason="Bug #1019")),
+        # pytest.param("TNECORR", "ECORR", marks=pytest.mark.xfail(reason="Bug #1019")),
     ],
 )
 def test_noise_parameter_aliases(name, want):

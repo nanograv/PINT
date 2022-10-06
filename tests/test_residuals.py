@@ -2,7 +2,6 @@
 """
 
 import os
-from copy import deepcopy
 from io import StringIO
 
 import astropy.units as u
@@ -14,11 +13,9 @@ from pinttestdata import datadir
 
 from pint.fitter import GLSFitter, WidebandTOAFitter, WLSFitter
 from pint.models import get_model
-from pint.models.dispersion_model import Dispersion
 from pint.residuals import CombinedResiduals, Residuals, WidebandTOAResiduals
 from pint.toa import get_TOAs
 from pint.simulation import make_fake_toas_uniform
-from pint.utils import weighted_mean
 
 os.chdir(datadir)
 
@@ -224,9 +221,10 @@ def test_residuals_wideband_chi2(wideband_fake):
 
 
 # @pytest.mark.xfail()
-@pytest.mark.parametrize(
-    "full_cov", [pytest.param(True, marks=pytest.mark.xfail), False]
-)
+# @pytest.mark.parametrize(
+#    "full_cov", [pytest.param(True, marks=pytest.mark.xfail), False]
+# )
+@pytest.mark.parametrize("full_cov", [True, False])
 def test_gls_chi2_reasonable(full_cov):
     model = get_model(
         StringIO(
@@ -251,7 +249,7 @@ def test_gls_chi2_reasonable(full_cov):
     assert_allclose(fit_chi2, f.resids.calc_chi2(full_cov=full_cov))
 
 
-@pytest.mark.xfail(reason="numerical instability maybe?")
+# @pytest.mark.xfail(reason="numerical instability maybe?")
 def test_gls_chi2_full_cov():
     model = get_model(
         StringIO(

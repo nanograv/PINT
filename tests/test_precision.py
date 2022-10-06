@@ -3,7 +3,6 @@ import re
 import sys
 from datetime import datetime
 from decimal import Decimal
-from itertools import product
 
 try:
     import erfa
@@ -14,7 +13,7 @@ import numpy as np
 import pytest
 from astropy.tests.helper import assert_quantity_allclose
 from astropy.time import Time
-from hypothesis import assume, example, given, settings
+from hypothesis import assume, example, given
 from hypothesis.strategies import (
     booleans,
     composite,
@@ -228,7 +227,7 @@ def test_data2longdouble_converts_arrays(a):
 @example(i_f=(43143, 9.313492199680697e-10))
 @example(i_f=(40000, -4.440892098500627e-16))
 @example(i_f=(40000, -4.440892098500627e-16))
-@example(scale="tdb", i_f=(65536, 3.637978807091714e-12))
+@example(i_f=(65536, 3.637978807091714e-12))  # scale="tdb"
 @pytest.mark.parametrize("scale", ["tai", "tt", "tdb"])
 def test_time_construction_jds_exact(scale, i_f):
     i, f = i_f
@@ -238,7 +237,6 @@ def test_time_construction_jds_exact(scale, i_f):
     assert (jd1, jd2) == (jd1_t, jd2_t)
 
 
-@pytest.mark.xfail(reason="astropy bug #9327; fixed in 3.2.2")
 @given(reasonable_mjd())
 @example(i_f=(40000, -4.440892098500627e-16))
 @example(i_f=(43143, 9.313492199680697e-10))
@@ -252,7 +250,6 @@ def test_time_construction_mjds_preserved(i_f):
     assert (abs((jd1 - jd1_t) + (jd2 - jd2_t)) * u.day).to(u.ns) < 1 * u.ns
 
 
-@pytest.mark.xfail(reason="astropy bug #9327; fixed in 3.2.2")
 @given(reasonable_mjd())
 @example(i_f=(40000, -4.440892098500627e-16))
 @example(i_f=(43143, 9.313492199680697e-10))
@@ -282,7 +279,6 @@ def test_time_to_longdouble_via_jd(scale, i_f):
     assert (abs(time_to_longdouble(t) - ld) * u.day).to(u.ns) < 1 * u.ns
 
 
-@pytest.mark.xfail(reason="astropy bug #9327; fixed in 3.2.2")
 @given(reasonable_mjd())
 @example(i_f=(43143, 9.313492199680697e-10))
 @example(i_f=(40000, -4.440892098500627e-16))
@@ -297,10 +293,10 @@ def test_time_to_longdouble(scale, i_f):
 
 @pytest.mark.xfail
 @given(reasonable_mjd())
-@example(format="pulsar_mjd", i_f=(43143, 9.313492199680697e-10))
-@example(format="pulsar_mjd", i_f=(40000, -4.440892098500627e-16))
+@example(i_f=(43143, 9.313492199680697e-10))  # format="pulsar_mjd"
+@example(i_f=(40000, -4.440892098500627e-16))  # format="pulsar_mjd"
 @example(i_f=(65536, 3.637978807091714e-12))
-@example(format="mjd", i_f=(40000, -4.440892098500627e-16))
+@example(i_f=(40000, -4.440892098500627e-16))  # format="mjd"
 @example(i_f=(42710, 0.45015659432648014))
 @pytest.mark.parametrize("format", ["mjd", "pulsar_mjd"])
 def test_time_to_longdouble_utc(format, scale, i_f):
@@ -329,10 +325,8 @@ def test_time_from_longdouble(scale, i_f):
 
 
 @given(reasonable_mjd())
-@example(format="pulsar_mjd", i_f=(40000, 0.7333333333333333))
-@example(format="mjd", i_f=(40000, 0.7333333333333333))
-# @example(format="mjd", i_f=(41498, 0.9999999999999982))
-# @example(format="pulsar_mjd", i_f=(41498, 0.9999999999999982))
+@example(i_f=(40000, 0.7333333333333333))
+@example(i_f=(41498, 0.9999999999999982))
 @pytest.mark.parametrize("format", ["mjd", "pulsar_mjd"])
 def test_time_from_longdouble_utc(format, i_f):
     i, f = i_f
@@ -353,11 +347,11 @@ def test_time_from_longdouble_utc(format, i_f):
 # @pytest.mark.xfail
 @given(reasonable_mjd())
 @example(i_f=(65536, 3.552713678800502e-15))
-@example(format="pulsar_mjd", i_f=(43143, 9.313492199680697e-10))
-@example(format="pulsar_mjd", i_f=(40000, -4.440892098500627e-16))
-@example(format="mjd", i_f=(40000, -4.440892098500627e-16))
-@example(format="pulsar_mjd", i_f=(40001, -4.440892098500627e-16))
-@example(format="pulsar_mjd", i_f=(50081, 1.0000000016292463))
+@example(i_f=(43143, 9.313492199680697e-10))  # format="pulsar_mjd"
+@example(i_f=(40000, -4.440892098500627e-16))  # format="pulsar_mjd"
+@example(i_f=(40000, -4.440892098500627e-16))  # format="mjd"
+@example(i_f=(40001, -4.440892098500627e-16))  # format="pulsar_mjd"
+@example(i_f=(50081, 1.0000000016292463))  # format="pulsar_mjd"
 @example(i_f=(43143, 9.313492199680697e-10))
 @pytest.mark.parametrize("format", ["mjd", "pulsar_mjd"])
 def test_time_to_longdouble_close_to_time_to_mjd_string(format, i_f):
@@ -383,11 +377,11 @@ def test_time_to_longdouble_no_longer_than_time_to_mjd_string(i_f):
 # @pytest.mark.xfail
 @given(reasonable_mjd())
 @example(i_f=(65536, 3.552713678800502e-15))
-@example(format="pulsar_mjd", i_f=(43143, 9.313492199680697e-10))
-@example(format="pulsar_mjd", i_f=(40000, -4.440892098500627e-16))
-@example(format="mjd", i_f=(40000, -4.440892098500627e-16))
-@example(format="pulsar_mjd", i_f=(40001, -4.440892098500627e-16))
-@example(format="mjd", i_f=(43143, 9.313492199680697e-10))
+@example(i_f=(43143, 9.313492199680697e-10))  # format="pulsar_mjd"
+@example(i_f=(40000, -4.440892098500627e-16))  # format="pulsar_mjd"
+@example(i_f=(40000, -4.440892098500627e-16))  # format="mjd"
+@example(i_f=(40001, -4.440892098500627e-16))  # format="pulsar_mjd"
+@example(i_f=(43143, 9.313492199680697e-10))  # format="mjd"
 @pytest.mark.parametrize("format", ["mjd", "pulsar_mjd"])
 def test_time_to_mjd_string_versus_longdouble(format, i_f):
     i, f = i_f
@@ -403,11 +397,11 @@ def test_time_to_mjd_string_versus_longdouble(format, i_f):
 
 @given(reasonable_mjd())
 @example(i_f=(65536, 3.552713678800502e-15))
-@example(format="pulsar_mjd", i_f=(43143, 9.313492199680697e-10))
-@example(format="pulsar_mjd", i_f=(40000, -4.440892098500627e-16))
-@example(format="mjd", i_f=(40000, -4.440892098500627e-16))
-@example(format="pulsar_mjd", i_f=(40001, -4.440892098500627e-16))
-@example(format="mjd", i_f=(43143, 9.313492199680697e-10))
+@example(i_f=(43143, 9.313492199680697e-10))  # format="pulsar_mjd"
+@example(i_f=(40000, -4.440892098500627e-16))  # format="pulsar_mjd"
+@example(i_f=(40000, -4.440892098500627e-16))  # format="mjd"
+@example(i_f=(40001, -4.440892098500627e-16))  # format="pulsar_mjd"
+@example(i_f=(43143, 9.313492199680697e-10))  # format="mjd"
 @pytest.mark.parametrize("format", ["mjd", "pulsar_mjd"])
 def test_time_to_mjd_string_versus_decimal(format, i_f):
     i, f = i_f
@@ -729,9 +723,9 @@ def tf2d_nice(sgn, h, m, s):
 
 
 @given(floats(-2, 2, allow_nan=False))
-@example(ndp=10, f=1.3322676295501882e-15)
-@example(ndp=11, f=4.440892098500627e-16)
-@example(ndp=12, f=4.440892098500627e-16)
+@example(f=1.3322676295501882e-15)  # ndp=10
+@example(f=4.440892098500627e-16)  # ndp=11
+@example(f=4.440892098500627e-16)  # ndp=12
 @pytest.mark.parametrize(
     "ndp, k",
     [

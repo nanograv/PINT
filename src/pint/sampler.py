@@ -20,7 +20,7 @@ class MCMCSampler:
     has been created.
 
     The general flow of using the MCMCSampler class with MCMCFitter is::
-        #Create the sampler object but don't intialize the internals
+        #Create the sampler object but don't initialize the internals
         sampler = MCMCSampler()
 
         #Create the fitter using the new sampler
@@ -67,7 +67,7 @@ class EmceeSampler(MCMCSampler):
     """
 
     def __init__(self, nwalkers):
-        super(EmceeSampler, self).__init__()
+        super().__init__()
         self.method = "Emcee"
         self.nwalkers = nwalkers
         self.sampler = None

@@ -64,6 +64,12 @@ def test_pulse_number(model, toas):
     assert "pulse_number" in toas.table.colnames
 
 
+def test_remove_pulse_number(model, toas):
+    assert "pulse_number" in toas.table.colnames
+    toas.remove_pulse_numbers()
+    assert "pulse_number" not in toas.table.colnames
+
+
 @pytest.mark.parametrize("obs", ["GBT", "AO", "@", "coe"])
 def test_make_fake_toas(obs, model):
     t = make_fake_toas_uniform(56000, 59000, 10, model, obs=obs)
@@ -161,3 +167,32 @@ def test_partial_pulse_numbers(model, toas):
     toas_2.table["pulse_number"][1] = np.nan
     r2 = Residuals(toas_2, model, track_mode="use_pulse_numbers")
     assert_almost_equal(r.time_resids[2:].value, r2.time_resids[2:].value)
+
+
+def test_save_delta_pulse_number(model, toas):
+    toas.compute_pulse_numbers(model)
+    toas["delta_pulse_number"][:10] = 1
+    toas["delta_pulse_number"][10:20] = -1
+    outtim = StringIO()
+    toas.write_TOA_file(outtim)
+    outtim.seek(0)
+    newtoas = get_TOAs(outtim)
+    assert (newtoas[:10]["delta_pulse_number"] == 1).all()
+    assert (newtoas[10:20]["delta_pulse_number"] == -1).all()
+    assert (newtoas[20:]["delta_pulse_number"] == 0).all()
+    assert (toas["delta_pulse_number"] == newtoas["delta_pulse_number"]).all()
+
+
+def test_get_pulse_numbers(model, toas):
+    toas.compute_pulse_numbers(model)
+    pn_column = toas.get_pulse_numbers()
+
+    toas["pn"] = pn_column
+    # this should raise an error since both the column and flag are present
+    with pytest.raises(ValueError):
+        pn_flag = toas.get_pulse_numbers()
+
+    del toas.table["pulse_number"]
+    # now it should be OK
+    pn_flag = toas.get_pulse_numbers()
+    assert (pn_column == pn_flag).all()

@@ -13,7 +13,12 @@ from loguru import logger as log
 from pint import ls
 from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
 from pint.models.stand_alone_psr_binaries import binary_orbits as bo
-from pint.models.timing_model import DelayComponent, MissingParameter, UnknownParameter
+from pint.models.timing_model import (
+    DelayComponent,
+    MissingParameter,
+    TimingModelError,
+    UnknownParameter,
+)
 from pint.utils import taylor_horner_deriv
 from pint.pulsar_ecliptic import PulsarEcliptic
 
@@ -75,7 +80,7 @@ class PulsarBinary(DelayComponent):
             floatParameter(
                 name="PBDOT",
                 units=u.day / u.day,
-                description="Orbital period derivitve respect to time",
+                description="Orbital period derivative respect to time",
                 unit_scale=True,
                 scale_factor=1e-12,
                 scale_threshold=1e-7,
@@ -108,7 +113,7 @@ class PulsarBinary(DelayComponent):
             floatParameter(
                 name="EDOT",
                 units="1/s",
-                description="Eccentricity derivitve respect to time",
+                description="Eccentricity derivative respect to time",
                 unit_scale=True,
                 scale_factor=1e-12,
                 scale_threshold=1e-7,
@@ -139,7 +144,7 @@ class PulsarBinary(DelayComponent):
             floatParameter(
                 name="M2",
                 units=u.M_sun,
-                description="Mass of companian in the unit Sun mass",
+                description="Mass of companion in the unit Sun mass",
             )
         )
         self.add_param(
@@ -279,7 +284,7 @@ class PulsarBinary(DelayComponent):
         Warns
         -----
         If passing 'None' to 'toa' argument, the stand alone binary model will use
-        the TOAs were passed to it from last interation (i.e. last barycnetered
+        the TOAs were passed to it from last iteration (i.e. last barycentered
         TOAs) or no TOAs for stand alone binary model at all. This behavior will
         cause incorrect answers. Allowing the passing None to 'toa' argument is
         for some lower level functions and tests. We do not recommend PINT
@@ -287,7 +292,7 @@ class PulsarBinary(DelayComponent):
         """
         # Don't need to fill P0 and P1. Translate all the others to the format
         # that is used in bmodel.py
-        # Get barycnetric toa first
+        # Get barycentric toa first
         updates = {}
         if toas is not None:
             tbl = toas.table
@@ -355,7 +360,7 @@ class PulsarBinary(DelayComponent):
         return self.binary_instance.binary_delay()
 
     def d_binary_delay_d_xxxx(self, toas, param, acc_delay):
-        """Return the binary model delay derivtives."""
+        """Return the binary model delay derivatives."""
         self.update_binary_object(toas, acc_delay)
         return self.binary_instance.d_binarydelay_d_par(param)
 
@@ -388,7 +393,7 @@ class PulsarBinary(DelayComponent):
 
         T0 will be changed to the periapsis time closest to the supplied epoch,
         and the argument of periapsis (OM), eccentricity (ECC), and projected
-        semimajor axis (A1 or X) will be updated according to the specified
+        semi-major axis (A1 or X) will be updated according to the specified
         OMDOT, EDOT, and A1DOT or XDOT, if present.
 
         Note that derivatives of binary orbital frequency higher than the first

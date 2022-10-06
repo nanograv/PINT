@@ -77,7 +77,7 @@ class PulsarEcliptic(coord.BaseCoordinateFrame):
                 )
             del kwargs["ecl"]
 
-        super(PulsarEcliptic, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
 def _ecliptic_rotation_matrix_pulsar(obl):

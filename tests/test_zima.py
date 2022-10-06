@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 import os
 import sys
-import unittest
 
-import numpy as np
 from io import StringIO
 
 import pint.scripts.zima as zima
-from pinttestdata import datadir, testdir
+from pinttestdata import datadir
 
 
 def test_result(tmp_path):

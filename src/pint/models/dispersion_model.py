@@ -84,7 +84,7 @@ class Dispersion(DelayComponent):
         param_name : str
             Derivative parameter name
         acc_delay : `astropy.quantity` or `numpy.ndarray`
-            Accumlated delay values. This parameter is to keep the unified API,
+            Accumulated delay values. This parameter is to keep the unified API,
             but not used in this function.
         """
         try:
@@ -115,7 +115,7 @@ class Dispersion(DelayComponent):
             self.dm_deriv_funcs[pn] = [func]
         else:
             # TODO:
-            # Runing setup() mulitple times can lead to adding derivative
+            # Running setup() multiple times can lead to adding derivative
             # function multiple times. This prevent it from happening now. But
             # in the future, we should think a better way to do so.
             if func in self.dm_deriv_funcs[pn]:
@@ -229,7 +229,7 @@ class DispersionDM(Dispersion):
 
     def print_par(self, format="pint"):
         # TODO we need to have a better design for print out the parameters in
-        # an inhertance class.
+        # an inheritance class.
         result = ""
         prefix_dm = list(self.get_prefix_mapping_component("DM").values())
         dms = ["DM"] + prefix_dm
@@ -569,7 +569,7 @@ class DispersionDMX(Dispersion):
 
 
 class DispersionJump(Dispersion):
-    """This class provides the contant offsets to the DM values.
+    """This class provides the constant offsets to the DM values.
 
     Parameters supported:
 

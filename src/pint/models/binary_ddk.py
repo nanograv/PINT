@@ -69,7 +69,7 @@ class BinaryDDK(BinaryDD):
     def __init__(
         self,
     ):
-        super(BinaryDDK, self).__init__()
+        super().__init__()
         self.binary_model_name = "DDK"
         self.binary_model_class = DDKmodel
 

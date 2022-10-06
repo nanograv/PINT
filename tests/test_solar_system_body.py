@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import os
 import unittest
-import pytest
 
 import astropy.time as time
 import numpy as np

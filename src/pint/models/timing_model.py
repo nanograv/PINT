@@ -32,6 +32,7 @@ import inspect
 from collections import OrderedDict, defaultdict
 from functools import wraps
 from warnings import warn
+from uncertainties import ufloat
 
 import astropy.time as time
 import astropy.units as u
@@ -63,6 +64,7 @@ from pint.utils import (
     lines_of,
     split_prefixed_name,
     open_or_use,
+    colorize,
 )
 
 
@@ -320,7 +322,7 @@ class TimingModel:
             boolParameter(
                 name="DILATEFREQ",
                 value=False,
-                description="Whether or not TEMPO2 should apply gravitational redshift and time dilation to obseerving frequency (Y/N; PINT only supports N)",
+                description="Whether or not TEMPO2 should apply gravitational redshift and time dilation to observing frequency (Y/N; PINT only supports N)",
             ),
             "",
         )
@@ -375,7 +377,16 @@ class TimingModel:
             warn("PINT only supports 'T2CMETHOD IAU2000B'")
             self.T2CMETHOD.value = "IAU2000B"
         if self.UNITS.value not in [None, "TDB"]:
-            raise ValueError("PINT only supports 'UNITS TDB'")
+            if self.UNITS.value == "TCB":
+                error_message = """The TCB timescale is not supported by PINT. (PINT only supports 'UNITS TDB'.)
+                See https://nanograv-pint.readthedocs.io/en/latest/explanation.html#time-scales for an explanation
+                on different timescales. The par file can be converted from TCB to TDB using the `transform`
+                plugin of TEMPO2 like so:
+                    $ tempo2 -gr transform J1234+6789_tcb.par J1234+6789_tdb.par tdb 
+                """
+            else:
+                error_message = f"PINT only supports 'UNITS TDB'. The given timescale '{self.UNITS.value}' is invalid."
+            raise ValueError(error_message)
         if not self.START.frozen:
             warn("START cannot be unfrozen...setting START.frozen to True")
             self.START.frozen = True
@@ -550,6 +561,26 @@ class TimingModel:
                 raise ValueError(f"Unknown kind {kind!r}")
         return c
 
+    def get_params_of_component_type(self, component_type):
+        """Get a list of parameters belonging to a component type.
+
+        Parameters
+        ----------
+        component_type : "PhaseComponent", "DelayComponent", "NoiseComponent"
+
+        Returns
+        -------
+        list
+        """
+        component_type_list_str = "{}_list".format(component_type)
+        if hasattr(self, component_type_list_str):
+            component_type_list = getattr(self, component_type_list_str)
+            return [
+                param for component in component_type_list for param in component.params
+            ]
+        else:
+            return []
+
     def set_param_values(self, fitp):
         """Set the model parameters to the value contained in the input dict.
 
@@ -615,7 +646,7 @@ class TimingModel:
         barytimes: Time, TOAs, array-like, or float
             MJD barycentric time(s). The times to compute the
             orbital phases.  Needs to be a barycentric time in TDB.
-            If a TOAs instance is passed, the barycenting will happen
+            If a TOAs instance is passed, the barycentering will happen
             automatically.  If an astropy Time object is passed, it must
             be in scale='tdb'.  If an array-like object is passed or
             a simple float, the time must be in MJD format.
@@ -1083,6 +1114,7 @@ class TimingModel:
         else:
             target_component = param_map[param]
             self.components[target_component].remove_param(param)
+        self.setup()
 
     def get_params_mapping(self):
         """Report whick component each parameter name comes from."""
@@ -1381,68 +1413,89 @@ class TimingModel:
         return result
 
     def jump_flags_to_params(self, toas):
-        """Convert jump flags in toas.table["flags"] (loaded in .tim file) to jump parameters in the model.
+        """Add JUMP parameters corresponding to tim_jump flags.
 
-        The flag processed is ``jump``.
+        When a ``.tim`` file contains pairs of JUMP lines, the user's expectation
+        is that the TOAs between each pair of flags will be affected by a JUMP, even
+        if that JUMP does not appear in the ``.par`` file. (This is how TEMPO works.)
+        In PINT, those TOAs have a flag attached, `-tim_jump N`, where N is a
+        number that is different for each JUMPed set of TOAs. The goal of this function
+        is to add JUMP parameters to the model corresponding to these.
 
-        Note:  this method should be called *before* the PhaseJump mathod jump_params_to_flags()
+        Some complexities arise: TOAs may also have `-tim_jump` flags associated
+        with them, just as flags, for example if such a ``.tim`` file were exported
+        in PINT-native format and then reloaded. And models may already have JUMPs
+        associated with some or all ``tim_jump`` values.
+
+        This function looks at all the ``tim_jump`` values and adds JUMP parameters
+        for any that do not have any. It does not change the TOAs object it is passed.
         """
         from . import jump
 
         tjvals, idxs = toas.get_flag_value("tim_jump")
-        Ntimjumps = len({int(n) for n in tjvals if n is not None})
-        if not Ntimjumps:
+        tim_jump_values = set(tjvals)
+        tim_jump_values.remove(None)
+        if not tim_jump_values:
             log.info("No jump flags to process from .tim file")
             return None
-        log.info(f"There are {Ntimjumps} JUMPs from the timfile.")
-        # The number of parfile-based JUMPs we have
-        Nparjumps = (
-            self.components["PhaseJump"].get_number_of_jumps()
-            if "PhaseJump" in self.components
-            else 0
-        )
-        log.info(f"There are {Nparjumps} JUMPs from the model.")
-        if Nparjumps:
-            # Check to see if there are already tim-file jumps defined.
-            # If so, we will change their numbers so that the parfile ones
-            # are first in numerical order
-            log.debug(f"Increasing the timfile JUMP numbers by {Nparjumps}")
-            for idx in idxs:
-                snum = str(int(tjvals[idx]) + Nparjumps)
-                toas.table[idx]["flags"]["jump"] = snum
-                toas.table[idx]["flags"]["tim_jump"] = snum
-        # Because JUMPS are handled serially, we need to do everything
-        # via index order and *not* by group_by("obs")
-        ix_tab = toas.table[np.argsort(toas.table["index"])]
-        jumped = ["jump" in fd for fd in ix_tab["flags"]]
-        for flag_dict in ix_tab["flags"][jumped]:
-            # add PhaseJump object if model does not have one already
-            if "PhaseJump" not in self.components:
-                log.info("PhaseJump component added")
-                a = jump.PhaseJump()
-                a.setup()
-                self.add_component(a)
-                self.remove_param("JUMP1")
-            # take jumps in TOA table and add them as parameters to the model
-            num = flag_dict["jump"]
-            if f"JUMP{str(num)}" not in self.params:
-                param = maskParameter(
-                    name="JUMP",
-                    index=num,
-                    key="-tim_jump",
-                    key_value=num,
-                    value=0.0,
-                    units="second",
-                    uncertainty=0.0,
-                )
-                self.add_param_from_top(param, "PhaseJump")
-                getattr(self, param.name).frozen = False
-            flag_dict["tim_jump"] = str(num)  # this is the value select_toa_mask uses
+        log.info(f"There are {len(tim_jump_values)} JUMPs from the timfile.")
+
+        if "PhaseJump" not in self.components:
+            log.info("PhaseJump component added")
+            a = jump.PhaseJump()
+            a.setup()
+            self.add_component(a)
+            self.remove_param("JUMP1")
+            a.setup()
+
+        used_indices = set()
+        for p in self.get_jump_param_objects():
+            if p.key == "-tim_jump":
+                used_indices.add(p.index)
+                (tjv,) = p.key_value
+                if tjv in tim_jump_values:
+                    log.info(f"JUMP -tim_jump {tjv} already exists")
+                    tim_jump_values.remove(tjv)
+        if used_indices:
+            num = max(used_indices) + 1
+        else:
+            num = 1
+
+        if not tim_jump_values:
+            log.info(f"All tim_jump values have corresponding JUMPs")
+            return
+
+        # FIXME: arrange for these to be in a sensible order (might not be integers
+        # but if they are then lexicographical order is not wanted)
+        t_j_v = set()
+        for v in tim_jump_values:
+            try:
+                vi = int(v)
+            except ValueError:
+                vi = v
+            t_j_v.add(vi)
+        for v in sorted(t_j_v):
+            # Now we need to add a JUMP for each of these
+            log.info(f"Adding JUMP -tim_jump {v}")
+            param = maskParameter(
+                name="JUMP",
+                index=num,
+                key="-tim_jump",
+                key_value=v,
+                value=0.0,
+                units="second",
+                uncertainty=0.0,
+            )
+            self.add_param_from_top(param, "PhaseJump")
+            getattr(self, param.name).frozen = False
+            num += 1
+
         self.components["PhaseJump"].setup()
 
     def delete_jump_and_flags(self, toa_table, jump_num):
-        """Delete jump object from PhaseJump and remove its flags from TOA table
-        (helper function for pintk).
+        """Delete jump object from PhaseJump and remove its flags from TOA table.
+
+        This is a helper function for pintk.
 
         Parameters
         ----------
@@ -1471,7 +1524,7 @@ class TimingModel:
 
         # if last jump deleted, remove PhaseJump object from model
         if (
-            self.components["PhaseJump"].get_number_of_jumps() == 1
+            self.components["PhaseJump"].get_number_of_jumps() == 0
         ):  # means last jump just deleted
             comp_list = getattr(self, "PhaseComponent_list")
             for item in comp_list:
@@ -1738,9 +1791,20 @@ class TimingModel:
         We decide to add minus sign here in the design matrix, so the fitter
         keeps the conventional way.
         """
+
+        noise_params = self.get_params_of_component_type("NoiseComponent")
+        # unfrozen_noise_params = [
+        #     param for param in noise_params if not getattr(self, param).frozen
+        # ]
+
+        # The entries for any unfrozen noise parameters will not be
+        # included in the design matrix as they are not well-defined.
+
         params = ["Offset"] if incoffset else []
         params += [
-            par for par in self.params if incfrozen or not getattr(self, par).frozen
+            par
+            for par in self.params
+            if (incfrozen or not getattr(self, par).frozen) and par not in noise_params
         ]
 
         F0 = self.F0.quantity  # 1/sec
@@ -1769,9 +1833,12 @@ class TimingModel:
         self,
         othermodel,
         nodmx=True,
+        convertcoordinates=True,
         threshold_sigma=3.0,
         unc_rat_threshold=1.05,
         verbosity="max",
+        usecolor=True,
+        format="text",
     ):
         """Print comparison with another model
 
@@ -1779,48 +1846,75 @@ class TimingModel:
         ----------
         othermodel
             TimingModel object to compare to
-        nodmx : bool
-            If True (which is the default), don't print the DMX parameters in
+        nodmx : bool, optional
+            If True, don't print the DMX parameters in
             the comparison
-        threshold_sigma : float
+        convertcoordinates : bool, optional
+            Convert coordinates from ICRS<->ECL to make models consistent
+        threshold_sigma : float, optional
             Pulsar parameters for which diff_sigma > threshold will be printed
             with an exclamation point at the end of the line
-        unc_rat_threshold : float
+        unc_rat_threshold : float, optional
             Pulsar parameters for which the uncertainty has increased by a
             factor of unc_rat_threshold will be printed with an asterisk at
             the end of the line
-        verbosity : string
+        verbosity : string, optional
             Dictates amount of information returned. Options include "max",
             "med", and "min", which have the following results:
+
                 "max"     - print all lines from both models whether they are fit or not (note that nodmx will override this); DEFAULT
                 "med"     - only print lines for parameters that are fit
                 "min"     - only print lines for fit parameters for which diff_sigma > threshold
                 "check"   - only print significant changes with logging.warning, not as string (note that all other modes will still print this)
+        usecolor : bool, optional
+            Use colors on the output to complement use of "!" and "*"
+        format : string, optional
+            One of "text" or "markdown"
 
         Returns
         -------
         str
             Human readable comparison, for printing.
             Formatted as a five column table with titles of
-            PARAMETER NAME | Model 1 | Model 2 | Diff_Sigma1 | Diff_Sigma2
-            where Model 1/2 refer to self and othermodel Timing Model objects,
-            and Diff_SigmaX is the difference in a given parameter as reported by the two models,
+            ``PARAMETER NAME | Model1 | Model2 | Diff_Sigma1 | Diff_Sigma2``
+            where ``ModelX`` refer to self and othermodel Timing Model objects,
+            and ``Diff_SigmaX`` is the difference in a given parameter as reported by the two models,
             normalized by the uncertainty in model X. If model X has no reported uncertainty,
-            nothing will be printed. When either Diff_Sigma value is greater than threshold_sigma,
-            an exclamation point (!) will be appended to the line. If the uncertainty in the first model
-            if smaller than the second, an asterisk (*) will be appended to the line. Also, astropy
-            warnings and info statements will be printed.
+            nothing will be printed.
+
+            If ``format="text"``, when either ``Diff_SigmaX`` value is greater than ``threshold_sigma``,
+            an exclamation point (``!``) will be appended to the line and color will be added if ``usecolor=True``. If the uncertainty in the first model
+            if smaller than the second, an asterisk (``*``) will be appended to the line and color will be added if ``usecolor=True``.
+
+            If ``format="markdown"`` then will be formatted as a markdown table with bold, colored, and highlighted text as appropriate.
+
+            For both output formats, warnings and info statements will be printed.
 
         Note
         ----
             Prints logging warnings for parameters that have changed significantly
             and/or have increased in uncertainty.
-        """
-        import sys
-        from copy import deepcopy as cp
 
-        import uncertainties.umath as um
-        from uncertainties import ufloat
+        Examples
+        --------
+        To use this in a Jupyter notebook with and without markdown::
+
+            >>> from pint.models import get_model
+            >>> import pint.logging
+            >>> from IPython.display import display_markdown
+            >>> pint.logging.setup(level="WARNING")
+            >>> m1 = get_model(<file1>)
+            >>> m2 = get_model(<file2>)
+            >>> print(m1.compare(m2))
+            >>> display_markdown(m1.compare(m2, format="markdown"), raw=True)
+
+        Make sure to use ``raw=True`` to get the markdown output in a notebook.
+
+        """
+        assert verbosity.lower() in ["max", "med", "min", "check"]
+        verbosity = verbosity.lower()
+        assert format.lower() in ["text", "markdown"]
+        format = format.lower()
 
         if self.name != "":
             model_name = self.name.split("/")[-1]
@@ -1831,27 +1925,34 @@ class TimingModel:
         else:
             other_model_name = "Model 2"
 
-        s = "{:14s} {:>28s} {:>28s} {:14s} {:14s}\n".format(
-            "PARAMETER", model_name, other_model_name, "Diff_Sigma1", "Diff_Sigma2"
-        )
-        s += "{:14s} {:>28s} {:>28s} {:14s} {:14s}\n".format(
-            "---------", "----------", "----------", "----------", "----------"
-        )
+        # 5 columns of the output, + a way to keep track of values/uncertainties that have changed a lot
+        parameter = {}
+        value1 = {}
+        value2 = {}
+        diff1 = {}
+        diff2 = {}
+        modifier = {}
+        parameter["TITLE"] = "PARAMETER"
+        value1["TITLE"] = model_name
+        value2["TITLE"] = other_model_name
+        diff1["TITLE"] = "Diff_Sigma1"
+        diff2["TITLE"] = "Diff_Sigma2"
+        modifier["TITLE"] = []
         log.info("Comparing ephemerides for PSR %s" % self.PSR.value)
-        log.info("Threshold sigma = %2.2f" % threshold_sigma)
-        log.info("Threshold uncertainty ratio = %2.2f" % unc_rat_threshold)
-        log.info("Creating a copy of model from %s" % other_model_name)
+        log.debug("Threshold sigma = %2.2f" % threshold_sigma)
+        log.debug("Threshold uncertainty ratio = %2.2f" % unc_rat_threshold)
+        log.debug("Creating a copy of model from %s" % other_model_name)
         if verbosity == "max":
-            log.info("Maximum verbosity - printing all parameters")
+            log.debug("Maximum verbosity - printing all parameters")
         elif verbosity == "med":
-            log.info("Medium verbosity - printing parameters that are fit")
+            log.debug("Medium verbosity - printing parameters that are fit")
         elif verbosity == "min":
-            log.info(
+            log.debug(
                 "Minimum verbosity - printing parameters that are fit and significantly changed"
             )
         elif verbosity == "check":
-            log.info("Check verbosity - only warnings/info will be displayed")
-        othermodel = cp(othermodel)
+            log.debug("Check verbosity - only warnings/info will be displayed")
+        othermodel = copy.deepcopy(othermodel)
 
         if (
             "POSEPOCH" in self.params_ordered
@@ -1859,6 +1960,7 @@ class TimingModel:
         ):
             if (
                 self.POSEPOCH.value is not None
+                and othermodel.POSEPOCH.value is not None
                 and self.POSEPOCH.value != othermodel.POSEPOCH.value
             ):
                 log.info(
@@ -1885,77 +1987,117 @@ class TimingModel:
                     % (other_model_name, model_name)
                 )
                 othermodel.change_dmepoch(self.DMEPOCH.value)
+        if (
+            "AstrometryEquatorial" in self.components
+            and "AstrometryEcliptic" in othermodel.components
+        ):
+            if convertcoordinates:
+                log.warning(f"Converting {other_model_name} from ECL to ICRS")
+                othermodel = othermodel.as_ICRS()
+            else:
+                log.warning(
+                    f"{model_name} is in ICRS coordinates but {other_model_name} is in ECL coordinates and convertcoordinates=False"
+                )
+        elif (
+            "AstrometryEcliptic" in self.components
+            and "AstrometryEquatorial" in othermodel.components
+        ):
+            if convertcoordinates:
+                log.warning(
+                    f"Converting {other_model_name} from ICRS to ECL({self.ECL.value})"
+                )
+                othermodel = othermodel.as_ECL(ecl=self.ECL.value)
+            else:
+                log.warning(
+                    f"{model_name} is in ECL({self.ECL.value}) coordinates but {other_model_name} is in ICRS coordinates and convertcoordinates=False"
+                )
+
         for pn in self.params_ordered:
             par = getattr(self, pn)
             if par.value is None:
                 continue
-            newstr = ""
             try:
                 otherpar = getattr(othermodel, pn)
             except AttributeError:
                 otherpar = None
             if isinstance(par, strParameter):
-                newstr += "{:14s} {:>28s}".format(pn, par.value)
+                parameter[pn] = str(pn)
+                value1[pn] = str(par.value)
                 if otherpar is not None and otherpar.value is not None:
-                    newstr += " {:>28s}\n".format(otherpar.value)
+                    value2[pn] = str(otherpar.value)
                 else:
-                    newstr += " {:>28s}\n".format("Missing")
+                    value2[pn] = "Missing"
+                diff1[pn] = ""
+                diff2[pn] = ""
+                modifier[pn] = []
             elif isinstance(par, AngleParameter):
                 if par.frozen:
                     # If not fitted, just print both values
-                    newstr += "{:14s} {:>28s}".format(pn, str(par.quantity))
+                    parameter[pn] = str(pn)
+                    value1[pn] = str(par.quantity)
                     if otherpar is not None and otherpar.quantity is not None:
-                        newstr += " {:>28s}\n".format(str(otherpar.quantity))
+                        value2[pn] = str(otherpar.quantity)
                         if otherpar.quantity != par.quantity:
                             log.info(
                                 "Parameter %s not fit, but has changed between these models"
                                 % par.name
                             )
                     else:
-                        newstr += " {:>28s}\n".format("Missing")
+                        value2[pn] = "Missing"
+                    diff1[pn] = ""
+                    diff2[pn] = ""
+                    modifier[pn] = []
                 else:
                     # If fitted, print both values with uncertainties
                     if par.units == u.hourangle:
                         uncertainty_unit = pint.hourangle_second
                     else:
                         uncertainty_unit = u.arcsec
-                    newstr += "{:14s} {:>16s} +/- {:7.2g}".format(
-                        pn,
+                    parameter[pn] = pn
+                    modifier[pn] = []
+                    value1[pn] = "{:>16s} +/- {:7.2g}".format(
                         str(par.quantity),
-                        par.uncertainty.to(uncertainty_unit).value,
+                        par.uncertainty.to_value(uncertainty_unit),
                     )
+
                     if otherpar is not None:
-                        try:
-                            newstr += " {:>16s} +/- {:7.2g}".format(
+                        if otherpar.uncertainty is not None:
+                            value2[pn] = "{:>16s} +/- {:7.2g}".format(
                                 str(otherpar.quantity),
-                                otherpar.uncertainty.to(uncertainty_unit).value,
+                                otherpar.uncertainty.to_value(uncertainty_unit),
                             )
-                        except AttributeError:
+                        else:
                             # otherpar must have no uncertainty
                             if otherpar.quantity is not None:
-                                newstr += " {:>28s}".format(str(otherpar.quantity))
+                                value2[pn] = "{:>s}".format(str(otherpar.quantity))
                             else:
-                                newstr += " {:>28s}".format("Missing")
+                                value2[pn] = "Missing"
                     else:
-                        newstr += " {:>28s}".format("Missing")
+                        value2[pn] = "Missing"
+                        diff1[pn] = ""
+                        diff2[pn] = ""
                     if otherpar is not None and otherpar.quantity is not None:
                         diff = otherpar.quantity - par.quantity
-                        diff_sigma = (diff / par.uncertainty).decompose()
-                        if abs(diff_sigma) != np.inf:
-                            newstr += " {:>10.2f}".format(diff_sigma)
-                            if abs(diff_sigma) > threshold_sigma:
-                                newstr += " !"
-                            else:
-                                newstr += "  "
+                        if par.uncertainty is not None:
+                            diff_sigma = (diff / par.uncertainty).decompose()
                         else:
-                            newstr += "           "
-                        diff_sigma2 = (diff / otherpar.uncertainty).decompose()
+                            diff_sigma = np.inf
+                        if abs(diff_sigma) != np.inf:
+                            diff1[pn] = "{:>10.2f}".format(diff_sigma)
+                            if abs(diff_sigma) > threshold_sigma:
+                                modifier[pn].append("diff1")
+                        else:
+                            diff1[pn] = ""
+                        if otherpar.uncertainty is not None:
+                            diff_sigma2 = (diff / otherpar.uncertainty).decompose()
+                        else:
+                            diff_sigma2 = np.inf
                         if abs(diff_sigma2) != np.inf:
-                            newstr += " {:>10.2f}".format(diff_sigma2)
+                            diff2[pn] = "{:>10.2f}".format(diff_sigma2)
                             if abs(diff_sigma2) > threshold_sigma:
-                                newstr += " !"
-                    # except (AttributeError, TypeError):
-                    #    pass
+                                modifier[pn].append("diff2")
+                        else:
+                            diff2[pn] = ""
                     if otherpar is not None:
                         if (
                             par.uncertainty is not None
@@ -1965,22 +2107,25 @@ class TimingModel:
                                 unc_rat_threshold * par.uncertainty
                                 < otherpar.uncertainty
                             ):
-                                newstr += " *"
-                    newstr += "\n"
+                                modifier[pn].append("unc_rat")
             else:
                 # Assume numerical parameter
                 if nodmx and pn.startswith("DMX"):
                     continue
+                parameter[pn] = str(pn)
+                modifier[pn] = []
                 if par.frozen:
                     # If not fitted, just print both values
-                    newstr += "{:14s} {:28f}".format(pn, par.value)
+                    value1[pn] = str(par.value)
+                    diff1[pn] = ""
+                    diff2[pn] = ""
                     if otherpar is not None and otherpar.value is not None:
-                        try:
-                            newstr += " {:28SP}".format(
+                        if otherpar.uncertainty is not None:
+                            value2[pn] = "{:SP}".format(
                                 ufloat(otherpar.value, otherpar.uncertainty.value)
                             )
-                        except (ValueError, AttributeError):
-                            newstr += " {:28f}".format(otherpar.value)
+                        else:
+                            value2[pn] = str(otherpar.value)
                         if otherpar.value != par.value:
                             if par.name in ["START", "FINISH", "CHI2", "NTOA"]:
                                 if verbosity == "max":
@@ -2002,7 +2147,7 @@ class TimingModel:
                                     "Parameter %s not fit, but has changed between these models"
                                     % par.name
                                 )
-                                newstr += " !"
+                                modifier[pn].append("change")
                         if (
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
@@ -2011,54 +2156,59 @@ class TimingModel:
                                 par.uncertainty * unc_rat_threshold
                                 < otherpar.uncertainty
                             ):
-                                newstr += " *"
-                        newstr += "\n"
+                                modifier[pn].append("unc_rat")
                     else:
-                        newstr += " {:>28s}\n".format("Missing")
+                        value2[pn] = "Missing"
                 else:
                     # If fitted, print both values with uncertainties
                     if par.uncertainty is not None:
-                        newstr += "{:14s} {:28SP}".format(
-                            pn, ufloat(par.value, par.uncertainty.value)
+                        value1[pn] = "{:SP}".format(
+                            ufloat(par.value, par.uncertainty.value)
                         )
                     else:
-                        newstr += "{:14s} {:28f}".format(pn, float(par.value))
+                        value1[pn] = str(par.value)
                     if otherpar is not None and otherpar.value is not None:
-                        try:
-                            newstr += " {:28SP}".format(
+                        if otherpar.uncertainty is not None:
+                            value2[pn] = "{:SP}".format(
                                 ufloat(otherpar.value, otherpar.uncertainty.value)
                             )
-                        except AttributeError:
+                        else:
                             # otherpar must have no uncertainty
                             if otherpar.value is not None:
-                                newstr += " {:28f}".format(otherpar.value)
+                                value2[pn] = str(otherpar.value)
                             else:
-                                newstr += " {:>28s}".format("Missing")
+                                value2[pn] = "Missing"
                     else:
-                        newstr += " {:>28s}".format("Missing")
-                    if "Missing" in newstr:
-                        ind = np.where(np.array(newstr.split()) == "Missing")[0][0] - 1
-                        models = [model_name, other_model_name]
+                        value2[pn] = "Missing"
+                    if value2[pn] == "Missing":
                         log.info(
-                            "Parameter %s missing from %s" % (par.name, models[ind])
+                            "Parameter %s missing from %s"
+                            % (par.name, other_model_name)
                         )
+                    if value1[pn] == "Missing":
+                        log.info(
+                            "Parameter %s missing from %s" % (par.name, model_name)
+                        )
+
                     if otherpar is not None and otherpar.value is not None:
-                        try:
-                            diff = otherpar.value - par.value
-                            diff_sigma = diff / par.uncertainty.value
-                            if abs(diff_sigma) != np.inf:
-                                newstr += " {:>10.2f}".format(diff_sigma)
-                                if abs(diff_sigma) > threshold_sigma:
-                                    newstr += " !"
-                            else:
-                                newstr += "           "
+                        diff = otherpar.value - par.value
+                        diff_sigma = diff / par.uncertainty.value
+                        if abs(diff_sigma) != np.inf:
+                            diff1[pn] = "{:>10.2f}".format(diff_sigma)
+                            if abs(diff_sigma) > threshold_sigma:
+                                modifier[pn].append("diff1")
+                        else:
+                            diff1[pn] = ""
+                        if otherpar.uncertainty is not None:
                             diff_sigma2 = diff / otherpar.uncertainty.value
                             if abs(diff_sigma2) != np.inf:
-                                newstr += " {:>10.2f}".format(diff_sigma2)
+                                diff2[pn] = "{:>10.2f}".format(diff_sigma2)
                                 if abs(diff_sigma2) > threshold_sigma:
-                                    newstr += " !"
-                        except (AttributeError, TypeError):
-                            pass
+                                    modifier[pn].append("diff2")
+                            else:
+                                diff2[pn] = ""
+                        else:
+                            diff2[pn] = ""
                         if (
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
@@ -2067,38 +2217,27 @@ class TimingModel:
                                 par.uncertainty * unc_rat_threshold
                                 < otherpar.uncertainty
                             ):
-                                newstr += " *"
-                    newstr += "\n"
+                                modifier[pn].append("unc_rat")
+                    else:
+                        diff1[pn] = ""
+                        diff2[pn] = ""
+            if "diff1" in modifier[pn] and not par.frozen:
+                log.warning(
+                    "Parameter %s has changed significantly (%s sigma1)"
+                    % (parameter[pn], diff1[pn])
+                )
+            if "diff2" in modifier[pn] and not par.frozen:
+                log.warning(
+                    "Parameter %s has changed significantly (%s sigma2)"
+                    % (parameter[pn], diff2[pn])
+                )
 
-            if "!" in newstr and not par.frozen:
-                try:
-                    log.warning(
-                        "Parameter %s has changed significantly (%f sigma)"
-                        % (newstr.split()[0], float(newstr.split()[-2]))
-                    )
-                except ValueError:
-                    log.warning(
-                        "Parameter %s has changed significantly (%f sigma)"
-                        % (newstr.split()[0], float(newstr.split()[-3]))
-                    )
-            if "*" in newstr:
+            if "unc_rat" in modifier[pn]:
                 log.warning(
                     "Uncertainty on parameter %s has increased (unc2/unc1 = %2.2f)"
-                    % (newstr.split()[0], float(otherpar.uncertainty / par.uncertainty))
+                    % (parameter[pn], float(otherpar.uncertainty / par.uncertainty))
                 )
 
-            if verbosity == "max":
-                s += newstr
-            elif verbosity == "med":
-                if not par.frozen:
-                    s += newstr
-            elif verbosity == "min":
-                if "!" in newstr and not par.frozen:
-                    s += newstr
-            elif verbosity != "check":
-                raise AttributeError(
-                    'Options for verbosity are "max" (default), "med", "min", and "check"'
-                )
         # Now print any parameters in othermodel that were missing in self.
         mypn = self.params_ordered
         for opn in othermodel.params_ordered:
@@ -2114,11 +2253,108 @@ class TimingModel:
                 continue
             log.info("Parameter %s missing from %s" % (opn, model_name))
             if verbosity == "max":
-                s += "{:14s} {:>28s}".format(opn, "Missing")
-                s += " {:>28s}".format(str(otherpar.quantity))
-                s += "\n"
+                parameter[opn] = str(opn)
+                value1[opn] = "Missing"
+                value2[opn] = str(otherpar.quantity)
+                diff1[opn] = ""
+                diff2[opn] = ""
+                modifier[opn] = []
+        separation = self.get_psr_coords().separation(othermodel.get_psr_coords())
+        pn = "SEPARATION"
+        parameter[pn] = "SEPARATION"
+        if separation < 60 * u.arcsec:
+            value1[pn] = "{:>f} arcsec".format(separation.arcsec)
+        elif separation < 60 * u.arcmin:
+            value1[pn] = "{:>f} arcmin".format(separation.arcmin)
+        else:
+            value1[pn] = "{:>f} deg".format(separation.deg)
+        value2[pn] = ""
+        diff1[pn] = ""
+        diff2[pn] = ""
+        modifier[pn] = []
+        s = []
+        pad = 2
+        longest_parameter = len(max(parameter.values(), key=len))
+        longest_value1 = len(max(value1.values(), key=len))
+        longest_value2 = len(max(value2.values(), key=len))
+        longest_diff1 = len(max(diff1.values(), key=len))
+        longest_diff2 = len(max(diff2.values(), key=len))
+        param = "TITLE"
+        if format == "text":
+            p = parameter[param]
+            v1 = value1[param]
+            v2 = value2[param]
+            d1 = diff1[param]
+            d2 = diff2[param]
+            s.append(
+                f"{p:<{longest_parameter+pad}} {v1:>{longest_value1+pad}} {v2:>{longest_value2+pad}} {d1:>{longest_diff1+pad}} {d2:>{longest_diff2+pad}}"
+            )
+            p = "-" * longest_parameter
+            v1 = "-" * longest_value1
+            v2 = "-" * longest_value2
+            d1 = "-" * longest_diff1
+            d2 = "-" * longest_diff2
+            s.append(
+                f"{p:<{longest_parameter+pad}} {v1:>{longest_value1+pad}} {v2:>{longest_value2+pad}} {d1:>{longest_diff1+pad}} {d2:>{longest_diff2+pad}}"
+            )
+        elif format == "markdown":
+            p = parameter[param]
+            v1 = value1[param]
+            v2 = value2[param]
+            d1 = diff1[param]
+            d2 = diff2[param]
+            s.append(f"| {p} | {v1} | {v2} | {d1} | {d2} |")
+            s.append(f" :--- | ---: | ---: | ---: | ---: |")
+        for param in parameter:
+            if param == "TITLE":
+                continue
+            p = parameter[param]
+            v1 = value1[param]
+            v2 = value2[param]
+            d1 = diff1[param]
+            d2 = diff2[param]
+            m = modifier[param]
+            if format == "text":
+                sout = f"{p:<{longest_parameter+pad}} {v1:>{longest_value1+pad}} {v2:>{longest_value2+pad}} {d1:>{longest_diff1+pad}} {d2:>{longest_diff2+pad}}"
+                if "change" in m or "diff1" in m or "diff2" in m:
+                    sout += " !"
+                if "unc_rat" in m:
+                    sout += " *"
+                if usecolor:
+                    if (
+                        "change" in m
+                        or "diff1" in m
+                        or "diff2" in m
+                        and not "unc_rat" in m
+                    ):
+                        sout = colorize(sout, "red")
+                    elif (
+                        "change" in m or "diff1" in m or "diff2" in m and "unc_rat" in m
+                    ):
+                        sout = colorize(sout, "red", bg_color="green")
+                    elif "unc_rat" in m:
+                        sout = colorize(sout, bg_color="green")
+            elif format == "markdown":
+                sout = [p.strip(), v1.strip(), v2.strip(), d1.strip(), d2.strip()]
+                if "change" in m or "diff1" in m or "diff2" in m:
+                    sout = [
+                        f"<span style='color:red'>**{x}**</span>" if len(x) > 0 else x
+                        for x in sout
+                    ]
+                if "unc_rat" in m:
+                    sout = [f"<mark>{x}</mark>" if len(x) > 0 else x for x in sout]
+                sout = " | ".join(sout).strip()
+            if verbosity == "max":
+                s.append(sout)
+            elif verbosity == "med" and len(d1) > 0:
+                # not frozen so has uncertainty
+                s.append(sout)
+            elif verbosity == "min" and len(m) > 0:
+                # has a modifier
+                s.append(sout)
+
         if verbosity != "check":
-            return s.split("\n")
+            return "\n".join(s)
 
     def use_aliases(self, reset_to_default=True, alias_translation=None):
         """Set the parameters to use aliases as specified upon writing.
@@ -2443,10 +2679,10 @@ class ModelMeta(abc.ABCMeta):
         if "register" in dct:
             if cls.register:
                 getattr(cls, regname)[name] = cls
-        super(ModelMeta, cls).__init__(name, bases, dct)
+        super().__init__(name, bases, dct)
 
 
-class Component(object, metaclass=ModelMeta):
+class Component(metaclass=ModelMeta):
     """Timing model components.
 
     When such a class is defined, it registers itself in
@@ -2841,13 +3077,13 @@ class Component(object, metaclass=ModelMeta):
 
 class DelayComponent(Component):
     def __init__(self):
-        super(DelayComponent, self).__init__()
+        super().__init__()
         self.delay_funcs_component = []
 
 
 class PhaseComponent(Component):
     def __init__(self):
-        super(PhaseComponent, self).__init__()
+        super().__init__()
         self.phase_funcs_component = []
         self.phase_derivs_wrt_delay = []
 
@@ -3136,7 +3372,7 @@ class AllComponents:
                 first_init_par = None
                 # Handle the case of start index from 0 and 1
                 for start_idx in [0, 1]:
-                    first_init_par_alias = prefix + "{1:0{0}}".format(fmt, start_idx)
+                    first_init_par_alias = prefix + f"{start_idx:0{fmt}}"
                     first_init_par = self._param_alias_map.get(
                         first_init_par_alias, None
                     )
@@ -3177,7 +3413,7 @@ class MissingParameter(TimingModelError):
     """
 
     def __init__(self, module, param, msg=None):
-        super(MissingParameter, self).__init__(msg)
+        super().__init__(msg)
         self.module = module
         self.param = param
         self.msg = msg

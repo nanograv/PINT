@@ -3,13 +3,10 @@ import logging
 import os.path
 import warnings
 from contextlib import contextmanager
-from glob import glob
 
 import numdifftools
 import numpy as np
 import pytest
-from hypothesis import HealthCheck, Verbosity, assume, given, settings
-from hypothesis.strategies import composite, floats, integers, sampled_from
 from numpy.testing import assert_allclose
 from astropy import units as u
 

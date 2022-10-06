@@ -44,7 +44,7 @@ class Prior:
 
         >>> model.PB.prior = Prior(scipy.stats.norm(loc=32.0,scale=1.0))
 
-    A bounded gaussian prior that ensure that eccentrity never gets > 1.0
+    A bounded gaussian prior that ensure that eccentricity never gets > 1.0
 
         >>> model.ECC.prior = Prior(GaussianBoundedRV(loc=0.9,scale=0.1,
         ...            lower_bound=0.0,upper_bound=1.0))
@@ -80,7 +80,7 @@ class RandomInclinationPrior(rv_continuous):
     def __init__(self, **kwargs):
         kwargs["a"] = 0
         kwargs["b"] = 1
-        super(RandomInclinationPrior, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def _pdf(self, v):
         return v / (1 - v**2) ** 0.5

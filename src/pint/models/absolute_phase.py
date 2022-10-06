@@ -19,7 +19,7 @@ class AbsPhase(PhaseComponent):
 
     Note
     ----
-    Although this class is condisder as a phase component, it does not
+    Although this class is considered as a phase component, it does not
     provide the phase_func
     """
 
@@ -27,7 +27,7 @@ class AbsPhase(PhaseComponent):
     category = "absolute_phase"
 
     def __init__(self):
-        super(AbsPhase, self).__init__()
+        super().__init__()
         self.add_param(
             MJDParameter(
                 name="TZRMJD", description="Epoch of the zero phase.", time_scale="utc"
@@ -42,16 +42,16 @@ class AbsPhase(PhaseComponent):
             floatParameter(
                 name="TZRFRQ",
                 units=u.MHz,
-                description="The frequency of the zero phase mearsured.",
+                description="The frequency of the zero phase measured.",
             )
         )
         self.tz_cache = None
 
     def setup(self):
-        super(AbsPhase, self).setup()
+        super().setup()
 
     def validate(self):
-        super(AbsPhase, self).validate()
+        super().validate()
         # Make sure the cached TOA is cleared
         self.tz_cache = None
         # Check input Parameters
@@ -77,7 +77,7 @@ class AbsPhase(PhaseComponent):
         We are treating the TZRMJD as a special TOA.
         Note that any observatory clock corrections will be applied
         to this TOA, as with any other TOA. This does not affect the
-        value of the TZRMJD parmeter, however.
+        value of the TZRMJD parameter, however.
         """
         clkc_info = toas.clock_corr_info
         # If we have cached the TZR TOA and all the TZR* and clock info has not changed, then don't rebuild it

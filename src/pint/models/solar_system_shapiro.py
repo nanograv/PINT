@@ -33,7 +33,7 @@ class SolarSystemShapiro(DelayComponent):
     category = "solar_system_shapiro"
 
     def __init__(self):
-        super(SolarSystemShapiro, self).__init__()
+        super().__init__()
         self.add_param(
             boolParameter(
                 name="PLANET_SHAPIRO",
@@ -42,12 +42,6 @@ class SolarSystemShapiro(DelayComponent):
             )
         )
         self.delay_funcs_component += [self.solar_system_shapiro_delay]
-
-    def setup(self):
-        super(SolarSystemShapiro, self).setup()
-
-    def validate(self):
-        super(SolarSystemShapiro, self).validate()
 
     # Put masses in a convenient dictionary
     _ss_mass_sec = {
@@ -103,23 +97,27 @@ class SolarSystemShapiro(DelayComponent):
         # Start out with 0 delay with units of seconds
         tbl = toas.table
         delay = numpy.zeros(len(tbl))
-        # FIXME: is there any reason to use groups here? it's slow
-        for ii, key in enumerate(tbl.groups.keys):
-            if key["obs"].lower() == "barycenter":
+        for key, grp in toas.get_obs_groups():
+            if key.lower() == "barycenter":
                 log.debug("Skipping Shapiro delay for Barycentric TOAs")
                 continue
-            grp = tbl.groups[ii]
-            # obs = tbl.groups.keys[ii]["obs"]
-            loind, hiind = tbl.groups.indices[ii : ii + 2]
             psr_dir = self._parent.ssb_to_psb_xyz_ICRS(
-                epoch=grp["tdbld"].astype(numpy.float64)
+                epoch=tbl[grp]["tdbld"].astype(numpy.float64)
             )
-            delay[loind:hiind] += self.ss_obj_shapiro_delay(
-                grp["obs_sun_pos"], psr_dir, self._ss_mass_sec["sun"]
+            delay[grp] += self.ss_obj_shapiro_delay(
+                tbl[grp]["obs_sun_pos"], psr_dir, self._ss_mass_sec["sun"]
             )
-            if self.PLANET_SHAPIRO.value:
-                for pl in ("jupiter", "saturn", "venus", "uranus", "neptune"):
-                    delay[loind:hiind] += self.ss_obj_shapiro_delay(
-                        grp["obs_" + pl + "_pos"], psr_dir, self._ss_mass_sec[pl]
-                    )
+            try:
+                if self.PLANET_SHAPIRO.value:
+                    for pl in ("jupiter", "saturn", "venus", "uranus", "neptune"):
+                        delay[grp] += self.ss_obj_shapiro_delay(
+                            tbl[grp]["obs_" + pl + "_pos"],
+                            psr_dir,
+                            self._ss_mass_sec[pl],
+                        )
+            except KeyError:
+                raise KeyError(
+                    "Planet positions not found when trying to compute Solar System Shapiro delay. "
+                    "Make sure that you include `planets=True` in your `get_TOAs()` call, or use `get_model_and_toas()`."
+                )
         return delay * u.second

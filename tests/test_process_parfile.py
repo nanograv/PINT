@@ -1,14 +1,13 @@
 #! /usr/bin/env python
 """Tests for par file parsing, pintify parfile and value fill up
 """
-import os
-import tempfile
 
 import pytest
 from io import StringIO
 
 from pint.models.model_builder import ModelBuilder, parse_parfile, TimingModelError
 
+from pint.models import get_model
 
 base_par = """
 PSR J1234+5678
@@ -93,6 +92,42 @@ def test_parse_parfile_index_param():
     pint_dict, original_name, unknow = m._pintify_parfile(StringIO(indexed_par))
     assert pint_dict["DMX_0001"] == ["1 1 2"]
     assert pint_dict["DMX_0025"] == ["2 1 3"]
+
+
+dm_deriv_lines = """
+            PSR J1234+5678
+            ELAT 0 1 2
+            ELONG 0 1 3
+            F0 1 1 5
+            DM 10 0 3
+            PEPOCH 57000
+            DM001 0 1 0
+            DM002 1 1 0
+            DM3 2 1 0
+            DM010 3 1 0
+            DMX_0001 0 1 0
+            DMXR1_0001 59000
+            DMXR2_0001 59001
+            """
+
+
+def test_parse_dm_derivs():
+    dm_deriv_par = StringIO(dm_deriv_lines)
+    m = get_model(dm_deriv_par)
+    assert m.DM.value == 10.0
+    assert m.DM1.value == 0.0
+    assert m.DM3.value == 2.0
+    assert m.DM10.value == 3.0
+    assert m.DMX_0001.value == 0.0
+
+
+def test_name_check_dm_derivs():
+    dm_deriv_par = StringIO(dm_deriv_lines)
+    mb = ModelBuilder()
+    pint_dict, original_name, unknow = mb._pintify_parfile(dm_deriv_par)
+    assert original_name["DM1"] == "DM001"
+    assert original_name["DM3"] == "DM3"
+    assert original_name["DM10"] == "DM010"
 
 
 def test_pintify_parfile_alises():

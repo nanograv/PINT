@@ -23,6 +23,7 @@ parameters PINT understands.
 """
 import numbers
 from warnings import warn
+import re
 
 import astropy.time as time
 import astropy.units as u
@@ -282,7 +283,7 @@ class Parameter:
             self._units = pint_units[unt]
 
         else:
-            # Try to use it as an astopy unit.  If this fails,
+            # Try to use it as an astropy unit.  If this fails,
             # ValueError will be raised.
             self._units = u.Unit(unt)
 
@@ -583,8 +584,10 @@ class Parameter:
 
     def name_matches(self, name):
         """Whether or not the parameter name matches the provided name"""
-        return (name == self.name.upper()) or (
-            name in [x.upper() for x in self.aliases]
+        return (
+            (name == self.name.upper())
+            or (name in [x.upper() for x in self.aliases])
+            or (split_prefixed_name(name) == split_prefixed_name(self.name.upper()))
         )
 
     def set(self, value):
@@ -1336,7 +1339,7 @@ class prefixParameter:
         try:
             self.param_class = self.type_mapping[self.parameter_type.lower()]
         except KeyError:
-            raise ValueError("Unknow parameter type '" + parameter_type + "' ")
+            raise ValueError("Unknown parameter type '" + parameter_type + "' ")
 
         # Set up other attributes in the wrapper class
         self.unit_template = unit_template
@@ -1347,7 +1350,7 @@ class prefixParameter:
         # set templates, the templates should be a named function and input is
         # the index of prefix parameter.
 
-        # Set the description and units for the parameter compostion.
+        # Set the description and units for the parameter composition.
         if self.unit_template is not None:
             real_units = self.unit_template(self.index)
         else:

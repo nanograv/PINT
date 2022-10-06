@@ -44,7 +44,7 @@ class custom_timing(
     pint.models.spindown.Spindown, pint.models.astrometry.AstrometryEcliptic
 ):
     def __init__(self, parfile):
-        super(custom_timing, self).__init__()
+        super().__init__()
         self.read_parfile(parfile)
 
 
@@ -259,7 +259,7 @@ class emcee_fitter(Fitter):
     def __init__(
         self, toas=None, model=None, template=None, weights=None, phs=0.5, phserr=0.03
     ):
-        # super(emcee_fitter, self).__init__(model=model, toas=toas)
+        # super().__init__(model=model, toas=toas)
         self.toas = toas
         self.model = model
         self.template = template
@@ -276,7 +276,7 @@ class emcee_fitter(Fitter):
         """
         Return pulse phases based on the current model
         """
-        phss = self.model.phase(self.toas)[1]
+        phss = self.model.phase(self.toas).frac
         return phss.value % 1
 
     def lnprior(self, theta):
@@ -343,7 +343,7 @@ class emcee_fitter(Fitter):
         """
         Make a nice 2-panel phaseogram for the current model
         """
-        mjds = self.toas.table["tdbld"].quantity
+        mjds = self.toas.table["tdbld"].data
         phss = self.get_event_phases()
         plot_utils.phaseogram(
             mjds,
@@ -514,29 +514,35 @@ def main(argv=None):
     parser.add_argument(
         "--log-level",
         type=str,
-        choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
+        choices=pint.logging.levels,
         default=pint.logging.script_level,
         help="Logging level",
         dest="loglevel",
     )
     parser.add_argument(
-        "--numcores",
-        type=int,
-        default=1.0,
-        help="The number of cores used for multiprocessing",
+        "-v", "--verbosity", default=0, action="count", help="Increase output verbosity"
     )
-
-    global nwalkers, nsteps, ftr
+    parser.add_argument(
+        "-q", "--quiet", default=0, action="count", help="Decrease output verbosity"
+    )
+    parser.add_argument(
+        "--multicore",
+        default=False,
+        action="store_true",
+        help="Run event optimize on multiple cores",
+    )
+    parser.add_argument(
+        "--ncores",
+        type=int,
+        default=8,
+        help="The number of cores for parallel processing",
+    )
 
     args = parser.parse_args(argv)
-    log.remove()
-    log.add(
-        sys.stderr,
-        level=args.loglevel,
-        colorize=True,
-        format=pint.logging.format,
-        filter=pint.logging.LogFilter(),
+    pint.logging.setup(
+        level=pint.logging.get_level(args.loglevel, args.verbosity, args.quiet)
     )
+    global nwalkers, nsteps, ftr
 
     eventfile = args.eventfile
     parfile = args.parfile
@@ -561,7 +567,7 @@ def main(argv=None):
     minWeight = args.minWeight
     do_opt_first = args.doOpt
     wgtexp = args.wgtexp
-    numcores = args.numcores
+    ncores = args.ncores
 
     # Read in initial model
     modelin = pint.models.get_model(parfile)
@@ -765,23 +771,35 @@ def main(argv=None):
 
     import emcee
 
+    dtype = [("lnprior", float), ("lnlikelihood", float)]
+
     # Following are for parallel processing tests...
-    if numcores != 1:
+    if args.multicores:
+        try:
+            import pathos.multiprocessing as mp
 
-        def unwrapped_lnpost(theta):
-            return ftr.lnposterior(theta)
+            def unwrapped_lnpost(theta):
+                return ftr.lnposterior(theta)
 
-        import pathos.multiprocessing as mp
-
-        pool = mp.ProcessPool(nodes=numcores)
-        dtype = [("lnprior", float), ("lnlikelihood", float)]
-        sampler = emcee.EnsembleSampler(
-            nwalkers, ndim, unwrapped_lnpost, blobs_dtype=dtype, pool=pool
-        )
+            with mp.ProcessPool(nodes=ncores) as pool:
+                sampler = emcee.EnsembleSampler(
+                    nwalkers, ndim, unwrapped_lnpost, blobs_dtype=dtype, pool=pool
+                )
+                sampler.run_mcmc(pos, nsteps)
+            pool.close()
+            pool.join()
+        except ImportError:
+            log.info("Pathos module not available, using single core")
+            sampler = emcee.EnsembleSampler(
+                nwalkers, ndim, ftr.lnposterior, blobs_dtype=dtype
+            )
+            sampler.run_mcmc(pos, nsteps)
     else:
-        sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior)
-    # The number is the number of points in the chain
-    sampler.run_mcmc(pos, nsteps)
+        sampler = emcee.EnsembleSampler(
+            nwalkers, ndim, ftr.lnposterior, blobs_dtype=dtype
+        )
+        # The number is the number of points in the chain
+        sampler.run_mcmc(pos, nsteps)
 
     def chains_to_dict(names, sampler):
         chains = [sampler.chain[:, :, ii].T for ii in range(len(names))]
@@ -808,13 +826,12 @@ def main(argv=None):
     # Make the triangle plot.
     samples = sampler.chain[:, burnin:, :].reshape((-1, ndim))
 
-    if numcores != 1:
-        blobs = sampler.get_blobs()
-        lnprior_samps = blobs["lnprior"]
-        lnlikelihood_samps = blobs["lnlikelihood"]
-        lnpost_samps = lnprior_samps + lnlikelihood_samps
-        ind = np.unravel_index(np.argmax(lnpost_samps), lnpost_samps.shape)
-        ftr.maxpost_fitvals = [chains[ii][ind] for ii in ftr.fitkeys]
+    blobs = sampler.get_blobs()
+    lnprior_samps = blobs["lnprior"]
+    lnlikelihood_samps = blobs["lnlikelihood"]
+    lnpost_samps = lnprior_samps + lnlikelihood_samps
+    ind = np.unravel_index(np.argmax(lnpost_samps), lnpost_samps.shape)
+    ftr.maxpost_fitvals = [chains[ii][ind] for ii in ftr.fitkeys]
 
     try:
         import corner

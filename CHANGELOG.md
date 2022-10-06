@@ -6,8 +6,50 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 
 ## Unreleased
 ### Changed
-- model.phase() now defaults to abs_phase=True when TZR* params are in the model
+- Minimum supported versions updated to numpy 1.18.5, matplotlib 3.2.0
+### Added
+- Can ignore pulse_number column on TOA read or write (to help merging)
+- Can add in missing columns when merging unless told not to
+- Can initialize observatories with lat/lon/altitude
+- Can output observatories as JSON
+- Can extract single TOAs as length=1 table
+### Fixed
+- global clock files now emit a warning instead of an exception if expired and the download fails
+- dmxparse outputs to dmxparse.out if save=True
+- Excluded noise parameters from the design matrix.
+- Split the computation of correlated noise basis matrix and weights into two functions.
+- Fixed bug in combining design matrices
+- Fixed bug in dmxparse
+- Fixed bug in photonphase with polycos
+
+## [0.9.1] 2022-08-12
+### Changed
+- No tests now change based on $TEMPO or $TEMPO2
+- Ensure Fitters work with ELL1 even on Astropy 4 (bug #1316)
+- index.txt is only checked at most once a day
+- Moved observatories to JSON file.  Changed way observatories are loaded/overloaded
+- Split Jodrell Bank observatory based on backend to get correct clock files
+- Clock files can be marked as being valid past the end of the data they contain
+- Polycos can be written/read from Path or Stream objects
+- Polyco format registration now done once as a class method
+- Polyco reading/generation from timing model done as class methods
+### Added
+- delta_pulse_number column is now saved to -padd flag on TOA write
+- command-line utility to compare parfiles
+- FD_delay_frequency function to easily access the FD model's excess delay
+- scripts now have explicit setting of verbosity and `-q`/`-v` options
+### Fixed
+- TOA flags are properly deepcopy'd when desired (to deal with [astropy bug](https://github.com/astropy/astropy/issues/13435))
+
+## [0.9.0] 2022-06-24
+### Changed
+- `model.phase()` now defaults to `abs_phase=True` when TZR* params are in the model
+- TOAs no longer need to be grouped by observatory
 - removed explicit download of IERS and leapsecond data (handled now by astropy)
+- The default version of TT(BIPM) uses BIPM2021
+- ClockFile no longer uses metaclass magic or many subclasses, and have friendly names for use in messages
+- `model.setup()` now gets called automatically after removing a parameter as part of `remove_param`
+- Cleaned up handling of telescopes with no clock files so they don't emit ERROR messages
 ### Added
 - logging now needs to be setup explicitly
 - Color-by-jump mode for pintk
@@ -15,8 +57,18 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added the ability to write clock files in TEMPO or TEMPO2 format
 - Added examples of how to write a par file to tutorials
 - Added `TimingModel.write_parfile()`
+- Added generator for iterating over like items in an array
+- Added iterator to iterate over observatory groups
+- Clock files are now searched for in the directory PINT_CLOCK_OVERRIDE
+- Clock files are now searched for in the online global repository
+- You can export the clock files you are using with `export_all_clock_corrections()`
+- You can request that all your clock files be updated and loaded into the cache with `update_clock_files()` 
+- The `temp_cache` fixture that runs tests with an empty, scratch Astropy cache
 ### Fixed
+- Selecting of TOAs in `pintk` was broken if some TOAs were deleted (bug #1290)
 - INCLUDE lines in tim files are now relative to the location of the tim file (bug #1269)
+- jump_flags_to_params now works if some JUMPs are present, never modifies the TOAs, and is idempotent
+- jump_params_to_flags is now idempotent and unconditionally sets the -jump flag to a correct state
 ### Changed
 - Required version of python updated to 3.8
 
@@ -256,4 +308,4 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## [0.5.7] - 2020-03-16
 ### Added
 - First release using PyPI
-- Initial entry in CHANGELOG
+- Initial entry in CHANGELOG 

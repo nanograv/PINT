@@ -18,12 +18,12 @@ class NoiseComponent(Component):
     ):
         super().__init__()
         self.covariance_matrix_funcs = []
-        self.scaled_toa_sigma_funcs = []  # Need to move this to a speical place.
+        self.scaled_toa_sigma_funcs = []  # Need to move this to a special place.
         self.scaled_dm_sigma_funcs = []
         # TODO This works right now. But if we want to expend noise model, we
         # need to think about the design now. If we do not define the list
         # here and calling the same name from other component, it will get
-        # it from the component that hosts it. It has the risk to dulicate
+        # it from the component that hosts it. It has the risk to duplicate
         # the list elements.
         self.dm_covariance_matrix_funcs_component = []
         self.basis_funcs = []
@@ -39,7 +39,7 @@ class ScaleToaError(NoiseComponent):
 
     Note
     ----
-    Ref: NanoGrav 11 yrs data
+    Ref: NANOGrav 11 yrs data
 
     """
 
@@ -185,7 +185,7 @@ class ScaleDmError(NoiseComponent):
 
     Note
     ----
-    Ref: NanoGrav 12.5 yrs wideband data
+    Ref: NANOGrav 12.5 yrs wideband data
     """
 
     register = True
@@ -293,7 +293,7 @@ class EcorrNoise(NoiseComponent):
 
     Note
     ----
-    Ref: NanoGrav 11 yrs data
+    Ref: NANOGrav 11 yrs data
 
     """
 
@@ -345,12 +345,10 @@ class EcorrNoise(NoiseComponent):
             ecorrs.append(getattr(self, ecorr))
         return ecorrs
 
-    def ecorr_basis_weight_pair(self, toas):
-        """Return a quantization matrix and ECORR weights.
+    def get_basis(self, toas):
+        """Return the quantization matrix for ECORR.
 
         A quantization matrix maps TOAs to observing epochs.
-        The weights used are the square of the ECORR values.
-
         """
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
@@ -359,21 +357,45 @@ class EcorrNoise(NoiseComponent):
         for ec in ecorrs:
             mask = ec.select_toa_mask(toas)
             if np.any(mask):
-                umats.append(create_quantization_matrix(t[mask]))
+                umats.append(create_ecorr_quantization_matrix(t[mask]))
             else:
                 warnings.warn(f"ECORR {ec} has no TOAs")
                 umats.append(np.zeros((0, 0)))
         nc = sum(u.shape[1] for u in umats)
         umat = np.zeros((len(t), nc))
-        weight = np.zeros(nc)
         nctot = 0
         for ct, ec in enumerate(ecorrs):
             mask = ec.select_toa_mask(toas)
             nn = umats[ct].shape[1]
             umat[mask, nctot : nn + nctot] = umats[ct]
-            weight[nctot : nn + nctot] = ec.quantity.to(u.s).value ** 2
             nctot += nn
-        return (umat, weight)
+        return umat
+
+    def get_weights(self, toas, nweights=None):
+        """Return the ECORR weights
+        The weights used are the square of the ECORR values.
+        """
+        ecorrs = self.get_ecorrs()
+        if nweights is None:
+            ts = (toas.table["tdbld"].quantity * u.day).to(u.s).value
+            nweights = [
+                get_ecorr_nweights(ts[ec.select_toa_mask(toas)]) for ec in ecorrs
+            ]
+        nc = sum(nweights)
+        weights = np.zeros(nc)
+        nctot = 0
+        for ec, nn in zip(ecorrs, nweights):
+            weights[nctot : nn + nctot] = ec.quantity.to(u.s).value ** 2
+            nctot += nn
+        return weights
+
+    def ecorr_basis_weight_pair(self, toas):
+        """Return a quantization matrix and ECORR weights.
+
+        A quantization matrix maps TOAs to observing epochs.
+        The weights used are the square of the ECORR values.
+        """
+        return (self.get_basis(toas), self.get_weights(toas))
 
     def ecorr_cov_matrix(self, toas):
         """Full ECORR covariance matrix."""
@@ -398,7 +420,7 @@ class PLRedNoise(NoiseComponent):
 
     Note
     ----
-    Ref: NanoGrav 11 yrs data
+    Ref: NANOGrav 11 yrs data
 
     """
 
@@ -429,7 +451,7 @@ class PLRedNoise(NoiseComponent):
 
         self.add_param(
             floatParameter(
-                name="TNRedAmp",
+                name="TNREDAMP",
                 units="",
                 aliases=[],
                 description="Amplitude of powerlaw " "red noise in tempo2 format",
@@ -437,7 +459,7 @@ class PLRedNoise(NoiseComponent):
         )
         self.add_param(
             floatParameter(
-                name="TNRedGam",
+                name="TNREDGAM",
                 units="",
                 aliases=[],
                 description="Spectral index of powerlaw " "red noise in tempo2 format",
@@ -445,7 +467,7 @@ class PLRedNoise(NoiseComponent):
         )
         self.add_param(
             floatParameter(
-                name="TNRedC",
+                name="TNREDC",
                 units="",
                 aliases=[],
                 description="Number of red noise frequencies.",
@@ -456,38 +478,59 @@ class PLRedNoise(NoiseComponent):
         self.basis_funcs += [self.pl_rn_basis_weight_pair]
 
     def get_pl_vals(self):
-        nf = int(self.TNRedC.value) if self.TNRedC.value is not None else 30
-        if self.TNRedAmp.value is not None and self.TNRedGam.value is not None:
-            amp, gam = 10**self.TNRedAmp.value, self.TNRedGam.value
+        nf = int(self.TNREDC.value) if self.TNREDC.value is not None else 30
+        if self.TNREDAMP.value is not None and self.TNREDGAM.value is not None:
+            amp, gam = 10**self.TNREDAMP.value, self.TNREDGAM.value
         elif self.RNAMP.value is not None and self.RNIDX is not None:
             fac = (86400.0 * 365.24 * 1e6) / (2.0 * np.pi * np.sqrt(3.0))
             amp, gam = self.RNAMP.value / fac, -1 * self.RNIDX.value
         return (amp, gam, nf)
 
+    def get_noise_basis(self, toas):
+        """Return a Fourier design matrix for red noise.
+
+        See the documentation for pl_rn_basis_weight_pair function for details."""
+
+        tbl = toas.table
+        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        nf = self.get_pl_vals()[2]
+        Fmat = create_fourier_design_matrix(t, nf)
+        return Fmat
+
+    def get_noise_weights(self, toas):
+        """Return power law red noise weights.
+
+        See the documentation for pl_rn_basis_weight_pair for details."""
+
+        tbl = toas.table
+        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        amp, gam, nf = self.get_pl_vals()
+        Ffreqs = get_rednoise_freqs(t, nf)
+        weights = powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
+        return weights
+
     def pl_rn_basis_weight_pair(self, toas):
-        """Return a Fourier design matrix and red noise weights.
+        """Return a Fourier design matrix and power law red noise weights.
 
         A Fourier design matrix contains the sine and cosine basis_functions
         in a Fourier series expansion.
         The weights used are the power-law PSD values at frequencies n/T,
-        where n is in [1, TNRedC] and T is the total observing duration of
+        where n is in [1, TNREDC] and T is the total observing duration of
         the dataset.
 
         """
-        tbl = toas.table
-        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
-        amp, gam, nf = self.get_pl_vals()
-        Fmat, f = create_fourier_design_matrix(t, nf)
-        weight = powerlaw(f, amp, gam) * f[0]
-        return (Fmat, weight)
+        return (self.get_noise_basis(toas), self.get_noise_weights(toas))
 
     def pl_rn_cov_matrix(self, toas):
         Fmat, phi = self.pl_rn_basis_weight_pair(toas)
         return np.dot(Fmat * phi[None, :], Fmat.T)
 
 
-def create_quantization_matrix(toas_table, dt=1, nmin=2):
-    """Create quantization matrix mapping TOAs to observing epochs."""
+def get_ecorr_epochs(toas_table, dt=1, nmin=2):
+    """Find only epochs with more than 1 TOA for applying ECORR."""
+    if len(toas_table) == 0:
+        return []
+
     isort = np.argsort(toas_table)
 
     bucket_ref = [toas_table[isort[0]]]
@@ -500,14 +543,45 @@ def create_quantization_matrix(toas_table, dt=1, nmin=2):
             bucket_ref.append(toas_table[i])
             bucket_ind.append([i])
 
-    # find only epochs with more than 1 TOA
     bucket_ind2 = [ind for ind in bucket_ind if len(ind) >= nmin]
+
+    return bucket_ind2
+
+
+def get_ecorr_nweights(toas_table, dt=1, nmin=2):
+    """Get the number of epochs associated with each ECORR.
+    This is equal to the number of weights of that ECORR."""
+    return len(get_ecorr_epochs(toas_table, dt=dt, nmin=nmin))
+
+
+def create_ecorr_quantization_matrix(toas_table, dt=1, nmin=2):
+    """Create quantization matrix mapping TOAs to observing epochs.
+    Only epochs with more than 1 TOA are included."""
+
+    bucket_ind2 = get_ecorr_epochs(toas_table, dt=dt, nmin=nmin)
 
     U = np.zeros((len(toas_table), len(bucket_ind2)), "d")
     for i, l in enumerate(bucket_ind2):
         U[l, i] = 1
 
     return U
+
+
+def get_rednoise_freqs(t, nmodes, Tspan=None):
+    """Frequency components for creating the red noise basis matrix."""
+
+    if Tspan is not None:
+        T = Tspan
+    else:
+        T = t.max() - t.min()
+
+    f = np.linspace(1 / T, nmodes / T, nmodes)
+
+    Ffreqs = np.zeros(2 * nmodes)
+    Ffreqs[0::2] = f
+    Ffreqs[1::2] = f
+
+    return Ffreqs
 
 
 def create_fourier_design_matrix(t, nmodes, Tspan=None):
@@ -524,21 +598,12 @@ def create_fourier_design_matrix(t, nmodes, Tspan=None):
     N = len(t)
     F = np.zeros((N, 2 * nmodes))
 
-    if Tspan is not None:
-        T = Tspan
-    else:
-        T = t.max() - t.min()
+    Ffreqs = get_rednoise_freqs(t, nmodes, Tspan=Tspan)
 
-    f = np.linspace(1 / T, nmodes / T, nmodes)
+    F[:, ::2] = np.sin(2 * np.pi * t[:, None] * Ffreqs[0::2])
+    F[:, 1::2] = np.cos(2 * np.pi * t[:, None] * Ffreqs[1::2])
 
-    Ffreqs = np.zeros(2 * nmodes)
-    Ffreqs[0::2] = f
-    Ffreqs[1::2] = f
-
-    F[:, ::2] = np.sin(2 * np.pi * t[:, None] * f[None, :])
-    F[:, 1::2] = np.cos(2 * np.pi * t[:, None] * f[None, :])
-
-    return F, Ffreqs
+    return F
 
 
 def powerlaw(f, A=1e-16, gamma=5):

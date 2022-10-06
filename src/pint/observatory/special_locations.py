@@ -2,13 +2,20 @@
 
 Special "site" locations (eg, barycenter) which do not need clock
 corrections or much else done.
+
+Can be loaded using :func:`pint.observatory.special_locations.load_special_locations`, which is run on import.
+Otherwise it only needs to be run if :func:`pint.observatory.Observatory.clear_registry` is run.
+
+See Also
+--------
+:mod:`pint.observatory.topo_obs`
 """
 import os
 
 import astropy.constants as const
 import astropy.units as u
-from astropy.coordinates import EarthLocation
 import numpy as np
+from astropy.coordinates import EarthLocation
 from loguru import logger as log
 
 import pint.config
@@ -16,7 +23,16 @@ from pint.observatory import bipm_default
 from pint.observatory.clock_file import ClockFile
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 from pint.utils import PosVel
+
 from . import Observatory
+
+__all__ = [
+    "SpecialLocation",
+    "BarycenterObs",
+    "GeocenterObs",
+    "T2SpacecraftObs",
+    "load_special_locations",
+]
 
 
 class SpecialLocation(Observatory):
@@ -36,7 +52,7 @@ class SpecialLocation(Observatory):
     include_gps : bool, optional
         Set False to disable UTC(GPS)->UTC clock correction.
     include_bipm : bool, optional
-        Set False to disable UTC-> TT BIPM clock
+        Set False to disable TAI-> TT BIPM clock
         correction. If False, it only apply TAI->TT correction
         TT = TAI+32.184s, the same as TEMPO2 TT(TAI) in the
         parfile. If True, it will apply the correction from
@@ -44,9 +60,11 @@ class SpecialLocation(Observatory):
         https://www.bipm.org/en/bipm-services/timescales/time-ftp/ttbipm.html
     bipm_version : str, optional
         Set the version of TT BIPM clock correction file to
-        use, the default is %s.  It has to be in the format
-        like 'BIPM2015'
-    """ % bipm_default
+        use. It has to be in the format like 'BIPM2015'
+    overwrite : bool, optional
+        If True, allow redefinition of an existing observatory; if False,
+        raise an exception.
+    """
 
     def __init__(
         self,
@@ -57,106 +75,37 @@ class SpecialLocation(Observatory):
         bipm_version=bipm_default,
         overwrite=False,
     ):
-        # GPS corrections not implemented yet
-        self.include_gps = include_gps
-        self._gps_clock = None
-
-        # BIPM corrections not implemented yet
-        self.include_bipm = include_bipm
-        self.bipm_version = bipm_version
-        self._bipm_clock = None
+        super().__init__(
+            name,
+            aliases=aliases,
+            include_gps=include_gps,
+            include_bipm=include_bipm,
+            bipm_version=bipm_version,
+            overwrite=overwrite,
+        )
 
         self.origin = "Built-in special location."
 
-        super().__init__(name, aliases=aliases)
-
-    @property
-    def gps_fullpath(self):
-        """Returns full path to the GPS-UTC clock file.  Will first try PINT
-        data dirs, then fall back on $TEMPO2/clock."""
-        fname = "gps2utc.clk"
-        try:
-            fullpath = pint.config.runtimefile(fname)
-            return fullpath
-        except FileNotFoundError:
-            log.info(
-                "{} not found in PINT data dirs, falling back on TEMPO2/clock directory".format(
-                    fname
-                )
-            )
-            return os.path.join(os.getenv("TEMPO2"), "clock", fname)
-
-    @property
-    def bipm_fullpath(
-        self,
-    ):
-        """Returns full path to the TAI TT(BIPM) clock file.  Will first try PINT
-        data dirs, then fall back on $TEMPO2/clock."""
-        fname = "tai2tt_" + self.bipm_version.lower() + ".clk"
-        try:
-            fullpath = pint.config.runtimefile(fname)
-            return fullpath
-        except FileNotFoundError:
-            pass
-        log.info(
-            "{} not found in PINT data dirs, falling back on TEMPO2/clock directory".format(
-                fname
-            )
-        )
-        return os.path.join(os.getenv("TEMPO2"), "clock", fname)
-
-    def _load_gps_clock(self):
-        if self._gps_clock is None:
-            log.info(
-                "Observatory {0}, loading GPS clock file {1}".format(
-                    self.name, self.gps_fullpath
-                )
-            )
-            self._gps_clock = ClockFile.read(self.gps_fullpath, format="tempo2")
-
-    def _load_bipm_clock(self):
-        if self._bipm_clock is None:
-            try:
-                log.info(
-                    "Observatory {0}, loading BIPM clock file {1}".format(
-                        self.name, self.bipm_fullpath
-                    )
-                )
-                self._bipm_clock = ClockFile.read(self.bipm_fullpath, format="tempo2")
-            except:
-                raise ValueError("Can not find TT BIPM file '%s'. " % self.bipm_version)
-
-    def clock_corrections(self, t, limits="warn"):
-        corr = np.zeros(t.shape) * u.s
-        if self.include_gps:
-            log.info("Applying GPS to UTC clock correction (~few nanoseconds)")
-            self._load_gps_clock()
-            corr += self._gps_clock.evaluate(t, limits=limits)
-        if self.include_bipm:
-            log.info("Applying TT(TAI) to TT(BIPM) clock correction (~27 us)")
-            self._load_bipm_clock()
-            tt2tai = 32.184 * 1e6 * u.us
-            corr += self._bipm_clock.evaluate(t, limits=limits) - tt2tai
-        return corr
-
-    def last_clock_correction_mjd(self):
-        """Return the MJD of the last available clock correction.
-
-        Returns ``np.inf`` if no clock corrections are relevant.
-        """
-        t = np.inf
-        if self.include_gps:
-            self._load_gps_clock()
-            t = min(t, self._gps_clock.last_correction_mjd())
-        if self.include_bipm:
-            self._load_bipm_clock()
-            t = min(t, self._bipm_clock.last_correction_mjd())
-        return t
-
 
 class BarycenterObs(SpecialLocation):
-    """Observatory-derived class for the solar system barycenter.  Time
-    scale is assumed to be tdb."""
+    """Observatory-derived class for the solar system barycenter.
+
+    Time scale is assumed to be tdb."""
+
+    def __init__(
+        self,
+        name,
+        aliases=None,
+        overwrite=False,
+    ):
+        super().__init__(
+            name,
+            aliases=aliases,
+            include_gps=False,
+            include_bipm=False,
+            bipm_version=bipm_default,
+            overwrite=overwrite,
+        )
 
     @property
     def timescale(self):
@@ -184,13 +133,6 @@ class BarycenterObs(SpecialLocation):
             obj=self.name,
             origin="ssb",
         )
-
-    def clock_corrections(self, t, limits="warn"):
-        log.info("Special observatory location. No clock corrections applied.")
-        return np.zeros(t.shape) * u.s
-
-    def last_clock_correction_mjd(self):
-        return np.inf
 
 
 class GeocenterObs(SpecialLocation):
@@ -314,8 +256,18 @@ class T2SpacecraftObs(SpecialLocation):
         return geo_posvel + stl_posvel
 
 
-# Need to initialize one of each so that it gets added to the list
-BarycenterObs("barycenter", aliases=["@", "ssb", "bary", "bat"])
-GeocenterObs("geocenter", aliases=["0", "o", "coe", "geo"])
-T2SpacecraftObs("stl_geo", aliases=["STL_GEO"])
-# TODO -- BIPM issue
+def load_special_locations():
+    """Load Barycenter, Geocenter, and other special locations into observatory registry.
+
+    Loads :class:`~pint.observatory.special_locations.BarycenterObs`, :class:`~pint.observatory.special_locations.GeocenterObs`,
+    and :class:`~pint.observatory.special_locations.T2SpacecraftObs` into observatory registry.
+    """
+    # Need to initialize one of each so that it gets added to the list
+    BarycenterObs("barycenter", aliases=["@", "ssb", "bary", "bat"], overwrite=True)
+    GeocenterObs("geocenter", aliases=["0", "o", "coe", "geo"], overwrite=True)
+    T2SpacecraftObs("stl_geo", aliases=["STL_GEO"], overwrite=True)
+    # TODO -- How to handle user changing bipm_version?
+
+
+# run this on import
+load_special_locations()

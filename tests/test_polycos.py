@@ -24,8 +24,7 @@ def test_polycos_basic(polyco_file):
 
     Except the ones that should.
     """
-    p = Polycos()
-    p.read_polyco_file(polyco_file)
+    p = Polycos.read(polyco_file)
     table = p.polycoTable
     entry = table["entry"][0]
     print(entry)
@@ -39,8 +38,7 @@ def test_polycos_basic(polyco_file):
 
 def test_find_entry(polyco_file):
     """Check polycos find the correct entry and out of bounds throws an error."""
-    p = Polycos()
-    p.read_polyco_file(polyco_file)
+    p = Polycos.read(polyco_file)
 
     assert np.all(p.find_entry(55000) == 0)
     assert np.all(p.find_entry(55001) == 4)
@@ -58,10 +56,8 @@ def test_read_write_round_trip(tmpdir, polyco_file):
         p1 = f.read()
 
     output_polyco = tmpdir / "B1855_polyco_round_trip.dat"
-    p = Polycos()
-    p.read_polyco_file(polyco_file)
-    p.write_polyco_file(output_polyco)
-
+    p = Polycos.read(polyco_file)
+    p.write_polyco_file(str(output_polyco))
     with open(output_polyco, "r") as f:
         p2 = f.read()
 
@@ -70,9 +66,8 @@ def test_read_write_round_trip(tmpdir, polyco_file):
 
 def test_generate_polycos_maxha_error(par_file):
     model = get_model(str(par_file))
-    p = Polycos()
     with pytest.raises(ValueError):
-        p.generate_polycos(model, 55000, 55002, "ao", 144, 12, 400.0, maxha=8)
+        p = Polycos.generate_polycos(model, 55000, 55002, "ao", 144, 12, 400.0, maxha=8)
 
 
 @pytest.mark.parametrize("obs", ["ao", "gbt", "@", "coe"])
@@ -84,11 +79,9 @@ def test_generate_polycos(tmpdir, par_file, obs, obsfreq, nspan, ncoeff):
 
     model = get_model(str(par_file))
 
-    p = Polycos()
-    p.generate_polycos(model, mjd_start, mjd_end, obs, nspan, ncoeff, obsfreq)
-    p.write_polyco_file(output_polyco)
-    q = Polycos()
-    q.read_polyco_file(output_polyco)
+    p = Polycos.generate_polycos(model, mjd_start, mjd_end, obs, nspan, ncoeff, obsfreq)
+    p.write_polyco_file(str(output_polyco))
+    q = Polycos(str(output_polyco))
 
     mjds = np.linspace(mjd_start, mjd_end, 51)
 

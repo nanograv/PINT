@@ -1,11 +1,11 @@
 #! /usr/bin/env python
-import os
+
 import tempfile
 
 import pytest
 
 import pint.models as tm
-from pinttestdata import testdir, datadir
+from pinttestdata import datadir
 
 parfile = datadir / "J1744-1134.basic.par"
 
@@ -32,8 +32,6 @@ def demo_parfile():
 
 
 params = sorted(tm.get_model(parfile).params)
-params.remove("TZRMJD")
-params.append(pytest.param("TZRMJD", marks=pytest.mark.xfail(reason="Bug #519")))
 
 
 @pytest.fixture

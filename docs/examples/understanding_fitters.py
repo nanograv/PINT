@@ -9,7 +9,7 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.13.8
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -23,6 +23,7 @@
 from __future__ import print_function, division
 import numpy as np
 import astropy.units as u
+from IPython.display import display_markdown
 
 # %%
 import pint.toa
@@ -117,12 +118,22 @@ powfit.print_summary()
 # %% [markdown]
 # ***!!! Note that the Powell fitter does not produce a covariance matrix or estimates of the uncertainties. !!!***
 #
+# **Also note that the F1 value here is not really believable.  The Powell fitter ended up in a different place**
+
+# %% [markdown]
+#
 # ## Comparing models
 #
 # There also a convenience function for pretty printing a comparison of two models with the differences measured in sigma.
 
 # %%
-print(wlsfit.model.compare(powfit.model))
+display_markdown(wlsfit.model.compare(powfit.model, format="markdown"), raw=True)
+
+# %% [markdown]
+# You can see just how much F1 changed.  But the $\chi^2$ is still good (in fact it's too good), and the residuals look OK:
+
+# %%
+powfit.plot()
 
 # %% [markdown]
 # ## Generalized Least Squares fitter
@@ -206,6 +217,21 @@ ax.plot(mjds, glsfit.resids.time_resids, ".")
 ax.plot(mjds, glsfit.resids.noise_resids["pl_red_noise"], ".")
 
 # %% [markdown]
-# The MCMC fitter is considerably more complicated, so it has its own dedicated walkthroughs in `MCMC_walkthrough.ipynb` (for photon data) and `examples/fit_NGC6440E_MCMC.py` (for fitting TOAs).
+# ## Choosing fitters
+#
+# You can use the automatic fitter selection to help you choose between `WLSFitter`, `GLSFitter`, and their wideband variants.  The default `Downhill` fitters generally have better performance than the plain variants.
 
 # %%
+autofit = pint.fitter.Fitter.auto(toas=ts1855, model=m1855)
+
+# %%
+autofit.fit_toas()
+
+# %%
+display_markdown(autofit.model.compare(glsfit.model, format="markdown"), raw=True)
+
+# %% [markdown]
+# The results are (thankfully) identical.
+
+# %% [markdown]
+# The MCMC fitter is considerably more complicated, so it has its own dedicated walkthroughs in `MCMC_walkthrough.ipynb` (for photon data) and `examples/fit_NGC6440E_MCMC.py` (for fitting TOAs).

@@ -2,8 +2,8 @@ from io import StringIO
 
 import numpy as np
 import pytest
-from hypothesis import given, assume
-from hypothesis.strategies import slices, integers, booleans, one_of, lists
+from hypothesis import given
+from hypothesis.strategies import slices, integers, one_of, lists
 from hypothesis.extra.numpy import arrays, array_shapes
 
 from pint.toa import get_TOAs
@@ -27,10 +27,8 @@ def test_get_TOAs(high_precision):
     toas = get_TOAs(StringIO(tim), ephem="de421")
     m = toas.get_mjds(high_precision=high_precision)
     assert isinstance(m, np.ndarray)
-    assert not np.all(
-        np.diff(m) > 0
-    ), "returned values should be grouped by observatory"
     assert len(m) == n_tim
+    assert np.all(np.diff(m) > 0)
 
 
 @given(arrays(bool, n_tim))
@@ -42,9 +40,6 @@ def test_select(c):
     assert len(toas) == np.sum(c)
     assert np.all(toas.get_mjds() == m[c])
     if len(toas) > 0:
-        assert np.all(
-            toas.table["mjd_float"] == toas.table.group_by("obs")["mjd_float"]
-        )
         toas.get_summary()
 
 
@@ -57,7 +52,6 @@ def test_getitem_boolean(c):
     assert len(s) == np.sum(c)
     assert np.all(s.get_mjds() == m[c])
     if len(s) > 0:
-        assert np.all(s.table["mjd_float"] == s.table.group_by("obs")["mjd_float"])
         toas.get_summary()
 
 
@@ -65,16 +59,20 @@ def test_getitem_boolean(c):
     one_of(
         arrays(int, array_shapes(max_dims=1), elements=integers(0, n_tim - 1)),
         lists(integers(0, n_tim - 1)),
+        integers(0, n_tim - 1),
     )
 )
 def test_getitem_where(a):
     toas = get_TOAs(StringIO(tim), ephem="de421")
     m = toas.get_mjds()
     s = toas[a]
-    assert len(s) == len(a)
-    assert set(s.get_mjds()) == set(m[a])
+    if not isinstance(a, int):
+        assert len(s) == len(a)
+        assert set(s.get_mjds()) == set(m[a])
+    else:
+        assert len(s) == 1
+        assert set(s.get_mjds()) == set(m[[a]])
     if len(s) > 0:
-        assert np.all(s.table["mjd_float"] == s.table.group_by("obs")["mjd_float"])
         toas.get_summary()
 
 
@@ -84,8 +82,8 @@ def test_getitem_slice(c):
     m = toas.get_mjds()
     s = toas[c]
     assert set(s.get_mjds()) == set(m[c])
+    assert (toas[c].get_mjds() == toas.get_mjds()[c]).all()
     if len(s) > 0:
-        assert np.all(s.table["mjd_float"] == s.table.group_by("obs")["mjd_float"])
         toas.get_summary()
 
 
