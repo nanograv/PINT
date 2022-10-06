@@ -774,7 +774,7 @@ def main(argv=None):
     dtype = [("lnprior", float), ("lnlikelihood", float)]
 
     # Following are for parallel processing tests...
-    if args.multicores:
+    if args.multicore:
         try:
             import pathos.multiprocessing as mp
 

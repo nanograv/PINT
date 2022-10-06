@@ -71,7 +71,7 @@ def test_parallel(tmp_path):
         event_optimize.maxpost = -9e99
         event_optimize.numcalls = 0
 
-        cmd = f"{eventfile} {parfile} {temfile} --weightcol=PSRJ0030+0451 --minWeight=0.9 --nwalkers=10 --nsteps=50 --burnin 10 --multicores"
+        cmd = f"{eventfile} {parfile} {temfile} --weightcol=PSRJ0030+0451 --minWeight=0.9 --nwalkers=10 --nsteps=50 --burnin 10 --multicore"
         event_optimize.main(cmd.split())
         with open("J0030+0451_samples.pickle", "rb") as f:
             samples2 = pickle.load(f)
