@@ -1,7 +1,5 @@
-import numpy as np
 import unittest
 import astropy
-import astropy.units as u
 import pint
 import pint.models as mod
 import os

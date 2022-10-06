@@ -4,7 +4,6 @@ from io import StringIO
 
 import astropy.units as u
 import numpy as np
-import pytest
 from pinttestdata import datadir
 
 from pint.models import get_model

@@ -1,10 +1,9 @@
 # pinttestdata.py
 
 # import this to get the location of the datafiles for tests.  This file
-# must be kept in the appropriate location relative to the test data
-# dir for this to work.
+# must be kept in the appropriate location relative to the test data dir
+# for this to work.
 
-import os
 from pathlib import Path
 
 # Location of this file and the test data scripts

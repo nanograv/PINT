@@ -6,10 +6,7 @@ from io import StringIO
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
-import copy
-import sys
 
-import astropy.units as u
 from astropy.time import Time
 from pint.models import get_model, get_model_and_toas
 from pint.fitter import Fitter

@@ -1,5 +1,4 @@
 import io
-from lib2to3.pytree import convert
 import pint.models.model_builder as mb
 import pytest
 

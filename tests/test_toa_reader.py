@@ -1,10 +1,8 @@
 import os
 import shutil
 import unittest
-from glob import glob
 from io import StringIO
 from pathlib import Path
-from webbrowser import get
 
 import numpy as np
 import pytest

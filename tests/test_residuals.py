@@ -2,7 +2,6 @@
 """
 
 import os
-from copy import deepcopy
 from io import StringIO
 
 import astropy.units as u
@@ -14,11 +13,9 @@ from pinttestdata import datadir
 
 from pint.fitter import GLSFitter, WidebandTOAFitter, WLSFitter
 from pint.models import get_model
-from pint.models.dispersion_model import Dispersion
 from pint.residuals import CombinedResiduals, Residuals, WidebandTOAResiduals
 from pint.toa import get_TOAs
 from pint.simulation import make_fake_toas_uniform
-from pint.utils import weighted_mean
 
 os.chdir(datadir)
 
