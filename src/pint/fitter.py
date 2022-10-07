@@ -565,10 +565,20 @@ class Fitter:
                     self.model.TASC.quantity.mjd,
                     self.model.TASC.uncertainty.to(u.d).value,
                 )
-                pb = ufloat(
-                    self.model.PB.quantity.to(u.d).value,
-                    self.model.PB.uncertainty.to(u.d).value,
-                )
+                try:
+                    pb = ufloat(
+                        self.model.PB.quantity.to(u.d).value,
+                        self.model.PB.uncertainty.to(u.d).value,
+                    )
+                except:
+                    p, perr = pint.derived_quantities.pferrs(
+                        self.model.FB0.quantity,
+                        self.model.FB0.uncertainty
+                    )
+                    pb = ufloat(
+                        p.to(u.d).value,
+                        perr.to(u.d).value
+                    )
                 s += "Conversion from ELL1 parameters:\n"
                 ecc = um.sqrt(eps1**2 + eps2**2)
                 s += "ECC = {:P}\n".format(ecc)
