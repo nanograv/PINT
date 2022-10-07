@@ -492,7 +492,7 @@ class Fitter:
                     s += "Magnetic field at light cylinder = {:.4g}\n".format(
                         pint.derived_quantities.pulsar_B_lightcyl(F0, F1)
                     )
-                    I_NS = I = 1.0e45 * u.g * u.cm ** 2
+                    I_NS = I = 1.0e45 * u.g * u.cm**2
                     s += "Spindown Edot = {:.4g} (I={})\n".format(
                         pint.derived_quantities.pulsar_edot(F0, F1, I=I_NS), I_NS
                     )
@@ -553,10 +553,12 @@ class Fitter:
             if binary.startswith("BinaryELL1"):
                 ell1 = True
                 eps1 = ufloat(
-                    self.model.EPS1.quantity.value, self.model.EPS1.uncertainty.value,
+                    self.model.EPS1.quantity.value,
+                    self.model.EPS1.uncertainty.value,
                 )
                 eps2 = ufloat(
-                    self.model.EPS2.quantity.value, self.model.EPS2.uncertainty.value,
+                    self.model.EPS2.quantity.value,
+                    self.model.EPS2.uncertainty.value,
                 )
                 tasc = ufloat(
                     # This is a time in MJD
@@ -574,7 +576,7 @@ class Fitter:
                     )
                     pb = ufloat(p.to(u.d).value, perr.to(u.d).value)
                 s += "Conversion from ELL1 parameters:\n"
-                ecc = um.sqrt(eps1 ** 2 + eps2 ** 2)
+                ecc = um.sqrt(eps1**2 + eps2**2)
                 s += "ECC = {:P}\n".format(ecc)
                 om = um.atan2(eps1, eps2) * 180.0 / np.pi
                 if om < 0.0:
@@ -608,7 +610,10 @@ class Fitter:
             pb = p.to(u.d) if btx else self.model.PB.quantity
             pberr = perr.to(u.d) if btx else self.model.PB.uncertainty
             if not self.model.A1.frozen:
-                pbs = ufloat(pb.to(u.s).value, pberr.to(u.s).value,)
+                pbs = ufloat(
+                    pb.to(u.s).value,
+                    pberr.to(u.s).value,
+                )
                 a1 = ufloat(
                     self.model.A1.quantity.to(pint.ls).value,
                     self.model.A1.uncertainty.to(pint.ls).value,
@@ -616,13 +621,19 @@ class Fitter:
                 # This is the mass function, done explicitly so that we get
                 # uncertainty propagation automatically.
                 # TODO: derived quantities funcs should take uncertainties
-                fm = 4.0 * np.pi ** 2 * a1 ** 3 / (4.925490947e-6 * pbs ** 2)
+                fm = 4.0 * np.pi**2 * a1**3 / (4.925490947e-6 * pbs**2)
                 s += "Mass function = {:SP} Msun\n".format(fm)
                 mcmed = pint.derived_quantities.companion_mass(
-                    pb, self.model.A1.quantity, i=60.0 * u.deg, mp=1.4 * u.solMass,
+                    pb,
+                    self.model.A1.quantity,
+                    i=60.0 * u.deg,
+                    mp=1.4 * u.solMass,
                 )
                 mcmin = pint.derived_quantities.companion_mass(
-                    pb, self.model.A1.quantity, i=90.0 * u.deg, mp=1.4 * u.solMass,
+                    pb,
+                    self.model.A1.quantity,
+                    i=90.0 * u.deg,
+                    mp=1.4 * u.solMass,
                 )
                 s += "Min / Median Companion mass (assuming Mpsr = 1.4 Msun) = {:.4f} / {:.4f} Msun\n".format(
                     mcmin.value, mcmed.value
@@ -645,10 +656,14 @@ class Fitter:
                 # This is probably a good assumption until we can get the uncertainties module
                 # to work with quantities.
                 Mtot_hi = pint.derived_quantities.omdot_to_mtot(
-                    omdot + omdot_err, pb, ecc,
+                    omdot + omdot_err,
+                    pb,
+                    ecc,
                 )
                 Mtot_lo = pint.derived_quantities.omdot_to_mtot(
-                    omdot - omdot_err, pb, ecc,
+                    omdot - omdot_err,
+                    pb,
+                    ecc,
                 )
                 Mtot_err = max(abs(Mtot_hi - Mtot), abs(Mtot - Mtot_lo))
                 mt = ufloat(Mtot.value, Mtot_err.value)
@@ -667,7 +682,7 @@ class Fitter:
                             self.model.SINI.uncertainty.value,
                         )
                         s += "From SINI in model:\n"
-                        s += "    cos(i) = {:SP}\n".format(um.sqrt(1 - si ** 2))
+                        s += "    cos(i) = {:SP}\n".format(um.sqrt(1 - si**2))
                         s += "    i = {:SP} deg\n".format(um.asin(si) * 180.0 / np.pi)
 
                     psrmass = pint.derived_quantities.pulsar_mass(
@@ -1336,7 +1351,7 @@ class WLSState(ModelState):
         # NOTE, We remove subtract mean value here, since it did not give us a
         # fast converge fitting.
         # M[:,1:] -= M[:,1:].mean(axis=0)
-        fac = np.sqrt((M ** 2).mean(axis=0))
+        fac = np.sqrt((M**2).mean(axis=0))
         fac[fac == 0] = 1.0
         M /= fac
         # Singular value decomp of design matrix:
@@ -1409,7 +1424,7 @@ class WLSState(ModelState):
         # Sigma = np.dot(Vt.T / s, U.T)
         # The post-fit parameter covariance matrix
         #   Sigma = V s^-2 V^T
-        Sigma = np.dot(self.Vt.T / (self.s ** 2), self.Vt)
+        Sigma = np.dot(self.Vt.T / (self.s**2), self.Vt)
         return CovarianceMatrix(
             (Sigma / self.fac).T / self.fac, self.parameter_covariance_matrix_labels
         )
@@ -1488,7 +1503,7 @@ class GLSState(ModelState):
                 M = np.hstack((M, Mn))
 
         # normalize the design matrix
-        norm = np.sqrt(np.sum(M ** 2, axis=0))
+        norm = np.sqrt(np.sum(M**2, axis=0))
         for c in np.where(norm == 0)[0]:
             warn(
                 f"Parameter degeneracy; the following parameter yields "
@@ -1509,7 +1524,7 @@ class GLSState(ModelState):
             mtcy = np.dot(cm.T, residuals)
 
         else:
-            phiinv /= norm ** 2
+            phiinv /= norm**2
             # Why are we scaling residuals by the *square* of the uncertainty?
             Nvec = (
                 self.model.scaled_toa_uncertainty(self.fitter.toas).to(u.s).value ** 2
@@ -1669,7 +1684,7 @@ class WidebandState(ModelState):
                 DesignMatrixMaker("toa", u.s)(
                     self.fitter.toas, self.model, self.model.free_params, offset=True
                 ),
-                DesignMatrixMaker("dm", u.pc / u.cm ** 3)(
+                DesignMatrixMaker("dm", u.pc / u.cm**3)(
                     self.fitter.toas, self.model, self.model.free_params, offset=True
                 ),
             ]
@@ -1695,7 +1710,7 @@ class WidebandState(ModelState):
                 )
 
         # normalize the design matrix
-        norm = np.sqrt(np.sum(M ** 2, axis=0))
+        norm = np.sqrt(np.sum(M**2, axis=0))
         # The fixed offset is an unlisted parameter
         ntmpar = len(self.model.free_params) + 1
         if M.shape[1] > ntmpar:
@@ -1709,7 +1724,7 @@ class WidebandState(ModelState):
         norm[norm == 0] = 1
         M /= norm
         if not self.full_cov:
-            phiinv /= norm ** 2
+            phiinv /= norm**2
             self.phiinv = phiinv
         self.fac = norm
 
@@ -1743,7 +1758,7 @@ class WidebandState(ModelState):
             cov = combine_covariance_matrix(
                 [
                     CovarianceMatrixMaker("toa", u.s)(self.fitter.toas, self.model),
-                    CovarianceMatrixMaker("dm", u.pc / u.cm ** 3)(
+                    CovarianceMatrixMaker("dm", u.pc / u.cm**3)(
                         self.fitter.toas, self.model
                     ),
                 ]
@@ -1761,7 +1776,7 @@ class WidebandState(ModelState):
                             u.s
                         ),
                         self.model.scaled_dm_uncertainty(self.fitter.toas).to_value(
-                            u.pc / u.cm ** 3
+                            u.pc / u.cm**3
                         ),
                     ]
                 )
@@ -2044,7 +2059,7 @@ class WLSFitter(Fitter):
             # NOTE, We remove subtract mean value here, since it did not give us a
             # fast converge fitting.
             # M[:,1:] -= M[:,1:].mean(axis=0)
-            fac = np.sqrt((M ** 2).mean(axis=0))
+            fac = np.sqrt((M**2).mean(axis=0))
             # fac[0] = 1.0
             fac[fac == 0] = 1.0
             M /= fac
@@ -2085,7 +2100,7 @@ class WLSFitter(Fitter):
             # Sigma = np.dot(Vt.T / s, U.T)
             # The post-fit parameter covariance matrix
             #   Sigma = V s^-2 V^T
-            Sigma = np.dot(Vt.T / (s ** 2), Vt)
+            Sigma = np.dot(Vt.T / (s**2), Vt)
             # Parameter uncertainties. Scale by fac recovers original units.
             errs = np.sqrt(np.diag(Sigma)) / fac
             # covariance matrix stuff (for randomized models in pintk)
@@ -2213,7 +2228,7 @@ class GLSFitter(Fitter):
                     M = np.hstack((M, Mn))
 
             # normalize the design matrix
-            norm = np.sqrt(np.sum(M ** 2, axis=0))
+            norm = np.sqrt(np.sum(M**2, axis=0))
             ntmpar = len(fitp)
             for c in np.where(norm == 0)[0]:
                 warn(
@@ -2234,7 +2249,7 @@ class GLSFitter(Fitter):
                 mtcy = np.dot(cm.T, residuals)
 
             else:
-                phiinv /= norm ** 2
+                phiinv /= norm**2
                 Nvec = self.model.scaled_toa_uncertainty(self.toas).to(u.s).value ** 2
                 cinv = 1 / Nvec
                 mtcm = np.dot(M.T, cinv[:, None] * M)
@@ -2574,7 +2589,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                     )
 
             # normalize the design matrix
-            norm = np.sqrt(np.sum(M ** 2, axis=0))
+            norm = np.sqrt(np.sum(M**2, axis=0))
             ntmpar = len(fitp)
             for c in np.where(norm == 0)[0]:
                 warn(
@@ -2595,7 +2610,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 mtcy = np.dot(cm.T, residuals)
 
             else:
-                phiinv /= norm ** 2
+                phiinv /= norm**2
                 Nvec = self.scaled_all_sigma() ** 2
 
                 cinv = 1 / Nvec
