@@ -18,6 +18,7 @@ import pint.plot_utils as plot_utils
 import pint.toa as toa
 from pint.eventstats import hm, hmw
 from pint.fitter import Fitter
+from pint.models.priors import Prior
 from pint.observatory.satellite_obs import get_satellite_observatory
 
 
