@@ -565,12 +565,12 @@ class Fitter:
                     self.model.TASC.quantity.mjd,
                     self.model.TASC.uncertainty.to(u.d).value,
                 )
-                try:
+                if hasattr(self.model, "PB") and self.model.PB.value is not None:
                     pb = ufloat(
                         self.model.PB.quantity.to(u.d).value,
                         self.model.PB.uncertainty.to(u.d).value,
                     )
-                except:
+                elif hasattr(self.model, "FB0") and self.model.FB0.value is not None:
                     p, perr = pint.derived_quantities.pferrs(
                         self.model.FB0.quantity, self.model.FB0.uncertainty
                     )
