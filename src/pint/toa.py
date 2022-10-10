@@ -15,7 +15,6 @@ has moved to :mod:`pint.simulation`.
 """
 import copy
 import gzip
-import hashlib
 import pickle
 import re
 import warnings
@@ -26,7 +25,6 @@ import astropy.table as table
 import astropy.time as time
 import astropy.units as u
 import numpy as np
-import numpy.ma
 from astropy.coordinates import (
     ICRS,
     CartesianDifferential,
