@@ -1,10 +1,8 @@
-import os
 import io
 
 import astropy.time
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
-import tkinter.messagebox as tkMessageBox
 
 import pint
 
