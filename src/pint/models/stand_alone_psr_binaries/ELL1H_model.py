@@ -1,11 +1,8 @@
 """Model parametrizing Shapiro delay differently."""
 
 # This Python file uses the following encoding: utf-8
-import astropy.constants as c
 import astropy.units as u
 import numpy as np
-
-from pint import GMsun, Tsun, ls
 
 from .ELL1_model import ELL1BaseModel
 
