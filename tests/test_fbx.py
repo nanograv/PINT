@@ -8,6 +8,7 @@ import test_derivative_utils as tdu
 from pinttestdata import datadir
 
 from pint import fitter
+from pint.models import get_model_and_toas
 import pint.models.model_builder as mb
 import pint.toa as toa
 from pint.residuals import Residuals
@@ -84,15 +85,9 @@ def test_derivative(modelJ0023, toasJ0023):
 
 
 def test_summary_FB():
-    m = mb.get_model(os.path.join(datadir, parJ0023ell1))
-    t = toa.TOAs(os.path.join(datadir, timJ0023))
-    t.apply_clock_corrections(include_bipm=False)
-    t.compute_TDBs()
-    try:
-        planet_ephems = m.PLANET_SHAPIRO.value
-    except AttributeError:
-        planet_ephems = False
-    t.compute_posvels(planets=planet_ephems)
+    m, t = get_model_and_toas(
+        os.path.join(datadir, parJ0023ell1), os.path.join(datadir, timJ0023)
+    )
     f = fitter.WLSFitter(toas=t, model=m)
 
     # Ensure print_summary runs without an exception for an ELL1 model with FBX
