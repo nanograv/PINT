@@ -10,7 +10,7 @@ from astropy import time
 
 import pint.residuals
 import pint.toa
-from pint.observatory import Observatory, bipm_default, get_observatory
+from pint.observatory import bipm_default, get_observatory
 
 __all__ = [
     "zero_residuals",
