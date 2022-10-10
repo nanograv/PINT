@@ -1,9 +1,6 @@
 import argparse
-import os
-import sys
 
 import pint.logging
-from loguru import logger as log
 
 pint.logging.setup(level=pint.logging.script_level)
 

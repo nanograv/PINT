@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 import argparse
-import sys
 
 import astropy.io.fits as pyfits
-import astropy.units as u
 import numpy as np
 from astropy.coordinates import SkyCoord
 
@@ -20,7 +18,6 @@ from pint.fermi_toas import load_Fermi_TOAs
 from pint.fits_utils import read_fits_event_mjds_tuples
 from pint.observatory.satellite_obs import get_satellite_observatory
 from pint.plot_utils import phaseogram
-from pint.pulsar_mjd import Time
 
 __all__ = ["main"]
 

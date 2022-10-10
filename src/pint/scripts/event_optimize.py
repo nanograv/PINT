@@ -1,10 +1,7 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore::DeprecationWarning
 import argparse
-import os
 import sys
 
-import astropy.table
-import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize as op
@@ -21,12 +18,6 @@ import pint.plot_utils as plot_utils
 import pint.toa as toa
 from pint.eventstats import hm, hmw
 from pint.fitter import Fitter
-from pint.models.priors import (
-    GaussianBoundedRV,
-    Prior,
-    UniformBoundedRV,
-    UniformUnboundedRV,
-)
 from pint.observatory.satellite_obs import get_satellite_observatory
 
 
