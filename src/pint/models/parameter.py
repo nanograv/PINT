@@ -23,7 +23,6 @@ parameters PINT understands.
 """
 import numbers
 from warnings import warn
-import re
 
 import astropy.time as time
 import astropy.units as u

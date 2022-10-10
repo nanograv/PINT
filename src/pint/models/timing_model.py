@@ -60,8 +60,6 @@ from pint.phase import Phase
 from pint.toa import TOAs
 from pint.utils import (
     PrefixError,
-    interesting_lines,
-    lines_of,
     split_prefixed_name,
     open_or_use,
     colorize,
