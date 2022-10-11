@@ -47,10 +47,10 @@ def test_covariance_matrix_relation(model_and_toas, component_label):
 
     model, toas = model_and_toas
     component = model.components[component_label]
-    basis_weight_func = component.basis_funcs[0]
+    basis_weights_func = component.basis_funcs[0]
     cov_func = component.covariance_matrix_funcs[0]
 
-    basis, weights = basis_weight_func(toas)
+    basis, weights = basis_weights_func(toas)
     cov = cov_func(toas)
     cov2 = np.dot(basis * weights[None, :], basis.T)
 
@@ -66,3 +66,18 @@ def test_ecorrnoise_basis_integer(model_and_toas):
     basis, weights = ecorrcomponent.ecorr_basis_weight_pair(toas)
 
     assert np.all(basis.astype(int) == basis) and np.all(basis >= 0)
+
+
+@pytest.mark.parametrize("component_label", ["EcorrNoise", "PLRedNoise"])
+def test_noise_basis_weights_funcs(model_and_toas, component_label):
+    model, toas = model_and_toas
+    component = model.components[component_label]
+
+    basis_weights_func = component.basis_funcs[0]
+
+    basis, weights = basis_weights_func(toas)
+
+    basis_ = component.get_noise_basis(toas)
+    weights_ = component.get_noise_weights(toas)
+
+    assert np.allclose(basis_, basis) and np.allclose(weights, weights_)
