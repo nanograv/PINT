@@ -1,18 +1,13 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore:DeprecationWarning
 """Tkinter interactive interface for PINT pulsar timing tool"""
-import sys
 import argparse
-
-import numpy as np
 
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
 import tkinter.messagebox as tkMessageBox
-from tkinter import ttk
 import matplotlib as mpl
 
 import pint.logging
-from loguru import logger as log
 
 pint.logging.setup(level=pint.logging.script_level)
 

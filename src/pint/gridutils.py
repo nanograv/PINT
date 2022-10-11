@@ -2,12 +2,8 @@
 import concurrent.futures
 import copy
 import multiprocessing
-import os
 import subprocess
-import functools
 
-import astropy.constants as const
-import astropy.units as u
 import numpy as np
 from loguru import logger as log
 
@@ -19,7 +15,6 @@ except ModuleNotFoundError:
 from astropy.utils.console import ProgressBar
 
 from pint import fitter
-import pint.utils
 
 
 __all__ = ["doonefit", "grid_chisq", "grid_chisq_derived", "plot_grid_chisq"]

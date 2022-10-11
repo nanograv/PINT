@@ -1,6 +1,5 @@
 import argparse
 import os
-import sys
 
 import pint.logging
 from loguru import logger as log
