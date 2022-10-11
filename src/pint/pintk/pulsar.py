@@ -426,7 +426,7 @@ class Pulsar:
                     self.all_toas.table["flags"][jumped_selected], num
                 )
                 log.info(
-                    f"Removing existing jump JUMP{str(num)} from {jumped_selected.astype(int).sum()} TOAs"
+                    f"Removed existing jump JUMP{str(num)} from {jumped_selected.astype(int).sum()} TOAs"
                 )
                 return list(jumped_selected)
         # if here, then doesn't match anything
