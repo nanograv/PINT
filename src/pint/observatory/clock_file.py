@@ -1,19 +1,18 @@
 """Routines for reading and writing various formats of clock file."""
 
-import os
 import re
 from pathlib import Path
 from textwrap import dedent
+from warnings import warn
 
 import astropy.units as u
 import numpy as np
 from loguru import logger as log
 
-import pint.config
 from pint.observatory import ClockCorrectionOutOfRange, NoClockCorrections
-from pint.observatory.global_clock_corrections import Index, get_clock_correction_file
+from pint.observatory.global_clock_corrections import get_clock_correction_file
 from pint.pulsar_mjd import Time
-from pint.utils import lines_of, open_or_use
+from pint.utils import compute_hash, lines_of, open_or_use
 
 __all__ = [
     "ClockFile",
@@ -95,9 +94,11 @@ class ClockFile:
         comments=None,
         header=None,
         leading_comment=None,
+        valid_beyond_ends=False,
     ):
         self.filename = filename
         self.friendly_name = self.filename if friendly_name is None else friendly_name
+        self.valid_beyond_ends = valid_beyond_ends
         if len(mjd) != len(clock):
             raise ValueError(f"MJDs have {len(mjd)} entries but clock has {len(clock)}")
         self._time = Time(mjd, format="pulsar_mjd", scale="utc")
@@ -125,21 +126,6 @@ class ClockFile:
             return cls._formats[format](filename, **kwargs)
         else:
             raise ValueError("clock file format '%s' not defined" % format)
-
-    @classmethod
-    def null(cls, *, filename=None, friendly_name=None):
-        """Construct a null clock correction file.
-
-        This has no clock corrections, and can be used to handle
-        conditions where a file is expected but not available.
-        """
-        return cls(
-            mjd=np.array([]),
-            clock=np.array([]) * u.s,
-            filename=filename,
-            friendly_name=friendly_name,
-            leading_comment="# No clock file available",
-        )
 
     @property
     def time(self):
@@ -174,18 +160,20 @@ class ClockFile:
         corrections : astropy.units.Quantity
             The corrections in units of microseconds.
         """
-        if len(self.time) == 0:
+        if not self.valid_beyond_ends and len(self.time) == 0:
             msg = f"No data points in clock file '{self.friendly_name}'"
             if limits == "warn":
-                log.warning(msg)
+                warn(msg)
                 return np.zeros_like(t) * u.us
             elif limits == "error":
                 raise NoClockCorrections(msg)
 
-        if np.any(t < self.time[0]) or np.any(t > self.time[-1]):
+        if not self.valid_beyond_ends and (
+            np.any(t < self.time[0]) or np.any(t > self.time[-1])
+        ):
             msg = f"Data points out of range in clock file '{self.friendly_name}'"
             if limits == "warn":
-                log.warning(msg)
+                warn(msg)
             elif limits == "error":
                 raise ClockCorrectionOutOfRange(msg)
 
@@ -447,7 +435,9 @@ clkcorr_re = re.compile(
 )
 
 
-def read_tempo2_clock_file(filename, bogus_last_correction=False, friendly_name=None):
+def read_tempo2_clock_file(
+    filename, bogus_last_correction=False, friendly_name=None, valid_beyond_ends=False
+):
     """Read a TEMPO2-format clock file.
 
     This function can also be accessed through
@@ -464,6 +454,8 @@ def read_tempo2_clock_file(filename, bogus_last_correction=False, friendly_name=
     friendly_name : str or None
         A human-readable name for this file, for use in error reporting.
         If not provided, will default to ``filename``.
+    valid_beyond_ends : bool
+        Whether to consider the file valid past the ends of the data it contains.
     """
     log.debug(
         f"Loading TEMPO2-format observatory clock correction file {filename} with {bogus_last_correction=}"
@@ -521,10 +513,9 @@ def read_tempo2_clock_file(filename, bogus_last_correction=False, friendly_name=
                     add_comment(m.group(3))
         clk = np.array(clk)
     except (FileNotFoundError, OSError):
-        log.error(f"TEMPO2-style clock correction file {filename} not found")
-        mjd = np.array([], dtype=float)
-        clk = np.array([], dtype=float)
-        header = None
+        raise NoClockCorrections(
+            f"TEMPO2-style clock correction file {filename} not found"
+        )
     if bogus_last_correction and len(mjd):
         mjd = mjd[:-1]
         clk = clk[:-1]
@@ -542,6 +533,7 @@ def read_tempo2_clock_file(filename, bogus_last_correction=False, friendly_name=
         leading_comment=leading_comment,
         header=header,
         friendly_name=friendly_name,
+        valid_beyond_ends=valid_beyond_ends,
     )
 
 
@@ -568,6 +560,7 @@ def read_tempo_clock_file(
     bogus_last_correction=False,
     process_includes=True,
     friendly_name=None,
+    valid_beyond_ends=False,
 ):
     """Read a TEMPO-format clock file.
 
@@ -579,7 +572,7 @@ def read_tempo_clock_file(
     the exception of the 'F' flag (to disable interpolation), which
     is currently not implemented.
 
-    INCLUDE statments are processed.
+    INCLUDE statements are processed.
 
 
     Parameters
@@ -602,6 +595,8 @@ def read_tempo_clock_file(
     friendly_name : str or None
         A human-readable name for this file, for use in error reporting.
         If not provided, will default to ``filename``.
+    valid_beyond_ends : bool
+        Whether to consider the file valid past the ends of the data it contains.
     """
 
     leading_comment = None
@@ -626,7 +621,7 @@ def read_tempo_clock_file(
             leading_comment += "\n" + s.rstrip()
 
     try:
-        # TODO we might want to handle 'f' flags by inserting addtional
+        # TODO we might want to handle 'f' flags by inserting additional
         # entries so that interpolation routines will give the right result.
         # The way TEMPO interprets 'f' flags is that an MJD with an 'f' flag
         # gives the constant clock correction value for at most a day either side.
@@ -690,6 +685,7 @@ def read_tempo_clock_file(
                 # allow mjd=0 to pass, since that is often used
                 # for effectively null clock files
                 if (mjd < 39000 and mjd != 0) or mjd > 100000:
+                    log.info(f"Disregarding suspicious MJD {mjd} in TEMPO clock file")
                     mjd = None
             except (ValueError, IndexError):
                 mjd = None
@@ -740,7 +736,7 @@ def read_tempo_clock_file(
             comments.append(None)
             add_comment(l[50:])
     except (FileNotFoundError, OSError):
-        log.error(
+        raise NoClockCorrections(
             f"TEMPO-style clock correction file {filename} "
             f"for site {obscode} not found"
         )
@@ -760,6 +756,7 @@ def read_tempo_clock_file(
         comments=comments,
         leading_comment=leading_comment,
         friendly_name=friendly_name,
+        valid_beyond_ends=valid_beyond_ends,
     )
 
 
@@ -807,11 +804,45 @@ class GlobalClockFile(ClockFile):
             url_base=self.url_base,
             url_mirrors=self.url_mirrors,
         )
+        self.f = f
+        self.hash = compute_hash(f)
         self.clock_file = ClockFile.read(
             f, self.format, friendly_name=self.friendly_name, **kwargs
         )
 
-    # FIXME: add update method?
+    def update(self):
+        """Download a new version of a clock file if appropriate.
+
+        An update is appropriate if the last-downloaded version is older than
+        the update frequency specified in ``index.txt``. This function should not
+        be called unless data outside the range available in the already present
+        clock file is requested, or if the user explicitly requests a new version.
+        """
+        # FIXME: allow user to force an update? by passing an appropriate
+        # download policy to get_clock_correction_file, presumably
+        mtime = self.f.stat().st_mtime
+        f = get_clock_correction_file(
+            self.filename, url_base=self.url_base, url_mirrors=self.url_mirrors
+        )
+        if f == self.f and f.stat().st_mtime == mtime:
+            # Nothing changed
+            pass
+        else:
+            self.f = f
+            h = compute_hash(f)
+            if h == self.hash:
+                # Nothing changed but we got it from the Net
+                pass
+            else:
+                # Actual new data (probably)!
+                self.hash = h
+                self.clock_file = ClockFile.read(
+                    f,
+                    format=self.format,
+                    friendly_name=self.friendly_name,
+                    **self.kwargs,
+                )
+                self.clock_file.friendly_name = self.friendly_name
 
     def evaluate(self, t, limits="warn"):
         """Evaluate the clock corrections at the times t.
@@ -838,14 +869,7 @@ class GlobalClockFile(ClockFile):
             The corrections in units of microseconds.
         """
         if np.any(t > self.clock_file.time[-1]):
-            f = get_clock_correction_file(
-                self.filename, url_base=self.url_base, url_mirrors=self.url_mirrors
-            )
-            # FIXME: don't reload unless we actually got something new
-            self.clock_file = ClockFile.read(
-                f, format=self.format, friendly_name=self.friendly_name, **self.kwargs
-            )
-            self.clock_file.friendly_name = self.friendly_name
+            self.update()
         return self.clock_file.evaluate(t, limits=limits)
 
     @property

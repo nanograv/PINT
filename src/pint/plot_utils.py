@@ -2,12 +2,16 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from pint.models.priors import GaussianBoundedRV
+import astropy
+import astropy.units as u
+import astropy.time
+from loguru import logger as log
 
 __all__ = ["phaseogram", "phaseogram_binned", "plot_priors"]
 
 
 def phaseogram(
-    mjds,
+    mjds_in,
     phases,
     weights=None,
     title=None,
@@ -19,10 +23,32 @@ def phaseogram(
     maxphs=2.0,
     plotfile=None,
 ):
-    """Make a nice 2-panel phaseogram"""
-    years = (mjds.value - 51544.0) / 365.25 + 2000.0
+    """Make a nice 2-panel phaseogram
+
+    Makes a phaseogram of photons with phases, with a point for each photon that can
+    have a transparency determined by an array of weights.
+
+    Parameters
+    ----------
+    mjds_in : array or astropy.units.Quantity or astropy.time.Time
+        Assumes units of days if bare numerical array, otherwise
+        will convert Quantity or Time into days.
+    phases : array
+        Phases for each photon, assumes range is [0,1)
+
+    """
+    # If mjds_in is a Time() then pull out the MJD values and make a quantity
+    if type(mjds_in) == astropy.time.core.Time:
+        mjds = mjds_in.mjd * u.d
+    # If mjds_in have no units, assume days
+    elif type(mjds_in) != astropy.units.quantity.Quantity:
+        mjds = mjds_in * u.d
+    else:
+        mjds = mjds_in
+
+    years = (mjds.to(u.d).value - 51544.0) / 365.25 + 2000.0
     phss = phases + rotate
-    phss[phss > 1.0] -= 1.0
+    phss[phss >= 1.0] -= 1.0
     plt.figure(figsize=(width, 8))
     ax1 = plt.subplot2grid((3, 1), (0, 0))
     ax2 = plt.subplot2grid((3, 1), (1, 0), rowspan=2)
@@ -72,7 +98,7 @@ def phaseogram(
 
 
 def phaseogram_binned(
-    mjds,
+    mjds_in,
     phases,
     weights=None,
     title=None,
@@ -86,8 +112,29 @@ def phaseogram_binned(
 ):
     """
     Make a nice 2-panel phaseogram
+
+    Makes a binned phaseogram of photons with phases, where the contribution to each bin
+    can be determined by an array of weights.
+
+    Parameters
+    ----------
+    mjds_in : array or astropy.units.Quantity or astropy.time.Time
+        Assumes units of days if bare numerical array, otherwise
+        will convert Quantity or Time into days.
+    phases : array
+        Phases for each photon, assumes range is [0,1)
+
     """
-    years = (mjds.value - 51544.0) / 365.25 + 2000.0
+    # If mjds_in is a Time() then pull out the MJD values and make a quantity
+    if type(mjds_in) == astropy.time.core.Time:
+        mjds = mjds_in.mjd * u.d
+    # If mjds_in has no units, assume days
+    elif type(mjds_in) != astropy.units.quantity.Quantity:
+        mjds = mjds_in * u.d
+    else:
+        mjds = mjds_in
+
+    years = (mjds.to(u.d).value - 51544.0) / 365.25 + 2000.0
     phss = phases + rotate
     phss[phss >= 1.0] -= 1.0
     plt.figure(figsize=(width, 8))

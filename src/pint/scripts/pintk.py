@@ -1,18 +1,15 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore:DeprecationWarning
 """Tkinter interactive interface for PINT pulsar timing tool"""
-import sys
 import argparse
 
-import numpy as np
+import sys
 
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
 import tkinter.messagebox as tkMessageBox
-from tkinter import ttk
 import matplotlib as mpl
 
 import pint.logging
-from loguru import logger as log
 
 pint.logging.setup(level=pint.logging.script_level)
 
@@ -239,7 +236,6 @@ def main(argv=None):
         help="PINT Fitter to use [default='auto'].  'auto' will choose WLS/GLS/WidebandTOA depending on TOA/model properties.  'downhill' will do the same for Downhill versions.",
     )
     parser.add_argument(
-        "-v",
         "--version",
         action="version",
         help="Print version info and  exit.",
@@ -248,15 +244,22 @@ def main(argv=None):
     parser.add_argument(
         "--log-level",
         type=str,
-        choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
-        default="WARNING",
+        choices=pint.logging.levels,
+        default=pint.logging.script_level,
         help="Logging level",
         dest="loglevel",
     )
-    args = parser.parse_args(argv)
+    parser.add_argument(
+        "-v", "--verbosity", default=0, action="count", help="Increase output verbosity"
+    )
+    parser.add_argument(
+        "-q", "--quiet", default=0, action="count", help="Decrease output verbosity"
+    )
 
-    if args.loglevel != "WARNING":
-        pint.logging.setup(level=args.loglevel)
+    args = parser.parse_args(argv)
+    pint.logging.setup(
+        level=pint.logging.get_level(args.loglevel, args.verbosity, args.quiet)
+    )
 
     root = tk.Tk()
     root.minsize(1000, 800)

@@ -1,20 +1,13 @@
 #!/usr/bin/env python
 import os
-import pickle
 import shutil
 import time
 import unittest
 
-import astropy.time
-import astropy.units as u
-import numpy as np
 import pytest
 from pinttestdata import datadir
 
-import pint.models
-import pint.toa
 from pint import toa
-from pint import simulation
 
 
 @pytest.fixture

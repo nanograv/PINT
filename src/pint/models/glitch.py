@@ -4,7 +4,7 @@ import numpy as np
 
 from loguru import logger as log
 
-from pint.models.parameter import MJDParameter, prefixParameter
+from pint.models.parameter import prefixParameter
 from pint.models.timing_model import MissingParameter, PhaseComponent
 from pint.utils import split_prefixed_name
 

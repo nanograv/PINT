@@ -1,6 +1,4 @@
 import numpy as np
-import os
-import unittest
 from os.path import join
 
 import astropy.units as u

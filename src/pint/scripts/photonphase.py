@@ -2,7 +2,6 @@
 import sys
 
 import astropy.io.fits as pyfits
-import astropy.units as u
 import numpy as np
 
 import pint.logging
@@ -13,12 +12,11 @@ pint.logging.setup(level=pint.logging.script_level)
 import pint.models
 import pint.residuals
 import pint.toa as toa
-from pint.event_toas import load_event_TOAs, load_fits_TOAs
+from pint.event_toas import load_event_TOAs
 from pint.eventstats import h2sig, hm
 from pint.fits_utils import read_fits_event_mjds
 from pint.observatory.satellite_obs import get_satellite_observatory
 from pint.plot_utils import phaseogram_binned
-from pint.pulsar_mjd import Time
 import pint.polycos as polycos
 
 __all__ = ["main"]
@@ -95,29 +93,31 @@ def main(argv=None):
         help="Use TT(BIPM) instead of TT(TAI)",
     )
     parser.add_argument(
-        "--log-level",
-        type=str,
-        choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
-        default="WARNING",
-        help="Logging level",
-        dest="loglevel",
-    )
-    #    parser.add_argument("--fix",help="Apply 1.0 second offset for NICER", action='store_true', default=False)
-    parser.add_argument(
         "--polycos",
         default=False,
         action="store_true",
         help="Use polycos to calculate phases; use when working with very large event files",
     )
-    args = parser.parse_args(argv)
-    log.remove()
-    log.add(
-        sys.stderr,
-        level=args.loglevel,
-        colorize=True,
-        format=pint.logging.format,
-        filter=pint.logging.LogFilter(),
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        choices=pint.logging.levels,
+        default=pint.logging.script_level,
+        help="Logging level",
+        dest="loglevel",
     )
+    parser.add_argument(
+        "-v", "--verbosity", default=0, action="count", help="Increase output verbosity"
+    )
+    parser.add_argument(
+        "-q", "--quiet", default=0, action="count", help="Decrease output verbosity"
+    )
+
+    args = parser.parse_args(argv)
+    pint.logging.setup(
+        level=pint.logging.get_level(args.loglevel, args.verbosity, args.quiet)
+    )
+    #    parser.add_argument("--fix",help="Apply 1.0 second offset for NICER", action='store_true', default=False)
 
     # If outfile is specified, that implies addphase
     if args.outfile is not None:
@@ -225,7 +225,7 @@ def main(argv=None):
 
         # Calculate phases
         log.debug("Evaluating polycos")
-        phases = p.eval_phase(mjds)
+        phases = ptable.eval_phase(mjds)
         phases[phases < 0] += 1.0
         h = float(hm(phases))
         print("Htest : {0:.2f} ({1:.2f} sigma)".format(h, h2sig(h)))

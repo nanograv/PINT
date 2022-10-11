@@ -1,12 +1,11 @@
 import unittest
+from os import path
 
-import pytest
-import os
 import astropy.units as u
 import numpy
-from pinttestdata import datadir
-from os import path
+import pytest
 from astropy.time import Time
+from pinttestdata import datadir
 
 from pint.observatory import Observatory
 from pint.observatory.clock_file import ClockFile

@@ -1,8 +1,5 @@
 """Test chi^2 gridding routines"""
 import concurrent.futures
-import io
-import multiprocessing
-import os
 import pytest
 
 import astropy.units as u

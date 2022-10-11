@@ -2,9 +2,9 @@
 import astropy.units as u
 import numpy as np
 
-from pint.models.parameter import prefixParameter, MJDParameter
+from pint.models.parameter import prefixParameter
 from pint.models.timing_model import MissingParameter, PhaseComponent
-from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
+from pint.utils import split_prefixed_name, taylor_horner
 
 
 class PiecewiseSpindown(PhaseComponent):
@@ -237,7 +237,7 @@ class PiecewiseSpindown(PhaseComponent):
             order = 0
         # order = idxv + 1
         fterms = self.get_spin_terms(idxv)
-        # make the choosen fterms 1 others 0
+        # make the chosen fterms 1 others 0
         fterms = [ft * np.longdouble(0.0) / unit for ft in fterms]
         fterms[order] += np.longdouble(1.0)
         glepnm = f"PWEP_{idxf}"

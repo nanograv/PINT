@@ -1,5 +1,3 @@
-import logging
-
 import numpy as np
 
 from pinttestdata import datadir
@@ -106,7 +104,7 @@ def test_simple_fit_unbinned():
     # load in simulated phases
     ph = np.loadtxt(datadir / "template_phases.asc")
     lcf = lcfitters.LCFitter(lct, ph)
-    lcf.fit(unbinned=True, estimate_errors=True)
+    lcf.fit(unbinned=True, estimate_errors=True, quiet=True)
     expected_val = r"""
 Log Likelihood for fit: 1091.04
 
@@ -139,8 +137,8 @@ def test_simple_fit_binned():
 
     # load in simulated phases
     ph = np.loadtxt(datadir / "template_phases.asc")
-    lcf = lcfitters.LCFitter(lct, ph)
-    lcf.fit(unbinned=False, estimate_errors=True)
+    lcf = lcfitters.LCFitter(lct, ph, binned_bins=100)
+    lcf.fit(unbinned=False, estimate_errors=True, quiet=True)
     expected_val = r"""
 Log Likelihood for fit: 1080.31
 

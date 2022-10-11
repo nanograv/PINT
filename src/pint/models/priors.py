@@ -7,7 +7,6 @@ such as total proper motion, 2-d sky location, etc.
 
 """
 import numpy as np
-import scipy.stats
 from scipy.stats import norm, rv_continuous, rv_discrete, uniform
 
 
@@ -44,7 +43,7 @@ class Prior:
 
         >>> model.PB.prior = Prior(scipy.stats.norm(loc=32.0,scale=1.0))
 
-    A bounded gaussian prior that ensure that eccentrity never gets > 1.0
+    A bounded gaussian prior that ensure that eccentricity never gets > 1.0
 
         >>> model.ECC.prior = Prior(GaussianBoundedRV(loc=0.9,scale=0.1,
         ...            lower_bound=0.0,upper_bound=1.0))

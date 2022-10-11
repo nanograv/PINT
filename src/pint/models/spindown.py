@@ -4,8 +4,7 @@
 import astropy.units as u
 import numpy
 
-import pint.toa as toa
-from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
+from pint.models.parameter import MJDParameter, prefixParameter
 from pint.models.timing_model import MissingParameter, PhaseComponent
 from pint.pulsar_mjd import Time
 from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
@@ -149,7 +148,7 @@ class Spindown(PhaseComponent):
         return phs.to(u.dimensionless_unscaled)
 
     def change_pepoch(self, new_epoch, toas=None, delay=None):
-        """Move PEPOCH to a new time and change the related paramters.
+        """Move PEPOCH to a new time and change the related parameters.
 
         Parameters
         ----------
@@ -171,7 +170,7 @@ class Spindown(PhaseComponent):
             if toas is None or delay is None:
                 raise ValueError(
                     "`PEPOCH` is not in the model, thus, 'toa' and"
-                    " 'delay' shoule be givne."
+                    " 'delay' should be given."
                 )
             tbl = toas.table
             phsepoch_ld = (tbl["tdb"][0] - delay[0]).tdb.mjd_long

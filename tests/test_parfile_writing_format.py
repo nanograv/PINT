@@ -1,5 +1,4 @@
 import os
-import unittest
 import pytest
 from io import StringIO
 
@@ -99,9 +98,6 @@ def test_ECL():
             assert l.split()[-1] == "IERS2003"
 
 
-@pytest.mark.xfail(
-    message="This file exists only as spurious output from a different test."
-)
 def test_DMDATA_N():
     """Should be an integer for TEMPO/TEMPO2"""
     m = get_model(os.path.join(datadir, "J0030+0451_post.par"))

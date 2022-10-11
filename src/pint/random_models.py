@@ -6,7 +6,6 @@ from copy import deepcopy
 import numpy as np
 from loguru import logger as log
 
-import pint.toa as toa
 import pint.simulation as simulation
 from pint.phase import Phase
 
@@ -37,7 +36,7 @@ def random_models(
     iter
         how many random models will be computed, default 1
     npoints
-        how many fake toas will be reated for the random lines, default 100
+        how many fake toas will be related for the random lines, default 100
 
     Returns
     -------

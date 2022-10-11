@@ -1,10 +1,7 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore::DeprecationWarning
 import argparse
-import os
 import sys
 
-import astropy.table
-import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize as op
@@ -21,12 +18,7 @@ import pint.plot_utils as plot_utils
 import pint.toa as toa
 from pint.eventstats import hm, hmw
 from pint.fitter import Fitter
-from pint.models.priors import (
-    GaussianBoundedRV,
-    Prior,
-    UniformBoundedRV,
-    UniformUnboundedRV,
-)
+from pint.models.priors import Prior
 from pint.observatory.satellite_obs import get_satellite_observatory
 
 
@@ -276,7 +268,7 @@ class emcee_fitter(Fitter):
         """
         Return pulse phases based on the current model
         """
-        phss = self.model.phase(self.toas)[1]
+        phss = self.model.phase(self.toas).frac
         return phss.value % 1
 
     def lnprior(self, theta):
@@ -343,7 +335,7 @@ class emcee_fitter(Fitter):
         """
         Make a nice 2-panel phaseogram for the current model
         """
-        mjds = self.toas.table["tdbld"].quantity
+        mjds = self.toas.table["tdbld"].data
         phss = self.get_event_phases()
         plot_utils.phaseogram(
             mjds,
@@ -514,23 +506,23 @@ def main(argv=None):
     parser.add_argument(
         "--log-level",
         type=str,
-        choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),
+        choices=pint.logging.levels,
         default=pint.logging.script_level,
         help="Logging level",
         dest="loglevel",
     )
-
-    global nwalkers, nsteps, ftr
+    parser.add_argument(
+        "-v", "--verbosity", default=0, action="count", help="Increase output verbosity"
+    )
+    parser.add_argument(
+        "-q", "--quiet", default=0, action="count", help="Decrease output verbosity"
+    )
 
     args = parser.parse_args(argv)
-    log.remove()
-    log.add(
-        sys.stderr,
-        level=args.loglevel,
-        colorize=True,
-        format=pint.logging.format,
-        filter=pint.logging.LogFilter(),
+    pint.logging.setup(
+        level=pint.logging.get_level(args.loglevel, args.verbosity, args.quiet)
     )
+    global nwalkers, nsteps, ftr
 
     eventfile = args.eventfile
     parfile = args.parfile

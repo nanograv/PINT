@@ -2,7 +2,6 @@
 
 import copy
 
-import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy.table import vstack
@@ -276,7 +275,7 @@ class MCMCFitter(Fitter):
         """
         Return pulse phases based on the current model
         """
-        phases = self.model.phase(self.toas)[1]
+        phases = self.model.phase(self.toas).frac
         # ensure all positive
         return np.where(phases < 0.0, phases + 1.0, phases)
 
@@ -360,7 +359,7 @@ class MCMCFitter(Fitter):
         self, weights=None, bins=100, rotate=0.0, size=5, alpha=0.25, plotfile=None
     ):
         """Make a nice 2-panel phaseogram for the current model"""
-        mjds = self.toas.table["tdbld"].quantity
+        mjds = self.toas.table["tdbld"].data
         phss = self.get_event_phases()
         plot_utils.phaseogram(
             mjds,

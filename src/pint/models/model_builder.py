@@ -1,13 +1,8 @@
-import os
 import copy
 import warnings
 from io import StringIO
 from collections import Counter, defaultdict
 from pathlib import Path
-
-from astropy import log
-from astropy.utils.decorators import lazyproperty
-from loguru import logger as log
 
 from pint.models.parameter import maskParameter
 from pint.models.timing_model import (
@@ -34,7 +29,7 @@ default_models = ["StandardTimingModel"]
 
 
 class ComponentConflict(ValueError):
-    """Error for mulitple components can be select but no other indications."""
+    """Error for multiple components can be select but no other indications."""
 
 
 def parse_parfile(parfile):
@@ -62,10 +57,11 @@ class ModelBuilder:
     """Class for building a `TimingModel` object from a parameter file.
 
     The ModelBuilder class helps building a TimingModel from a parameter file
-    (i.e., pulsar ephemerise or '.par' file).
+    (i.e., pulsar ephemeris or '.par' file).
     It first maps the provided parameter names to the PINT defined parameter
     names, if they are in the PINT parameter aliases list. Then, the
     ModelBuilder selects model components based on the following rules:
+
         * The components in the :py:attr:`~default_components` list will be selected.
         * When a component get mapped uniquely by the given parameters.
         * The pulsar binary component will be selected by the 'BINARY' parameter.
@@ -141,9 +137,9 @@ class ModelBuilder:
                     raise ComponentConflict(m)
 
     def _get_component_param_overlap(self, component):
-        """Check the parameter overlaping between two components.
+        """Check the parameter overlapping between two components.
 
-        Check if one component's parameters are overlaped with another
+        Check if one component's parameters are overlapped with another
         component.
 
         Parameters
@@ -154,8 +150,8 @@ class ModelBuilder:
         Returns
         -------
         overlap : dict
-            The component has overlap parameters and the overlaping parameters
-            in the format of {overlap compnent name: (overlap parameter,
+            The component has overlap parameters and the overlapping parameters
+            in the format of {overlap component name: (overlap parameter,
             number of non-overlap param in test component,
             number of non-overlap param in overlap component) }
         """
@@ -222,7 +218,7 @@ class ModelBuilder:
                 Pintified parameter dictionary with the PINT name as key and list of
                 parameter value-uncertainty lines as value. For the
                 repeating parameters in the parfile, the value will contain
-                mulitple lines.
+                multiple lines.
 
             original_name_map : dict
                 PINT name maps to the original .par file input names. PINT name
@@ -236,7 +232,7 @@ class ModelBuilder:
         Raises
         ------
         TimingModelError
-            If the parfile has mulitple line with non-repeating parameters.
+            If the parfile has multiple line with non-repeating parameters.
         """
         pint_param_dict = defaultdict(list)
         original_name_map = defaultdict(list)
@@ -270,7 +266,7 @@ class ModelBuilder:
                 if pint_name not in self.all_components.repeatable_param:
                     raise TimingModelError(
                         f"Parameter {pint_name} is not a repeatable parameter. "
-                        f"However, mulitple line use it."
+                        f"However, multiple line use it."
                     )
         # Check if the name is mixed
         for p_n, o_n in original_name_map.items():
@@ -293,7 +289,7 @@ class ModelBuilder:
         ----------
         param_inpar: dict
             Dictionary of the unique parameters in .par file with the key is the
-        parfile line. :func:`parse_parfile` returns this dictionary.
+            parfile line. :func:`parse_parfile` returns this dictionary.
 
         Returns
         -------
@@ -310,14 +306,15 @@ class ModelBuilder:
         Note
         ----
         The selection algorithm:
-            #. Look at the BINARY in the par file and catche the indicated binary model
+            #. Look at the BINARY in the par file and cache the indicated binary model
             #. Translate para file parameters to the pint parameter name
             #. Go over the parameter-component map and pick up the components based
                on the parameters in parfile.
+
                 #. Select the components that have its unique parameters in the parfile.
                    In other words, select the components that have one parameter to
                    on component mapping.
-                #. Log the conflict components, one parameter to mulitple components mapping.
+                #. Log the conflict components, one parameter to multiple components mapping.
         """
         selected_components = set()
         param_count = Counter()
@@ -430,7 +427,7 @@ class ModelBuilder:
         it will search matching key value pair first. If the input parameter line's
         key-value matches the existing parameter, the parameter value and uncertainty
         will copy to the existing parameter. If there is no match, it will find an
-        empty existing parameter, whose `key` is `None`, and fill it up. If no empyt
+        empty existing parameter, whose `key` is `None`, and fill it up. If no empty
         parameter left, it will add a new parameter to it.
 
         Parameters
@@ -438,14 +435,14 @@ class ModelBuilder:
         timing_model : pint.models.TimingModel
             Timing model to get setup.
         pint_param_dict: dict
-            Pintified parfile dictionary which can be aquired by
+            Pintified parfile dictionary which can be acquired by
             :meth:`ModelBuilder._pintify_parfile`
         original_name : dict, optional
             A map from PINT name to the original input name.
         setup : bool, optional
             Whether to run the setup function in the timing model.
         validate : bool, optional
-            Whether to run the validate funciotn in the timing model.
+            Whether to run the validate function in the timing model.
         """
         if original_name is not None:
             use_alias = True
@@ -469,7 +466,7 @@ class ModelBuilder:
                         f" timing model. It is used in {par_hosts},"
                         f" but the current timing model uses {currnt_cp}."
                     )
-                # TODO need to create a beeter API for _loacte_param_host
+                # TODO need to create a better API for _locate_param_host
                 host_component = timing_model._locate_param_host(first_init)
                 timing_model.add_param_from_top(
                     getattr(timing_model, first_init).new_param(index),
@@ -491,7 +488,7 @@ class ModelBuilder:
                 example_par = getattr(timing_model, pp)
                 prefix, _, index = split_prefixed_name(pp)
                 for li in lines:
-                    # Creat a temp parameter with the idx bigger than all the existing indices
+                    # Create a temp parameter with the idx bigger than all the existing indices
                     repeatable_map = timing_model.get_prefix_mapping(prefix)
                     new_max_idx = max(repeatable_map.keys()) + 1
                     temp_par = example_par.new_param(new_max_idx)
@@ -591,6 +588,7 @@ def get_model_and_toas(
     planets=None,
     usepickle=False,
     tdb_method="default",
+    include_pn=True,
     picklefilename=None,
     allow_name_mixing=False,
     limits="warn",
@@ -619,6 +617,8 @@ def get_model_and_toas(
     tdb_method : str
         Which method to use for the clock correction to TDB. See
         :func:`pint.observatory.Observatory.get_TDBs` for details.
+    include_pn : bool, optional
+        Whether or not to read in the 'pn' column (``pulse_number``)
     picklefilename : str or None
         Filename to use for caching loaded file. Defaults to adding ``.pickle.gz`` to the
         filename of the timfile, if there is one and only one. If no filename is available,
@@ -638,6 +638,7 @@ def get_model_and_toas(
     mm = get_model(parfile, allow_name_mixing)
     tt = get_TOAs(
         timfile,
+        include_pn=include_pn,
         model=mm,
         ephem=ephem,
         include_bipm=include_bipm,

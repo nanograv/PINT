@@ -14,11 +14,9 @@ $Header: /nfs/slac/g/glast/ground/cvs/pointlike/python/uw/pulsar/lcfitters.py,v 
 author: M. Kerr <matthew.kerr@gmail.com>
 
 """
-from copy import deepcopy
-
 import numpy as np
 import scipy
-from pint.eventstats import hm, hmw, z2mw
+from pint.eventstats import hm, hmw
 from scipy.optimize import fmin, fmin_tnc, leastsq
 
 SECSPERDAY = 86400.0
@@ -54,7 +52,7 @@ def LCFitter(
     weights=None,
     log10_ens=None,
     times=1,
-    binned_bins=100,
+    binned_bins=1000,
     binned_ebins=8,
     phase_shift=0,
 ):
@@ -208,6 +206,7 @@ class UnweightedLCFitter:
         prior=None,
         unbinned_refit=True,
         try_bootstrap=True,
+        quiet=False,
     ):
         # NB use of priors currently not supported by quick_fit, positions first, etc.
         self._set_unbinned(unbinned)
@@ -245,6 +244,7 @@ class UnweightedLCFitter:
                 unbinned=unbinned,
                 use_gradient=use_gradient,
                 positions_first=False,
+                quiet=quiet,
             )
             self._fix_state(restore_state)
 
@@ -255,7 +255,7 @@ class UnweightedLCFitter:
         ll0 = -fit_func(self.template.get_parameters())
         p0 = self.template.get_parameters().copy()
         if use_gradient:
-            f = self.fit_tnc(fit_func, grad_func)
+            f = self.fit_tnc(fit_func, grad_func, quiet=quiet)
         else:
             f = self.fit_fmin(fit_func)
         if (ll0 > self.ll) or (self.ll == -2e20) or (np.isnan(self.ll)):
@@ -293,7 +293,8 @@ class UnweightedLCFitter:
                 # except ValueError:
                 #    print('Warning, could not estimate errors.')
                 #    self.template.set_errors(np.zeros_like(p0))
-        print("Improved log likelihood by %.2f" % (self.ll - ll0))
+        if not quiet:
+            print("Improved log likelihood by %.2f" % (self.ll - ll0))
         return True
 
     def fit_position(self, unbinned=True, track=False):
@@ -399,7 +400,7 @@ class UnweightedLCFitter:
         self.cov_matrix = fit[3]
         return fit
 
-    def fit_tnc(self, fit_func, grad_func, ftol=1e-5):
+    def fit_tnc(self, fit_func, grad_func, ftol=1e-5, quiet=False):
         x0 = self.template.get_parameters()
         bounds = self.template.get_bounds()
         fit = fmin_tnc(
@@ -411,6 +412,7 @@ class UnweightedLCFitter:
             bounds=bounds,
             maxfun=5000,
             messages=8,
+            disp=0 if quiet else 1,
         )
         self.fitval = fit[0]
         self.ll = -fit_func(self.template.get_parameters())

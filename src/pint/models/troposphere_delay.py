@@ -28,7 +28,7 @@ class TroposphereDelay(DelayComponent):
     The hydrostatic delay is best described as the relatively non-changing component to the
     delay, depending primarily on atmospheric pressure.
     The wet delay represents changes due to dynamical variation in the
-    atmosphere (ie changing water vapor) and is ususally around 10% of the hydrostatic delay
+    atmosphere (ie changing water vapor) and is usually around 10% of the hydrostatic delay
 
     Parameters supported:
 
@@ -87,7 +87,7 @@ class TroposphereDelay(DelayComponent):
         """equation 4 from the Niell mapping function.
         It is a modification to the plane-parallel atmosphere model (1 / sin(alt))
         The coefficients a b and c provide the correction for the correct map
-        near the horizion, while still producing the correct mapping at zenith (1)
+        near the horizon, while still producing the correct mapping at zenith (1)
         """
         sinAlt = np.sin(alt)
         return 1 / (
@@ -147,7 +147,7 @@ class TroposphereDelay(DelayComponent):
     def troposphere_delay(self, toas, acc_delay=None):
         """This is the main function for the troposphere delay.
         Pass in the TOAs and it will calculate the delay for each TOA,
-        accounting for the observatory locaiton, target coordiantes, and time of observation
+        accounting for the observatory location, target coordinates, and time of observation
         """
         tbl = toas.table
         delay = np.zeros(len(tbl))
@@ -191,8 +191,8 @@ class TroposphereDelay(DelayComponent):
         Then, to allow for fast numpy math, correct the individual invalid TOAs
         to make them appear at the zenith, then afterwards make that part of
         the delay be zero.
-        This alitude correction is applied to the alt numpy array passed in as argument
-        optionally pass obs to list which observatory the invalid altitues are from
+        This altitude correction is applied to the alt numpy array passed in as argument
+        optionally pass obs to list which observatory the invalid altitudes are from
 
         This has been tested and it does work, even though it's slightly convoluted
         """
@@ -212,11 +212,11 @@ class TroposphereDelay(DelayComponent):
 
             # now correct the values
             # first make the invalid altitudes zeros
-            alt *= isValid  # multilpy valids by 1, else make zero
+            alt *= isValid  # multiply valids by 1, else make zero
             alt += (
                 90 * u.deg * np.logical_not(isValid)
             )  # increase the invalid ones to 90 deg (zenith)
-            # this will prevent unexpected behaviour from occuring for negative altitudes
+            # this will prevent unexpected behavior from occurring for negative altitudes
         return isValid
 
     def delay_model(self, alt, lat, H, mjd):
@@ -228,7 +228,7 @@ class TroposphereDelay(DelayComponent):
             alt, lat, H, mjd
         ) + self.wet_zenith_delay() * self.wet_map(alt, lat)
 
-        # modify the delay if any of the alittudes are invalid
+        # modify the delay if any of the altitudes are invalid
         if not np.all(altIsValid):
             delay *= altIsValid  # this will make the invalid delays zero
         return delay
@@ -237,7 +237,7 @@ class TroposphereDelay(DelayComponent):
         """From CRC Handbook Chapter 14 page 19 US Standard Atmosphere"""
         gph = self.EARTH_R * H / (self.EARTH_R + H)  # geopotential height
         if gph > 11 * u.km:
-            warn("Pressure approximation invalid for elevations above 11 km")
+            log.warning("Pressure approximation invalid for elevations above 11 km")
         T = 288.15 - 0.0065 * H.to(u.m).value  # temperature lapse
         P = 101.325 * (288.15 / T) ** -5.25575 * u.kPa
         return P
@@ -278,7 +278,7 @@ class TroposphereDelay(DelayComponent):
         """
         according to Niell, the way to use latitude interpolation is to interpolate
         between the nearest definite latitude coefficient functions.  So that means
-        I need to calcualte the function, then I can go back and interpolate between the results.
+        I need to calculate the function, then I can go back and interpolate between the results.
         I figure the easiest way to do this will be to calculate the function on the entire array
         """
 
@@ -329,7 +329,7 @@ class TroposphereDelay(DelayComponent):
         to be predictable from the station height"
         """
 
-        latIndex = self._find_latitude_index(lat)  # lattitude dependent
+        latIndex = self._find_latitude_index(lat)  # latitude dependent
 
         aNeighbors = self.AW[latIndex : latIndex + 2]
         bNeighbors = self.BW[latIndex : latIndex + 2]

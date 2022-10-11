@@ -5,6 +5,13 @@ To use this do::
     import pint.logging
     pint.logging.setup()
 
+If you want to emit messages later in your code, set things up with::
+
+    from loguru import logger as log
+    log.info("INFO test")
+
+This can happen before or after the :func:`~pint.logging.setup`.
+
 You can optionally pass the desired logging level to the :func:`~pint.logging.setup` function, formats, custom filters, colors, etc.  
 See documentation for :func:`pint.logging.setup`.
 
@@ -20,9 +27,17 @@ while the default for this module is::
 
 If you want to use command-line arguments in a script to set the level you can do that like::
 
-    parser.add_argument("--log-level",type=str,choices=("TRACE", "DEBUG", "INFO", "WARNING", "ERROR"),default=pint.logging.script_level,help="Logging level",dest="loglevel")
+    parser.add_argument("--log-level",type=str,choices=pint.logging.levels,default=pint.logging.script_level,help="Logging level",dest="loglevel")
+    parser.add_argument(
+        "-v", "--verbosity", default=0, action="count", help="Increase output verbosity"
+    )
+    parser.add_argument(
+        "-q", "--quiet", default=0, action="count", help="Decrease output verbosity"
+    )
     args = parser.parse_args(argv)
-    pint.logging.setup(level=args.loglevel)
+    pint.logging.setup(
+        level=pint.logging.get_level(args.loglevel, args.verbosity, args.quiet)
+    )
 
 Note that ``loguru`` does not allow you to change the properties of an existing logger.
 Instead it's better to remove it and make another (e.g., if you want to change the level).
@@ -45,7 +60,7 @@ try:
 except ImportError:
     from astropy._erfa import ErfaWarning
 
-__all__ = ["LogFilter", "setup", "format"]
+__all__ = ["LogFilter", "setup", "format", "levels", "get_level"]
 
 # defaults can be overridden using $LOGURU_LEVEL and $LOGURU_FORMAT
 # default for an individual level can be overridden by $LOGURU_DEBUG_COLOR etc
@@ -61,6 +76,11 @@ script_level = "WARNING"
 
 showwarning_ = warnings.showwarning
 warning_onceregistry = {}
+
+# basic loguru level definitions from:
+# https://loguru.readthedocs.io/en/stable/api/logger.html
+# this is so we can map from increase/decrease of verbosity to level
+levels = ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 
 def showwarning(message, category, filename, lineno, file=None, line=None):
@@ -294,3 +314,39 @@ def setup(
         log.level(level, color=debug_color)
 
     return loghandler
+
+
+def get_level(starting_level_name, verbosity, quietness):
+    """Get appropriate logging level given command-line input
+
+    Parameters
+    ----------
+    starting_level_name : str
+        Name of level to start with (e.g., "WARNING")
+    verbosity : int
+        Number of verbose levels requested
+    quietness : int
+        Number of quiet levels requested
+
+    Returns
+    -------
+    str
+        Name of level
+
+    Examples
+    --------
+
+        >>> parser.add_argument("--log-level",type=str, choices=pint.logging.levels,
+        default=pint.logging.script_level, help="Logging level",dest="loglevel")
+        >>> parser.add_argument("-v", "--verbosity", default=0, action="count", help="Increase output verbosity")
+        >>> parser.add_argument("-q", "--quiet", default=0, action="count", help="Decrease output verbosity")
+        >>> args = parser.parse_args(argv)
+        >>> pint.logging.setup(level=pint.logging.get_level(args.loglevel, args.verbosity, args.quiet))
+
+    """
+    starting_level = [i for i in range(len(levels)) if levels[i] == starting_level_name]
+    level = min(
+        max(starting_level[0] - verbosity + quietness, 0),
+        len(levels) - 1,
+    )
+    return levels[level]

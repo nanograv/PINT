@@ -1,14 +1,11 @@
 """Tests of PINT generic binary model """
 
-import logging
 from os.path import basename, join
 from glob import glob
-import unittest
 import pytest
-from warnings import warn
 
 from pint.models.model_builder import get_model
-from pint.models.timing_model import MissingParameter, TimingModel, Component
+from pint.models.timing_model import MissingParameter
 from utils import verify_stand_alone_binary_parameter_updates
 from pinttestdata import datadir
 

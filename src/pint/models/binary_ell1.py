@@ -10,7 +10,7 @@ from pint.models.pulsar_binary import PulsarBinary
 from pint.models.stand_alone_psr_binaries import binary_orbits as bo
 from pint.models.stand_alone_psr_binaries.ELL1_model import ELL1model
 from pint.models.stand_alone_psr_binaries.ELL1H_model import ELL1Hmodel
-from pint.models.timing_model import MissingParameter, TimingModelError
+from pint.models.timing_model import MissingParameter
 from pint.utils import taylor_horner_deriv
 
 
@@ -105,7 +105,7 @@ class BinaryELL1(PulsarBinary):
 
         TASC will be changed to the epoch of the ascending node closest to the
         supplied epoch, and the Laplace parameters (EPS1, EPS2) and projected
-        semimajor axis (A1 or X) will be updated according to the specified
+        semi-major axis (A1 or X) will be updated according to the specified
         EPS1DOT, EPS2DOT, and A1DOT or XDOT, if present.
 
         Note that derivatives of binary orbital frequency higher than the first

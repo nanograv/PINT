@@ -10,7 +10,7 @@ PINT's built-in observatories are loaded when anyone imports the modules
 :mod:`pint.observatory.special_locations`. This automatically happens
 when you call :func:`pint.observatory.Observatory.get`,
 :func:`pint.observatory.get_observatory`, or
-:func:`pint.observatory.Observatory.names` 
+:func:`pint.observatory.Observatory.names`
 (:func:`pint.observatory.Observatory.names_and_aliases` to include aliases).
 Satellite observatories are somewhat different, as they cannot be
 created until the user supplies an orbit file. Once created, they will
@@ -35,6 +35,7 @@ import numpy as np
 from astropy.coordinates import EarthLocation
 from loguru import logger as log
 
+from pint.config import runtimefile
 from pint.pulsar_mjd import Time
 from pint.utils import interesting_lines
 
@@ -61,6 +62,8 @@ __all__ = [
 # FIXME: this should be auto-detected by checking the index file to see what's available
 bipm_default = "BIPM2021"
 
+pint_clock_env_var = "PINT_CLOCK_OVERRIDE"
+
 
 class ClockCorrectionError(RuntimeError):
     """Unspecified error doing clock correction."""
@@ -80,10 +83,41 @@ class ClockCorrectionOutOfRange(ClockCorrectionError):
     pass
 
 
+# Global clock files shared by all observatories
+_gps_clock = None
+_bipm_clock_versions = {}
+
+
+def _load_gps_clock():
+    global _gps_clock
+    if _gps_clock is None:
+        log.info(f"Loading global GPS clock file")
+        _gps_clock = find_clock_file(
+            "gps2utc.clk",
+            format="tempo2",
+        )
+
+
+def _load_bipm_clock(bipm_version):
+    bipm_version = bipm_version.lower()
+    if bipm_version not in _bipm_clock_versions:
+        try:
+            log.info(f"Loading BIPM clock version {bipm_version}")
+            # FIXME: error handling?
+            _bipm_clock_versions[bipm_version] = find_clock_file(
+                f"tai2tt_{bipm_version}.clk",
+                format="tempo2",
+            )
+        except Exception as e:
+            raise ValueError(
+                f"Cannot find TT BIPM file for version '{bipm_version}'."
+            ) from e
+
+
 class Observatory:
     """Observatory locations and related site-dependent properties
 
-    For example, TOA time scales, clock corrections.  Any new Observtory that
+    For example, TOA time scales, clock corrections.  Any new Observatory that
     is declared will be automatically added to a registry that is keyed on
     observatory name.  Aside from their initial declaration (for examples, see
     ``pint/data/runtimefile/observatories.json``), Observatory instances should
@@ -112,7 +146,7 @@ class Observatory:
     _alias_map = {}
 
     def __new__(cls, name, *args, **kwargs):
-        # Generates a new Observtory object instance, and adds it
+        # Generates a new Observatory object instance, and adds it
         # it the registry, using name as the key.  Name must be unique,
         # a new instance with a given name will over-write the existing
         # one only if overwrite=True
@@ -133,9 +167,21 @@ class Observatory:
         cls._register(obs, name)
         return obs
 
-    def __init__(self, name, aliases=None):
+    def __init__(
+        self,
+        name,
+        aliases=None,
+        include_gps=True,
+        include_bipm=True,
+        bipm_version=bipm_default,
+        overwrite=False,
+    ):
         if aliases is not None:
             Observatory._add_aliases(self, aliases)
+
+        self.include_gps = include_gps
+        self.include_bipm = include_bipm
+        self.bipm_version = bipm_version
 
     @classmethod
     def _register(cls, obs, name):
@@ -164,6 +210,24 @@ class Observatory:
                 if name == o.name:
                     obs_aliases.append(alias)
             o._aliases = obs_aliases
+
+    @staticmethod
+    def gps_correction(t, limits="warn"):
+        """Compute the GPS clock corrections for times t."""
+        log.info("Applying GPS to UTC clock correction (~few nanoseconds)")
+        _load_gps_clock()
+        return _gps_clock.evaluate(t, limits=limits)
+
+    @staticmethod
+    def bipm_correction(t, bipm_version=bipm_default, limits="warn"):
+        """Compute the GPS clock corrections for times t."""
+        log.info(f"Applying TT(TAI) to TT({bipm_version}) clock correction (~27 us)")
+        tt2tai = 32.184 * 1e6 * u.us
+        _load_bipm_clock(bipm_version)
+        return (
+            _bipm_clock_versions[bipm_version.lower()].evaluate(t, limits=limits)
+            - tt2tai
+        )
 
     @classmethod
     def clear_registry(cls):
@@ -247,7 +311,7 @@ class Observatory:
 
         obs = TopoObs(
             name,
-            itrf_xyz=[site_astropy.x.value, site_astropy.y.value, site_astropy.z.value],
+            location=site_astropy,
             # add in metadata from astropy
             origin="astropy: '%s'" % site_astropy.info.meta["source"],
         )
@@ -272,7 +336,7 @@ class Observatory:
         which uses ERFA (IAU SOFA).
 
         The time argument is ignored for observatories with static
-        positions. For moving observaties (e.g. spacecraft), it
+        positions. For moving observatories (e.g. spacecraft), it
         should be specified (as an astropy Time) and the position
         at that time will be returned.
         """
@@ -296,21 +360,42 @@ class Observatory:
         raise NotImplementedError
 
     def clock_corrections(self, t, limits="warn"):
-        """Given an array-valued Time, return the clock corrections
+        """Compute clock corrections for a Time array.
+
+        Given an array-valued Time, return the clock corrections
         as a numpy array, with units.  These values are to be added to the
         raw TOAs in order to refer them to the timescale specified by
         self.timescale."""
         # TODO this and derived methods should be changed to accept a TOA
         # table in addition to Time objects.  This will allow access to extra
         # TOA metadata which may be necessary in some cases.
-        raise NotImplementedError
+        corr = np.zeros_like(t) * u.us
+
+        if self.include_gps:
+            corr += self.gps_correction(t, limits=limits)
+
+        if self.include_bipm:
+            corr += self.bipm_correction(t, self.bipm_version, limits=limits)
+
+        return corr
 
     def last_clock_correction_mjd(self):
         """Return the MJD of the last available clock correction.
 
         Returns ``np.inf`` if no clock corrections are relevant.
         """
-        return np.inf
+        t = np.inf
+
+        if self.include_gps:
+            _load_gps_clock()
+            t = min(t, _gps_clock.last_correction_mjd())
+        if self.include_bipm:
+            _load_bipm_clock(self.bipm_version)
+            t = min(
+                t,
+                _bipm_clock_versions[self.bipm_version.lower()].last_correction_mjd(),
+            )
+        return t
 
     def get_TDBs(self, t, method="default", ephem=None, options=None):
         """This is a high level function for converting TOAs to TDB time scale.
@@ -347,7 +432,7 @@ class Observatory:
             t = Time([t])
         if t.scale == "tdb":
             return t
-        # Check the method. This pattern is from numpy minize
+        # Check the method. This pattern is from numpy minimize
         if callable(method):
             meth = "_custom"
         else:
@@ -382,7 +467,7 @@ class Observatory:
     def posvel(self, t, ephem, group=None):
         """Return observatory position and velocity for the given times.
 
-        Postion is relative to solar system barycenter; times are
+        Position is relative to solar system barycenter; times are
         (astropy array-valued Time objects).
         """
         # TODO this and derived methods should be changed to accept a TOA
@@ -476,8 +561,8 @@ def compare_t2_observatories_dat(t2dir=None):
                         "{short_name}"
                     ],
                     "itrf_xyz": [
-                        {x}, 
-                        {y}, 
+                        {x},
+                        {y},
                         {z}
                     ]
                 }
@@ -523,7 +608,7 @@ def compare_t2_observatories_dat(t2dir=None):
 
 
 def compare_tempo_obsys_dat(tempodir=None):
-    """Read a tempo obsys.dat file and compare with PINT
+    """Read a tempo obsys.dat file and compare with PINT.
 
     Produces a report including lines that can be added to PINT's
     observatories.json to add any observatories unknown to PINT.
@@ -594,8 +679,8 @@ def compare_tempo_obsys_dat(tempodir=None):
                 f"""
                 "{name}": {
                     "itrf_xyz": [
-                        {x}, 
-                        {y}, 
+                        {x},
+                        {y},
                         {z}
                     ],
                     "tempo_code": "{tempo_code}",
@@ -717,3 +802,145 @@ def update_clock_files(bipm_versions=None):
             pass
         except NoClockCorrections:
             log.info(f"Observatory {n} has no clock corrections")
+
+
+# Both topo_obs and special_locations need this
+def find_clock_file(
+    name,
+    format,
+    bogus_last_correction=False,
+    url_base=None,
+    clock_dir=None,
+    valid_beyond_ends=False,
+):
+    """Locate and return a ClockFile in one of several places.
+
+    PINT looks for clock files in three places, in order:
+
+    1. The directory ``$PINT_CLOCK_OVERRIDE``
+    2. The global clock correction repository on the Internet (or a locally cached copy)
+    3. The directory ``pint.config.runtimefile('.')``
+
+    The first place the file is found is the one use; this allows you to force PINT to
+    use your own files in place of those in the global repository.
+
+    Parameters
+    ----------
+    name : str
+        The name of the file, for example ``time_ao.dat``.
+    format : "tempo" or "tempo2"
+        The format of the file; this also determines where in the global repository
+        to look for it.
+    bogus_last_correction : bool
+        Whether the file contains a far-future value to help other programs'
+        interpolation cope.
+    url_base : str or None
+        Override the usual location to look for global clock corrections
+        (mostly useful for testing)
+    clock_dir : str or pathlib.Path or None
+        If None or "PINT", use the above procedure; if "TEMPO" or "TEMPO2" use
+        those programs' customary locations; if a path, look there specifically.
+    valid_beyond_ends : bool
+        If False, emit a warning or exception when evaluating the clock file past
+        the ends of the data it contains.
+
+    Returns
+    -------
+    ClockFile
+    """
+    # Avoid import loop
+    from pint.observatory.clock_file import ClockFile, GlobalClockFile
+    from pint.observatory.global_clock_corrections import (
+        Index,
+        get_clock_correction_file,
+    )
+
+    if name == "":
+        raise ValueError("No filename supplied to find_clock_file")
+    if clock_dir is None or str(clock_dir).upper() == "PINT":
+        # Don't try loading it from a specific path
+        p = None
+    elif str(clock_dir).lower() == "tempo":
+        if "TEMPO" not in os.environ:
+            raise NoClockCorrections(
+                f"TEMPO environment variable not set but clock file {name} "
+                f"is supposed to be in the directory it points to"
+            )
+        p = Path(os.environ["TEMPO"]) / "clock" / name
+    elif str(clock_dir).lower() == "tempo2":
+        if "TEMPO2" not in os.environ:
+            raise NoClockCorrections(
+                f"TEMPO2 environment variable not set but clock file {name} "
+                f"is supposed to be in the directory it points to"
+            )
+        # Look in the TEMPO2 directory and nowhere else
+        p = Path(os.environ["TEMPO2"]) / "clock" / name
+    else:
+        # assume it's a path and look in there
+        p = Path(clock_dir) / name
+    if p is not None:
+        log.info("Loading clock file {p} from specified location")
+        return ClockFile.read(
+            p,
+            format=format,
+            bogus_last_correction=bogus_last_correction,
+            friendly_name=name,
+            valid_beyond_ends=valid_beyond_ends,
+        )
+
+    env_clock = None
+    global_clock = None
+    local_clock = None
+    if pint_clock_env_var in os.environ:
+        loc = Path(os.environ[pint_clock_env_var]) / name
+        if loc.exists():
+            # FIXME: more arguments?
+            env_clock = ClockFile.read(
+                loc,
+                format=format,
+                bogus_last_correction=bogus_last_correction,
+                friendly_name=name,
+                valid_beyond_ends=valid_beyond_ends,
+            )
+            # Could just return this but we want to emit
+            # a warning with an appropriate level of forcefulness
+    index = Index(url_base=url_base)
+    if name in index.files:
+        global_clock = GlobalClockFile(
+            name,
+            format=format,
+            bogus_last_correction=bogus_last_correction,
+            url_base=url_base,
+            valid_beyond_ends=valid_beyond_ends,
+        )
+    loc = Path(runtimefile(name))
+    if loc.exists():
+        local_clock = ClockFile.read(
+            loc,
+            format=format,
+            bogus_last_correction=bogus_last_correction,
+            friendly_name=name,
+            valid_beyond_ends=valid_beyond_ends,
+        )
+
+    if env_clock is not None:
+        if global_clock is not None:
+            # FIXME: if we're not going to use the values from the global clock
+            # we could have saved downloading and parsing it
+            log.warning(
+                f"Clock file from {env_clock.filename} overrides global clock "
+                f"file {name} because of {pint_clock_env_var}"
+            )
+        else:
+            log.info(f"Using clock file from {env_clock.filename}")
+        return env_clock
+    elif global_clock is not None:
+        log.info(f"Using global clock file for {name} with {bogus_last_correction=}")
+        return global_clock
+    elif local_clock is not None:
+        log.info(f"Using local clock file for {name}")
+        return local_clock
+    else:
+        # Null clock file should return warnings/exceptions if ever you try to
+        # look up a data point in it
+        raise NoClockCorrections(f"No clock file for {name}")

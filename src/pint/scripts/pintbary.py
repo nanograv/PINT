@@ -65,8 +65,25 @@ def main(argv=None):
         action="store_true",
         help="Use TT(BIPM) instead of TT(TAI)",
     )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        choices=pint.logging.levels,
+        default=pint.logging.script_level,
+        help="Logging level",
+        dest="loglevel",
+    )
+    parser.add_argument(
+        "-v", "--verbosity", default=0, action="count", help="Increase output verbosity"
+    )
+    parser.add_argument(
+        "-q", "--quiet", default=0, action="count", help="Decrease output verbosity"
+    )
 
     args = parser.parse_args(argv)
+    pint.logging.setup(
+        level=pint.logging.get_level(args.loglevel, args.verbosity, args.quiet)
+    )
 
     if args.format in ("mjd", "jd", "unix"):
         # These formats require conversion from string to long double first

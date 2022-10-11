@@ -20,7 +20,7 @@ class MCMCSampler:
     has been created.
 
     The general flow of using the MCMCSampler class with MCMCFitter is::
-        #Create the sampler object but don't intialize the internals
+        #Create the sampler object but don't initialize the internals
         sampler = MCMCSampler()
 
         #Create the fitter using the new sampler

@@ -2,7 +2,6 @@
 import copy
 import logging
 import os
-import re
 import unittest
 from io import StringIO
 import warnings
@@ -11,17 +10,15 @@ import astropy.units as u
 import numpy as np
 import pytest
 import test_derivative_utils as tdu
-from astropy.time import Time
 from pinttestdata import datadir
 from utils import verify_stand_alone_binary_parameter_updates
-from loguru import logger as log
 
 import pint.models.model_builder as mb
 from pint.models import get_model
 import pint.simulation
 import pint.toa as toa
 from pint.models.parameter import boolParameter
-from pint.models.timing_model import MissingParameter, TimingModelError
+from pint.models.timing_model import MissingParameter
 from pint.residuals import Residuals
 import pint.fitter
 
@@ -241,8 +238,8 @@ def test_ddk_ECL_ICRS():
     assert np.isclose(mECL_transformed.KOM.quantity, mECL.KOM.quantity)
 
 
-@pytest.mark.xfail(reason="model builder does not reject invalid parameters but should")
-def test_sini_from_par():
+def test_sini_raises():
+    # SINI is not an allowed parameter for DDK
     test_par_str = temp_par_str + "\n SINI  0.8     1  0.562"
     with pytest.raises(ValueError):
         mb.get_model(StringIO(test_par_str))

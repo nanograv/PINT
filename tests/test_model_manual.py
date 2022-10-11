@@ -2,7 +2,6 @@
 
 from glob import glob
 from os.path import basename, join
-from collections import defaultdict
 import pytest
 
 import astropy.units as u

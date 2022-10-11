@@ -1,6 +1,5 @@
 """Test model builder using variance input"""
 
-from collections import defaultdict
 import pytest
 import io
 from glob import glob
@@ -14,7 +13,6 @@ from pint.models.timing_model import (
     Component,
     AllComponents,
     AliasConflict,
-    UnknownBinaryModel,
 )
 from pint.models.model_builder import ModelBuilder, ComponentConflict, get_model
 from pint.models.parameter import floatParameter

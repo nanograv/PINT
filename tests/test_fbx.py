@@ -1,6 +1,5 @@
 """Various tests to assess the performance of the FBX model."""
 import os
-import unittest
 
 import astropy.units as u
 import numpy as np
@@ -8,11 +7,14 @@ import pytest
 import test_derivative_utils as tdu
 from pinttestdata import datadir
 
+from pint import fitter
+from pint.models import get_model_and_toas
 import pint.models.model_builder as mb
 import pint.toa as toa
 from pint.residuals import Residuals
 
 parfileJ0023 = os.path.join(datadir, "J0023+0923_NANOGrav_11yv0.gls.par")
+parJ0023ell1 = os.path.join(datadir, "J0023+0923_ell1_simple.par")
 timJ0023 = os.path.join(datadir, "J0023+0923_NANOGrav_11yv0.tim")
 
 
@@ -80,3 +82,15 @@ def test_derivative(modelJ0023, toasJ0023):
             assert np.nanmax(relative_diff) < tol, msg
         else:
             continue
+
+
+def test_summary_FB():
+    m, t = get_model_and_toas(
+        os.path.join(datadir, parJ0023ell1), os.path.join(datadir, timJ0023)
+    )
+    f = fitter.WLSFitter(toas=t, model=m)
+
+    # Ensure print_summary runs without an exception for an ELL1 model with FBX
+    f.print_summary()
+
+    assert "PB" in f.get_summary()

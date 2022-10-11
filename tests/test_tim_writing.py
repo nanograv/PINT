@@ -4,8 +4,8 @@ import re
 import astropy.units as u
 import numpy as np
 import pytest
-from hypothesis import given, settings
-from hypothesis.strategies import lists, tuples, one_of, from_regex, just
+from hypothesis import given
+from hypothesis.strategies import lists, tuples, from_regex
 from pint.toa import get_TOAs
 
 basic_tim_header = "FORMAT 1\n"
@@ -125,6 +125,7 @@ some_barycentered 999999.999 56403.000000000000000   1.000  @  -some argument -a
                     "-obs",
                     "-clkcorr",
                     "-to",  # FIXME: used in clock corrections? What does this do?
+                    "-pn",  # Gets converted to pulse_number so fails roundtrip
                 }
             ),
             from_regex(re.compile(r"[ \t]+", re.ASCII), fullmatch=True),

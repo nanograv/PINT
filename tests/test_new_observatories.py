@@ -1,14 +1,14 @@
-from io import StringIO
-
-import numpy as np
 import os
 import os.path
-import pytest
+from io import StringIO
 
-from pint.toa import get_TOAs
+import astropy.units as u
+import numpy as np
+from pinttestdata import datadir
+
 from pint.models import get_model
 from pint.observatory import get_observatory
-from pinttestdata import datadir
+from pint.toa import get_TOAs
 
 parfile = os.path.join(datadir, "NGC6440E.par")
 
@@ -18,16 +18,12 @@ fake 1400 58514.619895 1.0 mk -flag thing2
 """
 
 
-@pytest.mark.skipif(
-    "TEMPO2" not in os.environ,
-    reason="Needs TEMPO2 clock files, but TEMPO2 envariable not set",
-)
 def test_get_TOAs():
     tt = get_TOAs(StringIO(tim), ephem="DE421")
     # Check the site clock correction by itself
     site = get_observatory("meerkat", include_gps=False, include_bipm=False)
     clock_corr = site.clock_corrections(tt.table["mjd"][0])
-    assert np.isclose(clock_corr.value, 0.40802)  # from mk2utc.clk
+    assert np.isclose(clock_corr.to_value(u.us), 0.40802, atol=0.002)  # from mk2utc.clk
     # Now check barycentering
     mm = get_model(parfile)
     # The "correct" value is from PRESTO's bary command run like this:
