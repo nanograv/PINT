@@ -249,7 +249,7 @@ class PhaseJump(PhaseComponent):
 
         Parameters
         ----------
-        toa_flags: list object
+        toa_flags: list
             The TOA table which must be modified. In pintk (pulsar.py), this will
             be all_toas.table["flags"][selected]
 
