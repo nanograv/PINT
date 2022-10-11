@@ -8,6 +8,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Changed
 - index.txt is only checked at most once a day
 - Moved observatories to JSON file.  Changed way observatories are loaded/overloaded
+- Added a pintk helper function to delete jumped TOAs/remove existing jumps. Fixed indexing issue for single clicks.
 ### Added
 ### Fixed
 
