@@ -4,10 +4,6 @@ from io import StringIO
 from copy import deepcopy
 from io import StringIO
 
-# import matplotlib
-# matplotlib.use('TKAgg')
-import matplotlib.pyplot as plt
-import pytest
 import astropy.units as u
 
 import pint.models as tm
@@ -61,7 +57,6 @@ def test_fitter():
     print("chi^2 is initially %0.2f" % f.resids.chi2)
 
     # Plot initial residuals
-    xt = f.resids.toas.get_mjds().value
     yerr = t.get_errors() * 1e-6
 
     # Do a 4-parameter fit
@@ -74,7 +69,6 @@ def test_fitter():
     assert f.resids.dof == 57
 
     print("chi^2 is %0.2f after 4-param fit" % f.resids.chi2)
-    p2 = plt.errorbar(xt, f.resids.time_resids.value, yerr.value, fmt="go")
 
     # Make sure the summary printing works
     f.print_summary()
