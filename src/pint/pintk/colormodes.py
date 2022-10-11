@@ -3,8 +3,6 @@ import numpy as np
 import matplotlib
 import matplotlib.colors
 
-import pint.logging
-from loguru import logger as log
 
 # subset of other colors to allow users to distinguish between them
 named_colors = [

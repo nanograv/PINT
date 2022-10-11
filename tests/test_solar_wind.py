@@ -6,14 +6,9 @@ from io import StringIO
 import pytest
 import numpy as np
 from numpy.testing import assert_allclose
-import copy
-import sys
 
-import astropy.units as u
 from astropy.time import Time
 from pint.models import get_model
-from pint.fitter import WidebandTOAFitter
-from pint.toa import get_TOAs
 from pint.simulation import make_fake_toas_uniform
 from pinttestdata import datadir
 

@@ -1,6 +1,5 @@
 """Routines for reading and writing various formats of clock file."""
 
-import os
 import re
 from pathlib import Path
 from textwrap import dedent
@@ -10,9 +9,8 @@ import astropy.units as u
 import numpy as np
 from loguru import logger as log
 
-import pint.config
 from pint.observatory import ClockCorrectionOutOfRange, NoClockCorrections
-from pint.observatory.global_clock_corrections import Index, get_clock_correction_file
+from pint.observatory.global_clock_corrections import get_clock_correction_file
 from pint.pulsar_mjd import Time
 from pint.utils import compute_hash, lines_of, open_or_use
 

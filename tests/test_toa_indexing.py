@@ -2,8 +2,8 @@ from io import StringIO
 
 import numpy as np
 import pytest
-from hypothesis import given, assume
-from hypothesis.strategies import slices, integers, booleans, one_of, lists
+from hypothesis import given
+from hypothesis.strategies import slices, integers, one_of, lists
 from hypothesis.extra.numpy import arrays, array_shapes
 
 from pint.toa import get_TOAs

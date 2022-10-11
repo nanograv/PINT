@@ -6,7 +6,7 @@ import numpy
 from loguru import logger as log
 
 from pint.models.parameter import maskParameter
-from pint.models.timing_model import DelayComponent, MissingParameter, PhaseComponent
+from pint.models.timing_model import DelayComponent, PhaseComponent
 
 
 class DelayJump(DelayComponent):

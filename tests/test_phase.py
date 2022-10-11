@@ -4,7 +4,6 @@ import pytest
 import numpy as np
 import astropy.units as u
 from pint.phase import Phase
-import math
 
 # modified from @mhvk's test_phase_class.py
 def assert_equal(first, second):

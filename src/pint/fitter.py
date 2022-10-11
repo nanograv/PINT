@@ -57,7 +57,6 @@ To automatically select a fitter based on the properties of the data and model::
     >>> fitter = Fitter.auto(toas, model)
 
 """
-import collections
 import copy
 from warnings import warn
 

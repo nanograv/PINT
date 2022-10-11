@@ -2,14 +2,10 @@
 import os
 import unittest
 
-import astropy.units as u
-import numpy as np
-from astropy.tests.helper import assert_quantity_allclose
-
 import pint.models.model_builder as mb
 import pint.toa as toa
 from pint.residuals import Residuals
-from pinttestdata import datadir, testdir
+from pinttestdata import datadir
 
 
 class Test_CHIME_data(unittest.TestCase):

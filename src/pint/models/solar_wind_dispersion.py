@@ -5,10 +5,8 @@ import astropy.constants as const
 import astropy.units as u
 import numpy as np
 
-import pint.utils as ut
-from pint.models.dispersion_model import Dispersion, DMconst
+from pint.models.dispersion_model import Dispersion
 from pint.models.parameter import floatParameter
-from pint.toa_select import TOASelect
 
 
 class SolarWindDispersion(Dispersion):
