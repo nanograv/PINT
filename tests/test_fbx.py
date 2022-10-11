@@ -92,3 +92,5 @@ def test_summary_FB():
 
     # Ensure print_summary runs without an exception for an ELL1 model with FBX
     f.print_summary()
+
+    assert "PB" in f.get_summary()
