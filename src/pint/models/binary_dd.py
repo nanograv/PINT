@@ -2,7 +2,6 @@
 from pint.models.parameter import floatParameter
 from pint.models.pulsar_binary import PulsarBinary
 from pint.models.stand_alone_psr_binaries.DD_model import DDmodel
-from pint.models.timing_model import MissingParameter
 
 
 class BinaryDD(PulsarBinary):

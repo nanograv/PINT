@@ -4,10 +4,6 @@ from io import StringIO
 from copy import deepcopy
 from io import StringIO
 
-# import matplotlib
-# matplotlib.use('TKAgg')
-import matplotlib.pyplot as plt
-import pytest
 import astropy.units as u
 
 import pint.models as tm
@@ -18,7 +14,6 @@ from pint import ls
 from pint.models import get_model, get_model_and_toas
 
 
-@pytest.mark.xfail
 def test_fitter_basic():
     m = tm.get_model(os.path.join(datadir, "NGC6440E.par"))
     m.fit_params = ["F0", "F1"]
@@ -31,19 +26,16 @@ def test_fitter_basic():
 
     f_1 = fitter.WLSFitter(toas=t, model=m)
     f_1.fit_toas()
-    assert abs(f_1.model.F0 - m.F0) < dF0
+    assert abs(f_1.model.F0.quantity - m.F0.quantity) < dF0
 
     m_2 = deepcopy(m)
     m_2.F0.quantity += 2 * dF0
-    assert abs(m_2.F0 - m.F0) > dF0
+    assert abs(m_2.F0.quantity - m.F0.quantity) > dF0
     f_2 = fitter.WLSFitter(toas=t, model=m_2)
     f_2.fit_toas()
-    assert abs(f_2.model.F0 - m.F0) < dF0
+    assert abs(f_2.model.F0.quantity - m.F0.quantity) < dF0
 
 
-@pytest.mark.skipif(
-    "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
-)
 def test_fitter():
     # Get model
 
@@ -65,16 +57,7 @@ def test_fitter():
     print("chi^2 is initially %0.2f" % f.resids.chi2)
 
     # Plot initial residuals
-    xt = f.resids.toas.get_mjds().value
     yerr = t.get_errors() * 1e-6
-    plt.close()
-    p1 = plt.errorbar(
-        xt,
-        f.resids.toas.get_mjds().value,
-        f.resids.time_resids.value,
-        yerr.value,
-        fmt="bo",
-    )
 
     # Do a 4-parameter fit
     f.model.free_params = ("F0", "F1", "RAJ", "DECJ")
@@ -86,7 +69,6 @@ def test_fitter():
     assert f.resids.dof == 57
 
     print("chi^2 is %0.2f after 4-param fit" % f.resids.chi2)
-    p2 = plt.errorbar(xt, f.resids.time_resids.value, yerr.value, fmt="go")
 
     # Make sure the summary printing works
     f.print_summary()
@@ -98,7 +80,6 @@ def test_fitter():
     f.model.F1.value = 1.1 * f.model.F1.value
     f.fit_toas()
     print("chi^2 is %0.2f after perturbing F1" % f.resids.chi2)
-    p3 = plt.errorbar(xt, f.resids.time_resids.value, yerr.value, fmt="ms")
 
     f.model.free_params = ["F1"]
     f.fit_toas()
@@ -106,39 +87,6 @@ def test_fitter():
         'chi^2 is %0.2f after fitting just F1 with default method="Powell"'
         % f.resids.chi2
     )
-    p4 = plt.errorbar(xt, f.resids.time_resids.value, yerr.value, fmt="k^")
-
-    # Try a different method. This works, apparently.
-    # NOTE: Disable this part since the interface has changed.
-    # f.fit_toas(method='Nelder-Mead')
-    # print('chi^2 is %0.2f after fitting just F1 with method="Nelder-Mead"' % f.resids.chi2)
-    # p5=plt.errorbar(xt,f.resids.time_resids.value,yerr,fmt='rs');
-    #
-    # # Perturb F1 again
-    # f.model.F1.value=1.1*f.model.F1.value
-    # f.fit_toas()
-    # print('chi^2 is %0.2f after perturbing F1' % f.resids.chi2)
-    #
-    # # This method does not converge in 20 iterations when fitting four params
-    # f.set_fitparams('F0','F1','RA','DEC')
-    # f.fit_toas(method='Nelder-Mead')
-    # print(f.fitresult)
-    #
-    # # Powell method does claim to converge, but clearly does not actually find
-    # # global minimum.
-    # f.fit_toas()
-    # p6=plt.errorbar(xt,f.resids.time_resids.value,yerr,fmt='g^');
-    # print(f.fitresult)
-    # print('chi^2 is %0.2f after fitting F0,F1,RA,DEC with method="Powell"' % f.resids.chi2)
-    #
-    # plt.grid();
-    # plt.legend([p1,p2,p3,p4,p5,p6],['Initial','4-param','Perturb F1',
-    #                                 'Fit F1 with method="Powell"',
-    #                                 'Fit F1 with method="Nelder-Mead"',
-    #                                 'Fit F0,F1,RA,DEC with method="Powell"'],
-    #            loc=3)
-    # #plt.show()
-    # plt.savefig(os.path.join(datadir,"test_fitter_plot.pdf"))
 
 
 def test_ftest_nb():

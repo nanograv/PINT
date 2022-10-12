@@ -1,6 +1,5 @@
 """Solar system ephemeris downloading and setting support."""
 import os
-from urllib.parse import urljoin
 
 import astropy.coordinates
 import astropy.units as u

@@ -3,8 +3,6 @@
 
 import astropy.units as u
 import numpy as np
-from astropy.time import TimeDelta
-import sys
 
 import pint.logging
 from loguru import logger as log
@@ -13,7 +11,6 @@ pint.logging.setup(level=pint.logging.script_level)
 
 import pint.fitter
 import pint.models
-import pint.toa as toa
 import pint.simulation
 import pint.residuals
 

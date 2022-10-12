@@ -11,11 +11,6 @@ These docstrings contain reference documentation; for tutorials, explanations,
 or how-to documentation, please see other sections of the online documentation.
 """
 
-import os
-import re
-import sys
-import warnings
-
 import astropy
 import astropy.constants as c
 import astropy.time as time

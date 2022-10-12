@@ -6,7 +6,6 @@ import os
 import sys
 
 from astropy.time import Time
-from astropy.table import vstack
 import astropy.units as u
 import matplotlib as mpl
 import numpy as np
