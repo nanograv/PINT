@@ -5,9 +5,8 @@ All times are in days, distances in light-seconds, and masses in solar masses.
 import collections
 
 import numpy as np
-import scipy.linalg
 from scipy.linalg import block_diag
-from scipy.optimize import fsolve, newton
+from scipy.optimize import newton
 
 # FIXME: can I import this from somewhere?
 G = 36768.59290949113  # Based on standard gravitational parameter

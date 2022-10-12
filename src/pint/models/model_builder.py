@@ -1,13 +1,8 @@
-import os
 import copy
 import warnings
 from io import StringIO
 from collections import Counter, defaultdict
 from pathlib import Path
-
-from astropy import log
-from astropy.utils.decorators import lazyproperty
-from loguru import logger as log
 
 from pint.models.parameter import maskParameter
 from pint.models.timing_model import (

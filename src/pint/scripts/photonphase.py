@@ -2,7 +2,6 @@
 import sys
 
 import astropy.io.fits as pyfits
-import astropy.units as u
 import numpy as np
 
 import pint.logging
@@ -13,12 +12,11 @@ pint.logging.setup(level=pint.logging.script_level)
 import pint.models
 import pint.residuals
 import pint.toa as toa
-from pint.event_toas import load_event_TOAs, load_fits_TOAs
+from pint.event_toas import load_event_TOAs
 from pint.eventstats import h2sig, hm
 from pint.fits_utils import read_fits_event_mjds
 from pint.observatory.satellite_obs import get_satellite_observatory
 from pint.plot_utils import phaseogram_binned
-from pint.pulsar_mjd import Time
 import pint.polycos as polycos
 
 __all__ = ["main"]

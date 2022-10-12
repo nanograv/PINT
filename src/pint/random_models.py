@@ -6,7 +6,6 @@ from copy import deepcopy
 import numpy as np
 from loguru import logger as log
 
-import pint.toa as toa
 import pint.simulation as simulation
 from pint.phase import Phase
 
