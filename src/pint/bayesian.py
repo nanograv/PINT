@@ -41,18 +41,10 @@ class BayesianTiming:
     3. Currently, only uniform and normal distributions are supported in prior_info. More
        general priors should be set directly in the TimingModel object before creating the
        BayesianTiming object. Here is an example prior_info object:
-            prior_info = {
-                "F0" : {
-                    "distr" : "normal",
-                    "mu"    : 1,
-                    "sigma" : 0.00001
-                },
-                "EFAC1" : {
-                    "distr" : "uniform",
-                    "pmin"  : 0.5,
-                    "pmax"  : 2.0
-                }
-            }
+       >>> prior_info = {
+       >>>   "F0" : {"distr" : "normal", "mu"    : 1, "sigma" : 0.00001},
+       >>>   "EFAC1" : {"distr" : "uniform", "pmin"  : 0.5, "pmax"  : 2.0}
+       >>> }
 
     4. Only narow-band TOAs are supported at present.
     """
