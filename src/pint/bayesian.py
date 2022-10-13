@@ -73,6 +73,10 @@ class BayesianTiming:
                 elif distr == "normal":
                     mu, sigma = prior_info[par]["mu"], prior_info[par]["sigma"]
                     getattr(self.model, par).prior = Prior(norm(mu, sigma))
+                else:
+                    raise NotImplementedError(
+                        "Only uniform and normal distributions are supported in prior_info."
+                    )
 
         self._validate_priors()
 
