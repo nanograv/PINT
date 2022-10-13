@@ -17,7 +17,8 @@ class BayesianTiming:
     Parameters
     ----------
     model : :class:`pint.models.timing_model.TimingModel`
-        The best-fit values stored in this object are not used.
+        Contains the input timing model. The best-fit values stored in this object
+        are not used.
     toas : :class:`pint.toa.TOAs`
         Contains the input toas.
     use_pulse_numbers : bool, optional
@@ -30,29 +31,28 @@ class BayesianTiming:
 
     Notes
     -----
-    > The `prior` attribute of each free parameter in the `model` object should
-      be set to an instance of :class:`pint.models.priors.Prior`.
+    1. The `prior` attribute of each free parameter in the `model` object should be set to
+       an instance of :class:`pint.models.priors.Prior`.
 
-    > The parameters of BayesianTiming.model will change for every likelihood function
-      call. These parameters in general will not be the best-fit values. Hence, it is NOT
-      a good idea to save it as a par file.
+    2. The parameters of BayesianTiming.model will change for every likelihood function call.
+       These parameters in general will not be the best-fit values. Hence, it is NOT a good
+       idea to save it as a par file.
 
-    > Currently, only uniform and normal distributions are supported in prior_info. More
-      general priors should be set directly in the TimingModel object before creating the
-      BayesianTiming object.
-      Here is an example prior_info object:
-        prior_info = {
-            "F0" : {
-                "distr" : "normal",
-                "mu"    : 1,
-                "sigma" : 0.00001
-            },
-            "EFAC1" : {
-                "distr" : "uniform",
-                "pmin"  : 0.5,
-                "pmax"  : 2.0
+    3. Currently, only uniform and normal distributions are supported in prior_info. More
+       general priors should be set directly in the TimingModel object before creating the
+       BayesianTiming object.Here is an example prior_info object:
+            prior_info = {
+                "F0" : {
+                    "distr" : "normal",
+                    "mu"    : 1,
+                    "sigma" : 0.00001
+                },
+                "EFAC1" : {
+                    "distr" : "uniform",
+                    "pmin"  : 0.5,
+                    "pmax"  : 2.0
+                }
             }
-        }
     """
 
     def __init__(self, model, toas, use_pulse_numbers=False, prior_info=None):
