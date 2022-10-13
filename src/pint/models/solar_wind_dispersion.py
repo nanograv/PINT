@@ -8,10 +8,10 @@ import astropy.time
 import numpy as np
 import scipy.special
 
-from pint.models.dispersion_model import Dispersion, DMconst
+from pint.models.dispersion_model import Dispersion
 from pint.models.parameter import floatParameter, prefixParameter
 import pint.utils
-from pint.models.timing_model import DelayComponent, MissingParameter, MissingTOAs
+from pint.models.timing_model import MissingTOAs
 from pint.toa_select import TOASelect
 
 
