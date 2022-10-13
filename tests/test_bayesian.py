@@ -106,3 +106,24 @@ def test_bayesian_timing_funcs(data_NGC6440E_efac):
 
     lnp = bt.lnposterior(test_params)
     assert np.isfinite(lnp) and np.isclose(lnp, lnpr + lnl)
+
+
+def test_prior_dict(data_NGC6440E_efac):
+    model, toas = data_NGC6440E_efac
+
+    prior_info = dict()
+    for par in model.free_params:
+        param = getattr(model, par)
+        param_min = float(param.value - 10 * param.uncertainty_value)
+        param_max = float(param.value + 10 * param.uncertainty_value)
+        prior_info[par] = {"distr": "uniform", "pmin": param_min, "pmax": param_max}
+    prior_info["EFAC1"] = {"distr": "normal", "mu": 1, "sigma": 0.1}
+
+    bt = BayesianTiming(model, toas, use_pulse_numbers=True, prior_info=prior_info)
+
+    test_cube = 0.5 * np.ones(bt.nparams)
+    test_params = bt.prior_transform(test_cube)
+    assert np.all(np.isfinite(test_params))
+
+    lnpr = bt.lnprior(test_params)
+    assert np.isfinite(lnpr)
