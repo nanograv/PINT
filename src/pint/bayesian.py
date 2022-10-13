@@ -53,6 +53,8 @@ class BayesianTiming:
                     "pmax"  : 2.0
                 }
             }
+
+    4. Only narow-band TOAs are supported at present.
     """
 
     def __init__(self, model, toas, use_pulse_numbers=False, prior_info=None):
