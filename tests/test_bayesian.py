@@ -45,6 +45,15 @@ def data_NGC6440E_efac():
     return model, toas
 
 
+@pytest.fixture()
+def data_J0740p6620_wb():
+    parfile = examplefile("J0740+6620.FCP+21.wb.DMX3.0.par")
+    timfile = examplefile("J0740+6620.FCP+21.wb.tim")
+    model, toas = get_model_and_toas(parfile, timfile)
+    set_dummy_priors(model)
+    return model, toas
+
+
 def test_use_pulse_numbers(data_NGC6440E):
     model, toas = data_NGC6440E
     toas.compute_pulse_numbers(model)
@@ -127,3 +136,9 @@ def test_prior_dict(data_NGC6440E_efac):
 
     lnpr = bt.lnprior(test_params)
     assert np.isfinite(lnpr)
+
+
+def test_wideband_exception(data_J0740p6620_wb):
+    model, toas = data_J0740p6620_wb
+    with pytest.raises(NotImplementedError):
+        bt = BayesianTiming(model, toas)
