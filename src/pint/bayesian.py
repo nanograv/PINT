@@ -1,7 +1,8 @@
+"""Bayesian interface providing the pulsar timing likelihood, prior and posterior functions."""
+
 from copy import deepcopy
 
 import numpy as np
-from scipy.linalg import cho_factor, cho_solve
 from scipy.stats import norm, uniform
 
 from pint.models.priors import Prior, UniformUnboundedRV
