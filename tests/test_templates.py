@@ -2,6 +2,7 @@ import logging
 import pytest
 
 import numpy as np
+from scipy.special import i0,i1
 
 from pinttestdata import datadir
 from pint.templates import lcfitters, lcprimitives, lceprimitives, lcnorm, lcenorm, lctemplate
@@ -32,7 +33,6 @@ def test_prim_gauss_definition():
     expected_val = gauss(0.48, 0.5, 0.01)
     assert abs(g1(0.48) - expected_val) < 1e-6
 
-
 def test_prim_gauss_wrapping():
 
     # default is to wrap a function by 10 times; make a fat pulse here and
@@ -45,7 +45,6 @@ def test_prim_gauss_wrapping():
         expected_val += gauss(0.5 + i, 0.5, 0.5)
         expected_val += gauss(0.5 - i, 0.5, 0.5)
     assert abs(g1(0.5) - expected_val) < 1e-6
-
 
 def test_template_basic_functionality():
     """Make sure objects adequately implement mathematical intent."""
@@ -95,6 +94,16 @@ def test_template_basic_functionality():
     ## the optimal display point should roughly undo the above rotation
     assert(lct.get_display_point()==0.2)
 
+    # check wrap at 0/1
+    lct.rotate(-0.4)
+    assert(lct.primitives[0].get_location()==0.0)
+    assert(lct.primitives[1].get_location()==0.98)
+    assert(lct(0)==lct(1))
+
+    lct = lctemplate.get_gauss2()
+    assert(lct(0)>0)
+
+def test_template_integration():
     # check integration / cdf
     lct = lctemplate.get_gauss2()
     assert((lct.get_display_point()-0.15)<1e-10)
@@ -107,7 +116,50 @@ def test_template_basic_functionality():
     assert(lct.cdf(1)==1)
     assert(lct.cdf(0)==0)
 
+def test_template_copy():
+    lct = lctemplate.get_gauss2()
+    lct.set_cache_properties(ncache=347,interpolation=0)
+    assert(lct.ncache==347)
+    assert(lct.interpolation==0)
+    lct_copy = lct.copy()
+    assert(lct_copy.ncache==lct.ncache)
+    assert(lct(0.47,use_cache=True)==lct_copy(0.47,use_cache=True))
+    lct = lctemplate.get_gauss2()
+    assert(lct.ncache!=lct_copy.ncache)
+    # should differ because of interpolation
+    assert(lct(0.47,use_cache=True)!=lct_copy(0.47,use_cache=True)) 
 
+def test_template_caching():
+    # default is 1000 bins with linear interpolation
+    lct = lctemplate.get_gauss2(width1=0.03,width2=0.05,x1=0.1,x2=0.5) # default bin edges are at 0, 0.001, ...
+    assert(abs(lct.phbins[470]-0.470)<1e-15)
+    assert(abs(lct(0.470,use_cache=True)-lct(0.470))<3e-15)
+    assert(abs(lct(0.4705,use_cache=True)-0.5*(lct(0.470)+lct(0.471)))<3e-15)
+    assert(abs(lct(0.471,use_cache=True)-lct(0.471))<3e-15)
+    assert(lct(0,use_cache=True)==lct(1,use_cache=True))
+    assert(abs(lct(0.471,use_cache=True)-lct(0.471))<3e-15)
+    lct.set_cache_properties(ncache=100,interpolation=0)
+    assert(lct(0,use_cache=True)==lct(1,use_cache=True))
+    assert(abs(lct(0.004,use_cache=True)-lct(0))<1e-15)
+    assert(abs(lct(0.008,use_cache=True)-lct(0.01))<1e-15)
+    assert(abs(lct(0.005,use_cache=True)-lct(0.01))<1e-15)
+    assert(abs(lct(0.00499,use_cache=True)-lct(0))<1e-15)
+
+    # try an energy-dependent version
+    lct = lctemplate.get_gauss2(width1=0.05,width2=0.05,x1=0.2,x2=0.5) # default bin edges are at 0, 0.001, ...
+    assert(lct(0.1,log10_ens=3) == lct(0.1,log10_ens=2))
+    lct.add_energy_dependence(0,slope_free=False)
+    lct[0].slope[1] = 0.1
+    assert(abs(lct(0.1,log10_ens=2)-lct(0.2,log10_ens=3))<1e-7)
+    assert(abs(lct(0.1,log10_ens=2)-lct(0.1,log10_ens=3))>1)
+    lct.set_cache_properties(ncache=100,ebins=[2,3,4])
+    assert(lct.ebins is not None)
+    assert(lct.ecens is not None)
+    assert(lct(0.1,log10_ens=2.4,use_cache=True)==lct(0.1,log10_ens=2.5))
+    assert(lct(0.1,log10_ens=2.8,use_cache=True)==lct(0.1,log10_ens=2.5))
+    assert(lct(0.1,log10_ens=2.0,use_cache=True)==lct(0.1,log10_ens=2.5))
+    assert(lct(0.1,log10_ens=3.2,use_cache=True)==lct(0.1,log10_ens=3.5))
+    assert(np.all(lct([0.1,0.2],log10_ens=[2.4,3.2],use_cache=True)==lct([0.1,0.2],log10_ens=[2.5,3.5])))
 
 def test_component_manipulation():
 
@@ -185,9 +237,11 @@ def test_energy_dependence():
     lct0[-1].slope_free[0] = False
 
     lcg = lceprimitives.LCEGaussian(p=[0.03,0.5])
-    lcg.slope[:] = [0.02,0.1]
-    assert(not np.any(lcg.slope_free)) # default is False
-    lcg.slope_free[:] = True
+    assert(np.all(lcg.slope==0))
+    assert(np.all(lcg.slope_free==False))
+    lcg = lceprimitives.LCEGaussian(p=[0.03,0.5],slope=[0.02,0.1],slope_free=[True,True])
+    assert(np.all(lcg.slope==np.asarray([0.02,0.1])))
+    assert(np.all(lcg.slope_free==True))
     lcg2 = lcprimitives.LCGaussian(p=[0.04,0.8])
     lcn = lcenorm.ENormAngles([0.4,0.35])
     assert(not np.any(lcn.slope_free)) # default is False
@@ -211,8 +265,6 @@ def test_energy_dependence():
     lcf.fit(unbinned=True,use_gradient=True)
     logl2 = lcf.loglikelihood(lct.get_parameters())
     assert(abs(abs(logl2-logl1)-5.15)<0.05)
-
-
 
 def test_template_gradient():
     """ Verify analytic gradient computation with numerical evaluation."""
@@ -279,6 +331,7 @@ def test_simple_fit_unbinned():
     # load in simulated phases
     ph = np.loadtxt(datadir / "template_phases.asc")
     lcf = lcfitters.LCFitter(lct, ph)
+    assert(np.all(lcf.weights==1))
     lcf.fit(unbinned=True, estimate_errors=True, quiet=True)
     expected_val = r"""
 Log Likelihood for fit: 1091.04
@@ -313,9 +366,10 @@ def test_simple_fit_binned():
     # load in simulated phases
     ph = np.loadtxt(datadir / "template_phases.asc")
     lcf = lcfitters.LCFitter(lct, ph, binned_bins=100)
+    assert(np.all(lcf.weights==1))
     lcf.fit(unbinned=False, estimate_errors=True, quiet=True)
     expected_val = r"""
-Log Likelihood for fit: 1080.31
+Log Likelihood for fit: 1104.39
 
 Mixture Amplitudes
 ------------------
@@ -325,12 +379,12 @@ DC : 0.0000 +\- 0.0000
 
 P1 -- Gaussian
 ------------------
-Width   : 0.0106 +\- 0.0004
+Width   : 0.0099 +\- 0.0004
 Location: 0.1007 +\- 0.0006
 
 P2 -- Gaussian
 ------------------
-Width   : 0.0213 +\- 0.0010
+Width   : 0.0209 +\- 0.0010
 Location: 0.5493 +\- 0.0015
 
 delta   : 0.1007 +\- 0.0006
@@ -338,3 +392,29 @@ Delta   : 0.4486 +\- 0.0016
 """
 
     assert expected_val.strip() == str(lcf).strip()
+
+def test_vonmises():
+    p1 = lcprimitives.LCVonMises(p=[0.05,0.1])
+    p2 = lcprimitives.LCVonMises(p=[0.05,0.4])
+    def vm(x,p):
+        width,loc = p
+        x = np.asarray(x)
+        z = (2*np.pi)*(x-loc)
+        scale = 1./width
+        return np.exp(np.cos(z)*scale) * (1./i0(scale))
+    en = np.random.rand(1000)*2 + 2 # 2-4 range
+    ph = np.random.rand(1000)
+    assert(np.allclose(p1(ph,log10_ens=en),vm(ph,[0.05,0.1])))
+
+    lct = lctemplate.LCTemplate([p1,p2],[0.4,0.6])
+    assert(lct.check_gradient(quiet=True,seed=0))
+    assert(lct.check_derivative())
+
+    p1 = lceprimitives.LCEVonMises(p=[0.05,0.1],slope=[0,0.1])
+    p2 = lceprimitives.LCEVonMises(p=[0.05,0.4],slope=[0.05,0.05])
+    assert(np.all(p2.slope==0.05))
+    assert(np.allclose(p1(ph,log10_ens=en),vm(ph,[0.5,0.1+(en-3)*0.1])))
+    lct = lctemplate.LCTemplate([p1,p2],[0.4,0.6])
+    assert(lct.is_energy_dependent())
+    assert(lct.check_gradient(quiet=True,seed=0))
+    assert(lct.check_derivative())

@@ -19,7 +19,7 @@ import numpy as np
 from scipy.integrate import quad, simps
 from scipy.interpolate import interp1d
 from scipy.special import erf, i0, i1
-from scipy.stats import cauchy, norm
+from scipy.stats import cauchy, norm, vonmises
 
 ROOT2PI = (2 * np.pi) ** 0.5
 R2DI = (2 / np.pi) ** 0.5
@@ -30,6 +30,8 @@ MAXWRAPS = 15
 MINWRAPS = 3
 WRAPEPS = 1e-8
 
+def isvector(x):
+    return len(np.asarray(x).shape)>0
 
 def two_comp_mc(n, w1, w2, loc, func):
     """Generate MC photons from a two-sided distribution.
@@ -58,7 +60,6 @@ def two_comp_mc(n, w1, w2, loc, func):
     r2 = func(loc=0, scale=w2, size=n - n1)
     r2 = loc + np.where(r2 > 0, r2, -r2)
     return np.mod(np.append(r1, r2), 1)
-
 
 def approx_gradient(func, phases, log10_ens=None, eps=1e-6):
     """Return a numerical gradient for LCPrimitive and LCTemplate objects.
@@ -186,11 +187,13 @@ class LCPrimitive:
         Here, init is called and certain guaranteed default members
         are established."""
         self.init()
+        self._einit()
+        self.errors = np.zeros_like(self.p)
+        self.parse_kwargs(kwargs)
+        if not hasattr(self,'free'):
+            self.free = np.asarray([True] * len(self.p))
         if not hasattr(self, "bounds"):
             self.bounds = self._default_bounds()  # default
-        self.errors = np.zeros_like(self.p)
-        self.free = np.asarray([True] * len(self.p))
-        self.parse_kwargs(kwargs)
         self._asarrays()
         (
             self.gauss_prior_loc,
@@ -199,9 +202,12 @@ class LCPrimitive:
         ) = self._default_priors()
         self.shift_mode = False
 
+    def _einit(self):
+        pass
+
     def parse_kwargs(self,kwargs):
         # acceptable keyword arguments, can be overriden by children
-        recognized_kwargs = ['p']
+        recognized_kwargs = ['p','free']
         for key in kwargs.keys():
             if key not in recognized_kwargs:
                 raise ValueError('kwarg %s not recognized'%key)
@@ -391,22 +397,29 @@ class LCPrimitive:
         """Default is accept/reject."""
         if n < 1:
             return 0
-        if hasattr(log10_ens,'__len__'):
+        if isvector(log10_ens):
             assert(n==len(log10_ens))
-        M = self(self.p[-1],log10_ens=log10_ens) # TODO -- this needs test
+        edep_ps = self._make_p(log10_ens)
+        locs = edep_ps[-1] # this should be the peak at each energy
+        M = self(locs,log10_ens=log10_ens) # this is the (edep) maximum
         rvals = np.empty(n)
-        position = 0
         rfunc = np.random.rand
+        mask = np.ones(n,dtype=bool)
+        indices = np.arange(n)
         while True:
-            cand_phases = rfunc(n)
-            cand_phases = cand_phases[rfunc(n) < self(cand_phases,log10_ens=log10_ens) / M]
-            ncands = len(cand_phases)
-            if ncands == 0:
-                continue
-            rvals[position : position + ncands] = cand_phases[: n - position]
-            position += ncands
-            if position >= n:
+            N = mask.sum()
+            if N == 0:
                 break
+            cand_phases = rfunc(N)
+            if isvector(M):
+                accept = rfunc(N) < self(cand_phases,log10_ens=log10_ens[mask])/M[mask]
+            else:
+                if isvector(log10_ens):
+                    accept = rfunc(N) < self(cand_phases,log10_ens=log10_ens[mask])/M
+                else:
+                    accept = rfunc(N) < self(cand_phases,log10_ens=log10_ens)/M
+            rvals[indices[mask][accept]] = cand_phases[accept]
+            mask[indices[mask][accept]] = False
         return rvals
 
     def __str__(self):
@@ -736,7 +749,8 @@ class LCGaussian(LCWrappedFunction):
         return 0.5 * (erf(z2 / ROOT2) - erf(z1 / ROOT2))
 
     def random(self, n, log10_ens=3):
-        if hasattr(log10_ens,'__len__') and len(log10_ens) != n:
+
+        if isvector(log10_ens) and len(log10_ens) != n:
             raise ValueError(
                     "Provided log10_ens vector does not match requested n.")
         e, width, x0 = self._make_p(log10_ens)
@@ -1004,20 +1018,39 @@ class LCVonMises(LCPrimitive):
     def __call__(self, phases, log10_ens=3):
         e, width, loc = self._make_p(log10_ens)
         z = TWOPI * (phases - loc)
-        return np.exp(np.cos(z) / width) / i0(1.0 / width)
+        kappa = 1./width
+        return np.exp(np.cos(z) * kappa) / i0(kappa)
 
     def gradient(self, phases, log10_ens=3, free=False):
         e, width, loc = self._make_p(log10_ens)
-        my_i0 = i0(1.0 / width)
-        my_i1 = i1(1.0 / width)
+        kappa = 1.0/width
+        I0 = i0(kappa)
+        I1 = i1(kappa)
         z = TWOPI * (phases - loc)
         cz = np.cos(z)
         sz = np.sin(z)
-        f = (np.exp(cz) / width) / my_i0
-        return np.asarray(
-            [-cz / width**2 * f, TWOPI * (sz / width + my_i1 / my_i0) * f]
-        )
+        f = np.exp(cz * kappa) / I0
+        q = f*kappa
+        rvals = np.empty([2,len(phases)])
+        rvals[0] = f*kappa**2*(I1/I0-cz)
+        rvals[1] = f*(TWOPI*kappa)*sz
+        return rvals
 
+    def derivative(self, phases, log10_ens=3, order=1):
+        # NB -- same as the (-ve) loc gradient
+        e, width, loc = self._make_p(log10_ens)
+        z = TWOPI * (phases - loc)
+        kappa = 1./width
+        f = np.exp(np.cos(z) * kappa) / i0(kappa)
+        return f*((-TWOPI)*kappa)*np.sin(z)
+
+    def random(self, n, log10_ens=3):
+
+        if isvector(log10_ens) and len(log10_ens) != n:
+            raise ValueError(
+                    "Provided log10_ens vector does not match requested n.")
+        e, width, x0 = self._make_p(log10_ens)
+        return vonmises.rvs(loc=x0*TWOPI, kappa=1./width, size=n)/TWOPI
 
 class LCKing(LCWrappedFunction):
     """Represent a (wrapped) King function peak.
@@ -1370,7 +1403,7 @@ class LCKernelDensity(LCPrimitive):
         # crude nearest neighbor approximation
         x = self.interpolator.x
         y = self.interpolator.y
-        mask = (x >= x0) & (x <= x1)
+        mask = (x >= x1) & (x <= x2)
         return simps(y[mask], x=x[mask])
         # return self.interpolator.y[mask].sum()/len(mask)
 

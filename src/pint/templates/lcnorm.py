@@ -11,6 +11,8 @@ import numpy as np
 # can some of the code be reduced with inheritance here?
 # TODO -- error propagation to norms
 
+def isvector(x):
+    return len(np.asarray(x).shape)>0
 
 class NormAngles:
     """Keep track of N angles (0 to pi/2) representing the coordinates inside a unit radius N-ball.
@@ -91,7 +93,7 @@ class NormAngles:
         return self.dim
 
     def _make_p(self,log10_ens=3):
-        if hasattr(log10_ens,'__len__'):
+        if isvector(log10_ens):
             p = np.empty([self.dim,len(log10_ens)])
             for i in range(self.dim):
                 p[i] = self.p[i]
@@ -196,7 +198,13 @@ class NormAngles:
             norms[i - 1] = m * np.cos(p[i])
             m *= np.sin(p[i])
         norms[self.dim - 1] = m
-        return norms**2
+        norms = norms**2
+        q = norms.sum(axis=0)
+        if np.any(q > 1):
+            if len(norms.shape)==2:
+                return norms*(1./q)[None,:]
+            return norms*(1./q)
+        return norms
 
     def gradient(self, log10_ens=3, free=False):
         """Return a matrix giving the value of the partial derivative

@@ -4,6 +4,9 @@ import numpy as np
 # can some of the code be reduced with inheritance here?
 # TODO -- error propagation to norms
 
+def isvector(x):
+    return len(np.asarray(x).shape)>0
+
 class ENormAngles(NormAngles):
 
     def __init__(self,norms,slope=None,slope_free=None,**kwargs):
@@ -97,7 +100,7 @@ class ENormAngles(NormAngles):
         e,p = super()._make_p(log10_ens)
         de = np.asarray(log10_ens) - 3
         bounds = self.get_bounds()
-        if hasattr(log10_ens,'__len__'):
+        if isvector(log10_ens):
             for i in range(self.dim):
                 np.clip(p[i] + self.slope[i]*de,bounds[i][0],bounds[i][1],out=p[i])
         else:

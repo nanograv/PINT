@@ -1,9 +1,57 @@
 from pint.templates.lcprimitives import *
 
+def isvector(x):
+    return len(np.asarray(x).shape)>0
+
+def edep_gradient(self,grad_func,phases,log10_ens=3,free=False):
+    """ Return the analytic gradient of a general LCEPrimitive.
+
+    The evaluation is similar to the non-energy dependent version, and
+    since this is a linear model, application of the chain rule simply
+    returns the gradient at the indicated parameters, but weighted by
+    the difference in (log) energy.
+
+    However, there is one complication.  Because of the bounds enforced
+    by "_make_p", the gradient for the slope parameters vanishese at
+    some energies when the bound has saturated.  These entries should be
+    zeroed.
+    """
+    t = self._make_p(log10_ens)
+    e = t[0]
+    p = t[1:]
+    # NB -- use "False" here to handle case where a parameter might be
+    # fixed but the slope free; this isn't really a performance hit
+    # because right now the base function computes the gradient for
+    # every parameter anyway
+    g = grad_func(phases,log10_ens,free=False)
+    n = g.shape[0]
+    t = np.empty([2*n,len(phases)])
+    t[:n,:] = g
+    t[n:,:] = e*g
+    # apply correction for parameter clipped
+    bounds = self.get_bounds(free=False)
+    for i in range(n):
+        lo_mask = p[i] <= bounds[i][0]
+        hi_mask = p[i] >= bounds[i][1]
+        t[n+i,lo_mask|hi_mask] = 0
+        t[i,lo_mask|hi_mask] = 0
+    if free:
+        return t[np.append(self.free,self.slope_free)]
+    return t
+
 class LCEPrimitive(LCPrimitive):
     
     def is_energy_dependent(self):
         return True
+
+    # TODO -- this is so awkward, fix it?
+    def parse_kwargs(self,kwargs):
+        # acceptable keyword arguments, can be overriden by children
+        recognized_kwargs = ['p','free','slope','slope_free']
+        for key in kwargs.keys():
+            if key not in recognized_kwargs:
+                raise ValueError('kwarg %s not recognized'%key)
+        self.__dict__.update(kwargs)
 
     def _einit(self):
         """ Do setup work common to energy-dependent primitives.
@@ -65,10 +113,10 @@ class LCEPrimitive(LCPrimitive):
             fstring_s = '' if self.slope_free[i] else ' [FIXED]'
             n=self.pnames[i][:m]
             t_n = n+(m-len(n))*' '
-            l += [t_n + ': %.4f +\- %.4f%s'%(self.p[i],self.errors[i],fstring_p)]
+            l += [t_n + ': %.4f +\\- %.4f%s'%(self.p[i],self.errors[i],fstring_p)]
             n=' (Slope)'
             t_n = n+(m-len(n))*' '
-            l += [t_n + ': %.4f +\- %.4f%s'%(self.slope[i],self.slope_errors[i],fstring_s)]
+            l += [t_n + ': %.4f +\\- %.4f%s'%(self.slope[i],self.slope_errors[i],fstring_s)]
         l = [self.name+'\n------------------'] + l
         return '\n'.join(l)
 
@@ -95,40 +143,8 @@ class LCEWrappedFunction(LCEPrimitive,LCWrappedFunction):
     __doc__ = LCWrappedFunction.__doc__
 
     def gradient(self,phases,log10_ens=3,free=False):
-        """ Return the analytic gradient.
-
-        The evaluation is similar to the non-energy dependent version, and
-        since this is a linear model, application of the chain rule simply
-        returns the gradient at the indicated parameters, but weighted by
-        the difference in (log) energy.
-
-        However, there is one complication.  Because of the bounds enforced
-        by "_make_p", the gradient for the slope parameters vanishese at
-        some energies when the bound has saturated.  These entries should be
-        zeroed.
-        """
-        t = self._make_p(log10_ens)
-        e = t[0]
-        p = t[1:]
-        # NB -- use "False" here to handle case where a parameter might be
-        # fixed but the slope free; this isn't really a performance hit
-        # because right now the base function computes the gradient for
-        # every parameter anyway
-        g = super(LCEWrappedFunction,self).gradient(phases,log10_ens,free=False)
-        n = g.shape[0]
-        t = np.empty([2*n,len(phases)])
-        t[:n,:] = g
-        t[n:,:] = e*g
-        # apply correction for parameter clipped
-        bounds = self.get_bounds(free=False)
-        for i in range(n):
-            lo_mask = p[i] <= bounds[i][0]
-            hi_mask = p[i] >= bounds[i][1]
-            t[n+i,lo_mask|hi_mask] = 0
-            t[i,lo_mask|hi_mask] = 0
-        if free:
-            return t[np.append(self.free,self.slope_free)]
-        return t
+        g = super().gradient
+        return edep_gradient(self,g,phases,log10_ens=log10_ens,free=free)
 
     def hessian(self,phases,log10_ens=3,free=False):
         """ Return the hessian.
@@ -222,7 +238,7 @@ class LCELorentzian2(LCEWrappedFunction,LCLorentzian2):
             both components."""
         # TODO -- I haven't checked this code
         raise NotImplementedError()
-        if not hasattr(log10_ens,'__len__'):
+        if not isvector(log10_ens):
             n = log10_ens
             log10_ens = 3
         else:
@@ -261,11 +277,23 @@ class LCEGaussian2(LCEWrappedFunction,LCGaussian2):
             both components."""
         # TODO -- I haven't checked this code
         raise NotImplementedError()
-        if not hasattr(log10_ens,'__len__'):
+        if not isvector(log10_ens):
             n = log10_ens
             log10_ens = 3
         else:
             n = len(log10_ens)
         e,width1,width2,x0 = self.p
         return two_comp_mc(n,width1,width2,x0,norm.rvs)
+
+class LCEVonMises(LCEPrimitive,LCVonMises):
+
+    def init(self):
+        super(LCEVonMises,self).init()
+        self._einit()
+        self.name = 'VonMisesE'
+        self.shortname = 'VME'
+
+    def gradient(self,phases,log10_ens=3,free=False):
+        g = super().gradient
+        return edep_gradient(self,g,phases,log10_ens=log10_ens,free=free)
 

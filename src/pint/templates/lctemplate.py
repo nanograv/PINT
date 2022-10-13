@@ -17,6 +17,8 @@ from .lceprimitives import *
 
 log = logging.getLogger(__name__)
 
+def isvector(x):
+    return len(np.asarray(x).shape)>0
 
 class LCTemplate:
     """Manage a lightcurve template (collection of LCPrimitive objects).
@@ -31,7 +33,7 @@ class LCTemplate:
         If a tuple, they are relative amplitudes for the primitive components.
     """
 
-    def __init__(self, primitives, norms=None):
+    def __init__(self, primitives, norms=None, cache_kwargs=None):
         self.primitives = primitives
         self.shift_mode = np.any([p.shift_mode for p in self.primitives])
         if norms is None:
@@ -43,7 +45,9 @@ class LCTemplate:
         self._sanity_checks()
         self._cache = defaultdict(None)
         self._cache_dirty = defaultdict(lambda: True)
-        self.set_cache_properties()
+        if cache_kwargs is None:
+            cache_kwargs = {}
+        self.set_cache_properties(**cache_kwargs)
 
     def __setstate__(self, state):
         # TEMPORARY to handle changed class definition
@@ -98,10 +102,23 @@ class LCTemplate:
 
     def copy(self):
         prims = [deepcopy(x) for x in self.primitives]
-        return self.__class__(prims, self.norms.copy())
+        norms = self.norms.copy()
+        cache_kwargs = dict(ncache=self.ncache,ebins=self.ebins,interpolation=self.interpolation)
+        newcopy = self.__class__(prims, norms, cache_kwargs=cache_kwargs)
+        return newcopy
 
-    def set_cache_properties(self, ncache=1000, interpolation=1):
+    def set_cache_properties(self, ncache=1000, ebins=None, interpolation=1):
         self.ncache = ncache
+        self.phbins = np.linspace(0,1,ncache+1)
+        if ebins is None:
+            self.ebins = None
+            self.ecens = None
+        else:
+            ebins = np.asarray(ebins)
+            if len(ebins) < 2:
+                raise ValueError("len(ebins) must be >=2 (edges).")
+            self.ebins = ebins
+            self.ecens  = 0.5*(self.ebins[1:] + self.ebins[:-1])
         self.interpolation = interpolation
         self.mark_cache_dirty()
 
@@ -110,12 +127,14 @@ class LCTemplate:
             self._cache_dirty[k] = True
 
     def get_cache(self, order=0):
-        ncache = self.ncache
         if self._cache_dirty[order]:
             self.set_cache(order=order)
-        if len(self._cache[order]) != ncache + 1:
-            self.set_cache(order=order)
-        return self._cache[order]
+        # I don't see how it's possible to have a cache with wrong shape.
+        rval = self._cache[order]
+        if self.ecens is not None:
+            assert(rval.shape[0] == len(self.ecens))
+        assert(rval.shape[-1] == (self.ncache + 1))
+        return rval
 
     def set_cache(self, order=0):
         """Populate the cache with *point* values.
@@ -125,45 +144,64 @@ class LCTemplate:
         necessary.
         """
         ncache = self.ncache
-        if order == 0:
-            t = self(np.linspace(0, 1, ncache + 1))
-            # self._cache[0] = 0.5*(t[1:]+t[:-1])
-            # NB store the wrapped values to make evaluation faster
-            self._cache[0] = t
-            self._cache_dirty[0] = False
+        if self.ecens is None:
+            if order == 0:
+                new_cache = self(self.phbins)
+            else:
+                new_cache = self.derivative(self.phbins,order=order)
         else:
-            t = self.derivative(np.linspace(0, 1, ncache + 1), order=order)
-            # self._cache[order] = 0.5*(t[1:]+t[:-1])
-            self._cache[order] = t
-            self._cache_dirty[order] = False
+            new_cache = np.empty((len(self.ecens),self.ncache+1))
+            if order == 0:
+                for ibin,en in enumerate(self.ecens):
+                    new_cache[ibin] = self(self.phbins,log10_ens=en)
+            else:
+                for ibin,en in enumerate(self.ecens):
+                    new_cache[ibin] = self.derivative(self.phbins,log10_ens=en,order=order)
+        self._cache[order] = new_cache
+        self._cache_dirty[order] = False
 
-    def eval_cache(self, phases, order=0):
+    def eval_cache(self, phases, log10_ens=3, order=0):
         # NB, cached values are stored on a grid of points from [0..1).  In
         # order to find the closest point, add half a bin before floor
 
         ncache = self.ncache
         interpolation = self.interpolation
         cached_values = self.get_cache(order=order)
+        # energy is ALWAYS nearest-neihboring interpolation
+        if self.ecens is not None:
+            scale = len(self.ecens)/(self.ebins[-1]-self.ebins[0])
+            einds = np.asarray((log10_ens-self.ebins[0])*scale,dtype=int)
+        else:
+            einds = None
+
+        def lookup(indices):
+            if einds is None:
+                return cached_values[indices]
+            return cached_values[einds,indices]
 
         if interpolation == 0:
             indices = np.array(phases * ncache + 0.5, dtype=int)
             try:
-                return cached_values[indices]
+                return(lookup(indices))
             except IndexError as e:
                 nanphases = np.sum(np.isnan(phases))
                 if nanphases > 0:
                     print("%d phases were NaN!" % (nanphases))
                     indices[np.isnan(phases)] = 0
-                    return cached_values[indices]
+                    return(lookup(indices))
                 else:
                     raise e
 
         if interpolation == 1:
-            indices = phases * ncache
+            indices = np.atleast_1d(phases) * ncache
             indices_lo = indices.astype(int)
+            # TMP -- allow ph == 1?
+            indices_hi = indices_lo + (indices_lo < ncache)
+            # end TMP
+            #indices_hi = indices_lo + 1
             dhi = indices - indices_lo
             dlo = 1.0 - dhi
-            return cached_values[indices_lo] * dlo + cached_values[indices_lo + 1] * dhi
+            return lookup(indices_lo)*dlo + lookup(indices_hi)*dhi
 
         else:
             raise NotImplementedError(
@@ -306,7 +344,7 @@ class LCTemplate:
         """
         phi1 = np.asarray(phi1)
         phi2 = np.asarray(phi2)
-        if hasattr(log10_ens,'__len__'):
+        if isvector(log10_ens):
             assert(len(log10_ens)==len(phi1))
         try:
             assert(len(phi1)==len(phi2))
@@ -334,15 +372,21 @@ class LCTemplate:
         peak.  Trivial in typical cases, but important for linked
         components, e.g. the bridge pedestal.
         """
-        rvals = np.zeros_like(phases)
+        rvals = np.zeros(np.asarray(phases).shape,dtype=float)
         norms = self.norms(log10_ens)
         return rvals, norms, norms.sum(axis=0)
 
     def __call__(self, phases, log10_ens=3, suppress_bg=False, use_cache=False):
         """Evaluate template at the provided phases and (if provided)
         energies.  If "suppress_bg" is set, ignore the DC component."""
+        # TMP -- check phase range.  Add this as a formal check?
+        phases = np.asarray(phases)
+        log10_ens = np.asarray(log10_ens)
+        assert(np.all(phases>=0))
+        assert(np.all(phases<=1))
+        # end TM
         if use_cache:
-            return self.eval_cache(phases, order=0)
+            return self.eval_cache(phases, log10_ens=log10_ens, order=0)
         rvals, norms, norm = self._get_scales(phases, log10_ens)
         for n, prim in zip(norms, self.primitives):
             rvals += n * prim(phases, log10_ens=log10_ens)
@@ -615,8 +659,8 @@ class LCTemplate:
                     "Provided weight vector does not match requested n.")
 
         # check energies
-        if hasattr(log10_ens,'__len__'):
-            if (len(log10_ens) != n):
+        if isvector(log10_ens):
+            if len(log10_ens) != n:
                 raise ValueError(
                     "Provided log10_ens vector does not match requested n.")
         else:
@@ -841,130 +885,6 @@ class LCTemplate:
             "".join(("%.6f %.6f\n" % (x, y) for x, y in zip(bin_phases, bin_values)))
         )
 
-
-class LCBridgeTemplate(LCTemplate):
-    """A light curve template specialized to the "typical" shape of a
-    gamma-ray pulsar, viz. two peaks linked by a bridge.  The bridge
-    is implemented as a pedestal connecting the modes of two specific
-    peaks, and the only free parameter associated with it is its
-    normalization (from which its amplituded is determimned).
-    """
-
-    def has_bridge(self):
-        return True
-
-    def __init__(self, primitives, norms=None):
-        """primitives -- a list of LCPrimitive instances of len >= 2; the
-            last two components are interpreted as P1 and P2
-        norms -- either an instance of NormAngles, or a tuple of
-            relative amplitudes for the primitive components; should
-            have one extra parameter for the bridge component; the
-            first component is interpreted as the pedestal nor
-        """
-        if norms is None:
-            norms = np.ones(len(primitives) + 1) / (len(primitives + 1))
-        super().__init__(primitives, norms)
-        self.p1 = self.primitives[-2]
-        self.p2 = self.primitives[-1]
-
-    def _sanity_checks(self):
-        if len(self.primitives) != len(self.norms) - 1:
-            raise ValueError("Require n_primitive+1 norm components.")
-
-    def _get_scales(self, phases, log10_ens=3):
-        """Return the scale factor for p1, p2, and the pedestal such that
-        the pedestal has the correct normalization and p1, p2, and the
-        pedestal form a smooth, continuous curve.
-        """
-        all_norms = self.norms(log10_ens)
-        nped, norms = all_norms[0], all_norms[1:]
-        n1, n2 = norms[-2:]
-        p1, p2 = self.p1, self.p2
-        # NB -- location need to be made "energy aware"
-        l1, l2 = p1.get_location(), p2.get_location()
-        # can't really enforce l1 < l2, so need to allow for wrapping
-        delta = (l2 - l1) + (l2 < l1)
-        # evaluate each peak at change points
-        f11, f12, f21, f22 = (
-            p1(l1, log10_ens),
-            p1(l2, log10_ens),
-            p2(l1, log10_ens),
-            p2(l2, log10_ens),
-        )
-        d = f11 * f22 - f12 * f21
-        if l2 > l1:
-            i1 = p1.integrate(l1, l2, log10_ens)
-            i2 = p2.integrate(l1, l2, log10_ens)
-        else:
-            i1 = 1 - p1.integrate(l2, l1, log10_ens)
-            i2 = 1 - p2.integrate(l2, l1, log10_ens)
-        # coefficient for pedestal
-        k = nped * (1.0 - (i1 * (f22 - f21) + i2 * (f11 - f12)) / (d * delta)) ** -1
-        # rescaling for peaks over pedestal
-        dn1 = k / (delta * d) * (f21 - f22)
-        dn2 = k / (delta * d) * (f12 - f11)
-        # make the mask inclusive for ease of testing
-        if l2 > l1:
-            mask = (phases >= l1) & (phases <= l2)
-        else:
-            mask = (phases >= l1) | (phases <= l2)
-        rvals = k / delta * mask  # pedestal
-        norm_list = [norms[i] for i in range(0, len(norms) - 2)] + [
-            n1 + dn1 * mask,
-            n2 + dn2 * mask,
-        ]
-        return rvals, norm_list, all_norms.sum(axis=0)
-
-    def random(self, n, weights=None, return_partition=False):
-        # note -- this wouldn't be that hard to do, just do multinomial as
-        # usual, then an additional step to determine which part of the peaks
-        # the photons should come from
-        raise NotImplementedError()
-
-    def __str__(self):
-        s = super().__str__()
-        return "TODO: Add pedestal stuff! \n\n" + s
-        # prims = self.primitives
-        # s0 = str(self.norms)
-        # s1 = '\n\n'+'\n\n'.join( ['P%d -- '%(i+1)+str(prim) for i,prim in enumerate(prims)] ) + '\n'
-        # s1 +=  '\ndelta   : %.4f +\- %.4f'%self.delta()
-        # s1 +=  '\nDelta   : %.4f +\- %.4f'%self.Delta()
-        # return s0+s1
-
-    def single_component(self, index, phases, log10_ens=3):
-        """Evaluate a single component of template."""
-        # this needs to be done in some sane way, not sure if ideal exists
-        # so best guess is to compute the pedestal offset and add that on
-        # to the inner peak, trusting that it will itself be plotted to
-        # give the sense that this component isn't independnet
-        # raise NotImplementedError()
-        rvals, norms, norm = self._get_scales(phases, log10_ens)
-        if index < len(self.primitives):
-            np.add(
-                rvals, norms[index] * self.primitives[index](phases, log10_ens), rvals
-            )
-        return rvals
-
-    def mean_single_component(
-        self, index, phases, log10_ens=None, weights=None, bins=20, add_pedestal=False
-    ):
-        # if add_pedestal:
-        # print('No add pedestal.')
-        # this needs to be done in some sane way, not sure if ideal exists
-        # raise NotImplementedError()
-        if (log10_ens is None) or (not self.is_energy_dependent()):
-            return self.single_component(index, phases)
-        if weights is None:
-            weights = np.ones_like(log10_ens)
-        edges = np.linspace(log10_ens.min(), log10_ens.max(), bins + 1)
-        w = np.histogram(log10_ens, weights=weights, bins=edges)
-        rvals = np.zeros_like(phases)
-        for weight, en in zip(w[0], (edges[:-1] + edges[1:]) / 2):
-            rvals += weight * self.single_component(index, phases, en)
-        rvals /= w[0].sum()
-        return rvals
-
-
 def get_gauss2(
     pulse_frac=1,
     x1=0.1,
@@ -1086,7 +1006,6 @@ def prim_io(template):
         return [LCEmpiricalFourier(input_file=toks[1:])], None
     raise ValueError("Template format not recognized!")
 
-
 def check_gradient_derivative(templ):
     dom = np.linspace(0, 1, 10001)
     pcs = 0.5 * (dom[:-1] + dom[1:])
@@ -1096,3 +1015,6 @@ def check_gradient_derivative(templ):
     for i in range(gd.shape[0]):
         print(np.max(np.abs(gd[i] - ngd[i])))
     return pcs, gd, ngd
+
+def isvector(x):
+    return len(np.asarray(x).shape)>0
