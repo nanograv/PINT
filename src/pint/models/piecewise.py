@@ -2,9 +2,9 @@
 import astropy.units as u
 import numpy as np
 
-from pint.models.parameter import prefixParameter, MJDParameter
+from pint.models.parameter import prefixParameter
 from pint.models.timing_model import MissingParameter, PhaseComponent
-from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
+from pint.utils import split_prefixed_name, taylor_horner
 
 
 class PiecewiseSpindown(PhaseComponent):

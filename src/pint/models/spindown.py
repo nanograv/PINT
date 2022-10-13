@@ -4,8 +4,7 @@
 import astropy.units as u
 import numpy
 
-import pint.toa as toa
-from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
+from pint.models.parameter import MJDParameter, prefixParameter
 from pint.models.timing_model import MissingParameter, PhaseComponent
 from pint.pulsar_mjd import Time
 from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv

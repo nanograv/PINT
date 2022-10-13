@@ -3,7 +3,6 @@ import re
 import astropy.units as u
 import numpy as np
 
-import pint.utils as ut
 from pint.utils import taylor_horner, taylor_horner_deriv
 
 

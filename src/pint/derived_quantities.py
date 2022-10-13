@@ -2,7 +2,6 @@
 """
 
 import astropy.constants as const
-import astropy.coordinates.angles as angles
 import astropy.units as u
 import numpy as np
 

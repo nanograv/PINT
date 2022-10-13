@@ -40,7 +40,6 @@ from pint.observatory import (
     get_observatory,
     earth_location_distance,
 )
-from pint.observatory.global_clock_corrections import Index, get_clock_correction_file
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import get_tdb_tt_ephem_geocenter, objPosVel_wrt_SSB
 from pint.utils import has_astropy_unit, open_or_use

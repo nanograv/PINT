@@ -37,12 +37,8 @@ import platform
 import re
 import sys
 import textwrap
-from collections import OrderedDict
 from contextlib import contextmanager
-from copy import deepcopy
-from io import StringIO
 from pathlib import Path
-from warnings import warn
 
 import astropy.constants as const
 import astropy.coordinates as coords
@@ -50,7 +46,6 @@ import astropy.coordinates.angles as angles
 from astropy.time import Time
 import astropy.units as u
 import numpy as np
-import scipy.optimize.zeros as zeros
 from loguru import logger as log
 from scipy.special import fdtrc
 
