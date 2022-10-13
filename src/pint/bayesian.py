@@ -40,7 +40,7 @@ class BayesianTiming:
 
     3. Currently, only uniform and normal distributions are supported in prior_info. More
        general priors should be set directly in the TimingModel object before creating the
-       BayesianTiming object.Here is an example prior_info object:
+       BayesianTiming object. Here is an example prior_info object:
             prior_info = {
                 "F0" : {
                     "distr" : "normal",
@@ -61,7 +61,7 @@ class BayesianTiming:
         self.toas = toas
 
         self.param_labels = self.model.free_params
-        self.params = [getattr(model, par) for par in self.param_labels]
+        self.params = [getattr(self.model, par) for par in self.param_labels]
         self.nparams = len(self.param_labels)
 
         if prior_info is not None:

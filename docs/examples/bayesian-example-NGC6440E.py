@@ -154,17 +154,18 @@ model2 = get_model(io.StringIO(parfile))
 # Now set the priors.
 # Again, don't do this with real data. Use uninformative priors or priors
 # motivated by previous experiments. This is done here with the sole purpose
-# of making the run finish fast.
+# of making the run finish fast. Let us try this with the prior_info option now.
+prior_info = dict()
 for par in model2.free_params:
     param = getattr(model2, par)
     param_min = float(param.value - 10 * param.uncertainty_value)
-    param_span = float(20 * param.uncertainty_value)
-    param.prior = Prior(uniform(param_min, param_span))
+    param_max = float(param.value + 10 * param.uncertainty_value)
+    prior_info[par] = {"distr": "uniform", "pmin": param_min, "pmax": param_max}
 
-model2.EFAC1.prior = Prior(uniform(0.1, 1.9))
+prior_info["EFAC1"] = {"distr": "normal", "mu": 1, "sigma": 0.1}
 
 # %%
-bt2 = BayesianTiming(model2, toas, use_pulse_numbers=True)
+bt2 = BayesianTiming(model2, toas, use_pulse_numbers=True, prior_info=prior_info)
 print(bt2.likelihood_method)
 
 # %%
