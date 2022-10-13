@@ -16,9 +16,10 @@ class BayesianTiming:
 
     Parameters
     ----------
-    model : :class:`pint.models.TimingModel`
+    model : :class:`pint.models.timing_model.TimingModel`
         The best-fit values stored in this object are not used.
-    toas : a :class:`pint.toa.TOAs` instance. Contains the input toas.
+    toas : :class:`pint.toa.TOAs`
+        Contains the input toas.
     use_pulse_numbers : bool, optional
         How to handle phase wrapping. If True, will use the pulse numbers
         from the toas object while creating :class:`pint.residuals.Residuals`
