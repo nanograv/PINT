@@ -1317,3 +1317,15 @@ class SolarWindDispersionScaled(Dispersion):
         return (self.SWDMMAX.quantity / self.fiducial_solar_wind_geometry()).to(
             u.cm**-3
         )
+
+    def set_ne_sw(self, ne_sw):
+        """Set the DMMAX based on an input NE_SW value (electron density at 1 AU)
+
+        Parameters
+        ----------
+        ne_sw : astropy.quantity.Quantity
+            Desired NE_SW
+        """
+        self.SWDMMAX.quantity = (self.fiducial_solar_wind_geometry() * ne_sw).to(
+            u.pc / u.cm**3
+        )
