@@ -501,7 +501,7 @@ class SolarWindDispersionX(Dispersion):
     """This class provides a SWX model - multiple Solar Wind segments.
 
     This model lets the user specify time ranges and fit for a different
-    SWX (solar wind density at 1 AU) value and SWXP (radial power-law index) in each time range.
+    SWXDM (max solar wind DM) value and SWXP (radial power-law index) in each time range.
 
     The default radial power-law index value of 2 corresponds to the Edwards et al. model.
     Other values are for the You et al./Hazboun et al. model.
@@ -525,9 +525,9 @@ class SolarWindDispersionX(Dispersion):
     def __init__(self):
         super().__init__()
 
-        self.add_swx_range(None, None, swx=0, swxp=2, frozen=False, index=1)
+        self.add_swx_range(None, None, swxdm=0, swxp=2, frozen=False, index=1)
 
-        self.set_special_params(["SWX_0001", "SWXP_0001", "SWXR1_0001", "SWXR2_0001"])
+        self.set_special_params(["SWXDM_0001", "SWXP_0001", "SWXR1_0001", "SWXR2_0001"])
         self.dm_value_funcs += [self.swx_dm]
         self.delay_funcs_component += [self.swx_delay]
 
@@ -550,6 +550,25 @@ class SolarWindDispersionX(Dispersion):
         # get elongation angle, distance from Earth to Sun
         theta, r = self._parent.sun_angle(toas, also_distance=True)
         return _solar_wind_geometry(r, theta, p).to(u.pc)
+
+    def fiducial_solar_wind_geometry(self, p):
+        """Return the fiducial geometry of solar wind dispersion.
+
+        Implements Eqn. 11 of Hazboun et al. (2022)
+
+        Parameters
+        ----------
+        p : float
+            Radial power-law index
+
+        Returns
+        -------
+        astropy.quantity.Quantity
+        """
+        r0 = 1 * u.AU
+        coord = self._parent.get_psr_coords()
+        theta0 = coord.transform_to(pint.pulsar_ecliptic.PulsarEcliptic()).lat
+        return _solar_wind_geometry(r0, theta0, p).to(u.pc)
 
     def d_solar_wind_geometry_d_swxp(self, toas, p):
         """Derivative of solar_wind_geometry (path length) wrt power-law index p
@@ -574,28 +593,44 @@ class SolarWindDispersionX(Dispersion):
         theta, r = self._parent.sun_angle(toas, also_distance=True)
         return _d_solar_wind_geometry_d_p(r, theta, p)
 
-    def add_swx_range(self, mjd_start, mjd_end, index=None, swx=0, swxp=2, frozen=True):
-        """Add SWX range to a dispersion model with specified start/end MJD, SWX, and power-law index
+    def d_fiducial_solar_wind_geometry_d_swxp(self, p):
+        """Derivative of fiducial_solar_wind_geometry (path length) wrt power-law index p
+
+        The evaluation is done using Eqn. 12 in Hazboun et al. (2022).  The first term
+        involving hypergeometric functions (:func:`_hypergeom_function`)
+        has the derivative computed approximately using a Pade expansion (:func:`_d_hypergeom_function_dp`).
+        The second uses gamma functions (:func:`_gamma_function`) and has the derivative computed
+        using polygamma functions (:func:`_d_gamma_function_dp`).
+
+        """
+        # fiducial values
+        r0 = 1 * u.AU
+        coord = self._parent.get_psr_coords()
+        theta0 = coord.transform_to(pint.pulsar_ecliptic.PulsarEcliptic()).lat
+        return _d_solar_wind_geometry_d_p(r0, theta0, p)
+
+    def add_swx_range(
+        self, mjd_start, mjd_end, index=None, swxdm=0, swxp=2, frozen=True
+    ):
+        """Add SWX range to a dispersion model with specified start/end MJD, SWXDM, and power-law index
 
         Parameters
         ----------
-
         mjd_start : float
             MJD for beginning of DMX event.
         mjd_end : float
             MJD for end of DMX event.
         index : int, None
             Integer label for DMX event. If None, will increment largest used index by 1.
-        swx : float
-            Solar wind density at 1 AU
+        swxdm : float
+            Max solar wind DM
         swxp : float
             Solar wind power-law index
         frozen : bool
-            Indicates whether SWX and SWXP will be fit.
+            Indicates whether SWXDM and SWXP will be fit.
 
         Returns
         -------
-
         index : int
             Index that has been assigned to new SWX event.
 
@@ -603,7 +638,7 @@ class SolarWindDispersionX(Dispersion):
 
         #### Setting up the SWX title convention. If index is None, want to increment the current max SWX index by 1.
         if index is None:
-            dct = self.get_prefix_mapping_component("SWX_")
+            dct = self.get_prefix_mapping_component("SWXDM_")
             index = np.max(list(dct.keys())) + 1
         i = f"{int(index):04d}"
 
@@ -613,7 +648,7 @@ class SolarWindDispersionX(Dispersion):
         elif mjd_start != mjd_end:
             raise ValueError("Only one MJD bound is set.")
 
-        if int(index) in self.get_prefix_mapping_component("SWX_"):
+        if int(index) in self.get_prefix_mapping_component("SWXDM_"):
             raise ValueError(
                 "Index '%s' is already in use in this model. Please choose another."
                 % index
@@ -621,10 +656,10 @@ class SolarWindDispersionX(Dispersion):
 
         self.add_param(
             prefixParameter(
-                name="SWX_" + i,
-                units="cm^-3",
-                value=swx,
-                description="Solar Wind density at 1 AU",
+                name="SWXDM_" + i,
+                units="pc cm^-3",
+                value=swxdm,
+                description="Max Solar Wind DM",
                 parameter_type="float",
                 frozen=frozen,
             )
@@ -686,7 +721,7 @@ class SolarWindDispersionX(Dispersion):
             )
         for index in indices:
             index_rf = f"{int(index):04d}"
-            for prefix in ["SWX_", "SWXP_", "SWXR1_", "SWXR2_"]:
+            for prefix in ["SWXDM_", "SWXP_", "SWXR1_", "SWXR2_"]:
                 self.remove_param(prefix + index_rf)
         self.validate()
 
@@ -700,7 +735,7 @@ class SolarWindDispersionX(Dispersion):
         """
         inds = []
         for p in self.params:
-            if "SWX_" in p:
+            if "SWXDM_" in p:
                 inds.append(int(p.split("_")[-1]))
         return np.array(inds)
 
@@ -709,7 +744,7 @@ class SolarWindDispersionX(Dispersion):
         # Get SWX mapping.
         # Register the SWX derivatives
         for prefix_par in self.get_params_of_type("prefixParameter"):
-            if prefix_par.startswith("SWX_"):
+            if prefix_par.startswith("SWXDM_"):
                 # check to make sure power-law index is present
                 # if not, put in default
                 p_name = "SWXP_" + pint.utils.split_prefixed_name(prefix_par)[1]
@@ -722,8 +757,8 @@ class SolarWindDispersionX(Dispersion):
                             parameter_type="float",
                         )
                     )
-                self.register_deriv_funcs(self.d_delay_d_swx, prefix_par)
-                self.register_dm_deriv_funcs(self.d_dm_d_swx, prefix_par)
+                self.register_deriv_funcs(self.d_delay_d_swxdm, prefix_par)
+                self.register_dm_deriv_funcs(self.d_dm_d_swxdm, prefix_par)
             elif prefix_par.startswith("SWXP_"):
                 self.register_deriv_funcs(self.d_delay_d_swxp, prefix_par)
                 self.register_dm_deriv_funcs(self.d_dm_d_swxp, prefix_par)
@@ -731,46 +766,46 @@ class SolarWindDispersionX(Dispersion):
     def validate(self):
         """Validate the SWX parameters."""
         super().validate()
-        SWX_mapping = self.get_prefix_mapping_component("SWX_")
+        SWXDM_mapping = self.get_prefix_mapping_component("SWXDM_")
         SWXP_mapping = self.get_prefix_mapping_component("SWXP_")
         SWXR1_mapping = self.get_prefix_mapping_component("SWXR1_")
         SWXR2_mapping = self.get_prefix_mapping_component("SWXR2_")
-        if SWX_mapping.keys() != SWXP_mapping.keys():
+        if SWXDM_mapping.keys() != SWXP_mapping.keys():
             # FIXME: report mismatch
             raise ValueError(
-                "SWX_ parameters do not "
+                "SWXDM_ parameters do not "
                 "match SWXP_ parameters. "
                 "Please check your prefixed parameters."
             )
-        if SWX_mapping.keys() != SWXR1_mapping.keys():
+        if SWXDM_mapping.keys() != SWXR1_mapping.keys():
             # FIXME: report mismatch
             raise ValueError(
-                "SWX_ parameters do not "
+                "SWXDM_ parameters do not "
                 "match SWXR1_ parameters. "
                 "Please check your prefixed parameters."
             )
-        if SWX_mapping.keys() != SWXR2_mapping.keys():
+        if SWXDM_mapping.keys() != SWXR2_mapping.keys():
             raise ValueError(
-                "SWX_ parameters do not "
+                "SWXDM_ parameters do not "
                 "match SWXR2_ parameters. "
                 "Please check your prefixed parameters."
             )
 
     def validate_toas(self, toas):
-        SWX_mapping = self.get_prefix_mapping_component("SWX_")
+        SWXDM_mapping = self.get_prefix_mapping_component("SWXDM_")
         SWXP_mapping = self.get_prefix_mapping_component("SWXP_")
         SWXR1_mapping = self.get_prefix_mapping_component("SWXR1_")
         SWXR2_mapping = self.get_prefix_mapping_component("SWXR2_")
         bad_parameters = []
         for k in SWXR1_mapping.keys():
-            if self._parent[SWX_mapping[k]].frozen:
+            if self._parent[SWXDM_mapping[k]].frozen:
                 continue
             b = self._parent[SWXR1_mapping[k]].quantity.mjd * u.d
             e = self._parent[SWXR2_mapping[k]].quantity.mjd * u.d
             mjds = toas.get_mjds()
             n = np.sum((b <= mjds) & (mjds < e))
             if n == 0:
-                bad_parameters.append(SWX_mapping[k])
+                bad_parameters.append(SWXDM_mapping[k])
         if bad_parameters:
             raise MissingTOAs(bad_parameters)
 
@@ -781,33 +816,35 @@ class SolarWindDispersionX(Dispersion):
         tbl = toas.table
         if not hasattr(self, "swx_toas_selector"):
             self.swx_toas_selector = TOASelect(is_range=True)
-        SWX_mapping = self.get_prefix_mapping_component("SWX_")
+        SWXDM_mapping = self.get_prefix_mapping_component("SWXDM_")
         SWXP_mapping = self.get_prefix_mapping_component("SWXP_")
         SWXR1_mapping = self.get_prefix_mapping_component("SWXR1_")
         SWXR2_mapping = self.get_prefix_mapping_component("SWXR2_")
-        for epoch_ind in SWX_mapping.keys():
+        for epoch_ind in SWXDM_mapping.keys():
             r1 = getattr(self, SWXR1_mapping[epoch_ind]).quantity
             r2 = getattr(self, SWXR2_mapping[epoch_ind]).quantity
-            condition[SWX_mapping[epoch_ind]] = (r1.mjd, r2.mjd)
-            p[SWX_mapping[epoch_ind]] = getattr(self, SWXP_mapping[epoch_ind]).value
+            condition[SWXDM_mapping[epoch_ind]] = (r1.mjd, r2.mjd)
+            p[SWXDM_mapping[epoch_ind]] = getattr(self, SWXP_mapping[epoch_ind]).value
         select_idx = self.swx_toas_selector.get_select_index(
             condition, tbl["mjd_float"]
         )
         # Get SWX delays
         dm = np.zeros(len(tbl)) * self._parent.DM.units
         for k, v in select_idx.items():
-            ne_sw = getattr(self, k).quantity
+            dmmax = getattr(self, k).quantity
             if len(v) > 0:
-                dm[v] += (self.solar_wind_geometry(toas[v], p=p[k]) * ne_sw).to(
-                    u.pc / u.cm**3
-                )
+                dm[v] += (
+                    dmmax
+                    * self.solar_wind_geometry(toas[v], p=p[k])
+                    / self.fiducial_solar_wind_geometry(p[k])
+                ).to(u.pc / u.cm**3)
         return dm
 
     def swx_delay(self, toas, acc_delay=None):
         """This is a wrapper function for interacting with the TimingModel class"""
         return self.dispersion_type_delay(toas)
 
-    def d_dm_d_swx(self, toas, param_name, acc_delay=None):
+    def d_dm_d_swxdm(self, toas, param_name, acc_delay=None):
         condition = {}
         tbl = toas.table
         if not hasattr(self, "swx_toas_selector"):
@@ -830,13 +867,15 @@ class SolarWindDispersionX(Dispersion):
         except AttributeError:
             warn("Using topocentric frequency for dedispersion!")
             bfreq = tbl["freq"]
-        deriv = np.zeros(len(tbl)) * u.pc
+        deriv = np.zeros(len(tbl)) * u.dimensionless_unscaled
         for k, v in select_idx.items():
             if len(v) > 0:
-                deriv[v] += self.solar_wind_geometry(toas[v], p=p)
+                deriv[v] += self.solar_wind_geometry(
+                    toas[v], p=p
+                ) / self.fiducial_solar_wind_geometry(p)
         return deriv
 
-    def d_delay_d_swx(self, toas, param_name, acc_delay=None):
+    def d_delay_d_swxdm(self, toas, param_name, acc_delay=None):
         try:
             bfreq = self._parent.barycentric_radio_freq(toas)
         except AttributeError:
@@ -854,16 +893,16 @@ class SolarWindDispersionX(Dispersion):
             self.swx_toas_selector = TOASelect(is_range=True)
         param = getattr(self, param_name)
         swxp_index = param.index
-        SWX_mapping = self.get_prefix_mapping_component("SWX_")
+        SWXDM_mapping = self.get_prefix_mapping_component("SWXDM_")
         SWXP_mapping = self.get_prefix_mapping_component("SWXP_")
         SWXR1_mapping = self.get_prefix_mapping_component("SWXR1_")
         SWXR2_mapping = self.get_prefix_mapping_component("SWXR2_")
-        swx = getattr(self, SWX_mapping[swxp_index]).quantity
+        swxdm = getattr(self, SWXDM_mapping[swxp_index]).quantity
         p = getattr(self, SWXP_mapping[swxp_index]).value
         r1 = getattr(self, SWXR1_mapping[swxp_index]).quantity
         r2 = getattr(self, SWXR2_mapping[swxp_index]).quantity
 
-        swx_name = "SWX_" + pint.utils.split_prefixed_name(param_name)[1]
+        swx_name = "SWXDM_" + pint.utils.split_prefixed_name(param_name)[1]
         condition = {swx_name: (r1.mjd, r2.mjd)}
         select_idx = self.swx_toas_selector.get_select_index(
             condition, tbl["mjd_float"]
@@ -877,7 +916,14 @@ class SolarWindDispersionX(Dispersion):
         deriv = np.zeros(len(tbl)) * u.pc / u.cm**3
         for k, v in select_idx.items():
             if len(v) > 0:
-                deriv[v] += swx * self.d_solar_wind_geometry_d_swxp(toas[v], p=p)
+                geometry = self.solar_wind_geometry(toas[v], p)
+                fiducial_geometry = self.fiducial_solar_wind_geometry(p)
+                d_geometry_dp = self.d_solar_wind_geometry_d_swxp(toas[v], p)
+                d_fiducial_geometry_dp = self.d_fiducial_solar_wind_geometry_d_swxp(p)
+                deriv[v] += swxdm * (
+                    (d_geometry_dp / fiducial_geometry)
+                    - (geometry / fiducial_geometry**2) * d_fiducial_geometry_dp
+                )
         return deriv
 
     def d_delay_d_swxp(self, toas, param_name, acc_delay=None):
@@ -892,13 +938,13 @@ class SolarWindDispersionX(Dispersion):
 
     def print_par(self, format="pint"):
         result = ""
-        SWX_mapping = self.get_prefix_mapping_component("SWX_")
+        SWXDM_mapping = self.get_prefix_mapping_component("SWXDM_")
         SWXP_mapping = self.get_prefix_mapping_component("SWXP_")
         SWXR1_mapping = self.get_prefix_mapping_component("SWXR1_")
         SWXR2_mapping = self.get_prefix_mapping_component("SWXR2_")
-        sorted_list = sorted(SWX_mapping.keys())
+        sorted_list = sorted(SWXDM_mapping.keys())
         for ii in sorted_list:
-            result += getattr(self, SWX_mapping[ii]).as_parfile_line(format=format)
+            result += getattr(self, SWXDM_mapping[ii]).as_parfile_line(format=format)
             result += getattr(self, SWXP_mapping[ii]).as_parfile_line(format=format)
             result += getattr(self, SWXR1_mapping[ii]).as_parfile_line(format=format)
             result += getattr(self, SWXR2_mapping[ii]).as_parfile_line(format=format)
@@ -913,20 +959,15 @@ class SolarWindDispersionX(Dispersion):
         -------
         astropy.quantity.Quantity
         """
-        SWX_mapping = self.get_prefix_mapping_component("SWX_")
+        SWXDM_mapping = self.get_prefix_mapping_component("SWXDM_")
         SWXP_mapping = self.get_prefix_mapping_component("SWXP_")
         SWXR1_mapping = self.get_prefix_mapping_component("SWXR1_")
-        sorted_list = sorted(SWX_mapping.keys())
+        sorted_list = sorted(SWXDM_mapping.keys())
         dms = np.zeros(len(sorted_list)) * u.pc / u.cm**3
         coord = self._parent.get_psr_coords()
         for j, ii in enumerate(sorted_list):
-            r1 = getattr(self, SWXR1_mapping[ii]).quantity
-            p = getattr(self, SWXP_mapping[ii]).value
-            swx = getattr(self, SWX_mapping[ii]).quantity
-            t0, elongation = pint.utils.get_conjunction(coord, r1, precision="high")
-            theta = elongation
-            r = 1 * u.AU
-            dms[j] = (_solar_wind_geometry(r, theta, p) * swx).to(u.pc / u.cm**3)
+            swxdm = getattr(self, SWXDM_mapping[ii]).quantity
+            dms[j] = (swxdm).to(u.pc / u.cm**3)
         return dms
 
     def get_min_dms(self):
@@ -938,22 +979,48 @@ class SolarWindDispersionX(Dispersion):
         -------
         astropy.quantity.Quantity
         """
-        SWX_mapping = self.get_prefix_mapping_component("SWX_")
+        SWXDM_mapping = self.get_prefix_mapping_component("SWXDM_")
         SWXP_mapping = self.get_prefix_mapping_component("SWXP_")
         SWXR1_mapping = self.get_prefix_mapping_component("SWXR1_")
-        sorted_list = sorted(SWX_mapping.keys())
+        sorted_list = sorted(SWXDM_mapping.keys())
         dms = np.zeros(len(sorted_list)) * u.pc / u.cm**3
         coord = self._parent.get_psr_coords()
         for j, ii in enumerate(sorted_list):
             r1 = getattr(self, SWXR1_mapping[ii]).quantity
             p = getattr(self, SWXP_mapping[ii]).value
-            swx = getattr(self, SWX_mapping[ii]).quantity
+            swxdm = getattr(self, SWXDM_mapping[ii]).quantity
             t0, elongation = pint.utils.get_conjunction(coord, r1, precision="high")
             # for the min
             theta = 180 * u.deg - elongation
             r = 1 * u.AU
-            dms[j] = (_solar_wind_geometry(r, theta, p) * swx).to(u.pc / u.cm**3)
+            dms[j] = (
+                (
+                    _solar_wind_geometry(r, theta, p)
+                    / _solar_wind_geometry(r, elongation, p)
+                )
+                * swxdm
+            ).to(u.pc / u.cm**3)
         return dms
+
+    def get_ne_sws(self):
+        """Return Solar Wind electron densities at 1 AU for each segment
+
+        Simplified model that assumes a circular orbit
+
+        Returns
+        -------
+        astropy.quantity.Quantity
+        """
+        SWXDM_mapping = self.get_prefix_mapping_component("SWXDM_")
+        SWXP_mapping = self.get_prefix_mapping_component("SWXP_")
+        SWXR1_mapping = self.get_prefix_mapping_component("SWXR1_")
+        sorted_list = sorted(SWXDM_mapping.keys())
+        ne_sws = np.zeros(len(sorted_list)) * u.cm**-3
+        for j, ii in enumerate(sorted_list):
+            swxdm = getattr(self, SWXDM_mapping[ii]).quantity
+            p = getattr(self, SWXP_mapping[ii]).value
+            ne_sws[j] = (swxdm / self.fiducial_solar_wind_geometry(p)).to(u.cm**-3)
+        return ne_sws
 
 
 class SolarWindDispersionScaled(Dispersion):
@@ -1063,7 +1130,7 @@ class SolarWindDispersionScaled(Dispersion):
         deriv[bfreq < 1.0 * u.MHz] = 0.0
         return deriv
 
-    def d_solar_wind_geometry_d_swp(self, toas, param_name, acc_delay=None):
+    def d_solar_wind_geometry_d_swp(self, toas):
         """Derivative of solar_wind_geometry (path length) wrt power-law index p
 
         The evaluation is done using Eqn. 12 in Hazboun et al. (2022).  The first term
@@ -1078,7 +1145,7 @@ class SolarWindDispersionScaled(Dispersion):
         theta, r = self._parent.sun_angle(toas, also_distance=True)
         return _d_solar_wind_geometry_d_p(r, theta, self.SWPP.value)
 
-    def d_fiducial_solar_wind_geometry_d_swp(self, toas, param_name, acc_delay=None):
+    def d_fiducial_solar_wind_geometry_d_swp(self):
         """Derivative of fiducial_solar_wind_geometry (path length) wrt power-law index p
 
         The evaluation is done using Eqn. 12 in Hazboun et al. (2022).  The first term
@@ -1097,12 +1164,8 @@ class SolarWindDispersionScaled(Dispersion):
     def d_dm_d_swp(self, toas, param_name, acc_delay=None):
         geometry = self.solar_wind_geometry(toas)
         fiducial_geometry = self.fiducial_solar_wind_geometry()
-        d_geometry_dp = self.d_solar_wind_geometry_d_swp(
-            toas, param_name, acc_delay=acc_delay
-        )
-        d_fiducial_geometry_dp = self.d_fiducial_solar_wind_geometry_d_swp(
-            toas, param_name, acc_delay=acc_delay
-        )
+        d_geometry_dp = self.d_solar_wind_geometry_d_swp(toas)
+        d_fiducial_geometry_dp = self.d_fiducial_solar_wind_geometry_d_swp()
         return self.SWDMMAX.quantity * (
             (d_geometry_dp / fiducial_geometry)
             - (geometry / fiducial_geometry**2) * d_fiducial_geometry_dp

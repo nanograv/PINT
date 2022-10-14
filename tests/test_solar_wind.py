@@ -22,7 +22,7 @@ par = """
 PSR J1234+5678
 F0 1
 DM 10
-ELAT 0
+ELAT 10
 ELONG 0
 PEPOCH 54000
 """
@@ -104,18 +104,23 @@ def test_swx():
     model2 = get_model(
         StringIO(
             "\n".join(
-                [par, "SWX_0001 1\nSWXP_0001 2\nSWXR1_0001 53999\nSWXR2_0001 55000"]
+                [par, "SWXDM_0001 1\nSWXP_0001 2\nSWXR1_0001 53999\nSWXR2_0001 55000"]
             )
         )
     )
+    model2.SWXDM_0001.quantity = model.get_max_dm()
     toas = make_fake_toas_uniform(54000, 54000 + year, 13, model=model, obs="gbt")
     assert np.allclose(model2.swx_dm(toas), model.solar_wind_dm(toas))
     assert np.allclose(model2.swx_delay(toas), model.solar_wind_delay(toas))
     assert np.allclose(
-        model2.d_dm_d_param(toas, "SWX_0001"), model.d_dm_d_param(toas, "NE_SW")
+        model2.d_dm_d_param(toas, "SWXDM_0001")
+        * model2.fiducial_solar_wind_geometry(model2.SWXP_0001.value),
+        model.d_dm_d_param(toas, "NE_SW"),
     )
     assert np.allclose(
-        model2.d_delay_d_param(toas, "SWX_0001"), model.d_delay_d_param(toas, "NE_SW")
+        model2.d_delay_d_param(toas, "SWXDM_0001")
+        * model2.fiducial_solar_wind_geometry(model2.SWXP_0001.value),
+        model.d_delay_d_param(toas, "NE_SW"),
     )
 
 
@@ -140,7 +145,7 @@ def test_swfits():
     model3.SWXR2_0001.value = t.get_mjds().max().value
     model3.SWXP_0001.value = 2
     model3.SWXP_0001.frozen = True
-    model3.SWX_0001.value = 10
+    model3.SWXDM_0001.value = 1e-3
 
     f1 = Fitter.auto(t, model1)
     f2 = Fitter.auto(t, model2)
@@ -150,7 +155,7 @@ def test_swfits():
     f2.fit_toas()
     f3.fit_toas()
     assert np.isclose(f1.model.NE_SW.value, f2.model.NE_SW.value)
-    assert np.isclose(f1.model.NE_SW.value, f3.model.SWX_0001.value)
+    assert np.isclose(f1.model.NE_SW.value, f3.model.get_ne_sws()[0].value)
 
 
 def test_swp_fit():
@@ -170,7 +175,7 @@ def test_swxp_fit():
     model.add_component(SolarWindDispersionX())
     model.SWXR1_0001.value = 54000
     model.SWXR2_0001.value = 54365
-    model.SWX_0001.value = 10
+    model.SWXDM_0001.value = 1e-3
     model.SWXP_0001.value = 2
     toas = make_fake_toas_uniform(54000, 54000 + 365, 153, model=model, obs="gbt")
     for param in model.free_params:
@@ -187,7 +192,7 @@ def test_overlapping_swx():
     model.add_component(SolarWindDispersionX())
     model.SWXR1_0001.value = 54000
     model.SWXR2_0001.value = 54365
-    model.SWX_0001.value = 10
+    model.SWXDM_0001.value = 10
     model.SWXP_0001.value = 5
     toas = make_fake_toas_uniform(54000, 54000 + 365, 150, model=model, obs="gbt")
 
@@ -196,7 +201,7 @@ def test_overlapping_swx():
     model2 = copy.deepcopy(model)
     model3 = copy.deepcopy(model)
 
-    model2.add_swx_range(54000, 54180, swx=10, swxp=1.5)
+    model2.add_swx_range(54000, 54180, swxdm=10, swxp=1.5)
     dm2 = model2.components["SolarWindDispersionX"].swx_dm(toas)
 
     model3.SWXR2_0001.value = 54180
