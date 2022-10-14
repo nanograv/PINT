@@ -162,6 +162,73 @@ def _d_hypergeom_function_dp(b, z, p):
     )
 
 
+def _solar_wind_geometry(r, theta, p):
+    """Solar wind geometry factor (integral of path length)
+
+    For the models with variable power-law index (You et al., Hazboun et al.)
+
+    Parameters
+    ----------
+    r : astropy.quantity.Quantity
+        Distance from the Earth to the Sun
+    theta : astropy.quantity.Quantity
+        Solar elongation
+    p : float
+        Power-law index
+
+    Returns
+    -------
+    astropy.quantity.Quantity
+    """
+    # impact parameter
+    b = r * np.sin(theta)
+    # distance from the Earth to the impact point
+    z_sun = r * np.cos(theta)
+    # a big value for comparison
+    # this is what Enterprise uses
+    z_p = (1e14 * u.s * const.c).to(b.unit)
+    if p > 1:
+        solar_wind_geometry = (
+            (1 / b.to_value(u.AU)) ** p
+            * b
+            * (_dm_p_int(b, z_p, p) - _dm_p_int(b, -z_sun, p))
+        )
+    else:
+        raise NotImplementedError(
+            "Solar Wind geometry not implemented for power-law index p <= 1"
+        )
+    return solar_wind_geometry
+
+
+def _d_solar_wind_geometry_d_p(r, theta, p):
+    """Derivative of solar_wind_geometry (path length) wrt power-law index p
+
+    The evaluation is done using Eqn. 12 in Hazboun et al. (2022).  The first term
+    involving hypergeometric functions (:func:`_hypergeom_function`)
+    has the derivative computed approximately using a Pade expansion (:func:`_d_hypergeom_function_dp`).
+    The second uses gamma functions (:func:`_gamma_function`) and has the derivative computed
+    using polygamma functions (:func:`_d_gamma_function_dp`).
+
+    """
+    # impact parameter
+    b = r * np.sin(theta)
+    # distance from the Earth to the impact point
+    z_sun = r * np.cos(theta)
+    # a big value for comparison
+    # this is what Enterprise uses
+    z_p = (1e14 * u.s * const.c).to(b.unit)
+    if p > 1:
+        return (1 / b.to_value(u.AU)) ** p * (
+            b * _d_hypergeom_function_dp(b, z_sun, p)
+            + (b * np.sqrt(np.pi) / 2) * _d_gamma_function_dp(p)
+        ) - (1 / b.to_value(u.AU)) ** p * np.log(b.to_value(u.AU)) * (
+            b * _hypergeom_function(b, z_sun, p)
+            + (b * np.sqrt(np.pi) / 2) * _gamma_function(p)
+        )
+    else:
+        return np.inf * np.ones(len(theta)) * u.pc
+
+
 class SolarWindDispersion(Dispersion):
     """Dispersion due to the solar wind (basic model).
 
@@ -258,24 +325,7 @@ class SolarWindDispersion(Dispersion):
         elif swm == 1:
             # get elongation angle, distance from Earth to Sun
             theta, r = self._parent.sun_angle(toas, also_distance=True)
-            # impact parameter
-            b = r * np.sin(theta)
-            # distance from the Earth to the impact point
-            z_sun = r * np.cos(theta)
-            # a big value for comparison
-            # this is what Enterprise uses
-            z_p = (1e14 * u.s * const.c).to(b.unit)
-            if p > 1:
-                solar_wind_geometry = (
-                    (1 / b.to_value(u.AU)) ** p
-                    * b
-                    * (_dm_p_int(b, z_p, p) - _dm_p_int(b, -z_sun, p))
-                )
-            else:
-                raise NotImplementedError(
-                    "Solar Dispersion Delay not implemented for power-law index p <= 1"
-                )
-            return solar_wind_geometry.to(u.pc)
+            return _solar_wind_geometry(r, theta, p).to(u.pc)
         else:
             raise NotImplementedError(
                 "Solar Dispersion Delay not implemented for SWM %d" % swm
@@ -343,24 +393,7 @@ class SolarWindDispersion(Dispersion):
         elif self.SWM.value == 1:
             # get elongation angle, distance from Earth to Sun
             theta, r = self._parent.sun_angle(toas, also_distance=True)
-            # impact parameter
-            b = r * np.sin(theta)
-            # distance from the Earth to the impact point
-            z_sun = r * np.cos(theta)
-            # a big value for comparison
-            # this is what Enterprise uses
-            z_p = (1e14 * u.s * const.c).to(b.unit)
-            p = self.SWP.value
-            if p > 1:
-                return (1 / b.to_value(u.AU)) ** p * (
-                    b * _d_hypergeom_function_dp(b, z_sun, p)
-                    + (b * np.sqrt(np.pi) / 2) * _d_gamma_function_dp(p)
-                ) - (1 / b.to_value(u.AU)) ** p * np.log(b.to_value(u.AU)) * (
-                    b * _hypergeom_function(b, z_sun, p)
-                    + (b * np.sqrt(np.pi) / 2) * _gamma_function(p)
-                )
-            else:
-                return np.inf * np.ones(len(toas)) * u.pc
+            return _d_solar_wind_geometry_d_p(r, theta, self.SWP.value)
         else:
             raise NotImplementedError(
                 "Solar Dispersion Delay not implemented for SWM %d" % self.SWM.value
@@ -418,24 +451,9 @@ class SolarWindDispersion(Dispersion):
             p = self.SWP.value
             theta = elongation
             r = 1 * u.AU
-            # impact parameter
-            b = r * np.sin(theta)
-            # distance from the Earth to the impact point
-            z_sun = r * np.cos(theta)
-            # a big value for comparison
-            # this is what Enterprise uses
-            z_p = (1e14 * u.s * const.c).to(b.unit)
-            if p > 1:
-                solar_wind_geometry = (
-                    (1 / b.to_value(u.AU)) ** p
-                    * b
-                    * (_dm_p_int(b, z_p, p) - _dm_p_int(b, -z_sun, p))
-                )
-            else:
-                raise NotImplementedError(
-                    "Solar Dispersion Delay not implemented for power-law index p <= 1"
-                )
-            return (solar_wind_geometry * self.NE_SW.quantity).to(u.pc / u.cm**3)
+            return (_solar_wind_geometry(r, theta, p) * self.NE_SW.quantity).to(
+                u.pc / u.cm**3
+            )
         else:
             raise NotImplementedError(
                 "Solar Dispersion Delay not implemented for SWM %d" % self.SWM.value
@@ -470,24 +488,9 @@ class SolarWindDispersion(Dispersion):
             # for the min
             theta = 180 * u.deg - elongation
             r = 1 * u.AU
-            # impact parameter
-            b = r * np.sin(theta)
-            # distance from the Earth to the impact point
-            z_sun = r * np.cos(theta)
-            # a big value for comparison
-            # this is what Enterprise uses
-            z_p = (1e14 * u.s * const.c).to(b.unit)
-            if p > 1:
-                solar_wind_geometry = (
-                    (1 / b.to_value(u.AU)) ** p
-                    * b
-                    * (_dm_p_int(b, z_p, p) - _dm_p_int(b, -z_sun, p))
-                )
-            else:
-                raise NotImplementedError(
-                    "Solar Dispersion Delay not implemented for power-law index p <= 1"
-                )
-            return (solar_wind_geometry * self.NE_SW.quantity).to(u.pc / u.cm**3)
+            return (_solar_wind_geometry(r, theta, p) * self.NE_SW.quantity).to(
+                u.pc / u.cm**3
+            )
         else:
             raise NotImplementedError(
                 "Solar Dispersion Delay not implemented for SWM %d" % self.SWM.value
@@ -528,7 +531,7 @@ class SolarWindDispersionX(Dispersion):
         self.dm_value_funcs += [self.swx_dm]
         self.delay_funcs_component += [self.swx_delay]
 
-    def solar_wind_geometry(self, toas, p=2):
+    def solar_wind_geometry(self, toas, p):
         """Return the geometry of solar wind dispersion.
 
         Implements Eqn. 11 of Hazboun et al. (2022)
@@ -536,7 +539,7 @@ class SolarWindDispersionX(Dispersion):
         Parameters
         ----------
         toas : pint.toa.TOAs
-        p : float, optional
+        p : float
             Radial power-law index
 
         Returns
@@ -546,24 +549,7 @@ class SolarWindDispersionX(Dispersion):
 
         # get elongation angle, distance from Earth to Sun
         theta, r = self._parent.sun_angle(toas, also_distance=True)
-        # impact parameter
-        b = r * np.sin(theta)
-        # distance from the Earth to the impact point
-        z_sun = r * np.cos(theta)
-        # a big value for comparison
-        # this is what Enterprise uses
-        z_p = (1e14 * u.s * const.c).to(b.unit)
-        if p > 1:
-            solar_wind_geometry = (
-                (1 / b.to_value(u.AU)) ** p
-                * b
-                * (_dm_p_int(b, z_p, p) - _dm_p_int(b, -z_sun, p))
-            )
-        else:
-            raise NotImplementedError(
-                "Solar Dispersion Delay not implemented for power-law index p <= 1"
-            )
-        return solar_wind_geometry.to(u.pc)
+        return _solar_wind_geometry(r, theta, p).to(u.pc)
 
     def d_solar_wind_geometry_d_swxp(self, toas, p):
         """Derivative of solar_wind_geometry (path length) wrt power-law index p
@@ -586,23 +572,7 @@ class SolarWindDispersionX(Dispersion):
         """
         # get elongation angle, distance from Earth to Sun
         theta, r = self._parent.sun_angle(toas, also_distance=True)
-        # impact parameter
-        b = r * np.sin(theta)
-        # distance from the Earth to the impact point
-        z_sun = r * np.cos(theta)
-        # a big value for comparison
-        # this is what Enterprise uses
-        z_p = (1e14 * u.s * const.c).to(b.unit)
-        if p > 1:
-            return (1 / b.to_value(u.AU)) ** p * (
-                b * _d_hypergeom_function_dp(b, z_sun, p)
-                + (b * np.sqrt(np.pi) / 2) * _d_gamma_function_dp(p)
-            ) - (1 / b.to_value(u.AU)) ** p * np.log(b.to_value(u.AU)) * (
-                b * _hypergeom_function(b, z_sun, p)
-                + (b * np.sqrt(np.pi) / 2) * _gamma_function(p)
-            )
-        else:
-            return np.inf * np.ones(len(toas)) * u.pc
+        return _d_solar_wind_geometry_d_p(r, theta, p)
 
     def add_swx_range(self, mjd_start, mjd_end, index=None, swx=0, swxp=2, frozen=True):
         """Add SWX range to a dispersion model with specified start/end MJD, SWX, and power-law index
@@ -956,24 +926,7 @@ class SolarWindDispersionX(Dispersion):
             t0, elongation = pint.utils.get_conjunction(coord, r1, precision="high")
             theta = elongation
             r = 1 * u.AU
-            # impact parameter
-            b = r * np.sin(theta)
-            # distance from the Earth to the impact point
-            z_sun = r * np.cos(theta)
-            # a big value for comparison
-            # this is what Enterprise uses
-            z_p = (1e14 * u.s * const.c).to(b.unit)
-            if p > 1:
-                solar_wind_geometry = (
-                    (1 / b.to_value(u.AU)) ** p
-                    * b
-                    * (_dm_p_int(b, z_p, p) - _dm_p_int(b, -z_sun, p))
-                )
-            else:
-                raise NotImplementedError(
-                    "Solar Dispersion Delay not implemented for power-law index p <= 1"
-                )
-            dms[j] = (solar_wind_geometry * swx).to(u.pc / u.cm**3)
+            dms[j] = (_solar_wind_geometry(r, theta, p) * swx).to(u.pc / u.cm**3)
         return dms
 
     def get_min_dms(self):
@@ -999,24 +952,7 @@ class SolarWindDispersionX(Dispersion):
             # for the min
             theta = 180 * u.deg - elongation
             r = 1 * u.AU
-            # impact parameter
-            b = r * np.sin(theta)
-            # distance from the Earth to the impact point
-            z_sun = r * np.cos(theta)
-            # a big value for comparison
-            # this is what Enterprise uses
-            z_p = (1e14 * u.s * const.c).to(b.unit)
-            if p > 1:
-                solar_wind_geometry = (
-                    (1 / b.to_value(u.AU)) ** p
-                    * b
-                    * (_dm_p_int(b, z_p, p) - _dm_p_int(b, -z_sun, p))
-                )
-            else:
-                raise NotImplementedError(
-                    "Solar Dispersion Delay not implemented for power-law index p <= 1"
-                )
-            dms[j] = (solar_wind_geometry * swx).to(u.pc / u.cm**3)
+            dms[j] = (_solar_wind_geometry(r, theta, p) * swx).to(u.pc / u.cm**3)
         return dms
 
 
@@ -1083,24 +1019,7 @@ class SolarWindDispersionScaled(Dispersion):
 
         # get elongation angle, distance from Earth to Sun
         theta, r = self._parent.sun_angle(toas, also_distance=True)
-        # impact parameter
-        b = r * np.sin(theta)
-        # distance from the Earth to the impact point
-        z_sun = r * np.cos(theta)
-        # a big value for comparison
-        # this is what Enterprise uses
-        z_p = (1e14 * u.s * const.c).to(b.unit)
-        if p > 1:
-            solar_wind_geometry = (
-                (1 / b.to_value(u.AU)) ** p
-                * b
-                * (_dm_p_int(b, z_p, p) - _dm_p_int(b, -z_sun, p))
-            )
-        else:
-            raise NotImplementedError(
-                "Solar Dispersion Delay not implemented for power-law index p <= 1"
-            )
-        return solar_wind_geometry.to(u.pc)
+        return _solar_wind_geometry(r, theta, p).to(u.pc)
 
     def fiducial_solar_wind_geometry(self):
         """Return the geometry of solar wind dispersion for the fiducial elongation
@@ -1113,25 +1032,7 @@ class SolarWindDispersionScaled(Dispersion):
         r0 = 1 * u.AU
         coord = self._parent.get_psr_coords()
         theta0 = coord.transform_to(pint.pulsar_ecliptic.PulsarEcliptic()).lat
-
-        # impact parameter
-        b = r0 * np.sin(theta0)
-        # distance from the Earth to the impact point
-        z_sun = r0 * np.cos(theta0)
-        # a big value for comparison
-        # this is what Enterprise uses
-        z_p = (1e14 * u.s * const.c).to(b.unit)
-        if p > 1:
-            solar_wind_geometry = (
-                (1 / b.to_value(u.AU)) ** p
-                * b
-                * (_dm_p_int(b, z_p, p) - _dm_p_int(b, -z_sun, p))
-            )
-        else:
-            raise NotImplementedError(
-                "Solar Dispersion Delay not implemented for power-law index p <= 1"
-            )
-        return solar_wind_geometry.to(u.pc)
+        return _solar_wind_geometry(r0, theta0, p).to(u.pc)
 
     def solar_wind_dm(self, toas):
         """Return the solar wind dispersion measure."""
@@ -1175,24 +1076,7 @@ class SolarWindDispersionScaled(Dispersion):
 
         # get elongation angle, distance from Earth to Sun
         theta, r = self._parent.sun_angle(toas, also_distance=True)
-        # impact parameter
-        b = r * np.sin(theta)
-        # distance from the Earth to the impact point
-        z_sun = r * np.cos(theta)
-        # a big value for comparison
-        # this is what Enterprise uses
-        z_p = (1e14 * u.s * const.c).to(b.unit)
-        p = self.SWPP.value
-        if p > 1:
-            return (1 / b.to_value(u.AU)) ** p * (
-                b * _d_hypergeom_function_dp(b, z_sun, p)
-                + (b * np.sqrt(np.pi) / 2) * _d_gamma_function_dp(p)
-            ) - (1 / b.to_value(u.AU)) ** p * np.log(b.to_value(u.AU)) * (
-                b * _hypergeom_function(b, z_sun, p)
-                + (b * np.sqrt(np.pi) / 2) * _gamma_function(p)
-            )
-        else:
-            return np.inf * np.ones(len(toas)) * u.pc
+        return _d_solar_wind_geometry_d_p(r, theta, self.SWPP.value)
 
     def d_fiducial_solar_wind_geometry_d_swp(self, toas, param_name, acc_delay=None):
         """Derivative of fiducial_solar_wind_geometry (path length) wrt power-law index p
@@ -1208,23 +1092,7 @@ class SolarWindDispersionScaled(Dispersion):
         r0 = 1 * u.AU
         coord = self._parent.get_psr_coords()
         theta0 = coord.transform_to(pint.pulsar_ecliptic.PulsarEcliptic()).lat
-        b0 = r0 * np.sin(theta0)
-        # distance from the Earth to the impact point
-        z_sun0 = r0 * np.cos(theta0)
-        # a big value for comparison
-        # this is what Enterprise uses
-        z_p = (1e14 * u.s * const.c).to(b0.unit)
-        p = self.SWPP.value
-        if p > 1:
-            return (1 / b0.to_value(u.AU)) ** p * (
-                b0 * _d_hypergeom_function_dp(b0, z_sun0, p)
-                + (b0 * np.sqrt(np.pi) / 2) * _d_gamma_function_dp(p)
-            ) - (1 / b0.to_value(u.AU)) ** p * np.log(b0.to_value(u.AU)) * (
-                b0 * _hypergeom_function(b0, z_sun0, p)
-                + (b0 * np.sqrt(np.pi) / 2) * _gamma_function(p)
-            )
-        else:
-            return np.inf * np.ones(len(toas)) * u.pc
+        return _d_solar_wind_geometry_d_p(r0, theta0, self.SWPP.value)
 
     def d_dm_d_swp(self, toas, param_name, acc_delay=None):
         geometry = self.solar_wind_geometry(toas)
@@ -1281,30 +1149,11 @@ class SolarWindDispersionScaled(Dispersion):
         coord = self._parent.get_psr_coords()
         theta0 = coord.transform_to(pint.pulsar_ecliptic.PulsarEcliptic()).lat
         # for the min
-        theta = (
-            np.array([(180 * u.deg - theta0).to_value(u.deg), theta0.to_value(u.deg)])
-            * u.deg
-        )
+        theta_min = 180 * u.deg - theta0
         r = 1 * u.AU
-        # impact parameter
-        b = r * np.sin(theta)
-        # distance from the Earth to the impact point
-        z_sun = r * np.cos(theta)
-        # a big value for comparison
-        # this is what Enterprise uses
-        z_p = (1e14 * u.s * const.c).to(b.unit)
-        if p > 1:
-            solar_wind_geometry = (
-                (1 / b.to_value(u.AU)) ** p
-                * b
-                * (_dm_p_int(b, z_p, p) - _dm_p_int(b, -z_sun, p))
-            )
-        else:
-            raise NotImplementedError(
-                "Solar Dispersion Delay not implemented for power-law index p <= 1"
-            )
         return (
-            (solar_wind_geometry[0] / solar_wind_geometry[1]) * self.SWDMMAX.quantity
+            (_solar_wind_geometry(r, theta_min, p) / _solar_wind_geometry(r, theta0, p))
+            * self.SWDMMAX.quantity
         ).to(u.pc / u.cm**3)
 
     def get_ne_sw(self):
