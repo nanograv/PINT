@@ -22,6 +22,16 @@ par = """
 PSR J1234+5678
 F0 1
 DM 10
+ELAT 0
+ELONG 0
+PEPOCH 54000
+"""
+
+# a model with ELAT > 0
+par2 = """
+PSR J1234+5678
+F0 1
+DM 10
 ELAT 10
 ELONG 0
 PEPOCH 54000
@@ -99,12 +109,12 @@ def test_solar_wind_generalmodel_p1():
 
 def test_swx():
     # default model
-    model = get_model(StringIO("\n".join([par, "NE_SW 1"])))
+    model = get_model(StringIO("\n".join([par2, "NE_SW 1"])))
     # SWX model with a single segment to match the default model
     model2 = get_model(
         StringIO(
             "\n".join(
-                [par, "SWXDM_0001 1\nSWXP_0001 2\nSWXR1_0001 53999\nSWXR2_0001 55000"]
+                [par2, "SWXDM_0001 1\nSWXP_0001 2\nSWXR1_0001 53999\nSWXR2_0001 55000"]
             )
         )
     )
@@ -159,7 +169,7 @@ def test_swfits():
 
 
 def test_swp_fit():
-    model = get_model(StringIO("\n".join([par, "NE_SW 1\nSWM 1\nSWP 2"])))
+    model = get_model(StringIO("\n".join([par2, "NE_SW 1\nSWM 1\nSWP 2"])))
     toas = make_fake_toas_uniform(54000, 54000 + 365, 153, model=model, obs="gbt")
     for param in model.free_params:
         getattr(model, param).frozen = True
@@ -171,7 +181,7 @@ def test_swp_fit():
 
 
 def test_swxp_fit():
-    model = get_model(StringIO(par))
+    model = get_model(StringIO(par2))
     model.add_component(SolarWindDispersionX())
     model.SWXR1_0001.value = 54000
     model.SWXR2_0001.value = 54365
@@ -188,7 +198,7 @@ def test_swxp_fit():
 
 
 def test_overlapping_swx():
-    model = get_model(StringIO(par))
+    model = get_model(StringIO(par2))
     model.add_component(SolarWindDispersionX())
     model.SWXR1_0001.value = 54000
     model.SWXR2_0001.value = 54365
