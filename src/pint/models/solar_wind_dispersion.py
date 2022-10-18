@@ -1013,7 +1013,6 @@ class SolarWindDispersionX(Dispersion):
         """
         SWXDM_mapping = self.get_prefix_mapping_component("SWXDM_")
         SWXP_mapping = self.get_prefix_mapping_component("SWXP_")
-        SWXR1_mapping = self.get_prefix_mapping_component("SWXR1_")
         sorted_list = sorted(SWXDM_mapping.keys())
         ne_sws = np.zeros(len(sorted_list)) * u.cm**-3
         for j, ii in enumerate(sorted_list):
@@ -1022,222 +1021,30 @@ class SolarWindDispersionX(Dispersion):
             ne_sws[j] = (swxdm / self.fiducial_solar_wind_geometry(p)).to(u.cm**-3)
         return ne_sws
 
-
-class SolarWindDispersionScaled(Dispersion):
-    """Dispersion due to the solar wind (basic model).
-
-    The model is a simple spherically-symmetric model that is fit
-    in its constant amplitude and power-law index
-
-    Parameters supported:
-
-    .. paramtable::
-        :class: pint.models.solar_wind_dispersion.SolarWindDispersionScaled
-
-    References
-    ----------
-    - Edwards et al. 2006, MNRAS, 372, 1549; Setion 2.5.4
-    - Madison et al. 2019, ApJ, 872, 150; Section 3.1.
-    - Hazboun et al. (2022, ApJ, 929, 39)
-    - You et al. (2012, MNRAS, 422, 1160)
-    """
-
-    register = True
-    category = "solar_wind"
-
-    def __init__(self):
-        super().__init__()
-        self.add_param(
-            floatParameter(
-                name="SWDMMAX", units="pc*cm^-3", value=0.0, description="Maximum DM"
-            )
-        )
-        self.add_param(
-            floatParameter(
-                name="SWPP",
-                value=2.0,
-                units="",
-                description="Solar Wind Model radial power-law index",
-            )
-        )
-        self.dm_value_funcs += [self.solar_wind_dm]
-        self.delay_funcs_component += [self.solar_wind_delay]
-        self.set_special_params(["SWDMMAX", "SWPP"])
-
-    def setup(self):
-        super().setup()
-        self.register_dm_deriv_funcs(self.d_dm_d_swdmmax, "SWDMMAX")
-        self.register_deriv_funcs(self.d_delay_d_swdmmax, "SWDMMAX")
-        self.register_dm_deriv_funcs(self.d_dm_d_swp, "SWPP")
-        self.register_deriv_funcs(self.d_delay_d_swp, "SWPP")
-
-    def solar_wind_geometry(self, toas):
-        """Return the geometry of solar wind dispersion.
+    def set_ne_sws(self, ne_sws):
+        """Set the DMMAXs based on an input NE_SW values (electron density at 1 AU)
 
         Parameters
         ----------
-        toas : pint.toa.TOAs
+        ne_sws : astropy.quantity.Quantity
+            Desired NE_SWs (should be scalar or the same length as the number of segments)
 
-        Returns
-        -------
-        astropy.quantity.Quantity
+        Raises
+        ------
+        ValueError : If length of input does ont match number of segments
         """
-        p = self.SWPP.value
-
-        # get elongation angle, distance from Earth to Sun
-        theta, r = self._parent.sun_angle(toas, also_distance=True)
-        return _solar_wind_geometry(r, theta, p).to(u.pc)
-
-    def fiducial_solar_wind_geometry(self):
-        """Return the geometry of solar wind dispersion for the fiducial elongation
-
-        Returns
-        -------
-        astropy.quantity.Quantity
-        """
-        p = self.SWPP.value
-        r0 = 1 * u.AU
-        coord = self._parent.get_psr_coords()
-        theta0 = coord.transform_to(pint.pulsar_ecliptic.PulsarEcliptic()).lat
-        return _solar_wind_geometry(r0, theta0, p).to(u.pc)
-
-    def solar_wind_dm(self, toas):
-        """Return the solar wind dispersion measure."""
-        solar_wind_geometry = self.solar_wind_geometry(toas)
-        fiducial_solar_wind_geometry = self.fiducial_solar_wind_geometry()
-        solar_wind_dm = self.SWDMMAX.quantity * (
-            solar_wind_geometry / fiducial_solar_wind_geometry
-        )
-        return solar_wind_dm.to(u.pc / u.cm**3)
-
-    def solar_wind_delay(self, toas, acc_delay=None):
-        """This is a wrapper function to compute solar wind dispersion delay."""
-        if self.SWDMMAX.value == 0:
-            return np.zeros(len(toas)) * u.s
-        return self.dispersion_type_delay(toas)
-
-    def d_dm_d_swdmmax(self, toas, param_name, acc_delay=None):
-        """Derivative of of DM wrt the solar wind max dm"""
-        return self.solar_wind_geometry(toas) / self.fiducial_solar_wind_geometry()
-
-    def d_delay_d_swdmmax(self, toas, param_name, acc_delay=None):
-        try:
-            bfreq = self._parent.barycentric_radio_freq(toas)
-        except AttributeError:
-            warn("Using topocentric frequency for dedispersion!")
-            bfreq = toas.table["freq"]
-        deriv = self.d_delay_d_dmparam(toas, "SWDMMAX")
-        deriv[bfreq < 1.0 * u.MHz] = 0.0
-        return deriv
-
-    def d_solar_wind_geometry_d_swp(self, toas):
-        """Derivative of solar_wind_geometry (path length) wrt power-law index p
-
-        The evaluation is done using Eqn. 12 in Hazboun et al. (2022).  The first term
-        involving hypergeometric functions (:func:`_hypergeom_function`)
-        has the derivative computed approximately using a Pade expansion (:func:`_d_hypergeom_function_dp`).
-        The second uses gamma functions (:func:`_gamma_function`) and has the derivative computed
-        using polygamma functions (:func:`_d_gamma_function_dp`).
-
-        """
-
-        # get elongation angle, distance from Earth to Sun
-        theta, r = self._parent.sun_angle(toas, also_distance=True)
-        return _d_solar_wind_geometry_d_p(r, theta, self.SWPP.value)
-
-    def d_fiducial_solar_wind_geometry_d_swp(self):
-        """Derivative of fiducial_solar_wind_geometry (path length) wrt power-law index p
-
-        The evaluation is done using Eqn. 12 in Hazboun et al. (2022).  The first term
-        involving hypergeometric functions (:func:`_hypergeom_function`)
-        has the derivative computed approximately using a Pade expansion (:func:`_d_hypergeom_function_dp`).
-        The second uses gamma functions (:func:`_gamma_function`) and has the derivative computed
-        using polygamma functions (:func:`_d_gamma_function_dp`).
-
-        """
-        # fiducial values
-        r0 = 1 * u.AU
-        coord = self._parent.get_psr_coords()
-        theta0 = coord.transform_to(pint.pulsar_ecliptic.PulsarEcliptic()).lat
-        return _d_solar_wind_geometry_d_p(r0, theta0, self.SWPP.value)
-
-    def d_dm_d_swp(self, toas, param_name, acc_delay=None):
-        geometry = self.solar_wind_geometry(toas)
-        fiducial_geometry = self.fiducial_solar_wind_geometry()
-        d_geometry_dp = self.d_solar_wind_geometry_d_swp(toas)
-        d_fiducial_geometry_dp = self.d_fiducial_solar_wind_geometry_d_swp()
-        return self.SWDMMAX.quantity * (
-            (d_geometry_dp / fiducial_geometry)
-            - (geometry / fiducial_geometry**2) * d_fiducial_geometry_dp
-        )
-
-    def d_delay_d_swp(self, toas, param_name, acc_delay=None):
-        try:
-            bfreq = self._parent.barycentric_radio_freq(toas)
-        except AttributeError:
-            warn("Using topocentric frequency for dedispersion!")
-            bfreq = toas.table["freq"]
-        deriv = self.d_delay_d_dmparam(toas, "SWPP")
-        deriv[bfreq < 1.0 * u.MHz] = 0.0
-        return deriv
-
-    def print_par(self, format="pint"):
-        result = ""
-        result += getattr(self, "SWDMMAX").as_parfile_line(format=format)
-        result += getattr(self, "SWPP").as_parfile_line(format=format)
-        return result
-
-    def get_max_dm(self):
-        """Return approximate maximum DM from the Solar Wind (at conjunction)
-
-        Simplified model that assumes a circular orbit
-
-        Returns
-        -------
-        astropy.quantity.Quantity
-        """
-        return self.SWDMMAX.quantity
-
-    def get_min_dm(self):
-        """Return approximate minimum DM from the Solar Wind (180deg away from conjunction)
-
-        Simplified model that assumes a circular orbit
-
-        Returns
-        -------
-        astropy.quantity.Quantity
-        """
-        p = self.SWPP.value
-        # for the max
-        coord = self._parent.get_psr_coords()
-        theta0 = coord.transform_to(pint.pulsar_ecliptic.PulsarEcliptic()).lat
-        # for the min
-        theta_min = 180 * u.deg - theta0
-        r = 1 * u.AU
-        return (
-            (_solar_wind_geometry(r, theta_min, p) / _solar_wind_geometry(r, theta0, p))
-            * self.SWDMMAX.quantity
-        ).to(u.pc / u.cm**3)
-
-    def get_ne_sw(self):
-        """Return the effective Solar Wind electron density at 1 AU
-
-        Returns
-        -------
-        astropy.quantity.Quantity
-        """
-        return (self.SWDMMAX.quantity / self.fiducial_solar_wind_geometry()).to(
-            u.cm**-3
-        )
-
-    def set_ne_sw(self, ne_sw):
-        """Set the DMMAX based on an input NE_SW value (electron density at 1 AU)
-
-        Parameters
-        ----------
-        ne_sw : astropy.quantity.Quantity
-            Desired NE_SW
-        """
-        self.SWDMMAX.quantity = (self.fiducial_solar_wind_geometry() * ne_sw).to(
-            u.pc / u.cm**3
-        )
+        ne_sws = np.atleast_1d(ne_sws)
+        SWXDM_mapping = self.get_prefix_mapping_component("SWXDM_")
+        SWXP_mapping = self.get_prefix_mapping_component("SWXP_")
+        sorted_list = sorted(SWXDM_mapping.keys())
+        if len(ne_sws) == 1:
+            ne_sws = ne_sws[0] * np.ones(len(sorted_list))
+        if not len(sorted_list) == len(ne_sws):
+            raise ValueError(
+                f"Length of input NE_SW values ({len(ne_sws)}) must match number of SWX segments ({len(sorted_list)})"
+            )
+        for j, ii in enumerate(sorted_list):
+            p = getattr(self, SWXP_mapping[ii]).value
+            getattr(self, SWXDM_mapping[ii]).quantity = (
+                self.fiducial_solar_wind_geometry(p) * ne_sws[j]
+            ).to(u.pc / u.cm**3)

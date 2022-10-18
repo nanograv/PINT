@@ -107,7 +107,7 @@ def test_solar_wind_generalmodel_p1():
         toas = make_fake_toas_uniform(54000, 54000 + year, 13, model=model, obs="gbt")
 
 
-def test_swx():
+def test_swx_dm():
     # default model
     model = get_model(StringIO("\n".join([par2, "NE_SW 1"])))
     # SWX model with a single segment to match the default model
@@ -121,7 +121,37 @@ def test_swx():
     model2.SWXDM_0001.quantity = model.get_max_dm()
     toas = make_fake_toas_uniform(54000, 54000 + year, 13, model=model, obs="gbt")
     assert np.allclose(model2.swx_dm(toas), model.solar_wind_dm(toas))
+
+
+def test_swx_delay():
+    # default model
+    model = get_model(StringIO("\n".join([par2, "NE_SW 1"])))
+    # SWX model with a single segment to match the default model
+    model2 = get_model(
+        StringIO(
+            "\n".join(
+                [par2, "SWXDM_0001 1\nSWXP_0001 2\nSWXR1_0001 53999\nSWXR2_0001 55000"]
+            )
+        )
+    )
+    model2.SWXDM_0001.quantity = model.get_max_dm()
+    toas = make_fake_toas_uniform(54000, 54000 + year, 13, model=model, obs="gbt")
     assert np.allclose(model2.swx_delay(toas), model.solar_wind_delay(toas))
+
+
+def test_swx_derivs():
+    # default model
+    model = get_model(StringIO("\n".join([par2, "NE_SW 1"])))
+    # SWX model with a single segment to match the default model
+    model2 = get_model(
+        StringIO(
+            "\n".join(
+                [par2, "SWXDM_0001 1\nSWXP_0001 2\nSWXR1_0001 53999\nSWXR2_0001 55000"]
+            )
+        )
+    )
+    model2.SWXDM_0001.quantity = model.get_max_dm()
+    toas = make_fake_toas_uniform(54000, 54000 + year, 13, model=model, obs="gbt")
     assert np.allclose(
         model2.d_dm_d_param(toas, "SWXDM_0001")
         * model2.fiducial_solar_wind_geometry(model2.SWXP_0001.value),
@@ -132,6 +162,31 @@ def test_swx():
         * model2.fiducial_solar_wind_geometry(model2.SWXP_0001.value),
         model.d_delay_d_param(toas, "NE_SW"),
     )
+
+
+def test_swx_getset():
+    # default model
+    model = get_model(StringIO("\n".join([par2, "NE_SW 1"])))
+    # SWX model with a single segment to match the default model
+    model2 = get_model(
+        StringIO(
+            "\n".join(
+                [par2, "SWXDM_0001 1\nSWXP_0001 2\nSWXR1_0001 53999\nSWXR2_0001 55000"]
+            )
+        )
+    )
+    model2.SWXDM_0001.quantity = model.get_max_dm()
+    toas = make_fake_toas_uniform(54000, 54000 + year, 13, model=model, obs="gbt")
+    assert np.isclose(model2.get_ne_sws()[0], model.NE_SW.quantity)
+    model2.set_ne_sws(model.NE_SW.quantity * 2)
+    assert np.isclose(model2.get_ne_sws()[0], 2 * model.NE_SW.quantity)
+    model2.set_ne_sws(np.array([model.NE_SW.value * 2]) * model.NE_SW.quantity.unit)
+    assert np.isclose(model2.get_ne_sws()[0], 2 * model.NE_SW.quantity)
+    with pytest.raises(ValueError):
+        model2.set_ne_sws(
+            np.array([model.NE_SW.value * 2, model.NE_SW.value])
+            * model.NE_SW.quantity.unit
+        )
 
 
 def test_swfits():
