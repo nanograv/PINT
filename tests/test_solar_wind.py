@@ -15,6 +15,7 @@ from pint.fitter import Fitter
 from pint.toa import get_TOAs
 from pint.simulation import make_fake_toas_uniform
 from pint.models.solar_wind_dispersion import SolarWindDispersionX
+import pint.utils
 from pinttestdata import datadir
 
 
@@ -59,6 +60,15 @@ def test_sun_angle_ecliptic(frac):
     sun_longitude = (sun_longitude + 180) % 360 - 180
     angles = np.rad2deg(model.sun_angle(toas).value)
     assert_allclose(angles, np.abs(sun_longitude), atol=1)
+
+
+def test_conjunction():
+    model = get_model(StringIO(par))
+    t0, elongation = pint.utils.get_conjunction(
+        model.get_psr_coords(), Time(march_equinox, format="mjd") - 2 * u.d
+    )
+    assert np.isclose(t0.mjd, 57102.87019389531)
+    assert elongation == 0 * u.deg
 
 
 def test_solar_wind_delays_positive():
