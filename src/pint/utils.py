@@ -1829,9 +1829,7 @@ def get_conjunction(coord, t0, precision="low", ecl="IERS2010"):
     """
 
     assert precision.lower() in ["low", "high"]
-    print(f"Input {coord} {t0}")
     coord = coord.transform_to(pint.pulsar_ecliptic.PulsarEcliptic(ecl=ecl))
-    print(f"Transformed {coord} {t0}")
 
     # low precision version
     # use analytic form for Sun's ecliptic longitude
@@ -1856,7 +1854,9 @@ def get_conjunction(coord, t0, precision="low", ecl="IERS2010"):
     # use astropy solar coordinates
     # start with 10 days on either side of the low precision value
     tt = conjunction + np.linspace(-10, 10) * u.d
-    print(f"Test times {tt}")
+    csun = coords.get_sun(tt)
+    # this seems to be needed in old astropy
+    csun = coords.SkyCoord(ra=csun.ra, dec=csun.dec)
     elongation = coords.get_sun(tt).separation(coord)
     # get min value and interpolate with a quadratic fit
     j = np.where(elongation == elongation.min())[0][0]
@@ -1864,8 +1864,11 @@ def get_conjunction(coord, t0, precision="low", ecl="IERS2010"):
     y = elongation.value[j - 3 : j + 4]
     f = np.polyfit(x, y, 2)
     conjunction = Time(-f[1] / 2 / f[0], format="mjd")
+    csun = coords.get_sun(conjunction)
+    # this seems to be needed in old astropy
+    csun = coords.SkyCoord(ra=csun.ra, dec=csun.dec)
 
-    return conjunction, coords.get_sun(conjunction).separation(coord)
+    return conjunction, csun.separation(coord)
 
 
 def divide_times(t, t0, offset=0.5):
