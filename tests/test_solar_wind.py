@@ -65,10 +65,12 @@ def test_sun_angle_ecliptic(frac):
 def test_conjunction():
     model = get_model(StringIO(par))
     t0, elongation = pint.utils.get_conjunction(
-        model.get_psr_coords(), Time(march_equinox, format="mjd") - 2 * u.d
+        model.get_psr_coords(),
+        Time(march_equinox, format="mjd") - 2 * u.d,
+        precision="high",
     )
-    assert np.isclose(t0.mjd, 57102.87019389531)
-    assert elongation == 0 * u.deg
+    assert np.isclose(t0.mjd, 57102.1792, atol=1e-4)
+    assert np.isclose(elongation, 0 * u.deg, atol=0.1 * u.deg)
 
 
 def test_solar_wind_delays_positive():
