@@ -44,11 +44,9 @@ class BayesianTiming:
        general priors should be set directly in the TimingModel object before creating the
        BayesianTiming object. Here is an example prior_info object:
 
-       .. code-block:: python
-       prior_info = {
-          "F0" : {"distr" : "normal", "mu" : 1, "sigma" : 0.00001},
-          "EFAC1" : {"distr" : "uniform", "pmin" : 0.5, "pmax" : 2.0}
-       }
+    `prior_info = { "F0" : {"distr" : "normal", "mu" : 1, "sigma" : 0.00001}, "EFAC1" : {"distr" : "uniform", "pmin" : 0.5, "pmax" : 2.0} }`
+
+    See examples/bayesian-example-NGC6440E.py for detailed example.
     """
 
     def __init__(self, model, toas, use_pulse_numbers=False, prior_info=None):
