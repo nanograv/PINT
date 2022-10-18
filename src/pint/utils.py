@@ -1857,7 +1857,7 @@ def get_conjunction(coord, t0, precision="low", ecl="IERS2010"):
     csun = coords.get_sun(tt)
     # this seems to be needed in old astropy
     csun = coords.SkyCoord(ra=csun.ra, dec=csun.dec)
-    elongation = coords.get_sun(tt).separation(coord)
+    elongation = csun.separation(coord)
     # get min value and interpolate with a quadratic fit
     j = np.where(elongation == elongation.min())[0][0]
     x = tt.mjd[j - 3 : j + 4]
