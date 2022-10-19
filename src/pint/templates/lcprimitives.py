@@ -130,7 +130,7 @@ def approx_derivative(func, phases, log10_ens=None, order=1, eps=1e-7):
     Fmid = func(phases,log10_ens=log10_ens)
     return (Fhi+Flo-2*Fmid)*(1.0/eps**2)
 
-def check_gradient(func, n=1000, atol=1e-8, rtol=1e-5, quiet=False):
+def check_gradient(func, n=1000, atol=1e-8, rtol=1e-5, quiet=False, ph=None, en=None):
     """Test gradient function with a set of MC photons.
     This works with either LCPrimitive or LCTemplate objects.
 
@@ -138,13 +138,26 @@ def check_gradient(func, n=1000, atol=1e-8, rtol=1e-5, quiet=False):
     a for the location-related parameters when the finite step
     causes the peak to shift from one side of an evaluation phase
     to the other."""
-    en = np.random.rand(n) * 3 + 1  # 10 MeV to 10 GeV
-    ph = func.random(n,log10_ens=en)
+    if en is None:
+        en = np.random.rand(n) * 3 + 1  # 10 MeV to 10 GeV
+    if ph is None:
+        ph = func.random(n,log10_ens=en)
+    assert(len(en)==len(ph))
     if hasattr(func, "closest_to_peak"):
         eps = min(1e-6, 0.2 * func.closest_to_peak(ph))
     else:
         eps = 1e-6
-    g1 = func.gradient(ph, log10_ens=en, free=False)
+    try:
+        g1,t1 = func.gradient(ph, log10_ens=en, free=False, template_too=True)
+        vals = func(ph,log10_ens=en)
+        if not np.allclose(vals,t1):
+            print('template_too value failed')
+            return False
+    except AttributeError:
+        g1 = func.gradient(ph, log10_ens=en, free=False)
+    if np.any(np.isnan(g1)):
+        print('Found NaN in gradient.')
+        return False
     g2 = func.approx_gradient(ph, log10_ens=en, eps=eps)
     anyfail = False
     for i in range(g1.shape[0]): # loop over params
@@ -163,6 +176,9 @@ def check_derivative(func, n=1000, atol=1e-8, rtol=1e-5, order=1, eps=1e-7, quie
     en = np.random.rand(n) * 3 + 1  # 10 MeV to 10 GeV
     ph = func.random(n,log10_ens=en)
     g1 = func.derivative(ph, log10_ens=en, order=order)
+    if np.any(np.isnan(g1)):
+        print('Found NaN in derivative.')
+        return False
     g2 = func.approx_derivative(ph, log10_ens=en, eps=eps, order=order)
     d1 = np.abs(g1-g2)
     if order > 1:
@@ -242,8 +258,15 @@ class LCPrimitive:
 
     def integrate(self, x1=0, x2=1, log10_ens=3):
         """Base implemention with scipy quad."""
-        f = lambda ph: self(ph, log10_ens)
-        return quad(f, x1, x2)[0]
+        if not isvector(log10_ens):
+            f = lambda ph: self(ph, log10_ens)
+            return quad(f, x1, x2)[0]
+        else:
+            rvals = np.empty_like(log10_ens)
+            for i in range(len(log10_ens)):
+                f = lambda ph: self(ph, log10_ens[i])
+                rvals[i] = quad(f, x1, x2)[0]
+            return rvals
 
     def cdf(self, x, log10_ens=3):
         return self.integrate(x1=0, x2=x, log10_ens=3)
@@ -300,7 +323,7 @@ class LCPrimitive:
             self.p[:] = p
         # adjust position to be between 0 and 1
         self.p[-1] = self.p[-1] % 1
-        return np.all(self.p >= 0)
+        #return np.all(self.p>=self.bounds[:,0]) and np.all(self.p<=self.bounds[:,1])
 
     def get_parameters(self, free=True):
         if free:
@@ -1012,6 +1035,12 @@ class LCVonMises(LCPrimitive):
         self.name = "VonMises"
         self.shortname = "VM"
 
+    def _default_bounds(self):
+        bounds = [[]] * len(self.p)
+        bounds[0] = [0.0015, 1.5]  # width
+        bounds[-1] = [-1, 1]  # position
+        return bounds
+
     def hwhm(self, right=False):
         return 0.5 * np.arccos(self.p[0] * np.log(0.5) + 1) / TWOPI
 
@@ -1021,6 +1050,8 @@ class LCVonMises(LCPrimitive):
         kappa = 1./width
         return np.exp(np.cos(z) * kappa) / i0(kappa)
 
+    # TODO -- replace these i0/i1 calls with some thing that can handle
+    # large arguments more gracefully, +  cache.
     def gradient(self, phases, log10_ens=3, free=False):
         e, width, loc = self._make_p(log10_ens)
         kappa = 1.0/width
@@ -1034,6 +1065,8 @@ class LCVonMises(LCPrimitive):
         rvals = np.empty([2,len(phases)])
         rvals[0] = f*kappa**2*(I1/I0-cz)
         rvals[1] = f*(TWOPI*kappa)*sz
+        if free:
+            return rvals[self.free]
         return rvals
 
     def derivative(self, phases, log10_ens=3, order=1):
@@ -1050,7 +1083,13 @@ class LCVonMises(LCPrimitive):
             raise ValueError(
                     "Provided log10_ens vector does not match requested n.")
         e, width, x0 = self._make_p(log10_ens)
-        return vonmises.rvs(loc=x0*TWOPI, kappa=1./width, size=n)/TWOPI
+        return np.mod(vonmises.rvs(loc=x0*TWOPI, kappa=1./width, size=n)*(1./TWOPI),1)
+
+    def integrate(self, x0, x1, log10_ens=3):
+        e, width, loc = self._make_p(log10_ens)
+        i0 = vonmises.cdf(x0*TWOPI,loc=loc*TWOPI, kappa=1./width)
+        i1 = vonmises.cdf(x1*TWOPI,loc=loc*TWOPI, kappa=1./width)
+        return i1-i0
 
 class LCKing(LCWrappedFunction):
     """Represent a (wrapped) King function peak.
@@ -1432,3 +1471,14 @@ def convert_primitive(p1, ptype=LCLorentzian):
         if len(p2.p) == 3:
             p2.p[1] *= scale
     return p2
+
+class IO(object):
+    """ Special class to quickly evaluate modified Bessel function.
+    """
+    def __init__(self):
+        self._x = np.log(np.logspace(-1,2.845,1001))
+        self._y = np.log(i0(np.exp(self._x)))
+        self._interp = interp1d(self._x,self._y)
+
+    def __call__(self,x):
+        return np.exp(self._interp(np.log(x)))

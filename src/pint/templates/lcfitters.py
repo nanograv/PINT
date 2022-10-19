@@ -132,10 +132,12 @@ class LCFitter:
                 self.slices.append(slice(indices[mask].min(), indices[mask].max() + 1))
         self.counts_centers = np.asarray(self.counts_centers)
 
-    def unbinned_loglikelihood(self, p, *args):
+    def unbinned_loglikelihood(self, p, *args, **kwargs):
         t = self.template
         params_ok = t.set_parameters(p)
-        if not (t.norm_ok() and params_ok):
+        if not t.norm_ok():
+            return 2e20
+        if (not params_ok) and ('skip_bounds_check' not in kwargs):
             return 2e20
         # TODO -- keep this formulation??
         arg = 1 + self.weights * (t(self.phases,log10_ens=self.log10_ens,use_cache=False) - 1)
@@ -143,10 +145,12 @@ class LCFitter:
         return -np.log(arg).sum()
         #return -np.log(1 + self.weights * (t(self.phases,log10_ens=self.log10_ens,use_cache=False) - 1)).sum()
 
-    def binned_loglikelihood(self, p, *args):
+    def binned_loglikelihood(self, p, *args, **kwargs):
         t = self.template
         params_ok = t.set_parameters(p)
-        if not (t.norm_ok() and params_ok):
+        if not t.norm_ok():
+            return 2e20
+        if (not params_ok) and ('skip_bounds_check' not in kwargs):
             return 2e20
         template_terms = t(self.counts_centers,log10_ens=self.log10_ens,use_cache=False) - 1
         phase_template_terms = np.empty_like(self.weights)
@@ -158,20 +162,24 @@ class LCFitter:
         return -np.log(arg).sum()
         #return -np.log(1 + self.weights * phase_template_terms).sum()
 
-    def unbinned_gradient(self, p, *args):
+    def unbinned_gradient(self, p, *args, **kwargs):
         t = self.template
-        t.set_parameters(p)
+        params_ok = t.set_parameters(p)
         if not t.norm_ok():
-            return np.ones_like(p) * 2e20
+            return np.full(p.shape,2e20)
+        if (not params_ok) and ('skip_bounds_check' not in kwargs):
+            return np.full(p.shape,2e20)
         numer = self.weights * t.gradient(self.phases,log10_ens=self.log10_ens)
         denom = 1 + self.weights * (t(self.phases,log10_ens=self.log10_ens,use_cache=False) - 1)
-        return -(numer / denom).sum(axis=1)
+        return -np.sum(numer / denom,axis=1)
 
-    def binned_gradient(self, p, *args):
+    def binned_gradient(self, p, *args, **kwargs):
         t = self.template
-        param_ok = t.set_parameters(p)
-        if not (t.norm_ok() and param_ok):
-            return np.ones_like(p) * 2e20
+        params_ok = t.set_parameters(p)
+        if not t.norm_ok():
+            return np.full(p.shape,2e20)
+        if (not params_ok) and ('skip_bounds_check' not in kwargs):
+            return np.full(p.shape,2e20)
         nump = len(p)
         template_terms = t(self.counts_centers,log10_ens=self.log10_ens,use_cache=False) - 1
         gradient_terms = t.gradient(self.counts_centers,log10_ens=self.log10_ens)
@@ -476,9 +484,11 @@ class LCFitter:
         p = self.template.get_parameters()
         nump = len(p)
         self.cov_matrix = np.zeros([nump, nump], dtype=float)
-        ss = calc_step_size(self.loglikelihood, p.copy())
+        logl = lambda p: self.loglikelihood(p,skip_bounds_check=True)
+        grad = lambda p: self.gradient(p,skip_counts_check=True)
+        ss = calc_step_size(logl, p.copy())
         if use_gradient:
-            h1 = hess_from_grad(self.gradient, p.copy(), step=ss)
+            h1 = hess_from_grad(grad, p.copy(), step=ss)
             c1 = scipy.linalg.inv(h1)
             if np.all(np.diag(c1) > 0):
                 self.cov_matrix = c1
@@ -486,7 +496,7 @@ class LCFitter:
                 print("Could not estimate errors from hessian.")
                 return False
         else:
-            h1 = hessian(self.template, self.loglikelihood, delta=ss)
+            h1 = hessian(self.template, logl, delta=ss)
             try:
                 c1 = scipy.linalg.inv(h1)
             except scipy.linalg.LinAlgError:
@@ -496,7 +506,7 @@ class LCFitter:
             if np.all(d > 0):
                 self.cov_matrix = c1
                 # attempt to refine
-                h2 = hessian(self.template, self.loglikelihood, delt=d**0.5)
+                h2 = hessian(self.template, logl, delt=d**0.5)
                 try:
                     c2 = scipy.linalg.inv(h2)
                 except scipy.linalg.LinAlgError:

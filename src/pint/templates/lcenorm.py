@@ -13,7 +13,7 @@ class ENormAngles(NormAngles):
         # TODO -- keyword checking
         """ norms -- a tuple or array with the amplitudes of a set of
             components; their sum must be <= 1."""
-        super(ENormAngles,self).__init__(norms,**kwargs)
+        super().__init__(norms,**kwargs)
         if slope is None:
             slope = np.zeros(self.dim)
         self.slope = np.asarray(slope,dtype=float)
@@ -26,7 +26,7 @@ class ENormAngles(NormAngles):
         return True
 
     def __str__(self):
-        s0 = super(ENormAngles,self).__str__()
+        s0 = super().__str__()
         s0 += '\nSlopes:'
         for i,(s,se,sf) in enumerate(zip(
             self.slope,self.slope_errors,self.slope_free)):

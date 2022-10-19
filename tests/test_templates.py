@@ -2,6 +2,7 @@ import logging
 import pytest
 
 import numpy as np
+from scipy.integrate import quad
 from scipy.special import i0,i1
 
 from pinttestdata import datadir
@@ -229,12 +230,17 @@ def test_energy_dependence():
     lct0 = lctemplate.LCTemplate([lcg,lcg2],[0.4,0.35])
     lct0.add_energy_dependence(0,slope_free=False)
     assert(not np.any(lct0.primitives[0].slope_free))
+    assert(lct0.num_parameters(free=True)==6)
+    assert(lct0.num_parameters(free=False)==8)
     lct0[0].slope_free[:] = True
     lct0[0].slope[:] = [0.02,0.1]
+    assert(lct0.num_parameters(free=True)==8)
     lct0.add_energy_dependence(-1,slope_free=True)
     assert(np.all(lct0.norms.slope_free))
+    assert(lct0.num_parameters(free=True)==10)
     lct0[-1].slope[1] = 0.2
     lct0[-1].slope_free[0] = False
+    assert(lct0.num_parameters(free=True)==9)
 
     lcg = lceprimitives.LCEGaussian(p=[0.03,0.5])
     assert(np.all(lcg.slope==0))
@@ -409,12 +415,29 @@ def test_vonmises():
     lct = lctemplate.LCTemplate([p1,p2],[0.4,0.6])
     assert(lct.check_gradient(quiet=True,seed=0))
     assert(lct.check_derivative())
+    p1.free[1] = False
+    assert(p1.gradient(ph[:10],free=True).shape[0]==1)
 
     p1 = lceprimitives.LCEVonMises(p=[0.05,0.1],slope=[0,0.1])
     p2 = lceprimitives.LCEVonMises(p=[0.05,0.4],slope=[0.05,0.05])
     assert(np.all(p2.slope==0.05))
-    assert(np.allclose(p1(ph,log10_ens=en),vm(ph,[0.5,0.1+(en-3)*0.1])))
+    assert(np.allclose(p1(ph,log10_ens=en),vm(ph,[0.05,0.1+(en-3)*0.1])))
     lct = lctemplate.LCTemplate([p1,p2],[0.4,0.6])
     assert(lct.is_energy_dependent())
+    assert(p1.gradient(ph[:10],free=True).shape[0]==2)
+    assert(p1.gradient(ph[:10],free=False).shape[0]==4)
     assert(lct.check_gradient(quiet=True,seed=0))
     assert(lct.check_derivative())
+
+
+    # check integral
+    ens = np.linspace(2,4,21)
+    integrals = p1.integrate(0,0.5,log10_ens=ens)
+    quads = [quad(lambda x: p1(x,log10_ens=ens[i]),0,0.5)[0] for i in range(len(ens))]
+    assert(np.allclose(quads,integrals))
+
+    # check overflow
+    p1 = lceprimitives.LCEVonMises()
+    p1.p[0] = p1.bounds[0][0]
+    assert(not np.isnan(p1(p1.p[-1])))
+            

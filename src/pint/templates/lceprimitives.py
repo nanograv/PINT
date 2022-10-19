@@ -121,7 +121,7 @@ class LCEPrimitive(LCPrimitive):
         return '\n'.join(l)
 
     def _make_p(self,log10_ens):
-        e = log10_ens-3
+        e = np.asarray(log10_ens,dtype=float)-3
         # allow saturation at bounds
         return [e] + [np.clip(x+y*e,b[0],b[1]) 
                 for x,y,b in zip(self.p,self.slope,self.bounds)]

@@ -213,13 +213,11 @@ class LCTemplate:
         params_ok = True
         for prim in self.primitives:
             n = len(prim.get_parameters(free=free))
-            params_ok = (
-                prim.set_parameters(p[start : start + n], free=free) and params_ok
-            )
+            prim.set_parameters(p[start : start + n], free=free)
             start += n
         self.norms.set_parameters(p[start:], free)
         self.mark_cache_dirty()
-        return params_ok
+        return self.check_bounds(free=free)
 
     def set_errors(self, errs):
         start = 0
@@ -301,6 +299,11 @@ class LCTemplate:
         b1 = np.concatenate([prim.get_bounds(free) for prim in self.primitives])
         b2 = self.norms.get_bounds(free)
         return np.concatenate((b1, b2)).tolist()
+
+    def check_bounds(self,free=True):
+        bounds = np.asarray(self.get_bounds(free=free))
+        x0 = self.get_parameters(free=free)
+        return np.all((x0>=bounds[:,0])&(x0<=bounds[:,1]))
 
     def set_overall_phase(self, ph):
         """Put the peak of the first component at phase ph."""
@@ -415,31 +418,34 @@ class LCTemplate:
             return rvals + n.sum(axis=0)
         return rvals
 
-    def gradient(self, phases, log10_ens=3, free=True):
+    def gradient(self, phases, log10_ens=3, free=True, template_too=False):
         r = np.empty((self.num_parameters(free), len(phases)))
         c = 0
-        norms = self.norms(log10_ens=log10_ens)
+        rvals,norms,norm = self._get_scales(phases,log10_ens=log10_ens)
         prim_terms = np.empty((len(self.primitives),len(phases)))
-        for i, (norm, prim) in enumerate(zip(norms, self.primitives)):
+        for i, (nm, prim) in enumerate(zip(norms, self.primitives)):
             n = len(prim.get_parameters(free=free))
-            r[c : c + n, :] = norm * prim.gradient(phases, log10_ens=log10_ens, free=free)
+            r[c : c + n, :] = nm * prim.gradient(phases, log10_ens=log10_ens, free=free)
             c += n
             prim_terms[i] = prim(phases,log10_ens=log10_ens) - 1
-        # handle case where no norm parameters are free
-        if c == r.shape[0]:
-            return r
 
-        # "prim_terms" are df/dn_i and have shape nnorm x nphase
-        # the output of gradient is the matrix M_ij or M_ijk, depending
-        # on whether or not there is energy dependence, which is
-        # dnorm_i/dnorm_angle_j (at energy k).  The sum is over the
-        # "internal parameter" norm_j, while the phase axis and norm_angle
-        # axis are retained.
-        m = self.norms.gradient(log10_ens=log10_ens,free=free)
-        if len(m.shape)==2:
-            m = m[...,None]
-        np.einsum('ij,ikj->kj',prim_terms,m,out=r[c:])
-        #r[c:] = np.sum(prim_terms*m,axis=1)
+        # handle case where no norm parameters are free
+        if c != r.shape[0]:
+            # "prim_terms" are df/dn_i and have shape nnorm x nphase
+            # the output of gradient is the matrix M_ij or M_ijk, depending
+            # on whether or not there is energy dependence, which is
+            # dnorm_i/dnorm_angle_j (at energy k).  The sum is over the
+            # "internal parameter" norm_j, while the phase axis and 
+            # norm_angle axis are retained.
+            m = self.norms.gradient(log10_ens=log10_ens,free=free)
+            if len(m.shape)==2:
+                m = m[...,None]
+            np.einsum('ij,ikj->kj',prim_terms,m,out=r[c:])
+        if template_too:
+            rvals[:] = (1-norm)
+            for i in range(0,len(prim_terms)):
+                rvals += (prim_terms[i]+1) * norms[i]
+            return r,rvals
         return r
 
     def gradient_derivative(self, phases, log10_ens=3, free=False):
@@ -477,12 +483,14 @@ class LCTemplate:
     def approx_derivative(self, phases, log10_ens=None, order=1, eps=1e-7):
         return approx_derivative(self, phases, log10_ens=log10_ens, order=order, eps=eps)
 
-    def check_gradient(self, atol=1e-7, rtol=1e-5, quiet=False, seed=None):
+    def check_gradient(self, atol=1e-7, rtol=1e-5, quiet=False, seed=None,
+            en=None,ph=None):
         if seed is not None:
             # essentially set a known good state of the RNG to avoid any
             # numerical issues interfering with the test
             np.random.seed(seed)
-        return check_gradient(self, atol=atol, rtol=rtol, quiet=quiet)
+        return check_gradient(self, atol=atol, rtol=rtol, quiet=quiet,
+                en=en,ph=ph)
 
     def check_derivative(self, atol=1e-7, rtol=1e-5, order=1, eps=1e-7, quiet=False):
         return check_derivative(self, atol=atol, rtol=rtol, quiet=quiet, eps=1e-7, order=order)
@@ -730,6 +738,9 @@ class LCTemplate:
         """[Convenience] -- return a new LCTemplate with the specified
         LCPrimitive added and renormalized."""
         norms, prims = self.norms, self.primitives
+        if len(prims) == 0:
+            # special case of an empty profile
+            return LCTemplate([prim],[1])
         nprims = [deepcopy(prims[i]) for i in range(len(prims))] + [prim]
         nnorms = self.norms.add_component(norm)
         if inplace:
@@ -770,10 +781,12 @@ class LCTemplate:
             # primitive
             if comp.name == 'Gaussian':
                 constructor = LCEGaussian
+            elif comp.name == 'VonMises':
+                constructor = LCEVonMises
             else:
                 raise NotImplementedError('%s not supported.'%comp.name)
             newcomp = constructor(p=comp.p)
-            newcomp.free[:] = comp.free
+        newcomp.free[:] = comp.free
         newcomp.slope_free[:] = slope_free
         self[index] = newcomp
 
