@@ -14,6 +14,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Can output observatories as JSON
 - Can extract single TOAs as length=1 table
 - Added PLDMNoise component which allows modeling of stochastic DM variations as red noise with a power law spectrum
+- Added Bayesian interface (Timing model and white noise only)
 ### Fixed
 - global clock files now emit a warning instead of an exception if expired and the download fails
 - dmxparse outputs to dmxparse.out if save=True
