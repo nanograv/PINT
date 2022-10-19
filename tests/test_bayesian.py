@@ -138,7 +138,21 @@ def test_prior_dict(data_NGC6440E_efac):
     assert np.isfinite(lnpr)
 
 
-# def test_wideband_exception(data_J0740p6620_wb):
-#     model, toas = data_J0740p6620_wb
-#     with pytest.raises(NotImplementedError):
-#         bt = BayesianTiming(model, toas)
+def test_wideband_data(data_J0740p6620_wb):
+    model, toas = data_J0740p6620_wb
+    bt = BayesianTiming(model, toas)
+
+    assert bt.is_wideband and bt.likelihood_method == "wls-wb"
+
+    test_cube = 0.5 * np.ones(bt.nparams)
+    test_params = bt.prior_transform(test_cube)
+    assert np.all(np.isfinite(test_params))
+
+    lnpr = bt.lnprior(test_params)
+    assert np.isfinite(lnpr)
+
+    lnl = bt.lnlikelihood(test_params)
+    assert np.isfinite(lnl)
+
+    lnp = bt.lnposterior(test_params)
+    assert np.isfinite(lnp) and np.isclose(lnp, lnpr + lnl)
