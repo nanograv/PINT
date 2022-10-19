@@ -56,9 +56,6 @@ class BayesianTiming:
 
         self.is_wideband = toas.is_wideband()
 
-        # if toas.is_wideband():
-        #    raise NotImplementedError("Wideband TOAs are not yet supported.")
-
         self.param_labels = self.model.free_params
         self.params = [getattr(self.model, par) for par in self.param_labels]
         self.nparams = len(self.param_labels)
