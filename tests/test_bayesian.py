@@ -68,7 +68,7 @@ def test_no_noise(data_NGC6440E):
     bt = BayesianTiming(model, toas)
     maxlike_params = np.array([param.value for param in bt.params], dtype=float)
     lnl = bt.lnlikelihood(maxlike_params)
-    assert bt.likelihood_method == "wls" and not np.isnan(lnl)
+    assert bt.likelihood_method == "wls-nb" and not np.isnan(lnl)
 
 
 def test_white_noise(data_NGC6440E_efac):
@@ -76,7 +76,7 @@ def test_white_noise(data_NGC6440E_efac):
     bt = BayesianTiming(model, toas)
     maxlike_params = np.array([param.value for param in bt.params], dtype=float)
     lnl = bt.lnlikelihood(maxlike_params)
-    assert bt.likelihood_method == "wls" and not np.isnan(lnl)
+    assert bt.likelihood_method == "wls-nb" and not np.isnan(lnl)
 
 
 def test_lnlikelihood_unit_efac(data_NGC6440E, data_NGC6440E_efac):
@@ -138,7 +138,7 @@ def test_prior_dict(data_NGC6440E_efac):
     assert np.isfinite(lnpr)
 
 
-def test_wideband_exception(data_J0740p6620_wb):
-    model, toas = data_J0740p6620_wb
-    with pytest.raises(NotImplementedError):
-        bt = BayesianTiming(model, toas)
+# def test_wideband_exception(data_J0740p6620_wb):
+#     model, toas = data_J0740p6620_wb
+#     with pytest.raises(NotImplementedError):
+#         bt = BayesianTiming(model, toas)
