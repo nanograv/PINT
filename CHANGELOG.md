@@ -16,6 +16,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - SWM=1 models can be used
 - SWX models to fit the solar wind over various intervals
 - Added PLDMNoise component which allows modeling of stochastic DM variations as red noise with a power law spectrum
+- Added Bayesian interface (Timing model and white noise only)
 ### Fixed
 - global clock files now emit a warning instead of an exception if expired and the download fails
 - dmxparse outputs to dmxparse.out if save=True
