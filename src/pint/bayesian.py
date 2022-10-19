@@ -230,7 +230,11 @@ class BayesianTiming:
         params_dict = dict(zip(self.param_labels, params))
         self.model.set_param_values(params_dict)
 
-        res = WidebandTOAResiduals(self.toas, self.model, track_mode=self.track_mode)
+        res = WidebandTOAResiduals(
+            self.toas,
+            self.model,
+            # track_mode=self.track_mode
+        )
 
         chi2_toa = res.toa.calc_chi2()
         sigmas_toa = self.model.scaled_toa_uncertainty(self.toas).si.value
