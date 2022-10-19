@@ -231,9 +231,7 @@ class BayesianTiming:
         self.model.set_param_values(params_dict)
 
         res = WidebandTOAResiduals(
-            self.toas,
-            self.model,
-            # track_mode=self.track_mode
+            self.toas, self.model, toa_resid_args={"track_mode": self.track_mode}
         )
 
         chi2_toa = res.toa.calc_chi2()
