@@ -46,11 +46,13 @@ class ScaleToaError(NoiseComponent):
     register = True
     category = "scale_toa_error"
 
+    introduces_correlated_errors = False
+
     def __init__(
         self,
     ):
         super().__init__()
-        self.introduces_correlated_errors = False
+
         self.add_param(
             maskParameter(
                 name="EFAC",
@@ -191,11 +193,12 @@ class ScaleDmError(NoiseComponent):
     register = True
     category = "scale_dm_error"
 
+    introduces_correlated_errors = False
+
     def __init__(
         self,
     ):
         super().__init__()
-        self.introduces_correlated_errors = False
         self.add_param(
             maskParameter(
                 name="DMEFAC",
@@ -300,11 +303,12 @@ class EcorrNoise(NoiseComponent):
     register = True
     category = "ecorr_noise"
 
+    introduces_correlated_errors = True
+
     def __init__(
         self,
     ):
         super().__init__()
-        self.introduces_correlated_errors = True
         self.add_param(
             maskParameter(
                 name="ECORR",
@@ -430,11 +434,13 @@ class PLDMNoise(NoiseComponent):
     register = True
     category = "pl_DM_noise"
 
+    introduces_correlated_errors = True
+
     def __init__(
         self,
     ):
         super().__init__()
-        self.introduces_correlated_errors = True
+
         self.add_param(
             floatParameter(
                 name="TNDMAMP",
@@ -538,11 +544,13 @@ class PLRedNoise(NoiseComponent):
     register = True
     category = "pl_red_noise"
 
+    introduces_correlated_errors = True
+
     def __init__(
         self,
     ):
         super().__init__()
-        self.introduces_correlated_errors = True
+
         self.add_param(
             floatParameter(
                 name="RNAMP",
