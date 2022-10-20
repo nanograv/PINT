@@ -120,10 +120,12 @@ class BayesianTiming:
         More complex priors must be separately implemented.
 
         Args:
-            params (array-like): Parameters
+            params : (array-like)
+                Parameters
 
         Returns:
-            float: Value of the log-prior at params
+            float :
+                Value of the log-prior at params
         """
         if len(params) != self.nparams:
             raise IndexError(
@@ -145,11 +147,12 @@ class BayesianTiming:
         More complex prior transforms must be separately implemented.
 
         Args:
-            cube (array-like): Sample drawn from a uniform distribution defined in an
-            nparams-dimensional unit hypercube.
+            cube : (array-like)
+                Sample drawn from a uniform distribution defined in an nparams-dimensional unit hypercube.
 
         Returns:
-            ndarray : Sample drawn from the prior distribution
+            ndarray :
+                Sample drawn from the prior distribution
         """
         result = np.array(
             [param.prior._rv.ppf(x) for x, param in zip(cube, self.params)]
@@ -164,10 +167,12 @@ class BayesianTiming:
         is the generalized least-squares metric. For reference, see, e.g., Lentati+ 2013.
 
         Args:
-            params (array-like): Parameters
+            params : (array-like)
+                Parameters
 
         Returns:
-            float: The value of the log-likelihood at params
+            float :
+                The value of the log-likelihood at params
         """
         if self.likelihood_method == "wls-nb":
             return self._wls_nb_lnlikelihood(params)
@@ -185,10 +190,12 @@ class BayesianTiming:
         is not evaluated.
 
         Args:
-            params (array-like): Parameters
+            params : (array-like)
+                Parameters
 
         Returns:
-            float: The value of the log-posterior at params
+            float :
+                The value of the log-posterior at params
         """
         lnpr = self.lnprior(params)
         if np.isnan(lnpr):
@@ -203,10 +210,12 @@ class BayesianTiming:
         EQUAD).
 
         Args:
-            params (array-like): Parameters
+            params : (array-like)
+                Parameters
 
         Returns:
-            float: The value of the log-likelihood at params
+            float :
+                The value of the log-likelihood at params
         """
         params_dict = dict(zip(self.param_labels, params))
         self.model.set_param_values(params_dict)
@@ -222,10 +231,12 @@ class BayesianTiming:
         DMEFAC and DMEQUAD).
 
         Args:
-            params (array-like): Parameters
+            params : (array-like)
+                Parameters
 
         Returns:
-            float: The value of the log-likelihood at params
+            float :
+                The value of the log-likelihood at params
         """
         params_dict = dict(zip(self.param_labels, params))
         self.model.set_param_values(params_dict)
