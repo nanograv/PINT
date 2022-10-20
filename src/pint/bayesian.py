@@ -76,7 +76,7 @@ class BayesianTiming:
 
         self._validate_priors()
 
-        self.likelihood_method = self._decide_likelihood_method()
+        self._decide_likelihood_method()
 
         self.track_mode = "use_pulse_numbers" if use_pulse_numbers else "nearest"
 
@@ -94,26 +94,20 @@ class BayesianTiming:
         quares with normalization term (gls), for narrow-band (nb) or wide-band (wb)
         dataset."""
 
-        if "NoiseComponent" not in self.model.component_types:
-            method = "wls"
-        else:
-            correlated_errors_present = np.any(
-                [
-                    nc.introduces_correlated_errors
-                    for nc in self.model.NoiseComponent_list
-                ]
-            )
-            if not correlated_errors_present:
-                method = "wls"
+        if (
+            "NoiseComponent" not in self.model.component_types
+            or not self.model.has_correlated_errors
+        ):
+            if self.is_wideband:
+                self.likelihood_method = "wls-wb"
+                self._lnlikelihood = self._wls_wb_lnlikelihood
             else:
-                raise NotImplementedError(
-                    "GLS likelihood for correlated noise is not yet implemented."
-                )
-                # return "gls"
-
-        toa_type = "wb" if self.is_wideband else "nb"
-
-        return f"{method}-{toa_type}"
+                self.likelihood_method = "wls-nb"
+                self._lnlikelihood = self._wls_nb_lnlikelihood
+        else:
+            raise NotImplementedError(
+                "GLS likelihood for correlated noise is not yet implemented."
+            )
 
     def lnprior(self, params):
         """Basic implementation of a factorized log prior.
@@ -174,16 +168,7 @@ class BayesianTiming:
             float :
                 The value of the log-likelihood at params
         """
-        if self.likelihood_method == "wls-nb":
-            return self._wls_nb_lnlikelihood(params)
-        elif self.likelihood_method == "wls-wb":
-            return self._wls_wb_lnlikelihood(params)
-        elif self.likelihood_method in ["gls-nb", "gls-wb"]:
-            raise NotImplementedError(
-                "GLS likelihood for correlated noise is not yet implemented."
-            )
-        else:
-            raise ValueError(f"Unknown likelihood method '{self.likelihood_method}'.")
+        return self._lnlikelihood(params)
 
     def lnposterior(self, params):
         """Log-posterior function. If the prior evaluates to zero, the likelihood
