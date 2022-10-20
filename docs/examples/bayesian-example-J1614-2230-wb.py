@@ -49,6 +49,7 @@ test_params = bt.prior_transform(test_cube)
 test_lnl = bt.lnlikelihood(test_params)
 
 # Do the sampling using nestle
+# This takes about over 30 minutes to finish.
 result_nestle = nestle.sample(
     bt.lnlikelihood,
     bt.prior_transform,
