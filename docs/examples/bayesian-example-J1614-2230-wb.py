@@ -14,7 +14,7 @@ parfile = examplefile("J1614-2230_NANOGrav_12yv3.wb.gls.par")
 timfile = examplefile("J1614-2230_NANOGrav_12yv3.wb.tim")
 model, toas = get_model_and_toas(parfile, timfile)
 
-# The par files have a lot of free parameters.
+# The par file has a lot of free parameters.
 # Let us keep only a few of them free so that the sampling finishes in a reasonable time.
 for param_label, param in model.get_params_dict().items():
     getattr(model, param_label).frozen = True
@@ -47,6 +47,7 @@ bt = BayesianTiming(model, toas)
 test_cube = 0.5 * np.ones(bt.nparams)
 test_params = bt.prior_transform(test_cube)
 test_lnl = bt.lnlikelihood(test_params)
+print(test_lnl)
 
 # Do the sampling using nestle
 # This takes about over 30 minutes to finish.
