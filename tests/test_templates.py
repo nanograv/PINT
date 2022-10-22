@@ -3,7 +3,7 @@ import pytest
 
 import numpy as np
 from scipy.integrate import quad
-from scipy.special import i0,i1
+from scipy.special import i0,i1,erf
 
 from pinttestdata import datadir
 from pint.templates import lcfitters, lcprimitives, lceprimitives, lcnorm, lcenorm, lctemplate
@@ -26,6 +26,7 @@ def test_prim_gauss_definition():
     # use narrow gaussians here to be close to analytic form.
 
     g1 = lcprimitives.LCGaussian(p=[0.01, 0.5])
+    assert(abs(g1(g1.get_location()+g1.hwhm())*2-g1(g1.get_location()))<1e-5)
     # defined as 1/sigma/(2*pi)^0.5 * (-0.5*(x-x0)^2) WRAPPED
     # because this is a narrow gaussian, it's essentially the same as
     # an unwrapped version
@@ -103,6 +104,23 @@ def test_template_basic_functionality():
 
     lct = lctemplate.get_gauss2()
     assert(lct(0)>0)
+
+def test_norms():
+    n = np.asarray([0.02683208,0.13441056,0.0236155,0.39370402,
+        0.16328161,0.05283352,0.05245909, 0.11335948])
+    lcn = lcnorm.NormAngles(n)
+    assert(np.allclose(lcn(),n))
+    new_val = n[1]*(5./6)
+    lcn.set_single_norm(1,new_val)
+    assert(abs(lcn()[1]-new_val)<1e-10)
+    assert(abs(1-np.sum(lcn())-np.cos(lcn.p[0])**2)<1e-10)
+
+    # this test inspired by a bug I caught when going from scalar to vector
+    # there was a check that the sum of the norms <=1, but when it failed,
+    # it was applied to every output!  That led all outputs to have norms=1.
+    lcn = lcenorm.ENormAngles([0.55,0.4],slope=[0.3,0.0])
+    q = lcn(log10_ens=np.linspace(2,4.5,101))
+    assert(np.any(q.sum(axis=0)<=0.95))
 
 def test_template_integration():
     # check integration / cdf
@@ -222,6 +240,8 @@ def test_component_manipulation():
     assert(abs(lct.norms()[0]-0.35)<1e-10)
     assert(abs(lct.norms()[1]-0.25)<1e-10)
 
+    print('TODO: test energy-dependent slope of normalizations when re-ordering')
+
 def test_energy_dependence():
     """ Initial stab at testing energy-dependent profile modeling."""
 
@@ -241,6 +261,21 @@ def test_energy_dependence():
     lct0[-1].slope[1] = 0.2
     lct0[-1].slope_free[0] = False
     assert(lct0.num_parameters(free=True)==9)
+
+    # check re-ordering
+    g1 = lceprimitives.LCEGaussian(p=[0.03,0.5],slope=[0.01,0.02])
+    g2 = lceprimitives.LCEGaussian(p=[0.04,0.8],slope=[-0.01,-0.02])
+    lct2 = lctemplate.LCTemplate([g2,g1],[0.4,0.35])
+    lct2.add_energy_dependence(-1)
+    lct2.norms.slope[0] = 0.1
+    lct2.norms.slope[1] = -0.1
+    assert(lct2.primitives[1].p[-1] < lct2.primitives[0].p[-1])
+    dom = np.linspace(0,1,101)
+    ens = np.linspace(2,4,101)
+    vals0 = lct2(dom,log10_ens=ens)
+    lct2.order_primitives()
+    assert(lct2.primitives[1].p[-1] > lct2.primitives[0].p[-1])
+    assert(np.allclose(lct2(dom,log10_ens=ens),vals0))
 
     lcg = lceprimitives.LCEGaussian(p=[0.03,0.5])
     assert(np.all(lcg.slope==0))
@@ -265,10 +300,13 @@ def test_energy_dependence():
     ph,comps = lct.random(N,weights=we,log10_ens=log10_ens,return_partition=True)
 
     assert(np.all(lct(ph,log10_ens=log10_ens)==lct0(ph,log10_ens=log10_ens)))
+    # check the evaluation of the template within the gradient function
+    g,t = lct.gradient(ph,log10_ens=log10_ens,template_too=True)
+    assert(np.allclose(t,lct(ph,log10_ens=log10_ens)))
 
     lcf = lcfitters.LCFitter(lct,ph,weights=we,log10_ens=log10_ens)
     logl1 = lcf.loglikelihood(lct.get_parameters())
-    lcf.fit(unbinned=True,use_gradient=True)
+    lcf.fit(unbinned=True,use_gradient=True,quiet=True)
     logl2 = lcf.loglikelihood(lct.get_parameters())
     assert(abs(abs(logl2-logl1)-5.15)<0.05)
 
@@ -278,21 +316,32 @@ def test_template_gradient():
     lct = default_template()
 
     # check that analytic gradient is equal to numerical gradient
-    assert(lct.check_gradient(seed=0))
+    assert(lct.check_gradient(quiet=True,seed=0))
 
     # check derivative too
-    assert(lct.check_derivative())
+    assert(lct.check_derivative(order=1))
+    #assert(lct.check_derivative(order=2))
 
     # check that nothing breaks when freezing a normalization angle
     lct.norms.free[0] = False
-    assert(lct.check_gradient(seed=0))
+    assert(lct.check_gradient(quiet=True,seed=0))
 
     # check that nothing breaks when freezing a primitive parameter
     lct[0].free[0] = False
-    assert(lct.check_gradient(seed=0))
+    assert(lct.check_gradient(quiet=True,seed=0))
     lct[0].free[:] = False
-    assert(lct.check_gradient(seed=0))
+    assert(lct.check_gradient(quiet=True,seed=0))
 
+def test_fitter_gradient():
+    # TODO -- idea here is to use a known template and an exact set of
+    # phases/weights to make sure the gradient comes out correctly/close
+    # in both unbinned and (?) binned cases.
+    print('need to implement fitter gradient!')
+
+def test_template_ebinning():
+    # TODO -- verify that the binned version of an energy-dependent template
+    # comes out close enough -- though maybe this should be under validation
+    pass
 
 def test_template_string_representation():
     """Exercise print functions."""
@@ -400,7 +449,12 @@ Delta   : 0.4486 +\- 0.0016
     assert expected_val.strip() == str(lcf).strip()
 
 def test_vonmises():
+    with pytest.raises(AssertionError):
+        lceprimitives.LCEVonMises(p=[0.0001,0.5],slope_free=[True,True,True])
+    with pytest.raises(ValueError):
+        lcprimitives.LCVonMises(p=[0.0001,0.5])
     p1 = lcprimitives.LCVonMises(p=[0.05,0.1])
+    assert(abs(p1(0.1+p1.hwhm())*2-p1(0.1))<1e-5)
     p2 = lcprimitives.LCVonMises(p=[0.05,0.4])
     def vm(x,p):
         width,loc = p
@@ -414,7 +468,8 @@ def test_vonmises():
 
     lct = lctemplate.LCTemplate([p1,p2],[0.4,0.6])
     assert(lct.check_gradient(quiet=True,seed=0))
-    assert(lct.check_derivative())
+    assert(lct.check_derivative(order=1))
+    #assert(lct.check_derivative(order=2))
     p1.free[1] = False
     assert(p1.gradient(ph[:10],free=True).shape[0]==1)
 
@@ -440,4 +495,81 @@ def test_vonmises():
     p1 = lceprimitives.LCEVonMises()
     p1.p[0] = p1.bounds[0][0]
     assert(not np.isnan(p1(p1.p[-1])))
+
+    # check fast Bessel function
+    q = np.logspace(-1,np.log10(700),201)
+    I0 = lcprimitives.FastBessel(order=0)
+    I1 = lcprimitives.FastBessel(order=1)
+    assert(np.all(np.abs(I0(q)/i0(q)-1)<1e-2))
+    assert(np.all(np.abs(I1(q)/i1(q)-1)<1e-2))
+
+def test_skewnorm():
+
+    # check bounds and limits
+    with pytest.raises(ValueError):
+        lcprimitives.LCSkewGaussian(p=[0.0001,0.1,0.5])
+    with pytest.raises(ValueError):
+        lcprimitives.LCSkewGaussian(p=[0.0001,200,0.5])
+    p1 = lcprimitives.LCSkewGaussian(p=[0.05,0.0,0.1])
+    pg = lcprimitives.LCGaussian(p=[0.05,0.1])
+    assert(p1(0.1)==pg(0.1))
+    assert(p1(0.5)==pg(0.5))
+
+    # TODO -- check hwhm
+    #assert(abs(p1(0.1+p1.hwhm())*2-p1(0.1))<1e-5)
+
+    # check function evaluation
+    p1 = lcprimitives.LCSkewGaussian(p=[0.05,-1.0,0.5])
+    def sn(x,p,index=0):
+        width,shape,loc = p
+        x = np.asarray(x)+index
+        z = (x-loc)/width
+        t1 = 1./((2*np.pi)**0.5*width)*np.exp(-0.5*z**2)
+        t2 = 1 + erf(shape*z/2**0.5)
+        return t1*t2
+    en = np.random.rand(1000)*2 + 2 # 2-4 range
+    ph = np.random.rand(1000)
+    assert(np.allclose(p1(ph,log10_ens=en),sn(ph,p1.p)))
+
+    p1 = lcprimitives.LCSkewGaussian(p=[0.05,-1.0,0.1])
+    p2 = lcprimitives.LCSkewGaussian(p=[0.05,2.0,0.4])
+    lct = lctemplate.LCTemplate([p1,p2],[0.4,0.6])
+    assert(lct.check_gradient(quiet=True,seed=0))
+    assert(lct.check_derivative())
+    return
+
+
+    p1.free[1] = False
+    assert(p1.gradient(ph[:10],free=True).shape[0]==1)
+
+    p1 = lceprimitives.LCEVonMises(p=[0.05,0.1],slope=[0,0.1])
+    p2 = lceprimitives.LCEVonMises(p=[0.05,0.4],slope=[0.05,0.05])
+    assert(np.all(p2.slope==0.05))
+    assert(np.allclose(p1(ph,log10_ens=en),vm(ph,[0.05,0.1+(en-3)*0.1])))
+    lct = lctemplate.LCTemplate([p1,p2],[0.4,0.6])
+    assert(lct.is_energy_dependent())
+    assert(p1.gradient(ph[:10],free=True).shape[0]==2)
+    assert(p1.gradient(ph[:10],free=False).shape[0]==4)
+    assert(lct.check_gradient(quiet=True,seed=0))
+    assert(lct.check_derivative())
+
+
+    # check integral
+    ens = np.linspace(2,4,21)
+    integrals = p1.integrate(0,0.5,log10_ens=ens)
+    quads = [quad(lambda x: p1(x,log10_ens=ens[i]),0,0.5)[0] for i in range(len(ens))]
+    assert(np.allclose(quads,integrals))
+
+    # check overflow
+    p1 = lceprimitives.LCEVonMises()
+    p1.p[0] = p1.bounds[0][0]
+    assert(not np.isnan(p1(p1.p[-1])))
+
+    # check fast Bessel function
+    q = np.logspace(-1,np.log10(700),201)
+    I0 = lcprimitives.FastBessel(order=0)
+    I1 = lcprimitives.FastBessel(order=1)
+    assert(np.all(np.abs(I0(q)/i0(q)-1)<1e-2))
+    assert(np.all(np.abs(I1(q)/i1(q)-1)<1e-2))
             
+

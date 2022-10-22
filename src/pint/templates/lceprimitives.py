@@ -190,6 +190,29 @@ class LCEGaussian(LCEWrappedFunction,LCGaussian):
         self.name = 'GaussianE'
         self.shortname = 'GE'
 
+class LCESkewGaussian(LCEWrappedFunction,LCSkewGaussian):
+    """ Represent a (wrapped), skew Gaussian peak with linearized energy-
+        dependent parameters.
+
+        Parameters
+        Norm      :     fraction of photons belonging to peak
+        Width     :     the standard deviation parameter of the norm dist.
+        Shape     : the degree of skewness, +ve values are right-skewed
+        Location  :     the mode of the Gaussian distribution
+
+        These parameters are normalized to 1 GeV.  An additional set of
+        parameters (included as separate members to not break other
+        functionality) give the "slope" of these as a function of
+        log10(energy).  Thus, slope=0 implies no energy dependence, while a
+        slope of 0.5 implies that, say, the width changes by a factor of 2
+        from 0.1 to 1 GeV, etc.
+    """
+
+    def init(self):
+        super(LCESkewGaussian,self).init()
+        self.name = 'SkewGaussianE'
+        self.shortname = 'GSE'
+
 class LCELorentzian(LCEWrappedFunction,LCLorentzian):
     """ Represent a (wrapped) Lorentzian peak.
    
@@ -201,7 +224,6 @@ class LCELorentzian(LCEWrappedFunction,LCLorentzian):
 
     def init(self):
         super(LCELorentzian,self).init()
-        self._einit()
         self.name = 'LorentzianE'
         self.shortname = 'LE'
 
@@ -215,7 +237,6 @@ class LCELorentzian2(LCEWrappedFunction,LCLorentzian2):
 
     def init(self):
         super(LCELorentzian2,self).init()
-        self._einit()
         self.name = 'Lorentzian2E'
         self.shortname = 'L2E'
 
@@ -256,7 +277,6 @@ class LCEGaussian2(LCEWrappedFunction,LCGaussian2):
 
     def init(self):
         super(LCEGaussian2,self).init()
-        self._einit()
         self.name = 'Gaussian2E'
         self.shortname = 'G2E'
 
@@ -289,7 +309,6 @@ class LCEVonMises(LCEPrimitive,LCVonMises):
 
     def init(self):
         super(LCEVonMises,self).init()
-        self._einit()
         self.name = 'VonMisesE'
         self.shortname = 'VME'
 

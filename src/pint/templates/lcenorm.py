@@ -25,15 +25,6 @@ class ENormAngles(NormAngles):
     def is_energy_dependent(self):
         return True
 
-    def __str__(self):
-        s0 = super().__str__()
-        s0 += '\nSlopes:'
-        for i,(s,se,sf) in enumerate(zip(
-            self.slope,self.slope_errors,self.slope_free)):
-            fstring = '' if sf else ' [FIXED]'
-            s0 += '\nP%d : %.4f +/- %.4f%s'%(i+1,s,se,fstring)
-        return s0
-
     def set_parameters(self,p,free=True):
         if free:
             n = sum(self.free)
@@ -111,12 +102,12 @@ class ENormAngles(NormAngles):
     def gradient(self,log10_ens,free=True):
         # dimension is num_norms x num_params x num_energies
         # TODO -- need to make decision on "clip check" like with prims
-        g0 = super().gradient(log10_ens=log10_ens,free=False)
+        g0 = self._eindep_gradient(log10_ens=log10_ens,free=False)
         e,p = self._make_p(log10_ens)
-        if len(p.shape)>1:
-            rvals = np.empty((self.dim,2*self.dim,p.shape[1]))
-        else:
+        if len(p.shape) == 1:
             rvals = np.empty((self.dim,2*self.dim))
+        else:
+            rvals = np.empty((self.dim,2*self.dim,p.shape[1]))
         rvals[:,:self.dim] = g0
         rvals[:,self.dim:] = g0*e
         if free:

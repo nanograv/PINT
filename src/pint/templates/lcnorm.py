@@ -72,21 +72,32 @@ class NormAngles:
                     )
 
     def __str__(self):
-        # IN PROGRESS
         norms = self()
         errs = self.get_errors(free=False, propagate=True)
         dcderiv = 2 * np.sin(self.p[0]) * np.cos(self.p[0])
         dcerr = self.errors[0] * abs(dcderiv)
 
+        # for energy-dependence
+        if self.is_energy_dependent():
+            M = self._eindep_gradient(log10_ens=3,free=False)
+            eff_slopes = M@self.slope
+            eff_errors = ((M**2)@self.slope_errors**2)**0.5 # CHECK
+
         def norm_string(i):
             fstring = "" if self.free[i] else " [FIXED]"
-            return "P%d : %.4f +\\- %.4f%s" % (i + 1, norms[i], errs[i], fstring)
+            l1 = "P%d : %.4f +\\- %.4f%s" % (i + 1, norms[i], errs[i], fstring)
+            if self.is_energy_dependent():
+                fstring = "" if self.slope_free[i] else " [FIXED]"
+                l1 += '\n (Slope) : %.4f +\\- %.4f%s'%(eff_slopes[i], eff_errors[i], fstring)
+            return l1
 
         s0 = (
             "\nMixture Amplitudes\n------------------\n"
             + "\n".join([norm_string(i) for i in range(self.dim)])
             + "\nDC : %.4f +\\- %.4f" % (1 - self.get_total(), dcerr)
         )
+        if self.is_energy_dependent():
+            s0 += '\n (Slope) : %.4f'%(-eff_slopes.sum())
         return s0
 
     def __len__(self):
@@ -189,7 +200,8 @@ class NormAngles:
         a light curve.
 
         NB this version should work with both scalar (log10_ens=3) and
-        vector (log10_ens an array) versions.
+        vector (log10_ens an array) versions.  The shape is [nparam] for
+        scalar and [nparam, nenergy] for vector.
         """
         _,p = self._make_p(log10_ens=log10_ens)
         m = np.sin(p[0])  # normalization
@@ -199,35 +211,18 @@ class NormAngles:
             m *= np.sin(p[i])
         norms[self.dim - 1] = m
         norms = norms**2
+        # check normalization condition -- can fail numerically
         q = norms.sum(axis=0)
         if np.any(q > 1):
             if len(norms.shape)==2:
+                # for vector case, make sure we don't divide by sum of norms
+                # except for cases where the norms actually exceed 1!
+                q[q<1] = 1
                 return norms*(1./q)[None,:]
             return norms*(1./q)
         return norms
 
-    def gradient(self, log10_ens=3, free=False):
-        """Return a matrix giving the value of the partial derivative
-        of the ith normalization with respect to the jth angle, i.e.
-
-        M_ij = dn_i/dphi_j
-
-        This is the relevant quantity because it is the angles that are
-        actually fit for, so this allows the application of the chain
-        rule.
-
-        Because of the way the normalizations are defined, the ith
-        normalization only depends on the (i+1)th first angles, so
-        the upper half of M_ij is zero (see break statement below).
-
-        For taking higher derivatives, it is convenient to express
-        the derivative as so:
-        -d(cos^2(x)) = d(sin^2(x)) = sin(2x)
-        So that any non-zero derivative can be expressed by taking
-        the norm, dividing by sin^2/cos^2 as appropriate, and
-        multiplying by +/- sin(2x).  Then higher derivatives simply
-        pop out a factor of +/-2 and toggle sin/cos.
-        """
+    def _eindep_gradient(self, log10_ens=3, free=False):
         _,p = self._make_p(log10_ens=log10_ens)
         n = self(log10_ens)
         if len(p.shape) == 1:
@@ -259,6 +254,30 @@ class NormAngles:
         if free:
             return m[:,self.free]
         return m
+
+    def gradient(self, log10_ens=3, free=False):
+        """Return a matrix giving the value of the partial derivative
+        of the ith normalization with respect to the jth angle, i.e.
+
+        M_ij = dn_i/dphi_j
+
+        This is the relevant quantity because it is the angles that are
+        actually fit for, so this allows the application of the chain
+        rule.
+
+        Because of the way the normalizations are defined, the ith
+        normalization only depends on the (i+1)th first angles, so
+        the upper half of M_ij is zero (see break statement below).
+
+        For taking higher derivatives, it is convenient to express
+        the derivative as so:
+        -d(cos^2(x)) = d(sin^2(x)) = sin(2x)
+        So that any non-zero derivative can be expressed by taking
+        the norm, dividing by sin^2/cos^2 as appropriate, and
+        multiplying by +/- sin(2x).  Then higher derivatives simply
+        pop out a factor of +/-2 and toggle sin/cos.
+        """
+        return self._eindep_gradient(log10_ens=log10_ens,free=free)
 
     def hessian(self, log10_ens=3, free=False):
         """Return a matrix giving the value of the 2nd partial derivative
@@ -344,9 +363,15 @@ class NormAngles:
         n.free[:] = self.free[mask]
         n.errors[:] = self.errors[mask]
         if n.is_energy_dependent():
+            print('Warning!  Energy-dependence will be slightly altered when changing components.')
             n.slope[:] = self.slope[mask]
             n.slope_free[:] = self.slope_free[mask]
             n.slope_errors[:] = self.slope_errors[mask]
+            # get desired energy slopes for new object (approximate)
+            M = self._eindep_gradient(log10_ens=3,free=False)
+            effective_slopes = (M@self.slope)[mask]
+            M = n._eindep_gradient(log10_ens=3,free=False)
+            n.slope[:] = np.linalg.inv(M)@effective_slopes
         return n
 
     def add_component(self, norm=0.1):
@@ -366,20 +391,34 @@ class NormAngles:
             n.slope[:] = np.append(self.slope,0)
             n.slope_free[:] = np.append(self.slope_free,True)
             n.slope_errors[:] = np.append(self.slope_errors,0)
+            ## get desired energy slopes for new object (approximate)
+            M = self._eindep_gradient(log10_ens=3,free=False)
+            effective_slopes = np.append((M@self.slope)*(1-norm),0)
+            M = n._eindep_gradient(log10_ens=3,free=False)
+            n.slope[:] = np.linalg.inv(M)@effective_slopes
         return n
 
     def reorder_components(self, indices):
+        # currently this is only APPROXIMATE, not sure if it's possible
+        # to actually re-order them.  Perhaps consider a mapping instead.
         if (len(indices) != self.dim):
             raise ValueError('New indices do not match component count.')
+        if self.is_energy_dependent():
+            print('Warning!  Energy-dependence will be slightly altered when re-ordering components.')
+            # save the linearized slopes before changing params
+            M = self._eindep_gradient(log10_ens=3,free=False)
+            effective_slopes = (M@self.slope)[indices]
         self.p[:] = self._get_angles(self()[indices])
         self.free[:] = self.free[indices]
         self.errors[:] = self.errors[indices]
+        if self.is_energy_dependent():
+            M = self._eindep_gradient(log10_ens=3,free=False)
+            self.slope[:] = np.linalg.inv(M)@effective_slopes
+            self.slope_free[:] = self.slope_free[indices]
+            ## TODO -- but I probably don't care about this much
+            self.slope_errors[:] = self.slope_errors[indices]
         # TODO -- I don't think just swapping the order will work for
         # slopes, probably need to use the gradient to convert!
-        if self.is_energy_dependent():
-            self.slope[:] = self.slope[indices]
-            self.slope_free[:] = self.slope_free[indices]
-            self.slope_errors[:] = self.slope_errors[indices]
 
     def eval_string(self):
         """Return a string that can be evaled to instantiate a nearly-

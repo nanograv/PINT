@@ -18,8 +18,8 @@ from math import atan, cos, cosh, sin, sinh, tan
 import numpy as np
 from scipy.integrate import quad, simps
 from scipy.interpolate import interp1d
-from scipy.special import erf, i0, i1
-from scipy.stats import cauchy, norm, vonmises
+from scipy.special import erf, i0, i1, owens_t
+from scipy.stats import cauchy, norm, vonmises, skewnorm
 
 ROOT2PI = (2 * np.pi) ** 0.5
 R2DI = (2 / np.pi) ** 0.5
@@ -153,7 +153,8 @@ def check_gradient(func, n=1000, atol=1e-8, rtol=1e-5, quiet=False, ph=None, en=
         if not np.allclose(vals,t1):
             print('template_too value failed')
             return False
-    except AttributeError:
+    #except AttributeError:
+    except TypeError:
         g1 = func.gradient(ph, log10_ens=en, free=False)
     if np.any(np.isnan(g1)):
         print('Found NaN in gradient.')
@@ -217,6 +218,12 @@ class LCPrimitive:
             self.gauss_prior_enable,
         ) = self._default_priors()
         self.shift_mode = False
+        assert(len(self.p)==len(self.free))
+        if hasattr(self,'slope'):
+            assert(len(self.slope)==len(self.p))
+            assert(len(self.slope_free)==len(self.p))
+        if not self.check_bounds():
+            raise ValueError('Supplied parameter values were outside bounds.')
 
     def _einit(self):
         pass
@@ -349,6 +356,11 @@ class LCPrimitive:
             return np.asarray(self.bounds)[self.free]
         return self.bounds
 
+    def check_bounds(self,p=None):
+        b = np.asarray(self.bounds)
+        p = p or self.p
+        return np.all((p>=b[:,0])&(p<=b[:,1]))
+
     def get_gauss_prior_parameters(self):
         mod_array = [False] * (len(self.p) - 1) + [True]
         return (
@@ -462,6 +474,9 @@ class LCPrimitive:
 
     def approx_hessian(self, phases, log10_ens=None, eps=1e-5):
         return approx_hessian(self, phases, log10_ens=log10_ens, eps=eps)
+
+    def approx_derivative(self, phases, log10_ens=None, order=1, eps=1e-7):
+        return approx_derivative(self, phases, log10_ens=log10_ens, order=order, eps=eps)
 
     def check_gradient(self, atol=1e-8, rtol=1e-5, quiet=False):
         return check_gradient(self, atol=atol, rtol=rtol, quiet=quiet)
@@ -586,7 +601,8 @@ class LCWrappedFunction(LCPrimitive):
             t += self.base_func(phases, log10_ens, index=-i)
             results += t
             if (i >= MINWRAPS) and (np.all(t < WRAPEPS)):
-                break
+                return results
+        # TODO -- only return remainder when MAXWRAPS?
         return results + self._norm(i, log10_ens)
 
     def gradient(self, phases, log10_ens=3, free=False):
@@ -779,7 +795,6 @@ class LCGaussian(LCWrappedFunction):
         e, width, x0 = self._make_p(log10_ens)
         return np.mod(norm.rvs(loc=x0, scale=width, size=n), 1)
 
-
 class LCGaussian2(LCWrappedFunction):
     """Represent a (wrapped) two-sided Gaussian peak.
 
@@ -843,6 +858,114 @@ class LCGaussian2(LCWrappedFunction):
             n = len(n)
         return two_comp_mc(n, self.p[0], self.p[1], self.p[-1], norm.rvs)
 
+class LCSkewGaussian(LCWrappedFunction):
+    """Represent a (wrapped) skew-normal (Gaussian) peak.
+
+    Parameters
+    Width     the standard deviation parameter of the norm dist.
+    Shape     the degree of skewness, +ve values are right-skewed
+    Location  the mode of the Gaussian distribution
+    """
+
+    def init(self):
+        self.p = np.asarray([0.03, 0, 0.5])
+        self.pnames = ["Width", "Shape", "Location"]
+        self.name = "SkewGaussian"
+        self.shortname = "GS"
+
+    def _default_bounds(self):
+        bounds = [[]] * len(self.p)
+        bounds[0] = [0.0015, 1.5]  # width
+        bounds[1] = [-100, 100]
+        bounds[2] = [-1, 1]  # position
+        return bounds
+
+    def hwhm(self, right=False):
+        raise NotImplementedError
+        #return self.p[0] * (2 * np.log(2)) ** 0.5
+
+    def base_func(self, phases, log10_ens=3, index=0):
+        e, width, shape, x0 = self._make_p(log10_ens)
+        z = (phases + index - x0) / width
+        t1 = (1.0 / (width * ROOT2PI)) * np.exp(-0.5 * z**2)
+        t2 = 1+erf(shape*z*2**-0.5)
+        return t1*t2
+
+    def base_grad(self, phases, log10_ens=3, index=0):
+        # basic idea here: f(z) = 2*phi(z) * Phi(a*z)
+        # df/dz = (-2z)phi(z)Phi(a*z) + (2a)phi(z)phi(a*z)
+        # df/da = 2z*phi(z)*phi(a*z)
+        # dz/dw = -z/w; dz/dx0 = -1/w
+        # so remaining derivatives chain rule from dz/dparam
+        e, width, shape, x0 = self._make_p(log10_ens)
+        z = (phases + index - x0) / width
+        t1 = (1.0 / (width * ROOT2PI)) * np.exp(-0.5 * z**2)
+        t2 = 1+erf(shape*z*(1./2**0.5))
+        t3 = (1.0 / ROOT2PI) * np.exp(-0.5 * (shape*z)**2)
+        f1 = t1*t2
+        f2 = t1*t3
+        return np.asarray([
+            f1 * (z**2 - 1.0)/width - 2*f2*z*(shape/width),
+            2 *f2 * z,
+            f1 * (z/width) - 2*f2*(shape/width)])
+
+    def base_grad_deriv(self, phases, log10_ens=3, index=0):
+        raise NotImplementedError
+        e, width, x0 = self._make_p(log10_ens)
+        z = (phases + index - x0) / width
+        f = (1.0 / (width * ROOT2PI)) * np.exp(-0.5 * z**2)
+        q = f / width**2
+        z2 = z**2
+        return np.asarray([q * z * (3 - z2), q * (1 - z2)])
+
+    def base_hess(self, phases, log10_ens=3, index=0):
+        raise NotImplementedError
+        e, width, x0 = self._make_p(log10_ens=log10_ens)
+        z = (phases + index - x0) / width
+        f = (1.0 / (width * ROOT2PI)) * np.exp(-0.5 * z**2)
+        q = f / width**2
+        z2 = z**2
+        rvals = np.empty((2, 2, len(z)))
+        rvals[0, 0] = q * (z2**2 - 5 * z2 + 2)
+        rvals[0, 1] = q * (z2 - 3) * z
+        rvals[1, 1] = q * (z2 - 1)
+        rvals[1, 0] = rvals[0, 1]
+        return rvals
+
+    def base_derivative(self, phases, log10_ens=3, index=0, order=1):
+        e, width, shape, x0 = self._make_p(log10_ens)
+        z = (phases + index - x0) / width
+        t1 = (1.0 / (width * ROOT2PI)) * np.exp(-0.5 * z**2)
+        t2 = 1+erf(shape*z*(1./2**0.5))
+        t3 = (1.0 / ROOT2PI) * np.exp(-0.5 * (shape*z)**2)
+        f1 = t1*t2
+        f2 = t1*t3
+        if order == 1:
+            return -f1 * (z/width) + 2*f2*(shape/width)
+        elif order == 2:
+            return f1 * (z**2-1)/width**2 - f2*(2*shape*z/width**2)*(2+shape**2)
+        else:
+            raise NotImplementedError
+
+    def base_int(self, x1, x2, log10_ens=3, index=0):
+        # the scipy.stats version is SUPER slow, for some reason, so just
+        # calculate it ourselves
+        e, width, shape, x0 = self._make_p(log10_ens)
+        z1 = (x1 + index - x0) / width
+        z2 = (x2 + index - x0) / width
+        norm_1 = 0.5*(1+erf(z1*(1./2**0.5)))
+        norm_2 = 0.5*(1+erf(z2*(1./2**0.5)))
+        owens_1 = 2*owens_t(z1,shape)
+        owens_2 = 2*owens_t(z2,shape)
+        return (norm_2-owens_2)-(norm_1-owens_1)
+
+    def random(self, n, log10_ens=3):
+
+        if isvector(log10_ens) and len(log10_ens) != n:
+            raise ValueError(
+                    "Provided log10_ens vector does not match requested n.")
+        e, width, shape, x0 = self._make_p(log10_ens)
+        return np.mod(skewnorm.rvs(shape,loc=x0, scale=width, size=n), 1)
 
 class LCLorentzian(LCPrimitive):
     """Represent a (wrapped) Lorentzian peak.
@@ -1042,7 +1165,7 @@ class LCVonMises(LCPrimitive):
         return bounds
 
     def hwhm(self, right=False):
-        return 0.5 * np.arccos(self.p[0] * np.log(0.5) + 1) / TWOPI
+        return (1.0/TWOPI) * np.arccos(self.p[0] * np.log(0.5) + 1)
 
     def __call__(self, phases, log10_ens=3):
         e, width, loc = self._make_p(log10_ens)
@@ -1075,7 +1198,12 @@ class LCVonMises(LCPrimitive):
         z = TWOPI * (phases - loc)
         kappa = 1./width
         f = np.exp(np.cos(z) * kappa) / i0(kappa)
-        return f*((-TWOPI)*kappa)*np.sin(z)
+        if order == 1:
+            return f*((-TWOPI)*kappa)*np.sin(z)
+        elif order == 2:
+            return (TWOPI**2*kappa)*f*(kappa*np.sin(z)**2-np.cos(z))
+        else:
+            raise NotImplementedError
 
     def random(self, n, log10_ens=3):
 
@@ -1451,18 +1579,57 @@ def convert_primitive(p1, ptype=LCLorentzian):
     """Attempt to set the parameters of p2 to give a comparable primitive
     to p1."""
     p2 = ptype()
+    edep = p1.is_energy_dependent() and p2.is_energy_dependent()
+    two_to_one = (len(p2.p) == 2) and (len(p1.p) == 3)
+    one_to_two = (len(p2.p) == 3) and (len(p1.p) == 2)
+
+    # handle VonMises as a special case since width is complicated
+    if 'VonMises' in p2.name:
+        width = (np.cos(p1.hwhm()*(2*np.pi))-1)/np.log(0.5)
+        p2.p[0] = width
+        p2.p[-1] = p1.p[-1]
+        if edep:
+            p2.free[-1] = p1.free[-1]
+            p2.slope[-1] = p1.slope[-1]
+            p2.slope_free[-1] = p1.slope_free[-1]
+
+            p2.free[0] = p1.free[0]
+            p2.slope[0] = p1.slope[0] * width/p1.p[0]
+            p2.slope_free[0] = p1.slope_free[0]
+            if two_to_one:
+                if p1.free[1]:
+                    p2.free[0] = True
+                if p1.slope_free[1]:
+                    p2.slope_free[0] = True
+        assert(p2.check_bounds())
+        return p2
+
+
+    # get a rough idea of scale first for nonlinear cases
     p2_scale = p2.p[0] / p2.hwhm()
     # set position
     p2.p[-1] = p1.p[-1]
     # set width
-    # default, 2->2 conversion
+    # default, 1->1 conversion
     p2.p[0] = p2_scale * p1.hwhm()
+    p2.free[0] = p1.free[0]
+    if edep:
+        p2.slope[0] = p2_scale * p1.hwhm() * p1.slope[0]
+        p2.slope_free[0] = p1.slope_free[0]
+        p2.slope_free[-1] = p1.slope_free[-1]
+        p2.slope[-1] = p1.slope[-1]
+
     # if we are going from 2->1, use mean of widths
-    if (len(p2.p) == 2) and (len(p1.p) == 3):
+    if two_to_one:
         p2.p[0] = p2_scale * (p1.hwhm(right=False) + p1.hwhm(right=True)) / 2
-    # if we are going from 1->2, duplicate
-    elif (len(p2.p) == 3) and (len(p1.p) == 2):
+        p2.free[0] = p1.free[0] or p1.free[1]
+        if edep:
+            p2.slope_free[0] = p1.slope_free[0] or p1.slope_free[1]
+    elif one_to_two:
         p2.p[1] = p2.p[0]
+        p2.slope[1] = p2.slope[0]
+        p2.slope_free[1] = p2.slope[0]
+
     # special case of going from gauss to Lorentzian
     # this makes peaks closer in nature than going by equiv HWHM
     if "Gaussian" in str(type(p1)) and "Lorentzian" in str(type(p2)):
@@ -1470,14 +1637,30 @@ def convert_primitive(p1, ptype=LCLorentzian):
         p2.p[0] *= scale
         if len(p2.p) == 3:
             p2.p[1] *= scale
+
+    if p1.is_energy_dependent() and p2.is_energy_dependent():
+        p2.slope[0] = p1.slope[0]*p2_scale
+    assert(p2.check_bounds())
     return p2
 
-class IO(object):
+class FastBessel(object):
     """ Special class to quickly evaluate modified Bessel function.
     """
-    def __init__(self):
-        self._x = np.log(np.logspace(-1,2.845,1001))
-        self._y = np.log(i0(np.exp(self._x)))
+    def __init__(self,order=0):
+        if order == 0:
+            func = i0
+        elif order == 1:
+            func = i1
+        else:
+            raise NotImplementedError
+        x = np.logspace(-1,3.5,2001)
+        y = np.empty_like(x)
+        mask = x < 700
+        y[mask] = np.log(func(x[mask]))
+        mask = ~mask
+        y[mask] = x[mask] + np.log((1+(4*order**2-1)/(8*x[mask]))/(2*np.pi*x[mask])**0.5)
+        self._y = y
+        self._x = np.log(x)
         self._interp = interp1d(self._x,self._y)
 
     def __call__(self,x):

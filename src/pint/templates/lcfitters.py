@@ -82,6 +82,27 @@ class LCFitter:
 
         self._binned_setup()
 
+    def __str__(self):
+        if "ll" in self.__dict__.keys():
+            return "\nLog Likelihood for fit: %.2f\n" % (self.ll) + str(self.template)
+        return str(self.template)
+
+    def __getstate__(self):
+        """Cannot pickle self.loglikelihood and self.gradient since
+        these are instancemethod objects.
+        See: http://mail.python.org/pipermail/python-list/2000-October/054610.html"""
+        result = self.__dict__.copy()
+        #del result["loglikelihood"]
+        #del result["gradient"]
+        result.pop('loglikelihood')
+        result.pop('gradient')
+        return result
+
+    def __setstate__(self, state):
+        self.__dict__ = state
+        self.loglikelihood = self.unbinned_loglikelihood
+        self.gradient = self.unbinned_gradient
+
     def is_energy_dependent(self):
         return self.template.is_energy_dependent()
 
@@ -169,8 +190,11 @@ class LCFitter:
             return np.full(p.shape,2e20)
         if (not params_ok) and ('skip_bounds_check' not in kwargs):
             return np.full(p.shape,2e20)
-        numer = self.weights * t.gradient(self.phases,log10_ens=self.log10_ens)
-        denom = 1 + self.weights * (t(self.phases,log10_ens=self.log10_ens,use_cache=False) - 1)
+        g,tmpl = t.gradient(self.phases,log10_ens=self.log10_ens,template_too=True)
+        #numer = self.weights * t.gradient(self.phases,log10_ens=self.log10_ens)
+        #denom = 1 + self.weights * (t(self.phases,log10_ens=self.log10_ens,use_cache=False) - 1)
+        numer = self.weights * g
+        denom = 1 + self.weights * (tmpl - 1)
         return -np.sum(numer / denom,axis=1)
 
     def binned_gradient(self, p, *args, **kwargs):
@@ -202,7 +226,6 @@ class LCFitter:
         args[0].set_parameters(p)
         chi = (bg + (1 - bg) * self.template(x) - y) / yerr
         return chi
-
 
     def quick_fit(self):
         t = self.template
@@ -243,6 +266,7 @@ class LCFitter:
         quick_fit_first=False,
         unbinned=True,
         use_gradient=True,
+        ftol=1e-5,
         overall_position_first=False,
         positions_first=False,
         estimate_errors=False,
@@ -298,11 +322,11 @@ class LCFitter:
         ll0 = -fit_func(self.template.get_parameters())
         p0 = self.template.get_parameters().copy()
         if use_gradient:
-            f = self.fit_tnc(fit_func, grad_func, quiet=quiet)
+            f = self.fit_tnc(fit_func, grad_func, ftol=ftol, quiet=quiet)
         else:
-            f = self.fit_fmin(fit_func)
-        if (ll0 > self.ll) or (self.ll == -2e20) or (np.isnan(self.ll)):
-            if unbinned_refit and np.isnan(self.ll) and (not unbinned):
+            f = self.fit_fmin(fit_func, ftol=ftol)
+        if (ll0 > self.ll) or (ll0 == 2e20) or (np.isnan(ll0)):
+            if unbinned_refit and np.isnan(ll0) and (not unbinned):
                 if (self.binned_bins * 2) < 400:
                     print(
                         "Did not converge using %d bins... retrying with %d bins..."
@@ -324,6 +348,12 @@ class LCFitter:
             self.bad_p = self.template.get_parameters().copy()
             self.bad_ll = self.ll
             print("Failed likelihood fit -- resetting parameters.")
+            if np.isnan(ll0):
+                print('   (Condition: LL = NaN)')
+            if (ll0 > self.ll):
+                print('   (Condition: LL did not improve)')
+            if (ll0==-2e20):
+                print('   (Condition: LL set to -infty)')
             self.template.set_parameters(p0)
             self.ll = ll0
             self.fitvals = p0
@@ -553,36 +583,8 @@ class LCFitter:
         self.weights = w0
         return results
 
-    def __str__(self):
-        if "ll" in self.__dict__.keys():
-            return "\nLog Likelihood for fit: %.2f\n" % (self.ll) + str(self.template)
-        return str(self.template)
-
     def write_template(self, outputfile="template.gauss"):
         s = self.template.prof_string(outputfile=outputfile)
-
-    def remove_component(self, index, steps=5, fit_kwargs={}):
-        """Gradually remove a component from a model by refitting and
-        return new LCTemplate object."""
-        if len(self.template) == 1:
-            raise ValueError(
-                "Template only has one component -- removing it would be madness!"
-            )
-        old_p = self.template.get_parameters()
-        old_f = self.template.norms.free.copy()
-        vals = np.arange(steps).astype(float) / np.arange(1, steps + 1)
-        vals = vals[::-1] * self.template.norms()[index]
-        self.template.norms.free[index] = False
-        # self.template.primitives[index].free[:] = False
-        for v in vals:
-            self.template.norms.set_single_norm(index, v)
-            if "unbinned" not in fit_kwargs:
-                fit_kwargs["unbinned"] = False
-            self.fit(**fit_kwargs)
-        t = self.template.delete_primitive(index)
-        self.template.norms.free[:] = old_f
-        self.template.set_parameters(old_p)
-        return t
 
     def plot(
         self,
@@ -796,19 +798,16 @@ class LCFitter:
         pl.xlabel("Phase")
         pl.grid(True)
 
-    def __getstate__(self):
-        """Cannot pickle self.loglikelihood and self.gradient since
-        these are instancemethod objects.
-        See: http://mail.python.org/pipermail/python-list/2000-October/054610.html"""
-        result = self.__dict__.copy()
-        del result["loglikelihood"]
-        del result["gradient"]
-        return result
+    def rotate_for_display(self):
+        """ Rotate both internal phases and template to a nice phase.
 
-    def __setstate__(self, state):
-        self.__dict__ = state
-        self.loglikelihood = self.unbinned_loglikelihood
-        self.gradient = self.unbinned_gradient
+        NB this will potentially break zero-phase references and will also
+        necessitate re-binning if using binned mode.
+
+    """
+        dphi = self.template.get_display_point(do_rotate=True)
+        self.phases = np.mod(self.phases+dphi,1)
+        self._binned_setup()
 
     def aic(self, template=None):
         """Return the Akaike information criterion for the current state.
