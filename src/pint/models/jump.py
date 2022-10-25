@@ -194,7 +194,7 @@ class PhaseJump(PhaseComponent):
 
         Parameters
         ----------
-        toa_table: list object
+        toa_table: astropy.table.column.Column
             The TOA table which must be modified. In pintk (pulsar.py), this will
             be all_toas.table["flags"][selected]
         """
@@ -251,7 +251,7 @@ class PhaseJump(PhaseComponent):
         ----------
         toa_flags: astropy.table.column.Column
             The TOA table which must be modified. In pintk (pulsar.py), this will
-            be all_toas.table["flags"][selected]
+            be ``all_toas.table["flags"][selected]``
 
         jump_num: int
             jump that needs to be deleted from the TOAs
