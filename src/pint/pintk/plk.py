@@ -1340,14 +1340,28 @@ class PlkWidget(tk.Frame):
             if ind is not None:
                 if event.button == 3:
                     # Right click deletes closest TOA
-                    # if the point is jumped, tell the user to delete the jump first
-                    if ind in self.psr.all_toas.table["index"][self.jumped]:
-                        log.warning(
-                            "Cannot delete jumped TOAs. Delete interfering jumps before deleting TOAs."
-                        )
-                        return None
-                    self.selected = self.psr.delete_TOAs([ind], self.selected)
+                    # Adapt to TOA index rather than plot index, they differ when TOAs are already deleted
+                    toa_ind = self.psr.all_toas.table["index"][ind]
+                    sudo_select_mask = np.zeros_like(self.selected).astype(bool)
+                    sudo_select_mask[ind] = True
+                    jumped_copy = copy.deepcopy(self.jumped)
+                    unselect_jump_stat = jumped_copy[~sudo_select_mask]
+
+                    # Check if it is jumped
+                    if jumped_copy[ind]:
+                        # Means its jumped, so unjump it
+                        jump_name = self.psr.add_jump(sudo_select_mask)
+                        self.updateJumped(jump_name)
+                        if type(jump_name) != list:
+                            log.error(f"Mistakenly added new jump {jump_name}")
+                        else:
+                            log.info(
+                                f"Existing jump removed for {np.array(jump_name).astype(int).sum()} toas and deleted them"
+                            )
+                    # Now delete it
+                    self.selected = self.psr.delete_TOAs([toa_ind], self.selected)
                     self.updateAllJumped()
+                    self.jumped |= unselect_jump_stat
                     self.psr.update_resids()
                     self.updatePlot(keepAxes=True)
                     self.call_updates()
@@ -1435,21 +1449,29 @@ class PlkWidget(tk.Frame):
                 self.updatePlot(keepAxes=False)
                 self.call_updates()
         elif event.key == "d":
-            # if any of the points are jumped, tell the user to delete the jump(s) first
+            # Get the current state of jumped toas
             jumped_copy = copy.deepcopy(self.jumped)
-            self.updateAllJumped()
-            all_jumped = copy.deepcopy(self.jumped)
-            self.jumped = jumped_copy
-            if (self.selected & all_jumped).any():
-                log.warning(
-                    "Cannot delete jumped TOAs. Delete interfering jumps before deleting TOAs."
-                )
-                return None
+            unselect_jump_status = jumped_copy[~self.selected]
+
+            # First update the jump status and then delete them
+            if np.any(jumped_copy & self.selected):
+                # Which means that there is an overlap between selected and jumped TOAs
+                jump_name = self.psr.add_jump(self.selected)
+                self.updateJumped(jump_name)
+                # Here jump_name has to be a list
+                if type(jump_name) != list:
+                    log.error(f"Mistakenly added new jump {jump_name}")
+                else:
+                    log.info(
+                        f"Existing jump removed for {np.array(jump_name).astype(int).sum()} toas and deleted them"
+                    )
             # Delete the selected points
             self.selected = self.psr.delete_TOAs(
                 self.psr.all_toas.table["index"][self.selected], self.selected
             )
             self.updateAllJumped()
+            # Restore the jumps back
+            self.jumped |= unselect_jump_status
             self.psr.update_resids()
             self.updatePlot(keepAxes=True)
             self.call_updates()
@@ -1459,8 +1481,6 @@ class PlkWidget(tk.Frame):
             # jump the selected points, or unjump if already jumped
             jump_name = self.psr.add_jump(self.selected)
             self.updateJumped(jump_name)
-            print(f"New jump {jump_name} for {self.selected.sum()} toas.")
-            # undo the selection, since that is almost certainly what we want
             self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
             self.selected = np.zeros(self.psr.selected_toas.ntoas, dtype=bool)
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
