@@ -345,7 +345,7 @@ class EcorrNoise(NoiseComponent):
             ecorrs.append(getattr(self, ecorr))
         return ecorrs
 
-    def get_basis(self, toas):
+    def get_noise_basis(self, toas):
         """Return the quantization matrix for ECORR.
 
         A quantization matrix maps TOAs to observing epochs.
@@ -371,7 +371,7 @@ class EcorrNoise(NoiseComponent):
             nctot += nn
         return umat
 
-    def get_weights(self, toas, nweights=None):
+    def get_noise_weights(self, toas, nweights=None):
         """Return the ECORR weights
         The weights used are the square of the ECORR values.
         """
@@ -395,7 +395,7 @@ class EcorrNoise(NoiseComponent):
         A quantization matrix maps TOAs to observing epochs.
         The weights used are the square of the ECORR values.
         """
-        return (self.get_basis(toas), self.get_weights(toas))
+        return (self.get_noise_basis(toas), self.get_noise_weights(toas))
 
     def ecorr_cov_matrix(self, toas):
         """Full ECORR covariance matrix."""
