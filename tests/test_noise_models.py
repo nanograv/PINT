@@ -105,9 +105,10 @@ def test_ecorrnoise_basis_integer(model_and_toas):
     assert np.all(basis.astype(int) == basis) and np.all(basis >= 0)
 
 
-@pytest.mark.parametrize("component_label", noise_component_labels)
+@pytest.mark.parametrize("component_label", correlated_noise_component_labels)
 def test_noise_basis_weights_funcs(model_and_toas, component_label):
     model, toas = model_and_toas
+
     component = model.components[component_label]
 
     basis_weights_func = component.basis_funcs[0]
