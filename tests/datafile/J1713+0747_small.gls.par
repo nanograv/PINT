@@ -39,18 +39,9 @@ KIN                 71.969                 0.562
 K96                         1
 RNAMP         0.21246D-01
 RNIDX            -1.58090
-T2EFAC -f Rcvr1_2_GASP   1.079
 T2EFAC -f L-wide_ASP   1.018
-T2EFAC -f S-wide_ASP   1.115
-T2EFAC -f Rcvr_800_GASP   1.085
-T2EQUAD -f Rcvr1_2_GASP   0.04500
 T2EQUAD -f L-wide_ASP   0.02900
-T2EQUAD -f S-wide_ASP   0.00010
-T2EQUAD -f Rcvr_800_GASP   0.13430
 ECORR -f L-wide_ASP   0.09480
-ECORR -f Rcvr1_2_GASP   0.09260
-ECORR -f Rcvr_800_GASP   0.01630
-ECORR -f S-wide_ASP   0.11770
 JUMP -fe Rcvr1_2       0.000009637         0.000000069
 JUMP -fe L-wide       0.000019826         0.000000069
 JUMP -fe S-wide       0.000027750  1       0.000000071
