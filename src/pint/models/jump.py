@@ -249,12 +249,13 @@ class PhaseJump(PhaseComponent):
 
         Parameters
         ----------
-        toa_flags: list
+        toa_flags: astropy.table.column.Column
             The TOA table which must be modified. In pintk (pulsar.py), this will
             be all_toas.table["flags"][selected]
 
         jump_num: int
-            jump that needs to be deleted from the TOAs"""
+            jump that needs to be deleted from the TOAs
+        """
 
         if toa_flags is not None:
             # This means there is overlap between selected TOAs and jump_num
