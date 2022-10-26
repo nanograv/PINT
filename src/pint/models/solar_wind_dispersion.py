@@ -506,6 +506,21 @@ class SolarWindDispersionX(Dispersion):
     The default radial power-law index value of 2 corresponds to the Edwards et al. model.
     Other values are for the You et al./Hazboun et al. model.
 
+    Note that unlike the standard model, this model goes to 0 at opposition (the minimum).
+    So it really represents a Delta DM.  This is to make it easier to join multiple segments.
+    However, to get the peak to still be the requested max DM the values are scaled compared
+    to the standard model.
+
+    To compare against a standard model:
+
+    Example
+    -------
+
+        >>> swxmodel.SWXDM_0001.quantity = model.get_max_dm() * swxmodel.get_swscalings()[0]
+        >>> np.allclose(swxmodel.get_min_dms(),model.get_min_dm()*swxmodel.get_swscalings())
+        >>> toas = pint.simulation.make_fake_toas_uniform(54000, 54000 + 2 * 365, 500, model=model, obs="gbt")
+        >>> np.allclose((swxmodel.swx_dm(toas) + model.get_min_dm()), model.solar_wind_dm(toas))
+
     Parameters supported:
 
     .. paramtable::
@@ -530,9 +545,10 @@ class SolarWindDispersionX(Dispersion):
         self.set_special_params(["SWXDM_0001", "SWXP_0001", "SWXR1_0001", "SWXR2_0001"])
         self.dm_value_funcs += [self.swx_dm]
         self.delay_funcs_component += [self.swx_delay]
+        self._theta0 = None
 
     def solar_wind_geometry(self, toas, p):
-        """Return the geometry of solar wind dispersion.
+        """Return the geometry of solar wind dispersion (integrated path-length)
 
         Implements Eqn. 11 of Hazboun et al. (2022)
 
@@ -551,8 +567,8 @@ class SolarWindDispersionX(Dispersion):
         theta, r = self._parent.sun_angle(toas, also_distance=True)
         return _solar_wind_geometry(r, theta, p).to(u.pc)
 
-    def fiducial_solar_wind_geometry(self, p):
-        """Return the fiducial geometry of solar wind dispersion.
+    def conjunction_solar_wind_geometry(self, p):
+        """Return the geometry (integrated path-length) of solar wind dispersion at conjunction
 
         Implements Eqn. 11 of Hazboun et al. (2022)
 
@@ -566,9 +582,24 @@ class SolarWindDispersionX(Dispersion):
         astropy.quantity.Quantity
         """
         r0 = 1 * u.AU
-        coord = self._parent.get_psr_coords()
-        theta0 = coord.transform_to(pint.pulsar_ecliptic.PulsarEcliptic()).lat
-        return _solar_wind_geometry(r0, theta0, p).to(u.pc)
+        return _solar_wind_geometry(r0, self.theta0, p).to(u.pc)
+
+    def opposition_solar_wind_geometry(self, p):
+        """Return the geometry (integrated path-length) of solar wind dispersion at opposition
+
+        Implements Eqn. 11 of Hazboun et al. (2022)
+
+        Parameters
+        ----------
+        p : float
+            Radial power-law index
+
+        Returns
+        -------
+        astropy.quantity.Quantity
+        """
+        r0 = 1 * u.AU
+        return _solar_wind_geometry(r0, 180 * u.deg - self.theta0, p).to(u.pc)
 
     def d_solar_wind_geometry_d_swxp(self, toas, p):
         """Derivative of solar_wind_geometry (path length) wrt power-law index p
@@ -593,8 +624,8 @@ class SolarWindDispersionX(Dispersion):
         theta, r = self._parent.sun_angle(toas, also_distance=True)
         return _d_solar_wind_geometry_d_p(r, theta, p)
 
-    def d_fiducial_solar_wind_geometry_d_swxp(self, p):
-        """Derivative of fiducial_solar_wind_geometry (path length) wrt power-law index p
+    def d_conjunction_solar_wind_geometry_d_swxp(self, p):
+        """Derivative of conjunction_solar_wind_geometry (path length) wrt power-law index p
 
         The evaluation is done using Eqn. 12 in Hazboun et al. (2022).  The first term
         involving hypergeometric functions (:func:`_hypergeom_function`)
@@ -605,9 +636,21 @@ class SolarWindDispersionX(Dispersion):
         """
         # fiducial values
         r0 = 1 * u.AU
-        coord = self._parent.get_psr_coords()
-        theta0 = coord.transform_to(pint.pulsar_ecliptic.PulsarEcliptic()).lat
-        return _d_solar_wind_geometry_d_p(r0, theta0, p)
+        return _d_solar_wind_geometry_d_p(r0, self.theta0, p)
+
+    def d_opposition_solar_wind_geometry_d_swxp(self, p):
+        """Derivative of opposition_solar_wind_geometry (path length) wrt power-law index p
+
+        The evaluation is done using Eqn. 12 in Hazboun et al. (2022).  The first term
+        involving hypergeometric functions (:func:`_hypergeom_function`)
+        has the derivative computed approximately using a Pade expansion (:func:`_d_hypergeom_function_dp`).
+        The second uses gamma functions (:func:`_gamma_function`) and has the derivative computed
+        using polygamma functions (:func:`_d_gamma_function_dp`).
+
+        """
+        # fiducial values
+        r0 = 1 * u.AU
+        return _d_solar_wind_geometry_d_p(r0, 180 * u.deg - self.theta0, p)
 
     def add_swx_range(
         self, mjd_start, mjd_end, index=None, swxdm=0, swxp=2, frozen=True
@@ -791,6 +834,25 @@ class SolarWindDispersionX(Dispersion):
                 "Please check your prefixed parameters."
             )
 
+    def get_theta0(self):
+        """Get approximate elongation at conjunction
+
+        Just based on the pulsar's ecliptic coordinate
+
+        Returns
+        -------
+        astropy.quantity.Quantity
+        """
+        coord = self._parent.get_psr_coords()
+        # approximate elongation at conjunction
+        self._theta0 = coord.transform_to(pint.pulsar_ecliptic.PulsarEcliptic()).lat
+
+    @property
+    def theta0(self):
+        if self._theta0 is None:
+            self.get_theta0()
+        return self._theta0
+
     def validate_toas(self, toas):
         SWXDM_mapping = self.get_prefix_mapping_component("SWXDM_")
         SWXP_mapping = self.get_prefix_mapping_component("SWXP_")
@@ -810,7 +872,7 @@ class SolarWindDispersionX(Dispersion):
             raise MissingTOAs(bad_parameters)
 
     def swx_dm(self, toas):
-        """Return solar wind DM for given TOAs"""
+        """Return solar wind Delta DM for given TOAs"""
         condition = {}
         p = {}
         tbl = toas.table
@@ -835,8 +897,16 @@ class SolarWindDispersionX(Dispersion):
             if len(v) > 0:
                 dm[v] += (
                     dmmax
-                    * self.solar_wind_geometry(toas[v], p=p[k])
-                    / self.fiducial_solar_wind_geometry(p[k])
+                    * (
+                        (
+                            self.solar_wind_geometry(toas[v], p=p[k])
+                            - self.opposition_solar_wind_geometry(p[k])
+                        )
+                        / (
+                            self.conjunction_solar_wind_geometry(p[k])
+                            - self.opposition_solar_wind_geometry(p[k])
+                        )
+                    )
                 ).to(u.pc / u.cm**3)
         return dm
 
@@ -870,9 +940,13 @@ class SolarWindDispersionX(Dispersion):
         deriv = np.zeros(len(tbl)) * u.dimensionless_unscaled
         for k, v in select_idx.items():
             if len(v) > 0:
-                deriv[v] += self.solar_wind_geometry(
-                    toas[v], p=p
-                ) / self.fiducial_solar_wind_geometry(p)
+                deriv[v] += (
+                    self.solar_wind_geometry(toas[v], p=p)
+                    - self.opposition_solar_wind_geometry(p)
+                ) / (
+                    self.conjunction_solar_wind_geometry(p)
+                    - self.opposition_solar_wind_geometry(p)
+                )
         return deriv
 
     def d_delay_d_swxdm(self, toas, param_name, acc_delay=None):
@@ -917,12 +991,21 @@ class SolarWindDispersionX(Dispersion):
         for k, v in select_idx.items():
             if len(v) > 0:
                 geometry = self.solar_wind_geometry(toas[v], p)
-                fiducial_geometry = self.fiducial_solar_wind_geometry(p)
+                conjunction_geometry = self.conjunction_solar_wind_geometry(p)
+                opposition_geometry = self.opposition_solar_wind_geometry(p)
                 d_geometry_dp = self.d_solar_wind_geometry_d_swxp(toas[v], p)
-                d_fiducial_geometry_dp = self.d_fiducial_solar_wind_geometry_d_swxp(p)
+                d_conjunction_geometry_dp = (
+                    self.d_conjunction_solar_wind_geometry_d_swxp(p)
+                )
+                d_opposition_geometry_dp = self.d_opposition_solar_wind_geometry_d_swxp(
+                    p
+                )
                 deriv[v] += swxdm * (
-                    (d_geometry_dp / fiducial_geometry)
-                    - (geometry / fiducial_geometry**2) * d_fiducial_geometry_dp
+                    (d_geometry_dp - d_opposition_geometry_dp)
+                    / (conjunction_geometry - opposition_geometry)
+                    - (geometry - opposition_geometry)
+                    * (d_conjunction_geometry_dp - d_conjunction_geometry_dp)
+                    / (conjunction_geometry - opposition_geometry) ** 2
                 )
         return deriv
 
@@ -950,6 +1033,25 @@ class SolarWindDispersionX(Dispersion):
             result += getattr(self, SWXR2_mapping[ii]).as_parfile_line(format=format)
         return result
 
+    def get_swscalings(self):
+        """Return the approximate scaling between the SWX model and the standard model
+
+        Returns
+        -------
+        np.ndarray"""
+        SWXDM_mapping = self.get_prefix_mapping_component("SWXDM_")
+        SWXP_mapping = self.get_prefix_mapping_component("SWXP_")
+        sorted_list = sorted(SWXDM_mapping.keys())
+        scalings = np.zeros(len(sorted_list))
+        for j, ii in enumerate(sorted_list):
+            swxdm = getattr(self, SWXDM_mapping[ii]).quantity
+            p = getattr(self, SWXP_mapping[ii]).value
+            scalings[j] = (
+                self.conjunction_solar_wind_geometry(p)
+                - self.opposition_solar_wind_geometry(p)
+            ) / self.conjunction_solar_wind_geometry(p)
+        return scalings
+
     def get_max_dms(self):
         """Return approximate maximum DMs for each segment from the Solar Wind (at conjunction)
 
@@ -960,20 +1062,19 @@ class SolarWindDispersionX(Dispersion):
         astropy.quantity.Quantity
         """
         SWXDM_mapping = self.get_prefix_mapping_component("SWXDM_")
-        SWXP_mapping = self.get_prefix_mapping_component("SWXP_")
-        SWXR1_mapping = self.get_prefix_mapping_component("SWXR1_")
         sorted_list = sorted(SWXDM_mapping.keys())
         dms = np.zeros(len(sorted_list)) * u.pc / u.cm**3
-        coord = self._parent.get_psr_coords()
         for j, ii in enumerate(sorted_list):
             swxdm = getattr(self, SWXDM_mapping[ii]).quantity
             dms[j] = (swxdm).to(u.pc / u.cm**3)
         return dms
 
     def get_min_dms(self):
-        """Return approximate minimum DMs for each segment from the Solar Wind (at conjunction)
+        """Return approximate minimum DMs for each segment from the Solar Wind (at opposition).
 
         Simplified model that assumes a circular orbit
+
+        Note that this value has been subtracted off of the model
 
         Returns
         -------
@@ -981,24 +1082,15 @@ class SolarWindDispersionX(Dispersion):
         """
         SWXDM_mapping = self.get_prefix_mapping_component("SWXDM_")
         SWXP_mapping = self.get_prefix_mapping_component("SWXP_")
-        SWXR1_mapping = self.get_prefix_mapping_component("SWXR1_")
         sorted_list = sorted(SWXDM_mapping.keys())
         dms = np.zeros(len(sorted_list)) * u.pc / u.cm**3
-        coord = self._parent.get_psr_coords()
         for j, ii in enumerate(sorted_list):
-            r1 = getattr(self, SWXR1_mapping[ii]).quantity
-            p = getattr(self, SWXP_mapping[ii]).value
             swxdm = getattr(self, SWXDM_mapping[ii]).quantity
-            t0, elongation = pint.utils.get_conjunction(coord, r1, precision="high")
-            # for the min
-            theta = 180 * u.deg - elongation
-            r = 1 * u.AU
+            p = getattr(self, SWXP_mapping[ii]).value
             dms[j] = (
-                (
-                    _solar_wind_geometry(r, theta, p)
-                    / _solar_wind_geometry(r, elongation, p)
-                )
-                * swxdm
+                swxdm
+                * self.opposition_solar_wind_geometry(p)
+                / self.conjunction_solar_wind_geometry(p)
             ).to(u.pc / u.cm**3)
         return dms
 
@@ -1018,7 +1110,7 @@ class SolarWindDispersionX(Dispersion):
         for j, ii in enumerate(sorted_list):
             swxdm = getattr(self, SWXDM_mapping[ii]).quantity
             p = getattr(self, SWXP_mapping[ii]).value
-            ne_sws[j] = (swxdm / self.fiducial_solar_wind_geometry(p)).to(u.cm**-3)
+            ne_sws[j] = (swxdm / self.conjunction_solar_wind_geometry(p)).to(u.cm**-3)
         return ne_sws
 
     def set_ne_sws(self, ne_sws):
@@ -1046,5 +1138,5 @@ class SolarWindDispersionX(Dispersion):
         for j, ii in enumerate(sorted_list):
             p = getattr(self, SWXP_mapping[ii]).value
             getattr(self, SWXDM_mapping[ii]).quantity = (
-                self.fiducial_solar_wind_geometry(p) * ne_sws[j]
+                self.conjunction_solar_wind_geometry(p) * ne_sws[j]
             ).to(u.pc / u.cm**3)
