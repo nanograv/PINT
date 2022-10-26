@@ -842,6 +842,12 @@ class SolarWindDispersionX(Dispersion):
         astropy.quantity.Quantity
         """
         coord = self._parent.get_psr_coords()
+        if self._parent.POSEPOCH.value is not None:
+            t0 = self._parent.POSEPOCH.quantity
+        elif self._parent.PEPOCH.value is not None:
+            t0 = self._parent.PEPOCH.quantity
+        else:
+            t0 = astropy.time.Time(50000, format="mjd")
         t0, elongation = pint.utils.get_conjunction(coord, t0, precision="high")
         # approximate elongation at conjunction
         self._theta0 = elongation
@@ -930,12 +936,6 @@ class SolarWindDispersionX(Dispersion):
         select_idx = self.swx_toas_selector.get_select_index(
             condition, tbl["mjd_float"]
         )
-
-        try:
-            bfreq = self._parent.barycentric_radio_freq(toas)
-        except AttributeError:
-            warn("Using topocentric frequency for dedispersion!")
-            bfreq = tbl["freq"]
         deriv = np.zeros(len(tbl)) * u.dimensionless_unscaled
         for k, v in select_idx.items():
             if len(v) > 0:
@@ -981,11 +981,6 @@ class SolarWindDispersionX(Dispersion):
             condition, tbl["mjd_float"]
         )
 
-        try:
-            bfreq = self._parent.barycentric_radio_freq(toas)
-        except AttributeError:
-            warn("Using topocentric frequency for dedispersion!")
-            bfreq = tbl["freq"]
         deriv = np.zeros(len(tbl)) * u.pc / u.cm**3
         for k, v in select_idx.items():
             if len(v) > 0:
@@ -1003,7 +998,7 @@ class SolarWindDispersionX(Dispersion):
                     (d_geometry_dp - d_opposition_geometry_dp)
                     / (conjunction_geometry - opposition_geometry)
                     - (geometry - opposition_geometry)
-                    * (d_conjunction_geometry_dp - d_conjunction_geometry_dp)
+                    * (d_conjunction_geometry_dp - d_opposition_geometry_dp)
                     / (conjunction_geometry - opposition_geometry) ** 2
                 )
         return deriv
