@@ -835,17 +835,16 @@ class SolarWindDispersionX(Dispersion):
             )
 
     def get_theta0(self):
-        """Get approximate elongation at conjunction
-
-        Just based on the pulsar's ecliptic coordinate
+        """Get elongation at conjunction
 
         Returns
         -------
         astropy.quantity.Quantity
         """
         coord = self._parent.get_psr_coords()
+        t0, elongation = pint.utils.get_conjunction(coord, t0, precision="high")
         # approximate elongation at conjunction
-        self._theta0 = coord.transform_to(pint.pulsar_ecliptic.PulsarEcliptic()).lat
+        self._theta0 = elongation
 
     @property
     def theta0(self):
