@@ -36,7 +36,7 @@ def wideband_fake():
         )
     )
     toas = make_fake_toas_uniform(
-        57000, 59000, 40, model=model, error=1 * u.us, dm=10 * u.pc / u.cm**3
+        57000, 59000, 40, model=model, error=1 * u.us, include_dm=True
     )
     toas.compute_pulse_numbers(model)
     np.random.seed(0)
@@ -158,7 +158,7 @@ def test_residuals_fake_wideband():
         )
     )
     toas = make_fake_toas_uniform(
-        57000, 59000, 20, model=model, error=1 * u.us, dm=10 * u.pc / u.cm**3
+        57000, 59000, 20, model=model, error=1 * u.us, include_dm=True
     )
     r = WidebandTOAResiduals(toas, model)
     e = r.toa.get_data_error(scaled=True)
