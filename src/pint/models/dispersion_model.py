@@ -344,13 +344,13 @@ class DispersionDMX(Dispersion):
         Parameters
         ----------
 
-        mjd_start : float
+        mjd_start : float or astropy.quantity.Quantity or astropy.time.Time
             MJD for beginning of DMX event.
-        mjd_end : float
+        mjd_end : float or astropy.quantity.Quantity or astropy.time.Time
             MJD for end of DMX event.
         index : int, None
             Integer label for DMX event. If None, will increment largest used index by 1.
-        dmx : float
+        dmx : float or astropy.quantity.Quantity
             Change in DM during DMX event.
         frozen : bool
             Indicates whether DMX will be fit.
@@ -381,6 +381,16 @@ class DispersionDMX(Dispersion):
                 % index
             )
 
+        if isinstance(dmx, u.quantity.Quantity):
+            dmx = dmx.to_value(u.pc / u.cm**3)
+        if isinstance(mjd_start, Time):
+            mjd_start = mjd_start.mjd
+        elif isinstance(mjd_start, u.quantity.Quantity):
+            mjd_start = mjd_start.value
+        if isinstance(mjd_end, Time):
+            mjd_end = mjd_end.mjd
+        elif isinstance(mjd_end, u.quantity.Quantity):
+            mjd_end = mjd_end.value
         self.add_param(
             prefixParameter(
                 name="DMX_" + i,

@@ -659,15 +659,15 @@ class SolarWindDispersionX(Dispersion):
 
         Parameters
         ----------
-        mjd_start : float
+        mjd_start : float or astropy.quantity.Quantity or astropy.time.Time
             MJD for beginning of DMX event.
-        mjd_end : float
+        mjd_end : float or astropy.quantity.Quantity or astropy.time.Time
             MJD for end of DMX event.
         index : int, None
             Integer label for DMX event. If None, will increment largest used index by 1.
-        swxdm : float
+        swxdm : float or astropy.quantity.Quantity
             Max solar wind DM
-        swxp : float
+        swxp : float or astropy.quantity.Quantity
             Solar wind power-law index
         frozen : bool
             Indicates whether SWXDM and SWXP will be fit.
@@ -696,7 +696,18 @@ class SolarWindDispersionX(Dispersion):
                 "Index '%s' is already in use in this model. Please choose another."
                 % index
             )
-
+        if isinstance(swxdm, u.quantity.Quantity):
+            swxdm = swxdm.to_value(u.pc / u.cm**3)
+        if isinstance(mjd_start, astropy.time.Time):
+            mjd_start = mjd_start.mjd
+        elif isinstance(mjd_start, u.quantity.Quantity):
+            mjd_start = mjd_start.value
+        if isinstance(mjd_end, astropy.time.Time):
+            mjd_end = mjd_end.mjd
+        elif isinstance(mjd_end, u.quantity.Quantity):
+            mjd_end = mjd_end.value
+        if isinstance(swxp, u.quantity.Quantity):
+            swxp = swxp.value
         self.add_param(
             prefixParameter(
                 name="SWXDM_" + i,
