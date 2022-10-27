@@ -175,6 +175,13 @@ def make_fake_toas(ts, model, add_noise=False, name="fake"):
     return tsim
 
 
+def make_fake_dms(model, toas, dm_error):
+    dms = model.total_dm(toas)
+    dms += dm_error.to(pint.dmu) * np.random.randn(len(dms))
+
+    return dms
+
+
 def make_fake_toas_uniform(
     startMJD,
     endMJD,
@@ -185,7 +192,7 @@ def make_fake_toas_uniform(
     obs="GBT",
     error=1 * u.us,
     add_noise=False,
-    dm=None,
+    include_dm=False,
     dm_error=1e-4 * pint.dmu,
     name="fake",
     include_bipm=False,
@@ -216,9 +223,10 @@ def make_fake_toas_uniform(
         uncertainty to attach to each TOA
     add_noise : bool, optional
         Add noise to the TOAs (otherwise `error` just populates the column)
-    dm : astropy.units.Quantity, optional
-        DM value to include with each TOA; default is
-        not to include any DM information
+    include_dm : bool, optional
+        Whether to include DM information with each TOA; default is not to
+        include any DM information. If True, the DM associated with each TOA
+        will be computed using the model.
     dm_error : astropy.units.Quantity
         uncertainty to attach to each DM measurement
     name : str, optional
@@ -262,10 +270,13 @@ def make_fake_toas_uniform(
     ts.ephem = model["EPHEM"].value
     update_fake_toa_clock(ts, model, include_bipm=include_bipm, include_gps=include_gps)
     ts.table["error"] = error
-    if dm is not None:
-        for f in ts.table["flags"]:
+
+    if include_dm:
+        dms = make_fake_dms(model, ts, dm_error)
+        for f, dm in zip(ts.table["flags"], dms):
             f["pp_dm"] = str(dm.to_value(pint.dmu))
             f["pp_dme"] = str(dm_error.to_value(pint.dmu))
+
     ts.compute_TDBs()
     ts.compute_posvels()
     return make_fake_toas(ts, model=model, add_noise=add_noise, name=name)
@@ -278,7 +289,7 @@ def make_fake_toas_fromMJDs(
     obs="GBT",
     error=1 * u.us,
     add_noise=False,
-    dm=None,
+    include_dm=False,
     dm_error=1e-4 * pint.dmu,
     name="fake",
     include_bipm=False,
@@ -345,10 +356,13 @@ def make_fake_toas_fromMJDs(
     ts.ephem = model["EPHEM"].value
     update_fake_toa_clock(ts, model, include_bipm=include_bipm, include_gps=include_gps)
     ts.table["error"] = error
-    if dm is not None:
-        for f in ts.table["flags"]:
+
+    if include_dm:
+        dms = make_fake_dms(model, ts, dm_error)
+        for f, dm in zip(ts.table["flags"], dms):
             f["pp_dm"] = str(dm.to_value(pint.dmu))
             f["pp_dme"] = str(dm_error.to_value(pint.dmu))
+
     ts.compute_TDBs()
     ts.compute_posvels()
     return make_fake_toas(ts, model=model, add_noise=add_noise, name=name)
