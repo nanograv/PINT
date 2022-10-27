@@ -509,7 +509,8 @@ class SolarWindDispersionX(Dispersion):
     Note that unlike the standard model, this model goes to 0 at opposition (the minimum).
     So it really represents a Delta DM.  This is to make it easier to join multiple segments.
     However, to get the peak to still be the requested max DM the values are scaled compared
-    to the standard model.
+    to the standard model: the standard model goes from opposition (min) to conjunction (max),
+    while this model goes from 0 to conjunction (max), so the scaling is ``(conjuction / (conjunction - opposition))``.
 
     To compare against a standard model:
 
