@@ -124,7 +124,7 @@ def test_ftest_wb():
     """Test for wideband fitter class F-test."""
     wb_m = tm.get_model(os.path.join(datadir, "J0023+0923_ell1_simple.par"))
     wb_t = simulation.make_fake_toas_uniform(
-        56000.0, 56001.0, 10, wb_m, freq=1400.0 * u.MHz, obs="GBT", dm=wb_m.DM.quantity
+        56000.0, 56001.0, 10, wb_m, freq=1400.0 * u.MHz, obs="GBT", include_dm=True
     )
     wb_f = fitter.WidebandTOAFitter(wb_t, wb_m)
     wb_f.fit_toas()
