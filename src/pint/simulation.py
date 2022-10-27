@@ -1,6 +1,7 @@
 """Functions related to simulating TOAs and models
 """
 from collections import OrderedDict
+from collections.abc import Sequence
 from copy import deepcopy
 
 import astropy.units as u
@@ -175,11 +176,23 @@ def make_fake_toas(ts, model, add_noise=False, name="fake"):
     return tsim
 
 
-def make_fake_dms(model, toas, dm_error):
-    dms = model.total_dm(toas)
-    dms += dm_error.to(pint.dmu) * np.random.randn(len(dms))
+def update_fake_dms(model, ts, dm_error):
+    toas = deepcopy(ts)
 
-    return dms
+    dm_errors = dm_error * np.ones(len(toas))
+
+    for f, dme in zip(toas.table["flags"], dm_errors):
+        f["pp_dme"] = str(dme.to_value(pint.dmu))
+
+    scaled_dm_errors = model.scaled_dm_uncertainty(toas)
+    dms = model.total_dm(toas) + scaled_dm_errors.to(pint.dmu) * np.random.randn(
+        len(scaled_dm_errors)
+    )
+
+    for f, dm in zip(toas.table["flags"], dms):
+        f["pp_dm"] = str(dm.to_value(pint.dmu))
+
+    return toas
 
 
 def make_fake_toas_uniform(
@@ -272,10 +285,7 @@ def make_fake_toas_uniform(
     ts.table["error"] = error
 
     if include_dm:
-        dms = make_fake_dms(model, ts, dm_error)
-        for f, dm in zip(ts.table["flags"], dms):
-            f["pp_dm"] = str(dm.to_value(pint.dmu))
-            f["pp_dme"] = str(dm_error.to_value(pint.dmu))
+        ts = update_fake_dms(model, ts, dm_error)
 
     ts.compute_TDBs()
     ts.compute_posvels()
@@ -314,8 +324,8 @@ def make_fake_toas_fromMJDs(
         uncertainty to attach to each TOA
     add_noise : bool, optional
         Add noise to the TOAs (otherwise `error` just populates the column)
-    dm : astropy.units.Quantity, optional
-        DM value to include with each TOA; default is
+    include_dm : astropy.units.Quantity, optional
+        Whether to include DM values with each TOA; default is
         not to include any DM information
     dm_error : astropy.units.Quantity
         uncertainty to attach to each DM measurement
@@ -358,10 +368,7 @@ def make_fake_toas_fromMJDs(
     ts.table["error"] = error
 
     if include_dm:
-        dms = make_fake_dms(model, ts, dm_error)
-        for f, dm in zip(ts.table["flags"], dms):
-            f["pp_dm"] = str(dm.to_value(pint.dmu))
-            f["pp_dme"] = str(dm_error.to_value(pint.dmu))
+        ts = update_fake_dms(model, ts, dm_error)
 
     ts.compute_TDBs()
     ts.compute_posvels()
@@ -396,6 +403,12 @@ def make_fake_toas_fromtim(timfile, model, add_noise=False, name="fake"):
     :func:`make_fake_toas`
     """
     input_ts = pint.toa.get_TOAs(timfile)
+
+    include_dm = input_ts.is_wideband()
+    if include_dm:
+        dm_errors = input_ts.get_dm_errors()
+        ts = update_fake_dms(model, ts, dm_errors)
+
     return make_fake_toas(input_ts, model=model, add_noise=add_noise, name=name)
 
 
