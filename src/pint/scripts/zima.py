@@ -9,6 +9,7 @@ from loguru import logger as log
 
 pint.logging.setup(level=pint.logging.script_level)
 
+import pint
 import pint.fitter
 import pint.models
 import pint.simulation
@@ -65,6 +66,18 @@ def main(argv=None):
         help="Actually add in random noise, or just populate the column",
     )
     parser.add_argument(
+        "--simulatedm",
+        action="store_true",
+        default=False,
+        help="Add DM information to simulated TOAs. Generates wideband toas.",
+    )
+    parser.add_argument(
+        "--dmerror",
+        help="Random error to apply to simulated DM measurements (dmu)",
+        type=float,
+        default=1e-4,
+    )
+    parser.add_argument(
         "--fuzzdays",
         help="Standard deviation of 'fuzz' distribution (jd)",
         type=float,
@@ -114,6 +127,8 @@ def main(argv=None):
             freq=np.atleast_1d(args.freq) * u.MHz,
             fuzz=args.fuzzdays * u.d,
             add_noise=args.addnoise,
+            include_dm=args.simulatedm,
+            dm_error=args.dmerror * pint.dmu,
         )
     else:
         log.info("Reading initial TOAs from {0}".format(args.inputtim))
