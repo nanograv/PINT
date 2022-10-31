@@ -6,17 +6,19 @@ import pytest
 from pint.config import examplefile
 from pint.models import get_model_and_toas
 from pint.models.timing_model import Component
+from pint.models.noise_model import NoiseComponent
 
 
-# get list of correlated noise components
-noise_component_labels = []
-for key in list(Component.component_types.keys()):
-    component_instance = Component.component_types[key]()
-    try:
-        if component_instance.introduces_correlated_errors:
-            noise_component_labels.append(key)
-    except:
-        pass
+noise_component_labels = [
+    cl for cl, c in Component.component_types.items() if issubclass(c, NoiseComponent)
+]
+correlated_noise_component_labels = [
+    cl
+    for cl, c in Component.component_types.items()
+    if issubclass(c, NoiseComponent)
+    and hasattr(c, "introduces_correlated_errors")
+    and c.introduces_correlated_errors
+]
 
 
 def add_DM_noise_to_model(model):
@@ -41,6 +43,16 @@ def model_and_toas():
 
 
 @pytest.mark.parametrize("component_label", noise_component_labels)
+def test_introduces_correlated_errors(component_label):
+    """All `NoiseComponent` classes should have a Boolean attribute `introduces_correlated_errors`."""
+
+    component = Component.component_types[component_label]
+    assert hasattr(component, "introduces_correlated_errors") and isinstance(
+        component.introduces_correlated_errors, bool
+    )
+
+
+@pytest.mark.parametrize("component_label", correlated_noise_component_labels)
 def test_noise_basis_shape(model_and_toas, component_label):
     """Test shape of basis matrix."""
 
@@ -53,7 +65,7 @@ def test_noise_basis_shape(model_and_toas, component_label):
     assert basis.shape == (len(toas), len(weights))
 
 
-@pytest.mark.parametrize("component_label", noise_component_labels)
+@pytest.mark.parametrize("component_label", correlated_noise_component_labels)
 def test_noise_weights_sign(model_and_toas, component_label):
     """Weights should be positive."""
 
@@ -66,16 +78,16 @@ def test_noise_weights_sign(model_and_toas, component_label):
     assert np.all(weights >= 0)
 
 
-@pytest.mark.parametrize("component_label", noise_component_labels)
+@pytest.mark.parametrize("component_label", correlated_noise_component_labels)
 def test_covariance_matrix_relation(model_and_toas, component_label):
     """Consistency between basis and weights and covariance matrix"""
 
     model, toas = model_and_toas
     component = model.components[component_label]
-    basis_weight_func = component.basis_funcs[0]
+    basis_weights_func = component.basis_funcs[0]
     cov_func = component.covariance_matrix_funcs[0]
 
-    basis, weights = basis_weight_func(toas)
+    basis, weights = basis_weights_func(toas)
     cov = cov_func(toas)
     cov2 = np.dot(basis * weights[None, :], basis.T)
 
@@ -91,3 +103,19 @@ def test_ecorrnoise_basis_integer(model_and_toas):
     basis, weights = ecorrcomponent.ecorr_basis_weight_pair(toas)
 
     assert np.all(basis.astype(int) == basis) and np.all(basis >= 0)
+
+
+@pytest.mark.parametrize("component_label", correlated_noise_component_labels)
+def test_noise_basis_weights_funcs(model_and_toas, component_label):
+    model, toas = model_and_toas
+
+    component = model.components[component_label]
+
+    basis_weights_func = component.basis_funcs[0]
+
+    basis, weights = basis_weights_func(toas)
+
+    basis_ = component.get_noise_basis(toas)
+    weights_ = component.get_noise_weights(toas)
+
+    assert np.allclose(basis_, basis) and np.allclose(weights, weights_)
