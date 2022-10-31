@@ -87,7 +87,7 @@ def main(argv=None):
         "--plot", help="Plot residuals", action="store_true", default=False
     )
     parser.add_argument(
-        "--format", help="The format of out put .tim file.", default="TEMPO2"
+        "--format", help="The format of output .tim file.", default="TEMPO2"
     )
     parser.add_argument(
         "--log-level",
