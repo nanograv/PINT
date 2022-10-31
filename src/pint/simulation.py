@@ -284,11 +284,12 @@ def make_fake_toas_uniform(
     update_fake_toa_clock(ts, model, include_bipm=include_bipm, include_gps=include_gps)
     ts.table["error"] = error
 
+    ts.compute_TDBs()
+    ts.compute_posvels()
+
     if include_dm:
         ts = update_fake_dms(model, ts, dm_error)
 
-    ts.compute_TDBs()
-    ts.compute_posvels()
     return make_fake_toas(ts, model=model, add_noise=add_noise, name=name)
 
 
