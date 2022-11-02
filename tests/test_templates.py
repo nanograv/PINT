@@ -134,13 +134,18 @@ def test_template_integration():
     assert(np.all(np.abs(lct.integrate([0.2,0.0],[0.8,0.2])-np.asarray([0.4,0.6]))<1e-10))
     assert(lct.cdf(1)==1)
     assert(lct.cdf(0)==0)
+    ph = np.linspace(0,1,101)
+    lct.cdf(ph)
 
 def test_template_copy():
     lct = lctemplate.get_gauss2()
     lct.set_cache_properties(ncache=347,interpolation=0)
+    # populate the cache
+    lct(0.5,use_cache=True)
     assert(lct.ncache==347)
     assert(lct.interpolation==0)
     lct_copy = lct.copy()
+    assert(np.all(lct_copy._cache[0]==lct._cache[0]))
     assert(lct_copy.ncache==lct.ncache)
     assert(lct(0.47,use_cache=True)==lct_copy(0.47,use_cache=True))
     lct = lctemplate.get_gauss2()
@@ -171,7 +176,7 @@ def test_template_caching():
     lct[0].slope[1] = 0.1
     assert(abs(lct(0.1,log10_ens=2)-lct(0.2,log10_ens=3))<1e-7)
     assert(abs(lct(0.1,log10_ens=2)-lct(0.1,log10_ens=3))>1)
-    lct.set_cache_properties(ncache=100,ebins=[2,3,4])
+    lct.set_cache_properties(ncache=100,eedges=[2,3,4])
     assert(lct.ebins is not None)
     assert(lct.ecens is not None)
     assert(lct(0.1,log10_ens=2.4,use_cache=True)==lct(0.1,log10_ens=2.5))

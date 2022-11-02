@@ -63,6 +63,8 @@ class LCTemplate:
         if not hasattr(self, "ncache"):
             self.ncache = 1000
             self.interpolation = 1
+        if not hasattr(self, "ebins"):
+            self.ebins = None
 
     def __getstate__(self):
         # transform _cache_dirty into a normal dict, necessary to pickle it
@@ -103,20 +105,39 @@ class LCTemplate:
     def copy(self):
         prims = [deepcopy(x) for x in self.primitives]
         norms = self.norms.copy()
-        cache_kwargs = dict(ncache=self.ncache,ebins=self.ebins,interpolation=self.interpolation)
+        cache_kwargs = dict(ncache=self.ncache,eedges=self.ebins,interpolation=self.interpolation)
         newcopy = self.__class__(prims, norms, cache_kwargs=cache_kwargs)
+        for key in self._cache.keys():
+            newcopy._cache[key] = self._cache[key]
+            newcopy._cache_dirty[key] = self._cache_dirty[key]
         return newcopy
 
-    def set_cache_properties(self, ncache=1000, ebins=None, interpolation=1):
+    def set_cache_properties(self, ncache=1000, eedges=None, interpolation=1):
+        """ Set the granularity and behavior of the cache.
+
+        In all cases, ncache sets the phase resolution.  If it is desired
+        to have energy dependence, ebins must be specified as a set of
+        edges in log10 space.
+
+        Finally, interpolation=0 (nearest neighbor) and 1 (linear) are
+        supported *in phase*.  In energy, interpolation is always nearest
+        neighbor.  (Interpolation is a really bad idea for components
+        that can move.)
+        """
+        if hasattr(self,'ncache') and (ncache == self.ncache):
+            if (eedges is None) and (self.ebins is None):
+                return
+            elif np.all(eedges==self.ebins):
+                return
         self.ncache = ncache
         self.phbins = np.linspace(0,1,ncache+1)
-        if ebins is None:
+        if eedges is None:
             self.ebins = None
             self.ecens = None
         else:
-            ebins = np.asarray(ebins)
+            ebins = np.asarray(eedges)
             if len(ebins) < 2:
-                raise ValueError("len(ebins) must be >=2 (edges).")
+                raise ValueError("len(eedges) must be >=2 (edges).")
             self.ebins = ebins
             self.ecens  = 0.5*(self.ebins[1:] + self.ebins[:-1])
         self.interpolation = interpolation
@@ -365,7 +386,7 @@ class LCTemplate:
             return (1 - t) * dphi + rvals
 
     def cdf(self, x, log10_ens=3):
-        return self.integrate(0, x, log10_ens, suppress_bg=False)
+        return self.integrate(np.zeros_like(x), x, log10_ens, suppress_bg=False)
 
     def max(self, resolution=0.01):
         return self(np.arange(0, 1, resolution)).max()
@@ -954,6 +975,27 @@ def make_twoside_gaussian(one_side_gaussian):
     g2.p[0] = g2.p[1] = g1.p[0]
     g2.p[-1] = g1.p[-1]
     return g2
+
+def adaptive_samples(func,npt,nres=200):
+    """ func should have a .cdf method.
+
+    The idea is to return a set of points on [0,1] which are approximately
+    distributed uniformly in F(phi) and thus more densely sample the
+    peaks.  First, the cdf is evaluated on nres points.  Then npt estimates
+    of the inverse cdf are obtained by linear interpolation.
+    """
+    x = np.linspace(0,1,nres)
+    F = func.cdf(x)
+    Y = np.linspace(0,1,npt)
+    idx = np.searchsorted(F,Y[1:-1])
+    assert(idx.min()>0)
+    F1 = F[idx]
+    F0 = F[idx-1]
+    m = (F1-F0)*(1./(x[1]-x[0]))
+    X1 = x[idx]
+    X0 = x[idx-1]
+    Y[1:-1] = X0 + (Y[1:-1]-F0)/(F1-F0)*(x[1]-x[0])
+    return Y
 
 
 class GaussianPrior:

@@ -967,6 +967,34 @@ class LCSkewGaussian(LCWrappedFunction):
         e, width, shape, x0 = self._make_p(log10_ens)
         return np.mod(skewnorm.rvs(shape,loc=x0, scale=width, size=n), 1)
 
+    def mean(self,log10_ens=3):
+        """ Return the approximate mode, which is not in general where
+            the loc parameter is.
+
+            This expression is approximate and taken from wikipedia.
+        """
+        e, width, shape, x0 = self._make_p(log10_ens)
+        delta = shape / (1+shape**2)**0.5
+        f = (2/np.pi)**0.5
+        muz = f*delta
+        return x0+width*muz
+
+    def mode(self,log10_ens=3):
+        """ Return the approximate mode, which is not in general where
+            the loc parameter is.
+
+            This expression is approximate and taken from wikipedia.
+        """
+        e, width, shape, x0 = self._make_p(log10_ens)
+        delta = shape / (1+shape**2)**0.5
+        f = (2/np.pi)**0.5
+        muz = f*delta
+        sigz = (1-muz**2)**0.5
+        sgn = np.where(shape>=0,1,-1)
+        gam1 = 0.5*(4-np.pi)*muz**3/(1-muz**2)**(1.5)
+        m0 = muz-0.5*(gam1*sigz*+sgn*np.exp(-(2*np.pi)/np.abs(shape)))
+        return x0 + width*m0
+
 class LCLorentzian(LCPrimitive):
     """Represent a (wrapped) Lorentzian peak.
 
