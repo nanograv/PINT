@@ -139,11 +139,10 @@ def test_template_integration():
 
 def test_template_copy():
     lct = lctemplate.get_gauss2()
-    lct.set_cache_properties(ncache=347,interpolation=0)
+    lct.set_cache_properties(ncache=347)
     # populate the cache
     lct(0.5,use_cache=True)
     assert(lct.ncache==347)
-    assert(lct.interpolation==0)
     lct_copy = lct.copy()
     assert(np.all(lct_copy._cache[0]==lct._cache[0]))
     assert(lct_copy.ncache==lct.ncache)
@@ -156,18 +155,22 @@ def test_template_copy():
 def test_template_caching():
     # default is 1000 bins with linear interpolation
     lct = lctemplate.get_gauss2(width1=0.03,width2=0.05,x1=0.1,x2=0.5) # default bin edges are at 0, 0.001, ...
-    assert(abs(lct.phbins[470]-0.470)<1e-15)
+    assert(abs(lct.ph_edges[470]-0.470)<1e-15)
     assert(abs(lct(0.470,use_cache=True)-lct(0.470))<3e-15)
     assert(abs(lct(0.4705,use_cache=True)-0.5*(lct(0.470)+lct(0.471)))<3e-15)
     assert(abs(lct(0.471,use_cache=True)-lct(0.471))<3e-15)
     assert(lct(0,use_cache=True)==lct(1,use_cache=True))
     assert(abs(lct(0.471,use_cache=True)-lct(0.471))<3e-15)
-    lct.set_cache_properties(ncache=100,interpolation=0)
+    lct.set_cache_properties(ncache=100)
     assert(lct(0,use_cache=True)==lct(1,use_cache=True))
-    assert(abs(lct(0.004,use_cache=True)-lct(0))<1e-15)
-    assert(abs(lct(0.008,use_cache=True)-lct(0.01))<1e-15)
-    assert(abs(lct(0.005,use_cache=True)-lct(0.01))<1e-15)
-    assert(abs(lct(0.00499,use_cache=True)-lct(0))<1e-15)
+    v0 = lct(0,use_cache=False)
+    v1 = lct(0.01,use_cache=False)
+    expectation = (v0*0.6 + v1*0.4)
+    assert(abs(lct(0.004,use_cache=True)-expectation)<1e-15)
+    expectation = (v0*0.2 + v1*0.8)
+    assert(abs(lct(0.008,use_cache=True)-expectation)<1e-15)
+    expectation = (v0*0.5 + v1*0.5)
+    assert(abs(lct(0.005,use_cache=True)-expectation)<1e-15)
 
     # try an energy-dependent version
     lct = lctemplate.get_gauss2(width1=0.05,width2=0.05,x1=0.2,x2=0.5) # default bin edges are at 0, 0.001, ...
@@ -176,14 +179,20 @@ def test_template_caching():
     lct[0].slope[1] = 0.1
     assert(abs(lct(0.1,log10_ens=2)-lct(0.2,log10_ens=3))<1e-7)
     assert(abs(lct(0.1,log10_ens=2)-lct(0.1,log10_ens=3))>1)
-    lct.set_cache_properties(ncache=100,eedges=[2,3,4])
-    assert(lct.ebins is not None)
-    assert(lct.ecens is not None)
-    assert(lct(0.1,log10_ens=2.4,use_cache=True)==lct(0.1,log10_ens=2.5))
-    assert(lct(0.1,log10_ens=2.8,use_cache=True)==lct(0.1,log10_ens=2.5))
-    assert(lct(0.1,log10_ens=2.0,use_cache=True)==lct(0.1,log10_ens=2.5))
-    assert(lct(0.1,log10_ens=3.2,use_cache=True)==lct(0.1,log10_ens=3.5))
-    assert(np.all(lct([0.1,0.2],log10_ens=[2.4,3.2],use_cache=True)==lct([0.1,0.2],log10_ens=[2.5,3.5])))
+    lct.set_cache_properties(ncache=100,en_edges=[2,3,4])
+    assert(lct.en_edges is not None)
+    assert(lct.en_cens is not None)
+    v00 = lct(0.10,log10_ens=2)
+    v01 = lct(0.10,log10_ens=3)
+    v10 = lct(0.11,log10_ens=2)
+    v11 = lct(0.11,log10_ens=3)
+    expectation = 0.6*v00 + 0.4*v01
+    assert(abs(lct(0.1,log10_ens=2.4,use_cache=True)-expectation)<1e-10)
+    expectation = 0.2*v00 + 0.8*v01
+    assert(abs(lct(0.1,log10_ens=2.8,use_cache=True)-expectation)<1e-10)
+    expectation = 0.6*(0.6*v00+0.4*v01) + 0.4*(0.6*v10 + 0.4*v11)
+    assert(abs(lct(0.104,log10_ens=2.4,use_cache=True)-expectation)<1e-10)
+    #assert(np.all(lct([0.1,0.2],log10_ens=[2.4,3.2],use_cache=True)==lct([0.1,0.2],log10_ens=[2.5,3.5])))
 
 def test_component_manipulation():
 

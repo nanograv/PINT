@@ -62,9 +62,10 @@ class LCTemplate:
             self._cache_dirty = _cache_dirty
         if not hasattr(self, "ncache"):
             self.ncache = 1000
-            self.interpolation = 1
-        if not hasattr(self, "ebins"):
-            self.ebins = None
+        if not hasattr(self, "en_cens"):
+            self.en_cens = None
+        if not hasattr(self, "en_edges"):
+            self.en_edges = None
 
     def __getstate__(self):
         # transform _cache_dirty into a normal dict, necessary to pickle it
@@ -105,42 +106,39 @@ class LCTemplate:
     def copy(self):
         prims = [deepcopy(x) for x in self.primitives]
         norms = self.norms.copy()
-        cache_kwargs = dict(ncache=self.ncache,eedges=self.ebins,interpolation=self.interpolation)
+        cache_kwargs = dict(ncache=self.ncache,en_edges=self.en_edges)
         newcopy = self.__class__(prims, norms, cache_kwargs=cache_kwargs)
         for key in self._cache.keys():
             newcopy._cache[key] = self._cache[key]
             newcopy._cache_dirty[key] = self._cache_dirty[key]
         return newcopy
 
-    def set_cache_properties(self, ncache=1000, eedges=None, interpolation=1):
+    def set_cache_properties(self, ncache=1000, en_edges=None):
         """ Set the granularity and behavior of the cache.
 
         In all cases, ncache sets the phase resolution.  If it is desired
-        to have energy dependence, ebins must be specified as a set of
-        edges in log10 space.
+        to have energy dependence, en_edges must be specified as a set of
+        edges in log10 space which fully encompass all possible photon
+        energies that wil be used.
 
-        Finally, interpolation=0 (nearest neighbor) and 1 (linear) are
-        supported *in phase*.  In energy, interpolation is always nearest
-        neighbor.  (Interpolation is a really bad idea for components
-        that can move.)
+        Interpolation is always linear (bilinear in energy if applicable.)
         """
         if hasattr(self,'ncache') and (ncache == self.ncache):
-            if (eedges is None) and (self.ebins is None):
+            if (en_edges is None) and (self.en_edges is None):
                 return
-            elif np.all(eedges==self.ebins):
+            elif np.all(en_edges==self.en_edges):
                 return
         self.ncache = ncache
-        self.phbins = np.linspace(0,1,ncache+1)
-        if eedges is None:
-            self.ebins = None
-            self.ecens = None
+        self.ph_edges = np.linspace(0,1,ncache+1)
+        if en_edges is None:
+            self.en_edges = None
+            self.en_cens = None
         else:
-            ebins = np.asarray(eedges)
-            if len(ebins) < 2:
-                raise ValueError("len(eedges) must be >=2 (edges).")
-            self.ebins = ebins
-            self.ecens  = 0.5*(self.ebins[1:] + self.ebins[:-1])
-        self.interpolation = interpolation
+            en_edges = np.asarray(en_edges)
+            if len(en_edges) < 2:
+                raise ValueError("len(en_edges) must be >=2.")
+            self.en_edges = en_edges
+            self.en_cens  = 0.5*(en_edges[1:] + en_edges[:-1])
         self.mark_cache_dirty()
 
     def mark_cache_dirty(self):
@@ -152,82 +150,67 @@ class LCTemplate:
             self.set_cache(order=order)
         # I don't see how it's possible to have a cache with wrong shape.
         rval = self._cache[order]
-        if self.ecens is not None:
-            assert(rval.shape[0] == len(self.ecens))
+        if self.en_edges is not None:
+            assert(rval.shape[0] == len(self.en_edges))
         assert(rval.shape[-1] == (self.ncache + 1))
         return rval
 
     def set_cache(self, order=0):
-        """Populate the cache with *point* values.
-
-        Previous implementation used an average (poor person's integration)
-        but I think it makes more sense to use points and interpolation as
-        necessary.
+        """Populate the cache with values along the bin edges.
         """
         ncache = self.ncache
-        if self.ecens is None:
+        if self.en_edges is None:
             if order == 0:
-                new_cache = self(self.phbins)
+                new_cache = self(self.ph_edges)
             else:
-                new_cache = self.derivative(self.phbins,order=order)
+                new_cache = self.derivative(self.ph_edges,order=order)
         else:
-            new_cache = np.empty((len(self.ecens),self.ncache+1))
+            new_cache = np.empty((len(self.en_edges),len(self.ph_edges)))
             if order == 0:
-                for ibin,en in enumerate(self.ecens):
-                    new_cache[ibin] = self(self.phbins,log10_ens=en)
+                for ibin,en in enumerate(self.en_edges):
+                    new_cache[ibin] = self(self.ph_edges,log10_ens=en)
             else:
-                for ibin,en in enumerate(self.ecens):
-                    new_cache[ibin] = self.derivative(self.phbins,log10_ens=en,order=order)
+                for ibin,en in enumerate(self.en_edges):
+                    new_cache[ibin] = self.derivative(
+                            self.ph_edges,log10_ens=en,order=order)
         self._cache[order] = new_cache
         self._cache_dirty[order] = False
 
     def eval_cache(self, phases, log10_ens=3, order=0):
-        # NB, cached values are stored on a grid of points from [0..1).  In
-        # order to find the closest point, add half a bin before floor
+        """
+        Cached values are stored on edges in both phase and, if applicable,
+        energy, so lookup is straightforward.
+        """
+        cache = self.get_cache(order=order)
 
-        ncache = self.ncache
-        interpolation = self.interpolation
-        cached_values = self.get_cache(order=order)
-        # energy is ALWAYS nearest-neihboring interpolation
-        if self.ecens is not None:
-            scale = len(self.ecens)/(self.ebins[-1]-self.ebins[0])
-            einds = np.asarray((log10_ens-self.ebins[0])*scale,dtype=int)
-        else:
-            einds = None
+        dphi = np.atleast_1d(phases) * self.ncache
+        phind_lo = dphi.astype(int)
+        phind_hi = phind_lo + (phind_lo < self.ncache) # allows ph==1
+        dphi_hi = dphi - phind_lo
+        dphi_lo = 1.0 - dphi_hi
+        assert(np.all(dphi_hi>=0))
+        assert(np.all(dphi_hi<=1))
+        assert(np.all(dphi_lo>=0))
+        assert(np.all(dphi_lo<=1))
 
-        def lookup(indices):
-            if einds is None:
-                return cached_values[indices]
-            return cached_values[einds,indices]
+        edges = self.en_edges
+        if edges is None:
+            return cache[phind_lo]*dphi_lo + cache[phind_hi]*dphi_hi
 
-        if interpolation == 0:
-            indices = np.array(phases * ncache + 0.5, dtype=int)
-            try:
-                return(lookup(indices))
-            except IndexError as e:
-                nanphases = np.sum(np.isnan(phases))
-                if nanphases > 0:
-                    print("%d phases were NaN!" % (nanphases))
-                    indices[np.isnan(phases)] = 0
-                    return(lookup(indices))
-                else:
-                    raise e
-
-        if interpolation == 1:
-            indices = np.atleast_1d(phases) * ncache
-            indices_lo = indices.astype(int)
-            # TMP -- allow ph == 1?
-            indices_hi = indices_lo + (indices_lo < ncache)
-            # end TMP
-            #indices_hi = indices_lo + 1
-            dhi = indices - indices_lo
-            dlo = 1.0 - dhi
-            return lookup(indices_lo)*dlo + lookup(indices_hi)*dhi
-
-        else:
-            raise NotImplementedError(
-                "interpolation=%d not implemented" % (interpolation)
-            )
+        de = (log10_ens-edges[0])/(edges[1]-edges[0])
+        eind_lo = de.astype(int)
+        eind_hi = eind_lo+1
+        de_hi = de-eind_lo
+        de_lo = 1.0-de_hi
+        assert(np.all(de_hi>=0))
+        assert(np.all(de_hi<=1))
+        assert(np.all(de_lo>=0))
+        assert(np.all(de_lo<=1))
+        v00 = cache[eind_lo,phind_lo]*(de_lo*dphi_lo)
+        v01 = cache[eind_lo,phind_hi]*(de_lo*dphi_hi)
+        v10 = cache[eind_hi,phind_lo]*(de_hi*dphi_lo)
+        v11 = cache[eind_hi,phind_hi]*(de_hi*dphi_hi)
+        return v00+v01+v10+v11
 
     def set_parameters(self, p, free=True):
         start = 0
@@ -976,16 +959,19 @@ def make_twoside_gaussian(one_side_gaussian):
     g2.p[-1] = g1.p[-1]
     return g2
 
-def adaptive_samples(func,npt,nres=200):
+def adaptive_samples(func,npt,log10_ens=3,nres=200):
     """ func should have a .cdf method.
+
+    NB -- log10_ens needs to be a scalar!
 
     The idea is to return a set of points on [0,1] which are approximately
     distributed uniformly in F(phi) and thus more densely sample the
     peaks.  First, the cdf is evaluated on nres points.  Then npt estimates
     of the inverse cdf are obtained by linear interpolation.
     """
+    assert(np.isscalar(log10_ens))
     x = np.linspace(0,1,nres)
-    F = func.cdf(x)
+    F = func.cdf(x,log10_ens=log10_ens)
     Y = np.linspace(0,1,npt)
     idx = np.searchsorted(F,Y[1:-1])
     assert(idx.min()>0)
