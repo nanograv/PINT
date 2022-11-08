@@ -258,7 +258,6 @@ def grid_chisq(
     for parname in parnames:
         getattr(ftr.model, parname).frozen = True
 
-    log.warning("Beware!")
     wftr = WrappedFitter(ftr, **fitargs)
 
     if isinstance(executor, concurrent.futures.Executor):
