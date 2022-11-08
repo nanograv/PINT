@@ -64,7 +64,6 @@ class WrappedFitter:
         # Make a full copy of the fitter to work with
         myftr = copy.deepcopy(self.ftr)
         parstrings = []
-        log.warning(f"In fit {str(log)}")
         for parname, parvalue in zip(parnames, parvalues):
             # Freeze the  params we are going to grid over and set their values
             # All other unfrozen parameters will be fitted for at each grid point
