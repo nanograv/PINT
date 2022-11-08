@@ -512,6 +512,8 @@ class SolarWindDispersionX(Dispersion):
     to the standard model: the standard model goes from opposition (min) to conjunction (max),
     while this model goes from 0 to conjunction (max), so the scaling is ``((conjunction - opposition)/conjuction)``.
 
+    See `Solar Wind Examples <examples/solar_wind.html>`_.
+
     To compare against a standard model:
 
     Example
