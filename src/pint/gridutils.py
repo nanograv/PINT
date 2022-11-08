@@ -24,6 +24,11 @@ def hostinfo():
     return subprocess.check_output("uname -a", shell=True)
 
 
+def set_log(logger_):
+    global log
+    log = logger_
+
+
 class WrappedFitter:
     """Worker class to compute one fit with specified parameters fixed but passing other parameters to fit_toas()"""
 
@@ -59,6 +64,7 @@ class WrappedFitter:
         # Make a full copy of the fitter to work with
         myftr = copy.deepcopy(self.ftr)
         parstrings = []
+        log.warning(f"In fit {str(log)}")
         for parname, parvalue in zip(parnames, parvalues):
             # Freeze the  params we are going to grid over and set their values
             # All other unfrozen parameters will be fitted for at each grid point
@@ -243,14 +249,6 @@ def grid_chisq(
     .. [1] https://mpi4py.readthedocs.io/en/stable/mpi4py.futures.html#mpipoolexecutor
     .. [2] https://github.com/sampsyo/clusterfutures
     """
-    if isinstance(executor, concurrent.futures.Executor):
-        # the executor has already been created
-        executor = executor
-    elif executor is None and (ncpu is None or ncpu > 1):
-        # make the default type of Executor
-        if ncpu is None:
-            ncpu = multiprocessing.cpu_count()
-        executor = concurrent.futures.ProcessPoolExecutor(max_workers=ncpu)
 
     # Save the current model so we can tweak it for gridding, then restore it at the end
     savemod = ftr.model
@@ -261,7 +259,19 @@ def grid_chisq(
     for parname in parnames:
         getattr(ftr.model, parname).frozen = True
 
+    log.warning("Beware!")
     wftr = WrappedFitter(ftr, **fitargs)
+
+    if isinstance(executor, concurrent.futures.Executor):
+        # the executor has already been created
+        executor = executor
+    elif executor is None and (ncpu is None or ncpu > 1):
+        # make the default type of Executor
+        if ncpu is None:
+            ncpu = multiprocessing.cpu_count()
+        executor = concurrent.futures.ProcessPoolExecutor(
+            max_workers=ncpu, initializer=set_log, initargs=(log,)
+        )
 
     # All other unfrozen parameters will be fitted for at each grid point
     out = np.meshgrid(*parvalues)
