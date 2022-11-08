@@ -54,7 +54,6 @@ from pint.utils import (
     taylor_horner,
     taylor_horner_deriv,
     preload_cache,
-    no_internet,
     set_no_internet,
 )
 
@@ -863,7 +862,7 @@ def test_preload_cache_gives_all_expected_files(tmp_path):
 def test_no_internet_forbids_internet(tmp_path, monkeypatch):
     monkeypatch.delattr("astropy.utils.data.download_file")
     with set_temp_cache(tmp_path):
-        with no_internet():
-            with pytest.warns(astropy.utils.iers.IERSDegradedAccuracyWarning):
-                (Time.now() + 1 * u.year).utc.tai.ut1
+        with set_temp_config():
+            set_no_internet()
+            (Time.now() + 1 * u.year).utc.tai.ut1
             assert not astropy.utils.data.cache_contents()

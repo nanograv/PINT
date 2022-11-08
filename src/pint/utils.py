@@ -1710,11 +1710,12 @@ def set_no_internet(mode="warn"):
 
     if hasattr(astropy.utils.data.conf, "allow_internet"):
         astropy.utils.data.conf.allow_internet = False
-    if hasattr(astropy.utils.iers.conf, "auto_download"):
-        astropy.utils.iers.conf.auto_download = False
-    else:
-        astropy.utils.iers.conf.remote_timeout = 0
+    astropy.utils.iers.conf.remote_timeout = 0
+    # if hasattr(astropy.utils.iers.conf, "auto_download"):
+    #    astropy.utils.iers.conf.auto_download = False
+    # else:
+    #    astropy.utils.iers.conf.remote_timeout = 0
     if hasattr(astropy.utils.iers.conf, "iers_degraded_accuracy"):
         astropy.utils.iers.conf.iers_degraded_accuracy = "warn"
-    else:
-        astropy.utils.iers.conf.auto_max_age = None
+    # else:
+    #    astropy.utils.iers.conf.auto_max_age = None
