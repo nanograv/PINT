@@ -556,6 +556,8 @@
             4900430.8
         ],
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
+        "clock_file": "effix2gps.clk",
+        "clock_fmt": "tempo2",
     },
     "leap": {
         "aliases": [
