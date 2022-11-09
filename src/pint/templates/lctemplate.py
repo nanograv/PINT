@@ -17,8 +17,10 @@ from .lceprimitives import *
 
 log = logging.getLogger(__name__)
 
+
 def isvector(x):
-    return len(np.asarray(x).shape)>0
+    return len(np.asarray(x).shape) > 0
+
 
 class LCTemplate:
     """Manage a lightcurve template (collection of LCPrimitive objects).
@@ -38,7 +40,7 @@ class LCTemplate:
         self.shift_mode = np.any([p.shift_mode for p in self.primitives])
         if norms is None:
             norms = np.ones(len(primitives)) / len(primitives)
-        if hasattr(norms,'_make_p'):
+        if hasattr(norms, "_make_p"):
             self.norms = norms
         else:
             self.norms = NormAngles(norms)
@@ -86,14 +88,14 @@ class LCTemplate:
 
     def __getitem__(self, index):
         if index < 0:
-            index += len(self.primitives)+1
+            index += len(self.primitives) + 1
         if index == len(self.primitives):
             return self.norms
         return self.primitives[index]
 
     def __setitem__(self, index, value):
         if index < 0:
-            index += len(self.primitives)+1
+            index += len(self.primitives) + 1
         if index == len(self.primitives):
             self.norms = value
         else:
@@ -106,7 +108,7 @@ class LCTemplate:
     def copy(self):
         prims = [deepcopy(x) for x in self.primitives]
         norms = self.norms.copy()
-        cache_kwargs = dict(ncache=self.ncache,en_edges=self.en_edges)
+        cache_kwargs = dict(ncache=self.ncache, en_edges=self.en_edges)
         newcopy = self.__class__(prims, norms, cache_kwargs=cache_kwargs)
         for key in self._cache.keys():
             newcopy._cache[key] = self._cache[key]
@@ -114,7 +116,7 @@ class LCTemplate:
         return newcopy
 
     def set_cache_properties(self, ncache=1000, en_edges=None):
-        """ Set the granularity and behavior of the cache.
+        """Set the granularity and behavior of the cache.
 
         In all cases, ncache sets the phase resolution.  If it is desired
         to have energy dependence, en_edges must be specified as a set of
@@ -123,13 +125,13 @@ class LCTemplate:
 
         Interpolation is always linear (bilinear in energy if applicable.)
         """
-        if hasattr(self,'ncache') and (ncache == self.ncache):
+        if hasattr(self, "ncache") and (ncache == self.ncache):
             if (en_edges is None) and (self.en_edges is None):
                 return
-            elif np.all(en_edges==self.en_edges):
+            elif np.all(en_edges == self.en_edges):
                 return
         self.ncache = ncache
-        self.ph_edges = np.linspace(0,1,ncache+1)
+        self.ph_edges = np.linspace(0, 1, ncache + 1)
         if en_edges is None:
             self.en_edges = None
             self.en_cens = None
@@ -138,7 +140,7 @@ class LCTemplate:
             if len(en_edges) < 2:
                 raise ValueError("len(en_edges) must be >=2.")
             self.en_edges = en_edges
-            self.en_cens  = 0.5*(en_edges[1:] + en_edges[:-1])
+            self.en_cens = 0.5 * (en_edges[1:] + en_edges[:-1])
         self.mark_cache_dirty()
 
     def mark_cache_dirty(self):
@@ -151,28 +153,28 @@ class LCTemplate:
         # I don't see how it's possible to have a cache with wrong shape.
         rval = self._cache[order]
         if self.en_edges is not None:
-            assert(rval.shape[0] == len(self.en_edges))
-        assert(rval.shape[-1] == (self.ncache + 1))
+            assert rval.shape[0] == len(self.en_edges)
+        assert rval.shape[-1] == (self.ncache + 1)
         return rval
 
     def set_cache(self, order=0):
-        """Populate the cache with values along the bin edges.
-        """
+        """Populate the cache with values along the bin edges."""
         ncache = self.ncache
         if self.en_edges is None:
             if order == 0:
                 new_cache = self(self.ph_edges)
             else:
-                new_cache = self.derivative(self.ph_edges,order=order)
+                new_cache = self.derivative(self.ph_edges, order=order)
         else:
-            new_cache = np.empty((len(self.en_edges),len(self.ph_edges)))
+            new_cache = np.empty((len(self.en_edges), len(self.ph_edges)))
             if order == 0:
-                for ibin,en in enumerate(self.en_edges):
-                    new_cache[ibin] = self(self.ph_edges,log10_ens=en)
+                for ibin, en in enumerate(self.en_edges):
+                    new_cache[ibin] = self(self.ph_edges, log10_ens=en)
             else:
-                for ibin,en in enumerate(self.en_edges):
+                for ibin, en in enumerate(self.en_edges):
                     new_cache[ibin] = self.derivative(
-                            self.ph_edges,log10_ens=en,order=order)
+                        self.ph_edges, log10_ens=en, order=order
+                    )
         self._cache[order] = new_cache
         self._cache_dirty[order] = False
 
@@ -185,32 +187,32 @@ class LCTemplate:
 
         dphi = np.atleast_1d(phases) * self.ncache
         phind_lo = dphi.astype(int)
-        phind_hi = phind_lo + (phind_lo < self.ncache) # allows ph==1
+        phind_hi = phind_lo + (phind_lo < self.ncache)  # allows ph==1
         dphi_hi = dphi - phind_lo
         dphi_lo = 1.0 - dphi_hi
-        assert(np.all(dphi_hi>=0))
-        assert(np.all(dphi_hi<=1))
-        assert(np.all(dphi_lo>=0))
-        assert(np.all(dphi_lo<=1))
+        assert np.all(dphi_hi >= 0)
+        assert np.all(dphi_hi <= 1)
+        assert np.all(dphi_lo >= 0)
+        assert np.all(dphi_lo <= 1)
 
         edges = self.en_edges
         if edges is None:
-            return cache[phind_lo]*dphi_lo + cache[phind_hi]*dphi_hi
+            return cache[phind_lo] * dphi_lo + cache[phind_hi] * dphi_hi
 
-        de = (log10_ens-edges[0])/(edges[1]-edges[0])
+        de = (log10_ens - edges[0]) / (edges[1] - edges[0])
         eind_lo = de.astype(int)
-        eind_hi = eind_lo+1
-        de_hi = de-eind_lo
-        de_lo = 1.0-de_hi
-        assert(np.all(de_hi>=0))
-        assert(np.all(de_hi<=1))
-        assert(np.all(de_lo>=0))
-        assert(np.all(de_lo<=1))
-        v00 = cache[eind_lo,phind_lo]*(de_lo*dphi_lo)
-        v01 = cache[eind_lo,phind_hi]*(de_lo*dphi_hi)
-        v10 = cache[eind_hi,phind_lo]*(de_hi*dphi_lo)
-        v11 = cache[eind_hi,phind_hi]*(de_hi*dphi_hi)
-        return v00+v01+v10+v11
+        eind_hi = eind_lo + 1
+        de_hi = de - eind_lo
+        de_lo = 1.0 - de_hi
+        assert np.all(de_hi >= 0)
+        assert np.all(de_hi <= 1)
+        assert np.all(de_lo >= 0)
+        assert np.all(de_lo <= 1)
+        v00 = cache[eind_lo, phind_lo] * (de_lo * dphi_lo)
+        v01 = cache[eind_lo, phind_hi] * (de_lo * dphi_hi)
+        v10 = cache[eind_hi, phind_lo] * (de_hi * dphi_lo)
+        v11 = cache[eind_hi, phind_hi] * (de_hi * dphi_hi)
+        return v00 + v01 + v10 + v11
 
     def set_parameters(self, p, free=True):
         start = 0
@@ -236,22 +238,22 @@ class LCTemplate:
         )
 
     def num_parameters(self, free=True):
-        """ Return the total number of free parameters."""
+        """Return the total number of free parameters."""
 
         nprim = sum((prim.num_parameters(free) for prim in self.primitives))
         return nprim + self.norms.num_parameters(free)
 
-    def _set_all_free_or_fixed(self,freeze=True):
+    def _set_all_free_or_fixed(self, freeze=True):
         for prim in self.primitives:
             prim.free[:] = not freeze
         self.norms.free[:] = not freeze
 
     def free_parameters(self):
-        """ Free all parameters. Convenience function."""
+        """Free all parameters. Convenience function."""
         self._set_all_free_or_fixed(freeze=False)
 
     def freeze_parameters(self):
-        """ Freeze all parameters. Convenience function."""
+        """Freeze all parameters. Convenience function."""
         self._set_all_free_or_fixed(freeze=True)
 
     def get_errors(self, free=True):
@@ -263,7 +265,7 @@ class LCTemplate:
     def get_free_mask(self):
         """Return a mask with True if parameters are free, else False."""
         m1 = np.concatenate([p.get_free_mask() for p in self.primitives])
-        return np.append(m1,self.norms.get_free_mask())
+        return np.append(m1, self.norms.get_free_mask())
 
     def get_parameter_names(self, free=True):
         # I will no doubt hate myself in future for below comprehension
@@ -299,15 +301,15 @@ class LCTemplate:
         enables = np.append(np.concatenate(enables), t.astype(bool))
         return GaussianPrior(locs, widths, mods, mask=enables)
 
-    def get_bounds(self,free=True):
+    def get_bounds(self, free=True):
         b1 = np.concatenate([prim.get_bounds(free) for prim in self.primitives])
         b2 = self.norms.get_bounds(free)
         return np.concatenate((b1, b2)).tolist()
 
-    def check_bounds(self,free=True):
+    def check_bounds(self, free=True):
         bounds = np.asarray(self.get_bounds(free=free))
         x0 = self.get_parameters(free=free)
-        return np.all((x0>=bounds[:,0])&(x0<=bounds[:,1]))
+        return np.all((x0 >= bounds[:, 0]) & (x0 <= bounds[:, 1]))
 
     def set_overall_phase(self, ph):
         """Put the peak of the first component at phase ph."""
@@ -339,7 +341,7 @@ class LCTemplate:
         return self.norm() <= 1
 
     def integrate(self, phi1, phi2, log10_ens=3, suppress_bg=False):
-        """ Integrate profile from phi1 to phi2.
+        """Integrate profile from phi1 to phi2.
 
         NB that because of the phase modulo ambiguity, it is not uniquely
         definite what the phi2 < phi1 case means:
@@ -352,19 +354,19 @@ class LCTemplate:
         phi1 = np.asarray(phi1)
         phi2 = np.asarray(phi2)
         if isvector(log10_ens):
-            assert(len(log10_ens)==len(phi1))
+            assert len(log10_ens) == len(phi1)
         try:
-            assert(len(phi1)==len(phi2))
+            assert len(phi1) == len(phi2)
         except TypeError:
             pass
         norms = self.norms(log10_ens=log10_ens)
         t = norms.sum(axis=0)
         dphi = phi2 - phi1
-        rvals = np.zeros(phi1.shape,dtype=float)
+        rvals = np.zeros(phi1.shape, dtype=float)
         for n, prim in zip(norms, self.primitives):
             rvals += n * prim.integrate(phi1, phi2, log10_ens=log10_ens)
         if suppress_bg:
-            return rvals * (1./t)
+            return rvals * (1.0 / t)
         else:
             return (1 - t) * dphi + rvals
 
@@ -379,7 +381,7 @@ class LCTemplate:
         peak.  Trivial in typical cases, but important for linked
         components, e.g. the bridge pedestal.
         """
-        rvals = np.zeros(np.asarray(phases).shape,dtype=float)
+        rvals = np.zeros(np.asarray(phases).shape, dtype=float)
         norms = self.norms(log10_ens)
         return rvals, norms, norms.sum(axis=0)
 
@@ -389,8 +391,8 @@ class LCTemplate:
         # TMP -- check phase range.  Add this as a formal check?
         phases = np.asarray(phases)
         log10_ens = np.asarray(log10_ens)
-        assert(np.all(phases>=0))
-        assert(np.all(phases<=1))
+        assert np.all(phases >= 0)
+        assert np.all(phases <= 1)
         # end TM
         if use_cache:
             return self.eval_cache(phases, log10_ens=log10_ens, order=0)
@@ -425,13 +427,13 @@ class LCTemplate:
     def gradient(self, phases, log10_ens=3, free=True, template_too=False):
         r = np.empty((self.num_parameters(free), len(phases)))
         c = 0
-        rvals,norms,norm = self._get_scales(phases,log10_ens=log10_ens)
-        prim_terms = np.empty((len(self.primitives),len(phases)))
+        rvals, norms, norm = self._get_scales(phases, log10_ens=log10_ens)
+        prim_terms = np.empty((len(self.primitives), len(phases)))
         for i, (nm, prim) in enumerate(zip(norms, self.primitives)):
             n = len(prim.get_parameters(free=free))
             r[c : c + n, :] = nm * prim.gradient(phases, log10_ens=log10_ens, free=free)
             c += n
-            prim_terms[i] = prim(phases,log10_ens=log10_ens) - 1
+            prim_terms[i] = prim(phases, log10_ens=log10_ens) - 1
 
         # handle case where no norm parameters are free
         if c != r.shape[0]:
@@ -439,24 +441,24 @@ class LCTemplate:
             # the output of gradient is the matrix M_ij or M_ijk, depending
             # on whether or not there is energy dependence, which is
             # dnorm_i/dnorm_angle_j (at energy k).  The sum is over the
-            # "internal parameter" norm_j, while the phase axis and 
+            # "internal parameter" norm_j, while the phase axis and
             # norm_angle axis are retained.
-            m = self.norms.gradient(log10_ens=log10_ens,free=free)
-            if len(m.shape)==2:
-                m = m[...,None]
-            np.einsum('ij,ikj->kj',prim_terms,m,out=r[c:])
+            m = self.norms.gradient(log10_ens=log10_ens, free=free)
+            if len(m.shape) == 2:
+                m = m[..., None]
+            np.einsum("ij,ikj->kj", prim_terms, m, out=r[c:])
         if template_too:
-            rvals[:] = (1-norm)
-            for i in range(0,len(prim_terms)):
-                rvals += (prim_terms[i]+1) * norms[i]
-            return r,rvals
+            rvals[:] = 1 - norm
+            for i in range(0, len(prim_terms)):
+                rvals += (prim_terms[i] + 1) * norms[i]
+            return r, rvals
         return r
 
     def gradient_derivative(self, phases, log10_ens=3, free=False):
         """Return d/dphi(gradient).  This is the derivative with respect
         to pulse phase of the gradient with respect to the parameters.
         """
-        raise NotImplementedError() # is this used anymore?
+        raise NotImplementedError()  # is this used anymore?
         free_mask = self.get_free_mask()
         nparam = len(free_mask)
         nnorm_param = len(self.norms.p)
@@ -485,19 +487,23 @@ class LCTemplate:
         return approx_hessian(self, phases, log10_ens=log10_ens, eps=eps)
 
     def approx_derivative(self, phases, log10_ens=None, order=1, eps=1e-7):
-        return approx_derivative(self, phases, log10_ens=log10_ens, order=order, eps=eps)
+        return approx_derivative(
+            self, phases, log10_ens=log10_ens, order=order, eps=eps
+        )
 
-    def check_gradient(self, atol=1e-7, rtol=1e-5, quiet=False, seed=None,
-            en=None,ph=None):
+    def check_gradient(
+        self, atol=1e-7, rtol=1e-5, quiet=False, seed=None, en=None, ph=None
+    ):
         if seed is not None:
             # essentially set a known good state of the RNG to avoid any
             # numerical issues interfering with the test
             np.random.seed(seed)
-        return check_gradient(self, atol=atol, rtol=rtol, quiet=quiet,
-                en=en,ph=ph)
+        return check_gradient(self, atol=atol, rtol=rtol, quiet=quiet, en=en, ph=ph)
 
     def check_derivative(self, atol=1e-7, rtol=1e-5, order=1, eps=1e-7, quiet=False):
-        return check_derivative(self, atol=atol, rtol=rtol, quiet=quiet, eps=1e-7, order=order)
+        return check_derivative(
+            self, atol=atol, rtol=rtol, quiet=quiet, eps=1e-7, order=order
+        )
 
     def hessian(self, phases, log10_ens=3, free=True):
         """Return the hessian of the primitive and normaliation angles.
@@ -528,7 +534,7 @@ class LCTemplate:
         r = np.zeros([nparam, nparam, len(phases)])
 
         norms = self.norms(log10_ens=log10_ens)
-        norm_grads = self.norms.gradient(log10_ens=log10_ens,free=False)
+        norm_grads = self.norms.gradient(log10_ens=log10_ens, free=False)
         prim_terms = np.empty([len(self.primitives), len(phases)])
 
         c = 0
@@ -545,11 +551,13 @@ class LCTemplate:
                 for k in range(nnorm_param):
                     r[nprim_param + k, c + j, :] = pg[j] * norm_grads[i, k]
                     r[c + j, nprim_param + k, :] = r[nprim_param + k, c + j, :]
-            prim_terms[i, :] = prim(phases,log10_ens=log10_ens) - 1
+            prim_terms[i, :] = prim(phases, log10_ens=log10_ens) - 1
             c += n
 
         # now put in normalization hessian
-        hnorm = self.norms.hessian(log10_ens=log10_ens)  # nnorm_param x nnorm_param x nnorm_param
+        hnorm = self.norms.hessian(
+            log10_ens=log10_ens
+        )  # nnorm_param x nnorm_param x nnorm_param
         for j in range(nnorm_param):
             for k in range(j, nnorm_param):
                 for i in range(nnorm_param):
@@ -667,48 +675,47 @@ class LCTemplate:
             weights = np.ones(n)
         else:
             if len(weights) != n:
-                raise ValueError(
-                    "Provided weight vector does not match requested n.")
+                raise ValueError("Provided weight vector does not match requested n.")
 
         # check energies
         if isvector(log10_ens):
             if len(log10_ens) != n:
                 raise ValueError(
-                    "Provided log10_ens vector does not match requested n.")
+                    "Provided log10_ens vector does not match requested n."
+                )
         else:
-            log10_ens = np.full(n,log10_ens)
-
+            log10_ens = np.full(n, log10_ens)
 
         # first, calculate the energy dependent norm of each vector
-        norms = self.norms(log10_ens=log10_ens) # nnorm x nen array
+        norms = self.norms(log10_ens=log10_ens)  # nnorm x nen array
         N = norms.sum(axis=0)
-        nDC = weights*N
-        pDC = 1-nDC
-        partition_probs = np.append(norms/N*nDC,pDC[None,:],axis=0)
+        nDC = weights * N
+        pDC = 1 - nDC
+        partition_probs = np.append(norms / N * nDC, pDC[None, :], axis=0)
         # now, draw a component for each bit of the partition
-        cpp = np.cumsum(partition_probs,axis=0)
-        assert(np.allclose(cpp[-1],1))
-        comps = np.full(n,len(self.primitives))
+        cpp = np.cumsum(partition_probs, axis=0)
+        assert np.allclose(cpp[-1], 1)
+        comps = np.full(n, len(self.primitives))
         Q = np.random.rand(n)
         for i in np.arange(len(self.primitives))[::-1]:
             mask = Q < cpp[i]
             comps[mask] = i
         total = 0
         rvals = np.empty(n)
-        rvals[:] = np.nan # TMP
+        rvals[:] = np.nan  # TMP
 
         total = 0
-        for iprim,prim in enumerate(self.primitives):
-            mask = comps==iprim
+        for iprim, prim in enumerate(self.primitives):
+            mask = comps == iprim
             total += mask.sum()
-            rvals[mask] = prim.random(mask.sum(),log10_ens=log10_ens[mask])
+            rvals[mask] = prim.random(mask.sum(), log10_ens=log10_ens[mask])
 
         # DC component
-        mask = comps==len(self.primitives)
+        mask = comps == len(self.primitives)
         total += mask.sum()
         rvals[mask] = np.random.rand(mask.sum())
 
-        assert(not np.any(np.isnan(rvals))) # TMP
+        assert not np.any(np.isnan(rvals))  # TMP
 
         if return_partition:
             return rvals, comps
@@ -720,7 +727,7 @@ class LCTemplate:
         self.primitives[index] = convert_primitive(self.primitives[index], ptype)
 
     def delete_primitive(self, index, inplace=False):
-        """ Return a new LCTemplate with the primitive at index removed.
+        """Return a new LCTemplate with the primitive at index removed.
 
         The flux is renormalized to preserve the same pulsed ratio (in the
         case of an energy-dependent template, at the pivot energy).
@@ -730,7 +737,7 @@ class LCTemplate:
             raise ValueError("Template only has a single primitive.")
         if index < 0:
             index += len(prims)
-        newprims = [deepcopy(p) for ip,p in enumerate(prims) if not index==ip]
+        newprims = [deepcopy(p) for ip, p in enumerate(prims) if not index == ip]
         newnorms = self.norms.delete_component(index)
         if inplace:
             self.primitives = newprims
@@ -744,7 +751,7 @@ class LCTemplate:
         norms, prims = self.norms, self.primitives
         if len(prims) == 0:
             # special case of an empty profile
-            return LCTemplate([prim],[1])
+            return LCTemplate([prim], [1])
         nprims = [deepcopy(prims[i]) for i in range(len(prims))] + [prim]
         nnorms = self.norms.add_component(norm)
         if inplace:
@@ -754,7 +761,7 @@ class LCTemplate:
             return LCTemplate(nprims, nnorms)
 
     def order_primitives(self, order=0):
-        """ Re-order components in place.
+        """Re-order components in place.
 
         order == 0: order by ascending position
         order == 1: order by descending maximum amplitude
@@ -767,28 +774,28 @@ class LCTemplate:
         elif order == 2:
             indices = np.argsort(self.norms())[::-1]
         else:
-            raise NotImplementedError('Specified order not supported.')
+            raise NotImplementedError("Specified order not supported.")
         self.primitives = [self.primitives[i] for i in indices]
         self.norms.reorder_components(indices)
 
     def get_fixed_energy_version(self, log10_en=3):
         return self
 
-    def add_energy_dependence(self,index,slope_free=True):
+    def add_energy_dependence(self, index, slope_free=True):
         comp = self[index]
         if comp.is_energy_dependent():
             return
-        if comp.name=='NormAngles':
+        if comp.name == "NormAngles":
             # normalization
             newcomp = ENormAngles(self.norms())
         else:
             # primitive
-            if comp.name == 'Gaussian':
+            if comp.name == "Gaussian":
                 constructor = LCEGaussian
-            elif comp.name == 'VonMises':
+            elif comp.name == "VonMises":
                 constructor = LCEVonMises
             else:
-                raise NotImplementedError('%s not supported.'%comp.name)
+                raise NotImplementedError("%s not supported." % comp.name)
             newcomp = constructor(p=comp.p)
         newcomp.free[:] = comp.free
         newcomp.slope_free[:] = slope_free
@@ -849,10 +856,10 @@ class LCTemplate:
             new_location = (prim.get_location() + dphi) % 1
             prim.set_location(new_location)
 
-    def get_display_point(self,do_rotate=False):
+    def get_display_point(self, do_rotate=False):
         # TODO -- need to fix this to scan all the way around, either
         # from -0.5 to 0 or from 0.5 to 1.0, whichever -- see J0102
-        """ Return phase shift which optimizes the display of the profile.
+        """Return phase shift which optimizes the display of the profile.
 
         This is determined by finding the 60% window which contains the
         most flux and returning the left edge.  Rotating the profile such
@@ -860,9 +867,9 @@ class LCTemplate:
         the resulting phase shift would do that.
         """
         N = 50
-        dom = np.linspace(0,1,2*N+1)[:-1]
-        cod = self.integrate(dom,dom+0.6)
-        dphi = 0.20-dom[np.argmax(cod)]
+        dom = np.linspace(0, 1, 2 * N + 1)[:-1]
+        cod = self.integrate(dom, dom + 0.6)
+        dphi = 0.20 - dom[np.argmax(cod)]
         if do_rotate:
             self.rotate(dphi)
         return dphi
@@ -901,6 +908,7 @@ class LCTemplate:
         open(fname, "w").write(
             "".join(("%.6f %.6f\n" % (x, y) for x, y in zip(bin_phases, bin_values)))
         )
+
 
 def get_gauss2(
     pulse_frac=1,
@@ -959,8 +967,9 @@ def make_twoside_gaussian(one_side_gaussian):
     g2.p[-1] = g1.p[-1]
     return g2
 
-def adaptive_samples(func,npt,log10_ens=3,nres=200):
-    """ func should have a .cdf method.
+
+def adaptive_samples(func, npt, log10_ens=3, nres=200):
+    """func should have a .cdf method.
 
     NB -- log10_ens needs to be a scalar!
 
@@ -969,18 +978,18 @@ def adaptive_samples(func,npt,log10_ens=3,nres=200):
     peaks.  First, the cdf is evaluated on nres points.  Then npt estimates
     of the inverse cdf are obtained by linear interpolation.
     """
-    assert(np.isscalar(log10_ens))
-    x = np.linspace(0,1,nres)
-    F = func.cdf(x,log10_ens=log10_ens)
-    Y = np.linspace(0,1,npt)
-    idx = np.searchsorted(F,Y[1:-1])
-    assert(idx.min()>0)
+    assert np.isscalar(log10_ens)
+    x = np.linspace(0, 1, nres)
+    F = func.cdf(x, log10_ens=log10_ens)
+    Y = np.linspace(0, 1, npt)
+    idx = np.searchsorted(F, Y[1:-1])
+    assert idx.min() > 0
     F1 = F[idx]
-    F0 = F[idx-1]
-    m = (F1-F0)*(1./(x[1]-x[0]))
+    F0 = F[idx - 1]
+    m = (F1 - F0) * (1.0 / (x[1] - x[0]))
     X1 = x[idx]
-    X0 = x[idx-1]
-    Y[1:-1] = X0 + (Y[1:-1]-F0)/(F1-F0)*(x[1]-x[0])
+    X0 = x[idx - 1]
+    Y[1:-1] = X0 + (Y[1:-1] - F0) / (F1 - F0) * (x[1] - x[0])
     return Y
 
 
@@ -1047,6 +1056,7 @@ def prim_io(template):
         return [LCEmpiricalFourier(input_file=toks[1:])], None
     raise ValueError("Template format not recognized!")
 
+
 def check_gradient_derivative(templ):
     dom = np.linspace(0, 1, 10001)
     pcs = 0.5 * (dom[:-1] + dom[1:])
@@ -1057,5 +1067,6 @@ def check_gradient_derivative(templ):
         print(np.max(np.abs(gd[i] - ngd[i])))
     return pcs, gd, ngd
 
+
 def isvector(x):
-    return len(np.asarray(x).shape)>0
+    return len(np.asarray(x).shape) > 0

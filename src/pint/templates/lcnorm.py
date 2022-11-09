@@ -11,8 +11,10 @@ import numpy as np
 # can some of the code be reduced with inheritance here?
 # TODO -- error propagation to norms
 
+
 def isvector(x):
-    return len(np.asarray(x).shape)>0
+    return len(np.asarray(x).shape) > 0
+
 
 class NormAngles:
     """Keep track of N angles (0 to pi/2) representing the coordinates inside a unit radius N-ball.
@@ -50,7 +52,7 @@ class NormAngles:
     def is_energy_dependent(self):
         return False
 
-    def num_parameters(self,free=True):
+    def num_parameters(self, free=True):
         return np.sum(self.free) if free else len(self.free)
 
     def get_free_mask(self):
@@ -79,16 +81,20 @@ class NormAngles:
 
         # for energy-dependence
         if self.is_energy_dependent():
-            M = self._eindep_gradient(log10_ens=3,free=False)
-            eff_slopes = M@self.slope
-            eff_errors = ((M**2)@self.slope_errors**2)**0.5 # CHECK
+            M = self._eindep_gradient(log10_ens=3, free=False)
+            eff_slopes = M @ self.slope
+            eff_errors = ((M**2) @ self.slope_errors**2) ** 0.5  # CHECK
 
         def norm_string(i):
             fstring = "" if self.free[i] else " [FIXED]"
             l1 = "P%d : %.4f +\\- %.4f%s" % (i + 1, norms[i], errs[i], fstring)
             if self.is_energy_dependent():
                 fstring = "" if self.slope_free[i] else " [FIXED]"
-                l1 += '\n (Slope) : %.4f +\\- %.4f%s'%(eff_slopes[i], eff_errors[i], fstring)
+                l1 += "\n (Slope) : %.4f +\\- %.4f%s" % (
+                    eff_slopes[i],
+                    eff_errors[i],
+                    fstring,
+                )
             return l1
 
         s0 = (
@@ -97,20 +103,20 @@ class NormAngles:
             + "\nDC : %.4f +\\- %.4f" % (1 - self.get_total(), dcerr)
         )
         if self.is_energy_dependent():
-            s0 += '\n (Slope) : %.4f'%(-eff_slopes.sum())
+            s0 += "\n (Slope) : %.4f" % (-eff_slopes.sum())
         return s0
 
     def __len__(self):
         return self.dim
 
-    def _make_p(self,log10_ens=3):
+    def _make_p(self, log10_ens=3):
         if isvector(log10_ens):
-            p = np.empty([self.dim,len(log10_ens)])
+            p = np.empty([self.dim, len(log10_ens)])
             for i in range(self.dim):
                 p[i] = self.p[i]
         else:
             p = self.p.copy()
-        return None,p
+        return None, p
 
     # TODO -- vectorize
     def _check_norms(self, norms, eps=1e-15):
@@ -167,17 +173,17 @@ class NormAngles:
         """
         if not propagate:
             return self.errors[self.free] if free else self.errors
-        g = self.gradient(log10_ens=3,free=free) ** 2
+        g = self.gradient(log10_ens=3, free=free) ** 2
         g *= self.errors**2
         errors = g.sum(axis=1) ** 0.5
         return errors
 
-    def get_bounds(self,free=True):
+    def get_bounds(self, free=True):
         """Angles are always [0,pi/2)."""
-        PI2 = np.pi*0.5
+        PI2 = np.pi * 0.5
         if free:
-            return [[0, PI2] for ix,x in enumerate(self.free) if x]
-        return [[0, PI2] for ix,x in enumerate(self.free)]
+            return [[0, PI2] for ix, x in enumerate(self.free) if x]
+        return [[0, PI2] for ix, x in enumerate(self.free)]
 
     def sanity_checks(self, eps=1e-6):
         t1 = np.abs(self().sum() - np.sin(self.p[0]) ** 2) < eps
@@ -203,7 +209,7 @@ class NormAngles:
         vector (log10_ens an array) versions.  The shape is [nparam] for
         scalar and [nparam, nenergy] for vector.
         """
-        _,p = self._make_p(log10_ens=log10_ens)
+        _, p = self._make_p(log10_ens=log10_ens)
         m = np.sin(p[0])  # normalization
         norms = np.empty_like(p)
         for i in range(1, self.dim):
@@ -214,33 +220,33 @@ class NormAngles:
         # check normalization condition -- can fail numerically
         q = norms.sum(axis=0)
         if np.any(q > 1):
-            if len(norms.shape)==2:
+            if len(norms.shape) == 2:
                 # for vector case, make sure we don't divide by sum of norms
                 # except for cases where the norms actually exceed 1!
-                q[q<1] = 1
-                return norms*(1./q)[None,:]
-            return norms*(1./q)
+                q[q < 1] = 1
+                return norms * (1.0 / q)[None, :]
+            return norms * (1.0 / q)
         return norms
 
     def _eindep_gradient(self, log10_ens=3, free=False):
-        _,p = self._make_p(log10_ens=log10_ens)
+        _, p = self._make_p(log10_ens=log10_ens)
         n = self(log10_ens)
         if len(p.shape) == 1:
             m = np.zeros((self.dim, self.dim), dtype=float)
         else:
-            m = np.zeros((self.dim, self.dim,p.shape[1]), dtype=float)
+            m = np.zeros((self.dim, self.dim, p.shape[1]), dtype=float)
         s2p = np.sin(2 * p)
         # NB -- the gradient is always well defined, and numerical issues
         # here stem from the way the gradient is evaluated by first
         # calculating the normal. I *think* that any matrix element that
         # involves cot(p) where p-->0 will always be 0.  Thus, simply set
         # the places where p is 0 to 0.
-        mask = p%(0.5*np.pi) != 0
+        mask = p % (0.5 * np.pi) != 0
         sp = np.zeros(p.shape)
-        cp = -s2p / np.cos(p) ** 2 # = -2*tan(p)
+        cp = -s2p / np.cos(p) ** 2  # = -2*tan(p)
         cp[~mask] = 0
         sp = np.zeros_like(cp)
-        sp[mask] = s2p[mask] / np.sin(p[mask])**2 # = 2*cot(p)
+        sp[mask] = s2p[mask] / np.sin(p[mask]) ** 2  # = 2*cot(p)
         # loop over normalizations
         for i in range(self.dim):
             for j in range(self.dim):
@@ -254,7 +260,7 @@ class NormAngles:
                     # get to it here because j==i is the last term then
                     m[i, j] = n[i] * cp[j]
         if free:
-            return m[:,self.free]
+            return m[:, self.free]
         return m
 
     def gradient(self, log10_ens=3, free=False):
@@ -279,7 +285,7 @@ class NormAngles:
         multiplying by +/- sin(2x).  Then higher derivatives simply
         pop out a factor of +/-2 and toggle sin/cos.
         """
-        return self._eindep_gradient(log10_ens=log10_ens,free=free)
+        return self._eindep_gradient(log10_ens=log10_ens, free=free)
 
     def hessian(self, log10_ens=3, free=False):
         """Return a matrix giving the value of the 2nd partial derivative
@@ -352,12 +358,12 @@ class NormAngles:
         self.p = self._get_angles(norms)
 
     def delete_component(self, index):
-        """ Remove a component and return resulting object.
+        """Remove a component and return resulting object.
 
         Pulsed normalization is preserved, and NormAngles or ENormAngles is
         return as appropriate.
         """
-        mask = np.ones(self.dim,dtype=bool)
+        mask = np.ones(self.dim, dtype=bool)
         mask[index] = False
         norms = self()
         newnorms = norms[mask] * norms.sum() / norms[mask].sum()
@@ -365,19 +371,21 @@ class NormAngles:
         n.free[:] = self.free[mask]
         n.errors[:] = self.errors[mask]
         if n.is_energy_dependent():
-            print('Warning!  Energy-dependence will be slightly altered when changing components.')
+            print(
+                "Warning!  Energy-dependence will be slightly altered when changing components."
+            )
             n.slope[:] = self.slope[mask]
             n.slope_free[:] = self.slope_free[mask]
             n.slope_errors[:] = self.slope_errors[mask]
             # get desired energy slopes for new object (approximate)
-            M = self._eindep_gradient(log10_ens=3,free=False)
-            effective_slopes = (M@self.slope)[mask]
-            M = n._eindep_gradient(log10_ens=3,free=False)
-            n.slope[:] = np.linalg.inv(M)@effective_slopes
+            M = self._eindep_gradient(log10_ens=3, free=False)
+            effective_slopes = (M @ self.slope)[mask]
+            M = n._eindep_gradient(log10_ens=3, free=False)
+            n.slope[:] = np.linalg.inv(M) @ effective_slopes
         return n
 
     def add_component(self, norm=0.1):
-        """ Add a component and return resulting object.
+        """Add a component and return resulting object.
 
         The normalization is specified as a fraction of the current pulsed
         normalization, such that the resulting NormAngles or ENormAngles
@@ -385,37 +393,39 @@ class NormAngles:
         """
         norms = self()
         pulsed = norms.sum()
-        newnorms  = np.append(norms*(1-norm),norm*pulsed)
+        newnorms = np.append(norms * (1 - norm), norm * pulsed)
         n = self.__class__(newnorms)
-        n.free[:] = np.append(self.free,True)
-        n.errors[:] = np.append(self.errors,0)
+        n.free[:] = np.append(self.free, True)
+        n.errors[:] = np.append(self.errors, 0)
         if n.is_energy_dependent():
-            n.slope[:] = np.append(self.slope,0)
-            n.slope_free[:] = np.append(self.slope_free,True)
-            n.slope_errors[:] = np.append(self.slope_errors,0)
+            n.slope[:] = np.append(self.slope, 0)
+            n.slope_free[:] = np.append(self.slope_free, True)
+            n.slope_errors[:] = np.append(self.slope_errors, 0)
             ## get desired energy slopes for new object (approximate)
-            M = self._eindep_gradient(log10_ens=3,free=False)
-            effective_slopes = np.append((M@self.slope)*(1-norm),0)
-            M = n._eindep_gradient(log10_ens=3,free=False)
-            n.slope[:] = np.linalg.inv(M)@effective_slopes
+            M = self._eindep_gradient(log10_ens=3, free=False)
+            effective_slopes = np.append((M @ self.slope) * (1 - norm), 0)
+            M = n._eindep_gradient(log10_ens=3, free=False)
+            n.slope[:] = np.linalg.inv(M) @ effective_slopes
         return n
 
     def reorder_components(self, indices):
         # currently this is only APPROXIMATE, not sure if it's possible
         # to actually re-order them.  Perhaps consider a mapping instead.
-        if (len(indices) != self.dim):
-            raise ValueError('New indices do not match component count.')
+        if len(indices) != self.dim:
+            raise ValueError("New indices do not match component count.")
         if self.is_energy_dependent():
-            print('Warning!  Energy-dependence will be slightly altered when re-ordering components.')
+            print(
+                "Warning!  Energy-dependence will be slightly altered when re-ordering components."
+            )
             # save the linearized slopes before changing params
-            M = self._eindep_gradient(log10_ens=3,free=False)
-            effective_slopes = (M@self.slope)[indices]
+            M = self._eindep_gradient(log10_ens=3, free=False)
+            effective_slopes = (M @ self.slope)[indices]
         self.p[:] = self._get_angles(self()[indices])
         self.free[:] = self.free[indices]
         self.errors[:] = self.errors[indices]
         if self.is_energy_dependent():
-            M = self._eindep_gradient(log10_ens=3,free=False)
-            self.slope[:] = np.linalg.inv(M)@effective_slopes
+            M = self._eindep_gradient(log10_ens=3, free=False)
+            self.slope[:] = np.linalg.inv(M) @ effective_slopes
             self.slope_free[:] = self.slope_free[indices]
             ## TODO -- but I probably don't care about this much
             self.slope_errors[:] = self.slope_errors[indices]
@@ -465,7 +475,6 @@ class NormAngles:
             "slope_free = %s"
             % (str(list(self.slope_free)) if hasattr(self, "slope_free") else None),
         ]
-
 
 
 def numerical_gradient(norms, delta=1e-3):
