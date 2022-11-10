@@ -25,8 +25,11 @@ def hostinfo():
 
 
 def set_log(logger_):
+    print("Initializing...")
     global log
+    global testglobal
     log = logger_
+    testglobal = 2
 
 
 class WrappedFitter:
@@ -64,6 +67,7 @@ class WrappedFitter:
         # Make a full copy of the fitter to work with
         myftr = copy.deepcopy(self.ftr)
         parstrings = []
+        print(f"{'testglobal' in globals()}")
         for parname, parvalue in zip(parnames, parvalues):
             # Freeze the  params we are going to grid over and set their values
             # All other unfrozen parameters will be fitted for at each grid point
