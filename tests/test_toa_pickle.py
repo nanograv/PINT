@@ -123,6 +123,8 @@ def test_pickle_moved(temp_tim):
 
 
 def test_save_pickle_exceptions(temp_tim):
+    """Raise exceptions in save_pickle if output filename is not given."""
+
     tt, tp = temp_tim
 
     toas = toa.get_TOAs(tt, usepickle=True, picklefilename=tp)
@@ -132,8 +134,10 @@ def test_save_pickle_exceptions(temp_tim):
     toas2 = copy.deepcopy(toas)
     toas2.filename = None
 
+    # For merged TOAs.
     with pytest.raises(ValueError):
         toa.save_pickle(toas1)
 
+    # For TOAs where filename is not set.
     with pytest.raises(ValueError):
         toa.save_pickle(toas2)
