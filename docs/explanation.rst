@@ -147,7 +147,7 @@ in, and what kind of time you're asking for::
 
 The conventional time scale for working with pulsars, and the one PINT
 uses, is Barycentric Dynamical Time (TDB). You should be aware that there
-is another time scale, not yet supported in PINT, called Baycentric
+is another time scale, not yet supported in PINT, called Barycentric
 Coordinate Time (TCB), and that because of different handling of
 relativistic corrections, it does not advance at the same rate as TDB
 (there is also a many-second offset). TEMPO2 uses TCB by default, so
@@ -646,7 +646,7 @@ TEMPO and TEMPO2 can check whether the predicted improvement of chi-squared, ass
 
 This algorithm is the Gauss-Newton_algorithm_ for solving nonlinear
 least-squares problems, and even in one-complex-dimensional cases can exhibit
-convergence behaviour that is literally chaotic_. For TEMPO/TEMPO2 and PINT, the
+convergence behavior that is literally chaotic_. For TEMPO/TEMPO2 and PINT, the
 problem is that the model is never actually evaluated at the updated starting
 point before committing to it; it can be invalid (ECC > 1) or the step can be
 large enough that the derivative does not match the function and thus the
