@@ -24,6 +24,7 @@ from pint.derived_quantities import (
     gamma,
     omdot_to_mtot,
     p_to_f,
+    shklovskii_factor,
 )
 
 
@@ -313,3 +314,11 @@ def test_p_to_f(pdd):
 
     for i, fi in enumerate(result):
         assert fi.unit == (1 / p).unit / u.s**i
+
+
+def test_shklovskii_factor():
+    pmtot = 1 * u.mas / u.yr
+    D = 1 * u.kpc
+    shf = shklovskii_factor(pmtot, D)
+
+    assert np.isfinite(shf)
