@@ -203,7 +203,7 @@ def test_toa_merge_again():
     check_indices_contiguous(nt2)
 
 
-def test_toa_merge_again():
+def test_toa_merge_again_2():
     filenames = [
         datadir / "NGC6440E.tim",
         datadir / "testtimes.tim",
@@ -347,6 +347,51 @@ def test_toa_merge_different_columns_ignorepn_onwrite():
     f.seek(0)
     toas = [toa.get_TOAs(fname, include_pn=True) for fname in [f, filenames[1]]]
     nt = toa.merge_TOAs(toas)
+
+
+def test_toa_merge_different_bipm():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+        datadir / "parkes.toa",
+    ]
+    inc_bipms = [True, True, False]
+    toas = [
+        toa.get_TOAs(ff, include_bipm=inc_bipm)
+        for ff, inc_bipm in zip(filenames, inc_bipms)
+    ]
+    with pytest.raises(TypeError):
+        nt = toa.merge_TOAs(toas)
+
+
+def test_toa_merge_different_bipm_ver():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+        datadir / "parkes.toa",
+    ]
+    bipm_vers = ["BIPM2015", "BIPM2015", "BIPM2017"]
+    toas = [
+        toa.get_TOAs(ff, include_bipm=True, bipm_version=bipm_ver)
+        for ff, bipm_ver in zip(filenames, bipm_vers)
+    ]
+    with pytest.raises(TypeError):
+        nt = toa.merge_TOAs(toas)
+
+
+def test_toa_merge_different_gps():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+        datadir / "parkes.toa",
+    ]
+    inc_gpss = [True, True, False]
+    toas = [
+        toa.get_TOAs(ff, include_gps=inc_gps)
+        for ff, inc_gps in zip(filenames, inc_gpss)
+    ]
+    with pytest.raises(TypeError):
+        nt = toa.merge_TOAs(toas)
 
 
 def test_bipm_default():
