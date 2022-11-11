@@ -134,7 +134,7 @@ def test_write_pn_nan():
     t.write_TOA_file(f)
     f.seek(0)
     contents = f.read()
-    assert "nan" not in contents
+    assert "nan" not in contents.split()
     f.seek(0)
     t2 = toa.get_TOAs(f)
     assert np.isnan(t2["pulse_number"][10])

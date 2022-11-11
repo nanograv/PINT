@@ -621,7 +621,7 @@ def format_toa_line(
             freq = 0.0 * u.MHz
         flagstring = ""
         if dm != 0.0 * pint.dmu:
-            flagstring += "-dm {0:%.5f}".format(dm.to(pint.dmu).value)
+            flagstring += "-dm {0:.5f}".format(dm.to(pint.dmu).value)
         # Here I need to append any actual flags
         for flag in flags.keys():
             v = flags[flag]
