@@ -498,6 +498,14 @@ def _parse_TOA_line(line, fmt="Unknown"):
         d["obs"] = get_observatory(fields[4].upper()).name
         # All the rest should be flags
         flags = fields[5:]
+
+        # Flags and flag-values should be given in pairs.
+        # The for loop below will fail otherwise.
+        if len(flags) % 2 != 0:
+            raise ValueError(
+                f"Flags and flag-values should be given in pairs. The given flags are {' '.join(flags)}"
+            )
+
         for i in range(0, len(flags), 2):
             k, v = flags[i].lstrip("-"), flags[i + 1]
             if k in ["error", "freq", "scale", "MJD", "flags", "obs", "name"]:
