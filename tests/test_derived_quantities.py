@@ -6,6 +6,7 @@ import numpy as np
 from hypothesis import given
 from hypothesis.extra.numpy import arrays
 from hypothesis.strategies import floats
+import pytest
 
 import pint
 from pint.derived_quantities import (
@@ -22,6 +23,7 @@ from pint.derived_quantities import (
     pbdot,
     gamma,
     omdot_to_mtot,
+    p_to_f,
 )
 
 
@@ -296,3 +298,18 @@ def test_a1sini_Mp_array(Mp, Mc, Pb, i):
     i = i * u.deg
     x = a1sini(Mp, Mc, Pb, i=i)
     assert np.allclose(Mp, pulsar_mass(Pb, x, Mc, i))
+
+
+@pytest.mark.parametrize("pdd", [None, 0 * u.s / u.s**2, 1e-15 * u.s / u.s**2])
+def test_p_to_f(pdd):
+    p = 1 * u.s
+    pd = 1e-9 * u.s / u.s
+
+    result = p_to_f(p, pd, pdd)
+    values = [res.value for res in result]
+
+    assert len(result) == (2 if pdd is None else 3)
+    assert np.all(np.isfinite(values))
+
+    for i, fi in enumerate(result):
+        assert fi.unit == (1 / p).unit / u.s**i
