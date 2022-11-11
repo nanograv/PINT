@@ -631,3 +631,9 @@ def test_chained_include_directories(tmp_path):
     )
 
     assert len(toa.get_TOAs(str(t1))) == 3
+
+
+def test_read_itoa():
+    timfile = datadir / "NGC6440E.itoa"
+    with pytest.raises(RuntimeError):
+        toa.get_TOAs(timfile)
