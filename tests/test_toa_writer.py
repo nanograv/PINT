@@ -214,7 +214,7 @@ def test_format_toa_line(format):
     assert isinstance(toa_line, str) and len(toa_line) > 0
 
 
-def test_format_toa_line_bad_fmt(format):
+def test_format_toa_line_bad_fmt():
     toatime = Time(datetime.now())
     toaerr = u.Quantity(1e-6, "s")
     freq = u.Quantity(1400, "MHz")
