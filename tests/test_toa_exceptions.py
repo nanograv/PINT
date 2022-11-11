@@ -22,6 +22,7 @@ def test_parse_toa_line_exceptions():
     with pytest.raises(ValueError):
         toa._parse_TOA_line(badline)
 
+    # Garbage line
     garbage = "asdg skfgs dj"
     with pytest.raises(RuntimeError):
         toa._parse_TOA_line(garbage)
