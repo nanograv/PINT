@@ -133,8 +133,10 @@ def test_write_pn_nan():
     f = StringIO()
     t.write_TOA_file(f)
     f.seek(0)
-    contents = f.read()
-    assert "nan" not in contents.split()
+    # contents = f.read()
+    for line in f.readlines():
+        if toa._toa_format(line) != "Comment":
+            assert "nan" not in line.split()
     f.seek(0)
     t2 = toa.get_TOAs(f)
     assert np.isnan(t2["pulse_number"][10])
