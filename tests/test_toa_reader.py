@@ -634,6 +634,8 @@ def test_chained_include_directories(tmp_path):
 
 
 def test_read_itoa():
+    # This test is put here only to ensure that the correct exception is raised.
+    # This should be removed or replaced if/when ITOA support is implemented.
     timfile = datadir / "NGC6440E.itoa"
     with pytest.raises(RuntimeError):
         toa.get_TOAs(timfile)
