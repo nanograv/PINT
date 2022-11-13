@@ -98,10 +98,11 @@ def test_known_problem():
     m2.compare(m1)
 
 
-@pytest.mark.parametrize("args", [""])
-def test_compare_parfile_script(args):
+def test_compare_parfile_script():
     parfile1 = "par_15yr_a.par"
     parfile2 = "par_15yr_b.par"
+
+    args = ""
 
     with open(parfile1, "w") as par1:
         par1.write(par_15yr_a)
