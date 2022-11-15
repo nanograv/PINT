@@ -48,7 +48,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Changed
 - `model.phase()` now defaults to `abs_phase=True` when TZR* params are in the model
 - TOAs no longer need to be grouped by observatory
-- removed explicit download of IERS and leapsecond data (handled now by astropy)
+- removed explicit download of IERS and leap second data (handled now by astropy)
 - The default version of TT(BIPM) uses BIPM2021
 - ClockFile no longer uses metaclass magic or many subclasses, and have friendly names for use in messages
 - `model.setup()` now gets called automatically after removing a parameter as part of `remove_param`
@@ -193,7 +193,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## [0.8] - 2020-12-21
 ### Fixed
 - Fixed an indentation bug in Wideband TOA fitting.
-- The CombinedResidual class has API change on the get_data_error(), child residueal class in save as dictionary.
+- The CombinedResidual class has API change on the get_data_error(), child residual class in save as dictionary.
 ### Removed
 - Removed Python 2.7 support from travis and tox testing suites and from requirements files
 - Removed "landscape" code checker since that package is no longer supported by its author
@@ -288,7 +288,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Add function to compute epoch averaged residuals based on ECORR
 - Added model comparison pretty printer
 - Added functions to change PEPOCH, DMEPOCH, and binary epoch
-- Aded dmxparse function
+- Added dmxparse function
 - Added code to ensure that IERS B table is up to date
 - Added fitter.print_summary()
 ### Changed

@@ -96,7 +96,7 @@ it, ensuring that all dependencies needed to run PINT are available::
     $ cd PINT
     $ pip install .
 
-Complete installation instructions are availble here_.
+Complete installation instructions are available here_.
 
 .. _here: https://nanograv-pint.readthedocs.io/en/latest/installation.html
 
