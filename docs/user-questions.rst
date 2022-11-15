@@ -27,7 +27,9 @@ If you wish to checkout branch ``testbranch`` from user ``pintuser``::
     git pull https://github.com/pintuser/PINT.git testbranch
 
 The first command makes a new local branch with name ``pintuser-testbranch`` from the ``master`` branch.  
-The second pulls the remote branch from the desired user's fork into that local branch.
+The second pulls the remote branch from the desired user's fork into that local branch.  
+You may still need to install/reinstall that branch, depending on how you have things set up 
+(so ``pip install .`` or ``pip install -e .``, where the later keeps the files in-place for faster developing).
 
 
 How to go to a specific version of PINT
