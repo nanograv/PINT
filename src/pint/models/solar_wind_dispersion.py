@@ -229,6 +229,34 @@ def _d_solar_wind_geometry_d_p(r, theta, p):
         return np.inf * np.ones(len(theta)) * u.pc
 
 
+def _get_reference_time(
+    model,
+    params=["POSEPOCH", "PEPOCH", "DMEPOCH"],
+    default=astropy.time.Time(50000, format="mjd"),
+):
+    """Return a reference time for other calculations
+
+    Go through a list of possible times in a model, and return the first one that is not None.
+
+    If none is found, return the default.
+
+    Parameters
+    ----------
+    model : pint.models.timing_model.TimingModel
+    params : list
+        Names of parameters to search through
+    default : astropy.time.Time
+
+    Returns
+    -------
+    astropy.time.Time
+    """
+    for p in params:
+        if getattr(model, p).value is not None:
+            return getattr(model, p).quantity
+    return default
+
+
 class SolarWindDispersion(Dispersion):
     """Dispersion due to the solar wind (basic model).
 
@@ -433,12 +461,7 @@ class SolarWindDispersion(Dispersion):
         astropy.quantity.Quantity
         """
         coord = self._parent.get_psr_coords()
-        if self._parent.POSEPOCH.value is not None:
-            t0 = self._parent.POSEPOCH.quantity
-        elif self._parent.PEPOCH.value is not None:
-            t0 = self._parent.PEPOCH.quantity
-        else:
-            t0 = astropy.time.Time(50000, format="mjd")
+        t0 = _get_reference_time(self._parent)
         # time and distance of conjunction
         t0, elongation = pint.utils.get_conjunction(coord, t0, precision="high")
         if self.SWM.value == 0:
@@ -469,12 +492,7 @@ class SolarWindDispersion(Dispersion):
         astropy.quantity.Quantity
         """
         coord = self._parent.get_psr_coords()
-        if self._parent.POSEPOCH.value is not None:
-            t0 = self._parent.POSEPOCH.quantity
-        elif self._parent.PEPOCH.value is not None:
-            t0 = self._parent.PEPOCH.quantity
-        else:
-            t0 = astropy.time.Time(50000, format="mjd")
+        t0 = _get_reference_time(self._parent)
         # time and distance of conjunction
         t0, elongation = pint.utils.get_conjunction(coord, t0, precision="high")
         if self.SWM.value == 0:
@@ -856,12 +874,7 @@ class SolarWindDispersionX(Dispersion):
         astropy.quantity.Quantity
         """
         coord = self._parent.get_psr_coords()
-        if self._parent.POSEPOCH.value is not None:
-            t0 = self._parent.POSEPOCH.quantity
-        elif self._parent.PEPOCH.value is not None:
-            t0 = self._parent.PEPOCH.quantity
-        else:
-            t0 = astropy.time.Time(50000, format="mjd")
+        t0 = _get_reference_time(self._parent)
         t0, elongation = pint.utils.get_conjunction(coord, t0, precision="high")
         # approximate elongation at conjunction
         self._theta0 = elongation
