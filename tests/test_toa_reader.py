@@ -571,3 +571,20 @@ def test_chained_include_directories(tmp_path):
     )
 
     assert len(toa.get_TOAs(str(t1))) == 3
+
+
+def test_tempo2_lookslike_parkes():
+    # a fraction of a tim file that failed on the uwl_200830_103538.rf.noscl.paz2.pTF line
+    # because of the initial space and the "." in character 41
+    # it is actually in Tempo2 format but PINT thought it was Parkes
+    s = """FORMAT 1
+MODE 1
+ uwl_200620_110732.0000_0000.rf.pTF 1102.00000000 59020.48454853458879299 13.68700 pks
+ uwl_200703_053144.calib.paz2.pTF 1193.45200000 59033.24748901219228969 16.68400 pks
+ uwl_200723_040744.calib.paz2.pTF 1194.39000000 59053.19164379733292591 17.46900 pks
+ uwl_200801_101324.calib.paz2.pTF 1194.65900000 59062.44204936713518350 18.06300 pks
+C uwl_200817_060611.0000_0000.rf.pTF 1102.00000000 59078.27291615603383690 18.41200 pks
+ uwl_200830_103538.rf.noscl.paz2.pTF 1115.36200000 59091.46028405561133567 14.03300 pks
+ uwl_200914_031352.calib.paz2.pTF 1192.38600000 59106.15041719173595425 18.61600 pks
+ uwl_201020_230358_0.calib.paz2.pTF 1193.25000000 59142.98175923008920662 16.38500 pks"""
+    t = toa.get_TOAs(StringIO(s))
