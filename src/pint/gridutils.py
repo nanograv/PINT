@@ -17,7 +17,7 @@ from astropy.utils.console import ProgressBar
 from pint import fitter
 
 
-__all__ = ["doonefit", "grid_chisq", "grid_chisq_derived", "plot_grid_chisq"]
+__all__ = ["doonefit", "grid_chisq", "grid_chisq_derived"]
 
 
 def hostinfo():
@@ -184,7 +184,7 @@ def grid_chisq(
     extraout : dict of np.ndarray
         Parameter values computed at each grid point for `extraparnames`
 
-    Example
+    Examples
     -------
     >>> import astropy.units as u
     >>> import numpy as np
@@ -203,6 +203,43 @@ def grid_chisq(
     # We'll do something like 3-sigma around the best-fit values of  F0
     >>> F0 = np.linspace(f.model.F0.quantity - 3 * f.model.F0.uncertainty,f.model.F0.quantity + 3 * f.model.F0.uncertainty,25)
     >>> chi2_F0,_ = pint.gridutils.grid_chisq(f, ("F0",), (F0,))
+
+
+    A 2D example with a plot:
+
+    >>> import astropy.units as u
+    >>> import numpy as np
+    >>> import pint.gridutils
+    >>> from pint.fitter import WLSFitter
+    >>> from pint.models.model_builder import get_model_and_toas
+    >>> import scipy.stats
+    >>> import matplotlib.pyplot as plt
+    >>> # Load in a basic dataset
+    >>> parfile = pint.config.examplefile("NGC6440E.par")
+    >>> timfile = pint.config.examplefile("NGC6440E.tim")
+    >>> m, t = get_model_and_toas(parfile, timfile)
+    >>> f = WLSFitter(t, m)
+    >>> # find the best-fit
+    >>> f.fit_toas()
+    >>> bestfit = f.resids.chi2
+    >>> F0 = np.linspace(f.model.F0.quantity - 3 * f.model.F0.uncertainty,f.model.F0.quantity + 3 * f.model.F0.uncertainty,25)
+    >>> F1 = np.linspace(f.model.F1.quantity - 3 * f.model.F1.uncertainty,f.model.F1.quantity + 3 * f.model.F1.uncertainty,27)
+    >>> chi2grid = pint.gridutils.grid_chisq(f, ("F0", "F1"), (F0, F1))[0]
+    >>> # 1, 2, and 3 sigma confidence limits
+    >>> nsigma = np.arange(1, 4)
+    >>> # these are the CDFs going from -infinity to nsigma.  So subtract away 0.5 and double for the 2-sided values
+    >>> CIs = (scipy.stats.norm().cdf(nsigma) - 0.5) * 2
+    >>> print(f"Confidence intervals for {nsigma} sigma: {CIs}")
+    >>> # chi^2 random variable for 2 parameters
+    >>> rv = scipy.stats.chi2(2)
+    >>> # the ppf = Percent point function is the inverse of the CDF
+    >>> contour_levels = rv.ppf(CIs)
+    >>> fig, ax = plt.subplots(figsize=(16, 9))
+    >>> # just plot the values offset from the best-fit values
+    >>> twod = ax.contour(F0 - f.model.F0.quantity,F1 - f.model.F1.quantity,chi2grid - bestfit,levels=contour_levels,colors="b")
+    >>> ax.errorbar(0, 0, xerr=f.model.F0.uncertainty.value, yerr=f.model.F1.uncertainty.value, fmt="ro")
+    >>> ax.set_xlabel("$\Delta F_0$ (Hz)", fontsize=24)
+    >>> ax.set_ylabel("$\Delta F_1$ (Hz/s)", fontsize=24)
 
     Notes
     -----
