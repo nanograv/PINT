@@ -192,15 +192,15 @@ def grid_chisq(
     >>> import pint.gridutils
     >>> from pint.fitter import WLSFitter
     >>> from pint.models.model_builder import get_model, get_model_and_toas
-    # Load in a basic dataset
+    >>> # Load in a basic dataset
     >>> parfile = pint.config.examplefile("NGC6440E.par")
     >>> timfile = pint.config.examplefile("NGC6440E.tim")
     >>> m, t = get_model_and_toas(parfile, timfile)
     >>> f = WLSFitter(t, m)
-    # find the best-fit
+    >>> # find the best-fit
     >>> f.fit_toas()
     >>> bestfit = f.resids.chi2
-    # We'll do something like 3-sigma around the best-fit values of  F0
+    >>> # We'll do something like 3-sigma around the best-fit values of  F0
     >>> F0 = np.linspace(f.model.F0.quantity - 3 * f.model.F0.uncertainty,f.model.F0.quantity + 3 * f.model.F0.uncertainty,25)
     >>> chi2_F0,_ = pint.gridutils.grid_chisq(f, ("F0",), (F0,))
 
@@ -240,6 +240,7 @@ def grid_chisq(
     >>> ax.errorbar(0, 0, xerr=f.model.F0.uncertainty.value, yerr=f.model.F1.uncertainty.value, fmt="ro")
     >>> ax.set_xlabel("$\Delta F_0$ (Hz)", fontsize=24)
     >>> ax.set_ylabel("$\Delta F_1$ (Hz/s)", fontsize=24)
+    >>> plt.show()
 
     Notes
     -----
