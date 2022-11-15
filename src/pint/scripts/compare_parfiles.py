@@ -20,10 +20,11 @@ def main(argv=None):
         "--dmx", default=False, action="store_true", help="Print DMX parameters"
     )
     parser.add_argument(
-        "--convertcoordinates",
-        default=True,
-        action="store_true",
-        help="Convert coordinates to make models consistent",
+        "--no-convertcoordinates",
+        dest="convertcoordinates",
+        default=False,
+        action="store_false",
+        help="Do not convert coordinates to make models consistent",
     )
     parser.add_argument(
         "--sigma",
