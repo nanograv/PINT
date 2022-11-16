@@ -11,7 +11,7 @@ from astropy import time
 import pint.toa
 import pint.models
 from pint.residuals import Residuals
-from pint.observatory import Observatory, bipm_default, get_observatory
+from pint.observatory import bipm_default, get_observatory
 
 __all__ = [
     "zero_residuals",
@@ -65,10 +65,7 @@ def zero_residuals(ts, model, maxiter=10, tolerance=None):
     ts.compute_pulse_numbers(model)
     maxresid = None
     if tolerance is None:
-        if pint.utils.check_longdouble_precision():
-            tolerance = 1 * u.ns
-        else:
-            tolerance = 5 * u.us
+        tolerance = 1 * u.ns if pint.utils.check_longdouble_precision() else 5 * u.us
     for i in range(maxiter):
         r = Residuals(ts, model, track_mode="use_pulse_numbers")
         resids = r.calc_time_resids(calctype="taylor")
