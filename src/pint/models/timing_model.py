@@ -65,7 +65,7 @@ from pint.utils import (
     split_prefixed_name,
     open_or_use,
     colorize,
-    taylor_horner
+    taylor_horner,
 )
 
 
