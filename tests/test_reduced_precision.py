@@ -7,5 +7,8 @@ import pytest
 
 
 def test_require_longdouble_precision():
+    # There are some limited precision warnings here.
+    import pint.pulsar_mjd
+
     with pytest.raises(PINTPrecisionError):
         require_longdouble_precision()
