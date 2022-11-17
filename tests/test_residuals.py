@@ -226,6 +226,13 @@ def test_residuals_wideband_chi2(wideband_fake):
     assert f.fit_toas() >= rn.chi2
 
 
+def test_residuals_badpn(wideband_fake):
+    toas, model = wideband_fake
+    toas.table["pulse_number"][0] = np.nan
+    r = WidebandTOAResiduals(toas, model)
+    assert r.toa.track_mode == "nearest"
+
+
 # @pytest.mark.xfail()
 # @pytest.mark.parametrize(
 #    "full_cov", [pytest.param(True, marks=pytest.mark.xfail), False]
