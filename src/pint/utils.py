@@ -42,6 +42,7 @@ from pathlib import Path
 
 import astropy.constants as const
 import astropy.coordinates as coords
+from astropy.time import Time
 import astropy.units as u
 import numpy as np
 from loguru import logger as log
@@ -83,6 +84,8 @@ __all__ = [
     "PINTPrecisionError",
     "check_longdouble_precision",
     "require_longdouble_precision",
+    "get_conjunction",
+    "divide_times",
 ]
 
 COLOR_NAMES = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
@@ -1060,6 +1063,124 @@ def dmxparse(fitter, save=False):
     return dmx
 
 
+def get_prefix_timerange(model, prefixname):
+    """Get time range for a prefix quantity like DMX or SWX
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+    prefixname : str
+        Something like ``DMX_0001`` or ``SWX_0005``
+
+    Returns
+    -------
+    tuple
+        Each element is astropy.time.Time
+
+    Example
+    -------
+    To match a range between SWX and DMX, you can do:
+
+        >>> m.add_DMX_range(*(59077.33674631197, 59441.34020807681), index=1, frozen=False)
+
+    Which sets ``DMX_0001`` to cover the same time range as ``SWX_0002``
+    """
+    prefix, index, indexnum = split_prefixed_name(prefixname)
+    r1 = prefix.replace("_", "R1_") + index
+    r2 = prefix.replace("_", "R2_") + index
+    return getattr(model, r1).quantity, getattr(model, r2).quantity
+
+
+def split_dmx(model, time):
+    """
+    Split an existing DMX bin at the desired time
+
+    Parameters
+    ----------
+    model : pint.models.timing_model.TimingModel
+    time : astropy.time.Time
+
+    Returns
+    -------
+    index : int
+        Index of existing bin that was split
+    newindex : int
+        Index of new bin that was added
+
+    """
+    try:
+        DMX_mapping = model.get_prefix_mapping("DMX_")
+    except ValueError:
+        raise RuntimeError("No DMX values in model!")
+    dmx_epochs = [f"{x:04d}" for x in DMX_mapping.keys()]
+    DMX_R1 = np.zeros(len(dmx_epochs))
+    DMX_R2 = np.zeros(len(dmx_epochs))
+    for ii, epoch in enumerate(dmx_epochs):
+        DMX_R1[ii] = getattr(model, "DMXR1_{:}".format(epoch)).value
+        DMX_R2[ii] = getattr(model, "DMXR2_{:}".format(epoch)).value
+    ii = np.where((time.mjd > DMX_R1) & (time.mjd < DMX_R2))[0]
+    if len(ii) == 0:
+        raise ValueError(f"Time {time} not in any DMX bins")
+    ii = ii[0]
+    index = int(dmx_epochs[ii])
+    t1 = DMX_R1[ii]
+    t2 = DMX_R2[ii]
+    print(f"{ii} {t1} {t2} {time}")
+    getattr(model, f"DMXR2_{index:04d}").value = time.mjd
+    newindex = model.add_DMX_range(
+        time.mjd,
+        t2,
+        dmx=getattr(model, f"DMX_{index:04d}").quantity,
+        frozen=getattr(model, f"DMX_{index:04d}").frozen,
+    )
+    return index, newindex
+
+
+def split_swx(model, time):
+    """
+    Split an existing SWX bin at the desired time
+
+    Parameters
+    ----------
+    model : pint.models.timing_model.TimingModel
+    time : astropy.time.Time
+
+    Returns
+    -------
+    index : int
+        Index of existing bin that was split
+    newindex : int
+        Index of new bin that was added
+
+    """
+    try:
+        SWX_mapping = model.get_prefix_mapping("SWX_")
+    except ValueError:
+        raise RuntimeError("No SWX values in model!")
+    swx_epochs = [f"{x:04d}" for x in SWX_mapping.keys()]
+    SWX_R1 = np.zeros(len(swx_epochs))
+    SWX_R2 = np.zeros(len(swx_epochs))
+    for ii, epoch in enumerate(swx_epochs):
+        SWX_R1[ii] = getattr(model, "SWXR1_{:}".format(epoch)).value
+        SWX_R2[ii] = getattr(model, "SWXR2_{:}".format(epoch)).value
+    ii = np.where((time.mjd > SWX_R1) & (time.mjd < SWX_R2))[0]
+    if len(ii) == 0:
+        raise ValueError(f"Time {time} not in any SWX bins")
+    ii = ii[0]
+    index = int(swx_epochs[ii])
+    t1 = SWX_R1[ii]
+    t2 = SWX_R2[ii]
+    print(f"{ii} {t1} {t2} {time}")
+    getattr(model, f"SWXR2_{index:04d}").value = time.mjd
+    newindex = model.add_swx_range(
+        time.mjd,
+        t2,
+        swx=getattr(model, f"SWX_{index:04d}").quantity,
+        frozen=getattr(model, f"SWX_{index:04d}").frozen,
+    )
+    return index, newindex
+
+
 def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
     """Compute weighted mean of input values
 
@@ -1681,3 +1802,108 @@ def compute_hash(filename):
         while block := f.read(blocks * h.block_size):
             h.update(block)
     return h.digest()
+
+
+def get_conjunction(coord, t0, precision="low", ecl="IERS2010"):
+    """
+    Find first time of Solar conjuction after t0 and approximate elongation at conjunction
+
+    Offers a low-precision version (based on analytic expression of Solar longitude)
+    Or a higher-precision version (based on interpolating :func:`astropy.coordinates.get_sun`)
+
+    Parameters
+    ----------
+    coord : astropy.coordinates.SkyCoord
+    t0 : astropy.time.Time
+    precision : str, optional
+        "low" or "high" precision
+    ecl : str, optional
+        Obliquity for PulsarEcliptic coordinates
+
+    Returns
+    -------
+    astropy.time.Time
+        Time of conjunction
+    astropy.quantity.Quantity
+        Elongation at conjunction
+    """
+
+    assert precision.lower() in ["low", "high"]
+    coord = coord.transform_to(pint.pulsar_ecliptic.PulsarEcliptic(ecl=ecl))
+
+    # low precision version
+    # use analytic form for Sun's ecliptic longitude
+    # and interpolate
+    tt = t0 + np.linspace(0, 365) * u.d
+    # Allen's Astrophysical Quantities
+    # Low precision solar coordinates (27.4.1)
+    # number of days since J2000
+    n = tt.jd - 2451545
+    # mean longitude of Sun, corrected for abberation
+    L = 280.460 * u.deg + 0.9854674 * u.deg * n
+    # Mean anomaly
+    g = 357.528 * u.deg + 0.9856003 * u.deg * n
+    # Ecliptic longitude
+    longitude = L + 1.915 * u.deg * np.sin(g) + 0.20 * u.deg * np.sin(2 * g)
+    dlongitude = longitude - coord.lon
+    dlongitude -= (dlongitude // (360 * u.deg)).max() * 360 * u.deg
+    conjunction = Time(np.interp(0, dlongitude.value, tt.mjd), format="mjd")
+    if precision.lower() == "low":
+        return conjunction, coord.lat
+    # do higher precision
+    # use astropy solar coordinates
+    # start with 10 days on either side of the low precision value
+    tt = conjunction + np.linspace(-10, 10) * u.d
+    csun = coords.get_sun(tt)
+    # this seems to be needed in old astropy
+    csun = coords.SkyCoord(ra=csun.ra, dec=csun.dec)
+    elongation = csun.separation(coord)
+    # get min value and interpolate with a quadratic fit
+    j = np.where(elongation == elongation.min())[0][0]
+    x = tt.mjd[j - 3 : j + 4]
+    y = elongation.value[j - 3 : j + 4]
+    f = np.polyfit(x, y, 2)
+    conjunction = Time(-f[1] / 2 / f[0], format="mjd")
+    csun = coords.get_sun(conjunction)
+    # this seems to be needed in old astropy
+    csun = coords.SkyCoord(ra=csun.ra, dec=csun.dec)
+
+    return conjunction, csun.separation(coord)
+
+
+def divide_times(t, t0, offset=0.5):
+    """
+    Divide input times into years relative to t0
+
+    Years are centered around the requested offset value
+
+    Parameters
+    ----------
+    t : astropy.time.Time
+    t0 : astropy.time.Time
+        Reference time
+    offset : float, optional
+        Offset value for division.  A value of 0.5 divides the results into intervals [-0.5,0.5].
+
+    Returns
+    -------
+    np.ndarray
+        Array of indices for division
+
+
+    Example
+    -------
+    Divide into years around each conjunction
+
+        >>> elongation = astropy.coordinates.get_sun(Time(t.get_mjds(), format="mjd")).separation(m.get_psr_coords())
+        >>> t0 = get_conjunction(m.get_psr_coords(), m.PEPOCH.quantity, precision="high")[0]
+        >>> indices = divide_times(Time(t.get_mjds(), format="mjd"), t0)
+        >>> plt.clf()
+        >>> for i in np.unique(indices):
+                plt.plot(t.get_mjds()[indices == i], elongation[indices == i].value, ".")
+
+    """
+    dt = t - t0
+    values = (dt.to(u.yr).value + offset) // 1
+    indices = np.digitize(values, np.unique(values), right=True)
+    return indices

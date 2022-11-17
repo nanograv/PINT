@@ -72,6 +72,8 @@ class TestResidualBuilding:
         # assert np.all(phase_res_nomean.resids -
         #         phase_res_nomean.resids.mean() == phase_res_noweight.resids)
 
+        phase_res_noweight.update()
+
     def test_build_dm_residual(self):
         dm_res = Residuals(toas=self.toa, model=self.model, residual_type="dm")
         assert len(dm_res.resids) == self.toa.ntoas
