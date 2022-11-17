@@ -32,3 +32,19 @@ def test_zima_inputtim(tmp_path):
         lines = sys.stdout.getvalue()
     finally:
         sys.stdout = saved_stdout
+
+
+def test_zima_plot(tmp_path):
+    import matplotlib
+
+    matplotlib.use("Agg")
+
+    parfile = os.path.join(datadir, "NGC6440E.par")
+    output_timfile = tmp_path / "fake_testzima.tim"
+    saved_stdout, sys.stdout = sys.stdout, StringIO("_")
+    try:
+        cmd = "--plot {0} {1}".format(parfile, output_timfile)
+        zima.main(cmd.split())
+        lines = sys.stdout.getvalue()
+    finally:
+        sys.stdout = saved_stdout
