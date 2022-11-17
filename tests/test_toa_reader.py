@@ -82,7 +82,7 @@ class TestTOAReader(unittest.TestCase):
             toa._parse_TOA_line(toaline)
 
     def test_commands(self):
-        assert len(self.x.commands) == 18
+        assert len(self.x.commands) == 19
 
     def test_count(self):
         assert self.x.ntoas == 9
