@@ -5,6 +5,7 @@ import multiprocessing
 import subprocess
 
 import numpy as np
+
 from loguru import logger as log
 
 try:
@@ -25,11 +26,9 @@ def hostinfo():
 
 
 def set_log(logger_):
-    print("Initializing...")
+    print(f"Initializing... with {logger_}")
     global log
-    global testglobal
     log = logger_
-    testglobal = 2
 
 
 class WrappedFitter:
@@ -57,7 +56,7 @@ class WrappedFitter:
         parvalues : list
             List of parameter values to grid over (each should be 1D array of astropy.units.Quantity)
         extraparnames : list, optional
-            Names of other parameters to return
+            Names of other parameters to 1return
 
         Returns
         -------
@@ -67,7 +66,7 @@ class WrappedFitter:
         # Make a full copy of the fitter to work with
         myftr = copy.deepcopy(self.ftr)
         parstrings = []
-        print(f"{'testglobal' in globals()}")
+        print(f"log = {log}")
         for parname, parvalue in zip(parnames, parvalues):
             # Freeze the  params we are going to grid over and set their values
             # All other unfrozen parameters will be fitted for at each grid point

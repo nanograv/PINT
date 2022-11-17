@@ -31,6 +31,7 @@ from astropy.coordinates import (
     CartesianRepresentation,
     EarthLocation,
 )
+
 from loguru import logger as log
 
 import pint
@@ -2275,9 +2276,7 @@ class TOAs:
         # Record the choice of ephemeris and planets
         self.ephem = ephem
         self.planets = planets
-        print(
-            f"Current log is {str(log)} {'log' in globals()} {'testglobal' in globals()}"
-        )
+        print(f"Current log is {str(log)} log")
         if planets:
             log.debug(
                 "Computing PosVels of observatories, Earth and planets, using {}".format(

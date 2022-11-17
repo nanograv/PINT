@@ -240,7 +240,6 @@ def setup(
     colors={"DEBUG": debug_color},
     capturewarnings=True,
     removeprior=True,
-    enqueue=True,
 ):
     """
     Setup the PINT logging using ``loguru``
@@ -266,8 +265,6 @@ def setup(
         Whether or not messages emitted by :func:`warnings.warn` should be included in the logging output
     removeprior : bool, optional
         Whether or not to remove prior loggers
-    enqueue : bool, optional
-        Make the logging multi-process safe
 
     Returns
     -------
@@ -311,7 +308,7 @@ def setup(
         filter=filter,
         format=format,
         colorize=usecolors,
-        enqueue=enqueue,
+        enqueue=True,
     )
     # change default colors
     for level in colors:
