@@ -11,7 +11,6 @@ from pint.utils import interesting_lines, lines_of
 
 __all__ = ["OBL", "PulsarEcliptic"]
 
-astropy_version = sys.modules["astropy"].__version__
 
 # Load obliquity data
 # Assume the data file is in the ./datafile directory
