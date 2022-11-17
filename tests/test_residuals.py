@@ -233,6 +233,14 @@ def test_residuals_badpn(wideband_fake):
     assert r.toa.track_mode == "nearest"
 
 
+@pytest.mark.parametrize("calctype", ["modelF0", "numerical", "taylor"])
+def test_residuals_get_PSR_freq(wideband_fake, calctype):
+    toas, model = wideband_fake
+    r = WidebandTOAResiduals(toas, model)
+
+    assert np.all(np.isfinite([r.toa.get_PSR_freq(calctype=calctype)]))
+
+
 # @pytest.mark.xfail()
 # @pytest.mark.parametrize(
 #    "full_cov", [pytest.param(True, marks=pytest.mark.xfail), False]
