@@ -126,7 +126,7 @@ The virtualenv mechanism uses environment variables to create an isolated
 python environment into which you can install and upgrade packages without
 affecting or being affected by anything in any other environment. Unfortunately
 it is possible to defeat this by setting the ``PYTHONPATH`` environment
-vairable. Double unfortunately, setting the ``PYTHONPATH`` environment used to
+variable. Double unfortunately, setting the ``PYTHONPATH`` environment used to
 be the Right Way to use python things that weren't part of your operating
 system. So many of us have ``PYTHONPATH`` set in our shells. You can check this::
 

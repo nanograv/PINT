@@ -134,7 +134,7 @@ Before you submit a pull request, check that it meets these guidelines:
 1. Try to write clear :ref:`pythonic` code, follow our :ref:`CodingStyle`, and think
    about how others might use your new code.
 2. The pull request should include tests that cover both the expected
-   behaviour and sensible error reporting when given bad input.
+   behavior and sensible error reporting when given bad input.
 3. If the pull request adds or changes functionality, the docs should
    be updated. Put your new functionality into a function with a
    docstring. Check the HTML documentation produced by ``make docs``
