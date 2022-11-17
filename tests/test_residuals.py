@@ -225,6 +225,9 @@ def test_residuals_wideband_chi2(wideband_fake):
     assert_allclose(f.fit_toas(), r.chi2)
     assert f.fit_toas() >= rn.chi2
 
+    assert np.all(np.isfinite(list(r.rms_weighted().values())))
+    assert np.all(np.isfinite(list(r._combined_data_error)))
+
 
 def test_residuals_badpn(wideband_fake):
     toas, model = wideband_fake
@@ -350,3 +353,31 @@ def test_wideband_chi2_updating(wideband_fake):
     assert 1e-3 > abs(WidebandTOAResiduals(toas, f2.model).chi2 - ftc2) > 1e-5
     ftc2 = f2.fit_toas(maxiter=10)
     assert_allclose(WidebandTOAResiduals(toas, f2.model).chi2, ftc2)
+
+
+def test_ecorr_average():
+    model = get_model(
+        StringIO(
+            """
+            PSRJ J1234+5678
+            ELAT 0 1
+            ELONG 0 1
+            DM 10
+            F0 1 1
+            PEPOCH 58000
+            TNRedAmp -14.227505410948254
+            TNRedGam 4.91353
+            TNRedC 45
+            ECORR TEL gbt 1e-9
+            """
+        )
+    )
+    toas = make_fake_toas_uniform(57000, 59000, 40, model=model, error=1 * u.us)
+    np.random.seed(0)
+    toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
+    f = GLSFitter(toas, model)
+    initial_chi2 = Residuals(toas, model).calc_chi2()
+    fit_chi2 = f.fit_toas()
+    assert fit_chi2 <= initial_chi2
+    assert f.resids.calc_chi2() <= initial_chi2
+    assert initial_chi2 == Residuals(toas, model).calc_chi2()
