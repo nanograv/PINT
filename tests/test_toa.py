@@ -67,6 +67,10 @@ class TestTOA(unittest.TestCase):
         assert "foo1" in str(toa)
         assert "bla" in toa.as_line(name="bla")
 
+        # Missing name
+        with self.assertRaises(ValueError):
+            toa.as_line()
+
         toa = TOA(MJD=toatime, error=toaerr, freq=freq, obs=obs, foo="foo1", name="bla")
         assert "bla" in toa.as_line()
 
