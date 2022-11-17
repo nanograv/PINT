@@ -771,7 +771,7 @@ def read_toa_file(filename, process_includes=True, cdict=None, dir=None):
                 cdict[cmd] = float(d["Command"][1]) * u.MHz
             elif cmd in ("EFAC", "PHA1", "PHA2"):
                 cdict[cmd] = float(d["Command"][1])
-                if cmd in ("PHA1", "PHA2", "TIME", "PHASE"):
+                if cmd in ("PHA1", "PHA2"):
                     d[cmd] = d["Command"][1]
             elif cmd == "INFO":
                 cdict[cmd] = d["Command"][1]
