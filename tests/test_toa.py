@@ -63,9 +63,18 @@ class TestTOA(unittest.TestCase):
                 MJD=toatime, error=toaerr, freq=freq, obs=obs, flags={"-foo": "foo1"}
             )
 
+        # Invalid flag
+        with self.assertRaises(ValueError):
+            toa = TOA(
+                MJD=toatime, error=toaerr, freq=freq, obs=obs, flags={"$": "foo1"}
+            )
+        with self.assertRaises(ValueError):
+            toa = TOA(MJD=toatime, error=toaerr, freq=freq, obs=obs, flags={"foo": 1})
+
         toa = TOA(MJD=toatime, error=toaerr, freq=freq, obs=obs, foo="foo1")
         assert "foo1" in str(toa)
         assert "bla" in toa.as_line(name="bla")
+        assert len(toa.flags) > 0
 
         # Missing name
         with self.assertRaises(ValueError):
