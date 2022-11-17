@@ -95,6 +95,10 @@ class TestResidualBuilding:
         )
         assert np.all(dm_res.resids - dm_res.resids.mean() == dm_res_noweight.resids)
 
+    def test_build_invalid_residual_type(self):
+        with pytest.raises(ValueError):
+            bad_res = Residuals(toas=self.toa, model=self.model, residual_type="foo")
+
     def test_combined_residuals(self):
         phase_res = Residuals(toas=self.toa, model=self.model)
         dm_res = Residuals(toas=self.toa, model=self.model, residual_type="dm")
