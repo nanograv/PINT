@@ -42,6 +42,10 @@ def test_kepler_2d_circ():
     assert np.all(np.isfinite(xyv))
     assert np.all(np.isfinite(partials))
 
+    xyv, partials = kepler.kepler_2d(p, 0)
+    assert np.all(np.isfinite(xyv))
+    assert np.all(np.isfinite(partials))
+
 
 def flatten_namedtuple(f, tupletype):
     l = len(tupletype._fields)
