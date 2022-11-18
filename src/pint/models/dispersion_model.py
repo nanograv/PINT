@@ -5,6 +5,8 @@ import numpy as np
 import astropy.units as u
 from astropy.table import Table
 from astropy.time import Time
+from loguru import logger as log
+
 from pint.models.parameter import (
     MJDParameter,
     floatParameter,
@@ -424,6 +426,119 @@ class DispersionDMX(Dispersion):
         self.setup()
         self.validate()
         return index
+
+    def add_DMX_ranges(self, mjd_starts, mjd_ends, indices=None, dmxs=0, frozens=True):
+        """Add DMX ranges to a dispersion model with specified start/end MJDs and DMXs.
+
+        Parameters
+        ----------
+
+        mjd_starts : iterable of float or astropy.quantity.Quantity or astropy.time.Time
+            MJD for beginning of DMX event.
+        mjd_end : iterable of float or astropy.quantity.Quantity or astropy.time.Time
+            MJD for end of DMX event.
+        indices : iterable of int, None
+            Integer label for DMX event. If None, will increment largest used index by 1.
+        dmxs : iterable of float or astropy.quantity.Quantity, or float or astropy.quantity.Quantity
+            Change in DM during DMX event.
+        frozens : iterable of bool or bool
+            Indicates whether DMX will be fit.
+
+        Returns
+        -------
+
+        indices : list
+            Indices that has been assigned to new DMX events
+
+        """
+        if len(mjd_starts) != len(mjd_ends):
+            raise ValueError(
+                f"Number of mjd_start values {len(mjd_starts)} must match number of mjd_end values {len(mjd_ends)}"
+            )
+        if indices is None:
+            indices = [None] * len(mjd_starts)
+        dmxs = np.atleast_1d(dmxs)
+        if len(dmxs) == 1:
+            dmxs = np.repeat(dmxs, len(mjd_starts))
+        if len(dmxs) != len(mjd_starts):
+            raise ValueError(
+                f"Number of mjd_start values {len(mjd_starts)} must match number of dmx values {len(dmxs)}"
+            )
+        frozens = np.atleast_1d(frozens)
+        if len(frozens) == 1:
+            frozens = np.repeat(frozens, len(mjd_starts))
+        if len(frozens) != len(mjd_starts):
+            raise ValueError(
+                f"Number of mjd_start values {len(mjd_starts)} must match number of frozen values {len(frozens)}"
+            )
+
+        #### Setting up the DMX title convention. If index is None, want to increment the current max DMX index by 1.
+        dct = self.get_prefix_mapping_component("DMX_")
+        last_index = np.max(list(dct.keys()))
+        added_indices = []
+        for mjd_start, mjd_end, index, dmx, frozen in zip(
+            mjd_starts, mjd_ends, indices, dmxs, frozens
+        ):
+            if index is None:
+                index = last_index + 1
+                last_index += 1
+            added_indices.append(index)
+            i = f"{int(index):04d}"
+
+            if mjd_end is not None and mjd_start is not None:
+                if mjd_end < mjd_start:
+                    raise ValueError("Starting MJD is greater than ending MJD.")
+            elif mjd_start != mjd_end:
+                raise ValueError("Only one MJD bound is set.")
+            if int(index) in dct:
+                raise ValueError(
+                    "Index '%s' is already in use in this model. Please choose another."
+                    % index
+                )
+            if isinstance(dmx, u.quantity.Quantity):
+                dmx = dmx.to_value(u.pc / u.cm**3)
+            if isinstance(mjd_start, Time):
+                mjd_start = mjd_start.mjd
+            elif isinstance(mjd_start, u.quantity.Quantity):
+                mjd_start = mjd_start.value
+            if isinstance(mjd_end, Time):
+                mjd_end = mjd_end.mjd
+            elif isinstance(mjd_end, u.quantity.Quantity):
+                mjd_end = mjd_end.value
+            log.trace(f"Adding DMX_{i} from MJD {mjd_start} to MJD {mjd_end}")
+            self.add_param(
+                prefixParameter(
+                    name="DMX_" + i,
+                    units="pc cm^-3",
+                    value=dmx,
+                    description="Dispersion measure variation",
+                    parameter_type="float",
+                    frozen=frozen,
+                )
+            )
+            self.add_param(
+                prefixParameter(
+                    name="DMXR1_" + i,
+                    units="MJD",
+                    description="Beginning of DMX interval",
+                    parameter_type="MJD",
+                    time_scale="utc",
+                    value=mjd_start,
+                )
+            )
+            self.add_param(
+                prefixParameter(
+                    name="DMXR2_" + i,
+                    units="MJD",
+                    description="End of DMX interval",
+                    parameter_type="MJD",
+                    time_scale="utc",
+                    value=mjd_end,
+                )
+            )
+        self.setup()
+        self.validate()
+        return added_indices
 
     def remove_DMX_range(self, index):
         """Removes all DMX parameters associated with a given index/list of indices.

@@ -18,6 +18,8 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added a pintk helper function to delete jumped TOAs/remove existing jumps. Fixed indexing issue for single clicks.
 - Added PLDMNoise component which allows modeling of stochastic DM variations as red noise with a power law spectrum
 - Added Bayesian interface (Timing model and white noise only)
+- Can add multiple DMX values at once
+- Can add overlapping DMX ranges
 ### Fixed
 - global clock files now emit a warning instead of an exception if expired and the download fails
 - dmxparse outputs to dmxparse.out if save=True
