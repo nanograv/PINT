@@ -1,6 +1,7 @@
 import logging
 import os
 import unittest
+import io
 
 import astropy.units as u
 import numpy as np
@@ -8,6 +9,8 @@ import numpy as np
 import pint.toa as toa
 from pint import residuals
 from pint.models import model_builder as mb
+from pint.models import get_model
+import pint.simulation
 from pinttestdata import datadir
 
 
@@ -56,6 +59,34 @@ class TestDMX(unittest.TestCase):
                 % ("d_delay_d_" + p, np.nanmax(relative_diff).value)
             )
             assert np.nanmax(relative_diff) < tol, msg
+
+
+def test_dmx_overlap():
+    par = """
+    PSR J1234+5678
+    F0 1
+    DM 10
+    ELAT 10
+    ELONG 0
+    PEPOCH 54000
+    DMXR1_0001 54000
+    DMXR2_0001 55000
+    DMX_0001 1
+    DMXR1_0002 55000
+    DMXR2_0002 56000
+    DMX_0002 2
+    """
+
+    model = get_model(io.StringIO(par))
+    toas = pint.simulation.make_fake_toas_uniform(
+        54000, 56000, 100, model=model, obs="gbt"
+    )
+    dmx = model.components["DispersionDMX"].dmx_dm(toas)
+
+    # add in new overlapping DMX
+    model.add_DMX_range(54500, 55000, dmx=0, frozen=True)
+    newdmx = model.components["DispersionDMX"].dmx_dm(toas)
+    assert np.all(dmx == newdmx)
 
 
 if __name__ == "__main__":

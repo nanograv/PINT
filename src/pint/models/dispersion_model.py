@@ -531,7 +531,7 @@ class DispersionDMX(Dispersion):
         # Get DMX delays
         dm = np.zeros(len(tbl)) * self._parent.DM.units
         for k, v in select_idx.items():
-            dm[v] = getattr(self, k).quantity
+            dm[v] += getattr(self, k).quantity
         return dm
 
     def DMX_dispersion_delay(self, toas, acc_delay=None):
