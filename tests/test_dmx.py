@@ -89,5 +89,39 @@ def test_dmx_overlap():
     assert np.all(dmx == newdmx)
 
 
+def test_multiple_dmxs():
+    par = """
+    PSR J1234+5678
+    F0 1
+    DM 10
+    ELAT 10
+    ELONG 0
+    PEPOCH 54000
+    DMXR1_0001 54000
+    DMXR2_0001 54500
+    DMX_0001 1
+    """
+    dmxpar = """
+    DMXR1_0002 54500
+    DMXR2_0002 55000
+    DMX_0002 2
+    DMXR1_0003 55500
+    DMXR2_0003 56000
+    DMX_0003 3
+    """
+
+    model = get_model(io.StringIO(par))
+    toas = pint.simulation.make_fake_toas_uniform(
+        54000, 56000, 100, model=model, obs="gbt"
+    )
+    dmxmodel = get_model(io.StringIO(par + dmxpar))
+    indices = model.add_DMX_ranges([54500, 55500], [55000, 56000], dmxs=[2, 3])
+    assert np.all(np.array(indices) == np.array([2, 3]))
+    assert np.all(
+        model.components["DispersionDMX"].dmx_dm(toas)
+        == dmxmodel.components["DispersionDMX"].dmx_dm(toas)
+    )
+
+
 if __name__ == "__main__":
     pass
