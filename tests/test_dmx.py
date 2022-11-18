@@ -2,6 +2,7 @@ import logging
 import os
 import unittest
 import io
+import pytest
 
 import astropy.units as u
 import numpy as np
@@ -121,6 +122,118 @@ def test_multiple_dmxs():
         model.components["DispersionDMX"].dmx_dm(toas)
         == dmxmodel.components["DispersionDMX"].dmx_dm(toas)
     )
+
+
+def test_multiple_dmxs_broadcast_frozens():
+    par = """
+    PSR J1234+5678
+    F0 1
+    DM 10
+    ELAT 10
+    ELONG 0
+    PEPOCH 54000
+    DMXR1_0001 54000
+    DMXR2_0001 54500
+    DMX_0001 1
+    """
+
+    model = get_model(io.StringIO(par))
+    indices = model.add_DMX_ranges([54500, 55500], [55000, 56000], frozens=False)
+    for index in indices:
+        assert getattr(model, f"DMX_{index:04d}").frozen == False
+
+
+def test_multiple_dmxs_broadcast_dmxs():
+    par = """
+    PSR J1234+5678
+    F0 1
+    DM 10
+    ELAT 10
+    ELONG 0
+    PEPOCH 54000
+    DMXR1_0001 54000
+    DMXR2_0001 54500
+    DMX_0001 1
+    """
+
+    model = get_model(io.StringIO(par))
+    indices = model.add_DMX_ranges([54500, 55500], [55000, 56000], dmxs=2)
+    for index in indices:
+        assert getattr(model, f"DMX_{index:04d}").value == 2
+
+
+def test_multiple_dmxs_wrong_ends():
+    par = """
+    PSR J1234+5678
+    F0 1
+    DM 10
+    ELAT 10
+    ELONG 0
+    PEPOCH 54000
+    DMXR1_0001 54000
+    DMXR2_0001 54500
+    DMX_0001 1
+    """
+
+    model = get_model(io.StringIO(par))
+    with pytest.raises(ValueError):
+        indices = model.add_DMX_ranges([54500, 55500], [55000], dmxs=[2, 3])
+
+
+def test_multiple_dmxs_wrong_starts():
+    par = """
+    PSR J1234+5678
+    F0 1
+    DM 10
+    ELAT 10
+    ELONG 0
+    PEPOCH 54000
+    DMXR1_0001 54000
+    DMXR2_0001 54500
+    DMX_0001 1
+    """
+
+    model = get_model(io.StringIO(par))
+    with pytest.raises(ValueError):
+        indices = model.add_DMX_ranges([54500], [55000, 56000], dmxs=[2, 3])
+
+
+def test_multiple_dmxs_wrong_dmxs():
+    par = """
+    PSR J1234+5678
+    F0 1
+    DM 10
+    ELAT 10
+    ELONG 0
+    PEPOCH 54000
+    DMXR1_0001 54000
+    DMXR2_0001 54500
+    DMX_0001 1
+    """
+
+    model = get_model(io.StringIO(par))
+    with pytest.raises(ValueError):
+        indices = model.add_DMX_ranges([54500, 55500], [55000, 56000], dmxs=[2, 3, 4])
+
+
+def test_multiple_dmxs_wrong_frozens():
+    par = """
+    PSR J1234+5678
+    F0 1
+    DM 10
+    ELAT 10
+    ELONG 0
+    PEPOCH 54000
+    DMXR1_0001 54000
+    DMXR2_0001 54500
+    DMX_0001 1
+    """
+
+    model = get_model(io.StringIO(par))
+    with pytest.raises(ValueError):
+        indices = model.add_DMX_ranges(
+            [54500, 55500], [55000, 56000], frozens=[True, False, False]
+        )
 
 
 if __name__ == "__main__":
