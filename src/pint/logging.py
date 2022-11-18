@@ -173,11 +173,12 @@ class LogFilter:
             r"Adding columns .*": False,
             r"Applying TT\(\S+\) to TT\(\S+\) clock correction \(\~27 us\)": False,
             r"No pulse number flags found in the TOAs": False,
-            r"SSB obs pos \[\S+ \S+ \S+\] m": False,
+            r"SSB obs pos \[\S+\s+\S+\s+\S+\] m": False,
             r"Column \S+ already exists. Removing...": False,
             r"Skipping Shapiro delay for Barycentric TOAs": False,
             r"Special observatory location. No clock corrections applied.": False,
             r"DDK model uses KIN as inclination angle. SINI will not be used. This happens every time a DDK model is constructed.": False,
+            r"Glitch phase for glitch (\S+):": False,
         }
         # add in any more defined on init
         if onlyonce is not None:
@@ -214,15 +215,19 @@ class LogFilter:
             if re.search(m, record["message"]):
                 return False
         # display all warnings and above
-        if record["level"].no < log.level(self.onlyonce_level).no:
+        if record["level"].no > log.level(self.onlyonce_level).no:
             return True
         for m in self.onlyonce:
             if re.match(m, record["message"]):
+                # save not the whole message, but only the portion that matches the regex
+                # this allows filtering on things like glitch number
+                match = re.match(m, record["message"])
+                message_to_save = record["message"][: match.span()[1]]
                 if not self.onlyonce[m]:
-                    self.onlyonce[m] = [record["message"]]
+                    self.onlyonce[m] = [message_to_save]
                     return True
-                elif not (record["message"] in self.onlyonce[m]):
-                    self.onlyonce[m].append(record["message"])
+                elif not (message_to_save in self.onlyonce[m]):
+                    self.onlyonce[m].append(message_to_save)
                     return True
                 return False
         return True
