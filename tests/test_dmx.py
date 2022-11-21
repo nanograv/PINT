@@ -15,6 +15,27 @@ import pint.simulation
 from pinttestdata import datadir
 
 
+par = """
+PSR J1234+5678
+F0 1
+DM 10
+ELAT 10
+ELONG 0
+PEPOCH 54000
+DMXR1_0001 54000
+DMXR2_0001 54500
+DMX_0001 1
+"""
+dmxpar = """
+DMXR1_0002 54500
+DMXR2_0002 55000
+DMX_0002 2
+DMXR1_0003 55500
+DMXR2_0003 56000
+DMX_0003 3
+"""
+
+
 class TestDMX(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -63,21 +84,6 @@ class TestDMX(unittest.TestCase):
 
 
 def test_dmx_overlap():
-    par = """
-    PSR J1234+5678
-    F0 1
-    DM 10
-    ELAT 10
-    ELONG 0
-    PEPOCH 54000
-    DMXR1_0001 54000
-    DMXR2_0001 55000
-    DMX_0001 1
-    DMXR1_0002 55000
-    DMXR2_0002 56000
-    DMX_0002 2
-    """
-
     model = get_model(io.StringIO(par))
     toas = pint.simulation.make_fake_toas_uniform(
         54000, 56000, 100, model=model, obs="gbt"
@@ -91,26 +97,6 @@ def test_dmx_overlap():
 
 
 def test_multiple_dmxs():
-    par = """
-    PSR J1234+5678
-    F0 1
-    DM 10
-    ELAT 10
-    ELONG 0
-    PEPOCH 54000
-    DMXR1_0001 54000
-    DMXR2_0001 54500
-    DMX_0001 1
-    """
-    dmxpar = """
-    DMXR1_0002 54500
-    DMXR2_0002 55000
-    DMX_0002 2
-    DMXR1_0003 55500
-    DMXR2_0003 56000
-    DMX_0003 3
-    """
-
     model = get_model(io.StringIO(par))
     toas = pint.simulation.make_fake_toas_uniform(
         54000, 56000, 100, model=model, obs="gbt"
@@ -125,18 +111,6 @@ def test_multiple_dmxs():
 
 
 def test_multiple_dmxs_broadcast_frozens():
-    par = """
-    PSR J1234+5678
-    F0 1
-    DM 10
-    ELAT 10
-    ELONG 0
-    PEPOCH 54000
-    DMXR1_0001 54000
-    DMXR2_0001 54500
-    DMX_0001 1
-    """
-
     model = get_model(io.StringIO(par))
     indices = model.add_DMX_ranges([54500, 55500], [55000, 56000], frozens=False)
     for index in indices:
@@ -144,18 +118,6 @@ def test_multiple_dmxs_broadcast_frozens():
 
 
 def test_multiple_dmxs_broadcast_dmxs():
-    par = """
-    PSR J1234+5678
-    F0 1
-    DM 10
-    ELAT 10
-    ELONG 0
-    PEPOCH 54000
-    DMXR1_0001 54000
-    DMXR2_0001 54500
-    DMX_0001 1
-    """
-
     model = get_model(io.StringIO(par))
     indices = model.add_DMX_ranges([54500, 55500], [55000, 56000], dmxs=2)
     for index in indices:
@@ -163,72 +125,24 @@ def test_multiple_dmxs_broadcast_dmxs():
 
 
 def test_multiple_dmxs_wrong_ends():
-    par = """
-    PSR J1234+5678
-    F0 1
-    DM 10
-    ELAT 10
-    ELONG 0
-    PEPOCH 54000
-    DMXR1_0001 54000
-    DMXR2_0001 54500
-    DMX_0001 1
-    """
-
     model = get_model(io.StringIO(par))
     with pytest.raises(ValueError):
         indices = model.add_DMX_ranges([54500, 55500], [55000], dmxs=[2, 3])
 
 
 def test_multiple_dmxs_wrong_starts():
-    par = """
-    PSR J1234+5678
-    F0 1
-    DM 10
-    ELAT 10
-    ELONG 0
-    PEPOCH 54000
-    DMXR1_0001 54000
-    DMXR2_0001 54500
-    DMX_0001 1
-    """
-
     model = get_model(io.StringIO(par))
     with pytest.raises(ValueError):
         indices = model.add_DMX_ranges([54500], [55000, 56000], dmxs=[2, 3])
 
 
 def test_multiple_dmxs_wrong_dmxs():
-    par = """
-    PSR J1234+5678
-    F0 1
-    DM 10
-    ELAT 10
-    ELONG 0
-    PEPOCH 54000
-    DMXR1_0001 54000
-    DMXR2_0001 54500
-    DMX_0001 1
-    """
-
     model = get_model(io.StringIO(par))
     with pytest.raises(ValueError):
         indices = model.add_DMX_ranges([54500, 55500], [55000, 56000], dmxs=[2, 3, 4])
 
 
 def test_multiple_dmxs_wrong_frozens():
-    par = """
-    PSR J1234+5678
-    F0 1
-    DM 10
-    ELAT 10
-    ELONG 0
-    PEPOCH 54000
-    DMXR1_0001 54000
-    DMXR2_0001 54500
-    DMX_0001 1
-    """
-
     model = get_model(io.StringIO(par))
     with pytest.raises(ValueError):
         indices = model.add_DMX_ranges(
