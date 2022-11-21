@@ -482,6 +482,10 @@ class DispersionDMX(Dispersion):
             if index is None:
                 index = last_index + 1
                 last_index += 1
+            elif index in list(dct.keys()):
+                raise ValueError(
+                    f"Attempting to insert DMX_{index:04d} but it already exists"
+                )
             added_indices.append(index)
             i = f"{int(index):04d}"
 
@@ -610,6 +614,30 @@ class DispersionDMX(Dispersion):
                 "match DMXR2_ parameters. "
                 "Please check your prefixed parameters."
             )
+        r1 = np.zeros(len(DMX_mapping))
+        r2 = np.zeros(len(DMX_mapping))
+        indices = np.zeros(len(DMX_mapping), dtype=np.int32)
+        for j, index in enumerate(DMX_mapping):
+            if (
+                getattr(self, f"DMXR1_{index:04d}").quantity is not None
+                and getattr(self, f"DMXR2_{index:04d}").quantity is not None
+            ):
+                r1[j] = getattr(self, f"DMXR1_{index:04d}").quantity.mjd
+                r2[j] = getattr(self, f"DMXR2_{index:04d}").quantity.mjd
+                indices[j] = index
+        for j, index in enumerate(DMXR1_mapping):
+            if np.any((r1[j] > r1) & (r1[j] < r2)):
+                k = np.where((r1[j] > r1) & (r1[j] < r2))[0]
+                for kk in k.flatten():
+                    log.debug(
+                        f"Start of DMX_{index:04d} ({r1[j]}-{r2[j]}) overlaps with DMX_{indices[kk]:04d} ({r1[kk]}-{r2[kk]})"
+                    )
+            if np.any((r2[j] > r1) & (r2[j] < r2)):
+                k = np.where((r2[j] > r1) & (r2[j] < r2))[0]
+                for kk in k.flatten():
+                    log.debug(
+                        f"End of DMX_{index:04d} ({r1[j]}-{r2[j]}) overlaps with DMX_{indices[kk]:04d} ({r1[kk]}-{r2[kk]})"
+                    )
 
     def validate_toas(self, toas):
         DMX_mapping = self.get_prefix_mapping_component("DMX_")
