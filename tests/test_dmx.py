@@ -150,5 +150,17 @@ def test_multiple_dmxs_wrong_frozens():
         )
 
 
+def test_multiple_dmxs_explicit_indices():
+    model = get_model(io.StringIO(par))
+    indices = model.add_DMX_ranges([54500, 55500], [55000, 56000], indices=[2, 3])
+    assert np.all(np.array(indices) == np.array([2, 3]))
+
+
+def test_multiple_dmxs_explicit_indices_duplicate():
+    model = get_model(io.StringIO(par))
+    with pytest.raises(ValueError):
+        indices = model.add_DMX_ranges([54500, 55500], [55000, 56000], indices=[1, 3])
+
+
 if __name__ == "__main__":
     pass
