@@ -7,6 +7,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## Unreleased
 ### Changed
 - Minimum supported versions updated to numpy 1.18.5, matplotlib 3.2.0
+- `introduces_correlated_errors` is now a class attribute of `NoiseComponent`s
 ### Added
 - Can ignore pulse_number column on TOA read or write (to help merging)
 - Can add in missing columns when merging unless told not to
@@ -20,6 +21,9 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added Bayesian interface (Timing model and white noise only)
 - Can add multiple DMX values at once
 - Can add overlapping DMX ranges
+- New tests to improve test coverage
+- Documentation: Instructions to checkout development branch
+- Clock file for effix
 ### Fixed
 - global clock files now emit a warning instead of an exception if expired and the download fails
 - dmxparse outputs to dmxparse.out if save=True
@@ -28,6 +32,12 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Fixed bug in combining design matrices
 - Fixed bug in dmxparse
 - Fixed bug in photonphase with polycos
+- Made clock file loading log entries a little friendlier
+- Typo fixes in documentation
+### Removed
+- Removed obsolete `ltinterface` module
+- Removed old and WIP functions from `gridutils` module
+
 
 ## [0.9.1] 2022-08-12
 ### Changed
