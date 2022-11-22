@@ -65,7 +65,7 @@ class LCTemplate:
         if not hasattr(self, "ncache"):
             self.ncache = 1000
         if not hasattr(self, "ph_edges"):
-            self.ph_edges = np.linspace(0,1,self.ncache+1)
+            self.ph_edges = np.linspace(0, 1, self.ncache + 1)
         if not hasattr(self, "en_cens"):
             self.en_cens = None
         if not hasattr(self, "en_edges"):
