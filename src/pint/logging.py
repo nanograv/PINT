@@ -222,7 +222,7 @@ class LogFilter:
                 # save not the whole message, but only the portion that matches the regex
                 # this allows filtering on things like glitch number
                 match = re.match(m, record["message"])
-                message_to_save = record["message"][: match.span()[1]]
+                message_to_save = record["message"][slice(*match.span())]
                 if not self.onlyonce[m]:
                     self.onlyonce[m] = [message_to_save]
                     return True
