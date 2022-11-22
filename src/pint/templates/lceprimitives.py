@@ -227,6 +227,12 @@ class LCESkewGaussian(LCEWrappedFunction, LCSkewGaussian):
         self.name = "SkewGaussianE"
         self.shortname = "GSE"
 
+    def _einit(self):
+        super()._einit()
+        # broaden boundaries
+        self.slope_bounds[1] = [-10,10]
+        # need to allow loc to move more to offset the mode
+        self.slope_bounds[2] = [-0.3,0.3]
 
 class LCELorentzian(LCEWrappedFunction, LCLorentzian):
     """Represent a (wrapped) Lorentzian peak.
