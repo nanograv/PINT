@@ -559,17 +559,13 @@ class DispersionDMX(Dispersion):
             Number or list/array of numbers corresponding to DMX indices to be removed from model.
         """
 
-        if (
-            isinstance(index, int)
-            or isinstance(index, float)
-            or isinstance(index, np.int64)
-        ):
+        if isinstance(index, (int, float, np.int64)):
             indices = [index]
-        elif isinstance(index, (list, np.ndarray)):
+        elif isinstance(index, (list, set, np.ndarray)):
             indices = index
         else:
             raise TypeError(
-                f"index must be a float, int, list, or array - not {type(index)}"
+                f"index must be a float, int, set, list, or array - not {type(index)}"
             )
         for index in indices:
             index_rf = f"{int(index):04d}"
@@ -585,10 +581,7 @@ class DispersionDMX(Dispersion):
         inds : np.ndarray
         Array of DMX indices in model.
         """
-        inds = []
-        for p in self.params:
-            if "DMX_" in p:
-                inds.append(int(p.split("_")[-1]))
+        inds = [int(p.split("_")[-1]) for p in self.params if "DMX_" in p]
         return np.array(inds)
 
     def setup(self):

@@ -866,8 +866,7 @@ def dmxselections(model, toas):
         r1 = getattr(model, DMXR1_mapping[ii]).quantity
         r2 = getattr(model, DMXR2_mapping[ii]).quantity
         condition[DMX_mapping[ii]] = (r1.mjd, r2.mjd)
-    select_idx = toas_selector.get_select_index(condition, toas["mjd_float"])
-    return select_idx
+    return toas_selector.get_select_index(condition, toas["mjd_float"])
 
 
 def dmxstats(model, toas, file=sys.stdout):
@@ -1151,6 +1150,49 @@ def find_prefix_bytime(model, prefixname, t):
     if len(matches) == 1:
         matches = int(matches)
     return indices[matches]
+
+
+def merge_dmx(model, index1, index2, value="mean", frozen=True):
+    """Merge two DMX bins
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+    index1: int
+    index2 : int
+    value : str, optional
+        One of "first", "second", "mean".  Determines value of new bin
+    frozen : bool, optional
+
+    Returns
+    -------
+    int
+        New DMX index
+    """
+    assert value.lower() in ["first", "second", "mean"]
+    tstart1, tend1 = get_prefix_timerange(model, f"DMX_{index1:04d}")
+    tstart2, tend2 = get_prefix_timerange(model, f"DMX_{index2:04d}")
+    tstart = min([tstart1, tstart2])
+    tend = max([tend1, tend2])
+    intervening_indices = find_prefix_bytime(model, "DMX", (tstart.mjd + tend.mjd) / 2)
+    if len(np.setdiff1d(intervening_indices, [index1, index2])) > 0:
+        for k in np.setdiff1d(intervening_indices, [index1, index2]):
+            log.warning(
+                f"Attempting to merge DMX_{index1:04d} and DMX_{index2:04d}, but DMX_{k:04d} is in between"
+            )
+    if value.lower() == "first":
+        dmx = getattr(model, f"DMX_{index1:04d}").quantity
+    elif value.lower == "second":
+        dmx = getattr(model, f"DMX_{index2:04d}").quantity
+    elif value.lower() == "mean":
+        dmx = (
+            getattr(model, f"DMX_{index1:04d}").quantity
+            + getattr(model, f"DMX_{index2:04d}").quantity
+        ) / 2
+    # add the new one before we delete previous ones to make sure we have >=1 present
+    newindex = model.add_DMX_range(tstart, tend, dmx=dmx, frozen=frozen)
+    model.remove_DMX_range([index1, index2])
+    return newindex
 
 
 def split_dmx(model, time):
