@@ -629,13 +629,13 @@ class DispersionDMX(Dispersion):
             if np.any((r1[j] > r1) & (r1[j] < r2)):
                 k = np.where((r1[j] > r1) & (r1[j] < r2))[0]
                 for kk in k.flatten():
-                    log.debug(
+                    log.warning(
                         f"Start of DMX_{index:04d} ({r1[j]}-{r2[j]}) overlaps with DMX_{indices[kk]:04d} ({r1[kk]}-{r2[kk]})"
                     )
             if np.any((r2[j] > r1) & (r2[j] < r2)):
                 k = np.where((r2[j] > r1) & (r2[j] < r2))[0]
                 for kk in k.flatten():
-                    log.debug(
+                    log.warning(
                         f"End of DMX_{index:04d} ({r1[j]}-{r2[j]}) overlaps with DMX_{indices[kk]:04d} ({r1[kk]}-{r2[kk]})"
                     )
 
