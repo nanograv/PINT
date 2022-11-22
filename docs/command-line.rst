@@ -25,7 +25,7 @@ pintk
 pintbary
 --------
 
-``pintbary`` does quick barycentering calculations, convering an
+``pintbary`` does quick barycentering calculations, converting an
 MJD(UTC) on the command line to TDB with barycentric delays applied. The
 position used for barycentering can be read from a par file or from the
 command line
