@@ -7,15 +7,21 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## Unreleased
 ### Changed
 - Minimum supported versions updated to numpy 1.18.5, matplotlib 3.2.0
+- `introduces_correlated_errors` is now a class attribute of `NoiseComponent`s
 ### Added
 - Can ignore pulse_number column on TOA read or write (to help merging)
 - Can add in missing columns when merging unless told not to
 - Can initialize observatories with lat/lon/altitude
 - Can output observatories as JSON
 - Can extract single TOAs as length=1 table
+- SWM=1 models can be used
+- SWX models to fit the solar wind over various intervals
 - Added a pintk helper function to delete jumped TOAs/remove existing jumps. Fixed indexing issue for single clicks.
 - Added PLDMNoise component which allows modeling of stochastic DM variations as red noise with a power law spectrum
 - Added Bayesian interface (Timing model and white noise only)
+- New tests to improve test coverage
+- Documentation: Instructions to checkout development branch
+- Clock file for effix
 ### Fixed
 - global clock files now emit a warning instead of an exception if expired and the download fails
 - dmxparse outputs to dmxparse.out if save=True
@@ -24,6 +30,12 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Fixed bug in combining design matrices
 - Fixed bug in dmxparse
 - Fixed bug in photonphase with polycos
+- Made clock file loading log entries a little friendlier
+- Typo fixes in documentation
+### Removed
+- Removed obsolete `ltinterface` module
+- Removed old and WIP functions from `gridutils` module
+
 
 ## [0.9.1] 2022-08-12
 ### Changed
@@ -48,7 +60,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Changed
 - `model.phase()` now defaults to `abs_phase=True` when TZR* params are in the model
 - TOAs no longer need to be grouped by observatory
-- removed explicit download of IERS and leapsecond data (handled now by astropy)
+- removed explicit download of IERS and leap second data (handled now by astropy)
 - The default version of TT(BIPM) uses BIPM2021
 - ClockFile no longer uses metaclass magic or many subclasses, and have friendly names for use in messages
 - `model.setup()` now gets called automatically after removing a parameter as part of `remove_param`
@@ -193,7 +205,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## [0.8] - 2020-12-21
 ### Fixed
 - Fixed an indentation bug in Wideband TOA fitting.
-- The CombinedResidual class has API change on the get_data_error(), child residueal class in save as dictionary.
+- The CombinedResidual class has API change on the get_data_error(), child residual class in save as dictionary.
 ### Removed
 - Removed Python 2.7 support from travis and tox testing suites and from requirements files
 - Removed "landscape" code checker since that package is no longer supported by its author
@@ -288,7 +300,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Add function to compute epoch averaged residuals based on ECORR
 - Added model comparison pretty printer
 - Added functions to change PEPOCH, DMEPOCH, and binary epoch
-- Aded dmxparse function
+- Added dmxparse function
 - Added code to ensure that IERS B table is up to date
 - Added fitter.print_summary()
 ### Changed

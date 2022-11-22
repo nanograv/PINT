@@ -88,6 +88,7 @@ class TestScalarArithmeticFunc:
         assert isinstance(phasesum, Phase)
         assert_equal(phasesum.int, u.Quantity(sumi))
         assert_equal(phasesum.frac, u.Quantity(sumf))
+        assert np.isfinite(phasesum.quantity.value)
 
     def test_commutative_scalar_addition(self):
         phase1 = Phase(2, 0.5)
@@ -125,7 +126,7 @@ class TestScalarArithmeticFunc:
         product2 = phase * 1
         assert_equal(product2.int, phase.int)
         assert_equal(product2.frac, phase.frac)
-        product3 = phase * 2
+        product3 = 2 * phase
         assert_equal(product3.int, u.Quantity(4))
         assert_equal(product3.frac, u.Quantity(0.2))
 
