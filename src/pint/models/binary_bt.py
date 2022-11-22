@@ -1,11 +1,9 @@
 """The BT (Blandford & Teukolsky) model."""
-import astropy.units as u
 
-from pint import GMsun, Tsun, ls
 from pint.models.parameter import floatParameter
 from pint.models.pulsar_binary import PulsarBinary
 from pint.models.stand_alone_psr_binaries.BT_model import BTmodel
-from pint.models.timing_model import MissingParameter, TimingModel
+from pint.models.timing_model import MissingParameter
 
 
 class BinaryBT(PulsarBinary):

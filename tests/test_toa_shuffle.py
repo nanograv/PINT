@@ -4,7 +4,6 @@ from copy import deepcopy
 
 import numpy as np
 import pytest
-import time
 
 from hypothesis import given
 from hypothesis.strategies import (
@@ -17,7 +16,7 @@ from pinttestdata import datadir
 
 from pint import simulation, toa
 import pint.residuals
-from pint.models import get_model, get_model_and_toas
+from pint.models import get_model
 
 shuffletoas = """FORMAT 1
 test 1234.0 54321 0 pks

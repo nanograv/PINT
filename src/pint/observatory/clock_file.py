@@ -1,6 +1,5 @@
 """Routines for reading and writing various formats of clock file."""
 
-import os
 import re
 from pathlib import Path
 from textwrap import dedent
@@ -10,9 +9,8 @@ import astropy.units as u
 import numpy as np
 from loguru import logger as log
 
-import pint.config
 from pint.observatory import ClockCorrectionOutOfRange, NoClockCorrections
-from pint.observatory.global_clock_corrections import Index, get_clock_correction_file
+from pint.observatory.global_clock_corrections import get_clock_correction_file
 from pint.pulsar_mjd import Time
 from pint.utils import compute_hash, lines_of, open_or_use
 
@@ -460,7 +458,7 @@ def read_tempo2_clock_file(
         Whether to consider the file valid past the ends of the data it contains.
     """
     log.debug(
-        f"Loading TEMPO2-format observatory clock correction file {filename} with {bogus_last_correction=}"
+        f"Loading TEMPO2-format observatory clock correction file {friendly_name} ({filename}) with {bogus_last_correction=}"
     )
     try:
         mjd = []
@@ -602,9 +600,15 @@ def read_tempo_clock_file(
     """
 
     leading_comment = None
-    log.debug(
-        f"Loading TEMPO observatory ({obscode}) clock correction file {filename} with {bogus_last_correction=}"
-    )
+    if obscode is None:
+        log.debug(
+            f"Loading TEMPO-format observatory clock correction file {friendly_name} ({filename}) with {bogus_last_correction=}"
+        )
+    else:
+        log.debug(
+            f"Loading TEMPO-format observatory ({obscode}) clock correction file {friendly_name} ({filename}) with {bogus_last_correction=}"
+        )
+
     mjds = []
     clkcorrs = []
     comments = []

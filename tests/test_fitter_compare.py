@@ -1,6 +1,4 @@
 #! /usr/bin/env python
-import os
-import unittest
 from os.path import join
 from io import StringIO
 import copy
@@ -12,7 +10,6 @@ from pinttestdata import datadir
 
 import pint
 from pint.fitter import (
-    ConvergenceFailure,
     MaxiterReached,
     DownhillGLSFitter,
     DownhillWLSFitter,

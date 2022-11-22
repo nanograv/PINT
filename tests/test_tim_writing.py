@@ -4,8 +4,8 @@ import re
 import astropy.units as u
 import numpy as np
 import pytest
-from hypothesis import given, settings
-from hypothesis.strategies import lists, tuples, one_of, from_regex, just
+from hypothesis import given
+from hypothesis.strategies import lists, tuples, from_regex
 from pint.toa import get_TOAs
 
 basic_tim_header = "FORMAT 1\n"

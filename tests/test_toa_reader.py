@@ -1,7 +1,6 @@
 import os
 import shutil
 import unittest
-from glob import glob
 from io import StringIO
 from pathlib import Path
 
@@ -10,6 +9,7 @@ import pytest
 
 # For this test, turn off the check for the age of the IERS A table
 from astropy.utils.iers import conf
+import astropy.table
 from hypothesis import given, settings
 from hypothesis.extra.numpy import arrays
 from hypothesis.strategies import floats, integers, sampled_from
@@ -203,7 +203,7 @@ def test_toa_merge_again():
     check_indices_contiguous(nt2)
 
 
-def test_toa_merge_again():
+def test_toa_merge_again_2():
     filenames = [
         datadir / "NGC6440E.tim",
         datadir / "testtimes.tim",
@@ -230,6 +230,181 @@ def test_toa_merge_different_ephem():
     ]
     toas = [toa.get_TOAs(ff) for ff in filenames]
     toas[0].ephem = "DE436"
+    with pytest.raises(TypeError):
+        nt = toa.merge_TOAs(toas)
+
+
+def test_toa_merge_different_columns_strict():
+    # merge with strict=True should fail with an error about pulse_number
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+    ]
+    model = get_model(datadir / "NGC6440E.par")
+    # add a pulse_number column.  then the merge should fail
+    toas = [toa.get_TOAs(ff, model=model) for ff in filenames]
+    toas[0].compute_pulse_numbers(model)
+    with pytest.raises(astropy.table.np_utils.TableMergeError) as exc:
+        nt = toa.merge_TOAs(toas, strict=True)
+    assert "pulse_number" in str(exc)
+
+
+def test_toa_merge_different_columns_notstrict():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+    ]
+    model = get_model(datadir / "NGC6440E.par")
+    # add a pulse_number column.  then the merge should fail
+    toas = [toa.get_TOAs(ff, model=model) for ff in filenames]
+    toas[0].compute_pulse_numbers(model)
+    nt = toa.merge_TOAs(toas, strict=False)
+
+
+def test_toa_merge_different_columns_TDB_notstrict():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+    ]
+    model = get_model(datadir / "NGC6440E.par")
+    toas = [toa.get_TOAs(ff, model=model) for ff in filenames]
+    # remove the tdb column
+    # merge should fail if strict
+    del toas[1].table["tdb"]
+    nt = toa.merge_TOAs(toas, strict=False)
+
+
+def test_toa_merge_different_columns_TDB_strict():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+    ]
+    model = get_model(datadir / "NGC6440E.par")
+    toas = [toa.get_TOAs(ff, model=model) for ff in filenames]
+    # remove the tdb column
+    # merge should fail if strict
+    del toas[1].table["tdb"]
+    with pytest.raises(astropy.table.np_utils.TableMergeError) as exc:
+        nt = toa.merge_TOAs(toas, strict=True)
+    assert "tdb" in str(exc)
+
+
+def test_toa_merge_different_columns_posvel_notstrict():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+    ]
+    model = get_model(datadir / "NGC6440E.par")
+    toas = [toa.get_TOAs(ff, model=model) for ff in filenames]
+    # remove the ssb_obs_pos column
+    # merge should fail if strict
+    del toas[1].table["ssb_obs_pos"]
+    nt = toa.merge_TOAs(toas, strict=False)
+
+
+def test_toa_merge_different_columns_posvel_strict():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+    ]
+    model = get_model(datadir / "NGC6440E.par")
+    toas = [toa.get_TOAs(ff, model=model) for ff in filenames]
+    # remove the ssb_obs_pos column
+    # merge should fail if strict
+    del toas[1].table["ssb_obs_pos"]
+    with pytest.raises(astropy.table.np_utils.TableMergeError) as exc:
+        nt = toa.merge_TOAs(toas, strict=True)
+    assert "ssb_obs_pos" in str(exc)
+
+
+def test_toa_merge_different_columns_ignorepn_onread():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+    ]
+    model = get_model(datadir / "NGC6440E.par")
+    # read and add pulse numbers
+    t = toa.get_TOAs(filenames[0], model=model)
+    t.compute_pulse_numbers(model)
+    f = StringIO()
+    t.write_TOA_file(f)
+    f.seek(0)
+    toas = [toa.get_TOAs(fname, include_pn=False) for fname in [f, filenames[1]]]
+    nt = toa.merge_TOAs(toas)
+
+
+def test_toa_merge_different_columns_ignorepn_onwrite():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+    ]
+    model = get_model(datadir / "NGC6440E.par")
+    # read and add pulse numbers
+    t = toa.get_TOAs(filenames[0], model=model)
+    t.compute_pulse_numbers(model)
+    f = StringIO()
+    t.write_TOA_file(f, include_pn=False)
+    f.seek(0)
+    toas = [toa.get_TOAs(fname, include_pn=True) for fname in [f, filenames[1]]]
+    nt = toa.merge_TOAs(toas)
+
+
+def test_toa_merge_different_bipm():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+        datadir / "parkes.toa",
+    ]
+    inc_bipms = [True, True, False]
+    toas = [
+        toa.get_TOAs(ff, include_bipm=inc_bipm)
+        for ff, inc_bipm in zip(filenames, inc_bipms)
+    ]
+    with pytest.raises(TypeError):
+        nt = toa.merge_TOAs(toas)
+
+
+def test_toa_merge_different_bipm_ver():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+        datadir / "parkes.toa",
+    ]
+    bipm_vers = ["BIPM2015", "BIPM2015", "BIPM2017"]
+    toas = [
+        toa.get_TOAs(ff, include_bipm=True, bipm_version=bipm_ver)
+        for ff, bipm_ver in zip(filenames, bipm_vers)
+    ]
+    with pytest.raises(TypeError):
+        nt = toa.merge_TOAs(toas)
+
+
+def test_toa_merge_different_gps():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+        datadir / "parkes.toa",
+    ]
+    inc_gpss = [True, True, False]
+    toas = [
+        toa.get_TOAs(ff, include_gps=inc_gps)
+        for ff, inc_gps in zip(filenames, inc_gpss)
+    ]
+    with pytest.raises(TypeError):
+        nt = toa.merge_TOAs(toas)
+
+
+def test_toa_merge_different_planets():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+        datadir / "parkes.toa",
+    ]
+    inc_planetss = [True, True, False]
+    toas = [
+        toa.get_TOAs(ff, planets=inc_planets)
+        for ff, inc_planets in zip(filenames, inc_planetss)
+    ]
     with pytest.raises(TypeError):
         nt = toa.merge_TOAs(toas)
 
@@ -456,3 +631,37 @@ def test_chained_include_directories(tmp_path):
     )
 
     assert len(toa.get_TOAs(str(t1))) == 3
+
+
+def test_read_itoa():
+    # This test is put here only to ensure that the correct exception is raised.
+    # This should be removed or replaced if/when ITOA support is implemented.
+    timfile = datadir / "NGC6440E.itoa"
+    with pytest.raises(RuntimeError):
+        toa.get_TOAs(timfile)
+
+
+def test_parse_toa_line_exceptions():
+    # This should work.
+    goodline = "55731.000019.3.000.000.9y.x.ff 428.000000 55731.193719931024413   2.959  ao  -fe 430 -be ASP -f 430_ASP -bw 4 -tobs 1200.7 -tmplt J1853+1303.430.PUPPI.9y.x.sum.sm -gof 0.98 -nbin 2048 -nch 1 -chan 2 -subint 0 -snr 36.653 -wt 20 -proc 9y -pta NANOGrav -to -0.789e-6"
+    toa._parse_TOA_line(goodline)
+
+    # obs is given as a flag.
+    badline = "55731.000019.3.000.000.9y.x.ff 428.000000 55731.193719931024413   2.959  ao -obs ao -fe 430 -be ASP -f 430_ASP -bw 4 -tobs 1200.7 -tmplt J1853+1303.430.PUPPI.9y.x.sum.sm -gof 0.98 -nbin 2048 -nch 1 -chan 2 -subint 0 -snr 36.653 -wt 20 -proc 9y -pta NANOGrav -to -0.789e-6"
+    with pytest.raises(ValueError):
+        toa._parse_TOA_line(badline)
+
+    # Flag without corresponding value (-a)
+    badline = "55731.000019.3.000.000.9y.x.ff 428.000000 55731.193719931024413   2.959  ao -a -fe 430 -be ASP -f 430_ASP -bw 4 -tobs 1200.7 -tmplt J1853+1303.430.PUPPI.9y.x.sum.sm -gof 0.98 -nbin 2048 -nch 1 -chan 2 -subint 0 -snr 36.653 -wt 20 -proc 9y -pta NANOGrav -to -0.789e-6"
+    with pytest.raises(ValueError):
+        toa._parse_TOA_line(badline)
+
+    # Empty flag label (-)
+    badline = "55731.000019.3.000.000.9y.x.ff 428.000000 55731.193719931024413   2.959  ao - a -fe 430 -be ASP -f 430_ASP -bw 4 -tobs 1200.7 -tmplt J1853+1303.430.PUPPI.9y.x.sum.sm -gof 0.98 -nbin 2048 -nch 1 -chan 2 -subint 0 -snr 36.653 -wt 20 -proc 9y -pta NANOGrav -to -0.789e-6"
+    with pytest.raises(ValueError):
+        toa._parse_TOA_line(badline)
+
+    # Garbage line
+    garbage = "asdg skfgs dj"
+    with pytest.raises(RuntimeError):
+        toa._parse_TOA_line(garbage)

@@ -1,8 +1,6 @@
 from io import StringIO
 import re
 
-import astropy.units as u
-import numpy as np
 import pytest
 from pint.models import get_model
 import pint.toa

@@ -4,7 +4,7 @@ import numpy as np
 
 from loguru import logger as log
 
-from pint.models.parameter import MJDParameter, prefixParameter
+from pint.models.parameter import prefixParameter
 from pint.models.timing_model import MissingParameter, PhaseComponent
 from pint.utils import split_prefixed_name
 
@@ -209,7 +209,7 @@ class Glitch(PhaseComponent):
             else:
                 decayterm = 0.0 * u.Unit("")
 
-            log.info("Glitch phase {} {} ".format(dphs, dphs.unit))
+            log.debug("Glitch phase {} {} ".format(dphs, dphs.unit))
             phs[affected] += (
                 dphs
                 + dt[affected]

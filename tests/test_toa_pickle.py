@@ -1,20 +1,14 @@
 #!/usr/bin/env python
 import os
-import pickle
 import shutil
 import time
 import unittest
+import copy
 
-import astropy.time
-import astropy.units as u
-import numpy as np
 import pytest
 from pinttestdata import datadir
 
-import pint.models
-import pint.toa
 from pint import toa
-from pint import simulation
 
 
 @pytest.fixture
@@ -113,7 +107,7 @@ def test_pickle_invalidated_time(temp_tim):
 
 
 # SMR changed the behavior of this so that if the .filename
-# in the picklefile does not exist, then the pickle is
+# in the pickle file does not exist, then the pickle is
 # invalidated.  The reason is that the previous behavior
 # caused pickling to always fail to be valid for .tim files
 # that had INCLUDE statements to load other .tim files.
@@ -126,3 +120,24 @@ def test_pickle_moved(temp_tim):
     # Should fail since the original file is gone
     with pytest.raises(FileNotFoundError):
         toa.get_TOAs(tt, usepickle=True, picklefilename=tp)
+
+
+def test_save_pickle_exceptions(temp_tim):
+    """Raise exceptions in save_pickle if output filename is not given."""
+
+    tt, tp = temp_tim
+
+    toas = toa.get_TOAs(tt, usepickle=True, picklefilename=tp)
+
+    toas1 = toa.merge_TOAs(toas[:4], toas[4:])
+
+    toas2 = copy.deepcopy(toas)
+    toas2.filename = None
+
+    # For merged TOAs.
+    with pytest.raises(ValueError):
+        toa.save_pickle(toas1)
+
+    # For TOAs where filename is not set.
+    with pytest.raises(ValueError):
+        toa.save_pickle(toas2)

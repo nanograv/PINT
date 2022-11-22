@@ -25,6 +25,11 @@ def getfiles():
     return [f.strip() for f in files.split("\n")]
 
 
+def test_datadir():
+    datadir = pint.config.datadir()
+    assert os.path.isdir(datadir)
+
+
 def test_examplefiles(getfiles):
     files = getfiles
     for filename in files:

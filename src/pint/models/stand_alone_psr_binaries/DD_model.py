@@ -3,7 +3,7 @@ import astropy.constants as c
 import astropy.units as u
 import numpy as np
 
-from pint import GMsun, Tsun, ls
+from pint import Tsun
 
 from .binary_generic import PSR_BINARY
 

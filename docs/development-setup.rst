@@ -30,7 +30,7 @@ able to do the following:
    - Jump to the definition of a function, class, or method with a keypress.
    - Obey ``.editorconfig`` settings.
 
-A little Googling should reveal how to get all this working in your favourite
+A little Googling should reveal how to get all this working in your favorite
 editor, but if you have some helpful links for a particular editor feel free to
 add them to the documentation right here.
 

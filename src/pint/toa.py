@@ -15,7 +15,6 @@ has moved to :mod:`pint.simulation`.
 """
 import copy
 import gzip
-import hashlib
 import pickle
 import re
 import warnings
@@ -26,7 +25,6 @@ import astropy.table as table
 import astropy.time as time
 import astropy.units as u
 import numpy as np
-import numpy.ma
 from astropy.coordinates import (
     ICRS,
     CartesianDifferential,
@@ -103,6 +101,7 @@ def get_TOAs(
     bipm_version=None,
     include_gps=None,
     planets=None,
+    include_pn=True,
     model=None,
     usepickle=False,
     tdb_method="default",
@@ -156,6 +155,8 @@ def get_TOAs(
         Whether to apply Shapiro delays based on planet positions. Note that a
         long-standing TEMPO2 bug in this feature went unnoticed for years.
         Defaults to False.
+    include_pn : bool, optional
+        Whether or not to read in the 'pn' column (``pulse_number``)
     model : pint.models.timing_model.TimingModel or None
         If a valid timing model is passed, model commands (such as BIPM version,
         planet shapiro delay, and solar system ephemeris) that affect TOA loading
@@ -305,6 +306,9 @@ def get_TOAs(
     if usepickle and updatepickle:
         log.info("Pickling TOAs.")
         save_pickle(t, picklefilename=picklefilename)
+    if "pulse_number" in t.table.colnames and not include_pn:
+        log.warning(f"'pulse_number' column exists but not being read in")
+        t.remove_pulse_numbers()
     return t
 
 
@@ -494,6 +498,14 @@ def _parse_TOA_line(line, fmt="Unknown"):
         d["obs"] = get_observatory(fields[4].upper()).name
         # All the rest should be flags
         flags = fields[5:]
+
+        # Flags and flag-values should be given in pairs.
+        # The for loop below will fail otherwise.
+        if len(flags) % 2 != 0:
+            raise ValueError(
+                f"Flags and flag-values should be given in pairs. The given flags are {' '.join(flags)}"
+            )
+
         for i in range(0, len(flags), 2):
             k, v = flags[i].lstrip("-"), flags[i + 1]
             if k in ["error", "freq", "scale", "MJD", "flags", "obs", "name"]:
@@ -609,7 +621,7 @@ def format_toa_line(
             freq = 0.0 * u.MHz
         flagstring = ""
         if dm != 0.0 * pint.dmu:
-            flagstring += "-dm {0:%.5f}".format(dm.to(pint.dmu).value)
+            flagstring += "-dm {0:.5f}".format(dm.to(pint.dmu).value)
         # Here I need to append any actual flags
         for flag in flags.keys():
             v = flags[flag]
@@ -1222,6 +1234,7 @@ class TOAs:
            :func:`pint.toa.TOAs.compute_pulse_numbers` or extracted from the
            ``pn`` entry in ``flags`` with
            :func:`pint.toa.TOAs.phase_columns_from_flags`.
+           If it is present for some TOAs but not all, missing values are filled with ``NaN``.
        * - ``delta_pulse_number``
          - number of turns to adjust pulse number by, compared to the model;
            ``PHASE`` statements in the ``.tim`` file or the ``padd`` entry in
@@ -1888,6 +1901,16 @@ class TOAs:
         self.table["pulse_number"] = phases.int
         self.table["pulse_number"].unit = u.dimensionless_unscaled
 
+    def remove_pulse_numbers(self):
+        """Delete pulse numbers from TOA data"""
+
+        if "pulse_number" in self.table.colnames:
+            del self.table["pulse_number"]
+        else:
+            log.warning(
+                f"Requested deleting of pulse numbers, but they are not present"
+            )
+
     def adjust_TOAs(self, delta):
         """Apply a time delta to TOAs.
 
@@ -1951,6 +1974,7 @@ class TOAs:
         commentflag=None,
         order_by_index=True,
         *,
+        include_pn=True,
         include_info=True,
         comment=None,
     ):
@@ -1978,6 +2002,8 @@ class TOAs:
             If True, write the TOAs in the order specified in the "index" column
             (which is usually the same as the original file);
             if False, write them in the order they occur in the TOAs object.
+        include_pn : bool, optional
+            Include pulse numbers (if available)
         include_info : bool, optional
             Include information string if True
         comment : str, optional
@@ -2002,7 +2028,15 @@ class TOAs:
         # FIXME: everywhere else the pulse number column is called pulse_number not pn
         toacopy = copy.deepcopy(self)
         if "pulse_number" in toacopy.table.colnames:
-            toacopy["pn"] = toacopy.table["pulse_number"]
+            if include_pn:
+                toacopy["pn"] = toacopy.table["pulse_number"]
+                # but delete those that are NaN
+                for i in np.where(np.isnan(self["pulse_number"]))[0]:
+                    del toacopy.table["flags"][i]["pn"]
+            else:
+                log.warning(
+                    f"'pulse_number' column exists but it is not being written out"
+                )
         if (
             "delta_pulse_number" in toacopy.table.columns
             and (toacopy.table["delta_pulse_number"] != 0).any()
@@ -2380,7 +2414,7 @@ class TOAs:
         self.table.add_column(col)
 
 
-def merge_TOAs(TOAs_list):
+def merge_TOAs(TOAs_list, strict=False):
     """Merge a list of TOAs instances and return a new combined TOAs instance
 
     In order for a merge to work, each TOAs instance needs to have
@@ -2389,9 +2423,14 @@ def merge_TOAs(TOAs_list):
     .planets (i.e. whether planetary PosVel columns are in the tables
     or not).
 
+    If ``pulse_number``, [``ssb_obs_pos``, ``ssb_obs_vel``, ``obs_sun_pos``], [``tdb``, ``tdbld``]
+    columns are present in some but not all data try to put them in unless ``strict=True``
+
     Parameters
     ----------
     TOAs_list : list of TOAs instances
+    strict : bool, optional
+        If ``strict``, do not add in missing columns to facilitate merging
 
     Returns
     -------
@@ -2420,11 +2459,66 @@ def merge_TOAs(TOAs_list):
     planets = [tt.planets for tt in TOAs_list]
     if len(set(planets)) > 1:
         raise TypeError(f"merge_TOAs() cannot merge. Inconsistent planets: {planets}")
-    num_cols = [len(tt.table.columns) for tt in TOAs_list]
-    if len(set(num_cols)) > 1:
-        raise TypeError(
-            f"merge_TOAs() cannot merge. Inconsistent numbers of table columns: {num_cols}"
-        )
+    # check for the presence of various computable columns
+    #   pulse_number
+    #   ssb_obs_pos, ssb_obs_vel, obs_sun_pos
+    #   tdb, tdbld
+    # if one file has these and the others don't, try to add them if strict=False
+    all_colnames = [tt.table.colnames for tt in TOAs_list]
+    has_pulse_number = np.array(
+        ["pulse_number" in colnames for colnames in all_colnames]
+    )
+    has_posvel = np.array(
+        [
+            ("ssb_obs_pos" in colnames)
+            and ("ssb_obs_vel" in colnames)
+            and ("obs_sun_pos" in colnames)
+            for colnames in all_colnames
+        ]
+    )
+    has_tdb = np.array(
+        [("tdb" in colnames) and ("tdbld" in colnames) for colnames in all_colnames]
+    )
+    has_posvel_ecl = np.array(
+        ["ssb_obs_vel_ecl" in colnames for colnames in all_colnames]
+    )
+    if has_pulse_number.any() and not has_pulse_number.all():
+        if strict:
+            log.warning("Not all data have 'pulse_number' columns but strict=True")
+        else:
+            # some data have pulse_numbers but not all
+            # put in NaN
+            for i, tt in enumerate(TOAs_list):
+                if not "pulse_number" in tt.table.colnames:
+                    log.warning(
+                        f"'pulse_number' not present in data set {i}: inserting NaNs"
+                    )
+                    tt.table.add_column(np.ones(len(tt)) * np.nan, name="pulse_number")
+    if has_posvel.any() and not has_posvel.all():
+        if strict:
+            log.warning("Not all data have position/velocity columns but strict=True")
+        else:
+            # some data have positions/velocities but not all
+            # compute as needed
+            for i, tt in enumerate(TOAs_list):
+                if not (
+                    ("ssb_obs_pos" in tt.table.colnames)
+                    and ("ssb_obs_vel" in tt.table.colnames)
+                    and ("obs_sun_pos" in tt.table.colnames)
+                ):
+                    tt.compute_posvels()
+    if has_tdb.any() and not has_tdb.all():
+        if strict:
+            log.warning("Not all data have TDB columns but strict=True")
+        else:
+            # some data have TDBs but not all
+            # compute as needed
+            for i, tt in enumerate(TOAs_list):
+                if not (
+                    ("tdb" in tt.table.colnames) and ("tdbld" in tt.table.colnames)
+                ):
+                    tt.compute_TDBs()
+
     # Use a copy of the first TOAs instance as the base for the joined object
     nt = copy.deepcopy(TOAs_list[0])
     # The following ensures that the filename list is flat
@@ -2445,8 +2539,30 @@ def merge_TOAs(TOAs_list):
         t["index"] += start_index
         start_index += tt.max_index + 1
         tables.append(t)
-    nt.table = table.vstack(tables, join_type="exact", metadata_conflicts="silent")
-    # Fix the table meta data about filenames
+    try:
+        nt.table = table.vstack(tables, join_type="exact", metadata_conflicts="silent")
+    except table.np_utils.TableMergeError as e:
+        # the astropy vstack will enforce having the same columns throughout
+        # but the error messages aren't very useful.
+        # This isn't an exhaustive check
+        # (it just checks everything against the first observation)
+        # but it should be more helpful
+        message = []
+        for i, colnames in enumerate(all_colnames[1:]):
+            extra_columns = [x for x in colnames if not x in all_colnames[0]]
+            missing_columns = [x for x in all_colnames[0] if not x in colnames]
+            if len(extra_columns) > 0:
+                message.append(
+                    f"File {i+1} has extra column(s): {','.join(extra_columns)}"
+                )
+
+            if len(missing_columns) > 0:
+                message.append(
+                    f"File {i+1} has missing column(s): {','.join(missing_columns)}"
+                )
+        raise table.np_utils.TableMergeError(", ".join(message)) from e
+
+        # Fix the table meta data about filenames
     nt.table.meta["filename"] = nt.filename
     nt.max_index = start_index - 1
     nt.hashes = {}

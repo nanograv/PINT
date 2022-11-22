@@ -21,6 +21,7 @@ from tkinter import ttk
 import pint.logging
 from loguru import logger as log
 
+
 try:
     from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 except ImportError:
@@ -58,7 +59,7 @@ Right click     Delete a TOA (if close enough)
   k             Correct the pane (i.e. rescale the axes and plot)
   f             Perform a fit on the selected TOAs
   d             Delete (permanently) the selected TOAs
-  t             Stash (temporarily remove) or un-stash the selected TOAs
+  t             Stash (temporarily remove) selected TOAs (or un-stash if nothing is selected) 
   u             Un-select all of the selected TOAs
   j             Jump the selected TOAs, or un-jump them if already jumped
   v             Jump all TOA clusters except those selected
@@ -980,6 +981,7 @@ class PlkWidget(tk.Frame):
         Tried using quantity_support and time_support, which plots x & yvals,
         but then yerrs fails - cannot find work-around in this case.
         """
+
         self.plkAxes.errorbar(
             self.xvals[selected].value,
             self.yvals[selected],
@@ -1338,14 +1340,28 @@ class PlkWidget(tk.Frame):
             if ind is not None:
                 if event.button == 3:
                     # Right click deletes closest TOA
-                    # if the point is jumped, tell the user to delete the jump first
-                    if ind in self.psr.all_toas.table["index"][self.jumped]:
-                        log.warning(
-                            "Cannot delete jumped TOAs. Delete interfering jumps before deleting TOAs."
-                        )
-                        return None
-                    self.selected = self.psr.delete_TOAs([ind], self.selected)
+                    # Adapt to TOA index rather than plot index, they differ when TOAs are already deleted
+                    toa_ind = self.psr.all_toas.table["index"][ind]
+                    sudo_select_mask = np.zeros_like(self.selected).astype(bool)
+                    sudo_select_mask[ind] = True
+                    jumped_copy = copy.deepcopy(self.jumped)
+                    unselect_jump_stat = jumped_copy[~sudo_select_mask]
+
+                    # Check if it is jumped
+                    if jumped_copy[ind]:
+                        # Means its jumped, so unjump it
+                        jump_name = self.psr.add_jump(sudo_select_mask)
+                        self.updateJumped(jump_name)
+                        if type(jump_name) != list:
+                            log.error(f"Mistakenly added new jump {jump_name}")
+                        else:
+                            log.info(
+                                f"Existing jump removed for {np.array(jump_name).astype(int).sum()} toas and deleted them"
+                            )
+                    # Now delete it
+                    self.selected = self.psr.delete_TOAs([toa_ind], self.selected)
                     self.updateAllJumped()
+                    self.jumped |= unselect_jump_stat
                     self.psr.update_resids()
                     self.updatePlot(keepAxes=True)
                     self.call_updates()
@@ -1433,21 +1449,29 @@ class PlkWidget(tk.Frame):
                 self.updatePlot(keepAxes=False)
                 self.call_updates()
         elif event.key == "d":
-            # if any of the points are jumped, tell the user to delete the jump(s) first
+            # Get the current state of jumped toas
             jumped_copy = copy.deepcopy(self.jumped)
-            self.updateAllJumped()
-            all_jumped = copy.deepcopy(self.jumped)
-            self.jumped = jumped_copy
-            if (self.selected & all_jumped).any():
-                log.warning(
-                    "Cannot delete jumped TOAs. Delete interfering jumps before deleting TOAs."
-                )
-                return None
+            unselect_jump_status = jumped_copy[~self.selected]
+
+            # First update the jump status and then delete them
+            if np.any(jumped_copy & self.selected):
+                # Which means that there is an overlap between selected and jumped TOAs
+                jump_name = self.psr.add_jump(self.selected)
+                self.updateJumped(jump_name)
+                # Here jump_name has to be a list
+                if type(jump_name) != list:
+                    log.error(f"Mistakenly added new jump {jump_name}")
+                else:
+                    log.info(
+                        f"Existing jump removed for {np.array(jump_name).astype(int).sum()} toas and deleted them"
+                    )
             # Delete the selected points
             self.selected = self.psr.delete_TOAs(
                 self.psr.all_toas.table["index"][self.selected], self.selected
             )
             self.updateAllJumped()
+            # Restore the jumps back
+            self.jumped |= unselect_jump_status
             self.psr.update_resids()
             self.updatePlot(keepAxes=True)
             self.call_updates()
@@ -1457,8 +1481,6 @@ class PlkWidget(tk.Frame):
             # jump the selected points, or unjump if already jumped
             jump_name = self.psr.add_jump(self.selected)
             self.updateJumped(jump_name)
-            print(f"New jump {jump_name} for {self.selected.sum()} toas.")
-            # undo the selection, since that is almost certainly what we want
             self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
             self.selected = np.zeros(self.psr.selected_toas.ntoas, dtype=bool)
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
@@ -1496,35 +1518,65 @@ class PlkWidget(tk.Frame):
             self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             self.updatePlot(keepAxes=True)
             self.call_updates()
+
         elif event.key == "t":
-            # Stash selected TOAs
-            if self.psr.stashed is None:
-                # if any of the points are jumped, tell the user to delete the jump(s) first
-                jumped_copy = copy.deepcopy(self.jumped)
-                self.updateAllJumped()
-                all_jumped = copy.deepcopy(self.jumped)
-                self.jumped = jumped_copy
-                if (self.selected & all_jumped).any():
-                    log.warning(
-                        "Cannot stash jumped TOAs. Delete interfering jumps before stashing TOAs."
-                    )
+            # Stash/unstash selected TOAs
+
+            if np.all(
+                ~self.selected
+            ):  # if no TOAs are selected, attempt to unstash all TOAs
+                if (
+                    self.psr.stashed is None
+                ):  # if there is nothing in the stash, do nothing
+                    log.debug("Nothing to stash/unstash.")
                     return None
-                # Delete the selected points
-                self.psr.stashed = copy.deepcopy(self.psr.all_toas)
-                self.psr.all_toas.table = self.psr.all_toas.table[~self.selected]
-            else:  # unstash
+                # otherwise, pull all TOAs out of the stash and set it to None
+                log.debug(
+                    f"Unstashing {len(self.psr.stashed)-len(self.psr.all_toas)} TOAs"
+                )
                 self.psr.all_toas = copy.deepcopy(self.psr.stashed)
+                self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
                 self.psr.stashed = None
+                self.updateAllJumped()
+                self.psr.update_resids()
+                self.updatePlot(keepAxes=False)
+
+            else:  # if TOAs are selected, add them to the stash
+                if (
+                    self.psr.stashed is None
+                ):  # if there is nothing in the stash, copy current TOAs to stash
+                    jumped_copy = copy.deepcopy(self.jumped)
+                    self.updateAllJumped()
+                    all_jumped = copy.deepcopy(self.jumped)
+                    self.jumped = jumped_copy
+                    if (self.selected & all_jumped).any():
+                        # if any of the points are jumped, tell the user to delete the jump(s) first
+                        log.warning(
+                            "Cannot stash jumped TOAs. Delete interfering jumps before stashing TOAs."
+                        )
+                        return None
+                    log.debug(f"Stashing {sum(self.selected)} TOAs")
+                    self.psr.stashed = copy.deepcopy(self.psr.all_toas)
+
+                else:  # if the stash isn't empty, remove selected from front-facing TOAs
+                    log.debug(
+                        f"Added {sum(self.selected)} TOAs to stash (stash now contains {len(self.psr.stashed.table)-len(self.psr.all_toas.table)+sum(self.selected)} TOAs)"
+                    )
                 if self.psr.fitted and self.psr.use_pulse_numbers:
                     self.psr.all_toas.compute_pulse_numbers(self.psr.postfit_model)
-            self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
-            self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
-            self.updateAllJumped()
-            self.psr.update_resids()
-            self.updatePlot(
-                keepAxes=False
-            )  # We often stash at beginning or end of array
-            self.call_updates()
+
+                # remove the newly-stashed TOAs from the front-facing TOAs
+                self.psr.all_toas.table = self.psr.all_toas.table[~self.selected]
+                self.psr.selected_toas = copy.deepcopy(self.psr.all_toas)
+                self.selected = np.zeros(self.psr.all_toas.ntoas, dtype=bool)
+                self.updateAllJumped()
+                self.psr.update_resids()
+                self.updatePlot(
+                    keepAxes=False
+                )  # We often stash at beginning or end of array
+
+                self.call_updates()
+
         elif event.key == "c":
             if self.psr.fitted:
                 self.psr.fitter.get_parameter_correlation_matrix(

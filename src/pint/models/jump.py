@@ -6,7 +6,7 @@ import numpy
 from loguru import logger as log
 
 from pint.models.parameter import maskParameter
-from pint.models.timing_model import DelayComponent, MissingParameter, PhaseComponent
+from pint.models.timing_model import DelayComponent, PhaseComponent
 
 
 class DelayJump(DelayComponent):
@@ -194,7 +194,7 @@ class PhaseJump(PhaseComponent):
 
         Parameters
         ----------
-        toa_table: list object
+        toa_table: astropy.table.column.Column
             The TOA table which must be modified. In pintk (pulsar.py), this will
             be all_toas.table["flags"][selected]
         """
@@ -242,3 +242,30 @@ class PhaseJump(PhaseComponent):
             dict1["jump"] = str(ind)
             dict1["gui_jump"] = str(ind)
         return name
+
+    def delete_not_all_jump_toas(self, toa_flags, jump_num):
+        """Unjumps the selected TOAs if they are already jumped. This is only called
+            when the selected TOAs are a subset of jumped TOAs with a particular jump.
+
+        Parameters
+        ----------
+        toa_flags: astropy.table.column.Column
+            The TOA table which must be modified. In pintk (pulsar.py), this will
+            be ``all_toas.table["flags"][selected]``
+
+        jump_num: int
+            jump that needs to be deleted from the TOAs
+        """
+
+        if toa_flags is not None:
+            # This means there is overlap between selected TOAs and jump_num
+            for d in toa_flags:
+                if "jump" in d:
+                    jumps_list = d["jump"].split(",")
+                    jump_ind = jumps_list.index(str(jump_num))
+                    del jumps_list[jump_ind]
+                    if not jumps_list:
+                        del d["jump"]
+                    else:
+                        d["jump"] = ",".join(jumps_list)
+        return

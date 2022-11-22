@@ -9,6 +9,11 @@ from pinttestdata import datadir
 from astropy.time import Time
 import numpy as np
 import astropy.units as u
+from pint import toa, observatory
+from datetime import datetime
+from astropy.time import Time
+from astropy import units as u
+import pint
 
 
 def test_roundtrip_bary_toa_Tempo2format(tmpdir):
@@ -118,6 +123,25 @@ def test_roundtrip_ncyobs_toa_TEMPOformat(tmp_path):
         ts.write_TOA_file(tmp_path / "testncyobs.tim", format="TEMPO")
 
 
+def test_write_pn_nan():
+    # NaN should not get written as flag in tim file
+    model = get_model(datadir / "NGC6440E.par")
+    # read and add pulse numbers
+    t = toa.get_TOAs(datadir / "NGC6440E.tim", model=model)
+    t.compute_pulse_numbers(model)
+    t["pulse_number"][10] = np.nan
+    f = StringIO()
+    t.write_TOA_file(f)
+    f.seek(0)
+    # contents = f.read()
+    for line in f.readlines():
+        if toa._toa_format(line) != "Comment":
+            assert "nan" not in line.split()
+    f.seek(0)
+    t2 = toa.get_TOAs(f)
+    assert np.isnan(t2["pulse_number"][10])
+
+
 simplepar = """
 PSR              1748-2021E
 RAJ       17:48:52.75  1
@@ -167,3 +191,47 @@ def test_tim_writing_order(tmp_path):
     ]
     assert obs[0] == obs[3] == obs[6] == obs[9]
     assert obs[0] != obs[1]
+
+
+@pytest.mark.parametrize("format", ["Tempo2", "Princeton"])
+def test_format_toa_line(format):
+    toatime = Time(datetime.now())
+    toaerr = u.Quantity(1e-6, "s")
+    freq = u.Quantity(1400, "MHz")
+    obs = observatory.get_observatory("ao")
+    dm = 1 * pint.dmu
+
+    toa_line = toa.format_toa_line(
+        toatime,
+        toaerr,
+        freq,
+        obs,
+        dm=dm,
+        name="unk",
+        flags={"-foo": 1, "bar": "ee", "spam": u.Quantity(3, "s")},
+        format=format,
+        alias_translation=None,
+    )
+
+    assert isinstance(toa_line, str) and len(toa_line) > 0
+
+
+def test_format_toa_line_bad_fmt():
+    toatime = Time(datetime.now())
+    toaerr = u.Quantity(1e-6, "s")
+    freq = u.Quantity(1400, "MHz")
+    obs = observatory.get_observatory("ao")
+    dm = 1 * pint.dmu
+
+    with pytest.raises(ValueError):
+        toa_line = toa.format_toa_line(
+            toatime,
+            toaerr,
+            freq,
+            obs,
+            dm=dm,
+            name="unk",
+            flags={"-foo": 1, "bar": 2, "spam": u.Quantity(3, "s")},
+            format="bla",
+            alias_translation=None,
+        )

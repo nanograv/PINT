@@ -18,6 +18,20 @@ With ``conda``::
     conda update pint-pulsar
 
 
+How to check out some user's particular branch for testing:
+-----------------------------------------------------------
+
+If you wish to checkout branch ``testbranch`` from user ``pintuser``::
+
+    git checkout -b pintuser-testbranch master
+    git pull https://github.com/pintuser/PINT.git testbranch
+
+The first command makes a new local branch with name ``pintuser-testbranch`` from the ``master`` branch.  
+The second pulls the remote branch from the desired user's fork into that local branch.  
+You may still need to install/reinstall that branch, depending on how you have things set up 
+(so ``pip install .`` or ``pip install -e .``, where the later keeps the files in-place for faster developing).
+
+
 How to go to a specific version of PINT
 ---------------------------------------
 

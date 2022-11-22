@@ -87,7 +87,7 @@ You may also want to run, from time to time::
 
 This will try to make sure that all the external links in the documentation
 still work, though of course they can't verify that the page that comes up is
-still the indended one and not `something else`_.
+still the intended one and not `something else`_.
 
 .. _Sphinx: http://www.sphinx-doc.org/en/master/
 .. _reStructuredText: http://docutils.sourceforge.net/rst.html

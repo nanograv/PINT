@@ -311,7 +311,7 @@ class Observatory:
 
         obs = TopoObs(
             name,
-            itrf_xyz=[site_astropy.x.value, site_astropy.y.value, site_astropy.z.value],
+            location=site_astropy,
             # add in metadata from astropy
             origin="astropy: '%s'" % site_astropy.info.meta["source"],
         )

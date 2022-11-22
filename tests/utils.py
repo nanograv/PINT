@@ -1,9 +1,4 @@
 """Utililty functions for the tests"""
-import logging
-import os
-from io import StringIO
-import unittest
-import pytest
 import warnings
 
 

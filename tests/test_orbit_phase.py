@@ -2,8 +2,6 @@
 import os
 import unittest
 
-import astropy.time as time
-import astropy.units as u
 import numpy as np
 
 import pint.toa as t

@@ -1,5 +1,4 @@
 import os
-import sys
 import pytest
 import importlib
 
@@ -60,7 +59,7 @@ def test_override_gbt(sandbox):
     importlib.reload(pint.observatory.special_locations)
 
     newgbt = pint.observatory.Observatory.get("gbt")
-    assert newgbt._loc_itrf.y > 0
+    assert newgbt.location.y > 0
 
 
 def test_override_gbt_loadfunction(sandbox):
@@ -69,7 +68,7 @@ def test_override_gbt_loadfunction(sandbox):
     pint.observatory.special_locations.load_special_locations()
 
     newgbt = pint.observatory.Observatory.get("gbt")
-    assert newgbt._loc_itrf.y > 0
+    assert newgbt.location.y > 0
 
 
 def test_is_gbt_ok(sandbox):
@@ -79,7 +78,7 @@ def test_is_gbt_ok(sandbox):
     importlib.reload(pint.observatory.special_locations)
 
     newgbt = pint.observatory.Observatory.get("gbt")
-    assert newgbt._loc_itrf.y < 0
+    assert newgbt.location.y < 0
 
 
 def test_is_gbt_ok_loadfunction(sandbox):
@@ -87,7 +86,7 @@ def test_is_gbt_ok_loadfunction(sandbox):
     pint.observatory.special_locations.load_special_locations()
 
     newgbt = pint.observatory.Observatory.get("gbt")
-    assert newgbt._loc_itrf.y < 0
+    assert newgbt.location.y < 0
 
 
 def test_is_ssb_ok(sandbox):

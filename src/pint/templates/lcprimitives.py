@@ -13,7 +13,7 @@ author: M. Kerr <matthew.kerr@gmail.com>
 # Monte Carlo variables because they don't account for the uniform approx.
 # perhaps this isn't a big deal
 
-from math import atan, cos, cosh, sin, sinh, tan
+from math import atan, cosh, tan
 
 import numpy as np
 from scipy.integrate import quad, simps

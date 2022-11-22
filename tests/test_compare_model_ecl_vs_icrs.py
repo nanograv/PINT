@@ -1,6 +1,6 @@
 import io
-from lib2to3.pytree import convert
 import pint.models.model_builder as mb
+from pint.scripts import compare_parfiles
 import pytest
 
 
@@ -66,3 +66,20 @@ def test_model_compare_convert_coord_n(model_ECL, model_ICRS):
     comparison1n = model_ECL.compare(model_ICRS, convertcoordinates=False)
     comparison2n = model_ICRS.compare(model_ECL, convertcoordinates=False)
     assert isinstance(comparison1n, str) and isinstance(comparison2n, str)
+
+
+def test_compare_parfile_script(model_ECL, model_ICRS):
+    parfile1 = "par_a.par"
+    parfile2 = "par_b.par"
+
+    with open(parfile1, "w") as par1:
+        par1.write(str(model_ECL))
+
+    with open(parfile2, "w") as par2:
+        par2.write(str(model_ICRS))
+
+    argv = f"{parfile1} {parfile2}".split()
+    compare_parfiles.main(argv)
+
+    argv = f"--convertcoordinates {parfile1} {parfile2}".split()
+    compare_parfiles.main(argv)

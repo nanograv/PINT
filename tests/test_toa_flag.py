@@ -6,7 +6,6 @@ import unittest
 import io
 import numpy as np
 import pytest
-import copy
 
 import pint.toa as toa
 from pinttestdata import datadir
