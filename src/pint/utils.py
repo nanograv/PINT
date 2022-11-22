@@ -1091,6 +1091,68 @@ def get_prefix_timerange(model, prefixname):
     return getattr(model, r1).quantity, getattr(model, r2).quantity
 
 
+def get_prefix_timeranges(model, prefixname):
+    """Get all time ranges and indices for a prefix quantity like DMX or SWX
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+    prefixname : str
+        Something like ``DMX`` or ``SWX`` (no trailing ``_``)
+
+    Returns
+    -------
+    indices : np.ndarray
+    starts : astropy.time.Time
+    ends : astropy.time.Time
+
+    """
+    if prefixname.endswith("_"):
+        prefixname = prefixname[:-1]
+    prefix_mapping = model.get_prefix_mapping(prefixname + "_")
+    r1 = np.zeros(len(prefix_mapping))
+    r2 = np.zeros(len(prefix_mapping))
+    indices = np.zeros(len(prefix_mapping), dtype=np.int32)
+    for j, index in enumerate(prefix_mapping.keys()):
+        if (
+            getattr(model, f"{prefixname}R1_{index:04d}").quantity is not None
+            and getattr(model, f"{prefixname}R2_{index:04d}").quantity is not None
+        ):
+            r1[j] = getattr(model, f"{prefixname}R1_{index:04d}").quantity.mjd
+            r2[j] = getattr(model, f"{prefixname}R2_{index:04d}").quantity.mjd
+            indices[j] = index
+    return (
+        indices,
+        Time(r1, format="pulsar_mjd"),
+        Time(r2, format="pulsar_mjd"),
+    )
+
+
+def find_prefix_bytime(model, prefixname, t):
+    """Identify matching index(es) for a prefix parameter like DMX
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+    prefixname : str
+        Something like ``DMX`` or ``SWX`` (no trailing ``_``)
+    t : astropy.time.Time or float or astropy.units.Quantity
+        If not :class:`astropy.time.Time`, then MJD is assumed
+
+    Returns
+    -------
+    int or np.ndarray
+        Index or indices that match
+    """
+    if not isinstance(t, Time):
+        t = Time(t, format="pulsar_mjd")
+    indices, r1, r2 = get_prefix_timeranges(model, prefixname)
+    matches = np.where((t >= r1) & (t < r2))[0]
+    if len(matches) == 1:
+        matches = int(matches)
+    return indices[matches]
+
+
 def split_dmx(model, time):
     """
     Split an existing DMX bin at the desired time
@@ -1824,7 +1886,7 @@ def get_conjunction(coord, t0, precision="low", ecl="IERS2010"):
     -------
     astropy.time.Time
         Time of conjunction
-    astropy.quantity.Quantity
+    astropy.units.Quantity
         Elongation at conjunction
     """
 
