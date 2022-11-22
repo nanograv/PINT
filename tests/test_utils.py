@@ -50,6 +50,7 @@ from pint.utils import (
     open_or_use,
     taylor_horner,
     taylor_horner_deriv,
+    find_prefix_bytime,
 )
 
 
@@ -790,3 +791,24 @@ def test_compute_hash_accepts_no_change(a):
         h_b = compute_hash(g)
 
     assert h_a == h_b
+
+
+def test_find_dmx():
+    par = """
+    PSR J1234+5678
+    F0 1
+    DM 10
+    ELAT 10
+    ELONG 0
+    PEPOCH 54000
+    DMXR1_0001 54000
+    DMXR2_0001 55000
+    DMX_0001 1
+    DMXR1_0002 55000
+    DMXR2_0002 56000
+    DMX_0002 2
+    """
+
+    model = tm.get_model(io.StringIO(par))
+    assert find_prefix_bytime(model, "DMX", 54500) == 1
+    assert len(find_prefix_bytime(model, "DMX", 53500)) == 0
