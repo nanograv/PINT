@@ -822,7 +822,9 @@ def main(argv=None):
     lnprior_samps = blobs["lnprior"]
     lnlikelihood_samps = blobs["lnlikelihood"]
     lnpost_samps = lnprior_samps + lnlikelihood_samps
-    ind = np.unravel_index(np.argmax(lnpost_samps[:][burnin:]), lnpost_samps[:][burnin:].shape)
+    ind = np.unravel_index(
+        np.argmax(lnpost_samps[:][burnin:]), lnpost_samps[:][burnin:].shape
+    )
     ftr.maxpost_fitvals = [chains[ii][burnin:][ind] for ii in ftr.fitkeys]
 
     try:
