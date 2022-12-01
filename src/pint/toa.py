@@ -307,7 +307,7 @@ def get_TOAs(
         log.info("Pickling TOAs.")
         save_pickle(t, picklefilename=picklefilename)
     if "pulse_number" in t.table.colnames and not include_pn:
-        log.warning(f"'pulse_number' column exists but not being read in")
+        log.warning("'pulse_number' column exists but not being read in")
         t.remove_pulse_numbers()
     return t
 
