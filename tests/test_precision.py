@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 from astropy.tests.helper import assert_quantity_allclose
 from astropy.time import Time
-from hypothesis import assume, example, given
+from hypothesis import assume, example, given, settings, HealthCheck
 from hypothesis.strategies import (
     booleans,
     composite,
@@ -605,6 +605,7 @@ def test_pulsar_mjd_proceeds_at_normal_rate_on_leap_second_days(i_f):
 
 
 @given(leap_sec_day_mjd())
+@settings(suppress_health_check=[HealthCheck.filter_too_much])
 def test_mjd_proceeds_slower_on_leap_second_days(i_f):
     i, f = i_f
     assume(0.2 < f < 1)
