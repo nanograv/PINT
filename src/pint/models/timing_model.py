@@ -2534,6 +2534,32 @@ class TimingModel:
         if bad_parameters:
             raise MissingTOAs(bad_parameters)
 
+    def find_empty_masks(self, toas, freeze=False):
+        """Find unfrozen mask parameters with no TOAs before trying to fit
+
+        Parameters
+        ----------
+        toas : pint.toa.TOAs
+        freeze : bool, optional
+            Should the parameters with on TOAs be frozen
+
+        Returns
+        -------
+        list
+            Parameters with no TOAs
+        """
+        bad_parameters = []
+        for maskpar in self.get_params_of_type_top("maskParameter"):
+            par = getattr(self, maskpar)
+            if "TNEQ" in str(par.name) or par.frozen:
+                continue
+            if len(par.select_toa_mask(toas)) == 0:
+                bad_parameters.append(maskpar)
+                if freeze:
+                    log.info(f"'{maskpar}' has no TOAs so freezing")
+                    getattr(self, maskpar).frozen = True
+        return bad_parameters
+
     def setup(self):
         """Run setup methods on all components."""
         for cp in self.components.values():
