@@ -25,7 +25,7 @@ def test_wb_result(tmp_path):
     timfile = tmp_path / "fake_testzima_wb.tim"
     saved_stdout, sys.stdout = sys.stdout, StringIO("_")
     try:
-        cmd = f"{parfile} {timfile} --addnoise --simulatedm --dmerror 1e-5"
+        cmd = f"{parfile} {timfile} --addnoise --wideband --dmerror 1e-5"
         zima.main(cmd.split())
         lines = sys.stdout.getvalue()
     finally:
