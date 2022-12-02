@@ -38,7 +38,7 @@ def wls():
 def wb():
     m = get_model(join(datadir, "NGC6440E.par"))
     t = make_fake_toas_uniform(
-        55000, 58000, 20, model=m, freq=1400 * u.MHz, include_dm=True
+        55000, 58000, 20, model=m, freq=1400 * u.MHz, wideband=True
     )
 
     wb = WidebandTOAFitter(t, m)
@@ -107,7 +107,7 @@ def m_t():
         )
     )
     toas = make_fake_toas_uniform(
-        55000, 57000, 20, model=model, add_noise=True, include_dm=True
+        55000, 57000, 20, model=model, add_noise=True, wideband=True
     )
     return model, toas
 
