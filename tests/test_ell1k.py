@@ -1,11 +1,13 @@
 from pint.models import get_model
 from pint.simulation import make_fake_toas_uniform
+from pint.residuals import Residuals
 from io import StringIO
 import pytest
+import numpy as np
 
 
 @pytest.fixture
-def model():
+def model_and_toas():
     parfile = StringIO(
         """
         PSRJ            J0636+5128
@@ -38,13 +40,17 @@ def model():
     model = get_model(parfile)
 
     fake_toas = make_fake_toas_uniform(
-        startMJD=50000, endMJD=51000, ntoas=500, model=model, add_noise=True
+        startMJD=50000, endMJD=51000, ntoas=100, model=model, add_noise=True
     )
 
     return model, fake_toas
 
 
-def test_ell1k(model):
+def test_ell1k(model_and_toas):
+    model, toas = model_and_toas
     assert "BinaryELL1k" in model.components
     assert hasattr(model, "OMDOT") and model.OMDOT.quantity is not None
     assert hasattr(model, "LNEDOT") and model.LNEDOT.quantity is not None
+
+    res = Residuals(toas, model)
+    assert np.isfinite(res.calc_chi2())
