@@ -239,9 +239,11 @@ class LCELorentzian(LCEWrappedFunction, LCLorentzian):
     """Represent a (wrapped) Lorentzian peak.
 
     Parameters
-    Width     : the width paramater of the wrapped Cauchy distribution,
-                namely HWHM*2PI for narrow distributions
-    Location  : the center of the peak in phase
+    ----------
+    Width :
+        the width paramater of the wrapped Cauchy distribution, namely HWHM*2PI for narrow distributions
+    Location :
+        the center of the peak in phase
     """
 
     def init(self):
