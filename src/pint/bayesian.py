@@ -90,24 +90,24 @@ class BayesianTiming:
                 )
 
     def _decide_likelihood_method(self):
-        """Weighted least squares with normalization term (wls), or Generalized leasts
-        quares with normalization term (gls), for narrow-band (nb) or wide-band (wb)
+        """Weighted least squares with normalization term (wls), or Generalized least
+        squares with normalization term (gls), for narrow-band (nb) or wide-band (wb)
         dataset."""
 
         if (
-            "NoiseComponent" not in self.model.component_types
-            or not self.model.has_correlated_errors
+            "NoiseComponent" in self.model.component_types
+            and self.model.has_correlated_errors
         ):
-            if self.is_wideband:
-                self.likelihood_method = "wls-wb"
-                self._lnlikelihood = self._wls_wb_lnlikelihood
-            else:
-                self.likelihood_method = "wls-nb"
-                self._lnlikelihood = self._wls_nb_lnlikelihood
-        else:
             raise NotImplementedError(
                 "GLS likelihood for correlated noise is not yet implemented."
             )
+
+        if self.is_wideband:
+            self.likelihood_method = "wls-wb"
+            self._lnlikelihood = self._wls_wb_lnlikelihood
+        else:
+            self.likelihood_method = "wls-nb"
+            self._lnlikelihood = self._wls_nb_lnlikelihood
 
     def lnprior(self, params):
         """Basic implementation of a factorized log prior.
@@ -148,10 +148,7 @@ class BayesianTiming:
             ndarray :
                 Sample drawn from the prior distribution
         """
-        result = np.array(
-            [param.prior._rv.ppf(x) for x, param in zip(cube, self.params)]
-        )
-        return result
+        return np.array([param.prior._rv.ppf(x) for x, param in zip(cube, self.params)])
 
     def lnlikelihood(self, params):
         """The Log-likelihood function. If the model does not contain any noise components or
@@ -183,10 +180,7 @@ class BayesianTiming:
                 The value of the log-posterior at params
         """
         lnpr = self.lnprior(params)
-        if np.isnan(lnpr):
-            return -np.inf
-        else:
-            return lnpr + self.lnlikelihood(params)
+        return -np.inf if np.isnan(lnpr) else lnpr + self.lnlikelihood(params)
 
     def _wls_nb_lnlikelihood(self, params):
         """Implementation of Log-Likelihood function for uncorrelated noise only for
