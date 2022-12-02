@@ -1,4 +1,5 @@
 from pint.models import get_model
+from pint.simulation import make_fake_toas_uniform
 from io import StringIO
 import pytest
 
@@ -34,7 +35,13 @@ def model():
         UNITS           TDB
         """
     )
-    return get_model(parfile)
+    model = get_model(parfile)
+
+    fake_toas = make_fake_toas_uniform(
+        startMJD=50000, endMJD=51000, ntoas=500, model=model, add_noise=True
+    )
+
+    return model, fake_toas
 
 
 def test_ell1k(model):

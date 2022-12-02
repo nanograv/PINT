@@ -312,6 +312,7 @@ class BinaryELL1k(BinaryELL1):
         self.add_param(
             floatParameter(
                 name="LNEDOT",
+                units="1/year",
                 description="Log-derivative of the eccentricity EDOT/ECC",
                 long_double=True,
             )
