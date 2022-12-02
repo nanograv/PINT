@@ -10,6 +10,7 @@ from pint.models.pulsar_binary import PulsarBinary
 from pint.models.stand_alone_psr_binaries import binary_orbits as bo
 from pint.models.stand_alone_psr_binaries.ELL1_model import ELL1model
 from pint.models.stand_alone_psr_binaries.ELL1H_model import ELL1Hmodel
+from pint.models.stand_alone_psr_binaries.ELL1k_model import ELL1kmodel
 from pint.models.timing_model import MissingParameter
 from pint.utils import taylor_horner_deriv
 
@@ -178,6 +179,8 @@ class BinaryELL1(PulsarBinary):
             dA1 = self.A1DOT.quantity * dt_integer_orbits
             self.A1.quantity = self.A1.quantity + dA1
 
+        return dt_integer_orbits
+
 
 class BinaryELL1H(BinaryELL1):
     """ELL1 modified to use H3 parameter for Shapiro delay.
@@ -266,3 +269,84 @@ class BinaryELL1H(BinaryELL1):
         super().validate()
         # if self.H3.quantity is None:
         #     raise MissingParameter("ELL1H", "H3", "'H3' is required for ELL1H model")
+
+
+class BinaryELL1k(BinaryELL1):
+    """ELL1k binary model.
+
+    Modified version of the ELL1 model applicable to short-orbital period binaries where
+    the periastron advance timescale is comparable to the data span. In such cases, the
+    evolution of EPS1 and EPS2 should be described using OMDOT and LNEDOT rather than
+    EPS1DOT and EPS2DOT. The (EPS1DOT, EPS2DOT) parametrization of the evolution of EPS1
+    and EPS2 is a linear approximation of the (OMDOT, LNEDOT) parametrization which breaks
+    down when the periastron advance timescale is comparable to the data span.
+
+    The actual calculations for this are done in
+    :class:`pint.models.stand_alone_psr_binaries.ELL1k_model.ELL1kmodel`.
+
+    It supports all the parameters defined in :class:`pint.models.pulsar_binary.PulsarBinary`
+    except that it removes the polar orbital parameters:
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.binary_ell1.BinaryELL1k
+    """
+
+    register = True
+
+    def __init__(self):
+        super().__init__()
+        self.binary_model_name = "ELL1k"
+        self.binary_model_class = ELL1kmodel
+
+        self.add_param(
+            floatParameter(
+                name="OMDOT",
+                units="deg/year",
+                description="Rate of advance of periastron",
+                long_double=True,
+            )
+        )
+
+        self.add_param(
+            floatParameter(
+                name="LNEDOT",
+                description="Log-derivative of the eccentricity EDOT/ECC",
+                long_double=True,
+            )
+        )
+
+        self.remove_param("EPS1DOT")
+        self.remove_param("EPS2DOT")
+
+    def validate(self):
+        """Validate parameters."""
+        super().validate()
+
+    def change_binary_epoch(self, new_epoch):
+        """Change the epoch for this binary model.
+
+        EPS1 and EPS2 will be evolved in time according to OMDOT and LNEDOT.
+        Everything else is the same as in the ELL1 model.
+
+        Parameters
+        ----------
+        new_epoch: float MJD (in TDB) or `astropy.Time` object
+            The new epoch value.
+        """
+        dt = super().change_binary_epoch()
+
+        # Update EPS1, EPS2
+        if self.OMDOT.quantity is not None and self.LNEDOT.quantity is not None:
+            eps10 = self.EPS1.quantity
+            eps20 = self.EPS1.quantity
+            omdot = self.OMDOT.quantity
+            lnedot = self.LNEDOT.quantity
+
+            self.EPS1.quantity = (1 + lnedot * dt) * (
+                eps10 * np.cos(omdot * dt) + eps20 * np.sin(omdot * dt)
+            )
+            self.EPS2.quantity = (1 + lnedot * dt) * (
+                eps20 * np.cos(omdot * dt) - eps10 * np.sin(omdot * dt)
+            )
