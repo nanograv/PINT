@@ -203,9 +203,9 @@ class LCPrimitive:
 
     All "analytic" light curve models must inherit and must implement
     the 'virtual' functions:
-        __call__ : evaluate the primitive at provided phases
-        gradient : evaluate the primitive derivative wrt the parameters
-        hwhm     : convert between internal parameters and empirical HWMM
+        * __call__ : evaluate the primitive at provided phases
+        * gradient : evaluate the primitive derivative wrt the parameters
+        * hwhm     : convert between internal parameters and empirical HWMM
 
     Specialized class initialization is handled via inheriting init.
     """
