@@ -387,20 +387,21 @@ class LCFitter:
 
     def fit_position(self, unbinned=True, track=False, skip_coarse=False):
         """Fit overall template position.  Return shift and its error.
-        Parameters
-         ----------
-         unbinned : bool
-             Use unbinned likelihood; will be very slow for many photons.
-         track : bool
-             Limit best-fit solution to +/- 0.2 periods of zero phase.
-             Helps to avoid 0.5period ambiguity for two-peaked profiles.
 
-         Returns
-         -------
-         delta_phi : float
-             overall phase shift from template
-         delta_phi_err : float
-             estimated uncertainty on phase shift from likelihood hessian
+        Parameters
+        ----------
+        unbinned : bool
+            Use unbinned likelihood; will be very slow for many photons.
+        track : bool
+            Limit best-fit solution to +/- 0.2 periods of zero phase.
+            Helps to avoid 0.5period ambiguity for two-peaked profiles.
+
+        Returns
+        -------
+        delta_phi : float
+            overall phase shift from template
+        delta_phi_err : float
+            estimated uncertainty on phase shift from likelihood hessian
 
         """
 
