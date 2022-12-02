@@ -43,10 +43,9 @@ class ELL1BaseModel(PSR_BINARY):
         ttasc = t - TASC
         """
         t = self.t
-        if not hasattr(self.t, "unit") or self.t.unit == None:
+        if not hasattr(self.t, "unit") or self.t.unit is None:
             t = self.t * u.day
-        ttasc = (t - self.TASC.value * u.day).to("second")
-        return ttasc
+        return (t - self.TASC.value * u.day).to("second")
 
     def a1(self):
         """ELL1 model a1 calculation.
@@ -101,15 +100,13 @@ class ELL1BaseModel(PSR_BINARY):
     # the attribute .orbits_func needs to be set as orbits_ELL1
     def Phi(self):
         """Orbit phase in ELL1 model. Using TASC"""
-        phase = self.M()
-        return phase
+        return self.M()
 
     def orbits_ELL1(self):
         PB = (self.pb()).to("second")
         PBDOT = self.pbdot()
         ttasc = self.ttasc()
-        orbits = (ttasc / PB - 0.5 * PBDOT * (ttasc / PB) ** 2).decompose()
-        return orbits
+        return (ttasc / PB - 0.5 * PBDOT * (ttasc / PB) ** 2).decompose()
 
     def d_Phi_d_TASC(self):
         """dPhi/dTASC"""
@@ -128,17 +125,16 @@ class ELL1BaseModel(PSR_BINARY):
 
         Returns
         -------
-        Derivitve of Phi respect to par
+        Derivative of Phi respect to par
         """
         if par not in self.binary_params:
-            errorMesg = par + " is not in binary parameter list."
-            raise ValueError(errorMesg)
+            raise ValueError(f"{par} is not in binary parameter list.")
 
         par_obj = getattr(self, par)
         try:
-            func = getattr(self, "d_Phi_d_" + par)
+            func = getattr(self, f"d_Phi_d_{par}")
             return func()
-        except:
+        except Exception:
             return self.d_M_d_par(par)
 
     def d_Dre_d_par(self, par):
@@ -277,7 +273,7 @@ class ELL1BaseModel(PSR_BINARY):
         return d_Drepp_d_par
 
     def delayR(self):
-        """ELL1 Roemer delay in proper time. Ch. Lange,1 F. Camilo, 2001 eq. A6"""
+        """ELL1 Roemer delay in proper time. Ch. Lange et al 2001 eq. A6"""
         Phi = self.Phi()
         return (
             self.a1()
@@ -289,10 +285,10 @@ class ELL1BaseModel(PSR_BINARY):
         ).decompose()
 
     def delayI(self):
-        """Inverse time delay formular.
+        """Inverse time delay formula.
 
         The treatment is similar to the one
-        in DD model(T. Damour and N. Deruelle(1986)equation [46-52])::
+        in DD model (T. Damour & N. Deruelle (1986) equation [46-52])::
 
             Dre = a1*(sin(Phi)+eps1/2*sin(2*Phi)+eps1/2*cos(2*Phi))
             Drep = dDre/dt
@@ -378,14 +374,13 @@ class ELL1model(ELL1BaseModel):
         self.d_binarydelay_d_par_funcs = [self.d_ELL1delay_d_par]
 
     def delayS(self):
-        """ELL1 Shaprio delay. Ch. Lange,1 F. Camilo, 2001 eq. A16"""
+        """ELL1 Shapiro delay. Lange et al 2001 eq. A16"""
         TM2 = self.TM2()
         Phi = self.Phi()
-        sDelay = -2 * TM2 * np.log(1 - self.SINI * np.sin(Phi))
-        return sDelay
+        return -2 * TM2 * np.log(1 - self.SINI * np.sin(Phi))
 
     def d_delayS_d_par(self, par):
-        """Derivative for bianry Shaprio delay.
+        """Derivative for binary Shapiro delay.
 
         Computes::
 
