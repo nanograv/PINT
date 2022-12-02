@@ -66,7 +66,7 @@ def main(argv=None):
         help="Actually add in random noise, or just populate the column",
     )
     parser.add_argument(
-        "--simulatedm",
+        "--wideband",
         action="store_true",
         default=False,
         help="Add DM information to simulated TOAs. Generates wideband toas.",
@@ -127,8 +127,8 @@ def main(argv=None):
             freq=np.atleast_1d(args.freq) * u.MHz,
             fuzz=args.fuzzdays * u.d,
             add_noise=args.addnoise,
-            include_dm=args.simulatedm,
-            dm_error=args.dmerror * pint.dmu,
+            wideband=args.wideband,
+            wb_dm_error=args.dmerror * pint.dmu,
         )
     else:
         log.info("Reading initial TOAs from {0}".format(args.inputtim))
