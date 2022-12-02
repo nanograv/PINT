@@ -1,9 +1,11 @@
-from pint.models import get_model
-from pint.simulation import make_fake_toas_uniform
-from pint.residuals import Residuals
 from io import StringIO
-import pytest
+
 import numpy as np
+import pytest
+
+from pint.models import get_model
+from pint.residuals import Residuals
+from pint.simulation import make_fake_toas_uniform
 
 
 @pytest.fixture
