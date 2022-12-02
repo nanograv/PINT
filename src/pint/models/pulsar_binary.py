@@ -136,7 +136,7 @@ class PulsarBinary(DelayComponent):
             floatParameter(
                 name="OMDOT",
                 units="deg/year",
-                description="Longitude of periastron",
+                description="Rate of advance of periastron",
                 long_double=True,
             )
         )
