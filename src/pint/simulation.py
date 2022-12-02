@@ -65,10 +65,7 @@ def zero_residuals(ts, model, maxiter=10, tolerance=None):
     ts.compute_pulse_numbers(model)
     maxresid = None
     if tolerance is None:
-        if pint.utils.check_longdouble_precision():
-            tolerance = 1 * u.ns
-        else:
-            tolerance = 5 * u.us
+        tolerance = 1 * u.ns if pint.utils.check_longdouble_precision() else 5 * u.us
     for i in range(maxiter):
         r = pint.residuals.Residuals(ts, model, track_mode="use_pulse_numbers")
         resids = r.calc_time_resids(calctype="taylor")
@@ -406,8 +403,7 @@ def make_fake_toas_fromtim(timfile, model, add_noise=False, name="fake"):
     """
     input_ts = pint.toa.get_TOAs(timfile)
 
-    include_dm = input_ts.is_wideband()
-    if include_dm:
+    if input_ts.is_wideband():
         dm_errors = input_ts.get_dm_errors()
         ts = update_fake_dms(model, ts, dm_errors)
 
@@ -483,7 +479,7 @@ def calculate_random_models(
     # this is a dictionary with the parameter values, but it might not be in the same order
     # and it leaves out the Offset parameter
     param_values = fitter.model.get_params_dict("free", "value")
-    mean_vector = np.array([param_values[x] for x in param_names if not x == "Offset"])
+    mean_vector = np.array([param_values[x] for x in param_names if x != "Offset"])
     if params == "all":
         # remove the first column and row (absolute phase)
         if param_names[0] == "Offset":
@@ -536,7 +532,4 @@ def calculate_random_models(
     if return_time:
         dphase /= freqs
 
-    if keep_models:
-        return dphase, random_models
-    else:
-        return dphase
+    return (dphase, random_models) if keep_models else dphase

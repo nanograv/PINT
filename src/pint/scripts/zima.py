@@ -146,20 +146,24 @@ def main(argv=None):
     ts.write_TOA_file(args.timfile, name="fake", format=out_format)
 
     if args.plot:
-        # This should be a very boring plot with all residuals flat at 0.0!
-        import matplotlib.pyplot as plt
-        from astropy.visualization import quantity_support
+        plot_simulated_toas(ts, m)
 
-        quantity_support()
 
-        r = pint.residuals.Residuals(ts, m)
-        plt.errorbar(
-            ts.get_mjds(),
-            r.calc_time_resids(calctype="taylor").to(u.us),
-            yerr=ts.get_errors().to(u.us),
-            fmt=".",
-        )
-        plt.xlabel("MJD")
-        plt.ylabel("Residual (us)")
-        plt.grid(True)
-        plt.show()
+def plot_simulated_toas(ts, m):
+    # This should be a very boring plot with all residuals flat at 0.0!
+    import matplotlib.pyplot as plt
+    from astropy.visualization import quantity_support
+
+    quantity_support()
+
+    r = pint.residuals.Residuals(ts, m)
+    plt.errorbar(
+        ts.get_mjds(),
+        r.calc_time_resids(calctype="taylor").to(u.us),
+        yerr=ts.get_errors().to(u.us),
+        fmt=".",
+    )
+    plt.xlabel("MJD")
+    plt.ylabel("Residual (us)")
+    plt.grid(True)
+    plt.show()
