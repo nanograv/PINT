@@ -250,8 +250,7 @@ class BinaryELL1H(BinaryELL1):
         if self.H4.quantity is not None:
             self.binary_instance.fit_params = ["H3", "H4"]
             # If have H4 or STIGMA, choose 7th order harmonics
-            if self.NHARMS.value < 7:
-                self.NHARMS.value = 7
+            self.NHARMS.value = max(self.NHARMS.value, 7)
             if self.STIGMA.quantity is not None:
                 raise ValueError("ELL1H can use H4 or STIGMA but not both")
 

@@ -232,7 +232,7 @@ class PulsarBinary(DelayComponent):
             )
 
     def check_required_params(self, required_params):
-        # seach for all the possible to get the parameters.
+        # search for all the possible to get the parameters.
         for p in required_params:
             par = getattr(self, p)
             if par.value is None:
@@ -455,7 +455,7 @@ class PulsarBinary(DelayComponent):
             fbterms = [0.0 * u.Unit("")] + self._parent.get_prefix_list("FB")
 
             for n in range(len(fbterms) - 1):
-                cur_deriv = getattr(self, "FB{}".format(n))
+                cur_deriv = getattr(self, f"FB{n}")
                 cur_deriv.value = taylor_horner_deriv(
                     dt_integer_orbits.to(u.s), fbterms, deriv_order=n + 1
                 )
