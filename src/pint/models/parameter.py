@@ -1860,8 +1860,8 @@ class maskParameter(floatParameter):
     def select_toa_mask(self, toas):
         """Select the toas that match the mask.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         toas: :class:`pint.toas.TOAs`
 
         Returns
@@ -1916,8 +1916,8 @@ class maskParameter(floatParameter):
         other_param: maskParameter
             The parameter to compare.
 
-        Return
-        ------
+        Returns
+        -------
         bool:
             If the key and value are the same, return True, otherwise False.
 
