@@ -58,9 +58,15 @@ def test_ell1k(model_and_toas):
     assert np.isfinite(res.calc_chi2())
 
 
-def test_ell1k_derivatives(model_and_toas):
+def test_ell1k_designmatrix(model_and_toas):
     model, toas = model_and_toas
 
     # @TODO : better tests for this
     M, _, _ = model.designmatrix(toas)
     assert np.all(np.isfinite(M))
+
+
+def test_change_epoch(model_and_toas):
+    model, toas = model_and_toas
+
+    model.components["BinaryELL1k"].change_binary_epoch(55300)

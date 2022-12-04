@@ -336,7 +336,7 @@ class BinaryELL1k(BinaryELL1):
         new_epoch: float MJD (in TDB) or `astropy.Time` object
             The new epoch value.
         """
-        dt = super().change_binary_epoch()
+        dt = super().change_binary_epoch(new_epoch)
 
         # Update EPS1, EPS2
         if self.OMDOT.quantity is not None and self.LNEDOT.quantity is not None:
