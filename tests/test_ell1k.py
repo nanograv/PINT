@@ -61,5 +61,6 @@ def test_ell1k(model_and_toas):
 def test_ell1k_derivatives(model_and_toas):
     model, toas = model_and_toas
 
+    # @TODO : better tests for this
     M, _, _ = model.designmatrix(toas)
     assert np.all(np.isfinite(M))
