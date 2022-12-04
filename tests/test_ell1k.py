@@ -22,18 +22,18 @@ def model_and_toas():
         POSEPOCH        57277.00
         DMEPOCH         56307.00
         BINARY          ELL1k
-        A1              0.00898636                    6.000e-08
-        TASC            57277.01594431                1.100e-07
-        EPS1            1.4E-6                        1.000e-05
-        EPS2            1.7E-5                        9.000e-06
-        OMDOT           30
-        LNEDOT          0
+        A1              0.00898636           1         6.000e-08
+        TASC            57277.01594431       1         1.100e-07
+        EPS1            1.4E-6               1         1.000e-05
+        EPS2            1.7E-5               1         9.000e-06
+        OMDOT           30                   1
+        LNEDOT          0                    1
         CLK             TT(BIPM2017)
         EPHEM           DE436
         RM              -7                            1.000e+00
         PX              1.4                           3.000e-01
-        FB0             0.00017391195942              4.000e-14
-        FB1             -7.7E-20                      3.000e-21
+        FB0             0.00017391195942     1         4.000e-14
+        FB1             -7.7E-20             1         3.000e-21
         PMELONG         3.33                          4.000e-02
         PMELAT          -1.44                         1.100e-01
         UNITS           TDB
@@ -56,3 +56,10 @@ def test_ell1k(model_and_toas):
 
     res = Residuals(toas, model)
     assert np.isfinite(res.calc_chi2())
+
+
+def test_ell1k_derivatives(model_and_toas):
+    model, toas = model_and_toas
+
+    M, _, _ = model.designmatrix(toas)
+    assert np.all(np.isfinite(M))
