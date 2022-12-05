@@ -169,13 +169,13 @@ class BinaryELL1(PulsarBinary):
                 )
 
         # Update EPS1, EPS2, and A1
-        if self.EPS1DOT.quantity is not None:
+        if hasattr(self, "EPS1DOT") and self.EPS1DOT.quantity is not None:
             dEPS1 = self.EPS1DOT.quantity * dt_integer_orbits
             self.EPS1.quantity = self.EPS1.quantity + dEPS1
-        if self.EPS2DOT.quantity is not None:
+        if hasattr(self, "EPS2DOT") and self.EPS2DOT.quantity is not None:
             dEPS2 = self.EPS2DOT.quantity * dt_integer_orbits
             self.EPS2.quantity = self.EPS2.quantity + dEPS2
-        if self.A1DOT.quantity is not None:
+        if hasattr(self, "A1DOT") and self.A1DOT.quantity is not None:
             dA1 = self.A1DOT.quantity * dt_integer_orbits
             self.A1.quantity = self.A1.quantity + dA1
 
