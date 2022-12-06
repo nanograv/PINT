@@ -127,11 +127,9 @@ class MissingTOAs(ValueError):
         if isinstance(parameter_names, str):
             parameter_names = [parameter_names]
         if len(parameter_names) == 1:
-            msg = f"Parameter {parameter_names[0]} does not correspond to any TOAs"
+            msg = f"Parameter {parameter_names[0]} does not correspond to any TOAs: you might need to run `model.find_empty_masks(toas, freeze=True)`"
         elif len(parameter_names) > 1:
-            msg = (
-                f"Parameters {' '.join(parameter_names)} do not correspond to any TOAs"
-            )
+            msg = f"Parameters {' '.join(parameter_names)} do not correspond to any TOAs: you might need to run `model.find_empty_masks(toas, freeze=True)`"
         else:
             raise ValueError("Incorrect attempt to construct MissingTOAs")
         super().__init__(msg)
@@ -2522,7 +2520,7 @@ class TimingModel:
         bad_parameters = []
         for maskpar in self.get_params_of_type_top("maskParameter"):
             par = getattr(self, maskpar)
-            if "TNEQ" in str(par.name) or par.frozen:
+            if par.frozen:
                 continue
             if len(par.select_toa_mask(toas)) == 0:
                 bad_parameters.append(f"'{maskpar}, {par.key}, {par.key_value}'")
@@ -2551,7 +2549,7 @@ class TimingModel:
         bad_parameters = []
         for maskpar in self.get_params_of_type_top("maskParameter"):
             par = getattr(self, maskpar)
-            if "TNEQ" in str(par.name) or par.frozen:
+            if par.frozen:
                 continue
             if len(par.select_toa_mask(toas)) == 0:
                 bad_parameters.append(maskpar)
