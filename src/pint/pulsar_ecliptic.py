@@ -11,7 +11,6 @@ from pint.utils import interesting_lines, lines_of
 
 __all__ = ["OBL", "PulsarEcliptic"]
 
-astropy_version = sys.modules["astropy"].__version__
 
 # Load obliquity data
 # Assume the data file is in the ./datafile directory
@@ -52,21 +51,6 @@ class PulsarEcliptic(coord.BaseCoordinateFrame):
     obliquity = QuantityAttribute(default=OBL["DEFAULT"], unit=u.arcsec)
 
     def __init__(self, *args, **kwargs):
-        # Allow using 'pm_lat' and 'pm_lon_coslat' keywords under astropy 2.
-        # This matches the behavior of the built-in frames in astropy 2,
-        # and the behavior of custom frames in astropy 3+.
-        if int(astropy_version.split(".")[0]) <= 2:
-            try:
-                kwargs["d_lon_coslat"] = kwargs["pm_lon_coslat"]
-                del kwargs["pm_lon_coslat"]
-            except KeyError:
-                pass
-            try:
-                kwargs["d_lat"] = kwargs["pm_lat"]
-                del kwargs["pm_lat"]
-            except KeyError:
-                pass
-
         if "ecl" in kwargs:
             try:
                 kwargs["obliquity"] = OBL[kwargs["ecl"]]

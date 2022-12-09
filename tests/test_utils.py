@@ -147,7 +147,7 @@ def test_interesting_lines(lines, goodlines, comments):
 def test_interesting_lines_input_validation():
     """Check it lets the user know about invalid comment markers."""
     with pytest.raises(ValueError):
-        for l in interesting_lines([""], comments=" C "):
+        for _ in interesting_lines([""], comments=" C "):
             pass
 
 
@@ -688,13 +688,13 @@ def test_Ftest_statistical(dof_1, dof_2, seed):
     """
     random = np.random.default_rng(0)
     Fs = []
-    for i in range(10000):
+    for _ in range(10000):
         x = random.standard_normal(dof_1)
         Fs.append(FTest((x**2).sum(), dof_1, (x[:dof_2] ** 2).sum(), dof_2))
     threshold = 0.01
     assert (
         scipy.stats.binom(len(Fs), threshold).ppf(0.01)
-        < sum(1 for F in Fs if F < threshold)
+        < sum(F < threshold for F in Fs)
         < scipy.stats.binom(len(Fs), threshold).ppf(0.99)
     )
 

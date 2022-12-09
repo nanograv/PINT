@@ -4,6 +4,7 @@ import unittest
 
 import astropy.units as u
 from astropy.time import Time
+from datetime import datetime
 from pinttestdata import datadir
 
 from pint.models import get_model
@@ -45,6 +46,42 @@ class TestTOA(unittest.TestCase):
         TOA(self.MJD, errror="1")
         with self.assertRaises(TypeError):
             TOA(self.MJD, errror=1, flags={})
+
+    def test_toa_object(self):
+        toatime = Time(datetime.now())
+        toaerr = u.Quantity(1e-6, "s")
+        freq = u.Quantity(1400, "MHz")
+        obs = "ao"
+
+        # scale should be None when MJD is a Time
+        with self.assertRaises(ValueError):
+            toa = TOA(MJD=toatime, error=toaerr, freq=freq, obs=obs, scale="utc")
+
+        # flags should be stored without their leading -
+        with self.assertRaises(ValueError):
+            toa = TOA(
+                MJD=toatime, error=toaerr, freq=freq, obs=obs, flags={"-foo": "foo1"}
+            )
+
+        # Invalid flag
+        with self.assertRaises(ValueError):
+            toa = TOA(
+                MJD=toatime, error=toaerr, freq=freq, obs=obs, flags={"$": "foo1"}
+            )
+        with self.assertRaises(ValueError):
+            toa = TOA(MJD=toatime, error=toaerr, freq=freq, obs=obs, flags={"foo": 1})
+
+        toa = TOA(MJD=toatime, error=toaerr, freq=freq, obs=obs, foo="foo1")
+        assert "foo1" in str(toa)
+        assert "bla" in toa.as_line(name="bla")
+        assert len(toa.flags) > 0
+
+        # Missing name
+        with self.assertRaises(ValueError):
+            toa.as_line()
+
+        toa = TOA(MJD=toatime, error=toaerr, freq=freq, obs=obs, foo="foo1", name="bla")
+        assert "bla" in toa.as_line()
 
 
 class TestTOAs(unittest.TestCase):
