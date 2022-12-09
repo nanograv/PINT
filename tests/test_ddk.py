@@ -282,5 +282,10 @@ def test_A1dot_warning():
         m = mb.get_model(StringIO(temp_par_str + "\nA1DOT 2\n"))
 
 
+def test_alternative_solutions():
+    mECL = get_model(StringIO(temp_par_str + "\n KIN  71.969  1               0.562"))
+    assert len(mECL.components["BinaryDDK"].alternative_solutions()) == 4
+
+
 if __name__ == "__main__":
     pass

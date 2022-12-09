@@ -36,9 +36,15 @@ def test_kepler_2d_t0_pb():
 
 def test_kepler_2d_circ():
     p = kepler.Kepler2DParameters(a=2, pb=3, eps1=0, eps2=0, t0=1)
-    xyv, _ = kepler.kepler_2d(p, p.t0)
+    xyv, partials = kepler.kepler_2d(p, p.t0)
     assert xyv[0] > 0
     assert_allclose(xyv[1], 0, atol=1e-8)
+    assert np.all(np.isfinite(xyv))
+    assert np.all(np.isfinite(partials))
+
+    xyv, partials = kepler.kepler_2d(p, 0)
+    assert np.all(np.isfinite(xyv))
+    assert np.all(np.isfinite(partials))
 
 
 def flatten_namedtuple(f, tupletype):
