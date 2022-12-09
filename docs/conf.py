@@ -119,6 +119,7 @@ exclude_patterns = [
     "examples/compare_tempo2_B1855.py",
     "examples/example_dmx_ranges.py",
     "examples/example_pulse_numbers.py",
+    "examples/bayesian-example-NGC6440E.py",
     "conf.py",
     "_ext",
 ]
