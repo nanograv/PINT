@@ -31,8 +31,7 @@ class TestWidebandTOAFitter:
         # test making residuals
         assert len(fitter.resids._combined_resids) == 2 * self.toas.ntoas
         # test additional args
-        add_args = {}
-        add_args["toa"] = {"subtract_mean": False}
+        add_args = {"toa": {"subtract_mean": False}}
         fitter2 = WidebandTOAFitter([self.toas], self.model, additional_args=add_args)
 
         assert fitter2.resids.toa.subtract_mean == False

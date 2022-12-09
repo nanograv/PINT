@@ -307,7 +307,7 @@ def get_TOAs(
         log.info("Pickling TOAs.")
         save_pickle(t, picklefilename=picklefilename)
     if "pulse_number" in t.table.colnames and not include_pn:
-        log.warning(f"'pulse_number' column exists but not being read in")
+        log.warning("'pulse_number' column exists but not being read in")
         t.remove_pulse_numbers()
     return t
 
@@ -771,7 +771,7 @@ def read_toa_file(filename, process_includes=True, cdict=None, dir=None):
                 cdict[cmd] = float(d["Command"][1]) * u.MHz
             elif cmd in ("EFAC", "PHA1", "PHA2"):
                 cdict[cmd] = float(d["Command"][1])
-                if cmd in ("PHA1", "PHA2", "TIME", "PHASE"):
+                if cmd in ("PHA1", "PHA2"):
                     d[cmd] = d["Command"][1]
             elif cmd == "INFO":
                 cdict[cmd] = d["Command"][1]
@@ -1134,13 +1134,17 @@ class TOA:
 
     def as_line(self, format="Tempo2", name=None, dm=0 * pint.dmu):
         """Format TOA as a line for a ``.tim`` file."""
-        if name is None:
-            name = self.name
+        if name is not None:
+            pass
+        elif "name" in self.flags:
+            name = self.flags["name"]
+        else:
+            raise ValueError("Unable to generate TOA line due to missing name.")
         return format_toa_line(
-            mjd=self.mjd,
-            error=self.error,
+            toatime=self.mjd,
+            toaerr=self.error,
             freq=self.freq,
-            obs=self.obs,
+            obs=get_observatory(self.obs),
             dm=dm,
             name=name,
             format=format,

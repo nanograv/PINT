@@ -73,8 +73,16 @@ class TestTOAReader(unittest.TestCase):
         assert "barycenter" in ts.observatories
         assert ts.ntoas == 8
 
+    def test_read_parkes_phaseoffset(self):
+        # Fourth column contains non-zero phase offset
+        toaline = " PUPPI_J2044+28_58852_652 432.3420  58852.7590686063892    1.00  120.75        @"
+
+        # To be changed if/when phase offset for Parkes format is implemented
+        with pytest.raises(ValueError):
+            toa._parse_TOA_line(toaline)
+
     def test_commands(self):
-        assert len(self.x.commands) == 18
+        assert len(self.x.commands) == 19
 
     def test_count(self):
         assert self.x.ntoas == 9
