@@ -127,7 +127,7 @@ def require_longdouble_precision():
     """
     if not check_longdouble_precision():
         raise PINTPrecisionError(
-            f"PINT needs higher precision floating point than you have available. PINT uses the numpy longdouble type to represent modified Julian days, and this machine does not have sufficient numerical precision to represent sub-microsecond times with np.longdouble. On an M1 Mac you will need to use a Rosetta environment, or on a Windows machine you will need to us a different Python interpreter. Some PINT operations can work with reduced precision, but you have requested one that cannot."
+            "PINT needs higher precision floating point than you have available. PINT uses the numpy longdouble type to represent modified Julian days, and this machine does not have sufficient numerical precision to represent sub-microsecond times with np.longdouble. On an M1 Mac you will need to use a Rosetta environment, or on a Windows machine you will need to us a different Python interpreter. Some PINT operations can work with reduced precision, but you have requested one that cannot."
         )
 
 
@@ -158,29 +158,22 @@ class PosVel:
     def __init__(self, pos, vel, obj=None, origin=None):
         if len(pos) != 3:
             raise ValueError("Position vector has length %d instead of 3" % len(pos))
-        if isinstance(pos, u.Quantity):
-            self.pos = pos
-        else:
-            self.pos = np.asarray(pos)
+        self.pos = pos if isinstance(pos, u.Quantity) else np.asarray(pos)
 
         if len(vel) != 3:
             raise ValueError("Position vector has length %d instead of 3" % len(pos))
-        if isinstance(vel, u.Quantity):
-            self.vel = vel
-        else:
-            self.vel = np.asarray(vel)
+        self.vel = vel if isinstance(vel, u.Quantity) else np.asarray(vel)
 
         if len(self.pos.shape) != len(self.vel.shape):
             # FIXME: could broadcast them, but have to be careful
             raise ValueError(
-                "pos and vel must have the same number of dimensions but are {} and {}".format(
-                    self.pos.shape, self.vel.shape
-                )
+                f"pos and vel must have the same number of dimensions but are {self.pos.shape} and {self.vel.shape}"
             )
+
         elif self.pos.shape != self.vel.shape:
             self.pos, self.vel = np.broadcast_arrays(self.pos, self.vel, subok=True)
 
-        if bool(obj is None) != bool(origin is None):
+        if (obj is None) != (origin is None):
             raise ValueError(
                 "If one of obj and origin is specified, the other must be too."
             )
@@ -208,9 +201,7 @@ class PosVel:
                 obj = self.obj
             else:
                 raise ValueError(
-                    "Attempting to add incompatible vectors: "
-                    + "%s->%s + %s->%s"
-                    % (self.origin, self.obj, other.origin, other.obj)
+                    f"Attempting to add incompatible vectors: {self.origin}->{self.obj} + {other.origin}->{other.obj}"
                 )
 
         return PosVel(
@@ -221,28 +212,16 @@ class PosVel:
         return self.__add__(other.__neg__())
 
     def __str__(self):
-        if self._has_labels():
-            return (
-                "PosVel("
-                + str(self.pos)
-                + ", "
-                + str(self.vel)
-                + " "
-                + self.origin
-                + "->"
-                + self.obj
-                + ")"
-            )
-        else:
-            return "PosVel(" + str(self.pos) + ", " + str(self.vel) + ")"
+        return (
+            f"PosVel({str(self.pos)}, {str(self.vel)} {self.origin}->{self.obj})"
+            if self._has_labels()
+            else f"PosVel({str(self.pos)}, {str(self.vel)})"
+        )
 
     def __getitem__(self, k):
         """Allow extraction of slices of the contained arrays"""
         colon = slice(None, None, None)
-        if isinstance(k, tuple):
-            ix = (colon,) + k
-        else:
-            ix = (colon, k)
+        ix = (colon,) + k if isinstance(k, tuple) else (colon, k)
         return self.__class__(
             self.pos[ix], self.vel[ix], obj=self.obj, origin=self.origin
         )
@@ -292,8 +271,6 @@ def check_all_partials(f, args, delta=1e-6, atol=1e-4, rtol=1e-4):
     try:
         np.testing.assert_allclose(jac, njac, atol=atol, rtol=rtol)
     except AssertionError:
-        # print jac
-        # print njac
         d = np.abs(jac - njac) / (atol + rtol * np.abs(njac))
         print("fail fraction:", np.sum(d > 1) / float(np.sum(d >= 0)))
         worst_ix = np.unravel_index(np.argmax(d.reshape((-1,))), d.shape)
@@ -465,8 +442,7 @@ def lines_of(f):
 
     """
     with open_or_use(f) as fo:
-        for l in fo:
-            yield l
+        yield from fo
 
 
 def interesting_lines(lines, comments=None):
