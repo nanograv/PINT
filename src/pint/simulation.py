@@ -1,7 +1,6 @@
 """Functions related to simulating TOAs and models
 """
 from collections import OrderedDict
-from collections.abc import Sequence
 from copy import deepcopy
 
 import astropy.units as u
@@ -481,7 +480,7 @@ def calculate_random_models(
     freqs = np.zeros((Nmodels, Nmjd), dtype=np.float128) * u.Hz
 
     cov_matrix = fitter.parameter_covariance_matrix
-    # this is a list of the parameter names in the order they appear in the coviarance matrix
+    # this is a list of the parameter names in the order they appear in the covariance matrix
     param_names = cov_matrix.get_label_names(axis=0)
     # this is a dictionary with the parameter values, but it might not be in the same order
     # and it leaves out the Offset parameter

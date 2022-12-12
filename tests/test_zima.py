@@ -1,26 +1,40 @@
 #!/usr/bin/env python
 import os
 import sys
-
 from io import StringIO
 
-import pint.scripts.zima as zima
+import numpy as np
+import pytest
 from pinttestdata import datadir
 
+import pint.scripts.zima as zima
+from pint.models import get_model_and_toas
+from pint.residuals import Residuals
 
-def test_result(tmp_path):
+
+@pytest.mark.parametrize("addnoise", ["", "--addnoise"])
+def test_result(tmp_path, addnoise):
     parfile = os.path.join(datadir, "NGC6440E.par")
     timfile = tmp_path / "fake_testzima.tim"
     saved_stdout, sys.stdout = sys.stdout, StringIO("_")
     try:
-        cmd = f"{parfile} {timfile}"
+        cmd = f"{parfile} {timfile} {addnoise}"
         zima.main(cmd.split())
         lines = sys.stdout.getvalue()
     finally:
         sys.stdout = saved_stdout
 
+    model, toas = get_model_and_toas(parfile, timfile)
+    res = Residuals(toas, model)
+    redchisq = res.reduced_chi2
 
-def test_wb_result(tmp_path):
+    if addnoise == "":
+        assert np.isclose(redchisq, 0, atol=1e-2)
+    else:
+        assert redchisq > 0.5 and redchisq < 2
+
+
+def test_wb_result_with_noise(tmp_path):
     parfile = os.path.join(datadir, "NGC6440E.par")
     timfile = tmp_path / "fake_testzima_wb.tim"
     saved_stdout, sys.stdout = sys.stdout, StringIO("_")
@@ -30,6 +44,11 @@ def test_wb_result(tmp_path):
         lines = sys.stdout.getvalue()
     finally:
         sys.stdout = saved_stdout
+
+    model, toas = get_model_and_toas(parfile, timfile)
+    res = Residuals(toas, model)
+    redchiq = res.reduced_chi2
+    assert redchiq < 2 and redchiq > 0.5
 
 
 def test_zima_plot(tmp_path):
