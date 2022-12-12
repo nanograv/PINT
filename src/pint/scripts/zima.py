@@ -131,7 +131,7 @@ def main(argv=None):
             wb_dm_error=args.dmerror * pint.dmu,
         )
     else:
-        log.info("Reading initial TOAs from {0}".format(args.inputtim))
+        log.info(f"Reading initial TOAs from {args.inputtim}")
         ts = pint.simulation.make_fake_toas_fromtim(
             args.inputtim,
             model=m,

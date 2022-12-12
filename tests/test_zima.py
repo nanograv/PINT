@@ -34,6 +34,19 @@ def test_result(tmp_path, addnoise):
         assert redchisq > 0.5 and redchisq < 2
 
 
+def test_result_inputtim(tmp_path):
+    parfile = os.path.join(datadir, "NGC6440E.par")
+    inputtim = os.path.join(datadir, "NGC6440E.tim")
+    timfile = tmp_path / "fake_testzima.tim"
+    saved_stdout, sys.stdout = sys.stdout, StringIO("_")
+    try:
+        cmd = f"{parfile} {timfile} --addnoise --inputtim {inputtim}"
+        zima.main(cmd.split())
+        lines = sys.stdout.getvalue()
+    finally:
+        sys.stdout = saved_stdout
+
+
 def test_wb_result_with_noise(tmp_path):
     parfile = os.path.join(datadir, "NGC6440E.par")
     timfile = tmp_path / "fake_testzima_wb.tim"
