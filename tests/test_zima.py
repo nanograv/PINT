@@ -73,7 +73,7 @@ def test_zima_plot(tmp_path):
     output_timfile = tmp_path / "fake_testzima.tim"
     saved_stdout, sys.stdout = sys.stdout, StringIO("_")
     try:
-        cmd = "--plot {0} {1}".format(parfile, output_timfile)
+        cmd = f"--plot {parfile} {output_timfile}"
         zima.main(cmd.split())
         lines = sys.stdout.getvalue()
     finally:
@@ -89,7 +89,7 @@ def test_zima_fuzzdays(tmp_path):
     output_timfile = tmp_path / "fake_testzima.tim"
     saved_stdout, sys.stdout = sys.stdout, StringIO("_")
     try:
-        cmd = "--fuzzdays 1 {0} {1}".format(parfile, output_timfile)
+        cmd = f"--fuzzdays 1 {parfile} {output_timfile}"
         zima.main(cmd.split())
         lines = sys.stdout.getvalue()
     finally:
