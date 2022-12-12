@@ -115,6 +115,8 @@ def main(argv=None):
     out_format = args.format
     error = args.error * u.microsecond
 
+    include_bipm = m.CLOCK.value.startswith("UTC")
+
     if args.inputtim is None:
         log.info("Generating uniformly spaced TOAs")
         ts = pint.simulation.make_fake_toas_uniform(
@@ -129,13 +131,12 @@ def main(argv=None):
             add_noise=args.addnoise,
             wideband=args.wideband,
             wb_dm_error=args.dmerror * pint.dmu,
+            include_bipm=include_bipm,
         )
     else:
         log.info(f"Reading initial TOAs from {args.inputtim}")
         ts = pint.simulation.make_fake_toas_fromtim(
-            args.inputtim,
-            model=m,
-            add_noise=args.addnoise,
+            args.inputtim, model=m, add_noise=args.addnoise, include_bipm=include_bipm
         )
 
     # Write TOAs to a file
