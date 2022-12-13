@@ -21,7 +21,10 @@ DMconst = 1.0 / 2.41e-4 * u.MHz * u.MHz * u.s * u.cm**3 / u.pc
 
 
 class Dispersion(DelayComponent):
-    """A base dispersion timing model."""
+    """A base dispersion timing model.
+
+    See https://nanograv-pint.readthedocs.io/en/latest/explanation.html#dispersion-measure
+    for an explanation on the dispersion delay and dispersion measure."""
 
     def __init__(self):
         super().__init__()
