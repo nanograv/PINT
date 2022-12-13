@@ -13,6 +13,7 @@ from pint.residuals import Residuals
 from pinttestdata import datadir
 from pint.models import parameter as p
 from pint.models import PhaseJump
+import pint.models.timing_model
 
 
 class SimpleSetup:
@@ -161,6 +162,32 @@ def test_multijump_toa(setup_NGC6440E):
         assert "jump" in dict
     assert len(cp.jumps) == 1
     assert "JUMP1" in cp.jumps
+
+
+def test_unfrozen_jump(setup_NGC6440E):
+    setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
+    # this has no TOAs
+    par = p.maskParameter(
+        name="JUMP", key="freq", value=0.2, key_value=[3000, 3200], units=u.s
+    )
+    setup_NGC6440E.m.components["PhaseJump"].add_param(par, setup=True)
+    setup_NGC6440E.m.JUMP1.frozen = False
+    with pytest.raises(pint.models.timing_model.MissingTOAs):
+        setup_NGC6440E.m.validate_toas(setup_NGC6440E.t)
+
+
+def test_find_empty_masks(setup_NGC6440E):
+    setup_NGC6440E.m.add_component(PhaseJump(), validate=False)
+    # this has no TOAs
+    par = p.maskParameter(
+        name="JUMP", key="freq", value=0.2, key_value=[3000, 3200], units=u.s
+    )
+    setup_NGC6440E.m.components["PhaseJump"].add_param(par, setup=True)
+    setup_NGC6440E.m.JUMP1.frozen = False
+    bad_parameters = setup_NGC6440E.m.find_empty_masks(setup_NGC6440E.t)
+    assert "JUMP1" in bad_parameters
+    bad_parameters = setup_NGC6440E.m.find_empty_masks(setup_NGC6440E.t, freeze=True)
+    setup_NGC6440E.m.validate_toas(setup_NGC6440E.t)
 
 
 class TestJUMP(unittest.TestCase):
