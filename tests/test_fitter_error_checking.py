@@ -221,6 +221,7 @@ def test_update_model_sets_things(Fitter):
     fitter = Fitter(toas, model)
     fitter.fit_toas()
     par_out = fitter.model.as_parfile()
+    print(par_out)
     assert re.search(r"CLOCK *TT\(TAI\)", par_out)
     assert re.search(r"TIMEEPH *FB90", par_out)
     assert re.search(r"T2CMETHOD *IAU2000B", par_out)
@@ -232,4 +233,4 @@ def test_update_model_sets_things(Fitter):
     assert re.search(r"EPHEM *DE421", par_out)
     assert re.search(r"DMDATA *N", par_out)
     assert re.search(r"START *58000.0", par_out)
-    assert re.search(r"FINISH *59000.0", par_out)
+    assert re.search(r"FINISH *58999.9+", par_out)
