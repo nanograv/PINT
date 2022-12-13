@@ -9,6 +9,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Added
 ### Fixed
 - Creating fake TOAs properly handles site clock corrections
+- method to identify mask parameters with no TOAs and optionally freeze them
 ### Removed
 
 ## [0.9.2] 2022-11-30
