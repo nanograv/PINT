@@ -1,23 +1,24 @@
 #! /usr/bin/env python
+import io
 import os
 import time
-from io import StringIO
+
 import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy import log
+from pinttestdata import datadir
 
 import pint.models as tm
 from pint import toa
 from pint.residuals import Residuals
-from pinttestdata import datadir
 
 
 def test_simple_parfile():
     """Test a simple parfile without frequency derivatives, proper motion,
     PEPOCH and POSEPOCH."""
     model = tm.get_model(
-        StringIO(
+        io.StringIO(
             """
             PSR J1234+5678
             ELAT 0
