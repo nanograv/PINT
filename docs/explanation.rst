@@ -191,13 +191,14 @@ interstellar medium (ISM). The time delay due to the interstellar dispersion is 
 The dominant source of this dispersion is the presence of free electrons in the ISM, and 
 to a first approximation, the DM can be interpreted as the electron column density along the 
 line of sight to the pulsar. :math:`K` is known as the DM constant, and should be equal to 
-:math:`\frac{e^2}{8 \pi ^2 c \epsilon _0 m_e} \approx 1.3445365918(9)E-07\; m^2/s` based
-on the latest measurements of the physical constants. However, pulsar astronomers have 
-traditionally used a fixed value :math:`1.3447217E-07\; m^2/s` for :math:`K` over the years.
-For example, the Handbook of Pulsar Astronomy by Lorimer & Kramer (Chapter 5) provides the 
-value 2.41E-4 MHz^-2 pc cm^-3 s^-1 for the reciprocal of :math:`K`. `PINT` follows this convention 
-to be compatible with older pulsar ephemerides and with other pulsar timing packages. The value of 
-:math:`K` used by `PINT` can be accessed as `pint.models.dispersion_model.DMconst`.
+:math:`\frac{e^2}{8 \pi ^2 c \epsilon _0 m_e} \approx 1.3445365918(9)\times 10^{-7}\; \text{m}^2/\text{s}` 
+based on the latest measurements of the physical constants. However, pulsar astronomers have 
+traditionally used a fixed value :math:`1.3447217\times 10^{-7}\; \text{m}^2/\text{s}` for :math:`K` over 
+the years. For example, the Handbook of Pulsar Astronomy by Lorimer & Kramer (Chapter 5) provides 
+the value :math:`2.41\times 10^{-4}\; \text{MHz}^{-2} \text{pc}\, \text{cm}^{-3} s^{-1}` for the 
+reciprocal of :math:`K`. `PINT` follows this convention to be compatible with older pulsar 
+ephemerides and with other pulsar timing packages. The value of :math:`K` used by `PINT` can be 
+accessed as ``pint.models.dispersion_model.DMconst``.
 
 It should also be noted that there are other effects contributing to the dispersion delay than 
 the free electrons, such as ions in the ISM, interstellar magnetic fields, and the ISM temperature.
