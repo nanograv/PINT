@@ -64,10 +64,7 @@ def zero_residuals(ts, model, maxiter=10, tolerance=None):
     ts.compute_pulse_numbers(model)
     maxresid = None
     if tolerance is None:
-        if pint.utils.check_longdouble_precision():
-            tolerance = 1 * u.ns
-        else:
-            tolerance = 5 * u.us
+        tolerance = 1 * u.ns if pint.utils.check_longdouble_precision() else 5 * u.us
     for i in range(maxiter):
         r = pint.residuals.Residuals(ts, model, track_mode="use_pulse_numbers")
         resids = r.calc_time_resids(calctype="taylor")
@@ -109,7 +106,6 @@ def get_fake_toa_clock_versions(model, include_bipm=False, include_gps=True):
             if len(clk) == 2:
                 ctype, cvers = clk
                 if ctype == "TT" and cvers.startswith("BIPM"):
-                    include_bipm = True
                     if bipm_version is None:
                         bipm_version = cvers
                         log.info(f"Using CLOCK = {bipm_version} from the given model")
@@ -118,11 +114,14 @@ def get_fake_toa_clock_versions(model, include_bipm=False, include_gps=True):
                         f'CLOCK = {model["CLOCK"].value} is not implemented. '
                         f"Using TT({bipm_default}) instead."
                     )
+                include_bipm = True
         else:
             log.warning(
                 f'CLOCK = {model["CLOCK"].value} is not implemented. '
                 f"Using TT({bipm_default}) instead."
             )
+            include_bipm = True
+
     return {
         "include_bipm": include_bipm,
         "bipm_version": bipm_version,
