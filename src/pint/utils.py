@@ -51,7 +51,6 @@ from scipy.special import fdtrc
 
 import pint
 import pint.pulsar_ecliptic
-from pint.derived_quantities import dispersion_slope
 from pint.toa_select import TOASelect
 
 __all__ = [
@@ -1908,10 +1907,17 @@ def convert_dispersion_measure(dm, dmconst=None):
     See https://nanograv-pint.readthedocs.io/en/latest/explanation.html#dispersion-measure
     for an explanation.
     """
+
+    # This value is cited from Duncan Lorimer, Michael Kramer, Handbook of Pulsar
+    # Astronomy, Second edition, Page 86, Note 1
+    # This is defined here instead of being imported from `pint.models.dispersion_model`
+    # to avoid circular import issue.
+    dmconst_conv = 1.0 / 2.41e-4 * u.MHz * u.MHz * u.s * u.cm**3 / u.pc
+
     if dmconst is None:
         e = constants.e.si
         eps0 = constants.eps0.si
         c = constants.c.si
         me = constants.m_e.si
         dmconst = e**2 / (8 * np.pi**2 * c * eps0 * me)
-    return (dispersion_slope(dm) / dmconst).to(pint.dmu)
+    return (dm * dmconst_conv / dmconst).to(pint.dmu)
