@@ -7,7 +7,9 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## Unreleased
 ### Changed
 ### Added
-- method to identify mask parameters with no TOAs and optionally freeze them
+- Method to identify mask parameters with no TOAs and optionally freeze them
+- Documentation: Explanation for DM
+- Methods to compute dispersion slope and to convert DM using the CODATA value of DMconst
 ### Fixed
 ### Removed
 
