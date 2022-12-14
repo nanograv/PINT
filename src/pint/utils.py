@@ -1900,7 +1900,9 @@ def convert_dispersion_measure(dm, dmconst=None):
     dm : astropy.units.Quantity
         DM measured according to the value of the DM constant computed from the
         latest values of the physical constants
-
+    dmconst : astropy.units.Quantity
+        Value of the DM constant. Default value is computed from CODATA physical
+        constants.
     Notes
     -----
     See https://nanograv-pint.readthedocs.io/en/latest/explanation.html#dispersion-measure
