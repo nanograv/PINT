@@ -183,8 +183,8 @@ not (this is a particular concern when working with X-ray or gamma-ray data).
 .. _TAI: https://www.bipm.org/en/bipm-services/timescales/tai.html
 .. _wiki: https://github.com/nanograv/PINT/wiki/Clock-Corrections-and-Timescales-in-PINT
 
-Dispersion Measure
-------------------
+Dispersion Measure (DM)
+-----------------------
 Radio waves emitted by the pulsar experience dispersion as they travel through the ionized 
 interstellar medium (ISM). The time delay due to the interstellar dispersion is given by
 :math:`\frac{K\times DM}{\nu^2}`, where :math:`\nu` is the frequency of the radio signal.
@@ -204,7 +204,10 @@ It should also be noted that there are other effects contributing to the dispers
 the free electrons, such as ions in the ISM, interstellar magnetic fields, and the ISM temperature.
 Hence, it has been argued (see Kulkarni 2020 https://arxiv.org/abs/2007.02886) that the dispersion
 slope :math:`K\times DM` should be treated as the primary observable rather than the DM, which 
-is usually interpreted as the electron column density. 
+is usually interpreted as the electron column density. The dispersion slope can be computed using 
+:func:`pint.derived_quantities.dispersion_slope`. A DM value measured based on the conventional value
+of :math:`K` can be converted to a value based on the latest physical constant values using
+:func:`pint.utils.convert_dispersion_measure`.
 
 Observatories
 -------------
