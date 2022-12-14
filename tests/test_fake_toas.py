@@ -12,6 +12,34 @@ from pint.fitter import GLSFitter
 from pinttestdata import datadir
 
 
+def roundtrip(toas, model):
+    with tempfile.NamedTemporaryFile("wt") as f:
+        toas.write_TOA_file(f)
+        f.flush()
+        toas2 = get_TOAs(f.name, model=model)
+    return toas2
+
+
+def test_roundtrip():
+    # test for roundtrip accuracy at high precision
+    parfile = os.path.join(datadir, "NGC6440E.par")
+    model = get_model(parfile)
+
+    toas = pint.simulation.make_fake_toas_uniform(
+        startMJD=56000,
+        endMJD=56400,
+        ntoas=100,
+        model=model,
+        obs="gbt",
+        error=1 * u.microsecond,
+        freq=1400 * u.MHz,
+    )
+    res = pint.residuals.Residuals(toas, model)
+    toas2 = roundtrip(toas, model)
+    res2 = pint.residuals.Residuals(toas2, model)
+    assert np.allclose(res.time_resids, res2.time_resids)
+
+
 def test_noise_addition():
     # basic model, no EFAC or EQUAD
     model = get_model(
