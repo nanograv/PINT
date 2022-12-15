@@ -6,7 +6,6 @@ import astropy.units as u
 import numpy as np
 
 import pint
-from pint.utils import DMconst
 
 __all__ = [
     "a1sini",
@@ -891,4 +890,4 @@ def dispersion_slope(dm: pint.dmu):
         If the input data are not quantities
     """
 
-    return (dm * DMconst).decompose()
+    return (dm * pint.DMconst).decompose()

@@ -198,7 +198,7 @@ the years. For example, the Handbook of Pulsar Astronomy by Lorimer & Kramer (Ch
 the value :math:`2.41\times 10^{-4}\; \text{MHz}^{-2} \text{pc}\, \text{cm}^{-3} s^{-1}` for the 
 reciprocal of :math:`K`. `PINT` follows this convention to be compatible with older pulsar 
 ephemerides and with other pulsar timing packages. The value of :math:`K` used by `PINT` can be 
-accessed as ``pint.models.dispersion_model.DMconst``.
+accessed as ``pint.DMconst``.
 
 It should also be noted that there are other effects contributing to the dispersion delay than 
 the free electrons, such as ions in the ISM, interstellar magnetic fields, and the ISM temperature.
