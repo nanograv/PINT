@@ -10,6 +10,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - method to identify mask parameters with no TOAs and optionally freeze them
 ### Fixed
 ### Removed
+- termios import for solar_wind_dispersion
 
 ## [0.9.2] 2022-11-30
 ### Changed
