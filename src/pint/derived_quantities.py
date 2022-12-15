@@ -6,7 +6,7 @@ import astropy.units as u
 import numpy as np
 
 import pint
-from pint.models.dispersion_model import DMconst
+from pint.utils import DMconst
 
 __all__ = [
     "a1sini",

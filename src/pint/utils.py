@@ -1886,6 +1886,13 @@ def divide_times(t, t0, offset=0.5):
     return indices
 
 
+# This value is cited from Duncan Lorimer, Michael Kramer, Handbook of Pulsar
+# Astronomy, Second edition, Page 86, Note 1
+# This is defined here instead of being imported from `pint.models.dispersion_model`
+# to avoid circular import issue.
+DMconst = 1.0 / 2.41e-4 * u.MHz * u.MHz * u.s * u.cm**3 / u.pc
+
+
 def convert_dispersion_measure(dm, dmconst=None):
     """Convert dispersion measure to a different value of the DM constant.
 
@@ -1908,16 +1915,10 @@ def convert_dispersion_measure(dm, dmconst=None):
     for an explanation.
     """
 
-    # This value is cited from Duncan Lorimer, Michael Kramer, Handbook of Pulsar
-    # Astronomy, Second edition, Page 86, Note 1
-    # This is defined here instead of being imported from `pint.models.dispersion_model`
-    # to avoid circular import issue.
-    dmconst_conv = 1.0 / 2.41e-4 * u.MHz * u.MHz * u.s * u.cm**3 / u.pc
-
     if dmconst is None:
         e = constants.e.si
         eps0 = constants.eps0.si
         c = constants.c.si
         me = constants.m_e.si
         dmconst = e**2 / (8 * np.pi**2 * c * eps0 * me)
-    return (dm * dmconst_conv / dmconst).to(pint.dmu)
+    return (dm * DMconst / dmconst).to(pint.dmu)
