@@ -1,5 +1,4 @@
 """Dispersion due to the solar wind."""
-from termios import B300
 from warnings import warn
 
 import astropy.constants as const

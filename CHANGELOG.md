@@ -12,6 +12,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Methods to compute dispersion slope and to convert DM using the CODATA value of DMconst
 ### Fixed
 ### Removed
+- termios import for solar_wind_dispersion
 
 ## [0.9.2] 2022-11-30
 ### Changed
