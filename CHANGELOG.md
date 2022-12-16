@@ -4,13 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.9.3] 2022-12-16
 ### Changed
 ### Added
 - method to identify mask parameters with no TOAs and optionally freeze them
 ### Fixed
 - Creating fake TOAs properly handles site clock corrections
-- corrected a precision issue with reading ASCII representations of pulse profiles
+- Corrected a precision issue with reading ASCII representations of pulse profiles
 - Fixed matplotlib 3.6 import issue in pintk
 ### Removed
 - termios import for solar_wind_dispersion
