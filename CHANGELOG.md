@@ -9,7 +9,10 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Added
 ### Fixed
 - Creating fake TOAs properly handles site clock corrections
+- corrected a precision issue with reading ASCII representations of pulse profiles
+- Fixed matplotlib 3.6 import issue in pintk
 ### Removed
+- termios import for solar_wind_dispersion
 
 ## [0.9.2] 2022-11-30
 ### Changed
