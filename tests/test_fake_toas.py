@@ -10,6 +10,7 @@ import os
 import pint.config
 from pint.fitter import GLSFitter
 from pinttestdata import datadir
+import pytest
 
 
 def roundtrip(toas, model):
@@ -20,10 +21,43 @@ def roundtrip(toas, model):
     return toas2
 
 
-def test_roundtrip():
+NGC6440E = """
+PSR              1748-2021E
+RAJ       17:48:52.75  1
+DECJ      -20:21:29.0  1
+F0       61.485476554  1
+F1         -1.181D-15  1
+PEPOCH        53750.000000
+POSEPOCH      53750.000000
+DM              223.9  1
+SOLARN0               0.00
+EPHEM               DE421
+UNITS               TDB
+TIMEEPH             FB90
+T2CMETHOD           TEMPO
+CORRECT_TROPOSPHERE N
+DILATEFREQ          N
+TZRMJD  53801.38605118223
+TZRFRQ            1949.609
+TZRSITE                  1
+"""
+
+
+@pytest.mark.parametrize(
+    "clock, planet",
+    [
+        ("UTC(NIST)", "Y"),
+        ("UTC(NIST)", "N"),
+        ("TT(BIPM2021)", "Y"),
+        ("TT(BIPM2021)", "N"),
+        ("TT(TAI)", "Y"),
+        ("TT(TAI)", "N"),
+    ],
+)
+def test_roundtrip(clock, planet):
     # test for roundtrip accuracy at high precision
-    parfile = os.path.join(datadir, "NGC6440E.par")
-    model = get_model(parfile)
+    partext = f"{NGC6440E}\nCLK {clock}\nPLANET_SHAPIRO {planet}"
+    model = get_model(io.StringIO(partext))
 
     toas = pint.simulation.make_fake_toas_uniform(
         startMJD=56000,
