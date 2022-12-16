@@ -9,6 +9,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Added
 - method to identify mask parameters with no TOAs and optionally freeze them
 ### Fixed
+- Creating fake TOAs properly handles site clock corrections
 - corrected a precision issue with reading ASCII representations of pulse profiles
 - Fixed matplotlib 3.6 import issue in pintk
 ### Removed
