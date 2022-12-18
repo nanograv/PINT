@@ -47,9 +47,10 @@ class TestTroposphereDelay(unittest.TestCase):
 
     def test_heights(self):
         # higher elevation observatories should have less troposphere delay
-        heightDelays = []  # list of the delays at each height
-        for h in self.testHeights:
-            heightDelays.append(self.td.delay_model(self.testAltitudes, 0, h, 0))
+        heightDelays = [
+            self.td.delay_model(self.testAltitudes, 0, h, 0) for h in self.testHeights
+        ]
+
         for i in range(1, len(self.testHeights)):
             print(heightDelays[i], heightDelays[i - 1])
             assert np.all(np.less(heightDelays[i], heightDelays[i - 1]))

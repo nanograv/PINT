@@ -4,7 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.9.3] 2022-12-16
+### Changed
+### Added
+- method to identify mask parameters with no TOAs and optionally freeze them
+### Fixed
+- Creating fake TOAs properly handles site clock corrections
+- Corrected a precision issue with reading ASCII representations of pulse profiles
+- Fixed matplotlib 3.6 import issue in pintk
+### Removed
+- termios import for solar_wind_dispersion
+
+## [0.9.2] 2022-11-30
 ### Changed
 - Minimum supported versions updated to numpy 1.18.5, matplotlib 3.2.0
 - `introduces_correlated_errors` is now a class attribute of `NoiseComponent`s
@@ -22,6 +33,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - New tests to improve test coverage
 - Documentation: Instructions to checkout development branch
 - Clock file for effix
+- Added energy dependent templates to the lctemplates utilities and added tests
 ### Fixed
 - global clock files now emit a warning instead of an exception if expired and the download fails
 - dmxparse outputs to dmxparse.out if save=True
@@ -32,6 +44,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Fixed bug in photonphase with polycos
 - Made clock file loading log entries a little friendlier
 - Typo fixes in documentation
+- Fixed failing HealthCheck in tests/test_precision.py
 ### Removed
 - Removed obsolete `ltinterface` module
 - Removed old and WIP functions from `gridutils` module

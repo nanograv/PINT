@@ -146,8 +146,8 @@ def kepler_2d(params, t):
     eps1 = params.eps1
     eps2 = params.eps2
     t = t - params.t0
-    if eps1 == 0 and eps2 == 0:
-        eps1 = 1e-50
+    # if eps1 == 0 and eps2 == 0:
+    #     eps1 = 1e-50
     e = np.hypot(eps1, eps2)
     if e == 0:
         d_e = np.array([0, 0, 0, 0, 0, 0])
