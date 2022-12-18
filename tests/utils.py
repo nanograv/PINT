@@ -1,4 +1,4 @@
-"""Utililty functions for the tests"""
+"""Utility functions for the tests"""
 import warnings
 
 
@@ -39,11 +39,8 @@ def verify_stand_alone_binary_parameter_updates(m):
             pint_par_name = m.match_param_aliases(binary_par)
         except ValueError:
             # The internal parameters are not in the parameter list. Thus, we
-            # need to have a seperate check.
-            if binary_par in m.internal_params:
-                pint_par_name = binary_par
-            else:
-                pint_par_name = None
+            # need a separate check.
+            pint_par_name = binary_par if binary_par in m.internal_params else None
         if pint_par_name is None:
             continue
         pint_par = getattr(m, pint_par_name)

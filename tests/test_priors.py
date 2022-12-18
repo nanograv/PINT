@@ -65,6 +65,11 @@ class TestPriors(unittest.TestCase):
         # Check that np.exp(logpdf) == pdf
         assert np.isclose(self.m.SINI.prior.pdf(v), np.exp(self.m.SINI.prior.logpdf(v)))
 
+        v = np.array([0.5, 0.9])
+        assert np.allclose(
+            self.m.SINI.prior.pdf(v), np.exp(self.m.SINI.prior.logpdf(v))
+        )
+
     def test_gaussian_bounded(self):
         print("test_gaussian_bounded")
         self.m.M2.prior = Prior(

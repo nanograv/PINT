@@ -209,7 +209,7 @@ class Glitch(PhaseComponent):
             else:
                 decayterm = 0.0 * u.Unit("")
 
-            log.debug("Glitch phase {} {} ".format(dphs, dphs.unit))
+            log.debug(f"Glitch phase for glitch {idx}: {dphs} {dphs.unit}")
             phs[affected] += (
                 dphs
                 + dt[affected]

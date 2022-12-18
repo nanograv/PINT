@@ -9,6 +9,7 @@ from astropy.time import Time
 import astropy.units as u
 import matplotlib as mpl
 import numpy as np
+import matplotlib.figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 import pint.pintk.pulsar as pulsar

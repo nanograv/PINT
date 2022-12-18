@@ -120,10 +120,6 @@ def main(argv=None):
         ts = pint.simulation.make_fake_toas_fromtim(
             args.inputtim,
             model=m,
-            obs=args.obs,
-            error=error,
-            freq=np.atleast_1d(args.freq) * u.MHz,
-            fuzz=args.fuzzdays * u.d,
             add_noise=args.addnoise,
         )
 
