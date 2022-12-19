@@ -47,7 +47,7 @@ class BinaryDDK(BinaryDD):
 
     Note
     ----
-    This model defines KOM with reference to east, either equatorial or ecliptic depending on how the model is defined.  
+    This model defines KOM with reference to east, either equatorial or ecliptic depending on how the model is defined.
     KOM and KIN are defined in the Damour & Taylor (1992) convention (DT92), where
 
         KIN = 180 deg means the orbital angular momentum vector points toward the Earth, and KIN = 0 means the orbital angular momentum vector points away from the Earth.
