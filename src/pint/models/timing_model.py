@@ -1291,6 +1291,7 @@ class TimingModel:
         return dm
 
     def total_dispersion_slope(self, toas):
+        """Calculate the dispersion slope from all the dispersion-type components."""
         dm_tot = self.total_dm(toas)
         return dispersion_slope(dm_tot)
 

@@ -204,11 +204,15 @@ It should also be noted that there are other effects contributing to the dispers
 the free electrons, such as ions in the ISM, interstellar magnetic fields, and the ISM temperature.
 Hence, it has been argued (see Kulkarni 2020 https://arxiv.org/abs/2007.02886) that the dispersion
 slope :math:`K\times DM` should be treated as the primary observable rather than the DM, which 
-is usually interpreted as the electron column density. The dispersion slope can be computed using 
-:func:`pint.derived_quantities.dispersion_slope`. A DM value measured based on the conventional value
-of :math:`K` can be converted to a value based on the latest physical constant values using
-:func:`pint.utils.convert_dispersion_measure`.
+is usually interpreted as the electron column density. The dispersion slope corresponding to a DM value
+can be computed using :func:`pint.derived_quantities.dispersion_slope`. A DM value measured based 
+on the conventional value of :math:`K` can be converted to a value based on the latest physical 
+constant values using :func:`pint.utils.convert_dispersion_measure`.
 
+The total DM and dispersion slope predicted by a given timing model (:class:`pint.models.TimingModel`)
+for a given set of TOAs (:class:`pint.toa.TOAs`) can be computed using :func:`pint.models.TimingModel.total_dm`
+and :func:`pint.models.TimingModel.dispersion_slope` methods respectively.
+ 
 Observatories
 -------------
 
