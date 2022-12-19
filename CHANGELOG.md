@@ -8,6 +8,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Changed
 ### Added
 - method to identify mask parameters with no TOAs and optionally freeze them
+- explicit discussion of DT92 convention to DDK model
 ### Fixed
 - Creating fake TOAs properly handles site clock corrections
 - Corrected a precision issue with reading ASCII representations of pulse profiles
