@@ -209,9 +209,9 @@ can be computed using :func:`pint.derived_quantities.dispersion_slope`. A DM val
 on the conventional value of :math:`K` can be converted to a value based on the latest physical 
 constant values using :func:`pint.utils.convert_dispersion_measure`.
 
-The total DM and dispersion slope predicted by a given timing model (:class:`pint.models.TimingModel`)
-for a given set of TOAs (:class:`pint.toa.TOAs`) can be computed using :func:`pint.models.TimingModel.total_dm`
-and :func:`pint.models.TimingModel.dispersion_slope` methods respectively.
+The total DM and dispersion slope predicted by a given timing model (:class:`pint.models.timing_model.TimingModel`)
+for a given set of TOAs (:class:`pint.toa.TOAs`) can be computed using :func:`pint.models.timing_model.TimingModel.total_dm`
+and :func:`pint.models.timing_model.TimingModel.total_dispersion_slope` methods respectively.
  
 Observatories
 -------------
