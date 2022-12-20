@@ -12,9 +12,9 @@ class DDmodel(PSR_BINARY):
     """DD binary model.
 
     This is a class independent from PINT platform for pulsar DD binary model.
-    Refence: T. Damour and N. Deruelle(1986)
+    Reference: T. Damour and N. Deruelle (1986)
     It is a subclass of PSR_BINARY class defined in file binary_generic.py in
-    the same dierectory. This class is desined for PINT platform but can be used
+    the same directory. This class is designed for PINT platform but can be used
     as an independent module for binary delay calculation.
     To interact with PINT platform, a pulsar_binary wrapper is needed.
     See the source file pint/models/pulsar_binary_dd.py
@@ -25,8 +25,8 @@ class DDmodel(PSR_BINARY):
         >>> import numpy as np
         >>> t = np.linspace(54200.0,55000.0,800)
         >>> binary_model = DDmodel()
-        >>> paramters_dict = {'A0':0.5,'ECC':0.01}
-        >>> binary_model.update_input(t, paramters_dict)
+        >>> parameters_dict = {'A0':0.5,'ECC':0.01}
+        >>> binary_model.update_input(t, parameters_dict)
 
     Here the binary has time input and parameters input, the delay can be
     calculated.
@@ -72,14 +72,14 @@ class DDmodel(PSR_BINARY):
 
     # DDmodel special omega.
     def omega(self):
-        """T. Damour and N. Deruelle(1986)equation [25]
+        """T. Damour and N. Deruelle (1986) equation [25]
 
         Calculates::
 
            omega = OM+nu*k
            k = OMDOT/n
 
-        (T. Damour and N. Deruelle(1986)equation between Eq 16 Eq 17)
+        (T. Damour and N. Deruelle (1986) equation between Eq 16 Eq 17)
         """
         PB = self.pb()
         PB = PB.to("second")
@@ -105,7 +105,7 @@ class DDmodel(PSR_BINARY):
 
         Returns
         -------
-        Derivitve of omega respect to par
+        Derivative of omega respect to par
         """
         if par not in self.binary_params:
             errorMesg = par + "is not in binary parameter list."
@@ -203,7 +203,7 @@ class DDmodel(PSR_BINARY):
 
     ##########
     def alpha(self):
-        """Alpha defined in T. Damour and N. Deruelle(1986)equation [46]
+        """Alpha defined in T. Damour and N. Deruelle (1986) equation [46]
 
         Computes::
 
@@ -213,7 +213,7 @@ class DDmodel(PSR_BINARY):
         return self.a1() / c.c * sinOmg
 
     def d_alpha_d_par(self, par):
-        """T. Damour and N. Deruelle(1986)equation [46]
+        """T. Damour and N. Deruelle (1986) equation [46]
 
         Computes::
 
@@ -257,7 +257,7 @@ class DDmodel(PSR_BINARY):
     ##############################################
 
     def beta(self):
-        """Beta defined in T. Damour and N. Deruelle(1986)equation [47]
+        """Beta defined in T. Damour and N. Deruelle (1986) equation [47]
 
         Computes::
 
@@ -416,7 +416,7 @@ class DDmodel(PSR_BINARY):
 
     ##################################################
     def Dre(self):
-        """Dre defined in T. Damour and N. Deruelle(1986)equation [48]
+        """Dre defined in T. Damour and N. Deruelle (1986) equation [48]
 
         Computes::
 
@@ -461,7 +461,7 @@ class DDmodel(PSR_BINARY):
 
     #################################################
     def Drep(self):
-        """Dervitive of Dre respect to E T. Damour and N. Deruelle(1986)equation [49]
+        """Derivative of Dre respect to E T. Damour and N. Deruelle (1986) equation [49]
 
         Computes::
 
@@ -502,7 +502,7 @@ class DDmodel(PSR_BINARY):
 
     #################################################
     def Drepp(self):
-        """Dervitive of Drep respect to E T. Damour and N. Deruelle(1986)equation [50]
+        """Derivative of Drep respect to E T. Damour and N. Deruelle (1986) equation [50]
 
         Computes::
 
@@ -543,7 +543,7 @@ class DDmodel(PSR_BINARY):
     #################################################
 
     def nhat(self):
-        """nhat defined as T. Damour and N. Deruelle(1986)equation [51]
+        """nhat defined as T. Damour and N. Deruelle (1986) equation [51]
 
         Computes::
 
@@ -584,15 +584,15 @@ class DDmodel(PSR_BINARY):
     def delayInverse(self):
         """DD model Inverse timing delay.
 
-        T. Damour and N. Deruelle(1986)equation [46-52]
+        T. Damour and N. Deruelle (1986) equation [46-52]
 
         This part is convert the delay argument from proper time to coordinate
-        time. The Romoer delay and Einstein are included in the calculation.
+        time. The Roemer delay and Einstein are included in the calculation.
         It uses there iterations to approximate the Roemer delay and Einstein
         delay.
 
-        T. Damour and N. Deruelle(1986)equation [43]. The equation [52] gives a
-        taylor expension of equation [43].
+        T. Damour and N. Deruelle (1986) equation [43]. The equation [52] gives a
+        taylor expansion of equation [43].
 
         Computes::
 
@@ -682,7 +682,7 @@ class DDmodel(PSR_BINARY):
     def delayS(self):
         """Binary shapiro delay
 
-        T. Damour and N. Deruelle(1986)equation [26]
+        T. Damour and N. Deruelle (1986) equation [26]
         """
         e = self.ecc()
         cE = np.cos(self.E())
@@ -772,10 +772,10 @@ class DDmodel(PSR_BINARY):
     def delayE(self):
         """Binary Einstein delay
 
-        T. Damour and N. Deruelle(1986)equation [25]
+        T. Damour and N. Deruelle (1986) equation [25]
         """
         sinE = np.sin(self.E())
-        return self.GAMMA
+        return self.GAMMA * sinE
 
     def d_delayE_d_par(self, par):
         """Derivative.
@@ -796,9 +796,9 @@ class DDmodel(PSR_BINARY):
     #################################################
 
     def delayA(self):
-        """Binary Abberation delay
+        """Binary Aberration delay
 
-        T. Damour and N. Deruelle(1986)equation [27]
+        T. Damour and N. Deruelle (1986) equation [27]
         """
         omgPlusAe = self.omega() + self.nu()
         et = self.ecc()
@@ -858,7 +858,7 @@ class DDmodel(PSR_BINARY):
         return self.delayInverse() + self.delayS() + self.delayA()
 
     def d_DDdelay_d_par(self, par):
-        """Full DD model delay derivtive"""
+        """Full DD model delay derivative"""
         with u.set_enabled_equivalencies(u.dimensionless_angles()):
             return (
                 self.d_delayI_d_par(par)
