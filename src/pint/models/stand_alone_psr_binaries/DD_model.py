@@ -415,6 +415,20 @@ class DDmodel(PSR_BINARY):
         return self.a1() / c.c * (-eTheta) / np.sqrt(1 - eTheta**2) * cosOmg
 
     ##################################################
+
+    def delayR(self):
+        """Roemer delay defined in T. Damour and N. Deruelle (1986)
+
+        Computes::
+
+            delayR = alpha*(cos(E)-er) + beta*sin(E)
+        """
+        er = self.er()
+        sinE = np.sin(self.E())
+        cosE = np.cos(self.E())
+        return self.alpha() * (cosE - er) + self.beta() * sinE
+
+    ##################################################
     def Dre(self):
         """Dre defined in T. Damour and N. Deruelle (1986) equation [48]
 
@@ -422,10 +436,11 @@ class DDmodel(PSR_BINARY):
 
             Dre = alpha*(cos(E)-er)+(beta+gamma)*sin(E)
         """
-        er = self.er()
-        sinE = np.sin(self.E())
-        cosE = np.cos(self.E())
-        return self.alpha() * (cosE - er) + (self.beta() + self.GAMMA) * sinE
+        # er = self.er()
+        # sinE = np.sin(self.E())
+        # cosE = np.cos(self.E())
+        # return self.alpha() * (cosE - er) + (self.beta() + self.GAMMA) * sinE
+        return self.delayR() + self.delayE()
 
     def d_Dre_d_par(self, par):
         """Derivative.
@@ -777,21 +792,21 @@ class DDmodel(PSR_BINARY):
         sinE = np.sin(self.E())
         return self.GAMMA * sinE
 
-    def d_delayE_d_par(self, par):
-        """Derivative.
+    # def d_delayE_d_par(self, par):
+    #     """Derivative.
 
-        Computes::
+    #     Computes::
 
-           eDelay = gamma*sin[E]
-           deDelay_dPar = deDelay/dgamma*dgamma/dPar +
-                          deDelay/dE*dE/dPar
-        """
-        cE = np.cos(self.E())
-        sE = np.sin(self.E())
+    #        eDelay = gamma*sin[E]
+    #        deDelay_dPar = deDelay/dgamma*dgamma/dPar +
+    #                       deDelay/dE*dE/dPar
+    #     """
+    #     cE = np.cos(self.E())
+    #     sE = np.sin(self.E())
 
-        return sE * self.prtl_der("GAMMA", par) + self.GAMMA * cE * self.prtl_der(
-            "E", par
-        )
+    #     return sE * self.prtl_der("GAMMA", par) + self.GAMMA * cE * self.prtl_der(
+    #         "E", par
+    #     )
 
     #################################################
 
