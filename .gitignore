@@ -114,3 +114,6 @@ docs/_autosummary
 
 # Jupyter notebooks should not be in git; they are built from md files
 docs/examples/*.ipynb
+
+# VSCode wants to put virtualenvs here
+.env
