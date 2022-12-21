@@ -391,14 +391,13 @@ class TopoObs(Observatory):
         # from Simon et al. 1994.
         topo_time_corr = np.sum(earth_pv.vel / c.c * obs_geocenter_pv.pos / c.c, axis=0)
         topo_tdb_tt = geo_tdb_tt - topo_time_corr
-        result = Time(
+        return Time(
             t.tt.jd1 - JD_MJD,
             t.tt.jd2 - topo_tdb_tt.to(u.day).value,
             format="pulsar_mjd",
             scale="tdb",
             location=self.earth_location_itrf(),
         )
-        return result
 
     def get_gcrs(self, t, ephem=None):
         """Return position vector of TopoObs in GCRS
@@ -485,9 +484,8 @@ def load_observatories(filename=observatories_json, overwrite=False):
         observatories = json.load(f)
 
     for obsname, obsdict in observatories.items():
-        if "origin" in obsdict:
-            if isinstance(obsdict["origin"], list):
-                obsdict["origin"] = "\n".join(obsdict["origin"])
+        if "origin" in obsdict and isinstance(obsdict["origin"], list):
+            obsdict["origin"] = "\n".join(obsdict["origin"])
         if overwrite:
             obsdict["overwrite"] = True
         # create the object, which will also register it

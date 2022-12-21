@@ -20,12 +20,10 @@
 #
 
 # %%
-from __future__ import print_function, division
 import numpy as np
 import astropy.units as u
 from IPython.display import display_markdown
 
-# %%
 import pint.toa
 import pint.models
 import pint.fitter
@@ -104,42 +102,20 @@ cov = wlsfit.get_parameter_covariance_matrix(pretty_print=True)
 wlsfit.plot()
 
 # %% [markdown]
-# ## Powell fitter
-#
-# The Powell fitter takes much longer to run! It also doesn't find quite as good of a minimum as the WLS fitter.
-#
-# This uses scipy's modification of Powell’s method, which is a conjugate direction method. It performs sequential one-dimensional minimizations along each vector of the directions, which is updated at each iteration of the main minimization loop. The function need not be differentiable, and no derivatives are taken.
-#
-# The default number of iterations is 20, but this can be changed with the `maxiter` parameter
-
-# %%
-powfit = pint.fitter.PowellFitter(toas=t, model=m)
-
-# %%
-powfit.fit_toas()
-
-# %%
-powfit.print_summary()
-
-# %% [markdown]
-# ***!!! Note that the Powell fitter does not produce a covariance matrix or estimates of the uncertainties. !!!***
-#
-# **Also note that the F1 value here is not really believable.  The Powell fitter ended up in a different place**
-
-# %% [markdown]
 #
 # ## Comparing models
 #
 # There also a convenience function for pretty printing a comparison of two models with the differences measured in sigma.
 
 # %%
-display_markdown(wlsfit.model.compare(powfit.model, format="markdown"), raw=True)
+display_markdown(wlsfit.model.compare(wlsfit.model_init, format="markdown"), raw=True)
 
 # %% [markdown]
-# You can see just how much F1 changed.  But the $\chi^2$ is still good (in fact it's too good), and the residuals look OK:
+# You can see just how much F1 changed.  Let's compare the $\chi^2$ values:
 
 # %%
-powfit.plot()
+print(f"Pre-fit chi-squared value: {wlsfit.resids_init.chi2}")
+print(f"Post-fit chi-squared value: {wlsfit.resids.chi2}")
 
 # %% [markdown]
 # ## Generalized Least Squares fitter
