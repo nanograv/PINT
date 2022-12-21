@@ -8,9 +8,9 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.8
+#       jupytext_version: 1.14.4
 #   kernelspec:
-#     display_name: Python 3 (ipykernel)
+#     display_name: .env
 #     language: python
 #     name: python3
 # ---
@@ -139,5 +139,7 @@ plt.show()
 # %%
 f.model.write_parfile("/tmp/output.par", "wt")
 print(f.model.as_parfile())
+
+# %%
 
 # %%
