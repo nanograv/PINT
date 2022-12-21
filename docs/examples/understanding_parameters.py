@@ -26,7 +26,6 @@ from astropy.time import Time
 import pint.config
 import pint.logging
 
-# setup logging
 pint.logging.setup(level="INFO")
 
 # %% {"jupyter": {"outputs_hidden": false}}

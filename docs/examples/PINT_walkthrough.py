@@ -77,7 +77,7 @@ import pint.config
 
 # maybe we want extra logging info here to see what happens when we load TOAs
 pint.logging.setup(level="DEBUG")
-t = toa.get_TOAs(pint.config.examplefile("NGC6440E.tim"), usepickle=False)
+t = toa.get_TOAs(pint.config.examplefile("NGC6440E.tim"), ephem="DE440")
 # but then turn back to "WARNING" later
 pint.logging.setup(level="WARNING")
 
@@ -220,7 +220,7 @@ plt.errorbar(
     yerr=rs.toas.get_errors().to(u.us),
     fmt=".",
 )
-plt.title("%s Pre-Fit Timing Residuals" % m.PSR.value)
+plt.title(f"{m.PSR.value} Pre-Fit Timing Residuals")
 plt.xlabel("MJD")
 plt.ylabel("Residual (us)")
 plt.grid()
@@ -247,7 +247,7 @@ f.print_summary()
 plt.errorbar(
     t.get_mjds(), f.resids.time_resids.to(u.us), t.get_errors().to(u.us), fmt="x"
 )
-plt.title("%s Post-Fit Timing Residuals" % m.PSR.value)
+plt.title(f"{m.PSR.value} Post-Fit Timing Residuals")
 plt.xlabel("MJD")
 plt.ylabel("Residual (us)")
 plt.grid()

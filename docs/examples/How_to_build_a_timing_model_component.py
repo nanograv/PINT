@@ -146,7 +146,7 @@ class PeriodSpindown(PhaseComponent):
         # Check required parameters, since P1 is not required, we are not checking it here
         for param in ["P0"]:
             if getattr(self, param) is None:
-                raise ValueError("Spindown period model needs {}".format(param))
+                raise ValueError(f"Spindown period model needs {param}")
 
     # One can always setup properties for updating attributes automatically.
     @property
@@ -238,8 +238,8 @@ par_string = """
              """
 
 # %%
-from pint.models import get_model
 import io
+from pint.models import get_model
 
 # %% [markdown]
 # ### Load the timing model with new parameterization.
@@ -290,7 +290,7 @@ plt.errorbar(
     yerr=toas.get_errors().to_value(u.us),
     fmt=".",
 )
-plt.title("%s Pre-Fit Timing Residuals" % model.PSR.value)
+plt.title(f"{model.PSR.value} Pre-Fit Timing Residuals")
 plt.xlabel("MJD")
 plt.ylabel("Residual (us)")
 plt.grid()
@@ -311,7 +311,7 @@ plt.errorbar(
     yerr=toas.get_errors().to_value(u.us),
     fmt=".",
 )
-plt.title("%s Pre-Fit Timing Residuals" % model.PSR.value)
+plt.title(f"{model.PSR.value} Pre-Fit Timing Residuals")
 plt.xlabel("MJD")
 plt.ylabel("Residual (us)")
 plt.grid()

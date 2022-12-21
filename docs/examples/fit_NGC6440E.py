@@ -97,7 +97,7 @@ print(t.get_summary())
 rs = pint.residuals.Residuals(t, m).phase_resids
 xt = t.get_mjds()
 plt.plot(xt, rs, "x")
-plt.title("%s Pre-Fit Timing Residuals" % m.PSR.value)
+plt.title(f"{m.PSR.value} Pre-Fit Timing Residuals")
 plt.xlabel("MJD")
 plt.ylabel("Residual (phase)")
 plt.grid()
@@ -131,7 +131,7 @@ plt.errorbar(
     t.get_errors().to_value(u.us),
     fmt="x",
 )
-plt.title("%s Post-Fit Timing Residuals" % m.PSR.value)
+plt.title(f"{m.PSR.value} Post-Fit Timing Residuals")
 plt.xlabel("MJD")
 plt.ylabel("Residual (us)")
 plt.grid()
@@ -140,7 +140,3 @@ plt.show()
 # %%
 f.model.write_parfile("/tmp/output.par", "wt")
 print(f.model.as_parfile())
-
-# %%
-
-# %%

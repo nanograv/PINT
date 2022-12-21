@@ -49,7 +49,7 @@ f.fit_toas()
 print("Current free parameters: ", f.model.free_params)
 
 # %%
-print("Current last TOA: MJD {}".format(f.model.FINISH.quantity))
+print(f"Current last TOA: MJD {f.model.FINISH.quantity}")
 
 # %%
 # pretend we have new observations starting at MJD 59000
