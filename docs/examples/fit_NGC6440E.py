@@ -23,7 +23,7 @@
 # `docs/examples/` directory in order to carry out a simple fit of a
 # timing model to some data. You should also be able to run the notebook
 # version as it is here (it may be necessary to `make notebooks` to
-# produce a `.ipynb` version using `jupyext`).
+# produce a `.ipynb` version using `jupytext`).
 
 # %%
 import os
@@ -39,6 +39,7 @@ import pint.residuals
 import pint.toa
 from pint.models import get_model, get_model_and_toas
 import pint.logging
+import os
 
 # setup logging
 pint.logging.setup(level="INFO")

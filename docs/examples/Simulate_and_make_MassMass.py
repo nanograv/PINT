@@ -163,6 +163,8 @@ def get_plot_xy(mp, mc, quantity, target, uncertainty, mp_to_plot, nsigma=3):
 # except
 # * I removed the DM1/DM2 parameters (they were causing errors without a DMEPOCH)
 # * I removed RM (PINT couldn't understand it)
+# * I removed EPHVER 2 (PINT doesn't do anything with it)
+# * I added EPHEM DE440
 test_par = """
 PSRJ            J1537+1155
 RAJ             15:37:09.961730               3.000e-06
@@ -190,8 +192,8 @@ F3              -1.6E-36                      2.000e-37
 GAMMA           2.0708E-03                    5.000e-07
 SINI            0.9772                        1.600e-03
 M2              1.35                          5.000e-02
-EPHVER          2
 UNITS           TDB
+EPHEM           DE440
 """
 
 # %%
@@ -238,7 +240,10 @@ fit.fit_toas()
 # %%
 # look at the output.  Hopefully, since these are simulated TOAs
 # the fit will be good.  And indeed we see a reduced chi^2 very close to 1
-fit.print_summary()
+try:
+    fit.print_summary()
+except ValueError as e:
+    print(f"Unexpected exception: {e}")
 
 # %% [markdown]
 # The value of $\dot P_B$ is biased because of kinematic effects:
@@ -426,7 +431,7 @@ plt.contour(
             fit.model.PB.quantity, fit.model.A1.quantity
         ).value
     ],
-    color="k",
+    colors="k",
 )
 z = (
     pint.derived_quantities.mass_funct2(Mp, Mc, 90 * u.deg).value
@@ -454,3 +459,5 @@ plt.ylabel("Companion Mass $(M_\\odot)$", fontsize=fontsize)
 plt.xticks(fontsize=fontsize)
 plt.yticks(fontsize=fontsize)
 # plt.savefig('PSRB1534_massmass.png')
+
+# %%

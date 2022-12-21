@@ -2,7 +2,6 @@ C Updated by replace_toas.py on Thu Jan 22 16:01:44 2015
 C Converted by make_release.py on Tue Jun 17 16:36:57 2014 by pdemores
 C Original filename: 'B1855+09/1855.dmx14.tim.5'
 C Commented 58 simultaneous ASP TOAs
-MODE 1
 FORMAT 1
 C Additional cut TOAs can be included via:
 C INCLUDE B1855+09_NANOGrav_8yv0.cut
