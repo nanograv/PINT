@@ -25,6 +25,9 @@
 # %matplotlib inline
 # import matplotlib.pyplot as plt
 # %%
+import contextlib
+
+import matplotlib.pyplot as plt
 import numpy as np
 import scipy.linalg
 import scipy.stats
@@ -53,57 +56,80 @@ m, t = pint.models.get_model_and_toas(parfile, timfile)
 #
 # Unfortunately, parameter correlation matrices are not stored when `.par` files are recorded, only the individual parameter uncertainties. In PINT, the machinery for computing these matrices resides in `Fitter` objects. We will therefore construct one and carry out a fit - but we will take zero steps, so that the fit doesn't change the solution (and it runs fairly quickly!).
 #
-# Normally you should probably actually do something if the model isn't converged! Specifically, the covariance matrix probably isn't very useful if you're not at a best-fit set of parameters. Nevertheless, if you're confident your solution is close enough, you can just ignore the fitter's convergence testing by capturing the exception.
+# Normally you should probably actually do something if the model isn't converged! Specifically, the covariance matrix probably isn't very useful if you're not at a best-fit set of parameters. Unfortunately, with `maxiter=0` you will always get an exception claiming that the fitter hasn't converged.
 
 # %%
-fo = pint.fitter.Fitter.auto(t, m)
+fitter = pint.fitter.Fitter.auto(t, m)
 
 with contextlib.suppress(pint.fitter.MaxiterReached):
-    fo.fit_toas(maxiter=0)
-    print("Actually converged!")
+    fitter.fit_toas(maxiter=0)
 
 # %% [markdown]
 # You can get a human-readable version of the parameter correlation matrix:
 
 # %%
-fo.parameter_correlation_matrix
+fitter.parameter_correlation_matrix
 
 # %% [markdown]
 # If you want a machine-readable version:
 
 # %%
-fo.parameter_correlation_matrix.labels
+fitter.parameter_correlation_matrix.labels
 
 # %%
-fo.parameter_correlation_matrix.matrix
-
-# %%
-fo.parameter_correlation_matrix.labels
+fitter.parameter_correlation_matrix.matrix
 
 # %% [markdown]
-# Be warned: if the model includes red noise parameters, there may be more rows and columns than labels in the parameter covariance matrix. These unlabelled rows and columns will always be at the end. Let's check that there aren't surprises waiting for this pulsar.
+# Be warned: the labels here are not necessarily in the same order as `fo.model.free_params`. If the model includes red noise parameters, there may be more rows and columns than labels in the parameter covariance matrix. These unlabelled rows and columns will always be at the end. Let's check that there aren't surprises waiting for this pulsar.
 #
 # Even if there are no noise component entries, the correlation matrix includes a row and column for the non-parameter `Offset`. This arises because internally PINT fits allow for a constant offset in phase, but custom in pulsar timing is to report mean-subtracted residuals and ignore the absolute phase.
 
 # %%
-print(f"Model free paramters: {len(fo.model.free_params)}")
-print(f"Correlation matrix labels: {len(fo.parameter_correlation_matrix.labels[0])}")
-print(f"Correlation matrix shape: {fo.parameter_correlation_matrix.shape}")
+print(f"Model free paramters: {len(fitter.model.free_params)}")
+print(
+    f"Correlation matrix labels: {len(fitter.parameter_correlation_matrix.labels[0])}"
+)
+print(f"Correlation matrix shape: {fitter.parameter_correlation_matrix.shape}")
+
+# %% [markdown]
+# Let's extract the correlation matrix in a more convenient form. This requires some fancy indexing to rearrange the rows and columns as needed.
+
+# %%
+pint_correlations = fitter.parameter_correlation_matrix
+
+params = fitter.model.free_params
+corr_labels = [label for label, _ in pint_correlations.labels[0]]
+ix = [corr_labels.index(p) for p in params]
+
+raw_correlation = pint_correlations.matrix
+assert np.allclose(raw_correlation, raw_correlation.T)
+raw_correlation = (raw_correlation + raw_correlation.T) / 2
+# extract rows in the right order then columns in the right order
+correlation = (raw_correlation[ix, :])[:, ix]
+
+assert correlation.shape == (len(params), len(params))
+
+for i, p1 in enumerate(params):
+    assert p1 in corr_labels
+    for j, p2 in enumerate(params[: i + 1]):
+        assert (
+            correlation[i, j]
+            == raw_correlation[corr_labels.index(p1), corr_labels.index(p2)]
+        )
+        assert correlation[i, j] == correlation[j, i]
+
 
 # %% [markdown]
 # Let's summarize the worst covariances.
 
 # %%
-correlation = fo.parameter_correlation_matrix.matrix[1:, 1:]
-params = fo.model.free_params
-
-correlations = []
+correlation_list = []
 for i, p1 in enumerate(params):
     for j, p2 in enumerate(params[:i]):
-        correlations.append((p1, p2, correlation[i, j]))
+        correlation_list.append((p1, p2, correlation[i, j]))
 
-correlations.sort(key=lambda t: -abs(t[-1]))
-for p1, p2, c in correlations:
+correlation_list.sort(key=lambda t: -abs(t[-1]))
+for p1, p2, c in correlation_list:
     if abs(c) < 0.5:
         break
     print(f"{p1:10s} {p2:10s} {c:+.15f}")
@@ -117,12 +143,12 @@ for p1, p2, c in correlations:
 # Let's plot the credible region for the pair of parameters `DM` anf `F1`.
 
 # %%
-p1 = "F1"
-p2 = "DM"
+p1 = "F0"
+p2 = "F1"
 i = params.index(p1)
 j = params.index(p2)
 cor = np.array([[1, correlation[i, j]], [correlation[i, j], 1]])
-sigmas = np.array([fo.get_fitparams_uncertainty()[p] for p in [p1, p2]])
+sigmas = np.array([fitter.get_fitparams_uncertainty()[p] for p in [p1, p2]])
 vals, vecs = scipy.linalg.eigh(cor)
 
 for n_sigma in [1, 2, 3]:
@@ -136,8 +162,8 @@ for n_sigma in [1, 2, 3]:
         points[:, 0] * sigmas[0], points[:, 1] * sigmas[1], label=f"{n_sigma} sigma"
     )
 
-# plt.axhspan(-sigmas[0], sigmas[0], alpha=0.5)
-# plt.axvspan(-sigmas[1], sigmas[1], alpha=0.5)
+plt.axvspan(-sigmas[0], sigmas[0], alpha=0.5, label="one-sigma single-variable")
+plt.axhspan(-sigmas[1], sigmas[1], alpha=0.5)
 
 plt.legend()
 plt.xlabel(r"$\Delta$" + f"{p1}")
@@ -156,10 +182,11 @@ sample = (
 # %% [markdown]
 # ## Model derivatives
 #
-# PINT's fitters rely on having analytical derivatives of the timing model with respect to each parameter. These can be obtained by querying appropriate methods in the `TimingModel` object, but it is more conveniently packaged as the "design matrix" for the fit.
+# PINT's fitters rely on having analytical derivatives of the timing model with respect to each parameter. These can be obtained by querying appropriate methods in the `TimingModel` object, but it is more conveniently packaged as the "design matrix" for the fit. Here too the order of the parameters may well not match what is in `fitter.model.free_params`.
 
 # %%
-design, names, units = fo.get_designmatrix()
+design, names, units = fitter.get_designmatrix()
 print(names)
 print(units)
+print(fitter.model.free_params)
 design.shape
