@@ -317,7 +317,7 @@ class TopoObs(Observatory):
                 continue
             kwargs = dict(bogus_last_correction=self.bogus_last_correction)
             if isinstance(cf, dict):
-                kwargs |= cf
+                kwargs.update(cf)
                 cf = kwargs.pop("name")
             self._clock.append(
                 find_clock_file(
