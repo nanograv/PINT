@@ -862,3 +862,32 @@ def shklovskii_factor(pmtot: u.mas / u.yr, D: u.kpc):
     with u.set_enabled_equivalencies(u.dimensionless_angles()):
         a_s = (D * pmtot**2 / const.c).to(u.s**-1)
     return a_s
+
+
+@u.quantity_input
+def dispersion_slope(dm: pint.dmu):
+    """Compute the dispersion slope.
+
+    This is equal to DMconst * DM.
+    See https://nanograv-pint.readthedocs.io/en/latest/explanation.html#dispersion-measure
+    for an explanation on why this is relevant.
+
+    Parameters
+    ----------
+    dm: astropy.units.Quantity
+        Dispersion measure
+
+    Returns
+    -------
+    dsl: astropy.units.Quantity
+        Dispersion slope
+
+    Raises
+    ------
+    astropy.units.UnitsError
+        If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
+    """
+
+    return (dm * pint.DMconst).decompose()

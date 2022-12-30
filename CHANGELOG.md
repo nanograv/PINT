@@ -4,11 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.9.3] 2022-12-16
+## Unreleased
 ### Changed
+- Moved DMconst from `pint.models.dispersion_model` to `pint` to avoid circular imports
 ### Added
-- method to identify mask parameters with no TOAs and optionally freeze them
-- explicit discussion of DT92 convention to DDK model
+- Documentation: Explanation for DM
+- Methods to compute dispersion slope and to convert DM using the CODATA value of DMconst
+- `TimingModel.total_dispersion_slope` method
+- Explicit discussion of DT92 convention to DDK model
+
+## [0.9.3] 2022-12-16
+### Added
+- Method to identify mask parameters with no TOAs and optionally freeze them
 ### Fixed
 - Creating fake TOAs properly handles site clock corrections
 - Corrected a precision issue with reading ASCII representations of pulse profiles
