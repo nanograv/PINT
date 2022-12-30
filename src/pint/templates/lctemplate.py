@@ -1029,7 +1029,7 @@ class GaussianPrior:
         return rvals
 
 
-def prim_io(template):
+def prim_io(template, bound_eps=1e-5):
     """Read files and build LCPrimitives."""
 
     def read_gaussian(toks):
@@ -1047,15 +1047,41 @@ def prim_io(template):
                 g.errors[0] = float(tok[4]) / 2.3548200450309493
             elif tok[0].startswith("ampl"):
                 norms.append(float(tok[2]))
-        return primitives, norms
+        # check to that bounds are OK
+        for iprim, prim in enumerate(primitives):
+            if prim.check_bounds():
+                continue
+            for ip, p in enumerate(prim.p):
+                lo, hi = prim.bounds[ip]
+                if (p < lo) and (abs(p - lo) < bound_eps):
+                    prim.p[ip] = lo
+                if (p > hi) and (abs(p - hi) < bound_eps):
+                    prim.p[ip] = hi
+            if not prim.check_bounds():
+                raise ValueError("Unrecoverable bounds errors on input.")
+        # check norms
+        norms = np.asarray(norms)
+        n = norms.sum()
+        if (n > 1) and (abs(n - 1) < bounds_eps):
+            norms *= 1.0 / n
+        return primitives, list(norms)
 
-    toks = [line.strip().split() for line in open(template) if len(line.strip()) > 0]
-    if "gauss" in toks[0]:
-        return read_gaussian(toks[1:])
-    elif "kernel" in toks[0]:
-        return [LCKernelDensity(input_file=toks[1:])], None
-    elif "fourier" in toks[0]:
-        return [LCEmpiricalFourier(input_file=toks[1:])], None
+    lines = None
+    try:
+        with open(template, "r") as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        lines = template.split("\n")
+    if lines is None:
+        raise ValueError("Could not load lines from template.")
+    toks = [line.strip().split() for line in lines if len(line.strip()) > 0]
+    label, toks = toks[0], toks[1:]
+    if "gauss" in label:
+        return read_gaussian(toks)
+    elif "kernel" in label:
+        return [LCKernelDensity(input_file=toks)], None
+    elif "fourier" in label:
+        return [LCEmpiricalFourier(input_file=toks)], None
     raise ValueError("Template format not recognized!")
 
 
