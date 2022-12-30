@@ -43,6 +43,32 @@ def test_prim_gauss_definition():
     assert abs(g1(0.48) - expected_val) < 1e-6
 
 
+def test_prim_io():
+    """Test functionality to save a template and have it obey founds."""
+    # This will fail unless we use loose bounds checking
+    template1 = """
+    # gauss
+    -------------------------
+    const = 0.95915 +/- 0.00000
+    phas1 = 0.00000 +/- 0.00000
+    fwhm1 = 0.02514 +/- 0.00000
+    ampl1 = 0.03810 +/- 0.00000
+    phas2 = 0.53059 +/- 0.00000
+    fwhm2 = 0.01177 +/- 0.00000
+    ampl2 = 0.00275 +/- 0.00000
+    -------------------------
+    """
+    with pytest.raises(ValueError):
+        prims, norms = lctemplate.prim_io(template1, bound_eps=0)
+
+    # this should work and set the lower bound to 0.005
+    prims, norms = lctemplate.prim_io(template1)
+    assert prims[1].p[0] == prims[1].bounds[0][0]
+
+    template2 = template1.replace("1177", "1178")
+    prims, norms = lctemplate.prim_io(template2)
+
+
 def test_prim_gauss_wrapping():
 
     # default is to wrap a function by 10 times; make a fat pulse here and
@@ -464,6 +490,18 @@ delta   : 0.1007 +\- 0.0006
 Delta   : 0.4486 +\- 0.0016
 """
     assert expected_val.strip() == str(lcf).strip()
+
+    # check position fitting
+    offset, error = lcf.fit_position()
+    assert abs(offset < 1e-7)
+    assert abs(error - 0.00055513) < 1e-7
+
+    # check that fitting with a bad parameter boundary fails
+    p = lcf.template.primitives[0]
+    p.p[0] = p.bounds[0][0] - 1e-4
+    assert not (p.check_bounds())
+    with pytest.raises(ValueError):
+        lcf.fit_position()
 
 
 def test_simple_fit_binned():

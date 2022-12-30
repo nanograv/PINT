@@ -95,7 +95,7 @@ def main(argv=None):
         t = Time(
             np.longdouble(args.time), scale=args.timescale, format=fmt, precision=9
         )
-        print(t)
+        # print(t)
     else:
         t = Time(args.time, scale=args.timescale, format=args.format, precision=9)
     log.debug(t.iso)
