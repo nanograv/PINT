@@ -28,7 +28,7 @@ from numpy.testing import assert_allclose, assert_array_equal
 from pinttestdata import datadir
 
 import pint.models as tm
-from pint import fitter, toa
+from pint import fitter, toa, dmu
 from pint.pulsar_mjd import (
     jds_to_mjds,
     jds_to_mjds_pulsar,
@@ -50,6 +50,7 @@ from pint.utils import (
     open_or_use,
     taylor_horner,
     taylor_horner_deriv,
+    convert_dispersion_measure,
 )
 
 
@@ -790,3 +791,10 @@ def test_compute_hash_accepts_no_change(a):
         h_b = compute_hash(g)
 
     assert h_a == h_b
+
+
+def test_convert_dm():
+    dm = 10 * dmu
+    dm_codata = convert_dispersion_measure(dm)
+
+    assert np.isfinite(dm_codata)

@@ -42,9 +42,10 @@ from pathlib import Path
 
 import astropy.constants as const
 import astropy.coordinates as coords
-from astropy.time import Time
 import astropy.units as u
 import numpy as np
+from astropy import constants
+from astropy.time import Time
 from loguru import logger as log
 from scipy.special import fdtrc
 
@@ -1883,3 +1884,34 @@ def divide_times(t, t0, offset=0.5):
     values = (dt.to(u.yr).value + offset) // 1
     indices = np.digitize(values, np.unique(values), right=True)
     return indices
+
+
+def convert_dispersion_measure(dm, dmconst=None):
+    """Convert dispersion measure to a different value of the DM constant.
+
+    Parameters
+    ----------
+    dm : astropy.units.Quantity
+        DM measured according to the conventional value of the DM constant
+
+    Returns
+    -------
+    dm : astropy.units.Quantity
+        DM measured according to the value of the DM constant computed from the
+        latest values of the physical constants
+    dmconst : astropy.units.Quantity
+        Value of the DM constant. Default value is computed from CODATA physical
+        constants.
+    Notes
+    -----
+    See https://nanograv-pint.readthedocs.io/en/latest/explanation.html#dispersion-measure
+    for an explanation.
+    """
+
+    if dmconst is None:
+        e = constants.e.si
+        eps0 = constants.eps0.si
+        c = constants.c.si
+        me = constants.m_e.si
+        dmconst = e**2 / (8 * np.pi**2 * c * eps0 * me)
+    return (dm * pint.DMconst / dmconst).to(pint.dmu)
