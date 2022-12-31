@@ -6,7 +6,7 @@ from loguru import logger as log
 
 from pint.models.binary_dd import BinaryDD
 from pint.models.parameter import boolParameter, floatParameter
-from pint.models.stand_alone_psr_binaries.DDK_model import DDKmodel
+from pint.models.stand_alone_psr_binaries.DDS_model import DDSmodel
 from pint.models.timing_model import MissingParameter, TimingModelError
 
 
@@ -15,7 +15,7 @@ class BinaryDDS(BinaryDD):
 
     This extends the :class:`pint.models.binary_dd.BinaryDD` model with
     :math:`SHAPMAX = -\log(1-s)` instead of just :math:`s=\sin i`, which behaves better
-    near :math:`\sin i` near 1.
+    for :math:`\sin i` near 1.
 
     The actual calculations for this are done in
     :class:`pint.models.stand_alone_psr_binaries.DDS_model.DDSmodel`.
