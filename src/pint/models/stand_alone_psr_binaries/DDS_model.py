@@ -56,6 +56,8 @@ class DDSmodel(DDmodel):
         # Remove unused parameter SINI
         del self.param_default_value["SINI"]
         self.set_param_values()
+        if input_params is not None:
+            self.update_input(param_dict=input_params)
 
     @property
     def SINI(self):
@@ -68,7 +70,7 @@ class DDSmodel(DDmodel):
         )
 
     def d_SINI_d_SHAPMAX(self):
-        return -np.exp(self.SHAPMAX)
+        return np.exp(-self.SHAPMAX)
 
     def d_SINI_d_par(self, par):
         par_obj = getattr(self, par)
