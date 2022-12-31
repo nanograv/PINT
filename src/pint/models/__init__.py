@@ -21,9 +21,8 @@ from pint.models.absolute_phase import AbsPhase
 # Import all standard model components here
 from pint.models.astrometry import AstrometryEcliptic, AstrometryEquatorial
 from pint.models.binary_bt import BinaryBT
-from pint.models.binary_dd import BinaryDD
+from pint.models.binary_dd import BinaryDD, BinaryDDS
 from pint.models.binary_ddk import BinaryDDK
-from pint.models.binary_dds import BinaryDDS
 from pint.models.binary_ell1 import BinaryELL1, BinaryELL1H
 from pint.models.dispersion_model import DispersionDM, DispersionDMX
 from pint.models.frequency_dependent import FD

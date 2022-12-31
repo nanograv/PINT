@@ -137,7 +137,7 @@ class BinaryDDS(BinaryDD):
     Parameters supported:
 
     .. paramtable::
-        :class: pint.models.binary_dds.BinaryDDS
+        :class: pint.models.binary_dd.BinaryDDS
 
     References
     ----------
