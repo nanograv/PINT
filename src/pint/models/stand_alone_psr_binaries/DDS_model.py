@@ -1,4 +1,4 @@
-"""Damour and Deruelle binary model."""
+"""The DDS model - Damour and Deruelle with alternate Shapiro delay paramterization."""
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
@@ -30,7 +30,7 @@ class DDSmodel(DDmodel):
     Parameters supported:
 
     .. paramtable::
-        :class: pint.models.binary_ddk.BinaryDDS
+        :class: pint.models.binary_dds.BinaryDDS
 
     References
     ----------
@@ -64,7 +64,7 @@ class DDSmodel(DDmodel):
     @SINI.setter
     def SINI(self, val):
         warnings.warn(
-            "DDS model uses SHAPMAX as inclination angle. SINI will not be used."
+            "DDS model uses SHAPMAX as inclination parameter. SINI will not be used."
         )
 
     def d_SINI_d_SHAPMAX(self):
@@ -74,6 +74,6 @@ class DDSmodel(DDmodel):
         par_obj = getattr(self, par)
         try:
             ko_func = getattr(self, "d_SINI_d_" + par)
-        except:
+        except AttributeError:
             ko_func = lambda: np.zeros(len(self.tt0)) * u.Unit("") / par_obj.unit
         return ko_func()

@@ -1,4 +1,4 @@
-"""The DDK model - Damour and Deruelle with kinematics."""
+"""The DDS model - Damour and Deruelle with alternate Shapiro delay paramterization."""
 import warnings
 import numpy as np
 from astropy import units as u
@@ -34,7 +34,7 @@ class BinaryDDS(BinaryDD):
     Parameters supported:
 
     .. paramtable::
-        :class: pint.models.binary_ddk.BinaryDDS
+        :class: pint.models.binary_dds.BinaryDDS
 
     References
     ----------
