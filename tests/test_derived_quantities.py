@@ -25,6 +25,7 @@ from pint.derived_quantities import (
     omdot_to_mtot,
     p_to_f,
     shklovskii_factor,
+    dispersion_slope,
 )
 
 
@@ -322,3 +323,10 @@ def test_shklovskii_factor():
     shf = shklovskii_factor(pmtot, D)
 
     assert np.isfinite(shf)
+
+
+def test_dispersion_slope():
+    dm = 10 * pint.dmu
+    dsl = dispersion_slope(dm)
+
+    assert np.isfinite(dsl)
