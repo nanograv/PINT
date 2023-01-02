@@ -70,6 +70,14 @@ class DDmodel(PSR_BINARY):
 
     # calculations for delays in DD model
 
+    @property
+    def k(self):
+        PB = self.pb()
+        PB = PB.to("second")
+        OMDOT = self.OMDOT
+        k = OMDOT.to(u.rad / u.second) / (2 * np.pi * u.rad / PB)
+        return k
+
     # DDmodel special omega.
     def omega(self):
         """T. Damour and N. Deruelle(1986)equation [25]
@@ -86,8 +94,7 @@ class DDmodel(PSR_BINARY):
         OMDOT = self.OMDOT
         OM = self.OM
         nu = self.nu()
-        k = OMDOT.to(u.rad / u.second) / (2 * np.pi * u.rad / PB)
-        return (OM + nu * k).to(u.rad)
+        return (OM + nu * self.k).to(u.rad)
 
     def d_omega_d_par(self, par):
         """derivative for omega respect to user input Parameter.
