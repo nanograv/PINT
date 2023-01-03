@@ -1,4 +1,4 @@
-"""The DDS model - Damour and Deruelle with alternate Shapiro delay paramterization."""
+"""The DDGR model - Damour and Deruelle with GR assumed"""
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
@@ -10,23 +10,69 @@ from pint import derived_quantities
 from .DD_model import DDmodel
 
 
-class DDGRmodel(DDmodel):
-    """Damour and Deruelle model with alternate Shapiro delay parameterization.
+@u.quantity_input(M1=u.Msun, M2=u.Msun, n=1 / u.d)
+def _solve_kepler(M1, M2, n, ARTOL=1e-10):
+    """Relativistic version of Kepler's third law, solved by iteration
 
-    This extends the :class:`pint.models.binary_dd.BinaryDD` model with
-    :math:`SHAPMAX = -\log(1-s)` instead of just :math:`s=\sin i`, which behaves better
-    for :math:`\sin i` near 1.
+    Taylor & Weisberg (1989), Eqn. 15
+    In tempo, implemented as ``mass2dd`` (https://sourceforge.net/p/tempo/tempo/ci/master/tree/src/mass2dd.f)
+
+
+    Parameters
+    ----------
+    M1 : u.Quantity
+        Mass of pulsar
+    M2 : u.Quantity
+        Mass of companion
+    n : u.Quantity
+        orbital angular frequency
+    ARTOL : float
+        fractional tolerance for solution
+
+    Returns
+    -------
+    arr0 : u.Quantity
+        non-relativistic semi-major axis
+    arr : u.Quantity
+        relativstic semi-major axis
+    """
+    MTOT = M1 + M2
+    # initial NR value
+    arr0 = (c.G * MTOT / n**2) ** (1.0 / 3)
+    arr = arr0
+    arr_old = arr
+    arr = arr0 * (
+        1 + (M1 * M2 / MTOT**2 - 9) * (c.G * MTOT / (2 * arr * c.c**2))
+    ) ** (2.0 / 3)
+    # iterate to get correct value
+    while np.fabs((arr - arr_old) / arr) > ARTOL:
+        arr_old = arr
+        ar = arr0 * (
+            1 + (M1 * M2 / MTOT**2 - 9) * (c.G * MTOT / (2 * arr * c.c**2))
+        ) ** (2.0 / 3)
+
+    return arr0, arr
+
+
+class DDGRmodel(DDmodel):
+    """Damour and Deruelle model assuming GR to be correct
 
     It supports all the parameters defined in :class:`pint.models.pulsar_binary.PulsarBinary`
     and :class:`pint.models.binary_dd.BinaryDD` plus:
 
-       SHAPMAX
-            :math:`-\log(1-\sin i)`
+        MTOT
+            Total mass
+        XPBDOT
+            Excess PBDOT beyond what GR predicts
+        XOMDOT
+            Excess OMDOT beyond what GR predicts
 
     It also removes:
 
-       SINI
-            use ``SHAPMAX`` instead
+        SINI
+        PBDOT
+        OMDOT
+        GAMMA
 
     Parameters supported:
 
@@ -35,11 +81,9 @@ class DDGRmodel(DDmodel):
 
     References
     ----------
-    - Kramer et al. (2006), Science, 314, 97 [1]_
-    - Rafikov and Lai (2006), PRD, 73, 063003 [2]_
+    - Taylor and Weisberg (1989), ApJ, 345, 434 [1]_
 
-    .. [1] https://ui.adsabs.harvard.edu/abs/2006Sci...314...97K/abstract
-    .. [2] https://ui.adsabs.harvard.edu/abs/2006PhRvD..73f3003R/abstract
+    .. [1] https://ui.adsabs.harvard.edu/abs/1989ApJ...345..434T/abstract
     """
 
     def __init__(self, t=None, input_params=None):
@@ -60,27 +104,17 @@ class DDGRmodel(DDmodel):
             self.update_input(param_dict=input_params)
 
     def _update(self, ARTOL=1e-10):
+        """Update measurable quantities from system parameters for DDGR model
+
+        Taylor & Weisberg (1989), Eqn. 15-25
+        In tempo, implemented as ``mass2dd`` (https://sourceforge.net/p/tempo/tempo/ci/master/tree/src/mass2dd.f)
+
+        """
         PB = self.pb()
         PB = PB.to("second")
         self._M1 = self.MTOT - self.M2
         self._n = 2 * np.pi / PB
-        # initial value of semi-major axis before relativstic corrections
-        arr0 = (c.G * self.MTOT / self._n**2) ** (1.0 / 3)
-        arr = arr0
-        arr_old = arr
-        arr = arr0 * (
-            1
-            + (self._M1 * self.M2 / self.MTOT**2 - 9)
-            * (c.G * self.Mtot / (2 * arr * c.c**2))
-        ) ** (2.0 / 3)
-        # iterate to get correct value
-        while np.fabs((arr - arr_old) / arr) > ARTOL:
-            arr_old = arr
-            ar = arr0 * (
-                1
-                + (self._M1 * self.M2 / self.MTOT**2 - 9)
-                * (c.G * self.Mtot / (2 * arr * c.c**2))
-            ) ** (2.0 / 3)
+        arr0, arr = _solve_kepler(self._M1, self.M2, self._n)
         self._arr = arr
         # pulsar component
         self._ar = self._arr * (self.M2 / self.MTOT)
@@ -161,7 +195,7 @@ class DDGRmodel(DDmodel):
     def d_SINI_d_par(self, par):
         par_obj = getattr(self, par)
         try:
-            ko_func = getattr(self, "d_SINI_d_" + par)
+            ko_func = getattr(self, f"d_SINI_d_{par}")
         except AttributeError:
             ko_func = lambda: np.zeros(len(self.tt0)) * u.Unit("") / par_obj.unit
         return ko_func()
