@@ -436,10 +436,12 @@ class DDmodel(PSR_BINARY):
 
             Dre = alpha*(cos(E)-er)+(beta+gamma)*sin(E)
         """
+
         # er = self.er()
         # sinE = np.sin(self.E())
         # cosE = np.cos(self.E())
         # return self.alpha() * (cosE - er) + (self.beta() + self.GAMMA) * sinE
+
         return self.delayR() + self.delayE()
 
     def d_Dre_d_par(self, par):
@@ -789,26 +791,8 @@ class DDmodel(PSR_BINARY):
 
         T. Damour and N. Deruelle (1986) equation [25]
         """
-        sinE = np.sin(self.E())
-        return self.GAMMA * sinE
 
-    # def d_delayE_d_par(self, par):
-    #     """Derivative.
-
-    #     Computes::
-
-    #        eDelay = gamma*sin[E]
-    #        deDelay_dPar = deDelay/dgamma*dgamma/dPar +
-    #                       deDelay/dE*dE/dPar
-    #     """
-    #     cE = np.cos(self.E())
-    #     sE = np.sin(self.E())
-
-    #     return sE * self.prtl_der("GAMMA", par) + self.GAMMA * cE * self.prtl_der(
-    #         "E", par
-    #     )
-
-    #################################################
+        return self.GAMMA * np.sin(self.E())
 
     def delayA(self):
         """Binary Aberration delay
