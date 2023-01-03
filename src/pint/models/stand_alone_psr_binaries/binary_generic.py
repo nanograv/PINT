@@ -389,9 +389,11 @@ class PSR_BINARY:
 
     def ecc(self):
         """Calculate ecctricity with EDOT"""
-        ECC = self.ECC
-        EDOT = self.EDOT
-        return ECC + (self.tt0 * EDOT).decompose()
+        if hasattr(self, "_tt0"):
+            ECC = self.ECC
+            EDOT = self.EDOT
+            return ECC + (self.tt0 * EDOT).decompose()
+        return self.ECC
 
     def d_ecc_d_T0(self):
         result = np.empty(len(self.tt0))

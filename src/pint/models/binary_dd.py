@@ -105,7 +105,7 @@ class BinaryDD(PulsarBinary):
     def as_DDS(self):
         mDDS = BinaryDDS()
         for p in self.params:
-            if not p == "SINI":
+            if p != "SINI":
                 setattr(mDDS, p, getattr(self, p))
         mDDS.SHAPMAX.quantity = -np.log(1 - self.SINI.quantity)
         mDDS.SHAPMAX.frozen = self.SINI.frozen
@@ -170,11 +170,17 @@ class BinaryDDS(BinaryDD):
     def validate(self):
         """Validate parameters."""
         super().validate()
+        if (
+            hasattr(self, "SHAPMAX")
+            and self.SHAPMAX.value is not None
+            and not self.SHAPMAX.value > -np.log(2)
+        ):
+            raise ValueError(f"SHAPMAX must be > -log(2) ({self.SHAPMAX.quantity})")
 
     def as_DD(self):
         mDD = BinaryDD()
         for p in self.params:
-            if not p == "SHAPMAX":
+            if p != "SHAPMAX":
                 setattr(mDD, p, getattr(self, p))
         mDD.SINI.quantity = 1 - np.exp(-self.SHAPMAX.quantity)
         mDD.SINI.frozen = self.SHAPMAX.frozen
@@ -186,39 +192,35 @@ class BinaryDDS(BinaryDD):
 
 
 class BinaryDDGR(BinaryDD):
-    """Damour and Deruelle model with alternate Shapiro delay parameterization.
-
-    This extends the :class:`pint.models.binary_dd.BinaryDD` model with
-    :math:`SHAPMAX = -\log(1-s)` instead of just :math:`s=\sin i`, which behaves better
-    for :math:`\sin i` near 1.
-
-    The actual calculations for this are done in
-    :class:`pint.models.stand_alone_psr_binaries.DDS_model.DDSmodel`.
+    """Damour and Deruelle model assuming GR to be correct
 
     It supports all the parameters defined in :class:`pint.models.pulsar_binary.PulsarBinary`
     and :class:`pint.models.binary_dd.BinaryDD` plus:
 
-       SHAPMAX
-            :math:`-\log(1-\sin i)`
+        MTOT
+            Total mass
+        XPBDOT
+            Excess PBDOT beyond what GR predicts
+        XOMDOT
+            Excess OMDOT beyond what GR predicts
 
     It also removes:
 
-       SINI
-            use ``SHAPMAX`` instead
+        SINI
+        PBDOT
+        OMDOT
+        GAMMA
 
     Parameters supported:
 
     .. paramtable::
-        :class: pint.models.binary_dd.BinaryDDS
+        :class: pint.models.binary_dd.BinaryDDGR
 
     References
     ----------
-    - Kramer et al. (2006), Science, 314, 97 [1]_
-    - Rafikov and Lai (2006), PRD, 73, 063003 [2]_
+    - Taylor and Weisberg (1989), ApJ, 345, 434 [1]_
 
-    .. [1] https://ui.adsabs.harvard.edu/abs/2006Sci...314...97K/abstract
-    .. [2] https://ui.adsabs.harvard.edu/abs/2006PhRvD..73f3003R/abstract
-
+    .. [1] https://ui.adsabs.harvard.edu/abs/1989ApJ...345..434T/abstract
     """
 
     register = True

@@ -75,7 +75,7 @@ class DDSmodel(DDmodel):
     def d_SINI_d_par(self, par):
         par_obj = getattr(self, par)
         try:
-            ko_func = getattr(self, "d_SINI_d_" + par)
+            ko_func = getattr(self, f"d_SINI_d_{par}")
         except AttributeError:
             ko_func = lambda: np.zeros(len(self.tt0)) * u.Unit("") / par_obj.unit
         return ko_func()

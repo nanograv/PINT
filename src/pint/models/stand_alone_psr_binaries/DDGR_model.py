@@ -77,7 +77,7 @@ class DDGRmodel(DDmodel):
     Parameters supported:
 
     .. paramtable::
-        :class: pint.models.binary_dd.BinaryDDS
+        :class: pint.models.binary_dd.BinaryDDGR
 
     References
     ----------
@@ -110,8 +110,9 @@ class DDGRmodel(DDmodel):
         In tempo, implemented as ``mass2dd`` (https://sourceforge.net/p/tempo/tempo/ci/master/tree/src/mass2dd.f)
 
         """
-        PB = self.pb()
-        PB = PB.to("second")
+        # unclear if this should compute the PB in a different way
+        # since this could incorporate changes, but to determine those changes we need to run this function
+        PB = self.PB.to(u.s)
         self._M1 = self.MTOT - self.M2
         self._n = 2 * np.pi / PB
         arr0, arr = _solve_kepler(self._M1, self.M2, self._n)
@@ -124,7 +125,7 @@ class DDGRmodel(DDmodel):
             * c.G
             * self.M2
             * (self._M1 + 2 * self.M2)
-            / (self._n * arr0 * self.MTOT)
+            / (self._n * c.c**2 * arr0 * self.MTOT)
         ).to(u.s)
         fe = (1 + (73.0 / 24) * self.ecc() ** 2 + (37.0 / 96) ** self.ecc() ** 4) * (
             1 - self.ecc() ** 2
@@ -188,6 +189,32 @@ class DDGRmodel(DDmodel):
     def eTheta(self):
         self._update()
         return self._eTheta
+
+    @SINI.setter
+    def SINI(self, val):
+        warnings.warn(
+            "DDGR model uses MTOT to derive the inclination angle. SINI will not be used."
+        )
+
+    @PBDOT.setter
+    def PBDOT(self, val):
+        warnings.warn("DDGR model uses MTOT to derive PBDOT. PBDOT will not be used.")
+
+    @OMDOT.setter
+    def OMDOT(self, val):
+        warnings.warn("DDGR model uses MTOT to derive OMDOT. OMDOT will not be used.")
+
+    @GAMMA.setter
+    def GAMMA(self, val):
+        warnings.warn("DDGR model uses MTOT to derive GAMMA. GAMMA will not be used.")
+
+    @DR.setter
+    def DR(self, val):
+        warnings.warn("DDGR model uses MTOT to derive Dr. Dr will not be used.")
+
+    @DTH.setter
+    def DTH(self, val):
+        warnings.warn("DDGR model uses MTOT to derive Dth. Dth will not be used.")
 
     def d_SINI_d_SHAPMAX(self):
         return np.exp(-self.SHAPMAX)
