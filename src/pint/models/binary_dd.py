@@ -87,11 +87,11 @@ class BinaryDD(PulsarBinary):
         self.check_required_params(["T0", "A1"])
         # If any *DOT is set, we need T0
         for p in ("PBDOT", "OMDOT", "EDOT", "A1DOT"):
-            if getattr(self, p).value is None:
+            if hasattr(self, p) and getattr(self, p).value is None:
                 getattr(self, p).set("0")
                 getattr(self, p).frozen = True
 
-        if self.GAMMA.value is None:
+        if hasattr(self, "GAMMA") and self.GAMMA.value is None:
             self.GAMMA.set("0")
             self.GAMMA.frozen = True
 
@@ -99,8 +99,9 @@ class BinaryDD(PulsarBinary):
         # OM = 0 -> T0 = TASC
         if self.ECC.value == 0 or self.ECC.value is None:
             for p in ("ECC", "OM", "OMDOT", "EDOT"):
-                getattr(self, p).set("0")
-                getattr(self, p).frozen = True
+                if hasattr(self, p):
+                    getattr(self, p).set("0")
+                    getattr(self, p).frozen = True
 
     def as_DDS(self):
         mDDS = BinaryDDS()

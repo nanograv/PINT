@@ -51,7 +51,7 @@ def _solve_kepler(M1, M2, n, ARTOL=1e-10):
             1 + (M1 * M2 / MTOT**2 - 9) * (c.G * MTOT / (2 * arr * c.c**2))
         ) ** (2.0 / 3)
 
-    return arr0, arr
+    return arr0.decompose(), arr.decompose()
 
 
 class DDGRmodel(DDmodel):
@@ -120,6 +120,7 @@ class DDGRmodel(DDmodel):
         # pulsar component
         self._ar = self._arr * (self.M2 / self.MTOT)
         self._SINI = (self.A1 / self._ar).decompose()
+        # use arr0 here following comments in tempo
         self._GAMMA = (
             self.ecc()
             * c.G
@@ -127,18 +128,27 @@ class DDGRmodel(DDmodel):
             * (self._M1 + 2 * self.M2)
             / (self._n * c.c**2 * arr0 * self.MTOT)
         ).to(u.s)
-        fe = (1 + (73.0 / 24) * self.ecc() ** 2 + (37.0 / 96) ** self.ecc() ** 4) * (
+        fe = (1 + (73.0 / 24) * self.ecc() ** 2 + (37.0 / 96) * self.ecc() ** 4) * (
             1 - self.ecc() ** 2
         ) ** (-7.0 / 2)
         self._PBDOT = (
             (-192 * np.pi / (5 * c.c**5))
-            * (c.G / self._n) ** (5.0 / 3)
+            * (c.G * self._n) ** (5.0 / 3)
             * self._M1
             * self.M2
             * self.MTOT ** (-1.0 / 3)
             * fe
         ).decompose()
-        self._k = (3 * c.G * self.MTOT) / (arr0 * (1 - self.ecc() ** 2))
+        self._OMDOT = (
+            3
+            * (self._n) ** (5.0 / 3)
+            * (1 / (1 - self.ecc() ** 2))
+            * (c.G * (self._M1 + self.M2) / c.c**3) ** (2.0 / 3)
+        ).to(u.deg / u.yr, equivalencies=u.dimensionless_angles())
+        # use arr0 here following comments in tempo
+        self._k = (
+            (3 * c.G * self.MTOT) / (c.c**2 * arr0 * (1 - self.ecc() ** 2))
+        ).decompose()
         self._DR = (c.G / (c.c**2 * self.MTOT * self._arr)) * (
             3 * self._M1**2 + 6 * self._M1 * self.M2 + 2 * self.M2**2
         )
@@ -188,7 +198,7 @@ class DDGRmodel(DDmodel):
 
     def eTheta(self):
         self._update()
-        return self._eTheta
+        return self._eth
 
     @SINI.setter
     def SINI(self, val):
