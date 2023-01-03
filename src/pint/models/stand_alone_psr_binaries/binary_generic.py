@@ -395,7 +395,7 @@ class PSR_BINARY:
         return tt0
 
     def ecc(self):
-        """Calculate ecctricity with EDOT"""
+        """Calculate eccentricity with EDOT"""
         ECC = self.ECC
         EDOT = self.EDOT
         return ECC + (self.tt0 * EDOT).decompose()

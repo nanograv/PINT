@@ -153,10 +153,10 @@ class DDmodel(PSR_BINARY):
     ############################################################
     # Calculate er
     def er(self):
-        return self.ecc() + self.DR
+        return self.ecc() * (1 + self.DR)
 
     def d_er_d_DR(self):
-        return np.longdouble(np.ones(len(self.tt0))) * u.Unit("")
+        return np.longdouble(np.ones(len(self.tt0))) * self.ecc()
 
     def d_er_d_par(self, par):
         if par not in self.binary_params:
@@ -177,10 +177,10 @@ class DDmodel(PSR_BINARY):
 
     ##########
     def eTheta(self):
-        return self.ecc() + self.DTH
+        return self.ecc() * (1 + self.DTH)
 
     def d_eTheta_d_DTH(self):
-        return np.longdouble(np.ones(len(self.tt0))) * u.Unit("")
+        return np.longdouble(np.ones(len(self.tt0))) * self.ecc()
 
     def d_eTheta_d_par(self, par):
         if par not in self.binary_params:
