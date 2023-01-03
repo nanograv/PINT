@@ -165,16 +165,14 @@ class PSR_BINARY:
             self.psr_pos = np.atleast_1d(updates["psr_pos"])
         # update parameters
         d_list = ["barycentric_toa", "obs_pos", "psr_pos"]
-        parameters = {}
-        for key, value in updates.items():
-            if key not in d_list:
-                parameters[key] = value
+        parameters = {key: value for key, value in updates.items() if key not in d_list}
+
         self.set_param_values(parameters)
 
         # Switch the cache off
         # NOTE Having cache is needs to be very careful.
         for cv in self.cache_vars:
-            setattr(self, "_" + cv, None)
+            setattr(self, f"_{cv}", None)
 
     def set_param_values(self, valDict=None):
         """Set the parameters and assign values,
@@ -203,10 +201,12 @@ class PSR_BINARY:
                     continue
                 if not hasattr(valDict[par], "unit"):
                     bm_par = getattr(self, parname)
-                    if not hasattr(bm_par, "unit"):
-                        val = valDict[par]
-                    else:
-                        val = valDict[par] * getattr(self, parname).unit
+                    val = (
+                        valDict[par] * getattr(self, parname).unit
+                        if hasattr(bm_par, "unit")
+                        else valDict[par]
+                    )
+
                 else:
                     val = valDict[par]
                 setattr(self, parname, val)
@@ -215,15 +215,12 @@ class PSR_BINARY:
         """Add one parameter to the binary class."""
         if parameter not in self.binary_params:
             self.binary_params.append(parameter)
-            if not hasattr(defaultValue, "unit"):
-                if unit:
-                    log.warning(
-                        "Binary parameters' value generally has unit."
-                        " Treat parameter " + parameter + " as a diemension less unit."
-                    )
-                    self.param_default_value[parameter] = defaultValue * u.Unit("")
-                else:
-                    self.param_default_value[parameter] = defaultValue
+            if not hasattr(defaultValue, "unit") and unit:
+                log.warning(
+                    "Binary parameters' value generally has unit."
+                    " Treat parameter " + parameter + " as a diemension less unit."
+                )
+                self.param_default_value[parameter] = defaultValue * u.Unit("")
             else:
                 self.param_default_value[parameter] = defaultValue
             setattr(self, parameter, self.param_default_value[parameter])
@@ -237,10 +234,7 @@ class PSR_BINARY:
 
     def search_alias(self, parname):
         for pn in self.param_aliases.keys():
-            if parname in self.param_aliases[pn]:
-                return pn
-            else:
-                return None
+            return pn if parname in self.param_aliases[pn] else None
 
     def binary_delay(self):
         """Returns total pulsar binary delay.
@@ -267,8 +261,9 @@ class PSR_BINARY:
         # search for aliases
         if par not in self.binary_params and self.search_alias(par) is None:
             raise AttributeError(
-                "Can not find parameter " + par + " in " + self.binary_name + " model"
+                f"Can not find parameter {par} in {self.binary_name} model"
             )
+
         # Get first derivative in the delay derivative function
         result = self.d_binarydelay_d_par_funcs[0](par)
         if len(self.d_binarydelay_d_par_funcs) > 1:
@@ -293,11 +288,11 @@ class PSR_BINARY:
            The derivatives pdy/pdx
         """
         if y not in self.binary_params + self.inter_vars:
-            errorMesg = y + " is not in binary parameter and variables list."
+            errorMesg = f"{y} is not in binary parameter and variables list."
             raise ValueError(errorMesg)
 
         if x not in self.inter_vars + self.binary_params:
-            errorMesg = x + " is not in binary parameters and variables list."
+            errorMesg = f"{x} is not in binary parameters and variables list."
             raise ValueError(errorMesg)
         # derivative to itself
         if x == y:
@@ -315,7 +310,7 @@ class PSR_BINARY:
             elif hasattr(attr, "__call__"):  # If attr is a method
                 U[i] = attr().unit
             else:
-                raise TypeError(type(attr) + "can not get unit")
+                raise TypeError(f"{type(attr)} can not get unit")
             # U[i] = 1*U[i]
 
             # commonU = list(set(U[i].unit.bases).intersection([u.rad,u.deg]))
@@ -331,12 +326,12 @@ class PSR_BINARY:
         # Call derivtive functions
         derU = yU / xU
 
-        if hasattr(self, "d_" + y + "_d_" + x):
-            dername = "d_" + y + "_d_" + x
+        if hasattr(self, f"d_{y}_d_{x}"):
+            dername = f"d_{y}_d_{x}"
             result = getattr(self, dername)()
 
-        elif hasattr(self, "d_" + y + "_d_par"):
-            dername = "d_" + y + "_d_par"
+        elif hasattr(self, f"d_{y}_d_par"):
+            dername = f"d_{y}_d_par"
             result = getattr(self, dername)(x)
 
         else:
@@ -386,13 +381,11 @@ class PSR_BINARY:
     def get_tt0(self, barycentricTOA):
         """tt0 = barycentricTOA - T0"""
         if barycentricTOA is None or self.T0 is None:
-            tt0 = None
-            return tt0
+            return None
         T0 = self.T0
-        if not hasattr(barycentricTOA, "unit") or barycentricTOA.unit == None:
+        if not hasattr(barycentricTOA, "unit") or barycentricTOA.unit is None:
             barycentricTOA = barycentricTOA * u.day
-        tt0 = (barycentricTOA - T0).to("second")
-        return tt0
+        return (barycentricTOA - T0).to("second")
 
     def ecc(self):
         """Calculate ecctricity with EDOT"""
@@ -427,16 +420,15 @@ class PSR_BINARY:
 
     def d_a1_d_par(self, par):
         if par not in self.binary_params:
-            errorMesg = par + "is not in binary parameter list."
+            errorMesg = f"{par} is not in binary parameter list."
             raise ValueError(errorMesg)
 
         par_obj = getattr(self, par)
         try:
-            func = getattr(self, "d_a1_d_" + par)
+            func = getattr(self, f"d_a1_d_{par}")
         except:
             func = lambda: np.zeros(len(self.tt0)) * self.A1.unit / par_obj.unit
-        result = func()
-        return result
+        return func()
 
     def pb(self):
         return self.orbits_cls.pbprime()
@@ -454,7 +446,7 @@ class PSR_BINARY:
         Derivitve of M respect to par
         """
         if par not in self.binary_params:
-            errorMesg = par + " is not in binary parameter list."
+            errorMesg = f"{par} is not in binary parameter list."
             raise ValueError(errorMesg)
 
         par_obj = getattr(self, par)
@@ -484,7 +476,7 @@ class PSR_BINARY:
         Derivitve of M respect to par
         """
         if par not in self.binary_params:
-            errorMesg = par + " is not in binary parameter list."
+            errorMesg = f"{par} is not in binary parameter list."
             raise ValueError(errorMesg)
 
         par_obj = getattr(self, par)
@@ -537,12 +529,12 @@ class PSR_BINARY:
         Derivitve of E respect to par
         """
         if par not in self.binary_params:
-            errorMesg = par + " is not in binary parameter list."
+            errorMesg = f"{par} is not in binary parameter list."
             raise ValueError(errorMesg)
 
         par_obj = getattr(self, par)
         try:
-            func = getattr(self, "d_E_d_" + par)
+            func = getattr(self, f"d_E_d_{par}")
         except:
             if par in self.orbits_cls.orbit_params:
                 d_M_d_par = self.d_M_d_par(par)
@@ -631,19 +623,18 @@ class PSR_BINARY:
         Derivitve of nu respect to par
         """
         if par not in self.binary_params:
-            errorMesg = par + " is not in binary parameter list."
+            errorMesg = f"{par} is not in binary parameter list."
             raise ValueError(errorMesg)
 
         par_obj = getattr(self, par)
         try:
-            func = getattr(self, "d_nu_d_" + par)
+            func = getattr(self, f"d_nu_d_{par}")
             return func()
         except:
             if par in self.orbits_cls.orbit_params:
                 return self.d_nu_d_E() * self.d_E_d_par(par)
-            else:
-                nu = self.nu()
-                return np.zeros(len(self.tt0)) * nu.unit / par_obj.unit
+            nu = self.nu()
+            return np.zeros(len(self.tt0)) * nu.unit / par_obj.unit
 
     def omega(self):
         PB = self.pb().to("second")
@@ -663,18 +654,17 @@ class PSR_BINARY:
         Derivitve of omega respect to par
         """
         if par not in self.binary_params:
-            errorMesg = par + "is not in binary parameter list."
+            errorMesg = f"{par}is not in binary parameter list."
             raise ValueError(errorMesg)
 
         par_obj = getattr(self, par)
 
         OMDOT = self.OMDOT
         OM = self.OM
-        if par in ["OM", "OMDOT", "T0"]:
-            dername = "d_omega_d_" + par
-            return getattr(self, dername)()
-        else:
+        if par not in ["OM", "OMDOT", "T0"]:
             return np.longdouble(np.zeros(len(self.tt0))) * self.OM.unit / par_obj.unit
+        dername = f"d_omega_d_{par}"
+        return getattr(self, dername)()
 
     def d_omega_d_OM(self):
         """dOmega/dOM = 1"""
@@ -833,7 +823,7 @@ class PSR_BINARY:
         M = np.zeros((len(self.t), npars))
 
         for ii, par in enumerate(params):
-            dername = "d_Pobs_d_" + par
+            dername = f"d_Pobs_d_{par}"
             M[:, ii] = getattr(self, dername)()
         return M
 
@@ -842,7 +832,7 @@ class PSR_BINARY:
         M = np.zeros((len(self.t), npars))
 
         for ii, par in enumerate(params):
-            dername = "d_delay_d_" + par
+            dername = f"d_delay_d_{par}"
             M[:, ii] = getattr(self, dername)()
 
         return M
