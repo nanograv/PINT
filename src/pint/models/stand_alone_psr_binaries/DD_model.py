@@ -108,7 +108,7 @@ class DDmodel(PSR_BINARY):
         Derivative of omega respect to par
         """
         if par not in self.binary_params:
-            errorMesg = par + "is not in binary parameter list."
+            errorMesg = f"{par}is not in binary parameter list."
             raise ValueError(errorMesg)
         par_obj = getattr(self, par)
 
@@ -118,7 +118,7 @@ class DDmodel(PSR_BINARY):
         nu = self.nu()
         k = OMDOT.to(u.rad / u.second) / (2 * np.pi * u.rad / PB)
         if par in ["OM", "OMDOT"]:
-            dername = "d_omega_d_" + par
+            dername = f"d_omega_d_{par}"
             return getattr(self, dername)()
         elif par in self.orbits_cls.orbit_params:
             d_nu_d_par = self.d_nu_d_par(par)
@@ -160,21 +160,20 @@ class DDmodel(PSR_BINARY):
 
     def d_er_d_par(self, par):
         if par not in self.binary_params:
-            errorMesg = par + "is not in binary parameter list."
+            errorMesg = f"{par}is not in binary parameter list."
             raise ValueError(errorMesg)
 
         if par in ["DR"]:
-            dername = "d_er_d_" + par
+            dername = f"d_er_d_{par}"
             return getattr(self, dername)()
         else:
-            dername = "d_ecc_d_" + par
+            dername = f"d_ecc_d_{par}"
             if hasattr(self, dername):
                 return getattr(self, dername)()
-            else:
-                par_obj = getattr(self, par)
-                return np.zeros(len(self.tt0), dtype=np.longdouble) * (
-                    u.Unit("") / par_obj.unit
-                )
+            par_obj = getattr(self, par)
+            return np.zeros(len(self.tt0), dtype=np.longdouble) * (
+                u.Unit("") / par_obj.unit
+            )
 
     ##########
     def eTheta(self):
@@ -185,15 +184,15 @@ class DDmodel(PSR_BINARY):
 
     def d_eTheta_d_par(self, par):
         if par not in self.binary_params:
-            errorMesg = par + "is not in parameter list."
+            errorMesg = f"{par}is not in parameter list."
             raise ValueError(errorMesg)
         par_obj = getattr(self, par)
 
         if par in ["DTH"]:
-            dername = "d_eTheta_d_" + par
+            dername = f"d_eTheta_d_{par}"
             return getattr(self, dername)()
         else:
-            dername = "d_ecc_d_" + par
+            dername = f"d_ecc_d_{par}"
             if hasattr(self, dername):
                 return getattr(self, dername)()
             else:
@@ -222,7 +221,7 @@ class DDmodel(PSR_BINARY):
         """
 
         if par not in self.binary_params:
-            errorMesg = par + "is not in binary parameter list."
+            errorMesg = f"{par}is not in binary parameter list."
             raise ValueError(errorMesg)
         par_obj = getattr(self, par)
         alpha = self.alpha()
@@ -284,7 +283,7 @@ class DDmodel(PSR_BINARY):
            dBeta/dPar = -A1/c*(1-eTheta**2)**0.5*sin(omega)*dOmega/dPar
         """
         if par not in self.binary_params:
-            errorMesg = par + "is not in binary parameter list."
+            errorMesg = f"{par}is not in binary parameter list."
             raise ValueError(errorMesg)
         par_obj = getattr(self, par)
         beta = self.beta()
@@ -708,7 +707,7 @@ class DDmodel(PSR_BINARY):
         cOmega = np.cos(self.omega())
         TM2 = self.M2.value * Tsun
 
-        sDelay = (
+        return (
             -2
             * TM2
             * np.log(
@@ -717,7 +716,6 @@ class DDmodel(PSR_BINARY):
                 - self.SINI * (sOmega * (cE - e) + (1 - e**2) ** 0.5 * cOmega * sE)
             )
         )
-        return sDelay
 
     def d_delayS_d_par(self, par):
         """Derivative.
@@ -803,10 +801,10 @@ class DDmodel(PSR_BINARY):
         et = self.ecc()
         sinOmg = np.sin(self.omega())
         cosOmg = np.cos(self.omega())
-        aDelay = self.A0 * (np.sin(omgPlusAe) + et * sinOmg) + self.B0 * (
+
+        return self.A0 * (np.sin(omgPlusAe) + et * sinOmg) + self.B0 * (
             np.cos(omgPlusAe) + et * cosOmg
         )
-        return aDelay
 
     def d_delayA_d_par(self, par):
         """Derivative.
