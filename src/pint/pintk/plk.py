@@ -1071,11 +1071,11 @@ class PlkWidget(tk.Frame):
                     else self.psr.postfit_resids
                 )
                 if self.y_unit == u.us:
-                    f0 = r.get_PSR_freq().to(u.MHz).value
+                    f0 = r.model.F0.quantity.to(u.MHz).value
                 elif self.y_unit == u.ms:
-                    f0 = r.get_PSR_freq().to(u.kHz).value
+                    f0 = r.model.F0.quantity.to(u.kHz).value
                 else:
-                    f0 = r.get_PSR_freq().to(u.Hz).value
+                    f0 = r.model.F0.quantity.to(u.Hz).value
                 self.plkAx2x.set_visible(True)
                 self.plkAx2x.set_ylabel(plotlabels[self.yid][1])
                 self.plkAx2x.set_ylim(ymin * f0, ymax * f0)

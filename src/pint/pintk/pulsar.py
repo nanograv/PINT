@@ -632,7 +632,7 @@ class Pulsar:
                 Ntoas,
                 self.postfit_model,
                 obs="coe",
-                freq=1 * u.THz,  # effectively infinite frequency
+                freq=np.median(self.all_toas.get_freqs()),
                 include_bipm=sim_sel.clock_corr_info["include_bipm"],
                 include_gps=sim_sel.clock_corr_info["include_gps"],
             )
@@ -653,6 +653,8 @@ class Pulsar:
             Nmodels=15,
             keep_models=False,
             return_time=True,
+            params="all",
+            fast_method=True,
         )
 
         # Get a selection array for the fake TOAs that covers the fit TOAs (plus extra)

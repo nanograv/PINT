@@ -63,6 +63,7 @@ from pint.utils import (
     split_prefixed_name,
     open_or_use,
     colorize,
+    taylor_horner,
 )
 from pint.derived_quantities import dispersion_slope
 
@@ -86,22 +87,20 @@ __all__ = [
 # errors in the par file.
 #
 # Comparisons with keywords in par file lines is done in a case insensitive way.
-ignore_params = set(
-    [
-        "TRES",
-        "TZRMJD",
-        "TZRFRQ",
-        "TZRSITE",
-        "NITS",
-        "IBOOT",
-        "CHI2R",
-        "MODE",
-        "PLANET_SHAPIRO2",
-        #    'NE_SW', 'NE_SW2',
-    ]
-)
+ignore_params = {
+    "TRES",
+    "TZRMJD",
+    "TZRFRQ",
+    "TZRSITE",
+    "NITS",
+    "IBOOT",
+    "CHI2R",
+    "MODE",
+    "PLANET_SHAPIRO2",
+    # 'NE_SW', 'NE_SW2',
+}
 
-ignore_prefix = set(["DMXF1_", "DMXF2_", "DMXEP_"])  # DMXEP_ for now.
+ignore_prefix = {"DMXF1_", "DMXF2_", "DMXEP_"}  # DMXEP_ for now.
 
 DEFAULT_ORDER = [
     "astrometry",
@@ -438,34 +437,29 @@ class TimingModel:
         used_cats = set()
         pstart = copy.copy(self.top_level_params)
         for cat in start_order:
-            if cat in compdict:
-                cp = compdict[cat]
-                for cpp in cp:
-                    pstart += cpp.params
-                used_cats.add(cat)
-            else:
+            if cat not in compdict:
                 continue
-
+            cp = compdict[cat]
+            for cpp in cp:
+                pstart += cpp.params
+            used_cats.add(cat)
         pend = []
         for cat in last_order:
-            if cat in compdict:
-                cp = compdict[cat]
-                for cpp in cp:
-                    pend += cpp.parms
-                used_cats.add(cat)
-            else:
+            if cat not in compdict:
                 continue
-
+            cp = compdict[cat]
+            for cpp in cp:
+                pend += cpp.parms
+            used_cats.add(cat)
         # Now collect any components that haven't already been included in the list
         pmid = []
         for cat in compdict:
             if cat in used_cats:
                 continue
-            else:
-                cp = compdict[cat]
-                for cpp in cp:
-                    pmid += cpp.params
-                used_cats.add(cat)
+            cp = compdict[cat]
+            for cpp in cp:
+                pmid += cpp.params
+            used_cats.add(cat)
 
         return pstart + pmid + pend
 
@@ -569,7 +563,7 @@ class TimingModel:
         -------
         list
         """
-        component_type_list_str = "{}_list".format(component_type)
+        component_type_list_str = f"{component_type}_list"
         if hasattr(self, component_type_list_str):
             component_type_list = getattr(self, component_type_list_str)
             return [
@@ -600,17 +594,14 @@ class TimingModel:
         """Set the model parameters to the value contained in the input dict."""
         for k, v in fitp.items():
             p = getattr(self, k)
-            if isinstance(v, u.Quantity):
-                p.uncertainty = v
-            else:
-                p.uncertainty = v * p.units
+            p.uncertainty = v if isinstance(v, u.Quantity) else v * p.units
 
     @property_exists
     def components(self):
         """All the components in a dictionary indexed by name."""
         comps = {}
         for ct in self.component_types:
-            for cp in getattr(self, ct + "_list"):
+            for cp in getattr(self, f"{ct}_list"):
                 comps[cp.__class__.__name__] = cp
         return comps
 
@@ -701,10 +692,7 @@ class TimingModel:
             raise ValueError("anom='%s' is not a recognized type of anomaly" % anom)
         # Make sure all angles are between 0-2*pi
         anoms = np.remainder(anoms.value, 2 * np.pi)
-        if radians:  # return with radian units
-            return anoms * u.rad
-        else:  # return as unitless cycles from 0-1
-            return anoms / (2 * np.pi)
+        return anoms * u.rad if radians else anoms / (2 * np.pi)
 
     def conjunction(self, baryMJD):
         """Return the time(s) of the first superior conjunction(s) after baryMJD.
@@ -763,10 +751,7 @@ class TimingModel:
                     break
             # Now use scipy to find the root
             scs.append(brentq(funct, ts[lb], ts[lb + 1]))
-        if len(scs) == 1:
-            return scs[0]  # Return a float
-        else:
-            return np.asarray(scs)  # otherwise return an array
+        return scs[0] if len(scs) == 1 else np.asarray(scs)
 
     @property_exists
     def dm_funcs(self):
@@ -864,11 +849,11 @@ class TimingModel:
         """Return dictionary of derivative functions."""
         # TODO, this function can be a more generical function collector.
         deriv_funcs = defaultdict(list)
-        if not derivative_type == "":
+        if derivative_type != "":
             derivative_type += "_"
-        for cp in getattr(self, component_type + "_list"):
+        for cp in getattr(self, f"{component_type}_list"):
             try:
-                df = getattr(cp, derivative_type + "deriv_funcs")
+                df = getattr(cp, f"{derivative_type}deriv_funcs")
             except AttributeError:
                 continue
             for k, v in df.items():
@@ -947,15 +932,14 @@ class TimingModel:
             if component not in list(comps.keys()):
                 raise AttributeError("No '%s' in the timing model." % component)
             comp = comps[component]
-        else:  # When component is an component instance.
-            if component not in list(comps.values()):
-                raise AttributeError(
-                    "No '%s' in the timing model." % component.__class__.__name__
-                )
-            else:
-                comp = component
+        elif component in list(comps.values()):
+            comp = component
+        else:
+            raise AttributeError(
+                "No '%s' in the timing model." % component.__class__.__name__
+            )
         comp_type = self.get_component_type(comp)
-        host_list = getattr(self, comp_type + "_list")
+        host_list = getattr(self, f"{comp_type}_list")
         order = host_list.index(comp)
         return comp, order, host_list, comp_type
 
@@ -974,9 +958,9 @@ class TimingModel:
             If true, add a duplicate component. Default is False.
         """
         comp_type = self.get_component_type(component)
+        cur_cps = []
         if comp_type in self.component_types:
-            comp_list = getattr(self, comp_type + "_list")
-            cur_cps = []
+            comp_list = getattr(self, f"{comp_type}_list")
             for cp in comp_list:
                 # If component order is not defined.
                 cp_order = (
@@ -997,21 +981,19 @@ class TimingModel:
                     )
         else:
             self.component_types.append(comp_type)
-            cur_cps = []
-
         # link new component to TimingModel
         component._parent = self
 
-        # If the categore is not in the order list, it will be added to the end.
+        # If the category is not in the order list, it will be added to the end.
         if component.category not in order:
-            new_cp = tuple((len(order) + 1, component))
+            new_cp = len(order) + 1, component
         else:
-            new_cp = tuple((order.index(component.category), component))
+            new_cp = order.index(component.category), component
         # add new component
         cur_cps.append(new_cp)
         cur_cps.sort(key=lambda x: x[0])
         new_comp_list = [c[1] for c in cur_cps]
-        setattr(self, comp_type + "_list", new_comp_list)
+        setattr(self, f"{comp_type}_list", new_comp_list)
         # Set up components
         if setup:
             self.setup()
@@ -1087,12 +1069,12 @@ class TimingModel:
         if target_component == "":
             setattr(self, param.name, param)
             self.top_level_params += [param.name]
-        else:
-            if target_component not in list(self.components.keys()):
-                raise AttributeError(
-                    "Can not find component '%s' in " "timing model." % target_component
-                )
+        elif target_component in list(self.components.keys()):
             self.components[target_component].add_param(param, setup=setup)
+        else:
+            raise AttributeError(
+                "Can not find component '%s' in " "timing model." % target_component
+            )
 
     def remove_param(self, param):
         """Remove a parameter from timing model.
@@ -1114,10 +1096,8 @@ class TimingModel:
         self.setup()
 
     def get_params_mapping(self):
-        """Report whick component each parameter name comes from."""
-        param_mapping = {}
-        for p in self.top_level_params:
-            param_mapping[p] = "timing_model"
+        """Report which component each parameter name comes from."""
+        param_mapping = {p: "timing_model" for p in self.top_level_params}
         for cp in list(self.components.values()):
             for pp in cp.params:
                 param_mapping[pp] = cp.__class__.__name__
@@ -1214,10 +1194,9 @@ class TimingModel:
         Parameters
         ----------
         toas: pint.toa.TOAs
-            The toas for analysis delays.
+            The toas to analyze the delays.
         cutoff_component: str
-            The delay component name that a user wants the calculation to stop
-            at.
+            The delay component name at which to stop the calculation.
         include_last: bool
             If the cutoff delay component is included.
         """
@@ -1226,13 +1205,11 @@ class TimingModel:
             idx = len(self.DelayComponent_list)
         else:
             delay_names = [x.__class__.__name__ for x in self.DelayComponent_list]
-            if cutoff_component in delay_names:
-                idx = delay_names.index(cutoff_component)
-                if include_last:
-                    idx += 1
-            else:
+            if cutoff_component not in delay_names:
                 raise KeyError("No delay component named '%s'." % cutoff_component)
-
+            idx = delay_names.index(cutoff_component)
+            if include_last:
+                idx += 1
         # Do NOT cycle through delay_funcs - cycle through components until cutoff
         for dc in self.DelayComponent_list[:idx]:
             for df in dc.delay_funcs_component:
@@ -1255,30 +1232,26 @@ class TimingModel:
         # abs_phase defaults to True if AbsPhase is in the model, otherwise to
         # False.  Of course, if you manually set it, it will use that setting.
         if abs_phase is None:
-            if "AbsPhase" in list(self.components.keys()):
-                abs_phase = True
-            else:
-                abs_phase = False
+            abs_phase = "AbsPhase" in list(self.components.keys())
+        if not abs_phase:
+            return phase
         # If the absolute phase flag is on, use the TZR parameters to compute
         # the absolute phase.
-        if abs_phase:
-            if "AbsPhase" not in list(self.components.keys()):
-                # if no absolute phase (TZRMJD), add the component to the model and calculate it
-                from pint.models import absolute_phase
+        if "AbsPhase" not in list(self.components.keys()):
+            # if no absolute phase (TZRMJD), add the component to the model and calculate it
+            from pint.models import absolute_phase
 
-                self.add_component(absolute_phase.AbsPhase(), validate=False)
-                self.make_TZR_toa(
-                    toas
-                )  # TODO:needs timfile to get all toas, but model doesn't have access to timfile. different place for this?
-                self.validate()
-            tz_toa = self.get_TZR_toa(toas)
-            tz_delay = self.delay(tz_toa)
-            tz_phase = Phase(np.zeros(len(toas.table)), np.zeros(len(toas.table)))
-            for pf in self.phase_funcs:
-                tz_phase += Phase(pf(tz_toa, tz_delay))
-            return phase - tz_phase
-        else:
-            return phase
+            self.add_component(absolute_phase.AbsPhase(), validate=False)
+            self.make_TZR_toa(
+                toas
+            )  # TODO:needs timfile to get all toas, but model doesn't have access to timfile. different place for this?
+            self.validate()
+        tz_toa = self.get_TZR_toa(toas)
+        tz_delay = self.delay(tz_toa)
+        tz_phase = Phase(np.zeros(len(toas.table)), np.zeros(len(toas.table)))
+        for pf in self.phase_funcs:
+            tz_phase += Phase(pf(tz_toa, tz_delay))
+        return phase - tz_phase
 
     def total_dm(self, toas):
         """Calculate dispersion measure from all the dispersion type of components."""
@@ -1458,13 +1431,9 @@ class TimingModel:
                 if tjv in tim_jump_values:
                     log.info(f"JUMP -tim_jump {tjv} already exists")
                     tim_jump_values.remove(tjv)
-        if used_indices:
-            num = max(used_indices) + 1
-        else:
-            num = 1
-
+        num = max(used_indices) + 1 if used_indices else 1
         if not tim_jump_values:
-            log.info(f"All tim_jump values have corresponding JUMPs")
+            log.info("All tim_jump values have corresponding JUMPs")
             return
 
         # FIXME: arrange for these to be in a sensible order (might not be integers
@@ -1510,7 +1479,7 @@ class TimingModel:
             Specifies the index of the jump to be deleted.
         """
         # remove jump of specified index
-        self.remove_param("JUMP" + str(jump_num))
+        self.remove_param(f"JUMP{str(jump_num)}")
 
         # remove jump flags from selected TOA tables
         if toa_table is not None:
@@ -1534,6 +1503,61 @@ class TimingModel:
                     self.remove_component(item)
             return
         self.components["PhaseJump"].setup()
+
+    def get_spin_freq(self, times, calctype="modelF0"):
+        """Return barycentric pulsar rotational frequency in Hz at specific times
+
+        Parameters
+        ----------
+        times : float or long double MJD (can be array), astropy.Time object, TOAs
+            The times (barycentric, inf freq) at which to compute the spin frequency
+        calctype : {'modelF0', 'numerical', 'taylor'}
+            Type of calculation:
+                "modelF0" means a constant ``F0`` from the timing model
+                "numerical" uses the numerical derivative ``d_phase_d_toa()``
+                    This option requires times to be a TOAs object
+                "taylor" uses a Taylor series to compute the frequencies
+
+        Returns
+        -------
+        freq : astropy.units.Quantity (can be array)
+            The spin frequency in Hz at each barycentric time
+
+        Note
+        ----
+        "numerical" is significantly slower, but is much more exact, and
+        """
+        calc = calctype.lower()
+        if calc not in ["modelf0", "taylor", "numerical"]:
+            raise ValueError(
+                "calctype must be one of ['modelf0', 'taylor'', 'numerical']"
+            )
+
+        if calc == "modelf0":
+            return self.F0.quantity
+
+        # ToDo: How does this handle Glitch or Piecewise models?
+        if calc == "numerical":
+            if not isinstance(times, TOAs):
+                raise TypeError("times must be TOAs when using calctype='numerical'")
+            return self.d_phase_d_toa(times)
+
+        # Handle various types of input times for "taylor" calc
+        if isinstance(times, TOAs):
+            # If we pass the TOA table, then barycenter the TOAs
+            bts = self.get_barycentric_toas(times)  # have units of days
+        elif isinstance(times, time.Time):
+            if times.scale == "tdb":
+                bts = np.asarray(times.mjd_long) << u.d
+            else:
+                raise ValueError("times as Time instance in needs scale=='tdb'")
+        elif isinstance(times, MJDParameter):
+            bts = np.asarray(times.value) << u.d  # .value is always a MJD long double
+        else:
+            bts = np.asarray(times) << u.d
+        dts = bts - (self.PEPOCH.value << u.d)
+        fterms = self.get_spin_terms()
+        return taylor_horner(dts, fterms).to(u.Hz)
 
     def get_barycentric_toas(self, toas, cutoff_component=""):
         """Conveniently calculate the barycentric TOAs.
@@ -1682,10 +1706,7 @@ class TimingModel:
         par = getattr(self, param)
         ori_value = par.value
         unit = par.units
-        if ori_value == 0:
-            h = 1.0 * step
-        else:
-            h = ori_value * step
+        h = 1.0 * step if ori_value == 0 else ori_value * step
         parv = [par.value - h, par.value + h]
 
         phase_i = (
@@ -1719,10 +1740,7 @@ class TimingModel:
             log.warning("Parameter '%s' is not used by timing model." % param)
             return np.zeros(toas.ntoas) * (u.second / par.units)
         unit = par.units
-        if ori_value == 0:
-            h = 1.0 * step
-        else:
-            h = ori_value * step
+        h = 1.0 * step if ori_value == 0 else ori_value * step
         parv = [par.value - h, par.value + h]
         delay = np.zeros((toas.ntoas, 2))
         for ii, val in enumerate(parv):
@@ -1753,14 +1771,16 @@ class TimingModel:
             )
         return result
 
-    def designmatrix(self, toas, acc_delay=None, incfrozen=False, incoffset=True):
+    def designmatrix(self, toas, incfrozen=False, incoffset=True, calctype="taylor"):
         """Return the design matrix.
 
-        The design matrix is the matrix with columns of ``d_phase_d_param/F0``
-        or ``d_toa_d_param``; it is used in fitting and calculating parameter
-        covariances.
+        The design matrix is the matrix with columns of
+        ``d_phase_d_param/F0`` or ``d_toa_d_param`` (or possibly
+        ``d_phase_d_param`` if calctype==``phase``); it is used in fitting
+        and calculating parameter covariances.
 
-        The value of ``F0`` used here is the parameter value in the model.
+        If calctype is not ``phase``, then it computes the local spin freq
+        by default via the ``taylor`` method.
 
         The order of parameters that are included is that returned by
         ``self.params``.
@@ -1769,29 +1789,36 @@ class TimingModel:
         ----------
         toas : pint.toa.TOAs
             The TOAs at which to compute the design matrix.
-        acc_delay
-            ???
         incfrozen : bool
             Whether to include frozen parameters in the design matrix
         incoffset : bool
             Whether to include the constant offset in the design matrix
+        calctype : {'modelF0', 'numerical', 'taylor'}
+            Type of calculation (for ``.get_spin_freq()``):
+                "modelF0" means a constant ``F0`` from the timing model
+                "numerical" uses the numerical derivative ``d_phase_d_toa()``
+                    This option requires times to be a TOAs object
+                "taylor" uses a Taylor series to compute the frequencies
+                "phase" return the matrix in terms of phase, not time
 
         Returns
         -------
         M : array
-            The design matrix, with shape (len(toas), len(self.free_params)+1)
-        names : list of str
-            The names of parameters in the corresponding parts of the design matrix
+            The design matrix, with shape (len(toas),
+            len(self.free_params)+incoffset)
+        names : list of strings
+            The names of parameters in the corresponding parts of the
+            design matrix
         units : astropy.units.Unit
             The units of the corresponding parts of the design matrix
 
         Note
         ----
-        Here we have negative sign here. Since in pulsar timing
-        the residuals are calculated as (Phase - int(Phase)), which is different
-        from the conventional definition of least square definition (Data - model)
-        We decide to add minus sign here in the design matrix, so the fitter
-        keeps the conventional way.
+        We return the negative of the ``d_phase_d_param()`` since in
+        pulsar timing the residuals are calculated as (Phase -
+        int(Phase)), which is different from the conventional definition
+        of least square definition (Data - model).  Including the negative
+        here allows the fitter to keep the standard convention.
         """
 
         noise_params = self.get_params_of_component_type("NoiseComponent")
@@ -1809,26 +1836,27 @@ class TimingModel:
             if (incfrozen or not getattr(self, par).frozen) and par not in noise_params
         ]
 
-        F0 = self.F0.quantity  # 1/sec
-        ntoas = len(toas)
-        nparams = len(params)
+        # This is either ones if we want the derivs in phase rather than
+        # time, or it is the spin freq calculated by the chosen method
+        norm = (
+            self.get_spin_freq(toas, calctype)
+            if calctype != "phase"
+            else (np.ones(toas.ntoas) << u.dimensionless_unscaled)
+        )
         delay = self.delay(toas)
         units = []
-        # Apply all delays ?
-        # tt = toas['tdbld']
-        # for df in self.delay_funcs:
-        #    tt -= df(toas)
 
-        M = np.zeros((ntoas, nparams))
+        # SMR: Wouldn't it be better to have this in thetransposed shape?
+        M = np.zeros((toas.ntoas, len(params)), dtype=float)
         for ii, param in enumerate(params):
             if param == "Offset":
-                M[:, ii] = 1.0 / F0.value
-                units.append(u.s / u.s)
+                M[:, ii] = 1.0 / norm.value
+                units.append(u.Unit("") / norm.unit)
             else:
                 q = -self.d_phase_d_param(toas, delay, param)
                 the_unit = u.Unit("") / getattr(self, param).units
-                M[:, ii] = q.to_value(the_unit) / F0.value
-                units.append(the_unit / F0.unit)
+                M[:, ii] = q.to_value(the_unit) / norm.value
+                units.append(the_unit / norm.unit)
         return M, params, units
 
     def compare(

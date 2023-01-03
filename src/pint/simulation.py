@@ -8,8 +8,9 @@ import numpy as np
 from loguru import logger as log
 from astropy import time
 
-import pint.residuals
 import pint.toa
+import pint.models
+from pint.residuals import Residuals
 from pint.observatory import bipm_default, get_observatory
 
 __all__ = [
@@ -66,7 +67,7 @@ def zero_residuals(ts, model, maxiter=10, tolerance=None):
     if tolerance is None:
         tolerance = 1 * u.ns if pint.utils.check_longdouble_precision() else 5 * u.us
     for i in range(maxiter):
-        r = pint.residuals.Residuals(ts, model, track_mode="use_pulse_numbers")
+        r = Residuals(ts, model, track_mode="use_pulse_numbers")
         resids = r.calc_time_resids(calctype="taylor")
         if maxresid is not None and (np.abs(resids).max() > maxresid):
             log.warning(
@@ -390,27 +391,184 @@ def make_fake_toas_fromtim(timfile, model, add_noise=False, name="fake"):
     return make_fake_toas(input_ts, model=model, add_noise=add_noise, name=name)
 
 
-def calculate_random_models(
-    fitter, toas, Nmodels=100, keep_models=True, return_time=False, params="all"
-):
-    """
-    Calculates random models based on the covariance matrix of the `fitter` object.
-
-    returns the new phase differences compared to the original model
-    optionally returns all of the random models
+def make_random_models(fitter, Nmodels=100, params="all"):
+    """Create random models based on the covariance matrix of fitter.
 
     Parameters
     ----------
-    fitter: pint.fitter.Fitter
-        current fitter object containing a model and parameter covariance matrix
-    toas: pint.toa.TOAs
+    fitter : pint.fitter.Fitter
+        current post-fit fitter object instance containing a model
+    Nmodels : int, default=100
+        number of random models to create
+    params : list, default="all"
+        if specified, selects only those parameters to vary.  Default
+        ('all') is to use all parameters other than Offset
+
+    Returns
+    -------
+    random_models : list
+        list of random models (each is a :class:`pint.models.timing_model.TimingModel`)
+
+    Note
+    ----
+    This function is used by :func:`~pint.simulation.calculate_random_models`
+    """
+    cov_matrix = fitter.parameter_covariance_matrix
+    # this is a list of the parameter names in the order they appear in the covariance matrix
+    param_names = cov_matrix.get_label_names(axis=0)
+    # this is a dictionary with the parameter values, but it might not be in the same order
+    # and it leaves out the Offset parameter
+    param_values = fitter.model.get_params_dict("free", "value")
+    mean_vector = np.array([param_values[x] for x in param_names if x != "Offset"])
+    if params == "all":
+        # remove the first column and row (absolute phase)
+        if param_names[0] == "Offset":
+            cov_matrix = cov_matrix.get_label_matrix(param_names[1:])
+            fac = fitter.fac[1:]
+            param_names = param_names[1:]
+        else:
+            fac = fitter.fac
+    else:
+        # only select some parameters
+        # need to also select from the fac array and the mean_vector array
+        idx, labels = cov_matrix.get_label_slice(params)
+        cov_matrix = cov_matrix.get_label_matrix(params)
+        index = idx[0].flatten()
+        fac = fitter.fac[index]
+        # except mean_vector does not have the 'Offset' entry
+        # so may need to subtract 1
+        if param_names[0] == "Offset":
+            mean_vector = mean_vector[index - 1]
+        else:
+            mean_vector = mean_vector[index]
+        param_names = cov_matrix.get_label_names(axis=0)
+
+    # scale by fac
+    mean_vector = mean_vector * fac
+    scaled_cov_matrix = ((cov_matrix.matrix * fac).T * fac).T
+    random_models = []
+    for _ in range(Nmodels):
+        m_rand = deepcopy(fitter.model)
+        # create a set of randomized parameters based on mean vector and covariance matrix
+        # dividing by fac brings us back to real units
+        rparams = np.random.multivariate_normal(mean_vector, scaled_cov_matrix) / fac
+        m_rand.set_param_values(dict(zip(param_names, rparams)))
+        random_models.append(m_rand)
+    return random_models
+
+
+def compute_random_model_resids_exact(fitter, models, toas, return_time=False):
+    """Calculate residuals from random models exactly.
+
+    Parameters
+    ----------
+    fitter : pint.fitter.Fitter
+        current post-fit fitter object instance containing the reference model
+    models : list, pint.models.timing_model.TimingModel
+        list of the random models to compute residuals
+    toas : pint.toa.TOAs
+        TOAs to calculate residuals from
+    return_time : bool, default=False
+        return the residuals in time rather than in phase
+
+    Returns
+    -------
+    dphase : np.ndarray
+        phase difference with respect to reference model, size is [len(models), len(toas)]
+
+    Note
+    ----
+    This function is used by :func:`~pint.simulation.calculate_random_models`
+    """
+    resids = np.zeros((len(models), toas.ntoas), dtype=np.float)
+    # These are the reference residuals from the reference model
+    r0 = Residuals(toas, fitter.model, subtract_mean=False)
+    for ii, model in enumerate(models):
+        rn = Residuals(toas, model, subtract_mean=False)
+        resids[ii] = (
+            rn.time_resids - r0.time_resids
+            if return_time
+            else rn.phase_resids - r0.phase_resids
+        )
+    return resids << u.s if return_time else resids
+
+
+def compute_random_model_resids_fast(fitter, models, toas, return_time=False):
+    """Calculate residuals from random models using the design matrix.
+
+    Parameters
+    ----------
+    fitter : pint.fitter.Fitter
+        current post-fit fitter object instance containing the reference model
+    models : list, pint.models.timing_model.TimingModel
+        list of the random models to compute residuals
+    toas : pint.toa.TOAs
+        TOAs to calculate residuals from
+    return_time : bool, default=False
+        return the residuals in time rather than in phase
+
+    Returns
+    -------
+    dphase : np.ndarray
+        phase difference with respect to reference model, size is [len(models), len(toas)]
+
+    Note
+    ----
+    This function is used by :func:`~pint.simulation.calculate_random_models`.  It should be
+    a factor of about three faster than the exact version, and the majority of the time it
+    takes is calculating the design matrix.  The residual computation via np.dot() is
+    incredibly fast.
+    """
+    # Compute the design matrix for the toas using the reference model
+    m = fitter.model
+    calctype = "taylor" if return_time else "phase"
+    dmat, labels, _ = m.designmatrix(
+        toas, incfrozen=False, incoffset=False, calctype=calctype
+    )
+    rs = np.zeros((len(models), toas.ntoas), dtype=np.float)
+    dparam = np.zeros(len(labels), dtype=np.float128)
+    for ii, rm in enumerate(models):
+        # Do the differencing between the random models and the reference model
+        for jj, pp in enumerate(labels):
+            if type(getattr(m, pp)) == pint.models.parameter.MJDParameter:
+                dparam[jj] = (getattr(m, pp).value - getattr(rm, pp).value) * u.d
+            else:
+                dparam[jj] = getattr(m, pp).quantity - getattr(rm, pp).quantity
+        # Compute residuals via a dot product of the param diffs with the design matrix
+        rs[ii] = np.dot(dparam, dmat.T)
+    return rs << u.s if return_time else rs
+
+
+def calculate_random_models(
+    fitter,
+    toas,
+    Nmodels=100,
+    keep_models=True,
+    return_time=False,
+    params="all",
+    fast_method=True,
+):
+    """Calculates random model residuals based on the parameter covariance matrix.
+
+    Parameters
+    ----------
+    fitter : pint.fitter.Fitter
+        current post-fit fitter object instance containing a model
+    toas : pint.toa.TOAs
         TOAs to calculate models
-    Nmodels: int, optional
+    Nmodels : int, default=100
         number of random models to calculate
-    keep_models: bool, optional
+    keep_models : bool, default=True
         whether to keep and return the individual random models (slower)
-    params: list, optional
-        if specified, selects only those parameters to vary.  Default ('all') is to use all parameters other than Offset
+    return_time : bool, default=False
+        return the residuals in time rather than in phase
+    params : list, default="all"
+        if specified, selects only those parameters to vary.  Default
+        ('all') is to use all parameters other than Offset
+    fast_method : bool, default=True
+        Compute the residuals using the design matrix and perturbations
+        rather than full residual calculation and subtraction from the
+        reference model (typically 3-5x faster)
 
     Returns
     -------
@@ -441,78 +599,16 @@ def calculate_random_models(
     >>> # now make random models
     >>> dphase, mrand = pint.simulation.calculate_random_models(f, tnew, Nmodels=100)
 
-
     Note
     ----
-    To calculate new TOAs, you can use :func:`~pint.simulation.make_fake_toas`
-
-    or similar
+    To calculate new TOAs, you can use
+    :func:`~pint.simulation.make_fake_toas` or similar
     """
-    Nmjd = len(toas)
-    phases_i = np.zeros((Nmodels, Nmjd))
-    phases_f = np.zeros((Nmodels, Nmjd))
-    freqs = np.zeros((Nmodels, Nmjd), dtype=np.float128) * u.Hz
-
-    cov_matrix = fitter.parameter_covariance_matrix
-    # this is a list of the parameter names in the order they appear in the coviarance matrix
-    param_names = cov_matrix.get_label_names(axis=0)
-    # this is a dictionary with the parameter values, but it might not be in the same order
-    # and it leaves out the Offset parameter
-    param_values = fitter.model.get_params_dict("free", "value")
-    mean_vector = np.array([param_values[x] for x in param_names if not x == "Offset"])
-    if params == "all":
-        # remove the first column and row (absolute phase)
-        if param_names[0] == "Offset":
-            cov_matrix = cov_matrix.get_label_matrix(param_names[1:])
-            fac = fitter.fac[1:]
-            param_names = param_names[1:]
-        else:
-            fac = fitter.fac
-    else:
-        # only select some parameters
-        # need to also select from the fac array and the mean_vector array
-        idx, labels = cov_matrix.get_label_slice(params)
-        cov_matrix = cov_matrix.get_label_matrix(params)
-        index = idx[0].flatten()
-        fac = fitter.fac[index]
-        # except mean_vector does not have the 'Offset' entry
-        # so may need to subtract 1
-        if param_names[0] == "Offset":
-            mean_vector = mean_vector[index - 1]
-        else:
-            mean_vector = mean_vector[index]
-        param_names = cov_matrix.get_label_names(axis=0)
-
-    f_rand = deepcopy(fitter)
-
-    # scale by fac
-    mean_vector = mean_vector * fac
-    scaled_cov_matrix = ((cov_matrix.matrix * fac).T * fac).T
-    random_models = []
-    for imodel in range(Nmodels):
-        # create a set of randomized parameters based on mean vector and covariance matrix
-        rparams_num = np.random.multivariate_normal(mean_vector, scaled_cov_matrix)
-        # scale params back to real units
-        for j in range(len(mean_vector)):
-            rparams_num[j] /= fac[j]
-        rparams = OrderedDict(zip(param_names, rparams_num))
-        f_rand.set_params(rparams)
-        phase = f_rand.model.phase(toas, abs_phase=True)
-        phases_i[imodel] = phase.int
-        phases_f[imodel] = phase.frac
-        r = pint.residuals.Residuals(toas, f_rand.model)
-        freqs[imodel] = r.get_PSR_freq(calctype="taylor")
-        if keep_models:
-            random_models.append(f_rand.model)
-            f_rand = deepcopy(fitter)
-    phases = phases_i + phases_f
-    phases0 = fitter.model.phase(toas, abs_phase=True)
-    dphase = phases - (phases0.int + phases0.frac)
-
-    if return_time:
-        dphase /= freqs
-
-    if keep_models:
-        return dphase, random_models
-    else:
-        return dphase
+    models = make_random_models(fitter, Nmodels, params)
+    residuals_fn = (
+        compute_random_model_resids_fast
+        if fast_method
+        else compute_random_model_resids_exact
+    )
+    resids = residuals_fn(fitter, models, toas, return_time)
+    return (resids, models) if keep_models else resids
