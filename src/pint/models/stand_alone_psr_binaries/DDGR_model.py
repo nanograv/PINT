@@ -73,6 +73,8 @@ class DDGRmodel(DDmodel):
         PBDOT
         OMDOT
         GAMMA
+        DR
+        DTH
 
     Parameters supported:
 
