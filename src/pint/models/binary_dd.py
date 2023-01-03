@@ -211,6 +211,8 @@ class BinaryDDGR(BinaryDD):
         PBDOT
         OMDOT
         GAMMA
+        DR
+        DTH
 
     Parameters supported:
 
@@ -262,6 +264,8 @@ class BinaryDDGR(BinaryDD):
         self.remove_param("GAMMA")
         self.remove_param("OMDOT")
         self.remove_param("SINI")
+        self.remove_param("DR")
+        self.remove_param("DTH")
 
     def validate(self):
         """Validate parameters."""

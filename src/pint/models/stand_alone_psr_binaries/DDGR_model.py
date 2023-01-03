@@ -149,13 +149,15 @@ class DDGRmodel(DDmodel):
         self._k = (
             (3 * c.G * self.MTOT) / (c.c**2 * arr0 * (1 - self.ecc() ** 2))
         ).decompose()
-        self._DR = (c.G / (c.c**2 * self.MTOT * self._arr)) * (
-            3 * self._M1**2 + 6 * self._M1 * self.M2 + 2 * self.M2**2
-        )
+        self._DR = (
+            (c.G / (c.c**2 * self.MTOT * self._arr))
+            * (3 * self._M1**2 + 6 * self._M1 * self.M2 + 2 * self.M2**2)
+        ).decompose()
         self._er = self.ecc() * (1 + self._DR)
-        self._DTH = (c.G / (c.c**2 * self.MTOT * self._arr)) * (
-            3.5 * self._M1**2 + 6 * self._M1 * self.M2 + 2 * self.M2**2
-        )
+        self._DTH = (
+            (c.G / (c.c**2 * self.MTOT * self._arr))
+            * (3.5 * self._M1**2 + 6 * self._M1 * self.M2 + 2 * self.M2**2)
+        ).decompose()
         self._eth = self.ecc() * (1 + self._DTH)
 
     @property
@@ -180,6 +182,7 @@ class DDGRmodel(DDmodel):
 
     @property
     def OMDOT(self):
+        # don't need an explicit OMDOT here since the main precession is carried in the k term
         return self.XOMDOT
 
     @property

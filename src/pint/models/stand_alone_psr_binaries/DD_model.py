@@ -159,7 +159,7 @@ class DDmodel(PSR_BINARY):
     ############################################################
     # Calculate er
     def er(self):
-        return self.ecc() + self.DR
+        return self.ecc() * (1 + self.DR)
 
     def d_er_d_DR(self):
         return np.longdouble(np.ones(len(self.tt0))) * u.Unit("")
@@ -183,7 +183,7 @@ class DDmodel(PSR_BINARY):
 
     ##########
     def eTheta(self):
-        return self.ecc() + self.DTH
+        return self.ecc() * (1 + self.DTH)
 
     def d_eTheta_d_DTH(self):
         return np.longdouble(np.ones(len(self.tt0))) * u.Unit("")
@@ -420,6 +420,17 @@ class DDmodel(PSR_BINARY):
         return self.a1() / c.c * (-eTheta) / np.sqrt(1 - eTheta**2) * cosOmg
 
     ##################################################
+    def delayR(self):
+        """Roemer delay defined in T. Damour and N. Deruelle (1986)
+        Computes::
+            delayR = alpha*(cos(E)-er) + beta*sin(E)
+        """
+        er = self.er()
+        sinE = np.sin(self.E())
+        cosE = np.cos(self.E())
+        return self.alpha() * (cosE - er) + self.beta() * sinE
+
+    ##################################################
     def Dre(self):
         """Dre defined in T. Damour and N. Deruelle(1986)equation [48]
 
@@ -427,10 +438,11 @@ class DDmodel(PSR_BINARY):
 
             Dre = alpha*(cos(E)-er)+(beta+gamma)*sin(E)
         """
-        er = self.er()
-        sinE = np.sin(self.E())
-        cosE = np.cos(self.E())
-        return self.alpha() * (cosE - er) + (self.beta() + self.GAMMA) * sinE
+        # er = self.er()
+        # sinE = np.sin(self.E())
+        # cosE = np.cos(self.E())
+        # return self.alpha() * (cosE - er) + (self.beta() + self.GAMMA) * sinE
+        return self.delayR() + self.delayE()
 
     def d_Dre_d_par(self, par):
         """Derivative.
@@ -779,7 +791,7 @@ class DDmodel(PSR_BINARY):
         T. Damour and N. Deruelle(1986)equation [25]
         """
         sinE = np.sin(self.E())
-        return self.GAMMA
+        return self.GAMMA * sinE
 
     def d_delayE_d_par(self, par):
         """Derivative.
