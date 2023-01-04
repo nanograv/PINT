@@ -108,7 +108,7 @@ class DDmodel(PSR_BINARY):
         Derivative of omega respect to par
         """
         if par not in self.binary_params:
-            errorMesg = f"{par}is not in binary parameter list."
+            errorMesg = f"{par} is not in binary parameter list."
             raise ValueError(errorMesg)
         par_obj = getattr(self, par)
 
@@ -160,7 +160,7 @@ class DDmodel(PSR_BINARY):
 
     def d_er_d_par(self, par):
         if par not in self.binary_params:
-            errorMesg = f"{par}is not in binary parameter list."
+            errorMesg = f"{par} is not in binary parameter list."
             raise ValueError(errorMesg)
 
         if par in ["DR"]:
@@ -184,7 +184,7 @@ class DDmodel(PSR_BINARY):
 
     def d_eTheta_d_par(self, par):
         if par not in self.binary_params:
-            errorMesg = f"{par}is not in parameter list."
+            errorMesg = f"{par} is not in parameter list."
             raise ValueError(errorMesg)
         par_obj = getattr(self, par)
 
@@ -221,7 +221,7 @@ class DDmodel(PSR_BINARY):
         """
 
         if par not in self.binary_params:
-            errorMesg = f"{par}is not in binary parameter list."
+            errorMesg = f"{par} is not in binary parameter list."
             raise ValueError(errorMesg)
         par_obj = getattr(self, par)
         alpha = self.alpha()
@@ -283,7 +283,7 @@ class DDmodel(PSR_BINARY):
            dBeta/dPar = -A1/c*(1-eTheta**2)**0.5*sin(omega)*dOmega/dPar
         """
         if par not in self.binary_params:
-            errorMesg = f"{par}is not in binary parameter list."
+            errorMesg = f"{par} is not in binary parameter list."
             raise ValueError(errorMesg)
         par_obj = getattr(self, par)
         beta = self.beta()
