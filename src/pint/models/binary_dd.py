@@ -1,6 +1,6 @@
 """Damour and Deruelle binary model."""
 import numpy as np
-from astropy import units as u
+from astropy import units as u, constants as c
 
 from pint.models.parameter import floatParameter
 from pint.models.pulsar_binary import PulsarBinary
@@ -270,3 +270,15 @@ class BinaryDDGR(BinaryDD):
     def validate(self):
         """Validate parameters."""
         super().validate()
+        aR = (c.G * self.MTOT.quantity * self.PB.quantity**2 / 4 / np.pi**2) ** (
+            1.0 / 3
+        )
+        sini = (
+            self.A1.quantity * self.MTOT.quantity / aR / self.M2.quantity
+        ).decompose()
+        if sini > 1:
+            raise ValueError(
+                f"Inferred SINI must be <= 1 for DDGR model (MTOT={self.MTOT.quantity}, PB={self.PB.quantity}, A1={self.A1.quantity}, M2={self.M2.quantity} imply SINI={sini})"
+            )
+        if self.MTOT.frozen is False:
+            raise AttributeError("MTOT cannot be unfrozen for DDGR model")

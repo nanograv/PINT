@@ -2,6 +2,7 @@
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
+from loguru import logger as log
 
 from pint import Tsun
 
@@ -72,6 +73,7 @@ class DDmodel(PSR_BINARY):
 
     @property
     def k(self):
+        # separate this into a property so it can be calculated correctly in DDGR
         PB = self.pb()
         PB = PB.to("second")
         OMDOT = self.OMDOT
@@ -122,19 +124,18 @@ class DDmodel(PSR_BINARY):
         OMDOT = self.OMDOT
         OM = self.OM
         nu = self.nu()
-        k = OMDOT.to(u.rad / u.second) / (2 * np.pi * u.rad / PB)
         if par in ["OM", "OMDOT"]:
             dername = f"d_omega_d_{par}"
             return getattr(self, dername)()
         elif par in self.orbits_cls.orbit_params:
             d_nu_d_par = self.d_nu_d_par(par)
             d_pb_d_par = self.d_pb_d_par(par)
-            return d_nu_d_par * k + d_pb_d_par * nu * OMDOT.to(u.rad / u.second) / (
-                2 * np.pi * u.rad
-            )
+            return d_nu_d_par * self.k + d_pb_d_par * nu * OMDOT.to(
+                u.rad / u.second
+            ) / (2 * np.pi * u.rad)
         else:
             # For parameters only in nu
-            return (k * self.d_nu_d_par(par)).to(
+            return (self.k * self.d_nu_d_par(par)).to(
                 OM.unit / par_obj.unit, equivalencies=u.dimensionless_angles()
             )
 
@@ -162,7 +163,7 @@ class DDmodel(PSR_BINARY):
         return self.ecc() * (1 + self.DR)
 
     def d_er_d_DR(self):
-        return np.longdouble(np.ones(len(self.tt0))) * u.Unit("")
+        return np.longdouble(np.ones(len(self.tt0))) * u.Unit("") * self.ecc()
 
     def d_er_d_par(self, par):
         if par not in self.binary_params:
@@ -186,7 +187,7 @@ class DDmodel(PSR_BINARY):
         return self.ecc() * (1 + self.DTH)
 
     def d_eTheta_d_DTH(self):
-        return np.longdouble(np.ones(len(self.tt0))) * u.Unit("")
+        return np.longdouble(np.ones(len(self.tt0))) * u.Unit("") * self.ecc()
 
     def d_eTheta_d_par(self, par):
         if par not in self.binary_params:
@@ -804,7 +805,6 @@ class DDmodel(PSR_BINARY):
         """
         cE = np.cos(self.E())
         sE = np.sin(self.E())
-
         return sE * self.prtl_der("GAMMA", par) + self.GAMMA * cE * self.prtl_der(
             "E", par
         )

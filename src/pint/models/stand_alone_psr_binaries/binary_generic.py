@@ -390,9 +390,7 @@ class PSR_BINARY:
     def ecc(self):
         """Calculate ecctricity with EDOT"""
         if hasattr(self, "_tt0"):
-            ECC = self.ECC
-            EDOT = self.EDOT
-            return ECC + (self.tt0 * EDOT).decompose()
+            return self.ECC + (self.tt0 * self.EDOT).decompose()
         return self.ECC
 
     def d_ecc_d_T0(self):
@@ -407,7 +405,7 @@ class PSR_BINARY:
         return self.tt0
 
     def a1(self):
-        return self.A1 + self.tt0 * self.A1DOT
+        return self.A1 + self.tt0 * self.A1DOT if hasattr(self, "_tt0") else self.A1
 
     def d_a1_d_A1(self):
         return np.longdouble(np.ones(len(self.tt0))) * u.Unit("")
@@ -428,7 +426,7 @@ class PSR_BINARY:
         par_obj = getattr(self, par)
         try:
             func = getattr(self, f"d_a1_d_{par}")
-        except:
+        except AttributeError:
             func = lambda: np.zeros(len(self.tt0)) * self.A1.unit / par_obj.unit
         return func()
 
@@ -537,13 +535,14 @@ class PSR_BINARY:
         par_obj = getattr(self, par)
         try:
             func = getattr(self, f"d_E_d_{par}")
-        except:
+        except AttributeError:
             if par in self.orbits_cls.orbit_params:
                 d_M_d_par = self.d_M_d_par(par)
                 return d_M_d_par / (1.0 - np.cos(self.E()) * self.ecc())
             else:
                 E = self.E()
                 return np.zeros(len(self.tt0)) * E.unit / par_obj.unit
+        return func()
 
     def nu(self):
         """True anomaly  (Ae)"""
@@ -632,7 +631,7 @@ class PSR_BINARY:
         try:
             func = getattr(self, f"d_nu_d_{par}")
             return func()
-        except:
+        except AttributeError:
             if par in self.orbits_cls.orbit_params:
                 return self.d_nu_d_E() * self.d_E_d_par(par)
             nu = self.nu()

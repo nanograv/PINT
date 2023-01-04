@@ -2,10 +2,12 @@ from astropy import units as u, constants as c
 import numpy as np
 import io
 import os
+import copy
 
 from pint.models import get_model
 from pint import derived_quantities
 import pint.simulation
+import pint.fitter
 
 par = """
 PSRJ           1855+09
@@ -92,3 +94,49 @@ class TestDDGR:
         DD_delay = self.mDD.binarymodel_delay(t, None)
         DDGR_delay = self.mDDGR.binarymodel_delay(t, None)
         assert np.allclose(DD_delay, DDGR_delay)
+
+    def test_ddgrfit(self):
+        # set the PK parameters
+        self.mDD.GAMMA.value = self.bDDGR.GAMMA.value
+        self.mDD.PBDOT.value = self.bDDGR.PBDOT.value
+        self.mDD.OMDOT.value = self.bDDGR._OMDOT.value
+        self.mDD.DR.value = self.bDDGR.DR.value
+        self.mDD.DTH.value = self.bDDGR.DTH.value
+        t = pint.simulation.make_fake_toas_uniform(
+            55000, 57000, 100, error=1 * u.us, add_noise=True, model=self.mDD
+        )
+
+        fDD = pint.fitter.Fitter.auto(t, self.mDD)
+        fDDGR = pint.fitter.Fitter.auto(t, self.mDDGR)
+        for p in ["ECC", "PB", "A1", "OM", "T0"]:
+            getattr(fDD.model, p).frozen = False
+            getattr(fDDGR.model, p).frozen = False
+
+        fDD.model.GAMMA.frozen = False
+        fDD.model.PBDOT.frozen = False
+        fDD.model.OMDOT.frozen = False
+        fDD.model.SINI.frozen = False
+        fDD.model.M2.frozen = False
+
+        # cannot fit for MTOT yet
+        fDDGR.model.M2.frozen = False
+        fDDGR.model.MTOT.frozen = True
+
+        fDD.fit_toas()
+        chi2DD = fDD.resids.calc_chi2()
+
+        fDDGR.fit_toas()
+        chi2DDGR = fDDGR.resids.calc_chi2()
+        M2 = copy.deepcopy(fDDGR.model.M2.quantity)
+        # chi^2 values don't have to be super close
+        assert (
+            np.fabs(fDD.model.M2.quantity - fDDGR.model.M2.quantity)
+            < 2 * fDD.model.M2.uncertainty
+        )
+        # perturn M2 and make sure chi^2 gets worse
+        fDDGR.model.M2.quantity += 3 * fDDGR.model.M2.uncertainty
+        fDDGR.resids.update()
+        assert fDDGR.resids.calc_chi2() > chi2DDGR
+        fDDGR.fit_toas()
+        assert np.isclose(fDDGR.resids.calc_chi2(), chi2DDGR)
+        assert np.isclose(fDDGR.model.M2.quantity, M2)
