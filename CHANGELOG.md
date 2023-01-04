@@ -13,8 +13,16 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 
 ## [0.9.3] 2022-12-16
 ### Changed
+- Moved DMconst from `pint.models.dispersion_model` to `pint` to avoid circular imports
 ### Added
-- method to identify mask parameters with no TOAs and optionally freeze them
+- Documentation: Explanation for DM
+- Methods to compute dispersion slope and to convert DM using the CODATA value of DMconst
+- `TimingModel.total_dispersion_slope` method
+- Explicit discussion of DT92 convention to DDK model
+
+## [0.9.3] 2022-12-16
+### Added
+- Method to identify mask parameters with no TOAs and optionally freeze them
 ### Fixed
 - Creating fake TOAs properly handles site clock corrections
 - Corrected a precision issue with reading ASCII representations of pulse profiles
