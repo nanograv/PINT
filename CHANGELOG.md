@@ -7,18 +7,14 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## Unreleased
 ### Changed
 - Changed minimum supported version of scipy to 1.4.1
-### Added
-### Fixed
-### Removed
-
-## [0.9.3] 2022-12-16
-### Changed
 - Moved DMconst from `pint.models.dispersion_model` to `pint` to avoid circular imports
 ### Added
 - Documentation: Explanation for DM
 - Methods to compute dispersion slope and to convert DM using the CODATA value of DMconst
 - `TimingModel.total_dispersion_slope` method
 - Explicit discussion of DT92 convention to DDK model
+### Fixed
+### Removed
 
 ## [0.9.3] 2022-12-16
 ### Added
