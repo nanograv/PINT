@@ -481,6 +481,36 @@ def convert_binary(model, output, **kwargs):
             outmodel.STIGMA.quantity = stigma
             outmodel.STIGMA.uncertainty = stigma_unc
             outmodel.STIGMA.frozen = outmodel.H3.frozen
+        elif output == "ELL1":
+            M2, SINI, M2_unc, SINI_unc = _orthometric_to_M2SINI(model)
+            outmodel = copy.deepcopy(model)
+            outmodel.remove_component(binary_component_name)
+            outmodel.BINARY.value = output
+            # parameters not to copy
+            badlist = ["H3", "H4", "STIGMA", "BINARY"]
+            outmodel.add_component(BinaryELL1(), validate=False)
+            for p in model.params:
+                if p not in badlist:
+                    setattr(outmodel, p, getattr(model, p))
+            for p in model.components[binary_component_name].params:
+                if p not in badlist:
+                    setattr(
+                        outmodel.components["BinaryELL1"],
+                        p,
+                        getattr(model.components[binary_component_name], p),
+                    )
+            outmodel.M2.quantity = M2
+            outmodel.SINI.quantity = SINI
+            if model.STIGMA.quantity is not None:
+                outmodel.M2.frozen = model.STIGMA.frozen or model.H3.frozen
+                outmodel.SINI.frozen = model.STIGMA.frozen
+            else:
+                outmodel.M2.frozen = model.STIGMA.frozen or model.H3.frozen
+                outmodel.SINI.frozen = model.STIGMA.frozen or model.H3.frozen
+            if M2_unc is not None:
+                outmodel.M2.uncertainty = M2_unc
+            if SINI_unc is not None:
+                outmodel.SINI.uncertainty = SINI_unc
         elif output in ["DD", "DDS", "DDK", "BT"]:
             # need to convert
             ECC, OM, T0, EDOT, ECC_unc, OM_unc, T0_unc, EDOT_unc = _from_ELL1(model)
