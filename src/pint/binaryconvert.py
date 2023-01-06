@@ -39,14 +39,14 @@ def _M2SINI_to_orthometric(model):
 
     Returns
     -------
-    stigma : u.Quantity
-    h3 : u.Quantity
-    h4 : u.Quantity
-    stigma_unc : u.Quantity or None
+    stigma : astropy.units.Quantity
+    h3 : astropy.units.Quantity
+    h4 : astropy.units.Quantity
+    stigma_unc : astropy.units.Quantity or None
         Uncertainty on stigma
-    h3_unc : u.Quantity or None
+    h3_unc : astropy.units.Quantity or None
         Uncertainty on H3
-    h4_unc : u.Quantity or None
+    h4_unc : astropy.units.Quantity or None
         Uncertainty on H4
 
     References
@@ -94,11 +94,11 @@ def _orthometric_to_M2SINI(model):
 
     Returns
     -------
-    M2 : u.Quantity
-    SINI : u.Quantity
-    M2_unc : u.Quantity or None
+    M2 : astropy.units.Quantity.
+    SINI : astropy.units.Quantity
+    M2_unc : astropy.units.Quantity or None
         Uncertainty on M2
-    SINI_unc : u.Quantity or None
+    SINI_unc : astropy.units.Quantity or None
         Uncertainty on SINI
 
     References
@@ -156,8 +156,8 @@ def _SINI_to_SHAPMAX(model):
 
     Returns
     -------
-    SHAPMAX : u.Quantity
-    SHAPMAX_unc : u.Quantity or None
+    SHAPMAX : astropy.units.Quantity
+    SHAPMAX_unc : astropy.units.Quantity or None
         Uncertainty on SHAPMAX
     """
     SHAPMAX = -np.log(1 - model.SINI.quantity)
@@ -180,8 +180,8 @@ def _SHAPMAX_to_SINI(model):
 
     Returns
     -------
-    SINI : u.Quantity
-    SINI_unc : u.Quantity or None
+    SINI : astropy.units.Quantity
+    SINI_unc : astropy.units.Quantity or None
         Uncertainty on SINI
     """
     SINI = 1 - np.exp(-model.SHAPMAX.quantity)
@@ -206,17 +206,17 @@ def _from_ELL1(model):
 
     Returns
     -------
-    ECC : u.Quantity
-    OM : u.Quantity
-    T0 : u.Quantity
-    EDOT : u.Quantity or None
-    ECC_unc : u.Quantity or None
+    ECC : astropy.units.Quantity
+    OM : astropy.units.Quantity
+    T0 : astropy.units.Quantity
+    EDOT : astropy.units.Quantity or None
+    ECC_unc : astropy.units.Quantity or None
         Uncertainty on ECC
-    OM_unc : u.Quantity or None
+    OM_unc : astropy.units.Quantity or None
         Uncertainty on OM
-    T0_unc : u.Quantity or None
+    T0_unc : astropy.units.Quantity or None
         Uncertainty on T0
-    EDOT_unc : u.Quantity or None
+    EDOT_unc : astropy.units.Quantity or None
         Uncertainty on EDOT
 
     References
@@ -310,20 +310,20 @@ def _to_ELL1(model):
 
     Returns
     -------
-    EPS1 : u.Quantity
-    EPS2 : u.Quantity
-    TASC : u.Quantity
-    EPS1DOT : u.Quantity or None
-    EPS2DOT : u.Quantity or None
-    EPS1_unc : u.Quantity or None
+    EPS1 : astropy.units.Quantity
+    EPS2 : astropy.units.Quantity
+    TASC : astropy.units.Quantity
+    EPS1DOT : astropy.units.Quantity or None
+    EPS2DOT : astropy.units.Quantity or None
+    EPS1_unc : astropy.units.Quantity or None
         Uncertainty on EPS1
-    EPS2_unc : u.Quantity or None
+    EPS2_unc : astropy.units.Quantity or None
         Uncertainty on EPS2
-    TASC_unc : u.Quantity or None
+    TASC_unc : astropy.units.Quantity or None
         Uncertainty on TASC
-    EPS1DOT_unc : u.Quantity or None
+    EPS1DOT_unc : astropy.units.Quantity or None
         Uncertainty on EPS1DOT
-    EPS2DOT_unc : u.Quantity or None
+    EPS2DOT_unc : astropy.units.Quantity or None
         Uncertainty on EPS2DOT
 
     References
@@ -492,23 +492,22 @@ def _DDK_to_PK(model):
     return pbdot, gamma, omegadot, s, r, Dr, Dth
 
 
-def convert_binary(model, output, **kwargs):
+def convert_binary(model, output, NHARMS=3, KOM=0 * u.deg):
     """
     Convert between binary models
 
-    Input models can be from "DD", "DDK", "DDGR", "DDS", "BT", "ELL1", "ELL1H"
-    Output models can be from "DD", "DDK", "DDS", "BT", "ELL1", "ELL1H"
-
-    For output "DDK", must also pass value for ``KOM``
-    For output "ELL1H", must also pass value for ``NHARMS``
+    Input models can be from :class:`~pint.models.binary_dd.BinaryDD`, :class:`~pint.models.binary_dd.BinaryDDS`, :class:`~pint.models.binary_dd.BinaryDDGR`, :class:`~pint.models.binary_bt.BinaryBT`, :class:`~pint.models.binary_ddk.BinaryDDK`, :class:`~pint.models.binary_ell1.BinaryELL1`, :class:`~pint.models.binary_ell1.BinaryELL1H`
+    Output models can be from :class:`~pint.models.binary_dd.BinaryDD`, :class:`~pint.models.binary_dd.BinaryDDS`, :class:`~pint.models.binary_bt.BinaryBT`, :class:`~pint.models.binary_ddk.BinaryDDK`, :class:`~pint.models.binary_ell1.BinaryELL1`, :class:`~pint.models.binary_ell1.BinaryELL1H`
 
     Parameters
     ----------
     model : pint.models.timing_model.TimingModel
     output : str
         Output model type
-    kwargs :
-        Other parameters (output model dependent)
+    NHARMS : int
+        Number of harmonics (``ELL1H`` only)
+    KOM : astropy.units.Quantity
+        Longitude of the ascending node (``DDK`` only)
 
     Returns
     -------
@@ -534,25 +533,6 @@ def convert_binary(model, output, **kwargs):
         )
         return copy.deepcopy(model)
     log.debug(f"Identified input model '{binary_component_name}'")
-    # check for required input depending on output type
-    if output == "DDK":
-        if "KOM" not in kwargs:
-            raise ValueError(
-                "For output model 'DDK', must supply value of 'KOM' to this function"
-            )
-        if not isinstance(kwargs["KOM"], u.Quantity):
-            raise ValueError("'KOM' must have units specified")
-        if not kwargs["KOM"].unit.is_equivalent("deg"):
-            raise ValueError(
-                f"'KOM' must have units convertible to 'deg' (not {kwargs['KOM'].unit})"
-            )
-    elif output == "ELL1H":
-        if "NHARMS" not in kwargs:
-            raise ValueError(
-                "For output model 'ELL1H', must supply value of 'NHARMS' to this function"
-            )
-        if not isinstance(kwargs["NHARMS"], int) and kwargs["NHARMS"] >= 3:
-            raise ValueError(f"'NHARMS' must be an integer >=3 (not {kwargs['NHARMS']}")
 
     if binary_component.binary_model_name in ["ELL1", "ELL1H"]:
         if output == "ELL1H":
@@ -574,7 +554,7 @@ def convert_binary(model, output, **kwargs):
                         p,
                         getattr(model.components[binary_component_name], p),
                     )
-            outmodel.NHARMS.value = kwargs["NHARMS"]
+            outmodel.NHARMS.value = NHARMS
             outmodel.H3.quantity = h3
             outmodel.H3.uncertainty = h3_unc
             outmodel.H3.frozen = model.M2.frozen or model.SINI.frozen
@@ -881,7 +861,7 @@ def convert_binary(model, output, **kwargs):
                 stigma, h3, h4, stigma_unc, h3_unc, h4_unc = _M2SINI_to_orthometric(
                     model
                 )
-                outmodel.NHARMS.value = kwargs["NHARMS"]
+                outmodel.NHARMS.value = NHARMS
                 outmodel.H3.quantity = h3
                 outmodel.H3.uncertainty = h3_unc
                 outmodel.H3.frozen = model.M2.frozen or model.SINI.frozen
@@ -897,7 +877,7 @@ def convert_binary(model, output, **kwargs):
         outmodel.SHAPMAX.frozen = model.SINI.frozen
 
     if output == "DDK":
-        outmodel.KOM.quantity = kwargs["KOM"]
+        outmodel.KOM.quantity = KOM
         if binary_component.binary_model_name != "DDGR":
             if model.SINI.quantity is not None:
                 outmodel.KIN.quantity = np.arcsin(model.SINI.quantity).to(

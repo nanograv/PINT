@@ -18,20 +18,20 @@ def _solve_kepler(M1, M2, n, ARTOL=1e-10):
 
     Parameters
     ----------
-    M1 : u.Quantity
+    M1 : astropy.units.Quantity
         Mass of pulsar
-    M2 : u.Quantity
+    M2 : astropy.units.Quantity
         Mass of companion
-    n : u.Quantity
+    n : astropy.units.Quantity
         orbital angular frequency
     ARTOL : float
         fractional tolerance for solution
 
     Returns
     -------
-    arr0 : u.Quantity
+    arr0 : astropy.units.Quantity
         non-relativistic semi-major axis
-    arr : u.Quantity
+    arr : astropy.units.Quantity
         relativstic semi-major axis
     """
     MTOT = M1 + M2
@@ -103,12 +103,11 @@ class DDGRmodel(DDmodel):
         if input_params is not None:
             self.update_input(param_dict=input_params)
 
-    def _update(self, ARTOL=1e-10):
-        """Update measurable quantities from system parameters for DDGR model
+    def _updatePK(self, ARTOL=1e-10):
+        """Update measurable PK quantities from system parameters for DDGR model
 
         Taylor & Weisberg (1989), Eqn. 15-25
         In tempo, implemented as ``mass2dd`` (https://sourceforge.net/p/tempo/tempo/ci/master/tree/src/mass2dd.f)
-
 
         Parameters
         ----------
@@ -505,7 +504,7 @@ class DDGRmodel(DDmodel):
     @PB.setter
     def PB(self, val):
         self._PB = val
-        self._update()
+        self._updatePK()
 
     @property
     def MTOT(self):
@@ -514,7 +513,7 @@ class DDGRmodel(DDmodel):
     @MTOT.setter
     def MTOT(self, val):
         self._MTOT = val
-        self._update()
+        self._updatePK()
 
     @property
     def M2(self):
@@ -523,7 +522,7 @@ class DDGRmodel(DDmodel):
     @M2.setter
     def M2(self, val):
         self._M2 = val
-        self._update()
+        self._updatePK()
 
     @property
     def A1(self):
@@ -532,7 +531,7 @@ class DDGRmodel(DDmodel):
     @A1.setter
     def A1(self, val):
         self._A1 = val
-        self._update()
+        self._updatePK()
 
     @property
     def ECC(self):
@@ -541,7 +540,7 @@ class DDGRmodel(DDmodel):
     @ECC.setter
     def ECC(self, val):
         self._ECC = val
-        self._update()
+        self._updatePK()
 
     @property
     def A1DOT(self):
@@ -550,7 +549,7 @@ class DDGRmodel(DDmodel):
     @A1DOT.setter
     def A1DOT(self, val):
         self._A1DOT = val
-        self._update()
+        self._updatePK()
 
     @property
     def EDOT(self):
@@ -559,4 +558,4 @@ class DDGRmodel(DDmodel):
     @EDOT.setter
     def EDOT(self, val):
         self._EDOT = val
-        self._update()
+        self._updatePK()

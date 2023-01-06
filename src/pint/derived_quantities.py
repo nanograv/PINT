@@ -294,8 +294,8 @@ def mass_funct(pb: u.d, x: u.cm):
     ----------
     pb : astropy.units.Quantity
         Binary period
-    x : astropy.units.Quantity in ``pint.ls``
-        Semi-major axis, A1SINI, in units of ls
+    x : astropy.units.Quantity
+        Semi-major axis, A1SINI, in units of ``pint.ls``
 
     Returns
     -------
@@ -729,8 +729,8 @@ def sini(mp: u.Msun, mc: u.Msun, pb: u.d, x: u.cm):
         companion mass
     pb : astropy.units.Quantity
         Binary orbital period
-    x : astropy.units.Quantity in ``pint.ls``
-        Semi-major axis, A1SINI, in units of ls
+    x : astropy.units.Quantity
+        Semi-major axis, A1SINI, in units of ``pint.ls``
 
     Returns
     -------
@@ -823,7 +823,7 @@ def dr(mp: u.Msun, mc: u.Msun, pb: u.d):
 def dth(mp: u.Msun, mc: u.Msun, pb: u.d):
     """Post-Keplerian Roemer delay term
 
-    dth (:math:`\delta_\theta`) is part of the relativistic deformation of the orbit
+    dth (:math:`\delta_{\\theta}`) is part of the relativistic deformation of the orbit
 
     Parameters
     ----------
@@ -851,7 +851,7 @@ def dth(mp: u.Msun, mc: u.Msun, pb: u.d):
 
     .. math::
 
-        \delta_\theta = T_{\odot}^{2/3} \\left(\\frac{P_b}{2\pi}\\right)^{2/3}
+        \delta_{\\theta} = T_{\odot}^{2/3} \\left(\\frac{P_b}{2\pi}\\right)^{2/3}
         \\frac{3.5 m_p^2+6 m_p m_c +2m_c^2}{(m_p+m_c)^{4/3}}
 
     with :math:`T_\odot = GM_\odot c^{-3}`.

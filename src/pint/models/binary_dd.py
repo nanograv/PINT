@@ -126,6 +126,8 @@ class BinaryDDS(BinaryDD):
        SINI
             use ``SHAPMAX`` instead
 
+    The inferred value of this can be accessed via the ``.sini`` property
+
     Parameters supported:
 
     .. paramtable::
@@ -166,6 +168,10 @@ class BinaryDDS(BinaryDD):
             and not self.SHAPMAX.value > -np.log(2)
         ):
             raise ValueError(f"SHAPMAX must be > -log(2) ({self.SHAPMAX.quantity})")
+
+    @property
+    def sini(self):
+        return 1 - np.exp(-self.SHAPMAX.quantity)
 
 
 class BinaryDDGR(BinaryDD):
