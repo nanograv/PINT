@@ -436,11 +436,6 @@ class DDmodel(PSR_BINARY):
             Dre = alpha*(cos(E)-er)+(beta+gamma)*sin(E)
         """
 
-        # er = self.er()
-        # sinE = np.sin(self.E())
-        # cosE = np.cos(self.E())
-        # return self.alpha() * (cosE - er) + (self.beta() + self.GAMMA) * sinE
-
         return self.delayR() + self.delayE()
 
     def d_Dre_d_par(self, par):
