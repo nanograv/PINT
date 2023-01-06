@@ -108,6 +108,19 @@ class TestDDGR:
         DDGR_delay = self.mDDGR.binarymodel_delay(t, None)
         assert np.allclose(DD_delay, DDGR_delay)
 
+    def test_xpbdot(self):
+        self.mDD.GAMMA.value = self.bDDGR.GAMMA.value
+        self.mDD.PBDOT.value = self.bDDGR.PBDOT.value * 2
+        self.mDD.OMDOT.value = self.bDDGR._OMDOT.value
+        self.mDD.DR.value = self.bDDGR.DR.value
+        self.mDD.DTH.value = self.bDDGR.DTH.value
+
+        self.mDDGR.XPBDOT.value = self.bDDGR.PBDOT.value
+        t = pint.simulation.make_fake_toas_uniform(55000, 57000, 100, model=self.mDD)
+        DD_delay = self.mDD.binarymodel_delay(t, None)
+        DDGR_delay = self.mDDGR.binarymodel_delay(t, None)
+        assert np.allclose(DD_delay, DDGR_delay)
+
     def test_ddgrfit(self):
         # set the PK parameters
         self.mDD.GAMMA.value = self.bDDGR.GAMMA.value

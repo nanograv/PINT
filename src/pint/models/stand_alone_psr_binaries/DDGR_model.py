@@ -227,6 +227,26 @@ class DDGRmodel(DDmodel):
         return ko_func()
 
     ####################
+    def omega(self):
+        # add in any excess OMDOT from the XOMDOT term
+        return (
+            self.OM
+            + self.nu() * self.k
+            + self.nu() * (self.XOMDOT / (2 * np.pi * u.rad / self.PB))
+        ).to(u.rad)
+
+    def d_omega_d_XOMDOT(self):
+        """Derivative.
+
+        Calculates::
+
+            dOmega/dXOMDOT = 1/n*nu
+            n = 2*pi/PB
+            dOmega/dXOMDOT = PB/2*pi*nu
+        """
+        return self.nu() * self.pb().to(u.s) / (2 * np.pi * u.rad)
+
+    ####################
     @property
     def SINI(self):
         return self._SINI
@@ -313,7 +333,8 @@ class DDGRmodel(DDmodel):
     ####################
     @property
     def PBDOT(self):
-        return self._PBDOT + self.XPBDOT
+        # don't add XPBDOT here: that is handled by the normal binary objects
+        return self._PBDOT
 
     def d_PBDOT_d_MTOT(self):
         return (

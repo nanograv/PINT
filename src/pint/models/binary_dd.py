@@ -280,5 +280,3 @@ class BinaryDDGR(BinaryDD):
             raise ValueError(
                 f"Inferred SINI must be <= 1 for DDGR model (MTOT={self.MTOT.quantity}, PB={self.PB.quantity}, A1={self.A1.quantity}, M2={self.M2.quantity} imply SINI={sini})"
             )
-        if self.MTOT.frozen is False:
-            raise AttributeError("MTOT cannot be unfrozen for DDGR model")

@@ -92,7 +92,6 @@ class DDmodel(PSR_BINARY):
         """
         PB = self.pb()
         PB = PB.to("second")
-        OMDOT = self.OMDOT
         OM = self.OM
         nu = self.nu()
         return (OM + nu * self.k).to(u.rad)
