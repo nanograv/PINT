@@ -65,7 +65,7 @@ class DDGRmodel(DDmodel):
         XOMDOT
             Excess OMDOT beyond what GR predicts
 
-    It also removes:
+    It also reads but ignores:
 
         SINI
         PBDOT
@@ -96,8 +96,8 @@ class DDGRmodel(DDmodel):
         # If any parameter has aliases, it should be updated
         # self.param_aliases.update({})
         self.binary_params = list(self.param_default_value.keys())
-        # Remove unused parameter SINI
-        for p in ["SINI", "PBDOT", "OMDOT", "GAMMA"]:
+        # Remove unused parameter SINI and others
+        for p in ["SINI", "PBDOT", "OMDOT", "GAMMA", "DR", "DTH"]:
             del self.param_default_value[p]
         self.set_param_values()
         if input_params is not None:

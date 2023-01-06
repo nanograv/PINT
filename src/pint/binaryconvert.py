@@ -22,6 +22,9 @@ from pint.models.parameter import floatParameter, MJDParameter, intParameter
 binary_types = ["DD", "DDK", "DDS", "BT", "ELL1", "ELL1H"]
 
 
+__all__ = ["convert_binary"]
+
+
 def _M2SINI_to_orthometric(model):
     """Convert from standard Shapiro delay (M2, SINI) to orthometric (H3, H4, STIGMA)
 
