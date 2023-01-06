@@ -127,10 +127,10 @@ def _orthometric_to_M2SINI(model):
             else None
         )
 
-    SINI = stigma / np.sqrt(stigma**2 + 1)
+    SINI = 2 * stigma / (1 + stigma**2)
     M2 = (model.H3.quantity / stigma**3 / Tsun) * u.Msun
     if stigma_unc is not None:
-        SINI_unc = stigma_unc / (stigma**2 + 1) ** 1.5
+        SINI_unc = np.abs(stigma_unc * 2 * (stigma**2 - 1) / (1 + stigma**2) ** 2)
         if model.H3.uncertainty is not None:
             M2_unc = (
                 np.sqrt(
@@ -225,7 +225,9 @@ def _from_ELL1(model):
     """
     # do we have to account for FB or PBDOT here?
     ECC = np.sqrt(model.EPS1.quantity**2 + model.EPS2.quantity**2)
-    OM = np.arctan(model.EPS2.quantity / model.EPS1.quantity)
+    OM = np.arctan2(model.EPS2.quantity, model.EPS1.quantity)
+    if OM < 0:
+        OM += 360 * u.deg
     T0 = model.TASC.quantity + ((model.PB.quantity / 2 / np.pi) * OM).to(
         u.d, equivalencies=u.dimensionless_angles()
     )
@@ -363,11 +365,11 @@ def _to_ELL1(model):
         TASC_unc = np.sqrt(
             (model.T0.uncertainty) ** 2
             + (model.PB.uncertainty * model.OM.quantity / 2 / np.pi).to(
-                u.dimensionless_unscaled, equivalencies=u.dimensionless_angles()
+                u.d, equivalencies=u.dimensionless_angles()
             )
             ** 2
             + (model.PB.quantity * model.OM.uncertainty / 2 / np.pi).to(
-                u.dimensionless_unscaled, equivalencies=u.dimensionless_angles()
+                u.d, equivalencies=u.dimensionless_angles()
             )
             ** 2
         )
@@ -482,6 +484,7 @@ def convert_binary(model, output, **kwargs):
             outmodel.STIGMA.uncertainty = stigma_unc
             outmodel.STIGMA.frozen = outmodel.H3.frozen
         elif output == "ELL1":
+            # ELL1H -> ELL1
             M2, SINI, M2_unc, SINI_unc = _orthometric_to_M2SINI(model)
             outmodel = copy.deepcopy(model)
             outmodel.remove_component(binary_component_name)
@@ -592,6 +595,10 @@ def convert_binary(model, output, **kwargs):
             badlist = [
                 "BINARY",
             ]
+            if binary_component.binary_model_name == "DDS":
+                badlist.append("SHAPMAX")
+            elif binary_component.binary_model_name == "DDK":
+                badlist += ["KIN", "KOM"]
             if output == "DD":
                 outmodel.add_component(BinaryDD(), validate=False)
             elif output == "DDS":
@@ -650,6 +657,10 @@ def convert_binary(model, output, **kwargs):
             outmodel.BINARY.value = output
             # parameters not to copy
             badlist = ["BINARY", "ECC", "OM", "T0", "OMDOT", "EDOT"]
+            if binary_component.binary_model_name == "DDS":
+                badlist.append("SHAPMAX")
+            elif binary_component.binary_model_name == "DDK":
+                badlist += ["KIN", "KOM"]
             if output == "ELL1":
                 outmodel.add_component(BinaryELL1(), validate=False)
             elif output == "ELL1H":
@@ -700,6 +711,22 @@ def convert_binary(model, output, **kwargs):
                 if EPS1DOT_unc is not None:
                     outmodel.EPS1DOT.uncertainty = EPS1DOT_unc
                     outmodel.EPS2DOT.uncertainty = EPS2DOT_unc
+            if binary_component.binary_model_name == "DDS":
+                SINI, SINI_unc = _SHAPMAX_to_SINI(model)
+                outmodel.SINI.quantity = SINI
+                if SINI_unc is not None:
+                    outmodel.SINI.uncertainty = SINI_unc
+            elif binary_component.binary_model_name == "DDK":
+                if model.KIN.quantity is not None:
+                    outmodel.SINI.quantity = np.sin(model.KIN.quantity)
+                    if model.KIN.uncertainty is not None:
+                        outmodel.SINI.uncertainty = np.abs(
+                            model.KIN.uncertainty * np.cos(model.KIN.quantity)
+                        ).to(
+                            u.dimensionless_unscaled,
+                            equivalencies=u.dimensionless_angles(),
+                        )
+                    outmodel.SINI.frozen = model.KIN.frozen
             if output == "ELL1H":
                 if binary_component.binary_model_name == "DDGR":
                     model = convert_binary(model, "DD")

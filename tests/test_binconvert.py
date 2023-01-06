@@ -53,6 +53,7 @@ Mp = 1.4 * u.Msun
 Mc = 1.1 * u.Msun
 i = 85 * u.deg
 PB = 0.5 * u.day
+A1 = derived_quantities.a1sini(Mp, Mc, PB, i)
 
 parELL1 = """PSR              B1855+09
 LAMBDA   286.8634874826803  1     0.0000000103957
@@ -96,33 +97,74 @@ SINI              0.999185  1            0.000190
 M2                0.246769  1            0.009532
 """
 
+kwargs = {"ELL1H": {"NHARMS": 3}, "DDK": {"KOM": 0 * u.deg}}
+
 
 @pytest.mark.parametrize("output", ["ELL1", "ELL1H", "DD", "BT", "DDS", "DDK"])
 def test_ELL1(output):
     m = get_model(io.StringIO(parELL1))
-    kwargs = {}
-    if output == "ELL1H":
-        kwargs = {"NHARMS": 3}
-    elif output == "DDK":
-        kwargs = {"KOM": 0 * u.deg}
-    mout = pint.binaryconvert.convert_binary(m, output, **kwargs)
+    mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
 
 
 @pytest.mark.parametrize("output", ["ELL1", "ELL1H", "DD", "BT", "DDS", "DDK"])
 def test_ELL1_roundtrip(output):
     m = get_model(io.StringIO(parELL1))
-    kwargs = {}
-    if output == "ELL1H":
-        kwargs = {"NHARMS": 3}
-    elif output == "DDK":
-        kwargs = {"KOM": 0 * u.deg}
-    mout = pint.binaryconvert.convert_binary(m, output, **kwargs)
+    mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
     mback = pint.binaryconvert.convert_binary(mout, "ELL1")
     for p in m.params:
-        print(f"{p}: {getattr(m,p).quantity} {getattr(mback,p).quantity}")
+        if output == "BT":
+            if p in ["M2", "SINI"]:
+                # these are not in BT
+                continue
         if getattr(m, p).value is None:
             continue
         if not isinstance(getattr(m, p).quantity, (str, bool, astropy.time.Time)):
             assert np.isclose(getattr(m, p).quantity, getattr(mback, p).quantity)
+            if getattr(m, p).uncertainty is not None:
+                # some precision may be lost in uncertainty conversion
+                assert np.isclose(
+                    getattr(m, p).uncertainty, getattr(mback, p).uncertainty, rtol=0.2
+                )
+        else:
+            assert getattr(m, p).value == getattr(mback, p).value
+
+
+@pytest.mark.parametrize("output", ["ELL1", "ELL1H", "DD", "BT", "DDS", "DDK"])
+def test_DD(output):
+    m = get_model(
+        io.StringIO(
+            f"{parDD}\nBINARY DD\nSINI {np.sin(i).value}\nA1 {A1.value}\nPB {PB.value}\nM2 {Mc.value}\n"
+        )
+    )
+    mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
+
+
+@pytest.mark.parametrize("output", ["ELL1", "ELL1H", "DD", "BT", "DDS", "DDK"])
+def test_DD_roundtrip(output):
+    m = get_model(
+        io.StringIO(
+            f"{parDD}\nBINARY DD\nSINI {np.sin(i).value}\nA1 {A1.value}\nPB {PB.value} 1 0.1\nM2 {Mc.value}\n"
+        )
+    )
+    mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
+    mback = pint.binaryconvert.convert_binary(mout, "DD")
+    for p in m.params:
+        if output == "BT":
+            if p in ["M2", "SINI"]:
+                # these are not in BT
+                continue
+        if getattr(m, p).value is None:
+            continue
+        # print(getattr(m, p), getattr(mback, p))
+        if not isinstance(getattr(m, p).quantity, (str, bool, astropy.time.Time)):
+            assert np.isclose(getattr(m, p).quantity, getattr(mback, p).quantity)
+            if getattr(m, p).uncertainty is not None:
+                # some precision may be lost in uncertainty conversion
+                if output in ["ELL1", "ELL1H"] and p in ["ECC"]:
+                    # we lose precision on ECC since it also contains a contribution from OM now
+                    continue
+                assert np.isclose(
+                    getattr(m, p).uncertainty, getattr(mback, p).uncertainty, rtol=0.2
+                )
         else:
             assert getattr(m, p).value == getattr(mback, p).value
