@@ -65,8 +65,6 @@ class TestDDGR:
                 f"{par}\nBINARY DDGR\nA1 {A1.value}\nPB {PB.value}\nM2 {Mc.value}\nMTOT {(Mp+Mc).value}\n"
             )
         )
-        self.bDD = self.mDD.components["BinaryDD"].binary_instance
-        self.bDDGR = self.mDDGR.components["BinaryDDGR"].binary_instance
 
     def test_pkparameters(self):
         pbdot = derived_quantities.pbdot(
@@ -78,17 +76,17 @@ class TestDDGR:
         omdot = derived_quantities.omdot(
             Mp, Mc, self.mDD.PB.quantity, self.mDD.ECC.quantity
         )
-        assert np.isclose(gamma, self.bDDGR.GAMMA)
-        assert np.isclose(pbdot, self.bDDGR.PBDOT)
-        assert np.isclose(omdot, self.bDDGR._OMDOT)
+        assert np.isclose(gamma, self.mDDGR.gamma)
+        assert np.isclose(pbdot, self.mDDGR.pbdot)
+        assert np.isclose(omdot, self.mDDGR.omdot)
 
     def test_binarydelay(self):
         # set the PK parameters
-        self.mDD.GAMMA.value = self.bDDGR.GAMMA.value
-        self.mDD.PBDOT.value = self.bDDGR.PBDOT.value
-        self.mDD.OMDOT.value = self.bDDGR._OMDOT.value
-        self.mDD.DR.value = self.bDDGR.DR.value
-        self.mDD.DTH.value = self.bDDGR.DTH.value
+        self.mDD.GAMMA.value = self.mDDGR.gamma.value
+        self.mDD.PBDOT.value = self.mDDGR.pbdot.value
+        self.mDD.OMDOT.value = self.mDDGR.omdot.value
+        self.mDD.DR.value = self.mDDGR.dr.value
+        self.mDD.DTH.value = self.mDDGR.dth.value
 
         t = pint.simulation.make_fake_toas_uniform(55000, 57000, 100, model=self.mDD)
         DD_delay = self.mDD.binarymodel_delay(t, None)
@@ -96,26 +94,26 @@ class TestDDGR:
         assert np.allclose(DD_delay, DDGR_delay)
 
     def test_xomdot(self):
-        self.mDD.GAMMA.value = self.bDDGR.GAMMA.value
-        self.mDD.PBDOT.value = self.bDDGR.PBDOT.value
-        self.mDD.OMDOT.value = self.bDDGR._OMDOT.value * 2
-        self.mDD.DR.value = self.bDDGR.DR.value
-        self.mDD.DTH.value = self.bDDGR.DTH.value
+        self.mDD.GAMMA.value = self.mDDGR.gamma.value
+        self.mDD.PBDOT.value = self.mDDGR.pbdot.value
+        self.mDD.OMDOT.value = self.mDDGR.omdot.value * 2
+        self.mDD.DR.value = self.mDDGR.dr.value
+        self.mDD.DTH.value = self.mDDGR.dth.value
 
-        self.mDDGR.XOMDOT.value = self.bDDGR._OMDOT.value
+        self.mDDGR.XOMDOT.value = self.mDDGR.omdot.value
         t = pint.simulation.make_fake_toas_uniform(55000, 57000, 100, model=self.mDD)
         DD_delay = self.mDD.binarymodel_delay(t, None)
         DDGR_delay = self.mDDGR.binarymodel_delay(t, None)
         assert np.allclose(DD_delay, DDGR_delay)
 
     def test_xpbdot(self):
-        self.mDD.GAMMA.value = self.bDDGR.GAMMA.value
-        self.mDD.PBDOT.value = self.bDDGR.PBDOT.value * 2
-        self.mDD.OMDOT.value = self.bDDGR._OMDOT.value
-        self.mDD.DR.value = self.bDDGR.DR.value
-        self.mDD.DTH.value = self.bDDGR.DTH.value
+        self.mDD.GAMMA.value = self.mDDGR.gamma.value
+        self.mDD.PBDOT.value = self.mDDGR.pbdot.value * 2
+        self.mDD.OMDOT.value = self.mDDGR.omdot.value
+        self.mDD.DR.value = self.mDDGR.dr.value
+        self.mDD.DTH.value = self.mDDGR.dth.value
 
-        self.mDDGR.XPBDOT.value = self.bDDGR.PBDOT.value
+        self.mDDGR.XPBDOT.value = self.mDDGR.pbdot.value
         t = pint.simulation.make_fake_toas_uniform(55000, 57000, 100, model=self.mDD)
         DD_delay = self.mDD.binarymodel_delay(t, None)
         DDGR_delay = self.mDDGR.binarymodel_delay(t, None)
@@ -123,11 +121,12 @@ class TestDDGR:
 
     def test_ddgrfit(self):
         # set the PK parameters
-        self.mDD.GAMMA.value = self.bDDGR.GAMMA.value
-        self.mDD.PBDOT.value = self.bDDGR.PBDOT.value
-        self.mDD.OMDOT.value = self.bDDGR._OMDOT.value
-        self.mDD.DR.value = self.bDDGR.DR.value
-        self.mDD.DTH.value = self.bDDGR.DTH.value
+        self.mDD.GAMMA.value = self.mDDGR.gamma.value
+        self.mDD.PBDOT.value = self.mDDGR.pbdot.value
+        self.mDD.OMDOT.value = self.mDDGR.omdot.value
+        self.mDD.DR.value = self.mDDGR.dr.value
+        self.mDD.DTH.value = self.mDDGR.dth.value
+
         t = pint.simulation.make_fake_toas_uniform(
             55000, 57000, 100, error=1 * u.us, add_noise=True, model=self.mDD
         )
