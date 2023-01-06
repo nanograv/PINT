@@ -9,7 +9,7 @@ Potential issues:
 import numpy as np
 from astropy import units as u, constants as c
 import copy
-
+from uncertainties import ufloat, umath
 from loguru import logger as log
 
 from pint import Tsun
@@ -393,6 +393,102 @@ def _to_ELL1(model):
     )
 
 
+def _DDK_to_PK(model):
+    """Convert DDK model to equivalent PK parameters
+
+    Uses ``uncertainties`` module to propagate uncertainties
+
+    Parameters
+    ----------
+    model : pint.models.timing_model.TimingModel
+
+    Returns
+    -------
+    pbdot : uncertainties.core.Variable
+    gamma : uncertainties.core.Variable
+    omegadot : uncertainties.core.Variable
+    s : uncertainties.core.Variable
+    r : uncertainties.core.Variable
+    Dr : uncertainties.core.Variable
+    Dth : uncertainties.core.Variable
+    """
+    tsun = Tsun.to_value(u.s)
+    if model.MTOT.uncertainty is not None:
+        mtot = ufloat(
+            model.MTOT.quantity.to_value(u.Msun),
+            model.MTOT.uncertainty.to_value(u.Msun),
+        )
+    else:
+        mtot = ufloat(model.MTOT.quantity.to_value(u.Msun), 0)
+    if model.M2.uncertainty is not None:
+        mc = ufloat(
+            model.M2.quantity.to_value(u.Msun), model.M2.uncertainty.to_value(u.Msun)
+        )
+    else:
+        mc = ufloat(model.M2.quantity.to_value(u.Msun), 0)
+    mp = mtot - mc
+    if model.A1.uncertainty is not None:
+        x = ufloat(model.A1.value, model.A1.uncertainty_value)
+    else:
+        x = ufloat(model.A1.value, 0)
+    if model.PB.uncertainty is not None:
+        n = (
+            2
+            * np.pi
+            / ufloat(
+                model.PB.quantity.to_value(u.s), model.PB.uncertainty.to_value(u.s)
+            )
+        )
+    else:
+        n = 2 * np.pi / model.PB.quantity.to_value(u.s)
+    if model.ECC.uncertainty is not None:
+        ECC = ufloat(model.ECC.value, model.ECC.uncertainty_value)
+    else:
+        ECC = ufloat(model.ECC.value, 0)
+    # units are seconds
+    gamma = (
+        tsun ** (2.0 / 3)
+        * n ** (-1.0 / 3)
+        * (mc * (mp + 2 * mc) / (mp + mc) ** (4.0 / 3))
+    )
+    # units as seconds
+    r = tsun * mc
+    # units are radian/s
+    omegadot = (
+        (3 * tsun ** (2.0 / 3))
+        * n ** (5.0 / 3)
+        * (1 / (1 - ECC**2))
+        * (mp + mc) ** (2.0 / 3)
+    )
+    fe = (1 + (73.0 / 24) * ECC**2 + (37.0 / 96) * ECC**4) / (1 - ECC**2) ** (
+        7.0 / 2
+    )
+    # units as s/s
+    pbdot = (
+        (-192 * np.pi / 5)
+        * tsun ** (5.0 / 3)
+        * n ** (5.0 / 3)
+        * fe
+        * (mp * mc)
+        / (mp + mc) ** (1.0 / 3)
+    )
+    # dimensionless
+    s = tsun ** (-1.0 / 3) * n ** (2.0 / 3) * x * (mp + mc) ** (2.0 / 3) / mc
+    Dr = (
+        tsun ** (2.0 / 3)
+        * n ** (2.0 / 3)
+        * (3 * mp**2 + 6 * mp * mc + 2 * mc**2)
+        / (mp + mc) ** (4.0 / 3)
+    )
+    Dth = (
+        tsun ** (2.0 / 3)
+        * n ** (2.0 / 3)
+        * (3.5 * mp**2 + 6 * mp * mc + 2 * mc**2)
+        / (mp + mc) ** (4.0 / 3)
+    )
+    return pbdot, gamma, omegadot, s, r, Dr, Dth
+
+
 def convert_binary(model, output, **kwargs):
     """
     Convert between binary models
@@ -637,19 +733,68 @@ def convert_binary(model, output, **kwargs):
                         )
                     outmodel.SINI.frozen = model.KIN.frozen
             elif binary_component.binary_model_name == "DDGR":
-                b = model.components["BinaryDDGR"].binary_instance
-                outmodel.GAMMA.value = b.GAMMA.value
-                outmodel.PBDOT.value = b.PBDOT.value
-                outmodel.OMDOT.value = b._OMDOT.value
-                outmodel.DR.value = b.DR.value
-                outmodel.DTH.value = b.DTH.value
-                if output != "DDS":
-                    outmodel.SINI.value = b._SINI.value
-                else:
-                    outmodel.SHAPMAX.value = -np.log(1 - b._SINI.value)
-                log.warning(
-                    "For conversion from DDGR model, uncertainties are not propagated on PK parameters"
+                pbdot, gamma, omegadot, s, r, Dr, Dth = _DDK_to_PK(model)
+                outmodel.GAMMA.value = gamma.n
+                if gamma.s > 0:
+                    outmodel.GAMMA.uncertainty_value = gamma.s
+                outmodel.PBDOT.value = pbdot.n
+                if pbdot.s > 0:
+                    outmodel.PBDOT.uncertainty_value = pbdot.s
+                outmodel.OMDOT.value = omegadot.n
+                if omegadot.s > 0:
+                    outmodel.OMDOT.uncertainty_value = omegadot.s
+                outmodel.GAMMA.frozen = model.PB.frozen or model.M2.frozen
+                outmodel.OMDOT.frozen = (
+                    model.PB.frozen or model.M2.frozen or model.ECC.frozen
                 )
+                outmodel.PBDOT.frozen = (
+                    model.PB.frozen or model.M2.frozen or model.ECC.frozen
+                )
+                if output != "BT":
+                    outmodel.DR.value = Dr.n
+                    if Dr.s > 0:
+                        outmodel.DR.uncertainty_value = Dr.s
+                    outmodel.DTH.value = Dth.n
+                    if Dth.s > 0:
+                        outmodel.DTH.uncertainty_value = Dth.s
+                    outmodel.DR.frozen = model.PB.frozen or model.M2.frozen
+                    outmodel.DTH.frozen = model.PB.frozen or model.M2.frozen
+
+                    if output == "DDS":
+                        shapmax = -umath.log(1 - s)
+                        outmodel.SHAPMAX.value = shapmax.n
+                        if shapmax.s > 0:
+                            outmodel.SHAPMAX.uncertainty_value = shapmax.s
+                        outmodel.SHAPMAX.frozen = (
+                            model.PB.frozen
+                            or model.M2.frozen
+                            or model.ECC.frozen
+                            or model.A1.frozen
+                        )
+                    elif output == "DDK":
+                        kin = umath.asin(s)
+                        outmodel.KIN.value = kin.n
+                        if kin.s > 0:
+                            outmodel.KIN.uncertainty_value = kin.s
+                        outmodel.KIN.frozen = (
+                            model.PB.frozen
+                            or model.M2.frozen
+                            or model.ECC.frozen
+                            or model.A1.frozen
+                        )
+                        log.warning(
+                            f"Setting KIN={outmodel.KIN}: check that the sign is correct"
+                        )
+                    else:
+                        outmodel.SINI.value = s.n
+                        if s.s > 0:
+                            outmodel.SINI.uncertainty_value = s.s
+                        outmodel.SINI.frozen = (
+                            model.PB.frozen
+                            or model.M2.frozen
+                            or model.ECC.frozen
+                            or model.A1.frozen
+                        )
 
         elif output in ["ELL1", "ELL1H"]:
             outmodel = copy.deepcopy(model)
@@ -750,18 +895,19 @@ def convert_binary(model, output, **kwargs):
 
     if output == "DDK":
         outmodel.KOM.quantity = kwargs["KOM"]
-        if model.SINI.quantity is not None:
-            outmodel.KIN.quantity = np.arcsin(model.SINI.quantity).to(
-                u.deg, equivalencies=u.dimensionless_angles()
-            )
-            if model.SINI.uncertainty is not None:
-                outmodel.KIN.uncertainty = (
-                    model.SINI.uncertainty / np.sqrt(1 - model.SINI.quantity**2)
-                ).to(u.deg, equivalencies=u.dimensionless_angles())
-            log.warning(
-                f"Setting KIN={outmodel.KIN} from SINI={model.SINI}: check that the sign is correct"
-            )
-        outmodel.KIN.frozen = model.SINI.frozen
+        if binary_component.binary_model_name != "DDGR":
+            if model.SINI.quantity is not None:
+                outmodel.KIN.quantity = np.arcsin(model.SINI.quantity).to(
+                    u.deg, equivalencies=u.dimensionless_angles()
+                )
+                if model.SINI.uncertainty is not None:
+                    outmodel.KIN.uncertainty = (
+                        model.SINI.uncertainty / np.sqrt(1 - model.SINI.quantity**2)
+                    ).to(u.deg, equivalencies=u.dimensionless_angles())
+                log.warning(
+                    f"Setting KIN={outmodel.KIN} from SINI={model.SINI}: check that the sign is correct"
+                )
+            outmodel.KIN.frozen = model.SINI.frozen
     outmodel.validate()
 
     return outmodel

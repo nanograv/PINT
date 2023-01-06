@@ -168,3 +168,13 @@ def test_DD_roundtrip(output):
                 )
         else:
             assert getattr(m, p).value == getattr(mback, p).value
+
+
+@pytest.mark.parametrize("output", ["ELL1", "ELL1H", "DD", "BT", "DDS", "DDK"])
+def test_DDGR(output):
+    m = get_model(
+        io.StringIO(
+            f"{parDD}\nBINARY DDGR\nA1 {A1.value} 0 0.01\nPB {PB.value} 0 0.02\nM2 {Mc.value} \nMTOT {(Mp+Mc).value}\n"
+        )
+    )
+    mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
