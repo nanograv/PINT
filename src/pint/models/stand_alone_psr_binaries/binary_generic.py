@@ -165,10 +165,7 @@ class PSR_BINARY:
             self.psr_pos = np.atleast_1d(updates["psr_pos"])
         # update parameters
         d_list = ["barycentric_toa", "obs_pos", "psr_pos"]
-        parameters = {}
-        for key, value in updates.items():
-            if key not in d_list:
-                parameters[key] = value
+        parameters = {key: value for key, value in updates.items() if key not in d_list}
         self.set_param_values(parameters)
 
         # Switch the cache off
@@ -203,10 +200,11 @@ class PSR_BINARY:
                     continue
                 if not hasattr(valDict[par], "unit"):
                     bm_par = getattr(self, parname)
-                    if not hasattr(bm_par, "unit"):
-                        val = valDict[par]
-                    else:
-                        val = valDict[par] * getattr(self, parname).unit
+                    val = (
+                        valDict[par] * getattr(self, parname).unit
+                        if hasattr(bm_par, "unit")
+                        else valDict[par]
+                    )
                 else:
                     val = valDict[par]
                 setattr(self, parname, val)
@@ -215,15 +213,12 @@ class PSR_BINARY:
         """Add one parameter to the binary class."""
         if parameter not in self.binary_params:
             self.binary_params.append(parameter)
-            if not hasattr(defaultValue, "unit"):
-                if unit:
-                    log.warning(
-                        "Binary parameters' value generally has unit."
-                        " Treat parameter " + parameter + " as a dimension less unit."
-                    )
-                    self.param_default_value[parameter] = defaultValue * u.Unit("")
-                else:
-                    self.param_default_value[parameter] = defaultValue
+            if not hasattr(defaultValue, "unit") and unit:
+                log.warning(
+                    f"Binary parameter values generally have units."
+                    f" Treating parameter {parameter} as a dimensionless quantity."
+                )
+                self.param_default_value[parameter] = defaultValue * u.Unit("")
             else:
                 self.param_default_value[parameter] = defaultValue
             setattr(self, parameter, self.param_default_value[parameter])
@@ -423,7 +418,7 @@ class PSR_BINARY:
 
     def d_a1_d_par(self, par):
         if par not in self.binary_params:
-            errorMesg = f"{par}is not in binary parameter list."
+            errorMesg = f"{par} is not in binary parameter list."
             raise ValueError(errorMesg)
 
         par_obj = getattr(self, par)
@@ -636,9 +631,9 @@ class PSR_BINARY:
         except:
             if par in self.orbits_cls.orbit_params:
                 return self.d_nu_d_E() * self.d_E_d_par(par)
-            else:
-                nu = self.nu()
-                return np.zeros(len(self.tt0)) * nu.unit / par_obj.unit
+
+            nu = self.nu()
+            return np.zeros(len(self.tt0)) * nu.unit / par_obj.unit
 
     def omega(self):
         PB = self.pb().to("second")
@@ -658,7 +653,7 @@ class PSR_BINARY:
         Derivative of omega respect to par
         """
         if par not in self.binary_params:
-            errorMesg = f"{par}is not in binary parameter list."
+            errorMesg = f"{par} is not in binary parameter list."
             raise ValueError(errorMesg)
 
         par_obj = getattr(self, par)
