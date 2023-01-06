@@ -121,7 +121,7 @@ class BinaryDDS(BinaryDD):
 
     This extends the :class:`pint.models.binary_dd.BinaryDD` model with
     :math:`SHAPMAX = -\log(1-s)` instead of just :math:`s=\sin i`, which behaves better
-    for :math:`\sin i` near 1.
+    for :math:`\sin i` near 1.  It does not (yet) implement the higher-order delays and lensing correction.
 
     The actual calculations for this are done in
     :class:`pint.models.stand_alone_psr_binaries.DDS_model.DDSmodel`.
@@ -177,19 +177,6 @@ class BinaryDDS(BinaryDD):
             and not self.SHAPMAX.value > -np.log(2)
         ):
             raise ValueError(f"SHAPMAX must be > -log(2) ({self.SHAPMAX.quantity})")
-
-    def as_DD(self):
-        mDD = BinaryDD()
-        for p in self.params:
-            if p != "SHAPMAX":
-                setattr(mDD, p, getattr(self, p))
-        mDD.SINI.quantity = 1 - np.exp(-self.SHAPMAX.quantity)
-        mDD.SINI.frozen = self.SHAPMAX.frozen
-        if self.SHAPMAX.uncertainty is not None:
-            mDD.SINI.uncertainty = self.SHAPMAX.uncertainty * np.exp(
-                -self.SHAPMAX.quantity
-            )
-        return mDD
 
 
 class BinaryDDGR(BinaryDD):

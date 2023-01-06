@@ -157,7 +157,7 @@ def test_DD_roundtrip(output):
             continue
         # print(getattr(m, p), getattr(mback, p))
         if not isinstance(getattr(m, p).quantity, (str, bool, astropy.time.Time)):
-            assert np.isclose(getattr(m, p).quantity, getattr(mback, p).quantity)
+            assert np.allclose(getattr(m, p).quantity, getattr(mback, p).quantity)
             if getattr(m, p).uncertainty is not None:
                 # some precision may be lost in uncertainty conversion
                 if output in ["ELL1", "ELL1H"] and p in ["ECC"]:

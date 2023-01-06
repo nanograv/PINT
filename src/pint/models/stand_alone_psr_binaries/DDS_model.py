@@ -2,7 +2,7 @@
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
-import warnings
+from loguru import logger as log
 
 from pint import Tsun
 
@@ -14,7 +14,7 @@ class DDSmodel(DDmodel):
 
     This extends the :class:`pint.models.binary_dd.BinaryDD` model with
     :math:`SHAPMAX = -\log(1-s)` instead of just :math:`s=\sin i`, which behaves better
-    for :math:`\sin i` near 1.
+    for :math:`\sin i` near 1.  It does not (yet) implement the higher-order delays and lensing correction.
 
     It supports all the parameters defined in :class:`pint.models.pulsar_binary.PulsarBinary`
     and :class:`pint.models.binary_dd.BinaryDD` plus:
@@ -65,7 +65,7 @@ class DDSmodel(DDmodel):
 
     @SINI.setter
     def SINI(self, val):
-        warnings.warn(
+        log.debug(
             "DDS model uses SHAPMAX as inclination parameter. SINI will not be used."
         )
 

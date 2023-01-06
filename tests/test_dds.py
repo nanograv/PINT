@@ -10,6 +10,7 @@ from pint.models import get_model, get_model_and_toas
 import pint.simulation
 import pint.fitter
 import pint.toa as toa
+from pint import binaryconvert
 from pinttestdata import datadir
 
 
@@ -90,9 +91,7 @@ class TestDDSFit:
         """
 
         self.m = get_model(io.StringIO(par))
-        self.mDDS = copy.deepcopy(self.m)
-        self.mDDS.remove_component("BinaryDD")
-        self.mDDS.add_component(self.m.components["BinaryDD"].as_DDS())
+        self.mDDS = binaryconvert.convert_binary(self.m, "DDS")
 
         self.t = pint.simulation.make_fake_toas_uniform(
             55000, 57000, 100, self.m, error=0.1 * u.us, add_noise=True
@@ -114,6 +113,7 @@ class TestDDSFit:
         assert np.isclose(
             1 - np.exp(-fDDS.model.SHAPMAX.value), f.model.SINI.value, rtol=1e-3
         )
+        print(f"{chi2} {chi2DDS}")
         assert np.isclose(chi2, chi2DDS, rtol=1e-3)
 
     def test_ddsfit_newSHAPMAX(self):
