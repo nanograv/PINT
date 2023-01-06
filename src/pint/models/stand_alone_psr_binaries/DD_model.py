@@ -433,7 +433,9 @@ class DDmodel(PSR_BINARY):
 
         Computes::
 
-            Dre = alpha*(cos(E)-er)+(beta+gamma)*sin(E)
+            delayR = alpha*(cos(E)-er) + beta*sin(E)
+            delayE = gamma*sin(E)
+            Dre = delayR + delayE
         """
 
         return self.delayR() + self.delayE()
