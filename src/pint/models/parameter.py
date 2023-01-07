@@ -176,6 +176,7 @@ class Parameter:
         continuous=True,
         prior=priors.Prior(priors.UniformUnboundedRV()),
         use_alias=None,
+        parent=None,
     ):
 
         self.name = name  # name of the parameter
@@ -196,6 +197,7 @@ class Parameter:
         self.valueType = None
         self.special_arg = []
         self.use_alias = use_alias
+        self._parent = parent
 
     @property
     def quantity(self):
@@ -2121,3 +2123,46 @@ class pairParameter(floatParameter):
         quan0 = str(v0)
         quan1 = str(v1)
         return quan0 + " " + quan1
+
+
+class funcParameter(floatParameter):
+    def __init__(
+        self,
+        name=None,
+        description=None,
+        func=None,
+        pars=None,
+        units=None,
+        long_double=False,
+        unit_scale=False,
+        scale_factor=None,
+        scale_threshold=None,
+    ):
+        self.paramType = "funcParameter"
+        self.name = name
+        self.description = description
+        self.func = func
+        self.pars = pars
+        if units is None:
+            units = ""
+        self.units = units
+        self.uncertainty = None
+        self.frozen = True
+        self.long_double = long_double
+        self.scale_factor = scale_factor
+        self.scale_threshold = scale_threshold
+        self._unit_scale = False
+        self.unit_scale = unit_scale
+        self.use_alias = None
+
+    def _get(self):
+        args = [getattr(self._parent._parent, p).quantity for p in self.pars]
+        return self.func(*args)
+
+    @property
+    def quantity(self):
+        return self._get()
+
+    @property
+    def value(self):
+        return self._get().value
