@@ -2126,6 +2126,48 @@ class pairParameter(floatParameter):
 
 
 class funcParameter(floatParameter):
+    """Parameter defined as a read-only function operating on other parameters that returns a float or long double value.
+
+    ``.quantity`` stores current parameter value and its unit in an
+    :class:`~astropy.units.Quantity`. Upon storage in ``.quantity``
+    the input is converted to ``self.units``.
+
+    On its own this parameter will not be useful,
+    but when inserted into a :class:`pint.models.timing_model.Component` object
+    it can operate on any parameters within that component or others in the same
+    :class:`pint.models.timing_model.TimingModel`.
+
+    Parameters
+    ----------
+    name : str
+        The name of the parameter.
+    func : function
+        Returns the desired value
+    pars : iterable
+        List or tuple of parameter names
+    units : str or astropy.units.Quantity
+        Parameter default unit. Parameter .value and .uncertainty_value attribute
+        will associate with the default units. If unit is dimensionless, use
+        "''" as its unit.
+    description : str, optional
+        A short description of what this parameter means.
+    long_double : bool, optional, default False
+        A flag specifying whether value is float or long double.
+
+    Example
+    -------
+    >>> import pint.models.parameter
+    >>> p = pint.models.parameter.funcParameter(
+            name="AGE",
+            description="Spindown age",
+            pars=("F0", "F1"),
+            func=lambda f0, f1: f0 / 2 / f1,
+            units="yr",
+        )
+    >>> m.components["Spindown"].add_param(p)
+    >>> print(m.AGE)
+    """
+
     def __init__(
         self,
         name=None,
@@ -2138,26 +2180,47 @@ class funcParameter(floatParameter):
         scale_factor=None,
         scale_threshold=None,
     ):
+
         self.paramType = "funcParameter"
         self.name = name
         self.description = description
-        self.func = func
-        self.pars = pars
+        self._func = func
+        self._pars = pars
         if units is None:
             units = ""
         self.units = units
-        self.uncertainty = None
-        self.frozen = True
         self.long_double = long_double
         self.scale_factor = scale_factor
         self.scale_threshold = scale_threshold
         self._unit_scale = False
         self.unit_scale = unit_scale
+
+        # these should be fixed
+        self.uncertainty = None
+        self.frozen = True
         self.use_alias = None
+        # for each parameter determine how many levels of parentage to check
+        self._parentlevel = []
+
+    def _get_parentage(self):
+        """Determine parentage level for each parameter"""
+        for p in self._pars:
+            if hasattr(self, "_parent") and hasattr(self._parent, p):
+                self._parentlevel.append(self._parent)
+            elif (
+                hasattr(self, "parent")
+                and (hasattr(getattr(self, "parent"), "parent"))
+                and hasattr(self._parent._parent, p)
+            ):
+                self._parentlevel.append(self._parent._parent)
+            else:
+                raise AttributeError(f"Cannot find parameter '{p}' in parent objects")
 
     def _get(self):
-        args = [getattr(self._parent._parent, p).quantity for p in self.pars]
-        return self.func(*args)
+        if self._parentlevel == []:
+            self._get_parentage()
+        args = [getattr(l, p).quantity for l, p in zip(self._parentlevel, self._pars)]
+        return self._func(*args)
 
     @property
     def quantity(self):
