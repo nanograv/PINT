@@ -2155,18 +2155,30 @@ class funcParameter(floatParameter):
     long_double : bool, optional, default False
         A flag specifying whether value is float or long double.
 
-    Example
+    Examples
     -------
     >>> import pint.models.parameter
     >>> p = pint.models.parameter.funcParameter(
             name="AGE",
             description="Spindown age",
             params=("F0", "F1"),
-            func=lambda f0, f1: f0 / 2 / f1,
+            func=lambda f0, f1: -f0 / 2 / f1,
             units="yr",
         )
     >>> m.components["Spindown"].add_param(p)
     >>> print(m.AGE)
+
+    >>> import pint.models.parameter
+    >>> import pint.derived_quantities
+    >>> p2 = pint.models.parameter.funcParameter(
+            name="EDOT",
+            description="Spindown luminosity",
+            params=("F0", "F1"),
+            func=pint.derived_quantities.pulsar_edot,
+            units="erg/s",
+        )
+    >>> m.components["Spindown"].add_param(p2)
+    >>> print(m.EDOT)
     """
 
     def __init__(
