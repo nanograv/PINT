@@ -23,7 +23,7 @@ def test_funcpardefine():
     p = pint.models.parameter.funcParameter(
         name="AGE",
         description="Spindown age",
-        pars=("F0", "F1"),
+        params=("F0", "F1"),
         func=lambda f0, f1: f0 / 2 / f1,
         units="yr",
     )
@@ -37,7 +37,7 @@ def test_funcpardefineandadd_undefined():
     p = pint.models.parameter.funcParameter(
         name="AGE",
         description="Spindown age",
-        pars=("F0", "F1"),
+        params=("F0", "F1"),
         func=lambda f0, f1: f0 / 2 / f1,
         units="yr",
     )
@@ -53,7 +53,7 @@ def test_funcpardefineandadd():
     p = pint.models.parameter.funcParameter(
         name="AGE",
         description="Spindown age",
-        pars=("F0", "F1"),
+        params=("F0", "F1"),
         func=lambda f0, f1: f0 / 2 / f1,
         units="yr",
     )
@@ -70,7 +70,7 @@ def test_funcpardefine_notquantity():
     p = pint.models.parameter.funcParameter(
         name="AGE",
         description="Spindown age",
-        pars=("F0", ("F1", "uncertainty")),
+        params=("F0", ("F1", "uncertainty")),
         func=lambda f0, f1: f0 / 2 / f1,
         units="yr",
     )
@@ -89,7 +89,7 @@ def test_funcparfails():
     p = pint.models.parameter.funcParameter(
         name="AGE",
         description="Spindown age",
-        pars=("F0", "F2"),
+        params=("F0", "F2"),
         func=lambda f0, f1: f0 / 2 / f1,
         units="yr",
     )
@@ -97,3 +97,21 @@ def test_funcparfails():
     m.F1.quantity = 3e-10 * u.Hz / u.s
     with pytest.raises(AttributeError):
         print(m.AGE)
+
+
+def test_funcparsetfails():
+
+    m = get_model(io.StringIO(base_par))
+
+    p = pint.models.parameter.funcParameter(
+        name="AGE",
+        description="Spindown age",
+        params=("F0", "F1"),
+        func=lambda f0, f1: f0 / 2 / f1,
+        units="yr",
+    )
+    m.components["Spindown"].add_param(p)
+    m.F1.quantity = 3e-10 * u.Hz / u.s
+
+    with pytest.raises(AttributeError):
+        m.AGE.quantity = 10 * u.yr

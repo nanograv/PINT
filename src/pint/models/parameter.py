@@ -2143,7 +2143,7 @@ class funcParameter(floatParameter):
         The name of the parameter.
     func : function
         Returns the desired value
-    pars : iterable
+    params : iterable
         List or tuple of parameter names.
         Each can optionally also be a tuple including the attribute to access (default is ``quantity``)
     units : str or astropy.units.Quantity
@@ -2161,7 +2161,7 @@ class funcParameter(floatParameter):
     >>> p = pint.models.parameter.funcParameter(
             name="AGE",
             description="Spindown age",
-            pars=("F0", "F1"),
+            params=("F0", "F1"),
             func=lambda f0, f1: f0 / 2 / f1,
             units="yr",
         )
@@ -2174,7 +2174,7 @@ class funcParameter(floatParameter):
         name=None,
         description=None,
         func=None,
-        pars=None,
+        params=None,
         units=None,
         long_double=False,
         unit_scale=False,
@@ -2186,16 +2186,7 @@ class funcParameter(floatParameter):
         self.name = name
         self.description = description
         self._func = func
-        self._pars = []
-        self._attrs = []
-        for p in pars:
-            if isinstance(p, str):
-                self._pars.append(p)
-                # assume quantity
-                self._attrs.append("quantity")
-            else:
-                self._pars.append(p[0])
-                self._attrs.append(p[1])
+        self._set_params(params)
         if units is None:
             units = ""
         self.units = units
@@ -2213,11 +2204,23 @@ class funcParameter(floatParameter):
         self._parentlevel = []
         self._parent = None
 
+    def _set_params(self, params):
+        self._params = []
+        self._attrs = []
+        for p in params:
+            if isinstance(p, str):
+                self._params.append(p)
+                # assume quantity
+                self._attrs.append("quantity")
+            else:
+                self._params.append(p[0])
+                self._attrs.append(p[1])
+
     def _get_parentage(self):
         """Determine parentage level for each parameter"""
         if self._parent is None:
             return
-        for p in self._pars:
+        for p in self._params:
             if hasattr(self, "_parent") and hasattr(self._parent, p):
                 self._parentlevel.append(self._parent)
             elif (
@@ -2235,7 +2238,7 @@ class funcParameter(floatParameter):
         if self._parentlevel == []:
             self._get_parentage()
         args = []
-        for l, p, a in zip(self._parentlevel, self._pars, self._attrs):
+        for l, p, a in zip(self._parentlevel, self._params, self._attrs):
             args.append(getattr(getattr(l, p), a))
             if args[-1] is None:
                 return None
@@ -2245,9 +2248,25 @@ class funcParameter(floatParameter):
     def quantity(self):
         return self._get()
 
+    @quantity.setter
+    def quantity(self, value):
+        raise AttributeError("Cannot set funcParameter")
+
     @property
     def value(self):
         if self._get() is not None:
             return self._get().value
         else:
             return None
+
+    @value.setter
+    def value(self, value):
+        raise AttributeError("Cannot set funcParameter")
+
+    @property
+    def param(self):
+        return zip(self._params, self._attrs)
+
+    @param.setter
+    def param(self, params):
+        self._set_params(params)
