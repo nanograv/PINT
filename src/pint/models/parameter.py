@@ -2144,7 +2144,8 @@ class funcParameter(floatParameter):
     func : function
         Returns the desired value
     pars : iterable
-        List or tuple of parameter names
+        List or tuple of parameter names.
+        Each can optionally also be a tuple including the attribute to access (default is ``quantity``)
     units : str or astropy.units.Quantity
         Parameter default unit. Parameter .value and .uncertainty_value attribute
         will associate with the default units. If unit is dimensionless, use
@@ -2185,7 +2186,16 @@ class funcParameter(floatParameter):
         self.name = name
         self.description = description
         self._func = func
-        self._pars = pars
+        self._pars = []
+        self._attrs = []
+        for p in pars:
+            if isinstance(p, str):
+                self._pars.append(p)
+                # assume quantity
+                self._attrs.append("quantity")
+            else:
+                self._pars.append(p[0])
+                self._attrs.append(p[1])
         if units is None:
             units = ""
         self.units = units
@@ -2201,9 +2211,12 @@ class funcParameter(floatParameter):
         self.use_alias = None
         # for each parameter determine how many levels of parentage to check
         self._parentlevel = []
+        self._parent = None
 
     def _get_parentage(self):
         """Determine parentage level for each parameter"""
+        if self._parent is None:
+            return
         for p in self._pars:
             if hasattr(self, "_parent") and hasattr(self._parent, p):
                 self._parentlevel.append(self._parent)
@@ -2217,9 +2230,15 @@ class funcParameter(floatParameter):
                 raise AttributeError(f"Cannot find parameter '{p}' in parent objects")
 
     def _get(self):
+        if self._parent is None:
+            return None
         if self._parentlevel == []:
             self._get_parentage()
-        args = [getattr(l, p).quantity for l, p in zip(self._parentlevel, self._pars)]
+        args = []
+        for l, p, a in zip(self._parentlevel, self._pars, self._attrs):
+            args.append(getattr(getattr(l, p), a))
+            if args[-1] is None:
+                return None
         return self._func(*args)
 
     @property
@@ -2228,4 +2247,7 @@ class funcParameter(floatParameter):
 
     @property
     def value(self):
-        return self._get().value
+        if self._get() is not None:
+            return self._get().value
+        else:
+            return None
