@@ -568,6 +568,11 @@
             486989.4,
             4900430.8
         ],
+        "clock_fmt": "tempo2",
+        "clock_file": [
+            "leap2effix.clk",
+            "effix2gps.clk"
+        ],
         "origin": "The Large European Array for Pulsars.\nThis is the same as the position of the Effelsberg radio telescope.\nImported from TEMPO2 observatories.dat 2021 June 7."
     },
     "jodrellm4": {

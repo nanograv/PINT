@@ -38,16 +38,23 @@ class DDKmodel(DDmodel):
 
     Notes
     -----
-    This model defines KOM with reference to north, either equatorial or ecliptic depending on how the model is defined.
+    This model defines KOM with reference to east, either equatorial or ecliptic depending on how the model is defined.
+    KOM and KIN are defined in the Damour & Taylor (1992) convention (DT92), where
+
+        KIN = 180 deg means the orbital angular momentum vector points toward the Earth, and KIN = 0 means the orbital angular momentum vector points away from the Earth.
+
+        KOM is 0 toward the East and increases clockwise on the sky; it is measured "East through North."
 
 
     References
     ----------
     - Kopeikin (1995), ApJ, 439, L5 [1]_
     - Kopeikin (1996), ApJ, 467, L93 [2]_
+    - Damour & Taylor (1992), Phys Rev D, 45, 1840 [3]_
 
     .. [1] https://ui.adsabs.harvard.edu/abs/1995ApJ...439L...5K/abstract
     .. [2] https://ui.adsabs.harvard.edu/abs/1996ApJ...467L..93K/abstract
+    .. [3] https://ui.adsabs.harvard.edu/abs/1992PhRvD..45.1840D/abstract
     """
 
     def __init__(self, t=None, input_params=None):

@@ -405,6 +405,9 @@ class LCFitter:
 
         """
 
+        if not self.template.check_bounds():
+            raise ValueError("Template does not satisfy parameter bounds.")
+
         self._set_unbinned(unbinned)
         ph0 = self.template.get_location()
 

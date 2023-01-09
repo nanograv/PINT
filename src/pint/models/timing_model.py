@@ -64,6 +64,7 @@ from pint.utils import (
     open_or_use,
     colorize,
 )
+from pint.derived_quantities import dispersion_slope
 
 
 __all__ = [
@@ -1288,6 +1289,11 @@ class TimingModel:
         for dm_f in self.dm_funcs[1::]:
             dm += dm_f(toas)
         return dm
+
+    def total_dispersion_slope(self, toas):
+        """Calculate the dispersion slope from all the dispersion-type components."""
+        dm_tot = self.total_dm(toas)
+        return dispersion_slope(dm_tot)
 
     def toa_covariance_matrix(self, toas):
         """Get the TOA covariance matrix for noise models.

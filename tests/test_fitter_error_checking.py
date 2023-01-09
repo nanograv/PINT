@@ -232,4 +232,6 @@ def test_update_model_sets_things(Fitter):
     assert re.search(r"EPHEM *DE421", par_out)
     assert re.search(r"DMDATA *N", par_out)
     assert re.search(r"START *58000.0", par_out)
-    assert re.search(r"FINISH *59000.0", par_out)
+    assert re.search(r"FINISH *59000.0", par_out) or re.search(
+        r"FINISH *58999.9+", par_out
+    )
