@@ -2128,9 +2128,8 @@ class pairParameter(floatParameter):
 class funcParameter(floatParameter):
     """Parameter defined as a read-only function operating on other parameters that returns a float or long double value.
 
-    ``.quantity`` stores current parameter value and its unit in an
-    :class:`~astropy.units.Quantity`. Upon storage in ``.quantity``
-    the input is converted to ``self.units``.
+    Can access the result of the function through the ``.quantity`` attribute,
+    and the value without units through the ``.value`` attribute.
 
     On its own this parameter will not be useful,
     but when inserted into a :class:`pint.models.timing_model.Component` object
@@ -2258,7 +2257,7 @@ class funcParameter(floatParameter):
                 raise AttributeError(f"Cannot find parameter '{p}' in parent objects")
 
     def _get(self):
-        """Run the function and return the value
+        """Run the function and return the result
 
         Returns
         -------
@@ -2280,6 +2279,7 @@ class funcParameter(floatParameter):
 
     @property
     def quantity(self):
+        """The result of the function"""
         return self._get()
 
     @quantity.setter
@@ -2288,6 +2288,7 @@ class funcParameter(floatParameter):
 
     @property
     def value(self):
+        """The result of the function without units."""
         if self._get() is not None:
             return self._get().value
         else:
@@ -2309,7 +2310,8 @@ class funcParameter(floatParameter):
     def from_parfile_line(self, line):
         """Ignore reading from par file
 
-        For funcParameters, they are for information only so are ignored on reading
+        For :class:`~pint.models.parameter.funcParameter`s,
+        they are for information only so are ignored on reading
         """
 
         return True
