@@ -2228,23 +2228,45 @@ class funcParameter(floatParameter):
                 self._params.append(p[0])
                 self._attrs.append(p[1])
 
-    def _get_parentage(self):
-        """Determine parentage level for each parameter"""
+    def _get_parentage(self, max_level=2):
+        """Determine parentage level for each parameter
+
+        Parameters
+        ----------
+        max_level : int, optional
+            Maximum parentage level to search
+
+        Raises
+        ------
+        AttributeError :
+            If the parameter cannot be located in any parent object
+        """
         if self._parent is None:
             return
-        for p in self._params:
-            if hasattr(self, "_parent") and hasattr(self._parent, p):
-                self._parentlevel.append(self._parent)
-            elif (
-                hasattr(self, "parent")
-                and (hasattr(getattr(self, "parent"), "parent"))
-                and hasattr(self._parent._parent, p)
-            ):
-                self._parentlevel.append(self._parent._parent)
-            else:
+        self._parentlevel = []
+        for i, p in enumerate(self._params):
+            parent = self._parent
+            for level in range(max_level):
+                if hasattr(parent, p):
+                    self._parentlevel.append(parent)
+                    break
+                if hasattr(parent, "_parent"):
+                    parent = getattr(parent, "_parent")
+                else:
+                    break
+            if len(self._parentlevel) < i + 1:
                 raise AttributeError(f"Cannot find parameter '{p}' in parent objects")
 
     def _get(self):
+        """Run the function and return the value
+
+        Returns
+        -------
+        astropy.units.Quantity or None
+            If any input value is None or if the parentage is not yet specified, will return ``None``
+            Otherwise will return the result of the function
+
+        """
         if self._parent is None:
             return None
         if self._parentlevel == []:
@@ -2276,9 +2298,18 @@ class funcParameter(floatParameter):
         raise AttributeError("Cannot set funcParameter")
 
     @property
-    def param(self):
-        return zip(self._params, self._attrs)
+    def params(self):
+        """Return a list of tuples of parameter names and attributes"""
+        return list(zip(self._params, self._attrs))
 
-    @param.setter
-    def param(self, params):
+    @params.setter
+    def params(self, params):
         self._set_params(params)
+
+    def from_parfile_line(self, line):
+        """Ignore reading from par file
+
+        For funcParameters, they are for information only so are ignored on reading
+        """
+
+        return True
