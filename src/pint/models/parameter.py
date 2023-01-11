@@ -2211,6 +2211,7 @@ class funcParameter(floatParameter):
         self.uncertainty = None
         self.frozen = True
         self.use_alias = None
+        self.aliases = []
         # for each parameter determine how many levels of parentage to check
         self._parentlevel = []
         self._parent = None
@@ -2313,5 +2314,4 @@ class funcParameter(floatParameter):
         For :class:`~pint.models.parameter.funcParameter`s,
         they are for information only so are ignored on reading
         """
-
         return True
