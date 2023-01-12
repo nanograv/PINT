@@ -2178,6 +2178,11 @@ class funcParameter(floatParameter):
         )
     >>> m.components["Spindown"].add_param(p2)
     >>> print(m.EDOT)
+
+    Notes
+    -----
+    Defining functions through ``lambda`` functions may result in unpickleable models
+
     """
 
     def __init__(

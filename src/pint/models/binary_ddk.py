@@ -10,6 +10,36 @@ from pint.models.stand_alone_psr_binaries.DDK_model import DDKmodel
 from pint.models.timing_model import MissingParameter, TimingModelError
 
 
+def _convert_kin(kin):
+    """Convert DDK KIN to/from IAU/DT92 conventions
+
+    Parameters
+    ----------
+    kin : astropy.units.Quantity
+
+    Returns
+    -------
+    astropy.units.Quantity
+        Value returned in other convention
+    """
+    return 180 * u.deg - kin
+
+
+def _convert_kom(kom):
+    """Convert DDK KOM to/from IAU/DT92 conventions
+
+    Parameters
+    ----------
+    kom : astropy.units.Quantity
+
+    Returns
+    -------
+    astropy.units.Quantity
+        Value returned in other convention
+    """
+    return 90 * u.deg - kom
+
+
 class BinaryDDK(BinaryDD):
     """Damour and Deruelle model with kinematics.
 
@@ -109,7 +139,7 @@ class BinaryDDK(BinaryDD):
                 name="KINIAU",
                 description="Inclination angle in the IAU convention",
                 params=("KIN",),
-                func=lambda kin: 180 * u.deg - kin,
+                func=_convert_kin,
                 units="deg",
             )
         )
@@ -118,7 +148,7 @@ class BinaryDDK(BinaryDD):
                 name="KOMIAU",
                 description="The longitude of the ascending node in the IAU convention",
                 params=("KOM",),
-                func=lambda kom: 90 * u.deg - kom,
+                func=_convert_kom,
                 units="deg",
             )
         )
