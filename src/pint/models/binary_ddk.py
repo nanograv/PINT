@@ -5,7 +5,7 @@ from astropy import units as u
 from loguru import logger as log
 
 from pint.models.binary_dd import BinaryDD
-from pint.models.parameter import boolParameter, floatParameter
+from pint.models.parameter import boolParameter, floatParameter, funcParameter
 from pint.models.stand_alone_psr_binaries.DDK_model import DDKmodel
 from pint.models.timing_model import MissingParameter, TimingModelError
 
@@ -103,6 +103,25 @@ class BinaryDDK(BinaryDD):
         )
         self.remove_param("SINI")
         self.internal_params += ["PMLONG_DDK", "PMLAT_DDK"]
+
+        self.add_param(
+            funcParameter(
+                name="KINIAU",
+                description="Inclination angle in the IAU convention",
+                params=("KIN",),
+                func=lambda kin: 180 * u.deg - kin,
+                units="deg",
+            )
+        )
+        self.add_param(
+            funcParameter(
+                name="KOMIAU",
+                description="The longitude of the ascending node in the IAU convention",
+                params=("KOM",),
+                func=lambda kom: 90 * u.deg - kom,
+                units="deg",
+            )
+        )
 
     @property
     def PMLONG_DDK(self):

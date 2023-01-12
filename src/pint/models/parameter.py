@@ -2212,6 +2212,9 @@ class funcParameter(floatParameter):
         self.frozen = True
         self.use_alias = None
         self.aliases = []
+        self.is_prefix = False
+        self.continuous = True
+
         # for each parameter determine how many levels of parentage to check
         self._parentlevel = []
         self._parent = None
@@ -2290,10 +2293,7 @@ class funcParameter(floatParameter):
     @property
     def value(self):
         """The result of the function without units."""
-        if self._get() is not None:
-            return self._get().value
-        else:
-            return None
+        return self._get().value if self._get() is not None else None
 
     @value.setter
     def value(self, value):
