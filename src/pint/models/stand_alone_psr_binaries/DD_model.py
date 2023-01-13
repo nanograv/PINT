@@ -474,7 +474,7 @@ class DDmodel(PSR_BINARY):
 
     #################################################
     def Drep(self):
-        """Derivative of Dre respect to E T. Damour and N. Deruelle (1986) equation [49]
+        """Derivative of Dre respect to T. Damour and N. Deruelle (1986) equation [49]
 
         Computes::
 
@@ -515,7 +515,7 @@ class DDmodel(PSR_BINARY):
 
     #################################################
     def Drepp(self):
-        """Derivative of Drep respect to E T. Damour and N. Deruelle (1986) equation [50]
+        """Derivative of Drep respect to T. Damour and N. Deruelle (1986) equation [50]
 
         Computes::
 
