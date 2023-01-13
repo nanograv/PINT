@@ -2099,18 +2099,15 @@ class TOAs:
         """
         # First make sure that we haven't already applied clock corrections
         flags = self.table["flags"]
-        if any(["clkcorr" in f for f in flags]):
-            if all(["clkcorr" in f for f in flags]):
-                log.warning("Clock corrections already applied. Not re-applying.")
-                return
-            else:
+        if any("clkcorr" in f for f in flags):
+            if any("clkcorr" not in f for f in flags):
                 # FIXME: could apply clock corrections to just the ones that don't have any
                 raise ValueError("Some TOAs have 'clkcorr' flag and some do not!")
+            log.warning("Clock corrections already applied. Not re-applying.")
+            return
         # An array of all the time corrections, one for each TOA
         log.debug(
-            "Applying clock corrections (include_gps = {0}, include_bipm = {1})".format(
-                include_gps, include_bipm
-            )
+            f"Applying clock corrections (include_gps = {include_gps}, include_bipm = {include_bipm})"
         )
         corrections = np.zeros(self.ntoas) * u.s
         # values of "-to" flags
