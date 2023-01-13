@@ -2203,9 +2203,7 @@ class funcParameter(floatParameter):
         self.description = description
         self._func = func
         self._set_params(params)
-        if units is None:
-            units = ""
-        self.units = units
+        self.units = "" if units is None else units
         self.long_double = long_double
         self.scale_factor = scale_factor
         self.scale_threshold = scale_threshold
@@ -2225,6 +2223,14 @@ class funcParameter(floatParameter):
         self._parent = None
 
     def _set_params(self, params):
+        """Split the input parameter list into tuples of parameter and attribute
+
+        Parameters
+        ----------
+        params : : iterable
+            List or tuple of parameter names.
+            Each can optionally also be a tuple including the attribute to access (default is ``quantity``)
+        """
         self._params = []
         self._attrs = []
         for p in params:
@@ -2263,7 +2269,9 @@ class funcParameter(floatParameter):
                 else:
                     break
             if len(self._parentlevel) < i + 1:
-                raise AttributeError(f"Cannot find parameter '{p}' in parent objects")
+                raise AttributeError(
+                    f"Cannot find parameter '{p}' in parent objects of parameter '{self.name}'"
+                )
 
     def _get(self):
         """Run the function and return the result
@@ -2271,7 +2279,7 @@ class funcParameter(floatParameter):
         Returns
         -------
         astropy.units.Quantity or None
-            If any input value is None or if the parentage is not yet specified, will return ``None``
+            If any input value is ``None`` or if the parentage is not yet specified, will return ``None``
             Otherwise will return the result of the function
 
         """
@@ -2316,7 +2324,7 @@ class funcParameter(floatParameter):
     def from_parfile_line(self, line):
         """Ignore reading from par file
 
-        For :class:`~pint.models.parameter.funcParameter`s,
-        they are for information only so are ignored on reading
+        For :class:`~pint.models.parameter.funcParameter` ,
+        it is for information only so is ignored on reading
         """
         return True
