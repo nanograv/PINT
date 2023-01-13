@@ -13,6 +13,8 @@ Function:
 
 has moved to :mod:`pint.simulation`.
 """
+
+import contextlib
 import copy
 import gzip
 import pickle
@@ -340,16 +342,12 @@ def load_pickle(toafilename, picklefilename=None):
 
     lf = None
     for fn in picklefilenames:
-        try:
+        with contextlib.suppress(IOError, pickle.UnpicklingError, ValueError):
             with gzip.open(fn, "rb") as f:
                 lf = pickle.load(f)
-        except (IOError, pickle.UnpicklingError, ValueError):
-            pass
-        try:
+        with contextlib.suppress(IOError, pickle.UnpicklingError, ValueError):
             with open(fn, "rb") as f:
                 lf = pickle.load(f)
-        except (IOError, pickle.UnpicklingError, ValueError):
-            pass
     if lf is not None:
         lf.was_pickled = True
         return lf
@@ -530,12 +528,12 @@ def _parse_TOA_line(line, fmt="Unknown"):
         phaseoffset = float(line[55:62])
         if phaseoffset != 0:
             raise ValueError(
-                "Cannot interpret Parkes format with phaseoffset=%f yet" % phaseoffset
+                f"Cannot interpret Parkes format with phaseoffset={phaseoffset} yet"
             )
         d["error"] = float(line[63:71])
         d["obs"] = get_observatory(line[79].upper()).name
     elif fmt == "ITOA":
-        raise RuntimeError("TOA format '%s' not implemented yet" % fmt)
+        raise RuntimeError(f"TOA format '{fmt}' not implemented yet")
     elif fmt in ["Blank", "Comment"]:
         pass
     else:
@@ -2252,10 +2250,8 @@ class TOAs:
             # the TOA object, to prevent mixing.
             if (self.ephem is not None) and (ephem != self.ephem):
                 log.error(
-                    "Ephemeris provided to compute_posvels {0} is different than "
-                    "TOAs object ephemeris {1}! Using posvels ephemeris.".format(
-                        ephem, self.ephem
-                    )
+                    f"Ephemeris provided to compute_posvels {ephem} is different than "
+                    f"TOAs object ephemeris {self.ephem}! Using posvels ephemeris."
                 )
         if planets is None:
             planets = self.planets
