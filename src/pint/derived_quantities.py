@@ -761,7 +761,7 @@ def sini(mp: u.Msun, mc: u.Msun, pb: u.d, x: u.cm):
     """
 
     return (
-        (const.G / const.c**3) ** (-1.0 / 3)
+        (const.G) ** (-1.0 / 3)
         * (pb / 2 / np.pi) ** (-2.0 / 3)
         * x
         * (mp + mc) ** (2.0 / 3)
