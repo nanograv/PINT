@@ -200,7 +200,7 @@ def make_fake_toas_uniform(
     error=1 * u.us,
     add_noise=False,
     wideband=False,
-    wb_dm_error=1e-4 * pint.dmu,
+    wideband_dm_error=1e-4 * pint.dmu,
     name="fake",
     include_bipm=False,
     include_gps=True,
@@ -292,7 +292,7 @@ def make_fake_toas_uniform(
     ts.table["error"] = error
 
     if wideband:
-        ts = update_fake_dms(model, ts, wb_dm_error, add_noise)
+        ts = update_fake_dms(model, ts, wideband_dm_error, add_noise)
 
     return make_fake_toas(ts, model=model, add_noise=add_noise, name=name)
 
@@ -305,7 +305,7 @@ def make_fake_toas_fromMJDs(
     error=1 * u.us,
     add_noise=False,
     wideband=False,
-    wb_dm_error=1e-4 * pint.dmu,
+    wideband_dm_error=1e-4 * pint.dmu,
     name="fake",
     include_bipm=False,
     include_gps=True,
@@ -332,7 +332,7 @@ def make_fake_toas_fromMJDs(
     wideband : astropy.units.Quantity, optional
         Whether to include wideband DM values with each TOA; default is
         not to include any DM information
-    wb_dm_error : astropy.units.Quantity
+    wideband_dm_error : astropy.units.Quantity
         uncertainty to attach to each DM measurement
     name : str, optional
         Name for the TOAs (goes into the flags)
@@ -380,7 +380,7 @@ def make_fake_toas_fromMJDs(
     ts.table["error"] = error
 
     if wideband:
-        ts = update_fake_dms(model, ts, wb_dm_error, add_noise)
+        ts = update_fake_dms(model, ts, wideband_dm_error, add_noise)
 
     return make_fake_toas(ts, model=model, add_noise=add_noise, name=name)
 

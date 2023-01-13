@@ -142,11 +142,13 @@ def test_jump_everything_wideband():
         f["pp_dm"] = "15.0"
         f["pp_dme"] = "1e-4"
     model.free_params = ["JUMP1", "F0", "DM"]
+
     fitter = pint.fitter.WidebandTOAFitter(toas, model)
     with pytest.warns(pint.fitter.DegeneracyWarning, match=r".*degeneracy.*Offset\b"):
         fitter.fit_toas(threshold=1e-14)
     for p in fitter.model.free_params:
         assert not np.isnan(fitter.model[p].value)
+
     fitter = pint.fitter.WidebandTOAFitter(toas, model)
     with pytest.warns(pint.fitter.DegeneracyWarning, match=r".*degeneracy.*JUMP1\b"):
         fitter.fit_toas(threshold=1e-14)
@@ -186,7 +188,7 @@ def test_null_vector(Fitter):
         obs="barycenter",
         freq=1400.0 * u.MHz,
         wideband=True,
-        wb_dm_error=1e-4 * u.pc * u.cm**-3,
+        wideband_dm_error=1e-4 * u.pc * u.cm**-3,
     )
     fitter = Fitter(toas, model)
     with pytest.warns(
