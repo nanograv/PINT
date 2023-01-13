@@ -408,7 +408,7 @@ def get_TOAs_list(
     t.commands = [] if commands is None else commands
     t.filename = filename
     t.hashes = {} if hashes is None else hashes
-    if not any(["clkcorr" in f for f in t.table["flags"]]):
+    if all("clkcorr" not in f for f in t.table["flags"]):
         t.apply_clock_corrections(
             include_gps=include_gps,
             include_bipm=include_bipm,
@@ -1552,9 +1552,7 @@ class TOAs:
 
         # there may be a more elegant way to do this
         dm_data, valid_data = self.get_flag_value("pp_dm", as_type=float)
-        if valid_data == []:
-            return False
-        return True
+        return valid_data != []
 
     def get_all_flags(self):
         """Return a list of all the flags used by any TOA."""
