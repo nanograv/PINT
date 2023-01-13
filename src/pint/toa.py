@@ -378,9 +378,9 @@ def save_pickle(toas, picklefilename=None):
         )
     elif toas.filename is not None:
         if isinstance(toas.filename, (str, Path)):
-            picklefilename = str(toas.filename) + ".pickle.gz"
+            picklefilename = f"{str(toas.filename)}.pickle.gz"
         else:
-            picklefilename = toas.filename[0] + ".pickle.gz"
+            picklefilename = f"{toas.filename[0]}.pickle.gz"
     else:
         raise ValueError("TOA pickle method needs a (single) filename.")
     with gzip.open(picklefilename, "wb") as f:
@@ -407,10 +407,7 @@ def get_TOAs_list(
     t = TOAs(toalist=toa_list)
     t.commands = [] if commands is None else commands
     t.filename = filename
-    if hashes is None:
-        t.hashes = {}
-    else:
-        t.hashes = hashes
+    t.hashes = {} if hashes is None else hashes
     if not any(["clkcorr" in f for f in t.table["flags"]]):
         t.apply_clock_corrections(
             include_gps=include_gps,
@@ -632,10 +629,7 @@ def format_toa_line(
             if hasattr(v, "unit"):
                 v = v.value
             flag = str(flag)
-            if flag.startswith("-"):
-                flagstring += " %s %s" % (flag, v)
-            else:
-                flagstring += " -%s %s" % (flag, v)
+            flagstring += f" {flag} {v}" if flag.startswith("-") else f" -{flag} {v}"
         # Now set observatory code. Use obs.name unless overridden by tempo2_code
         try:
             obscode = obs.tempo2_code
@@ -664,7 +658,7 @@ def format_toa_line(
             freq = 0.0 * u.MHz
         if obs.tempo_code is None:
             raise ValueError(
-                "Observatory {} does not have 1-character tempo_code!".format(obs.name)
+                f"Observatory {obs.name} does not have 1-character tempo_code!"
             )
         if dm != 0.0 * pint.dmu:
             out = obs.tempo_code + " %13s%9.3f%20s%9.2f                %9.4f\n" % (
@@ -907,7 +901,7 @@ def _cluster_by_gaps(t, gap):
 
 class FlagDict(MutableMapping):
     def __init__(self, *args, **kwargs):
-        self.store = dict()
+        self.store = {}
         self.update(dict(*args, **kwargs))
 
     @staticmethod
@@ -923,7 +917,7 @@ class FlagDict(MutableMapping):
         if not isinstance(k, str):
             raise ValueError(f"flag {k} must be a string")
         if k.startswith("-"):
-            raise ValueError(f"flags should be stored without their leading -")
+            raise ValueError("flags should be stored without their leading -")
         if not FlagDict._key_re.match(k):
             raise ValueError(f"flag {k} is not a valid flag")
 
@@ -1069,10 +1063,7 @@ class TOA:
                 scale = site.timescale
             # First build a time without a location
             # Note that when scale is UTC, must use pulsar_mjd format!
-            if scale.lower() == "utc":
-                fmt = "pulsar_mjd"
-            else:
-                fmt = "mjd"
+            fmt = "pulsar_mjd" if scale.lower() == "utc" else "mjd"
             t = time.Time(arg1, arg2, scale=scale, format=fmt, precision=9)
 
         # Now assign the site location to the Time, for use in the TDB conversion
@@ -1129,7 +1120,7 @@ class TOA:
             + f": {self.error.value:6.3f} {self.error.unit} error at '{self.obs}' at {self.freq.value:.4f} {self.freq.unit}"
         )
         if self.flags:
-            s += " " + str(self.flags)
+            s += f" {str(self.flags)}"
         return s
 
     def as_line(self, format="Tempo2", name=None, dm=0 * pint.dmu):
@@ -1373,10 +1364,7 @@ class TOAs:
             if len(index) != 2:
                 raise ValueError("Invalid indexing")
             a, b = index
-            if isinstance(a, str):
-                column, subset = a, b
-            else:
-                column, subset = b, a
+            column, subset = (a, b) if isinstance(a, str) else (b, a)
         elif isinstance(index, str):
             column = index
         else:
@@ -1407,12 +1395,9 @@ class TOAs:
                 r.table = r.table[[index]]
                 return r
             else:
-                raise ValueError("Unable to index TOAs with {}".format(index))
+                raise ValueError(f"Unable to index TOAs with {index}")
         elif column in self.table.columns:
-            if subset is None:
-                return self.table[column]
-            else:
-                return self.table[column, subset]
+            return self.table[column] if subset is None else self.table[column, subset]
         else:
             r = []
             if subset is None:
@@ -1461,10 +1446,7 @@ class TOAs:
             if len(index) != 2:
                 raise ValueError("Invalid indexing")
             a, b = index
-            if isinstance(a, str):
-                column, subset = a, b
-            else:
-                column, subset = b, a
+            column, subset = (a, b) if isinstance(a, str) else (b, a)
         elif isinstance(index, str):
             column = index
         else:
@@ -1911,9 +1893,7 @@ class TOAs:
         if "pulse_number" in self.table.colnames:
             del self.table["pulse_number"]
         else:
-            log.warning(
-                f"Requested deleting of pulse numbers, but they are not present"
-            )
+            log.warning("Requested deleting of pulse numbers, but they are not present")
 
     def adjust_TOAs(self, delta):
         """Apply a time delta to TOAs.
@@ -2235,7 +2215,7 @@ class TOAs:
                     grpmjds = time.Time(self.table[grp]["mjd"], location=locs)
 
             grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem)
-            tdbs[grp] = np.asarray([t for t in grptdbs])
+            tdbs[grp] = np.asarray(list(grptdbs))
         # Now add the new columns to the table
         col_tdb = table.Column(name="tdb", data=tdbs)
         col_tdbld = table.Column(name="tdbld", data=[t.tdb.mjd_long for t in tdbs])
@@ -2289,15 +2269,11 @@ class TOAs:
         self.planets = planets
         if planets:
             log.debug(
-                "Computing PosVels of observatories, Earth and planets, using {}".format(
-                    ephem
-                )
+                f"Computing PosVels of observatories, Earth and planets, using {ephem}"
             )
 
         else:
-            log.debug(
-                "Computing PosVels of observatories and Earth, using {}".format(ephem)
-            )
+            log.debug(f"Computing PosVels of observatories and Earth, using {ephem}")
         # Remove any existing columns
         cols_to_remove = ["ssb_obs_pos", "ssb_obs_vel", "obs_sun_pos"]
         for c in cols_to_remove:
@@ -2305,7 +2281,7 @@ class TOAs:
                 log.debug("Column {0} already exists. Removing...".format(c))
                 self.table.remove_column(c)
         for p in all_planets:
-            name = "obs_" + p + "_pos"
+            name = f"obs_{p}_pos"
             if name in self.table.colnames:
                 log.debug("Column {0} already exists. Removing...".format(name))
                 self.table.remove_column(name)
@@ -2332,7 +2308,7 @@ class TOAs:
         if planets:
             plan_poss = {}
             for p in all_planets:
-                name = "obs_" + p + "_pos"
+                name = f"obs_{p}_pos"
                 plan_poss[name] = table.Column(
                     name=name,
                     data=np.zeros((self.ntoas, 3), dtype=np.float64),
@@ -2357,7 +2333,7 @@ class TOAs:
             obs_sun_pos[grp, :] = sun_obs.pos.T.to(u.km)
             if planets:
                 for p in all_planets:
-                    name = "obs_" + p + "_pos"
+                    name = f"obs_{p}_pos"
                     dest = p
                     pv = objPosVel_wrt_SSB(dest, tdb, ephem) - ssb_obs
                     plan_poss[name][grp, :] = pv.pos.T.to(u.km)
@@ -2414,7 +2390,7 @@ class TOAs:
             # get velocity vector from coordinate frame
             ssb_obs_vel_ecl[grp, :] = coord.velocity.d_xyz.T.to(u.km / u.s)
         col = ssb_obs_vel_ecl
-        log.debug("Adding column " + col.name)
+        log.debug(f"Adding column {col.name}")
         self.table.add_column(col)
 
 
