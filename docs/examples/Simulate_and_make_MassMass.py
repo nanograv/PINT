@@ -204,7 +204,7 @@ m = get_model(f)
 
 # %%
 # roughly the parameters from Fonseca, Stairs, Thorsett (2014)
-tstart = astropy.time.Time(1990, format="jyear")
+tstart = astropy.time.Time(1990.25, format="jyear")
 tstop = astropy.time.Time(2014, format="jyear")
 # this is the error on each TOA
 error = 5 * u.us
