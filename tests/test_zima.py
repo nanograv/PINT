@@ -59,6 +59,8 @@ def test_wb_result_with_noise(tmp_path):
         sys.stdout = saved_stdout
 
     model, toas = get_model_and_toas(parfile, timfile)
+    assert toas.is_wideband()
+
     res = Residuals(toas, model)
     redchiq = res.reduced_chi2
     assert redchiq < 2 and redchiq > 0.5
