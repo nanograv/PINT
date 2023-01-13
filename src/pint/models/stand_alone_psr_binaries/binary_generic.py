@@ -20,7 +20,7 @@ SECS_PER_JUL_YEAR = SECS_PER_DAY * 365.25
 class PSR_BINARY:
     """A base (generic) object for psr binary models.
 
-    In this class, a set of generally used binary paramters and several commonly used
+    In this class, a set of generally used binary parameters and several commonly used
     calculations are defined. For each binary model, the specific parameters and
     calculations are defined in the subclass.
 
@@ -29,7 +29,7 @@ class PSR_BINARY:
     values and input time is not initialized. The update those values, method
     `.update_input()` should be used.
 
-    Example of build a sepcific binary model class::
+    Example of build a specific binary model class::
 
         >>> from pint.models.stand_alone_psr_binaries.pulsar_binary import PSR_BINARY
         >>> import numpy
@@ -57,14 +57,14 @@ class PSR_BINARY:
                     pass
         >>> # To build a model instance
         >>> binary_foo = foo()
-        >>> # binary_foo class has the defualt parameter value without toa input.
+        >>> # binary_foo class has the default parameter value without toa input.
         >>> # Update the toa input and parameters
         >>> t = numpy.linspace(54200.0,55000.0,800)
-        >>> paramters_dict = {'A0':0.5,'ECC':0.01}
-        >>> binary_foo.update_input(t, paramters_dict)
+        >>> parameters_dict = {'A0':0.5,'ECC':0.01}
+        >>> binary_foo.update_input(t, parameters_dict)
         >>> # Now the binary delay and derivatives can be computed.
 
-    To acess the binary model class from pint platform, a pint pulsar binary
+    To access the binary model class from pint platform, a pint pulsar binary
     wrapper is needed. See docstrings in the source code of pint/models/pulsar_binary
     class `PulsarBinary`.
 
@@ -80,7 +80,7 @@ class PSR_BINARY:
     @param XPBDOT:      Rate of change of orbital period minus GR prediction
     @param OMDOT:       Time-derivative of OMEGA [0.0]
 
-    Intermedia variables calculation method are given here:
+    Intermediate variables calculation method are given here:
     Eccentric Anomaly               E (not parameter ECC)
     Mean Anomaly                    M
     True Anomaly                    nu
@@ -166,7 +166,6 @@ class PSR_BINARY:
         # update parameters
         d_list = ["barycentric_toa", "obs_pos", "psr_pos"]
         parameters = {key: value for key, value in updates.items() if key not in d_list}
-
         self.set_param_values(parameters)
 
         # Switch the cache off
@@ -206,7 +205,6 @@ class PSR_BINARY:
                         if hasattr(bm_par, "unit")
                         else valDict[par]
                     )
-
                 else:
                     val = valDict[par]
                 setattr(self, parname, val)
@@ -217,8 +215,8 @@ class PSR_BINARY:
             self.binary_params.append(parameter)
             if not hasattr(defaultValue, "unit") and unit:
                 log.warning(
-                    "Binary parameters' value generally has unit."
-                    " Treat parameter " + parameter + " as a diemension less unit."
+                    f"Binary parameter values generally have units."
+                    f" Treating parameter {parameter} as a dimensionless quantity."
                 )
                 self.param_default_value[parameter] = defaultValue * u.Unit("")
             else:
@@ -310,7 +308,8 @@ class PSR_BINARY:
             elif hasattr(attr, "__call__"):  # If attr is a method
                 U[i] = attr().unit
             else:
-                raise TypeError(f"{type(attr)} can not get unit")
+                raise TypeError(f"{type(attr)}can not get unit")
+
             # U[i] = 1*U[i]
 
             # commonU = list(set(U[i].unit.bases).intersection([u.rad,u.deg]))
@@ -323,7 +322,7 @@ class PSR_BINARY:
 
         yU = U[0]
         xU = U[1]
-        # Call derivtive functions
+        # Call derivative functions
         derU = yU / xU
 
         if hasattr(self, f"d_{y}_d_{x}"):
@@ -388,7 +387,7 @@ class PSR_BINARY:
         return (barycentricTOA - T0).to("second")
 
     def ecc(self):
-        """Calculate ecctricity with EDOT"""
+        """Calculate eccentricity with EDOT"""
         if hasattr(self, "_tt0"):
             return self.ECC + (self.tt0 * self.EDOT).decompose()
         return self.ECC
@@ -434,7 +433,7 @@ class PSR_BINARY:
         return self.orbits_cls.pbprime()
 
     def d_pb_d_par(self, par):
-        """derivative for pbprime respect to bianry parameter.
+        """derivative for pbprime respect to binary parameter.
 
         Parameters
         ----------
@@ -443,7 +442,7 @@ class PSR_BINARY:
 
         Returns
         -------
-        Derivitve of M respect to par
+        Derivative of M respect to par
         """
         if par not in self.binary_params:
             errorMesg = f"{par} is not in binary parameter list."
@@ -464,7 +463,7 @@ class PSR_BINARY:
         return self.orbits_cls.orbit_phase()
 
     def d_M_d_par(self, par):
-        """derivative for M respect to bianry parameter.
+        """derivative for M respect to binary parameter.
 
         Parameters
         ----------
@@ -473,7 +472,7 @@ class PSR_BINARY:
 
         Returns
         -------
-        Derivitve of M respect to par
+        Derivative of M respect to par
         """
         if par not in self.binary_params:
             errorMesg = f"{par} is not in binary parameter list."
@@ -493,7 +492,7 @@ class PSR_BINARY:
             self._E = self.compute_eccentric_anomaly(self.ecc(), self.M())
         return self._E
 
-    # Analytically calculate derivtives.
+    # Analytically calculate derivatives.
 
     def d_E_d_T0(self):
         """Analytic derivative
@@ -517,7 +516,7 @@ class PSR_BINARY:
         return self.tt0 * self.d_E_d_ECC()
 
     def d_E_d_par(self, par):
-        """derivative for E respect to bianry parameter.
+        """derivative for E respect to binary parameter.
 
         Parameters
         ----------
@@ -526,7 +525,7 @@ class PSR_BINARY:
 
         Returns
         -------
-        Derivitve of E respect to par
+        Derivative of E respect to par
         """
         if par not in self.binary_params:
             errorMesg = f"{par} is not in binary parameter list."
@@ -535,7 +534,7 @@ class PSR_BINARY:
         par_obj = getattr(self, par)
         try:
             func = getattr(self, f"d_E_d_{par}")
-        except AttributeError:
+        except:
             if par in self.orbits_cls.orbit_params:
                 d_M_d_par = self.d_M_d_par(par)
                 return d_M_d_par / (1.0 - np.cos(self.E()) * self.ecc())
@@ -613,7 +612,7 @@ class PSR_BINARY:
         return self.tt0 * self.d_nu_d_ECC()
 
     def d_nu_d_par(self, par):
-        """derivative for nu respect to bianry parameter.
+        """derivative for nu respect to binary parameter.
 
         Parameters
         ----------
@@ -621,7 +620,7 @@ class PSR_BINARY:
              parameter name
         Returns
         -------
-        Derivitve of nu respect to par
+        Derivative of nu respect to par
         """
         if par not in self.binary_params:
             errorMesg = f"{par} is not in binary parameter list."
@@ -634,6 +633,7 @@ class PSR_BINARY:
         except AttributeError:
             if par in self.orbits_cls.orbit_params:
                 return self.d_nu_d_E() * self.d_E_d_par(par)
+
             nu = self.nu()
             return np.zeros(len(self.tt0)) * nu.unit / par_obj.unit
 
@@ -652,10 +652,10 @@ class PSR_BINARY:
              parameter name
         Returns
         -------
-        Derivitve of omega respect to par
+        Derivative of omega respect to par
         """
         if par not in self.binary_params:
-            errorMesg = f"{par}is not in binary parameter list."
+            errorMesg = f"{par} is not in binary parameter list."
             raise ValueError(errorMesg)
 
         par_obj = getattr(self, par)
