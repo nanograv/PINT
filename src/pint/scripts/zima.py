@@ -128,7 +128,7 @@ def main(argv=None):
             fuzz=args.fuzzdays * u.d,
             add_noise=args.addnoise,
             wideband=args.wideband,
-            wb_dm_error=args.dmerror * pint.dmu,
+            wideband_dm_error=args.dmerror * pint.dmu,
         )
     else:
         log.info(f"Reading initial TOAs from {args.inputtim}")
