@@ -76,6 +76,7 @@ class BinaryDD(PulsarBinary):
         self.add_param(
             floatParameter(
                 name="DTH",
+                aliases=["DTHETA"],
                 value=0.0,
                 units="",
                 description="Relativistic deformation of the orbit",
