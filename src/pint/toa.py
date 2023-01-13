@@ -2493,7 +2493,7 @@ def merge_TOAs(TOAs_list, strict=False):
             # some data have pulse_numbers but not all
             # put in NaN
             for i, tt in enumerate(TOAs_list):
-                if not "pulse_number" in tt.table.colnames:
+                if "pulse_number" not in tt.table.colnames:
                     log.warning(
                         f"'pulse_number' not present in data set {i}: inserting NaNs"
                     )
@@ -2504,11 +2504,11 @@ def merge_TOAs(TOAs_list, strict=False):
         else:
             # some data have positions/velocities but not all
             # compute as needed
-            for i, tt in enumerate(TOAs_list):
-                if not (
-                    ("ssb_obs_pos" in tt.table.colnames)
-                    and ("ssb_obs_vel" in tt.table.colnames)
-                    and ("obs_sun_pos" in tt.table.colnames)
+            for tt in TOAs_list:
+                if (
+                    "ssb_obs_pos" not in tt.table.colnames
+                    or "ssb_obs_vel" not in tt.table.colnames
+                    or "obs_sun_pos" not in tt.table.colnames
                 ):
                     tt.compute_posvels()
     if has_tdb.any() and not has_tdb.all():
@@ -2517,10 +2517,8 @@ def merge_TOAs(TOAs_list, strict=False):
         else:
             # some data have TDBs but not all
             # compute as needed
-            for i, tt in enumerate(TOAs_list):
-                if not (
-                    ("tdb" in tt.table.colnames) and ("tdbld" in tt.table.colnames)
-                ):
+            for tt in TOAs_list:
+                if "tdb" not in tt.table.colnames or "tdbld" not in tt.table.colnames:
                     tt.compute_TDBs()
 
     # Use a copy of the first TOAs instance as the base for the joined object
@@ -2529,8 +2527,7 @@ def merge_TOAs(TOAs_list, strict=False):
     nt.filename = []
     for xx in [tt.filename for tt in TOAs_list]:
         if type(xx) is list:
-            for yy in xx:
-                nt.filename.append(yy)
+            nt.filename.extend(iter(xx))
         else:
             nt.filename.append(xx)
     # We do not ensure that the command list is flat
@@ -2553,14 +2550,14 @@ def merge_TOAs(TOAs_list, strict=False):
         # but it should be more helpful
         message = []
         for i, colnames in enumerate(all_colnames[1:]):
-            extra_columns = [x for x in colnames if not x in all_colnames[0]]
-            missing_columns = [x for x in all_colnames[0] if not x in colnames]
-            if len(extra_columns) > 0:
+            extra_columns = [x for x in colnames if x not in all_colnames[0]]
+            missing_columns = [x for x in all_colnames[0] if x not in colnames]
+            if extra_columns:
                 message.append(
                     f"File {i+1} has extra column(s): {','.join(extra_columns)}"
                 )
 
-            if len(missing_columns) > 0:
+            if missing_columns:
                 message.append(
                     f"File {i+1} has missing column(s): {','.join(missing_columns)}"
                 )
@@ -2571,7 +2568,7 @@ def merge_TOAs(TOAs_list, strict=False):
     nt.max_index = start_index - 1
     nt.hashes = {}
     for tt in TOAs_list:
-        nt.hashes.update(tt.hashes)
+        nt.hashes |= tt.hashes
     # This sets a flag that indicates that we have merged TOAs instances
     nt.merged = True
 
