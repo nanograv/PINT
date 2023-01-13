@@ -194,12 +194,13 @@ class DDGRmodel(DDmodel):
         return self._k
 
     def d_k_d_MTOT(self):
+        print("d_k_d_MTOT")
         return (
             2
             * (c.G**2 * self._n**2 / self.MTOT) ** (1.0 / 3)
             / c.c**2
             / (1 - self.ecc() ** 2)
-        )
+        ).to(u.rad / u.Msun)
 
     def d_k_d_ECC(self):
         return (
@@ -234,6 +235,10 @@ class DDGRmodel(DDmodel):
             + self.nu() * (self.XOMDOT / (2 * np.pi * u.rad / self.PB))
         ).to(u.rad)
 
+    def d_omega_d_MTOT(self):
+        print("d_omega_d_MTOT")
+        return (self.nu() * self.d_k_d_MTOT()).to(u.rad / u.Msun)
+
     def d_omega_d_XOMDOT(self):
         """Derivative.
 
@@ -251,6 +256,7 @@ class DDGRmodel(DDmodel):
         return self._SINI
 
     def d_SINI_d_MTOT(self):
+        print("d_SINI_d_MTOT")
         return (
             (2.0 / 3)
             * self.a1()
@@ -295,6 +301,7 @@ class DDGRmodel(DDmodel):
         )
 
     def d_GAMMA_d_MTOT(self):
+        print("d_GAMMA_d_MTOT")
         return (
             -self.M2
             * self.ecc()
@@ -336,6 +343,7 @@ class DDGRmodel(DDmodel):
         return self._PBDOT
 
     def d_PBDOT_d_MTOT(self):
+        print("d_PBDOT_d_MTOT")
         return (
             -(64 * np.pi / 5 / c.c**5)
             * (c.G**5 * self._n**5 / self.MTOT**4) ** (1.0 / 3)
@@ -390,6 +398,7 @@ class DDGRmodel(DDmodel):
         return self.XOMDOT
 
     def d_OMDOT_d_par(self, par):
+        print(f"d_OMDOT_d_{par}")
         par_obj = getattr(self, par)
         if par == "XOMDOT":
             return lambda: np.ones(len(self.tt0)) * (u.deg / u.yr) / par_obj.unit
@@ -402,6 +411,7 @@ class DDGRmodel(DDmodel):
         return self._DR
 
     def d_DR_d_MTOT(self):
+        print("d_DR_d_MTOT")
         return (
             2
             * (c.G**2 * self._n**2 / self.MTOT**7) ** (1.0 / 3)
@@ -433,7 +443,8 @@ class DDGRmodel(DDmodel):
     def DTH(self):
         return self._DTH
 
-    def d_DTH_d_M(self):
+    def d_DTH_d_MTOT(self):
+        print("d_DTH_d_MTOT")
         return (
             (c.G**2 * self._n**2 / self.MTOT**7) ** (1.0 / 3)
             * (7 * self.MTOT**2 + self.MTOT * self.M2 + 2 * self.M2**2)
