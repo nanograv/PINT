@@ -383,6 +383,23 @@ class DDGRmodel(DDmodel):
     def d_PBDOT_d_XPBDOT(self):
         return np.ones(len(self.tt0)) * u.Unit("")
 
+    def d_E_d_MTOT(self):
+        """Eccentric anomaly has MTOT dependence through PBDOT and Kepler's equation"""
+        print("d_E_d_MTOT")
+        d_M_d_MTOT = (
+            -2 * np.pi * self.tt0**2 / (2 * self.PB**2) * self.d_PBDOT_d_MTOT()
+        )
+        return d_M_d_MTOT / (1.0 - np.cos(self.E()) * self.ecc())
+
+    def d_nu_d_MTOT(self):
+        """True anomaly nu has MTOT dependence through PBDOT"""
+        print("d_nu_d_MTOT")
+        return self.d_nu_d_E() * self.d_E_d_MTOT()
+
+    def d_PB_d_MTOT(self):
+        print("d_PB_d_MTOT")
+        return self.tt0 * self.d_PBDOT_d_MTOT()
+
     def d_PBDOT_d_par(self, par):
         par_obj = getattr(self, par)
         try:
@@ -480,6 +497,27 @@ class DDGRmodel(DDmodel):
 
     def eTheta(self):
         return self._eth
+
+    def d_er_d_MTOT(self):
+        print("d_er_d_MTOT")
+        return self.ecc() * self.d_DR_d_MTOT()
+
+    def d_er_d_M2(self):
+        return self.ecc() * self.d_DR_d_M2()
+
+    def d_eTheta_d_MTOT(self):
+        print("d_eTheta_d_MTOT")
+        return self.ecc() * self.d_DTH_d_MTOT()
+
+    def d_eTheta_d_M2(self):
+        return self.ecc() * self.d_DTH_d_M2()
+
+    def d_beta_d_MTOT(self):
+        print("d_beta_d_MTOT")
+        return self.d_beta_d_DTH() * self.d_DTH_d_MTOT()
+
+    def d_beta_d_M2(self):
+        return self.d_beta_d_DTH() * self.d_DTH_d_M2()
 
     @SINI.setter
     def SINI(self, val):
