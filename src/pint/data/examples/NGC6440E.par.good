@@ -10,10 +10,10 @@ FINISH           54187.588
 DM              224.113798  1            0.034939
 SOLARN0               0.00
 EPHEM               DE421
-CLK                 UTC(NIST)   
+CLK                 TT(BIPM2021)   
 UNITS               TDB
 TIMEEPH             FB90
-T2CMETHOD           TEMPO
+T2CMETHOD           IAU2000B
 CORRECT_TROPOSPHERE N
 PLANET_SHAPIRO      N
 DILATEFREQ          N
