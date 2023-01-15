@@ -230,14 +230,60 @@ class DDGRmodel(DDmodel):
     def omega(self):
         # add in any excess OMDOT from the XOMDOT term
         return (
-            self.OM
-            + self.nu() * self.k
-            + self.nu() * (self.XOMDOT / (2 * np.pi * u.rad / self.PB))
+            self.OM + self.nu() * self.k + self.nu() * (self.XOMDOT / (self._n * u.rad))
         ).to(u.rad)
+
+    def d_omega_d_par(self, par):
+        """derivative for omega respect to user input Parameter.
+
+        Calculates::
+
+           if par is not 'OM','OMDOT','XOMDOT','PB'
+           dOmega/dPar =  k*dAe/dPar
+           k = OMDOT/n
+
+        Parameters
+        ----------
+        par : string
+             parameter name
+
+        Returns
+        -------
+        Derivative of omega respect to par
+        """
+        print(f"In d_omega_d_par {par}")
+
+        if par not in self.binary_params:
+            errorMesg = f"{par} is not in binary parameter list."
+            raise ValueError(errorMesg)
+        par_obj = getattr(self, par)
+
+        PB = self.pb()
+        OMDOT = self.OMDOT
+        OM = self.OM
+        nu = self.nu()
+        if par in ["OM", "OMDOT", "XOMDOT", "MTOT"]:
+            dername = f"d_omega_d_{par}"
+            return getattr(self, dername)()
+        elif par in self.orbits_cls.orbit_params:
+            d_nu_d_par = self.d_nu_d_par(par)
+            d_pb_d_par = self.d_pb_d_par(par)
+            return d_nu_d_par * self.k + d_pb_d_par * nu * OMDOT.to(
+                u.rad / u.second
+            ) / (2 * np.pi * u.rad)
+        else:
+            print(f"All else fails, {par}")
+            # For parameters only in nu
+            return (self.k * self.d_nu_d_par(par)).to(
+                OM.unit / par_obj.unit, equivalencies=u.dimensionless_angles()
+            )
 
     def d_omega_d_MTOT(self):
         print("d_omega_d_MTOT")
-        return (self.nu() * self.d_k_d_MTOT()).to(u.rad / u.Msun)
+        return (
+            (self.k + (self.XOMDOT / (self._n * u.rad))) * self.d_nu_d_MTOT()
+            + self.nu() * self.d_k_d_MTOT()
+        ).to(u.rad / u.Msun)
 
     def d_omega_d_XOMDOT(self):
         """Derivative.
@@ -248,7 +294,7 @@ class DDGRmodel(DDmodel):
             n = 2*pi/PB
             dOmega/dXOMDOT = PB/2*pi*nu
         """
-        return self.nu() * self.pb().to(u.s) / (2 * np.pi * u.rad)
+        return self.nu() / (self._n * u.rad)
 
     ####################
     @property
@@ -399,6 +445,10 @@ class DDGRmodel(DDmodel):
     def d_PB_d_MTOT(self):
         print("d_PB_d_MTOT")
         return self.tt0 * self.d_PBDOT_d_MTOT()
+
+    def d_n_d_MTOT(self):
+        print("d_n_d_MTOT")
+        return (-2 * np.pi / self.PB**2) * self.d_PB_d_MTOT()
 
     def d_PBDOT_d_par(self, par):
         par_obj = getattr(self, par)
