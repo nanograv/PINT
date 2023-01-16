@@ -443,7 +443,8 @@ class DDGRmodel(DDmodel):
 
     def d_GAMMA_d_M2(self):
         log.debug("d_GAMMA_d_M2")
-        return (
+        # Note that this equation in Tempo2 may have the wrong sign
+        return -(
             c.G
             / c.c**2
             * (
