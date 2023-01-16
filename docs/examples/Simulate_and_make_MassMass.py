@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.8
+#       jupytext_version: 1.14.4
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -53,7 +53,7 @@ def plot_contour(mp, mc, quantity, target, uncertainty, color, nsigma=3, **kwarg
     mc : astropy.units.Quantity
         array of companion masses (y-axis)
     quantity : astropy.units.Quantity
-        2D array of the prediction as a function of mp and mc.  Shape is (len(mc), len(mp))
+        2D array of the prediction as a function of mp and mc. Shape is (len(mc), len(mp))
     target : astropy.units.Quantity
         best-fit value of the prediction (say from a PINT fit).
     uncertainty : astropy.units.Quantity
