@@ -186,6 +186,78 @@ class DDGRmodel(DDmodel):
 
     ####################
     @property
+    def arr(self):
+        return self._arr
+
+    def d_arr_d_M2(self):
+        """From tempo2 DDGR
+        Keeping the constants"""
+        an0 = (np.sqrt(c.G * self.MTOT / self.arr**3)).decompose()
+        fact1 = (
+            (c.G / c.c**2)
+            * (self.MTOT / (2 * self.arr))
+            * ((self.MTOT - self.M2) * self.M2 / self.MTOT**2 - 9)
+        ).decompose()
+        fact2 = c.G * c.c * (3 * self.MTOT / (2 * self.arr**4)) * (1.0 + fact1)
+        fact3 = (
+            (c.c)
+            * (self.MTOT / 2 / self.arr)
+            * (
+                self.M2 / self.MTOT**2
+                - 2 * (self.MTOT - self.M2) * self.M2 / self.MTOT**3
+            )
+        )
+        fact4 = c.c * c.G * (1 + fact1) * 3 * self.MTOT / (2 * self.arr**4 * an0)
+        fact5 = c.c * an0 * fact1 / self.arr
+
+        denumm = c.c**3 * (1 + fact1) / (2 * self.arr**3 * an0) + an0 * (
+            (c.c**3 / c.G) * fact1 / self.MTOT + fact3
+        )
+
+        denomm = fact4 + fact5
+
+        dnum = an0 * (self.MTOT - 2 * self.M2) / (2 * self.arr * self.MTOT)
+        denom = c.c * an0 * fact1 / self.arr + fact2 / an0
+        darrdm2 = (c.G / c.c) * (dnum / denom)
+        darrdm = (c.G / c.c**2) * (denumm / denomm)
+
+        return darrdm2
+
+    def d_arr_d_MTOT(self):
+        """From tempo2 DDGR
+        Keeping the constants"""
+        an0 = (np.sqrt(c.G * self.MTOT / self.arr**3)).decompose()
+        fact1 = (
+            (c.G / c.c**2)
+            * (self.MTOT / (2 * self.arr))
+            * ((self.MTOT - self.M2) * self.M2 / self.MTOT**2 - 9)
+        ).decompose()
+        fact2 = c.G * c.c * (3 * self.MTOT / (2 * self.arr**4)) * (1.0 + fact1)
+        fact3 = (
+            (c.c)
+            * (self.MTOT / 2 / self.arr)
+            * (
+                self.M2 / self.MTOT**2
+                - 2 * (self.MTOT - self.M2) * self.M2 / self.MTOT**3
+            )
+        )
+        fact4 = c.c * c.G * (1 + fact1) * 3 * self.MTOT / (2 * self.arr**4 * an0)
+        fact5 = c.c * an0 * fact1 / self.arr
+
+        denumm = c.c**3 * (1 + fact1) / (2 * self.arr**3 * an0) + an0 * (
+            (c.c**3 / c.G) * fact1 / self.MTOT + fact3
+        )
+
+        denomm = fact4 + fact5
+
+        dnum = an0 * (self.MTOT - 2 * self.M2) / (2 * self.arr * self.MTOT)
+        denom = c.c * an0 * fact1 / self.arr + fact2 / an0
+        darrdm2 = (c.G / c.c) * (dnum / denom)
+        darrdm = (c.G / c.c**2) * (denumm / denomm)
+        return darrdm
+
+    ####################
+    @property
     def k(self):
         """Precessing rate assuming GR
 
@@ -195,12 +267,16 @@ class DDGRmodel(DDmodel):
 
     def d_k_d_MTOT(self):
         print("d_k_d_MTOT")
-        return (
-            2
-            * (c.G**2 * self._n**2 / self.MTOT) ** (1.0 / 3)
-            / c.c**2
-            / (1 - self.ecc() ** 2)
-        ).to(u.rad / u.Msun)
+        # return (
+        #     2
+        #     * (c.G**2 * self._n**2 / self.MTOT) ** (1.0 / 3)
+        #     / c.c**2
+        #     / (1 - self.ecc() ** 2)
+        # ).to(u.rad / u.Msun)
+        return self.k / self.MTOT - self.k * self.d_arr_d_MTOT() / self.arr
+
+    def d_k_d_M2(self):
+        return -self.k * self.d_arr_d_M2() / self.arr
 
     def d_k_d_ECC(self):
         return (
@@ -303,18 +379,26 @@ class DDGRmodel(DDmodel):
 
     def d_SINI_d_MTOT(self):
         print("d_SINI_d_MTOT")
+        # return (
+        #     (2.0 / 3)
+        #     * self.a1()
+        #     * (self._n**2 / c.G / self.MTOT) ** (1.0 / 3)
+        #     / self.M2
+        # )
         return (
-            (2.0 / 3)
-            * self.a1()
-            * (self._n**2 / c.G / self.MTOT) ** (1.0 / 3)
-            / self.M2
-        )
+            -(self.MTOT * self.A1 / (self.arr * self.M2))
+            * (-1 / self.MTOT + self.d_arr_d_MTOT() / self.arr)
+        ).decompose()
 
     def d_SINI_d_M2(self):
         return (
-            -(self.a1() * (self.MTOT**2 * self._n**2 / c.G) ** (1.0 / 3))
-            / self.M2**2
-        )
+            -(self.MTOT * self.a1() / (self.arr * self.M2))
+            * (1.0 / self.M2 + self.d_arr_d_M2() / self.arr)
+        ).decompose()
+        # return (
+        #     -(self.a1() * (self.MTOT**2 * self._n**2 / c.G) ** (1.0 / 3))
+        #     / self.M2**2
+        # )
 
     def d_SINI_d_PB(self):
         return (
@@ -348,20 +432,45 @@ class DDGRmodel(DDmodel):
 
     def d_GAMMA_d_MTOT(self):
         print("d_GAMMA_d_MTOT")
-        return (
-            -self.M2
+        # return (
+        #     -self.M2
+        #     * self.ecc()
+        #     * c.G ** (2.0 / 3)
+        #     * (self.MTOT + 4 * self.M2)
+        #     / (3 * self.MTOT ** (7.0 / 3) * c.c**2 * self._n ** (1.0 / 3))
+        # )
+        return (c.G / c.c**2) * (
+            (
+                (1 / (self.arr * self.MTOT))
+                - (self.MTOT + self.M2) / (self.arr * self.MTOT**2)
+                - (self.MTOT + self.M2)
+                * self.d_arr_d_MTOT()
+                / (self.arr**2 * self.MTOT)
+            )
             * self.ecc()
-            * c.G ** (2.0 / 3)
-            * (self.MTOT + 4 * self.M2)
-            / (3 * self.MTOT ** (7.0 / 3) * c.c**2 * self._n ** (1.0 / 3))
+            * self.M2
+            / self._n
         )
 
     def d_GAMMA_d_M2(self):
+        # return -(
+        #     self.ecc()
+        #     * c.G ** (2.0 / 3)
+        #     * (self.MTOT + 2 * self.M2)
+        #     / (c.c**2 * self.MTOT ** (4.0 / 3) * self._n ** (1.0 / 3))
+        # )
         return (
-            self.ecc()
-            * c.G ** (2.0 / 3)
-            * (self.MTOT + 2 * self.M2)
-            / (c.c**2 * self.MTOT ** (4.0 / 3) * self._n ** (1.0 / 3))
+            c.G
+            / c.c**2
+            * (
+                (
+                    self.M2 * (self.MTOT + self.M2) * self.d_arr_d_M2() / self.arr**2
+                    - (self.MTOT + 2 * self.M2) / self.arr
+                )
+                * self.ecc()
+                / self._n
+                / self.MTOT
+            ).decompose()
         )
 
     def d_GAMMA_d_PB(self):
@@ -479,15 +588,23 @@ class DDGRmodel(DDmodel):
 
     def d_DR_d_MTOT(self):
         print("d_DR_d_MTOT")
+        # return (
+        #     2
+        #     * (c.G**2 * self._n**2 / self.MTOT**7) ** (1.0 / 3)
+        #     * (self.MTOT**2 + 2 * self.M2**2 / 3)
+        #     / c.c**2
+        # )
         return (
-            2
-            * (c.G**2 * self._n**2 / self.MTOT**7) ** (1.0 / 3)
-            * (self.MTOT**2 + 2 * self.M2**2 / 3)
-            / c.c**2
+            -self.DR / self.MTOT
+            - self.DR * self.d_arr_d_MTOT() / self.arr
+            + (c.G / c.c**2) * 6 / self.arr
         )
 
     def d_DR_d_M2(self):
-        return -2 * (c.G * self._n / self.MTOT**2) ** (2.0 / 3) * self.M2 / c.c**2
+        # return -2 * (c.G * self._n / self.MTOT**2) ** (2.0 / 3) * self.M2 / c.c**2
+        return -self.DR * self.d_arr_d_M2() / self.arr - (
+            c.G / c.c**2
+        ) * 2 * self.M2 / (self.arr * self.MTOT)
 
     def d_DR_d_PB(self):
         return (
@@ -512,19 +629,27 @@ class DDGRmodel(DDmodel):
 
     def d_DTH_d_MTOT(self):
         print("d_DTH_d_MTOT")
+        # return (
+        #     (c.G**2 * self._n**2 / self.MTOT**7) ** (1.0 / 3)
+        #     * (7 * self.MTOT**2 + self.MTOT * self.M2 + 2 * self.M2**2)
+        #     / 3
+        #     / c.c**2
+        # )
         return (
-            (c.G**2 * self._n**2 / self.MTOT**7) ** (1.0 / 3)
-            * (7 * self.MTOT**2 + self.MTOT * self.M2 + 2 * self.M2**2)
-            / 3
-            / c.c**2
+            -self.DTH / self.MTOT
+            - self.DTH * self.d_arr_d_MTOT() / self.arr
+            + (c.G / c.c**2) * (7 * self.MTOT - self.M2) / (self.arr * self.MTOT)
         )
 
     def d_DTH_d_M2(self):
-        return (
-            -((c.G * self._n / self.MTOT**2) ** (2.0 / 3))
-            * (self.MTOT + self.M2)
-            / c.c**2
-        )
+        # return (
+        #     -((c.G * self._n / self.MTOT**2) ** (2.0 / 3))
+        #     * (self.MTOT + self.M2)
+        #     / c.c**2
+        # )
+        return -self.DTH * self.d_arr_d_M2() / self.arr - (c.G / c.c**2) * (
+            self.MTOT + self.M2
+        ) / (self.arr * self.MTOT)
 
     def d_DTH_d_PB(self):
         return (
