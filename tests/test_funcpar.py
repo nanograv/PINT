@@ -63,7 +63,7 @@ def test_funcpardefineandadd():
     assert np.isclose(m.AGE.quantity, (1 * u.Hz / 2 / (3e-10 * u.Hz / u.s)).to(u.yr))
 
 
-def test_funcpar_notinparfile():
+def test_funcpar_commentedinparfile():
 
     m = get_model(io.StringIO(base_par))
 
@@ -78,8 +78,10 @@ def test_funcpar_notinparfile():
     m.components["Spindown"].add_param(p)
     m.F1.quantity = 3e-10 * u.Hz / u.s
 
-    out = str(m)
-    assert "AGE" not in out
+    out = str(m).split("\n")
+    for line in out:
+        if "AGE" in line:
+            assert line.startswith("#")
 
 
 def test_funcpar_inparfile():

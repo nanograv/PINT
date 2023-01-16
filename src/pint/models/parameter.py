@@ -2152,7 +2152,7 @@ class funcParameter(floatParameter):
     description : str, optional
         A short description of what this parameter means.
     inpar : bool, optional
-        Whether or not to include in par-file printouts
+        Whether to include in par-file printouts, or to comment out
     long_double : bool, optional, default False
         A flag specifying whether value is float or long double.
 
@@ -2338,6 +2338,8 @@ class funcParameter(floatParameter):
         return True
 
     def as_parfile_line(self, format="pint"):
-        if self.inpar:
-            return super().as_parfile_line(format=format)
-        return ""
+        return (
+            super().as_parfile_line(format=format)
+            if self.inpar
+            else f"# {super().as_parfile_line(format=format)}"
+        )
