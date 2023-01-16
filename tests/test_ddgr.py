@@ -190,3 +190,137 @@ class TestDDGR:
         )
         assert np.abs(fDDGR.model.M2.quantity - (Mc)) < 3 * fDDGR.model.M2.uncertainty
         assert np.abs(fDDGR.model.XPBDOT.quantity) < 3 * fDDGR.model.XPBDOT.uncertainty
+
+    def test_design_XOMDOT(self):
+        t = pint.simulation.make_fake_toas_uniform(
+            55000, 57000, 100, model=self.mDDGR, error=1 * u.us, add_noise=True
+        )
+        f = pint.fitter.Fitter.auto(t, self.mDDGR)
+        for p in f.model.free_params:
+            getattr(f.model, p).frozen = True
+        f.model.XOMDOT.frozen = False
+        f.model.XOMDOT.value = 0
+        f.fit_toas()
+        XOMDOT = 0 * u.deg / u.yr
+        dXOMDOT = 1e-6 * u.deg / u.yr
+        # move away from minimum
+        f.model.XOMDOT.quantity = XOMDOT + dXOMDOT
+        f.update_resids()
+        M, pars, units = f.model.designmatrix(f.toas)
+        # this is recalculating chi^2 for comparison
+        chi2start = (
+            ((f.resids.calc_time_resids() / f.toas.get_errors()).decompose()) ** 2
+        ).sum()
+        chi2pred = (
+            (
+                (
+                    (f.resids.calc_time_resids() - M[:, 1] * dXOMDOT.value / u.Hz)
+                    / f.toas.get_errors()
+                ).decompose()
+            )
+            ** 2
+        ).sum()
+        f.model.XOMDOT.quantity = XOMDOT + dXOMDOT * 2
+        f.update_resids()
+        chi2found = f.resids.calc_chi2()
+        assert np.isclose(chi2pred, chi2found, rtol=1e-2)
+
+    def test_design_XPBDOT(self):
+        t = pint.simulation.make_fake_toas_uniform(
+            55000, 57000, 100, model=self.mDDGR, error=1 * u.us, add_noise=True
+        )
+        f = pint.fitter.Fitter.auto(t, self.mDDGR)
+        for p in f.model.free_params:
+            getattr(f.model, p).frozen = True
+        f.model.XPBDOT.frozen = False
+        f.model.XPBDOT.value = 0
+        f.fit_toas()
+        XPBDOT = 0 * u.s / u.s
+        dXPBDOT = 1e-14 * u.s / u.s
+        # move away from minimum
+        f.model.XPBDOT.quantity = XPBDOT + dXPBDOT
+        f.update_resids()
+        M, pars, units = f.model.designmatrix(f.toas)
+        # this is recalculating chi^2 for comparison
+        chi2start = (
+            ((f.resids.calc_time_resids() / f.toas.get_errors()).decompose()) ** 2
+        ).sum()
+        chi2pred = (
+            (
+                (
+                    (f.resids.calc_time_resids() - M[:, 1] * dXPBDOT.value / u.Hz)
+                    / f.toas.get_errors()
+                ).decompose()
+            )
+            ** 2
+        ).sum()
+        f.model.XPBDOT.quantity = XPBDOT + dXPBDOT * 2
+        f.update_resids()
+        chi2found = f.resids.calc_chi2()
+        assert np.isclose(chi2pred, chi2found, rtol=1e-2)
+
+    def test_design_M2(self):
+        t = pint.simulation.make_fake_toas_uniform(
+            55000, 57000, 100, model=self.mDDGR, error=1 * u.us, add_noise=True
+        )
+        f = pint.fitter.Fitter.auto(t, self.mDDGR)
+        for p in f.model.free_params:
+            getattr(f.model, p).frozen = True
+        f.model.M2.frozen = False
+        f.fit_toas()
+        M2 = f.model.M2.quantity
+        dM2 = 1e-4 * u.Msun
+        # move away from minimum
+        f.model.M2.quantity = M2 + dM2
+        f.update_resids()
+        M, pars, units = f.model.designmatrix(f.toas)
+        # this is recalculating chi^2 for comparison
+        chi2start = (
+            ((f.resids.calc_time_resids() / f.toas.get_errors()).decompose()) ** 2
+        ).sum()
+        chi2pred = (
+            (
+                (
+                    (f.resids.calc_time_resids() - M[:, 1] * dM2.value / u.Hz)
+                    / f.toas.get_errors()
+                ).decompose()
+            )
+            ** 2
+        ).sum()
+        f.model.M2.quantity = M2 + dM2 * 2
+        f.update_resids()
+        chi2found = f.resids.calc_chi2()
+        assert np.isclose(chi2pred, chi2found, rtol=1e-2)
+
+    def test_design_MTOT(self):
+        t = pint.simulation.make_fake_toas_uniform(
+            55000, 57000, 100, model=self.mDDGR, error=1 * u.us, add_noise=True
+        )
+        f = pint.fitter.Fitter.auto(t, self.mDDGR)
+        for p in f.model.free_params:
+            getattr(f.model, p).frozen = True
+        f.model.MTOT.frozen = False
+        f.fit_toas()
+        MTOT = f.model.MTOT.quantity
+        dMTOT = 1e-5 * u.Msun
+        # move away from minimum
+        f.model.MTOT.quantity = MTOT + dMTOT
+        f.update_resids()
+        M, pars, units = f.model.designmatrix(f.toas)
+        # this is recalculating chi^2 for comparison
+        chi2start = (
+            ((f.resids.calc_time_resids() / f.toas.get_errors()).decompose()) ** 2
+        ).sum()
+        chi2pred = (
+            (
+                (
+                    (f.resids.calc_time_resids() - M[:, 1] * dMTOT.value / u.Hz)
+                    / f.toas.get_errors()
+                ).decompose()
+            )
+            ** 2
+        ).sum()
+        f.model.MTOT.quantity = MTOT + dMTOT * 2
+        f.update_resids()
+        chi2found = f.resids.calc_chi2()
+        assert np.isclose(chi2pred, chi2found, rtol=1e-2)
