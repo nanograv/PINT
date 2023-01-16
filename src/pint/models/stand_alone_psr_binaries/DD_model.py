@@ -837,7 +837,6 @@ class DDmodel(PSR_BINARY):
 
             decc_dpar = self.prtl_der("ecc", par)
             daDelay_decc = A0 * sOmega + B0 * cOmega
-
             return (
                 domega_dpar * daDelay_domega
                 + dnu_dpar * daDelay_dnu

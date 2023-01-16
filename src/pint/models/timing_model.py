@@ -1649,7 +1649,6 @@ class TimingModel:
             #                         d_Phase2/d_delay*d_delay/d_param
             #                       = (d_Phase1/d_delay + d_Phase2/d_delay) *
             #                         d_delay_d_param
-            log.debug(f"Design matrix d_delay_d_{param}")
             d_delay_d_p = self.d_delay_d_param(toas, param)
             dpdd_result = np.longdouble(np.zeros(toas.ntoas)) / u.second
             for dpddf in self.d_phase_d_delay_funcs:
@@ -1825,7 +1824,6 @@ class TimingModel:
                 M[:, ii] = 1.0 / F0.value
                 units.append(u.s / u.s)
             else:
-                log.debug(f"Getting design d_phase_d_{param}")
                 q = -self.d_phase_d_param(toas, delay, param)
                 the_unit = u.Unit("") / getattr(self, param).units
                 M[:, ii] = q.to_value(the_unit) / F0.value
