@@ -48,7 +48,7 @@ PLANET_SHAPIRO N
 """
 Mp = 1.4 * u.Msun
 Mc = 1.1 * u.Msun
-i = 85 * u.deg
+i = 45 * u.deg
 PB = 0.5 * u.day
 
 
@@ -119,7 +119,7 @@ class TestDDGR:
         DDGR_delay = self.mDDGR.binarymodel_delay(t, None)
         assert np.allclose(DD_delay, DDGR_delay)
 
-    def test_ddgrfit(self):
+    def test_ddgrfit_noMTOT(self):
         # set the PK parameters
         self.mDD.GAMMA.value = self.mDDGR.gamma.value
         self.mDD.PBDOT.value = self.mDDGR.pbdot.value
@@ -165,3 +165,28 @@ class TestDDGR:
         fDDGR.fit_toas()
         assert np.isclose(fDDGR.resids.calc_chi2(), chi2DDGR)
         assert np.isclose(fDDGR.model.M2.quantity, M2)
+
+    def test_ddgrfit(self):
+
+        t = pint.simulation.make_fake_toas_uniform(
+            55000, 57000, 100, model=self.mDDGR, error=1 * u.us, add_noise=True
+        )
+        fDDGR = pint.fitter.Fitter.auto(t, self.mDDGR)
+
+        fDDGR.model.M2.frozen = False
+        fDDGR.model.MTOT.frozen = False
+        # mDDGR.XOMDOT.frozen = False
+        fDDGR.model.XPBDOT.frozen = False
+
+        # start well away from best-fit
+        fDDGR.model.MTOT.quantity += 1e-4 * u.Msun
+        fDDGR.model.M2.quantity += 1e-2 * u.Msun
+        fDDGR.update_resids()
+
+        fDDGR.fit_toas()
+        assert (
+            np.abs(fDDGR.model.MTOT.quantity - (Mp + Mc))
+            < 3 * fDDGR.model.MTOT.uncertainty
+        )
+        assert np.abs(fDDGR.model.M2.quantity - (Mc)) < 3 * fDDGR.model.M2.uncertainty
+        assert np.abs(fDDGR.model.XPBDOT.quantity) < 3 * fDDGR.model.XPBDOT.uncertainty
