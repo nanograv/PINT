@@ -4,7 +4,9 @@ This module if for wrapping standalone binary models so that they work
 as PINT timing models.
 """
 
+
 import astropy.units as u
+import contextlib
 import numpy as np
 from astropy.time import Time
 from astropy.coordinates import SkyCoord
@@ -179,10 +181,8 @@ class PulsarBinary(DelayComponent):
         # Setup the FBX orbits if FB is set.
         # TODO this should use a smarter way to set up orbit.
         FBX_mapping = self.get_prefix_mapping_component("FB")
-        FBXs = {}
-        for fbn in FBX_mapping.values():
-            FBXs[fbn] = getattr(self, fbn).quantity
-        if any([v is not None for v in FBXs.values()]):
+        FBXs = {fbn: getattr(self, fbn).quantity for fbn in FBX_mapping.values()}
+        if any(v is not None for v in FBXs.values()):
             if self.FB0.value is None:
                 raise ValueError("Some FBn parameters are set but FB0 is not.")
             for fb_name, fb_value in FBXs.items():
@@ -237,13 +237,13 @@ class PulsarBinary(DelayComponent):
             par = getattr(self, p)
             if par.value is None:
                 # try to search if there is any class method that computes it
-                method_name = p.lower() + "_func"
+                method_name = f"{p.lower()}_func"
                 try:
                     par_method = getattr(self.binary_instance, method_name)
                 except AttributeError:
                     raise MissingParameter(
                         self.binary_model_name,
-                        p + " is required for '%s'." % self.binary_model_name,
+                        f"{p} is required for '{self.binary_model_name}'.",
                     )
                 par_method()
 
@@ -365,21 +365,22 @@ class PulsarBinary(DelayComponent):
         return self.binary_instance.d_binarydelay_d_par(param)
 
     def print_par(self, format="pint"):
-        if self._parent is not None:
-            # Check if the binary name are the same as BINARY parameter
-            if self._parent.BINARY.value != self.binary_model_name:
-                raise TimingModelError(
-                    f"Parameter BINARY {self._parent.BINARY.value}"
-                    f" does not match the binary"
-                    f" component {self.binary_model_name}"
-                )
-            result = self._parent.BINARY.as_parfile_line(format=format)
+        if self._parent is None:
+            result = f"BINARY {self.binary_model_name}\n"
+        elif self._parent.BINARY.value != self.binary_model_name:
+            raise TimingModelError(
+                f"Parameter BINARY {self._parent.BINARY.value}"
+                f" does not match the binary"
+                f" component {self.binary_model_name}"
+            )
         else:
-            result = "BINARY {0}\n".format(self.binary_model_name)
+            result = self._parent.BINARY.as_parfile_line(format=format)
+
         for p in self.params:
             par = getattr(self, p)
             if par.quantity is not None:
                 result += par.as_parfile_line(format=format)
+
         return result
 
     def FBX_unit(self, n):
@@ -438,15 +439,12 @@ class PulsarBinary(DelayComponent):
         dt_integer_orbits = PB * n_orbits + PB * PBDOT * n_orbits**2 / 2.0
         self.T0.quantity = self.T0.quantity + dt_integer_orbits
 
-        try:
+        with contextlib.suppress(AttributeError):
             if self.FB2.quantity is not None:
                 log.warning(
                     "Ignoring orbital frequency derivatives higher than FB1"
                     "in computing new T0; a model fit should resolve this"
                 )
-        except AttributeError:
-            pass
-
         # Update PB or FB0, FB1, etc.
         if isinstance(self.binary_instance.orbits_cls, bo.OrbitPB):
             dPB = PBDOT * dt_integer_orbits
