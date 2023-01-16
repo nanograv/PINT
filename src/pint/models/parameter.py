@@ -2151,6 +2151,8 @@ class funcParameter(floatParameter):
         "''" as its unit.
     description : str, optional
         A short description of what this parameter means.
+    inpar : bool, optional
+        Whether or not to include in par-file printouts
     long_double : bool, optional, default False
         A flag specifying whether value is float or long double.
 
@@ -2192,6 +2194,7 @@ class funcParameter(floatParameter):
         func=None,
         params=None,
         units=None,
+        inpar=False,
         long_double=False,
         unit_scale=False,
         scale_factor=None,
@@ -2209,6 +2212,7 @@ class funcParameter(floatParameter):
         self.scale_threshold = scale_threshold
         self._unit_scale = False
         self.unit_scale = unit_scale
+        self.inpar = inpar
 
         # these should be fixed
         self.uncertainty = None
@@ -2328,3 +2332,8 @@ class funcParameter(floatParameter):
         it is for information only so is ignored on reading
         """
         return True
+
+    def as_parfile_line(self, format="pint"):
+        if self.inpar:
+            return super().as_parfile_line(format=format)
+        return ""

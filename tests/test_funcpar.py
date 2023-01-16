@@ -63,6 +63,44 @@ def test_funcpardefineandadd():
     assert np.isclose(m.AGE.quantity, (1 * u.Hz / 2 / (3e-10 * u.Hz / u.s)).to(u.yr))
 
 
+def test_funcpar_notinparfile():
+
+    m = get_model(io.StringIO(base_par))
+
+    p = pint.models.parameter.funcParameter(
+        name="AGE",
+        description="Spindown age",
+        params=("F0", "F1"),
+        func=lambda f0, f1: f0 / 2 / f1,
+        units="yr",
+        inpar=False,
+    )
+    m.components["Spindown"].add_param(p)
+    m.F1.quantity = 3e-10 * u.Hz / u.s
+
+    out = str(m)
+    assert "AGE" not in out
+
+
+def test_funcpar_inparfile():
+
+    m = get_model(io.StringIO(base_par))
+
+    p = pint.models.parameter.funcParameter(
+        name="AGE",
+        description="Spindown age",
+        params=("F0", "F1"),
+        func=lambda f0, f1: f0 / 2 / f1,
+        units="yr",
+        inpar=True,
+    )
+    m.components["Spindown"].add_param(p)
+    m.F1.quantity = 3e-10 * u.Hz / u.s
+
+    out = str(m)
+    assert "AGE" in out
+
+
 def test_funcpardefine_notquantity():
 
     m = get_model(io.StringIO(base_par))
