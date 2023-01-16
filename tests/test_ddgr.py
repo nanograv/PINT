@@ -48,7 +48,7 @@ PLANET_SHAPIRO N
 """
 Mp = 1.4 * u.Msun
 Mc = 1.1 * u.Msun
-i = 45 * u.deg
+i = 75 * u.deg
 PB = 0.5 * u.day
 
 
@@ -146,7 +146,6 @@ class TestDDGR:
         # cannot fit for MTOT yet
         fDDGR.model.M2.frozen = False
         fDDGR.model.MTOT.frozen = True
-
         fDD.fit_toas()
         chi2DD = fDD.resids.calc_chi2()
 
