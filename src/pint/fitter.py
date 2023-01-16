@@ -2042,6 +2042,7 @@ class WLSFitter(Fitter):
             fitperrs = self.model.get_params_dict("free", "uncertainty")
             # Define the linear system
             M, params, units = self.get_designmatrix()
+            log.debug("Done with design matrix")
             # Get residuals and TOA uncertainties in seconds
             self.update_resids()
             residuals = self.resids.time_resids.to(u.s).value

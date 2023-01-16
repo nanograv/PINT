@@ -324,7 +324,7 @@ class PSR_BINARY:
         xU = U[1]
         # Call derivative functions
         derU = yU / xU
-        print(f"Looking for d_{y}_d_{x}: {hasattr(self, f'd_{y}_d_{x}')}")
+        log.debug(f"Looking for d_{y}_d_{x}: {hasattr(self, f'd_{y}_d_{x}')}")
         if hasattr(self, f"d_{y}_d_{x}"):
             dername = f"d_{y}_d_{x}"
             result = getattr(self, dername)()

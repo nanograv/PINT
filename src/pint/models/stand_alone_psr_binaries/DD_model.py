@@ -74,10 +74,7 @@ class DDmodel(PSR_BINARY):
     @property
     def k(self):
         # separate this into a property so it can be calculated correctly in DDGR
-        PB = self.pb()
-        PB = PB.to("second")
-        OMDOT = self.OMDOT
-        return OMDOT.to(u.rad / u.second) / (2 * np.pi * u.rad / PB)
+        return self.OMDOT.to(u.rad / u.second) / (2 * np.pi * u.rad / self.pb())
 
     # DDmodel special omega.
     def omega(self):
@@ -90,11 +87,7 @@ class DDmodel(PSR_BINARY):
 
         (T. Damour and N. Deruelle (1986) equation between Eq 16 Eq 17)
         """
-        PB = self.pb()
-        PB = PB.to("second")
-        OM = self.OM
-        nu = self.nu()
-        return (OM + nu * self.k).to(u.rad)
+        return (self.OM + self.nu() * self.k).to(u.rad)
 
     def d_omega_d_par(self, par):
         """derivative for omega respect to user input Parameter.
