@@ -2205,6 +2205,10 @@ class funcParameter(floatParameter):
         self.name = name
         self.description = description
         self._func = func
+        if self._func.__name__ == "<lambda>":
+            log.warning(
+                f"May not be able to pickle function {self._func}: use a named function if this is required"
+            )
         self._set_params(params)
         self.units = "" if units is None else units
         self.long_double = long_double
