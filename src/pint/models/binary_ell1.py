@@ -116,12 +116,12 @@ class BinaryELL1(PulsarBinary):
             funcParameter(
                 name="ECC",
                 units="",
+                aliases=["E"],
                 description="Eccentricity",
                 params=("EPS1", "EPS2"),
                 func=_eps_to_e,
             )
         )
-
         self.add_param(
             funcParameter(
                 name="OM",

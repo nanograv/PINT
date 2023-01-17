@@ -361,7 +361,7 @@ class PSR_BINARY:
             e = np.longdouble(eccentricity).value
         else:
             e = eccentricity
-
+        print(f"e: {e}")
         if any(e < 0) or any(e >= 1):
             raise ValueError("Eccentricity should be in the range of [0,1).")
 

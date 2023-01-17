@@ -405,6 +405,9 @@ class PulsarBinary(DelayComponent):
                     if par in self.internal_params:
                         pint_bin_name = par
                 binObjpar = getattr(self._parent, pint_bin_name)
+                # make sure we aren't passing along derived parameters to the binary instance
+                if isinstance(binObjpar, funcParameter):
+                    continue
                 instance_par = getattr(self.binary_instance, par)
                 if hasattr(instance_par, "value"):
                     instance_par_val = instance_par.value
