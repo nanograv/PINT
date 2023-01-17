@@ -8,6 +8,7 @@ from pint.models.stand_alone_psr_binaries.DD_model import DDmodel
 from pint.models.stand_alone_psr_binaries.DDS_model import DDSmodel
 from pint.models.stand_alone_psr_binaries.DDGR_model import DDGRmodel
 import pint.derived_quantities
+from pint.models.timing_model import TimingModelError
 
 
 class BinaryDD(PulsarBinary):
@@ -272,18 +273,21 @@ class BinaryDDGR(BinaryDD):
         #     if hasattr(self, p) and not getattr(self, p).frozen:
         #         raise ValueError(f"PK parameter {p} cannot be unfrozen in DDGR model")
 
+    def update_binary_object(self, toas, acc_delay=None):
+        super().update_binary_object(toas, acc_delay)
+        self.binary_instance._updatePK()
+
     def print_par(self, format="pint"):
-        if self._parent is not None:
-            # Check if the binary name are the same as BINARY parameter
-            if self._parent.BINARY.value != self.binary_model_name:
-                raise TimingModelError(
-                    f"Parameter BINARY {self._parent.BINARY.value}"
-                    f" does not match the binary"
-                    f" component {self.binary_model_name}"
-                )
-            result = self._parent.BINARY.as_parfile_line(format=format)
-        else:
+        if self._parent is None:
             result = "BINARY {0}\n".format(self.binary_model_name)
+        elif self._parent.BINARY.value != self.binary_model_name:
+            raise TimingModelError(
+                f"Parameter BINARY {self._parent.BINARY.value}"
+                f" does not match the binary"
+                f" component {self.binary_model_name}"
+            )
+        else:
+            result = self._parent.BINARY.as_parfile_line(format=format)
         for p in self.params:
             par = getattr(self, p)
             if par.quantity is not None:
