@@ -2155,6 +2155,9 @@ class funcParameter(floatParameter):
         Whether to include in par-file printouts, or to comment out
     long_double : bool, optional, default False
         A flag specifying whether value is float or long double.
+    aliases : list, optional
+        An optional list of strings specifying alternate names that can also
+        be accepted for this parameter.
 
     Examples
     -------
@@ -2185,6 +2188,8 @@ class funcParameter(floatParameter):
     -----
     Defining functions through ``lambda`` functions may result in unpickleable models
 
+    Future versions may include derivative functions to calculate uncertainties.
+
     """
 
     def __init__(
@@ -2199,6 +2204,8 @@ class funcParameter(floatParameter):
         unit_scale=False,
         scale_factor=None,
         scale_threshold=None,
+        aliases=None,
+        **kwargs,
     ):
 
         self.paramType = "funcParameter"
@@ -2217,12 +2224,14 @@ class funcParameter(floatParameter):
         self._unit_scale = False
         self.unit_scale = unit_scale
         self.inpar = inpar
+        self.aliases = [] if aliases is None else aliases
+        for arg in kwargs:
+            setattr(self, arg, kwargs[arg])
 
         # these should be fixed
         self.uncertainty = None
         self.frozen = True
         self.use_alias = None
-        self.aliases = []
         self.is_prefix = False
         self.continuous = True
 

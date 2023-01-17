@@ -11,7 +11,12 @@ from astropy.coordinates import SkyCoord
 from loguru import logger as log
 
 from pint import ls
-from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
+from pint.models.parameter import (
+    MJDParameter,
+    floatParameter,
+    prefixParameter,
+    funcParameter,
+)
 from pint.models.stand_alone_psr_binaries import binary_orbits as bo
 from pint.models.timing_model import (
     DelayComponent,
@@ -21,6 +26,14 @@ from pint.models.timing_model import (
 )
 from pint.utils import taylor_horner_deriv
 from pint.pulsar_ecliptic import PulsarEcliptic
+
+
+# def _p_to_f(p):
+#     return 1 / p
+
+
+# def _pdot_to_fdot(p, pdot):
+#     return -pdot / p**2
 
 
 class PulsarBinary(DelayComponent):
@@ -190,6 +203,59 @@ class PulsarBinary(DelayComponent):
             self.binary_instance.orbits_cls = bo.OrbitFBX(
                 self.binary_instance, list(FBXs.keys())
             )
+            # Note: if we are happy to use these to show alternate parameterizations then this can be uncommented
+
+            # # remove the PB parameterization, replace with functions
+            # self.remove_param("PB")
+            # self.remove_param("PBDOT")
+            # self.add_param(
+            #     funcParameter(
+            #         name="PB",
+            #         units=u.day,
+            #         description="Orbital period",
+            #         long_double=True,
+            #         params=("FB0",),
+            #         func=_p_to_f,
+            #     )
+            # )
+            # self.add_param(
+            #     funcParameter(
+            #         name="PBDOT",
+            #         units=u.day / u.day,
+            #         description="Orbital period derivative respect to time",
+            #         unit_scale=True,
+            #         scale_factor=1e-12,
+            #         scale_threshold=1e-7,
+            #         params=("FB0", "FB1"),
+            #         func=_pdot_to_fdot,
+            #     )
+            # )
+        # Note: if we are happy to use these to show alternate parameterizations then this can be uncommented
+        # else:
+        #     # remove the FB parameterization, replace with functions
+        #     self.remove_param("FB0")
+        #     self.add_param(
+        #         funcParameter(
+        #             name="FB0",
+        #             units="1/s^1",
+        #             description="0th time derivative of frequency of orbit",
+        #             aliases=["FB"],
+        #             long_double=True,
+        #             params=("PB",),
+        #             func=_p_to_f,
+        #         )
+        #     )
+        #     self.add_param(
+        #         funcParameter(
+        #             name="FB1",
+        #             units="1/s^2",
+        #             description="1st time derivative of frequency of orbit",
+        #             long_double=True,
+        #             params=("PB", "PBDOT"),
+        #             func=_pdot_to_fdot,
+        #         )
+        #     )
+
         # Update the parameters in the stand alone binary
         self.update_binary_object(None)
 
@@ -224,7 +290,10 @@ class PulsarBinary(DelayComponent):
                 raise ValueError(
                     f"Binary period PB must be non-negative ({self.PB.quantity})"
                 )
-            if self.FB0.value is not None:
+            if self.FB0.value is not None and not (
+                isinstance(self.FB0, funcParameter)
+                or isinstance(self.PB, funcParameter)
+            ):
                 raise ValueError("Model cannot have values for both FB0 and PB")
         if self.FB0.value is not None and self.FB0.value <= 0:
             raise ValueError(
@@ -415,7 +484,7 @@ class PulsarBinary(DelayComponent):
             new_epoch = Time(new_epoch, scale="tdb", format="mjd", precision=9)
 
         # Get PB and PBDOT from model
-        if self.PB.quantity is not None:
+        if self.PB.quantity is not None and not isinstance(self.PB, funcParameter):
             PB = self.PB.quantity
             if self.PBDOT.quantity is not None:
                 PBDOT = self.PBDOT.quantity
