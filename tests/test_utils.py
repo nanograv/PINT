@@ -28,7 +28,7 @@ from numpy.testing import assert_allclose, assert_array_equal
 from pinttestdata import datadir
 
 import pint.models as tm
-from pint import fitter, toa
+from pint import fitter, toa, dmu
 from pint.pulsar_mjd import (
     jds_to_mjds,
     jds_to_mjds_pulsar,
@@ -52,6 +52,7 @@ from pint.utils import (
     taylor_horner_deriv,
     find_prefix_bytime,
     merge_dmx,
+    convert_dispersion_measure,
 )
 
 
@@ -149,7 +150,7 @@ def test_interesting_lines(lines, goodlines, comments):
 def test_interesting_lines_input_validation():
     """Check it lets the user know about invalid comment markers."""
     with pytest.raises(ValueError):
-        for l in interesting_lines([""], comments=" C "):
+        for _ in interesting_lines([""], comments=" C "):
             pass
 
 
@@ -690,13 +691,13 @@ def test_Ftest_statistical(dof_1, dof_2, seed):
     """
     random = np.random.default_rng(0)
     Fs = []
-    for i in range(10000):
+    for _ in range(10000):
         x = random.standard_normal(dof_1)
         Fs.append(FTest((x**2).sum(), dof_1, (x[:dof_2] ** 2).sum(), dof_2))
     threshold = 0.01
     assert (
         scipy.stats.binom(len(Fs), threshold).ppf(0.01)
-        < sum(1 for F in Fs if F < threshold)
+        < sum(F < threshold for F in Fs)
         < scipy.stats.binom(len(Fs), threshold).ppf(0.99)
     )
 
@@ -835,3 +836,10 @@ def test_merge_dmx():
     newindex = merge_dmx(model, 1, 2, value="mean")
     print(model, newindex)
     assert getattr(model, f"DMX_{newindex:04d}").value == 1.5
+
+
+def test_convert_dm():
+    dm = 10 * dmu
+    dm_codata = convert_dispersion_measure(dm)
+
+    assert np.isfinite(dm_codata)

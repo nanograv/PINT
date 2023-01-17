@@ -64,6 +64,7 @@ from pint.utils import (
     open_or_use,
     colorize,
 )
+from pint.derived_quantities import dispersion_slope
 
 
 __all__ = [
@@ -127,11 +128,9 @@ class MissingTOAs(ValueError):
         if isinstance(parameter_names, str):
             parameter_names = [parameter_names]
         if len(parameter_names) == 1:
-            msg = f"Parameter {parameter_names[0]} does not correspond to any TOAs"
+            msg = f"Parameter {parameter_names[0]} does not correspond to any TOAs: you might need to run `model.find_empty_masks(toas, freeze=True)`"
         elif len(parameter_names) > 1:
-            msg = (
-                f"Parameters {' '.join(parameter_names)} do not correspond to any TOAs"
-            )
+            msg = f"Parameters {' '.join(parameter_names)} do not correspond to any TOAs: you might need to run `model.find_empty_masks(toas, freeze=True)`"
         else:
             raise ValueError("Incorrect attempt to construct MissingTOAs")
         super().__init__(msg)
@@ -1290,6 +1289,11 @@ class TimingModel:
         for dm_f in self.dm_funcs[1::]:
             dm += dm_f(toas)
         return dm
+
+    def total_dispersion_slope(self, toas):
+        """Calculate the dispersion slope from all the dispersion-type components."""
+        dm_tot = self.total_dm(toas)
+        return dispersion_slope(dm_tot)
 
     def toa_covariance_matrix(self, toas):
         """Get the TOA covariance matrix for noise models.
@@ -2522,7 +2526,7 @@ class TimingModel:
         bad_parameters = []
         for maskpar in self.get_params_of_type_top("maskParameter"):
             par = getattr(self, maskpar)
-            if "TNEQ" in str(par.name) or par.frozen:
+            if par.frozen:
                 continue
             if len(par.select_toa_mask(toas)) == 0:
                 bad_parameters.append(f"'{maskpar}, {par.key}, {par.key_value}'")
@@ -2533,6 +2537,32 @@ class TimingModel:
                 bad_parameters += e.parameter_names
         if bad_parameters:
             raise MissingTOAs(bad_parameters)
+
+    def find_empty_masks(self, toas, freeze=False):
+        """Find unfrozen mask parameters with no TOAs before trying to fit
+
+        Parameters
+        ----------
+        toas : pint.toa.TOAs
+        freeze : bool, optional
+            Should the parameters with on TOAs be frozen
+
+        Returns
+        -------
+        list
+            Parameters with no TOAs
+        """
+        bad_parameters = []
+        for maskpar in self.get_params_of_type_top("maskParameter"):
+            par = getattr(self, maskpar)
+            if par.frozen:
+                continue
+            if len(par.select_toa_mask(toas)) == 0:
+                bad_parameters.append(maskpar)
+                if freeze:
+                    log.info(f"'{maskpar}' has no TOAs so freezing")
+                    getattr(self, maskpar).frozen = True
+        return bad_parameters
 
     def setup(self):
         """Run setup methods on all components."""

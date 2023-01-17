@@ -21,14 +21,18 @@ from pint.utils import (
     taylor_horner_deriv,
     get_prefix_timeranges,
 )
+from pint import DMconst
 
 # This value is cited from Duncan Lorimer, Michael Kramer, Handbook of Pulsar
 # Astronomy, Second edition, Page 86, Note 1
-DMconst = 1.0 / 2.41e-4 * u.MHz * u.MHz * u.s * u.cm**3 / u.pc
+# DMconst = 1.0 / 2.41e-4 * u.MHz * u.MHz * u.s * u.cm**3 / u.pc
 
 
 class Dispersion(DelayComponent):
-    """A base dispersion timing model."""
+    """A base dispersion timing model.
+
+    See https://nanograv-pint.readthedocs.io/en/latest/explanation.html#dispersion-measure
+    for an explanation on the dispersion delay and dispersion measure."""
 
     def __init__(self):
         super().__init__()
@@ -80,6 +84,9 @@ class Dispersion(DelayComponent):
         for dm_f in self.dm_value_funcs:
             dm += dm_f(toas)
         return dm
+
+    def dispersion_slope_value(self, toas):
+        return
 
     def d_delay_d_dmparam(self, toas, param_name, acc_delay=None):
         """Derivative of delay wrt to DM parameter.

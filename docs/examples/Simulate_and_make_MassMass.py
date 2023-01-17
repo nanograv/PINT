@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.8
+#       jupytext_version: 1.14.4
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -27,7 +27,6 @@ import astropy.time
 import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib.cm as cm
-import copy
 import io
 
 import pint.fitter
@@ -54,7 +53,7 @@ def plot_contour(mp, mc, quantity, target, uncertainty, color, nsigma=3, **kwarg
     mc : astropy.units.Quantity
         array of companion masses (y-axis)
     quantity : astropy.units.Quantity
-        2D array of the prediction as a function of mp,mc.  Shape is (len(mc),len(mp))
+        2D array of the prediction as a function of mp and mc. Shape is (len(mc), len(mp))
     target : astropy.units.Quantity
         best-fit value of the prediction (say from a PINT fit).
     uncertainty : astropy.units.Quantity
@@ -72,7 +71,7 @@ def plot_contour(mp, mc, quantity, target, uncertainty, color, nsigma=3, **kwarg
     return plt.contour(
         mp.value,
         mc.value,
-        quantity,
+        quantity.value,
         [(target - nsigma * uncertainty).value, (target + nsigma * uncertainty).value],
         colors=color,
         **kwargs,
@@ -205,7 +204,7 @@ m = get_model(f)
 
 # %%
 # roughly the parameters from Fonseca, Stairs, Thorsett (2014)
-tstart = astropy.time.Time(1990, format="jyear")
+tstart = astropy.time.Time(1990.25, format="jyear")
 tstop = astropy.time.Time(2014, format="jyear")
 # this is the error on each TOA
 error = 5 * u.us

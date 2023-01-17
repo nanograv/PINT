@@ -95,6 +95,10 @@ class TestResidualBuilding:
         )
         assert np.all(dm_res.resids - dm_res.resids.mean() == dm_res_noweight.resids)
 
+    def test_build_invalid_residual_type(self):
+        with pytest.raises(ValueError):
+            bad_res = Residuals(toas=self.toa, model=self.model, residual_type="foo")
+
     def test_combined_residuals(self):
         phase_res = Residuals(toas=self.toa, model=self.model)
         dm_res = Residuals(toas=self.toa, model=self.model, residual_type="dm")
@@ -220,6 +224,24 @@ def test_residuals_wideband_chi2(wideband_fake):
     f = WidebandTOAFitter(toas, model)
     assert_allclose(f.fit_toas(), r.chi2)
     assert f.fit_toas() >= rn.chi2
+
+    assert np.all(np.isfinite(list(r.rms_weighted().values())))
+    assert np.all(np.isfinite(list(r._combined_data_error)))
+
+
+def test_residuals_badpn(wideband_fake):
+    toas, model = wideband_fake
+    toas.table["pulse_number"][0] = np.nan
+    r = WidebandTOAResiduals(toas, model)
+    assert r.toa.track_mode == "nearest"
+
+
+@pytest.mark.parametrize("calctype", ["modelF0", "numerical", "taylor"])
+def test_residuals_get_PSR_freq(wideband_fake, calctype):
+    toas, model = wideband_fake
+    r = WidebandTOAResiduals(toas, model)
+
+    assert np.all(np.isfinite([r.toa.get_PSR_freq(calctype=calctype)]))
 
 
 # @pytest.mark.xfail()
