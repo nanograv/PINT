@@ -114,34 +114,71 @@ def _orthometric_to_M2SINI(model):
     if model.STIGMA.quantity is not None:
         stigma = model.STIGMA.quantity
         stigma_unc = model.STIGMA.uncertainty
-    else:
-        stigma = (
-            model.STIGMA.quantity
-            if model.STIGMA.quantity is not None
-            else model.H4.quantity / model.H3.quantity
+        SINI = 2 * stigma / (1 + stigma**2)
+        M2 = (model.H3.quantity / stigma**3 / Tsun) * u.Msun
+        if stigma_unc is not None:
+            SINI_unc = np.abs(
+                stigma_unc * 2 * (stigma**2 - 1) / (1 + stigma**2) ** 2
+            )
+            if model.H3.uncertainty is not None:
+                M2_unc = (
+                    np.sqrt(
+                        (model.H3.uncertainty / stigma**3) ** 2
+                        + (3 * stigma_unc * model.H3.quantity / stigma**4) ** 2
+                    )
+                    / Tsun
+                ) * u.Msun
+
+    elif model.H4.quantity is not None:
+        # FW10 Eqn. 25, 26
+        SINI = (2 * model.H3.quantity * model.H4.quantity) / (
+            model.H3.quantity**2 + model.H4.quantity**2
         )
-        stigma_unc = (
-            np.sqrt(
-                (model.H4.uncertainty / model.H3.quantity) ** 2
-                + (model.H3.uncertainty * model.H4.quantity / model.H3.quantity**2)
+        M2 = (model.H3.quantity**4 / model.H4.quantity**3 / Tsun) * u.Msun
+        if model.H4.uncertainty is not None and model.H3.uncertainty is not None:
+            M2_unc = np.sqrt(
+                (
+                    4
+                    * model.H3.quantity**3
+                    * model.H3.uncertainty
+                    / model.H4.quantity**3
+                )
+                ** 2
+                + (
+                    3
+                    * model.H3.quantity**4
+                    * model.H4.uncertainty
+                    / model.H4.quantity**4
+                )
+                ** 2
+            ) * (u.Msun / Tsun)
+            SINI_unc = np.sqrt(
+                (
+                    (
+                        (
+                            2 * model.H4.quantity**3
+                            - 2 * model.H3.quantity**2 * model.H4.quantity
+                        )
+                        * model.H3.uncertainty
+                    )
+                    / (model.H3.quantity**2 + model.H4.quantity**2) ** 2
+                )
+                ** 2
+                + (
+                    (
+                        (
+                            2 * model.H3.quantity**3
+                            - 2 * model.H4.quantity**2 * model.H3.quantity
+                        )
+                        * model.H4.uncertainty
+                    )
+                    / (model.H3.quantity**2 + model.H4.quantity**2) ** 2
+                )
                 ** 2
             )
-            if (model.H3.uncertainty is not None and model.H4.uncertainty is not None)
-            else None
-        )
+    else:
+        raise ValueError("Cannot uniquely convert from ELL1H to ELL1 with only H3")
 
-    SINI = 2 * stigma / (1 + stigma**2)
-    M2 = (model.H3.quantity / stigma**3 / Tsun) * u.Msun
-    if stigma_unc is not None:
-        SINI_unc = np.abs(stigma_unc * 2 * (stigma**2 - 1) / (1 + stigma**2) ** 2)
-        if model.H3.uncertainty is not None:
-            M2_unc = (
-                np.sqrt(
-                    (model.H3.uncertainty / stigma**3) ** 2
-                    + (3 * stigma_unc * model.H3.quantity / stigma**4) ** 2
-                )
-                / Tsun
-            ) * u.Msun
     return M2, SINI, M2_unc, SINI_unc
 
 

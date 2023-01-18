@@ -97,7 +97,7 @@ SINI              0.999185  1            0.000190
 M2                0.246769  1            0.009532
 """
 
-kwargs = {"ELL1H": {"NHARMS": 3}, "DDK": {"KOM": 0 * u.deg}}
+kwargs = {"ELL1H": {"NHARMS": 3, "useSTIGMA": True}, "DDK": {"KOM": 0 * u.deg}}
 
 
 @pytest.mark.parametrize("output", ["ELL1", "ELL1H", "DD", "BT", "DDS", "DDK"])
