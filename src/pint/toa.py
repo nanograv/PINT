@@ -798,6 +798,14 @@ def read_toa_file(filename, process_includes=True, cdict=None, dir=None):
                 commands.extend(new_commands)
                 # re-set FORMAT
                 cdict["FORMAT"] = fmt
+            elif cmd == "MODE":
+                if d["Command"][1] == "0":
+                    log.warning(
+                        "MODE command is not supported by PINT. 'MODE 0' does not invoke ordinary least squares fitting."
+                    )
+                elif d["Command"][1] != "1":
+                    log.warning("MODE command is not supported by PINT.")
+                continue
             else:
                 log.warning(f"Unknown command {cmd} in line {line}")
                 continue
