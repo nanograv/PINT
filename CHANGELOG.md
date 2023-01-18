@@ -8,6 +8,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Changed
 - Changed minimum supported version of scipy to 1.4.1
 - Moved DMconst from `pint.models.dispersion_model` to `pint` to avoid circular imports
+- Updated AUTHORS.rst
 ### Added
 - Documentation: Explanation for DM
 - Methods to compute dispersion slope and to convert DM using the CODATA value of DMconst
