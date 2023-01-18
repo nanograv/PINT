@@ -492,7 +492,7 @@ def _DDK_to_PK(model):
     return pbdot, gamma, omegadot, s, r, Dr, Dth
 
 
-def convert_binary(model, output, NHARMS=3, KOM=0 * u.deg):
+def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
     """
     Convert between binary models
 
@@ -504,8 +504,10 @@ def convert_binary(model, output, NHARMS=3, KOM=0 * u.deg):
     model : pint.models.timing_model.TimingModel
     output : str
         Output model type
-    NHARMS : int
+    NHARMS : int, optional
         Number of harmonics (``ELL1H`` only)
+    useSTIGMA : bool, optional
+        Whether to use STIGMA or H4 (``ELL1H`` only)
     KOM : astropy.units.Quantity
         Longitude of the ascending node (``DDK`` only)
 
@@ -558,10 +560,16 @@ def convert_binary(model, output, NHARMS=3, KOM=0 * u.deg):
             outmodel.H3.quantity = h3
             outmodel.H3.uncertainty = h3_unc
             outmodel.H3.frozen = model.M2.frozen or model.SINI.frozen
-            # use STIGMA and H3
-            outmodel.STIGMA.quantity = stigma
-            outmodel.STIGMA.uncertainty = stigma_unc
-            outmodel.STIGMA.frozen = outmodel.H3.frozen
+            if useSTIGMA:
+                # use STIGMA and H3
+                outmodel.STIGMA.quantity = stigma
+                outmodel.STIGMA.uncertainty = stigma_unc
+                outmodel.STIGMA.frozen = outmodel.H3.frozen
+            else:
+                # use H4 and H3
+                outmodel.H4.quantity = h4
+                outmodel.H4.uncertainty = h4_unc
+                outmodel.H4.frozen = outmodel.H3.frozen
         elif output == "ELL1":
             # ELL1H -> ELL1
             M2, SINI, M2_unc, SINI_unc = _orthometric_to_M2SINI(model)
@@ -865,10 +873,16 @@ def convert_binary(model, output, NHARMS=3, KOM=0 * u.deg):
                 outmodel.H3.quantity = h3
                 outmodel.H3.uncertainty = h3_unc
                 outmodel.H3.frozen = model.M2.frozen or model.SINI.frozen
-                # use STIGMA and H3
-                outmodel.STIGMA.quantity = stigma
-                outmodel.STIGMA.uncertainty = stigma_unc
-                outmodel.STIGMA.frozen = outmodel.H3.frozen
+                if useSTIGMA:
+                    # use STIGMA and H3
+                    outmodel.STIGMA.quantity = stigma
+                    outmodel.STIGMA.uncertainty = stigma_unc
+                    outmodel.STIGMA.frozen = outmodel.H3.frozen
+                else:
+                    # use H4 and H3
+                    outmodel.H4.quantity = h4
+                    outmodel.H4.uncertainty = h4_unc
+                    outmodel.H4.frozen = outmodel.H3.frozen
 
     if output == "DDS" and binary_component.binary_model_name != "DDGR":
         SHAPMAX, SHAPMAX_unc = _SINI_to_SHAPMAX(model)

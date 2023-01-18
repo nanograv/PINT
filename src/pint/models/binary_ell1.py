@@ -12,6 +12,7 @@ from pint.models.stand_alone_psr_binaries.ELL1_model import ELL1model
 from pint.models.stand_alone_psr_binaries.ELL1H_model import ELL1Hmodel
 from pint.models.timing_model import MissingParameter
 from pint.utils import taylor_horner_deriv
+from pint import Tsun
 
 
 class BinaryELL1(PulsarBinary):
@@ -180,7 +181,20 @@ class BinaryELL1(PulsarBinary):
 
 
 class BinaryELL1H(BinaryELL1):
-    """ELL1 modified to use H3 parameter for Shapiro delay.
+    """
+    ELL1 modified to use ``H3``, ``H4``, and ``STIGMA`` parameters, from Freire and Wex (2010).
+
+    The :class:`~pint.models.binary_ell1.BinaryELL1H` model parameterizes the Shapiro
+    delay differently compare to the :class:`~pint.models.binary_ell1.BinaryELL1`
+    model. A fourier series expansion is used for the Shapiro delay:
+
+    .. math::
+
+        \\Delta_S = -2r \\left( \\frac{a_0}{2} + \\Sum_k (a_k \\cos k\\phi + b_k \\sin k \phi) \\right)
+
+    The first two harmonics are generlly absorbed by the ELL1 Roemer delay.
+    Thus, :class:`~pint.models.binary_ell1.BinaryELL1H` uses the series from the third
+    harmonic and higher.
 
     The actual calculations for this are done in
     :class:`pint.models.stand_alone_psr_binaries.ELL1_model.ELL1model`.
@@ -190,9 +204,17 @@ class BinaryELL1H(BinaryELL1):
     .. paramtable::
         :class: pint.models.binary_ell1.BinaryELL1H
 
-    Note
-    ----
-    Ref:  Freire and Wex 2010; Only the Medium-inclination case model is implemented.
+    In addition, if ``H3`` and one of ``H4`` or ``STIGMA`` is set, you can access the inferred ``SINI`` and ``M2``
+    values via the ``.sini`` and ``.m2`` properties
+
+
+    References
+    ----------
+    - Freire and Wex (2010), MNRAS, 409, 199 [1]_
+
+    .. [1] https://ui.adsabs.harvard.edu/abs/2010MNRAS.409..199F/abstract
+
+     for Shapiro delay.
     """
 
     register = True
@@ -249,14 +271,11 @@ class BinaryELL1H(BinaryELL1):
         super().setup()
         if self.H4.quantity is not None:
             self.binary_instance.fit_params = ["H3", "H4"]
-            # If have H4 or STIGMA, choose 7th order harmonics
-            if self.NHARMS.value < 7:
-                self.NHARMS.value = 7
             if self.STIGMA.quantity is not None:
                 raise ValueError("ELL1H can use H4 or STIGMA but not both")
-
-        if self.STIGMA.quantity is not None:
+        elif self.STIGMA.quantity is not None:
             self.binary_instance.fit_params = ["H3", "STIGMA"]
+            log.debug("Using exact ELL1H Shapiro delay for STIGMA > 0")
             self.binary_instance.ds_func = self.binary_instance.delayS_H3_STIGMA_exact
             if self.STIGMA.quantity <= 0:
                 raise ValueError("STIGMA must be greater than zero.")
@@ -267,3 +286,30 @@ class BinaryELL1H(BinaryELL1):
         super().validate()
         # if self.H3.quantity is None:
         #     raise MissingParameter("ELL1H", "H3", "'H3' is required for ELL1H model")
+
+    @property
+    def sini(self):
+        if self.H4.quantity is not None:
+            return (
+                2
+                * self.H3.quantity
+                * self.H4.quantity
+                / (self.H3.quantity**2 + self.H4.quantity**2)
+            )
+        elif self.STIGMA.quantity is not None:
+            return 2 * self.STIGMA.quantity / (1 + self.STIGMA.quantity**2)
+        else:
+            return None
+
+    @property
+    def m2(self):
+        if self.H4.quantity is not None:
+            return (
+                (self.H3.quantity) ** 4 / (self.H4.quantity) ** 3 / Tsun
+            ).decompose() * u.Msun
+        elif self.STIGMA.quantity is not None:
+            return (
+                (self.H3.quantity / self.STIGMA.quantity**3) / Tsun
+            ).decompose() * u.Msun
+        else:
+            return None
