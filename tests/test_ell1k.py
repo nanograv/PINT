@@ -6,6 +6,7 @@ import pytest
 from pint.models import get_model
 from pint.residuals import Residuals
 from pint.simulation import make_fake_toas_uniform
+from pint.fitter import WLSFitter
 
 
 @pytest.fixture
@@ -50,12 +51,14 @@ def model_and_toas():
 
 def test_ell1k(model_and_toas):
     model, toas = model_and_toas
+
     assert "BinaryELL1k" in model.components
     assert hasattr(model, "OMDOT") and model.OMDOT.quantity is not None
     assert hasattr(model, "LNEDOT") and model.LNEDOT.quantity is not None
 
     res = Residuals(toas, model)
     assert np.isfinite(res.calc_chi2())
+    assert res.reduced_chi2 > 0.5 and res.reduced_chi2 < 2.0
 
 
 def test_ell1k_designmatrix(model_and_toas):
@@ -70,3 +73,18 @@ def test_change_epoch(model_and_toas):
     model, toas = model_and_toas
 
     model.components["BinaryELL1k"].change_binary_epoch(55300)
+
+
+def test_fitting(model_and_toas):
+    model, toas = model_and_toas
+
+    for par in model.free_params:
+        getattr(model, par).frozen = True
+    model.OMDOT.frozen = False
+
+    ftr = WLSFitter(toas, model)
+    ftr.fit_toas()
+
+    assert np.isfinite(ftr.model.OMDOT.value) and np.isfinite(
+        ftr.model.OMDOT.uncertainty_value
+    )
