@@ -38,6 +38,8 @@ class ELL1kmodel(ELL1model):
     ###############################
 
     def eps1(self):
+        """EPS1 as a function of time
+        Susobhanan+ 2018 Eq. 15"""
         eps10 = self.EPS1
         eps20 = self.EPS2
         omdot = self.OMDOT
@@ -75,6 +77,8 @@ class ELL1kmodel(ELL1model):
         return -self.eps1() * lnedot / (1 + lnedot * dt) - self.eps2() * omdot
 
     def eps2(self):
+        """EPS2 as a function of time
+        Susobhanan+ 2018 Eq. 15"""
         eps10 = self.EPS1
         eps20 = self.EPS2
         omdot = self.OMDOT
@@ -107,7 +111,7 @@ class ELL1kmodel(ELL1model):
 
     def delayR(self):
         """ELL1k Roemer delay in proper time.
-        A Susobhanan et al 2018 eq. 6
+        A Susobhanan et al 2018 Eq. 6
         There is an extra term (-3*a1*eps1)/(2*c) as compared to the ELL1 model."""
 
         Phi = self.Phi()
@@ -158,7 +162,7 @@ class ELL1kmodel(ELL1model):
         return d_Dre_d_par
 
     def ELL1kdelay(self):
-        # TODO need add aberration delay
+        # TODO add aberration delay
         return self.delayI() + self.delayS()
 
     def d_ELL1kdelay_d_par(self, par):
