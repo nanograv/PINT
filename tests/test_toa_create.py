@@ -2,8 +2,10 @@ import numpy as np
 from astropy import units as u, constants as c
 from pint import pulsar_mjd
 from pint import toa
+from pint.models import get_model
 from astropy import time
 import copy
+import io
 import pytest
 
 
@@ -87,3 +89,53 @@ def test_toas_failure_flags():
     obs = "gbt"
     with pytest.raises(AttributeError):
         toas = toa.get_TOAs_array(t, obs, flags=[{"a": "b"}, {"c": "d"}, {"e": "f"}])
+
+
+def test_toas_failure_scale():
+    t = pulsar_mjd.Time(np.array([55000, 56000]), scale="utc", format="pulsar_mjd")
+    obs = "gbt"
+    with pytest.raises(ValueError):
+        toas = toa.get_TOAs_array(t, obs, scale="tt")
+
+
+def test_toas_model():
+    par = """PSR    J0613-0200
+      LAMBDA 93.7990065496191  1 0.0000000158550
+      BETA   -25.4071326875232  1 0.0000000369013
+      PMLAMBDA 2.1192  1 0.0174
+      PMBETA -10.3422  1              0.0433
+      PX 0.9074  1              0.1509
+      F0 326.6005670972169810  1  0.0000000000066373
+      F1 -1.022985317101D-15  1  6.219122230955D-20
+      PEPOCH        54890.000000
+      DM         38.778683
+      EPHEM DE440
+      CLOCK TT(BIPM2019)
+      """
+    m = get_model(io.StringIO(par))
+    t = pulsar_mjd.Time(np.array([55000, 56000]), scale="utc", format="pulsar_mjd")
+    obs = "gbt"
+    toas = toa.get_TOAs_array(t, obs, model=m, include_bipm=None, bipm_version=None)
+    assert toas.ephem == "DE440"
+    assert toas.clock_corr_info["bipm_version"] == "BIPM2019"
+    assert toas.clock_corr_info["include_bipm"]
+
+    par = """PSR    J0613-0200
+      LAMBDA 93.7990065496191  1 0.0000000158550
+      BETA   -25.4071326875232  1 0.0000000369013
+      PMLAMBDA 2.1192  1 0.0174
+      PMBETA -10.3422  1              0.0433
+      PX 0.9074  1              0.1509
+      F0 326.6005670972169810  1  0.0000000000066373
+      F1 -1.022985317101D-15  1  6.219122230955D-20
+      PEPOCH        54890.000000
+      DM         38.778683
+      EPHEM DE440
+      CLOCK TT(TAI)
+      """
+    m = get_model(io.StringIO(par))
+    t = pulsar_mjd.Time(np.array([55000, 56000]), scale="utc", format="pulsar_mjd")
+    obs = "gbt"
+    toas = toa.get_TOAs_array(t, obs, model=m, include_bipm=None, bipm_version=None)
+    assert toas.ephem == "DE440"
+    assert not toas.clock_corr_info["include_bipm"]
