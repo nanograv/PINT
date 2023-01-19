@@ -11,10 +11,7 @@ from pint.observatory import Observatory
 
 
 def test_simpler_erfa_import():
-    try:
-        import erfa
-    except ImportError:
-        import astropy._erfa as erfa
+    import erfa
 
     erfa
 
