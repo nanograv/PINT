@@ -97,7 +97,8 @@ To load both::
 
 Create TOAs from a list of times
 --------------------------------
-A :class:`pint.toa.TOA` object contains both a time and a location, along with optional information like frequency, measurement error, etc.  
+A :class:`pint.toa.TOA` object represents a *single* TOA as an object that contains 
+both a time and a location, along with optional information like frequency, measurement error, etc.  
 So each :class:`~pint.toa.TOA` object should only contain a single time, since otherwise the location information would be ambiguous.
 If you wish to create TOAs from a list of times you should use list comprehension to create a list of :class:`~pint.toa.TOA` objects,
 and then convert them to a :class:`pint.toa.TOAs` ojbect::
