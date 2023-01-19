@@ -95,6 +95,31 @@ To load both::
     m, t = get_model_and_toas(parfile, timfile)
 
 
+Create TOAs from a list of times
+--------------------------------
+A :class:`pint.toa.TOA` object represents a *single* TOA as an object that contains 
+both a time and a location, along with optional information like frequency, measurement error, etc.  
+So each :class:`~pint.toa.TOA` object should only contain a single time, since otherwise the location information would be ambiguous.
+If you wish to create TOAs from a :class:`astropy.time.Time` object containing multiple times, 
+you should use list comprehension to create a list of :class:`~pint.toa.TOA` objects,
+and then convert them to a :class:`pint.toa.TOAs` object::
+
+    import numpy as np
+    from astropy import units as u, constants as c
+    from pint import pulsar_mjd
+    from pint import toa
+
+    t = pulsar_mjd.Time(np.array([55000, 56000]), scale="utc", format="pulsar_mjd")
+    obs = "gbt"
+
+    toalist = [toa.TOA(tt, obs=obs, error=1 * u.us) for tt in t]
+    toas = toa.get_TOAs_list(toalist)
+
+Note that we also use ``Time`` from :mod:`pint.pulsar_mjd` rather than :class:`astropy.time.Time` directly to allow the 
+``pulsar_mjd`` format, designed to avoid leap seconds.  But this would work with standard :class:`astropy.time.Time` 
+objects as well.  We use :func:`pint.toa.get_TOAs_list` to make sure clock corrections are applied when constructing the TOAs.
+
+
 Get the red noise basis functions and the corresponding coefficients out of a PINT fitter object
 ------------------------------------------------------------------------------------------------
 
