@@ -8,14 +8,20 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Changed
 - Changed minimum supported version of scipy to 1.4.1
 - Moved DMconst from `pint.models.dispersion_model` to `pint` to avoid circular imports
-- Updated AUTHORS.rst
 - Removed references to `astropy._erfa` (removed since astropy 4.2)
+- Refactor `Dre` method, fix expressions for Einstein delay and post-Keplerian parameters in DD model
+- Updated contributor list (AUTHORS.rst)
+- Emit an informative warning for "MODE" statement in TOA file; Ignore "MODE 1" silently
 ### Added
 - Documentation: Explanation for DM
 - Methods to compute dispersion slope and to convert DM using the CODATA value of DMconst
 - `TimingModel.total_dispersion_slope` method
 - Explicit discussion of DT92 convention to DDK model
+- Documentation: making TOAs from a list of times added to HowTo
+- Clock correction for LEAP
 ### Fixed
+- Broken notebooks CI test
+- BIPM correction for simulated TOAs
 ### Removed
 
 ## [0.9.3] 2022-12-16
