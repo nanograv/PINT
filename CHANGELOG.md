@@ -8,13 +8,21 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Changed
 - Changed minimum supported version of scipy to 1.4.1
 - Moved DMconst from `pint.models.dispersion_model` to `pint` to avoid circular imports
+- Removed references to `astropy._erfa` (removed since astropy 4.2)
+- Refactor `Dre` method, fix expressions for Einstein delay and post-Keplerian parameters in DD model
+- Updated contributor list (AUTHORS.rst)
+- Emit an informative warning for "MODE" statement in TOA file; Ignore "MODE 1" silently
 ### Added
 - Documentation: Explanation for DM
 - Methods to compute dispersion slope and to convert DM using the CODATA value of DMconst
 - `TimingModel.total_dispersion_slope` method
 - Explicit discussion of DT92 convention to DDK model
 - H.E.S.S. telescope to the list of known observatories
+- Documentation: making TOAs from a list of times added to HowTo
+- Clock correction for LEAP
 ### Fixed
+- Broken notebooks CI test
+- BIPM correction for simulated TOAs
 ### Removed
 
 ## [0.9.3] 2022-12-16
@@ -42,6 +50,8 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added a pintk helper function to delete jumped TOAs/remove existing jumps. Fixed indexing issue for single clicks.
 - Added PLDMNoise component which allows modeling of stochastic DM variations as red noise with a power law spectrum
 - Added Bayesian interface (Timing model and white noise only)
+- Can add multiple DMX values at once
+- Can add overlapping DMX ranges
 - New tests to improve test coverage
 - Documentation: Instructions to checkout development branch
 - Clock file for effix

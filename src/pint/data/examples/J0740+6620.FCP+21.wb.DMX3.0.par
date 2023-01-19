@@ -1129,7 +1129,7 @@ ECL                 IERS2010
 CLK                 TT(BIPM2019)                    
 UNITS               TDB
 TIMEEPH             FB90
-T2CMETHOD           TEMPO
+T2CMETHOD           IAU2000B
 CORRECT_TROPOSPHERE N
 PLANET_SHAPIRO      N
 DILATEFREQ          N

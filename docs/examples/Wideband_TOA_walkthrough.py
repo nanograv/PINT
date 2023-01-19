@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.8
+#       jupytext_version: 1.14.4
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -25,7 +25,7 @@ import astropy.units as u
 import matplotlib.pyplot as plt
 from astropy.visualization import quantity_support
 
-from pint.fitter import WidebandTOAFitter
+from pint.fitter import Fitter
 from pint.models import get_model_and_toas
 from pint.toa import get_TOAs
 import pint.config
@@ -62,10 +62,10 @@ toas.table["flags"][0]
 # %% [markdown]
 # ## Do the fit
 #
-# As before, but now we need a fitter adapted to wideband TOAs.
+# As before, but now we need a fitter adapted to wideband TOAs. The function `Fitter.auto()` will examine the model and choose an appropriate one.
 
 # %%
-fitter = WidebandTOAFitter(toas, model)
+fitter = Fitter.auto(toas, model)
 
 # %%
 fitter.fit_toas()
@@ -158,7 +158,7 @@ plt.xlabel("MJD")
 # #### Design Matrix are combined
 
 # %%
-d_matrix = fitter.get_designmatrix()
+d_matrix, labels, units = fitter.get_designmatrix()
 
 # %%
 print("Number of TOAs:", toas.ntoas)
@@ -170,10 +170,11 @@ print("Shape of design matrix:", d_matrix.shape)
 # #### Covariance Matrix are combined
 
 # %%
-c_matrix = fitter.get_noise_covariancematrix()
+# c_matrix = fitter.get_noise_covariancematrix()
 
 # %%
-print("Shape of covariance matrix:", c_matrix.shape)
+# print("Shape of covariance matrix:", c_matrix.shape)
+
 
 # %% [markdown]
 # NOTE the matrix are PINTMatrix object right now, here are the difference
@@ -182,12 +183,12 @@ print("Shape of covariance matrix:", c_matrix.shape)
 # If you want to access the matrix data
 
 # %%
-print(d_matrix.matrix)
+# print(d_matrix.matrix)
 
 # %% [markdown]
 # PINT matrix has labels that marks all the element in the matrix. It has the label name, index of range of the matrix, and the unit.
 
 # %%
-print("labels for dimension 0:", d_matrix.labels[0])
+# print("labels for dimension 0:", d_matrix.labels[0])
 
 # %%
