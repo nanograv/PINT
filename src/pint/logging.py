@@ -55,10 +55,7 @@ import sys
 import warnings
 from loguru import logger as log
 
-try:
-    from erfa import ErfaWarning
-except ImportError:
-    from astropy._erfa import ErfaWarning
+from erfa import ErfaWarning
 
 __all__ = ["LogFilter", "setup", "format", "levels", "get_level"]
 
