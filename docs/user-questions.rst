@@ -113,11 +113,11 @@ and then convert them to a :class:`pint.toa.TOAs` object::
     obs = "gbt"
 
     toalist = [toa.TOA(tt, obs=obs, error=1 * u.us) for tt in t]
-    toas = toa.TOAs(toalist=toalist)
+    toas = toa.get_TOAs_list(toalist)
 
 Note that we also use ``Time`` from :mod:`pint.pulsar_mjd` rather than :class:`astropy.time.Time` directly to allow the 
 ``pulsar_mjd`` format, designed to avoid leap seconds.  But this would work with standard :class:`astropy.time.Time` 
-objects as well.
+objects as well.  We use :func:`pint.toa.get_TOAs_list` to make sure clock corrections are applied when constructing the TOAs.
 
 
 Get the red noise basis functions and the corresponding coefficients out of a PINT fitter object
