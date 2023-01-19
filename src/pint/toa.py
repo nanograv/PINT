@@ -47,6 +47,7 @@ __all__ = [
     "TOAs",
     "get_TOAs",
     "get_TOAs_list",
+    "get_TOAs_array",
     "load_pickle",
     "save_pickle",
     "format_toa_line",
@@ -1296,7 +1297,7 @@ class TOAs:
         Whether the TOAs also have wideband DM information
     """
 
-    def __init__(self, toafile=None, toalist=None):
+    def __init__(self, toafile=None, toalist=None, toatable=None):
         # First, just make an empty container
         self.commands = []
         self.filename = None
@@ -1311,22 +1312,31 @@ class TOAs:
 
         if (toalist is not None) and (toafile is not None):
             raise ValueError("Cannot initialize TOAs from both file and list.")
+        if (toalist is not None) and (toatable is not None):
+            raise ValueError("Cannot initialize TOAs from both table and list.")
+        if (toatable is not None) and (toafile is not None):
+            raise ValueError("Cannot initialize TOAs from both file and table.")
 
-        if isinstance(toafile, (str, Path)):
-            toalist, self.commands = read_toa_file(toafile)
-            # Check to see if there were any INCLUDEs:
-            inc_fns = [x[0][1] for x in self.commands if x[0][0].upper() == "INCLUDE"]
-            self.filename = [toafile] + inc_fns if inc_fns else toafile
-        elif toafile is not None:
-            toalist, self.commands = read_toa_file(toafile)
-            self.filename = None
+        if toatable is None:
+            if isinstance(toafile, (str, Path)):
+                toalist, self.commands = read_toa_file(toafile)
+                # Check to see if there were any INCLUDEs:
+                inc_fns = [
+                    x[0][1] for x in self.commands if x[0][0].upper() == "INCLUDE"
+                ]
+                self.filename = [toafile] + inc_fns if inc_fns else toafile
+            elif toafile is not None:
+                toalist, self.commands = read_toa_file(toafile)
+                self.filename = None
 
-        if toalist is None:
-            raise ValueError("No TOAs found!")
+            if toalist is None:
+                raise ValueError("No TOAs found!")
+            else:
+                if not isinstance(toalist, (list, tuple)):
+                    raise ValueError("Trying to initialize TOAs from a non-list class")
+            self.table = build_table(toalist, filename=self.filename)
         else:
-            if not isinstance(toalist, (list, tuple)):
-                raise ValueError("Trying to initialize TOAs from a non-list class")
-        self.table = build_table(toalist, filename=self.filename)
+            self.table = toatable
         self.max_index = len(self.table) - 1
         # Add pulse number column (if needed) or make PHASE adjustments
         try:
@@ -2584,3 +2594,213 @@ def merge_TOAs(TOAs_list, strict=False):
     nt.merged = True
 
     return nt
+
+
+def get_TOAs_array(
+    times,
+    obs,
+    scale=None,
+    errors=1 * u.us,
+    freqs=np.inf * u.MHz,
+    flags=None,
+    ephem=None,
+    include_bipm=True,
+    bipm_version=bipm_default,
+    include_gps=True,
+    planets=False,
+    tdb_method="default",
+    commands=None,
+    hashes=None,
+    limits="warn",
+    **kwargs,
+):
+    """Load and prepare TOAs for PINT use from an array of times.
+
+    Creates TOAs from a an array of times, applies clock corrections, computes
+    key values (like TDB), computes the observatory position and velocity
+    vectors.
+
+    Observatory clock corrections are also applied, and thus
+    the exact result also depends on the precise values in observatory clock
+    correction files; normally these do not change. See :func:`pint.toa.TOAs.apply_clock_corrections` f
+    or further information on the meaning of
+    the clock correction flags.
+
+    Parameters
+    ----------
+    times : astropy.time.Time, float, np.ndarray, or tuple of floats/np.ndarray
+        The times of the TOAs, which can be expressed as an astropy Time,
+        a floating point MJD (64 or 80 bit precision), or a tuple
+        of (MJD1,MJD2) values whose sum is the full precision MJD (usually the
+        integer and fractional part of the MJD)
+    obs : str
+        The observatory code for the TOA
+    errors : astropy.units.Quantity or np.ndarray or float, optional
+        The uncertainty on the TOA; Assumed to be
+        in microseconds if no units provided
+    freq : astropy.units.Quantity or np.ndarray or float, optional
+        Frequency corresponding to the TOAs; Assumed to be
+        in MHz if no units provided
+    scale : str, optional
+        Time scale for the TOAs.  Defaults to the timescale appropriate
+        to the site, but can be overridden
+    flags : dict or iterable
+        Flags associated with the TOAs.  If iterable, then must have same length as ``times``.
+        Any additional keyword arguments are interpreted as flags.
+    ephem : str
+        The name of the solar system ephemeris to use; defaults to "DE421".
+    include_bipm : bool or None
+        Whether to apply the BIPM clock correction. Defaults to True.
+    bipm_version : str or None
+        Which version of the BIPM tables to use for the clock correction.
+        The format must be 'BIPMXXXX' where XXXX is a year.
+    include_gps : bool or None
+        Whether to include the GPS clock correction. Defaults to True.
+    planets : bool or None
+        Whether to apply Shapiro delays based on planet positions. Note that a
+        long-standing TEMPO2 bug in this feature went unnoticed for years.
+        Defaults to False.
+    include_pn : bool, optional
+        Whether or not to read in the 'pn' column (``pulse_number``)
+    model : pint.models.timing_model.TimingModel or None
+        If a valid timing model is passed, model commands (such as BIPM version,
+        planet shapiro delay, and solar system ephemeris) that affect TOA loading
+        are applied.
+    usepickle : bool
+        Whether to try to use pickle-based caching of loaded clock-corrected TOAs objects.
+    tdb_method : str
+        Which method to use for the clock correction to TDB. See
+        :func:`pint.observatory.Observatory.get_TDBs` for details.
+    hashes : dict
+        A dictionary of hashes of the files this data was read from (if any).
+        This is used by ``check_hashes()`` to verify whether the data on disk
+        has changed so that the file can be re-read if necessary.
+    limits : "warn" or "error"
+        What to do when encountering TOAs for which clock corrections are not available.
+
+    Returns
+    -------
+    TOAs
+        Completed TOAs object representing the data.
+    """
+    # mjds, mjd_floats, errors, freqs, obss, flags
+    site = get_observatory(obs)
+    # If MJD is already a Time, just use it. Note that this will ignore
+    # the 'scale' argument to the TOA() constructor!
+    if isinstance(times, time.Time):
+        if scale is not None:
+            raise ValueError("scale argument is ignored when Time is provided")
+        t = times
+    else:
+        arg1, arg2 = times if isinstance(times, tuple) else (times, None)
+        if scale is None:
+            scale = site.timescale
+        # First build a time without a location
+        # Note that when scale is UTC, must use pulsar_mjd format!
+        fmt = "pulsar_mjd" if scale.lower() == "utc" else "mjd"
+        t = time.Time(arg1, arg2, scale=scale, format=fmt, precision=9)
+    # Now assign the site location to the Time, for use in the TDB conversion
+    # Time objects are immutable so you must make a new one to add the location!
+    # Use the intial time to look up the observatory location
+    # (needed for moving observatories)
+    # The location is an EarthLocation in the ITRF (ECEF, WGS84) frame
+    try:
+        loc = site.earth_location_itrf(time=t)
+    except Exception:
+        # Just add informmation and re-raise
+        log.error(f"Error computing earth_location_itrf at time {t}, {type(t)}")
+        raise
+    # Then construct the full time, with observatory location set
+    mjd = time.Time(t, location=loc, precision=9)
+
+    errors = np.atleast_1d(errors)
+    if len(errors) == 1:
+        errors = np.repeat(errors, len(t))
+    if len(errors) != len(t):
+        raise AttributeError(
+            f"Length of error array ({len(errors)}) must match length of times ({len(t)})"
+        )
+    if hasattr(errors, "unit"):
+        try:
+            errors = errors.to(u.microsecond)
+        except u.UnitConversionError:
+            raise u.UnitConversionError(
+                f"Uncertainty for TOA with incompatible unit {errors}"
+            )
+    else:
+        errors = errors * u.microsecond
+
+    obs = [site.name] * len(t)
+
+    freqs = np.atleast_1d(freqs)
+    if len(freqs) == 1:
+        freqs = np.repeat(freqs, len(t))
+    if len(freqs) != len(t):
+        raise AttributeError(
+            f"Length of frequency array ({len(freqs)}) must match length of times ({len(t)})"
+        )
+
+    if hasattr(freqs, "unit"):
+        try:
+            freqs = freqs.to(u.MHz)
+        except u.UnitConversionError:
+            raise u.UnitConversionError(
+                f"Frequency for TOA with incompatible unit {freqs}"
+            )
+    else:
+        freqs = freqs * u.MHz
+    freqs[freqs == 0] = np.inf * u.MHz
+
+    if isinstance(flags, (list, tuple)):
+        if len(flags) != len(t):
+            raise AttributeError(
+                f"Length of flags ({len(flags)}) must match length of times ({len(t)})"
+            )
+        flags = [FlagDict.from_dict(f) for f in flags]
+    kwflags = FlagDict.from_dict(kwargs)
+    if flags is None:
+        flags = [kwflags] * len(t)
+    else:
+        for flag in flags:
+            for k, v in kwflags.items():
+                flag[k] = v
+    flags_array = np.empty(len(t), dtype=object)
+    for i, f in enumerate(flags):
+        flags_array[i] = f
+    out = table.Table(
+        [
+            np.arange(len(mjd)),
+            table.Column(mjd),
+            np.array(mjd.mjd, dtype=float) * u.d,
+            np.array(errors, dtype=float) * u.us,
+            np.array(freqs, dtype=float) * u.MHz,
+            np.array(obs),
+            flags_array,
+            np.zeros(len(mjd), dtype=float),
+        ],
+        names=(
+            "index",
+            "mjd",
+            "mjd_float",
+            "error",
+            "freq",
+            "obs",
+            "flags",
+            "delta_pulse_number",
+        ),
+    )
+    t = TOAs(toatable=out)
+    t.commands = [] if commands is None else commands
+    t.hashes = {} if hashes is None else hashes
+    if not any(["clkcorr" in f for f in t.table["flags"]]):
+        t.apply_clock_corrections(
+            include_gps=include_gps,
+            include_bipm=include_bipm,
+            bipm_version=bipm_version,
+            limits=limits,
+        )
+    if "tdb" not in t.table.colnames:
+        t.compute_TDBs(method=tdb_method, ephem=ephem)
+    if "ssb_obs_pos" not in t.table.colnames:
+        t.compute_posvels(ephem, planets)
+    return t
