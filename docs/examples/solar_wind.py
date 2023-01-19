@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.8
+#       jupytext_version: 1.14.4
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -57,6 +57,7 @@ DM 10
 ELAT 3
 ELONG 0
 PEPOCH 54000
+EPHEM DE440
 """
 
 # %%

@@ -6,43 +6,53 @@ Development of PINT is partially supported by the NANOGrav_ pulsar timing array 
 
 .. _NANOGrav: http://nanograv.org/
 
-If you use PINT for your work, please cite the PINT paper and the ASCL entry_ .
+If you use PINT for your work, please cite the PINT paper_ and the ASCL entry_ .
 
+.. _paper: https://doi.org/10.3847/1538-4357/abe62f
 .. _entry: http://ascl.net/1902.007
 
-Development Leads
------------------
+Contributors
+------------
 
-As listed in the PINT paper:
+Active developers are indicated by (*). Authors of the PINT paper are indicated by (#).
 
-* Luo Jing
-* Scott Ransom
-* Paul Demorest
-* Paul Ray
-* Anne Archibald
-* Matthew Kerr
-* Ross Jennings
-* Matteo Bachetti
-* Rutger van Haasteren
-* Chloe Champagne
-* Jonathan Colen
-* Camryn Phillips
-* Josef Zimmerman
-* Kevin Stovall
-* Michael Lam
-* Rick Jenet
-
-Other contributors (alphabetical)
----------------------------------
-
-* Bastian Beischer
-* Chris Deil
-* Julia Deneva
-* Justin A. Ellis
-* Zac Hatfield-Dodds
-* Maarten van Kerkwijk
-* Matt Pitkin
-* Ben Shapiro-Albert
-* Chris Sheehy
-* Renee Spiewak
-* Michele Vallisneri
+* Akash Anumarlapudi (*)
+* Anne Archibald (#*)
+* Matteo Bachetti (#)
+* Bastian Beischer 
+* Deven Bhakta 
+* Chloe Champagne (#)
+* Jonathan Colen (#)
+* Thankful Cromartie 
+* Christoph Deil 
+* Paul Demorest (#)
+* Julia Deneva 
+* Justin Ellis 
+* Fabian Jankowski 
+* Rick Jenet (#)
+* Ross Jennings (#*)
+* Luo Jing (#)
+* David Kaplan (*)
+* Matthew Kerr (#*)
+* Michael Lam (#)
+* Bjorn Larsen (*)
+* Sasha Levina 
+* Nikhil Mahajan 
+* Alex McEwen 
+* Patrick O'Neill 
+* Tim Pennucci 
+* Camryn Phillips (#)
+* Matt Pitkin 
+* Scott Ransom (#*)
+* Paul Ray (#*)
+* Brent Shapiro-Albert 
+* Chris Sheehy 
+* Renee Spiewak 
+* Kevin Stovall (#)
+* Abhimanyu Susobhanan (*)
+* Joe Swiggum (*)
+* Jackson Taylor 
+* Michele Vallisneri 
+* Rutger van Haasteren (#)
+* Marten van Kerkwijk 
+* Josef Zimmerman (#)
