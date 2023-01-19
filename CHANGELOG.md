@@ -8,6 +8,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ### Changed
 - Changed minimum supported version of scipy to 1.4.1
 - Moved DMconst from `pint.models.dispersion_model` to `pint` to avoid circular imports
+- Updated AUTHORS.rst
 ### Added
 - Documentation: Explanation for DM
 - Methods to compute dispersion slope and to convert DM using the CODATA value of DMconst
@@ -41,6 +42,8 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added a pintk helper function to delete jumped TOAs/remove existing jumps. Fixed indexing issue for single clicks.
 - Added PLDMNoise component which allows modeling of stochastic DM variations as red noise with a power law spectrum
 - Added Bayesian interface (Timing model and white noise only)
+- Can add multiple DMX values at once
+- Can add overlapping DMX ranges
 - New tests to improve test coverage
 - Documentation: Instructions to checkout development branch
 - Clock file for effix
