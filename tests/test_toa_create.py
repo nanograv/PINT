@@ -64,3 +64,26 @@ def test_toas_compare(t, errors, freqs):
         ]
     toas_fromlist = toa.get_TOAs_list(toalist)
     assert np.all(toas.table == toas_fromlist.table)
+
+
+@pytest.mark.parametrize("errors", [2 * u.m, np.array([1, 2, 3]) * u.us])
+def test_toas_failure_error(errors):
+    t = pulsar_mjd.Time(np.array([55000, 56000]), scale="utc", format="pulsar_mjd")
+    obs = "gbt"
+    with pytest.raises((AttributeError, u.UnitConversionError)):
+        toas = toa.get_TOAs_array(t, obs, errors=errors)
+
+
+@pytest.mark.parametrize("freqs", [2 * u.m, np.array([1000, 2000, 3000]) * u.MHz])
+def test_toas_failure_freqs(freqs):
+    t = pulsar_mjd.Time(np.array([55000, 56000]), scale="utc", format="pulsar_mjd")
+    obs = "gbt"
+    with pytest.raises((AttributeError, u.UnitConversionError)):
+        toas = toa.get_TOAs_array(t, obs, freqs=freqs)
+
+
+def test_toas_failure_flags():
+    t = pulsar_mjd.Time(np.array([55000, 56000]), scale="utc", format="pulsar_mjd")
+    obs = "gbt"
+    with pytest.raises(AttributeError):
+        toas = toa.get_TOAs_array(t, obs, flags=[{"a": "b"}, {"c": "d"}, {"e": "f"}])
