@@ -6,9 +6,9 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.8
+#       jupytext_version: 1.14.4
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: .env
 #     language: python
 #     name: python3
 # ---
@@ -25,7 +25,12 @@
 # %%
 import astropy.units as u  # Astropy units is a very useful module.
 import pint.logging
-from IPython.core.display_functions import display
+
+try:
+    from IPython.display import display
+except ImportError:
+    # Older IPython
+    from IPython.core.display_functions import display
 
 # setup logging
 pint.logging.setup(level="INFO")

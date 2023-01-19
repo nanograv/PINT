@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.8
+#       jupytext_version: 1.14.4
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -139,7 +139,7 @@ _ = [print(dc.__class__) for dc in m.DelayComponent_list]
 # First get the toas
 from pint.toa import get_TOAs
 
-t = get_TOAs(pint.config.examplefile("B1855+09_NANOGrav_dfg+12.tim"))
+t = get_TOAs(pint.config.examplefile("B1855+09_NANOGrav_dfg+12.tim"), model=m)
 
 # %%
 # compute the total delay

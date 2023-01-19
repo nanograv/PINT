@@ -9,7 +9,6 @@ PMRA            -5.3
 PMDEC           -2              
 POSEPOCH        52079
 C PX              4.1             
-EPHVER          2
 UNITS           TDB
 PLANET_SHAPIRO N
 TZRMJD 56000

@@ -91,7 +91,7 @@ _bipm_clock_versions = {}
 def _load_gps_clock():
     global _gps_clock
     if _gps_clock is None:
-        log.info(f"Loading global GPS clock file")
+        log.info("Loading global GPS clock file")
         _gps_clock = find_clock_file(
             "gps2utc.clk",
             format="tempo2",
@@ -152,18 +152,16 @@ class Observatory:
         # one only if overwrite=True
         obs = super().__new__(cls)
         if name.lower() in cls._registry:
-            if "overwrite" in kwargs and kwargs["overwrite"]:
-                log.warning(
-                    "Observatory '%s' already present; overwriting..." % name.lower()
-                )
-
-                cls._register(obs, name)
-                return obs
-            else:
+            if "overwrite" not in kwargs or not kwargs["overwrite"]:
                 raise ValueError(
-                    "Observatory '%s' already present and overwrite=False"
-                    % name.lower()
+                    f"Observatory {name.lower} already present and overwrite=False"
                 )
+            log.warning(
+                "Observatory '%s' already present; overwriting..." % name.lower()
+            )
+
+            cls._register(obs, name)
+            return obs
         cls._register(obs, name)
         return obs
 
@@ -205,11 +203,9 @@ class Observatory:
         for a in aliases:
             cls._alias_map[a.lower()] = obs.name
         for o in cls._registry.values():
-            obs_aliases = []
-            for alias, name in cls._alias_map.items():
-                if name == o.name:
-                    obs_aliases.append(alias)
-            o._aliases = obs_aliases
+            o._aliases = [
+                alias for alias, name in cls._alias_map.items() if name == o.name
+            ]
 
     @staticmethod
     def gps_correction(t, limits="warn"):
@@ -250,10 +246,7 @@ class Observatory:
         import pint.observatory.topo_obs  # noqa
         import pint.observatory.special_locations  # noqa
 
-        s = {}
-        for oname, obs in cls._registry.items():
-            s[oname] = obs.aliases
-        return s
+        return {oname: obs.aliases for oname, obs in cls._registry.items()}
 
     # Note, name and aliases are not currently intended to be changed
     # after initialization.  If we want to allow this, we could add
@@ -288,23 +281,22 @@ class Observatory:
         # Be case-insensitive
         name = name.lower()
         # First see if name matches
-        if name in cls._registry.keys():
+        if name in cls._registry:
             return cls._registry[name]
         # Then look for aliases
-        if name in cls._alias_map.keys():
+        if name in cls._alias_map:
             return cls._registry[cls._alias_map[name]]
         # Then look in astropy
         log.warning(
-            "Observatory name '%s' is not present in PINT observatory list; searching astropy..."
-            % name
+            f"Observatory name {name} is not present in PINT observatory list; searching astropy..."
         )
         # the name was not found in the list of standard PINT observatories
         # see if we can it from astropy
         try:
             site_astropy = astropy.coordinates.EarthLocation.of_site(name)
-        except astropy.coordinates.errors.UnknownSiteException:
+        except astropy.coordinates.errors.UnknownSiteException as e:
             # turn it into the same error type as PINT would have returned
-            raise KeyError("Observatory name '%s' is not defined" % name)
+            raise KeyError("Observatory name '%s' is not defined" % name) from e
 
         # we need to import this here rather than up-top because of circular import issues
         from pint.observatory.topo_obs import TopoObs
@@ -318,9 +310,6 @@ class Observatory:
         # add to registry
         cls._register(obs, name)
         return cls._registry[name]
-
-        # Nothing matched, raise an error
-        raise KeyError("Observatory name '%s' is not defined" % name)
 
     # The following methods define the basic API for the Observatory class.
     # Any which raise NotImplementedError below must be implemented in
@@ -433,10 +422,7 @@ class Observatory:
         if t.scale == "tdb":
             return t
         # Check the method. This pattern is from numpy minimize
-        if callable(method):
-            meth = "_custom"
-        else:
-            meth = method.lower()
+        meth = "_custom" if callable(method) else method.lower()
         if options is None:
             options = {}
         if meth == "_custom":
@@ -745,15 +731,13 @@ def list_last_correction_mjds():
     """
     for n in Observatory.names():
         o = get_observatory(n)
-        if not hasattr(o, "clock_file"):
-            continue
         m = o.last_clock_correction_mjd()
-        if not o.clock_file:
-            continue
         try:
             print(f"{n:<24} {Time(m, format='mjd').iso}")
         except (ValueError, TypeError):
             print(f"{n:<24} MISSING")
+        if not hasattr(o, "_clock"):
+            continue
         for c in o._clock:
             try:
                 print(
