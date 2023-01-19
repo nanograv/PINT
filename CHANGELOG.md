@@ -9,6 +9,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Changed minimum supported version of scipy to 1.4.1
 - Moved DMconst from `pint.models.dispersion_model` to `pint` to avoid circular imports
 - Updated AUTHORS.rst
+- Removed references to `astropy._erfa` (removed since astropy 4.2)
 ### Added
 - Documentation: Explanation for DM
 - Methods to compute dispersion slope and to convert DM using the CODATA value of DMconst
