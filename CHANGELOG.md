@@ -14,6 +14,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Methods to compute dispersion slope and to convert DM using the CODATA value of DMconst
 - `TimingModel.total_dispersion_slope` method
 - Explicit discussion of DT92 convention to DDK model
+- Documentation: making TOAs from a list of times added to HowTo
 ### Fixed
 ### Removed
 
