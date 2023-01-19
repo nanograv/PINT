@@ -1259,8 +1259,11 @@ class TOAs:
     toafile : str, optional
         Filename to load TOAs from.
     toalist : list of TOA objects, optional
-        The TOA objects this TOAs should contain.  Exactly one of
-        these two parameters must be provided.
+        The TOA objects this TOAs should contain.
+    toatable : astropy.table.Table, optional
+        An existing TOA table
+
+    Exactly one of these three parameters must be provided.
 
     Attributes
     ----------
@@ -2603,6 +2606,7 @@ def get_TOAs_array(
     errors=1 * u.us,
     freqs=np.inf * u.MHz,
     flags=None,
+    model=None,
     ephem=None,
     include_bipm=True,
     bipm_version=bipm_default,
@@ -2646,7 +2650,7 @@ def get_TOAs_array(
         to the site, but can be overridden
     flags : dict or iterable
         Flags associated with the TOAs.  If iterable, then must have same length as ``times``.
-        Any additional keyword arguments are interpreted as flags.
+        Any additional keyword arguments are interpreted as flags applied to all TOAs.
     ephem : str
         The name of the solar system ephemeris to use; defaults to "DE421".
     include_bipm : bool or None
@@ -2660,14 +2664,10 @@ def get_TOAs_array(
         Whether to apply Shapiro delays based on planet positions. Note that a
         long-standing TEMPO2 bug in this feature went unnoticed for years.
         Defaults to False.
-    include_pn : bool, optional
-        Whether or not to read in the 'pn' column (``pulse_number``)
     model : pint.models.timing_model.TimingModel or None
         If a valid timing model is passed, model commands (such as BIPM version,
         planet shapiro delay, and solar system ephemeris) that affect TOA loading
         are applied.
-    usepickle : bool
-        Whether to try to use pickle-based caching of loaded clock-corrected TOAs objects.
     tdb_method : str
         Which method to use for the clock correction to TDB. See
         :func:`pint.observatory.Observatory.get_TDBs` for details.
@@ -2683,6 +2683,43 @@ def get_TOAs_array(
     TOAs
         Completed TOAs object representing the data.
     """
+    if model:
+        # If the keyword args are set, override what is in the model
+        if ephem is None and model["EPHEM"].value is not None:
+            ephem = model["EPHEM"].value
+            log.debug(f"Using EPHEM = {ephem} from the given model")
+        if include_bipm is None and model["CLOCK"].value is not None:
+            if model["CLOCK"].value == "TT(TAI)":
+                include_bipm = False
+                log.info("Using CLOCK = TT(TAI), so setting include_bipm = False")
+            elif "BIPM" in model["CLOCK"].value:
+                clk = model["CLOCK"].value.strip(")").split("(")
+                if len(clk) == 2:
+                    ctype, cvers = clk
+                    if ctype == "TT" and cvers.startswith("BIPM"):
+                        include_bipm = True
+                        if bipm_version is None:
+                            if cvers == "BIPM":
+                                bipm_version = bipm_default
+                            else:
+                                bipm_version = cvers
+                                log.debug(
+                                    f"Using CLOCK = {bipm_version} from the given model"
+                                )
+                    else:
+                        log.warning(
+                            f'CLOCK = {model["CLOCK"].value} is not implemented. '
+                            f"Using TT({bipm_default}) instead."
+                        )
+            else:
+                log.warning(
+                    f'CLOCK = {model["CLOCK"].value} is not implemented. '
+                    f"Using TT({bipm_default}) instead."
+                )
+        if planets is None and model["PLANET_SHAPIRO"].value:
+            planets = True
+            log.debug("Using PLANET_SHAPIRO = True from the given model")
+
     # mjds, mjd_floats, errors, freqs, obss, flags
     site = get_observatory(obs)
     # If MJD is already a Time, just use it. Note that this will ignore
