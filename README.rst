@@ -85,7 +85,7 @@ virtualenv to work on PINT (using a virtualenv is highly recommended by the PINT
 
 PINT is also available for Anaconda python under the conda-forge channel:
 
-    $ conda install -c conda-forge pint-pulsar
+   $ conda install -c conda-forge pint-pulsar
 
 The above two options install the latest *released* version. If you want access to the latest development version, 
 the source code, example notebooks, and tests, you can install from source, by 
@@ -106,7 +106,7 @@ Using
 
 See the online documentation_.  Specifically:
 
-* `tutorials <https://nanograv-pint.readthedocs.io/en/latest/tutorials.html>`_
+* `Tutorials <https://nanograv-pint.readthedocs.io/en/latest/tutorials.html>`_
 * `API reference <https://nanograv-pint.readthedocs.io/en/latest/reference.html>`_
 * `How to's for common tasks <https://github.com/nanograv/PINT/wiki/How-To>`_
 
