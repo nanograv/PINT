@@ -26,13 +26,13 @@ Your Python must have the package installation tool pip_ installed.  Also make s
 
 We highly recommend using an :ref:`Anaconda <install-with-anaconda>` environment or the package isolation tool virtualenv_.
 
-TEMPO and Tempo2
+TEMPO and TEMPO2
 ''''''''''''''''
 
 `TEMPO`_ is not required, but if you have it installed PINT can find clock
 correction files in ``$TEMPO/clock``
 
-`Tempo2`_ is not required, but if you have it installed PINT can find clock
+`TEMPO2`_ is not required, but if you have it installed PINT can find clock
 correction files in ``$TEMPO2/clock``
 
 IMPORTANT Note!
@@ -184,7 +184,7 @@ PINT development (building the documentation) requires pandoc_, which isn't a
 python package and therefore needs to be installed in some way appropriate for
 your operating system. On Linux you may be able to just run::
 
-   $ apt install pandoc
+   $ sudo apt install pandoc
 
 On a Mac using MacPorts this would be::
 
@@ -198,6 +198,6 @@ For further development instructions see :ref:`Developing PINT`
    you through the process.
 .. _pip: https://pip.pypa.io/en/stable/
 .. _TEMPO: http://tempo.sourceforge.net
-.. _Tempo2: https://bitbucket.org/psrsoft/tempo2
+.. _TEMPO2: https://bitbucket.org/psrsoft/tempo2
 .. _pandoc: https://pandoc.org/
 .. _`install pandoc`: https://pandoc.org/installing.html
