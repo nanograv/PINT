@@ -1339,7 +1339,7 @@ class TOAs:
                     raise ValueError("Trying to initialize TOAs from a non-list class")
             self.table = build_table(toalist, filename=self.filename)
         else:
-            self.table = toatable
+            self.table = copy.deepcopy(toatable)
         self.max_index = len(self.table) - 1
         # Add pulse number column (if needed) or make PHASE adjustments
         try:
@@ -2803,7 +2803,7 @@ def get_TOAs_array(
                 flag[k] = v
     flags_array = np.empty(len(t), dtype=object)
     for i, f in enumerate(flags):
-        flags_array[i] = f
+        flags_array[i] = copy.deepcopy(f)
     out = table.Table(
         [
             np.arange(len(mjd)),
