@@ -95,7 +95,7 @@ To load both::
     m, t = get_model_and_toas(parfile, timfile)
 
 
-Create TOAs from a list of times
+Create TOAs from an array of times
 --------------------------------
 A :class:`pint.toa.TOA` object represents a *single* TOA as an object that contains 
 both a time and a location, along with optional information like frequency, measurement error, etc.  
@@ -116,7 +116,7 @@ you can do::
 Note that we also use ``Time`` from :mod:`pint.pulsar_mjd` rather than :class:`astropy.time.Time` directly to allow the 
 ``pulsar_mjd`` format, designed to avoid leap seconds.  But this would work with standard :class:`astropy.time.Time` 
 objects as well.  We use :func:`pint.toa.get_TOAs_array` to make sure clock corrections are applied when constructing the TOAs.  
-Other information like ``errors``, ``frequencies``, ``flags`` can be added.  You can also merge multiple data-sets with 
+Other information like ``errors``, ``frequencies``, and ``flags`` can be added.  You can also merge multiple data-sets with 
 :func:`pint.toa.merge_TOAs`
 
 

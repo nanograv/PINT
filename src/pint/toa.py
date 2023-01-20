@@ -379,9 +379,9 @@ def save_pickle(toas, picklefilename=None):
         )
     elif toas.filename is not None:
         if isinstance(toas.filename, (str, Path)):
-            picklefilename = str(toas.filename) + ".pickle.gz"
+            picklefilename = f"{str(toas.filename)}.pickle.gz"
         else:
-            picklefilename = toas.filename[0] + ".pickle.gz"
+            picklefilename = f"{toas.filename[0]}.pickle.gz"
     else:
         raise ValueError("TOA pickle method needs a (single) filename.")
     with gzip.open(picklefilename, "wb") as f:
@@ -408,10 +408,7 @@ def get_TOAs_list(
     t = TOAs(toalist=toa_list)
     t.commands = [] if commands is None else commands
     t.filename = filename
-    if hashes is None:
-        t.hashes = {}
-    else:
-        t.hashes = hashes
+    t.hashes = {} if hashes is None else hashes
     if not any(["clkcorr" in f for f in t.table["flags"]]):
         t.apply_clock_corrections(
             include_gps=include_gps,
@@ -480,7 +477,7 @@ def _parse_TOA_line(line, fmt="Unknown"):
         d["freq"] = float(line[15:24])
         d["error"] = float(line[44:53])
         ii, ff = line[24:44].split(".")
-        MJD = (int(ii), float("0." + ff))
+        MJD = (int(ii), float(f"0.{ff}"))
         try:
             d["ddm"] = str(float(line[68:78]))
         except ValueError:
@@ -492,7 +489,7 @@ def _parse_TOA_line(line, fmt="Unknown"):
         d["freq"] = float(fields[1])
         if "." in fields[2]:
             ii, ff = fields[2].split(".")
-            MJD = (int(ii), float("0." + ff))
+            MJD = (int(ii), float(f"0.{ff}"))
         else:
             MJD = (int(fields[2]), 0.0)
         d["error"] = float(fields[3])
@@ -633,10 +630,7 @@ def format_toa_line(
             if hasattr(v, "unit"):
                 v = v.value
             flag = str(flag)
-            if flag.startswith("-"):
-                flagstring += " %s %s" % (flag, v)
-            else:
-                flagstring += " -%s %s" % (flag, v)
+            flagstring += f" {flag} {v}" if flag.startswith("-") else f" -{flag} {v}"
         # Now set observatory code. Use obs.name unless overridden by tempo2_code
         try:
             obscode = obs.tempo2_code
@@ -892,14 +886,14 @@ def _cluster_by_gaps(t, gap):
 
     Parameters
     ----------
-    t : np.ndarray
+    t : numpy.ndarray
         Input times to be clustered
     gap : float
         gap for clustering, same units as `t`
 
     Returns
     -------
-    clusters : np.ndarray
+    clusters : numpy.ndarray
         cluster numbers to which the times belong
 
     """
@@ -1380,7 +1374,7 @@ class TOAs:
 
         Returns
         -------
-        pint.toa.TOAs or np.ndarray or astropy.table.Column
+        pint.toa.TOAs or numpy.ndarray or astropy.table.Column
             The selected part of the object.
 
         Note
@@ -1394,10 +1388,7 @@ class TOAs:
             if len(index) != 2:
                 raise ValueError("Invalid indexing")
             a, b = index
-            if isinstance(a, str):
-                column, subset = a, b
-            else:
-                column, subset = b, a
+            column, subset = (a, b) if isinstance(a, str) else (b, a)
         elif isinstance(index, str):
             column = index
         else:
@@ -1428,22 +1419,17 @@ class TOAs:
                 r.table = r.table[[index]]
                 return r
             else:
-                raise ValueError("Unable to index TOAs with {}".format(index))
+                raise ValueError(f"Unable to index TOAs with {index}")
         elif column in self.table.columns:
-            if subset is None:
-                return self.table[column]
-            else:
-                return self.table[column, subset]
+            return self.table[column] if subset is None else self.table[column, subset]
         else:
             r = []
             if subset is None:
-                for f in self.table["flags"]:
-                    r.append(f.get(column, ""))
+                r.extend(f.get(column, "") for f in self.table["flags"])
             elif isinstance(subset, int):
                 return self.table["flags"][subset].get(column, "")
             else:
-                for f in self.table["flags"][subset]:
-                    r.append(f.get(column, ""))
+                r.extend(f.get(column, "") for f in self.table["flags"][subset])
             # FIXME: what to do if length zero? How to ensure it's a string array even then?
             return np.array(r)
 
@@ -1482,10 +1468,7 @@ class TOAs:
             if len(index) != 2:
                 raise ValueError("Invalid indexing")
             a, b = index
-            if isinstance(a, str):
-                column, subset = a, b
-            else:
-                column, subset = b, a
+            column, subset = (a, b) if isinstance(a, str) else (b, a)
         elif isinstance(index, str):
             column = index
         else:
@@ -2635,17 +2618,17 @@ def get_TOAs_array(
 
     Parameters
     ----------
-    times : astropy.time.Time, float, np.ndarray, or tuple of floats/np.ndarray
-        The times of the TOAs, which can be expressed as an astropy Time,
-        a floating point MJD (64 or 80 bit precision), or a tuple
+    times : astropy.time.Time, float, numpy.ndarray, or tuple of floats/numpy.ndarray
+        The times of the TOAs, which can be expressed as astropy Time values,
+        floating point MJDs (64 or 80 bit precision), or a tuple
         of (MJD1,MJD2) values whose sum is the full precision MJD (usually the
         integer and fractional part of the MJD)
     obs : str
         The observatory code for the TOA
-    errors : astropy.units.Quantity or np.ndarray or float, optional
+    errors : astropy.units.Quantity or numpy.ndarray or float, optional
         The uncertainty on the TOA; Assumed to be
         in microseconds if no units provided
-    freq : astropy.units.Quantity or np.ndarray or float, optional
+    freq : astropy.units.Quantity or numpy.ndarray or float, optional
         Frequency corresponding to the TOAs; Assumed to be
         in MHz if no units provided
     scale : str, optional
@@ -2730,7 +2713,7 @@ def get_TOAs_array(
     if isinstance(times, time.Time):
         if scale is not None:
             raise ValueError("scale argument is ignored when Time is provided")
-        t = times
+        t = np.atleast_1d(times)
     else:
         arg1, arg2 = times if isinstance(times, tuple) else (times, None)
         if scale is None:
@@ -2832,7 +2815,7 @@ def get_TOAs_array(
     t = TOAs(toatable=out)
     t.commands = [] if commands is None else commands
     t.hashes = {} if hashes is None else hashes
-    if not any(["clkcorr" in f for f in t.table["flags"]]):
+    if all("clkcorr" not in f for f in t.table["flags"]):
         t.apply_clock_corrections(
             include_gps=include_gps,
             include_bipm=include_bipm,
