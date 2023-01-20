@@ -63,7 +63,7 @@ Install with Anaconda
 ---------------------
 
 If you use `Anaconda <https://www.anaconda.com/products/individual>`_ environments to manage your python packages, 
-PINT is also available for Anaconda python under the `conda-forge <https://conda-forge.org>`_ channel:
+PINT is also available for Anaconda python under the `conda-forge <https://conda-forge.org>`_ channel::
 
     $ conda install -c conda-forge pint-pulsar
 
