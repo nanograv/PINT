@@ -139,3 +139,20 @@ def test_toas_model():
     toas = toa.get_TOAs_array(t, obs, model=m, include_bipm=None, bipm_version=None)
     assert toas.ephem == "DE440"
     assert not toas.clock_corr_info["include_bipm"]
+
+
+def test_toas_clockflag_adjust():
+    t = pulsar_mjd.Time(np.array([55000, 56000]), scale="utc", format="pulsar_mjd")
+    obs = "gbt"
+    toas = toa.get_TOAs_array(t, obs, to="1.2")
+    toas2 = toa.get_TOAs_array(t, obs)
+
+    assert np.allclose(toas["mjd_float"] - toas2["mjd_float"], 1.2 / 86400)
+
+
+def test_toas_clockflag_allcolumns():
+    t = pulsar_mjd.Time(np.array([55000, 56000]), scale="utc", format="pulsar_mjd")
+    obs = "gbt"
+    toas = toa.get_TOAs_array(t, obs, to="1.2")
+
+    assert np.allclose(np.array([x.mjd for x in toas["mjd"]]) - toas["mjd_float"], 0)
