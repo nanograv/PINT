@@ -2154,6 +2154,7 @@ class TOAs:
             corrections[grp] = time_statements[grp] + clock_corrections
             for jj in grp:
                 self["mjd"][jj] += time.TimeDelta(corrections[jj])
+                self["mjd_float"][jj] += corrections[jj].to_value(u.d)
                 if corrections[jj] != 0:
                     flags[jj]["clkcorr"] = str(corrections[jj].to_value(u.s))
         # Update clock correction info
