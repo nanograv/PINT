@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.8
+#       jupytext_version: 1.14.4
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -24,17 +24,10 @@ from glob import glob
 
 import pint.observatory
 import pint.observatory.topo_obs
-
-# %%
-# hide annoying INFO messages
-from loguru import logger as log
-import sys
 import pint.logging
 
-logfilter = pint.logging.LogFilter()
-log.remove()
-log.add(sys.stderr, level="WARNING", filter=logfilter, colorize=True)
-
+# hide annoying INFO messages?
+pint.logging.setup("WARNING")
 
 # %%
 pint.observatory.list_last_correction_mjds()
@@ -44,8 +37,7 @@ pint.observatory.list_last_correction_mjds()
 # these exact versions for reproducibility purposes.
 #
 # %%
-
 d = tempfile.mkdtemp()
 pint.observatory.topo_obs.export_all_clock_files(d)
-for f in sorted(glob(d + "/*")):
+for f in sorted(glob(f"{d}/*")):
     print(f)
