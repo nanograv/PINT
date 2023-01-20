@@ -18,7 +18,8 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - `TimingModel.total_dispersion_slope` method
 - Explicit discussion of DT92 convention to DDK model
 - H.E.S.S. telescope to the list of known observatories
-- Documentation: making TOAs from a list of times added to HowTo
+- Documentation: making TOAs from array of times added to HowTo
+- Method to make TOAs from an array of times
 - Clock correction for LEAP
 ### Fixed
 - Broken notebooks CI test
