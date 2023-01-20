@@ -2630,6 +2630,9 @@ def get_TOAs_array(
     or further information on the meaning of
     the clock correction flags.
 
+    Note that this requires all TOAs to be measured at a single observatory.  If you
+    wish to combine multiple data-sets use :func:`pint.toa.merge_TOAs`
+
     Parameters
     ----------
     times : astropy.time.Time, float, np.ndarray, or tuple of floats/np.ndarray
@@ -2680,7 +2683,7 @@ def get_TOAs_array(
 
     Returns
     -------
-    TOAs
+    TOAs : pint.toa.TOAs
         Completed TOAs object representing the data.
     """
     if model:
