@@ -2154,9 +2154,10 @@ class TOAs:
             corrections[grp] = time_statements[grp] + clock_corrections
             for jj in grp:
                 self["mjd"][jj] += time.TimeDelta(corrections[jj])
-                self["mjd_float"][jj] += corrections[jj].to_value(u.d)
+
                 if corrections[jj] != 0:
                     flags[jj]["clkcorr"] = str(corrections[jj].to_value(u.s))
+            self["mjd_float"][grp] += corrections[grp].to_value(u.d)
         # Update clock correction info
         self.clock_corr_info.update(
             {
@@ -2614,8 +2615,8 @@ def get_TOAs_array(
     or further information on the meaning of
     the clock correction flags.
 
-    Note that this requires all TOAs to be measured at a single observatory.  If you
-    wish to combine multiple data-sets use :func:`pint.toa.merge_TOAs`
+    Note that this requires all TOAs to be measured at a single observatory (which can be a
+    spacecraft).  If you wish to combine multiple data-sets use :func:`pint.toa.merge_TOAs`
 
     Parameters
     ----------

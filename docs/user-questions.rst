@@ -106,18 +106,20 @@ you can do::
     import numpy as np
     from astropy import units as u, constants as c
     from pint import pulsar_mjd
+    from astropy.time import Time
     from pint import toa
 
-    t = pulsar_mjd.Time(np.array([55000, 56000]), scale="utc", format="pulsar_mjd")
+    t = Time(np.array([55000, 56000]), scale="utc", format="pulsar_mjd")
     obs = "gbt"
 
     toas = toa.get_TOAs_array(t, obs)
 
-Note that we also use ``Time`` from :mod:`pint.pulsar_mjd` rather than :class:`astropy.time.Time` directly to allow the 
-``pulsar_mjd`` format, designed to avoid leap seconds.  But this would work with standard :class:`astropy.time.Time` 
-objects as well.  We use :func:`pint.toa.get_TOAs_array` to make sure clock corrections are applied when constructing the TOAs.  
-Other information like ``errors``, ``frequencies``, and ``flags`` can be added.  You can also merge multiple data-sets with 
-:func:`pint.toa.merge_TOAs`
+Note that we import :mod:`pint.pulsar_mjd` to allow the 
+``pulsar_mjd`` format, designed to deal properly with leap seconds.  
+We use :func:`pint.toa.get_TOAs_array` to make sure clock corrections are 
+applied when constructing the TOAs.  
+Other information like ``errors``, ``frequencies``, and ``flags`` can be added.  
+You can also merge multiple data-sets with :func:`pint.toa.merge_TOAs`
 
 
 Get the red noise basis functions and the corresponding coefficients out of a PINT fitter object

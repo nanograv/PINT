@@ -4,6 +4,9 @@ from pint import pulsar_mjd
 from pint import toa
 from pint.models import get_model
 from astropy import time
+from pint.fermi_toas import load_Fermi_TOAs
+from pint.observatory.satellite_obs import get_satellite_observatory
+from pinttestdata import datadir
 import copy
 import io
 import pytest
@@ -156,3 +159,27 @@ def test_toas_clockflag_allcolumns():
     toas = toa.get_TOAs_array(t, obs, to="1.2")
 
     assert np.allclose(np.array([x.mjd for x in toas["mjd"]]) - toas["mjd_float"], 0)
+
+
+def test_toas_fermi():
+    eventfileraw = datadir / "J0030+0451_w323_ft1weights.fits"
+    ft2file = datadir / "lat_spacecraft_weekly_w323_p202_v001.fits"
+    get_satellite_observatory("Fermi", ft2file)
+
+    tl = load_Fermi_TOAs(eventfileraw, weightcolumn="PSRJ0030+0451")
+    ts = toa.get_TOAs_list(
+        tl, include_gps=False, include_bipm=False, planets=False, ephem="DE405"
+    )
+
+    t = time.Time([toa.mjd for toa in tl], scale="tt")
+    flags = [toa.flags for toa in tl]
+    ts2 = toa.get_TOAs_array(
+        t,
+        "fermi",
+        include_gps=False,
+        include_bipm=False,
+        planets=False,
+        ephem="DE405",
+        flags=flags,
+    )
+    assert np.all(ts["mjd"] == ts2["mjd"])
