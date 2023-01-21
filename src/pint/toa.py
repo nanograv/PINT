@@ -2423,6 +2423,37 @@ class TOAs:
         log.debug("Adding column " + col.name)
         self.table.add_column(col)
 
+    def update_mjd_float(self):
+        """Update the ``mjd_float`` column from the ``mjd`` column"""
+        self["mjd_float"] = np.array([t.mjd for t in self["mjd"]], dtype=float) * u.d
+
+    def update_all_times(self, tdb_method="default"):
+        """Update the various derived time columns
+
+        Updates:
+
+            ``mjd_float``
+            ``tdb``
+            ``tdbld``
+            ``ssb_obs_pos``
+            ``ssb_obs_vel``
+            ``obs_sun_pos``
+            ``obs_*_pos`` if ``planets`` is ``True``
+            ``ssb_obs_vel_ecl`` if ``obliquity`` is not ``None``
+
+        Parameters
+        ----------
+        tdb_method : str
+            Which method to use for the clock correction to TDB. See
+            :func:`pint.observatory.Observatory.get_TDBs` for details.
+        """
+        self.compute_TDBs(method=tdb_method, ephem=self.ephem)
+        self.compute_posvels(self.ephem, self.planets)
+        self.update_mjd_float()
+
+        if self.obliquity is not None:
+            self.add_vel_ecl(self.obliquity)
+
 
 def merge_TOAs(TOAs_list, strict=False):
     """Merge a list of TOAs instances and return a new combined TOAs instance
