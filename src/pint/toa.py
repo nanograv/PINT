@@ -2432,14 +2432,14 @@ class TOAs:
 
         Updates:
 
-            ``mjd_float``
-            ``tdb``
-            ``tdbld``
-            ``ssb_obs_pos``
-            ``ssb_obs_vel``
-            ``obs_sun_pos``
-            ``obs_*_pos`` if ``planets`` is ``True``
-            ``ssb_obs_vel_ecl`` if ``obliquity`` is not ``None``
+            * ``mjd_float``
+            * ``tdb``
+            * ``tdbld``
+            * ``ssb_obs_pos``
+            * ``ssb_obs_vel``
+            * ``obs_sun_pos``
+            * ``obs_*_pos`` if ``planets`` is ``True``
+            * ``ssb_obs_vel_ecl`` if ``obliquity`` is not ``None``
 
         Parameters
         ----------
