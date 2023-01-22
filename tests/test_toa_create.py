@@ -4,7 +4,7 @@ from pint import pulsar_mjd
 from pint import toa
 from pint.models import get_model
 from astropy import time
-from pint.fermi_toas import load_Fermi_TOAs
+from pint.fermi_toas import load_Fermi_TOAs, load_Fermi_Times
 from pint.observatory.satellite_obs import get_satellite_observatory
 from pinttestdata import datadir
 import copy
@@ -183,3 +183,32 @@ def test_toas_fermi():
         flags=flags,
     )
     assert np.all(ts["mjd"] == ts2["mjd"])
+
+
+def test_toas_fermi_notoalist():
+    eventfileraw = datadir / "J0030+0451_w323_ft1weights.fits"
+    ft2file = datadir / "lat_spacecraft_weekly_w323_p202_v001.fits"
+    get_satellite_observatory("Fermi", ft2file, overwrite=True)
+
+    tl = load_Fermi_TOAs(eventfileraw, weightcolumn="PSRJ0030+0451")
+    toas = toa.get_TOAs_list(
+        tl, include_gps=False, include_bipm=False, planets=False, ephem="DE405"
+    )
+
+    t2, obs, energies, weights = load_Fermi_Times(
+        eventfileraw, weightcolumn="PSRJ0030+0451"
+    )
+    toas2 = toa.get_TOAs_array(
+        t2,
+        obs,
+        include_gps=False,
+        include_bipm=False,
+        planets=False,
+        ephem="DE405",
+        flags=[
+            {"energy": str(e), "weight": str(w)}
+            for e, w in zip(energies.to_value(u.MeV), weights)
+        ],
+    )
+    assert np.all(toas["mjd"] == toas2["mjd"])
+    assert np.all(toas.table == toas2.table)
