@@ -164,7 +164,7 @@ def test_toas_clockflag_allcolumns():
 def test_toas_fermi():
     eventfileraw = datadir / "J0030+0451_w323_ft1weights.fits"
     ft2file = datadir / "lat_spacecraft_weekly_w323_p202_v001.fits"
-    get_satellite_observatory("Fermi", ft2file)
+    get_satellite_observatory("Fermi", ft2file, overwrite=True)
 
     tl = load_Fermi_TOAs(eventfileraw, weightcolumn="PSRJ0030+0451")
     ts = toa.get_TOAs_list(
