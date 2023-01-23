@@ -2700,6 +2700,30 @@ def get_TOAs_array(
     -------
     TOAs : pint.toa.TOAs
         Completed TOAs object representing the data.
+
+
+    Examples
+    --------
+
+        >>> from pint import pulsar_mjd
+        >>> from pint import toa
+        >>> from astropy import time
+        >>> t = pulsar_mjd.Time(np.linspace(55000, 56000, 100), scale="utc", format="pulsar_mjd")
+        >>> errors = np.random.normal(loc=1, scale=0.1, size=len(t)) << u.us
+        >>> freqs = np.ones(len(t)) * 1400 << u.MHz
+        >>> obs = "gbt"
+        >>> flags = {"quality": "good"}
+        >>> # additional kwargs are converted to flags
+        >>> # they are automatically made into strings
+        >>> toas = toa.get_TOAs_array(
+                t,
+                obs,
+                errors=errors,
+                freqs=freqs,
+                ephem="DE440",
+                flags=flags,
+                int_time=np.ones(len(t)) * 30,
+            )
     """
     if model:
         # If the keyword args are set, override what is in the model
