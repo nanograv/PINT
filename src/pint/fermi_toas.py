@@ -385,7 +385,7 @@ def get_Fermi_TOAs(
             obs,
             include_gps=False,
             include_bipm=False,
-            planets=False,
+            planets=planets,
             ephem=ephem,
             flags=[
                 {"energy": str(e), "weight": str(w)} for e in energies.to_value(u.MeV)
