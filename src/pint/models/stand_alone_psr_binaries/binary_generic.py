@@ -108,15 +108,13 @@ class PSR_BINARY:
             "SINI": 0 * u.Unit(""),
             "GAMMA": 0 * u.second,
             "FB0": 1.1574e-6 * u.Unit("") / u.second,
+        } | {
+            # For Binary phase calculation
+            "P0": 1.0 * u.second,
+            "P1": 0.0 * u.second / u.second,
+            "PEPOCH": np.longdouble(54000.0) * u.day,
         }
-        # For Binary phase calculation
-        self.param_default_value.update(
-            {
-                "P0": 1.0 * u.second,
-                "P1": 0.0 * u.second / u.second,
-                "PEPOCH": np.longdouble(54000.0) * u.day,
-            }
-        )
+
         self.param_aliases = {"ECC": ["E"], "EDOT": ["ECCDOT"], "A1DOT": ["XDOT"]}
         self.binary_params = list(self.param_default_value.keys())
         self.inter_vars = ["E", "M", "nu", "ecc", "omega", "a1", "TM2"]
@@ -417,7 +415,7 @@ class PSR_BINARY:
         par_obj = getattr(self, par)
         try:
             func = getattr(self, f"d_a1_d_{par}")
-        except Exception:
+        except AttributeError:
             func = lambda: np.zeros(len(self.tt0)) * self.A1.unit / par_obj.unit
         return func()
 
@@ -525,8 +523,8 @@ class PSR_BINARY:
 
         par_obj = getattr(self, par)
         try:
-            func = getattr(self, f"d_E_d_{par}")
-        except Exception:
+            return getattr(self, f"d_E_d_{par}")()
+        except AttributeError:
             if par in self.orbits_cls.orbit_params:
                 d_M_d_par = self.d_M_d_par(par)
                 return d_M_d_par / (1.0 - np.cos(self.E()) * self.ecc())
@@ -619,9 +617,8 @@ class PSR_BINARY:
 
         par_obj = getattr(self, par)
         try:
-            func = getattr(self, f"d_nu_d_{par}")
-            return func()
-        except Exception:
+            return getattr(self, f"d_nu_d_{par}")()
+        except AttributeError:
             if par in self.orbits_cls.orbit_params:
                 return self.d_nu_d_E() * self.d_E_d_par(par)
 

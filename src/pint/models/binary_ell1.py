@@ -285,7 +285,7 @@ class BinaryELL1k(BinaryELL1):
     :class:`pint.models.stand_alone_psr_binaries.ELL1k_model.ELL1kmodel`.
 
     It supports all the parameters defined in :class:`pint.models.pulsar_binary.PulsarBinary`
-    except that it removes the polar orbital parameters:
+    except that it removes ECC, OM, and T0:
 
     Parameters supported:
 
