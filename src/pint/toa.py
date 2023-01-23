@@ -54,6 +54,8 @@ __all__ = [
     "TOA",
 ]
 
+EPHEM_default = "DE421"
+
 toa_commands = (
     "DITHER",
     "EFAC",
@@ -143,8 +145,8 @@ def get_TOAs(
     ----------
     timfile : str or list of strings or file-like
         Filename, list of filenames, or file-like object containing the TOA data.
-    ephem : str
-        The name of the solar system ephemeris to use; defaults to "DE421".
+    ephem : str or None
+        The name of the solar system ephemeris to use; defaults to ``pint.toa.EPHEM_default`` if ``None``
     include_bipm : bool or None
         Whether to apply the BIPM clock correction. Defaults to True.
     bipm_version : str or None
@@ -2183,7 +2185,8 @@ class TOAs:
             for details.
         ephem : str or None
             Solar System ephemeris to use for the computation. If not specified
-            use the value in ``self.ephem``; if specified, replace ``self.ephem``.
+            use the value in ``self.ephem`` if available, else use ``pint.toa.EPHEM_default``
+            If specified, replace ``self.ephem``.
         """
         log.debug("Computing TDB columns.")
         if "tdb" in self.table.colnames:
@@ -2198,9 +2201,9 @@ class TOAs:
                 ephem = self.ephem
             else:
                 log.warning(
-                    "No ephemeris provided to TOAs object or compute_TDBs. Using DE421"
+                    f"No ephemeris provided to TOAs object or compute_TDBs. Using {EPHEM_default}"
                 )
-                ephem = "DE421"
+                ephem = EPHEM_default
         else:
             # If user specifies an ephemeris, make sure it is the same as the one already
             # in the TOA object, to prevent mixing.
