@@ -34,6 +34,12 @@ class BinaryELL1(PulsarBinary):
 
     .. paramtable::
         :class: pint.models.binary_ell1.BinaryELL1
+
+    References
+    ----------
+    - Lange et al. (2001), MNRAS, 326 (1), 274–282 [1]_
+
+    .. [1] https://ui.adsabs.harvard.edu/abs/2001MNRAS.326..274L/abstract
     """
 
     register = True
@@ -195,7 +201,13 @@ class BinaryELL1H(BinaryELL1):
 
     Note
     ----
-    Ref:  Freire and Wex 2010; Only the Medium-inclination case model is implemented.
+    Only the Medium-inclination case model is implemented.
+
+    References
+    ----------
+    - Freire & Wex (2010), MNRAS, 409 (1), 199-212 [1]_
+
+    .. [1] https://ui.adsabs.harvard.edu/abs/2010MNRAS.409..199F/abstract
     """
 
     register = True
@@ -291,6 +303,12 @@ class BinaryELL1k(BinaryELL1):
 
     .. paramtable::
         :class: pint.models.binary_ell1.BinaryELL1k
+
+    References
+    ----------
+    - Susobhanan et al. (2018), MNRAS, 480 (4), 5260-5271 [1]_
+
+    .. [1] https://ui.adsabs.harvard.edu/abs/2018MNRAS.480.5260S/abstract
     """
 
     register = True

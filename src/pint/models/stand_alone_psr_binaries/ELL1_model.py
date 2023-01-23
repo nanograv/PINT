@@ -365,7 +365,14 @@ class ELL1BaseModel(PSR_BINARY):
 
 
 class ELL1model(ELL1BaseModel):
-    """This is a ELL1 model using M2 and SINI as the Shapiro delay parameters."""
+    """This is a ELL1 model using M2 and SINI as the Shapiro delay parameters.
+
+    References
+    ----------
+    - Lange et al. (2001), MNRAS, 326 (1), 274–282 [1]_
+
+    .. [1] https://ui.adsabs.harvard.edu/abs/2001MNRAS.326..274L/abstract
+    """
 
     def __init__(self):
         super().__init__()

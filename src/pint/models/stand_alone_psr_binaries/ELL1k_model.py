@@ -11,6 +11,12 @@ class ELL1kmodel(ELL1model):
 
     ELL1k model is a generalization of ELL1 model to handle systems with
     large advance of periastron.
+
+    References
+    ----------
+    - Susobhanan et al. (2018), MNRAS, 480 (4), 5260-5271 [1]_
+
+    .. [1] https://ui.adsabs.harvard.edu/abs/2018MNRAS.480.5260S/abstract
     """
 
     def __init__(self):

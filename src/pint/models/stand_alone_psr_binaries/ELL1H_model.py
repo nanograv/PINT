@@ -12,13 +12,18 @@ class ELL1Hmodel(ELL1BaseModel):
 
     Note
     ----
-    Ref : Paulo C. C. Freire and Norbert Wex, Mon. Not. R. Astron. Soc. 409,
     ELL1H model parameterize the shapiro delay differently compare to ELL1
     model. A fourier series expansion is used for the shapiro delay.
     Ds = -2r * (a0/2 + sum(a_k*cos(k*phi)) + sum(b_k * sin(k*phi))
     The first two harmonics are generally absorbed by ELL1 roemer delay.
     Thus, when ELL1 parameterize shapiro delay uses the series from the third
     harmonic or higher.
+
+    References
+    ----------
+    - Freire & Wex (2010), MNRAS, 409 (1), 199-212 [1]_
+
+    .. [1] https://ui.adsabs.harvard.edu/abs/2010MNRAS.409..199F/abstract
     """
 
     def __init__(self):
