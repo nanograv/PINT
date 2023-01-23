@@ -92,7 +92,7 @@ def load_Fermi_TOAs(
         Specifies the FITS column name to read the photon weights from.
         The special value 'CALC' causes the weights to be computed
         empirically as in Philippe Bruel's SearchPulsation code.
-    targetcoord : astropy.SkyCoord
+    targetcoord : astropy.coordinates.SkyCoord
         Source coordinate for weight computation if weightcolumn=='CALC'
     logeref : float
         Parameter for the weight computation if weightcolumn=='CALC'
@@ -219,7 +219,7 @@ def load_Fermi_TOAs(
     return toalist
 
 
-def load_Fermi_Times(
+def get_Fermi_TOAs(
     ft1name,
     weightcolumn=None,
     targetcoord=None,
@@ -229,9 +229,11 @@ def load_Fermi_Times(
     minmjd=-np.inf,
     maxmjd=np.inf,
     fermiobs="Fermi",
+    ephem=None,
+    planets=False,
 ):
     """
-      Read photon event times out of a Fermi FT1 file and return a :class:`~astropy.time.Time` object
+      Read photon event times out of a Fermi FT1 file and return a :class:`pint.toa.TOAs` object
 
       Correctly handles raw FT1 files, or ones processed with gtbary
       to have barycentered or geocentered TOAs.
@@ -242,7 +244,7 @@ def load_Fermi_Times(
         Specifies the FITS column name to read the photon weights from.
         The special value ``CALC`` causes the weights to be computed
         empirically as in Philippe Bruel's SearchPulsation code.
-    targetcoord : astropy.SkyCoord
+    targetcoord : astropy.coordinates.SkyCoord
         Source coordinate for weight computation if weightcolumn=='CALC'
     logeref : float
         Parameter for the weight computation if weightcolumn=='CALC'
@@ -257,18 +259,17 @@ def load_Fermi_Times(
     fermiobs: str
       The default observatory name is Fermi, and must have already been
       registered.  The user can specify another name
+    ephem : str, optional
+        The name of the solar system ephemeris to use; defaults to "DE421".
+    planets : bool, optional
+        Whether to apply Shapiro delays based on planet positions. Note that a
+        long-standing TEMPO2 bug in this feature went unnoticed for years.
+        Defaults to False.
+
 
     Returns
     -------
-    t : astropy.time.Time
-        Array of times
-    obs : str
-        Observatory for constructing TOAs
-    energies : astropy.units.Quantity
-        Energies of each event
-    weights : numpy.ndarray
-        Weight of each event.   Only returned if ``weightcolumn`` is not ``None``
-
+    pint.toa.TOAs
 
     Examples
     -------
@@ -276,15 +277,10 @@ def load_Fermi_Times(
     orbit file (called ``ft2file``)::
 
         >>> import pint.toa as toa
-        >>> from pint.fermi_toas import load_Fermi_Times
+        >>> from pint.fermi_toas import get_Fermi_TOAs
         >>> from pint.observatory.satellite_obs import get_satellite_observatory
-        >>> from astropy import units as u
         >>> get_satellite_observatory("Fermi", ft2file, overwrite=True)
-        >>> t, obs, energies, weights = load_Fermi_Times(eventfile, weightcolumn="PSRJ0030+0451")
-        >>> toas = toa.get_TOAs_array(t, obs, include_gps=False,
-                include_bipm=False, planets=False, ephem="DE405",
-                flags=[{"energy": str(e), "weight": str(w)} for e, w in zip(energies.to_value(u.MeV), weights)],
-                )
+        >>> toas = get_Fermi_TOAs(eventfile, weightcolumn="PSRJ0030+0451", ephem="DE405")
 
     """
 
@@ -384,6 +380,27 @@ def load_Fermi_Times(
             location=EarthLocation(0, 0, 0),
         )
     if weightcolumn is None:
-        return t, obs, energies
+        return toa.get_TOAs_array(
+            t,
+            obs,
+            include_gps=False,
+            include_bipm=False,
+            planets=False,
+            ephem=ephem,
+            flags=[
+                {"energy": str(e), "weight": str(w)} for e in energies.to_value(u.MeV)
+            ],
+        )
     else:
-        return t, obs, energies, weights
+        return toa.get_TOAs_array(
+            t,
+            obs,
+            include_gps=False,
+            include_bipm=False,
+            planets=planets,
+            ephem=ephem,
+            flags=[
+                {"energy": str(e), "weight": str(w)}
+                for e, w in zip(energies.to_value(u.MeV), weights)
+            ],
+        )
