@@ -37,6 +37,7 @@ import pint
 import pint.utils
 from pint.observatory import Observatory, bipm_default, get_observatory
 from pint.observatory.special_locations import T2SpacecraftObs
+from pint.observatory.satellite_obs import SatelliteObs
 from pint.observatory.topo_obs import TopoObs
 from pint.phase import Phase
 from pint.pulsar_ecliptic import PulsarEcliptic
@@ -2225,26 +2226,19 @@ class TOAs:
                 grpmjds = time.Time(
                     self.table[grp]["mjd"], location=self.table[grp]["mjd"][0].location
                 )
+            elif isinstance(site, SatelliteObs):
+                # for satellites, the location does not matter
+                grpmjds = time.Time(self.table[grp]["mjd"], location=None)
             else:
                 # Grab locations for each TOA
-                # It is crazy that I have to deconstruct the locations like
-                # this to build a single EarthLocation object with an array
-                # of locations contained in it.
-                # Is there a more efficient way to convert a list of EarthLocations
-                # into a single EarthLocation object with an array of values internally?
-                loclist = [t.location for t in self.table[grp]["mjd"]]
+                loclist = np.array([t.location for t in self.table[grp]["mjd"]])
                 if loclist[0] is None:
                     grpmjds = time.Time(self.table[grp]["mjd"], location=None)
                 else:
-                    locs = EarthLocation(
-                        np.array([loc.x.value for loc in loclist]) * u.m,
-                        np.array([loc.y.value for loc in loclist]) * u.m,
-                        np.array([loc.z.value for loc in loclist]) * u.m,
-                    )
+                    locs = loclist * u.m
                     grpmjds = time.Time(self.table[grp]["mjd"], location=locs)
 
-            grptdbs = site.get_TDBs(grpmjds, method=method, ephem=ephem)
-            tdbs[grp] = np.asarray([t for t in grptdbs])
+            tdbs[grp] = site.get_TDBs(grpmjds, method=method, ephem=ephem)
         # Now add the new columns to the table
         col_tdb = table.Column(name="tdb", data=tdbs)
         col_tdbld = table.Column(name="tdbld", data=[t.tdb.mjd_long for t in tdbs])
