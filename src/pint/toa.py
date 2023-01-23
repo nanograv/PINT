@@ -2235,7 +2235,9 @@ class TOAs:
                 if loclist[0] is None:
                     grpmjds = time.Time(self.table[grp]["mjd"], location=None)
                 else:
-                    locs = loclist * u.m
+                    locs = EarthLocation(
+                        x=loclist["x"] * u.m, y=loclist["y"] * u.m, z=loclist["z"] * u.m
+                    )
                     grpmjds = time.Time(self.table[grp]["mjd"], location=locs)
 
             tdbs[grp] = site.get_TDBs(grpmjds, method=method, ephem=ephem)
@@ -2666,7 +2668,7 @@ def get_TOAs_array(
         to the site, but can be overridden
     flags : dict or iterable
         Flags associated with the TOAs.  If iterable, then must have same length as ``times``.
-        Any additional keyword arguments are interpreted as flags applied to all TOAs.
+        Any additional keyword arguments are interpreted as flags as well.
     ephem : str
         The name of the solar system ephemeris to use; defaults to "DE421".
     include_bipm : bool or None
@@ -2804,22 +2806,33 @@ def get_TOAs_array(
         freqs = freqs * u.MHz
     freqs[freqs == 0] = np.inf * u.MHz
 
-    if isinstance(flags, (list, tuple)):
+    if isinstance(flags, (list, tuple, np.ndarray)):
         if len(flags) != len(t):
             raise AttributeError(
                 f"Length of flags ({len(flags)}) must match length of times ({len(t)})"
             )
-        flags = [FlagDict.from_dict(f) for f in flags]
-    kwflags = FlagDict.from_dict(kwargs)
-    if flags is None:
-        flags = [kwflags] * len(t)
+        flagdicts = [FlagDict.from_dict(f) for f in flags]
+    elif flags is not None:
+        flagdicts = [FlagDict(flags)] * len(t)
     else:
-        for flag in flags:
-            for k, v in kwflags.items():
-                flag[k] = v
+        flagdicts = [FlagDict()] * len(t)
+
+    for k, v in kwargs.items():
+        if isinstance(v, (list, tuple, np.ndarray)):
+            if len(v) != len(t):
+                raise AttributeError(
+                    f"Length of flags for {k} ({len(v)}) must match length of times ({len(t)})"
+                )
+            for i in range(len(v)):
+                flagdicts[i][k] = str(v[i])
+        else:
+            for i in range(len(flagdicts)):
+                flagdicts[i][k] = str(v)
+
     flags_array = np.empty(len(t), dtype=object)
-    for i, f in enumerate(flags):
+    for i, f in enumerate(flagdicts):
         flags_array[i] = copy.deepcopy(f)
+
     out = table.Table(
         [
             np.arange(len(mjd)),

@@ -71,6 +71,15 @@ def test_toas_compare(t, errors, freqs):
     assert np.all(toas.table == toas_fromlist.table)
 
 
+def test_kwargs_as_flags():
+    t = pulsar_mjd.Time(np.array([55000, 56000]), scale="utc", format="pulsar_mjd")
+    obs = "gbt"
+    kwargs = {"name": "data", "energies": [1, 2]}
+    flags = [{"type": "good"}, {"type": "bad"}]
+    toas = toa.get_TOAs_array(t, obs, flags=flags, **kwargs)
+    assert np.all(toas["energies"] == np.array(["1", "2"]))
+
+
 @pytest.mark.parametrize("errors", [2 * u.m, np.array([1, 2, 3]) * u.us])
 def test_toas_failure_error(errors):
     t = pulsar_mjd.Time(np.array([55000, 56000]), scale="utc", format="pulsar_mjd")
