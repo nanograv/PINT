@@ -108,12 +108,15 @@ class PSR_BINARY:
             "SINI": 0 * u.Unit(""),
             "GAMMA": 0 * u.second,
             "FB0": 1.1574e-6 * u.Unit("") / u.second,
-        } | {
-            # For Binary phase calculation
-            "P0": 1.0 * u.second,
-            "P1": 0.0 * u.second / u.second,
-            "PEPOCH": np.longdouble(54000.0) * u.day,
         }
+        # For Binary phase calculation
+        self.param_default_value.update(
+            {
+                "P0": 1.0 * u.second,
+                "P1": 0.0 * u.second / u.second,
+                "PEPOCH": np.longdouble(54000.0) * u.day,
+            }
+        )
 
         self.param_aliases = {"ECC": ["E"], "EDOT": ["ECCDOT"], "A1DOT": ["XDOT"]}
         self.binary_params = list(self.param_default_value.keys())
