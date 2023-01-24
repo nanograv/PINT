@@ -20,6 +20,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - H.E.S.S. telescope to the list of known observatories
 - Documentation: making TOAs from a list of times added to HowTo
 - Clock correction for LEAP
+- Wideband TOA simulation feature in `pint.simulation` and `zima`
 - ELL1k timing model
 ### Fixed
 - Broken notebooks CI test
