@@ -437,8 +437,7 @@ class Residuals:
                 # return ((self.time_resids.to(u.s) / self.toas.get_errors().to(u.s)).value**2.0).sum()
 
                 # This the fastest way, but highly depend on the assumption of time_resids and
-                # error units.
-                # insure only a pure number returned
+                # error units. Ensure only a pure number is returned.
                 try:
                     return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum().value
                 except ValueError:

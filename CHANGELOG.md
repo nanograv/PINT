@@ -21,6 +21,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Documentation: making TOAs from array of times added to HowTo
 - Method to make TOAs from an array of times
 - Clock correction for LEAP
+- Wideband TOA simulation feature in `pint.simulation` and `zima`
 ### Fixed
 - Broken notebooks CI test
 - BIPM correction for simulated TOAs

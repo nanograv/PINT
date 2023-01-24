@@ -169,6 +169,26 @@ def make_fake_toas(ts, model, add_noise=False, name="fake"):
     return tsim
 
 
+def update_fake_dms(model, ts, dm_error, add_noise):
+    """Update simulated wideband DM information in TOAs."""
+    toas = deepcopy(ts)
+
+    dm_errors = dm_error * np.ones(len(toas))
+
+    for f, dme in zip(toas.table["flags"], dm_errors):
+        f["pp_dme"] = str(dme.to_value(pint.dmu))
+
+    scaled_dm_errors = model.scaled_dm_uncertainty(toas)
+    dms = model.total_dm(toas)
+    if add_noise:
+        dms += scaled_dm_errors.to(pint.dmu) * np.random.randn(len(scaled_dm_errors))
+
+    for f, dm in zip(toas.table["flags"], dms):
+        f["pp_dm"] = str(dm.to_value(pint.dmu))
+
+    return toas
+
+
 def make_fake_toas_uniform(
     startMJD,
     endMJD,
@@ -179,8 +199,8 @@ def make_fake_toas_uniform(
     obs="GBT",
     error=1 * u.us,
     add_noise=False,
-    dm=None,
-    dm_error=1e-4 * pint.dmu,
+    wideband=False,
+    wideband_dm_error=1e-4 * pint.dmu,
     name="fake",
     include_bipm=False,
     include_gps=True,
@@ -210,9 +230,11 @@ def make_fake_toas_uniform(
         uncertainty to attach to each TOA
     add_noise : bool, optional
         Add noise to the TOAs (otherwise `error` just populates the column)
-    dm : astropy.units.Quantity, optional
-        DM value to include with each TOA; default is
-        not to include any DM information
+    wideband : bool, optional
+        Whether to include wideband DM information with each TOA; default is
+        not to include any wideband DM information. If True, the DM associated
+        with each TOA will be computed using the model, and the `-ppdm` and
+        `-ppdme` flags will be set.
     dm_error : astropy.units.Quantity
         uncertainty to attach to each DM measurement
     name : str, optional
@@ -231,7 +253,12 @@ def make_fake_toas_uniform(
 
     Notes
     -----
-    `add_noise` respects any ``EFAC`` or ``EQUAD`` present in the `model`
+    1. `add_noise` respects any ``EFAC`` or ``EQUAD`` present in the `model`
+    2. When `wideband` is set, wideband DM measurement noise will be included
+       only if `add_noise` is set. Otherwise, the `-pp_dme` flags will be set
+       without adding the measurement noise to the simulated DM values.
+    3. The simulated DM measurement noise respects ``DMEFAC`` and ``DMEQUAD``
+       values in the `model`.
 
     See Also
     --------
@@ -270,10 +297,11 @@ def make_fake_toas_uniform(
         include_gps=clk_version["include_gps"],
         planets=model["PLANET_SHAPIRO"].value,
     )
-    if dm is not None:
-        for f in ts.table["flags"]:
-            f["pp_dm"] = str(dm.to_value(pint.dmu))
-            f["pp_dme"] = str(dm_error.to_value(pint.dmu))
+    ts.table["error"] = error
+
+    if wideband:
+        ts = update_fake_dms(model, ts, wideband_dm_error, add_noise)
+
     return make_fake_toas(ts, model=model, add_noise=add_noise, name=name)
 
 
@@ -284,8 +312,8 @@ def make_fake_toas_fromMJDs(
     obs="GBT",
     error=1 * u.us,
     add_noise=False,
-    dm=None,
-    dm_error=1e-4 * pint.dmu,
+    wideband=False,
+    wideband_dm_error=1e-4 * pint.dmu,
     name="fake",
     include_bipm=False,
     include_gps=True,
@@ -309,10 +337,10 @@ def make_fake_toas_fromMJDs(
         uncertainty to attach to each TOA
     add_noise : bool, optional
         Add noise to the TOAs (otherwise `error` just populates the column)
-    dm : astropy.units.Quantity, optional
-        DM value to include with each TOA; default is
+    wideband : astropy.units.Quantity, optional
+        Whether to include wideband DM values with each TOA; default is
         not to include any DM information
-    dm_error : astropy.units.Quantity
+    wideband_dm_error : astropy.units.Quantity
         uncertainty to attach to each DM measurement
     name : str, optional
         Name for the TOAs (goes into the flags)
@@ -364,10 +392,11 @@ def make_fake_toas_fromMJDs(
         include_gps=clk_version["include_gps"],
         planets=model["PLANET_SHAPIRO"].value,
     )
-    if dm is not None:
-        for f in ts.table["flags"]:
-            f["pp_dm"] = str(dm.to_value(pint.dmu))
-            f["pp_dme"] = str(dm_error.to_value(pint.dmu))
+    ts.table["error"] = error
+
+    if wideband:
+        ts = update_fake_dms(model, ts, wideband_dm_error, add_noise)
+
     return make_fake_toas(ts, model=model, add_noise=add_noise, name=name)
 
 
@@ -399,6 +428,11 @@ def make_fake_toas_fromtim(timfile, model, add_noise=False, name="fake"):
     :func:`make_fake_toas`
     """
     input_ts = pint.toa.get_TOAs(timfile)
+
+    if input_ts.is_wideband():
+        dm_errors = input_ts.get_dm_errors()
+        ts = update_fake_dms(model, ts, dm_errors, add_noise)
+
     return make_fake_toas(input_ts, model=model, add_noise=add_noise, name=name)
 
 
@@ -466,12 +500,12 @@ def calculate_random_models(
     freqs = np.zeros((Nmodels, Nmjd), dtype=np.float128) * u.Hz
 
     cov_matrix = fitter.parameter_covariance_matrix
-    # this is a list of the parameter names in the order they appear in the coviarance matrix
+    # this is a list of the parameter names in the order they appear in the covariance matrix
     param_names = cov_matrix.get_label_names(axis=0)
     # this is a dictionary with the parameter values, but it might not be in the same order
     # and it leaves out the Offset parameter
     param_values = fitter.model.get_params_dict("free", "value")
-    mean_vector = np.array([param_values[x] for x in param_names if not x == "Offset"])
+    mean_vector = np.array([param_values[x] for x in param_names if x != "Offset"])
     if params == "all":
         # remove the first column and row (absolute phase)
         if param_names[0] == "Offset":
@@ -524,7 +558,4 @@ def calculate_random_models(
     if return_time:
         dphase /= freqs
 
-    if keep_models:
-        return dphase, random_models
-    else:
-        return dphase
+    return (dphase, random_models) if keep_models else dphase
