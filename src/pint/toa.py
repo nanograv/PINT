@@ -2768,11 +2768,24 @@ def get_TOAs_array(
     # If MJD is already a Time, just use it. Note that this will ignore
     # the 'scale' argument to the TOA() constructor!
     if isinstance(times, time.Time):
+        if np.isscalar(times.mjd):
+            raise AttributeError(
+                "Cannot make time array of length 1 into TOAs; make single TOA instead"
+            )
         if scale is not None:
             raise ValueError("scale argument is ignored when Time is provided")
         t = np.atleast_1d(times)
     else:
         arg1, arg2 = times if isinstance(times, tuple) else (times, None)
+        if isinstance(arg1, u.Quantity):
+            if np.isscalar(arg1.value):
+                raise AttributeError(
+                    "Cannot make time array of length 1 into TOAs; make single TOA instead"
+                )
+        elif np.isscalar(arg1):
+            raise AttributeError(
+                "Cannot make time array of length 1 into TOAs; make single TOA instead"
+            )
         if scale is None:
             scale = site.timescale
         # First build a time without a location
