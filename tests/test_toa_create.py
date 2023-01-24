@@ -33,9 +33,8 @@ def test_toas_fromarray(t, errors, freqs):
 @pytest.mark.parametrize(
     "t", [55000, (55000, 0.0), pulsar_mjd.Time(55000, scale="utc", format="pulsar_mjd")]
 )
-def test_toas_fromscalar_fail(t):
-    with pytest.raises(AttributeError):
-        toas = toa.get_TOAs_array(t, "gbt")
+def test_toas_fromscalar(t):
+    toas = toa.get_TOAs_array(t, "gbt")
 
 
 @pytest.mark.parametrize(

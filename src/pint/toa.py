@@ -2661,7 +2661,7 @@ def get_TOAs_array(
     errors : astropy.units.Quantity or numpy.ndarray or float, optional
         The uncertainty on the TOA; Assumed to be
         in microseconds if no units provided
-    freq : astropy.units.Quantity or numpy.ndarray or float, optional
+    freqs : astropy.units.Quantity or numpy.ndarray or float, optional
         Frequency corresponding to the TOAs; Assumed to be
         in MHz if no units provided
     scale : str, optional
@@ -2768,24 +2768,13 @@ def get_TOAs_array(
     # If MJD is already a Time, just use it. Note that this will ignore
     # the 'scale' argument to the TOA() constructor!
     if isinstance(times, time.Time):
-        if np.isscalar(times.mjd):
-            raise AttributeError(
-                "Cannot make time array of length 1 into TOAs; make single TOA instead"
-            )
         if scale is not None:
             raise ValueError("scale argument is ignored when Time is provided")
         t = np.atleast_1d(times)
     else:
         arg1, arg2 = times if isinstance(times, tuple) else (times, None)
-        if isinstance(arg1, u.Quantity):
-            if np.isscalar(arg1.value):
-                raise AttributeError(
-                    "Cannot make time array of length 1 into TOAs; make single TOA instead"
-                )
-        elif np.isscalar(arg1):
-            raise AttributeError(
-                "Cannot make time array of length 1 into TOAs; make single TOA instead"
-            )
+        arg1 = np.atleast_1d(arg1)
+        arg2 = np.atleast_1d(arg2)
         if scale is None:
             scale = site.timescale
         # First build a time without a location
