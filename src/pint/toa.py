@@ -3,7 +3,8 @@
 In particular, single TOAs are represented by :class:`pint.toa.TOA` objects, and if you
 want to manage a collection of these we recommend you use a :class:`pint.toa.TOAs` object
 as this makes certain operations much more convenient. You probably want to load one with
-:func:`pint.toa.get_TOAs`.
+:func:`pint.toa.get_TOAs` (from a ``.tim`` file) or :func:`pint.toa.get_TOAs_array` (from a 
+`:class:`numpy.ndarray` or :class:`astropy.time.Time` object).
 
 Warning
 -------
