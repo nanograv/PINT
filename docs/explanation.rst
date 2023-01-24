@@ -561,15 +561,15 @@ constructing a covariance matrix describing all the correlations between the
 measurements; a square root of this matrix can be computed using the Cholesky
 decomposition, and this square root can be used to transform the fitting
 problem into a conventional least-squares problem. This procedure is described
-in Coles_et_al_2011_ and implemented in PINT (via the ``full_cov=True`` option to
+in Coles et al. 2011 [3_] and implemented in PINT (via the ``full_cov=True`` option to
 fitters). Unfortunately this method requires a decomposition of a matrix that
 is the size of the number of TOAs by the number of TOAs; this can be very
 expensive in terms of memory and computation.
 
-Fortunately, Lentati_et_al_2013_ and van_Haasteren_and_Vallisneri_2015_ describe
+Fortunately, Lentati et al. 2013 [4_] and van Haasteren & Vallisneri 2015 [5_] describe
 a method for using a low-rank approximation to the covariance matrix to remove
 the need to ever construct these very large matrices; the implementation in
-PINT follows the mathematics in the NANOGrav_9-year_ data analysis paper,
+PINT follows the mathematics in the NANOGrav 9-year data analysis paper [6_],
 Appendix C.
 
 The idea of this reduced-rank approach is to represent the correlations using
@@ -597,7 +597,7 @@ sine and cosine functions at each of a range of frequencies, :math:`a` is the
 amplitudes of these basis functions in the red noise contribution, :math:`U` is
 a matrix of basis functions representing the ECORR blocks, :math:`j` is their
 coefficients, and :math:`n` is a vector of uncorrelated noise of amplitude
-coming from the adjusted TOA uncertainties. The NANOGrav_9-year_ paper gives
+coming from the adjusted TOA uncertainties. The NANOGrav 9-year paper[6_] gives
 expressions for the likelihood of such a representation, suitable for use in
 Bayesian fitting methods, but for PINT's fitters the goal is to find the
 maximum-likelihood values for :math:`\epsilon`, a corresponding set of
@@ -642,7 +642,7 @@ would be the equations for a linear least squares fit for :math:`b` to match
 :math:`B^{-1}` in :math:`\Sigma` is where our knowledge about the amplitudes of
 the noise basis functions is applied.
 
-The formula is not worked out in the NANOGrav_9-year_ data set paper, but if we
+The formula is not worked out in the NANOGrav 9-year dataset paper [6_], but if we
 want a goodness-of-fit statistic for a set of model parameters that correctly
 reflects both the mis-fit of the data and also the penalization of the noise
 components, we need to fix all the model parameters we care about, reducing
@@ -655,10 +655,10 @@ obtaining a maximum-likelihood :math:`b` and a set of whitened residuals
 
     \chi_G^2 = n^T N n + b^T B^{-1} b
 
-.. _Coles_et_al_2011: https://ui.adsabs.harvard.edu/abs/2011MNRAS.418..561C/abstract
-.. _Lentati_et_al_2013: https://ui.adsabs.harvard.edu/abs/2013PhRvD..87j4021L/abstract
-.. _van_Haasteren_and_Vallisneri_2015: https://ui.adsabs.harvard.edu/abs/2015MNRAS.446.1170V/abstract
-.. _NANOGrav_9-year: https://ui.adsabs.harvard.edu/abs/2015ApJ...813...65N/abstract
+.. _3: https://ui.adsabs.harvard.edu/abs/2011MNRAS.418..561C/abstract
+.. _4: https://ui.adsabs.harvard.edu/abs/2013PhRvD..87j4021L/abstract
+.. _5: https://ui.adsabs.harvard.edu/abs/2015MNRAS.446.1170V/abstract
+.. _6: https://ui.adsabs.harvard.edu/abs/2015ApJ...813...65N/abstract
 
 Fitting algorithms
 ''''''''''''''''''
