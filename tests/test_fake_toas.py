@@ -1,4 +1,5 @@
 import astropy.units as u
+import astropy.time
 import pint.simulation
 from pint.models.model_builder import get_model, get_model_and_toas
 from pint.toa import get_TOAs
@@ -191,7 +192,17 @@ def test_zima():
     assert np.isclose(r.calc_time_resids().std(), 1 * u.us, rtol=0.5)
 
 
-def test_fake_fromMJDs():
+@pytest.mark.parametrize(
+    "MJDs",
+    [
+        np.linspace(57001, 58000, 200, dtype=np.longdouble) * u.d,
+        np.linspace(57001, 58000, 200, dtype=np.longdouble),
+        astropy.time.Time(
+            np.linspace(57001, 58000, 200, dtype=np.longdouble), format="mjd"
+        ),
+    ],
+)
+def test_fake_fromMJDs(MJDs):
     # basic model, no EFAC or EQUAD
     model = get_model(
         io.StringIO(
@@ -205,9 +216,42 @@ def test_fake_fromMJDs():
         """
         )
     )
-    MJDs = np.linspace(57001, 58000, 200, dtype=np.longdouble) * u.d
     toas = pint.simulation.make_fake_toas_fromMJDs(
         MJDs, model=model, error=1 * u.us, add_noise=True
+    )
+    r = pint.residuals.Residuals(toas, model)
+
+    # need a generous rtol because of the small statistics
+    assert np.isclose(r.calc_time_resids().std(), 1 * u.us, rtol=0.2)
+
+
+@pytest.mark.parametrize(
+    "t1,t2",
+    [
+        (57001, 58000),
+        (57001 * u.d, 58000 * u.d),
+        (
+            astropy.time.Time(57001, format="mjd"),
+            astropy.time.Time(58000, format="mjd"),
+        ),
+    ],
+)
+def test_fake_uniform(t1, t2):
+    # basic model, no EFAC or EQUAD
+    model = get_model(
+        io.StringIO(
+            """
+        PSRJ J1234+5678
+        ELAT 0
+        ELONG 0
+        DM 10
+        F0 1
+        PEPOCH 58000
+        """
+        )
+    )
+    toas = pint.simulation.make_fake_toas_uniform(
+        t1, t2, 50, model=model, error=1 * u.us, add_noise=True
     )
     r = pint.residuals.Residuals(toas, model)
 
