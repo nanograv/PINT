@@ -95,13 +95,22 @@ class AbsPhase(PhaseComponent):
         # NOTE: Using TZRMJD.quantity.jd[1,2] so that the time scale can be properly
         # set to the TZRSITE default timescale (e.g. UTC for TopoObs and TDB for SSB)
         log.debug("Creating and dealing with the single TZR_toa for absolute phase")
-        TZR_toa = toa.TOA(
+        # TZR_toa = toa.TOA(
+        #     (self.TZRMJD.quantity.jd1 - 2400000.5, self.TZRMJD.quantity.jd2),
+        #     obs=self.TZRSITE.value,
+        #     freq=self.TZRFRQ.quantity,
+        # )
+        # tz = toa.get_TOAs_list(
+        #     [TZR_toa],
+        #     include_bipm=clkc_info["include_bipm"],
+        #     include_gps=clkc_info["include_gps"],
+        #     ephem=toas.ephem,
+        #     planets=toas.planets,
+        # )
+        tz = toa.get_TOAs_array(
             (self.TZRMJD.quantity.jd1 - 2400000.5, self.TZRMJD.quantity.jd2),
             obs=self.TZRSITE.value,
-            freq=self.TZRFRQ.quantity,
-        )
-        tz = toa.get_TOAs_list(
-            [TZR_toa],
+            freqs=self.TZRFRQ.quantity,
             include_bipm=clkc_info["include_bipm"],
             include_gps=clkc_info["include_gps"],
             ephem=toas.ephem,

@@ -2774,7 +2774,7 @@ def get_TOAs_array(
     else:
         arg1, arg2 = times if isinstance(times, tuple) else (times, None)
         arg1 = np.atleast_1d(arg1)
-        arg2 = np.atleast_1d(arg2)
+        arg2 = np.atleast_1d(arg2) if arg2 is not None else arg2
         if scale is None:
             scale = site.timescale
         # First build a time without a location
