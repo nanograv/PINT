@@ -247,23 +247,21 @@ def make_fake_toas_uniform(
     if freq is None or np.isinf(freq).all():
         freq = np.inf * u.MHz
     freq_array = _get_freq_array(np.atleast_1d(freq), len(times))
-    t1 = [
-        pint.toa.TOA(t.value, obs=obs, freq=f, scale=get_observatory(obs).timescale)
-        for t, f in zip(times, freq_array)
-    ]
     clk_version = get_fake_toa_clock_versions(
         model, include_bipm=include_bipm, include_gps=include_gps
     )
-    ts = pint.toa.get_TOAs_list(
-        toa_list=t1,
+    ts = pint.toa.get_TOAs_array(
+        times,
+        obs=obs,
+        scale=get_observatory(obs).timescale,
+        freqs=freq_array,
+        errors=error,
         ephem=model["EPHEM"].value,
         include_bipm=clk_version["include_bipm"],
         bipm_version=clk_version["bipm_version"],
         include_gps=clk_version["include_gps"],
         planets=model["PLANET_SHAPIRO"].value,
     )
-
-    ts.table["error"] = error
     if dm is not None:
         for f in ts.table["flags"]:
             f["pp_dm"] = str(dm.to_value(pint.dmu))
@@ -336,22 +334,21 @@ def make_fake_toas_fromMJDs(
     if freq is None or np.isinf(freq).all():
         freq = np.inf * u.MHz
     freq_array = _get_freq_array(np.atleast_1d(freq), len(times))
-    t1 = [
-        pint.toa.TOA(t.value, obs=obs, freq=f, scale=get_observatory(obs).timescale)
-        for t, f in zip(times, freq_array)
-    ]
     clk_version = get_fake_toa_clock_versions(
         model, include_bipm=include_bipm, include_gps=include_gps
     )
-    ts = pint.toa.get_TOAs_list(
-        toa_list=t1,
+    ts = pint.toa.get_TOAs_array(
+        times,
+        obs=obs,
+        freqs=freq_array,
+        errors=error,
+        scale=get_observatory(obs).timescale,
         ephem=model["EPHEM"].value,
         include_bipm=clk_version["include_bipm"],
         bipm_version=clk_version["bipm_version"],
         include_gps=clk_version["include_gps"],
         planets=model["PLANET_SHAPIRO"].value,
     )
-    ts.table["error"] = error
     if dm is not None:
         for f in ts.table["flags"]:
             f["pp_dm"] = str(dm.to_value(pint.dmu))
