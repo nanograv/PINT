@@ -8,12 +8,12 @@ This section is to explain pulsar timing, how PINT works, and why it is built th
 PINT is used for pulsar timing and related activities. Some of it may
 make a lot more sense if you know something about the science it is used
 for. You can find an excellent introduction in the Handbook of Pulsar
-Astronomy by Lorimer and Kramer [1]_. This document is aimed at using PINT
+Astronomy by Lorimer and Kramer [1_]. This document is aimed at using PINT
 specifically, and may also be more understandable if you have used
 other pulsar timing software, TEMPO_ or TEMPO2_, though we hope that
 you will find PINT sufficient for all your needs!
 
-.. _[1]: https://ui.adsabs.harvard.edu/abs/2004hpa..book.....L/abstract
+.. _1: https://ui.adsabs.harvard.edu/abs/2004hpa..book.....L/abstract
 .. _TEMPO: http://tempo.sourceforge.net/
 .. _TEMPO2: https://www.atnf.csiro.au/research/pulsar/tempo2/
 
@@ -203,7 +203,7 @@ accessed as ``pint.DMconst``.
 
 It should also be noted that there are other effects contributing to the dispersion delay than 
 the free electrons, such as ions in the ISM, interstellar magnetic fields, and the ISM temperature.
-Hence, it has been argued (see Kulkarni 2020 https://arxiv.org/abs/2007.02886) that the dispersion
+Hence, it has been argued (see Kulkarni 2020 [2_]) that the dispersion
 slope :math:`K\times DM` should be treated as the primary observable rather than the DM, which 
 is usually interpreted as the electron column density. The dispersion slope corresponding to a DM value
 can be computed using :func:`pint.derived_quantities.dispersion_slope`. A DM value measured based 
@@ -214,15 +214,18 @@ The total DM and dispersion slope predicted by a given timing model (:class:`pin
 for a given set of TOAs (:class:`pint.toa.TOAs`) can be computed using :func:`pint.models.timing_model.TimingModel.total_dm`
 and :func:`pint.models.timing_model.TimingModel.total_dispersion_slope` methods respectively.
  
+.. _2: https://arxiv.org/abs/2007.02886
+
 Observatories
 -------------
 
-PINT comes with a number of defined observatories.  Those on the surface of the Earth are :class:`~pint.observatory.topo_obs.TopoObs` 
-instances.  It can also pull in observatories from ``astropy``, 
-and you can define your own.  Observatories are generally referenced when reading TOA files, but can also be accessed directly::
+PINT comes with a number of defined observatories. Those on the surface of the Earth are 
+:class:`~pint.observatory.topo_obs.TopoObs` instances.  It can also pull in observatories 
+from ``astropy``, and you can define your own. Observatories are generally referenced when 
+reading TOA files, but can also be accessed directly::
 
-  import pint.observatory
-  gbt = pint.observatory.get_observatory("gbt")  
+    import pint.observatory
+    gbt = pint.observatory.get_observatory("gbt")  
 
 Observatory definitions
 '''''''''''''''''''''''
