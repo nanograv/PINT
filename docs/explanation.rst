@@ -8,11 +8,12 @@ This section is to explain pulsar timing, how PINT works, and why it is built th
 PINT is used for pulsar timing and related activities. Some of it may
 make a lot more sense if you know something about the science it is used
 for. You can find an excellent introduction in the Handbook of Pulsar
-Astronomy, by Lorimer and Kramer. This document is aimed at using PINT
+Astronomy by Lorimer and Kramer [1]_. This document is aimed at using PINT
 specifically, and may also be more understandable if you have used
 other pulsar timing software, TEMPO_ or TEMPO2_, though we hope that
 you will find PINT sufficient for all your needs!
 
+.. _[1]: https://ui.adsabs.harvard.edu/abs/2004hpa..book.....L/abstract
 .. _TEMPO: http://tempo.sourceforge.net/
 .. _TEMPO2: https://www.atnf.csiro.au/research/pulsar/tempo2/
 
@@ -157,7 +158,7 @@ TCB. PINT will attempt to detect this and let you know.
 Note that the need for leap seconds is because the Earth's rotation is
 somewhat erratic - no, we're not about to be thrown off, but its
 unpredictability can get as large as a second after a few years. So
-the International_Earth_Rotation_Service_ announces leap seconds about
+the International Earth Rotation Service (IERS_) announces leap seconds about
 six months in advance. This means that ``astropy`` and pint need to
 keep their lists of leap seconds up-to-date by checking the IERS
 website from time to time.
@@ -179,7 +180,7 @@ leap seconds, this may be the problem. Alternatively, you may not be using
 up-to-date leap-second data files, or the process that generated the MJDs may
 not (this is a particular concern when working with X-ray or gamma-ray data).
 
-.. _International_Earth_Rotation_Service: https://www.iers.org/IERS/EN/Home/home_node.html
+.. _IERS: https://www.iers.org/IERS/EN/Home/home_node.html
 .. _TAI: https://www.bipm.org/en/bipm-services/timescales/tai.html
 .. _wiki: https://github.com/nanograv/PINT/wiki/Clock-Corrections-and-Timescales-in-PINT
 
@@ -245,7 +246,7 @@ The observatory data are stored in JSON format.  A simple example is::
     }
 
 The observatory is defined by its name (``gbt``) and its position.  This can be given as geocentric coordinates in the 
-International_Terrestrial_Reference_System_ (ITRF) through the ``itrf_xyz`` triple (units as ``m``), or geodetic coordinates 
+International Terrestrial Reference System (ITRF_) through the ``itrf_xyz`` triple (units as ``m``), or geodetic coordinates 
 (WGS84_ assumed) through ``lat``, ``lon``, ``alt`` 
 (units are ``deg`` and ``m``).  Conversion is done through Astropy_EarthLocation_.
 
@@ -334,7 +335,7 @@ you could then do::
 
 (or the equivalent in your shell of choice) before you start any PINT scripts.  By default this will overwrite any existing definitions.
 
-4. You can rely on ``astropy``.  For instance:
+4. You can rely on ``astropy``.  For instance,
 ::
 
     import pint.observatory
@@ -342,7 +343,7 @@ you could then do::
 
 will find Keck.  :func:`astropy.coordinates.EarthLocation.get_site_names` will return a list of potential observatories.
 
-.. _International_Terrestrial_Reference_System: https://en.wikipedia.org/wiki/International_Terrestrial_Reference_System_and_Frame
+.. _ITRS: https://en.wikipedia.org/wiki/International_Terrestrial_Reference_System_and_Frame
 .. _WGS84: https://en.wikipedia.org/wiki/World_Geodetic_System#WGS84
 .. _Astropy_EarthLocation: https://docs.astropy.org/en/stable/api/astropy.coordinates.EarthLocation.html
 
