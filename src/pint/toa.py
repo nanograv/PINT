@@ -2768,7 +2768,7 @@ def get_TOAs_array(
     # If MJD is already a Time, just use it. Note that this will ignore
     # the 'scale' argument to the TOA() constructor!
     if isinstance(times, time.Time):
-        if scale is not None:
+        if scale is not None and scale != times.scale:
             raise ValueError("scale argument is ignored when Time is provided")
         t = np.atleast_1d(times)
     else:

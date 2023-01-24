@@ -192,9 +192,9 @@ def make_fake_toas_uniform(
 
     Parameters
     ----------
-    startMJD : float
+    startMJD : float or astropy.units.Quantity or astropy.time.Time
         starting MJD for fake toas
-    endMJD : float
+    endMJD : float or astropy.units.Quantity or astropy.time.Time
         ending MJD for fake toas
     ntoas : int
         number of fake toas to create between startMJD and endMJD
@@ -237,8 +237,16 @@ def make_fake_toas_uniform(
     --------
     :func:`make_fake_toas`
     """
+    if isinstance(startMJD, time.Time):
+        startMJD = startMJD.mjd << u.d
+    if isinstance(endMJD, time.Time):
+        endMJD = endMJD.mjd << u.d
+    if not isinstance(startMJD, u.Quantity):
+        startMJD = startMJD << u.d
+    if not isinstance(endMJD, u.Quantity):
+        endMJD = endMJD << u.d
 
-    times = np.linspace(startMJD, endMJD, ntoas, dtype=np.longdouble) * u.d
+    times = np.linspace(startMJD, endMJD, ntoas, dtype=np.longdouble)
     if fuzz > 0:
         # apply some fuzz to the dates
         fuzz = np.random.normal(scale=fuzz.to_value(u.d), size=len(times)) * u.d
@@ -282,14 +290,14 @@ def make_fake_toas_fromMJDs(
     include_bipm=False,
     include_gps=True,
 ):
-    """Make evenly spaced toas
+    """Make toas from a list of MJDs
 
     Can include alternating frequencies if fed an array of frequencies,
     only works with one observatory at a time
 
     Parameters
     ----------
-    MJDs : astropy.units.Quantity
+    MJDs : astropy.units.Quantity or astropy.time.Time or numpy.ndarray
         array of MJDs for fake toas
     model : pint.models.timing_model.TimingModel
         current model
@@ -328,7 +336,14 @@ def make_fake_toas_fromMJDs(
     --------
     :func:`make_fake_toas`
     """
-
+    scale = get_observatory(obs).timescale
+    if isinstance(MJDs, time.Time):
+        times = MJDs.mjd * u.d
+        scale = None
+    elif not isinstance(MJDs, (u.Quantity, np.ndarray)):
+        raise TypeError(
+            f"Do not know how to interpret input times of type '{type(MJDs)}'"
+        )
     times = MJDs
 
     if freq is None or np.isinf(freq).all():
@@ -342,7 +357,7 @@ def make_fake_toas_fromMJDs(
         obs=obs,
         freqs=freq_array,
         errors=error,
-        scale=get_observatory(obs).timescale,
+        scale=scale,
         ephem=model["EPHEM"].value,
         include_bipm=clk_version["include_bipm"],
         bipm_version=clk_version["bipm_version"],
