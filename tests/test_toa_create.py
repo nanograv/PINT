@@ -219,3 +219,12 @@ def test_toas_fermi_notoalist():
     )
     assert np.all(toas["mjd"] == toas2["mjd"])
     assert np.all(toas.table == toas2.table)
+
+
+def test_toa_wb():
+    t = pulsar_mjd.Time(np.array([55000, 56000]), scale="utc", format="pulsar_mjd")
+    obs = "gbt"
+    pp_dm = np.array([1, 2]) * u.pc / u.cm**3
+    pp_dme = np.array([0.1, 0.1]) * u.pc / u.cm**3
+    toas = toa.get_TOAs_array(t, obs, pp_dm=pp_dm.value, pp_dme=pp_dme.value)
+    assert toas.wideband
