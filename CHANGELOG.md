@@ -22,6 +22,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Clock correction for LEAP
 - Wideband TOA simulation feature in `pint.simulation` and `zima`
 - ELL1k timing model
+- Test for `MCMCFitter`
 ### Fixed
 - Broken notebooks CI test
 - BIPM correction for simulated TOAs
