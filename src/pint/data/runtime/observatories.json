@@ -255,6 +255,14 @@
         ],
         "origin": "The Giant Metrewave Radio Telescope.\nThe origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
     },
+    "ort": {
+        "itrf_xyz": [
+            1442712.95,
+            6087044.73,
+            1251052.35
+        ],
+        "origin": "The Ooty Radio Telescope.\nCoordinates provided by Jaikhomba Singha.\n"
+    },
     "wsrt": {
         "aliases": [
             "we"
