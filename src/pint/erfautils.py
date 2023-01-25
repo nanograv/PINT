@@ -1,9 +1,6 @@
 """Observatory position and velocity calculation."""
 
-try:
-    import erfa
-except ImportError:
-    import astropy._erfa as erfa
+import erfa
 
 import numpy as np
 from astropy import table

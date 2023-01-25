@@ -1,7 +1,6 @@
 C Converted by make_wb_release.py on Wed Mar 11 19:22:33 2020 by tim
 C Original filename: 'J1614-2230/wideband/J1614-2230.wb.working.tim'
 C Commented 23 simultaneous GASP TOAs
-MODE 1
 FORMAT 1
 54724.000006.1.000.000.9y.x.ff 844.65464869 54724.873889353435877   2.042  gbt -pp_dm 34.4828090 -pp_dme 0.0118764 -be GASP -ver 20200204 -nchx 16 -tobs 60.078 -f Rcvr_800_GASP -gof 1.035 -snr 35.572 -fratio 1.073 -pta NANOGrav -subint 0 -nch 16 -bw 60.000 -chbw 4.000 -fe Rcvr_800 -nbin 2048 -proc 12y -tmplt J1614-2230.Rcvr_800.GUPPI.12y.x.avg_port.spl -to -8.970e-07
 54724.000007.1.000.000.9y.x.ff 848.86898945 54724.880887448273805   0.600  gbt -pp_dm 34.4915853 -pp_dme 0.0028637 -be GASP -ver 20200204 -nchx 16 -tobs 901.177 -f Rcvr_800_GASP -gof 1.014 -snr 116.462 -fratio 1.073 -pta NANOGrav -subint 0 -nch 16 -bw 60.000 -chbw 4.000 -fe Rcvr_800 -nbin 2048 -proc 12y -tmplt J1614-2230.Rcvr_800.GUPPI.12y.x.avg_port.spl -to -8.970e-07
