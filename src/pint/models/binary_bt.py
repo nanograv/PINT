@@ -55,7 +55,7 @@ class BinaryBT(PulsarBinary):
         super().validate()
         for p in ("T0", "A1"):
             if getattr(self, p).value is None:
-                raise MissingParameter("BT", p, "%s is required for BT" % p)
+                raise MissingParameter("BT", p, f"{p} is required for BT")
 
         # If any *DOT is set, we need T0
         for p in ("PBDOT", "OMDOT", "EDOT", "A1DOT"):

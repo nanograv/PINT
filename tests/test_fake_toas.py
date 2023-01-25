@@ -274,3 +274,19 @@ def test_fake_DMfit():
 
     assert np.isclose(DMs.std(), f.model.DM.uncertainty, rtol=0.5)
     assert np.abs(DMs.mean() - f.model.DM.quantity) < 5 * f.model.DM.uncertainty
+
+
+def test_fake_wb_toas():
+    parfile = pint.config.examplefile("NGC6440E.par")
+    m = get_model(parfile)
+
+    tfu = pint.simulation.make_fake_toas_uniform(
+        startMJD=50000,
+        endMJD=51000,
+        ntoas=100,
+        model=m,
+        wideband=True,
+        add_noise=True,
+    )
+    assert len(tfu) == 100
+    assert all("pp_dm" in f and "pp_dme" in f for f in tfu.get_flags())

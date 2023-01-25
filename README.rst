@@ -83,7 +83,7 @@ By default this will install in your system site-packages.  Depending on your sy
 to install it for just yourself (e.g. if you don't have permission to write in the system site-packages), or you may want to create a 
 virtualenv to work on PINT (using a virtualenv is highly recommended by the PINT developers).
 
-PINT is also available for Anaconda python under the conda-forge channel:
+PINT is also available for Anaconda python under the conda-forge channel::
 
     $ conda install -c conda-forge pint-pulsar
 
