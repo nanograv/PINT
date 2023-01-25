@@ -42,7 +42,7 @@ class PSR_BINARY:
                     self.set_param_values() # This is to set all the parameters to attributes
                     self.binary_delay_funcs += [self.foo_delay]
                     self.d_binarydelay_d_par_funcs += [self.d_foo_delay_d_par]
-                    # If you have intermedia value in the calculation
+                    # If you have intermediate value in the calculation
                     self.dd_interVars = ['er','eTheta','beta','alpha','Dre','Drep','Drepp',
                                          'nhat', 'TM2']
                     self.add_inter_vars(self.dd_interVars)
@@ -117,6 +117,7 @@ class PSR_BINARY:
                 "PEPOCH": np.longdouble(54000.0) * u.day,
             }
         )
+
         self.param_aliases = {"ECC": ["E"], "EDOT": ["ECCDOT"], "A1DOT": ["XDOT"]}
         self.binary_params = list(self.param_default_value.keys())
         self.inter_vars = ["E", "M", "nu", "ecc", "omega", "a1", "TM2"]
@@ -184,11 +185,7 @@ class PSR_BINARY:
                     parname = self.search_alias(par)
                     if parname is None:
                         raise AttributeError(
-                            "Can not find parameter "
-                            + par
-                            + " in "
-                            + self.binary_name
-                            + " model"
+                            f"Can not find parameter {par} in {self.binary_name} model"
                         )
                 else:
                     parname = par
@@ -421,7 +418,7 @@ class PSR_BINARY:
         par_obj = getattr(self, par)
         try:
             func = getattr(self, f"d_a1_d_{par}")
-        except:
+        except AttributeError:
             func = lambda: np.zeros(len(self.tt0)) * self.A1.unit / par_obj.unit
         return func()
 
@@ -529,8 +526,8 @@ class PSR_BINARY:
 
         par_obj = getattr(self, par)
         try:
-            func = getattr(self, f"d_E_d_{par}")
-        except:
+            return getattr(self, f"d_E_d_{par}")()
+        except AttributeError:
             if par in self.orbits_cls.orbit_params:
                 d_M_d_par = self.d_M_d_par(par)
                 return d_M_d_par / (1.0 - np.cos(self.E()) * self.ecc())
@@ -623,9 +620,8 @@ class PSR_BINARY:
 
         par_obj = getattr(self, par)
         try:
-            func = getattr(self, f"d_nu_d_{par}")
-            return func()
-        except:
+            return getattr(self, f"d_nu_d_{par}")()
+        except AttributeError:
             if par in self.orbits_cls.orbit_params:
                 return self.d_nu_d_E() * self.d_E_d_par(par)
 
