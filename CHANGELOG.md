@@ -22,6 +22,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Method to make TOAs from an array of times
 - Clock correction for LEAP
 - Wideband TOA simulation feature in `pint.simulation` and `zima`
+- Test for `MCMCFitter`
 ### Fixed
 - Broken notebooks CI test
 - BIPM correction for simulated TOAs
