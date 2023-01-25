@@ -100,13 +100,13 @@ M2                0.246769  1            0.009532
 kwargs = {"ELL1H": {"NHARMS": 3, "useSTIGMA": True}, "DDK": {"KOM": 0 * u.deg}}
 
 
-@pytest.mark.parametrize("output", ["ELL1", "ELL1H", "DD", "BT", "DDS", "DDK"])
+@pytest.mark.parametrize("output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK"])
 def test_ELL1(output):
     m = get_model(io.StringIO(parELL1))
     mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
 
 
-@pytest.mark.parametrize("output", ["ELL1", "ELL1H", "DD", "BT", "DDS", "DDK"])
+@pytest.mark.parametrize("output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK"])
 def test_ELL1_roundtrip(output):
     m = get_model(io.StringIO(parELL1))
     mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
@@ -131,7 +131,7 @@ def test_ELL1_roundtrip(output):
             assert getattr(m, p).value == getattr(mback, p).value
 
 
-@pytest.mark.parametrize("output", ["ELL1", "ELL1H", "DD", "BT", "DDS", "DDK"])
+@pytest.mark.parametrize("output", ["ELL1", "ELL1k", "ELL1H", "DD", "BT", "DDS", "DDK"])
 def test_DD(output):
     m = get_model(
         io.StringIO(
@@ -141,7 +141,7 @@ def test_DD(output):
     mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
 
 
-@pytest.mark.parametrize("output", ["ELL1", "ELL1H", "DD", "BT", "DDS", "DDK"])
+@pytest.mark.parametrize("output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK"])
 def test_DD_roundtrip(output):
     m = get_model(
         io.StringIO(
@@ -162,7 +162,7 @@ def test_DD_roundtrip(output):
             assert np.isclose(getattr(m, p).value, getattr(mback, p).value)
             if getattr(m, p).uncertainty is not None:
                 # some precision may be lost in uncertainty conversion
-                if output in ["ELL1", "ELL1H"] and p in ["ECC"]:
+                if output in ["ELL1", "ELL1H", "ELL1k"] and p in ["ECC"]:
                     # we lose precision on ECC since it also contains a contribution from OM now
                     continue
                 assert np.isclose(
@@ -174,7 +174,7 @@ def test_DD_roundtrip(output):
             assert getattr(m, p).value == getattr(mback, p).value
 
 
-@pytest.mark.parametrize("output", ["ELL1", "ELL1H", "DD", "BT", "DDS", "DDK"])
+@pytest.mark.parametrize("output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK"])
 def test_DDGR(output):
     m = get_model(
         io.StringIO(

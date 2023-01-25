@@ -16,10 +16,10 @@ from pint import Tsun
 from pint.models.binary_bt import BinaryBT
 from pint.models.binary_dd import BinaryDD, BinaryDDS, BinaryDDGR
 from pint.models.binary_ddk import BinaryDDK
-from pint.models.binary_ell1 import BinaryELL1, BinaryELL1H
+from pint.models.binary_ell1 import BinaryELL1, BinaryELL1H, BinaryELL1k
 from pint.models.parameter import floatParameter, MJDParameter, intParameter
 
-binary_types = ["DD", "DDK", "DDS", "BT", "ELL1", "ELL1H"]
+binary_types = ["DD", "DDK", "DDS", "BT", "ELL1", "ELL1H", "ELL1k"]
 
 
 __all__ = ["convert_binary"]
@@ -263,6 +263,8 @@ def _from_ELL1(model):
     .. [1] https://ui.adsabs.harvard.edu/abs/2001MNRAS.326..274L/abstract
 
     """
+    if model.BINARY.value not in ["ELL1", "ELL1H", "ELL1k"]:
+        raise ValueError(f"Requires model ELL1* rather than {model.BINARY.value}")
     # do we have to account for FB or PBDOT here?
     ECC = np.sqrt(model.EPS1.quantity**2 + model.EPS2.quantity**2)
     OM = np.arctan2(model.EPS2.quantity, model.EPS1.quantity)
@@ -298,39 +300,50 @@ def _from_ELL1(model):
     # does there also need to be a computation of OMDOT here?
     EDOT = None
     EDOT_unc = None
-    if model.EPS1DOT.quantity is not None and model.EPS2DOT.quantity is not None:
-        EDOT = (
-            model.EPS1DOT.quantity * model.EPS1.quantity
-            + model.EPS2DOT.quantity * model.EPS2.quantity
-        ) / ECC
-        if (
-            model.EPS1DOT.uncertainty is not None
-            and model.EPS2DOT.uncertainty is not None
-        ):
-            EDOT_unc = np.sqrt(
-                (
-                    model.EPS1.uncertainty
-                    * model.EPS2.quantity
-                    * (
-                        model.EPS1.quantity * model.EPS2DOT.quantity
-                        - model.EPS2.quantity * model.EPS1DOT.quantity
+    if model.BINARY.value == "ELL1k":
+        if model.LNEDOT.quantity is not None and ECC is not None:
+            EDOT = model.LNEDOT.quantity * ECC
+            if model.LNEDOT.uncertainty is not None or ECC_unc is not None:
+                EDOT_unc = 0
+                if model.LNEDOT.uncertainty is not None:
+                    EDOT_unc += (model.LNEDOT.uncertainty * ECC) ** 2
+                if ECC_unc is not None:
+                    EDOT_unc += (model.LNEDOT.quantity * ECC_unc) ** 2
+                EDOT_unc = np.sqrt(EDOT_unc)
+    else:
+        if model.EPS1DOT.quantity is not None and model.EPS2DOT.quantity is not None:
+            EDOT = (
+                model.EPS1DOT.quantity * model.EPS1.quantity
+                + model.EPS2DOT.quantity * model.EPS2.quantity
+            ) / ECC
+            if (
+                model.EPS1DOT.uncertainty is not None
+                and model.EPS2DOT.uncertainty is not None
+            ):
+                EDOT_unc = np.sqrt(
+                    (
+                        model.EPS1.uncertainty
+                        * model.EPS2.quantity
+                        * (
+                            model.EPS1.quantity * model.EPS2DOT.quantity
+                            - model.EPS2.quantity * model.EPS1DOT.quantity
+                        )
+                        / ECC**3
                     )
-                    / ECC**3
-                )
-                ** 2
-                + (
-                    model.EPS2.uncertainty
-                    * model.EPS1.quantity
-                    * (
-                        model.EPS2.quantity * model.EPS1DOT.quantity
-                        - model.EPS1.quantity * model.EPS2DOT.quantity
+                    ** 2
+                    + (
+                        model.EPS2.uncertainty
+                        * model.EPS1.quantity
+                        * (
+                            model.EPS2.quantity * model.EPS1DOT.quantity
+                            - model.EPS1.quantity * model.EPS2DOT.quantity
+                        )
+                        / ECC**3
                     )
-                    / ECC**3
+                    ** 2
+                    + (model.EPS1DOT.uncertainty * model.EPS1.quantity / ECC) ** 2
+                    + (model.EPS2DOT.uncertainty * model.EPS2.quantity / ECC) ** 2
                 )
-                ** 2
-                + (model.EPS1DOT.uncertainty * model.EPS1.quantity / ECC) ** 2
-                + (model.EPS2DOT.uncertainty * model.EPS2.quantity / ECC) ** 2
-            )
     return ECC, OM, T0, EDOT, ECC_unc, OM_unc, T0_unc, EDOT_unc
 
 
@@ -431,6 +444,90 @@ def _to_ELL1(model):
         EPS1DOT_unc,
         EPS2DOT_unc,
     )
+
+
+def _ELL1_to_ELL1k(model):
+    if model.BINARY.value not in ["ELL1", "ELL1H"]:
+        raise ValueError(f"Requires model ELL1/ELL1H rather than {model.BINARY.value}")
+    LNEDOT = None
+    OMDOT = None
+    LNEDOT_unc = None
+    OMDOT_unc = None
+    if (
+        model.EPS1.quantity is not None
+        and model.EPS2.quantity is not None
+        and model.EPS1DOT.quantity is not None
+        and model.EPS2DOT.quantity is not None
+    ):
+        LNEDOT = (
+            model.EPS1.quantity * model.EPS1DOT.quantity
+            + model.EPS2.quantity * model.EPS2.quantity
+        )
+        OMDOT = (
+            model.EPS2.quantity * model.EPS1DOT.quantity
+            - model.EPS1.quantity * model.EPS2DOT.quantity
+        )
+        if (
+            model.EPS1.uncertainty is not None
+            and model.EPS2.uncertainty is not None
+            and model.EPS1DOT.uncertainty is not None
+            and model.EPS2DOT.uncertainty is not None
+        ):
+            LNEDOT_unc = np.sqrt(
+                (model.EPS1.uncertainty * model.EPS1DOT.quantity) ** 2
+                + (model.EPS2.uncertainty * model.EPS2DOT.quantity) ** 2
+                + (model.EPS1.quantity * model.EPS1DOT.uncertainty) ** 2
+                + (model.EPS2.uncertainty * model.EPS2DOT.quantity) ** 2
+            )
+            OMDOT_unc = np.sqrt(
+                (model.EPS2.uncertainty * model.EPS1DOT.quantity) ** 2
+                + (model.EPS1.uncertainty * model.EPS2DOT.quantity) ** 2
+                + (model.EPS2.quantity * model.EPS1DOT.uncertainty) ** 2
+                + (model.EPS1.uncertainty * model.EPS2DOT.quantity) ** 2
+            )
+    return LNEDOT, OMDOT, LNEDOT_unc, OMDOT_unc
+
+
+def _ELL1k_to_ELL1(model):
+    if model.BINARY.value != "ELL1k":
+        raise ValueError(f"Requires model ELL1k rather than {model.BINARY.value}")
+    EPS1DOT = None
+    EPS2DOT = None
+    EPS1DOT_unc = None
+    EPS2DOT_unc = None
+    if (
+        model.LNEDOT.quantity is not None
+        and model.OMDOT.quantity is not None
+        and model.EPS1.quantity is not None
+        and model.EPS2.quantity
+    ):
+        EPS1DOT = (
+            model.LNEDOT.quantity * model.EPS1.quantity
+            + model.OMDOT.quantity * model.EPS2.quantity
+        )
+        EPS2DOT = (
+            model.LNEDOT.quantity * model.EPS2.quantity
+            - model.OMDOT.quantity * model.EPS1.quantity
+        )
+        if (
+            model.LNEDOT.uncertainty is not None
+            and model.OMDOT.uncertainty is not None
+            and model.EPS1.uncertainty is not None
+            and model.EPS2.uncertainty is not None
+        ):
+            EPS1DOT_unc = np.sqrt(
+                (model.LNEDOT.uncertainty * model.EPS1.quantity) ** 2
+                + (model.LNEDOT.quantity * model.EPS1.uncertainty) ** 2
+                + (model.OMDOT.uncertainty * model.EPS2.quantity) ** 2
+                + (model.OMDOT.quantity * model.EPS2.uncertainty) ** 2
+            )
+            EPS2DOT_unc = np.sqrt(
+                (model.LNEDOT.uncertainty * model.EPS2.quantity) ** 2
+                + (model.LNEDOT.quantity * model.EPS2.uncertainty) ** 2
+                + (model.OMDOT.uncertainty * model.EPS1.quantity) ** 2
+                + (model.OMDOT.quantity * model.EPS1.uncertainty) ** 2
+            )
+    return EPS1DOT, EPS2DOT, EPS1DOT_unc, EPS2DOT_unc
 
 
 def _DDK_to_PK(model):
@@ -553,7 +650,6 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
     outmodel : pint.models.timing_model.TimingModel
     """
     # Do initial checks
-    output = output.upper()
     if output not in binary_types:
         raise ValueError(
             f"Requested output binary '{output}' is not one of the known types ({binary_types})"
@@ -571,11 +667,11 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
             f"Input model and requested output are both of type '{output}'; returning copy"
         )
         return copy.deepcopy(model)
-    log.debug(f"Identified input model '{binary_component_name}'")
+    log.debug(f"Converting from '{binary_component.binary_model_name}' to '{output}'")
 
-    if binary_component.binary_model_name in ["ELL1", "ELL1H"]:
+    if binary_component.binary_model_name in ["ELL1", "ELL1H", "ELL1k"]:
         if output == "ELL1H":
-            # this can only be ELL -> ELL1H
+            # ELL1,ELL1k -> ELL1H
             stigma, h3, h4, stigma_unc, h3_unc, h4_unc = _M2SINI_to_orthometric(model)
             outmodel = copy.deepcopy(model)
             outmodel.remove_component(binary_component_name)
@@ -583,6 +679,19 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
             # parameters not to copy
             badlist = ["M2", "SINI", "BINARY"]
             outmodel.add_component(BinaryELL1H(), validate=False)
+            if binary_component.binary_model_name == "ELL1k":
+                badlist += ["LNEDOT", "OMDOT"]
+                EPS1DOT, EPS2DOT, EPS1DOT_unc, EPS2DOT_unc = _ELL1k_to_ELL1(model)
+                if EPS1DOT is not None:
+                    outmodel.EPS1DOT.quantity = EPS1DOT
+                    if EPS1DOT_unc is not None:
+                        outmodel.EPS1DOT.uncertainty = EPS1DOT_unc
+                if EPS2DOT is not None:
+                    outmodel.EPS2DOT.quantity = EPS2DOT
+                    if EPS2DOT_unc is not None:
+                        outmodel.EPS2DOT.uncertainty = EPS2DOT_unc
+                outmodel.EPS1DOT.frozen = model.LNEDOT.frozen or model.OMDOT.frozen
+                outmodel.EPS2DOT.frozen = model.LNEDOT.frozen or model.OMDOT.frozen
             for p in model.params:
                 if p not in badlist:
                     setattr(outmodel, p, getattr(model, p))
@@ -608,36 +717,134 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 outmodel.H4.uncertainty = h4_unc
                 outmodel.H4.frozen = outmodel.H3.frozen
         elif output == "ELL1":
-            # ELL1H -> ELL1
-            M2, SINI, M2_unc, SINI_unc = _orthometric_to_M2SINI(model)
-            outmodel = copy.deepcopy(model)
-            outmodel.remove_component(binary_component_name)
-            outmodel.BINARY.value = output
-            # parameters not to copy
-            badlist = ["H3", "H4", "STIGMA", "BINARY"]
-            outmodel.add_component(BinaryELL1(), validate=False)
-            for p in model.params:
-                if p not in badlist:
-                    setattr(outmodel, p, getattr(model, p))
-            for p in model.components[binary_component_name].params:
-                if p not in badlist:
-                    setattr(
-                        outmodel.components["BinaryELL1"],
-                        p,
-                        getattr(model.components[binary_component_name], p),
-                    )
-            outmodel.M2.quantity = M2
-            outmodel.SINI.quantity = SINI
-            if model.STIGMA.quantity is not None:
-                outmodel.M2.frozen = model.STIGMA.frozen or model.H3.frozen
-                outmodel.SINI.frozen = model.STIGMA.frozen
-            else:
-                outmodel.M2.frozen = model.STIGMA.frozen or model.H3.frozen
-                outmodel.SINI.frozen = model.STIGMA.frozen or model.H3.frozen
-            if M2_unc is not None:
-                outmodel.M2.uncertainty = M2_unc
-            if SINI_unc is not None:
-                outmodel.SINI.uncertainty = SINI_unc
+            if model.BINARY.value == "ELL1H":
+                # ELL1H -> ELL1
+                M2, SINI, M2_unc, SINI_unc = _orthometric_to_M2SINI(model)
+                outmodel = copy.deepcopy(model)
+                outmodel.remove_component(binary_component_name)
+                outmodel.BINARY.value = output
+                # parameters not to copy
+                badlist = ["H3", "H4", "STIGMA", "BINARY"]
+                outmodel.add_component(BinaryELL1(), validate=False)
+                for p in model.params:
+                    if p not in badlist:
+                        setattr(outmodel, p, getattr(model, p))
+                for p in model.components[binary_component_name].params:
+                    if p not in badlist:
+                        setattr(
+                            outmodel.components["BinaryELL1"],
+                            p,
+                            getattr(model.components[binary_component_name], p),
+                        )
+                outmodel.M2.quantity = M2
+                outmodel.SINI.quantity = SINI
+                if model.STIGMA.quantity is not None:
+                    outmodel.M2.frozen = model.STIGMA.frozen or model.H3.frozen
+                    outmodel.SINI.frozen = model.STIGMA.frozen
+                else:
+                    outmodel.M2.frozen = model.STIGMA.frozen or model.H3.frozen
+                    outmodel.SINI.frozen = model.STIGMA.frozen or model.H3.frozen
+                if M2_unc is not None:
+                    outmodel.M2.uncertainty = M2_unc
+                if SINI_unc is not None:
+                    outmodel.SINI.uncertainty = SINI_unc
+            elif model.BINARY.value == "ELL1k":
+                # ELL1k -> ELL1
+                outmodel = copy.deepcopy(model)
+                outmodel.remove_component(binary_component_name)
+                outmodel.BINARY.value = output
+                # parameters not to copy
+                badlist = ["BINARY", "LNEDOT", "OMDOT"]
+                outmodel.add_component(BinaryELL1(), validate=False)
+                EPS1DOT, EPS2DOT, EPS1DOT_unc, EPS2DOT_unc = _ELL1k_to_ELL1(model)
+                for p in model.params:
+                    if p not in badlist:
+                        setattr(outmodel, p, getattr(model, p))
+                for p in model.components[binary_component_name].params:
+                    if p not in badlist:
+                        setattr(
+                            outmodel.components["BinaryELL1"],
+                            p,
+                            getattr(model.components[binary_component_name], p),
+                        )
+                if EPS1DOT is not None:
+                    outmodel.EPS1DOT.quantity = EPS1DOT
+                    if EPS1DOT_unc is not None:
+                        outmodel.EPS1DOT.uncertainty = EPS1DOT_unc
+                if EPS2DOT is not None:
+                    outmodel.EPS2DOT.quantity = EPS2DOT
+                    if EPS2DOT_unc is not None:
+                        outmodel.EPS2DOT.uncertainty = EPS2DOT_unc
+                outmodel.EPS1DOT.frozen = model.LNEDOT.frozen or model.OMDOT.frozen
+                outmodel.EPS2DOT.frozen = model.LNEDOT.frozen or model.OMDOT.frozen
+        elif output == "ELL1k":
+            if model.BINARY.value == "ELL1":
+                # ELL1 -> ELL1k
+                LNEDOT, OMDOT, LNEDOT_unc, OMDOT_unc = _ELL1_to_ELL1k(model)
+                outmodel = copy.deepcopy(model)
+                outmodel.remove_component(binary_component_name)
+                outmodel.BINARY.value = output
+                # parameters not to copy
+                badlist = ["BINARY", "EPS1DOT", "EPS2DOT"]
+                outmodel.add_component(BinaryELL1k(), validate=False)
+                for p in model.params:
+                    if p not in badlist:
+                        setattr(outmodel, p, getattr(model, p))
+                for p in model.components[binary_component_name].params:
+                    if p not in badlist:
+                        setattr(
+                            outmodel.components["BinaryELL1k"],
+                            p,
+                            getattr(model.components[binary_component_name], p),
+                        )
+                outmodel.LNEDOT.quantity = LNEDOT
+                outmodel.OMDOT.quantity = OMDOT
+                if LNEDOT_unc is not None:
+                    outmodel.LNEDOT.uncertainty = LNEDOT_unc
+                if OMDOT_unc is not None:
+                    outmodel.OMDOT.uncertainty = OMDOT_unc
+                outmodel.LNEDOT.frozen = model.EPS1DOT.frozen or model.EPS2DOT.frozen
+                outmodel.OMDOT.frozen = model.EPS1DOT.frozen or model.EPS2DOT.frozen
+            elif model.BINARY.value == "ELL1H":
+                # ELL1H -> ELL1k
+                LNEDOT, OMDOT, LNEDOT_unc, OMDOT_unc = _ELL1_to_ELL1k(model)
+                M2, SINI, M2_unc, SINI_unc = _orthometric_to_M2SINI(model)
+                outmodel = copy.deepcopy(model)
+                outmodel.remove_component(binary_component_name)
+                outmodel.BINARY.value = output
+                # parameters not to copy
+                badlist = ["BINARY", "EPS1DOT", "EPS2DOT", "H3", "H4", "STIGMA"]
+                outmodel.add_component(BinaryELL1k(), validate=False)
+                for p in model.params:
+                    if p not in badlist:
+                        setattr(outmodel, p, getattr(model, p))
+                for p in model.components[binary_component_name].params:
+                    if p not in badlist:
+                        setattr(
+                            outmodel.components["BinaryELL1k"],
+                            p,
+                            getattr(model.components[binary_component_name], p),
+                        )
+                outmodel.LNEDOT.quantity = LNEDOT
+                outmodel.OMDOT.quantity = OMDOT
+                if LNEDOT_unc is not None:
+                    outmodel.LNEDOT.uncertainty = LNEDOT_unc
+                if OMDOT_unc is not None:
+                    outmodel.OMDOT.uncertainty = OMDOT_unc
+                outmodel.LNEDOT.frozen = model.EPS1DOT.frozen or model.EPS2DOT.frozen
+                outmodel.OMDOT.frozen = model.EPS1DOT.frozen or model.EPS2DOT.frozen
+                outmodel.M2.quantity = M2
+                outmodel.SINI.quantity = SINI
+                if model.STIGMA.quantity is not None:
+                    outmodel.M2.frozen = model.STIGMA.frozen or model.H3.frozen
+                    outmodel.SINI.frozen = model.STIGMA.frozen
+                else:
+                    outmodel.M2.frozen = model.STIGMA.frozen or model.H3.frozen
+                    outmodel.SINI.frozen = model.STIGMA.frozen or model.H3.frozen
+                if M2_unc is not None:
+                    outmodel.M2.uncertainty = M2_unc
+                if SINI_unc is not None:
+                    outmodel.SINI.uncertainty = SINI_unc
         elif output in ["DD", "DDS", "DDK", "BT"]:
             # need to convert
             ECC, OM, T0, EDOT, ECC_unc, OM_unc, T0_unc, EDOT_unc = _from_ELL1(model)
@@ -693,9 +900,14 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 or model.TASC.frozen
                 or model.PB.frozen
             )
-            outmodel.EDOT.quantity = EDOT
-            outmodel.EDOT.uncertainty = EDOT_unc
-            outmodel.EDOT.frozen = model.EPS1DOT.frozen or model.EPS2DOT.frozen
+            if EDOT is not None:
+                outmodel.EDOT.quantity = EDOT
+            if EDOT_unc is not None:
+                outmodel.EDOT.uncertainty = EDOT_unc
+            if binary_component.binary_model_name != "ELL1k":
+                outmodel.EDOT.frozen = model.EPS1DOT.frozen or model.EPS2DOT.frozen
+            else:
+                outmodel.EDOT.frozen = model.LNEDOT.frozen
             if binary_component.binary_model_name == "ELL1H":
                 M2, SINI, M2_unc, SINI_unc = _orthometric_to_M2SINI(model)
                 outmodel.M2.quantity = M2
@@ -710,6 +922,10 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 else:
                     outmodel.SINI.frozen = model.H3.frozen or model.H4.frozen
                     outmodel.M2.frozen = model.H3.frozen or model.H4.frozen
+        else:
+            raise ValueError(
+                f"Do not know how to convert from {binary_component.binary_model_name} to {output}"
+            )
     elif binary_component.binary_model_name in ["DD", "DDGR", "DDS", "DDK", "BT"]:
         if output in ["DD", "DDS", "DDK", "BT"]:
             outmodel = copy.deepcopy(model)
@@ -824,7 +1040,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                             or model.A1.frozen
                         )
 
-        elif output in ["ELL1", "ELL1H"]:
+        elif output in ["ELL1", "ELL1H", "ELL1k"]:
             outmodel = copy.deepcopy(model)
             outmodel.remove_component(binary_component_name)
             outmodel.BINARY.value = output
@@ -839,6 +1055,11 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
             elif output == "ELL1H":
                 outmodel.add_component(BinaryELL1H(), validate=False)
                 badlist += ["M2", "SINI"]
+            elif output == "ELL1k":
+                outmodel.add_component(BinaryELL1k(), validate=False)
+                badlist += ["EPS1DOT", "EPS2DOT"]
+                badlist.remove("OMDOT")
+                badlist.remove("EDOT")
             for p in model.params:
                 if p not in badlist:
                     setattr(outmodel, p, getattr(model, p))
@@ -861,7 +1082,32 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 EPS1DOT_unc,
                 EPS2DOT_unc,
             ) = _to_ELL1(model)
-
+            LNEDOT = None
+            LNEDOT_unc = None
+            if output == "ELL1k":
+                LNEDOT = 0 / u.yr
+                if (
+                    hasattr(model, "ECCDOT")
+                    and model.ECCDOT.quantity is not None
+                    and model.ECC.quantity is not None
+                ):
+                    LNEDOT = model.ECCDOT.quantity / model.ECC.quantity
+                    if (
+                        model.ECCDOT.uncertainty is not None
+                        or model.ECC.uncertainty is not None
+                    ):
+                        LNEDOT_unc = 0
+                        if model.ECCDOT.uncertainty is not None:
+                            LNEDOT_unc += (
+                                model.ECCDOT.uncertainty / model.ECC.quantity
+                            ) ** 2
+                        if model.ECC.uncertainty is not None:
+                            LNEDOT_unc += (
+                                model.ECCDOT.quantity
+                                * model.ECC.uncertainty
+                                / model.ECC.quantity**2
+                            )
+                        LNEDOT_unc = np.sqrt(LNEDOT_unc)
             outmodel.EPS1.quantity = EPS1
             outmodel.EPS2.quantity = EPS2
             outmodel.TASC.quantity = TASC
@@ -876,7 +1122,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 or model.PB.frozen
                 or model.T0.frozen
             )
-            if EPS1DOT is not None:
+            if EPS1DOT is not None and output != "ELL1k":
                 outmodel.EPS1DOT.quantity = EPS1DOT
                 outmodel.EPS2DOT.quantity = EPS2DOT
                 outmodel.EPS1DOT.frozen = model.EDOT.frozen or model.OM.frozen
@@ -884,6 +1130,11 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 if EPS1DOT_unc is not None:
                     outmodel.EPS1DOT.uncertainty = EPS1DOT_unc
                     outmodel.EPS2DOT.uncertainty = EPS2DOT_unc
+            if LNEDOT is not None and output == "ELL1k":
+                outmodel.LNEDOT.quantity = LNEDOT
+                outmodel.LNEDOT.frozen = model.EDOT.frozen
+                if LNEDOT_unc is not None:
+                    outmodel.LNEDOT.uncertainty = LNEDOT_unc
             if binary_component.binary_model_name == "DDS":
                 SINI, SINI_unc = _SHAPMAX_to_SINI(model)
                 outmodel.SINI.quantity = SINI

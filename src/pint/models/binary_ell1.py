@@ -382,6 +382,7 @@ class BinaryELL1k(BinaryELL1):
 
         self.remove_param("EPS1DOT")
         self.remove_param("EPS2DOT")
+        self.remove_param("EDOT")
 
     def validate(self):
         """Validate parameters."""
