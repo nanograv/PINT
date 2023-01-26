@@ -122,16 +122,20 @@ def test_ELL1_roundtrip(output):
         if getattr(m, p).value is None:
             continue
         if not isinstance(getattr(m, p).quantity, (str, bool, astropy.time.Time)):
-            assert np.isclose(getattr(m, p).value, getattr(mback, p).value)
+            assert np.isclose(
+                getattr(m, p).value, getattr(mback, p).value
+            ), f"{p}: {getattr(m, p).value} does not match {getattr(mback, p).value}"
             if getattr(m, p).uncertainty is not None:
                 # some precision may be lost in uncertainty conversion
                 assert np.isclose(
                     getattr(m, p).uncertainty_value,
                     getattr(mback, p).uncertainty_value,
                     rtol=0.2,
-                )
+                ), f"{p} uncertainty: {getattr(m, p).uncertainty_value} does not match {getattr(mback, p).uncertainty_value}"
         else:
-            assert getattr(m, p).value == getattr(mback, p).value
+            assert (
+                getattr(m, p).value == getattr(mback, p).value
+            ), f"{p}: {getattr(m, p).value} does not match {getattr(mback, p).value}"
 
 
 @pytest.mark.parametrize("output", ["ELL1", "ELL1k", "ELL1H", "DD", "BT", "DDS", "DDK"])

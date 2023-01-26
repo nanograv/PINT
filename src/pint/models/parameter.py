@@ -28,6 +28,7 @@ import astropy.time as time
 import astropy.units as u
 import numpy as np
 from astropy.coordinates.angles import Angle
+from uncertainties import ufloat
 
 from loguru import logger as log
 
@@ -788,6 +789,27 @@ class floatParameter(Parameter):
         else:
             return quan.to(self.units).value
 
+    def as_ufloat(self, units=None):
+        """Return the parameter as a :class:`uncertainties.ufloat`
+
+        Will cast to the specified units, or the default
+        If the uncertainty is not set will be returned as 0
+
+        Parameters
+        ----------
+        units : astropy.units.core.Unit, optional
+            Units to cast the value
+
+        Returns
+        -------
+        uncertainties.ufloat
+        """
+        if units is None:
+            units = self.units
+        value = self.quantity.to_value(units) if self.quantity is not None else 0
+        error = self.uncertainty.to_value(units) if self.uncertainty is not None else 0
+        return ufloat(value, error)
+
 
 class strParameter(Parameter):
     """String-valued parameter.
@@ -1540,6 +1562,27 @@ class prefixParameter:
 
         newpfx = prefixParameter(name=new_name, **kws)
         return newpfx
+
+    def as_ufloat(self, units=None):
+        """Return the parameter as a :class:`uncertainties.ufloat`
+
+        Will cast to the specified units, or the default
+        If the uncertainty is not set will be returned as 0
+
+        Parameters
+        ----------
+        units : astropy.units.core.Unit, optional
+            Units to cast the value
+
+        Returns
+        -------
+        uncertainties.ufloat
+        """
+        if units is None:
+            units = self.units
+        value = self.quantity.to_value(units) if self.quantity is not None else 0
+        error = self.uncertainty.to_value(units) if self.uncertainty is not None else 0
+        return ufloat(value, error)
 
 
 class maskParameter(floatParameter):

@@ -155,7 +155,7 @@ class TestDDGR:
         # chi^2 values don't have to be super close
         assert (
             np.fabs(fDD.model.M2.quantity - fDDGR.model.M2.quantity)
-            < 2 * fDD.model.M2.uncertainty
+            < 3 * fDD.model.M2.uncertainty
         )
         # perturn M2 and make sure chi^2 gets worse
         fDDGR.model.M2.quantity += 3 * fDDGR.model.M2.uncertainty

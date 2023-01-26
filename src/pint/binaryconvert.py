@@ -56,28 +56,22 @@ def _M2SINI_to_orthometric(model):
     .. [1] https://ui.adsabs.harvard.edu/abs/2010MNRAS.409..199F/abstract
 
     """
-    cbar = np.sqrt(1 - model.SINI.quantity**2)
-    stigma = model.SINI.quantity / (1 + cbar)
-    h3 = Tsun * model.M2.quantity.to_value(u.Msun) * stigma**3
+    if not (hasattr(model, "M2") and hasattr(model, "SINI")):
+        raise AttributeError(
+            "Model must contain M2 and SINI for conversion to orthometric parameters"
+        )
+    sini = model.SINI.as_ufloat()
+    m2 = model.M2.as_ufloat(u.Msun)
+    cbar = umath.sqrt(1 - sini**2)
+    stigma = sini / (1 + cbar)
+    h3 = Tsun.value * m2 * stigma**3
     h4 = h3 * stigma
-    stigma_unc = None
-    h3_unc = None
-    h4_unc = None
-    if model.SINI.uncertainty is not None:
-        stigma_unc = model.SINI.uncertainty / (1 + cbar) / cbar
-        if model.M2.uncertainty is not None:
-            h3_unc = np.sqrt(
-                (Tsun * model.M2.uncertainty.to_value(u.Msun) * stigma**3) ** 2
-                + (
-                    3
-                    * (Tsun * model.M2.quantity.to_value(u.Msun))
-                    * stigma**2
-                    * stigma_unc
-                )
-                ** 2
-            )
-            h4_unc = np.sqrt((h3_unc * stigma) ** 2 + (h3 * stigma_unc) ** 2)
-    return stigma, h3, h4, stigma_unc, h3_unc, h4_unc
+
+    stigma_unc = stigma.s if stigma.s > 0 else None
+    h3_unc = h3.s * u.s if h3.s > 0 else None
+    h4_unc = h4.s * u.s if h4.s > 0 else None
+
+    return stigma.n, h3.n * u.s, h4.n * u.s, stigma_unc, h3_unc, h4_unc
 
 
 def _orthometric_to_M2SINI(model):
@@ -108,78 +102,28 @@ def _orthometric_to_M2SINI(model):
     .. [1] https://ui.adsabs.harvard.edu/abs/2010MNRAS.409..199F/abstract
 
     """
-
-    SINI_unc = None
-    M2_unc = None
-    if model.STIGMA.quantity is not None:
-        stigma = model.STIGMA.quantity
-        stigma_unc = model.STIGMA.uncertainty
-        SINI = 2 * stigma / (1 + stigma**2)
-        M2 = (model.H3.quantity / stigma**3 / Tsun) * u.Msun
-        if stigma_unc is not None:
-            SINI_unc = np.abs(
-                stigma_unc * 2 * (stigma**2 - 1) / (1 + stigma**2) ** 2
-            )
-            if model.H3.uncertainty is not None:
-                M2_unc = (
-                    np.sqrt(
-                        (model.H3.uncertainty / stigma**3) ** 2
-                        + (3 * stigma_unc * model.H3.quantity / stigma**4) ** 2
-                    )
-                    / Tsun
-                ) * u.Msun
-
-    elif model.H4.quantity is not None:
-        # FW10 Eqn. 25, 26
-        SINI = (2 * model.H3.quantity * model.H4.quantity) / (
-            model.H3.quantity**2 + model.H4.quantity**2
+    if not (
+        hasattr(model, "H3") and (hasattr(model, "STIGMA") or hasattr(model, "H4"))
+    ):
+        raise AttributeError(
+            "Model must contain H3 and either STIGMA or H4 for conversion to M2/SINI"
         )
-        M2 = (model.H3.quantity**4 / model.H4.quantity**3 / Tsun) * u.Msun
-        if model.H4.uncertainty is not None and model.H3.uncertainty is not None:
-            M2_unc = np.sqrt(
-                (
-                    4
-                    * model.H3.quantity**3
-                    * model.H3.uncertainty
-                    / model.H4.quantity**3
-                )
-                ** 2
-                + (
-                    3
-                    * model.H3.quantity**4
-                    * model.H4.uncertainty
-                    / model.H4.quantity**4
-                )
-                ** 2
-            ) * (u.Msun / Tsun)
-            SINI_unc = np.sqrt(
-                (
-                    (
-                        (
-                            2 * model.H4.quantity**3
-                            - 2 * model.H3.quantity**2 * model.H4.quantity
-                        )
-                        * model.H3.uncertainty
-                    )
-                    / (model.H3.quantity**2 + model.H4.quantity**2) ** 2
-                )
-                ** 2
-                + (
-                    (
-                        (
-                            2 * model.H3.quantity**3
-                            - 2 * model.H4.quantity**2 * model.H3.quantity
-                        )
-                        * model.H4.uncertainty
-                    )
-                    / (model.H3.quantity**2 + model.H4.quantity**2) ** 2
-                )
-                ** 2
-            )
-    else:
-        raise ValueError("Cannot uniquely convert from ELL1H to ELL1 with only H3")
+    h3 = model.H3.as_ufloat()
+    h4 = model.H4.as_ufloat() if model.H4.value is not None else None
+    stigma = model.STIGMA.as_ufloat() if model.STIGMA.value is not None else None
 
-    return M2, SINI, M2_unc, SINI_unc
+    if stigma is not None:
+        sini = 2 * stigma / (1 + stigma**2)
+        m2 = h3 / stigma**3 / Tsun.value
+    else:
+        # FW10 Eqn. 25, 26
+        sini = 2 * h3 * h4 / (h3**2 + h4**2)
+        m2 = h3**4 / h4**3 / Tsun.value
+
+    m2_unc = m2.s * u.Msun if m2.s > 0 else None
+    sini_unc = sini.s if sini.s > 0 else None
+
+    return m2.n * u.Msun, sini.n, m2_unc, sini_unc
 
 
 def _SINI_to_SHAPMAX(model):
@@ -197,6 +141,8 @@ def _SINI_to_SHAPMAX(model):
     SHAPMAX_unc : astropy.units.Quantity or None
         Uncertainty on SHAPMAX
     """
+    if not hasattr(model, "SINI"):
+        raise AttributeError("Model must contain SINI for conversion to SHAPMAX")
     SHAPMAX = -np.log(1 - model.SINI.quantity)
     SHAPMAX_unc = (
         model.SINI.uncertainty / (1 - model.SINI.quantity)
@@ -221,6 +167,8 @@ def _SHAPMAX_to_SINI(model):
     SINI_unc : astropy.units.Quantity or None
         Uncertainty on SINI
     """
+    if not hasattr(model, "SHAPMAX"):
+        raise AttributeError("Model must contain SHAPMAX for conversion to SINI")
     SINI = 1 - np.exp(-model.SHAPMAX.quantity)
     SINI_unc = (
         model.SHAPMAX.uncertainty * np.exp(-model.SHAPMAX.quantity)
@@ -265,6 +213,8 @@ def _from_ELL1(model):
     """
     if model.BINARY.value not in ["ELL1", "ELL1H", "ELL1k"]:
         raise ValueError(f"Requires model ELL1* rather than {model.BINARY.value}")
+
+    # don't do this with ufloats yet since we don't know how to handle MJD parameters
     # do we have to account for FB or PBDOT here?
     ECC = np.sqrt(model.EPS1.quantity**2 + model.EPS2.quantity**2)
     OM = np.arctan2(model.EPS2.quantity, model.EPS1.quantity)
@@ -383,6 +333,10 @@ def _to_ELL1(model):
     .. [1] https://ui.adsabs.harvard.edu/abs/2001MNRAS.326..274L/abstract
 
     """
+    if not (hasattr(model, "ECC") and hasattr(model, "T0") and hasattr(model, "OM")):
+        raise AttributeError(
+            "Model must contain ECC, T0, OM for conversion to EPS1/EPS2"
+        )
     EPS1_unc = None
     EPS2_unc = None
     TASC_unc = None
@@ -447,104 +401,82 @@ def _to_ELL1(model):
 
 
 def _ELL1_to_ELL1k(model):
+    """Convert from ELL1 EPS1DOT/EPS2DOT to ELL1k LNEDOT/OMDOT
+
+    Parameters
+    ----------
+    model : pint.models.timing_model.TimingModel
+
+    Returns
+    -------
+    LNEDOT: astropy.units.Quantity
+    OMDOT: astropy.units.Quantity
+    LNEDOT_unc: astropy.units.Quantity or None
+        Uncertainty on LNEDOT
+    OMDOT_unc: astropy.units.Quantity or None
+        Uncertainty on OMDOT
+
+    References
+    ----------
+    - Susobhanan et al. (2018), MNRAS, 480 (4), 5260-5271 [1]_
+
+    .. [1] https://ui.adsabs.harvard.edu/abs/2018MNRAS.480.5260S/abstract
+    """
     if model.BINARY.value not in ["ELL1", "ELL1H"]:
         raise ValueError(f"Requires model ELL1/ELL1H rather than {model.BINARY.value}")
-    LNEDOT = None
-    OMDOT = None
-    LNEDOT_unc = None
-    OMDOT_unc = None
-    ECC = np.sqrt(model.EPS1.quantity**2 + model.EPS2.quantity**2)
-    ECC_unc = None
-    if model.EPS1.uncertainty is not None and model.EPS2.uncertainty is not None:
-        ECC_unc = np.sqrt(
-            (model.EPS1.uncertainty * model.EPS1.quantity / ECC) ** 2
-            + (model.EPS2.uncertainty * model.EPS2.quantity / ECC) ** 2
-        )
-    if (
-        model.EPS1.quantity is not None
-        and model.EPS2.quantity is not None
-        and model.EPS1DOT.quantity is not None
-        and model.EPS2DOT.quantity is not None
-    ):
-        LNEDOT = (
-            model.EPS1.quantity * model.EPS1DOT.quantity
-            + model.EPS2.quantity * model.EPS2DOT.quantity
-        ) / ECC
-        OMDOT = (
-            model.EPS2.quantity * model.EPS1DOT.quantity
-            - model.EPS1.quantity * model.EPS2DOT.quantity
-        ).to(u.deg / u.yr, equivalencies=u.dimensionless_angles()) / ECC
-        if (
-            model.EPS1.uncertainty is not None
-            and model.EPS2.uncertainty is not None
-            and model.EPS1DOT.uncertainty is not None
-            and model.EPS2DOT.uncertainty is not None
-            and ECC_unc is not None
-        ):
-            LNEDOT_unc = np.sqrt(
-                (model.EPS1.uncertainty * model.EPS1DOT.quantity / ECC) ** 2
-                + (model.EPS2.uncertainty * model.EPS2DOT.quantity / ECC) ** 2
-                + (model.EPS1.quantity * model.EPS1DOT.uncertainty / ECC) ** 2
-                + (model.EPS2.quantity * model.EPS2DOT.uncertainty / ECC) ** 2
-                + (LNEDOT * ECC_unc / ECC) ** 2
-            )
-            with u.set_enabled_equivalencies(u.dimensionless_angles()):
-                OMDOT_unc = np.sqrt(
-                    (model.EPS2.uncertainty * model.EPS1DOT.quantity / ECC) ** 2
-                    + (model.EPS1.uncertainty * model.EPS2DOT.quantity / ECC) ** 2
-                    + (model.EPS2.quantity * model.EPS1DOT.uncertainty / ECC) ** 2
-                    + (model.EPS1.quantity * model.EPS2DOT.uncertainty / ECC) ** 2
-                    + (OMDOT * ECC_unc / ECC) ** 2
-                ).to(u.deg / u.yr)
-    return LNEDOT, OMDOT, LNEDOT_unc, OMDOT_unc
+    eps1 = model.EPS1.as_ufloat()
+    eps2 = model.EPS2.as_ufloat()
+    eps1dot = model.EPS1DOT.as_ufloat(u.Hz)
+    eps2dot = model.EPS2DOT.as_ufloat(u.Hz)
+    ecc = umath.sqrt(eps1**2 + eps2**2)
+    lnedot = (eps1 * eps1dot + eps2 * eps2dot) / ecc
+    omdot = (eps2 * eps1dot - eps1 * eps2dot) / ecc
+
+    with u.set_enabled_equivalencies(u.dimensionless_angles()):
+        lnedot_unc = lnedot.s / u.s if lnedot.s > 0 else None
+        omdot_unc = (omdot.s / u.s).to(u.deg / u.yr) if omdot.s > 0 else None
+        return lnedot.n / u.s, (omdot.n / u.s).to(u.deg / u.yr), lnedot_unc, omdot_unc
 
 
 def _ELL1k_to_ELL1(model):
+    """Convert from ELL1k LNEDOT/OMDOT to ELL1 EPS1DOT/EPS2DOT
+
+    Parameters
+    ----------
+    model : pint.models.timing_model.TimingModel
+
+    Returns
+    -------
+    EPS1DOT: astropy.units.Quantity
+    EPS2DOT: astropy.units.Quantity
+    EPS1DOT_unc: astropy.units.Quantity or None
+        Uncertainty on EPS1DOT
+    EPS2DOT_unc: astropy.units.Quantity or None
+        Uncertainty on EPS2DOT
+
+    References
+    ----------
+    - Susobhanan et al. (2018), MNRAS, 480 (4), 5260-5271 [1]_
+
+    .. [1] https://ui.adsabs.harvard.edu/abs/2018MNRAS.480.5260S/abstract
+    """
     if model.BINARY.value != "ELL1k":
         raise ValueError(f"Requires model ELL1k rather than {model.BINARY.value}")
-    EPS1DOT = None
-    EPS2DOT = None
-    EPS1DOT_unc = None
-    EPS2DOT_unc = None
-    if (
-        model.LNEDOT.quantity is not None
-        and model.OMDOT.quantity is not None
-        and model.EPS1.quantity is not None
-        and model.EPS2.quantity
-    ):
-        with u.set_enabled_equivalencies(u.dimensionless_angles()):
-            EPS1DOT = (
-                model.LNEDOT.quantity * model.EPS1.quantity
-                + model.OMDOT.quantity * model.EPS2.quantity
-            )
-            EPS2DOT = (
-                model.LNEDOT.quantity * model.EPS2.quantity
-                - model.OMDOT.quantity * model.EPS1.quantity
-            )
-            if (
-                model.LNEDOT.uncertainty is not None
-                and model.OMDOT.uncertainty is not None
-                and model.EPS1.uncertainty is not None
-                and model.EPS2.uncertainty is not None
-            ):
-                EPS1DOT_unc = np.sqrt(
-                    (model.LNEDOT.uncertainty * model.EPS1.quantity) ** 2
-                    + (model.LNEDOT.quantity * model.EPS1.uncertainty) ** 2
-                    + (model.OMDOT.uncertainty * model.EPS2.quantity) ** 2
-                    + (model.OMDOT.quantity * model.EPS2.uncertainty) ** 2
-                )
-                EPS2DOT_unc = np.sqrt(
-                    (model.LNEDOT.uncertainty * model.EPS2.quantity) ** 2
-                    + (model.LNEDOT.quantity * model.EPS2.uncertainty) ** 2
-                    + (model.OMDOT.uncertainty.to(u.Hz) * model.EPS1.quantity) ** 2
-                    + (model.OMDOT.quantity.to(u.Hz) * model.EPS1.uncertainty) ** 2
-                )
+    eps1 = model.EPS1.as_ufloat()
+    eps2 = model.EPS2.as_ufloat()
+    lnedot = model.LNEDOT.as_ufloat(u.Hz)
+    with u.set_enabled_equivalencies(u.dimensionless_angles()):
+        omdot = model.OMDOT.as_ufloat(1 / u.s)
+    eps1dot = lnedot * eps1 + omdot * eps2
+    eps2dot = lnedot * eps2 - omdot * eps1
 
-    return EPS1DOT, EPS2DOT, EPS1DOT_unc, EPS2DOT_unc
+    eps1dot_unc = eps1dot.s / u.s if eps1dot.s > 0 else None
+    eps2dot_unc = eps2dot.s / u.s if eps2dot.s > 0 else None
+    return eps1dot.n / u.s, eps2dot.n / u.s, eps1dot_unc, eps2dot_unc
 
 
-def _DDK_to_PK(model):
-    """Convert DDK model to equivalent PK parameters
+def _DDGR_to_PK(model):
+    """Convert DDGR model to equivalent PK parameters
 
     Uses ``uncertainties`` module to propagate uncertainties
 
@@ -562,39 +494,18 @@ def _DDK_to_PK(model):
     Dr : uncertainties.core.Variable
     Dth : uncertainties.core.Variable
     """
+    if model.BINARY.value != "DDGR":
+        raise ValueError(
+            f"Requires DDGR model for conversion, not '{model.BINARY.value}'"
+        )
     tsun = Tsun.to_value(u.s)
-    if model.MTOT.uncertainty is not None:
-        mtot = ufloat(
-            model.MTOT.quantity.to_value(u.Msun),
-            model.MTOT.uncertainty.to_value(u.Msun),
-        )
-    else:
-        mtot = ufloat(model.MTOT.quantity.to_value(u.Msun), 0)
-    if model.M2.uncertainty is not None:
-        mc = ufloat(
-            model.M2.quantity.to_value(u.Msun), model.M2.uncertainty.to_value(u.Msun)
-        )
-    else:
-        mc = ufloat(model.M2.quantity.to_value(u.Msun), 0)
+    mtot = model.MTOT.as_ufloat(u.Msun)
+    mc = model.M2.as_ufloat(u.Msun)
+    x = model.A1.as_ufloat()
+    pb = model.PB.as_ufloat(u.s)
+    n = 2 * np.pi / pb
     mp = mtot - mc
-    if model.A1.uncertainty is not None:
-        x = ufloat(model.A1.value, model.A1.uncertainty_value)
-    else:
-        x = ufloat(model.A1.value, 0)
-    if model.PB.uncertainty is not None:
-        n = (
-            2
-            * np.pi
-            / ufloat(
-                model.PB.quantity.to_value(u.s), model.PB.uncertainty.to_value(u.s)
-            )
-        )
-    else:
-        n = 2 * np.pi / model.PB.quantity.to_value(u.s)
-    if model.ECC.uncertainty is not None:
-        ECC = ufloat(model.ECC.value, model.ECC.uncertainty_value)
-    else:
-        ECC = ufloat(model.ECC.value, 0)
+    ecc = model.ECC.as_ufloat()
     # units are seconds
     gamma = (
         tsun ** (2.0 / 3)
@@ -607,10 +518,10 @@ def _DDK_to_PK(model):
     omegadot = (
         (3 * tsun ** (2.0 / 3))
         * n ** (5.0 / 3)
-        * (1 / (1 - ECC**2))
+        * (1 / (1 - ecc**2))
         * (mp + mc) ** (2.0 / 3)
     )
-    fe = (1 + (73.0 / 24) * ECC**2 + (37.0 / 96) * ECC**4) / (1 - ECC**2) ** (
+    fe = (1 + (73.0 / 24) * ecc**2 + (37.0 / 96) * ecc**4) / (1 - ecc**2) ** (
         7.0 / 2
     )
     # units as s/s
@@ -639,12 +550,46 @@ def _DDK_to_PK(model):
     return pbdot, gamma, omegadot, s, r, Dr, Dth
 
 
+def _transfer_params(inmodel, outmodel, badlist=[]):
+    """Transfer parameters between an input and output model, excluding certain parameters
+
+    Parameters
+    ----------
+    inmodel : pint.models.timing_model.TimingModel
+    outmodel : pint.models.timing_model.TimingModel
+    badlist : list, optional
+        List of parameters to not transfer
+
+    """
+    inbinary_component_name = [
+        x for x in inmodel.components.keys() if x.startswith("Binary")
+    ][0]
+    outbinary_component_name = [
+        x for x in outmodel.components.keys() if x.startswith("Binary")
+    ][0]
+    for p in inmodel.params:
+        if p not in badlist:
+            setattr(outmodel, p, getattr(inmodel, p))
+    for p in inmodel.components[inbinary_component_name].params:
+        if p not in badlist:
+            setattr(
+                outmodel.components[outbinary_component_name],
+                p,
+                getattr(inmodel.components[inbinary_component_name], p),
+            )
+
+
 def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
     """
     Convert between binary models
 
-    Input models can be from :class:`~pint.models.binary_dd.BinaryDD`, :class:`~pint.models.binary_dd.BinaryDDS`, :class:`~pint.models.binary_dd.BinaryDDGR`, :class:`~pint.models.binary_bt.BinaryBT`, :class:`~pint.models.binary_ddk.BinaryDDK`, :class:`~pint.models.binary_ell1.BinaryELL1`, :class:`~pint.models.binary_ell1.BinaryELL1H`
-    Output models can be from :class:`~pint.models.binary_dd.BinaryDD`, :class:`~pint.models.binary_dd.BinaryDDS`, :class:`~pint.models.binary_bt.BinaryBT`, :class:`~pint.models.binary_ddk.BinaryDDK`, :class:`~pint.models.binary_ell1.BinaryELL1`, :class:`~pint.models.binary_ell1.BinaryELL1H`
+    Input models can be from :class:`~pint.models.binary_dd.BinaryDD`, :class:`~pint.models.binary_dd.BinaryDDS`,
+    :class:`~pint.models.binary_dd.BinaryDDGR`, :class:`~pint.models.binary_bt.BinaryBT`, :class:`~pint.models.binary_ddk.BinaryDDK`,
+    :class:`~pint.models.binary_ell1.BinaryELL1`, :class:`~pint.models.binary_ell1.BinaryELL1H`, :class:`~pint.models.binary_ell1.BinaryELL1k`
+
+    Output models can be from :class:`~pint.models.binary_dd.BinaryDD`, :class:`~pint.models.binary_dd.BinaryDDS`,
+    :class:`~pint.models.binary_bt.BinaryBT`, :class:`~pint.models.binary_ddk.BinaryDDK`, :class:`~pint.models.binary_ell1.BinaryELL1`,
+    :class:`~pint.models.binary_ell1.BinaryELL1H`, :class:`~pint.models.binary_ell1.BinaryELL1k`
 
     Parameters
     ----------
@@ -683,6 +628,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
     log.debug(f"Converting from '{binary_component.binary_model_name}' to '{output}'")
 
     if binary_component.binary_model_name in ["ELL1", "ELL1H", "ELL1k"]:
+        # from ELL1, ELL1H, ELL1k
         if output == "ELL1H":
             # ELL1,ELL1k -> ELL1H
             stigma, h3, h4, stigma_unc, h3_unc, h4_unc = _M2SINI_to_orthometric(model)
@@ -705,16 +651,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                         outmodel.EPS2DOT.uncertainty = EPS2DOT_unc
                 outmodel.EPS1DOT.frozen = model.LNEDOT.frozen or model.OMDOT.frozen
                 outmodel.EPS2DOT.frozen = model.LNEDOT.frozen or model.OMDOT.frozen
-            for p in model.params:
-                if p not in badlist:
-                    setattr(outmodel, p, getattr(model, p))
-            for p in model.components[binary_component_name].params:
-                if p not in badlist:
-                    setattr(
-                        outmodel.components["BinaryELL1H"],
-                        p,
-                        getattr(model.components[binary_component_name], p),
-                    )
+            _transfer_params(model, outmodel, badlist)
             outmodel.NHARMS.value = NHARMS
             outmodel.H3.quantity = h3
             outmodel.H3.uncertainty = h3_unc
@@ -739,16 +676,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 # parameters not to copy
                 badlist = ["H3", "H4", "STIGMA", "BINARY"]
                 outmodel.add_component(BinaryELL1(), validate=False)
-                for p in model.params:
-                    if p not in badlist:
-                        setattr(outmodel, p, getattr(model, p))
-                for p in model.components[binary_component_name].params:
-                    if p not in badlist:
-                        setattr(
-                            outmodel.components["BinaryELL1"],
-                            p,
-                            getattr(model.components[binary_component_name], p),
-                        )
+                _transfer_params(model, outmodel, badlist)
                 outmodel.M2.quantity = M2
                 outmodel.SINI.quantity = SINI
                 if model.STIGMA.quantity is not None:
@@ -770,16 +698,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 badlist = ["BINARY", "LNEDOT", "OMDOT"]
                 outmodel.add_component(BinaryELL1(), validate=False)
                 EPS1DOT, EPS2DOT, EPS1DOT_unc, EPS2DOT_unc = _ELL1k_to_ELL1(model)
-                for p in model.params:
-                    if p not in badlist:
-                        setattr(outmodel, p, getattr(model, p))
-                for p in model.components[binary_component_name].params:
-                    if p not in badlist:
-                        setattr(
-                            outmodel.components["BinaryELL1"],
-                            p,
-                            getattr(model.components[binary_component_name], p),
-                        )
+                _transfer_params(model, outmodel, badlist)
                 if EPS1DOT is not None:
                     outmodel.EPS1DOT.quantity = EPS1DOT
                     if EPS1DOT_unc is not None:
@@ -800,16 +719,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 # parameters not to copy
                 badlist = ["BINARY", "EPS1DOT", "EPS2DOT"]
                 outmodel.add_component(BinaryELL1k(), validate=False)
-                for p in model.params:
-                    if p not in badlist:
-                        setattr(outmodel, p, getattr(model, p))
-                for p in model.components[binary_component_name].params:
-                    if p not in badlist:
-                        setattr(
-                            outmodel.components["BinaryELL1k"],
-                            p,
-                            getattr(model.components[binary_component_name], p),
-                        )
+                _transfer_params(model, outmodel, badlist)
                 outmodel.LNEDOT.quantity = LNEDOT
                 outmodel.OMDOT.quantity = OMDOT
                 if LNEDOT_unc is not None:
@@ -828,16 +738,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 # parameters not to copy
                 badlist = ["BINARY", "EPS1DOT", "EPS2DOT", "H3", "H4", "STIGMA"]
                 outmodel.add_component(BinaryELL1k(), validate=False)
-                for p in model.params:
-                    if p not in badlist:
-                        setattr(outmodel, p, getattr(model, p))
-                for p in model.components[binary_component_name].params:
-                    if p not in badlist:
-                        setattr(
-                            outmodel.components["BinaryELL1k"],
-                            p,
-                            getattr(model.components[binary_component_name], p),
-                        )
+                _transfer_params(model, outmodel, badlist)
                 outmodel.LNEDOT.quantity = LNEDOT
                 outmodel.OMDOT.quantity = OMDOT
                 if LNEDOT_unc is not None:
@@ -859,7 +760,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 if SINI_unc is not None:
                     outmodel.SINI.uncertainty = SINI_unc
         elif output in ["DD", "DDS", "DDK", "BT"]:
-            # need to convert
+            # need to convert from EPS1/EPS2/TASC to ECC/OM/TASC
             ECC, OM, T0, EDOT, ECC_unc, OM_unc, T0_unc, EDOT_unc = _from_ELL1(model)
             outmodel = copy.deepcopy(model)
             outmodel.remove_component(binary_component_name)
@@ -886,17 +787,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 badlist += ["M2", "SINI"]
             if binary_component.binary_model_name == "ELL1H":
                 badlist += ["H3", "H4", "STIGMA", "VARSIGMA"]
-            for p in model.params:
-                if p not in badlist:
-                    setattr(outmodel, p, getattr(model, p))
-            for p in model.components[binary_component_name].params:
-                if p not in badlist:
-                    setattr(
-                        outmodel.components[f"Binary{output}"],
-                        p,
-                        getattr(model.components[binary_component_name], p),
-                    )
-
+            _transfer_params(model, outmodel, badlist)
             outmodel.ECC.quantity = ECC
             outmodel.ECC.uncertainty = ECC_unc
             outmodel.ECC.frozen = model.EPS1.frozen or model.EPS2.frozen
@@ -963,16 +854,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
             elif output == "BT":
                 outmodel.add_component(BinaryBT(), validate=False)
                 badlist += ["M2", "SINI"]
-            for p in model.params:
-                if p not in badlist:
-                    setattr(outmodel, p, getattr(model, p))
-            for p in model.components[binary_component_name].params:
-                if p not in badlist:
-                    setattr(
-                        outmodel.components[f"Binary{output}"],
-                        p,
-                        getattr(model.components[binary_component_name], p),
-                    )
+            _transfer_params(model, outmodel, badlist)
             if binary_component.binary_model_name == "DDS":
                 SINI, SINI_unc = _SHAPMAX_to_SINI(model)
                 outmodel.SINI.quantity = SINI
@@ -990,7 +872,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                         )
                     outmodel.SINI.frozen = model.KIN.frozen
             elif binary_component.binary_model_name == "DDGR":
-                pbdot, gamma, omegadot, s, r, Dr, Dth = _DDK_to_PK(model)
+                pbdot, gamma, omegadot, s, r, Dr, Dth = _DDGR_to_PK(model)
                 outmodel.GAMMA.value = gamma.n
                 if gamma.s > 0:
                     outmodel.GAMMA.uncertainty_value = gamma.s
@@ -1072,16 +954,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 outmodel.add_component(BinaryELL1k(), validate=False)
                 badlist += ["EPS1DOT", "EPS2DOT"]
                 badlist.remove("OMDOT")
-            for p in model.params:
-                if p not in badlist:
-                    setattr(outmodel, p, getattr(model, p))
-            for p in model.components[binary_component_name].params:
-                if p not in badlist:
-                    setattr(
-                        outmodel.components[f"Binary{output}"],
-                        p,
-                        getattr(model.components[binary_component_name], p),
-                    )
+            _transfer_params(model, outmodel, badlist)
             (
                 EPS1,
                 EPS2,
