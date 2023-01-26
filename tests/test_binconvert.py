@@ -48,6 +48,7 @@ CHI2R          2.1896 637
 SOLARN0        00.00
 TIMEEPH        FB90
 PLANET_SHAPIRO N
+EDOT       2e-10 1 2e-12
 """
 Mp = 1.4 * u.Msun
 Mc = 1.1 * u.Msun
@@ -95,6 +96,8 @@ EPS1         -0.0000215334  1        0.0000000194
 EPS2          0.0000024177  1        0.0000000127
 SINI              0.999185  1            0.000190
 M2                0.246769  1            0.009532
+EPS1DOT           1e-10 1 1e-11
+EPS2DOT           -1e-10 1 1e-11
 """
 
 kwargs = {"ELL1H": {"NHARMS": 3, "useSTIGMA": True}, "DDK": {"KOM": 0 * u.deg}}
@@ -143,11 +146,11 @@ def test_DD(output):
 
 @pytest.mark.parametrize("output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK"])
 def test_DD_roundtrip(output):
-    m = get_model(
-        io.StringIO(
-            f"{parDD}\nBINARY DD\nSINI {np.sin(i).value}\nA1 {A1.value}\nPB {PB.value} 1 0.1\nM2 {Mc.value}\n"
-        )
-    )
+    s = f"{parDD}\nBINARY DD\nSINI {np.sin(i).value} 1 0.01\nA1 {A1.value}\nPB {PB.value} 1 0.1\nM2 {Mc.value} 1 0.01\n"
+    if output not in ["ELL1", "ELL1H"]:
+        s += "OMDOT       1e-10 1 1e-12"
+
+    m = get_model(io.StringIO(s))
     mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
     mback = pint.binaryconvert.convert_binary(mout, "DD")
     for p in m.params:
@@ -164,6 +167,9 @@ def test_DD_roundtrip(output):
                 # some precision may be lost in uncertainty conversion
                 if output in ["ELL1", "ELL1H", "ELL1k"] and p in ["ECC"]:
                     # we lose precision on ECC since it also contains a contribution from OM now
+                    continue
+                if output == "ELL1H" and p == "M2":
+                    # this also loses precision
                     continue
                 assert np.isclose(
                     getattr(m, p).uncertainty_value,

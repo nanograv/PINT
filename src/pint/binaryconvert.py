@@ -430,8 +430,8 @@ def _to_ELL1(model):
         EPS1DOT = model.EDOT.quantity * np.cos(model.OM.quantity)
         EPS2DOT = model.EDOT.quantity * np.sin(model.OM.quantity)
         if model.EDOT.uncertainty is not None:
-            EPS1DOT_unc = model.EDOT.uncertainty * np.cos(model.OM.quantity)
-            EPS2DOT_unc = model.EDOT.uncertainty * np.sin(model.OM.quantity)
+            EPS1DOT_unc = np.abs(model.EDOT.uncertainty * np.cos(model.OM.quantity))
+            EPS2DOT_unc = np.abs(model.EDOT.uncertainty * np.sin(model.OM.quantity))
     return (
         EPS1,
         EPS2,
@@ -453,6 +453,13 @@ def _ELL1_to_ELL1k(model):
     OMDOT = None
     LNEDOT_unc = None
     OMDOT_unc = None
+    ECC = np.sqrt(model.EPS1.quantity**2 + model.EPS2.quantity**2)
+    ECC_unc = None
+    if model.EPS1.uncertainty is not None and model.EPS2.uncertainty is not None:
+        ECC_unc = np.sqrt(
+            (model.EPS1.uncertainty * model.EPS1.quantity / ECC) ** 2
+            + (model.EPS2.uncertainty * model.EPS2.quantity / ECC) ** 2
+        )
     if (
         model.EPS1.quantity is not None
         and model.EPS2.quantity is not None
@@ -461,30 +468,34 @@ def _ELL1_to_ELL1k(model):
     ):
         LNEDOT = (
             model.EPS1.quantity * model.EPS1DOT.quantity
-            + model.EPS2.quantity * model.EPS2.quantity
-        )
+            + model.EPS2.quantity * model.EPS2DOT.quantity
+        ) / ECC
         OMDOT = (
             model.EPS2.quantity * model.EPS1DOT.quantity
             - model.EPS1.quantity * model.EPS2DOT.quantity
-        )
+        ).to(u.deg / u.yr, equivalencies=u.dimensionless_angles()) / ECC
         if (
             model.EPS1.uncertainty is not None
             and model.EPS2.uncertainty is not None
             and model.EPS1DOT.uncertainty is not None
             and model.EPS2DOT.uncertainty is not None
+            and ECC_unc is not None
         ):
             LNEDOT_unc = np.sqrt(
-                (model.EPS1.uncertainty * model.EPS1DOT.quantity) ** 2
-                + (model.EPS2.uncertainty * model.EPS2DOT.quantity) ** 2
-                + (model.EPS1.quantity * model.EPS1DOT.uncertainty) ** 2
-                + (model.EPS2.uncertainty * model.EPS2DOT.quantity) ** 2
+                (model.EPS1.uncertainty * model.EPS1DOT.quantity / ECC) ** 2
+                + (model.EPS2.uncertainty * model.EPS2DOT.quantity / ECC) ** 2
+                + (model.EPS1.quantity * model.EPS1DOT.uncertainty / ECC) ** 2
+                + (model.EPS2.quantity * model.EPS2DOT.uncertainty / ECC) ** 2
+                + (LNEDOT * ECC_unc / ECC) ** 2
             )
-            OMDOT_unc = np.sqrt(
-                (model.EPS2.uncertainty * model.EPS1DOT.quantity) ** 2
-                + (model.EPS1.uncertainty * model.EPS2DOT.quantity) ** 2
-                + (model.EPS2.quantity * model.EPS1DOT.uncertainty) ** 2
-                + (model.EPS1.uncertainty * model.EPS2DOT.quantity) ** 2
-            )
+            with u.set_enabled_equivalencies(u.dimensionless_angles()):
+                OMDOT_unc = np.sqrt(
+                    (model.EPS2.uncertainty * model.EPS1DOT.quantity / ECC) ** 2
+                    + (model.EPS1.uncertainty * model.EPS2DOT.quantity / ECC) ** 2
+                    + (model.EPS2.quantity * model.EPS1DOT.uncertainty / ECC) ** 2
+                    + (model.EPS1.quantity * model.EPS2DOT.uncertainty / ECC) ** 2
+                    + (OMDOT * ECC_unc / ECC) ** 2
+                ).to(u.deg / u.yr)
     return LNEDOT, OMDOT, LNEDOT_unc, OMDOT_unc
 
 
@@ -501,32 +512,34 @@ def _ELL1k_to_ELL1(model):
         and model.EPS1.quantity is not None
         and model.EPS2.quantity
     ):
-        EPS1DOT = (
-            model.LNEDOT.quantity * model.EPS1.quantity
-            + model.OMDOT.quantity * model.EPS2.quantity
-        )
-        EPS2DOT = (
-            model.LNEDOT.quantity * model.EPS2.quantity
-            - model.OMDOT.quantity * model.EPS1.quantity
-        )
-        if (
-            model.LNEDOT.uncertainty is not None
-            and model.OMDOT.uncertainty is not None
-            and model.EPS1.uncertainty is not None
-            and model.EPS2.uncertainty is not None
-        ):
-            EPS1DOT_unc = np.sqrt(
-                (model.LNEDOT.uncertainty * model.EPS1.quantity) ** 2
-                + (model.LNEDOT.quantity * model.EPS1.uncertainty) ** 2
-                + (model.OMDOT.uncertainty * model.EPS2.quantity) ** 2
-                + (model.OMDOT.quantity * model.EPS2.uncertainty) ** 2
+        with u.set_enabled_equivalencies(u.dimensionless_angles()):
+            EPS1DOT = (
+                model.LNEDOT.quantity * model.EPS1.quantity
+                + model.OMDOT.quantity * model.EPS2.quantity
             )
-            EPS2DOT_unc = np.sqrt(
-                (model.LNEDOT.uncertainty * model.EPS2.quantity) ** 2
-                + (model.LNEDOT.quantity * model.EPS2.uncertainty) ** 2
-                + (model.OMDOT.uncertainty * model.EPS1.quantity) ** 2
-                + (model.OMDOT.quantity * model.EPS1.uncertainty) ** 2
+            EPS2DOT = (
+                model.LNEDOT.quantity * model.EPS2.quantity
+                - model.OMDOT.quantity * model.EPS1.quantity
             )
+            if (
+                model.LNEDOT.uncertainty is not None
+                and model.OMDOT.uncertainty is not None
+                and model.EPS1.uncertainty is not None
+                and model.EPS2.uncertainty is not None
+            ):
+                EPS1DOT_unc = np.sqrt(
+                    (model.LNEDOT.uncertainty * model.EPS1.quantity) ** 2
+                    + (model.LNEDOT.quantity * model.EPS1.uncertainty) ** 2
+                    + (model.OMDOT.uncertainty * model.EPS2.quantity) ** 2
+                    + (model.OMDOT.quantity * model.EPS2.uncertainty) ** 2
+                )
+                EPS2DOT_unc = np.sqrt(
+                    (model.LNEDOT.uncertainty * model.EPS2.quantity) ** 2
+                    + (model.LNEDOT.quantity * model.EPS2.uncertainty) ** 2
+                    + (model.OMDOT.uncertainty.to(u.Hz) * model.EPS1.quantity) ** 2
+                    + (model.OMDOT.quantity.to(u.Hz) * model.EPS1.uncertainty) ** 2
+                )
+
     return EPS1DOT, EPS2DOT, EPS1DOT_unc, EPS2DOT_unc
 
 
@@ -1059,7 +1072,6 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 outmodel.add_component(BinaryELL1k(), validate=False)
                 badlist += ["EPS1DOT", "EPS2DOT"]
                 badlist.remove("OMDOT")
-                badlist.remove("EDOT")
             for p in model.params:
                 if p not in badlist:
                     setattr(outmodel, p, getattr(model, p))
@@ -1085,29 +1097,21 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
             LNEDOT = None
             LNEDOT_unc = None
             if output == "ELL1k":
-                LNEDOT = 0 / u.yr
-                if (
-                    hasattr(model, "ECCDOT")
-                    and model.ECCDOT.quantity is not None
-                    and model.ECC.quantity is not None
-                ):
-                    LNEDOT = model.ECCDOT.quantity / model.ECC.quantity
+                if model.EDOT.quantity is not None and model.ECC.quantity is not None:
+                    LNEDOT = model.EDOT.quantity / model.ECC.quantity
                     if (
-                        model.ECCDOT.uncertainty is not None
-                        or model.ECC.uncertainty is not None
+                        model.EDOT.uncertainty is not None
+                        and model.ECC.uncertainty is not None
                     ):
-                        LNEDOT_unc = 0
-                        if model.ECCDOT.uncertainty is not None:
-                            LNEDOT_unc += (
-                                model.ECCDOT.uncertainty / model.ECC.quantity
-                            ) ** 2
-                        if model.ECC.uncertainty is not None:
-                            LNEDOT_unc += (
-                                model.ECCDOT.quantity
+                        LNEDOT_unc = np.sqrt(
+                            (model.EDOT.uncertainty / model.ECC.quantity) ** 2
+                            + (
+                                model.EDOT.quantity
                                 * model.ECC.uncertainty
                                 / model.ECC.quantity**2
                             )
-                        LNEDOT_unc = np.sqrt(LNEDOT_unc)
+                            ** 2
+                        )
             outmodel.EPS1.quantity = EPS1
             outmodel.EPS2.quantity = EPS2
             outmodel.TASC.quantity = TASC
