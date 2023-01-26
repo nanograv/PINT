@@ -1952,6 +1952,8 @@ class TOAs:
         ] * u.day
         self.compute_TDBs()
         self.compute_posvels(self.ephem, self.planets)
+        if self.obliquity is not None:
+            self.add_vel_ecl(self.obliquity)
 
     def renumber(self, index_order=True):
         """Recreate the index column so the values go from 0 to len(self)-1.
