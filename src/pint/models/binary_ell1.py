@@ -328,7 +328,7 @@ class BinaryELL1H(BinaryELL1):
 
 
 class BinaryELL1k(BinaryELL1):
-    """ELL1k binary model.
+    """ELL1k binary model modified for short-orbital period binaries, from Susobhanan et al. (2018)
 
     Modified version of the ELL1 model applicable to short-orbital period binaries where
     the periastron advance timescale is comparable to the data span. In such cases, the
