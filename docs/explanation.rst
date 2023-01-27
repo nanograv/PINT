@@ -214,7 +214,7 @@ The total DM and dispersion slope predicted by a given timing model (:class:`pin
 for a given set of TOAs (:class:`pint.toa.TOAs`) can be computed using :func:`pint.models.timing_model.TimingModel.total_dm`
 and :func:`pint.models.timing_model.TimingModel.total_dispersion_slope` methods respectively.
 
-.. _k2020: https://arxiv.org/abs/2007.02886
+.. _k2020: https://ui.adsabs.harvard.edu/abs/2020arXiv200702886K
 
 Observatories
 -------------
@@ -252,7 +252,7 @@ The observatory is defined by its name (``gbt``) and its position. This
 can be given as geocentric coordinates in the International Terrestrial 
 Reference System (ITRF_) through the ``itrf_xyz`` triple (units as ``m``), 
 or geodetic coordinates (WGS84_ assumed) through ``lat``, ``lon``, ``alt`` 
-(units are ``deg`` and ``m``). Conversion is done through Astropy_EarthLocation_.
+(units are ``deg`` and ``m``). Conversion is done through `astropy.coordinates.EarthLocation`_.
 
 Other attributes are optional.  Here we have also specified the ``tempo_code`` 
 and ``itoa_code``, and a human-readable ``origin`` string.
@@ -362,7 +362,7 @@ return a list of potential observatories.
 
 .. _ITRS: https://en.wikipedia.org/wiki/International_Terrestrial_Reference_System_and_Frame
 .. _WGS84: https://en.wikipedia.org/wiki/World_Geodetic_System#WGS84
-.. _Astropy_EarthLocation: https://docs.astropy.org/en/stable/api/astropy.coordinates.EarthLocation.html
+.. _astropy.coordinates.EarthLocation: https://docs.astropy.org/en/stable/api/astropy.coordinates.EarthLocation.html
 
 External Data
 -------------
@@ -692,7 +692,7 @@ for example), leaving aside the rank-reduced case, proceed like:
 
 TEMPO and TEMPO2 can check whether the predicted improvement of chi-squared, assuming the linear model is correct, is enough to warrant continuing; if so, they jump back to step 1 unless the maximum number of iterations is reached. PINT does not contain this check.
 
-This algorithm is the Gauss-Newton_algorithm_ for solving nonlinear
+This algorithm is the `Gauss-Newton algorithm`_ for solving nonlinear
 least-squares problems, and even in one-complex-dimensional cases can exhibit
 convergence behavior that is literally chaotic_. For TEMPO/TEMPO2 and PINT, the
 problem is that the model is never actually evaluated at the updated starting
@@ -712,12 +712,21 @@ PINT contains a slightly more sophisticated algorithm, implemented in
 4. Evaluate the model at the starting point plus :math:`\lambda \delta x`. If this is invalid or worse than the starting point, divide :math:`\lambda` by two and repeat this step. If :math:`\lambda` is too small, accept the best point seen to date and exit without convergence.
 5. If the model improved but only slightly with :math:`\lambda=1`, exit with convergence. If the maximum number of iterations was reached, exit without convergence. Otherwise update the starting point and return to step 1.
 
-This ensures that PINT tries taking smaller steps if problems arise, and claims convergence only if a normal step worked. It does not solve the problems that arise if some parameters are nearly degenerate, enough to cause problems with the numerical linear algebra.
+This ensures that PINT tries taking smaller steps if problems arise, and claims 
+convergence only if a normal step worked. It does not solve the problems that 
+arise if some parameters are nearly degenerate, enough to cause problems with 
+the numerical linear algebra.
 
-As a rule, this kind of problem is addressed with the Levenberg-Marquardt algorithm, which operates on the same principle of taking reduced steps when the derivative appears not to match the function, but does so in a way that also reduces issues with degenerate parameters; unfortunately it is not clear how to adapt this problem to the rank-reduced case. Nevertheless PINT contains an implementation, in :class:`pint.fitter.WidebandLMFitter`, but it does not perform as well as one might hope in practice and must be considered experimental.
+As a rule, this kind of problem is addressed with the `Levenberg-Marquardt algorithm`_, 
+which operates on the same principle of taking reduced steps when the derivative appears 
+not to match the function, but does so in a way that also reduces issues with degenerate 
+parameters; unfortunately it is not clear how to adapt this problem to the rank-reduced 
+case. Nevertheless PINT contains an implementation, in :class:`pint.fitter.WidebandLMFitter`, 
+but it does not perform as well as one might hope in practice and must be considered experimental.
 
-.. _Gauss-Newton_algorithm: https://en.wikipedia.org/wiki/Gauss%E2%80%93Newton_algorithm
+.. _Gauss-Newton algorithm: https://en.wikipedia.org/wiki/Gauss%E2%80%93Newton_algorithm
 .. _chaotic: https://en.wikipedia.org/wiki/Newton_fractal
+.. _Levenberg-Marquardt algorithm: https://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm
 
 Coding Style
 ------------
