@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+"""Plotting utility functions"""
+
 import matplotlib.pyplot as plt
 import numpy as np
 from pint.models.priors import GaussianBoundedRV

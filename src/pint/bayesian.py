@@ -10,9 +10,10 @@ from pint.residuals import Residuals
 
 
 class BayesianTiming:
-    """A wrapper around the PINT API that provides lnprior, prior_transform,
-    lnlikelihood, and lnposterior functions. This interface can be used to
-    draw posterior samples using the sampler of your choice.
+    """A wrapper around the PINT API that provides log-prior, prior transform,
+    log-likelihood, and log-posterior functions. This interface can be used to
+    perform Bayesian inference (see Lentati et al. 2014 [`lah+2014`_]) using a
+    sampler of your choice.
 
     Parameters
     ----------
@@ -38,15 +39,29 @@ class BayesianTiming:
        These parameters in general will not be the best-fit values. Hence, it is NOT a good
        idea to save it as a par file.
 
-    3. Only narow-band TOAs are supported at present.
+    3. Only narrow-band TOAs are supported at present.
 
     4. Currently, only uniform and normal distributions are supported in prior_info. More
        general priors should be set directly in the TimingModel object before creating the
-       BayesianTiming object. Here is an example prior_info object:
+       BayesianTiming object. Here is an example prior_info object::
 
-    `prior_info = { "F0" : {"distr" : "normal", "mu" : 1, "sigma" : 0.00001}, "EFAC1" : {"distr" : "uniform", "pmin" : 0.5, "pmax" : 2.0} }`
+          prior_info = {
+            "F0" : {
+                "distr" : "normal",
+                "mu" : 1,
+                "sigma" : 0.00001
+            },
+            "EFAC1" : {
+                "distr" : "uniform",
+                "pmin" : 0.5,
+                "pmax" : 2.0
+            }
+          }
 
-    See examples/bayesian-example-NGC6440E.py for detailed example.
+    A detailed example may be found here_.
+
+    .. _lah+2014: https://ui.adsabs.harvard.edu/abs/2014MNRAS.437.3004L/abstract
+    .. _here: https://github.com/nanograv/PINT/blob/master/docs/examples/bayesian-example-NGC6440E.py
     """
 
     def __init__(self, model, toas, use_pulse_numbers=False, prior_info=None):
@@ -147,10 +162,7 @@ class BayesianTiming:
         Returns:
             ndarray : Sample drawn from the prior distribution
         """
-        result = np.array(
-            [param.prior._rv.ppf(x) for x, param in zip(cube, self.params)]
-        )
-        return result
+        return np.array([param.prior._rv.ppf(x) for x, param in zip(cube, self.params)])
 
     def lnlikelihood(self, params):
         """The Log-likelihood function. If the model does not contain any noise components or
@@ -185,10 +197,7 @@ class BayesianTiming:
             float: The value of the log-posterior at params
         """
         lnpr = self.lnprior(params)
-        if np.isnan(lnpr):
-            return -np.inf
-        else:
-            return lnpr + self.lnlikelihood(params)
+        return -np.inf if np.isnan(lnpr) else lnpr + self.lnlikelihood(params)
 
     def _wls_lnlikelihood(self, params):
         """Implementation of Log-Likelihood function for uncorrelated noise only.
