@@ -1,3 +1,5 @@
+"""Wrapper classes for samplers used in MCMC fitting such as `emcee`."""
+
 import emcee
 import numpy as np
 
@@ -94,14 +96,12 @@ class EmceeSampler(MCMCSampler):
         """
         if len(fitkeys) != len(fitvals):
             raise ValueError(
-                "Number of keys does ({}) not match number of values ({})!".format(
-                    len(fitkeys), len(fitvals)
-                )
+                f"Number of keys does ({len(fitkeys)}) not match number of values ({len(fitvals)})!"
             )
         n_fit_params = len(fitvals)
         pos = [
             fitvals + fiterrs * errfact * np.random.randn(n_fit_params)
-            for ii in range(self.nwalkers)
+            for _ in range(self.nwalkers)
         ]
         # set starting params
         # FIXME: what about other glitch phase parameters? This can't be right!

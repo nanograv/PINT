@@ -1,4 +1,5 @@
-import sys
+"""The pulsar ecliptic coordinate system."""
+
 import numpy as np
 
 import astropy.coordinates as coord

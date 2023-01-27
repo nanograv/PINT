@@ -1,3 +1,5 @@
+"""Utility functions for manipulating models"""
+
 from loguru import logger as log
 from pint.models.astrometry import AstrometryEquatorial, AstrometryEcliptic
 
@@ -21,7 +23,7 @@ def model_ecliptic_to_equatorial(model, force=False):
         new model with AstrometryEquatorial component
     """
 
-    if not ("AstrometryEquatorial" in model.components) or force:
+    if ("AstrometryEquatorial" not in model.components) or force:
         if "AstrometryEquatorial" in model.components:
             log.warning(
                 "Equatorial coordinates already present but re-calculating anyway"
@@ -73,7 +75,7 @@ def model_equatorial_to_ecliptic(model, force=False):
         new model with AstrometryEcliptic component
     """
 
-    if not ("AstrometryEcliptic" in model.components) or force:
+    if ("AstrometryEcliptic" not in model.components) or force:
         if "AstrometryEcliptic" in model.components:
             log.warning(
                 "Ecliptic coordinates already present but re-calculating anyway"

@@ -610,7 +610,7 @@ sine and cosine functions at each of a range of frequencies, :math:`a` is the
 amplitudes of these basis functions in the red noise contribution, :math:`U` is
 a matrix of basis functions representing the ECORR blocks, :math:`j` is their
 coefficients, and :math:`n` is a vector of uncorrelated noise of amplitude
-coming from the adjusted TOA uncertainties. The NANOGrav 9-year paper[`abb+2015`_] gives
+coming from the adjusted TOA uncertainties. The NANOGrav 9-year paper [`abb+2015`_] gives
 expressions for the likelihood of such a representation, suitable for use in
 Bayesian fitting methods, but for PINT's fitters the goal is to find the
 maximum-likelihood values for :math:`\epsilon`, a corresponding set of
