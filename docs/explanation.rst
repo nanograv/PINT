@@ -8,12 +8,12 @@ This section is to explain pulsar timing, how PINT works, and why it is built th
 PINT is used for pulsar timing and related activities. Some of it may
 make a lot more sense if you know something about the science it is used
 for. You can find an excellent introduction in the Handbook of Pulsar
-Astronomy by Lorimer and Kramer [1_]. This document is aimed at using PINT
+Astronomy by Lorimer and Kramer [lk2004_]. This document is aimed at using PINT
 specifically, and may also be more understandable if you have used
 other pulsar timing software, TEMPO_ or TEMPO2_, though we hope that
 you will find PINT sufficient for all your needs!
 
-.. _1: https://ui.adsabs.harvard.edu/abs/2004hpa..book.....L/abstract
+.. _lk2004: https://ui.adsabs.harvard.edu/abs/2004hpa..book.....L/abstract
 .. _TEMPO: http://tempo.sourceforge.net/
 .. _TEMPO2: https://www.atnf.csiro.au/research/pulsar/tempo2/
 
@@ -203,7 +203,7 @@ accessed as ``pint.DMconst``.
 
 It should also be noted that there are other effects contributing to the dispersion delay than 
 the free electrons, such as ions in the ISM, interstellar magnetic fields, and the ISM temperature.
-Hence, it has been argued (see Kulkarni 2020 [2_]) that the dispersion
+Hence, it has been argued (see Kulkarni 2020 [k2020_]) that the dispersion
 slope :math:`K\times DM` should be treated as the primary observable rather than the DM, which 
 is usually interpreted as the electron column density. The dispersion slope corresponding to a DM value
 can be computed using :func:`pint.derived_quantities.dispersion_slope`. A DM value measured based 
@@ -213,8 +213,8 @@ constant values using :func:`pint.utils.convert_dispersion_measure`.
 The total DM and dispersion slope predicted by a given timing model (:class:`pint.models.timing_model.TimingModel`)
 for a given set of TOAs (:class:`pint.toa.TOAs`) can be computed using :func:`pint.models.timing_model.TimingModel.total_dm`
 and :func:`pint.models.timing_model.TimingModel.total_dispersion_slope` methods respectively.
- 
-.. _2: https://arxiv.org/abs/2007.02886
+
+.. _k2020: https://arxiv.org/abs/2007.02886
 
 Observatories
 -------------
@@ -248,12 +248,14 @@ The observatory data are stored in JSON format.  A simple example is::
         "origin": "The Robert C. Byrd Green Bank Telescope.\nThis data was obtained by Joe Swiggum from Ryan Lynch in 2021 September.\n"
     }
 
-The observatory is defined by its name (``gbt``) and its position.  This can be given as geocentric coordinates in the 
-International Terrestrial Reference System (ITRF_) through the ``itrf_xyz`` triple (units as ``m``), or geodetic coordinates 
-(WGS84_ assumed) through ``lat``, ``lon``, ``alt`` 
-(units are ``deg`` and ``m``).  Conversion is done through Astropy_EarthLocation_.
+The observatory is defined by its name (``gbt``) and its position. This 
+can be given as geocentric coordinates in the International Terrestrial 
+Reference System (ITRF_) through the ``itrf_xyz`` triple (units as ``m``), 
+or geodetic coordinates (WGS84_ assumed) through ``lat``, ``lon``, ``alt`` 
+(units are ``deg`` and ``m``). Conversion is done through Astropy_EarthLocation_.
 
-Other attributes are optional.  Here we have also specified the ``tempo_code`` and ``itoa_code``, and a human-readable ``origin`` string.
+Other attributes are optional.  Here we have also specified the ``tempo_code`` 
+and ``itoa_code``, and a human-readable ``origin`` string.
 
 A more complex/complete example is::
 
@@ -284,19 +286,23 @@ A more complex/complete example is::
         ]
     }
 
-Here we have included additional explicit ``aliases``, specified the clock format via ``clock_fmt``, and specified that the last entry in the 
-clock file is bogus (``bogus_last_correction``).  There are two clock files included in ``clock_file``:
+Here we have included additional explicit ``aliases``, specified the clock 
+format via ``clock_fmt``, and specified that the last entry in the clock 
+file is bogus (``bogus_last_correction``).  There are two clock files included 
+in ``clock_file``:
 
 * ``jbroach2jb.clk`` (where we also specify that it is ``valid_beyond_ends``)
 * ``jb2gps.clk``
 
-These are combined to reference this particular telescope/instrument combination.  For the full set of options, see :class:`~pint.observatory.topo_obs.TopoObs`.
+These are combined to reference this particular telescope/instrument combination.  
+For the full set of options, see :class:`~pint.observatory.topo_obs.TopoObs`.
 
 
 Adding New Observatories
 ''''''''''''''''''''''''
 
-In addition to modifying ``pint.config.runtimefile("observatories.json")``, there are other ways to add new observatories.  
+In addition to modifying ``pint.config.runtimefile("observatories.json")``, there
+ are other ways to add new observatories.  
 **Make sure you define any new observatory before you load any TOAs.**
 
 1. You can define them pythonically:
@@ -304,9 +310,14 @@ In addition to modifying ``pint.config.runtimefile("observatories.json")``, ther
 
     import pint.observatory.topo_obs
     import astropy.coordinates
-    newobs = pint.observatory.topo_obs.TopoObs("newobs", location=astropy.coordinates.EarthLocation.of_site("keck"), origin="another way to get Keck")
+    newobs = pint.observatory.topo_obs.TopoObs(
+      "newobs", 
+      location=astropy.coordinates.EarthLocation.of_site("keck"), 
+      origin="another way to get Keck"
+    )
 
-This can be done by specifying the ITRF coordinates, (``lat``, ``lon``, ``alt``), or a :class:`~astropy.coordinates.EarthLocation` instance.
+This can be done by specifying the ITRF coordinates, (``lat``, ``lon``, ``alt``), 
+or a :class:`~astropy.coordinates.EarthLocation` instance.
 
 2. You can include them just for the duration of your python session:
 ::
@@ -329,14 +340,16 @@ This can be done by specifying the ITRF coordinates, (``lat``, ``lon``, ``alt``)
         }"""
     load_observatories(io.StringIO(fakeGBT), overwrite=True)
 
-Note that since we are overwriting an existing observatory (rather than defining a completely new one) we specify ``overwrite=True``.  
+Note that since we are overwriting an existing observatory (rather than 
+defining a completely new one) we specify ``overwrite=True``.  
 
-3. You can define them in a different file on disk.  If you took the JSON above and put it into a file ``/home/user/anothergbt.json``, 
-you could then do::
+3. You can define them in a different file on disk.  If you took the JSON above 
+and put it into a file ``/home/user/anothergbt.json``, you could then do::
 
     export $PINT_OBS_OVERRIDE=/home/user/anothergbt.json
 
-(or the equivalent in your shell of choice) before you start any PINT scripts.  By default this will overwrite any existing definitions.
+(or the equivalent in your shell of choice) before you start any PINT scripts.  
+By default, this will overwrite any existing definitions.
 
 4. You can rely on ``astropy``.  For instance,
 ::
@@ -344,7 +357,8 @@ you could then do::
     import pint.observatory
     keck = pint.observatory.Observatory.get("keck")
 
-will find Keck.  :func:`astropy.coordinates.EarthLocation.get_site_names` will return a list of potential observatories.
+will find Keck.  :func:`astropy.coordinates.EarthLocation.get_site_names` will 
+return a list of potential observatories.
 
 .. _ITRS: https://en.wikipedia.org/wiki/International_Terrestrial_Reference_System_and_Frame
 .. _WGS84: https://en.wikipedia.org/wiki/World_Geodetic_System#WGS84
@@ -361,11 +375,10 @@ of the Earth's rotation, for example, or observatory clock corrections.
 
 Most of this external data is obtained through ``astropy``'s data downloading
 mechanism (see ``astropy.utils.data``). This will result in the data being
-downloaded the first time it
-is required on your machine but thereafter stored in a "cache" in your home
-directory. If you plan to operate offline, you may want to run some commands
-before disconnecting to ensure that this data has been downloaded. Data
-that must be up-to-date is generally in the form of a time series, and
+downloaded the first time it is required on your machine but thereafter stored 
+in a "cache" in your home directory. If you plan to operate offline, you may 
+want to run some commands before disconnecting to ensure that this data has been 
+downloaded. Data that must be up-to-date is generally in the form of a time series, and
 "up-to-date" generally means that it must cover the times that occur in
 your data. This can be an issue for simulation and forecasting; there should
 always be a mechanism to allow out-of-date data if you can accept lower
@@ -561,15 +574,15 @@ constructing a covariance matrix describing all the correlations between the
 measurements; a square root of this matrix can be computed using the Cholesky
 decomposition, and this square root can be used to transform the fitting
 problem into a conventional least-squares problem. This procedure is described
-in Coles et al. 2011 [3_] and implemented in PINT (via the ``full_cov=True`` option to
+in Coles et al. 2011 [`chc+2011`_] and implemented in PINT (via the ``full_cov=True`` option to
 fitters). Unfortunately this method requires a decomposition of a matrix that
 is the size of the number of TOAs by the number of TOAs; this can be very
 expensive in terms of memory and computation.
 
-Fortunately, Lentati et al. 2013 [4_] and van Haasteren & Vallisneri 2015 [5_] describe
+Fortunately, Lentati et al. 2013 [`lah+2013`_] and van Haasteren & Vallisneri 2015 [hv2015_] describe
 a method for using a low-rank approximation to the covariance matrix to remove
 the need to ever construct these very large matrices; the implementation in
-PINT follows the mathematics in the NANOGrav 9-year data analysis paper [6_],
+PINT follows the mathematics in the NANOGrav 9-year data analysis paper [`abb+2015`_],
 Appendix C.
 
 The idea of this reduced-rank approach is to represent the correlations using
@@ -597,7 +610,7 @@ sine and cosine functions at each of a range of frequencies, :math:`a` is the
 amplitudes of these basis functions in the red noise contribution, :math:`U` is
 a matrix of basis functions representing the ECORR blocks, :math:`j` is their
 coefficients, and :math:`n` is a vector of uncorrelated noise of amplitude
-coming from the adjusted TOA uncertainties. The NANOGrav 9-year paper[6_] gives
+coming from the adjusted TOA uncertainties. The NANOGrav 9-year paper[`abb+2015`_] gives
 expressions for the likelihood of such a representation, suitable for use in
 Bayesian fitting methods, but for PINT's fitters the goal is to find the
 maximum-likelihood values for :math:`\epsilon`, a corresponding set of
@@ -642,7 +655,7 @@ would be the equations for a linear least squares fit for :math:`b` to match
 :math:`B^{-1}` in :math:`\Sigma` is where our knowledge about the amplitudes of
 the noise basis functions is applied.
 
-The formula is not worked out in the NANOGrav 9-year dataset paper [6_], but if we
+The formula is not worked out in the NANOGrav 9-year dataset paper [`abb+2015`_], but if we
 want a goodness-of-fit statistic for a set of model parameters that correctly
 reflects both the mis-fit of the data and also the penalization of the noise
 components, we need to fix all the model parameters we care about, reducing
@@ -655,10 +668,10 @@ obtaining a maximum-likelihood :math:`b` and a set of whitened residuals
 
     \chi_G^2 = n^T N n + b^T B^{-1} b
 
-.. _3: https://ui.adsabs.harvard.edu/abs/2011MNRAS.418..561C/abstract
-.. _4: https://ui.adsabs.harvard.edu/abs/2013PhRvD..87j4021L/abstract
-.. _5: https://ui.adsabs.harvard.edu/abs/2015MNRAS.446.1170V/abstract
-.. _6: https://ui.adsabs.harvard.edu/abs/2015ApJ...813...65N/abstract
+.. _chc+2011: https://ui.adsabs.harvard.edu/abs/2011MNRAS.418..561C/abstract
+.. _lah+2013: https://ui.adsabs.harvard.edu/abs/2013PhRvD..87j4021L/abstract
+.. _hv2015: https://ui.adsabs.harvard.edu/abs/2015MNRAS.446.1170V/abstract
+.. _abb+2015: https://ui.adsabs.harvard.edu/abs/2015ApJ...813...65N/abstract
 
 Fitting algorithms
 ''''''''''''''''''
@@ -670,7 +683,8 @@ model and data require different calculations - narrowband (TOA-only) versus
 wideband (TOA and DM measurements) and uncorrelated errors versus correlated
 errors.
 
-The TEMPO/TEMPO2 and default PINT fitting algorithms (:class:`pint.fitter.WidebandTOAFitter` for example), leaving aside the rank-reduced case, proceed like:
+The TEMPO/TEMPO2 and default PINT fitting algorithms (:class:`pint.fitter.WidebandTOAFitter` 
+for example), leaving aside the rank-reduced case, proceed like:
 
 1. Evaluate the model and its derivatives at the starting point :math:`x`, producing a set of residuals :math:`\delta y` and a Jacobian `M`.
 2. Compute :math:`\delta x` to minimize :math:`\left| M\delta x - \delta y \right|_C`, where :math:`\left| \cdot \right|_C` is the squared amplitude of a vector with respect to the data uncertainties/covariance :math:`C`.
