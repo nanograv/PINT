@@ -111,20 +111,15 @@ class BayesianTiming:
 
         if "NoiseComponent" not in self.model.component_types:
             return "wls"
-        else:
-            correlated_errors_present = np.any(
-                [
-                    nc.introduces_correlated_errors
-                    for nc in self.model.NoiseComponent_list
-                ]
+        elif np.any(
+            [nc.introduces_correlated_errors for nc in self.model.NoiseComponent_list]
+        ):
+            # return "gls"
+            raise NotImplementedError(
+                "GLS likelihood for correlated noise is not yet implemented."
             )
-            if not correlated_errors_present:
-                return "wls"
-            else:
-                raise NotImplementedError(
-                    "GLS likelihood for correlated noise is not yet implemented."
-                )
-                # return "gls"
+        else:
+            return "wls"
 
     def lnprior(self, params):
         """Basic implementation of a factorized log prior.
