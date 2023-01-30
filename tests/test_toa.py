@@ -1,15 +1,20 @@
+import io
 import os
 import re
 import unittest
+import numpy as np
+import pytest
 
 import astropy.units as u
-from astropy.time import Time
+import astropy.constants as c
+from astropy.time import Time, TimeDelta
 from datetime import datetime
 from pinttestdata import datadir
 
 from pint.models import get_model
 from pint.observatory import get_observatory
 from pint.toa import TOA, TOAs
+import pint.toa
 from pint.simulation import make_fake_toas_uniform
 
 
@@ -154,3 +159,143 @@ def test_toa_summary():
     assert re.search(r" *Min error: *1 us", s)
     assert re.search(r" *Max error: *1 us", s)
     assert re.search(r" *Median error: *1 us", s)
+
+
+def test_add_to_toas():
+    model = get_model(
+        io.StringIO(
+            """
+            PSRJ J1234+5678
+            ELAT 0
+            ELONG 0
+            DM 10
+            F0 1
+            PEPOCH 58000
+            """
+        )
+    )
+    toas = make_fake_toas_uniform(
+        57000, 59000, 20, model=model, error=1 * u.us, add_noise=False
+    )
+    toas2 = make_fake_toas_uniform(
+        57000, 59000, 20, model=model, error=1 * u.us, add_noise=False
+    )
+    dt = TimeDelta(np.random.normal(size=len(toas)) * u.ms)
+    toas.adjust_TOAs(dt)
+    toas2 = toas2 + dt
+    assert np.all(toas.table == toas2.table)
+
+
+def test_sub_from_toas():
+    model = get_model(
+        io.StringIO(
+            """
+            PSRJ J1234+5678
+            ELAT 0
+            ELONG 0
+            DM 10
+            F0 1
+            PEPOCH 58000
+            """
+        )
+    )
+    toas = make_fake_toas_uniform(
+        57000, 59000, 20, model=model, error=1 * u.us, add_noise=False
+    )
+    toas2 = make_fake_toas_uniform(
+        57000, 59000, 20, model=model, error=1 * u.us, add_noise=False
+    )
+    dt = TimeDelta(np.random.normal(size=len(toas)) * u.ms)
+    toas.adjust_TOAs(-dt)
+    toas2 = toas2 - dt
+    assert np.all(toas.table == toas2.table)
+
+
+def test_add_to_toasfails():
+    model = get_model(
+        io.StringIO(
+            """
+            PSRJ J1234+5678
+            ELAT 0
+            ELONG 0
+            DM 10
+            F0 1
+            PEPOCH 58000
+            """
+        )
+    )
+    toas = make_fake_toas_uniform(
+        57000, 59000, 20, model=model, error=1 * u.us, add_noise=False
+    )
+    with pytest.raises(TypeError):
+        toas = toas + "test"
+
+
+def test_add_to_toas_quantity():
+    model = get_model(
+        io.StringIO(
+            """
+            PSRJ J1234+5678
+            ELAT 0
+            ELONG 0
+            DM 10
+            F0 1
+            PEPOCH 58000
+            """
+        )
+    )
+    toas = make_fake_toas_uniform(
+        57000, 59000, 20, model=model, error=1 * u.us, add_noise=False
+    )
+    toas2 = make_fake_toas_uniform(
+        57000, 59000, 20, model=model, error=1 * u.us, add_noise=False
+    )
+    dt = np.random.normal(size=len(toas)) * u.ms
+    toas.adjust_TOAs(TimeDelta(dt))
+    toas2 = toas2 + dt
+    assert np.all(toas.table == toas2.table)
+
+
+def test_add_to_toas_quantityfails():
+    model = get_model(
+        io.StringIO(
+            """
+            PSRJ J1234+5678
+            ELAT 0
+            ELONG 0
+            DM 10
+            F0 1
+            PEPOCH 58000
+            """
+        )
+    )
+    toas2 = make_fake_toas_uniform(
+        57000, 59000, 20, model=model, error=1 * u.us, add_noise=False
+    )
+    dt = np.random.normal(size=len(toas2)) * u.m
+    with pytest.raises(u.UnitConversionError):
+        toas2 = toas2 + dt
+
+
+def test_merge_toas():
+    model = get_model(
+        io.StringIO(
+            """
+            PSRJ J1234+5678
+            ELAT 0
+            ELONG 0
+            DM 10
+            F0 1
+            PEPOCH 58000
+            """
+        )
+    )
+    toas = make_fake_toas_uniform(
+        57000, 58000, 20, model=model, error=1 * u.us, add_noise=False
+    )
+    toas2 = make_fake_toas_uniform(
+        59000, 60000, 20, model=model, error=1 * u.us, add_noise=False
+    )
+    toas_out = pint.toa.merge_TOAs([toas, toas2])
+    toas_outb = toas + toas2
+    assert np.all(toas_out.table == toas_outb.table)
