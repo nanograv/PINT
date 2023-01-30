@@ -316,9 +316,9 @@ def mass_funct(pb: u.d, x: u.cm):
 
         f(m_p, m_c) = \\frac{4\pi^2 x^3}{G P_b^2}
 
-    See [1]_
+    See Eq. 8.34 of [lk2004]_
 
-    .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.34 (RHS)
+    .. _lk2004: https://ui.adsabs.harvard.edu/abs/2004hpa..book.....L/abstract
     """
     fm = 4.0 * np.pi**2 * x**3 / (const.G * pb**2)
     return fm.to(u.solMass)
@@ -361,9 +361,9 @@ def mass_funct2(mp: u.Msun, mc: u.Msun, i: u.deg):
     .. math::
         f(m_p, m_c) = \\frac{m_c^3\sin^3 i}{(m_c + m_p)^2}
 
-    See [2]_
+    See Eq. 8.34 of [lk2004_]
 
-    .. [2] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.34 (LHS)
+    .. _lk2004: https://ui.adsabs.harvard.edu/abs/2004hpa..book.....L/abstract
 
     """
     return (mc * np.sin(i)) ** 3.0 / (mc + mp) ** 2.0
@@ -438,7 +438,7 @@ def pulsar_mass(pb: u.d, x: u.cm, mc: u.Msun, i: u.deg):
 
 @u.quantity_input(inc=u.deg, mpsr=u.solMass)
 def companion_mass(pb: u.d, x: u.cm, i=60.0 * u.deg, mp=1.4 * u.solMass):
-    """Commpute the companion mass from the orbital parameters
+    """Compute the companion mass from the orbital parameters
 
     Compute companion mass for a binary system from orbital mechanics,
     not Shapiro delay.
@@ -485,11 +485,11 @@ def companion_mass(pb: u.d, x: u.cm, i=60.0 * u.deg, mp=1.4 * u.solMass):
     - :math:`c = -2 M_p {\\rm massfunct}`
     - :math:`d = -{\\rm massfunct} M_p^2`
 
-    To solve it we can use a direct calculation of the cubic roots [3]_.
+    To solve it we can use a `direct calculation of the cubic roots`_.
 
 
-    It's useful to look at the discriminant to understand the nature of the roots
-    and make sure we get the right one [4]_.
+    It's useful to look at the discriminant_ to understand the nature of the roots
+    and make sure we get the right one.
 
 
     :math:`\Delta = (b^2 c^2 - 4ac^3-4b^3d-27a^2d^2+18abcd)`
@@ -500,8 +500,8 @@ def companion_mass(pb: u.d, x: u.cm, i=60.0 * u.deg, mp=1.4 * u.solMass):
     since this reduces to :math:`-27\sin^6 i f(P_b,x)^2 M_p^4 -4\sin^3 i f(P_b,x)^3 M_p^3`
     (where :math:`f(P_b,x)` is the mass function) so there is just 1 real root.
 
-    .. [3] https://en.wikipedia.org/wiki/Cubic_equation#General_cubic_formula
-    .. [4] https://en.wikipedia.org/wiki/Discriminant#Degree_3
+    .. _`direct calculation of the cubic roots`: https://en.wikipedia.org/wiki/Cubic_equation#General_cubic_formula
+    .. _discriminant: https://en.wikipedia.org/wiki/Discriminant#Degree_3
 
     """
     massfunct = mass_funct(pb, x)
@@ -586,9 +586,9 @@ def pbdot(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
     and :math:`T_\odot = GM_\odot c^{-3}`.
 
-    More details in :ref:`Timing Models`.  Also see [5]_.
+    More details in :ref:`Timing Models`.  Also see Eq. 8.52 of [lk2004_].
 
-    .. [5] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.52
+    .. _lk2004: https://ui.adsabs.harvard.edu/abs/2004hpa..book.....L/abstract
 
     """
     f = (1 + (73.0 / 24) * e**2 + (37.0 / 96) * e**4) / (1 - e**2) ** (7.0 / 2)
@@ -644,9 +644,9 @@ def gamma(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
     with :math:`T_\odot = GM_\odot c^{-3}`.
 
-    More details in :ref:`Timing Models`.  Also see [6]_
+    More details in :ref:`Timing Models`.  Also see Eq. 8.49 of [lk2004_]
 
-    .. [6] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.49
+    .. _lk2004: https://ui.adsabs.harvard.edu/abs/2004hpa..book.....L/abstract
 
     """
     value = (
@@ -700,9 +700,9 @@ def omdot(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
     with :math:`T_\odot = GM_\odot c^{-3}`.
 
-    More details in :ref:`Timing Models`.  Also see [7]_.
+    More details in :ref:`Timing Models`.  Also see Eq. 8.48 of [lk2004_].
 
-    .. [7] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.48
+    .. _lk2004: https://ui.adsabs.harvard.edu/abs/2004hpa..book.....L/abstract
 
     """
     value = (
@@ -756,9 +756,9 @@ def omdot_to_mtot(omdot: u.deg / u.yr, pb: u.d, e: u.dimensionless_unscaled):
     to calculate :math:`m_{\\rm tot} = m_p + m_c`,
     with :math:`T_\odot = GM_\odot c^{-3}`.
 
-    More details in :ref:`Timing Models`.  Also see [9]_.
+    More details in :ref:`Timing Models`.  Also see Eq. 8.48 of [lk2004_].
 
-    .. [9] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.48
+    .. _lk2004: https://ui.adsabs.harvard.edu/abs/2004hpa..book.....L/abstract
     """
     return (
         (
@@ -817,9 +817,9 @@ def a1sini(mp, mc, pb, i=90 * u.deg):
         \\frac{a_p \sin i}{c} = \\frac{m_c \sin i}{(m_p+m_c)^{2/3}}
         G^{1/3}\\left(\\frac{P_b}{2\pi}\\right)^{2/3}
 
-    More details in :ref:`Timing Models`.  Also see [8]_
+    More details in :ref:`Timing Models`.  Also see Eqs. 8.21, 8.22, 8.27 of [lk2004_]
 
-    .. [8] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.21, 8.22, 8.27
+    .. _lk2004: https://ui.adsabs.harvard.edu/abs/2004hpa..book.....L/abstract
 
     """
     return (
@@ -832,7 +832,7 @@ def a1sini(mp, mc, pb, i=90 * u.deg):
 def shklovskii_factor(pmtot: u.mas / u.yr, D: u.kpc):
     """Compute magnitude of Shklovskii correction factor.
 
-    Computes the Shklovskii correction factor, as defined in Eq 8.12 of Lorimer & Kramer (2005) [10]_
+    Computes the Shklovskii correction factor, as defined in Eq. 8.12 of [lk2004_].
     This is the factor by which :math:`\dot P /P` is increased due to the transverse velocity.
     Note that this affects both the measured spin period and the orbital period.
     If we call this Shklovskii acceleration :math:`a_s`, then
@@ -855,9 +855,7 @@ def shklovskii_factor(pmtot: u.mas / u.yr, D: u.kpc):
     acceleration : astropy.units.Quantity
         Shklovskii acceleration
 
-    Notes
-    -----
-    .. [10] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.12
+    .. _lk2004: https://ui.adsabs.harvard.edu/abs/2004hpa..book.....L/abstract
     """
     # This uses the small angle approximation that sin(x) = x, so we need to
     # make our angle dimensionless.
