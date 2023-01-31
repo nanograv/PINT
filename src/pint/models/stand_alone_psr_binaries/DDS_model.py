@@ -34,11 +34,11 @@ class DDSmodel(DDmodel):
 
     References
     ----------
-    - Kramer et al. (2006), Science, 314, 97 [1]_
-    - Rafikov and Lai (2006), PRD, 73, 063003 [2]_
+    - Kramer et al. (2006), Science, 314, 97 [klm+06]_
+    - Rafikov and Lai (2006), PRD, 73, 063003 [rl06]_
 
-    .. [1] https://ui.adsabs.harvard.edu/abs/2006Sci...314...97K/abstract
-    .. [2] https://ui.adsabs.harvard.edu/abs/2006PhRvD..73f3003R/abstract
+    .. [klm+06] https://ui.adsabs.harvard.edu/abs/2006Sci...314...97K/abstract
+    .. [rl06] https://ui.adsabs.harvard.edu/abs/2006PhRvD..73f3003R/abstract
     """
 
     def __init__(self, t=None, input_params=None):

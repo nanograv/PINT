@@ -81,9 +81,9 @@ class DDGRmodel(DDmodel):
 
     References
     ----------
-    - Taylor and Weisberg (1989), ApJ, 345, 434 [1]_
+    - Taylor and Weisberg (1989), ApJ, 345, 434 [tw89]_
 
-    .. [1] https://ui.adsabs.harvard.edu/abs/1989ApJ...345..434T/abstract
+    .. [tw89] https://ui.adsabs.harvard.edu/abs/1989ApJ...345..434T/abstract
     """
 
     def __init__(self, t=None, input_params=None):

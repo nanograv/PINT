@@ -137,11 +137,11 @@ class BinaryDDS(BinaryDD):
 
     References
     ----------
-    - Kramer et al. (2006), Science, 314, 97 [1]_
-    - Rafikov and Lai (2006), PRD, 73, 063003 [2]_
+    - Kramer et al. (2006), Science, 314, 97 [ksm+2006]_
+    - Rafikov and Lai (2006), PRD, 73, 063003 [rl2006]_
 
-    .. [1] https://ui.adsabs.harvard.edu/abs/2006Sci...314...97K/abstract
-    .. [2] https://ui.adsabs.harvard.edu/abs/2006PhRvD..73f3003R/abstract
+    .. [ksm+2006] https://ui.adsabs.harvard.edu/abs/2006Sci...314...97K/abstract
+    .. [rl2006] https://ui.adsabs.harvard.edu/abs/2006PhRvD..73f3003R/abstract
 
     """
 
@@ -201,6 +201,9 @@ class BinaryDDGR(BinaryDD):
     The values of these at any time can be obtained via
     ``.sini``, ``.pbdot``, ``.omdot``, ``.gamma``, ``.dr``, and ``.dth`` properties
 
+    The actual calculations for this are done in
+    :class:`pint.models.stand_alone_psr_binaries.DDGR_model.DDGRmodel`.
+
     Parameters supported:
 
     .. paramtable::
@@ -208,9 +211,9 @@ class BinaryDDGR(BinaryDD):
 
     References
     ----------
-    - Taylor and Weisberg (1989), ApJ, 345, 434 [1]_
+    - Taylor and Weisberg (1989), ApJ, 345, 434 [tw89]_
 
-    .. [1] https://ui.adsabs.harvard.edu/abs/1989ApJ...345..434T/abstract
+    .. [tw89] https://ui.adsabs.harvard.edu/abs/1989ApJ...345..434T/abstract
     """
 
     register = True
