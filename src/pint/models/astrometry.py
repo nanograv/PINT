@@ -11,11 +11,7 @@ from astropy.time import Time
 
 from loguru import logger as log
 
-try:
-    from erfa import ErfaWarning
-except ImportError:
-    from astropy._erfa import ErfaWarning
-
+from erfa import ErfaWarning
 from pint import ls
 from pint.models.parameter import (
     AngleParameter,

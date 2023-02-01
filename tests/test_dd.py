@@ -9,6 +9,7 @@ import pint.models.model_builder as mb
 import pint.toa as toa
 from pint.residuals import Residuals
 from pinttestdata import datadir
+from copy import deepcopy
 
 
 class TestDD(unittest.TestCase):
@@ -25,7 +26,7 @@ class TestDD(unittest.TestCase):
         cls.modelB1855 = mb.get_model(cls.parfileB1855)
         # libstempo result
         cls.ltres, cls.ltbindelay = np.genfromtxt(
-            cls.parfileB1855 + ".tempo_test", unpack=True
+            f"{cls.parfileB1855}.tempo_test", unpack=True
         )
 
     def test_J1855_binary_delay(self):
@@ -35,7 +36,7 @@ class TestDD(unittest.TestCase):
             np.abs(pint_binary_delay.value + self.ltbindelay) < 1e-11
         ), "DD B1855 TEST FAILED"
 
-    # TODO: PINT can still incresase the precision by adding more components
+    # TODO: PINT can still increase the precision by adding more components
     def test_B1855(self):
         pint_resids_us = Residuals(
             self.toasB1855, self.modelB1855, use_weighted_mean=False
@@ -44,6 +45,8 @@ class TestDD(unittest.TestCase):
             np.abs(pint_resids_us.value - self.ltres) < 1e-7
         ), "DD B1855 TEST FAILED"
 
-
-if __name__ == "__main__":
-    pass
+    def test_dd_zero_ecc(self):
+        m = deepcopy(self.modelB1855)
+        m.ECC.value = 0
+        m.validate()  # validate will set the following values to 0
+        assert m.OM.value == 0 and m.OMDOT.value == 0 and m.EDOT.value == 0

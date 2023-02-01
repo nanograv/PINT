@@ -28,7 +28,7 @@ from numpy.testing import assert_allclose, assert_array_equal
 from pinttestdata import datadir
 
 import pint.models as tm
-from pint import fitter, toa
+from pint import fitter, toa, dmu
 from pint.pulsar_mjd import (
     jds_to_mjds,
     jds_to_mjds_pulsar,
@@ -50,6 +50,9 @@ from pint.utils import (
     open_or_use,
     taylor_horner,
     taylor_horner_deriv,
+    find_prefix_bytime,
+    merge_dmx,
+    convert_dispersion_measure,
 )
 
 
@@ -790,3 +793,53 @@ def test_compute_hash_accepts_no_change(a):
         h_b = compute_hash(g)
 
     assert h_a == h_b
+
+
+def test_find_dmx():
+    par = """
+    PSR J1234+5678
+    F0 1
+    DM 10
+    ELAT 10
+    ELONG 0
+    PEPOCH 54000
+    DMXR1_0001 54000
+    DMXR2_0001 55000
+    DMX_0001 1
+    DMXR1_0002 55000
+    DMXR2_0002 56000
+    DMX_0002 2
+    """
+
+    model = tm.get_model(io.StringIO(par))
+    assert find_prefix_bytime(model, "DMX", 54500) == 1
+    assert len(find_prefix_bytime(model, "DMX", 53500)) == 0
+
+
+def test_merge_dmx():
+    par = """
+    PSR J1234+5678
+    F0 1
+    DM 10
+    ELAT 10
+    ELONG 0
+    PEPOCH 54000
+    DMXR1_0001 54000
+    DMXR2_0001 55000
+    DMX_0001 1
+    DMXR1_0002 55000
+    DMXR2_0002 56000
+    DMX_0002 2
+    """
+
+    model = tm.get_model(io.StringIO(par))
+    newindex = merge_dmx(model, 1, 2, value="mean")
+    print(model, newindex)
+    assert getattr(model, f"DMX_{newindex:04d}").value == 1.5
+
+
+def test_convert_dm():
+    dm = 10 * dmu
+    dm_codata = convert_dispersion_measure(dm)
+
+    assert np.isfinite(dm_codata)

@@ -42,9 +42,10 @@ from pathlib import Path
 
 import astropy.constants as const
 import astropy.coordinates as coords
-from astropy.time import Time
 import astropy.units as u
 import numpy as np
+from astropy import constants
+from astropy.time import Time
 from loguru import logger as log
 from scipy.special import fdtrc
 
@@ -842,8 +843,7 @@ def dmxselections(model, toas):
         r1 = getattr(model, DMXR1_mapping[ii]).quantity
         r2 = getattr(model, DMXR2_mapping[ii]).quantity
         condition[DMX_mapping[ii]] = (r1.mjd, r2.mjd)
-    select_idx = toas_selector.get_select_index(condition, toas["mjd_float"])
-    return select_idx
+    return toas_selector.get_select_index(condition, toas["mjd_float"])
 
 
 def dmxstats(model, toas, file=sys.stdout):
@@ -1065,6 +1065,111 @@ def get_prefix_timerange(model, prefixname):
     r1 = prefix.replace("_", "R1_") + index
     r2 = prefix.replace("_", "R2_") + index
     return getattr(model, r1).quantity, getattr(model, r2).quantity
+
+
+def get_prefix_timeranges(model, prefixname):
+    """Get all time ranges and indices for a prefix quantity like DMX or SWX
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+    prefixname : str
+        Something like ``DMX`` or ``SWX`` (no trailing ``_``)
+
+    Returns
+    -------
+    indices : np.ndarray
+    starts : astropy.time.Time
+    ends : astropy.time.Time
+
+    """
+    if prefixname.endswith("_"):
+        prefixname = prefixname[:-1]
+    prefix_mapping = model.get_prefix_mapping(prefixname + "_")
+    r1 = np.zeros(len(prefix_mapping))
+    r2 = np.zeros(len(prefix_mapping))
+    indices = np.zeros(len(prefix_mapping), dtype=np.int32)
+    for j, index in enumerate(prefix_mapping.keys()):
+        if (
+            getattr(model, f"{prefixname}R1_{index:04d}").quantity is not None
+            and getattr(model, f"{prefixname}R2_{index:04d}").quantity is not None
+        ):
+            r1[j] = getattr(model, f"{prefixname}R1_{index:04d}").quantity.mjd
+            r2[j] = getattr(model, f"{prefixname}R2_{index:04d}").quantity.mjd
+            indices[j] = index
+    return (
+        indices,
+        Time(r1, format="pulsar_mjd"),
+        Time(r2, format="pulsar_mjd"),
+    )
+
+
+def find_prefix_bytime(model, prefixname, t):
+    """Identify matching index(es) for a prefix parameter like DMX
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+    prefixname : str
+        Something like ``DMX`` or ``SWX`` (no trailing ``_``)
+    t : astropy.time.Time or float or astropy.units.Quantity
+        If not :class:`astropy.time.Time`, then MJD is assumed
+
+    Returns
+    -------
+    int or np.ndarray
+        Index or indices that match
+    """
+    if not isinstance(t, Time):
+        t = Time(t, format="pulsar_mjd")
+    indices, r1, r2 = get_prefix_timeranges(model, prefixname)
+    matches = np.where((t >= r1) & (t < r2))[0]
+    if len(matches) == 1:
+        matches = int(matches)
+    return indices[matches]
+
+
+def merge_dmx(model, index1, index2, value="mean", frozen=True):
+    """Merge two DMX bins
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+    index1: int
+    index2 : int
+    value : str, optional
+        One of "first", "second", "mean".  Determines value of new bin
+    frozen : bool, optional
+
+    Returns
+    -------
+    int
+        New DMX index
+    """
+    assert value.lower() in ["first", "second", "mean"]
+    tstart1, tend1 = get_prefix_timerange(model, f"DMX_{index1:04d}")
+    tstart2, tend2 = get_prefix_timerange(model, f"DMX_{index2:04d}")
+    tstart = min([tstart1, tstart2])
+    tend = max([tend1, tend2])
+    intervening_indices = find_prefix_bytime(model, "DMX", (tstart.mjd + tend.mjd) / 2)
+    if len(np.setdiff1d(intervening_indices, [index1, index2])) > 0:
+        for k in np.setdiff1d(intervening_indices, [index1, index2]):
+            log.warning(
+                f"Attempting to merge DMX_{index1:04d} and DMX_{index2:04d}, but DMX_{k:04d} is in between"
+            )
+    if value.lower() == "first":
+        dmx = getattr(model, f"DMX_{index1:04d}").quantity
+    elif value.lower == "second":
+        dmx = getattr(model, f"DMX_{index2:04d}").quantity
+    elif value.lower() == "mean":
+        dmx = (
+            getattr(model, f"DMX_{index1:04d}").quantity
+            + getattr(model, f"DMX_{index2:04d}").quantity
+        ) / 2
+    # add the new one before we delete previous ones to make sure we have >=1 present
+    newindex = model.add_DMX_range(tstart, tend, dmx=dmx, frozen=frozen)
+    model.remove_DMX_range([index1, index2])
+    return newindex
 
 
 def split_dmx(model, time):
@@ -1800,7 +1905,7 @@ def get_conjunction(coord, t0, precision="low", ecl="IERS2010"):
     -------
     astropy.time.Time
         Time of conjunction
-    astropy.quantity.Quantity
+    astropy.units.Quantity
         Elongation at conjunction
     """
 
@@ -1883,3 +1988,34 @@ def divide_times(t, t0, offset=0.5):
     values = (dt.to(u.yr).value + offset) // 1
     indices = np.digitize(values, np.unique(values), right=True)
     return indices
+
+
+def convert_dispersion_measure(dm, dmconst=None):
+    """Convert dispersion measure to a different value of the DM constant.
+
+    Parameters
+    ----------
+    dm : astropy.units.Quantity
+        DM measured according to the conventional value of the DM constant
+
+    Returns
+    -------
+    dm : astropy.units.Quantity
+        DM measured according to the value of the DM constant computed from the
+        latest values of the physical constants
+    dmconst : astropy.units.Quantity
+        Value of the DM constant. Default value is computed from CODATA physical
+        constants.
+    Notes
+    -----
+    See https://nanograv-pint.readthedocs.io/en/latest/explanation.html#dispersion-measure
+    for an explanation.
+    """
+
+    if dmconst is None:
+        e = constants.e.si
+        eps0 = constants.eps0.si
+        c = constants.c.si
+        me = constants.m_e.si
+        dmconst = e**2 / (8 * np.pi**2 * c * eps0 * me)
+    return (dm * pint.DMconst / dmconst).to(pint.dmu)
