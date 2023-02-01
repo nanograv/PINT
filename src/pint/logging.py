@@ -55,10 +55,7 @@ import sys
 import warnings
 from loguru import logger as log
 
-try:
-    from erfa import ErfaWarning
-except ImportError:
-    from astropy._erfa import ErfaWarning
+from erfa import ErfaWarning
 
 __all__ = ["LogFilter", "setup", "format", "levels", "get_level"]
 
@@ -128,7 +125,8 @@ def showwarning(message, category, filename, lineno, file=None, line=None):
 class LogFilter:
     """Custom logging filter for ``loguru``.
     Define some messages that are never seen (e.g., Deprecation Warnings).
-    Others that will only be seen once.  Filtering of those is done on the basis of regular expressions."""
+    Others that will only be seen once.  Filtering of those is done on the basis of regular expressions.
+    """
 
     def __init__(self, onlyonce=None, never=None, onlyonce_level="INFO"):
         """

@@ -10,15 +10,6 @@ from pint import erfautils
 from pint.observatory import Observatory
 
 
-def test_simpler_erfa_import():
-    try:
-        import erfa
-    except ImportError:
-        import astropy._erfa as erfa
-
-    erfa
-
-
 @pytest.mark.xfail(
     reason="astropy doesn't include up-to-date IERS B - "
     "if this starts passing we can ditch the "
@@ -36,7 +27,7 @@ def test_compare_erfautils_astropy():
     dvel = np.sqrt((dopv.vel**2).sum(axis=0))
     assert len(dpos) == len(mjds)
     # This is just above the level of observed difference
-    assert dpos.max() < 0.05 * u.m, "position difference of %s" % dpos.max().to(u.m)
+    assert dpos.max() < 0.05 * u.m, f"position difference of {dpos.max().to(u.m)}"
     # This level is what is permitted as a velocity difference from tempo2 in test_times.py
     assert dvel.max() < 0.02 * u.mm / u.s, "velocity difference of %s" % dvel.max().to(
         u.mm / u.s
