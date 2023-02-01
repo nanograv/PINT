@@ -7,6 +7,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## Unreleased
 ### Changed
 - Moved DMconst from `pint.models.dispersion_model` to `pint` to avoid circular imports
+- Ensured we require `pyerfa` and remove the obsolete `astropy._erfa`
 ### Added
 - Documentation: Explanation for DM
 - Methods to compute dispersion slope and to convert DM using the CODATA value of DMconst
