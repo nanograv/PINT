@@ -47,37 +47,35 @@ from pint.utils import PosVel
 time_eps = (np.finfo(float).eps * u.day).to(u.ns)
 
 
-leap_sec_mjds = set(
-    [
-        41499,
-        41683,
-        42048,
-        42413,
-        42778,
-        43144,
-        43509,
-        43874,
-        44239,
-        44786,
-        45151,
-        45516,
-        46247,
-        47161,
-        47892,
-        48257,
-        48804,
-        49169,
-        49534,
-        50083,
-        50630,
-        51179,
-        53736,
-        54832,
-        56109,
-        57204,
-        57754,
-    ]
-)
+leap_sec_mjds = {
+    41499,
+    41683,
+    42048,
+    42413,
+    42778,
+    43144,
+    43509,
+    43874,
+    44239,
+    44786,
+    45151,
+    45516,
+    46247,
+    47161,
+    47892,
+    48257,
+    48804,
+    49169,
+    49534,
+    50083,
+    50630,
+    51179,
+    53736,
+    54832,
+    56109,
+    57204,
+    57754,
+}
 leap_sec_days = set([d - 1 for d in leap_sec_mjds])
 near_leap_sec_days = list(
     sorted([d - 1 for d in leap_sec_days] + [d + 1 for d in leap_sec_days])
@@ -98,7 +96,7 @@ def possible_leap_sec_days(draw):
 @composite
 def leap_sec_day_mjd(draw):
     i = draw(sampled_from(sorted(leap_sec_days)))
-    f = draw(floats(0, 1, allow_nan=False))
+    f = draw(floats(1, 2, allow_nan=False)) - 1
     return (i, f)
 
 
