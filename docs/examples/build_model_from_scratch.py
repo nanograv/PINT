@@ -99,7 +99,7 @@ tm = TimingModel("NGC6400E", component_instances)
 
 # %%
 # print the components in the timing model
-for (cp_name, cp_instance) in tm.components.items():
+for cp_name, cp_instance in tm.components.items():
     print(cp_name, cp_instance)
 
 # %% [markdown]
