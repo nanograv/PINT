@@ -1525,6 +1525,9 @@ class TOAs:
                 for i in subset:
                     self[column, i] = str(value[i])
 
+    def __repr__(self):
+        return f"{len(self)} TOAs starting at MJD {self.first_MJD}"
+
     def __eq__(self, other):
         sd, od = self.__dict__.copy(), other.__dict__.copy()
         st = sd.pop("table")
@@ -1535,6 +1538,12 @@ class TOAs:
         """Addition operator, allowing merging/concatenation of TOAs"""
         if isinstance(other, type(self)):
             return merge_TOAs([self, other])
+        raise TypeError(f"Do not know how to add '{type(self)}' and '{type(other)}'")
+
+    def __iadd__(self, other):
+        if isinstance(other, type(self)):
+            self.merge(other)
+            return self
         raise TypeError(f"Do not know how to add '{type(self)}' and '{type(other)}'")
 
     def __sub__(self, other):
@@ -2468,6 +2477,170 @@ class TOAs:
 
         if self.obliquity is not None:
             self.add_vel_ecl(self.obliquity)
+
+    def merge(self, t, *args, strict=False):
+        """Merge TOAs instances into the existing object
+
+        In order for a merge to work, each TOAs instance needs to have
+        been created using the same Solar System Ephemeris (EPHEM),
+        the same reference timescale (i.e. CLOCK), and the same value of
+        .planets (i.e. whether planetary PosVel columns are in the tables
+        or not).
+
+        If ``pulse_number``, [``ssb_obs_pos``, ``ssb_obs_vel``, ``obs_sun_pos``], [``tdb``, ``tdbld``]
+        columns are present in some but not all data try to put them in unless ``strict=True``
+
+        Parameters
+        ----------
+        t : pint.toa.TOAs
+        args : pint.toa.TOAs, optional
+            Additional TOAs to merge
+        strict : bool, optional
+            If ``strict``, do not add in missing columns to facilitate merging
+
+        """
+        TOAs_list = [self, t] + list(args)
+        # Check each TOA object for consistency
+        ephems = [tt.ephem for tt in TOAs_list]
+        if len(set(ephems)) > 1:
+            raise TypeError(f"merge_TOAs() cannot merge. Inconsistent ephem: {ephems}")
+        inc_BIPM = [tt.clock_corr_info.get("include_bipm", None) for tt in TOAs_list]
+        if len(set(inc_BIPM)) > 1:
+            raise TypeError(
+                f"merge_TOAs() cannot merge. Inconsistent include_bipm: {inc_BIPM}"
+            )
+        BIPM_vers = [tt.clock_corr_info.get("bipm_version", None) for tt in TOAs_list]
+        if len(set(BIPM_vers)) > 1:
+            raise TypeError(
+                f"merge_TOAs() cannot merge. Inconsistent bipm_version: {BIPM_vers}"
+            )
+        inc_GPS = [tt.clock_corr_info.get("include_gps", None) for tt in TOAs_list]
+        if len(set(inc_GPS)) > 1:
+            raise TypeError(
+                f"merge_TOAs() cannot merge. Inconsistent include_gps: {inc_GPS}"
+            )
+        planets = [tt.planets for tt in TOAs_list]
+        if len(set(planets)) > 1:
+            raise TypeError(
+                f"merge_TOAs() cannot merge. Inconsistent planets: {planets}"
+            )
+        # check for the presence of various computable columns
+        #   pulse_number
+        #   ssb_obs_pos, ssb_obs_vel, obs_sun_pos
+        #   tdb, tdbld
+        # if one file has these and the others don't, try to add them if strict=False
+        all_colnames = [tt.table.colnames for tt in TOAs_list]
+        has_pulse_number = np.array(
+            ["pulse_number" in colnames for colnames in all_colnames]
+        )
+        has_posvel = np.array(
+            [
+                ("ssb_obs_pos" in colnames)
+                and ("ssb_obs_vel" in colnames)
+                and ("obs_sun_pos" in colnames)
+                for colnames in all_colnames
+            ]
+        )
+        has_tdb = np.array(
+            [("tdb" in colnames) and ("tdbld" in colnames) for colnames in all_colnames]
+        )
+        has_posvel_ecl = np.array(
+            ["ssb_obs_vel_ecl" in colnames for colnames in all_colnames]
+        )
+        if has_pulse_number.any() and not has_pulse_number.all():
+            if strict:
+                log.warning("Not all data have 'pulse_number' columns but strict=True")
+            else:
+                # some data have pulse_numbers but not all
+                # put in NaN
+                for i, tt in enumerate(TOAs_list):
+                    if not "pulse_number" in tt.table.colnames:
+                        log.warning(
+                            f"'pulse_number' not present in data set {i}: inserting NaNs"
+                        )
+                        tt.table.add_column(
+                            np.ones(len(tt)) * np.nan, name="pulse_number"
+                        )
+        if has_posvel.any() and not has_posvel.all():
+            if strict:
+                log.warning(
+                    "Not all data have position/velocity columns but strict=True"
+                )
+            else:
+                # some data have positions/velocities but not all
+                # compute as needed
+                for i, tt in enumerate(TOAs_list):
+                    if not (
+                        ("ssb_obs_pos" in tt.table.colnames)
+                        and ("ssb_obs_vel" in tt.table.colnames)
+                        and ("obs_sun_pos" in tt.table.colnames)
+                    ):
+                        tt.compute_posvels()
+        if has_tdb.any() and not has_tdb.all():
+            if strict:
+                log.warning("Not all data have TDB columns but strict=True")
+            else:
+                # some data have TDBs but not all
+                # compute as needed
+                for i, tt in enumerate(TOAs_list):
+                    if not (
+                        ("tdb" in tt.table.colnames) and ("tdbld" in tt.table.colnames)
+                    ):
+                        tt.compute_TDBs()
+
+        # update in-place (in contrast to `merge_TOAs`)
+        nt = self
+        # The following ensures that the filename list is flat
+        nt.filename = []
+        for xx in [tt.filename for tt in TOAs_list]:
+            if type(xx) is list:
+                for yy in xx:
+                    nt.filename.append(yy)
+            else:
+                nt.filename.append(xx)
+        # We do not ensure that the command list is flat
+        nt.commands = [tt.commands for tt in TOAs_list]
+        # Now do the actual table stacking
+        start_index = 0
+        tables = []
+        for tt in TOAs_list:
+            t = copy.deepcopy(tt.table)
+            t["index"] += start_index
+            start_index += tt.max_index + 1
+            tables.append(t)
+        try:
+            nt.table = table.vstack(
+                tables, join_type="exact", metadata_conflicts="silent"
+            )
+        except table.np_utils.TableMergeError as e:
+            # the astropy vstack will enforce having the same columns throughout
+            # but the error messages aren't very useful.
+            # This isn't an exhaustive check
+            # (it just checks everything against the first observation)
+            # but it should be more helpful
+            message = []
+            for i, colnames in enumerate(all_colnames[1:]):
+                extra_columns = [x for x in colnames if not x in all_colnames[0]]
+                missing_columns = [x for x in all_colnames[0] if not x in colnames]
+                if len(extra_columns) > 0:
+                    message.append(
+                        f"File {i+1} has extra column(s): {','.join(extra_columns)}"
+                    )
+
+                if len(missing_columns) > 0:
+                    message.append(
+                        f"File {i+1} has missing column(s): {','.join(missing_columns)}"
+                    )
+            raise table.np_utils.TableMergeError(", ".join(message)) from e
+
+            # Fix the table meta data about filenames
+        nt.table.meta["filename"] = nt.filename
+        nt.max_index = start_index - 1
+        nt.hashes = {}
+        for tt in TOAs_list:
+            nt.hashes.update(tt.hashes)
+        # This sets a flag that indicates that we have merged TOAs instances
+        nt.merged = True
 
 
 def merge_TOAs(TOAs_list, strict=False):

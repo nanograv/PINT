@@ -239,3 +239,27 @@ def test_toa_add_is_merge():
     toasout = toa.merge_TOAs([toas, toas2])
     toasout_add = toas + toas2
     assert np.all(toasout.table == toasout_add.table)
+
+
+def test_toa_merge():
+    t = pulsar_mjd.Time(np.array([55000, 56000]), scale="utc", format="pulsar_mjd")
+    t2 = pulsar_mjd.Time(np.array([56500, 57000]), scale="utc", format="pulsar_mjd")
+    obs = "gbt"
+    toas = toa.get_TOAs_array(t, obs)
+    toas2 = toa.get_TOAs_array(t2, obs)
+    toasout = toa.merge_TOAs([toas, toas2])
+    toas.merge(toas2)
+    assert np.all(toasout.table == toas.table)
+
+
+def test_toa_iadd_is_merge():
+    t = pulsar_mjd.Time(np.array([55000, 56000]), scale="utc", format="pulsar_mjd")
+    t2 = pulsar_mjd.Time(np.array([56500, 57000]), scale="utc", format="pulsar_mjd")
+    obs = "gbt"
+    toas = toa.get_TOAs_array(t, obs)
+    startid = id(toas)
+    toas2 = toa.get_TOAs_array(t2, obs)
+    toasout = toa.merge_TOAs([toas, toas2])
+    toas += toas2
+    assert np.all(toasout.table == toas.table)
+    assert startid == id(toas)
