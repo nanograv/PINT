@@ -120,3 +120,4 @@ docs/examples-rendered/*.py
 
 # VSCode wants to put virtualenvs here
 .env
+.venv
