@@ -50,7 +50,6 @@ are not included in the default build because they take too long, but you can do
 .. Using the exclude_patterns list in conf.py
 
 .. toctree::
-.. only:: not noexamples
 
    basic-installation
    examples/time_a_pulsar.ipynb
