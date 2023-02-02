@@ -53,6 +53,7 @@ clean:
 cleaner:
 	rm -rf $(BUILDDIR)/*
 	rm -rf _autosummary/*.rst
+	rm -rf examples/*.ipynb
 
 html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
