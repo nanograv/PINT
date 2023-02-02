@@ -135,9 +135,8 @@ except ImportError:
                 )
             try:
                 cache = instance.__dict__
-            except (
-                AttributeError
-            ):  # not all objects have __dict__ (e.g. class defines slots)
+            except AttributeError:
+                # not all objects have __dict__ (e.g. class defines slots)
                 msg = (
                     f"No '__dict__' attribute on {type(instance).__name__!r} "
                     f"instance to cache {self.attrname!r} property."
