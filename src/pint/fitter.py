@@ -135,7 +135,9 @@ except ImportError:
                 )
             try:
                 cache = instance.__dict__
-            except AttributeError:  # not all objects have __dict__ (e.g. class defines slots)
+            except (
+                AttributeError
+            ):  # not all objects have __dict__ (e.g. class defines slots)
                 msg = (
                     f"No '__dict__' attribute on {type(instance).__name__!r} "
                     f"instance to cache {self.attrname!r} property."
@@ -2383,7 +2385,6 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         track_mode=None,
         additional_args={},
     ):
-
         self.model_init = model
         # Check input data and data_type
         self.fit_data_names = fit_data_names

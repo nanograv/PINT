@@ -150,7 +150,6 @@ class LCEPrimitive(LCPrimitive):
 
 
 class LCEWrappedFunction(LCEPrimitive, LCWrappedFunction):
-
     __doc__ = LCWrappedFunction.__doc__
 
     def gradient(self, phases, log10_ens=3, free=False):

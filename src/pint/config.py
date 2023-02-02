@@ -5,6 +5,7 @@ import pkg_resources
 
 __all__ = ["datadir", "examplefile", "runtimefile"]
 
+
 # location of tim, par files installed via pkg_resources
 def datadir():
     """Location of the PINT data (par and tim files)
