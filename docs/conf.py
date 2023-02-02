@@ -123,6 +123,9 @@ exclude_patterns = [
     "_ext",
 ]
 
+if tags.has("noexamples"):
+    exclude_patterns.append("examples/*.py")
+
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
 # default_role = None
