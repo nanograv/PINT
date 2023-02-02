@@ -1532,21 +1532,9 @@ class TOAs:
         return sd == od and np.all(st == ot)
 
     def __add__(self, other):
-        """Addition operator
-
-        If both arguments are :class:`~pint.toa.TOAs`, merge them
-
-        If one argument is a :class:`~astropy.time.TimeDelta` or can be converted
-        to that, adjust the TOAs
-        """
+        """Addition operator, allowing merging/concatenation of TOAs"""
         if isinstance(other, type(self)):
             return merge_TOAs([self, other])
-        elif isinstance(other, (u.Quantity, time.TimeDelta)):
-            if not isinstance(other, time.TimeDelta):
-                other = time.TimeDelta(other)
-            newtoa = copy.deepcopy(self)
-            newtoa.adjust_TOAs(other)
-            return newtoa
         raise TypeError(f"Do not know how to add '{type(self)}' and '{type(other)}'")
 
     def __sub__(self, other):

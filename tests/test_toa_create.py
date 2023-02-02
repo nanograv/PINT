@@ -228,3 +228,14 @@ def test_toa_wb():
     pp_dme = np.array([0.1, 0.1]) * u.pc / u.cm**3
     toas = toa.get_TOAs_array(t, obs, pp_dm=pp_dm.value, pp_dme=pp_dme.value)
     assert toas.wideband
+
+
+def test_toa_add_is_merge():
+    t = pulsar_mjd.Time(np.array([55000, 56000]), scale="utc", format="pulsar_mjd")
+    t2 = pulsar_mjd.Time(np.array([56500, 57000]), scale="utc", format="pulsar_mjd")
+    obs = "gbt"
+    toas = toa.get_TOAs_array(t, obs)
+    toas2 = toa.get_TOAs_array(t2, obs)
+    toasout = toa.merge_TOAs([toas, toas2])
+    toasout_add = toas + toas2
+    assert np.all(toasout.table == toasout_add.table)
