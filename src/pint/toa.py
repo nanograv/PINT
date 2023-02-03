@@ -2483,9 +2483,9 @@ class TOAs:
 
         In order for a merge to work, each TOAs instance needs to have
         been created using the same Solar System Ephemeris (EPHEM),
-        the same reference timescale (i.e. CLOCK), and the same value of
+        the same reference timescale (i.e. CLOCK), the same value of
         .planets (i.e. whether planetary PosVel columns are in the tables
-        or not).
+        or not), and the same value of the obliquity.
 
         If ``pulse_number``, [``ssb_obs_pos``, ``ssb_obs_vel``, ``obs_sun_pos``], [``tdb``, ``tdbld``]
         columns are present in some but not all data try to put them in unless ``strict=True``
@@ -2524,6 +2524,12 @@ class TOAs:
             raise TypeError(
                 f"merge_TOAs() cannot merge. Inconsistent planets: {planets}"
             )
+        obliquity = [tt.obliquity for tt in TOAs_list]
+        if len(set(obliquity)) > 1:
+            raise TypeError(
+                f"merge_TOAs() cannot merge. Inconsistent obliquity: {obliquity}"
+            )
+
         # check for the presence of various computable columns
         #   pulse_number
         #   ssb_obs_pos, ssb_obs_vel, obs_sun_pos
@@ -2576,6 +2582,17 @@ class TOAs:
                         and ("obs_sun_pos" in tt.table.colnames)
                     ):
                         tt.compute_posvels()
+        if has_posvel_ecl.any() and not has_posvel_ecl.all():
+            if strict:
+                log.warning(
+                    "Not all data have ecliptic position/velocity columns but strict=True"
+                )
+            else:
+                # some data have ecliptic positions/velocities but not all
+                # compute as needed
+                for i, tt in enumerate(TOAs_list):
+                    if not (("ssb_obs_vel_ecl" in tt.table.colnames)):
+                        tt.add_vel_ecl(obliquity[0])
         if has_tdb.any() and not has_tdb.all():
             if strict:
                 log.warning("Not all data have TDB columns but strict=True")
