@@ -2608,8 +2608,9 @@ class TOAs:
         # update in-place (in contrast to `merge_TOAs`)
         nt = self
         # The following ensures that the filename list is flat
+        filenames = [copy.deepcopy(tt.filename) for tt in TOAs_list]
         nt.filename = []
-        for xx in [tt.filename for tt in TOAs_list]:
+        for xx in filenames:
             if type(xx) is list:
                 for yy in xx:
                     nt.filename.append(yy)
@@ -2653,8 +2654,7 @@ class TOAs:
             # Fix the table meta data about filenames
         nt.table.meta["filename"] = nt.filename
         nt.max_index = start_index - 1
-        nt.hashes = {}
-        for tt in TOAs_list:
+        for tt in TOAs_list[1:]:
             nt.hashes.update(tt.hashes)
         # This sets a flag that indicates that we have merged TOAs instances
         nt.merged = True
