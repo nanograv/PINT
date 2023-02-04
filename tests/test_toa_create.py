@@ -48,7 +48,6 @@ def test_toas_fromscalar(t):
 @pytest.mark.parametrize("errors", [1, 1.0 * u.us, np.array([1.0, 2.3]) * u.us])
 @pytest.mark.parametrize("freqs", [1400, 400 * u.MHz, np.array([1400, 1500]) * u.MHz])
 def test_toas_compare(t, errors, freqs):
-
     obs = "gbt"
     kwargs = {"name": "data"}
     flags = [{"type": "good"}, {"type": "bad"}]
