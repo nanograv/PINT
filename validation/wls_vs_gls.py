@@ -20,8 +20,7 @@ from astropy.table import Table
 
 
 def change_parfile(filename, param, value):
-    """A function to change parfile parameter value and fit flag
-    """
+    """A function to change parfile parameter value and fit flag"""
     strv = ut.longdouble2string(value)
     fh, abs_path = mkstemp()
     with open(abs_path, "w") as new_file:
@@ -40,15 +39,13 @@ def change_parfile(filename, param, value):
 
 
 def reset_model(source, target, fitter):
-    """Change parfile and fitter to original parameter value.
-    """
+    """Change parfile and fitter to original parameter value."""
     fitter.reset_model()
     copyfile(source, target)
 
 
 def perturb_param(f, param, h, source, target):
-    """Perturbate parameter value and change the corresponding par file
-    """
+    """Perturbate parameter value and change the corresponding par file"""
     reset_model(source, target, f)
     pn = f.model.match_param_aliases(param)
     if not pn == "":
@@ -63,8 +60,7 @@ def perturb_param(f, param, h, source, target):
 
 
 def check_tempo_output(parf, timf, result_par):
-    """Check out tempo output
-    """
+    """Check out tempo output"""
     a = subprocess.check_output("tempo -f " + parf + " " + timf, shell=True)
     tempo_m = mb.get_model(result_par)
     info_idx = a.index("Weighted RMS residual: pre-fit")
@@ -86,8 +82,7 @@ def check_tempo_output(parf, timf, result_par):
 
 
 def check_tempo2_output(parf, timf, p, result_par):
-    """Check out tempo2 output
-    """
+    """Check out tempo2 output"""
     res = subprocess.check_output(
         "tempo2 -f " + parf + " " + timf + " -norescale -newpar", shell=True
     )
