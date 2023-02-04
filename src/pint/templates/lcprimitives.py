@@ -803,7 +803,6 @@ class LCGaussian(LCWrappedFunction):
         return 0.5 * (erf(z2 / ROOT2) - erf(z1 / ROOT2))
 
     def random(self, n, log10_ens=3):
-
         if isvector(log10_ens) and len(log10_ens) != n:
             raise ValueError("Provided log10_ens vector does not match requested n.")
         e, width, x0 = self._make_p(log10_ens)
@@ -981,7 +980,6 @@ class LCSkewGaussian(LCWrappedFunction):
         return (norm_2 - owens_2) - (norm_1 - owens_1)
 
     def random(self, n, log10_ens=3):
-
         if isvector(log10_ens) and len(log10_ens) != n:
             raise ValueError("Provided log10_ens vector does not match requested n.")
         e, width, shape, x0 = self._make_p(log10_ens)
@@ -1255,7 +1253,6 @@ class LCVonMises(LCPrimitive):
             raise NotImplementedError
 
     def random(self, n, log10_ens=3):
-
         if isvector(log10_ens) and len(log10_ens) != n:
             raise ValueError("Provided log10_ens vector does not match requested n.")
         e, width, x0 = self._make_p(log10_ens)

@@ -3,6 +3,8 @@ import mpmath as mp
 from spiceTest import *
 
 mp.mp.dps = 25
+
+
 #### From mjd2tdt
 def mjd2tdt(mjd):
     """
@@ -152,7 +154,10 @@ statespk = []  # Directlt calculated earth position in (km)
 ltspk = []  # Directly calculated earth to ssb lt time in (sec)
 # Calculating postion
 for time in et:
-    state0, lt0, = spkInterp(float(time), 4)
+    (
+        state0,
+        lt0,
+    ) = spkInterp(float(time), 4)
     stateInterp.append(state0)
     ltInterp.append(lt0)
     state1, lt1 = spice.spkezr("EARTH", time, "J2000", "NONE", "SSB")
