@@ -220,7 +220,6 @@ def test_gbt_registered():
 
 
 def test_is_gbt_still_ok():
-
     gbt = get_observatory("gbt")
     assert gbt.location.y < 0
 

@@ -11,6 +11,7 @@ import HPtimeCvrtLib as tc
 
 mp.mp.dps = 25
 
+
 #### From mjdutc to et
 def mjd2et(mjd, tt2tdb):
     """
@@ -78,7 +79,10 @@ statespk = []  # Directlt calculated earth position in (km)
 ltspk = []  # Directly calculated earth to ssb lt time in (sec)
 # Calculating postion
 for time in et:
-    state0, lt0, = spkInterp(float(time), 7)
+    (
+        state0,
+        lt0,
+    ) = spkInterp(float(time), 7)
     stateInterp.append(state0)
     ltInterp.append(lt0)
     state1, lt1 = spice.spkezr("EARTH", time, "J2000", "NONE", "SSB")
