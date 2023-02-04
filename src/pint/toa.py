@@ -2083,7 +2083,7 @@ class TOAs:
             ix = np.argsort(toacopy.table["index"])
         else:
             ix = np.arange(len(toacopy))
-        for (toatime, toaerr, freq, obs, flags) in zip(
+        for toatime, toaerr, freq, obs, flags in zip(
             toacopy.table["mjd"][ix],
             toacopy.table["error"][ix].quantity,
             toacopy.table["freq"][ix].quantity,

@@ -177,7 +177,6 @@ def phaseogram_binned(
         # Loop over blocks to process
         a = []
         for tstart, tstop in zip(mjdstarts, mjdstops):
-
             # Clear profile array
             profile = profile * 0.0
 

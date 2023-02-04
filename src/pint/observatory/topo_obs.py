@@ -167,7 +167,6 @@ class TopoObs(Observatory):
         overwrite=False,
         bogus_last_correction=False,
     ):
-
         input_values = [lat is not None, lon is not None, height is not None]
         if sum(input_values) > 0 and sum(input_values) < 3:
             raise ValueError("All of lat, lon, height are required for observatory")
