@@ -42,6 +42,7 @@ pint.logging.setup(level="INFO")
 # %% [markdown]
 # Some helper functions for plotting
 
+
 # %%
 def plot_contour(mp, mc, quantity, target, uncertainty, color, nsigma=3, **kwargs):
     """Plot two lines at +/-nsigma * the uncertainty to illustrate a constraint.

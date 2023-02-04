@@ -237,7 +237,6 @@ class T2SpacecraftObs(SpecialLocation):
         return stl_posvel
 
     def posvel(self, t, ephem, group=None):
-
         if group is None:
             raise ValueError("TOA group table needed for SpacecraftObs posvel")
 
