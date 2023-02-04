@@ -30,7 +30,6 @@ from pint.derived_quantities import (
 
 
 def test_mass_function():
-
     # Mass function
     # RHS of Eqn. 8.34 in Lorimer & Kramer (2008)
     # this should be 4* pi**2 * x**3 / (G * Pb**2)
@@ -41,7 +40,6 @@ def test_mass_function():
 
 
 def test_other_mass_function():
-
     # Mass function, second form
     # LHS of Eqn. 8.34 in Lorimer & Kramer (2008)
     # this should be (Mc * sin(inc))**3 / (Mp + Mc)**2

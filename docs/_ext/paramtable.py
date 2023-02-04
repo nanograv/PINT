@@ -74,7 +74,6 @@ class ParamTable(Table):
 
 
 def setup(app):
-
     app.add_directive("paramtable", ParamTable)
 
     return {

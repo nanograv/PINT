@@ -12,7 +12,6 @@ class TestCompare(unittest.TestCase):
     """Test model comparison method"""
 
     def test_paramchange(self):
-
         # This test changes each parameter's magnitude by the "factor" below times the parameter's
         # uncertainty. If this factor is above the threshold sigma, warnings will appear
         # and the changed parameter's string will have an exclamation point appended. If

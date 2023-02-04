@@ -30,7 +30,6 @@ def model_ecliptic_to_equatorial(model, force=False):
             )
 
         if "AstrometryEcliptic" in model.components:
-
             c = model.coords_as_ICRS()
             a = AstrometryEquatorial()
 
@@ -81,7 +80,6 @@ def model_equatorial_to_ecliptic(model, force=False):
                 "Ecliptic coordinates already present but re-calculating anyway"
             )
         if "AstrometryEquatorial" in model.components:
-
             c = model.coords_as_ECL()
             a = AstrometryEcliptic()
 
