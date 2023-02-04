@@ -544,7 +544,6 @@ class WidebandDMResiduals(Residuals):
         subtract_mean=False,
         use_weighted_mean=True,
     ):
-
         self.toas = toas
         self.model = model
         self.residual_type = residual_type
