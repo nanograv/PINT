@@ -2202,7 +2202,6 @@ class funcParameter(floatParameter):
         aliases=None,
         **kwargs,
     ):
-
         self.paramType = "funcParameter"
         self.name = name
         self.description = description

@@ -31,7 +31,6 @@ def test_funcpardefine():
 
 
 def test_funcpardefineandadd_undefined():
-
     m = get_model(io.StringIO(base_par))
 
     p = pint.models.parameter.funcParameter(
@@ -47,7 +46,6 @@ def test_funcpardefineandadd_undefined():
 
 
 def test_funcpardefineandadd():
-
     m = get_model(io.StringIO(base_par))
 
     p = pint.models.parameter.funcParameter(
@@ -64,7 +62,6 @@ def test_funcpardefineandadd():
 
 
 def test_funcpar_commentedinparfile():
-
     m = get_model(io.StringIO(base_par))
 
     p = pint.models.parameter.funcParameter(
@@ -85,7 +82,6 @@ def test_funcpar_commentedinparfile():
 
 
 def test_funcpar_inparfile():
-
     m = get_model(io.StringIO(base_par))
 
     p = pint.models.parameter.funcParameter(
@@ -104,7 +100,6 @@ def test_funcpar_inparfile():
 
 
 def test_funcpardefine_notquantity():
-
     m = get_model(io.StringIO(base_par))
 
     p = pint.models.parameter.funcParameter(
@@ -140,7 +135,6 @@ def test_funcparfails():
 
 
 def test_funcparsetfails():
-
     m = get_model(io.StringIO(base_par))
 
     p = pint.models.parameter.funcParameter(
