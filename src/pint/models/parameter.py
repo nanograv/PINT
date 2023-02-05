@@ -178,7 +178,6 @@ class Parameter:
         use_alias=None,
         parent=None,
     ):
-
         self.name = name  # name of the parameter
         # The input parameter from parfile, which can be an alias of the parameter
         # TODO give a better name and make it easy to access.
@@ -817,7 +816,6 @@ class strParameter(Parameter):
     """
 
     def __init__(self, name=None, value=None, description=None, aliases=None, **kwargs):
-
         # FIXME: where did kwargs go?
         super().__init__(
             name=name,
@@ -871,7 +869,6 @@ class boolParameter(Parameter):
         aliases=None,
         **kwargs,
     ):
-
         # FIXME: where did kwargs go?
         super().__init__(
             name=name,
@@ -935,7 +932,6 @@ class intParameter(Parameter):
         aliases=None,
         **kwargs,
     ):
-
         # FIXME: where did kwargs go?
         super().__init__(
             name=name,
@@ -1977,7 +1973,6 @@ class pairParameter(floatParameter):
         aliases=[],
         **kwargs,
     ):
-
         self.index = index
         name_param = name
         self.origin_name = name

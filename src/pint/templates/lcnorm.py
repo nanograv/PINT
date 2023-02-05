@@ -496,7 +496,6 @@ def numerical_hessian(norms, delta=1e-3):
     p = norms.p.copy()
     for i in range(norms.dim):
         for j in range(i, norms.dim):
-
             norms.p[i] += delta
             norms.p[j] += delta
             hihi = norms()
