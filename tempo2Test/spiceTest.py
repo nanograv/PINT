@@ -23,8 +23,8 @@ def spice_Intplt(et, stepBitNum):
     """
     Testing interpolating spice results with two exact numbers
     """
-    step = 1.0 / 2.0 ** stepBitNum
-    numStep = 2.0 ** stepBitNum
+    step = 1.0 / 2.0**stepBitNum
+    numStep = 2.0**stepBitNum
     et0 = np.floor(et)  # The first integer before targeting time et
     et1 = np.ceil(et)  # The first integer after targeting time et
     exctNumArray = np.linspace(et0, et1, numStep)
@@ -65,8 +65,8 @@ def spkInterp(et, stepBitNum):
     calculated by bits
     step  = 1.0/2.0**stepBitNum
     """
-    step = 1.0 / 2.0 ** stepBitNum  # Step from exact point
-    numStep = 2.0 ** stepBitNum  # Number of exact point
+    step = 1.0 / 2.0**stepBitNum  # Step from exact point
+    numStep = 2.0**stepBitNum  # Number of exact point
     et0 = np.floor(et)  # Start point of interval
     etExctArray = np.linspace(et0, et0 + 1, numStep + 1)  # Exact time point array
     stateArray = []  # Earth state array for each exact point

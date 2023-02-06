@@ -25,7 +25,6 @@ __all__ = ["main"]
 
 
 def main(argv=None):
-
     parser = argparse.ArgumentParser(
         description="Use PINT to compute H-test and plot Phaseogram from a Fermi FT1 event file.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,

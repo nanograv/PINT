@@ -88,11 +88,13 @@ pint.logging.setup(level="INFO")
 # * Register the analytical derivative functions using the `.register_deriv_funcs(derivative function, parameter name)` if any.
 # * If one wants to access the attribute in the parent `TimingModel` class or from other components, please use `._parent` attribute which is a linker to the `TimingModel` class and other components.
 
+
 # %%
 class PeriodSpindown(PhaseComponent):
     """This is an example model component of pular spindown but parametrized as period."""
 
     register = True  # Flags for the model builder to find this component.
+
     # define the init function.
     # Most components do not have a parameter for input.
     def __init__(self):

@@ -12,6 +12,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Refactor `Dre` method, fix expressions for Einstein delay and post-Keplerian parameters in DD model
 - Updated contributor list (AUTHORS.rst)
 - Emit an informative warning for "MODE" statement in TOA file; Ignore "MODE 1" silently
+- Updated black version to 23.x
 ### Added
 - Documentation: Explanation for DM
 - Methods to compute dispersion slope and to convert DM using the CODATA value of DMconst
