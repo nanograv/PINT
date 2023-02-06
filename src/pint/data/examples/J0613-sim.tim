@@ -1,5 +1,4 @@
 FORMAT 1
-MODE 1
  53216.000004.1.000.000.8y.x.ff 1432.00000000 53216.12668125924253815 3.72100 gbt -fe Rcvr1_2 -be GASP -f Rcvr1_2_GASP -bw 4 -tobs 360.53 -tmplt J1744-1134.Rcvr1_2.GUPPI.8y.x.su1.13 -gof 1.13 -nbin 2048 -nch 1 -chan 0 -subint 0 -snr 18.511 -wt 2 -proc 8y -pta NANOGrav -to -0.752e-6 
  53216.000004.1.000.000.8y.x.ff 1428.00000000 53216.12668126437453608 6.79700 gbt -fe Rcvr1_2 -be GASP -f Rcvr1_2_GASP -bw 4 -tobs 360.53 -tmplt J1744-1134.Rcvr1_2.GUPPI.8y.x.su1 -gof 1 -nbin 2048 -nch 1 -chan 1 -subint 0 -snr 10.627 -wt 2 -proc 8y -pta NANOGrav -to -0.752e-6 
  53216.000004.1.000.000.8y.x.ff 1424.00000000 53216.12668126953212067 8.31800 gbt -fe Rcvr1_2 -be GASP -f Rcvr1_2_GASP -bw 4 -tobs 360.53 -tmplt J1744-1134.Rcvr1_2.GUPPI.8y.x.su0.964 -gof 0.964 -nbin 2048 -nch 1 -chan 2 -subint 0 -snr 7.6733 -wt 2 -proc 8y -pta NANOGrav -to -0.752e-6 

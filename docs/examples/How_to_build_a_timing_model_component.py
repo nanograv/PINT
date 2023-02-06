@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.8
+#       jupytext_version: 1.14.4
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -88,11 +88,13 @@ pint.logging.setup(level="INFO")
 # * Register the analytical derivative functions using the `.register_deriv_funcs(derivative function, parameter name)` if any.
 # * If one wants to access the attribute in the parent `TimingModel` class or from other components, please use `._parent` attribute which is a linker to the `TimingModel` class and other components.
 
+
 # %%
 class PeriodSpindown(PhaseComponent):
     """This is an example model component of pular spindown but parametrized as period."""
 
     register = True  # Flags for the model builder to find this component.
+
     # define the init function.
     # Most components do not have a parameter for input.
     def __init__(self):
@@ -146,7 +148,7 @@ class PeriodSpindown(PhaseComponent):
         # Check required parameters, since P1 is not required, we are not checking it here
         for param in ["P0"]:
             if getattr(self, param) is None:
-                raise ValueError("Spindown period model needs {}".format(param))
+                raise ValueError(f"Spindown period model needs {param}")
 
     # One can always setup properties for updating attributes automatically.
     @property
@@ -238,8 +240,8 @@ par_string = """
              """
 
 # %%
-from pint.models import get_model
 import io
+from pint.models import get_model
 
 # %% [markdown]
 # ### Load the timing model with new parameterization.
@@ -290,7 +292,7 @@ plt.errorbar(
     yerr=toas.get_errors().to_value(u.us),
     fmt=".",
 )
-plt.title("%s Pre-Fit Timing Residuals" % model.PSR.value)
+plt.title(f"{model.PSR.value} Pre-Fit Timing Residuals")
 plt.xlabel("MJD")
 plt.ylabel("Residual (us)")
 plt.grid()
@@ -311,7 +313,7 @@ plt.errorbar(
     yerr=toas.get_errors().to_value(u.us),
     fmt=".",
 )
-plt.title("%s Pre-Fit Timing Residuals" % model.PSR.value)
+plt.title(f"{model.PSR.value} Pre-Fit Timing Residuals")
 plt.xlabel("MJD")
 plt.ylabel("Residual (us)")
 plt.grid()

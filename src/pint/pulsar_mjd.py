@@ -27,10 +27,7 @@ was observing the sky at the moment a leap second was introduced.
 .. _leap_smear: https://developers.google.com/time/smear
 """
 
-try:
-    import erfa
-except ImportError:
-    import astropy._erfa as erfa
+import erfa
 import astropy.time
 import astropy.units as u
 import numpy as np

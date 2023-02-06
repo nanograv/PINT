@@ -568,6 +568,11 @@
             486989.4,
             4900430.8
         ],
+        "clock_fmt": "tempo2",
+        "clock_file": [
+            "leap2effix.clk",
+            "effix2gps.clk"
+        ],
         "origin": "The Large European Array for Pulsars.\nThis is the same as the position of the Effelsberg radio telescope.\nImported from TEMPO2 observatories.dat 2021 June 7."
     },
     "jodrellm4": {
@@ -1373,5 +1378,14 @@
             4449633.220012489
         ],
         "origin": "Imported from TEMPO obsys.dat 2021 June 8."
-    }
+    },
+	"hess": {
+		"include_bipm": false,
+		"itrf_xyz": [
+			5622462.3793,
+			1665449.2317,
+			-2505096.8054
+		],
+		"origin": "H.E.S.S., the High Energy Stereoscopic System, an Imaging Atmospheric Cherenkov Telescope.\nThese coordinates are provided (from geodetic coordinates : lat = 23°16'18''S, lon = 16°30'00''E at 1800m asl) by the Maxime Regeard and Arache Djannati-Atai on behalf of the H.E.S.S. Collabotation, 2023 January 18."
+	}
 }

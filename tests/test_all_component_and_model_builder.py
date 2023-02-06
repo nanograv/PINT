@@ -383,6 +383,7 @@ def test_model_from_par():
 
 def test_model_from_par_hassubset():
     """Test Get model from test par file with a subset component."""
+
     # Define a subset parameter model that is registered. So the metaclass can
     # catch it.
     class SubsetModel2(PhaseComponent):
@@ -402,6 +403,7 @@ def test_model_from_par_hassubset():
 
 
 bad_trouble = ["J1923+2515_NANOGrav_9yv1.gls.par", "J1744-1134.basic.ecliptic.par"]
+
 
 # Test all the parameters.
 @pytest.mark.parametrize("parfile", glob(join(datadir, "*.par")))

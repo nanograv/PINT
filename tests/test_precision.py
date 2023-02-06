@@ -4,10 +4,7 @@ import sys
 from datetime import datetime
 from decimal import Decimal
 
-try:
-    import erfa
-except ImportError:
-    import astropy._erfa as erfa
+import erfa
 import astropy.units as u
 import numpy as np
 import pytest
