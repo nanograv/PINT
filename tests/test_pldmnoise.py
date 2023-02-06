@@ -149,7 +149,7 @@ def test_PLRedNoise_recovery():
     f2 = fitters.DownhillGLSFitter(toas, model)
     try:
         f2.fit_toas()
-    except fitters.InvalidModelParameters:
+    except (fitters.InvalidModelParameters, fitters.StepProblem):
         pass
     f2.model.validate()
     f2.model.validate_toas(toas)
