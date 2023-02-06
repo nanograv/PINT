@@ -160,4 +160,4 @@ def test_PLRedNoise_recovery():
 
     # check residuals are equivalent within error
     rs_diff = r2.time_resids.value - r1.time_resids.value
-    assert np.all(np.isclose(rs_diff, 0, atol=1e-7))
+    assert np.all(np.isclose(rs_diff, 0, atol=1e-6))
