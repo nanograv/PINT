@@ -714,7 +714,6 @@ class LCFitter:
     def plot_ebands(
         self, nband=4, fignum=2, plot_zoom=True, equalize_y=False, **plot_kwargs
     ):
-
         import pylab as pl
 
         pl.close(fignum)
@@ -887,7 +886,6 @@ def hessian(m, mf, *args, **kwargs):
         for j in range(
             i, len(p)
         ):  # Second partials by finite difference; could be done analytically in a future revision
-
             xhyh, xhyl, xlyh, xlyl = p.copy(), p.copy(), p.copy(), p.copy()
             xdelt = delt if p[i] >= 0 else -delt
             ydelt = delt if p[j] >= 0 else -delt

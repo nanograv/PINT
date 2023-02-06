@@ -419,7 +419,6 @@ class emcee_fitter(Fitter):
 
 
 def main(argv=None):
-
     parser = argparse.ArgumentParser(
         description="PINT tool for MCMC optimization of timing models using event data.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
