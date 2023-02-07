@@ -26,7 +26,10 @@ __all__ = ["main"]
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Command line interfact to PINT")
+    parser = argparse.ArgumentParser(
+        description="Command line interfact to PINT",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     parser.add_argument("parfile", help="par file to read model from")
     parser.add_argument("timfile", help="TOA file name")
     parser.add_argument(
