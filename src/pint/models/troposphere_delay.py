@@ -154,7 +154,6 @@ class TroposphereDelay(DelayComponent):
 
         # if not correcting for troposphere, return the default zero delay
         if self.CORRECT_TROPOSPHERE.value:
-
             radec = self._get_target_skycoord()
 
             # the only python for loop is to iterate through the unique observatory locations

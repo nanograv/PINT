@@ -298,7 +298,7 @@ class emcee_fitter(Fitter):
         # the posterior if the prior is not finite
         lnprior = self.lnprior(theta)
         if not np.isfinite(lnprior):
-            return -np.inf
+            return -np.inf, -np.inf, -np.inf
 
         # Call PINT to compute the phases
         phases = self.get_event_phases()
@@ -312,7 +312,7 @@ class emcee_fitter(Fitter):
                 log.info("  %8s: %25.15g" % (name, val))
             maxpost = lnpost
             self.maxpost_fitvals = theta
-        return lnpost
+        return lnpost, lnprior, lnlikelihood
 
     def minimize_func(self, theta):
         """
@@ -419,7 +419,6 @@ class emcee_fitter(Fitter):
 
 
 def main(argv=None):
-
     parser = argparse.ArgumentParser(
         description="PINT tool for MCMC optimization of timing models using event data.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -517,6 +516,18 @@ def main(argv=None):
     parser.add_argument(
         "-q", "--quiet", default=0, action="count", help="Decrease output verbosity"
     )
+    parser.add_argument(
+        "--multicore",
+        default=False,
+        action="store_true",
+        help="Run event optimize on multiple cores",
+    )
+    parser.add_argument(
+        "--ncores",
+        type=int,
+        default=8,
+        help="The number of cores for parallel processing",
+    )
 
     args = parser.parse_args(argv)
     pint.logging.setup(
@@ -547,6 +558,7 @@ def main(argv=None):
     minWeight = args.minWeight
     do_opt_first = args.doOpt
     wgtexp = args.wgtexp
+    ncores = args.ncores
 
     # Read in initial model
     modelin = pint.models.get_model(parfile)
@@ -750,22 +762,35 @@ def main(argv=None):
 
     import emcee
 
+    dtype = [("lnprior", float), ("lnlikelihood", float)]
+
     # Following are for parallel processing tests...
-    if 0:
+    if args.multicore:
+        try:
+            import pathos.multiprocessing as mp
 
-        def unwrapped_lnpost(theta, ftr=ftr):
-            return ftr.lnposterior(theta)
+            def unwrapped_lnpost(theta):
+                return ftr.lnposterior(theta)
 
-        import pathos.multiprocessing as mp
-
-        pool = mp.ProcessPool(nodes=8)
-        sampler = emcee.EnsembleSampler(
-            nwalkers, ndim, unwrapped_lnpost, pool=pool, args=[ftr]
-        )
+            with mp.ProcessPool(nodes=ncores) as pool:
+                sampler = emcee.EnsembleSampler(
+                    nwalkers, ndim, unwrapped_lnpost, blobs_dtype=dtype, pool=pool
+                )
+                sampler.run_mcmc(pos, nsteps)
+            pool.close()
+            pool.join()
+        except ImportError:
+            log.info("Pathos module not available, using single core")
+            sampler = emcee.EnsembleSampler(
+                nwalkers, ndim, ftr.lnposterior, blobs_dtype=dtype
+            )
+            sampler.run_mcmc(pos, nsteps)
     else:
-        sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior)
-    # The number is the number of points in the chain
-    sampler.run_mcmc(pos, nsteps)
+        sampler = emcee.EnsembleSampler(
+            nwalkers, ndim, ftr.lnposterior, blobs_dtype=dtype
+        )
+        # The number is the number of points in the chain
+        sampler.run_mcmc(pos, nsteps)
 
     def chains_to_dict(names, sampler):
         chains = [sampler.chain[:, :, ii].T for ii in range(len(names))]
@@ -791,6 +816,16 @@ def main(argv=None):
 
     # Make the triangle plot.
     samples = sampler.chain[:, burnin:, :].reshape((-1, ndim))
+
+    blobs = sampler.get_blobs()
+    lnprior_samps = blobs["lnprior"]
+    lnlikelihood_samps = blobs["lnlikelihood"]
+    lnpost_samps = lnprior_samps + lnlikelihood_samps
+    ind = np.unravel_index(
+        np.argmax(lnpost_samps[:][burnin:]), lnpost_samps[:][burnin:].shape
+    )
+    ftr.maxpost_fitvals = [chains[ii][burnin:][ind] for ii in ftr.fitkeys]
+
     try:
         import corner
 

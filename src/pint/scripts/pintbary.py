@@ -19,7 +19,8 @@ __all__ = ["main"]
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="PINT tool for command-line barycentering calculations."
+        description="PINT tool for command-line barycentering calculations.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
     parser.add_argument("time", help="MJD (UTC, by default)")

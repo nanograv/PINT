@@ -5,6 +5,7 @@ import numpy as np
 import astropy.units as u
 from pint.phase import Phase
 
+
 # modified from @mhvk's test_phase_class.py
 def assert_equal(first, second):
     assert type(first) is type(second)
