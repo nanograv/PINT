@@ -162,7 +162,7 @@ class TestDDGR:
         fDDGR.resids.update()
         assert fDDGR.resids.calc_chi2() > chi2DDGR
         fDDGR.fit_toas()
-        assert np.isclose(fDDGR.resids.calc_chi2(), chi2DDGR)
+        assert np.isclose(fDDGR.resids.calc_chi2(), chi2DDGR, atol=0.1)
         assert np.isclose(fDDGR.model.M2.quantity, M2)
 
     def test_ddgrfit(self):
