@@ -6,31 +6,33 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 
 ## Unreleased
 ### Changed
-- Changed minimum supported version of scipy to 1.4.1
-- Moved DMconst from `pint.models.dispersion_model` to `pint` to avoid circular imports
-- Removed references to `astropy._erfa` (removed since astropy 4.2)
+- Changed minimum supported version of `scipy` to 1.4.1
+- Moved `DMconst` from `pint.models.dispersion_model` to `pint` to avoid circular imports
+- Removed references to `astropy._erfa` (removed since `astropy` 4.2)
 - Refactor `Dre` method, fix expressions for Einstein delay and post-Keplerian parameters in DD model
 - Updated contributor list (AUTHORS.rst)
 - Emit an informative warning for "MODE" statement in TOA file; Ignore "MODE 1" silently
-- Version of sphinx-rtd-them updated in requirements_dev.txt 
-- Updated black version to 23.x
+- Version of `sphinx-rtd-theme` updated in `requirements_dev.txt` 
+- Updated `black` version to 23.x
 ### Added
 - Documentation: Explanation for DM
 - Methods to compute dispersion slope and to convert DM using the CODATA value of DMconst
 - `TimingModel.total_dispersion_slope` method
 - Explicit discussion of DT92 convention to DDK model
-- H.E.S.S. telescope to the list of known observatories
+- HESS and ORT telescopes to the list of known observatories
 - Documentation: making TOAs from array of times added to HowTo
 - Method to make TOAs from an array of times
 - Clock correction for LEAP
 - Wideband TOA simulation feature in `pint.simulation` and `zima`
 - ELL1k timing model
 - Test for `MCMCFitter`
+- Added multiprocessing capability to `event_optimize`
 - Can adjust or merge TOAs using '+'
 ### Fixed
 - Broken notebooks CI test
 - BIPM correction for simulated TOAs
 - Added try/except to `test_pldmnoise.py`/`test_PLRedNoise_recovery` to avoid exceptions during CI
+- Import for `longdouble2str` in `get_tempo_result`
 ### Removed
 
 ## [0.9.3] 2022-12-16
