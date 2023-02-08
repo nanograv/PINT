@@ -253,9 +253,14 @@
             5797947.77,
             2073243.16
         ],
-        "origin": "The Giant Metrewave Radio Telescope.\nThe origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
+        "origin": "The Giant Metre-wave Radio Telescope.\nThe origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\nGMRT does not need clock files as the data is recorded against UTC(gps)."
     },
     "ort": {
+        "aliases" : [
+            "or"
+        ],
+        "clock_fmt": "tempo2",
+        "clock_file": "",
         "itrf_xyz": [
             1442712.95,
             6087044.73,
