@@ -29,6 +29,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Broken notebooks CI test
 - BIPM correction for simulated TOAs
 - Added try/except to `test_pldmnoise.py`/`test_PLRedNoise_recovery` to avoid exceptions during CI
+- Import for `longdouble2str` in `get_tempo_result`
 ### Removed
 
 ## [0.9.3] 2022-12-16
