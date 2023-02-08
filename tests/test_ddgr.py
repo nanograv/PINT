@@ -166,7 +166,6 @@ class TestDDGR:
         assert np.isclose(fDDGR.model.M2.quantity, M2)
 
     def test_ddgrfit(self):
-
         t = pint.simulation.make_fake_toas_uniform(
             55000, 57000, 100, model=self.mDDGR, error=1 * u.us, add_noise=True
         )
