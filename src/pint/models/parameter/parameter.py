@@ -161,6 +161,7 @@ class Parameter:
         self.valueType = None
         self.special_arg = []
         self.use_alias = use_alias
+        self.is_mask = False
 
     @property
     def quantity(self):
