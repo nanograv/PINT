@@ -8,5 +8,6 @@ from pint.models.parameter.parameter import (
     floatParameter,
     intParameter,
     strParameter,
+    parfile_formats,
 )
 from pint.models.parameter.prefix_parameter import prefixParameter
