@@ -4,7 +4,7 @@ import astropy.time as time
 import astropy.units as u
 import numpy as np
 
-from pint.models.parameter.parameter import _parfile_formats, floatParameter
+from pint.models.parameter.parameter import parfile_formats, floatParameter
 from pint.observatory import get_observatory
 from pint.pulsar_mjd import str2longdouble, time_to_mjd_string
 from pint.toa_select import TOASelect
@@ -289,9 +289,9 @@ class maskParameter(floatParameter):
 
     def as_parfile_line(self, format="pint"):
         assert (
-            format.lower() in _parfile_formats
+            format.lower() in parfile_formats
         ), "parfile format must be one of %s" % ", ".join(
-            [f'"{x}"' for x in _parfile_formats]
+            [f'"{x}"' for x in parfile_formats]
         )
 
         if self.quantity is None:

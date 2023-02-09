@@ -46,7 +46,7 @@ from pint.utils import split_prefixed_name
 
 # potential parfile formats
 # in one place for consistency
-_parfile_formats = ["pint", "tempo", "tempo2"]
+parfile_formats = ["pint", "tempo", "tempo2"]
 
 
 def _identity_function(x):
@@ -415,9 +415,9 @@ class Parameter:
         .. [1] https://github.com/nanograv/PINT/wiki/PINT-vs.-TEMPO%282%29-par-file-changes
         """
         assert (
-            format.lower() in _parfile_formats
+            format.lower() in parfile_formats
         ), "parfile format must be one of %s" % ", ".join(
-            [f'"{x}"' for x in _parfile_formats]
+            [f'"{x}"' for x in parfile_formats]
         )
 
         # Don't print unset parameters
