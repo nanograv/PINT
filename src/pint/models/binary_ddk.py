@@ -5,9 +5,39 @@ from astropy import units as u
 from loguru import logger as log
 
 from pint.models.binary_dd import BinaryDD
-from pint.models.parameter import boolParameter, floatParameter
+from pint.models.parameter import boolParameter, floatParameter, funcParameter
 from pint.models.stand_alone_psr_binaries.DDK_model import DDKmodel
 from pint.models.timing_model import MissingParameter, TimingModelError
+
+
+def _convert_kin(kin):
+    """Convert DDK KIN to/from IAU/DT92 conventions
+
+    Parameters
+    ----------
+    kin : astropy.units.Quantity
+
+    Returns
+    -------
+    astropy.units.Quantity
+        Value returned in other convention
+    """
+    return 180 * u.deg - kin
+
+
+def _convert_kom(kom):
+    """Convert DDK KOM to/from IAU/DT92 conventions
+
+    Parameters
+    ----------
+    kom : astropy.units.Quantity
+
+    Returns
+    -------
+    astropy.units.Quantity
+        Value returned in other convention
+    """
+    return 90 * u.deg - kom
 
 
 class BinaryDDK(BinaryDD):
@@ -103,6 +133,25 @@ class BinaryDDK(BinaryDD):
         )
         self.remove_param("SINI")
         self.internal_params += ["PMLONG_DDK", "PMLAT_DDK"]
+
+        self.add_param(
+            funcParameter(
+                name="KINIAU",
+                description="Inclination angle in the IAU convention",
+                params=("KIN",),
+                func=_convert_kin,
+                units="deg",
+            )
+        )
+        self.add_param(
+            funcParameter(
+                name="KOMIAU",
+                description="The longitude of the ascending node in the IAU convention",
+                params=("KOM",),
+                func=_convert_kom,
+                units="deg",
+            )
+        )
 
     @property
     def PMLONG_DDK(self):

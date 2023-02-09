@@ -82,7 +82,7 @@ class BinaryDD(PulsarBinary):
         self.check_required_params(["T0", "A1"])
         # If any *DOT is set, we need T0
         for p in ("PBDOT", "OMDOT", "EDOT", "A1DOT"):
-            if getattr(self, p).value is None:
+            if hasattr(self, p) and getattr(self, p).value is None:
                 getattr(self, p).set("0")
                 getattr(self, p).frozen = True
 

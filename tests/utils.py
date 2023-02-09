@@ -1,5 +1,6 @@
 """Utility functions for the tests"""
 import warnings
+from pint.models.parameter import funcParameter
 
 
 def verify_stand_alone_binary_parameter_updates(m):
@@ -45,10 +46,11 @@ def verify_stand_alone_binary_parameter_updates(m):
             continue
         pint_par = getattr(m, pint_par_name)
         if pint_par.value is not None:
-            if hasattr(standalone_par, "value"):
-                # Test for astropy quantity
-                assert pint_par.value == standalone_par.value
-            else:
-                # Test for non-astropy quantity parameters.
-                assert pint_par.value == standalone_par
+            if not isinstance(pint_par, funcParameter):
+                if hasattr(standalone_par, "value"):
+                    # Test for astropy quantity
+                    assert pint_par.value == standalone_par.value
+                else:
+                    # Test for non-astropy quantity parameters.
+                    assert pint_par.value == standalone_par
     return

@@ -5,7 +5,12 @@ from astropy.time import Time
 
 from loguru import logger as log
 
-from pint.models.parameter import MJDParameter, floatParameter, intParameter
+from pint.models.parameter import (
+    MJDParameter,
+    floatParameter,
+    intParameter,
+    funcParameter,
+)
 from pint.models.pulsar_binary import PulsarBinary
 from pint.models.stand_alone_psr_binaries import binary_orbits as bo
 from pint.models.stand_alone_psr_binaries.ELL1_model import ELL1model
@@ -13,6 +18,26 @@ from pint.models.stand_alone_psr_binaries.ELL1H_model import ELL1Hmodel
 from pint.models.stand_alone_psr_binaries.ELL1k_model import ELL1kmodel
 from pint.models.timing_model import MissingParameter
 from pint.utils import taylor_horner_deriv
+
+
+def _eps_to_e(eps1, eps2):
+    return np.sqrt(eps1**2 + eps2**2)
+
+
+def _eps_to_om(eps1, eps2):
+    OM = np.arctan2(eps1, eps2)
+    if OM < 0:
+        OM += 360 * u.deg
+    return OM
+
+
+def _tasc_to_T0(TASC, PB, eps1, eps2):
+    OM = np.arctan2(eps1, eps2)
+    if OM < 0:
+        OM += 360 * u.deg
+    return TASC + ((PB / 2 / np.pi) * OM).to(
+        u.d, equivalencies=u.dimensionless_angles()
+    )
 
 
 class BinaryELL1(PulsarBinary):
@@ -94,6 +119,38 @@ class BinaryELL1(PulsarBinary):
         self.remove_param("OM")
         self.remove_param("T0")
 
+        self.add_param(
+            funcParameter(
+                name="ECC",
+                units="",
+                aliases=["E"],
+                description="Eccentricity",
+                params=("EPS1", "EPS2"),
+                func=_eps_to_e,
+            )
+        )
+        self.add_param(
+            funcParameter(
+                name="OM",
+                units=u.deg,
+                description="Longitude of periastron",
+                long_double=True,
+                params=("EPS1", "EPS2"),
+                func=_eps_to_om,
+            )
+        )
+        # don't implement T0 yet since that is a MJDparameter at base
+        # and our funcParameters don't support that yet
+        # self.add_param(
+        #     funcParameter(
+        #         name="T0",
+        #         description="Epoch of periastron passage",
+        #         time_scale="tdb",
+        #         params=("TASC", "PB", "EPS1", "EPS2"),
+        #         func=_tasc_to_T0,
+        #     )
+        # )
+
         self.warn_default_params = []
 
     def validate(self):
@@ -132,7 +189,8 @@ class BinaryELL1(PulsarBinary):
             new_epoch = Time(new_epoch, scale="tdb", format="mjd", precision=9)
 
         # Get PB and PBDOT from model
-        if self.PB.quantity is not None:
+        # make sure that the PB is the base parameter
+        if self.PB.quantity is not None and not isinstance(self.PB, funcParameter):
             PB = self.PB.quantity
             if self.PBDOT.quantity is not None:
                 PBDOT = self.PBDOT.quantity
