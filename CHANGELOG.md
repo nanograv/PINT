@@ -30,6 +30,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Can merge TOAs using '+' operator; in-place merge using '+=' operator
 - `funcParameters` defined as functions operating on other parameters
 - Option to save `emcee` backend chains in `event_optimize`
+- Documentation on how to extract a covariance matrix
 ### Fixed
 - Broken notebooks CI test
 - BIPM correction for simulated TOAs
