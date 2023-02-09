@@ -1,11 +1,11 @@
+from pint.models.parameter.pair_parameter import pairParameter
 from pint.models.parameter.parameter import (
+    AngleParameter,
+    MJDParameter,
+    boolParameter,
     floatParameter,
     strParameter,
-    boolParameter,
-    MJDParameter,
-    AngleParameter,
 )
-from pint.models.parameter.pair_parameter import pairParameter
 from pint.utils import split_prefixed_name
 
 

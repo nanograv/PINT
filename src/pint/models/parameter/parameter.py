@@ -28,7 +28,6 @@ import astropy.time as time
 import astropy.units as u
 import numpy as np
 from astropy.coordinates.angles import Angle
-
 from loguru import logger as log
 
 from pint import pint_units
@@ -36,15 +35,14 @@ from pint.models import priors
 from pint.pulsar_mjd import (
     Time,
     data2longdouble,
-    quantity2longdouble_withunit,
     fortran_float,
+    quantity2longdouble_withunit,
     str2longdouble,
     time_from_longdouble,
     time_to_longdouble,
     time_to_mjd_string,
 )
 from pint.utils import split_prefixed_name
-
 
 # potential parfile formats
 # in one place for consistency

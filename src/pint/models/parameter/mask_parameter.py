@@ -1,11 +1,13 @@
-from pint.models.parameter.parameter import floatParameter, _parfile_formats
-from pint.observatory import get_observatory
-from pint.toa_select import TOASelect
-from pint.pulsar_mjd import str2longdouble, time_to_mjd_string
+import numbers
+
 import astropy.time as time
 import astropy.units as u
-import numbers
 import numpy as np
+
+from pint.models.parameter.parameter import _parfile_formats, floatParameter
+from pint.observatory import get_observatory
+from pint.pulsar_mjd import str2longdouble, time_to_mjd_string
+from pint.toa_select import TOASelect
 
 
 def _get_observatory_name(o):
