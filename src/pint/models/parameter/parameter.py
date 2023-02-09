@@ -179,9 +179,8 @@ class Parameter:
         if val is None:
             if hasattr(self, "quantity") and self.quantity is not None:
                 raise ValueError("Setting an existing value to None is not allowed.")
-            else:
-                self._quantity = val
-                return
+            self._quantity = val
+            return
         self._quantity = self._set_quantity(val)
 
     @property
@@ -192,10 +191,7 @@ class Parameter:
         a :class:`~astropy.units.Quantity` can be provided, which will be converted
         to ``self.units``.
         """
-        if self._quantity is None:
-            return None
-        else:
-            return self._get_value(self._quantity)
+        return None if self._quantity is None else self._get_value(self._quantity)
 
     @value.setter
     def value(self, val):
@@ -222,20 +218,19 @@ class Parameter:
     @units.setter
     def units(self, unt):
         # Check if this is the first time set units and check compatibility
-        if hasattr(self, "quantity"):
-            if self.units is not None:
-                if unt != self.units:
-                    wmsg = "Parameter " + self.name + " default units has been "
-                    wmsg += " reset to " + str(unt) + " from " + str(self.units)
-                    log.warning(wmsg)
-                try:
-                    if hasattr(self.quantity, "unit"):
-                        self.quantity.to(unt)
-                except ValueError:
-                    log.warning(
-                        "The value unit is not compatible with"
-                        " parameter units right now."
-                    )
+        if hasattr(self, "quantity") and self.units is not None:
+            if unt != self.units:
+                wmsg = f"Parameter {self.name} default units has been "
+                wmsg += f" reset to {str(unt)} from {str(self.units)}"
+                log.warning(wmsg)
+            try:
+                if hasattr(self.quantity, "unit"):
+                    self.quantity.to(unt)
+            except ValueError:
+                log.warning(
+                    "The value unit is not compatible with"
+                    " parameter units right now."
+                )
 
         if unt is None:
             self._units = None
@@ -272,12 +267,11 @@ class Parameter:
                 raise ValueError(
                     "Setting an existing uncertainty to None is not allowed."
                 )
-            else:
-                self._uncertainty = self._uncertainty_value = None
-                return
+            self._uncertainty = self._uncertainty_value = None
+            return
         val = self._set_uncertainty(val)
 
-        if not val >= 0:
+        if val < 0:
             raise ValueError(f"Uncertainties cannot be negative but {val} was supplied")
             # self.uncertainty_value = np.abs(self.uncertainty_value)
 
@@ -382,16 +376,16 @@ class Parameter:
         return str(uncertainty.to(self.units).value)
 
     def __repr__(self):
-        out = "{0:16s}{1:20s}".format(self.__class__.__name__ + "(", self.name)
+        out = "{0:16s}{1:20s}".format(f"{self.__class__.__name__}(", self.name)
         if self.quantity is None:
             out += "UNSET"
             return out
         out += "{:17s}".format(self.str_quantity(self.quantity))
         if self.units is not None:
-            out += " (" + str(self.units) + ")"
+            out += f" ({str(self.units)})"
         if self.uncertainty is not None and isinstance(self.value, numbers.Number):
-            out += " +/- " + str(self.uncertainty.to(self.units))
-        out += " frozen={}".format(self.frozen)
+            out += f" +/- {str(self.uncertainty.to(self.units))}"
+        out += f" frozen={self.frozen}"
         out += ")"
         return out
 
@@ -399,7 +393,7 @@ class Parameter:
         """Return a help line containing parameter name, description and units."""
         out = "%-12s %s" % (self.name, self.description)
         if self.units is not None:
-            out += " (" + str(self.units) + ")"
+            out += f" ({str(self.units)})"
         return out
 
     def as_parfile_line(self, format="pint"):
@@ -409,7 +403,7 @@ class Parameter:
         ----------
         format : str, optional
              Parfile output format. PINT outputs in 'tempo', 'tempo2' and 'pint'
-             formats. The defaul format is `pint`.
+             formats. The default format is `pint`.
 
         Returns
         -------
@@ -424,28 +418,24 @@ class Parameter:
         assert (
             format.lower() in _parfile_formats
         ), "parfile format must be one of %s" % ", ".join(
-            ['"%s"' % x for x in _parfile_formats]
+            [f'"{x}"' for x in _parfile_formats]
         )
 
         # Don't print unset parameters
         if self.quantity is None:
             return ""
-        if self.use_alias is None:
-            name = self.name
-        else:
-            name = self.use_alias
-
+        name = self.name if self.use_alias is None else self.use_alias
         # special cases for parameter names that change depending on format
-        if self.name == "CHI2" and not (format.lower() == "pint"):
+        if self.name == "CHI2" and format.lower() != "pint":
             # no CHI2 for TEMPO/TEMPO2
             return ""
-        elif self.name == "SWM" and not (format.lower() == "pint"):
+        elif self.name == "SWM" and format.lower() != "pint":
             # no SWM for TEMPO/TEMPO2
             return ""
-        elif self.name == "A1DOT" and not (format.lower() == "pint"):
+        elif self.name == "A1DOT" and format.lower() != "pint":
             # change to XDOT for TEMPO/TEMPO2
             name = "XDOT"
-        elif self.name == "STIGMA" and not (format.lower() == "pint"):
+        elif self.name == "STIGMA" and format.lower() != "pint":
             # change to VARSIGMA for TEMPO/TEMPO2
             name = "VARSIGMA"
 
@@ -459,22 +449,22 @@ class Parameter:
                 )
                 # change ECL value to IERS2003 for TEMPO2
                 line = "%-15s %25s" % (name, "IERS2003")
-        elif self.name == "NHARMS" and not (format.lower() == "pint"):
+        elif self.name == "NHARMS" and format.lower() != "pint":
             # convert NHARMS value to int
             line = "%-15s %25d" % (name, self.value)
         elif self.name == "KIN" and format.lower() == "tempo":
             # convert from DT92 convention to IAU
             line = "%-15s %25s" % (name, self.str_quantity(180 * u.deg - self.quantity))
             log.warning(
-                f"Changing KIN from DT92 convention to IAU: this will not be readable by PINT"
+                "Changing KIN from DT92 convention to IAU: this will not be readable by PINT"
             )
         elif self.name == "KOM" and format.lower() == "tempo":
             # convert from DT92 convention to IAU
             line = "%-15s %25s" % (name, self.str_quantity(90 * u.deg - self.quantity))
             log.warning(
-                f"Changing KOM from DT92 convention to IAU: this will not be readable by PINT"
+                "Changing KOM from DT92 convention to IAU: this will not be readable by PINT"
             )
-        elif self.name == "DMDATA" and not format.lower() == "pint":
+        elif self.name == "DMDATA" and format.lower() != "pint":
             line = "%-15s %d" % (self.name, int(self.value))
 
         if self.uncertainty is not None:
@@ -487,7 +477,7 @@ class Parameter:
 
         if self.name == "T2CMETHOD" and format.lower() == "tempo2":
             # comment out T2CMETHOD for TEMPO2
-            line = "#" + line
+            line = f"#{line}"
         return line + "\n"
 
     def from_parfile_line(self, line):
@@ -534,10 +524,10 @@ class Parameter:
                 try:
                     str2longdouble(k[2])
                     ucty = k[2]
-                except ValueError:
+                except ValueError as e:
                     errmsg = f"Unidentified string '{k[2]}' in"
-                    errmsg += f" parfile line " + " ".join(k)
-                    raise ValueError(errmsg)
+                    errmsg += " parfile line " + " ".join(k)
+                    raise ValueError(errmsg) from e
 
             if len(k) >= 4:
                 ucty = k[3]
@@ -720,15 +710,11 @@ class floatParameter(Parameter):
         except AttributeError:
             # This will happen if the input value did not have units
             num_value = setfunc_no_unit(val)
-            if self.unit_scale:
-                # For some parameters, if the value is above a threshold, it is assumed to be in units of scale_factor
-                # e.g. "PBDOT 7.2" is interpreted as "PBDOT 7.2E-12", since the scale_factor is 1E-12 and the scale_threshold is 1E-7
-                if np.abs(num_value) > np.abs(self.scale_threshold):
-                    log.info(
-                        "Parameter %s's value will be scaled by %s"
-                        % (self.name, str(self.scale_factor))
-                    )
-                    num_value *= self.scale_factor
+            if self.unit_scale and np.abs(num_value) > np.abs(self.scale_threshold):
+                log.info(
+                    f"Parameter {self.name}'s value will be scaled by {str(self.scale_factor)}"
+                )
+                num_value *= self.scale_factor
             result = num_value * self.units
 
         return result
@@ -739,18 +725,17 @@ class floatParameter(Parameter):
     def str_quantity(self, quan):
         """Quantity as a string (for floating-point values)."""
         v = quan.to(self.units).value
-        if self._long_double:
-            if not isinstance(v, np.longdouble):
-                raise ValueError(
-                    "Parameter is supposed to contain long double values but contains a float"
-                )
+        if self._long_double and not isinstance(v, np.longdouble):
+            raise ValueError(
+                "Parameter is supposed to contain long double values but contains a float"
+            )
         return str(v)
 
     def _get_value(self, quan):
         """Convert to appropriate units and extract value."""
         if quan is None:
             return None
-        elif isinstance(quan, float) or isinstance(quan, np.longdouble):
+        elif isinstance(quan, (float, np.longdouble)):
             return quan
         else:
             return quan.to(self.units).value
@@ -914,15 +899,14 @@ class intParameter(Parameter):
         if isinstance(val, str):
             try:
                 ival = int(val)
-            except ValueError:
+            except ValueError as e:
                 fval = float(val)
                 ival = int(fval)
                 if ival != fval and abs(fval) < 2**52:
                     raise ValueError(
                         f"Value {val} does not appear to be an integer "
                         f"but parameter {self.name} stores only integers."
-                    )
-            return ival
+                    ) from e
         else:
             ival = int(val)
             fval = float(val)
@@ -931,7 +915,8 @@ class intParameter(Parameter):
                     f"Value {val} does not appear to be an integer "
                     f"but parameter {self.name} stores only integers."
                 )
-            return ival
+
+        return ival
 
 
 class MJDParameter(Parameter):
@@ -1061,7 +1046,7 @@ class MJDParameter(Parameter):
             result = val
         else:
             raise ValueError(
-                "MJD parameter can not accept " + type(val).__name__ + "format."
+                f"MJD parameter can not accept {type(val).__name__}format."
             )
         return result
 
@@ -1136,7 +1121,7 @@ class AngleParameter(Parameter):
         }
         # Check unit format
         if units.lower() not in self.unit_identifier.keys():
-            raise ValueError("Unidentified unit " + units)
+            raise ValueError(f"Unidentified unit {units}")
 
         self.unitsuffix = self.unit_identifier[units.lower()][1]
         self.value_type = Angle
@@ -1175,7 +1160,7 @@ class AngleParameter(Parameter):
             result = Angle(val.to(self.units))
         else:
             raise ValueError(
-                "Angle parameter can not accept " + type(val).__name__ + "format."
+                f"Angle parameter can not accept {type(val).__name__}format."
             )
         return result
 
@@ -1191,7 +1176,7 @@ class AngleParameter(Parameter):
             result = Angle(val.to(self.unit_identifier[self._str_unit.lower()][2]))
         else:
             raise ValueError(
-                "Angle parameter can not accept " + type(val).__name__ + "format."
+                f"Angle parameter can not accept {type(val).__name__}format."
             )
         return result
 
@@ -1204,11 +1189,10 @@ class AngleParameter(Parameter):
 
     def _print_uncertainty(self, unc):
         """This is a function for printing out the uncertainty"""
-        if ":" in self._str_unit:
-            angle_arcsec = unc.to(u.arcsec)
-            if self.units == u.hourangle:
-                # Triditionaly hourangle uncertainty is in hourangle seconds
-                angle_arcsec /= 15.0
-            return angle_arcsec.to_string(decimal=True, precision=20)
-        else:
+        if ":" not in self._str_unit:
             return unc.to_string(decimal=True, precision=20)
+        angle_arcsec = unc.to(u.arcsec)
+        if self.units == u.hourangle:
+            # Traditionally, hourangle uncertainty is in hourangle seconds
+            angle_arcsec /= 15.0
+        return angle_arcsec.to_string(decimal=True, precision=20)
