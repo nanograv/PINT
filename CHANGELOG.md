@@ -27,7 +27,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - ELL1k timing model
 - Test for `MCMCFitter`
 - Added multiprocessing capability to `event_optimize`
-- Can adjust or merge TOAs using '+'
+- Can merge TOAs using '+' operator; in-place merge using '+=' operator
 ### Fixed
 - Broken notebooks CI test
 - BIPM correction for simulated TOAs
