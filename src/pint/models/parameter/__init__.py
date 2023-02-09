@@ -1,3 +1,4 @@
+from pint.models.parameter.func_parameter import funcParameter
 from pint.models.parameter.mask_parameter import maskParameter
 from pint.models.parameter.pair_parameter import pairParameter
 from pint.models.parameter.parameter import (
@@ -7,8 +8,7 @@ from pint.models.parameter.parameter import (
     boolParameter,
     floatParameter,
     intParameter,
-    strParameter,
     parfile_formats,
+    strParameter,
 )
 from pint.models.parameter.prefix_parameter import prefixParameter
-from pint.models.parameter.func_parameter import funcParameter

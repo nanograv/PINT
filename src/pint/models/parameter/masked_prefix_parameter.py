@@ -1,5 +1,5 @@
-from pint.models.parameter.prefix_parameter import prefixParameter
 from pint.models.parameter.mask_parameter import maskParameter
+from pint.models.parameter.prefix_parameter import prefixParameter
 from pint.utils import split_masked_prefixed_name
 
 

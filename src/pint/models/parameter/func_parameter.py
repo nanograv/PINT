@@ -1,5 +1,6 @@
-from pint.models.parameter.parameter import floatParameter
 from loguru import logger as log
+
+from pint.models.parameter.parameter import floatParameter
 
 
 class funcParameter(floatParameter):
