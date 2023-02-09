@@ -11,3 +11,4 @@ from pint.models.parameter.parameter import (
     parfile_formats,
 )
 from pint.models.parameter.prefix_parameter import prefixParameter
+from pint.models.parameter.func_parameter import funcParameter
