@@ -346,8 +346,50 @@ def split_prefixed_name(name):
         except AttributeError:
             continue
     else:
-        raise PrefixError("Unrecognized prefix name pattern '%s'." % name)
+        raise PrefixError(f"Unrecognized prefix name pattern '{name}'.")
     return prefix_part, index_part, int(index_part)
+
+
+def split_masked_prefixed_name(name):
+    """Split a prefixed name.
+
+    Parameters
+    ----------
+    name : str
+       Prefixed name
+
+    Returns
+    -------
+    prefixPart : str
+       The prefix part of the name
+    indexParts : str
+       The index parts from the name for prefix and mask
+    indexValues : int
+       The absolute index values for prefix and mask
+
+    Example
+    -------
+
+        >>> split_masked_prefixed_name("FDJUMP2_3")
+        ('FDJUMP', ('2', '3'), (2, 3)
+        >>> split_masked_prefixed_name("PEPOCH")
+        Traceback (most recent call last):
+          File "<stdin>", line 1, in <module>
+          File "pint/utils.py", line 406, in split_masked_prefixed_name
+            raise PrefixError("Unrecognized prefix name pattern '%s'." % name)
+        pint.utils.PrefixError: Unrecognized prefix name pattern 'PEPOCH'.
+
+    """
+    pt = re.compile(r"^([a-zA-Z]+)(\d+)_(\d+)$")
+    try:
+        prefix_part, prefix_index_part, mask_index_part = pt.match(name).groups()
+    except AttributeError as e:
+        raise PrefixError(f"Unrecognized prefix name pattern '{name}'.") from e
+    return (
+        prefix_part,
+        (prefix_index_part, mask_index_part),
+        (int(prefix_index_part), int(mask_index_part)),
+    )
 
 
 def taylor_horner(x, coeffs):
@@ -575,10 +617,8 @@ def dmx_ranges_old(
     # Round off the dates to 0.1 days and only keep unique values so we ignore closely spaced TOAs
     loMJDs = np.unique(loMJDs.round(1))
     hiMJDs = np.unique(hiMJDs.round(1))
-    log.info("There are {} dates with freqs > {} MHz".format(len(hiMJDs), divide_freq))
-    log.info(
-        "There are {} dates with freqs < {} MHz\n".format(len(loMJDs), divide_freq)
-    )
+    log.info(f"There are {len(hiMJDs)} dates with freqs > {divide_freq} MHz")
+    log.info(f"There are {len(loMJDs)} dates with freqs < {divide_freq} MHz\n")
 
     DMXs = []
 
@@ -665,7 +705,7 @@ def dmx_ranges_old(
     # Mark TOAs as True if they are in any DMX bin
     for DMX in DMXs:
         mask[np.logical_and(MJDs > DMX.min - offset, MJDs < DMX.max + offset)] = True
-    log.info("{} out of {} TOAs are in a DMX bin".format(mask.sum(), len(mask)))
+    log.info(f"{mask.sum()} out of {len(mask)} TOAs are in a DMX bin")
     # Instantiate a DMX component
     dmx_class = Component.component_types["DispersionDMX"]
     dmx_comp = dmx_class()
@@ -962,7 +1002,7 @@ def dmxparse(fitter, save=False):
         # access by label name to make sure we get the right values
         # make sure they are sorted in ascending order
         cc = fitter.parameter_covariance_matrix.get_label_matrix(
-            sorted(["DMX_" + x for x in dmx_epochs])
+            sorted([f"DMX_{x}" for x in dmx_epochs])
         )
         n = len(DMX_Errs) - np.sum(mask_idxs)
         # Find error in mean DM
@@ -995,25 +1035,26 @@ def dmxparse(fitter, save=False):
         if isinstance(save, bool):
             save = "dmxparse.out"
         DMX = "DMX"
-        lines = []
-        lines.append("# Mean %s value = %+.6e \n" % (DMX, DMX_mean))
-        lines.append("# Uncertainty in average %s = %.5e \n" % ("DM", DMX_mean_err))
-        lines.append(
-            "# Columns: %sEP %s_value %s_var_err %sR1 %sR2 %s_bin \n"
-            % (DMX, DMX, DMX, DMX, DMX, DMX)
-        )
-        for k in range(len(dmx_epochs)):
-            lines.append(
-                "%.4f %+.7e %.3e %.4f %.4f %s \n"
-                % (
-                    DMX_center_MJD[k],
-                    DMXs[k] - DMX_mean,
-                    DMX_vErrs[k],
-                    DMX_R1[k],
-                    DMX_R2[k],
-                    DMX_keys[k],
-                )
+        lines = [
+            "# Mean %s value = %+.6e \n" % (DMX, DMX_mean),
+            "# Uncertainty in average %s = %.5e \n" % ("DM", DMX_mean_err),
+            (
+                "# Columns: %sEP %s_value %s_var_err %sR1 %sR2 %s_bin \n"
+                % (DMX, DMX, DMX, DMX, DMX, DMX)
+            ),
+        ]
+        lines.extend(
+            "%.4f %+.7e %.3e %.4f %.4f %s \n"
+            % (
+                DMX_center_MJD[k],
+                DMXs[k] - DMX_mean,
+                DMX_vErrs[k],
+                DMX_R1[k],
+                DMX_R2[k],
+                DMX_keys[k],
             )
+            for k in range(len(dmx_epochs))
+        )
         with open_or_use(save, mode="w") as dmxout:
             dmxout.writelines(lines)
             if isinstance(save, (str, Path)):
@@ -1025,18 +1066,16 @@ def dmxparse(fitter, save=False):
     DMX_units = getattr(fitter.model, "DMX_{:}".format(dmx_epochs[0])).units
     DMXR_units = getattr(fitter.model, "DMXR1_{:}".format(dmx_epochs[0])).units
 
-    # define the output dictionary
-    dmx = {}
-    dmx["dmxs"] = mean_sub_DMXs * DMX_units
-    dmx["dmx_verrs"] = DMX_vErrs * DMX_units
-    dmx["dmxeps"] = DMX_center_MJD * DMXR_units
-    dmx["r1s"] = DMX_R1 * DMXR_units
-    dmx["r2s"] = DMX_R2 * DMXR_units
-    dmx["bins"] = DMX_keys
-    dmx["mean_dmx"] = DMX_mean * DMX_units
-    dmx["avg_dm_err"] = DMX_mean_err * DMX_units
-
-    return dmx
+    return {
+        "dmxs": mean_sub_DMXs * DMX_units,
+        "dmx_verrs": DMX_vErrs * DMX_units,
+        "dmxeps": DMX_center_MJD * DMXR_units,
+        "r1s": DMX_R1 * DMXR_units,
+        "r2s": DMX_R2 * DMXR_units,
+        "bins": DMX_keys,
+        "mean_dmx": DMX_mean * DMX_units,
+        "avg_dm_err": DMX_mean_err * DMX_units,
+    }
 
 
 def get_prefix_timerange(model, prefixname):
@@ -1085,7 +1124,7 @@ def get_prefix_timeranges(model, prefixname):
     """
     if prefixname.endswith("_"):
         prefixname = prefixname[:-1]
-    prefix_mapping = model.get_prefix_mapping(prefixname + "_")
+    prefix_mapping = model.get_prefix_mapping(f"{prefixname}_")
     r1 = np.zeros(len(prefix_mapping))
     r2 = np.zeros(len(prefix_mapping))
     indices = np.zeros(len(prefix_mapping), dtype=np.int32)
@@ -1303,10 +1342,7 @@ def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
     weights = weights_in
     wtot = weights.sum()
     # user has input a mean value
-    if inputmean is None:
-        wmean = (weights * arr).sum() / wtot
-    else:
-        wmean = float(inputmean)
+    wmean = (weights * arr).sum() / wtot if inputmean is None else float(inputmean)
     # how should error be calculated?
     if calcerr:
         werr2 = (weights**2 * (arr - wmean) ** 2).sum()
@@ -1355,10 +1391,12 @@ def ELL1_check(
     lhs = A1 / const.c * E**2.0
     rhs = TRES / np.sqrt(NTOA)
     if outstring:
-        s = "Checking applicability of ELL1 model -- \n"
-        s += "    Condition is asini/c * ecc**2 << timing precision / sqrt(# TOAs) to use ELL1\n"
-        s += "    asini/c * ecc**2    = {:.3g} \n".format(lhs.to(u.us))
-        s += "    TRES / sqrt(# TOAs) = {:.3g} \n".format(rhs.to(u.us))
+        s = (
+            "Checking applicability of ELL1 model -- \n"
+            + "    Condition is asini/c * ecc**2 << timing precision / sqrt(# TOAs) to use ELL1\n"
+            + "    asini/c * ecc**2    = {:.3g} \n".format(lhs.to(u.us))
+            + "    TRES / sqrt(# TOAs) = {:.3g} \n".format(rhs.to(u.us))
+        )
     if lhs * 50.0 < rhs:
         if outstring:
             s += "    Should be fine.\n"
@@ -1478,7 +1516,7 @@ def add_dummy_distance(c, distance=1 * u.kpc):
 
         return cnew
     elif isinstance(c.frame, coords.builtin_frames.galactic.Galactic):
-        cnew = coords.SkyCoord(
+        return coords.SkyCoord(
             l=c.l,
             b=c.b,
             pm_l_cosb=c.pm_l_cosb,
@@ -1487,9 +1525,8 @@ def add_dummy_distance(c, distance=1 * u.kpc):
             distance=distance,
             frame=coords.Galactic,
         )
-        return cnew
     elif isinstance(c.frame, pint.pulsar_ecliptic.PulsarEcliptic):
-        cnew = coords.SkyCoord(
+        return coords.SkyCoord(
             lon=c.lon,
             lat=c.lat,
             pm_lon_coslat=c.pm_lon_coslat,
@@ -1499,7 +1536,6 @@ def add_dummy_distance(c, distance=1 * u.kpc):
             obliquity=c.obliquity,
             frame=pint.pulsar_ecliptic.PulsarEcliptic,
         )
-        return cnew
     else:
         log.warning(
             "Do not know coordinate frame for %r: returning coordinates unchanged" % c
@@ -1527,8 +1563,8 @@ def remove_dummy_distance(c):
         )
         return c
     if isinstance(c.frame, coords.builtin_frames.icrs.ICRS):
-        if hasattr(c, "pm_ra_cosdec"):
-            cnew = coords.SkyCoord(
+        return (
+            coords.SkyCoord(
                 ra=c.ra,
                 dec=c.dec,
                 pm_ra_cosdec=c.pm_ra_cosdec,
@@ -1536,11 +1572,8 @@ def remove_dummy_distance(c):
                 obstime=c.obstime,
                 frame=coords.ICRS,
             )
-        else:
-            # it seems that after applying proper motions
-            # it changes the RA pm to pm_ra instead of pm_ra_cosdec
-            # although the value seems the same
-            cnew = coords.SkyCoord(
+            if hasattr(c, "pm_ra_cosdec")
+            else coords.SkyCoord(
                 ra=c.ra,
                 dec=c.dec,
                 pm_ra_cosdec=c.pm_ra,
@@ -1548,9 +1581,9 @@ def remove_dummy_distance(c):
                 obstime=c.obstime,
                 frame=coords.ICRS,
             )
-        return cnew
+        )
     elif isinstance(c.frame, coords.builtin_frames.galactic.Galactic):
-        cnew = coords.SkyCoord(
+        return coords.SkyCoord(
             l=c.l,
             b=c.b,
             pm_l_cosb=c.pm_l_cosb,
@@ -1558,9 +1591,8 @@ def remove_dummy_distance(c):
             obstime=c.obstime,
             frame=coords.Galactic,
         )
-        return cnew
     elif isinstance(c.frame, pint.pulsar_ecliptic.PulsarEcliptic):
-        cnew = coords.SkyCoord(
+        return coords.SkyCoord(
             lon=c.lon,
             lat=c.lat,
             pm_lon_coslat=c.pm_lon_coslat,
@@ -1569,7 +1601,6 @@ def remove_dummy_distance(c):
             obliquity=c.obliquity,
             frame=pint.pulsar_ecliptic.PulsarEcliptic,
         )
-        return cnew
     else:
         log.warning(
             "Do not know coordinate frame for %r: returning coordinates unchanged" % c
@@ -1985,8 +2016,7 @@ def divide_times(t, t0, offset=0.5):
     """
     dt = t - t0
     values = (dt.to(u.yr).value + offset) // 1
-    indices = np.digitize(values, np.unique(values), right=True)
-    return indices
+    return np.digitize(values, np.unique(values), right=True)
 
 
 def convert_dispersion_measure(dm, dmconst=None):
