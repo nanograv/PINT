@@ -2,6 +2,7 @@ import unittest
 import astropy
 import pint
 import pint.models as mod
+from pint.models.parameter import funcParameter
 import os
 import io
 from copy import deepcopy as cp
@@ -39,6 +40,7 @@ class TestCompare(unittest.TestCase):
                 if (
                     isinstance(param_cp.quantity, (str, astropy.time.core.Time))
                     or param_cp.quantity is None
+                    or isinstance(param_cp, funcParameter)
                 ):
                     continue
                 if param_cp.uncertainty != None:

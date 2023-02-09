@@ -2867,6 +2867,7 @@ class Component(metaclass=ModelMeta):
             self.setup()
         if deriv_func is not None:
             self.register_deriv_funcs(deriv_func, param.name)
+        param._parent = self
 
     def remove_param(self, param):
         """Remove a parameter from the Component.
