@@ -760,28 +760,35 @@ class Polycos:
                 tStop = tmid + mjdSpan / 2
                 nodes = np.linspace(tStart, tStop, numNodes)
 
-                toaMid = toa.get_TOAs_list(
-                    [
-                        toa.TOA(
-                            (np.modf(tmid)[1], np.modf(tmid)[0]), obs=obs, freq=obsFreq
-                        )
-                    ],
+                toaMid = toa.get_TOAs_array(
+                    (np.modf(tmid)[1], np.modf(tmid)[0]),
+                    obs=obs,
+                    freqs=obsFreq,
                     ephem=ephem,
                 )
+                # toaMid = toa.get_TOAs_list(
+                #     [toa.TOA()],
+                # )
 
                 refPhase = model.phase(toaMid, abs_phase=True)
 
                 # Create node toas(Time sample using TOA class)
-                toaList = [
-                    toa.TOA(
-                        (np.modf(toaNode)[1], np.modf(toaNode)[0]),
-                        obs=obs,
-                        freq=obsFreq,
-                    )
-                    for toaNode in nodes
-                ]
+                # toaList = [
+                #     toa.TOA(
+                #         (np.modf(toaNode)[1], np.modf(toaNode)[0]),
+                #         obs=obs,
+                #         freq=obsFreq,
+                #     )
+                #     for toaNode in nodes
+                # ]
 
-                toas = toa.get_TOAs_list(toaList, ephem=ephem)
+                # toas = toa.get_TOAs_list(toaList, ephem=ephem)
+                toas = toa.get_TOAs_array(
+                    (np.modf(nodes)[0], np.modf(nodes)[1]),
+                    obs=obs,
+                    freqs=obsFreq,
+                    ephem=ephem,
+                )
 
                 ph = model.phase(toas, abs_phase=True)
                 dt = (nodes - tmid) * MIN_PER_DAY
