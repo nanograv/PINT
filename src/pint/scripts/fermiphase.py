@@ -14,7 +14,7 @@ import pint.models
 import pint.residuals
 import pint.toa as toa
 from pint.eventstats import h2sig, hmw
-from pint.fermi_toas import load_Fermi_TOAs
+from pint.fermi_toas import get_Fermi_TOAs
 from pint.fits_utils import read_fits_event_mjds_tuples
 from pint.observatory.satellite_obs import get_satellite_observatory
 from pint.plot_utils import phaseogram
@@ -105,20 +105,14 @@ def main(argv=None):
     # Read event file and return list of TOA objects
     maxmjd = np.inf if (args.maxMJD is None) else float(args.maxMJD)
     minmjd = 0.0 if (args.minMJD is None) else float(args.minMJD)
-    tl = load_Fermi_TOAs(
+    # Now convert to TOAs object and compute TDBs and posvels
+    # For Fermi, we are not including GPS or TT(BIPM) corrections
+    ts = get_Fermi_TOAs(
         args.eventfile,
         maxmjd=maxmjd,
         minmjd=minmjd,
         weightcolumn=args.weightcol,
         targetcoord=tc,
-    )
-
-    # Now convert to TOAs object and compute TDBs and posvels
-    # For Fermi, we are not including GPS or TT(BIPM) corrections
-    ts = toa.get_TOAs_list(
-        tl,
-        include_gps=False,
-        include_bipm=False,
         planets=args.planets,
         ephem=args.ephem,
     )

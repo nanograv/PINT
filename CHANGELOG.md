@@ -20,12 +20,14 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - `TimingModel.total_dispersion_slope` method
 - Explicit discussion of DT92 convention to DDK model
 - HESS and ORT telescopes to the list of known observatories
-- Documentation: making TOAs from a list of times added to HowTo
+- Documentation: making TOAs from array of times added to HowTo
+- Method to make TOAs from an array of times
 - Clock correction for LEAP
 - Wideband TOA simulation feature in `pint.simulation` and `zima`
 - ELL1k timing model
 - Test for `MCMCFitter`
 - Added multiprocessing capability to `event_optimize`
+- Can merge TOAs using '+' operator; in-place merge using '+=' operator
 - `funcParameters` defined as functions operating on other parameters
 ### Fixed
 - Broken notebooks CI test
