@@ -19,7 +19,8 @@ __all__ = ["main"]
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="PINT tool for command-line barycentering calculations."
+        description="PINT tool for command-line barycentering calculations.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
     parser.add_argument("time", help="MJD (UTC, by default)")
@@ -100,10 +101,10 @@ def main(argv=None):
         t = Time(args.time, scale=args.timescale, format=args.format, precision=9)
     log.debug(t.iso)
 
-    t = toa.TOA(t, freq=args.freq, obs=args.obs)
-    # Build TOAs and compute TDBs and positions from ephemeris
-    ts = toa.get_TOAs_list(
-        [t],
+    ts = toa.get_TOAs_array(
+        t,
+        freqs=args.freq,
+        obs=args.obs,
         ephem=args.ephem,
         include_bipm=args.use_bipm,
         include_gps=args.use_gps,

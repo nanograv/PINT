@@ -70,7 +70,6 @@ def test_prim_io():
 
 
 def test_prim_gauss_wrapping():
-
     # default is to wrap a function by 10 times; make a fat pulse here and
     # check against a manually calculated wrap
 
@@ -256,7 +255,6 @@ def test_template_caching():
 
 
 def test_component_manipulation():
-
     # test sorting components
     lct = default_template()
     lct.order_primitives(order=0)  # sort by position, should swap them
@@ -600,7 +598,6 @@ def test_vonmises():
 
 
 def test_skewnorm():
-
     # check bounds and limits
     with pytest.raises(ValueError):
         lcprimitives.LCSkewGaussian(p=[0.0001, 0.1, 0.5])

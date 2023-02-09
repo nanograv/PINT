@@ -1,6 +1,7 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore::DeprecationWarning
 import argparse
 import sys
+import os
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -298,7 +299,7 @@ class emcee_fitter(Fitter):
         # the posterior if the prior is not finite
         lnprior = self.lnprior(theta)
         if not np.isfinite(lnprior):
-            return -np.inf
+            return -np.inf, -np.inf, -np.inf
 
         # Call PINT to compute the phases
         phases = self.get_event_phases()
@@ -312,7 +313,7 @@ class emcee_fitter(Fitter):
                 log.info("  %8s: %25.15g" % (name, val))
             maxpost = lnpost
             self.maxpost_fitvals = theta
-        return lnpost
+        return lnpost, lnprior, lnlikelihood
 
     def minimize_func(self, theta):
         """
@@ -419,7 +420,6 @@ class emcee_fitter(Fitter):
 
 
 def main(argv=None):
-
     parser = argparse.ArgumentParser(
         description="PINT tool for MCMC optimization of timing models using event data.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -517,6 +517,40 @@ def main(argv=None):
     parser.add_argument(
         "-q", "--quiet", default=0, action="count", help="Decrease output verbosity"
     )
+    parser.add_argument(
+        "--multicore",
+        default=False,
+        action="store_true",
+        help="Run event optimize on multiple cores",
+    )
+    parser.add_argument(
+        "--ncores",
+        type=int,
+        default=8,
+        help="The number of cores for parallel processing",
+    )
+    parser.add_argument(
+        "--backend",
+        help="Save chains to a h5 file",
+        default=False,
+        action="store_true",
+    )
+    parser.add_argument(
+        "--filepath",
+        type=str,
+        help="File path to save all output files to",
+    )
+    parser.add_argument(
+        "--basename",
+        type=str,
+        help="Base name for all output files",
+    )
+    parser.add_argument(
+        "--clobber",
+        help="Overwrite previous output files",
+        default=False,
+        action="store_true",
+    )
 
     args = parser.parse_args(argv)
     pint.logging.setup(
@@ -547,9 +581,27 @@ def main(argv=None):
     minWeight = args.minWeight
     do_opt_first = args.doOpt
     wgtexp = args.wgtexp
+    ncores = args.ncores
 
     # Read in initial model
     modelin = pint.models.get_model(parfile)
+
+    # File name setup and clobber file check
+    filepath = args.filepath if args.filepath else os.getcwd()
+    basename = args.basename if args.basename else modelin.PSR.value
+    filename = os.path.join(filepath, basename)
+
+    check_file = os.path.isfile(
+        filename + "_pre.png"
+    )  # Checks to see if the first generated phaseogram file exists
+    if check_file:
+        if args.clobber:
+            log.warning("Clobber flag is on: Preexisting files will be overwritten")
+        else:
+            log.warning(
+                "Clobber flag is not on: Preexisting files will not be overwritten. Change the basename or filepath to avoid overwritting previous results"
+            )
+            raise Exception
 
     # The custom_timing version below is to manually construct the TimingModel
     # class, which allows it to be pickled. This is needed for parallelizing
@@ -684,7 +736,7 @@ def main(argv=None):
         )
         fitvals[-1] = args.phs
     ftr.fitvals[-1] = fitvals[-1]
-    ftr.phaseogram(plotfile=ftr.model.PSR.value + "_pre.png")
+    ftr.phaseogram(plotfile=filename + "_pre.png")
     plt.close()
     # ftr.phaseogram()
 
@@ -692,7 +744,7 @@ def main(argv=None):
     vs, xs = np.histogram(
         ftr.get_event_phases(), outprof_nbins, range=[0, 1], weights=ftr.weights
     )
-    f = open(ftr.model.PSR.value + "_prof_pre.txt", "w")
+    f = open(filename + "_prof_pre.txt", "w")
     for x, v in zip(xs, vs):
         f.write("%.5f  %12.5f\n" % (x, v))
     f.close()
@@ -750,22 +802,51 @@ def main(argv=None):
 
     import emcee
 
-    # Following are for parallel processing tests...
-    if 0:
-
-        def unwrapped_lnpost(theta, ftr=ftr):
-            return ftr.lnposterior(theta)
-
-        import pathos.multiprocessing as mp
-
-        pool = mp.ProcessPool(nodes=8)
-        sampler = emcee.EnsembleSampler(
-            nwalkers, ndim, unwrapped_lnpost, pool=pool, args=[ftr]
-        )
+    # Setting up a backend to save the chains into an h5 file
+    if args.backend:
+        try:
+            backend = emcee.backends.HDFBackend(filename + "_chains.h5")
+            backend.reset(nwalkers, ndim)
+        except ImportError:
+            log.warning("h5py package not installed. Backend set to None")
+            backend = None
     else:
-        sampler = emcee.EnsembleSampler(nwalkers, ndim, ftr.lnposterior)
-    # The number is the number of points in the chain
-    sampler.run_mcmc(pos, nsteps)
+        backend = None
+
+    dtype = [("lnprior", float), ("lnlikelihood", float)]
+
+    # Following are for parallel processing tests...
+    if args.multicore:
+        try:
+            import pathos.multiprocessing as mp
+
+            def unwrapped_lnpost(theta):
+                return ftr.lnposterior(theta)
+
+            with mp.ProcessPool(nodes=ncores) as pool:
+                sampler = emcee.EnsembleSampler(
+                    nwalkers,
+                    ndim,
+                    unwrapped_lnpost,
+                    blobs_dtype=dtype,
+                    pool=pool,
+                    backend=backend,
+                )
+                sampler.run_mcmc(pos, nsteps)
+            pool.close()
+            pool.join()
+        except ImportError:
+            log.info("Pathos module not available, using single core")
+            sampler = emcee.EnsembleSampler(
+                nwalkers, ndim, ftr.lnposterior, blobs_dtype=dtype, backend=backend
+            )
+            sampler.run_mcmc(pos, nsteps)
+    else:
+        sampler = emcee.EnsembleSampler(
+            nwalkers, ndim, ftr.lnposterior, blobs_dtype=dtype, backend=backend
+        )
+        # The number is the number of points in the chain
+        sampler.run_mcmc(pos, nsteps)
 
     def chains_to_dict(names, sampler):
         chains = [sampler.chain[:, :, ii].T for ii in range(len(names))]
@@ -787,10 +868,20 @@ def main(argv=None):
             plt.close()
 
     chains = chains_to_dict(ftr.fitkeys, sampler)
-    plot_chains(chains, file=ftr.model.PSR.value + "_chains.png")
+    plot_chains(chains, file=filename + "_chains.png")
 
     # Make the triangle plot.
     samples = sampler.chain[:, burnin:, :].reshape((-1, ndim))
+
+    blobs = sampler.get_blobs()
+    lnprior_samps = blobs["lnprior"]
+    lnlikelihood_samps = blobs["lnlikelihood"]
+    lnpost_samps = lnprior_samps + lnlikelihood_samps
+    ind = np.unravel_index(
+        np.argmax(lnpost_samps[:][burnin:]), lnpost_samps[:][burnin:].shape
+    )
+    ftr.maxpost_fitvals = [chains[ii][burnin:][ind] for ii in ftr.fitkeys]
+
     try:
         import corner
 
@@ -801,34 +892,34 @@ def main(argv=None):
             truths=ftr.maxpost_fitvals,
             plot_contours=True,
         )
-        fig.savefig(ftr.model.PSR.value + "_triangle.png")
+        fig.savefig(filename + "_triangle.png")
         plt.close()
     except ImportError:
         pass
 
     # Plot the scaled prior probability alongside the initial gaussian probability distribution and the histogrammed samples
     ftr.plot_priors(chains, burnin, scale=True)
-    plt.savefig(ftr.model.PSR.value + "_priors.png")
+    plt.savefig(filename + "_priors.png")
     plt.close()
 
     # Make a phaseogram with the 50th percentile values
     # ftr.set_params(dict(zip(ftr.fitkeys, np.percentile(samples, 50, axis=0))))
     # Make a phaseogram with the best MCMC result
     ftr.set_params(dict(zip(ftr.fitkeys[:-1], ftr.maxpost_fitvals[:-1])))
-    ftr.phaseogram(plotfile=ftr.model.PSR.value + "_post.png")
+    ftr.phaseogram(plotfile=filename + "_post.png")
     plt.close()
 
     # Write out the output pulse profile
     vs, xs = np.histogram(
         ftr.get_event_phases(), outprof_nbins, range=[0, 1], weights=ftr.weights
     )
-    f = open(ftr.model.PSR.value + "_prof_post.txt", "w")
+    f = open(filename + "_prof_post.txt", "w")
     for x, v in zip(xs, vs):
         f.write("%.5f  %12.5f\n" % (x, v))
     f.close()
 
     # Write out the par file for the best MCMC parameter est
-    f = open(ftr.model.PSR.value + "_post.par", "w")
+    f = open(filename + "_post.par", "w")
     f.write(ftr.model.as_parfile())
     f.close()
 
@@ -842,7 +933,7 @@ def main(argv=None):
         log.info("%8s:" % name + "%25.15g (+ %12.5g  / - %12.5g)" % vals)
 
     # Put the same stuff in a file
-    f = open(ftr.model.PSR.value + "_results.txt", "w")
+    f = open(filename + "_results.txt", "w")
 
     f.write("Post-MCMC values (50th percentile +/- (16th/84th percentile):\n")
     for name, vals in zip(ftr.fitkeys, ranges):
@@ -854,4 +945,4 @@ def main(argv=None):
 
     import pickle
 
-    pickle.dump(samples, open(ftr.model.PSR.value + "_samples.pickle", "wb"))
+    pickle.dump(samples, open(filename + "_samples.pickle", "wb"))

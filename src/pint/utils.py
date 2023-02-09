@@ -1528,7 +1528,6 @@ def remove_dummy_distance(c):
         return c
     if isinstance(c.frame, coords.builtin_frames.icrs.ICRS):
         if hasattr(c, "pm_ra_cosdec"):
-
             cnew = coords.SkyCoord(
                 ra=c.ra,
                 dec=c.dec,
