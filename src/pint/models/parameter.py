@@ -2170,14 +2170,14 @@ class funcParameter(floatParameter):
     >>> import pint.models.parameter
     >>> import pint.derived_quantities
     >>> p2 = pint.models.parameter.funcParameter(
-            name="EDOT",
+            name="PSREDOT",
             description="Spindown luminosity",
             params=("F0", "F1"),
             func=pint.derived_quantities.pulsar_edot,
             units="erg/s",
         )
     >>> m.components["Spindown"].add_param(p2)
-    >>> print(m.EDOT)
+    >>> print(m.PSREDOT)
 
     Notes
     -----
