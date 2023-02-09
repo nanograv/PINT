@@ -587,7 +587,7 @@ def main(argv=None):
     modelin = pint.models.get_model(parfile)
 
     # File name setup and clobber file check
-    filepath = args.filepath if args.basename else os.getcwd()
+    filepath = args.filepath if args.filepath else os.getcwd()
     basename = args.basename if args.basename else modelin.PSR.value
     filename = os.path.join(filepath, basename)
 
