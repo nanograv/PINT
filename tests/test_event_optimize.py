@@ -62,7 +62,7 @@ def test_parallel(tmp_path):
         import pathos
 
         os.chdir(tmp_path)
-        cmd = f"{eventfile} {parfile} {temfile} --weightcol=PSRJ0030+0451 --minWeight=0.9 --nwalkers=10 --nsteps=50 --burnin 10"
+        cmd = f"{eventfile} {parfile} {temfile} --weightcol=PSRJ0030+0451 --minWeight=0.9 --nwalkers=10 --nsteps=50 --burnin 10 --clobber"
         event_optimize.main(cmd.split())
         with open("J0030+0451_samples.pickle", "rb") as f:
             samples1 = pickle.load(f)
@@ -71,7 +71,7 @@ def test_parallel(tmp_path):
         event_optimize.maxpost = -9e99
         event_optimize.numcalls = 0
 
-        cmd = f"{eventfile} {parfile} {temfile} --weightcol=PSRJ0030+0451 --minWeight=0.9 --nwalkers=10 --nsteps=50 --burnin 10 --multicore"
+        cmd = f"{eventfile} {parfile} {temfile} --weightcol=PSRJ0030+0451 --minWeight=0.9 --nwalkers=10 --nsteps=50 --burnin 10 --multicore --clobber"
         event_optimize.main(cmd.split())
         with open("J0030+0451_samples.pickle", "rb") as f:
             samples2 = pickle.load(f)
@@ -103,9 +103,9 @@ def test_backend(tmp_path):
         import h5py
 
         samples = None
-        os.chdir(tmp_path)
+
         # Running with backend
-        cmd = f"{eventfile} {parfile} {temfile} --weightcol=PSRJ0030+0451 --minWeight=0.9 --nwalkers=10 --nsteps=50 --burnin=10 --backend"
+        cmd = f"{eventfile} {parfile} {temfile} --weightcol=PSRJ0030+0451 --minWeight=0.9 --nwalkers=10 --nsteps=50 --burnin=10 --backend --clobber"
         event_optimize.maxpost = -9e99
         event_optimize.numcalls = 0
         event_optimize.main(cmd.split())
@@ -113,6 +113,17 @@ def test_backend(tmp_path):
         reader = emcee.backends.HDFBackend("J0030+0451_chains.h5")
         samples = reader.get_chain(discard=10)
         assert samples is not None
+
+        try:
+            # Clobber flag test
+            timestamp = os.path.getmtime("J0030+0451_chains.h5")
+            cmd = f"{eventfile} {parfile} {temfile} --weightcol=PSRJ0030+0451 --minWeight=0.9 --nwalkers=10 --nsteps=50 --burnin=10 --backend"
+            event_optimize.maxpost = -9e99
+            event_optimize.numcalls = 0
+            event_optimize.main(cmd.split())
+        except Exception:
+            assert timestamp == os.path.getmtime("J0030+0451_chains.h5")
+
     except ImportError:
         pytest.skip
     finally:

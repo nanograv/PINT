@@ -601,7 +601,7 @@ def main(argv=None):
             log.warning(
                 "Clobber flag is not on: Preexisting files will not be overwritten. Change the basename or filepath to avoid overwritting previous results"
             )
-            sys.exit(1)
+            raise Exception
 
     # The custom_timing version below is to manually construct the TimingModel
     # class, which allows it to be pickled. This is needed for parallelizing
