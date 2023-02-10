@@ -2,13 +2,23 @@
 import numpy as np
 from astropy import units as u, constants as c
 
-from pint.models.parameter import floatParameter
+from pint.models.parameter import floatParameter, funcParameter
 from pint.models.pulsar_binary import PulsarBinary
 from pint.models.stand_alone_psr_binaries.DD_model import DDmodel
 from pint.models.stand_alone_psr_binaries.DDS_model import DDSmodel
 from pint.models.stand_alone_psr_binaries.DDGR_model import DDGRmodel
 import pint.derived_quantities
 from pint.models.timing_model import TimingModelError
+
+
+# these would be doable with lambda functions
+# but then the instances would not pickle
+def _sini_from_shapmax(SHAPMAX):
+    return 1 - np.exp(-SHAPMAX)
+
+
+def _mp_from_mtot(MTOT, M2):
+    return MTOT - M2
 
 
 class BinaryDD(PulsarBinary):
@@ -123,12 +133,10 @@ class BinaryDDS(BinaryDD):
        SHAPMAX
             :math:`-\log(1-\sin i)`
 
-    It also removes:
+    It also converts:
 
        SINI
-            use ``SHAPMAX`` instead
-
-    The inferred value of this can be accessed via the ``.sini`` property
+            into a read-only parameter
 
     Parameters supported:
 
@@ -160,6 +168,15 @@ class BinaryDDS(BinaryDD):
             )
         )
         self.remove_param("SINI")
+        self.add_param(
+            funcParameter(
+                name="SINI",
+                units="",
+                description="Sine of inclination angle",
+                params=("SHAPMAX",),
+                func=_sini_from_shapmax,
+            )
+        )
 
     def validate(self):
         """Validate parameters."""
@@ -170,10 +187,6 @@ class BinaryDDS(BinaryDD):
             and not self.SHAPMAX.value > -np.log(2)
         ):
             raise ValueError(f"SHAPMAX must be > -log(2) ({self.SHAPMAX.quantity})")
-
-    @property
-    def sini(self):
-        return 1 - np.exp(-self.SHAPMAX.quantity)
 
 
 class BinaryDDGR(BinaryDD):
@@ -189,7 +202,7 @@ class BinaryDDGR(BinaryDD):
         XOMDOT
             Excess OMDOT beyond what GR predicts
 
-    It also reads but ignores:
+    It also reads but converts:
 
         SINI
         PBDOT
@@ -198,8 +211,7 @@ class BinaryDDGR(BinaryDD):
         DR
         DTH
 
-    The values of these at any time can be obtained via
-    ``.sini``, ``.pbdot``, ``.omdot``, ``.gamma``, ``.dr``, and ``.dth`` properties
+            into read-only parameters
 
     The actual calculations for this are done in
     :class:`pint.models.stand_alone_psr_binaries.DDGR_model.DDGRmodel`.
@@ -250,14 +262,80 @@ class BinaryDDGR(BinaryDD):
                 scale_threshold=1e-7,
             )
         )
+        for p in ["OMDOT", "PBDOT", "GAMMA", "SINI", "DR", "DTH"]:
+            self.remove_param(p)
+
+        self.add_param(
+            funcParameter(
+                name="MP",
+                units=u.M_sun,
+                description="Pulsar mass",
+                params=("MTOT", "M2"),
+                func=_mp_from_mtot,
+            )
+        )
+        self.add_param(
+            funcParameter(
+                name="OMDOT",
+                units="deg/year",
+                description="Longitude of periastron",
+                long_double=True,
+                params=("MP", "M2", "PB", "ECC"),
+                func=pint.derived_quantities.omdot,
+            )
+        )
+        self.add_param(
+            funcParameter(
+                name="SINI",
+                units="",
+                description="Sine of inclination angle",
+                params=("MP", "M2", "PB", "A1"),
+                func=pint.derived_quantities.sini,
+            )
+        )
+        self.add_param(
+            funcParameter(
+                name="PBDOT",
+                units=u.day / u.day,
+                description="Orbital period derivative respect to time",
+                unit_scale=True,
+                scale_factor=1e-12,
+                scale_threshold=1e-7,
+                params=("MP", "M2", "PB", "ECC"),
+                func=pint.derived_quantities.pbdot,
+            )
+        )
+        self.add_param(
+            funcParameter(
+                name="GAMMA",
+                units="second",
+                description="Time dilation & gravitational redshift",
+                params=("MP", "M2", "PB", "ECC"),
+                func=pint.derived_quantities.gamma,
+            )
+        )
+        self.add_param(
+            funcParameter(
+                name="DR",
+                units="",
+                description="Relativistic deformation of the orbit",
+                params=("MP", "M2", "PB"),
+                func=pint.derived_quantities.dr,
+            )
+        )
+        self.add_param(
+            funcParameter(
+                name="DTH",
+                units="",
+                description="Relativistic deformation of the orbit",
+                params=("MP", "M2", "PB"),
+                func=pint.derived_quantities.dth,
+            )
+        )
 
     def setup(self):
         """Parameter setup."""
         super().setup()
-        # don't remove these from the definition so they can be read
-        # but remove them on setup so they will be ignored
-        for p in ["OMDOT", "PBDOT", "GAMMA", "SINI", "DR", "DTH"]:
-            super().remove_param(p)
 
     def validate(self):
         """Validate parameters."""
@@ -272,116 +350,7 @@ class BinaryDDGR(BinaryDD):
             raise ValueError(
                 f"Inferred SINI must be <= 1 for DDGR model (MTOT={self.MTOT.quantity}, PB={self.PB.quantity}, A1={self.A1.quantity}, M2={self.M2.quantity} imply SINI={sini})"
             )
-        # for p in ["OMDOT", "PBDOT", "GAMMA", "SINI", "DR", "DTH"]:
-        #     if hasattr(self, p) and not getattr(self, p).frozen:
-        #         raise ValueError(f"PK parameter {p} cannot be unfrozen in DDGR model")
 
     def update_binary_object(self, toas, acc_delay=None):
         super().update_binary_object(toas, acc_delay)
         self.binary_instance._updatePK()
-
-    def print_par(self, format="pint"):
-        if self._parent is None:
-            result = "BINARY {0}\n".format(self.binary_model_name)
-        elif self._parent.BINARY.value != self.binary_model_name:
-            raise TimingModelError(
-                f"Parameter BINARY {self._parent.BINARY.value}"
-                f" does not match the binary"
-                f" component {self.binary_model_name}"
-            )
-        else:
-            result = self._parent.BINARY.as_parfile_line(format=format)
-        for p in self.params:
-            par = getattr(self, p)
-            if par.quantity is not None:
-                result += par.as_parfile_line(format=format)
-        # we will introduce the PK parameters here just for printing
-        result += floatParameter(
-            name="OMDOT",
-            value=self.omdot.value,
-            units="deg/year",
-            description="Longitude of periastron",
-            long_double=True,
-        ).as_parfile_line(format=format)
-        result += floatParameter(
-            name="SINI",
-            units="",
-            description="Sine of inclination angle",
-            value=self.sini.value,
-        ).as_parfile_line(format=format)
-        result += floatParameter(
-            name="PBDOT",
-            value=self.pbdot.value,
-            units=u.day / u.day,
-            description="Orbital period derivative respect to time",
-            unit_scale=True,
-            scale_factor=1e-12,
-            scale_threshold=1e-7,
-        ).as_parfile_line(format=format)
-        result += floatParameter(
-            name="GAMMA",
-            value=self.gamma.value,
-            units="second",
-            description="Time dilation & gravitational redshift",
-        ).as_parfile_line(format=format)
-        result += floatParameter(
-            name="DR",
-            value=self.dr.value,
-            units="",
-            description="Relativistic deformation of the orbit",
-        ).as_parfile_line(format=format)
-        result += floatParameter(
-            name="DTH",
-            value=self.dth.value,
-            units="",
-            description="Relativistic deformation of the orbit",
-        ).as_parfile_line(format=format)
-        return result
-
-    @property
-    def pbdot(self):
-        return pint.derived_quantities.pbdot(
-            self.MTOT.quantity - self.M2.quantity,
-            self.M2.quantity,
-            self.PB.quantity,
-            self.ECC.quantity,
-        )
-
-    @property
-    def omdot(self):
-        return pint.derived_quantities.omdot(
-            self.MTOT.quantity - self.M2.quantity,
-            self.M2.quantity,
-            self.PB.quantity,
-            self.ECC.quantity,
-        )
-
-    @property
-    def gamma(self):
-        return pint.derived_quantities.gamma(
-            self.MTOT.quantity - self.M2.quantity,
-            self.M2.quantity,
-            self.PB.quantity,
-            self.ECC.quantity,
-        )
-
-    @property
-    def dr(self):
-        return pint.derived_quantities.dr(
-            self.MTOT.quantity - self.M2.quantity, self.M2.quantity, self.PB.quantity
-        )
-
-    @property
-    def dth(self):
-        return pint.derived_quantities.dth(
-            self.MTOT.quantity - self.M2.quantity, self.M2.quantity, self.PB.quantity
-        )
-
-    @property
-    def sini(self):
-        return pint.derived_quantities.sini(
-            self.MTOT.quantity - self.M2.quantity,
-            self.M2.quantity,
-            self.PB.quantity,
-            self.A1.quantity,
-        )
