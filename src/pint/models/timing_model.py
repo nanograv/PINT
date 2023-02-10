@@ -359,7 +359,7 @@ class TimingModel:
     def __str__(self):
         return self.as_parfile()
 
-    def validate(self):
+    def validate(self, allow_tcb=False):
         """Validate component setup.
 
         The checks include required parameters and parameter values.
@@ -373,17 +373,19 @@ class TimingModel:
         if self.T2CMETHOD.value not in [None, "IAU2000B"]:  # FIXME: really?
             warn("PINT only supports 'T2CMETHOD IAU2000B'")
             self.T2CMETHOD.value = "IAU2000B"
-        if self.UNITS.value not in [None, "TDB"]:
-            if self.UNITS.value == "TCB":
-                error_message = """The TCB timescale is not supported by PINT. (PINT only supports 'UNITS TDB'.)
-                See https://nanograv-pint.readthedocs.io/en/latest/explanation.html#time-scales for an explanation
-                on different timescales. The par file can be converted from TCB to TDB using the `transform`
-                plugin of TEMPO2 like so:
-                    $ tempo2 -gr transform J1234+6789_tcb.par J1234+6789_tdb.par tdb 
-                """
-            else:
-                error_message = f"PINT only supports 'UNITS TDB'. The given timescale '{self.UNITS.value}' is invalid."
+        
+        if self.UNITS.value not in [None, "TDB", "TCB"]:
+            error_message = f"PINT only supports 'UNITS TDB'. The given timescale '{self.UNITS.value}' is invalid."
             raise ValueError(error_message)
+        elif self.UNITS.value == "TCB" and not allow_tcb:
+            error_message = """The TCB timescale is not supported by PINT. (PINT only supports 'UNITS TDB'.)
+            See https://nanograv-pint.readthedocs.io/en/latest/explanation.html#time-scales for an explanation
+            on different timescales. The par file can be converted from TCB to TDB using the `transform`
+            plugin of TEMPO2 like so:
+                $ tempo2 -gr transform J1234+6789_tcb.par J1234+6789_tdb.par tdb 
+            """
+            raise ValueError(error_message)
+                
         if not self.START.frozen:
             warn("START cannot be unfrozen...setting START.frozen to True")
             self.START.frozen = True

@@ -73,7 +73,7 @@ class ModelBuilder:
         self._validate_components()
         self.default_components = ["SolarSystemShapiro"]
 
-    def __call__(self, parfile, allow_name_mixing=False):
+    def __call__(self, parfile, allow_name_mixing=False, allow_tcb=False):
         """Callable object for making a timing model from .par file.
 
         Parameters
@@ -103,7 +103,14 @@ class ModelBuilder:
         # Make timing model
         cps = [self.all_components.components[c] for c in selected]
         tm = TimingModel(components=cps)
-        self._setup_model(tm, pint_param_dict, original_name, setup=True, validate=True)
+        self._setup_model(
+            tm,
+            pint_param_dict,
+            original_name,
+            setup=True,
+            validate=True,
+            allow_tcb=allow_tcb,
+        )
         # Report unknown line
         for k, v in unknown_param.items():
             p_line = " ".join([k] + v)
@@ -418,6 +425,7 @@ class ModelBuilder:
         original_name=None,
         setup=True,
         validate=True,
+        allow_tcb=False,
     ):
         """Fill up a timing model with parameter values and then setup the model.
 
@@ -529,7 +537,7 @@ class ModelBuilder:
         if setup:
             timing_model.setup()
         if validate:
-            timing_model.validate()
+            timing_model.validate(allow_tcb=allow_tcb)
         return timing_model
 
     def _report_conflict(self, conflict_graph):
@@ -543,7 +551,7 @@ class ModelBuilder:
             )
 
 
-def get_model(parfile, allow_name_mixing=False):
+def get_model(parfile, allow_name_mixing=False, allow_tcb=False):
     """A one step function to build model from a parfile.
 
     Parameters
@@ -570,11 +578,11 @@ def get_model(parfile, allow_name_mixing=False):
         # # parfile is a filename and can be handled by ModelBuilder
         # if _model_builder is None:
         #     _model_builder = ModelBuilder()
-        model = model_builder(parfile, allow_name_mixing)
+        model = model_builder(parfile, allow_name_mixing, allow_tcb=allow_tcb)
         model.name = parfile
         return model
     else:
-        tm = model_builder(StringIO(contents), allow_name_mixing)
+        tm = model_builder(StringIO(contents), allow_name_mixing, allow_tcb=allow_tcb)
         return tm
 
 
