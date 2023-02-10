@@ -17,7 +17,12 @@ from pint.models.binary_bt import BinaryBT
 from pint.models.binary_dd import BinaryDD, BinaryDDS, BinaryDDGR
 from pint.models.binary_ddk import BinaryDDK
 from pint.models.binary_ell1 import BinaryELL1, BinaryELL1H, BinaryELL1k
-from pint.models.parameter import floatParameter, MJDParameter, intParameter
+from pint.models.parameter import (
+    floatParameter,
+    MJDParameter,
+    intParameter,
+    funcParameter,
+)
 
 binary_types = ["DD", "DDK", "DDS", "BT", "ELL1", "ELL1H", "ELL1k"]
 
@@ -569,7 +574,14 @@ def _transfer_params(inmodel, outmodel, badlist=[]):
     ][0]
     for p in inmodel.params:
         if p not in badlist:
-            setattr(outmodel, p, getattr(inmodel, p))
+            if (
+                hasattr(inmodel, p)
+                and not isinstance(getattr(inmodel, p), funcParameter)
+            ) and (
+                hasattr(outmodel, p)
+                and not isinstance(getattr(outmodel, p), funcParameter)
+            ):
+                setattr(outmodel, p, getattr(inmodel, p))
     for p in inmodel.components[inbinary_component_name].params:
         if p not in badlist:
             setattr(
@@ -767,6 +779,8 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
             outmodel.BINARY.value = output
             # parameters not to copy
             badlist = [
+                "ECC",
+                "OM",
                 "TASC",
                 "EPS1",
                 "EPS2",
@@ -840,9 +854,11 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 "BINARY",
             ]
             if binary_component.binary_model_name == "DDS":
-                badlist.append("SHAPMAX")
+                badlist += ["SHAPMAX", "SINI"]
             elif binary_component.binary_model_name == "DDK":
                 badlist += ["KIN", "KOM"]
+            elif binary_component.binary_model_name == "DDGR":
+                badlist += ["PBDOT", "OMDOT", "GAMMA", "DR", "DTH", "SINI"]
             if output == "DD":
                 outmodel.add_component(BinaryDD(), validate=False)
             elif output == "DDS":
@@ -942,7 +958,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
             # parameters not to copy
             badlist = ["BINARY", "ECC", "OM", "T0", "OMDOT", "EDOT"]
             if binary_component.binary_model_name == "DDS":
-                badlist.append("SHAPMAX")
+                badlist += ["SHAPMAX", "SINI"]
             elif binary_component.binary_model_name == "DDK":
                 badlist += ["KIN", "KOM"]
             if output == "ELL1":
