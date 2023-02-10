@@ -378,11 +378,13 @@ class TimingModel:
             error_message = f"PINT only supports 'UNITS TDB'. The given timescale '{self.UNITS.value}' is invalid."
             raise ValueError(error_message)
         elif self.UNITS.value == "TCB" and not allow_tcb:
-            error_message = """The TCB timescale is not supported by PINT. (PINT only supports 'UNITS TDB'.)
-            See https://nanograv-pint.readthedocs.io/en/latest/explanation.html#time-scales for an explanation
-            on different timescales. The par file can be converted from TCB to TDB using the `transform`
-            plugin of TEMPO2 like so:
-                $ tempo2 -gr transform J1234+6789_tcb.par J1234+6789_tdb.par tdb 
+            error_message = """The TCB timescale is not fully supported by PINT. PINT only supports 'UNITS TDB' 
+            internally. See https://nanograv-pint.readthedocs.io/en/latest/explanation.html#time-scales for an 
+            explanation on different timescales. A TCB par file can be converted to TDB upon read using the 
+            `allow_tcb` option. However, this conversion is not exact and a fit must be performed to obtain 
+            reliable results. Note that PINT only supports writing TDB par files. A TCB par file can also be 
+            converted to TDB using the `tcb2tdb` command like so:
+                $ tcb2tdb J1234+6789_tcb.par J1234+6789_tdb.par
             """
             raise ValueError(error_message)
                 
