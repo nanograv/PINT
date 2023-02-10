@@ -278,7 +278,7 @@ class BinaryDDGR(BinaryDD):
             funcParameter(
                 name="OMDOT",
                 units="deg/year",
-                description="Longitude of periastron",
+                description="Rate of advance of periastron",
                 long_double=True,
                 params=("MP", "M2", "PB", "ECC"),
                 func=pint.derived_quantities.omdot,
@@ -326,6 +326,7 @@ class BinaryDDGR(BinaryDD):
         self.add_param(
             funcParameter(
                 name="DTH",
+                aliases=["DTHETA"],
                 units="",
                 description="Relativistic deformation of the orbit",
                 params=("MP", "M2", "PB"),
