@@ -22,7 +22,7 @@ def main(argv):
     Please note that this conversion is exact and the timing model 
     should be re-fit to the TOAs. 
 
-    The following parameters are converted to TCB:
+    The following parameters are converted to TDB:
         1. Spin frequency, its derivatives and spin epoch
         2. Sky coordinates, proper motion and the position epoch
         3. Keplerian binary parameters
