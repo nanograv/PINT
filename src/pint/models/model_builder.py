@@ -116,6 +116,7 @@ class ModelBuilder:
             p_line = " ".join([k] + v)
             warnings.warn(f"Unrecognized parfile line '{p_line}'", UserWarning)
             # log.warning(f"Unrecognized parfile line '{p_line}'")
+        
         return tm
 
     def _validate_components(self):
@@ -600,6 +601,7 @@ def get_model_and_toas(
     picklefilename=None,
     allow_name_mixing=False,
     limits="warn",
+    allow_tcb=False,
 ):
     """Load a timing model and a related TOAs, using model commands as needed
 
@@ -643,7 +645,7 @@ def get_model_and_toas(
     -------
     A tuple with (model instance, TOAs instance)
     """
-    mm = get_model(parfile, allow_name_mixing)
+    mm = get_model(parfile, allow_name_mixing, allow_tcb=allow_tcb)
     tt = get_TOAs(
         timfile,
         include_pn=include_pn,

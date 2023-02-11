@@ -387,7 +387,12 @@ class TimingModel:
                 $ tcb2tdb J1234+6789_tcb.par J1234+6789_tdb.par
             """
             raise ValueError(error_message)
-                
+        elif allow_tcb and self.UNITS.value == "TCB":
+            log.warning(
+                "PINT does not support 'UNITS TCB' internally. Reading this par file nevertheless" 
+                "because the `allow_tcb` option was given. This `TimingModel` object should not be"
+                "used for anything except converting to TDB."
+            )
         if not self.START.frozen:
             warn("START cannot be unfrozen...setting START.frozen to True")
             self.START.frozen = True
