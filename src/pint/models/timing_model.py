@@ -373,7 +373,7 @@ class TimingModel:
         if self.T2CMETHOD.value not in [None, "IAU2000B"]:  # FIXME: really?
             warn("PINT only supports 'T2CMETHOD IAU2000B'")
             self.T2CMETHOD.value = "IAU2000B"
-        
+
         if self.UNITS.value not in [None, "TDB", "TCB"]:
             error_message = f"PINT only supports 'UNITS TDB'. The given timescale '{self.UNITS.value}' is invalid."
             raise ValueError(error_message)
@@ -389,7 +389,7 @@ class TimingModel:
             raise ValueError(error_message)
         elif allow_tcb and self.UNITS.value == "TCB":
             log.warning(
-                "PINT does not support 'UNITS TCB' internally. Reading this par file nevertheless" 
+                "PINT does not support 'UNITS TCB' internally. Reading this par file nevertheless"
                 "because the `allow_tcb` option was given. This `TimingModel` object should not be"
                 "used for anything except converting to TDB."
             )

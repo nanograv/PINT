@@ -8,6 +8,7 @@ import argparse
 
 pint.logging.setup(level=pint.logging.script_level)
 
+
 def main(argv):
     parser = argparse.ArgumentParser(
         description="PINT tool for converting TCB par files to TBD.",

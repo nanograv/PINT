@@ -116,7 +116,7 @@ class ModelBuilder:
             p_line = " ".join([k] + v)
             warnings.warn(f"Unrecognized parfile line '{p_line}'", UserWarning)
             # log.warning(f"Unrecognized parfile line '{p_line}'")
-        
+
         return tm
 
     def _validate_components(self):
