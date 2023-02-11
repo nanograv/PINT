@@ -33,23 +33,25 @@ def convert_tcb_to_tdb(model):
     a starting point, the resulting parameters are only approximate
     and the accompanying TOAs should be re-fit.
 
+    This is based on the `transform` plugin of tempo2.
+
     The following parameters are converted to TCB:
         1. Spin frequency, its derivatives and spin epoch
         2. Sky coordinates, proper motion and the position epoch
         3. Keplerian binary parameters
     
-    The following parameters are NOT converted which are in fact 
-    affected by the TCB to TDB conversion:
+    The following parameters are NOT converted although they are 
+    in fact affected by the TCB to TDB conversion:
         1. Parallax
         2. TZRMJD and TZRFRQ
         2. DM, DM derivatives, DM epoch, DMX parameters
         3. Solar wind parameters
         4. Binary post-Keplerian parameters including Shapiro delay 
            parameters
-        5. Jumps
+        5. Jumps and DM Jumps
         6. FD parameters
         7. EQUADs
-        8. Red noise parameters including WAVE, powerlaw red noise and 
+        8. Red noise parameters including FITWAVES, powerlaw red noise and 
            powerlaw DM noise parameters
     """
 
