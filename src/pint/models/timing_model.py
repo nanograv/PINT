@@ -1245,26 +1245,23 @@ class TimingModel:
         # False.  Of course, if you manually set it, it will use that setting.
         if abs_phase is None:
             abs_phase = "AbsPhase" in list(self.components.keys())
-        # If the absolute phase flag is on, use the TZR parameters to compute
-        # the absolute phase.
-        if abs_phase:
-            if "AbsPhase" not in list(self.components.keys()):
-                # if no absolute phase (TZRMJD), add the component to the model and calculate it
-                from pint.models import absolute_phase
-
-                self.add_component(absolute_phase.AbsPhase(), validate=False)
-                self.make_TZR_toa(
-                    toas
-                )  # TODO:needs timfile to get all toas, but model doesn't have access to timfile. different place for this?
-                self.validate()
-            tz_toa = self.get_TZR_toa(toas)
-            tz_delay = self.delay(tz_toa)
-            tz_phase = Phase(np.zeros(len(toas.table)), np.zeros(len(toas.table)))
-            for pf in self.phase_funcs:
-                tz_phase += Phase(pf(tz_toa, tz_delay))
-            return phase - tz_phase
-        else:
+        if not abs_phase:
             return phase
+        if "AbsPhase" not in list(self.components.keys()):
+            # if no absolute phase (TZRMJD), add the component to the model and calculate it
+            from pint.models import absolute_phase
+
+            self.add_component(absolute_phase.AbsPhase(), validate=False)
+            self.make_TZR_toa(
+                toas
+            )  # TODO:needs timfile to get all toas, but model doesn't have access to timfile. different place for this?
+            self.validate()
+        tz_toa = self.get_TZR_toa(toas)
+        tz_delay = self.delay(tz_toa)
+        tz_phase = Phase(np.zeros(len(toas.table)), np.zeros(len(toas.table)))
+        for pf in self.phase_funcs:
+            tz_phase += Phase(pf(tz_toa, tz_delay))
+        return phase - tz_phase
 
     def total_dm(self, toas):
         """Calculate dispersion measure from all the dispersion type of components."""
