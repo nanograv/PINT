@@ -502,10 +502,7 @@ class Fitter:
         if hasattr(self.model, "PX"):
             if not self.model.PX.frozen:
                 s += "\n"
-                px = ufloat(
-                    self.model.PX.quantity.to(u.arcsec).value,
-                    self.model.PX.uncertainty.to(u.arcsec).value,
-                )
+                px = self.model.PX.as_ufloat(u.arcsec)
                 s += "Parallax distance = {:.3uP} pc\n".format(1.0 / px)
 
         # Now binary system derived parameters
@@ -552,29 +549,17 @@ class Fitter:
             ell1 = False
             if binary.startswith("BinaryELL1"):
                 ell1 = True
-                eps1 = ufloat(
-                    self.model.EPS1.quantity.value,
-                    self.model.EPS1.uncertainty.value,
-                )
-                eps2 = ufloat(
-                    self.model.EPS2.quantity.value,
-                    self.model.EPS2.uncertainty.value,
-                )
+                eps1 = self.model.EPS1.as_ufloat()
+                eps2 = self.model.EPS2.as_ufloat()
                 tasc = ufloat(
                     # This is a time in MJD
                     self.model.TASC.quantity.mjd,
                     self.model.TASC.uncertainty.to(u.d).value,
                 )
                 if hasattr(self.model, "PB") and self.model.PB.value is not None:
-                    pb = ufloat(
-                        self.model.PB.quantity.to(u.d).value,
-                        self.model.PB.uncertainty.to(u.d).value,
-                    )
+                    pb = self.model.PB.as_ufloat(u.d)
                 elif hasattr(self.model, "FB0") and self.model.FB0.value is not None:
-                    p, perr = pint.derived_quantities.pferrs(
-                        self.model.FB0.quantity, self.model.FB0.uncertainty
-                    )
-                    pb = ufloat(p.to(u.d).value, perr.to(u.d).value)
+                    pb = 1 / self.model.FB0.as_ufloat(1 / u.d)
                 s += "Conversion from ELL1 parameters:\n"
                 ecc = um.sqrt(eps1**2 + eps2**2)
                 s += "ECC = {:P}\n".format(ecc)
@@ -614,10 +599,7 @@ class Fitter:
                     pb.to(u.s).value,
                     pberr.to(u.s).value,
                 )
-                a1 = ufloat(
-                    self.model.A1.quantity.to(pint.ls).value,
-                    self.model.A1.uncertainty.to(pint.ls).value,
-                )
+                a1 = self.model.A1.as_ufloat(pint.ls)
                 # This is the mass function, done explicitly so that we get
                 # uncertainty propagation automatically.
                 # TODO: derived quantities funcs should take uncertainties
@@ -677,10 +659,7 @@ class Fitter:
                 try:
                     # Put this in a try in case SINI is UNSET or an illegal value
                     if not self.model.SINI.frozen:
-                        si = ufloat(
-                            self.model.SINI.quantity.value,
-                            self.model.SINI.uncertainty.value,
-                        )
+                        si = self.model.SINI.as_ufloat()
                         s += "From SINI in model:\n"
                         s += "    cos(i) = {:SP}\n".format(um.sqrt(1 - si**2))
                         s += "    i = {:SP} deg\n".format(um.asin(si) * 180.0 / np.pi)

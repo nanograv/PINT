@@ -150,13 +150,9 @@ def _SINI_to_SHAPMAX(model):
     """
     if not hasattr(model, "SINI"):
         raise AttributeError("Model must contain SINI for conversion to SHAPMAX")
-    SHAPMAX = -np.log(1 - model.SINI.quantity)
-    SHAPMAX_unc = (
-        model.SINI.uncertainty / (1 - model.SINI.quantity)
-        if model.SINI.uncertainty is not None
-        else None
-    )
-    return SHAPMAX, SHAPMAX_unc
+    sini = model.SINI.as_ufloat()
+    shapmax = -umath.log(1 - sini)
+    return shapmax.n, shapmax.s if shapmax.s > 0 else None
 
 
 def _SHAPMAX_to_SINI(model):
@@ -176,13 +172,9 @@ def _SHAPMAX_to_SINI(model):
     """
     if not hasattr(model, "SHAPMAX"):
         raise AttributeError("Model must contain SHAPMAX for conversion to SINI")
-    SINI = 1 - np.exp(-model.SHAPMAX.quantity)
-    SINI_unc = (
-        model.SHAPMAX.uncertainty * np.exp(-model.SHAPMAX.quantity)
-        if model.SHAPMAX.uncertainty is not None
-        else None
-    )
-    return SINI, SINI_unc
+    shapmax = model.SHAPMAX.as_ufloat()
+    sini = 1 - umath.exp(-shapmax)
+    return sini.n, sini.s if sini.s > 0 else None
 
 
 def _from_ELL1(model):
@@ -221,39 +213,28 @@ def _from_ELL1(model):
     if model.BINARY.value not in ["ELL1", "ELL1H", "ELL1k"]:
         raise ValueError(f"Requires model ELL1* rather than {model.BINARY.value}")
 
-    # don't do this with ufloats yet since we don't know how to handle MJD parameters
-    ECC = np.sqrt(model.EPS1.quantity**2 + model.EPS2.quantity**2)
-    OM = np.arctan2(model.EPS2.quantity, model.EPS1.quantity)
-    if OM < 0:
-        OM += 360 * u.deg
     if model.PB.quantity is not None:
-        T0 = model.TASC.quantity + ((model.PB.quantity / 2 / np.pi) * OM).to(
-            u.d, equivalencies=u.dimensionless_angles()
-        )
+        pb = model.PB.as_ufloat(u.d)
     elif model.FB0.quantity is not None:
-        T0 = model.TASC.quantity + (((1 / model.FB0.quantity) / 2 / np.pi) * OM).to(
-            u.d, equivalencies=u.dimensionless_angles()
-        )
-    ECC_unc = None
-    OM_unc = None
+        pb = 1 / model.FB0.as_ufloat(1 / u.d)
+    eps1 = model.EPS1.as_ufloat()
+    eps2 = model.EPS2.as_ufloat()
+    om = umath.atan2(eps2, eps1)
+    if om < 0:
+        om += 2 * np.pi
+    ecc = umath.sqrt(eps1**2 + eps2**2)
+    # don't do this with ufloats yet since we don't know how to handle MJD parameters
+    if model.PB.quantity is not None:
+        T0 = model.TASC.quantity + ((model.PB.quantity / 2 / np.pi) * om.n)
+    elif model.FB0.quantity is not None:
+        T0 = model.TASC.quantity + (((1 / model.FB0.quantity) / 2 / np.pi) * om.n)
     T0_unc = None
     if model.EPS1.uncertainty is not None and model.EPS2.uncertainty is not None:
-        ECC_unc = np.sqrt(
-            (model.EPS1.uncertainty * model.EPS1.quantity / ECC) ** 2
-            + (model.EPS2.uncertainty * model.EPS2.quantity / ECC) ** 2
-        )
-        OM_unc = np.sqrt(
-            (model.EPS1.uncertainty * model.EPS2.quantity / ECC**2) ** 2
-            + (model.EPS2.uncertainty * model.EPS1.quantity / ECC**2) ** 2
-        )
         if model.PB.uncertainty is not None and model.TASC.uncertainty is not None:
             T0_unc = np.sqrt(
                 (model.TASC.uncertainty) ** 2
-                + (model.PB.quantity / 2 / np.pi * OM_unc).to(
-                    u.d, equivalencies=u.dimensionless_angles()
-                )
-                ** 2
-                + (model.PB.uncertainty * OM / 2 / np.pi).to(
+                + (model.PB.quantity / 2 / np.pi * om.s) ** 2
+                + (model.PB.uncertainty * om.n / 2 / np.pi).to(
                     u.d, equivalencies=u.dimensionless_angles()
                 )
                 ** 2
@@ -261,64 +242,32 @@ def _from_ELL1(model):
         elif model.FB0.uncertainty is not None and model.TASC.uncertainty is not None:
             T0_unc = np.sqrt(
                 (model.TASC.uncertainty) ** 2
-                + ((1 / model.FB0.quantity) / 2 / np.pi * OM_unc).to(
-                    u.d, equivalencies=u.dimensionless_angles()
-                )
-                ** 2
-                + (model.FB0.uncertainty * OM / 2 / np.pi / model.FB0.quantity**2).to(
-                    u.d, equivalencies=u.dimensionless_angles()
-                )
+                + ((1 / model.FB0.quantity) / 2 / np.pi * om.s) ** 2
+                + (model.FB0.uncertainty * om.n / 2 / np.pi / model.FB0.quantity**2)
                 ** 2
             )
 
     # does there also need to be a computation of OMDOT here?
-    EDOT = None
-    EDOT_unc = None
+    edot = None
     if model.BINARY.value == "ELL1k":
-        if model.LNEDOT.quantity is not None and ECC is not None:
-            EDOT = model.LNEDOT.quantity * ECC
-            if model.LNEDOT.uncertainty is not None or ECC_unc is not None:
-                EDOT_unc = 0
-                if model.LNEDOT.uncertainty is not None:
-                    EDOT_unc += (model.LNEDOT.uncertainty * ECC) ** 2
-                if ECC_unc is not None:
-                    EDOT_unc += (model.LNEDOT.quantity * ECC_unc) ** 2
-                EDOT_unc = np.sqrt(EDOT_unc)
+        lnedot = model.LNEDOT.as_ufloat(u.Hz)
+        edot = lnedot * ecc
     else:
         if model.EPS1DOT.quantity is not None and model.EPS2DOT.quantity is not None:
-            EDOT = (
-                model.EPS1DOT.quantity * model.EPS1.quantity
-                + model.EPS2DOT.quantity * model.EPS2.quantity
-            ) / ECC
-            if (
-                model.EPS1DOT.uncertainty is not None
-                and model.EPS2DOT.uncertainty is not None
-            ):
-                EDOT_unc = np.sqrt(
-                    (
-                        model.EPS1.uncertainty
-                        * model.EPS2.quantity
-                        * (
-                            model.EPS1.quantity * model.EPS2DOT.quantity
-                            - model.EPS2.quantity * model.EPS1DOT.quantity
-                        )
-                        / ECC**3
-                    )
-                    ** 2
-                    + (
-                        model.EPS2.uncertainty
-                        * model.EPS1.quantity
-                        * (
-                            model.EPS2.quantity * model.EPS1DOT.quantity
-                            - model.EPS1.quantity * model.EPS2DOT.quantity
-                        )
-                        / ECC**3
-                    )
-                    ** 2
-                    + (model.EPS1DOT.uncertainty * model.EPS1.quantity / ECC) ** 2
-                    + (model.EPS2DOT.uncertainty * model.EPS2.quantity / ECC) ** 2
-                )
-    return ECC, OM, T0, EDOT, ECC_unc, OM_unc, T0_unc, EDOT_unc
+            eps1dot = model.EPS1DOT.as_ufloat(u.Hz)
+            eps2dot = model.EPS2DOT.as_ufloat(u.Hz)
+            edot = (eps1dot * eps1 + eps2dot * eps2) / ecc
+
+    return (
+        ecc.n,
+        (om.n * u.rad).to(u.deg),
+        T0,
+        edot.n * u.Hz,
+        ecc.s if ecc.s > 0 else None,
+        (om.s * u.rad).to(u.deg) if om.s > 0 else None,
+        T0_unc,
+        edot.s * u.Hz if (edot is not None and edot.s > 0) else None,
+    )
 
 
 def _to_ELL1(model):
@@ -361,92 +310,41 @@ def _to_ELL1(model):
         raise AttributeError(
             "Model must contain ECC, T0, OM for conversion to EPS1/EPS2"
         )
-    EPS1_unc = None
-    EPS2_unc = None
-    TASC_unc = None
-    EPS1DOT = None
-    EPS2DOT = None
-    EPS1DOT_unc = None
-    EPS2DOT_unc = None
-    EPS1 = model.ECC.quantity * np.cos(model.OM.quantity)
-    EPS2 = model.ECC.quantity * np.sin(model.OM.quantity)
+    ecc = model.ECC.as_ufloat()
+    om = model.OM.as_ufloat(u.rad)
+    eps1 = ecc * umath.cos(om)
+    eps2 = ecc * umath.sin(om)
     if model.PB.quantity is not None:
-        TASC = model.T0.quantity - (
-            model.PB.quantity * model.OM.quantity / 2 / np.pi
-        ).to(u.d, equivalencies=u.dimensionless_angles())
+        pb = model.PB.as_ufloat(u.d)
     elif model.FB0.quantity is not None:
-        TASC = model.T0.quantity - (
-            (1 / model.FB0.quantity) * model.OM.quantity / 2 / np.pi
-        ).to(u.d, equivalencies=u.dimensionless_angles())
-
-    if model.ECC.uncertainty is not None and model.OM.uncertainty is not None:
-        EPS1_unc = np.sqrt(
-            (model.ECC.uncertainty * np.cos(model.OM.quantity)) ** 2
-            + (
-                model.ECC.quantity * model.OM.uncertainty * np.sin(model.OM.quantity)
-            ).to(u.dimensionless_unscaled, equivalencies=u.dimensionless_angles())
-            ** 2
-        )
-        EPS2_unc = np.sqrt(
-            (model.ECC.uncertainty * np.sin(model.OM.quantity)) ** 2
-            + (
-                model.ECC.quantity * model.OM.uncertainty * np.cos(model.OM.quantity)
-            ).to(u.dimensionless_unscaled, equivalencies=u.dimensionless_angles())
-            ** 2
-        )
-    if (
-        model.OM.uncertainty is not None
-        and model.T0.uncertainty is not None
-        and model.PB.uncertainty is not None
-    ):
+        pb = 1 / model.FB0.as_ufloat(1 / u.d)
+    TASC = model.T0.quantity - (pb.n * om.n / 2 / np.pi)
+    if model.T0.uncertainty is not None:
         TASC_unc = np.sqrt(
             (model.T0.uncertainty) ** 2
-            + (model.PB.uncertainty * model.OM.quantity / 2 / np.pi).to(
-                u.d, equivalencies=u.dimensionless_angles()
-            )
-            ** 2
-            + (model.PB.quantity * model.OM.uncertainty / 2 / np.pi).to(
-                u.d, equivalencies=u.dimensionless_angles()
-            )
-            ** 2
+            + (pb.s * u.d * om.n / 2 / np.pi) ** 2
+            + (pb.n * u.d * om.s / 2 / np.pi) ** 2
         )
-    elif (
-        model.OM.uncertainty is not None
-        and model.T0.uncertainty is not None
-        and model.FB0.uncertainty is not None
-    ):
-        TASC_unc = np.sqrt(
-            (model.T0.uncertainty) ** 2
-            + (
-                model.FB0.uncertainty
-                * model.OM.quantity
-                / 2
-                / np.pi
-                / model.FB0.quantity**2
-            ).to(u.d, equivalencies=u.dimensionless_angles())
-            ** 2
-            + ((1 / model.FB0.quantity) * model.OM.uncertainty / 2 / np.pi).to(
-                u.d, equivalencies=u.dimensionless_angles()
-            )
-            ** 2
-        )
+    eps1dot = None
+    eps2dot = None
     if model.EDOT.quantity is not None:
-        EPS1DOT = model.EDOT.quantity * np.cos(model.OM.quantity)
-        EPS2DOT = model.EDOT.quantity * np.sin(model.OM.quantity)
         if model.EDOT.uncertainty is not None:
             EPS1DOT_unc = np.abs(model.EDOT.uncertainty * np.cos(model.OM.quantity))
             EPS2DOT_unc = np.abs(model.EDOT.uncertainty * np.sin(model.OM.quantity))
+        edot = model.EDOT.as_ufloat(u.Hz)
+        eps1dot = edot * umath.cos(om)
+        eps2dot = edot * umath.sin(om)
     return (
-        EPS1,
-        EPS2,
+        eps1.n,
+        eps2.n,
         TASC,
-        EPS1DOT,
-        EPS2DOT,
-        EPS1_unc,
-        EPS2_unc,
+        eps1dot.n * u.Hz,
+        eps2dot.n * u.Hz,
+        eps1.s if eps1.s > 0 else None,
+        eps2.s if eps2.s > 0 else None,
         TASC_unc,
-        EPS1DOT_unc,
-        EPS2DOT_unc,
+        eps1dot.s * u.Hz if (eps1dot is not None and eps1dot.s > 0) else None,
+        eps2dot.s * u.Hz if (eps2dot is not None and eps2dot.s > 0) else None,
     )
 
 
