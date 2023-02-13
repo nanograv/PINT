@@ -49,6 +49,8 @@ plotlabels = {
     "frequency": r"Observing Frequency (MHz)",
     "TOA error": r"TOA uncertainty ($\mu$s)",
     "rounded MJD": r"MJD",
+    "wideband DM": "Wideband DM (dmu)",
+    "wideband DM error": "Wideband DM error (dmu)",
 }
 
 helpstring = """The following interactions are currently supported in the plotting pane in `pintk`:
@@ -493,7 +495,7 @@ class PlkXYChoiceWidget(tk.Frame):
         self.ybuttons = []
 
         lbls = (
-            pulsar.plot_labels + ["wb-dm", "wb-dmerr"]
+            pulsar.plot_labels + ["wideband DM", "wideband DM error"]
             if self.wideband
             else pulsar.plot_labels
         )
@@ -1238,6 +1240,12 @@ class PlkWidget(tk.Frame):
         elif label == "rounded MJD":
             data = np.floor(self.psr.all_toas.get_mjds() + 0.5 * u.d)
             error = self.psr.all_toas.get_errors().to(u.d)
+        elif label == "wideband DM":
+            data = self.psr.all_toas.get_dms().to(pint.dmu)
+            error = self.psr.all_toas.get_dm_errors().to(pint.dmu)
+        elif label == "wideband DM error":
+            data = self.psr.all_toas.get_dm_errors().to(pint.dmu)
+            error = None
         return data, error
 
     def coordToPoint(self, cx, cy):
