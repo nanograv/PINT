@@ -576,7 +576,7 @@ class TimingModel:
         -------
         list
         """
-        component_type_list_str = "{}_list".format(component_type)
+        component_type_list_str = f"{component_type}_list"
         if hasattr(self, component_type_list_str):
             component_type_list = getattr(self, component_type_list_str)
             return [
@@ -607,17 +607,14 @@ class TimingModel:
         """Set the model parameters to the value contained in the input dict."""
         for k, v in fitp.items():
             p = getattr(self, k)
-            if isinstance(v, u.Quantity):
-                p.uncertainty = v
-            else:
-                p.uncertainty = v * p.units
+            p.uncertainty = v if isinstance(v, u.Quantity) else v * p.units
 
     @property_exists
     def components(self):
         """All the components in a dictionary indexed by name."""
         comps = {}
         for ct in self.component_types:
-            for cp in getattr(self, ct + "_list"):
+            for cp in getattr(self, f"{ct}_list"):
                 comps[cp.__class__.__name__] = cp
         return comps
 
@@ -708,10 +705,8 @@ class TimingModel:
             raise ValueError(f"anom='{anom}' is not a recognized type of anomaly")
         # Make sure all angles are between 0-2*pi
         anoms = np.remainder(anoms.value, 2 * np.pi)
-        if radians:  # return with radian units
-            return anoms * u.rad
-        else:  # return as unitless cycles from 0-1
-            return anoms / (2 * np.pi)
+        # return with radian units or return as unitless cycles from 0-1
+        return anoms * u.rad if radians else anoms / (2 * np.pi)
 
     def conjunction(self, baryMJD):
         """Return the time(s) of the first superior conjunction(s) after baryMJD.
@@ -770,10 +765,7 @@ class TimingModel:
                     break
             # Now use scipy to find the root
             scs.append(brentq(funct, ts[lb], ts[lb + 1]))
-        if len(scs) == 1:
-            return scs[0]  # Return a float
-        else:
-            return np.asarray(scs)  # otherwise return an array
+        return scs[0] if len(scs) == 1 else np.asarray(scs)
 
     @property_exists
     def dm_funcs(self):
@@ -869,13 +861,13 @@ class TimingModel:
 
     def get_deriv_funcs(self, component_type, derivative_type=""):
         """Return dictionary of derivative functions."""
-        # TODO, this function can be a more generical function collector.
+        # TODO, this function can be a more generic function collector.
         deriv_funcs = defaultdict(list)
-        if not derivative_type == "":
+        if derivative_type != "":
             derivative_type += "_"
-        for cp in getattr(self, component_type + "_list"):
+        for cp in getattr(self, f"{component_type}_list"):
             try:
-                df = getattr(cp, derivative_type + "deriv_funcs")
+                df = getattr(cp, f"{derivative_type}deriv_funcs")
             except AttributeError:
                 continue
             for k, v in df.items():
@@ -918,13 +910,11 @@ class TimingModel:
         comp_base = inspect.getmro(component.__class__)
         if comp_base[-2].__name__ != "Component":
             raise TypeError(
-                "Class '%s' is not a Component type class."
-                % component.__class__.__name__
+                f"Class '{component.__class__.__name__}' is not a Component type class."
             )
         elif len(comp_base) < 3:
             raise TypeError(
-                "'%s' class is not a subclass of 'Component' class."
-                % component.__class__.__name__
+                f"'{component.__class__.__name__}' class is not a subclass of 'Component' class."
             )
         else:
             comp_type = comp_base[-3].__name__
@@ -952,17 +942,16 @@ class TimingModel:
         comps = self.components
         if isinstance(component, str):
             if component not in list(comps.keys()):
-                raise AttributeError("No '%s' in the timing model." % component)
+                raise AttributeError(f"No '{component}' in the timing model.")
             comp = comps[component]
-        else:  # When component is an component instance.
-            if component not in list(comps.values()):
-                raise AttributeError(
-                    "No '%s' in the timing model." % component.__class__.__name__
-                )
-            else:
-                comp = component
+        elif component in list(comps.values()):
+            comp = component
+        else:
+            raise AttributeError(
+                f"No '{component.__class__.__name__}' in the timing model."
+            )
         comp_type = self.get_component_type(comp)
-        host_list = getattr(self, comp_type + "_list")
+        host_list = getattr(self, f"{comp_type}_list")
         order = host_list.index(comp)
         return comp, order, host_list, comp_type
 
@@ -981,9 +970,9 @@ class TimingModel:
             If true, add a duplicate component. Default is False.
         """
         comp_type = self.get_component_type(component)
+        cur_cps = []
         if comp_type in self.component_types:
-            comp_list = getattr(self, comp_type + "_list")
-            cur_cps = []
+            comp_list = getattr(self, f"{comp_type}_list")
             for cp in comp_list:
                 # If component order is not defined.
                 cp_order = (
@@ -993,32 +982,28 @@ class TimingModel:
             # Check if the component has been added already.
             if component.__class__ in (x.__class__ for x in comp_list):
                 log.warning(
-                    "Component '%s' is already present but was added again."
-                    % component.__class__.__name__
+                    f"Component '{component.__class__.__name__}' is already present but was added again."
                 )
                 if not force:
                     raise ValueError(
-                        "Component '%s' is already present and will not be "
-                        "added again. To force add it, use force=True option."
-                        % component.__class__.__name__
+                        f"Component '{component.__class__.__name__}' is already present and will not be "
+                        f"added again. To force add it, use force=True option."
                     )
         else:
             self.component_types.append(comp_type)
-            cur_cps = []
-
         # link new component to TimingModel
         component._parent = self
 
-        # If the categore is not in the order list, it will be added to the end.
+        # If the category is not in the order list, it will be added to the end.
         if component.category not in order:
-            new_cp = tuple((len(order) + 1, component))
+            new_cp = len(order) + 1, component
         else:
-            new_cp = tuple((order.index(component.category), component))
+            new_cp = order.index(component.category), component
         # add new component
         cur_cps.append(new_cp)
         cur_cps.sort(key=lambda x: x[0])
         new_comp_list = [c[1] for c in cur_cps]
-        setattr(self, comp_type + "_list", new_comp_list)
+        setattr(self, f"{comp_type}_list", new_comp_list)
         # Set up components
         if setup:
             self.setup()
@@ -1094,12 +1079,12 @@ class TimingModel:
         if target_component == "":
             setattr(self, param.name, param)
             self.top_level_params += [param.name]
-        else:
-            if target_component not in list(self.components.keys()):
-                raise AttributeError(
-                    "Can not find component '%s' in " "timing model." % target_component
-                )
+        elif target_component in list(self.components.keys()):
             self.components[target_component].add_param(param, setup=setup)
+        else:
+            raise AttributeError(
+                f"Can not find component '{target_component}' in " "timing model."
+            )
 
     def remove_param(self, param):
         """Remove a parameter from timing model.
@@ -1111,7 +1096,7 @@ class TimingModel:
         """
         param_map = self.get_params_mapping()
         if param not in param_map:
-            raise AttributeError("Can not find '%s' in timing model." % param)
+            raise AttributeError(f"Can not find '{param}' in timing model.")
         if param_map[param] == "timing_model":
             delattr(self, param)
             self.top_level_params.remove(param)
@@ -1121,10 +1106,8 @@ class TimingModel:
         self.setup()
 
     def get_params_mapping(self):
-        """Report whick component each parameter name comes from."""
-        param_mapping = {}
-        for p in self.top_level_params:
-            param_mapping[p] = "timing_model"
+        """Report which component each parameter name comes from."""
+        param_mapping = {p: "timing_model" for p in self.top_level_params}
         for cp in list(self.components.values()):
             for pp in cp.params:
                 param_mapping[pp] = cp.__class__.__name__
@@ -1147,7 +1130,7 @@ class TimingModel:
         Returns
         -------
         dict
-           A dictionary with prefix pararameter real index as key and parameter
+           A dictionary with prefix parameter real index as key and parameter
            name as value.
         """
         for cp in self.components.values():
@@ -1233,13 +1216,12 @@ class TimingModel:
             idx = len(self.DelayComponent_list)
         else:
             delay_names = [x.__class__.__name__ for x in self.DelayComponent_list]
-            if cutoff_component in delay_names:
-                idx = delay_names.index(cutoff_component)
-                if include_last:
-                    idx += 1
-            else:
-                raise KeyError("No delay component named '%s'." % cutoff_component)
+            if cutoff_component not in delay_names:
+                raise KeyError(f"No delay component named '{cutoff_component}'.")
 
+            idx = delay_names.index(cutoff_component)
+            if include_last:
+                idx += 1
         # Do NOT cycle through delay_funcs - cycle through components until cutoff
         for dc in self.DelayComponent_list[:idx]:
             for df in dc.delay_funcs_component:
@@ -1262,10 +1244,7 @@ class TimingModel:
         # abs_phase defaults to True if AbsPhase is in the model, otherwise to
         # False.  Of course, if you manually set it, it will use that setting.
         if abs_phase is None:
-            if "AbsPhase" in list(self.components.keys()):
-                abs_phase = True
-            else:
-                abs_phase = False
+            abs_phase = "AbsPhase" in list(self.components.keys())
         # If the absolute phase flag is on, use the TZR parameters to compute
         # the absolute phase.
         if abs_phase:
@@ -1400,8 +1379,8 @@ class TimingModel:
         """Number of basis functions for each noise model component.
 
         Returns a dictionary of correlated-noise components in the noise
-        model.  Each entry contains a tuple (offset, size) where size is the
-        number of basis funtions for the component, and offset is their
+        model. Each entry contains a tuple (offset, size) where size is the
+        number of basis functions for the component, and offset is their
         starting location in the design matrix and weights vector.
         """
         result = {}
