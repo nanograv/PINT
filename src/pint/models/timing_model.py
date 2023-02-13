@@ -26,6 +26,8 @@ To actually create a timing model, you almost certainly want to use
 See :ref:`Timing Models` for more details on how PINT's timing models work.
 
 """
+
+
 import abc
 import copy
 import inspect
@@ -86,22 +88,19 @@ __all__ = [
 # errors in the par file.
 #
 # Comparisons with keywords in par file lines is done in a case insensitive way.
-ignore_params = set(
-    [
-        "TRES",
-        "TZRMJD",
-        "TZRFRQ",
-        "TZRSITE",
-        "NITS",
-        "IBOOT",
-        "CHI2R",
-        "MODE",
-        "PLANET_SHAPIRO2",
-        #    'NE_SW', 'NE_SW2',
-    ]
-)
+ignore_params = {
+    "TRES",
+    "TZRMJD",
+    "TZRFRQ",
+    "TZRSITE",
+    "NITS",
+    "IBOOT",
+    "CHI2R",
+    "MODE",
+    "PLANET_SHAPIRO2",
+}
 
-ignore_prefix = set(["DMXF1_", "DMXF2_", "DMXEP_"])  # DMXEP_ for now.
+ignore_prefix = {"DMXF1_", "DMXF2_", "DMXEP_"}
 
 DEFAULT_ORDER = [
     "astrometry",
@@ -378,13 +377,15 @@ class TimingModel:
             error_message = f"PINT only supports 'UNITS TDB'. The given timescale '{self.UNITS.value}' is invalid."
             raise ValueError(error_message)
         elif self.UNITS.value == "TCB" and not allow_tcb:
-            error_message = """The TCB timescale is not fully supported by PINT. PINT only supports 'UNITS TDB' 
-            internally. See https://nanograv-pint.readthedocs.io/en/latest/explanation.html#time-scales for an 
-            explanation on different timescales. A TCB par file can be converted to TDB upon read using the 
-            `allow_tcb` option. However, this conversion is not exact and a fit must be performed to obtain 
-            reliable results. Note that PINT only supports writing TDB par files. A TCB par file can also be 
+            error_message = """The TCB timescale is not fully supported by PINT. 
+            PINT only supports 'UNITS TDB' internally. See https://nanograv-pint.readthedocs.io/en/latest/explanation.html#time-scales
+            for an explanation on different timescales. A TCB par file can be 
             converted to TDB using the `tcb2tdb` command like so:
+            
                 $ tcb2tdb J1234+6789_tcb.par J1234+6789_tdb.par
+            
+            However, this conversion is not exact and a fit must be performed to obtain 
+            reliable results. Note that PINT only supports writing TDB par files. 
             """
             raise ValueError(error_message)
         elif allow_tcb and self.UNITS.value == "TCB":
@@ -703,7 +704,7 @@ class TimingModel:
         elif anom.lower() == "true":
             anoms = bbi.nu()  # can be negative
         else:
-            raise ValueError("anom='%s' is not a recognized type of anomaly" % anom)
+            raise ValueError(f"anom='{anom}' is not a recognized type of anomaly")
         # Make sure all angles are between 0-2*pi
         anoms = np.remainder(anoms.value, 2 * np.pi)
         if radians:  # return with radian units
