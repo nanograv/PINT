@@ -1,3 +1,5 @@
+"""PINT-based tool for converting TCB par files to TDB."""
+
 from loguru import logger as log
 
 import pint.logging

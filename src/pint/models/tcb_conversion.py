@@ -17,6 +17,7 @@ IFTE_K = 1 + IFTE_KM1
 
 
 def scale_parameter(model, param, n):
+    """Scale parameter by a power of IFTE_K"""
     factor = IFTE_K**n
 
     if hasattr(model, param) and getattr(model, param).quantity is not None:
@@ -27,6 +28,7 @@ def scale_parameter(model, param, n):
 
 
 def transform_mjd_parameter(model, param):
+    """Convert an MJD from TCB to TDB."""
     factor = 1 / IFTE_K
     tref = IFTE_MJD0
 
@@ -63,6 +65,11 @@ def convert_tcb_to_tdb(model):
         7. EQUADs
         8. Red noise parameters including FITWAVES, powerlaw red noise and
            powerlaw DM noise parameters
+
+    Parameters
+    ----------
+    model : pint.models.timing_model.TimingModel
+       Timing model to be converted.
     """
 
     if model.UNITS in ["TDB", None]:
