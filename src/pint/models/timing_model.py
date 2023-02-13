@@ -760,7 +760,7 @@ class TimingModel:
                 raise AttributeError(
                     "Neither PB nor FB0 is present in the timing model."
                 )
-            ts = np.linspace(bt, bt + self.PB.value, 11)
+            ts = np.linspace(bt, bt + pb, 11)
             # Compute the true anomalies and omegas for those times
             nus = self.orbital_phase(ts, anom="true")
             omegas = bbi.omega()
