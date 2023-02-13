@@ -2,6 +2,8 @@
 
 import numpy as np
 
+from pint.models.parameter import MJDParameter
+
 __all__ = [
     "IFTE_K",
     "scale_parameter",
@@ -34,6 +36,8 @@ def transform_mjd_parameter(model, param):
 
     if hasattr(model, param) and getattr(model, param).quantity is not None:
         par = getattr(model, param)
+        assert isinstance(par, MJDParameter)
+
         par.value = (par.value - tref) * factor + tref
         if par.uncertainty_value is not None:
             par.uncertainty_value *= factor
