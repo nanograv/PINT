@@ -392,10 +392,7 @@ class PlkFitterSelect(tk.Frame):
         self.fitterSelect.bind("<<ComboboxSelected>>", self.changeFitter)
 
     def updateFitterChoices(self, wideband):
-        if wideband:
-            self.fitterSelect["values"] = wb_fitters
-        else:
-            self.fitterSelect["values"] = nb_fitters
+        self.fitterSelect["values"] = wb_fitters if wideband else nb_fitters
 
     def changeFitter(self, event):
         self.fitter = self.fitterSelect.get()  # get current value
@@ -438,7 +435,7 @@ class PlkColorModeBoxes(tk.Frame):
                     model = self.master.psr.postfit_model
                 else:
                     model = self.master.psr.prefit_model
-                if not "PhaseJump" in model.components:
+                if "PhaseJump" not in model.components:
                     self.checkboxes[index].configure(state="disabled")
 
         self.updateLayout()
@@ -670,7 +667,7 @@ class PlkWidget(tk.Frame):
     def __init__(self, master=None, **kwargs):
         tk.Frame.__init__(self, master)
         self.configure(bg=background)
-        self.init_loglevel = kwargs["loglevel"] if "loglevel" in kwargs else None
+        self.init_loglevel = kwargs.get("loglevel")
         self.initPlk()
         self.initPlkLayout()
         self.current_state = State()
