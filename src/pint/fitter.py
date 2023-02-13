@@ -590,7 +590,10 @@ class Fitter:
                         outstring=True,
                     )
                 s += "\n"
-
+            if hasattr(self.model, "FB0") and self.model.FB0.value is not None:
+                p, perr = pint.derived_quantities.pferrs(
+                    self.model.FB0.quantity, self.model.FB0.uncertainty
+                )
             # Masses and inclination
             pb = p.to(u.d) if btx else self.model.PB.quantity
             pberr = perr.to(u.d) if btx else self.model.PB.uncertainty
