@@ -1,12 +1,12 @@
 """PINT-based tool for converting TCB par files to TDB."""
 
+import argparse
+
 from loguru import logger as log
 
 import pint.logging
-from pint.models.tcb_conversion import convert_tcb_to_tdb
 from pint.models import get_model
-
-import argparse
+from pint.models.tcb_conversion import convert_tcb_to_tdb
 
 pint.logging.setup(level="INFO")
 
