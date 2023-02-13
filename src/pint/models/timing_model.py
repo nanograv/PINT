@@ -1035,8 +1035,8 @@ class TimingModel:
         list of tuples
            All possible components that host the target parameter.  The first
            element is the component object that have the target parameter, the
-           second one is the parameter object. If it is a prefix-style parameter
-           , it will return one example of such parameter.
+           second one is the parameter object. If it is a prefix-style parameter,
+           it will return one example of such parameter.
         """
         result_comp = []
         for cp_name, cp in self.components.items():
@@ -1554,7 +1554,7 @@ class TimingModel:
         if sample_step is None:
             pulse_period = 1.0 / (self.F0.quantity)
             sample_step = pulse_period * 2
-        # Note that sample_dt is applied cumulatively, so this evaulates phase at TOA-dt and TOA+dt
+        # Note that sample_dt is applied cumulatively, so this evaluates phase at TOA-dt and TOA+dt
         sample_dt = [-sample_step, 2 * sample_step]
 
         sample_phase = []
@@ -1643,8 +1643,8 @@ class TimingModel:
         delay_derivs = self.delay_deriv_funcs
         if param not in list(delay_derivs.keys()):
             raise AttributeError(
-                "Derivative function for '%s' is not provided"
-                " or not registered. " % param
+                "Derivative function for '{param}' is not provided"
+                " or not registered. "
             )
         for df in delay_derivs[param]:
             result += df(toas, param, acc_delay).to(
@@ -1715,7 +1715,7 @@ class TimingModel:
         result = np.zeros(len(data)) << (u.pc / u.cm**3 / par.units)
         dm_df = self.dm_derivs.get(param, None)
         if dm_df is None:
-            if param not in self.params:  # Maybe add differentitable params
+            if param not in self.params:  # Maybe add differentiable params
                 raise AttributeError(f"Parameter {param} does not exist")
             else:
                 return result

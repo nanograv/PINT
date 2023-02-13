@@ -400,8 +400,8 @@ class ModelBuilder:
                     temp_cf_cp.remove(cp)
                     conflict_components[cp].update(set(temp_cf_cp))
                 continue
-        # Check if the selected component in the confilict graph. If it is
-        # remove the selected componens with its conflict components.
+        # Check if the selected component in the conflict graph. If it is
+        # remove the selected components with its conflict components.
         for ps_cp in selected_components:
             cf_cps = conflict_components.get(ps_cp)
             if cf_cps is not None:  # Had conflict, but resolved.
@@ -413,9 +413,9 @@ class ModelBuilder:
         for cp in selected_components:
             cate = self.all_components.component_category_map[cp]
             if cate in selected_cates:
-                exisit_cp = selected_cates[cate]
+                exist_cp = selected_cates[cate]
                 raise TimingModelError(
-                    f"Component '{cp}' and '{exisit_cp}' belong to the"
+                    f"Component '{cp}' and '{exist_cp}' belong to the"
                     f" same category '{cate}'. Only one component from"
                     f" the same category can be used for a timing model."
                     f" Please check your input (e.g., .par file)."
@@ -473,12 +473,12 @@ class ModelBuilder:
                     prefix, _, index = split_prefixed_name(pint_par)
                 except PrefixError as e:
                     par_hosts = self.all_components.param_component_map[pint_par]
-                    currnt_cp = timing_model.components.keys()
+                    current_cp = timing_model.components.keys()
                     raise TimingModelError(
                         f"Parameter {pint_par} is recognized"
                         f" by PINT, but not used in the current"
                         f" timing model. It is used in {par_hosts},"
-                        f" but the current timing model uses {currnt_cp}."
+                        f" but the current timing model uses {current_cp}."
                     ) from e
                 # TODO need to create a better API for _locate_param_host
                 host_component = timing_model._locate_param_host(first_init)
