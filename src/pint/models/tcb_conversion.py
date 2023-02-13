@@ -32,7 +32,7 @@ def convert_tcb_to_tdb(model):
     """This function performs a partial conversion of a model
     specified in TCB to TDB. While this should be sufficient as
     a starting point, the resulting parameters are only approximate
-    and the accompanying TOAs should be re-fit.
+    and the model should be re-fit.
 
     This is based on the `transform` plugin of tempo2.
 
@@ -76,13 +76,13 @@ def convert_tcb_to_tdb(model):
         scale_parameter(model, "PMELONG", IFTE_K)
         transform_mjd_parameter(model, "POSEPOCH")
 
-    if hasattr(model, "BINARY") and hasattr(model, "BINARY").value is not None:
+    if hasattr(model, "BINARY") and getattr(model, "BINARY").value is not None:
         transform_mjd_parameter(model, "T0")
         transform_mjd_parameter(model, "TASC")
         scale_parameter(model, "PB", -1)
         scale_parameter(model, "FB0", 1)
         scale_parameter(model, "A1", -1)
 
-    model.UNITS = "TDB"
+    model.UNITS.value = "TDB"
 
     model.validate()

@@ -6,10 +6,12 @@ from pint.models import get_model
 
 import argparse
 
-pint.logging.setup(level=pint.logging.script_level)
+pint.logging.setup(level="INFO")
+
+__all__ = ["main"]
 
 
-def main(argv):
+def main(argv=None):
     parser = argparse.ArgumentParser(
         description="PINT tool for converting TCB par files to TBD.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -20,7 +22,7 @@ def main(argv):
     args = parser.parse_args(argv)
 
     welcome_message = """This script converts TCB par files to TDB.
-    Please note that this conversion is exact and the timing model 
+    Please note that this conversion is not exact and the timing model 
     should be re-fit to the TOAs. 
 
     The following parameters are converted to TDB:
