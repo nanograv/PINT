@@ -447,34 +447,30 @@ class TimingModel:
         used_cats = set()
         pstart = copy.copy(self.top_level_params)
         for cat in start_order:
-            if cat in compdict:
-                cp = compdict[cat]
-                for cpp in cp:
-                    pstart += cpp.params
-                used_cats.add(cat)
-            else:
+            if cat not in compdict:
                 continue
-
+            cp = compdict[cat]
+            for cpp in cp:
+                pstart += cpp.params
+            used_cats.add(cat)
         pend = []
         for cat in last_order:
-            if cat in compdict:
-                cp = compdict[cat]
-                for cpp in cp:
-                    pend += cpp.parms
-                used_cats.add(cat)
-            else:
+            if cat not in compdict:
                 continue
 
+            cp = compdict[cat]
+            for cpp in cp:
+                pend += cpp.parms
+            used_cats.add(cat)
         # Now collect any components that haven't already been included in the list
         pmid = []
         for cat in compdict:
             if cat in used_cats:
                 continue
-            else:
-                cp = compdict[cat]
-                for cpp in cp:
-                    pmid += cpp.params
-                used_cats.add(cat)
+            cp = compdict[cat]
+            for cpp in cp:
+                pmid += cpp.params
+            used_cats.add(cat)
 
         return pstart + pmid + pend
 
@@ -1467,13 +1463,9 @@ class TimingModel:
                 if tjv in tim_jump_values:
                     log.info(f"JUMP -tim_jump {tjv} already exists")
                     tim_jump_values.remove(tjv)
-        if used_indices:
-            num = max(used_indices) + 1
-        else:
-            num = 1
-
+        num = max(used_indices) + 1 if used_indices else 1
         if not tim_jump_values:
-            log.info(f"All tim_jump values have corresponding JUMPs")
+            log.info("All tim_jump values have corresponding JUMPs")
             return
 
         # FIXME: arrange for these to be in a sensible order (might not be integers
@@ -1519,7 +1511,7 @@ class TimingModel:
             Specifies the index of the jump to be deleted.
         """
         # remove jump of specified index
-        self.remove_param("JUMP" + str(jump_num))
+        self.remove_param(f"JUMP{jump_num}")
 
         # remove jump flags from selected TOA tables
         if toa_table is not None:
@@ -1691,10 +1683,7 @@ class TimingModel:
         par = getattr(self, param)
         ori_value = par.value
         unit = par.units
-        if ori_value == 0:
-            h = 1.0 * step
-        else:
-            h = ori_value * step
+        h = 1.0 * step if ori_value == 0 else ori_value * step
         parv = [par.value - h, par.value + h]
 
         phase_i = (
@@ -1725,13 +1714,10 @@ class TimingModel:
         ori_value = par.value
         if ori_value is None:
             # A parameter did not get to use in the model
-            log.warning("Parameter '%s' is not used by timing model." % param)
+            log.warning(f"Parameter '{param}' is not used by timing model.")
             return np.zeros(toas.ntoas) * (u.second / par.units)
         unit = par.units
-        if ori_value == 0:
-            h = 1.0 * step
-        else:
-            h = ori_value * step
+        h = 1.0 * step if ori_value == 0 else ori_value * step
         parv = [par.value - h, par.value + h]
         delay = np.zeros((toas.ntoas, 2))
         for ii, val in enumerate(parv):
