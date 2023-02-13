@@ -1,7 +1,7 @@
 """
 
 Potential issues:
-* Use FB instead of PB
+* orbital frequency derivatives
 * Does EPS1DOT/EPS2DOT imply OMDOT and vice versa?
 
 """
@@ -877,7 +877,6 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                     or model.TASC.frozen
                     or model.FB0.frozen
                 )
-
             if EDOT is not None:
                 outmodel.EDOT.quantity = EDOT
             if EDOT_unc is not None:
