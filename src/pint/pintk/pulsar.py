@@ -167,10 +167,7 @@ class Pulsar:
 
     def _delete_TOAs(self, toa_table):
         del_inds = np.in1d(toa_table["index"], np.array(list(self.deleted)))
-        if del_inds.sum() < len(toa_table):
-            return toa_table[~del_inds]
-        else:
-            return None
+        return toa_table[~del_inds] if del_inds.sum() < len(toa_table) else None
 
     def delete_TOAs(self, indices, selected):
         # note: indices should be a list or an array
@@ -452,21 +449,11 @@ class Pulsar:
 
     def getDefaultFitter(self, downhill=False):
         if self.all_toas.wideband:
-            if downhill:
-                return "WidebandDownhillFitter"
-            else:
-                return "WidebandTOAFitter"
+            return "WidebandDownhillFitter" if downhill else "WidebandTOAFitter"
+        if self.prefit_model.has_correlated_errors:
+            return "DownhillGLSFitter" if downhill else "GLSFitter"
         else:
-            if self.prefit_model.has_correlated_errors:
-                if downhill:
-                    return "DownhillGLSFitter"
-                else:
-                    return "GLSFitter"
-            else:
-                if downhill:
-                    return "DownhillWLSFitter"
-                else:
-                    return "WLSFitter"
+            return "DownhillWLSFitter" if downhill else "WLSFitter"
 
     def print_chi2(self, selected):
         # Select all the TOAs if none are explicitly set

@@ -392,10 +392,7 @@ class PlkFitterSelect(tk.Frame):
         self.fitterSelect.bind("<<ComboboxSelected>>", self.changeFitter)
 
     def updateFitterChoices(self, wideband):
-        if wideband:
-            self.fitterSelect["values"] = wb_fitters
-        else:
-            self.fitterSelect["values"] = nb_fitters
+        self.fitterSelect["values"] = wb_fitters if wideband else nb_fitters
 
     def changeFitter(self, event):
         self.fitter = self.fitterSelect.get()  # get current value
@@ -438,7 +435,7 @@ class PlkColorModeBoxes(tk.Frame):
                     model = self.master.psr.postfit_model
                 else:
                     model = self.master.psr.prefit_model
-                if not "PhaseJump" in model.components:
+                if "PhaseJump" not in model.components:
                     self.checkboxes[index].configure(state="disabled")
 
         self.updateLayout()
@@ -475,6 +472,9 @@ class PlkXYChoiceWidget(tk.Frame):
         self.xvar = tk.StringVar()
         self.yvar = tk.StringVar()
 
+        # This will be set in PlkWidget.setPulsar and PlkWidget.update methods.
+        self.wideband = False
+
         self.initPlkXYChoice()
 
     def initPlkXYChoice(self):
@@ -492,7 +492,13 @@ class PlkXYChoiceWidget(tk.Frame):
         self.xbuttons = []
         self.ybuttons = []
 
-        for ii, choice in enumerate(pulsar.plot_labels):
+        lbls = (
+            pulsar.plot_labels + ["wb-dm", "wb-dmerr"]
+            if self.wideband
+            else pulsar.plot_labels
+        )
+
+        for ii, choice in enumerate(lbls):
             label = tk.Label(self, text=choice, fg=foreground, bg=background)
             label.grid(row=ii + 1, column=0)
 
@@ -670,7 +676,7 @@ class PlkWidget(tk.Frame):
     def __init__(self, master=None, **kwargs):
         tk.Frame.__init__(self, master)
         self.configure(bg=background)
-        self.init_loglevel = kwargs["loglevel"] if "loglevel" in kwargs else None
+        self.init_loglevel = kwargs.get("loglevel")
         self.initPlk()
         self.initPlkLayout()
         self.current_state = State()
@@ -759,6 +765,7 @@ class PlkWidget(tk.Frame):
             # reset state stack
             self.state_stack = [self.base_state]
             self.current_state = State()
+            self.xyChoiceWidget.wideband = self.psr.all_toas.wideband
 
     def setPulsar(self, psr, updates):
         self.psr = psr
@@ -795,6 +802,8 @@ class PlkWidget(tk.Frame):
         self.fitterWidget.fitter = self.psr.fit_method
         self.updatePlot(keepAxes=False)
         self.plkToolbar.update()
+
+        self.xyChoiceWidget.wideband = self.psr.all_toas.wideband
 
     def call_updates(self, psr_update=False):
         if self.update_callbacks is not None:
