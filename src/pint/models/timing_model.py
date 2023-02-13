@@ -376,29 +376,30 @@ class TimingModel:
         if self.UNITS.value not in [None, "TDB", "TCB"]:
             error_message = f"PINT only supports 'UNITS TDB'. The given timescale '{self.UNITS.value}' is invalid."
             raise ValueError(error_message)
-        elif self.UNITS.value == "TCB" and not allow_tcb:
-            error_message = """The TCB timescale is not fully supported by PINT. 
-            PINT only supports 'UNITS TDB' internally. See https://nanograv-pint.readthedocs.io/en/latest/explanation.html#time-scales
-            for an explanation on different timescales. A TCB par file can be 
-            converted to TDB using the `tcb2tdb` command like so:
-            
-                $ tcb2tdb J1234+6789_tcb.par J1234+6789_tdb.par
-            
-            However, this conversion is not exact and a fit must be performed to obtain 
-            reliable results. Note that PINT only supports writing TDB par files. 
-            """
-            raise ValueError(error_message)
-        elif allow_tcb and self.UNITS.value == "TCB":
-            log.warning(
-                "PINT does not support 'UNITS TCB' internally. Reading this par file nevertheless"
-                "because the `allow_tcb` option was given. This `TimingModel` object should not be"
-                "used for anything except converting to TDB."
-            )
+        elif self.UNITS.value == "TCB":
+            if not allow_tcb:
+                error_message = """The TCB timescale is not fully supported by PINT. 
+                PINT only supports 'UNITS TDB' internally. See https://nanograv-pint.readthedocs.io/en/latest/explanation.html#time-scales
+                for an explanation on different timescales. A TCB par file can be 
+                converted to TDB using the `tcb2tdb` command like so:
+                
+                    $ tcb2tdb J1234+6789_tcb.par J1234+6789_tdb.par
+                
+                However, this conversion is not exact and a fit must be performed to obtain 
+                reliable results. Note that PINT only supports writing TDB par files. 
+                """
+                raise ValueError(error_message)
+            else:
+                log.warning(
+                    "PINT does not support 'UNITS TCB' internally. Reading this par file nevertheless"
+                    "because the `allow_tcb` option was given. This `TimingModel` object should not be"
+                    "used for anything except converting to TDB."
+                )
         if not self.START.frozen:
-            warn("START cannot be unfrozen...setting START.frozen to True")
+            warn("START cannot be unfrozen... Setting START.frozen to True")
             self.START.frozen = True
         if not self.FINISH.frozen:
-            warn("FINISH cannot be unfrozen...setting FINISH.frozen to True")
+            warn("FINISH cannot be unfrozen... Setting FINISH.frozen to True")
             self.FINISH.frozen = True
 
         for cp in self.components.values():
