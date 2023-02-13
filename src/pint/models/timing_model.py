@@ -80,7 +80,7 @@ __all__ = [
     "MissingBinaryError",
     "UnknownBinaryModel",
 ]
-# Parameters or lines in parfiles we don't understand but shouldn't
+# Parameters or lines in par files we don't understand but shouldn't
 # complain about. These are still passed to components so that they
 # can use them if they want to.
 #

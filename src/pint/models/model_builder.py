@@ -1,3 +1,5 @@
+"""Building a timing model from a par file."""
+
 import copy
 import warnings
 from io import StringIO

@@ -1,4 +1,13 @@
+"""TCB to TDB conversion of a timing model."""
+
 import numpy as np
+
+__all__ = [
+    "IFTE_K",
+    "scale_parameter",
+    "transform_mjd_parameter",
+    "convert_tcb_to_tdb",
+]
 
 # These constants are taken from Irwin & Fukushima 1999.
 # These are the same as the constants used in tempo2 as of 10 Feb 2023.
