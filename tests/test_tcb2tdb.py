@@ -39,9 +39,10 @@ def test_convert_to_tdb():
 
     m = get_model(StringIO(simplepar), allow_tcb=True)
     f0_tcb = m.F0.value
+    pb_tcb = m.PB.value
     convert_tcb_to_tdb(m)
     assert m.UNITS.value == "TDB"
-    assert np.isclose(m.F0.value, f0_tcb * IFTE_K)
+    assert np.isclose(m.F0.value / f0_tcb, pb_tcb / m.PB.value)
 
 
 def test_tcb2tdb(tmp_path):
