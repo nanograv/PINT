@@ -1,10 +1,12 @@
-from pint.models.tcb_conversion import convert_tcb_to_tdb, IFTE_K
-from pint.models import get_model
-from pint.scripts import tcb2tdb
-from io import StringIO
-import pytest
-import numpy as np
 import os
+from io import StringIO
+
+import numpy as np
+import pytest
+
+from pint.models import get_model
+from pint.models.tcb_conversion import IFTE_K, convert_tcb_to_tdb
+from pint.scripts import tcb2tdb
 
 simplepar = """
 PSR              PSRTEST

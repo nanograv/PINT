@@ -36,14 +36,14 @@ def main(argv=None):
     in fact affected by the TCB to TDB conversion:
         1. Parallax
         2. TZRMJD and TZRFRQ
-        2. DM, DM derivatives, DM epoch, DMX parameters
-        3. Solar wind parameters
-        4. Binary post-Keplerian parameters including Shapiro delay 
+        3. DM, DM derivatives, DM epoch, DMX parameters
+        4. Solar wind parameters
+        5. Binary post-Keplerian parameters including Shapiro delay 
            parameters
-        5. Jumps and DM Jumps
-        6. FD parameters
-        7. EQUADs
-        8. Red noise parameters including FITWAVES, powerlaw red noise and 
+        6. Jumps and DM Jumps
+        7. FD parameters
+        8. EQUADs
+        9. Red noise parameters including FITWAVES, powerlaw red noise and 
            powerlaw DM noise parameters
     """
     log.info(welcome_message)
