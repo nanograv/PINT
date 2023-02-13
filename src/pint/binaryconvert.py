@@ -24,6 +24,8 @@ from pint.models.parameter import (
     funcParameter,
 )
 
+# output types
+# DDGR is not included as there is not a well-defined way to get a unique output
 binary_types = ["DD", "DDK", "DDS", "BT", "ELL1", "ELL1H", "ELL1k"]
 
 
@@ -220,14 +222,18 @@ def _from_ELL1(model):
         raise ValueError(f"Requires model ELL1* rather than {model.BINARY.value}")
 
     # don't do this with ufloats yet since we don't know how to handle MJD parameters
-    # do we have to account for FB or PBDOT here?
     ECC = np.sqrt(model.EPS1.quantity**2 + model.EPS2.quantity**2)
     OM = np.arctan2(model.EPS2.quantity, model.EPS1.quantity)
     if OM < 0:
         OM += 360 * u.deg
-    T0 = model.TASC.quantity + ((model.PB.quantity / 2 / np.pi) * OM).to(
-        u.d, equivalencies=u.dimensionless_angles()
-    )
+    if model.PB.quantity is not None:
+        T0 = model.TASC.quantity + ((model.PB.quantity / 2 / np.pi) * OM).to(
+            u.d, equivalencies=u.dimensionless_angles()
+        )
+    elif model.FB0.quantity is not None:
+        T0 = model.TASC.quantity + (((1 / model.FB0.quantity) / 2 / np.pi) * OM).to(
+            u.d, equivalencies=u.dimensionless_angles()
+        )
     ECC_unc = None
     OM_unc = None
     T0_unc = None
@@ -252,6 +258,19 @@ def _from_ELL1(model):
                 )
                 ** 2
             )
+        elif model.FB0.uncertainty is not None and model.TASC.uncertainty is not None:
+            T0_unc = np.sqrt(
+                (model.TASC.uncertainty) ** 2
+                + ((1 / model.FB0.quantity) / 2 / np.pi * OM_unc).to(
+                    u.d, equivalencies=u.dimensionless_angles()
+                )
+                ** 2
+                + (model.FB0.uncertainty * OM / 2 / np.pi / model.FB0.quantity**2).to(
+                    u.d, equivalencies=u.dimensionless_angles()
+                )
+                ** 2
+            )
+
     # does there also need to be a computation of OMDOT here?
     EDOT = None
     EDOT_unc = None
@@ -351,9 +370,15 @@ def _to_ELL1(model):
     EPS2DOT_unc = None
     EPS1 = model.ECC.quantity * np.cos(model.OM.quantity)
     EPS2 = model.ECC.quantity * np.sin(model.OM.quantity)
-    TASC = model.T0.quantity - (model.PB.quantity * model.OM.quantity / 2 / np.pi).to(
-        u.d, equivalencies=u.dimensionless_angles()
-    )
+    if model.PB.quantity is not None:
+        TASC = model.T0.quantity - (
+            model.PB.quantity * model.OM.quantity / 2 / np.pi
+        ).to(u.d, equivalencies=u.dimensionless_angles())
+    elif model.FB0.quantity is not None:
+        TASC = model.T0.quantity - (
+            (1 / model.FB0.quantity) * model.OM.quantity / 2 / np.pi
+        ).to(u.d, equivalencies=u.dimensionless_angles())
+
     if model.ECC.uncertainty is not None and model.OM.uncertainty is not None:
         EPS1_unc = np.sqrt(
             (model.ECC.uncertainty * np.cos(model.OM.quantity)) ** 2
@@ -381,6 +406,26 @@ def _to_ELL1(model):
             )
             ** 2
             + (model.PB.quantity * model.OM.uncertainty / 2 / np.pi).to(
+                u.d, equivalencies=u.dimensionless_angles()
+            )
+            ** 2
+        )
+    elif (
+        model.OM.uncertainty is not None
+        and model.T0.uncertainty is not None
+        and model.FB0.uncertainty is not None
+    ):
+        TASC_unc = np.sqrt(
+            (model.T0.uncertainty) ** 2
+            + (
+                model.FB0.uncertainty
+                * model.OM.quantity
+                / 2
+                / np.pi
+                / model.FB0.quantity**2
+            ).to(u.d, equivalencies=u.dimensionless_angles())
+            ** 2
+            + ((1 / model.FB0.quantity) * model.OM.uncertainty / 2 / np.pi).to(
                 u.d, equivalencies=u.dimensionless_angles()
             )
             ** 2
@@ -507,7 +552,10 @@ def _DDGR_to_PK(model):
     mtot = model.MTOT.as_ufloat(u.Msun)
     mc = model.M2.as_ufloat(u.Msun)
     x = model.A1.as_ufloat()
-    pb = model.PB.as_ufloat(u.s)
+    if model.PB.quantity is not None:
+        pb = model.PB.as_ufloat(u.s)
+    elif model.FB0.quantity is not None:
+        pb = 1 / model.FB0.as_ufloat(u.Hz)
     n = 2 * np.pi / pb
     mp = mtot - mc
     ecc = model.ECC.as_ufloat()
@@ -557,6 +605,8 @@ def _DDGR_to_PK(model):
 
 def _transfer_params(inmodel, outmodel, badlist=[]):
     """Transfer parameters between an input and output model, excluding certain parameters
+
+    Parameters (input or output) that are :class:`~pint.models.parameter.funcParameter` are not copied
 
     Parameters
     ----------
@@ -772,6 +822,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 if SINI_unc is not None:
                     outmodel.SINI.uncertainty = SINI_unc
         elif output in ["DD", "DDS", "DDK", "BT"]:
+            # (ELL1, ELL1k, ELL1H) -> (DD, DDS, DDK, BT)
             # need to convert from EPS1/EPS2/TASC to ECC/OM/TASC
             ECC, OM, T0, EDOT, ECC_unc, OM_unc, T0_unc, EDOT_unc = _from_ELL1(model)
             outmodel = copy.deepcopy(model)
@@ -812,12 +863,21 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
             outmodel.OM.frozen = model.EPS1.frozen or model.EPS2.frozen
             outmodel.T0.quantity = T0
             outmodel.T0.uncertainty = T0_unc
-            outmodel.T0.frozen = (
-                model.EPS1.frozen
-                or model.EPS2.frozen
-                or model.TASC.frozen
-                or model.PB.frozen
-            )
+            if model.PB.quantity is not None:
+                outmodel.T0.frozen = (
+                    model.EPS1.frozen
+                    or model.EPS2.frozen
+                    or model.TASC.frozen
+                    or model.PB.frozen
+                )
+            elif model.FB0.quantity is not None:
+                outmodel.T0.frozen = (
+                    model.EPS1.frozen
+                    or model.EPS2.frozen
+                    or model.TASC.frozen
+                    or model.FB0.frozen
+                )
+
             if EDOT is not None:
                 outmodel.EDOT.quantity = EDOT
             if EDOT_unc is not None:
@@ -846,6 +906,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
             )
     elif binary_component.binary_model_name in ["DD", "DDGR", "DDS", "DDK", "BT"]:
         if output in ["DD", "DDS", "DDK", "BT"]:
+            # (DD, DDGR, DDS, DDK, BT) -> (DD, DDS, DDK, BT)
             outmodel = copy.deepcopy(model)
             outmodel.remove_component(binary_component_name)
             outmodel.BINARY.value = output
@@ -952,6 +1013,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                         )
 
         elif output in ["ELL1", "ELL1H", "ELL1k"]:
+            # (DD, DDGR, DDS, DDK, BT) -> (ELL1, ELL1H, ELL1k)
             outmodel = copy.deepcopy(model)
             outmodel.remove_component(binary_component_name)
             outmodel.BINARY.value = output
