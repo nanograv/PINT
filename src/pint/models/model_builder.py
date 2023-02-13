@@ -176,9 +176,9 @@ class ModelBuilder:
             # Add aliases compare
             overlap = in_param & cpm_param
             # translate to PINT parameter
-            overlap_pint_par = set(
-                [self.all_components.alias_to_pint_param(ovlp)[0] for ovlp in overlap]
-            )
+            overlap_pint_par = {
+                self.all_components.alias_to_pint_param(ovlp)[0] for ovlp in overlap
+            }
             # The degree of overlapping for input component and compared component
             overlap_deg_in = len(component.params) - len(overlap_pint_par)
             overlap_deg_cpm = len(cp.params) - len(overlap_pint_par)
@@ -256,7 +256,7 @@ class ModelBuilder:
             try:
                 pint_name, init0 = self.all_components.alias_to_pint_param(k)
             except UnknownParameter:
-                if k in ignore_params:  # Parameter is known but in the ingore list
+                if k in ignore_params:  # Parameter is known but in the ignore list
                     continue
                 else:  # Check ignored prefix
                     try:
@@ -272,22 +272,23 @@ class ModelBuilder:
             original_name_map[pint_name].append(k)
             repeating[pint_name] += len(v)
             # Check if this parameter is allowed to be repeated by PINT
-            if len(pint_param_dict[pint_name]) > 1:
-                if pint_name not in self.all_components.repeatable_param:
-                    raise TimingModelError(
-                        f"Parameter {pint_name} is not a repeatable parameter. "
-                        f"However, multiple line use it."
-                    )
+            if (
+                len(pint_param_dict[pint_name]) > 1
+                and pint_name not in self.all_components.repeatable_param
+            ):
+                raise TimingModelError(
+                    f"Parameter {pint_name} is not a repeatable parameter. "
+                    f"However, multiple line use it."
+                )
         # Check if the name is mixed
         for p_n, o_n in original_name_map.items():
-            if len(o_n) > 1:
-                if not allow_name_mixing:
-                    raise TimingModelError(
-                        f"Parameter {p_n} have mixed input names/alias "
-                        f"{o_n}. If you want to have mixing names, please use"
-                        f" 'allow_name_mixing=True', and the output .par file "
-                        f"will use '{original_name_map[pint_name][0]}'."
-                    )
+            if len(o_n) > 1 and not allow_name_mixing:
+                raise TimingModelError(
+                    f"Parameter {p_n} have mixed input names/alias "
+                    f"{o_n}. If you want to have mixing names, please use"
+                    f" 'allow_name_mixing=True', and the output .par file "
+                    f"will use '{original_name_map[pint_name][0]}'."
+                )
             original_name_map[p_n] = o_n[0]
 
         return pint_param_dict, original_name_map, unknown_param
@@ -362,7 +363,7 @@ class ModelBuilder:
                 param_components_inpar[p_name] = p_cp
         # Back map the possible_components and the parameters in the parfile
         # This will remove the duplicate components.
-        conflict_components = defaultdict(set)  # graph for confilict
+        conflict_components = defaultdict(set)  # graph for conflict
         for k, cps in param_components_inpar.items():
             # If `timing_model` in param --> component mapping skip
             # Timing model is the base.
@@ -455,10 +456,7 @@ class ModelBuilder:
         validate : bool, optional
             Whether to run the validate function in the timing model.
         """
-        if original_name is not None:
-            use_alias = True
-        else:
-            use_alias = False
+        use_alias = original_name is not None
         for pp, v in pint_param_dict.items():
             try:
                 par = getattr(timing_model, pp)
@@ -488,10 +486,7 @@ class ModelBuilder:
             # Fill up the values
             param_line = len(v)
             if param_line < 2:
-                if use_alias:
-                    name = original_name[pp]
-                else:
-                    name = pp
+                name = original_name[pp] if use_alias else pp
                 par.from_parfile_line(" ".join([name] + v))
             else:  # For the repeatable parameters
                 lines = copy.deepcopy(v)  # Line queue.
@@ -549,9 +544,7 @@ class ModelBuilder:
             # Put all the conflict components together from the graph
             cf_cps = list(v)
             cf_cps.append(k)
-            raise ComponentConflict(
-                "Can not decide the one component from:" " {}".format(cf_cps)
-            )
+            raise ComponentConflict(f"Can not decide the one component from: {cf_cps}")
 
 
 def get_model(parfile, allow_name_mixing=False, allow_tcb=False):
