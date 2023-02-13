@@ -33,6 +33,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Documentation on how to extract a covariance matrix
 - DDS and DDGR models
 - Module for converting between binary models
+- Method to get a parameter as a `uncertainties.ufloat` for doing math
 ### Fixed
 - Broken notebooks CI test
 - BIPM correction for simulated TOAs
