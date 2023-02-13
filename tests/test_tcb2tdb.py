@@ -16,6 +16,12 @@ PEPOCH        53750.000000
 POSEPOCH      53750.000000
 DM              223.9  1
 SOLARN0               0.00
+BINARY              BT
+T0                  53750
+A1                  100.0 1 0.1
+ECC                 1.0
+OM                  0.0
+PB                  10.0
 EPHEM               DE436
 CLK              TT(BIPM2017)
 UNITS               TCB
