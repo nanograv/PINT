@@ -55,6 +55,7 @@ are not included in the default build because they take too long, but you can do
    examples/time_a_pulsar.ipynb
    examples/PINT_walkthrough.ipynb
    examples/fit_NGC6440E.ipynb
+   examples/covariance.ipynb
    examples/check_clock_corrections.ipynb
    examples/understanding_timing_models.ipynb
    examples/understanding_parameters.ipynb
