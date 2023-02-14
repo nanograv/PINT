@@ -46,7 +46,7 @@ def main(argv=None):
         9. Red noise parameters including FITWAVES, powerlaw red noise and 
            powerlaw DM noise parameters
     """
-    log.info(welcome_message)
+    log.warning(welcome_message)
 
     model = get_model(args.input_par, allow_tcb=True)
     convert_tcb_to_tdb(model)
