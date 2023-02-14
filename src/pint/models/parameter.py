@@ -1135,6 +1135,23 @@ class MJDParameter(Parameter):
     def _print_uncertainty(self, uncertainty):
         return str(self.uncertainty_value)
 
+    def as_ufloats(self):
+        """Return the parameter as a pair of :class:`uncertainties.ufloat`
+        values representing the integer and fractional Julian dates.
+        The uncertainty is carried by the latter.
+
+        If the uncertainty is not set will be returned as 0
+
+        Returns
+        -------
+        uncertainties.ufloat
+        uncertainties.ufloat
+        """
+        value1 = self.quantity.jd1 if self.quantity is not None else 0
+        value2 = self.quantity.jd2 if self.quantity is not None else 0
+        error = self.uncertainty.to_value(u.d) if self.uncertainty is not None else 0
+        return ufloat(value1, 0), ufloat(value2, error)
+
 
 class AngleParameter(Parameter):
     """Parameter in angle units.

@@ -8,6 +8,7 @@ Potential issues:
 
 import numpy as np
 from astropy import units as u, constants as c
+from astropy.time import Time
 import copy
 from uncertainties import ufloat, umath
 from loguru import logger as log
@@ -223,30 +224,17 @@ def _from_ELL1(model):
     if om < 0:
         om += 2 * np.pi
     ecc = umath.sqrt(eps1**2 + eps2**2)
-    # don't do this with ufloats yet since we don't know how to handle MJD parameters
-    if model.PB.quantity is not None:
-        T0 = model.TASC.quantity + ((model.PB.quantity / 2 / np.pi) * om.n)
-    elif model.FB0.quantity is not None:
-        T0 = model.TASC.quantity + (((1 / model.FB0.quantity) / 2 / np.pi) * om.n)
-    T0_unc = None
-    if model.EPS1.uncertainty is not None and model.EPS2.uncertainty is not None:
-        if model.PB.uncertainty is not None and model.TASC.uncertainty is not None:
-            T0_unc = np.sqrt(
-                (model.TASC.uncertainty) ** 2
-                + (model.PB.quantity / 2 / np.pi * om.s) ** 2
-                + (model.PB.uncertainty * om.n / 2 / np.pi).to(
-                    u.d, equivalencies=u.dimensionless_angles()
-                )
-                ** 2
-            )
-        elif model.FB0.uncertainty is not None and model.TASC.uncertainty is not None:
-            T0_unc = np.sqrt(
-                (model.TASC.uncertainty) ** 2
-                + ((1 / model.FB0.quantity) / 2 / np.pi * om.s) ** 2
-                + (model.FB0.uncertainty * om.n / 2 / np.pi / model.FB0.quantity**2)
-                ** 2
-            )
 
+    tasc1, tasc2 = model.TASC.as_ufloats()
+    t01 = tasc1
+    t02 = tasc2 + (pb / 2 / np.pi) * om
+    T0 = Time(
+        t01.n,
+        val2=t02.n,
+        scale=model.TASC.quantity.scale,
+        precision=model.TASC.quantity.precision,
+        format="jd",
+    )
     # does there also need to be a computation of OMDOT here?
     edot = None
     if model.BINARY.value == "ELL1k":
@@ -265,7 +253,7 @@ def _from_ELL1(model):
         edot.n * u.Hz,
         ecc.s if ecc.s > 0 else None,
         (om.s * u.rad).to(u.deg) if om.s > 0 else None,
-        T0_unc,
+        t02.s * u.d if t02.s > 0 else None,
         edot.s * u.Hz if (edot is not None and edot.s > 0) else None,
     )
 
@@ -318,19 +306,19 @@ def _to_ELL1(model):
         pb = model.PB.as_ufloat(u.d)
     elif model.FB0.quantity is not None:
         pb = 1 / model.FB0.as_ufloat(1 / u.d)
-    TASC = model.T0.quantity - (pb.n * om.n / 2 / np.pi)
-    if model.T0.uncertainty is not None:
-        TASC_unc = np.sqrt(
-            (model.T0.uncertainty) ** 2
-            + (pb.s * u.d * om.n / 2 / np.pi) ** 2
-            + (pb.n * u.d * om.s / 2 / np.pi) ** 2
-        )
+    t01, t02 = model.T0.as_ufloats()
+    tasc1 = t01
+    tasc2 = t02 - (pb * om / 2 / np.pi)
+    TASC = Time(
+        tasc1.n,
+        val2=tasc2.n,
+        format="jd",
+        scale=model.T0.quantity.scale,
+        precision=model.T0.quantity.precision,
+    )
     eps1dot = None
     eps2dot = None
     if model.EDOT.quantity is not None:
-        if model.EDOT.uncertainty is not None:
-            EPS1DOT_unc = np.abs(model.EDOT.uncertainty * np.cos(model.OM.quantity))
-            EPS2DOT_unc = np.abs(model.EDOT.uncertainty * np.sin(model.OM.quantity))
         edot = model.EDOT.as_ufloat(u.Hz)
         eps1dot = edot * umath.cos(om)
         eps2dot = edot * umath.sin(om)
@@ -342,7 +330,7 @@ def _to_ELL1(model):
         eps2dot.n * u.Hz,
         eps1.s if eps1.s > 0 else None,
         eps2.s if eps2.s > 0 else None,
-        TASC_unc,
+        tasc2.s * u.d if tasc2.s > 0 else None,
         eps1dot.s * u.Hz if (eps1dot is not None and eps1dot.s > 0) else None,
         eps2dot.s * u.Hz if (eps2dot is not None and eps2dot.s > 0) else None,
     )
