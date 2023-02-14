@@ -7,15 +7,17 @@ from io import StringIO
 from pint.scripts import pintempo
 from pinttestdata import datadir
 import matplotlib
+import pytest
 
 parfile = os.path.join(datadir, "NGC6440E.par")
 timfile = os.path.join(datadir, "NGC6440E.tim")
 
 
-def test_result():
+@pytest.mark.parametrize("gls", ["", "--gls"])
+def test_pintempo(gls):
     matplotlib.use("Agg")
     saved_stdout, sys.stdout = sys.stdout, StringIO("_")
-    cmd = f"{parfile} {timfile} --plot"
+    cmd = f"{parfile} {timfile} --plot {gls}"
     pintempo.main(cmd.split())
     lines = sys.stdout.getvalue()
     v = 999.0
