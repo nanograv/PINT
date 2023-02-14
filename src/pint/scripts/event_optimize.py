@@ -923,8 +923,7 @@ def main(argv=None):
         samples[:, i] - ftr.maxpost_fitvals[i] for i in range(len(ftr.fitkeys))
     ]
     errors = [
-        np.percentile(np.abs(centered_samples[i]), 68) / 2
-        for i in range(len(ftr.fitkeys))
+        np.percentile(np.abs(centered_samples[i]), 68) for i in range(len(ftr.fitkeys))
     ]
     ftr.set_param_uncertainties(dict(zip(ftr.fitkeys[:-1], errors[:-1])))
 
