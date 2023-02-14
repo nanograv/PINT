@@ -49,8 +49,9 @@ plotlabels = {
     "frequency": r"Observing Frequency (MHz)",
     "TOA error": r"TOA uncertainty ($\mu$s)",
     "rounded MJD": r"MJD",
-    "wideband DM": "Wideband DM (dmu)",
-    "wideband DM error": "Wideband DM error (dmu)",
+    "WB DM": "Wideband DM (dmu)",
+    "WB DM res": "Wideband DM residual (dmu)",
+    "WB DM err": "Wideband DM error (dmu)",
 }
 
 helpstring = """The following interactions are currently supported in the plotting pane in `pintk`:
@@ -494,13 +495,7 @@ class PlkXYChoiceWidget(tk.Frame):
         self.xbuttons = []
         self.ybuttons = []
 
-        lbls = (
-            pulsar.plot_labels + ["wideband DM", "wideband DM error"]
-            if self.wideband
-            else pulsar.plot_labels
-        )
-
-        for ii, choice in enumerate(lbls):
+        for ii, choice in enumerate(pulsar.plot_labels):
             label = tk.Label(self, text=choice, fg=foreground, bg=background)
             label.grid(row=ii + 1, column=0)
 
@@ -761,13 +756,13 @@ class PlkWidget(tk.Frame):
             self.randomboxWidget.addRandomCheckbox(self)
             self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             self.fitterWidget.updateFitterChoices(self.psr.all_toas.wideband)
+            self.xyChoiceWidget.wideband = self.psr.all_toas.wideband
             self.xyChoiceWidget.setChoice()
             self.updatePlot(keepAxes=True)
             self.plkToolbar.update()
             # reset state stack
             self.state_stack = [self.base_state]
             self.current_state = State()
-            self.xyChoiceWidget.wideband = self.psr.all_toas.wideband
 
     def setPulsar(self, psr, updates):
         self.psr = psr
@@ -786,6 +781,7 @@ class PlkWidget(tk.Frame):
 
         self.fitboxesWidget.setCallbacks(self.fitboxChecked)
         self.colorModeWidget.setCallbacks(self.updateGraphColors)
+        self.xyChoiceWidget.wideband = self.psr.all_toas.wideband
         self.xyChoiceWidget.setCallbacks(self.updatePlot)
         self.actionsWidget.setCallbacks(
             self.fit, self.reset, self.writePar, self.writeTim, self.revert
@@ -804,8 +800,6 @@ class PlkWidget(tk.Frame):
         self.fitterWidget.fitter = self.psr.fit_method
         self.updatePlot(keepAxes=False)
         self.plkToolbar.update()
-
-        self.xyChoiceWidget.wideband = self.psr.all_toas.wideband
 
     def call_updates(self, psr_update=False):
         if self.update_callbacks is not None:
@@ -910,7 +904,7 @@ class PlkWidget(tk.Frame):
                         f"Pulsar has not been fitted! Saving pre-fit parfile to {filename} in {format} format"
                     )
 
-        except:
+        except Exception:
             if filename in [(), ""]:
                 print("Write Par cancelled.")
             else:
@@ -929,7 +923,7 @@ class PlkWidget(tk.Frame):
             log.info(f"Choose output file {filename}")
             self.psr.all_toas.write_TOA_file(filename, format=format)
             log.info(f"Wrote TOAs to {filename} with format {format}")
-        except:
+        except Exception:
             if filename in [(), ""]:
                 print("Write Tim cancelled.")
             else:
@@ -1240,12 +1234,37 @@ class PlkWidget(tk.Frame):
         elif label == "rounded MJD":
             data = np.floor(self.psr.all_toas.get_mjds() + 0.5 * u.d)
             error = self.psr.all_toas.get_errors().to(u.d)
-        elif label == "wideband DM":
-            data = self.psr.all_toas.get_dms().to(pint.dmu)
-            error = self.psr.all_toas.get_dm_errors().to(pint.dmu)
-        elif label == "wideband DM error":
-            data = self.psr.all_toas.get_dm_errors().to(pint.dmu)
-            error = None
+        elif label == "WB DM":
+            if self.psr.all_toas.wideband:
+                data = self.psr.all_toas.get_dms().to(pint.dmu)
+                error = self.psr.all_toas.get_dm_errors().to(pint.dmu)
+            else:
+                log.warning("Cannot plot WB DMs for NB TOAs.")
+                data = None
+                error = None
+        elif label == "WB DM res":
+            if self.psr.all_toas.wideband:
+                if self.psr.fitted:
+                    data = self.psr.postfit_resids.dm.resids.to(pint.dmu)
+                else:
+                    log.warning(
+                        "Pulsar has not been fitted yet! Giving pre-fit residuals"
+                    )
+                    data = self.psr.prefit_resids.dm.resids.to(pint.dmu)
+                error = self.psr.all_toas.get_dm_errors().to(pint.dmu)
+            else:
+                log.warning("Cannot plot WB DM resids for NB TOAs.")
+                data = None
+                error = None
+        elif label == "WB DM err":
+            if self.psr.all_toas.wideband:
+                data = self.psr.all_toas.get_dm_errors().to(pint.dmu)
+                error = None
+            else:
+                log.warning("Cannot plot WB DM errors for NB TOAs.")
+                data = None
+                error = None
+
         return data, error
 
     def coordToPoint(self, cx, cy):

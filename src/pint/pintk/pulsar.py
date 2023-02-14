@@ -1,4 +1,4 @@
-"""A wrapper around pulsar functions for pintkinter to use.
+"""A wrapper around pulsar functions for `pintk` to use.
 
 This object will be shared between widgets in the main frame
 and will contain the pre/post fit model, toas,
@@ -37,6 +37,9 @@ plot_labels = [
     "frequency",
     "TOA error",
     "rounded MJD",
+    "WB DM",
+    "WB DM res",
+    "WB DM err",
 ]
 
 # Some parameters we do not want to add a fitting checkbox for:
@@ -323,7 +326,7 @@ class Pulsar:
                     line += "%24s\t" % post.str_quantity(post.quantity)
                     try:
                         line += "%16.8g  " % post.uncertainty.value
-                    except:
+                    except Exception:
                         line += "%18s" % ""
                     diff = post.value - pre.value
                     line += "%16.8g  " % diff
