@@ -336,7 +336,7 @@ class Residuals:
                 modelphase -= Phase(modelphase.int[0], modelphase.frac[0])
 
             # Here we discard the integer portion of the residual and replace it with 0
-            # This is effectively selecting the nearst pulse to compute the residual to.
+            # This is effectively selecting the nearest pulse to compute the residual to.
             residualphase = Phase(np.zeros_like(modelphase.frac), modelphase.frac)
             # This converts from a Phase object to a np.float128
             full = residualphase.int + residualphase.frac
