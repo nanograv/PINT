@@ -30,13 +30,14 @@ def main(argv=None):
     The following parameters are converted to TDB:
         1. Spin frequency, its derivatives and spin epoch
         2. Sky coordinates, proper motion and the position epoch
-        3. Keplerian binary parameters
+        3. DM, DM derivatives and DM epoch
+        4. Keplerian binary parameters
     
     The following parameters are NOT converted although they are 
     in fact affected by the TCB to TDB conversion:
         1. Parallax
         2. TZRMJD and TZRFRQ
-        3. DM, DM derivatives, DM epoch, DMX parameters
+        3. DMX parameters
         4. Solar wind parameters
         5. Binary post-Keplerian parameters including Shapiro delay 
            parameters

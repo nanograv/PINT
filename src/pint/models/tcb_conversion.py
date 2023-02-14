@@ -54,13 +54,14 @@ def convert_tcb_to_tdb(model):
     The following parameters are converted to TDB:
         1. Spin frequency, its derivatives and spin epoch
         2. Sky coordinates, proper motion and the position epoch
-        3. Keplerian binary parameters
+        3. DM, DM derivatives and DM epoch
+        4. Keplerian binary parameters
 
     The following parameters are NOT converted although they are
     in fact affected by the TCB to TDB conversion:
         1. Parallax
         2. TZRMJD and TZRFRQ
-        2. DM, DM derivatives, DM epoch, DMX parameters
+        2. DMX parameters
         3. Solar wind parameters
         4. Binary post-Keplerian parameters including Shapiro delay
            parameters
@@ -95,6 +96,16 @@ def convert_tcb_to_tdb(model):
         scale_parameter(model, "PMELAT", IFTE_K)
         scale_parameter(model, "PMELONG", IFTE_K)
         transform_mjd_parameter(model, "POSEPOCH")
+
+    # Although DM has the unit pc/cm^3, the quantity that enters
+    # the timing model is DMconst*DM, which has dimensions
+    # of frequency. Hence, DM and its derivatives will be
+    # scaled by IFTE_K**(i+1).
+    if "DispersionDM" in model.components:
+        scale_parameter(model, "DM", IFTE_K)
+        for i in range(1, len(model.get_DM_terms())):
+            scale_parameter(model, f"DM{i}", IFTE_K ** (i + 1))
+        transform_mjd_parameter(model, "DMEPOCH")
 
     if hasattr(model, "BINARY") and getattr(model, "BINARY").value is not None:
         transform_mjd_parameter(model, "T0")
