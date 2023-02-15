@@ -108,8 +108,7 @@ def convert_tcb_to_tdb(model):
     )
 
     if "Spindown" in model.components:
-        for Fn_par in model.components["Spindown"].F_terms:
-            n = int(Fn_par[1:])
+        for n, Fn_par in model.get_prefix_mapping("F"):
             scale_parameter(model, Fn_par, n + 1)
 
         transform_mjd_parameter(model, "PEPOCH")
@@ -129,8 +128,8 @@ def convert_tcb_to_tdb(model):
     # scaled by IFTE_K**(i+1).
     if "DispersionDM" in model.components:
         scale_parameter(model, "DM", IFTE_K)
-        for i in range(1, len(model.get_DM_terms())):
-            scale_parameter(model, f"DM{i}", IFTE_K ** (i + 1))
+        for n, DMn_par in model.get_prefix_mapping("DM"):
+            scale_parameter(model, DMn_par, IFTE_K ** (n + 1))
         transform_mjd_parameter(model, "DMEPOCH")
 
     if hasattr(model, "BINARY") and getattr(model, "BINARY").value is not None:
