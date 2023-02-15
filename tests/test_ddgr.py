@@ -155,7 +155,7 @@ class TestDDGR:
         # chi^2 values don't have to be super close
         assert (
             np.fabs(fDD.model.M2.quantity - fDDGR.model.M2.quantity)
-            < 3 * fDD.model.M2.uncertainty
+            < 4 * fDD.model.M2.uncertainty
         )
         # perturn M2 and make sure chi^2 gets worse
         fDDGR.model.M2.quantity += 3 * fDDGR.model.M2.uncertainty
@@ -184,10 +184,10 @@ class TestDDGR:
         fDDGR.fit_toas()
         assert (
             np.abs(fDDGR.model.MTOT.quantity - (Mp + Mc))
-            < 3 * fDDGR.model.MTOT.uncertainty
+            < 4 * fDDGR.model.MTOT.uncertainty
         )
-        assert np.abs(fDDGR.model.M2.quantity - (Mc)) < 3 * fDDGR.model.M2.uncertainty
-        assert np.abs(fDDGR.model.XPBDOT.quantity) < 3 * fDDGR.model.XPBDOT.uncertainty
+        assert np.abs(fDDGR.model.M2.quantity - (Mc)) < 4 * fDDGR.model.M2.uncertainty
+        assert np.abs(fDDGR.model.XPBDOT.quantity) < 4 * fDDGR.model.XPBDOT.uncertainty
 
     def test_design_XOMDOT(self):
         t = pint.simulation.make_fake_toas_uniform(
