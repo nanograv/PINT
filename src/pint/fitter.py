@@ -57,6 +57,8 @@ To automatically select a fitter based on the properties of the data and model::
     >>> fitter = Fitter.auto(toas, model)
 
 """
+
+import contextlib
 import copy
 from warnings import warn
 
@@ -468,42 +470,30 @@ class Fitter:
             F0 = self.model.F0.quantity
             if not self.model.F0.frozen:
                 p, perr = pint.derived_quantities.pferrs(F0, self.model.F0.uncertainty)
-                s += "Period = {} +/- {}\n".format(p.to(u.s), perr.to(u.s))
+                s += f"Period = {p.to(u.s)} +/- {perr.to(u.s)}\n"
             else:
-                s += "Period = {}\n".format((1.0 / F0).to(u.s))
+                s += f"Period = {(1.0 / F0).to(u.s)}\n"
         if hasattr(self.model, "F1"):
             F1 = self.model.F1.quantity
             if not any([self.model.F1.frozen, self.model.F0.frozen]):
                 p, perr, pd, pderr = pint.derived_quantities.pferrs(
                     F0, self.model.F0.uncertainty, F1, self.model.F1.uncertainty
                 )
-                s += "Pdot = {} +/- {}\n".format(
-                    pd.to(u.dimensionless_unscaled), pderr.to(u.dimensionless_unscaled)
-                )
+                s += f"Pdot = {pd.to(u.dimensionless_unscaled)} +/- {pderr.to(u.dimensionless_unscaled)}\n"
                 if F1.value < 0.0:  # spinning-down
                     brakingindex = 3
-                    s += "Characteristic age = {:.4g} (braking index = {})\n".format(
-                        pint.derived_quantities.pulsar_age(F0, F1, n=brakingindex),
-                        brakingindex,
-                    )
-                    s += "Surface magnetic field = {:.3g}\n".format(
-                        pint.derived_quantities.pulsar_B(F0, F1)
-                    )
-                    s += "Magnetic field at light cylinder = {:.4g}\n".format(
-                        pint.derived_quantities.pulsar_B_lightcyl(F0, F1)
-                    )
+                    s += f"Characteristic age = {pint.derived_quantities.pulsar_age(F0, F1, n=brakingindex):.4g} (braking index = {brakingindex})\n"
+                    s += f"Surface magnetic field = {pint.derived_quantities.pulsar_B(F0, F1):.3g}\n"
+                    s += f"Magnetic field at light cylinder = {pint.derived_quantities.pulsar_B_lightcyl(F0, F1):.4g}\n"
                     I_NS = I = 1.0e45 * u.g * u.cm**2
-                    s += "Spindown Edot = {:.4g} (I={})\n".format(
-                        pint.derived_quantities.pulsar_edot(F0, F1, I=I_NS), I_NS
-                    )
+                    s += f"Spindown Edot = {pint.derived_quantities.pulsar_edot(F0, F1, I=I_NS):.4g} (I={I_NS})\n"
                 else:
                     s += "Not computing Age, B, or Edot since F1 > 0.0\n"
 
-        if hasattr(self.model, "PX"):
-            if not self.model.PX.frozen:
-                s += "\n"
-                px = self.model.PX.as_ufloat(u.arcsec)
-                s += "Parallax distance = {:.3uP} pc\n".format(1.0 / px)
+        if hasattr(self.model, "PX") and not self.model.PX.frozen:
+            s += "\n"
+            px = self.model.PX.as_ufloat(u.arcsec)
+            s += f"Parallax distance = {1.0/px:.3uP} pc\n"
 
         # Now binary system derived parameters
         if self.model.is_binary:
@@ -511,7 +501,7 @@ class Fitter:
                 if x.startswith("Binary"):
                     binary = x
 
-            s += "\nBinary model {}\n".format(binary)
+            s += f"\nBinary model {binary}\n"
 
             btx = False
             if (
@@ -522,14 +512,12 @@ class Fitter:
                 btx = True
                 FB0 = self.model.FB0.quantity
                 if not self.model.FB0.frozen:
-                    p, perr = pint.derived_quantities.pferrs(
+                    pb, pberr = pint.derived_quantities.pferrs(
                         FB0, self.model.FB0.uncertainty
                     )
-                    s += "Orbital Period  (PB) = {} +/- {}\n".format(
-                        p.to(u.d), perr.to(u.d)
-                    )
+                    s += f"Orbital Period  (PB) = {pb.to(u.d)} +/- {pberr.to(u.d)}\n"
                 else:
-                    s += "Orbital Period  (PB) = {}\n".format((1.0 / FB0).to(u.d))
+                    s += f"Orbital Period  (PB) = {(1.0 / FB0).to(u.d)}\n"
 
             if (
                 hasattr(self.model, "FB1")
@@ -538,13 +526,10 @@ class Fitter:
             ):
                 FB1 = self.model.FB1.quantity
                 if not any([self.model.FB1.frozen, self.model.FB0.frozen]):
-                    p, perr, pd, pderr = pint.derived_quantities.pferrs(
+                    pb, pberr, pbd, pbderr = pint.derived_quantities.pferrs(
                         FB0, self.model.FB0.uncertainty, FB1, self.model.FB1.uncertainty
                     )
-                    s += "Orbital Pdot (PBDOT) = {} +/- {}\n".format(
-                        pd.to(u.dimensionless_unscaled),
-                        pderr.to(u.dimensionless_unscaled),
-                    )
+                    s += f"Orbital Pdot (PBDOT) = {pbd.to(u.dimensionless_unscaled)} +/- {pbderr.to(u.dimensionless_unscaled)}\n"
 
             ell1 = False
             if binary.startswith("BinaryELL1"):
@@ -566,13 +551,15 @@ class Fitter:
                 om = um.atan2(eps1, eps2) * 180.0 / np.pi
                 if om < 0.0:
                     om += 360.0
-                s += "OM  = {:P} deg\n".format(om)
+                s += f"OM  = {om:P} deg\n"
                 t0 = tasc + pb * om / 360.0
-                s += "T0  = {:SP}\n".format(t0)
+                s += f"T0  = {t0:SP}\n"
 
-                a1 = self.model.A1.quantity
-                if a1 is None:
-                    a1 = 0 * pint.ls
+                a1 = (
+                    self.model.A1.quantity
+                    if self.model.A1.quantity is not None
+                    else 0 * pint.ls
+                )
                 if self.is_wideband:
                     s += pint.utils.ELL1_check(
                         a1,
@@ -591,12 +578,12 @@ class Fitter:
                     )
                 s += "\n"
             if hasattr(self.model, "FB0") and self.model.FB0.value is not None:
-                p, perr = pint.derived_quantities.pferrs(
+                pb, pberr = pint.derived_quantities.pferrs(
                     self.model.FB0.quantity, self.model.FB0.uncertainty
                 )
             # Masses and inclination
-            pb = p.to(u.d) if btx else self.model.PB.quantity
-            pberr = perr.to(u.d) if btx else self.model.PB.uncertainty
+            pb = pb.to(u.d) if btx else self.model.PB.quantity
+            pberr = pberr.to(u.d) if btx else self.model.PB.uncertainty
             if not self.model.A1.frozen:
                 pbs = ufloat(
                     pb.to(u.s).value,
@@ -607,7 +594,7 @@ class Fitter:
                 # uncertainty propagation automatically.
                 # TODO: derived quantities funcs should take uncertainties
                 fm = 4.0 * np.pi**2 * a1**3 / (4.925490947e-6 * pbs**2)
-                s += "Mass function = {:SP} Msun\n".format(fm)
+                s += f"Mass function = {fm:SP} Msun\n"
                 mcmed = pint.derived_quantities.companion_mass(
                     pb,
                     self.model.A1.quantity,
@@ -620,9 +607,7 @@ class Fitter:
                     i=90.0 * u.deg,
                     mp=1.4 * u.solMass,
                 )
-                s += "Min / Median Companion mass (assuming Mpsr = 1.4 Msun) = {:.4f} / {:.4f} Msun\n".format(
-                    mcmin.value, mcmed.value
-                )
+                s += f"Min / Median Companion mass (assuming Mpsr = 1.4 Msun) = {mcmin.value:.4f} / {mcmed.value:.4f} Msun\n".
 
             if (
                 hasattr(self.model, "OMDOT")
@@ -652,20 +637,20 @@ class Fitter:
                 )
                 Mtot_err = max(abs(Mtot_hi - Mtot), abs(Mtot - Mtot_lo))
                 mt = ufloat(Mtot.value, Mtot_err.value)
-                s += "Total mass, assuming GR, from OMDOT is {:SP} Msun\n".format(mt)
+                s += f"Total mass, assuming GR, from OMDOT is {mt:SP} Msun\n"
 
             if (
                 hasattr(self.model, "SINI")
                 and self.model.SINI.quantity is not None
                 and (self.model.SINI.value >= 0.0 and self.model.SINI.value < 1.0)
             ):
-                try:
+                with contextlib.suppress(TypeError, ValueError):
                     # Put this in a try in case SINI is UNSET or an illegal value
                     if not self.model.SINI.frozen:
                         si = self.model.SINI.as_ufloat()
-                        s += "From SINI in model:\n"
-                        s += "    cos(i) = {:SP}\n".format(um.sqrt(1 - si**2))
-                        s += "    i = {:SP} deg\n".format(um.asin(si) * 180.0 / np.pi)
+                        s += f"From SINI in model:\n"
+                        s += f"    cos(i) = {um.sqrt(1 - si**2):SP}\n"
+                        s += f"    i = {um.asin(si) * 180.0 / np.pi:SP} deg\n"
 
                     psrmass = pint.derived_quantities.pulsar_mass(
                         pb,
@@ -673,9 +658,7 @@ class Fitter:
                         self.model.M2.quantity,
                         np.arcsin(self.model.SINI.quantity),
                     )
-                    s += "Pulsar mass (Shapiro Delay) = {}".format(psrmass)
-                except (TypeError, ValueError):
-                    pass
+                    s += f"Pulsar mass (Shapiro Delay) = {psrmass}"
         return s
 
     def print_summary(self):
