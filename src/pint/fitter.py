@@ -607,7 +607,7 @@ class Fitter:
                     i=90.0 * u.deg,
                     mp=1.4 * u.solMass,
                 )
-                s += f"Min / Median Companion mass (assuming Mpsr = 1.4 Msun) = {mcmin.value:.4f} / {mcmed.value:.4f} Msun\n".
+                s += f"Min / Median Companion mass (assuming Mpsr = 1.4 Msun) = {mcmin.value:.4f} / {mcmed.value:.4f} Msun\n"
 
             if (
                 hasattr(self.model, "OMDOT")
