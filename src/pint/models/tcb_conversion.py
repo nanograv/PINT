@@ -23,6 +23,18 @@ def scale_parameter(model, param, n):
     """Scale a parameter x by a power of IFTE_K
         x_tdb = x_tdb * IFTE_K**n
 
+    The power n depends on the "effective dimensionality" of
+    the parameter as it appears in the timing model. Some examples
+    are given bellow:
+
+        1. F0 has effective dimensionality of frequency and n = 1
+        2. F1 has effective dimensionality of frequency^2 and n = 2
+        3. A1 has effective dimensionality of time because it appears as
+           A1/c in the timing model. Therefore, its n = -1
+        4. DM has effective dimensionality of frequency because it appears
+           as DM*DMconst in the timing model. Therefore, its n = 1
+        5. PBDOT is dimensionless and has n = 0. i.e., it is not scaled.
+
     Parameter
     ---------
     model : pint.models.timing_model.TimingModel
@@ -32,6 +44,8 @@ def scale_parameter(model, param, n):
     n : int
         The power of IFTE_K in the scaling factor
     """
+    assert isinstance(n, int), "The power must be an integer."
+
     factor = IFTE_K**n
 
     if hasattr(model, param) and getattr(model, param).quantity is not None:
@@ -76,7 +90,7 @@ def convert_tcb_to_tdb(model):
         1. Spin frequency, its derivatives and spin epoch
         2. Sky coordinates, proper motion and the position epoch
         3. DM, DM derivatives and DM epoch
-        4. Keplerian binary parameters
+        4. Keplerian binary parameters and FB1
 
     The following parameters are NOT converted although they are
     in fact affected by the TCB to TDB conversion:
@@ -85,7 +99,7 @@ def convert_tcb_to_tdb(model):
         2. DMX parameters
         3. Solar wind parameters
         4. Binary post-Keplerian parameters including Shapiro delay
-           parameters
+           parameters (except FB1)
         5. Jumps and DM Jumps
         6. FD parameters
         7. EQUADs
@@ -114,12 +128,12 @@ def convert_tcb_to_tdb(model):
         transform_mjd_parameter(model, "PEPOCH")
 
     if "AstrometryEquatorial" in model.components:
-        scale_parameter(model, "PMRA", IFTE_K)
-        scale_parameter(model, "PMDEC", IFTE_K)
+        scale_parameter(model, "PMRA", 1)
+        scale_parameter(model, "PMDEC", 1)
         transform_mjd_parameter(model, "POSEPOCH")
     elif "AstrometryEcliptic" in model.components:
-        scale_parameter(model, "PMELAT", IFTE_K)
-        scale_parameter(model, "PMELONG", IFTE_K)
+        scale_parameter(model, "PMELAT", 1)
+        scale_parameter(model, "PMELONG", 1)
         transform_mjd_parameter(model, "POSEPOCH")
 
     # Although DM has the unit pc/cm^3, the quantity that enters
@@ -127,9 +141,9 @@ def convert_tcb_to_tdb(model):
     # of frequency. Hence, DM and its derivatives will be
     # scaled by IFTE_K**(i+1).
     if "DispersionDM" in model.components:
-        scale_parameter(model, "DM", IFTE_K)
+        scale_parameter(model, "DM", 1)
         for n, DMn_par in model.get_prefix_mapping("DM"):
-            scale_parameter(model, DMn_par, IFTE_K ** (n + 1))
+            scale_parameter(model, DMn_par, n + 1)
         transform_mjd_parameter(model, "DMEPOCH")
 
     if hasattr(model, "BINARY") and getattr(model, "BINARY").value is not None:
@@ -137,6 +151,7 @@ def convert_tcb_to_tdb(model):
         transform_mjd_parameter(model, "TASC")
         scale_parameter(model, "PB", -1)
         scale_parameter(model, "FB0", 1)
+        scale_parameter(model, "FB1", 2)
         scale_parameter(model, "A1", -1)
 
     model.UNITS.value = "TDB"

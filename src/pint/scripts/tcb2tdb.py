@@ -23,7 +23,7 @@ def main(argv=None):
             1. Spin frequency, its derivatives and spin epoch
             2. Sky coordinates, proper motion and the position epoch
             3. DM, DM derivatives and DM epoch
-            4. Keplerian binary parameters
+            4. Keplerian binary parameters and FB1
         
         The following parameters are NOT converted although they are 
         in fact affected by the TCB to TDB conversion:
@@ -32,7 +32,7 @@ def main(argv=None):
             3. DMX parameters
             4. Solar wind parameters
             5. Binary post-Keplerian parameters including Shapiro delay 
-            parameters
+               parameters (except FB1)
             6. Jumps and DM Jumps
             7. FD parameters
             8. EQUADs
