@@ -3,6 +3,7 @@
 import numpy as np
 
 from pint.models.parameter import MJDParameter
+from loguru import logger as log
 
 __all__ = [
     "IFTE_K",
@@ -98,7 +99,7 @@ def convert_tcb_to_tdb(model):
     """
 
     if model.UNITS in ["TDB", None]:
-        # ~ issue warning here ~
+        log.warning("The input par file is already in TDB units. Doing nothing.")
         return
 
     if "Spindown" in model.components:
