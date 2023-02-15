@@ -537,7 +537,21 @@ class PulsarBinary(DelayComponent):
         self.A1.quantity = self.A1.quantity + dA1
 
     def pb(self, t=None):
-        """Return binary period (optionally evaluated at different times) regardless of binary model"""
+        """Return binary period and uncertainty (optionally evaluated at different times) regardless of binary model
+
+        Parameters
+        ----------
+        t : astropy.time.Time, astropy.units.Quantity, numpy.ndarray, float, int, str, optional
+            Time(s) to evaluate period
+
+        Returns
+        -------
+        astropy.units.Quantity :
+            Binary period
+        astropy.units.Quantity :
+            Binary period uncertainty
+
+        """
         if self.binary_model_name.startswith("ELL1"):
             t0 = self.TASC.quantity
         else:

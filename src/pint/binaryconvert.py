@@ -214,10 +214,8 @@ def _from_ELL1(model):
     if model.BINARY.value not in ["ELL1", "ELL1H", "ELL1k"]:
         raise ValueError(f"Requires model ELL1* rather than {model.BINARY.value}")
 
-    if model.PB.quantity is not None:
-        pb = model.PB.as_ufloat(u.d)
-    elif model.FB0.quantity is not None:
-        pb = 1 / model.FB0.as_ufloat(1 / u.d)
+    PB, PBerr = model.pb()
+    pb = ufloat(PB.to_value(u.d), PBerr.to_value(u.d) if PBerr is not None else 0)
     eps1 = model.EPS1.as_ufloat()
     eps2 = model.EPS2.as_ufloat()
     om = umath.atan2(eps2, eps1)
@@ -302,10 +300,8 @@ def _to_ELL1(model):
     om = model.OM.as_ufloat(u.rad)
     eps1 = ecc * umath.cos(om)
     eps2 = ecc * umath.sin(om)
-    if model.PB.quantity is not None:
-        pb = model.PB.as_ufloat(u.d)
-    elif model.FB0.quantity is not None:
-        pb = 1 / model.FB0.as_ufloat(1 / u.d)
+    PB, PBerr = model.pb()
+    pb = ufloat(PB.to_value(u.d), PBerr.to_value(u.d) if PBerr is not None else 0)
     t01, t02 = model.T0.as_ufloats()
     tasc1 = t01
     tasc2 = t02 - (pb * om / 2 / np.pi)
@@ -438,10 +434,8 @@ def _DDGR_to_PK(model):
     mtot = model.MTOT.as_ufloat(u.Msun)
     mc = model.M2.as_ufloat(u.Msun)
     x = model.A1.as_ufloat()
-    if model.PB.quantity is not None:
-        pb = model.PB.as_ufloat(u.s)
-    elif model.FB0.quantity is not None:
-        pb = 1 / model.FB0.as_ufloat(u.Hz)
+    PB, PBerr = model.pb()
+    pb = ufloat(PB.to_value(u.s), PBerr.to_value(u.s) if PBerr is not None else 0)
     n = 2 * np.pi / pb
     mp = mtot - mc
     ecc = model.ECC.as_ufloat()
