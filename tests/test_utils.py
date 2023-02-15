@@ -53,6 +53,7 @@ from pint.utils import (
     find_prefix_bytime,
     merge_dmx,
     convert_dispersion_measure,
+    parse_time,
 )
 
 
@@ -843,3 +844,19 @@ def test_convert_dm():
     dm_codata = convert_dispersion_measure(dm)
 
     assert np.isfinite(dm_codata)
+
+
+@pytest.mark.parametrize(
+    "t",
+    [
+        Time(55555, format="pulsar_mjd", scale="tdb", precision=9),
+        55555 * u.d,
+        55555.0,
+        55555,
+        "55555",
+    ],
+)
+def test_parse_time(t):
+    assert parse_time(t, scale="tdb") == Time(
+        55555, format="pulsar_mjd", scale="tdb", precision=9
+    )

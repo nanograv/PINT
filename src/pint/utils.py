@@ -39,6 +39,7 @@ import sys
 import textwrap
 from contextlib import contextmanager
 from pathlib import Path
+import uncertainties
 
 import astropy.constants as const
 import astropy.coordinates as coords
@@ -361,9 +362,9 @@ def taylor_horner(x, coeffs):
 
     Parameters
     ----------
-    x: astropy.units.Quantity
+    x: float or numpy.ndarray or astropy.units.Quantity
         Input value; may be an array.
-    coeffs: list of astropy.units.Quantity
+    coeffs: list of astropy.units.Quantity or uncertainties.ufloat
         Coefficient array; must have length at least one. The coefficient in
         position ``i`` is multiplied by ``x**i``. Each coefficient should
         just be a number, not an array. The units should be compatible once
@@ -371,7 +372,7 @@ def taylor_horner(x, coeffs):
 
     Returns
     -------
-    astropy.units.Quantity
+    float or numpy.ndarray or astropy.units.Quantity
         Output value; same shape as input. Units as inferred from inputs.
     """
     return taylor_horner_deriv(x, coeffs, deriv_order=0)
@@ -388,9 +389,9 @@ def taylor_horner_deriv(x, coeffs, deriv_order=1):
 
     Parameters
     ----------
-    x: astropy.units.Quantity
+    x: float or numpy.ndarray or astropy.units.Quantity
         Input value; may be an array.
-    coeffs: list of astropy.units.Quantity
+    coeffs: list of astropy.units.Quantity or uncertainties.ufloat
         Coefficient array; must have length at least one. The coefficient in
         position ``i`` is multiplied by ``x**i``. Each coefficient should
         just be a number, not an array. The units should be compatible once
@@ -401,9 +402,10 @@ def taylor_horner_deriv(x, coeffs, deriv_order=1):
 
     Returns
     -------
-    astropy.units.Quantity
+    float or numpy.ndarray or astropy.units.Quantity
         Output value; same shape as input. Units as inferred from inputs.
     """
+    assert deriv_order >= 0
     result = 0.0
     if hasattr(coeffs[-1], "unit"):
         if not hasattr(x, "unit"):
@@ -2018,3 +2020,33 @@ def convert_dispersion_measure(dm, dmconst=None):
         me = constants.m_e.si
         dmconst = e**2 / (8 * np.pi**2 * c * eps0 * me)
     return (dm * pint.DMconst / dmconst).to(pint.dmu)
+
+
+def parse_time(input, scale="tdb", precision=9):
+    """Parse an :class:`astropy.time.Time` object from a range of input types
+
+    Parameters
+    ----------
+    input : astropy.time.Time, astropy.units.Quantity, numpy.ndarray, float, int, str
+        Value to parse
+    scale : str, optional
+        Scale of time for conversion
+    precision : int, optional
+        Precision for time
+
+    Returns
+    -------
+    astropy.time.Time
+    """
+    if isinstance(input, Time):
+        return input if input.scale == scale else getattr(input, scale)
+    elif isinstance(input, u.Quantity):
+        return Time(
+            input.to(u.d), format="pulsar_mjd", scale=scale, precision=precision
+        )
+    elif isinstance(input, (np.ndarray, float, int)):
+        return Time(input, format="pulsar_mjd", scale=scale, precision=precision)
+    elif isinstance(input, str):
+        return Time(input, format="pulsar_mjd_string", scale=scale, precision=precision)
+    else:
+        raise TypeError(f"Do not know how to parse times from {type(input)}")
