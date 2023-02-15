@@ -811,6 +811,23 @@ class floatParameter(Parameter):
         error = self.uncertainty.to_value(units) if self.uncertainty is not None else 0
         return ufloat(value, error)
 
+    def from_ufloat(self, value, units=None):
+        """Set the parameter from the value of a :class:`uncertainties.ufloat`
+
+        Will cast to the specified units, or the default
+        If the uncertainty is 0 it will be set to ``None``
+
+        Parameters
+        ----------
+        value : uncertainties.ufloat
+        units : astropy.units.core.Unit, optional
+            Units to cast the value
+        """
+        if units is None:
+            units = self.units
+        self.quantity = value.n * units
+        self.uncertainty = value.s * units if value.s > 0 else None
+
 
 class strParameter(Parameter):
     """String-valued parameter.
