@@ -11,7 +11,7 @@ from pint.models import get_model
 def test_fb():
     # with FB terms
     m = get_model(os.path.join(datadir, "J0023+0923_NANOGrav_11yv0.gls.par"))
-    assert np.isclose(m.pb()[0], 1 / m.FB0.quantity)
+    assert np.isclose(m.pb()[0].to_value(u.d), (1 / m.FB0.quantity).to_value(u.d))
 
 
 @pytest.mark.parametrize(
@@ -33,7 +33,7 @@ def test_fb_input(t):
 
 def test_pb():
     m = get_model(os.path.join(datadir, "J0437-4715.par"))
-    assert np.isclose(m.pb()[0], m.PB.quantity)
+    assert np.isclose(m.pb()[0].to_value(u.d), m.PB.quantity.to_value(u.d))
 
 
 @pytest.mark.parametrize(
