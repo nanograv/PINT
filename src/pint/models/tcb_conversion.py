@@ -102,6 +102,11 @@ def convert_tcb_to_tdb(model):
         log.warning("The input par file is already in TDB units. Doing nothing.")
         return
 
+    log.warning(
+        "The TCB to TDB conversion is only approximate. "
+        "The resulting timing model should be re-fit to get reliable results."
+    )
+
     if "Spindown" in model.components:
         for Fn_par in model.components["Spindown"].F_terms:
             n = int(Fn_par[1:])
