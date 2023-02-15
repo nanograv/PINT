@@ -19,7 +19,18 @@ IFTE_K = 1 + IFTE_KM1
 
 
 def scale_parameter(model, param, n):
-    """Scale parameter by a power of IFTE_K"""
+    """Scale a parameter x by a power of IFTE_K
+        x_tdb = x_tdb * IFTE_K**n
+
+    Parameter
+    ---------
+    model : pint.models.timing_model.TimingModel
+        The timing model
+    param : str
+        The parameter name to be converted
+    n : int
+        The power of IFTE_K in the scaling factor
+    """
     factor = IFTE_K**n
 
     if hasattr(model, param) and getattr(model, param).quantity is not None:
@@ -30,7 +41,16 @@ def scale_parameter(model, param, n):
 
 
 def transform_mjd_parameter(model, param):
-    """Convert an MJD from TCB to TDB."""
+    """Convert an MJD from TCB to TDB.
+        t_tdb = (t_tcb - IFTE_MJD0) / IFTE_K
+
+    Parameters
+    ----------
+    model : pint.models.timing_model.TimingModel
+        The timing model
+    param : str
+        The parameter name to be converted
+    """
     factor = 1 / IFTE_K
     tref = IFTE_MJD0
 
