@@ -552,7 +552,7 @@ class ModelBuilder:
             raise ComponentConflict(f"Can not decide the one component from: {cf_cps}")
 
 
-def get_model(parfile, allow_name_mixing=False, allow_tcb=False):
+def get_model(parfile, allow_name_mixing=False):
     """A one step function to build model from a parfile.
 
     Parameters
@@ -566,9 +566,6 @@ def get_model(parfile, allow_name_mixing=False, allow_tcb=False):
         T2EFAC and EFAC, both of them maps to PINT parameter EFAC, present
         in the parfile at the same time.
 
-    allow_tcb : bool, optional
-        Whether to allow reading TCB par files
-
     Returns
     -------
     Model instance get from parfile.
@@ -579,11 +576,11 @@ def get_model(parfile, allow_name_mixing=False, allow_tcb=False):
     except AttributeError:
         contents = None
     if contents is not None:
-        return model_builder(StringIO(contents), allow_name_mixing, allow_tcb=allow_tcb)
+        return model_builder(StringIO(contents), allow_name_mixing)
     # # parfile is a filename and can be handled by ModelBuilder
     # if _model_builder is None:
     #     _model_builder = ModelBuilder()
-    model = model_builder(parfile, allow_name_mixing, allow_tcb=allow_tcb)
+    model = model_builder(parfile, allow_name_mixing)
     model.name = parfile
     return model
 
@@ -602,7 +599,6 @@ def get_model_and_toas(
     picklefilename=None,
     allow_name_mixing=False,
     limits="warn",
-    allow_tcb=False,
 ):
     """Load a timing model and a related TOAs, using model commands as needed
 
@@ -641,14 +637,12 @@ def get_model_and_toas(
         in the parfile at the same time.
     limits : "warn" or "error"
         What to do when encountering TOAs for which clock corrections are not available.
-    allow_tcb : bool, optional
-        Whether to allow reading TCB par files
 
     Returns
     -------
     A tuple with (model instance, TOAs instance)
     """
-    mm = get_model(parfile, allow_name_mixing, allow_tcb=allow_tcb)
+    mm = get_model(parfile, allow_name_mixing)
     tt = get_TOAs(
         timfile,
         include_pn=include_pn,

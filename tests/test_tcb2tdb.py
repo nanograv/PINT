@@ -4,7 +4,7 @@ from io import StringIO
 import numpy as np
 import pytest
 
-from pint.models import get_model
+from pint.models.model_builder import ModelBuilder
 from pint.models.tcb_conversion import IFTE_K, convert_tcb_to_tdb
 from pint.scripts import tcb2tdb
 
@@ -37,9 +37,9 @@ DILATEFREQ          N
 
 def test_convert_to_tdb():
     with pytest.raises(ValueError):
-        m = get_model(StringIO(simplepar))
+        m = ModelBuilder()(StringIO(simplepar))
 
-    m = get_model(StringIO(simplepar), allow_tcb=True)
+    m = ModelBuilder()(StringIO(simplepar), allow_tcb=True)
     f0_tcb = m.F0.value
     pb_tcb = m.PB.value
     convert_tcb_to_tdb(m)
@@ -58,5 +58,5 @@ def test_tcb2tdb(tmp_path):
 
     assert os.path.isfile(tmppar2)
 
-    m2 = get_model(tmppar2)
+    m2 = ModelBuilder()(tmppar2)
     assert m2.UNITS.value == "TDB"
