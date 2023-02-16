@@ -661,7 +661,7 @@ def compare_tempo_obsys_dat(tempodir=None):
             name = obsnam.replace(" ", "_")
             topo_obs_entry = textwrap.dedent(
                 f"""
-                "{name}": {
+                "{name}": {{
                     "itrf_xyz": [
                         {x},
                         {y},
@@ -669,7 +669,7 @@ def compare_tempo_obsys_dat(tempodir=None):
                     ],
                     "tempo_code": "{tempo_code}",
                     "itoa_code": "{itoa_code}"
-                }
+                }}
                 """
             )
             try:

@@ -18,6 +18,7 @@ from pint.observatory import (
     Observatory,
     get_observatory,
     compare_t2_observatories_dat,
+    compare_tempo_obsys_dat,
 )
 from pint.pulsar_mjd import Time
 import pint.observatory.topo_obs
@@ -329,4 +330,9 @@ def test_names_and_aliases():
 
 def test_compare_t2_observatories_dat():
     s = compare_t2_observatories_dat(testdatadir)
+    assert isinstance(s, str)
+
+
+def test_compare_tempo_obsys_dat():
+    s = compare_tempo_obsys_dat(testdatadir / "observatory")
     assert isinstance(s, str)
