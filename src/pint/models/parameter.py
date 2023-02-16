@@ -804,6 +804,11 @@ class floatParameter(Parameter):
         Returns
         -------
         uncertainties.ufloat
+
+        Notes
+        -----
+        Currently :class:`~uncertainties.ufloat` does not support double precision values,
+        so some precision may be lost.
         """
         if units is None:
             units = self.units
