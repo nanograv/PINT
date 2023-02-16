@@ -622,7 +622,7 @@ def compare_tempo_obsys_dat(tempodir=None):
 
     report = defaultdict(list)
     with open(filename) as f:
-        for line in f.readlines():
+        for line in f:
             if line.strip().startswith("#"):
                 continue
             try:
