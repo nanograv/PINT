@@ -26,6 +26,7 @@ from pint.observatory.topo_obs import (
     TopoObs,
     load_observatories,
 )
+from collections import defaultdict
 
 tobs = ["aro", "ao", "chime", "drao"]
 
@@ -330,9 +331,9 @@ def test_names_and_aliases():
 
 def test_compare_t2_observatories_dat():
     s = compare_t2_observatories_dat(testdatadir)
-    assert isinstance(s, str)
+    assert isinstance(s, defaultdict)
 
 
 def test_compare_tempo_obsys_dat():
     s = compare_tempo_obsys_dat(testdatadir / "observatory")
-    assert isinstance(s, str)
+    assert isinstance(s, defaultdict)
