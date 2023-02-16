@@ -1,11 +1,12 @@
 import os
+from copy import deepcopy
 from io import StringIO
 
 import numpy as np
 import pytest
 
 from pint.models.model_builder import ModelBuilder
-from pint.models.tcb_conversion import IFTE_K, convert_tcb_to_tdb
+from pint.models.tcb_conversion import convert_tcb_tdb
 from pint.scripts import tcb2tdb
 
 simplepar = """
@@ -35,16 +36,34 @@ DILATEFREQ          N
 """
 
 
-def test_convert_to_tdb():
+@pytest.mark.parametrize("backwards", [True, False])
+def test_convert_units(backwards):
     with pytest.raises(ValueError):
         m = ModelBuilder()(StringIO(simplepar))
 
     m = ModelBuilder()(StringIO(simplepar), allow_tcb=True)
     f0_tcb = m.F0.value
     pb_tcb = m.PB.value
-    convert_tcb_to_tdb(m)
-    assert m.UNITS.value == "TDB"
+    convert_tcb_tdb(m, backwards=backwards)
+    assert m.UNITS.value == ("TCB" if backwards else "TDB")
     assert np.isclose(m.F0.value / f0_tcb, pb_tcb / m.PB.value)
+
+
+def test_convert_units_roundtrip():
+    m = ModelBuilder()(StringIO(simplepar), allow_tcb=True)
+    m_ = deepcopy(m)
+    convert_tcb_tdb(m, backwards=False)
+    convert_tcb_tdb(m, backwards=True)
+
+    for par in m.params:
+        p = getattr(m, par)
+        p_ = getattr(m_, par)
+        if p.value is None:
+            assert p_.value is None
+        elif isinstance(p.value, str):
+            assert getattr(m, par).value == getattr(m_, par).value
+        else:
+            assert np.isclose(getattr(m, par).value, getattr(m_, par).value)
 
 
 def test_tcb2tdb(tmp_path):

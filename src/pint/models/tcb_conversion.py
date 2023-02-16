@@ -19,7 +19,7 @@ IFTE_KM1 = np.longdouble("1.55051979176e-8")
 IFTE_K = 1 + IFTE_KM1
 
 
-def scale_parameter(model, param, n):
+def scale_parameter(model, param, n, backwards):
     """Scale a parameter x by a power of IFTE_K
         x_tdb = x_tdb * IFTE_K**n
 
@@ -43,10 +43,14 @@ def scale_parameter(model, param, n):
         The parameter name to be converted
     n : int
         The power of IFTE_K in the scaling factor
+    backwards : bool
+        Whether to do TDB to TCB conversion.
     """
     assert isinstance(n, int), "The power must be an integer."
 
-    factor = IFTE_K**n
+    p = -1 if backwards else 1
+
+    factor = IFTE_K ** (p * n)
 
     if hasattr(model, param) and getattr(model, param).quantity is not None:
         par = getattr(model, param)
@@ -55,9 +59,10 @@ def scale_parameter(model, param, n):
             par.uncertainty_value *= factor
 
 
-def transform_mjd_parameter(model, param):
-    """Convert an MJD from TCB to TDB.
-        t_tdb = (t_tcb - IFTE_MJD0) / IFTE_K
+def transform_mjd_parameter(model, param, backwards):
+    """Convert an MJD from TCB to TDB or vice versa.
+        t_tdb = (t_tcb - IFTE_MJD0) / IFTE_K + IFTE_MJD0
+        t_tcb = (t_tdb - IFTE_MJD0) * IFTE_K + IFTE_MJD0
 
     Parameters
     ----------
@@ -65,8 +70,10 @@ def transform_mjd_parameter(model, param):
         The timing model
     param : str
         The parameter name to be converted
+    backwards : bool
+        Whether to do TDB to TCB conversion.
     """
-    factor = 1 / IFTE_K
+    factor = IFTE_K if backwards else 1 / IFTE_K
     tref = IFTE_MJD0
 
     if hasattr(model, param) and getattr(model, param).quantity is not None:
@@ -78,7 +85,7 @@ def transform_mjd_parameter(model, param):
             par.uncertainty_value *= factor
 
 
-def convert_tcb_to_tdb(model):
+def convert_tcb_tdb(model, backwards=False):
     """This function performs a partial conversion of a model
     specified in TCB to TDB. While this should be sufficient as
     a starting point, the resulting parameters are only approximate
@@ -110,6 +117,8 @@ def convert_tcb_to_tdb(model):
     ----------
     model : pint.models.timing_model.TimingModel
        Timing model to be converted.
+    backwards : bool
+        Whether to do TDB to TCB conversion. The default is TCB to TDB.
     """
 
     if model.UNITS in ["TDB", None]:
@@ -123,37 +132,37 @@ def convert_tcb_to_tdb(model):
 
     if "Spindown" in model.components:
         for n, Fn_par in model.get_prefix_mapping("F").items():
-            scale_parameter(model, Fn_par, n + 1)
+            scale_parameter(model, Fn_par, n + 1, backwards)
 
-        transform_mjd_parameter(model, "PEPOCH")
+        transform_mjd_parameter(model, "PEPOCH", backwards)
 
     if "AstrometryEquatorial" in model.components:
-        scale_parameter(model, "PMRA", 1)
-        scale_parameter(model, "PMDEC", 1)
-        transform_mjd_parameter(model, "POSEPOCH")
+        scale_parameter(model, "PMRA", 1, backwards)
+        scale_parameter(model, "PMDEC", 1, backwards)
+        transform_mjd_parameter(model, "POSEPOCH", backwards)
     elif "AstrometryEcliptic" in model.components:
-        scale_parameter(model, "PMELAT", 1)
-        scale_parameter(model, "PMELONG", 1)
-        transform_mjd_parameter(model, "POSEPOCH")
+        scale_parameter(model, "PMELAT", 1, backwards)
+        scale_parameter(model, "PMELONG", 1, backwards)
+        transform_mjd_parameter(model, "POSEPOCH", backwards)
 
     # Although DM has the unit pc/cm^3, the quantity that enters
     # the timing model is DMconst*DM, which has dimensions
     # of frequency. Hence, DM and its derivatives will be
     # scaled by IFTE_K**(i+1).
     if "DispersionDM" in model.components:
-        scale_parameter(model, "DM", 1)
+        scale_parameter(model, "DM", 1, backwards)
         for n, DMn_par in model.get_prefix_mapping("DM").items():
-            scale_parameter(model, DMn_par, n + 1)
-        transform_mjd_parameter(model, "DMEPOCH")
+            scale_parameter(model, DMn_par, n + 1, backwards)
+        transform_mjd_parameter(model, "DMEPOCH", backwards)
 
     if hasattr(model, "BINARY") and getattr(model, "BINARY").value is not None:
-        transform_mjd_parameter(model, "T0")
-        transform_mjd_parameter(model, "TASC")
-        scale_parameter(model, "PB", -1)
-        scale_parameter(model, "FB0", 1)
-        scale_parameter(model, "FB1", 2)
-        scale_parameter(model, "A1", -1)
+        transform_mjd_parameter(model, "T0", backwards)
+        transform_mjd_parameter(model, "TASC", backwards)
+        scale_parameter(model, "PB", -1, backwards)
+        scale_parameter(model, "FB0", 1, backwards)
+        scale_parameter(model, "FB1", 2, backwards)
+        scale_parameter(model, "A1", -1, backwards)
 
-    model.UNITS.value = "TDB"
+    model.UNITS.value = "TCB" if backwards else "TDB"
 
-    model.validate()
+    model.validate(allow_tcb=backwards)
