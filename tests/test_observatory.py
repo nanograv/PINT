@@ -10,9 +10,15 @@ import pytest
 from astropy import units as u
 
 from pint.pulsar_mjd import Time
+from pinttestdata import datadir as testdatadir
 
 import pint.observatory
-from pint.observatory import NoClockCorrections, Observatory, get_observatory
+from pint.observatory import (
+    NoClockCorrections,
+    Observatory,
+    get_observatory,
+    compare_t2_observatories_dat,
+)
 from pint.pulsar_mjd import Time
 import pint.observatory.topo_obs
 from pint.observatory.topo_obs import (
@@ -319,3 +325,8 @@ def test_valid_past_end():
 def test_names_and_aliases():
     na = Observatory.names_and_aliases()
     assert isinstance(na, dict) and isinstance(na["gbt"], list)
+
+
+def test_compare_t2_observatories_dat():
+    s = compare_t2_observatories_dat(testdatadir)
+    assert isinstance(s, str)

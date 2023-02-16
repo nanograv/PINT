@@ -156,9 +156,7 @@ class Observatory:
                 raise ValueError(
                     f"Observatory {name.lower} already present and overwrite=False"
                 )
-            log.warning(
-                "Observatory '%s' already present; overwriting..." % name.lower()
-            )
+            log.warning(f"Observatory '{name.lower()}' already present; overwriting...")
 
             cls._register(obs, name)
             return obs
@@ -296,16 +294,16 @@ class Observatory:
             site_astropy = astropy.coordinates.EarthLocation.of_site(name)
         except astropy.coordinates.errors.UnknownSiteException as e:
             # turn it into the same error type as PINT would have returned
-            raise KeyError("Observatory name '%s' is not defined" % name) from e
+            raise KeyError(f"Observatory name '{name}' is not defined") from e
 
         # we need to import this here rather than up-top because of circular import issues
         from pint.observatory.topo_obs import TopoObs
 
+        # add in metadata from astropy
         obs = TopoObs(
             name,
             location=site_astropy,
-            # add in metadata from astropy
-            origin="astropy: '%s'" % site_astropy.info.meta["source"],
+            origin=f"""astropy: '{site_astropy.info.meta["source"]}'""",
         )
         # add to registry
         cls._register(obs, name)
@@ -438,7 +436,7 @@ class Observatory:
                 )
             return self._get_TDB_ephem(t, ephem)
         else:
-            raise ValueError("Unknown method '%s'." % method)
+            raise ValueError(f"Unknown method '{method}'.")
 
     def _get_TDB_default(self, t, ephem):
         return t.tdb
@@ -525,10 +523,10 @@ def compare_t2_observatories_dat(t2dir=None):
     """
     if t2dir is None:
         t2dir = os.getenv("TEMPO2")
-        if t2dir is None:
-            raise ValueError(
-                "TEMPO2 directory not provided and TEMPO2 environment variable not set"
-            )
+    if t2dir is None:
+        raise ValueError(
+            "TEMPO2 directory not provided and TEMPO2 environment variable not set"
+        )
     filename = os.path.join(t2dir, "observatory", "observatories.dat")
 
     report = defaultdict(list)
@@ -542,7 +540,7 @@ def compare_t2_observatories_dat(t2dir=None):
             full_name, short_name = full_name.lower(), short_name.lower()
             topo_obs_entry = textwrap.dedent(
                 f"""
-                "{full_name}": {
+                "{full_name}": {{
                     "aliases": [
                         "{short_name}"
                     ],
@@ -551,7 +549,7 @@ def compare_t2_observatories_dat(t2dir=None):
                         {y},
                         {z}
                     ]
-                }
+                }}
                 """
             )
             try:
