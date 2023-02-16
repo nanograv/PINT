@@ -1103,7 +1103,15 @@ class PlkWidget(tk.Frame):
                     # Get the time of conjunction after T0 or TASC
                     tt = m.T0.value if hasattr(m, "T0") else m.TASC.value
                     mjd = m.conjunction(tt)
-                    phs = (mjd - tt) * u.day / m.PB
+                    if m.PB.value is not None:
+                        pb = m.PB.value
+                    elif m.FB0.quantity is not None:
+                        pb = (1 / m.FB0.quantity).to("day").value
+                    else:
+                        raise AttributeError(
+                            "Neither PB nor FB0 is present in the timing model."
+                        )
+                    phs = (mjd - tt) / pb
                     self.plkAxes.plot([phs, phs], [ymin, ymax], "k-")
         else:
             self.plkAxes.set_ylabel(plotlabels[self.yid])
