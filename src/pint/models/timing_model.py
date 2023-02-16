@@ -752,7 +752,15 @@ class TimingModel:
         scs = []
         for bt in bts:
             # Make 11 times over one orbit after bt
-            ts = np.linspace(bt, bt + self.PB.value, 11)
+            if self.PB.value is not None:
+                pb = self.PB.value
+            elif self.FB0.quantity is not None:
+                pb = (1 / self.FB0.quantity).to("day").value
+            else:
+                raise AttributeError(
+                    "Neither PB nor FB0 is present in the timing model."
+                )
+            ts = np.linspace(bt, bt + pb, 11)
             # Compute the true anomalies and omegas for those times
             nus = self.orbital_phase(ts, anom="true")
             omegas = bbi.omega()
@@ -763,10 +771,7 @@ class TimingModel:
                     break
             # Now use scipy to find the root
             scs.append(brentq(funct, ts[lb], ts[lb + 1]))
-        if len(scs) == 1:
-            return scs[0]  # Return a float
-        else:
-            return np.asarray(scs)  # otherwise return an array
+        return scs[0] if len(scs) == 1 else np.asarray(scs)
 
     @property_exists
     def dm_funcs(self):
