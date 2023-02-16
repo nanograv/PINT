@@ -1,3 +1,5 @@
+"""Tests for `pint.models.tcb_conversion` and the `tcb2tdb` script."""
+
 import os
 from copy import deepcopy
 from io import StringIO
