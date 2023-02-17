@@ -23,7 +23,7 @@ from pint.models.timing_model import (
 )
 from pint.toa import get_TOAs
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
-
+from pint.models.tcb_conversion import convert_tcb_tdb
 
 __all__ = ["ModelBuilder", "get_model", "get_model_and_toas"]
 
@@ -552,7 +552,7 @@ class ModelBuilder:
             raise ComponentConflict(f"Can not decide the one component from: {cf_cps}")
 
 
-def get_model(parfile, allow_name_mixing=False):
+def get_model(parfile, allow_name_mixing=False, allow_tcb=False):
     """A one step function to build model from a parfile.
 
     Parameters
@@ -570,18 +570,31 @@ def get_model(parfile, allow_name_mixing=False):
     -------
     Model instance get from parfile.
     """
+    assert allow_tcb in [True, False, "raw"]
+
+    convert_tcb = allow_tcb == True
+    allow_tcb_ = allow_tcb in [True, "raw"]
+
     model_builder = ModelBuilder()
     try:
         contents = parfile.read()
     except AttributeError:
         contents = None
     if contents is not None:
-        return model_builder(StringIO(contents), allow_name_mixing)
+        model = model_builder(
+            StringIO(contents), allow_name_mixing, allow_tcb=allow_tcb_
+        )
+        if convert_tcb:
+            convert_tcb_tdb(model)
+        return model
+
     # # parfile is a filename and can be handled by ModelBuilder
     # if _model_builder is None:
     #     _model_builder = ModelBuilder()
-    model = model_builder(parfile, allow_name_mixing)
+    model = model_builder(parfile, allow_name_mixing, allow_tcb=allow_tcb_)
     model.name = parfile
+    if convert_tcb:
+        convert_tcb_tdb(model)
     return model
 
 
@@ -599,6 +612,7 @@ def get_model_and_toas(
     picklefilename=None,
     allow_name_mixing=False,
     limits="warn",
+    allow_tcb=False,
 ):
     """Load a timing model and a related TOAs, using model commands as needed
 
@@ -642,7 +656,7 @@ def get_model_and_toas(
     -------
     A tuple with (model instance, TOAs instance)
     """
-    mm = get_model(parfile, allow_name_mixing)
+    mm = get_model(parfile, allow_name_mixing, allow_tcb=allow_tcb)
     tt = get_TOAs(
         timfile,
         include_pn=include_pn,
