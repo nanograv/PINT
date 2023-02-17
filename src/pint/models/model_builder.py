@@ -89,14 +89,22 @@ class ModelBuilder:
             T2EFAC and EFAC, both of them maps to PINT parameter EFAC, present
             in the parfile at the same time.
 
-        allow_tcb : bool, optional
-            Whether to allow reading TCB par files
+        allow_tcb : True, False, or "raw", optional
+            Whether to read TCB par files. Default is False, and will throw an
+            error upon encountering TCB par files. If True, the par file will be
+            converted to TDB upon read. If "raw", an unconverted malformed TCB
+            TimingModel object will be returned.
 
         Returns
         -------
         pint.models.timing_model.TimingModel
             The result timing model based on the input .parfile or file object.
         """
+
+        assert allow_tcb in [True, False, "raw"]
+        convert_tcb = allow_tcb == True
+        allow_tcb_ = allow_tcb in [True, "raw"]
+
         pint_param_dict, original_name, unknown_param = self._pintify_parfile(
             parfile, allow_name_mixing
         )
@@ -114,13 +122,16 @@ class ModelBuilder:
             original_name,
             setup=True,
             validate=True,
-            allow_tcb=allow_tcb,
+            allow_tcb=allow_tcb_,
         )
         # Report unknown line
         for k, v in unknown_param.items():
             p_line = " ".join([k] + v)
             warnings.warn(f"Unrecognized parfile line '{p_line}'", UserWarning)
             # log.warning(f"Unrecognized parfile line '{p_line}'")
+
+        if tm.UNITS.value == "TCB" and convert_tcb:
+            convert_tcb_tdb(tm)
 
         return tm
 
@@ -566,14 +577,16 @@ def get_model(parfile, allow_name_mixing=False, allow_tcb=False):
         T2EFAC and EFAC, both of them maps to PINT parameter EFAC, present
         in the parfile at the same time.
 
+    allow_tcb : True, False, or "raw", optional
+        Whether to read TCB par files. Default is False, and will throw an
+        error upon encountering TCB par files. If True, the par file will be
+        converted to TDB upon read. If "raw", an unconverted malformed TCB
+        TimingModel object will be returned.
+
     Returns
     -------
     Model instance get from parfile.
     """
-    assert allow_tcb in [True, False, "raw"]
-
-    convert_tcb = allow_tcb == True
-    allow_tcb_ = allow_tcb in [True, "raw"]
 
     model_builder = ModelBuilder()
     try:
@@ -581,20 +594,13 @@ def get_model(parfile, allow_name_mixing=False, allow_tcb=False):
     except AttributeError:
         contents = None
     if contents is not None:
-        model = model_builder(
-            StringIO(contents), allow_name_mixing, allow_tcb=allow_tcb_
-        )
-        if convert_tcb:
-            convert_tcb_tdb(model)
-        return model
+        return model_builder(StringIO(contents), allow_name_mixing, allow_tcb=allow_tcb)
 
     # # parfile is a filename and can be handled by ModelBuilder
     # if _model_builder is None:
     #     _model_builder = ModelBuilder()
-    model = model_builder(parfile, allow_name_mixing, allow_tcb=allow_tcb_)
+    model = model_builder(parfile, allow_name_mixing, allow_tcb=allow_tcb)
     model.name = parfile
-    if convert_tcb:
-        convert_tcb_tdb(model)
     return model
 
 
@@ -651,6 +657,11 @@ def get_model_and_toas(
         in the parfile at the same time.
     limits : "warn" or "error"
         What to do when encountering TOAs for which clock corrections are not available.
+    allow_tcb : True, False, or "raw", optional
+        Whether to read TCB par files. Default is False, and will throw an
+        error upon encountering TCB par files. If True, the par file will be
+        converted to TDB upon read. If "raw", an unconverted malformed TCB
+        TimingModel object will be returned.
 
     Returns
     -------
