@@ -17,7 +17,7 @@ timfile = os.path.join(datadir, "NGC6440E.tim")
 def test_pintempo(gls):
     matplotlib.use("Agg")
     saved_stdout, sys.stdout = sys.stdout, StringIO("_")
-    cmd = f"{parfile} {timfile} --plot {gls}"
+    cmd = f"{parfile} {timfile} --plot {gls} --plotfile _test_pintempo.pdf --outfile _test_pintempo.out"
     pintempo.main(cmd.split())
     lines = sys.stdout.getvalue()
     v = 999.0
