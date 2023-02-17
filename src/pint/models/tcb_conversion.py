@@ -123,8 +123,10 @@ def convert_tcb_tdb(model, backwards=False):
 
     target_units = "TCB" if backwards else "TDB"
 
-    if model.UNITS.value in [target_units, None]:
-        log.warning("The input par file is already in TDB units. Doing nothing.")
+    if model.UNITS.value == target_units or (
+        model.UNITS.value is None and not backwards
+    ):
+        log.warning("The input par file is already in the target units. Doing nothing.")
         return
 
     log.warning(
