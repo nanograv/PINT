@@ -21,7 +21,7 @@ IFTE_K = 1 + IFTE_KM1
 
 def scale_parameter(model, param, n, backwards):
     """Scale a parameter x by a power of IFTE_K
-        x_tdb = x_tdb * IFTE_K**n
+        x_tdb = x_tcb * IFTE_K**n
 
     The power n depends on the "effective dimensionality" of
     the parameter as it appears in the timing model. Some examples
@@ -139,11 +139,10 @@ def convert_tcb_tdb(model, backwards=False):
     if "AstrometryEquatorial" in model.components:
         scale_parameter(model, "PMRA", 1, backwards)
         scale_parameter(model, "PMDEC", 1, backwards)
-        transform_mjd_parameter(model, "POSEPOCH", backwards)
     elif "AstrometryEcliptic" in model.components:
         scale_parameter(model, "PMELAT", 1, backwards)
         scale_parameter(model, "PMELONG", 1, backwards)
-        transform_mjd_parameter(model, "POSEPOCH", backwards)
+    transform_mjd_parameter(model, "POSEPOCH", backwards)
 
     # Although DM has the unit pc/cm^3, the quantity that enters
     # the timing model is DMconst*DM, which has dimensions
