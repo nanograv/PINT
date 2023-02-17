@@ -121,7 +121,9 @@ def convert_tcb_tdb(model, backwards=False):
         Whether to do TDB to TCB conversion. The default is TCB to TDB.
     """
 
-    if model.UNITS in ["TDB", None]:
+    target_units = "TCB" if backwards else "TDB"
+
+    if model.UNITS.value in [target_units, None]:
         log.warning("The input par file is already in TDB units. Doing nothing.")
         return
 
@@ -162,6 +164,6 @@ def convert_tcb_tdb(model, backwards=False):
         scale_parameter(model, "FB1", 2, backwards)
         scale_parameter(model, "A1", -1, backwards)
 
-    model.UNITS.value = "TCB" if backwards else "TDB"
+    model.UNITS.value = target_units
 
     model.validate(allow_tcb=backwards)
