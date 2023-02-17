@@ -581,7 +581,7 @@ class PulsarBinary(DelayComponent):
                     uncertainties.unumpy.std_devs(pnew) * u.d,
                 )
 
-        else:
+        elif self.FB0.quantity is not None:
             # assume FB terms
             dt = (t - t0).sec
             coeffs = []
@@ -599,3 +599,4 @@ class PulsarBinary(DelayComponent):
                     uncertainties.unumpy.nominal_values(pnew) * u.s,
                     uncertainties.unumpy.std_devs(pnew) * u.s,
                 )
+        raise AttributeError("Neither PB nor FB0 is present in the timing model.")

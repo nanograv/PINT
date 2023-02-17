@@ -752,14 +752,7 @@ class TimingModel:
         scs = []
         for bt in bts:
             # Make 11 times over one orbit after bt
-            if self.PB.value is not None:
-                pb = self.PB.value
-            elif self.FB0.quantity is not None:
-                pb = (1 / self.FB0.quantity).to("day").value
-            else:
-                raise AttributeError(
-                    "Neither PB nor FB0 is present in the timing model."
-                )
+            pb = self.pb()[0].to_value("day")
             ts = np.linspace(bt, bt + pb, 11)
             # Compute the true anomalies and omegas for those times
             nus = self.orbital_phase(ts, anom="true")
