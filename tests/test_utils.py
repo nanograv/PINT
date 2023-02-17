@@ -53,6 +53,7 @@ from pint.utils import (
     find_prefix_bytime,
     merge_dmx,
     convert_dispersion_measure,
+    print_color_examples,
 )
 
 
@@ -843,3 +844,7 @@ def test_convert_dm():
     dm_codata = convert_dispersion_measure(dm)
 
     assert np.isfinite(dm_codata)
+
+
+def test_print_color_examples():
+    print_color_examples()
