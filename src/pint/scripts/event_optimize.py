@@ -919,6 +919,14 @@ def main(argv=None):
     f.close()
 
     # Write out the par file for the best MCMC parameter est
+    centered_samples = [
+        samples[:, i] - ftr.maxpost_fitvals[i] for i in range(len(ftr.fitkeys))
+    ]
+    errors = [
+        np.percentile(np.abs(centered_samples[i]), 68) for i in range(len(ftr.fitkeys))
+    ]
+    ftr.set_param_uncertainties(dict(zip(ftr.fitkeys[:-1], errors[:-1])))
+
     f = open(filename + "_post.par", "w")
     f.write(ftr.model.as_parfile())
     f.close()
