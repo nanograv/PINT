@@ -38,6 +38,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Import for `longdouble2str` in `get_tempo_result`
 - Plotting orbital phase in `pintk` when FB0 is used instead of PB
 - Selection of BIPM for random models
+- Added 1 sigma errors to update the postfit parfile errors in `event_optimize`
 ### Removed
 
 ## [0.9.3] 2022-12-16
