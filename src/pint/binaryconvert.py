@@ -443,6 +443,7 @@ def _DDGR_to_PK(model):
     gamma = (
         tsun ** (2.0 / 3)
         * n ** (-1.0 / 3)
+        * ecc
         * (mc * (mp + 2 * mc) / (mp + mc) ** (4.0 / 3))
     )
     # units as seconds
@@ -454,6 +455,8 @@ def _DDGR_to_PK(model):
         * (1 / (1 - ecc**2))
         * (mp + mc) ** (2.0 / 3)
     )
+    if model.XOMDOT.quantity is not None:
+        omegadot += model.XOMDOT.as_ufloat(u.rad / u.s)
     fe = (1 + (73.0 / 24) * ecc**2 + (37.0 / 96) * ecc**4) / (1 - ecc**2) ** (
         7.0 / 2
     )
@@ -466,6 +469,8 @@ def _DDGR_to_PK(model):
         * (mp * mc)
         / (mp + mc) ** (1.0 / 3)
     )
+    if model.XPBDOT.quantity is not None:
+        pbdot += model.XPBDOT.as_ufloat(u.s / u.s)
     # dimensionless
     s = tsun ** (-1.0 / 3) * n ** (2.0 / 3) * x * (mp + mc) ** (2.0 / 3) / mc
     Dr = (
@@ -798,7 +803,16 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
             elif binary_component.binary_model_name == "DDK":
                 badlist += ["KIN", "KOM"]
             elif binary_component.binary_model_name == "DDGR":
-                badlist += ["PBDOT", "OMDOT", "GAMMA", "DR", "DTH", "SINI"]
+                badlist += [
+                    "PBDOT",
+                    "OMDOT",
+                    "GAMMA",
+                    "DR",
+                    "DTH",
+                    "SINI",
+                    "XOMDOT",
+                    "XPBDOT",
+                ]
             if output == "DD":
                 outmodel.add_component(BinaryDD(), validate=False)
             elif output == "DDS":
@@ -835,9 +849,11 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 outmodel.PBDOT.value = pbdot.n
                 if pbdot.s > 0:
                     outmodel.PBDOT.uncertainty_value = pbdot.s
-                outmodel.OMDOT.value = omegadot.n
+                outmodel.OMDOT.value = (omegadot.n * u.rad / u.s).to_value(u.deg / u.yr)
                 if omegadot.s > 0:
-                    outmodel.OMDOT.uncertainty_value = omegadot.s
+                    outmodel.OMDOT.uncertainty_value = (
+                        omegadot.s * u.rad / u.s
+                    ).to_value(u.deg / u.yr)
                 outmodel.GAMMA.frozen = model.PB.frozen or model.M2.frozen
                 outmodel.OMDOT.frozen = (
                     model.PB.frozen or model.M2.frozen or model.ECC.frozen
