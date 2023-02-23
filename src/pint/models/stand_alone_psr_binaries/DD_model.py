@@ -74,6 +74,11 @@ class DDmodel(PSR_BINARY):
     @property
     def k(self):
         # separate this into a property so it can be calculated correctly in DDGR
+        # note that this include self.pb() in the calculation of k
+        # and self.pb() is PB + PBDOT*dt, so it can vary slightly
+        # compared to a definition that does not include PBDOT
+        # I am not certain about how this should be done
+        # but this is keeping the behavior consistent
         return self.OMDOT.to(u.rad / u.second) / (2 * np.pi * u.rad / self.pb())
 
     # DDmodel special omega.
