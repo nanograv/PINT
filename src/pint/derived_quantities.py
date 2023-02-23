@@ -864,7 +864,7 @@ def dth(mp: u.Msun, mc: u.Msun, pb: u.d):
     return (
         (const.G / const.c**3) ** (2.0 / 3)
         * (2 * np.pi / pb) ** (2.0 / 3)
-        * (3 * mp**2 + 6 * mp * mc + 2 * mc**2)
+        * (3.5 * mp**2 + 6 * mp * mc + 2 * mc**2)
         / (mp + mc) ** (4 / 3)
     ).decompose()
 
