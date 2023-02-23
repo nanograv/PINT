@@ -405,7 +405,12 @@ class PulsarBinary(DelayComponent):
                 except UnknownParameter:
                     if par in self.internal_params:
                         pint_bin_name = par
+                    else:
+                        raise UnknownParameter(
+                            f"Unable to find {par} in the parent model"
+                        )
                 binObjpar = getattr(self._parent, pint_bin_name)
+
                 # make sure we aren't passing along derived parameters to the binary instance
                 if isinstance(binObjpar, funcParameter):
                     continue
