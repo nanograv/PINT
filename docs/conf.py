@@ -15,7 +15,6 @@
 
 import os
 import sys
-from packaging.version import parse
 
 import jupytext
 
