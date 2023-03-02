@@ -37,6 +37,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Added try/except to `test_pldmnoise.py`/`test_PLRedNoise_recovery` to avoid exceptions during CI
 - Import for `longdouble2str` in `get_tempo_result`
 - Plotting orbital phase in `pintk` when FB0 is used instead of PB
+- Selection of BIPM for random models
 - Added 1 sigma errors to update the postfit parfile errors in `event_optimize`
 ### Removed
 
