@@ -106,9 +106,8 @@ def get_fake_toa_clock_versions(model, include_bipm=False, include_gps=True):
             if len(clk) == 2:
                 ctype, cvers = clk
                 if ctype == "TT" and cvers.startswith("BIPM"):
-                    if bipm_version is None:
-                        bipm_version = cvers
-                        log.info(f"Using CLOCK = {bipm_version} from the given model")
+                    bipm_version = cvers
+                    log.info(f"Using CLOCK = {bipm_version} from the given model")
                 else:
                     log.warning(
                         f'CLOCK = {model["CLOCK"].value} is not implemented. '
