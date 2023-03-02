@@ -127,4 +127,4 @@ And for more details, please read and cite(!) the PINT paper_.
 
 .. _paper:   https://ui.adsabs.harvard.edu/abs/2021ApJ...911...45L/abstract
 
-Articles that cite the PINT paper can be found `here <https://ui.adsabs.harvard.edu/search/q=citations(bibcode%3A2021ApJ...911...45L)&sort=date%20desc%2C%20bibcode%20desc&p_=0>`.
+Articles that cite the PINT paper can be found `here <https://ui.adsabs.harvard.edu/search/q=citations(bibcode%3A2021ApJ...911...45L)&sort=date%20desc%2C%20bibcode%20desc&p_=0>`_.
