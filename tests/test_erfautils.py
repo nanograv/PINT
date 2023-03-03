@@ -16,28 +16,30 @@ def test_simpler_erfa_import():
     erfa
 
 
-@pytest.mark.xfail(
-    reason="astropy doesn't include up-to-date IERS B - "
-    "if this starts passing we can ditch the "
-    "implementation in erfautils"
-)
-def test_compare_erfautils_astropy():
-    o = "Arecibo"
-    loc = Observatory.get(o).earth_location_itrf()
-    mjds = np.linspace(50000, 58000, 512)
-    t = Time(mjds, scale="tdb", format="mjd")
-    posvel = erfautils.old_gcrs_posvel_from_itrf(loc, t, obsname=o)
-    astropy_posvel = erfautils.astropy_gcrs_posvel_from_itrf(loc, t, obsname=o)
-    dopv = astropy_posvel - posvel
-    dpos = np.sqrt((dopv.pos**2).sum(axis=0))
-    dvel = np.sqrt((dopv.vel**2).sum(axis=0))
-    assert len(dpos) == len(mjds)
-    # This is just above the level of observed difference
-    assert dpos.max() < 0.05 * u.m, "position difference of %s" % dpos.max().to(u.m)
-    # This level is what is permitted as a velocity difference from tempo2 in test_times.py
-    assert dvel.max() < 0.02 * u.mm / u.s, "velocity difference of %s" % dvel.max().to(
-        u.mm / u.s
-    )
+# The old_ function was removed, but has Astropy fixed the problem?
+# @pytest.mark.xfail(
+#     reason="astropy doesn't include up-to-date IERS B - "
+#     "if this starts passing we can ditch the "
+#     "implementation in erfautils",
+#     raises=AssertionError,
+# )
+# def test_compare_erfautils_astropy():
+#     o = "Arecibo"
+#     loc = Observatory.get(o).earth_location_itrf()
+#     mjds = np.linspace(50000, 58000, 512)
+#     t = Time(mjds, scale="tdb", format="mjd")
+#     posvel = erfautils.old_gcrs_posvel_from_itrf(loc, t, obsname=o)
+#     astropy_posvel = erfautils.astropy_gcrs_posvel_from_itrf(loc, t, obsname=o)
+#     dopv = astropy_posvel - posvel
+#     dpos = np.sqrt((dopv.pos**2).sum(axis=0))
+#     dvel = np.sqrt((dopv.vel**2).sum(axis=0))
+#     assert len(dpos) == len(mjds)
+#     # This is just above the level of observed difference
+#     assert dpos.max() < 0.05 * u.m, "position difference of %s" % dpos.max().to(u.m)
+#     # This level is what is permitted as a velocity difference from tempo2 in test_times.py
+#     assert dvel.max() < 0.02 * u.mm / u.s, "velocity difference of %s" % dvel.max().to(
+#         u.mm / u.s
+#     )
 
 
 def test_iers_discrepancies():
@@ -59,22 +61,13 @@ def test_scalar():
     assert posvel.pos.shape == (3,)
 
 
-@pytest.mark.skip(
-    "I don't know why this test exists but it no longer fails after changing to astropy version of gcrs_posvel_from_itrf() -- paulr"
-)
-def test_matrix():
-    """Confirm higher-dimensional arrays raise an exception"""
-    with pytest.raises(ValueError):
-        o = "Arecibo"
-        loc = Observatory.get(o).earth_location_itrf()
-        t = Time(56000 * np.ones((4, 5)), scale="tdb", format="mjd")
-        erfautils.gcrs_posvel_from_itrf(loc, t, obsname=o)
-
-
 # The below explore why astropy might disagree with PINT internal code
 
 
-@pytest.mark.xfail(reason="astropy doesn't include up-to-date IERS B")
+# This test checks for a bug that was in Astropy; is it fixed in the oldest version we support?
+@pytest.mark.xfail(
+    reason="astropy doesn't include up-to-date IERS B", raises=AssertionError
+)
 def test_IERS_B_all_in_IERS_Auto():
     B = IERS_B.open(download_file(IERS_B_URL, cache=True))
     mjd = B["MJD"].to(u.day).value
@@ -84,7 +77,12 @@ def test_IERS_B_all_in_IERS_Auto():
     assert_equal(A["dX_2000A_B"][i_A], B["dX_2000A"])
 
 
-@pytest.mark.xfail(reason="IERS changes old values in new versions of the B table")
+# This test checks for a bug that was in Astropy; is it fixed in the oldest version we support?
+# I think this might be the IERS that changes the old versions?
+@pytest.mark.xfail(
+    reason="IERS changes old values in new versions of the B table",
+    raises=AssertionError,
+)
 def test_IERS_B_agree_with_IERS_Auto_dX():
     A = IERS_Auto.open()
     B = IERS_B.open(download_file(IERS_B_URL, cache=True))
@@ -115,9 +113,11 @@ def test_IERS_B_agree_with_IERS_Auto_dX():
         )
 
 
-@pytest.mark.xfail(
-    reason="IERS changes old values in new versions of the B table in astropy 4"
-)
+# This test checks for a bug that was in Astropy; is it fixed in the oldest version we support?
+# @pytest.mark.xfail(
+#     reason="IERS changes old values in new versions of the B table in astropy 4",
+#     raises=AssertionError,
+# )
 def test_IERS_B_agree_with_IERS_Auto():
     A = IERS_Auto.open()
     B = IERS_B.open(download_file(IERS_B_URL, cache=True))
@@ -150,6 +150,7 @@ def test_IERS_B_agree_with_IERS_Auto():
         )
 
 
+# This test checks for a bug that was in Astropy; is it fixed in the oldest version we support?
 # @pytest.mark.xfail(reason="disagreement in current astropy")
 def test_IERS_B_builtin_agree_with_IERS_Auto_dX():
     A = IERS_Auto.open()
@@ -181,7 +182,8 @@ def test_IERS_B_builtin_agree_with_IERS_Auto_dX():
     )
 
 
-@pytest.mark.skip
+# This test checks for a bug that was in Astropy; is it fixed in the oldest version we support?
+# @pytest.mark.skip
 def test_IERS_B_builtin_agree_with_IERS_Auto():
     """The UT1-UTC, PM_X, and PM_Y values are correctly copied"""
     A = IERS_Auto.open()
@@ -225,15 +227,18 @@ copy_columns = [
     ("PM_x", "PM_X_B"),
     ("PM_y", "PM_Y_B"),
     pytest.param(
-        "dX_2000A", "dX_2000A_B", marks=pytest.mark.xfail(reason="Bug in astropy")
+        "dX_2000A",
+        "dX_2000A_B",  # marks=pytest.mark.xfail(reason="Bug in astropy")
     ),
     pytest.param(
-        "dY_2000A", "dY_2000A_B", marks=pytest.mark.xfail(reason="Bug in astropy")
+        "dY_2000A",
+        "dY_2000A_B",  # marks=pytest.mark.xfail(reason="Bug in astropy")
     ),
 ]
 
 
-@pytest.mark.skip
+# This test checks for a bug that was in Astropy; is it fixed in the oldest version we support?
+# @pytest.mark.skip
 @pytest.mark.parametrize("b_name,a_name", copy_columns)
 def test_IERS_B_parameters_loaded_into_IERS_Auto(b_name, a_name):
     A = IERS_Auto.open()
