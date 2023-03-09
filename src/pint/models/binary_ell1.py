@@ -455,6 +455,9 @@ class BinaryELL1k(BinaryELL1):
         self.binary_model_name = "ELL1k"
         self.binary_model_class = ELL1kmodel
 
+        # remove the funcparameter, but it back for real
+        self.remove_param("OMDOT")
+
         self.add_param(
             floatParameter(
                 name="OMDOT",
