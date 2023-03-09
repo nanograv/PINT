@@ -218,7 +218,7 @@ def _from_ELL1(model):
     pb = ufloat(PB.to_value(u.d), PBerr.to_value(u.d) if PBerr is not None else 0)
     eps1 = model.EPS1.as_ufloat()
     eps2 = model.EPS2.as_ufloat()
-    om = umath.atan2(eps2, eps1)
+    om = umath.atan2(eps1, eps2)
     if om < 0:
         om += 2 * np.pi
     ecc = umath.sqrt(eps1**2 + eps2**2)
@@ -298,8 +298,8 @@ def _to_ELL1(model):
         )
     ecc = model.ECC.as_ufloat()
     om = model.OM.as_ufloat(u.rad)
-    eps1 = ecc * umath.cos(om)
-    eps2 = ecc * umath.sin(om)
+    eps1 = ecc * umath.sin(om)
+    eps2 = ecc * umath.cos(om)
     PB, PBerr = model.pb()
     pb = ufloat(PB.to_value(u.d), PBerr.to_value(u.d) if PBerr is not None else 0)
     t01, t02 = model.T0.as_ufloats()
@@ -316,8 +316,8 @@ def _to_ELL1(model):
     eps2dot = None
     if model.EDOT.quantity is not None:
         edot = model.EDOT.as_ufloat(u.Hz)
-        eps1dot = edot * umath.cos(om)
-        eps2dot = edot * umath.sin(om)
+        eps1dot = edot * umath.sin(om)
+        eps2dot = edot * umath.cos(om)
     return (
         eps1.n,
         eps2.n,
