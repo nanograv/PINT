@@ -148,13 +148,17 @@ EPS2DOT           -1e-10 1 1e-11
 kwargs = {"ELL1H": {"NHARMS": 3, "useSTIGMA": True}, "DDK": {"KOM": 0 * u.deg}}
 
 
-@pytest.mark.parametrize("output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK"])
+@pytest.mark.parametrize(
+    "output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK", "ELL1+"]
+)
 def test_ELL1(output):
     m = get_model(io.StringIO(parELL1))
     mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
 
 
-@pytest.mark.parametrize("output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK"])
+@pytest.mark.parametrize(
+    "output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK", "ELL1+"]
+)
 def test_ELL1_roundtrip(output):
     m = get_model(io.StringIO(parELL1))
     mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
@@ -183,13 +187,17 @@ def test_ELL1_roundtrip(output):
             ), f"{p}: {getattr(m, p).value} does not match {getattr(mback, p).value}"
 
 
-@pytest.mark.parametrize("output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK"])
+@pytest.mark.parametrize(
+    "output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK", "ELL1+"]
+)
 def test_ELL1FB0(output):
     m = get_model(io.StringIO(parELL1FB0))
     mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
 
 
-@pytest.mark.parametrize("output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK"])
+@pytest.mark.parametrize(
+    "output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK", "ELL1+"]
+)
 def test_ELL1_roundtripFB0(output):
     m = get_model(io.StringIO(parELL1FB0))
     mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
@@ -218,7 +226,9 @@ def test_ELL1_roundtripFB0(output):
             ), f"{p}: {getattr(m, p).value} does not match {getattr(mback, p).value}"
 
 
-@pytest.mark.parametrize("output", ["ELL1", "ELL1k", "ELL1H", "DD", "BT", "DDS", "DDK"])
+@pytest.mark.parametrize(
+    "output", ["ELL1", "ELL1k", "ELL1H", "DD", "BT", "DDS", "DDK", "ELL1+"]
+)
 def test_DD(output):
     m = get_model(
         io.StringIO(
@@ -228,10 +238,12 @@ def test_DD(output):
     mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
 
 
-@pytest.mark.parametrize("output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK"])
+@pytest.mark.parametrize(
+    "output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK", "ELL1+"]
+)
 def test_DD_roundtrip(output):
     s = f"{parDD}\nBINARY DD\nSINI {np.sin(i).value} 1 0.01\nA1 {A1.value}\nPB {PB.value} 1 0.1\nM2 {Mc.value} 1 0.01\n"
-    if output not in ["ELL1", "ELL1H"]:
+    if output not in ["ELL1", "ELL1+", "ELL1H"]:
         s += "OMDOT       1e-10 1 1e-12"
 
     m = get_model(io.StringIO(s))
@@ -249,7 +261,7 @@ def test_DD_roundtrip(output):
             assert np.isclose(getattr(m, p).value, getattr(mback, p).value)
             if getattr(m, p).uncertainty is not None:
                 # some precision may be lost in uncertainty conversion
-                if output in ["ELL1", "ELL1H", "ELL1k"] and p in ["ECC"]:
+                if output in ["ELL1", "ELL1+", "ELL1H", "ELL1k"] and p in ["ECC"]:
                     # we lose precision on ECC since it also contains a contribution from OM now
                     continue
                 if output == "ELL1H" and p == "M2":
@@ -264,7 +276,9 @@ def test_DD_roundtrip(output):
             assert getattr(m, p).value == getattr(mback, p).value
 
 
-@pytest.mark.parametrize("output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK"])
+@pytest.mark.parametrize(
+    "output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK", "ELL1+"]
+)
 def test_DDGR(output):
     m = get_model(
         io.StringIO(
@@ -274,7 +288,9 @@ def test_DDGR(output):
     mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
 
 
-@pytest.mark.parametrize("output", ["ELL1", "ELL1k", "ELL1H", "DD", "BT", "DDS", "DDK"])
+@pytest.mark.parametrize(
+    "output", ["ELL1", "ELL1k", "ELL1H", "DD", "BT", "DDS", "DDK", "ELL1+"]
+)
 def test_DDFB0(output):
     m = get_model(
         io.StringIO(
@@ -284,10 +300,12 @@ def test_DDFB0(output):
     mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
 
 
-@pytest.mark.parametrize("output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK"])
+@pytest.mark.parametrize(
+    "output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK", "ELL1+"]
+)
 def test_DDFB0_roundtrip(output):
     s = f"{parDD}\nBINARY DD\nSINI {np.sin(i).value} 1 0.01\nA1 {A1.value}\nFB0 {(1/PB).to_value(u.Hz)} 1 0.1\nM2 {Mc.value} 1 0.01\n"
-    if output not in ["ELL1", "ELL1H"]:
+    if output not in ["ELL1", "ELL1H", "ELL1+"]:
         s += "OMDOT       1e-10 1 1e-12"
 
     m = get_model(io.StringIO(s))
@@ -305,7 +323,7 @@ def test_DDFB0_roundtrip(output):
             assert np.isclose(getattr(m, p).value, getattr(mback, p).value)
             if getattr(m, p).uncertainty is not None:
                 # some precision may be lost in uncertainty conversion
-                if output in ["ELL1", "ELL1H", "ELL1k"] and p in ["ECC"]:
+                if output in ["ELL1", "ELL1H", "ELL1k", "ELL1+"] and p in ["ECC"]:
                     # we lose precision on ECC since it also contains a contribution from OM now
                     continue
                 if output == "ELL1H" and p == "M2":

@@ -75,6 +75,7 @@ __all__ = [
     "dmx_ranges",
     "weighted_mean",
     "ELL1_check",
+    "ELL1plus_check",
     "FTest",
     "add_dummy_distance",
     "remove_dummy_distance",
@@ -1360,6 +1361,60 @@ def ELL1_check(
         s = "Checking applicability of ELL1 model -- \n"
         s += "    Condition is asini/c * ecc**2 << timing precision / sqrt(# TOAs) to use ELL1\n"
         s += "    asini/c * ecc**2    = {:.3g} \n".format(lhs.to(u.us))
+        s += "    TRES / sqrt(# TOAs) = {:.3g} \n".format(rhs.to(u.us))
+    if lhs * 50.0 < rhs:
+        if outstring:
+            s += "    Should be fine.\n"
+            return s
+        return True
+    elif lhs * 5.0 < rhs:
+        if outstring:
+            s += "    Should be OK, but not optimal.\n"
+            return s
+        return True
+    else:
+        if outstring:
+            s += "    *** WARNING*** Should probably use BT or DD instead!\n"
+            return s
+        return False
+
+
+@u.quantity_input
+def ELL1plus_check(
+    A1: u.cm, E: u.dimensionless_unscaled, TRES: u.us, NTOA: int, outstring=True
+):
+    """Check for validity of assumptions in ELL1+ binary model
+
+    Checks whether the assumptions that allow ELL1 to be safely used are
+    satisfied. To work properly, we should have:
+    :math:`asini/c  e^3 \ll {\\rm timing precision} / \sqrt N_{\\rm TOA}`
+    or :math:`A1 E^3 \ll TRES / \sqrt N_{\\rm TOA}`
+
+    Parameters
+    ----------
+    A1 : astropy.units.Quantity
+        Projected semi-major axis (aka ASINI) in `pint.ls`
+    E : astropy.units.Quantity (dimensionless)
+        Eccentricity
+    TRES : astropy.units.Quantity
+        RMS TOA uncertainty
+    NTOA : int
+        Number of TOAs in the fit
+    outstring : bool, optional
+
+    Returns
+    -------
+    bool or str
+        Returns True if ELL1+ is safe to use, otherwise False.
+        If outstring is True then returns a string summary instead.
+
+    """
+    lhs = A1 / const.c * E**3.0
+    rhs = TRES / np.sqrt(NTOA)
+    if outstring:
+        s = "Checking applicability of ELL1+ model -- \n"
+        s += "    Condition is asini/c * ecc**3 << timing precision / sqrt(# TOAs) to use ELL1+\n"
+        s += "    asini/c * ecc**3    = {:.3g} \n".format(lhs.to(u.us))
         s += "    TRES / sqrt(# TOAs) = {:.3g} \n".format(rhs.to(u.us))
     if lhs * 50.0 < rhs:
         if outstring:

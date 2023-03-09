@@ -16,6 +16,7 @@ from pint.models.stand_alone_psr_binaries import binary_orbits as bo
 from pint.models.stand_alone_psr_binaries.ELL1_model import ELL1model
 from pint.models.stand_alone_psr_binaries.ELL1H_model import ELL1Hmodel
 from pint.models.stand_alone_psr_binaries.ELL1k_model import ELL1kmodel
+from pint.models.stand_alone_psr_binaries.ELL1plus_model import ELL1plusmodel
 from pint.models.timing_model import MissingParameter
 from pint.utils import taylor_horner_deriv
 from pint import Tsun
@@ -472,3 +473,38 @@ class BinaryELL1k(BinaryELL1):
             self.EPS2.quantity = (1 + lnedot * dt) * (
                 eps20 * np.cos(omdot * dt) - eps10 * np.sin(omdot * dt)
             )
+
+
+class BinaryELL1plus(BinaryELL1):
+    """ELL1+ binary model for higher-order eccentricity correction
+
+    Modified version of the ELL1 model applicable to long-period binaries where
+    x*ecc**2 may be larger than RMS/sqrt(Ntoa), but x*ecc**3 will be smaller.
+
+    The actual calculations for this are done in
+    :class:`pint.models.stand_alone_psr_binaries.ELL1plus_model.ELL1plusmodel`.
+
+    It supports all the parameters defined in :class:`pint.models.pulsar_binary.PulsarBinary`.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.binary_ell1.BinaryELL1plus
+
+    References
+    ----------
+    - Zhu et al. (2019), MNRAS, 482 (3), 3249-3260 [1]_
+
+    .. [1] https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.3249Z/abstract
+    """
+
+    register = True
+
+    def __init__(self):
+        super().__init__()
+        self.binary_model_name = "ELL1+"
+        self.binary_model_class = ELL1plusmodel
+
+    def validate(self):
+        """Validate parameters."""
+        super().validate()

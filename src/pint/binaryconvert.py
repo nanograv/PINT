@@ -17,7 +17,7 @@ from pint import Tsun
 from pint.models.binary_bt import BinaryBT
 from pint.models.binary_dd import BinaryDD, BinaryDDS, BinaryDDGR
 from pint.models.binary_ddk import BinaryDDK
-from pint.models.binary_ell1 import BinaryELL1, BinaryELL1H, BinaryELL1k
+from pint.models.binary_ell1 import BinaryELL1, BinaryELL1H, BinaryELL1k, BinaryELL1plus
 from pint.models.parameter import (
     floatParameter,
     MJDParameter,
@@ -27,7 +27,7 @@ from pint.models.parameter import (
 
 # output types
 # DDGR is not included as there is not a well-defined way to get a unique output
-binary_types = ["DD", "DDK", "DDS", "BT", "ELL1", "ELL1H", "ELL1k"]
+binary_types = ["DD", "DDK", "DDS", "BT", "ELL1", "ELL1H", "ELL1k", "ELL1+"]
 
 
 __all__ = ["convert_binary"]
@@ -211,7 +211,7 @@ def _from_ELL1(model):
     .. [1] https://ui.adsabs.harvard.edu/abs/2001MNRAS.326..274L/abstract
 
     """
-    if model.BINARY.value not in ["ELL1", "ELL1H", "ELL1k"]:
+    if model.BINARY.value not in ["ELL1", "ELL1H", "ELL1k", "ELL1+"]:
         raise ValueError(f"Requires model ELL1* rather than {model.BINARY.value}")
 
     PB, PBerr = model.pb()
@@ -354,8 +354,10 @@ def _ELL1_to_ELL1k(model):
 
     .. [1] https://ui.adsabs.harvard.edu/abs/2018MNRAS.480.5260S/abstract
     """
-    if model.BINARY.value not in ["ELL1", "ELL1H"]:
-        raise ValueError(f"Requires model ELL1/ELL1H rather than {model.BINARY.value}")
+    if model.BINARY.value not in ["ELL1", "ELL1H", "ELL1+"]:
+        raise ValueError(
+            f"Requires model ELL1/ELL1H/ELL1+ rather than {model.BINARY.value}"
+        )
     eps1 = model.EPS1.as_ufloat()
     eps2 = model.EPS2.as_ufloat()
     eps1dot = model.EPS1DOT.as_ufloat(u.Hz)
@@ -532,11 +534,12 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
 
     Input models can be from :class:`~pint.models.binary_dd.BinaryDD`, :class:`~pint.models.binary_dd.BinaryDDS`,
     :class:`~pint.models.binary_dd.BinaryDDGR`, :class:`~pint.models.binary_bt.BinaryBT`, :class:`~pint.models.binary_ddk.BinaryDDK`,
-    :class:`~pint.models.binary_ell1.BinaryELL1`, :class:`~pint.models.binary_ell1.BinaryELL1H`, :class:`~pint.models.binary_ell1.BinaryELL1k`
+    :class:`~pint.models.binary_ell1.BinaryELL1`, :class:`~pint.models.binary_ell1.BinaryELL1H`, :class:`~pint.models.binary_ell1.BinaryELL1k`,
+    :class:`~pint.models.binary_ell1.BinaryELL1plus`
 
     Output models can be from :class:`~pint.models.binary_dd.BinaryDD`, :class:`~pint.models.binary_dd.BinaryDDS`,
     :class:`~pint.models.binary_bt.BinaryBT`, :class:`~pint.models.binary_ddk.BinaryDDK`, :class:`~pint.models.binary_ell1.BinaryELL1`,
-    :class:`~pint.models.binary_ell1.BinaryELL1H`, :class:`~pint.models.binary_ell1.BinaryELL1k`
+    :class:`~pint.models.binary_ell1.BinaryELL1H`, :class:`~pint.models.binary_ell1.BinaryELL1k`, :class:`~pint.models.binary_ell1.BinaryELL1plus`
 
     Parameters
     ----------
@@ -574,10 +577,10 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
         return copy.deepcopy(model)
     log.debug(f"Converting from '{binary_component.binary_model_name}' to '{output}'")
 
-    if binary_component.binary_model_name in ["ELL1", "ELL1H", "ELL1k"]:
-        # from ELL1, ELL1H, ELL1k
+    if binary_component.binary_model_name in ["ELL1", "ELL1H", "ELL1k", "ELL1+"]:
+        # from ELL1, ELL1H, ELL1k, ELL1+
         if output == "ELL1H":
-            # ELL1,ELL1k -> ELL1H
+            # ELL1,ELL1k,ELL1+ -> ELL1H
             stigma, h3, h4, stigma_unc, h3_unc, h4_unc = _M2SINI_to_orthometric(model)
             outmodel = copy.deepcopy(model)
             outmodel.remove_component(binary_component_name)
@@ -613,16 +616,19 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 outmodel.H4.quantity = h4
                 outmodel.H4.uncertainty = h4_unc
                 outmodel.H4.frozen = outmodel.H3.frozen
-        elif output == "ELL1":
+        elif output in ["ELL1", "ELL1+"]:
             if model.BINARY.value == "ELL1H":
-                # ELL1H -> ELL1
+                # ELL1H -> ELL1,ELL1+
                 M2, SINI, M2_unc, SINI_unc = _orthometric_to_M2SINI(model)
                 outmodel = copy.deepcopy(model)
                 outmodel.remove_component(binary_component_name)
                 outmodel.BINARY.value = output
                 # parameters not to copy
                 badlist = ["H3", "H4", "STIGMA", "BINARY"]
-                outmodel.add_component(BinaryELL1(), validate=False)
+                if output == "ELL1":
+                    outmodel.add_component(BinaryELL1(), validate=False)
+                else:
+                    outmodel.add_component(BinaryELL1plus(), validate=False)
                 _transfer_params(model, outmodel, badlist)
                 outmodel.M2.quantity = M2
                 outmodel.SINI.quantity = SINI
@@ -637,13 +643,16 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 if SINI_unc is not None:
                     outmodel.SINI.uncertainty = SINI_unc
             elif model.BINARY.value == "ELL1k":
-                # ELL1k -> ELL1
+                # ELL1k -> ELL1,ELL1+
                 outmodel = copy.deepcopy(model)
                 outmodel.remove_component(binary_component_name)
                 outmodel.BINARY.value = output
                 # parameters not to copy
                 badlist = ["BINARY", "LNEDOT", "OMDOT"]
-                outmodel.add_component(BinaryELL1(), validate=False)
+                if output == "ELL1":
+                    outmodel.add_component(BinaryELL1(), validate=False)
+                else:
+                    outmodel.add_component(BinaryELL1plus(), validate=False)
                 EPS1DOT, EPS2DOT, EPS1DOT_unc, EPS2DOT_unc = _ELL1k_to_ELL1(model)
                 _transfer_params(model, outmodel, badlist)
                 if EPS1DOT is not None:
@@ -656,9 +665,21 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                         outmodel.EPS2DOT.uncertainty = EPS2DOT_unc
                 outmodel.EPS1DOT.frozen = model.LNEDOT.frozen or model.OMDOT.frozen
                 outmodel.EPS2DOT.frozen = model.LNEDOT.frozen or model.OMDOT.frozen
+            elif model.BINARY.value in ["ELL1", "ELL1+"]:
+                # ELL1 <-> ELL1+
+                outmodel = copy.deepcopy(model)
+                outmodel.remove_component(binary_component_name)
+                outmodel.BINARY.value = output
+                # parameters not to copy
+                badlist = ["BINARY"]
+                if output == "ELL1":
+                    outmodel.add_component(BinaryELL1(), validate=False)
+                else:
+                    outmodel.add_component(BinaryELL1plus(), validate=False)
+                _transfer_params(model, outmodel, badlist)
         elif output == "ELL1k":
-            if model.BINARY.value == "ELL1":
-                # ELL1 -> ELL1k
+            if model.BINARY.value in ["ELL1", "ELL1+"]:
+                # ELL1,ELL1+ -> ELL1k
                 LNEDOT, OMDOT, LNEDOT_unc, OMDOT_unc = _ELL1_to_ELL1k(model)
                 outmodel = copy.deepcopy(model)
                 outmodel.remove_component(binary_component_name)
@@ -707,7 +728,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 if SINI_unc is not None:
                     outmodel.SINI.uncertainty = SINI_unc
         elif output in ["DD", "DDS", "DDK", "BT"]:
-            # (ELL1, ELL1k, ELL1H) -> (DD, DDS, DDK, BT)
+            # (ELL1, ELL1k, ELL1H, ELL1+) -> (DD, DDS, DDK, BT)
             # need to convert from EPS1/EPS2/TASC to ECC/OM/TASC
             ECC, OM, T0, EDOT, ECC_unc, OM_unc, T0_unc, EDOT_unc = _from_ELL1(model)
             outmodel = copy.deepcopy(model)
@@ -907,8 +928,8 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                             or model.A1.frozen
                         )
 
-        elif output in ["ELL1", "ELL1H", "ELL1k"]:
-            # (DD, DDGR, DDS, DDK, BT) -> (ELL1, ELL1H, ELL1k)
+        elif output in ["ELL1", "ELL1H", "ELL1k", "ELL1+"]:
+            # (DD, DDGR, DDS, DDK, BT) -> (ELL1, ELL1H, ELL1k, ELL1+)
             outmodel = copy.deepcopy(model)
             outmodel.remove_component(binary_component_name)
             outmodel.BINARY.value = output
@@ -920,6 +941,8 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 badlist += ["KIN", "KOM"]
             if output == "ELL1":
                 outmodel.add_component(BinaryELL1(), validate=False)
+            elif output == "ELL1+":
+                outmodel.add_component(BinaryELL1plus(), validate=False)
             elif output == "ELL1H":
                 outmodel.add_component(BinaryELL1H(), validate=False)
                 badlist += ["M2", "SINI"]
