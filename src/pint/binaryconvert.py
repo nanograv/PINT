@@ -195,6 +195,7 @@ def _from_ELL1(model):
     OM : astropy.units.Quantity
     T0 : astropy.units.Quantity
     EDOT : astropy.units.Quantity or None
+    OMDOT : astropy.units.Quantity or None
     ECC_unc : astropy.units.Quantity or None
         Uncertainty on ECC
     OM_unc : astropy.units.Quantity or None
@@ -203,6 +204,8 @@ def _from_ELL1(model):
         Uncertainty on T0
     EDOT_unc : astropy.units.Quantity or None
         Uncertainty on EDOT
+    OMDOTDOT_unc : astropy.units.Quantity or None
+        Uncertainty on OMDOT
 
     References
     ----------
@@ -233,26 +236,33 @@ def _from_ELL1(model):
         precision=model.TASC.quantity.precision,
         format="jd",
     )
-    # does there also need to be a computation of OMDOT here?
     edot = None
+    omdot = None
     if model.BINARY.value == "ELL1k":
         lnedot = model.LNEDOT.as_ufloat(u.Hz)
         edot = lnedot * ecc
+        omdot = model.OMDOT.as_ufloat(u.rad / u.s)
+
     else:
         if model.EPS1DOT.quantity is not None and model.EPS2DOT.quantity is not None:
             eps1dot = model.EPS1DOT.as_ufloat(u.Hz)
             eps2dot = model.EPS2DOT.as_ufloat(u.Hz)
             edot = (eps1dot * eps1 + eps2dot * eps2) / ecc
+            omdot = (eps1dot * eps2 - eps2dot * eps1) / ecc
 
     return (
         ecc.n,
         (om.n * u.rad).to(u.deg),
         T0,
-        edot.n * u.Hz,
+        edot.n * u.Hz if edot is not None else None,
+        (omdot.n * u.rad / u.s).to(u.deg / u.yr) if omdot is not None else None,
         ecc.s if ecc.s > 0 else None,
         (om.s * u.rad).to(u.deg) if om.s > 0 else None,
         t02.s * u.d if t02.s > 0 else None,
         edot.s * u.Hz if (edot is not None and edot.s > 0) else None,
+        (omdot.s * u.rad / u.s).to(u.deg / u.yr)
+        if (omdot is not None and omdot.s > 0)
+        else None,
     )
 
 
@@ -314,10 +324,17 @@ def _to_ELL1(model):
     )
     eps1dot = None
     eps2dot = None
-    if model.EDOT.quantity is not None:
-        edot = model.EDOT.as_ufloat(u.Hz)
-        eps1dot = edot * umath.sin(om)
-        eps2dot = edot * umath.cos(om)
+    if model.EDOT.quantity is not None or model.OMDOT.quantity is not None:
+        if model.EDOT.quantity is not None:
+            edot = model.EDOT.as_ufloat(u.Hz)
+        else:
+            edot = ufloat(0, 0)
+        if model.OMDOT.quantity is not None:
+            omdot = model.OMDOT.as_ufloat(u.rad * u.Hz)
+        else:
+            omdot = ufloat(0, 0)
+        eps1dot = edot * umath.sin(om) + ecc * umath.cos(om) * omdot
+        eps2dot = edot * umath.cos(om) - ecc * umath.sin(om) * omdot
     return (
         eps1.n,
         eps2.n,
@@ -730,7 +747,18 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
         elif output in ["DD", "DDS", "DDK", "BT"]:
             # (ELL1, ELL1k, ELL1H, ELL1+) -> (DD, DDS, DDK, BT)
             # need to convert from EPS1/EPS2/TASC to ECC/OM/TASC
-            ECC, OM, T0, EDOT, ECC_unc, OM_unc, T0_unc, EDOT_unc = _from_ELL1(model)
+            (
+                ECC,
+                OM,
+                T0,
+                EDOT,
+                OMDOT,
+                ECC_unc,
+                OM_unc,
+                T0_unc,
+                EDOT_unc,
+                OMDOT_unc,
+            ) = _from_ELL1(model)
             outmodel = copy.deepcopy(model)
             outmodel.remove_component(binary_component_name)
             outmodel.BINARY.value = output
@@ -787,8 +815,13 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 outmodel.EDOT.quantity = EDOT
             if EDOT_unc is not None:
                 outmodel.EDOT.uncertainty = EDOT_unc
+            if OMDOT is not None:
+                outmodel.OMDOT.quantity = OMDOT
+            if OMDOT_unc is not None:
+                outmodel.OMDOT.uncertainty = OMDOT_unc
             if binary_component.binary_model_name != "ELL1k":
                 outmodel.EDOT.frozen = model.EPS1DOT.frozen or model.EPS2DOT.frozen
+                outmodel.OMDOT.frozen = model.EPS1DOT.frozen or model.EPS2DOT.frozen
             else:
                 outmodel.EDOT.frozen = model.LNEDOT.frozen
             if binary_component.binary_model_name == "ELL1H":
