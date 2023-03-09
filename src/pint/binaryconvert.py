@@ -603,10 +603,10 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
             outmodel.remove_component(binary_component_name)
             outmodel.BINARY.value = output
             # parameters not to copy
-            badlist = ["M2", "SINI", "BINARY"]
+            badlist = ["M2", "SINI", "BINARY", "EDOT", "OMDOT"]
             outmodel.add_component(BinaryELL1H(), validate=False)
             if binary_component.binary_model_name == "ELL1k":
-                badlist += ["LNEDOT", "OMDOT"]
+                badlist += ["LNEDOT"]
                 EPS1DOT, EPS2DOT, EPS1DOT_unc, EPS2DOT_unc = _ELL1k_to_ELL1(model)
                 if EPS1DOT is not None:
                     outmodel.EPS1DOT.quantity = EPS1DOT
@@ -641,7 +641,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 outmodel.remove_component(binary_component_name)
                 outmodel.BINARY.value = output
                 # parameters not to copy
-                badlist = ["H3", "H4", "STIGMA", "BINARY"]
+                badlist = ["H3", "H4", "STIGMA", "BINARY", "EDOT", "OMDOT"]
                 if output == "ELL1":
                     outmodel.add_component(BinaryELL1(), validate=False)
                 else:
@@ -665,7 +665,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 outmodel.remove_component(binary_component_name)
                 outmodel.BINARY.value = output
                 # parameters not to copy
-                badlist = ["BINARY", "LNEDOT", "OMDOT"]
+                badlist = ["BINARY", "LNEDOT", "OMDOT", "EDOT"]
                 if output == "ELL1":
                     outmodel.add_component(BinaryELL1(), validate=False)
                 else:
@@ -688,7 +688,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 outmodel.remove_component(binary_component_name)
                 outmodel.BINARY.value = output
                 # parameters not to copy
-                badlist = ["BINARY"]
+                badlist = ["BINARY", "OMDOT", "EDOT"]
                 if output == "ELL1":
                     outmodel.add_component(BinaryELL1(), validate=False)
                 else:
@@ -702,7 +702,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 outmodel.remove_component(binary_component_name)
                 outmodel.BINARY.value = output
                 # parameters not to copy
-                badlist = ["BINARY", "EPS1DOT", "EPS2DOT"]
+                badlist = ["BINARY", "EPS1DOT", "EPS2DOT", "OMDOT", "EDOT"]
                 outmodel.add_component(BinaryELL1k(), validate=False)
                 _transfer_params(model, outmodel, badlist)
                 outmodel.LNEDOT.quantity = LNEDOT
@@ -721,7 +721,16 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 outmodel.remove_component(binary_component_name)
                 outmodel.BINARY.value = output
                 # parameters not to copy
-                badlist = ["BINARY", "EPS1DOT", "EPS2DOT", "H3", "H4", "STIGMA"]
+                badlist = [
+                    "BINARY",
+                    "EPS1DOT",
+                    "EPS2DOT",
+                    "H3",
+                    "H4",
+                    "STIGMA",
+                    "OMDOT",
+                    "EDOT",
+                ]
                 outmodel.add_component(BinaryELL1k(), validate=False)
                 _transfer_params(model, outmodel, badlist)
                 outmodel.LNEDOT.quantity = LNEDOT
@@ -772,6 +781,8 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 "EPS1DOT",
                 "EPS2DOT",
                 "BINARY",
+                "OMDOT",
+                "EDOT",
             ]
             if output == "DD":
                 outmodel.add_component(BinaryDD(), validate=False)

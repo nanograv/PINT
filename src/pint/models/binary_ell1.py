@@ -33,6 +33,18 @@ def _eps_to_om(eps1, eps2):
     return OM
 
 
+def _epsdot_to_edot(eps1, eps2, eps1dot, eps2dot):
+    ecc = np.sqrt(eps1**2 + eps2**2)
+    return (eps1dot * eps1 + eps2dot * eps2) / ecc
+
+
+def _epsdot_to_omdot(eps1, eps2, eps1dot, eps2dot):
+    ecc = np.sqrt(eps1**2 + eps2**2)
+    return ((eps1dot * eps2 - eps2dot * eps1) / ecc).to(
+        u.deg / u.yr, equivalencies=u.dimensionless_angles()
+    )
+
+
 def _tasc_to_T0(TASC, PB, eps1, eps2):
     OM = np.arctan2(eps1, eps2)
     if OM < 0:
@@ -139,6 +151,28 @@ class BinaryELL1(PulsarBinary):
                 long_double=True,
                 params=("EPS1", "EPS2"),
                 func=_eps_to_om,
+            )
+        )
+        self.add_param(
+            funcParameter(
+                name="EDOT",
+                units="1/s",
+                description="Eccentricity derivative respect to time",
+                unit_scale=True,
+                scale_factor=1e-12,
+                scale_threshold=1e-7,
+                params=("EPS1", "EPS2", "EPS1DOT", "EPS2DOT"),
+                func=_epsdot_to_edot,
+            )
+        )
+        self.add_param(
+            funcParameter(
+                name="OMDOT",
+                units="deg/year",
+                description="Rate of advance of periastron",
+                long_double=True,
+                params=("EPS1", "EPS2", "EPS1DOT", "EPS2DOT"),
+                func=_epsdot_to_omdot,
             )
         )
         # don't implement T0 yet since that is a MJDparameter at base
