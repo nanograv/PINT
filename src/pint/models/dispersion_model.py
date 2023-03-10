@@ -757,6 +757,8 @@ class DispersionJump(Dispersion):
             )
         )
 
+        self.delay_funcs_component += [self.dmjump_dispersion_delay]
+
     def setup(self):
         super().setup()
         self.dm_jumps = []
@@ -766,7 +768,7 @@ class DispersionJump(Dispersion):
         for j in self.dm_jumps:
             self.register_dm_deriv_funcs(self.d_dm_d_dmjump, j)
             # Note we can not use the derivative function 'd_delay_d_dmparam',
-            # Since dmjump does not effect delay.
+            # Since dmjump does not effect delay for wideband timing.
             # The function 'd_delay_d_dmparam' applies d_dm_d_dmparam first and
             # than applys the time delay part.
             self.register_deriv_funcs(self.d_delay_d_dmjump, j)
@@ -797,10 +799,24 @@ class DispersionJump(Dispersion):
         d_dm_d_j[mask] = -1.0
         return d_dm_d_j * jpar.units / jpar.units
 
+    def dmjump_dispersion_delay(self, toas, acc_delay=None):
+        """This is a wrapper function for interacting with the TimingModel class
+
+        No delay for wideband timing.
+        """
+        if toas.is_wideband():
+            return []
+        else:
+            return self.dispersion_type_delay(toas)
+
     def d_delay_d_dmjump(self, toas, param_name, acc_delay=None):
         """Derivative for delay wrt to dm jumps.
 
-        Since DMJUMPS does not affect delay, this would be zero.
+        For wideband timing, this would be zero since DMJUMPS do not affect
+        delay. For narrowband timing, DMJUMPS will affect delay.
         """
-        dmjump = getattr(self, param_name)
-        return np.zeros(toas.ntoas) * (u.s / dmjump.units)
+        if toas.is_wideband():
+            dmjump = getattr(self, param_name)
+            return np.zeros(toas.ntoas) * (u.s / dmjump.units)
+        else:
+            return self.d_delay_d_dmparam(toas, param_name)
