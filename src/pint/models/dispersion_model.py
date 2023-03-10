@@ -758,7 +758,7 @@ class DispersionJump(Dispersion):
             )
         )
 
-        # self.delay_funcs_component += [self.dmjump_dispersion_delay]
+        self.delay_funcs_component += [self.dmjump_dispersion_delay]
 
     def setup(self):
         super().setup()
