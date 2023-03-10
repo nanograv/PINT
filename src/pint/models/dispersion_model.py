@@ -757,7 +757,7 @@ class DispersionJump(Dispersion):
             )
         )
 
-        self.delay_funcs_component += [self.dmjump_dispersion_delay]
+        # self.delay_funcs_component += [self.dmjump_dispersion_delay]
 
     def setup(self):
         super().setup()
@@ -805,7 +805,7 @@ class DispersionJump(Dispersion):
         No delay for wideband timing.
         """
         if toas.is_wideband():
-            return []
+            return np.zeros(toas.ntoas) * u.s
         else:
             return self.dispersion_type_delay(toas)
 
