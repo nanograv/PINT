@@ -10,6 +10,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Moved `DMconst` from `pint.models.dispersion_model` to `pint` to avoid circular imports
 - Removed references to `astropy._erfa` (removed since `astropy` 4.2)
 - Refactor `Dre` method, fix expressions for Einstein delay and post-Keplerian parameters in DD model
+- Apply time delays from `DispersionJump` class when using narrowband ToAs
 - Updated contributor list (AUTHORS.rst)
 - Emit an informative warning for "MODE" statement in TOA file; Ignore "MODE 1" silently
 - Version of `sphinx-rtd-theme` updated in `requirements_dev.txt` 
