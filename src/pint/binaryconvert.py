@@ -978,7 +978,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
             outmodel.remove_component(binary_component_name)
             outmodel.BINARY.value = output
             # parameters not to copy
-            badlist = ["BINARY", "ECC", "OM", "T0", "OMDOT", "EDOT"]
+            badlist = ["BINARY", "ECC", "OM", "T0", "OMDOT", "EDOT", "GAMMA"]
             if binary_component.binary_model_name == "DDS":
                 badlist += ["SHAPMAX", "SINI"]
             elif binary_component.binary_model_name == "DDK":
