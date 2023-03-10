@@ -736,8 +736,9 @@ class DispersionJump(Dispersion):
 
     Notes
     -----
-    This DM jump is only for modeling the DM values, and will not apply to the
-    dispersion time delay.
+    For wideband timing, this DM jump is only for modeling the DM values, and
+    will not apply to the dispersion time delay. For narrowband timing, this
+    will apply the usual dispersion time delay.
     """
 
     register = True
@@ -802,7 +803,7 @@ class DispersionJump(Dispersion):
     def dmjump_dispersion_delay(self, toas, acc_delay=None):
         """This is a wrapper function for interacting with the TimingModel class
 
-        No delay for wideband timing.
+        No delay for wideband timing, yes delay for narrowband.
         """
         if toas.is_wideband():
             return np.zeros(toas.ntoas) * u.s
