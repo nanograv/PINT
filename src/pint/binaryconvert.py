@@ -248,7 +248,7 @@ def _from_ELL1(model):
             eps1dot = model.EPS1DOT.as_ufloat(u.Hz)
             eps2dot = model.EPS2DOT.as_ufloat(u.Hz)
             edot = (eps1dot * eps1 + eps2dot * eps2) / ecc
-            omdot = (eps1dot * eps2 - eps2dot * eps1) / ecc
+            omdot = (eps1dot * eps2 - eps2dot * eps1) / ecc**2
 
     return (
         ecc.n,
