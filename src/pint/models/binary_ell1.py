@@ -34,13 +34,15 @@ def _eps_to_om(eps1, eps2):
 
 
 def _epsdot_to_edot(eps1, eps2, eps1dot, eps2dot):
+    # Eqn. A14,A15 in Lange et al. inverted
     ecc = np.sqrt(eps1**2 + eps2**2)
     return (eps1dot * eps1 + eps2dot * eps2) / ecc
 
 
 def _epsdot_to_omdot(eps1, eps2, eps1dot, eps2dot):
+    # Eqn. A14,A15 in Lange et al. inverted
     ecc = np.sqrt(eps1**2 + eps2**2)
-    return ((eps1dot * eps2 - eps2dot * eps1) / ecc).to(
+    return ((eps1dot * eps2 - eps2dot * eps1) / ecc**2).to(
         u.deg / u.yr, equivalencies=u.dimensionless_angles()
     )
 
