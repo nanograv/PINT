@@ -30,7 +30,7 @@ def _eps_to_om(eps1, eps2):
     OM = np.arctan2(eps1, eps2)
     if OM < 0:
         OM += 360 * u.deg
-    return OM
+    return OM.to(u.deg)
 
 
 def _epsdot_to_edot(eps1, eps2, eps1dot, eps2dot):
