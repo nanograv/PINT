@@ -17,6 +17,17 @@ class ELL1plusmodel(ELL1model):
     - Zhu et al. (2019), MNRAS, 482 (3), 3249-3260 [1]_
 
     .. [1] https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.3249Z/abstract
+
+    Notes
+    -----
+    o(e^2) expression for Roemer delay from Norbert Wex and Weiwei Zhu
+    This is equaiton (1) of Zhu et al (2019) but with a corrected typo:
+        In the first line of that equation, ex->e1 and ey->e2
+        In the other lines, ex->e2 and ey->e1
+    See Email from Norbert and Weiwei to David on 2019-Aug-08
+    The dre expression comes from Norbert and Weiwei; the derivatives
+    were calculated by hand for PINT
+
     """
 
     def __init__(self):
@@ -37,19 +48,23 @@ class ELL1plusmodel(ELL1model):
 
     ###############################
     def d_delayR_da1(self):
-        """ELL1+ Roemer delay in proper time divided by a1/c"""
+        """ELL1+ Roemer delay in proper time divided by a1/c
+
+        typo corrected from Zhu et al., following:
+        https://github.com/nanograv/tempo/blob/master/src/bnryell1.f
+        """
         Phi = self.Phi()
         eps1 = self.eps1()
         eps2 = self.eps2()
         return (
             np.sin(Phi) + 0.5 * (eps2 * np.sin(2 * Phi) - eps1 * np.cos(2 * Phi))
         ) - (1.0 / 8) * (
-            5 * eps1**2 * np.sin(Phi)
-            - 3 * eps1**2 * np.sin(3 * Phi)
-            - 2 * eps1 * eps2 * np.cos(Phi)
-            + 6 * eps1 * eps2 * np.cos(3 * Phi)
-            + 3 * eps2**2 * np.sin(Phi)
-            + 3 * eps2**2 * np.sin(3 * Phi)
+            5 * eps2**2 * np.sin(Phi)
+            - 3 * eps2**2 * np.sin(3 * Phi)
+            - 2 * eps2 * eps1 * np.cos(Phi)
+            + 6 * eps2 * eps1 * np.cos(3 * Phi)
+            + 3 * eps1**2 * np.sin(Phi)
+            + 3 * eps1**2 * np.sin(3 * Phi)
         )
 
     def d_d_delayR_dPhi_da1(self):
@@ -63,12 +78,12 @@ class ELL1plusmodel(ELL1model):
             + eps2 * np.cos(2 * Phi)
             - (1.0 / 8)
             * (
-                5 * eps1**2 * np.cos(Phi)
-                - 9 * eps1**2 * np.cos(3 * Phi)
+                5 * eps2**2 * np.cos(Phi)
+                - 9 * eps2**2 * np.cos(3 * Phi)
                 + 2 * eps1 * eps2 * np.sin(Phi)
                 - 18 * eps1 * eps2 * np.sin(3 * Phi)
-                + 3 * eps2**2 * np.cos(Phi)
-                + 9 * eps2**2 * np.cos(3 * Phi)
+                + 3 * eps1**2 * np.cos(Phi)
+                + 9 * eps1**2 * np.cos(3 * Phi)
             )
         )
 
@@ -83,12 +98,12 @@ class ELL1plusmodel(ELL1model):
             - 2 * eps2 * np.sin(2 * Phi)
             - (1.0 / 8)
             * (
-                -5 * eps1**2 * np.sin(Phi)
-                + 27 * eps1**2 * np.sin(3 * Phi)
+                -5 * eps2**2 * np.sin(Phi)
+                + 27 * eps2**2 * np.sin(3 * Phi)
                 + 2 * eps1 * eps2 * np.cos(Phi)
                 - 54 * eps1 * eps2 * np.cos(3 * Phi)
-                - 3 * eps2**2 * np.sin(Phi)
-                - 27 * eps2**2 * np.sin(3 * Phi)
+                - 3 * eps1**2 * np.sin(Phi)
+                - 27 * eps1**2 * np.sin(3 * Phi)
             )
         )
 
@@ -122,10 +137,10 @@ class ELL1plusmodel(ELL1model):
                 -0.5 * np.cos(2 * Phi)
                 - (1.0 / 8)
                 * (
-                    10 * eps1 * np.sin(Phi)
-                    - 6 * eps1 * np.sin(3 * Phi)
-                    - 2 * eps2 * np.cos(Phi)
+                    -2 * eps2 * np.cos(Phi)
                     + 6 * eps2 * np.cos(3 * Phi)
+                    + 6 * eps1 * np.sin(Phi)
+                    + 6 * eps1 * np.sin(3 * Phi)
                 )
             )
         )
@@ -138,8 +153,8 @@ class ELL1plusmodel(ELL1model):
                 * (
                     -2 * eps1 * np.cos(Phi)
                     + 6 * eps1 * np.cos(3 * Phi)
-                    + 6 * eps2 * np.sin(Phi)
-                    + 6 * eps2 * np.sin(3 * Phi)
+                    + 10 * eps2 * np.sin(Phi)
+                    - 6 * eps2 * np.sin(3 * Phi)
                 )
             )
         )
@@ -183,8 +198,8 @@ class ELL1plusmodel(ELL1model):
                 np.sin(2.0 * Phi)
                 - (1.0 / 8)
                 * (
-                    10 * eps1 * np.cos(Phi)
-                    - 18 * eps1 * np.cos(3 * Phi)
+                    6 * eps1 * np.cos(Phi)
+                    + 18 * eps1 * np.cos(3 * Phi)
                     + 2 * eps2 * np.sin(Phi)
                     - 18 * eps2 * np.sin(3 * Phi)
                 )
@@ -199,8 +214,8 @@ class ELL1plusmodel(ELL1model):
                 * (
                     2 * eps1 * np.sin(Phi)
                     - 18 * eps1 * np.sin(3 * Phi)
-                    + 6 * eps2 * np.cos(Phi)
-                    + 18 * eps2 * np.cos(3 * Phi)
+                    + 10 * eps2 * np.cos(Phi)
+                    - 18 * eps2 * np.cos(3 * Phi)
                 )
             )
         )
@@ -240,12 +255,12 @@ class ELL1plusmodel(ELL1model):
                 - 4.0 * (eps1 * np.sin(2.0 * Phi) + eps2 * np.cos(2.0 * Phi))
                 - (1.0 / 8)
                 * (
-                    -5 * eps1**2 * np.cos(Phi)
-                    + 81 * eps1**2 * np.cos(3 * Phi)
+                    -5 * eps2**2 * np.cos(Phi)
+                    + 81 * eps2**2 * np.cos(3 * Phi)
                     - 2 * eps1 * eps2 * np.sin(Phi)
                     + 162 * eps1 * eps2 * np.sin(3 * Phi)
-                    - 3 * eps2**2 * np.cos(Phi)
-                    - 81 * eps2**2 * np.cos(3 * Phi)
+                    - 3 * eps1**2 * np.cos(Phi)
+                    - 81 * eps1**2 * np.cos(3 * Phi)
                 )
             )
         )
@@ -257,8 +272,8 @@ class ELL1plusmodel(ELL1model):
                 2.0 * np.cos(2.0 * Phi)
                 - (1.0 / 8)
                 * (
-                    -10 * eps1 * np.sin(Phi)
-                    + 54 * eps1 * np.sin(3 * Phi)
+                    -6 * eps1 * np.sin(Phi)
+                    - 54 * eps1 * np.sin(3 * Phi)
                     + 2 * eps2 * np.cos(Phi)
                     - 54 * eps2 * np.cos(3 * Phi)
                 )
@@ -273,8 +288,8 @@ class ELL1plusmodel(ELL1model):
                 * (
                     2 * eps1 * np.cos(Phi)
                     - 54 * eps1 * np.cos(3 * Phi)
-                    - 6 * eps2 * np.sin(Phi)
-                    - 54 * eps2 * np.sin(3 * Phi)
+                    - 10 * eps2 * np.sin(Phi)
+                    + 54 * eps2 * np.sin(3 * Phi)
                 )
             )
         )

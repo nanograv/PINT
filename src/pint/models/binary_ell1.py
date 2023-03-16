@@ -535,6 +535,17 @@ class BinaryELL1plus(BinaryELL1):
     - Zhu et al. (2019), MNRAS, 482 (3), 3249-3260 [1]_
 
     .. [1] https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.3249Z/abstract
+
+
+    Notes
+    -----
+    o(e^2) expression for Roemer delay from Norbert Wex and Weiwei Zhu
+    This is equaiton (1) of Zhu et al (2019) but with a corrected typo:
+        In the first line of that equation, ex->e1 and ey->e2
+        In the other lines, ex->e2 and ey->e1
+    See Email from Norbert and Weiwei to David on 2019-Aug-08
+    The dre expression comes from Norbert and Weiwei; the derivatives
+    were calculated by hand for PINT
     """
 
     register = True
