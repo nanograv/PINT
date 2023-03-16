@@ -526,22 +526,12 @@ def _transfer_params(inmodel, outmodel, badlist=[]):
     outbinary_component_name = [
         x for x in outmodel.components.keys() if x.startswith("Binary")
     ][0]
-    for p in inmodel.params:
-        if p not in badlist:
-            if (
-                hasattr(inmodel, p)
-                and not isinstance(getattr(inmodel, p), funcParameter)
-            ) and (
-                hasattr(outmodel, p)
-                and not isinstance(getattr(outmodel, p), funcParameter)
-            ):
-                setattr(outmodel, p, getattr(inmodel, p))
     for p in inmodel.components[inbinary_component_name].params:
         if p not in badlist:
             setattr(
                 outmodel.components[outbinary_component_name],
                 p,
-                getattr(inmodel.components[inbinary_component_name], p),
+                copy.deepcopy(getattr(inmodel.components[inbinary_component_name], p)),
             )
 
 
