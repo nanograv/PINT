@@ -32,7 +32,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Option to save `emcee` backend chains in `event_optimize`
 - Documentation on how to extract a covariance matrix
 - ELL1+, DDS and DDGR models
-- Module for converting between binary models
+- Module for converting between binary models also included in `convert_parfile`
 - Method to get a parameter as a `uncertainties.ufloat` for doing math
 - Method to get current binary period and uncertainty at a given time regardless of binary model
 ### Fixed
