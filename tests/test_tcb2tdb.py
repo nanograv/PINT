@@ -52,7 +52,7 @@ def test_convert_units(backwards):
 
 
 def test_convert_units_roundtrip():
-    m = ModelBuilder()(StringIO(simplepar), allow_tcb=True)
+    m = ModelBuilder()(StringIO(simplepar), allow_tcb="raw")
     m_ = deepcopy(m)
     convert_tcb_tdb(m, backwards=False)
     convert_tcb_tdb(m, backwards=True)
