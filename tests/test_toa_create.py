@@ -114,8 +114,8 @@ def test_toas_tolist(t, errors, freqs):
             for tt0, tt1, e, f, fr in zip(t[0], t[1], errors, combined_flags, freqs)
         ]
     toas_tolist = toas.to_TOA_list()
-    print(toalist[0])
-    print(toas_tolist[0])
+    for i in range(len(toalist)):
+        assert toalist[i] == toas_tolist[i], f"{toalist[i]} != {toas_tolist[i]}"
     assert np.all([t1 == t2 for (t1, t2) in zip(toalist, toas_tolist)])
 
 
