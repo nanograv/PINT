@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 from pinttestdata import datadir
 
+import matplotlib
 import pint.scripts.zima as zima
 from pint.models import get_model_and_toas
 from pint.residuals import Residuals
@@ -67,8 +68,6 @@ def test_wb_result_with_noise(tmp_path):
 
 
 def test_zima_plot(tmp_path):
-    import matplotlib
-
     matplotlib.use("Agg")
 
     parfile = os.path.join(datadir, "NGC6440E.par")
@@ -83,8 +82,6 @@ def test_zima_plot(tmp_path):
 
 
 def test_zima_fuzzdays(tmp_path):
-    import matplotlib
-
     matplotlib.use("Agg")
 
     parfile = os.path.join(datadir, "NGC6440E.par")
