@@ -118,7 +118,7 @@ def test_toas_tolist(t, errors, freqs):
     #     assert toalist[i] == toas_tolist[i], f"{toalist[i]} != {toas_tolist[i]}"
     # depending on precision they should be equal, but if they aren't then just check the MJDs
     assert np.all([t1 == t2 for (t1, t2) in zip(toalist, toas_tolist)]) or np.allclose(
-        [x.mjd for x in toalist], [x.mjd for x in toas_tolist]
+        [x.mjd.mjd for x in toalist], [x.mjd.mjd for x in toas_tolist]
     )
 
 
