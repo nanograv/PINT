@@ -2955,9 +2955,9 @@ def get_TOAs_array(
             )
         flagdicts = [FlagDict.from_dict(f) for f in flags]
     elif flags is not None:
-        flagdicts = [FlagDict(flags)] * len(t)
+        flagdicts = [FlagDict(flags) for i in range(len(t))]
     else:
-        flagdicts = [FlagDict()] * len(t)
+        flagdicts = [FlagDict() for i in range(len(t))]
 
     for k, v in kwargs.items():
         if isinstance(v, (list, tuple, np.ndarray)):

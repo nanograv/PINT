@@ -2,6 +2,8 @@
 import os
 
 import astropy.io.fits as pyfits
+from astropy.time import Time
+from astropy.coordinates import EarthLocation
 import numpy as np
 from loguru import logger as log
 
@@ -257,6 +259,7 @@ def load_fits_TOAs(
         timesys = _get_timesys(hdulist[1])
     if timeref is None:
         timeref = _get_timeref(hdulist[1])
+    log.info(f"TIMESYS: {timesys} TIMEREF: {timeref}")
     check_timesys(timesys)
     check_timeref(timeref)
 
@@ -293,6 +296,141 @@ def load_fits_TOAs(
         toalist[i] = toa.TOA(mjds[i], obs=obs, scale=scale, **kw)
 
     return toalist
+
+
+def get_fits_TOAs(
+    eventname,
+    mission,
+    weights=None,
+    extension=None,
+    timesys=None,
+    timeref=None,
+    minmjd=-np.inf,
+    maxmjd=np.inf,
+    ephem=None,
+    planets=False,
+):
+    """
+    Read photon event times out of a FITS file as :class:`pint.toa.TOAs` object
+
+    Correctly handles raw event files, or ones processed with axBary to have
+    barycentered TOAs. Different conditions may apply to different missions.
+
+    The minmjd/maxmjd parameters can be used to avoid instantiation of TOAs
+    we don't want, which can otherwise be very slow.
+
+    Parameters
+    ----------
+    eventname : str
+        File name of the FITS event list
+    mission : str
+        Name of the mission (e.g. RXTE, XMM)
+    weights : array or None
+        The array has to be of the same size as the event list. Overwrites
+        possible weight lists from mission-specific FITS files
+    extension : str
+        FITS extension to read
+    timesys : str, default None
+        Force this time system
+    timeref : str, default None
+        Forse this time reference
+    minmjd : float, default "-infinity"
+        minimum MJD timestamp to return
+    maxmjd : float, default "infinity"
+        maximum MJD timestamp to return
+    ephem : str, optional
+        The name of the solar system ephemeris to use; defaults to "DE421".
+    planets : bool, optional
+        Whether to apply Shapiro delays based on planet positions. Note that a
+        long-standing TEMPO2 bug in this feature went unnoticed for years.
+        Defaults to False.
+
+    Returns
+    -------
+    pint.toa.TOAs
+    """
+    # Load photon times from event file
+    hdulist = pyfits.open(eventname)
+    if mission not in mission_config:
+        log.warning("Mission not recognized. Using generic")
+        mission = "generic"
+
+    if (
+        extension is not None
+        and isinstance(extension, str)
+        and hdulist[1].name not in extension.split(",")
+    ):
+        raise RuntimeError(
+            "First table in FITS file"
+            + "must be {}. Found {}".format(extension, hdulist[1].name)
+        )
+    if isinstance(extension, int) and extension != 1:
+        raise ValueError(
+            "At the moment, only data in the first FITS extension is supported"
+        )
+
+    if timesys is None:
+        timesys = _get_timesys(hdulist[1])
+    if timeref is None:
+        timeref = _get_timeref(hdulist[1])
+    log.info(f"TIMESYS: {timesys} TIMEREF: {timeref}")
+    check_timesys(timesys)
+    check_timeref(timeref)
+
+    if not mission_config[mission]["allow_local"] and timesys != "TDB":
+        log.error("Raw spacecraft TOAs not yet supported for " + mission)
+
+    obs, scale = _default_obs_and_scale(mission, timesys, timeref)
+
+    # Read time column from FITS file
+    mjds = read_fits_event_mjds_tuples(hdulist[1])
+
+    new_kwargs = _get_columns_from_fits(
+        hdulist[1], mission_config[mission]["fits_columns"]
+    )
+
+    hdulist.close()
+
+    if weights is not None:
+        new_kwargs["weights"] = weights
+
+    # mask out times/columns outside of mjd range
+    mjds_float = np.asarray([r[0] + r[1] for r in mjds])
+    idx = (minmjd < mjds_float) & (mjds_float < maxmjd)
+    mjds = mjds[idx]
+    for key in new_kwargs.keys():
+        new_kwargs[key] = new_kwargs[key][idx]
+
+    if timeref == "GEOCENTRIC":
+        location = EarthLocation(0, 0, 0)
+    else:
+        location = None
+
+    if len(mjds.shape) == 2:
+        t = Time(
+            val=mjds[:, 0],
+            val2=mjds[:, 1],
+            format="mjd",
+            scale=scale,
+            location=location,
+        )
+    else:
+        t = Time(mjds, format="mjd", scale=scale, location=location)
+    flags = [toa.FlagDict() for _ in range(len(mjds))]
+    for i in range(len(mjds)):
+        for key in new_kwargs:
+            flags[i][key] = str(new_kwargs[key][i])
+
+    return toa.get_TOAs_array(
+        t,
+        obs,
+        errors=0,
+        include_gps=False,
+        include_bipm=False,
+        planets=planets,
+        ephem=ephem,
+        flags=flags,
+    )
 
 
 def load_event_TOAs(eventname, mission, weights=None, minmjd=-np.inf, maxmjd=np.inf):
@@ -340,6 +478,68 @@ def load_event_TOAs(eventname, mission, weights=None, minmjd=-np.inf, maxmjd=np.
     )
 
 
+def get_event_TOAs(
+    eventname,
+    mission,
+    weights=None,
+    minmjd=-np.inf,
+    maxmjd=np.inf,
+    ephem=None,
+    planets=False,
+):
+    """
+    Read photon event times out of a FITS file as a :class:`pint.toa.TOAs` object
+
+    Correctly handles raw event files, or ones processed with axBary to have
+    barycentered TOAs. Different conditions may apply to different missions.
+
+    The minmjd/maxmjd parameters can be used to avoid instantiation of TOAs
+    we don't want, which can otherwise be very slow.
+
+    Parameters
+    ----------
+    eventname : str
+        File name of the FITS event list
+    mission : str
+        Name of the mission (e.g. RXTE, XMM)
+    weights : array or None
+        The array has to be of the same size as the event list. Overwrites
+        possible weight lists from mission-specific FITS files
+    minmjd : float, default "-infinity"
+        minimum MJD timestamp to return
+    maxmjd : float, default "infinity"
+        maximum MJD timestamp to return
+    ephem : str, optional
+        The name of the solar system ephemeris to use; defaults to "DE421".
+    planets : bool, optional
+        Whether to apply Shapiro delays based on planet positions. Note that a
+        long-standing TEMPO2 bug in this feature went unnoticed for years.
+        Defaults to False.
+
+    Returns
+    -------
+    pint.toa.TOAs
+
+    """
+    # Load photon times from event file
+
+    try:
+        extension = mission_config[mission]["fits_extension"]
+    except ValueError:
+        log.warning("Mission name (TELESCOP) not recognized, using generic!")
+        extension = mission_config["generic"]["fits_extension"]
+    return get_fits_TOAs(
+        eventname,
+        mission,
+        weights=weights,
+        extension=extension,
+        minmjd=minmjd,
+        maxmjd=maxmjd,
+        ephem=ephem,
+        planets=planets,
+    )
+
+
 def load_RXTE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
     return load_event_TOAs(eventname, "xte", minmjd=minmjd, maxmjd=maxmjd)
 
@@ -362,3 +562,41 @@ def load_NuSTAR_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
 
 def load_Swift_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
     return load_event_TOAs(eventname, "swift", minmjd=minmjd, maxmjd=maxmjd)
+
+
+def get_RXTE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, ephem=None, planets=False):
+    return get_event_TOAs(
+        eventname, "xte", minmjd=minmjd, maxmjd=maxmjd, ephem=ephem, planets=planets
+    )
+
+
+def get_NICER_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, ephem=None, planets=False):
+    return get_event_TOAs(
+        eventname, "nicer", minmjd=minmjd, maxmjd=maxmjd, ephem=ephem, planets=planets
+    )
+
+
+def get_IXPE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, ephem=None, planets=False):
+    return get_event_TOAs(
+        eventname, "ixpe", minmjd=minmjd, maxmjd=maxmjd, ephem=ephem, planets=planets
+    )
+
+
+def get_XMM_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, ephem=None, planets=False):
+    return get_event_TOAs(
+        eventname, "xmm", minmjd=minmjd, maxmjd=maxmjd, ephem=ephem, planets=planets
+    )
+
+
+def get_NuSTAR_TOAs(
+    eventname, minmjd=-np.inf, maxmjd=np.inf, ephem=None, planets=False
+):
+    return get_event_TOAs(
+        eventname, "nustar", minmjd=minmjd, maxmjd=maxmjd, ephem=ephem, planets=planets
+    )
+
+
+def get_Swift_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, ephem=None, planets=False):
+    return get_event_TOAs(
+        eventname, "swift", minmjd=minmjd, maxmjd=maxmjd, ephem=ephem, planets=planets
+    )

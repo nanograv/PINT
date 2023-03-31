@@ -249,6 +249,7 @@ def get_Fermi_TOAs(
         obs = "Barycenter"
         scale = "tdb"
         msg = "barycentric"
+        location = None
     elif (timesys == "TT") and (timeref == "LOCAL"):
         assert timesys == "TT"
         try:
@@ -262,10 +263,12 @@ def get_Fermi_TOAs(
         obs = fermiobs
         scale = "tt"
         msg = "spacecraft local"
+        location = None
     elif (timesys == "TT") and (timeref == "GEOCENTRIC"):
         obs = "Geocenter"
         scale = "tt"
         msg = "geocentric"
+        location = EarthLocation(0, 0, 0)
     else:
         raise ValueError("Unrecognized TIMEREF/TIMESYS.")
 
@@ -278,31 +281,26 @@ def get_Fermi_TOAs(
             val2=mjds[:, 1],
             format="mjd",
             scale=scale,
-            location=EarthLocation(0, 0, 0),
+            location=location,
         )
     else:
-        t = Time(
-            mjds,
-            format="mjd",
-            scale=scale,
-            location=EarthLocation(0, 0, 0),
-        )
+        t = Time(mjds, format="mjd", scale=scale, location=location)
     if weightcolumn is None:
         return toa.get_TOAs_array(
             t,
             obs,
+            errors=0,
             include_gps=False,
             include_bipm=False,
             planets=planets,
             ephem=ephem,
-            flags=[
-                {"energy": str(e), "weight": str(w)} for e in energies.to_value(u.MeV)
-            ],
+            flags=[{"energy": str(e)} for e in energies.to_value(u.MeV)],
         )
     else:
         return toa.get_TOAs_array(
             t,
             obs,
+            errors=0,
             include_gps=False,
             include_bipm=False,
             planets=planets,
