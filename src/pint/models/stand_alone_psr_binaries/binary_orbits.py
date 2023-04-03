@@ -151,6 +151,8 @@ class OrbitPB(Orbit):
         return self.tt0
 
     def d_pbprime_d_T0(self):
+        if not np.isscalar(self.PBDOT):
+            return -self.PBDOT
         result = np.empty(len(self.tt0))
         result.fill(-self.PBDOT.value)
         return result * u.Unit(self.PBDOT.unit)

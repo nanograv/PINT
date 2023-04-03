@@ -10,6 +10,8 @@ import pint
 __all__ = [
     "a1sini",
     "companion_mass",
+    "dr",
+    "dth",
     "gamma",
     "mass_funct",
     "mass_funct2",
@@ -24,6 +26,7 @@ __all__ = [
     "pulsar_edot",
     "pulsar_mass",
     "shklovskii_factor",
+    "sini",
 ]
 
 
@@ -291,8 +294,8 @@ def mass_funct(pb: u.d, x: u.cm):
     ----------
     pb : astropy.units.Quantity
         Binary period
-    x : astropy.units.Quantity in ``pint.ls``
-        Semi-major axis, A1SINI, in units of ls
+    x : astropy.units.Quantity
+        Semi-major axis, A1SINI, in units of ``pint.ls``
 
     Returns
     -------
@@ -710,6 +713,160 @@ def omdot(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
         * (const.G * (mp + mc) / const.c**3) ** (2.0 / 3)
     )
     return value.to(u.deg / u.yr, equivalencies=u.dimensionless_angles())
+
+
+@u.quantity_input
+def sini(mp: u.Msun, mc: u.Msun, pb: u.d, x: u.cm):
+    """Post-Keplerian sine of inclination, assuming general relativity.
+
+    Can handle scalar or array inputs.
+
+    Parameters
+    ----------
+    mp : astropy.units.Quantity
+        pulsar mass
+    mc : astropy.units.Quantity
+        companion mass
+    pb : astropy.units.Quantity
+        Binary orbital period
+    x : astropy.units.Quantity
+        Semi-major axis, A1SINI, in units of ``pint.ls``
+
+    Returns
+    -------
+    sini : astropy.units.Quantity
+
+    Raises
+    ------
+    astropy.units.UnitsError
+        If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
+
+    Notes
+    -----
+    Calculates
+
+    .. math::
+
+        s = T_{\odot}^{-1/3} \\left(\\frac{P_b}{2\pi}\\right)^{-2/3}
+        \\frac{(m_p+m_c)^{2/3}}{m_c}
+
+    with :math:`T_\odot = GM_\odot c^{-3}`.
+
+    More details in :ref:`Timing Models`.  Also see [11]_.
+
+    .. [11] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.51
+
+    """
+
+    return (
+        (const.G) ** (-1.0 / 3)
+        * (pb / 2 / np.pi) ** (-2.0 / 3)
+        * x
+        * (mp + mc) ** (2.0 / 3)
+        / mc
+    ).decompose()
+
+
+@u.quantity_input
+def dr(mp: u.Msun, mc: u.Msun, pb: u.d):
+    """Post-Keplerian Roemer delay term
+
+    dr (:math:`\delta_r`) is part of the relativistic deformation of the orbit
+
+    Parameters
+    ----------
+    mp : astropy.units.Quantity
+        pulsar mass
+    mc : astropy.units.Quantity
+        companion mass
+    pb : astropy.units.Quantity
+        Binary orbital period
+
+    Returns
+    -------
+    dr : astropy.units.Quantity
+
+    Raises
+    ------
+    astropy.units.UnitsError
+        If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
+
+    Notes
+    -----
+    Calculates
+
+    .. math::
+
+        \delta_r = T_{\odot}^{2/3} \\left(\\frac{P_b}{2\pi}\\right)^{2/3}
+        \\frac{3 m_p^2+6 m_p m_c +2m_c^2}{(m_p+m_c)^{4/3}}
+
+    with :math:`T_\odot = GM_\odot c^{-3}`.
+
+    More details in :ref:`Timing Models`.  Also see [12]_.
+
+    .. [12] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.54
+
+    """
+    return (
+        (const.G / const.c**3) ** (2.0 / 3)
+        * (2 * np.pi / pb) ** (2.0 / 3)
+        * (3 * mp**2 + 6 * mp * mc + 2 * mc**2)
+        / (mp + mc) ** (4 / 3)
+    ).decompose()
+
+
+@u.quantity_input
+def dth(mp: u.Msun, mc: u.Msun, pb: u.d):
+    """Post-Keplerian Roemer delay term
+
+    dth (:math:`\delta_{\\theta}`) is part of the relativistic deformation of the orbit
+
+    Parameters
+    ----------
+    mp : astropy.units.Quantity
+        pulsar mass
+    mc : astropy.units.Quantity
+        companion mass
+    pb : astropy.units.Quantity
+        Binary orbital period
+
+    Returns
+    -------
+    dth : astropy.units.Quantity
+
+    Raises
+    ------
+    astropy.units.UnitsError
+        If the input data are not appropriate quantities
+    TypeError
+        If the input data are not quantities
+
+    Notes
+    -----
+    Calculates
+
+    .. math::
+
+        \delta_{\\theta} = T_{\odot}^{2/3} \\left(\\frac{P_b}{2\pi}\\right)^{2/3}
+        \\frac{3.5 m_p^2+6 m_p m_c +2m_c^2}{(m_p+m_c)^{4/3}}
+
+    with :math:`T_\odot = GM_\odot c^{-3}`.
+
+    More details in :ref:`Timing Models`.  Also see [13]_.
+
+    .. [13] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.55
+
+    """
+    return (
+        (const.G / const.c**3) ** (2.0 / 3)
+        * (2 * np.pi / pb) ** (2.0 / 3)
+        * (3.5 * mp**2 + 6 * mp * mc + 2 * mc**2)
+        / (mp + mc) ** (4 / 3)
+    ).decompose()
 
 
 @u.quantity_input
