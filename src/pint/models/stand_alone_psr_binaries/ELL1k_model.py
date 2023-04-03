@@ -28,6 +28,7 @@ class ELL1kmodel(ELL1model):
 
         self.param_default_value.pop("EPS1DOT")
         self.param_default_value.pop("EPS2DOT")
+        self.param_default_value.pop("EDOT")
         self.param_default_value.update(
             {"OMDOT": u.Quantity(0, "deg/year"), "LNEDOT": u.Quantity(0, "1/year")}
         )

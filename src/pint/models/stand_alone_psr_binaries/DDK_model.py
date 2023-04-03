@@ -78,6 +78,8 @@ class DDKmodel(DDmodel):
         # Remove unused parameter SINI
         del self.param_default_value["SINI"]
         self.set_param_values()
+        if input_params is not None:
+            self.update_input(param_dict=input_params)
 
     @property
     def KOM(self):

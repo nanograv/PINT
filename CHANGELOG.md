@@ -31,6 +31,11 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - `funcParameters` defined as functions operating on other parameters
 - Option to save `emcee` backend chains in `event_optimize`
 - Documentation on how to extract a covariance matrix
+- DDS and DDGR models
+- Second-order corrections included in ELL1
+- Module for converting between binary models also included in `convert_parfile`
+- Method to get a parameter as a `uncertainties.ufloat` for doing math
+- Method to get current binary period and uncertainty at a given time regardless of binary model
 ### Fixed
 - Broken notebooks CI test
 - BIPM correction for simulated TOAs
