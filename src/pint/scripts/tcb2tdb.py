@@ -48,7 +48,6 @@ def main(argv=None):
 
     mb = ModelBuilder()
     model = mb(args.input_par, allow_tcb=True)
-    convert_tcb_tdb(model)
     model.write_parfile(args.output_par)
 
     log.info(f"Output written to {args.output_par}.")
