@@ -43,7 +43,7 @@ def test_convert_units(backwards):
     with pytest.raises(ValueError):
         m = ModelBuilder()(StringIO(simplepar))
 
-    m = ModelBuilder()(StringIO(simplepar), allow_tcb=True)
+    m = ModelBuilder()(StringIO(simplepar), allow_tcb="raw")
     f0_tcb = m.F0.value
     pb_tcb = m.PB.value
     convert_tcb_tdb(m, backwards=backwards)

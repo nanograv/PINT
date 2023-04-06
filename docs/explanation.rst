@@ -154,7 +154,7 @@ corrections, the TCB timescale does not advance at the same rate as TDB
 you may encounter pulsar timing models or even measurements that use
 TCB. PINT provides a command line tool `tcb2tdb` to approximately convert
 TCB timing models to TDB. PINT can also optionally convert TCB timing models
-to TDB (approximately) upon read. 
+to TDB (approximately) upon read.
 
 Note that the need for leap seconds is because the Earth's rotation is
 somewhat erratic - no, we're not about to be thrown off, but its
