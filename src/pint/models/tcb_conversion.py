@@ -130,8 +130,9 @@ def convert_tcb_tdb(model, backwards=False):
         return
 
     log.warning(
-        "The TCB to TDB conversion is only approximate. "
-        "The resulting timing model should be re-fit to get reliable results."
+        "Converting this timing model from TCB to TDB. "
+        "Please note that the TCB to TDB conversion is only approximate and "
+        "the resulting timing model should be re-fit to get reliable results."
     )
 
     if "Spindown" in model.components:
