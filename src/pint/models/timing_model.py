@@ -391,7 +391,7 @@ class TimingModel:
                 raise ValueError(error_message)
             else:
                 log.warning(
-                    "PINT does not support 'UNITS TCB' internally. Reading this par file nevertheless"
+                    "PINT does not support 'UNITS TCB' internally. Reading this par file nevertheless "
                     "because the `allow_tcb` option was given. This `TimingModel` object should not be"
                     "used for anything except converting to TDB."
                 )
