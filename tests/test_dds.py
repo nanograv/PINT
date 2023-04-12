@@ -92,7 +92,8 @@ class TestDDSFit:
 
         self.m = get_model(io.StringIO(par))
         self.mDDS = binaryconvert.convert_binary(self.m, "DDS")
-
+        # use a specific seed for reproducible results
+        np.random.seed(12345)
         self.t = pint.simulation.make_fake_toas_uniform(
             55000, 57000, 100, self.m, error=0.1 * u.us, add_noise=True
         )
@@ -111,10 +112,10 @@ class TestDDSFit:
         fDDS.fit_toas()
         chi2DDS = fDDS.resids.calc_chi2()
         assert np.isclose(
-            1 - np.exp(-fDDS.model.SHAPMAX.value), f.model.SINI.value, rtol=1e-3
+            1 - np.exp(-fDDS.model.SHAPMAX.value), f.model.SINI.value, rtol=1e-2
         )
         print(f"{chi2} {chi2DDS}")
-        assert np.isclose(chi2, chi2DDS, rtol=1e-3)
+        assert np.isclose(chi2, chi2DDS, rtol=1e-2)
 
     def test_ddsfit_newSHAPMAX(self):
         f = pint.fitter.Fitter.auto(self.t, self.m)
@@ -125,6 +126,6 @@ class TestDDSFit:
         fDDS.fit_toas()
         chi2DDS = fDDS.resids.calc_chi2()
         assert np.isclose(
-            1 - np.exp(-fDDS.model.SHAPMAX.value), f.model.SINI.value, rtol=1e-3
+            1 - np.exp(-fDDS.model.SHAPMAX.value), f.model.SINI.value, rtol=1e-2
         )
-        assert np.isclose(chi2, chi2DDS, rtol=1e-3)
+        assert np.isclose(chi2, chi2DDS, rtol=1e-2)

@@ -44,6 +44,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Plotting orbital phase in `pintk` when FB0 is used instead of PB
 - Selection of BIPM for random models
 - Added 1 sigma errors to update the postfit parfile errors in `event_optimize`
+- Fixed DDS CI testing failures
 ### Removed
 
 ## [0.9.3] 2022-12-16
