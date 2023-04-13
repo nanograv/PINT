@@ -1619,7 +1619,7 @@ class TOAs:
         tl = []
         clkcorrs = self.get_flag_value("clkcorr", 0, float)[0] * u.s
         for i in range(len(self)):
-            t = self[i].table["mjd"][0]
+            t = self.table["mjd"][i]
             f = self.table["flags"][i]
             if not clkcorr:
                 t -= clkcorrs[i]
