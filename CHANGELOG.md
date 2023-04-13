@@ -36,6 +36,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Module for converting between binary models also included in `convert_parfile`
 - Method to get a parameter as a `uncertainties.ufloat` for doing math
 - Method to get current binary period and uncertainty at a given time regardless of binary model
+- TCB to TDB conversion on read, and conversion script (`tcb2tdb`)
 ### Fixed
 - Broken notebooks CI test
 - BIPM correction for simulated TOAs
@@ -44,6 +45,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Plotting orbital phase in `pintk` when FB0 is used instead of PB
 - Selection of BIPM for random models
 - Added 1 sigma errors to update the postfit parfile errors in `event_optimize`
+- Fixed DDS CI testing failures
 ### Removed
 
 ## [0.9.3] 2022-12-16

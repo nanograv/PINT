@@ -111,13 +111,13 @@ class SolarSystemShapiro(DelayComponent):
                 if self.PLANET_SHAPIRO.value:
                     for pl in ("jupiter", "saturn", "venus", "uranus", "neptune"):
                         delay[grp] += self.ss_obj_shapiro_delay(
-                            tbl[grp]["obs_" + pl + "_pos"],
+                            tbl[grp][f"obs_{pl}_pos"],
                             psr_dir,
                             self._ss_mass_sec[pl],
                         )
-            except KeyError:
+            except KeyError as e:
                 raise KeyError(
                     "Planet positions not found when trying to compute Solar System Shapiro delay. "
                     "Make sure that you include `planets=True` in your `get_TOAs()` call, or use `get_model_and_toas()`."
-                )
+                ) from e
         return delay * u.second
