@@ -1,3 +1,5 @@
+"""Building a timing model from a par file."""
+
 import copy
 import warnings
 from io import StringIO
@@ -21,7 +23,7 @@ from pint.models.timing_model import (
 )
 from pint.toa import get_TOAs
 from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
-
+from pint.models.tcb_conversion import convert_tcb_tdb
 
 __all__ = ["ModelBuilder", "get_model", "get_model_and_toas"]
 
@@ -73,7 +75,7 @@ class ModelBuilder:
         self._validate_components()
         self.default_components = ["SolarSystemShapiro"]
 
-    def __call__(self, parfile, allow_name_mixing=False):
+    def __call__(self, parfile, allow_name_mixing=False, allow_tcb=False):
         """Callable object for making a timing model from .par file.
 
         Parameters
@@ -87,11 +89,22 @@ class ModelBuilder:
             T2EFAC and EFAC, both of them maps to PINT parameter EFAC, present
             in the parfile at the same time.
 
+        allow_tcb : True, False, or "raw", optional
+            Whether to read TCB par files. Default is False, and will throw an
+            error upon encountering TCB par files. If True, the par file will be
+            converted to TDB upon read. If "raw", an unconverted malformed TCB
+            TimingModel object will be returned.
+
         Returns
         -------
         pint.models.timing_model.TimingModel
             The result timing model based on the input .parfile or file object.
         """
+
+        assert allow_tcb in [True, False, "raw"]
+        convert_tcb = allow_tcb == True
+        allow_tcb_ = allow_tcb in [True, "raw"]
+
         pint_param_dict, original_name, unknown_param = self._pintify_parfile(
             parfile, allow_name_mixing
         )
@@ -103,12 +116,23 @@ class ModelBuilder:
         # Make timing model
         cps = [self.all_components.components[c] for c in selected]
         tm = TimingModel(components=cps)
-        self._setup_model(tm, pint_param_dict, original_name, setup=True, validate=True)
+        self._setup_model(
+            tm,
+            pint_param_dict,
+            original_name,
+            setup=True,
+            validate=True,
+            allow_tcb=allow_tcb_,
+        )
         # Report unknown line
         for k, v in unknown_param.items():
             p_line = " ".join([k] + v)
             warnings.warn(f"Unrecognized parfile line '{p_line}'", UserWarning)
             # log.warning(f"Unrecognized parfile line '{p_line}'")
+
+        if tm.UNITS.value == "TCB" and convert_tcb:
+            convert_tcb_tdb(tm)
+
         return tm
 
     def _validate_components(self):
@@ -166,9 +190,9 @@ class ModelBuilder:
             # Add aliases compare
             overlap = in_param & cpm_param
             # translate to PINT parameter
-            overlap_pint_par = set(
-                [self.all_components.alias_to_pint_param(ovlp)[0] for ovlp in overlap]
-            )
+            overlap_pint_par = {
+                self.all_components.alias_to_pint_param(ovlp)[0] for ovlp in overlap
+            }
             # The degree of overlapping for input component and compared component
             overlap_deg_in = len(component.params) - len(overlap_pint_par)
             overlap_deg_cpm = len(cp.params) - len(overlap_pint_par)
@@ -246,38 +270,40 @@ class ModelBuilder:
             try:
                 pint_name, init0 = self.all_components.alias_to_pint_param(k)
             except UnknownParameter:
-                if k in ignore_params:  # Parameter is known but in the ingore list
+                if k in ignore_params:
+                    # Parameter is known but in the ignore list
                     continue
-                else:  # Check ignored prefix
-                    try:
-                        pfx, idxs, idx = split_prefixed_name(k)
-                        if pfx in ignore_prefix:  # It is an ignored prefix.
-                            continue
-                        else:
-                            unknown_param[k] += v
-                    except PrefixError:
+                # Check ignored prefix
+                try:
+                    pfx, idxs, idx = split_prefixed_name(k)
+                    if pfx in ignore_prefix:  # It is an ignored prefix.
+                        continue
+                    else:
                         unknown_param[k] += v
+                except PrefixError:
+                    unknown_param[k] += v
                 continue
             pint_param_dict[pint_name] += v
             original_name_map[pint_name].append(k)
             repeating[pint_name] += len(v)
             # Check if this parameter is allowed to be repeated by PINT
-            if len(pint_param_dict[pint_name]) > 1:
-                if pint_name not in self.all_components.repeatable_param:
-                    raise TimingModelError(
-                        f"Parameter {pint_name} is not a repeatable parameter. "
-                        f"However, multiple line use it."
-                    )
+            if (
+                len(pint_param_dict[pint_name]) > 1
+                and pint_name not in self.all_components.repeatable_param
+            ):
+                raise TimingModelError(
+                    f"Parameter {pint_name} is not a repeatable parameter. "
+                    f"However, multiple line use it."
+                )
         # Check if the name is mixed
         for p_n, o_n in original_name_map.items():
-            if len(o_n) > 1:
-                if not allow_name_mixing:
-                    raise TimingModelError(
-                        f"Parameter {p_n} have mixed input names/alias "
-                        f"{o_n}. If you want to have mixing names, please use"
-                        f" 'allow_name_mixing=True', and the output .par file "
-                        f"will use '{original_name_map[pint_name][0]}'."
-                    )
+            if len(o_n) > 1 and not allow_name_mixing:
+                raise TimingModelError(
+                    f"Parameter {p_n} have mixed input names/alias "
+                    f"{o_n}. If you want to have mixing names, please use"
+                    f" 'allow_name_mixing=True', and the output .par file "
+                    f"will use '{original_name_map[pint_name][0]}'."
+                )
             original_name_map[p_n] = o_n[0]
 
         return pint_param_dict, original_name_map, unknown_param
@@ -347,12 +373,11 @@ class ModelBuilder:
             if p_name != first_init:
                 param_not_in_pint.append(pp)
 
-            p_cp = self.all_components.param_component_map.get(first_init, None)
-            if p_cp:
+            if p_cp := self.all_components.param_component_map.get(first_init, None):
                 param_components_inpar[p_name] = p_cp
         # Back map the possible_components and the parameters in the parfile
         # This will remove the duplicate components.
-        conflict_components = defaultdict(set)  # graph for confilict
+        conflict_components = defaultdict(set)  # graph for conflict
         for k, cps in param_components_inpar.items():
             # If `timing_model` in param --> component mapping skip
             # Timing model is the base.
@@ -386,10 +411,10 @@ class ModelBuilder:
                     temp_cf_cp.remove(cp)
                     conflict_components[cp].update(set(temp_cf_cp))
                 continue
-        # Check if the selected component in the confilict graph. If it is
-        # remove the selected componens with its conflict components.
+        # Check if the selected component in the conflict graph. If it is
+        # remove the selected components with its conflict components.
         for ps_cp in selected_components:
-            cf_cps = conflict_components.get(ps_cp, None)
+            cf_cps = conflict_components.get(ps_cp)
             if cf_cps is not None:  # Had conflict, but resolved.
                 for cf_cp in cf_cps:
                     del conflict_components[cf_cp]
@@ -398,17 +423,17 @@ class ModelBuilder:
         selected_cates = {}
         for cp in selected_components:
             cate = self.all_components.component_category_map[cp]
-            if cate not in selected_cates.keys():
-                selected_cates[cate] = cp
-            else:
-                exisit_cp = selected_cates[cate]
+            if cate in selected_cates:
+                exist_cp = selected_cates[cate]
                 raise TimingModelError(
-                    f"Component '{cp}' and '{exisit_cp}' belong to the"
+                    f"Component '{cp}' and '{exist_cp}' belong to the"
                     f" same category '{cate}'. Only one component from"
                     f" the same category can be used for a timing model."
                     f" Please check your input (e.g., .par file)."
                 )
 
+            else:
+                selected_cates[cate] = cp
         return selected_components, conflict_components, param_not_in_pint
 
     def _setup_model(
@@ -418,6 +443,7 @@ class ModelBuilder:
         original_name=None,
         setup=True,
         validate=True,
+        allow_tcb=False,
     ):
         """Fill up a timing model with parameter values and then setup the model.
 
@@ -443,29 +469,28 @@ class ModelBuilder:
             Whether to run the setup function in the timing model.
         validate : bool, optional
             Whether to run the validate function in the timing model.
+        allow_tcb : bool, optional
+            Whether to allow reading TCB par files
         """
-        if original_name is not None:
-            use_alias = True
-        else:
-            use_alias = False
+        use_alias = original_name is not None
         for pp, v in pint_param_dict.items():
             try:
                 par = getattr(timing_model, pp)
             except AttributeError:
-                # since the input is pintfied, it should be an uninitized indexed parameter
+                # since the input is pintfied, it should be an uninitialized indexed parameter
                 # double check if the missing parameter an indexed parameter.
                 pint_par, first_init = self.all_components.alias_to_pint_param(pp)
                 try:
                     prefix, _, index = split_prefixed_name(pint_par)
-                except PrefixError:
+                except PrefixError as e:
                     par_hosts = self.all_components.param_component_map[pint_par]
-                    currnt_cp = timing_model.components.keys()
+                    current_cp = timing_model.components.keys()
                     raise TimingModelError(
                         f"Parameter {pint_par} is recognized"
                         f" by PINT, but not used in the current"
                         f" timing model. It is used in {par_hosts},"
-                        f" but the current timing model uses {currnt_cp}."
-                    )
+                        f" but the current timing model uses {current_cp}."
+                    ) from e
                 # TODO need to create a better API for _locate_param_host
                 host_component = timing_model._locate_param_host(first_init)
                 timing_model.add_param_from_top(
@@ -477,10 +502,7 @@ class ModelBuilder:
             # Fill up the values
             param_line = len(v)
             if param_line < 2:
-                if use_alias:
-                    name = original_name[pp]
-                else:
-                    name = pp
+                name = original_name[pp] if use_alias else pp
                 par.from_parfile_line(" ".join([name] + v))
             else:  # For the repeatable parameters
                 lines = copy.deepcopy(v)  # Line queue.
@@ -516,20 +538,20 @@ class ModelBuilder:
 
                     # There is no current repeatable parameter matching the new line
                     # First try to fill up an empty space.
-                    if empty_repeat_param != []:
-                        emt_par = empty_repeat_param.pop(0)
-                        emt_par.from_parfile_line(" ".join([emt_par.name, li]))
-                        if use_alias:  # Use the input alias as input
-                            emt_par.use_alias = original_name[pp]
-                    else:
+                    if not empty_repeat_param:
                         # No empty space, add a new parameter to the timing model.
                         host_component = timing_model._locate_param_host(pp)
                         timing_model.add_param_from_top(temp_par, host_component[0][0])
 
+                    else:
+                        emt_par = empty_repeat_param.pop(0)
+                        emt_par.from_parfile_line(" ".join([emt_par.name, li]))
+                        if use_alias:  # Use the input alias as input
+                            emt_par.use_alias = original_name[pp]
         if setup:
             timing_model.setup()
         if validate:
-            timing_model.validate()
+            timing_model.validate(allow_tcb=allow_tcb)
         return timing_model
 
     def _report_conflict(self, conflict_graph):
@@ -538,12 +560,10 @@ class ModelBuilder:
             # Put all the conflict components together from the graph
             cf_cps = list(v)
             cf_cps.append(k)
-            raise ComponentConflict(
-                "Can not decide the one component from:" " {}".format(cf_cps)
-            )
+            raise ComponentConflict(f"Can not decide the one component from: {cf_cps}")
 
 
-def get_model(parfile, allow_name_mixing=False):
+def get_model(parfile, allow_name_mixing=False, allow_tcb=False):
     """A one step function to build model from a parfile.
 
     Parameters
@@ -557,25 +577,31 @@ def get_model(parfile, allow_name_mixing=False):
         T2EFAC and EFAC, both of them maps to PINT parameter EFAC, present
         in the parfile at the same time.
 
+    allow_tcb : True, False, or "raw", optional
+        Whether to read TCB par files. Default is False, and will throw an
+        error upon encountering TCB par files. If True, the par file will be
+        converted to TDB upon read. If "raw", an unconverted malformed TCB
+        TimingModel object will be returned.
+
     Returns
     -------
     Model instance get from parfile.
     """
+
     model_builder = ModelBuilder()
     try:
         contents = parfile.read()
     except AttributeError:
         contents = None
-    if contents is None:
-        # # parfile is a filename and can be handled by ModelBuilder
-        # if _model_builder is None:
-        #     _model_builder = ModelBuilder()
-        model = model_builder(parfile, allow_name_mixing)
-        model.name = parfile
-        return model
-    else:
-        tm = model_builder(StringIO(contents), allow_name_mixing)
-        return tm
+    if contents is not None:
+        return model_builder(StringIO(contents), allow_name_mixing, allow_tcb=allow_tcb)
+
+    # # parfile is a filename and can be handled by ModelBuilder
+    # if _model_builder is None:
+    #     _model_builder = ModelBuilder()
+    model = model_builder(parfile, allow_name_mixing, allow_tcb=allow_tcb)
+    model.name = parfile
+    return model
 
 
 def get_model_and_toas(
@@ -592,6 +618,7 @@ def get_model_and_toas(
     picklefilename=None,
     allow_name_mixing=False,
     limits="warn",
+    allow_tcb=False,
 ):
     """Load a timing model and a related TOAs, using model commands as needed
 
@@ -630,12 +657,17 @@ def get_model_and_toas(
         in the parfile at the same time.
     limits : "warn" or "error"
         What to do when encountering TOAs for which clock corrections are not available.
+    allow_tcb : True, False, or "raw", optional
+        Whether to read TCB par files. Default is False, and will throw an
+        error upon encountering TCB par files. If True, the par file will be
+        converted to TDB upon read. If "raw", an unconverted malformed TCB
+        TimingModel object will be returned.
 
     Returns
     -------
     A tuple with (model instance, TOAs instance)
     """
-    mm = get_model(parfile, allow_name_mixing)
+    mm = get_model(parfile, allow_name_mixing, allow_tcb=allow_tcb)
     tt = get_TOAs(
         timfile,
         include_pn=include_pn,
