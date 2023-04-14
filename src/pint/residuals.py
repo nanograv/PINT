@@ -322,8 +322,11 @@ class Residuals:
             # Compute model phase. For pulse numbers tracking
             # we need absolute phases, since TZRMJD serves as the pulse
             # number reference.
+            # @abhisrkckl: Use absolute phase only if explicit phase offset is not present.
+            use_abs_phase = "PhaseOffset" not in self.model.components
             modelphase = (
-                self.model.phase(self.toas, abs_phase=True) + delta_pulse_numbers
+                self.model.phase(self.toas, abs_phase=use_abs_phase)
+                + delta_pulse_numbers
             )
             # First assign each TOA to the correct relative pulse number, including
             # and delta_pulse_numbers (from PHASE lines or adding phase jumps in GUI)
