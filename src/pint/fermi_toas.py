@@ -79,11 +79,10 @@ def load_Fermi_TOAs(
     fermiobs="Fermi",
 ):
     """
-    toalist = load_Fermi_TOAs(ft1name)
-      Read photon event times out of a Fermi FT1 file and return
-      a list of PINT TOA objects.
-      Correctly handles raw FT1 files, or ones processed with gtbary
-      to have barycentered or geocentered TOAs.
+    Read photon event times out of a Fermi FT1 file and return a list of PINT :class:`~pint.toa.TOA` objects.
+
+    Correctly handles raw FT1 files, or ones processed with gtbary
+    to have barycentered or geocentered TOAs.
 
 
     Parameters
@@ -111,7 +110,16 @@ def load_Fermi_TOAs(
     Returns
     -------
     toalist : list
-        A list of TOA objects corresponding to the Fermi events.
+        A list of :class:`~pint.toa.TOA` objects corresponding to the Fermi events.
+
+    Note
+    ----
+    This list should be converted into a :class:`~pint.toa.TOAs` object with :func:`pint.toa.get_TOAs_list` for most operations
+
+    See Also
+    --------
+    :func:`get_Fermi_TOAs`
+
     """
     t = get_Fermi_TOAs(
         ft1name,
