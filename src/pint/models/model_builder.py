@@ -5,6 +5,7 @@ import warnings
 from io import StringIO
 from collections import Counter, defaultdict
 from pathlib import Path
+from pint.models.astrometry import Astrometry
 
 from pint.models.parameter import maskParameter
 from pint.models.timing_model import (
@@ -73,7 +74,7 @@ class ModelBuilder:
         # Validate the components
         self.all_components = AllComponents()
         self._validate_components()
-        self.default_components = ["SolarSystemShapiro"]
+        self.default_components = []
 
     def __call__(self, parfile, allow_name_mixing=False, allow_tcb=False):
         """Callable object for making a timing model from .par file.
@@ -110,6 +111,14 @@ class ModelBuilder:
         )
         selected, conflict, param_not_in_pint = self.choose_model(pint_param_dict)
         selected.update(set(self.default_components))
+
+        # Add SolarSystemShapiro only if an Astrometry component is present.
+        if any(
+            isinstance(self.all_components.components[sc], Astrometry)
+            for sc in selected
+        ):
+            selected.add("SolarSystemShapiro")
+
         # Report conflict
         if len(conflict) != 0:
             self._report_conflict(conflict)
