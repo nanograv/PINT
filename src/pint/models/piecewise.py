@@ -231,10 +231,7 @@ class PiecewiseSpindown(PhaseComponent):
         par = getattr(self, param)
         unit = par.units
         pn, idxf, idxv = split_prefixed_name(param)
-        if param.startswith("PWF"):
-            order = split_prefixed_name(param[:4])[2] + 1
-        else:
-            order = 0
+        order = split_prefixed_name(param[:4])[2] + 1 if param.startswith("PWF") else 0
         # order = idxv + 1
         fterms = self.get_spin_terms(idxv)
         # make the chosen fterms 1 others 0
