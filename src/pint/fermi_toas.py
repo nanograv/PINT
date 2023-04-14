@@ -147,6 +147,8 @@ def get_Fermi_TOAs(
     fermiobs="Fermi",
     ephem=None,
     planets=False,
+    include_bipm=False,
+    include_gps=False,
 ):
     """
       Read photon event times out of a Fermi FT1 file and return a :class:`pint.toa.TOAs` object
@@ -181,7 +183,10 @@ def get_Fermi_TOAs(
         Whether to apply Shapiro delays based on planet positions. Note that a
         long-standing TEMPO2 bug in this feature went unnoticed for years.
         Defaults to False.
-
+    include_bipm : bool, optional
+        Use TT(BIPM) instead of TT(TAI)
+    include_gps : bool, optional
+        Apply GPS to UTC clock corrections
 
     Returns
     -------
@@ -298,8 +303,8 @@ def get_Fermi_TOAs(
             t,
             obs,
             errors=0,
-            include_gps=False,
-            include_bipm=False,
+            include_gps=include_gps,
+            include_bipm=include_bipm,
             planets=planets,
             ephem=ephem,
             flags=[{"energy": str(e)} for e in energies.to_value(u.MeV)],

@@ -251,67 +251,18 @@ def load_fits_TOAs(
     --------
     :func:`get_fits_TOAs`
     """
-    # Load photon times from event file
-    hdulist = pyfits.open(eventname)
-    if mission not in mission_config:
-        log.warning("Mission not recognized. Using generic")
-        mission = "generic"
-
-    if (
-        extension is not None
-        and isinstance(extension, str)
-        and hdulist[1].name not in extension.split(",")
-    ):
-        raise RuntimeError(
-            "First table in FITS file"
-            + "must be {}. Found {}".format(extension, hdulist[1].name)
-        )
-    if isinstance(extension, int) and extension != 1:
-        raise ValueError(
-            "At the moment, only data in the first FITS extension is supported"
-        )
-
-    if timesys is None:
-        timesys = _get_timesys(hdulist[1])
-    if timeref is None:
-        timeref = _get_timeref(hdulist[1])
-    log.info(f"TIMESYS: {timesys} TIMEREF: {timeref}")
-    check_timesys(timesys)
-    check_timeref(timeref)
-
-    if not mission_config[mission]["allow_local"] and timesys != "TDB":
-        log.error("Raw spacecraft TOAs not yet supported for " + mission)
-
-    obs, scale = _default_obs_and_scale(mission, timesys, timeref)
-
-    # Read time column from FITS file
-    mjds = read_fits_event_mjds_tuples(hdulist[1])
-
-    new_kwargs = _get_columns_from_fits(
-        hdulist[1], mission_config[mission]["fits_columns"]
+    toas = get_fits_TOAs(
+        eventname,
+        mission,
+        weights=weights,
+        extension=extension,
+        timesys=timesys,
+        timeref=timeref,
+        minmjd=minmjd,
+        maxmjd=maxmjd,
     )
 
-    hdulist.close()
-
-    if weights is not None:
-        new_kwargs["weights"] = weights
-
-    # mask out times/columns outside of mjd range
-    mjds_float = np.asarray([r[0] + r[1] for r in mjds])
-    idx = (minmjd < mjds_float) & (mjds_float < maxmjd)
-    mjds = mjds[idx]
-    for key in new_kwargs.keys():
-        new_kwargs[key] = new_kwargs[key][idx]
-
-    toalist = [None] * len(mjds)
-    kw = {}
-    for i in range(len(mjds)):
-        # Create TOA list
-        for key in new_kwargs:
-            kw[key] = str(new_kwargs[key][i])
-        toalist[i] = toa.TOA(mjds[i], obs=obs, scale=scale, **kw)
-
-    return toalist
+    return toas.to_TOA_list()
 
 
 def get_fits_TOAs(
@@ -325,6 +276,8 @@ def get_fits_TOAs(
     maxmjd=np.inf,
     ephem=None,
     planets=False,
+    include_bipm=False,
+    include_gps=False,
 ):
     """
     Read photon event times out of a FITS file as :class:`pint.toa.TOAs` object
@@ -360,6 +313,10 @@ def get_fits_TOAs(
         Whether to apply Shapiro delays based on planet positions. Note that a
         long-standing TEMPO2 bug in this feature went unnoticed for years.
         Defaults to False.
+    include_bipm : bool, optional
+        Use TT(BIPM) instead of TT(TAI)
+    include_gps : bool, optional
+        Apply GPS to UTC clock corrections
 
     Returns
     -------
@@ -441,8 +398,8 @@ def get_fits_TOAs(
         t,
         obs,
         errors=0,
-        include_gps=False,
-        include_bipm=False,
+        include_gps=include_gps,
+        include_bipm=include_bipm,
         planets=planets,
         ephem=ephem,
         flags=flags,
@@ -510,6 +467,8 @@ def get_event_TOAs(
     maxmjd=np.inf,
     ephem=None,
     planets=False,
+    include_bipm=False,
+    include_gps=False,
 ):
     """
     Read photon event times out of a FITS file as a :class:`pint.toa.TOAs` object
@@ -539,6 +498,10 @@ def get_event_TOAs(
         Whether to apply Shapiro delays based on planet positions. Note that a
         long-standing TEMPO2 bug in this feature went unnoticed for years.
         Defaults to False.
+    include_bipm : bool, optional
+        Use TT(BIPM) instead of TT(TAI)
+    include_gps : bool, optional
+        Apply GPS to UTC clock corrections
 
     Returns
     -------
@@ -561,6 +524,8 @@ def get_event_TOAs(
         maxmjd=maxmjd,
         ephem=ephem,
         planets=planets,
+        include_bipm=include_bipm,
+        include_gps=include_gps,
     )
 
 
