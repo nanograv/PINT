@@ -447,21 +447,18 @@ class TimingModel:
         )
 
         assert (
-            num_components_of_type([SolarWindDispersion, SolarWindDispersionX]) <= 1
+            num_components_of_type((SolarWindDispersion, SolarWindDispersionX)) <= 1
         ), "Model can have at most one solar wind dispersion component."
 
         from pint.models.dispersion_model import DispersionDMX
         from pint.models.wave import Wave
         from pint.models.noise_model import PLRedNoise, PLDMNoise
 
-        if (
-            num_components_of_type(DispersionDMX) > 0
-            and num_components_of_type(PLDMNoise) > 0
-        ):
+        if num_components_of_type((DispersionDMX, PLDMNoise)) > 1:
             log.warning(
                 "DispersionDMX and PLDMNoise are being used together. They are two ways of modelling the same effect."
             )
-        if num_components_of_type(Wave) > 0 and num_components_of_type(PLRedNoise) > 0:
+        if num_components_of_type((Wave, PLRedNoise)) > 1:
             log.warning(
                 "Wave and PLRedNoise are being used together. They are two ways of modelling the same effect."
             )
