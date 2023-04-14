@@ -14,6 +14,8 @@ Function:
 
 has moved to :mod:`pint.simulation`.
 """
+
+import contextlib
 import copy
 import gzip
 import pickle
@@ -345,16 +347,12 @@ def load_pickle(toafilename, picklefilename=None):
 
     lf = None
     for fn in picklefilenames:
-        try:
+        with contextlib.suppress(IOError, pickle.UnpicklingError, ValueError):
             with gzip.open(fn, "rb") as f:
                 lf = pickle.load(f)
-        except (IOError, pickle.UnpicklingError, ValueError):
-            pass
-        try:
+        with contextlib.suppress(IOError, pickle.UnpicklingError, ValueError):
             with open(fn, "rb") as f:
                 lf = pickle.load(f)
-        except (IOError, pickle.UnpicklingError, ValueError):
-            pass
     if lf is not None:
         lf.was_pickled = True
         return lf
@@ -413,7 +411,7 @@ def get_TOAs_list(
     t.commands = [] if commands is None else commands
     t.filename = filename
     t.hashes = {} if hashes is None else hashes
-    if not any(["clkcorr" in f for f in t.table["flags"]]):
+    if all("clkcorr" not in f for f in t.table["flags"]):
         t.apply_clock_corrections(
             include_gps=include_gps,
             include_bipm=include_bipm,
@@ -531,7 +529,7 @@ def _parse_TOA_line(line, fmt="Unknown"):
         d["freq"] = float(line[25:34])
         ii = line[34:41]
         ff = line[42:55]
-        MJD = (int(ii), float("0." + ff))
+        MJD = int(ii), float(f"0.{ff}")
         phaseoffset = float(line[55:62])
         if phaseoffset != 0:
             raise ValueError(
@@ -540,10 +538,8 @@ def _parse_TOA_line(line, fmt="Unknown"):
         d["error"] = float(line[63:71])
         d["obs"] = get_observatory(line[79].upper()).name
     elif fmt == "ITOA":
-        raise RuntimeError("TOA format '%s' not implemented yet" % fmt)
-    elif fmt in ["Blank", "Comment"]:
-        pass
-    else:
+        raise RuntimeError(f"TOA format '{fmt}' not implemented yet")
+    elif fmt not in ["Blank", "Comment"]:
         raise RuntimeError(
             f"Unable to identify TOA format for line {line!r}, expecting {fmt}"
         )
@@ -663,7 +659,7 @@ def format_toa_line(
             freq = 0.0 * u.MHz
         if obs.tempo_code is None:
             raise ValueError(
-                "Observatory {} does not have 1-character tempo_code!".format(obs.name)
+                f"Observatory {obs.name} does not have 1-character tempo_code!"
             )
         if dm != 0.0 * pint.dmu:
             out = obs.tempo_code + " %13s%9.3f%20s%9.2f                %9.4f\n" % (
@@ -914,7 +910,7 @@ def _cluster_by_gaps(t, gap):
 
 class FlagDict(MutableMapping):
     def __init__(self, *args, **kwargs):
-        self.store = dict()
+        self.store = {}
         self.update(dict(*args, **kwargs))
 
     @staticmethod
@@ -930,7 +926,7 @@ class FlagDict(MutableMapping):
         if not isinstance(k, str):
             raise ValueError(f"flag {k} must be a string")
         if k.startswith("-"):
-            raise ValueError(f"flags should be stored without their leading -")
+            raise ValueError("flags should be stored without their leading -")
         if not FlagDict._key_re.match(k):
             raise ValueError(f"flag {k} is not a valid flag")
 
@@ -1076,21 +1072,18 @@ class TOA:
                 scale = site.timescale
             # First build a time without a location
             # Note that when scale is UTC, must use pulsar_mjd format!
-            if scale.lower() == "utc":
-                fmt = "pulsar_mjd"
-            else:
-                fmt = "mjd"
+            fmt = "pulsar_mjd" if scale.lower() == "utc" else "mjd"
             t = time.Time(arg1, arg2, scale=scale, format=fmt, precision=9)
 
         # Now assign the site location to the Time, for use in the TDB conversion
         # Time objects are immutable so you must make a new one to add the location!
-        # Use the intial time to look up the observatory location
+        # Use the initial time to look up the observatory location
         # (needed for moving observatories)
         # The location is an EarthLocation in the ITRF (ECEF, WGS84) frame
         try:
             loc = site.earth_location_itrf(time=t)
         except Exception:
-            # Just add informmation and re-raise
+            # Just add information and re-raise
             log.error(
                 "Error computing earth_location_itrf at time {0}, {1}".format(
                     t, type(t)
@@ -1103,20 +1096,20 @@ class TOA:
         if hasattr(error, "unit"):
             try:
                 self.error = error.to(u.microsecond)
-            except u.UnitConversionError:
+            except u.UnitConversionError as e:
                 raise u.UnitConversionError(
                     "Uncertainty for TOA with incompatible unit {0}".format(error)
-                )
+                ) from e
         else:
             self.error = error * u.microsecond
         self.obs = site.name
         if hasattr(freq, "unit"):
             try:
                 self.freq = freq.to(u.MHz)
-            except u.UnitConversionError:
+            except u.UnitConversionError as e:
                 raise u.UnitConversionError(
                     "Frequency for TOA with incompatible unit {0}".format(freq)
-                )
+                ) from e
         else:
             self.freq = freq * u.MHz
         if self.freq == 0.0 * u.MHz:
@@ -1136,7 +1129,7 @@ class TOA:
             + f": {self.error.value:6.3f} {self.error.unit} error at '{self.obs}' at {self.freq.value:.4f} {self.freq.unit}"
         )
         if self.flags:
-            s += " " + str(self.flags)
+            s += f" {str(self.flags)}"
         return s
 
     def as_line(self, format="Tempo2", name=None, dm=0 * pint.dmu):
@@ -1337,9 +1330,8 @@ class TOAs:
 
             if toalist is None:
                 raise ValueError("No TOAs found!")
-            else:
-                if not isinstance(toalist, (list, tuple)):
-                    raise ValueError("Trying to initialize TOAs from a non-list class")
+            if not isinstance(toalist, (list, tuple)):
+                raise ValueError("Trying to initialize TOAs from a non-list class")
             self.table = build_table(toalist, filename=self.filename)
         else:
             self.table = copy.deepcopy(toatable)
@@ -1490,45 +1482,37 @@ class TOAs:
                 self.table[column] = value
             else:
                 self.table[column][subset] = value
-        else:
-            # dealing with flags
-            if np.isscalar(value):
-                if subset is None:
-                    for f in self.table["flags"]:
-                        if value:
-                            f[column] = str(value)
-                        else:
-                            try:
-                                del f[column]
-                            except KeyError:
-                                pass
-                elif isinstance(subset, int):
-                    f = self.table["flags"][subset]
+        elif np.isscalar(value):
+            if subset is None:
+                for f in self.table["flags"]:
                     if value:
                         f[column] = str(value)
                     else:
-                        try:
+                        with contextlib.suppress(KeyError):
                             del f[column]
-                        except KeyError:
-                            pass
+            elif isinstance(subset, int):
+                f = self.table["flags"][subset]
+                if value:
+                    f[column] = str(value)
                 else:
-                    for f in self.table["flags"][subset]:
-                        if value:
-                            f[column] = str(value)
-                        else:
-                            try:
-                                del f[column]
-                            except KeyError:
-                                pass
+                    with contextlib.suppress(KeyError):
+                        del f[column]
             else:
-                if subset is None:
-                    subset = range(len(self))
-                if len(subset) != len(value):
-                    raise ValueError(
-                        "Length of flag values must be equal to length of TOA subset"
-                    )
-                for i in subset:
-                    self[column, i] = str(value[i])
+                for f in self.table["flags"][subset]:
+                    if value:
+                        f[column] = str(value)
+                    else:
+                        with contextlib.suppress(KeyError):
+                            del f[column]
+        else:
+            if subset is None:
+                subset = range(len(self))
+            if len(subset) != len(value):
+                raise ValueError(
+                    "Length of flag values must be equal to length of TOA subset"
+                )
+            for i in subset:
+                self[column, i] = str(value[i])
 
     def __repr__(self):
         return f"{len(self)} TOAs starting at MJD {self.first_MJD}"
@@ -1605,9 +1589,7 @@ class TOAs:
 
         # there may be a more elegant way to do this
         dm_data, valid_data = self.get_flag_value("pp_dm", as_type=float)
-        if valid_data == []:
-            return False
-        return True
+        return valid_data != []
 
     def get_all_flags(self):
         """Return a list of all the flags used by any TOA."""
@@ -1827,10 +1809,10 @@ class TOAs:
         if len(timfiles) != len(filenames):
             return False
 
-        for t, f in zip(timfiles, filenames):
-            if pint.utils.compute_hash(t) != self.hashes[f]:
-                return False
-        return True
+        return all(
+            pint.utils.compute_hash(t) == self.hashes[f]
+            for t, f in zip(timfiles, filenames)
+        )
 
     def select(self, selectarray):
         """Apply a boolean selection or mask array to the TOA table.
@@ -1946,9 +1928,7 @@ class TOAs:
         if "pulse_number" in self.table.colnames:
             del self.table["pulse_number"]
         else:
-            log.warning(
-                f"Requested deleting of pulse numbers, but they are not present"
-            )
+            log.warning("Requested deleting of pulse numbers, but they are not present")
 
     def adjust_TOAs(self, delta):
         """Apply a time delta to TOAs.
@@ -2076,7 +2056,7 @@ class TOAs:
                     del toacopy.table["flags"][i]["pn"]
             else:
                 log.warning(
-                    f"'pulse_number' column exists but it is not being written out"
+                    "'pulse_number' column exists but it is not being written out"
                 )
         if (
             "delta_pulse_number" in toacopy.table.columns
@@ -2158,18 +2138,15 @@ class TOAs:
         """
         # First make sure that we haven't already applied clock corrections
         flags = self.table["flags"]
-        if any(["clkcorr" in f for f in flags]):
-            if all(["clkcorr" in f for f in flags]):
-                log.warning("Clock corrections already applied. Not re-applying.")
-                return
-            else:
+        if any("clkcorr" in f for f in flags):
+            if any("clkcorr" not in f for f in flags):
                 # FIXME: could apply clock corrections to just the ones that don't have any
                 raise ValueError("Some TOAs have 'clkcorr' flag and some do not!")
+            log.warning("Clock corrections already applied. Not re-applying.")
+            return
         # An array of all the time corrections, one for each TOA
         log.debug(
-            "Applying clock corrections (include_gps = {0}, include_bipm = {1})".format(
-                include_gps, include_bipm
-            )
+            f"Applying clock corrections (include_gps = {include_gps}, include_bipm = {include_bipm})"
         )
         corrections = np.zeros(self.ntoas) * u.s
         # values of "-to" flags
@@ -2228,21 +2205,18 @@ class TOAs:
             self.table.remove_column("tdbld")
 
         if ephem is None:
-            if self.ephem is not None:
-                ephem = self.ephem
-            else:
+            if self.ephem is None:
                 log.warning(
                     f"No ephemeris provided to TOAs object or compute_TDBs. Using {EPHEM_default}"
                 )
                 ephem = EPHEM_default
-        else:
-            # If user specifies an ephemeris, make sure it is the same as the one already
-            # in the TOA object, to prevent mixing.
-            if (self.ephem is not None) and (ephem != self.ephem):
-                log.error(
-                    "Ephemeris provided to compute_TDBs {0} is different than TOAs object "
-                    "ephemeris {1}! Using TDB ephemeris.".format(ephem, self.ephem)
-                )
+            else:
+                ephem = self.ephem
+        elif (self.ephem is not None) and (ephem != self.ephem):
+            log.error(
+                "Ephemeris provided to compute_TDBs {0} is different than TOAs object "
+                "ephemeris {1}! Using TDB ephemeris.".format(ephem, self.ephem)
+            )
         self.ephem = ephem
         log.debug(f"Using EPHEM = {self.ephem} for TDB calculation.")
         # Compute in observatory groups
@@ -2300,23 +2274,18 @@ class TOAs:
             specified, set ``self.planets`` to this value.
         """
         if ephem is None:
-            if self.ephem is not None:
-                ephem = self.ephem
-            else:
+            if self.ephem is None:
                 log.warning(
                     "No ephemeris provided to TOAs object or compute_posvels. Using DE421"
                 )
                 ephem = "DE421"
-        else:
-            # If user specifies an ephemeris, make sure it is the same as the one already in
-            # the TOA object, to prevent mixing.
-            if (self.ephem is not None) and (ephem != self.ephem):
-                log.error(
-                    "Ephemeris provided to compute_posvels {0} is different than "
-                    "TOAs object ephemeris {1}! Using posvels ephemeris.".format(
-                        ephem, self.ephem
-                    )
-                )
+            else:
+                ephem = self.ephem
+        elif (self.ephem is not None) and (ephem != self.ephem):
+            log.error(
+                f"Ephemeris provided to compute_posvels {ephem} is different than "
+                f"TOAs object ephemeris {self.ephem}! Using posvels ephemeris."
+            )
         if planets is None:
             planets = self.planets
         # Record the choice of ephemeris and planets
@@ -2324,15 +2293,11 @@ class TOAs:
         self.planets = planets
         if planets:
             log.debug(
-                "Computing PosVels of observatories, Earth and planets, using {}".format(
-                    ephem
-                )
+                f"Computing PosVels of observatories, Earth and planets, using {ephem}"
             )
 
         else:
-            log.debug(
-                "Computing PosVels of observatories and Earth, using {}".format(ephem)
-            )
+            log.debug(f"Computing PosVels of observatories and Earth, using {ephem}")
         # Remove any existing columns
         cols_to_remove = ["ssb_obs_pos", "ssb_obs_vel", "obs_sun_pos"]
         for c in cols_to_remove:
@@ -2340,7 +2305,7 @@ class TOAs:
                 log.debug("Column {0} already exists. Removing...".format(c))
                 self.table.remove_column(c)
         for p in all_planets:
-            name = "obs_" + p + "_pos"
+            name = f"obs_{p}_pos"
             if name in self.table.colnames:
                 log.debug("Column {0} already exists. Removing...".format(name))
                 self.table.remove_column(name)
@@ -2367,7 +2332,7 @@ class TOAs:
         if planets:
             plan_poss = {}
             for p in all_planets:
-                name = "obs_" + p + "_pos"
+                name = f"obs_{p}_pos"
                 plan_poss[name] = table.Column(
                     name=name,
                     data=np.zeros((self.ntoas, 3), dtype=np.float64),
@@ -2392,7 +2357,7 @@ class TOAs:
             obs_sun_pos[grp, :] = sun_obs.pos.T.to(u.km)
             if planets:
                 for p in all_planets:
-                    name = "obs_" + p + "_pos"
+                    name = f"obs_{p}_pos"
                     dest = p
                     pv = objPosVel_wrt_SSB(dest, tdb, ephem) - ssb_obs
                     plan_poss[name][grp, :] = pv.pos.T.to(u.km)
@@ -2449,7 +2414,7 @@ class TOAs:
             # get velocity vector from coordinate frame
             ssb_obs_vel_ecl[grp, :] = coord.velocity.d_xyz.T.to(u.km / u.s)
         col = ssb_obs_vel_ecl
-        log.debug("Adding column " + col.name)
+        log.debug(f"Adding column {col.name}")
         self.table.add_column(col)
 
     def update_mjd_float(self):
@@ -2565,7 +2530,7 @@ class TOAs:
                 # some data have pulse_numbers but not all
                 # put in NaN
                 for i, tt in enumerate(TOAs_list):
-                    if not "pulse_number" in tt.table.colnames:
+                    if "pulse_number" not in tt.table.colnames:
                         log.warning(
                             f"'pulse_number' not present in data set {i}: inserting NaNs"
                         )
@@ -2580,11 +2545,11 @@ class TOAs:
             else:
                 # some data have positions/velocities but not all
                 # compute as needed
-                for i, tt in enumerate(TOAs_list):
-                    if not (
-                        ("ssb_obs_pos" in tt.table.colnames)
-                        and ("ssb_obs_vel" in tt.table.colnames)
-                        and ("obs_sun_pos" in tt.table.colnames)
+                for tt in TOAs_list:
+                    if (
+                        "ssb_obs_pos" not in tt.table.colnames
+                        or "ssb_obs_vel" not in tt.table.colnames
+                        or "obs_sun_pos" not in tt.table.colnames
                     ):
                         tt.compute_posvels()
         if has_posvel_ecl.any() and not has_posvel_ecl.all():
@@ -2595,8 +2560,8 @@ class TOAs:
             else:
                 # some data have ecliptic positions/velocities but not all
                 # compute as needed
-                for i, tt in enumerate(TOAs_list):
-                    if not (("ssb_obs_vel_ecl" in tt.table.colnames)):
+                for tt in TOAs_list:
+                    if "ssb_obs_vel_ecl" not in tt.table.colnames:
                         tt.add_vel_ecl(obliquity[0])
         if has_tdb.any() and not has_tdb.all():
             if strict:
@@ -2604,9 +2569,10 @@ class TOAs:
             else:
                 # some data have TDBs but not all
                 # compute as needed
-                for i, tt in enumerate(TOAs_list):
-                    if not (
-                        ("tdb" in tt.table.colnames) and ("tdbld" in tt.table.colnames)
+                for tt in TOAs_list:
+                    if (
+                        "tdb" not in tt.table.colnames
+                        or "tdbld" not in tt.table.colnames
                     ):
                         tt.compute_TDBs()
 
@@ -2617,8 +2583,7 @@ class TOAs:
         nt.filename = []
         for xx in filenames:
             if type(xx) is list:
-                for yy in xx:
-                    nt.filename.append(yy)
+                nt.filename.extend(iter(xx))
             else:
                 nt.filename.append(xx)
         # We do not ensure that the command list is flat
@@ -2643,14 +2608,14 @@ class TOAs:
             # but it should be more helpful
             message = []
             for i, colnames in enumerate(all_colnames[1:]):
-                extra_columns = [x for x in colnames if not x in all_colnames[0]]
-                missing_columns = [x for x in all_colnames[0] if not x in colnames]
-                if len(extra_columns) > 0:
+                extra_columns = [x for x in colnames if x not in all_colnames[0]]
+                missing_columns = [x for x in all_colnames[0] if x not in colnames]
+                if extra_columns:
                     message.append(
                         f"File {i+1} has extra column(s): {','.join(extra_columns)}"
                     )
 
-                if len(missing_columns) > 0:
+                if missing_columns:
                     message.append(
                         f"File {i+1} has missing column(s): {','.join(missing_columns)}"
                     )
