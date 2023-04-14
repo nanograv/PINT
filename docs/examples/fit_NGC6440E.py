@@ -37,7 +37,7 @@ import matplotlib.pyplot as plt
 import pint.fitter
 import pint.residuals
 import pint.toa
-from pint.models import get_model, get_model_and_toas
+from pint.models import get_model_and_toas
 import pint.logging
 import os
 
@@ -61,7 +61,7 @@ m, t = get_model_and_toas(parfile, timfile)
 # ```python
 # # Define the timing model
 # m = get_model(parfile)
-# # Read in the TOAs, using the solar system epemeris and other things from the model
+# # Read in the TOAs, using the solar system ephemeris and other things from the model
 # t = pint.toa.get_TOAs(timfile, model=m)
 # ```
 
