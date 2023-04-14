@@ -405,6 +405,67 @@ class TimingModel:
         for cp in self.components.values():
             cp.validate()
 
+        self.validate_component_types()
+
+    def validate_component_types(self):
+        def num_components_of_type(type):
+            return len(
+                list(filter(lambda c: isinstance(c, type), self.components.values()))
+            )
+
+        assert (
+            num_components_of_type(PhaseComponent) > 0
+        ), "Model must have at least one phase component."
+
+        from pint.models.astrometry import Astrometry
+
+        assert (
+            num_components_of_type(Astrometry) <= 1
+        ), "Model can have at most one Astrometry component."
+
+        from pint.models.solar_system_shapiro import SolarSystemShapiro
+
+        if num_components_of_type(SolarSystemShapiro) == 1:
+            assert (
+                num_components_of_type(Astrometry) == 1
+            ), "Model cannot have SolarSystemShapiro component without an Astrometry component."
+
+        from pint.models.pulsar_binary import PulsarBinary
+
+        has_binary_attr = hasattr(self, "BINARY") and self.BINARY.value
+        if has_binary_attr:
+            assert (
+                num_components_of_type(PulsarBinary) == 1
+            ), "BINARY attribute is set but no PulsarBinary component found."
+        assert (
+            num_components_of_type(PulsarBinary) <= 1
+        ), "Model can have at most one PulsarBinary component."
+
+        from pint.models.solar_wind_dispersion import (
+            SolarWindDispersion,
+            SolarWindDispersionX,
+        )
+
+        assert (
+            num_components_of_type([SolarWindDispersion, SolarWindDispersionX]) <= 1
+        ), "Model can have at most one solar wind dispersion component."
+
+        from pint.models.dispersion_model import DispersionDMX
+        from pint.models.wave import Wave
+        from pint.models.noise_model import PLRedNoise, PLDMNoise
+
+        if (
+            num_components_of_type(DispersionDMX) > 0
+            and num_components_of_type(PLDMNoise) > 0
+        ):
+            log.warning(
+                "DispersionDMX and PLDMNoise are being used together. They are two ways of modelling the same effect."
+            )
+        if num_components_of_type(Wave) > 0 and num_components_of_type(PLRedNoise) > 0:
+            log.warning(
+                "Wave and PLRedNoise are being used together. They are two ways of modelling the same effect."
+            )
+
     # def __str__(self):
     #    result = ""
     #    comps = self.components
