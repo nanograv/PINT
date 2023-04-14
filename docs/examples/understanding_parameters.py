@@ -21,7 +21,6 @@
 import pint.models
 import pint.models.parameter as pp
 import astropy.units as u
-from astropy.coordinates.angles import Angle
 from astropy.time import Time
 import pint.config
 import pint.logging

@@ -18,6 +18,7 @@ provides some of the infrastructure needed to implement them conveniently.
 """
 
 # Import all model components here
+from pint.models.absolute_phase import AbsPhase
 from pint.models.astrometry import AstrometryEcliptic, AstrometryEquatorial
 from pint.models.binary_bt import BinaryBT
 from pint.models.binary_dd import BinaryDD, BinaryDDGR, BinaryDDS
