@@ -23,15 +23,15 @@ class PhaseOffset(PhaseComponent):
         self.add_param(
             floatParameter(
                 name="OFFSET",
-                units="radian",
+                units="",
                 description="Overall phase offset.",
             )
         )
         self.phase_funcs_component += [self.offset_phase]
-        self.register_deriv_funcs(self.d_phase_offset_d_OFFSET, "OFFSET")
+        self.register_deriv_funcs(self.d_offset_phase_d_OFFSET, "OFFSET")
 
-    def offset_phase(self, toas):
-        return np.ones(len(toas)) * self.OFFSET.quantity
+    def offset_phase(self, toas, delay):
+        return (np.ones(len(toas)) * self.OFFSET.quantity).to(u.dimensionless_unscaled)
 
-    def d_phase_offset_d_OFFSET(self, toas):
+    def d_offset_phase_d_OFFSET(self, toas, param, delay):
         return np.ones(len(toas)) * u.Unit("")

@@ -60,7 +60,7 @@ class Residuals:
         The type of the residuals. Default: 'toa'
     unit: :class:`astropy.units.Unit`, optional
         The default unit of the residuals. Default: u.s
-    subtract_mean : bool
+    subtract_mean : bool, "auto"
         Controls whether mean will be subtracted from the residuals
     use_weighted_mean : bool
         Controls whether mean computation is weighted (by errors) or not.
@@ -100,14 +100,25 @@ class Residuals:
         model=None,
         residual_type="toa",
         unit=u.s,
-        subtract_mean=True,
+        subtract_mean="auto",
         use_weighted_mean=True,
         track_mode=None,
     ):
         self.toas = toas
         self.model = model
         self.residual_type = residual_type
-        self.subtract_mean = subtract_mean
+
+        self.subtract_mean = (
+            ("PhaseOffset" not in model.components)
+            if subtract_mean == "auto"
+            else subtract_mean
+        )
+        if hasattr(model, "OFFSET") and self.subtract_mean:
+            raise ValueError(
+                "`subtract_mean=True` cannot be used when explicit phase OFFSET is given. "
+                "Use `subtract_mean=False`."
+            )
+
         self.use_weighted_mean = use_weighted_mean
         if track_mode is None:
             if getattr(self.model, "TRACK").value == "-2":
@@ -144,12 +155,6 @@ class Residuals:
         # A flag to identify if this residual object is combined with residual
         # class.
         self._is_combined = False
-
-        if hasattr(model, "OFFSET") and subtract_mean:
-            raise ValueError(
-                "`subtract_mean=True` cannot be used when explicit phase OFFSET is given. "
-                "Use `subtract_mean=False`."
-            )
 
     @property
     def resids(self):
