@@ -116,7 +116,7 @@ class Residuals:
         if hasattr(model, "OFFSET") and self.subtract_mean:
             raise ValueError(
                 "`subtract_mean=True` cannot be used when explicit phase OFFSET is given. "
-                "Use `subtract_mean=False`."
+                "Use `subtract_mean=False` or `subtract_mean='auto'`."
             )
 
         self.use_weighted_mean = use_weighted_mean

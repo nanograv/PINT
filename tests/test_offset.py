@@ -15,11 +15,20 @@ def test_offset():
     PEPOCH 50000
     OFFSET 0.5 1
     """
-    m = get_model(StringIO(par))
-    assert hasattr(m, "OFFSET") and m.OFFSET.quantity == u.Quantity(0.5, "")
+    model = get_model(StringIO(par))
+    assert (
+        "PhaseOffset" in model.components
+        and hasattr(model, "OFFSET")
+        and model.OFFSET.quantity == u.Quantity(0.5, "")
+    )
 
-    toas = make_fake_toas_uniform(50000, 51000, 100, m, add_noise=True)
+    toas = make_fake_toas_uniform(50000, 51000, 100, model, add_noise=True)
 
     with pytest.raises(ValueError):
-        res = Residuals(toas, m, subtract_mean=True)
-    res = Residuals(toas, m, subtract_mean=False)
+        _ = Residuals(toas, model, subtract_mean=True)
+    _ = Residuals(toas, model, subtract_mean=False)
+    res = Residuals(toas, model, subtract_mean="auto")
+
+    ftr = WLSFitter(toas, model)
+    ftr.fit_toas()
+    assert ftr.resids.reduced_chi2 < 2
