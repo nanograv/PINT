@@ -31,7 +31,17 @@ class PhaseOffset(PhaseComponent):
         self.register_deriv_funcs(self.d_offset_phase_d_OFFSET, "OFFSET")
 
     def offset_phase(self, toas, delay):
-        return (np.ones(len(toas)) * self.OFFSET.quantity).to(u.dimensionless_unscaled)
+        return (
+            (np.zeros(len(toas)) * self.OFFSET.quantity).to(u.dimensionless_unscaled)
+            if toas.tzr
+            else (np.ones(len(toas)) * self.OFFSET.quantity).to(
+                u.dimensionless_unscaled
+            )
+        )
 
     def d_offset_phase_d_OFFSET(self, toas, param, delay):
-        return np.ones(len(toas)) * u.Unit("")
+        return (
+            np.zeros(len(toas)) * u.Unit("")
+            if toas.tzr
+            else np.ones(len(toas)) * u.Unit("")
+        )
