@@ -1796,7 +1796,7 @@ class TimingModel:
 
         M = np.zeros((ntoas, nparams))
         for ii, param in enumerate(params):
-            if param == "Offset":
+            if param == "OFFSET":
                 M[:, ii] = 1.0 / F0.value
                 units.append(u.s / u.s)
             else:
