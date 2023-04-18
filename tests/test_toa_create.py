@@ -1,5 +1,5 @@
 import numpy as np
-from astropy import units as u, constants as c
+from astropy import units as u
 from pint import pulsar_mjd
 from pint import toa
 from pint.models import get_model
@@ -63,16 +63,17 @@ def test_toas_compare(t, errors, freqs):
         errors = np.repeat(errors, len(t))
     if len(freqs) < len(t):
         freqs = np.repeat(freqs, len(t))
-    if not isinstance(t, tuple):
-        toalist = [
-            toa.TOA(tt, obs=obs, error=e, freq=fr, flags=f)
-            for tt, e, f, fr in zip(t, errors, combined_flags, freqs)
-        ]
-    else:
-        toalist = [
+    toalist = (
+        [
             toa.TOA((tt0, tt1), obs=obs, error=e, freq=fr, flags=f)
             for tt0, tt1, e, f, fr in zip(t[0], t[1], errors, combined_flags, freqs)
         ]
+        if isinstance(t, tuple)
+        else [
+            toa.TOA(tt, obs=obs, error=e, freq=fr, flags=f)
+            for tt, e, f, fr in zip(t, errors, combined_flags, freqs)
+        ]
+    )
     toas_fromlist = toa.get_TOAs_list(toalist)
     assert np.all(toas.table == toas_fromlist.table)
 

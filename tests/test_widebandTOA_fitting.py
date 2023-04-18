@@ -56,7 +56,7 @@ class TestWidebandTOAFitter:
         prefit_pint = fitter.resids_init.toa.time_resids
         prefit_tempo = self.tempo_res[:, 0] * u.us
         diff_prefit = (prefit_pint - prefit_tempo).to(u.ns)
-        # 50 ns is the difference of PINT tempo precession and nautation model.
+        # 50 ns is the difference of PINT tempo precession and nutation model.
         assert np.abs(diff_prefit - diff_prefit.mean()).max() < 50 * u.ns
         postfit_pint = fitter.resids.toa.time_resids
         postfit_tempo = self.tempo_res[:, 1] * u.us

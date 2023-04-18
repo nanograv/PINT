@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import contextlib
 import os
 import shutil
 import time
@@ -24,11 +25,9 @@ class TestTOAReader(unittest.TestCase):
         os.chdir(datadir)
         # First, read the TOAs from the tim file.
         # This should also create the pickle file.
-        try:
+        with contextlib.suppress(OSError):
             os.remove("test1.tim.pickle.gz")
             os.remove("test1.tim.pickle")
-        except OSError:
-            pass
         tt = toa.get_TOAs("test1.tim", usepickle=False, include_bipm=False)
         self.numtoas = tt.ntoas
         del tt
@@ -87,10 +86,8 @@ def test_pickle_changed_planets(temp_tim):
 )
 def test_pickle_invalidated_settings(temp_tim, k, v, wv):
     tt, tp = temp_tim
-    d = {}
-    d[k] = v
-    wd = {}
-    wd[k] = wv
+    d = {k: v}
+    wd = {k: wv}
     toa.get_TOAs(tt, usepickle=True, **d)
     assert toa.get_TOAs(tt, usepickle=True, **wd).clock_corr_info[k] == wv
 
