@@ -1742,27 +1742,25 @@ class TOAs:
             chronologically from zero.
         """
         if (
-            ("clusters" not in self.table.colnames)
-            or ("cluster_gap" not in self.table.meta)
-            or (gap_limit != self.table.meta["cluster_gap"])
+            "clusters" in self.table.colnames
+            and "cluster_gap" in self.table.meta
+            and gap_limit == self.table.meta["cluster_gap"]
         ):
-            clusters = _cluster_by_gaps(
-                self.get_mjds().to_value(u.d), gap_limit.to_value(u.d)
-            )
-            if add_column:
-                self.table.add_column(clusters, name="clusters")
-                self.table.meta["cluster_gap"] = gap_limit
-                log.debug(f"Added 'clusters' column to TOA table with gap={gap_limit}")
-            if add_flag is not None:
-                for i in range(len(clusters)):
-                    self.table["flags"][i][add_flag] = str(clusters[i])
-                self.table.meta["cluster_gap"] = gap_limit
-                log.debug(f"Added '{add_flag}' flag to TOA table with gap={gap_limit}")
-
-            return clusters
-
-        else:
             return self.table["clusters"]
+        clusters = _cluster_by_gaps(
+            self.get_mjds().to_value(u.d), gap_limit.to_value(u.d)
+        )
+        if add_column:
+            self.table.add_column(clusters, name="clusters")
+            self.table.meta["cluster_gap"] = gap_limit
+            log.debug(f"Added 'clusters' column to TOA table with gap={gap_limit}")
+        if add_flag is not None:
+            for i in range(len(clusters)):
+                self.table["flags"][i][add_flag] = str(clusters[i])
+            self.table.meta["cluster_gap"] = gap_limit
+            log.debug(f"Added '{add_flag}' flag to TOA table with gap={gap_limit}")
+
+        return clusters
 
     def get_highest_density_range(self, ndays=7 * u.d):
         """Print the range of mjds (default 7 days) with the most toas"""
