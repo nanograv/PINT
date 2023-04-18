@@ -54,8 +54,7 @@ def calc_lat_weights(energies, angseps, logeref=4.1, logesig=0.5):
 
     sigma = (
         np.sqrt(
-            psfpar0 * psfpar0 * np.power(100.0 / energies, 2.0 * psfpar1)
-            + psfpar2 * psfpar2
+            (psfpar0**2 * np.power(100.0 / energies, 2.0 * psfpar1) + psfpar2**2)
         )
         / scalepsf
     )
@@ -177,8 +176,7 @@ def load_Fermi_TOAs(
             get_observatory(fermiobs)
         except KeyError:
             log.error(
-                "%s observatory not defined. Make sure you have specified an FT2 file!"
-                % fermiobs
+                f"{fermiobs} observatory not defined. Make sure you have specified an FT2 file!"
             )
             raise
         obs = fermiobs
@@ -196,15 +194,19 @@ def load_Fermi_TOAs(
             msg, mjds[0, 0] + mjds[0, 1], mjds[-1, 0] + mjds[-1, 1]
         )
     )
-    if weightcolumn is None:
-        toalist = [
+    return (
+        [
             toa.TOA(
-                m, obs=obs, scale=scale, energy=str(e.to_value(u.MeV)), error=1.0 * u.us
+                m,
+                obs=obs,
+                scale=scale,
+                energy=str(e.to_value(u.MeV)),
+                error=1.0 * u.us,
             )
             for m, e in zip(mjds, energies)
         ]
-    else:
-        toalist = [
+        if weightcolumn is None
+        else [
             toa.TOA(
                 m,
                 obs=obs,
@@ -215,8 +217,7 @@ def load_Fermi_TOAs(
             )
             for m, e, w in zip(mjds, energies, weights)
         ]
-
-    return toalist
+    )
 
 
 def get_Fermi_TOAs(
@@ -347,8 +348,7 @@ def get_Fermi_TOAs(
             get_observatory(fermiobs)
         except KeyError:
             log.error(
-                "%s observatory not defined. Make sure you have specified an FT2 file!"
-                % fermiobs
+                f"{fermiobs} observatory not defined. Make sure you have specified an FT2 file!"
             )
             raise
         obs = fermiobs
@@ -379,28 +379,15 @@ def get_Fermi_TOAs(
             scale=scale,
             location=EarthLocation(0, 0, 0),
         )
-    if weightcolumn is None:
-        return toa.get_TOAs_array(
-            t,
-            obs,
-            include_gps=False,
-            include_bipm=False,
-            planets=planets,
-            ephem=ephem,
-            flags=[
-                {"energy": str(e), "weight": str(w)} for e in energies.to_value(u.MeV)
-            ],
-        )
-    else:
-        return toa.get_TOAs_array(
-            t,
-            obs,
-            include_gps=False,
-            include_bipm=False,
-            planets=planets,
-            ephem=ephem,
-            flags=[
-                {"energy": str(e), "weight": str(w)}
-                for e, w in zip(energies.to_value(u.MeV), weights)
-            ],
-        )
+    return toa.get_TOAs_array(
+        t,
+        obs,
+        include_gps=False,
+        include_bipm=False,
+        planets=planets,
+        ephem=ephem,
+        flags=[
+            {"energy": str(e), "weight": str(w)}
+            for e, w in zip(energies.to_value(u.MeV), weights)
+        ],
+    )
