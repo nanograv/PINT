@@ -10,12 +10,6 @@ import pint.config
 from pint.solar_system_ephemerides import objPosVel, objPosVel_wrt_SSB
 from pinttestdata import datadir
 
-# Hack to support FileNotFoundError in Python 2
-try:
-    FileNotFoundError
-except NameError:
-    FileNotFoundError = IOError
-
 
 class TestSolarSystemDynamic(unittest.TestCase):
     @classmethod
