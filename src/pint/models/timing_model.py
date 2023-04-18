@@ -405,24 +405,6 @@ class TimingModel:
         for cp in self.components.values():
             cp.validate()
 
-        assert (
-            "PhaseOffset" not in self.components or "AbsPhase" not in self.components
-        ), "AbsPhase and PhaseOffset cannot be used together."
-
-        # This is done using string comparison because importing Astrometry
-        # leads to a circular import.
-        # TODO: Find a better way
-        assert (
-            len(
-                list(
-                    filter(
-                        lambda c: c.startswith("Astrometry"), self.components.values()
-                    )
-                )
-            )
-            <= 1
-        ), "Only one Astrometry component can be used."
-
     # def __str__(self):
     #    result = ""
     #    comps = self.components
