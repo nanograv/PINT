@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 """Tests for par file parsing, pintify parfile and value fill up
 """
 
