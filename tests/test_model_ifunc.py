@@ -29,9 +29,9 @@ class TestIFunc(unittest.TestCase):
         rs = pint.residuals.Residuals(self.t, self.m)
         rms = rs.time_resids.to(u.us).std()
         chi2 = rs.reduced_chi2
-        emsg = "RMS of " + str(rms.value) + " is too big."
+        emsg = f"RMS of {str(rms.value)} is too big."
         assert rms < 2700.0 * u.us, emsg
-        emsg = "reduced chi^2 of " + str(chi2) + " is too big."
+        emsg = f"reduced chi^2 of {str(chi2)} is too big."
         assert chi2 < 1.1, emsg
 
         # test a fit
@@ -40,9 +40,9 @@ class TestIFunc(unittest.TestCase):
         rs = f.resids
         rms = rs.time_resids.to(u.us).std()
         chi2 = rs.reduced_chi2
-        emsg = "RMS of " + str(rms.value) + " is too big."
+        emsg = f"RMS of {str(rms.value)} is too big."
         assert rms < 2700.0 * u.us, emsg
-        emsg = "reduced chi^2 of " + str(chi2) + " is too big."
+        emsg = f"reduced chi^2 of {str(chi2)} is too big."
         assert chi2 < 1.1, emsg
 
         # the residuals are actually terrible when using linear interpolation,

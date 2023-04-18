@@ -53,15 +53,13 @@ class TestGLS(unittest.TestCase):
                         if par not in ["ELONG", "ELAT"]
                         else getattr(self.f.model, par).uncertainty.to(u.rad).value
                     )
-                    msg = "Parameter {} does not match T2 for full_cov={}".format(
-                        par, full_cov
-                    )
+                    msg = f"Parameter {par} does not match T2 for full_cov={full_cov}"
                     assert np.abs(v - val[0]) <= val[1], msg
                     assert np.abs(v - val[0]) <= e, msg
                     assert np.abs(1 - val[1] / e) < 0.1, msg
 
     def test_noise_design_matrix_index(self):
-        self.fit(False, True)  # get the debug infor
+        self.fit(False, True)  # get the debug info
         # Test red noise basis
         pl_rd = self.f.model.pl_rn_basis_weight_pair(self.f.toas)[0]
         p0, p1 = self.f.resids.pl_red_noise_M_index
