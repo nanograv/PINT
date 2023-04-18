@@ -3,7 +3,7 @@ import numpy as np
 
 
 def test_str2longdouble():
-    print("You are using numpy %s" % np.__version__)
+    print(f"You are using numpy {np.__version__}")
     a = np.longdouble("0.12345678901234567890")
     b = float("0.12345678901234567890")
     # If numpy is converting to longdouble without loss of
