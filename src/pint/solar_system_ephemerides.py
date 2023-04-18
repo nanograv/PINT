@@ -1,8 +1,10 @@
 """Solar system ephemeris downloading and setting support."""
+
 import os
 
 import astropy.coordinates
 import astropy.units as u
+import contextlib
 import numpy as np
 from astropy.utils.data import download_file
 from loguru import logger as log
@@ -44,7 +46,7 @@ def _load_kernel_link(ephem, link=None):
     if link == "":
         raise ValueError("Empty string is not a valid URL")
 
-    mirrors = [m + f"{ephem}.bsp" for m in ephemeris_mirrors]
+    mirrors = [f"{m}{ephem}.bsp" for m in ephemeris_mirrors]
     if link is not None:
         mirrors = [link] + mirrors
     astropy.coordinates.solar_system_ephemeris.set(
@@ -54,26 +56,18 @@ def _load_kernel_link(ephem, link=None):
 
 
 def _load_kernel_local(ephem, path):
-    ephem_bsp = "%s.bsp" % ephem
-    if os.path.isdir(path):
-        custom_path = os.path.join(path, ephem_bsp)
-    else:
-        custom_path = path
+    ephem_bsp = f"{ephem}.bsp"
+    custom_path = os.path.join(path, ephem_bsp) if os.path.isdir(path) else path
     search_list = [custom_path]
-    try:
+    with contextlib.suppress(FileNotFoundError):
         search_list.append(pint.config.runtimefile(ephem_bsp))
-    except FileNotFoundError:
-        # If not found in runtimefile path, just continue. Error will be raised later if also not in "path"
-        pass
     for p in search_list:
         if os.path.exists(p):
             # .set() can accept a path to an ephemeris
             astropy.coordinates.solar_system_ephemeris.set(ephem)
-            log.info("Set solar system ephemeris to local file:\n\t{}".format(ephem))
+            log.info(f"Set solar system ephemeris to local file:\n\t{ephem}")
             return
-    raise FileNotFoundError(
-        "ephemeris file {} not found in any of {}".format(ephem, search_list)
-    )
+    raise FileNotFoundError(f"ephemeris file {ephem} not found in any of {search_list}")
 
 
 def load_kernel(ephem, path=None, link=None):
@@ -125,15 +119,14 @@ def load_kernel(ephem, path=None, link=None):
             )
     # Links are just suggestions, try just plain loading
     # Astropy may download something here, not from nanograv
-    try:
+    # An exception below means it wasn't a standard astropy ephemeris
+    # or astropy can't access it (because astropy doesn't know about
+    # the nanograv mirrors)
+    with contextlib.suppress(ValueError, OSError):
         astropy.coordinates.solar_system_ephemeris.set(ephem)
         log.info(f"Set solar system ephemeris to {ephem} through astropy")
         return
-    except (ValueError, OSError):
-        # Just means it wasn't a standard astropy ephemeris
-        # or astropy can't access it (because astropy doesn't know about
-        # the nanograv mirrors)
-        pass
+
     # If this raises an exception our last hope is gone so let it propagate
     _load_kernel_link(ephem, link=link)
 
@@ -198,8 +191,7 @@ def objPosVel(obj1, obj2, t, ephem, path=None, link=None):
         J2000 cartesian coordinate.
     """
     if obj1.lower() == "ssb" and obj2.lower() != "ssb":
-        obj2pv = objPosVel_wrt_SSB(obj2, t, ephem, path=path, link=link)
-        return obj2pv
+        return objPosVel_wrt_SSB(obj2, t, ephem, path=path, link=link)
     elif obj2.lower() == "ssb" and obj1.lower() != "ssb":
         obj1pv = objPosVel_wrt_SSB(obj1, t, ephem, path=path, link=link)
         return -obj1pv
