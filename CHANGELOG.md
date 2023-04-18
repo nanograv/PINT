@@ -14,6 +14,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Emit an informative warning for "MODE" statement in TOA file; Ignore "MODE 1" silently
 - Version of `sphinx-rtd-theme` updated in `requirements_dev.txt` 
 - Updated `black` version to 23.x
+- More rigorous validation of timing model components
 ### Added
 - Documentation: Explanation for DM
 - Methods to compute dispersion slope and to convert DM using the CODATA value of DMconst
