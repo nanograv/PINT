@@ -21,7 +21,3 @@ class TestPintk(unittest.TestCase):
         pintk.main(cmd.split())
         lines = pintk.sys.stdout.getvalue()
         pintk.sys.stdout = saved_stdout
-
-
-if __name__ == "__main__":
-    unittest.main()

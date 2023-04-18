@@ -49,7 +49,3 @@ class TestIFunc(unittest.TestCase):
         print("Test RMS of a PSR J0007+7303 ephemeris with IFUNCs(0).")
         self.m.SIFUNC.quantity = 0
         rs = pint.residuals.Residuals(self.t, self.m)
-
-
-if __name__ == "__main__":
-    unittest.main()
