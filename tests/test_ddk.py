@@ -1,4 +1,5 @@
 """Various tests to assess the performance of the DD model."""
+
 import copy
 import logging
 import os
@@ -67,7 +68,7 @@ class TestDDK(unittest.TestCase):
             cls.ECLltres,
             cls.ECLltbindelay,
         ) = np.genfromtxt(
-            os.path.join(datadir, cls.parfileJ1713 + ".libstempo"), unpack=True
+            os.path.join(datadir, f"{cls.parfileJ1713}.libstempo"), unpack=True
         )[
             :, index
         ]
@@ -78,7 +79,7 @@ class TestDDK(unittest.TestCase):
             cls.ICRSltres,
             cls.ICRSltbindelay,
         ) = np.genfromtxt(
-            os.path.join(datadir, cls.ICRSparfileJ1713 + ".libstempo"), unpack=True
+            os.path.join(datadir, f"{cls.ICRSparfileJ1713}.libstempo"), unpack=True
         )[
             :, index
         ]
@@ -154,11 +155,11 @@ class TestDDK(unittest.TestCase):
             par = getattr(self.ECLmodelJ1713, p)
             if isinstance(par, boolParameter):
                 continue
-            print("Runing derivative for %s" % ("d_phase_d_" + p))
+            print(f"Runing derivative for d_phase_d_{p}")
             ndf = self.ECLmodelJ1713.d_phase_d_param_num(self.toasJ1713, p, testp[p])
             adf = self.ECLmodelJ1713.d_phase_d_param(self.toasJ1713, delay, p)
             diff = adf - ndf
-            if not np.all(diff.value) == 0.0:
+            if np.all(diff.value) != 0.0:
                 mean_der = (adf + ndf) / 2.0
                 relative_diff = np.abs(diff) / np.abs(mean_der)
                 # print "Diff Max is :", np.abs(diff).max()
@@ -173,8 +174,10 @@ class TestDDK(unittest.TestCase):
                 else:
                     tol = 1e-3
                 print(
-                    "derivative relative diff for %s, %lf"
-                    % ("d_phase_d_" + p, np.nanmax(relative_diff).value)
+                    (
+                        "derivative relative diff for %s, %lf"
+                        % (f"d_phase_d_{p}", np.nanmax(relative_diff).value)
+                    )
                 )
                 assert np.nanmax(relative_diff) < tol, msg
             else:
@@ -285,7 +288,3 @@ def test_A1dot_warning():
 def test_alternative_solutions():
     mECL = get_model(StringIO(temp_par_str + "\n KIN  71.969  1               0.562"))
     assert len(mECL.components["BinaryDDK"].alternative_solutions()) == 4
-
-
-if __name__ == "__main__":
-    pass

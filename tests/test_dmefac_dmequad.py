@@ -1,4 +1,4 @@
-"""Test for the DM uncertaity rescaling DMEFAC and DMEQUAD
+"""Test for the DM uncertainty rescaling DMEFAC and DMEQUAD
 """
 from io import StringIO
 
