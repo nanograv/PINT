@@ -1,5 +1,4 @@
-""" Various of tests for the general data fitter using wideband TOAs.
-"""
+""" Various of tests for the general data fitter using wideband TOAs."""
 
 import os
 

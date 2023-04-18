@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import contextlib
 import os
 import shutil

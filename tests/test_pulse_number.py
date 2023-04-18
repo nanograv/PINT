@@ -1,4 +1,3 @@
-#!/usr/bin/python
 import contextlib
 from io import StringIO
 import os
