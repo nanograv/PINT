@@ -1126,7 +1126,7 @@ class ModelState:
                 # getattr(self.model, p) + s
                 # getattr(new_model, p).value = s
             except AttributeError:
-                if p != "Offset":
+                if p != "OFFSET":
                     log.warning(f"Unexpected parameter {p}")
         return new_model
 
@@ -1273,7 +1273,7 @@ class DownhillFitter(Fitter):
                     pass
                 pm = getattr(self.model, p)
             except AttributeError:
-                if p != "Offset":
+                if p != "OFFSET":
                     log.warning(f"Unexpected parameter {p}")
             else:
                 pm.uncertainty = e * pm.units
@@ -2850,7 +2850,7 @@ class WidebandLMFitter(LMFitter):
                 log.trace(f"Setting {getattr(self.model, p)} uncertainty to {e}")
                 pm = getattr(self.model, p)
             except AttributeError:
-                if p != "Offset":
+                if p != "OFFSET":
                     log.warning(f"Unexpected parameter {p}")
             else:
                 pm.uncertainty = e * pm.units
