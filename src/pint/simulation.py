@@ -455,7 +455,7 @@ def calculate_random_models(
     keep_models: bool, optional
         whether to keep and return the individual random models (slower)
     params: list, optional
-        if specified, selects only those parameters to vary.  Default ('all') is to use all parameters other than Offset
+        if specified, selects only those parameters to vary.  Default ('all') is to use all parameters other than OFFSET
 
     Returns
     -------
@@ -502,12 +502,18 @@ def calculate_random_models(
     # this is a list of the parameter names in the order they appear in the covariance matrix
     param_names = cov_matrix.get_label_names(axis=0)
     # this is a dictionary with the parameter values, but it might not be in the same order
-    # and it leaves out the Offset parameter
+    # and it leaves out the OFFSET parameter
     param_values = fitter.model.get_params_dict("free", "value")
-    mean_vector = np.array([param_values[x] for x in param_names if x != "Offset"])
+    mean_vector = np.array(
+        [
+            param_values[x]
+            for x in param_names
+            if (x != "OFFSET" and "PhaseOffset" not in fitter.model.components)
+        ]
+    )
     if params == "all":
         # remove the first column and row (absolute phase)
-        if param_names[0] == "Offset":
+        if param_names[0] == "OFFSET" and "PhaseOffset" not in fitter.model.components:
             cov_matrix = cov_matrix.get_label_matrix(param_names[1:])
             fac = fitter.fac[1:]
             param_names = param_names[1:]
@@ -520,9 +526,9 @@ def calculate_random_models(
         cov_matrix = cov_matrix.get_label_matrix(params)
         index = idx[0].flatten()
         fac = fitter.fac[index]
-        # except mean_vector does not have the 'Offset' entry
+        # except mean_vector does not have the 'OFFSET' entry
         # so may need to subtract 1
-        if param_names[0] == "Offset":
+        if param_names[0] == "OFFSET" and "PhaseOffset" not in fitter.model.components:
             mean_vector = mean_vector[index - 1]
         else:
             mean_vector = mean_vector[index]
