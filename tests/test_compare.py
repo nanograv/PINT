@@ -47,21 +47,19 @@ class TestCompare(unittest.TestCase):
                     param_cp.quantity = (
                         param_cp.quantity + factor * param_cp.uncertainty
                     )
+                elif isinstance(param, pint.models.parameter.boolParameter):
+                    param.value = not param.value
+                elif isinstance(param, pint.models.parameter.intParameter):
+                    param.value += 1
+                elif param_cp.quantity != 0:
+                    param_cp.quantity = 1.1 * param_cp.quantity
                 else:
-                    if isinstance(param, pint.models.parameter.boolParameter):
-                        param.value = not param.value
-                    elif isinstance(param, pint.models.parameter.intParameter):
-                        param.value += 1
-                    elif param_cp.quantity != 0:
-                        param_cp.quantity = 1.1 * param_cp.quantity
-                    else:
-                        param_cp.value += 3.0
+                    param_cp.value += 3.0
                 model.compare(
                     modelcp, threshold_sigma=threshold_sigma, verbosity=verbosity
                 )
                 if not accumulate_changes:
                     modelcp = cp(model)
-        assert True, "Failure in parameter changing test"
 
     def test_uncertaintychange(self):
         # This test changes each parameter's uncertainty by the "factor" below.
@@ -93,9 +91,7 @@ class TestCompare(unittest.TestCase):
                     or param_cp.quantity is None
                 ):
                     continue
-                if param_cp.uncertainty != None:
-                    param_cp.uncertainty = factor * param_cp.uncertainty
-                else:
+                if param_cp.uncertainty is None:
                     if isinstance(param, pint.models.parameter.boolParameter):
                         param.value = not param.value
                     elif isinstance(param, pint.models.parameter.intParameter):
@@ -103,10 +99,11 @@ class TestCompare(unittest.TestCase):
                     else:
                         param.uncertainty = 0 * param.units
                         param_cp.uncertainty = 3.0 * param_cp.units
+                else:
+                    param_cp.uncertainty = factor * param_cp.uncertainty
                 model.compare(modelcp, threshold_sigma=3.0, verbosity=verbosity)
                 if not accumulate_changes:
                     modelcp = cp(model)
-        assert True, "Failure in uncertainty changing test"
 
     def test_missing_uncertainties(self):
         # Removes uncertainties from both models and attempts to use compare.
@@ -161,4 +158,3 @@ class TestCompare(unittest.TestCase):
             model_2.compare(model_1)
             model_1 = mod.get_model(io.StringIO(par_base1))
             model_2 = mod.get_model(io.StringIO(par_base2))
-        assert True, "Failure in missing uncertainty test"

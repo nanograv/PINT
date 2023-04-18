@@ -1,4 +1,5 @@
 """Test installation of PINT data files"""
+
 import os
 import pytest
 import pint.config
