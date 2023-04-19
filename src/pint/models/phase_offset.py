@@ -12,7 +12,7 @@ class PhaseOffset(PhaseComponent):
     Parameters supported:
 
     .. paramtable::
-        :class: pint.models.jump.PhaseOffset
+        :class: pint.models.phase_offset.PhaseOffset
     """
 
     register = True
