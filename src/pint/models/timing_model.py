@@ -1748,6 +1748,7 @@ class TimingModel:
             Whether to include frozen parameters in the design matrix
         incoffset : bool
             Whether to include the constant offset in the design matrix
+            This option is ignored if a `PhaseOffset` component is present.
 
         Returns
         -------
