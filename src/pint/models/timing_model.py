@@ -1775,6 +1775,8 @@ class TimingModel:
         # The entries for any unfrozen noise parameters will not be
         # included in the design matrix as they are not well-defined.
 
+        incoffset = incoffset and "PhaseOffset" not in self.components
+
         params = ["Offset"] if incoffset else []
         params += [
             par
