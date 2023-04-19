@@ -27,6 +27,7 @@ from pint.models.binary_ell1 import BinaryELL1, BinaryELL1H, BinaryELL1k
 from pint.models.dispersion_model import DispersionDM, DispersionDMX
 from pint.models.frequency_dependent import FD
 from pint.models.glitch import Glitch
+from pint.models.phase_offset import PhaseOffset
 from pint.models.piecewise import PiecewiseSpindown
 from pint.models.ifunc import IFunc
 from pint.models.jump import DelayJump, PhaseJump
