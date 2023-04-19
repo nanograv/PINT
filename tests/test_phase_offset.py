@@ -33,7 +33,7 @@ def test_phase_offset():
     )
 
     ftr = WLSFitter(t, m)
-    ftr.fit_toas()
+    ftr.fit_toas(maxiter=3)
     assert ftr.resids.reduced_chi2 < 1.5
 
 
