@@ -115,6 +115,7 @@ class AbsPhase(PhaseComponent):
             include_gps=clkc_info["include_gps"],
             ephem=toas.ephem,
             planets=toas.planets,
+            tzr=True,
         )
         log.debug("Done with TZR_toa")
         self.tz_cache = tz
