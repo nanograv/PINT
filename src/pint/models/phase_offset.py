@@ -37,12 +37,14 @@ class PhaseOffset(PhaseComponent):
         return (
             (np.zeros(len(toas)) * self.PHOFF.quantity).to(u.dimensionless_unscaled)
             if toas.tzr
-            else (np.ones(len(toas)) * self.PHOFF.quantity).to(u.dimensionless_unscaled)
+            else (-np.ones(len(toas)) * self.PHOFF.quantity).to(
+                u.dimensionless_unscaled
+            )
         )
 
     def d_offset_phase_d_PHOFF(self, toas, param, delay):
         return (
             np.zeros(len(toas)) * u.Unit("")
             if toas.tzr
-            else np.ones(len(toas)) * u.Unit("")
+            else -np.ones(len(toas)) * u.Unit("")
         )
