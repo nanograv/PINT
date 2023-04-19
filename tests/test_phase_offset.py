@@ -1,7 +1,10 @@
 import numpy as np
+import io
 
-from pint.models import get_model_and_toas
+from pint.models import get_model_and_toas, get_model
 from pint.models.phase_offset import PhaseOffset
+from pint.simulation import make_fake_toas_uniform
+from pint.fitter import WLSFitter
 
 from pinttestdata import datadir
 
@@ -10,6 +13,31 @@ timfile = datadir / "NGC6440E.tim"
 
 
 def test_phase_offset():
+    simplepar = """
+    ELAT 5.6 1
+    ELONG 3.2 1
+    F0 100 1
+    PEPOCH 50000
+    PHOFF 0.2 1
+    """
+    m = get_model(io.StringIO(simplepar))
+
+    assert hasattr(m, "PHOFF") and m.PHOFF.value == 0.2
+
+    t = make_fake_toas_uniform(
+        startMJD=50000,
+        endMJD=50500,
+        ntoas=100,
+        model=m,
+        add_noise=True,
+    )
+
+    ftr = WLSFitter(t, m)
+    ftr.fit_toas()
+    assert ftr.resids.reduced_chi2 < 1.5
+
+
+def test_phase_offset_designmatrix():
     m, t = get_model_and_toas(parfile, timfile)
 
     M1, pars1, units1 = m.designmatrix(t, incoffset=True)
