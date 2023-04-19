@@ -61,7 +61,8 @@ class Residuals:
     unit: :class:`astropy.units.Unit`, optional
         The defualt unit of the residuals. Default: u.s
     subtract_mean : bool
-        Controls whether mean will be subtracted from the residuals
+        Controls whether mean will be subtracted from the residuals.
+        This option will be ignored if a `PhaseOffset` is present in the timing model.
     use_weighted_mean : bool
         Controls whether mean compution is weighted (by errors) or not.
     track_mode : None, "nearest", "use_pulse_numbers"
@@ -110,7 +111,7 @@ class Residuals:
         self.toas = toas
         self.model = model
         self.residual_type = residual_type
-        self.subtract_mean = subtract_mean
+        self.subtract_mean = subtract_mean and "PhaseOffset" not in model.components
         self.use_weighted_mean = use_weighted_mean
         if track_mode is None:
             if getattr(self.model, "TRACK").value == "-2":
