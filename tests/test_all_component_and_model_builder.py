@@ -74,7 +74,7 @@ def simple_model_alias_overlap():
 @pytest.fixture
 def test_timing_model():
     ac = AllComponents()
-    timing_model = TimingModel(
+    return TimingModel(
         name="Test",
         components=[
             ac.components["AstrometryEquatorial"],
@@ -84,7 +84,6 @@ def test_timing_model():
             ac.components["ScaleToaError"],
         ],
     )
-    return timing_model
 
 
 pint_dict_base = {
@@ -115,9 +114,9 @@ def test_model_builder_class():
 
 
 def test_aliases_mapping():
-    """Test if aliases gets mapped correclty"""
+    """Test if aliases gets mapped correctly"""
     mb = AllComponents()
-    # all alases should be mapped to the components
+    # all aliases should be mapped to the components
     assert set(mb._param_alias_map.keys()) == set(mb.param_component_map.keys())
 
     # Test if the param_alias_map is passed by pointer
@@ -126,10 +125,10 @@ def test_aliases_mapping():
     # assert "TESTAX" in mb._param_alias_map
     # Test existing entry
     # When adding an existing alias to the map. The mapped value should be the
-    # same, otherwrise it will fail.
+    # same, otherwise it will fail.
     mb._check_alias_conflict("F0", "F0", mb._param_alias_map)
     # assert mb._param_alias_map["F0"] == "F0"
-    # Test repeatable_params with differnt indices.
+    # Test repeatable_params with different indices.
     for rp in mb.repeatable_param:
         pint_par, first_init_par = mb.alias_to_pint_param(rp)
         cp = mb.param_component_map[pint_par][0]
@@ -139,10 +138,10 @@ def test_aliases_mapping():
         except PrefixError:
             prefix = rp
 
-        new_idx_par = prefix + "2"
-        assert mb.alias_to_pint_param(new_idx_par)[0] == pint_par_obj.prefix + "2"
-        new_idx_par = prefix + "55"
-        assert mb.alias_to_pint_param(new_idx_par)[0] == pint_par_obj.prefix + "55"
+        new_idx_par = f"{prefix}2"
+        assert mb.alias_to_pint_param(new_idx_par)[0] == f"{pint_par_obj.prefix}2"
+        new_idx_par = f"{prefix}55"
+        assert mb.alias_to_pint_param(new_idx_par)[0] == f"{pint_par_obj.prefix}55"
         # Test all aliases
         for als in pint_par_obj.aliases:
             assert mb.alias_to_pint_param(als)[0] == pint_par_obj.name
@@ -150,14 +149,14 @@ def test_aliases_mapping():
                 als_prefix, id, ids = split_prefixed_name(als)
             except PrefixError:
                 als_prefix = als
-        assert mb.alias_to_pint_param(als_prefix + "2")[0] == pint_par_obj.prefix + "2"
+        assert mb.alias_to_pint_param(f"{als_prefix}2")[0] == f"{pint_par_obj.prefix}2"
         assert (
-            mb.alias_to_pint_param(als_prefix + "55")[0] == pint_par_obj.prefix + "55"
+            mb.alias_to_pint_param(f"{als_prefix}55")[0] == f"{pint_par_obj.prefix}55"
         )
 
 
 def test_conflict_alias():
-    """Test if model builder detects the alais conflict."""
+    """Test if model builder detects the alias conflict."""
     mb = AllComponents()
     # Test conflict parameter alias name
     with pytest.raises(AliasConflict):
@@ -165,7 +164,7 @@ def test_conflict_alias():
 
 
 def test_conflict_alias_in_component():
-    # Define conflict alais from component class
+    # Define conflict alias from component class
     class SimpleModel2(PhaseComponent):
         """Very simple test model component"""
 
@@ -190,7 +189,7 @@ def test_overlap_component(simple_model_overlap, simple_model_alias_overlap):
     # Test overlap
     overlap = mb._get_component_param_overlap(simple_model_overlap)
     assert "Spindown" in overlap.keys()
-    assert overlap["Spindown"][0] == set(["F0"])
+    assert overlap["Spindown"][0] == {"F0"}
     # Only one over lap parameter F0
     # Since the _get_component_param_overlap returns non-overlap part,
     # we test if the non-overlap number makes sense.
@@ -201,13 +200,13 @@ def test_overlap_component(simple_model_overlap, simple_model_alias_overlap):
     )
 
     a_overlap = mb._get_component_param_overlap(simple_model_alias_overlap)
-    assert a_overlap["Spindown"][0] == set(["F0"])
+    assert a_overlap["Spindown"][0] == {"F0"}
     assert a_overlap["Spindown"][1] == len(simple_model_alias_overlap.params) - 1
     assert (
         a_overlap["Spindown"][2]
         == len(mb.all_components.components["Spindown"].params) - 1
     )
-    assert a_overlap["AstrometryEcliptic"][0] == set(["ELONG"])
+    assert a_overlap["AstrometryEcliptic"][0] == {"ELONG"}
     assert (
         a_overlap["AstrometryEcliptic"][1] == len(simple_model_alias_overlap.params) - 1
     )
@@ -411,3 +410,25 @@ def test_all_parfiles(parfile):
     if basename(parfile) in bad_trouble:
         pytest.skip("This parfile is unclear")
     model = get_model(parfile)
+
+
+def test_include_solar_system_shapiro():
+    par = "F0 100 1"
+    m = get_model(io.StringIO(par))
+    assert "SolarSystemShapiro" not in m.components
+
+    par = """
+        ELAT 0.1 1
+        ELONG 2.1 1
+        F0 100 1 
+    """
+    m = get_model(io.StringIO(par))
+    assert "SolarSystemShapiro" in m.components
+
+    par = """
+        RAJ 06:00:00 1
+        DECJ 12:00:00 1
+        F0 100 1 
+    """
+    m = get_model(io.StringIO(par))
+    assert "SolarSystemShapiro" in m.components

@@ -49,6 +49,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Selection of BIPM for random models
 - Added 1 sigma errors to update the postfit parfile errors in `event_optimize`
 - Fixed DDS CI testing failures
+- Add SolarSystemShapiro to the timing model only if an Astrometry component is present.
 ### Removed
 
 ## [0.9.3] 2022-12-16
