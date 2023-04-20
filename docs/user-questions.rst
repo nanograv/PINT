@@ -171,6 +171,33 @@ requested epoch. Similarly::
 does the same for :class:`pint.models.astrometry.AstrometryEcliptic` (with an
 optional specification of the obliquity).
 
+Convert between binary models
+-----------------------------
+
+If ``m`` is your initial model, say an ELL1 binary::
+
+    from pint import binaryconvert
+    m2 = binaryconvert.convert_binary(m, "DD")
+
+will convert it to a DD binary.  
+
+Some binary types need additional parameters.  For ELL1H, you can set the number of harmonics and whether to use H4 or STIGMA::
+
+    m2 = binaryconvert.convert_binary(m, "ELL1H", NHARMS=3, useSTIGMA=True)
+
+For DDK, you can set OM::
+
+    m2 = binaryconvert.convert_binary(mDD, "DDK", KOM=12 * u.deg)
+
+Parameter values and uncertainties will be converted.  It will also make a best-guess as to which parameters should be frozen, but 
+it can still be useful to refit with the new model and check which parameters are fit.
+
+Note: the T2 model from tempo2 is not implemented, as this is a complex model that actually encapsulates several models.  The best practice is to 
+change the model to the actual underlying model (ELL1, DD, BT, etc).
+
+These conversions can also be done on the command line using ``convert_parfile``::
+
+    convert_parfile --binary=DD ell1.par -o dd.par
 
 Add a jump programmatically
 ---------------------------
