@@ -632,23 +632,17 @@ def main(argv=None):
         except IOError:
             pass
     if ts is None:
-        # Read event file and return list of TOA objects
-        tl = fermi.load_Fermi_TOAs(
-            eventfile, weightcolumn=weightcol, targetcoord=target, minweight=minWeight
+        ts = fermi.get_Fermi_TOAs(
+            eventfile,
+            weightcolumn=weightcol,
+            targetcoord=target,
+            minweight=minWeight,
+            minmjd=minMJD,
+            maxmjd=maxMJD,
+            ephem="DE421",
+            planets=False,
         )
-        # Limit the TOAs to ones in selected MJD range and above minWeight
-        tl = [
-            tl[ii]
-            for ii in range(len(tl))
-            if (
-                tl[ii].mjd.value > minMJD
-                and tl[ii].mjd.value < maxMJD
-                and (weightcol is None or float(tl[ii].flags["weight"]) > minWeight)
-            )
-        ]
-        log.info("There are %d events we will use" % len(tl))
-        # Now convert to TOAs object and compute TDBs and posvels
-        ts = toa.get_TOAs_list(tl, ephem="DE421", planets=False)
+        log.info("There are %d events we will use" % len(ts))
         ts.filename = eventfile
         # FIXME: writes to the TOA directory unconditionally
         try:
