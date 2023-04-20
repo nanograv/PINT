@@ -14,6 +14,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Emit an informative warning for "MODE" statement in TOA file; Ignore "MODE 1" silently
 - Version of `sphinx-rtd-theme` updated in `requirements_dev.txt` 
 - Updated `black` version to 23.x
+- Older event loading functions now use newer functions to create TOAs and then convert to list of TOA objects
 ### Added
 - Documentation: Explanation for DM
 - Methods to compute dispersion slope and to convert DM using the CODATA value of DMconst
@@ -37,6 +38,8 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Method to get a parameter as a `uncertainties.ufloat` for doing math
 - Method to get current binary period and uncertainty at a given time regardless of binary model
 - TCB to TDB conversion on read, and conversion script (`tcb2tdb`)
+- Functions to get TOAs objects from satellite data (Fermi and otherwise)
+- Methods to convert a TOAs object into a list of TOA objects
 ### Fixed
 - Broken notebooks CI test
 - BIPM correction for simulated TOAs
