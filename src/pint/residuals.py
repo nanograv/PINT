@@ -451,15 +451,17 @@ class Residuals:
         :meth:`pint.residuals.Residuals.get_PSR_freq`
         """
         assert calctype.lower() in ["modelf0", "taylor", "numerical"]
-        phase_resids = self.calc_phase_resids(
-            subtract_mean=subtract_mean, use_weighted_mean=use_weighted_mean
-        )
-        if (
-            self.phase_resids is None
-            and subtract_mean is None
-            and use_weighted_mean is None
-        ):
-            self.phase_resids = phase_resids
+        if subtract_mean is None and use_weighted_mean is None:
+            # if we are using the defaults, save the calculation
+            if self.phase_resids is None:
+                self.phase_resids = self.calc_phase_resids(
+                    subtract_mean=subtract_mean, use_weighted_mean=use_weighted_mean
+                )
+            phase_resids = self.phase_resids
+        else:
+            phase_resids = self.calc_phase_resids(
+                subtract_mean=subtract_mean, use_weighted_mean=use_weighted_mean
+            )
         return (phase_resids / self.get_PSR_freq(calctype=calctype)).to(u.s)
 
     def calc_chi2(self, full_cov=False):
