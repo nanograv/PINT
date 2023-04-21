@@ -15,6 +15,7 @@ from pinttestdata import datadir
 from pint.fitter import GLSFitter, WidebandTOAFitter, WLSFitter
 from pint.models import get_model
 from pint.residuals import CombinedResiduals, Residuals, WidebandTOAResiduals
+import pint.residuals
 from pint.toa import get_TOAs
 from pint.simulation import make_fake_toas_uniform
 
@@ -388,3 +389,27 @@ def test_toa_adjust(d):
     r = Residuals(toas, model, subtract_mean=False)
     r2 = Residuals(toas2, model, subtract_mean=False)
     assert np.allclose(r2.calc_time_resids() - r.calc_time_resids(), dcomp, atol=1e-3)
+
+
+def test_resid_mean():
+    model = get_model(
+        StringIO(
+            """
+            PSRJ J1234+5678
+            ELAT 0
+            ELONG 0
+            DM 10
+            F0 1
+            PEPOCH 58000
+            EFAC mjd 57000 58000 2
+            """
+        )
+    )
+    toas = make_fake_toas_uniform(57000, 59000, 20, model=model, error=1 * u.us)
+    r = Residuals(toas, model, subtract_mean=False)
+    r2 = Residuals(toas, model)
+    full = r.calc_time_resids()
+    w = 1.0 / (r.get_data_error().value ** 2)
+    mean, _ = pint.residuals.weighted_mean(full, w)
+    assert mean == r.calc_time_mean()
+    assert r.calc_time_mean() == r2.calc_time_mean()
