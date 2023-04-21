@@ -1996,12 +1996,12 @@ class TOAs:
 
         Parameters
         ----------
-        delta : astropy.time.TimeDelta
+        delta : astropy.time.TimeDelta or astropy.units.Quantity
             The time difference to add to the MJD of each TOA
         """
         col = self.table["mjd"]
-        if not isinstance(delta, time.TimeDelta):
-            raise ValueError("Type of argument must be TimeDelta")
+        if not isinstance(delta, (time.TimeDelta, u.Quantity)):
+            raise ValueError("Type of argument must be Quantity or TimeDelta")
         if delta.shape != col.shape:
             raise ValueError("Shape of mjd column and delta must be compatible")
         for ii in range(len(col)):

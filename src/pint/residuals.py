@@ -310,7 +310,7 @@ class Residuals:
             subtract_mean = self.subtract_mean
         if use_weighted_mean is None:
             use_weighted_mean = self.use_weighted_mean
-
+        print(subtract_mean)
         # Read any delta_pulse_numbers that are in the TOAs table.
         # These are for PHASE statements, -padd flags, as well as user-inserted phase jumps
         # Check for the column, and if not there then create it as zeros
@@ -404,7 +404,7 @@ class Residuals:
         Parameters
         ----------
         calctype : str, optional
-            Calculation time for phase to time converstion.  See :func:`calc_time_resids` for details.
+            Calculation time for phase to time converstion.  See :meth:`pint.residuals.Residuals.calc_time_resids` for details.
         weighted : bool, optional
 
         Returns
@@ -451,9 +451,16 @@ class Residuals:
         :meth:`pint.residuals.Residuals.get_PSR_freq`
         """
         assert calctype.lower() in ["modelf0", "taylor", "numerical"]
-        if self.phase_resids is None:
-            self.phase_resids = self.calc_phase_resids()
-        return (self.phase_resids / self.get_PSR_freq(calctype=calctype)).to(u.s)
+        phase_resids = self.calc_phase_resids(
+            subtract_mean=subtract_mean, use_weighted_mean=use_weighted_mean
+        )
+        if (
+            self.phase_resids is None
+            and subtract_mean is None
+            and use_weighted_mean is None
+        ):
+            self.phase_resids = phase_resids
+        return (phase_resids / self.get_PSR_freq(calctype=calctype)).to(u.s)
 
     def calc_chi2(self, full_cov=False):
         """Return the weighted chi-squared for the model and toas.
