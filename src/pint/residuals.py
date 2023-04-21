@@ -310,7 +310,6 @@ class Residuals:
             subtract_mean = self.subtract_mean
         if use_weighted_mean is None:
             use_weighted_mean = self.use_weighted_mean
-        print(subtract_mean)
         # Read any delta_pulse_numbers that are in the TOAs table.
         # These are for PHASE statements, -padd flags, as well as user-inserted phase jumps
         # Check for the column, and if not there then create it as zeros
