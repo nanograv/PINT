@@ -3,6 +3,7 @@
 
 import os
 from io import StringIO
+import copy
 
 import astropy.units as u
 import numpy as np
@@ -353,3 +354,37 @@ def test_wideband_chi2_updating(wideband_fake):
     assert 1e-3 > abs(WidebandTOAResiduals(toas, f2.model).chi2 - ftc2) > 1e-5
     ftc2 = f2.fit_toas(maxiter=10)
     assert_allclose(WidebandTOAResiduals(toas, f2.model).chi2, ftc2)
+
+
+@pytest.mark.parametrize(
+    "d",
+    [
+        1 * u.s,
+        np.ones(20) * u.s,
+        TimeDelta(np.ones(20) * u.s),
+    ],
+)
+def test_toa_adjust(d):
+    model = get_model(
+        StringIO(
+            """
+            PSRJ J1234+5678
+            ELAT 0
+            ELONG 0
+            DM 10
+            F0 1
+            PEPOCH 58000
+            EFAC mjd 57000 58000 2
+            """
+        )
+    )
+    toas = make_fake_toas_uniform(57000, 59000, 20, model=model, error=1 * u.us)
+    toas2 = copy.deepcopy(toas)
+    toas2.adjust_TOAs(d)
+    if isinstance(d, TimeDelta):
+        dcomp = d.sec * u.s
+    else:
+        dcomp = d
+    r = Residuals(toas, model, subtract_mean=False)
+    r2 = Residuals(toas2, model, subtract_mean=False)
+    assert np.allclose(r2.calc_time_resids() - r.calc_time_resids(), dcomp, atol=1e-3)
