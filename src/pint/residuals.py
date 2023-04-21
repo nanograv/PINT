@@ -291,8 +291,25 @@ class Residuals:
         elif calctype.lower() == "numerical":
             return self.model.d_phase_d_toa(self.toas)
 
-    def calc_phase_resids(self):
-        """Compute timing model residuals in pulse phase."""
+    def calc_phase_resids(self, subtract_mean=None, use_weighted_mean=None):
+        """Compute timing model residuals in pulse phase.
+
+        if ``subtract_mean`` or ``use_weighted_mean`` is None, will use the values set for the object itself
+
+        Parameters
+        ----------
+        subtract_mean : bool or None, optional
+        use_weighted_mean : bool or None, optional
+
+        Returns
+        -------
+        Phase
+        """
+
+        if subtract_mean is None:
+            subtract_mean = self.subtract_mean
+        if use_weighted_mean is None:
+            use_weighted_mean = self.use_weighted_mean
 
         # Read any delta_pulse_numbers that are in the TOAs table.
         # These are for PHASE statements, -padd flags, as well as user-inserted phase jumps
@@ -335,7 +352,7 @@ class Residuals:
             modelphase = self.model.phase(self.toas) + delta_pulse_numbers
             # Here it subtracts the first phase, so making the first TOA be the
             # reference. Not sure this is a good idea.
-            if self.subtract_mean:
+            if subtract_mean:
                 modelphase -= Phase(modelphase.int[0], modelphase.frac[0])
 
             # Here we discard the integer portion of the residual and replace it with 0
@@ -346,9 +363,9 @@ class Residuals:
         else:
             raise ValueError("Invalid track_mode '{}'".format(self.track_mode))
         # If we are using pulse numbers, do we really want to subtract any kind of mean?
-        if not self.subtract_mean:
+        if not subtract_mean:
             return full
-        if not self.use_weighted_mean:
+        if not use_weighted_mean:
             mean = full.mean()
         else:
             # Errs for weighted sum.  Units don't matter since they will
@@ -361,11 +378,58 @@ class Residuals:
             mean, err = weighted_mean(full, w)
         return full - mean
 
-    def calc_time_resids(self, calctype="taylor"):
+    def calc_phase_mean(self, weighted=True):
+        """Calculate mean phase of residuals, optionally weighted
+
+        Parameters
+        ----------
+        weighted : bool, optional
+
+        Returns
+        -------
+        astropy.units.Quantity
+        """
+        r = self.calc_phase_resids(subtract_mean=False)
+        if not weighted:
+            return r.mean()
+        if np.any(self.get_data_error() == 0):
+            raise ValueError("Some TOA errors are zero - cannot calculate residuals")
+        w = 1.0 / (self.get_data_error().value ** 2)
+        mean, _ = weighted_mean(r, w)
+        return mean
+
+    def calc_time_mean(self, calctype="taylor", weighted=True):
+        """Calculate mean time of residuals, optionally weighted
+
+        Parameters
+        ----------
+        calctype : str, optional
+            Calculation time for phase to time converstion.  See :func:`calc_time_resids` for details.
+        weighted : bool, optional
+
+        Returns
+        -------
+        astropy.units.Quantity
+        """
+
+        r = self.calc_time_resids(calctype=calctype, subtract_mean=False)
+        if not weighted:
+            return r.mean()
+        if np.any(self.get_data_error() == 0):
+            raise ValueError("Some TOA errors are zero - cannot calculate residuals")
+        w = 1.0 / (self.get_data_error().value ** 2)
+        mean, _ = weighted_mean(r, w)
+        return mean
+
+    def calc_time_resids(
+        self, calctype="taylor", subtract_mean=None, use_weighted_mean=None
+    ):
         """Compute timing model residuals in time (seconds).
 
         Converts from phase residuals to time residuals using several possible ways
         to calculate the frequency.
+
+        If ``subtract_mean`` or ``use_weighted_mean`` is None, will use the values set for the object itself
 
         Parameters
         ----------
@@ -374,6 +438,9 @@ class Residuals:
             parameter from the model.
             If `calctype` == "numerical", then try a numerical derivative
             If `calctype` == "taylor", evaluate the frequency with a Taylor series
+        subtract_mean : bool or None, optional
+        use_weighted_mean : bool or None, optional
+
 
         Returns
         -------
