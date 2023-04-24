@@ -89,10 +89,7 @@ class Residuals:
                 cls = residual_map[residual_type.lower()]
             except KeyError:
                 raise ValueError(
-                    "'{}' is not a PINT supported residual. Currently "
-                    "supported data types are {}".format(
-                        residual_type, list(residual_map.keys())
-                    )
+                    f"'{residual_type}' is not a PINT supported residual. Currently supported data types are {list(residual_map.keys())}"
                 )
 
         return super().__new__(cls)
@@ -224,10 +221,11 @@ class Residuals:
         scaled: bool, optional
             If errors get scaled by the noise model.
         """
-        if not scaled:
-            return self.toas.get_errors()
-        else:
-            return self.model.scaled_toa_uncertainty(self.toas)
+        return (
+            self.model.scaled_toa_uncertainty(self.toas)
+            if scaled
+            else self.toas.get_errors()
+        )
 
     def rms_weighted(self):
         """Compute weighted RMS of the residals in time."""
@@ -313,12 +311,9 @@ class Residuals:
         # Read any delta_pulse_numbers that are in the TOAs table.
         # These are for PHASE statements, -padd flags, as well as user-inserted phase jumps
         # Check for the column, and if not there then create it as zeros
-        try:
-            delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
-        except IndexError:
+        if "delta_pulse_number" not in self.toas.table.colnames:
             self.toas.table["delta_pulse_number"] = np.zeros(len(self.toas.get_mjds()))
-            delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
-
+        delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
         # Track on pulse numbers, if requested
         if self.track_mode == "use_pulse_numbers":
             pulse_num = self.toas.get_pulse_numbers()
@@ -336,16 +331,11 @@ class Residuals:
             # and delta_pulse_numbers (from PHASE lines or adding phase jumps in GUI)
             i = pulse_num.copy()
             f = np.zeros_like(pulse_num)
-            c = np.isnan(pulse_num)
-            if np.any(c):
+            if np.any(np.isnan(pulse_num)):
                 raise ValueError("Pulse numbers are missing on some TOAs")
-                i[c] = 0
             residualphase = modelphase - Phase(i, f)
             # This converts from a Phase object to a np.float128
             full = residualphase.int + residualphase.frac
-            if np.any(c):
-                full[c] -= np.round(full[c])
-        # If not tracking then do the usual nearest pulse number calculation
         elif self.track_mode == "nearest":
             # Compute model phase
             modelphase = self.model.phase(self.toas) + delta_pulse_numbers
@@ -360,7 +350,7 @@ class Residuals:
             # This converts from a Phase object to a np.float128
             full = residualphase.int + residualphase.frac
         else:
-            raise ValueError("Invalid track_mode '{}'".format(self.track_mode))
+            raise ValueError(f"Invalid track_mode '{self.track_mode}'")
         # If we are using pulse numbers, do we really want to subtract any kind of mean?
         if not subtract_mean:
             return full
@@ -503,20 +493,19 @@ class Residuals:
             toa_errors = self.get_data_error()
             if (toa_errors == 0.0).any():
                 return np.inf
-            else:
-                # The self.time_resids is in the unit of "s", the error "us".
-                # This is more correct way, but it is the slowest.
-                # return (((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()).value
+            # The self.time_resids is in the unit of "s", the error "us".
+            # This is more correct way, but it is the slowest.
+            # return (((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()).value
 
-                # This method is faster then the method above but not the most correct way
-                # return ((self.time_resids.to(u.s) / self.toas.get_errors().to(u.s)).value**2.0).sum()
+            # This method is faster then the method above but not the most correct way
+            # return ((self.time_resids.to(u.s) / self.toas.get_errors().to(u.s)).value**2.0).sum()
 
-                # This the fastest way, but highly depend on the assumption of time_resids and
-                # error units. Ensure only a pure number is returned.
-                try:
-                    return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum().value
-                except ValueError:
-                    return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum()
+            # This the fastest way, but highly depend on the assumption of time_resids and
+            # error units. Ensure only a pure number is returned.
+            try:
+                return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum().value
+            except ValueError:
+                return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum()
 
     def ecorr_average(self, use_noise_model=True):
         """Uses the ECORR noise model time-binning to compute "epoch-averaged" residuals.
@@ -804,17 +793,11 @@ class CombinedResiduals:
 
     @property
     def unit(self):
-        units = {}
-        for k, v in self.residual_objs.items():
-            units[k] = v.unit
-        return units
+        return {k: v.unit for k, v in self.residual_objs.items()}
 
     @property
     def chi2(self):
-        chi2 = 0
-        for res in self.residual_objs.values():
-            chi2 += res.chi2
-        return chi2
+        return sum(res.chi2 for res in self.residual_objs.values())
 
     @property
     def data_error(self):
