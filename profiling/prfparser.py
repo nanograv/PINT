@@ -1,4 +1,4 @@
-""" Parses inputed profiler output for function times. Designed specifically for 
+""" Parses profiler output for function times. Designed specifically for 
 cProfile output files. Prints functions and times in neat, user-friendly layout.
 Requires pandas package: https://pandas.pydata.org/
 Install with: pip install pandas
@@ -15,8 +15,7 @@ dictionary = {
 
 def parse_line(line):
     for key, attr in dictionary.items():
-        match = attr.search(line)
-        if match:
+        if match := attr.search(line):
             return key, attr
 
     return None, None
@@ -47,7 +46,7 @@ def parse_file(file):
                 # if match, read next line to get time
                 line = filename.readline()
                 n = 1
-                # while there's a nonblank line under the keywork line...
+                # while there's a non-blank line under the keyword line...
                 while line.strip():
                     # extract values separated by spaces in the line, store in vals
                     vals = line.split()

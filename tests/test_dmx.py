@@ -51,7 +51,7 @@ class TestDMX(unittest.TestCase):
             .time_resids.to(u.s)
             .value
         )
-        ltres, _ = np.genfromtxt(self.parf + ".tempo_test", unpack=True)
+        ltres, _ = np.genfromtxt(f"{self.parf}.tempo_test", unpack=True)
         resDiff = rs - ltres
         assert np.all(
             np.abs(resDiff) < 2e-8
@@ -60,11 +60,11 @@ class TestDMX(unittest.TestCase):
     def test_derivative(self):
         log = logging.getLogger("DMX.derivative_test")
         p = "DMX_0002"
-        log.debug("Runing derivative for %s", "d_delay_d_" + p)
+        log.debug("Running derivative for %s", f"d_delay_d_{p}")
         ndf = self.DMXm.d_delay_d_param_num(self.toas, p)
         adf = self.DMXm.d_delay_d_param(self.toas, p)
         diff = adf - ndf
-        if not np.all(diff.value) == 0.0:
+        if np.all(diff.value) != 0.0:
             mean_der = (adf + ndf) / 2.0
             relative_diff = np.abs(diff) / np.abs(mean_der)
             # print "Diff Max is :", np.abs(diff).max()
@@ -72,13 +72,12 @@ class TestDMX(unittest.TestCase):
                 "Derivative test failed at d_delay_d_%s with max relative difference %lf"
                 % (p, np.nanmax(relative_diff).value)
             )
-            if p in ["SINI"]:
-                tol = 0.7
-            else:
-                tol = 1e-3
+            tol = 0.7 if p in {"SINI"} else 1e-3
             log.debug(
-                "derivative relative diff for %s, %lf"
-                % ("d_delay_d_" + p, np.nanmax(relative_diff).value)
+                (
+                    "derivative relative diff for %s, %lf"
+                    % (f"d_delay_d_{p}", np.nanmax(relative_diff).value)
+                )
             )
             assert np.nanmax(relative_diff) < tol, msg
 
@@ -160,7 +159,3 @@ def test_multiple_dmxs_explicit_indices_duplicate():
     model = get_model(io.StringIO(par))
     with pytest.raises(ValueError):
         indices = model.add_DMX_ranges([54500, 55500], [55000, 56000], indices=[1, 3])
-
-
-if __name__ == "__main__":
-    pass

@@ -27,7 +27,7 @@ class TestJ0613(unittest.TestCase):
         cls.modelJ0613 = mb.get_model(cls.parfileJ0613)
         # tempo result
         cls.ltres, cls.ltbindelay = np.genfromtxt(
-            cls.parfileJ0613 + ".tempo2_test", skip_header=1, unpack=True
+            f"{cls.parfileJ0613}.tempo2_test", skip_header=1, unpack=True
         )
         print(cls.ltres)
 
@@ -61,11 +61,11 @@ class TestJ0613(unittest.TestCase):
         testp["PMDEC"] = 1
         testp["PMRA"] = 1
         for p in testp.keys():
-            log.debug("Runing derivative for %s", "d_delay_d_" + p)
+            log.debug("Runing derivative for %s", f"d_delay_d_{p}")
             ndf = self.modelJ0613.d_phase_d_param_num(self.toasJ0613, p, testp[p])
             adf = self.modelJ0613.d_phase_d_param(self.toasJ0613, delay, p)
             diff = adf - ndf
-            if not np.all(diff.value) == 0.0:
+            if np.all(diff.value) != 0.0:
                 mean_der = (adf + ndf) / 2.0
                 relative_diff = np.abs(diff) / np.abs(mean_der)
                 # print "Diff Max is :", np.abs(diff).max()
@@ -73,18 +73,13 @@ class TestJ0613(unittest.TestCase):
                     "Derivative test failed at d_delay_d_%s with max relative difference %lf"
                     % (p, np.nanmax(relative_diff).value)
                 )
-                if p in ["EPS1DOT", "EPS1"]:
-                    tol = 0.05
-                else:
-                    tol = 1e-3
+                tol = 0.05 if p in ["EPS1DOT", "EPS1"] else 1e-3
                 log.debug(
-                    "derivative relative diff for %s, %lf"
-                    % ("d_delay_d_" + p, np.nanmax(relative_diff).value)
+                    (
+                        "derivative relative diff for %s, %lf"
+                        % (f"d_delay_d_{p}", np.nanmax(relative_diff).value)
+                    )
                 )
                 assert np.nanmax(relative_diff) < tol, msg
             else:
                 continue
-
-
-if __name__ == "__main__":
-    pass
