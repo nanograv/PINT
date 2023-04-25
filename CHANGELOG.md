@@ -15,6 +15,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Version of `sphinx-rtd-theme` updated in `requirements_dev.txt` 
 - Updated `black` version to 23.x
 - Older event loading functions now use newer functions to create TOAs and then convert to list of TOA objects
+- Limited hypothesis to <= 6.72.0 to avoid numpy problems in oldestdeps
 - More rigorous validation of timing model components
 ### Added
 - Documentation: Explanation for DM
