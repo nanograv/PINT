@@ -26,14 +26,13 @@ def test_DDS_delay():
     for line in lines:
         if not (line.startswith("SINI") or line.startswith("BINARY")):
             outlines += f"{line}"
-        else:
-            if line.startswith("SINI"):
-                d = line.split()
-                sini = float(d[1])
-                shapmax = -np.log(1 - sini)
-                outlines += f"SHAPMAX {shapmax}\n"
-            elif line.startswith("BINARY"):
-                outlines += "BINARY DDS\n"
+        elif line.startswith("SINI"):
+            d = line.split()
+            sini = float(d[1])
+            shapmax = -np.log(1 - sini)
+            outlines += f"SHAPMAX {shapmax}\n"
+        elif line.startswith("BINARY"):
+            outlines += "BINARY DDS\n"
     mDDS = get_model(io.StringIO(outlines))
     DD_delay = mDD.binarymodel_delay(t, None)
     DDS_delay = mDDS.binarymodel_delay(t, None)

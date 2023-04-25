@@ -1,6 +1,4 @@
-# pinttestdata.py
-
-# import this to get the location of the datafiles for tests.  This file
+# Import this to get the location of the datafiles for tests.  This file
 # must be kept in the appropriate location relative to the test data dir
 # for this to work.
 

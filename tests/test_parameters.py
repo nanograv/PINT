@@ -6,6 +6,7 @@ import io
 import astropy.time as time
 import astropy.units as u
 import numpy as np
+import pathlib
 import pytest
 from numpy.testing import assert_allclose
 from pinttestdata import datadir
@@ -436,10 +437,7 @@ class TestParameters(unittest.TestCase):
         are added as unfrozen it warns and fixes
         """
 
-        # check initialization after fitting for .par file without START/FINISH
-        with open("NGC6440E.par") as f:
-            s = f.read()
-        s += "START 54000 1\nFINISH 55000 1\n"
+        s = pathlib.Path("NGC6440E.par").read_text() + "START 54000 1\nFINISH 55000 1\n"
         # make sure that it warns
         with pytest.warns(UserWarning, match=r"cannot be unfrozen"):
             m = get_model(io.StringIO(s))

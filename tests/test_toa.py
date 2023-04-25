@@ -3,11 +3,9 @@ import os
 import re
 import unittest
 import numpy as np
-import pytest
 
 import astropy.units as u
-import astropy.constants as c
-from astropy.time import Time, TimeDelta
+from astropy.time import Time
 from datetime import datetime
 from pinttestdata import datadir
 

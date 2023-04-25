@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 import os
 
 import astropy.units as u
@@ -25,28 +24,21 @@ def _gen_data(par, tim):
     err = m.scaled_sigma(t).to(u.us).value
     info = t.get_flag_value("f")
 
-    fout = open(par + ".resids", "w")
-    iout = open(par + ".info", "w")
-    for i in range(t.ntoas):
-        line = "%.10f %.4f %+.8e %.3e 0.0 %s" % (
-            mjds[i],
-            freqs[i],
-            res[i],
-            err[i],
-            info[i],
-        )
-        fout.write(line + "\n")
-        iout.write(info[i] + "\n")
-    fout.close()
-    iout.close()
+    with open(f"{par}.resids", "w") as fout:
+        with open(f"{par}.info", "w") as iout:
+            for i in range(t.ntoas):
+                line = "%.10f %.4f %+.8e %.3e 0.0 %s" % (
+                    mjds[i],
+                    freqs[i],
+                    res[i],
+                    err[i],
+                    info[i],
+                )
+                fout.write(line + "\n")
+                iout.write(info[i] + "\n")
 
     # Requires res_avg in path
-    cmd = "cat %s.resids | res_avg -r -t0.0001 -E%s -i%s.info > %s.resavg" % (
-        par,
-        par,
-        par,
-        par,
-    )
+    cmd = f"cat {par}.resids | res_avg -r -t0.0001 -E{par} -i{par}.info > {par}.resavg"
     print(cmd)
     # os.system(cmd)
 
@@ -61,7 +53,7 @@ def test_ecorr_average():
     f = GLSFitter(t, m)
     # Get comparison resids and uncertainties
     mjd, freq, res, err, ophase, chi2, info = np.genfromtxt(
-        par + ".resavg", unpack=True
+        f"{par}.resavg", unpack=True
     )
     resavg_mjd = mjd * u.d
     # resavg_freq = freq * u.MHz

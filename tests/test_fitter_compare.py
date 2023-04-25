@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+import contextlib
 from os.path import join
 from io import StringIO
 import copy
@@ -8,7 +8,6 @@ import astropy.units as u
 import pytest
 from pinttestdata import datadir
 
-import pint
 from pint.fitter import (
     MaxiterReached,
     DownhillGLSFitter,
@@ -57,22 +56,16 @@ def test_compare_gls(full_cov, wls):
 
 def test_compare_downhill_wls(wls):
     dwls = DownhillWLSFitter(wls.toas, wls.model_init)
-    try:
+    with contextlib.suppress(MaxiterReached):
         dwls.fit_toas(maxiter=1)
-    except MaxiterReached:
-        pass
-
     assert abs(wls.resids.chi2 - dwls.resids.chi2) < 0.01
 
 
 @pytest.mark.parametrize("full_cov", [False, True])
 def test_compare_downhill_gls(full_cov, wls):
     gls = DownhillGLSFitter(wls.toas, wls.model_init)
-    try:
+    with contextlib.suppress(MaxiterReached):
         gls.fit_toas(maxiter=1, full_cov=full_cov)
-    except MaxiterReached:
-        pass
-
     # Why is this taking a different step from the plain GLS fitter?
     assert abs(wls.resids_init.chi2 - gls.resids_init.chi2) < 0.01
     assert abs(wls.resids.chi2 - gls.resids.chi2) < 0.01
@@ -81,11 +74,8 @@ def test_compare_downhill_gls(full_cov, wls):
 @pytest.mark.parametrize("full_cov", [False, True])
 def test_compare_downhill_wb(full_cov, wb):
     dwb = WidebandDownhillFitter(wb.toas, wb.model_init)
-    try:
+    with contextlib.suppress(MaxiterReached):
         dwb.fit_toas(maxiter=1, full_cov=full_cov)
-    except MaxiterReached:
-        pass
-
     assert abs(wb.resids.chi2 - dwb.resids.chi2) < 0.01
 
 
@@ -126,18 +116,14 @@ def m_t():
 def test_step_different_with_efacs(fitter, m_t):
     m, t = m_t
     f = fitter(t, m)
-    try:
+    with contextlib.suppress(MaxiterReached):
         f.fit_toas(maxiter=1)
-    except MaxiterReached:
-        pass
     m2 = copy.deepcopy(m)
     m2.EFAC1.value = 1
     m2.EFAC2.value = 1
     f2 = fitter(t, m2)
-    try:
+    with contextlib.suppress(MaxiterReached):
         f2.fit_toas(maxiter=1)
-    except MaxiterReached:
-        pass
     for p in m.free_params:
         assert getattr(f.model, p).value != getattr(f2.model, p).value
 
@@ -154,18 +140,14 @@ def test_step_different_with_efacs(fitter, m_t):
 def test_step_different_with_efacs_full_cov(fitter, m_t):
     m, t = m_t
     f = fitter(t, m)
-    try:
+    with contextlib.suppress(MaxiterReached):
         f.fit_toas(maxiter=1, full_cov=True)
-    except MaxiterReached:
-        pass
     m2 = copy.deepcopy(m)
     m2.EFAC1.value = 1
     m2.EFAC2.value = 1
     f2 = fitter(t, m2)
-    try:
+    with contextlib.suppress(MaxiterReached):
         f2.fit_toas(maxiter=1, full_cov=True)
-    except MaxiterReached:
-        pass
     for p in m.free_params:
         assert getattr(f.model, p).value != getattr(f2.model, p).value
 
@@ -182,14 +164,10 @@ def test_downhill_same_step(fitter1, fitter2, m_t):
     m, t = m_t
     f1 = fitter1(t, m)
     f2 = fitter2(t, m)
-    try:
+    with contextlib.suppress(MaxiterReached):
         f1.fit_toas(maxiter=1)
-    except MaxiterReached:
-        pass
-    try:
+    with contextlib.suppress(MaxiterReached):
         f2.fit_toas(maxiter=1)
-    except MaxiterReached:
-        pass
     for p in m.free_params:
         assert np.isclose(
             getattr(f1.model, p).value - getattr(f1.model_init, p).value,

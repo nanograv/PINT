@@ -68,7 +68,7 @@ def modelJ0613_STIG():
 @pytest.fixture()
 def tempo2_res():
     parfileJ1853 = "J1853+1303_NANOGrav_11yv0.gls.par"
-    return np.genfromtxt(parfileJ1853 + ".tempo2_test", skip_header=1, unpack=True)
+    return np.genfromtxt(f"{parfileJ1853}.tempo2_test", skip_header=1, unpack=True)
 
 
 def test_J1853(toasJ1853, modelJ1853, tempo2_res):
@@ -105,11 +105,11 @@ def test_derivative(toasJ1853, modelJ1853):
     testp["H4"] = 1e-2
     testp["STIGMA"] = 1e-2
     for p in test_params:
-        log.debug("Runing derivative for %s", "d_delay_d_" + p)
+        log.debug("Runing derivative for %s", f"d_delay_d_{p}")
         ndf = modelJ1853.d_phase_d_param_num(toasJ1853, p, testp[p])
         adf = modelJ1853.d_phase_d_param(toasJ1853, delay, p)
         diff = adf - ndf
-        if not np.all(diff.value) == 0.0:
+        if np.all(diff.value) != 0.0:
             mean_der = (adf + ndf) / 2.0
             relative_diff = np.abs(diff) / np.abs(mean_der)
             # print "Diff Max is :", np.abs(diff).max()
@@ -117,13 +117,12 @@ def test_derivative(toasJ1853, modelJ1853):
                 "Derivative test failed at d_delay_d_%s with max relative difference %lf"
                 % (p, np.nanmax(relative_diff).value)
             )
-            if p in ["EPS1DOT", "EPS1"]:
-                tol = 0.05
-            else:
-                tol = 1e-3
+            tol = 0.05 if p in ["EPS1DOT", "EPS1"] else 1e-3
             log.debug(
-                "derivative relative diff for %s, %lf"
-                % ("d_delay_d_" + p, np.nanmax(relative_diff).value)
+                (
+                    "derivative relative diff for %s, %lf"
+                    % (f"d_delay_d_{p}", np.nanmax(relative_diff).value)
+                )
             )
             assert np.nanmax(relative_diff) < tol, msg
         else:

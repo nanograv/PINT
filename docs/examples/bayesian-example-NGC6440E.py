@@ -146,8 +146,9 @@ plt.show()
 # TOAs in this dataset are from GBT).
 
 # %%
-parfile = str(model)  # casting the model to str gives the par file representation.
-parfile += "EFAC TEL gbt 1 1"  # Add an EFAC to the par file and make it unfrozen.
+# casting the model to str gives the par file representation.
+# Add an EFAC to the par file and make it unfrozen.
+parfile = f"{str(model)}EFAC TEL gbt 1 1"
 model2 = get_model(io.StringIO(parfile))
 
 # %%
@@ -155,7 +156,7 @@ model2 = get_model(io.StringIO(parfile))
 # Again, don't do this with real data. Use uninformative priors or priors
 # motivated by previous experiments. This is done here with the sole purpose
 # of making the run finish fast. Let us try this with the prior_info option now.
-prior_info = dict()
+prior_info = {}
 for par in model2.free_params:
     param = getattr(model2, par)
     param_min = float(param.value - 10 * param.uncertainty_value)
@@ -201,4 +202,4 @@ bf = np.exp(result_nestle_1.logz - result_nestle_2.logz)
 print(f"Bayes factor : {bf} (in favor of no EFAC)")
 
 # %% [markdown]
-# The Bayes factor tells us that the EFAC is unncessary for this dataset.
+# The Bayes factor tells us that the EFAC is unnecessary for this dataset.

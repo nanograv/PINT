@@ -23,7 +23,7 @@ def test_mjd_mask(toas):
     mp = maskParameter("test1", key="mjd", key_value=[54000, 54100])
     assert mp.key == "mjd"
     assert mp.key_value == [54000, 54100]
-    assert mp.value == None
+    assert mp.value is None
     select_toas = mp.select_toa_mask(toas)
     assert len(select_toas) > 0
     raw_selection = np.where(
