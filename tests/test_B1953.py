@@ -27,7 +27,7 @@ class TestB1953(unittest.TestCase):
         cls.modelB1953 = mb.get_model(cls.parfileB1953)
         # tempo result
         cls.ltres, cls.ltbindelay = np.genfromtxt(
-            cls.parfileB1953 + ".tempo2_test", skip_header=1, unpack=True
+            f"{cls.parfileB1953}.tempo2_test", skip_header=1, unpack=True
         )
         print(cls.ltres)
 
@@ -52,11 +52,11 @@ class TestB1953(unittest.TestCase):
         testp = tdu.get_derivative_params(self.modelB1953)
         delay = self.modelB1953.delay(self.toasB1953)
         for p in testp.keys():
-            log.debug("Runing derivative for %s".format("d_delay_d_" + p))
+            log.debug("Runing derivative for %s".format(f"d_delay_d_{p}"))
             ndf = self.modelB1953.d_phase_d_param_num(self.toasB1953, p, testp[p])
             adf = self.modelB1953.d_phase_d_param(self.toasB1953, delay, p)
             diff = adf - ndf
-            if not np.all(diff.value) == 0.0:
+            if np.all(diff.value) != 0.0:
                 mean_der = (adf + ndf) / 2.0
                 relative_diff = np.abs(diff) / np.abs(mean_der)
                 # print "Diff Max is :", np.abs(diff).max()
@@ -71,13 +71,11 @@ class TestB1953(unittest.TestCase):
                 else:
                     tol = 1e-3
                 log.debug(
-                    "derivative relative diff for %s, %lf"
-                    % ("d_delay_d_" + p, np.nanmax(relative_diff).value)
+                    (
+                        "derivative relative diff for %s, %lf"
+                        % (f"d_delay_d_{p}", np.nanmax(relative_diff).value)
+                    )
                 )
                 assert np.nanmax(relative_diff) < tol, msg
             else:
                 continue
-
-
-if __name__ == "__main__":
-    pass

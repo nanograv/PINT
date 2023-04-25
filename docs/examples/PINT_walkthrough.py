@@ -277,5 +277,5 @@ import pint.observatory.topo_obs
 
 d = tempfile.mkdtemp()
 pint.observatory.topo_obs.export_all_clock_files(d)
-for f in sorted(glob(d + "/*")):
+for f in sorted(glob(f"{d}/*")):
     print(f)

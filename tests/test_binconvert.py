@@ -160,10 +160,9 @@ def test_ELL1_roundtrip(output):
     mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
     mback = pint.binaryconvert.convert_binary(mout, "ELL1")
     for p in m.params:
-        if output == "BT":
-            if p in ["M2", "SINI"]:
-                # these are not in BT
-                continue
+        if output == "BT" and p in ["M2", "SINI"]:
+            # these are not in BT
+            continue
         if getattr(m, p).value is None:
             continue
         if not isinstance(getattr(m, p).quantity, (str, bool, astropy.time.Time)):
@@ -195,10 +194,9 @@ def test_ELL1_roundtripFB0(output):
     mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
     mback = pint.binaryconvert.convert_binary(mout, "ELL1")
     for p in m.params:
-        if output == "BT":
-            if p in ["M2", "SINI"]:
-                # these are not in BT
-                continue
+        if output == "BT" and p in ["M2", "SINI"]:
+            # these are not in BT
+            continue
         if getattr(m, p).value is None:
             continue
         if not isinstance(getattr(m, p).quantity, (str, bool, astropy.time.Time)):
@@ -238,10 +236,9 @@ def test_DD_roundtrip(output):
     mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
     mback = pint.binaryconvert.convert_binary(mout, "DD")
     for p in m.params:
-        if output == "BT":
-            if p in ["M2", "SINI"]:
-                # these are not in BT
-                continue
+        if output == "BT" and p in ["M2", "SINI"]:
+            # these are not in BT
+            continue
         if getattr(m, p).value is None:
             continue
         # print(getattr(m, p), getattr(mback, p))
@@ -305,10 +302,9 @@ def test_DDFB0_roundtrip(output):
     mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
     mback = pint.binaryconvert.convert_binary(mout, "DD")
     for p in m.params:
-        if output == "BT":
-            if p in ["M2", "SINI"]:
-                # these are not in BT
-                continue
+        if output == "BT" and p in ["M2", "SINI"]:
+            # these are not in BT
+            continue
         if getattr(m, p).value is None:
             continue
         # print(getattr(m, p), getattr(mback, p))

@@ -63,7 +63,7 @@ def test_basic():
     ],
 )
 def test_time(c):
-    f = StringIO(basic_tim_header + "\n{}\n".format(c) + basic_tim)
+    f = StringIO(f"{basic_tim_header}\n{c}\n{basic_tim}")
     do_roundtrip(get_TOAs(f))
 
 

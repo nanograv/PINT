@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 import os
 from io import StringIO
 from copy import deepcopy
@@ -144,10 +143,10 @@ def test_ftest_wb():
     A1DOT_Component = "BinaryELL1"
     # Test adding A1DOT
     Ftest_dict = wb_f.ftest(A1DOT, A1DOT_Component, remove=False, full_output=True)
-    assert isinstance(Ftest_dict["ft"], float) or isinstance(Ftest_dict["ft"], bool)
+    assert isinstance(Ftest_dict["ft"], (float, bool))
     # Test removing parallax
     Ftest_dict = wb_f.ftest(PX, PX_Component, remove=True, full_output=True)
-    assert isinstance(Ftest_dict["ft"], float) or isinstance(Ftest_dict["ft"], bool)
+    assert isinstance(Ftest_dict["ft"], (float, bool))
 
 
 def test_fitsummary_binary():

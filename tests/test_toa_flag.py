@@ -100,7 +100,7 @@ def test_flag_set_partialarray():
         if i < 2:
             assert float(t["test", i]) == 1
         else:
-            assert not "test" in t["flags"][i]
+            assert "test" not in t["flags"][i]
 
 
 def test_flag_delete():
@@ -108,7 +108,7 @@ def test_flag_delete():
     t["test"] = "1"
     t["test"] = ""
     for i in range(t.ntoas):
-        assert not "test" in t["flags"][i]
+        assert "test" not in t["flags"][i]
 
 
 def test_flag_partialdelete():
@@ -117,6 +117,6 @@ def test_flag_partialdelete():
     t[:2, "test"] = ""
     for i in range(t.ntoas):
         if i < 2:
-            assert not "test" in t["flags"][i]
+            assert "test" not in t["flags"][i]
         else:
             assert float(t["test", i]) == 1

@@ -1,5 +1,4 @@
-""" Various of tests on the wideband DM data
-"""
+""" Various of tests on the wideband DM data"""
 
 import io
 import os
