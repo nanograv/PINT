@@ -1,5 +1,4 @@
-""" Test for pint object copying
-"""
+""" Test for PINT object copying"""
 
 import os
 import pytest

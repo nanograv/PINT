@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # This test is DISABLED because event_optimize requires PRESTO to be installed
 # to get the fftfit module.  It can be run manually by people who have PRESTO
 import os
@@ -34,7 +33,3 @@ class TestEventOptimizeMCMCFitter(unittest.TestCase):
         lines = event_optimize.sys.stdout.getvalue()
         # Need to add some check here.
         event_optimize.sys.stdout = saved_stdout
-
-
-if __name__ == "__main__":
-    unittest.main()

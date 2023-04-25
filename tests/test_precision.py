@@ -44,38 +44,36 @@ from pint.utils import PosVel
 time_eps = (np.finfo(float).eps * u.day).to(u.ns)
 
 
-leap_sec_mjds = set(
-    [
-        41499,
-        41683,
-        42048,
-        42413,
-        42778,
-        43144,
-        43509,
-        43874,
-        44239,
-        44786,
-        45151,
-        45516,
-        46247,
-        47161,
-        47892,
-        48257,
-        48804,
-        49169,
-        49534,
-        50083,
-        50630,
-        51179,
-        53736,
-        54832,
-        56109,
-        57204,
-        57754,
-    ]
-)
-leap_sec_days = set([d - 1 for d in leap_sec_mjds])
+leap_sec_mjds = {
+    41499,
+    41683,
+    42048,
+    42413,
+    42778,
+    43144,
+    43509,
+    43874,
+    44239,
+    44786,
+    45151,
+    45516,
+    46247,
+    47161,
+    47892,
+    48257,
+    48804,
+    49169,
+    49534,
+    50083,
+    50630,
+    51179,
+    53736,
+    54832,
+    56109,
+    57204,
+    57754,
+}
+leap_sec_days = {d - 1 for d in leap_sec_mjds}
 near_leap_sec_days = list(
     sorted([d - 1 for d in leap_sec_days] + [d + 1 for d in leap_sec_days])
 )
@@ -84,8 +82,7 @@ near_leap_sec_days = list(
 @composite
 def possible_leap_sec_days(draw):
     y = draw(integers(2017, 2050))
-    s = draw(booleans())
-    if s:
+    if s := draw(booleans()):
         m = Time(datetime(y, 6, 30, 0, 0, 0), scale="tai").mjd
     else:
         m = Time(datetime(y, 12, 31, 0, 0, 0), scale="tai").mjd
@@ -327,9 +324,7 @@ def test_time_from_longdouble(scale, i_f):
 @pytest.mark.parametrize("format", ["mjd", "pulsar_mjd"])
 def test_time_from_longdouble_utc(format, i_f):
     i, f = i_f
-    assume(
-        not (format == "pulsar_mjd" and i in leap_sec_days and (1 - f) * 86400 < 1e-9)
-    )
+    assume(format != "pulsar_mjd" or i not in leap_sec_days or (1 - f) * 86400 >= 1e-9)
     t = Time(val=i, val2=f, format=format, scale="utc")
     ld = np.longdouble(i) + np.longdouble(f)
     assert (
@@ -479,9 +474,7 @@ def test_posvel_respects_longdouble():
 def test_time_from_mjd_string_accuracy_vs_longdouble(format, i_f):
     i, f = i_f
     mjd = np.longdouble(i) + np.longdouble(f)
-    assume(
-        not (format == "pulsar_mjd" and i in leap_sec_days and (1 - f) * 86400 < 1e-9)
-    )
+    assume(format != "pulsar_mjd" or i not in leap_sec_days or (1 - f) * 86400 >= 1e-9)
     s = str(mjd)
     t = Time(val=i, val2=f, format=format, scale="utc")
     assert (
@@ -507,9 +500,7 @@ def test_time_from_mjd_string_roundtrip_very_close(format):
 @pytest.mark.parametrize("format", ["pulsar_mjd", "mjd"])
 def test_time_from_mjd_string_roundtrip(format, i_f):
     i, f = i_f
-    assume(
-        not (format == "pulsar_mjd" and i in leap_sec_days and (1 - f) * 86400 < 1e-9)
-    )
+    assume(format != "pulsar_mjd" or i not in leap_sec_days or (1 - f) * 86400 >= 1e-9)
     t = Time(val=i, val2=f, format=format, scale="utc")
     assert (
         abs(t - time_from_mjd_string(time_to_mjd_string(t), format=format)).to(u.ns)
@@ -683,15 +674,17 @@ def _test_erfa_conversion(leap, i_f):
     else:
         assert jd_change.to(u.ns) < 2 * u.ns
         # assert jd_change.to(u.ns) < 1 * u.ns
-    return
 
-    i_o, f_o = day_frac(jd1 - erfa.DJM0, jd2)
+    # @abhisrkckl : There was a return statement above which made the
+    # code below unreachable. I have removed it and commented out the code below.
 
-    mjd_change = abs((i_o - i_i) + (f_o - f_i)) * u.day
-    if leap:
-        assert mjd_change.to(u.s) < 1 * u.s
-    else:
-        assert mjd_change.to(u.ns) < 1 * u.ns
+    # i_o, f_o = day_frac(jd1 - erfa.DJM0, jd2)
+
+    # mjd_change = abs((i_o - i_i) + (f_o - f_i)) * u.day
+    # if leap:
+    #     assert mjd_change.to(u.s) < 1 * u.s
+    # else:
+    #     assert mjd_change.to(u.ns) < 1 * u.ns
 
 
 # Try to nail down ERFA behaviour
@@ -760,7 +753,7 @@ def test_mjd_jd_round_trip(i_f):
 @given(reasonable_mjd())
 def test_mjd_jd_pulsar_round_trip(i_f):
     i, f = i_f
-    assume(not (i in leap_sec_days and (1 - f) * 86400 < 1e-9))
+    assume(i not in leap_sec_days or (1 - f) * 86400 >= 1e-9)
     with decimal.localcontext(decimal.Context(prec=40)):
         jds = mjds_to_jds_pulsar(*i_f)
         assert_closer_than_ns(jds_to_mjds_pulsar(*jds), i_f, 1)
