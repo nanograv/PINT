@@ -12,7 +12,7 @@ pint.logging.setup(level=pint.logging.script_level)
 import pint.models
 import pint.residuals
 import pint.toa as toa
-from pint.event_toas import load_event_TOAs
+from pint.event_toas import get_event_TOAs
 from pint.eventstats import h2sig, hm
 from pint.fits_utils import read_fits_event_mjds
 from pint.observatory.satellite_obs import get_satellite_observatory
@@ -152,23 +152,6 @@ def main(argv=None):
                 "The orbit file is not recognized. It is likely that this mission is not supported. "
                 "Please barycenter the event file using the official mission tools before processing with PINT"
             )
-    # Read event file and return list of TOA objects, if not using polycos
-    if args.polycos == False:
-        try:
-            tl = load_event_TOAs(
-                args.eventfile, telescope, minmjd=minmjd, maxmjd=maxmjd
-            )
-        except KeyError:
-            log.error(
-                "Observatory not recognized. This probably means you need to provide an orbit file or barycenter the event file."
-            )
-            sys.exit(1)
-
-        # Now convert to TOAs object and compute TDBs and posvels
-        if len(tl) == 0:
-            log.error("No TOAs, exiting!")
-            sys.exit(0)
-
     # Read in model
     modelin = pint.models.get_model(args.parfile)
     use_planets = False
@@ -181,6 +164,33 @@ def main(argv=None):
             "for computing phases. Make sure you have TZR* parameters in your par file!"
         )
         raise ValueError("Model missing AbsPhase component.")
+
+    # Read event file and return list of TOA objects, if not using polycos
+    if args.polycos == False:
+        try:
+            # tl = load_event_TOAs(
+            #     args.eventfile, telescope, minmjd=minmjd, maxmjd=maxmjd
+            # )
+            ts = get_event_TOAs(
+                args.eventfile,
+                telescope,
+                minmjd=minmjd,
+                maxmjd=maxmjd,
+                ephem=args.ephem,
+                include_bipm=args.use_bipm,
+                include_gps=args.use_gps,
+                planets=use_planets,
+            )
+        except KeyError:
+            log.error(
+                "Observatory not recognized. This probably means you need to provide an orbit file or barycenter the event file."
+            )
+            sys.exit(1)
+
+        # Now convert to TOAs object and compute TDBs and posvels
+        if len(ts) == 0:
+            log.error("No TOAs, exiting!")
+            sys.exit(0)
 
     if args.addorbphase and (not hasattr(modelin, "binary_model_name")):
         log.error(
@@ -230,14 +240,6 @@ def main(argv=None):
         h = float(hm(phases))
         print("Htest : {0:.2f} ({1:.2f} sigma)".format(h, h2sig(h)))
     else:  # Normal mode, not polycos
-        ts = toa.get_TOAs_list(
-            tl,
-            ephem=args.ephem,
-            include_bipm=args.use_bipm,
-            include_gps=args.use_gps,
-            planets=use_planets,
-            tdb_method=args.tdbmethod,
-        )
         ts.filename = args.eventfile
         #    if args.fix:
         #        ts.adjust_TOAs(TimeDelta(np.ones(len(ts.table))*-1.0*u.s,scale='tt'))

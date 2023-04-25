@@ -2,7 +2,7 @@ import os
 import pytest
 
 from pint.event_toas import read_mission_info_from_heasoft, create_mission_config
-from pint.event_toas import load_fits_TOAs
+from pint.event_toas import get_fits_TOAs
 from pinttestdata import datadir
 
 
@@ -48,7 +48,7 @@ def test_load_events_wrongext_raises():
     with pytest.raises(ValueError) as excinfo:
         # Not sure how to test that the warning is raised, with Astropy's log system
         # Anyway, here I'm testing another error
-        load_fits_TOAs(eventfile_nicer_topo, mission="xdsgse", extension=2)
+        get_fits_TOAs(eventfile_nicer_topo, mission="xdsgse", extension=2)
     assert msg in str(excinfo.value)
 
 
@@ -58,5 +58,5 @@ def test_load_events_wrongext_text_raises():
     with pytest.raises(RuntimeError) as excinfo:
         # Not sure how to test that the warning is raised, with Astropy's log system
         # Anyway, here I'm testing another error
-        load_fits_TOAs(eventfile_nicer_topo, mission="xdsgse", extension="dafasdfa")
+        get_fits_TOAs(eventfile_nicer_topo, mission="xdsgse", extension="dafasdfa")
     assert msg in str(excinfo.value)

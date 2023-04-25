@@ -12,10 +12,10 @@ class Test_CHIME_data(unittest.TestCase):
     """Compare delays from the dd model with tempo and PINT"""
 
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         os.chdir(datadir)
-        self.parfile = "B1937+21.basic.par"
-        self.tim = "B1937+21.CHIME.CHIME.NG.N.tim"
+        cls.parfile = "B1937+21.basic.par"
+        cls.tim = "B1937+21.CHIME.CHIME.NG.N.tim"
 
     def test_toa_read(self):
         toas = toa.get_TOAs(self.tim, ephem="DE436", planets=False, include_bipm=True)

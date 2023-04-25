@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import sys
 import unittest
 
@@ -41,6 +40,3 @@ class TestPintBary(unittest.TestCase):
 #        pintbary.output('some_text')
 #        self.assertEquals(plus_one.sys.stdout.getvalue(), 'some_text\n')
 #        plus_one.sys.stdout = saved_stdout
-
-if __name__ == "__main__":
-    unittest.main()

@@ -6,7 +6,6 @@ from glob import glob
 import copy
 from os.path import basename, join
 import numpy as np
-import astropy.units as u
 from pint.models.timing_model import (
     TimingModel,
     PhaseComponent,

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 from numpy.testing import assert_allclose
 
 import pint.eventstats as es

@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 import io
 
 import numpy as np
