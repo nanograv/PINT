@@ -17,7 +17,7 @@ from pinttestdata import datadir
 
 def test_sampler():
     r = []
-    for i in range(2):
+    for _ in range(2):
         random.seed(0)
         numpy.random.seed(0)
         s = numpy.random.mtrand.RandomState(0)

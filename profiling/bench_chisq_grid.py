@@ -36,8 +36,8 @@ m2_grid = np.linspace(0.2 * u.solMass, 0.30 * u.solMass, n)
 thankftr_chi2grid = grid_chisq(thankftr, ("M2", "SINI"), (m2_grid, sini_grid), ncpu=1)
 
 print()
-print("Number of TOAs: " + str(thanktoas.ntoas))
-print("Grid size of parameters: " + str(n) + "x" + str(n))
+print(f"Number of TOAs: {str(thanktoas.ntoas)}")
+print(f"Grid size of parameters: {n}x{n}")
 print("Number of fits: 1")
 print()
 
