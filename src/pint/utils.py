@@ -347,7 +347,7 @@ def split_prefixed_name(name):
         except AttributeError:
             continue
     else:
-        raise PrefixError("Unrecognized prefix name pattern '%s'." % name)
+        raise PrefixError(f"Unrecognized prefix name pattern '{name}'.")
     return prefix_part, index_part, int(index_part)
 
 
