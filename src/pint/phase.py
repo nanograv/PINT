@@ -51,21 +51,22 @@ class Phase(namedtuple("Phase", "int frac")):
             pulse phase object with arrays of dimensionless :class:`~astropy.units.Quantity`
             objects as the ``int`` and ``frac`` parts
         """
-        if not hasattr(arg1, "unit"):
-            arg1 = u.Quantity(arg1)
-        else:
-            # This will raise an exception if the argument has any unit not convertible to Unit(dimensionless)
-            arg1 = arg1.to(u.dimensionless_unscaled)
+        arg1 = (
+            arg1.to(u.dimensionless_unscaled)
+            if hasattr(arg1, "unit")
+            else u.Quantity(arg1)
+        )
         #  If arg is scalar, convert to an array of length 1
         if arg1.shape == ():
             arg1 = arg1.reshape((1,))
         if arg2 is None:
             ff, ii = numpy.modf(arg1)
         else:
-            if not hasattr(arg2, "unit"):
-                arg2 = u.Quantity(arg2)
-            else:
-                arg2 = arg2.to(u.dimensionless_unscaled)
+            arg2 = (
+                arg2.to(u.dimensionless_unscaled)
+                if hasattr(arg2, "unit")
+                else u.Quantity(arg2)
+            )
             if arg2.shape == ():
                 arg2 = arg2.reshape((1,))
             arg1S = numpy.modf(arg1)
