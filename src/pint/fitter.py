@@ -236,7 +236,7 @@ class Fitter:
 
     @classmethod
     def auto(
-        self, toas, model, downhill=True, track_mode=None, residuals=None, **kwargs
+        cls, toas, model, downhill=True, track_mode=None, residuals=None, **kwargs
     ):
         """Automatically return the proper :class:`pint.fitter.Fitter` object depending on the TOAs and model.
 
@@ -265,68 +265,66 @@ class Fitter:
         if toas.wideband:
             if downhill:
                 log.info(
-                    f"For wideband TOAs and downhill fitter, returning 'WidebandDownhillFitter'"
+                    "For wideband TOAs and downhill fitter, returning 'WidebandDownhillFitter'"
                 )
                 return WidebandDownhillFitter(
                     toas, model, track_mode=track_mode, residuals=residuals, **kwargs
                 )
             else:
                 log.info(
-                    f"For wideband TOAs and non-downhill fitter, returning 'WidebandTOAFitter'"
+                    "For wideband TOAs and non-downhill fitter, returning 'WidebandTOAFitter'"
                 )
                 return WidebandTOAFitter(toas, model, track_mode=track_mode, **kwargs)
-        else:
-            if model.has_correlated_errors:
-                if downhill:
-                    log.info(
-                        f"For narrowband TOAs with correlated errors and downhill fitter, returning 'DownhillGLSFitter'"
-                    )
-                    return DownhillGLSFitter(
-                        toas,
-                        model,
-                        track_mode=track_mode,
-                        residuals=residuals,
-                        **kwargs,
-                    )
-                else:
-                    log.info(
-                        f"For narrowband TOAs with correlated errors and non-downhill fitter, returning 'GLSFitter'"
-                    )
-                    return GLSFitter(
-                        toas,
-                        model,
-                        track_mode=track_mode,
-                        residuals=residuals,
-                        **kwargs,
-                    )
+        elif model.has_correlated_errors:
+            if downhill:
+                log.info(
+                    "For narrowband TOAs with correlated errors and downhill fitter, returning 'DownhillGLSFitter'"
+                )
+                return DownhillGLSFitter(
+                    toas,
+                    model,
+                    track_mode=track_mode,
+                    residuals=residuals,
+                    **kwargs,
+                )
             else:
-                if downhill:
-                    log.info(
-                        f"For narrowband TOAs without correlated errors and downhill fitter, returning 'DownhillWLSFitter'"
-                    )
-                    return DownhillWLSFitter(
-                        toas,
-                        model,
-                        track_mode=track_mode,
-                        residuals=residuals,
-                        **kwargs,
-                    )
-                else:
-                    log.info(
-                        f"For narrowband TOAs without correlated errors and non-downhill fitter, returning 'WLSFitter'"
-                    )
-                    return WLSFitter(
-                        toas,
-                        model,
-                        track_mode=track_mode,
-                        residuals=residuals,
-                        **kwargs,
-                    )
+                log.info(
+                    "For narrowband TOAs with correlated errors and non-downhill fitter, returning 'GLSFitter'"
+                )
+                return GLSFitter(
+                    toas,
+                    model,
+                    track_mode=track_mode,
+                    residuals=residuals,
+                    **kwargs,
+                )
+        elif downhill:
+            log.info(
+                "For narrowband TOAs without correlated errors and downhill fitter, returning 'DownhillWLSFitter'"
+            )
+            return DownhillWLSFitter(
+                toas,
+                model,
+                track_mode=track_mode,
+                residuals=residuals,
+                **kwargs,
+            )
+        else:
+            log.info(
+                "For narrowband TOAs without correlated errors and non-downhill fitter, returning 'WLSFitter'"
+            )
+            return WLSFitter(
+                toas,
+                model,
+                track_mode=track_mode,
+                residuals=residuals,
+                **kwargs,
+            )
 
     def fit_toas(self, maxiter=None, debug=False):
         """Run fitting operation.
 
-        This method needs to be implemented by subclasses. All implemenations
+        This method needs to be implemented by subclasses. All implementations
         should call ``self.model.validate()`` and
         ``self.model.validate_toas()`` before doing the fitting.
         """
@@ -952,7 +950,7 @@ class Fitter:
         values, x, and a second optional tuple of input arguments.  It returns
         a quantity to be minimized (in this case chi^2).
         """
-        self.set_params({k: v for k, v in zip(args, x)})
+        self.set_params(dict(zip(args, x)))
         self.update_resids()
         # Return chi^2
         return self.resids.chi2
@@ -982,7 +980,7 @@ class Fitter:
                 if rn != "":
                     fit_params_name.append(rn)
                 else:
-                    raise ValueError("Unrecognized parameter {}".format(pn))
+                    raise ValueError(f"Unrecognized parameter {pn}")
         self.model.fit_params = fit_params_name
 
     def get_allparams(self):
@@ -1113,11 +1111,8 @@ class ModelState:
         new_model = copy.deepcopy(self.model)
         for p, s in zip(self.params, step * lambda_):
             try:
-                try:
+                with contextlib.suppress(ValueError):
                     log.trace(f"Adjusting {getattr(self.model, p)} by {s}")
-                except ValueError:
-                    # I don't know why this fails with multiprocessing, but bypass if it does
-                    pass
                 pm = getattr(new_model, p)
                 if pm.value is None:
                     pm.value = 0
@@ -1214,16 +1209,15 @@ class DownhillFitter(Fitter):
                             f"chi2 increased from {current_state.chi2} to {new_state.chi2} "
                             f"when trying to take a step with lambda {lambda_}"
                         )
-                    else:
-                        log.trace(
-                            f"Iteration {i}: "
-                            f"Updating state, chi2 goes down by {chi2_decrease} "
-                            f"from {current_state.chi2} "
-                            f"to {new_state.chi2}"
-                        )
-                        exception = None
-                        current_state = new_state
-                        break
+                    log.trace(
+                        f"Iteration {i}: "
+                        f"Updating state, chi2 goes down by {chi2_decrease} "
+                        f"from {current_state.chi2} "
+                        f"to {new_state.chi2}"
+                    )
+                    exception = None
+                    current_state = new_state
+                    break
                 except InvalidModelParameters as e:
                     # This could be an exception evaluating new_state.chi2 or an increase in value
                     # If bad parameter values escape, look in ModelState.resids for the except
@@ -1251,7 +1245,7 @@ class DownhillFitter(Fitter):
                 break
         else:
             log.debug(
-                f"Stopping because maxmum number of iterations ({maxiter}) reached"
+                f"Stopping because maximum number of iterations ({maxiter}) reached"
             )
         self.current_state = best_state
         # collect results
@@ -2002,7 +1996,7 @@ class WLSFitter(Fitter):
         self.model.validate()
         self.model.validate_toas(self.toas)
         chi2 = 0
-        for i in range(maxiter):
+        for _ in range(maxiter):
             fitp = self.model.get_params_dict("free", "quantity")
             fitpv = self.model.get_params_dict("free", "num")
             fitperrs = self.model.get_params_dict("free", "uncertainty")
@@ -2074,10 +2068,10 @@ class WLSFitter(Fitter):
             sigma_cov = (sigma_var / errors).T / errors
             # covariance matrix = variances in diagonal, used for gaussian random models
             covariance_matrix = sigma_var
-            # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
-            covariance_matrix_labels = {}
-            for i, (param, unit) in enumerate(zip(params, units)):
-                covariance_matrix_labels[param] = (i, i + 1, unit)
+            covariance_matrix_labels = {
+                param: (i, i + 1, unit)
+                for i, (param, unit) in enumerate(zip(params, units))
+            }
             # covariance matrix is 2D and symmetric
             covariance_matrix_labels = [
                 covariance_matrix_labels
@@ -2097,7 +2091,7 @@ class WLSFitter(Fitter):
             #   dpars = V s^-1 U^T r
             # Scaling by fac recovers original units
             dpars = np.dot(Vt.T, np.dot(U.T, residuals) / s) / fac
-            for ii, pn in enumerate(fitp.keys()):
+            for pn in fitp.keys():
                 uind = params.index(pn)  # Index of designmatrix
                 un = 1.0 / (units[uind])  # Unit in designmatrix
                 un *= u.s
@@ -2282,7 +2276,7 @@ class GLSFitter(Fitter):
                 (covmat / errs).T / errs, covariance_matrix_labels
             )
 
-            for ii, pn in enumerate(fitp.keys()):
+            for pn in fitp.keys():
                 uind = params.index(pn)  # Index of designmatrix
                 un = 1.0 / (units[uind])  # Unit in designmatrix
                 un *= u.s
@@ -2375,21 +2369,17 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         # Get the makers for fitting parts.
         self.reset_model()
         self.resids_init = copy.deepcopy(self.resids)
-        self.designmatrix_makers = []
-        for data_resids in self.resids.residual_objs.values():
-            self.designmatrix_makers.append(
-                DesignMatrixMaker(data_resids.residual_type, data_resids.unit)
-            )
-
+        self.designmatrix_makers = [
+            DesignMatrixMaker(data_resids.residual_type, data_resids.unit)
+            for data_resids in self.resids.residual_objs.values()
+        ]
         # Add noise design matrix maker
         self.noise_designmatrix_maker = DesignMatrixMaker("toa_noise", u.s)
         #
-        self.covariancematrix_makers = []
-        for data_resids in self.resids.residual_objs.values():
-            self.covariancematrix_makers.append(
-                CovarianceMatrixMaker(data_resids.residual_type, data_resids.unit)
-            )
-
+        self.covariancematrix_makers = [
+            CovarianceMatrixMaker(data_resids.residual_type, data_resids.unit)
+            for data_resids in self.resids.residual_objs.values()
+        ]
         self.is_wideband = True
         self.method = "General_Data_Fitter"
 
@@ -2420,17 +2410,15 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         design_matrixs = []
         fit_params = self.model.free_params
         if len(self.fit_data) == 1:
-            for ii, dmatrix_maker in enumerate(self.designmatrix_makers):
-                design_matrixs.append(
-                    dmatrix_maker(self.fit_data[0], self.model, fit_params, offset=True)
-                )
+            design_matrixs.extend(
+                dmatrix_maker(self.fit_data[0], self.model, fit_params, offset=True)
+                for dmatrix_maker in self.designmatrix_makers
+            )
         else:
-            for ii, dmatrix_maker in enumerate(self.designmatrix_makers):
-                design_matrixs.append(
-                    dmatrix_maker(
-                        self.fit_data[ii], self.model, fit_params, offset=True
-                    )
-                )
+            design_matrixs.extend(
+                dmatrix_maker(self.fit_data[ii], self.model, fit_params, offset=True)
+                for ii, dmatrix_maker in enumerate(self.designmatrix_makers)
+            )
         return combine_design_matrices_by_quantity(design_matrixs)
 
     def get_noise_covariancematrix(self):
@@ -2468,7 +2456,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         scaled_sigmas = []
         sigma_units = []
         for ii, fd_name in enumerate(self.fit_data_names):
-            func_name = "scaled_{}_uncertainty".format(fd_name)
+            func_name = f"scaled_{fd_name}_uncertainty"
             sigma_units.append(self.resids.residual_objs[fd_name].unit)
             if hasattr(self.model, func_name):
                 scale_func = getattr(self.model, func_name)
@@ -2625,9 +2613,10 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             errs = np.sqrt(np.diag(xvar)) / norm
             covmat = (xvar / norm).T / norm
             # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
-            covariance_matrix_labels = {}
-            for i, (param, unit) in enumerate(zip(params, units)):
-                covariance_matrix_labels[param] = (i, i + 1, unit)
+            covariance_matrix_labels = {
+                param: (i, i + 1, unit)
+                for i, (param, unit) in enumerate(zip(params, units))
+            }
             # covariance matrix is 2D and symmetric
             covariance_matrix_labels = [covariance_matrix_labels] * covmat.ndim
             self.parameter_covariance_matrix = CovarianceMatrix(
@@ -2640,7 +2629,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             # self.covariance_matrix = covmat
             # self.correlation_matrix = (covmat / errs).T / errs
 
-            for ii, pn in enumerate(fitp.keys()):
+            for pn in fitp.keys():
                 uind = params.index(pn)  # Index of designmatrix
                 # Here we use design matrix's label, so the unit goes to normal.
                 # instead of un = 1 / (units[uind])
@@ -2667,8 +2656,8 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                     p1 = p0 + noise_dims[comp][1]
                     noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
                     if debug:
-                        setattr(self.resids, comp + "_M", (M[:, p0:p1], xhat[p0:p1]))
-                        setattr(self.resids, comp + "_M_index", (p0, p1))
+                        setattr(self.resids, f"{comp}_M", (M[:, p0:p1], xhat[p0:p1]))
+                        setattr(self.resids, f"{comp}_M_index", (p0, p1))
                 self.resids.noise_resids = noise_resids
                 if debug:
                     setattr(self.resids, "norm", norm)
@@ -2749,9 +2738,9 @@ class LMFitter(Fitter):
                     chi2_decrease = current_state.chi2 - new_state.chi2
                     if chi2_decrease < -min_chi2_decrease:
                         lambda_ *= (
-                            lambda_factor_increase
-                            if not ill_conditioned
-                            else lambda_factor_invalid
+                            lambda_factor_invalid
+                            if ill_conditioned
+                            else lambda_factor_increase
                         )
                         log.trace(
                             f"Iteration {i}: chi2 increased from {current_state.chi2} "
@@ -2864,10 +2853,10 @@ class WidebandLMFitter(LMFitter):
 
         self.update_model(state.chi2)
         # Compute the noise realizations if possible
-        ntmpar = len(self.model.free_params)
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
             noise_resids = {}
+            ntmpar = len(self.model.free_params)
             for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
                 # the indices of noise designmatrix
@@ -2876,9 +2865,9 @@ class WidebandLMFitter(LMFitter):
                 noise_resids[comp] = np.dot(state.M[:, p0:p1], state.xhat[p0:p1]) * u.s
                 if debug:
                     setattr(
-                        self.resids, comp + "_M", (state.M[:, p0:p1], state.xhat[p0:p1])
+                        self.resids, f"{comp}_M", (state.M[:, p0:p1], state.xhat[p0:p1])
                     )
-                    setattr(self.resids, comp + "_M_index", (p0, p1))
+                    setattr(self.resids, f"{comp}_M_index", (p0, p1))
             self.resids.noise_resids = noise_resids
             if debug:
                 setattr(self.resids, "norm", state.norm)
