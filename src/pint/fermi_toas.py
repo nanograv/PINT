@@ -54,8 +54,7 @@ def calc_lat_weights(energies, angseps, logeref=4.1, logesig=0.5):
 
     sigma = (
         np.sqrt(
-            psfpar0 * psfpar0 * np.power(100.0 / energies, 2.0 * psfpar1)
-            + psfpar2 * psfpar2
+            (psfpar0**2 * np.power(100.0 / energies, 2.0 * psfpar1) + psfpar2**2)
         )
         / scalepsf
     )
@@ -114,7 +113,8 @@ def load_Fermi_TOAs(
 
     Note
     ----
-    This list should be converted into a :class:`~pint.toa.TOAs` object with :func:`pint.toa.get_TOAs_list` for most operations
+    This list should be converted into a :class:`~pint.toa.TOAs` object with
+    :func:`pint.toa.get_TOAs_list` for most operations
 
     See Also
     --------
@@ -269,8 +269,7 @@ def get_Fermi_TOAs(
             get_observatory(fermiobs)
         except KeyError:
             log.error(
-                "%s observatory not defined. Make sure you have specified an FT2 file!"
-                % fermiobs
+                f"{fermiobs} observatory not defined. Make sure you have specified an FT2 file!"
             )
             raise
         obs = fermiobs
