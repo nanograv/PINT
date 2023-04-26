@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 import os
 import unittest
 
@@ -29,7 +28,7 @@ class TestGlitch(unittest.TestCase):
         # Now do the fit
         print("Fitting...")
         self.f.fit_toas()
-        emsg = "RMS of " + self.m.PSR.value + " is too big."
+        emsg = f"RMS of {self.m.PSR.value} is too big."
         assert self.f.resids.time_resids.std().to(u.us).value < 950.0, emsg
 
     @pytest.mark.filterwarnings("ignore:invalid value")
@@ -47,17 +46,11 @@ class TestGlitch(unittest.TestCase):
                 adf = self.m.d_phase_d_param(self.t, delay, param)
                 param_obj = getattr(self.m, param)
                 # Get numerical derivative steps.
-                if param_obj.units == u.day:
-                    h = 1e-8
-                else:
-                    h = 1e-2
+                h = 1e-8 if param_obj.units == u.day else 1e-2
                 ndf = self.m.d_phase_d_param_num(self.t, param, h)
                 diff = adf - ndf
                 mean = (adf + ndf) / 2.0
                 r_diff = diff / mean
-                errormsg = (
-                    "Derivatives for %s is not accurate, max relative difference is"
-                    % param
-                )
+                errormsg = f"Derivatives for {param} is not accurate, max relative difference is"
                 errormsg += " %lf" % np.nanmax(np.abs(r_diff.value))
                 assert np.nanmax(np.abs(r_diff.value)) < 1e-3, errormsg

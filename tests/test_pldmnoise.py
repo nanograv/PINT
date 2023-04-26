@@ -10,7 +10,9 @@ To do:
     Add test that checks for same results between PINT and enterprise
 """
 
+
 import astropy.units as u
+import contextlib
 import io
 import numpy as np
 import pint.fitter as fitters
@@ -147,10 +149,8 @@ def test_PLRedNoise_recovery():
 
     # refit model
     f2 = fitters.DownhillGLSFitter(toas, model)
-    try:
+    with contextlib.suppress(fitters.InvalidModelParameters, fitters.StepProblem):
         f2.fit_toas()
-    except (fitters.InvalidModelParameters, fitters.StepProblem):
-        pass
     f2.model.validate()
     f2.model.validate_toas(toas)
     r2 = Residuals(toas, f2.model)

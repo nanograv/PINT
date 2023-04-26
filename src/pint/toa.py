@@ -1128,6 +1128,12 @@ class TOA:
             s += f" {str(self.flags)}"
         return s
 
+    def __eq__(self, other):
+        result = True
+        for p in ["mjd", "error", "obs", "freq", "flags"]:
+            result = result and getattr(self, p) == getattr(other, p)
+        return result
+
     def as_line(self, format="Tempo2", name=None, dm=0 * pint.dmu):
         """Format TOA as a line for a ``.tim`` file."""
         if name is not None:
@@ -1574,6 +1580,41 @@ class TOAs:
     def wideband(self):
         """Whether or not the data have wideband TOA values"""
         return self.is_wideband()
+
+    def to_TOA_list(self, clkcorr=False):
+        """Turn a :class:`pint.toa.TOAs` object into a list of :class:`pint.toa.TOA` objects
+
+        This effectively undoes :func:`pint.toa.get_TOAs_list`, optionally undoing clock corrections too
+
+        Parameters
+        ----------
+        clkcorr : bool, optional
+            Whether or not to undo any clock corrections
+
+        Returns
+        -------
+        list :
+            Of :class:`pint.toa.TOA` objects
+        """
+        tl = []
+        clkcorrs = self.get_flag_value("clkcorr", 0, float)[0] * u.s
+        for i in range(len(self)):
+            t = self.table["mjd"][i]
+            f = self.table["flags"][i]
+            if not clkcorr:
+                t -= clkcorrs[i]
+                if "clkcorr" in f:
+                    del f["clkcorr"]
+            tl.append(
+                TOA(
+                    MJD=t,
+                    error=self.table["error"][i] * self.table["error"].unit,
+                    obs=self.table["obs"][i],
+                    freq=self.table["freq"][i] * self.table["freq"].unit,
+                    flags=f,
+                )
+            )
+        return tl
 
     def is_wideband(self):
         """Whether or not the data have wideband TOA values"""
@@ -2871,9 +2912,9 @@ def get_TOAs_array(
             )
         flagdicts = [FlagDict.from_dict(f) for f in flags]
     elif flags is not None:
-        flagdicts = [FlagDict(flags)] * len(t)
+        flagdicts = [FlagDict(flags) for i in range(len(t))]
     else:
-        flagdicts = [FlagDict()] * len(t)
+        flagdicts = [FlagDict() for i in range(len(t))]
 
     for k, v in kwargs.items():
         if isinstance(v, (list, tuple, np.ndarray)):

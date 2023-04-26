@@ -32,7 +32,7 @@ JUMP -tel ao 1
 def test_noise_parameter_aliases(name, want):
     parfile = "\n".join([par_basic, f"{name} -f bogus 1.234"])
     m = get_model(StringIO(parfile))
-    assert getattr(m, want + "1").value == 1.234
+    assert getattr(m, f"{want}1").value == 1.234
     assert re.search(
         f"^{want}" + r"\s+-f\s+bogus\s+1.23\d+\s*$", m.as_parfile(), re.MULTILINE
     )

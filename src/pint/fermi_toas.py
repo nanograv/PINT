@@ -78,11 +78,10 @@ def load_Fermi_TOAs(
     fermiobs="Fermi",
 ):
     """
-    toalist = load_Fermi_TOAs(ft1name)
-      Read photon event times out of a Fermi FT1 file and return
-      a list of PINT TOA objects.
-      Correctly handles raw FT1 files, or ones processed with gtbary
-      to have barycentered or geocentered TOAs.
+    Read photon event times out of a Fermi FT1 file and return a list of PINT :class:`~pint.toa.TOA` objects.
+
+    Correctly handles raw FT1 files, or ones processed with gtbary
+    to have barycentered or geocentered TOAs.
 
 
     Parameters
@@ -110,114 +109,29 @@ def load_Fermi_TOAs(
     Returns
     -------
     toalist : list
-        A list of TOA objects corresponding to the Fermi events.
+        A list of :class:`~pint.toa.TOA` objects corresponding to the Fermi events.
+
+    Note
+    ----
+    This list should be converted into a :class:`~pint.toa.TOAs` object with :func:`pint.toa.get_TOAs_list` for most operations
+
+    See Also
+    --------
+    :func:`get_Fermi_TOAs`
+
     """
-
-    # Load photon times from FT1 file
-    hdulist = fits.open(ft1name)
-    ft1hdr = hdulist[1].header
-    ft1dat = hdulist[1].data
-
-    # TIMESYS will be 'TT' for unmodified Fermi LAT events (or geocentered), and
-    #                 'TDB' for events barycentered with gtbary
-    # TIMEREF will be 'GEOCENTER' for geocentered events,
-    #                 'SOLARSYSTEM' for barycentered,
-    #             and 'LOCAL' for unmodified events
-
-    timesys = ft1hdr["TIMESYS"]
-    log.info("TIMESYS {0}".format(timesys))
-    timeref = ft1hdr["TIMEREF"]
-    log.info("TIMEREF {0}".format(timeref))
-
-    # Read time column from FITS file
-    mjds = read_fits_event_mjds_tuples(hdulist[1])
-    if len(mjds) == 0:
-        log.error("No MJDs read from file!")
-        raise
-
-    energies = ft1dat.field("ENERGY") * u.MeV
-    if weightcolumn is not None:
-        if weightcolumn == "CALC":
-            photoncoords = SkyCoord(
-                ft1dat.field("RA") * u.degree,
-                ft1dat.field("DEC") * u.degree,
-                frame="icrs",
-            )
-            weights = calc_lat_weights(
-                ft1dat.field("ENERGY"),
-                photoncoords.separation(targetcoord),
-                logeref=logeref,
-                logesig=logesig,
-            )
-        else:
-            weights = ft1dat.field(weightcolumn)
-        if minweight > 0.0:
-            idx = np.where(weights > minweight)[0]
-            mjds = mjds[idx]
-            energies = energies[idx]
-            weights = weights[idx]
-
-    # limit the TOAs to ones in selected MJD range
-    mjds_float = np.asarray([r[0] + r[1] for r in mjds])
-    idx = (minmjd < mjds_float) & (mjds_float < maxmjd)
-    mjds = mjds[idx]
-    energies = energies[idx]
-    if weightcolumn is not None:
-        weights = weights[idx]
-
-    if timesys == "TDB":
-        log.info("Building barycentered TOAs")
-        obs = "Barycenter"
-        scale = "tdb"
-        msg = "barycentric"
-    elif (timesys == "TT") and (timeref == "LOCAL"):
-        assert timesys == "TT"
-        try:
-            get_observatory(fermiobs)
-        except KeyError:
-            log.error(
-                f"{fermiobs} observatory not defined. Make sure you have specified an FT2 file!"
-            )
-            raise
-        obs = fermiobs
-        scale = "tt"
-        msg = "spacecraft local"
-    elif (timesys == "TT") and (timeref == "GEOCENTRIC"):
-        obs = "Geocenter"
-        scale = "tt"
-        msg = "geocentric"
-    else:
-        raise ValueError("Unrecognized TIMEREF/TIMESYS.")
-
-    log.info(
-        "Building {0} TOAs, with MJDs in range {1} to {2}".format(
-            msg, mjds[0, 0] + mjds[0, 1], mjds[-1, 0] + mjds[-1, 1]
-        )
+    t = get_Fermi_TOAs(
+        ft1name,
+        weightcolumn=weightcolumn,
+        targetcoord=targetcoord,
+        logeref=logeref,
+        logesig=logesig,
+        minweight=minweight,
+        minmjd=minmjd,
+        maxmjd=maxmjd,
+        fermiobs=fermiobs,
     )
-    return (
-        [
-            toa.TOA(
-                m,
-                obs=obs,
-                scale=scale,
-                energy=str(e.to_value(u.MeV)),
-                error=1.0 * u.us,
-            )
-            for m, e in zip(mjds, energies)
-        ]
-        if weightcolumn is None
-        else [
-            toa.TOA(
-                m,
-                obs=obs,
-                scale=scale,
-                energy=str(e.to_value(u.MeV)),
-                weight=str(w),
-                error=1.0 * u.us,
-            )
-            for m, e, w in zip(mjds, energies, weights)
-        ]
-    )
+    return t.to_TOA_list()
 
 
 def get_Fermi_TOAs(
@@ -232,6 +146,8 @@ def get_Fermi_TOAs(
     fermiobs="Fermi",
     ephem=None,
     planets=False,
+    include_bipm=False,
+    include_gps=False,
 ):
     """
       Read photon event times out of a Fermi FT1 file and return a :class:`pint.toa.TOAs` object
@@ -266,7 +182,10 @@ def get_Fermi_TOAs(
         Whether to apply Shapiro delays based on planet positions. Note that a
         long-standing TEMPO2 bug in this feature went unnoticed for years.
         Defaults to False.
-
+    include_bipm : bool, optional
+        Use TT(BIPM) instead of TT(TAI)
+    include_gps : bool, optional
+        Apply GPS to UTC clock corrections
 
     Returns
     -------
@@ -342,6 +261,7 @@ def get_Fermi_TOAs(
         obs = "Barycenter"
         scale = "tdb"
         msg = "barycentric"
+        location = None
     elif (timesys == "TT") and (timeref == "LOCAL"):
         assert timesys == "TT"
         try:
@@ -354,10 +274,12 @@ def get_Fermi_TOAs(
         obs = fermiobs
         scale = "tt"
         msg = "spacecraft local"
+        location = None
     elif (timesys == "TT") and (timeref == "GEOCENTRIC"):
         obs = "Geocenter"
         scale = "tt"
         msg = "geocentric"
+        location = EarthLocation(0, 0, 0)
     else:
         raise ValueError("Unrecognized TIMEREF/TIMESYS.")
 
@@ -370,24 +292,32 @@ def get_Fermi_TOAs(
             val2=mjds[:, 1],
             format="mjd",
             scale=scale,
-            location=EarthLocation(0, 0, 0),
+            location=location,
         )
     else:
-        t = Time(
-            mjds,
-            format="mjd",
-            scale=scale,
-            location=EarthLocation(0, 0, 0),
+        t = Time(mjds, format="mjd", scale=scale, location=location)
+    if weightcolumn is None:
+        return toa.get_TOAs_array(
+            t,
+            obs,
+            errors=0,
+            include_gps=include_gps,
+            include_bipm=include_bipm,
+            planets=planets,
+            ephem=ephem,
+            flags=[{"energy": str(e)} for e in energies.to_value(u.MeV)],
         )
-    return toa.get_TOAs_array(
-        t,
-        obs,
-        include_gps=False,
-        include_bipm=False,
-        planets=planets,
-        ephem=ephem,
-        flags=[
-            {"energy": str(e), "weight": str(w)}
-            for e, w in zip(energies.to_value(u.MeV), weights)
-        ],
-    )
+    else:
+        return toa.get_TOAs_array(
+            t,
+            obs,
+            errors=0,
+            include_gps=False,
+            include_bipm=False,
+            planets=planets,
+            ephem=ephem,
+            flags=[
+                {"energy": str(e), "weight": str(w)}
+                for e, w in zip(energies.to_value(u.MeV), weights)
+            ],
+        )
