@@ -113,7 +113,8 @@ def load_Fermi_TOAs(
 
     Note
     ----
-    This list should be converted into a :class:`~pint.toa.TOAs` object with :func:`pint.toa.get_TOAs_list` for most operations
+    This list should be converted into a :class:`~pint.toa.TOAs` object with
+    :func:`pint.toa.get_TOAs_list` for most operations
 
     See Also
     --------
