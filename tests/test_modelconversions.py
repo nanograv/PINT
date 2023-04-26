@@ -71,7 +71,7 @@ def test_ECL_to_ICRS():
 
 
 def test_ECL_to_ECL():
-    # start with ECL model, get residuals with ECL model with differenct obliquity, compare
+    # start with ECL model, get residuals with ECL model with different obliquity, compare
     model_ECL = get_model(io.StringIO(modelstring_ECL))
 
     toas = pint.simulation.make_fake_toas_uniform(

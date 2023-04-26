@@ -105,7 +105,7 @@ def test_get_model_roundtrip(tmp_dir, parfile):
     try:
         m_old = get_model(parfile)
     except (ValueError, IOError, MissingParameter) as e:
-        pytest.skip("Existing code raised an exception {}".format(e))
+        pytest.skip(f"Existing code raised an exception {e}")
 
     fn = join(tmp_dir, "file.par")
     with open(fn, "w") as f:

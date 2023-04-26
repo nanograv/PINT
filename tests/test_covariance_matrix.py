@@ -1,5 +1,4 @@
-""" Various of tests for the pint covariance.
-"""
+""" Various of tests for the pint covariance."""
 
 import pytest
 import os
