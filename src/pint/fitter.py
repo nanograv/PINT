@@ -240,7 +240,8 @@ class Fitter:
     ):
         """Automatically return the proper :class:`pint.fitter.Fitter` object depending on the TOAs and model.
 
-        In general the `downhill` fitters are to be preferred.  See https://github.com/nanograv/PINT/wiki/How-To#choose-a-fitter for the logic used.
+        In general the `downhill` fitters are to be preferred.
+        See https://github.com/nanograv/PINT/wiki/How-To#choose-a-fitter for the logic used.
 
         Parameters
         ----------
@@ -345,7 +346,6 @@ class Fitter:
                 "fit_toas() has not been run, so pre-fit and post-fit will be the same!"
             )
 
-        import uncertainties.umath as um
         from uncertainties import ufloat
 
         # Check if Wideband or not
@@ -398,10 +398,11 @@ class Fitter:
                             pn, str(prefitpar.quantity), "", par.units
                         )
                     else:
-                        if par.units == u.hourangle:
-                            uncertainty_unit = pint.hourangle_second
-                        else:
-                            uncertainty_unit = u.arcsec
+                        uncertainty_unit = (
+                            pint.hourangle_second
+                            if par.units == u.hourangle
+                            else u.arcsec
+                        )
                         s += (
                             "{:" + spacingName + "s} {:>20s}  {:>16s} +/- {:.2g} \n"
                         ).format(
@@ -414,45 +415,39 @@ class Fitter:
                     s += ("{:" + spacingName + "s} {:>20s} {:28s} {}\n").format(
                         pn, prefitpar.str_quantity(prefitpar.value), "", par.units
                     )
-                else:
-                    # Assume a numerical parameter
-                    if par.frozen:
-                        if par.name == "START":
-                            if prefitpar.value is None:
-                                s += (
-                                    "{:" + spacingName + "s} {:20s} {:28g} {} \n"
-                                ).format(pn, " ", par.value, par.units)
-                            else:
-                                s += (
-                                    "{:" + spacingName + "s} {:20g} {:28g} {} \n"
-                                ).format(pn, prefitpar.value, par.value, par.units)
-                        elif par.name == "FINISH":
-                            if prefitpar.value is None:
-                                s += (
-                                    "{:" + spacingName + "s} {:20s} {:28g} {} \n"
-                                ).format(pn, " ", par.value, par.units)
-                            else:
-                                s += (
-                                    "{:" + spacingName + "s} {:20g} {:28g} {} \n"
-                                ).format(pn, prefitpar.value, par.value, par.units)
-                        else:
-                            s += ("{:" + spacingName + "s} {:20g} {:28s} {} \n").format(
-                                pn, prefitpar.value, "", par.units
-                            )
-                    else:
-                        # s += "{:14s} {:20g} {:20g} {:20.2g} {} \n".format(
-                        #     pn,
-                        #     prefitpar.value,
-                        #     par.value,
-                        #     par.uncertainty.value,
-                        #     par.units,
-                        # )
-                        s += ("{:" + spacingName + "s} {:20g} {:28SP} {} \n").format(
-                            pn,
-                            prefitpar.value,
-                            ufloat(par.value, par.uncertainty.value),
-                            par.units,
+                elif par.frozen:
+                    if (
+                        par.name == "START"
+                        and prefitpar.value is None
+                        or par.name != "START"
+                        and par.name == "FINISH"
+                        and prefitpar.value is None
+                    ):
+                        s += ("{:" + spacingName + "s} {:20s} {:28g} {} \n").format(
+                            pn, " ", par.value, par.units
                         )
+                    elif par.name in ["START", "FINISH"]:
+                        s += ("{:" + spacingName + "s} {:20g} {:28g} {} \n").format(
+                            pn, prefitpar.value, par.value, par.units
+                        )
+                    else:
+                        s += ("{:" + spacingName + "s} {:20g} {:28s} {} \n").format(
+                            pn, prefitpar.value, "", par.units
+                        )
+                else:
+                    # s += "{:14s} {:20g} {:20g} {:20.2g} {} \n".format(
+                    #     pn,
+                    #     prefitpar.value,
+                    #     par.value,
+                    #     par.uncertainty.value,
+                    #     par.units,
+                    # )
+                    s += ("{:" + spacingName + "s} {:20g} {:28SP} {} \n").format(
+                        pn,
+                        prefitpar.value,
+                        ufloat(par.value, par.uncertainty.value),
+                        par.units,
+                    )
         s += "\n" + self.get_derived_params()
         return s
 
@@ -699,10 +694,11 @@ class Fitter:
         self.model.NTOA.value = len(self.toas)
         self.model.EPHEM.value = self.toas.ephem
         self.model.DMDATA.value = hasattr(self.resids, "dm")
-        if not self.toas.clock_corr_info["include_bipm"]:
-            self.model.CLOCK.value = "TT(TAI)"
-        else:
-            self.model.CLOCK.value = f"TT({self.toas.clock_corr_info['bipm_version']})"
+        self.model.CLOCK.value = (
+            f"TT({self.toas.clock_corr_info['bipm_version']})"
+            if self.toas.clock_corr_info["include_bipm"]
+            else "TT(TAI)"
+        )
 
     def reset_model(self):
         """Reset the current model to the initial model."""
@@ -827,7 +823,7 @@ class Fitter:
         NB = not self.is_wideband
         # Copy the fitter that we do not change the initial model and fitter
         fitter_copy = copy.deepcopy(self)
-        # We need the original degrees of freedome and chi-squared value
+        # We need the original degrees of freedom and chi-squared value
         # Because this applies to nested models, model 1 must always have fewer parameters
         if remove:
             dof_2 = self.resids.dof
@@ -835,7 +831,7 @@ class Fitter:
         else:
             dof_1 = self.resids.dof
             chi2_1 = self.resids.chi2
-        # Single inputs are converted to lists to handle arb. number of parameteres
+        # Single inputs are converted to lists to handle arb. number of parameters
         if type(parameter) is not list:
             parameter = [parameter]
         # also do the components
@@ -880,17 +876,17 @@ class Fitter:
                         fitter_copy.model, "{:}".format(parameter[ii].name)
                     ).frozen = False
                     # Check if parameter is one that needs to be checked
-                    if parameter[ii].name in check_params.keys():
-                        if parameter[ii].value == 0.0:
-                            log.warning(
-                                "Default value for %s cannot be 0, resetting to %s"
-                                % (parameter[ii].name, check_params[parameter[ii].name])
-                            )
-                            parameter[ii].value = check_params[parameter[ii].name]
+                    if (
+                        parameter[ii].name in check_params
+                        and parameter[ii].value == 0.0
+                    ):
+                        log.warning(
+                            f"Default value for {parameter[ii].name} cannot be 0, resetting to {check_params[parameter[ii].name]}"
+                        )
+                        parameter[ii].value = check_params[parameter[ii].name]
                     getattr(
                         fitter_copy.model, "{:}".format(parameter[ii].name)
                     ).value = parameter[ii].value
-                # If not, add it to the model
                 else:
                     fitter_copy.model.components[component[ii]].add_param(
                         parameter[ii], setup=True
@@ -907,40 +903,39 @@ class Fitter:
         # Now run the actual F-test
         ft = FTest(chi2_1, dof_1, chi2_2, dof_2)
 
-        if full_output:
-            if remove:
-                dof_test = dof_1
-                chi2_test = chi2_1
-            else:
-                dof_test = dof_2
-                chi2_test = chi2_2
-            if NB:
-                resid_rms_test = fitter_copy.resids.time_resids.std().to(u.us)
-                resid_wrms_test = fitter_copy.resids.rms_weighted()  # units: us
-                return {
-                    "ft": ft,
-                    "resid_rms_test": resid_rms_test,
-                    "resid_wrms_test": resid_wrms_test,
-                    "chi2_test": chi2_test,
-                    "dof_test": dof_test,
-                }
-            else:
-                # Return the dm and time resid values separately
-                resid_rms_test = fitter_copy.resids.toa.time_resids.std().to(u.us)
-                resid_wrms_test = fitter_copy.resids.toa.rms_weighted()  # units: us
-                dm_resid_rms_test = fitter_copy.resids.dm.resids.std()
-                dm_resid_wrms_test = fitter_copy.resids.dm.rms_weighted()
-                return {
-                    "ft": ft,
-                    "resid_rms_test": resid_rms_test,
-                    "resid_wrms_test": resid_wrms_test,
-                    "chi2_test": chi2_test,
-                    "dof_test": dof_test,
-                    "dm_resid_rms_test": dm_resid_rms_test,
-                    "dm_resid_wrms_test": dm_resid_wrms_test,
-                }
-        else:
+        if not full_output:
             return {"ft": ft}
+        if remove:
+            dof_test = dof_1
+            chi2_test = chi2_1
+        else:
+            dof_test = dof_2
+            chi2_test = chi2_2
+        if NB:
+            resid_rms_test = fitter_copy.resids.time_resids.std().to(u.us)
+            resid_wrms_test = fitter_copy.resids.rms_weighted()  # units: us
+            return {
+                "ft": ft,
+                "resid_rms_test": resid_rms_test,
+                "resid_wrms_test": resid_wrms_test,
+                "chi2_test": chi2_test,
+                "dof_test": dof_test,
+            }
+        else:
+            # Return the dm and time resid values separately
+            resid_rms_test = fitter_copy.resids.toa.time_resids.std().to(u.us)
+            resid_wrms_test = fitter_copy.resids.toa.rms_weighted()  # units: us
+            dm_resid_rms_test = fitter_copy.resids.dm.resids.std()
+            dm_resid_wrms_test = fitter_copy.resids.dm.rms_weighted()
+            return {
+                "ft": ft,
+                "resid_rms_test": resid_rms_test,
+                "resid_wrms_test": resid_wrms_test,
+                "chi2_test": chi2_test,
+                "dof_test": dof_test,
+                "dm_resid_rms_test": dm_resid_rms_test,
+                "dm_resid_wrms_test": dm_resid_wrms_test,
+            }
 
     def minimize_func(self, x, *args):
         """Wrapper function for the residual class.
@@ -1165,7 +1160,7 @@ class DownhillFitter(Fitter):
         one; if the new model is invalid or worse than the current one, it
         tries taking a shorter step in the same direction. This can exit if it
         exceeds the maximum number of iterations or if improvement is not
-        possible even with very short steps, or it can exit successully if a
+        possible even with very short steps, or it can exit successfully if a
         full-size step is taken and it does not decrease the ``chi2`` by much.
 
         The attribute ``self.converged`` is set to True or False depending on
@@ -1260,11 +1255,9 @@ class DownhillFitter(Fitter):
         )
         for p, e in zip(self.current_state.params, self.errors):
             try:
-                try:
+                # I don't know why this fails with multiprocessing, but bypass if it does
+                with contextlib.suppress(ValueError):
                     log.trace(f"Setting {getattr(self.model, p)} uncertainty to {e}")
-                except ValueError:
-                    # I don't know why this fails with multiprocessing, but bypass if it does
-                    pass
                 pm = getattr(self.model, p)
             except AttributeError:
                 if p != "Offset":
@@ -1359,9 +1352,10 @@ class WLSState(ModelState):
         self.units = units
         self.scaled_resids = scaled_resids
         # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
-        covariance_matrix_labels = {}
-        for i, (param, unit) in enumerate(zip(params, units)):
-            covariance_matrix_labels[param] = (i, i + 1, unit)
+        covariance_matrix_labels = {
+            param: (i, i + 1, unit)
+            for i, (param, unit) in enumerate(zip(params, units))
+        }
         # covariance matrix is 2D and symmetric
         covariance_matrix_labels = [covariance_matrix_labels] * 2
         self.parameter_covariance_matrix_labels = covariance_matrix_labels
@@ -1443,9 +1437,10 @@ class GLSState(ModelState):
         self.params = params
         self.units = units
         # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
-        covariance_matrix_labels = {}
-        for i, (param, unit) in enumerate(zip(params, units)):
-            covariance_matrix_labels[param] = (i, i + 1, unit)
+        covariance_matrix_labels = {
+            param: (i, i + 1, unit)
+            for i, (param, unit) in enumerate(zip(params, units))
+        }
         # covariance matrix is 2D and symmetric
         covariance_matrix_labels = [covariance_matrix_labels] * 2
         self.parameter_covariance_matrix_labels = covariance_matrix_labels
@@ -1596,10 +1591,10 @@ class DownhillGLSFitter(DownhillFitter):
         r = super().fit_toas(maxiter=maxiter, debug=debug, **kwargs)
         # FIXME: set up noise residuals et cetera
         # Compute the noise realizations if possible
-        ntmpar = len(self.model.free_params)
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
             noise_resids = {}
+            ntmpar = len(self.model.free_params)
             for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
                 # the indices of noise designmatrix
@@ -1614,13 +1609,13 @@ class DownhillGLSFitter(DownhillFitter):
                 if debug:
                     setattr(
                         self.resids,
-                        comp + "_M",
+                        f"{comp}_M",
                         (
                             self.current_state.M[:, p0:p1],
                             self.current_state.xhat[p0:p1],
                         ),
                     )
-                    setattr(self.resids, comp + "_M_index", (p0, p1))
+                    setattr(self.resids, f"{comp}_M_index", (p0, p1))
             self.resids.noise_resids = noise_resids
             if debug:
                 setattr(self.resids, "norm", self.current_state.norm)
@@ -1816,9 +1811,10 @@ class WidebandState(ModelState):
         # make sure we compute the SVD
         xvar = np.dot(self.Vt.T / self.s, self.Vt)
         # is this the best place to do this?
-        covariance_matrix_labels = {}
-        for i, (param, unit) in enumerate(zip(self.params, self.units)):
-            covariance_matrix_labels[param] = (i, i + 1, unit)
+        covariance_matrix_labels = {
+            param: (i, i + 1, unit)
+            for i, (param, unit) in enumerate(zip(self.params, self.units))
+        }
         # covariance matrix is 2D and symmetric
         covariance_matrix_labels = [covariance_matrix_labels] * 2
 
@@ -1885,11 +1881,11 @@ class WidebandDownhillFitter(DownhillFitter):
         self.full_cov = full_cov
         # FIXME: set up noise residuals et cetera
         r = super().fit_toas(maxiter=maxiter, debug=debug, **kwargs)
-        # Compute the noise realizations if possible
-        ntmpar = len(self.model.free_params)
+        # Compute the noise realizations if possibl
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
             noise_resids = {}
+            ntmpar = len(self.model.free_params)
             for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
                 # the indices of noise designmatrix
@@ -1904,13 +1900,13 @@ class WidebandDownhillFitter(DownhillFitter):
                 if debug:
                     setattr(
                         self.resids,
-                        comp + "_M",
+                        f"{comp}_M",
                         (
                             self.current_state.M[:, p0:p1],
                             self.current_state.xhat[p0:p1],
                         ),
                     )
-                    setattr(self.resids, comp + "_M_index", (p0, p1))
+                    setattr(self.resids, f"{comp}_M_index", (p0, p1))
             self.resids.noise_resids = noise_resids
             if debug:
                 setattr(self.resids, "norm", self.current_state.norm)
@@ -2261,12 +2257,10 @@ class GLSFitter(Fitter):
             dpars = xhat / norm
             errs = np.sqrt(np.diag(xvar)) / norm
             covmat = (xvar / norm).T / norm
-            # self.covariance_matrix = covmat
-            # self.correlation_matrix = (covmat / errs).T / errs
-            # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
-            covariance_matrix_labels = {}
-            for i, (param, unit) in enumerate(zip(params, units)):
-                covariance_matrix_labels[param] = (i, i + 1, unit)
+            covariance_matrix_labels = {
+                param: (i, i + 1, unit)
+                for i, (param, unit) in enumerate(zip(params, units))
+            }
             # covariance matrix is 2D and symmetric
             covariance_matrix_labels = [covariance_matrix_labels] * covmat.ndim
             self.parameter_covariance_matrix = CovarianceMatrix(
@@ -2302,8 +2296,8 @@ class GLSFitter(Fitter):
                     p1 = p0 + noise_dims[comp][1]
                     noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
                     if debug:
-                        setattr(self.resids, comp + "_M", (M[:, p0:p1], xhat[p0:p1]))
-                        setattr(self.resids, comp + "_M_index", (p0, p1))
+                        setattr(self.resids, f"{comp}_M", (M[:, p0:p1], xhat[p0:p1]))
+                        setattr(self.resids, f"{comp}_M_index", (p0, p1))
                 self.resids.noise_resids = noise_resids
                 if debug:
                     setattr(self.resids, "norm", norm)
@@ -2425,12 +2419,15 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         # TODO This needs to be more general
         cov_matrixs = []
         if len(self.fit_data) == 1:
-            for ii, cmatrix_maker in enumerate(self.covariancematrix_makers):
-                cov_matrixs.append(cmatrix_maker(self.fit_data[0], self.model))
+            cov_matrixs.extend(
+                cmatrix_maker(self.fit_data[0], self.model)
+                for cmatrix_maker in self.covariancematrix_makers
+            )
         else:
-            for ii, cmatrix_maker in enumerate(self.covariancematrix_makers):
-                cov_matrixs.append(cmatrix_maker(self.fit_data[ii], self.model))
-
+            cov_matrixs.extend(
+                cmatrix_maker(self.fit_data[ii], self.model)
+                for ii, cmatrix_maker in enumerate(self.covariancematrix_makers)
+            )
         return combine_covariance_matrix(cov_matrixs)
 
     def get_data_uncertainty(self, data_name, data_obj):
