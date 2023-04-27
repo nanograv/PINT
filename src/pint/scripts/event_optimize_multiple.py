@@ -1,6 +1,8 @@
 #!/usr/bin/env python -W ignore::FutureWarning -W ignore::UserWarning -W ignore::DeprecationWarning
 import argparse
+import contextlib
 import sys
+import pickle
 
 import astropy.units as u
 import matplotlib.pyplot as plt
@@ -39,9 +41,7 @@ numcalls = 0
 
 def get_toas(evtfile, flags, tcoords=None, minweight=0, minMJD=0, maxMJD=100000):
     if evtfile[:-3] == "tim":
-        usepickle = False
-        if "usepickle" in flags:
-            usepickle = flags["usepickle"]
+        usepickle = flags["usepickle"] if "usepickle" in flags else False
         ts = toa.get_TOAs(evtfile, usepickle=usepickle)
         # Prune out of range MJDs
         mask = np.logical_or(
@@ -51,14 +51,9 @@ def get_toas(evtfile, flags, tcoords=None, minweight=0, minMJD=0, maxMJD=100000)
         ts.table = ts.table.group_by("obs")
     else:
         if "usepickle" in flags and flags["usepickle"]:
-            try:
-                picklefile = toa._check_pickle(evtfile)
-                if not picklefile:
-                    picklefile = evtfile
-                ts = toa.TOAs(picklefile)
-                return ts
-            except Exception:
-                pass
+            with contextlib.suppress(Exception):
+                picklefile = toa._check_pickle(evtfile) or evtfile
+                return toa.TOAs(picklefile)
         weightcol = flags["weightcol"] if "weightcol" in flags else None
         target = tcoords if weightcol == "CALC" else None
         tl = fermi.load_Fermi_TOAs(
@@ -100,21 +95,18 @@ def load_eventfiles(infile, tcoords=None, minweight=0, minMJD=0, maxMJD=100000):
         "setweights": [],
     }
     for line in lines:
-        log.info("%s" % line)
+        log.info(f"{line}")
         if len(line) == 0:
             continue
         try:
             words = line.split()
 
+            flags = {}
             if len(words) > 3:
                 kvs = words[3:]
-                flags = {}
                 for i in range(0, len(flags), 2):
                     k, v = kvs[i].lstrip("-"), kvs[i + 1]
                     flags[k] = v
-            else:
-                flags = {}
-
             ts = get_toas(
                 words[0],
                 flags,
@@ -136,8 +128,8 @@ def load_eventfiles(infile, tcoords=None, minweight=0, minMJD=0, maxMJD=100000):
             else:
                 eventinfo["weightcol"].append(None)
         except Exception as e:
-            log.error("%s" % str(e))
-            log.error("Could not load %s" % line)
+            log.error(f"{str(e)}")
+            log.error(f"Could not load {line}")
 
     return eventinfo
 
@@ -303,9 +295,7 @@ def main(argv=None):
         try:
             lnlike_funcs[i] = funcs[eventinfo["lnlikes"][i]]
         except:
-            raise ValueError(
-                "%s is not a recognized function" % eventinfo["lnlikes"][i]
-            )
+            raise ValueError(f'{eventinfo["lnlikes"][i]} is not a recognized function')
 
         # Load in weights
         ts = eventinfo["toas"][i]
@@ -341,13 +331,13 @@ def main(argv=None):
         if tname[-6:] == "pickle" or tname == "analytic":
             # Analytic template
             try:
-                gtemplate = cPickle.load(file(tname))
-            except:
+                gtemplate = pickle.load(file(tname))
+            except Exception:
                 phases = (modelin.phase(ts)[1].value).astype(np.float64) % 1
                 gtemplate = lctemplate.get_gauss2()
                 lcf = lcfitters.LCFitter(gtemplate, phases, weights=wlist[i])
                 lcf.fit(unbinned=False)
-                cPickle.dump(
+                pickle.dump(
                     gtemplate,
                     file("%s_template%d.pickle" % (jname, i), "wb"),
                     protocol=2,
@@ -400,7 +390,7 @@ def main(argv=None):
         ftr.prof_vs_weights(use_weights=False)
         sys.exit()
 
-    ftr.phaseogram(plotfile=ftr.model.PSR.value + "_pre.png")
+    ftr.phaseogram(plotfile=f"{ftr.model.PSR.value}_pre.png")
     like_start = ftr.lnlikelihood(ftr, ftr.get_parameters())
     log.info("Starting Pulse Likelihood:\t%f" % like_start)
 
@@ -409,7 +399,7 @@ def main(argv=None):
     if args.samples is None:
         pos = None
     else:
-        chains = cPickle.load(file(args.samples))
+        chains = pickle.load(file(args.samples))
         chains = np.reshape(chains, [nwalkers, -1, ndim])
         pos = chains[:, -1, :]
 
@@ -433,11 +423,11 @@ def main(argv=None):
             plt.close()
 
     chains = sampler.chains_to_dict(ftr.fitkeys)
-    plot_chains(chains, file=ftr.model.PSR.value + "_chains.png")
+    plot_chains(chains, file=f"{ftr.model.PSR.value}_chains.png")
 
     # Make the triangle plot.
     samples = sampler.sampler.chain[:, burnin:, :].reshape((-1, ftr.n_fit_params))
-    try:
+    with contextlib.suppress(ImportError):
         import corner
 
         fig = corner.corner(
@@ -447,23 +437,17 @@ def main(argv=None):
             truths=ftr.maxpost_fitvals,
             plot_contours=True,
         )
-        fig.savefig(ftr.model.PSR.value + "_triangle.png")
+        fig.savefig(f"{ftr.model.PSR.value}_triangle.png")
         plt.close()
-    except ImportError:
-        pass
-
     # Make a phaseogram with the 50th percentile values
     # ftr.set_params(dict(zip(ftr.fitkeys, np.percentile(samples, 50, axis=0))))
     # Make a phaseogram with the best MCMC result
     ftr.set_parameters(ftr.maxpost_fitvals)
-    ftr.phaseogram(plotfile=ftr.model.PSR.value + "_post.png")
+    ftr.phaseogram(plotfile=f"{ftr.model.PSR.value}_post.png")
     plt.close()
 
-    # Write out the par file for the best MCMC parameter est
-    f = open(ftr.model.PSR.value + "_post.par", "w")
-    f.write(ftr.model.as_parfile())
-    f.close()
-
+    with open(f"{ftr.model.PSR.value}_post.par", "w") as f:
+        f.write(ftr.model.as_parfile())
     # Print the best MCMC values and ranges
     ranges = map(
         lambda v: (v[1], v[2] - v[1], v[1] - v[0]),
@@ -473,17 +457,12 @@ def main(argv=None):
     for name, vals in zip(ftr.fitkeys, ranges):
         log.info("%8s:" % name + "%25.15g (+ %12.5g  / - %12.5g)" % vals)
 
-    # Put the same stuff in a file
-    f = open(ftr.model.PSR.value + "_results.txt", "w")
+    with open(f"{ftr.model.PSR.value}_results.txt", "w") as f:
+        f.write("Post-MCMC values (50th percentile +/- (16th/84th percentile):\n")
+        for name, vals in zip(ftr.fitkeys, ranges):
+            f.write("%8s:" % name + " %25.15g (+ %12.5g  / - %12.5g)\n" % vals)
 
-    f.write("Post-MCMC values (50th percentile +/- (16th/84th percentile):\n")
-    for name, vals in zip(ftr.fitkeys, ranges):
-        f.write("%8s:" % name + " %25.15g (+ %12.5g  / - %12.5g)\n" % vals)
-
-    f.write("\nMaximum likelihood par file:\n")
-    f.write(ftr.model.as_parfile())
-    f.close()
-
-    import cPickle
-
-    cPickle.dump(samples, open(ftr.model.PSR.value + "_samples.pickle", "wb"))
+        f.write("\nMaximum likelihood par file:\n")
+        f.write(ftr.model.as_parfile())
+    with open(f"{ftr.model.PSR.value}_samples.pickle", "wb") as smppkl:
+        pickle.dump(samples, smppkl)
