@@ -16,6 +16,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Updated `black` version to 23.x
 - Older event loading functions now use newer functions to create TOAs and then convert to list of TOA objects
 - Limited hypothesis to <= 6.72.0 to avoid numpy problems in oldestdeps
+- Applied `sourcery` refactors to the entire codebase
 ### Added
 - Documentation: Explanation for DM
 - Methods to compute dispersion slope and to convert DM using the CODATA value of DMconst
