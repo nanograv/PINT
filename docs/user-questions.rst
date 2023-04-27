@@ -185,15 +185,16 @@ Some binary types need additional parameters.  For ELL1H, you can set the number
 
     m2 = binaryconvert.convert_binary(m, "ELL1H", NHARMS=3, useSTIGMA=True)
 
-For DDK, you can set OM::
+For DDK, you can set OM (known as ``KOM``)::
 
     m2 = binaryconvert.convert_binary(mDD, "DDK", KOM=12 * u.deg)
 
 Parameter values and uncertainties will be converted.  It will also make a best-guess as to which parameters should be frozen, but 
 it can still be useful to refit with the new model and check which parameters are fit.
 
-Note: the T2 model from tempo2 is not implemented, as this is a complex model that actually encapsulates several models.  The best practice is to 
-change the model to the actual underlying model (ELL1, DD, BT, etc).
+.. note::
+    The T2 model from tempo2 is not implemented, as this is a complex model that actually encapsulates several models.  The best practice is to 
+    change the model to the actual underlying model (ELL1, DD, BT, etc).
 
 These conversions can also be done on the command line using ``convert_parfile``::
 
