@@ -53,9 +53,8 @@ def get_derivative_params(model):
         if p.startswith("DMX"):
             if not p.startswith("DMX_"):
                 continue
-            else:
-                if par.index != 2:
-                    continue
+            elif par.index != 2:
+                continue
 
         if isinstance(par, pa.MJDParameter) or par.units == u.day:
             h = 1e-8

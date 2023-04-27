@@ -42,7 +42,7 @@ class TestTOAselection(unittest.TestCase):
                     toas_table["mjd_float"] >= r1.mjd, toas_table["mjd_float"] <= r2.mjd
                 )
                 toas_table["DMX_section"][msk] = epoch_ind
-                epoch_ind = epoch_ind + 1
+                epoch_ind += 1
         return toas_table
 
     def get_dmx_old(self, toas):
@@ -131,7 +131,3 @@ class TestTOAselection(unittest.TestCase):
         assert len(indx0005_2) == 0
         assert len(run1) == len(run2)
         assert np.allclose(run1, run2)
-
-
-if __name__ == "__main__":
-    unittest.main()

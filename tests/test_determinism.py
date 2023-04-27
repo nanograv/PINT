@@ -17,7 +17,7 @@ from pinttestdata import datadir
 
 def test_sampler():
     r = []
-    for i in range(2):
+    for _ in range(2):
         random.seed(0)
         numpy.random.seed(0)
         s = numpy.random.mtrand.RandomState(0)
@@ -37,10 +37,13 @@ def test_sampler():
         phs = 0.0
 
         model = pint.models.get_model(parfile)
-        tl = fermi.load_Fermi_TOAs(
-            eventfile, weightcolumn=weightcol, minweight=minWeight
+        ts = fermi.get_Fermi_TOAs(
+            eventfile,
+            weightcolumn=weightcol,
+            minweight=minWeight,
+            ephem="DE421",
+            planets=False,
         )
-        ts = toa.get_TOAs_list(tl, ephem="DE421", planets=False)
         # Introduce a small error so that residuals can be calculated
         ts.table["error"] = 1.0
         ts.filename = eventfile
