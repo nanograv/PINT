@@ -20,6 +20,8 @@ log.add(
 import pint.fermi_toas as fermi
 import pint.models
 import pint.toa as toa
+from pint.templates import lctemplate, lcfitters
+from pint.residuals import Residuals
 from pint.mcmc_fitter import CompositeMCMCFitter
 from pint.observatory.satellite_obs import get_satellite_observatory
 from pint.sampler import EmceeSampler
@@ -55,7 +57,7 @@ def get_toas(evtfile, flags, tcoords=None, minweight=0, minMJD=0, maxMJD=100000)
                     picklefile = evtfile
                 ts = toa.TOAs(picklefile)
                 return ts
-            except:
+            except Exception:
                 pass
         weightcol = flags["weightcol"] if "weightcol" in flags else None
         target = tcoords if weightcol == "CALC" else None
@@ -90,13 +92,13 @@ def load_eventfiles(infile, tcoords=None, minweight=0, minMJD=0, maxMJD=100000):
 
     """
     lines = open(infile, "r").read().split("\n")
-    eventinfo = {}
-    eventinfo["toas"] = []
-    eventinfo["lnlikes"] = []
-    eventinfo["templates"] = []
-    eventinfo["weightcol"] = []
-    eventinfo["setweights"] = []
-
+    eventinfo = {
+        "toas": [],
+        "lnlikes": [],
+        "templates": [],
+        "weightcol": [],
+        "setweights": [],
+    }
     for line in lines:
         log.info("%s" % line)
         if len(line) == 0:
