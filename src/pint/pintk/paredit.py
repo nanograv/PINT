@@ -275,7 +275,7 @@ class ParWidget(tk.Frame):
             log.info(f"Saved parfile to {filename}")
         except Exception:
             if filename in [(), ""]:
-                log.warning("Write Par cancelled.")
+                log.warning("Writing par file cancelled.")
             else:
                 log.warning("Could not save parfile to filename:\t%s" % filename)
 

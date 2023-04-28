@@ -189,6 +189,6 @@ class TimWidget(tk.Frame):
             log.info(f"Saved timfile to {filename}")
         except Exception:
             if filename in [(), ""]:
-                log.warning("Write Tim cancelled.")
+                log.warning("Writing tim file cancelled.")
             else:
                 log.warning("Could not save timfile to filename:\t%s" % filename)
