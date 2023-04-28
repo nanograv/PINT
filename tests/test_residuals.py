@@ -3,6 +3,7 @@
 
 import os
 from io import StringIO
+import copy
 
 import astropy.units as u
 import numpy as np
@@ -14,6 +15,7 @@ from pinttestdata import datadir
 from pint.fitter import GLSFitter, WidebandTOAFitter, WLSFitter
 from pint.models import get_model
 from pint.residuals import CombinedResiduals, Residuals, WidebandTOAResiduals
+import pint.residuals
 from pint.toa import get_TOAs
 from pint.simulation import make_fake_toas_uniform
 
@@ -353,3 +355,85 @@ def test_wideband_chi2_updating(wideband_fake):
     assert 1e-3 > abs(WidebandTOAResiduals(toas, f2.model).chi2 - ftc2) > 1e-5
     ftc2 = f2.fit_toas(maxiter=10)
     assert_allclose(WidebandTOAResiduals(toas, f2.model).chi2, ftc2)
+
+
+@pytest.mark.parametrize(
+    "d",
+    [
+        1 * u.s,
+        np.ones(20) * u.s,
+        TimeDelta(np.ones(20) * u.s),
+    ],
+)
+def test_toa_adjust(d):
+    model = get_model(
+        StringIO(
+            """
+            PSRJ J1234+5678
+            ELAT 0
+            ELONG 0
+            DM 10
+            F0 1
+            PEPOCH 58000
+            EFAC mjd 57000 58000 2
+            """
+        )
+    )
+    toas = make_fake_toas_uniform(57000, 59000, 20, model=model, error=1 * u.us)
+    toas2 = copy.deepcopy(toas)
+    toas2.adjust_TOAs(d)
+    if isinstance(d, TimeDelta):
+        dcomp = d.sec * u.s
+    else:
+        dcomp = d
+    r = Residuals(toas, model, subtract_mean=False)
+    r2 = Residuals(toas2, model, subtract_mean=False)
+    assert np.allclose(r2.calc_time_resids() - r.calc_time_resids(), dcomp, atol=1e-3)
+
+
+def test_resid_mean():
+    model = get_model(
+        StringIO(
+            """
+            PSRJ J1234+5678
+            ELAT 0
+            ELONG 0
+            DM 10
+            F0 1
+            PEPOCH 58000
+            EFAC mjd 57000 58000 2
+            """
+        )
+    )
+    toas = make_fake_toas_uniform(57000, 59000, 20, model=model, error=1 * u.us)
+    r = Residuals(toas, model, subtract_mean=False)
+    r2 = Residuals(toas, model)
+    full = r.calc_time_resids()
+    w = 1.0 / (r.get_data_error().value ** 2)
+    mean, _ = pint.residuals.weighted_mean(full, w)
+    assert mean == r.calc_time_mean()
+    assert r.calc_time_mean() == r2.calc_time_mean()
+
+
+def test_resid_mean_phase():
+    model = get_model(
+        StringIO(
+            """
+            PSRJ J1234+5678
+            ELAT 0
+            ELONG 0
+            DM 10
+            F0 1
+            PEPOCH 58000
+            EFAC mjd 57000 58000 2
+            """
+        )
+    )
+    toas = make_fake_toas_uniform(57000, 59000, 20, model=model, error=1 * u.us)
+    r = Residuals(toas, model, subtract_mean=False)
+    r2 = Residuals(toas, model)
+    full = r.calc_phase_resids()
+    w = 1.0 / (r.get_data_error().value ** 2)
+    mean, _ = pint.residuals.weighted_mean(full, w)
+    assert mean == r.calc_phase_mean()
+    assert r.calc_phase_mean() == r2.calc_phase_mean()

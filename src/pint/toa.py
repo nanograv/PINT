@@ -1964,18 +1964,22 @@ class TOAs:
         """Apply a time delta to TOAs.
 
         Adjusts the time (MJD) of the TOAs by applying delta, which should
-        have the same shape as ``self.table['mjd']``.  This function does not change
+        be a scalar or have the same shape as ``self.table['mjd']``.  This function does not change
         the pulse numbers column, if present, but does recompute ``mjd_float``,
         the TDB times, and the observatory positions and velocities.
 
         Parameters
         ----------
-        delta : astropy.time.TimeDelta
+        delta : astropy.time.TimeDelta or astropy.units.Quantity
             The time difference to add to the MJD of each TOA
         """
         col = self.table["mjd"]
+        if not isinstance(delta, (time.TimeDelta, u.Quantity)):
+            raise ValueError("Type of argument must be Quantity or TimeDelta")
         if not isinstance(delta, time.TimeDelta):
-            raise ValueError("Type of argument must be TimeDelta")
+            delta = time.TimeDelta(delta)
+        if delta.isscalar:
+            delta = time.TimeDelta(np.repeat(delta.sec, len(col)) * u.s)
         if delta.shape != col.shape:
             raise ValueError("Shape of mjd column and delta must be compatible")
         for ii in range(len(col)):
