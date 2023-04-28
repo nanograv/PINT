@@ -90,7 +90,7 @@ class Residuals:
             except KeyError as e:
                 raise ValueError(
                     f"'{residual_type}' is not a PINT supported residual. Currently supported data types are {list(residual_map.keys())}"
-                ) from e
+                )
 
         return super().__new__(cls)
 
@@ -289,18 +289,31 @@ class Residuals:
         elif calctype.lower() == "numerical":
             return self.model.d_phase_d_toa(self.toas)
 
-    def calc_phase_resids(self):
-        """Compute timing model residuals in pulse phase."""
+    def calc_phase_resids(self, subtract_mean=None, use_weighted_mean=None):
+        """Compute timing model residuals in pulse phase.
 
+        if ``subtract_mean`` or ``use_weighted_mean`` is None, will use the values set for the object itself
+
+        Parameters
+        ----------
+        subtract_mean : bool or None, optional
+        use_weighted_mean : bool or None, optional
+
+        Returns
+        -------
+        Phase
+        """
+
+        if subtract_mean is None:
+            subtract_mean = self.subtract_mean
+        if use_weighted_mean is None:
+            use_weighted_mean = self.use_weighted_mean
         # Read any delta_pulse_numbers that are in the TOAs table.
         # These are for PHASE statements, -padd flags, as well as user-inserted phase jumps
         # Check for the column, and if not there then create it as zeros
-        try:
-            delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
-        except IndexError:
+        if "delta_pulse_number" not in self.toas.table.colnames:
             self.toas.table["delta_pulse_number"] = np.zeros(len(self.toas.get_mjds()))
-            delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
-
+        delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
         # Track on pulse numbers, if requested
         if self.track_mode == "use_pulse_numbers":
             pulse_num = self.toas.get_pulse_numbers()
@@ -318,22 +331,17 @@ class Residuals:
             # and delta_pulse_numbers (from PHASE lines or adding phase jumps in GUI)
             i = pulse_num.copy()
             f = np.zeros_like(pulse_num)
-            c = np.isnan(pulse_num)
-            if np.any(c):
+            if np.any(np.isnan(pulse_num)):
                 raise ValueError("Pulse numbers are missing on some TOAs")
-
             residualphase = modelphase - Phase(i, f)
             # This converts from a Phase object to a np.float128
             full = residualphase.int + residualphase.frac
-            if np.any(c):
-                full[c] -= np.round(full[c])
-        # If not tracking then do the usual nearest pulse number calculation
         elif self.track_mode == "nearest":
             # Compute model phase
             modelphase = self.model.phase(self.toas) + delta_pulse_numbers
             # Here it subtracts the first phase, so making the first TOA be the
             # reference. Not sure this is a good idea.
-            if self.subtract_mean:
+            if subtract_mean:
                 modelphase -= Phase(modelphase.int[0], modelphase.frac[0])
 
             # Here we discard the integer portion of the residual and replace it with 0
@@ -344,9 +352,9 @@ class Residuals:
         else:
             raise ValueError(f"Invalid track_mode '{self.track_mode}'")
         # If we are using pulse numbers, do we really want to subtract any kind of mean?
-        if not self.subtract_mean:
+        if not subtract_mean:
             return full
-        if not self.use_weighted_mean:
+        if not use_weighted_mean:
             mean = full.mean()
         else:
             # Errs for weighted sum.  Units don't matter since they will
@@ -359,11 +367,58 @@ class Residuals:
             mean, err = weighted_mean(full, w)
         return full - mean
 
-    def calc_time_resids(self, calctype="taylor"):
+    def calc_phase_mean(self, weighted=True):
+        """Calculate mean phase of residuals, optionally weighted
+
+        Parameters
+        ----------
+        weighted : bool, optional
+
+        Returns
+        -------
+        astropy.units.Quantity
+        """
+        r = self.calc_phase_resids(subtract_mean=False)
+        if not weighted:
+            return r.mean()
+        if np.any(self.get_data_error() == 0):
+            raise ValueError("Some TOA errors are zero - cannot calculate residuals")
+        w = 1.0 / (self.get_data_error().value ** 2)
+        mean, _ = weighted_mean(r, w)
+        return mean
+
+    def calc_time_mean(self, calctype="taylor", weighted=True):
+        """Calculate mean time of residuals, optionally weighted
+
+        Parameters
+        ----------
+        calctype : str, optional
+            Calculation time for phase to time converstion.  See :meth:`pint.residuals.Residuals.calc_time_resids` for details.
+        weighted : bool, optional
+
+        Returns
+        -------
+        astropy.units.Quantity
+        """
+
+        r = self.calc_time_resids(calctype=calctype, subtract_mean=False)
+        if not weighted:
+            return r.mean()
+        if np.any(self.get_data_error() == 0):
+            raise ValueError("Some TOA errors are zero - cannot calculate residuals")
+        w = 1.0 / (self.get_data_error().value ** 2)
+        mean, _ = weighted_mean(r, w)
+        return mean
+
+    def calc_time_resids(
+        self, calctype="taylor", subtract_mean=None, use_weighted_mean=None
+    ):
         """Compute timing model residuals in time (seconds).
 
         Converts from phase residuals to time residuals using several possible ways
         to calculate the frequency.
+
+        If ``subtract_mean`` or ``use_weighted_mean`` is None, will use the values set for the object itself
 
         Parameters
         ----------
@@ -372,6 +427,9 @@ class Residuals:
             parameter from the model.
             If `calctype` == "numerical", then try a numerical derivative
             If `calctype` == "taylor", evaluate the frequency with a Taylor series
+        subtract_mean : bool or None, optional
+        use_weighted_mean : bool or None, optional
+
 
         Returns
         -------
@@ -382,9 +440,18 @@ class Residuals:
         :meth:`pint.residuals.Residuals.get_PSR_freq`
         """
         assert calctype.lower() in ["modelf0", "taylor", "numerical"]
-        if self.phase_resids is None:
-            self.phase_resids = self.calc_phase_resids()
-        return (self.phase_resids / self.get_PSR_freq(calctype=calctype)).to(u.s)
+        if subtract_mean is None and use_weighted_mean is None:
+            # if we are using the defaults, save the calculation
+            if self.phase_resids is None:
+                self.phase_resids = self.calc_phase_resids(
+                    subtract_mean=subtract_mean, use_weighted_mean=use_weighted_mean
+                )
+            phase_resids = self.phase_resids
+        else:
+            phase_resids = self.calc_phase_resids(
+                subtract_mean=subtract_mean, use_weighted_mean=use_weighted_mean
+            )
+        return (phase_resids / self.get_PSR_freq(calctype=calctype)).to(u.s)
 
     def calc_chi2(self, full_cov=False):
         """Return the weighted chi-squared for the model and toas.
