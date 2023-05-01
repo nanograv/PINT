@@ -1,11 +1,15 @@
 import numbers
+
 import astropy.time as time
 import astropy.units as u
+import numpy as np
+from uncertainties import ufloat
 
-from pint.models.parameter.param_base import parfile_formats
 from pint.models.parameter.float_parameter import floatParameter
-from pint.models.parameter.mask_parameter import validate_key_value, key_identifier
+from pint.models.parameter.mask_parameter import key_identifier, validate_key_value
+from pint.models.parameter.param_base import parfile_formats
 from pint.pulsar_mjd import str2longdouble, time_to_mjd_string
+from pint.toa_select import TOASelect
 from pint.utils import split_prefixed_name
 
 
@@ -341,3 +345,119 @@ class maskedPrefixParameter:
         elif not self.frozen:
             line += " 1"
         return line + "\n"
+
+    def new_param(self, mask_index, prefix_index, copy_all=False):
+        """Create a new but same style mask parameter"""
+        return (
+            maskedPrefixParameter(
+                name=f"{self.prefix}{prefix_index}",
+                mask_index=mask_index,
+                key=self.key,
+                key_value=self.key_value,
+                value=self.value,
+                units=self.units,
+                unit_template=self.unit_template,
+                description=self.description,
+                description_template=self.description_template,
+                uncertainty=self.uncertainty,
+                frozen=self.frozen,
+            )
+            if copy_all
+            else maskedPrefixParameter(
+                name=f"{self.prefix}{prefix_index}",
+                index=mask_index,
+                units=self.units,
+            )
+        )
+
+    def select_toa_mask(self, toas):
+        """Select the toas that match the mask.
+
+        Parameters
+        ----------
+        toas: :class:`pint.toas.TOAs`
+
+        Returns
+        -------
+        array
+            An array of TOA indices selected by the mask.
+        """
+        if len(self.key_value) == 1:
+            if not hasattr(self, "toa_selector"):
+                self.toa_selector = TOASelect(is_range=False, use_hash=True)
+            condition = {self.name: self.key_value[0]}
+        elif len(self.key_value) == 2:
+            if not hasattr(self, "toa_selector"):
+                self.toa_selector = TOASelect(is_range=True, use_hash=True)
+            condition = {self.name: tuple(self.key_value)}
+        elif len(self.key_value) == 0:
+            return np.array([], dtype=int)
+        else:
+            raise ValueError(
+                f"Parameter {self.name} has more key values than expected.(Expect 1 or 2 key values)"
+            )
+        # get the table columns
+        # TODO Right now it is only supports mjd, freq, tel, and flagkeys,
+        # We need to consider some more complicated situation
+        key = self.key[1::] if self.key.startswith("-") else self.key
+
+        tbl = toas.table
+        column_match = {"mjd": "mjd_float", "freq": "freq", "tel": "obs"}
+        if (
+            self.key.lower() not in column_match
+        ):  # This only works for the one with flags.
+            # The flags are recomputed every time. If don't
+            # recompute, flags can only be added to the toa table once and then never update,
+            # making it impossible to add additional jump parameters after the par file is read in (pintk)
+            flag_col = [x.get(key, None) for x in tbl["flags"]]
+            tbl[key] = flag_col
+            col = tbl[key]
+        else:
+            col = tbl[column_match[key.lower()]]
+        select_idx = self.toa_selector.get_select_index(condition, col)
+        return select_idx[self.name]
+
+    def compare_key_value(self, other_param):
+        """Compare if the key and value are the same with the other parameter.
+
+        Parameters
+        ----------
+        other_param: maskParameter
+            The parameter to compare.
+
+        Returns
+        -------
+        bool:
+            If the key and value are the same, return True, otherwise False.
+
+        Raises
+        ------
+        ValueError:
+            If the parameter to compare does not have 'key' or 'key_value'.
+        """
+        if not hasattr(other_param, "key") and not hasattr(other_param, "key_value"):
+            raise ValueError("Parameter to compare does not have `key` or `key_value`.")
+        if self.key != other_param.key:
+            return False
+        return self.key_value == other_param.key_value
+
+    def as_ufloat(self, units=None):
+        """Return the parameter as a :class:`uncertainties.ufloat`
+
+        Will cast to the specified units, or the default
+        If the uncertainty is not set will be returned as 0
+
+        Parameters
+        ----------
+        units : astropy.units.core.Unit, optional
+            Units to cast the value
+
+        Returns
+        -------
+        uncertainties.ufloat
+        """
+        if units is None:
+            units = self.units
+        value = self.quantity.to_value(units) if self.quantity is not None else 0
+        error = self.uncertainty.to_value(units) if self.uncertainty is not None else 0
+        return ufloat(value, error)
