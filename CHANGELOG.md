@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+## Changed
+- Applied `sourcery` refactors to the entire codebase
+## Added
+## Fixed
+## Removed
+
 ## [0.9.5] 2023-05-01
 ### Changed
 - Changed minimum supported version of `scipy` to 1.4.1
@@ -16,7 +23,6 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Updated `black` version to 23.x
 - Older event loading functions now use newer functions to create TOAs and then convert to list of TOA objects
 - Limited hypothesis to <= 6.72.0 to avoid numpy problems in oldestdeps
-- Applied `sourcery` refactors to the entire codebase
 ### Added
 - Documentation: Explanation for DM
 - Methods to compute dispersion slope and to convert DM using the CODATA value of DMconst
