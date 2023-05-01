@@ -167,11 +167,11 @@ def main(argv=None):
             hdulist[1] = bt
         if args.outfile is None:
             # Overwrite the existing file
-            log.info("Overwriting existing FITS file " + args.eventfile)
+            log.info(f"Overwriting existing FITS file {args.eventfile}")
             hdulist.flush(verbose=True, output_verify="warn")
         else:
             # Write to new output file
-            log.info("Writing output FITS file " + args.outfile)
+            log.info(f"Writing output FITS file {args.outfile}")
             hdulist.writeto(
                 args.outfile, overwrite=True, checksum=True, output_verify="warn"
             )

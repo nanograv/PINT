@@ -96,20 +96,15 @@ class BayesianTiming:
 
         if "NoiseComponent" not in self.model.component_types:
             return "wls"
-        else:
-            correlated_errors_present = np.any(
-                [
-                    nc.introduces_correlated_errors
-                    for nc in self.model.NoiseComponent_list
-                ]
+        if correlated_errors_present := np.any(
+            [nc.introduces_correlated_errors for nc in self.model.NoiseComponent_list]
+        ):
+            raise NotImplementedError(
+                "GLS likelihood for correlated noise is not yet implemented."
             )
-            if not correlated_errors_present:
-                return "wls"
-            else:
-                raise NotImplementedError(
-                    "GLS likelihood for correlated noise is not yet implemented."
-                )
-                # return "gls"
+        else:
+            return "wls"
+            # return "gls"
 
     def lnprior(self, params):
         """Basic implementation of a factorized log prior.
@@ -147,10 +142,7 @@ class BayesianTiming:
         Returns:
             ndarray : Sample drawn from the prior distribution
         """
-        result = np.array(
-            [param.prior._rv.ppf(x) for x, param in zip(cube, self.params)]
-        )
-        return result
+        return np.array([param.prior._rv.ppf(x) for x, param in zip(cube, self.params)])
 
     def lnlikelihood(self, params):
         """The Log-likelihood function. If the model does not contain any noise components or
@@ -185,10 +177,7 @@ class BayesianTiming:
             float: The value of the log-posterior at params
         """
         lnpr = self.lnprior(params)
-        if np.isnan(lnpr):
-            return -np.inf
-        else:
-            return lnpr + self.lnlikelihood(params)
+        return lnpr + self.lnlikelihood(params) if np.isfinite(lnpr) else -np.inf
 
     def _wls_lnlikelihood(self, params):
         """Implementation of Log-Likelihood function for uncorrelated noise only.

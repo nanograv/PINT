@@ -1,7 +1,7 @@
 """Objects for comparing models to data.
 
 These objects can be constructed directly, as ``Residuals(toas, model)``, or
-they are contructed during fitting operations with :class:`pint.fitter.Fitter`
+they are constructed during fitting operations with :class:`pint.fitter.Fitter`
 objects, as ``fitter.residual``. Variants exist for arrival-time-only data
 (:class:`pint.residuals.Residuals`) and for arrival times that come paired with
 dispersion measures (:class:`pint.residuals.WidebandTOAResiduals`).
@@ -54,16 +54,16 @@ class Residuals:
     ----------
     toas: :class:`pint.toa.TOAs`, optional
         The input TOAs object. Default: None
-    model: :class:`pint.models.timing_model.TimingModel`, optinonal
+    model: :class:`pint.models.timing_model.TimingModel`, optional
         Input model object. Default: None
     residual_type: str, optional
-        The type of the resiudals. Default: 'toa'
+        The type of the residuals. Default: 'toa'
     unit: :class:`astropy.units.Unit`, optional
-        The defualt unit of the residuals. Default: u.s
+        The default unit of the residuals. Default: u.s
     subtract_mean : bool
         Controls whether mean will be subtracted from the residuals
     use_weighted_mean : bool
-        Controls whether mean compution is weighted (by errors) or not.
+        Controls whether mean computation is weighted (by errors) or not.
     track_mode : None, "nearest", "use_pulse_numbers"
         Controls how pulse numbers are assigned. ``"nearest"`` assigns
         each TOA to the nearest integer pulse. ``"use_pulse_numbers"`` uses the
@@ -87,7 +87,7 @@ class Residuals:
         if cls is Residuals:
             try:
                 cls = residual_map[residual_type.lower()]
-            except KeyError:
+            except KeyError as e:
                 raise ValueError(
                     f"'{residual_type}' is not a PINT supported residual. Currently supported data types are {list(residual_map.keys())}"
                 )
@@ -141,7 +141,7 @@ class Residuals:
         self.debug_info = {}
         # We should be carefully for the other type of residuals
         self.unit = unit
-        # A flag to indentify if this residual object is combined with residual
+        # A flag to identify if this residual object is combined with residual
         # class.
         self._is_combined = False
 
@@ -228,7 +228,7 @@ class Residuals:
         )
 
     def rms_weighted(self):
-        """Compute weighted RMS of the residals in time."""
+        """Compute weighted RMS of the residuals in time."""
         # Use scaled errors, if the noise model is not presented, it will
         # return the raw errors
         scaled_errors = self.get_data_error()
@@ -260,7 +260,7 @@ class Residuals:
         assert calctype.lower() in ["modelf0", "taylor", "numerical"]
         if calctype.lower() == "modelf0":
             # TODO this function will be re-write and move to timing model soon.
-            # The following is a temproary patch.
+            # The following is a temporary patch.
             if "Spindown" in self.model.components:
                 F0 = self.model.F0.quantity
             elif "P0" in self.model.params:
@@ -345,7 +345,7 @@ class Residuals:
                 modelphase -= Phase(modelphase.int[0], modelphase.frac[0])
 
             # Here we discard the integer portion of the residual and replace it with 0
-            # This is effectively selecting the nearst pulse to compute the residual to.
+            # This is effectively selecting the nearest pulse to compute the residual to.
             residualphase = Phase(np.zeros_like(modelphase.frac), modelphase.frac)
             # This converts from a Phase object to a np.float128
             full = residualphase.int + residualphase.frac
@@ -640,12 +640,14 @@ class WidebandDMResiduals(Residuals):
                 " class. The individual residual's dof is not "
                 "calculated correctly in the combined residuals."
             )
-        dof = len(self.dm_data)
+
         # only get dm type of model component
         # TODO provide a function in the timing model to get one type of component
-        for cp in self.model.components.values():
-            if Dispersion in cp.__class__.__bases__:
-                dof -= len(cp.free_params_component)
+        dof = len(self.dm_data) - sum(
+            len(cp.free_params_component)
+            for cp in self.model.components.values()
+            if Dispersion in cp.__class__.__bases__
+        )
         dof -= 1
         return dof
 
@@ -657,18 +659,13 @@ class WidebandDMResiduals(Residuals):
         scaled: bool, optional
             If errors get scaled by the noise model.
         """
-        if not scaled:
-            return self.dm_error
-        else:
-            return self.model.scaled_dm_uncertainty(self.toas)
+        return self.model.scaled_dm_uncertainty(self.toas) if scaled else self.dm_error
 
     def calc_resids(self):
         model_value = self.get_model_value(self.toas)[self.relevant_toas]
         resids = self.dm_data - model_value
         if self.subtract_mean:
-            if not self.use_weighted_mean:
-                resids -= resids.mean()
-            else:
+            if self.use_weighted_mean:
                 # Errs for weighted sum.  Units don't matter since they will
                 # cancel out in the weighted sum.
                 if self.dm_error is None or np.any(self.dm_error == 0):
@@ -678,20 +675,21 @@ class WidebandDMResiduals(Residuals):
                     )
                 wm = np.average(resids, weights=1.0 / (self.dm_error**2))
                 resids -= wm
+            else:
+                resids -= resids.mean()
         return resids
 
     def calc_chi2(self):
         data_errors = self.get_data_error()
         if (data_errors == 0.0).any():
             return np.inf
-        else:
-            try:
-                return ((self.resids / data_errors) ** 2.0).sum().decompose().value
-            except ValueError:
-                return ((self.resids / data_errors) ** 2.0).sum().decompose()
+        try:
+            return ((self.resids / data_errors) ** 2.0).sum().decompose().value
+        except ValueError:
+            return ((self.resids / data_errors) ** 2.0).sum().decompose()
 
     def rms_weighted(self):
-        """Compute weighted RMS of the residals in time."""
+        """Compute weighted RMS of the residuals in time."""
         scaled_errors = self.get_data_error()
         if np.any(scaled_errors.value == 0):
             raise ValueError(
@@ -752,7 +750,7 @@ class CombinedResiduals:
     Parameters
     ----------
     residuals: List of residual objects
-        A list of different typs of residual objects
+        A list of different types of residual objects
 
     Note
     ----
@@ -772,22 +770,20 @@ class CombinedResiduals:
     def model(self):
         """Return the single timing model object."""
         raise AttributeError(
-            "Combined redisuals object does not provide a "
-            "single timing model object. Pleaes use the "
+            "Combined residuals object does not provide a "
+            "single timing model object. Please use the "
             "dedicated subclass."
         )
 
     @property
     def _combined_resids(self):
         """Residuals from all of the residual types."""
-        all_resids = []
-        for res in self.residual_objs.values():
-            all_resids.append(res.resids_value)
+        all_resids = [res.resids_value for res in self.residual_objs.values()]
         return np.hstack(all_resids)
 
     @property
     def _combined_data_error(self):
-        # Since it is the combinde residual, the units are removed.
+        # Since it is the combined residual, the units are removed.
         dr = self.data_error
         return np.hstack([rv.value for rv in dr.values()])
 
@@ -801,13 +797,14 @@ class CombinedResiduals:
 
     @property
     def data_error(self):
-        errors = []
-        for rs in self.residual_objs.values():
-            errors.append((rs.residual_type, rs.get_data_error()))
+        errors = [
+            (rs.residual_type, rs.get_data_error())
+            for rs in self.residual_objs.values()
+        ]
         return collections.OrderedDict(errors)
 
     def rms_weighted(self):
-        """Compute weighted RMS of the residals in time."""
+        """Compute weighted RMS of the residuals in time."""
 
         if np.any(self._combined_data_error == 0):
             raise ValueError(

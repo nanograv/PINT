@@ -72,7 +72,7 @@ def random_models(
 
     rss = []
     random_models = []
-    for i in range(iter):
+    for _ in range(iter):
         # create a set of randomized parameters based on mean vector and covariance matrix
         rparams_num = np.random.multivariate_normal(mean_vector, cov_matrix)
         # scale params back to real units

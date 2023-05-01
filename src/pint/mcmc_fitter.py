@@ -89,7 +89,7 @@ def set_priors_basic(ftr, priorerrfact=10.0):
     """
     fkeys, fvals, ferrs = ftr.fitkeys, ftr.fitvals, ftr.fiterrs
     for key, val, err in zip(fkeys, fvals, ferrs):
-        if key == "SINI" or key == "E" or key == "ECC":
+        if key in ["SINI", "E", "ECC"]:
             getattr(ftr.model, key).prior = Prior(uniform(0.0, 1.0))
         elif key == "PX":
             getattr(ftr.model, key).prior = Prior(uniform(0.0, 10.0))
@@ -99,7 +99,7 @@ def set_priors_basic(ftr, priorerrfact=10.0):
             if err == 0 and not getattr(ftr.model, key).frozen:
                 ftr.priors_set = False
                 raise ValueError(
-                    "Parameter %s does not have uncertainty in par file" % key
+                    f"Parameter {key} does not have uncertainty in par file"
                 )
             getattr(ftr.model, key).prior = Prior(
                 norm(loc=float(val), scale=float(err * priorerrfact))
@@ -389,10 +389,7 @@ class MCMCFitter(Fitter):
             if nphotons <= 0:
                 hval = 0
             else:
-                if use_weights:
-                    hval = hmw(phss[good], weights=wgts)
-                else:
-                    hval = hm(phss[good])
+                hval = hmw(phss[good], weights=wgts) if use_weights else hm(phss[good])
             htests.append(hval)
             if ii > 0 and ii % 2 == 0 and ii < 20:
                 r, c = ((ii - 2) / 2) / 3, ((ii - 2) / 2) % 3
@@ -412,22 +409,22 @@ class MCMCFitter(Fitter):
                 if r == 2:
                     ax[r][c].set_xlabel("Phase")
                 f.suptitle(
-                    "%s:  Minwgt / H-test / Approx # events" % self.model.PSR.value,
+                    f"{self.model.PSR.value}:  Minwgt / H-test / Approx # events",
                     fontweight="bold",
                 )
         if use_weights:
-            plt.savefig(self.model.PSR.value + "_profs_v_wgtcut.png")
+            plt.savefig(f"{self.model.PSR.value}_profs_v_wgtcut.png")
         else:
-            plt.savefig(self.model.PSR.value + "_profs_v_wgtcut_unweighted.png")
+            plt.savefig(f"{self.model.PSR.value}_profs_v_wgtcut_unweighted.png")
         plt.close()
         plt.plot(weights, htests, "k")
         plt.xlabel("Min Weight")
         plt.ylabel("H-test")
         plt.title(self.model.PSR.value)
         if use_weights:
-            plt.savefig(self.model.PSR.value + "_htest_v_wgtcut.png")
+            plt.savefig(f"{self.model.PSR.value}_htest_v_wgtcut.png")
         else:
-            plt.savefig(self.model.PSR.value + "_htest_v_wgtcut_unweighted.png")
+            plt.savefig(f"{self.model.PSR.value}_htest_v_wgtcut_unweighted.png")
         plt.close()
 
     def plot_priors(self, chains, burnin, bins=100, scale=False):
@@ -642,33 +639,32 @@ class CompositeMCMCFitter(MCMCFitter):
             )
         if isinstance(self.templates[index], LCTemplate):
             return self.templates[index](phases, use_cache=True)
-        else:
-            if self.xtemps[index] is None:
-                ltemp = len(self.templates[index])
-                self.xtemps[index] = np.arange(ltemp) * 1.0 / ltemp
-            return np.interp(
-                phases,
-                self.xtemps[index],
-                self.templates[index],
-                right=self.templates[index][0],
-            )
+        if self.xtemps[index] is None:
+            ltemp = len(self.templates[index])
+            self.xtemps[index] = np.arange(ltemp) * 1.0 / ltemp
+        return np.interp(
+            phases,
+            self.xtemps[index],
+            self.templates[index],
+            right=self.templates[index][0],
+        )
 
     def get_weights(self, index=None):
-        if not index is None:
+        if index is not None:
             return self.weights[index]
-        else:
-            wgts = np.zeros(len(self.toas.table))
-            curr = 0
-            for i in range(len(self.toas_list)):
-                ts = self.toas_list[i]
-                nxt = curr + len(ts.table)
-                print(curr, nxt, len(ts.table))
-                if self.weights[i] is None:
-                    wgts[curr:nxt] = 1.0 * self.set_weights[i]
-                else:
-                    wgts[curr:nxt] = self.weights[i] * self.set_weights[i]
-                curr = nxt
-            return wgts
+        wgts = np.zeros(len(self.toas.table))
+        curr = 0
+        for i in range(len(self.toas_list)):
+            ts = self.toas_list[i]
+            nxt = curr + len(ts.table)
+            print(curr, nxt, len(ts.table))
+            wgts[curr:nxt] = (
+                1.0 * self.set_weights[i]
+                if self.weights[i] is None
+                else self.weights[i] * self.set_weights[i]
+            )
+            curr = nxt
+        return wgts
 
     def lnlikelihood(self, fitter, theta):
         """Sum over the log-likelihood functions for each dataset, multiply by weights in the sum.
