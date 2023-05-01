@@ -1,11 +1,11 @@
 from uncertainties import ufloat
 
+from pint.models.parameter.angle_parameter import AngleParameter
 from pint.models.parameter.bool_parameter import boolParameter
 from pint.models.parameter.float_parameter import floatParameter
 from pint.models.parameter.mjd_parameter import MJDParameter
-from pint.models.parameter.str_parameter import strParameter
-from pint.models.parameter.angle_parameter import AngleParameter
 from pint.models.parameter.pair_parameter import pairParameter
+from pint.models.parameter.str_parameter import strParameter
 from pint.utils import split_prefixed_name
 
 

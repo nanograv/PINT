@@ -1,7 +1,7 @@
 import numbers
 
-import numpy as np
 import astropy.units as u
+import numpy as np
 from astropy.coordinates.angles import Angle
 
 from pint import pint_units
