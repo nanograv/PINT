@@ -32,3 +32,4 @@ from pint.models.parameter.pair_parameter import pairParameter
 from pint.models.parameter.param_base import Parameter, parfile_formats
 from pint.models.parameter.prefix_parameter import prefixParameter
 from pint.models.parameter.str_parameter import strParameter
+from pint.models.parameter.func_parameter import funcParameter
