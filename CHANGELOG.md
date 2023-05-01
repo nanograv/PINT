@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.9.5] 2023-05-01
 ### Changed
 - Changed minimum supported version of `scipy` to 1.4.1
 - Moved `DMconst` from `pint.models.dispersion_model` to `pint` to avoid circular imports
@@ -12,7 +12,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Refactor `Dre` method, fix expressions for Einstein delay and post-Keplerian parameters in DD model
 - Updated contributor list (AUTHORS.rst)
 - Emit an informative warning for "MODE" statement in TOA file; Ignore "MODE 1" silently
-- Version of `sphinx-rtd-theme` updated in `requirements_dev.txt` 
+- Version of `sphinx-rtd-theme` updated in `requirements_dev.txt`
 - Updated `black` version to 23.x
 - Older event loading functions now use newer functions to create TOAs and then convert to list of TOA objects
 - Limited hypothesis to <= 6.72.0 to avoid numpy problems in oldestdeps
@@ -44,6 +44,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - `tzr` attribute in `TOAs` class to identify TZR TOAs
 - `PhaseOffset` component (overall phase offset between physical and TZR toas)
 ### Fixed
+- Syntax error in README.rst
 - Broken notebooks CI test
 - BIPM correction for simulated TOAs
 - Added try/except to `test_pldmnoise.py`/`test_PLRedNoise_recovery` to avoid exceptions during CI
