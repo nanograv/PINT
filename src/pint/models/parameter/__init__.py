@@ -29,6 +29,6 @@ from pint.models.parameter.int_parameter import intParameter
 from pint.models.parameter.mask_parameter import maskParameter
 from pint.models.parameter.mjd_parameter import MJDParameter
 from pint.models.parameter.pair_parameter import pairParameter
-from pint.models.parameter.param_base import Parameter
+from pint.models.parameter.param_base import Parameter, parfile_formats
 from pint.models.parameter.prefix_parameter import prefixParameter
 from pint.models.parameter.str_parameter import strParameter
