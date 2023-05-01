@@ -313,7 +313,8 @@ class maskedPrefixParameter:
         return True
 
     def as_parfile_line(self, format="pint"):
-        # This function is the same as in maskParameter.
+        # This function is mostly the same as in maskParameter.
+        # Some of the unnecessary special cases were removed.
 
         assert (
             format.lower() in parfile_formats
