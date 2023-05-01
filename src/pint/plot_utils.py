@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import matplotlib.pyplot as plt
 import numpy as np
-from pint.models.priors import GaussianBoundedRV
 import astropy
 import astropy.units as u
 import astropy.time
@@ -184,15 +183,14 @@ def phaseogram_binned(
 
             if weights is not None:
                 for ph, ww in zip(phases[idx], weights[idx]):
-                    bin = int(ph * bins)
-                    profile[bin] += ww
+                    ibin = int(ph * bins)
+                    profile[ibin] += ww
             else:
                 for ph in phases[idx]:
-                    bin = int(ph * bins)
-                    profile[bin] += 1
+                    ibin = int(ph * bins)
+                    profile[ibin] += 1
 
-            for i in range(bins):
-                a.append(profile[i])
+            a.extend(profile[i] for i in range(bins))
 
         a = np.array(a)
         b = a.reshape(ntoa, bins)
@@ -250,7 +248,7 @@ def plot_priors(
         samples from the chains is not supported. Can be created using
         :meth:`pint.sampler.EmceeSampler.chains_to_dict`
     maxpost_fitvals : list, optional
-        The maximum posterier values returned from MCMC integration for each
+        The maximum posterior values returned from MCMC integration for each
         fitter key. Plots a vertical dashed line to denote the maximum
         posterior value in relation to the histogrammed samples. If the
         values are not provided, then the lines are not plotted
@@ -271,15 +269,15 @@ def plot_priors(
         larger than the other. The scaling is for visual purposes to clearly
         plot the priors with the samples
     """
-    keys = []
     values = []
+    keys = []
     for k, v in chains.items():
         keys.append(k), values.append(v)
 
     priors = []
     x_range = []
     counts = []
-    for i in range(0, len(keys[:-1])):
+    for i in range(len(keys[:-1])):
         values[i] = values[i][burnin:].flatten()
         x_range.append(np.linspace(values[i].min(), values[i].max(), num=bins))
         priors.append(getattr(model, keys[i]).prior.pdf(x_range[i]))
@@ -291,9 +289,8 @@ def plot_priors(
     for i, p in enumerate(keys):
         if i != len(keys[:-1]):
             axs[i].set_xlabel(
-                str(p)
-                + ": Mean Value = "
-                + str("{:.9e}".format(values[i].mean()))
+                f"{str(p)}: Mean Value = "
+                + "{:.9e}".format(values[i].mean())
                 + " ("
                 + str(getattr(model, p).units)
                 + ")"
