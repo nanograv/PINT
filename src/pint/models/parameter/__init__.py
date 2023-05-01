@@ -22,8 +22,6 @@ parameters PINT understands.
 
 """
 
-from loguru import logger as log
-
 from pint.models.parameter.angle_parameter import AngleParameter
 from pint.models.parameter.bool_parameter import boolParameter
 from pint.models.parameter.float_parameter import floatParameter
