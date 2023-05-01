@@ -4,7 +4,7 @@ from warnings import warn
 import astropy.units as u
 import numpy as np
 
-from pint.models.parameter import prefixParameter
+from pint.models.parameter import prefixParameter, maskedPrefixParameter, boolParameter
 from pint.models.timing_model import DelayComponent, MissingParameter
 
 
@@ -129,3 +129,73 @@ class FD(DelayComponent):
             FD_par = getattr(self, FD)
             result += FD_par.as_parfile_line(format=format)
         return result
+
+
+class FDJump(DelayComponent):
+    """A timing model for system-dependent frequency evolution of pulsar profiles.
+
+    This model expresses the delay as a polynomial function of the observing
+    frequency or the logarithm(?) of of the observing frequency for each system.
+    This is intended to compensate for the system-dependent delays introduced
+    by frequency-dependent profile structure when frequency-independent template
+    profiles are used.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.frequency_dependent.FD
+    """
+
+    @classmethod
+    def _description_template(cls, x):
+        return "%d term of frequency dependent coefficients" % x
+
+    register = True
+    category = "frequency_dependent_jump"
+
+    def __init__(self):
+        super().__init__()
+        self.add_param(
+            maskedPrefixParameter(
+                name="FDJUMP1",
+                units="second",
+                value=0.0,
+                description="Coefficient of system-dependent delay as a polynomial function of frequency/log-frequency",
+                type_match="float",
+            )
+        )
+        self.add_param(
+            boolParameter(
+                name="FDJUMPLOG",
+                value=True,
+                description="Whether to use a polynomial function of log-frequency for FDJUMPs",
+            )
+        )
+
+        self.delay_funcs_component += [self.FDjump_delay]
+
+    def setup(self):
+        super().setup()
+        # Check if FD terms are in order.
+        FD_mapping = self.get_prefix_mapping_component("FDJUMP")
+        self.num_FD_terms = len(FD_mapping)
+        # set up derivative functions
+        for val in FD_mapping.values():
+            self.register_deriv_funcs(self.d_delay_FD_d_FDX, val)
+
+    def FDjump_delay(self, toas, acc_delay=None):
+        """Calculate frequency dependent delay.
+
+        Z. Arzoumanian, The NANOGrav Nine-year Data Set: Observations, Arrival
+        Time Measurements, and Analysis of 37 Millisecond Pulsars, The
+        Astrophysical Journal, Volume 813, Issue 1, article id. 65, 31 pp.(2015).
+        Eq.(2):
+        FDdelay = sum(c_i * (log(obs_freq/1GHz))^i)
+        """
+        tbl = toas.table
+        try:
+            bfreq = self._parent.barycentric_radio_freq(toas)
+        except AttributeError:
+            warn("Using topocentric frequency for frequency dependent delay!")
+            bfreq = tbl["freq"]
+        return self.FD_delay_frequency(bfreq)

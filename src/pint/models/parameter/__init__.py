@@ -27,6 +27,7 @@ from pint.models.parameter.bool_parameter import boolParameter
 from pint.models.parameter.float_parameter import floatParameter
 from pint.models.parameter.func_parameter import funcParameter
 from pint.models.parameter.int_parameter import intParameter
+from pint.models.parameter.masked_prefix_parameter import maskedPrefixParameter
 from pint.models.parameter.mask_parameter import maskParameter
 from pint.models.parameter.mjd_parameter import MJDParameter
 from pint.models.parameter.pair_parameter import pairParameter
