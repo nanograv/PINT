@@ -13,6 +13,28 @@ from pint.models.parameter.param_base import (
 from pint.pulsar_mjd import str2longdouble, time_to_mjd_string
 from pint.toa_select import TOASelect
 
+key_identifier = {
+    "mjd": (float, 2),
+    "freq": (return_frequency_asquantity, 2),
+    "name": (str, 1),
+    "tel": (get_observatory_name, 1),
+}
+
+
+def validate_key_value(key, key_value):
+    if key is not None:
+        if key.lower() in key_identifier:
+            key_info = key_identifier[key.lower()]
+            if len(key_value) != key_info[1]:
+                errmsg = f"Key {key} takes {key_info[1]} element(s)."
+                raise ValueError(errmsg)
+        elif not key.startswith("-"):
+            raise ValueError(
+                "A key to a TOA flag requires a leading '-'. "
+                "Legal keywords that don't require a leading '-' "
+                "are MJD, FREQ, NAME, TEL."
+            )
+
 
 class maskParameter(floatParameter):
     """Parameter that applies to a subset of TOAs.
@@ -89,36 +111,24 @@ class maskParameter(floatParameter):
         self.is_mask = True
         # {key_name: (keyvalue parse function, keyvalue length)}
         # Move this to some other places.
-        self.key_identifier = {
-            "mjd": (float, 2),
-            "freq": (return_frequency_asquantity, 2),
-            "name": (str, 1),
-            "tel": (get_observatory_name, 1),
-        }
+        self.key_identifier = key_identifier
 
         if not isinstance(key_value, (list, tuple)):
             key_value = [key_value]
 
         # Check key and key value
-        key_value_parser = str
-        if key is not None:
-            if key.lower() in self.key_identifier:
-                key_info = self.key_identifier[key.lower()]
-                if len(key_value) != key_info[1]:
-                    errmsg = f"key {key} takes {key_info[1]} element(s)."
-                    raise ValueError(errmsg)
-                key_value_parser = key_info[0]
-            elif not key.startswith("-"):
-                raise ValueError(
-                    "A key to a TOA flag requires a leading '-'."
-                    " Legal keywords that don't require a leading '-' "
-                    "are MJD, FREQ, NAME, TEL."
-                )
+        key_value_parser = (
+            self.key_identifier[key.lower()][0]
+            if key is not None and key.lower() in self.key_identifier
+            else str
+        )
+        validate_key_value(key, key_value)
         self.key = key
         self.key_value = [
             key_value_parser(k) for k in key_value
         ]  # retains string format from .par file to ensure correct data type for comparison
         self.key_value.sort()
+
         self.index = index
         name_param = name + str(index)
         self.origin_name = name
