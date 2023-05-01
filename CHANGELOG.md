@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.9.4] 2023-05-01
+## [0.9.5] 2023-05-01
 ### Changed
 - Changed minimum supported version of `scipy` to 1.4.1
 - Moved `DMconst` from `pint.models.dispersion_model` to `pint` to avoid circular imports
@@ -42,6 +42,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Functions to get TOAs objects from satellite data (Fermi and otherwise)
 - Methods to convert a TOAs object into a list of TOA objects
 ### Fixed
+- Syntax error in README.rst
 - Broken notebooks CI test
 - BIPM correction for simulated TOAs
 - Added try/except to `test_pldmnoise.py`/`test_PLRedNoise_recovery` to avoid exceptions during CI
