@@ -3,7 +3,6 @@ from loguru import logger as log
 from uncertainties import ufloat
 
 from pint.models.parameter.param_base import (
-    identity_function as _identity_function,
     Parameter,
 )
 from pint.pulsar_mjd import (
@@ -11,6 +10,27 @@ from pint.pulsar_mjd import (
     quantity2longdouble_withunit,
     fortran_float,
 )
+
+
+def _identity_function(x):
+    """A function to just return the input argument
+
+    A replacement for::
+
+        lambda x: x
+
+    which is needed below.
+
+    Parameters
+    ----------
+    x
+
+    Returns
+    -------
+    x
+    """
+
+    return x
 
 
 class floatParameter(Parameter):

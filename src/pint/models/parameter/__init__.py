@@ -45,7 +45,6 @@ from pint.utils import split_prefixed_name
 
 from pint.models.parameter.param_base import (
     parfile_formats as _parfile_formats,
-    identity_function as _identity_function,
     get_observatory_name as _get_observatory_name,
     return_frequency_asquantity as _return_frequency_asquantity,
     Parameter,

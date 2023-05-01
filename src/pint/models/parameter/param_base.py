@@ -14,27 +14,6 @@ from pint.utils import split_prefixed_name
 parfile_formats = ["pint", "tempo", "tempo2"]
 
 
-def identity_function(x):
-    """A function to just return the input argument
-
-    A replacement for::
-
-        lambda x: x
-
-    which is needed below.
-
-    Parameters
-    ----------
-    x
-
-    Returns
-    -------
-    x
-    """
-
-    return x
-
-
 def get_observatory_name(o):
     """Return observatory name only from an telescope code
 
