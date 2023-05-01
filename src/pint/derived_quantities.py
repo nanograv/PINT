@@ -66,12 +66,12 @@ def p_to_f(p, pd, pdd=None):
     fd = -pd / (p * p)
     if pdd is None:
         return [f, fd]
-    else:
-        if pdd == 0.0:
-            fdd = 0.0 * f.unit / (u.s**2)
-        else:
-            fdd = 2.0 * pd * pd / (p**3.0) - pdd / (p * p)
-        return [f, fd, fdd]
+    fdd = (
+        0.0 * f.unit / (u.s**2)
+        if pdd == 0.0
+        else 2.0 * pd * pd / (p**3.0) - pdd / (p * p)
+    )
+    return [f, fd, fdd]
 
 
 @u.quantity_input(
@@ -118,14 +118,13 @@ def pferrs(porf, porferr, pdorfd=None, pdorfderr=None):
     """
     if pdorfd is None:
         return [1.0 / porf, porferr / porf**2.0]
-    else:
-        forperr = porferr / porf**2.0
-        fdorpderr = np.sqrt(
-            (4.0 * pdorfd**2.0 * porferr**2.0) / porf**6.0
-            + pdorfderr**2.0 / porf**4.0
-        )
-        [forp, fdorpd] = p_to_f(porf, pdorfd)
-        return [forp, forperr, fdorpd, fdorpderr]
+    forperr = porferr / porf**2.0
+    fdorpderr = np.sqrt(
+        (4.0 * pdorfd**2.0 * porferr**2.0) / porf**6.0
+        + pdorfderr**2.0 / porf**4.0
+    )
+    [forp, fdorpd] = p_to_f(porf, pdorfd)
+    return [forp, forperr, fdorpd, fdorpderr]
 
 
 @u.quantity_input(fo=u.Hz)
