@@ -2,7 +2,6 @@
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
-import warnings
 from loguru import logger as log
 
 from .DD_model import DDmodel

@@ -79,7 +79,7 @@ class Wave(PhaseComponent):
             )
         self.wave_terms.sort()
         wave_in_order = list(range(1, max(self.wave_terms) + 1))
-        if not self.wave_terms == wave_in_order:
+        if self.wave_terms != wave_in_order:
             diff = list(set(wave_in_order) - set(self.wave_terms))
             raise MissingParameter("Wave", "WAVE%d" % diff[0])
 
@@ -115,5 +115,4 @@ class Wave(PhaseComponent):
             times += wave_a * np.sin(wave_phase)
             times += wave_b * np.cos(wave_phase)
 
-        phase = ((times) * self._parent.F0.quantity).to(u.dimensionless_unscaled)
-        return phase
+        return ((times) * self._parent.F0.quantity).to(u.dimensionless_unscaled)

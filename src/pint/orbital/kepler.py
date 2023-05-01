@@ -111,7 +111,7 @@ class Kepler2DParameters(
     Parameters
     ----------
     a : float
-        semimajor axis
+        semi-major axis
     pb : float
         binary period
     eps1 : float
@@ -127,8 +127,8 @@ class Kepler2DParameters(
 def kepler_2d(params, t):
     """Position and velocity of a particle in a Kepler orbit.
 
-    The orbit has semimajor axis a, period pb, and eccentricity
-    paramerized by eps1=e*sin(om) and eps2=e*cos(om), and the
+    The orbit has semi-major axis a, period pb, and eccentricity
+    parametrized by eps1=e*sin(om) and eps2=e*cos(om), and the
     particle is on the x axis at time t0, while the values
     are computed for time t.
 
@@ -366,7 +366,7 @@ class Kepler3DParameters(
     Parameters
     ----------
     a : float
-        semimajor axis
+        semi-major axis
     pb : float
         binary period
     eps1 : float

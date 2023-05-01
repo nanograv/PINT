@@ -68,7 +68,7 @@ def load_Fermi_FT2(ft2_filename):
         # Otherwise, compute velocities by differentiation because FT2 does not have velocities
         # This is not the best way. Should fit an orbit and determine velocity from that.
         dt = mjds_TT[1] - mjds_TT[0]
-        log.info("FT2 spacing is " + str(dt.to(u.s)))
+        log.info(f"FT2 spacing is {str(dt.to(u.s))}")
         # Use "spacing" argument for gradient to handle nonuniform entries
         tt = mjds_TT.to(u.s).value
         Vx = np.gradient(X.value, tt) * u.m / u.s
@@ -79,12 +79,11 @@ def load_Fermi_FT2(ft2_filename):
             mjds_TT.min(), mjds_TT.max()
         )
     )
-    FT2_table = Table(
+    return Table(
         [mjds_TT, X, Y, Z, Vx, Vy, Vz],
         names=("MJD_TT", "X", "Y", "Z", "Vx", "Vy", "Vz"),
         meta={"name": "FT2"},
     )
-    return FT2_table
 
 
 def load_FPorbit(orbit_filename):
@@ -119,14 +118,14 @@ def load_FPorbit(orbit_filename):
 
     # TIMEREF should be 'LOCAL', since no delays are applied
 
-    if not "TIMESYS" in FPorbit_hdr:
+    if "TIMESYS" not in FPorbit_hdr:
         log.warning("Keyword TIMESYS is missing. Assuming TT")
         timesys = "TT"
     else:
         timesys = FPorbit_hdr["TIMESYS"]
         log.debug("FPorbit TIMESYS {0}".format(timesys))
 
-    if not "TIMEREF" in FPorbit_hdr:
+    if "TIMEREF" not in FPorbit_hdr:
         log.warning("Keyword TIMESYS is missing. Assuming TT")
         timeref = "LOCAL"
     else:
@@ -235,12 +234,11 @@ def load_nustar_orbit(orb_filename):
             mjds_TT.min(), mjds_TT.max()
         )
     )
-    orb_table = Table(
+    return Table(
         [mjds_TT, X, Y, Z, Vx, Vy, Vz],
         names=("MJD_TT", "X", "Y", "Z", "Vx", "Vy", "Vz"),
         meta={"name": "orb"},
     )
-    return orb_table
 
 
 def load_orbit(obs_name, orb_filename):
@@ -262,10 +260,8 @@ def load_orbit(obs_name, orb_filename):
 
     if str(orb_filename).startswith("@"):
         # Read multiple orbit files names
-        orb_list = []
         fnames = [ll.strip() for ll in open(orb_filename[1:]).readlines()]
-        for fn in fnames:
-            orb_list.append(load_orbit(obs_name, fn))
+        orb_list = [load_orbit(obs_name, fn) for fn in fnames]
         full_orb = vstack(orb_list)
         # Make sure full table is sorted
         full_orb.sort("MJD_TT")
@@ -283,7 +279,7 @@ def load_orbit(obs_name, orb_filename):
     elif "nustar" in lower_name:
         return load_nustar_orbit(orb_filename)
     else:
-        raise ValueError("Unrecognized satellite observatory %s." % (obs_name))
+        raise ValueError(f"Unrecognized satellite observatory {obs_name}.")
 
 
 class SatelliteObs(SpecialLocation):
@@ -430,8 +426,7 @@ class SatelliteObs(SpecialLocation):
             np.array([self.Vx(t.tt.mjd), self.Vy(t.tt.mjd), self.Vz(t.tt.mjd)])
             * self.FT2["Vx"].unit
         )
-        sat_posvel = PosVel(sat_pos_geo, sat_vel_geo, origin="earth", obj=self.name)
-        return sat_posvel
+        return PosVel(sat_pos_geo, sat_vel_geo, origin="earth", obj=self.name)
 
 
 def get_satellite_observatory(name, ft2name, **kwargs):
