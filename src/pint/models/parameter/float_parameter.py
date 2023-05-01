@@ -2,9 +2,7 @@ import numpy as np
 from loguru import logger as log
 from uncertainties import ufloat
 
-from pint.models.parameter.param_base import (
-    Parameter,
-)
+from pint.models.parameter.param_base import Parameter
 from pint.pulsar_mjd import (
     data2longdouble,
     quantity2longdouble_withunit,
