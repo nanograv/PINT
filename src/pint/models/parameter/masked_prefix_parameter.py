@@ -1,3 +1,5 @@
+import numbers
+
 from pint.models.parameter.angle_parameter import AngleParameter
 from pint.models.parameter.bool_parameter import boolParameter
 from pint.models.parameter.float_parameter import floatParameter
@@ -100,6 +102,28 @@ class maskedPrefixParameter:
             scale_factor=None,
             scale_threshold=None,
         )
+
+    def __repr__(self):
+        # Taken from maskParameter
+        out = f"{self.__class__.__name__}({self.name}"
+        if self.key is not None:
+            out += f" {self.key}"
+        if self.key_value is not None:
+            for kv in self.key_value:
+                out += f" {str(kv)}"
+        if self.quantity is not None:
+            out += f" {self.param_comp.str_quantity(self.quantity)}"
+        else:
+            out += " UNSET"
+            return out
+
+        if self.uncertainty is not None and isinstance(self.value, numbers.Number):
+            out += f" +/- {str(self.uncertainty.to(self.units))}"
+        if self.units is not None:
+            out += f" ({str(self.units)})"
+        out += ")"
+
+        return out
 
     @property
     def repeatable(self):

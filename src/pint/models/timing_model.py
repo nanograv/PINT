@@ -47,7 +47,7 @@ from loguru import logger as log
 
 import pint
 from pint.models.parameter import (
-    _parfile_formats,
+    parfile_formats,
     AngleParameter,
     MJDParameter,
     Parameter,
@@ -2387,8 +2387,8 @@ class TimingModel:
              Parfile output format. PINT outputs in 'tempo', 'tempo2' and 'pint'
              formats. The defaul format is `pint`.
         """
-        if not format.lower() in _parfile_formats:
-            raise ValueError(f"parfile format must be one of {_parfile_formats}")
+        if not format.lower() in parfile_formats:
+            raise ValueError(f"parfile format must be one of {parfile_formats}")
 
         self.validate()
         if include_info:
