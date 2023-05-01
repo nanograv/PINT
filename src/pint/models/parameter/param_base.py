@@ -1,8 +1,9 @@
-import astropy.units as u
 import numbers
 from warnings import warn
 
+import astropy.units as u
 from loguru import logger as log
+
 from pint import pint_units
 from pint.models import priors
 from pint.observatory import get_observatory

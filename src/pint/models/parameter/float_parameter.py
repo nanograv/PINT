@@ -3,11 +3,7 @@ from loguru import logger as log
 from uncertainties import ufloat
 
 from pint.models.parameter.param_base import Parameter
-from pint.pulsar_mjd import (
-    data2longdouble,
-    quantity2longdouble_withunit,
-    fortran_float,
-)
+from pint.pulsar_mjd import data2longdouble, fortran_float, quantity2longdouble_withunit
 
 
 def _identity_function(x):
