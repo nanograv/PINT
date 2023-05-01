@@ -1,16 +1,11 @@
 import numbers
+import astropy.time as time
+import astropy.units as u
 
-from pint.models.parameter.angle_parameter import AngleParameter
-from pint.models.parameter.bool_parameter import boolParameter
+from pint.models.parameter.param_base import parfile_formats
 from pint.models.parameter.float_parameter import floatParameter
-from pint.models.parameter.mjd_parameter import MJDParameter
-from pint.models.parameter.param_base import (
-    get_observatory_name,
-    return_frequency_asquantity,
-)
-from pint.models.parameter.str_parameter import strParameter
 from pint.models.parameter.mask_parameter import validate_key_value, key_identifier
-from pint.pulsar_mjd import str2longdouble
+from pint.pulsar_mjd import str2longdouble, time_to_mjd_string
 from pint.utils import split_prefixed_name
 
 
@@ -316,3 +311,32 @@ class maskedPrefixParameter:
                 ucty = k[4 + len_key_v]
             self.uncertainty = self.param_comp._set_uncertainty(ucty)
         return True
+
+    def as_parfile_line(self, format="pint"):
+        # This function is the same as in maskParameter.
+
+        assert (
+            format.lower() in parfile_formats
+        ), "parfile format must be one of %s" % ", ".join(
+            [f'"{x}"' for x in parfile_formats]
+        )
+
+        if self.quantity is None:
+            return ""
+
+        name = self.origin_name
+
+        line = "%-15s %s " % (name, self.key)
+        for kv in self.key_value:
+            if isinstance(kv, time.Time):
+                line += f"{time_to_mjd_string(kv)} "
+            elif isinstance(kv, u.Quantity):
+                line += f"{kv.value} "
+            else:
+                line += f"{kv} "
+        line += "%25s" % self.str_quantity(self.quantity)
+        if self.uncertainty is not None:
+            line += " %d %s" % (0 if self.frozen else 1, str(self.uncertainty_value))
+        elif not self.frozen:
+            line += " 1"
+        return line + "\n"
