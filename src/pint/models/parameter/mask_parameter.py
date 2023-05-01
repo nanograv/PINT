@@ -208,6 +208,9 @@ class maskParameter(floatParameter):
             NAME key key_value1 key_value2 parameter_value uncertainty
 
         where NAME is the name for this class as reported by ``self.name_matches``.
+        Note that NAME is the internal PINT representation, and need not be the same as
+        the parameter name as it appears in the par file. The logic for changing the
+        NAME to the PINT representation is implemented in the model builder.
         """
         k = line.split()
         if not k:
