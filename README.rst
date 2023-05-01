@@ -96,9 +96,7 @@ it, ensuring that all dependencies needed to run PINT are available::
     $ cd PINT
     $ pip install .
 
-Complete installation instructions are available here_.
-
-.. _here: https://nanograv-pint.readthedocs.io/en/latest/installation.html
+Complete installation instructions are available on `readthedocs <https://nanograv-pint.readthedocs.io/en/latest/installation.html>`_.
 
 
 Using
@@ -127,5 +125,5 @@ And for more details, please read and cite(!) the PINT paper_.
 
 .. _paper:   https://ui.adsabs.harvard.edu/abs/2021ApJ...911...45L/abstract
 
-Articles that cite the PINT paper can be found `here <https://ui.adsabs.harvard.edu/search/q=citations(bibcode%3A2021ApJ...911...45L)&sort=date%20desc%2C%20bibcode%20desc&p_=0>`_.
+Articles that cite the PINT paper can be found in an ADS `Library <https://ui.adsabs.harvard.edu/search/q=citations(bibcode%3A2021ApJ...911...45L)&sort=date%20desc%2C%20bibcode%20desc&p_=0>`_.
 A list of software packages that use PINT can be found `here <https://nanograv-pint.readthedocs.io/en/latest/dependent-packages.html>`_.
