@@ -43,7 +43,7 @@ def read_mission_info_from_heasoft():
 
     db = {}
     with open(fname) as fobj:
-        for line in fobj.readlines():
+        for line in fobj:
             line = line.strip()
 
             if line.startswith("!") or line == "":
@@ -110,8 +110,9 @@ def create_mission_config():
     try:
         mission_config["chandra"] = mission_config["axaf"]
     except KeyError:
-        log.warning("AXAF configuration not found -- likely HEADAS envariable not set.")
-        pass
+        log.warning(
+            "AXAF configuration not found -- likely HEADAS env variable not set."
+        )
 
     # Fix xte
     mission_config["xte"]["fits_columns"] = {"ecol": "PHA"}
@@ -334,8 +335,7 @@ def get_fits_TOAs(
         and hdulist[1].name not in extension.split(",")
     ):
         raise RuntimeError(
-            "First table in FITS file"
-            + "must be {}. Found {}".format(extension, hdulist[1].name)
+            f"First table in FITS file must be {extension}. Found {hdulist[1].name}"
         )
     if isinstance(extension, int) and extension != 1:
         raise ValueError(
@@ -351,7 +351,7 @@ def get_fits_TOAs(
     check_timeref(timeref)
 
     if not mission_config[mission]["allow_local"] and timesys != "TDB":
-        log.error("Raw spacecraft TOAs not yet supported for " + mission)
+        log.error(f"Raw spacecraft TOAs not yet supported for {mission}")
 
     obs, scale = _default_obs_and_scale(mission, timesys, timeref)
 
@@ -374,10 +374,7 @@ def get_fits_TOAs(
     for key in new_kwargs.keys():
         new_kwargs[key] = new_kwargs[key][idx]
 
-    if timeref == "GEOCENTRIC":
-        location = EarthLocation(0, 0, 0)
-    else:
-        location = None
+    location = EarthLocation(0, 0, 0) if timeref == "GEOCENTRIC" else None
 
     if len(mjds.shape) == 2:
         t = Time(
