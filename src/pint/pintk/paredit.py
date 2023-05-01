@@ -233,7 +233,7 @@ class ParWidget(tk.Frame):
         self.update_callbacks = updates
 
     def call_updates(self):
-        if not self.update_callbacks is None:
+        if self.update_callbacks is not None:
             for ucb in self.update_callbacks:
                 ucb()
 
@@ -270,13 +270,12 @@ class ParWidget(tk.Frame):
     def writePar(self):
         filename = tkFileDialog.asksaveasfilename(title="Choose output par file")
         try:
-            fout = open(filename, "w")
-            fout.write(self.editor.get("1.0", "end-1c"))
-            fout.close()
-            log.info("Saved parfile to %s" % filename)
-        except:
-            if filename == () or filename == "":
-                log.warning("Write Par cancelled.")
+            with open(filename, "w") as fout:
+                fout.write(self.editor.get("1.0", "end-1c"))
+            log.info(f"Saved parfile to {filename}")
+        except Exception:
+            if filename in [(), ""]:
+                log.warning("Writing par file cancelled.")
             else:
                 log.warning("Could not save parfile to filename:\t%s" % filename)
 
