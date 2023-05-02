@@ -9,7 +9,7 @@ from loguru import logger as log
 pint.logging.setup(level=pint.logging.script_level)
 
 from pint.models import get_model
-from pint.models.parameter import _parfile_formats
+from pint.models.parameter import parfile_formats
 import pint.binaryconvert
 
 __all__ = ["main"]
@@ -26,7 +26,7 @@ def main(argv=None):
         "-f",
         "--format",
         help=("Format for output"),
-        choices=_parfile_formats,
+        choices=parfile_formats,
         default="pint",
     )
     parser.add_argument(
