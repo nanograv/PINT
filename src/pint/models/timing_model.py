@@ -2917,7 +2917,10 @@ class Component(metaclass=ModelMeta):
         for parname in parnames:
             par = getattr(self, parname)
             if par.is_prefix and par.prefix == prefix:
-                mapping[par.index] = parname
+                if par.is_mask:
+                    mapping[(par.prefix_index, par.mask_index)] = parname
+                else:
+                    mapping[par.index] = parname
         return OrderedDict(sorted(mapping.items()))
 
     def match_param_aliases(self, alias):

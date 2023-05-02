@@ -199,3 +199,51 @@ class FDJump(DelayComponent):
             warn("Using topocentric frequency for frequency dependent delay!")
             bfreq = tbl["freq"]
         return self.FD_delay_frequency(bfreq)
+
+    def FD_delay_frequency(self, freq):
+        """Compute the FD delay at an array of frequencies."""
+        FD_mapping = self.get_prefix_mapping_component("FD")
+        log_freq = np.log(freq.to(u.GHz).value)
+        non_finite = np.invert(np.isfinite(log_freq))
+        log_freq[non_finite] = 0.0
+        FD_coeff = [
+            getattr(self, FD_mapping[ii]).value
+            for ii in range(self.num_FD_terms, 0, -1)
+        ]
+        FD_coeff += [0.0]  # Zeroth term of polynomial
+
+        FD_delay = np.polyval(FD_coeff, log_freq)
+
+        return FD_delay * self.FD1.units
+
+    def d_delay_FD_d_FDX(self, toas, param, acc_delay=None):
+        """This is a derivative function for FD parameter"""
+        tbl = toas.table
+        try:
+            bfreq = self._parent.barycentric_radio_freq(toas)
+        except AttributeError:
+            warn(
+                "Using topocentric frequency for frequency dependent delay derivative!"
+            )
+            bfreq = tbl["freq"]
+        log_freq = np.log(bfreq / (1 * u.GHz))
+        non_finite = np.invert(np.isfinite(log_freq))
+        log_freq[non_finite] = 0.0
+        FD_par = getattr(self, param)
+        FD_term = FD_par.index
+        FD_mapping = self.get_prefix_mapping_component("FD")
+        if FD_term > self.num_FD_terms:
+            raise ValueError("FD model has no FD%d term" % FD_term)
+        # make the selected FD coefficient 1, others 0
+        FD_coeff = np.zeros(len(FD_mapping) + 1)
+        FD_coeff[-1 - FD_term] = np.longdouble(1.0)
+        d_delay_d_FD = np.polyval(FD_coeff, log_freq)
+        return d_delay_d_FD * u.second / FD_par.units
+
+    def print_par(self, format="pint"):
+        result = ""
+        FD_mapping = self.get_prefix_mapping_component("FD")
+        for FD in FD_mapping.values():
+            FD_par = getattr(self, FD)
+            result += FD_par.as_parfile_line(format=format)
+        return result
