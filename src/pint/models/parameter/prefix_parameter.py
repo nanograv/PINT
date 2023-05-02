@@ -136,6 +136,7 @@ class prefixParameter:
             scale_threshold=scale_threshold,
         )
         self.is_prefix = True
+        self.is_mask = False
         self.time_scale = time_scale
 
     @property
