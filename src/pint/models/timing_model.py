@@ -231,8 +231,8 @@ class TimingModel:
         - Derivatives of delay and phase respect to parameter for fitting toas.
 
     Each timing parameters are stored as TimingModel attribute in the type of
-    :class:`~pint.models.parameter.Parameter` delay or phase and its derivatives are implemented
-    as TimingModel Methods.
+    :class:`~pint.models.parameter.Parameter` delay or phase and its derivatives
+    are implemented as TimingModel Methods.
 
     Attributes
     ----------
@@ -427,9 +427,11 @@ class TimingModel:
                 list(filter(lambda c: isinstance(c, type), self.components.values()))
             )
 
+        from pint.models.spindown import SpindownBase
+
         assert (
-            num_components_of_type(PhaseComponent) > 0
-        ), "Model must have at least one phase component."
+            num_components_of_type(SpindownBase) > 0
+        ), "Model must have at least one spindown component (Spindown or another subclass of SpindownBase)."
 
         from pint.models.astrometry import Astrometry
 

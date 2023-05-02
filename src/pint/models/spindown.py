@@ -10,7 +10,13 @@ from pint.pulsar_mjd import Time
 from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
 
 
-class Spindown(PhaseComponent):
+class SpindownBase(PhaseComponent):
+    """An abstract base class to mark Spindown components."""
+
+    pass
+
+
+class Spindown(SpindownBase):
     """A simple timing model for an isolated pulsar.
 
     This represents the pulsar's spin as a Taylor series,
