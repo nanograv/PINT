@@ -417,7 +417,9 @@ class TimingModel:
         and :class:`pint.models.astrometry.AstrometryEcliptic`). It emits a warning if
         a deterministic component and a stochastic component that model the same effect
         are used together (e.g. :class:`pint.models.noise_model.PLDMNoise`
-        and :class:`pint.models.dispersion_model.DispersionDMX`).
+        and :class:`pint.models.dispersion_model.DispersionDMX`). It also requires that
+        at least one :class:`pint.models.timing_model.PhaseComponent` be present in a
+        timing model.
         """
 
         def num_components_of_type(type):
