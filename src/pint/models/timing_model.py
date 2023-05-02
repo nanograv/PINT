@@ -2917,7 +2917,7 @@ class Component(metaclass=ModelMeta):
         for parname in parnames:
             par = getattr(self, parname)
             if par.is_prefix and par.prefix == prefix:
-                if par.is_mask:
+                if hasattr(par, "prefix_index") and hasattr(par, "mask_index"):
                     mapping[(par.prefix_index, par.mask_index)] = parname
                 else:
                     mapping[par.index] = parname
