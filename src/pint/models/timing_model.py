@@ -457,13 +457,10 @@ class TimingModel:
             num_components_of_type(PulsarBinary) <= 1
         ), "Model can have at most one PulsarBinary component."
 
-        from pint.models.solar_wind_dispersion import (
-            SolarWindDispersion,
-            SolarWindDispersionX,
-        )
+        from pint.models.solar_wind_dispersion import SolarWindDispersionBase
 
         assert (
-            num_components_of_type((SolarWindDispersion, SolarWindDispersionX)) <= 1
+            num_components_of_type(SolarWindDispersionBase) <= 1
         ), "Model can have at most one solar wind dispersion component."
 
         from pint.models.dispersion_model import DispersionDMX

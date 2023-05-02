@@ -256,7 +256,13 @@ def _get_reference_time(
     return default
 
 
-class SolarWindDispersion(Dispersion):
+class SolarWindDispersionBase(Dispersion):
+    """Abstract base class for solar wind dispersion components."""
+
+    pass
+
+
+class SolarWindDispersion(SolarWindDispersionBase):
     """Dispersion due to the solar wind (basic model).
 
     The model is a simple spherically-symmetric model that is fit
@@ -514,7 +520,7 @@ class SolarWindDispersion(Dispersion):
             )
 
 
-class SolarWindDispersionX(Dispersion):
+class SolarWindDispersionX(SolarWindDispersionBase):
     """This class provides a SWX model - multiple Solar Wind segments.
 
     This model lets the user specify time ranges and fit for a different
