@@ -89,7 +89,6 @@ class ScaleToaError(NoiseComponent):
 
     def setup(self):
         super().setup()
-        # Get all the EFAC parameters and EQUAD
         self.EFACs = {}
         self.EQUADs = {}
         self.TNEQs = {}
@@ -107,23 +106,17 @@ class ScaleToaError(NoiseComponent):
                 continue
         # convert all the TNEQ to EQUAD
 
-        for tneq in self.TNEQs:
+        for tneq, value in self.TNEQs.items():
             tneq_par = getattr(self, tneq)
             if tneq_par.key is None:
                 continue
-            if self.TNEQs[tneq] in list(self.EQUADs.values()):
+            if value in list(self.EQUADs.values()):
                 log.warning(
-                    "'%s %s %s' is provided by parameter EQUAD, using"
-                    " EQUAD instead. " % (tneq, tneq_par.key, tneq_par.key_value)
+                    f"'{tneq} {tneq_par.key} {tneq_par.key_value}' is provided by parameter EQUAD, using EQUAD instead. "
                 )
             else:
-                EQUAD_name = "EQUAD" + str(tneq_par.index)
-                if EQUAD_name in list(self.EQUADs.keys()):
-                    EQUAD_par = getattr(self, EQUAD_name)
-                    EQUAD_par.key = tneq_par.key
-                    EQUAD_par.key_value = tneq_par.key_value
-                    EQUAD_par.quantity = tneq_par.quantity.to(u.us)
-                else:
+                EQUAD_name = f"EQUAD{str(tneq_par.index)}"
+                if EQUAD_name not in list(self.EQUADs.keys()):
                     self.add_param(
                         maskParameter(
                             name="EQUAD",
@@ -135,10 +128,10 @@ class ScaleToaError(NoiseComponent):
                             " scaled (by EFAC) TOA uncertainty.",
                         )
                     )
-                    EQUAD_par = getattr(self, EQUAD_name)
-                    EQUAD_par.key = tneq_par.key
-                    EQUAD_par.key_value = tneq_par.key_value
-                    EQUAD_par.quantity = tneq_par.quantity.to(u.us)
+                EQUAD_par = getattr(self, EQUAD_name)
+                EQUAD_par.quantity = tneq_par.quantity.to(u.us)
+                EQUAD_par.key_value = tneq_par.key_value
+                EQUAD_par.key = tneq_par.key
         for pp in self.params:
             if pp.startswith("EQUAD"):
                 par = getattr(self, pp)
@@ -150,7 +143,7 @@ class ScaleToaError(NoiseComponent):
         for el in ["EFACs", "EQUADs"]:
             l = list(getattr(self, el).values())
             if [x for x in l if l.count(x) > 1] != []:
-                raise ValueError("'%s' have duplicated keys and key values." % el)
+                raise ValueError(f"'{el}' have duplicated keys and key values.")
 
     def scale_toa_sigma(self, toas):
         sigma_scaled = toas.table["error"].quantity.copy()
@@ -250,7 +243,7 @@ class ScaleDmError(NoiseComponent):
         for el in ["DMEFACs", "DMEQUADs"]:
             l = list(getattr(self, el).values())
             if [x for x in l if l.count(x) > 1] != []:
-                raise ValueError("'%s' have duplicated keys and key values." % el)
+                raise ValueError(f"'{el}' have duplicated keys and key values.")
 
     def scale_dm_sigma(self, toas):
         """
@@ -341,13 +334,10 @@ class EcorrNoise(NoiseComponent):
         for el in ["ECORRs"]:
             l = list(getattr(self, el).values())
             if [x for x in l if l.count(x) > 1] != []:
-                raise ValueError("'%s' have duplicated keys and key values." % el)
+                raise ValueError(f"'{el}' have duplicated keys and key values.")
 
     def get_ecorrs(self):
-        ecorrs = []
-        for ecorr, ecorr_key in list(self.ECORRs.items()):
-            ecorrs.append(getattr(self, ecorr))
-        return ecorrs
+        return [getattr(self, ecorr) for ecorr, ecorr_key in list(self.ECORRs.items())]
 
     def get_noise_basis(self, toas):
         """Return the quantization matrix for ECORR.
@@ -497,8 +487,7 @@ class PLDMNoise(NoiseComponent):
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
         amp, gam, nf = self.get_pl_vals()
         Ffreqs = get_rednoise_freqs(t, nf)
-        weights = powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
-        return weights
+        return powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
 
     def pl_dm_basis_weight_pair(self, toas):
         """Return a Fourier design matrix and power law DM noise weights.
@@ -613,8 +602,7 @@ class PLRedNoise(NoiseComponent):
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
         nf = self.get_pl_vals()[2]
-        Fmat = create_fourier_design_matrix(t, nf)
-        return Fmat
+        return create_fourier_design_matrix(t, nf)
 
     def get_noise_weights(self, toas):
         """Return power law red noise weights.
@@ -625,8 +613,7 @@ class PLRedNoise(NoiseComponent):
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
         amp, gam, nf = self.get_pl_vals()
         Ffreqs = get_rednoise_freqs(t, nf)
-        weights = powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
-        return weights
+        return powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
 
     def pl_rn_basis_weight_pair(self, toas):
         """Return a Fourier design matrix and power law red noise weights.
@@ -662,9 +649,7 @@ def get_ecorr_epochs(toas_table, dt=1, nmin=2):
             bucket_ref.append(toas_table[i])
             bucket_ind.append([i])
 
-    bucket_ind2 = [ind for ind in bucket_ind if len(ind) >= nmin]
-
-    return bucket_ind2
+    return [ind for ind in bucket_ind if len(ind) >= nmin]
 
 
 def get_ecorr_nweights(toas_table, dt=1, nmin=2):
@@ -689,15 +674,12 @@ def create_ecorr_quantization_matrix(toas_table, dt=1, nmin=2):
 def get_rednoise_freqs(t, nmodes, Tspan=None):
     """Frequency components for creating the red noise basis matrix."""
 
-    if Tspan is not None:
-        T = Tspan
-    else:
-        T = t.max() - t.min()
+    T = Tspan if Tspan is not None else t.max() - t.min()
 
     f = np.linspace(1 / T, nmodes / T, nmodes)
 
     Ffreqs = np.zeros(2 * nmodes)
-    Ffreqs[0::2] = f
+    Ffreqs[::2] = f
     Ffreqs[1::2] = f
 
     return Ffreqs
@@ -719,7 +701,7 @@ def create_fourier_design_matrix(t, nmodes, Tspan=None):
 
     Ffreqs = get_rednoise_freqs(t, nmodes, Tspan=Tspan)
 
-    F[:, ::2] = np.sin(2 * np.pi * t[:, None] * Ffreqs[0::2])
+    F[:, ::2] = np.sin(2 * np.pi * t[:, None] * Ffreqs[::2])
     F[:, 1::2] = np.cos(2 * np.pi * t[:, None] * Ffreqs[1::2])
 
     return F
