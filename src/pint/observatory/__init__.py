@@ -22,9 +22,7 @@ necessary.
 """
 
 import os
-import sys
 import textwrap
-import warnings
 from collections import defaultdict
 from io import StringIO
 from pathlib import Path

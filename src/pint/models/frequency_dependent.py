@@ -59,10 +59,9 @@ class FD(DelayComponent):
 
     def validate(self):
         super().validate()
-        FD_terms = list(self.get_prefix_mapping_component("FD").keys())
-        FD_terms.sort()
+        FD_terms = sorted(self.get_prefix_mapping_component("FD").keys())
         FD_in_order = list(range(1, max(FD_terms) + 1))
-        if not FD_terms == FD_in_order:
+        if FD_terms != FD_in_order:
             diff = list(set(FD_in_order) - set(FD_terms))
             raise MissingParameter("FD", "FD%d" % diff[0])
 

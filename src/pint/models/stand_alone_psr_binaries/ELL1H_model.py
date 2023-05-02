@@ -147,26 +147,23 @@ class ELL1Hmodel(ELL1BaseModel):
 
     def d_fourier_component_d_stigma(self, stigma, k, factor_out_power=0):
         """This is a method to compute the derivative of a fourier component."""
-        if k != 0:
-            pwr, basis_func = self._ELL1H_fourier_basis(k)
-            # prevent factor out zeros.
-            if stigma == 0.0 and k == factor_out_power:
-                return 0.0, basis_func
-            else:
-                return (
-                    (-1) ** (pwr)
-                    * 2.0
-                    * (k - factor_out_power)
-                    / k
-                    * stigma ** (k - factor_out_power - 1),
-                    basis_func,
-                )
-        else:
-            basis_func = np.cos
+
+        # prevent factor out zeros.
+        if k == 0:
             # a0 is -1 * np.log(1 + stigma ** 2)
             # But the in the Fourier series it is a0/2
+            return -2.0 / (1 + stigma**2.0) * stigma ** (1 - factor_out_power), np.cos
+        pwr, basis_func = self._ELL1H_fourier_basis(k)
+
+        if stigma == 0.0 and k == factor_out_power:
+            return 0.0, basis_func
+        else:
             return (
-                -2.0 / (1 + stigma**2.0) * stigma ** (1 - factor_out_power),
+                (-1) ** (pwr)
+                * 2.0
+                * (k - factor_out_power)
+                / k
+                * stigma ** (k - factor_out_power - 1),
                 basis_func,
             )
 

@@ -177,8 +177,7 @@ class TopoObs(Observatory):
         ]
         if sum(input_values) == 0:
             raise ValueError(
-                "EarthLocation, ITRF coordinates, or lat/lon/height are required for observatory '%s'"
-                % name
+                f"EarthLocation, ITRF coordinates, or lat/lon/height are required for observatory '{name}'"
             )
         if sum(input_values) > 1:
             raise ValueError(
@@ -198,7 +197,7 @@ class TopoObs(Observatory):
             # Check for correct array dims
             if xyz.shape != (3,):
                 raise ValueError(
-                    "Incorrect coordinate dimensions for observatory '%s'" % (name)
+                    f"Incorrect coordinate dimensions for observatory '{name}'"
                 )
             # Convert to astropy EarthLocation, ensuring use of ITRF geocentric coordinates
             self.location = EarthLocation.from_geocentric(*xyz)
@@ -216,7 +215,7 @@ class TopoObs(Observatory):
         # If using TEMPO time.dat we need to know the 1-char tempo-style
         # observatory code.
         if clock_fmt == "tempo" and clock_file == "time.dat" and tempo_code is None:
-            raise ValueError("No tempo_code set for observatory '%s'" % name)
+            raise ValueError(f"No tempo_code set for observatory '{name}'")
 
         # GPS corrections
         self.include_gps = include_gps

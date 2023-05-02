@@ -8,9 +8,7 @@ as PINT timing models.
 import astropy.units as u
 import contextlib
 import numpy as np
-from astropy.time import Time
 from astropy.coordinates import SkyCoord
-from uncertainties import ufloat
 from loguru import logger as log
 
 from pint import ls
@@ -561,13 +559,11 @@ class PulsarBinary(DelayComponent):
             t0 = self.TASC.quantity
         else:
             t0 = self.T0.quantity
-        if t is None:
-            t = t0
-        else:
-            t = parse_time(t)
+        t = t0 if t is None else parse_time(t)
         if self.PB.quantity is not None:
-            if self.PBDOT.quantity is None and not (
-                hasattr(self, "XPBDOT") and getattr(self, "XPBDOT").quantity is None
+            if self.PBDOT.quantity is None and (
+                not hasattr(self, "XPBDOT")
+                or getattr(self, "XPBDOT").quantity is not None
             ):
                 return self.PB.quantity, self.PB.uncertainty
             pb = self.PB.as_ufloat(u.d)
@@ -578,13 +574,12 @@ class PulsarBinary(DelayComponent):
             pnew = pb + pbdot * (t - t0).jd
             if not isinstance(pnew, np.ndarray):
                 return pnew.n * u.d, pnew.s * u.d if pnew.s > 0 else None
-            else:
-                import uncertainties.unumpy
+            import uncertainties.unumpy
 
-                return (
-                    uncertainties.unumpy.nominal_values(pnew) * u.d,
-                    uncertainties.unumpy.std_devs(pnew) * u.d,
-                )
+            return (
+                uncertainties.unumpy.nominal_values(pnew) * u.d,
+                uncertainties.unumpy.std_devs(pnew) * u.d,
+            )
 
         elif self.FB0.quantity is not None:
             # assume FB terms
@@ -597,11 +592,10 @@ class PulsarBinary(DelayComponent):
             pnew = 1 / taylor_horner_deriv(dt, coeffs, deriv_order=0)
             if not isinstance(pnew, np.ndarray):
                 return pnew.n * u.s, pnew.s * u.s if pnew.s > 0 else None
-            else:
-                import uncertainties.unumpy
+            import uncertainties.unumpy
 
-                return (
-                    uncertainties.unumpy.nominal_values(pnew) * u.s,
-                    uncertainties.unumpy.std_devs(pnew) * u.s,
-                )
+            return (
+                uncertainties.unumpy.nominal_values(pnew) * u.s,
+                uncertainties.unumpy.std_devs(pnew) * u.s,
+            )
         raise AttributeError("Neither PB nor FB0 is present in the timing model.")
