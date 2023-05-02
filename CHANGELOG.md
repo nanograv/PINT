@@ -8,6 +8,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 ## Changed
 - Applied `sourcery` refactors to the entire codebase
 ## Added
+- `PhaseOffset` component (overall phase offset between physical and TZR toas)
 ## Fixed
 ## Removed
 
@@ -49,7 +50,6 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Functions to get TOAs objects from satellite data (Fermi and otherwise)
 - Methods to convert a TOAs object into a list of TOA objects
 - `tzr` attribute in `TOAs` class to identify TZR TOAs
-- `PhaseOffset` component (overall phase offset between physical and TZR toas)
 ### Fixed
 - Syntax error in README.rst
 - Broken notebooks CI test
