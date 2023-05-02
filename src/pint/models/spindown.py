@@ -97,11 +97,10 @@ class Spindown(SpindownBase):
         # Check continuity
         self._parent.get_prefix_list("F", start_index=0)
         # If F1 is set, we need PEPOCH
-        if hasattr(self, "F1") and self.F1.value != 0.0:
-            if self.PEPOCH.value is None:
-                raise MissingParameter(
-                    "Spindown", "PEPOCH", "PEPOCH is required if F1 or higher are set"
-                )
+        if hasattr(self, "F1") and self.F1.value != 0.0 and self.PEPOCH.value is None:
+            raise MissingParameter(
+                "Spindown", "PEPOCH", "PEPOCH is required if F1 or higher are set"
+            )
 
     @property
     def F_terms(self):
@@ -134,8 +133,7 @@ class Spindown(SpindownBase):
             phsepoch_ld = (tbl["tdb"][0] - delay[0]).tdb.mjd_long
         else:
             phsepoch_ld = self.PEPOCH.quantity.tdb.mjd_long
-        dt = (tbl["tdbld"] - phsepoch_ld) * u.day - delay
-        return dt
+        return (tbl["tdbld"] - phsepoch_ld) * u.day - delay
 
     def spindown_phase(self, toas, delay):
         """Spindown phase function.
@@ -186,7 +184,7 @@ class Spindown(SpindownBase):
         fterms = [0.0 * u.Unit("")] + self.get_spin_terms()
         # rescale the fterms
         for n in range(len(fterms) - 1):
-            f_par = getattr(self, "F{}".format(n))
+            f_par = getattr(self, f"F{n}")
             f_par.value = taylor_horner_deriv(
                 dt.to(u.second), fterms, deriv_order=n + 1
             )

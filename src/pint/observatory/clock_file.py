@@ -125,7 +125,7 @@ class ClockFile:
         if format in cls._formats:
             return cls._formats[format](filename, **kwargs)
         else:
-            raise ValueError("clock file format '%s' not defined" % format)
+            raise ValueError(f"clock file format '{format}' not defined")
 
     @property
     def time(self):
@@ -182,10 +182,7 @@ class ClockFile:
 
     def last_correction_mjd(self):
         """Last MJD for which corrections are available."""
-        if len(self.time) == 0:
-            return -np.inf
-        else:
-            return self.time[-1].mjd
+        return -np.inf if len(self.time) == 0 else self.time[-1].mjd
 
     @staticmethod
     def merge(clocks, *, trim=True):
@@ -249,8 +246,8 @@ class ClockFile:
             ]
             corr += this_corr
         if trim:
-            b = max([c._time.mjd[0] for c in clocks])
-            e = min([c._time.mjd[-1] for c in clocks])
+            b = max(c._time.mjd[0] for c in clocks)
+            e = min(c._time.mjd[-1] for c in clocks)
             il = np.searchsorted(times.mjd, b)
             ir = np.searchsorted(times.mjd, e, side="right")
             times = times[il:ir]
@@ -315,21 +312,21 @@ class ClockFile:
             )
         mjds = self.time.mjd
         corr = self.clock.to_value(u.us)
-        comments = self.comments if self.comments else [""] * len(self.clock)
+        comments = self.comments or [""] * len(self.clock)
         # TEMPO writes microseconds
-        if extra_comment is not None:
-            if self.leading_comment is not None:
-                leading_comment = extra_comment.rstrip() + "\n" + self.leading_comment
-            else:
-                leading_comment = extra_comment.rstrip()
-        else:
+        if extra_comment is None:
             leading_comment = self.leading_comment
+        elif self.leading_comment is not None:
+            leading_comment = extra_comment.rstrip() + "\n" + self.leading_comment
+        else:
+            leading_comment = extra_comment.rstrip()
         with open_or_use(filename, "wt") as f:
             f.write(tempo_standard_header)
             if leading_comment is not None:
                 f.write(leading_comment.strip())
                 f.write("\n")
             # Do not use EECO-REF column as TEMPO does a weird subtraction thing
+            # sourcery skip: hoist-statement-from-loop
             for mjd, corr, comment in zip(mjds, corr, comments):
                 # 0:9 for MJD
                 # 9:21 for clkcorr1 (do not use)
@@ -380,20 +377,19 @@ class ClockFile:
             hdrline = self.header
         if not hdrline.startswith("#"):
             raise ValueError(f"Header line must start with #: {hdrline!r}")
-        if extra_comment is not None:
-            if self.leading_comment is not None:
-                leading_comment = extra_comment.rstrip() + "\n" + self.leading_comment
-            else:
-                leading_comment = extra_comment.rstrip()
-        else:
+        if extra_comment is None:
             leading_comment = self.leading_comment
+        elif self.leading_comment is not None:
+            leading_comment = extra_comment.rstrip() + "\n" + self.leading_comment
+        else:
+            leading_comment = extra_comment.rstrip()
         with open_or_use(filename, "wt") as f:
             f.write(hdrline.rstrip())
             f.write("\n")
             if leading_comment is not None:
                 f.write(leading_comment.rstrip())
                 f.write("\n")
-            comments = self.comments if self.comments else [""] * len(self.time)
+            comments = self.comments or [""] * len(self.time)
 
             for mjd, corr, comment in zip(
                 self.time.mjd, self.clock.to_value(u.s), comments
@@ -512,7 +508,7 @@ def read_tempo2_clock_file(
                     # Anything else on the line is a comment too
                     add_comment(m.group(3))
         clk = np.array(clk)
-    except (FileNotFoundError, OSError):
+    except OSError:
         raise NoClockCorrections(
             f"TEMPO2-style clock correction file {filename} not found"
         )
@@ -687,7 +683,7 @@ def read_tempo_clock_file(
 
             # Parse MJD
             try:
-                mjd = float(l[0:9])
+                mjd = float(l[:9])
                 # allow mjd=0 to pass, since that is often used
                 # for effectively null clock files
                 if (mjd < 39000 and mjd != 0) or mjd > 100000:
@@ -741,7 +737,7 @@ def read_tempo_clock_file(
             clkcorrs.append(clkcorr2 - clkcorr1)
             comments.append(None)
             add_comment(l[50:])
-    except (FileNotFoundError, OSError):
+    except OSError:
         raise NoClockCorrections(
             f"TEMPO-style clock correction file {filename} "
             f"for site {obscode} not found"
@@ -830,16 +826,10 @@ class GlobalClockFile(ClockFile):
         f = get_clock_correction_file(
             self.filename, url_base=self.url_base, url_mirrors=self.url_mirrors
         )
-        if f == self.f and f.stat().st_mtime == mtime:
-            # Nothing changed
-            pass
-        else:
+        if f != self.f or f.stat().st_mtime != mtime:
             self.f = f
             h = compute_hash(f)
-            if h == self.hash:
-                # Nothing changed but we got it from the Net
-                pass
-            else:
+            if h != self.hash:
                 # Actual new data (probably)!
                 self.hash = h
                 self.clock_file = ClockFile.read(

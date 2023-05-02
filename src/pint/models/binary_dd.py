@@ -8,7 +8,6 @@ from pint.models.stand_alone_psr_binaries.DD_model import DDmodel
 from pint.models.stand_alone_psr_binaries.DDS_model import DDSmodel
 from pint.models.stand_alone_psr_binaries.DDGR_model import DDGRmodel
 import pint.derived_quantities
-from pint.models.timing_model import TimingModelError
 
 
 # these would be doable with lambda functions

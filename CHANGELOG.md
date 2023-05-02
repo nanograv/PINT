@@ -6,6 +6,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 
 ## Unreleased
 ### Changed
+- Applied `sourcery` refactors to the entire codebase
 ### Added
 - `SpindownBase` as the abstract base class for `Spindown` and `PeriodSpindown` in the `How_to_build_a_timing_model_component.py` example.
 - `SolarWindDispersionBase` as the abstract base class for solar wind dispersion components.

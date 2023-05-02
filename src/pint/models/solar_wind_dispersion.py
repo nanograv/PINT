@@ -374,13 +374,12 @@ class SolarWindDispersion(SolarWindDispersionBase):
         """
         if self.NE_SW.value == 0:
             return np.zeros(len(toas)) * u.pc / u.cm**3
-        if self.SWM.value == 0 or self.SWM.value == 1:
-            solar_wind_geometry = self.solar_wind_geometry(toas)
-            solar_wind_dm = self.NE_SW.quantity * solar_wind_geometry
-        else:
+        if self.SWM.value not in [0, 1]:
             raise NotImplementedError(
-                "Solar Dispersion Delay not implemented for SWM %d" % self.SWM.value
+                f"Solar Dispersion Delay not implemented for SWM {self.SWM.value}"
             )
+        solar_wind_geometry = self.solar_wind_geometry(toas)
+        solar_wind_dm = self.NE_SW.quantity * solar_wind_geometry
         return solar_wind_dm.to(u.pc / u.cm**3)
 
     def solar_wind_delay(self, toas, acc_delay=None):
@@ -391,7 +390,7 @@ class SolarWindDispersion(SolarWindDispersionBase):
 
     def d_dm_d_ne_sw(self, toas, param_name, acc_delay=None):
         """Derivative of of DM wrt the solar wind ne amplitude."""
-        if self.SWM.value == 0 or self.SWM.value == 1:
+        if self.SWM.value in [0, 1]:
             solar_wind_geometry = self.solar_wind_geometry(toas)
         else:
             raise NotImplementedError(
@@ -719,8 +718,7 @@ class SolarWindDispersionX(SolarWindDispersionBase):
 
         if int(index) in self.get_prefix_mapping_component("SWXDM_"):
             raise ValueError(
-                "Index '%s' is already in use in this model. Please choose another."
-                % index
+                f"Index '{index}' is already in use in this model. Please choose another."
             )
         if isinstance(swxdm, u.quantity.Quantity):
             swxdm = swxdm.to_value(u.pc / u.cm**3)
@@ -736,7 +734,7 @@ class SolarWindDispersionX(SolarWindDispersionBase):
             swxp = swxp.value
         self.add_param(
             prefixParameter(
-                name="SWXDM_" + i,
+                name=f"SWXDM_{i}",
                 units="pc cm^-3",
                 value=swxdm,
                 description="Max Solar Wind DM",
@@ -746,7 +744,7 @@ class SolarWindDispersionX(SolarWindDispersionBase):
         )
         self.add_param(
             prefixParameter(
-                name="SWXP_" + i,
+                name=f"SWXP_{i}",
                 value=swxp,
                 description="Solar wind power-law index",
                 parameter_type="float",
@@ -755,7 +753,7 @@ class SolarWindDispersionX(SolarWindDispersionBase):
         )
         self.add_param(
             prefixParameter(
-                name="SWXR1_" + i,
+                name=f"SWXR1_{i}",
                 units="MJD",
                 description="Beginning of SWX interval",
                 parameter_type="MJD",
@@ -765,7 +763,7 @@ class SolarWindDispersionX(SolarWindDispersionBase):
         )
         self.add_param(
             prefixParameter(
-                name="SWXR2_" + i,
+                name=f"SWXR2_{i}",
                 units="MJD",
                 description="End of SWX interval",
                 parameter_type="MJD",
@@ -787,11 +785,7 @@ class SolarWindDispersionX(SolarWindDispersionBase):
             Number or list/array of numbers corresponding to SWX indices to be removed from model.
         """
 
-        if (
-            isinstance(index, int)
-            or isinstance(index, float)
-            or isinstance(index, np.int64)
-        ):
+        if isinstance(index, (int, float, np.int64)):
             indices = [index]
         elif isinstance(index, (list, np.ndarray)):
             indices = index
@@ -813,10 +807,7 @@ class SolarWindDispersionX(SolarWindDispersionBase):
         inds : np.ndarray
             Array of SWX indices in model.
         """
-        inds = []
-        for p in self.params:
-            if "SWXDM_" in p:
-                inds.append(int(p.split("_")[-1]))
+        inds = [int(p.split("_")[-1]) for p in self.params if "SWXDM_" in p]
         return np.array(inds)
 
     def setup(self):
@@ -827,7 +818,7 @@ class SolarWindDispersionX(SolarWindDispersionBase):
             if prefix_par.startswith("SWXDM_"):
                 # check to make sure power-law index is present
                 # if not, put in default
-                p_name = "SWXP_" + pint.utils.split_prefixed_name(prefix_par)[1]
+                p_name = f"SWXP_{pint.utils.split_prefixed_name(prefix_par)[1]}"
                 if not hasattr(self, p_name):
                     self.add_param(
                         prefixParameter(
@@ -930,8 +921,8 @@ class SolarWindDispersionX(SolarWindDispersionBase):
         # Get SWX delays
         dm = np.zeros(len(tbl)) * self._parent.DM.units
         for k, v in select_idx.items():
-            dmmax = getattr(self, k).quantity
             if len(v) > 0:
+                dmmax = getattr(self, k).quantity
                 dm[v] += (
                     dmmax
                     * (
@@ -1007,7 +998,7 @@ class SolarWindDispersionX(SolarWindDispersionBase):
         r1 = getattr(self, SWXR1_mapping[swxp_index]).quantity
         r2 = getattr(self, SWXR2_mapping[swxp_index]).quantity
 
-        swx_name = "SWXDM_" + pint.utils.split_prefixed_name(param_name)[1]
+        swx_name = f"SWXDM_{pint.utils.split_prefixed_name(param_name)[1]}"
         condition = {swx_name: (r1.mjd, r2.mjd)}
         select_idx = self.swx_toas_selector.get_select_index(
             condition, tbl["mjd_float"]
@@ -1157,7 +1148,7 @@ class SolarWindDispersionX(SolarWindDispersionBase):
         sorted_list = sorted(SWXDM_mapping.keys())
         if len(ne_sws) == 1:
             ne_sws = ne_sws[0] * np.ones(len(sorted_list))
-        if not len(sorted_list) == len(ne_sws):
+        if len(sorted_list) != len(ne_sws):
             raise ValueError(
                 f"Length of input NE_SW values ({len(ne_sws)}) must match number of SWX segments ({len(sorted_list)})"
             )
