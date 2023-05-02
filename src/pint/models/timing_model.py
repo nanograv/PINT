@@ -361,7 +361,8 @@ class TimingModel:
     def validate(self, allow_tcb=False):
         """Validate component setup.
 
-        The checks include required parameters and parameter values.
+        The checks include required parameters and parameter values, and component types.
+        See also: :func:`pint.models.timing_model.TimingModel.validate_component_types`.
         """
         if self.DILATEFREQ.value:
             warn("PINT does not support 'DILATEFREQ Y'")
@@ -408,6 +409,17 @@ class TimingModel:
         self.validate_component_types()
 
     def validate_component_types(self):
+        """Physically motivated validation of a timing model. This method checks the
+        compatibility of different model components when used together.
+
+        This function throws an error if multiple deterministic components that model
+        the same effect are used together (e.g. :class:`pint.models.astrometry.AstrometryEquatorial`
+        and :class:`pint.models.astrometry.AstrometryEcliptic`). It emits a warning if
+        a deterministic component and a stochastic component that model the same effect
+        are used together (e.g. :class:`pint.models.noise_model.PLDMNoise`
+        and :class:`pint.models.dispersion_model.DispersionDMX`).
+        """
+
         def num_components_of_type(type):
             return len(
                 list(filter(lambda c: isinstance(c, type), self.components.values()))
