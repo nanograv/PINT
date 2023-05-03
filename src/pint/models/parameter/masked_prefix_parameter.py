@@ -38,7 +38,7 @@ class maskedPrefixParameter:
         self._parfile_name = self.origin_name
         self.prefix, _, self.prefix_index = split_prefixed_name(name)
         self.mask_index = mask_index
-        self.name = f"{self.prefix}{self.prefix_index}_{self.mask_index}"
+        self.name = f"{self.prefix}{self.prefix_index}__{self.mask_index}"
 
         # Mask key and key-value
         # Taken from maskParameter
@@ -79,7 +79,7 @@ class maskedPrefixParameter:
         # Setting these to simple values for the time being.
         self.long_double = False
         self.time_scale = "utc"
-        self.prefix_aliases = []
+        self.prefix_aliases = [self._parfile_name] if mask_index == 1 else []
 
         # Only support floatParameter to start with.
         # The underlying parameter is accessed via inheritance in maskParameter

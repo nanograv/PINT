@@ -39,7 +39,6 @@ import sys
 import textwrap
 from contextlib import contextmanager
 from pathlib import Path
-import uncertainties
 
 import astropy.constants as const
 import astropy.coordinates as coords
@@ -299,6 +298,10 @@ prefix_pattern = [
     # re.compile(r'([a-zA-Z]\d[a-zA-Z]+)(\d+)'),  # for prefixes like PLANET_SHAPIRO2?
 ]
 
+masked_prefix_pattern = re.compile(
+    r"^([a-zA-Z]+)(\d+)__(\d+)$"
+)  # For the prefix like FDJUMP1__3
+
 
 class PrefixError(ValueError):
     pass
@@ -340,6 +343,18 @@ def split_prefixed_name(name):
         pint.utils.PrefixError: Unrecognized prefix name pattern 'PEPOCH'.
 
     """
+    if masked_prefix_pattern.match(name) is not None:
+        prefix_part, prefix_index_part, mask_index_part = masked_prefix_pattern.match(
+            name
+        ).groups()
+        return (
+            prefix_part,
+            prefix_index_part,
+            int(prefix_index_part),
+            mask_index_part,
+            int(mask_index_part),
+        )
+
     for pt in prefix_pattern:
         try:
             prefix_part, index_part = pt.match(name).groups()

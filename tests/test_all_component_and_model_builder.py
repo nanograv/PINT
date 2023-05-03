@@ -129,9 +129,9 @@ def test_aliases_mapping():
     # assert mb._param_alias_map["F0"] == "F0"
     # Test repeatable_params with different indices.
     for rp in mb.repeatable_param:
-        # Hack for FDJUMP. Fix this later.
-        if rp.startswith("FDJUMP"):
-            continue
+        # # Hack for FDJUMP. Fix this later.
+        # if rp.startswith("FDJUMP"):
+        #     continue
 
         pint_par, first_init_par = mb.alias_to_pint_param(rp)
         cp = mb.param_component_map[pint_par][0]
