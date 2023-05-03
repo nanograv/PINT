@@ -5,8 +5,10 @@ import warnings
 from io import StringIO
 from collections import Counter, defaultdict
 from pathlib import Path
-from pint.models.astrometry import Astrometry
+from astropy import units as u
+from loguru import logger as log
 
+from pint.models.astrometry import Astrometry
 from pint.models.parameter import maskParameter
 from pint.models.timing_model import (
     DEFAULT_ORDER,
@@ -572,7 +574,7 @@ class ModelBuilder:
             raise ComponentConflict(f"Can not decide the one component from: {cf_cps}")
 
 
-def get_model(parfile, allow_name_mixing=False, allow_tcb=False):
+def get_model(parfile, allow_name_mixing=False, allow_tcb=False, **kwargs):
     """A one step function to build model from a parfile.
 
     Parameters
@@ -592,24 +594,37 @@ def get_model(parfile, allow_name_mixing=False, allow_tcb=False):
         converted to TDB upon read. If "raw", an unconverted malformed TCB
         TimingModel object will be returned.
 
+    kwargs : dict
+        Any additional parameter/value pairs that will override those in the parfile.
+        Values can be ``str``, ``float``, ``bool`` (as appropriate) or ``Quantity``
+
     Returns
     -------
     Model instance get from parfile.
     """
-
     model_builder = ModelBuilder()
     try:
         contents = parfile.read()
     except AttributeError:
         contents = None
     if contents is not None:
-        return model_builder(StringIO(contents), allow_name_mixing, allow_tcb=allow_tcb)
-
-    # # parfile is a filename and can be handled by ModelBuilder
-    # if _model_builder is None:
-    #     _model_builder = ModelBuilder()
-    model = model_builder(parfile, allow_name_mixing, allow_tcb=allow_tcb)
-    model.name = parfile
+        model = model_builder(
+            StringIO(contents), allow_name_mixing, allow_tcb=allow_tcb
+        )
+    else:
+        # # parfile is a filename and can be handled by ModelBuilder
+        # if _model_builder is None:
+        #     _model_builder = ModelBuilder()
+        model = model_builder(parfile, allow_name_mixing, allow_tcb=allow_tcb)
+        model.name = parfile
+    for k, v in kwargs.items():
+        if not hasattr(model, k):
+            raise ValueError(f"Model does not have parameter '{k}'")
+        log.debug(f"Setting '{k}' from model to '{v}'")
+        if isinstance(v, u.Quantity):
+            getattr(model, k).quantity = v
+        else:
+            getattr(model, k).value = v
     return model
 
 
@@ -628,6 +643,7 @@ def get_model_and_toas(
     allow_name_mixing=False,
     limits="warn",
     allow_tcb=False,
+    **kwargs,
 ):
     """Load a timing model and a related TOAs, using model commands as needed
 
@@ -671,12 +687,15 @@ def get_model_and_toas(
         error upon encountering TCB par files. If True, the par file will be
         converted to TDB upon read. If "raw", an unconverted malformed TCB
         TimingModel object will be returned.
+    kwargs : dict
+        Any additional parameter/value pairs that will override those in the parfile.
+        Values can be ``str``, ``float``, ``bool`` (as appropriate) or ``Quantity``
 
     Returns
     -------
     A tuple with (model instance, TOAs instance)
     """
-    mm = get_model(parfile, allow_name_mixing, allow_tcb=allow_tcb)
+    mm = get_model(parfile, allow_name_mixing, allow_tcb=allow_tcb, **kwargs)
     tt = get_TOAs(
         timfile,
         include_pn=include_pn,
