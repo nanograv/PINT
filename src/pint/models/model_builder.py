@@ -78,7 +78,7 @@ class ModelBuilder:
         self._validate_components()
         self.default_components = []
 
-    def __call__(self, parfile, allow_name_mixing=False, allow_tcb=False):
+    def __call__(self, parfile, allow_name_mixing=False, allow_tcb=False, **kwargs):
         """Callable object for making a timing model from .par file.
 
         Parameters
@@ -98,6 +98,9 @@ class ModelBuilder:
             converted to TDB upon read. If "raw", an unconverted malformed TCB
             TimingModel object will be returned.
 
+        kwargs : dict
+            Any additional parameter/value pairs that will add to or override those in the parfile.
+
         Returns
         -------
         pint.models.timing_model.TimingModel
@@ -111,6 +114,15 @@ class ModelBuilder:
         pint_param_dict, original_name, unknown_param = self._pintify_parfile(
             parfile, allow_name_mixing
         )
+        remaining_args = {}
+        for k, v in kwargs.items():
+            if not k in pint_param_dict:
+                pint_param_dict[k] = [
+                    str(v),
+                ]
+                original_name[k] = k
+            else:
+                remaining_args[k] = v
         selected, conflict, param_not_in_pint = self.choose_model(pint_param_dict)
         selected.update(set(self.default_components))
 
@@ -143,6 +155,15 @@ class ModelBuilder:
 
         if tm.UNITS.value == "TCB" and convert_tcb:
             convert_tcb_tdb(tm)
+
+        for k, v in remaining_args.items():
+            if not hasattr(tm, k):
+                raise ValueError(f"Model does not have parameter '{k}'")
+            log.debug(f"Overriding '{k}' to '{v}'")
+            if isinstance(v, u.Quantity):
+                getattr(tm, k).quantity = v
+            else:
+                getattr(tm, k).value = v
 
         return tm
 
@@ -595,8 +616,7 @@ def get_model(parfile, allow_name_mixing=False, allow_tcb=False, **kwargs):
         TimingModel object will be returned.
 
     kwargs : dict
-        Any additional parameter/value pairs that will override those in the parfile.
-        Values can be ``str``, ``float``, ``bool`` (as appropriate) or ``Quantity``
+        Any additional parameter/value pairs that will add to or override those in the parfile.
 
     Returns
     -------
@@ -608,23 +628,16 @@ def get_model(parfile, allow_name_mixing=False, allow_tcb=False, **kwargs):
     except AttributeError:
         contents = None
     if contents is not None:
-        model = model_builder(
-            StringIO(contents), allow_name_mixing, allow_tcb=allow_tcb
+        return model_builder(
+            StringIO(contents), allow_name_mixing, allow_tcb=allow_tcb, **kwargs
         )
-    else:
-        # # parfile is a filename and can be handled by ModelBuilder
-        # if _model_builder is None:
-        #     _model_builder = ModelBuilder()
-        model = model_builder(parfile, allow_name_mixing, allow_tcb=allow_tcb)
-        model.name = parfile
-    for k, v in kwargs.items():
-        if not hasattr(model, k):
-            raise ValueError(f"Model does not have parameter '{k}'")
-        log.debug(f"Setting '{k}' from model to '{v}'")
-        if isinstance(v, u.Quantity):
-            getattr(model, k).quantity = v
-        else:
-            getattr(model, k).value = v
+
+    # # parfile is a filename and can be handled by ModelBuilder
+    # if _model_builder is None:
+    #     _model_builder = ModelBuilder()
+    model = model_builder(parfile, allow_name_mixing, allow_tcb=allow_tcb, **kwargs)
+    model.name = parfile
+
     return model
 
 
@@ -688,8 +701,7 @@ def get_model_and_toas(
         converted to TDB upon read. If "raw", an unconverted malformed TCB
         TimingModel object will be returned.
     kwargs : dict
-        Any additional parameter/value pairs that will override those in the parfile.
-        Values can be ``str``, ``float``, ``bool`` (as appropriate) or ``Quantity``
+        Any additional parameter/value pairs that will add to or override those in the parfile.
 
     Returns
     -------
