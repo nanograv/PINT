@@ -117,6 +117,8 @@ class ModelBuilder:
         remaining_args = {}
         for k, v in kwargs.items():
             if not k in pint_param_dict:
+                if isinstance(v, u.Quantity):
+                    raise TypeError(f"Parameter '{k}' cannot be Quantity")
                 pint_param_dict[k] = [
                     str(v),
                 ]
