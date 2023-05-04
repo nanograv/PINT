@@ -9,6 +9,7 @@ import numpy as np
 from pint.models import get_model, get_model_and_toas
 import pint.simulation
 
+
 par = """PSRJ      J1636-5133
 RAJ       16:35:44.7781433          1 0.05999748816321897513
 DECJ      -51:34:18.01262           1 0.73332573676867170105
@@ -20,6 +21,7 @@ BINARY     ELL1
 PB       0.74181505310937273631     1 0.00000018999923507341
 A1       1.5231012457846993008      1 0.00050791514972366278
 TASC      59683.784709068155703     1 0.00004690256150561100"""
+
 
 # add in parameters that exist, parameters that don't, float, and string
 @pytest.mark.parametrize(("k", "v"), [("F1", -2e-14), ("F2", 1e-12), ("PSR", "ABC")])
