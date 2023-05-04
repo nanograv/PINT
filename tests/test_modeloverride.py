@@ -5,6 +5,7 @@ import time
 import pytest
 
 import astropy.units as u
+from astropy.time import Time
 import numpy as np
 from pint.models import get_model, get_model_and_toas
 import pint.simulation
@@ -33,6 +34,7 @@ TASC      59683.784709068155703     1 0.00004690256150561100"""
         ("DMDATA", True),
         ("F1", -1e-10 * u.Hz / u.day),
         ("F2", -1e-10 * u.Hz / u.day**2),
+        ("PEPOCH", Time(55000, format="pulsar_mjd", scale="tdb")),
     ],
 )
 def test_paroverride(k, v):
@@ -42,6 +44,8 @@ def test_paroverride(k, v):
         assert getattr(m, k).value == v
     elif isinstance(v, u.Quantity):
         assert np.isclose(getattr(m, k).quantity, v)
+    elif isinstance(v, Time):
+        assert getattr(m, k).quantity == v
     else:
         assert np.isclose(getattr(m, k).value, v)
 
