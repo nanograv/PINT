@@ -418,7 +418,7 @@ class TimingModel:
         a deterministic component and a stochastic component that model the same effect
         are used together (e.g. :class:`pint.models.noise_model.PLDMNoise`
         and :class:`pint.models.dispersion_model.DispersionDMX`). It also requires that
-        at least one :class:`pint.models.timing_model.SpindownBase` component be present
+        one and only one :class:`pint.models.timing_model.SpindownBase` component is present
         in a timing model.
         """
 
@@ -430,8 +430,8 @@ class TimingModel:
         from pint.models.spindown import SpindownBase
 
         assert (
-            num_components_of_type(SpindownBase) > 0
-        ), "Model must have at least one spindown component (Spindown or another subclass of SpindownBase)."
+            num_components_of_type(SpindownBase) == 1
+        ), "Model must have one and only one spindown component (Spindown or another subclass of SpindownBase)."
 
         from pint.models.astrometry import Astrometry
 
