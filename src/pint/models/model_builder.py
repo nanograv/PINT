@@ -116,12 +116,19 @@ class ModelBuilder:
         )
         remaining_args = {}
         for k, v in kwargs.items():
-            if not k in pint_param_dict:
+            if k not in pint_param_dict:
                 if isinstance(v, u.Quantity):
-                    raise TypeError(f"Parameter '{k}' cannot be Quantity")
-                pint_param_dict[k] = [
-                    str(v),
-                ]
+                    # hack to allow passing a quantity to a parameter
+                    # that doesn't exist yet:
+                    # initialize with temporary value, then replace later with the true value
+                    remaining_args[k] = v
+                    pint_param_dict[k] = [
+                        str(0),
+                    ]
+                else:
+                    pint_param_dict[k] = [
+                        str(v),
+                    ]
                 original_name[k] = k
             else:
                 remaining_args[k] = v

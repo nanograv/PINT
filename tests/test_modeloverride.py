@@ -23,13 +23,25 @@ A1       1.5231012457846993008      1 0.00050791514972366278
 TASC      59683.784709068155703     1 0.00004690256150561100"""
 
 
-# add in parameters that exist, parameters that don't, float, and string
-@pytest.mark.parametrize(("k", "v"), [("F1", -2e-14), ("F2", 1e-12), ("PSR", "ABC")])
+# add in parameters that exist, parameters that don't, float, bool, and string.  Then somem quantities
+@pytest.mark.parametrize(
+    ("k", "v"),
+    [
+        ("F1", -2e-14),
+        ("F2", 1e-12),
+        ("PSR", "ABC"),
+        ("DMDATA", True),
+        ("F1", -1e-10 * u.Hz / u.day),
+        ("F2", -1e-10 * u.Hz / u.day**2),
+    ],
+)
 def test_paroverride(k, v):
     kwargs = {k: v}
     m = get_model(io.StringIO(par), **kwargs)
-    if isinstance(v, str):
+    if isinstance(v, (str, bool)):
         assert getattr(m, k).value == v
+    elif isinstance(v, u.Quantity):
+        assert np.isclose(getattr(m, k).quantity, v)
     else:
         assert np.isclose(getattr(m, k).value, v)
 
@@ -38,18 +50,14 @@ def test_paroverride(k, v):
 # adding F3 without F2
 # adding an unknown parameter
 # adding an improper value
-@pytest.mark.parametrize(("k", "v"), [("F3", -2e-14), ("TEST", -1), ("F1", "test")])
+# adding a value with incorrect units
+@pytest.mark.parametrize(
+    ("k", "v"), [("F3", -2e-14), ("TEST", -1), ("F1", "test"), ("F1", -1e-10 * u.Hz)]
+)
 def test_paroverride_fails(k, v):
     kwargs = {k: v}
     with pytest.raises((AttributeError, ValueError)):
         m = get_model(io.StringIO(par), **kwargs)
-
-
-# only works for existing parameters
-def test_paroverride_quantity():
-    v = -1e-10 * u.Hz / u.s
-    m = get_model(io.StringIO(par), F1=v.to(u.Hz / u.day))
-    assert np.isclose(m.F1.quantity, v)
 
 
 # add in parameters that exist, parameters that don't, float, and string
