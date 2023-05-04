@@ -3,6 +3,7 @@ import io
 
 from pint.models import get_model_and_toas, get_model
 from pint.models.phase_offset import PhaseOffset
+from pint.residuals import Residuals
 from pint.simulation import make_fake_toas_uniform
 from pint.fitter import WLSFitter
 
@@ -31,6 +32,9 @@ def test_phase_offset():
         model=m,
         add_noise=True,
     )
+
+    res = Residuals(t, m)
+    assert res.reduced_chi2 < 1.5
 
     ftr = WLSFitter(t, m)
     ftr.fit_toas(maxiter=3)
@@ -61,3 +65,18 @@ def test_phase_offset_designmatrix():
 
     assert np.allclose(M1_offset, M2_phoff)
     assert M1.shape == M2.shape
+
+
+def test_fit_real_data():
+    m, t = get_model_and_toas(parfile, timfile)
+
+    po = PhaseOffset()
+    m.add_component(po)
+    m.PHOFF.frozen = False
+
+    ftr = WLSFitter(t, m)
+    ftr.fit_toas(maxiter=3)
+
+    assert ftr.resids.reduced_chi2 < 1.5
+
+    assert abs(ftr.model.PHOFF.value) <= 0.5
