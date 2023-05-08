@@ -12,6 +12,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - `SolarWindDispersionBase` as the abstract base class for solar wind dispersion components.
 - `validate_component_types` method for more rigorous validation of timing model components.
 - roundtrip test to make sure clock corrections are not written to tim files
+- `calc_phase_mean` and `calc_time_mean` methods in `Residuals` class to compute the residual mean.
 ### Fixed
 ### Removed
 
