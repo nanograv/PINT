@@ -1256,7 +1256,7 @@ class TOAs:
     toatable : astropy.table.Table, optional
         An existing TOA table
     tzr : bool
-        Whether TZR TOA
+        Whether the TOAs object corresponds to a TZR TOA
 
     Exactly one of these three parameters must be provided.
 
@@ -1294,7 +1294,7 @@ class TOAs:
     wideband : bool
         Whether the TOAs also have wideband DM information
     tzr : bool
-        Whether the TOA is a TZR TOA
+        Whether the TOAs object corresponds to a TZR TOA
     """
 
     def __init__(self, toafile=None, toalist=None, toatable=None, tzr=False):
@@ -2779,7 +2779,7 @@ def get_TOAs_array(
     limits : "warn" or "error"
         What to do when encountering TOAs for which clock corrections are not available.
     tzr : bool
-        Whether TZR TOA
+        Whether the TOAs object corresponds to a TZR TOA
 
     Returns
     -------
