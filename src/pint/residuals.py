@@ -108,7 +108,13 @@ class Residuals:
         self.toas = toas
         self.model = model
         self.residual_type = residual_type
+
+        if "PhaseOffset" in model.components and subtract_mean:
+            log.debug(
+                "Disabling implicit `subtract_mean` because `PhaseOffset` is present in the timing model."
+            )
         self.subtract_mean = subtract_mean and "PhaseOffset" not in model.components
+
         self.use_weighted_mean = use_weighted_mean
         if track_mode is None:
             if getattr(self.model, "TRACK").value == "-2":
