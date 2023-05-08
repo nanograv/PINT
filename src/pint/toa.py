@@ -1294,7 +1294,7 @@ class TOAs:
     wideband : bool
         Whether the TOAs also have wideband DM information
     tzr : bool
-        Whether TZR TOA
+        Whether the TOA is a TZR TOA
     """
 
     def __init__(self, toafile=None, toalist=None, toatable=None, tzr=False):
