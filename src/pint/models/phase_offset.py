@@ -7,7 +7,7 @@ import numpy as np
 
 
 class PhaseOffset(PhaseComponent):
-    """Explicit pulse phase offset.
+    """Explicit pulse phase offset between physical TOAs and the TZR TOA.
 
     Parameters supported:
 
@@ -25,7 +25,7 @@ class PhaseOffset(PhaseComponent):
                 name="PHOFF",
                 value=0.0,
                 units="",
-                description="Overall phase offset.",
+                description="Overall phase offset between physical TOAs and the TZR TOA.",
             )
         )
         self.phase_funcs_component += [self.offset_phase]

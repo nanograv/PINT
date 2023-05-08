@@ -1,3 +1,5 @@
+"Tests for the PhaseOffset component."
+
 import numpy as np
 import io
 

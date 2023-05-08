@@ -418,7 +418,7 @@ class TimingModel:
         a deterministic component and a stochastic component that model the same effect
         are used together (e.g. :class:`pint.models.noise_model.PLDMNoise`
         and :class:`pint.models.dispersion_model.DispersionDMX`). It also requires that
-        one and only one :class:`pint.models.timing_model.SpindownBase` component is present
+        one and only one :class:`pint.models.spindown.SpindownBase` component is present
         in a timing model.
         """
 
