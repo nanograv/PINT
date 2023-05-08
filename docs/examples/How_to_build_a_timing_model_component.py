@@ -28,7 +28,7 @@
 #   * Add the new component to the `TimingModel` class
 #   * Use the functions in the `TimingModel` class to interact with the new component.
 #
-# We will build a simple model component, pulsar spindow model with spin period as parameters, instead of spin frequency.
+# We will build a simple model component, pulsar spindown model with spin period as parameters, instead of spin frequency.
 
 # %% [markdown]
 # ## Import the necessary modules
@@ -36,11 +36,11 @@
 # %%
 import numpy as np  # Numpy is a widely used package
 
-# PINT uses astropy units in the internal cacluation and is highly recommended for a new component
+# PINT uses astropy units in the internal calculation and is highly recommended for a new component
 import astropy.units as u
 
 # Import the component classes.
-from pint.models.timing_model import TimingModel, Component, PhaseComponent
+from pint.models.spindown import SpindownBase
 import pint.models.parameter as p
 import pint.config
 import pint.logging
@@ -90,15 +90,15 @@ pint.logging.setup(level="INFO")
 
 
 # %%
-class PeriodSpindown(PhaseComponent):
-    """This is an example model component of pular spindown but parametrized as period."""
+class PeriodSpindown(SpindownBase):
+    """This is an example model component of pulsar spindown but parametrized as period."""
 
     register = True  # Flags for the model builder to find this component.
 
     # define the init function.
     # Most components do not have a parameter for input.
     def __init__(self):
-        # Get the attruibutes that initilzed in the parent class
+        # Get the attributes that initialized in the parent class
         super().__init__()
         # Add parameters using the add_params in the TimingModel
         # Add spin period as parameter

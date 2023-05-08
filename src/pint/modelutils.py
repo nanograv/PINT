@@ -21,7 +21,7 @@ def model_ecliptic_to_equatorial(model, force=False):
         new model with AstrometryEquatorial component
     """
 
-    if ("AstrometryEquatorial" not in model.components) or force:
+    if "AstrometryEquatorial" not in model.components or force:
         if "AstrometryEquatorial" in model.components:
             log.warning(
                 "Equatorial coordinates already present but re-calculating anyway"
@@ -43,8 +43,8 @@ def model_ecliptic_to_equatorial(model, force=False):
         a.PMRA.quantity = c.pm_ra_cosdec
         a.PMDEC.quantity = c.pm_dec
 
-        model.add_component(a)
         model.remove_component("AstrometryEcliptic")
+        model.add_component(a)
 
         model.setup()
         model.validate()
@@ -71,7 +71,7 @@ def model_equatorial_to_ecliptic(model, force=False):
         new model with AstrometryEcliptic component
     """
 
-    if ("AstrometryEcliptic" not in model.components) or force:
+    if "AstrometryEcliptic" not in model.components or force:
         if "AstrometryEcliptic" in model.components:
             log.warning(
                 "Ecliptic coordinates already present but re-calculating anyway"
@@ -92,8 +92,8 @@ def model_equatorial_to_ecliptic(model, force=False):
         a.PMELONG.quantity = c.pm_lon_coslat
         a.PMELAT.quantity = c.pm_lat
 
-        model.add_component(a)
         model.remove_component("AstrometryEquatorial")
+        model.add_component(a)
 
         model.setup()
         model.validate()

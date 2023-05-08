@@ -231,8 +231,8 @@ class TimingModel:
         - Derivatives of delay and phase respect to parameter for fitting toas.
 
     Each timing parameters are stored as TimingModel attribute in the type of
-    :class:`~pint.models.parameter.Parameter` delay or phase and its derivatives are implemented
-    as TimingModel Methods.
+    :class:`~pint.models.parameter.Parameter` delay or phase and its derivatives
+    are implemented as TimingModel Methods.
 
     Attributes
     ----------
@@ -361,7 +361,8 @@ class TimingModel:
     def validate(self, allow_tcb=False):
         """Validate component setup.
 
-        The checks include required parameters and parameter values.
+        The checks include required parameters and parameter values, and component types.
+        See also: :func:`pint.models.timing_model.TimingModel.validate_component_types`.
         """
         if self.DILATEFREQ.value:
             warn("PINT does not support 'DILATEFREQ Y'")
@@ -404,6 +405,76 @@ class TimingModel:
 
         for cp in self.components.values():
             cp.validate()
+
+        self.validate_component_types()
+
+    def validate_component_types(self):
+        """Physically motivated validation of a timing model. This method checks the
+        compatibility of different model components when used together.
+
+        This function throws an error if multiple deterministic components that model
+        the same effect are used together (e.g. :class:`pint.models.astrometry.AstrometryEquatorial`
+        and :class:`pint.models.astrometry.AstrometryEcliptic`). It emits a warning if
+        a deterministic component and a stochastic component that model the same effect
+        are used together (e.g. :class:`pint.models.noise_model.PLDMNoise`
+        and :class:`pint.models.dispersion_model.DispersionDMX`). It also requires that
+        one and only one :class:`pint.models.timing_model.SpindownBase` component is present
+        in a timing model.
+        """
+
+        def num_components_of_type(type):
+            return len(
+                list(filter(lambda c: isinstance(c, type), self.components.values()))
+            )
+
+        from pint.models.spindown import SpindownBase
+
+        assert (
+            num_components_of_type(SpindownBase) == 1
+        ), "Model must have one and only one spindown component (Spindown or another subclass of SpindownBase)."
+
+        from pint.models.astrometry import Astrometry
+
+        assert (
+            num_components_of_type(Astrometry) <= 1
+        ), "Model can have at most one Astrometry component."
+
+        from pint.models.solar_system_shapiro import SolarSystemShapiro
+
+        if num_components_of_type(SolarSystemShapiro) == 1:
+            assert (
+                num_components_of_type(Astrometry) == 1
+            ), "Model cannot have SolarSystemShapiro component without an Astrometry component."
+
+        from pint.models.pulsar_binary import PulsarBinary
+
+        has_binary_attr = hasattr(self, "BINARY") and self.BINARY.value
+        if has_binary_attr:
+            assert (
+                num_components_of_type(PulsarBinary) == 1
+            ), "BINARY attribute is set but no PulsarBinary component found."
+        assert (
+            num_components_of_type(PulsarBinary) <= 1
+        ), "Model can have at most one PulsarBinary component."
+
+        from pint.models.solar_wind_dispersion import SolarWindDispersionBase
+
+        assert (
+            num_components_of_type(SolarWindDispersionBase) <= 1
+        ), "Model can have at most one solar wind dispersion component."
+
+        from pint.models.dispersion_model import DispersionDMX
+        from pint.models.wave import Wave
+        from pint.models.noise_model import PLRedNoise, PLDMNoise
+
+        if num_components_of_type((DispersionDMX, PLDMNoise)) > 1:
+            log.warning(
+                "DispersionDMX and PLDMNoise are being used together. They are two ways of modelling the same effect."
+            )
+        if num_components_of_type((Wave, PLRedNoise)) > 1:
+            log.warning(
+                "Wave and PLRedNoise are being used together. They are two ways of modelling the same effect."
+            )
 
     # def __str__(self):
     #    result = ""
