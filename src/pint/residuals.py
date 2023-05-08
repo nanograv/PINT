@@ -313,6 +313,13 @@ class Residuals:
 
         if subtract_mean is None:
             subtract_mean = self.subtract_mean
+
+        if "PhaseOffset" in self.model.components and subtract_mean:
+            log.debug(
+                "Ignoring `subtract_mean` because `PhaseOffset` is present in the timing model."
+            )
+        subtract_mean = subtract_mean and "PhaseOffset" not in self.model.components
+
         if use_weighted_mean is None:
             use_weighted_mean = self.use_weighted_mean
         # Read any delta_pulse_numbers that are in the TOAs table.
@@ -400,7 +407,7 @@ class Residuals:
         Parameters
         ----------
         calctype : str, optional
-            Calculation time for phase to time converstion.  See :meth:`pint.residuals.Residuals.calc_time_resids` for details.
+            Calculation time for phase to time conversion.  See :meth:`pint.residuals.Residuals.calc_time_resids` for details.
         weighted : bool, optional
 
         Returns
