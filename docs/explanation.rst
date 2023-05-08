@@ -217,12 +217,49 @@ The total DM and dispersion slope predicted by a given timing model (:class:`pin
 for a given set of TOAs (:class:`pint.toa.TOAs`) can be computed using :func:`pint.models.timing_model.TimingModel.total_dm`
 and :func:`pint.models.timing_model.TimingModel.total_dispersion_slope` methods respectively.
  
+Offsets in pulsar timing
+------------------------
+Offsets arise in pulsar timing models for a variety of reasons. The different types of
+offsets are listed below:
+
+Overall phase offset
+''''''''''''''''''''
+The pulse phase corresponding to the TOAs are usually computed in reference to an arbitrary 
+fiducial TOA known as the TZR TOA (see :class:`pint.models.absolute_phase.AbsPhase`). Since the 
+choice of the TZR TOA is arbitrary, there can be an overall phase offset between the TZR TOA and 
+the measured TOAs. There are three ways to account for this offset: (1) subtract the weighted mean
+from the timing residuals, (2) make the TZR TOA (given by the `TZRMJD` parameter) fittable, or 
+(3) introduce a fittable phase offset parameter between measured TOAs and the TZR TOA.
+Traditionally, pulsar timing packages have opted to implicitly subtract the residual mean, and this
+is the default behavior of `PINT`. Option (2) is hard to implement because the TZR TOA may be 
+specified at any observatory, and computing the TZR phase requires the application of the clock 
+corrections. The explicit phase offset (option 3) can be invoked by adding the `PHOFF` parameter, 
+(implemented in :class:`pint.models.phase_offset.PhaseOffset`). If the explicit offset `PHOFF`
+is given, the implicit residual mean subtraction behavior will be disabled.
+
+System-dependent delays
+'''''''''''''''''''''''
+It is very common to have TOAs for the same pulsar obtained using different observatories, 
+telescope receivers, backend systems, and data processing pipelines, especially in long-running 
+campaigns. Delays can arise between the TOAs measured using such different systems due to, among
+other reasons, instrumental delays, differences in algorithms used for RFI mitigation, folding, TOA 
+measurement etc., and the choice of different template profiles used for TOA measurement. Such 
+offsets are usually modeled using phase jumps (the `JUMP` parameter, see :class:`pint.models.jump.PhaseJump`) 
+between TOAs generated from different systems.
+
+System-dependent DM offsets
+'''''''''''''''''''''''''''
+Similar to system-dependent offsets, offsets can arise between wideband DM values measured using 
+different systems due to the choice of template portraits with different fiducial DMs. This is 
+usually modeled using DM jumps (the `DMJUMP` parameter, see :class:`pint.models.dispersion_model.DispersionJump`).
+
 Observatories
 -------------
 
-PINT comes with a number of defined observatories.  Those on the surface of the Earth are :class:`~pint.observatory.topo_obs.TopoObs` 
-instances.  It can also pull in observatories from ``astropy``, 
-and you can define your own.  Observatories are generally referenced when reading TOA files, but can also be accessed directly::
+PINT comes with a number of defined observatories.  Those on the surface of the Earth 
+are :class:`~pint.observatory.topo_obs.TopoObs` instances.  It can also pull in observatories 
+from ``astropy``, and you can define your own.  Observatories are generally referenced when 
+reading TOA files, but can also be accessed directly::
 
   import pint.observatory
   gbt = pint.observatory.get_observatory("gbt")  
@@ -248,12 +285,14 @@ The observatory data are stored in JSON format.  A simple example is::
         "origin": "The Robert C. Byrd Green Bank Telescope.\nThis data was obtained by Joe Swiggum from Ryan Lynch in 2021 September.\n"
     }
 
-The observatory is defined by its name (``gbt``) and its position.  This can be given as geocentric coordinates in the 
-International_Terrestrial_Reference_System_ (ITRF) through the ``itrf_xyz`` triple (units as ``m``), or geodetic coordinates 
-(WGS84_ assumed) through ``lat``, ``lon``, ``alt`` 
-(units are ``deg`` and ``m``).  Conversion is done through Astropy_EarthLocation_.
+The observatory is defined by its name (``gbt``) and its position.  This can be given as 
+geocentric coordinates in the International_Terrestrial_Reference_System_ (ITRF) through 
+the ``itrf_xyz`` triple (units as ``m``), or geodetic coordinates (WGS84_ assumed) through 
+``lat``, ``lon``, ``alt`` (units are ``deg`` and ``m``).  Conversion is done through 
+Astropy_EarthLocation_.
 
-Other attributes are optional.  Here we have also specified the ``tempo_code`` and ``itoa_code``, and a human-readable ``origin`` string.
+Other attributes are optional.  Here we have also specified the ``tempo_code`` and 
+``itoa_code``, and a human-readable ``origin`` string.
 
 A more complex/complete example is::
 
@@ -284,19 +323,22 @@ A more complex/complete example is::
         ]
     }
 
-Here we have included additional explicit ``aliases``, specified the clock format via ``clock_fmt``, and specified that the last entry in the 
-clock file is bogus (``bogus_last_correction``).  There are two clock files included in ``clock_file``:
+Here we have included additional explicit ``aliases``, specified the clock format via 
+``clock_fmt``, and specified that the last entry in the clock file is bogus (``bogus_last_correction``).  
+There are two clock files included in ``clock_file``:
 
 * ``jbroach2jb.clk`` (where we also specify that it is ``valid_beyond_ends``)
 * ``jb2gps.clk``
 
-These are combined to reference this particular telescope/instrument combination.  For the full set of options, see :class:`~pint.observatory.topo_obs.TopoObs`.
+These are combined to reference this particular telescope/instrument combination.  
+For the full set of options, see :class:`~pint.observatory.topo_obs.TopoObs`.
 
 
 Adding New Observatories
 ''''''''''''''''''''''''
 
-In addition to modifying ``pint.config.runtimefile("observatories.json")``, there are other ways to add new observatories.  
+In addition to modifying ``pint.config.runtimefile("observatories.json")``, there are other 
+ways to add new observatories.  
 **Make sure you define any new observatory before you load any TOAs.**
 
 1. You can define them pythonically:
@@ -306,7 +348,8 @@ In addition to modifying ``pint.config.runtimefile("observatories.json")``, ther
     import astropy.coordinates
     newobs = pint.observatory.topo_obs.TopoObs("newobs", location=astropy.coordinates.EarthLocation.of_site("keck"), origin="another way to get Keck")
 
-This can be done by specifying the ITRF coordinates, (``lat``, ``lon``, ``alt``), or a :class:`~astropy.coordinates.EarthLocation` instance.
+This can be done by specifying the ITRF coordinates, (``lat``, ``lon``, ``alt``), or a 
+:class:`~astropy.coordinates.EarthLocation` instance.
 
 2. You can include them just for the duration of your python session:
 ::
@@ -329,14 +372,17 @@ This can be done by specifying the ITRF coordinates, (``lat``, ``lon``, ``alt``)
         }"""
     load_observatories(io.StringIO(fakeGBT), overwrite=True)
 
-Note that since we are overwriting an existing observatory (rather than defining a completely new one) we specify ``overwrite=True``.  
+Note that since we are overwriting an existing observatory (rather than defining a 
+completely new one) we specify ``overwrite=True``.  
 
-3. You can define them in a different file on disk.  If you took the JSON above and put it into a file ``/home/user/anothergbt.json``, 
+3. You can define them in a different file on disk.  If you took the JSON above and 
+put it into a file ``/home/user/anothergbt.json``, 
 you could then do::
 
     export $PINT_OBS_OVERRIDE=/home/user/anothergbt.json
 
-(or the equivalent in your shell of choice) before you start any PINT scripts.  By default this will overwrite any existing definitions.
+(or the equivalent in your shell of choice) before you start any PINT scripts.  
+By default this will overwrite any existing definitions.
 
 4. You can rely on ``astropy``.  For instance:
 ::
@@ -344,7 +390,8 @@ you could then do::
     import pint.observatory
     keck = pint.observatory.Observatory.get("keck")
 
-will find Keck.  :func:`astropy.coordinates.EarthLocation.get_site_names` will return a list of potential observatories.
+will find Keck.  :func:`astropy.coordinates.EarthLocation.get_site_names` will return a list 
+of potential observatories.
 
 .. _International_Terrestrial_Reference_System: https://en.wikipedia.org/wiki/International_Terrestrial_Reference_System_and_Frame
 .. _WGS84: https://en.wikipedia.org/wiki/World_Geodetic_System#WGS84
