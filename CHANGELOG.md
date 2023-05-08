@@ -13,6 +13,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - `validate_component_types` method for more rigorous validation of timing model components.
 - `PhaseOffset` component (overall phase offset between physical and TZR toas)
 - `tzr` attribute in `TOAs` class to identify TZR TOAs
+- Documentation: Explanation for offsets
 ### Fixed
 ### Removed
 
