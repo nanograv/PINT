@@ -113,10 +113,7 @@ class Astrometry(DelayComponent):
         r = (osv**2).sum(axis=1) ** 0.5
         osv /= r[:, None]
         cos = (osv * psr_vec).sum(axis=1)
-        if also_distance:
-            return np.arccos(cos), r
-        else:
-            return np.arccos(cos)
+        return (np.arccos(cos), r) if also_distance else np.arccos(cos)
 
     def barycentric_radio_freq(self, toas):
         raise NotImplementedError
@@ -150,17 +147,13 @@ class Astrometry(DelayComponent):
 
     def get_d_delay_quantities(self, toas):
         """Calculate values needed for many d_delay_d_param functions"""
-        # TODO: Move all these calculations in a separate class for elegance
-        rd = dict()
-
         # TODO: Should delay not have units of u.second?
         delay = self._parent.delay(toas)
 
         # TODO: tbl['tdbld'].quantity should have units of u.day
         # NOTE: Do we need to include the delay here?
         tbl = toas.table
-        rd["epoch"] = tbl["tdbld"].quantity * u.day  # - delay * u.second
-
+        rd = {"epoch": tbl["tdbld"].quantity * u.day}
         # Distance from SSB to observatory, and from SSB to psr
         ssb_obs = tbl["ssb_obs_pos"].quantity
         ssb_psr = self.ssb_to_psb_xyz_ICRS(epoch=np.array(rd["epoch"]))
@@ -286,7 +279,7 @@ class AstrometryEquatorial(Astrometry):
         )
         self.set_special_params(["RAJ", "DECJ", "PMRA", "PMDEC"])
         for param in ["RAJ", "DECJ", "PMRA", "PMDEC"]:
-            deriv_func_name = "d_delay_astrometry_d_" + param
+            deriv_func_name = f"d_delay_astrometry_d_{param}"
             func = getattr(self, deriv_func_name)
             self.register_deriv_funcs(func, param)
 
@@ -352,21 +345,19 @@ class AstrometryEquatorial(Astrometry):
                 obstime=self.POSEPOCH.quantity,
                 frame=coords.ICRS,
             )
-        else:
-            if isinstance(epoch, Time):
-                newepoch = epoch
-            else:
-                newepoch = Time(epoch, scale="tdb", format="mjd")
-            position_now = add_dummy_distance(self.get_psr_coords())
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", ErfaWarning)
-                # for the most part the dummy distance should remove any potential erfa warnings
-                # but for some very large proper motions that does not quite work
-                # so we catch the warnings
-                position_then = position_now.apply_space_motion(new_obstime=newepoch)
-                position_then = remove_dummy_distance(position_then)
+        newepoch = (
+            epoch if isinstance(epoch, Time) else Time(epoch, scale="tdb", format="mjd")
+        )
+        position_now = add_dummy_distance(self.get_psr_coords())
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", ErfaWarning)
+            # for the most part the dummy distance should remove any potential erfa warnings
+            # but for some very large proper motions that does not quite work
+            # so we catch the warnings
+            position_then = position_now.apply_space_motion(new_obstime=newepoch)
+            position_then = remove_dummy_distance(position_then)
 
-            return position_then
+        return position_then
 
     def coords_as_ICRS(self, epoch=None):
         """Return the pulsar's ICRS coordinates as an astropy coordinate object."""
@@ -392,13 +383,12 @@ class AstrometryEquatorial(Astrometry):
         return pos_icrs.transform_to(coords.Galactic)
 
     def get_params_as_ICRS(self):
-        result = {
+        return {
             "RAJ": self.RAJ.quantity,
             "DECJ": self.DECJ.quantity,
             "PMRA": self.PMRA.quantity,
             "PMDEC": self.PMDEC.quantity,
         }
-        return result
 
     def d_delay_astrometry_d_RAJ(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt RAJ
@@ -650,7 +640,7 @@ class AstrometryEcliptic(Astrometry):
 
         self.set_special_params(["ELONG", "ELAT", "PMELONG", "PMELAT"])
         for param in ["ELAT", "ELONG", "PMELAT", "PMELONG"]:
-            deriv_func_name = "d_delay_astrometry_d_" + param
+            deriv_func_name = f"d_delay_astrometry_d_{param}"
             func = getattr(self, deriv_func_name)
             self.register_deriv_funcs(func, param)
 
@@ -702,11 +692,10 @@ class AstrometryEcliptic(Astrometry):
         """
         try:
             obliquity = OBL[self.ECL.value]
-        except KeyError:
+        except KeyError as e:
             raise ValueError(
-                "No obliquity " + str(self.ECL.value) + " provided. "
-                "Check your pint/datafile/ecliptic.dat file."
-            )
+                f"No obliquity {str(self.ECL.value)} provided. Check your pint/datafile/ecliptic.dat file."
+            ) from e
         if epoch is None or (self.PMELONG.value == 0.0 and self.PMELAT.value == 0.0):
             # Compute only once
             return coords.SkyCoord(
@@ -718,17 +707,14 @@ class AstrometryEcliptic(Astrometry):
                 obstime=self.POSEPOCH.quantity,
                 frame=PulsarEcliptic,
             )
-        else:
             # Compute for each time because there is proper motion
-            if isinstance(epoch, Time):
-                newepoch = epoch
-            else:
-                newepoch = Time(epoch, scale="tdb", format="mjd")
-            position_now = add_dummy_distance(self.get_psr_coords())
-            position_then = remove_dummy_distance(
-                position_now.apply_space_motion(new_obstime=newepoch)
-            )
-            return position_then
+        newepoch = (
+            epoch if isinstance(epoch, Time) else Time(epoch, scale="tdb", format="mjd")
+        )
+        position_now = add_dummy_distance(self.get_psr_coords())
+        return remove_dummy_distance(
+            position_now.apply_space_motion(new_obstime=newepoch)
+        )
 
     def coords_as_ICRS(self, epoch=None):
         """Return the pulsar's ICRS coordinates as an astropy coordinate object."""
@@ -755,15 +741,17 @@ class AstrometryEcliptic(Astrometry):
     def get_d_delay_quantities_ecliptical(self, toas):
         """Calculate values needed for many d_delay_d_param functions."""
         # TODO: Move all these calculations in a separate class for elegance
-        rd = dict()
+
         # From the earth_ra dec to earth_elong and elat
         try:
             obliquity = OBL[self.ECL.value]
-        except KeyError:
+        except KeyError as e:
             raise ValueError(
-                "No obliquity " + self.ECL.value + " provided. "
-                "Check your pint/datafile/ecliptic.dat file."
-            )
+                (
+                    f"No obliquity {self.ECL.value}" + " provided. "
+                    "Check your pint/datafile/ecliptic.dat file."
+                )
+            ) from e
 
         rd = self.get_d_delay_quantities(toas)
         coords_icrs = coords.ICRS(ra=rd["earth_ra"], dec=rd["earth_dec"])
@@ -774,14 +762,14 @@ class AstrometryEcliptic(Astrometry):
         return rd
 
     def get_params_as_ICRS(self):
-        result = dict()
         pv_ECL = self.get_psr_coords()
         pv_ICRS = pv_ECL.transform_to(coords.ICRS)
-        result["RAJ"] = pv_ICRS.ra.to(u.hourangle)
-        result["DECJ"] = pv_ICRS.dec
-        result["PMRA"] = pv_ICRS.pm_ra_cosdec
-        result["PMDEC"] = pv_ICRS.pm_dec
-        return result
+        return {
+            "RAJ": pv_ICRS.ra.to(u.hourangle),
+            "DECJ": pv_ICRS.dec,
+            "PMRA": pv_ICRS.pm_ra_cosdec,
+            "PMDEC": pv_ICRS.pm_dec,
+        }
 
     def d_delay_astrometry_d_ELONG(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt RAJ.
@@ -793,7 +781,7 @@ class AstrometryEcliptic(Astrometry):
         ae = Earth right ascension
         dp = pulsar declination
         aa = pulsar right ascension
-        r = distance from SSB to Earh
+        r = distance from SSB to Earth
         c = speed of light
 
         delay = r*[cos(de)*cos(dp)*cos(ae-aa)+sin(de)*sin(dp)]/c
@@ -802,7 +790,7 @@ class AstrometryEcliptic(Astrometry):
         elonge = Earth elong
         elatp = pulsar elat
         elongp = pulsar elong
-        r = distance from SSB to Earh
+        r = distance from SSB to Earth
         c = speed of light
 
         delay = r*[cos(elate)*cos(elatp)*cos(elonge-elongp)+sin(elate)*sin(elatp)]/c

@@ -262,8 +262,8 @@ def test_swfit_swx():
     model1.SWM.value = 0
     # SWX model
     model3 = copy.deepcopy(model0)
-    model3.add_component(SolarWindDispersionX())
     model3.remove_component("SolarWindDispersion")
+    model3.add_component(SolarWindDispersionX())
     model3.SWXR1_0001.value = t.get_mjds().min().value
     model3.SWXR2_0001.value = t.get_mjds().max().value
     model3.SWXP_0001.value = 2
