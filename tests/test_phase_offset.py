@@ -38,6 +38,26 @@ def test_phase_offset():
     res = Residuals(t, m)
     assert res.reduced_chi2 < 1.5
 
+    # Simulated TOAs should have zero residual mean..
+    mean0 = res.calc_phase_mean().value
+    assert np.isclose(mean0, 0, atol=1e-3)
+
+    res.model.PHOFF.value = -0.1
+    mean1 = res.calc_phase_mean().value
+    # The new mean should be equal to (0.2 - -0.1).
+    assert np.isclose(mean1 - mean0, 0.3, atol=1e-3)
+    assert np.isclose(
+        np.average(res.calc_phase_resids(), weights=1 / t.get_errors() ** 2),
+        0.3,
+        atol=1e-3,
+    )
+
+    # subtract_mean option should be ignored.
+    assert np.allclose(
+        res.calc_phase_resids(subtract_mean=True),
+        res.calc_phase_resids(subtract_mean=False),
+    )
+
     ftr = WLSFitter(t, m)
     ftr.fit_toas(maxiter=3)
     assert ftr.resids.reduced_chi2 < 1.5
