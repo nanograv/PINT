@@ -13,6 +13,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - `validate_component_types` method for more rigorous validation of timing model components.
 - `calc_phase_mean` and `calc_time_mean` methods in `Residuals` class to compute the residual mean.
 ### Fixed
+- fixed docstring for `add_param_from_top`
 ### Removed
 
 ## [0.9.5] 2023-05-01
