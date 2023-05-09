@@ -39,11 +39,14 @@ import sys
 import textwrap
 from contextlib import contextmanager
 from pathlib import Path
+import uncertainties
 
 import astropy.constants as const
 import astropy.coordinates as coords
 import astropy.units as u
 import numpy as np
+from astropy import constants
+from astropy.time import Time
 from loguru import logger as log
 from scipy.special import fdtrc
 
@@ -83,6 +86,8 @@ __all__ = [
     "PINTPrecisionError",
     "check_longdouble_precision",
     "require_longdouble_precision",
+    "get_conjunction",
+    "divide_times",
 ]
 
 COLOR_NAMES = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
@@ -124,7 +129,7 @@ def require_longdouble_precision():
     """
     if not check_longdouble_precision():
         raise PINTPrecisionError(
-            f"PINT needs higher precision floating point than you have available. PINT uses the numpy longdouble type to represent modified Julian days, and this machine does not have sufficient numerical precision to represent sub-microsecond times with np.longdouble. On an M1 Mac you will need to use a Rosetta environment, or on a Windows machine you will need to us a different Python interpreter. Some PINT operations can work with reduced precision, but you have requested one that cannot."
+            "PINT needs higher precision floating point than you have available. PINT uses the numpy longdouble type to represent modified Julian days, and this machine does not have sufficient numerical precision to represent sub-microsecond times with np.longdouble. On an M1 Mac you will need to use a Rosetta environment, or on a Windows machine you will need to us a different Python interpreter. Some PINT operations can work with reduced precision, but you have requested one that cannot."
         )
 
 
@@ -155,29 +160,22 @@ class PosVel:
     def __init__(self, pos, vel, obj=None, origin=None):
         if len(pos) != 3:
             raise ValueError("Position vector has length %d instead of 3" % len(pos))
-        if isinstance(pos, u.Quantity):
-            self.pos = pos
-        else:
-            self.pos = np.asarray(pos)
+        self.pos = pos if isinstance(pos, u.Quantity) else np.asarray(pos)
 
         if len(vel) != 3:
             raise ValueError("Position vector has length %d instead of 3" % len(pos))
-        if isinstance(vel, u.Quantity):
-            self.vel = vel
-        else:
-            self.vel = np.asarray(vel)
+        self.vel = vel if isinstance(vel, u.Quantity) else np.asarray(vel)
 
         if len(self.pos.shape) != len(self.vel.shape):
             # FIXME: could broadcast them, but have to be careful
             raise ValueError(
-                "pos and vel must have the same number of dimensions but are {} and {}".format(
-                    self.pos.shape, self.vel.shape
-                )
+                f"pos and vel must have the same number of dimensions but are {self.pos.shape} and {self.vel.shape}"
             )
+
         elif self.pos.shape != self.vel.shape:
             self.pos, self.vel = np.broadcast_arrays(self.pos, self.vel, subok=True)
 
-        if bool(obj is None) != bool(origin is None):
+        if (obj is None) != (origin is None):
             raise ValueError(
                 "If one of obj and origin is specified, the other must be too."
             )
@@ -205,9 +203,7 @@ class PosVel:
                 obj = self.obj
             else:
                 raise ValueError(
-                    "Attempting to add incompatible vectors: "
-                    + "%s->%s + %s->%s"
-                    % (self.origin, self.obj, other.origin, other.obj)
+                    f"Attempting to add incompatible vectors: {self.origin}->{self.obj} + {other.origin}->{other.obj}"
                 )
 
         return PosVel(
@@ -218,28 +214,16 @@ class PosVel:
         return self.__add__(other.__neg__())
 
     def __str__(self):
-        if self._has_labels():
-            return (
-                "PosVel("
-                + str(self.pos)
-                + ", "
-                + str(self.vel)
-                + " "
-                + self.origin
-                + "->"
-                + self.obj
-                + ")"
-            )
-        else:
-            return "PosVel(" + str(self.pos) + ", " + str(self.vel) + ")"
+        return (
+            f"PosVel({str(self.pos)}, {str(self.vel)} {self.origin}->{self.obj})"
+            if self._has_labels()
+            else f"PosVel({str(self.pos)}, {str(self.vel)})"
+        )
 
     def __getitem__(self, k):
         """Allow extraction of slices of the contained arrays"""
         colon = slice(None, None, None)
-        if isinstance(k, tuple):
-            ix = (colon,) + k
-        else:
-            ix = (colon, k)
+        ix = (colon,) + k if isinstance(k, tuple) else (colon, k)
         return self.__class__(
             self.pos[ix], self.vel[ix], obj=self.obj, origin=self.origin
         )
@@ -289,8 +273,6 @@ def check_all_partials(f, args, delta=1e-6, atol=1e-4, rtol=1e-4):
     try:
         np.testing.assert_allclose(jac, njac, atol=atol, rtol=rtol)
     except AssertionError:
-        # print jac
-        # print njac
         d = np.abs(jac - njac) / (atol + rtol * np.abs(njac))
         print("fail fraction:", np.sum(d > 1) / float(np.sum(d >= 0)))
         worst_ix = np.unravel_index(np.argmax(d.reshape((-1,))), d.shape)
@@ -365,7 +347,7 @@ def split_prefixed_name(name):
         except AttributeError:
             continue
     else:
-        raise PrefixError("Unrecognized prefix name pattern '%s'." % name)
+        raise PrefixError(f"Unrecognized prefix name pattern '{name}'.")
     return prefix_part, index_part, int(index_part)
 
 
@@ -380,9 +362,9 @@ def taylor_horner(x, coeffs):
 
     Parameters
     ----------
-    x: astropy.units.Quantity
+    x: float or numpy.ndarray or astropy.units.Quantity
         Input value; may be an array.
-    coeffs: list of astropy.units.Quantity
+    coeffs: list of astropy.units.Quantity or uncertainties.ufloat
         Coefficient array; must have length at least one. The coefficient in
         position ``i`` is multiplied by ``x**i``. Each coefficient should
         just be a number, not an array. The units should be compatible once
@@ -390,7 +372,7 @@ def taylor_horner(x, coeffs):
 
     Returns
     -------
-    astropy.units.Quantity
+    float or numpy.ndarray or astropy.units.Quantity
         Output value; same shape as input. Units as inferred from inputs.
     """
     return taylor_horner_deriv(x, coeffs, deriv_order=0)
@@ -407,9 +389,9 @@ def taylor_horner_deriv(x, coeffs, deriv_order=1):
 
     Parameters
     ----------
-    x: astropy.units.Quantity
+    x: float or numpy.ndarray or astropy.units.Quantity
         Input value; may be an array.
-    coeffs: list of astropy.units.Quantity
+    coeffs: list of astropy.units.Quantity or uncertainties.ufloat
         Coefficient array; must have length at least one. The coefficient in
         position ``i`` is multiplied by ``x**i``. Each coefficient should
         just be a number, not an array. The units should be compatible once
@@ -420,9 +402,10 @@ def taylor_horner_deriv(x, coeffs, deriv_order=1):
 
     Returns
     -------
-    astropy.units.Quantity
+    float or numpy.ndarray or astropy.units.Quantity
         Output value; same shape as input. Units as inferred from inputs.
     """
+    assert deriv_order >= 0
     result = 0.0
     if hasattr(coeffs[-1], "unit"):
         if not hasattr(x, "unit"):
@@ -462,8 +445,7 @@ def lines_of(f):
 
     """
     with open_or_use(f) as fo:
-        for l in fo:
-            yield l
+        yield from fo
 
 
 def interesting_lines(lines, comments=None):
@@ -863,8 +845,7 @@ def dmxselections(model, toas):
         r1 = getattr(model, DMXR1_mapping[ii]).quantity
         r2 = getattr(model, DMXR2_mapping[ii]).quantity
         condition[DMX_mapping[ii]] = (r1.mjd, r2.mjd)
-    select_idx = toas_selector.get_select_index(condition, toas["mjd_float"])
-    return select_idx
+    return toas_selector.get_select_index(condition, toas["mjd_float"])
 
 
 def dmxstats(model, toas, file=sys.stdout):
@@ -1060,6 +1041,229 @@ def dmxparse(fitter, save=False):
     return dmx
 
 
+def get_prefix_timerange(model, prefixname):
+    """Get time range for a prefix quantity like DMX or SWX
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+    prefixname : str
+        Something like ``DMX_0001`` or ``SWX_0005``
+
+    Returns
+    -------
+    tuple
+        Each element is astropy.time.Time
+
+    Example
+    -------
+    To match a range between SWX and DMX, you can do:
+
+        >>> m.add_DMX_range(*(59077.33674631197, 59441.34020807681), index=1, frozen=False)
+
+    Which sets ``DMX_0001`` to cover the same time range as ``SWX_0002``
+    """
+    prefix, index, indexnum = split_prefixed_name(prefixname)
+    r1 = prefix.replace("_", "R1_") + index
+    r2 = prefix.replace("_", "R2_") + index
+    return getattr(model, r1).quantity, getattr(model, r2).quantity
+
+
+def get_prefix_timeranges(model, prefixname):
+    """Get all time ranges and indices for a prefix quantity like DMX or SWX
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+    prefixname : str
+        Something like ``DMX`` or ``SWX`` (no trailing ``_``)
+
+    Returns
+    -------
+    indices : np.ndarray
+    starts : astropy.time.Time
+    ends : astropy.time.Time
+
+    """
+    if prefixname.endswith("_"):
+        prefixname = prefixname[:-1]
+    prefix_mapping = model.get_prefix_mapping(prefixname + "_")
+    r1 = np.zeros(len(prefix_mapping))
+    r2 = np.zeros(len(prefix_mapping))
+    indices = np.zeros(len(prefix_mapping), dtype=np.int32)
+    for j, index in enumerate(prefix_mapping.keys()):
+        if (
+            getattr(model, f"{prefixname}R1_{index:04d}").quantity is not None
+            and getattr(model, f"{prefixname}R2_{index:04d}").quantity is not None
+        ):
+            r1[j] = getattr(model, f"{prefixname}R1_{index:04d}").quantity.mjd
+            r2[j] = getattr(model, f"{prefixname}R2_{index:04d}").quantity.mjd
+            indices[j] = index
+    return (
+        indices,
+        Time(r1, format="pulsar_mjd"),
+        Time(r2, format="pulsar_mjd"),
+    )
+
+
+def find_prefix_bytime(model, prefixname, t):
+    """Identify matching index(es) for a prefix parameter like DMX
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+    prefixname : str
+        Something like ``DMX`` or ``SWX`` (no trailing ``_``)
+    t : astropy.time.Time or float or astropy.units.Quantity
+        If not :class:`astropy.time.Time`, then MJD is assumed
+
+    Returns
+    -------
+    int or np.ndarray
+        Index or indices that match
+    """
+    if not isinstance(t, Time):
+        t = Time(t, format="pulsar_mjd")
+    indices, r1, r2 = get_prefix_timeranges(model, prefixname)
+    matches = np.where((t >= r1) & (t < r2))[0]
+    if len(matches) == 1:
+        matches = int(matches)
+    return indices[matches]
+
+
+def merge_dmx(model, index1, index2, value="mean", frozen=True):
+    """Merge two DMX bins
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+    index1: int
+    index2 : int
+    value : str, optional
+        One of "first", "second", "mean".  Determines value of new bin
+    frozen : bool, optional
+
+    Returns
+    -------
+    int
+        New DMX index
+    """
+    assert value.lower() in ["first", "second", "mean"]
+    tstart1, tend1 = get_prefix_timerange(model, f"DMX_{index1:04d}")
+    tstart2, tend2 = get_prefix_timerange(model, f"DMX_{index2:04d}")
+    tstart = min([tstart1, tstart2])
+    tend = max([tend1, tend2])
+    intervening_indices = find_prefix_bytime(model, "DMX", (tstart.mjd + tend.mjd) / 2)
+    if len(np.setdiff1d(intervening_indices, [index1, index2])) > 0:
+        for k in np.setdiff1d(intervening_indices, [index1, index2]):
+            log.warning(
+                f"Attempting to merge DMX_{index1:04d} and DMX_{index2:04d}, but DMX_{k:04d} is in between"
+            )
+    if value.lower() == "first":
+        dmx = getattr(model, f"DMX_{index1:04d}").quantity
+    elif value.lower == "second":
+        dmx = getattr(model, f"DMX_{index2:04d}").quantity
+    elif value.lower() == "mean":
+        dmx = (
+            getattr(model, f"DMX_{index1:04d}").quantity
+            + getattr(model, f"DMX_{index2:04d}").quantity
+        ) / 2
+    # add the new one before we delete previous ones to make sure we have >=1 present
+    newindex = model.add_DMX_range(tstart, tend, dmx=dmx, frozen=frozen)
+    model.remove_DMX_range([index1, index2])
+    return newindex
+
+
+def split_dmx(model, time):
+    """
+    Split an existing DMX bin at the desired time
+
+    Parameters
+    ----------
+    model : pint.models.timing_model.TimingModel
+    time : astropy.time.Time
+
+    Returns
+    -------
+    index : int
+        Index of existing bin that was split
+    newindex : int
+        Index of new bin that was added
+
+    """
+    try:
+        DMX_mapping = model.get_prefix_mapping("DMX_")
+    except ValueError:
+        raise RuntimeError("No DMX values in model!")
+    dmx_epochs = [f"{x:04d}" for x in DMX_mapping.keys()]
+    DMX_R1 = np.zeros(len(dmx_epochs))
+    DMX_R2 = np.zeros(len(dmx_epochs))
+    for ii, epoch in enumerate(dmx_epochs):
+        DMX_R1[ii] = getattr(model, "DMXR1_{:}".format(epoch)).value
+        DMX_R2[ii] = getattr(model, "DMXR2_{:}".format(epoch)).value
+    ii = np.where((time.mjd > DMX_R1) & (time.mjd < DMX_R2))[0]
+    if len(ii) == 0:
+        raise ValueError(f"Time {time} not in any DMX bins")
+    ii = ii[0]
+    index = int(dmx_epochs[ii])
+    t1 = DMX_R1[ii]
+    t2 = DMX_R2[ii]
+    print(f"{ii} {t1} {t2} {time}")
+    getattr(model, f"DMXR2_{index:04d}").value = time.mjd
+    newindex = model.add_DMX_range(
+        time.mjd,
+        t2,
+        dmx=getattr(model, f"DMX_{index:04d}").quantity,
+        frozen=getattr(model, f"DMX_{index:04d}").frozen,
+    )
+    return index, newindex
+
+
+def split_swx(model, time):
+    """
+    Split an existing SWX bin at the desired time
+
+    Parameters
+    ----------
+    model : pint.models.timing_model.TimingModel
+    time : astropy.time.Time
+
+    Returns
+    -------
+    index : int
+        Index of existing bin that was split
+    newindex : int
+        Index of new bin that was added
+
+    """
+    try:
+        SWX_mapping = model.get_prefix_mapping("SWX_")
+    except ValueError:
+        raise RuntimeError("No SWX values in model!")
+    swx_epochs = [f"{x:04d}" for x in SWX_mapping.keys()]
+    SWX_R1 = np.zeros(len(swx_epochs))
+    SWX_R2 = np.zeros(len(swx_epochs))
+    for ii, epoch in enumerate(swx_epochs):
+        SWX_R1[ii] = getattr(model, "SWXR1_{:}".format(epoch)).value
+        SWX_R2[ii] = getattr(model, "SWXR2_{:}".format(epoch)).value
+    ii = np.where((time.mjd > SWX_R1) & (time.mjd < SWX_R2))[0]
+    if len(ii) == 0:
+        raise ValueError(f"Time {time} not in any SWX bins")
+    ii = ii[0]
+    index = int(swx_epochs[ii])
+    t1 = SWX_R1[ii]
+    t2 = SWX_R2[ii]
+    print(f"{ii} {t1} {t2} {time}")
+    getattr(model, f"SWXR2_{index:04d}").value = time.mjd
+    newindex = model.add_swx_range(
+        time.mjd,
+        t2,
+        swx=getattr(model, f"SWX_{index:04d}").quantity,
+        frozen=getattr(model, f"SWX_{index:04d}").frozen,
+    )
+    return index, newindex
+
+
 def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
     """Compute weighted mean of input values
 
@@ -1128,8 +1332,10 @@ def ELL1_check(
 
     Checks whether the assumptions that allow ELL1 to be safely used are
     satisfied. To work properly, we should have:
-    :math:`asini/c  e^2 \ll {\\rm timing precision} / \sqrt N_{\\rm TOA}`
-    or :math:`A1 E^2 \ll TRES / \sqrt N_{\\rm TOA}`
+    :math:`asini/c  e^3 \ll {\\rm timing precision} / \sqrt N_{\\rm TOA}`
+    or :math:`A1 E^3 \ll TRES / \sqrt N_{\\rm TOA}`
+
+    since the ELL1 model now includes terms up to O(E^2)
 
     Parameters
     ----------
@@ -1150,12 +1356,12 @@ def ELL1_check(
         If outstring is True then returns a string summary instead.
 
     """
-    lhs = A1 / const.c * E**2.0
+    lhs = A1 / const.c * E**3.0
     rhs = TRES / np.sqrt(NTOA)
     if outstring:
         s = "Checking applicability of ELL1 model -- \n"
-        s += "    Condition is asini/c * ecc**2 << timing precision / sqrt(# TOAs) to use ELL1\n"
-        s += "    asini/c * ecc**2    = {:.3g} \n".format(lhs.to(u.us))
+        s += "    Condition is asini/c * ecc**3 << timing precision / sqrt(# TOAs) to use ELL1\n"
+        s += "    asini/c * ecc**3    = {:.3g} \n".format(lhs.to(u.us))
         s += "    TRES / sqrt(# TOAs) = {:.3g} \n".format(rhs.to(u.us))
     if lhs * 50.0 < rhs:
         if outstring:
@@ -1326,7 +1532,6 @@ def remove_dummy_distance(c):
         return c
     if isinstance(c.frame, coords.builtin_frames.icrs.ICRS):
         if hasattr(c, "pm_ra_cosdec"):
-
             cnew = coords.SkyCoord(
                 ra=c.ra,
                 dec=c.dec,
@@ -1681,3 +1886,169 @@ def compute_hash(filename):
         while block := f.read(blocks * h.block_size):
             h.update(block)
     return h.digest()
+
+
+def get_conjunction(coord, t0, precision="low", ecl="IERS2010"):
+    """
+    Find first time of Solar conjuction after t0 and approximate elongation at conjunction
+
+    Offers a low-precision version (based on analytic expression of Solar longitude)
+    Or a higher-precision version (based on interpolating :func:`astropy.coordinates.get_sun`)
+
+    Parameters
+    ----------
+    coord : astropy.coordinates.SkyCoord
+    t0 : astropy.time.Time
+    precision : str, optional
+        "low" or "high" precision
+    ecl : str, optional
+        Obliquity for PulsarEcliptic coordinates
+
+    Returns
+    -------
+    astropy.time.Time
+        Time of conjunction
+    astropy.units.Quantity
+        Elongation at conjunction
+    """
+
+    assert precision.lower() in ["low", "high"]
+    coord = coord.transform_to(pint.pulsar_ecliptic.PulsarEcliptic(ecl=ecl))
+
+    # low precision version
+    # use analytic form for Sun's ecliptic longitude
+    # and interpolate
+    tt = t0 + np.linspace(0, 365) * u.d
+    # Allen's Astrophysical Quantities
+    # Low precision solar coordinates (27.4.1)
+    # number of days since J2000
+    n = tt.jd - 2451545
+    # mean longitude of Sun, corrected for abberation
+    L = 280.460 * u.deg + 0.9854674 * u.deg * n
+    # Mean anomaly
+    g = 357.528 * u.deg + 0.9856003 * u.deg * n
+    # Ecliptic longitude
+    longitude = L + 1.915 * u.deg * np.sin(g) + 0.20 * u.deg * np.sin(2 * g)
+    dlongitude = longitude - coord.lon
+    dlongitude -= (dlongitude // (360 * u.deg)).max() * 360 * u.deg
+    conjunction = Time(np.interp(0, dlongitude.value, tt.mjd), format="mjd")
+    if precision.lower() == "low":
+        return conjunction, coord.lat
+    # do higher precision
+    # use astropy solar coordinates
+    # start with 10 days on either side of the low precision value
+    tt = conjunction + np.linspace(-10, 10) * u.d
+    csun = coords.get_sun(tt)
+    # this seems to be needed in old astropy
+    csun = coords.SkyCoord(ra=csun.ra, dec=csun.dec)
+    elongation = csun.separation(coord)
+    # get min value and interpolate with a quadratic fit
+    j = np.where(elongation == elongation.min())[0][0]
+    x = tt.mjd[j - 3 : j + 4]
+    y = elongation.value[j - 3 : j + 4]
+    f = np.polyfit(x, y, 2)
+    conjunction = Time(-f[1] / 2 / f[0], format="mjd")
+    csun = coords.get_sun(conjunction)
+    # this seems to be needed in old astropy
+    csun = coords.SkyCoord(ra=csun.ra, dec=csun.dec)
+
+    return conjunction, csun.separation(coord)
+
+
+def divide_times(t, t0, offset=0.5):
+    """
+    Divide input times into years relative to t0
+
+    Years are centered around the requested offset value
+
+    Parameters
+    ----------
+    t : astropy.time.Time
+    t0 : astropy.time.Time
+        Reference time
+    offset : float, optional
+        Offset value for division.  A value of 0.5 divides the results into intervals [-0.5,0.5].
+
+    Returns
+    -------
+    np.ndarray
+        Array of indices for division
+
+
+    Example
+    -------
+    Divide into years around each conjunction
+
+        >>> elongation = astropy.coordinates.get_sun(Time(t.get_mjds(), format="mjd")).separation(m.get_psr_coords())
+        >>> t0 = get_conjunction(m.get_psr_coords(), m.PEPOCH.quantity, precision="high")[0]
+        >>> indices = divide_times(Time(t.get_mjds(), format="mjd"), t0)
+        >>> plt.clf()
+        >>> for i in np.unique(indices):
+                plt.plot(t.get_mjds()[indices == i], elongation[indices == i].value, ".")
+
+    """
+    dt = t - t0
+    values = (dt.to(u.yr).value + offset) // 1
+    indices = np.digitize(values, np.unique(values), right=True)
+    return indices
+
+
+def convert_dispersion_measure(dm, dmconst=None):
+    """Convert dispersion measure to a different value of the DM constant.
+
+    Parameters
+    ----------
+    dm : astropy.units.Quantity
+        DM measured according to the conventional value of the DM constant
+
+    Returns
+    -------
+    dm : astropy.units.Quantity
+        DM measured according to the value of the DM constant computed from the
+        latest values of the physical constants
+    dmconst : astropy.units.Quantity
+        Value of the DM constant. Default value is computed from CODATA physical
+        constants.
+    Notes
+    -----
+    See https://nanograv-pint.readthedocs.io/en/latest/explanation.html#dispersion-measure
+    for an explanation.
+    """
+
+    if dmconst is None:
+        e = constants.e.si
+        eps0 = constants.eps0.si
+        c = constants.c.si
+        me = constants.m_e.si
+        dmconst = e**2 / (8 * np.pi**2 * c * eps0 * me)
+    return (dm * pint.DMconst / dmconst).to(pint.dmu)
+
+
+def parse_time(input, scale="tdb", precision=9):
+    """Parse an :class:`astropy.time.Time` object from a range of input types
+
+    Parameters
+    ----------
+    input : astropy.time.Time, astropy.units.Quantity, numpy.ndarray, float, int, str
+        Value to parse
+    scale : str, optional
+        Scale of time for conversion
+    precision : int, optional
+        Precision for time
+
+    Returns
+    -------
+    astropy.time.Time
+    """
+    if isinstance(input, Time):
+        return input if input.scale == scale else getattr(input, scale)
+    elif isinstance(input, u.Quantity):
+        return Time(
+            input.to(u.d), format="pulsar_mjd", scale=scale, precision=precision
+        )
+    elif isinstance(input, (np.ndarray, float, int)):
+        return Time(input, format="pulsar_mjd", scale=scale, precision=precision)
+    elif isinstance(input, str):
+        return Time(input, format="pulsar_mjd_string", scale=scale, precision=precision)
+    else:
+        raise TypeError(f"Do not know how to parse times from {type(input)}")

@@ -1,14 +1,18 @@
+import io
 import os
 import re
 import unittest
+import numpy as np
 
 import astropy.units as u
 from astropy.time import Time
+from datetime import datetime
 from pinttestdata import datadir
 
 from pint.models import get_model
 from pint.observatory import get_observatory
 from pint.toa import TOA, TOAs
+import pint.toa
 from pint.simulation import make_fake_toas_uniform
 
 
@@ -45,6 +49,42 @@ class TestTOA(unittest.TestCase):
         TOA(self.MJD, errror="1")
         with self.assertRaises(TypeError):
             TOA(self.MJD, errror=1, flags={})
+
+    def test_toa_object(self):
+        toatime = Time(datetime.now())
+        toaerr = u.Quantity(1e-6, "s")
+        freq = u.Quantity(1400, "MHz")
+        obs = "ao"
+
+        # scale should be None when MJD is a Time
+        with self.assertRaises(ValueError):
+            toa = TOA(MJD=toatime, error=toaerr, freq=freq, obs=obs, scale="utc")
+
+        # flags should be stored without their leading -
+        with self.assertRaises(ValueError):
+            toa = TOA(
+                MJD=toatime, error=toaerr, freq=freq, obs=obs, flags={"-foo": "foo1"}
+            )
+
+        # Invalid flag
+        with self.assertRaises(ValueError):
+            toa = TOA(
+                MJD=toatime, error=toaerr, freq=freq, obs=obs, flags={"$": "foo1"}
+            )
+        with self.assertRaises(ValueError):
+            toa = TOA(MJD=toatime, error=toaerr, freq=freq, obs=obs, flags={"foo": 1})
+
+        toa = TOA(MJD=toatime, error=toaerr, freq=freq, obs=obs, foo="foo1")
+        assert "foo1" in str(toa)
+        assert "bla" in toa.as_line(name="bla")
+        assert len(toa.flags) > 0
+
+        # Missing name
+        with self.assertRaises(ValueError):
+            toa.as_line()
+
+        toa = TOA(MJD=toatime, error=toaerr, freq=freq, obs=obs, foo="foo1", name="bla")
+        assert "bla" in toa.as_line()
 
 
 class TestTOAs(unittest.TestCase):
@@ -117,3 +157,27 @@ def test_toa_summary():
     assert re.search(r" *Min error: *1 us", s)
     assert re.search(r" *Max error: *1 us", s)
     assert re.search(r" *Median error: *1 us", s)
+
+
+def test_merge_toas():
+    model = get_model(
+        io.StringIO(
+            """
+            PSRJ J1234+5678
+            ELAT 0
+            ELONG 0
+            DM 10
+            F0 1
+            PEPOCH 58000
+            """
+        )
+    )
+    toas = make_fake_toas_uniform(
+        57000, 58000, 20, model=model, error=1 * u.us, add_noise=False
+    )
+    toas2 = make_fake_toas_uniform(
+        59000, 60000, 20, model=model, error=1 * u.us, add_noise=False
+    )
+    toas_out = pint.toa.merge_TOAs([toas, toas2])
+    toas_outb = toas + toas2
+    assert np.all(toas_out.table == toas_outb.table)

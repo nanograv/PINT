@@ -1,0 +1,32 @@
+# This alias file tries to replicate obsys.dat from tempo
+# To use this file by default, set env variable
+# $TEMPO2_ALIAS=tempo
+#
+gbt        1 GB
+quabbin    2 QU
+ao         3     arecebo arecibo
+hobart     4 HO
+princeton  5 PR
+vla        6 VL  c
+pks        7  PK
+jb         8  JB
+gb300      9  G3
+gb140      a  G1
+gb853      b  G8
+medicina   d  BO
+mo         e
+ncy        f  NC
+eff        g  EF
+jbmk2      h  J2
+wsrt       i  WS
+fast       k  FA
+meerkat    m  MK
+gmrt       r  GM
+shao       s  SH
+lofar      t  LF
+mwa        u  MW
+pv         v 
+lwa1       x  LW
+chime      y  CH
+srt        z  SR
+lwasv      -  LS

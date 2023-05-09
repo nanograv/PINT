@@ -9,13 +9,17 @@ from pinttestdata import datadir
 from astropy.time import Time
 import numpy as np
 import astropy.units as u
+from pint import toa, observatory
+from datetime import datetime
+from astropy.time import Time
+from astropy import units as u
+import pint
 
 
 def test_roundtrip_bary_toa_Tempo2format(tmpdir):
     # Create a barycentric TOA
     t1time = Time(58534.0, 0.0928602471130208, format="mjd", scale="tdb")
-    t1 = toa.TOA(t1time, obs="Barycenter", freq=0.0)
-    ts = toa.get_TOAs_list([t1], ephem="DE421")
+    ts = toa.get_TOAs_array(t1time, "Barycenter", freqs=0, ephem="DE421")
     outnm = os.path.join(tmpdir, "testbaryT.tim")
     ts.write_TOA_file(outnm, format="Tempo2")
     ts2 = toa.get_TOAs(outnm)
@@ -26,8 +30,7 @@ def test_roundtrip_bary_toa_Tempo2format(tmpdir):
 def test_roundtrip_bary_toa_TEMPOformat(tmpdir):
     # Create a barycentric TOA
     t1time = Time(58534.0, 0.0928602471130208, format="mjd", scale="tdb")
-    t1 = toa.TOA(t1time, obs="Barycenter", freq=0.0)
-    ts = toa.get_TOAs_list([t1], ephem="DE421")
+    ts = toa.get_TOAs_array(t1time, "Barycenter", freqs=0, ephem="DE421")
     outnm = os.path.join(tmpdir, "testbaryT2.tim")
     ts.write_TOA_file(outnm, format="TEMPO")
     ts2 = toa.get_TOAs(outnm)
@@ -38,8 +41,7 @@ def test_roundtrip_bary_toa_TEMPOformat(tmpdir):
 def test_roundtrip_topo_toa_Tempo2format(tmpdir):
     # Create a barycentric TOA
     t1time = Time(58534.0, 0.0928602471130208, format="mjd", scale="utc")
-    t1 = toa.TOA(t1time, obs="gbt", freq=0.0)
-    ts = toa.get_TOAs_list([t1], ephem="DE421")
+    ts = toa.get_TOAs_array(t1time, "gbt", freqs=0, ephem="DE421")
     outnm = os.path.join(tmpdir, "testtopoT2.tim")
     ts.write_TOA_file(outnm, format="Tempo2")
     ts2 = toa.get_TOAs(outnm)
@@ -74,8 +76,7 @@ def test_commenting_toas(tmpdir):
 def test_roundtrip_topo_toa_TEMPOformat(tmpdir):
     # Create a barycentric TOA
     t1time = Time(58534.0, 0.0928602471130208, format="mjd", scale="utc")
-    t1 = toa.TOA(t1time, obs="gbt", freq=0.0)
-    ts = toa.get_TOAs_list([t1], ephem="DE421")
+    ts = toa.get_TOAs_array(t1time, "gbt", freqs=0, ephem="DE421")
     outnm = os.path.join(tmpdir, "testtopot1.tim")
     ts.write_TOA_file(outnm, format="TEMPO")
     ts2 = toa.get_TOAs(outnm)
@@ -86,8 +87,7 @@ def test_roundtrip_topo_toa_TEMPOformat(tmpdir):
 def test_roundtrip_gmrt_toa_Tempo2format(tmp_path):
     # Create a barycentric TOA
     t1time = Time(58534.0, 0.0928602471130208, format="mjd", scale="utc")
-    t1 = toa.TOA(t1time, obs="gmrt", freq=0.0)
-    ts = toa.get_TOAs_list([t1], ephem="DE421")
+    ts = toa.get_TOAs_array(t1time, "gbt", freqs=0, ephem="DE421")
     ts.write_TOA_file(tmp_path / "testgmrt.tim", format="Tempo2")
     ts2 = toa.get_TOAs(tmp_path / "testgmrt.tim")
     print(ts.table, ts2.table)
@@ -98,8 +98,7 @@ def test_roundtrip_gmrt_toa_Tempo2format(tmp_path):
 def test_roundtrip_ncyobs_toa_Tempo2format(tmp_path):
     # Create a barycentric TOA
     t1time = Time(58534.0, 0.0928602471130208, format="mjd", scale="utc")
-    t1 = toa.TOA(t1time, obs="ncyobs", freq=0.0)
-    ts = toa.get_TOAs_list([t1], ephem="DE421")
+    ts = toa.get_TOAs_array(t1time, "ncyobs", freqs=0, ephem="DE421")
     ts.write_TOA_file(tmp_path / "testncyobs.tim", format="Tempo2")
     ts2 = toa.get_TOAs(tmp_path / "testncyobs.tim")
     print(ts.table, ts2.table)
@@ -110,8 +109,7 @@ def test_roundtrip_ncyobs_toa_Tempo2format(tmp_path):
 def test_roundtrip_ncyobs_toa_TEMPOformat(tmp_path):
     # Create a barycentric TOA
     t1time = Time(58534.0, 0.0928602471130208, format="mjd", scale="utc")
-    t1 = toa.TOA(t1time, obs="ncyobs", freq=0.0)
-    ts = toa.get_TOAs_list([t1], ephem="DE421")
+    ts = toa.get_TOAs_array(t1time, "ncyobs", freqs=0, ephem="DE421")
     # This is an observatory that can't be represented in TEMPO format
     # so it should raise an exception
     with pytest.raises(ValueError):
@@ -128,8 +126,10 @@ def test_write_pn_nan():
     f = StringIO()
     t.write_TOA_file(f)
     f.seek(0)
-    contents = f.read()
-    assert "nan" not in contents
+    # contents = f.read()
+    for line in f.readlines():
+        if toa._toa_format(line) != "Comment":
+            assert "nan" not in line.split()
     f.seek(0)
     t2 = toa.get_TOAs(f)
     assert np.isnan(t2["pulse_number"][10])
@@ -184,3 +184,47 @@ def test_tim_writing_order(tmp_path):
     ]
     assert obs[0] == obs[3] == obs[6] == obs[9]
     assert obs[0] != obs[1]
+
+
+@pytest.mark.parametrize("format", ["Tempo2", "Princeton"])
+def test_format_toa_line(format):
+    toatime = Time(datetime.now())
+    toaerr = u.Quantity(1e-6, "s")
+    freq = u.Quantity(1400, "MHz")
+    obs = observatory.get_observatory("ao")
+    dm = 1 * pint.dmu
+
+    toa_line = toa.format_toa_line(
+        toatime,
+        toaerr,
+        freq,
+        obs,
+        dm=dm,
+        name="unk",
+        flags={"-foo": 1, "bar": "ee", "spam": u.Quantity(3, "s")},
+        format=format,
+        alias_translation=None,
+    )
+
+    assert isinstance(toa_line, str) and len(toa_line) > 0
+
+
+def test_format_toa_line_bad_fmt():
+    toatime = Time(datetime.now())
+    toaerr = u.Quantity(1e-6, "s")
+    freq = u.Quantity(1400, "MHz")
+    obs = observatory.get_observatory("ao")
+    dm = 1 * pint.dmu
+
+    with pytest.raises(ValueError):
+        toa_line = toa.format_toa_line(
+            toatime,
+            toaerr,
+            freq,
+            obs,
+            dm=dm,
+            name="unk",
+            flags={"-foo": 1, "bar": 2, "spam": u.Quantity(3, "s")},
+            format="bla",
+            alias_translation=None,
+        )

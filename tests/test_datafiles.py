@@ -1,4 +1,5 @@
 """Test installation of PINT data files"""
+
 import os
 import pytest
 import pint.config
@@ -23,6 +24,11 @@ def getfiles():
     waves_withpn.tim"""
 
     return [f.strip() for f in files.split("\n")]
+
+
+def test_datadir():
+    datadir = pint.config.datadir()
+    assert os.path.isdir(datadir)
 
 
 def test_examplefiles(getfiles):

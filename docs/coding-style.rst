@@ -26,7 +26,7 @@ PINT coding style
    - Every public function or class should have a docstring. It
      should be in the correct format (numpy guidelines_).
    - Do not abbreviate public names (for example, use "Residuals"
-     not "resids"). If *aboslutely* necessary, make certain that there
+     not "resids"). If *absolutely* necessary, make certain that there
      is One True Abbreviation and that it is used everywhere.
    - Raise an exception if the code cannot continue and produce
      correct results.
@@ -44,7 +44,7 @@ PINT coding style
      available the ``pulsar_mjd`` time format.
    - PINT should work with python 2.7, 3.5, 3.6, 3.7, and later. There
      is no need to maintain compatibility with older versions, so use
-     approprate modern constructs like sets, iterators, and the string
+     appropriate modern constructs like sets, iterators, and the string
      ``.format()`` method.
    - Use six_ to manage python 2/3 compatibility problems.
 

@@ -137,11 +137,11 @@ class Glitch(PhaseComponent):
         for idx in set(self.glitch_indices):
             for param in self.glitch_prop:
                 if not hasattr(self, param + "%d" % idx):
-                    param0 = getattr(self, param + "1")
+                    param0 = getattr(self, f"{param}1")
                     self.add_param(param0.new_param(idx))
                     getattr(self, param + "%d" % idx).value = 0.0
                 self.register_deriv_funcs(
-                    getattr(self, "d_phase_d_" + param[0:-1]), param + "%d" % idx
+                    getattr(self, f"d_phase_d_{param[:-1]}"), param + "%d" % idx
                 )
 
     def validate(self):
@@ -152,14 +152,15 @@ class Glitch(PhaseComponent):
                 msg = "Glitch Epoch is needed for Glitch %d." % idx
                 raise MissingParameter("Glitch", "GLEP_%d" % idx, msg)
             else:  # Check to see if both the epoch and phase are to be fit
-                if hasattr(self, "GLPH_%d" % idx):
-                    if (not getattr(self, "GLEP_%d" % idx).frozen) and (
-                        not getattr(self, "GLPH_%d" % idx).frozen
-                    ):
-                        raise ValueError(
-                            "Both the glitch epoch and phase cannot be fit for Glitch %d."
-                            % idx
-                        )
+                if (
+                    hasattr(self, "GLPH_%d" % idx)
+                    and (not getattr(self, "GLEP_%d" % idx).frozen)
+                    and (not getattr(self, "GLPH_%d" % idx).frozen)
+                ):
+                    raise ValueError(
+                        "Both the glitch epoch and phase cannot be fit for Glitch %d."
+                        % idx
+                    )
 
         # Check the Decay Term.
         glf0dparams = [x for x in self.params if x.startswith("GLF0D_")]
@@ -209,7 +210,7 @@ class Glitch(PhaseComponent):
             else:
                 decayterm = 0.0 * u.Unit("")
 
-            log.info("Glitch phase {} {} ".format(dphs, dphs.unit))
+            log.debug(f"Glitch phase for glitch {idx}: {dphs} {dphs.unit}")
             phs[affected] += (
                 dphs
                 + dt[affected]
@@ -226,7 +227,7 @@ class Glitch(PhaseComponent):
         """Get the things we need for any of the derivative calcs"""
         tbl = toas.table
         p, ids, idv = split_prefixed_name(param)
-        eph = getattr(self, "GLEP_" + ids).value
+        eph = getattr(self, f"GLEP_{ids}").value
         dt = (tbl["tdbld"] - eph) * u.day - delay
         dt = dt.to(u.second)
         affected = np.where(dt > 0.0)[0]
@@ -237,7 +238,7 @@ class Glitch(PhaseComponent):
         tbl, p, ids, idv, dt, affected = self.deriv_prep(toas, param, delay)
         if p != "GLPH_":
             raise ValueError(
-                "Can not calculate d_phase_d_GLPH with respect to %s." % param
+                f"Can not calculate d_phase_d_GLPH with respect to {param}."
             )
         par_GLPH = getattr(self, param)
         dpdGLPH = np.zeros(len(tbl), dtype=np.longdouble) / par_GLPH.units
@@ -249,7 +250,7 @@ class Glitch(PhaseComponent):
         tbl, p, ids, idv, dt, affected = self.deriv_prep(toas, param, delay)
         if p != "GLF0_":
             raise ValueError(
-                "Can not calculate d_phase_d_GLF0 with respect to %s." % param
+                f"Can not calculate d_phase_d_GLF0 with respect to {param}."
             )
         par_GLF0 = getattr(self, param)
         dpdGLF0 = np.zeros(len(tbl), dtype=np.longdouble) / par_GLF0.units
@@ -261,7 +262,7 @@ class Glitch(PhaseComponent):
         tbl, p, ids, idv, dt, affected = self.deriv_prep(toas, param, delay)
         if p != "GLF1_":
             raise ValueError(
-                "Can not calculate d_phase_d_GLF1 with respect to %s." % param
+                f"Can not calculate d_phase_d_GLF1 with respect to {param}."
             )
         par_GLF1 = getattr(self, param)
         dpdGLF1 = np.zeros(len(tbl), dtype=np.longdouble) / par_GLF1.units
@@ -273,7 +274,7 @@ class Glitch(PhaseComponent):
         tbl, p, ids, idv, dt, affected = self.deriv_prep(toas, param, delay)
         if p != "GLF2_":
             raise ValueError(
-                "Can not calculate d_phase_d_GLF2 with respect to %s." % param
+                f"Can not calculate d_phase_d_GLF2 with respect to {param}."
             )
         par_GLF2 = getattr(self, param)
         dpdGLF2 = np.zeros(len(tbl), dtype=np.longdouble) / par_GLF2.units
@@ -287,7 +288,7 @@ class Glitch(PhaseComponent):
         tbl, p, ids, idv, dt, affected = self.deriv_prep(toas, param, delay)
         if p != "GLF0D_":
             raise ValueError(
-                "Can not calculate d_phase_d_GLF0D with respect to %s." % param
+                f"Can not calculate d_phase_d_GLF0D with respect to {param}."
             )
         par_GLF0D = getattr(self, param)
         tau = getattr(self, "GLTD_%d" % idv).quantity
@@ -300,12 +301,12 @@ class Glitch(PhaseComponent):
         tbl, p, ids, idv, dt, affected = self.deriv_prep(toas, param, delay)
         if p != "GLTD_":
             raise ValueError(
-                "Can not calculate d_phase_d_GLTD with respect to %s." % param
+                f"Can not calculate d_phase_d_GLTD with respect to {param}."
             )
         par_GLTD = getattr(self, param)
         if par_GLTD.value == 0.0:
             return np.zeros(len(tbl), dtype=np.longdouble) / par_GLTD.units
-        glf0d = getattr(self, "GLF0D_" + ids).quantity
+        glf0d = getattr(self, f"GLF0D_{ids}").quantity
         tau = par_GLTD.quantity
         dpdGLTD = np.zeros(len(tbl), dtype=np.longdouble) / par_GLTD.units
         dpdGLTD[affected] += glf0d * (
@@ -318,14 +319,14 @@ class Glitch(PhaseComponent):
         tbl, p, ids, idv, dt, affected = self.deriv_prep(toas, param, delay)
         if p != "GLEP_":
             raise ValueError(
-                "Can not calculate d_phase_d_GLEP with respect to %s." % param
+                f"Can not calculate d_phase_d_GLEP with respect to {param}."
             )
         par_GLEP = getattr(self, param)
-        glf0 = getattr(self, "GLF0_" + ids).quantity
-        glf1 = getattr(self, "GLF1_" + ids).quantity
-        glf2 = getattr(self, "GLF2_" + ids).quantity
-        glf0d = getattr(self, "GLF0D_" + ids).quantity
-        tau = getattr(self, "GLTD_" + ids).quantity
+        glf0 = getattr(self, f"GLF0_{ids}").quantity
+        glf1 = getattr(self, f"GLF1_{ids}").quantity
+        glf2 = getattr(self, f"GLF2_{ids}").quantity
+        glf0d = getattr(self, f"GLF0D_{ids}").quantity
+        tau = getattr(self, f"GLTD_{ids}").quantity
         dpdGLEP = np.zeros(len(tbl), dtype=np.longdouble) / par_GLEP.units
         dpdGLEP[affected] += (
             -glf0 + -glf1 * dt[affected] + -0.5 * glf2 * dt[affected] ** 2

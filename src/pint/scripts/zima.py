@@ -9,6 +9,7 @@ from loguru import logger as log
 
 pint.logging.setup(level=pint.logging.script_level)
 
+import pint
 import pint.fitter
 import pint.models
 import pint.simulation
@@ -65,6 +66,18 @@ def main(argv=None):
         help="Actually add in random noise, or just populate the column",
     )
     parser.add_argument(
+        "--wideband",
+        action="store_true",
+        default=False,
+        help="Add DM information to simulated TOAs. Generates wideband toas.",
+    )
+    parser.add_argument(
+        "--dmerror",
+        help="Random error to apply to simulated DM measurements (dmu)",
+        type=float,
+        default=1e-4,
+    )
+    parser.add_argument(
         "--fuzzdays",
         help="Standard deviation of 'fuzz' distribution (jd)",
         type=float,
@@ -74,7 +87,7 @@ def main(argv=None):
         "--plot", help="Plot residuals", action="store_true", default=False
     )
     parser.add_argument(
-        "--format", help="The format of out put .tim file.", default="TEMPO2"
+        "--format", help="The format of output .tim file.", default="TEMPO2"
     )
     parser.add_argument(
         "--log-level",
@@ -114,37 +127,37 @@ def main(argv=None):
             freq=np.atleast_1d(args.freq) * u.MHz,
             fuzz=args.fuzzdays * u.d,
             add_noise=args.addnoise,
+            wideband=args.wideband,
+            wideband_dm_error=args.dmerror * pint.dmu,
         )
     else:
-        log.info("Reading initial TOAs from {0}".format(args.inputtim))
+        log.info(f"Reading initial TOAs from {args.inputtim}")
         ts = pint.simulation.make_fake_toas_fromtim(
-            args.inputtim,
-            model=m,
-            obs=args.obs,
-            error=error,
-            freq=np.atleast_1d(args.freq) * u.MHz,
-            fuzz=args.fuzzdays * u.d,
-            add_noise=args.addnoise,
+            args.inputtim, model=m, add_noise=args.addnoise
         )
 
     # Write TOAs to a file
     ts.write_TOA_file(args.timfile, name="fake", format=out_format)
 
     if args.plot:
-        # This should be a very boring plot with all residuals flat at 0.0!
-        import matplotlib.pyplot as plt
-        from astropy.visualization import quantity_support
+        plot_simulated_toas(ts, m)
 
-        quantity_support()
 
-        r = pint.residuals.Residuals(ts, m)
-        plt.errorbar(
-            ts.get_mjds(),
-            r.calc_time_resids(calctype="taylor").to(u.us),
-            yerr=ts.get_errors().to(u.us),
-            fmt=".",
-        )
-        plt.xlabel("MJD")
-        plt.ylabel("Residual (us)")
-        plt.grid(True)
-        plt.show()
+def plot_simulated_toas(ts, m):
+    # This should be a very boring plot with all residuals flat at 0.0!
+    import matplotlib.pyplot as plt
+    from astropy.visualization import quantity_support
+
+    quantity_support()
+
+    r = pint.residuals.Residuals(ts, m)
+    plt.errorbar(
+        ts.get_mjds(),
+        r.calc_time_resids(calctype="taylor").to(u.us),
+        yerr=ts.get_errors().to(u.us),
+        fmt=".",
+    )
+    plt.xlabel("MJD")
+    plt.ylabel("Residual (us)")
+    plt.grid(True)
+    plt.show()

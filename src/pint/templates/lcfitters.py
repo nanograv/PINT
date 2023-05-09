@@ -4,7 +4,7 @@ unweighted sets of photon phases.  The model is encapsulated in LCTemplate,
 a mixture model.
 
 LCPrimitives are combined to form a light curve (LCTemplate).
-LCFitter then performs a maximum likielihood fit to determine the
+LCFitter then performs a maximum likelihood fit to determine the
 light curve parameters.
 
 LCFitter also allows fits to subsets of the phases for TOA calculation.
@@ -20,6 +20,10 @@ from pint.eventstats import hm, hmw
 from scipy.optimize import fmin, fmin_tnc, leastsq
 
 SECSPERDAY = 86400.0
+
+
+def isvector(x):
+    return len(np.asarray(x).shape) > 0
 
 
 def shifted(m, delta=0.5):
@@ -46,120 +50,196 @@ def weighted_light_curve(nbins, phases, weights, normed=False, phase_shift=0):
     return bins, w1 / norm, errors / norm
 
 
-def LCFitter(
-    template,
-    phases,
-    weights=None,
-    log10_ens=None,
-    times=1,
-    binned_bins=1000,
-    binned_ebins=8,
-    phase_shift=0,
-):
-    """Factory class for light curve fitters.  Based on whether weights
-    or energies are supplied in addition to photon phases, the
-    appropriate fitter class is returned.
-    Arguments:
-    template -- an instance of LCTemplate
-    phases   -- list of photon phases
+class LCFitter:
+    def __init__(
+        self,
+        template,
+        phases,
+        weights=None,
+        log10_ens=3,
+        times=1,
+        binned_bins=1000,
+        binned_ebins=8,
+        phase_shift=0,
+    ):
+        """Class for fitting light curves.
 
-    Keyword arguments:
-    weights      [None] optional photon weights
-    log10_ens    [None] optional photon energies (log10(E/MeV))
-    times        [None] optional photon arrival times
-    binned_bins  [100]  phase bins to use in binned likelihood
-    binned_ebins [8]    energy bins to use in binned likelihood
-    phase_shift  [0]    set this if a phase shift has been applied
-    """
-    kwargs = dict(
-        times=np.asarray(times), binned_bins=binned_bins, phase_shift=phase_shift
-    )
-    if weights is None:
-        kwargs["weights"] = None
-        return UnweightedLCFitter(template, phases, **kwargs)
-    kwargs["weights"] = np.asarray(weights)
-    return WeightedLCFitter(template, phases, **kwargs)
+        Arguments:
+        template -- an instance of LCTemplate
+        phases   -- list of photon phases
 
-
-class UnweightedLCFitter:
-    def __init__(self, template, phases, **kwargs):
+        Keyword arguments:
+        weights      [None] optional photon weights
+        log10_ens    [None] optional photon energies (log10(E/MeV))
+        times        [None] optional photon arrival times
+        binned_bins  [100]  phase bins to use in binned likelihood
+        binned_ebins [8]    energy bins to use in binned likelihood
+        phase_shift  [0]    set this if a phase shift has been applied
+        """
         self.template = template
         self.phases = np.asarray(phases)
-        self.__dict__.update(kwargs)
-        self._hist_setup()
-        # default is unbinned likelihood
+        if weights is None:
+            weights = np.ones(len(phases), dtype=float)
+        self.weights = weights
+        self.log10_ens = np.asarray(log10_ens)
+        self.times = times
+        self.binned_bins = binned_bins
+        self.binned_ebins = binned_ebins  # TODO?
+        self.phase_shift = phase_shift
+        self.loglikelihood = self.unbinned_loglikelihood
+        self.gradient = self.unbinned_gradient
+
+        self._binned_setup()
+
+    def __str__(self):
+        if "ll" in self.__dict__.keys():
+            return "\nLog Likelihood for fit: %.2f\n" % (self.ll) + str(self.template)
+        return str(self.template)
+
+    def __getstate__(self):
+        """Cannot pickle self.loglikelihood and self.gradient since
+        these are instancemethod objects.
+        See: http://mail.python.org/pipermail/python-list/2000-October/054610.html"""
+        result = self.__dict__.copy()
+        # del result["loglikelihood"]
+        # del result["gradient"]
+        result.pop("loglikelihood")
+        result.pop("gradient")
+        return result
+
+    def __setstate__(self, state):
+        self.__dict__ = state
         self.loglikelihood = self.unbinned_loglikelihood
         self.gradient = self.unbinned_gradient
 
     def is_energy_dependent(self):
-        return False
+        return self.template.is_energy_dependent()
 
     def _hist_setup(self):
-        """Setup data for chi-squared and binned likelihood."""
-        h = hm(self.phases)
+        """Setup binning for a quick chi-squared fit."""
+        h = hmw(self.phases, self.weights)
         nbins = 25
         if h > 100:
             nbins = 50
         if h > 1000:
             nbins = 100
-        ph0, ph1 = 0 + self.phase_shift, 1 + self.phase_shift
-        hist = np.histogram(self.phases, bins=np.linspace(ph0, ph1, nbins))
-        if len(hist[0]) == nbins:
-            raise ValueError("Histogram too old!")
-        x = ((hist[1][1:] + hist[1][:-1]) / 2.0)[hist[0] > 0]
-        counts = (hist[0][hist[0] > 0]).astype(float)
-        y = counts / counts.sum() * nbins
-        yerr = counts**0.5 / counts.sum() * nbins
-        self.chistuff = x, y, yerr
+        bins, counts, errors = weighted_light_curve(
+            nbins, self.phases, self.weights, phase_shift=self.phase_shift
+        )
+        mask = counts > 0
+        N = counts.sum()
+        self.bg_level = 1 - (self.weights**2).sum() / N
+        x = (bins[1:] + bins[:-1]) / 2
+        y = counts / N * nbins
+        yerr = errors / N * nbins
+        self.chistuff = x[mask], y[mask], yerr[mask]
         # now set up binning for binned likelihood
-        nbins = self.binned_bins + 1
-        hist = np.histogram(self.phases, bins=np.linspace(ph0, ph1, nbins))
-        self.counts_centers = ((hist[1][1:] + hist[1][:-1]) / 2.0)[hist[0] > 0]
-        self.counts = hist[0][hist[0] > 0]
 
-    def unbinned_loglikelihood(self, p, *args):
+    def _binned_setup(self):
+        nbins = self.binned_bins
+        bins = np.linspace(0 + self.phase_shift, 1 + self.phase_shift, nbins + 1)
+        # TODO -- revisit this slice approach and implement in a way that
+        # doesn't require sorting.  It seems very fragile.  Looking at the
+        # binned likelihood, we could keep the masks, select the weights,
+        # and broadcast the single template term.
+        a = np.argsort(self.phases)
+        self.phases = self.phases[a]
+        self.weights = self.weights[a]
+        if isvector(self.log10_ens):
+            self.log10_ens = self.log10_ens[a]
+        self.counts_centers = []
+        self.slices = []
+        indices = np.arange(len(self.weights))
+        for i in range(nbins):
+            mask = (self.phases >= bins[i]) & (self.phases < bins[i + 1])
+            if mask.sum() > 0:
+                w = self.weights[mask]
+                if w.sum() == 0:
+                    continue
+                p = self.phases[mask]
+                self.counts_centers.append((w * p).sum() / w.sum())
+                # self.counts_centers.append(0.5*(bins[i]+bins[i+1]))
+                self.slices.append(slice(indices[mask].min(), indices[mask].max() + 1))
+        self.counts_centers = np.asarray(self.counts_centers)
+
+    def unbinned_loglikelihood(self, p, *args, **kwargs):
         t = self.template
         params_ok = t.set_parameters(p)
-        # if (not t.shift_mode) and np.any(p<0):
-        if (t.norm() > 1) or (not params_ok):
+        if not t.norm_ok():
             return 2e20
-        rvals = -np.log(t(self.phases)).sum()
-        if np.isnan(rvals):
-            return 2e20  # NB need to do better accounting of norm
-        return rvals
+        if (not params_ok) and ("skip_bounds_check" not in kwargs):
+            return 2e20
+        # TODO -- keep this formulation??
+        arg = 1 + self.weights * (
+            t(self.phases, log10_ens=self.log10_ens, use_cache=False) - 1
+        )
+        arg[arg <= 0] = 1e-300
+        return -np.log(arg).sum()
+        # return -np.log(1 + self.weights * (t(self.phases,log10_ens=self.log10_ens,use_cache=False) - 1)).sum()
 
-    def binned_loglikelihood(self, p, *args):
+    def binned_loglikelihood(self, p, *args, **kwargs):
         t = self.template
         params_ok = t.set_parameters(p)
-        # if (not t.shift_mode) and np.any(p<0):
-        if (t.norm() > 1) or (not params_ok):
+        if not t.norm_ok():
             return 2e20
-        return -(self.counts * np.log(t(self.counts_centers))).sum()
+        if (not params_ok) and ("skip_bounds_check" not in kwargs):
+            return 2e20
+        template_terms = (
+            t(self.counts_centers, log10_ens=self.log10_ens, use_cache=False) - 1
+        )
+        phase_template_terms = np.empty_like(self.weights)
+        for tt, sl in zip(template_terms, self.slices):
+            phase_template_terms[sl] = tt
+        # TODO -- keep this formulation??
+        arg = 1 + self.weights * phase_template_terms
+        arg[arg <= 0] = 1e-300
+        return -np.log(arg).sum()
+        # return -np.log(1 + self.weights * phase_template_terms).sum()
 
-    def __call__(self):
-        """Shortcut for log likelihood at current param values."""
-        return self.loglikelihood(self.template.get_parameters())
-
-    def unbinned_gradient(self, p, *args):
+    def unbinned_gradient(self, p, *args, **kwargs):
         t = self.template
-        t.set_parameters(p)
-        return -(t.gradient(self.phases) / t(self.phases)).sum(axis=1)
+        params_ok = t.set_parameters(p)
+        if not t.norm_ok():
+            return np.full(p.shape, 2e20)
+        if (not params_ok) and ("skip_bounds_check" not in kwargs):
+            return np.full(p.shape, 2e20)
+        g, tmpl = t.gradient(self.phases, log10_ens=self.log10_ens, template_too=True)
+        # numer = self.weights * t.gradient(self.phases,log10_ens=self.log10_ens)
+        # denom = 1 + self.weights * (t(self.phases,log10_ens=self.log10_ens,use_cache=False) - 1)
+        numer = self.weights * g
+        denom = 1 + self.weights * (tmpl - 1)
+        return -np.sum(numer / denom, axis=1)
 
-    def binned_gradient(self, p, *args):
+    def binned_gradient(self, p, *args, **kwargs):
         t = self.template
-        t.set_parameters(p)
-        return -(
-            self.counts * t.gradient(self.counts_centers) / t(self.counts_centers)
-        ).sum(axis=1)
+        params_ok = t.set_parameters(p)
+        if not t.norm_ok():
+            return np.full(p.shape, 2e20)
+        if (not params_ok) and ("skip_bounds_check" not in kwargs):
+            return np.full(p.shape, 2e20)
+        nump = len(p)
+        template_terms = (
+            t(self.counts_centers, log10_ens=self.log10_ens, use_cache=False) - 1
+        )
+        gradient_terms = t.gradient(self.counts_centers, log10_ens=self.log10_ens)
+        phase_template_terms = np.empty_like(self.weights)
+        phase_gradient_terms = np.empty([nump, len(self.weights)])
+        # distribute the central values to the unbinned phases/weights
+        for tt, gt, sl in zip(template_terms, gradient_terms.transpose(), self.slices):
+            phase_template_terms[sl] = tt
+            for j in range(nump):
+                phase_gradient_terms[j, sl] = gt[j]
+        numer = self.weights * phase_gradient_terms
+        denom = 1 + self.weights * (phase_template_terms)
+        return -(numer / denom).sum(axis=1)
 
     def chi(self, p, *args):
         x, y, yerr = self.chistuff
-        t = self.template
+        bg = self.bg_level
         if not self.template.shift_mode and np.any(p < 0):
             return 2e100 * np.ones_like(x) / len(x)
-        t.set_parameters(p)
-        chi = (t(x) - y) / yerr
-        return chi
+        args[0].set_parameters(p)
+        return (bg + (1 - bg) * self.template(x) - y) / yerr
 
     def quick_fit(self):
         t = self.template
@@ -181,9 +261,8 @@ class UnweightedLCFitter:
                 old_state.append(p.free[i])
                 if restore_state is not None:
                     p.free[i] = restore_state[counter]
-                else:
-                    if i < (len(p.p) - 1):
-                        p.free[i] = False
+                elif i < (len(p.p) - 1):
+                    p.free[i] = False
                 counter += 1
         return old_state
 
@@ -200,6 +279,7 @@ class UnweightedLCFitter:
         quick_fit_first=False,
         unbinned=True,
         use_gradient=True,
+        ftol=1e-5,
         overall_position_first=False,
         positions_first=False,
         estimate_errors=False,
@@ -255,49 +335,57 @@ class UnweightedLCFitter:
         ll0 = -fit_func(self.template.get_parameters())
         p0 = self.template.get_parameters().copy()
         if use_gradient:
-            f = self.fit_tnc(fit_func, grad_func, quiet=quiet)
+            f = self.fit_tnc(fit_func, grad_func, ftol=ftol, quiet=quiet)
         else:
-            f = self.fit_fmin(fit_func)
-        if (ll0 > self.ll) or (self.ll == -2e20) or (np.isnan(self.ll)):
-            if unbinned_refit and np.isnan(self.ll) and (not unbinned):
-                if (self.binned_bins * 2) < 400:
-                    print(
-                        "Did not converge using %d bins... retrying with %d bins..."
-                        % (self.binned_bins, self.binned_bins * 2)
-                    )
-                    self.template.set_parameters(p0)
-                    self.ll = ll0
-                    self.fitvals = p0
-                    self.binned_bins *= 2
-                    self._hist_setup()
-                    return self.fit(
-                        quick_fit_first=quick_fit_first,
-                        unbinned=unbinned,
-                        use_gradient=use_gradient,
-                        positions_first=positions_first,
-                        estimate_errors=estimate_errors,
-                        prior=prior,
-                    )
+            f = self.fit_fmin(fit_func, ftol=ftol)
+        if (ll0 > self.ll) or (ll0 == 2e20) or (np.isnan(ll0)):
+            if (
+                unbinned_refit
+                and np.isnan(ll0)
+                and (not unbinned)
+                and (self.binned_bins * 2) < 400
+            ):
+                print(
+                    "Did not converge using %d bins... retrying with %d bins..."
+                    % (self.binned_bins, self.binned_bins * 2)
+                )
+                self.template.set_parameters(p0)
+                self.ll = ll0
+                self.fitvals = p0
+                self.binned_bins *= 2
+                self._hist_setup()
+                return self.fit(
+                    quick_fit_first=quick_fit_first,
+                    unbinned=unbinned,
+                    use_gradient=use_gradient,
+                    positions_first=positions_first,
+                    estimate_errors=estimate_errors,
+                    prior=prior,
+                )
             self.bad_p = self.template.get_parameters().copy()
             self.bad_ll = self.ll
             print("Failed likelihood fit -- resetting parameters.")
+            if np.isnan(ll0):
+                print("   (Condition: LL = NaN)")
+            if ll0 > self.ll:
+                print("   (Condition: LL did not improve)")
+            if ll0 == -2e20:
+                print("   (Condition: LL set to -infty)")
             self.template.set_parameters(p0)
             self.ll = ll0
             self.fitvals = p0
             return False
-        if estimate_errors:
-            if not self.hess_errors(use_gradient=use_gradient):
-                # try:
-                if try_bootstrap:
-                    self.bootstrap_errors(set_errors=True)
-                # except ValueError:
-                #    print('Warning, could not estimate errors.')
-                #    self.template.set_errors(np.zeros_like(p0))
+        if (
+            estimate_errors
+            and not self.hess_errors(use_gradient=use_gradient)
+            and try_bootstrap
+        ):
+            self.bootstrap_errors(set_errors=True)
         if not quiet:
             print("Improved log likelihood by %.2f" % (self.ll - ll0))
         return True
 
-    def fit_position(self, unbinned=True, track=False):
+    def fit_position(self, unbinned=True, track=False, skip_coarse=False):
         """Fit overall template position.  Return shift and its error.
 
         Parameters
@@ -317,6 +405,9 @@ class UnweightedLCFitter:
 
         """
 
+        if not self.template.check_bounds():
+            raise ValueError("Template does not satisfy parameter bounds.")
+
         self._set_unbinned(unbinned)
         ph0 = self.template.get_location()
 
@@ -328,12 +419,21 @@ class UnweightedLCFitter:
         if track:
             dom = np.append(np.linspace(0.0, 0.2, 25), np.linspace(0.8, 1.0, 25)[:-1])
         else:
-            dom = np.linspace(0, 1, 101)
-        dombest = min(dom, key=logl)
-        ph1 = fmin(logl, [dombest], full_output=True, disp=0)[0][0]
-        delta = 0.01
-        d2 = (logl(ph1 + delta) - 2 * logl(ph1) + logl(ph1 - delta)) / delta**2
+            if skip_coarse:
+                dom = np.linspace(ph0 - 0.01, ph0 + 0.01, 21)
+            else:
+                dom = np.linspace(0, 1, 101)
+        x0 = min(dom, key=logl)
+        ph1 = fmin(logl, x0, full_output=True, disp=0, xtol=1e-6)[0][0]
         self.template.set_overall_phase(ph1)
+
+        # estimate error by computing d2logl/dphi2
+        f0 = self.template(self.phases)
+        f1 = self.template.derivative(self.phases, order=1)
+        f2 = self.template.derivative(self.phases, order=2)
+        w = self.weights
+        den = 1 + w * (f0 - 1)
+        d2 = np.sum(((w * f1) / den) ** 2 - w * f2 / den)
         return ph1 - ph0, d2**-0.5
 
     def fit_background(self, unbinned=True):
@@ -370,7 +470,7 @@ class UnweightedLCFitter:
     def fit_cg(self):
         from scipy.optimize import fmin_cg
 
-        fit = fmin_cg(
+        return fmin_cg(
             self.loglikelihood,
             self.template.get_parameters(),
             fprime=self.gradient,
@@ -378,7 +478,6 @@ class UnweightedLCFitter:
             full_output=1,
             disp=1,
         )
-        return fit
 
     def fit_bfgs(self):
         from scipy.optimize import fmin_bfgs
@@ -423,19 +522,20 @@ class UnweightedLCFitter:
 
         x0 = self.template.get_parameters()
         bounds = self.template.get_bounds()
-        fit = fmin_l_bfgs_b(
+        return fmin_l_bfgs_b(
             self.loglikelihood, x0, fprime=self.gradient, bounds=bounds, factr=1e-5
         )
-        return fit
 
     def hess_errors(self, use_gradient=True):
         """Set errors from hessian.  Fit should be called first..."""
         p = self.template.get_parameters()
         nump = len(p)
         self.cov_matrix = np.zeros([nump, nump], dtype=float)
-        ss = calc_step_size(self.loglikelihood, p.copy())
+        logl = lambda p: self.loglikelihood(p, skip_bounds_check=True)
+        grad = lambda p: self.gradient(p, skip_counts_check=True)
+        ss = calc_step_size(logl, p.copy())
         if use_gradient:
-            h1 = hess_from_grad(self.gradient, p.copy(), step=ss)
+            h1 = hess_from_grad(grad, p.copy(), step=ss)
             c1 = scipy.linalg.inv(h1)
             if np.all(np.diag(c1) > 0):
                 self.cov_matrix = c1
@@ -443,7 +543,7 @@ class UnweightedLCFitter:
                 print("Could not estimate errors from hessian.")
                 return False
         else:
-            h1 = hessian(self.template, self.loglikelihood, delta=ss)
+            h1 = hessian(self.template, logl, delta=ss)
             try:
                 c1 = scipy.linalg.inv(h1)
             except scipy.linalg.LinAlgError:
@@ -453,7 +553,7 @@ class UnweightedLCFitter:
             if np.all(d > 0):
                 self.cov_matrix = c1
                 # attempt to refine
-                h2 = hessian(self.template, self.loglikelihood, delt=d**0.5)
+                h2 = hessian(self.template, logl, delt=d**0.5)
                 try:
                     c2 = scipy.linalg.inv(h2)
                 except scipy.linalg.LinAlgError:
@@ -500,36 +600,8 @@ class UnweightedLCFitter:
         self.weights = w0
         return results
 
-    def __str__(self):
-        if "ll" in self.__dict__.keys():
-            return "\nLog Likelihood for fit: %.2f\n" % (self.ll) + str(self.template)
-        return str(self.template)
-
     def write_template(self, outputfile="template.gauss"):
         s = self.template.prof_string(outputfile=outputfile)
-
-    def remove_component(self, index, steps=5, fit_kwargs={}):
-        """Gradually remove a component from a model by refitting and
-        return new LCTemplate object."""
-        if len(self.template) == 1:
-            raise ValueError(
-                "Template only has one component -- removing it would be madness!"
-            )
-        old_p = self.template.get_parameters()
-        old_f = self.template.norms.free.copy()
-        vals = np.arange(steps).astype(float) / np.arange(1, steps + 1)
-        vals = vals[::-1] * self.template.norms()[index]
-        self.template.norms.free[index] = False
-        # self.template.primitives[index].free[:] = False
-        for v in vals:
-            self.template.norms.set_single_norm(index, v)
-            if "unbinned" not in fit_kwargs:
-                fit_kwargs["unbinned"] = False
-            self.fit(**fit_kwargs)
-        t = self.template.delete_primitive(index)
-        self.template.norms.free[:] = old_f
-        self.template.set_parameters(old_p)
-        return t
 
     def plot(
         self,
@@ -539,41 +611,61 @@ class UnweightedLCFitter:
         plot_components=False,
         template=None,
         line_color="blue",
+        comp_color=None,
+        plot_eavg=True,
+        log10_erange=None,
+        optimize_display_phase=True,
     ):
         import pylab as pl
 
+        if comp_color is None:
+            comp_color = line_color
+
         weights = self.weights
-        dom = np.linspace(0, 1, 1000)
+        log10_ens = self.log10_ens
+        phases = self.phases
+
         if template is None:
             template = self.template
+
+        if optimize_display_phase:
+            template = template.copy()
+            dphi = template.get_display_point(do_rotate=True)
+            phases = np.mod(phases + dphi, 1)
+
+        plot_log_en = 3
+        if (log10_erange is not None) and (log10_ens is not None):
+            lo, hi = log10_erange
+            mask = (log10_ens >= lo) & (log10_ens < hi)
+            if weights is not None:
+                weights = weights[mask]
+            phases = phases[mask]
+            log10_ens = log10_ens[mask]
+            plot_log_en = 0.5 * (lo + hi)
 
         if axes is None:
             fig = pl.figure(fignum)
             axes = fig.add_subplot(111)
 
         axes.hist(
-            self.phases,
+            phases,
             bins=np.linspace(0, 1, nbins + 1),
             histtype="step",
-            ec="red",
+            ec="C3",
             density=True,
             lw=1,
             weights=weights,
         )
+
         if weights is not None:
             bg_level = 1 - (weights**2).sum() / weights.sum()
             axes.axhline(bg_level, color="k")
-            # cod = template(dom)*(1-bg_level)+bg_level
-            # axes.plot(dom,cod,color='blue')
-            x, w1, errors = weighted_light_curve(
-                nbins, self.phases, weights, normed=True
-            )
+            x, w1, errors = weighted_light_curve(nbins, phases, weights, normed=True)
             x = (x[:-1] + x[1:]) / 2
             axes.errorbar(x, w1, yerr=errors, capsize=0, marker="", ls=" ", color="red")
         else:
             bg_level = 0
-            # axes.plot(dom,cod,color='blue',lw=1)
-            h = np.histogram(self.phases, bins=np.linspace(0, 1, nbins + 1))
+            h = np.histogram(phases, bins=np.linspace(0, 1, nbins + 1))
             x = (h[1][:-1] + h[1][1:]) / 2
             n = float(h[0].sum()) / nbins
             axes.errorbar(
@@ -583,18 +675,127 @@ class UnweightedLCFitter:
                 capsize=0,
                 marker="",
                 ls=" ",
-                color="red",
+                color="C3",
             )
-        cod = template(dom) * (1 - bg_level) + bg_level
+
+        def avg_energy(func):
+            if not plot_eavg:
+                return func(dom)
+            if not isvector(log10_ens):
+                return func(dom)
+            h = np.histogram(log10_ens, weights=weights, bins=20)
+            wt = h[0] * (1.0 / h[0].sum())
+            hc = 0.5 * (h[1][:-1] + h[1][1:])
+            rvals = np.zeros_like(dom)
+            for x, w in zip(hc, wt):
+                rvals += w * func(dom, log10_ens=x)
+            return rvals
+
+        dom = np.linspace(0, 1, 1000)
+
+        cod = avg_energy(template) * (1 - bg_level) + bg_level
         axes.plot(dom, cod, color=line_color, lw=1)
         if plot_components:
             for i in range(len(template.primitives)):
-                cod = template.single_component(i, dom) * (1 - bg_level) + bg_level
-                axes.plot(dom, cod, color=line_color, lw=1, ls="--")
+
+                def f(ph, log10_ens=3):
+                    return template.single_component(i, dom, log10_ens=log10_ens)
+
+                cod = avg_energy(f) * (1 - bg_level) + bg_level
+                axes.plot(dom, cod, color=comp_color, lw=1, ls="--")
         pl.axis([0, 1, pl.axis()[2], max(pl.axis()[3], cod.max() * 1.05)])
         axes.set_ylabel("Normalized Profile")
         axes.set_xlabel("Phase")
         axes.grid(True)
+        return bg_level
+
+    def plot_ebands(
+        self, nband=4, fignum=2, plot_zoom=True, equalize_y=False, **plot_kwargs
+    ):
+        import pylab as pl
+
+        pl.close(fignum)
+        fig = pl.figure(fignum, (4.5 + 4.5 * int(plot_zoom), 7))
+        if "fignum" in plot_kwargs:
+            plot_kwargs.pop("fignum")
+
+        log10_ebands = self.get_ebands(nband)
+        if len(log10_ebands) == 0:
+            raise ValueError("No energy information available.")
+        toggle = int(plot_zoom)
+        axes = []
+        axzooms = []
+        maxy = 0
+        for i in range(nband):
+            lo, hi = log10_ebands[i : i + 2]
+            ax = pl.subplot(nband, 1 + toggle, i * (1 + toggle) + 1)
+            axes.append(ax)
+            plot_kwargs["log10_erange"] = [lo, hi]
+            plot_kwargs["axes"] = ax
+            self.plot(**plot_kwargs)
+            maxy = max(ax.axis()[-1], maxy)
+            ax.text(
+                0.03,
+                ax.axis()[-1] * 0.88,
+                "%.2f--%.2f GeV" % (10**lo * 1e-3, 10**hi * 1e-3),
+            )
+            if plot_zoom:
+                axzoom = pl.subplot(nband, 1 + toggle, i * (1 + toggle) + 2)
+                plot_kwargs["axes"] = axzoom
+                bg_level = self.plot(**plot_kwargs)
+                axzoom.axis([0, 1, bg_level - 0.2, bg_level + 1.0])
+                axzoom.set_ylabel("")
+                axzoom.tick_params(
+                    labelleft=False, labelright=True, labelbottom=i == (nband - 1)
+                )
+                if i >= nband - 1:
+                    axzoom.set_xticks([0.2, 0.4, 0.6, 0.8, 1.0])
+                axzoom.set_xlabel("")
+                axzoom.set_ylabel("")
+                axzooms.append(axzoom)
+            if i < (nband - 1):
+                ax.tick_params(labelbottom=False)
+            ax.set_xlabel("")
+            ax.set_ylabel("")
+        if equalize_y:
+            for ax in axes:
+                old_axis = list(ax.axis())
+                old_axis[-1] = maxy
+                ax.axis(tuple(old_axis))
+
+        try:
+            fig.supylabel("Normalized Profile")
+            fig.supxlabel("Phase")
+        except AttributeError:
+            axes[-1].set_xlabel("Phase")
+            if axzooms:
+                axzooms[-1].set_xlabel("Phase")
+            for ax in axes:
+                ax.set_ylabel("Normalized Profile")
+        pl.tight_layout()
+        pl.subplots_adjust(hspace=0)
+        pl.subplots_adjust(wspace=0)
+
+    def get_ebands(self, nband=3):
+        if not isvector(self.log10_ens):
+            return []
+        t = self.template(self.phases, log10_ens=self.log10_ens)
+        if self.weights is None:
+            logl = np.log(t)
+        else:
+            logl = np.log(1 + self.weights * (t - 1))
+        a = np.argsort(self.log10_ens)
+        logl = logl[a]
+        logl = np.cumsum(logl)
+        logl *= 1.0 / logl[-1]
+        indices = np.searchsorted(logl, np.arange(nband)[1:] / nband)
+        indices = np.append(0, indices)
+        indices = np.append(indices, -1)
+        log10_ens = self.log10_ens[a][indices]
+        # round boundaries down/up to nearest 0.1
+        log10_ens[0] = np.floor(log10_ens[0] * 10) * 0.1
+        log10_ens[-1] = np.ceil(log10_ens[-1] * 10) * 0.1
+        return log10_ens
 
     def plot_residuals(self, nbins=50, fignum=3):
         import pylab as pl
@@ -619,19 +820,16 @@ class UnweightedLCFitter:
         pl.xlabel("Phase")
         pl.grid(True)
 
-    def __getstate__(self):
-        """Cannot pickle self.loglikelihood and self.gradient since
-        these are instancemethod objects.
-        See: http://mail.python.org/pipermail/python-list/2000-October/054610.html"""
-        result = self.__dict__.copy()
-        del result["loglikelihood"]
-        del result["gradient"]
-        return result
+    def rotate_for_display(self):
+        """Rotate both internal phases and template to a nice phase.
 
-    def __setstate__(self, state):
-        self.__dict__ = state
-        self.loglikelihood = self.unbinned_loglikelihood
-        self.gradient = self.unbinned_gradient
+        NB this will potentially break zero-phase references and will also
+        necessitate re-binning if using binned mode.
+
+        """
+        dphi = self.template.get_display_point(do_rotate=True)
+        self.phases = np.mod(self.phases + dphi, 1)
+        self._binned_setup()
 
     def aic(self, template=None):
         """Return the Akaike information criterion for the current state.
@@ -660,187 +858,23 @@ class UnweightedLCFitter:
         else:
             template = self.template
         nump = len(self.template.get_parameters())
-        if self.weights is None:
-            n = len(self.phases)
-        else:
-            n = self.weights.sum()
+        n = len(self.phases) if self.weights is None else self.weights.sum()
         ts = nump * np.log(n) + 2 * self()
         self.template = template
         return ts
-
-
-class WeightedLCFitter(UnweightedLCFitter):
-    def _hist_setup(self):
-        """Setup binning for a quick chi-squared fit."""
-        h = hmw(self.phases, self.weights)
-        nbins = 25
-        if h > 100:
-            nbins = 50
-        if h > 1000:
-            nbins = 100
-        bins, counts, errors = weighted_light_curve(
-            nbins, self.phases, self.weights, phase_shift=self.phase_shift
-        )
-        mask = counts > 0
-        N = counts.sum()
-        self.bg_level = 1 - (self.weights**2).sum() / N
-        x = (bins[1:] + bins[:-1]) / 2
-        y = counts / N * nbins
-        yerr = errors / N * nbins
-        self.chistuff = x[mask], y[mask], yerr[mask]
-        # now set up binning for binned likelihood
-        nbins = self.binned_bins
-        bins = np.linspace(0 + self.phase_shift, 1 + self.phase_shift, nbins + 1)
-        a = np.argsort(self.phases)
-        self.phases = self.phases[a]
-        self.weights = self.weights[a]
-        self.counts_centers = []
-        self.slices = []
-        indices = np.arange(len(self.weights))
-        for i in range(nbins):
-            mask = (self.phases >= bins[i]) & (self.phases < bins[i + 1])
-            if mask.sum() > 0:
-                w = self.weights[mask]
-                if w.sum() == 0:
-                    continue
-                p = self.phases[mask]
-                self.counts_centers.append((w * p).sum() / w.sum())
-                self.slices.append(slice(indices[mask].min(), indices[mask].max() + 1))
-        self.counts_centers = np.asarray(self.counts_centers)
-
-    def chi(self, p, *args):
-        x, y, yerr = self.chistuff
-        bg = self.bg_level
-        if not self.template.shift_mode and np.any(p < 0):
-            return 2e100 * np.ones_like(x) / len(x)
-        args[0].set_parameters(p)
-        chi = (bg + (1 - bg) * self.template(x) - y) / yerr
-        return chi
-
-    def unbinned_loglikelihood(self, p, *args):
-        t = self.template
-        params_ok = t.set_parameters(p)
-        if (t.norm() > 1) or (not params_ok):
-            # if (t.norm()>1) or (not t.shift_mode and np.any(p<0)):
-            return 2e20
-        return -np.log(1 + self.weights * (t(self.phases) - 1)).sum()
-        # return -np.log(1+self.weights*(self.template(self.phases,suppress_bg=True)-1)).sum()
-
-    def binned_loglikelihood(self, p, *args):
-        t = self.template
-        params_ok = t.set_parameters(p)
-        # if (t.norm()>1) or (not t.shift_mode and np.any(p<0)):
-        if (t.norm() > 1) or (not params_ok):
-            return 2e20
-        template_terms = t(self.counts_centers) - 1
-        phase_template_terms = np.empty_like(self.weights)
-        for tt, sl in zip(template_terms, self.slices):
-            phase_template_terms[sl] = tt
-        return -np.log(1 + self.weights * phase_template_terms).sum()
-
-    def unbinned_gradient(self, p, *args):
-        t = self.template
-        t.set_parameters(p)
-        if t.norm() > 1:
-            return np.ones_like(p) * 2e20
-        numer = self.weights * t.gradient(self.phases)
-        denom = 1 + self.weights * (t(self.phases) - 1)
-        return -(numer / denom).sum(axis=1)
-
-    def binned_gradient(self, p, *args):
-        t = self.template
-        t.set_parameters(p)
-        if t.norm() > 1:
-            return np.ones_like(p) * 2e20
-        nump = len(p)
-        template_terms = t(self.counts_centers) - 1
-        gradient_terms = t.gradient(self.counts_centers)
-        phase_template_terms = np.empty_like(self.weights)
-        phase_gradient_terms = np.empty([nump, len(self.weights)])
-        # distribute the central values to the unbinned phases/weights
-        for tt, gt, sl in zip(template_terms, gradient_terms.transpose(), self.slices):
-            phase_template_terms[sl] = tt
-            for j in range(nump):
-                phase_gradient_terms[j, sl] = gt[j]
-        numer = self.weights * phase_gradient_terms
-        denom = 1 + self.weights * (phase_template_terms)
-        return -(numer / denom).sum(axis=1)
-
-
-class ChiSqLCFitter:
-    """Fit binned data with a gaussian likelihood."""
-
-    def __init__(self, template, x, y, yerr, log10_ens=3, **kwargs):
-        self.template = template
-        self.chistuff = x, y, yerr, log10_ens
-        self.__dict__.update(kwargs)
-
-    def is_energy_dependent(self):
-        return False
-
-    def chi(self, p, *args):
-        x, y, yerr, log10_ens = self.chistuff
-        t = self.template
-        if not self.template.shift_mode and np.any(p < 0):
-            return 2e100 * np.ones_like(x) / len(x)
-        t.set_parameters(p)
-        chi = (t(x, log10_ens) - y) / yerr
-        return chi
-
-    def chigrad(self, p, *args):
-        x, y, yerr, log10_ens = self.chistuff
-        # chi = self.chi(p,*args)
-        g = self.template.gradient(x, log10_ens)
-        # return 2*(chi*g)
-        return g / yerr
-
-    def fit(self, use_gradient=True, get_results=False):
-        p = self.template.get_parameters()
-        Dfun = self.chigrad if use_gradient else None
-        results = leastsq(self.chi, p, Dfun=Dfun, full_output=1, col_deriv=True)
-        p, cov = results[:2]
-        self.template.set_parameters(p)
-        if cov is not None:
-            self.template.set_errors(np.diag(cov) ** 0.5)
-        if get_results:
-            return results
-
-    def __str__(self):
-        return str(self.template)
-
-    def plot(self, fignum=2, shift=0, resids=False):
-        import pylab as pl
-
-        x, y, yerr, log10_ens = self.chistuff
-        my = self.template(x, log10_ens)
-        if shift != 0:
-            y = shifted(y, shift)
-            my = shifted(my, shift)
-        if resids:
-            y = y - my
-        pl.figure(fignum)
-        pl.clf()
-        pl.errorbar(x, y, yerr=yerr, ls=" ")
-        if not resids:
-            pl.plot(x, my, color="red")
 
 
 def hessian(m, mf, *args, **kwargs):
     """Calculate the Hessian; mf is the minimizing function, m is the model,args additional arguments for mf."""
     p = m.get_parameters().copy()
     p0 = p.copy()  # sacrosanct copy
-    if "delt" in kwargs.keys():
-        delta = kwargs["delt"]
-    else:
-        delta = [0.01] * len(p)
-
+    delta = kwargs.get("delt", [0.01] * len(p))
     hessian = np.zeros([len(p), len(p)])
     for i in range(len(p)):
         delt = delta[i]
         for j in range(
             i, len(p)
         ):  # Second partials by finite difference; could be done analytically in a future revision
-
             xhyh, xhyl, xlyh, xlyl = p.copy(), p.copy(), p.copy(), p.copy()
             xdelt = delt if p[i] >= 0 else -delt
             ydelt = delt if p[j] >= 0 else -delt
@@ -1035,9 +1069,7 @@ def calc_step_size(logl, par, minstep=1e-5, maxstep=1e-1):
         p0[i] = par[i] + x
         delta_ll = logl(p0) - ll0 - 0.5
         p0[i] = par[i]
-        if abs(delta_ll) < 0.05:
-            return 0
-        return delta_ll
+        return 0 if abs(delta_ll) < 0.05 else delta_ll
 
     for i in range(len(par)):
         if f(maxstep, i) <= 0:

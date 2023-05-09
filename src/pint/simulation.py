@@ -64,10 +64,7 @@ def zero_residuals(ts, model, maxiter=10, tolerance=None):
     ts.compute_pulse_numbers(model)
     maxresid = None
     if tolerance is None:
-        if pint.utils.check_longdouble_precision():
-            tolerance = 1 * u.ns
-        else:
-            tolerance = 5 * u.us
+        tolerance = 1 * u.ns if pint.utils.check_longdouble_precision() else 5 * u.us
     for i in range(maxiter):
         r = pint.residuals.Residuals(ts, model, track_mode="use_pulse_numbers")
         resids = r.calc_time_resids(calctype="taylor")
@@ -85,13 +82,11 @@ def zero_residuals(ts, model, maxiter=10, tolerance=None):
         )
 
 
-def update_fake_toa_clock(ts, model, include_bipm=False, include_gps=True):
-    """Update the clock settings (corrections, etc) for fake TOAs
+def get_fake_toa_clock_versions(model, include_bipm=False, include_gps=True):
+    """Get the clock settings (corrections, etc) for fake TOAs
 
     Parameters
     ----------
-    ts : pint.toa.TOAs
-        Input TOAs (modified in-place)
     model : pint.models.timing_model.TimingModel
         current model
     include_bipm : bool, optional
@@ -111,28 +106,26 @@ def update_fake_toa_clock(ts, model, include_bipm=False, include_gps=True):
             if len(clk) == 2:
                 ctype, cvers = clk
                 if ctype == "TT" and cvers.startswith("BIPM"):
-                    include_bipm = True
-                    if bipm_version is None:
-                        bipm_version = cvers
-                        log.info(f"Using CLOCK = {bipm_version} from the given model")
+                    bipm_version = cvers
+                    log.info(f"Using CLOCK = {bipm_version} from the given model")
                 else:
                     log.warning(
                         f'CLOCK = {model["CLOCK"].value} is not implemented. '
                         f"Using TT({bipm_default}) instead."
                     )
+                include_bipm = True
         else:
             log.warning(
                 f'CLOCK = {model["CLOCK"].value} is not implemented. '
                 f"Using TT({bipm_default}) instead."
             )
+            include_bipm = True
 
-    ts.clock_corr_info.update(
-        {
-            "include_bipm": include_bipm,
-            "bipm_version": bipm_version,
-            "include_gps": include_gps,
-        }
-    )
+    return {
+        "include_bipm": include_bipm,
+        "bipm_version": bipm_version,
+        "include_gps": include_gps,
+    }
 
 
 def make_fake_toas(ts, model, add_noise=False, name="fake"):
@@ -175,6 +168,26 @@ def make_fake_toas(ts, model, add_noise=False, name="fake"):
     return tsim
 
 
+def update_fake_dms(model, ts, dm_error, add_noise):
+    """Update simulated wideband DM information in TOAs."""
+    toas = deepcopy(ts)
+
+    dm_errors = dm_error * np.ones(len(toas))
+
+    for f, dme in zip(toas.table["flags"], dm_errors):
+        f["pp_dme"] = str(dme.to_value(pint.dmu))
+
+    scaled_dm_errors = model.scaled_dm_uncertainty(toas)
+    dms = model.total_dm(toas)
+    if add_noise:
+        dms += scaled_dm_errors.to(pint.dmu) * np.random.randn(len(scaled_dm_errors))
+
+    for f, dm in zip(toas.table["flags"], dms):
+        f["pp_dm"] = str(dm.to_value(pint.dmu))
+
+    return toas
+
+
 def make_fake_toas_uniform(
     startMJD,
     endMJD,
@@ -185,8 +198,8 @@ def make_fake_toas_uniform(
     obs="GBT",
     error=1 * u.us,
     add_noise=False,
-    dm=None,
-    dm_error=1e-4 * pint.dmu,
+    wideband=False,
+    wideband_dm_error=1e-4 * pint.dmu,
     name="fake",
     include_bipm=False,
     include_gps=True,
@@ -198,9 +211,9 @@ def make_fake_toas_uniform(
 
     Parameters
     ----------
-    startMJD : float
+    startMJD : float or astropy.units.Quantity or astropy.time.Time
         starting MJD for fake toas
-    endMJD : float
+    endMJD : float or astropy.units.Quantity or astropy.time.Time
         ending MJD for fake toas
     ntoas : int
         number of fake toas to create between startMJD and endMJD
@@ -216,9 +229,11 @@ def make_fake_toas_uniform(
         uncertainty to attach to each TOA
     add_noise : bool, optional
         Add noise to the TOAs (otherwise `error` just populates the column)
-    dm : astropy.units.Quantity, optional
-        DM value to include with each TOA; default is
-        not to include any DM information
+    wideband : bool, optional
+        Whether to include wideband DM information with each TOA; default is
+        not to include any wideband DM information. If True, the DM associated
+        with each TOA will be computed using the model, and the `-ppdm` and
+        `-ppdme` flags will be set.
     dm_error : astropy.units.Quantity
         uncertainty to attach to each DM measurement
     name : str, optional
@@ -237,14 +252,27 @@ def make_fake_toas_uniform(
 
     Notes
     -----
-    `add_noise` respects any ``EFAC`` or ``EQUAD`` present in the `model`
+    1. `add_noise` respects any ``EFAC`` or ``EQUAD`` present in the `model`
+    2. When `wideband` is set, wideband DM measurement noise will be included
+       only if `add_noise` is set. Otherwise, the `-pp_dme` flags will be set
+       without adding the measurement noise to the simulated DM values.
+    3. The simulated DM measurement noise respects ``DMEFAC`` and ``DMEQUAD``
+       values in the `model`.
 
     See Also
     --------
     :func:`make_fake_toas`
     """
+    if isinstance(startMJD, time.Time):
+        startMJD = startMJD.mjd << u.d
+    if isinstance(endMJD, time.Time):
+        endMJD = endMJD.mjd << u.d
+    if not isinstance(startMJD, u.Quantity):
+        startMJD = startMJD << u.d
+    if not isinstance(endMJD, u.Quantity):
+        endMJD = endMJD << u.d
 
-    times = np.linspace(startMJD, endMJD, ntoas, dtype=np.longdouble) * u.d
+    times = np.linspace(startMJD, endMJD, ntoas, dtype=np.longdouble)
     if fuzz > 0:
         # apply some fuzz to the dates
         fuzz = np.random.normal(scale=fuzz.to_value(u.d), size=len(times)) * u.d
@@ -253,21 +281,26 @@ def make_fake_toas_uniform(
     if freq is None or np.isinf(freq).all():
         freq = np.inf * u.MHz
     freq_array = _get_freq_array(np.atleast_1d(freq), len(times))
-    t1 = [
-        pint.toa.TOA(t.value, obs=obs, freq=f, scale=get_observatory(obs).timescale)
-        for t, f in zip(times, freq_array)
-    ]
-    ts = pint.toa.TOAs(toalist=t1)
-    ts.planets = model["PLANET_SHAPIRO"].value
-    ts.ephem = model["EPHEM"].value
-    update_fake_toa_clock(ts, model, include_bipm=include_bipm, include_gps=include_gps)
+    clk_version = get_fake_toa_clock_versions(
+        model, include_bipm=include_bipm, include_gps=include_gps
+    )
+    ts = pint.toa.get_TOAs_array(
+        times,
+        obs=obs,
+        scale=get_observatory(obs).timescale,
+        freqs=freq_array,
+        errors=error,
+        ephem=model["EPHEM"].value,
+        include_bipm=clk_version["include_bipm"],
+        bipm_version=clk_version["bipm_version"],
+        include_gps=clk_version["include_gps"],
+        planets=model["PLANET_SHAPIRO"].value,
+    )
     ts.table["error"] = error
-    if dm is not None:
-        for f in ts.table["flags"]:
-            f["pp_dm"] = str(dm.to_value(pint.dmu))
-            f["pp_dme"] = str(dm_error.to_value(pint.dmu))
-    ts.compute_TDBs()
-    ts.compute_posvels()
+
+    if wideband:
+        ts = update_fake_dms(model, ts, wideband_dm_error, add_noise)
+
     return make_fake_toas(ts, model=model, add_noise=add_noise, name=name)
 
 
@@ -278,20 +311,20 @@ def make_fake_toas_fromMJDs(
     obs="GBT",
     error=1 * u.us,
     add_noise=False,
-    dm=None,
-    dm_error=1e-4 * pint.dmu,
+    wideband=False,
+    wideband_dm_error=1e-4 * pint.dmu,
     name="fake",
     include_bipm=False,
     include_gps=True,
 ):
-    """Make evenly spaced toas
+    """Make toas from a list of MJDs
 
     Can include alternating frequencies if fed an array of frequencies,
     only works with one observatory at a time
 
     Parameters
     ----------
-    MJDs : astropy.units.Quantity
+    MJDs : astropy.units.Quantity or astropy.time.Time or numpy.ndarray
         array of MJDs for fake toas
     model : pint.models.timing_model.TimingModel
         current model
@@ -303,10 +336,10 @@ def make_fake_toas_fromMJDs(
         uncertainty to attach to each TOA
     add_noise : bool, optional
         Add noise to the TOAs (otherwise `error` just populates the column)
-    dm : astropy.units.Quantity, optional
-        DM value to include with each TOA; default is
+    wideband : astropy.units.Quantity, optional
+        Whether to include wideband DM values with each TOA; default is
         not to include any DM information
-    dm_error : astropy.units.Quantity
+    wideband_dm_error : astropy.units.Quantity
         uncertainty to attach to each DM measurement
     name : str, optional
         Name for the TOAs (goes into the flags)
@@ -330,27 +363,39 @@ def make_fake_toas_fromMJDs(
     --------
     :func:`make_fake_toas`
     """
-
+    scale = get_observatory(obs).timescale
+    if isinstance(MJDs, time.Time):
+        times = MJDs.mjd * u.d
+        scale = None
+    elif not isinstance(MJDs, (u.Quantity, np.ndarray)):
+        raise TypeError(
+            f"Do not know how to interpret input times of type '{type(MJDs)}'"
+        )
     times = MJDs
 
     if freq is None or np.isinf(freq).all():
         freq = np.inf * u.MHz
     freq_array = _get_freq_array(np.atleast_1d(freq), len(times))
-    t1 = [
-        pint.toa.TOA(t.value, obs=obs, freq=f, scale=get_observatory(obs).timescale)
-        for t, f in zip(times, freq_array)
-    ]
-    ts = pint.toa.TOAs(toalist=t1)
-    ts.planets = model["PLANET_SHAPIRO"].value
-    ts.ephem = model["EPHEM"].value
-    update_fake_toa_clock(ts, model, include_bipm=include_bipm, include_gps=include_gps)
+    clk_version = get_fake_toa_clock_versions(
+        model, include_bipm=include_bipm, include_gps=include_gps
+    )
+    ts = pint.toa.get_TOAs_array(
+        times,
+        obs=obs,
+        freqs=freq_array,
+        errors=error,
+        scale=scale,
+        ephem=model["EPHEM"].value,
+        include_bipm=clk_version["include_bipm"],
+        bipm_version=clk_version["bipm_version"],
+        include_gps=clk_version["include_gps"],
+        planets=model["PLANET_SHAPIRO"].value,
+    )
     ts.table["error"] = error
-    if dm is not None:
-        for f in ts.table["flags"]:
-            f["pp_dm"] = str(dm.to_value(pint.dmu))
-            f["pp_dme"] = str(dm_error.to_value(pint.dmu))
-    ts.compute_TDBs()
-    ts.compute_posvels()
+
+    if wideband:
+        ts = update_fake_dms(model, ts, wideband_dm_error, add_noise)
+
     return make_fake_toas(ts, model=model, add_noise=add_noise, name=name)
 
 
@@ -382,6 +427,11 @@ def make_fake_toas_fromtim(timfile, model, add_noise=False, name="fake"):
     :func:`make_fake_toas`
     """
     input_ts = pint.toa.get_TOAs(timfile)
+
+    if input_ts.is_wideband():
+        dm_errors = input_ts.get_dm_errors()
+        ts = update_fake_dms(model, ts, dm_errors, add_noise)
+
     return make_fake_toas(input_ts, model=model, add_noise=add_noise, name=name)
 
 
@@ -449,12 +499,12 @@ def calculate_random_models(
     freqs = np.zeros((Nmodels, Nmjd), dtype=np.float128) * u.Hz
 
     cov_matrix = fitter.parameter_covariance_matrix
-    # this is a list of the parameter names in the order they appear in the coviarance matrix
+    # this is a list of the parameter names in the order they appear in the covariance matrix
     param_names = cov_matrix.get_label_names(axis=0)
     # this is a dictionary with the parameter values, but it might not be in the same order
     # and it leaves out the Offset parameter
     param_values = fitter.model.get_params_dict("free", "value")
-    mean_vector = np.array([param_values[x] for x in param_names if not x == "Offset"])
+    mean_vector = np.array([param_values[x] for x in param_names if x != "Offset"])
     if params == "all":
         # remove the first column and row (absolute phase)
         if param_names[0] == "Offset":
@@ -507,7 +557,4 @@ def calculate_random_models(
     if return_time:
         dphase /= freqs
 
-    if keep_models:
-        return dphase, random_models
-    else:
-        return dphase
+    return (dphase, random_models) if keep_models else dphase
