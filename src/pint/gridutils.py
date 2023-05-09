@@ -56,7 +56,7 @@ class WrappedFitter:
         parvalues : list
             List of parameter values to grid over (each should be 1D array of astropy.units.Quantity)
         extraparnames : list, optional
-            Names of other parameters to 1return
+            Names of other parameters to return
 
         Returns
         -------

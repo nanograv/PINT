@@ -34,7 +34,6 @@ from astropy.coordinates import (
     CartesianRepresentation,
     EarthLocation,
 )
-
 from loguru import logger as log
 
 import pint
