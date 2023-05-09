@@ -1140,8 +1140,8 @@ class TimingModel:
 
         Parameters
         ----------
-        param: str
-            Parameter name
+        param: pint.models.parameter.Parameter
+            Parameter instance
         target_component: str
             Parameter host component name. If given as "" it would add
             parameter to the top level `TimingModel` class
