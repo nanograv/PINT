@@ -2324,7 +2324,6 @@ class TOAs:
         # Record the choice of ephemeris and planets
         self.ephem = ephem
         self.planets = planets
-        print(f"Current log is {str(log)} log")
         if planets:
             log.debug(
                 f"Computing PosVels of observatories, Earth and planets, using {ephem}"

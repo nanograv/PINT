@@ -3,6 +3,7 @@ import concurrent.futures
 import copy
 import multiprocessing
 import subprocess
+import sys
 
 import numpy as np
 
@@ -16,7 +17,7 @@ except ModuleNotFoundError:
 from astropy.utils.console import ProgressBar
 
 from pint import fitter
-
+from pint.observatory import clock_file
 
 __all__ = ["doonefit", "grid_chisq", "grid_chisq_derived"]
 
@@ -26,7 +27,6 @@ def hostinfo():
 
 
 def set_log(logger_):
-    print(f"Initializing... with {logger_}")
     global log
     log = logger_
 
@@ -65,8 +65,13 @@ class WrappedFitter:
         """
         # Make a full copy of the fitter to work with
         myftr = copy.deepcopy(self.ftr)
+        # copy the log to all imported modules
+        # this makes them respect the logger settings
+        for m in sys.modules:
+            if m.startswith("pint") and hasattr(sys.modules[m], "log"):
+                setattr(sys.modules[m], "log", log)
+
         parstrings = []
-        print(f"log = {log}")
         for parname, parvalue in zip(parnames, parvalues):
             # Freeze the  params we are going to grid over and set their values
             # All other unfrozen parameters will be fitted for at each grid point
