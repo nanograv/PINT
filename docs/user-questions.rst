@@ -18,6 +18,20 @@ With ``conda``::
     conda update pint-pulsar
 
 
+How to check out some user's particular branch for testing:
+-----------------------------------------------------------
+
+If you wish to checkout branch ``testbranch`` from user ``pintuser``::
+
+    git checkout -b pintuser-testbranch master
+    git pull https://github.com/pintuser/PINT.git testbranch
+
+The first command makes a new local branch with name ``pintuser-testbranch`` from the ``master`` branch.  
+The second pulls the remote branch from the desired user's fork into that local branch.  
+You may still need to install/reinstall that branch, depending on how you have things set up 
+(so ``pip install .`` or ``pip install -e .``, where the later keeps the files in-place for faster developing).
+
+
 How to go to a specific version of PINT
 ---------------------------------------
 
@@ -81,6 +95,33 @@ To load both::
     m, t = get_model_and_toas(parfile, timfile)
 
 
+Create TOAs from an array of times
+--------------------------------
+A :class:`pint.toa.TOA` object represents a *single* TOA as an object that contains 
+both a time and a location, along with optional information like frequency, measurement error, etc.  
+So each :class:`~pint.toa.TOA` object should only contain a single time, since otherwise the location information would be ambiguous.
+If you wish to create TOAs from a :class:`astropy.time.Time` object containing multiple times,
+you can do::
+
+    import numpy as np
+    from astropy import units as u, constants as c
+    from pint import pulsar_mjd
+    from astropy.time import Time
+    from pint import toa
+
+    t = Time(np.array([55000, 56000]), scale="utc", format="pulsar_mjd")
+    obs = "gbt"
+
+    toas = toa.get_TOAs_array(t, obs)
+
+Note that we import :mod:`pint.pulsar_mjd` to allow the 
+``pulsar_mjd`` format, designed to deal properly with leap seconds.  
+We use :func:`pint.toa.get_TOAs_array` to make sure clock corrections are 
+applied when constructing the TOAs.  
+Other information like ``errors``, ``frequencies``, and ``flags`` can be added.  
+You can also merge multiple data-sets with :func:`pint.toa.merge_TOAs`
+
+
 Get the red noise basis functions and the corresponding coefficients out of a PINT fitter object
 ------------------------------------------------------------------------------------------------
 
@@ -130,6 +171,34 @@ requested epoch. Similarly::
 does the same for :class:`pint.models.astrometry.AstrometryEcliptic` (with an
 optional specification of the obliquity).
 
+Convert between binary models
+-----------------------------
+
+If ``m`` is your initial model, say an ELL1 binary::
+
+    from pint import binaryconvert
+    m2 = binaryconvert.convert_binary(m, "DD")
+
+will convert it to a DD binary.  
+
+Some binary types need additional parameters.  For ELL1H, you can set the number of harmonics and whether to use H4 or STIGMA::
+
+    m2 = binaryconvert.convert_binary(m, "ELL1H", NHARMS=3, useSTIGMA=True)
+
+For DDK, you can set OM (known as ``KOM``)::
+
+    m2 = binaryconvert.convert_binary(mDD, "DDK", KOM=12 * u.deg)
+
+Parameter values and uncertainties will be converted.  It will also make a best-guess as to which parameters should be frozen, but 
+it can still be useful to refit with the new model and check which parameters are fit.
+
+.. note::
+    The T2 model from tempo2 is not implemented, as this is a complex model that actually encapsulates several models.  The best practice is to 
+    change the model to the actual underlying model (ELL1, DD, BT, etc).
+
+These conversions can also be done on the command line using ``convert_parfile``::
+
+    convert_parfile --binary=DD ell1.par -o dd.par
 
 Add a jump programmatically
 ---------------------------

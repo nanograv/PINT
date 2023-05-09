@@ -73,8 +73,16 @@ class TestTOAReader(unittest.TestCase):
         assert "barycenter" in ts.observatories
         assert ts.ntoas == 8
 
+    def test_read_parkes_phaseoffset(self):
+        # Fourth column contains non-zero phase offset
+        toaline = " PUPPI_J2044+28_58852_652 432.3420  58852.7590686063892    1.00  120.75        @"
+
+        # To be changed if/when phase offset for Parkes format is implemented
+        with pytest.raises(ValueError):
+            toa._parse_TOA_line(toaline)
+
     def test_commands(self):
-        assert len(self.x.commands) == 18
+        assert len(self.x.commands) == 19
 
     def test_count(self):
         assert self.x.ntoas == 9
@@ -177,7 +185,7 @@ def test_toa_merge():
         datadir / "parkes.toa",
     ]
     toas = [toa.get_TOAs(ff) for ff in filenames]
-    ntoas = sum([tt.ntoas for tt in toas])
+    ntoas = sum(tt.ntoas for tt in toas)
     nt = toa.merge_TOAs(toas)
     assert len(nt.observatories) == 3
     assert nt.table.meta["filename"] == filenames
@@ -193,7 +201,7 @@ def test_toa_merge_again():
         datadir / "parkes.toa",
     ]
     toas = [toa.get_TOAs(ff) for ff in filenames]
-    ntoas = sum([tt.ntoas for tt in toas])
+    ntoas = sum(tt.ntoas for tt in toas)
     nt = toa.merge_TOAs(toas)
     # The following tests merging with and already merged TOAs
     other = toa.get_TOAs(datadir / "test1.tim")
@@ -203,14 +211,14 @@ def test_toa_merge_again():
     check_indices_contiguous(nt2)
 
 
-def test_toa_merge_again():
+def test_toa_merge_again_2():
     filenames = [
         datadir / "NGC6440E.tim",
         datadir / "testtimes.tim",
         datadir / "parkes.toa",
     ]
     toas = [toa.get_TOAs(ff) for ff in filenames]
-    ntoas = sum([tt.ntoas for tt in toas])
+    ntoas = sum(tt.ntoas for tt in toas)
     other = toa.get_TOAs(datadir / "test1.tim")
     # check consecutive merging
     nt = toa.merge_TOAs(toas[:2])
@@ -347,6 +355,66 @@ def test_toa_merge_different_columns_ignorepn_onwrite():
     f.seek(0)
     toas = [toa.get_TOAs(fname, include_pn=True) for fname in [f, filenames[1]]]
     nt = toa.merge_TOAs(toas)
+
+
+def test_toa_merge_different_bipm():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+        datadir / "parkes.toa",
+    ]
+    inc_bipms = [True, True, False]
+    toas = [
+        toa.get_TOAs(ff, include_bipm=inc_bipm)
+        for ff, inc_bipm in zip(filenames, inc_bipms)
+    ]
+    with pytest.raises(TypeError):
+        nt = toa.merge_TOAs(toas)
+
+
+def test_toa_merge_different_bipm_ver():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+        datadir / "parkes.toa",
+    ]
+    bipm_vers = ["BIPM2015", "BIPM2015", "BIPM2017"]
+    toas = [
+        toa.get_TOAs(ff, include_bipm=True, bipm_version=bipm_ver)
+        for ff, bipm_ver in zip(filenames, bipm_vers)
+    ]
+    with pytest.raises(TypeError):
+        nt = toa.merge_TOAs(toas)
+
+
+def test_toa_merge_different_gps():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+        datadir / "parkes.toa",
+    ]
+    inc_gpss = [True, True, False]
+    toas = [
+        toa.get_TOAs(ff, include_gps=inc_gps)
+        for ff, inc_gps in zip(filenames, inc_gpss)
+    ]
+    with pytest.raises(TypeError):
+        nt = toa.merge_TOAs(toas)
+
+
+def test_toa_merge_different_planets():
+    filenames = [
+        datadir / "NGC6440E.tim",
+        datadir / "testtimes.tim",
+        datadir / "parkes.toa",
+    ]
+    inc_planetss = [True, True, False]
+    toas = [
+        toa.get_TOAs(ff, planets=inc_planets)
+        for ff, inc_planets in zip(filenames, inc_planetss)
+    ]
+    with pytest.raises(TypeError):
+        nt = toa.merge_TOAs(toas)
 
 
 def test_bipm_default():
@@ -571,3 +639,37 @@ def test_chained_include_directories(tmp_path):
     )
 
     assert len(toa.get_TOAs(str(t1))) == 3
+
+
+def test_read_itoa():
+    # This test is put here only to ensure that the correct exception is raised.
+    # This should be removed or replaced if/when ITOA support is implemented.
+    timfile = datadir / "NGC6440E.itoa"
+    with pytest.raises(RuntimeError):
+        toa.get_TOAs(timfile)
+
+
+def test_parse_toa_line_exceptions():
+    # This should work.
+    goodline = "55731.000019.3.000.000.9y.x.ff 428.000000 55731.193719931024413   2.959  ao  -fe 430 -be ASP -f 430_ASP -bw 4 -tobs 1200.7 -tmplt J1853+1303.430.PUPPI.9y.x.sum.sm -gof 0.98 -nbin 2048 -nch 1 -chan 2 -subint 0 -snr 36.653 -wt 20 -proc 9y -pta NANOGrav -to -0.789e-6"
+    toa._parse_TOA_line(goodline)
+
+    # obs is given as a flag.
+    badline = "55731.000019.3.000.000.9y.x.ff 428.000000 55731.193719931024413   2.959  ao -obs ao -fe 430 -be ASP -f 430_ASP -bw 4 -tobs 1200.7 -tmplt J1853+1303.430.PUPPI.9y.x.sum.sm -gof 0.98 -nbin 2048 -nch 1 -chan 2 -subint 0 -snr 36.653 -wt 20 -proc 9y -pta NANOGrav -to -0.789e-6"
+    with pytest.raises(ValueError):
+        toa._parse_TOA_line(badline)
+
+    # Flag without corresponding value (-a)
+    badline = "55731.000019.3.000.000.9y.x.ff 428.000000 55731.193719931024413   2.959  ao -a -fe 430 -be ASP -f 430_ASP -bw 4 -tobs 1200.7 -tmplt J1853+1303.430.PUPPI.9y.x.sum.sm -gof 0.98 -nbin 2048 -nch 1 -chan 2 -subint 0 -snr 36.653 -wt 20 -proc 9y -pta NANOGrav -to -0.789e-6"
+    with pytest.raises(ValueError):
+        toa._parse_TOA_line(badline)
+
+    # Empty flag label (-)
+    badline = "55731.000019.3.000.000.9y.x.ff 428.000000 55731.193719931024413   2.959  ao - a -fe 430 -be ASP -f 430_ASP -bw 4 -tobs 1200.7 -tmplt J1853+1303.430.PUPPI.9y.x.sum.sm -gof 0.98 -nbin 2048 -nch 1 -chan 2 -subint 0 -snr 36.653 -wt 20 -proc 9y -pta NANOGrav -to -0.789e-6"
+    with pytest.raises(ValueError):
+        toa._parse_TOA_line(badline)
+
+    # Garbage line
+    garbage = "asdg skfgs dj"
+    with pytest.raises(RuntimeError):
+        toa._parse_TOA_line(garbage)

@@ -115,8 +115,7 @@ class TOALineOrderSetup:
     def toas_and_order(draw, cls):
         # note that draw must come before cls
         n = len(cls.t)
-        ix = draw(permutations(np.arange(n)))
-        return ix
+        return draw(permutations(np.arange(n)))
 
 
 @given(TOALineOrderSetup.toas_and_order())

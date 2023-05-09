@@ -1,0 +1,22 @@
+# New format observatory information file.
+#
+# Values are x,y,z geocentric coordinates
+# The last column contains the old-style telescope ID code
+#
+####### From Jodrell obsys.dat file
+#
+ 383395.727    -173759.585      5077751.313      MKIII               j  
+ 3817176.557   -162921.170      5089462.046      TABLEY              k  
+ 3828714.504   -169458.987      5080647.749      DARNHALL            l  
+ 3859711.492   -201995.082      5056134.285      KNOCKIN             m  
+ 3923069.135   -146804.404      5009320.570      DEFFORD             n  
+       0.0           1.0              0.0        COE                 o  UTC
+#
+###### Telescope ID changed from the Jodrell obsys.dat file
+#
+ 3822473.365   -153692.318      5085851.303      JB_MKII             h  UTC
+ 3822294.825   -153862.275      5085987.071      JB_42ft             i  UTC
+
+# to handle Kaspi, Ryba & Taylor data, which is referred to UTC
+  2390490.0     -5564764.0      1994727.0        ARECIBO             aoutc UTC
+

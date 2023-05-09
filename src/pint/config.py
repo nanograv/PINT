@@ -5,6 +5,7 @@ import pkg_resources
 
 __all__ = ["datadir", "examplefile", "runtimefile"]
 
+
 # location of tim, par files installed via pkg_resources
 def datadir():
     """Location of the PINT data (par and tim files)
@@ -31,7 +32,8 @@ def examplefile(filename):
 
     Notes
     -----
-    This is **not** for files needed at runtime. Those are located by :func:`pint.config.runtimefile`.  This is for files needed for the example notebooks.
+    This is **not** for files needed at runtime. Those are located by :func:`pint.config.runtimefile`.
+    This is for files needed for the example notebooks.
     """
     return pkg_resources.resource_filename(
         __name__, os.path.join("data/examples/", filename)
@@ -52,7 +54,8 @@ def runtimefile(filename):
 
     Notes
     -----
-    This **is**  for files needed at runtime. Files needed for the example notebooks are found via :func:`pint.config.examplefile`.
+    This **is**  for files needed at runtime. Files needed for the example notebooks
+    are found via :func:`pint.config.examplefile`.
     """
     return pkg_resources.resource_filename(
         __name__, os.path.join("data/runtime/", filename)

@@ -74,7 +74,6 @@ class TestGalactic(unittest.TestCase):
         assert sep < 1e-9 * u.arcsec, msg
 
     def test_proper_motion_identity(self):
-
         # sanity check that evaluation at POSEPOCH returns something very close to 0
         J0613_icrs = self.modelJ0613.coords_as_ICRS()
         J0613_icrs_alt = self.modelJ0613.coords_as_ICRS(
@@ -178,7 +177,3 @@ class TestGalactic(unittest.TestCase):
             % sep.arcsec
         )
         assert sep < 1e-9 * u.arcsec, msg
-
-
-if __name__ == "__main__":
-    unittest.main()

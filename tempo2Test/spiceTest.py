@@ -1,11 +1,10 @@
-from __future__ import print_function, division
 import spice
 import numpy as np
 
 
 def test_lmt(et, step):
     """
-    Testing how accurate that spice can distinguish two near by times(et) with littl time step
+    Testing how accurate that spice can distinguish two near by times(et) with little time step
     et is the initial time
     step is the small time step
     """
@@ -23,8 +22,8 @@ def spice_Intplt(et, stepBitNum):
     """
     Testing interpolating spice results with two exact numbers
     """
-    step = 1.0 / 2.0 ** stepBitNum
-    numStep = 2.0 ** stepBitNum
+    step = 1.0 / 2.0**stepBitNum
+    numStep = 2.0**stepBitNum
     et0 = np.floor(et)  # The first integer before targeting time et
     et1 = np.ceil(et)  # The first integer after targeting time et
     exctNumArray = np.linspace(et0, et1, numStep)
@@ -44,12 +43,10 @@ def spice_Intplt(et, stepBitNum):
     print(exctNum0, exctNum1)
     state0, lt0 = spice.spkezr("EARTH", exctNum0, "J2000", "NONE", "SSB")
     state1, lt1 = spice.spkezr("EARTH", exctNum1, "J2000", "NONE", "SSB")
-    state = []
-    lt = []
-    for i in range(6):
-        state.append(np.interp(et, [exctNum0, exctNum1], [state0[i], state1[i]]))
-    lt.append(np.interp(et, [exctNum0, exctNum1], [lt0, lt1]))
-
+    state = [
+        np.interp(et, [exctNum0, exctNum1], [state0[i], state1[i]]) for i in range(6)
+    ]
+    lt = [np.interp(et, [exctNum0, exctNum1], [lt0, lt1])]
     stateOr, ltOr = spice.spkezr("EARTH", et, "J2000", "NONE", "SSB")
 
     return state, stateOr, np.array(state) - np.array(stateOr)
@@ -57,7 +54,7 @@ def spice_Intplt(et, stepBitNum):
 
 def spkInterp(et, stepBitNum):
     """
-    This function interpolates earth state in one second with seveal exact points.
+    This function interpolates earth state in one second with several exact points.
     To increase accuracy, each know point will be the exact number that can be represented
     by double precision.
     et is the target time
@@ -65,8 +62,8 @@ def spkInterp(et, stepBitNum):
     calculated by bits
     step  = 1.0/2.0**stepBitNum
     """
-    step = 1.0 / 2.0 ** stepBitNum  # Step from exact point
-    numStep = 2.0 ** stepBitNum  # Number of exact point
+    step = 1.0 / 2.0**stepBitNum  # Step from exact point
+    numStep = 2.0**stepBitNum  # Number of exact point
     et0 = np.floor(et)  # Start point of interval
     etExctArray = np.linspace(et0, et0 + 1, numStep + 1)  # Exact time point array
     stateArray = []  # Earth state array for each exact point

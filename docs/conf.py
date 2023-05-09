@@ -15,7 +15,6 @@
 
 import os
 import sys
-from packaging.version import parse
 
 import jupytext
 
@@ -87,7 +86,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "pint"
-copyright = "2017-2021 PINT Developers"
+copyright = "2017-2023 PINT Developers"
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
@@ -122,6 +121,9 @@ exclude_patterns = [
     "conf.py",
     "_ext",
 ]
+
+if tags.has("noexamples"):
+    exclude_patterns.append("examples/*.py")
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -200,7 +202,7 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
 
 # The name of an image file (relative to this directory) to place at the
 # top of the sidebar.
-# html_logo = None
+html_logo = "logo/PINT_LOGO_64trans.png"
 
 # The name of an image file (within the static path) to use as favicon
 # of the docs.  This file should be a Windows icon file (.ico) being

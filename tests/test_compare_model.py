@@ -3,6 +3,7 @@ from io import StringIO
 import pytest
 
 from pint.models import get_model
+from pint.scripts import compare_parfiles
 
 par_basic = """
 PSR J1234+5678
@@ -95,3 +96,19 @@ def test_known_problem():
     m2 = get_model(StringIO(par_15yr_b))
     m1.compare(m2)
     m2.compare(m1)
+
+
+def test_compare_parfile_script():
+    parfile1 = "par_15yr_a.par"
+    parfile2 = "par_15yr_b.par"
+
+    args = ""
+
+    with open(parfile1, "w") as par1:
+        par1.write(par_15yr_a)
+
+    with open(parfile2, "w") as par2:
+        par2.write(par_15yr_b)
+
+    argv = f"{args} {parfile1} {parfile2}".split()
+    compare_parfiles.main(argv)

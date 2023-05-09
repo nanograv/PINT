@@ -1,5 +1,4 @@
-""" Various of tests on the wideband DM data
-"""
+""" Various of tests on the wideband DM data"""
 
 import io
 import os
@@ -116,9 +115,7 @@ class TestDMData:
         # First get the toas for jump
         all_backends = list(set(self.toa_backends))
         dm_jump_value = self.model.jump_dm(self.toas)
-        dm_jump_map = {}
-        for dmj in self.dm_jump_params:
-            dm_jump_map[dmj.key_value[0]] = dmj
+        dm_jump_map = {dmj.key_value[0]: dmj for dmj in self.dm_jump_params}
         for be in all_backends:
             assert all(
                 dm_jump_value[self.toa_backends == be] == -dm_jump_map[be].quantity

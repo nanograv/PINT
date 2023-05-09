@@ -28,7 +28,7 @@ from numpy.testing import assert_allclose, assert_array_equal
 from pinttestdata import datadir
 
 import pint.models as tm
-from pint import fitter, toa
+from pint import fitter, toa, dmu
 from pint.pulsar_mjd import (
     jds_to_mjds,
     jds_to_mjds_pulsar,
@@ -50,6 +50,11 @@ from pint.utils import (
     open_or_use,
     taylor_horner,
     taylor_horner_deriv,
+    find_prefix_bytime,
+    merge_dmx,
+    convert_dispersion_measure,
+    print_color_examples,
+    parse_time,
 )
 
 
@@ -147,7 +152,7 @@ def test_interesting_lines(lines, goodlines, comments):
 def test_interesting_lines_input_validation():
     """Check it lets the user know about invalid comment markers."""
     with pytest.raises(ValueError):
-        for l in interesting_lines([""], comments=" C "):
+        for _ in interesting_lines([""], comments=" C "):
             pass
 
 
@@ -688,13 +693,13 @@ def test_Ftest_statistical(dof_1, dof_2, seed):
     """
     random = np.random.default_rng(0)
     Fs = []
-    for i in range(10000):
+    for _ in range(10000):
         x = random.standard_normal(dof_1)
         Fs.append(FTest((x**2).sum(), dof_1, (x[:dof_2] ** 2).sum(), dof_2))
     threshold = 0.01
     assert (
         scipy.stats.binom(len(Fs), threshold).ppf(0.01)
-        < sum(1 for F in Fs if F < threshold)
+        < sum(F < threshold for F in Fs)
         < scipy.stats.binom(len(Fs), threshold).ppf(0.99)
     )
 
@@ -790,3 +795,73 @@ def test_compute_hash_accepts_no_change(a):
         h_b = compute_hash(g)
 
     assert h_a == h_b
+
+
+def test_find_dmx():
+    par = """
+    PSR J1234+5678
+    F0 1
+    DM 10
+    ELAT 10
+    ELONG 0
+    PEPOCH 54000
+    DMXR1_0001 54000
+    DMXR2_0001 55000
+    DMX_0001 1
+    DMXR1_0002 55000
+    DMXR2_0002 56000
+    DMX_0002 2
+    """
+
+    model = tm.get_model(io.StringIO(par))
+    assert find_prefix_bytime(model, "DMX", 54500) == 1
+    assert len(find_prefix_bytime(model, "DMX", 53500)) == 0
+
+
+def test_merge_dmx():
+    par = """
+    PSR J1234+5678
+    F0 1
+    DM 10
+    ELAT 10
+    ELONG 0
+    PEPOCH 54000
+    DMXR1_0001 54000
+    DMXR2_0001 55000
+    DMX_0001 1
+    DMXR1_0002 55000
+    DMXR2_0002 56000
+    DMX_0002 2
+    """
+
+    model = tm.get_model(io.StringIO(par))
+    newindex = merge_dmx(model, 1, 2, value="mean")
+    print(model, newindex)
+    assert getattr(model, f"DMX_{newindex:04d}").value == 1.5
+
+
+def test_convert_dm():
+    dm = 10 * dmu
+    dm_codata = convert_dispersion_measure(dm)
+
+    assert np.isfinite(dm_codata)
+
+
+def test_print_color_examples():
+    print_color_examples()
+
+
+@pytest.mark.parametrize(
+    "t",
+    [
+        Time(55555, format="pulsar_mjd", scale="tdb", precision=9),
+        55555 * u.d,
+        55555.0,
+        55555,
+        "55555",
+    ],
+)
+def test_parse_time(t):
+    assert parse_time(t, scale="tdb") == Time(
+        55555, format="pulsar_mjd", scale="tdb", precision=9
+    )

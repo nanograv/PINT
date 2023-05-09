@@ -24,7 +24,6 @@ from pint.models import (
 )
 from pint.simulation import make_fake_toas_uniform
 from pint.toa import get_TOAs
-import pint.residuals
 
 
 @pytest.fixture
@@ -443,3 +442,9 @@ def test_writing_to_file_equals_string(tmp_path, model_0437):
     p = tmp_path / "file.par"
     model_0437.write_parfile(p, include_info=False)
     assert p.read_text() == model_0437.as_parfile(include_info=False)
+
+
+def test_dispersion_slope(model_0437):
+    toas = make_fake_toas_uniform(56000, 57000, 50, model=model_0437)
+    dsl = model_0437.total_dispersion_slope(toas)
+    assert np.all(np.isfinite(dsl))

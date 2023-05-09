@@ -60,6 +60,10 @@ ls = u.def_unit("ls", c.c * 1.0 * u.s)
 # DM unit (pc cm^-3)
 dmu = u.def_unit("dmu", u.pc * u.cm**-3)
 
+# This value is cited from Duncan Lorimer, Michael Kramer, Handbook of Pulsar
+# Astronomy, Second edition, Page 86, Note 1
+DMconst = 1.0 / 2.41e-4 * u.MHz * u.MHz * u.s * u.cm**3 / u.pc
+
 # define equivalency for astropy units
 light_second_equivalency = [(ls, si.second, lambda x: x, lambda x: x)]
 # hourangle_second unit

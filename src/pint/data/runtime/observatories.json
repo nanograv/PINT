@@ -253,7 +253,20 @@
             5797947.77,
             2073243.16
         ],
-        "origin": "The Giant Metrewave Radio Telescope.\nThe origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
+        "origin": "The Giant Metre-wave Radio Telescope.\nThe origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\nGMRT does not need clock files as the data is recorded against UTC(gps)."
+    },
+    "ort": {
+        "aliases": [
+            "or"
+        ],
+        "clock_fmt": "tempo2",
+        "clock_file": "",
+        "itrf_xyz": [
+            1442712.95,
+            6087044.73,
+            1251052.35
+        ],
+        "origin": "The Ooty Radio Telescope.\nCoordinates provided by Jaikhomba Singha on 25 Jan 2023.\nORT does not need clock files as the data is recorded against UTC(gps)."
     },
     "wsrt": {
         "aliases": [
@@ -555,7 +568,9 @@
             486989.4,
             4900430.8
         ],
-        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
+        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7.",
+        "clock_file": "effix2gps.clk",
+        "clock_fmt": "tempo2"
     },
     "leap": {
         "aliases": [
@@ -565,6 +580,11 @@
             4033949.5,
             486989.4,
             4900430.8
+        ],
+        "clock_fmt": "tempo2",
+        "clock_file": [
+            "leap2effix.clk",
+            "effix2gps.clk"
         ],
         "origin": "The Large European Array for Pulsars.\nThis is the same as the position of the Effelsberg radio telescope.\nImported from TEMPO2 observatories.dat 2021 June 7."
     },
@@ -1371,5 +1391,24 @@
             4449633.220012489
         ],
         "origin": "Imported from TEMPO obsys.dat 2021 June 8."
+    },
+    "hess": {
+        "include_bipm": false,
+        "itrf_xyz": [
+            5622462.3793,
+            1665449.2317,
+            -2505096.8054
+        ],
+        "origin": "H.E.S.S., the High Energy Stereoscopic System, an Imaging Atmospheric Cherenkov Telescope.\nThese coordinates are provided (from geodetic coordinates : lat = 23°16'18''S, lon = 16°30'00''E at 1800m asl) by the Maxime Regeard and Arache Djannati-Atai on behalf of the H.E.S.S. Collabotation, 2023 January 18."
+    },
+    "hawc": {
+        "include_bipm": false,
+        "include_gps": true,
+        "itrf_xyz": [
+            -767864.42219771,
+            -5987810.65796205,
+            2064148.57332404
+        ],
+        "origin": "HAWC: High Altitude Water Cherenkov Experiment.\nCoordinates provided (as geodetic coordinates : 18:59:41.63 N, 97:18:27.39 W, 4096 m) by the spokesperson Ke Fang on behalf of the HAWC Collabotation, 2023 April 21."
     }
 }

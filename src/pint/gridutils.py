@@ -17,7 +17,7 @@ from astropy.utils.console import ProgressBar
 from pint import fitter
 
 
-__all__ = ["doonefit", "grid_chisq", "grid_chisq_derived", "plot_grid_chisq"]
+__all__ = ["doonefit", "grid_chisq", "grid_chisq_derived"]
 
 
 def hostinfo():
@@ -189,7 +189,7 @@ def grid_chisq(
     extraout : dict of np.ndarray
         Parameter values computed at each grid point for `extraparnames`
 
-    Example
+    Examples
     -------
     >>> import astropy.units as u
     >>> import numpy as np
@@ -197,17 +197,55 @@ def grid_chisq(
     >>> import pint.gridutils
     >>> from pint.fitter import WLSFitter
     >>> from pint.models.model_builder import get_model, get_model_and_toas
-    # Load in a basic dataset
+    >>> # Load in a basic dataset
     >>> parfile = pint.config.examplefile("NGC6440E.par")
     >>> timfile = pint.config.examplefile("NGC6440E.tim")
     >>> m, t = get_model_and_toas(parfile, timfile)
     >>> f = WLSFitter(t, m)
-    # find the best-fit
+    >>> # find the best-fit
     >>> f.fit_toas()
     >>> bestfit = f.resids.chi2
-    # We'll do something like 3-sigma around the best-fit values of  F0
+    >>> # We'll do something like 3-sigma around the best-fit values of  F0
     >>> F0 = np.linspace(f.model.F0.quantity - 3 * f.model.F0.uncertainty,f.model.F0.quantity + 3 * f.model.F0.uncertainty,25)
     >>> chi2_F0,_ = pint.gridutils.grid_chisq(f, ("F0",), (F0,))
+
+
+    A 2D example with a plot:
+
+    >>> import astropy.units as u
+    >>> import numpy as np
+    >>> import pint.gridutils
+    >>> from pint.fitter import WLSFitter
+    >>> from pint.models.model_builder import get_model_and_toas
+    >>> import scipy.stats
+    >>> import matplotlib.pyplot as plt
+    >>> # Load in a basic dataset
+    >>> parfile = pint.config.examplefile("NGC6440E.par")
+    >>> timfile = pint.config.examplefile("NGC6440E.tim")
+    >>> m, t = get_model_and_toas(parfile, timfile)
+    >>> f = WLSFitter(t, m)
+    >>> # find the best-fit
+    >>> f.fit_toas()
+    >>> bestfit = f.resids.chi2
+    >>> F0 = np.linspace(f.model.F0.quantity - 3 * f.model.F0.uncertainty,f.model.F0.quantity + 3 * f.model.F0.uncertainty,25)
+    >>> F1 = np.linspace(f.model.F1.quantity - 3 * f.model.F1.uncertainty,f.model.F1.quantity + 3 * f.model.F1.uncertainty,27)
+    >>> chi2grid = pint.gridutils.grid_chisq(f, ("F0", "F1"), (F0, F1))[0]
+    >>> # 1, 2, and 3 sigma confidence limits
+    >>> nsigma = np.arange(1, 4)
+    >>> # these are the CDFs going from -infinity to nsigma.  So subtract away 0.5 and double for the 2-sided values
+    >>> CIs = (scipy.stats.norm().cdf(nsigma) - 0.5) * 2
+    >>> print(f"Confidence intervals for {nsigma} sigma: {CIs}")
+    >>> # chi^2 random variable for 2 parameters
+    >>> rv = scipy.stats.chi2(2)
+    >>> # the ppf = Percent point function is the inverse of the CDF
+    >>> contour_levels = rv.ppf(CIs)
+    >>> fig, ax = plt.subplots(figsize=(16, 9))
+    >>> # just plot the values offset from the best-fit values
+    >>> twod = ax.contour(F0 - f.model.F0.quantity,F1 - f.model.F1.quantity,chi2grid - bestfit,levels=contour_levels,colors="b")
+    >>> ax.errorbar(0, 0, xerr=f.model.F0.uncertainty.value, yerr=f.model.F1.uncertainty.value, fmt="ro")
+    >>> ax.set_xlabel("$\Delta F_0$ (Hz)", fontsize=24)
+    >>> ax.set_ylabel("$\Delta F_1$ (Hz/s)", fontsize=24)
+    >>> plt.show()
 
     Notes
     -----
@@ -908,264 +946,3 @@ def tuple_chisq_derived(
     # Restore saved model
     ftr.model = savemod
     return chi2, out, extraout
-
-
-##############################
-# WIP
-##############################
-
-
-def _grid_docolfit(ftr, par1_name, par1_values, parnames, parvalues):
-    """Worker process that computes one row of the chisq grid"""
-    chisq = np.zeros(len(par1_values))
-    for jj, par1 in enumerate(par1_values):
-        # Make a full copy of the fitter to work with
-        myftr = copy.deepcopy(ftr)
-        for parname, parvalue in zip(parnames, parvalues):
-            getattr(myftr.model, parname).frozen = True
-            getattr(myftr.model, parname).quantity = parvalue
-        getattr(myftr.model, par1_name).frozen = True
-        getattr(myftr.model, par1_name).quantity = par1
-        chisq[jj] = myftr.fit_toas()
-    return chisq
-
-
-def grid_chisq_col(ftr, parnames, parvalues, ncpu=None):
-    if ncpu is None or ncpu > 1:
-        try:
-            from pathos.multiprocessing import ProcessingPool as Pool
-
-            if ncpu is None:
-                # Use al available CPUs
-                ncpu = multiprocessing.cpu_count()
-            pool = Pool(ncpu)
-        except ImportError:
-            log.warning("pathos module not found; using single processor version")
-            ncpu = 1
-    # Save the current model so we can tweak it for gridding, then restore it at the end
-    savemod = ftr.model
-    gridmod = copy.deepcopy(ftr.model)
-    ftr.model = gridmod
-
-    # Freeze the  params we are going to grid over
-    for parname in parnames:
-        getattr(ftr.model, parname).frozen = True
-    # All other unfrozen parameters will be fitted for at each grid point
-    out = np.meshgrid(*parvalues[:-1])
-    chi2 = np.zeros(out[0].shape + (len(parvalues[-1]),))
-    print(out[0].shape)
-    print(chi2.shape)
-    print(np.meshgrid(*parvalues)[0].shape)
-    nrep = len(out[0].flatten())
-    results = pool.map(
-        _grid_docolfit,
-        (ftr,) * nrep,
-        (parnames[-1],) * nrep,
-        (parvalues[-1],) * nrep,
-        (parnames[:-1],) * nrep,
-        list(zip(*[x.flatten() for x in out])),
-    )
-    for i, j in enumerate(np.ndindex(out[0].shape)):
-        chi2[j] = results[i]
-    return chi2
-
-
-##############################
-# OLD
-##############################
-from multiprocessing import Process, Queue
-
-
-def _grid_docol(ftr, par1_name, par1, par2_name, par2_grid, ii, q):
-    """Worker process that computes one row of the chisq grid"""
-    for jj, par2 in enumerate(par2_grid):
-        # Make a full copy of the fitter to work with
-        myftr = copy.deepcopy(ftr)
-        # Freeze the two params we are going to grid over and set their values
-        # All other unfrozen parameters will be fitted for at each grid point
-        getattr(myftr.model, par1_name).frozen = True
-        getattr(myftr.model, par2_name).frozen = True
-        getattr(myftr.model, par1_name).quantity = par1
-        getattr(myftr.model, par2_name).quantity = par2
-        chisq = myftr.fit_toas()
-        # print(".", end="")
-        q.put([ii, jj, chisq])
-
-
-def old_grid_chisq_mp(ftr, par1_name, par1_grid, par2_name, par2_grid, ncpu=None):
-    """Compute chisq over a grid of two parameters, multiprocessing version
-    Use Python's multiprocessing package to do a parallel computation of
-    chisq over 2-D grid of parameters.
-    Parameters
-    ----------
-    ftr
-        The base fitter to use.
-    par1_name : str
-        Name of the first parameter to grid over
-    par1_grid : array, Quantity
-        Array of par1 values for column of the output matrix
-    par2_name : str
-        Name of the second parameter to grid over
-    par2_grid : array, Quantity
-        Array of par2 values for column of the output matrix
-    ncpu : int, optional
-        Number of processes to use in parallel. Default is number of CPUs available
-    Returns
-    -------
-    array : 2-D array of chisq values with par1 varying in columns and par2 varying in rows
-    """
-
-    if ncpu is None:
-        # Use al available CPUs
-        ncpu = multiprocessing.cpu_count()
-
-    # Instantiate a Queue for getting return values from the worker processes
-    q = Queue()
-
-    chi2 = np.zeros((len(par1_grid), len(par2_grid)))
-    # First create all the processes and put them in a list
-    processes = []
-    # Want par1 on X-axis and par2 on y-axis
-    for ii, par1 in enumerate(par1_grid):
-        # ii indexes rows, now for have each column done by a different process
-        proc = Process(
-            target=_grid_docol, args=(ftr, par1_name, par1, par2_name, par2_grid, ii, q)
-        )
-        processes.append(proc)
-
-    # Now consume the list of processes by starting up to ncpu processes at a time
-    while len(processes):
-        # Start up to ncpu processes
-        started = []
-        for cpunum in range(ncpu):
-            if len(processes):
-                proc = processes.pop()
-                proc.start()
-                started.append(proc)
-        # Collect all the results from the started processes
-        for proc in started * len(par2_grid):
-            ii, jj, ch = q.get()
-            # Array index here is rownum, colnum so translates to y, x
-            chi2[jj, ii] = ch
-
-        # Now join each of those that are done to close them out
-        # This will be inefficient if the processes have large differences in runtime, since there
-        # is a synchronization point. In this case it should not be a problem.
-        for proc in started:
-            proc.join()
-            # print("|", end="")
-        # print("")
-
-    return chi2
-
-
-def old_grid_chisq(ftr, par1_name, par1_grid, par2_name, par2_grid):
-    """Compute chisq over a grid of two parameters, serial version
-    Single-threaded computation of chisq over 2-D grid of parameters.
-    Parameters
-    ----------
-    ftr
-        The base fitter to use.
-    par1_name : str
-        Name of the first parameter to grid over
-    par1_grid : array, Quantity
-        Array of par1 values for column of the output matrix
-    par2_name : str
-        Name of the second parameter to grid over
-    par2_grid : array, Quantity
-        Array of par2 values for column of the output matrix
-    Returns
-    -------
-    array : 2-D array of chisq values with par1 varying in columns and par2 varying in rows
-    """
-
-    # Save the current model so we can tweak it for gridding, then restore it at the end
-    savemod = ftr.model
-    gridmod = copy.deepcopy(ftr.model)
-    ftr.model = gridmod
-
-    # Freeze the two params we are going to grid over
-    getattr(ftr.model, par1_name).frozen = True
-    getattr(ftr.model, par2_name).frozen = True
-
-    # All other unfrozen parameters will be fitted for at each grid point
-
-    chi2 = np.zeros((len(par1_grid), len(par2_grid)))
-    # Want par1 on X-axis and par2 on y-axis
-    for ii, par1 in enumerate(par1_grid):
-        getattr(ftr.model, par1_name).quantity = par1
-        for jj, par2 in enumerate(par2_grid):
-            getattr(ftr.model, par2_name).quantity = par2
-            # Array index here is rownum, colnum so translates to y, x
-            chi2[jj, ii] = ftr.fit_toas()
-            # print(".", end="")
-        # print("")
-
-    # Restore saved model
-    ftr.model = savemod
-    return chi2
-
-
-##############################
-
-
-def plot_grid_chisq(
-    par1_name, par1_grid, par2_name, par2_grid, chi2, title="Chisq Heatmap"
-):
-    """Plot results of chi2 grid
-
-    Parameters
-    ----------
-    ftr
-        The base fitter to use.
-    par1_name : str
-        Name of the first parameter to grid over
-    par1_grid : array, Quantity
-        Array of par1 values for column of the output matrix
-    par2_name : str
-        Name of the second parameter to grid over
-    par2_grid : array, Quantity
-        Array of par2 values for column of the output matrix
-    title : str, optional
-        Title for plot
-    """
-
-    import matplotlib.pyplot as plt
-
-    # Compute chi2 difference from minimum
-    delchi2 = chi2 - chi2.min()
-    fig, ax = plt.subplots(figsize=(9, 9))
-    delta_par1 = (par1_grid[1] - par1_grid[0]).value
-    delta_par2 = (par2_grid[1] - par2_grid[0]).value
-    ax.imshow(
-        delchi2,
-        origin="lower",
-        extent=(
-            par1_grid[0].value - delta_par1 / 2,
-            par1_grid[-1].value + delta_par1 / 2,
-            par2_grid[0] - delta_par2 / 2,
-            par2_grid[-1] + delta_par2 / 2,
-        ),
-        aspect="auto",
-        cmap="Blues_r",
-        interpolation="bicubic",
-        vmin=0,
-        vmax=10,
-    )
-    levels = np.arange(4) + 1
-    ax.contour(
-        delchi2,
-        levels=levels,
-        colors="red",
-        extent=(
-            par1_grid[0].value - delta_par1 / 2,
-            par1_grid[-1].value + delta_par1 / 2,
-            par2_grid[0] - delta_par2 / 2,
-            par2_grid[-1] + delta_par2 / 2,
-        ),
-    )
-    ax.set_xlabel(par1_name)
-    ax.set_ylabel(par2_name)
-    ax.grid(True)
-    ax.set_title(title)
-    return

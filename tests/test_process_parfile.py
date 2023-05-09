@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 """Tests for par file parsing, pintify parfile and value fill up
 """
 
@@ -140,14 +139,14 @@ def test_pintify_parfile_alises():
 
 
 def test_pintify_parfile_nonrepeat_with_alise_repeating():
-    aliases_par = base_par + "LAMBDA 2 1 3"
+    aliases_par = f"{base_par}LAMBDA 2 1 3"
     m = ModelBuilder()
     with pytest.raises(TimingModelError):
         m._pintify_parfile(StringIO(aliases_par))
 
 
 def test_pintify_parfile_unrecognize():
-    wrong_par = base_par + "UNKNOWN 2 1 1"
+    wrong_par = f"{base_par}UNKNOWN 2 1 1"
     m = ModelBuilder()
     pint_dict, original_name, unknow = m._pintify_parfile(StringIO(wrong_par))
     assert unknow == {"UNKNOWN": ["2 1 1"]}

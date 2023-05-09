@@ -233,11 +233,9 @@ class T2SpacecraftObs(SpecialLocation):
 
         pos_geo = self.get_gcrs(t, group, ephem=None)
 
-        stl_posvel = PosVel(pos_geo, vel_geo, origin="earth", obj="spacecraft")
-        return stl_posvel
+        return PosVel(pos_geo, vel_geo, origin="earth", obj="spacecraft")
 
     def posvel(self, t, ephem, group=None):
-
         if group is None:
             raise ValueError("TOA group table needed for SpacecraftObs posvel")
 

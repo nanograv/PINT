@@ -1,5 +1,4 @@
-""" Various of tests for the general data fitter using wideband TOAs.
-"""
+""" Various of tests for the general data fitter using wideband TOAs."""
 
 import os
 
@@ -31,8 +30,7 @@ class TestWidebandTOAFitter:
         # test making residuals
         assert len(fitter.resids._combined_resids) == 2 * self.toas.ntoas
         # test additional args
-        add_args = {}
-        add_args["toa"] = {"subtract_mean": False}
+        add_args = {"toa": {"subtract_mean": False}}
         fitter2 = WidebandTOAFitter([self.toas], self.model, additional_args=add_args)
 
         assert fitter2.resids.toa.subtract_mean == False
@@ -57,7 +55,7 @@ class TestWidebandTOAFitter:
         prefit_pint = fitter.resids_init.toa.time_resids
         prefit_tempo = self.tempo_res[:, 0] * u.us
         diff_prefit = (prefit_pint - prefit_tempo).to(u.ns)
-        # 50 ns is the difference of PINT tempo precession and nautation model.
+        # 50 ns is the difference of PINT tempo precession and nutation model.
         assert np.abs(diff_prefit - diff_prefit.mean()).max() < 50 * u.ns
         postfit_pint = fitter.resids.toa.time_resids
         postfit_tempo = self.tempo_res[:, 1] * u.us

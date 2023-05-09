@@ -1,4 +1,5 @@
-#! /usr/bin/env python
+import contextlib
+import io
 import os
 import time
 
@@ -6,11 +7,30 @@ import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy import log
+from pinttestdata import datadir
 
 import pint.models as tm
 from pint import toa
 from pint.residuals import Residuals
-from pinttestdata import datadir
+
+
+def test_simple_parfile():
+    """Test a simple parfile without frequency derivatives, proper motion,
+    PEPOCH and POSEPOCH."""
+    model = tm.get_model(
+        io.StringIO(
+            """
+            PSR J1234+5678
+            ELAT 0
+            ELONG 0
+            F0 1
+            DM 10
+            """
+        )
+    )
+
+    assert model.ELAT.value == model.ELONG.value == 0
+    assert model.PEPOCH.quantity is None and model.POSEPOCH.quantity is None
 
 
 def test_model():
@@ -56,8 +76,9 @@ def test_model():
     #                                     ['tt2tb', 'roemer', 'post_phase',
     #                                      'shapiro', 'shapiroJ'])
     tempo2_vals = np.genfromtxt(
-        parfile + ".tempo2_test", names=True, comments="#", dtype=np.longdouble
+        f"{parfile}.tempo2_test", names=True, comments="#", dtype=np.longdouble
     )
+
     t2_resids = tempo2_vals["post_phase"] / float(m.F0.value) * 1e6 * u.us
     diff_t2 = (resids_us - t2_resids).to(u.ns)
     diff_t2 -= diff_t2.mean()
@@ -70,13 +91,14 @@ def test_model():
 
     # run tempo1 also, if the tempo_utils module is available
     did_tempo1 = False
-    try:
+    with contextlib.suppress(Exception):
         import tempo_utils
 
         log.info("Running TEMPO1...")
         t1_result = np.genfromtxt(
-            t1_parfile + ".tempo_test", names=True, comments="#", dtype=np.longdouble
+            f"{t1_parfile}.tempo_test", names=True, comments="#", dtype=np.longdouble
         )
+
         t1_resids = t1_result["residuals_phase"] / float(m.F0.value) * 1e6 * u.us
         did_tempo1 = True
         diff_t1 = (resids_us - t1_resids).to(u.ns)
@@ -92,9 +114,6 @@ def test_model():
             % np.fabs(diff_t2_t1).max().value
         )
         log.info("Std resid diff between T1 and T2: %.2f ns" % diff_t2_t1.std().value)
-    except:
-        pass
-
     if did_tempo1 and not planets:
         assert np.fabs(diff_t1).max() < 32.0 * u.ns
 

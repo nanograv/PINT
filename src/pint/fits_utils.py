@@ -3,10 +3,7 @@
 import numpy as np
 from loguru import logger as log
 
-try:
-    from erfa import DAYSEC as SECS_PER_DAY
-except ImportError:
-    from astropy._erfa import DAYSEC as SECS_PER_DAY
+from erfa import DAYSEC as SECS_PER_DAY
 
 from pint.pulsar_mjd import fortran_float
 
@@ -15,7 +12,7 @@ __all__ = ["read_fits_event_mjds", "read_fits_event_mjds_tuples"]
 
 
 def read_fits_event_mjds_tuples(event_hdu, timecolumn="TIME"):
-    """Read a set of MJDs from a FITS HDU, with proper converstion of times to MJD
+    """Read a set of MJDs from a FITS HDU, with proper conversion of times to MJD
 
     The FITS time format is defined here:
     https://heasarc.gsfc.nasa.gov/docs/journal/timing3.html
@@ -61,18 +58,13 @@ def read_fits_event_mjds_tuples(event_hdu, timecolumn="TIME"):
             )
     log.debug("MJDREF = {0}".format(MJDREF))
 
-    # Should check timecolumn units to be sure they are seconds!
-
-    # MJD = (TIMECOLUMN + TIMEZERO)/SECS_PER_DAY + MJDREF
-    mjds = np.array(
+    return np.array(
         [(MJDREF, tt) for tt in (event_dat.field(timecolumn) + TIMEZERO) / SECS_PER_DAY]
     )
 
-    return mjds
-
 
 def read_fits_event_mjds(event_hdu, timecolumn="TIME"):
-    """Read a set of MJDs from a FITS HDU, with proper converstion of times to MJD
+    """Read a set of MJDs from a FITS HDU, with proper conversion of times to MJD
 
     The FITS time format is defined here:
     https://heasarc.gsfc.nasa.gov/docs/journal/timing3.html
@@ -110,8 +102,6 @@ def read_fits_event_mjds(event_hdu, timecolumn="TIME"):
     # Should check timecolumn units to be sure they are seconds!
 
     # MJD = (TIMECOLUMN + TIMEZERO)/SECS_PER_DAY + MJDREF
-    mjds = (
+    return (
         np.array(event_dat.field(timecolumn), dtype=float) + TIMEZERO
     ) / SECS_PER_DAY + MJDREF
-
-    return mjds
