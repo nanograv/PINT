@@ -11,11 +11,13 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - `SpindownBase` as the abstract base class for `Spindown` and `PeriodSpindown` in the `How_to_build_a_timing_model_component.py` example.
 - `SolarWindDispersionBase` as the abstract base class for solar wind dispersion components.
 - `validate_component_types` method for more rigorous validation of timing model components.
+- roundtrip test to make sure clock corrections are not written to tim files
 - `calc_phase_mean` and `calc_time_mean` methods in `Residuals` class to compute the residual mean.
 - `PhaseOffset` component (overall phase offset between physical and TZR toas)
 - `tzr` attribute in `TOAs` class to identify TZR TOAs
 - Documentation: Explanation for offsets
 ### Fixed
+- fixed docstring for `add_param_from_top`
 ### Removed
 
 ## [0.9.5] 2023-05-01
