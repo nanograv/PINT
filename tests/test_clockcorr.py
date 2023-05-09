@@ -1,5 +1,6 @@
 import unittest
 from os import path
+import io
 
 import astropy.units as u
 import numpy
@@ -9,6 +10,7 @@ from pinttestdata import datadir
 
 from pint.observatory import Observatory
 from pint.observatory.clock_file import ClockFile
+from pint.toa import get_TOAs
 
 
 class TestClockcorrection(unittest.TestCase):
@@ -45,3 +47,23 @@ class TestClockcorrection(unittest.TestCase):
         with pytest.raises(RuntimeError):
             t = cf.time[-1] + 1.0 * u.d
             cf.evaluate(t, limits="error")
+
+
+def test_clockcorr_roundtrip():
+    timlines = """FORMAT 1
+    toa1 1400 55555.0 1.0 gbt
+    toa2 1400 55556.0 1.0 gbt"""
+    t = get_TOAs(io.StringIO(timlines))
+    # should have positive clock correction applied
+    assert t.get_mjds()[0].value > 55555
+    assert t.get_mjds()[1].value > 55556
+    o = io.StringIO()
+    t.write_TOA_file(o)
+    o.seek(0)
+    lines = o.readlines()
+    # make sure the clock corrections are no longer there.
+    for line in lines:
+        if line.startswith("toa1"):
+            assert float(line.split()[2]) == 55555
+        if line.startswith("toa2"):
+            assert float(line.split()[2]) == 55556
