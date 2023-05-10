@@ -35,13 +35,19 @@ TASC      59683.784709068155703     1 0.00004690256150561100"""
         ("F1", -1e-10 * u.Hz / u.day),
         ("F2", -1e-10 * u.Hz / u.day**2),
         ("PEPOCH", Time(55000, format="pulsar_mjd", scale="tdb")),
+        ("JUMP", "mjd 55000 56000 0.03"),
     ],
 )
 def test_paroverride(k, v):
     kwargs = {k: v}
     m = get_model(io.StringIO(par), **kwargs)
     if isinstance(v, (str, bool)):
-        assert getattr(m, k).value == v
+        if k != "JUMP":
+            assert getattr(m, k).value == v
+        else:
+            assert getattr(m, f"{k}1").value == 0.03
+            assert getattr(m, f"{k}1").key == "mjd"
+            assert getattr(m, f"{k}1").key_value == [55000.0, 56000.0]
     elif isinstance(v, u.Quantity):
         assert np.isclose(getattr(m, k).quantity, v)
     elif isinstance(v, Time):
