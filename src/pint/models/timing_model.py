@@ -3277,6 +3277,26 @@ class AllComponents:
         return alias
 
     @lazyproperty
+    def _param_unit_map(self):
+        units = {}
+        for k, cp in self.components.items():
+            for p in cp.params:
+                if p in units.keys():
+                    if units[p] != getattr(cp, p).units:
+                        raise TimingModelError(
+                            f"Units of parameter '{p}' in component '{cp}' ({getattr(cp, p).units}) do not match those of existing parameter ({units[p]})"
+                        )
+                units[p] = getattr(cp, p).units
+        tm = TimingModel()
+        for tp in tm.params:
+            # if units[p] != getattr(cp, p).units:
+            # raise TimingModelError(
+            #    f"Units of parameter '{p}' in component '{cp}' ({getattr(cp, p).units}) do not match those of existing parameter ({units[p]})"
+            # )
+            units[p] = getattr(tm, tp).units
+        return units
+
+    @lazyproperty
     def repeatable_param(self):
         """Return the repeatable parameter map."""
         repeatable = []
