@@ -16,6 +16,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - `PhaseOffset` component (overall phase offset between physical and TZR toas)
 - `tzr` attribute in `TOAs` class to identify TZR TOAs
 - Documentation: Explanation for offsets
+- Example: `phase_offset_example.py`
 ### Fixed
 - fixed docstring for `add_param_from_top`
 ### Removed
