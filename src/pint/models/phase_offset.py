@@ -43,6 +43,7 @@ class PhaseOffset(PhaseComponent):
         )
 
     def d_offset_phase_d_PHOFF(self, toas, param, delay):
+        """Derivative of the pulse phase w.r.t. PHOFF"""
         return (
             np.zeros(len(toas)) * u.Unit("")
             if toas.tzr
