@@ -62,19 +62,15 @@ mjds = toas.get_mjds()
 errors = toas.get_errors() * model.F0.quantity
 
 plt.subplot(211)
-plt.errorbar(
-    toas.get_mjds(), resids1, errors, ls="", marker="x", label="Mean subtracted"
-)
-plt.errorbar(
-    toas.get_mjds(), resids2, errors, ls="", marker="x", label="Not mean subtracted"
-)
+plt.errorbar(mjds, resids1, errors, ls="", marker="x", label="Mean subtracted")
+plt.errorbar(mjds, resids2, errors, ls="", marker="x", label="Not mean subtracted")
 plt.xlabel("MJD")
 plt.ylabel("Phase residuals")
 plt.axhline(0, ls="dotted", color="grey")
 plt.legend()
 
 plt.subplot(212)
-plt.plot(toas.get_mjds(), resids2 - resids1, ls="", marker="x")
+plt.plot(mjds, resids2 - resids1, ls="", marker="x")
 plt.xlabel("MJD")
 plt.ylabel("Phase residual difference")
 plt.show()
@@ -84,11 +80,8 @@ plt.show()
 # using the `calc_phase_mean` function. There is also a similar function
 # `calc_time_mean` for time offsets.
 
-implicit_offset = -res.calc_phase_mean().to("")
+implicit_offset = res.calc_phase_mean().to("")
 print("Implicit offset = ", implicit_offset)
-
-# The negative sign is because it gets subtracted from the residuals.
-
 
 # %%
 # Now let us look at the design matrix.
@@ -116,6 +109,20 @@ print(
 )
 
 # This is consistent with the implicit offset we got earlier.
+
+# %%
+# Let us plot the post-fit residuals.
+
+mjds = ftr.toas.get_mjds()
+errors = ftr.toas.get_errors() * model.F0.quantity
+resids = ftr.resids.calc_phase_resids().to("")
+
+plt.errorbar(mjds, resids, errors, ls="", marker="x", label="After fitting PHOFF")
+plt.xlabel("MJD")
+plt.ylabel("Phase residuals")
+plt.axhline(0, ls="dotted", color="grey")
+plt.legend()
+plt.show()
 
 # %%
 # Let us compute the phase residual mean again.
