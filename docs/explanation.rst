@@ -249,7 +249,7 @@ between TOAs generated from different systems.
 
 System-dependent DM offsets
 '''''''''''''''''''''''''''
-Similar to system-dependent offsets, offsets can arise between wideband DM values measured using 
+Similar to system-dependent delays, offsets can arise between wideband DM values measured using 
 different systems due to the choice of template portraits with different fiducial DMs. This is 
 usually modeled using DM jumps (the `DMJUMP` parameter, see :class:`pint.models.dispersion_model.DispersionJump`).
 
