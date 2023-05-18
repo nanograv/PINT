@@ -8,6 +8,7 @@ import numpy as np
 
 class PhaseOffset(PhaseComponent):
     """Explicit pulse phase offset between physical TOAs and the TZR TOA.
+    See `examples/phase_offset_example.py` for example usage.
 
     Parameters supported:
 
