@@ -1,6 +1,7 @@
 import pytest
 from astropy import units as u
-from pint.models.timing_model import AllComponents, UnknownParameter
+from pint.models.timing_model import UnknownParameter
+from pint.utils import get_unit
 
 
 @pytest.mark.parametrize(
@@ -31,13 +32,11 @@ from pint.models.timing_model import AllComponents, UnknownParameter
     ],
 )
 def test_par_units(p):
-    ac = AllComponents()
-    unit = ac.param_to_unit(p)
+    unit = get_unit(p)
     print(f"{p}: {unit}")
     assert isinstance(unit, u.UnitBase) or unit is None
 
 
 def test_par_units_fails():
-    ac = AllComponents()
     with pytest.raises(UnknownParameter):
-        unit = ac.param_to_unit("notapar")
+        unit = get_unit("notapar")
