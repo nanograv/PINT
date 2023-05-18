@@ -3,8 +3,10 @@ import concurrent.futures
 import copy
 import multiprocessing
 import subprocess
+import sys
 
 import numpy as np
+
 from loguru import logger as log
 
 try:
@@ -15,13 +17,18 @@ except ModuleNotFoundError:
 from astropy.utils.console import ProgressBar
 
 from pint import fitter
-
+from pint.observatory import clock_file
 
 __all__ = ["doonefit", "grid_chisq", "grid_chisq_derived"]
 
 
 def hostinfo():
     return subprocess.check_output("uname -a", shell=True)
+
+
+def set_log(logger_):
+    global log
+    log = logger_
 
 
 class WrappedFitter:
@@ -58,6 +65,12 @@ class WrappedFitter:
         """
         # Make a full copy of the fitter to work with
         myftr = copy.deepcopy(self.ftr)
+        # copy the log to all imported modules
+        # this makes them respect the logger settings
+        for m in sys.modules:
+            if m.startswith("pint") and hasattr(sys.modules[m], "log"):
+                setattr(sys.modules[m], "log", log)
+
         parstrings = []
         for parname, parvalue in zip(parnames, parvalues):
             # Freeze the  params we are going to grid over and set their values
@@ -281,14 +294,6 @@ def grid_chisq(
     .. [1] https://mpi4py.readthedocs.io/en/stable/mpi4py.futures.html#mpipoolexecutor
     .. [2] https://github.com/sampsyo/clusterfutures
     """
-    if isinstance(executor, concurrent.futures.Executor):
-        # the executor has already been created
-        executor = executor
-    elif executor is None and (ncpu is None or ncpu > 1):
-        # make the default type of Executor
-        if ncpu is None:
-            ncpu = multiprocessing.cpu_count()
-        executor = concurrent.futures.ProcessPoolExecutor(max_workers=ncpu)
 
     # Save the current model so we can tweak it for gridding, then restore it at the end
     savemod = ftr.model
@@ -300,6 +305,17 @@ def grid_chisq(
         getattr(ftr.model, parname).frozen = True
 
     wftr = WrappedFitter(ftr, **fitargs)
+
+    if isinstance(executor, concurrent.futures.Executor):
+        # the executor has already been created
+        executor = executor
+    elif executor is None and (ncpu is None or ncpu > 1):
+        # make the default type of Executor
+        if ncpu is None:
+            ncpu = multiprocessing.cpu_count()
+        executor = concurrent.futures.ProcessPoolExecutor(
+            max_workers=ncpu, initializer=set_log, initargs=(log,)
+        )
 
     # All other unfrozen parameters will be fitted for at each grid point
     out = np.meshgrid(*parvalues)
