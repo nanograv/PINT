@@ -16,6 +16,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - method `AllComponents.param_to_unit` to get units for any parameter, and then made function `utils.get_unit`
 ### Fixed
 - fixed docstring for `add_param_from_top`
+- Gridded calculations now respect logger settings
 ### Removed
 
 ## [0.9.5] 2023-05-01
