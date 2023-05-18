@@ -1255,6 +1255,8 @@ class TOAs:
         The TOA objects this TOAs should contain.
     toatable : astropy.table.Table, optional
         An existing TOA table
+    tzr : bool
+        Whether the TOAs object corresponds to a TZR TOA
 
     Exactly one of these three parameters must be provided.
 
@@ -1291,9 +1293,11 @@ class TOAs:
         available to use names as compatible with TEMPO as possible.
     wideband : bool
         Whether the TOAs also have wideband DM information
+    tzr : bool
+        Whether the TOAs object corresponds to a TZR TOA
     """
 
-    def __init__(self, toafile=None, toalist=None, toatable=None):
+    def __init__(self, toafile=None, toalist=None, toatable=None, tzr=False):
         # First, just make an empty container
         self.commands = []
         self.filename = None
@@ -1305,6 +1309,7 @@ class TOAs:
         self.hashes = {}
         self.was_pickled = False
         self.alias_translation = None
+        self.tzr = tzr
 
         if (toalist is not None) and (toafile is not None):
             raise ValueError("Cannot initialize TOAs from both file and list.")
@@ -2708,6 +2713,7 @@ def get_TOAs_array(
     commands=None,
     hashes=None,
     limits="warn",
+    tzr=False,
     **kwargs,
 ):
     """Load and prepare TOAs for PINT use from an array of times.
@@ -2772,6 +2778,8 @@ def get_TOAs_array(
         has changed so that the file can be re-read if necessary.
     limits : "warn" or "error"
         What to do when encountering TOAs for which clock corrections are not available.
+    tzr : bool
+        Whether the TOAs object corresponds to a TZR TOA
 
     Returns
     -------
@@ -2958,7 +2966,7 @@ def get_TOAs_array(
             "delta_pulse_number",
         ),
     )
-    t = TOAs(toatable=out)
+    t = TOAs(toatable=out, tzr=tzr)
     t.commands = [] if commands is None else commands
     t.hashes = {} if hashes is None else hashes
     if all("clkcorr" not in f for f in t.table["flags"]):
