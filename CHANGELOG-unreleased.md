@@ -18,4 +18,5 @@ the released changes.
 - `calc_phase_mean` and `calc_time_mean` methods in `Residuals` class to compute the residual mean.
 ### Fixed
 - fixed docstring for `add_param_from_top`
+- Gridded calculations now respect logger settings
 ### Removed
