@@ -227,7 +227,8 @@ class ELL1BaseModel(PSR_BINARY):
         eps1 = self.eps1()
         eps2 = self.eps2()
         return (
-            (np.sin(Phi) + 0.5 * (eps2 * np.sin(2 * Phi) - eps1 * np.cos(2 * Phi)))
+            np.sin(Phi)
+            + 0.5 * (eps2 * np.sin(2 * Phi) - eps1 * np.cos(2 * Phi))
             - (1.0 / 8)
             * (
                 5 * eps2**2 * np.sin(Phi)
@@ -305,10 +306,10 @@ class ELL1BaseModel(PSR_BINARY):
                 - 12 * eps1**2 * eps2 * np.sin(2 * Phi)
                 + 24 * eps1 * eps2**2 * np.cos(2 * Phi)
                 + 16 * eps1**3 * np.cos(2 * Phi)
-                + 32 * eps2**3 * np.sin(4 * Phi)
-                - 96 * eps1**2 * eps2 * np.sin(4 * Phi)
-                - 96 * eps1 * eps2**2 * np.cos(4 * Phi)
-                + 32 * eps1**3 * np.cos(4 * Phi)
+                + 64 * eps2**3 * np.sin(4 * Phi)
+                - 192 * eps1**2 * eps2 * np.sin(4 * Phi)
+                - 192 * eps1 * eps2**2 * np.cos(4 * Phi)
+                + 64 * eps1**3 * np.cos(4 * Phi)
             )
         )
 
@@ -350,7 +351,7 @@ class ELL1BaseModel(PSR_BINARY):
                 )
                 - (1.0 / 12)
                 * (
-                    +6 * eps1 * eps2 * np.sin(2 * Phi)
+                    6 * eps1 * eps2 * np.sin(2 * Phi)
                     - 6 * eps2**2 * np.cos(2 * Phi)
                     - 12 * eps1**2 * np.cos(2 * Phi)
                     + 24 * eps1 * eps2 * np.sin(4 * Phi)
@@ -359,6 +360,7 @@ class ELL1BaseModel(PSR_BINARY):
                 )
             )
         )
+
         d_Dre_d_eps2 = (
             a1
             / c.c
@@ -438,6 +440,7 @@ class ELL1BaseModel(PSR_BINARY):
                 )
             )
         )
+
         d_Drep_d_eps2 = (
             a1
             / c.c
@@ -510,13 +513,14 @@ class ELL1BaseModel(PSR_BINARY):
                     - 24 * eps1**2 * eps2 * np.cos(2 * Phi)
                     - 48 * eps1 * eps2**2 * np.sin(2 * Phi)
                     - 32 * eps1**3 * np.sin(2 * Phi)
-                    + 128 * eps2**3 * np.cos(4 * Phi)
-                    - 384 * eps1**2 * eps2 * np.cos(4 * Phi)
-                    + 384 * eps1 * eps2**2 * np.sin(4 * Phi)
-                    - 128 * eps1**3 * np.sin(4 * Phi)
+                    + 256 * eps2**3 * np.cos(4 * Phi)
+                    - 768 * eps1**2 * eps2 * np.cos(4 * Phi)
+                    + 768 * eps1 * eps2**2 * np.sin(4 * Phi)
+                    - 256 * eps1**3 * np.sin(4 * Phi)
                 )
             )
         )
+
         d_Phi_d_par = self.prtl_der("Phi", par)
         d_Drepp_d_eps1 = (
             a1
@@ -535,9 +539,9 @@ class ELL1BaseModel(PSR_BINARY):
                     -24 * eps1 * eps2 * np.sin(2 * Phi)
                     + 24 * eps2**2 * np.cos(2 * Phi)
                     + 48 * eps1**2 * np.cos(2 * Phi)
-                    - 192 * eps1 * eps2 * np.sin(4 * Phi)
-                    - 96 * eps2**2 * np.cos(4 * Phi)
-                    + 96 * eps1 * np.cos(4 * Phi)
+                    - 384 * eps1 * eps2 * np.sin(4 * Phi)
+                    - 192 * eps2**2 * np.cos(4 * Phi)
+                    + 192 * eps1**2 * np.cos(4 * Phi)
                 )
             )
         )
@@ -558,9 +562,9 @@ class ELL1BaseModel(PSR_BINARY):
                     -60 * eps2**2 * np.sin(2 * Phi)
                     - 12 * eps1**2 * np.sin(2 * Phi)
                     + 48 * eps1 * eps2 * np.cos(2 * Phi)
-                    + 96 * eps2**2 * np.sin(4 * Phi)
-                    - 96 * eps1**2 * np.sin(4 * Phi)
-                    - 192 * eps1 * eps2 * np.cos(4 * Phi)
+                    + 192 * eps2**2 * np.sin(4 * Phi)
+                    - 192 * eps1**2 * np.sin(4 * Phi)
+                    - 384 * eps1 * eps2 * np.cos(4 * Phi)
                 )
             )
         )
