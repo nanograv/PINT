@@ -23,8 +23,10 @@ If you are reporting a bug, please include:
 * Your operating system name and version.
 * The output of ``pint.__version__`` and ``pint.__file__``
 * Any details about your local setup that might be helpful in troubleshooting,
-  such as the command used to install PINT and whether you are using a virtualenv.
-* Detailed steps to reproduce the bug, as simply as possible.
+  such as the command used to install PINT and whether you are using a virtualenv,
+  conda environment, etc.
+* Detailed steps to reproduce the bug, as simply as possible. A self-contained
+  code snippet that triggers the issue will be most helpful.
 
 Submit Feedback
 ~~~~~~~~~~~~~~~
@@ -139,7 +141,8 @@ Before you submit a pull request, check that it meets these guidelines:
    be updated. Put your new functionality into a function with a
    docstring. Check the HTML documentation produced by ``make docs``
    to make sure your new documentation appears and looks reasonable.
-4. The pull request should work for Python 2.7 and 3.6+. Check
-   https://travis-ci.org/nanograv/pint/pull_requests
-   and make sure that the tests pass for all supported Python versions.
+4. The pull request should work for and 3.8+. Make sure that all the
+   CI tests for the pull request pass. 
+5. Update `CHANGELOG-unreleased.md` with an appropriate entry. Please note
+   that `CHANGELOG.md` should not be updated for pull requests.
 
