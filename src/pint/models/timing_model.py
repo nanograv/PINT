@@ -418,7 +418,7 @@ class TimingModel:
         a deterministic component and a stochastic component that model the same effect
         are used together (e.g. :class:`pint.models.noise_model.PLDMNoise`
         and :class:`pint.models.dispersion_model.DispersionDMX`). It also requires that
-        one and only one :class:`pint.models.timing_model.SpindownBase` component is present
+        one and only one :class:`pint.models.spindown.SpindownBase` component is present
         in a timing model.
         """
 
@@ -1819,6 +1819,7 @@ class TimingModel:
             Whether to include frozen parameters in the design matrix
         incoffset : bool
             Whether to include the constant offset in the design matrix
+            This option is ignored if a `PhaseOffset` component is present.
 
         Returns
         -------
@@ -1845,6 +1846,8 @@ class TimingModel:
 
         # The entries for any unfrozen noise parameters will not be
         # included in the design matrix as they are not well-defined.
+
+        incoffset = incoffset and "PhaseOffset" not in self.components
 
         params = ["Offset"] if incoffset else []
         params += [

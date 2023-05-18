@@ -61,7 +61,8 @@ class Residuals:
     unit: :class:`astropy.units.Unit`, optional
         The default unit of the residuals. Default: u.s
     subtract_mean : bool
-        Controls whether mean will be subtracted from the residuals
+        Controls whether mean will be subtracted from the residuals.
+        This option will be ignored if a `PhaseOffset` is present in the timing model.
     use_weighted_mean : bool
         Controls whether mean computation is weighted (by errors) or not.
     track_mode : None, "nearest", "use_pulse_numbers"
@@ -107,7 +108,13 @@ class Residuals:
         self.toas = toas
         self.model = model
         self.residual_type = residual_type
-        self.subtract_mean = subtract_mean
+
+        if "PhaseOffset" in model.components and subtract_mean:
+            log.debug(
+                "Disabling implicit `subtract_mean` because `PhaseOffset` is present in the timing model."
+            )
+        self.subtract_mean = subtract_mean and "PhaseOffset" not in model.components
+
         self.use_weighted_mean = use_weighted_mean
         if track_mode is None:
             if getattr(self.model, "TRACK").value == "-2":
@@ -306,6 +313,13 @@ class Residuals:
 
         if subtract_mean is None:
             subtract_mean = self.subtract_mean
+
+        if "PhaseOffset" in self.model.components and subtract_mean:
+            log.debug(
+                "Ignoring `subtract_mean` because `PhaseOffset` is present in the timing model."
+            )
+        subtract_mean = subtract_mean and "PhaseOffset" not in self.model.components
+
         if use_weighted_mean is None:
             use_weighted_mean = self.use_weighted_mean
         # Read any delta_pulse_numbers that are in the TOAs table.
@@ -393,7 +407,7 @@ class Residuals:
         Parameters
         ----------
         calctype : str, optional
-            Calculation time for phase to time converstion.  See :meth:`pint.residuals.Residuals.calc_time_resids` for details.
+            Calculation time for phase to time conversion.  See :meth:`pint.residuals.Residuals.calc_time_resids` for details.
         weighted : bool, optional
 
         Returns
