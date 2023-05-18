@@ -19,6 +19,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Example: `phase_offset_example.py`
 ### Fixed
 - fixed docstring for `add_param_from_top`
+- Gridded calculations now respect logger settings
 ### Removed
 
 ## [0.9.5] 2023-05-01
