@@ -2063,6 +2063,8 @@ def get_unit(parname):
     and `pint.models.parameter.maskParameter`) with an index beyond those currently
     initialized.
 
+    This can be used without an existing :class:`~pint.models.TimingModel`.
+
     Parameters
     ----------
     name : str

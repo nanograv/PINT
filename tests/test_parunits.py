@@ -29,6 +29,9 @@ from pint.utils import get_unit
         "T0",
         "TASC",
         "XDOT",
+        "EFAC",
+        "EQUAD",
+        "JUMP1",
     ],
 )
 def test_par_units(p):
