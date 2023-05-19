@@ -3280,6 +3280,26 @@ class AllComponents:
         return alias
 
     @lazyproperty
+    def _param_unit_map(self):
+        """A dictionary to map parameter names to their units
+
+        This excludes prefix parameters and aliases.  Use :func:`param_to_unit` to handle those.
+        """
+        units = {}
+        for k, cp in self.components.items():
+            for p in cp.params:
+                if p in units.keys():
+                    if units[p] != getattr(cp, p).units:
+                        raise TimingModelError(
+                            f"Units of parameter '{p}' in component '{cp}' ({getattr(cp, p).units}) do not match those of existing parameter ({units[p]})"
+                        )
+                units[p] = getattr(cp, p).units
+        tm = TimingModel()
+        for tp in tm.params:
+            units[p] = getattr(tm, tp).units
+        return units
+
+    @lazyproperty
     def repeatable_param(self):
         """Return the repeatable parameter map."""
         repeatable = []
@@ -3382,8 +3402,8 @@ class AllComponents:
         """Translate a alias to a PINT parameter name.
 
         This is a wrapper function over the property ``_param_alias_map``. It
-        also handles the indexed parameters (e.g., `pint.models.parameter.prefixParameter`
-        and `pint.models.parameter.maskParameter`) with and index beyond currently
+        also handles indexed parameters (e.g., `pint.models.parameter.prefixParameter`
+        and `pint.models.parameter.maskParameter`) with an index beyond those currently
         initialized.
 
         Parameters
@@ -3466,6 +3486,35 @@ class AllComponents:
                 "Can not find matching PINT parameter for '{}'".format(alias)
             )
         return pint_par, first_init_par
+
+    def param_to_unit(self, name):
+        """Return the unit associated with a parameter
+
+        This is a wrapper function over the property ``_param_unit_map``.  It
+        also handles aliases and indexed parameters (e.g., `pint.models.parameter.prefixParameter`
+        and `pint.models.parameter.maskParameter`) with an index beyond those currently
+        initialized.
+
+        This can be used without an existing :class:`~pint.models.TimingModel`.
+
+        Parameters
+        ----------
+        name : str
+            Name of PINT parameter or alias
+
+        Returns
+        -------
+        astropy.u.Unit
+        """
+        pintname, firstname = self.alias_to_pint_param(name)
+        if pintname == firstname:
+            # not a prefix parameter
+            return self._param_unit_map[pintname]
+        prefix, idx_str, idx = split_prefixed_name(pintname)
+        component = self.param_component_map[firstname][0]
+        if getattr(self.components[component], firstname).unit_template is None:
+            return self._param_unit_map[firstname]
+        return u.Unit(getattr(self.components[component], firstname).unit_template(idx))
 
 
 class TimingModelError(ValueError):
