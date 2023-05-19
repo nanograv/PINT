@@ -16,6 +16,10 @@ the released changes.
 - `validate_component_types` method for more rigorous validation of timing model components.
 - roundtrip test to make sure clock corrections are not written to tim files
 - `calc_phase_mean` and `calc_time_mean` methods in `Residuals` class to compute the residual mean.
+- - `PhaseOffset` component (overall phase offset between physical and TZR toas)
+- `tzr` attribute in `TOAs` class to identify TZR TOAs
+- Documentation: Explanation for offsets
+- Example: `phase_offset_example.py`
 ### Fixed
 - fixed docstring for `add_param_from_top`
 - Gridded calculations now respect logger settings
