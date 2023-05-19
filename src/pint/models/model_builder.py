@@ -25,7 +25,13 @@ from pint.models.timing_model import (
     ignore_prefix,
 )
 from pint.toa import get_TOAs
-from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
+from pint.utils import (
+    PrefixError,
+    interesting_lines,
+    lines_of,
+    split_prefixed_name,
+    get_unit,
+)
 from pint.models.tcb_conversion import convert_tcb_tdb
 
 __all__ = ["ModelBuilder", "get_model", "get_model_and_toas"]
@@ -118,12 +124,8 @@ class ModelBuilder:
         for k, v in kwargs.items():
             if k not in pint_param_dict:
                 if isinstance(v, u.Quantity):
-                    # hack to allow passing a quantity to a parameter
-                    # that doesn't exist yet:
-                    # initialize with temporary value, then replace later with the true value
-                    remaining_args[k] = v
                     pint_param_dict[k] = [
-                        str(0),
+                        str(v.to_value(get_unit(k))),
                     ]
                 else:
                     pint_param_dict[k] = [
