@@ -20,6 +20,7 @@ the released changes.
 - `tzr` attribute in `TOAs` class to identify TZR TOAs
 - Documentation: Explanation for offsets
 - Example: `phase_offset_example.py`
+- method `AllComponents.param_to_unit` to get units for any parameter, and then made function `utils.get_unit`
 ### Fixed
 - fixed docstring for `add_param_from_top`
 - Gridded calculations now respect logger settings
