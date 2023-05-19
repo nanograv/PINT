@@ -59,7 +59,7 @@ class AbsPhase(PhaseComponent):
             raise MissingParameter(
                 "AbsPhase",
                 "TZRMJD",
-                "TZRMJD is required " "to compute the absolute phase. ",
+                "TZRMJD is required to compute the absolute phase.",
             )
         if self.TZRSITE.value is None:
             self.TZRSITE.value = "ssb"
@@ -114,6 +114,7 @@ class AbsPhase(PhaseComponent):
             include_gps=clkc_info["include_gps"],
             ephem=toas.ephem,
             planets=toas.planets,
+            tzr=True,
         )
         log.debug("Done with TZR_toa")
         self.tz_cache = tz
