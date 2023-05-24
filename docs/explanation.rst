@@ -269,7 +269,8 @@ Observatory definitions
 
 Observatory definitions are included in ``pint.config.runtimefile("observatories.json")``.  
 To see the existing names, :func:`pint.observatory.Observatory.names_and_aliases` will 
-return a dictionary giving all of the names (primary keys) and potential aliases (values).
+return a dictionary giving all of the names (primary keys) and potential aliases (values).  
+You can also find the full list at :ref:`Observatory List`.
 
 The observatory data are stored in JSON format.  A simple example is::
 
