@@ -317,7 +317,7 @@ class ELL1BaseModel(PSR_BINARY):
         """ELL1 Roemer delay in proper time.
         Include terms up to third order in eccentricity
         Zhu et al. (2019), Eqn. 1
-        Fiore et al. (in prep)
+        Fiore et al. (2023), Eqn. 4
         """
         return ((self.a1() / c.c) * self.d_delayR_da1()).decompose()
 

@@ -79,11 +79,11 @@ class BinaryELL1(PulsarBinary):
     ----------
     - Lange et al. (2001), MNRAS, 326 (1), 274–282 [1]_
     - Zhu et al. (2019), MNRAS, 482 (3), 3249-3260 [2]_
-    - Fiore et al. (in prep)
+    - Fiore et al. (2023), arXiv:2305.13624 [astro-ph.HE] [3]_
 
     .. [1] https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.3249Z/abstract
     .. [2] https://ui.adsabs.harvard.edu/abs/2001MNRAS.326..274L/abstract
-
+    .. [3] https://arxiv.org/abs/2305.13624
 
     Notes
     -----
@@ -94,6 +94,9 @@ class BinaryELL1(PulsarBinary):
     See Email from Norbert and Weiwei to David on 2019-Aug-08
     The dre expression comes from Norbert and Weiwei; the derivatives
     were calculated by hand for PINT
+
+    Also includes o(e^3) expression from Will Fiore, equation (4) of Fiore et al. (2023)
+    (derivatives also calculated by hand)
 
     """
 
