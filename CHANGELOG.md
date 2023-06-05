@@ -18,6 +18,7 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - `tzr` attribute in `TOAs` class to identify TZR TOAs
 - Documentation: Explanation for offsets
 - Example: `phase_offset_example.py`
+- List of observatories in docs
 ### Fixed
 - fixed docstring for `add_param_from_top`
 - Gridded calculations now respect logger settings
