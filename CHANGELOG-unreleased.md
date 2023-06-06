@@ -10,6 +10,7 @@ the released changes.
 ## Unreleased
 ### Changed
 - Applied `sourcery` refactors to the entire codebase
+- Changed threshold for `test_model_derivatives` test to avoid CI failures
 ### Added
 - `SpindownBase` as the abstract base class for `Spindown` and `PeriodSpindown` in the `How_to_build_a_timing_model_component.py` example.
 - `SolarWindDispersionBase` as the abstract base class for solar wind dispersion components.
