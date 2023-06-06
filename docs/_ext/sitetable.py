@@ -6,6 +6,9 @@ import urllib.parse
 import pint.observatory
 import numpy as np
 
+_iptaclock_baseurl = "https://ipta.github.io/pulsar-clock-corrections"
+_googlesearch_baseurl = "https://www.google.com/maps/search/?"
+
 
 class SiteTable(Table):
     option_spec = {"class": unchanged_required}
@@ -16,6 +19,7 @@ class SiteTable(Table):
             ("Name / Aliases", "name", 10),
             ("Origin", "origin", 50),
             ("Location", "location", 20),
+            ("Clock File(s)", "clock", 20),
         ]
 
         class_ = None
@@ -54,18 +58,33 @@ class SiteTable(Table):
                         lon = loc.lon.value
                         text = f"{np.abs(lat):.4f}{'N' if lat >=0 else 'S'}, {np.abs(lon):.4f}{'E' if lon >= 0 else 'W'}"
                         # https://developers.google.com/maps/documentation/urls/get-started
-                        url = (
-                            "https://www.google.com/maps/search/?"
-                            + urllib.parse.urlencode(
-                                {"api": "1", "query": f"{lat},{lon}"}
-                            )
+                        url = _googlesearch_baseurl + urllib.parse.urlencode(
+                            {"api": "1", "query": f"{lat},{lon}"}
                         )
-                        para = nodes.paragraph(text=text)
+                        para = nodes.paragraph()
                         refnode = nodes.reference("", "", internal=False, refuri=url)
-                        innernode = nodes.emphasis(" (maps link)", " (maps link)")
+                        innernode = nodes.emphasis(text, text)
                         refnode.append(innernode)
                         para += refnode
                         entry += para
+                elif c == "clock":
+                    if hasattr(o, "clock_files"):
+                        for clockfile in o.clock_files:
+                            clockfilename = (
+                                clockfile
+                                if isinstance(clockfile, str)
+                                else clockfile["name"]
+                            )
+                            para = nodes.paragraph()
+                            dirname = "tempo" if o.clock_fmt == "tempo" else "T2runtime"
+                            url = f"{_iptaclock_baseurl}/{dirname}/clock/{clockfilename}.html"
+                            refnode = nodes.reference(
+                                "", "", internal=False, refuri=url
+                            )
+                            innernode = nodes.emphasis(clockfilename, clockfilename)
+                            refnode.append(innernode)
+                            para += refnode
+                            entry += para
             tbody += row
         tgroup += tbody
         return [table]
