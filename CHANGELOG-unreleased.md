@@ -23,6 +23,7 @@ the released changes.
 - Documentation: Explanation for offsets
 - Example: `phase_offset_example.py`
 - method `AllComponents.param_to_unit` to get units for any parameter, and then made function `utils.get_unit`
+- can override/add parameter values when reading models
 ### Fixed
 - fixed docstring for `add_param_from_top`
 - Gridded calculations now respect logger settings
