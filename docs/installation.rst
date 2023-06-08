@@ -18,14 +18,25 @@ PINT requires Python 3. [1]_
 
 Your Python must have the package installation tool pip_ installed.  Also make sure your setuptools are up to date (e.g. ``pip install -U setuptools``).
 
-We highly recommend using an :ref:`Anaconda <install-with-anaconda>` environment or the package isolation tool virtualenv_.
+We highly recommend using a Conda_/`Anaconda <https://www.anaconda.com/products/individual>`_ environment or the package isolation tool virtualenv_.
 
 
-IMPORTANT Note!
+IMPORTANT Notes!
 ---------------
 
+Naming conflict
+'''''''''''''''
+
 PINT has a naming conflict with the `pint <https://pypi.org/project/Pint/>`_ units package available from PyPI (i.e. using pip) and conda.  
-Do **NOT** ``pip install pint`` or ``conda install pint``!  See below!
+Do **NOT** ``pip install pint`` or ``conda install pint``!  See :ref:`Basic Install via pip` or :ref:`Install with Anaconda`.
+
+Apple M1/M2 processors
+''''''''''''''''''''''
+
+PINT requires ``longdouble`` arithmetic within ``numpy``, which is currently not supported natively on M1/M2 Macs. 
+However, you can use an x86 version of ``conda`` even on an M1/M2 Mac: see `instructions for using Apple Intel packages on Apple silicon <https://conda-forge.org/docs/user/tipsandtricks.html#installing-apple-intel-packages-on-apple-silicon>`_. 
+It's possible to have `parallel versions of conda for x86 and ARM <https://towardsdatascience.com/python-conda-environments-for-both-arm64-and-x86-64-on-m1-apple-silicon-147b943ffa55>`_.
+
 
 Basic Install via pip
 ---------------------
@@ -52,12 +63,6 @@ If you use `Anaconda <https://www.anaconda.com/products/individual>`_ environmen
 PINT is also available for Anaconda python under the `conda-forge <https://conda-forge.org>`_ channel:
 
     $ conda install -c conda-forge pint-pulsar
-
-**NOTE**: PINT requires ``longdouble`` arithmetic within ``numpy``, which is currently not supported natively on M1/M2 Macs.
-However, you can use an x86 version of `conda` even on an M1/M2 Mac: see `instructions for using Apple Intel packages on Apple silicon <https://conda-forge.org/docs/user/tipsandtricks.html#installing-apple-intel-packages-on-apple-silicon>`_.
-It's possible to have `parallel versions of conda for x86 and ARM <https://towardsdatascience.com/python-conda-environments-for-both-arm64-and-x86-64-on-m1-apple-silicon-147b943ffa55>`_.
-
-
 
 Install from Source
 -------------------
@@ -158,6 +163,7 @@ luck.
 .. _virtualenv: https://virtualenv.pypa.io/en/latest/
 .. _virtualenvwrapper: https://virtualenvwrapper.readthedocs.io/en/latest/
 .. _Conda: https://docs.conda.io/en/latest/
+.. _Anaconda: https://www.anaconda.com
 
 Installing PINT for Developers
 ------------------------------
