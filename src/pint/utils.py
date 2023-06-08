@@ -88,6 +88,7 @@ __all__ = [
     "require_longdouble_precision",
     "get_conjunction",
     "divide_times",
+    "get_unit",
 ]
 
 COLOR_NAMES = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
@@ -2052,3 +2053,29 @@ def parse_time(input, scale="tdb", precision=9):
         return Time(input, format="pulsar_mjd_string", scale=scale, precision=precision)
     else:
         raise TypeError(f"Do not know how to parse times from {type(input)}")
+
+
+def get_unit(parname):
+    """Return the unit associated with a parameter
+
+    Handles normal parameters, along with aliases and indexed parameters
+    (e.g., `pint.models.parameter.prefixParameter`
+    and `pint.models.parameter.maskParameter`) with an index beyond those currently
+    initialized.
+
+    This can be used without an existing :class:`~pint.models.TimingModel`.
+
+    Parameters
+    ----------
+    name : str
+        Name of PINT parameter or alias
+
+    Returns
+    -------
+    astropy.u.Unit
+    """
+    # import in the function to avoid circular dependencies
+    from pint.models.timing_model import AllComponents
+
+    ac = AllComponents()
+    return ac.param_to_unit(parname)

@@ -8,6 +8,7 @@ import sys
 from astropy.time import Time
 import astropy.units as u
 import matplotlib as mpl
+from matplotlib import figure
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 

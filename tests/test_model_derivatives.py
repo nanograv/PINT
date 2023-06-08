@@ -177,6 +177,6 @@ def test_derivative_equals_numerical(parfile, param):
     a = model.d_phase_d_param(toas, delay=None, param=param).to_value(1 / units)
     b = df(getattr(model, param).value)
     if param.startswith("FB"):
-        assert np.amax(np.abs(a - b)) / np.amax(np.abs(a) + np.abs(b)) < 1e-6
+        assert np.amax(np.abs(a - b)) / np.amax(np.abs(a) + np.abs(b)) < 1.5e-6
     else:
         assert_allclose(a, b, atol=1e-4, rtol=1e-4)

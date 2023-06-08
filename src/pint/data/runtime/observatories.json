@@ -483,7 +483,7 @@
             -4123529.78,
             4147966.36
         ],
-        "origin": "The Allan telescope array.\nOrigin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2.\n"
+        "origin": "The Allen telescope array.\nOrigin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2.\n"
     },
     "ccera": {
         "itrf_xyz": [

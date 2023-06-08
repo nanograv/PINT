@@ -61,7 +61,7 @@ m, t = get_model_and_toas(parfile, timfile)
 # ```python
 # # Define the timing model
 # m = get_model(parfile)
-# # Read in the TOAs, using the solar system epemeris and other things from the model
+# # Read in the TOAs, using the solar system ephemeris and other things from the model
 # t = pint.toa.get_TOAs(timfile, model=m)
 # ```
 
