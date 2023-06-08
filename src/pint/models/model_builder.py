@@ -5,8 +5,10 @@ import warnings
 from io import StringIO
 from collections import Counter, defaultdict
 from pathlib import Path
-from pint.models.astrometry import Astrometry
+from astropy import units as u
+from loguru import logger as log
 
+from pint.models.astrometry import Astrometry
 from pint.models.parameter import maskParameter
 from pint.models.timing_model import (
     DEFAULT_ORDER,
@@ -23,7 +25,13 @@ from pint.models.timing_model import (
     ignore_prefix,
 )
 from pint.toa import get_TOAs
-from pint.utils import PrefixError, interesting_lines, lines_of, split_prefixed_name
+from pint.utils import (
+    PrefixError,
+    interesting_lines,
+    lines_of,
+    split_prefixed_name,
+    get_unit,
+)
 from pint.models.tcb_conversion import convert_tcb_tdb
 
 __all__ = ["ModelBuilder", "get_model", "get_model_and_toas"]
@@ -76,7 +84,7 @@ class ModelBuilder:
         self._validate_components()
         self.default_components = []
 
-    def __call__(self, parfile, allow_name_mixing=False, allow_tcb=False):
+    def __call__(self, parfile, allow_name_mixing=False, allow_tcb=False, **kwargs):
         """Callable object for making a timing model from .par file.
 
         Parameters
@@ -96,6 +104,9 @@ class ModelBuilder:
             converted to TDB upon read. If "raw", an unconverted malformed TCB
             TimingModel object will be returned.
 
+        kwargs : dict
+            Any additional parameter/value pairs that will add to or override those in the parfile.
+
         Returns
         -------
         pint.models.timing_model.TimingModel
@@ -109,6 +120,20 @@ class ModelBuilder:
         pint_param_dict, original_name, unknown_param = self._pintify_parfile(
             parfile, allow_name_mixing
         )
+        remaining_args = {}
+        for k, v in kwargs.items():
+            if k not in pint_param_dict:
+                if isinstance(v, u.Quantity):
+                    pint_param_dict[k] = [
+                        str(v.to_value(get_unit(k))),
+                    ]
+                else:
+                    pint_param_dict[k] = [
+                        str(v),
+                    ]
+                original_name[k] = k
+            else:
+                remaining_args[k] = v
         selected, conflict, param_not_in_pint = self.choose_model(pint_param_dict)
         selected.update(set(self.default_components))
 
@@ -141,6 +166,15 @@ class ModelBuilder:
 
         if tm.UNITS.value == "TCB" and convert_tcb:
             convert_tcb_tdb(tm)
+
+        for k, v in remaining_args.items():
+            if not hasattr(tm, k):
+                raise ValueError(f"Model does not have parameter '{k}'")
+            log.debug(f"Overriding '{k}' to '{v}'")
+            if isinstance(v, u.Quantity):
+                getattr(tm, k).quantity = v
+            else:
+                getattr(tm, k).value = v
 
         return tm
 
@@ -572,7 +606,7 @@ class ModelBuilder:
             raise ComponentConflict(f"Can not decide the one component from: {cf_cps}")
 
 
-def get_model(parfile, allow_name_mixing=False, allow_tcb=False):
+def get_model(parfile, allow_name_mixing=False, allow_tcb=False, **kwargs):
     """A one step function to build model from a parfile.
 
     Parameters
@@ -592,24 +626,29 @@ def get_model(parfile, allow_name_mixing=False, allow_tcb=False):
         converted to TDB upon read. If "raw", an unconverted malformed TCB
         TimingModel object will be returned.
 
+    kwargs : dict
+        Any additional parameter/value pairs that will add to or override those in the parfile.
+
     Returns
     -------
     Model instance get from parfile.
     """
-
     model_builder = ModelBuilder()
     try:
         contents = parfile.read()
     except AttributeError:
         contents = None
     if contents is not None:
-        return model_builder(StringIO(contents), allow_name_mixing, allow_tcb=allow_tcb)
+        return model_builder(
+            StringIO(contents), allow_name_mixing, allow_tcb=allow_tcb, **kwargs
+        )
 
     # # parfile is a filename and can be handled by ModelBuilder
     # if _model_builder is None:
     #     _model_builder = ModelBuilder()
-    model = model_builder(parfile, allow_name_mixing, allow_tcb=allow_tcb)
+    model = model_builder(parfile, allow_name_mixing, allow_tcb=allow_tcb, **kwargs)
     model.name = parfile
+
     return model
 
 
@@ -628,6 +667,7 @@ def get_model_and_toas(
     allow_name_mixing=False,
     limits="warn",
     allow_tcb=False,
+    **kwargs,
 ):
     """Load a timing model and a related TOAs, using model commands as needed
 
@@ -671,12 +711,14 @@ def get_model_and_toas(
         error upon encountering TCB par files. If True, the par file will be
         converted to TDB upon read. If "raw", an unconverted malformed TCB
         TimingModel object will be returned.
+    kwargs : dict
+        Any additional parameter/value pairs that will add to or override those in the parfile.
 
     Returns
     -------
     A tuple with (model instance, TOAs instance)
     """
-    mm = get_model(parfile, allow_name_mixing, allow_tcb=allow_tcb)
+    mm = get_model(parfile, allow_name_mixing, allow_tcb=allow_tcb, **kwargs)
     tt = get_TOAs(
         timfile,
         include_pn=include_pn,
