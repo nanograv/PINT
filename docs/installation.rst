@@ -14,26 +14,12 @@ is more complicated (but not too much).
 Prerequisites
 -------------
 
-You need a python interpreter (either provided by your operating system or your favorite package manager).
-You should use Python 3.x -- it's time. Python 2 has been `sunset <https://www.python.org/doc/sunset-python-2/>`_ as of January 1, 2020.
-Importantly, astropy versions 3 and later have completely dropped support for Python 2.
-
-However, for PINT version 0.7.x and earlier both Python 2.7 and Python 3.5+ are supported. 
-
-For PINT versions 0.8 or later only Python 3.x will be supported.
+PINT requires Python 3. [1]_
 
 Your Python must have the package installation tool pip_ installed.  Also make sure your setuptools are up to date (e.g. ``pip install -U setuptools``).
 
 We highly recommend using an :ref:`Anaconda <install-with-anaconda>` environment or the package isolation tool virtualenv_.
 
-TEMPO and Tempo2
-''''''''''''''''
-
-`TEMPO`_ is not required, but if you have it installed PINT can find clock
-correction files in ``$TEMPO/clock``
-
-`Tempo2`_ is not required, but if you have it installed PINT can find clock
-correction files in ``$TEMPO2/clock``
 
 IMPORTANT Note!
 ---------------
@@ -67,7 +53,10 @@ PINT is also available for Anaconda python under the `conda-forge <https://conda
 
     $ conda install -c conda-forge pint-pulsar
 
-**NOTE**: PINT requires ``longdouble`` arithmetic within ``numpy``, which is currently not supported natively on M1 Macs (e.g., with the `ARM64 conda build <https://conda-forge.org/blog/posts/2020-10-29-macos-arm64/>`_).  So it may be better to install the standard ``osx-64`` build and rely on Rosetta.
+**NOTE**: PINT requires ``longdouble`` arithmetic within ``numpy``, which is currently not supported natively on M1/M2 Macs.
+However, you can use an x86 version of `conda` even on an M1/M2 Mac: see `instructions for using Apple Intel packages on Apple silicon <https://conda-forge.org/docs/user/tipsandtricks.html#installing-apple-intel-packages-on-apple-silicon>`_.
+It's possible to have `parallel versions of conda for x86 and ARM <https://towardsdatascience.com/python-conda-environments-for-both-arm64-and-x86-64-on-m1-apple-silicon-147b943ffa55>`_.
+
 
 
 Install from Source
@@ -194,10 +183,11 @@ Otherwise, there are several ways to `install pandoc`_
 
 For further development instructions see :ref:`Developing PINT`
 
-.. _1: If you don't have `pip`_ installed, this `Python installation guide`_ can guide
-   you through the process.
 .. _pip: https://pip.pypa.io/en/stable/
 .. _TEMPO: http://tempo.sourceforge.net
 .. _Tempo2: https://bitbucket.org/psrsoft/tempo2
 .. _pandoc: https://pandoc.org/
 .. _`install pandoc`: https://pandoc.org/installing.html
+
+.. rubric:: Footnotes
+.. [1] Python 2.7 and 3.5+ are supported for PINT 0.7.x and earlier.
