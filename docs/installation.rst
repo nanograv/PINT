@@ -139,8 +139,7 @@ by running ``pip install --user thing``. Unfortunately this causes something of
 the same problem as having a ``PYTHONPATH`` set, where packages installed
 outside your virtualenv can obscure the ones you have inside, producing bizarre
 error messages. Record your current packages with ``pip freeze``, then try,
-outside a virtualenv, doing ``pip list`` with various options, and ``pip
-uninstall``; you shouldn't be able to uninstall anything system-wise (do not
+outside a virtualenv, doing ``pip list`` with various options, and ``pip uninstall``; you shouldn't be able to uninstall anything system-wise (do not
 use ``sudo``!) and you shouldn't be able to uninstall anything in an inactive
 virtualenv. So once you've blown away all those packages, you should be able to
 work in clean virtualenvs. If you saved the output of ``pip freeze`` above, you
