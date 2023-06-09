@@ -91,11 +91,11 @@ class BinaryELL1(PulsarBinary):
     This is equation (1) of Zhu et al (2019) but with a corrected typo:
         In the first line of that equation, ex->e1 and ey->e2
         In the other lines, ex->e2 and ey->e1
-    See Email from Norbert and Weiwei to David on 2019-Aug-08
-    The dre expression comes from Norbert and Weiwei; the derivatives
+    See Email from NW and WZ to David Nice on 2019-Aug-08
+    The dre expression comes from NW and WZ; the derivatives
     were calculated by hand for PINT
 
-    Also includes o(e^3) expression from Will Fiore, equation (4) of Fiore et al. (2023)
+    Also includes o(e^3) expression from equation (4) of Fiore et al. (2023)
     (derivatives also calculated by hand)
 
     """
