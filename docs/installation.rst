@@ -14,9 +14,9 @@ is more complicated (but not too much).
 Prerequisites
 -------------
 
-PINT requires Python 3. [1]_
+PINT requires Python 3.8+ [1]_
 
-Your Python must have the package installation tool pip_ installed.  Also make sure your setuptools are up to date (e.g. ``pip install -U setuptools``).
+Your Python must have the package installation tool pip_ installed.  Also make sure your ``setuptools`` are up to date (e.g. ``pip install -U setuptools``).
 
 We highly recommend using a Conda_/`Anaconda <https://www.anaconda.com/products/individual>`_ environment or the package isolation tool virtualenv_.
 
@@ -33,7 +33,7 @@ Do **NOT** ``pip install pint`` or ``conda install pint``!  See :ref:`Basic Inst
 Apple M1/M2 processors
 ''''''''''''''''''''''
 
-PINT requires ``longdouble`` arithmetic within ``numpy``, which is currently not supported natively on M1/M2 Macs. 
+PINT requires ``longdouble`` (80- or 128-bit floating point) arithmetic within ``numpy``, which is currently not supported natively on M1/M2 Macs. 
 However, you can use an x86 version of ``conda`` even on an M1/M2 Mac: see `instructions for using Apple Intel packages on Apple silicon <https://conda-forge.org/docs/user/tipsandtricks.html#installing-apple-intel-packages-on-apple-silicon>`_. 
 It's possible to have `parallel versions of conda for x86 and ARM <https://towardsdatascience.com/python-conda-environments-for-both-arm64-and-x86-64-on-m1-apple-silicon-147b943ffa55>`_.
 
@@ -190,8 +190,6 @@ Otherwise, there are several ways to `install pandoc`_
 For further development instructions see :ref:`Developing PINT`
 
 .. _pip: https://pip.pypa.io/en/stable/
-.. _TEMPO: http://tempo.sourceforge.net
-.. _Tempo2: https://bitbucket.org/psrsoft/tempo2
 .. _pandoc: https://pandoc.org/
 .. _`install pandoc`: https://pandoc.org/installing.html
 
