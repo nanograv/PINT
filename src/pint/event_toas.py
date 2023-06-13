@@ -4,6 +4,7 @@ import os
 import astropy.io.fits as pyfits
 from astropy.time import Time
 from astropy.coordinates import EarthLocation
+from astropy import units as u
 import numpy as np
 from loguru import logger as log
 
@@ -210,6 +211,7 @@ def load_fits_TOAs(
     timeref=None,
     minmjd=-np.inf,
     maxmjd=np.inf,
+    errors=1 * u.us,
 ):
     """
     Read photon event times out of a FITS file as a list of PINT :class:`~pint.toa.TOA` objects.
@@ -239,6 +241,9 @@ def load_fits_TOAs(
         minimum MJD timestamp to return
     maxmjd : float, default "infinity"
         maximum MJD timestamp to return
+    errors : astropy.units.Quantity or float, optional
+        The uncertainty on the TOA; if it's a float it is assumed to be
+        in microseconds
 
     Returns
     -------
@@ -261,6 +266,7 @@ def load_fits_TOAs(
         timeref=timeref,
         minmjd=minmjd,
         maxmjd=maxmjd,
+        errors=errors,
     )
 
     return toas.to_TOA_list()
@@ -279,6 +285,7 @@ def get_fits_TOAs(
     planets=False,
     include_bipm=False,
     include_gps=False,
+    errors=1 * u.us,
 ):
     """
     Read photon event times out of a FITS file as :class:`pint.toa.TOAs` object
@@ -318,6 +325,9 @@ def get_fits_TOAs(
         Use TT(BIPM) instead of TT(TAI)
     include_gps : bool, optional
         Apply GPS to UTC clock corrections
+    errors : astropy.units.Quantity or float, optional
+        The uncertainty on the TOA; if it's a float it is assumed to be
+        in microseconds
 
     Returns
     -------
@@ -367,6 +377,9 @@ def get_fits_TOAs(
     if weights is not None:
         new_kwargs["weights"] = weights
 
+    if not isinstance(errors, u.Quantity):
+        errors = errors * u.microsecond
+
     # mask out times/columns outside of mjd range
     mjds_float = np.asarray([r[0] + r[1] for r in mjds])
     idx = (minmjd < mjds_float) & (mjds_float < maxmjd)
@@ -400,10 +413,13 @@ def get_fits_TOAs(
         planets=planets,
         ephem=ephem,
         flags=flags,
+        errors=errors,
     )
 
 
-def load_event_TOAs(eventname, mission, weights=None, minmjd=-np.inf, maxmjd=np.inf):
+def load_event_TOAs(
+    eventname, mission, weights=None, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us
+):
     """
     Read photon event times out of a FITS file as PINT :class:`~pint.toa.TOA` objects.
 
@@ -426,6 +442,9 @@ def load_event_TOAs(eventname, mission, weights=None, minmjd=-np.inf, maxmjd=np.
         minimum MJD timestamp to return
     maxmjd : float, default "infinity"
         maximum MJD timestamp to return
+    errors : astropy.units.Quantity or float, optional
+        The uncertainty on the TOA; if it's a float it is assumed to be
+        in microseconds
 
     Returns
     -------
@@ -453,6 +472,7 @@ def load_event_TOAs(eventname, mission, weights=None, minmjd=-np.inf, maxmjd=np.
         extension=extension,
         minmjd=minmjd,
         maxmjd=maxmjd,
+        errors=errors,
     )
 
 
@@ -466,6 +486,7 @@ def get_event_TOAs(
     planets=False,
     include_bipm=False,
     include_gps=False,
+    errors=1 * u.us,
 ):
     """
     Read photon event times out of a FITS file as a :class:`pint.toa.TOAs` object
@@ -499,6 +520,9 @@ def get_event_TOAs(
         Use TT(BIPM) instead of TT(TAI)
     include_gps : bool, optional
         Apply GPS to UTC clock corrections
+    errors : astropy.units.Quantity or float, optional
+        The uncertainty on the TOA; if it's a float it is assumed to be
+        in microseconds
 
     Returns
     -------
@@ -523,6 +547,7 @@ def get_event_TOAs(
         planets=planets,
         include_bipm=include_bipm,
         include_gps=include_gps,
+        errors=errors,
     )
 
 

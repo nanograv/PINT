@@ -5,7 +5,10 @@ from pathlib import Path
 
 import pytest
 
+import numpy as np
+
 from astropy.io import fits
+from astropy import units as u
 
 import pint.models
 import pint.scripts.fermiphase as fermiphase
@@ -82,3 +85,31 @@ def test_process_and_accuracy():
     # require absolute phase to be within 500 ns; NB this relies on
     # GBT clock corrections since the TZR is referenced there
     assert max(abs(resids_mus)) < 0.5
+
+
+def test_for_toa_errors_default():
+    get_satellite_observatory("Fermi", ft2file, overwrite=True)
+    ts = get_Fermi_TOAs(
+        eventfileraw,
+        weightcolumn="PSRJ0030+0451",
+        include_gps=False,
+        include_bipm=False,
+        planets=False,
+        ephem="DE405",
+    )
+    assert np.all(ts.get_errors() == 1 * u.us)
+
+
+@pytest.mark.parametrize("errors", [2, 2 * u.us])
+def test_for_toa_errors_manual(errors):
+    get_satellite_observatory("Fermi", ft2file, overwrite=True)
+    ts = get_Fermi_TOAs(
+        eventfileraw,
+        weightcolumn="PSRJ0030+0451",
+        include_gps=False,
+        include_bipm=False,
+        planets=False,
+        ephem="DE405",
+        errors=errors,
+    )
+    assert np.all(ts.get_errors() == 2 * u.us)
