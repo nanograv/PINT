@@ -407,7 +407,6 @@ def get_fits_TOAs(
     return toa.get_TOAs_array(
         t,
         obs,
-        errors=0,
         include_gps=include_gps,
         include_bipm=include_bipm,
         planets=planets,
