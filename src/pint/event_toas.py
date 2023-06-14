@@ -1,4 +1,5 @@
 """Generic functions to load TOAs from events files, along with specific implementations for different missions.
+The versions that look like `get_..._TOAs()` are preferred: the others are retained for backward compatibility.
 
 **Instrument-specific Functions**
 
