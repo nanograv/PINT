@@ -1,0 +1,25 @@
+# Created: 2023-05-17T14:02:21.738913
+# PINT_version: 0.9.5+145.ga1930cdf.dirty
+# User: Abhimanyu Susobhanan (abhimanyu)
+# Host: abhimanyu-VirtualBox
+# OS: Linux-5.19.0-41-generic-x86_64-with-glibc2.35
+# Format: pint
+# Converted from tempo2 example file "example1.par"
+PSRJ                           J1028-5819
+UNITS                                 TDB
+DILATEFREQ                              N
+DMDATA                                  N
+NTOA                                    0
+CHI2                                  0.0
+RAJ                     10:28:28.00000000 1 0.00000000000000000000
+DECJ                   -58:19:05.20000000 1 0.00000000000000000000
+PMRA                                  0.0
+PMDEC                                 0.0
+PX                                    0.0
+POSEPOCH           54561.9998229616586976
+F0                  10.940532469635118635 1 0.0
+F1              -1.9300000598500644258e-12 1 0.0
+PEPOCH             54561.9998229616586976
+PLANET_SHAPIRO                          N
+DM                  96.525001496639228994
+DMEPOCH            54561.9998229616586976

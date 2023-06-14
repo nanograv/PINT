@@ -177,7 +177,3 @@ class TestGalactic(unittest.TestCase):
             % sep.arcsec
         )
         assert sep < 1e-9 * u.arcsec, msg
-
-
-if __name__ == "__main__":
-    unittest.main()

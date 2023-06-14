@@ -256,7 +256,7 @@
         "origin": "The Giant Metre-wave Radio Telescope.\nThe origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\nGMRT does not need clock files as the data is recorded against UTC(gps)."
     },
     "ort": {
-        "aliases" : [
+        "aliases": [
             "or"
         ],
         "clock_fmt": "tempo2",
@@ -483,7 +483,7 @@
             -4123529.78,
             4147966.36
         ],
-        "origin": "The Allan telescope array.\nOrigin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2.\n"
+        "origin": "The Allen telescope array.\nOrigin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2.\n"
     },
     "ccera": {
         "itrf_xyz": [
@@ -1392,13 +1392,23 @@
         ],
         "origin": "Imported from TEMPO obsys.dat 2021 June 8."
     },
-	"hess": {
-		"include_bipm": false,
-		"itrf_xyz": [
-			5622462.3793,
-			1665449.2317,
-			-2505096.8054
-		],
-		"origin": "H.E.S.S., the High Energy Stereoscopic System, an Imaging Atmospheric Cherenkov Telescope.\nThese coordinates are provided (from geodetic coordinates : lat = 23°16'18''S, lon = 16°30'00''E at 1800m asl) by the Maxime Regeard and Arache Djannati-Atai on behalf of the H.E.S.S. Collabotation, 2023 January 18."
-	}
+    "hess": {
+        "include_bipm": false,
+        "itrf_xyz": [
+            5622462.3793,
+            1665449.2317,
+            -2505096.8054
+        ],
+        "origin": "H.E.S.S., the High Energy Stereoscopic System, an Imaging Atmospheric Cherenkov Telescope.\nThese coordinates are provided (from geodetic coordinates : lat = 23°16'18''S, lon = 16°30'00''E at 1800m asl) by the Maxime Regeard and Arache Djannati-Atai on behalf of the H.E.S.S. Collabotation, 2023 January 18."
+    },
+    "hawc": {
+        "include_bipm": false,
+        "include_gps": true,
+        "itrf_xyz": [
+            -767864.42219771,
+            -5987810.65796205,
+            2064148.57332404
+        ],
+        "origin": "HAWC: High Altitude Water Cherenkov Experiment.\nCoordinates provided (as geodetic coordinates : 18:59:41.63 N, 97:18:27.39 W, 4096 m) by the spokesperson Ke Fang on behalf of the HAWC Collabotation, 2023 April 21."
+    }
 }

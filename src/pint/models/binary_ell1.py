@@ -18,6 +18,7 @@ from pint.models.stand_alone_psr_binaries.ELL1H_model import ELL1Hmodel
 from pint.models.stand_alone_psr_binaries.ELL1k_model import ELL1kmodel
 from pint.models.timing_model import MissingParameter
 from pint.utils import taylor_horner_deriv
+from pint import Tsun
 
 
 def _eps_to_e(eps1, eps2):
@@ -28,7 +29,21 @@ def _eps_to_om(eps1, eps2):
     OM = np.arctan2(eps1, eps2)
     if OM < 0:
         OM += 360 * u.deg
-    return OM
+    return OM.to(u.deg)
+
+
+def _epsdot_to_edot(eps1, eps2, eps1dot, eps2dot):
+    # Eqn. A14,A15 in Lange et al. inverted
+    ecc = np.sqrt(eps1**2 + eps2**2)
+    return (eps1dot * eps1 + eps2dot * eps2) / ecc
+
+
+def _epsdot_to_omdot(eps1, eps2, eps1dot, eps2dot):
+    # Eqn. A14,A15 in Lange et al. inverted
+    ecc = np.sqrt(eps1**2 + eps2**2)
+    return ((eps1dot * eps2 - eps2dot * eps1) / ecc**2).to(
+        u.deg / u.yr, equivalencies=u.dimensionless_angles()
+    )
 
 
 def _tasc_to_T0(TASC, PB, eps1, eps2):
@@ -45,7 +60,7 @@ class BinaryELL1(PulsarBinary):
 
     This binary model uses a rectangular representation for the eccentricity of an orbit,
     resolving complexities that arise with periastron-based parameters in nearly-circular
-    orbits. It also makes certain approximations that are invalid when the eccentricity
+    orbits. It also makes certain approximations (up to O(e^2)) that are invalid when the eccentricity
     is "large"; what qualifies as "large" depends on your data quality. A formula exists
     to determine when the approximations this model makes are sufficiently accurate.
 
@@ -63,8 +78,22 @@ class BinaryELL1(PulsarBinary):
     References
     ----------
     - Lange et al. (2001), MNRAS, 326 (1), 274–282 [1]_
+    - Zhu et al. (2019), MNRAS, 482 (3), 3249-3260 [2]_
 
-    .. [1] https://ui.adsabs.harvard.edu/abs/2001MNRAS.326..274L/abstract
+    .. [1] https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.3249Z/abstract
+    .. [2] https://ui.adsabs.harvard.edu/abs/2001MNRAS.326..274L/abstract
+
+
+    Notes
+    -----
+    This includes o(e^2) expression for Roemer delay from Norbert Wex and Weiwei Zhu
+    This is equaiton (1) of Zhu et al (2019) but with a corrected typo:
+        In the first line of that equation, ex->e1 and ey->e2
+        In the other lines, ex->e2 and ey->e1
+    See Email from Norbert and Weiwei to David on 2019-Aug-08
+    The dre expression comes from Norbert and Weiwei; the derivatives
+    were calculated by hand for PINT
+
     """
 
     register = True
@@ -137,6 +166,28 @@ class BinaryELL1(PulsarBinary):
                 long_double=True,
                 params=("EPS1", "EPS2"),
                 func=_eps_to_om,
+            )
+        )
+        self.add_param(
+            funcParameter(
+                name="EDOT",
+                units="1/s",
+                description="Eccentricity derivative respect to time",
+                unit_scale=True,
+                scale_factor=1e-12,
+                scale_threshold=1e-7,
+                params=("EPS1", "EPS2", "EPS1DOT", "EPS2DOT"),
+                func=_epsdot_to_edot,
+            )
+        )
+        self.add_param(
+            funcParameter(
+                name="OMDOT",
+                units="deg/year",
+                description="Rate of advance of periastron",
+                long_double=True,
+                params=("EPS1", "EPS2", "EPS1DOT", "EPS2DOT"),
+                func=_epsdot_to_omdot,
             )
         )
         # don't implement T0 yet since that is a MJDparameter at base

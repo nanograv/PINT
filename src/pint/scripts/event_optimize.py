@@ -68,8 +68,7 @@ def read_gaussfitfile(gaussfitfile, proflen):
             fwhms.append(float(line.split()[2]))
     if not (len(phass) == len(ampls) == len(fwhms)):
         log.warning(
-            "Number of phases, amplitudes, and FWHMs are not the same in '%s'!"
-            % gaussfitfile
+            f"Number of phases, amplitudes, and FWHMs are not the same in '{gaussfitfile}'!"
         )
         return 0.0
     phass = np.asarray(phass)
@@ -280,9 +279,7 @@ class emcee_fitter(Fitter):
         for val, key in zip(theta[:-1], self.fitkeys[:-1]):
             lnsum += getattr(self.model, key).prior_pdf(val, logpdf=True)
         # Add the phase term
-        if theta[-1] > 1.0 or theta[-1] < 0.0:
-            return -np.inf
-        return lnsum
+        return -np.inf if theta[-1] > 1.0 or theta[-1] < 0.0 else lnsum
 
     def lnposterior(self, theta):
         """
@@ -366,10 +363,7 @@ class emcee_fitter(Fitter):
             if nphotons <= 0:
                 hval = 0
             else:
-                if use_weights:
-                    hval = hmw(phss[good], weights=wgts)
-                else:
-                    hval = hm(phss[good])
+                hval = hmw(phss[good], weights=wgts) if use_weights else hm(phss[good])
             htests.append(hval)
             if ii > 0 and ii % 2 == 0 and ii < 20:
                 r, c = ((ii - 2) // 2) // 3, ((ii - 2) // 2) % 3
@@ -389,22 +383,22 @@ class emcee_fitter(Fitter):
                 if r == 2:
                     ax[r][c].set_xlabel("Phase")
                 f.suptitle(
-                    "%s:  Minwgt / H-test / Approx # events" % self.model.PSR.value,
+                    f"{self.model.PSR.value}:  Minwgt / H-test / Approx # events",
                     fontweight="bold",
                 )
         if use_weights:
-            plt.savefig(ftr.model.PSR.value + "_profs_v_wgtcut.png")
+            plt.savefig(f"{ftr.model.PSR.value}_profs_v_wgtcut.png")
         else:
-            plt.savefig(ftr.model.PSR.value + "_profs_v_wgtcut_unweighted.png")
+            plt.savefig(f"{ftr.model.PSR.value}_profs_v_wgtcut_unweighted.png")
         plt.close()
         plt.plot(weights, htests, "k")
         plt.xlabel("Min Weight")
         plt.ylabel("H-test")
         plt.title(self.model.PSR.value)
         if use_weights:
-            plt.savefig(ftr.model.PSR.value + "_htest_v_wgtcut.png")
+            plt.savefig(f"{ftr.model.PSR.value}_htest_v_wgtcut.png")
         else:
-            plt.savefig(ftr.model.PSR.value + "_htest_v_wgtcut_unweighted.png")
+            plt.savefig(f"{ftr.model.PSR.value}_htest_v_wgtcut_unweighted.png")
         plt.close()
 
     def plot_priors(self, chains, burnin, bins=100, scale=False):
@@ -587,8 +581,8 @@ def main(argv=None):
     modelin = pint.models.get_model(parfile)
 
     # File name setup and clobber file check
-    filepath = args.filepath if args.filepath else os.getcwd()
-    basename = args.basename if args.basename else modelin.PSR.value
+    filepath = args.filepath or os.getcwd()
+    basename = args.basename or modelin.PSR.value
     filename = os.path.join(filepath, basename)
 
     check_file = os.path.isfile(
@@ -632,23 +626,17 @@ def main(argv=None):
         except IOError:
             pass
     if ts is None:
-        # Read event file and return list of TOA objects
-        tl = fermi.load_Fermi_TOAs(
-            eventfile, weightcolumn=weightcol, targetcoord=target, minweight=minWeight
+        ts = fermi.get_Fermi_TOAs(
+            eventfile,
+            weightcolumn=weightcol,
+            targetcoord=target,
+            minweight=minWeight,
+            minmjd=minMJD,
+            maxmjd=maxMJD,
+            ephem="DE421",
+            planets=False,
         )
-        # Limit the TOAs to ones in selected MJD range and above minWeight
-        tl = [
-            tl[ii]
-            for ii in range(len(tl))
-            if (
-                tl[ii].mjd.value > minMJD
-                and tl[ii].mjd.value < maxMJD
-                and (weightcol is None or float(tl[ii].flags["weight"]) > minWeight)
-            )
-        ]
-        log.info("There are %d events we will use" % len(tl))
-        # Now convert to TOAs object and compute TDBs and posvels
-        ts = toa.get_TOAs_list(tl, ephem="DE421", planets=False)
+        log.info("There are %d events we will use" % len(ts))
         ts.filename = eventfile
         # FIXME: writes to the TOA directory unconditionally
         try:

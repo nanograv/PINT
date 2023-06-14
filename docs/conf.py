@@ -57,6 +57,7 @@ extensions = [
     "nbsphinx",
     "paramtable",
     "componentlist",
+    "sitetable",
     #'IPython.sphinxext.ipython_console_highlighting',
 ]
 

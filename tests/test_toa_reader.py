@@ -185,7 +185,7 @@ def test_toa_merge():
         datadir / "parkes.toa",
     ]
     toas = [toa.get_TOAs(ff) for ff in filenames]
-    ntoas = sum([tt.ntoas for tt in toas])
+    ntoas = sum(tt.ntoas for tt in toas)
     nt = toa.merge_TOAs(toas)
     assert len(nt.observatories) == 3
     assert nt.table.meta["filename"] == filenames
@@ -201,7 +201,7 @@ def test_toa_merge_again():
         datadir / "parkes.toa",
     ]
     toas = [toa.get_TOAs(ff) for ff in filenames]
-    ntoas = sum([tt.ntoas for tt in toas])
+    ntoas = sum(tt.ntoas for tt in toas)
     nt = toa.merge_TOAs(toas)
     # The following tests merging with and already merged TOAs
     other = toa.get_TOAs(datadir / "test1.tim")
@@ -218,7 +218,7 @@ def test_toa_merge_again_2():
         datadir / "parkes.toa",
     ]
     toas = [toa.get_TOAs(ff) for ff in filenames]
-    ntoas = sum([tt.ntoas for tt in toas])
+    ntoas = sum(tt.ntoas for tt in toas)
     other = toa.get_TOAs(datadir / "test1.tim")
     # check consecutive merging
     nt = toa.merge_TOAs(toas[:2])

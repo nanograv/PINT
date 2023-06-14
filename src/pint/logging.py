@@ -224,7 +224,7 @@ class LogFilter:
                 if not self.onlyonce[m]:
                     self.onlyonce[m] = [message_to_save]
                     return True
-                elif not (message_to_save in self.onlyonce[m]):
+                elif message_to_save not in self.onlyonce[m]:
                     self.onlyonce[m].append(message_to_save)
                     return True
                 return False
@@ -311,6 +311,7 @@ def setup(
         filter=filter,
         format=format,
         colorize=usecolors,
+        enqueue=True,
     )
     # change default colors
     for level in colors:

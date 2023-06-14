@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import os
 import sys
 from io import StringIO
@@ -11,7 +10,7 @@ from astropy.io import fits
 import pint.models
 import pint.scripts.fermiphase as fermiphase
 import pint.toa as toa
-from pint.fermi_toas import load_Fermi_TOAs
+from pint.fermi_toas import get_Fermi_TOAs
 from pint.observatory.satellite_obs import get_satellite_observatory
 from pinttestdata import datadir
 
@@ -58,10 +57,13 @@ def test_process_and_accuracy():
 
     modelin = pint.models.get_model(parfile)
     get_satellite_observatory("Fermi", ft2file)
-    tl = load_Fermi_TOAs(eventfileraw, weightcolumn="PSRJ0030+0451")
-    # ts = toa.TOAs(toalist=tl)
-    ts = toa.get_TOAs_list(
-        tl, include_gps=False, include_bipm=False, planets=False, ephem="DE405"
+    ts = get_Fermi_TOAs(
+        eventfileraw,
+        weightcolumn="PSRJ0030+0451",
+        include_gps=False,
+        include_bipm=False,
+        planets=False,
+        ephem="DE405",
     )
     iphss, phss = modelin.phase(ts, abs_phase=True)
     ph_pint = phss % 1

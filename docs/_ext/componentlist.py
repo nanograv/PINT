@@ -1,9 +1,6 @@
 from docutils import nodes
 from docutils.parsers.rst import Directive
-from docutils.parsers.rst.directives.tables import Table
-from docutils.parsers.rst.directives import unchanged_required
 from docutils.statemachine import ViewList
-import pint.utils
 
 
 class ComponentList(Directive):

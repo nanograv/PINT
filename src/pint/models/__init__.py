@@ -22,12 +22,13 @@ from pint.models.absolute_phase import AbsPhase
 from pint.models.astrometry import AstrometryEcliptic, AstrometryEquatorial
 from pint.models.binary_bt import BinaryBT
 from pint.models.binary_piecewise import BinaryBTPiecewise
-from pint.models.binary_dd import BinaryDD
+from pint.models.binary_dd import BinaryDD, BinaryDDS, BinaryDDGR
 from pint.models.binary_ddk import BinaryDDK
 from pint.models.binary_ell1 import BinaryELL1, BinaryELL1H, BinaryELL1k
 from pint.models.dispersion_model import DispersionDM, DispersionDMX
 from pint.models.frequency_dependent import FD
 from pint.models.glitch import Glitch
+from pint.models.phase_offset import PhaseOffset
 from pint.models.piecewise import PiecewiseSpindown
 from pint.models.ifunc import IFunc
 from pint.models.jump import DelayJump, PhaseJump

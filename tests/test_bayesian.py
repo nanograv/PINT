@@ -43,8 +43,7 @@ def data_NGC6440E_efac():
     timfile = examplefile("NGC6440E.tim")
     model, toas = get_model_and_toas(parfile, timfile)
 
-    parfile = str(model)
-    parfile += "EFAC TEL gbt 1 1"
+    parfile = f"{str(model)}EFAC TEL gbt 1 1"
     model = get_model(io.StringIO(parfile))
     set_dummy_priors(model)
 
@@ -67,9 +66,11 @@ def data_NGC6440E_red():
     parfile = examplefile("NGC6440E.par.good")
     timfile = examplefile("NGC6440E.tim")
     model, toas = get_model_and_toas(parfile, timfile)
-    parfile = str(model)
-    parfile += """RNAMP         1e-6
-                  RNIDX         -3.82398"""
+    parfile = (
+        str(model)
+        + """RNAMP         1e-6
+             RNIDX         -3.82398"""
+    )
     model = get_model(io.StringIO(parfile))
     set_dummy_priors(model)
 
@@ -155,7 +156,7 @@ def test_bayesian_timing_funcs(data_NGC6440E_efac):
 def test_prior_dict(data_NGC6440E_efac):
     model, toas = data_NGC6440E_efac
 
-    prior_info = dict()
+    prior_info = {}
     for par in model.free_params:
         param = getattr(model, par)
         param_min = float(param.value - 10 * param.uncertainty_value)

@@ -24,7 +24,7 @@ def test_times_against_tempo2():
     ls = u.def_unit("ls", const.c * 1.0 * u.s)
 
     log.info("Reading TOAs into PINT")
-    ts = toa.get_TOAs(datadir + "/testtimes.tim", include_bipm=False, usepickle=False)
+    ts = toa.get_TOAs(f"{datadir}/testtimes.tim", include_bipm=False, usepickle=False)
     if log.level < 25:
         ts.print_summary()
     ts.table.sort("index")
@@ -40,7 +40,7 @@ def test_times_against_tempo2():
     # assert(len(goodlines)==len(ts.table))
     # t2result = numpy.genfromtxt('datafile/testtimes.par' + '.tempo2_test', names=True, comments = '#')
 
-    f = open(datadir + "/testtimes.par" + ".tempo2_test")
+    f = open(f"{datadir}/testtimes.par.tempo2_test")
     lines = f.readlines()
     goodlines = lines[1:]
     # Get the output lines from the TOAs

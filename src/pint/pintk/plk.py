@@ -8,8 +8,8 @@ import sys
 from astropy.time import Time
 import astropy.units as u
 import matplotlib as mpl
+from matplotlib import figure
 import numpy as np
-import matplotlib.figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 import pint.pintk.pulsar as pulsar
@@ -1095,14 +1095,7 @@ class PlkWidget(tk.Frame):
                     # Get the time of conjunction after T0 or TASC
                     tt = m.T0.value if hasattr(m, "T0") else m.TASC.value
                     mjd = m.conjunction(tt)
-                    if m.PB.value is not None:
-                        pb = m.PB.value
-                    elif m.FB0.quantity is not None:
-                        pb = (1 / m.FB0.quantity).to("day").value
-                    else:
-                        raise AttributeError(
-                            "Neither PB nor FB0 is present in the timing model."
-                        )
+                    pb = m.pb()[0].to_value("day")
                     phs = (mjd - tt) / pb
                     self.plkAxes.plot([phs, phs], [ymin, ymax], "k-")
         else:
