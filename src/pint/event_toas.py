@@ -1,4 +1,21 @@
-"""Generic function to load TOAs from events files."""
+"""Generic functions to load TOAs from events files, along with specific implementations for different missions.
+
+**Instrument-specific Functions**
+
+.. autofunction:: pint.event_toas.load_NuSTAR_TOAs(eventname [, minmjd, maxmjd, errors, ephem, planets])
+.. autofunction:: pint.event_toas.load_NICER_TOAs(eventname [, minmjd, maxmjd, errors, ephem, planets])
+.. autofunction:: pint.event_toas.load_RXTE_TOAs(eventname [, minmjd, maxmjd, errors, ephem, planets])
+.. autofunction:: pint.event_toas.load_IXPE_TOAs(eventname [, minmjd, maxmjd, errors, ephem, planets])
+.. autofunction:: pint.event_toas.load_Swift_TOAs(eventname [, minmjd, maxmjd, errors, ephem, planets])
+.. autofunction:: pint.event_toas.load_XMM_TOAs(eventname [, minmjd, maxmjd, errors, ephem, planets])
+.. autofunction:: pint.event_toas.get_NuSTAR_TOAs(eventname [, minmjd, maxmjd, errors, ephem, planets])
+.. autofunction:: pint.event_toas.get_NICER_TOAs(eventname [, minmjd, maxmjd, errors, ephem, planets])
+.. autofunction:: pint.event_toas.get_RXTE_TOAs(eventname [, minmjd, maxmjd, errors, ephem, planets])
+.. autofunction:: pint.event_toas.get_IXPE_TOAs(eventname [, minmjd, maxmjd, errors, ephem, planets])
+.. autofunction:: pint.event_toas.get_Swift_TOAs(eventname [, minmjd, maxmjd, errors, ephem, planets])
+.. autofunction:: pint.event_toas.get_XMM_TOAs(eventname [, minmjd, maxmjd, errors, ephem, planets])
+
+"""
 import os
 from functools import partial
 
