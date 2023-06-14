@@ -40,7 +40,7 @@ def test_DDS_delay():
 
 
 class TestDDSFit:
-    def setup(self):
+    def setup_method(self):
         par = """
         PSR                            J1640+2224
         EPHEM                               DE440

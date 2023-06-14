@@ -53,7 +53,7 @@ PB = 0.5 * u.day
 
 
 class TestDDGR:
-    def setup(self):
+    def setup_method(self):
         A1 = derived_quantities.a1sini(Mp, Mc, PB, i)
         self.mDD = get_model(
             io.StringIO(

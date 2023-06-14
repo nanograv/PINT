@@ -49,7 +49,7 @@ def wideband_fake():
 
 
 class TestResidualBuilding:
-    def setup(self):
+    def setup_method(self):
         self.model = get_model("J1614-2230_NANOGrav_12yv3.wb.gls.par")
         # self.toa = make_fake_toas(57000,59000,20,model=self.model)
         self.toa = get_TOAs("J1614-2230_NANOGrav_12yv3.wb.tim")

@@ -13,7 +13,7 @@ os.chdir(datadir)
 
 
 class TestWidebandTOAFitter:
-    def setup(self):
+    def setup_method(self):
         self.model = get_model("J1614-2230_NANOGrav_12yv3.wb.gls.par")
         self.toas = get_TOAs(
             "J1614-2230_NANOGrav_12yv3.wb.tim", ephem="DE436", bipm_version="BIPM2015"
