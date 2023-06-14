@@ -5,7 +5,7 @@ import numpy as np
 from astropy import units as u
 
 from pint.event_toas import read_mission_info_from_heasoft, create_mission_config
-from pint.event_toas import get_fits_TOAs, get_NICER_TOAs
+from pint.event_toas import get_fits_TOAs, get_NICER_TOAs, _default_uncertainty
 from pinttestdata import datadir
 
 
@@ -71,7 +71,7 @@ def test_for_toa_errors_default():
     ts = get_NICER_TOAs(
         eventfile_nicer,
     )
-    assert np.all(ts.get_errors() == 1 * u.us)
+    assert np.all(ts.get_errors() == _default_uncertainty["NICER"])
 
 
 @pytest.mark.parametrize("errors", [2, 2 * u.us])

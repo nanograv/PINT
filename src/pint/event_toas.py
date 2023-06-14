@@ -11,6 +11,17 @@ from loguru import logger as log
 import pint.toa as toa
 from pint.fits_utils import read_fits_event_mjds_tuples
 
+# default TOA (event) uncertainty depending on facility
+_default_uncertainty = {
+    "NICER": 0.1 * u.us,
+    "RXTE": 2.5 * u.us,
+    "IPXE": 20 * u.us,
+    "XMM": 48 * u.us,
+    "NuSTAR": 65 * u.us,
+    "Swift": 300 * u.us,
+    "default": 1 * u.us,
+}
+
 
 __all__ = [
     "load_fits_TOAs",
@@ -211,7 +222,7 @@ def load_fits_TOAs(
     timeref=None,
     minmjd=-np.inf,
     maxmjd=np.inf,
-    errors=1 * u.us,
+    errors=_default_uncertainty,
 ):
     """
     Read photon event times out of a FITS file as a list of PINT :class:`~pint.toa.TOA` objects.
@@ -285,7 +296,7 @@ def get_fits_TOAs(
     planets=False,
     include_bipm=False,
     include_gps=False,
-    errors=1 * u.us,
+    errors=_default_uncertainty["default"],
 ):
     """
     Read photon event times out of a FITS file as :class:`pint.toa.TOAs` object
@@ -417,7 +428,12 @@ def get_fits_TOAs(
 
 
 def load_event_TOAs(
-    eventname, mission, weights=None, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us
+    eventname,
+    mission,
+    weights=None,
+    minmjd=-np.inf,
+    maxmjd=np.inf,
+    errors=_default_uncertainty["default"],
 ):
     """
     Read photon event times out of a FITS file as PINT :class:`~pint.toa.TOA` objects.
@@ -485,7 +501,7 @@ def get_event_TOAs(
     planets=False,
     include_bipm=False,
     include_gps=False,
-    errors=1 * u.us,
+    errors=_default_uncertainty["default"],
 ):
     """
     Read photon event times out of a FITS file as a :class:`pint.toa.TOAs` object
@@ -550,7 +566,9 @@ def get_event_TOAs(
     )
 
 
-def load_RXTE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us):
+def load_RXTE_TOAs(
+    eventname, minmjd=-np.inf, maxmjd=np.inf, errors=_default_uncertainty["RXTE"]
+):
     """
     Read photon event times out of a RXTE file as PINT :class:`~pint.toa.TOA` objects.
 
@@ -590,7 +608,9 @@ def load_RXTE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us):
     )
 
 
-def load_NICER_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us):
+def load_NICER_TOAs(
+    eventname, minmjd=-np.inf, maxmjd=np.inf, errors=_default_uncertainty["NICER"]
+):
     """
     Read photon event times out of a NICER file as PINT :class:`~pint.toa.TOA` objects.
 
@@ -633,7 +653,9 @@ def load_NICER_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us):
     )
 
 
-def load_IXPE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us):
+def load_IXPE_TOAs(
+    eventname, minmjd=-np.inf, maxmjd=np.inf, errors=_default_uncertainty["IPXE"]
+):
     """
     Read photon event times out of a IXPE file as PINT :class:`~pint.toa.TOA` objects.
 
@@ -676,7 +698,9 @@ def load_IXPE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us):
     )
 
 
-def load_XMM_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us):
+def load_XMM_TOAs(
+    eventname, minmjd=-np.inf, maxmjd=np.inf, errors=_default_uncertainty["XMM"]
+):
     """
     Read photon event times out of a XMM file as PINT :class:`~pint.toa.TOA` objects.
 
@@ -720,7 +744,9 @@ def load_XMM_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us):
     )
 
 
-def load_NuSTAR_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us):
+def load_NuSTAR_TOAs(
+    eventname, minmjd=-np.inf, maxmjd=np.inf, errors=_default_uncertainty["NuSTAR"]
+):
     """
     Read photon event times out of a NuSTAR file as PINT :class:`~pint.toa.TOA` objects.
 
@@ -763,7 +789,9 @@ def load_NuSTAR_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us):
     )
 
 
-def load_Swift_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us):
+def load_Swift_TOAs(
+    eventname, minmjd=-np.inf, maxmjd=np.inf, errors=_default_uncertainty["Swift"]
+):
     """
     Read photon event times out of a Swift file as PINT :class:`~pint.toa.TOA` objects.
 
@@ -807,7 +835,12 @@ def load_Swift_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us):
 
 
 def get_RXTE_TOAs(
-    eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us, ephem=None, planets=False
+    eventname,
+    minmjd=-np.inf,
+    maxmjd=np.inf,
+    errors=_default_uncertainty["RXTE"],
+    ephem=None,
+    planets=False,
 ):
     """
     Read photon event times out of a RXTE file as a :class:`pint.toa.TOAs` object
@@ -852,7 +885,12 @@ def get_RXTE_TOAs(
 
 
 def get_NICER_TOAs(
-    eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us, ephem=None, planets=False
+    eventname,
+    minmjd=-np.inf,
+    maxmjd=np.inf,
+    errors=_default_uncertainty["NICER"],
+    ephem=None,
+    planets=False,
 ):
     """
     Read photon event times out of a NICER file as a :class:`pint.toa.TOAs` object
@@ -897,7 +935,12 @@ def get_NICER_TOAs(
 
 
 def get_IXPE_TOAs(
-    eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us, ephem=None, planets=False
+    eventname,
+    minmjd=-np.inf,
+    maxmjd=np.inf,
+    errors=_default_uncertainty["IPXE"],
+    ephem=None,
+    planets=False,
 ):
     """
     Read photon event times out of a IXPE file as a :class:`pint.toa.TOAs` object
@@ -942,7 +985,12 @@ def get_IXPE_TOAs(
 
 
 def get_XMM_TOAs(
-    eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us, ephem=None, planets=False
+    eventname,
+    minmjd=-np.inf,
+    maxmjd=np.inf,
+    errors=_default_uncertainty["XMM"],
+    ephem=None,
+    planets=False,
 ):
     """
     Read photon event times out of a XMM file as a :class:`pint.toa.TOAs` object
@@ -987,7 +1035,12 @@ def get_XMM_TOAs(
 
 
 def get_NuSTAR_TOAs(
-    eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us, ephem=None, planets=False
+    eventname,
+    minmjd=-np.inf,
+    maxmjd=np.inf,
+    errors=_default_uncertainty["NuSTAR"],
+    ephem=None,
+    planets=False,
 ):
     """
     Read photon event times out of a NuSTAR file as a :class:`pint.toa.TOAs` object
@@ -1032,7 +1085,12 @@ def get_NuSTAR_TOAs(
 
 
 def get_Swift_TOAs(
-    eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us, ephem=None, planets=False
+    eventname,
+    minmjd=-np.inf,
+    maxmjd=np.inf,
+    errors=_default_uncertainty["Swift"],
+    ephem=None,
+    planets=False,
 ):
     """
     Read photon event times out of a Swift file as a :class:`pint.toa.TOAs` object

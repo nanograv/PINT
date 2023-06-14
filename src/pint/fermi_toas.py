@@ -11,6 +11,8 @@ import pint.toa as toa
 from pint.fits_utils import read_fits_event_mjds_tuples
 from pint.observatory import get_observatory
 
+# default TOA (event) uncertainty depending on facility
+_default_uncertainty = 1 * u.us
 
 __all__ = ["load_Fermi_TOAs", "get_Fermi_TOAs"]
 
@@ -76,7 +78,7 @@ def load_Fermi_TOAs(
     minmjd=-np.inf,
     maxmjd=np.inf,
     fermiobs="Fermi",
-    errors=1 * u.us,
+    errors=_default_uncertainty,
 ):
     """
     Read photon event times out of a Fermi FT1 file and return a list of PINT :class:`~pint.toa.TOA` objects.
@@ -154,7 +156,7 @@ def get_Fermi_TOAs(
     planets=False,
     include_bipm=False,
     include_gps=False,
-    errors=1 * u.us,
+    errors=_default_uncertainty,
 ):
     """
       Read photon event times out of a Fermi FT1 file and return a :class:`pint.toa.TOAs` object
