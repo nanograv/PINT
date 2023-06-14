@@ -550,7 +550,7 @@ def get_event_TOAs(
     )
 
 
-def load_RXTE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
+def load_RXTE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us):
     """
     Read photon event times out of a RXTE file as PINT :class:`~pint.toa.TOA` objects.
 
@@ -568,6 +568,10 @@ def load_RXTE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
         minimum MJD timestamp to return
     maxmjd : float, default "infinity"
         maximum MJD timestamp to return
+    errors : astropy.units.Quantity or float, optional
+        The uncertainty on the TOA; if it's a float it is assumed to be
+        in microseconds
+
 
     Returns
     -------
@@ -581,10 +585,12 @@ def load_RXTE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
     --------
     :func:`get_RXTE_TOAs`
     """
-    return load_event_TOAs(eventname, "xte", minmjd=minmjd, maxmjd=maxmjd)
+    return load_event_TOAs(
+        eventname, "xte", minmjd=minmjd, maxmjd=maxmjd, errors=errors
+    )
 
 
-def load_NICER_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
+def load_NICER_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us):
     """
     Read photon event times out of a NICER file as PINT :class:`~pint.toa.TOA` objects.
 
@@ -602,6 +608,9 @@ def load_NICER_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
         minimum MJD timestamp to return
     maxmjd : float, default "infinity"
         maximum MJD timestamp to return
+    errors : astropy.units.Quantity or float, optional
+        The uncertainty on the TOA; if it's a float it is assumed to be
+        in microseconds
 
     Returns
     -------
@@ -615,10 +624,16 @@ def load_NICER_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
     --------
     :func:`get_NICER_TOAs`
     """
-    return load_event_TOAs(eventname, "nicer", minmjd=minmjd, maxmjd=maxmjd)
+    return load_event_TOAs(
+        eventname,
+        "nicer",
+        minmjd=minmjd,
+        maxmjd=maxmjd,
+        errors=errors,
+    )
 
 
-def load_IXPE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
+def load_IXPE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us):
     """
     Read photon event times out of a IXPE file as PINT :class:`~pint.toa.TOA` objects.
 
@@ -636,6 +651,9 @@ def load_IXPE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
         minimum MJD timestamp to return
     maxmjd : float, default "infinity"
         maximum MJD timestamp to return
+    errors : astropy.units.Quantity or float, optional
+        The uncertainty on the TOA; if it's a float it is assumed to be
+        in microseconds
 
     Returns
     -------
@@ -649,10 +667,16 @@ def load_IXPE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
     --------
     :func:`get_IXPE_TOAs`
     """
-    return load_event_TOAs(eventname, "ixpe", minmjd=minmjd, maxmjd=maxmjd)
+    return load_event_TOAs(
+        eventname,
+        "ixpe",
+        minmjd=minmjd,
+        maxmjd=maxmjd,
+        errors=errors,
+    )
 
 
-def load_XMM_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
+def load_XMM_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us):
     """
     Read photon event times out of a XMM file as PINT :class:`~pint.toa.TOA` objects.
 
@@ -670,6 +694,10 @@ def load_XMM_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
         minimum MJD timestamp to return
     maxmjd : float, default "infinity"
         maximum MJD timestamp to return
+    errors : astropy.units.Quantity or float, optional
+        The uncertainty on the TOA; if it's a float it is assumed to be
+        in microseconds
+
 
     Returns
     -------
@@ -683,10 +711,16 @@ def load_XMM_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
     --------
     :func:`get_XMM_TOAs`
     """
-    return load_event_TOAs(eventname, "xmm", minmjd=minmjd, maxmjd=maxmjd)
+    return load_event_TOAs(
+        eventname,
+        "xmm",
+        minmjd=minmjd,
+        maxmjd=maxmjd,
+        errors=errors,
+    )
 
 
-def load_NuSTAR_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
+def load_NuSTAR_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us):
     """
     Read photon event times out of a NuSTAR file as PINT :class:`~pint.toa.TOA` objects.
 
@@ -704,6 +738,9 @@ def load_NuSTAR_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
         minimum MJD timestamp to return
     maxmjd : float, default "infinity"
         maximum MJD timestamp to return
+    errors : astropy.units.Quantity or float, optional
+        The uncertainty on the TOA; if it's a float it is assumed to be
+        in microseconds
 
     Returns
     -------
@@ -717,10 +754,16 @@ def load_NuSTAR_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
     --------
     :func:`get_NuSTAR_TOAs`
     """
-    return load_event_TOAs(eventname, "nustar", minmjd=minmjd, maxmjd=maxmjd)
+    return load_event_TOAs(
+        eventname,
+        "nustar",
+        minmjd=minmjd,
+        maxmjd=maxmjd,
+        errors=errors,
+    )
 
 
-def load_Swift_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
+def load_Swift_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us):
     """
     Read photon event times out of a Swift file as PINT :class:`~pint.toa.TOA` objects.
 
@@ -738,6 +781,9 @@ def load_Swift_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
         minimum MJD timestamp to return
     maxmjd : float, default "infinity"
         maximum MJD timestamp to return
+    errors : astropy.units.Quantity or float, optional
+        The uncertainty on the TOA; if it's a float it is assumed to be
+        in microseconds
 
     Returns
     -------
@@ -751,10 +797,18 @@ def load_Swift_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf):
     --------
     :func:`get_Swift_TOAs`
     """
-    return load_event_TOAs(eventname, "swift", minmjd=minmjd, maxmjd=maxmjd)
+    return load_event_TOAs(
+        eventname,
+        "swift",
+        minmjd=minmjd,
+        maxmjd=maxmjd,
+        errors=errors,
+    )
 
 
-def get_RXTE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, ephem=None, planets=False):
+def get_RXTE_TOAs(
+    eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us, ephem=None, planets=False
+):
     """
     Read photon event times out of a RXTE file as a :class:`pint.toa.TOAs` object
 
@@ -772,6 +826,9 @@ def get_RXTE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, ephem=None, planets=
         minimum MJD timestamp to return
     maxmjd : float, default "infinity"
         maximum MJD timestamp to return
+    errors : astropy.units.Quantity or float, optional
+        The uncertainty on the TOA; if it's a float it is assumed to be
+        in microseconds
     ephem : str, optional
         The name of the solar system ephemeris to use; defaults to "DE421".
     planets : bool, optional
@@ -784,11 +841,19 @@ def get_RXTE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, ephem=None, planets=
     pint.toa.TOAs
     """
     return get_event_TOAs(
-        eventname, "xte", minmjd=minmjd, maxmjd=maxmjd, ephem=ephem, planets=planets
+        eventname,
+        "xte",
+        minmjd=minmjd,
+        maxmjd=maxmjd,
+        errors=errors,
+        ephem=ephem,
+        planets=planets,
     )
 
 
-def get_NICER_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, ephem=None, planets=False):
+def get_NICER_TOAs(
+    eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us, ephem=None, planets=False
+):
     """
     Read photon event times out of a NICER file as a :class:`pint.toa.TOAs` object
 
@@ -806,6 +871,9 @@ def get_NICER_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, ephem=None, planets
         minimum MJD timestamp to return
     maxmjd : float, default "infinity"
         maximum MJD timestamp to return
+    errors : astropy.units.Quantity or float, optional
+        The uncertainty on the TOA; if it's a float it is assumed to be
+        in microseconds
     ephem : str, optional
         The name of the solar system ephemeris to use; defaults to "DE421".
     planets : bool, optional
@@ -818,11 +886,19 @@ def get_NICER_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, ephem=None, planets
     pint.toa.TOAs
     """
     return get_event_TOAs(
-        eventname, "nicer", minmjd=minmjd, maxmjd=maxmjd, ephem=ephem, planets=planets
+        eventname,
+        "nicer",
+        minmjd=minmjd,
+        maxmjd=maxmjd,
+        errors=errors,
+        ephem=ephem,
+        planets=planets,
     )
 
 
-def get_IXPE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, ephem=None, planets=False):
+def get_IXPE_TOAs(
+    eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us, ephem=None, planets=False
+):
     """
     Read photon event times out of a IXPE file as a :class:`pint.toa.TOAs` object
 
@@ -840,6 +916,9 @@ def get_IXPE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, ephem=None, planets=
         minimum MJD timestamp to return
     maxmjd : float, default "infinity"
         maximum MJD timestamp to return
+    errors : astropy.units.Quantity or float, optional
+        The uncertainty on the TOA; if it's a float it is assumed to be
+        in microseconds
     ephem : str, optional
         The name of the solar system ephemeris to use; defaults to "DE421".
     planets : bool, optional
@@ -852,11 +931,19 @@ def get_IXPE_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, ephem=None, planets=
     pint.toa.TOAs
     """
     return get_event_TOAs(
-        eventname, "ixpe", minmjd=minmjd, maxmjd=maxmjd, ephem=ephem, planets=planets
+        eventname,
+        "ixpe",
+        minmjd=minmjd,
+        maxmjd=maxmjd,
+        errors=errors,
+        ephem=ephem,
+        planets=planets,
     )
 
 
-def get_XMM_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, ephem=None, planets=False):
+def get_XMM_TOAs(
+    eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us, ephem=None, planets=False
+):
     """
     Read photon event times out of a XMM file as a :class:`pint.toa.TOAs` object
 
@@ -874,6 +961,9 @@ def get_XMM_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, ephem=None, planets=F
         minimum MJD timestamp to return
     maxmjd : float, default "infinity"
         maximum MJD timestamp to return
+    errors : astropy.units.Quantity or float, optional
+        The uncertainty on the TOA; if it's a float it is assumed to be
+        in microseconds
     ephem : str, optional
         The name of the solar system ephemeris to use; defaults to "DE421".
     planets : bool, optional
@@ -886,12 +976,18 @@ def get_XMM_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, ephem=None, planets=F
     pint.toa.TOAs
     """
     return get_event_TOAs(
-        eventname, "xmm", minmjd=minmjd, maxmjd=maxmjd, ephem=ephem, planets=planets
+        eventname,
+        "xmm",
+        minmjd=minmjd,
+        maxmjd=maxmjd,
+        errors=errors,
+        ephem=ephem,
+        planets=planets,
     )
 
 
 def get_NuSTAR_TOAs(
-    eventname, minmjd=-np.inf, maxmjd=np.inf, ephem=None, planets=False
+    eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us, ephem=None, planets=False
 ):
     """
     Read photon event times out of a NuSTAR file as a :class:`pint.toa.TOAs` object
@@ -910,6 +1006,9 @@ def get_NuSTAR_TOAs(
         minimum MJD timestamp to return
     maxmjd : float, default "infinity"
         maximum MJD timestamp to return
+    errors : astropy.units.Quantity or float, optional
+        The uncertainty on the TOA; if it's a float it is assumed to be
+        in microseconds
     ephem : str, optional
         The name of the solar system ephemeris to use; defaults to "DE421".
     planets : bool, optional
@@ -922,11 +1021,19 @@ def get_NuSTAR_TOAs(
     pint.toa.TOAs
     """
     return get_event_TOAs(
-        eventname, "nustar", minmjd=minmjd, maxmjd=maxmjd, ephem=ephem, planets=planets
+        eventname,
+        "nustar",
+        minmjd=minmjd,
+        maxmjd=maxmjd,
+        errors=errors,
+        ephem=ephem,
+        planets=planets,
     )
 
 
-def get_Swift_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, ephem=None, planets=False):
+def get_Swift_TOAs(
+    eventname, minmjd=-np.inf, maxmjd=np.inf, errors=1 * u.us, ephem=None, planets=False
+):
     """
     Read photon event times out of a Swift file as a :class:`pint.toa.TOAs` object
 
@@ -944,6 +1051,9 @@ def get_Swift_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, ephem=None, planets
         minimum MJD timestamp to return
     maxmjd : float, default "infinity"
         maximum MJD timestamp to return
+    errors : astropy.units.Quantity or float, optional
+        The uncertainty on the TOA; if it's a float it is assumed to be
+        in microseconds
     ephem : str, optional
         The name of the solar system ephemeris to use; defaults to "DE421".
     planets : bool, optional
@@ -956,5 +1066,11 @@ def get_Swift_TOAs(eventname, minmjd=-np.inf, maxmjd=np.inf, ephem=None, planets
     pint.toa.TOAs
     """
     return get_event_TOAs(
-        eventname, "swift", minmjd=minmjd, maxmjd=maxmjd, ephem=ephem, planets=planets
+        eventname,
+        "swift",
+        minmjd=minmjd,
+        maxmjd=maxmjd,
+        errors=errors,
+        ephem=ephem,
+        planets=planets,
     )
