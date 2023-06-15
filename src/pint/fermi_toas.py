@@ -11,8 +11,10 @@ import pint.toa as toa
 from pint.fits_utils import read_fits_event_mjds_tuples
 from pint.observatory import get_observatory
 
+# default TOA (event) uncertainty depending on facility
+_default_uncertainty = 1 * u.us
 
-__all__ = ["load_Fermi_TOAs"]
+__all__ = ["load_Fermi_TOAs", "get_Fermi_TOAs"]
 
 
 def calc_lat_weights(energies, angseps, logeref=4.1, logesig=0.5):
@@ -76,6 +78,7 @@ def load_Fermi_TOAs(
     minmjd=-np.inf,
     maxmjd=np.inf,
     fermiobs="Fermi",
+    errors=_default_uncertainty,
 ):
     """
     Read photon event times out of a Fermi FT1 file and return a list of PINT :class:`~pint.toa.TOA` objects.
@@ -105,6 +108,9 @@ def load_Fermi_TOAs(
     fermiobs: str
       The default observatory name is Fermi, and must have already been
       registered.  The user can specify another name
+    errors : astropy.units.Quantity or float, optional
+        The uncertainty on the TOA; if it's a float it is assumed to be
+        in microseconds
 
     Returns
     -------
@@ -131,6 +137,7 @@ def load_Fermi_TOAs(
         minmjd=minmjd,
         maxmjd=maxmjd,
         fermiobs=fermiobs,
+        errors=errors,
     )
     return t.to_TOA_list()
 
@@ -149,6 +156,7 @@ def get_Fermi_TOAs(
     planets=False,
     include_bipm=False,
     include_gps=False,
+    errors=_default_uncertainty,
 ):
     """
       Read photon event times out of a Fermi FT1 file and return a :class:`pint.toa.TOAs` object
@@ -187,6 +195,9 @@ def get_Fermi_TOAs(
         Use TT(BIPM) instead of TT(TAI)
     include_gps : bool, optional
         Apply GPS to UTC clock corrections
+    errors : astropy.units.Quantity or float, optional
+        The uncertainty on the TOA; if it's a float it is assumed to be
+        in microseconds
 
     Returns
     -------
@@ -249,6 +260,9 @@ def get_Fermi_TOAs(
             energies = energies[idx]
             weights = weights[idx]
 
+    if not isinstance(errors, u.Quantity):
+        errors = errors * u.microsecond
+
     # limit the TOAs to ones in selected MJD range
     mjds_float = np.asarray([r[0] + r[1] for r in mjds])
     idx = (minmjd < mjds_float) & (mjds_float < maxmjd)
@@ -301,7 +315,7 @@ def get_Fermi_TOAs(
         return toa.get_TOAs_array(
             t,
             obs,
-            errors=0,
+            errors=errors,
             include_gps=include_gps,
             include_bipm=include_bipm,
             planets=planets,
@@ -312,7 +326,7 @@ def get_Fermi_TOAs(
         return toa.get_TOAs_array(
             t,
             obs,
-            errors=0,
+            errors=errors,
             include_gps=False,
             include_bipm=False,
             planets=planets,

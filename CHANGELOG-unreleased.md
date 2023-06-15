@@ -28,4 +28,5 @@ the released changes.
 ### Fixed
 - fixed docstring for `add_param_from_top`
 - Gridded calculations now respect logger settings
+- Event TOAs now have default error that is non-zero, and can set as desired
 ### Removed
