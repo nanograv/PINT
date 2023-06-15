@@ -30,7 +30,16 @@ from loguru import logger as log
 import pint.toa as toa
 from pint.fits_utils import read_fits_event_mjds_tuples
 
-# default TOA (event) uncertainty depending on facility
+"""
+Default TOA (event) uncertainty depending on facility
+
+* RXTE: https://ui.adsabs.harvard.edu/abs/1998ApJ...501..749R/abstract
+* IXPE: https://ui.adsabs.harvard.edu/abs/2019SPIE11118E..0VO/abstract
+* XMM: https://ui.adsabs.harvard.edu/abs/2012A%26A...545A.126M/abstract
+* NuSTAR: https://ui.adsabs.harvard.edu/abs/2021ApJ...908..184B/abstract
+* Swift: https://ui.adsabs.harvard.edu/abs/2005SPIE.5898..377C/abstract
+* NICER: https://heasarc.gsfc.nasa.gov/docs/nicer/mission_guide/
+"""
 _default_uncertainty = {
     "NICER": 0.1 * u.us,
     "RXTE": 2.5 * u.us,
