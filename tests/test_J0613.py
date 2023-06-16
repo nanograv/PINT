@@ -1,7 +1,7 @@
 """Various tests to assess the performance of the J0623-0200."""
 import logging
 import os
-import unittest
+import pytest
 
 import astropy.units as u
 import numpy as np

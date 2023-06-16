@@ -1,7 +1,7 @@
 """Tests for jump model component """
 import logging
 import os
-import unittest
+import pytest
 import pytest
 
 import astropy.units as u

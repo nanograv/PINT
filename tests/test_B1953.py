@@ -1,7 +1,7 @@
 """Various tests to assess the performance of the B1953+29."""
 from astropy import log
 import os
-import unittest
+import pytest
 
 import astropy.units as u
 import numpy as np

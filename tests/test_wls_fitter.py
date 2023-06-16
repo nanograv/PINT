@@ -1,5 +1,5 @@
 import os
-import unittest
+import pytest
 
 from pint.models.model_builder import get_model
 from pint import toa

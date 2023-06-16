@@ -2,7 +2,7 @@ import pytest
 import io
 import os
 import re
-import unittest
+import pytest
 import numpy as np
 
 import astropy.units as u

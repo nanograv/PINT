@@ -1,7 +1,7 @@
 """Various tests to assess the performance of the FD model."""
 import copy
 import os
-import unittest
+import pytest
 from io import StringIO
 
 import astropy.units as u

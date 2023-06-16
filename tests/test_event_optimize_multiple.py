@@ -2,7 +2,7 @@
 # to get the fftfit module.  It can be run manually by people who have PRESTO
 import os
 import sys
-import unittest
+import pytest
 
 from io import StringIO
 

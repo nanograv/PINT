@@ -1,6 +1,6 @@
 import pytest
 import logging
-import unittest
+import pytest
 import pint.observatory
 
 

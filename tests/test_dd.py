@@ -1,6 +1,6 @@
 """Various tests to assess the performance of the DD model."""
 import os
-import unittest
+import pytest
 
 import astropy.units as u
 import numpy as np

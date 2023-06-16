@@ -1,6 +1,6 @@
 import logging
 import os
-import unittest
+import pytest
 
 import astropy.units as u
 import numpy as np

@@ -1,6 +1,6 @@
 """Various tests to assess the performance of early CHIME data."""
 import os
-import unittest
+import pytest
 
 import pint.models.model_builder as mb
 import pint.toa as toa

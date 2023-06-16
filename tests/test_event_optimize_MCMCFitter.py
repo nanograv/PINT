@@ -1,7 +1,7 @@
 # This test is DISABLED because event_optimize requires PRESTO to be installed
 # to get the fftfit module.  It can be run manually by people who have PRESTO
 import os
-import unittest
+import pytest
 
 from io import StringIO
 

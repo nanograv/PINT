@@ -1,4 +1,4 @@
-import unittest
+import pytest
 
 import astropy.coordinates
 import astropy.time

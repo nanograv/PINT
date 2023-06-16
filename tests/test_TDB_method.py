@@ -1,6 +1,6 @@
 """tests for different compute TDB method."""
 import os
-import unittest
+import pytest
 
 import numpy as np
 
