@@ -862,7 +862,7 @@ def dmxstats(model, toas, file=sys.stdout):
     """
     mjds = toas.get_mjds()
     freqs = toas.table["freq"]
-    selected = np.zeros(len(toas), dtype=np.bool8)
+    selected = np.zeros(len(toas), dtype=np.bool_)
     DMX_mapping = model.get_prefix_mapping("DMX_")
     select_idx = dmxselections(model, toas)
     for ii in DMX_mapping:
@@ -940,7 +940,7 @@ def dmxparse(fitter, save=False):
     DMX_Errs = np.zeros(len(dmx_epochs))
     DMX_R1 = np.zeros(len(dmx_epochs))
     DMX_R2 = np.zeros(len(dmx_epochs))
-    mask_idxs = np.zeros(len(dmx_epochs), dtype=np.bool8)
+    mask_idxs = np.zeros(len(dmx_epochs), dtype=np.bool_)
     # Get DMX values (will be in units of 10^-3 pc cm^-3)
     for ii, epoch in enumerate(dmx_epochs):
         DMXs[ii] = getattr(fitter.model, "DMX_{:}".format(epoch)).value
