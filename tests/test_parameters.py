@@ -236,8 +236,10 @@ class TestParameters:
 
     def test_set_value(self):
         """Try to set the numerical value of a parameter to various things"""
-        pytest.raises(ValueError, self.set_num_to_unit)
-        pytest.raises(ValueError, self.set_num_to_quantity)
+        with pytest.raises(ValueError):
+            self.set_num_to_unit()
+        with pytest.raises(u.UnitTypeError):
+            self.set_num_to_quantity()
 
     def test_t0(self):
         """Test setting T0 to a test value"""
