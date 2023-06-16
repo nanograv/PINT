@@ -2692,7 +2692,7 @@ def merge_TOAs(TOAs_list, strict=False):
     """
     # don't duplicate code: just use the existing method
     t = copy.deepcopy(TOAs_list[0])
-    if len(TOAs_list > 1):
+    if len(TOAs_list) > 1:
         t.merge(*TOAs_list[1:], strict=strict)
     return t
 
