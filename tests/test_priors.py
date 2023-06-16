@@ -16,9 +16,9 @@ from pint.models.priors import (
 from pinttestdata import datadir
 
 
-class TestPriors(unittest.TestCase):
+class TestPriors:
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         os.chdir(datadir)
         cls.m = pint.models.get_model("B1855+09_NANOGrav_dfg+12_modified.par")
 

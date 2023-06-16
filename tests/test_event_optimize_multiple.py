@@ -12,8 +12,8 @@ parfile = os.path.join(datadir, "PSRJ0030+0451_psrcat.par")
 eventfile = os.path.join(datadir, "evtfiles.txt")
 
 
-@unittest.skip
-class TestEventOptimizeMultiple(unittest.TestCase):
+@pytest.mark.skip
+class TestEventOptimizeMultiple:
     def test_result(self):
         # Delay import because of fftfit
         from pint.scripts import event_optimize_multiple

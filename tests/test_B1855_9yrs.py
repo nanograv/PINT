@@ -13,11 +13,11 @@ from pint.residuals import Residuals
 from pinttestdata import datadir
 
 
-class TestB1855(unittest.TestCase):
+class TestB1855:
     """Compare delays from the dd model with tempo and PINT"""
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         os.chdir(datadir)
         cls.parfileB1855 = "B1855+09_NANOGrav_9yv1.gls.par"
         cls.timB1855 = "B1855+09_NANOGrav_9yv1.tim"
@@ -30,7 +30,7 @@ class TestB1855(unittest.TestCase):
             f"{cls.parfileB1855}.tempo2_test", skip_header=1, unpack=True
         )
 
-    def test_B1855(self):
+    def test_b1855(self):
         pint_resids_us = Residuals(
             self.toasB1855, self.modelB1855, use_weighted_mean=False
         ).time_resids.to(u.s)

@@ -1,15 +1,16 @@
+import pytest
 import logging
 import unittest
 import numpy as np
 import pint.observatory
 
 
-class TestAstropyObservatory(unittest.TestCase):
+class TestAstropyObservatory:
     """
     Test fallback from PINT observatories to astropy observatories."""
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         # name and ITRF of an observatory that PINT should know about
         cls.pint_obsname = "gbt"
         cls.pint_itrf = [882589.65, -4924872.32, 3943729.348]
@@ -70,4 +71,4 @@ class TestAstropyObservatory(unittest.TestCase):
         """
         try to instantiate a missing observatory.
         """
-        self.assertRaises(KeyError, pint.observatory.Observatory.get, self.none_obsname)
+        pytest.raises(KeyError, pint.observatory.Observatory.get, self.none_obsname)

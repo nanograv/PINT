@@ -11,11 +11,11 @@ from pint.fitter import GLSFitter
 from pinttestdata import datadir
 
 
-class TestGLS(unittest.TestCase):
+class TestGLS:
     """Compare delays from the dd model with tempo and PINT"""
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         os.chdir(datadir)
         cls.par = "B1855+09_NANOGrav_9yv1.gls.par"
         cls.tim = "B1855+09_NANOGrav_9yv1.tim"

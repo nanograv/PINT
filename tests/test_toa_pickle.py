@@ -19,8 +19,8 @@ def temp_tim(tmpdir):
     return tt, tp
 
 
-class TestTOAReader(unittest.TestCase):
-    def setUp(self):
+class TestTOAReader:
+    def setup_method(self):
         os.chdir(datadir)
         # First, read the TOAs from the tim file.
         # This should also create the pickle file.

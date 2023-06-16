@@ -36,15 +36,15 @@ DMX_0003 3
 """
 
 
-class TestDMX(unittest.TestCase):
+class TestDMX:
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         cls.parf = os.path.join(datadir, "B1855+09_NANOGrav_dfg+12_DMX.par")
         cls.timf = os.path.join(datadir, "B1855+09_NANOGrav_dfg+12.tim")
         cls.DMXm = mb.get_model(cls.parf)
         cls.toas = toa.get_TOAs(cls.timf, ephem="DE405", include_bipm=False)
 
-    def test_DMX(self):
+    def test_dmx(self):
         print("Testing DMX module.")
         rs = (
             residuals.Residuals(self.toas, self.DMXm, use_weighted_mean=False)

@@ -9,12 +9,12 @@ import pint.toa as toa
 from pinttestdata import datadir
 
 
-class TestTroposphereDelay(unittest.TestCase):
+class TestTroposphereDelay:
     MIN_ALT = 5  # the minimum altitude in degrees for testing the delay model
 
     FLOAT_THRESHOLD = 1e-12  #
 
-    def setUp(self):
+    def setup_method(self):
         # parfile = os.path.join(datadir, "J1744-1134.basic.par")
         # ngc = os.path.join(datadir, "NGC6440E")
 

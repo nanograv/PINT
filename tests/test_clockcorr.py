@@ -13,7 +13,7 @@ from pint.observatory.clock_file import ClockFile
 from pint.toa import get_TOAs
 
 
-class TestClockcorrection(unittest.TestCase):
+class TestClockcorrection:
     # Note, these tests currently depend on external data (TEMPO2 clock
     # files, which could potentially change.  Values here are taken
     # from tempo2 version 2020-06-01 or so.

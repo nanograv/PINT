@@ -11,9 +11,9 @@ from pint.polycos import Polycos
 from pinttestdata import datadir, testdir
 
 
-class TestD_phase_d_toa(unittest.TestCase):
+class TestD_phase_d_toa:
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         os.chdir(datadir)
         cls.parfileB1855 = "B1855+09_polycos.par"
         cls.timB1855 = "B1855_polyco.tim"
@@ -24,7 +24,7 @@ class TestD_phase_d_toa(unittest.TestCase):
         # Read tempo style polycos.
         cls.plc = Polycos().read("B1855_polyco.dat", "tempo")
 
-    def testD_phase_d_toa(self):
+    def test_d_phase_d_toa(self):
         pint_d_phase_d_toa = self.modelB1855.d_phase_d_toa(self.toasB1855)
         mjd = np.array(
             [

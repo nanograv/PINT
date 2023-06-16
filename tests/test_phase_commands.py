@@ -12,7 +12,7 @@ parfile = os.path.join(datadir, "NGC6440E_PHASETEST.par")
 timfile = os.path.join(datadir, "NGC6440E_PHASETEST.tim")
 
 
-class TestAbsPhase(unittest.TestCase):
+class TestAbsPhase:
     def test_phase_commands(self):
         model = pint.models.get_model(parfile)
         toas = pint.toa.get_TOAs(timfile)

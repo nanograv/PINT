@@ -13,11 +13,11 @@ from pint.residuals import Residuals
 from pinttestdata import datadir
 
 
-class TestB1953(unittest.TestCase):
+class TestB1953:
     """Compare delays from the dd model with tempo and PINT"""
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         os.chdir(datadir)
         cls.parfileB1953 = "B1953+29_NANOGrav_dfg+12_TAI_FB90.par"
         cls.timB1953 = "B1953+29_NANOGrav_dfg+12.tim"
@@ -31,14 +31,14 @@ class TestB1953(unittest.TestCase):
         )
         print(cls.ltres)
 
-    def test_B1953_binary_delay(self):
+    def test_b1953_binary_delay(self):
         # Calculate delays with PINT
         pint_binary_delay = self.modelB1953.binarymodel_delay(self.toasB1953, None)
         assert np.all(
             np.abs(pint_binary_delay.value + self.ltbindelay) < 1e-8
         ), "B1953 binary delay test failed."
 
-    def test_B1953(self):
+    def test_b1953(self):
         pint_resids_us = Residuals(
             self.toasB1953, self.modelB1953, use_weighted_mean=False
         ).time_resids.to(u.s)

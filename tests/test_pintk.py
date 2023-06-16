@@ -14,7 +14,7 @@ timfile = os.path.join(datadir, "NGC6440E.tim")
 @pytest.mark.skipif(
     "DISPLAY" not in os.environ, reason="Needs an X server, xvfb counts"
 )
-class TestPintk(unittest.TestCase):
+class TestPintk:
     def test_result(self):
         saved_stdout, pintk.sys.stdout = pintk.sys.stdout, StringIO("_")
         cmd = "--test {0} {1}".format(parfile, timfile)

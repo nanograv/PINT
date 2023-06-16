@@ -13,11 +13,11 @@ from pinttestdata import datadir
 from pint.modelutils import model_equatorial_to_ecliptic, model_ecliptic_to_equatorial
 
 
-class TestEcliptic(unittest.TestCase):
+class TestEcliptic:
     """Test conversion from equatorial <-> ecliptic coordinates, and compare residuals."""
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         # J0613 is in equatorial
         cls.parfileJ0613 = os.path.join(
             datadir, "J0613-0200_NANOGrav_dfg+12_TAI_FB90.par"

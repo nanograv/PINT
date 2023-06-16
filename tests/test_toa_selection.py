@@ -15,9 +15,9 @@ import pint.toa as toa
 from pinttestdata import datadir
 
 
-class TestTOAselection(unittest.TestCase):
+class TestTOAselection:
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         os.chdir(datadir)
         cls.parf = "B1855+09_NANOGrav_9yv1.gls.par"
         cls.timf = "B1855+09_NANOGrav_9yv1.tim"
@@ -76,7 +76,7 @@ class TestTOAselection(unittest.TestCase):
         self.toas.unselect()
         assert self.toas.ntoas == 4005
 
-    def test_DMX_selection(self):
+    def test_dmx_selection(self):
         dmx_old = self.get_dmx_old(self.toas).value
         # New way in the code.
         dmx_new = self.model.dmx_dm(self.toas).value

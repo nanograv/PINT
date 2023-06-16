@@ -8,11 +8,11 @@ from pint.residuals import Residuals
 from pinttestdata import datadir
 
 
-class Test_CHIME_data(unittest.TestCase):
+class Test_CHIME_data:
     """Compare delays from the dd model with tempo and PINT"""
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         os.chdir(datadir)
         cls.parfile = "B1937+21.basic.par"
         cls.tim = "B1937+21.CHIME.CHIME.NG.N.tim"

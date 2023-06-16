@@ -11,11 +11,11 @@ import pint.toa as toa
 from pinttestdata import datadir
 
 
-class TestToaFlag(unittest.TestCase):
+class TestToaFlag:
     """Compare delays from the dd model with tempo and PINT"""
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         cls.tim = "B1855+09_NANOGrav_dfg+12.tim"
         cls.toas = toa.get_TOAs(
             os.path.join(datadir, cls.tim),
