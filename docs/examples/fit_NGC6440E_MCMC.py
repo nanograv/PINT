@@ -88,9 +88,8 @@ plot_chains(chains, file=f"{f.model.PSR.value}_chains.png")
 
 # triangle plot
 # this doesn't include burn-in because we're not using it here, otherwise set get_chain(discard=burnin)
-#samples = sampler.sampler.chain[:, :, :].reshape((-1, f.n_fit_params))
-samples = np.transpose(sampler.get_chain(), (1, 0, 2)).reshape(
-    (-1, ndim))
+# samples = sampler.sampler.chain[:, :, :].reshape((-1, f.n_fit_params))
+samples = np.transpose(sampler.get_chain(), (1, 0, 2)).reshape((-1, ndim))
 with contextlib.suppress(ImportError):
     import corner
 
