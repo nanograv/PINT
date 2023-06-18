@@ -358,7 +358,10 @@ def main(argv=None):
     plot_chains(chains, file=ftr.model.PSR.value + "_chains.png")
 
     # Make the triangle plot.
-    samples = sampler.sampler.chain[:, burnin:, :].reshape((-1, ftr.n_fit_params))
+    # samples = sampler.sampler.chain[:, burnin:, :].reshape((-1, ftr.n_fit_params))
+    samples = np.transpose(
+        sampler.sampler.get_chain(discard=burnin), (1, 0, 2)
+    ).reshape((-1, ftr.n_fit_params))
     try:
         import corner
 

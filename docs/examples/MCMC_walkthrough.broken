@@ -127,7 +127,8 @@ To make this run relatively fast for demonstration purposes, nsteps was purposef
 
 ```python
 fitter.phaseogram()
-samples = sampler.sampler.chain[:, 10:, :].reshape((-1, fitter.n_fit_params))
+samples = np.transpose(sampler.sampler.get_chain(discard=10), (1, 0, 2)).reshape(
+    (-1, fitter.n_fit_params))
 ranges = map(
     lambda v: (v[1], v[2] - v[1], v[1] - v[0]),
     zip(*np.percentile(samples, [16, 50, 84], axis=0)),
@@ -192,7 +193,7 @@ fitter2.fit_toas(maxiter=nsteps2, pos=None)
 ```
 
 ```python
-samples2 = sampler2.sampler.chain[:, :, :].reshape((-1, fitter2.n_fit_params))
+samples2 = np.transpose(sampler2.sampler.get_chain(), (1, 0, 2)).reshape((-1, fitter2.n_fit_params))
 ranges2 = map(
     lambda v: (v[1], v[2] - v[1], v[1] - v[0]),
     zip(*np.percentile(samples2, [16, 50, 84], axis=0)),
