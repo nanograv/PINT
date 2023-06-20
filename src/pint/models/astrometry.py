@@ -957,8 +957,12 @@ class AstrometryEcliptic(Astrometry):
             lat=self.ELAT.quantity,
             obliquity=OBL[self.ECL.value],
             obstime=self.POSEPOCH.quantity,
-            pm_lon_coslat=self.PMELONG.uncertainty,
-            pm_lat=self.PMELAT.uncertainty,
+            pm_lon_coslat=self.PMELONG.uncertainty
+            if self.PMELONG.uncertainty is not None
+            else 0 * self.PMELONG.units,
+            pm_lat=self.PMELAT.uncertainty
+            if self.PMELAT.uncertainty is not None
+            else 0 * self.PMELAT.units,
             frame=PulsarEcliptic,
         )
         c_ECL = c.transform_to(PulsarEcliptic(ecl=ecl))
@@ -1007,8 +1011,12 @@ class AstrometryEcliptic(Astrometry):
             lat=self.ELAT.quantity,
             obliquity=OBL[self.ECL.value],
             obstime=self.POSEPOCH.quantity,
-            pm_lon_coslat=self.ELONG.uncertainty * np.cos(self.ELAT.quantity) / dt,
-            pm_lat=self.ELAT.uncertainty / dt,
+            pm_lon_coslat=self.ELONG.uncertainty * np.cos(self.ELAT.quantity) / dt
+            if self.ELONG.uncertainty is not None
+            else 0 * self.ELONG.units / dt,
+            pm_lat=self.ELAT.uncertainty / dt
+            if self.ELAT.uncertainty is not None
+            else 0 * self.ELAT.units / dt,
             frame=PulsarEcliptic,
         )
         c_ICRS = c.transform_to(coords.ICRS)
@@ -1021,8 +1029,12 @@ class AstrometryEcliptic(Astrometry):
             lat=self.ELAT.quantity,
             obliquity=OBL[self.ECL.value],
             obstime=self.POSEPOCH.quantity,
-            pm_lon_coslat=self.PMELONG.uncertainty,
-            pm_lat=self.PMELAT.uncertainty,
+            pm_lon_coslat=self.PMELONG.uncertainty
+            if self.PMELONG.uncertainty is not None
+            else 0 * self.PMELONG.units,
+            pm_lat=self.PMELAT.uncertainty
+            if self.PMELAT.uncertainty is not None
+            else 0 * self.PMELAT.units,
             frame=PulsarEcliptic,
         )
         c_ICRS = c.transform_to(coords.ICRS)
