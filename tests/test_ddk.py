@@ -3,7 +3,7 @@
 import copy
 import logging
 import os
-import unittest
+import pytest
 from io import StringIO
 import warnings
 
@@ -44,11 +44,11 @@ temp_par_str = """
 """
 
 
-class TestDDK(unittest.TestCase):
+class TestDDK:
     """Compare delays from the ddk model with libstempo and PINT"""
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         cls.parfileJ1713 = "J1713+0747_NANOGrav_11yv0_short.gls.par"
         cls.ICRSparfileJ1713 = "J1713+0747_NANOGrav_11yv0_short.gls.ICRS.par"
         cls.timJ1713 = "J1713+0747_NANOGrav_11yv0_short.tim"
@@ -84,7 +84,7 @@ class TestDDK(unittest.TestCase):
             :, index
         ]
 
-    def test_J1713_ECL_binary_delay(self):
+    def test_j1713_ecl_binary_delay(self):
         # Calculate delays with PINT
         pint_binary_delay = self.ECLmodelJ1713.binarymodel_delay(self.toasJ1713, None)
         print(f"{np.abs(pint_binary_delay.value + self.ECLltbindelay).max()}")
@@ -93,7 +93,7 @@ class TestDDK(unittest.TestCase):
             % np.abs(pint_binary_delay.value + self.ECLltbindelay).max()
         )
 
-    def test_J1713_ICRS_binary_delay(self):
+    def test_j1713_icrs_binary_delay(self):
         # Calculate delays with PINT
         pint_binary_delay = self.ICRSmodelJ1713.binarymodel_delay(self.toasJ1713, None)
         print(f"{np.abs(pint_binary_delay.value + self.ECLltbindelay).max()}")
@@ -102,7 +102,7 @@ class TestDDK(unittest.TestCase):
             % np.abs(pint_binary_delay.value + self.ICRSltbindelay).max()
         )
 
-    def test_J1713_ECL(self):
+    def test_j1713_ecl(self):
         pint_resids_us = Residuals(
             self.toasJ1713, self.ECLmodelJ1713, use_weighted_mean=False
         ).time_resids.to(u.s)
@@ -113,7 +113,7 @@ class TestDDK(unittest.TestCase):
             % np.abs(diff - diff.mean()).max()
         )
 
-    def test_J1713_ICRS(self):
+    def test_j1713_icrs(self):
         pint_resids_us = Residuals(
             self.toasJ1713, self.ICRSmodelJ1713, use_weighted_mean=False
         ).time_resids.to(u.s)
@@ -143,7 +143,7 @@ class TestDDK(unittest.TestCase):
         diff = bdelay0 - bdelay1
         assert np.all(diff != 0)
 
-    def test_J1713_deriv(self):
+    def test_j1713_deriv(self):
         testp = tdu.get_derivative_params(self.ECLmodelJ1713)
         delay = self.ECLmodelJ1713.delay(self.toasJ1713)
         for p in testp.keys():
@@ -183,7 +183,7 @@ class TestDDK(unittest.TestCase):
             else:
                 continue
 
-    def test_K96(self):
+    def test_k96(self):
         modelJ1713 = copy.deepcopy(self.ECLmodelJ1713)
         log = logging.getLogger("TestJ1713 Switch of K96")
         modelJ1713.K96.value = False
