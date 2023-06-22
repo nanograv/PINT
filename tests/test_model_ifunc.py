@@ -1,5 +1,5 @@
 import os
-import unittest
+import pytest
 
 import astropy.units as u
 
@@ -16,9 +16,9 @@ parfile = os.path.join(datadir, "j0007_ifunc.par")
 timfile = os.path.join(datadir, "j0007_ifunc.tim")
 
 
-class TestIFunc(unittest.TestCase):
+class TestIFunc:
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         cls.m = pint.models.get_model(parfile)
         cls.t = pint.toa.get_TOAs(timfile, ephem="DE405", include_bipm=False)
 
