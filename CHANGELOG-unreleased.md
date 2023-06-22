@@ -12,6 +12,7 @@ the released changes.
 - Applied `sourcery` refactors to the entire codebase
 - Changed threshold for `test_model_derivatives` test to avoid CI failures
 - Unreleased CHANGELOG entries should now be entered in `CHANGELOG-unreleased.md` instead of `CHANGELOG.md`. Updated documentation accordingly.
+- Changed tests to remove `unittest` and use pure pytest format
 ### Added
 - `SpindownBase` as the abstract base class for `Spindown` and `PeriodSpindown` in the `How_to_build_a_timing_model_component.py` example.
 - `SolarWindDispersionBase` as the abstract base class for solar wind dispersion components.
@@ -29,4 +30,5 @@ the released changes.
 - fixed docstring for `add_param_from_top`
 - Gridded calculations now respect logger settings
 - Event TOAs now have default error that is non-zero, and can set as desired
+- Fix `merge_TOAs()` to allow lists of length 1
 ### Removed
