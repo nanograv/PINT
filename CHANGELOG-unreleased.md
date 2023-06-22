@@ -13,6 +13,7 @@ the released changes.
 - Changed threshold for `test_model_derivatives` test to avoid CI failures
 - Unreleased CHANGELOG entries should now be entered in `CHANGELOG-unreleased.md` instead of `CHANGELOG.md`. Updated documentation accordingly.
 - Changed tests to remove `unittest` and use pure pytest format
+- Changed deprecated `sampler.chain` usage
 ### Added
 - `SpindownBase` as the abstract base class for `Spindown` and `PeriodSpindown` in the `How_to_build_a_timing_model_component.py` example.
 - `SolarWindDispersionBase` as the abstract base class for solar wind dispersion components.
