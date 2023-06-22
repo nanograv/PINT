@@ -31,5 +31,6 @@ the released changes.
 - fixed docstring for `add_param_from_top`
 - Gridded calculations now respect logger settings
 - Event TOAs now have default error that is non-zero, and can set as desired
+- Model conversion ICRS <-> ECL works if PM uncertainties are not set
 - Fix `merge_TOAs()` to allow lists of length 1
 ### Removed
