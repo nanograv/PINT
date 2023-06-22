@@ -837,7 +837,8 @@ def main(argv=None):
         sampler.run_mcmc(pos, nsteps)
 
     def chains_to_dict(names, sampler):
-        chains = [sampler.chain[:, :, ii].T for ii in range(len(names))]
+        samples = np.transpose(sampler.get_chain(), (1, 0, 2))
+        chains = [samples[:, :, ii].T for ii in range(len(names))]
         return dict(zip(names, chains))
 
     def plot_chains(chain_dict, file=False):
@@ -859,7 +860,9 @@ def main(argv=None):
     plot_chains(chains, file=filename + "_chains.png")
 
     # Make the triangle plot.
-    samples = sampler.chain[:, burnin:, :].reshape((-1, ndim))
+    samples = np.transpose(sampler.get_chain(discard=burnin), (1, 0, 2)).reshape(
+        (-1, ndim)
+    )
 
     blobs = sampler.get_blobs()
     lnprior_samps = blobs["lnprior"]
