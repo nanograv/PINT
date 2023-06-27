@@ -1,13 +1,14 @@
+import pytest
 import logging
-import unittest
+import pytest
 import pint.observatory
 
 
-class TestObservatoryMetadata(unittest.TestCase):
+class TestObservatoryMetadata:
     """Test handling of observatory metadata"""
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         # name of an observatory that PINT should know about
         # and should have metadata on
         cls.pint_obsname = "gbt"
@@ -44,7 +45,7 @@ class TestObservatoryMetadata(unittest.TestCase):
             origin="Inserted for testing purposes",
         )
         obs = pint.observatory.get_observatory(obsname)
-        self.assertRaises(
+        pytest.raises(
             ValueError,
             TopoObs,
             obsname,

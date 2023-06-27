@@ -150,7 +150,7 @@ class EmceeSampler(MCMCSampler):
         """
         if self.sampler is None:
             raise ValueError("MCMCSampler object has not called initialize_sampler()")
-        return self.sampler.chain
+        return self.sampler.get_chain()
 
     def chains_to_dict(self, names):
         """
@@ -158,7 +158,8 @@ class EmceeSampler(MCMCSampler):
         """
         if self.sampler is None:
             raise ValueError("MCMCSampler object has not called initialize_sampler()")
-        chains = [self.sampler.chain[:, :, ii].T for ii in range(len(names))]
+        samples = np.transpose(self.sampler.get_chain(), (1, 0, 2))
+        chains = [samples[:, :, ii].T for ii in range(len(names))]
         return dict(zip(names, chains))
 
     def run_mcmc(self, pos, nsteps):

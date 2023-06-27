@@ -83,9 +83,11 @@ def test_sampler():
 
         # fitter.phaseogram()
         # samples = sampler.sampler.chain[:, 10:, :].reshape((-1, fitter.n_fit_params))
+        samples = np.transpose(sampler.get_chain(), (1, 0, 2))
 
         # r.append(np.random.randn())
-        r.append(sampler.sampler.chain[0])
+        # r.append(sampler.sampler.chain[0])
+        r.append(samples[0])
     assert_array_equal(r[0], r[1])
 
 
@@ -109,6 +111,7 @@ def test_raw_emcee():
         sampler.random_state = s
         sampler.run_mcmc(p0, 100)
 
-        samples = sampler.chain.reshape((-1, ndim))
+        # samples = sampler.chain.reshape((-1, ndim))
+        samples = np.transpose(sampler.get_chain(), (1, 0, 2)).reshape((-1, ndim))
         r.append(samples[0, 0])
     assert r[0] == r[1]

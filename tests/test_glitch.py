@@ -1,5 +1,5 @@
 import os
-import unittest
+import pytest
 
 import astropy.units as u
 import numpy as np
@@ -15,9 +15,9 @@ parfile = os.path.join(datadir, "prefixtest.par")
 timfile = os.path.join(datadir, "prefixtest.tim")
 
 
-class TestGlitch(unittest.TestCase):
+class TestGlitch:
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         cls.m = pint.models.get_model(parfile)
         cls.t = pint.toa.get_TOAs(timfile, ephem="DE405", include_bipm=False)
         cls.f = pint.fitter.WLSFitter(cls.t, cls.m)

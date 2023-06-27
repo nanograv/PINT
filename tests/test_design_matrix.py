@@ -14,7 +14,7 @@ from pinttestdata import datadir
 
 
 class TestDesignMatrix:
-    def setup(self):
+    def setup_method(self):
         os.chdir(datadir)
         self.par_file = "J1614-2230_NANOGrav_12yv3.wb.gls.par"
         self.tim_file = "J1614-2230_NANOGrav_12yv3.wb.tim"
