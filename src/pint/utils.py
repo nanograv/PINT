@@ -1333,10 +1333,10 @@ def ELL1_check(
 
     Checks whether the assumptions that allow ELL1 to be safely used are
     satisfied. To work properly, we should have:
-    :math:`asini/c  e^3 \ll {\\rm timing precision} / \sqrt N_{\\rm TOA}`
-    or :math:`A1 E^3 \ll TRES / \sqrt N_{\\rm TOA}`
+    :math:`asini/c  e^4 \ll {\\rm timing precision} / \sqrt N_{\\rm TOA}`
+    or :math:`A1 E^4 \ll TRES / \sqrt N_{\\rm TOA}`
 
-    since the ELL1 model now includes terms up to O(E^2)
+    since the ELL1 model now includes terms up to O(E^3)
 
     Parameters
     ----------
@@ -1357,12 +1357,12 @@ def ELL1_check(
         If outstring is True then returns a string summary instead.
 
     """
-    lhs = A1 / const.c * E**3.0
+    lhs = A1 / const.c * E**4.0
     rhs = TRES / np.sqrt(NTOA)
     if outstring:
         s = "Checking applicability of ELL1 model -- \n"
-        s += "    Condition is asini/c * ecc**3 << timing precision / sqrt(# TOAs) to use ELL1\n"
-        s += "    asini/c * ecc**3    = {:.3g} \n".format(lhs.to(u.us))
+        s += "    Condition is asini/c * ecc**4 << timing precision / sqrt(# TOAs) to use ELL1\n"
+        s += "    asini/c * ecc**4    = {:.3g} \n".format(lhs.to(u.us))
         s += "    TRES / sqrt(# TOAs) = {:.3g} \n".format(rhs.to(u.us))
     if lhs * 50.0 < rhs:
         if outstring:

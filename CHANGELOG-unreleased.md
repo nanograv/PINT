@@ -10,5 +10,6 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
+- Third-order Roemer delay terms to ELL1 model
 ### Fixed
 ### Removed
