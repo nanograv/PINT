@@ -40,3 +40,31 @@ class WaveX(DelayComponent):
             )
         )
         #self.delay_funcs_component += [self.wavex_delay]
+
+    #Initialize setup 
+    # def setup(self):
+    #     super().setup()
+    #     self.wave_freqs = list(self.get_prefix_mapping_component("WXFREQ_").keys())
+    #     self.num_wave_freqs = len(self.wave_freqs)
+    
+    #Placeholder for validation tests
+    # def validate(self)
+
+    def wavex_delay(self,toas,delays):
+        total_delay = 0
+       # wave_freq_params = self.get_prefix_mapping_component("WXFREQ_")
+        wave_freqs = self.get_prefix_mapping_component("WXFREQ_").values()
+        wave_sins = self.get_prefix_mapping_component("WXSIN_").values()
+        wave_cos = self.get_prefix_mapping_component("WXSIN_").values()
+        base_phase = (
+            toas.table["tbdld"] * u.day
+            - self.WXEPOCH.value * u.day
+            - delays.to(u.day)
+        ).value
+        for f,freq in enumerate(wave_freqs):
+            arg = 2. * np.pi * freq.value * base_phase
+            total_delay += (wave_sins[f] * np.sin(arg) + wave_cos[f] * np.cos(arg))
+
+
+
+
