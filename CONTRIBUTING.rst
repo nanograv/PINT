@@ -76,7 +76,7 @@ to write good documentation, you come to understand the code very well.
 Get Started!
 ------------
 
-Ready to contribute? Here's how to set up PINT for local development.
+Ready to contribute? Here's how to set up `PINT` for local development.
 
 1. Fork_ the `PINT` repo on GitHub.
 2. Clone your fork locally::
@@ -113,7 +113,7 @@ Ready to contribute? Here's how to set up PINT for local development.
 6. Commit your changes and push your branch to GitHub::
 
     $ git add .
-    $ git commit -m "Your detailed description of your changes."
+    $ git commit -m "Detailed description of your changes."
     $ git push origin name-of-your-bugfix-or-feature
 
 7. Submit a pull request through the GitHub website.
@@ -146,6 +146,9 @@ Before you submit a pull request, check that it meets these guidelines:
    be updated. Put your new functionality into a function with a
    docstring. Check the HTML documentation produced by ``make docs``
    to make sure your new documentation appears and looks reasonable.
+   If the new functionality needs a more detailed explanation than can be
+   put in a docstring, add it to `docs/explanation.rst`. Make sure that
+   the docstring contains a brief description as well.
 4. The pull request should work for and 3.8+. Make sure that all the
    CI tests for the pull request pass. 
 5. Update `CHANGELOG-unreleased.md` with an appropriate entry. Please note
