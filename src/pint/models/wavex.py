@@ -65,6 +65,9 @@ class WaveX(DelayComponent):
             arg = 2. * np.pi * freq.value * base_phase
             total_delay += (wave_sins[f] * np.sin(arg) + wave_cos[f] * np.cos(arg))
 
+    #Placeholder for calculations of derivatives
+    # def d_wavex_delay
+
 
 
 
