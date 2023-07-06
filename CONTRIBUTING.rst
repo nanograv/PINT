@@ -138,7 +138,7 @@ Pull Request Guidelines
 
 Before you submit a pull request, check that it meets these guidelines:
 
-1. Try to write clear :ref:`pythonic` code, follow our :ref:`CodingStyle`, and think
+1. Try to write clear `Pythonic`_ code, follow our `Coding Style`_, and think
    about how others might use your new code.
 2. The pull request should include tests that cover both the expected
    behavior and sensible error reporting when given bad input.
@@ -151,3 +151,5 @@ Before you submit a pull request, check that it meets these guidelines:
 5. Update `CHANGELOG-unreleased.md` with an appropriate entry. Please note
    that `CHANGELOG.md` should not be updated for pull requests.
 
+.. _`Pythonic`: https://peps.python.org/pep-0008/
+.. _`Coding Style`: https://nanograv-pint.readthedocs.io/en/latest/coding-style.html 
