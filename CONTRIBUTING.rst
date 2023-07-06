@@ -20,8 +20,9 @@ Report bugs at https://github.com/nanograv/pint/issues.
 
 If you are reporting a bug, please include:
 
-* Your operating system name and version.
-* The output of ``pint.__version__`` and ``pint.__file__``
+* The output of ``print(pint.utils.info_string())``, ``print(sys.version)``, and ``pint.__file__``.
+  The first command provides the OS name and version, and PINT version. The second command
+  provides the Python version information.
 * Any details about your local setup that might be helpful in troubleshooting,
   such as the command used to install PINT and whether you are using a virtualenv,
   conda environment, etc.
