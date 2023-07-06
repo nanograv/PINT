@@ -95,7 +95,7 @@ Ready to contribute? Here's how to set up PINT for local development.
     $ pre-commit install
    
    The last command installs pre-commit hooks which will squawk at you while trying
-   to commit changes that don't adhere to our code formatting standards.
+   to commit changes that don't adhere to our `Coding Style`_.
 
 4. Create a branch for local development::
 
