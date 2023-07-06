@@ -78,20 +78,24 @@ Get Started!
 
 Ready to contribute? Here's how to set up PINT for local development.
 
-1. Fork_ the ``pint`` repo on GitHub.
+1. Fork_ the `PINT` repo on GitHub.
 2. Clone your fork locally::
 
     $ git clone git@github.com:your_name_here/pint.git
 
-3. Install your local copy into a virtualenv. Assuming you have
-   virtualenvwrapper installed, this is how you set up your fork for local
+3. Install your local copy into a `conda`_ environment. Assuming you have
+   `conda` installed, this is how you set up your fork for local
    development::
 
-    $ mkvirtualenv pint
+    $ conda create -n pint-devel python=3.10
+    $ conda activate pint-devel
     $ cd PINT/
     $ pip install -r requirements_dev.txt
-    $ pip install -r requirements.txt
     $ pip install -e .
+    $ pre-commit install
+   
+   The last command installs pre-commit hooks which will squawk at you while trying
+   to commit changes that don't adhere to our code formatting standards.
 
 4. Create a branch for local development::
 
@@ -114,8 +118,8 @@ Ready to contribute? Here's how to set up PINT for local development.
 
 7. Submit a pull request through the GitHub website.
 
-8. Check that our automatic testing "Travis CI" passes your code. If
-   problems crop up, fix them, commit the changes, and push a new version,
+8. Check that our automatic testing in "GitHub Actions" passes for your code. 
+   If problems crop up, fix them, commit the changes, and push a new version,
    which will automatically update the pull request::
 
    $ git add pint/file-i-just-fixed.py
@@ -127,6 +131,7 @@ Ready to contribute? Here's how to set up PINT for local development.
    functional changes. If accepted, it will be merged into the master branch.
 
 .. _Fork: https://help.github.com/en/articles/fork-a-repo
+.. _`conda`: https://docs.conda.io/
 
 Pull Request Guidelines
 -----------------------
