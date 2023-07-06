@@ -147,12 +147,12 @@ Before you submit a pull request, check that it meets these guidelines:
    docstring. Check the HTML documentation produced by ``make docs``
    to make sure your new documentation appears and looks reasonable.
    If the new functionality needs a more detailed explanation than can be
-   put in a docstring, add it to `docs/explanation.rst`. Make sure that
+   put in a docstring, add it to ``docs/explanation.rst``. Make sure that
    the docstring contains a brief description as well.
 4. The pull request should work for and 3.8+. Make sure that all the
    CI tests for the pull request pass. 
-5. Update `CHANGELOG-unreleased.md` with an appropriate entry. Please note
-   that `CHANGELOG.md` should not be updated for pull requests.
+5. Update ``CHANGELOG-unreleased.md`` with an appropriate entry. Please note
+   that ``CHANGELOG.md`` should not be updated for pull requests.
 
 .. _`Pythonic`: https://peps.python.org/pep-0008/
 .. _`Coding Style`: https://nanograv-pint.readthedocs.io/en/latest/coding-style.html 
