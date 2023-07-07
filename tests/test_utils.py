@@ -55,6 +55,7 @@ from pint.utils import (
     convert_dispersion_measure,
     print_color_examples,
     parse_time,
+    info_string,
 )
 
 
@@ -865,3 +866,8 @@ def test_parse_time(t):
     assert parse_time(t, scale="tdb") == Time(
         55555, format="pulsar_mjd", scale="tdb", precision=9
     )
+
+
+def test_info_str(t):
+    info = info_string()
+    dinfo = info_string(detailed=True)
