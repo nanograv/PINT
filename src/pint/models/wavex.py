@@ -11,8 +11,7 @@ class WaveX(DelayComponent):
 
     Delays are expressed as a sum of sinusoids.
 
-    Used for decomposition of timing noise into a series of sine/cosine components
-    with the amplitudes as fitted parameters.
+    Used for decomposition of timing noise into a series of sine/cosine components with the amplitudes as fitted parameters.
 
 
     Parameters supported:
@@ -35,28 +34,52 @@ class WaveX(DelayComponent):
                 time_scale="tdb",
             )
         )
+        self.set_special_params(["WXFREQ_0001", "WXSIN_0001", "WXCOS_0001"])
+        self.delay_funcs_component += [self.wavex_delay]
+
+    def add_wavex_components(self, index=None, frozens=True):
+        """Add WaveX components
+
+        Parameters
+        ----------
+
+        index : int, None
+            Interger label for WaveX component. If None, will increment largest used index by 1.
+        frozens : iterable of bool or bool
+            Indicates whether wavex will be fit
+
+        Returns
+        -------
+
+        """
+
+        #### If index is None, increment the current max WaveX index by 1. Increment using WXFREQ
+        if index is None:
+            dct = self.get_prefix_mapping_component("WXFREQ_")
+            index = np.max(list(dct.keys())) + 1
+        i = f"{int(index):04d}"
+
         self.add_param(
             prefixParameter(
-                name="WXFREQ_",
+                name="WXFREQ_{i}",
                 description="Base frequency of wave delay solution",
                 units="1/d",
             )
         )
         self.add_param(
             prefixParameter(
-                name="WXSIN_",
+                name="WXSIN_{i}",
                 description="Sine amplitudes for wave delay function",
                 units="s",
             )
         )
         self.add_param(
             prefixParameter(
-                name="WXCOS_",
+                name="WXCOS_{i}",
                 description="Cosine amplitudes for wave delay function",
                 units="s",
             )
         )
-        # self.delay_funcs_component += [self.wavex_delay]
 
     # Initialize setup
     def setup(self):
