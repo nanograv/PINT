@@ -7,13 +7,13 @@ from pint.models.timing_model import DelayComponent, MissingParameter
 
 class WaveX(DelayComponent):
 # These lines are in wave.py and not sure what they are meant to do
-#   register = True
+    register = True
 #  category = "wave"
     def __init__(self):
         super().__init__()
         self.add_param(
             MJDParameter(
-                name="WXEPOCH",
+                name= "WXEPOCH",
                 description="Reference epoch for wave delay solution",
                 time_scale="tdb",
             )
