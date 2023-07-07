@@ -1582,7 +1582,7 @@ def remove_dummy_distance(c):
         return c
 
 
-def info_string(prefix_string="# ", comment=None):
+def info_string(prefix_string="# ", comment=None, detailed=False):
     """Returns an informative string about the current state of PINT.
 
     Adds:
@@ -1602,6 +1602,8 @@ def info_string(prefix_string="# ", comment=None):
         comment or similar)
     comment: str, optional
         a free-form comment string to be included if present
+    detailed: bool, optional
+        Include detailed version info on dependencies.
 
     Returns
     -------
@@ -1698,6 +1700,27 @@ def info_string(prefix_string="# ", comment=None):
     User: {username}
     Host: {platform.node()}
     OS: {platform.platform()}
+    Python: {sys.version}
+    """
+
+    if detailed:
+        from numpy import __version__ as numpy_version
+        from scipy import __version__ as scipy_version
+        from astropy import __version__ as astropy_version
+        from erfa import __version__ as erfa_version
+        from jplephem import __version__ as jpleph_version
+        from matplotlib import __version__ as matplotlib_version
+        from loguru import __version__ as loguru_version
+
+        s += f"""
+    numpy_version: {numpy_version}
+    numpy_longdouble_precision: {np.dtype(np.longdouble).name}
+    scipy_version: {scipy_version}
+    astropy_version: {astropy_version}
+    pyerfa_version: {erfa_version}
+    jplephem_version: {jpleph_version}
+    matplotlib_version: {matplotlib_version}
+    loguru_version: {loguru_version}
     """
 
     s = textwrap.dedent(s)
