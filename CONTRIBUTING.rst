@@ -98,6 +98,16 @@ Ready to contribute? Here's how to set up `PINT` for local development.
    The last command installs pre-commit hooks which will squawk at you while trying
    to commit changes that don't adhere to our `Coding Style`_.
 
+   Alternatively, this can also be done using `virtualenv`. Assuming you have 
+   `virtualenvwrapper` installed, this is how you set up your fork for local
+   development::
+
+    $ mkvirtualenv pint-devel
+    $ cd PINT/
+    $ pip install -r requirements_dev.txt
+    $ pip install -e .
+    $ pre-commit install
+
 4. Create a branch for local development::
 
     $ git checkout -b name-of-your-bugfix-or-feature
