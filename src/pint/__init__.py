@@ -24,7 +24,7 @@ from pint.extern._version import get_versions
 from pint.pulsar_ecliptic import PulsarEcliptic
 from pint.pulsar_mjd import PulsarMJD, time_to_longdouble  # ensure always loaded
 
-from pint.utils import info_string as pint_info
+from pint.utils import info_string
 
 __all__ = [
     "__version__",
@@ -110,3 +110,7 @@ if astropy.version.major < 4:
     raise ValueError(
         f"astropy version must be >=4 (currently it is {astropy.version.major})"
     )
+
+
+def print_info():
+    print(info_string(detailed=True))
