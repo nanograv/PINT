@@ -242,6 +242,17 @@ class WaveX(DelayComponent):
                 self.remove_param(prefix + index_rf)
         self.validate()
 
+    def get_indices(self):
+        """Returns an array of intergers corresponding to WaveX component parameters using WXFREQs
+
+        Returns
+        -------
+        inds : np.ndarray
+        Array of WaveX indices in model.
+        """
+        inds = [int(p.split("_")[-1]) for p in self.params if "WXFREQ_" in p]
+        return np.array(inds)
+
     # Initialize setup
     def setup(self):
         super().setup()
