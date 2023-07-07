@@ -14,11 +14,10 @@ class WaveX(DelayComponent):
 
     Used for decomposition of timing noise into a series of sine/cosine components with the amplitudes as fitted parameters.
 
-
     Parameters supported:
 
     .. paramtable::
-        :class: pint.models.wave.Wave
+        :class: pint.models.wavex.WaveX
 
     This is an extension of the L13 method described in Lentati et al., 2013
     """
@@ -257,11 +256,34 @@ class WaveX(DelayComponent):
     def setup(self):
         super().setup()
 
+    # Get WaveX mapping
+    # Register WXSIN and WXCOS derivatives PLACEHOLDER
+    # for prefix_par in self.get_params_of_type("prefixParameter"):
+    #     if prefix_par.startswith("WXSIN_"):
+    #         self.register_deriv_funcs()
+    #     if prefix_par.startswith("WXCOS_"):
+    #         self.register_deriv_funcs()
     #     self.wave_freqs = list(self.get_prefix_mapping_component("WXFREQ_").keys())
     #     self.num_wave_freqs = len(self.wave_freqs)
 
-    # Placeholder for validation tests
-    # def validate(self)
+    # PLACEHOLDER for validation tests
+    def validate(self):
+        """Validate all the WaveX parameters"""
+        super().validate()
+        WXFREQ_mapping = self.get_prefix_mapping_component("WXFREQ_")
+        WXSIN_mapping = self.get_prefix_mapping_component("WXSIN_")
+        WXCOS_mapping = self.get_prefix_mapping_component("WXCOS_")
+        if WXFREQ_mapping.keys() != WXSIN_mapping.keys():
+            # PLACEHOLDER : Report the mismatched parameters
+            raise ValueError(
+                "WXFREQ_ parameters do not match WXSIN_ parameters."
+                "Please check your prefixed parameters"
+            )
+        if WXFREQ_mapping.keys() != WXCOS_mapping.keys():
+            raise ValueError(
+                "WXFREQ_ parameters do not match WXCOS_ parameters."
+                "Please check your prefixed parameters"
+            )
 
     def wavex_delay(self, toas, delays):
         total_delay = 0
