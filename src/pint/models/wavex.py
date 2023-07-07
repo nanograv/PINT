@@ -1,6 +1,7 @@
 """Delays expressed as a sum of sinusoids."""
 import astropy.units as u
 import numpy as np
+from loguru import logger as log
 
 from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
 from pint.models.timing_model import DelayComponent, MissingParameter
@@ -37,7 +38,7 @@ class WaveX(DelayComponent):
         self.set_special_params(["WXFREQ_0001", "WXSIN_0001", "WXCOS_0001"])
         self.delay_funcs_component += [self.wavex_delay]
 
-    def add_wavex_component(self, wxfreq=1, index=None, frozens=True):
+    def add_wavex_component(self, wxfreq, index=None, wxsin=0, wxcos=0, frozen=True):
         """Add WaveX component
 
         Parameters
@@ -47,7 +48,11 @@ class WaveX(DelayComponent):
             Base frequency for WaveX component
         index : int, None
             Interger label for WaveX component. If None, will increment largest used index by 1.
-        frozens : iterable of bool or bool
+        wxsin : float or astropy.quantity.Quantity
+            Sine amplitude for WaveX component
+        wxcos : float or astropy.quantity.Quantity
+            Cosine amplitude for WaveX component
+        frozen : iterable of bool or bool
             Indicates whether wavex will be fit
 
         Returns
@@ -68,15 +73,19 @@ class WaveX(DelayComponent):
                 f"Index '{index}' is already in use in this model. Please choose another"
             )
 
+        if isinstance(wxsin, u.quantity.Quantity):
+            wxsin = wxsin.to_value(u.s)
+        if isinstance(wxcos, u.quantity.Quantity):
+            wxcos = wxcos.to_value(u.s)
         if isinstance(wxfreq, u.quantity.Quantity):
-            wxfreq = wxfreq.to_value(u.d**-1)
+            # wxfreq = wxfreq.value
+            wxfreq = wxfreq.to_value(1 / u.d)
         self.add_param(
             prefixParameter(
                 name="WXFREQ_{i}",
                 description="Base frequency of wave delay solution",
                 units="1/d",
                 value=wxfreq,
-                frozen=frozen,
             )
         )
         self.add_param(
@@ -84,6 +93,8 @@ class WaveX(DelayComponent):
                 name="WXSIN_{i}",
                 description="Sine amplitudes for wave delay function",
                 units="s",
+                value=wxsin,
+                frozen=frozen,
             )
         )
         self.add_param(
@@ -91,11 +102,122 @@ class WaveX(DelayComponent):
                 name="WXCOS_{i}",
                 description="Cosine amplitudes for wave delay function",
                 units="s",
+                value=wxcos,
+                frozen=frozen,
             )
         )
         self.setup()
         self.validate()
         return index
+
+    def add_wavex_components(
+        self, wxfreqs, indices=None, wxsins=0, wxcoses=0, frozens=True
+    ):
+        """Add WaveX components with specified base frequencies
+
+        Parameters
+        ----------
+
+        wxfreqs : iterable of float or astropy.quantity.Quantity
+            Base frequencies for WaveX components
+        indices : iterable of int, None
+            Interger labels for WaveX components. If None, will increment largest used index by 1.
+        wxsins : iterable of float or astropy.quantity.Quantity
+            Sine amplitudes for WaveX components
+        wxcoses : iterable of float or astropy.quantity.Quantity
+            Cosine amplitudes for WaveX components
+        frozens : iterable of bool or bool
+            Indicates whether sine adn cosine amplitudes of wavex components will be fit
+        Returns
+        -------
+
+        indices : list
+            Indices that have been assigned to new WaveX components
+        """
+
+        if indices is None:
+            indices = [None] * len(wxfreqs)
+        wxsins = np.atleast_1d(wxsins)
+        wxcoses = np.atleast_1d(wxcoses)
+        if len(wxsins) == 1:
+            wxsins = np.repeat(wxsins, len(wxfreqs))
+        if len(wxcoses) == 1:
+            wxcoses = np.repeat(wxcoses, len(wxfreqs))
+        if len(wxsins) != len(wxfreqs):
+            raise ValueError(
+                f"Number of base frequencies {len(wxfreqs)} doesn't match number of sine ampltudes {len(wxsins)}"
+            )
+        if len(wxcoses) != len(wxfreqs):
+            raise ValueError(
+                f"Number of base frequencies {len(wxfreqs)} doesn't match number of cosine ampltudes {len(wxcoses)}"
+            )
+        frozens = np.atleast_1d(frozens)
+        if len(frozens) == 1:
+            frozens = np.repeat(frozens, len(wxfreqs))
+        if len(frozens) != len(wxfreqs):
+            raise ValueError(
+                f"Number of base frequencies must match number of frozen values"
+            )
+        #### If indices is None, increment the current max WaveX index by 1. Increment using WXFREQ
+        dct = self.get_prefix_mapping_component("WXFREQ_")
+        last_index = np.max(list(dct.keys()))
+        added_indices = []
+        for wxfreq, index, wxsin, wxcos, frozen in zip(
+            wxfreqs, indices, wxsins, wxcoses, frozens
+        ):
+            if index is None:
+                index = last_index + 1
+                last_index += 1
+            elif index in list(dct.keys()):
+                raise ValueError(
+                    f"Attempting to insert WXFREQ_{index:04d} but it already exists"
+                )
+            added_indices.append(index)
+            i = f"{int(index):04d}"
+
+            if int(index) in dct:
+                raise ValueError(
+                    f"Index '{index}' is already in use in this model. Please choose another"
+                )
+            if isinstance(wxfreq, u.quantity.Quantity):
+                wxfreq = wxfreq.to_value(u.d**-1)
+            if isinstance(wxsin, u.quantity.Quantity):
+                wxsin = wxsin.to_value(u.s)
+            if isinstance(wxcos, u.quantity.Quantity):
+                wxcos = wxcos.to_value(u.s)
+            log.trace(f"Adding WXSIN_{i} and WXCOS_{i} at frequency WXFREQ_{i}")
+            self.add_param(
+                prefixParameter(
+                    name="WXFREQ_{i}",
+                    description="Base frequency of wave delay solution",
+                    units="1/d",
+                    value=wxfreq,
+                    parameter_type="float",
+                )
+            )
+            self.add_param(
+                prefixParameter(
+                    name="WXSIN_{i}",
+                    description="Sine amplitudes for wave delay function",
+                    units="s",
+                    value=wxsin,
+                    parameter_type="float",
+                    frozen=frozen,
+                )
+            )
+            self.add_param(
+                prefixParameter(
+                    name="WXCOS_{i}",
+                    description="Cosine amplitudes for wave delay function",
+                    units="s",
+                    value=wxcos,
+                    parameter_type="float",
+                    frozen=frozen,
+                )
+            )
+        self.setup()
+        self.validate()
+        return added_indices
 
     # Initialize setup
     def setup(self):
