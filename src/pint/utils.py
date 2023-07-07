@@ -1713,6 +1713,7 @@ def info_string(prefix_string="# ", comment=None, detailed=False):
         from loguru import __version__ as loguru_version
 
         s += f"""
+    endian: {sys.byteorder}
     numpy_version: {numpy_version}
     numpy_longdouble_precision: {np.dtype(np.longdouble).name}
     scipy_version: {scipy_version}
