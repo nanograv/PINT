@@ -37,12 +37,14 @@ class WaveX(DelayComponent):
         self.set_special_params(["WXFREQ_0001", "WXSIN_0001", "WXCOS_0001"])
         self.delay_funcs_component += [self.wavex_delay]
 
-    def add_wavex_components(self, index=None, frozens=True):
-        """Add WaveX components
+    def add_wavex_component(self, wxfreq=1, index=None, frozens=True):
+        """Add WaveX component
 
         Parameters
         ----------
 
+        wxfreq : float or astropy.quantity.Quantity
+            Base frequency for WaveX component
         index : int, None
             Interger label for WaveX component. If None, will increment largest used index by 1.
         frozens : iterable of bool or bool
@@ -51,6 +53,8 @@ class WaveX(DelayComponent):
         Returns
         -------
 
+        index : int
+            Index that has been assigned to new WaveX component
         """
 
         #### If index is None, increment the current max WaveX index by 1. Increment using WXFREQ
@@ -59,11 +63,20 @@ class WaveX(DelayComponent):
             index = np.max(list(dct.keys())) + 1
         i = f"{int(index):04d}"
 
+        if int(index) in self.get_prefix_mapping_component("WXFREQ_"):
+            raise ValueError(
+                f"Index '{index}' is already in use in this model. Please choose another"
+            )
+
+        if isinstance(wxfreq, u.quantity.Quantity):
+            wxfreq = wxfreq.to_value(u.d**-1)
         self.add_param(
             prefixParameter(
                 name="WXFREQ_{i}",
                 description="Base frequency of wave delay solution",
                 units="1/d",
+                value=wxfreq,
+                frozen=frozen,
             )
         )
         self.add_param(
@@ -80,6 +93,9 @@ class WaveX(DelayComponent):
                 units="s",
             )
         )
+        self.setup()
+        self.validate()
+        return index
 
     # Initialize setup
     def setup(self):
