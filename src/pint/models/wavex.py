@@ -219,6 +219,29 @@ class WaveX(DelayComponent):
         self.validate()
         return added_indices
 
+    def remove_wavex_component(self, index):
+        """Remove all WaveX components associated with a given index or list of indices
+
+        Parameters
+        ----------
+        index : float, int, list, np.ndarray
+            Number or list/array of numbers corresponding to WaveX indices to be removed from model.
+        """
+
+        if isinstance(index, (int, float, np.int64)):
+            indices = [index]
+        elif isinstance(index, (list, set, np.ndarray)):
+            indices = index
+        else:
+            raise TypeError(
+                f"index most be a float, int, set, list, or array - not {type(index)}"
+            )
+        for index in indices:
+            index_rf = f"{int(index):04d}"
+            for prefix in ["WXFREQ_", "WXSIN_", "WXCOS_"]:
+                self.remove_param(prefix + index_rf)
+        self.validate()
+
     # Initialize setup
     def setup(self):
         super().setup()
