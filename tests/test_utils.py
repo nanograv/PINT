@@ -868,6 +868,6 @@ def test_parse_time(t):
     )
 
 
-def test_info_str(t):
+def test_info_str():
     info = info_string()
     dinfo = info_string(detailed=True)
