@@ -91,7 +91,8 @@ Ready to contribute? Here's how to set up `PINT` for local development.
     $ conda create -n pint-devel python=3.10
     $ conda activate pint-devel
     $ cd PINT/
-    $ pip install -r requirements_dev.txt
+    $ conda install -c conda-forge --file requirements_dev.txt
+    $ conda install -c conda-forge --file requirements.txt
     $ pip install -e .
     $ pre-commit install
    
