@@ -8,7 +8,9 @@ from pint.models.timing_model import DelayComponent, MissingParameter
 
 class WaveX(DelayComponent):
     """Implementation of the wave model as a delay correction
+
     Delays are expressed as a sum of sinusoids.
+
     Used for decomposition of timing noise into a series of sine/cosine components
     with the amplitudes as fitted parameters.
 
