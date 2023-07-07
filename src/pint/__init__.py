@@ -113,4 +113,5 @@ if astropy.version.major < 4:
 
 
 def print_info():
+    """Print the OS version, Python version, PINT version, versions of the dependencies etc."""
     print(info_string(detailed=True))
