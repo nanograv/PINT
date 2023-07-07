@@ -266,10 +266,10 @@ class WaveX(DelayComponent):
     #     self.wave_freqs = list(self.get_prefix_mapping_component("WXFREQ_").keys())
     #     self.num_wave_freqs = len(self.wave_freqs)
 
-    # PLACEHOLDER for validation tests
     def validate(self):
         """Validate all the WaveX parameters"""
         super().validate()
+        self.setup()
         WXFREQ_mapping = self.get_prefix_mapping_component("WXFREQ_")
         WXSIN_mapping = self.get_prefix_mapping_component("WXSIN_")
         WXCOS_mapping = self.get_prefix_mapping_component("WXCOS_")
@@ -284,6 +284,13 @@ class WaveX(DelayComponent):
                 "WXFREQ_ parameters do not match WXCOS_ parameters."
                 "Please check your prefixed parameters"
             )
+        if self.WXEPOCH.quantity is None:
+            if self.PEPOCH.quantity is None:
+                raise MissingParameter(
+                    "WXEPOCH or PEPOCH are required if WaveX is being used"
+                )
+            else:
+                self.WXEPOCH = self.PEPOCH
 
     def wavex_delay(self, toas, delays):
         total_delay = 0
@@ -296,7 +303,10 @@ class WaveX(DelayComponent):
         ).value
         for f, freq in enumerate(wave_freqs):
             arg = 2.0 * np.pi * freq.value * base_phase
-            total_delay += wave_sins[f] * np.sin(arg) + wave_cos[f] * np.cos(arg)
+            total_delay += wave_sins[f].quantity * np.sin(arg) + wave_cos[f] * np.cos(
+                arg
+            )
+        return total_delay
 
     # Placeholder for calculations of derivatives
     # def d_wavex_delay
