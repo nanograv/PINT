@@ -41,6 +41,7 @@ from pint.models.spindown import Spindown
 from pint.models.timing_model import DEFAULT_ORDER, TimingModel
 from pint.models.troposphere_delay import TroposphereDelay
 from pint.models.wave import Wave
+from pint.models.wavex import WaveX
 
 # Define a standard basic model
 StandardTimingModel = TimingModel(

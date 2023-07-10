@@ -117,6 +117,7 @@ DEFAULT_ORDER = [
     "spindown",
     "phase_jump",
     "wave",
+    "wavex"
 ]
 
 
