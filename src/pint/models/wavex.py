@@ -34,6 +34,7 @@ class WaveX(DelayComponent):
                 time_scale="tdb",
             )
         )
+        self.add_wavex_component(None, index=1, wxsin=0, wxcos=0, frozen=False)
         self.set_special_params(["WXFREQ_0001", "WXSIN_0001", "WXCOS_0001"])
         self.delay_funcs_component += [self.wavex_delay]
 
