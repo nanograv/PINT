@@ -23,8 +23,8 @@ class WaveX(DelayComponent):
     """
 
     register = True
+    category = "wavex"
 
-    #  category = "wave"
     def __init__(self):
         super().__init__()
         self.add_param(
