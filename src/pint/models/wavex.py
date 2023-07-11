@@ -295,7 +295,7 @@ class WaveX(DelayComponent):
                         "WXEPOCH or PEPOCH are required if WaveX is being used"
                     )
                 else:
-                    self.WXEPOCH = self._parent.PEPOCH
+                    self.WXEPOCH.quantity = self._parent.PEPOCH.quantity
 
     def wavex_delay(self, toas, delays):
         total_delay = np.zeros(toas.ntoas) * u.s
