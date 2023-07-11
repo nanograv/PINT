@@ -82,28 +82,31 @@ class WaveX(DelayComponent):
             wxfreq = wxfreq.to_value(1 / u.d)
         self.add_param(
             prefixParameter(
-                name="WXFREQ_{i}",
+                name=f"WXFREQ_{i}",
                 description="Base frequency of wave delay solution",
                 units="1/d",
                 value=wxfreq,
+                parameter_type="float",
             )
         )
         self.add_param(
             prefixParameter(
-                name="WXSIN_{i}",
+                name=f"WXSIN_{i}",
                 description="Sine amplitudes for wave delay function",
                 units="s",
                 value=wxsin,
                 frozen=frozen,
+                parameter_type="float",
             )
         )
         self.add_param(
             prefixParameter(
-                name="WXCOS_{i}",
+                name=f"WXCOS_{i}",
                 description="Cosine amplitudes for wave delay function",
                 units="s",
                 value=wxcos,
                 frozen=frozen,
+                parameter_type="float",
             )
         )
         self.setup()
@@ -188,7 +191,7 @@ class WaveX(DelayComponent):
             log.trace(f"Adding WXSIN_{i} and WXCOS_{i} at frequency WXFREQ_{i}")
             self.add_param(
                 prefixParameter(
-                    name="WXFREQ_{i}",
+                    name=f"WXFREQ_{i}",
                     description="Base frequency of wave delay solution",
                     units="1/d",
                     value=wxfreq,
@@ -197,7 +200,7 @@ class WaveX(DelayComponent):
             )
             self.add_param(
                 prefixParameter(
-                    name="WXSIN_{i}",
+                    name=f"WXSIN_{i}",
                     description="Sine amplitudes for wave delay function",
                     units="s",
                     value=wxsin,
@@ -207,7 +210,7 @@ class WaveX(DelayComponent):
             )
             self.add_param(
                 prefixParameter(
-                    name="WXCOS_{i}",
+                    name=f"WXCOS_{i}",
                     description="Cosine amplitudes for wave delay function",
                     units="s",
                     value=wxcos,
@@ -285,28 +288,30 @@ class WaveX(DelayComponent):
                 "WXFREQ_ parameters do not match WXCOS_ parameters."
                 "Please check your prefixed parameters"
             )
-        if self.WXEPOCH.quantity is None:
-            if self.PEPOCH.quantity is None:
-                raise MissingParameter(
-                    "WXEPOCH or PEPOCH are required if WaveX is being used"
-                )
-            else:
-                self.WXEPOCH = self.PEPOCH
+        if self.WXEPOCH.value is None:
+            if self._parent is not None:
+                if self._parent.PEPOCH.value is None:
+                    raise MissingParameter(
+                        "WXEPOCH or PEPOCH are required if WaveX is being used"
+                    )
+                else:
+                    self.WXEPOCH = self._parent.PEPOCH
 
     def wavex_delay(self, toas, delays):
-        total_delay = 0
-        # wave_freq_params = self.get_prefix_mapping_component("WXFREQ_")
-        wave_freqs = self.get_prefix_mapping_component("WXFREQ_").values()
-        wave_sins = self.get_prefix_mapping_component("WXSIN_").values()
-        wave_cos = self.get_prefix_mapping_component("WXSIN_").values()
+        total_delay = np.zeros(toas.ntoas) * u.s
+        wave_freqs = self.get_prefix_mapping_component("WXFREQ_")
+        wave_sins = self.get_prefix_mapping_component("WXSIN_")
+        wave_cos = self.get_prefix_mapping_component("WXCOS_")
+
         base_phase = (
-            toas.table["tbdld"] * u.day - self.WXEPOCH.value * u.day - delays.to(u.day)
-        ).value
-        for f, freq in enumerate(wave_freqs):
-            arg = 2.0 * np.pi * freq.value * base_phase
-            total_delay += wave_sins[f].quantity * np.sin(arg) + wave_cos[f] * np.cos(
-                arg
-            )
+            toas.table["tdbld"].value * u.d - self.WXEPOCH.value * u.d - delays.to(u.d)
+        )
+        for idx, param in wave_freqs.items():
+            freq = getattr(self, param).quantity
+            wxsin = getattr(self, wave_sins[idx]).quantity
+            wxcos = getattr(self, wave_cos[idx]).quantity
+            arg = 2.0 * np.pi * freq * base_phase
+            total_delay += wxsin * np.sin(arg.value) + wxcos * np.cos(arg.value)
         return total_delay
 
     # Placeholder for calculations of derivatives
