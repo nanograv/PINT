@@ -862,7 +862,7 @@ def dmxstats(model, toas, file=sys.stdout):
     """
     mjds = toas.get_mjds()
     freqs = toas.table["freq"]
-    selected = np.zeros(len(toas), dtype=np.bool8)
+    selected = np.zeros(len(toas), dtype=np.bool_)
     DMX_mapping = model.get_prefix_mapping("DMX_")
     select_idx = dmxselections(model, toas)
     for ii in DMX_mapping:
@@ -940,7 +940,7 @@ def dmxparse(fitter, save=False):
     DMX_Errs = np.zeros(len(dmx_epochs))
     DMX_R1 = np.zeros(len(dmx_epochs))
     DMX_R2 = np.zeros(len(dmx_epochs))
-    mask_idxs = np.zeros(len(dmx_epochs), dtype=np.bool8)
+    mask_idxs = np.zeros(len(dmx_epochs), dtype=np.bool_)
     # Get DMX values (will be in units of 10^-3 pc cm^-3)
     for ii, epoch in enumerate(dmx_epochs):
         DMXs[ii] = getattr(fitter.model, "DMX_{:}".format(epoch)).value
@@ -1333,10 +1333,10 @@ def ELL1_check(
 
     Checks whether the assumptions that allow ELL1 to be safely used are
     satisfied. To work properly, we should have:
-    :math:`asini/c  e^3 \ll {\\rm timing precision} / \sqrt N_{\\rm TOA}`
-    or :math:`A1 E^3 \ll TRES / \sqrt N_{\\rm TOA}`
+    :math:`asini/c  e^4 \ll {\\rm timing precision} / \sqrt N_{\\rm TOA}`
+    or :math:`A1 E^4 \ll TRES / \sqrt N_{\\rm TOA}`
 
-    since the ELL1 model now includes terms up to O(E^2)
+    since the ELL1 model now includes terms up to O(E^3)
 
     Parameters
     ----------
@@ -1357,12 +1357,12 @@ def ELL1_check(
         If outstring is True then returns a string summary instead.
 
     """
-    lhs = A1 / const.c * E**3.0
+    lhs = A1 / const.c * E**4.0
     rhs = TRES / np.sqrt(NTOA)
     if outstring:
         s = "Checking applicability of ELL1 model -- \n"
-        s += "    Condition is asini/c * ecc**3 << timing precision / sqrt(# TOAs) to use ELL1\n"
-        s += "    asini/c * ecc**3    = {:.3g} \n".format(lhs.to(u.us))
+        s += "    Condition is asini/c * ecc**4 << timing precision / sqrt(# TOAs) to use ELL1\n"
+        s += "    asini/c * ecc**4    = {:.3g} \n".format(lhs.to(u.us))
         s += "    TRES / sqrt(# TOAs) = {:.3g} \n".format(rhs.to(u.us))
     if lhs * 50.0 < rhs:
         if outstring:

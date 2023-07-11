@@ -1,4 +1,4 @@
-import unittest
+import pytest
 import astropy
 import pint
 import pint.models as mod
@@ -9,7 +9,7 @@ from copy import deepcopy as cp
 from pinttestdata import datadir
 
 
-class TestCompare(unittest.TestCase):
+class TestCompare:
     """Test model comparison method"""
 
     def test_paramchange(self):

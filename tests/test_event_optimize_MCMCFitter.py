@@ -1,7 +1,7 @@
 # This test is DISABLED because event_optimize requires PRESTO to be installed
 # to get the fftfit module.  It can be run manually by people who have PRESTO
 import os
-import unittest
+import pytest
 
 from io import StringIO
 
@@ -16,8 +16,8 @@ temfile = os.path.join(datadir, "templateJ0030.3gauss")
 
 # SMR skipped this test as event_optimize_MCMCFitter isn't used anywhere
 # How/why is it different from event_optimize?
-@unittest.skip
-class TestEventOptimizeMCMCFitter(unittest.TestCase):
+@pytest.mark.skip
+class TestEventOptimizeMCMCFitter:
     def test_result(self):
         import pint.scripts.event_optimize_MCMCFitter as event_optimize
 

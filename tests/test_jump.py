@@ -1,7 +1,7 @@
 """Tests for jump model component """
 import logging
 import os
-import unittest
+import pytest
 import pytest
 
 import astropy.units as u
@@ -193,9 +193,9 @@ def test_find_empty_masks(setup_NGC6440E):
     setup_NGC6440E.m.validate_toas(setup_NGC6440E.t)
 
 
-class TestJUMP(unittest.TestCase):
+class TestJUMP:
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         os.chdir(datadir)
         cls.parf = "B1855+09_NANOGrav_dfg+12_TAI.par"
         cls.timf = "B1855+09_NANOGrav_dfg+12.tim"

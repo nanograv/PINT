@@ -1,6 +1,6 @@
 import logging
 import os
-import unittest
+import pytest
 
 import astropy.units as u
 
@@ -12,11 +12,11 @@ import astropy.coordinates
 import astropy.time
 
 
-class TestGalactic(unittest.TestCase):
+class TestGalactic:
     """Test conversion from equatorial/ecliptic -> Galactic coordinates as astropy objects"""
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         # J0613 is in equatorial
         cls.parfileJ0613 = os.path.join(
             datadir, "J0613-0200_NANOGrav_dfg+12_TAI_FB90.par"

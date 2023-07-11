@@ -1,6 +1,6 @@
 import os
 import shutil
-import unittest
+import pytest
 from io import StringIO
 from pathlib import Path
 
@@ -61,8 +61,8 @@ def check_indices_contiguous(toas):
     assert ix[0] == 0
 
 
-class TestTOAReader(unittest.TestCase):
-    def setUp(self):
+class TestTOAReader:
+    def setup_method(self):
         self.x = toa.TOAs(datadir / "test1.tim")
         self.x.apply_clock_corrections()
         self.x.compute_TDBs()

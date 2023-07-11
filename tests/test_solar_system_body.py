@@ -1,5 +1,5 @@
 import os
-import unittest
+import pytest
 
 import astropy.time as time
 import numpy as np
@@ -10,9 +10,9 @@ from pint.solar_system_ephemerides import objPosVel, objPosVel_wrt_SSB
 from pinttestdata import datadir
 
 
-class TestSolarSystemDynamic(unittest.TestCase):
+class TestSolarSystemDynamic:
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         os.chdir(datadir)
         MJDREF = 2400000.5
         J2000_JD = 2451545.0
