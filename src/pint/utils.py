@@ -1729,11 +1729,11 @@ def info_string(prefix_string="# ", comment=None, detailed=False):
 
         if "CONDA_PREFIX" in os.environ:
             conda_prefix = os.environ["CONDA_PREFIX"]
-            s += f"    Environment: conda"
+            s += f"Environment: conda\n"
             s += f"    conda_prefix: {conda_prefix}"
         elif "VIRTUAL_ENV" in os.environ:
             venv_prefix = os.environ["VIRTUAL_ENV"]
-            s += f"    Environment: virtualenv"
+            s += f"Environment: virtualenv\n"
             s += f"    virtualenv_prefix: {venv_prefix}"
 
     s = textwrap.dedent(s)
