@@ -12,8 +12,5 @@ the released changes.
 ### Added
 - Third-order Roemer delay terms to ELL1 model
 ### Fixed
-- fixed docstring for `add_param_from_top`
-- Gridded calculations now respect logger settings
-- Event TOAs now have default error that is non-zero, and can set as desired
 - Deleting JUMP1 from flag tables will not prevent fitting
 ### Removed
