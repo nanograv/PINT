@@ -1711,6 +1711,7 @@ def info_string(prefix_string="# ", comment=None, detailed=False):
         from jplephem import __version__ as jpleph_version
         from matplotlib import __version__ as matplotlib_version
         from loguru import __version__ as loguru_version
+        from pint import __file__ as pint_file
 
         s += f"""
     endian: {sys.byteorder}
@@ -1722,7 +1723,18 @@ def info_string(prefix_string="# ", comment=None, detailed=False):
     jplephem_version: {jpleph_version}
     matplotlib_version: {matplotlib_version}
     loguru_version: {loguru_version}
+    Python_prefix: {sys.prefix}
+    PINT_file: {pint_file}
     """
+
+        if "CONDA_PREFIX" in os.environ:
+            conda_prefix = os.environ["CONDA_PREFIX"]
+            s += f"    Environment: conda"
+            s += f"    conda_prefix: {conda_prefix}"
+        elif "VIRTUAL_ENV" in os.environ:
+            venv_prefix = os.environ["VIRTUAL_ENV"]
+            s += f"    Environment: virtualenv"
+            s += f"    virtualenv_prefix: {venv_prefix}"
 
     s = textwrap.dedent(s)
     # remove blank lines
