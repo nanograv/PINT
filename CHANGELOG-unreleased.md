@@ -9,7 +9,9 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- Updated `CONTRIBUTING.rst` with the latest information.
 ### Added
 - Third-order Roemer delay terms to ELL1 model
+- `pint.print_info()` function for bug reporting
 ### Fixed
 ### Removed
