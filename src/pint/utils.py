@@ -1694,14 +1694,14 @@ def info_string(prefix_string="# ", comment=None, detailed=False):
     except (configparser.NoOptionError, configparser.NoSectionError, ImportError):
         username = getpass.getuser()
 
-    s = f"""
-    Created: {datetime.datetime.now().isoformat()}
-    PINT_version: {pint.__version__}
-    User: {username}
-    Host: {platform.node()}
-    OS: {platform.platform()}
-    Python: {sys.version}
-    """
+    info_dict = {
+        "Created": f"{datetime.datetime.now().isoformat()}",
+        "PINT_version": pint.__version__,
+        "User": username,
+        "Host": platform.node(),
+        "OS": platform.platform(),
+        "Python": sys.version,
+    }
 
     if detailed:
         from numpy import __version__ as numpy_version
@@ -1713,28 +1713,42 @@ def info_string(prefix_string="# ", comment=None, detailed=False):
         from loguru import __version__ as loguru_version
         from pint import __file__ as pint_file
 
-        s += f"""
-    endian: {sys.byteorder}
-    numpy_version: {numpy_version}
-    numpy_longdouble_precision: {np.dtype(np.longdouble).name}
-    scipy_version: {scipy_version}
-    astropy_version: {astropy_version}
-    pyerfa_version: {erfa_version}
-    jplephem_version: {jpleph_version}
-    matplotlib_version: {matplotlib_version}
-    loguru_version: {loguru_version}
-    Python_prefix: {sys.prefix}
-    PINT_file: {pint_file}
-    """
+        info_dict.update(
+            {
+                "endian": sys.byteorder,
+                "numpy_version": numpy_version,
+                "numpy_longdouble_precision": np.dtype(np.longdouble).name,
+                "scipy_version": scipy_version,
+                "astropy_version": astropy_version,
+                "pyerfa_version": erfa_version,
+                "jplephem_version": jpleph_version,
+                "matplotlib_version": matplotlib_version,
+                "loguru_version": loguru_version,
+                "Python_prefix": sys.prefix,
+                "PINT_file": pint_file,
+            }
+        )
 
         if "CONDA_PREFIX" in os.environ:
             conda_prefix = os.environ["CONDA_PREFIX"]
-            s += f"Environment: conda\n"
-            s += f"    conda_prefix: {conda_prefix}"
+            info_dict.update(
+                {
+                    "Environment": "conda",
+                    "conda_prefix": conda_prefix,
+                }
+            )
         elif "VIRTUAL_ENV" in os.environ:
             venv_prefix = os.environ["VIRTUAL_ENV"]
-            s += f"Environment: virtualenv\n"
-            s += f"    virtualenv_prefix: {venv_prefix}"
+            info_dict.update(
+                {
+                    "Environment": "virtualenv",
+                    "virtualenv_prefix": venv_prefix,
+                }
+            )
+
+    s = ""
+    for key, val in info_dict.items():
+        s += f"{key}: {val}\n"
 
     s = textwrap.dedent(s)
     # remove blank lines
