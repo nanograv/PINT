@@ -304,11 +304,11 @@ class WaveX(DelayComponent):
                 "WXSIN_ parameters do not match WXCOS_ parameters."
                 "Please check your prefixed parameters"
             )
-        # if len(WXSIN_mapping.keys()) != len(WXCOS_mapping.keys()):
-        #     raise ValueError(
-        #         "The number of WXSIN_ and WXCOS_ parameters do not match"
-        #         "Please check your prefixed parameters"
-        #     )
+        if len(WXSIN_mapping.keys()) != len(WXCOS_mapping.keys()):
+            raise ValueError(
+                "The number of WXSIN_ and WXCOS_ parameters do not match"
+                "Please check your prefixed parameters"
+            )
         if self.WXEPOCH.value is None:
             if self._parent is not None:
                 if self._parent.PEPOCH.value is None:
