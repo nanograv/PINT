@@ -179,6 +179,43 @@ class PulsarBinary(DelayComponent):
                 long_double=True,
             )
         )
+
+        self.add_param(
+            prefixParameter(
+                name="ORBWAVEC0",
+                value=None,
+                units="s",
+                description="Amplitude of cosine wave in Tasc-shift function",
+                aliases=["ORBWAVEC"],
+                description_template=self.ORBWAVE_description,
+                type_match="float",
+                long_double=True,
+            )
+        )
+
+        self.add_param(
+            prefixParameter(
+                name="ORBWAVES0",
+                value=None,
+                units="s",
+                description="Amplitude of sine wave in Tasc-shift function",
+                aliases=["ORBWAVES"],
+                description_template=self.ORBWAVE_description,
+                type_match="float",
+                long_double=True,
+            )
+        )
+
+        self.add_param(
+            floatParameter(
+                name="ORBWAVEOM",
+                units="rad/s",
+                description="Amplitude of cosine wave in Tasc-shift function",
+                long_double=True
+            )
+        )
+
+        
         self.internal_params = []
         self.warn_default_params = ["ECC", "OM"]
         # Set up delay function
@@ -188,8 +225,10 @@ class PulsarBinary(DelayComponent):
         super().setup()
         for bpar in self.params:
             self.register_deriv_funcs(self.d_binary_delay_d_xxxx, bpar)
+            print(bpar)
         # Setup the model isinstance
         self.binary_instance = self.binary_model_class()
+
         # Setup the FBX orbits if FB is set.
         # TODO this should use a smarter way to set up orbit.
         FBX_mapping = self.get_prefix_mapping_component("FB")
@@ -202,6 +241,24 @@ class PulsarBinary(DelayComponent):
             self.binary_instance.orbits_cls = bo.OrbitFBX(
                 self.binary_instance, list(FBXs.keys())
             )
+
+        ORBWAVES_mapping = self.get_prefix_mapping_component("ORBWAVES")
+        ORBWAVES = {ows: getattr(self, ows).quantity for ows in ORBWAVES_mapping.values()}
+        ORBWAVEC_mapping = self.get_prefix_mapping_component("ORBWAVEC")
+        ORBWAVEC = {owc: getattr(self, owc).quantity for owc in ORBWAVEC_mapping.values()}
+        if any(v is not None for v in ORBWAVES.values()):
+            self.binary_instance.add_binary_params("ORBWAVEOM",self.ORBWAVEOM.value)
+            
+            for ow_name,ow_value in ORBWAVES.items():
+                print(ow_name,ow_value)
+                self.binary_instance.add_binary_params(ow_name,ow_value)
+            for ow_name,ow_value in ORBWAVEC.items():
+                print(ow_name,ow_value)
+                self.binary_instance.add_binary_params(ow_name,ow_value)
+            self.binary_instance.orbits_cls = bo.OrbitWaves(
+                    self.binary_instance, ["PB","TASC","ORBWAVEOM"] + list(ORBWAVES.keys()) + list(ORBWAVEC.keys())
+            )
+        
             # Note: if we are happy to use these to show alternate parameterizations then this can be uncommented
 
             # # remove the PB parameterization, replace with functions
@@ -464,6 +521,9 @@ class PulsarBinary(DelayComponent):
 
     def FBX_description(self, n):
         return "%dth time derivative of frequency of orbit" % n
+
+    def ORBWAVE_description(self, n):
+        return "%dth cosine wave in Fourier series model of Tasc shifts" % n
 
     def change_binary_epoch(self, new_epoch):
         """Change the epoch for this binary model.
