@@ -362,23 +362,24 @@ class OrbitWaves(Orbit):
     def d_orbits_d_TASC(self):
 
         PB = self.PB.to("second")
-        return -(1 / PB).decompose()
+        return -(1 / PB).decompose() * 2 * np.pi * u.rad
 
     def d_orbits_d_PB(self):
 
         PB = self.PB.to("second")
-        return -(self.tt0 / PB ** 2).decompose()
+        return -(self.tt0 / PB ** 2).decompose() * 2 * np.pi * u.rad
 
     def d_orbits_d_orbwave(self,par):
 
         OM = self.ORBWAVEOM.to("radian/second")
+        PB = self.PB.to("second")
         nh = int(par[8:])
 
         return (
-            np.cos(OM * nh * self.tt0)
-            if par[7] == C
-            else np.sin(OM * nh * self.tt0)
-        )
+            -np.cos(OM * nh * self.tt0)
+            if par[7] == "C"
+            else -np.sin(OM * nh * self.tt0)
+        ) * 2 * np.pi * u.rad / PB
 
     def d_pbprime_d_PB(self):
 
@@ -406,7 +407,9 @@ class OrbitWaves(Orbit):
         else:
             dFB0_shift_dorbwave = OM * nh * np.cos(OM * nh * self.tt0) / PB
 
-        return 1.0/FB0_prime ** 2 * dFB0_shift_dorbwave
+        return (
+            1.0/FB0_prime ** 2 * dFB0_shift_dorbwave
+        ).to("d/s",equivalencies=u.dimensionless_angles())
     
     def d_orbits_d_par(self, par):
 
