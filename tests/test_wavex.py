@@ -81,12 +81,11 @@ def test_wavex_resids_amp():
     wave_model = get_model(StringIO(par2))
     rs = Residuals(toas, wave_model)
     injected_amp = np.sqrt(
-        wave_model.components["WaveX"].WXSIN_0001.value ** 2
-        + wave_model.components["WaveX"].WXCOS_0001.value ** 2
+        wave_model.components["WaveX"].WXSIN_0001.quantity ** 2
+        + wave_model.components["WaveX"].WXCOS_0001.quantity ** 2
     )
-    print(injected_amp, max(rs.resids.value))
-    assert np.isclose(max(rs.resids.value), injected_amp, atol=1e-2)
-    assert np.isclose(min(rs.resids.value), -injected_amp, atol=1e-2)
+    assert np.isclose(max(rs.resids), injected_amp, atol=1e-2)
+    assert np.isclose(min(rs.resids), -injected_amp, atol=1e-2)
 
 
 def test_multiple_wavex_resids_amp():
