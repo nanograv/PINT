@@ -83,7 +83,17 @@ def test_add_wavex_to_par():
     )
 
 
-def test_multiple_wavexs():
+def test_add_then_remove_wavex():
+    # Check that adding and then removing a wavex component actually gets rid of it
+    model = get_model(StringIO(par2))
+    model.components["WaveX"].add_wavex_component(0.2, index=2, wxsin=2, wxcos=2)
+    indices = model.components["WaveX"].get_indices()
+    model.components["WaveX"].remove_wavex_component(2)
+    index = model.components["WaveX"].get_indices()
+    assert np.all(np.array(len(indices)) != np.array(len(index)))
+
+
+def test_multiple_wavex():
     # Check that when adding multiple wavex component pythonically is consistent with a par file with the same components
     model = get_model(StringIO(par2))
     toas = make_fake_toas_uniform(55000, 55100, 100, model, obs="gbt")
@@ -98,11 +108,74 @@ def test_multiple_wavexs():
     )
 
 
-def test_add_then_remove_wavex():
-    # Check that adding and then removing a wavex component actually gets rid of it
+def test_multiple_wavex_broadcast_frozens():
+    # Check that when a single False is given for frozens, it gets broadcast to all the sine and cosine amplitudes
     model = get_model(StringIO(par2))
-    model.components["WaveX"].add_wavex_component(0.2, index=2, wxsin=2, wxcos=2)
-    indices = model.components["WaveX"].get_indices()
-    model.components["WaveX"].remove_wavex_component(2)
-    index = model.components["WaveX"].get_indices()
-    assert np.all(np.array(len(indices)) != np.array(len(index)))
+    indices = model.components["WaveX"].add_wavex_components(
+        [0.2, 0.3],
+        indices=[2, 3],
+        wxsins=[2, 3],
+        wxcoses=[2, 3],
+        frozens=False,
+    )
+    for index in indices:
+        assert getattr(model, f"WXSIN_{index:04d}").frozen == False
+        assert getattr(model, f"WXCOS_{index:04d}").frozen == False
+
+
+def test_multiple_wavex_wrong_cos_amps():
+    # Check that code breaks when adding an extra cosine amplitude than there are frequencies, indices, and sine amplitudes for
+    model = get_model(StringIO(par2))
+    with pytest.raises(ValueError):
+        indices = model.components["WaveX"].add_wavex_components(
+            [0.2, 0.3], indices=[2, 3], wxsins=[2, 3], wxcoses=[2, 3, 4]
+        )
+
+
+def test_multiple_wavex_wrong_sin_amps():
+    # Check that code breaks when adding an extra sine amplitude than there are frequencies, indices, and cosine amplitudes for
+    model = get_model(StringIO(par2))
+    with pytest.raises(ValueError):
+        indices = model.components["WaveX"].add_wavex_components(
+            [0.2, 0.3], indices=[2, 3], wxsins=[2, 3, 4], wxcoses=[2, 3]
+        )
+
+
+def test_multiple_wavex_wrong_freqs():
+    # Check that code breaks when not adding enough frequencies for the number of indices, sine amps, and cosine amps given
+    model = get_model(StringIO(par2))
+    with pytest.raises(ValueError):
+        indices = model.components["WaveX"].add_wavex_components(
+            [0.2, 0.3], indices=[2, 3, 4], wxsins=[2, 3, 4], wxcoses=[2, 3, 4]
+        )
+
+
+def test_multiple_wavex_wrong_frozens():
+    # Check that adding to many elements to frozens breaks code
+    model = get_model(StringIO(par2))
+    with pytest.raises(ValueError):
+        indices = model.components["WaveX"].add_wavex_components(
+            [0.2, 0.3],
+            indices=[2, 3],
+            wxsins=[2, 3],
+            wxcoses=[2, 3],
+            frozens=[False, False, False],
+        )
+
+
+def test_multiple_wavex_explicit_indices():
+    # Check that adding specific indices is done correctly
+    model = get_model(StringIO(par2))
+    indices = model.components["WaveX"].add_wavex_components(
+        [0.2, 0.3], indices=[3, 4], wxsins=[2, 3], wxcoses=[2, 3]
+    )
+    assert np.all(np.array(indices) == np.array([3, 4]))
+
+
+def test_multiple_wavex_explicit_indices_duplicate():
+    # Check that adding a duplicate index fails
+    model = get_model(StringIO(par2))
+    with pytest.raises(ValueError):
+        indices = model.components["WaveX"].add_wavex_components(
+            [0.2, 0.3], indices=[1, 3], wxsins=[2, 3], wxcoses=[2, 3]
+        )
