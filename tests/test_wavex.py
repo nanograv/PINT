@@ -6,6 +6,7 @@ from astropy import units as u
 from pint.models import get_model, get_model_and_toas
 from pint.models.timing_model import Component
 from pint.fitter import Fitter
+from pint.residuals import Residuals
 from pint.toa import get_TOAs
 from pint.simulation import make_fake_toas_uniform
 import pint.utils
@@ -55,6 +56,47 @@ wavex_par = """
     WXSIN_0003              3
     WXCOS_0003              3 
 """
+
+
+def wavex_delay(waves, toas):
+    total_delay = np.zeros(toas.ntoas) * u.s
+    wave_freqs = waves.get_prefix_mapping_component("WXFREQ_")
+    wave_sins = waves.get_prefix_mapping_component("WXSIN_")
+    wave_cos = waves.get_prefix_mapping_component("WXCOS_")
+
+    base_phase = toas.table["tdbld"].value * u.d - waves.WXEPOCH.value * u.d
+    for idx, param in wave_freqs.items():
+        freq = getattr(waves, param).quantity
+        wxsin = getattr(waves, wave_sins[idx]).quantity
+        wxcos = getattr(waves, wave_cos[idx]).quantity
+        arg = 2.0 * np.pi * freq * base_phase
+        total_delay += wxsin * np.sin(arg.value) + wxcos * np.cos(arg.value)
+    return total_delay
+
+
+def test_wavex_resids_amp():
+    # Check that the amplitude of residuals somewhat matches independent calculation of wave delay for a single component
+    model = get_model(StringIO(par1))
+    toas = make_fake_toas_uniform(55000, 55100, 100, model, obs="gbt")
+    wave_model = get_model(StringIO(par2))
+    rs = Residuals(toas, wave_model)
+    injected_amp = np.sqrt(
+        wave_model.components["WaveX"].WXSIN_0001.value ** 2
+        + wave_model.components["WaveX"].WXCOS_0001.value ** 2
+    )
+    print(injected_amp, max(rs.resids.value))
+    assert np.isclose(max(rs.resids.value), injected_amp, atol=1e-2)
+    assert np.isclose(min(rs.resids.value), -injected_amp, atol=1e-2)
+
+
+def test_multiple_wavex_resids_amp():
+    # Check that residuals for multiple components match independent calculation
+    model = get_model(StringIO(par1))
+    toas = make_fake_toas_uniform(55000, 55100, 100, model, obs="gbt")
+    wave_model = get_model(StringIO(par2 + wavex_par))
+    rs = Residuals(toas, wave_model)
+    wave_delays = wavex_delay(wave_model.components["WaveX"], toas)
+    assert np.allclose(rs.resids, -wave_delays, atol=max(rs.resids.value) / 10.0)
 
 
 def test_wavex_from_par():
