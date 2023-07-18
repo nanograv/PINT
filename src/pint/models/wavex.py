@@ -2,6 +2,7 @@
 import astropy.units as u
 import numpy as np
 from loguru import logger as log
+from warnings import warn
 
 from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
 from pint.models.timing_model import DelayComponent, MissingParameter
@@ -34,7 +35,7 @@ class WaveX(DelayComponent):
                 time_scale="tdb",
             )
         )
-        self.add_wavex_component(None, index=1, wxsin=0, wxcos=0, frozen=False)
+        self.add_wavex_component(0.1, index=1, wxsin=0, wxcos=0, frozen=False)
         self.set_special_params(["WXFREQ_0001", "WXSIN_0001", "WXCOS_0001"])
         self.delay_funcs_component += [self.wavex_delay]
 
@@ -283,7 +284,6 @@ class WaveX(DelayComponent):
                 "WXFREQ_ parameters do not match WXSIN_ parameters."
                 "Please check your prefixed parameters"
             )
-
         if WXFREQ_mapping.keys() != WXCOS_mapping.keys():
             raise ValueError(
                 "WXFREQ_ parameters do not match WXCOS_ parameters."
@@ -309,6 +309,20 @@ class WaveX(DelayComponent):
                 "The number of WXSIN_ and WXCOS_ parameters do not match"
                 "Please check your prefixed parameters"
             )
+        wfreqs = np.zeros(len(WXFREQ_mapping))
+        for j, index in enumerate(WXFREQ_mapping):
+            if (getattr(self, f"WXFREQ_{index:04d}").value == 0) or (
+                getattr(self, f"WXFREQ_{index:04d}").quantity is None
+            ):
+                raise ValueError(
+                    f"WXFREQ_{index:04d} is zero or None. Please check your prefixed parameters"
+                )
+            if getattr(self, f"WXFREQ_{index:04d}").value < 0.0:
+                warn(f"Frequency WXFREQ_{index:04d} is negative")
+            wfreqs[j] = getattr(self, f"WXFREQ_{index:04d}").value
+        wfreqs.sort()
+        if np.any(np.diff(wfreqs) <= (1.0 / (2.0 * 364.25))):
+            warn("Frequency resolution is greater than 1/yr")
         if self.WXEPOCH.value is None:
             if self._parent is not None:
                 if self._parent.PEPOCH.value is None:
