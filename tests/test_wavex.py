@@ -77,7 +77,7 @@ def wavex_delay(waves, toas):
 def test_wavex_resids_amp():
     # Check that the amplitude of residuals somewhat matches independent calculation of wave delay for a single component
     model = get_model(StringIO(par1))
-    toas = make_fake_toas_uniform(55000, 55100, 100, model, obs="gbt")
+    toas = make_fake_toas_uniform(55000, 55100, 500, model, obs="gbt")
     wave_model = get_model(StringIO(par2))
     rs = Residuals(toas, wave_model)
     injected_amp = np.sqrt(
@@ -91,7 +91,7 @@ def test_wavex_resids_amp():
 def test_multiple_wavex_resids_amp():
     # Check that residuals for multiple components match independent calculation
     model = get_model(StringIO(par1))
-    toas = make_fake_toas_uniform(55000, 55100, 100, model, obs="gbt")
+    toas = make_fake_toas_uniform(55000, 55100, 500, model, obs="gbt")
     wave_model = get_model(StringIO(par2 + wavex_par))
     rs = Residuals(toas, wave_model)
     wave_delays = wavex_delay(wave_model.components["WaveX"], toas)

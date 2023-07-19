@@ -39,6 +39,8 @@ class WaveX(DelayComponent):
         self.set_special_params(["WXFREQ_0001", "WXSIN_0001", "WXCOS_0001"])
         self.delay_funcs_component += [self.wavex_delay]
 
+    # Register derivative functions PLACEHOLDER
+
     def add_wavex_component(self, wxfreq, index=None, wxsin=0, wxcos=0, frozen=True):
         """Add WaveX component
 
@@ -261,15 +263,15 @@ class WaveX(DelayComponent):
     def setup(self):
         super().setup()
 
-    # Get WaveX mapping
-    # Register WXSIN and WXCOS derivatives PLACEHOLDER
-    # for prefix_par in self.get_params_of_type("prefixParameter"):
-    #     if prefix_par.startswith("WXSIN_"):
-    #         self.register_deriv_funcs()
-    #     if prefix_par.startswith("WXCOS_"):
-    #         self.register_deriv_funcs()
-    #     self.wave_freqs = list(self.get_prefix_mapping_component("WXFREQ_").keys())
-    #     self.num_wave_freqs = len(self.wave_freqs)
+        # Get WaveX mapping
+        # Register WXSIN and WXCOS derivatives PLACEHOLDER
+        for prefix_par in self.get_params_of_type("prefixParameter"):
+            if prefix_par.startswith("WXSIN_"):
+                self.register_deriv_funcs(self.d_wavex_delay_d_WXSIN, prefix_par)
+            if prefix_par.startswith("WXCOS_"):
+                self.register_deriv_funcs(self.d_wavex_delay_d_WXCOS, prefix_par)
+            self.wave_freqs = list(self.get_prefix_mapping_component("WXFREQ_").keys())
+            self.num_wave_freqs = len(self.wave_freqs)
 
     def validate(self):
         """Validate all the WaveX parameters"""
@@ -332,6 +334,9 @@ class WaveX(DelayComponent):
                 else:
                     self.WXEPOCH.quantity = self._parent.PEPOCH.quantity
 
+    def validate_toas(self, toas):
+        return super().validate_toas(toas)
+
     def wavex_delay(self, toas, delays):
         total_delay = np.zeros(toas.ntoas) * u.s
         wave_freqs = self.get_prefix_mapping_component("WXFREQ_")
@@ -350,4 +355,18 @@ class WaveX(DelayComponent):
         return total_delay
 
     # Placeholder for calculations of derivatives
-    # def d_wavex_delay
+    def d_wavex_delay_d_WXSIN(self, toas, param, delays, acc_delay=None):
+        par = getattr(self, param)
+        freq = getattr(self, f"WXFREQ_{int(par.index):04d}").quantity
+        base_phase = toas.table["tdbld"].value * u.d - self.WXEPOCH.value * u.d
+        arg = 2.0 * np.pi * freq * base_phase
+        deriv = np.sin(arg.value)
+        return deriv * u.s / par.units
+
+    def d_wavex_delay_d_WXCOS(self, toas, param, delays, acc_delay=None):
+        par = getattr(self, param)
+        freq = getattr(self, f"WXFREQ_{int(par.index):04d}").quantity
+        base_phase = toas.table["tdbld"].value * u.d - self.WXEPOCH.value * u.d
+        arg = 2.0 * np.pi * freq * base_phase
+        deriv = np.cos(arg.value)
+        return deriv * u.s / par.units
