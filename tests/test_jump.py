@@ -14,6 +14,7 @@ from pinttestdata import datadir
 from pint.models import parameter as p
 from pint.models import PhaseJump
 import pint.models.timing_model
+import pint.fitter
 
 
 class SimpleSetup:
@@ -83,12 +84,14 @@ def test_remove_jump_and_flags(setup_NGC6440E):
     # test delete_jump_and_flags
     setup_NGC6440E.m.delete_jump_and_flags(setup_NGC6440E.t.table["flags"], 1)
     assert len(cp.jumps) == 1
+    f = pint.fitter.Fitter.auto(setup_NGC6440E.t, setup_NGC6440E.m)
 
     # delete last jump
     setup_NGC6440E.m.delete_jump_and_flags(setup_NGC6440E.t.table["flags"], 2)
     for d in setup_NGC6440E.t.table["flags"][selected_toa_ind2]:
         assert "jump" not in d
     assert "PhaseJump" not in setup_NGC6440E.m.components
+    f = pint.fitter.Fitter.auto(setup_NGC6440E.t, setup_NGC6440E.m)
 
 
 def test_jump_params_to_flags(setup_NGC6440E):

@@ -12,4 +12,5 @@ the released changes.
 ### Added
 - Third-order Roemer delay terms to ELL1 model
 ### Fixed
+- Deleting JUMP1 from flag tables will not prevent fitting
 ### Removed
