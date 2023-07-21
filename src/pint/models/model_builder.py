@@ -771,7 +771,7 @@ def get_model_and_toas(
         limits=limits,
     )
 
-    if add_tzr_to_model:
+    if "AbsPhase" not in mm.components and add_tzr_to_model:
         mm.add_tzr_toa(tt)
 
     return mm, tt
