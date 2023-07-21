@@ -14,4 +14,5 @@ the released changes.
 - Third-order Roemer delay terms to ELL1 model
 - `pint.print_info()` function for bug reporting
 ### Fixed
+- Deleting JUMP1 from flag tables will not prevent fitting
 ### Removed
