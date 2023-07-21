@@ -710,6 +710,9 @@ def get_model_and_toas(
         The parfile name, or a file-like object to read the parfile contents from
     timfile : str
         The timfile name, or a file-like object to read the timfile contents from
+    ephem : str, optional
+        If not None (default), this ephemeris will be used to create the TOAs object.
+        Default is to use the EPHEM parameter from the timing model.
     include_bipm : bool or None
         Whether to apply the BIPM clock correction. Defaults to True.
     bipm_version : string or None
@@ -744,7 +747,7 @@ def get_model_and_toas(
         error upon encountering TCB par files. If True, the par file will be
         converted to TDB upon read. If "raw", an unconverted malformed TCB
         TimingModel object will be returned.
-    add_tzr_to_model: bool, optional
+    add_tzr_to_model : bool, optional
         Create a TZR TOA in the timing model using the created TOAs object. Default is
         True.
     kwargs : dict
