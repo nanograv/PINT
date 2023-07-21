@@ -294,7 +294,7 @@ def make_fake_toas_uniform(
         include_bipm=clk_version["include_bipm"],
         bipm_version=clk_version["bipm_version"],
         include_gps=clk_version["include_gps"],
-        planets=model["PLANET_SHAPIRO"].value,
+        planets=model["PLANET_SHAPIRO"].value if "PLANET_SHAPIRO" in model else False,
     )
     ts.table["error"] = error
 

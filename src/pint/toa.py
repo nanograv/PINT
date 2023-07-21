@@ -219,7 +219,11 @@ def get_TOAs(
                     f'CLOCK = {model["CLOCK"].value} is not implemented. '
                     f"Using TT({bipm_default}) instead."
                 )
-        if planets is None and model["PLANET_SHAPIRO"].value:
+        if (
+            planets is None
+            and "PLANET_SHAPIRO" in model
+            and model["PLANET_SHAPIRO"].value
+        ):
             planets = True
             log.debug("Using PLANET_SHAPIRO = True from the given model")
 
