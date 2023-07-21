@@ -192,6 +192,11 @@ class ModelBuilder:
             log.info("Creating a TZR TOA (AbsPhase) using the given TOAs object.")
             tm.add_tzr_toa(toas_for_tzr)
 
+        if not hasattr(tm, "DelayComponent_list"):
+            setattr(tm, "DelayComponent_list", [])
+        if not hasattr(tm, "NoiseComponent_list"):
+            setattr(tm, "NoiseComponent_list", [])
+
         return tm
 
     def _validate_components(self):
