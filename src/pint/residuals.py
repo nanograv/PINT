@@ -84,6 +84,7 @@ class Residuals:
         subtract_mean=True,
         use_weighted_mean=True,
         track_mode=None,
+        use_abs_phase=True,
     ):
         if cls is Residuals:
             try:
