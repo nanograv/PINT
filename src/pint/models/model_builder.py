@@ -189,6 +189,7 @@ class ModelBuilder:
 
         # Explicitly add a TZR TOA from a given TOAs object.
         if "AbsPhase" not in tm.components and toas_for_tzr is not None:
+            log.info("Creating a TZR TOA (AbsPhase) using the given TOAs object.")
             tm.add_tzr_toa(toas_for_tzr)
 
         return tm
@@ -772,6 +773,7 @@ def get_model_and_toas(
     )
 
     if "AbsPhase" not in mm.components and add_tzr_to_model:
+        log.info("Creating a TZR TOA (AbsPhase) using the given TOAs object.")
         mm.add_tzr_toa(tt)
 
     return mm, tt
