@@ -84,7 +84,14 @@ class ModelBuilder:
         self._validate_components()
         self.default_components = []
 
-    def __call__(self, parfile, allow_name_mixing=False, allow_tcb=False, **kwargs):
+    def __call__(
+        self,
+        parfile,
+        allow_name_mixing=False,
+        allow_tcb=False,
+        toas_for_tzr=None,
+        **kwargs,
+    ):
         """Callable object for making a timing model from .par file.
 
         Parameters
@@ -103,6 +110,10 @@ class ModelBuilder:
             error upon encountering TCB par files. If True, the par file will be
             converted to TDB upon read. If "raw", an unconverted malformed TCB
             TimingModel object will be returned.
+
+        toas_for_tzr : TOAs or None, optional
+            If this is not None, a TZR TOA (AbsPhase) will be created using the
+            given TOAs object.
 
         kwargs : dict
             Any additional parameter/value pairs that will add to or override those in the parfile.
@@ -175,6 +186,10 @@ class ModelBuilder:
                 getattr(tm, k).quantity = v
             else:
                 getattr(tm, k).value = v
+
+        # Explicitly add a TZR TOA from a given TOAs object.
+        if "AbsPhase" not in tm.components and toas_for_tzr is not None:
+            tm.add_tzr_toa(toas_for_tzr)
 
         return tm
 
@@ -606,7 +621,9 @@ class ModelBuilder:
             raise ComponentConflict(f"Can not decide the one component from: {cf_cps}")
 
 
-def get_model(parfile, allow_name_mixing=False, allow_tcb=False, **kwargs):
+def get_model(
+    parfile, allow_name_mixing=False, allow_tcb=False, toas_for_tzr=None, **kwargs
+):
     """A one step function to build model from a parfile.
 
     Parameters
@@ -626,6 +643,10 @@ def get_model(parfile, allow_name_mixing=False, allow_tcb=False, **kwargs):
         converted to TDB upon read. If "raw", an unconverted malformed TCB
         TimingModel object will be returned.
 
+    toas_for_tzr : TOAs or None, optional
+        If this is not None, a TZR TOA (AbsPhase) will be created using the
+        given TOAs object.
+
     kwargs : dict
         Any additional parameter/value pairs that will add to or override those in the parfile.
 
@@ -640,13 +661,23 @@ def get_model(parfile, allow_name_mixing=False, allow_tcb=False, **kwargs):
         contents = None
     if contents is not None:
         return model_builder(
-            StringIO(contents), allow_name_mixing, allow_tcb=allow_tcb, **kwargs
+            StringIO(contents),
+            allow_name_mixing,
+            allow_tcb=allow_tcb,
+            toas_for_tzr=toas_for_tzr,
+            **kwargs,
         )
 
     # # parfile is a filename and can be handled by ModelBuilder
     # if _model_builder is None:
     #     _model_builder = ModelBuilder()
-    model = model_builder(parfile, allow_name_mixing, allow_tcb=allow_tcb, **kwargs)
+    model = model_builder(
+        parfile,
+        allow_name_mixing,
+        allow_tcb=allow_tcb,
+        toas_for_tzr=toas_for_tzr,
+        **kwargs,
+    )
     model.name = parfile
 
     return model
@@ -667,6 +698,7 @@ def get_model_and_toas(
     allow_name_mixing=False,
     limits="warn",
     allow_tcb=False,
+    add_tzr_to_model=True,
     **kwargs,
 ):
     """Load a timing model and a related TOAs, using model commands as needed
@@ -711,6 +743,9 @@ def get_model_and_toas(
         error upon encountering TCB par files. If True, the par file will be
         converted to TDB upon read. If "raw", an unconverted malformed TCB
         TimingModel object will be returned.
+    add_tzr_to_model: bool, optional
+        Create a TZR TOA in the timing model using the created TOAs object. Default is
+        True.
     kwargs : dict
         Any additional parameter/value pairs that will add to or override those in the parfile.
 
@@ -718,7 +753,9 @@ def get_model_and_toas(
     -------
     A tuple with (model instance, TOAs instance)
     """
+
     mm = get_model(parfile, allow_name_mixing, allow_tcb=allow_tcb, **kwargs)
+
     tt = get_TOAs(
         timfile,
         include_pn=include_pn,
@@ -733,4 +770,8 @@ def get_model_and_toas(
         picklefilename=picklefilename,
         limits=limits,
     )
+
+    if add_tzr_to_model:
+        mm.add_tzr_toa(tt)
+
     return mm, tt

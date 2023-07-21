@@ -343,6 +343,7 @@ class Residuals:
         if "delta_pulse_number" not in self.toas.table.colnames:
             self.toas.table["delta_pulse_number"] = np.zeros(len(self.toas.get_mjds()))
         delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
+
         # Track on pulse numbers, if requested
         if self.track_mode == "use_pulse_numbers":
             pulse_num = self.toas.get_pulse_numbers()
@@ -381,6 +382,7 @@ class Residuals:
             full = residualphase.int + residualphase.frac
         else:
             raise ValueError(f"Invalid track_mode '{self.track_mode}'")
+
         # If we are using pulse numbers, do we really want to subtract any kind of mean?
         if not subtract_mean:
             return full
@@ -395,6 +397,7 @@ class Residuals:
                 )
             w = 1.0 / (self.get_data_error().value ** 2)
             mean, err = weighted_mean(full, w)
+
         return full - mean
 
     def calc_phase_mean(self, weighted=True):

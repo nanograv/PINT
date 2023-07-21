@@ -1324,6 +1324,8 @@ class TimingModel:
             return phase
 
         if "AbsPhase" not in list(self.components.keys()):
+            log.info("Creating a TZR TOA (AbsPhase) using the given TOAs object.")
+
             # if no absolute phase (TZRMJD), add the component to the model and calculate it
             self.add_tzr_toa(toas)
 
