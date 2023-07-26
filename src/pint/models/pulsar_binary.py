@@ -184,7 +184,7 @@ class PulsarBinary(DelayComponent):
             prefixParameter(
                 name="ORBWAVEC0",
                 value=None,
-                units="s",
+                units="",
                 description="Amplitude of cosine wave in Tasc-shift function",
                 aliases=["ORBWAVEC"],
                 description_template=self.ORBWAVE_description,
@@ -197,7 +197,7 @@ class PulsarBinary(DelayComponent):
             prefixParameter(
                 name="ORBWAVES0",
                 value=None,
-                units="s",
+                units="",
                 description="Amplitude of sine wave in Tasc-shift function",
                 aliases=["ORBWAVES"],
                 description_template=self.ORBWAVE_description,
@@ -208,14 +208,20 @@ class PulsarBinary(DelayComponent):
 
         self.add_param(
             floatParameter(
-                name="ORBWAVEOM",
+                name="ORBWAVE_OM",
                 units="rad/s",
                 description="Amplitude of cosine wave in Tasc-shift function",
-                long_double=True
+                long_double=True,
+            )
+        )
+        self.add_param(
+            MJDParameter(
+                name="ORBWAVE_EPOCH",
+                description="Reference epoch for ORBWAVEs model",
+                time_scale="tdb",
             )
         )
 
-        
         self.internal_params = []
         self.warn_default_params = ["ECC", "OM"]
         # Set up delay function
@@ -225,7 +231,6 @@ class PulsarBinary(DelayComponent):
         super().setup()
         for bpar in self.params:
             self.register_deriv_funcs(self.d_binary_delay_d_xxxx, bpar)
-            print(bpar)
         # Setup the model isinstance
         self.binary_instance = self.binary_model_class()
 
@@ -243,22 +248,36 @@ class PulsarBinary(DelayComponent):
             )
 
         ORBWAVES_mapping = self.get_prefix_mapping_component("ORBWAVES")
-        ORBWAVES = {ows: getattr(self, ows).quantity for ows in ORBWAVES_mapping.values()}
+        ORBWAVES = {
+            ows: getattr(self, ows).quantity for ows in ORBWAVES_mapping.values()
+        }
         ORBWAVEC_mapping = self.get_prefix_mapping_component("ORBWAVEC")
-        ORBWAVEC = {owc: getattr(self, owc).quantity for owc in ORBWAVEC_mapping.values()}
+        ORBWAVEC = {
+            owc: getattr(self, owc).quantity for owc in ORBWAVEC_mapping.values()
+        }
         if any(v is not None for v in ORBWAVES.values()):
-            self.binary_instance.add_binary_params("ORBWAVEOM",self.ORBWAVEOM.value)
-            
-            for ow_name,ow_value in ORBWAVES.items():
-                print(ow_name,ow_value)
-                self.binary_instance.add_binary_params(ow_name,ow_value)
-            for ow_name,ow_value in ORBWAVEC.items():
-                print(ow_name,ow_value)
-                self.binary_instance.add_binary_params(ow_name,ow_value)
-            self.binary_instance.orbits_cls = bo.OrbitWaves(
-                    self.binary_instance, ["PB","TASC","ORBWAVEOM"] + list(ORBWAVES.keys()) + list(ORBWAVEC.keys())
+            self.binary_instance.add_binary_params("ORBWAVE_OM", self.ORBWAVE_OM.value)
+            self.binary_instance.add_binary_params(
+                "ORBWAVE_EPOCH", self.ORBWAVE_EPOCH.value
             )
-        
+
+            ii = 0
+            while f"ORBWAVES{ii}" in ORBWAVES.keys():
+                self.binary_instance.add_binary_params(
+                    f"ORBWAVES{ii}", ORBWAVES[f"ORBWAVES{ii}"]
+                )
+                self.binary_instance.add_binary_params(
+                    f"ORBWAVEC{ii}", ORBWAVEC[f"ORBWAVEC{ii}"]
+                )
+                ii += 1
+
+            self.binary_instance.orbits_cls = bo.OrbitWaves(
+                self.binary_instance,
+                ["PB", "TASC", "ORBWAVE_OM", "ORBWAVE_EPOCH"]
+                + list(ORBWAVES.keys())
+                + list(ORBWAVEC.keys()),
+            )
+
             # Note: if we are happy to use these to show alternate parameterizations then this can be uncommented
 
             # # remove the PB parameterization, replace with functions
