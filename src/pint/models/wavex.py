@@ -344,7 +344,7 @@ class WaveX(DelayComponent):
         wave_cos = self.get_prefix_mapping_component("WXCOS_")
 
         base_phase = (
-            toas.table["tdbld"].value * u.d - self.WXEPOCH.value * u.d - delays.to(u.d)
+            toas.table["tdbld"].data * u.d - self.WXEPOCH.value * u.d - delays.to(u.d)
         )
         for idx, param in wave_freqs.items():
             freq = getattr(self, param).quantity

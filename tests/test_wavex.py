@@ -63,8 +63,7 @@ def wavex_delay(waves, toas):
     wave_freqs = waves.get_prefix_mapping_component("WXFREQ_")
     wave_sins = waves.get_prefix_mapping_component("WXSIN_")
     wave_cos = waves.get_prefix_mapping_component("WXCOS_")
-
-    base_phase = toas.table["tdbld"].value * u.d - waves.WXEPOCH.value * u.d
+    base_phase = toas.table["tdbld"].data * u.d - waves.WXEPOCH.value * u.d
     for idx, param in wave_freqs.items():
         freq = getattr(waves, param).quantity
         wxsin = getattr(waves, wave_sins[idx]).quantity
@@ -72,6 +71,13 @@ def wavex_delay(waves, toas):
         arg = 2.0 * np.pi * freq * base_phase
         total_delay += wxsin * np.sin(arg.value) + wxcos * np.cos(arg.value)
     return total_delay
+
+
+# def test_derivative():
+#     assert None
+
+# def test_fitter():
+#     assert
 
 
 def test_wavex_resids_amp():
