@@ -84,6 +84,7 @@ class Residuals:
         subtract_mean=True,
         use_weighted_mean=True,
         track_mode=None,
+        use_abs_phase=True,
     ):
         if cls is Residuals:
             try:
@@ -104,6 +105,7 @@ class Residuals:
         subtract_mean=True,
         use_weighted_mean=True,
         track_mode=None,
+        use_abs_phase=True,
     ):
         self.toas = toas
         self.model = model
@@ -114,6 +116,8 @@ class Residuals:
                 "Disabling implicit `subtract_mean` because `PhaseOffset` is present in the timing model."
             )
         self.subtract_mean = subtract_mean and "PhaseOffset" not in model.components
+
+        self.use_abs_phase = use_abs_phase
 
         self.use_weighted_mean = use_weighted_mean
         if track_mode is None:
@@ -139,6 +143,7 @@ class Residuals:
         else:
             self.phase_resids = None
             self.time_resids = None
+
         # delay chi-squared computation until needed to avoid infinite recursion
         # also it's expensive
         # only relevant if there are correlated errors
@@ -296,7 +301,9 @@ class Residuals:
         elif calctype.lower() == "numerical":
             return self.model.d_phase_d_toa(self.toas)
 
-    def calc_phase_resids(self, subtract_mean=None, use_weighted_mean=None):
+    def calc_phase_resids(
+        self, subtract_mean=None, use_weighted_mean=None, use_abs_phase=None
+    ):
         """Compute timing model residuals in pulse phase.
 
         if ``subtract_mean`` or ``use_weighted_mean`` is None, will use the values set for the object itself
@@ -304,7 +311,12 @@ class Residuals:
         Parameters
         ----------
         subtract_mean : bool or None, optional
+            Subtract the mean of the residuals. This is ignored if the `PhaseOffset` component
+            is present in the model. Default is to use the class attribute.
         use_weighted_mean : bool or None, optional
+            Whether to use weighted mean for mean subtraction. Default is to use the class attribute.
+        use_abs_phase : bool or None, optional
+            Whether to use absolute phase (w.r.t. the TZR TOA). Default is to use the class attribute.
 
         Returns
         -------
@@ -322,12 +334,17 @@ class Residuals:
 
         if use_weighted_mean is None:
             use_weighted_mean = self.use_weighted_mean
+
+        if use_abs_phase is None:
+            use_abs_phase = self.use_abs_phase
+
         # Read any delta_pulse_numbers that are in the TOAs table.
         # These are for PHASE statements, -padd flags, as well as user-inserted phase jumps
         # Check for the column, and if not there then create it as zeros
         if "delta_pulse_number" not in self.toas.table.colnames:
             self.toas.table["delta_pulse_number"] = np.zeros(len(self.toas.get_mjds()))
         delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
+
         # Track on pulse numbers, if requested
         if self.track_mode == "use_pulse_numbers":
             pulse_num = self.toas.get_pulse_numbers()
@@ -339,7 +356,8 @@ class Residuals:
             # we need absolute phases, since TZRMJD serves as the pulse
             # number reference.
             modelphase = (
-                self.model.phase(self.toas, abs_phase=True) + delta_pulse_numbers
+                self.model.phase(self.toas, abs_phase=use_abs_phase)
+                + delta_pulse_numbers
             )
             # First assign each TOA to the correct relative pulse number, including
             # and delta_pulse_numbers (from PHASE lines or adding phase jumps in GUI)
@@ -365,6 +383,7 @@ class Residuals:
             full = residualphase.int + residualphase.frac
         else:
             raise ValueError(f"Invalid track_mode '{self.track_mode}'")
+
         # If we are using pulse numbers, do we really want to subtract any kind of mean?
         if not subtract_mean:
             return full
@@ -379,6 +398,7 @@ class Residuals:
                 )
             w = 1.0 / (self.get_data_error().value ** 2)
             mean, err = weighted_mean(full, w)
+
         return full - mean
 
     def calc_phase_mean(self, weighted=True):
@@ -425,7 +445,11 @@ class Residuals:
         return mean
 
     def calc_time_resids(
-        self, calctype="taylor", subtract_mean=None, use_weighted_mean=None
+        self,
+        calctype="taylor",
+        subtract_mean=None,
+        use_weighted_mean=None,
+        use_abs_phase=None,
     ):
         """Compute timing model residuals in time (seconds).
 
@@ -442,8 +466,12 @@ class Residuals:
             If `calctype` == "numerical", then try a numerical derivative
             If `calctype` == "taylor", evaluate the frequency with a Taylor series
         subtract_mean : bool or None, optional
+            Subtract the mean of the residuals. This is ignored if the `PhaseOffset` component
+            is present in the model. Default is to use the class attribute.
         use_weighted_mean : bool or None, optional
-
+            Whether to use weighted mean for mean subtraction. Default is to use the class attribute.
+        use_abs_phase : bool or None, optional
+            Whether to use absolute phase (w.r.t. the TZR TOA). Default is to use the class attribute.
 
         Returns
         -------
@@ -458,12 +486,16 @@ class Residuals:
             # if we are using the defaults, save the calculation
             if self.phase_resids is None:
                 self.phase_resids = self.calc_phase_resids(
-                    subtract_mean=subtract_mean, use_weighted_mean=use_weighted_mean
+                    subtract_mean=subtract_mean,
+                    use_weighted_mean=use_weighted_mean,
+                    use_abs_phase=use_abs_phase,
                 )
             phase_resids = self.phase_resids
         else:
             phase_resids = self.calc_phase_resids(
-                subtract_mean=subtract_mean, use_weighted_mean=use_weighted_mean
+                subtract_mean=subtract_mean,
+                use_weighted_mean=use_weighted_mean,
+                use_abs_phase=use_abs_phase,
             )
         return (phase_resids / self.get_PSR_freq(calctype=calctype)).to(u.s)
 

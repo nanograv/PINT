@@ -16,8 +16,6 @@ you will find PINT sufficient for all your needs!
 .. _TEMPO: http://tempo.sourceforge.net/
 .. _TEMPO2: https://www.atnf.csiro.au/research/pulsar/tempo2/
 
-.. sectnum::
-
 Time
 ----
 
