@@ -498,8 +498,8 @@ class Residuals:
                 return f.fit_toas(maxiter=1, full_cov=full_cov)
             except LinAlgError as e:
                 log.warning(
-                    "Degenerate conditions encountered when "
-                    "computing chi-squared: %s" % (e,)
+                    f"Degenerate conditions encountered when "
+                    f"computing chi-squared: {e}"
                 )
                 return np.inf
         else:
@@ -520,6 +520,32 @@ class Residuals:
                 return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum().value
             except ValueError:
                 return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum()
+
+    def calc_grad_chi2(self):
+        if self.model.has_correlated_errors:
+            raise NotImplementedError(
+                "Chi2 gradiant is not yet implemented for models with correlated noise."
+            )
+
+        if self.toas.wideband:
+            raise NotImplementedError(
+                "Chi2 gradiant is not yet implemented for wideband TOAs."
+            )
+
+        s = self.get_data_error()
+        R = self.calc_time_resids()
+
+        M, params, M_units = self.model.designmatrix(self.toas, incoffset=False)
+
+        param_units = [self.model[p].units for p in params]
+        grad_chi2_units = [1 / pu for pu in param_units]
+
+        return 2 * np.array(
+            [
+                np.dot(R / s**2, Mi * Miu).to(gcu)
+                for Mi, Miu, gcu in zip(M.T, M_units, grad_chi2_units)
+            ]
+        )
 
     def ecorr_average(self, use_noise_model=True):
         """Uses the ECORR noise model time-binning to compute "epoch-averaged" residuals.

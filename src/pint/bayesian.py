@@ -196,3 +196,8 @@ class BayesianTiming:
         chi2 = res.calc_chi2()
         sigmas = self.model.scaled_toa_uncertainty(self.toas).si.value
         return -chi2 / 2 - np.sum(np.log(sigmas))
+
+    def _wls_lnlikelihood_grad(self, params):
+        params_dict = dict(zip(self.param_labels, params))
+        self.model.set_param_values(params_dict)
+        res = Residuals(self.toas, self.model, track_mode=self.track_mode)
