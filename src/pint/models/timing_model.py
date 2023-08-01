@@ -559,7 +559,7 @@ class TimingModel:
         On setting, parameter aliases are converted with
         :func:`pint.models.timing_model.TimingModel.match_param_aliases`.
         """
-        return [p for p in self.params_ordered if not getattr(self, p).frozen]
+        return [p for p in self.params if not getattr(self, p).frozen]
 
     @free_params.setter
     def free_params(self, params):
