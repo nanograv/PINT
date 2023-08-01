@@ -9,8 +9,13 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- Made the addition of a TZR TOA (`AbsPhase`) in the `TimingModel` explicit in `Residuals` class.
 ### Added
 - Third-order Roemer delay terms to ELL1 model
+- Options to add a TZR TOA (`AbsPhase`) during the creation of a `TimingModel` using `ModelBuilder.__call__`, `get_model`, and `get_model_and_toas`
 ### Fixed
 - Deleting JUMP1 from flag tables will not prevent fitting
+- Docstrings for `get_toas()` and `get_model_and_toas()`
+- Set `DelayComponent_list` and `NoiseComponent_list` to empty list if such components are absent
+- Fix invalid access of `PLANET_SHAPIRO` in models without `Astrometry`
 ### Removed
