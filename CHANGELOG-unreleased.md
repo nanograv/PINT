@@ -9,6 +9,7 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- Made the parameter order in `TimingModel.designmatrix` consistent with `TimingModel.free_params`
 ### Added
 - Third-order Roemer delay terms to ELL1 model
 ### Fixed
