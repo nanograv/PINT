@@ -7,6 +7,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from astropy import units as u
 from loguru import logger as log
+import re
 
 from pint.models.astrometry import Astrometry
 from pint.models.parameter import maskParameter
@@ -62,6 +63,20 @@ def parse_parfile(parfile):
         k = l.split()
         parfile_dict[k[0].upper()].append(" ".join(k[1:]))
     return parfile_dict
+
+
+def _replace_fdjump_in_parfile_dict(pardict):
+    fdjumpn_regex = re.compile("^FDJUMP(\\d+)")
+    pardict_new = {}
+    for key, value in pardict.items():
+        if m := fdjumpn_regex.match(key):
+            j = int(m.groups()[0])
+            new_key = f"FD{j}JUMP"
+            pardict_new[new_key] = value
+        else:
+            pardict_new[key] = value
+
+    return pardict_new
 
 
 class ModelBuilder:
@@ -330,6 +345,9 @@ class ModelBuilder:
             parfile_dict = parse_parfile(parfile)
         else:
             parfile_dict = parfile
+
+        parfile_dict = _replace_fdjump_in_parfile_dict(parfile_dict)
+
         for k, v in parfile_dict.items():
             try:
                 pint_name, init0 = self.all_components.alias_to_pint_param(k)
