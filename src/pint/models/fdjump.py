@@ -140,3 +140,16 @@ class FDJump(DelayComponent):
         delay_derivative[mask] = ymask**fdidx
 
         return delay_derivative * u.dimensionless_unscaled
+
+    def print_par(self, format="pint"):
+        par = super().print_par(format)
+
+        if format != "tempo2":
+            return par
+
+        for fdjump in self.fdjumps:
+            if getattr(self, fdjump).quantity is not None:
+                j = self.get_fd_index(fdjump)
+                par = par.replace(f"FD{j}JUMP", f"FDJUMP{j}")
+
+        return par
