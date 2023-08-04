@@ -16,6 +16,7 @@ the released changes.
 - Third-order Roemer delay terms to ELL1 model
 - Options to add a TZR TOA (`AbsPhase`) during the creation of a `TimingModel` using `ModelBuilder.__call__`, `get_model`, and `get_model_and_toas`
 - `pint.print_info()` function for bug reporting
+- A hacky implementation of system-dependent FD parameters (FDJUMP)
 ### Fixed
 - Deleting JUMP1 from flag tables will not prevent fitting
 - Docstrings for `get_toas()` and `get_model_and_toas()`
