@@ -74,3 +74,32 @@ def test_parfile_write(model_and_toas):
     par = str(model)
 
     assert par.count("FD1JUMP") == 2 and par.count("FD2JUMP") == 2
+
+
+def test_tempo2_parfile_read_write():
+    model_raw = get_model(datadir / "J1909-3744.NB.par")
+    model_raw.PLANET_SHAPIRO.value = False
+    fdlines = (
+        "FDJUMP1 -sys GM_GWB_500_100_b1 0.01 1\n"
+        "FDJUMP1 -sys GM_GWB_1460_100_b1 0.02 1\n"
+        "FDJUMP2 -sys GM_GWB_500_100_b1 0.001 1\n"
+        "FDJUMP2 -sys GM_GWB_1460_100_b1 0.002 1\n"
+    )
+    par = str(model_raw) + fdlines
+
+    model = get_model(StringIO(par))
+
+    assert (
+        hasattr(model, "FD1JUMP1")
+        and hasattr(model, "FD2JUMP1")
+        and hasattr(model, "FD1JUMP2")
+        and hasattr(model, "FD2JUMP2")
+    )
+
+    par = model.as_parfile()
+    assert par.count("FD1JUMP") == 2 and par.count("FD2JUMP") == 2
+    assert par.count("FDJUMP1") == 0 and par.count("FDJUMP1") == 0
+
+    par = model.as_parfile(format="tempo2")
+    assert par.count("FD1JUMP") == 0 and par.count("FD2JUMP") == 0
+    assert par.count("FDJUMP1") == 2 and par.count("FDJUMP1") == 2
