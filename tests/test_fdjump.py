@@ -51,3 +51,11 @@ def test_fitting(model_and_toas):
     ftr.fit_toas()
 
     assert np.isfinite(ftr.resids.chi2) and ftr.resids.reduced_chi2 < 1.5
+
+
+def test_parfile_write(model_and_toas):
+    model, toas = model_and_toas
+
+    par = str(model)
+
+    assert par.count("FD1JUMP") == 2 and par.count("FD2JUMP") == 2
