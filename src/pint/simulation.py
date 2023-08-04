@@ -426,7 +426,7 @@ def make_fake_toas_fromtim(timfile, model, add_noise=False, name="fake"):
     --------
     :func:`make_fake_toas`
     """
-    input_ts = pint.toa.get_TOAs(timfile,planets=model.PLANET_SHAPIRO.value)
+    input_ts = pint.toa.get_TOAs(timfile, planets=model.PLANET_SHAPIRO.value)
 
     if input_ts.is_wideband():
         dm_errors = input_ts.get_dm_errors()
