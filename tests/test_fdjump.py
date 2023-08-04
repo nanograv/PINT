@@ -53,6 +53,21 @@ def test_fitting(model_and_toas):
     assert np.isfinite(ftr.resids.chi2) and ftr.resids.reduced_chi2 < 1.5
 
 
+def test_refitting(model_and_toas):
+    model, toas = model_and_toas
+    FD1JUMP1_value_original = model.FD1JUMP1.value
+    model.FD1JUMP1.value = 0
+
+    ftr = DownhillWLSFitter(toas, model)
+    ftr.fit_toas()
+
+    assert (
+        np.abs(ftr.model.FD1JUMP1.value - FD1JUMP1_value_original)
+        / ftr.model.FD1JUMP1.uncertainty_value
+        < 2
+    )
+
+
 def test_parfile_write(model_and_toas):
     model, toas = model_and_toas
 
