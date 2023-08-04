@@ -13,4 +13,5 @@ the released changes.
 - Third-order Roemer delay terms to ELL1 model
 ### Fixed
 - Deleting JUMP1 from flag tables will not prevent fitting
+- Simulating TOAs from tim file when PLANET_SHAPIRO is true now works
 ### Removed
