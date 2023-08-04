@@ -51,6 +51,8 @@ class FDJump(DelayComponent):
                 )
             )
 
+        self.delay_funcs_component += [self.fdjump_delay]
+
     def setup(self):
         super().setup()
 
@@ -111,11 +113,13 @@ class FDJump(DelayComponent):
 
         delay = np.zeros_like(y)
         for fdjump in self.fdjumps:
-            mask = fdjump.select_toa_mask(toas)
-            ymask = y[mask]
-            fdidx = self.get_fd_index(fdjump)
-            fdcoeff = getattr(self, fdjump).value
-            delay[mask] += fdcoeff * ymask**fdidx
+            fdj = getattr(self, fdjump)
+            if fdj.quantity is not None:
+                mask = fdj.select_toa_mask(toas)
+                ymask = y[mask]
+                fdidx = self.get_fd_index(fdjump)
+                fdcoeff = fdj.value
+                delay[mask] += fdcoeff * ymask**fdidx
 
         return delay * u.s
 
