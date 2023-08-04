@@ -13,6 +13,20 @@ fdjump_max_index = 20
 
 
 class FDJump(DelayComponent):
+    """A timing model for system-dependent frequency evolution of pulsar
+    profiles.
+
+    This model expresses the delay as a polynomial function of the
+    observing frequency/logarithm of observing frequency. This is
+    intended to compensate for the delays introduced by frequency-dependent
+    profile structure when a frequency-independent template profile is used.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.fdjump.FDJump
+    """
+
     register = True
     category = "fdjump"
 
@@ -53,6 +67,7 @@ class FDJump(DelayComponent):
             self.register_deriv_funcs(self.d_delay_d_FDJUMP, fdj)
 
     def get_fd_index(self, par):
+        """Extract the index from an FDJUMP parameter name."""
         if m := self.param_regex.match(par):
             return int(m.groups()[0])
         else:
@@ -61,6 +76,7 @@ class FDJump(DelayComponent):
             )
 
     def get_freq_y(self, toas):
+        """Get frequency or log-frequency in GHz based on the FDJUMPLOG value."""
         tbl = toas.table
         try:
             freq = self._parent.barycentric_radio_freq(toas)
@@ -79,6 +95,18 @@ class FDJump(DelayComponent):
         return y
 
     def fdjump_delay(self, toas, acc_delay=None):
+        """Calculate frequency dependent delay.
+
+        If FDJUMPLOG is Y, use the following expression:
+            Z. Arzoumanian, The NANOGrav Nine-year Data Set: Observations, Arrival
+            Time Measurements, and Analysis of 37 Millisecond Pulsars, The
+            Astrophysical Journal, Volume 813, Issue 1, article id. 65, 31 pp.(2015).
+            Eq.(2):
+            FDJUMP_delay = sum_i(c_i * (log(obs_freq/1GHz))^i)
+
+        If FDJUMPLOG is N, use the following expression (same as in tempo2):
+            FDJUMP_delay = sum_i(c_i * (obs_freq/1GHz)^i)
+        """
         y = self.get_freq_y(toas)
 
         delay = np.zeros_like(y)
@@ -92,6 +120,7 @@ class FDJump(DelayComponent):
         return delay * u.s
 
     def d_delay_d_FDJUMP(self, toas, param, acc_delay=None):
+        """Derivative of delay wrt for FDJUMP parameters."""
         assert (
             bool(self.param_regex.match(param))
             and hasattr(self, param)
