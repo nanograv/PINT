@@ -9,7 +9,7 @@ import numpy as np
 from pint.models.parameter import boolParameter, maskParameter
 from pint.models.timing_model import DelayComponent
 
-fdjump_max_index = 10
+fdjump_max_index = 20
 
 
 class FDJump(DelayComponent):
