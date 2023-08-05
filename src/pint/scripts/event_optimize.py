@@ -621,12 +621,6 @@ def main(argv=None):
         default=False,
         action="store_true",
     )
-    parser.add_argument(
-        "--autocorr",
-        help="Runs an autocorrelation check to stop the sampler once convergence is reached",
-        default=False,
-        action="store_true",
-    )
 
     args = parser.parse_args(argv)
     pint.logging.setup(
