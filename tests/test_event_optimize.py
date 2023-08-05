@@ -14,8 +14,6 @@ import pickle
 import scipy.stats as stats
 from pint.scripts import event_optimize
 from pinttestdata import datadir
-from pathos.multiprocessing import Pool
-
 
 def test_result(tmp_path):
     parfile = datadir / "PSRJ0030+0451_psrcat.par"
