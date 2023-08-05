@@ -14,6 +14,7 @@ import pickle
 import scipy.stats as stats
 from pint.scripts import event_optimize
 from pinttestdata import datadir
+from pathos.multiprocessing import Pool
 
 
 def test_result(tmp_path):
@@ -79,7 +80,7 @@ def test_parallel(tmp_path):
         for i in range(samples1.shape[1]):
             assert stats.ks_2samp(samples1[:, i], samples2[:, i])[1] == 1.0
     except ImportError:
-        pytest.skip
+        pytest.skip(f"Pathos multiprocessing package not found")
     finally:
         os.chdir(p)
         sys.stdout = saved_stdout
@@ -104,11 +105,11 @@ def test_backend(tmp_path):
         samples = None
 
         # Running with backend
+        os.chdir(tmp_path)
         cmd = f"{eventfile} {parfile} {temfile} --weightcol=PSRJ0030+0451 --minWeight=0.9 --nwalkers=10 --nsteps=50 --burnin=10 --backend --clobber"
         event_optimize.maxpost = -9e99
         event_optimize.numcalls = 0
         event_optimize.main(cmd.split())
-
         reader = emcee.backends.HDFBackend("J0030+0451_chains.h5")
         samples = reader.get_chain(discard=10)
         assert samples is not None
@@ -124,7 +125,32 @@ def test_backend(tmp_path):
             assert timestamp == os.path.getmtime("J0030+0451_chains.h5")
 
     except ImportError:
-        pytest.skip
+        pytest.skip(f"h5py package not found")
     finally:
         os.chdir(p)
         sys.stdout = saved_stdout
+
+
+def test_autocorr(tmp_path):
+    # Defining a log posterior function based on the emcee tutorials
+    def ln_prob(theta):
+        ln_prior = -0.5 * np.sum((theta - 1.0) ** 2 / 100.0)
+        ln_prob = -0.5 * np.sum(theta**2) + ln_prior
+        return ln_prob
+
+    # Setting a random starting position for 10 walkers with 5 dimenisions
+    coords = np.random.randn(10, 5)
+    nwalkers, ndim = coords.shape
+
+    # Establishing the Sampler
+    nsteps = 500000
+    sampler = emcee.EnsembleSampler(nwalkers, ndim, ln_prob)
+
+    # Running the sampler with the autocorrelation check function from event_optimize
+    autocorr = event_optimize.autocorr_check(sampler, coords, nsteps, burnin=10)
+
+    # Extracting the samples and asserting that the autocorrelation check
+    # stopped the sampler once convergence was reached
+    samples = np.transpose(sampler.get_chain(discard=10), (1, 0, 2)).reshape((-1, ndim))
+
+    assert len(samples) < nsteps

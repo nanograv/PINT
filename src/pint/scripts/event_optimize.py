@@ -247,6 +247,82 @@ def get_fit_keyvals(model, phs=0.0, phserr=0.1):
     return fitkeys, np.asarray(fitvals), np.asarray(fiterrs)
 
 
+def autocorr_check(sampler, pos, nsteps, burnin, csteps=100, crit1=10):
+    """Return the converged sampler and the mean autocorrelation time per 100 steps
+    Parameters
+    ----------
+    Sampler
+        The Emcee Ensemble Sampler
+    pos
+        The Initial positions of the walkers
+    nsteps : int
+        The number of integration steps
+    csteps : int
+        The interval at which the autocorrelation time is computed.
+    crit1 : int
+        The ratio of chain length to autocorrelation time to satisfy convergence
+    Returns
+    -------
+    The sampler and the mean autocorrelation times
+    Note
+    ----
+    The function checks for convergence of the chains every specified number of steps.
+    The criteria to check for convergence is:
+        1. the chain has to be longer than the specified ratio times the estimated autocorrelation time
+        2. the change in the estimated autocorrelation time is less than 1%
+    """
+    autocorr = []
+    old_tau = np.inf
+    converged1 = False
+    converged2 = False
+    for sample in sampler.sample(pos, iterations=nsteps, progress=True):
+        if converged1 == False:
+            # Checks if the iteration is past the burnin and checks for convergence at 10% tau change
+            if sampler.iteration >= burnin and sampler.iteration % csteps == 0:
+                tau = sampler.get_autocorr_time(tol=0, quiet=True)
+                if np.any(np.isnan(tau)):
+                    continue
+                else:
+                    x = np.mean(tau)
+                    autocorr.append(x)
+                    converged1 = np.all(tau * crit1 < sampler.iteration)
+                    converged1 &= np.all(np.abs(old_tau - tau) / tau < 0.1)
+                    # log.info("The mean estimated integrated autocorrelation step is: " + str(x))
+                    old_tau = tau
+                    if converged1:
+                        log.info(
+                            "10 % convergence reached with a mean estimated integrated step: "
+                            + str(x)
+                        )
+                    else:
+                        continue
+            else:
+                continue
+        else:
+            if converged2 == False:
+                # Checks for convergence at every 25 steps instead of 100 and tau change is 1%
+                if sampler.iteration % int(csteps / 4) == 0:
+                    tau = sampler.get_autocorr_time(tol=0, quiet=True)
+                    if np.any(np.isnan(tau)):
+                        continue
+                    else:
+                        x = np.mean(tau)
+                        autocorr.append(x)
+                        converged2 = np.all(tau * crit1 < sampler.iteration)
+                        converged2 &= np.all(np.abs(old_tau - tau) / tau < 0.01)
+                        # log.info("The mean estimated integrated autocorrelation step is: " + str(x))
+                        old_tau = tau
+                        converge_step = sampler.iteration
+                else:
+                    continue
+            if converged2 and (sampler.iteration - burnin) >= 1000:
+                log.info(f"Convergence reached at {converge_step}")
+                break
+            else:
+                continue
+    return autocorr
+
+
 class emcee_fitter(Fitter):
     def __init__(
         self, toas=None, model=None, template=None, weights=None, phs=0.5, phserr=0.03
@@ -809,79 +885,6 @@ def main(argv=None):
 
     dtype = [("lnprior", float), ("lnlikelihood", float)]
 
-    def autocorr_check(sampler, pos, nsteps, burnin, csteps=100, crit1=50):
-        """Return the converged sampler and the mean autocorrelation time per 100 steps
-        Parameters
-        ----------
-        Sampler
-            The Emcee Ensemble Sampler
-        pos
-            The Initial positions of the walkers
-        nsteps : int
-            The number of integration steps
-        csteps : int
-            The interval at which the autocorrelation time is computed.
-        crit1 : int
-            The ratio of chain length to autocorrelation time to satisfy convergence
-        Returns
-        -------
-        The sampler and the mean autocorrelation times
-        Note
-        ----
-        The function checks for convergence of the chains every specified number of steps.
-        The criteria to check for convergence is:
-            1. the chain has to be longer than the specified ratio times the estimated autocorrelation time
-            2. the change in the estimated autocorrelation time is less than 1%
-        """
-        autocorr = []
-        old_tau = np.inf
-        converged1 = False
-        converged2 = False
-        for sample in sampler.sample(pos, iterations=nsteps, progress=True):
-            if converged1 == False:
-                # Checks if the iteration is past the burnin and checks for convergence at 10% tau change
-                if sampler.iteration >= burnin and sampler.iteration % csteps == 0:
-                    tau = sampler.get_autocorr_time(tol=0, quiet=True)
-                    if np.any(np.isnan(tau)):
-                        continue
-                    else:
-                        x = np.mean(tau)
-                        autocorr.append(x)
-                        converged1 = np.all(tau * crit1 < sampler.iteration)
-                        converged1 &= np.all(np.abs(old_tau - tau) / tau < 0.1)
-                        # log.info("The mean estimated integrated autocorrelation step is: " + str(x))
-                        old_tau = tau
-                        if converged1:
-                            log.info(
-                                "10 % convergence reached with a mean estimated integrated step: "
-                                + str(x)
-                            )
-                        else:
-                            continue
-                else:
-                    continue
-            else:
-                if converged2 == False:
-                    # Checks for convergence at every 25 steps instead of 100 and tau change is 1%
-                    if sampler.iteration % (csteps / 4) == 0:
-                        tau = sampler.get_autocorr_time(tol=0, quiet=True)
-                        if np.any(np.isnan(tau)):
-                            continue
-                        else:
-                            x = np.mean(tau)
-                            autocorr.append(x)
-                            converged2 = np.all(tau * crit1 < sampler.iteration)
-                            converged2 &= np.all(np.abs(old_tau - tau) / tau < 0.01)
-                            # log.info("The mean estimated integrated autocorrelation step is: " + str(x))
-                            old_tau = tau
-                    else:
-                        continue
-                if converged2 and (sampler.iteration - burnin) >= 1000:
-                    break
-                else:
-                    continue
-        return autocorr
-
     # Following are for parallel processing tests...
     if args.multicore:
         try:
@@ -899,12 +902,7 @@ def main(argv=None):
                     pool=pool,
                     backend=backend,
                 )
-                if args.autocorr:
-                    autocorr = autocorr_check(
-                        sampler, pos, nsteps, burnin, csteps=100, crit1=10
-                    )
-                else:
-                    sampler.run_mcmc(pos, nsteps, progress=True)
+                autocorr = autocorr_check(sampler, pos, nsteps, burnin)
             pool.close()
             pool.join()
         except ImportError:
@@ -912,22 +910,14 @@ def main(argv=None):
             sampler = emcee.EnsembleSampler(
                 nwalkers, ndim, ftr.lnposterior, blobs_dtype=dtype, backend=backend
             )
-            if args.autocorr:
-                autocorr = autocorr_check(
-                    sampler, pos, nsteps, burnin, csteps=100, crit1=10
-                )
-            else:
-                sampler.run_mcmc(pos, nsteps, progress=True)
+            autocorr = autocorr_check(
+                sampler, pos, nsteps, burnin, csteps=100, crit1=10
+            )
     else:
         sampler = emcee.EnsembleSampler(
             nwalkers, ndim, ftr.lnposterior, blobs_dtype=dtype, backend=backend
         )
-        if args.autocorr:
-            autocorr = autocorr_check(
-                sampler, pos, nsteps, burnin, csteps=100, crit1=10
-            )
-        else:
-            sampler.run_mcmc(pos, nsteps, progress=True)
+        autocorr = autocorr_check(sampler, pos, nsteps, burnin, csteps=100, crit1=10)
 
     def chains_to_dict(names, sampler):
         samples = np.transpose(sampler.get_chain(), (1, 0, 2))
