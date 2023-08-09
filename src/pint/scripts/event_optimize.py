@@ -621,6 +621,12 @@ def main(argv=None):
         default=False,
         action="store_true",
     )
+    parser.add_argument(
+        "--autocorr",
+        help="Turn the autocorrelation check function off",
+        default=True,
+        action="store_false",
+    )
 
     args = parser.parse_args(argv)
     pint.logging.setup(
@@ -896,7 +902,10 @@ def main(argv=None):
                     pool=pool,
                     backend=backend,
                 )
-                autocorr = autocorr_check(sampler, pos, nsteps, burnin)
+                if args.autocorr is False:
+                    sampler.run_mcmc(pos, nsteps, progress=True)
+                else:
+                    autocorr = autocorr_check(sampler, pos, nsteps, burnin)
             pool.close()
             pool.join()
         except ImportError:
@@ -904,14 +913,18 @@ def main(argv=None):
             sampler = emcee.EnsembleSampler(
                 nwalkers, ndim, ftr.lnposterior, blobs_dtype=dtype, backend=backend
             )
-            autocorr = autocorr_check(
-                sampler, pos, nsteps, burnin, csteps=100, crit1=10
-            )
+            if args.autocorr is False:
+                sampler.run_mcmc(pos, nsteps, progress=True)
+            else:
+                autocorr = autocorr_check(sampler, pos, nsteps, burnin)
     else:
         sampler = emcee.EnsembleSampler(
             nwalkers, ndim, ftr.lnposterior, blobs_dtype=dtype, backend=backend
         )
-        autocorr = autocorr_check(sampler, pos, nsteps, burnin, csteps=100, crit1=10)
+        if args.autocorr is False:
+            sampler.run_mcmc(pos, nsteps, progress=True)
+        else:
+            autocorr = autocorr_check(sampler, pos, nsteps, burnin)
 
     def chains_to_dict(names, sampler):
         samples = np.transpose(sampler.get_chain(), (1, 0, 2))
