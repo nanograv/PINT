@@ -276,7 +276,7 @@ def autocorr_check(sampler, pos, nsteps, burnin, csteps=100, crit1=10):
     converged1 = False
     converged2 = False
     for sample in sampler.sample(pos, iterations=nsteps, progress=True):
-        if converged1 == False:
+        if not converged1:
             # Checks if the iteration is past the burnin and checks for convergence at 10% tau change
             if sampler.iteration >= burnin and sampler.iteration % csteps == 0:
                 tau = sampler.get_autocorr_time(tol=0, quiet=True)
@@ -299,7 +299,7 @@ def autocorr_check(sampler, pos, nsteps, burnin, csteps=100, crit1=10):
             else:
                 continue
         else:
-            if converged2 == False:
+            if not converged2:
                 # Checks for convergence at every 25 steps instead of 100 and tau change is 1%
                 if sampler.iteration % int(csteps / 4) == 0:
                     tau = sampler.get_autocorr_time(tol=0, quiet=True)
