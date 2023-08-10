@@ -262,14 +262,14 @@ class ChromaticCM(Chromatic):
         # If CM1 is set, we need CMEPOCH
         if self.CM1.value is not None and self.CM1.value != 0.0:
             if self.CMEPOCH.value is None:
-                # Copy PEPOCH (PEPOCH must be set!)
-                self.CMEPOCH.value = self._parent.PEPOCH.value
-            if self.CMEPOCH.value is None:
-                raise MissingParameter(
-                    "Chromatic",
-                    "CMEPOCH",
-                    "CMEPOCH or PEPOCH is required if CM1 or higher are set",
-                )
+                if self._parent.PEPOCH.value is not None:
+                    self.CMEPOCH.value = self._parent.PEPOCH.value
+                else:
+                    raise MissingParameter(
+                        "Chromatic",
+                        "CMEPOCH",
+                        "CMEPOCH or PEPOCH is required if CM1 or higher are set",
+                    )
 
     def CM_derivative_unit(self, n):
         return f"pc cm^-3 MHz^-2 /yr^{n:d}" if n else "pc cm^-3 MHz^-2"
@@ -344,7 +344,7 @@ class ChromaticCM(Chromatic):
         dt_value = (dt.to(u.yr)).value
         return taylor_horner(dt_value, cm_terms) * (cmu / par.units)
 
-    def d_cm_d_CMIDX(
+    def d_alpha_d_CMIDX(
         self, toas, param_name, acc_delay=None
     ):  # NOTE we should have a better name for this.)
         """Derivatives of alpha wrt the CM index."""
