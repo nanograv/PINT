@@ -145,3 +145,23 @@ class Chromatic(DelayComponent):
             * np.log((bfreq / u.MHz).to("").value)
             * d_alpha_d_alphaparam
         )
+
+    def register_cm_deriv_funcs(self, func, param):
+        """Register the derivative function in to the deriv_func dictionaries.
+
+        Parameters
+        ----------
+        func : callable
+            Calculates the derivative
+        param : str
+            Name of parameter the derivative is with respect to
+
+        """
+        pn = self.match_param_aliases(param)
+
+        if pn not in list(self.cm_deriv_funcs.keys()):
+            self.cm_deriv_funcs[pn] = [func]
+        elif func in self.cm_deriv_funcs[pn]:
+            return
+        else:
+            self.cm_deriv_funcs[pn] += [func]
