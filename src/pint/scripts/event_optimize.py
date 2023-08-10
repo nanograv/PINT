@@ -622,7 +622,7 @@ def main(argv=None):
         action="store_true",
     )
     parser.add_argument(
-        "--autocorr",
+        "--no-autocorr",
         help="Turn the autocorrelation check function off",
         default=True,
         action="store_false",
