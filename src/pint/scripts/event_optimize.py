@@ -624,8 +624,9 @@ def main(argv=None):
     parser.add_argument(
         "--no-autocorr",
         help="Turn the autocorrelation check function off",
-        default=True,
-        action="store_false",
+        default=False,
+        action="store_true",
+        dest="noautocorr",
     )
 
     args = parser.parse_args(argv)
@@ -902,7 +903,7 @@ def main(argv=None):
                     pool=pool,
                     backend=backend,
                 )
-                if args.autocorr is False:
+                if args.noautocorr:
                     sampler.run_mcmc(pos, nsteps, progress=True)
                 else:
                     autocorr = autocorr_check(sampler, pos, nsteps, burnin)
@@ -913,7 +914,7 @@ def main(argv=None):
             sampler = emcee.EnsembleSampler(
                 nwalkers, ndim, ftr.lnposterior, blobs_dtype=dtype, backend=backend
             )
-            if args.autocorr is False:
+            if args.noautocorr:
                 sampler.run_mcmc(pos, nsteps, progress=True)
             else:
                 autocorr = autocorr_check(sampler, pos, nsteps, burnin)
@@ -921,7 +922,7 @@ def main(argv=None):
         sampler = emcee.EnsembleSampler(
             nwalkers, ndim, ftr.lnposterior, blobs_dtype=dtype, backend=backend
         )
-        if args.autocorr is False:
+        if args.noautocorr:
             sampler.run_mcmc(pos, nsteps, progress=True)
         else:
             autocorr = autocorr_check(sampler, pos, nsteps, burnin)
