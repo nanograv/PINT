@@ -18,6 +18,7 @@ the released changes.
 - `pint.print_info()` function for bug reporting
 ### Fixed
 - Deleting JUMP1 from flag tables will not prevent fitting
+- Simulating TOAs from tim file when PLANET_SHAPIRO is true now works
 - Docstrings for `get_toas()` and `get_model_and_toas()`
 - Set `DelayComponent_list` and `NoiseComponent_list` to empty list if such components are absent
 - Fix invalid access of `PLANET_SHAPIRO` in models without `Astrometry`
