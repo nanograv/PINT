@@ -716,11 +716,9 @@ class Fitter:
     def make_resids(self, model):
         return Residuals(toas=self.toas, model=model, track_mode=self.track_mode)
 
-    def get_designmatrix(self, normalize=False):
+    def get_designmatrix(self):
         """Return the model's design matrix for these TOAs."""
-        return self.model.designmatrix(
-            toas=self.toas, incfrozen=False, incoffset=True, normalize=normalize
-        )
+        return self.model.designmatrix(toas=self.toas, incfrozen=False, incoffset=True)
 
     def _get_corr_cov_matrix(
         self, matrix_type, with_phase, pretty_print, prec, usecolor
