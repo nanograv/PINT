@@ -1808,9 +1808,7 @@ class TimingModel:
             )
         return result
 
-    def designmatrix(
-        self, toas, acc_delay=None, incfrozen=False, incoffset=True, normalize=False
-    ):
+    def designmatrix(self, toas, acc_delay=None, incfrozen=False, incoffset=True):
         """Return the design matrix.
 
         The design matrix is the matrix with columns of ``d_phase_d_param/F0``
@@ -1890,11 +1888,7 @@ class TimingModel:
                 M[:, ii] = q.to_value(the_unit) / F0.value
                 units.append(the_unit / F0.unit)
 
-        if not normalize:
-            return M, params, units
-        else:
-            M, norm = normalize_designmatrix(M, params)
-            return M, norm, params, units
+        return M, params, units
 
     def compare(
         self,
