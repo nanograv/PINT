@@ -62,6 +62,7 @@ from pint.phase import Phase
 from pint.toa import TOAs
 from pint.utils import (
     PrefixError,
+    normalize_designmatrix,
     split_prefixed_name,
     open_or_use,
     colorize,
@@ -1892,17 +1893,7 @@ class TimingModel:
         if not normalize:
             return M, params, units
         else:
-            norm = np.sqrt(np.sum(M**2, axis=0))
-
-            if np.any(norm == 0):
-                offending_params = [params[i] for i in np.where(norm == 0)[0]]
-                warn(
-                    f"Parameter degeneracy found in design matrix! The offending parameters are {offending_params}."
-                )
-
-            norm[norm == 0] = 1
-            M /= norm
-
+            M, norm = normalize_designmatrix(M, params)
             return M, norm, params, units
 
     def compare(
