@@ -39,6 +39,7 @@ import sys
 import textwrap
 from contextlib import contextmanager
 from pathlib import Path
+from warnings import warn
 import uncertainties
 
 import astropy.constants as const
@@ -2129,3 +2130,20 @@ def get_unit(parname):
 
     ac = AllComponents()
     return ac.param_to_unit(parname)
+
+
+def normalize_designmatrix(M, params):
+    from pint.fitter import DegeneracyWarning
+
+    norm = np.sqrt(np.sum(M**2, axis=0))
+
+    bad_params = [params[i] for i in np.where(norm == 0)[0]]
+    if len(bad_params) > 0:
+        warn(
+            f"Parameter degeneracy found in designmatrix! The offending parameters are {bad_params}.",
+            DegeneracyWarning,
+        )
+    norm[norm == 0] = 1
+    M1 = M / norm
+
+    return M1, norm
