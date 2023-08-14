@@ -12,12 +12,13 @@ import warnings
 
 import astropy.units as u
 import numpy as np
-from scipy.linalg import LinAlgError
+import scipy
+from scipy.linalg import LinAlgError, cho_factor, cho_solve
 from loguru import logger as log
 
 from pint.models.dispersion_model import Dispersion
 from pint.phase import Phase
-from pint.utils import weighted_mean, taylor_horner_deriv
+from pint.utils import normalize_designmatrix, weighted_mean, taylor_horner_deriv
 
 __all__ = [
     "Residuals",
@@ -499,7 +500,51 @@ class Residuals:
             )
         return (phase_resids / self.get_PSR_freq(calctype=calctype)).to(u.s)
 
-    def calc_chi2(self, full_cov=False):
+    def _calc_gls_chi2(self):
+        self.update()
+
+        residuals = self.time_resids.to(u.s).value
+
+        M = self.model.noise_model_designmatrix(self.toas)
+        phi = self.model.noise_model_basis_weight(self.toas)
+        phiinv = 1 / phi
+
+        # For implicit offset subtraction
+        if "PHOFF" not in self.model:
+            M = np.append(M, np.ones((len(self.toas), 1)), axis=1)
+            phiinv = np.append(phiinv, [0])
+
+        M, norm = normalize_designmatrix(M, None)
+
+        phiinv /= norm**2
+        Nvec = self.model.scaled_toa_uncertainty(self.toas).to(u.s).value ** 2
+        cinv = 1 / Nvec
+        mtcm = np.dot(M.T, cinv[:, None] * M)
+        mtcm += np.diag(phiinv)
+        mtcy = np.dot(M.T, cinv * residuals)
+
+        try:
+            c = cho_factor(mtcm)
+            xhat = cho_solve(c, mtcy)
+        except LinAlgError as e:
+            log.warning(
+                f"Degenerate conditions encountered when " f"computing chi-squared: {e}"
+            )
+
+            U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
+
+            bad = np.where(s <= 0)[0]
+            s[bad] = np.inf
+
+            xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+
+        newres = residuals - np.dot(M, xhat)
+
+        chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
+
+        return chi2
+
+    def calc_chi2(self):
         """Return the weighted chi-squared for the model and toas.
 
         If the errors on the TOAs are independent this is a straightforward
@@ -519,21 +564,7 @@ class Residuals:
         correctly return infinity.
         """
         if self.model.has_correlated_errors:
-            log.trace("Using GLS fitter to compute residual chi2")
-            # Use GLS but don't actually fit
-            from pint.fitter import GLSFitter
-
-            m = copy.deepcopy(self.model)
-            m.free_params = []
-            f = GLSFitter(self.toas, m, residuals=self)
-            try:
-                return f.fit_toas(maxiter=1, full_cov=full_cov)
-            except LinAlgError as e:
-                log.warning(
-                    "Degenerate conditions encountered when "
-                    "computing chi-squared: %s" % (e,)
-                )
-                return np.inf
+            return self._calc_gls_chi2()
         else:
             # Residual units are in seconds. Error units are in microseconds.
             toa_errors = self.get_data_error()

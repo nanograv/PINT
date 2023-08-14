@@ -40,6 +40,7 @@ import textwrap
 from contextlib import contextmanager
 from pathlib import Path
 from warnings import warn
+import scipy
 import uncertainties
 
 import astropy.constants as const
@@ -2138,7 +2139,7 @@ def normalize_designmatrix(M, params):
     norm = np.sqrt(np.sum(M**2, axis=0))
 
     bad_params = [params[i] for i in np.where(norm == 0)[0]]
-    if len(bad_params) > 0:
+    if len(bad_params) > 0 and params is not None:
         warn(
             f"Parameter degeneracy found in designmatrix! The offending parameters are {bad_params}.",
             DegeneracyWarning,
@@ -2147,3 +2148,49 @@ def normalize_designmatrix(M, params):
     M1 = M / norm
 
     return M1, norm
+
+
+def calc_gls_chi2(resids, threshold=0):
+    resids.update()
+
+    residuals = resids.time_resids.to(u.s).value
+
+    M = resids.model.noise_model_designmatrix(resids.toas)
+    phi = resids.model.noise_model_basis_weight(resids.toas)
+    phiinv = 1 / phi
+
+    # For implicit offset subtraction
+    if "PHOFF" not in resids.model:
+        M = np.append(M, np.ones((len(resids.toas), 1)), axis=1)
+        phiinv = np.append(phiinv, [0])
+
+    M, norm = normalize_designmatrix(M, None)
+
+    phiinv /= norm**2
+    Nvec = resids.model.scaled_toa_uncertainty(resids.toas).to(u.s).value ** 2
+    cinv = 1 / Nvec
+    mtcm = np.dot(M.T, cinv[:, None] * M)
+    mtcm += np.diag(phiinv)
+    mtcy = np.dot(M.T, cinv * residuals)
+
+    log.trace(f"mtcm: {mtcm}")
+    xhat = None
+    if threshold <= 0:
+        try:
+            c = scipy.linalg.cho_factor(mtcm)
+            xhat = scipy.linalg.cho_solve(c, mtcy)
+        except scipy.linalg.LinAlgError:
+            xhat = None
+    if xhat is None:
+        U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
+
+        bad = np.where(s <= threshold * s[0])[0]
+        s[bad] = np.inf
+
+        xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+
+    newres = residuals - np.dot(M, xhat)
+    # compute linearized chisq
+    chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
+
+    return chi2
