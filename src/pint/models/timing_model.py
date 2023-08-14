@@ -501,19 +501,23 @@ class TimingModel:
 
     @property_exists
     def params(self):
-        """List of all parameter names in this model and all its components (order is arbitrary)."""
-        # FIXME: any reason not to just use params_ordered here?
-        p = self.top_level_params
-        for cp in self.components.values():
-            p = p + cp.params
-        return p
+        """List of all parameter names in this model and all its components.
+        This is the same as `params_ordered`."""
+
+        # Historically, this was different from `params_ordered` because Python
+        # dictionaries were unordered until Python 3.7. Now there is no reason for
+        # them to be different.
+
+        return self.params_ordered
 
     @property_exists
     def params_ordered(self):
         """List of all parameter names in this model and all its components, in a sensible order."""
+
         # Define the order of components in the list
         # Any not included will be printed between the first and last set.
         # FIXME: make order completely canonical (sort components by name?)
+
         start_order = ["astrometry", "spindown", "dispersion"]
         last_order = ["jump_delay"]
         compdict = self.get_components_by_category()
