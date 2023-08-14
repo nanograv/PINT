@@ -716,9 +716,11 @@ class Fitter:
     def make_resids(self, model):
         return Residuals(toas=self.toas, model=model, track_mode=self.track_mode)
 
-    def get_designmatrix(self):
+    def get_designmatrix(self, normalize=False):
         """Return the model's design matrix for these TOAs."""
-        return self.model.designmatrix(toas=self.toas, incfrozen=False, incoffset=True)
+        return self.model.designmatrix(
+            toas=self.toas, incfrozen=False, incoffset=True, normalize=normalize
+        )
 
     def _get_corr_cov_matrix(
         self, matrix_type, with_phase, pretty_print, prec, usecolor
@@ -2152,7 +2154,13 @@ class GLSFitter(Fitter):
             fitperrs = self.model.get_params_dict("free", "uncertainty")
 
             # Define the linear system
-            M, params, units = self.get_designmatrix()
+            # normalize the design matrix
+            M, norm, params, units = self.get_designmatrix(normalize=True)
+
+            self.fac = norm
+            # M /= norm
+
+            ntmpar = len(fitp)
 
             # Get residuals and TOA uncertainties in seconds
             if i == 0:

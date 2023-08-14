@@ -1807,7 +1807,9 @@ class TimingModel:
             )
         return result
 
-    def designmatrix(self, toas, acc_delay=None, incfrozen=False, incoffset=True):
+    def designmatrix(
+        self, toas, acc_delay=None, incfrozen=False, incoffset=True, normalize=False
+    ):
         """Return the design matrix.
 
         The design matrix is the matrix with columns of ``d_phase_d_param/F0``
@@ -1886,7 +1888,22 @@ class TimingModel:
                 the_unit = u.Unit("") / getattr(self, param).units
                 M[:, ii] = q.to_value(the_unit) / F0.value
                 units.append(the_unit / F0.unit)
-        return M, params, units
+
+        if not normalize:
+            return M, params, units
+        else:
+            norm = np.sqrt(np.sum(M**2, axis=0))
+
+            if np.any(norm == 0):
+                offending_params = [params[i] for i in np.where(norm == 0)[0]]
+                warn(
+                    f"Parameter degeneracy found in design matrix! The offending parameters are {offending_params}."
+                )
+
+            norm[norm == 0] = 1
+            M /= norm
+
+            return M, norm, params, units
 
     def compare(
         self,
