@@ -1889,7 +1889,9 @@ class TimingModel:
                 M[:, ii] = q.to_value(the_unit) / F0.value
                 units.append(the_unit / F0.unit)
 
-        if normalize:
+        if not normalize:
+            return M, params, units
+        else:
             norm = np.sqrt(np.sum(M**2, axis=0))
 
             if np.any(norm == 0):
@@ -1901,7 +1903,7 @@ class TimingModel:
             norm[norm == 0] = 1
             M /= norm
 
-        return M, params, units
+            return M, norm, params, units
 
     def compare(
         self,
