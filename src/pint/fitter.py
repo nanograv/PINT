@@ -2154,8 +2154,6 @@ class GLSFitter(Fitter):
             # Define the linear system
             # normalize the design matrix
             M, params, units = self.get_designmatrix()
-
-            self.fac = norm
             # M /= norm
 
             ntmpar = len(fitp)
