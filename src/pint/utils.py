@@ -1269,7 +1269,7 @@ def wavex_setup(fitter, freqs=None, n_freqs=None):
     """Set-up a WaveX model based on either an array of user-provided frequencies or the wave number
     frequency calculation. Sine and Cosine amplitudes are initially set to zero
 
-
+    User specifies either freqs or n_freqs
 
     Parameters
     ----------
@@ -1288,12 +1288,34 @@ def wavex_setup(fitter, freqs=None, n_freqs=None):
             "Please input either freqs or n_freqs"
         )
 
+    if (freqs is not None) and (n_freqs is not None):
+        raise ValueError(
+            "Both freqs and n_freqs are specified. Only one or the other should be used"
+        )
+
+    if n_freqs == 0:
+        raise ValueError("Must use a non-zero number of wave freequencies")
+
     if freqs is not None:
         fitter.model.add_component(WaveX())
         if len(freqs) == 1:
             fitter.model.WXFREQ_0001.value = freqs
         else:
             fitter.model.WXFREQ_0001.value = freqs[0]
+            fitter.model.components["WaveX"].add_wavex_components(freqs[1:])
+
+    if n_freqs is not None:
+        fitter.model.add_component(WaveX())
+        T_span = fitter.toas.get_mjds().max() - fitter.toas.get_mjds().min()
+        if n_freqs == 1:
+            wave_freq = 2.0 * np.pi / T_span
+            fitter.model.WXFREQ_0001.value = wave_freq
+        else:
+            wave_numbers = np.arange(1, n_freqs + 1)
+            wave_freqs = 2.0 * np.pi * wave_numbers / T_span
+            fitter.model.WXFREQ_0001.value = wave_freqs[0]
+            fitter.model.components["WaveX"].add_wavex_components(wave_freqs[1:])
+    return fitter.model.components["WaveX"].get_indices()
 
 
 def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
