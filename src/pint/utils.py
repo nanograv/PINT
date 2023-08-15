@@ -1269,7 +1269,8 @@ def wavex_setup(fitter, freqs=None, n_freqs=None):
     """Set-up a WaveX model based on either an array of user-provided frequencies or the wave number
     frequency calculation. Sine and Cosine amplitudes are initially set to zero
 
-    User specifies either freqs or n_freqs
+    User specifies either freqs or n_freqs. This function assumes that the timing model does not already
+    have any WaveX components
 
     Parameters
     ----------
@@ -1284,7 +1285,7 @@ def wavex_setup(fitter, freqs=None, n_freqs=None):
 
     if (freqs is None) and (n_freqs is None):
         raise ValueError(
-            "WaveX component base frequencies are not specified"
+            "WaveX component base frequencies are not specified. "
             "Please input either freqs or n_freqs"
         )
 
@@ -1294,7 +1295,7 @@ def wavex_setup(fitter, freqs=None, n_freqs=None):
         )
 
     if n_freqs == 0:
-        raise ValueError("Must use a non-zero number of wave freequencies")
+        raise ValueError("Must use a non-zero number of wave frequencies")
 
     if freqs is not None:
         fitter.model.add_component(WaveX())
