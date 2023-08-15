@@ -1,9 +1,11 @@
 from io import StringIO
 import pytest
 import numpy as np
+import logging
 
 from astropy import units as u
 from pint.models import get_model, get_model_and_toas
+from pint.models import model_builder as mb
 from pint.models.timing_model import Component
 from pint.fitter import Fitter
 from pint.residuals import Residuals
@@ -11,6 +13,7 @@ from pint.toa import get_TOAs
 from pint.simulation import make_fake_toas_uniform
 import pint.utils
 from pinttestdata import datadir
+from pint.models.wavex import WaveX
 
 par1 = """
     PSR              B1937+21
@@ -73,11 +76,68 @@ def wavex_delay(waves, toas):
     return total_delay
 
 
-# def test_derivative():
-#     assert None
+def test_derivative():
+    model = mb.get_model(StringIO(par2))
+    model.WXFREQ_0001.value = 0.1
+    model.WXSIN_0001.value = 0.01
+    model.WXCOS_0001.value = 0.05
+    toas = make_fake_toas_uniform(55000, 55100, 100, model, obs="gbt")
+    log = logging.getLogger("TestWaveXDerivative")
+    p = "WXSIN_0001"
+    log.debug("Running derivative for %s", f"d_delay_d_{p}")
+    ndf = model.d_delay_d_param_num(toas, p)
+    adf = model.d_delay_d_param(toas, p)
+    diff = ndf - adf
+    print(diff)
+    if np.all(diff.value) != 0.0:
+        mean_der = (adf + ndf) / 2.0
+        relative_diff = np.abs(diff) / np.abs(mean_der)
+        msg = (
+            "Derivative test failed at d_delay_d_%s with max relative difference %lf"
+            % (p, np.nanmax(relative_diff).value)
+        )
+        tol = 0.7
+        log.debug(
+            (
+                "derivative relative diff for %s, %lf"
+                % (f"d_delay_d_{p}", np.nanmax(relative_diff).value)
+            )
+        )
+        assert np.nanmax(relative_diff) < tol, msg
 
-# def test_fitter():
-#     assert
+
+def test_wxsin_fit():
+    # Check that when a par file with a wavex model is used to generate fake toas the wavex parameters don't change much when fitted for
+    model = get_model(StringIO(par1))
+    model.add_component(WaveX())
+    model.WXFREQ_0001.value = 0.1
+    model.WXSIN_0001.value = 0.01
+    model.WXCOS_0001.value = 0.05
+    toas = make_fake_toas_uniform(55000, 55100, 100, model, obs="gbt")
+    for param in model.free_params:
+        getattr(model, param).frozen = True
+    model.WXSIN_0001.value = 0.02
+    model.WXSIN_0001.frozen = False
+    f = Fitter.auto(toas, model)
+    f.fit_toas()
+    assert np.isclose(f.model.WXSIN_0001.value, 0.01, atol=1e-3)
+
+
+def test_wxcos_fit():
+    # Check that when a par file with a wavex model is used to generate fake toas the wavex parameters don't change much when fitted for
+    model = get_model(StringIO(par1))
+    model.add_component(WaveX())
+    model.WXFREQ_0001.value = 0.1
+    model.WXSIN_0001.value = 0.01
+    model.WXCOS_0001.value = 0.05
+    toas = make_fake_toas_uniform(55000, 55100, 100, model, obs="gbt")
+    for param in model.free_params:
+        getattr(model, param).frozen = True
+    model.WXCOS_0001.value = 0.09
+    model.WXCOS_0001.frozen = False
+    f = Fitter.auto(toas, model)
+    f.fit_toas()
+    assert np.isclose(f.model.WXCOS_0001.value, 0.05, atol=1e-3)
 
 
 def test_wavex_resids_amp():
@@ -87,8 +147,7 @@ def test_wavex_resids_amp():
     wave_model = get_model(StringIO(par2))
     rs = Residuals(toas, wave_model)
     injected_amp = np.sqrt(
-        wave_model.components["WaveX"].WXSIN_0001.quantity ** 2
-        + wave_model.components["WaveX"].WXCOS_0001.quantity ** 2
+        wave_model.WXSIN_0001.quantity**2 + wave_model.WXCOS_0001.quantity**2
     )
     assert np.isclose(max(rs.resids), injected_amp, atol=1e-2)
     assert np.isclose(min(rs.resids), -injected_amp, atol=1e-2)
@@ -115,11 +174,11 @@ def test_add_wavex_to_par():
     # Add a wavex component to par file that has none and check against par file with some WaveX model
     model = get_model(StringIO(par1))
     toas = make_fake_toas_uniform(55000, 55100, 100, model, obs="gbt")
-    model.add_component(Component.component_types["WaveX"]())
+    model.add_component(WaveX())
     index = model.components["WaveX"].get_indices()
-    model.components["WaveX"].WXFREQ_0001.quantity = 0.1 * (1 / u.d)
-    model.components["WaveX"].WXSIN_0001.quantity = 1 * u.s
-    model.components["WaveX"].WXCOS_0001.quantity = 1 * u.s
+    model.WXFREQ_0001.quantity = 0.1 * (1 / u.d)
+    model.WXSIN_0001.quantity = 1 * u.s
+    model.WXCOS_0001.quantity = 1 * u.s
     wavex_model = get_model(StringIO(par2))
     assert np.all(
         np.array(index) == np.array(wavex_model.components["WaveX"].get_indices())
