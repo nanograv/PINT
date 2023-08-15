@@ -77,6 +77,7 @@ def wavex_delay(waves, toas):
 
 
 def test_derivative():
+    # Check that analytical and numerical derivatives are similar
     model = mb.get_model(StringIO(par2))
     model.WXFREQ_0001.value = 0.1
     model.WXSIN_0001.value = 0.01

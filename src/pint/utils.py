@@ -1265,6 +1265,37 @@ def split_swx(model, time):
     return index, newindex
 
 
+def wavex_setup(fitter, freqs=None, n_freqs=None):
+    """Set-up a WaveX model based on either an array of user-provided frequencies or the wave number
+    frequency calculation. Sine and Cosine amplitudes are initially set to zero
+
+
+
+    Parameters
+    ----------
+    fitter: PINT fitter object, None
+    freqs: iterable of float or astropy.quantity.Quantity
+        User inputed base frequencies
+    n_freqs: int, None
+        Number of wave frequencies to calculate using the equation: freq_n = 2 * pi * n / T_span
+        Where n is the wave number, and T_span is the total time span of the toas in the fitter object
+    """
+    from pint.models.wavex import WaveX
+
+    if (freqs is None) and (n_freqs is None):
+        raise ValueError(
+            "WaveX component base frequencies are not specified"
+            "Please input either freqs or n_freqs"
+        )
+
+    if freqs is not None:
+        fitter.model.add_component(WaveX())
+        if len(freqs) == 1:
+            fitter.model.WXFREQ_0001.value = freqs
+        else:
+            fitter.model.WXFREQ_0001.value = freqs[0]
+
+
 def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
     """Compute weighted mean of input values
 
