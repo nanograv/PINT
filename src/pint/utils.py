@@ -1325,6 +1325,35 @@ def wavex_setup(fitter, freqs=None, n_freqs=None):
     return fitter.model.components["WaveX"].get_indices()
 
 
+def translate_wave_to_wavex(model):
+    from pint.models import WaveX
+
+    def translate_wave_freqs(om, k):
+        return (om * (k + 1)) / (2.0 * np.pi)
+
+    wave_names = [
+        "WAVE%d" % ii for ii in range(1, model.components["Wave"].num_wave_terms + 1)
+    ]
+    wave_terms = deepcopy(
+        [getattr(model.components["Wave"], name) for name in wave_names]
+    )
+    wave_om = deepcopy(model.components["Wave"].WAVE_OM.quantity)
+    model.remove_component("Wave")
+    model.add_component(WaveX())
+    for k, wave_term in enumerate(wave_terms):
+        wave_sin_amp, wave_cos_amp = wave_term.quantity
+        wavex_freq = translate_wave_freqs(wave_om, k)
+        if k == 1:
+            model.WXFREQ_0001.value = wavex_freq.value
+            model.WXSIN_0001.value = wave_sin_amp.value
+            model.WXCOS_0001.value = wave_cos_amp.value
+        else:
+            model.components["WaveX"].add_wavex_component(
+                wavex_freq, wxsin=wave_sin_amp, wxcos=wave_cos_amp
+            )
+    return model.components["WaveX"].get_indices()
+
+
 def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
     """Compute weighted mean of input values
 
