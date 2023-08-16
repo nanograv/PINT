@@ -176,7 +176,7 @@ class FDJump(DelayComponent):
         return delay * u.s
 
     def d_delay_d_FDJUMP(self, toas, param, acc_delay=None):
-        """Derivative of delay wrt for FDJUMP parameters."""
+        """Derivative of delay w.r.t. FDJUMP parameters."""
         assert (
             bool(self.param_regex.match(param))
             and hasattr(self, param)
