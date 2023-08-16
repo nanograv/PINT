@@ -358,7 +358,7 @@ class WaveX(DelayComponent):
     def d_wavex_delay_d_WXSIN(self, toas, param, delays, acc_delay=None):
         par = getattr(self, param)
         freq = getattr(self, f"WXFREQ_{int(par.index):04d}").quantity
-        base_phase = toas.table["tdbld"].value * u.d - self.WXEPOCH.value * u.d
+        base_phase = toas.table["tdbld"].data * u.d - self.WXEPOCH.value * u.d
         arg = 2.0 * np.pi * freq * base_phase
         deriv = np.sin(arg.value)
         return deriv * u.s / par.units
@@ -366,7 +366,7 @@ class WaveX(DelayComponent):
     def d_wavex_delay_d_WXCOS(self, toas, param, delays, acc_delay=None):
         par = getattr(self, param)
         freq = getattr(self, f"WXFREQ_{int(par.index):04d}").quantity
-        base_phase = toas.table["tdbld"].value * u.d - self.WXEPOCH.value * u.d
+        base_phase = toas.table["tdbld"].data * u.d - self.WXEPOCH.value * u.d
         arg = 2.0 * np.pi * freq * base_phase
         deriv = np.cos(arg.value)
         return deriv * u.s / par.units
