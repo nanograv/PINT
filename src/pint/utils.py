@@ -1270,7 +1270,8 @@ def wavex_setup(fitter, freqs=None, n_freqs=None):
     frequency calculation. Sine and Cosine amplitudes are initially set to zero
 
     User specifies either freqs or n_freqs. This function assumes that the timing model does not already
-    have any WaveX components
+    have any WaveX components. See add_wavex_component() or add_wavex_components to add WaveX components
+    to an existing WaveX model.
 
     Parameters
     ----------
@@ -1296,18 +1297,23 @@ def wavex_setup(fitter, freqs=None, n_freqs=None):
 
     if n_freqs == 0:
         raise ValueError("Must use a non-zero number of wave frequencies")
-
+    fitter.model.add_component(WaveX())
+    T_span = fitter.toas.get_mjds().max() - fitter.toas.get_mjds().min()
+    nyqist_freq = 1.0 / (2.0 * T_span)
     if freqs is not None:
-        fitter.model.add_component(WaveX())
         if len(freqs) == 1:
             fitter.model.WXFREQ_0001.value = freqs
         else:
+            np.array(freqs)
+            freqs.sort()
+            if min(np.diff(freqs)) < nyqist_freq.value:
+                raise ValueError(
+                    "Wave frequency spacing is finer than frequency resolution of data"
+                )
             fitter.model.WXFREQ_0001.value = freqs[0]
             fitter.model.components["WaveX"].add_wavex_components(freqs[1:])
 
     if n_freqs is not None:
-        fitter.model.add_component(WaveX())
-        T_span = fitter.toas.get_mjds().max() - fitter.toas.get_mjds().min()
         if n_freqs == 1:
             wave_freq = 2.0 * np.pi / T_span
             fitter.model.WXFREQ_0001.value = wave_freq
