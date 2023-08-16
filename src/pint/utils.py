@@ -1338,8 +1338,10 @@ def translate_wave_to_wavex(model):
         [getattr(model.components["Wave"], name) for name in wave_names]
     )
     wave_om = deepcopy(model.components["Wave"].WAVE_OM.quantity)
+    wave_epoch = deepcopy(model.components["Wave"].WAVEEPOCH.quantity)
     model.remove_component("Wave")
     model.add_component(WaveX())
+    model.WXEPOCH.value = wave_epoch.value
     for k, wave_term in enumerate(wave_terms):
         wave_sin_amp, wave_cos_amp = wave_term.quantity
         wavex_freq = translate_wave_freqs(wave_om, k)
