@@ -63,6 +63,7 @@ class FDJump(DelayComponent):
     def __init__(self):
         super().__init__()
 
+        # Matches "FDpJUMPq" where p and q are integers.
         self.param_regex = re.compile("^FD(\\d+)JUMP(\\d+)")
 
         self.add_param(
@@ -99,7 +100,17 @@ class FDJump(DelayComponent):
             self.register_deriv_funcs(self.d_delay_d_FDJUMP, fdj)
 
     def get_fd_index(self, par):
-        """Extract the index from an FDJUMP parameter name."""
+        """Extract the FD index from an FDJUMP parameter name. In a parameter name
+        "FDpJUMPq", p is the FD/prefix index and q is the mask index.
+
+        Parameters
+        ----------
+        par: Parameter name (str)
+
+        Returns
+        -------
+        FD index (int)
+        """
         if m := self.param_regex.match(par):
             return int(m.groups()[0])
         else:
@@ -108,7 +119,18 @@ class FDJump(DelayComponent):
             )
 
     def get_freq_y(self, toas):
-        """Get frequency or log-frequency in GHz based on the FDJUMPLOG value."""
+        """Get frequency or log-frequency in GHz based on the FDJUMPLOG value.
+        Returns (freq/1_GHz) if FDJUMPLOG==N and log(freq/1_GHz) if FDJUMPLOG==Y.
+        Any non-finite values are replaced by zero.
+
+        Parameters
+        ----------
+        toas: pint.toa.TOAs
+
+        Returns
+        -------
+        (freq/1_GHz) or log(freq/1_GHz) depending on the value of FDJUMPLOG (float).
+        """
         tbl = toas.table
         try:
             freq = self._parent.barycentric_radio_freq(toas)

@@ -66,6 +66,14 @@ def parse_parfile(parfile):
 
 
 def _replace_fdjump_in_parfile_dict(pardict):
+    """Replace parameter names s of the form "FDJUMPp" by "FDpJUMP"
+    while reading the par file, where p is the prefix index.
+
+    Ideally, this should have been done using the parameter alias
+    mechanism, but there is no easy way to do this currently due to the
+    mask and prefix indices being treated in an identical manner.
+
+    See :class:`~pint.models.fdjump.FDJump` for more details."""
     fdjumpn_regex = re.compile("^FDJUMP(\\d+)")
     pardict_new = {}
     for key, value in pardict.items():
@@ -346,6 +354,8 @@ class ModelBuilder:
         else:
             parfile_dict = parfile
 
+        # This is a special-case-hack to deal with FDJUMP parameters.
+        # @TODO: Implement a general mechanism to deal with cases like this.
         parfile_dict = _replace_fdjump_in_parfile_dict(parfile_dict)
 
         for k, v in parfile_dict.items():
