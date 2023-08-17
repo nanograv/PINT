@@ -11,5 +11,6 @@ the released changes.
 ### Changed
 ### Added
 - Third-order Roemer delay terms to ELL1 model
+- Added WaveX model as DelayComponent with wave amplitudes as fitted parameters
 ### Fixed
 ### Removed
