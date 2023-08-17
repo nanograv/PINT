@@ -1355,6 +1355,11 @@ def _translate_wave_freqs(om, k):
 def translate_wave_to_wavex(model):
     """Go from a Wave model to a WaveX model
 
+    WaveX frequencies get calculated based on the Wave model WAVEOM parameter and the number of WAVE parameters.
+        WaveX_freq_k = [WAVEOM * (k+1)] / [2 * pi]
+
+    WaveX amplitudes are taken from the WAVE pair parameters
+
     Paramters
     ---------
     model: pint.models.timing_model.TimingModel
