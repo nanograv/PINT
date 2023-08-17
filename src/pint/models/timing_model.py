@@ -500,18 +500,24 @@ class TimingModel:
         )
 
     @property_exists
-    def params(self):
+    def params_ordered(self):
         """List of all parameter names in this model and all its components.
-        This is the same as `params_ordered`."""
+        This is the same as `params`."""
 
-        # Historically, this was different from `params_ordered` because Python
+        # Historically, this was different from `params` because Python
         # dictionaries were unordered until Python 3.7. Now there is no reason for
         # them to be different.
 
-        return self.params_ordered
+        warn(
+            "`TimingModel.params_ordered` is now deprecated and maybe removed in the future. "
+            "Use `TimingModel.params` instead. It gives the same output as `TimingModel.params_ordered`.",
+            DeprecationWarning,
+        )
+
+        return self.params
 
     @property_exists
-    def params_ordered(self):
+    def params(self):
         """List of all parameter names in this model and all its components, in a sensible order."""
 
         # Define the order of components in the list
