@@ -16,6 +16,7 @@ Contributors
 
 Active developers are indicated by (*). Authors of the PINT paper are indicated by (#).
 
+* Gabriella Agazie (*)
 * Akash Anumarlapudi (*)
 * Anne Archibald (#*)
 * Matteo Bachetti (#)
