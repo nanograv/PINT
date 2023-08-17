@@ -1318,23 +1318,33 @@ class TimingModel:
         # False.  Of course, if you manually set it, it will use that setting.
         if abs_phase is None:
             abs_phase = "AbsPhase" in list(self.components.keys())
+
+        # This function gets called in `Residuals.calc_phase_resids()` with `abs_phase=True`
+        # by default. Hence, this branch is not run by default.
         if not abs_phase:
             return phase
-        if "AbsPhase" not in list(self.components.keys()):
-            # if no absolute phase (TZRMJD), add the component to the model and calculate it
-            from pint.models import absolute_phase
 
-            self.add_component(absolute_phase.AbsPhase(), validate=False)
-            self.make_TZR_toa(
-                toas
-            )  # TODO:needs timfile to get all toas, but model doesn't have access to timfile. different place for this?
-            self.validate()
+        if "AbsPhase" not in list(self.components.keys()):
+            log.info("Creating a TZR TOA (AbsPhase) using the given TOAs object.")
+
+            # if no absolute phase (TZRMJD), add the component to the model and calculate it
+            self.add_tzr_toa(toas)
+
         tz_toa = self.get_TZR_toa(toas)
         tz_delay = self.delay(tz_toa)
         tz_phase = Phase(np.zeros(len(toas.table)), np.zeros(len(toas.table)))
         for pf in self.phase_funcs:
             tz_phase += Phase(pf(tz_toa, tz_delay))
         return phase - tz_phase
+
+    def add_tzr_toa(self, toas):
+        """Create a TZR TOA for the given TOAs object and add it to
+        the timing model. This corresponds to TOA closest to the PEPOCH."""
+        from pint.models.absolute_phase import AbsPhase
+
+        self.add_component(AbsPhase(), validate=False)
+        self.make_TZR_toa(toas)
+        self.validate()
 
     def total_dm(self, toas):
         """Calculate dispersion measure from all the dispersion type of components."""
