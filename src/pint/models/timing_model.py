@@ -183,12 +183,11 @@ class TimingModel:
     removed with methods on this object, and for many of them additional
     parameters in families (``DMXEP_1234``) can be added.
 
-    Parameters in a TimingModel object are listed in the ``model.params`` and
-    ``model.params_ordered`` objects. Each Parameter can be set as free or
-    frozen using its ``.frozen`` attribute, and a list of the free parameters
-    is available through the ``model.free_params`` property; this can also
-    be used to set which parameters are free. Several methods are available
-    to get and set some or all parameters in the forms of dictionaries.
+    Parameters in a TimingModel object are listed in the ``model.params`` object.
+    Each Parameter can be set as free or frozen using its ``.frozen`` attribute,
+    and a list of the free parameters is available through the ``model.free_params``
+    property; this can also be used to set which parameters are free. Several methods
+    are available to get and set some or all parameters in the forms of dictionaries.
 
     TimingModel objects also support a number of functions for computing
     various things like orbital phase, and barycentric versions of TOAs,
@@ -561,7 +560,7 @@ class TimingModel:
     def free_params(self):
         """List of all the free parameters in the timing model. Can be set to change which are free.
 
-        These are ordered as ``self.params_ordered`` does.
+        These are ordered as ``self.params`` does.
 
         Upon setting, order does not matter, and aliases are accepted.
         ValueError is raised if a parameter is not recognized.
@@ -569,7 +568,7 @@ class TimingModel:
         On setting, parameter aliases are converted with
         :func:`pint.models.timing_model.TimingModel.match_param_aliases`.
         """
-        return [p for p in self.params_ordered if not getattr(self, p).frozen]
+        return [p for p in self.params if not getattr(self, p).frozen]
 
     @free_params.setter
     def free_params(self, params):
@@ -630,7 +629,7 @@ class TimingModel:
         if which == "free":
             ps = self.free_params
         elif which == "all":
-            ps = self.params_ordered
+            ps = self.params
         else:
             raise ValueError("get_params_dict expects which to be 'all' or 'free'")
         c = OrderedDict()
@@ -2023,10 +2022,7 @@ class TimingModel:
             log.debug("Check verbosity - only warnings/info will be displayed")
         othermodel = copy.deepcopy(othermodel)
 
-        if (
-            "POSEPOCH" in self.params_ordered
-            and "POSEPOCH" in othermodel.params_ordered
-        ):
+        if "POSEPOCH" in self.params and "POSEPOCH" in othermodel.params:
             if (
                 self.POSEPOCH.value is not None
                 and othermodel.POSEPOCH.value is not None
@@ -2037,7 +2033,7 @@ class TimingModel:
                     % (other_model_name, model_name)
                 )
                 othermodel.change_posepoch(self.POSEPOCH.value)
-        if "PEPOCH" in self.params_ordered and "PEPOCH" in othermodel.params_ordered:
+        if "PEPOCH" in self.params and "PEPOCH" in othermodel.params:
             if (
                 self.PEPOCH.value is not None
                 and self.PEPOCH.value != othermodel.PEPOCH.value
@@ -2046,7 +2042,7 @@ class TimingModel:
                     "Updating PEPOCH in %s to match %s" % (other_model_name, model_name)
                 )
                 othermodel.change_pepoch(self.PEPOCH.value)
-        if "DMEPOCH" in self.params_ordered and "DMEPOCH" in othermodel.params_ordered:
+        if "DMEPOCH" in self.params and "DMEPOCH" in othermodel.params:
             if (
                 self.DMEPOCH.value is not None
                 and self.DMEPOCH.value != othermodel.DMEPOCH.value
@@ -2081,7 +2077,7 @@ class TimingModel:
                     f"{model_name} is in ECL({self.ECL.value}) coordinates but {other_model_name} is in ICRS coordinates and convertcoordinates=False"
                 )
 
-        for pn in self.params_ordered:
+        for pn in self.params:
             par = getattr(self, pn)
             if par.value is None:
                 continue
@@ -2308,8 +2304,8 @@ class TimingModel:
                 )
 
         # Now print any parameters in othermodel that were missing in self.
-        mypn = self.params_ordered
-        for opn in othermodel.params_ordered:
+        mypn = self.params
+        for opn in othermodel.params:
             if opn in mypn and getattr(self, opn).value is not None:
                 continue
             if nodmx and opn.startswith("DMX"):
