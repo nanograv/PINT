@@ -110,3 +110,8 @@ class TestDesignMatrix:
             ]
             == 0.0
         )
+
+    def test_param_order(self):
+        params_dm = self.model.designmatrix(self.toas, incoffset=False)[1]
+        params_free = self.model.free_params
+        assert params_dm == params_free

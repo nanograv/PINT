@@ -363,7 +363,7 @@ class Fitter:
 
         # to handle all parameter names, determine the longest length for the first column
         longestName = 0  # optionally specify the minimum length here instead of 0
-        for pn in self.model.params_ordered:
+        for pn in self.model.params:
             if nodmx and pn.startswith("DMX"):
                 continue
             if len(pn) > longestName:
@@ -378,7 +378,7 @@ class Fitter:
         s += ("{:<" + spacingName + "s} {:>20s} {:>28s} {}\n").format(
             "=" * longestName, "=" * 20, "=" * 28, "=" * 5
         )
-        for pn in self.model.params_ordered:
+        for pn in self.model.params:
             if nodmx and pn.startswith("DMX"):
                 continue
             prefitpar = getattr(self.model_init, pn)
