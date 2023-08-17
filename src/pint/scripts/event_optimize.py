@@ -247,8 +247,8 @@ def get_fit_keyvals(model, phs=0.0, phserr=0.1):
     return fitkeys, np.asarray(fitvals), np.asarray(fiterrs)
 
 
-def autocorr_check(sampler, pos, nsteps, burnin, csteps=100, crit1=10):
-    """Return the converged sampler and the mean autocorrelation time per 100 steps
+def run_sampler_autocorr(sampler, pos, nsteps, burnin, csteps=100, crit1=10):
+    """Runs the sampler and checks for chain convergence. Return the converged sampler and the mean autocorrelation time per 100 steps
     Parameters
     ----------
     Sampler
@@ -906,7 +906,7 @@ def main(argv=None):
                 if args.noautocorr:
                     sampler.run_mcmc(pos, nsteps, progress=True)
                 else:
-                    autocorr = autocorr_check(sampler, pos, nsteps, burnin)
+                    autocorr = run_sampler_autocorr(sampler, pos, nsteps, burnin)
             pool.close()
             pool.join()
         except ImportError:
@@ -917,7 +917,7 @@ def main(argv=None):
             if args.noautocorr:
                 sampler.run_mcmc(pos, nsteps, progress=True)
             else:
-                autocorr = autocorr_check(sampler, pos, nsteps, burnin)
+                autocorr = run_sampler_autocorr(sampler, pos, nsteps, burnin)
     else:
         sampler = emcee.EnsembleSampler(
             nwalkers, ndim, ftr.lnposterior, blobs_dtype=dtype, backend=backend
@@ -925,7 +925,7 @@ def main(argv=None):
         if args.noautocorr:
             sampler.run_mcmc(pos, nsteps, progress=True)
         else:
-            autocorr = autocorr_check(sampler, pos, nsteps, burnin)
+            autocorr = run_sampler_autocorr(sampler, pos, nsteps, burnin)
 
     def chains_to_dict(names, sampler):
         samples = np.transpose(sampler.get_chain(), (1, 0, 2))

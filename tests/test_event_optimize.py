@@ -146,7 +146,7 @@ def test_autocorr(tmp_path):
     sampler = emcee.EnsembleSampler(nwalkers, ndim, ln_prob)
 
     # Running the sampler with the autocorrelation check function from event_optimize
-    autocorr = event_optimize.autocorr_check(sampler, coords, nsteps, burnin=10)
+    autocorr = event_optimize.run_sampler_autocorr(sampler, coords, nsteps, burnin=10)
 
     # Extracting the samples and asserting that the autocorrelation check
     # stopped the sampler once convergence was reached
