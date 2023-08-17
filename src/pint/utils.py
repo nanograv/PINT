@@ -49,6 +49,7 @@ from astropy import constants
 from astropy.time import Time
 from loguru import logger as log
 from scipy.special import fdtrc
+from copy import deepcopy
 
 import pint
 import pint.pulsar_ecliptic
@@ -1281,6 +1282,11 @@ def wavex_setup(fitter, freqs=None, n_freqs=None):
     n_freqs: int, None
         Number of wave frequencies to calculate using the equation: freq_n = 2 * pi * n / T_span
         Where n is the wave number, and T_span is the total time span of the toas in the fitter object
+
+    Returns
+    -------
+    indices : list
+            Indices that have been assigned to new WaveX components
     """
     from pint.models.wavex import WaveX
 
@@ -1301,12 +1307,16 @@ def wavex_setup(fitter, freqs=None, n_freqs=None):
     T_span = fitter.toas.get_mjds().max() - fitter.toas.get_mjds().min()
     nyqist_freq = 1.0 / (2.0 * T_span)
     if freqs is not None:
+        if isinstance(freqs, u.quantity.Quantity):
+            freqs.to(u.d**-1)
+        else:
+            freqs *= u.d**-1
         if len(freqs) == 1:
-            fitter.model.WXFREQ_0001.value = freqs
+            fitter.model.WXFREQ_0001.quantity = freqs
         else:
             np.array(freqs)
             freqs.sort()
-            if min(np.diff(freqs)) < nyqist_freq.value:
+            if min(np.diff(freqs.value)) < nyqist_freq.value:
                 raise ValueError(
                     "Wave frequency spacing is finer than frequency resolution of data"
                 )
@@ -1325,12 +1335,37 @@ def wavex_setup(fitter, freqs=None, n_freqs=None):
     return fitter.model.components["WaveX"].get_indices()
 
 
-def translate_wave_to_wavex(model):
-    from pint.models import WaveX
-    from copy import deepcopy
+def _translate_wave_freqs(om, k):
+    """Use Wave model WAVEOM parameter to calculate a WaveX WXFREQ_ frequency parameter for wave number k
 
-    def translate_wave_freqs(om, k):
-        return (om * (k + 1)) / (2.0 * np.pi)
+    Parameters
+    ----------
+    om: float or astropy.quantity.Quantity
+        Base frequency of Wave model solution - parameter WAVEOM
+    k: int
+        wave number to use to calculate WaveX WXFREQ_ frequency parameter
+
+    Returns
+    -------
+    WXFREQ_ value or quantity that can be used in WaveX model"""
+
+    return (om * (k + 1)) / (2.0 * np.pi)
+
+
+def translate_wave_to_wavex(model):
+    """Go from a Wave model to a WaveX model
+
+    Paramters
+    ---------
+    model: pint.models.timing_model.TimingModel
+        TimingModel containing a Wave model to be converted to a WaveX model
+
+    Returns
+    -------
+    indices : list
+            Indices that have been assigned to new WaveX components
+    Editted timing model with Wave model removed and converted WaveX model included"""
+    from pint.models import WaveX
 
     wave_names = [
         "WAVE%d" % ii for ii in range(1, model.components["Wave"].num_wave_terms + 1)
@@ -1345,7 +1380,7 @@ def translate_wave_to_wavex(model):
     model.WXEPOCH.value = wave_epoch.value
     for k, wave_term in enumerate(wave_terms):
         wave_sin_amp, wave_cos_amp = wave_term.quantity
-        wavex_freq = translate_wave_freqs(wave_om, k)
+        wavex_freq = _translate_wave_freqs(wave_om, k)
         if k == 1:
             model.WXFREQ_0001.value = wavex_freq.value
             model.WXSIN_0001.value = wave_sin_amp.value
