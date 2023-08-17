@@ -245,10 +245,10 @@ First make sure you are on the PINT master branch in the ``nanograv/PINT`` repos
 Now wait 15 minutes and check that travis-ci says that the build is OK, before tagging! 
 If needed, push any bug fixes.
 
-Next, check the CHANGELOG and make sure all the significant changes from PRs since the last 
-release have been documented.
-Then, change the # Unreleased section of the CHANGELOG to the version number you are about 
-to tag and commit, but don't yet push.
+Next, check the unreleased CHANGELOG (`CHANGELOG-unreleased.md`) and make sure all the
+significant changes from PRs since the last release have been documented. Move these entries
+to the released CHANGELOG (`CHANGELOG.md`), and change title of the newly moved entries 
+from "Unreleased" to the version number you are about to tag and commit. **But don't yet push**.
 
 When tagging, always use "annotated tags" by specifying ``-a``, so do these commands to tag and push::
 

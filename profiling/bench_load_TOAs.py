@@ -16,5 +16,5 @@ thanktoas = pint.toa.get_TOAs(
     include_bipm=True,
 )
 print()
-print("Number of TOAs: " + str(thanktoas.ntoas))
+print(f"Number of TOAs: {str(thanktoas.ntoas)}")
 print()

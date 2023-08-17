@@ -20,11 +20,14 @@ Report bugs at https://github.com/nanograv/pint/issues.
 
 If you are reporting a bug, please include:
 
-* Your operating system name and version.
-* The output of ``pint.__version__`` and ``pint.__file__``
+* The output of ``pint.print_info()``. This command provides the version information of 
+  the OS, Python, PINT, and the various dependencies along with other information about 
+  your system.
 * Any details about your local setup that might be helpful in troubleshooting,
-  such as the command used to install PINT and whether you are using a virtualenv.
-* Detailed steps to reproduce the bug, as simply as possible.
+  such as the command used to install PINT and whether you are using a virtualenv,
+  conda environment, etc.
+* Detailed steps to reproduce the bug, as simply as possible. A self-contained
+  code snippet that triggers the issue will be most helpful.
 
 Submit Feedback
 ~~~~~~~~~~~~~~~
@@ -74,22 +77,37 @@ to write good documentation, you come to understand the code very well.
 Get Started!
 ------------
 
-Ready to contribute? Here's how to set up PINT for local development.
+Ready to contribute? Here's how to set up `PINT` for local development.
 
-1. Fork_ the ``pint`` repo on GitHub.
+1. Fork_ the `PINT` repo on GitHub.
 2. Clone your fork locally::
 
     $ git clone git@github.com:your_name_here/pint.git
 
-3. Install your local copy into a virtualenv. Assuming you have
-   virtualenvwrapper installed, this is how you set up your fork for local
+3. Install your local copy into a `conda`_ environment. Assuming you have
+   `conda` installed, this is how you set up your fork for local
    development::
 
-    $ mkvirtualenv pint
+    $ conda create -n pint-devel python=3.10
+    $ conda activate pint-devel
+    $ cd PINT/
+    $ conda install -c conda-forge --file requirements_dev.txt
+    $ conda install -c conda-forge --file requirements.txt
+    $ pip install -e .
+    $ pre-commit install
+   
+   The last command installs pre-commit hooks which will squawk at you while trying
+   to commit changes that don't adhere to our `Coding Style`_.
+
+   Alternatively, this can also be done using `virtualenv`. Assuming you have 
+   `virtualenvwrapper` installed, this is how you set up your fork for local
+   development::
+
+    $ mkvirtualenv pint-devel
     $ cd PINT/
     $ pip install -r requirements_dev.txt
-    $ pip install -r requirements.txt
     $ pip install -e .
+    $ pre-commit install
 
 4. Create a branch for local development::
 
@@ -107,13 +125,13 @@ Ready to contribute? Here's how to set up PINT for local development.
 6. Commit your changes and push your branch to GitHub::
 
     $ git add .
-    $ git commit -m "Your detailed description of your changes."
+    $ git commit -m "Detailed description of your changes."
     $ git push origin name-of-your-bugfix-or-feature
 
 7. Submit a pull request through the GitHub website.
 
-8. Check that our automatic testing "Travis CI" passes your code. If
-   problems crop up, fix them, commit the changes, and push a new version,
+8. Check that our automatic testing in "GitHub Actions" passes for your code. 
+   If problems crop up, fix them, commit the changes, and push a new version,
    which will automatically update the pull request::
 
    $ git add pint/file-i-just-fixed.py
@@ -125,13 +143,14 @@ Ready to contribute? Here's how to set up PINT for local development.
    functional changes. If accepted, it will be merged into the master branch.
 
 .. _Fork: https://help.github.com/en/articles/fork-a-repo
+.. _`conda`: https://docs.conda.io/
 
 Pull Request Guidelines
 -----------------------
 
 Before you submit a pull request, check that it meets these guidelines:
 
-1. Try to write clear :ref:`pythonic` code, follow our :ref:`CodingStyle`, and think
+1. Try to write clear `Pythonic`_ code, follow our `Coding Style`_, and think
    about how others might use your new code.
 2. The pull request should include tests that cover both the expected
    behavior and sensible error reporting when given bad input.
@@ -139,7 +158,13 @@ Before you submit a pull request, check that it meets these guidelines:
    be updated. Put your new functionality into a function with a
    docstring. Check the HTML documentation produced by ``make docs``
    to make sure your new documentation appears and looks reasonable.
-4. The pull request should work for Python 2.7 and 3.6+. Check
-   https://travis-ci.org/nanograv/pint/pull_requests
-   and make sure that the tests pass for all supported Python versions.
+   If the new functionality needs a more detailed explanation than can be
+   put in a docstring, add it to ``docs/explanation.rst``. Make sure that
+   the docstring contains a brief description as well.
+4. The pull request should work for and 3.8+. Make sure that all the
+   CI tests for the pull request pass. 
+5. Update ``CHANGELOG-unreleased.md`` with an appropriate entry. Please note
+   that ``CHANGELOG.md`` should not be updated for pull requests.
 
+.. _`Pythonic`: https://peps.python.org/pep-0008/
+.. _`Coding Style`: https://nanograv-pint.readthedocs.io/en/latest/coding-style.html 

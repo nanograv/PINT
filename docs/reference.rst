@@ -16,6 +16,7 @@ Useful starting places:
    :maxdepth: 3
 
    timingmodels
+   observatory_list
    command-line
    API reference <_autosummary/pint>
    coding-style

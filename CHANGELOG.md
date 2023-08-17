@@ -4,7 +4,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project, at least loosely, adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+This file contains the released changes to the codebase. See CHANGELOG-unreleased.md for
+the unreleased changes. This file should only be changed while tagging a new version.
+
+## [0.9.6] 2023-06-22
+### Changed
+- Applied `sourcery` refactors to the entire codebase
+- Changed threshold for `test_model_derivatives` test to avoid CI failures
+- Unreleased CHANGELOG entries should now be entered in `CHANGELOG-unreleased.md` instead of `CHANGELOG.md`. Updated documentation accordingly.
+- Changed tests to remove `unittest` and use pure pytest format
+- Changed deprecated `sampler.chain` usage
+- Download data automatically in the profiling script `high_level_benchmark.py` instead of silently giving wrong results.
+### Added
+- `SpindownBase` as the abstract base class for `Spindown` and `PeriodSpindown` in the `How_to_build_a_timing_model_component.py` example.
+- `SolarWindDispersionBase` as the abstract base class for solar wind dispersion components.
+- `validate_component_types` method for more rigorous validation of timing model components.
+- roundtrip test to make sure clock corrections are not written to tim files
+- `calc_phase_mean` and `calc_time_mean` methods in `Residuals` class to compute the residual mean.
+- `PhaseOffset` component (overall phase offset between physical and TZR toas)
+- `tzr` attribute in `TOAs` class to identify TZR TOAs
+- Documentation: Explanation for offsets
+- Example: `phase_offset_example.py`
+- method `AllComponents.param_to_unit` to get units for any parameter, and then made function `utils.get_unit`
+- can override/add parameter values when reading models
+- docs now include list of observatories along with google maps links and clock files
+### Fixed
+- fixed docstring for `add_param_from_top`
+- Gridded calculations now respect logger settings
+- Event TOAs now have default error that is non-zero, and can set as desired
+- Model conversion ICRS <-> ECL works if PM uncertainties are not set
+- Fix `merge_TOAs()` to allow lists of length 1
+### Removed
+
+## [0.9.5] 2023-05-01
 ### Changed
 - Changed minimum supported version of `scipy` to 1.4.1
 - Moved `DMconst` from `pint.models.dispersion_model` to `pint` to avoid circular imports
@@ -12,14 +44,16 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - Refactor `Dre` method, fix expressions for Einstein delay and post-Keplerian parameters in DD model
 - Updated contributor list (AUTHORS.rst)
 - Emit an informative warning for "MODE" statement in TOA file; Ignore "MODE 1" silently
-- Version of `sphinx-rtd-theme` updated in `requirements_dev.txt` 
+- Version of `sphinx-rtd-theme` updated in `requirements_dev.txt`
 - Updated `black` version to 23.x
+- Older event loading functions now use newer functions to create TOAs and then convert to list of TOA objects
+- Limited hypothesis to <= 6.72.0 to avoid numpy problems in oldestdeps
 ### Added
 - Documentation: Explanation for DM
 - Methods to compute dispersion slope and to convert DM using the CODATA value of DMconst
 - `TimingModel.total_dispersion_slope` method
 - Explicit discussion of DT92 convention to DDK model
-- HESS and ORT telescopes to the list of known observatories
+- HAWC, HESS and ORT telescopes to the list of known observatories
 - Documentation: making TOAs from array of times added to HowTo
 - Method to make TOAs from an array of times
 - Clock correction for LEAP
@@ -31,13 +65,25 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 - `funcParameters` defined as functions operating on other parameters
 - Option to save `emcee` backend chains in `event_optimize`
 - Documentation on how to extract a covariance matrix
+- DDS and DDGR models
+- Second-order corrections included in ELL1
+- Module for converting between binary models also included in `convert_parfile`
+- Method to get a parameter as a `uncertainties.ufloat` for doing math
+- Method to get current binary period and uncertainty at a given time regardless of binary model
+- TCB to TDB conversion on read, and conversion script (`tcb2tdb`)
+- Functions to get TOAs objects from satellite data (Fermi and otherwise)
+- Methods to convert a TOAs object into a list of TOA objects
 ### Fixed
+- Syntax error in README.rst
 - Broken notebooks CI test
 - BIPM correction for simulated TOAs
 - Added try/except to `test_pldmnoise.py`/`test_PLRedNoise_recovery` to avoid exceptions during CI
 - Import for `longdouble2str` in `get_tempo_result`
 - Plotting orbital phase in `pintk` when FB0 is used instead of PB
+- Selection of BIPM for random models
 - Added 1 sigma errors to update the postfit parfile errors in `event_optimize`
+- Fixed DDS CI testing failures
+- Add SolarSystemShapiro to the timing model only if an Astrometry component is present.
 ### Removed
 
 ## [0.9.3] 2022-12-16

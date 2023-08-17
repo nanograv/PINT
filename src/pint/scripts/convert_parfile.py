@@ -1,6 +1,8 @@
 import argparse
 import os
 
+from astropy import units as u
+
 import pint.logging
 from loguru import logger as log
 
@@ -8,6 +10,7 @@ pint.logging.setup(level=pint.logging.script_level)
 
 from pint.models import get_model
 from pint.models.parameter import _parfile_formats
+import pint.binaryconvert
 
 __all__ = ["main"]
 
@@ -27,10 +30,34 @@ def main(argv=None):
         default="pint",
     )
     parser.add_argument(
+        "-b",
+        "--binary",
+        help="Binary model for output",
+        choices=pint.binaryconvert.binary_types,
+        default=None,
+    )
+    parser.add_argument(
         "-o",
         "--out",
         help=("Output filename [default=stdout]"),
         default=None,
+    )
+    parser.add_argument(
+        "--nharms",
+        default=3,
+        type=int,
+        help="Number of harmonics (convert to ELL1H only)",
+    )
+    parser.add_argument(
+        "--usestigma",
+        action="store_true",
+        help="Use STIGMA instead of H4? (convert to ELL1H only)",
+    )
+    parser.add_argument(
+        "--kom",
+        type=float,
+        default=0,
+        help="KOM (longitude of ascending node) in deg (convert to DDK only)",
     )
     parser.add_argument(
         "--log-level",
@@ -57,6 +84,18 @@ def main(argv=None):
 
     log.info(f"Reading '{args.input}'")
     model = get_model(args.input)
+    if hasattr(model, "BINARY") and args.binary is not None:
+        log.info(f"Converting from {model.BINARY.value} to {args.binary}")
+        if args.binary == "ELL1H":
+            model = pint.binaryconvert.convert_binary(
+                model, args.binary, NHARMS=args.nharms, useSTIGMA=args.usestigma
+            )
+        elif args.binary == "DDK":
+            model = pint.binaryconvert.convert_binary(
+                model, args.binary, KOM=args.kom * u.deg
+            )
+        else:
+            model = pint.binaryconvert.convert_binary(model, args.binary)
     output = model.as_parfile(format=args.format)
     if args.out is None:
         # just output to STDOUT

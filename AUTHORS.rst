@@ -20,7 +20,7 @@ Active developers are indicated by (*). Authors of the PINT paper are indicated 
 * Anne Archibald (#*)
 * Matteo Bachetti (#)
 * Bastian Beischer 
-* Deven Bhakta 
+* Deven Bhakta (*)
 * Chloe Champagne (#)
 * Jonathan Colen (#)
 * Thankful Cromartie 
@@ -28,6 +28,7 @@ Active developers are indicated by (*). Authors of the PINT paper are indicated 
 * Paul Demorest (#)
 * Julia Deneva 
 * Justin Ellis 
+* William Fiore (*)
 * Fabian Jankowski 
 * Rick Jenet (#)
 * Ross Jennings (#*)

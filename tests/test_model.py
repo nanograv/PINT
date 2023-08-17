@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+import contextlib
 import io
 import os
 import time
@@ -91,7 +91,7 @@ def test_model():
 
     # run tempo1 also, if the tempo_utils module is available
     did_tempo1 = False
-    try:
+    with contextlib.suppress(Exception):
         import tempo_utils
 
         log.info("Running TEMPO1...")
@@ -114,9 +114,6 @@ def test_model():
             % np.fabs(diff_t2_t1).max().value
         )
         log.info("Std resid diff between T1 and T2: %.2f ns" % diff_t2_t1.std().value)
-    except:
-        pass
-
     if did_tempo1 and not planets:
         assert np.fabs(diff_t1).max() < 32.0 * u.ns
 

@@ -46,7 +46,7 @@ class PulsarEcliptic(coord.BaseCoordinateFrame):
     """
 
     default_representation = coord.SphericalRepresentation
-    # NOTE: The feature below needs astropy verison 2.0. Disable it right now
+    # NOTE: The feature below needs astropy version 2.0. Disable it right now
     default_differential = coord.SphericalCosLatDifferential
     obliquity = QuantityAttribute(default=OBL["DEFAULT"], unit=u.arcsec)
 
@@ -54,11 +54,11 @@ class PulsarEcliptic(coord.BaseCoordinateFrame):
         if "ecl" in kwargs:
             try:
                 kwargs["obliquity"] = OBL[kwargs["ecl"]]
-            except KeyError:
+            except KeyError as e:
                 raise ValueError(
                     "No obliquity " + kwargs["ecl"] + " provided. "
                     "Check your pint/datafile/ecliptic.dat file."
-                )
+                ) from e
             del kwargs["ecl"]
 
         super().__init__(*args, **kwargs)

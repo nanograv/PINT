@@ -43,8 +43,7 @@ def data_NGC6440E_efac():
     timfile = examplefile("NGC6440E.tim")
     model, toas = get_model_and_toas(parfile, timfile)
 
-    parfile = str(model)
-    parfile += "EFAC TEL gbt 1 1"
+    parfile = f"{str(model)}EFAC TEL gbt 1 1"
     model = get_model(io.StringIO(parfile))
     set_dummy_priors(model)
 
@@ -67,9 +66,11 @@ def data_NGC6440E_red():
     parfile = examplefile("NGC6440E.par.good")
     timfile = examplefile("NGC6440E.tim")
     model, toas = get_model_and_toas(parfile, timfile)
-    parfile = str(model)
-    parfile += """RNAMP         1e-6
-                  RNIDX         -3.82398"""
+    parfile = (
+        str(model)
+        + """RNAMP         1e-6
+             RNIDX         -3.82398"""
+    )
     model = get_model(io.StringIO(parfile))
     set_dummy_priors(model)
 

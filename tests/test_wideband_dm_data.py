@@ -1,5 +1,4 @@
-""" Various of tests on the wideband DM data
-"""
+""" Various of tests on the wideband DM data"""
 
 import io
 import os
@@ -88,7 +87,7 @@ def wb_toas_all(wb_model):
 
 
 class TestDMData:
-    def setup(self):
+    def setup_method(self):
         self.model = get_model("J1614-2230_NANOGrav_12yv3.wb.gls.par")
         self.toas = get_TOAs("J1614-2230_NANOGrav_12yv3.wb.tim")
         toa_backends, valid_flags = self.toas.get_flag_value("fe")

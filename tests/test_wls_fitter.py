@@ -1,6 +1,5 @@
-#! /usr/bin/env python
 import os
-import unittest
+import pytest
 
 from pint.models.model_builder import get_model
 from pint import toa
@@ -8,11 +7,11 @@ from pint.fitter import WLSFitter
 from pinttestdata import datadir
 
 
-class Testwls(unittest.TestCase):
+class Testwls:
     """Compare delays from the dd model with tempo and PINT"""
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         os.chdir(datadir)
         cls.par = "B1855+09_NANOGrav_dfg+12_TAI_FB90.par"
         cls.tim = "B1855+09_NANOGrav_dfg+12.tim"

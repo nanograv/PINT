@@ -70,8 +70,39 @@ def test_ECL_to_ICRS():
     assert np.allclose(r_ECL.resids, r_ICRS.resids)
 
 
+def test_ICRS_to_ECL_nouncertainties():
+    # start with ICRS model with no pm uncertainties, get residuals with ECL model, compare
+    model_ICRS = get_model(io.StringIO(modelstring_ICRS))
+    for p in ["PMRA", "PMDEC"]:
+        getattr(model_ICRS, p).frozen = True
+        getattr(model_ICRS, p).uncertainties = None
+
+    toas = pint.simulation.make_fake_toas_uniform(
+        MJDStart, MJDStop, NTOA, model=model_ICRS, error=1 * u.us, add_noise=True
+    )
+    r_ICRS = pint.residuals.Residuals(toas, model_ICRS)
+    r_ECL = pint.residuals.Residuals(toas, model_ICRS.as_ECL())
+    assert np.allclose(r_ECL.resids, r_ICRS.resids)
+    # assert model_ICRS.as_ECL(ecl).ECL.value == ecl
+
+
+def test_ECL_to_ICRS_nouncertainties():
+    # start with ECL model with no pm uncertainties, get residuals with ICRS model, compare
+    model_ECL = get_model(io.StringIO(modelstring_ECL))
+    for p in ["PMELONG", "PMELAT"]:
+        getattr(model_ECL, p).frozen = True
+        getattr(model_ECL, p).uncertainties = None
+
+    toas = pint.simulation.make_fake_toas_uniform(
+        MJDStart, MJDStop, NTOA, model=model_ECL, error=1 * u.us, add_noise=True
+    )
+    r_ECL = pint.residuals.Residuals(toas, model_ECL)
+    r_ICRS = pint.residuals.Residuals(toas, model_ECL.as_ICRS())
+    assert np.allclose(r_ECL.resids, r_ICRS.resids)
+
+
 def test_ECL_to_ECL():
-    # start with ECL model, get residuals with ECL model with differenct obliquity, compare
+    # start with ECL model, get residuals with ECL model with different obliquity, compare
     model_ECL = get_model(io.StringIO(modelstring_ECL))
 
     toas = pint.simulation.make_fake_toas_uniform(

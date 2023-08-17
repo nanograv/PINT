@@ -94,20 +94,17 @@ class BayesianTiming:
         squares with normalization term (gls), for narrow-band (nb) or wide-band (wb)
         dataset."""
 
-        if (
-            "NoiseComponent" in self.model.component_types
-            and self.model.has_correlated_errors
+        if "NoiseComponent" not in self.model.component_types:
+            return "wls"
+        if correlated_errors_present := np.any(
+            [nc.introduces_correlated_errors for nc in self.model.NoiseComponent_list]
         ):
             raise NotImplementedError(
                 "GLS likelihood for correlated noise is not yet implemented."
             )
-
-        if self.is_wideband:
-            self.likelihood_method = "wls-wb"
-            self._lnlikelihood = self._wls_wb_lnlikelihood
         else:
-            self.likelihood_method = "wls-nb"
-            self._lnlikelihood = self._wls_nb_lnlikelihood
+            return "wls"
+            # return "gls"
 
     def lnprior(self, params):
         """Basic implementation of a factorized log prior.
@@ -180,7 +177,7 @@ class BayesianTiming:
                 The value of the log-posterior at params
         """
         lnpr = self.lnprior(params)
-        return -np.inf if np.isnan(lnpr) else lnpr + self.lnlikelihood(params)
+        return lnpr + self.lnlikelihood(params) if np.isfinite(lnpr) else -np.inf
 
     def _wls_nb_lnlikelihood(self, params):
         """Implementation of Log-Likelihood function for uncorrelated noise only for

@@ -200,14 +200,13 @@ class BinaryDDK(BinaryDD):
                 "No valid AstrometryEcliptic or AstrometryEquatorial component found"
             )
 
-        if hasattr(self._parent, "PX"):
-            if self._parent.PX.value <= 0.0 or self._parent.PX.value is None:
-                raise TimingModelError("DDK model needs a valid `PX` value.")
-        else:
+        if not hasattr(self._parent, "PX"):
             raise MissingParameter(
                 "Binary_DDK", "PX", "DDK model needs PX from" "Astrometry."
             )
 
+        if self._parent.PX.value <= 0.0 or self._parent.PX.value is None:
+            raise TimingModelError("DDK model needs a valid `PX` value.")
         if "A1DOT" in self.params and self.A1DOT.value != 0:
             warnings.warn("Using A1DOT with a DDK model is not advised.")
 

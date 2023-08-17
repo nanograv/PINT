@@ -15,7 +15,6 @@
 
 import os
 import sys
-from packaging.version import parse
 
 import jupytext
 
@@ -58,6 +57,7 @@ extensions = [
     "nbsphinx",
     "paramtable",
     "componentlist",
+    "sitetable",
     #'IPython.sphinxext.ipython_console_highlighting',
 ]
 

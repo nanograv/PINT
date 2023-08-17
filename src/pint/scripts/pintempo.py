@@ -119,7 +119,7 @@ def main(argv=None):
         xt = t.get_mjds()
         ax.errorbar(xt, prefit_resids.to(u.us), t.get_errors().to(u.us), fmt="o")
         ax.errorbar(xt, f.resids.time_resids.to(u.us), t.get_errors().to(u.us), fmt="x")
-        ax.set_title("%s Timing Residuals" % m.PSR.value)
+        ax.set_title(f"{m.PSR.value} Timing Residuals")
         ax.set_xlabel("MJD")
         ax.set_ylabel("Residual (us)")
         ax.grid()
