@@ -1327,6 +1327,7 @@ def wavex_setup(fitter, freqs=None, n_freqs=None):
 
 def translate_wave_to_wavex(model):
     from pint.models import WaveX
+    from copy import deepcopy
 
     def translate_wave_freqs(om, k):
         return (om * (k + 1)) / (2.0 * np.pi)
