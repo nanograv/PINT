@@ -62,7 +62,6 @@ from pint.phase import Phase
 from pint.toa import TOAs
 from pint.utils import (
     PrefixError,
-    normalize_designmatrix,
     split_prefixed_name,
     open_or_use,
     colorize,
