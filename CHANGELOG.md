@@ -14,6 +14,7 @@ the unreleased changes. This file should only be changed while tagging a new ver
 - Unreleased CHANGELOG entries should now be entered in `CHANGELOG-unreleased.md` instead of `CHANGELOG.md`. Updated documentation accordingly.
 - Changed tests to remove `unittest` and use pure pytest format
 - Changed deprecated `sampler.chain` usage
+- Download data automatically in the profiling script `high_level_benchmark.py` instead of silently giving wrong results.
 ### Added
 - `SpindownBase` as the abstract base class for `Spindown` and `PeriodSpindown` in the `How_to_build_a_timing_model_component.py` example.
 - `SolarWindDispersionBase` as the abstract base class for solar wind dispersion components.

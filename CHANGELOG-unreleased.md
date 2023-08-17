@@ -14,10 +14,12 @@ the released changes.
 - Updated `CONTRIBUTING.rst` with the latest information.
 - Moved design matrix normalization code from `pint.fitter` to the new `pint.utils.normalize_designmatrix()` function.
 - Made `Residuals` independent of `GLSFitter` (GLS chi2 is now computed using the new function `Residuals._calc_gls_chi2()`).
+- Made `TimingModel.params` and `TimingModel.ordered_params` identical. Deprecated `TimingModel.ordered_params`.
 ### Added
 - Third-order Roemer delay terms to ELL1 model
 - Options to add a TZR TOA (`AbsPhase`) during the creation of a `TimingModel` using `ModelBuilder.__call__`, `get_model`, and `get_model_and_toas`
 - `pint.print_info()` function for bug reporting
+- Added an autocorrelation function to check for chain convergence in `event_optimize`
 ### Fixed
 - Deleting JUMP1 from flag tables will not prevent fitting
 - Simulating TOAs from tim file when PLANET_SHAPIRO is true now works
