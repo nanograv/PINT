@@ -354,7 +354,6 @@ class WaveX(DelayComponent):
             total_delay += wxsin * np.sin(arg.value) + wxcos * np.cos(arg.value)
         return total_delay
 
-    # Placeholder for calculations of derivatives
     def d_wavex_delay_d_WXSIN(self, toas, param, delays, acc_delay=None):
         par = getattr(self, param)
         freq = getattr(self, f"WXFREQ_{int(par.index):04d}").quantity
