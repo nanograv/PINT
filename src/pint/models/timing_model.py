@@ -508,7 +508,7 @@ class TimingModel:
         # them to be different.
 
         warn(
-            "`TimingModel.params_ordered` is now deprecated and maybe removed in the future. "
+            "`TimingModel.params_ordered` is now deprecated and may be removed in the future. "
             "Use `TimingModel.params` instead. It gives the same output as `TimingModel.params_ordered`.",
             DeprecationWarning,
         )
