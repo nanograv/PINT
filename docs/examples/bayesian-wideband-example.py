@@ -97,8 +97,3 @@ fig = corner.corner(
     samples_emcee, labels=bt.param_labels, quantiles=[0.5], truths=maxlike_params
 )
 plt.show()
-
-# %%
-# It seems like EFAC1 and DMEFAC1 have been overestimated. This is not an issue with the
-# Bayesian analysis, but with the simulations. PINT simulations sometimes inject more or less
-# noise than expected
