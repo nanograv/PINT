@@ -120,7 +120,7 @@ exclude_patterns = [
     "examples/example_dmx_ranges.py",
     "examples/example_pulse_numbers.py",
     "examples/bayesian-example-NGC6440E.py",
-    "examples/bayesian-example-J1614-2230-wb.py",
+    "examples/bayesian-wideband-example.py",
     "conf.py",
     "_ext",
 ]
