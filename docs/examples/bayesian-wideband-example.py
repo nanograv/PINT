@@ -1,14 +1,13 @@
-from pint.models import get_model_and_toas
-from pint.fitter import WidebandDownhillFitter
-from pint.models.priors import Prior
-from scipy.stats import uniform
-from pint.bayesian import BayesianTiming
-import emcee
-import numpy as np
-from pint.logging import setup as setup_log
 import corner
+import emcee
 import matplotlib.pyplot as plt
+import numpy as np
+
+from pint.bayesian import BayesianTiming
 from pint.config import examplefile
+from pint.fitter import WidebandDownhillFitter
+from pint.logging import setup as setup_log
+from pint.models import get_model_and_toas
 
 setup_log(level="WARNING")
 
