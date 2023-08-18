@@ -54,6 +54,11 @@ class BayesianTiming:
         self.model = deepcopy(model)
         self.toas = toas
 
+        if use_pulse_numbers:
+            self.toas.compute_pulse_numbers(self.model)
+
+        self.track_mode = "use_pulse_numbers" if use_pulse_numbers else "nearest"
+
         self.is_wideband = toas.is_wideband()
 
         self.param_labels = self.model.free_params
@@ -77,8 +82,6 @@ class BayesianTiming:
         self._validate_priors()
 
         self.likelihood_method = self._decide_likelihood_method()
-
-        self.track_mode = "use_pulse_numbers" if use_pulse_numbers else "nearest"
 
     def _validate_priors(self):
         for param in self.params:
