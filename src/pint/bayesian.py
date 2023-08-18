@@ -76,7 +76,7 @@ class BayesianTiming:
 
         self._validate_priors()
 
-        self._decide_likelihood_method()
+        self.likelihood_method = self._decide_likelihood_method()
 
         self.track_mode = "use_pulse_numbers" if use_pulse_numbers else "nearest"
 
@@ -104,19 +104,16 @@ class BayesianTiming:
             )
         else:
             return "wls"
-            # return "gls"
 
     def lnprior(self, params):
         """Basic implementation of a factorized log prior.
         More complex priors must be separately implemented.
 
         Args:
-            params : (array-like)
-                Parameters
+            params (array-like): Parameters
 
         Returns:
-            float :
-                Value of the log-prior at params
+            float: Value of the log-prior at params
         """
         if len(params) != self.nparams:
             raise IndexError(
@@ -138,12 +135,11 @@ class BayesianTiming:
         More complex prior transforms must be separately implemented.
 
         Args:
-            cube : (array-like)
-                Sample drawn from a uniform distribution defined in an nparams-dimensional unit hypercube.
+            cube (array-like): Sample drawn from a uniform distribution defined in an
+            nparams-dimensional unit hypercube.
 
         Returns:
-            ndarray :
-                Sample drawn from the prior distribution
+            ndarray : Sample drawn from the prior distribution
         """
         return np.array([param.prior._rv.ppf(x) for x, param in zip(cube, self.params)])
 
@@ -155,26 +151,33 @@ class BayesianTiming:
         is the generalized least-squares metric. For reference, see, e.g., Lentati+ 2013.
 
         Args:
-            params : (array-like)
-                Parameters
+            params (array-like): Parameters
 
         Returns:
-            float :
-                The value of the log-likelihood at params
+            float: The value of the log-likelihood at params
         """
-        return self._lnlikelihood(params)
+        if self.likelihood_method == "wls":
+            return (
+                self._wls_wb_lnlikelihood(params)
+                if self.is_wideband
+                else self._wls_nb_lnlikelihood(params)
+            )
+        elif self.likelihood_method == "gls":
+            raise NotImplementedError(
+                "GLS likelihood for correlated noise is not yet implemented."
+            )
+        else:
+            raise ValueError(f"Unknown likelihood method '{self.likelihood_method}'.")
 
     def lnposterior(self, params):
         """Log-posterior function. If the prior evaluates to zero, the likelihood
         is not evaluated.
 
         Args:
-            params : (array-like)
-                Parameters
+            params (array-like): Parameters
 
         Returns:
-            float :
-                The value of the log-posterior at params
+            float: The value of the log-posterior at params
         """
         lnpr = self.lnprior(params)
         return lnpr + self.lnlikelihood(params) if np.isfinite(lnpr) else -np.inf
