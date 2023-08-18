@@ -120,7 +120,8 @@ class BayesianTiming:
         """
         if len(params) != self.nparams:
             raise IndexError(
-                f"The number of input parameters ({len(params)}) should be the same as the number of free parameters ({self.nparams})."
+                f"The number of input parameters ({len(params)}) should be the same "
+                f"as the number of free parameters ({self.nparams})."
             )
 
         lnsum = 0.0
