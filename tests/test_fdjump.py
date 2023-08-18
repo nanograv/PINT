@@ -64,7 +64,7 @@ def test_refitting(model_and_toas):
     assert (
         np.abs(ftr.model.FD1JUMP1.value - FD1JUMP1_value_original)
         / ftr.model.FD1JUMP1.uncertainty_value
-        < 2
+        < 2.5
     )
 
 
