@@ -12,7 +12,6 @@ import numpy as np
 @pytest.fixture
 def model_and_toas():
     model_raw = get_model(datadir / "J1909-3744.NB.par")
-    model_raw.PLANET_SHAPIRO.value = False
     fdlines = (
         "FD1JUMP -sys GM_GWB_500_100_b1 0.01 1\n"
         "FD1JUMP -sys GM_GWB_1460_100_b1 0.02 1\n"
