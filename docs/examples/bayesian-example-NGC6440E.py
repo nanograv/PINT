@@ -6,6 +6,7 @@ from pint.models import get_model, get_model_and_toas
 from pint.bayesian import BayesianTiming
 from pint.config import examplefile
 from pint.models.priors import Prior
+from pint.logging import setup as setup_log
 from scipy.stats import uniform
 
 # %%
@@ -15,6 +16,10 @@ import nestle
 import corner
 import io
 import matplotlib.pyplot as plt
+
+# %%
+# Turn off log messages. They can slow down the processing.
+setup_log(level="WARNING")
 
 # %%
 # Read the par and tim files
