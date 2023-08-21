@@ -1297,6 +1297,32 @@ class AngleParameter(Parameter):
             angle_arcsec /= 15.0
         return angle_arcsec.to_string(decimal=True, precision=20)
 
+    def as_ufloat(self, units=None):
+        """Return the parameter as a :class:`uncertainties.ufloat`
+
+        Will cast to the specified units, or the default
+        If the uncertainty is not set will be returned as 0
+
+        Parameters
+        ----------
+        units : astropy.units.core.Unit, optional
+            Units to cast the value
+
+        Returns
+        -------
+        uncertainties.ufloat
+
+        Notes
+        -----
+        Currently :class:`~uncertainties.ufloat` does not support double precision values,
+        so some precision may be lost.
+        """
+        if units is None:
+            units = self.units
+        value = self.quantity.to_value(units) if self.quantity is not None else 0
+        error = self.uncertainty.to_value(units) if self.uncertainty is not None else 0
+        return ufloat(value, error)
+
 
 class prefixParameter:
     """Families of parameters identified by a prefix like ``DMX_0123``.
