@@ -1407,7 +1407,7 @@ def translate_wave_to_wavex(model):
             new_model.components["WaveX"].add_wavex_component(
                 wavex_freq, wxsin=-wave_sin_amp, wxcos=-wave_cos_amp
             )
-    return new_model.components["WaveX"].get_indices(), new_model
+    return new_model
 
 
 def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
