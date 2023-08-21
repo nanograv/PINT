@@ -1163,6 +1163,18 @@ class MJDParameter(Parameter):
         error = self.uncertainty.to_value(u.d) if self.uncertainty is not None else 0
         return ufloat(value1, 0), ufloat(value2, error)
 
+    def as_ufloat(self):
+        """Return the parameter as a :class:`uncertainties.ufloat`
+        value.
+
+        If the uncertainty is not set will be returned as 0
+
+        Returns
+        -------
+        uncertainties.ufloat
+        """
+        return ufloat(self.value, self.uncertainty_value)
+
 
 class AngleParameter(Parameter):
     """Parameter in angle units.
