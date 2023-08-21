@@ -19,6 +19,7 @@ the released changes.
 - `pint.print_info()` function for bug reporting
 - Added an autocorrelation function to check for chain convergence in `event_optimize`
 - Minor doc updates to explain default NHARMS and missing derivative functions
+- `pint.output.publish` module and `pintpublish` script for generating publication (LaTeX) output.
 ### Fixed
 - Deleting JUMP1 from flag tables will not prevent fitting
 - Simulating TOAs from tim file when PLANET_SHAPIRO is true now works
