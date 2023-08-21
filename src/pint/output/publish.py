@@ -5,18 +5,20 @@ from pint.models import (
     Glitch,
     PhaseJump,
     SolarWindDispersionX,
+    AbsPhase,
 )
-from pint.models.absolute_phase import AbsPhase
+from pint.models.dispersion_model import DispersionJump
 from pint.models.noise_model import NoiseComponent
 from pint.models.parameter import (
     Parameter,
     boolParameter,
+    funcParameter,
     intParameter,
     maskParameter,
     strParameter,
 )
 from pint.toa import TOAs
-from pint.residuals import Residuals
+from pint.residuals import Residuals, WidebandTOAResiduals
 from io import StringIO
 import numpy as np
 
@@ -65,7 +67,13 @@ def publish(
         else "WLS"
     )
 
-    res = Residuals(toas, model)
+    if toas.is_wideband():
+        res = WidebandTOAResiduals(toas, model)
+        toares = res.toa
+        dmres = res.dm
+    else:
+        res = Residuals(toas, model)
+        toares = res
 
     exclude_params = [
         "START",
@@ -89,7 +97,7 @@ def publish(
     if not include_dmx:
         exclude_components.append(DispersionDMX)
     if not include_jumps:
-        exclude_components.append(PhaseJump)
+        exclude_components.extend([PhaseJump, DispersionJump])
     if not include_fd:
         exclude_components.append(FD)
     if not include_noise:
@@ -147,6 +155,11 @@ def publish(
                 f"Number of JUMPs               \\dotfill & {model.get_number_of_jumps()}      \\\\ \n"
             )
 
+        if "DispersionJump" in model.components:
+            tex.write(
+                f"Number of DMJUMPs               \\dotfill & {len(model.dm_jumps)}      \\\\ \n"
+            )
+
         if "DispersionDMX" in model.components:
             tex.write(
                 f"Number of DMX ranges          \\dotfill & {len(model.components['DispersionDMX'].get_indices())}      \\\\ \n"
@@ -197,15 +210,25 @@ def publish(
         )
         tex.write(f"Fitting method               \\dotfill & {fit_method}      \\\\ \n")
         tex.write(
-            f"RMS TOA residuals ($\\mu s$) \\dotfill & {res.calc_time_resids().to('us').value.std():.2f}   \\\\ \n"
+            f"RMS TOA residuals ($\\mu s$) \\dotfill & {toares.calc_time_resids().to('us').value.std():.2e}   \\\\ \n"
         )
-        tex.write(f"chi2                         \\dotfill & {res.chi2:.2f}    \\\\ \n")
+        if toas.is_wideband():
+            tex.write(
+                f"RMS DM residuals (pc / cm3) \\dotfill & {dmres.calc_resids().to('pc/cm^3').value.std():.2e}   \\\\ \n"
+            )
         tex.write(
-            f"Reduced chi2                 \\dotfill & {res.chi2_reduced:.2f}    \\\\ \n"
+            f"$\\chi^2$                         \\dotfill & {res.chi2:.2f}    \\\\ \n"
         )
+        if toas.is_wideband():
+            tex.write(f"Degrees of freedom \\dotfill & {res.dof}   \\\\ \n")
+        else:
+            tex.write(
+                f"Reduced $\\chi^2$                 \\dotfill & {res.chi2_reduced:.2f}    \\\\ \n"
+            )
         tex.write("\\hline\n")
 
         tex.write("\multicolumn{2}{c}{Measured Quantities} \\\\ \n")
+        tex.write("\\hline\n")
         for fp in model.free_params:
             param = getattr(model, fp)
             if (
@@ -232,14 +255,27 @@ def publish(
                     [not isinstance(param._parent, exc) for exc in exclude_components]
                 )
                 and (param.value != 0 or include_zeros)
+                and not isinstance(param, funcParameter)
             ):
                 tex.write(publish_param(param))
 
         tex.write("\\hline\n")
+
+        tex.write("\multicolumn{2}{c}{Derived Quantities} \\\\ \n")
+        tex.write("\\hline\n")
+        for p in model.params:
+            param = getattr(model, p)
+
+            if param.value is not None and isinstance(param, funcParameter):
+                tex.write(publish_param(param))
+        tex.write("\\hline\n")
+
         tex.write("\\end{tabular}\n")
         tex.write("\\end{table}\n")
         tex.write("\\end{document}\n")
 
         output = tex.getvalue()
+
+    output = output.replace("_", "\\_")
 
     return output
