@@ -1383,32 +1383,31 @@ def translate_wave_to_wavex(model):
     -------
     indices : list
             Indices that have been assigned to new WaveX components
-    Editted timing model with Wave model removed and converted WaveX model included"""
+    New timing model with Wave model removed and converted WaveX model included"""
     from pint.models.wavex import WaveX
 
+    new_model = deepcopy(model)
     wave_names = [
         "WAVE%d" % ii for ii in range(1, model.components["Wave"].num_wave_terms + 1)
     ]
-    wave_terms = deepcopy(
-        [getattr(model.components["Wave"], name) for name in wave_names]
-    )
-    wave_om = deepcopy(model.components["Wave"].WAVE_OM.quantity)
-    wave_epoch = deepcopy(model.components["Wave"].WAVEEPOCH.quantity)
-    model.remove_component("Wave")
-    model.add_component(WaveX())
-    model.WXEPOCH.value = wave_epoch.value
+    wave_terms = [getattr(model.components["Wave"], name) for name in wave_names]
+    wave_om = model.components["Wave"].WAVE_OM.quantity
+    wave_epoch = model.components["Wave"].WAVEEPOCH.quantity
+    new_model.remove_component("Wave")
+    new_model.add_component(WaveX())
+    new_model.WXEPOCH.value = wave_epoch.value
     for k, wave_term in enumerate(wave_terms):
         wave_sin_amp, wave_cos_amp = wave_term.quantity
         wavex_freq = _translate_wave_freqs(wave_om, k)
         if k == 1:
-            model.WXFREQ_0001.value = wavex_freq.value
-            model.WXSIN_0001.value = -wave_sin_amp.value
-            model.WXCOS_0001.value = -wave_cos_amp.value
+            new_model.WXFREQ_0001.value = wavex_freq.value
+            new_model.WXSIN_0001.value = -wave_sin_amp.value
+            new_model.WXCOS_0001.value = -wave_cos_amp.value
         else:
-            model.components["WaveX"].add_wavex_component(
+            new_model.components["WaveX"].add_wavex_component(
                 wavex_freq, wxsin=-wave_sin_amp, wxcos=-wave_cos_amp
             )
-    return model.components["WaveX"].get_indices()
+    return new_model.components["WaveX"].get_indices(), new_model
 
 
 def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
