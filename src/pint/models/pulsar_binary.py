@@ -158,7 +158,7 @@ class PulsarBinary(DelayComponent):
             floatParameter(
                 name="M2",
                 units=u.M_sun,
-                description="Mass of companion in the unit Sun mass",
+                description="Companion mass",
             )
         )
         self.add_param(

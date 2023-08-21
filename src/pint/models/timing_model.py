@@ -308,7 +308,7 @@ class TimingModel:
         self.add_param_from_top(
             strParameter(
                 name="BINARY",
-                description="The Pulsar System/Binary model to use.",
+                description="Pulsar System/Binary model",
                 value=None,
             ),
             "",
@@ -2908,6 +2908,9 @@ class Component(metaclass=ModelMeta):
             # convention of name + no_leading_zero_index
             param.name = prefix + str(idx)
             param.index = idx
+
+            if hasattr(self, f"{prefix}1"):
+                param.description = getattr(self, f"{prefix}1").description
 
         # A more general check
         if param.name in self.params:
