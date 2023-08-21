@@ -108,7 +108,7 @@ class Spindown(SpindownBase):
 
     def F_description(self, n):
         """Template function for description"""
-        return "Spin-frequency %d derivative" % n  # if n else "Spin-frequency"
+        return "Spin-frequency derivative %d" % n if n > 0 else "Spin-frequency"
 
     def F_unit(self, n):
         """Template function for unit"""
