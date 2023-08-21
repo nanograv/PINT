@@ -55,6 +55,7 @@ import pint
 import pint.pulsar_ecliptic
 from pint.toa_select import TOASelect
 
+
 __all__ = [
     "PosVel",
     "numeric_partial",
@@ -1266,7 +1267,7 @@ def split_swx(model, time):
     return index, newindex
 
 
-def wavex_setup(fitter, freqs=None, n_freqs=None):
+def wavex_setup(model, T_span, freqs=None, n_freqs=None):
     """Set-up a WaveX model based on either an array of user-provided frequencies or the wave number
     frequency calculation. Sine and Cosine amplitudes are initially set to zero
 
@@ -1276,12 +1277,16 @@ def wavex_setup(fitter, freqs=None, n_freqs=None):
 
     Parameters
     ----------
-    fitter: PINT fitter object, None
-    freqs: iterable of float or astropy.quantity.Quantity
+    model: pint.models.timing_model.TimingModel
+    freqs: iterable of float or astropy.quantity.Quantity, None
         User inputed base frequencies
     n_freqs: int, None
         Number of wave frequencies to calculate using the equation: freq_n = 2 * pi * n / T_span
         Where n is the wave number, and T_span is the total time span of the toas in the fitter object
+    T_span: float, astropy.quantity.Quantity
+        Time span used to calculate nyquist frequency when using freqs
+        Time span used to calculate WaveX frequencies when using n_freqs
+        Usually to be set as the length of the timing baseline the model is being used for
 
     Returns
     -------
@@ -1303,8 +1308,12 @@ def wavex_setup(fitter, freqs=None, n_freqs=None):
 
     if n_freqs == 0:
         raise ValueError("Must use a non-zero number of wave frequencies")
-    fitter.model.add_component(WaveX())
-    T_span = fitter.toas.get_mjds().max() - fitter.toas.get_mjds().min()
+    model.add_component(WaveX())
+    if isinstance(T_span, u.quantity.Quantity):
+        T_span.to(u.d)
+    else:
+        T_span *= u.d
+
     nyqist_freq = 1.0 / (2.0 * T_span)
     if freqs is not None:
         if isinstance(freqs, u.quantity.Quantity):
@@ -1312,27 +1321,27 @@ def wavex_setup(fitter, freqs=None, n_freqs=None):
         else:
             freqs *= u.d**-1
         if len(freqs) == 1:
-            fitter.model.WXFREQ_0001.quantity = freqs
+            model.WXFREQ_0001.quantity = freqs
         else:
             np.array(freqs)
             freqs.sort()
-            if min(np.diff(freqs.value)) < nyqist_freq.value:
+            if min(np.diff(freqs)) < nyqist_freq:
                 raise ValueError(
                     "Wave frequency spacing is finer than frequency resolution of data"
                 )
-            fitter.model.WXFREQ_0001.value = freqs[0]
-            fitter.model.components["WaveX"].add_wavex_components(freqs[1:])
+            model.WXFREQ_0001.quantity = freqs[0]
+            model.components["WaveX"].add_wavex_components(freqs[1:])
 
     if n_freqs is not None:
         if n_freqs == 1:
             wave_freq = 2.0 * np.pi / T_span
-            fitter.model.WXFREQ_0001.value = wave_freq
+            model.WXFREQ_0001.quantity = wave_freq
         else:
             wave_numbers = np.arange(1, n_freqs + 1)
             wave_freqs = 2.0 * np.pi * wave_numbers / T_span
-            fitter.model.WXFREQ_0001.value = wave_freqs[0]
-            fitter.model.components["WaveX"].add_wavex_components(wave_freqs[1:])
-    return fitter.model.components["WaveX"].get_indices()
+            model.WXFREQ_0001.quantity = wave_freqs[0]
+            model.components["WaveX"].add_wavex_components(wave_freqs[1:])
+    return model.components["WaveX"].get_indices()
 
 
 def _translate_wave_freqs(om, k):
@@ -1342,13 +1351,17 @@ def _translate_wave_freqs(om, k):
     ----------
     om: float or astropy.quantity.Quantity
         Base frequency of Wave model solution - parameter WAVEOM
+        If float is given default units of 1/d assigned
     k: int
         wave number to use to calculate WaveX WXFREQ_ frequency parameter
 
     Returns
     -------
-    WXFREQ_ value or quantity that can be used in WaveX model"""
-
+    WXFREQ_ quantity in units 1/d that can be used in WaveX model"""
+    if isinstance(om, u.quantity.Quantity):
+        om.to(u.d**-1)
+    else:
+        om *= u.d**-1
     return (om * (k + 1)) / (2.0 * np.pi)
 
 
@@ -1370,7 +1383,7 @@ def translate_wave_to_wavex(model):
     indices : list
             Indices that have been assigned to new WaveX components
     Editted timing model with Wave model removed and converted WaveX model included"""
-    from pint.models import WaveX
+    from pint.models.wavex import WaveX
 
     wave_names = [
         "WAVE%d" % ii for ii in range(1, model.components["Wave"].num_wave_terms + 1)
@@ -1388,11 +1401,11 @@ def translate_wave_to_wavex(model):
         wavex_freq = _translate_wave_freqs(wave_om, k)
         if k == 1:
             model.WXFREQ_0001.value = wavex_freq.value
-            model.WXSIN_0001.value = wave_sin_amp.value
-            model.WXCOS_0001.value = wave_cos_amp.value
+            model.WXSIN_0001.value = -wave_sin_amp.value
+            model.WXCOS_0001.value = -wave_cos_amp.value
         else:
             model.components["WaveX"].add_wavex_component(
-                wavex_freq, wxsin=wave_sin_amp, wxcos=wave_cos_amp
+                wavex_freq, wxsin=-wave_sin_amp, wxcos=-wave_cos_amp
             )
     return model.components["WaveX"].get_indices()
 
