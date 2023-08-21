@@ -102,7 +102,9 @@ class PulsarBinary(DelayComponent):
         )
         self.add_param(
             floatParameter(
-                name="A1", units=ls, description="Projected semi-major axis, a*sin(i)"
+                name="A1",
+                units=ls,
+                description="Projected semi-major axis of pulsar orbit",
             )
         )
         # NOTE: the DOT here takes the value and times 1e-12, tempo/tempo2 can
