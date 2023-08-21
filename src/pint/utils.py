@@ -50,6 +50,7 @@ from astropy.time import Time
 from loguru import logger as log
 from scipy.special import fdtrc
 from copy import deepcopy
+import warnings
 
 import pint
 import pint.pulsar_ecliptic
@@ -1271,8 +1272,8 @@ def wavex_setup(model, T_span, freqs=None, n_freqs=None):
     """Set-up a WaveX model based on either an array of user-provided frequencies or the wave number
     frequency calculation. Sine and Cosine amplitudes are initially set to zero
 
-    User specifies either freqs or n_freqs. This function assumes that the timing model does not already
-    have any WaveX components. See add_wavex_component() or add_wavex_components to add WaveX components
+    User specifies T_span and either freqs or n_freqs. This function assumes that the timing model does not already
+    have any WaveX components. See add_wavex_component() or add_wavex_components() to add WaveX components
     to an existing WaveX model.
 
     Parameters
@@ -1326,7 +1327,7 @@ def wavex_setup(model, T_span, freqs=None, n_freqs=None):
             np.array(freqs)
             freqs.sort()
             if min(np.diff(freqs)) < nyqist_freq:
-                raise ValueError(
+                warnings.warn(
                     "Wave frequency spacing is finer than frequency resolution of data"
                 )
             model.WXFREQ_0001.quantity = freqs[0]
