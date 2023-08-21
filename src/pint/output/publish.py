@@ -1,4 +1,5 @@
 from pint.models import TimingModel
+from pint.models.noise_model import NoiseComponent
 from pint.models.parameter import (
     AngleParameter,
     MJDParameter,
@@ -16,7 +17,14 @@ import numpy as np
 from uncertainties import ufloat
 
 
-def publish(model: TimingModel, toas: TOAs):
+def publish(
+    model: TimingModel,
+    toas: TOAs,
+    include_dmx=False,
+    include_noise=False,
+    include_jumps=True,
+    include_zeros=False,
+):
     psrname = model.PSR.value
     nfree = len(model.free_params)
     ephem = model.EPHEM.value
@@ -58,6 +66,12 @@ def publish(model: TimingModel, toas: TOAs):
         "ECL",
     ]
 
+    exclude_prefixes = []
+    if not include_dmx:
+        exclude_prefixes.append("DMX")
+    if not include_jumps:
+        exclude_prefixes.append("JUMP")
+
     with StringIO("w") as tex:
         tex.write("\\documentclass{article}\n")
         tex.write("\\begin{document}\n")
@@ -93,42 +107,69 @@ def publish(model: TimingModel, toas: TOAs):
 
         tex.write("\multicolumn{2}{c}{Measured Quantities} \\\\ \n")
         for fp in model.free_params:
-            param = getattr(model, fp)
-            if isinstance(param, MJDParameter):
-                uf = ufloat(param.value, param.uncertainty_value)
-                tex.write(
-                    "%s, %s (%s)\dotfill &  %s \\\\ \n"
-                    % (param.name, param.description, str(param.units), f"{uf:.1uS}")
-                )
-            elif isinstance(param, maskParameter):
-                tex.write(
-                    "%s %s %s, %s (%s)\dotfill &  %s \\\\ \n"
-                    % (
-                        param.prefix,
-                        param.key,
-                        " ".join(param.key_value),
-                        param.description,
-                        str(param.units),
-                        f"{param.as_ufloat():.1uS}",
+            if fp not in exclude_params and all(
+                [not fp.startswith(pre) for pre in exclude_prefixes]
+            ):
+                param = getattr(model, fp)
+
+                if isinstance(param._parent, NoiseComponent) and not include_noise:
+                    continue
+
+                if param.value == 0 and not include_zeros:
+                    continue
+
+                if isinstance(param, MJDParameter):
+                    uf = ufloat(param.value, param.uncertainty_value)
+                    tex.write(
+                        "%s, %s (%s)\dotfill &  %s \\\\ \n"
+                        % (
+                            param.name,
+                            param.description,
+                            str(param.units),
+                            f"{uf:.1uS}",
+                        )
                     )
-                )
-            else:
-                tex.write(
-                    "%s, %s (%s)\dotfill &  %s \\\\ \n"
-                    % (
-                        param.name,
-                        param.description,
-                        str(param.units),
-                        f"{param.as_ufloat():.1uS}",
+                elif isinstance(param, maskParameter):
+                    tex.write(
+                        "%s %s %s, %s (%s)\dotfill &  %s \\\\ \n"
+                        % (
+                            param.prefix,
+                            param.key,
+                            " ".join(param.key_value),
+                            param.description,
+                            str(param.units),
+                            f"{param.as_ufloat():.1uS}",
+                        )
                     )
-                )
+                else:
+                    tex.write(
+                        "%s, %s (%s)\dotfill &  %s \\\\ \n"
+                        % (
+                            param.name,
+                            param.description,
+                            str(param.units),
+                            f"{param.as_ufloat():.1uS}",
+                        )
+                    )
         tex.write("\\hline\n")
 
         tex.write("\multicolumn{2}{c}{Set Quantities} \\\\ \n")
         tex.write("\\hline\n")
         for p in model.params:
             param = getattr(model, p)
-            if param.value is not None and param.frozen and p not in exclude_params:
+
+            if isinstance(param._parent, NoiseComponent) and not include_noise:
+                continue
+
+            if param.value == 0 and not include_zeros:
+                continue
+
+            if (
+                param.value is not None
+                and param.frozen
+                and p not in exclude_params
+                and all([not p.startswith(pre) for pre in exclude_prefixes])
+            ):
                 if isinstance(param, maskParameter):
                     tex.write(
                         "%s %s %s, %s (%s)\dotfill &  %f \\\\ \n"
@@ -169,8 +210,6 @@ def publish(model: TimingModel, toas: TOAs):
                         "%s, %s \dotfill &  %d \\\\ \n"
                         % (param.name, param.description, param.value)
                     )
-
-                    # tex.write("%s, %s (%s)\dotfill &  %f \\\\ \n" % (param.name, param.description, str(param.units), param.value))
 
         # Epoch of frequency determination (MJD)\dotfill & 53750 \\
         # Epoch of position determination (MJD)\dotfill & 53750 \\
