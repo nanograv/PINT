@@ -1,9 +1,12 @@
 from pint.models import get_model_and_toas
 from pint.output.publish import publish
+from pint.logging import setup as setup_log
 import argparse
 
 
 def main(argv=None):
+    setup_log(level="WARNING")
+
     parser = argparse.ArgumentParser(
         description="Publication output for PINT",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,

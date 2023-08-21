@@ -16,7 +16,6 @@ from pint.models.parameter import (
     funcParameter,
     intParameter,
     maskParameter,
-    pairParameter,
     strParameter,
 )
 from pint.toa import TOAs
