@@ -262,7 +262,7 @@ def publish(
             tex.write(f"Degrees of freedom \\dotfill & {res.dof}   \\\\ \n")
         else:
             tex.write(
-                f"Reduced $\\chi^2$                 \\dotfill & {res.chi2_reduced:.2f}    \\\\ \n"
+                f"Reduced $\\chi^2$                 \\dotfill & {res.reduced_chi2:.2f}    \\\\ \n"
             )
         tex.write("\\hline\n")
 
