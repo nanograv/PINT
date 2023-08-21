@@ -19,6 +19,7 @@ the released changes.
 - `pint.print_info()` function for bug reporting
 - Added an autocorrelation function to check for chain convergence in `event_optimize`
 - Minor doc updates to explain default NHARMS and missing derivative functions
+- Support for wideband data in `pint.bayesian` (no correlated noise).
 ### Fixed
 - Deleting JUMP1 from flag tables will not prevent fitting
 - Simulating TOAs from tim file when PLANET_SHAPIRO is true now works
