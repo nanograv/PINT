@@ -1410,6 +1410,98 @@ def translate_wave_to_wavex(model):
     return new_model
 
 
+def get_wavex_freqs(model, index=None):
+    """Return the WaveX frequencies for a timing model.
+
+    If index is specified, returns the frequencies corresponding to the user-provided indices.
+    If index isn't specified, returns all WaveX frequencies in timing model
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+        Timing model from which to return WaveX frequencies
+    index: : float, int, list, np.ndarray, None
+        Number or list/array of numbers corresponding to WaveX frequencies to return
+
+    Returns
+    -------
+    List of WXFREQ_ parameters"""
+    if index == None:
+        freqs = model.components["WaveX"].get_prefix_mapping_component("WXFREQ_")
+        if len(freqs) == 1:
+            values = getattr(model.components["WaveX"], freqs.values())
+        else:
+            values = [
+                getattr(model.components["WaveX"], param) for param in freqs.values()
+            ]
+    elif isinstance(index, (int, float, np.int64)):
+        idx_rf = f"{int(index):04d}"
+        values = getattr(model.components["WaveX"], "WXFREQ_" + idx_rf)
+    elif isinstance(index, (list, set, np.ndarray)):
+        idx_rf = [f"{int(idx):04d}" for idx in index]
+        values = [getattr(model.components["WaveX"], "WXFREQ_" + ind) for ind in idx_rf]
+    else:
+        raise TypeError(
+            f"index most be a float, int, set, list, array, or None - not {type(index)}"
+        )
+    return values
+
+
+def get_wavex_amps(model, index=None):
+    """Return the WaveX amplitudes for a timing model.
+
+    If index is specified, returns the sine/cosine amplitudes corresponding to the user-provided indices.
+    If index isn't specified, returns all WaveX sine/cosine amplitudes in timing model
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+        Timing model from which to return WaveX frequencies
+    index: : float, int, list, np.ndarray, None
+        Number or list/array of numbers corresponding to WaveX amplitudes to return
+
+    Returns
+    -------
+    List of WXSIN_ and WXCOS_ parameters"""
+    if index == None:
+        indices = (
+            model.components["WaveX"].get_prefix_mapping_component("WXSIN_").keys()
+        )
+        if len(indices) == 1:
+            values = (
+                getattr(model.components["WaveX"], "WXSIN_" + f"{int(indices):04d}"),
+                getattr(model.components["WaveX"], "WXCOS_" + f"{int(indices):04d}"),
+            )
+        else:
+            values = [
+                (
+                    getattr(model.components["WaveX"], "WXSIN_" + f"{int(idx):04d}"),
+                    getattr(model.components["WaveX"], "WXCOS_" + f"{int(idx):04d}"),
+                )
+                for idx in indices
+            ]
+    elif isinstance(index, (int, float, np.int64)):
+        idx_rf = f"{int(index):04d}"
+        values = (
+            getattr(model.components["WaveX"], "WXSIN_" + idx_rf),
+            getattr(model.components["WaveX"], "WXCOS_" + idx_rf),
+        )
+    elif isinstance(index, (list, set, np.ndarray)):
+        idx_rf = [f"{int(idx):04d}" for idx in index]
+        values = [
+            (
+                getattr(model.components["WaveX"], "WXSIN_" + ind),
+                getattr(model.components["WaveX"], "WXCOS_" + ind),
+            )
+            for ind in idx_rf
+        ]
+    else:
+        raise TypeError(
+            f"index most be a float, int, set, list, array, or None - not {type(index)}"
+        )
+    return values
+
+
 def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
     """Compute weighted mean of input values
 
