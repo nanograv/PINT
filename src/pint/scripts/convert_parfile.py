@@ -44,9 +44,9 @@ def main(argv=None):
     )
     parser.add_argument(
         "--nharms",
-        default=3,
+        default=7,
         type=int,
-        help="Number of harmonics (convert to ELL1H only)",
+        help="Number of harmonics (convert to ELL1H only); note that default value for tempo2 is 4",
     )
     parser.add_argument(
         "--usestigma",
