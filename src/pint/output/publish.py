@@ -6,6 +6,7 @@ from pint.models import (
     PhaseJump,
     SolarWindDispersionX,
     AbsPhase,
+    Wave,
 )
 from pint.models.dispersion_model import DispersionJump
 from pint.models.noise_model import NoiseComponent
@@ -15,6 +16,7 @@ from pint.models.parameter import (
     funcParameter,
     intParameter,
     maskParameter,
+    pairParameter,
     strParameter,
 )
 from pint.toa import TOAs
@@ -93,7 +95,7 @@ def publish(
         "BINARY",
     ]
 
-    exclude_components = []
+    exclude_components = [Wave]
     if not include_dmx:
         exclude_components.append(DispersionDMX)
     if not include_jumps:
@@ -200,6 +202,10 @@ def publish(
             tex.write(
                 f"Number of DMEQUADs          \\dotfill & {len(model.DMEQUADs)}      \\\\ \n"
             )
+        if "Wave" in model.components:
+            tex.write(
+                f"Number of WAVE components    \\dotfill & {model.num_wave_terms}      \\\\ \n"
+            )
 
         tex.write("\\hline\n")
 
@@ -232,10 +238,8 @@ def publish(
         for fp in model.free_params:
             param = getattr(model, fp)
             if (
-                fp not in exclude_params
-                and all(
-                    [not isinstance(param._parent, exc) for exc in exclude_components]
-                )
+                all([not isinstance(param._parent, exc) for exc in exclude_components])
+                and fp not in exclude_params
                 and (param.value != 0 or include_zeros)
             ):
                 tex.write(publish_param(param))
@@ -248,12 +252,10 @@ def publish(
             param = getattr(model, p)
 
             if (
-                param.value is not None
+                all([not isinstance(param._parent, exc) for exc in exclude_components])
+                and param.value is not None
                 and param.frozen
                 and p not in exclude_params
-                and all(
-                    [not isinstance(param._parent, exc) for exc in exclude_components]
-                )
                 and (param.value != 0 or include_zeros)
                 and not isinstance(param, funcParameter)
             ):
@@ -266,7 +268,7 @@ def publish(
         for p in model.params:
             param = getattr(model, p)
 
-            if param.value is not None and isinstance(param, funcParameter):
+            if isinstance(param, funcParameter) and param.value is not None:
                 tex.write(publish_param(param))
         tex.write("\\hline\n")
 
