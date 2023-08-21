@@ -1,3 +1,4 @@
+"""Generate LaTeX summary of a timing model and TOAs."""
 from pint.models import (
     TimingModel,
     DispersionDMX,
@@ -25,6 +26,7 @@ import numpy as np
 
 
 def publish_param_value(param: Parameter):
+    """Return LaTeX string for a parameter value"""
     if isinstance(param, boolParameter):
         return "Y" if param.value else "N"
     elif isinstance(param, strParameter):
@@ -36,10 +38,12 @@ def publish_param_value(param: Parameter):
 
 
 def publish_param_unit(param: Parameter):
+    """Return LaTeX string for a parameter unit"""
     return "" if param.units == "" or param.units is None else f" ({param.units})"
 
 
 def publish_param(param):
+    """Return LaTeX line for a parameter"""
     if isinstance(param, maskParameter):
         return f"{param.prefix} {param.key} {' '.join(param.key_value)}, {param.description}{publish_param_unit(param)}\dotfill &  {publish_param_value(param)} \\\\ \n"
     else:
@@ -58,6 +62,36 @@ def publish(
     include_swx=False,
     include_tzr=False,
 ):
+    """Generate LaTeX summary of a given timing model and TOAs.
+
+    Parameters
+    ----------
+    model: pint.model.timing_model.TimingModel
+        Input timing model
+    toas: TOAs
+        Input TOAs
+    include_dmx: bool
+        Whether to include DMX paremeters (default is False)
+    include_noise: bool
+        Whether to include noise paremeters (default is False)
+    include_jumps: bool
+        Whether to include jump paremeters (JUMPs, DMJUMPs) (default is False)
+    include_zeros: bool
+        Whether to include paremeters which are zero (default is False)
+    include_fd: bool
+        Whether to include FD paremeters (default is False)
+    include_glitches: bool
+        Whether to include glitch paremeters (default is False)
+    include_swx: bool
+        Whether to include SWX paremeters (default is False)
+    include_tzr: bool
+        Whether to include TZR paremeters (default is False)
+
+    Returns
+    -------
+    latex_summary: str
+        The LaTeX summary
+    """
     mjds = toas.get_mjds()
     mjd_start, mjd_end = int(min(mjds.value)), int(max(mjds.value))
     data_span_yr = (mjd_end - mjd_start) / 365.25

@@ -1,3 +1,4 @@
+"""Generate LaTeX summary of a timing model and TOAs."""
 from pint.models import get_model_and_toas
 from pint.output.publish import publish
 from pint.logging import setup as setup_log
