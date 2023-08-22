@@ -55,7 +55,6 @@ import warnings
 import pint
 import pint.pulsar_ecliptic
 from pint.toa_select import TOASelect
-from pint.models.parameter import prefixParameter
 
 
 __all__ = [
@@ -1438,6 +1437,8 @@ def translate_wave_to_wavex(model):
 
 
 def _add_wave_comp(model, index, amps):
+    from pint.models.parameter import prefixParameter
+
     """Tool to add waves to a Wave model for translating between WaveX and Wave model.
 
     Paramters
