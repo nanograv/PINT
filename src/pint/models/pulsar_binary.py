@@ -104,7 +104,7 @@ class PulsarBinary(DelayComponent):
             floatParameter(
                 name="A1",
                 units=ls,
-                description="Projected semi-major axis of pulsar orbit",
+                description="Projected semi-major axis of pulsar orbit, ap*sin(i)",
             )
         )
         # NOTE: the DOT here takes the value and times 1e-12, tempo/tempo2 can
@@ -114,7 +114,7 @@ class PulsarBinary(DelayComponent):
                 name="A1DOT",
                 aliases=["XDOT"],
                 units=ls / u.s,
-                description="Derivative of projected semi-major axis, da*sin(i)/dt",
+                description="Derivative of projected semi-major axis, d[ap*sin(i)]/dt",
                 unit_scale=True,
                 scale_factor=1e-12,
                 scale_threshold=1e-7,

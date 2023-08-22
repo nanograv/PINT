@@ -301,7 +301,7 @@ class EcorrNoise(NoiseComponent):
                 name="ECORR",
                 units="us",
                 aliases=["TNECORR"],
-                description="An error term that correlates all TOAs in an observing epoch.",
+                description="An error term that is correlated among all TOAs in an observing epoch.",
             )
         )
 

@@ -117,7 +117,7 @@ class BinaryELL1(PulsarBinary):
             floatParameter(
                 name="EPS1",
                 units="",
-                description="First Laplace-Lagrange parameter",
+                description="First Laplace-Lagrange parameter, ECC*sin(OM)",
                 long_double=True,
             )
         )
@@ -126,7 +126,7 @@ class BinaryELL1(PulsarBinary):
             floatParameter(
                 name="EPS2",
                 units="",
-                description="Second Laplace-Lagrange parameter",
+                description="Second Laplace-Lagrange parameter, ECC*cos(OM)",
                 long_double=True,
             )
         )
