@@ -13,11 +13,7 @@ from pint.models.dispersion_model import DispersionJump
 from pint.models.noise_model import NoiseComponent
 from pint.models.parameter import (
     Parameter,
-    boolParameter,
     funcParameter,
-    intParameter,
-    maskParameter,
-    strParameter,
 )
 from pint.toa import TOAs
 from pint.residuals import Residuals, WidebandTOAResiduals
@@ -25,35 +21,10 @@ from io import StringIO
 import numpy as np
 
 
-def publish_param_value(param: Parameter):
-    """Return LaTeX string for a parameter value"""
-    if isinstance(param, boolParameter):
-        return "Y" if param.value else "N"
-    elif isinstance(param, strParameter):
-        return param.value
-    elif isinstance(param, intParameter):
-        return str(param.value)
-    else:
-        return (
-            f"${param.as_ufloat():.1uSL}$" if not param.frozen else f"{param.value:f}"
-        )
-
-
-def publish_param_unit(param: Parameter):
-    """Return LaTeX string for a parameter unit"""
-    return (
-        ""
-        if param.units == "" or param.units is None
-        else f" ({param.units.to_string(format='latex', fraction=False)})"
-    )
-
-
-def publish_param(param):
+def publish_param(param: Parameter):
     """Return LaTeX line for a parameter"""
-    if isinstance(param, maskParameter):
-        return f"{param.prefix} {param.key} {' '.join(param.key_value)}, {param.description}{publish_param_unit(param)}\dotfill &  {publish_param_value(param)} \\\\ \n"
-    else:
-        return f"{param.name}, {param.description}{publish_param_unit(param)}\dotfill &  {publish_param_value(param)} \\\\ \n"
+    label, value = param.as_latex()
+    return f"{label}\\dotfill &  {value} \\\\ \n"
 
 
 def publish(
@@ -67,6 +38,7 @@ def publish(
     include_glitches=False,
     include_swx=False,
     include_tzr=False,
+    include_prefix_summary=True,
 ):
     """Generate LaTeX summary of a given timing model and TOAs.
 
@@ -92,6 +64,8 @@ def publish(
         Whether to include SWX paremeters (default is False)
     include_tzr: bool
         Whether to include TZR paremeters (default is False)
+    include_prefix_summary: bool
+        Whether to include a summary of prefix and mask parameters (default is True)
 
     Returns
     -------
@@ -191,60 +165,61 @@ def publish(
                 f"Binary model               \\dotfill & {model.BINARY.value}      \\\\ \n"
             )
 
-        if "PhaseJump" in model.components:
-            tex.write(
-                f"Number of JUMPs               \\dotfill & {model.get_number_of_jumps()}      \\\\ \n"
-            )
+        if include_prefix_summary:
+            if "PhaseJump" in model.components:
+                tex.write(
+                    f"Number of JUMPs               \\dotfill & {model.get_number_of_jumps()}      \\\\ \n"
+                )
 
-        if "DispersionJump" in model.components:
-            tex.write(
-                f"Number of DMJUMPs               \\dotfill & {len(model.dm_jumps)}      \\\\ \n"
-            )
+            if "DispersionJump" in model.components:
+                tex.write(
+                    f"Number of DMJUMPs               \\dotfill & {len(model.dm_jumps)}      \\\\ \n"
+                )
 
-        if "DispersionDMX" in model.components:
-            tex.write(
-                f"Number of DMX ranges          \\dotfill & {len(model.components['DispersionDMX'].get_indices())}      \\\\ \n"
-            )
+            if "DispersionDMX" in model.components:
+                tex.write(
+                    f"Number of DMX ranges          \\dotfill & {len(model.components['DispersionDMX'].get_indices())}      \\\\ \n"
+                )
 
-        if "SolarWindDispersionX" in model.components:
-            tex.write(
-                f"Number of SWX ranges          \\dotfill & {len(model.components['SolarWindDispersionX'].get_indices())}      \\\\ \n"
-            )
+            if "SolarWindDispersionX" in model.components:
+                tex.write(
+                    f"Number of SWX ranges          \\dotfill & {len(model.components['SolarWindDispersionX'].get_indices())}      \\\\ \n"
+                )
 
-        if "Glitch" in model.components:
-            tex.write(
-                f"Number of Glitches          \\dotfill & {len(model.components['Glitch'].glitch_indices)}      \\\\ \n"
-            )
+            if "Glitch" in model.components:
+                tex.write(
+                    f"Number of Glitches          \\dotfill & {len(model.components['Glitch'].glitch_indices)}      \\\\ \n"
+                )
 
-        if "FD" in model.components:
-            tex.write(
-                f"Number of FD parameters          \\dotfill & {model.num_FD_terms}      \\\\ \n"
-            )
+            if "FD" in model.components:
+                tex.write(
+                    f"Number of FD parameters          \\dotfill & {model.num_FD_terms}      \\\\ \n"
+                )
 
-        if "ScaleToaError" in model.components:
-            tex.write(
-                f"Number of EFACs          \\dotfill & {len(model.EFACs)}     \\\\ \n"
-            )
-            tex.write(
-                f"Number of EQUADs          \\dotfill & {len(model.EQUADs)}      \\\\ \n"
-            )
+            if "ScaleToaError" in model.components:
+                tex.write(
+                    f"Number of EFACs          \\dotfill & {len(model.EFACs)}     \\\\ \n"
+                )
+                tex.write(
+                    f"Number of EQUADs          \\dotfill & {len(model.EQUADs)}      \\\\ \n"
+                )
 
-        if "EcorrNoise" in model.components:
-            tex.write(
-                f"Number of ECORRs          \\dotfill & {len(model.ECORRs)}      \\\\ \n"
-            )
+            if "EcorrNoise" in model.components:
+                tex.write(
+                    f"Number of ECORRs          \\dotfill & {len(model.ECORRs)}      \\\\ \n"
+                )
 
-        if "ScaleDmError" in model.components:
-            tex.write(
-                f"Number of DMEFACs          \\dotfill & {len(model.DMEFACs)}      \\\\ \n"
-            )
-            tex.write(
-                f"Number of DMEQUADs          \\dotfill & {len(model.DMEQUADs)}      \\\\ \n"
-            )
-        if "Wave" in model.components:
-            tex.write(
-                f"Number of WAVE components    \\dotfill & {model.num_wave_terms}      \\\\ \n"
-            )
+            if "ScaleDmError" in model.components:
+                tex.write(
+                    f"Number of DMEFACs          \\dotfill & {len(model.DMEFACs)}      \\\\ \n"
+                )
+                tex.write(
+                    f"Number of DMEQUADs          \\dotfill & {len(model.DMEQUADs)}      \\\\ \n"
+                )
+            if "Wave" in model.components:
+                tex.write(
+                    f"Number of WAVE components    \\dotfill & {model.num_wave_terms}      \\\\ \n"
+                )
 
         tex.write("\\hline\n")
 
@@ -303,7 +278,10 @@ def publish(
         tex.write("\\hline\n")
 
         derived_params = [
-            p for p in model.params if isinstance(getattr(model, p), funcParameter)
+            getattr(model, p)
+            for p in model.params
+            if isinstance(getattr(model, p), funcParameter)
+            and getattr(model, p).quantity is not None
         ]
         if len(derived_params) > 0:
             tex.write("\multicolumn{2}{c}{Derived Quantities} \\\\ \n")
