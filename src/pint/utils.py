@@ -1606,9 +1606,11 @@ def translate_wavex_to_wave(model):
     new_model.WAVEEPOCH.quantity = model.WXEPOCH.quantity
     new_model.WAVE_OM.quantity = wave_om
     if len(indices) == 1:
+        wave_amps = tuple(w * -1.0 for w in wave_amps)
         _add_wave_comp(new_model, index=indices, amps=wave_amps)
     else:
         for i in range(len(indices)):
+            wave_amps[i] = tuple(w * -1.0 for w in wave_amps[i])
             _add_wave_comp(new_model, index=indices[i], amps=wave_amps[i])
     return new_model
 
