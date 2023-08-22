@@ -502,7 +502,7 @@ class TimingModel:
         """Mostly this just sets ``self.name = value``.  But in the case where they are both :class:`Parameter` instances
         with different names, this copies the ``quantity``, ``uncertainty``, ``frozen`` attributes only.
         """
-        if isinstance(value, Parameter) and name != value.name:
+        if isinstance(value, (Parameter, prefixParameter)) and name != value.name:
             for p in ["quantity", "uncertainty", "frozen"]:
                 setattr(getattr(self, name), p, getattr(value, p))
         else:
