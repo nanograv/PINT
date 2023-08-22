@@ -1427,7 +1427,7 @@ def translate_wave_to_wavex(model):
     new_model.WXEPOCH.value = wave_epoch.value
     for k, wave_term in enumerate(wave_terms):
         wave_sin_amp, wave_cos_amp = wave_term.quantity
-        wavex_freq = _translate_wave_freqs(wave_om, (k + 1))
+        wavex_freq = _translate_wave_freqs(wave_om, k)
         if k == 0:
             new_model.WXFREQ_0001.value = wavex_freq.value
             new_model.WXSIN_0001.value = -wave_sin_amp.value
@@ -1595,7 +1595,7 @@ def translate_wavex_to_wave(model):
     new_model = deepcopy(model)
     indices = model.components["WaveX"].get_indices()
     wxfreqs = get_wavex_freqs(model, indices, quantity=True)
-    wave_om = _translate_wavex_freqs(wxfreqs, indices)
+    wave_om = _translate_wavex_freqs(wxfreqs, (indices - 1))
     if wave_om == False:
         raise ValueError(
             "This WaveX model cannot be properly translated into a Wave model due to the WaveX frequencies not producing a consistent WAVEOM value"
