@@ -41,7 +41,11 @@ def publish_param_value(param: Parameter):
 
 def publish_param_unit(param: Parameter):
     """Return LaTeX string for a parameter unit"""
-    return "" if param.units == "" or param.units is None else f" ({param.units:latex})"
+    return (
+        ""
+        if param.units == "" or param.units is None
+        else f" ({param.units.to_string(format='latex', fraction=False)})"
+    )
 
 
 def publish_param(param):
