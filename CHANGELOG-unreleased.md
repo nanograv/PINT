@@ -25,4 +25,5 @@ the released changes.
 - Docstrings for `get_toas()` and `get_model_and_toas()`
 - Set `DelayComponent_list` and `NoiseComponent_list` to empty list if such components are absent
 - Fix invalid access of `PLANET_SHAPIRO` in models without `Astrometry`
+- Setting `model.PARAM1 = model.PARAM2` no longer overrides the name of `PARAM1`
 ### Removed

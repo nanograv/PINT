@@ -605,3 +605,24 @@ def test_correct_number_of_params_and_FD_terms_after_add_or_remove_param():
     m.remove_param("FD4")
     assert len(m.components["FD"].params) == 3
     assert len(m.get_prefix_mapping("FD")) == 3
+
+
+def test_parameter_retains_name_on_set():
+    basic_par_str = """
+    PSR              B1937+21
+    LAMBDA   301.9732445337270
+    BETA      42.2967523367957
+    PMLAMBDA           -0.0175
+    PMBETA             -0.3971
+    PX                  0.1515
+    POSEPOCH        55321.0000
+    F0    641.9282333345536244  1  0.0000000000000132
+    F1     -4.330899370129D-14  1  2.149749089617D-22
+    PEPOCH        55321.000000
+    DM               71.016633
+    UNITS                  TDB
+    """
+
+    m = get_model(io.StringIO(basic_par_str))
+    m.POSEPOCH = m.PEPOCH
+    assert m.POSEPOCH.name == "POSEPOCH"
