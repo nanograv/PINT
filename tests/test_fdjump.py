@@ -102,3 +102,19 @@ def test_tempo2_parfile_read_write():
     par = model.as_parfile(format="tempo2")
     assert par.count("FD1JUMP") == 0 and par.count("FD2JUMP") == 0
     assert par.count("FDJUMP1") == 2 and par.count("FDJUMP1") == 2
+
+
+def test_residual_change(model_and_toas):
+    model, toas = model_and_toas
+
+    r_old = Residuals(toas, model, subtract_mean=False).calc_time_resids().value
+
+    mask_FD1JUMP1 = model.FD1JUMP1.select_toa_mask(toas)
+    mask_FD1JUMP1_inv = np.setdiff1d(np.arange(len(toas)), mask_FD1JUMP1)
+
+    model.FD1JUMP1.value = 0
+
+    r_new = Residuals(toas, model, subtract_mean=False).calc_time_resids().value
+
+    assert not np.allclose(r_old[mask_FD1JUMP1], r_new[mask_FD1JUMP1])
+    assert np.allclose(r_old[mask_FD1JUMP1_inv], r_new[mask_FD1JUMP1_inv])
