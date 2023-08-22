@@ -1390,7 +1390,7 @@ def _translate_wavex_freqs(wxfreq, k):
         wave_om = [
             ((2.0 * np.pi * wxfreq[i]) / (k[i] + 1.0)) for i in range(len(wxfreq))
         ]
-        if np.allclose(wave_om, wave_om[0], atol=1e-2):
+        if np.allclose(wave_om, wave_om[0], atol=1e-3):
             om = sum(wave_om) / len(wave_om)
             return om
         else:
