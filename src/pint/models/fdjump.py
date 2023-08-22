@@ -30,11 +30,10 @@ class FDJump(DelayComponent):
     Note
     ----
     FDJUMPs have two indices: the polynomial/FD/prefix index and the system/mask
-    index. i.e., they have properties of both maskParameters
-    such as JUMPs and prefixParameters such as FDs.
-    There is currently no elegant way in PINT to implement such parameters due to
-    the way parameter indexing is implemented; there is no way to distinguish between
-    mask and prefix indices.
+    index. i.e., they have properties of both maskParameters such as JUMPs and
+    prefixParameters such as FDs. There is currently no elegant way in PINT to implement
+    such parameters due to the way parameter indexing is implemented; there is no way to
+    distinguish between mask and prefix indices.
 
     Hence, they are implemented here as maskParameters as a stopgap measure.
     This means that there must be an upper limit for the FD indices. This is controlled
