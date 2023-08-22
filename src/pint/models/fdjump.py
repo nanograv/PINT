@@ -27,24 +27,25 @@ class FDJump(DelayComponent):
     This is controlled using the `FDJUMPLOG` parameter. `FDJUMPLOG Y` may not be
     tempo2-compatible.
 
-    Caveat
-    ------
-    `FDJUMP`s have two indices: the polynomial/FD/prefix index and the system/mask
-    index. i.e., they have properties of both `maskParameter`s such as `JUMP`s and
-    `prefixParameters` such as `FD`s. There is currently no elegant way in PINT
-    to implement such parameters due to the way parameter indexing is implemented;
-    there is no way to distinguish between mask and prefix indices.
+    Note
+    ----
+    FDJUMPs have two indices: the polynomial/FD/prefix index and the system/mask
+    index. i.e., they have properties of both maskParameters
+    such as JUMPs and prefixParameters such as FDs.
+    There is currently no elegant way in PINT to implement such parameters due to
+    the way parameter indexing is implemented; there is no way to distinguish between
+    mask and prefix indices.
 
-    Hence, they are implemented here as `maskParameter`s as a stopgap measure.
+    Hence, they are implemented here as maskParameters as a stopgap measure.
     This means that there must be an upper limit for the FD indices. This is controlled
-    using the ``pint.models.fdjump.fdjump_max_index`` variable, and is 20 by default.
+    using the `pint.models.fdjump.fdjump_max_index` variable, and is 20 by default.
     Note that this is strictly a limitation of the implementation and not a property
-    of `FDJUMP`s themselves.
+    of FDJUMPs themselves.
 
-    `FDJUMP`s appear in tempo2-format par files as `FDJUMPp`, where p is the FD index.
-    The mask index is not explicitly mentioned in par files similar to `JUMP`s.
-    PINT understands both `FDJUMPp` and `FDpJUMP` as the same parameter in par files,
-    but the internal representation is always `FDpJUMPq`, where q is the mask index.
+    FDJUMPs appear in tempo2-format par files as "FDJUMPp", where p is the FD index.
+    The mask index is not explicitly mentioned in par files similar to JUMPs.
+    PINT understands both "FDJUMPp" and "FDpJUMP" as the same parameter in par files,
+    but the internal representation is always "FDpJUMPq", where q is the mask index.
 
     PINT understands 'q' as the mask parameter just fine, but the identification of 'p'
     as the prefix parameter is done in a hacky way.
