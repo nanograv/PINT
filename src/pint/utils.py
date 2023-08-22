@@ -55,6 +55,7 @@ import warnings
 import pint
 import pint.pulsar_ecliptic
 from pint.toa_select import TOASelect
+from pint.models.parameter import prefixParameter
 
 
 __all__ = [
@@ -1366,11 +1367,39 @@ def _translate_wave_freqs(om, k):
     return (om * (k + 1)) / (2.0 * np.pi)
 
 
+def _translate_wavex_freqs(wxfreq, k):
+    """Use WaveX model WXFREQ_ parameters and wave number k to calculate the Wave model WAVEOM frequency parameter.
+
+    Parameters
+    ----------
+    wxfreq: float or astropy.quantity.Quantity
+        WaveX frequency from which the WAVEOM parameter will be calculated
+        If float is given default units of 1/d assigned
+    k: int
+        wave number to use to calculate Wave WAVEOM parameter
+
+    Returns
+    -------
+    WAVEOM quantity in units 1/d that can be used in Wave model"""
+    if isinstance(wxfreq, u.quantity.Quantity):
+        wxfreq.to(u.d**-1)
+    else:
+        wxfreq *= u.d**-1
+    if len(wxfreq) == 1:
+        return (2.0 * np.pi * wxfreq) / (k + 1)
+    else:
+        wave_om = [((2.0 * np.pi * wxfreq[i]) / (k[i] + 1)) for i in range(len(wxfreq))]
+        if np.allclose(wave_om, wave_om[0], atol=1e-3):
+            return np.mean(wave_om)
+        else:
+            return False
+
+
 def translate_wave_to_wavex(model):
     """Go from a Wave model to a WaveX model
 
     WaveX frequencies get calculated based on the Wave model WAVEOM parameter and the number of WAVE parameters.
-        WaveX_freq_k = [WAVEOM * (k+1)] / [2 * pi]
+        WXFREQ_000k = [WAVEOM * (k+1)] / [2 * pi]
 
     WaveX amplitudes are taken from the WAVE pair parameters
 
@@ -1381,9 +1410,7 @@ def translate_wave_to_wavex(model):
 
     Returns
     -------
-    indices : list
-            Indices that have been assigned to new WaveX components
-    New timing model with Wave model removed and converted WaveX model included"""
+    New timing model with converted WaveX model included"""
     from pint.models.wavex import WaveX
 
     new_model = deepcopy(model)
@@ -1408,6 +1435,35 @@ def translate_wave_to_wavex(model):
                 wavex_freq, wxsin=-wave_sin_amp, wxcos=-wave_cos_amp
             )
     return new_model
+
+
+def _add_wave_comp(model, index, amps):
+    """Tool to add waves to a Wave model for translating between WaveX and Wave model.
+
+    Paramters
+    ---------
+    model: pint.models.timing_model.TimingModel
+        TimingModel containing a Wave model
+    index: int
+        Interger label for Wave components.
+    amps: tuple of float or astropy.quantity.Quantity
+        Sine and cosine amplitudes
+
+    Returns
+    -------
+    Editted model with WAVE parameter added as a pairwise prefixParameter
+    """
+    model.components["Wave"].add_param(
+        prefixParameter(
+            name=f"WAVE{index}",
+            value=amps,
+            units="s",
+            description="Wave components",
+            type_match="pair",
+            long_double=True,
+            parameter_type="pair",
+        )
+    )
 
 
 def get_wavex_freqs(model, index=None):
@@ -1500,6 +1556,38 @@ def get_wavex_amps(model, index=None):
             f"index most be a float, int, set, list, array, or None - not {type(index)}"
         )
     return values
+
+
+def translate_wavex_to_wave(model):
+    """Go from a WaveX timing model to a Wave timing model.
+    WARNING: Not every WaveX model can be appropriately translated into a Wave model. This is dependent on the user's choice of frequencies in the WaveX model.
+    In order for a WaveX model to be able to be converted into a Wave model, every WaveX frequency must produce the same value of WAVEOM in the calculation:
+
+    WAVEOM = [2 * pi * WXFREQ_000k] / (k + 1)
+    Paramters
+    ---------
+    model: pint.models.timing_model.TimingModel
+        TimingModel containing a WaveX model to be converted to a Wave model
+
+    Returns
+    -------
+    New timing model with converted Wave model included"""
+    from pint.models.wave import Wave
+
+    new_model = deepcopy(model)
+    indices = model.components["WaveX"].get_indices()
+    wxfreqs = get_wavex_freqs(model, indices)
+    wave_om = _translate_wavex_freqs(wxfreqs, indices)
+    if wave_om == False:
+        raise ValueError(
+            "This WaveX model cannot be properly translated into a Wave model due to the WaveX frequencies not producing a consistent WAVEOM value"
+        )
+    amps = get_wavex_amps(model, index=indices)
+    new_model.remove_component("WaveX")
+    new_model.add_component(Wave(), validate=False)
+    new_model.WAVEEPOCH.quantity = model.WXEPOCH.quantity
+    new_model.WAVE_OM.quantity = wave_om
+    return new_model
 
 
 def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
