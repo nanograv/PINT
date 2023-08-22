@@ -11,7 +11,7 @@ data_NGC6440E = get_model_and_toas(datadir / "NGC6440E.par", datadir / "NGC6440E
 def test_NGC6440E():
     m, t = data_NGC6440E
     output = publish(m, t)
-    assert "NGC6440E" in output
+    assert "1748-2021E" in output
     assert "DE421" in output
 
 
