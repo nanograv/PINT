@@ -34,12 +34,14 @@ def publish_param_value(param: Parameter):
     elif isinstance(param, intParameter):
         return str(param.value)
     else:
-        return f"{param.as_ufloat():.1uS}" if not param.frozen else f"{param.value:f}"
+        return (
+            f"${param.as_ufloat():.1uSL}$" if not param.frozen else f"{param.value:f}"
+        )
 
 
 def publish_param_unit(param: Parameter):
     """Return LaTeX string for a parameter unit"""
-    return "" if param.units == "" or param.units is None else f" ({param.units})"
+    return "" if param.units == "" or param.units is None else f" ({param.units:latex})"
 
 
 def publish_param(param):
@@ -155,7 +157,7 @@ def publish(
         tex.write("\\multicolumn{2}{c}{Dataset and model summary}\\\\ \n")
         tex.write("\\hline\n")
         tex.write(
-            f"Pulsar name                  \\dotfill & {model.PSR.value}      \\\\ \n"
+            f"Pulsar name                  \\dotfill & {model.PSR.value.replace('-','$-$')}      \\\\ \n"
         )
         tex.write(
             f"MJD range                    \\dotfill & {mjd_start}---{mjd_end} \\\\ \n"
@@ -249,11 +251,11 @@ def publish(
         )
         tex.write(f"Fitting method               \\dotfill & {fit_method}      \\\\ \n")
         tex.write(
-            f"RMS TOA residuals ($\\mu s$) \\dotfill & {toares.calc_time_resids().to('us').value.std():.2e}   \\\\ \n"
+            f"RMS TOA residuals ($\\mu s$) \\dotfill & {toares.calc_time_resids().to('us').value.std():.2f}   \\\\ \n"
         )
         if toas.is_wideband():
             tex.write(
-                f"RMS DM residuals (pc / cm3) \\dotfill & {dmres.calc_resids().to('pc/cm^3').value.std():.2e}   \\\\ \n"
+                f"RMS DM residuals (pc / cm3) \\dotfill & {dmres.calc_resids().to('pc/cm^3').value.std():.2f}   \\\\ \n"
             )
         tex.write(
             f"$\\chi^2$                         \\dotfill & {res.chi2:.2f}    \\\\ \n"
@@ -296,14 +298,15 @@ def publish(
 
         tex.write("\\hline\n")
 
-        tex.write("\multicolumn{2}{c}{Derived Quantities} \\\\ \n")
-        tex.write("\\hline\n")
-        for p in model.params:
-            param = getattr(model, p)
-
-            if isinstance(param, funcParameter) and param.value is not None:
+        derived_params = [
+            p for p in model.params if isinstance(getattr(model, p), funcParameter)
+        ]
+        if len(derived_params) > 0:
+            tex.write("\multicolumn{2}{c}{Derived Quantities} \\\\ \n")
+            tex.write("\\hline\n")
+            for param in derived_params:
                 tex.write(publish_param(param))
-        tex.write("\\hline\n")
+            tex.write("\\hline\n")
 
         tex.write("\\end{tabular}\n")
         tex.write("\\end{table}\n")
