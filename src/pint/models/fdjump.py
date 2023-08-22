@@ -71,7 +71,7 @@ class FDJump(DelayComponent):
             boolParameter(
                 name="FDJUMPLOG",
                 value=False,
-                description="Whether to use log-frequency for computing FDJUMPs.",
+                description="Whether to use log-frequency (Y) or linear-frequency (N) for computing FDJUMPs.",
             )
         )
         for j in range(1, fdjump_max_index + 1):
@@ -153,9 +153,11 @@ class FDJump(DelayComponent):
         """Calculate frequency dependent delay.
 
         If FDJUMPLOG is Y, use the following expression (similar to global FD parameters):
+
             FDJUMP_delay = sum_i(c_i * (log(obs_freq/1GHz))^i)
 
         If FDJUMPLOG is N, use the following expression (same as in tempo2, default):
+
             FDJUMP_delay = sum_i(c_i * (obs_freq/1GHz)^i)
         """
         y = self.get_freq_y(toas)
