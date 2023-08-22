@@ -1385,11 +1385,14 @@ def _translate_wavex_freqs(wxfreq, k):
     else:
         wxfreq *= u.d**-1
     if len(wxfreq) == 1:
-        return (2.0 * np.pi * wxfreq) / (k + 1)
+        return (2.0 * np.pi * wxfreq) / (k + 1.0)
     else:
-        wave_om = [((2.0 * np.pi * wxfreq[i]) / (k[i] + 1)) for i in range(len(wxfreq))]
-        if np.allclose(wave_om, wave_om[0], atol=1e-3):
-            return np.mean(wave_om)
+        wave_om = [
+            ((2.0 * np.pi * wxfreq[i]) / (k[i] + 1.0)) for i in range(len(wxfreq))
+        ]
+        if np.allclose(wave_om, wave_om[0], atol=1e-2):
+            om = sum(wave_om) / len(wave_om)
+            return om
         else:
             return False
 
@@ -1424,8 +1427,8 @@ def translate_wave_to_wavex(model):
     new_model.WXEPOCH.value = wave_epoch.value
     for k, wave_term in enumerate(wave_terms):
         wave_sin_amp, wave_cos_amp = wave_term.quantity
-        wavex_freq = _translate_wave_freqs(wave_om, k)
-        if k == 1:
+        wavex_freq = _translate_wave_freqs(wave_om, (k + 1))
+        if k == 0:
             new_model.WXFREQ_0001.value = wavex_freq.value
             new_model.WXSIN_0001.value = -wave_sin_amp.value
             new_model.WXCOS_0001.value = -wave_cos_amp.value
@@ -1467,7 +1470,7 @@ def _add_wave_comp(model, index, amps):
     )
 
 
-def get_wavex_freqs(model, index=None):
+def get_wavex_freqs(model, index=None, quantity=False):
     """Return the WaveX frequencies for a timing model.
 
     If index is specified, returns the frequencies corresponding to the user-provided indices.
@@ -1479,11 +1482,13 @@ def get_wavex_freqs(model, index=None):
         Timing model from which to return WaveX frequencies
     index: : float, int, list, np.ndarray, None
         Number or list/array of numbers corresponding to WaveX frequencies to return
+    quantity: bool
+        If set to True, returns a list of astropy.quanitity.Quantity rather than a list of prefixParameters
 
     Returns
     -------
     List of WXFREQ_ parameters"""
-    if index == None:
+    if index is None:
         freqs = model.components["WaveX"].get_prefix_mapping_component("WXFREQ_")
         if len(freqs) == 1:
             values = getattr(model.components["WaveX"], freqs.values())
@@ -1501,10 +1506,15 @@ def get_wavex_freqs(model, index=None):
         raise TypeError(
             f"index most be a float, int, set, list, array, or None - not {type(index)}"
         )
+    if quantity:
+        if len(values) == 1:
+            values = values.quantity
+        else:
+            values = [v.quantity for v in values]
     return values
 
 
-def get_wavex_amps(model, index=None):
+def get_wavex_amps(model, index=None, quantity=False):
     """Return the WaveX amplitudes for a timing model.
 
     If index is specified, returns the sine/cosine amplitudes corresponding to the user-provided indices.
@@ -1516,11 +1526,13 @@ def get_wavex_amps(model, index=None):
         Timing model from which to return WaveX frequencies
     index: : float, int, list, np.ndarray, None
         Number or list/array of numbers corresponding to WaveX amplitudes to return
+    quantity: bool
+        If set to True, returns a list of tuples of astropy.quanitity.Quantity rather than a list of prefixParameters tuples
 
     Returns
     -------
     List of WXSIN_ and WXCOS_ parameters"""
-    if index == None:
+    if index is None:
         indices = (
             model.components["WaveX"].get_prefix_mapping_component("WXSIN_").keys()
         )
@@ -1556,6 +1568,11 @@ def get_wavex_amps(model, index=None):
         raise TypeError(
             f"index most be a float, int, set, list, array, or None - not {type(index)}"
         )
+    if quantity:
+        if isinstance(values, tuple):
+            values = tuple(v.quantity for v in values)
+        if isinstance(values, list):
+            values = [tuple((v[0].quantity, v[1].quantity)) for v in values]
     return values
 
 
@@ -1577,17 +1594,22 @@ def translate_wavex_to_wave(model):
 
     new_model = deepcopy(model)
     indices = model.components["WaveX"].get_indices()
-    wxfreqs = get_wavex_freqs(model, indices)
+    wxfreqs = get_wavex_freqs(model, indices, quantity=True)
     wave_om = _translate_wavex_freqs(wxfreqs, indices)
     if wave_om == False:
         raise ValueError(
             "This WaveX model cannot be properly translated into a Wave model due to the WaveX frequencies not producing a consistent WAVEOM value"
         )
-    amps = get_wavex_amps(model, index=indices)
+    wave_amps = get_wavex_amps(model, index=indices, quantity=True)
     new_model.remove_component("WaveX")
     new_model.add_component(Wave(), validate=False)
     new_model.WAVEEPOCH.quantity = model.WXEPOCH.quantity
     new_model.WAVE_OM.quantity = wave_om
+    if len(indices) == 1:
+        _add_wave_comp(new_model, index=indices, amps=wave_amps)
+    else:
+        for i in range(len(indices)):
+            _add_wave_comp(new_model, index=indices[i], amps=wave_amps[i])
     return new_model
 
 
