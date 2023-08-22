@@ -39,6 +39,9 @@ def publish(
     include_swx=False,
     include_tzr=False,
     include_prefix_summary=True,
+    include_set_params=True,
+    include_derived_params=True,
+    include_fit_summary=True,
 ):
     """Generate LaTeX summary of a given timing model and TOAs.
 
@@ -66,6 +69,12 @@ def publish(
         Whether to include TZR paremeters (default is False)
     include_prefix_summary: bool
         Whether to include a summary of prefix and mask parameters (default is True)
+    include_set_params: bool
+        Whether to include set params (default is True)
+    include_derived_params: bool
+        Whether to include derived params (default is True)
+    include_fit_summary: bool
+        Whether to include fit summary params (default is True)
 
     Returns
     -------
@@ -223,29 +232,32 @@ def publish(
 
         tex.write("\\hline\n")
 
-        tex.write("\\multicolumn{2}{c}{Fit summary}\\\\ \n")
-        tex.write("\\hline\n")
-        tex.write(
-            f"Number of free parameters    \\dotfill & {len(model.free_params)}      \\\\ \n"
-        )
-        tex.write(f"Fitting method               \\dotfill & {fit_method}      \\\\ \n")
-        tex.write(
-            f"RMS TOA residuals ($\\mu s$) \\dotfill & {toares.calc_time_resids().to('us').value.std():.2f}   \\\\ \n"
-        )
-        if toas.is_wideband():
+        if include_fit_summary:
+            tex.write("\\multicolumn{2}{c}{Fit summary}\\\\ \n")
+            tex.write("\\hline\n")
             tex.write(
-                f"RMS DM residuals (pc / cm3) \\dotfill & {dmres.calc_resids().to('pc/cm^3').value.std():.2f}   \\\\ \n"
+                f"Number of free parameters    \\dotfill & {len(model.free_params)}      \\\\ \n"
             )
-        tex.write(
-            f"$\\chi^2$                         \\dotfill & {res.chi2:.2f}    \\\\ \n"
-        )
-        if toas.is_wideband():
-            tex.write(f"Degrees of freedom \\dotfill & {res.dof}   \\\\ \n")
-        else:
             tex.write(
-                f"Reduced $\\chi^2$                 \\dotfill & {res.reduced_chi2:.2f}    \\\\ \n"
+                f"Fitting method               \\dotfill & {fit_method}      \\\\ \n"
             )
-        tex.write("\\hline\n")
+            tex.write(
+                f"RMS TOA residuals ($\\mu s$) \\dotfill & {toares.calc_time_resids().to('us').value.std():.2f}   \\\\ \n"
+            )
+            if toas.is_wideband():
+                tex.write(
+                    f"RMS DM residuals (pc / cm3) \\dotfill & {dmres.calc_resids().to('pc/cm^3').value.std():.2f}   \\\\ \n"
+                )
+            tex.write(
+                f"$\\chi^2$                         \\dotfill & {res.chi2:.2f}    \\\\ \n"
+            )
+            if toas.is_wideband():
+                tex.write(f"Degrees of freedom \\dotfill & {res.dof}   \\\\ \n")
+            else:
+                tex.write(
+                    f"Reduced $\\chi^2$                 \\dotfill & {res.reduced_chi2:.2f}    \\\\ \n"
+                )
+            tex.write("\\hline\n")
 
         tex.write("\multicolumn{2}{c}{Measured Quantities} \\\\ \n")
         tex.write("\\hline\n")
@@ -260,35 +272,42 @@ def publish(
 
         tex.write("\\hline\n")
 
-        tex.write("\multicolumn{2}{c}{Set Quantities} \\\\ \n")
-        tex.write("\\hline\n")
-        for p in model.params:
-            param = getattr(model, p)
-
-            if (
-                all([not isinstance(param._parent, exc) for exc in exclude_components])
-                and param.value is not None
-                and param.frozen
-                and p not in exclude_params
-                and (param.value != 0 or include_zeros)
-                and not isinstance(param, funcParameter)
-            ):
-                tex.write(publish_param(param))
-
-        tex.write("\\hline\n")
-
-        derived_params = [
-            getattr(model, p)
-            for p in model.params
-            if isinstance(getattr(model, p), funcParameter)
-            and getattr(model, p).quantity is not None
-        ]
-        if len(derived_params) > 0:
-            tex.write("\multicolumn{2}{c}{Derived Quantities} \\\\ \n")
+        if include_set_params:
+            tex.write("\multicolumn{2}{c}{Set Quantities} \\\\ \n")
             tex.write("\\hline\n")
-            for param in derived_params:
-                tex.write(publish_param(param))
+            for p in model.params:
+                param = getattr(model, p)
+
+                if (
+                    all(
+                        [
+                            not isinstance(param._parent, exc)
+                            for exc in exclude_components
+                        ]
+                    )
+                    and param.value is not None
+                    and param.frozen
+                    and p not in exclude_params
+                    and (param.value != 0 or include_zeros)
+                    and not isinstance(param, funcParameter)
+                ):
+                    tex.write(publish_param(param))
+
             tex.write("\\hline\n")
+
+        if include_derived_params:
+            derived_params = [
+                getattr(model, p)
+                for p in model.params
+                if isinstance(getattr(model, p), funcParameter)
+                and getattr(model, p).quantity is not None
+            ]
+            if len(derived_params) > 0:
+                tex.write("\multicolumn{2}{c}{Derived Quantities} \\\\ \n")
+                tex.write("\\hline\n")
+                for param in derived_params:
+                    tex.write(publish_param(param))
+                tex.write("\\hline\n")
 
         tex.write("\\end{tabular}\n")
         tex.write("\\end{table}\n")
