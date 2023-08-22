@@ -24,7 +24,7 @@ class FDJump(DelayComponent):
     The default behavior is to have FDJUMPs as polynomials of the observing
     frequency (rather than log-frequency). This is different from the convention
     used for global FD parameters. This choice is made to be compatible with tempo2.
-    This is controlled using the `FDJUMPLOG` parameter. `FDJUMPLOG Y` may not be
+    This is controlled using the FDJUMPLOG parameter. "FDJUMPLOG Y" may not be
     tempo2-compatible.
 
     Note
@@ -152,11 +152,7 @@ class FDJump(DelayComponent):
     def fdjump_delay(self, toas, acc_delay=None):
         """Calculate frequency dependent delay.
 
-        If FDJUMPLOG is Y, use the following expression:
-            Z. Arzoumanian, The NANOGrav Nine-year Data Set: Observations, Arrival
-            Time Measurements, and Analysis of 37 Millisecond Pulsars, The
-            Astrophysical Journal, Volume 813, Issue 1, article id. 65, 31 pp.(2015).
-            Eq.(2):
+        If FDJUMPLOG is Y, use the following expression (similar to global FD parameters):
             FDJUMP_delay = sum_i(c_i * (log(obs_freq/1GHz))^i)
 
         If FDJUMPLOG is N, use the following expression (same as in tempo2, default):
