@@ -506,7 +506,7 @@ class TimingModel:
             for p in ["quantity", "uncertainty", "frozen"]:
                 setattr(getattr(self, name), p, getattr(value, p))
         else:
-            self.__dict__[name] = value
+            super().__setattr__(name, value)
 
     @property_exists
     def params_ordered(self):
