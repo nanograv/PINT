@@ -1957,7 +1957,10 @@ class maskParameter(floatParameter):
             if self.units == "" or self.units is None
             else f" ({self.units.to_string(format='latex', fraction=False)})"
         )
-        return f"{self.prefix} {self.key} {' '.join(self.key_value)}, {self.description}{unit_latex}\dotfill &  {self.value_as_latex()} \\\\ \n"
+        return (
+            f"{self.prefix} {self.key} {' '.join(self.key_value)}, {self.description}{unit_latex}",
+            self.value_as_latex(),
+        )
 
     def new_param(self, index, copy_all=False):
         """Create a new but same style mask parameter"""
