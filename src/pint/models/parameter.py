@@ -1952,11 +1952,19 @@ class maskParameter(floatParameter):
         return line + "\n"
 
     def as_latex(self):
-        unit_latex = (
-            ""
-            if self.units == "" or self.units is None
-            else f" ({self.units.to_string(format='latex', fraction=False)})"
-        )
+        try:
+            unit_latex = (
+                ""
+                if self.units == "" or self.units is None
+                else f" ({self.units.to_string(format='latex', fraction=False)})"
+            )
+        except TypeError:
+            # `fraction` option is not available in old astropy versions.
+            unit_latex = (
+                ""
+                if self.units == "" or self.units is None
+                else f" ({self.units.to_string(format='latex')})"
+            )
         return (
             f"{self.prefix} {self.key} {' '.join(self.key_value)}, {self.description}{unit_latex}",
             self.value_as_latex(),
