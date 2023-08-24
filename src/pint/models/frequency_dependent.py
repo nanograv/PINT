@@ -24,7 +24,7 @@ class FD(DelayComponent):
 
     @classmethod
     def _description_template(cls, x):
-        return "%d term of frequency dependent coefficients" % x
+        return f"{x} term of frequency dependent coefficients"
 
     register = True
     category = "frequency_dependent"
@@ -72,7 +72,7 @@ class FD(DelayComponent):
         Time Measurements, and Analysis of 37 Millisecond Pulsars, The
         Astrophysical Journal, Volume 813, Issue 1, article id. 65, 31 pp.(2015).
         Eq.(2):
-        FDdelay = sum(c_i * (log(obs_freq/1GHz))^i)
+            FD_delay = sum_i(c_i * (log(obs_freq/1GHz))^i)
         """
         tbl = toas.table
         try:
