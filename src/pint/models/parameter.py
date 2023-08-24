@@ -575,11 +575,19 @@ class Parameter:
         return f"${self.as_ufloat():.1uSL}$" if not self.frozen else f"{self.value:f}"
 
     def as_latex(self):
-        unit_latex = (
-            ""
-            if self.units == "" or self.units is None
-            else f" ({self.units.to_string(format='latex', fraction=False)})"
-        )
+        try:
+            unit_latex = (
+                ""
+                if self.units == "" or self.units is None
+                else f" ({self.units.to_string(format='latex', fraction=False)})"
+            )
+        except TypeError:
+            # to deal with old astropy
+            unit_latex = (
+                ""
+                if self.units == "" or self.units is None
+                else f" ({self.units.to_string(format='latex')})"
+            )
         value_latex = self.value_as_latex()
         return f"{self.name}, {self.description}{unit_latex}", value_latex
 
