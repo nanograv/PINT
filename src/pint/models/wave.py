@@ -28,7 +28,13 @@ class Wave(PhaseComponent):
 
     def __init__(self):
         super().__init__()
-
+        self.add_param(
+            MJDParameter(
+                name="WAVEEPOCH",
+                description="Reference epoch for wave solution",
+                time_scale="tdb",
+            )
+        )
         self.add_param(
             floatParameter(
                 name="WAVE_OM",
@@ -46,13 +52,6 @@ class Wave(PhaseComponent):
                 parameter_type="pair",
             )
         )
-        self.add_param(
-            MJDParameter(
-                name="WAVEEPOCH",
-                description="Reference epoch for wave solution",
-                time_scale="tdb",
-            )
-        )
         self.phase_funcs_component += [self.wave_phase]
 
     def setup(self):
@@ -64,14 +63,14 @@ class Wave(PhaseComponent):
         super().validate()
         self.setup()
         if self.WAVEEPOCH.quantity is None:
-            if self.PEPOCH.quantity is None:
+            if self._parent.PEPOCH.quantity is None:
                 raise MissingParameter(
                     "Wave",
                     "WAVEEPOCH",
                     "WAVEEPOCH or PEPOCH are required if " "WAVE_OM is set.",
                 )
             else:
-                self.WAVEEPOCH = self.PEPOCH
+                self.WAVEEPOCH.quantity = self._parent.PEPOCH.quantity
 
         if (not hasattr(self._parent, "F0")) or (self._parent.F0.quantity is None):
             raise MissingParameter(

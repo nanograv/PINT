@@ -1508,7 +1508,7 @@ def get_wavex_freqs(model, index=None, quantity=False):
         )
     if quantity:
         if len(values) == 1:
-            values = values.quantity
+            values = [values[0].quantity]
         else:
             values = [v.quantity for v in values]
     return values
@@ -1602,14 +1602,15 @@ def translate_wavex_to_wave(model):
         )
     wave_amps = get_wavex_amps(model, index=indices, quantity=True)
     new_model.remove_component("WaveX")
-    new_model.add_component(Wave(), validate=False)
+    new_model.add_component(Wave())
     new_model.WAVEEPOCH.quantity = model.WXEPOCH.quantity
     new_model.WAVE_OM.quantity = wave_om
     if len(indices) == 1:
-        wave_amps = tuple(w * -1.0 for w in wave_amps)
-        _add_wave_comp(new_model, index=indices, amps=wave_amps)
+        wave_amps = tuple(w * -1.0 for w in wave_amps[0])
+        _add_wave_comp(new_model, index=indices[0], amps=wave_amps)
     else:
         for i in range(len(indices)):
+            print(wave_amps[i])
             wave_amps[i] = tuple(w * -1.0 for w in wave_amps[i])
             _add_wave_comp(new_model, index=indices[i], amps=wave_amps[i])
     return new_model
