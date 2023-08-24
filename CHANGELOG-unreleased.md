@@ -18,6 +18,7 @@ the released changes.
 - Options to add a TZR TOA (`AbsPhase`) during the creation of a `TimingModel` using `ModelBuilder.__call__`, `get_model`, and `get_model_and_toas`
 - `pint.print_info()` function for bug reporting
 - Added an autocorrelation function to check for chain convergence in `event_optimize`
+- A hacky implementation of system-dependent FD parameters (FDJUMP)
 - Minor doc updates to explain default NHARMS and missing derivative functions
 - Support for wideband data in `pint.bayesian` (no correlated noise).
 ### Fixed
