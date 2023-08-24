@@ -1734,7 +1734,7 @@ class TimingModel:
         if param not in list(delay_derivs.keys()):
             raise AttributeError(
                 "Derivative function for '{param}' is not provided"
-                " or not registered. "
+                " or not registered; parameter '{param}' may not be fittable. "
             )
         for df in delay_derivs[param]:
             result += df(toas, param, acc_delay).to(
