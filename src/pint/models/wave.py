@@ -94,6 +94,52 @@ class Wave(PhaseComponent):
 
         return result
 
+    def add_wave_component(self, amps, index=None):
+        """Add Wave Component
+
+        Parameters
+        ----------
+
+        index : int
+            Interger label for Wave components.
+        amps : tuple of float or astropy.quantity.Quantity
+            Sine and cosine amplitudes
+
+        Returns
+        -------
+
+        index :
+            Index that has been addigned to new Wave component
+        """
+        #### If index is None, increment the current max Wave index by 1. Increment using WAVE
+        if index is None:
+            dct = self.get_prefix_mapping_component("WAVE")
+            index = np.max(list(dct.keys())) + 1
+        i = f"{int(index):04d}"
+
+        if int(index) in self.get_prefix_mapping_component("WAVE"):
+            raise ValueError(
+                f"Index '{index}' is already in use in this model. Please choose another"
+            )
+
+        for amp in amps:
+            if isinstance(amp, u.quantity.Quantity):
+                amp = amp.to_value(u.s)
+        self.add_param(
+            prefixParameter(
+                name=f"WAVE{index}",
+                value=amps,
+                units="s",
+                description="Wave components",
+                type_match="pair",
+                long_double=True,
+                parameter_type="pair",
+            )
+        )
+        self.setup()
+        self.validate()
+        return index
+
     def wave_phase(self, toas, delays):
         times = 0
         wave_names = ["WAVE%d" % ii for ii in range(1, self.num_wave_terms + 1)]

@@ -1439,37 +1439,6 @@ def translate_wave_to_wavex(model):
     return new_model
 
 
-def _add_wave_comp(model, index, amps):
-    from pint.models.parameter import prefixParameter
-
-    """Tool to add waves to a Wave model for translating between WaveX and Wave model.
-
-    Paramters
-    ---------
-    model: pint.models.timing_model.TimingModel
-        TimingModel containing a Wave model
-    index: int
-        Interger label for Wave components.
-    amps: tuple of float or astropy.quantity.Quantity
-        Sine and cosine amplitudes
-
-    Returns
-    -------
-    Editted model with WAVE parameter added as a pairwise prefixParameter
-    """
-    model.components["Wave"].add_param(
-        prefixParameter(
-            name=f"WAVE{index}",
-            value=amps,
-            units="s",
-            description="Wave components",
-            type_match="pair",
-            long_double=True,
-            parameter_type="pair",
-        )
-    )
-
-
 def get_wavex_freqs(model, index=None, quantity=False):
     """Return the WaveX frequencies for a timing model.
 
@@ -1605,14 +1574,14 @@ def translate_wavex_to_wave(model):
     new_model.add_component(Wave())
     new_model.WAVEEPOCH.quantity = model.WXEPOCH.quantity
     new_model.WAVE_OM.quantity = wave_om
-    if len(indices) == 1:
-        wave_amps = tuple(w * -1.0 for w in wave_amps[0])
-        _add_wave_comp(new_model, index=indices[0], amps=wave_amps)
-    else:
-        for i in range(len(indices)):
+    new_model.WAVE1.quantity = tuple(w * -1.0 for w in wave_amps[0])
+    if len(indices) > 1:
+        for i in range(1, len(indices)):
             print(wave_amps[i])
             wave_amps[i] = tuple(w * -1.0 for w in wave_amps[i])
-            _add_wave_comp(new_model, index=indices[i], amps=wave_amps[i])
+            new_model.components["Wave"].add_wave_component(
+                wave_amps[i], index=indices[i]
+            )
     return new_model
 
 

@@ -39,8 +39,6 @@ class WaveX(DelayComponent):
         self.set_special_params(["WXFREQ_0001", "WXSIN_0001", "WXCOS_0001"])
         self.delay_funcs_component += [self.wavex_delay]
 
-    # Register derivative functions PLACEHOLDER
-
     def add_wavex_component(self, wxfreq, index=None, wxsin=0, wxcos=0, frozen=True):
         """Add WaveX component
 
@@ -81,7 +79,6 @@ class WaveX(DelayComponent):
         if isinstance(wxcos, u.quantity.Quantity):
             wxcos = wxcos.to_value(u.s)
         if isinstance(wxfreq, u.quantity.Quantity):
-            # wxfreq = wxfreq.value
             wxfreq = wxfreq.to_value(1 / u.d)
         self.add_param(
             prefixParameter(
@@ -262,9 +259,7 @@ class WaveX(DelayComponent):
     # Initialize setup
     def setup(self):
         super().setup()
-
-        # Get WaveX mapping
-        # Register WXSIN and WXCOS derivatives PLACEHOLDER
+        # Get WaveX mapping and register WXSIN and WXCOS derivatives
         for prefix_par in self.get_params_of_type("prefixParameter"):
             if prefix_par.startswith("WXSIN_"):
                 self.register_deriv_funcs(self.d_wavex_delay_d_WXSIN, prefix_par)
@@ -281,7 +276,6 @@ class WaveX(DelayComponent):
         WXSIN_mapping = self.get_prefix_mapping_component("WXSIN_")
         WXCOS_mapping = self.get_prefix_mapping_component("WXCOS_")
         if WXFREQ_mapping.keys() != WXSIN_mapping.keys():
-            # PLACEHOLDER : Report the mismatched parameters
             raise ValueError(
                 "WXFREQ_ parameters do not match WXSIN_ parameters."
                 "Please check your prefixed parameters"
