@@ -11,4 +11,5 @@ the released changes.
 ### Changed
 ### Added
 ### Fixed
+- Fixed RTD by specifying theme explicitly.
 ### Removed
