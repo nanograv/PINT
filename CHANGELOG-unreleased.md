@@ -25,4 +25,5 @@ the released changes.
 - Docstrings for `get_toas()` and `get_model_and_toas()`
 - Set `DelayComponent_list` and `NoiseComponent_list` to empty list if such components are absent
 - Fix invalid access of `PLANET_SHAPIRO` in models without `Astrometry`
+- Fix RTD build by making the theme explicit even when on RTD system
 ### Removed
