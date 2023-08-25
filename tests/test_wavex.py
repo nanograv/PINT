@@ -59,6 +59,11 @@ wavex_par = """
     WXSIN_0003              3
     WXCOS_0003              3 
 """
+wave_par = """
+    WAVEEPOCH 55321.000000
+    WAVE_OM 0.1 
+    WAVE1 0.2 0.1
+    WAVE2 0.6 0.3"""
 
 
 def wavex_delay(waves, toas):
@@ -286,3 +291,17 @@ def test_multiple_wavex_explicit_indices_duplicate():
         indices = model.components["WaveX"].add_wavex_components(
             [0.2, 0.3], indices=[1, 3], wxsins=[2, 3], wxcoses=[2, 3]
         )
+
+
+def test_wave_wavex_roundtrip_conversion():
+    # Check that when starting with a TimingModel with a Wave model, conversion to a WaveX mode and then back produces consistent results
+    model = get_model(StringIO(par1))
+    toas = make_fake_toas_uniform(55000, 55100, 500, model, obs="gbt")
+    wave_model = get_model(StringIO(par1 + wave_par))
+    wave_to_wavex_model = pint.utils.translate_wave_to_wavex(wave_model)
+    wavex_to_wave_model = pint.utils.translate_wavex_to_wave(wave_to_wavex_model)
+    rs_wave = Residuals(toas, wave_model)
+    rs_wave_to_wavex = Residuals(toas, wave_to_wavex_model)
+    rs_wavex_to_wave = Residuals(toas, wavex_to_wave_model)
+    assert np.allclose(rs_wave.resids, rs_wave_to_wavex.resids, atol=1e-3)
+    assert np.allclose(rs_wave.resids, rs_wavex_to_wave.resids, atol=1e-3)
