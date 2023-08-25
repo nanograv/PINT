@@ -9,23 +9,9 @@ the released changes.
 
 ## Unreleased
 ### Changed
-- Third-order Roemer delay terms to ELL1 model
-- Made the addition of a TZR TOA (`AbsPhase`) in the `TimingModel` explicit in `Residuals` class.
-- Updated `CONTRIBUTING.rst` with the latest information.
-- Made `TimingModel.params` and `TimingModel.ordered_params` identical. Deprecated `TimingModel.ordered_params`.
 ### Added
-- Third-order Roemer delay terms to ELL1 model
-- Options to add a TZR TOA (`AbsPhase`) during the creation of a `TimingModel` using `ModelBuilder.__call__`, `get_model`, and `get_model_and_toas`
-- `pint.print_info()` function for bug reporting
-- Added an autocorrelation function to check for chain convergence in `event_optimize`
-- A hacky implementation of system-dependent FD parameters (FDJUMP)
-- Minor doc updates to explain default NHARMS and missing derivative functions
 - `Parameter.as_latex` method for latex representation of a parameter.
 - `pint.output.publish` module and `pintpublish` script for generating publication (LaTeX) output.
 ### Fixed
-- Deleting JUMP1 from flag tables will not prevent fitting
-- Simulating TOAs from tim file when PLANET_SHAPIRO is true now works
-- Docstrings for `get_toas()` and `get_model_and_toas()`
-- Set `DelayComponent_list` and `NoiseComponent_list` to empty list if such components are absent
-- Fix invalid access of `PLANET_SHAPIRO` in models without `Astrometry`
+- Fixed RTD by specifying theme explicitly.
 ### Removed
