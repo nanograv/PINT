@@ -7,6 +7,28 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 This file contains the released changes to the codebase. See CHANGELOG-unreleased.md for
 the unreleased changes. This file should only be changed while tagging a new version.
 
+## [0.9.7] 2023-08-24
+### Changed
+- Third-order Roemer delay terms to ELL1 model
+- Made the addition of a TZR TOA (`AbsPhase`) in the `TimingModel` explicit in `Residuals` class.
+- Updated `CONTRIBUTING.rst` with the latest information.
+- Made `TimingModel.params` and `TimingModel.ordered_params` identical. Deprecated `TimingModel.ordered_params`.
+### Added
+- Third-order Roemer delay terms to ELL1 model
+- Options to add a TZR TOA (`AbsPhase`) during the creation of a `TimingModel` using `ModelBuilder.__call__`, `get_model`, and `get_model_and_toas`
+- `pint.print_info()` function for bug reporting
+- Added an autocorrelation function to check for chain convergence in `event_optimize`
+- A hacky implementation of system-dependent FD parameters (FDJUMP)
+- Minor doc updates to explain default NHARMS and missing derivative functions
+### Fixed
+- Deleting JUMP1 from flag tables will not prevent fitting
+- Simulating TOAs from tim file when PLANET_SHAPIRO is true now works
+- Docstrings for `get_toas()` and `get_model_and_toas()`
+- Set `DelayComponent_list` and `NoiseComponent_list` to empty list if such components are absent
+- Fix invalid access of `PLANET_SHAPIRO` in models without `Astrometry`
+### Removed
+
+
 ## [0.9.6] 2023-06-22
 ### Changed
 - Applied `sourcery` refactors to the entire codebase
@@ -14,6 +36,7 @@ the unreleased changes. This file should only be changed while tagging a new ver
 - Unreleased CHANGELOG entries should now be entered in `CHANGELOG-unreleased.md` instead of `CHANGELOG.md`. Updated documentation accordingly.
 - Changed tests to remove `unittest` and use pure pytest format
 - Changed deprecated `sampler.chain` usage
+- Download data automatically in the profiling script `high_level_benchmark.py` instead of silently giving wrong results.
 ### Added
 - `SpindownBase` as the abstract base class for `Spindown` and `PeriodSpindown` in the `How_to_build_a_timing_model_component.py` example.
 - `SolarWindDispersionBase` as the abstract base class for solar wind dispersion components.

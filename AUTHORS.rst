@@ -21,7 +21,7 @@ Active developers are indicated by (*). Authors of the PINT paper are indicated 
 * Anne Archibald (#*)
 * Matteo Bachetti (#)
 * Bastian Beischer 
-* Deven Bhakta 
+* Deven Bhakta (*)
 * Chloe Champagne (#)
 * Jonathan Colen (#)
 * Thankful Cromartie 
