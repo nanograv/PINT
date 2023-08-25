@@ -1285,7 +1285,8 @@ def split_swx(model, time):
 
 
 def wavex_setup(model, T_span, freqs=None, n_freqs=None):
-    """Set-up a WaveX model based on either an array of user-provided frequencies or the wave number
+    """
+    Set-up a WaveX model based on either an array of user-provided frequencies or the wave number
     frequency calculation. Sine and Cosine amplitudes are initially set to zero
 
     User specifies T_span and either freqs or n_freqs. This function assumes that the timing model does not already
@@ -1294,19 +1295,21 @@ def wavex_setup(model, T_span, freqs=None, n_freqs=None):
 
     Parameters
     ----------
-    model: pint.models.timing_model.TimingModel
-    freqs: iterable of float or astropy.quantity.Quantity, None
+
+    model : pint.models.timing_model.TimingModel
+    freqs : iterable of float or astropy.quantity.Quantity, None
         User inputed base frequencies
-    n_freqs: int, None
+    n_freqs : int, None
         Number of wave frequencies to calculate using the equation: freq_n = 2 * pi * n / T_span
         Where n is the wave number, and T_span is the total time span of the toas in the fitter object
-    T_span: float, astropy.quantity.Quantity
+    T_span : float, astropy.quantity.Quantity
         Time span used to calculate nyquist frequency when using freqs
         Time span used to calculate WaveX frequencies when using n_freqs
         Usually to be set as the length of the timing baseline the model is being used for
 
     Returns
     -------
+
     indices : list
             Indices that have been assigned to new WaveX components
     """
@@ -1362,19 +1365,23 @@ def wavex_setup(model, T_span, freqs=None, n_freqs=None):
 
 
 def _translate_wave_freqs(om, k):
-    """Use Wave model WAVEOM parameter to calculate a WaveX WXFREQ_ frequency parameter for wave number k
+    """
+    Use Wave model WAVEOM parameter to calculate a WaveX WXFREQ_ frequency parameter for wave number k
 
     Parameters
     ----------
-    om: float or astropy.quantity.Quantity
+
+    om : float or astropy.quantity.Quantity
         Base frequency of Wave model solution - parameter WAVEOM
         If float is given default units of 1/d assigned
-    k: int
+    k : int
         wave number to use to calculate WaveX WXFREQ_ frequency parameter
 
     Returns
     -------
-    WXFREQ_ quantity in units 1/d that can be used in WaveX model"""
+
+    WXFREQ_ quantity in units 1/d that can be used in WaveX model
+    """
     if isinstance(om, u.quantity.Quantity):
         om.to(u.d**-1)
     else:
@@ -1383,19 +1390,23 @@ def _translate_wave_freqs(om, k):
 
 
 def _translate_wavex_freqs(wxfreq, k):
-    """Use WaveX model WXFREQ_ parameters and wave number k to calculate the Wave model WAVEOM frequency parameter.
+    """
+    Use WaveX model WXFREQ_ parameters and wave number k to calculate the Wave model WAVEOM frequency parameter.
 
     Parameters
     ----------
-    wxfreq: float or astropy.quantity.Quantity
+
+    wxfreq : float or astropy.quantity.Quantity
         WaveX frequency from which the WAVEOM parameter will be calculated
         If float is given default units of 1/d assigned
-    k: int
+    k : int
         wave number to use to calculate Wave WAVEOM parameter
 
     Returns
     -------
-    WAVEOM quantity in units 1/d that can be used in Wave model"""
+
+    WAVEOM quantity in units 1/d that can be used in Wave model
+    """
     if isinstance(wxfreq, u.quantity.Quantity):
         wxfreq.to(u.d**-1)
     else:
@@ -1414,7 +1425,8 @@ def _translate_wavex_freqs(wxfreq, k):
 
 
 def translate_wave_to_wavex(model):
-    """Go from a Wave model to a WaveX model
+    """
+    Go from a Wave model to a WaveX model
 
     WaveX frequencies get calculated based on the Wave model WAVEOM parameter and the number of WAVE parameters.
         WXFREQ_000k = [WAVEOM * (k+1)] / [2 * pi]
@@ -1423,12 +1435,13 @@ def translate_wave_to_wavex(model):
 
     Paramters
     ---------
-    model: pint.models.timing_model.TimingModel
+    model : pint.models.timing_model.TimingModel
         TimingModel containing a Wave model to be converted to a WaveX model
 
     Returns
     -------
-    New timing model with converted WaveX model included"""
+    New timing model with converted WaveX model included
+    """
     from pint.models.wavex import WaveX
 
     new_model = deepcopy(model)
@@ -1456,23 +1469,25 @@ def translate_wave_to_wavex(model):
 
 
 def get_wavex_freqs(model, index=None, quantity=False):
-    """Return the WaveX frequencies for a timing model.
+    """
+    Return the WaveX frequencies for a timing model.
 
     If index is specified, returns the frequencies corresponding to the user-provided indices.
     If index isn't specified, returns all WaveX frequencies in timing model
 
     Parameters
     ----------
-    model: pint.models.timing_model.TimingModel
+    model : pint.models.timing_model.TimingModel
         Timing model from which to return WaveX frequencies
-    index: : float, int, list, np.ndarray, None
+    index : float, int, list, np.ndarray, None
         Number or list/array of numbers corresponding to WaveX frequencies to return
-    quantity: bool
+    quantity : bool
         If set to True, returns a list of astropy.quanitity.Quantity rather than a list of prefixParameters
 
     Returns
     -------
-    List of WXFREQ_ parameters"""
+    List of WXFREQ_ parameters
+    """
     if index is None:
         freqs = model.components["WaveX"].get_prefix_mapping_component("WXFREQ_")
         if len(freqs) == 1:
@@ -1500,23 +1515,25 @@ def get_wavex_freqs(model, index=None, quantity=False):
 
 
 def get_wavex_amps(model, index=None, quantity=False):
-    """Return the WaveX amplitudes for a timing model.
+    """
+    Return the WaveX amplitudes for a timing model.
 
     If index is specified, returns the sine/cosine amplitudes corresponding to the user-provided indices.
     If index isn't specified, returns all WaveX sine/cosine amplitudes in timing model
 
     Parameters
     ----------
-    model: pint.models.timing_model.TimingModel
+    model : pint.models.timing_model.TimingModel
         Timing model from which to return WaveX frequencies
-    index: : float, int, list, np.ndarray, None
+    index : float, int, list, np.ndarray, None
         Number or list/array of numbers corresponding to WaveX amplitudes to return
-    quantity: bool
+    quantity : bool
         If set to True, returns a list of tuples of astropy.quanitity.Quantity rather than a list of prefixParameters tuples
 
     Returns
     -------
-    List of WXSIN_ and WXCOS_ parameters"""
+    List of WXSIN_ and WXCOS_ parameters
+    """
     if index is None:
         indices = (
             model.components["WaveX"].get_prefix_mapping_component("WXSIN_").keys()
@@ -1562,19 +1579,21 @@ def get_wavex_amps(model, index=None, quantity=False):
 
 
 def translate_wavex_to_wave(model):
-    """Go from a WaveX timing model to a Wave timing model.
+    """
+    Go from a WaveX timing model to a Wave timing model.
     WARNING: Not every WaveX model can be appropriately translated into a Wave model. This is dependent on the user's choice of frequencies in the WaveX model.
     In order for a WaveX model to be able to be converted into a Wave model, every WaveX frequency must produce the same value of WAVEOM in the calculation:
 
     WAVEOM = [2 * pi * WXFREQ_000k] / (k + 1)
     Paramters
     ---------
-    model: pint.models.timing_model.TimingModel
+    model : pint.models.timing_model.TimingModel
         TimingModel containing a WaveX model to be converted to a Wave model
 
     Returns
     -------
-    New timing model with converted Wave model included"""
+    New timing model with converted Wave model included
+    """
     from pint.models.wave import Wave
 
     new_model = deepcopy(model)

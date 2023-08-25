@@ -9,7 +9,8 @@ from pint.models.timing_model import DelayComponent, MissingParameter
 
 
 class WaveX(DelayComponent):
-    """Implementation of the wave model as a delay correction
+    """
+    Implementation of the wave model as a delay correction
 
     Delays are expressed as a sum of sinusoids.
 
@@ -56,7 +57,8 @@ class WaveX(DelayComponent):
         self.delay_funcs_component += [self.wavex_delay]
 
     def add_wavex_component(self, wxfreq, index=None, wxsin=0, wxcos=0, frozen=True):
-        """Add WaveX component
+        """
+        Add WaveX component
 
         Parameters
         ----------
@@ -132,7 +134,8 @@ class WaveX(DelayComponent):
     def add_wavex_components(
         self, wxfreqs, indices=None, wxsins=0, wxcoses=0, frozens=True
     ):
-        """Add WaveX components with specified base frequencies
+        """
+        Add WaveX components with specified base frequencies
 
         Parameters
         ----------
@@ -147,6 +150,7 @@ class WaveX(DelayComponent):
             Cosine amplitudes for WaveX components
         frozens : iterable of bool or bool
             Indicates whether sine adn cosine amplitudes of wavex components will be fit
+
         Returns
         -------
 
@@ -239,7 +243,8 @@ class WaveX(DelayComponent):
         return added_indices
 
     def remove_wavex_component(self, index):
-        """Remove all WaveX components associated with a given index or list of indices
+        """
+        Remove all WaveX components associated with a given index or list of indices
 
         Parameters
         ----------
@@ -262,7 +267,8 @@ class WaveX(DelayComponent):
         self.validate()
 
     def get_indices(self):
-        """Returns an array of intergers corresponding to WaveX component parameters using WXFREQs
+        """
+        Returns an array of intergers corresponding to WaveX component parameters using WXFREQs
 
         Returns
         -------
@@ -285,7 +291,7 @@ class WaveX(DelayComponent):
             self.num_wave_freqs = len(self.wave_freqs)
 
     def validate(self):
-        """Validate all the WaveX parameters"""
+        # Validate all the WaveX parameters
         super().validate()
         self.setup()
         WXFREQ_mapping = self.get_prefix_mapping_component("WXFREQ_")
