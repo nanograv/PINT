@@ -11,4 +11,5 @@ the released changes.
 ### Changed
 ### Added
 ### Fixed
+- Fix RTD build by making the theme explicit even when on RTD system
 ### Removed
