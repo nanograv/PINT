@@ -12,4 +12,5 @@ the released changes.
 ### Added
 ### Fixed
 - Fixed RTD by specifying theme explicitly.
+- `.value()` now works for pairParameters
 ### Removed
