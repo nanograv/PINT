@@ -294,7 +294,7 @@ def make_fake_toas_uniform(
         include_bipm=clk_version["include_bipm"],
         bipm_version=clk_version["bipm_version"],
         include_gps=clk_version["include_gps"],
-        planets=model["PLANET_SHAPIRO"].value,
+        planets=model["PLANET_SHAPIRO"].value if "PLANET_SHAPIRO" in model else False,
     )
     ts.table["error"] = error
 
@@ -426,7 +426,7 @@ def make_fake_toas_fromtim(timfile, model, add_noise=False, name="fake"):
     --------
     :func:`make_fake_toas`
     """
-    input_ts = pint.toa.get_TOAs(timfile)
+    input_ts = pint.toa.get_TOAs(timfile, planets=model.PLANET_SHAPIRO.value)
 
     if input_ts.is_wideband():
         dm_errors = input_ts.get_dm_errors()

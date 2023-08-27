@@ -150,7 +150,8 @@ def get_TOAs(
     timfile : str or list of strings or file-like
         Filename, list of filenames, or file-like object containing the TOA data.
     ephem : str or None
-        The name of the solar system ephemeris to use; defaults to ``pint.toa.EPHEM_default`` if ``None``
+        The name of the solar system ephemeris to use; defaults to the EPHEM parameter
+        in the timing model (`model`) if it is given, otherwise defaults to ``pint.toa.EPHEM_default``.
     include_bipm : bool or None
         Whether to apply the BIPM clock correction. Defaults to True.
     bipm_version : str or None
@@ -167,7 +168,7 @@ def get_TOAs(
     model : pint.models.timing_model.TimingModel or None
         If a valid timing model is passed, model commands (such as BIPM version,
         planet shapiro delay, and solar system ephemeris) that affect TOA loading
-        are applied.
+        are applied. The solar system ephemeris is superseded by the `ephem` parameter.
     usepickle : bool
         Whether to try to use pickle-based caching of loaded clock-corrected TOAs objects.
     tdb_method : str
@@ -218,7 +219,11 @@ def get_TOAs(
                     f'CLOCK = {model["CLOCK"].value} is not implemented. '
                     f"Using TT({bipm_default}) instead."
                 )
-        if planets is None and model["PLANET_SHAPIRO"].value:
+        if (
+            planets is None
+            and "PLANET_SHAPIRO" in model
+            and model["PLANET_SHAPIRO"].value
+        ):
             planets = True
             log.debug("Using PLANET_SHAPIRO = True from the given model")
 

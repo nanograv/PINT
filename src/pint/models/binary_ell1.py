@@ -312,9 +312,11 @@ class BinaryELL1H(BinaryELL1):
     .. paramtable::
         :class: pint.models.binary_ell1.BinaryELL1H
 
-    Note
-    ----
+    Notes
+    -----
     Only the Medium-inclination case model is implemented.
+
+    Default value in `pint` for `NHARMS` is 7, while in `tempo2` it is 4.
 
     References
     ----------
