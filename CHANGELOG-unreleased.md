@@ -15,4 +15,5 @@ the released changes.
 - Options to add a TZR TOA (`AbsPhase`) during the creation of a `TimingModel` using `ModelBuilder.__call__`, `get_model`, and `get_model_and_toas`
 - `pint.print_info()` function for bug reporting
 ### Fixed
+- Fixed RTD by specifying theme explicitly.
 ### Removed
