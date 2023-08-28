@@ -10,10 +10,8 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
-- Third-order Roemer delay terms to ELL1 model
 - Added WaveX model as DelayComponent with wave amplitudes as fitted parameters
-- Options to add a TZR TOA (`AbsPhase`) during the creation of a `TimingModel` using `ModelBuilder.__call__`, `get_model`, and `get_model_and_toas`
-- `pint.print_info()` function for bug reporting
 ### Fixed
 - Fixed RTD by specifying theme explicitly.
+- Setting `model.PARAM1 = model.PARAM2` no longer overrides the name of `PARAM1`
 ### Removed
