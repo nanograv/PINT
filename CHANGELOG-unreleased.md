@@ -12,4 +12,5 @@ the released changes.
 ### Added
 ### Fixed
 - Fixed RTD by specifying theme explicitly.
+- Setting `model.PARAM1 = model.PARAM2` no longer overrides the name of `PARAM1`
 ### Removed
