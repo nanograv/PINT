@@ -36,6 +36,7 @@ from pint.models.noise_model import EcorrNoise, PLRedNoise, ScaleToaError
 from pint.models.solar_system_shapiro import SolarSystemShapiro
 from pint.models.solar_wind_dispersion import SolarWindDispersion, SolarWindDispersionX
 from pint.models.spindown import Spindown
+from pint.models.fdjump import FDJump
 
 # Import the main timing model classes
 from pint.models.timing_model import DEFAULT_ORDER, TimingModel

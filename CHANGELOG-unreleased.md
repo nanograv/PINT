@@ -9,18 +9,11 @@ the released changes.
 
 ## Unreleased
 ### Changed
-- Third-order Roemer delay terms to ELL1 model
-- Made the addition of a TZR TOA (`AbsPhase`) in the `TimingModel` explicit in `Residuals` class.
-- Updated `CONTRIBUTING.rst` with the latest information.
 ### Added
 - Third-order Roemer delay terms to ELL1 model
 - Added WaveX model as DelayComponent with wave amplitudes as fitted parameters
 - Options to add a TZR TOA (`AbsPhase`) during the creation of a `TimingModel` using `ModelBuilder.__call__`, `get_model`, and `get_model_and_toas`
 - `pint.print_info()` function for bug reporting
 ### Fixed
-- Deleting JUMP1 from flag tables will not prevent fitting
-- Simulating TOAs from tim file when PLANET_SHAPIRO is true now works
-- Docstrings for `get_toas()` and `get_model_and_toas()`
-- Set `DelayComponent_list` and `NoiseComponent_list` to empty list if such components are absent
-- Fix invalid access of `PLANET_SHAPIRO` in models without `Astrometry`
+- Fixed RTD by specifying theme explicitly.
 ### Removed
