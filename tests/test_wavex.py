@@ -1,7 +1,7 @@
 from io import StringIO
 import pytest
 import numpy as np
-import logging
+from loguru import logger as log
 
 from astropy import units as u
 from pint.models import get_model, get_model_and_toas
@@ -88,7 +88,6 @@ def test_derivative():
     model.WXSIN_0001.value = 0.01
     model.WXCOS_0001.value = 0.05
     toas = make_fake_toas_uniform(55000, 55100, 100, model, obs="gbt")
-    log = logging.getLogger("TestWaveXDerivative")
     p = "WXSIN_0001"
     log.debug("Running derivative for %s", f"d_delay_d_{p}")
     ndf = model.d_delay_d_param_num(toas, p)
@@ -106,7 +105,7 @@ def test_derivative():
         log.debug(
             (
                 "derivative relative diff for %s, %lf"
-                % (f"d_delay_d_{p}", np.nanmax(relative_diff).value)
+                % (f"d_delay_d_{p}", f"{np.nanmax(relative_diff).value}")
             )
         )
         assert np.nanmax(relative_diff) < tol, msg

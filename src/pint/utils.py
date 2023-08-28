@@ -1326,7 +1326,7 @@ def wavex_setup(model, T_span, freqs=None, n_freqs=None):
             "Both freqs and n_freqs are specified. Only one or the other should be used"
         )
 
-    if n_freqs == 0:
+    if n_freqs <= 0:
         raise ValueError("Must use a non-zero number of wave frequencies")
     model.add_component(WaveX())
     if isinstance(T_span, u.quantity.Quantity):
@@ -1446,7 +1446,7 @@ def translate_wave_to_wavex(model):
 
     new_model = deepcopy(model)
     wave_names = [
-        "WAVE%d" % ii for ii in range(1, model.components["Wave"].num_wave_terms + 1)
+        f"WAVE{ii}" for ii in range(1, model.components["Wave"].num_wave_terms + 1)
     ]
     wave_terms = [getattr(model.components["Wave"], name) for name in wave_names]
     wave_om = model.components["Wave"].WAVE_OM.quantity

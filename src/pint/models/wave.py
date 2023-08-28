@@ -109,7 +109,7 @@ class Wave(PhaseComponent):
         -------
 
         index :
-            Index that has been addigned to new Wave component
+            Index that has been assigned to new Wave component
         """
         #### If index is None, increment the current max Wave index by 1. Increment using WAVE
         if index is None:
@@ -138,7 +138,7 @@ class Wave(PhaseComponent):
         )
         self.setup()
         self.validate()
-        return index
+        return f"{index}"
 
     def wave_phase(self, toas, delays):
         times = 0
