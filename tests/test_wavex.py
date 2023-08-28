@@ -89,7 +89,7 @@ def test_derivative():
     model.WXCOS_0001.value = 0.05
     toas = make_fake_toas_uniform(55000, 55100, 100, model, obs="gbt")
     p = "WXSIN_0001"
-    log.debug("Running derivative for %s", f"d_delay_d_{p}")
+    log.debug(f"Running derivative for {p}", f"d_delay_d_{p}")
     ndf = model.d_delay_d_param_num(toas, p)
     adf = model.d_delay_d_param(toas, p)
     diff = ndf - adf
@@ -97,15 +97,11 @@ def test_derivative():
     if np.all(diff.value) != 0.0:
         mean_der = (adf + ndf) / 2.0
         relative_diff = np.abs(diff) / np.abs(mean_der)
-        msg = (
-            "Derivative test failed at d_delay_d_%s with max relative difference %lf"
-            % (p, np.nanmax(relative_diff).value)
-        )
+        msg = f"Derivative test failed at d_delay_d_{p} with max relative difference {np.nanmax(relative_diff).value}"
         tol = 0.7
         log.debug(
             (
-                "derivative relative diff for %s, %lf"
-                % (f"d_delay_d_{p}", f"{np.nanmax(relative_diff).value}")
+                f"derivative relative diff for d_delay_d_{p}, {np.nanmax(relative_diff).value}"
             )
         )
         assert np.nanmax(relative_diff) < tol, msg
