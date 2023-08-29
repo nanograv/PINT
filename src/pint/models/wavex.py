@@ -50,7 +50,7 @@ class WaveX(DelayComponent):
         self.add_param(
             MJDParameter(
                 name="WXEPOCH",
-                description="Reference epoch for wave delay solution",
+                description="Reference epoch for Fourier representation of red noise",
                 time_scale="tdb",
             )
         )
@@ -103,7 +103,7 @@ class WaveX(DelayComponent):
         self.add_param(
             prefixParameter(
                 name=f"WXFREQ_{i}",
-                description="Base frequency of wave delay solution",
+                description="Component frequency for Fourier representation of red noise",
                 units="1/d",
                 value=wxfreq,
                 parameter_type="float",
@@ -112,7 +112,7 @@ class WaveX(DelayComponent):
         self.add_param(
             prefixParameter(
                 name=f"WXSIN_{i}",
-                description="Sine amplitudes for wave delay function",
+                description="Sine amplitudes for Fourier representation of red noise",
                 units="s",
                 value=wxsin,
                 frozen=frozen,
@@ -122,7 +122,7 @@ class WaveX(DelayComponent):
         self.add_param(
             prefixParameter(
                 name=f"WXCOS_{i}",
-                description="Cosine amplitudes for wave delay function",
+                description="Cosine amplitudes for Fourier representation of red noise",
                 units="s",
                 value=wxcos,
                 frozen=frozen,
@@ -214,7 +214,7 @@ class WaveX(DelayComponent):
             self.add_param(
                 prefixParameter(
                     name=f"WXFREQ_{i}",
-                    description="Base frequency of wave delay solution",
+                    description="Component frequency for Fourier representation of red noise",
                     units="1/d",
                     value=wxfreq,
                     parameter_type="float",
@@ -223,7 +223,7 @@ class WaveX(DelayComponent):
             self.add_param(
                 prefixParameter(
                     name=f"WXSIN_{i}",
-                    description="Sine amplitudes for wave delay function",
+                    description="Sine amplitude for Fourier representation of red noise",
                     units="s",
                     value=wxsin,
                     parameter_type="float",
@@ -233,7 +233,7 @@ class WaveX(DelayComponent):
             self.add_param(
                 prefixParameter(
                     name=f"WXCOS_{i}",
-                    description="Cosine amplitudes for wave delay function",
+                    description="Cosine amplitude for Fourier representation of red noise",
                     units="s",
                     value=wxcos,
                     parameter_type="float",

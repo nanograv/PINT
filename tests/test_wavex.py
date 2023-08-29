@@ -190,6 +190,29 @@ def test_add_wavex_to_par():
     )
 
 
+def test_add_existing_index():
+    # Check that trying to add an existing index fails
+    model = get_model(StringIO(par2 + wavex_par))
+    with pytest.raises(ValueError):
+        index = model.components["WaveX"].add_wavex_component(0.01, index=2)
+
+
+def test_add_existing_indices():
+    # Check that trying to add multiple existing indices fails
+    model = get_model(StringIO(par2 + wavex_par))
+    with pytest.raises(ValueError):
+        indices = model.components["WaveX"].add_wavex_components(
+            [0.01, 0.02], indices=[2, 3]
+        )
+
+
+def test_multiple_wavex_none_indices():
+    model = get_model(StringIO(par2 + wavex_par))
+    model.components["WaveX"].add_wavex_components([0.01, 0.02])
+    indices = model.components["WaveX"].get_indices()
+    assert np.all(indices == np.array(range(1, len(indices) + 1)))
+
+
 def test_add_then_remove_wavex():
     # Check that adding and then removing a wavex component actually gets rid of it
     model = get_model(StringIO(par2))
@@ -213,6 +236,10 @@ def test_multiple_wavex():
         model.components["WaveX"].wavex_delay(toas, 0.0 * u.s)
         == wavex_model.components["WaveX"].wavex_delay(toas, 0.0 * u.s)
     )
+
+
+# def test_multiple_wavex_unit_conversion():
+# Check that input frequencies and amplitudes in different units convert properly
 
 
 def test_multiple_wavex_broadcast_frozens():
