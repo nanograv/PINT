@@ -1506,11 +1506,7 @@ class PlkWidget(tk.Frame):
                 self.psr.selected_toas = self.psr.all_toas[cluster_bool]
                 jump_name = self.psr.add_jump(cluster_bool)
                 self.updateJumped(jump_name)
-            if (
-                self.selected is not None
-                and self.selected != []
-                and all(self.selected)
-            ):
+            if self.selected is not None and self.selected != [] and all(self.selected):
                 self.psr.selected_toas = self.all_toas[self.selected]
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.randomboxWidget.addRandomCheckbox(self)
