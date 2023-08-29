@@ -501,6 +501,9 @@ class Residuals:
         return (phase_resids / self.get_PSR_freq(calctype=calctype)).to(u.s)
 
     def _calc_gls_chi2(self):
+        """Compute the chi2 when correlated noise is present in the timing model.
+        If the system is not singular, it uses Cholesky factorization to evaluate this.
+        If the system is singular, it uses singular value decomposition instead."""
         self.update()
 
         residuals = self.time_resids.to(u.s).value
@@ -528,7 +531,7 @@ class Residuals:
             xhat = cho_solve(c, mtcy)
         except LinAlgError as e:
             log.warning(
-                f"Degenerate conditions encountered when " f"computing chi-squared: {e}"
+                f"Degenerate conditions encountered when computing chi-squared: {e}"
             )
 
             U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
@@ -550,8 +553,8 @@ class Residuals:
         If the errors on the TOAs are independent this is a straightforward
         calculation, but if the noise model introduces correlated errors then
         obtaining a meaningful chi-squared value requires a Cholesky
-        decomposition. This is carried out, here, by constructing a GLSFitter
-        and asking it to do the chi-squared computation but not a fit.
+        decomposition. This is carried out using the :method:`~pint.residuals.Residuals._calc_gls_chi2`
+        helper function.
 
         The return value here is available as self.chi2, which will not
         redo the computation unless necessary.

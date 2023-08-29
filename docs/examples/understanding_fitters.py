@@ -144,7 +144,7 @@ print(f"Post-fit chi-squared value: {wlsfit.resids.chi2}")
 # straightforward but the full covariance matrix may be enormous.
 # If False, an algorithm is used that takes advantage of the structure
 # of the covariance matrix, based on information provided by the noise
-# model. The two algorithms should give the same result to numerical
+# model. The two algorithms should give the same result up to numerical
 # accuracy where they both can be applied.
 
 # %% [markdown]
@@ -206,7 +206,8 @@ ax.plot(mjds, glsfit.resids.noise_resids["pl_red_noise"], ".")
 # %% [markdown]
 # ## Choosing fitters
 #
-# You can use the automatic fitter selection to help you choose between `WLSFitter`, `GLSFitter`, and their wideband variants.  The default `Downhill` fitters generally have better performance than the plain variants.
+# You can use the automatic fitter selection to help you choose between `WLSFitter`, `GLSFitter`, and their wideband variants.
+# The default `Downhill` fitters generally have better performance than the plain variants.
 
 # %%
 autofit = pint.fitter.Fitter.auto(toas=ts1855, model=m1855)
@@ -221,4 +222,5 @@ display_markdown(autofit.model.compare(glsfit.model, format="markdown"), raw=Tru
 # The results are (thankfully) identical.
 
 # %% [markdown]
-# The MCMC fitter is considerably more complicated, so it has its own dedicated walkthroughs in `MCMC_walkthrough.ipynb` (for photon data) and `examples/fit_NGC6440E_MCMC.py` (for fitting TOAs).
+# The MCMC fitter is considerably more complicated, so it has its own dedicated walkthroughs in `MCMC_walkthrough.ipynb`
+# (for photon data) and `examples/fit_NGC6440E_MCMC.py` (for fitting TOAs).
