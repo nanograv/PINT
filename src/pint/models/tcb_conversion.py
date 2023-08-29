@@ -9,6 +9,7 @@ __all__ = [
     "IFTE_K",
     "scale_parameter",
     "transform_mjd_parameter",
+    "convert_tcb_tdb",
 ]
 
 # These constants are taken from Irwin & Fukushima 1999.
