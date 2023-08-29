@@ -9,9 +9,11 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- WAVE parameters can be added to a Wave model with `add_wave_component()` in wave.py 
 ### Added
 - Added WaveX model as DelayComponent with wave amplitudes as fitted parameters
 ### Fixed
+- Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
 - Fixed RTD by specifying theme explicitly.
 - `.value()` now works for pairParameters
 - Setting `model.PARAM1 = model.PARAM2` no longer overrides the name of `PARAM1`
