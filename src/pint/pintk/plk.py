@@ -1508,7 +1508,7 @@ class PlkWidget(tk.Frame):
                 self.updateJumped(jump_name)
             if (
                 self.selected is not None
-                and self.selected is not []
+                and self.selected != []
                 and all(self.selected)
             ):
                 self.psr.selected_toas = self.all_toas[self.selected]
