@@ -88,7 +88,6 @@ from pint.utils import FTest
 
 __all__ = [
     "Fitter",
-    "auto",
     "WLSFitter",
     "GLSFitter",
     "WidebandTOAFitter",
