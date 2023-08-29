@@ -499,6 +499,16 @@ class TimingModel:
             f"Attribute {name} not found in TimingModel or any Component"
         )
 
+    def __setattr__(self, name, value):
+        """Mostly this just sets ``self.name = value``.  But in the case where they are both :class:`Parameter` instances
+        with different names, this copies the ``quantity``, ``uncertainty``, ``frozen`` attributes only.
+        """
+        if isinstance(value, (Parameter, prefixParameter)) and name != value.name:
+            for p in ["quantity", "uncertainty", "frozen"]:
+                setattr(getattr(self, name), p, getattr(value, p))
+        else:
+            super().__setattr__(name, value)
+
     @property_exists
     def params_ordered(self):
         """List of all parameter names in this model and all its components.
