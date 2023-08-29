@@ -238,8 +238,19 @@ def test_multiple_wavex():
     )
 
 
-# def test_multiple_wavex_unit_conversion():
-# Check that input frequencies and amplitudes in different units convert properly
+def test_multiple_wavex_unit_conversion():
+    # Check that input frequencies and amplitudes in different units convert properly
+    model = get_model(StringIO(par2))
+    freqs = [2e-7 * u.s**-1, 3e-7 * u.s**-1]
+    indices = model.components["WaveX"].add_wavex_components(
+        [2e-7 * u.s**-1, 3e-7 * u.s**-1],
+        indices=[2, 3],
+        wxsins=[2, 3],
+        wxcoses=[2, 3],
+        frozens=False,
+    )
+    assert getattr(model, f"WXFREQ_0002").value == freqs[0].to(u.d**-1).value
+    assert getattr(model, f"WXFREQ_0003").value == freqs[1].to(u.d**-1).value
 
 
 def test_multiple_wavex_broadcast_frozens():
