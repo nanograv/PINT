@@ -796,6 +796,9 @@ class floatParameter(Parameter):
             return None
         elif isinstance(quan, (float, np.longdouble)):
             return quan
+        elif isinstance(quan, list):
+            # for pairParamters
+            return [x.to(self.units).value for x in quan]
         else:
             return quan.to(self.units).value
 

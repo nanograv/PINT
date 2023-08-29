@@ -14,5 +14,6 @@ the released changes.
 - `pint.output.publish` module and `pintpublish` script for generating publication (LaTeX) output.
 ### Fixed
 - Fixed RTD by specifying theme explicitly.
+- `.value()` now works for pairParameters
 - Setting `model.PARAM1 = model.PARAM2` no longer overrides the name of `PARAM1`
 ### Removed
