@@ -14,4 +14,5 @@ the released changes.
 - Fixed RTD by specifying theme explicitly.
 - `.value()` now works for pairParameters
 - Setting `model.PARAM1 = model.PARAM2` no longer overrides the name of `PARAM1`
+- Fix ICRS -> ECL conversion when parameter uncertainties are not set.
 ### Removed

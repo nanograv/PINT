@@ -550,8 +550,12 @@ class AstrometryEquatorial(Astrometry):
             ra=self.RAJ.quantity,
             dec=self.DECJ.quantity,
             obstime=self.POSEPOCH.quantity,
-            pm_ra_cosdec=self.RAJ.uncertainty * np.cos(self.DECJ.quantity) / dt,
-            pm_dec=self.DECJ.uncertainty / dt,
+            pm_ra_cosdec=self.RAJ.uncertainty * np.cos(self.DECJ.quantity) / dt
+            if self.RAJ.uncertainty is not None
+            else 0 * self.RAJ.units / dt,
+            pm_dec=self.DECJ.uncertainty / dt
+            if self.DECJ.uncertainty is not None
+            else 0 * self.DECJ.units / dt,
             frame=coords.ICRS,
         )
         c_ECL = c.transform_to(PulsarEcliptic(ecl=ecl))
@@ -563,8 +567,12 @@ class AstrometryEquatorial(Astrometry):
             ra=self.RAJ.quantity,
             dec=self.DECJ.quantity,
             obstime=self.POSEPOCH.quantity,
-            pm_ra_cosdec=self.PMRA.uncertainty,
-            pm_dec=self.PMDEC.uncertainty,
+            pm_ra_cosdec=self.PMRA.uncertainty
+            if self.PMRA.uncertainty is not None
+            else 0 * self.PMRA.units,
+            pm_dec=self.PMDEC.uncertainty
+            if self.PMDEC.uncertainty is not None
+            else 0 * self.PMDEC.units,
             frame=coords.ICRS,
         )
         c_ECL = c.transform_to(PulsarEcliptic(ecl=ecl))
