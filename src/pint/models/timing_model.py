@@ -1905,6 +1905,7 @@ class TimingModel:
                 the_unit = u.Unit("") / getattr(self, param).units
                 M[:, ii] = q.to_value(the_unit) / F0.value
                 units.append(the_unit / F0.unit)
+
         return M, params, units
 
     def compare(

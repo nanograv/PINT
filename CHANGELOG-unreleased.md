@@ -9,6 +9,8 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- Moved design matrix normalization code from `pint.fitter` to the new `pint.utils.normalize_designmatrix()` function.
+- Made `Residuals` independent of `GLSFitter` (GLS chi2 is now computed using the new function `Residuals._calc_gls_chi2()`).
 ### Added
 ### Fixed
 - Fixed RTD by specifying theme explicitly.

@@ -272,32 +272,33 @@ def test_gls_chi2_reasonable(full_cov):
     toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
     f = GLSFitter(toas, model)
     fit_chi2 = f.fit_toas(full_cov=full_cov)
-    assert_allclose(fit_chi2, f.resids.calc_chi2(full_cov=full_cov))
+    assert_allclose(fit_chi2, f.resids.calc_chi2())
 
 
+# @abhisrkckl: I am commenting this out because calc_chisq no longer has the full_cov option.
 # @pytest.mark.xfail(reason="numerical instability maybe?")
-def test_gls_chi2_full_cov():
-    model = get_model(
-        StringIO(
-            """
-            PSRJ J1234+5678
-            ELAT 0
-            ELONG 0
-            DM 10
-            F0 1
-            PEPOCH 58000
-            TNRedAmp -14.227505410948254
-            TNRedGam 4.91353
-            TNRedC 45
-            """
-        )
-    )
-    model.free_params = ["ELAT", "ELONG"]
-    toas = make_fake_toas_uniform(57000, 59000, 100, model=model, error=1 * u.us)
-    np.random.seed(0)
-    toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
-    r = Residuals(toas, model)
-    assert_allclose(r.calc_chi2(full_cov=True), r.calc_chi2(full_cov=False))
+# def test_gls_chi2_full_cov():
+#     model = get_model(
+#         StringIO(
+#             """
+#             PSRJ J1234+5678
+#             ELAT 0
+#             ELONG 0
+#             DM 10
+#             F0 1
+#             PEPOCH 58000
+#             TNRedAmp -14.227505410948254
+#             TNRedGam 4.91353
+#             TNRedC 45
+#             """
+#         )
+#     )
+#     model.free_params = ["ELAT", "ELONG"]
+#     toas = make_fake_toas_uniform(57000, 59000, 100, model=model, error=1 * u.us)
+#     np.random.seed(0)
+#     toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
+#     r = Residuals(toas, model)
+#     assert_allclose(r.calc_chi2(full_cov=True), r.calc_chi2(full_cov=False))
 
 
 def test_gls_chi2_behaviour():
