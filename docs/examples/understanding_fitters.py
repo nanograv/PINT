@@ -179,11 +179,6 @@ m1855.DMX_0001.prefix
 glsfit.fit_toas(maxiter=1)
 
 # %%
-# Not sure how to do this properly yet.
-# glsfit2 = pint.fitter.GLSFitter(toas=t, model=glsfit.model, residuals=glsfit.resids)
-# glsfit2.fit_toas(maxiter=0)
-
-# %%
 glsfit.print_summary()
 
 # %% [markdown]
