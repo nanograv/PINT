@@ -73,10 +73,10 @@ def test_ECL_to_ICRS():
 def test_ICRS_to_ECL_nouncertainties():
     # start with ICRS model with no pm uncertainties, get residuals with ECL model, compare
     model_ICRS = get_model(io.StringIO(modelstring_ICRS))
-    for p in ["PMRA", "PMDEC"]:
-        getattr(model_ICRS, p).frozen = True
-        getattr(model_ICRS, p).uncertainties = None
-
+    model_ICRS.PMRA._uncertainty = None
+    model_ICRS.PMRA.frozen = True
+    model_ICRS.PMDEC._uncertainty = None
+    model_ICRS.PMDEC.frozen = True
     toas = pint.simulation.make_fake_toas_uniform(
         MJDStart, MJDStop, NTOA, model=model_ICRS, error=1 * u.us, add_noise=True
     )
@@ -89,10 +89,10 @@ def test_ICRS_to_ECL_nouncertainties():
 def test_ECL_to_ICRS_nouncertainties():
     # start with ECL model with no pm uncertainties, get residuals with ICRS model, compare
     model_ECL = get_model(io.StringIO(modelstring_ECL))
-    for p in ["PMELONG", "PMELAT"]:
-        getattr(model_ECL, p).frozen = True
-        getattr(model_ECL, p).uncertainties = None
-
+    model_ECL.PMELONG._uncertainty = None
+    model_ECL.PMELONG.frozen = True
+    model_ECL.PMELAT._uncertainty = None
+    model_ECL.PMELAT.frozen = True
     toas = pint.simulation.make_fake_toas_uniform(
         MJDStart, MJDStop, NTOA, model=model_ECL, error=1 * u.us, add_noise=True
     )
