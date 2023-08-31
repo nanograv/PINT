@@ -184,15 +184,13 @@ def test_merge_toas():
     assert np.all(toas_out.table == toas_outb.table)
 
 
-def test_is_wideband():
-    t1 = pint.toa.get_TOAs(
-        io.StringIO(
-            """
-        fake.ff 1430.000000 53393.561383615118386   0.178  ao  -fe L-wide -be ASP -pp_dm 10.0
-        fake.ff 1430.000000 53394.561383615118386   0.178  ao  -fe L-wide -be ASP
-        """
+def test_mix_nb_wb():
+    with pytest.raises(ValueError):
+        t1 = pint.toa.get_TOAs(
+            io.StringIO(
+                """
+                fake.ff 1430.000000 53393.561383615118386   0.178  ao  -fe L-wide -be ASP -pp_dm 10.0
+                fake.ff 1430.000000 53394.561383615118386   0.178  ao  -fe L-wide -be ASP
+                """
+            )
         )
-    )
-    assert not t1.is_wideband()
-    assert t1[0].is_wideband()
-    assert not t1[1].is_wideband()
