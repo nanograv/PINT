@@ -11,6 +11,7 @@ the released changes.
 ### Changed
 - Moved design matrix normalization code from `pint.fitter` to the new `pint.utils.normalize_designmatrix()` function.
 - Made `Residuals` independent of `GLSFitter` (GLS chi2 is now computed using the new function `Residuals._calc_gls_chi2()`).
+- `TOAs.is_wideband` returns True only if *ALL* TOAs have the -pp_dm flag. Emits a warning if only some TOAs have this flag.
 ### Added
 ### Fixed
 - Fixed RTD by specifying theme explicitly.
