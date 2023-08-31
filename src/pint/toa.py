@@ -1634,8 +1634,8 @@ class TOAs:
 
         if len(valid_data) not in [0, len(self)]:
             log.warning(
-                "Only a subset of the TOAs have wideband DM information."
-                "A TOAs object will be treated wideband only of ALL TOAs have DM information."
+                "Only a subset of the TOAs have wideband DM information. "
+                "A TOAs object will be treated as wideband only of *ALL* TOAs have DM information."
             )
 
         return len(valid_data) == len(self)
