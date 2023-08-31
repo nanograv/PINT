@@ -12,7 +12,7 @@ import io
 def wb():
     m = get_model(os.path.join(datadir, "NGC6440E.par"))
     t = pint.simulation.make_fake_toas_uniform(
-        55000, 58000, 20, model=m, freq=1400 * u.MHz, wideband=True
+        55000, 58000, 20, model=m, freq=1400 * u.MHz, wideband=True, add_noise=True
     )
 
     return m, t
@@ -22,7 +22,13 @@ def wb():
 def nb():
     m = get_model(os.path.join(datadir, "NGC6440E.par"))
     t = pint.simulation.make_fake_toas_uniform(
-        55000, 58000, 20, model=m, freq=1400 * u.MHz, wideband=False
+        55000,
+        58000,
+        20,
+        model=m,
+        freq=1400 * u.MHz,
+        wideband=False,
+        add_noise=True,
     )
 
     return m, t
