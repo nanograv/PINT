@@ -14,6 +14,7 @@ the released changes.
 - Made `Residuals` independent of `GLSFitter` (GLS chi2 is now computed using the new function `Residuals._calc_gls_chi2()`).
 ### Added
 - Added WaveX model as DelayComponent with wave amplitudes as fitted parameters
+- Added DMWaveX model (Fourier representation of DM noise)
 ### Fixed
 - Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
 - Fixed RTD by specifying theme explicitly.
