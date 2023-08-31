@@ -698,6 +698,7 @@ class Fitter:
             if self.toas.clock_corr_info["include_bipm"]
             else "TT(TAI)"
         )
+        self.model.CHI2.value = self.resids.chi2
 
     def reset_model(self):
         """Reset the current model to the initial model."""
