@@ -277,10 +277,10 @@ class DMWaveX(Dispersion):
             if prefix_par.startswith("DMWXCOS_"):
                 self.register_deriv_funcs(self.d_delay_d_dmparam, prefix_par)
                 self.register_dm_deriv_funcs(self.d_dm_d_DMWXCOS, prefix_par)
-            self.wave_freqs = list(
+            self.dmwavex_freqs = list(
                 self.get_prefix_mapping_component("DMWXFREQ_").keys()
             )
-            self.num_wave_freqs = len(self.wave_freqs)
+            self.num_dmwavex_freqs = len(self.dmwavex_freqs)
 
     def validate(self):
         # Validate all the DMWaveX parameters
