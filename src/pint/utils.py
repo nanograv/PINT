@@ -1366,6 +1366,86 @@ def wavex_setup(model, T_span, freqs=None, n_freqs=None):
     return model.components["WaveX"].get_indices()
 
 
+def dmwavex_setup(model, T_span, freqs=None, n_freqs=None):
+    """
+    Set-up a DMWaveX model based on either an array of user-provided frequencies or the wave number
+    frequency calculation. Sine and Cosine amplitudes are initially set to zero
+
+    User specifies T_span and either freqs or n_freqs. This function assumes that the timing model does not already
+    have any WaveX components. See add_dmwavex_component() or add_dmwavex_components() to add components
+    to an existing DMWaveX model.
+
+    Parameters
+    ----------
+
+    model : pint.models.timing_model.TimingModel
+    freqs : iterable of float or astropy.quantity.Quantity, None
+        User inputed base frequencies
+    n_freqs : int, None
+        Number of wave frequencies to calculate using the equation: freq_n = 2 * pi * n / T_span
+        Where n is the wave number, and T_span is the total time span of the toas in the fitter object
+    T_span : float, astropy.quantity.Quantity
+        Time span used to calculate nyquist frequency when using freqs
+        Time span used to calculate WaveX frequencies when using n_freqs
+        Usually to be set as the length of the timing baseline the model is being used for
+
+    Returns
+    -------
+
+    indices : list
+            Indices that have been assigned to new WaveX components
+    """
+    from pint.models.dmwavex import DMWaveX
+
+    if (freqs is None) and (n_freqs is None):
+        raise ValueError(
+            "DMWaveX component base frequencies are not specified. "
+            "Please input either freqs or n_freqs"
+        )
+
+    if (freqs is not None) and (n_freqs is not None):
+        raise ValueError(
+            "Both freqs and n_freqs are specified. Only one or the other should be used"
+        )
+
+    if n_freqs <= 0:
+        raise ValueError("Must use a non-zero number of wave frequencies")
+    model.add_component(DMWaveX())
+    if isinstance(T_span, u.quantity.Quantity):
+        T_span.to(u.d)
+    else:
+        T_span *= u.d
+
+    nyqist_freq = 1.0 / (2.0 * T_span)
+    if freqs is not None:
+        if isinstance(freqs, u.quantity.Quantity):
+            freqs.to(u.d**-1)
+        else:
+            freqs *= u.d**-1
+        if len(freqs) == 1:
+            model.DMWXFREQ_0001.quantity = freqs
+        else:
+            np.array(freqs)
+            freqs.sort()
+            if min(np.diff(freqs)) < nyqist_freq:
+                warnings.warn(
+                    "DMWaveX frequency spacing is finer than frequency resolution of data"
+                )
+            model.DMWXFREQ_0001.quantity = freqs[0]
+            model.components["DMWaveX"].add_dmwavex_components(freqs[1:])
+
+    if n_freqs is not None:
+        if n_freqs == 1:
+            wave_freq = 2.0 * np.pi / T_span
+            model.DMWXFREQ_0001.quantity = wave_freq
+        else:
+            wave_numbers = np.arange(1, n_freqs + 1)
+            wave_freqs = 2.0 * np.pi * wave_numbers / T_span
+            model.DMWXFREQ_0001.quantity = wave_freqs[0]
+            model.components["DMWaveX"].add_dmwavex_components(wave_freqs[1:])
+    return model.components["DMWaveX"].get_indices()
+
+
 def _translate_wave_freqs(om, k):
     """
     Use Wave model WAVEOM parameter to calculate a WaveX WXFREQ_ frequency parameter for wave number k
