@@ -1,9 +1,31 @@
+from astropy import units as u
 import pytest
 from pint.models import get_model_and_toas, get_model
 import pint.fitter
+import pint.simulation
 from pinttestdata import datadir
 import os
 import io
+
+
+@pytest.fixture
+def wb():
+    m = get_model(os.path.join(datadir, "NGC6440E.par"))
+    t = pint.simulation.make_fake_toas_uniform(
+        55000, 58000, 20, model=m, freq=1400 * u.MHz, wideband=True
+    )
+
+    return m, t
+
+
+@pytest.fixture
+def nb():
+    m = get_model(os.path.join(datadir, "NGC6440E.par"))
+    t = pint.simulation.make_fake_toas_uniform(
+        55000, 58000, 20, model=m, freq=1400 * u.MHz, wideband=False
+    )
+
+    return m, t
 
 
 @pytest.mark.parametrize(
@@ -15,10 +37,8 @@ import io
         pint.fitter.DownhillGLSFitter,
     ],
 )
-def test_nbfitters(ft):
-    m, t = get_model_and_toas(
-        os.path.join(datadir, "NGC6440E.par"), os.path.join(datadir, "NGC6440E.tim")
-    )
+def test_nbfitters(ft, nb):
+    m, t = nb
     f = ft(t, m)
     f.fit_toas()
     matched_line = [
@@ -32,11 +52,8 @@ def test_nbfitters(ft):
 @pytest.mark.parametrize(
     "ft", [pint.fitter.WidebandTOAFitter, pint.fitter.WidebandDownhillFitter]
 )
-def test_wbfitters(ft):
-    m, t = get_model_and_toas(
-        "tests/datafile/B1855+09_NANOGrav_12yv3.wb.gls.par",
-        "tests/datafile/B1855+09_NANOGrav_12yv3.wb.tim",
-    )
+def test_wbfitters(ft, wb):
+    m, t = wb
     f = ft(t, m)
     f.fit_toas()
     matched_line = [
