@@ -4,6 +4,10 @@ from pint.models import get_model
 from pint.fitter import Fitter
 from pint.simulation import make_fake_toas_uniform
 from pint.utils import dmwavex_setup
+from pint import dmu
+
+import pytest
+import astropy.units as u
 
 par = """
     PSR              B1937+21
@@ -24,6 +28,9 @@ par = """
 def test_dmwavex():
     m = get_model(StringIO(par))
 
+    with pytest.raises(ValueError):
+        idxs = dmwavex_setup(m, 3600)
+
     idxs = dmwavex_setup(m, 3600, n_freqs=5)
 
     assert "DMWaveX" in m.components
@@ -38,3 +45,19 @@ def test_dmwavex():
     ftr.fit_toas()
 
     assert ftr.resids.reduced_chi2 < 2
+
+
+def test_add_dmwavex():
+    m = get_model(StringIO(par))
+    idxs = dmwavex_setup(m, 3600, n_freqs=5)
+
+    with pytest.raises(ValueError):
+        m.components["DMWaveX"].add_dmwavex_component(1, index=5, dmwxsin=0, dmwxcos=0)
+
+    m.components["DMWaveX"].add_dmwavex_component(1, index=6, dmwxsin=0, dmwxcos=0)
+    assert m.num_dmwavex_freqs == len(idxs) + 1
+
+    m.components["DMWaveX"].add_dmwavex_component(
+        1 / u.day, index=7, dmwxsin=0 * dmu, dmwxcos=0 * dmu
+    )
+    assert m.num_dmwavex_freqs == len(idxs) + 2

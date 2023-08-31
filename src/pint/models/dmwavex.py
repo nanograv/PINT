@@ -81,9 +81,9 @@ class DMWaveX(Dispersion):
             )
 
         if isinstance(dmwxsin, u.quantity.Quantity):
-            dmwxsin = dmwxsin.to_value(u.s)
+            dmwxsin = dmwxsin.to_value(dmu)
         if isinstance(dmwxcos, u.quantity.Quantity):
-            dmwxcos = dmwxcos.to_value(u.s)
+            dmwxcos = dmwxcos.to_value(dmu)
         if isinstance(dmwxfreq, u.quantity.Quantity):
             dmwxfreq = dmwxfreq.to_value(1 / u.d)
         self.add_param(
@@ -193,9 +193,9 @@ class DMWaveX(Dispersion):
             if isinstance(dmwxfreq, u.quantity.Quantity):
                 dmwxfreq = dmwxfreq.to_value(u.d**-1)
             if isinstance(dmwxsin, u.quantity.Quantity):
-                dmwxsin = dmwxsin.to_value(u.s)
+                dmwxsin = dmwxsin.to_value(dmu)
             if isinstance(dmwxcos, u.quantity.Quantity):
-                dmwxcos = dmwxcos.to_value(u.s)
+                dmwxcos = dmwxcos.to_value(dmu)
             log.trace(f"Adding DMWXSIN_{i} and DMWXCOS_{i} at frequency DMWXFREQ_{i}")
             self.add_param(
                 prefixParameter(
