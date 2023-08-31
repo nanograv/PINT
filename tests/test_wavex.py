@@ -6,7 +6,7 @@ from loguru import logger as log
 from astropy import units as u
 from pint.models import get_model, get_model_and_toas
 from pint.models import model_builder as mb
-from pint.models.timing_model import Component
+from pint.models.timing_model import Component, MissingParameter
 from pint.fitter import Fitter
 from pint.residuals import Residuals
 from pint.toa import get_TOAs
@@ -251,6 +251,68 @@ def test_multiple_wavex_unit_conversion():
     )
     assert getattr(model, f"WXFREQ_0002").value == freqs[0].to(u.d**-1).value
     assert getattr(model, f"WXFREQ_0003").value == freqs[1].to(u.d**-1).value
+
+
+def test_cos_amp_missing():
+    # Check that validate fails when using a model with missing cosine amplitudes for the frequencies present
+    bad_wavex_par = """
+    WXFREQ_0002            0.2
+    WXSIN_0002              2
+    """
+    with pytest.raises(ValueError):
+        model = get_model(StringIO(par2 + bad_wavex_par))
+
+
+def test_sin_amp_missing():
+    # Check that validate fails when using a model with missing cosine amplitudes for the frequencies present
+    bad_wavex_par = """
+    WXFREQ_0002            0.2
+    WXCOS_0002              2
+    """
+    with pytest.raises(ValueError):
+        model = get_model(StringIO(par2 + bad_wavex_par))
+
+
+def test_bad_wxfreq_value():
+    # Check that putting a zero, or None value for an added frequency raises ValueErrors
+    model = get_model(StringIO(par2))
+    with pytest.raises(ValueError):
+        model.components["WaveX"].add_wavex_component(0)
+        model.components["WaveX"].add_wavex_component(None)
+
+
+def test_missing_epoch_parameters():
+    bad_par = """
+    PSR              B1937+21
+    LAMBDA   301.9732445337270
+    BETA      42.2967523367957
+    PMLAMBDA           -0.0175
+    PMBETA             -0.3971
+    PX                  0.1515
+    F0    641.9282333345536244  1  0.0000000000000132
+    F1     -4.330899370129D-14  1  2.149749089617D-22
+    DM               71.016633
+    WXFREQ_0001            0.1
+    WXSIN_0001              1
+    WXCOS_0001              1 
+    UNITS                  TDB
+    """
+    with pytest.raises(MissingParameter):
+        model = get_model(StringIO(bad_par))
+
+
+def test_sin_cos_mismatch():
+    # Check that having mismatching sine and cosine amplitudes raises ValueErrors
+    bad_wavex_par = """
+    WXFREQ_0002            0.2
+    WXSIN_0002              2
+    WXCOS_0003              2
+    WXFREQ_0003            0.3
+    WXSIN_0003              2
+    WXCOS_0004              2
+    """
+    with pytest.raises(ValueError):
+        model = get_model(StringIO(par2 + bad_wavex_par))
 
 
 def test_multiple_wavex_broadcast_frozens():
