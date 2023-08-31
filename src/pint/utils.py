@@ -39,6 +39,8 @@ import sys
 import textwrap
 from contextlib import contextmanager
 from pathlib import Path
+from warnings import warn
+import scipy
 import uncertainties
 
 import astropy.constants as const
@@ -49,12 +51,18 @@ from astropy import constants
 from astropy.time import Time
 from loguru import logger as log
 from scipy.special import fdtrc
+from copy import deepcopy
+import warnings
 
 import pint
 import pint.pulsar_ecliptic
 from pint.toa_select import TOASelect
 
+
 __all__ = [
+    "PINTPrecisionError",
+    "check_longdouble_precision",
+    "require_longdouble_precision",
     "PosVel",
     "numeric_partial",
     "numeric_partials",
@@ -68,26 +76,39 @@ __all__ = [
     "lines_of",
     "interesting_lines",
     "pmtot",
-    "dmxselections",
-    "dmxparse",
-    "dmxstats",
+    "dmxrange",
+    "sum_print",
     "dmx_ranges_old",
     "dmx_ranges",
+    "dmxselections",
+    "dmxstats",
+    "dmxparse",
+    "get_prefix_timerange",
+    "get_prefix_timeranges",
+    "find_prefix_bytime",
+    "merge_dmx",
+    "split_dmx",
+    "split_swx",
+    "wavex_setup",
+    "translate_wave_to_wavex",
+    "get_wavex_freqs",
+    "get_wavex_amps",
+    "translate_wavex_to_wave",
     "weighted_mean",
     "ELL1_check",
     "FTest",
     "add_dummy_distance",
     "remove_dummy_distance",
     "info_string",
-    "print_color_examples",
+    "list_parameters",
     "colorize",
+    "print_color_examples",
     "group_iterator",
     "compute_hash",
-    "PINTPrecisionError",
-    "check_longdouble_precision",
-    "require_longdouble_precision",
     "get_conjunction",
     "divide_times",
+    "convert_dispersion_measure",
+    "parse_time",
     "get_unit",
 ]
 
@@ -1265,6 +1286,342 @@ def split_swx(model, time):
     return index, newindex
 
 
+def wavex_setup(model, T_span, freqs=None, n_freqs=None):
+    """
+    Set-up a WaveX model based on either an array of user-provided frequencies or the wave number
+    frequency calculation. Sine and Cosine amplitudes are initially set to zero
+
+    User specifies T_span and either freqs or n_freqs. This function assumes that the timing model does not already
+    have any WaveX components. See add_wavex_component() or add_wavex_components() to add WaveX components
+    to an existing WaveX model.
+
+    Parameters
+    ----------
+
+    model : pint.models.timing_model.TimingModel
+    freqs : iterable of float or astropy.quantity.Quantity, None
+        User inputed base frequencies
+    n_freqs : int, None
+        Number of wave frequencies to calculate using the equation: freq_n = 2 * pi * n / T_span
+        Where n is the wave number, and T_span is the total time span of the toas in the fitter object
+    T_span : float, astropy.quantity.Quantity
+        Time span used to calculate nyquist frequency when using freqs
+        Time span used to calculate WaveX frequencies when using n_freqs
+        Usually to be set as the length of the timing baseline the model is being used for
+
+    Returns
+    -------
+
+    indices : list
+            Indices that have been assigned to new WaveX components
+    """
+    from pint.models.wavex import WaveX
+
+    if (freqs is None) and (n_freqs is None):
+        raise ValueError(
+            "WaveX component base frequencies are not specified. "
+            "Please input either freqs or n_freqs"
+        )
+
+    if (freqs is not None) and (n_freqs is not None):
+        raise ValueError(
+            "Both freqs and n_freqs are specified. Only one or the other should be used"
+        )
+
+    if n_freqs <= 0:
+        raise ValueError("Must use a non-zero number of wave frequencies")
+    model.add_component(WaveX())
+    if isinstance(T_span, u.quantity.Quantity):
+        T_span.to(u.d)
+    else:
+        T_span *= u.d
+
+    nyqist_freq = 1.0 / (2.0 * T_span)
+    if freqs is not None:
+        if isinstance(freqs, u.quantity.Quantity):
+            freqs.to(u.d**-1)
+        else:
+            freqs *= u.d**-1
+        if len(freqs) == 1:
+            model.WXFREQ_0001.quantity = freqs
+        else:
+            np.array(freqs)
+            freqs.sort()
+            if min(np.diff(freqs)) < nyqist_freq:
+                warnings.warn(
+                    "Wave frequency spacing is finer than frequency resolution of data"
+                )
+            model.WXFREQ_0001.quantity = freqs[0]
+            model.components["WaveX"].add_wavex_components(freqs[1:])
+
+    if n_freqs is not None:
+        if n_freqs == 1:
+            wave_freq = 2.0 * np.pi / T_span
+            model.WXFREQ_0001.quantity = wave_freq
+        else:
+            wave_numbers = np.arange(1, n_freqs + 1)
+            wave_freqs = 2.0 * np.pi * wave_numbers / T_span
+            model.WXFREQ_0001.quantity = wave_freqs[0]
+            model.components["WaveX"].add_wavex_components(wave_freqs[1:])
+    return model.components["WaveX"].get_indices()
+
+
+def _translate_wave_freqs(om, k):
+    """
+    Use Wave model WAVEOM parameter to calculate a WaveX WXFREQ_ frequency parameter for wave number k
+
+    Parameters
+    ----------
+
+    om : float or astropy.quantity.Quantity
+        Base frequency of Wave model solution - parameter WAVEOM
+        If float is given default units of 1/d assigned
+    k : int
+        wave number to use to calculate WaveX WXFREQ_ frequency parameter
+
+    Returns
+    -------
+
+    WXFREQ_ quantity in units 1/d that can be used in WaveX model
+    """
+    if isinstance(om, u.quantity.Quantity):
+        om.to(u.d**-1)
+    else:
+        om *= u.d**-1
+    return (om * (k + 1)) / (2.0 * np.pi)
+
+
+def _translate_wavex_freqs(wxfreq, k):
+    """
+    Use WaveX model WXFREQ_ parameters and wave number k to calculate the Wave model WAVEOM frequency parameter.
+
+    Parameters
+    ----------
+
+    wxfreq : float or astropy.quantity.Quantity
+        WaveX frequency from which the WAVEOM parameter will be calculated
+        If float is given default units of 1/d assigned
+    k : int
+        wave number to use to calculate Wave WAVEOM parameter
+
+    Returns
+    -------
+
+    WAVEOM quantity in units 1/d that can be used in Wave model
+    """
+    if isinstance(wxfreq, u.quantity.Quantity):
+        wxfreq.to(u.d**-1)
+    else:
+        wxfreq *= u.d**-1
+    if len(wxfreq) == 1:
+        return (2.0 * np.pi * wxfreq) / (k + 1.0)
+    else:
+        wave_om = [
+            ((2.0 * np.pi * wxfreq[i]) / (k[i] + 1.0)) for i in range(len(wxfreq))
+        ]
+        if np.allclose(wave_om, wave_om[0], atol=1e-3):
+            om = sum(wave_om) / len(wave_om)
+            return om
+        else:
+            return False
+
+
+def translate_wave_to_wavex(model):
+    """
+    Go from a Wave model to a WaveX model
+
+    WaveX frequencies get calculated based on the Wave model WAVEOM parameter and the number of WAVE parameters.
+        WXFREQ_000k = [WAVEOM * (k+1)] / [2 * pi]
+
+    WaveX amplitudes are taken from the WAVE pair parameters
+
+    Paramters
+    ---------
+    model : pint.models.timing_model.TimingModel
+        TimingModel containing a Wave model to be converted to a WaveX model
+
+    Returns
+    -------
+    New timing model with converted WaveX model included
+    """
+    from pint.models.wavex import WaveX
+
+    new_model = deepcopy(model)
+    wave_names = [
+        f"WAVE{ii}" for ii in range(1, model.components["Wave"].num_wave_terms + 1)
+    ]
+    wave_terms = [getattr(model.components["Wave"], name) for name in wave_names]
+    wave_om = model.components["Wave"].WAVE_OM.quantity
+    wave_epoch = model.components["Wave"].WAVEEPOCH.quantity
+    new_model.remove_component("Wave")
+    new_model.add_component(WaveX())
+    new_model.WXEPOCH.value = wave_epoch.value
+    for k, wave_term in enumerate(wave_terms):
+        wave_sin_amp, wave_cos_amp = wave_term.quantity
+        wavex_freq = _translate_wave_freqs(wave_om, k)
+        if k == 0:
+            new_model.WXFREQ_0001.value = wavex_freq.value
+            new_model.WXSIN_0001.value = -wave_sin_amp.value
+            new_model.WXCOS_0001.value = -wave_cos_amp.value
+        else:
+            new_model.components["WaveX"].add_wavex_component(
+                wavex_freq, wxsin=-wave_sin_amp, wxcos=-wave_cos_amp
+            )
+    return new_model
+
+
+def get_wavex_freqs(model, index=None, quantity=False):
+    """
+    Return the WaveX frequencies for a timing model.
+
+    If index is specified, returns the frequencies corresponding to the user-provided indices.
+    If index isn't specified, returns all WaveX frequencies in timing model
+
+    Parameters
+    ----------
+    model : pint.models.timing_model.TimingModel
+        Timing model from which to return WaveX frequencies
+    index : float, int, list, np.ndarray, None
+        Number or list/array of numbers corresponding to WaveX frequencies to return
+    quantity : bool
+        If set to True, returns a list of astropy.quanitity.Quantity rather than a list of prefixParameters
+
+    Returns
+    -------
+    List of WXFREQ_ parameters
+    """
+    if index is None:
+        freqs = model.components["WaveX"].get_prefix_mapping_component("WXFREQ_")
+        if len(freqs) == 1:
+            values = getattr(model.components["WaveX"], freqs.values())
+        else:
+            values = [
+                getattr(model.components["WaveX"], param) for param in freqs.values()
+            ]
+    elif isinstance(index, (int, float, np.int64)):
+        idx_rf = f"{int(index):04d}"
+        values = getattr(model.components["WaveX"], "WXFREQ_" + idx_rf)
+    elif isinstance(index, (list, set, np.ndarray)):
+        idx_rf = [f"{int(idx):04d}" for idx in index]
+        values = [getattr(model.components["WaveX"], "WXFREQ_" + ind) for ind in idx_rf]
+    else:
+        raise TypeError(
+            f"index most be a float, int, set, list, array, or None - not {type(index)}"
+        )
+    if quantity:
+        if len(values) == 1:
+            values = [values[0].quantity]
+        else:
+            values = [v.quantity for v in values]
+    return values
+
+
+def get_wavex_amps(model, index=None, quantity=False):
+    """
+    Return the WaveX amplitudes for a timing model.
+
+    If index is specified, returns the sine/cosine amplitudes corresponding to the user-provided indices.
+    If index isn't specified, returns all WaveX sine/cosine amplitudes in timing model
+
+    Parameters
+    ----------
+    model : pint.models.timing_model.TimingModel
+        Timing model from which to return WaveX frequencies
+    index : float, int, list, np.ndarray, None
+        Number or list/array of numbers corresponding to WaveX amplitudes to return
+    quantity : bool
+        If set to True, returns a list of tuples of astropy.quanitity.Quantity rather than a list of prefixParameters tuples
+
+    Returns
+    -------
+    List of WXSIN_ and WXCOS_ parameters
+    """
+    if index is None:
+        indices = (
+            model.components["WaveX"].get_prefix_mapping_component("WXSIN_").keys()
+        )
+        if len(indices) == 1:
+            values = (
+                getattr(model.components["WaveX"], "WXSIN_" + f"{int(indices):04d}"),
+                getattr(model.components["WaveX"], "WXCOS_" + f"{int(indices):04d}"),
+            )
+        else:
+            values = [
+                (
+                    getattr(model.components["WaveX"], "WXSIN_" + f"{int(idx):04d}"),
+                    getattr(model.components["WaveX"], "WXCOS_" + f"{int(idx):04d}"),
+                )
+                for idx in indices
+            ]
+    elif isinstance(index, (int, float, np.int64)):
+        idx_rf = f"{int(index):04d}"
+        values = (
+            getattr(model.components["WaveX"], "WXSIN_" + idx_rf),
+            getattr(model.components["WaveX"], "WXCOS_" + idx_rf),
+        )
+    elif isinstance(index, (list, set, np.ndarray)):
+        idx_rf = [f"{int(idx):04d}" for idx in index]
+        values = [
+            (
+                getattr(model.components["WaveX"], "WXSIN_" + ind),
+                getattr(model.components["WaveX"], "WXCOS_" + ind),
+            )
+            for ind in idx_rf
+        ]
+    else:
+        raise TypeError(
+            f"index most be a float, int, set, list, array, or None - not {type(index)}"
+        )
+    if quantity:
+        if isinstance(values, tuple):
+            values = tuple(v.quantity for v in values)
+        if isinstance(values, list):
+            values = [tuple((v[0].quantity, v[1].quantity)) for v in values]
+    return values
+
+
+def translate_wavex_to_wave(model):
+    """
+    Go from a WaveX timing model to a Wave timing model.
+    WARNING: Not every WaveX model can be appropriately translated into a Wave model. This is dependent on the user's choice of frequencies in the WaveX model.
+    In order for a WaveX model to be able to be converted into a Wave model, every WaveX frequency must produce the same value of WAVEOM in the calculation:
+
+    WAVEOM = [2 * pi * WXFREQ_000k] / (k + 1)
+    Paramters
+    ---------
+    model : pint.models.timing_model.TimingModel
+        TimingModel containing a WaveX model to be converted to a Wave model
+
+    Returns
+    -------
+    New timing model with converted Wave model included
+    """
+    from pint.models.wave import Wave
+
+    new_model = deepcopy(model)
+    indices = model.components["WaveX"].get_indices()
+    wxfreqs = get_wavex_freqs(model, indices, quantity=True)
+    wave_om = _translate_wavex_freqs(wxfreqs, (indices - 1))
+    if wave_om == False:
+        raise ValueError(
+            "This WaveX model cannot be properly translated into a Wave model due to the WaveX frequencies not producing a consistent WAVEOM value"
+        )
+    wave_amps = get_wavex_amps(model, index=indices, quantity=True)
+    new_model.remove_component("WaveX")
+    new_model.add_component(Wave())
+    new_model.WAVEEPOCH.quantity = model.WXEPOCH.quantity
+    new_model.WAVE_OM.quantity = wave_om
+    new_model.WAVE1.quantity = tuple(w * -1.0 for w in wave_amps[0])
+    if len(indices) > 1:
+        for i in range(1, len(indices)):
+            print(wave_amps[i])
+            wave_amps[i] = tuple(w * -1.0 for w in wave_amps[i])
+            new_model.components["Wave"].add_wave_component(
+                wave_amps[i], index=indices[i]
+            )
+    return new_model
+
+
 def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
     """Compute weighted mean of input values
 
@@ -2129,3 +2486,36 @@ def get_unit(parname):
 
     ac = AllComponents()
     return ac.param_to_unit(parname)
+
+
+def normalize_designmatrix(M, params):
+    """Normalize each row of the design matrix.
+
+    This is used while computing the GLS chi2 and the GLS fitting step. The
+    normalized and unnormalized design matrices Mn and M are related by
+        M = Mn @ S
+    where S is a diagonal matrix containing the norms. This normalization is
+    OK because the GLS operations (fitting step, chi2 computation etc.) involve
+    the form
+        M @ (M.T @ N.inv() @ M).inv() @ M.T
+    and it is easy to see that the above expression doesn't change if we replace
+    M -> Mn.
+
+    Different parameters can have different units and numerically vastly different
+    design matrix entries. The normalization step forces the design matrix entries
+    to have similar numericall values and hence improves the numerical precision of
+    the matrix operations.
+    """
+    from pint.fitter import DegeneracyWarning
+
+    norm = np.sqrt(np.sum(M**2, axis=0))
+
+    bad_params = [params[i] for i in np.where(norm == 0)[0]]
+    if len(bad_params) > 0 and params is not None:
+        warn(
+            f"Parameter degeneracy found in designmatrix! The offending parameters are {bad_params}.",
+            DegeneracyWarning,
+        )
+    norm[norm == 0] = 1
+
+    return M / norm, norm
