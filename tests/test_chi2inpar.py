@@ -47,11 +47,15 @@ def test_nbfitters(ft, nb):
     m, t = nb
     f = ft(t, m)
     f.fit_toas()
-    matched_line = [
-        line for line in f.model.as_parfile().split("\n") if line.startswith("CHI2")
+    for p in ["CHI2", "CHI2R", "TRES"]:
+        matched_line = [
+            line for line in f.model.as_parfile().split("\n") if line.startswith(p)
+        ]
+        assert matched_line
+        assert float(matched_line[0].split()[-1]) > 0
+    assert not [
+        line for line in f.model.as_parfile().split("\n") if line.startswith("DMRES")
     ]
-    assert matched_line
-    assert float(matched_line[0].split()[-1]) > 0
     m2 = get_model(io.StringIO(f.model.as_parfile()))
 
 
@@ -62,9 +66,10 @@ def test_wbfitters(ft, wb):
     m, t = wb
     f = ft(t, m)
     f.fit_toas()
-    matched_line = [
-        line for line in f.model.as_parfile().split("\n") if line.startswith("CHI2")
-    ]
-    assert matched_line
-    assert float(matched_line[0].split()[-1]) > 0
+    for p in ["CHI2", "CHI2R", "TRES", "DMRES"]:
+        matched_line = [
+            line for line in f.model.as_parfile().split("\n") if line.startswith(p)
+        ]
+        assert matched_line
+        assert float(matched_line[0].split()[-1]) > 0
     m2 = get_model(io.StringIO(f.model.as_parfile()))

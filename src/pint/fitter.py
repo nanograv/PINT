@@ -699,7 +699,14 @@ class Fitter:
             else "TT(TAI)"
         )
         if chi2 is not None:
+            # assume a fit has been done
             self.model.CHI2.value = chi2
+            self.model.CHI2R.value = chi2 / self.resids.dof
+            if not self.is_wideband:
+                self.model.TRES.quantity = self.resids.rms_weighted()
+            else:
+                self.model.TRES.quantity = self.resids.rms_weighted()["toa"]
+                self.model.DMRES.quantity = self.resids.rms_weighted()["dm"]
 
     def reset_model(self):
         """Reset the current model to the initial model."""
