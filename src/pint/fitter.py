@@ -83,12 +83,11 @@ from pint.pint_matrix import (
 )
 from pint.residuals import Residuals, WidebandTOAResiduals
 from pint.toa import TOAs
-from pint.utils import FTest
+from pint.utils import FTest, normalize_designmatrix
 
 
 __all__ = [
     "Fitter",
-    "auto",
     "WLSFitter",
     "GLSFitter",
     "WidebandTOAFitter",
@@ -1303,9 +1302,7 @@ class WLSState(ModelState):
         # NOTE, We remove subtract mean value here, since it did not give us a
         # fast converge fitting.
         # M[:,1:] -= M[:,1:].mean(axis=0)
-        fac = np.sqrt((M**2).mean(axis=0))
-        fac[fac == 0] = 1.0
-        M /= fac
+        M, fac = normalize_designmatrix(M, params)
         # Singular value decomp of design matrix:
         #   M = U s V^T
         # Dimensions:
@@ -1457,15 +1454,7 @@ class GLSState(ModelState):
                 M = np.hstack((M, Mn))
 
         # normalize the design matrix
-        norm = np.sqrt(np.sum(M**2, axis=0))
-        for c in np.where(norm == 0)[0]:
-            warn(
-                f"Parameter degeneracy; the following parameter yields "
-                f"almost no change: {params[c]}",
-                DegeneracyWarning,
-            )
-        norm[norm == 0] = 1
-        M /= norm
+        M, norm = normalize_designmatrix(M, params)
         self.M = M
         self.fac = norm
 
@@ -2014,10 +2003,7 @@ class WLSFitter(Fitter):
             # NOTE, We remove subtract mean value here, since it did not give us a
             # fast converge fitting.
             # M[:,1:] -= M[:,1:].mean(axis=0)
-            fac = np.sqrt((M**2).mean(axis=0))
-            # fac[0] = 1.0
-            fac[fac == 0] = 1.0
-            M /= fac
+            M, fac = normalize_designmatrix(M, params)
             # Singular value decomp of design matrix:
             #   M = U s V^T
             # Dimensions:
@@ -2165,7 +2151,11 @@ class GLSFitter(Fitter):
             fitperrs = self.model.get_params_dict("free", "uncertainty")
 
             # Define the linear system
+            # normalize the design matrix
             M, params, units = self.get_designmatrix()
+            # M /= norm
+
+            ntmpar = len(fitp)
 
             # Get residuals and TOA uncertainties in seconds
             if i == 0:
@@ -2182,18 +2172,11 @@ class GLSFitter(Fitter):
                     phiinv = np.concatenate((phiinv, 1 / phi))
                     M = np.hstack((M, Mn))
 
-            # normalize the design matrix
-            norm = np.sqrt(np.sum(M**2, axis=0))
             ntmpar = len(fitp)
-            for c in np.where(norm == 0)[0]:
-                warn(
-                    f"Parameter degeneracy; the following parameter yields "
-                    f"almost no change: {params[c]}",
-                    DegeneracyWarning,
-                )
-            norm[norm == 0] = 1
+
+            # normalize the design matrix
+            M, norm = normalize_designmatrix(M, params)
             self.fac = norm
-            M /= norm
 
             # compute covariance matrices
             if full_cov:
@@ -2537,17 +2520,10 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                         new_d_matrix.param_units,
                     )
 
-            # normalize the design matrix
-            norm = np.sqrt(np.sum(M**2, axis=0))
             ntmpar = len(fitp)
-            for c in np.where(norm == 0)[0]:
-                warn(
-                    f"Parameter degeneracy; the following parameter yields "
-                    f"almost no change: {params[c]}",
-                    DegeneracyWarning,
-                )
-            norm[norm == 0] = 1
-            M /= norm
+
+            # normalize the design matrix
+            M, norm = normalize_designmatrix(M, params)
             self.fac = norm
 
             # compute covariance matrices
