@@ -415,13 +415,7 @@ class Fitter:
                         pn, prefitpar.str_quantity(prefitpar.value), "", par.units
                     )
                 elif par.frozen:
-                    if (
-                        par.name == "START"
-                        and prefitpar.value is None
-                        or par.name != "START"
-                        and par.name == "FINISH"
-                        and prefitpar.value is None
-                    ):
+                    if par.name in ["START", "FINISH"] and prefitpar.value is None:
                         s += ("{:" + spacingName + "s} {:20s} {:28g} {} \n").format(
                             pn, " ", par.value, par.units
                         )
@@ -429,10 +423,22 @@ class Fitter:
                         s += ("{:" + spacingName + "s} {:20g} {:28g} {} \n").format(
                             pn, prefitpar.value, par.value, par.units
                         )
+                    elif (
+                        par.name in ["CHI2", "CHI2R", "TRES", "DMRES"]
+                        and prefitpar.value is None
+                    ):
+                        s += ("{:" + spacingName + "s} {:20s} {:28g} {} \n").format(
+                            pn, " ", par.value, par.units
+                        )
+                    elif par.name in ["CHI2", "CHI2R", "TRES", "DMRES"]:
+                        s += ("{:" + spacingName + "s} {:20g} {:28g} {} \n").format(
+                            pn, prefitpar.value, par.value, par.units
+                        )
                     else:
                         s += ("{:" + spacingName + "s} {:20g} {:28s} {} \n").format(
                             pn, prefitpar.value, "", par.units
                         )
+
                 else:
                     # s += "{:14s} {:20g} {:20g} {:20.2g} {} \n".format(
                     #     pn,
