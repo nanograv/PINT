@@ -272,9 +272,11 @@ class DMWaveX(Dispersion):
         # Get DMWaveX mapping and register DMWXSIN and DMWXCOS derivatives
         for prefix_par in self.get_params_of_type("prefixParameter"):
             if prefix_par.startswith("DMWXSIN_"):
-                self.register_deriv_funcs(self.d_dmwavex_delay_d_DMWXSIN, prefix_par)
+                self.register_deriv_funcs(self.d_delay_d_dmparam, prefix_par)
+                self.register_dm_deriv_funcs(self.d_dm_d_DMWXSIN, prefix_par)
             if prefix_par.startswith("DMWXCOS_"):
-                self.register_deriv_funcs(self.d_dmwavex_delay_d_DMWXCOS, prefix_par)
+                self.register_deriv_funcs(self.d_delay_d_dmparam, prefix_par)
+                self.register_dm_deriv_funcs(self.d_dm_d_DMWXCOS, prefix_par)
             self.wave_freqs = list(
                 self.get_prefix_mapping_component("DMWXFREQ_").keys()
             )
@@ -361,18 +363,18 @@ class DMWaveX(Dispersion):
     def dmwavex_delay(self, toas, acc_delay=None):
         return self.dispersion_type_delay(toas)
 
-    def d_dmwavex_delay_d_DMWXSIN(self, toas, param, delays, acc_delay=None):
+    def d_dm_d_DMWXSIN(self, toas, param, acc_delay=None):
         par = getattr(self, param)
         freq = getattr(self, f"DMWXFREQ_{int(par.index):04d}").quantity
         base_phase = toas.table["tdbld"].data * u.d - self.DMWXEPOCH.value * u.d
         arg = 2.0 * np.pi * freq * base_phase
         deriv = np.sin(arg.value)
-        return deriv * u.s / par.units
+        return deriv * dmu / par.units
 
-    def d_dmwavex_delay_d_DMWXCOS(self, toas, param, delays, acc_delay=None):
+    def d_dm_d_DMWXCOS(self, toas, param, acc_delay=None):
         par = getattr(self, param)
         freq = getattr(self, f"DMWXFREQ_{int(par.index):04d}").quantity
         base_phase = toas.table["tdbld"].data * u.d - self.DMWXEPOCH.value * u.d
         arg = 2.0 * np.pi * freq * base_phase
         deriv = np.cos(arg.value)
-        return deriv * u.s / par.units
+        return deriv * dmu / par.units
