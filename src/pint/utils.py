@@ -39,6 +39,8 @@ import sys
 import textwrap
 from contextlib import contextmanager
 from pathlib import Path
+from warnings import warn
+import scipy
 import uncertainties
 
 import astropy.constants as const
@@ -2129,3 +2131,36 @@ def get_unit(parname):
 
     ac = AllComponents()
     return ac.param_to_unit(parname)
+
+
+def normalize_designmatrix(M, params):
+    """Normalize each row of the design matrix.
+
+    This is used while computing the GLS chi2 and the GLS fitting step. The
+    normalized and unnormalized design matrices Mn and M are related by
+        M = Mn @ S
+    where S is a diagonal matrix containing the norms. This normalization is
+    OK because the GLS operations (fitting step, chi2 computation etc.) involve
+    the form
+        M @ (M.T @ N.inv() @ M).inv() @ M.T
+    and it is easy to see that the above expression doesn't change if we replace
+    M -> Mn.
+
+    Different parameters can have different units and numerically vastly different
+    design matrix entries. The normalization step forces the design matrix entries
+    to have similar numericall values and hence improves the numerical precision of
+    the matrix operations.
+    """
+    from pint.fitter import DegeneracyWarning
+
+    norm = np.sqrt(np.sum(M**2, axis=0))
+
+    bad_params = [params[i] for i in np.where(norm == 0)[0]]
+    if len(bad_params) > 0 and params is not None:
+        warn(
+            f"Parameter degeneracy found in designmatrix! The offending parameters are {bad_params}.",
+            DegeneracyWarning,
+        )
+    norm[norm == 0] = 1
+
+    return M / norm, norm

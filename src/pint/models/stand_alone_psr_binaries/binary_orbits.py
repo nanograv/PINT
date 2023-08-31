@@ -29,7 +29,7 @@ class Orbit:
         return (orbits - norbits) * 2 * np.pi * u.rad
 
     def pbprime(self):
-        """Derivative of binary period with respect to time."""
+        """Instantaneous binary period as a function of time."""
         raise NotImplementedError
 
     def pbdot_orbit(self):
@@ -105,7 +105,7 @@ class OrbitPB(Orbit):
         ).decompose()
 
     def pbprime(self):
-        """Derivative of binary period with respect to time."""
+        """Instantaneous binary period as a function of time."""
         return self.PB + self.PBDOT * self.tt0
 
     def pbdot_orbit(self):
@@ -186,7 +186,7 @@ class OrbitFBX(Orbit):
         return orbits.decompose()
 
     def pbprime(self):
-        """Derivative of binary period with respect to time."""
+        """Instantaneous binary period as a function of time."""
         orbit_freq = taylor_horner_deriv(self.tt0, self._FBXs(), 1)
         return 1.0 / orbit_freq
 

@@ -9,6 +9,8 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- Moved design matrix normalization code from `pint.fitter` to the new `pint.utils.normalize_designmatrix()` function.
+- Made `Residuals` independent of `GLSFitter` (GLS chi2 is now computed using the new function `Residuals._calc_gls_chi2()`).
 ### Added
 - `Parameter.as_latex` method for latex representation of a parameter.
 - `pint.output.publish` module and `pintpublish` script for generating publication (LaTeX) output.
@@ -16,4 +18,6 @@ the released changes.
 - Fixed RTD by specifying theme explicitly.
 - `.value()` now works for pairParameters
 - Setting `model.PARAM1 = model.PARAM2` no longer overrides the name of `PARAM1`
+- Fixed an incorrect docstring in pbprime() functions. 
+- Fix ICRS -> ECL conversion when parameter uncertainties are not set.
 ### Removed
