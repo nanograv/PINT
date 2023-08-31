@@ -550,8 +550,16 @@ class AstrometryEquatorial(Astrometry):
             ra=self.RAJ.quantity,
             dec=self.DECJ.quantity,
             obstime=self.POSEPOCH.quantity,
-            pm_ra_cosdec=self.RAJ.uncertainty * np.cos(self.DECJ.quantity) / dt,
-            pm_dec=self.DECJ.uncertainty / dt,
+            pm_ra_cosdec=(
+                self.RAJ.uncertainty * np.cos(self.DECJ.quantity) / dt
+                if self.RAJ.uncertainty is not None
+                else 0 * self.RAJ.units / dt
+            ),
+            pm_dec=(
+                self.DECJ.uncertainty / dt
+                if self.DECJ.uncertainty is not None
+                else 0 * self.DECJ.units / dt
+            ),
             frame=coords.ICRS,
         )
         c_ECL = c.transform_to(PulsarEcliptic(ecl=ecl))
@@ -563,8 +571,16 @@ class AstrometryEquatorial(Astrometry):
             ra=self.RAJ.quantity,
             dec=self.DECJ.quantity,
             obstime=self.POSEPOCH.quantity,
-            pm_ra_cosdec=self.PMRA.uncertainty,
-            pm_dec=self.PMDEC.uncertainty,
+            pm_ra_cosdec=(
+                self.PMRA.uncertainty
+                if self.PMRA.uncertainty is not None
+                else 0 * self.PMRA.units
+            ),
+            pm_dec=(
+                self.PMDEC.uncertainty
+                if self.PMDEC.uncertainty is not None
+                else 0 * self.PMDEC.units
+            ),
             frame=coords.ICRS,
         )
         c_ECL = c.transform_to(PulsarEcliptic(ecl=ecl))
@@ -943,8 +959,16 @@ class AstrometryEcliptic(Astrometry):
             lat=self.ELAT.quantity,
             obliquity=OBL[self.ECL.value],
             obstime=self.POSEPOCH.quantity,
-            pm_lon_coslat=self.ELONG.uncertainty * np.cos(self.ELAT.quantity) / dt,
-            pm_lat=self.ELAT.uncertainty / dt,
+            pm_lon_coslat=(
+                self.ELONG.uncertainty * np.cos(self.ELAT.quantity) / dt
+                if self.ELONG.uncertainty is not None
+                else 0 * self.ELONG.units / dt
+            ),
+            pm_lat=(
+                self.ELAT.uncertainty / dt
+                if self.ELAT.uncertainty is not None
+                else 0 * self.ELAT.units / dt
+            ),
             frame=PulsarEcliptic,
         )
         c_ECL = c.transform_to(PulsarEcliptic(ecl=ecl))
@@ -957,12 +981,16 @@ class AstrometryEcliptic(Astrometry):
             lat=self.ELAT.quantity,
             obliquity=OBL[self.ECL.value],
             obstime=self.POSEPOCH.quantity,
-            pm_lon_coslat=self.PMELONG.uncertainty
-            if self.PMELONG.uncertainty is not None
-            else 0 * self.PMELONG.units,
-            pm_lat=self.PMELAT.uncertainty
-            if self.PMELAT.uncertainty is not None
-            else 0 * self.PMELAT.units,
+            pm_lon_coslat=(
+                self.PMELONG.uncertainty
+                if self.PMELONG.uncertainty is not None
+                else 0 * self.PMELONG.units
+            ),
+            pm_lat=(
+                self.PMELAT.uncertainty
+                if self.PMELAT.uncertainty is not None
+                else 0 * self.PMELAT.units
+            ),
             frame=PulsarEcliptic,
         )
         c_ECL = c.transform_to(PulsarEcliptic(ecl=ecl))
