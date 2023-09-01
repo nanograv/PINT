@@ -22,4 +22,5 @@ the released changes.
 - Setting `model.PARAM1 = model.PARAM2` no longer overrides the name of `PARAM1`
 - Fixed an incorrect docstring in pbprime() functions. 
 - Fix ICRS -> ECL conversion when parameter uncertainties are not set.
+- `get_TOAs` raises an exception upon finding mixed narrowband and wideband TOAs in a tim file. `TOAs.is_wideband` returns True only if *ALL* TOAs have the -pp_dm flag.
 ### Removed
