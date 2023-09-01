@@ -834,7 +834,7 @@ class TimingModel:
         )
 
     def radial_velocity(self, barytimes):
-        """Return line-of-sight velocity at barycentric MJD times.
+        """Return line-of-sight velocity of the pulsar at barycentric MJD times.
 
         Parameters
         ----------
@@ -858,6 +858,9 @@ class TimingModel:
 
         Notes
         -----
+        This is the radial velocity of the pulsar.  For the radial velocity of the companion,
+        this must be multiplied by -1 times the mass of the pulsar divided by the mass of the companion.
+
         See [1]_
 
         .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.24
