@@ -833,8 +833,8 @@ class TimingModel:
             bbi.a1() * np.sin(psi) * (1 - bbi.ecc() ** 2) / (1 + bbi.ecc() * np.cos(nu))
         )
 
-    def radial_velocity(self, barytimes):
-        """Return line-of-sight velocity of the pulsar at barycentric MJD times.
+    def pulsar_radial_velocity(self, barytimes):
+        """Return line-of-sight velocity of the pulsar relative to the system barycenter at barycentric MJD times.
 
         Parameters
         ----------
@@ -858,8 +858,7 @@ class TimingModel:
 
         Notes
         -----
-        This is the radial velocity of the pulsar.  For the radial velocity of the companion,
-        this must be multiplied by -1 times the mass of the pulsar divided by the mass of the companion.
+        This is the radial velocity of the pulsar.
 
         See [1]_
 
@@ -879,6 +878,42 @@ class TimingModel:
             / (bbi.pb() * np.sqrt(1 - bbi.ecc() ** 2))
             * (np.cos(psi) + bbi.ecc() * np.cos(bbi.omega()))
         ).cgs
+
+    def companion_radial_velocity(self, barytimes, massratio):
+        """Return line-of-sight velocity of the companion relative to the system barycenter at barycentric MJD times.
+
+        Parameters
+        ----------
+        barytimes: Time, TOAs, array-like, or float
+            MJD barycentric time(s). The times to compute the
+            orbital phases.  Needs to be a barycentric time in TDB.
+            If a TOAs instance is passed, the barycentering will happen
+            automatically.  If an astropy Time object is passed, it must
+            be in scale='tdb'.  If an array-like object is passed or
+            a simple float, the time must be in MJD format.
+        massratio : float
+            Ratio of pulsar mass to companion mass
+
+
+        Raises
+        ------
+        ValueError
+            If an astropy Time object is passed with scale!="tdb".
+
+        Returns
+        -------
+        array
+            The line-of-sight velocity
+
+        Notes
+        -----
+        This is the radial velocity of the companion.
+
+        See [1]_
+
+        .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.24
+        """
+        return -self.pulsar_radial_velocity(barytimes) * massratio
 
     def conjunction(self, baryMJD):
         """Return the time(s) of the first superior conjunction(s) after baryMJD.

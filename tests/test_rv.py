@@ -20,7 +20,7 @@ class TestRV:
         self.ts = self.m.T0.value + np.linspace(0, 2 * self.m.PB.value, 101)
         self.ts = pint.simulation.make_fake_toas_fromMJDs(self.ts, self.m)
 
-        self.v = self.m.radial_velocity(self.ts)
+        self.v = self.m.pulsar_radial_velocity(self.ts)
 
     def test_rv_basemodel(self):
         nu = self.m.orbital_phase(self.ts, anom="true", radians=True)
@@ -38,6 +38,6 @@ class TestRV:
     @pytest.mark.parametrize("othermodel", ["ELL1", "ELL1H", "DDS", "BT"])
     def test_rv_othermodels(self, othermodel):
         mc = pint.binaryconvert.convert_binary(self.m, othermodel)
-        vc = mc.radial_velocity(self.ts)
+        vc = mc.pulsar_radial_velocity(self.ts)
         # have a generous tolerance here since some of the models don't work well for high ECC
         assert np.allclose(vc, self.v, atol=20 * u.km / u.s, rtol=1e-2)
