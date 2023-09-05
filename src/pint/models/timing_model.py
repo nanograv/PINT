@@ -799,40 +799,6 @@ class TimingModel:
         # return with radian units or return as unitless cycles from 0-1
         return anoms * u.rad if radians else anoms / (2 * np.pi)
 
-    def radial_position(self, barytimes):
-        """Return line-of-sight position at barycentric MJD times.
-
-        Parameters
-        ----------
-        barytimes: Time, TOAs, array-like, or float
-            MJD barycentric time(s). The times to compute the
-            orbital phases.  Needs to be a barycentric time in TDB.
-            If a TOAs instance is passed, the barycentering will happen
-            automatically.  If an astropy Time object is passed, it must
-            be in scale='tdb'.  If an array-like object is passed or
-            a simple float, the time must be in MJD format.
-
-        Raises
-        ------
-        ValueError
-            If an astropy Time object is passed with scale!="tdb".
-
-        Returns
-        -------
-        array
-            The line-of-sight position
-        """
-        # this should also updaate the binary instance
-        nu = self.orbital_phase(barytimes, anom="true")
-        b = self.components[
-            [x for x in self.components.keys() if x.startswith("Binary")][0]
-        ]
-        bbi = b.binary_instance  # shorthand
-        psi = nu + bbi.omega()
-        return (
-            bbi.a1() * np.sin(psi) * (1 - bbi.ecc() ** 2) / (1 + bbi.ecc() * np.cos(nu))
-        )
-
     def pulsar_radial_velocity(self, barytimes):
         """Return line-of-sight velocity of the pulsar relative to the system barycenter at barycentric MJD times.
 
