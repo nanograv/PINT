@@ -500,7 +500,7 @@ class Residuals:
             )
         return (phase_resids / self.get_PSR_freq(calctype=calctype)).to(u.s)
 
-    def _calc_gls_chi2(self):
+    def _calc_gls_chi2(self, lognorm=False):
         """Compute the chi2 when correlated noise is present in the timing model.
         If the system is not singular, it uses Cholesky factorization to evaluate this.
         If the system is singular, it uses singular value decomposition instead."""
@@ -529,6 +529,7 @@ class Residuals:
         try:
             c = cho_factor(mtcm)
             xhat = cho_solve(c, mtcy)
+            svd = False
         except LinAlgError as e:
             log.warning(
                 f"Degenerate conditions encountered when computing chi-squared: {e}"
@@ -541,13 +542,24 @@ class Residuals:
 
             xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
 
+            svd = True
+
         newres = residuals - np.dot(M, xhat)
 
         chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
 
-        return chi2
+        if not lognorm:
+            return chi2
+        else:
+            logdet_N = np.sum(np.log(Nvec))
+            logdet_Phiinv = np.sum(np.log(phiinv))
+            logdet_Sigma = (
+                np.sum(np.log(np.diag(c[0]))) if not svd else np.sum(np.abs(np.log(s)))
+            )
+            lognorm = logdet_N + logdet_Phiinv + logdet_Sigma
+            return chi2, lognorm
 
-    def calc_chi2(self):
+    def calc_chi2(self, lognorm=False):
         """Return the weighted chi-squared for the model and toas.
 
         If the errors on the TOAs are independent this is a straightforward
@@ -567,12 +579,13 @@ class Residuals:
         correctly return infinity.
         """
         if self.model.has_correlated_errors:
-            return self._calc_gls_chi2()
+            return self._calc_gls_chi2(lognorm=lognorm)
         else:
             # Residual units are in seconds. Error units are in microseconds.
             toa_errors = self.get_data_error()
             if (toa_errors == 0.0).any():
                 return np.inf
+
             # The self.time_resids is in the unit of "s", the error "us".
             # This is more correct way, but it is the slowest.
             # return (((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()).value
@@ -582,10 +595,17 @@ class Residuals:
 
             # This the fastest way, but highly depend on the assumption of time_resids and
             # error units. Ensure only a pure number is returned.
-            try:
-                return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum().value
-            except ValueError:
-                return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum()
+
+            r = self.time_resids
+            err = toa_errors.to(u.s)
+
+            chi2 = ((r / err) ** 2.0).sum().value
+
+            if not lognorm:
+                return chi2
+            else:
+                lognorm = np.sum(np.log(err.value))
+                return chi2, lognorm
 
     def ecorr_average(self, use_noise_model=True):
         """Uses the ECORR noise model time-binning to compute "epoch-averaged" residuals.
