@@ -137,7 +137,7 @@ class DMWaveX(Dispersion):
         dmwxcoses : iterable of float or astropy.quantity.Quantity
             Cosine amplitudes for DMWaveX components
         frozens : iterable of bool or bool
-            Indicates whether sine adn cosine amplitudes of DMwavex components will be fit
+            Indicates whether sine and cosine amplitudes of DMwavex components will be fit
 
         Returns
         -------
