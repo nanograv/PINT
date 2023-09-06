@@ -1,9 +1,11 @@
 from copy import deepcopy
+
 import numpy as np
-from pint.fitter import CorrelatedErrors, Fitter, DownhillWLSFitter
-from pint.residuals import Residuals
-from scipy.optimize import minimize, root_scalar
 from numdifftools import Hessdiag
+from scipy.optimize import minimize, root_scalar
+
+from pint.fitter import CorrelatedErrors, DownhillWLSFitter, Fitter
+from pint.residuals import Residuals
 
 
 def get_free_noise_params(model):
@@ -29,15 +31,30 @@ class WLSNoiseFitter(Fitter):
         self.downhill_fitter = DownhillWLSFitter(
             toas, model, track_mode=track_mode, residuals=residuals
         )
-        super().__init__(
-            self.downhill_fitter.toas,
-            self.downhill_fitter.model,
-            track_mode,
-            residuals=self.downhill_fitter.resids,
-        )
 
         self.method = "downhill_wls_with_noise"
+
+        assert uncertainty_method in [
+            "fwhm",
+            "hess",
+        ], "uncertainty_method should be 'fwhm' or 'hess'."
         self.uncertainty_method = uncertainty_method
+
+    @property
+    def model(self):
+        return self.downhill_fitter.model
+
+    @property
+    def toas(self):
+        return self.downhill_fitter.toas
+
+    @property
+    def resids(self):
+        return self.downhill_fitter.resids
+
+    @property
+    def track_mode(self):
+        return self.downhill_fitter.track_mode
 
     def get_free_noise_params(self):
         return [
