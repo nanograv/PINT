@@ -102,16 +102,26 @@ class WLSNoiseFitter(Fitter):
 
             errs = np.zeros_like(xs0)
             for idx in range(len(free_noise_params)):
-                left = root_scalar(
-                    _like_half, args=(idx), x0=opt.x[idx], bracket=(1e-20, opt.x[idx])
-                ).root
+                try:
+                    left = root_scalar(
+                        _like_half,
+                        args=(idx),
+                        x0=opt.x[idx],
+                        bracket=(1e-20, opt.x[idx]),
+                    ).root
+                    right_max = 3 * opt.x[idx] - 2 * left
+                except ValueError:
+                    left = 0
+                    right_max = 10 * opt.x[idx] - 9 * left
                 right = root_scalar(
                     _like_half,
                     args=(idx),
                     x0=2 * opt.x[idx] - left,
-                    bracket=(opt.x[idx], 3 * opt.x[idx] - 2 * left),
+                    bracket=(opt.x[idx], right_max),
                 ).root
-                errs[idx] = (right - left) / 2.355
+
+                # FWHM to standard deviation
+                errs[idx] = (right - left) / (2 * np.sqrt(2 * np.log(2)))
         elif uncertainty_method == "hess":
 
             def _like(xs):
