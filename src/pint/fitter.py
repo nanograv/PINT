@@ -67,6 +67,7 @@ import numpy as np
 import scipy.linalg
 import scipy.optimize as opt
 from loguru import logger as log
+from numdifftools import Hessdiag
 
 import pint
 import pint.utils
@@ -1141,7 +1142,7 @@ class DownhillFitter(Fitter):
         )
         self.method = "downhill_checked"
 
-    def fit_toas(
+    def _fit_toas(
         self,
         maxiter=20,
         required_chi2_decrease=1e-2,
@@ -1188,6 +1189,7 @@ class DownhillFitter(Fitter):
         self.converged = False
         # algorithm
         exception = None
+
         for i in range(maxiter):
             step = current_state.step
             lambda_ = 1
@@ -1241,6 +1243,7 @@ class DownhillFitter(Fitter):
             log.debug(
                 f"Stopping because maximum number of iterations ({maxiter}) reached"
             )
+
         self.current_state = best_state
         # collect results
         self.model = self.current_state.model
@@ -1252,6 +1255,7 @@ class DownhillFitter(Fitter):
         self.parameter_correlation_matrix = (
             self.parameter_covariance_matrix.to_correlation_matrix()
         )
+
         for p, e in zip(self.current_state.params, self.errors):
             try:
                 # I don't know why this fails with multiprocessing, but bypass if it does
@@ -1272,9 +1276,89 @@ class DownhillFitter(Fitter):
             raise MaxiterReached(f"Convergence not detected after {maxiter} steps.")
         return self.converged
 
+    def fit_toas(
+        self,
+        maxiter=20,
+        noise_fit_niter=5,
+        required_chi2_decrease=1e-2,
+        max_chi2_increase=1e-2,
+        min_lambda=1e-3,
+        debug=False,
+    ):
+        free_noise_params = self._get_free_noise_params()
+
+        if len(free_noise_params) == 0:
+            return self._fit_toas(
+                maxiter=maxiter,
+                required_chi2_decrease=required_chi2_decrease,
+                max_chi2_increase=required_chi2_decrease,
+                min_lambda=required_chi2_decrease,
+                debug=debug,
+            )
+        else:
+            log.info("Will fit for noise parameters.")
+            for _ in range(noise_fit_niter):
+                self._fit_toas(
+                    maxiter=maxiter,
+                    required_chi2_decrease=required_chi2_decrease,
+                    max_chi2_increase=max_chi2_increase,
+                    min_lambda=min_lambda,
+                    debug=debug,
+                )
+                values, errors = self._fit_noise()
+                self._update_noise_params(values, errors)
+
+            return self._fit_toas(
+                maxiter=maxiter,
+                required_chi2_decrease=required_chi2_decrease,
+                max_chi2_increase=max_chi2_increase,
+                min_lambda=min_lambda,
+                debug=debug,
+            )
+
     @property
     def fac(self):
         return self.current_state.fac
+
+    def _get_free_noise_params(self):
+        return [
+            fp
+            for fp in self.model.get_params_of_component_type("NoiseComponent")
+            if not getattr(self.model, fp).frozen
+        ]
+
+    def _update_noise_params(self, values, errors):
+        free_noise_params = self._get_free_noise_params()
+        for fp, val, err in zip(free_noise_params, values, errors):
+            getattr(self.model, fp).value = val
+            getattr(self.model, fp).uncertainty_value = err
+
+    def _fit_noise(self):
+        free_noise_params = self._get_free_noise_params()
+
+        xs0 = [getattr(self.model, fp).value for fp in free_noise_params]
+
+        model1 = copy.deepcopy(self.model)
+
+        def _mloglike(xs):
+            """Negative of the log-likelihood function."""
+            for fp, x in zip(free_noise_params, xs):
+                getattr(model1, fp).value = x
+
+            res = Residuals(self.toas, model1)
+            chi2, lognorm = res.calc_chi2(lognorm=True)
+
+            return chi2 / 2 + lognorm
+
+        result = opt.minimize(_mloglike, xs0, method="Nelder-Mead")
+
+        def _like(xs):
+            return np.exp(-_mloglike(xs) + result.fun)
+
+        hess = Hessdiag(_like)
+        errs = np.sqrt(-_like(result.x) / hess(result.x))
+
+        return result.x, errs
 
 
 class WLSState(ModelState):
