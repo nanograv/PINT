@@ -830,7 +830,7 @@ class TimingModel:
 
         .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.24
         """
-        # this should also updaate the binary instance
+        # this should also update the binary instance
         nu = self.orbital_phase(barytimes, anom="true")
         b = self.components[
             [x for x in self.components.keys() if x.startswith("Binary")][0]
