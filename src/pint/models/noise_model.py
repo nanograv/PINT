@@ -59,7 +59,6 @@ class ScaleToaError(NoiseComponent):
                 units="",
                 aliases=["T2EFAC", "TNEF"],
                 description="A multiplication factor on the measured TOA uncertainties,",
-                positive=True,
             )
         )
 
@@ -69,7 +68,6 @@ class ScaleToaError(NoiseComponent):
                 units="us",
                 aliases=["T2EQUAD"],
                 description="An error term added in quadrature to the scaled (by EFAC) TOA uncertainty.",
-                positive=True,
             )
         )
 
@@ -78,7 +76,6 @@ class ScaleToaError(NoiseComponent):
                 name="TNEQ",
                 units=u.LogUnit(physical_unit=u.second),
                 description="An error term added in quadrature to the scaled (by EFAC) TOA uncertainty in the unit of log10(second).",
-                positive=True,
             )
         )
         self.covariance_matrix_funcs += [self.sigma_scaled_cov_matrix]
@@ -121,7 +118,6 @@ class ScaleToaError(NoiseComponent):
                             index=tneq_par.index,
                             aliases=["T2EQUAD"],
                             description="An error term added in quadrature to the scaled (by EFAC) TOA uncertainty.",
-                            positive=True,
                         )
                     )
                 EQUAD_par = getattr(self, EQUAD_name)
@@ -193,7 +189,6 @@ class ScaleDmError(NoiseComponent):
                 name="DMEFAC",
                 units="",
                 description="A multiplication factor on the measured DM uncertainties,",
-                positive=True,
             )
         )
 
@@ -202,7 +197,6 @@ class ScaleDmError(NoiseComponent):
                 name="DMEQUAD",
                 units="pc / cm ^ 3",
                 description="An error term added in quadrature to the scaled (by EFAC) TOA uncertainty.",
-                positive=True,
             )
         )
 
@@ -303,7 +297,6 @@ class EcorrNoise(NoiseComponent):
                 units="us",
                 aliases=["TNECORR"],
                 description="An error term added that correlated all TOAs in an observing epoch.",
-                positive=True,
             )
         )
 
@@ -431,7 +424,6 @@ class PLDMNoise(NoiseComponent):
                 units="",
                 aliases=[],
                 description="Amplitude of powerlaw DM noise in tempo2 format",
-                positive=True,
             )
         )
         self.add_param(
@@ -440,7 +432,6 @@ class PLDMNoise(NoiseComponent):
                 units="",
                 aliases=[],
                 description="Spectral index of powerlaw " "DM noise in tempo2 format",
-                positive=True,
             )
         )
         self.add_param(
@@ -449,7 +440,6 @@ class PLDMNoise(NoiseComponent):
                 units="",
                 aliases=[],
                 description="Number of DM noise frequencies.",
-                positive=True,
             )
         )
 
@@ -543,7 +533,6 @@ class PLRedNoise(NoiseComponent):
                 units="",
                 aliases=[],
                 description="Amplitude of powerlaw red noise.",
-                positive=True,
             )
         )
         self.add_param(
@@ -552,7 +541,6 @@ class PLRedNoise(NoiseComponent):
                 units="",
                 aliases=[],
                 description="Spectral index of powerlaw red noise.",
-                positive=True,
             )
         )
 
@@ -562,7 +550,6 @@ class PLRedNoise(NoiseComponent):
                 units="",
                 aliases=[],
                 description="Amplitude of powerlaw red noise in tempo2 format",
-                positive=True,
             )
         )
         self.add_param(
@@ -571,7 +558,6 @@ class PLRedNoise(NoiseComponent):
                 units="",
                 aliases=[],
                 description="Spectral index of powerlaw red noise in tempo2 format",
-                positive=True,
             )
         )
         self.add_param(
@@ -580,7 +566,6 @@ class PLRedNoise(NoiseComponent):
                 units="",
                 aliases=[],
                 description="Number of red noise frequencies.",
-                positive=True,
             )
         )
 
