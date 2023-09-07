@@ -224,9 +224,12 @@ class Parameter:
                 raise ValueError("Setting an existing value to None is not allowed.")
             self._quantity = val
             return
-        assert (
-            not self.positive or not hasattr(val, "__gt__") or val > 0
-        ), f"The value of {self.name} must be positive."
+
+        if hasattr(val, "__gt__"):
+            assert (
+                not self.positive or val > 0
+            ), f"The value of {self.name} must be positive."
+
         self._quantity = self._set_quantity(val)
 
     @property
@@ -251,9 +254,12 @@ class Parameter:
                 )
             else:
                 self.value = val
-        assert (
-            not self.positive or not hasattr(val, "__gt__") or val > 0
-        ), f"The value of {self.name} must be positive."
+
+        if hasattr(val, "__gt__"):
+            assert (
+                not self.positive or val > 0
+            ), f"The value of {self.name} must be positive."
+
         self._quantity = self._set_quantity(val)
 
     @property
