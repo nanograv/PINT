@@ -24,4 +24,5 @@ the released changes.
 - Fixed an incorrect docstring in `pbprime()` functions. 
 - Fix ICRS -> ECL conversion when parameter uncertainties are not set.
 - `get_TOAs` raises an exception upon finding mixed narrowband and wideband TOAs in a tim file. `TOAs.is_wideband` returns True only if *ALL* TOAs have the -pp_dm flag.
+- Robust access of EPHEM and PLANET_SHAPIRO in `make_fake_toas_fromtim`
 ### Removed
