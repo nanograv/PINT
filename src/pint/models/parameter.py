@@ -225,7 +225,7 @@ class Parameter:
             self._quantity = val
             return
 
-        if hasattr(val, "__gt__"):
+        if hasattr(val, "__gt__") and not isinstance(val, [str, bool]):
             assert (
                 not self.positive or val > 0
             ), f"The value of {self.name} must be positive."
@@ -255,7 +255,7 @@ class Parameter:
             else:
                 self.value = val
 
-        if hasattr(val, "__gt__"):
+        if hasattr(val, "__gt__") and not isinstance(val, [str, bool]):
             assert (
                 not self.positive or val > 0
             ), f"The value of {self.name} must be positive."
