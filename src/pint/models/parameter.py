@@ -158,6 +158,10 @@ class Parameter:
     use_alias : str or None
         Alias to use on write; normally whatever alias was in the par
         file it was read from
+    parent: pint.models.timing_model.Component, optional
+        The parent timing model component
+    positive: bool, optional
+        Whether the parameter must be positive
 
     Attributes
     ----------
@@ -178,6 +182,7 @@ class Parameter:
         prior=priors.Prior(priors.UniformUnboundedRV()),
         use_alias=None,
         parent=None,
+        positive=False,
     ):
         self.name = name  # name of the parameter
         # The input parameter from parfile, which can be an alias of the parameter
@@ -198,6 +203,7 @@ class Parameter:
         self.special_arg = []
         self.use_alias = use_alias
         self._parent = parent
+        self.positive = positive
 
     @property
     def quantity(self):
@@ -216,6 +222,9 @@ class Parameter:
                 raise ValueError("Setting an existing value to None is not allowed.")
             self._quantity = val
             return
+        assert (
+            not self.positive or not hasattr(val, "__gt__") or val > 0
+        ), f"The value of {self.name} must be positive."
         self._quantity = self._set_quantity(val)
 
     @property
@@ -240,6 +249,9 @@ class Parameter:
                 )
             else:
                 self.value = val
+        assert (
+            not self.positive or not hasattr(val, "__gt__") or val > 0
+        ), f"The value of {self.name} must be positive."
         self._quantity = self._set_quantity(val)
 
     @property
@@ -624,6 +636,8 @@ class floatParameter(Parameter):
         parameter exist.
     long_double : bool, optional, default False
         A flag specifying whether value is float or long double.
+    positive: bool, optional
+        Whether the parameter must be positive
 
     Example
     -------
@@ -647,6 +661,7 @@ class floatParameter(Parameter):
         unit_scale=False,
         scale_factor=None,
         scale_threshold=None,
+        positive=False,
         **kwargs,
     ):
         self.long_double = long_double
@@ -664,6 +679,7 @@ class floatParameter(Parameter):
             continuous=continuous,
             description=description,
             uncertainty=uncertainty,
+            positive=positive,
         )
         self.paramType = "floatParameter"
         self.special_arg += [
@@ -943,8 +959,8 @@ class intParameter(Parameter):
     ----------
     name : str
         The name of the parameter.
-    value : str, bool, [0,1]
-        The input parameter boolean value.
+    value : int
+        The parameter value.
     description : str, optional
         A short description of what this parameter means.
     aliases : list, optional
@@ -1350,6 +1366,8 @@ class prefixParameter:
         Set float type quantity and value in numpy long doubles.
     time_scale : str, optional
         Time scale for MJDParameter class.
+    positive: bool, optional
+        Whether the parameter must be positive
     """
 
     def __init__(
@@ -1370,6 +1388,7 @@ class prefixParameter:
         scale_factor=None,
         scale_threshold=None,
         time_scale="utc",
+        positive=False,
         **kwargs,
     ):
         # Split prefixed name, if the name is not in the prefixed format, error
@@ -1426,6 +1445,7 @@ class prefixParameter:
             unit_scale=unit_scale,
             scale_factor=scale_factor,
             scale_threshold=scale_threshold,
+            positive=positive,
         )
         self.is_prefix = True
         self.time_scale = time_scale
@@ -1662,6 +1682,8 @@ class maskParameter(floatParameter):
         Whether derivatives with respect to this parameter make sense.
     aliases : list, optional
         List of aliases for parameter name.
+    positive: bool, optional
+        Whether the parameter must be positive
     """
 
     # TODO: Is mask parameter provide some other type of parameters other then floatParameter?
@@ -1680,6 +1702,7 @@ class maskParameter(floatParameter):
         frozen=True,
         continuous=False,
         aliases=[],
+        positive=False,
     ):
         self.is_mask = True
         # {key_name: (keyvalue parse function, keyvalue length)}
@@ -1730,6 +1753,7 @@ class maskParameter(floatParameter):
             continuous=continuous,
             aliases=idx_aliases + aliases,
             long_double=long_double,
+            positive=positive,
         )
 
         # For the first mask parameter, add name to aliases for the reading

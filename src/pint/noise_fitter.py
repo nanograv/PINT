@@ -101,13 +101,14 @@ class WLSNoiseFitter(Fitter):
                 return _like(x, idx) - 0.5
 
             errs = np.zeros_like(xs0)
-            for idx in range(len(free_noise_params)):
+            for idx, fp in enumerate(free_noise_params):
                 try:
+                    left_min = 1e-20 if self.model[fp].positive else -2 * opt.x
                     left = root_scalar(
                         _like_half,
                         args=(idx),
                         x0=opt.x[idx],
-                        bracket=(1e-20, opt.x[idx]),
+                        bracket=(left_min, opt.x[idx]),
                     ).root
                     right_max = 3 * opt.x[idx] - 2 * left
                 except ValueError:

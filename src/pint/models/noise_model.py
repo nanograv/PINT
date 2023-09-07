@@ -58,8 +58,8 @@ class ScaleToaError(NoiseComponent):
                 name="EFAC",
                 units="",
                 aliases=["T2EFAC", "TNEF"],
-                description="A multiplication factor on"
-                " the measured TOA uncertainties,",
+                description="A multiplication factor on the measured TOA uncertainties,",
+                positive=True,
             )
         )
 
@@ -68,9 +68,8 @@ class ScaleToaError(NoiseComponent):
                 name="EQUAD",
                 units="us",
                 aliases=["T2EQUAD"],
-                description="An error term added in "
-                "quadrature to the scaled (by"
-                " EFAC) TOA uncertainty.",
+                description="An error term added in quadrature to the scaled (by EFAC) TOA uncertainty.",
+                positive=True,
             )
         )
 
@@ -78,10 +77,8 @@ class ScaleToaError(NoiseComponent):
             maskParameter(
                 name="TNEQ",
                 units=u.LogUnit(physical_unit=u.second),
-                description="An error term added in "
-                "quadrature to the scaled (by"
-                " EFAC) TOA uncertainty in "
-                " the unit of log10(second).",
+                description="An error term added in quadrature to the scaled (by EFAC) TOA uncertainty in the unit of log10(second).",
+                positive=True,
             )
         )
         self.covariance_matrix_funcs += [self.sigma_scaled_cov_matrix]
@@ -123,9 +120,8 @@ class ScaleToaError(NoiseComponent):
                             units="us",
                             index=tneq_par.index,
                             aliases=["T2EQUAD"],
-                            description="An error term "
-                            " added in quadrature to the"
-                            " scaled (by EFAC) TOA uncertainty.",
+                            description="An error term added in quadrature to the scaled (by EFAC) TOA uncertainty.",
+                            positive=True,
                         )
                     )
                 EQUAD_par = getattr(self, EQUAD_name)
@@ -196,8 +192,8 @@ class ScaleDmError(NoiseComponent):
             maskParameter(
                 name="DMEFAC",
                 units="",
-                description="A multiplication factor on"
-                " the measured DM uncertainties,",
+                description="A multiplication factor on the measured DM uncertainties,",
+                positive=True,
             )
         )
 
@@ -205,9 +201,8 @@ class ScaleDmError(NoiseComponent):
             maskParameter(
                 name="DMEQUAD",
                 units="pc / cm ^ 3",
-                description="An error term added in "
-                "quadrature to the scaled (by"
-                " EFAC) TOA uncertainty.",
+                description="An error term added in quadrature to the scaled (by EFAC) TOA uncertainty.",
+                positive=True,
             )
         )
 
@@ -307,9 +302,8 @@ class EcorrNoise(NoiseComponent):
                 name="ECORR",
                 units="us",
                 aliases=["TNECORR"],
-                description="An error term added that"
-                " correlated all TOAs in an"
-                " observing epoch.",
+                description="An error term added that correlated all TOAs in an observing epoch.",
+                positive=True,
             )
         )
 
@@ -436,7 +430,8 @@ class PLDMNoise(NoiseComponent):
                 name="TNDMAMP",
                 units="",
                 aliases=[],
-                description="Amplitude of powerlaw " "DM noise in tempo2 format",
+                description="Amplitude of powerlaw DM noise in tempo2 format",
+                positive=True,
             )
         )
         self.add_param(
@@ -445,6 +440,7 @@ class PLDMNoise(NoiseComponent):
                 units="",
                 aliases=[],
                 description="Spectral index of powerlaw " "DM noise in tempo2 format",
+                positive=True,
             )
         )
         self.add_param(
@@ -453,6 +449,7 @@ class PLDMNoise(NoiseComponent):
                 units="",
                 aliases=[],
                 description="Number of DM noise frequencies.",
+                positive=True,
             )
         )
 
@@ -545,7 +542,8 @@ class PLRedNoise(NoiseComponent):
                 name="RNAMP",
                 units="",
                 aliases=[],
-                description="Amplitude of powerlaw " "red noise.",
+                description="Amplitude of powerlaw red noise.",
+                positive=True,
             )
         )
         self.add_param(
@@ -553,7 +551,8 @@ class PLRedNoise(NoiseComponent):
                 name="RNIDX",
                 units="",
                 aliases=[],
-                description="Spectral index of " "powerlaw red noise.",
+                description="Spectral index of powerlaw red noise.",
+                positive=True,
             )
         )
 
@@ -562,7 +561,8 @@ class PLRedNoise(NoiseComponent):
                 name="TNREDAMP",
                 units="",
                 aliases=[],
-                description="Amplitude of powerlaw " "red noise in tempo2 format",
+                description="Amplitude of powerlaw red noise in tempo2 format",
+                positive=True,
             )
         )
         self.add_param(
@@ -570,7 +570,8 @@ class PLRedNoise(NoiseComponent):
                 name="TNREDGAM",
                 units="",
                 aliases=[],
-                description="Spectral index of powerlaw " "red noise in tempo2 format",
+                description="Spectral index of powerlaw red noise in tempo2 format",
+                positive=True,
             )
         )
         self.add_param(
@@ -579,6 +580,7 @@ class PLRedNoise(NoiseComponent):
                 units="",
                 aliases=[],
                 description="Number of red noise frequencies.",
+                positive=True,
             )
         )
 
