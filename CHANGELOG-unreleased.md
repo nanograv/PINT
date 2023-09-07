@@ -15,8 +15,7 @@ the released changes.
 ### Added
 - Added `WaveX` model as a `DelayComponent` with Fourier amplitudes as fitted parameters
 - Optionally return the the log normalization factor of the likelihood function from the `Residuals.calc_chi2()` method.
-- `WLSNoiseFitter` to estimate white noise parameters and their uncertainties.
-- `positive` attribute in `Parameter` class
+- `DownhilWLSFitter` can now estimate white noise parameters and their uncertainties.
 ### Fixed
 - Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
 - Fixed RTD by specifying theme explicitly.

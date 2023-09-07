@@ -1150,37 +1150,7 @@ class DownhillFitter(Fitter):
         min_lambda=1e-3,
         debug=False,
     ):
-        """Carry out a cautious downhill fit.
-
-        This tries to take the same steps as
-        :func:`pint.fitter.WLSFitter.fit_toas` or
-        :func:`pint.fitter.GLSFitter.fit_toas` or
-        :func:`pint.fitter.WidebandTOAFitter.fit_toas`.  At each step, it
-        checks whether the new model has a better ``chi2`` than the current
-        one; if the new model is invalid or worse than the current one, it
-        tries taking a shorter step in the same direction. This can exit if it
-        exceeds the maximum number of iterations or if improvement is not
-        possible even with very short steps, or it can exit successfully if a
-        full-size step is taken and it does not decrease the ``chi2`` by much.
-
-        The attribute ``self.converged`` is set to True or False depending on
-        whether the process actually converged.
-
-        Parameters
-        ==========
-
-        maxiter : int
-            Abandon the process if this many successful steps have been taken.
-        required_chi2_decrease : float
-            A full-size step that makes less than this much improvement is taken
-            to indicate that the fitter has converged.
-        max_chi2_increase : float
-            If this is positive, consider taking steps that slightly worsen the chi2 in hopes
-            of eventually finding our way downhill.
-        min_lambda : float
-            If steps are shrunk by this factor and still don't result in improvement, abandon hope
-            of convergence and stop.
-        """
+        "Downhill fit implementation. See documentation of the `fit_toas()` method for more details."
         # setup
         self.model.validate()
         self.model.validate_toas(self.toas)
@@ -1285,6 +1255,40 @@ class DownhillFitter(Fitter):
         min_lambda=1e-3,
         debug=False,
     ):
+        """Carry out a cautious downhill fit.
+
+        This tries to take the same steps as
+        :func:`pint.fitter.WLSFitter.fit_toas` or
+        :func:`pint.fitter.GLSFitter.fit_toas` or
+        :func:`pint.fitter.WidebandTOAFitter.fit_toas`.  At each step, it
+        checks whether the new model has a better ``chi2`` than the current
+        one; if the new model is invalid or worse than the current one, it
+        tries taking a shorter step in the same direction. This can exit if it
+        exceeds the maximum number of iterations or if improvement is not
+        possible even with very short steps, or it can exit successfully if a
+        full-size step is taken and it does not decrease the ``chi2`` by much.
+
+        The attribute ``self.converged`` is set to True or False depending on
+        whether the process actually converged.
+
+        This function can also estimate white noise parameters (EFACs and EQUADs)
+        and their uncertainties.
+
+        Parameters
+        ==========
+
+        maxiter : int
+            Abandon the process if this many successful steps have been taken.
+        required_chi2_decrease : float
+            A full-size step that makes less than this much improvement is taken
+            to indicate that the fitter has converged.
+        max_chi2_increase : float
+            If this is positive, consider taking steps that slightly worsen the chi2 in hopes
+            of eventually finding our way downhill.
+        min_lambda : float
+            If steps are shrunk by this factor and still don't result in improvement, abandon hope
+            of convergence and stop.
+        """
         free_noise_params = self._get_free_noise_params()
 
         if len(free_noise_params) == 0:
@@ -1321,6 +1325,7 @@ class DownhillFitter(Fitter):
         return self.current_state.fac
 
     def _get_free_noise_params(self):
+        """Returns a list of all free noise parameters."""
         return [
             fp
             for fp in self.model.get_params_of_component_type("NoiseComponent")
@@ -1328,12 +1333,14 @@ class DownhillFitter(Fitter):
         ]
 
     def _update_noise_params(self, values, errors):
+        """Update the model using estimated noise parameters."""
         free_noise_params = self._get_free_noise_params()
         for fp, val, err in zip(free_noise_params, values, errors):
             getattr(self.model, fp).value = val
             getattr(self.model, fp).uncertainty_value = err
 
     def _fit_noise(self):
+        """Estimate noise parameters and their uncertainties."""
         free_noise_params = self._get_free_noise_params()
 
         xs0 = [getattr(self.model, fp).value for fp in free_noise_params]
