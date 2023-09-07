@@ -188,6 +188,9 @@ class Parameter:
         # The input parameter from parfile, which can be an alias of the parameter
         # TODO give a better name and make it easy to access.
         self._parfile_name = name
+
+        self.positive = positive
+
         self.units = units  # Default unit
         self.quantity = value  # The value of parameter, internal storage
         self.prior = prior
@@ -203,7 +206,6 @@ class Parameter:
         self.special_arg = []
         self.use_alias = use_alias
         self._parent = parent
-        self.positive = positive
 
     @property
     def quantity(self):
