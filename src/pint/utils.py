@@ -1372,7 +1372,7 @@ def dmwavex_setup(model, T_span, freqs=None, n_freqs=None):
     frequency calculation. Sine and Cosine amplitudes are initially set to zero
 
     User specifies T_span and either freqs or n_freqs. This function assumes that the timing model does not already
-    have any WaveX components. See add_dmwavex_component() or add_dmwavex_components() to add components
+    have any DMWaveX components. See add_dmwavex_component() or add_dmwavex_components() to add components
     to an existing DMWaveX model.
 
     Parameters
