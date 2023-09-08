@@ -489,10 +489,16 @@ class TimingModel:
     #    return result
 
     def lock(self, toas):
+        """Lock a timing model object for a given TOAs object by caching parameter masks. This can
+        provide significant performance gains when mask parameters are present. However, mutating the
+        TOAs object after calling this function can lead to exceptions or wrong results down the line.
+        """
+
         log.warning(
-            "Locking the TimingModel object for the given TOAs. Mutating this TOAs object or using a "
-            "different TOAs object with this model will lead to undefined behavior."
+            "Locking the TimingModel object for the given TOAs object. This is will lead to "
+            "undefined behavior if the TOAs object is mutated after this."
         )
+
         self.__locked = True
         self.__lock_toas = toas
 

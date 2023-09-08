@@ -1973,6 +1973,9 @@ class maskParameter(floatParameter):
         return select_idx[self.name]
 
     def cache_toa_mask(self, toas):
+        """Cache the TOA mask for this parameter. This will lead to exceptions and/or
+        wrong results if the TOAs object is mutated after this.
+        """
         self.__cache_mask = self.select_toa_mask(toas)
         self.__cache_toas = toas
 
