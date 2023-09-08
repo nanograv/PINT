@@ -370,7 +370,7 @@ class DDmodel(PSR_BINARY):
            de/dECC = 1
         """
         eTheta = self.eTheta()
-        a1 = (self.a1()).decompose()
+        a1 = (self.a1()).to(u.m)
         sinOmg = np.sin(self.omega())
         cosOmg = np.cos(self.omega())
         with u.set_enabled_equivalencies(u.dimensionless_angles()):
@@ -392,7 +392,7 @@ class DDmodel(PSR_BINARY):
            de/dEDOT = tt0
         """
         eTheta = self.eTheta()
-        a1 = (self.a1()).decompose()
+        a1 = (self.a1()).to(u.m)
         sinOmg = np.sin(self.omega())
         cosOmg = np.cos(self.omega())
         with u.set_enabled_equivalencies(u.dimensionless_angles()):
@@ -642,7 +642,7 @@ class DDmodel(PSR_BINARY):
                 + 1.0 / 2 * nHat**2 * Dre * Drepp
                 - 1.0 / 2 * e * sinE / (1 - e * cosE) * nHat**2 * Dre * Drep
             )
-        ).decompose()
+        ).to(u.s)
 
     def d_delayI_d_par(self, par):
         """Derivative on delay inverse."""

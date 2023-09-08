@@ -106,7 +106,9 @@ class ELL1BaseModel(PSR_BINARY):
         PB = (self.pb()).to("second")
         PBDOT = self.pbdot()
         ttasc = self.ttasc()
-        return (ttasc / PB - 0.5 * PBDOT * (ttasc / PB) ** 2).decompose()
+        return (ttasc / PB - 0.5 * PBDOT * (ttasc / PB) ** 2).to(
+            u.dimensionless_unscaled
+        )
 
     def d_Phi_d_TASC(self):
         """dPhi/dTASC"""
@@ -162,7 +164,7 @@ class ELL1BaseModel(PSR_BINARY):
         return (
             Dre
             * (1 - nhat * Drep + (nhat * Drep) ** 2 + 1.0 / 2 * nhat**2 * Dre * Drepp)
-        ).decompose()
+        ).to(u.s)
 
     def nhat(self):
         return 2 * np.pi / self.pb()
@@ -319,7 +321,7 @@ class ELL1BaseModel(PSR_BINARY):
         Zhu et al. (2019), Eqn. 1
         Fiore et al. (2023), Eqn. 4
         """
-        return ((self.a1() / c.c) * self.d_delayR_da1()).decompose()
+        return ((self.a1() / c.c) * self.d_delayR_da1()).to(u.s)
 
     def d_Dre_d_par(self, par):
         """Derivative computation.

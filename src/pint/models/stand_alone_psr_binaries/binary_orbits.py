@@ -100,9 +100,9 @@ class OrbitPB(Orbit):
         PB = self.PB.to("second")
         PBDOT = self.PBDOT
         XPBDOT = self.XPBDOT
-        return (
-            self.tt0 / PB - 0.5 * (PBDOT + XPBDOT) * (self.tt0 / PB) ** 2
-        ).decompose()
+        return (self.tt0 / PB - 0.5 * (PBDOT + XPBDOT) * (self.tt0 / PB) ** 2).to(
+            u.dimensionless_unscaled
+        )
 
     def pbprime(self):
         """Instantaneous binary period as a function of time."""
@@ -183,7 +183,7 @@ class OrbitFBX(Orbit):
     def orbits(self):
         """Orbital phase (number of orbits since T0)."""
         orbits = taylor_horner(self.tt0, self._FBXs())
-        return orbits.decompose()
+        return orbits.to(u.dimensionless_unscaled)
 
     def pbprime(self):
         """Instantaneous binary period as a function of time."""
@@ -213,8 +213,7 @@ class OrbitFBX(Orbit):
                 FBXs.append(1.0 * getattr(self, f"FB{ii}").unit)
                 break
             ii += 1
-        d_orbits = taylor_horner(self.tt0, FBXs) / par.unit
-        return d_orbits.decompose() * 2 * np.pi * u.rad
+        return taylor_horner(self.tt0, FBXs) * 2 * np.pi * (u.rad / par.unit)
 
     def d_pbprime_d_FBX(self, FBX):
         par = getattr(self, FBX)

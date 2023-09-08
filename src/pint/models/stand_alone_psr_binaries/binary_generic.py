@@ -381,7 +381,7 @@ class PSR_BINARY:
     def ecc(self):
         """Calculate eccentricity with EDOT"""
         if hasattr(self, "_tt0"):
-            return self.ECC + (self.tt0 * self.EDOT).decompose()
+            return self.ECC + (self.tt0 * self.EDOT).to(u.dimensionless_unscaled)
         return self.ECC
 
     def d_ecc_d_T0(self):

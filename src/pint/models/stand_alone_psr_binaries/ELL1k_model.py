@@ -130,7 +130,7 @@ class ELL1kmodel(ELL1model):
                 + 0.5
                 * (self.eps2() * np.sin(2 * Phi) - self.eps1() * (np.cos(2 * Phi) + 3))
             )
-        ).decompose()
+        ).to(u.s)
 
     def d_Dre_d_par(self, par):
         """Derivative computation.
