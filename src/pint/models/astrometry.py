@@ -203,10 +203,10 @@ class Astrometry(DelayComponent):
         rd = self.get_d_delay_quantities(toas)
 
         px_r = np.sqrt(rd["ssb_obs_r"] ** 2 - rd["in_psr_obs"] ** 2)
-        dd_dpx = 0.5 * (px_r**2 / (u.AU * const.c)) * (u.mas / u.radian)
+        dd_dpx = 0.5 * px_r**2 * ((u.mas / u.radian) / (u.AU * const.c))
 
         # We want to return sec / mas
-        return dd_dpx.decompose(u.si.bases) / u.mas
+        return dd_dpx.to(u.s) / u.mas
 
     def d_delay_astrometry_d_POSEPOCH(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt POSEPOCH"""
@@ -415,7 +415,7 @@ class AstrometryEquatorial(Astrometry):
         )
         dd_draj = rd["ssb_obs_r"] * geom / (const.c * u.radian)
 
-        return dd_draj.decompose(u.si.bases)
+        return dd_draj.to(u.s / u.rad)
 
     def d_delay_astrometry_d_DECJ(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt DECJ
@@ -432,7 +432,7 @@ class AstrometryEquatorial(Astrometry):
         ) - np.sin(rd["earth_dec"]) * np.cos(psr_dec)
         dd_ddecj = rd["ssb_obs_r"] * geom / (const.c * u.radian)
 
-        return dd_ddecj.decompose(u.si.bases)
+        return dd_ddecj.to(u.s / u.rad)
 
     def d_delay_astrometry_d_PMRA(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt PMRA
@@ -448,10 +448,9 @@ class AstrometryEquatorial(Astrometry):
         geom = np.cos(rd["earth_dec"]) * np.sin(psr_ra - rd["earth_ra"])
 
         deriv = rd["ssb_obs_r"] * geom * te / (const.c * u.radian)
-        dd_dpmra = deriv * u.mas / u.year
 
         # We want to return sec / (mas / yr)
-        return dd_dpmra.decompose(u.si.bases) / (u.mas / u.year)
+        return deriv.to(u.s * u.year / u.mas)
 
     def d_delay_astrometry_d_PMDEC(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt PMDEC
@@ -470,10 +469,9 @@ class AstrometryEquatorial(Astrometry):
         ) - np.cos(psr_dec) * np.sin(rd["earth_dec"])
 
         deriv = rd["ssb_obs_r"] * geom * te / (const.c * u.radian)
-        dd_dpmdec = deriv * u.mas / u.year
 
         # We want to return sec / (mas / yr)
-        return dd_dpmdec.decompose(u.si.bases) / (u.mas / u.year)
+        return deriv.to(u.s * u.year / u.mas)
 
     def change_posepoch(self, new_epoch):
         """Change POSEPOCH to a new value and update the position accordingly.
@@ -823,7 +821,7 @@ class AstrometryEcliptic(Astrometry):
         )
         dd_delong = rd["ssb_obs_r"] * geom / (const.c * u.radian)
 
-        return dd_delong.decompose(u.si.bases)
+        return dd_delong.to(u.s / u.rad)
 
     def d_delay_astrometry_d_ELAT(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt DECJ
@@ -840,7 +838,7 @@ class AstrometryEcliptic(Astrometry):
         ) - np.sin(rd["earth_elat"]) * np.cos(psr_elat)
         dd_delat = rd["ssb_obs_r"] * geom / (const.c * u.radian)
 
-        return dd_delat.decompose(u.si.bases)
+        return dd_delat.to(u.s / u.rad)
 
     def d_delay_astrometry_d_PMELONG(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt PMRA
@@ -857,10 +855,9 @@ class AstrometryEcliptic(Astrometry):
         geom = np.cos(rd["earth_elat"]) * np.sin(psr_elong - rd["earth_elong"])
 
         deriv = rd["ssb_obs_r"] * geom * te / (const.c * u.radian)
-        dd_dpmelong = deriv * u.mas / u.year
 
         # We want to return sec / (mas / yr)
-        return dd_dpmelong.decompose(u.si.bases) / (u.mas / u.year)
+        return deriv.to(u.s * u.year / u.mas)
 
     def d_delay_astrometry_d_PMELAT(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt PMDEC
@@ -879,10 +876,9 @@ class AstrometryEcliptic(Astrometry):
         ) - np.cos(psr_elat) * np.sin(rd["earth_elat"])
 
         deriv = rd["ssb_obs_r"] * geom * te / (const.c * u.radian)
-        dd_dpmelat = deriv * u.mas / u.year
 
         # We want to return sec / (mas / yr)
-        return dd_dpmelat.decompose(u.si.bases) / (u.mas / u.year)
+        return deriv.to(u.s * u.year / u.mas)
 
     def print_par(self, format="pint"):
         result = ""

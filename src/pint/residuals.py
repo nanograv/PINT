@@ -582,10 +582,11 @@ class Residuals:
 
             # This the fastest way, but highly depend on the assumption of time_resids and
             # error units. Ensure only a pure number is returned.
-            try:
-                return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum().value
-            except ValueError:
-                return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum()
+            return (
+                ((self.time_resids / toa_errors) ** 2.0)
+                .sum()
+                .to_value(u.dimensionless_unscaled)
+            )
 
     def ecorr_average(self, use_noise_model=True):
         """Uses the ECORR noise model time-binning to compute "epoch-averaged" residuals.
