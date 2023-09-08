@@ -7,11 +7,67 @@ from pint.models.stand_alone_psr_binaries.BT_model import BTmodel
 from .binary_generic import PSR_BINARY
 
 
-def extract(lst):
-    return [item[0] for item in lst]
-
-
 class BTpiecewise(BTmodel):
+    """
+     This is a class independent from the PINT platform for pulsar BT piecewise binary model. It is a subclass of BTmodel which is a subclass of  PSR_BINARY class defined in file binary_generic.py in the same directory. This class is designed for use with the PINT platform but can be used as an independent module for piecewise binary delay calculation. To interact with the PINT platform, a pulsar_binary wrapper is needed. See the source file pint/models/binary_piecewise.py.
+    Reference
+    ---------
+    The 'BT' binary model for the pulse period. Model as in:
+    W.M. Smart, (1962), "Spherical Astronomy", p35
+    Blandford & Teukolsky (1976), ApJ, 205, 580-591
+    Return
+    ---------
+    A piecewise bt binary model class with parameters, delay calculations and derivatives.
+
+    Example Session
+    ---------
+    >>import astropy.units as u
+    >>import numpy as np
+
+    >>binary_model=BTpiecewise()
+    >>param_dict = {'T0': 50000, 'ECC': 0.2}
+    >>binary_model.update_input(**param_dict)
+
+    >>t=np.linspace(50001.,60000.,10)*u.d
+
+    Adding binary parameters and piece ranges
+    >>binary_model.add_binary_params('T0X_0000', 60000*u.d)
+    >>binary_model.add_binary_params('XR1_0000', 50000*u.d)
+    >>binary_model.add_binary_params('XR2_0000', 55000*u.d)
+
+    Can add more pieces here...
+
+    Overide default values values if desired
+    >>updates = {'T0X_0000':60000.*u.d,'XR1_0000':50000.*u.d,'XR2_0000': 55000*u.d}
+
+    update the model with the piecewise parameter value(s) and piece ranges
+    >>binary_model.update_input(**updates)
+
+    Using pint's get_model and loading this as a timing model and following the method described in ../binary_piecewise.py
+    sets  _t multiple times during pint's residual calculation
+    for simplicity we're just going to set _t directly though this is not recommended.
+    >>setattr(binary_model,'_t' ,t)
+
+    #here we call get_tt0 to get the "loaded toas" to interact with the pieces passed to the model earlier 
+    #sets the attribute "T0X_per_toa" and/or "A1X_per_toa", contains the piecewise parameter value that will be referenced 
+    #for each toa future calculations
+    >>binary_model.get_tt0(t)
+    #For a piecewise T0, tt0 becomes a piecewise quantity, otherwise it is how it functions in BT_model.py.
+
+    #get_tt0 sets the attribute "T0X_per_toa" and/or "A1X_per_toa".
+    #contains the piecewise parameter value that will be referenced for each toa future calculations
+    >>binary_model.T0X_per_toa
+ 
+    Information about any group can be found with the following:
+    >>binary_model.piecewise_parameter_information
+    Order: [[Group index, Piecewise T0, Piecewise A1, Piece lower bound, Piece upper bound]]
+
+    Making sure a binary_model.tt0 exists 
+    >>binary_model._tt0 = binary_model.get_tt0(binary_model._t)
+
+    Obtain piecewise BTdelay()
+    >>binary_model.BTdelay()
+    """
     def __init__(self, axis_store_initial=None, t=None, input_params=None):
         self.binary_name = "BT_piecewise"
         super(BTpiecewise, self).__init__()
@@ -41,6 +97,7 @@ class BTpiecewise(BTmodel):
         # initialise array that will be 5 x n in shape. Where n is the number of pieces required by the model
         piecewise_parameter_information = []
         # If there are no updates passed by binary_instance, sets default value (usually overwritten when reading from parfile)
+        print(f"valDict {valDict}")
         if valDict is None:
             self.T0X_arr = [self.T0]
             self.A1X_arr = [self.A1]
@@ -76,15 +133,17 @@ class BTpiecewise(BTmodel):
                 string = [
                     "T0X_" + index,
                     "A1X_" + index,
-                    "PLB_" + index,
-                    "PUB_" + index,
+                    "XR1_" + index,
+                    "XR2_" + index,
                 ]
+
                 if string[0] not in param_pieces:
                     for i in range(0, len(string)):
                         if string[i] in valDict:
                             param_pieces.append(valDict[string[i]])
                         elif string[i] not in valDict:
                             attr = string[i][0:2]
+                            
                             if hasattr(self, attr):
                                 param_pieces.append(getattr(self, attr))
                             else:
@@ -111,7 +170,6 @@ class BTpiecewise(BTmodel):
         """Creates a list of piecewise orbital parameters to use in calculations. It is the same dimensions as the TOAs loaded in. Each entry is the piecewise parameter value from the group it belongs to.
         ----------
         t : Quantity. TOA, not necesserily barycentered
-
         Returns
         -------
         list
@@ -125,7 +183,8 @@ class BTpiecewise(BTmodel):
         if len(self.group_index_array) != len(t):
             self.group_index_array = self.toa_belongs_in_group(t)
             # searches the 5 x n array to find the index matching the toa_index
-        possible_groups = extract(self.piecewise_parameter_information)
+        possible_groups = [item[0] for item in self.piecewise_parameter_information]
+        
         for i in self.group_index_array:
             if i != -1:
                 for k, j in enumerate(possible_groups):
@@ -149,17 +208,24 @@ class BTpiecewise(BTmodel):
         """Get the piece a TOA belongs to by finding which checking upper/lower edges of each piece.
         ----------
         t : Quantity. TOA, not necesserily barycentered
-
         Returns
         -------
         list
                 int (length: t). Group numbers
         """
         group_no = []
-        lower_edge, upper_edge = self.get_group_boundaries()
-        for i in t:
-            lower_bound = np.searchsorted(lower_edge, i) - 1
-            upper_bound = np.searchsorted(upper_edge, i)
+        gb = self.get_group_boundaries()
+
+        lower_edge = []
+        upper_edge = []
+        for i in range(len(gb[0])):
+            lower_edge.append( gb[0][i].value)
+            upper_edge.append( gb[1][i].value)
+        
+        #lower_edge, upper_edge = [self.get_group_boundaries()[:].value],[self.get_group_boundaries()[1].value]
+        for i in t.value:
+            lower_bound = np.searchsorted(np.array(lower_edge), i) - 1
+            upper_bound = np.searchsorted(np.array(upper_edge), i)
             if lower_bound == upper_bound:
                 index_no = lower_bound
             else:
@@ -414,3 +480,4 @@ class BTpiecewise(BTmodel):
         with u.set_enabled_equivalencies(u.dimensionless_angles()):
             result = result.to(u.Unit("") / par_obj.unit)
         return result
+
