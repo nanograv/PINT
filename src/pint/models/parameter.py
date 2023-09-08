@@ -1739,6 +1739,9 @@ class maskParameter(floatParameter):
         self.is_prefix = True
         self._parfile_name = self.origin_name
 
+        self.__cache_mask = None
+        self.__cache_toas = None
+
     def __repr__(self):
         out = f"{self.__class__.__name__}({self.name}"
         if self.key is not None:
@@ -1931,6 +1934,9 @@ class maskParameter(floatParameter):
         array
             An array of TOA indices selected by the mask.
         """
+        if self.__cache_mask is not None and self.__cache_toas is toas:
+            return self.__cache_mask
+
         if len(self.key_value) == 1:
             if not hasattr(self, "toa_selector"):
                 self.toa_selector = TOASelect(is_range=False, use_hash=True)
@@ -1965,6 +1971,10 @@ class maskParameter(floatParameter):
             col = tbl[column_match[key.lower()]]
         select_idx = self.toa_selector.get_select_index(condition, col)
         return select_idx[self.name]
+
+    def cache_toa_mask(self, toas):
+        self.__cache_mask = self.select_toa_mask(toas)
+        self.__cache_toas = toas
 
     def compare_key_value(self, other_param):
         """Compare if the key and value are the same with the other parameter.

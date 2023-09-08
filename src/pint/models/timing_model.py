@@ -349,6 +349,9 @@ class TimingModel:
         for cp in components:
             self.add_component(cp, setup=False, validate=False)
 
+        self.__locked = False
+        self.__lock_toas = None
+
     def __repr__(self):
         return "{}(\n  {}\n)".format(
             self.__class__.__name__,
@@ -484,6 +487,19 @@ class TimingModel:
     #        for pp in cp.params:
     #            result += str(getattr(cp, pp)) + "\n"
     #    return result
+
+    def lock(self, toas):
+        log.warning(
+            "Locking the TimingModel object for the given TOAs. Mutating this TOAs object or using a "
+            "different TOAs object with this model will lead to undefined behavior."
+        )
+        self.__locked = True
+        self.__lock_toas = toas
+
+        for mp in self.get_params_of_type_top("maskParameter"):
+            mpar = getattr(self, mp)
+            if mpar.key is not None:
+                mpar.cache_toa_mask(toas)
 
     def __getattr__(self, name):
         if name in ["components", "component_types", "search_cmp_attr"]:
