@@ -48,8 +48,8 @@ class BTpiecewise(BTmodel):
     for simplicity we're just going to set _t directly though this is not recommended.
     >>setattr(binary_model,'_t' ,t)
 
-    #here we call get_tt0 to get the "loaded toas" to interact with the pieces passed to the model earlier 
-    #sets the attribute "T0X_per_toa" and/or "A1X_per_toa", contains the piecewise parameter value that will be referenced 
+    #here we call get_tt0 to get the "loaded toas" to interact with the pieces passed to the model earlier
+    #sets the attribute "T0X_per_toa" and/or "A1X_per_toa", contains the piecewise parameter value that will be referenced
     #for each toa future calculations
     >>binary_model.get_tt0(t)
     #For a piecewise T0, tt0 becomes a piecewise quantity, otherwise it is how it functions in BT_model.py.
@@ -57,17 +57,18 @@ class BTpiecewise(BTmodel):
     #get_tt0 sets the attribute "T0X_per_toa" and/or "A1X_per_toa".
     #contains the piecewise parameter value that will be referenced for each toa future calculations
     >>binary_model.T0X_per_toa
- 
+
     Information about any group can be found with the following:
     >>binary_model.piecewise_parameter_information
     Order: [[Group index, Piecewise T0, Piecewise A1, Piece lower bound, Piece upper bound]]
 
-    Making sure a binary_model.tt0 exists 
+    Making sure a binary_model.tt0 exists
     >>binary_model._tt0 = binary_model.get_tt0(binary_model._t)
 
     Obtain piecewise BTdelay()
     >>binary_model.BTdelay()
     """
+
     def __init__(self, axis_store_initial=None, t=None, input_params=None):
         self.binary_name = "BT_piecewise"
         super(BTpiecewise, self).__init__()
@@ -97,7 +98,6 @@ class BTpiecewise(BTmodel):
         # initialise array that will be 5 x n in shape. Where n is the number of pieces required by the model
         piecewise_parameter_information = []
         # If there are no updates passed by binary_instance, sets default value (usually overwritten when reading from parfile)
-        print(f"valDict {valDict}")
         if valDict is None:
             self.T0X_arr = [self.T0]
             self.A1X_arr = [self.A1]
@@ -136,14 +136,13 @@ class BTpiecewise(BTmodel):
                     "XR1_" + index,
                     "XR2_" + index,
                 ]
-
                 if string[0] not in param_pieces:
                     for i in range(0, len(string)):
                         if string[i] in valDict:
                             param_pieces.append(valDict[string[i]])
                         elif string[i] not in valDict:
                             attr = string[i][0:2]
-                            
+
                             if hasattr(self, attr):
                                 param_pieces.append(getattr(self, attr))
                             else:
@@ -184,7 +183,7 @@ class BTpiecewise(BTmodel):
             self.group_index_array = self.toa_belongs_in_group(t)
             # searches the 5 x n array to find the index matching the toa_index
         possible_groups = [item[0] for item in self.piecewise_parameter_information]
-        
+
         for i in self.group_index_array:
             if i != -1:
                 for k, j in enumerate(possible_groups):
@@ -219,10 +218,10 @@ class BTpiecewise(BTmodel):
         lower_edge = []
         upper_edge = []
         for i in range(len(gb[0])):
-            lower_edge.append( gb[0][i].value)
-            upper_edge.append( gb[1][i].value)
-        
-        #lower_edge, upper_edge = [self.get_group_boundaries()[:].value],[self.get_group_boundaries()[1].value]
+            lower_edge.append(gb[0][i].value)
+            upper_edge.append(gb[1][i].value)
+
+        # lower_edge, upper_edge = [self.get_group_boundaries()[:].value],[self.get_group_boundaries()[1].value]
         for i in t.value:
             lower_bound = np.searchsorted(np.array(lower_edge), i) - 1
             upper_bound = np.searchsorted(np.array(upper_edge), i)
@@ -480,4 +479,3 @@ class BTpiecewise(BTmodel):
         with u.set_enabled_equivalencies(u.dimensionless_angles()):
             result = result.to(u.Unit("") / par_obj.unit)
         return result
-
