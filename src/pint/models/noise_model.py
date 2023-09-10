@@ -149,13 +149,18 @@ class ScaleToaError(NoiseComponent):
         # @abhisrkckl : This function turned out to be a performance bottleneck.
         # So I have changed this code so as to minimize Quantity operations.
 
-        sigma_scaled = toas.table["error"].quantity.to_value(u.s)
+        sigma_scaled = (
+            self._parent._toa_errors_cache
+            if self._parent.locked
+            else toas.table["error"].quantity.to_value(u.s)
+        )
+
         for equad_name in self.EQUADs:
             equad = getattr(self, equad_name)
             if equad.quantity is None:
                 continue
             mask = equad.select_toa_mask(toas)
-            if np.any(mask):
+            if self._parent.locked or np.any(mask):
                 sigma_scaled[mask] = np.hypot(
                     sigma_scaled[mask], equad.quantity.to_value(u.s)
                 )
@@ -164,7 +169,7 @@ class ScaleToaError(NoiseComponent):
         for efac_name in self.EFACs:
             efac = getattr(self, efac_name)
             mask = efac.select_toa_mask(toas)
-            if np.any(mask):
+            if self._parent.locked or np.any(mask):
                 sigma_scaled[mask] *= efac.quantity.to_value(u.dimensionless_unscaled)
             else:
                 warnings.warn(f"EFAC {efac} has no TOAs")
