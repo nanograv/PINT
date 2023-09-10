@@ -489,9 +489,10 @@ class TimingModel:
     #    return result
 
     def lock(self, toas):
-        """Lock a timing model object for a given TOAs object by caching parameter masks. This can
-        provide significant performance gains when mask parameters are present. However, mutating the
-        TOAs object after calling this function can lead to exceptions or wrong results down the line.
+        """Lock a timing model object for a given TOAs object by caching parameter masks. This also
+        allows us to do other optimizations such as skipping TOA error checks. This can provide significant
+        performance gains when mask parameters are present. However, mutating the TOAs object after calling
+        this function can lead to exceptions or wrong results down the line.
         """
 
         log.warning(
@@ -517,6 +518,7 @@ class TimingModel:
         return self.__locked
 
     def unlock(self):
+        """Undo the lock() call."""
         self.__locked = False
         self.__lock_toas = None
 
