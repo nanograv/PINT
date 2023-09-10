@@ -1977,6 +1977,9 @@ class maskParameter(floatParameter):
         wrong results if the TOAs object is mutated after this. This can be undone using
         the `clear_toa_mask_cache()` method.
         """
+        assert self.select_toa_mask(
+            toas
+        ).any(), f"Empty TOA mask found for {self.name}. Will not cache this."
         self.__cache_mask = self.select_toa_mask(toas)
         self.__cache_toas = toas
 
