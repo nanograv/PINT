@@ -571,8 +571,11 @@ class Residuals:
         else:
             # Residual units are in seconds. Error units are in microseconds.
             toa_errors = self.get_data_error()
-            if (toa_errors == 0.0).any():
+
+            # This check is expensive. Skip it if the model is locked.
+            if (not self.model.locked) and (toa_errors == 0.0).any():
                 return np.inf
+
             # The self.time_resids is in the unit of "s", the error "us".
             # This is more correct way, but it is the slowest.
             # return (((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()).value
@@ -583,10 +586,10 @@ class Residuals:
             # This the fastest way, but highly depend on the assumption of time_resids and
             # error units. Ensure only a pure number is returned.
             return (
-                ((self.time_resids / toa_errors) ** 2.0)
-                .sum()
-                .to_value(u.dimensionless_unscaled)
-            )
+                (
+                    (self.time_resids.to_value(u.s) / toa_errors.to_value(u.s)) ** 2.0
+                ).sum()
+            ) << u.dimensionless_unscaled
 
     def ecorr_average(self, use_noise_model=True):
         """Uses the ECORR noise model time-binning to compute "epoch-averaged" residuals.
