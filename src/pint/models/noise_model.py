@@ -146,24 +146,29 @@ class ScaleToaError(NoiseComponent):
                 raise ValueError(f"'{el}' have duplicated keys and key values.")
 
     def scale_toa_sigma(self, toas):
-        sigma_scaled = toas.table["error"].quantity.copy()
+        # @abhisrkckl : This function turned out to be a performance bottleneck.
+        # So I have changed this code so as to minimize Quantity operations.
+
+        sigma_scaled = toas.table["error"].quantity.to_value(u.s)
         for equad_name in self.EQUADs:
             equad = getattr(self, equad_name)
             if equad.quantity is None:
                 continue
             mask = equad.select_toa_mask(toas)
             if np.any(mask):
-                sigma_scaled[mask] = np.hypot(sigma_scaled[mask], equad.quantity)
+                sigma_scaled[mask] = np.hypot(
+                    sigma_scaled[mask], equad.quantity.to_value(u.s)
+                )
             else:
                 warnings.warn(f"EQUAD {equad} has no TOAs")
         for efac_name in self.EFACs:
             efac = getattr(self, efac_name)
             mask = efac.select_toa_mask(toas)
             if np.any(mask):
-                sigma_scaled[mask] *= efac.quantity
+                sigma_scaled[mask] *= efac.quantity.to_value(u.dimensionless_unscaled)
             else:
                 warnings.warn(f"EFAC {efac} has no TOAs")
-        return sigma_scaled
+        return sigma_scaled << u.s
 
     def sigma_scaled_cov_matrix(self, toas):
         scaled_sigma = self.scale_toa_sigma(toas).to(u.s).value ** 2
