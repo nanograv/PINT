@@ -351,6 +351,7 @@ class TimingModel:
 
         self.__locked = False
         self.__lock_toas = None
+        self.__toa_errors_cache = None
 
     def __repr__(self):
         return "{}(\n  {}\n)".format(
@@ -507,6 +508,7 @@ class TimingModel:
 
         self.__locked = True
         self.__lock_toas = toas
+        self._toa_errors_cache = toas.get_errors().to_value(u.s)
 
         for mp in self.get_params_of_type_top("maskParameter"):
             mpar = getattr(self, mp)
@@ -521,6 +523,7 @@ class TimingModel:
         """Undo the lock() call."""
         self.__locked = False
         self.__lock_toas = None
+        self._toa_errors_cache = None
 
         for mp in self.get_params_of_type_top("maskParameter"):
             mpar = getattr(self, mp)
@@ -1469,17 +1472,21 @@ class TimingModel:
         toas: pint.toa.TOAs
             The input data object for TOAs uncertainty.
         """
-        ntoa = toas.ntoas
         tbl = toas.table
-        result = np.zeros(ntoa)
 
         # When there is no noise model.
         if len(self.scaled_toa_uncertainty_funcs) == 0:
             return tbl["error"].quantity.to(u.us)
 
-        for nf in self.scaled_toa_uncertainty_funcs:
-            result += nf(toas).to_value(u.us)
-        return result << u.us
+        return (
+            sum(
+                map(
+                    lambda nf: nf(toas).to_value(u.us),
+                    self.scaled_toa_uncertainty_funcs,
+                )
+            )
+            << u.us
+        )
 
     def scaled_dm_uncertainty(self, toas):
         """Get the scaled DM data uncertainties noise models.
