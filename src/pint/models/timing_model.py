@@ -499,6 +499,11 @@ class TimingModel:
             "undefined behavior if the TOAs object is mutated after this."
         )
 
+        if (toas.get_errors() == 0).any():
+            raise ValueError(
+                "Model cannot be locked since some TOAs have zero uncertainties."
+            )
+
         self.__locked = True
         self.__lock_toas = toas
 
@@ -506,6 +511,19 @@ class TimingModel:
             mpar = getattr(self, mp)
             if mpar.key is not None:
                 mpar.cache_toa_mask(toas)
+
+    @property
+    def locked(self):
+        return self.__locked
+
+    def unlock(self):
+        self.__locked = False
+        self.__lock_toas = None
+
+        for mp in self.get_params_of_type_top("maskParameter"):
+            mpar = getattr(self, mp)
+            if mpar.key is not None:
+                mpar.clear_toa_mask_cache()
 
     def __getattr__(self, name):
         if name in ["components", "component_types", "search_cmp_attr"]:
@@ -1451,15 +1469,15 @@ class TimingModel:
         """
         ntoa = toas.ntoas
         tbl = toas.table
-        result = np.zeros(ntoa) * u.us
+        result = np.zeros(ntoa)
+
         # When there is no noise model.
         if len(self.scaled_toa_uncertainty_funcs) == 0:
-            result += tbl["error"].quantity
-            return result
+            return tbl["error"].quantity.to(u.us)
 
         for nf in self.scaled_toa_uncertainty_funcs:
-            result += nf(toas)
-        return result
+            result += nf(toas).to_value(u.us)
+        return result << u.us
 
     def scaled_dm_uncertainty(self, toas):
         """Get the scaled DM data uncertainties noise models.

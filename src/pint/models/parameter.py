@@ -1974,10 +1974,16 @@ class maskParameter(floatParameter):
 
     def cache_toa_mask(self, toas):
         """Cache the TOA mask for this parameter. This will lead to exceptions and/or
-        wrong results if the TOAs object is mutated after this.
+        wrong results if the TOAs object is mutated after this. This can be undone using
+        the `clear_toa_mask_cache()` method.
         """
         self.__cache_mask = self.select_toa_mask(toas)
         self.__cache_toas = toas
+
+    def clear_toa_mask_cache(self):
+        """Clear the TOA mask cache. This will undo a `cache_toa_mask()` call."""
+        self.__cache_mask = None
+        self.__cache_toas = None
 
     def compare_key_value(self, other_param):
         """Compare if the key and value are the same with the other parameter.
