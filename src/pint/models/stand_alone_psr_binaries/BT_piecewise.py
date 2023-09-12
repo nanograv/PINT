@@ -76,6 +76,7 @@ class BTpiecewise(BTmodel):
             self._t = None
         self.axis_store_initial = []
         self.extended_group_range = []
+        self.param_pieces = []
         self.d_binarydelay_d_par_funcs = [self.d_BTdelay_d_par]
         if t is not None:
             self._t = t
@@ -98,6 +99,7 @@ class BTpiecewise(BTmodel):
         # initialise array that will be 5 x n in shape. Where n is the number of pieces required by the model
         piecewise_parameter_information = []
         # If there are no updates passed by binary_instance, sets default value (usually overwritten when reading from parfile)
+
         if valDict is None:
             self.T0X_arr = [self.T0]
             self.A1X_arr = [self.A1]
@@ -136,30 +138,36 @@ class BTpiecewise(BTmodel):
                     "XR1_" + index,
                     "XR2_" + index,
                 ]
-                if string[0] not in param_pieces:
-                    for i in range(0, len(string)):
-                        if string[i] in valDict:
-                            param_pieces.append(valDict[string[i]])
-                        elif string[i] not in valDict:
-                            attr = string[i][0:2]
 
-                            if hasattr(self, attr):
-                                param_pieces.append(getattr(self, attr))
-                            else:
-                                raise AttributeError(
-                                    "Malformed valDict being used, attempting to set an attribute that doesn't exist. Likely a corner case slipping through validate() in binary_piecewise."
-                                )
+                # if string[0] not in param_pieces:
+                for i in range(0, len(string)):
+                    if string[i] in valDict:
+                        param_pieces.append(valDict[string[i]])
+                    elif string[i] not in valDict:
+                        attr = string[i][0:2]
+
+                        if hasattr(self, attr):
+                            param_pieces.append(getattr(self, attr))
+                        else:
+                            raise AttributeError(
+                                "Malformed valDict being used, attempting to set an attribute that doesn't exist. Likely a corner case slipping through validate() in binary_piecewise."
+                            )
                         # Raises error if range not defined as there is no Piece upper/lower bound in the model.
-                    piecewise_parameter_information.append(param_pieces)
+
+                piecewise_parameter_information.append(param_pieces)
+
             self.valDict = valDict
             # sorts the array chronologically by lower edge of each group,correctly works for unordered pieces
+
             self.piecewise_parameter_information = sorted(
                 piecewise_parameter_information, key=lambda x: x[3]
             )
+
             # Uses the index for each toa array to create arrays where elements are the A1X/T0X to use with that toa
             if len(self.piecewise_parameter_information) > 0:
                 if self._t:
                     self.group_index_array = self.toa_belongs_in_group(self._t)
+
                     (
                         self.T0X_per_toa,
                         self.A1X_per_toa,
@@ -183,30 +191,42 @@ class BTpiecewise(BTmodel):
             self.group_index_array = self.toa_belongs_in_group(t)
             # searches the 5 x n array to find the index matching the toa_index
         possible_groups = [item[0] for item in self.piecewise_parameter_information]
+        if len(self.group_index_array) > 1 and len(t) > 1:
+            for i in self.group_index_array:
+                if i != -1:
+                    for k, j in enumerate(possible_groups):
+                        if str(i) == j:
+                            group_index = k
+                            T0X_per_toa.append(
+                                self.piecewise_parameter_information[group_index][
+                                    1
+                                ].value
+                            )
 
-        for i in self.group_index_array:
-            if i != -1:
-                for k, j in enumerate(possible_groups):
-                    if str(i) == j:
-                        group_index = k
-                T0X_per_toa.append(
-                    self.piecewise_parameter_information[group_index][1].value
-                )
-                A1X_per_toa.append(
-                    self.piecewise_parameter_information[group_index][2].value
-                )
-            # if a toa lies between 2 groups, use default T0/A1 values (i.e. toa lies after previous upper bound but before next lower bound)
-            else:
-                T0X_per_toa.append(self.T0.value)
-                A1X_per_toa.append(self.A1.value)
+                            A1X_per_toa.append(
+                                self.piecewise_parameter_information[group_index][
+                                    2
+                                ].value
+                            )
+
+                # if a toa lies between 2 groups, use default T0/A1 values (i.e. toa lies after previous upper bound but before next lower bound)
+                else:
+                    T0X_per_toa.append(self.T0.value)
+                    A1X_per_toa.append(self.A1.value)
+
+        else:
+            T0X_per_toa = self.T0.value
+            A1X_per_toa = self.A1.value
+
         T0X_per_toa = T0X_per_toa * u.d
         A1X_per_toa = A1X_per_toa * ls
+
         return [T0X_per_toa, A1X_per_toa]
 
-    def toa_belongs_in_group(self, t):
+    def toa_belongs_in_group(self, toas):
         """Get the piece a TOA belongs to by finding which checking upper/lower edges of each piece.
         ----------
-        t : Quantity. TOA, not necesserily barycentered
+        toas : Astropy.quantity.Quantity.
         Returns
         -------
         list
@@ -222,7 +242,7 @@ class BTpiecewise(BTmodel):
             upper_edge.append(gb[1][i].value)
 
         # lower_edge, upper_edge = [self.get_group_boundaries()[:].value],[self.get_group_boundaries()[1].value]
-        for i in t.value:
+        for i in toas.value:
             lower_bound = np.searchsorted(np.array(lower_edge), i) - 1
             upper_bound = np.searchsorted(np.array(upper_edge), i)
             if lower_bound == upper_bound:
@@ -252,6 +272,13 @@ class BTpiecewise(BTmodel):
             return [lower_group_edge, upper_group_edge]
 
     def a1(self):
+        if len(self.piecewise_parameter_information) > 0:
+            # defines index for each toa as an array of length = len(self._t)
+            # Uses the index for each toa array to create arrays where elements are the A1X/T0X to use with that toa
+            self.A1X_per_toa = self.piecewise_parameter_from_information_array(self.t)[
+                1
+            ]
+
         if hasattr(self, "A1X_per_toa"):
             ret = self.A1X_per_toa + self.tt0 * self.A1DOT
         else:
@@ -261,31 +288,20 @@ class BTpiecewise(BTmodel):
     def get_tt0(self, barycentricTOA):
         """Finds (barycentricTOA - T0_x). Where T0_x is the piecewise T0 value, if it exists, correponding to the group the TOA belongs to. If T0_x does not exist, use the global T0 vlaue.
         ----------
-        barycentricTOA :
-                TOA object
         Returns
         -------
-        numpy.array
+        astropy.quantity.Quantity
                 time since T0
         """
         if barycentricTOA is None or self.T0 is None:
             return None
-        if len(barycentricTOA) >= 1:
-            if len(self.piecewise_parameter_information) > 0:
-                # defines index for each toa as an array of length = len(self._t)
-                # Uses the index for each toa array to create arrays where elements are the A1X/T0X to use with that toa
-                (
-                    self.T0X_per_toa,
-                    self.A1X_per_toa,
-                ) = self.piecewise_parameter_from_information_array(self._t)
-        if len(barycentricTOA) >= 1:
-            if hasattr(self, "T0X_per_toa"):
-                if len(self.T0X_per_toa) > 0:
-                    T0 = self.T0X_per_toa
-                else:
-                    T0 = self.T0
-            else:
-                T0 = self.T0
+        if len(barycentricTOA) > 1:
+            # defines index for each toa as an array of length = len(self._t)
+            # Uses the index for each toa array to create arrays where elements are the A1X/T0X to use with that toa
+            self.T0X_per_toa = self.piecewise_parameter_from_information_array(
+                barycentricTOA
+            )[0]
+            T0 = self.T0X_per_toa
         else:
             T0 = self.T0
         if not hasattr(barycentricTOA, "unit") or barycentricTOA.unit == None:

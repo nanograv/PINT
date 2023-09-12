@@ -14,6 +14,9 @@ from io import StringIO
 from pylab import *
 import pytest
 from pint.simulation import make_fake_toas_uniform
+import pint.logging
+
+pint.logging.setup(level="ERROR")
 
 
 @pytest.fixture
@@ -79,7 +82,7 @@ def model_BT():
     ECC                                   0.0
     EDOT                                  0.0
     T0                 55000.
-    TZRMJD             55000
+    TZRMJD             55000.
     TZRSITE                                 1
     """
     model = get_model(StringIO(par_base))
@@ -87,28 +90,28 @@ def model_BT():
 
 
 @pytest.fixture()
-def build_piecewise_model_with_one_T0_piece(model_no_pieces):
+def build_piecewise_model_with_one_A1_piece(model_no_pieces):
     # takes the basic model frame and adds 2 non-ovelerlapping pieces to it
     piecewise_model = deepcopy(model_no_pieces)
-    lower_bound = [55000, 55100.00001]
-    upper_bound = [55100, 55200]
-    piecewise_model.add_group_range(lower_bound[0], upper_bound[0], j=0)
+    lower_bound = [55000]
+    upper_bound = [55100]
+    piecewise_model.add_group_range(lower_bound[0], upper_bound[0], piece_index=0)
     piecewise_model.add_piecewise_param(
-        "T0", 0, paramx=piecewise_model.T0.value + 1.0e-3
+        A1=piecewise_model.A1.value + 1.0e-3, piece_index=0
     )
-    piecewise_model.lock_groups()
     return piecewise_model
 
 
 @pytest.fixture()
-def build_piecewise_model_with_one_A1_piece(model_no_pieces):
+def build_piecewise_model_with_one_T0_piece(model_no_pieces):
     # takes the basic model frame and adds 2 non-ovelerlapping pieces to it
     piecewise_model = deepcopy(model_no_pieces)
-    lower_bound = [55000, 55100.00001]
-    upper_bound = [55100, 55200]
-    piecewise_model.add_group_range(lower_bound[0], upper_bound[0], j=0)
-    piecewise_model.add_piecewise_param("A1", 0, paramx=piecewise_model.A1.value + 1e-3)
-    piecewise_model.lock_groups()
+    lower_bound = [55000]
+    upper_bound = [55100]
+    piecewise_model.add_group_range(lower_bound[0], upper_bound[0], piece_index=0)
+    piecewise_model.add_piecewise_param(
+        T0=piecewise_model.T0.value + 1.0e-5, piece_index=0
+    )
     return piecewise_model
 
 
@@ -120,14 +123,13 @@ def build_piecewise_model_with_two_pieces(model_no_pieces):
     lower_bound = [55000, 55100.000000001]
     upper_bound = [55100, 55200]
     for i in range(len(lower_bound)):
-        piecewise_model.add_group_range(lower_bound[i], upper_bound[i], j=i)
+        piecewise_model.add_group_range(lower_bound[i], upper_bound[i], piece_index=i)
         piecewise_model.add_piecewise_param(
-            "A1", i, paramx=piecewise_model.A1.value + (i + 1) * 1e-3
+            A1=(piecewise_model.A1.value + (i + 1) * 1e-3) * ls, piece_index=i
         )
         piecewise_model.add_piecewise_param(
-            "T0", i, paramx=piecewise_model.T0.value + (i + 1) * 1e-3
+            T0=(piecewise_model.T0.value + (i + 1) * 1e-3) * u.d, piece_index=i
         )
-    piecewise_model.lock_groups()
     return piecewise_model
 
 
@@ -160,7 +162,6 @@ def add_partial_coverage_groups_and_make_toas(build_piecewise_model_with_two_pie
     model3 = build_piecewise_model_with_two_pieces
     # known bug: if A1X exists it needs a partner T0X otherwise it breaks can freeze T0X for the time being, just needs a little thought
     model3.remove_range(0)
-    model3.lock_groups()
     # make sure TOAs are within ranges
     toas = make_generic_toas(model3, 55001, 55199)
     return model3, toas
@@ -170,18 +171,6 @@ def add_partial_coverage_groups_and_make_toas(build_piecewise_model_with_two_pie
 def make_generic_toas(model, lower_bound, upper_bound):
     # makes toas to go with the edge cases
     return make_fake_toas_uniform(lower_bound, upper_bound, 20, model)
-
-
-# fine function
-def return_truth_array_based_on_group_boundaries(model, barycentric_toa):
-    boundaries = model.get_group_boundaries()
-    upper_edge_of_lower_group = boundaries[1][0]
-    lower_edge_of_upper_group = boundaries[0][1]
-    truth_array_comparison = [
-        [barycentric_toa <= upper_edge_of_lower_group],
-        [barycentric_toa >= lower_edge_of_upper_group],
-    ]
-    return truth_array_comparison
 
 
 def add_offset_in_model_parameter(indexes, param, model):
@@ -208,12 +197,10 @@ def add_relative_offset_for_derivatives(index, param, model, offset_size, plus=T
         if hasattr(m_piecewise_temp, parameter_string):
             delta = getattr(m_piecewise_temp, parameter_string).value + offset_size
             getattr(m_piecewise_temp, parameter_string).value = delta
-            m_piecewise_temp.lock_groups()
     else:
         if hasattr(m_piecewise_temp, parameter_string):
             delta = getattr(m_piecewise_temp, parameter_string).value - offset_size
             getattr(m_piecewise_temp, parameter_string).value = delta
-            m_piecewise_temp.lock_groups()
     return m_piecewise_temp
 
 
@@ -248,10 +235,13 @@ def test_round_trips_to_parfile(model_no_pieces):
         55550,
     ]
     for i in range(0, n):
-        m_piecewise.add_group_range(lower_bounds[i], upper_bounds[i], j=i)
-        m_piecewise.add_piecewise_param("A1", i, paramx=m_piecewise.A1.value + i)
-        m_piecewise.add_piecewise_param("T0", i, paramx=m_piecewise.T0.value + i)
-    m_piecewise.lock_groups()
+        m_piecewise.add_group_range(lower_bounds[i], upper_bounds[i], piece_index=i)
+        m_piecewise.add_piecewise_param(
+            A1=(m_piecewise.A1.value + i) * ls, piece_index=i
+        )
+        m_piecewise.add_piecewise_param(
+            T0=(m_piecewise.T0.value + i) * u.d, piece_index=i
+        )
     m3 = get_model(StringIO(m_piecewise.as_parfile()))
     param_dict = m_piecewise.get_params_dict(which="all")
     copy_param_dict = m3.get_params_dict(which="all")
@@ -311,31 +301,34 @@ def test_paramX_per_toa_matches_corresponding_model_value(
     # Uses this array to apply T0X_i/A1X_i to corresponding indexes from group_index fn call. i.e. for T0X_i,T0X_j,T0X_k values and group_index return: [i,j,k] the output would be [T0X_i,T0X_j,T0X_k]
     m_piecewise = build_piecewise_model_with_two_pieces
     toa = make_toas_to_go_with_two_piece_model
+    expected_piece_1 = np.full(int(len(toa)), True)
+    expected_piece_1[int(len(toa) / 2) :] = False
+
+    expected_piece_2 = np.full(int(len(toa)), True)
+    expected_piece_2[: int(len(toa) / 2)] = False
+
+    should_toa_reference_piecewise_parameter = [expected_piece_1, expected_piece_2]
     if param == "A1X":
-        paramX_per_toa = m_piecewise.get_A1Xs_associated_with_toas(toa)
-        test_val = [m_piecewise.A1X_0000.quantity, m_piecewise.A1X_0001.quantity]
-        should_toa_reference_piecewise_parameter = [
-            m_piecewise.does_toa_reference_piecewise_parameter(toa, "A1X_0000"),
-            m_piecewise.does_toa_reference_piecewise_parameter(toa, "A1X_0001"),
-        ]
+        paramX_per_toa = m_piecewise.paramx_per_toa("A1", toa)
+        test_val = [m_piecewise.A1X_0000.value, m_piecewise.A1X_0001.value]
+
     elif param == "T0X":
-        paramX_per_toa = m_piecewise.get_T0Xs_associated_with_toas(toa)
-        test_val = [m_piecewise.T0X_0000.quantity, m_piecewise.T0X_0001.quantity]
-        should_toa_reference_piecewise_parameter = [
-            m_piecewise.does_toa_reference_piecewise_parameter(toa, "T0X_0000"),
-            m_piecewise.does_toa_reference_piecewise_parameter(toa, "T0X_0001"),
-        ]
+        paramX_per_toa = m_piecewise.paramx_per_toa("T0", toa)
+        test_val = [m_piecewise.T0X_0000.value, m_piecewise.T0X_0001.value]
 
     do_toas_reference_first_piecewise_parameter = np.isclose(
-        (paramX_per_toa.value - test_val[0].value), 0, atol=1e-6, rtol=0
+        (paramX_per_toa.value - test_val[0]), 0, atol=1e-6, rtol=0
     )
+
     do_toas_reference_second_piecewise_parameter = np.isclose(
-        (paramX_per_toa.value - test_val[1].value), 0, atol=1e-6, rtol=0
+        (paramX_per_toa.value - test_val[1]), 0, atol=1e-6, rtol=0
     )
+
     do_toas_reference_piecewise_parameter = [
         do_toas_reference_first_piecewise_parameter,
         do_toas_reference_second_piecewise_parameter,
     ]
+
     np.testing.assert_array_equal(
         do_toas_reference_piecewise_parameter, should_toa_reference_piecewise_parameter
     )
@@ -348,22 +341,22 @@ def test_problematic_group_indexes_and_ranges(model_no_pieces):
     m_piecewise = model_no_pieces
     with pytest.raises(ValueError):
         m_piecewise.add_group_range(
-            m_piecewise.START.value, m_piecewise.FINISH.value, j=-1
+            m_piecewise.START.value, m_piecewise.FINISH.value, piece_index=-1
         )
     with pytest.raises(ValueError):
         m_piecewise.add_group_range(
-            m_piecewise.FINISH.value, m_piecewise.START.value, j=1
+            m_piecewise.FINISH.value, m_piecewise.START.value, piece_index=1
         )
     with pytest.raises(ValueError):
         m_piecewise.add_group_range(
-            m_piecewise.START.value, m_piecewise.FINISH.value, j=1
+            m_piecewise.START.value, m_piecewise.FINISH.value, piece_index=1
         )
         m_piecewise.add_group_range(
-            m_piecewise.START.value, m_piecewise.FINISH.value, j=1
+            m_piecewise.START.value, m_piecewise.FINISH.value, piece_index=1
         )
     with pytest.raises(ValueError):
         m_piecewise.add_group_range(
-            m_piecewise.START.value, m_piecewise.FINISH.value, j=10000
+            m_piecewise.START.value, m_piecewise.FINISH.value, piece_index=10000
         )
 
 
@@ -372,91 +365,79 @@ def test_group_index_matching(model_no_pieces):
     with pytest.raises(ValueError):
         # should flag mismatching A1 group and boundary indexes
         m_piecewise.add_group_range(
-            m_piecewise.START.value, m_piecewise.FINISH.value, j=1
+            m_piecewise.START.value, m_piecewise.FINISH.value, piece_index=1
         )
-        m_piecewise.add_piecewise_param("A1", 2, paramx=m_piecewise.A1.value)
+        m_piecewise.add_piecewise_param(A1=m_piecewise.A1.value * ls, piece_index=2)
         # Errors raised in validate, which is run when groups are "locked in"
-        m_piecewise.lock_groups()
+        m_piecewise.setup()
+        m_piecewise.validate()
     with pytest.raises(ValueError):
         # should flag mismatching T0 group and boundary indexes
         m_piecewise.add_group_range(
-            m_piecewise.START.value, m_piecewise.FINISH.value, j=1
+            m_piecewise.START.value, m_piecewise.FINISH.value, piece_index=1
         )
-        m_piecewise.add_piecewise_param("T0", 2, paramx=m_piecewise.T0.value)
+        m_piecewise.add_piecewise_param(T0=m_piecewise.T0.value * u.d, piece_index=2)
         # Errors raised in validate, which is run when groups are "locked in"
-        m_piecewise.lock_groups()
+        m_piecewise.setup()
+        m_piecewise.validate()
     with pytest.raises(ValueError):
         # check whether boundaries are overlapping
-        m_piecewise.add_group_range(55000, 55200, j=1)
-        m_piecewise.add_piecewise_param("A1", 1, paramx=m_piecewise.A1.value)
-        m_piecewise.add_piecewise_param("T0", 1, paramx=m_piecewise.T0.value)
+        m_piecewise.add_group_range(55000, 55200, piece_index=1)
+        m_piecewise.add_piecewise_param(A1=m_piecewise.A1.value * ls, piece_index=1)
+        m_piecewise.add_piecewise_param(T0=m_piecewise.T0.value * u.d, piece_index=1)
 
-        m_piecewise.add_group_range(55100, 55300, j=2)
-        m_piecewise.add_piecewise_param("A1", 2, paramx=m_piecewise.A1.value)
-        m_piecewise.add_piecewise_param("T0", 2, paramx=m_piecewise.T0.value)
+        m_piecewise.add_group_range(55100, 55300, piece_index=2)
+        m_piecewise.add_piecewise_param(A1=m_piecewise.A1.value * ls, piece_index=2)
+        m_piecewise.add_piecewise_param(T0=m_piecewise.T0.value * u.d, piece_index=2)
 
-        m_piecewise.lock_groups()
+        m_piecewise.setup()
+        m_piecewise.validate()
     with pytest.raises(ValueError):
         # check whether boundaries are equal
-        m_piecewise.add_group_range(55000, 55000, j=1)
-        m_piecewise.add_piecewise_param("A1", 1, paramx=m_piecewise.A1.value)
-        m_piecewise.add_piecewise_param("T0", 1, paramx=m_piecewise.T0.value)
-        m_piecewise.lock_groups()
+        m_piecewise.add_group_range(55000, 55000, piece_index=1)
+        m_piecewise.add_piecewise_param(A1=m_piecewise.A1.value * u.d, piece_index=1)
+        m_piecewise.add_piecewise_param(T0=m_piecewise.T0.value * u.d, piece_index=1)
+        m_piecewise.setup()
+        m_piecewise.validate()
 
 
-def test_does_toa_lie_in_group_non_overlapping_complete_group_coverage(
-    model_no_pieces, build_piecewise_model_with_two_pieces
-):
-    m_piecewise, toas = add_full_coverage_and_non_overlapping_groups_and_make_toas(
-        model_no_pieces, build_piecewise_model_with_two_pieces
-    )
-    is_toa_in_each_group = []
-    for i in range(m_piecewise.get_number_of_groups()):
-        par = f"T0X_{int(i):04d}"
-        is_toa_in_each_group.append(
-            m_piecewise.does_toa_reference_piecewise_parameter(toas, par)
-        )
-    barycentric_toa = m_piecewise._parent.get_barycentric_toas(toas)
-    # Logic is toas lie in group 0:10 should all be True in the piece. And False for toas out of the piece. (T0X_0000 being used)
-    # and vice versa for the T0X_0001
-    are_toas_within_group_boundaries_mjd_method_per_parameter = (
-        return_truth_array_based_on_group_boundaries(m_piecewise, barycentric_toa)
-    )
-    is_toa_in_each_group = np.concatenate(
-        (is_toa_in_each_group[0], is_toa_in_each_group[1])
-    )
-    are_toas_within_group_boundaries_mjd_method_per_parameter = np.concatenate(
-        (
-            are_toas_within_group_boundaries_mjd_method_per_parameter[0][0],
-            are_toas_within_group_boundaries_mjd_method_per_parameter[1][0],
-        )
-    )
-    np.testing.assert_array_equal(
-        are_toas_within_group_boundaries_mjd_method_per_parameter, is_toa_in_each_group
-    )
-
-
+@pytest.mark.parametrize("param", ["A1X", "T0X"])
 def test_does_toa_lie_in_group_incomplete_group_coverage(
-    model_no_pieces, build_piecewise_model_with_two_pieces
+    param, model_no_pieces, build_piecewise_model_with_two_pieces
 ):
-    m_piecewise, toas = add_partial_coverage_groups_and_make_toas(model_no_pieces)
-    is_toa_in_each_group = []
-    for i in range(m_piecewise.get_number_of_groups()):
-        par = f"T0X_0001"
-        # should raise an error if T0X_0000 has been removed and "T0X" is effectively called in does_toa_reference_piecewise_parameter. Currently doesn't...
-        is_toa_in_each_group.append(
-            m_piecewise.does_toa_reference_piecewise_parameter(toas, par)
-        )
-    barycentric_toa = m_piecewise._parent.get_barycentric_toas(toas)
-    # This test is performed to make sure toas that shouldn't be in any group are correctly being flagged.
-    # Only latter half of toas should be in group. Distinct from the overlapping group test since it's not ambiguous which group they belong to since they aren't in a group
-    boundaries = m_piecewise.get_group_boundaries()
-    lower_edge_of_group = boundaries[0][0]
-    are_toas_above_group_edge = [barycentric_toa >= lower_edge_of_group]
-    do_in_piece_and_mjd_methods_of_assigning_groups_agree = np.array_equal(
-        is_toa_in_each_group, are_toas_above_group_edge
+    m_piecewise, toa = add_partial_coverage_groups_and_make_toas(model_no_pieces)
+
+    expected_out_piece = np.full(int(len(toa)), True)
+    expected_out_piece[int(len(toa) / 2) :] = False
+
+    expected_in_piece = np.full(int(len(toa)), True)
+    expected_in_piece[: int(len(toa) / 2)] = False
+
+    should_toa_reference_piecewise_parameter = [expected_in_piece, expected_out_piece]
+    if param == "A1X":
+        paramX_per_toa = m_piecewise.paramx_per_toa("A1", toa)
+        test_val = [m_piecewise.A1.value, m_piecewise.A1X_0001.value]
+
+    elif param == "T0X":
+        paramX_per_toa = m_piecewise.paramx_per_toa("T0", toa)
+        test_val = [m_piecewise.T0.value, m_piecewise.T0X_0001.value]
+
+    are_toas_referencing_global_paramX = np.isclose(
+        (paramX_per_toa.value - test_val[0]), 0, atol=1e-6, rtol=0
     )
-    assert do_in_piece_and_mjd_methods_of_assigning_groups_agree
+
+    are_toas_referencing_piecewise_paramX = np.isclose(
+        (paramX_per_toa.value - test_val[1]), 0, atol=1e-6, rtol=0
+    )
+
+    do_toas_reference_piecewise_parameter = [
+        are_toas_referencing_piecewise_paramX,
+        are_toas_referencing_global_paramX,
+    ]
+
+    np.testing.assert_array_equal(
+        do_toas_reference_piecewise_parameter, should_toa_reference_piecewise_parameter
+    )
 
 
 @pytest.mark.parametrize(
@@ -465,80 +446,99 @@ def test_does_toa_lie_in_group_incomplete_group_coverage(
 def test_residuals_in_groups_respond_to_changes_in_corresponding_piecewise_parameter(
     model_no_pieces, build_piecewise_model_with_two_pieces, param, index
 ):
-    m_piecewise, toas = add_full_coverage_and_non_overlapping_groups_and_make_toas(
+    m_piecewise, toa = add_full_coverage_and_non_overlapping_groups_and_make_toas(
         model_no_pieces, build_piecewise_model_with_two_pieces
     )
     rs_value = pint.residuals.Residuals(
-        toas, m_piecewise, subtract_mean=False
+        toa, m_piecewise, subtract_mean=False
     ).resids_value
-    parameter_string = f"{param}_{int(index):04d}"
+    param_string = f"{param}_{int(index):04d}"
     m_piecewise_temp = add_offset_in_model_parameter(index, param, m_piecewise)
+    if param == "A1X":
+        paramX_per_toa = m_piecewise.paramx_per_toa("A1", toa)
+    if param == "T0X":
+        paramX_per_toa = m_piecewise.paramx_per_toa("T0", toa)
+
+    test_val = [getattr(m_piecewise, param_string).value]
+
     rs_temp = pint.residuals.Residuals(
-        toas, m_piecewise_temp, subtract_mean=False
+        toa, m_piecewise_temp, subtract_mean=False
     ).resids_value
     have_residuals_changed = rs_temp != rs_value
-    should_residuals_change = m_piecewise.does_toa_reference_piecewise_parameter(
-        toas, parameter_string
+
+    are_toas_referencing_paramX = np.isclose(
+        (paramX_per_toa.value - test_val[0]), 0, atol=1e-6, rtol=0
     )
+
+    should_residuals_change = are_toas_referencing_paramX
+
     np.testing.assert_array_equal(have_residuals_changed, should_residuals_change)
 
 
 @pytest.mark.parametrize(
     "param, index", [("T0X", 0), ("T0X", 1), ("A1X", 0), ("A1X", 1)]
 )
-# assert array equal truth_array not (~) in_piece
 def test_d_delay_in_groups_respond_to_changes_in_corresponding_piecewise_parameter(
-    model_no_pieces, build_piecewise_model_with_two_pieces, param, index
+    param,
+    index,
+    model_no_pieces,
+    build_piecewise_model_with_two_pieces,
 ):
-    m_piecewise, toas = add_full_coverage_and_non_overlapping_groups_and_make_toas(
+    m_piecewise, toa = add_full_coverage_and_non_overlapping_groups_and_make_toas(
         model_no_pieces, build_piecewise_model_with_two_pieces
     )
-    m_piecewise_temp = add_offset_in_model_parameter(index, param, m_piecewise)
-    parameter_string = f"{param}_{int(index):04d}"
+    # m_piecewise_temp = add_offset_in_model_parameter(index, param, m_piecewise)
+
+    param_string = f"{param}_{int(index):04d}"
+    m_piecewise_temp = add_offset_in_model_parameter(index, param_string, m_piecewise)
+    if param == "A1X":
+        paramX_per_toa = m_piecewise_temp.paramx_per_toa("A1", toa)
+
+    if param == "T0X":
+        paramX_per_toa = m_piecewise_temp.paramx_per_toa("T0", toa)
+    test_val = [getattr(m_piecewise, param_string).value]
+    are_toas_referencing_paramX = np.isclose(
+        (paramX_per_toa.value - test_val[0]), 0, atol=1e-6, rtol=0
+    )
+    print(are_toas_referencing_paramX)
+
     is_d_delay_changing = np.invert(
         np.isclose(
-            m_piecewise_temp.d_binary_delay_d_xxxx(toas, parameter_string, None).value,
+            m_piecewise_temp.d_binary_delay_d_xxxx(toa, param_string, None).value,
             0,
             atol=1e-11,
             rtol=0,
         )
     )
-    should_d_delay_be_changing = m_piecewise.does_toa_reference_piecewise_parameter(
-        toas, parameter_string
-    )
+    should_d_delay_be_changing = are_toas_referencing_paramX
     # assert toas that are in the group have some non-zero delay derivative
     np.testing.assert_array_equal(is_d_delay_changing, should_d_delay_be_changing)
 
 
-def test_residuals_in_pieces_are_same_as_BT_piecewise_T0(
-    model_no_pieces, model_BT, build_piecewise_model_with_one_T0_piece
+@pytest.mark.parametrize("param, index", [("T0X", 0), ("A1X", 0)])
+def test_residuals_in_pieces_are_same_as_BT_piecewise_paramx(
+    param,
+    index,
+    model_no_pieces,
+    model_BT,
+    build_piecewise_model_with_one_T0_piece,
+    build_piecewise_model_with_one_A1_piece,
 ):
-    m_piecewise = build_piecewise_model_with_one_T0_piece
+    if param == "A1X":
+        m_piecewise = build_piecewise_model_with_one_A1_piece
+    elif param == "T0X":
+        m_piecewise = build_piecewise_model_with_one_T0_piece
     m_non_piecewise = model_BT
-    param = "T0"
-    index = 0
-    param_string = f"{param}X_{int(index):04d}"
-    param_q = getattr(m_non_piecewise, param)
+    param_string = f"{param}_{int(index):04d}"
+    param_q = getattr(m_non_piecewise, param[0:2])
     setattr(param_q, "value", getattr(m_piecewise, param_string).value)
     toas = make_generic_toas(m_non_piecewise, 55001, 55099)
-    rs_piecewise = pint.residuals.Residuals(toas, m_piecewise).time_resids
-    rs_non_piecewise = pint.residuals.Residuals(toas, m_non_piecewise).time_resids
-    np.testing.assert_array_equal(rs_piecewise, rs_non_piecewise)
-
-
-def test_residuals_in_pieces_are_same_as_BT_piecewise_A1(
-    model_no_pieces, model_BT, build_piecewise_model_with_one_A1_piece
-):
-    m_piecewise = build_piecewise_model_with_one_A1_piece
-    m_non_piecewise = model_BT
-    param = "A1"
-    index = 0
-    param_string = f"{param}X_{int(index):04d}"
-    param_q = getattr(m_non_piecewise, param)
-    setattr(param_q, "value", getattr(m_piecewise, param_string).value)
-    toas = make_generic_toas(m_non_piecewise, 55001, 55099)
-    rs_piecewise = pint.residuals.Residuals(toas, m_piecewise).time_resids
-    rs_non_piecewise = pint.residuals.Residuals(toas, m_non_piecewise).time_resids
+    rs_piecewise = pint.residuals.Residuals(
+        toas, m_piecewise, subtract_mean=True, use_weighted_mean=False
+    ).time_resids
+    rs_non_piecewise = pint.residuals.Residuals(
+        toas, m_non_piecewise, subtract_mean=True, use_weighted_mean=False
+    ).time_resids
     np.testing.assert_allclose(rs_piecewise, rs_non_piecewise)
 
 
@@ -555,27 +555,44 @@ def test_residuals_in_pieces_are_same_as_BT_piecewise_A1(
 # Then implement assert_all_close with arbitrary tolerances, roughly rtol=2.5, atol=1.e-7
 
 
-def test_derivatives_in_pieces_are_same_as_BT_piecewise_T0(
-    model_no_pieces, model_BT, build_piecewise_model_with_one_T0_piece
+@pytest.mark.parametrize("param, index", [("T0X", 0), ("A1X", 0)])
+def test_derivatives_in_pieces_are_same_as_BT_piecewise_paramx(
+    param,
+    index,
+    model_no_pieces,
+    model_BT,
+    build_piecewise_model_with_one_T0_piece,
+    build_piecewise_model_with_one_A1_piece,
 ):
-    m_piecewise = build_piecewise_model_with_one_T0_piece
+    if param == "A1X":
+        m_piecewise = build_piecewise_model_with_one_A1_piece
+    elif param == "T0X":
+        m_piecewise = build_piecewise_model_with_one_T0_piece
+
     m_non_piecewise = model_BT
     toas = make_generic_toas(m_non_piecewise, 55001, 55199)
-    param = "T0"
-    index = 0
-    param_string = f"{param}X_{int(index):04d}"
-    param_q = getattr(m_non_piecewise, param)
+
+    param_string = f"{param}_{int(index):04d}"
+    param_q = getattr(m_non_piecewise, param[0:2])
     setattr(param_q, "value", getattr(m_piecewise, param_string).value)
+
     piecewise_delays = m_piecewise.d_binary_delay_d_xxxx(
         toas, param_string, acc_delay=None
     )
     non_piecewise_delays = m_non_piecewise.d_binary_delay_d_xxxx(
-        toas, param, acc_delay=None
+        toas, param[0:2], acc_delay=None
     )
     # gets which toas that should be changing
-    where_delays_should_change = m_piecewise.does_toa_reference_piecewise_parameter(
-        toas, param_string
+    if param == "A1X":
+        paramX_per_toa = m_piecewise.paramx_per_toa("A1", toas)
+
+    if param == "T0X":
+        paramX_per_toa = m_piecewise.paramx_per_toa("T0", toas)
+    test_val = [getattr(m_piecewise, param_string).value]
+    are_toas_referencing_paramX = np.isclose(
+        (paramX_per_toa.value - test_val[0]), 0, atol=1e-6, rtol=0
     )
+    where_delays_should_change = are_toas_referencing_paramX
     # checks the derivatives wrt T0X is the same as the derivative calc'd in the BT model for T0=T0X, for TOAs within that group
     np.testing.assert_array_equal(
         piecewise_delays[where_delays_should_change],
@@ -588,92 +605,27 @@ def test_derivatives_in_pieces_are_same_as_BT_piecewise_T0(
     )
 
 
-def test_derivatives_in_pieces_are_same_as_BT_piecewise_A1(
-    model_no_pieces, model_BT, build_piecewise_model_with_one_A1_piece
-):
-    m_piecewise = build_piecewise_model_with_one_A1_piece
-    m_non_piecewise = model_BT
-    toas = make_generic_toas(m_non_piecewise, 55001, 55199)
-    param = "A1"
-    index = 0
-    param_string = f"{param}X_{int(index):04d}"
-    param_q = getattr(m_non_piecewise, param)
-    setattr(param_q, "value", getattr(m_piecewise, param_string).value)
-    piecewise_delays = m_piecewise.d_binary_delay_d_xxxx(
-        toas, param_string, acc_delay=None
-    )
-    non_piecewise_delays = m_non_piecewise.d_binary_delay_d_xxxx(
-        toas, param, acc_delay=None
-    )
-    # gets which toas that should be changing
-    where_delays_should_change = m_piecewise.does_toa_reference_piecewise_parameter(
-        toas, param_string
-    )
-    # checks the derivatives wrt A1X is the same as the derivative calc'd in the BT model for A1=A1X, for TOAs within that group
-    np.testing.assert_array_equal(
-        piecewise_delays[where_delays_should_change],
-        non_piecewise_delays[where_delays_should_change],
-    )
-    # checks the derivatives wrt A1X are 0 for toas outside of the group
-    np.testing.assert_array_equal(
-        piecewise_delays[~where_delays_should_change],
-        np.zeros(len(piecewise_delays[~where_delays_should_change])),
-    )
-
-
-def test_multiple_piece_residuals_match_BT_model(
-    build_piecewise_model_with_two_pieces, model_BT
-):
-    # test involving 2 pieces that cover all toas (not overlapping)
-    m_piecewise = build_piecewise_model_with_two_pieces
-    m_non_piecewise = model_BT
-    toas = make_generic_toas(m_non_piecewise, 55001, 55199)
-    rs_piecewise = pint.residuals.Residuals(
-        toas, m_piecewise, subtract_mean=False, use_weighted_mean=False
-    ).time_resids
-    rs_preserve = pint.residuals.Residuals(
-        toas, m_non_piecewise, subtract_mean=False, use_weighted_mean=False
-    ).time_resids
-    for index in [0, 1]:
-        param_q_T0 = getattr(m_non_piecewise, "T0")
-        param_q_A1 = getattr(m_non_piecewise, "A1")
-        param_string_T0X = f"T0X_{int(index):04d}"
-        param_string_A1X = f"A1X_{int(index):04d}"
-        setattr(param_q_T0, "value", getattr(m_piecewise, param_string_T0X).value)
-        setattr(param_q_A1, "value", getattr(m_piecewise, param_string_A1X).value)
-        where_residuals_should_be_equal = (
-            m_piecewise.does_toa_reference_piecewise_parameter(toas, param_string_T0X)
-        )
-        rs_non_piecewise = pint.residuals.Residuals(
-            toas, m_non_piecewise, subtract_mean=False, use_weighted_mean=False
-        ).time_resids
-        np.testing.assert_allclose(
-            rs_piecewise[where_residuals_should_be_equal],
-            rs_non_piecewise[where_residuals_should_be_equal],
-            atol=5e-5,
-            rtol=0.005,
-        )
-
-
 def test_interacting_with_multiple_models(model_no_pieces):
     m_piecewise_1 = deepcopy(model_no_pieces)
     m_piecewise_2 = deepcopy(model_no_pieces)
     lower_bound = [55000, 55100.00001]
     upper_bound = [55100, 55200]
     # just check by creating the models and adding pieces we aren't adding things to the other model
-    m_piecewise_1.add_group_range(lower_bound[0], upper_bound[0], j=0)
-    m_piecewise_1.add_piecewise_param("T0", 0, paramx=m_piecewise_1.T0.value + 1.0e-3)
-    m_piecewise_1.add_piecewise_param("A1", 0, paramx=m_piecewise_1.A1.value + 1.0e-3)
-    m_piecewise_1.lock_groups()
-    m_piecewise_2.add_group_range(lower_bound[1], upper_bound[1], j=0)
-    m_piecewise_2.add_piecewise_param("T0", 0, paramx=m_piecewise_2.T0.value + 3.0e-3)
-    m_piecewise_2.add_piecewise_param("A1", 0, paramx=m_piecewise_2.A1.value + 3.0e-3)
-    m_piecewise_2.lock_groups()
+    m_piecewise_1.add_group_range(lower_bound[0], upper_bound[0], piece_index=0)
+    m_piecewise_1.add_piecewise_param(T0=m_piecewise_1.T0.value + 1.0e-3, piece_index=0)
+    m_piecewise_1.add_piecewise_param(A1=m_piecewise_1.A1.value + 1.0e-3, piece_index=0)
+    m_piecewise_1.setup()
+    m_piecewise_1.validate()
+    m_piecewise_2.add_group_range(lower_bound[1], upper_bound[1], piece_index=0)
+    m_piecewise_2.add_piecewise_param(T0=m_piecewise_2.T0.value + 3.0e-3, piece_index=0)
+    m_piecewise_2.add_piecewise_param(A1=m_piecewise_2.A1.value + 3.0e-3, piece_index=0)
+    m_piecewise_2.setup()
+    m_piecewise_2.validate()
     # not yet interlacing function calls, just some extra sanity checks when it comes to loading more than one model that are yet untested
-    np.testing.assert_allclose(m_piecewise_1.PLB_0000.value, lower_bound[0])
-    np.testing.assert_allclose(m_piecewise_1.PUB_0000.value, upper_bound[0])
-    np.testing.assert_allclose(m_piecewise_2.PLB_0000.value, lower_bound[1])
-    np.testing.assert_allclose(m_piecewise_2.PUB_0000.value, upper_bound[1])
+    np.testing.assert_allclose(m_piecewise_1.XR1_0000.value, lower_bound[0])
+    np.testing.assert_allclose(m_piecewise_1.XR2_0000.value, upper_bound[0])
+    np.testing.assert_allclose(m_piecewise_2.XR1_0000.value, lower_bound[1])
+    np.testing.assert_allclose(m_piecewise_2.XR2_0000.value, upper_bound[1])
 
     np.testing.assert_allclose(
         m_piecewise_1.T0X_0000.value, m_piecewise_1.T0.value + 1.0e-3
@@ -736,4 +688,3 @@ def test_interacting_with_multiple_models(model_no_pieces):
     )
 
     # can add more suggested tests in here
-    # accepting suggestions for known nuisance operations that can result in caching
