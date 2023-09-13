@@ -500,7 +500,6 @@ def test_d_delay_in_groups_respond_to_changes_in_corresponding_piecewise_paramet
     are_toas_referencing_paramX = np.isclose(
         (paramX_per_toa.value - test_val[0]), 0, atol=1e-6, rtol=0
     )
-    print(are_toas_referencing_paramX)
 
     is_d_delay_changing = np.invert(
         np.isclose(
