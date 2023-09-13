@@ -165,7 +165,7 @@ class BTpiecewise(BTmodel):
 
             # Uses the index for each toa array to create arrays where elements are the A1X/T0X to use with that toa
             if len(self.piecewise_parameter_information) > 0:
-                if hasattr(self, "_t"):
+                if self._t is not None:
                     self.group_index_array = self.toa_belongs_in_group(self._t)
 
                     (
