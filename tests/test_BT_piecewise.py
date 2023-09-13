@@ -400,6 +400,7 @@ def test_group_index_matching(model_no_pieces):
         m_piecewise.setup()
         m_piecewise.validate()
 
+
 @pytest.mark.parametrize(
     "param, index", [("T0X", 0), ("T0X", 1), ("A1X", 0), ("A1X", 1)]
 )
@@ -461,7 +462,6 @@ def test_d_delay_in_groups_respond_to_changes_in_corresponding_piecewise_paramet
         (paramX_per_toa.value - test_val[0]), 0, atol=1e-6, rtol=0
     )
 
-
     is_d_delay_changing = np.invert(
         np.isclose(
             m_piecewise_temp.d_binary_delay_d_xxxx(toa, param_string, None).value,
@@ -473,6 +473,7 @@ def test_d_delay_in_groups_respond_to_changes_in_corresponding_piecewise_paramet
     should_d_delay_be_changing = are_toas_referencing_paramX
     # assert toas that are in the group have some non-zero delay derivative
     np.testing.assert_array_equal(is_d_delay_changing, should_d_delay_be_changing)
+
 
 @pytest.mark.parametrize("param, index", [("T0X", 0), ("A1X", 0)])
 def test_derivatives_in_pieces_are_same_as_BT_piecewise_paramx(
@@ -523,7 +524,8 @@ def test_derivatives_in_pieces_are_same_as_BT_piecewise_paramx(
         np.zeros(len(piecewise_delays[~where_delays_should_change])),
     )
 
-#This test is a bit of a mess, attempting to manipulate multiple models without breaking anything (i.e. model_1 and model_2 should not be affected by changes made to the other)
+
+# This test is a bit of a mess, attempting to manipulate multiple models without breaking anything (i.e. model_1 and model_2 should not be affected by changes made to the other)
 def test_interacting_with_multiple_models(model_no_pieces):
     m_piecewise_1 = deepcopy(model_no_pieces)
     m_piecewise_2 = deepcopy(model_no_pieces)
@@ -608,6 +610,7 @@ def test_interacting_with_multiple_models(model_no_pieces):
 
     # can add more suggested tests in here
 
+
 # --Place here for future tests--
 # Wants to check the residuals within the group are the same as those from the model used to generate them which has T0 = T0X_0000 (the only group)
 # In the residual calculation there is a mean subtraction/round off occurring in changing the binary parameter/something else.
@@ -618,19 +621,19 @@ def test_interacting_with_multiple_models(model_no_pieces):
 
 
 # --WIP Tests--
-#This is a wip test to evaluate the residuals using TOAs generated from a non-piecewise model using the BT and BT piecewise model
-#The test should pass if the residuals within a piece match those residuals produced by a BT model with the same parameter value as declared within the piece
-#i.e. Use BT model to create TOAs with flat residuals -> adjust BT model parameter to match the param value declared within a piece of the piecewise model -> get the residuals of the piecewise and BT model for TOAs that exist within the piece, they should match.
-#*Should* work but seems to be unable to produce fake TOAs when run through CI tests
-#@pytest.mark.parametrize("param, index", [("T0X", 0), ("A1X", 0)])
-#def test_residuals_in_pieces_are_same_as_BT_piecewise_paramx(
+# This is a wip test to evaluate the residuals using TOAs generated from a non-piecewise model using the BT and BT piecewise model
+# The test should pass if the residuals within a piece match those residuals produced by a BT model with the same parameter value as declared within the piece
+# i.e. Use BT model to create TOAs with flat residuals -> adjust BT model parameter to match the param value declared within a piece of the piecewise model -> get the residuals of the piecewise and BT model for TOAs that exist within the piece, they should match.
+# *Should* work but seems to be unable to produce fake TOAs when run through CI tests
+# @pytest.mark.parametrize("param, index", [("T0X", 0), ("A1X", 0)])
+# def test_residuals_in_pieces_are_same_as_BT_piecewise_paramx(
 #    param,
 #    index,
 #    model_no_pieces,
 #    model_BT,
 #    build_piecewise_model_with_one_T0_piece,
 #    build_piecewise_model_with_one_A1_piece,
-#):
+# ):
 #    if param == "A1X":
 #        m_piecewise = build_piecewise_model_with_one_A1_piece
 #    elif param == "T0X":
@@ -650,13 +653,13 @@ def test_interacting_with_multiple_models(model_no_pieces):
 #    np.testing.assert_allclose(rs_piecewise, rs_non_piecewise)
 #
 #
-#This is a wip test to evaluate the TOA group allocation in the absence of "full-group coverage" (i.e. includes data that exists outside of pieces).
-#i.e. Use (either BT/piecewise) model to create TOAs with flat residuals -> check the parameter value the TOAs reference during delay calculations (this should equal the global parameter value when there is no piecewise parameter to reference)
-#*Should* work but seems to be unable to produce fake TOAs when run through CI tests
-#@pytest.mark.parametrize("param", ["A1X", "T0X"])
-#def test_does_toa_lie_in_group_incomplete_group_coverage(
+# This is a wip test to evaluate the TOA group allocation in the absence of "full-group coverage" (i.e. includes data that exists outside of pieces).
+# i.e. Use (either BT/piecewise) model to create TOAs with flat residuals -> check the parameter value the TOAs reference during delay calculations (this should equal the global parameter value when there is no piecewise parameter to reference)
+# *Should* work but seems to be unable to produce fake TOAs when run through CI tests
+# @pytest.mark.parametrize("param", ["A1X", "T0X"])
+# def test_does_toa_lie_in_group_incomplete_group_coverage(
 #    param, model_no_pieces, build_piecewise_model_with_two_pieces
-#):
+# ):
 #    m_piecewise, toa = add_partial_coverage_groups_and_make_toas(model_no_pieces)
 #
 #    expected_out_piece = np.full(int(len(toa)), True)
@@ -686,7 +689,7 @@ def test_interacting_with_multiple_models(model_no_pieces):
 #        are_toas_referencing_piecewise_paramX,
 #        are_toas_referencing_global_paramX,
 #    ]
-#    
+#
 #    np.testing.assert_array_equal(
 #        do_toas_reference_piecewise_parameter, should_toa_reference_piecewise_parameter
 #    )
