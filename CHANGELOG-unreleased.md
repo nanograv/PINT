@@ -9,23 +9,17 @@ the released changes.
 
 ## Unreleased
 ### Changed
-- Applied `sourcery` refactors to the entire codebase
-- Changed threshold for `test_model_derivatives` test to avoid CI failures
-- Unreleased CHANGELOG entries should now be entered in `CHANGELOG-unreleased.md` instead of `CHANGELOG.md`. Updated documentation accordingly.
+- `WAVE` parameters can be added to a `Wave` model with `add_wave_component()` in `wave.py` 
+- Moved design matrix normalization code from `pint.fitter` to the new `pint.utils.normalize_designmatrix()` function.
+- Made `Residuals` independent of `GLSFitter` (GLS chi2 is now computed using the new function `Residuals._calc_gls_chi2()`).
 ### Added
-- `SpindownBase` as the abstract base class for `Spindown` and `PeriodSpindown` in the `How_to_build_a_timing_model_component.py` example.
-- `SolarWindDispersionBase` as the abstract base class for solar wind dispersion components.
-- `validate_component_types` method for more rigorous validation of timing model components.
-- roundtrip test to make sure clock corrections are not written to tim files
-- `calc_phase_mean` and `calc_time_mean` methods in `Residuals` class to compute the residual mean.
-- - `PhaseOffset` component (overall phase offset between physical and TZR toas)
-- `tzr` attribute in `TOAs` class to identify TZR TOAs
-- Documentation: Explanation for offsets
-- Example: `phase_offset_example.py`
-- method `AllComponents.param_to_unit` to get units for any parameter, and then made function `utils.get_unit`
-- can override/add parameter values when reading models
-- docs now include list of observatories along with google maps links and clock files
+- Added `WaveX` model as a `DelayComponent` with Fourier amplitudes as fitted parameters
 ### Fixed
-- fixed docstring for `add_param_from_top`
-- Gridded calculations now respect logger settings
+- Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
+- Fixed RTD by specifying theme explicitly.
+- `.value()` now works for pairParameters
+- Setting `model.PARAM1 = model.PARAM2` no longer overrides the name of `PARAM1`
+- Fixed an incorrect docstring in `pbprime()` functions. 
+- Fix ICRS -> ECL conversion when parameter uncertainties are not set.
+- `get_TOAs` raises an exception upon finding mixed narrowband and wideband TOAs in a tim file. `TOAs.is_wideband` returns True only if *ALL* TOAs have the -pp_dm flag.
 ### Removed

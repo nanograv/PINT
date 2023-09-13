@@ -100,11 +100,11 @@ class BinaryDD(PulsarBinary):
         # If any *DOT is set, we need T0
         for p in ("PBDOT", "OMDOT", "EDOT", "A1DOT"):
             if hasattr(self, p) and getattr(self, p).value is None:
-                getattr(self, p).set("0")
+                getattr(self, p).value = 0.0
                 getattr(self, p).frozen = True
 
         if hasattr(self, "GAMMA") and self.GAMMA.value is None:
-            self.GAMMA.set("0")
+            self.GAMMA.value = 0.0
             self.GAMMA.frozen = True
 
         # If eccentricity is zero, freeze some parameters to 0
@@ -112,7 +112,7 @@ class BinaryDD(PulsarBinary):
         if self.ECC.value == 0 or self.ECC.value is None:
             for p in ("ECC", "OM", "OMDOT", "EDOT"):
                 if hasattr(self, p):
-                    getattr(self, p).set("0")
+                    getattr(self, p).value = 0.0
                     getattr(self, p).frozen = True
 
 

@@ -16,8 +16,6 @@ you will find PINT sufficient for all your needs!
 .. _TEMPO: http://tempo.sourceforge.net/
 .. _TEMPO2: https://www.atnf.csiro.au/research/pulsar/tempo2/
 
-.. sectnum::
-
 Time
 ----
 
@@ -718,13 +716,16 @@ model and data require different calculations - narrowband (TOA-only) versus
 wideband (TOA and DM measurements) and uncorrelated errors versus correlated
 errors.
 
-The TEMPO/TEMPO2 and default PINT fitting algorithms (:class:`pint.fitter.WidebandTOAFitter` for example), leaving aside the rank-reduced case, proceed like:
+The TEMPO/TEMPO2 and default PINT fitting algorithms (:class:`pint.fitter.WidebandTOAFitter`, for example), 
+leaving aside the rank-reduced case, proceed like:
 
 1. Evaluate the model and its derivatives at the starting point :math:`x`, producing a set of residuals :math:`\delta y` and a Jacobian `M`.
 2. Compute :math:`\delta x` to minimize :math:`\left| M\delta x - \delta y \right|_C`, where :math:`\left| \cdot \right|_C` is the squared amplitude of a vector with respect to the data uncertainties/covariance :math:`C`.
 3. Update the starting point by :math:`\delta x`.
 
-TEMPO and TEMPO2 can check whether the predicted improvement of chi-squared, assuming the linear model is correct, is enough to warrant continuing; if so, they jump back to step 1 unless the maximum number of iterations is reached. PINT does not contain this check.
+TEMPO and TEMPO2 can check whether the predicted improvement of chi-squared, assuming 
+the linear model is correct, is enough to warrant continuing; if so, they jump back to 
+step 1 unless the maximum number of iterations is reached. PINT does not contain this check.
 
 This algorithm is the Gauss-Newton_algorithm_ for solving nonlinear
 least-squares problems, and even in one-complex-dimensional cases can exhibit
@@ -746,9 +747,16 @@ PINT contains a slightly more sophisticated algorithm, implemented in
 4. Evaluate the model at the starting point plus :math:`\lambda \delta x`. If this is invalid or worse than the starting point, divide :math:`\lambda` by two and repeat this step. If :math:`\lambda` is too small, accept the best point seen to date and exit without convergence.
 5. If the model improved but only slightly with :math:`\lambda=1`, exit with convergence. If the maximum number of iterations was reached, exit without convergence. Otherwise update the starting point and return to step 1.
 
-This ensures that PINT tries taking smaller steps if problems arise, and claims convergence only if a normal step worked. It does not solve the problems that arise if some parameters are nearly degenerate, enough to cause problems with the numerical linear algebra.
+This ensures that PINT tries taking smaller steps if problems arise, and claims convergence 
+only if a normal step worked. It does not solve the problems that arise if some parameters are 
+nearly degenerate, enough to cause problems with the numerical linear algebra.
 
-As a rule, this kind of problem is addressed with the Levenberg-Marquardt algorithm, which operates on the same principle of taking reduced steps when the derivative appears not to match the function, but does so in a way that also reduces issues with degenerate parameters; unfortunately it is not clear how to adapt this problem to the rank-reduced case. Nevertheless PINT contains an implementation, in :class:`pint.fitter.WidebandLMFitter`, but it does not perform as well as one might hope in practice and must be considered experimental.
+As a rule, this kind of problem is addressed with the Levenberg-Marquardt algorithm, which 
+operates on the same principle of taking reduced steps when the derivative appears not to 
+match the function, but does so in a way that also reduces issues with degenerate parameters; 
+unfortunately it is not clear how to adapt this problem to the rank-reduced case. Nevertheless, 
+PINT contains an implementation in :class:`pint.fitter.WidebandLMFitter`, but it does not perform as 
+well as one might hope in practice and must be considered experimental.
 
 .. _Gauss-Newton_algorithm: https://en.wikipedia.org/wiki/Gauss%E2%80%93Newton_algorithm
 .. _chaotic: https://en.wikipedia.org/wiki/Newton_fractal

@@ -16,6 +16,7 @@ import pint
 import sys
 import os
 import platform
+import urllib.request
 from prfparser import parse_file
 
 
@@ -67,11 +68,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="High-level summary of python file timing."
     )
+
+    if not os.path.isfile("J0740+6620.cfr+19.tim"):
+        print("Downloading data file J0740+6620.cfr+19.tim ...")
+        urllib.request.urlretrieve(
+            "https://data.nanograv.org/static/data/J0740+6620.cfr+19.tim",
+            "J0740+6620.cfr+19.tim",
+        )
+
+    script1 = "bench_load_TOAs.py"
     script2 = "bench_chisq_grid.py"
     script3 = "bench_chisq_grid_WLSFitter.py"
     script4 = "bench_MCMC.py"
 
-    script1 = "bench_load_TOAs.py"
     # time scripts
     output1 = bench_file(script1)
     output2 = bench_file(script2)

@@ -36,11 +36,13 @@ from pint.models.noise_model import EcorrNoise, PLRedNoise, ScaleToaError
 from pint.models.solar_system_shapiro import SolarSystemShapiro
 from pint.models.solar_wind_dispersion import SolarWindDispersion, SolarWindDispersionX
 from pint.models.spindown import Spindown
+from pint.models.fdjump import FDJump
 
 # Import the main timing model classes
 from pint.models.timing_model import DEFAULT_ORDER, TimingModel
 from pint.models.troposphere_delay import TroposphereDelay
 from pint.models.wave import Wave
+from pint.models.wavex import WaveX
 
 # Define a standard basic model
 StandardTimingModel = TimingModel(

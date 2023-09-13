@@ -3,7 +3,7 @@
 In particular, single TOAs are represented by :class:`pint.toa.TOA` objects, and if you
 want to manage a collection of these we recommend you use a :class:`pint.toa.TOAs` object
 as this makes certain operations much more convenient. You probably want to load one with
-:func:`pint.toa.get_TOAs` (from a ``.tim`` file) or :func:`pint.toa.get_TOAs_array` (from a 
+:func:`pint.toa.get_TOAs` (from a ``.tim`` file) or :func:`pint.toa.get_TOAs_array` (from a
 :class:`numpy.ndarray` or :class:`astropy.time.Time` object).
 
 Warning
@@ -150,7 +150,8 @@ def get_TOAs(
     timfile : str or list of strings or file-like
         Filename, list of filenames, or file-like object containing the TOA data.
     ephem : str or None
-        The name of the solar system ephemeris to use; defaults to ``pint.toa.EPHEM_default`` if ``None``
+        The name of the solar system ephemeris to use; defaults to the EPHEM parameter
+        in the timing model (`model`) if it is given, otherwise defaults to ``pint.toa.EPHEM_default``.
     include_bipm : bool or None
         Whether to apply the BIPM clock correction. Defaults to True.
     bipm_version : str or None
@@ -167,7 +168,7 @@ def get_TOAs(
     model : pint.models.timing_model.TimingModel or None
         If a valid timing model is passed, model commands (such as BIPM version,
         planet shapiro delay, and solar system ephemeris) that affect TOA loading
-        are applied.
+        are applied. The solar system ephemeris is superseded by the `ephem` parameter.
     usepickle : bool
         Whether to try to use pickle-based caching of loaded clock-corrected TOAs objects.
     tdb_method : str
@@ -218,7 +219,11 @@ def get_TOAs(
                     f'CLOCK = {model["CLOCK"].value} is not implemented. '
                     f"Using TT({bipm_default}) instead."
                 )
-        if planets is None and model["PLANET_SHAPIRO"].value:
+        if (
+            planets is None
+            and "PLANET_SHAPIRO" in model
+            and model["PLANET_SHAPIRO"].value
+        ):
             planets = True
             log.debug("Using PLANET_SHAPIRO = True from the given model")
 
@@ -316,6 +321,14 @@ def get_TOAs(
     if "pulse_number" in t.table.colnames and not include_pn:
         log.warning("'pulse_number' column exists but not being read in")
         t.remove_pulse_numbers()
+
+    dm_data, valid_data = t.get_flag_value("pp_dm", as_type=float)
+    if len(valid_data) not in [0, len(t)]:
+        raise ValueError(
+            "Mixing narrowband and wideband toas in a TOAs object is not allowed. "
+            "Make sure that either all or no TOAs have the -pp_dm flag."
+        )
+
     return t
 
 
@@ -1626,7 +1639,7 @@ class TOAs:
 
         # there may be a more elegant way to do this
         dm_data, valid_data = self.get_flag_value("pp_dm", as_type=float)
-        return valid_data != []
+        return len(valid_data) == len(self)
 
     def get_all_flags(self):
         """Return a list of all the flags used by any TOA."""
@@ -2692,7 +2705,8 @@ def merge_TOAs(TOAs_list, strict=False):
     """
     # don't duplicate code: just use the existing method
     t = copy.deepcopy(TOAs_list[0])
-    t.merge(*TOAs_list[1:], strict=strict)
+    if len(TOAs_list) > 1:
+        t.merge(*TOAs_list[1:], strict=strict)
     return t
 
 
@@ -2980,4 +2994,5 @@ def get_TOAs_array(
         t.compute_TDBs(method=tdb_method, ephem=ephem)
     if "ssb_obs_pos" not in t.table.colnames:
         t.compute_posvels(ephem, planets)
+
     return t

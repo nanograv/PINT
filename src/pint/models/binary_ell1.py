@@ -60,7 +60,7 @@ class BinaryELL1(PulsarBinary):
 
     This binary model uses a rectangular representation for the eccentricity of an orbit,
     resolving complexities that arise with periastron-based parameters in nearly-circular
-    orbits. It also makes certain approximations (up to O(e^2)) that are invalid when the eccentricity
+    orbits. It also makes certain approximations (up to O(e^3)) that are invalid when the eccentricity
     is "large"; what qualifies as "large" depends on your data quality. A formula exists
     to determine when the approximations this model makes are sufficiently accurate.
 
@@ -79,20 +79,24 @@ class BinaryELL1(PulsarBinary):
     ----------
     - Lange et al. (2001), MNRAS, 326 (1), 274–282 [1]_
     - Zhu et al. (2019), MNRAS, 482 (3), 3249-3260 [2]_
+    - Fiore et al. (2023), arXiv:2305.13624 [astro-ph.HE] [3]_
 
     .. [1] https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.3249Z/abstract
     .. [2] https://ui.adsabs.harvard.edu/abs/2001MNRAS.326..274L/abstract
-
+    .. [3] https://arxiv.org/abs/2305.13624
 
     Notes
     -----
     This includes o(e^2) expression for Roemer delay from Norbert Wex and Weiwei Zhu
-    This is equaiton (1) of Zhu et al (2019) but with a corrected typo:
+    This is equation (1) of Zhu et al (2019) but with a corrected typo:
         In the first line of that equation, ex->e1 and ey->e2
         In the other lines, ex->e2 and ey->e1
-    See Email from Norbert and Weiwei to David on 2019-Aug-08
-    The dre expression comes from Norbert and Weiwei; the derivatives
+    See Email from NW and WZ to David Nice on 2019-Aug-08
+    The dre expression comes from NW and WZ; the derivatives
     were calculated by hand for PINT
+
+    Also includes o(e^3) expression from equation (4) of Fiore et al. (2023)
+    (derivatives also calculated by hand)
 
     """
 
@@ -308,9 +312,11 @@ class BinaryELL1H(BinaryELL1):
     .. paramtable::
         :class: pint.models.binary_ell1.BinaryELL1H
 
-    Note
-    ----
+    Notes
+    -----
     Only the Medium-inclination case model is implemented.
+
+    Default value in `pint` for `NHARMS` is 7, while in `tempo2` it is 4.
 
     References
     ----------

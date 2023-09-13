@@ -12,12 +12,13 @@ import warnings
 
 import astropy.units as u
 import numpy as np
-from scipy.linalg import LinAlgError
+import scipy
+from scipy.linalg import LinAlgError, cho_factor, cho_solve
 from loguru import logger as log
 
 from pint.models.dispersion_model import Dispersion
 from pint.phase import Phase
-from pint.utils import weighted_mean, taylor_horner_deriv
+from pint.utils import normalize_designmatrix, weighted_mean, taylor_horner_deriv
 
 __all__ = [
     "Residuals",
@@ -84,6 +85,7 @@ class Residuals:
         subtract_mean=True,
         use_weighted_mean=True,
         track_mode=None,
+        use_abs_phase=True,
     ):
         if cls is Residuals:
             try:
@@ -104,6 +106,7 @@ class Residuals:
         subtract_mean=True,
         use_weighted_mean=True,
         track_mode=None,
+        use_abs_phase=True,
     ):
         self.toas = toas
         self.model = model
@@ -114,6 +117,8 @@ class Residuals:
                 "Disabling implicit `subtract_mean` because `PhaseOffset` is present in the timing model."
             )
         self.subtract_mean = subtract_mean and "PhaseOffset" not in model.components
+
+        self.use_abs_phase = use_abs_phase
 
         self.use_weighted_mean = use_weighted_mean
         if track_mode is None:
@@ -139,6 +144,7 @@ class Residuals:
         else:
             self.phase_resids = None
             self.time_resids = None
+
         # delay chi-squared computation until needed to avoid infinite recursion
         # also it's expensive
         # only relevant if there are correlated errors
@@ -296,7 +302,9 @@ class Residuals:
         elif calctype.lower() == "numerical":
             return self.model.d_phase_d_toa(self.toas)
 
-    def calc_phase_resids(self, subtract_mean=None, use_weighted_mean=None):
+    def calc_phase_resids(
+        self, subtract_mean=None, use_weighted_mean=None, use_abs_phase=None
+    ):
         """Compute timing model residuals in pulse phase.
 
         if ``subtract_mean`` or ``use_weighted_mean`` is None, will use the values set for the object itself
@@ -304,7 +312,12 @@ class Residuals:
         Parameters
         ----------
         subtract_mean : bool or None, optional
+            Subtract the mean of the residuals. This is ignored if the `PhaseOffset` component
+            is present in the model. Default is to use the class attribute.
         use_weighted_mean : bool or None, optional
+            Whether to use weighted mean for mean subtraction. Default is to use the class attribute.
+        use_abs_phase : bool or None, optional
+            Whether to use absolute phase (w.r.t. the TZR TOA). Default is to use the class attribute.
 
         Returns
         -------
@@ -322,12 +335,17 @@ class Residuals:
 
         if use_weighted_mean is None:
             use_weighted_mean = self.use_weighted_mean
+
+        if use_abs_phase is None:
+            use_abs_phase = self.use_abs_phase
+
         # Read any delta_pulse_numbers that are in the TOAs table.
         # These are for PHASE statements, -padd flags, as well as user-inserted phase jumps
         # Check for the column, and if not there then create it as zeros
         if "delta_pulse_number" not in self.toas.table.colnames:
             self.toas.table["delta_pulse_number"] = np.zeros(len(self.toas.get_mjds()))
         delta_pulse_numbers = Phase(self.toas.table["delta_pulse_number"])
+
         # Track on pulse numbers, if requested
         if self.track_mode == "use_pulse_numbers":
             pulse_num = self.toas.get_pulse_numbers()
@@ -339,7 +357,8 @@ class Residuals:
             # we need absolute phases, since TZRMJD serves as the pulse
             # number reference.
             modelphase = (
-                self.model.phase(self.toas, abs_phase=True) + delta_pulse_numbers
+                self.model.phase(self.toas, abs_phase=use_abs_phase)
+                + delta_pulse_numbers
             )
             # First assign each TOA to the correct relative pulse number, including
             # and delta_pulse_numbers (from PHASE lines or adding phase jumps in GUI)
@@ -365,6 +384,7 @@ class Residuals:
             full = residualphase.int + residualphase.frac
         else:
             raise ValueError(f"Invalid track_mode '{self.track_mode}'")
+
         # If we are using pulse numbers, do we really want to subtract any kind of mean?
         if not subtract_mean:
             return full
@@ -379,6 +399,7 @@ class Residuals:
                 )
             w = 1.0 / (self.get_data_error().value ** 2)
             mean, err = weighted_mean(full, w)
+
         return full - mean
 
     def calc_phase_mean(self, weighted=True):
@@ -425,7 +446,11 @@ class Residuals:
         return mean
 
     def calc_time_resids(
-        self, calctype="taylor", subtract_mean=None, use_weighted_mean=None
+        self,
+        calctype="taylor",
+        subtract_mean=None,
+        use_weighted_mean=None,
+        use_abs_phase=None,
     ):
         """Compute timing model residuals in time (seconds).
 
@@ -442,8 +467,12 @@ class Residuals:
             If `calctype` == "numerical", then try a numerical derivative
             If `calctype` == "taylor", evaluate the frequency with a Taylor series
         subtract_mean : bool or None, optional
+            Subtract the mean of the residuals. This is ignored if the `PhaseOffset` component
+            is present in the model. Default is to use the class attribute.
         use_weighted_mean : bool or None, optional
-
+            Whether to use weighted mean for mean subtraction. Default is to use the class attribute.
+        use_abs_phase : bool or None, optional
+            Whether to use absolute phase (w.r.t. the TZR TOA). Default is to use the class attribute.
 
         Returns
         -------
@@ -458,23 +487,74 @@ class Residuals:
             # if we are using the defaults, save the calculation
             if self.phase_resids is None:
                 self.phase_resids = self.calc_phase_resids(
-                    subtract_mean=subtract_mean, use_weighted_mean=use_weighted_mean
+                    subtract_mean=subtract_mean,
+                    use_weighted_mean=use_weighted_mean,
+                    use_abs_phase=use_abs_phase,
                 )
             phase_resids = self.phase_resids
         else:
             phase_resids = self.calc_phase_resids(
-                subtract_mean=subtract_mean, use_weighted_mean=use_weighted_mean
+                subtract_mean=subtract_mean,
+                use_weighted_mean=use_weighted_mean,
+                use_abs_phase=use_abs_phase,
             )
         return (phase_resids / self.get_PSR_freq(calctype=calctype)).to(u.s)
 
-    def calc_chi2(self, full_cov=False):
+    def _calc_gls_chi2(self):
+        """Compute the chi2 when correlated noise is present in the timing model.
+        If the system is not singular, it uses Cholesky factorization to evaluate this.
+        If the system is singular, it uses singular value decomposition instead."""
+        self.update()
+
+        residuals = self.time_resids.to(u.s).value
+
+        M = self.model.noise_model_designmatrix(self.toas)
+        phi = self.model.noise_model_basis_weight(self.toas)
+        phiinv = 1 / phi
+
+        # For implicit offset subtraction
+        if "PHOFF" not in self.model:
+            M = np.append(M, np.ones((len(self.toas), 1)), axis=1)
+            phiinv = np.append(phiinv, [0])
+
+        M, norm = normalize_designmatrix(M, None)
+
+        phiinv /= norm**2
+        Nvec = self.model.scaled_toa_uncertainty(self.toas).to(u.s).value ** 2
+        cinv = 1 / Nvec
+        mtcm = np.dot(M.T, cinv[:, None] * M)
+        mtcm += np.diag(phiinv)
+        mtcy = np.dot(M.T, cinv * residuals)
+
+        try:
+            c = cho_factor(mtcm)
+            xhat = cho_solve(c, mtcy)
+        except LinAlgError as e:
+            log.warning(
+                f"Degenerate conditions encountered when computing chi-squared: {e}"
+            )
+
+            U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
+
+            bad = np.where(s <= 0)[0]
+            s[bad] = np.inf
+
+            xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+
+        newres = residuals - np.dot(M, xhat)
+
+        chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
+
+        return chi2
+
+    def calc_chi2(self):
         """Return the weighted chi-squared for the model and toas.
 
         If the errors on the TOAs are independent this is a straightforward
         calculation, but if the noise model introduces correlated errors then
         obtaining a meaningful chi-squared value requires a Cholesky
-        decomposition. This is carried out, here, by constructing a GLSFitter
-        and asking it to do the chi-squared computation but not a fit.
+        decomposition. This is carried out using the :method:`~pint.residuals.Residuals._calc_gls_chi2`
+        helper function.
 
         The return value here is available as self.chi2, which will not
         redo the computation unless necessary.
@@ -487,21 +567,7 @@ class Residuals:
         correctly return infinity.
         """
         if self.model.has_correlated_errors:
-            log.trace("Using GLS fitter to compute residual chi2")
-            # Use GLS but don't actually fit
-            from pint.fitter import GLSFitter
-
-            m = copy.deepcopy(self.model)
-            m.free_params = []
-            f = GLSFitter(self.toas, m, residuals=self)
-            try:
-                return f.fit_toas(maxiter=1, full_cov=full_cov)
-            except LinAlgError as e:
-                log.warning(
-                    "Degenerate conditions encountered when "
-                    "computing chi-squared: %s" % (e,)
-                )
-                return np.inf
+            return self._calc_gls_chi2()
         else:
             # Residual units are in seconds. Error units are in microseconds.
             toa_errors = self.get_data_error()

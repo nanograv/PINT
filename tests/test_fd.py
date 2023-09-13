@@ -1,7 +1,7 @@
 """Various tests to assess the performance of the FD model."""
 import copy
 import os
-import unittest
+import pytest
 from io import StringIO
 
 import astropy.units as u
@@ -14,9 +14,9 @@ import pint.residuals
 import pint.toa as toa
 
 
-class TestFD(unittest.TestCase):
+class TestFD:
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         cls.parf = os.path.join(datadir, "test_FD.par")
         cls.timf = os.path.join(datadir, "test_FD.simulate.pint_corrected")
         cls.FDm = mb.get_model(cls.parf)
@@ -24,7 +24,7 @@ class TestFD(unittest.TestCase):
         # libstempo result
         cls.ltres, cls.ltbindelay = np.genfromtxt(f"{cls.parf}.tempo_test", unpack=True)
 
-    def test_FD(self):
+    def test_fd(self):
         print("Testing FD module.")
         rs = (
             pint.residuals.Residuals(self.toas, self.FDm, use_weighted_mean=False)
