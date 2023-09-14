@@ -13,7 +13,8 @@ the released changes.
 - Moved design matrix normalization code from `pint.fitter` to the new `pint.utils.normalize_designmatrix()` function.
 - Made `Residuals` independent of `GLSFitter` (GLS chi2 is now computed using the new function `Residuals._calc_gls_chi2()`).
 ### Added
-- Added `WaveX` model as a `DelayComponent` with Fourier amplitudes as fitted parameters
+- Added WaveX model as DelayComponent with wave amplitudes as fitted parameters
+- Added radial velocity methods for binary models
 ### Fixed
 - Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
 - Fixed RTD by specifying theme explicitly.
