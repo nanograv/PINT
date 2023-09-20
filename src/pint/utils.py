@@ -1345,7 +1345,7 @@ def wavex_setup(model, T_span, freqs=None, n_freqs=None):
         if len(freqs) == 1:
             model.WXFREQ_0001.quantity = freqs
         else:
-            np.array(freqs)
+            freqs = np.array(freqs)
             freqs.sort()
             if min(np.diff(freqs)) < nyqist_freq:
                 warnings.warn(
@@ -1425,7 +1425,7 @@ def dmwavex_setup(model, T_span, freqs=None, n_freqs=None):
         if len(freqs) == 1:
             model.DMWXFREQ_0001.quantity = freqs
         else:
-            np.array(freqs)
+            freqs = np.array(freqs)
             freqs.sort()
             if min(np.diff(freqs)) < nyqist_freq:
                 warnings.warn(
