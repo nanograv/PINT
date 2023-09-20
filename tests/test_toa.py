@@ -182,3 +182,15 @@ def test_merge_toas():
     toas_out = pint.toa.merge_TOAs([toas, toas2])
     toas_outb = toas + toas2
     assert np.all(toas_out.table == toas_outb.table)
+
+
+def test_mix_nb_wb():
+    with pytest.raises(ValueError):
+        t1 = pint.toa.get_TOAs(
+            io.StringIO(
+                """
+                fake.ff 1430.000000 53393.561383615118386   0.178  ao  -fe L-wide -be ASP -pp_dm 10.0
+                fake.ff 1430.000000 53394.561383615118386   0.178  ao  -fe L-wide -be ASP
+                """
+            )
+        )

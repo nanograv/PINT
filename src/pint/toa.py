@@ -321,6 +321,14 @@ def get_TOAs(
     if "pulse_number" in t.table.colnames and not include_pn:
         log.warning("'pulse_number' column exists but not being read in")
         t.remove_pulse_numbers()
+
+    dm_data, valid_data = t.get_flag_value("pp_dm", as_type=float)
+    if len(valid_data) not in [0, len(t)]:
+        raise ValueError(
+            "Mixing narrowband and wideband toas in a TOAs object is not allowed. "
+            "Make sure that either all or no TOAs have the -pp_dm flag."
+        )
+
     return t
 
 
@@ -1631,7 +1639,7 @@ class TOAs:
 
         # there may be a more elegant way to do this
         dm_data, valid_data = self.get_flag_value("pp_dm", as_type=float)
-        return valid_data != []
+        return len(valid_data) == len(self)
 
     def get_all_flags(self):
         """Return a list of all the flags used by any TOA."""
@@ -2986,4 +2994,5 @@ def get_TOAs_array(
         t.compute_TDBs(method=tdb_method, ephem=ephem)
     if "ssb_obs_pos" not in t.table.colnames:
         t.compute_posvels(ephem, planets)
+
     return t
