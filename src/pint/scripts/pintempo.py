@@ -27,7 +27,7 @@ __all__ = ["main"]
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="Command line interfact to PINT",
+        description="Command line interface to PINT",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument("parfile", help="par file to read model from")

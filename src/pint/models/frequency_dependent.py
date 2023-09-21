@@ -36,7 +36,7 @@ class FD(DelayComponent):
                 name="FD1",
                 units="second",
                 value=0.0,
-                description="Coefficient of delay as a polynomial function of log-frequency",
+                description="Polynomial coefficient of log-frequency-dependent delay",
                 # descriptionTplt=lambda x: (
                 #    "%d term of frequency" " dependent  coefficients" % x
                 # ),
