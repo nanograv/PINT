@@ -72,28 +72,36 @@ start_points = (
 )
 
 # %%
-print("Running emcee...")
-chain_length = 1000
-sampler.run_mcmc(
-    start_points,
-    chain_length,
-    progress=True,
-)
+# ** IMPORTANT!!! **
+# This is used to exclude the following time-consuming steps from the readthedocs build.
+# Set this to False while actually using this example.
+rtd = True
 
 # %%
-samples_emcee = sampler.get_chain(flat=True, discard=100)
+if not rtd:
+    print("Running emcee...")
+    chain_length = 1000
+    sampler.run_mcmc(
+        start_points,
+        chain_length,
+        progress=True,
+    )
+
+    samples_emcee = sampler.get_chain(flat=True, discard=100)
 
 # %%
 # Plot the chains to make sure they have converged and the burn-in has been removed properly.
-for idx, param_chain in enumerate(samples_emcee.T):
-    plt.subplot(bt.nparams, 1, idx + 1)
-    plt.plot(param_chain)
-    plt.ylabel(bt.param_labels[idx])
-    plt.autoscale()
-plt.show()
+if not rtd:
+    for idx, param_chain in enumerate(samples_emcee.T):
+        plt.subplot(bt.nparams, 1, idx + 1)
+        plt.plot(param_chain)
+        plt.ylabel(bt.param_labels[idx])
+        plt.autoscale()
+    plt.show()
 
 # %%
-fig = corner.corner(
-    samples_emcee, labels=bt.param_labels, quantiles=[0.5], truths=maxlike_params
-)
-plt.show()
+if not rtd:
+    fig = corner.corner(
+        samples_emcee, labels=bt.param_labels, quantiles=[0.5], truths=maxlike_params
+    )
+    plt.show()

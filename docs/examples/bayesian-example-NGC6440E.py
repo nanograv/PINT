@@ -76,30 +76,40 @@ start_points = (
 )
 
 # %%
+# ** IMPORTANT!!! **
+# This is used to exclude some of the following time-consuming steps from the readthedocs build.
+# Set this to False while actually using this example.
+rtd = True
+
+# %%
 # Use longer chain_length for real runs. It is kept small here so that
 # the sampling finishes quickly (and because I know the burn in is short
 # because of the cheating priors above).
-print("Running emcee...")
-chain_length = 1000
-sampler.run_mcmc(
-    start_points,
-    chain_length,
-    progress=True,
-)
+if not rtd:
+    print("Running emcee...")
+
+    chain_length = 1000
+
+    sampler.run_mcmc(
+        start_points,
+        chain_length,
+        progress=True,
+    )
 
 # %%
-# Merge all the chains together after discarding the first 100 samples as 'burn-in'.
-# The burn-in should be decided after looking at the chains in the real world.
-samples_emcee = sampler.get_chain(flat=True, discard=100)
+if not rtd:
+    # Merge all the chains together after discarding the first 100 samples as 'burn-in'.
+    # The burn-in should be decided after looking at the chains in the real world.
+    samples_emcee = sampler.get_chain(flat=True, discard=100)
 
-# %%
-# Plot the MCMC chains to make sure that the burn-in has been removed properly.
-# Otherwise, go back and discard more points.
-for idx, param_chain in enumerate(samples_emcee.T):
-    plt.subplot(bt.nparams, 1, idx + 1)
-    plt.plot(param_chain, label=bt.param_labels[idx])
-    plt.legend()
-plt.show()
+    # %%
+    # Plot the MCMC chains to make sure that the burn-in has been removed properly.
+    # Otherwise, go back and discard more points.
+    for idx, param_chain in enumerate(samples_emcee.T):
+        plt.subplot(bt.nparams, 1, idx + 1)
+        plt.plot(param_chain, label=bt.param_labels[idx])
+        plt.legend()
+    plt.show()
 
 # %%
 # Plot the posterior distribution.
@@ -123,28 +133,30 @@ plt.show()
 # `dlogz` is the target accuracy in the computed Bayesian evidence.
 # Increasing `npoints` or decreasing `dlogz` gives more accurate results,
 # but at the cost of time.
-print("Running nestle...")
-result_nestle_1 = nestle.sample(
-    bt.lnlikelihood,
-    bt.prior_transform,
-    bt.nparams,
-    method="multi",
-    npoints=150,
-    dlogz=0.5,
-    callback=nestle.print_progress,
-)
+if not rtd:
+    print("Running nestle...")
+    result_nestle_1 = nestle.sample(
+        bt.lnlikelihood,
+        bt.prior_transform,
+        bt.nparams,
+        method="multi",
+        npoints=150,
+        dlogz=0.5,
+        callback=nestle.print_progress,
+    )
 
 # %%
 # Plot the posterior
 # The nested samples come with weights, which must be taken into account
 # while plotting.
-fig = corner.corner(
-    result_nestle_1.samples,
-    weights=result_nestle_1.weights,
-    labels=bt.param_labels,
-    range=[0.999] * bt.nparams,
-)
-plt.show()
+if not rtd:
+    fig = corner.corner(
+        result_nestle_1.samples,
+        weights=result_nestle_1.weights,
+        labels=bt.param_labels,
+        range=[0.999] * bt.nparams,
+    )
+    plt.show()
 
 # %% [markdown]
 # Let us create a new model with an EFAC applied to all toas (all
@@ -175,36 +187,41 @@ bt2 = BayesianTiming(model2, toas, use_pulse_numbers=True, prior_info=prior_info
 print(bt2.likelihood_method)
 
 # %%
-result_nestle_2 = nestle.sample(
-    bt2.lnlikelihood,
-    bt2.prior_transform,
-    bt2.nparams,
-    method="multi",
-    npoints=150,
-    dlogz=0.5,
-    callback=nestle.print_progress,
-)
+if not rtd:
+    result_nestle_2 = nestle.sample(
+        bt2.lnlikelihood,
+        bt2.prior_transform,
+        bt2.nparams,
+        method="multi",
+        npoints=150,
+        dlogz=0.5,
+        callback=nestle.print_progress,
+    )
 
 # %%
 # Plot the posterior.
 # The EFAC looks consistent with 1.
-fig2 = corner.corner(
-    result_nestle_2.samples,
-    weights=result_nestle_2.weights,
-    labels=bt2.param_labels,
-    range=[0.999] * bt2.nparams,
-)
-plt.show()
+if not rtd:
+    fig2 = corner.corner(
+        result_nestle_2.samples,
+        weights=result_nestle_2.weights,
+        labels=bt2.param_labels,
+        range=[0.999] * bt2.nparams,
+    )
+    plt.show()
 
 # %% [markdown]
 # Now let us look at the evidences and compute the Bayes factor.
 
 # %%
-print(f"Evidence without EFAC : {result_nestle_1.logz} +/- {result_nestle_1.logzerr}")
-print(f"Evidence with EFAC : {result_nestle_2.logz} +/- {result_nestle_2.logzerr}")
+if not rtd:
+    print(
+        f"Evidence without EFAC : {result_nestle_1.logz} +/- {result_nestle_1.logzerr}"
+    )
+    print(f"Evidence with EFAC : {result_nestle_2.logz} +/- {result_nestle_2.logzerr}")
 
-bf = np.exp(result_nestle_1.logz - result_nestle_2.logz)
-print(f"Bayes factor : {bf} (in favor of no EFAC)")
+    bf = np.exp(result_nestle_1.logz - result_nestle_2.logz)
+    print(f"Bayes factor : {bf} (in favor of no EFAC)")
 
 # %% [markdown]
 # The Bayes factor tells us that the EFAC is unnecessary for this dataset.
