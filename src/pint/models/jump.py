@@ -93,7 +93,7 @@ class PhaseJump(PhaseComponent):
             maskParameter(
                 name="JUMP",
                 units="second",
-                description="Amount to jump the selected TOAs by.",
+                description="Phase jump for selection.",
             )
         )
         self.phase_funcs_component += [self.jump_phase]

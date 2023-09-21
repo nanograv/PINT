@@ -30,19 +30,21 @@ class AbsPhase(PhaseComponent):
         super().__init__()
         self.add_param(
             MJDParameter(
-                name="TZRMJD", description="Epoch of the zero phase.", time_scale="utc"
+                name="TZRMJD",
+                description="Epoch of the zero phase TOA.",
+                time_scale="utc",
             )
         )
         self.add_param(
             strParameter(
-                name="TZRSITE", description="Observatory of the zero phase measured."
+                name="TZRSITE", description="Observatory of the zero phase TOA."
             )
         )
         self.add_param(
             floatParameter(
                 name="TZRFRQ",
                 units=u.MHz,
-                description="The frequency of the zero phase measured.",
+                description="The frequency of the zero phase TOA.",
             )
         )
         self.tz_cache = None
