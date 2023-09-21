@@ -128,8 +128,9 @@ if not rtd:
 
 # %%
 # Plot the posterior distribution.
-fig = corner.corner(samples_emcee, labels=bt.param_labels)
-plt.show()
+if not rtd:
+    fig = corner.corner(samples_emcee, labels=bt.param_labels)
+    plt.show()
 
 # %% [markdown]
 # ## Nested sampling with nestle
