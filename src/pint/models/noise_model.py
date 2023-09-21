@@ -58,8 +58,7 @@ class ScaleToaError(NoiseComponent):
                 name="EFAC",
                 units="",
                 aliases=["T2EFAC", "TNEF"],
-                description="A multiplication factor on"
-                " the measured TOA uncertainties,",
+                description="A multiplication factor for the measured TOA uncertainties,",
             )
         )
 
@@ -68,9 +67,7 @@ class ScaleToaError(NoiseComponent):
                 name="EQUAD",
                 units="us",
                 aliases=["T2EQUAD"],
-                description="An error term added in "
-                "quadrature to the scaled (by"
-                " EFAC) TOA uncertainty.",
+                description="An error term added in quadrature to the TOA uncertainty.",
             )
         )
 
@@ -78,10 +75,7 @@ class ScaleToaError(NoiseComponent):
             maskParameter(
                 name="TNEQ",
                 units=u.LogUnit(physical_unit=u.second),
-                description="An error term added in "
-                "quadrature to the scaled (by"
-                " EFAC) TOA uncertainty in "
-                " the unit of log10(second).",
+                description="A log10-scale error term added in quadrature to the TOA uncertainty",
             )
         )
         self.covariance_matrix_funcs += [self.sigma_scaled_cov_matrix]
@@ -317,9 +311,7 @@ class EcorrNoise(NoiseComponent):
                 name="ECORR",
                 units="us",
                 aliases=["TNECORR"],
-                description="An error term added that"
-                " correlated all TOAs in an"
-                " observing epoch.",
+                description="An error term that is correlated among all TOAs in an observing epoch.",
             )
         )
 
