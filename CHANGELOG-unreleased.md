@@ -14,6 +14,8 @@ the released changes.
 - Made `Residuals` independent of `GLSFitter` (GLS chi2 is now computed using the new function `Residuals._calc_gls_chi2()`).
 ### Added
 - Added `WaveX` model as a `DelayComponent` with Fourier amplitudes as fitted parameters
+- `Parameter.as_latex` method for latex representation of a parameter.
+- `pint.output.publish` module and `pintpublish` script for generating publication (LaTeX) output.
 - Added radial velocity methods for binary models
 - Added `DMWaveX` model (Fourier representation of DM noise)
 ### Fixed
