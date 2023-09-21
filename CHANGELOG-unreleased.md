@@ -16,6 +16,7 @@ the released changes.
 - Added `WaveX` model as a `DelayComponent` with Fourier amplitudes as fitted parameters
 - Optionally return the the log normalization factor of the likelihood function from the `Residuals.calc_chi2()` method.
 - `DownhilWLSFitter` can now estimate white noise parameters and their uncertainties.
+- Added radial velocity methods for binary models
 ### Fixed
 - Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
 - Fixed RTD by specifying theme explicitly.
