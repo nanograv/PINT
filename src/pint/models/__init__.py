@@ -25,6 +25,7 @@ from pint.models.binary_dd import BinaryDD, BinaryDDS, BinaryDDGR
 from pint.models.binary_ddk import BinaryDDK
 from pint.models.binary_ell1 import BinaryELL1, BinaryELL1H, BinaryELL1k
 from pint.models.dispersion_model import DispersionDM, DispersionDMX
+from pint.models.dmwavex import DMWaveX
 from pint.models.frequency_dependent import FD
 from pint.models.glitch import Glitch
 from pint.models.phase_offset import PhaseOffset
