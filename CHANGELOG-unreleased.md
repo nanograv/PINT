@@ -14,7 +14,9 @@ the released changes.
 - Made `Residuals` independent of `GLSFitter` (GLS chi2 is now computed using the new function `Residuals._calc_gls_chi2()`).
 ### Added
 - CHI2, CHI2R, TRES, DMRES now in par files
-- Added WaveX model as DelayComponent with wave amplitudes as fitted parameters
+- Added `WaveX` model as a `DelayComponent` with Fourier amplitudes as fitted parameters
+- `Parameter.as_latex` method for latex representation of a parameter.
+- `pint.output.publish` module and `pintpublish` script for generating publication (LaTeX) output.
 - Added radial velocity methods for binary models
 ### Fixed
 - Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
