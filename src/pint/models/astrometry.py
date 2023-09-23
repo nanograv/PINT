@@ -145,30 +145,68 @@ class Astrometry(DelayComponent):
                 )
         return delay * u.second
 
-    def get_d_delay_quantities(self, toas):
+    def get_d_delay_quantities(self, toas, include="all"):
         """Calculate values needed for many d_delay_d_param functions"""
         # TODO: Should delay not have units of u.second?
-        delay = self._parent.delay(toas)
+        # @abhisrkckl: Commenting out unused computation
+        # This was slowing things significantly.
+        # delay = self._parent.delay(toas)
+
+        if include == "all":
+            include = [
+                "epoch",
+                "ssb_obs_r",
+                "ssb_obs_z",
+                "ssb_obs_xy",
+                "ssb_obs_x",
+                "ssb_obs_y",
+                "in_psr_obs",
+                "earth_dec",
+                "earth_ra",
+            ]
 
         # TODO: tbl['tdbld'].quantity should have units of u.day
         # NOTE: Do we need to include the delay here?
         tbl = toas.table
+
         rd = {"epoch": tbl["tdbld"].quantity * u.day}
+
         # Distance from SSB to observatory, and from SSB to psr
         ssb_obs = tbl["ssb_obs_pos"].quantity
-        ssb_psr = self.ssb_to_psb_xyz_ICRS(epoch=np.array(rd["epoch"]))
+
+        ssb_obs_value = ssb_obs.value
+        ssb_obs_unit = ssb_obs.unit
 
         # Cartesian coordinates, and derived quantities
-        rd["ssb_obs_r"] = np.sqrt(np.sum(ssb_obs**2, axis=1))
-        rd["ssb_obs_z"] = ssb_obs[:, 2]
-        rd["ssb_obs_xy"] = np.sqrt(ssb_obs[:, 0] ** 2 + ssb_obs[:, 1] ** 2)
-        rd["ssb_obs_x"] = ssb_obs[:, 0]
-        rd["ssb_obs_y"] = ssb_obs[:, 1]
-        rd["in_psr_obs"] = np.sum(ssb_obs * ssb_psr, axis=1)
+        if "ssb_obs_r" in include:
+            rd["ssb_obs_r"] = (
+                np.sqrt(np.sum(ssb_obs_value**2, axis=1)) << ssb_obs_unit
+            )
 
-        # Earth right ascension and declination
-        rd["earth_dec"] = np.arctan2(rd["ssb_obs_z"], rd["ssb_obs_xy"])
-        rd["earth_ra"] = np.arctan2(rd["ssb_obs_y"], rd["ssb_obs_x"])
+        if "ssb_obs_z" in include:
+            rd["ssb_obs_z"] = ssb_obs[:, 2]
+
+        if "ssb_obs_xy" in include or "earth_dec" in include:
+            rd["ssb_obs_xy"] = (
+                np.sqrt(ssb_obs_value[:, 0] ** 2 + ssb_obs_value[:, 1] ** 2)
+                << ssb_obs_unit
+            )
+
+            if "earth_dec" in include:
+                rd["earth_dec"] = np.arctan2(ssb_obs[:, 2], rd["ssb_obs_xy"])
+
+        if "ssb_obs_x" in include:
+            rd["ssb_obs_x"] = ssb_obs[:, 0]
+
+        if "ssb_obs_y" in include:
+            rd["ssb_obs_y"] = ssb_obs[:, 1]
+
+        if "in_psr_obs" in include:
+            ssb_psr = self.ssb_to_psb_xyz_ICRS(epoch=np.array(rd["epoch"]))
+            rd["in_psr_obs"] = np.sum(ssb_obs * ssb_psr, axis=1)
+
+        if "earth_ra" in include:
+            rd["earth_ra"] = np.arctan2(ssb_obs[:, 1], ssb_obs[:, 0])
 
         return rd
 
@@ -200,17 +238,16 @@ class Astrometry(DelayComponent):
         t_d = 0.5 * px_r * delta'/ c,  and delta = delta' * px_r / (1 AU)
 
         """
-        rd = self.get_d_delay_quantities(toas)
+        rd = self.get_d_delay_quantities(toas, include=["ssb_obs_r", "in_psr_obs"])
 
-        px_r = np.sqrt(rd["ssb_obs_r"] ** 2 - rd["in_psr_obs"] ** 2)
-        dd_dpx = 0.5 * (px_r**2 / (u.AU * const.c)) * (u.mas / u.radian)
+        px_r_2 = rd["ssb_obs_r"] ** 2 - rd["in_psr_obs"] ** 2
+        dd_dpx = 0.5 * px_r_2 / (u.AU * const.c * u.radian)
 
-        # We want to return sec / mas
-        return dd_dpx.decompose(u.si.bases) / u.mas
+        return dd_dpx.to(u.s / u.mas)
 
     def d_delay_astrometry_d_POSEPOCH(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt POSEPOCH"""
-        pass
+        raise NotImplementedError
 
     def change_posepoch(self, new_epoch):
         """Change POSEPOCH to a new value and update the position accordingly.
@@ -405,7 +442,7 @@ class AstrometryEquatorial(Astrometry):
 
         delay = r*[cos(de)*cos(dp)*cos(ae-aa)+sin(de)*sin(dp)]/c
         """
-        rd = self.get_d_delay_quantities(toas)
+        rd = self.get_d_delay_quantities(toas, ["earth_dec", "earth_ra", "ssb_obs_r"])
 
         psr_ra = self.RAJ.quantity
         psr_dec = self.DECJ.quantity
@@ -415,14 +452,14 @@ class AstrometryEquatorial(Astrometry):
         )
         dd_draj = rd["ssb_obs_r"] * geom / (const.c * u.radian)
 
-        return dd_draj.decompose(u.si.bases)
+        return dd_draj.to(u.s / self.RAJ.units)
 
     def d_delay_astrometry_d_DECJ(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt DECJ
 
         Definitions as in d_delay_d_RAJ
         """
-        rd = self.get_d_delay_quantities(toas)
+        rd = self.get_d_delay_quantities(toas, ["earth_dec", "earth_ra", "ssb_obs_r"])
 
         psr_ra = self.RAJ.quantity
         psr_dec = self.DECJ.quantity
@@ -432,7 +469,7 @@ class AstrometryEquatorial(Astrometry):
         ) - np.sin(rd["earth_dec"]) * np.cos(psr_dec)
         dd_ddecj = rd["ssb_obs_r"] * geom / (const.c * u.radian)
 
-        return dd_ddecj.decompose(u.si.bases)
+        return dd_ddecj.to(u.s / self.DECJ.units)
 
     def d_delay_astrometry_d_PMRA(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt PMRA
@@ -440,18 +477,19 @@ class AstrometryEquatorial(Astrometry):
         Definitions as in d_delay_d_RAJ. Now we have a derivative in mas/yr for
         the pulsar RA
         """
-        rd = self.get_d_delay_quantities(toas)
+        rd = self.get_d_delay_quantities(
+            toas, ["epoch", "earth_dec", "earth_ra", "ssb_obs_r"]
+        )
 
         psr_ra = self.RAJ.quantity
 
         te = rd["epoch"] - self.POSEPOCH.quantity.tdb.mjd_long * u.day
         geom = np.cos(rd["earth_dec"]) * np.sin(psr_ra - rd["earth_ra"])
 
-        deriv = rd["ssb_obs_r"] * geom * te / (const.c * u.radian)
-        dd_dpmra = deriv * u.mas / u.year
+        dd_dpmra = rd["ssb_obs_r"] * geom * te / (const.c * u.radian)
 
         # We want to return sec / (mas / yr)
-        return dd_dpmra.decompose(u.si.bases) / (u.mas / u.year)
+        return dd_dpmra.to(u.s / self.PMRA.units)
 
     def d_delay_astrometry_d_PMDEC(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt PMDEC
@@ -459,7 +497,9 @@ class AstrometryEquatorial(Astrometry):
         Definitions as in d_delay_d_RAJ. Now we have a derivative in mas/yr for
         the pulsar DEC
         """
-        rd = self.get_d_delay_quantities(toas)
+        rd = self.get_d_delay_quantities(
+            toas, ["epoch", "earth_dec", "earth_ra", "ssb_obs_r"]
+        )
 
         psr_ra = self.RAJ.quantity
         psr_dec = self.DECJ.quantity
@@ -469,11 +509,10 @@ class AstrometryEquatorial(Astrometry):
             psr_ra - rd["earth_ra"]
         ) - np.cos(psr_dec) * np.sin(rd["earth_dec"])
 
-        deriv = rd["ssb_obs_r"] * geom * te / (const.c * u.radian)
-        dd_dpmdec = deriv * u.mas / u.year
+        dd_dpmdec = rd["ssb_obs_r"] * geom * te / (const.c * u.radian)
 
         # We want to return sec / (mas / yr)
-        return dd_dpmdec.decompose(u.si.bases) / (u.mas / u.year)
+        return dd_dpmdec.to(u.s / self.PMDEC.units)
 
     def change_posepoch(self, new_epoch):
         """Change POSEPOCH to a new value and update the position accordingly.
