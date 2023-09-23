@@ -577,15 +577,11 @@ class Residuals:
             # This is more correct way, but it is the slowest.
             # return (((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()).value
 
-            # This method is faster then the method above but not the most correct way
-            # return ((self.time_resids.to(u.s) / self.toas.get_errors().to(u.s)).value**2.0).sum()
-
             # This the fastest way, but highly depend on the assumption of time_resids and
             # error units. Ensure only a pure number is returned.
-            try:
-                return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum().value
-            except ValueError:
-                return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum()
+            return (
+                (self.time_resids.to_value(u.s) / toa_errors.to_value(u.s)) ** 2.0
+            ).sum()
 
     def ecorr_average(self, use_noise_model=True):
         """Uses the ECORR noise model time-binning to compute "epoch-averaged" residuals.
@@ -763,10 +759,12 @@ class WidebandDMResiduals(Residuals):
         data_errors = self.get_data_error()
         if (data_errors == 0.0).any():
             return np.inf
-        try:
-            return ((self.resids / data_errors) ** 2.0).sum().decompose().value
-        except ValueError:
-            return ((self.resids / data_errors) ** 2.0).sum().decompose()
+
+        return (
+            ((self.resids / data_errors) ** 2.0)
+            .sum()
+            .to_value(u.dimensionless_unscaled)
+        )
 
     def rms_weighted(self):
         """Compute weighted RMS of the residuals in time."""
