@@ -10,7 +10,6 @@ import numpy as np
 from astropy.time import Time
 from erfa import ErfaWarning
 from loguru import logger as log
-from memoization import cached
 
 from pint import ls
 from pint.models.parameter import (
@@ -73,17 +72,7 @@ class Astrometry(DelayComponent):
         # function in AstrometryEcliptic.
         # As a stopgap measure, I am moving this computation to a cached pure function below.
 
-        if isinstance(self, AstrometryEcliptic):
-            return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
-        else:
-            return _ssb_to_psb_xyz_ICRS_eq(
-                self.RAJ.quantity,
-                self.DECJ.quantity,
-                self.PMRA.quantity,
-                self.PMDEC.quantity,
-                self.POSEPOCH.quantity,
-                np.array(epoch),
-            )
+        return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
 
     def ssb_to_psb_xyz_ECL(self, epoch=None, ecl=None):
         """Returns unit vector(s) from SSB to pulsar system barycenter under Ecliptic coordinates.
@@ -438,6 +427,35 @@ class AstrometryEquatorial(Astrometry):
         """Return the pulsar's galactic coordinates as an astropy coordinate object."""
         pos_icrs = self.get_psr_coords(epoch=epoch)
         return pos_icrs.transform_to(coords.Galactic)
+
+    def ssb_to_psb_xyz_ICRS(self, epoch=None):
+        """Returns unit vector(s) from SSB to pulsar system barycenter under ICRS.
+
+        If epochs (MJD) are given, proper motion is included in the calculation.
+        """
+
+        # There is a the version of this function in `Astrometry` that gives the same result.
+        # This override is significantly faster.
+
+        ra0, dec0 = self.RAJ.quantity, self.DECJ.quantity
+        pmra, pmdec = self.PMRA.quantity, self.PMDEC.quantity
+        posepoch = self.POSEPOCH.quantity
+
+        if epoch is None or (pmra == 0 and pmdec == 0):
+            ra, dec = ra0, dec0
+        else:
+            epoch = (
+                epoch
+                if isinstance(epoch, Time)
+                else Time(epoch, scale="tdb", format="mjd")
+            )
+            dt = epoch - posepoch
+            ra = ra0 + pmra * dt / np.cos(dec0)
+            dec = dec0 + pmdec * dt
+
+        return u.Quantity(
+            [np.cos(dec) * np.cos(ra), np.cos(dec) * np.sin(ra), np.sin(dec)]
+        ).T
 
     def get_params_as_ICRS(self):
         return {
@@ -813,6 +831,41 @@ class AstrometryEcliptic(Astrometry):
             pos_ecl = pos_ecl.transform_to(PulsarEcliptic(ecl=ecl))
         return pos_ecl
 
+    def ssb_to_psb_xyz_ICRS(self, epoch=None):
+        """Returns unit vector(s) from SSB to pulsar system barycenter under ICRS.
+
+        If epochs (MJD) are given, proper motion is included in the calculation.
+        """
+
+        # There is a the version of this function in `Astrometry` that gives the same result.
+        # This override is significantly faster.
+
+        elong0, elat0 = self.ELONG.quantity, self.ELAT.quantity
+        pmelong, pmelat = self.PMELONG.quantity, self.PMELAT.quantity
+        posepoch = self.POSEPOCH.quantity
+        obl = OBL[self.ECL.value]
+
+        if epoch is None or (pmelong == 0 and pmelat == 0):
+            elong, elat = elong0, elat0
+        else:
+            epoch = (
+                epoch
+                if isinstance(epoch, Time)
+                else Time(epoch, scale="tdb", format="mjd")
+            )
+            dt = epoch - posepoch
+            elong = elong0 + pmelong * dt / np.cos(elat0)
+            elat = elat0 + pmelat * dt
+
+        xhat_ecl = u.Quantity(
+            [np.cos(elat) * np.cos(elong), np.cos(elat) * np.sin(elong), np.sin(elat)]
+        )
+        R = np.array(
+            [[1, 0, 0], [0, np.cos(obl), -np.sin(obl)], [0, np.sin(obl), np.cos(obl)]]
+        )
+
+        return (R @ xhat_ecl).T
+
     def get_d_delay_quantities_ecliptical(self, toas):
         """Calculate values needed for many d_delay_d_param functions."""
         # TODO: Move all these calculations in a separate class for elegance
@@ -1134,44 +1187,3 @@ class AstrometryEcliptic(Astrometry):
         m_eq.PMDEC.frozen = self.PMELAT.frozen
 
         return m_eq
-
-
-@cached
-def _ssb_to_psb_xyz_ICRS_eq(ra, dec, pmra, pmdec, posepoch, epoch):
-    """A cached version of `AstrometryEquatorial.ssb_to_psb_xyz_ICRS`.
-    This is used to avoid repeated calls since this function is expensive.
-    """
-    if epoch is None or (pmra.value == 0.0 and pmdec.value == 0.0):
-        coords_as_ICRS = coords.SkyCoord(
-            ra=ra,
-            dec=dec,
-            pm_ra_cosdec=pmra,
-            pm_dec=pmdec,
-            obstime=posepoch,
-            frame=coords.ICRS,
-        )
-    else:
-        newepoch = (
-            epoch if isinstance(epoch, Time) else Time(epoch, scale="tdb", format="mjd")
-        )
-        position_now = add_dummy_distance(
-            coords.SkyCoord(
-                ra=ra,
-                dec=dec,
-                pm_ra_cosdec=pmra,
-                pm_dec=pmdec,
-                obstime=posepoch,
-                frame=coords.ICRS,
-            )
-        )
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", ErfaWarning)
-            # for the most part the dummy distance should remove any potential erfa warnings
-            # but for some very large proper motions that does not quite work
-            # so we catch the warnings
-            position_then = position_now.apply_space_motion(new_obstime=newepoch)
-            position_then = remove_dummy_distance(position_then)
-
-        coords_as_ICRS = position_then
-
-    return coords_as_ICRS.cartesian.xyz.transpose()
