@@ -547,7 +547,7 @@ class Residuals:
 
         return chi2
 
-    def calc_chi2(self):
+    def calc_chi2(self, update=False):
         """Return the weighted chi-squared for the model and toas.
 
         If the errors on the TOAs are independent this is a straightforward
@@ -566,6 +566,9 @@ class Residuals:
         a minimizer for example - may need to be checked to confirm that they
         correctly return infinity.
         """
+        if update:
+            self.update()
+
         if self.model.has_correlated_errors:
             return self._calc_gls_chi2()
         else:
@@ -755,7 +758,10 @@ class WidebandDMResiduals(Residuals):
                 resids -= resids.mean()
         return resids
 
-    def calc_chi2(self):
+    def calc_chi2(self, update=False):
+        if update:
+            self.update()
+
         data_errors = self.get_data_error()
         if (data_errors == 0.0).any():
             return np.inf
@@ -952,7 +958,7 @@ class WidebandTOAResiduals(CombinedResiduals):
         assert self._chi2 is not None
         return self._chi2
 
-    def calc_chi2(self, full_cov=False):
+    def calc_chi2(self, full_cov=False, update=False):
         """Return the weighted chi-squared for the model and toas.
 
         If the errors on the TOAs are independent this is a straightforward
@@ -971,6 +977,10 @@ class WidebandTOAResiduals(CombinedResiduals):
         a minimizer for example - may need to be checked to confirm that they
         correctly return infinity.
         """
+        if update:
+            self.toa.update()
+            self.dm.update()
+
         log.debug("Using wideband GLS fitter to compute residual chi2")
         # Use GLS but don't actually fit
         from pint.fitter import WidebandTOAFitter
