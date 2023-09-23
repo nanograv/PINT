@@ -63,6 +63,16 @@ class Astrometry(DelayComponent):
         If epochs (MJD) are given, proper motion is included in the calculation.
         """
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
+
+        # @abhisrkckl: The following operations are stupid slow for some reason.
+        # This is somewhat uunderstandable when the proper motion is non-zero, and
+        # we'll have to do this for every epoch. But this is slow even when there is
+        # no proper motion. The underlying operations should just be some trig functions
+        # and simple 3x3 matrix operations; so I don't understand why this has to be so slow.
+        # Anyway, I am not going down this rabbit hole right now. This rant is here to remind
+        # people that there is a performance bottleneck here. Same problem is there with a similar
+        # function in AstrometryEcliptic.
+
         return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
 
     def ssb_to_psb_xyz_ECL(self, epoch=None, ecl=None):
@@ -173,7 +183,6 @@ class Astrometry(DelayComponent):
 
         # Distance from SSB to observatory, and from SSB to psr
         ssb_obs = tbl["ssb_obs_pos"].quantity
-
         ssb_obs_value = ssb_obs.value
         ssb_obs_unit = ssb_obs.unit
 
@@ -382,6 +391,7 @@ class AstrometryEquatorial(Astrometry):
                 obstime=self.POSEPOCH.quantity,
                 frame=coords.ICRS,
             )
+
         newepoch = (
             epoch if isinstance(epoch, Time) else Time(epoch, scale="tdb", format="mjd")
         )
