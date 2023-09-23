@@ -73,16 +73,17 @@ class Astrometry(DelayComponent):
         # function in AstrometryEcliptic.
         # As a stopgap measure, I am moving this computation to a cached pure function below.
 
-        # return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
-
-        return _ssb_to_psb_xyz_ICRS(
-            self.RAJ.quantity,
-            self.DECJ.quantity,
-            self.PMRA.quantity,
-            self.PMDEC.quantity,
-            self.POSEPOCH.quantity,
-            np.array(epoch),
-        )
+        if isinstance(self, AstrometryEcliptic):
+            return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
+        else:
+            return _ssb_to_psb_xyz_ICRS_eq(
+                self.RAJ.quantity,
+                self.DECJ.quantity,
+                self.PMRA.quantity,
+                self.PMDEC.quantity,
+                self.POSEPOCH.quantity,
+                np.array(epoch),
+            )
 
     def ssb_to_psb_xyz_ECL(self, epoch=None, ecl=None):
         """Returns unit vector(s) from SSB to pulsar system barycenter under Ecliptic coordinates.
@@ -1136,7 +1137,7 @@ class AstrometryEcliptic(Astrometry):
 
 
 @cached
-def _ssb_to_psb_xyz_ICRS(ra, dec, pmra, pmdec, posepoch, epoch):
+def _ssb_to_psb_xyz_ICRS_eq(ra, dec, pmra, pmdec, posepoch, epoch):
     """A cached version of `AstrometryEquatorial.ssb_to_psb_xyz_ICRS`.
     This is used to avoid repeated calls since this function is expensive.
     """
