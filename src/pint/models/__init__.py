@@ -26,6 +26,7 @@ from pint.models.binary_ddk import BinaryDDK
 from pint.models.binary_ell1 import BinaryELL1, BinaryELL1H, BinaryELL1k
 from pint.models.chromatic_model import ChromaticCM
 from pint.models.dispersion_model import DispersionDM, DispersionDMX
+from pint.models.dmwavex import DMWaveX
 from pint.models.frequency_dependent import FD
 from pint.models.glitch import Glitch
 from pint.models.phase_offset import PhaseOffset
@@ -43,6 +44,7 @@ from pint.models.fdjump import FDJump
 from pint.models.timing_model import DEFAULT_ORDER, TimingModel
 from pint.models.troposphere_delay import TroposphereDelay
 from pint.models.wave import Wave
+from pint.models.wavex import WaveX
 
 # Define a standard basic model
 StandardTimingModel = TimingModel(

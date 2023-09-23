@@ -101,7 +101,7 @@ class Dispersion(DelayComponent):
             bfreq = self._parent.barycentric_radio_freq(toas)
         except AttributeError:
             warn("Using topocentric frequency for dedispersion!")
-            bfreq = toas.table["freq"]
+            bfreq = toas.table["freq"].quantity
         param_unit = getattr(self, param_name).units
         d_dm_d_dmparam = np.zeros(toas.ntoas) * u.pc / u.cm**3 / param_unit
         for df in self.dm_deriv_funcs[param_name]:

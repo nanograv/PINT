@@ -117,6 +117,7 @@ DEFAULT_ORDER = [
     "spindown",
     "phase_jump",
     "wave",
+    "wavex",
 ]
 
 
@@ -308,7 +309,7 @@ class TimingModel:
         self.add_param_from_top(
             strParameter(
                 name="BINARY",
-                description="The Pulsar System/Binary model to use.",
+                description="Pulsar System/Binary model",
                 value=None,
             ),
             "",
@@ -497,6 +498,16 @@ class TimingModel:
         raise AttributeError(
             f"Attribute {name} not found in TimingModel or any Component"
         )
+
+    def __setattr__(self, name, value):
+        """Mostly this just sets ``self.name = value``.  But in the case where they are both :class:`Parameter` instances
+        with different names, this copies the ``quantity``, ``uncertainty``, ``frozen`` attributes only.
+        """
+        if isinstance(value, (Parameter, prefixParameter)) and name != value.name:
+            for p in ["quantity", "uncertainty", "frozen"]:
+                setattr(getattr(self, name), p, getattr(value, p))
+        else:
+            super().__setattr__(name, value)
 
     @property_exists
     def params_ordered(self):
@@ -787,6 +798,88 @@ class TimingModel:
         anoms = np.remainder(anoms.value, 2 * np.pi)
         # return with radian units or return as unitless cycles from 0-1
         return anoms * u.rad if radians else anoms / (2 * np.pi)
+
+    def pulsar_radial_velocity(self, barytimes):
+        """Return line-of-sight velocity of the pulsar relative to the system barycenter at barycentric MJD times.
+
+        Parameters
+        ----------
+        barytimes: Time, TOAs, array-like, or float
+            MJD barycentric time(s). The times to compute the
+            orbital phases.  Needs to be a barycentric time in TDB.
+            If a TOAs instance is passed, the barycentering will happen
+            automatically.  If an astropy Time object is passed, it must
+            be in scale='tdb'.  If an array-like object is passed or
+            a simple float, the time must be in MJD format.
+
+        Raises
+        ------
+        ValueError
+            If an astropy Time object is passed with scale!="tdb".
+
+        Returns
+        -------
+        array
+            The line-of-sight velocity
+
+        Notes
+        -----
+        This is the radial velocity of the pulsar.
+
+        See [1]_
+
+        .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.24
+        """
+        # this should also update the binary instance
+        nu = self.orbital_phase(barytimes, anom="true")
+        b = self.components[
+            [x for x in self.components.keys() if x.startswith("Binary")][0]
+        ]
+        bbi = b.binary_instance  # shorthand
+        psi = nu + bbi.omega()
+        return (
+            2
+            * np.pi
+            * bbi.a1()
+            / (bbi.pb() * np.sqrt(1 - bbi.ecc() ** 2))
+            * (np.cos(psi) + bbi.ecc() * np.cos(bbi.omega()))
+        ).cgs
+
+    def companion_radial_velocity(self, barytimes, massratio):
+        """Return line-of-sight velocity of the companion relative to the system barycenter at barycentric MJD times.
+
+        Parameters
+        ----------
+        barytimes: Time, TOAs, array-like, or float
+            MJD barycentric time(s). The times to compute the
+            orbital phases.  Needs to be a barycentric time in TDB.
+            If a TOAs instance is passed, the barycentering will happen
+            automatically.  If an astropy Time object is passed, it must
+            be in scale='tdb'.  If an array-like object is passed or
+            a simple float, the time must be in MJD format.
+        massratio : float
+            Ratio of pulsar mass to companion mass
+
+
+        Raises
+        ------
+        ValueError
+            If an astropy Time object is passed with scale!="tdb".
+
+        Returns
+        -------
+        array
+            The line-of-sight velocity
+
+        Notes
+        -----
+        This is the radial velocity of the companion.
+
+        See [1]_
+
+        .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.24
+        """
+        return -self.pulsar_radial_velocity(barytimes) * massratio
 
     def conjunction(self, baryMJD):
         """Return the time(s) of the first superior conjunction(s) after baryMJD.
@@ -1895,6 +1988,7 @@ class TimingModel:
                 the_unit = u.Unit("") / getattr(self, param).units
                 M[:, ii] = q.to_value(the_unit) / F0.value
                 units.append(the_unit / F0.unit)
+
         return M, params, units
 
     def compare(
@@ -2908,6 +3002,9 @@ class Component(metaclass=ModelMeta):
             # convention of name + no_leading_zero_index
             param.name = prefix + str(idx)
             param.index = idx
+
+            if hasattr(self, f"{prefix}1"):
+                param.description = getattr(self, f"{prefix}1").description
 
         # A more general check
         if param.name in self.params:
