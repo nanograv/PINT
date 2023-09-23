@@ -7,6 +7,7 @@ import pytest
 from astropy.coordinates import Latitude, Longitude
 
 from pint.models import get_model
+from pint.models.astrometry import AstrometryEcliptic, AstrometryEquatorial
 from pinttestdata import datadir
 
 
@@ -81,3 +82,48 @@ def test_pm_acquires_posepoch_equatorial():
 def test_pm_one_set_other_not():
     m = get_model(StringIO("\n".join([par_basic_equatorial, "PMRA 7"])))
     assert m.POSEPOCH.quantity == m.PEPOCH.quantity
+
+
+def test_fast_ssb_to_psb_xyz_ICRS():
+    m = get_model(StringIO(par_basic_ecliptic))
+    ts = np.linspace(55000, 55500, 10)
+
+    assert np.allclose(
+        m.ssb_to_psb_xyz_ICRS(),
+        super(
+            AstrometryEcliptic, m.components["AstrometryEcliptic"]
+        ).ssb_to_psb_xyz_ICRS(),
+    )
+
+    m.POSEPOCH.quantity = m.PEPOCH.quantity
+    m.PMELAT.value = 1e-3
+    m.PMELONG.value = 1e-3
+
+    assert np.allclose(
+        m.ssb_to_psb_xyz_ICRS(epoch=ts),
+        super(
+            AstrometryEcliptic, m.components["AstrometryEcliptic"]
+        ).ssb_to_psb_xyz_ICRS(epoch=ts),
+    )
+
+    # =========
+
+    m = get_model(StringIO(par_basic_equatorial))
+
+    assert np.allclose(
+        m.ssb_to_psb_xyz_ICRS(),
+        super(
+            AstrometryEquatorial, m.components["AstrometryEquatorial"]
+        ).ssb_to_psb_xyz_ICRS(),
+    )
+
+    m.POSEPOCH.quantity = m.PEPOCH.quantity
+    m.PMRA.value = 1e-3
+    m.PMDEC.value = 1e-3
+
+    assert np.allclose(
+        m.ssb_to_psb_xyz_ICRS(epoch=ts),
+        super(
+            AstrometryEquatorial, m.components["AstrometryEquatorial"]
+        ).ssb_to_psb_xyz_ICRS(epoch=ts),
+    )
