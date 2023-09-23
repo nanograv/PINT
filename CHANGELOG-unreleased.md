@@ -12,12 +12,15 @@ the released changes.
 - `WAVE` parameters can be added to a `Wave` model with `add_wave_component()` in `wave.py` 
 - Moved design matrix normalization code from `pint.fitter` to the new `pint.utils.normalize_designmatrix()` function.
 - Made `Residuals` independent of `GLSFitter` (GLS chi2 is now computed using the new function `Residuals._calc_gls_chi2()`).
+- Optionally avoid certain computations in `Astrometry.get_d_delay_quantities()` method.
 ### Added
 - Added `WaveX` model as a `DelayComponent` with Fourier amplitudes as fitted parameters
 - `Parameter.as_latex` method for latex representation of a parameter.
 - `pint.output.publish` module and `pintpublish` script for generating publication (LaTeX) output.
 - Added radial velocity methods for binary models
 - Added `DMWaveX` model (Fourier representation of DM noise)
+- Faster implementations of `ssb_to_psb_xyz_ICRS()` method in `AstrometryEquatorial` and `AstrometryEcliptic` without using `astropy.coordinates`. Original version in `Astrometry` is retained for comparison.
+- `update` option in `Residuals.calc_chi2` and `WidebandTOAResiduals.calc_chi2`
 ### Fixed
 - Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
 - Fixed RTD by specifying theme explicitly.
