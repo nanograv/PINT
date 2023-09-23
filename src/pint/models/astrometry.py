@@ -8,10 +8,10 @@ import astropy.coordinates as coords
 import astropy.units as u
 import numpy as np
 from astropy.time import Time
-
-from loguru import logger as log
-
 from erfa import ErfaWarning
+from loguru import logger as log
+from memoization import cached
+
 from pint import ls
 from pint.models.parameter import (
     AngleParameter,
@@ -22,7 +22,6 @@ from pint.models.parameter import (
 from pint.models.timing_model import DelayComponent, MissingParameter
 from pint.pulsar_ecliptic import OBL, PulsarEcliptic
 from pint.utils import add_dummy_distance, remove_dummy_distance
-
 
 astropy_version = sys.modules["astropy"].__version__
 mas_yr = u.mas / u.yr
@@ -72,8 +71,18 @@ class Astrometry(DelayComponent):
         # Anyway, I am not going down this rabbit hole right now. This rant is here to remind
         # people that there is a performance bottleneck here. Same problem is there with a similar
         # function in AstrometryEcliptic.
+        # As a stopgap measure, I am moving this computation to a cached pure function below.
 
-        return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
+        # return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
+
+        return _ssb_to_psb_xyz_ICRS(
+            self.RAJ.quantity,
+            self.DECJ.quantity,
+            self.PMRA.quantity,
+            self.PMDEC.quantity,
+            self.POSEPOCH.quantity,
+            np.array(epoch),
+        )
 
     def ssb_to_psb_xyz_ECL(self, epoch=None, ecl=None):
         """Returns unit vector(s) from SSB to pulsar system barycenter under Ecliptic coordinates.
@@ -1124,3 +1133,44 @@ class AstrometryEcliptic(Astrometry):
         m_eq.PMDEC.frozen = self.PMELAT.frozen
 
         return m_eq
+
+
+@cached
+def _ssb_to_psb_xyz_ICRS(ra, dec, pmra, pmdec, posepoch, epoch):
+    """A cached version of `AstrometryEquatorial.ssb_to_psb_xyz_ICRS`.
+    This is used to avoid repeated calls since this function is expensive.
+    """
+    if epoch is None or (pmra.value == 0.0 and pmdec.value == 0.0):
+        coords_as_ICRS = coords.SkyCoord(
+            ra=ra,
+            dec=dec,
+            pm_ra_cosdec=pmra,
+            pm_dec=pmdec,
+            obstime=posepoch,
+            frame=coords.ICRS,
+        )
+    else:
+        newepoch = (
+            epoch if isinstance(epoch, Time) else Time(epoch, scale="tdb", format="mjd")
+        )
+        position_now = add_dummy_distance(
+            coords.SkyCoord(
+                ra=ra,
+                dec=dec,
+                pm_ra_cosdec=pmra,
+                pm_dec=pmdec,
+                obstime=posepoch,
+                frame=coords.ICRS,
+            )
+        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", ErfaWarning)
+            # for the most part the dummy distance should remove any potential erfa warnings
+            # but for some very large proper motions that does not quite work
+            # so we catch the warnings
+            position_then = position_now.apply_space_motion(new_obstime=newepoch)
+            position_then = remove_dummy_distance(position_then)
+
+        coords_as_ICRS = position_then
+
+    return coords_as_ICRS.cartesian.xyz.transpose()
