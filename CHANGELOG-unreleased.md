@@ -13,6 +13,7 @@ the released changes.
 - Moved design matrix normalization code from `pint.fitter` to the new `pint.utils.normalize_designmatrix()` function.
 - Made `Residuals` independent of `GLSFitter` (GLS chi2 is now computed using the new function `Residuals._calc_gls_chi2()`).
 - Optionally avoid certain computations in `Astrometry.get_d_delay_quantities()` method.
+- Removed an unnecessary for loop in `solar_system_shapiro_delay`
 ### Added
 - Added `WaveX` model as a `DelayComponent` with Fourier amplitudes as fitted parameters
 - `Parameter.as_latex` method for latex representation of a parameter.
