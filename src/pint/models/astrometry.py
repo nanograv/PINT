@@ -453,9 +453,11 @@ class AstrometryEquatorial(Astrometry):
             ra = ra0 + pmra * dt / np.cos(dec0)
             dec = dec0 + pmdec * dt
 
-        return u.Quantity(
-            [np.cos(dec) * np.cos(ra), np.cos(dec) * np.sin(ra), np.sin(dec)]
-        ).T
+        ra = ra.to_value(u.rad)
+        dec = dec.to_value(u.rad)
+
+        cos_dec = np.cos(dec)
+        return u.Quantity([cos_dec * np.cos(ra), cos_dec * np.sin(ra), np.sin(dec)]).T
 
     def get_params_as_ICRS(self):
         return {
