@@ -62,11 +62,11 @@ class Astrometry(DelayComponent):
         """
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
 
-        # @abhisrkckl: The following operations are stupid slow for some reason.
+        # @abhisrkckl: The following operations are very slow for some reason.
         # This is somewhat understandable when the proper motion is non-zero, and
         # we'll have to do this for every epoch. But this is slow even when there is
         # no proper motion. The underlying operations should just be some trig functions
-        # and simple 3x3 matrix operations; so I don't understand why this has to be so slow.
+        # and a 3x3 matrix multiplication; so I don't understand why this has to be so slow.
         # Anyway, I am not going down this rabbit hole right now. This rant is here to remind
         # people that there is a performance bottleneck here.
         #
