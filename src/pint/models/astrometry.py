@@ -115,15 +115,17 @@ class Astrometry(DelayComponent):
         """
         tbl = toas.table
 
-        if heliocenter:
-            osv = tbl["obs_sun_pos"].quantity.copy()
-        else:
-            osv = -tbl["ssb_obs_pos"].quantity.copy()
+        osv = (
+            tbl["obs_sun_pos"].quantity if heliocenter else -tbl["ssb_obs_pos"].quantity
+        )
+
         psr_vec = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"])
         r = (osv**2).sum(axis=1) ** 0.5
-        osv /= r[:, None]
-        cos = (osv * psr_vec).sum(axis=1)
-        return (np.arccos(cos), r) if also_distance else np.arccos(cos)
+
+        osvn = osv / r[:, None]
+
+        cos_sa = (osvn * psr_vec).sum(axis=1)
+        return (np.arccos(cos_sa), r) if also_distance else np.arccos(cos_sa)
 
     def barycentric_radio_freq(self, toas):
         raise NotImplementedError
