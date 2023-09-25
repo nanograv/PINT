@@ -2476,7 +2476,7 @@ def divide_times(t, t0, offset=0.5):
 
     """
     dt = t - t0
-    values = (dt.to(u.yr).value + offset) // 1
+    values = (dt.to_value(u.yr) + offset) // 1
     indices = np.digitize(values, np.unique(values), right=True)
     return indices
 

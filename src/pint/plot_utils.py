@@ -45,7 +45,7 @@ def phaseogram(
     else:
         mjds = mjds_in
 
-    years = (mjds.to(u.d).value - 51544.0) / 365.25 + 2000.0
+    years = (mjds.to_value(u.d) - 51544.0) / 365.25 + 2000.0
     phss = phases + rotate
     phss[phss >= 1.0] -= 1.0
     plt.figure(figsize=(width, 8))
@@ -133,7 +133,7 @@ def phaseogram_binned(
     else:
         mjds = mjds_in
 
-    years = (mjds.to(u.d).value - 51544.0) / 365.25 + 2000.0
+    years = (mjds.to_value(u.d) - 51544.0) / 365.25 + 2000.0
     phss = phases + rotate
     phss[phss >= 1.0] -= 1.0
     plt.figure(figsize=(width, 8))

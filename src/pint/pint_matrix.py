@@ -478,7 +478,9 @@ class PhaseDesignMatrixMaker(DesignMatrixMaker):
             else:
                 param_unit = getattr(model, param).units
                 # Since this is the phase derivative, we know the quantity unit.
-                q = deriv_func(data, delay, param).to(u.Unit("") / param_unit)
+                q = deriv_func(data, delay, param).to(
+                    u.dimensionless_unscaled / param_unit
+                )
 
                 # NOTE Here we have negative sign here. Since in pulsar timing
                 # the residuals are calculated as (Phase - int(Phase)), which is different

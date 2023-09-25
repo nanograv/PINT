@@ -632,7 +632,7 @@ def format_toa_line(
             freq = 0.0 * u.MHz
         flagstring = ""
         if dm != 0.0 * pint.dmu:
-            flagstring += "-dm {:.5f}".format(dm.to(pint.dmu).value)
+            flagstring += "-dm {:.5f}".format(dm.to_value(pint.dmu))
         # Here I need to append any actual flags
         for flag in flags.keys():
             v = flags[flag]
@@ -651,9 +651,9 @@ def format_toa_line(
             obscode = obs.name
         out = "%s %f %s %.3f %s %s\n" % (
             name,
-            freq.to(u.MHz).value,
+            freq.to_value(u.MHz),
             toa_str,
-            toaerr.to(u.us).value,
+            toaerr.to_value(u.us),
             alias_translation.get(obscode, obscode),
             flagstring,
         )
@@ -677,17 +677,17 @@ def format_toa_line(
         if dm != 0.0 * pint.dmu:
             out = obs.tempo_code + " %13s%9.3f%20s%9.2f                %9.4f\n" % (
                 name,
-                freq.to(u.MHz).value,
+                freq.to_value(u.MHz),
                 toa_str,
-                toaerr.to(u.us).value,
-                dm.to(pint.dmu).value,
+                toaerr.to_value(u.us),
+                dm.to_value(pint.dmu),
             )
         else:
             out = obs.tempo_code + " %13s%9.3f%20s%9.2f\n" % (
                 name,
-                freq.to(u.MHz).value,
+                freq.to_value(u.MHz),
                 toa_str,
-                toaerr.to(u.us).value,
+                toaerr.to_value(u.us),
             )
     else:
         raise ValueError(f"Unknown TOA format ({format})")

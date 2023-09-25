@@ -531,7 +531,7 @@ class Fitter:
                 tasc = ufloat(
                     # This is a time in MJD
                     self.model.TASC.quantity.mjd,
-                    self.model.TASC.uncertainty.to(u.d).value,
+                    self.model.TASC.uncertainty.to_value(u.d),
                 )
                 if hasattr(self.model, "PB") and self.model.PB.value is not None:
                     pb = self.model.PB.as_ufloat(u.d)
@@ -578,8 +578,8 @@ class Fitter:
             pberr = pberr.to(u.d) if btx else self.model.PB.uncertainty
             if not self.model.A1.frozen:
                 pbs = ufloat(
-                    pb.to(u.s).value,
-                    pberr.to(u.s).value,
+                    pb.to_value(u.s),
+                    pberr.to_value(u.s),
                 )
                 a1 = self.model.A1.as_ufloat(pint.ls)
                 # This is the mass function, done explicitly so that we get
@@ -1289,8 +1289,8 @@ class WLSState(ModelState):
             toas=self.fitter.toas, incfrozen=False, incoffset=True
         )
         # Get residuals and TOA uncertainties in seconds
-        Nvec = self.model.scaled_toa_uncertainty(self.fitter.toas).to(u.s).value
-        scaled_resids = self.resids.time_resids.to(u.s).value / Nvec
+        Nvec = self.model.scaled_toa_uncertainty(self.fitter.toas).to_value(u.s)
+        scaled_resids = self.resids.time_resids.to_value(u.s) / Nvec
 
         # "Whiten" design matrix and residuals by dividing by uncertainties
         M = M / Nvec.reshape((-1, 1))
@@ -1442,7 +1442,7 @@ class GLSState(ModelState):
         covariance_matrix_labels = [covariance_matrix_labels] * 2
         self.parameter_covariance_matrix_labels = covariance_matrix_labels
 
-        residuals = self.resids.time_resids.to(u.s).value
+        residuals = self.resids.time_resids.to_value(u.s)
 
         # get any noise design matrices and weight vectors
         if not self.full_cov:
@@ -1470,7 +1470,7 @@ class GLSState(ModelState):
             phiinv /= norm**2
             # Why are we scaling residuals by the *square* of the uncertainty?
             Nvec = (
-                self.model.scaled_toa_uncertainty(self.fitter.toas).to(u.s).value ** 2
+                self.model.scaled_toa_uncertainty(self.fitter.toas).to_value(u.s) ** 2
             )
             cinv = 1 / Nvec
             mtcm = np.dot(M.T, cinv[:, None] * M)
@@ -1989,8 +1989,8 @@ class WLSFitter(Fitter):
             M, params, units = self.get_designmatrix()
             # Get residuals and TOA uncertainties in seconds
             self.update_resids()
-            residuals = self.resids.time_resids.to(u.s).value
-            Nvec = self.model.scaled_toa_uncertainty(self.toas).to(u.s).value
+            residuals = self.resids.time_resids.to_value(u.s)
+            Nvec = self.model.scaled_toa_uncertainty(self.toas).to_value(u.s)
 
             # "Whiten" design matrix and residuals by dividing by uncertainties
             M = M / Nvec.reshape((-1, 1))
@@ -2161,7 +2161,7 @@ class GLSFitter(Fitter):
             if i == 0:
                 # Why is this here?
                 self.update_resids()
-            residuals = self.resids.time_resids.to(u.s).value
+            residuals = self.resids.time_resids.to_value(u.s)
 
             # get any noise design matrices and weight vectors
             if not full_cov:
@@ -2188,7 +2188,7 @@ class GLSFitter(Fitter):
 
             else:
                 phiinv /= norm**2
-                Nvec = self.model.scaled_toa_uncertainty(self.toas).to(u.s).value ** 2
+                Nvec = self.model.scaled_toa_uncertainty(self.toas).to_value(u.s) ** 2
                 cinv = 1 / Nvec
                 mtcm = np.dot(M.T, cinv[:, None] * M)
                 mtcm += np.diag(phiinv)

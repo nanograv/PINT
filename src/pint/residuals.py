@@ -506,7 +506,7 @@ class Residuals:
         If the system is singular, it uses singular value decomposition instead."""
         self.update()
 
-        residuals = self.time_resids.to(u.s).value
+        residuals = self.time_resids.to_value(u.s)
 
         M = self.model.noise_model_designmatrix(self.toas)
         phi = self.model.noise_model_basis_weight(self.toas)
@@ -520,7 +520,7 @@ class Residuals:
         M, norm = normalize_designmatrix(M, None)
 
         phiinv /= norm**2
-        Nvec = self.model.scaled_toa_uncertainty(self.toas).to(u.s).value ** 2
+        Nvec = self.model.scaled_toa_uncertainty(self.toas).to_value(u.s) ** 2
         cinv = 1 / Nvec
         mtcm = np.dot(M.T, cinv[:, None] * M)
         mtcm += np.diag(phiinv)
