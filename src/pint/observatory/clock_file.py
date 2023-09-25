@@ -178,7 +178,7 @@ class ClockFile:
                 raise ClockCorrectionOutOfRange(msg)
 
         # Can't pass Times directly to np.interp.  This should be OK:
-        return np.interp(t.mjd, self.time.mjd, self.clock.to(u.us).value) * u.us
+        return np.interp(t.mjd, self.time.mjd, self.clock.to_value(u.us)) * u.us
 
     def last_correction_mjd(self):
         """Last MJD for which corrections are available."""

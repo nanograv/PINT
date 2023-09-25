@@ -70,7 +70,7 @@ def load_Fermi_FT2(ft2_filename):
         dt = mjds_TT[1] - mjds_TT[0]
         log.info(f"FT2 spacing is {str(dt.to(u.s))}")
         # Use "spacing" argument for gradient to handle nonuniform entries
-        tt = mjds_TT.to(u.s).value
+        tt = mjds_TT.to_value(u.s)
         Vx = np.gradient(X.value, tt) * u.m / u.s
         Vy = np.gradient(Y.value, tt) * u.m / u.s
         Vz = np.gradient(Z.value, tt) * u.m / u.s

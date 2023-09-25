@@ -391,7 +391,7 @@ class TopoObs(Observatory):
         topo_tdb_tt = geo_tdb_tt - topo_time_corr
         return Time(
             t.tt.jd1 - JD_MJD,
-            t.tt.jd2 - topo_tdb_tt.to(u.day).value,
+            t.tt.jd2 - topo_tdb_tt.to_value(u.day),
             format="pulsar_mjd",
             scale="tdb",
             location=self.earth_location_itrf(),

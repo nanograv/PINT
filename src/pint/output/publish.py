@@ -17,6 +17,8 @@ from pint.models.parameter import (
 )
 from pint.toa import TOAs
 from pint.residuals import Residuals, WidebandTOAResiduals
+from pint import dmu
+from astropy import units as u
 from io import StringIO
 import numpy as np
 
@@ -242,11 +244,11 @@ def publish(
                 f"Fitting method               \\dotfill & {fit_method}      \\\\ \n"
             )
             tex.write(
-                f"RMS TOA residuals ($\\mu s$) \\dotfill & {toares.calc_time_resids().to('us').value.std():.2f}   \\\\ \n"
+                f"RMS TOA residuals ($\\mu s$) \\dotfill & {toares.calc_time_resids().to_value(u.microsecond).std():.2f}   \\\\ \n"
             )
             if toas.is_wideband():
                 tex.write(
-                    f"RMS DM residuals (pc / cm3) \\dotfill & {dmres.calc_resids().to('pc/cm^3').value.std():.2f}   \\\\ \n"
+                    f"RMS DM residuals (pc / cm3) \\dotfill & {dmres.calc_resids().to_value(dmu).std():.2f}   \\\\ \n"
                 )
             tex.write(
                 f"$\\chi^2$                         \\dotfill & {res.chi2:.2f}    \\\\ \n"
