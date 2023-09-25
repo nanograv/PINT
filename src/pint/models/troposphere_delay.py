@@ -236,7 +236,7 @@ class TroposphereDelay(DelayComponent):
         gph = self.EARTH_R * H / (self.EARTH_R + H)  # geopotential height
         if gph > 11 * u.km:
             log.warning("Pressure approximation invalid for elevations above 11 km")
-        T = 288.15 - 0.0065 * H.to(u.m).value  # temperature lapse
+        T = 288.15 - 0.0065 * H.to_value(u.m)  # temperature lapse
         return 101.325 * (288.15 / T) ** -5.25575 * u.kPa
 
     def zenith_delay(self, lat, H):
@@ -314,7 +314,7 @@ class TroposphereDelay(DelayComponent):
         # now add in the mapping correction based on height
         fcorrection = self._herring_map(alt, self.A_HT, self.B_HT, self.C_HT)
 
-        return baseMap + (1 / np.sin(alt) - fcorrection) * H.to(u.km).value
+        return baseMap + (1 / np.sin(alt) - fcorrection) * H.to_value(u.km)
 
     def wet_map(self, alt, lat):
         """This is very similar to the normal mapping function except it uses different

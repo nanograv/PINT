@@ -266,7 +266,7 @@ class DispersionDM(Dispersion):
         else:
             DMEPOCH = self.DMEPOCH.value
         dt = (toas["tdbld"] - DMEPOCH) * u.day
-        dt_value = (dt.to(u.yr)).value
+        dt_value = dt.to_value(u.yr)
         return taylor_horner(dt_value, dm_terms) * (self.DM.units / par.units)
 
     def change_dmepoch(self, new_epoch):

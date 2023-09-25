@@ -175,31 +175,35 @@ class DDKmodel(DDmodel):
 
     def d_SINI_d_KIN(self):
         # with u.set_enabled_equivalencies(u.dimensionless_angles()):
-        return np.cos(self.kin()).to(u.Unit("") / self.KIN.unit)
+        return np.cos(self.kin()).to(u.dimensionless_unscaled / self.KIN.unit)
 
     def d_SINI_d_KOM(self):
         if not self.K96:
-            return np.cos(self.kin()) * u.Unit("") / self.KOM.unit
+            return np.cos(self.kin()) * u.dimensionless_unscaled / self.KOM.unit
         d_si_d_kom = (
             (-self.PMLONG_DDK * self.cos_KOM - self.PMLAT_DDK * self.sin_KOM)
             * self.tt0
             * np.cos(self.kin())
         )
         # with u.set_enabled_equivalencies(u.dimensionless_angles()):
-        return d_si_d_kom.to(u.Unit("") / self.KOM.unit)
+        return d_si_d_kom.to(u.dimensionless_unscaled / self.KOM.unit)
 
     def d_SINI_d_T0(self):
         if not self.K96:
-            return np.ones(len(self.tt0)) * u.Unit("") / self.T0.unit
+            return np.ones(len(self.tt0)) * u.dimensionless_unscaled / self.T0.unit
         d_si_d_kom = -(-self.PMLONG_DDK * self.sin_KOM + self.PMLAT_DDK * self.cos_KOM)
-        return d_si_d_kom.to(u.Unit("") / self.T0.unit)
+        return d_si_d_kom.to(u.dimensionless_unscaled / self.T0.unit)
 
     def d_SINI_d_par(self, par):
         par_obj = getattr(self, par)
         try:
             ko_func = getattr(self, f"d_SINI_d_{par}")
         except Exception:
-            ko_func = lambda: np.zeros(len(self.tt0)) * u.Unit("") / par_obj.unit
+            ko_func = (
+                lambda: np.zeros(len(self.tt0))
+                * u.dimensionless_unscaled
+                / par_obj.unit
+            )
         return ko_func()
 
     def d_kin_proper_motion_d_KOM(self):
@@ -394,7 +398,7 @@ class DDKmodel(DDmodel):
             / PX_kpc
             * (self.delta_I0() * self.sin_KOM - self.delta_J0() * self.cos_KOM)
         )
-        return delta_sini.to("")
+        return delta_sini.to(u.dimensionless_unscaled)
 
     def delta_a1_parallax(self):
         """

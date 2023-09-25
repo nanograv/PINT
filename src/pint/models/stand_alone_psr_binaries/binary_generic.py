@@ -376,7 +376,7 @@ class PSR_BINARY:
         T0 = self.T0
         if not hasattr(barycentricTOA, "unit") or barycentricTOA.unit is None:
             barycentricTOA = barycentricTOA * u.day
-        return (barycentricTOA - T0).to("second")
+        return (barycentricTOA - T0).to(u.s)
 
     def ecc(self):
         """Calculate eccentricity with EDOT"""
@@ -473,7 +473,7 @@ class PSR_BINARY:
         par_obj = getattr(self, par)
         result = self.orbits_cls.d_orbits_d_par(par)
         with u.set_enabled_equivalencies(u.dimensionless_angles()):
-            result = result.to(u.Unit("") / par_obj.unit)
+            result = result.to(u.dimensionless_unscaled / par_obj.unit)
         return result
 
     ###############################################
@@ -629,7 +629,7 @@ class PSR_BINARY:
             return np.zeros(len(self.tt0)) * nu.unit / par_obj.unit
 
     def omega(self):
-        PB = self.pb().to("second")
+        PB = self.pb().to(u.s)
         OMDOT = self.OMDOT
         OM = self.OM
         return OM + OMDOT * self.tt0
@@ -682,7 +682,7 @@ class PSR_BINARY:
         return self.pb() - self.pbdot() * self.tt0
 
     def P(self):
-        return self.P0 + self.P1 * (self.t - self.PEPOCH).to("second")
+        return self.P0 + self.P1 * (self.t - self.PEPOCH).to(u.s)
 
     def t0(self):
         return self.t - self.PEPOCH

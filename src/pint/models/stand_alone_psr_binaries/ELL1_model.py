@@ -45,7 +45,7 @@ class ELL1BaseModel(PSR_BINARY):
         t = self.t
         if not hasattr(self.t, "unit") or self.t.unit is None:
             t = self.t * u.day
-        return (t - self.TASC.value * u.day).to("second")
+        return (t - self.TASC.value * u.day).to(u.s)
 
     def a1(self):
         """ELL1 model a1 calculation.
@@ -103,14 +103,14 @@ class ELL1BaseModel(PSR_BINARY):
         return self.M()
 
     def orbits_ELL1(self):
-        PB = (self.pb()).to("second")
+        PB = (self.pb()).to(u.s)
         PBDOT = self.pbdot()
         ttasc = self.ttasc()
         return (ttasc / PB - 0.5 * PBDOT * (ttasc / PB) ** 2).decompose()
 
     def d_Phi_d_TASC(self):
         """dPhi/dTASC"""
-        PB = self.pb().to("second")
+        PB = self.pb().to(u.s)
         PBDOT = self.pbdot()
         ttasc = self.ttasc()
         return (PBDOT * ttasc / PB - 1.0) * 2 * np.pi * u.rad / PB
@@ -157,7 +157,7 @@ class ELL1BaseModel(PSR_BINARY):
         Dre = self.delayR()
         Drep = self.Drep()
         Drepp = self.Drepp()
-        PB = self.pb().to("second")
+        PB = self.pb().to(u.s)
         nhat = 2 * np.pi / self.pb()
         return (
             Dre
@@ -182,7 +182,7 @@ class ELL1BaseModel(PSR_BINARY):
         Dre = self.delayR()
         Drep = self.Drep()
         Drepp = self.Drepp()
-        PB = self.pb().to("second")
+        PB = self.pb().to(u.s)
         nhat = 2 * np.pi / self.pb()
 
         d_delayI_d_Dre = (
@@ -214,7 +214,7 @@ class ELL1BaseModel(PSR_BINARY):
     def ELL1_T0(self):
         return self.TASC + self.pb() / (2 * np.pi) * (
             np.arctan(self.eps1() / self.eps2())
-        ).to(u.Unit(""), equivalencies=u.dimensionless_angles())
+        ).to(u.dimensionless_unscaled, equivalencies=u.dimensionless_angles())
 
     ###############################
     def d_delayR_da1(self):

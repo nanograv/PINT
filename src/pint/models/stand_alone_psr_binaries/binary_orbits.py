@@ -97,7 +97,7 @@ class OrbitPB(Orbit):
 
     def orbits(self):
         """Orbital phase (number of orbits since T0)."""
-        PB = self.PB.to("second")
+        PB = self.PB.to(u.s)
         PBDOT = self.PBDOT
         XPBDOT = self.XPBDOT
         return (
@@ -114,14 +114,14 @@ class OrbitPB(Orbit):
 
     def d_orbits_d_T0(self):
         """The derivatve of orbits with respect to T0."""
-        PB = self.PB.to("second")
+        PB = self.PB.to(u.s)
         PBDOT = self.PBDOT
         XPBDOT = self.XPBDOT
         return ((PBDOT - XPBDOT) * self.tt0 / PB - 1.0) * 2 * np.pi * u.rad / PB
 
     def d_orbits_d_PB(self):
         """dM/dPB this could be a generic function"""
-        PB = self.PB.to("second")
+        PB = self.PB.to(u.s)
         PBDOT = self.PBDOT
         XPBDOT = self.XPBDOT
         return (
@@ -133,12 +133,12 @@ class OrbitPB(Orbit):
 
     def d_orbits_d_PBDOT(self):
         """dM/dPBDOT this could be a generic function"""
-        PB = self.PB.to("second")
+        PB = self.PB.to(u.s)
         return -np.pi * u.rad * self.tt0**2 / PB**2
 
     def d_orbits_d_XPBDOT(self):
         """dM/dPBDOT this could be a generic function"""
-        PB = self.PB.to("second")
+        PB = self.PB.to(u.s)
         return -np.pi * u.rad * self.tt0**2 / PB**2
 
     def d_pbprime_d_PB(self):

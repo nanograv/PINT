@@ -46,8 +46,8 @@ class ELL1Hmodel(ELL1BaseModel):
             {
                 "H3": 0.0 * u.second,
                 "H4": 0.0 * u.second,
-                "STIGMA": 0.0 * u.Unit(""),
-                "NHARMS": 3 * u.Unit(""),
+                "STIGMA": 0.0 * u.dimensionless_unscaled,
+                "NHARMS": 3 * u.dimensionless_unscaled,
             }
         )
         self.binary_params = list(self.param_default_value.keys())

@@ -1470,7 +1470,7 @@ class TimingModel:
         """
         result = np.zeros((len(toas), len(toas)))
         if "ScaleToaError" not in self.components:
-            result += np.diag(toas.table["error"].quantity.to(u.s).value ** 2)
+            result += np.diag(toas.table["error"].quantity.to_value(u.s) ** 2)
 
         for nf in self.covariance_matrix_funcs:
             result += nf(toas)

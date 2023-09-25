@@ -149,7 +149,7 @@ class DDmodel(PSR_BINARY):
             n = 2*pi/PB
             dOmega/dOMDOT = PB/2*pi*nu
         """
-        PB = (self.pb()).to("second")
+        PB = (self.pb()).to(u.s)
         nu = self.nu()
 
         return PB / (2 * np.pi * u.rad) * nu
@@ -568,7 +568,7 @@ class DDmodel(PSR_BINARY):
            n = 2*pi/PB # should here be M()
         """
         cosE = np.cos(self.E())
-        return 2.0 * np.pi / self.pb().to("second") / (1 - self.ecc() * cosE)
+        return 2.0 * np.pi / self.pb().to(u.s) / (1 - self.ecc() * cosE)
 
     def d_nhat_d_par(self, par):
         """Derivative.

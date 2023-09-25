@@ -139,9 +139,9 @@ class FDJump(DelayComponent):
             freq = tbl["freq"]
 
         y = (
-            np.log(freq.to(u.GHz).value)
+            np.log(freq.to_value(u.GHz))
             if self.FDJUMPLOG.value
-            else freq.to(u.GHz).value
+            else freq.to_value(u.GHz)
         )
         non_finite = np.invert(np.isfinite(y))
         y[non_finite] = 0.0

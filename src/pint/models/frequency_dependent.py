@@ -85,7 +85,7 @@ class FD(DelayComponent):
     def FD_delay_frequency(self, freq):
         """Compute the FD delay at an array of frequencies."""
         FD_mapping = self.get_prefix_mapping_component("FD")
-        log_freq = np.log(freq.to(u.GHz).value)
+        log_freq = np.log(freq.to_value(u.GHz))
         non_finite = np.invert(np.isfinite(log_freq))
         log_freq[non_finite] = 0.0
         FD_coeff = [

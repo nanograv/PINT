@@ -409,7 +409,7 @@ class Parameter:
         This converts the :class:`~astropy.units.Quantity` provided to the
         appropriate units, extracts the value, and converts that to a string.
         """
-        return str(uncertainty.to(self.units).value)
+        return str(uncertainty.to_value(self.units))
 
     def __repr__(self):
         out = "{0:16s}{1:20s}".format(f"{self.__class__.__name__}(", self.name)
@@ -783,7 +783,7 @@ class floatParameter(Parameter):
 
     def str_quantity(self, quan):
         """Quantity as a string (for floating-point values)."""
-        v = quan.to(self.units).value
+        v = quan.to_value(self.units)
         if self._long_double and not isinstance(v, np.longdouble):
             raise ValueError(
                 "Parameter is supposed to contain long double values but contains a float"
@@ -798,9 +798,9 @@ class floatParameter(Parameter):
             return quan
         elif isinstance(quan, list):
             # for pairParamters
-            return [x.to(self.units).value for x in quan]
+            return [x.to_value(self.units) for x in quan]
         else:
-            return quan.to(self.units).value
+            return quan.to_value(self.units)
 
     def as_ufloat(self, units=None):
         """Return the parameter as a :class:`uncertainties.ufloat`
@@ -1606,7 +1606,7 @@ class prefixParameter:
         return self.param_comp.str_quantity(quan)
 
     def _print_uncertainty(self, uncertainty):
-        return str(uncertainty.to(self.units).value)
+        return str(uncertainty.to_value(self.units))
 
     def name_matches(self, name):
         return self.param_comp.name_matches(name)
@@ -2239,8 +2239,8 @@ class pairParameter(floatParameter):
             if len(quan) != 2:
                 raise ValueError(f"Don't know how to print this as a pair: {quan}")
 
-        v0 = quan[0].to(self.units).value
-        v1 = quan[1].to(self.units).value
+        v0 = quan[0].to_value(self.units)
+        v1 = quan[1].to_value(self.units)
         if self._long_double:
             if not isinstance(v0, np.longdouble):
                 raise TypeError(
