@@ -17,6 +17,7 @@ the released changes.
 - `Parameter.as_latex` method for latex representation of a parameter.
 - `pint.output.publish` module and `pintpublish` script for generating publication (LaTeX) output.
 - Added radial velocity methods for binary models
+- Added `DMWaveX` model (Fourier representation of DM noise)
 - Optionally return the the log normalization factor of the likelihood function from the `Residuals.calc_chi2()` method.
 - `DownhilWLSFitter` can now estimate white noise parameters and their uncertainties.
 ### Fixed
