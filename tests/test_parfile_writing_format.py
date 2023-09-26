@@ -29,9 +29,10 @@ def test_CHI2():
     )
 
     f = fitter.WLSFitter(toas=t, model=m)
+    f.fit_toas()
     assert "CHI2" in f.model.as_parfile()
-    assert "CHI2" not in f.model.as_parfile(format="tempo2")
-    assert "CHI2" not in f.model.as_parfile(format="tempo")
+    assert "CHI2" in f.model.as_parfile(format="tempo2")
+    assert "CHI2" in f.model.as_parfile(format="tempo")
 
 
 def test_T2CMETHOD():
