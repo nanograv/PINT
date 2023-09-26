@@ -416,13 +416,7 @@ class Fitter:
                         pn, prefitpar.str_quantity(prefitpar.value), "", par.units
                     )
                 elif par.frozen:
-                    if (
-                        par.name == "START"
-                        and prefitpar.value is None
-                        or par.name != "START"
-                        and par.name == "FINISH"
-                        and prefitpar.value is None
-                    ):
+                    if par.name in ["START", "FINISH"] and prefitpar.value is None:
                         s += ("{:" + spacingName + "s} {:20s} {:28g} {} \n").format(
                             pn, " ", par.value, par.units
                         )
@@ -430,10 +424,22 @@ class Fitter:
                         s += ("{:" + spacingName + "s} {:20g} {:28g} {} \n").format(
                             pn, prefitpar.value, par.value, par.units
                         )
+                    elif (
+                        par.name in ["CHI2", "CHI2R", "TRES", "DMRES"]
+                        and prefitpar.value is None
+                    ):
+                        s += ("{:" + spacingName + "s} {:20s} {:28g} {} \n").format(
+                            pn, " ", par.value, par.units
+                        )
+                    elif par.name in ["CHI2", "CHI2R", "TRES", "DMRES"]:
+                        s += ("{:" + spacingName + "s} {:20g} {:28g} {} \n").format(
+                            pn, prefitpar.value, par.value, par.units
+                        )
                     else:
                         s += ("{:" + spacingName + "s} {:20g} {:28s} {} \n").format(
                             pn, prefitpar.value, "", par.units
                         )
+
                 else:
                     # s += "{:14s} {:20g} {:20g} {:20.2g} {} \n".format(
                     #     pn,
@@ -699,6 +705,15 @@ class Fitter:
             if self.toas.clock_corr_info["include_bipm"]
             else "TT(TAI)"
         )
+        if chi2 is not None:
+            # assume a fit has been done
+            self.model.CHI2.value = chi2
+            self.model.CHI2R.value = chi2 / self.resids.dof
+            if not self.is_wideband:
+                self.model.TRES.quantity = self.resids.rms_weighted()
+            else:
+                self.model.TRES.quantity = self.resids.rms_weighted()["toa"]
+                self.model.DMRES.quantity = self.resids.rms_weighted()["dm"]
 
     def reset_model(self):
         """Reset the current model to the initial model."""

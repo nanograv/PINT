@@ -178,28 +178,30 @@ def test_prior_dict(data_NGC6440E_efac):
         bt = BayesianTiming(model, toas, use_pulse_numbers=True, prior_info=prior_info)
 
 
-def test_wideband_exception(data_J0740p6620_wb):
+def test_wideband_data(data_J0740p6620_wb):
     model, toas = data_J0740p6620_wb
-    with pytest.raises(NotImplementedError):
-        bt = BayesianTiming(model, toas)
+    bt = BayesianTiming(model, toas)
+
+    assert bt.is_wideband and bt.likelihood_method == "wls"
+
+    test_cube = 0.5 * np.ones(bt.nparams)
+    test_params = bt.prior_transform(test_cube)
+    assert np.all(np.isfinite(test_params))
+
+    lnpr = bt.lnprior(test_params)
+    assert np.isfinite(lnpr)
+
+    lnl = bt.lnlikelihood(test_params)
+    assert np.isfinite(lnl)
+
+    lnp = bt.lnposterior(test_params)
+    assert np.isfinite(lnp) and np.isclose(lnp, lnpr + lnl)
 
 
 def test_gls_exception(data_NGC6440E, data_NGC6440E_red):
     model, toas = data_NGC6440E_red
     with pytest.raises(NotImplementedError):
         bt = BayesianTiming(model, toas)
-
-    model, toas = data_NGC6440E
-    bt = BayesianTiming(model, toas)
-    bt.likelihood_method = "gls"
-    test_cube = 0.5 * np.ones(bt.nparams)
-    test_params = bt.prior_transform(test_cube)
-    with pytest.raises(NotImplementedError):
-        bt.lnlikelihood(test_params)
-
-    bt.likelihood_method = "bla"
-    with pytest.raises(ValueError):
-        bt.lnlikelihood(test_params)
 
 
 def test_badprior_exception(data_NGC6440E_default_priors):
