@@ -89,13 +89,13 @@ __all__ = [
 #
 # Comparisons with keywords in par file lines is done in a case insensitive way.
 ignore_params = {
-    "TRES",
+    #    "TRES",
     "TZRMJD",
     "TZRFRQ",
     "TZRSITE",
     "NITS",
     "IBOOT",
-    "CHI2R",
+    #    "CHI2R",
     "MODE",
     "PLANET_SHAPIRO2",
 }
@@ -339,13 +339,36 @@ class TimingModel:
         self.add_param_from_top(
             floatParameter(
                 name="CHI2",
-                value=0.0,
                 units="",
                 description="Chi-squared value obtained during fitting",
             ),
             "",
         )
+        self.add_param_from_top(
+            floatParameter(
+                name="CHI2R",
+                units="",
+                description="Reduced chi-squared value obtained during fitting",
+            ),
+            "",
+        )
 
+        self.add_param_from_top(
+            floatParameter(
+                name="TRES",
+                units=u.us,
+                description="TOA residual after fitting",
+            ),
+            "",
+        )
+        self.add_param_from_top(
+            floatParameter(
+                name="DMRES",
+                units=u.pc / u.cm**3,
+                description="DM residual after fitting (wideband only)",
+            ),
+            "",
+        )
         for cp in components:
             self.add_component(cp, setup=False, validate=False)
 
@@ -2286,7 +2309,7 @@ class TimingModel:
                         else:
                             value2[pn] = str(otherpar.value)
                         if otherpar.value != par.value:
-                            if par.name in ["START", "FINISH", "CHI2", "NTOA"]:
+                            if par.name in ["START", "FINISH", "CHI2", "CHI2R", "NTOA"]:
                                 if verbosity == "max":
                                     log.info(
                                         "Parameter %s has changed between these models"

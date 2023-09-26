@@ -15,6 +15,7 @@ the released changes.
 - Optionally avoid certain computations in `Astrometry.get_d_delay_quantities()` method.
 - Removed an unnecessary for loop in `solar_system_shapiro_delay`
 ### Added
+- CHI2, CHI2R, TRES, DMRES now in postfit par files
 - Added `WaveX` model as a `DelayComponent` with Fourier amplitudes as fitted parameters
 - `Parameter.as_latex` method for latex representation of a parameter.
 - `pint.output.publish` module and `pintpublish` script for generating publication (LaTeX) output.
