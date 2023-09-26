@@ -92,3 +92,11 @@ def test_zima_fuzzdays(tmp_path):
         lines = sys.stdout.getvalue()
     finally:
         sys.stdout = saved_stdout
+
+
+def test_zima_corrnoise(tmp_path):
+    parfile = datadir / "B1855+09_NANOGrav_9yv1.gls.par"
+    output_timfile = tmp_path / "fake_testzima.tim"
+    cmd = f"--addnoise --addcorrnoise {parfile} {output_timfile}"
+    zima.main(cmd.split())
+    assert os.path.isfile(output_timfile)
