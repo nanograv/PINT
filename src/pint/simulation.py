@@ -142,6 +142,8 @@ def make_fake_toas(ts, model, add_noise=False, add_correlated_noise=False, name=
         current model
     add_noise : bool, optional
         Add noise to the TOAs (otherwise `error` just populates the column)
+    add_correlated_noise : bool, optional
+        Add correlated noise to the TOAs if it's present in the timing mode.
     name : str, optional
         Name for the TOAs (goes into the flags)
 
@@ -237,6 +239,8 @@ def make_fake_toas_uniform(
         uncertainty to attach to each TOA
     add_noise : bool, optional
         Add noise to the TOAs (otherwise `error` just populates the column)
+    add_correlated_noise : bool, optional
+        Add correlated noise to the TOAs if it's present in the timing mode.
     wideband : bool, optional
         Whether to include wideband DM information with each TOA; default is
         not to include any wideband DM information. If True, the DM associated
@@ -351,6 +355,8 @@ def make_fake_toas_fromMJDs(
         uncertainty to attach to each TOA
     add_noise : bool, optional
         Add noise to the TOAs (otherwise `error` just populates the column)
+    add_correlated_noise : bool, optional
+        Add correlated noise to the TOAs if it's present in the timing mode.
     wideband : astropy.units.Quantity, optional
         Whether to include wideband DM values with each TOA; default is
         not to include any DM information
@@ -436,6 +442,8 @@ def make_fake_toas_fromtim(
         current model
     add_noise : bool, optional
         Add noise to the TOAs (otherwise `error` just populates the column)
+    add_correlated_noise : bool, optional
+        Add correlated noise to the TOAs if it's present in the timing mode.
     name : str, optional
         Name for the TOAs (goes into the flags)
 
