@@ -463,8 +463,8 @@ class Parameter:
         name = self.name if self.use_alias is None else self.use_alias
 
         # special cases for parameter names that change depending on format
-        if self.name == "CHI2" and format.lower() != "pint":
-            # no CHI2 for TEMPO/TEMPO2
+        if self.name in ["DMRES"] and format.lower() not in ["pint"]:
+            # DMRES only for PINT
             return ""
         elif self.name == "SWM" and format.lower() != "pint":
             # no SWM for TEMPO/TEMPO2
