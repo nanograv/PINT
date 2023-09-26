@@ -18,6 +18,7 @@ the released changes.
 - `pint.output.publish` module and `pintpublish` script for generating publication (LaTeX) output.
 - Added radial velocity methods for binary models
 - Added `DMWaveX` model (Fourier representation of DM noise)
+- Simulate correlated noise using `pint.simulate` functions and the `zima` script.
 ### Fixed
 - Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
 - Fixed RTD by specifying theme explicitly.
