@@ -20,6 +20,7 @@ the released changes.
 - `Parameter.as_latex` method for latex representation of a parameter.
 - `pint.output.publish` module and `pintpublish` script for generating publication (LaTeX) output.
 - Added radial velocity methods for binary models
+- Support for wideband data in `pint.bayesian` (no correlated noise).
 - Added `DMWaveX` model (Fourier representation of DM noise)
 - Faster implementations of `ssb_to_psb_xyz_ICRS()` method in `AstrometryEquatorial` and `AstrometryEcliptic` without using `astropy.coordinates`. Original version in `Astrometry` is retained for comparison.
 - `update` option in `Residuals.calc_chi2` and `WidebandTOAResiduals.calc_chi2`

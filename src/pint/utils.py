@@ -2354,8 +2354,8 @@ def compute_hash(filename):
     cryptographically robust. It uses the SHA256 algorithm, which
     is known to be vulnerable to a length-extension attack.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     f : str or Path or file-like
         The source of input. If file-like, it should return ``bytes`` not ``str`` -
         that is, the file should be opened in binary mode.
