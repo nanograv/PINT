@@ -8,8 +8,10 @@ from pinttestdata import datadir
 
 import matplotlib
 import pint.scripts.zima as zima
-from pint.models import get_model_and_toas
+from pint.models import get_model_and_toas, get_model
+from pint.simulation import make_fake_toas_uniform
 from pint.residuals import Residuals
+from pint.fitter import DownhillGLSFitter
 
 
 @pytest.mark.parametrize("addnoise", ["", "--addnoise"])
@@ -94,9 +96,39 @@ def test_zima_fuzzdays(tmp_path):
         sys.stdout = saved_stdout
 
 
-def test_zima_corrnoise(tmp_path):
+def test_simulate_corrnoise(tmp_path):
     parfile = datadir / "B1855+09_NANOGrav_9yv1.gls.par"
-    output_timfile = tmp_path / "fake_testzima.tim"
-    cmd = f"--addnoise --addcorrnoise {parfile} {output_timfile}"
-    zima.main(cmd.split())
-    assert os.path.isfile(output_timfile)
+
+    m = get_model(parfile)
+
+    # Simulated TOAs won't have the correct flags for some of these to work.
+    m.remove_component("ScaleToaError")
+    m.remove_component("EcorrNoise")
+    m.remove_component("DispersionDMX")
+    m.remove_component("PhaseJump")
+    m.remove_component("FD")
+    m.PLANET_SHAPIRO.value = False
+
+    t = make_fake_toas_uniform(
+        m.START.value,
+        m.FINISH.value,
+        1000,
+        m,
+        add_noise=True,
+        add_correlated_noise=True,
+    )
+
+    # Check if the created TOAs can be whitened using
+    # the original timing model. This won't work if the
+    # noise is not realized correctly.
+    ftr = DownhillGLSFitter(t, m)
+    ftr.fit_toas()
+    rc = sum(ftr.resids.noise_resids.values())
+    r = ftr.resids.time_resids
+    rw = r - rc
+    sigma = ftr.resids.get_data_error()
+
+    # This should be independent and standard-normal distributed.
+    x = (rw / sigma).to_value("")
+    assert np.isclose(np.std(x), 1, atol=0.2)
+    assert np.isclose(np.mean(x), 0, atol=0.01)
