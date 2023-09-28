@@ -162,7 +162,7 @@ def make_fake_toas(ts, model, add_noise=False, add_correlated_noise=False, name=
     if add_correlated_noise:
         U = model.noise_model_designmatrix(tsim)
         b = model.noise_model_basis_weight(tsim)
-        corrn = (U @ (b**0.5 * np.random.randn(len(b)))) << u.s
+        corrn = (U @ (b**0.5 * np.random.normal(size=len(b)))) << u.s
         tsim.adjust_TOAs(time.TimeDelta(corrn))
 
     if add_noise:
