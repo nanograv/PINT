@@ -279,7 +279,7 @@ def pulsar_B_lightcyl(f: u.Hz, fdot: u.Hz / u.s):
         2.9e8
         * u.G
         * p.to_value(u.s) ** (-5.0 / 2.0)
-        * np.sqrt(pd.to(u.dimensionless_unscaled).value)
+        * np.sqrt(pd.to_value(u.dimensionless_unscaled))
     )
 
 
