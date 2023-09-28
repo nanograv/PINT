@@ -20,6 +20,7 @@ the released changes.
 - Added radial velocity methods for binary models
 - Support for wideband data in `pint.bayesian` (no correlated noise).
 - Added `DMWaveX` model (Fourier representation of DM noise)
+- Piecewise orbital model (`BinaryBTPiecewise`)
 ### Fixed
 - Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
 - Fixed RTD by specifying theme explicitly.
