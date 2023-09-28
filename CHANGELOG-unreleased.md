@@ -20,7 +20,8 @@ the released changes.
 - Added radial velocity methods for binary models
 - Support for wideband data in `pint.bayesian` (no correlated noise).
 - Added `DMWaveX` model (Fourier representation of DM noise)
-- Simulate correlated noise using `pint.simulate` functions and the `zima` script.
+- Piecewise orbital model (`BinaryBTPiecewise`)
+- Simulate correlated noise using `pint.simulation` (also available via the `zima` script)
 ### Fixed
 - Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
 - Fixed RTD by specifying theme explicitly.
