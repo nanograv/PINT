@@ -891,6 +891,11 @@ class AstrometryEcliptic(Astrometry):
         # Instead look at what https://docs.astropy.org/en/stable/_modules/astropy/coordinates/sky_coordinate.html#SkyCoord.apply_space_motion
         # does, which is to use https://github.com/liberfa/erfa/blob/master/src/starpm.c
         # and then just use the relevant pieces of that
+
+        # but we need to check that the obliquity is the same
+        if ecl is not None and ecl != self.ECL.quantity:
+            return super().ssb_to_psb_xyz_ECL(epoch=epoch, ecl=ecl)
+
         if epoch is None:
             return self.coords_as_ECL(epoch=epoch, ecl=ecl).cartesian.xyz.transpose()
         epoch = (
@@ -900,15 +905,22 @@ class AstrometryEcliptic(Astrometry):
         )
         # compared to the general case above we can assume that the coordinates are ECL
         # so just access those components
+        lon = self.ELONG.quantity.to_value(u.radian)
+        lat = self.ELAT.quantity.to_value(u.radian)
+        pm_lon = (
+            self.PMELONG.quantity.to_value(u.radian / u.yr)
+            / np.cos(self.ELAT.quantity).value
+        )
+        pm_lat = self.PMELAT.quantity.to_value(u.radian / u.yr)
+
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", ErfaWarning)
             # note that pmsafe wants mu_lon not mu_lon * cos(lat)
             starpm = pmsafe(
-                self.ELONG.quantity.to_value(u.radian),
-                self.ELAT.quantity.to_value(u.radian),
-                self.PMELONG.quantity.to_value(u.radian / u.yr)
-                / np.cos(self.ELAT.quantity).value,
-                self.PMELAT.quantity.to_value(u.radian / u.yr),
+                lon,
+                lat,
+                pm_lon,
+                pm_lat,
                 0.0,
                 0.0,
                 self.POSEPOCH.quantity.jd1,
