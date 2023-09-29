@@ -79,7 +79,7 @@ class Astrometry(DelayComponent):
         # Instead look at what https://docs.astropy.org/en/stable/_modules/astropy/coordinates/sky_coordinate.html#SkyCoord.apply_space_motion
         # does, which is to use https://github.com/liberfa/erfa/blob/master/src/starpm.c
         # and then just use the relevant pieces of that
-        if epoch is None:
+        if epoch is None or self.POSEPOCH.quantity is None:
             return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
         epoch = (
             epoch if isinstance(epoch, Time) else Time(epoch, scale="tdb", format="mjd")
@@ -465,7 +465,7 @@ class AstrometryEquatorial(Astrometry):
         # Instead look at what https://docs.astropy.org/en/stable/_modules/astropy/coordinates/sky_coordinate.html#SkyCoord.apply_space_motion
         # does, which is to use https://github.com/liberfa/erfa/blob/master/src/starpm.c
         # and then just use the relevant pieces of that
-        if epoch is None:
+        if epoch is None or self.POSEPOCH is None:
             return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
         epoch = (
             epoch if isinstance(epoch, Time) else Time(epoch, scale="tdb", format="mjd")
@@ -888,7 +888,7 @@ class AstrometryEcliptic(Astrometry):
         if ecl is not None and ecl != self.ECL.quantity:
             return super().ssb_to_psb_xyz_ECL(epoch=epoch, ecl=ecl)
 
-        if epoch is None:
+        if epoch is None or self.POSEPOCH is None:
             return self.coords_as_ECL(epoch=epoch, ecl=ecl).cartesian.xyz.transpose()
         epoch = (
             epoch if isinstance(epoch, Time) else Time(epoch, scale="tdb", format="mjd")
