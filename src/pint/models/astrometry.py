@@ -73,7 +73,7 @@ class Astrometry(DelayComponent):
         """
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
 
-        # this is somewhat slow, since it repeatedly created difference SkyCoord Objects
+        # this is somewhat slow, since it repeatedly created different SkyCoord Objects
         # return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
 
         # Instead look at what https://docs.astropy.org/en/stable/_modules/astropy/coordinates/sky_coordinate.html#SkyCoord.apply_space_motion
@@ -81,10 +81,12 @@ class Astrometry(DelayComponent):
         # and then just use the relevant pieces of that
         if epoch is None or self.POSEPOCH.quantity is None:
             return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
-        epoch = (
-            epoch if isinstance(epoch, Time) else Time(epoch, scale="tdb", format="mjd")
-        )
-        # in the general case we don't know what system the coordinates will be in
+        if isinstance(epoch, Time):
+            jd1 = epoch.jd1
+            jd2 = epoch.jd2
+        else:
+            jd1 = 2400000.5
+            jd2 = epoch  # in the general case we don't know what system the coordinates will be in
         # so explicitly transform to ICRS
         cc = self.get_psr_coords()
         icrsrep = cc.icrs.represent_as(
@@ -103,8 +105,8 @@ class Astrometry(DelayComponent):
                 0.0,
                 self.POSEPOCH.quantity.jd1,
                 self.POSEPOCH.quantity.jd2,
-                epoch.jd1,
-                epoch.jd2,
+                jd1,
+                jd2,
             )
         # ra,dec now in radians
         ra, dec = starpm[0], starpm[1]
@@ -459,17 +461,21 @@ class AstrometryEquatorial(Astrometry):
         """
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
 
-        # this was somewhat slow, since it repeatedly created difference SkyCoord Objects
+        # this was somewhat slow, since it repeatedly created different SkyCoord Objects
         # return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
 
         # Instead look at what https://docs.astropy.org/en/stable/_modules/astropy/coordinates/sky_coordinate.html#SkyCoord.apply_space_motion
         # does, which is to use https://github.com/liberfa/erfa/blob/master/src/starpm.c
         # and then just use the relevant pieces of that
-        if epoch is None or self.POSEPOCH.quantity is None:
+        if epoch is None or (self.PMRA.quantity == 0 and self.PMDEC.quantity == 0):
             return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
-        epoch = (
-            epoch if isinstance(epoch, Time) else Time(epoch, scale="tdb", format="mjd")
-        )
+        if isinstance(epoch, Time):
+            jd1 = epoch.jd1
+            jd2 = epoch.jd2
+        else:
+            # assume MJD
+            jd1 = 2400000.5
+            jd2 = epoch
         # compared to the general case above we can assume that the coordinates are ICRS
         # so just access those components
         with warnings.catch_warnings():
@@ -485,8 +491,8 @@ class AstrometryEquatorial(Astrometry):
                 0.0,
                 self.POSEPOCH.quantity.jd1,
                 self.POSEPOCH.quantity.jd2,
-                epoch.jd1,
-                epoch.jd2,
+                jd1,
+                jd2,
             )
         # ra,dec now in radians
         ra, dec = starpm[0], starpm[1]
@@ -877,7 +883,7 @@ class AstrometryEcliptic(Astrometry):
         """
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
 
-        # this was somewhat slow, since it repeatedly created difference SkyCoord Objects
+        # this was somewhat slow, since it repeatedly created different SkyCoord Objects
         # return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
 
         # Instead look at what https://docs.astropy.org/en/stable/_modules/astropy/coordinates/sky_coordinate.html#SkyCoord.apply_space_motion
@@ -888,11 +894,14 @@ class AstrometryEcliptic(Astrometry):
         if ecl is not None and ecl != self.ECL.quantity:
             return super().ssb_to_psb_xyz_ECL(epoch=epoch, ecl=ecl)
 
-        if epoch is None or self.POSEPOCH.quantity is None:
+        if epoch is None or (self.PMELONG.value == 0 and self.PMELAT.value == 0):
             return self.coords_as_ECL(epoch=epoch, ecl=ecl).cartesian.xyz.transpose()
-        epoch = (
-            epoch if isinstance(epoch, Time) else Time(epoch, scale="tdb", format="mjd")
-        )
+        if isinstance(epoch, Time):
+            jd1 = epoch.jd1
+            jd2 = epoch.jd2
+        else:
+            jd1 = 2400000.5
+            jd2 = epoch
         # compared to the general case above we can assume that the coordinates are ECL
         # so just access those components
         lon = self.ELONG.quantity.to_value(u.radian)
@@ -915,8 +924,8 @@ class AstrometryEcliptic(Astrometry):
                 0.0,
                 self.POSEPOCH.quantity.jd1,
                 self.POSEPOCH.quantity.jd2,
-                epoch.jd1,
-                epoch.jd2,
+                jd1,
+                jd2,
             )
         # lon,lat now in radians
         lon, lat = starpm[0], starpm[1]
