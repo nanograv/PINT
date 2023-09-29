@@ -82,9 +82,7 @@ class Astrometry(DelayComponent):
         if epoch is None:
             return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
         epoch = (
-            epoch
-            if isinstance(epoch, Time)
-            else Time(epoch, scale="tdb", format="pulsar_mjd")
+            epoch if isinstance(epoch, Time) else Time(epoch, scale="tdb", format="mjd")
         )
         # in the general case we don't know what system the coordinates will be in
         # so explicitly transform to ICRS
@@ -470,9 +468,7 @@ class AstrometryEquatorial(Astrometry):
         if epoch is None:
             return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
         epoch = (
-            epoch
-            if isinstance(epoch, Time)
-            else Time(epoch, scale="tdb", format="pulsar_mjd")
+            epoch if isinstance(epoch, Time) else Time(epoch, scale="tdb", format="mjd")
         )
         # compared to the general case above we can assume that the coordinates are ICRS
         # so just access those components
@@ -895,9 +891,7 @@ class AstrometryEcliptic(Astrometry):
         if epoch is None:
             return self.coords_as_ECL(epoch=epoch, ecl=ecl).cartesian.xyz.transpose()
         epoch = (
-            epoch
-            if isinstance(epoch, Time)
-            else Time(epoch, scale="tdb", format="pulsar_mjd")
+            epoch if isinstance(epoch, Time) else Time(epoch, scale="tdb", format="mjd")
         )
         # compared to the general case above we can assume that the coordinates are ECL
         # so just access those components
