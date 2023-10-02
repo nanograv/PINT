@@ -1165,7 +1165,11 @@ class DownhillFitter(Fitter):
         min_lambda=1e-3,
         debug=False,
     ):
-        "Downhill fit implementation. See documentation of the `fit_toas()` method for more details."
+        """Downhill fit implementation for fitting the timing model parameters.
+        The `fit_toas()` calls this method iteratively to fit the timing model parameters
+        while also fitting for white noise parameters.
+
+        See documentation of the `fit_toas()` method for more details."""
         # setup
         self.model.validate()
         self.model.validate_toas(self.toas)
@@ -1289,6 +1293,12 @@ class DownhillFitter(Fitter):
         This function can also estimate white noise parameters (EFACs and EQUADs)
         and their uncertainties.
 
+        If there are no free white noise parameters, this function will do one
+        iteration of the downhill fit (implemented in the `_fit_toas()` method).
+        If free white noise parameters are present, it will fit for them by numerically
+        maximizing the likelihood function (implemented in the `_fit_noise()` method).
+        The timing model fit and the noise model fit are run iteratively in an alternating fashion.
+
         Parameters
         ==========
 
@@ -1315,7 +1325,7 @@ class DownhillFitter(Fitter):
                 debug=debug,
             )
         else:
-            log.info("Will fit for noise parameters.")
+            log.debug("Will fit for noise parameters.")
             for _ in range(noise_fit_niter):
                 self._fit_toas(
                     maxiter=maxiter,
@@ -1355,7 +1365,10 @@ class DownhillFitter(Fitter):
             getattr(self.model, fp).uncertainty_value = err
 
     def _fit_noise(self):
-        """Estimate noise parameters and their uncertainties."""
+        """Estimate noise parameters and their uncertainties. Noise parameters
+        are estimated by numerically maximizing the log-likelihood function including
+        the normalization term. The uncertainties thereof are computed using the
+        numerically-evaluated Hessian."""
         free_noise_params = self._get_free_noise_params()
 
         xs0 = [getattr(self.model, fp).value for fp in free_noise_params]
@@ -1375,6 +1388,10 @@ class DownhillFitter(Fitter):
         result = opt.minimize(_mloglike, xs0, method="Nelder-Mead")
 
         def _like(xs):
+            """The likelihood function normalized by its maximum value.
+            Note that this function will give sensible results only in the
+            vicinity of the maximum-likelihood point and will overflow
+            otherwise due to the `exp()` function."""
             return np.exp(-_mloglike(xs) + result.fun)
 
         hess = Hessdiag(_like)

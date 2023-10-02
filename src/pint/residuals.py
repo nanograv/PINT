@@ -503,7 +503,11 @@ class Residuals:
     def _calc_gls_chi2(self, lognorm=False):
         """Compute the chi2 when correlated noise is present in the timing model.
         If the system is not singular, it uses Cholesky factorization to evaluate this.
-        If the system is singular, it uses singular value decomposition instead."""
+        If the system is singular, it uses singular value decomposition instead.
+
+        If `lognorm=True` is given, the log-normalization-factor of the likelihood
+        function will also be returned.
+        """
         self.update()
 
         residuals = self.time_resids.to(u.s).value
@@ -577,6 +581,18 @@ class Residuals:
         Handling of problematic results - degenerate conditions explored by
         a minimizer for example - may need to be checked to confirm that they
         correctly return infinity.
+
+        If `lognorm=True` is given, the log-normalization-factor of the likelihood
+        function will also be returned.
+
+        Parameters
+        ----------
+        lognorm: bool
+            If True, return the the log-normalization-factor of the likelihood
+            function along with the chi2 value.
+
+        Returns
+
         """
         if self.model.has_correlated_errors:
             return self._calc_gls_chi2(lognorm=lognorm)

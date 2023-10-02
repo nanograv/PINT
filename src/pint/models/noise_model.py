@@ -75,7 +75,7 @@ class ScaleToaError(NoiseComponent):
             maskParameter(
                 name="TNEQ",
                 units=u.LogUnit(physical_unit=u.second),
-                description="An error term added in quadrature to the scaled (by EFAC) TOA uncertainty in the unit of log10(second).",
+                description="An error term added in quadrature to the scaled (by EFAC) TOA uncertainty in units of log10(second).",
             )
         )
         self.covariance_matrix_funcs += [self.sigma_scaled_cov_matrix]
