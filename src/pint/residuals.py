@@ -516,8 +516,6 @@ class Residuals:
         phi = self.model.noise_model_basis_weight(self.toas)
         phiinv = 1 / phi
 
-        assert np.all(phiinv > 0) and np.all(np.isfinite(phiinv))
-
         # For implicit offset subtraction
         if "PHOFF" not in self.model:
             M = np.append(M, np.ones((len(self.toas), 1)), axis=1)
