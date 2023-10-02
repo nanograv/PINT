@@ -1380,10 +1380,7 @@ class DownhillFitter(Fitter):
             for fp, x in zip(free_noise_params, xs):
                 getattr(model1, fp).value = x
 
-            res = Residuals(self.toas, model1)
-            chi2, lognorm = res.calc_chi2(lognorm=True)
-
-            return chi2 / 2 + lognorm
+            return -Residuals(self.toas, model1).lnlikelihood()
 
         result = opt.minimize(_mloglike, xs0, method="Nelder-Mead")
 

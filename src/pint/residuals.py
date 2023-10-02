@@ -625,6 +625,10 @@ class Residuals:
                 log_norm = np.sum(np.log(err.value))
                 return chi2, log_norm
 
+    def lnlikelihood(self):
+        chi2, log_norm = self.calc_chi2(lognorm=True)
+        return -(chi2 / 2 + log_norm)
+
     def ecorr_average(self, use_noise_model=True):
         """Uses the ECORR noise model time-binning to compute "epoch-averaged" residuals.
 
