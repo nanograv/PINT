@@ -80,6 +80,7 @@ class ScaleToaError(NoiseComponent):
         )
         self.covariance_matrix_funcs += [self.sigma_scaled_cov_matrix]
         self.scaled_toa_sigma_funcs += [self.scale_toa_sigma]
+        self.toasigma_deriv_funcs = {}
 
     def setup(self):
         super().setup()
@@ -131,6 +132,21 @@ class ScaleToaError(NoiseComponent):
                 par = getattr(self, pp)
                 self.EQUADs[pp] = (par.key, par.key_value)
 
+        for ef in self.EFACs:
+            self.register_toasigma_deriv_funcs(self.d_toasigma_d_EFAC, ef)
+
+        for eq in self.EQUADs:
+            self.register_toasigma_deriv_funcs(self.d_toasigma_d_EQUAD, eq)
+
+    def register_toasigma_deriv_funcs(self, func, param):
+        pn = self.match_param_aliases(param)
+        if pn not in list(self.toasigma_deriv_funcs.keys()):
+            self.toasigma_deriv_funcs[pn] = [func]
+        elif func in self.toasigma_deriv_funcs[pn]:
+            return
+        else:
+            self.toasigma_deriv_funcs[pn] += [func]
+
     def validate(self):
         super().validate()
         # check duplicate
@@ -139,7 +155,7 @@ class ScaleToaError(NoiseComponent):
             if [x for x in l if l.count(x) > 1] != []:
                 raise ValueError(f"'{el}' have duplicated keys and key values.")
 
-    def scale_toa_sigma(self, toas):
+    def scale_toa_sigma(self, toas, warn=True):
         sigma_scaled = toas.table["error"].quantity.copy()
         for equad_name in self.EQUADs:
             equad = getattr(self, equad_name)
@@ -148,20 +164,53 @@ class ScaleToaError(NoiseComponent):
             mask = equad.select_toa_mask(toas)
             if np.any(mask):
                 sigma_scaled[mask] = np.hypot(sigma_scaled[mask], equad.quantity)
-            else:
+            elif warn:
                 warnings.warn(f"EQUAD {equad} has no TOAs")
         for efac_name in self.EFACs:
             efac = getattr(self, efac_name)
             mask = efac.select_toa_mask(toas)
             if np.any(mask):
                 sigma_scaled[mask] *= efac.quantity
-            else:
+            elif warn:
                 warnings.warn(f"EFAC {efac} has no TOAs")
         return sigma_scaled
 
     def sigma_scaled_cov_matrix(self, toas):
         scaled_sigma = self.scale_toa_sigma(toas).to(u.s).value ** 2
         return np.diag(scaled_sigma)
+
+    def d_toasigma_d_EFAC(self, toas, param):
+        par = getattr(self, param)
+        mask = par.select_toa_mask(toas)
+        result = np.zeros(len(toas)) << u.s
+        result[mask] = self.scale_toa_sigma(toas[mask], warn=False).to(
+            u.s
+        ) / par.quantity.to(u.dimensionless_unscaled)
+        return result
+
+    def d_toasigma_d_EQUAD(self, toas, param):
+        par = getattr(self, param)
+        mask = par.select_toa_mask(toas)
+        toas_mask = toas[mask]
+
+        result = np.zeros(len(toas)) << u.dimensionless_unscaled
+
+        sigma_mask = self.scale_toa_sigma(toas_mask, warn=False)
+
+        sigma2_mask_noefac = toas_mask.get_errors().to(u.s) ** 2
+        for equad_name in self.EQUADs:
+            equad = getattr(self, equad_name)
+            if equad.quantity is None:
+                continue
+            eqmask = equad.select_toa_mask(toas_mask)
+            if np.any(eqmask):
+                sigma2_mask_noefac[eqmask] += equad.quantity**2
+
+        result[mask] = (sigma_mask * par.quantity / sigma2_mask_noefac).to(
+            u.dimensionless_unscaled
+        )
+
+        return result
 
 
 class ScaleDmError(NoiseComponent):

@@ -1045,8 +1045,13 @@ class TimingModel:
 
     @property_exists
     def dm_derivs(self):  #  TODO need to be careful about the name here.
-        """List of dm derivative functions."""
+        """List of DM derivative functions."""
         return self.get_deriv_funcs("DelayComponent", "dm")
+
+    @property_exists
+    def toasigma_derivs(self):
+        """List of scaled TOA uncertainty derivative functions"""
+        return self.get_deriv_funcs("NoiseComponent", "toasigma")
 
     @property_exists
     def d_phase_d_delay_funcs(self):
@@ -1916,7 +1921,7 @@ class TimingModel:
         return d_delay * (u.second / unit)
 
     def d_dm_d_param(self, data, param):
-        """Return the derivative of dm with respect to the parameter."""
+        """Return the derivative of DM with respect to the parameter."""
         par = getattr(self, param)
         result = np.zeros(len(data)) << (u.pc / u.cm**3 / par.units)
         dm_df = self.dm_derivs.get(param, None)
@@ -1927,6 +1932,23 @@ class TimingModel:
                 return result
 
         for df in dm_df:
+            result += df(data, param).to(
+                result.unit, equivalencies=u.dimensionless_angles()
+            )
+        return result
+
+    def d_toasigma_d_param(self, data, param):
+        """Return the derivative of the scaled TOA uncertainty with respect to the parameter."""
+        par = getattr(self, param)
+        result = np.zeros(len(data)) << (u.s / par.units)
+        sigma_df = self.toasigma_derivs.get(param, None)
+        if sigma_df is None:
+            if param not in self.params:  # Maybe add differentiable params
+                raise AttributeError(f"Parameter {param} does not exist")
+            else:
+                return result
+
+        for df in sigma_df:
             result += df(data, param).to(
                 result.unit, equivalencies=u.dimensionless_angles()
             )
