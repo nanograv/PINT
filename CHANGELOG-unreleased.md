@@ -20,6 +20,7 @@ the released changes.
 - Added radial velocity methods for binary models
 - Support for wideband data in `pint.bayesian` (no correlated noise).
 - Added `DMWaveX` model (Fourier representation of DM noise)
+- Piecewise orbital model (`BinaryBTPiecewise`)
 - Optionally return the the log normalization factor of the likelihood function from the `Residuals.calc_chi2()` method.
 - `DownhilWLSFitter` can now estimate white noise parameters and their uncertainties.
 ### Fixed
