@@ -523,7 +523,7 @@ class Residuals:
             # 1e-40 is used here instead of 0 to avoid an
             # un-normalizable distribution.
             # ENTERPRISE uses the same value.
-            phiinv = np.append(phiinv, [1e-20])
+            phiinv = np.append(phiinv, [1e-40])
 
         M, norm = normalize_designmatrix(M, None)
 
