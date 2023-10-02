@@ -1392,7 +1392,15 @@ class DownhillFitter(Fitter):
             Note that this function will give sensible results only in the
             vicinity of the maximum-likelihood point and will overflow
             otherwise due to the `exp()` function."""
-            return np.exp(-_mloglike(xs) + result.fun)
+            result = np.exp(-_mloglike(xs) + result.fun)
+
+            if np.isnan(result):
+                raise ValueError(
+                    "Float overflow in `_like(xs)`. This happens when "
+                    "xs is too far away from the maximum likelihood point."
+                )
+
+            return result
 
         hess = Hessdiag(_like)
         errs = np.sqrt(-_like(result.x) / hess(result.x))
