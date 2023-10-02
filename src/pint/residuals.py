@@ -560,8 +560,8 @@ class Residuals:
             logdet_Sigma = (
                 np.sum(np.log(np.diag(c[0]))) if not svd else np.sum(np.abs(np.log(s)))
             )
-            lognorm = logdet_N + logdet_Phiinv + logdet_Sigma
-            return chi2, lognorm
+            log_norm = logdet_N + logdet_Phiinv + logdet_Sigma
+            return chi2, log_norm
 
     def calc_chi2(self, lognorm=False):
         """Return the weighted chi-squared for the model and toas.
@@ -592,7 +592,9 @@ class Residuals:
             function along with the chi2 value.
 
         Returns
-
+        -------
+        chi2                   if lognorm is False
+        (chi2, log_norm)       if lognorm is True
         """
         if self.model.has_correlated_errors:
             return self._calc_gls_chi2(lognorm=lognorm)
@@ -620,8 +622,8 @@ class Residuals:
             if not lognorm:
                 return chi2
             else:
-                lognorm = np.sum(np.log(err.value))
-                return chi2, lognorm
+                log_norm = np.sum(np.log(err.value))
+                return chi2, log_norm
 
     def ecorr_average(self, use_noise_model=True):
         """Uses the ECORR noise model time-binning to compute "epoch-averaged" residuals.
