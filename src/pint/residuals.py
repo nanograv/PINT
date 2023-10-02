@@ -630,6 +630,7 @@ class Residuals:
                 return chi2, log_norm
 
     def lnlikelihood(self):
+        """Compute the log-likelihood for the model and TOAs."""
         chi2, log_norm = self.calc_chi2(lognorm=True)
         return -(chi2 / 2 + log_norm)
 
