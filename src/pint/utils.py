@@ -56,7 +56,6 @@ import warnings
 
 import pint
 import pint.pulsar_ecliptic
-from pint.residuals import Residuals
 from pint.toa_select import TOASelect
 
 
@@ -2603,6 +2602,8 @@ def normalize_designmatrix(M, params):
 
 
 def akaike_information_criterion(model, toas):
+    from pint.residuals import Residuals
+
     k = (
         len(model.free_params)
         if "PhaseOffset" in model.components
