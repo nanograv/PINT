@@ -11,7 +11,7 @@ from astropy.time import Time
 
 from loguru import logger as log
 
-from erfa import ErfaWarning, pmsafe
+from erfa import ErfaWarning, pmsafe, starpm
 from pint import ls
 from pint.models.parameter import (
     AngleParameter,
@@ -23,7 +23,6 @@ from pint.models.timing_model import DelayComponent, MissingParameter
 from pint.pulsar_ecliptic import OBL, PulsarEcliptic
 from pint.utils import add_dummy_distance, remove_dummy_distance
 
-
 astropy_version = sys.modules["astropy"].__version__
 mas_yr = u.mas / u.yr
 
@@ -32,6 +31,8 @@ __all__ = [
     "AstrometryEcliptic",
     "Astrometry",
 ]
+
+pmsafe = starpm
 
 
 class Astrometry(DelayComponent):
@@ -81,12 +82,14 @@ class Astrometry(DelayComponent):
         # and then just use the relevant pieces of that
         if epoch is None or self.POSEPOCH.quantity is None:
             return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
+
         if isinstance(epoch, Time):
             jd1 = epoch.jd1
             jd2 = epoch.jd2
         else:
             jd1 = 2400000.5
-            jd2 = epoch  # in the general case we don't know what system the coordinates will be in
+            jd2 = epoch
+        # in the general case we don't know what system the coordinates will be in
         # so explicitly transform to ICRS
         cc = self.get_psr_coords()
         icrsrep = cc.icrs.represent_as(
@@ -96,12 +99,12 @@ class Astrometry(DelayComponent):
         icrsvel = icrsrep.differentials["s"]
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", ErfaWarning)
-            starpm = pmsafe(
+            starpmout = pmsafe(
                 icrsrep.lon.radian,
                 icrsrep.lat.radian,
                 icrsvel.d_lon.to_value(u.radian / u.yr),
                 icrsvel.d_lat.to_value(u.radian / u.yr),
-                0.0,
+                cc.PX.quantity.to_value(u.arcsec),
                 0.0,
                 self.POSEPOCH.quantity.jd1,
                 self.POSEPOCH.quantity.jd2,
@@ -109,7 +112,7 @@ class Astrometry(DelayComponent):
                 jd2,
             )
         # ra,dec now in radians
-        ra, dec = starpm[0], starpm[1]
+        ra, dec = starpmout[0], starpmout[1]
         x = np.cos(ra) * np.cos(dec)
         y = np.sin(ra) * np.cos(dec)
         z = np.sin(dec)
@@ -173,7 +176,7 @@ class Astrometry(DelayComponent):
     def barycentric_radio_freq(self, toas):
         raise NotImplementedError
 
-    def solar_system_geometric_delay(self, toas, acc_delay=None, method=1):
+    def solar_system_geometric_delay(self, toas, acc_delay=None):
         """Returns geometric delay (in sec) due to position of site in
         solar system.  This includes Roemer delay and parallax.
 
@@ -185,9 +188,7 @@ class Astrometry(DelayComponent):
         # c selects the non-barycentric TOAs that need actual calculation
         c = np.logical_and.reduce(tbl["ssb_obs_pos"] != 0, axis=1)
         if np.any(c):
-            L_hat = self.ssb_to_psb_xyz_ICRS(
-                epoch=tbl["tdbld"][c].astype(np.float64), method=method
-            )
+            L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"][c].astype(np.float64))
             re_dot_L = np.sum(tbl["ssb_obs_pos"][c] * L_hat, axis=1)
             delay[c] = -re_dot_L.to(ls).value
             if self.PX.value != 0.0:
@@ -447,7 +448,7 @@ class AstrometryEquatorial(Astrometry):
             "PMDEC": self.PMDEC.quantity,
         }
 
-    def ssb_to_psb_xyz_ICRS(self, epoch=None, method=1):
+    def ssb_to_psb_xyz_ICRS(self, epoch=None):
         """Returns unit vector(s) from SSB to pulsar system barycenter under ICRS.
 
         If epochs (MJD) are given, proper motion is included in the calculation.
@@ -469,36 +470,8 @@ class AstrometryEquatorial(Astrometry):
         # Instead look at what https://docs.astropy.org/en/stable/_modules/astropy/coordinates/sky_coordinate.html#SkyCoord.apply_space_motion
         # does, which is to use https://github.com/liberfa/erfa/blob/master/src/starpm.c
         # and then just use the relevant pieces of that
-        if (
-            epoch is None
-            or (self.PMRA.quantity == 0 and self.PMDEC.quantity == 0)
-            or method == 0
-        ):
+        if epoch is None or (self.PMRA.quantity == 0 and self.PMDEC.quantity == 0):
             return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
-        elif method == 1:
-            ra0, dec0 = self.RAJ.quantity, self.DECJ.quantity
-            pmra, pmdec = self.PMRA.quantity, self.PMDEC.quantity
-            posepoch = self.POSEPOCH.quantity
-
-            if epoch is None or (pmra == 0 and pmdec == 0):
-                ra, dec = ra0, dec0
-            else:
-                epoch = (
-                    epoch
-                    if isinstance(epoch, Time)
-                    else Time(epoch, scale="tdb", format="mjd")
-                )
-                dt = epoch - posepoch
-                ra = ra0 + pmra * dt / np.cos(dec0)
-                dec = dec0 + pmdec * dt
-
-            ra = ra.to_value(u.rad)
-            dec = dec.to_value(u.rad)
-
-            cos_dec = np.cos(dec)
-            return u.Quantity(
-                [cos_dec * np.cos(ra), cos_dec * np.sin(ra), np.sin(dec)]
-            ).T
 
         if isinstance(epoch, Time):
             jd1 = epoch.jd1
@@ -511,14 +484,14 @@ class AstrometryEquatorial(Astrometry):
         # so just access those components
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", ErfaWarning)
-            # note that pmsafe wants mu_alpha not mu_alpha * cos(delta)
-            starpm = pmsafe(
+            # note that starpm wants mu_alpha not mu_alpha * cos(delta)
+            starpmout = pmsafe(
                 self.RAJ.quantity.to_value(u.radian),
                 self.DECJ.quantity.to_value(u.radian),
                 self.PMRA.quantity.to_value(u.radian / u.yr)
                 / np.cos(self.DECJ.quantity).value,
                 self.PMDEC.quantity.to_value(u.radian / u.yr),
-                0.0,
+                self.PX.quantity.to_value(u.arcsec),
                 0.0,
                 self.POSEPOCH.quantity.jd1,
                 self.POSEPOCH.quantity.jd2,
@@ -526,7 +499,7 @@ class AstrometryEquatorial(Astrometry):
                 jd2,
             )
         # ra,dec now in radians
-        ra, dec = starpm[0], starpm[1]
+        ra, dec = starpmout[0], starpmout[1]
         x = np.cos(ra) * np.cos(dec)
         y = np.sin(ra) * np.cos(dec)
         z = np.sin(dec)
@@ -946,12 +919,12 @@ class AstrometryEcliptic(Astrometry):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", ErfaWarning)
             # note that pmsafe wants mu_lon not mu_lon * cos(lat)
-            starpm = pmsafe(
+            starpmout = pmsafe(
                 lon,
                 lat,
                 pm_lon,
                 pm_lat,
-                0.0,
+                self.PX.quantity.to_value(u.arcsec),
                 0.0,
                 self.POSEPOCH.quantity.jd1,
                 self.POSEPOCH.quantity.jd2,
@@ -959,7 +932,7 @@ class AstrometryEcliptic(Astrometry):
                 jd2,
             )
         # lon,lat now in radians
-        lon, lat = starpm[0], starpm[1]
+        lon, lat = starpmout[0], starpmout[1]
         x = np.cos(lon) * np.cos(lat)
         y = np.sin(lon) * np.cos(lat)
         z = np.sin(lat)
