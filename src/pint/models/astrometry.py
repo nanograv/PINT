@@ -173,7 +173,7 @@ class Astrometry(DelayComponent):
     def barycentric_radio_freq(self, toas):
         raise NotImplementedError
 
-    def solar_system_geometric_delay(self, toas, acc_delay=None):
+    def solar_system_geometric_delay(self, toas, acc_delay=None, method=1):
         """Returns geometric delay (in sec) due to position of site in
         solar system.  This includes Roemer delay and parallax.
 
@@ -185,7 +185,9 @@ class Astrometry(DelayComponent):
         # c selects the non-barycentric TOAs that need actual calculation
         c = np.logical_and.reduce(tbl["ssb_obs_pos"] != 0, axis=1)
         if np.any(c):
-            L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"][c].astype(np.float64))
+            L_hat = self.ssb_to_psb_xyz_ICRS(
+                epoch=tbl["tdbld"][c].astype(np.float64), method=method
+            )
             re_dot_L = np.sum(tbl["ssb_obs_pos"][c] * L_hat, axis=1)
             delay[c] = -re_dot_L.to(ls).value
             if self.PX.value != 0.0:
@@ -445,7 +447,7 @@ class AstrometryEquatorial(Astrometry):
             "PMDEC": self.PMDEC.quantity,
         }
 
-    def ssb_to_psb_xyz_ICRS(self, epoch=None):
+    def ssb_to_psb_xyz_ICRS(self, epoch=None, method=1):
         """Returns unit vector(s) from SSB to pulsar system barycenter under ICRS.
 
         If epochs (MJD) are given, proper motion is included in the calculation.
@@ -467,8 +469,37 @@ class AstrometryEquatorial(Astrometry):
         # Instead look at what https://docs.astropy.org/en/stable/_modules/astropy/coordinates/sky_coordinate.html#SkyCoord.apply_space_motion
         # does, which is to use https://github.com/liberfa/erfa/blob/master/src/starpm.c
         # and then just use the relevant pieces of that
-        if epoch is None or (self.PMRA.quantity == 0 and self.PMDEC.quantity == 0):
+        if (
+            epoch is None
+            or (self.PMRA.quantity == 0 and self.PMDEC.quantity == 0)
+            or method == 0
+        ):
             return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
+        elif method == 1:
+            ra0, dec0 = self.RAJ.quantity, self.DECJ.quantity
+            pmra, pmdec = self.PMRA.quantity, self.PMDEC.quantity
+            posepoch = self.POSEPOCH.quantity
+
+            if epoch is None or (pmra == 0 and pmdec == 0):
+                ra, dec = ra0, dec0
+            else:
+                epoch = (
+                    epoch
+                    if isinstance(epoch, Time)
+                    else Time(epoch, scale="tdb", format="mjd")
+                )
+                dt = epoch - posepoch
+                ra = ra0 + pmra * dt / np.cos(dec0)
+                dec = dec0 + pmdec * dt
+
+            ra = ra.to_value(u.rad)
+            dec = dec.to_value(u.rad)
+
+            cos_dec = np.cos(dec)
+            return u.Quantity(
+                [cos_dec * np.cos(ra), cos_dec * np.sin(ra), np.sin(dec)]
+            ).T
+
         if isinstance(epoch, Time):
             jd1 = epoch.jd1
             jd2 = epoch.jd2
