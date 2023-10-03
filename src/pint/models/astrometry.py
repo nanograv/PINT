@@ -104,7 +104,7 @@ class Astrometry(DelayComponent):
                 icrsrep.lat.radian,
                 icrsvel.d_lon.to_value(u.radian / u.yr),
                 icrsvel.d_lat.to_value(u.radian / u.yr),
-                cc.PX.quantity.to_value(u.arcsec),
+                self.PX.quantity.to_value(u.arcsec),
                 0.0,
                 self.POSEPOCH.quantity.jd1,
                 self.POSEPOCH.quantity.jd2,
