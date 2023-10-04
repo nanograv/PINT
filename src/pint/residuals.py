@@ -634,6 +634,12 @@ class Residuals:
         chi2, log_norm = self.calc_chi2(lognorm=True)
         return -(chi2 / 2 + log_norm)
 
+    def d_lnlikelihood_d_whitenoise_param(self, param):
+        r = self.time_resids
+        sigma = self.get_data_error()
+        d_sigma_d_param = self.model.d_toasigma_d_param(self.toas, param)
+        return np.sum(((r / sigma) ** 2 - 1) / sigma * d_sigma_d_param)
+
     def ecorr_average(self, use_noise_model=True):
         """Uses the ECORR noise model time-binning to compute "epoch-averaged" residuals.
 

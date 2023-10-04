@@ -1382,7 +1382,23 @@ class DownhillFitter(Fitter):
 
             return -Residuals(self.toas, model1).lnlikelihood()
 
-        maxlike_result = opt.minimize(_mloglike, xs0, method="Nelder-Mead")
+        def _mloglike_grad(xs):
+            """Gradient of the negative of the log-likelihood function w.r.t. white noise parameters."""
+            for fp, x in zip(free_noise_params, xs):
+                getattr(model1, fp).value = x
+
+            res = Residuals(self.toas, model1)
+
+            return np.array(
+                [
+                    -res.d_lnlikelihood_d_whitenoise_param(par).value
+                    for par in free_noise_params
+                ]
+            )
+
+        maxlike_result = opt.minimize(
+            _mloglike, xs0, method="Newton-CG", jac=_mloglike_grad
+        )
 
         hess = Hessdiag(_mloglike)
         errs = np.sqrt(1 / hess(maxlike_result.x))
