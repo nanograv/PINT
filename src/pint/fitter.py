@@ -1382,27 +1382,27 @@ class DownhillFitter(Fitter):
 
             return -Residuals(self.toas, model1).lnlikelihood()
 
-        result = opt.minimize(_mloglike, xs0, method="Nelder-Mead")
+        maxlike_result = opt.minimize(_mloglike, xs0, method="Nelder-Mead")
 
         def _like(xs):
             """The likelihood function normalized by its maximum value.
             Note that this function will give sensible results only in the
             vicinity of the maximum-likelihood point and will overflow
             otherwise due to the `exp()` function."""
-            result = np.exp(-_mloglike(xs) + result.fun)
+            nlike = np.exp(-_mloglike(xs) + maxlike_result.fun)
 
-            if np.isnan(result):
-                raise ValueError(
-                    "Float overflow in `_like(xs)`. This happens when "
-                    "xs is too far away from the maximum likelihood point."
-                )
+            # if np.isnan(nlike):
+            #     raise ValueError(
+            #         "Float overflow in `_like(xs)`. This happens when "
+            #         "xs is too far away from the maximum likelihood point."
+            #     )
 
-            return result
+            return nlike
 
         hess = Hessdiag(_like)
-        errs = np.sqrt(-_like(result.x) / hess(result.x))
+        errs = np.sqrt(-_like(maxlike_result.x) / hess(maxlike_result.x))
 
-        return result.x, errs
+        return maxlike_result.x, errs
 
 
 class WLSState(ModelState):
