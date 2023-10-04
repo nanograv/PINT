@@ -1384,23 +1384,8 @@ class DownhillFitter(Fitter):
 
         maxlike_result = opt.minimize(_mloglike, xs0, method="Nelder-Mead")
 
-        def _like(xs):
-            """The likelihood function normalized by its maximum value.
-            Note that this function will give sensible results only in the
-            vicinity of the maximum-likelihood point and will overflow
-            otherwise due to the `exp()` function."""
-            nlike = np.exp(-_mloglike(xs) + maxlike_result.fun)
-
-            # if np.isnan(nlike):
-            #     raise ValueError(
-            #         "Float overflow in `_like(xs)`. This happens when "
-            #         "xs is too far away from the maximum likelihood point."
-            #     )
-
-            return nlike
-
-        hess = Hessdiag(_like)
-        errs = np.sqrt(-_like(maxlike_result.x) / hess(maxlike_result.x))
+        hess = Hessdiag(_mloglike)
+        errs = np.sqrt(1 / hess(maxlike_result.x))
 
         return maxlike_result.x, errs
 
