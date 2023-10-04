@@ -11,7 +11,7 @@ from astropy.time import Time
 
 from loguru import logger as log
 
-from erfa import ErfaWarning, pmsafe, starpm
+from erfa import ErfaWarning, pmsafe
 from pint import ls
 from pint.models.parameter import (
     AngleParameter,
@@ -31,8 +31,6 @@ __all__ = [
     "AstrometryEcliptic",
     "Astrometry",
 ]
-
-pmsafe = starpm
 
 
 class Astrometry(DelayComponent):
