@@ -25,6 +25,10 @@ the released changes.
 - `DownhilWLSFitter` can now estimate white noise parameters and their uncertainties.
 - `Residuals.lnlikelihood()` method
 - `pint.utils.akaike_information_criterion()` function
+- `TimingModel.d_toasigma_d_param` method to compute derivatives of scaled TOA uncertainties w.r.t. white noise parameters.
+- `TimingModel.toasigma_derivs` property to get all derivatives functions of scaled TOA uncertainties.
+- `ScaleToaError.register_toasigma_deriv_funcs` method to populate derivatives of scaled TOA uncertainties.
+- `ScaleToaError.d_toasigma_d_EFAC` and `ScaleToaError.d_toasigma_d_EQUAD` methods.
 ### Fixed
 - Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
 - Fixed RTD by specifying theme explicitly.
