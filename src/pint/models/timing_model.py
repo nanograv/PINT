@@ -615,6 +615,15 @@ class TimingModel:
                 f"Parameter(s) are familiar but not in the model: {params}"
             )
 
+    @property_exists
+    def fittable_params(self):
+        return [
+            p
+            for p in self.params
+            if (p in self.phase_deriv_funcs or p in self.delay_deriv_funcs)
+            and self[p].quantity is not None
+        ]
+
     def match_param_aliases(self, alias):
         """Return PINT parameter name corresponding to this alias.
 
