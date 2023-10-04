@@ -12,6 +12,8 @@ the released changes.
 - `WAVE` parameters can be added to a `Wave` model with `add_wave_component()` in `wave.py` 
 - Moved design matrix normalization code from `pint.fitter` to the new `pint.utils.normalize_designmatrix()` function.
 - Made `Residuals` independent of `GLSFitter` (GLS chi2 is now computed using the new function `Residuals._calc_gls_chi2()`).
+- Creation of `Fitter` objects will fail if there are free unfittable parameters in the timing model.
+- `TimingModel.designmatrix()` method will fail with an informative error message if there are free unfittable parameters in the timing model.
 ### Added
 - CHI2, CHI2R, TRES, DMRES now in postfit par files
 - Added `WaveX` model as a `DelayComponent` with Fourier amplitudes as fitted parameters
@@ -21,6 +23,7 @@ the released changes.
 - Support for wideband data in `pint.bayesian` (no correlated noise).
 - Added `DMWaveX` model (Fourier representation of DM noise)
 - Piecewise orbital model (`BinaryBTPiecewise`)
+- `TimingModel.fittable_params` property
 ### Fixed
 - Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
 - Fixed RTD by specifying theme explicitly.

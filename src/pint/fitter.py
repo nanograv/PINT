@@ -222,8 +222,9 @@ class Fitter:
                 model.fittable_params
             )
             raise ValueError(
-                f"Cannot create fitter because the following unfittable parameters"
-                f" were found unfrozen in the model: {free_unfittable_params}"
+                f"Cannot create fitter because the following unfittable parameters "
+                f"were found unfrozen in the model: {free_unfittable_params}. "
+                f"Freeze these parameters before creating the fitter."
             )
 
         self.toas = toas

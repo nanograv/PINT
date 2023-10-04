@@ -1983,6 +1983,16 @@ class TimingModel:
         keeps the conventional way.
         """
 
+        if not set(self.free_params).issubset(self.fittable_params):
+            free_unfittable_params = set(self.free_params).difference(
+                self.fittable_params
+            )
+            raise ValueError(
+                f"Cannot compute the design matrix because the following unfittable parameters "
+                f"were found unfrozen in the model: {free_unfittable_params}. "
+                f"Freeze these parameters before computing the design matrix."
+            )
+
         noise_params = self.get_params_of_component_type("NoiseComponent")
         # unfrozen_noise_params = [
         #     param for param in noise_params if not getattr(self, param).frozen
