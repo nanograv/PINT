@@ -73,48 +73,8 @@ class Astrometry(DelayComponent):
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
 
         # this is somewhat slow, since it repeatedly created different SkyCoord Objects
-        # return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
-
-        # Instead look at what https://docs.astropy.org/en/stable/_modules/astropy/coordinates/sky_coordinate.html#SkyCoord.apply_space_motion
-        # does, which is to use https://github.com/liberfa/erfa/blob/master/src/starpm.c
-        # and then just use the relevant pieces of that
-        if epoch is None or self.POSEPOCH.quantity is None:
-            return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
-
-        if isinstance(epoch, Time):
-            jd1 = epoch.jd1
-            jd2 = epoch.jd2
-        else:
-            jd1 = 2400000.5
-            jd2 = epoch
-        # in the general case we don't know what system the coordinates will be in
-        # so explicitly transform to ICRS
-        cc = self.get_psr_coords()
-        icrsrep = cc.icrs.represent_as(
-            coords.SphericalRepresentation,
-            coords.SphericalDifferential,
-        )
-        icrsvel = icrsrep.differentials["s"]
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", ErfaWarning)
-            starpmout = pmsafe(
-                icrsrep.lon.radian,
-                icrsrep.lat.radian,
-                icrsvel.d_lon.to_value(u.radian / u.yr),
-                icrsvel.d_lat.to_value(u.radian / u.yr),
-                self.PX.quantity.to_value(u.arcsec),
-                0.0,
-                self.POSEPOCH.quantity.jd1,
-                self.POSEPOCH.quantity.jd2,
-                jd1,
-                jd2,
-            )
-        # ra,dec now in radians
-        ra, dec = starpmout[0], starpmout[1]
-        x = np.cos(ra) * np.cos(dec)
-        y = np.sin(ra) * np.cos(dec)
-        z = np.sin(dec)
-        return u.Quantity([x, y, z]).T
+        # but for consistency only change the method in the subclasses below
+        return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
 
     def ssb_to_psb_xyz_ECL(self, epoch=None, ecl=None):
         """Returns unit vector(s) from SSB to pulsar system barycenter under Ecliptic coordinates.
@@ -427,7 +387,7 @@ class AstrometryEquatorial(Astrometry):
         If `ecl` is left unspecified, the global default IERS2010 will be used.
         """
         if ecl is None:
-            log.info("ECL not specified; using IERS2010.")
+            log.debug("ECL not specified; using IERS2010.")
             ecl = "IERS2010"
 
         pos_icrs = self.get_psr_coords(epoch=epoch)
@@ -896,6 +856,9 @@ class AstrometryEcliptic(Astrometry):
         if ecl is not None and ecl != self.ECL.quantity:
             return super().ssb_to_psb_xyz_ECL(epoch=epoch, ecl=ecl)
 
+        if ecl is None:
+            log.debug("ECL not specified; using IERS2010.")
+            ecl = "IERS2010"
         if epoch is None or (self.PMELONG.value == 0 and self.PMELAT.value == 0):
             return self.coords_as_ECL(epoch=epoch, ecl=ecl).cartesian.xyz.transpose()
         if isinstance(epoch, Time):
