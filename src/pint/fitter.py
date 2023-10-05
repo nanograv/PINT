@@ -1272,6 +1272,7 @@ class DownhillFitter(Fitter):
         required_chi2_decrease=1e-2,
         max_chi2_increase=1e-2,
         min_lambda=1e-3,
+        noisefit_method="Newton-CG",
         debug=False,
     ):
         """Carry out a cautious downhill fit.
@@ -1313,6 +1314,9 @@ class DownhillFitter(Fitter):
         min_lambda : float
             If steps are shrunk by this factor and still don't result in improvement, abandon hope
             of convergence and stop.
+        noisefit_method: str
+            Algorithm used to fit for noise parameters. See the documentation for
+            `scipy.optimize.minimize()` for more details and available options.
         """
         free_noise_params = self._get_free_noise_params()
 
@@ -1334,7 +1338,7 @@ class DownhillFitter(Fitter):
                     min_lambda=min_lambda,
                     debug=debug,
                 )
-                values, errors = self._fit_noise()
+                values, errors = self._fit_noise(noisefit_method=noisefit_method)
                 self._update_noise_params(values, errors)
 
             return self._fit_toas(
@@ -1364,7 +1368,7 @@ class DownhillFitter(Fitter):
             getattr(self.model, fp).value = val
             getattr(self.model, fp).uncertainty_value = err
 
-    def _fit_noise(self):
+    def _fit_noise(self, noisefit_method="Newton-CG"):
         """Estimate noise parameters and their uncertainties. Noise parameters
         are estimated by numerically maximizing the log-likelihood function including
         the normalization term. The uncertainties thereof are computed using the
@@ -1397,7 +1401,7 @@ class DownhillFitter(Fitter):
             )
 
         maxlike_result = opt.minimize(
-            _mloglike, xs0, method="Newton-CG", jac=_mloglike_grad
+            _mloglike, xs0, method=noisefit_method, jac=_mloglike_grad
         )
 
         hess = Hessdiag(_mloglike)
