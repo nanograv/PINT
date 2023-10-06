@@ -463,8 +463,8 @@ class Parameter:
         name = self.name if self.use_alias is None else self.use_alias
 
         # special cases for parameter names that change depending on format
-        if self.name == "CHI2" and format.lower() != "pint":
-            # no CHI2 for TEMPO/TEMPO2
+        if self.name in ["DMRES"] and format.lower() not in ["pint"]:
+            # DMRES only for PINT
             return ""
         elif self.name == "SWM" and format.lower() != "pint":
             # no SWM for TEMPO/TEMPO2
@@ -570,6 +570,26 @@ class Parameter:
                 ucty = k[3]
             self.uncertainty = self._set_uncertainty(ucty)
         return True
+
+    def value_as_latex(self):
+        return f"${self.as_ufloat():.1uSL}$" if not self.frozen else f"{self.value:f}"
+
+    def as_latex(self):
+        try:
+            unit_latex = (
+                ""
+                if self.units == "" or self.units is None
+                else f" ({self.units.to_string(format='latex', fraction=False)})"
+            )
+        except TypeError:
+            # to deal with old astropy
+            unit_latex = (
+                ""
+                if self.units == "" or self.units is None
+                else f" ({self.units.to_string(format='latex')})"
+            )
+        value_latex = self.value_as_latex()
+        return f"{self.name}, {self.description}{unit_latex}", value_latex
 
     def add_alias(self, alias):
         """Add a name to the list of aliases for this parameter."""
@@ -868,6 +888,9 @@ class strParameter(Parameter):
         """Convert to string."""
         return str(val)
 
+    def value_as_latex(self):
+        return self.value
+
 
 class boolParameter(Parameter):
     """Boolean-valued parameter.
@@ -934,6 +957,9 @@ class boolParameter(Parameter):
             # String not in the list
             return bool(float(val))
         return bool(val)
+
+    def value_as_latex(self):
+        return "Y" if self.value else "N"
 
 
 class intParameter(Parameter):
@@ -1002,6 +1028,9 @@ class intParameter(Parameter):
                 )
 
         return ival
+
+    def value_as_latex(self):
+        return str(self.value)
 
 
 class MJDParameter(Parameter):
@@ -1166,6 +1195,18 @@ class MJDParameter(Parameter):
         error = self.uncertainty.to_value(u.d) if self.uncertainty is not None else 0
         return ufloat(value1, 0), ufloat(value2, error)
 
+    def as_ufloat(self):
+        """Return the parameter as a :class:`uncertainties.ufloat`
+        value.
+
+        If the uncertainty is not set will be returned as 0
+
+        Returns
+        -------
+        uncertainties.ufloat
+        """
+        return ufloat(self.value, self.uncertainty_value)
+
 
 class AngleParameter(Parameter):
     """Parameter in angle units.
@@ -1299,6 +1340,32 @@ class AngleParameter(Parameter):
             # Traditionally, hourangle uncertainty is in hourangle seconds
             angle_arcsec /= 15.0
         return angle_arcsec.to_string(decimal=True, precision=20)
+
+    def as_ufloat(self, units=None):
+        """Return the parameter as a :class:`uncertainties.ufloat`
+
+        Will cast to the specified units, or the default
+        If the uncertainty is not set will be returned as 0
+
+        Parameters
+        ----------
+        units : astropy.units.core.Unit, optional
+            Units to cast the value
+
+        Returns
+        -------
+        uncertainties.ufloat
+
+        Notes
+        -----
+        Currently :class:`~uncertainties.ufloat` does not support double precision values,
+        so some precision may be lost.
+        """
+        if units is None:
+            units = self.units
+        value = self.quantity.to_value(units) if self.quantity is not None else 0
+        error = self.uncertainty.to_value(units) if self.uncertainty is not None else 0
+        return ufloat(value, error)
 
 
 class prefixParameter:
@@ -1546,6 +1613,9 @@ class prefixParameter:
 
     def as_parfile_line(self, format="pint"):
         return self.param_comp.as_parfile_line(format=format)
+
+    def as_latex(self):
+        return self.param_comp.as_latex()
 
     def help_line(self):
         return self.param_comp.help_line()
@@ -1891,6 +1961,25 @@ class maskParameter(floatParameter):
         elif not self.frozen:
             line += " 1"
         return line + "\n"
+
+    def as_latex(self):
+        try:
+            unit_latex = (
+                ""
+                if self.units == "" or self.units is None
+                else f" ({self.units.to_string(format='latex', fraction=False)})"
+            )
+        except TypeError:
+            # `fraction` option is not available in old astropy versions.
+            unit_latex = (
+                ""
+                if self.units == "" or self.units is None
+                else f" ({self.units.to_string(format='latex')})"
+            )
+        return (
+            f"{self.prefix} {self.key} {' '.join(self.key_value)}, {self.description}{unit_latex}",
+            self.value_as_latex(),
+        )
 
     def new_param(self, index, copy_all=False):
         """Create a new but same style mask parameter"""

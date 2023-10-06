@@ -151,7 +151,7 @@ class WaveX(DelayComponent):
         wxcoses : iterable of float or astropy.quantity.Quantity
             Cosine amplitudes for WaveX components
         frozens : iterable of bool or bool
-            Indicates whether sine adn cosine amplitudes of wavex components will be fit
+            Indicates whether sine and cosine amplitudes of wavex components will be fit
 
         Returns
         -------
