@@ -108,8 +108,22 @@ TZRSITE                  1
 """
 
 
-def test_ssb_accuracy_ICRS():
-    m = get_model(StringIO(parICRS))
+ntests = 200
+
+
+@pytest.mark.parametrize(
+    ("ra,dec,pmra,pmdec"),
+    list(
+        zip(
+            np.random.uniform(0, 360, ntests),
+            np.random.uniform(-90, 90, ntests),
+            np.random.normal(0, scale=10, size=ntests),
+            np.random.normal(0, scale=10, size=ntests),
+        )
+    ),
+)
+def test_ssb_accuracy_ICRS(ra, dec, pmra, pmdec):
+    m = get_model(StringIO(parICRS), RAJ=ra, DECJ=dec, PMRA=pmra, PMDEC=pmdec)
     t0 = m.POSEPOCH.quantity
     t0.format = "pulsar_mjd"
     t = t0 + np.linspace(0, 20) * u.yr
@@ -143,8 +157,21 @@ TZRSITE                  1
 """
 
 
-def test_ssb_accuracy_ICRS_ECLmodel():
-    m = get_model(StringIO(parECL))
+@pytest.mark.parametrize(
+    ("elong,elat,pmelong,pmelat"),
+    list(
+        zip(
+            np.random.uniform(0, 360, ntests),
+            np.random.uniform(-90, 90, ntests),
+            np.random.normal(0, scale=10, size=ntests),
+            np.random.normal(0, scale=10, size=ntests),
+        )
+    ),
+)
+def test_ssb_accuracy_ICRS_ECLmodel(elong, elat, pmelong, pmelat):
+    m = get_model(
+        StringIO(parECL), ELONG=elong, ELAT=elat, PMELONG=pmelong, PMELAT=pmelat
+    )
     t0 = m.POSEPOCH.quantity
     t0.format = "pulsar_mjd"
     t = t0 + np.linspace(0, 20) * u.yr
@@ -153,8 +180,21 @@ def test_ssb_accuracy_ICRS_ECLmodel():
     assert np.allclose(xyznew, xyzastropy)
 
 
-def test_ssb_accuracy_ECL_ECLmodel():
-    m = get_model(StringIO(parECL))
+@pytest.mark.parametrize(
+    ("elong,elat,pmelong,pmelat"),
+    list(
+        zip(
+            np.random.uniform(0, 360, ntests),
+            np.random.uniform(-90, 90, ntests),
+            np.random.normal(0, scale=10, size=ntests),
+            np.random.normal(0, scale=10, size=ntests),
+        )
+    ),
+)
+def test_ssb_accuracy_ECL_ECLmodel(elong, elat, pmelong, pmelat):
+    m = get_model(
+        StringIO(parECL), ELONG=elong, ELAT=elat, PMELONG=pmelong, PMELAT=pmelat
+    )
     t0 = m.POSEPOCH.quantity
     t0.format = "pulsar_mjd"
     t = t0 + np.linspace(0, 20) * u.yr
