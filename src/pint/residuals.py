@@ -559,12 +559,14 @@ class Residuals:
         if not lognorm:
             return chi2
         else:
-            logdet_N = np.sum(np.log(Nvec))
-            logdet_Phiinv = np.sum(np.log(phiinv))
+            logdet_N = np.sum(np.log(np.abs(Nvec)))
+            logdet_Phiinv = np.sum(np.log(np.abs(phiinv)))
             logdet_Sigma = (
-                np.sum(np.log(np.diag(c[0]))) if not svd else np.sum(np.abs(np.log(s)))
+                np.sum(np.log(np.abs(np.diag(c[0]))))
+                if not svd
+                else np.sum(np.log(np.abs(s)))
             )
-            log_norm = logdet_N + logdet_Phiinv + logdet_Sigma
+            log_norm = 0.5 * (logdet_N - logdet_Phiinv + logdet_Sigma)
             return chi2, log_norm
 
     def calc_chi2(self, lognorm=False):
