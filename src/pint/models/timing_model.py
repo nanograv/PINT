@@ -1974,18 +1974,31 @@ class TimingModel:
         units : astropy.units.Unit
             The units of the corresponding parts of the design matrix
 
-        Note
-        ----
-        Here we have negative sign here. Since in pulsar timing
-        the residuals are calculated as (Phase - int(Phase)), which is different
-        from the conventional definition of least square definition (Data - model)
-        We decide to add minus sign here in the design matrix, so the fitter
-        keeps the conventional way.
+        Notes
+        -----
+        1. We have negative sign here. Since the residuals are calculated as
+        (Phase - int(Phase)) in pulsar timing, which is different from the conventional
+        definition of least square definition (Data - model), we have decided to add
+        a minus sign here in the design matrix so that the fitter keeps the conventional
+        sign.
+
+        2. Design matrix entries can be computed only for parameters for which the
+        derivatives are implemented. If a parameter without a derivative is unfrozen
+        while calling this method, it will raise an informative error, except in the
+        case of unfrozen noise parameters, which are simply ignored.
         """
 
-        if not set(self.free_params).issubset(self.fittable_params):
-            free_unfittable_params = set(self.free_params).difference(
-                self.fittable_params
+        noise_params = self.get_params_of_component_type("NoiseComponent")
+
+        if (
+            not set(self.free_params)
+            .difference(noise_params)
+            .issubset(self.fittable_params)
+        ):
+            free_unfittable_params = (
+                set(self.free_params)
+                .difference(noise_params)
+                .difference(self.fittable_params)
             )
             raise ValueError(
                 f"Cannot compute the design matrix because the following unfittable parameters "
@@ -1993,7 +2006,6 @@ class TimingModel:
                 f"Freeze these parameters before computing the design matrix."
             )
 
-        noise_params = self.get_params_of_component_type("NoiseComponent")
         # unfrozen_noise_params = [
         #     param for param in noise_params if not getattr(self, param).frozen
         # ]
