@@ -53,6 +53,7 @@ from pint.models.parameter import (
     Parameter,
     boolParameter,
     floatParameter,
+    funcParameter,
     intParameter,
     maskParameter,
     strParameter,
@@ -2949,7 +2950,11 @@ class Component(metaclass=ModelMeta):
     def __repr__(self):
         return "{}(\n    {})".format(
             self.__class__.__name__,
-            ",\n    ".join(str(getattr(self, p)) for p in self.params),
+            ",\n    ".join(
+                str(getattr(self, p))
+                for p in self.params
+                if not isinstance(p, funcParameter)
+            ),
         )
 
     def setup(self):
