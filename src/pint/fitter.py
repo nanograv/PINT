@@ -1378,20 +1378,19 @@ class DownhillFitter(Fitter):
         xs0 = [getattr(self.model, fp).value for fp in free_noise_params]
 
         model1 = copy.deepcopy(self.model)
+        res = Residuals(self.toas, model1)
 
         def _mloglike(xs):
             """Negative of the log-likelihood function."""
             for fp, x in zip(free_noise_params, xs):
-                getattr(model1, fp).value = x
+                getattr(res.model, fp).value = x
 
-            return -Residuals(self.toas, model1).lnlikelihood()
+            return -res.lnlikelihood()
 
         def _mloglike_grad(xs):
             """Gradient of the negative of the log-likelihood function w.r.t. white noise parameters."""
             for fp, x in zip(free_noise_params, xs):
-                getattr(model1, fp).value = x
-
-            res = Residuals(self.toas, model1)
+                getattr(res.model, fp).value = x
 
             return np.array(
                 [
