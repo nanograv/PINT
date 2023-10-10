@@ -208,6 +208,7 @@ class PlkFitBoxesWidget(tk.Frame):
                 for p in model.components[comp].params
                 if p not in pulsar.nofitboxpars
                 and getattr(model, p).quantity is not None
+                and p in model.fittable_params
             ]
 
             # Don't bother showing components without any fittable parameters
