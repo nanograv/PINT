@@ -593,7 +593,8 @@ class TimingModel:
 
     @property_exists
     def free_params(self):
-        """List of all the free parameters in the timing model. Can be set to change which are free.
+        """List of all the free parameters in the timing model.
+        Can be set to change which are free.
 
         These are ordered as ``self.params`` does.
 
@@ -607,8 +608,6 @@ class TimingModel:
 
     @free_params.setter
     def free_params(self, params):
-        """List of free parameters, i.e., the parameters whose `frozen`
-        attribute is set to False."""
         params_true = {self.match_param_aliases(p) for p in params}
         for p in self.params:
             getattr(self, p).frozen = p not in params_true
