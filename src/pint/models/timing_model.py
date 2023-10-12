@@ -607,6 +607,8 @@ class TimingModel:
 
     @free_params.setter
     def free_params(self, params):
+        """List of free parameters, i.e., the parameters whose `frozen`
+        attribute is set to False."""
         params_true = {self.match_param_aliases(p) for p in params}
         for p in self.params:
             getattr(self, p).frozen = p not in params_true
@@ -618,6 +620,9 @@ class TimingModel:
 
     @property_exists
     def fittable_params(self):
+        """List of parameters that are fittable, i.e., the parameters
+        which have a derivative implemented. These derivatives are usually
+        accessed via the `d_delay_d_param` and `d_phase_d_param` methods."""
         return [
             p
             for p in self.params
