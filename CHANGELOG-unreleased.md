@@ -24,6 +24,7 @@ the released changes.
 - Added `DMWaveX` model (Fourier representation of DM noise)
 - Piecewise orbital model (`BinaryBTPiecewise`)
 - `TimingModel.fittable_params` property
+- Simulate correlated noise using `pint.simulation` (also available via the `zima` script)
 ### Fixed
 - Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
 - Fixed RTD by specifying theme explicitly.
