@@ -65,8 +65,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install tox
-        python -m pip install setuptools
-        python -m pip install pkg_resources
     - name: Install graphviz dependency
       if: "endsWith(matrix.tox_env, 'build_docs')"
       run: sudo apt-get -y install graphviz
@@ -77,7 +75,6 @@ jobs:
       run: |
         python -c "import sys; print(f'Python {sys.version}')"
         python -c "import pip; print(f'pip {pip.__version__}')"
-        python -c "import setuptools; print(f'setuptools {setuptools.__version__}')"
         python -c "import tox; print(f'tox {tox.__version__}')"
     - name: Run tests
       run: tox -e ${{ matrix.tox_env }}
