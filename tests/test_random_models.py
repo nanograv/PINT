@@ -3,11 +3,23 @@ import os
 import pytest
 import numpy as np
 
+from astropy import units as u
+
 from pint.models import get_model, get_model_and_toas
 from pint.toa import get_TOAs
 import pint.fitter
 from pint import simulation
 from pinttestdata import datadir
+
+
+@pytest.mark.parametrize("error", [1 * u.us, 1, 10 * u.ns, 1 * u.ms])
+def test_fake_errors(error):
+    m = get_model(os.path.join(datadir, "NGC6440E.par"))
+    t = simulation.make_fake_toas_uniform(50000, 51000, 10, m, error=error)
+    if isinstance(error, u.Quantity):
+        assert np.all(t["error"].data * t["error"].unit == error)
+    else:
+        assert np.all(t["error"].data * t["error"].unit == error * u.us)
 
 
 @pytest.mark.parametrize(
