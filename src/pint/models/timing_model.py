@@ -625,7 +625,16 @@ class TimingModel:
         return [
             p
             for p in self.params
-            if (p in self.phase_deriv_funcs or p in self.delay_deriv_funcs)
+            if (
+                p in self.phase_deriv_funcs
+                or p in self.delay_deriv_funcs
+                or (
+                    (
+                        hasattr(self, "toasigma_deriv_funcs")
+                        and p in self.toasigma_deriv_funcs
+                    )
+                )
+            )
         ]
 
     def match_param_aliases(self, alias):
