@@ -433,6 +433,11 @@ class BinaryELL1k(BinaryELL1):
         self.binary_model_name = "ELL1k"
         self.binary_model_class = ELL1kmodel
 
+        self.remove_param("OMDOT")
+        self.remove_param("EDOT")
+        self.remove_param("EPS1DOT")
+        self.remove_param("EPS2DOT")
+
         self.add_param(
             floatParameter(
                 name="OMDOT",
@@ -450,9 +455,6 @@ class BinaryELL1k(BinaryELL1):
                 long_double=True,
             )
         )
-
-        self.remove_param("EPS1DOT")
-        self.remove_param("EPS2DOT")
 
     def validate(self):
         """Validate parameters."""

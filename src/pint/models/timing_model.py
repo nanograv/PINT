@@ -53,6 +53,7 @@ from pint.models.parameter import (
     Parameter,
     boolParameter,
     floatParameter,
+    funcParameter,
     intParameter,
     maskParameter,
     strParameter,
@@ -592,7 +593,8 @@ class TimingModel:
 
     @property_exists
     def free_params(self):
-        """List of all the free parameters in the timing model. Can be set to change which are free.
+        """List of all the free parameters in the timing model.
+        Can be set to change which are free.
 
         These are ordered as ``self.params`` does.
 
@@ -614,6 +616,17 @@ class TimingModel:
             raise ValueError(
                 f"Parameter(s) are familiar but not in the model: {params}"
             )
+
+    @property_exists
+    def fittable_params(self):
+        """List of parameters that are fittable, i.e., the parameters
+        which have a derivative implemented. These derivatives are usually
+        accessed via the `d_delay_d_param` and `d_phase_d_param` methods."""
+        return [
+            p
+            for p in self.params
+            if (p in self.phase_deriv_funcs or p in self.delay_deriv_funcs)
+        ]
 
     def match_param_aliases(self, alias):
         """Return PINT parameter name corresponding to this alias.
@@ -1965,16 +1978,38 @@ class TimingModel:
         units : astropy.units.Unit
             The units of the corresponding parts of the design matrix
 
-        Note
-        ----
-        Here we have negative sign here. Since in pulsar timing
-        the residuals are calculated as (Phase - int(Phase)), which is different
-        from the conventional definition of least square definition (Data - model)
-        We decide to add minus sign here in the design matrix, so the fitter
-        keeps the conventional way.
+        Notes
+        -----
+        1. We have negative sign here. Since the residuals are calculated as
+        (Phase - int(Phase)) in pulsar timing, which is different from the conventional
+        definition of least square definition (Data - model), we have decided to add
+        a minus sign here in the design matrix so that the fitter keeps the conventional
+        sign.
+
+        2. Design matrix entries can be computed only for parameters for which the
+        derivatives are implemented. If a parameter without a derivative is unfrozen
+        while calling this method, it will raise an informative error, except in the
+        case of unfrozen noise parameters, which are simply ignored.
         """
 
         noise_params = self.get_params_of_component_type("NoiseComponent")
+
+        if (
+            not set(self.free_params)
+            .difference(noise_params)
+            .issubset(self.fittable_params)
+        ):
+            free_unfittable_params = (
+                set(self.free_params)
+                .difference(noise_params)
+                .difference(self.fittable_params)
+            )
+            raise ValueError(
+                f"Cannot compute the design matrix because the following unfittable parameters "
+                f"were found unfrozen in the model: {free_unfittable_params}. "
+                f"Freeze these parameters before computing the design matrix."
+            )
+
         # unfrozen_noise_params = [
         #     param for param in noise_params if not getattr(self, param).frozen
         # ]
@@ -2918,7 +2953,11 @@ class Component(metaclass=ModelMeta):
     def __repr__(self):
         return "{}(\n    {})".format(
             self.__class__.__name__,
-            ",\n    ".join(str(getattr(self, p)) for p in self.params),
+            ",\n    ".join(
+                str(getattr(self, p))
+                for p in self.params
+                if not isinstance(p, funcParameter)
+            ),
         )
 
     def setup(self):
