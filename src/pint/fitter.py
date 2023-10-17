@@ -218,6 +218,16 @@ class Fitter:
     """
 
     def __init__(self, toas, model, track_mode=None, residuals=None):
+        if not set(model.free_params).issubset(model.fittable_params):
+            free_unfittable_params = set(model.free_params).difference(
+                model.fittable_params
+            )
+            raise ValueError(
+                f"Cannot create fitter because the following unfittable parameters "
+                f"were found unfrozen in the model: {free_unfittable_params}. "
+                f"Freeze these parameters before creating the fitter."
+            )
+
         self.toas = toas
         self.model_init = model
         self.track_mode = track_mode
