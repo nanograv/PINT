@@ -15,6 +15,8 @@ the released changes.
 - `ssb_to_psb_ICRS` implementation is now a lot faster (uses erfa functions directly)
 - `ssb_to_psb_ECL` implementation within `AstrometryEcliptic` model is now a lot faster (uses erfa functions directly)
 - Upgraded versioneer for compatibility with Python 3.12
+- Creation of `Fitter` objects will fail if there are free unfittable parameters in the timing model.
+- Only fittable parameters will be listed as check boxes in the `plk` interface.
 ### Added
 - CHI2, CHI2R, TRES, DMRES now in postfit par files
 - Added `WaveX` model as a `DelayComponent` with Fourier amplitudes as fitted parameters
@@ -24,6 +26,7 @@ the released changes.
 - Support for wideband data in `pint.bayesian` (no correlated noise).
 - Added `DMWaveX` model (Fourier representation of DM noise)
 - Piecewise orbital model (`BinaryBTPiecewise`)
+- `TimingModel.fittable_params` property
 - Simulate correlated noise using `pint.simulation` (also available via the `zima` script)
 ### Fixed
 - Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
@@ -33,4 +36,5 @@ the released changes.
 - Fixed an incorrect docstring in `pbprime()` functions. 
 - Fix ICRS -> ECL conversion when parameter uncertainties are not set.
 - `get_TOAs` raises an exception upon finding mixed narrowband and wideband TOAs in a tim file. `TOAs.is_wideband` returns True only if *ALL* TOAs have the -pp_dm flag.
+- `TimingModel.designmatrix()` method will fail with an informative error message if there are free unfittable parameters in the timing model.
 ### Removed
