@@ -81,3 +81,123 @@ def test_pm_acquires_posepoch_equatorial():
 def test_pm_one_set_other_not():
     m = get_model(StringIO("\n".join([par_basic_equatorial, "PMRA 7"])))
     assert m.POSEPOCH.quantity == m.PEPOCH.quantity
+
+
+parICRS = """PSR              1748-2021E
+RAJ       17:48:52.75  1
+DECJ      -20:21:29.0  1
+PMRA     1000
+PMDEC    -500
+F0       61.485476554  1
+F1         -1.181D-15  1
+PEPOCH        53750.000000
+POSEPOCH      53750.000000
+DM              223.9  1
+SOLARN0               0.00
+EPHEM               DE421
+CLK              UTC(NIST)
+UNITS               TDB
+TIMEEPH             FB90
+T2CMETHOD           TEMPO
+CORRECT_TROPOSPHERE N
+PLANET_SHAPIRO      N
+DILATEFREQ          N
+TZRMJD  53801.38605118223
+TZRFRQ            1949.609
+TZRSITE                  1
+"""
+
+
+ntests = 200
+
+
+@pytest.mark.parametrize(
+    ("ra,dec,pmra,pmdec"),
+    list(
+        zip(
+            np.random.uniform(0, 360, ntests),
+            np.random.uniform(-90, 90, ntests),
+            np.random.normal(0, scale=10, size=ntests),
+            np.random.normal(0, scale=10, size=ntests),
+        )
+    ),
+)
+def test_ssb_accuracy_ICRS(ra, dec, pmra, pmdec):
+    m = get_model(StringIO(parICRS), RAJ=ra, DECJ=dec, PMRA=pmra, PMDEC=pmdec)
+    t0 = m.POSEPOCH.quantity
+    t0.format = "pulsar_mjd"
+    t = t0 + np.linspace(0, 20) * u.yr
+    xyzastropy = m.coords_as_ICRS(epoch=t).cartesian.xyz.transpose()
+    xyznew = m.ssb_to_psb_xyz_ICRS(epoch=t)
+    assert np.allclose(xyznew, xyzastropy)
+
+
+parECL = """PSR              1748-2021E
+ELONG       300.0
+ELAT      -55.0
+PMELONG     1000
+PMELAT    -500
+F0       61.485476554  1
+F1         -1.181D-15  1
+PEPOCH        53750.000000
+POSEPOCH      53750.000000
+DM              223.9  1
+SOLARN0               0.00
+EPHEM               DE421
+CLK              UTC(NIST)
+UNITS               TDB
+TIMEEPH             FB90
+T2CMETHOD           TEMPO
+CORRECT_TROPOSPHERE N
+PLANET_SHAPIRO      N
+DILATEFREQ          N
+TZRMJD  53801.38605118223
+TZRFRQ            1949.609
+TZRSITE                  1
+"""
+
+
+@pytest.mark.parametrize(
+    ("elong,elat,pmelong,pmelat"),
+    list(
+        zip(
+            np.random.uniform(0, 360, ntests),
+            np.random.uniform(-90, 90, ntests),
+            np.random.normal(0, scale=10, size=ntests),
+            np.random.normal(0, scale=10, size=ntests),
+        )
+    ),
+)
+def test_ssb_accuracy_ICRS_ECLmodel(elong, elat, pmelong, pmelat):
+    m = get_model(
+        StringIO(parECL), ELONG=elong, ELAT=elat, PMELONG=pmelong, PMELAT=pmelat
+    )
+    t0 = m.POSEPOCH.quantity
+    t0.format = "pulsar_mjd"
+    t = t0 + np.linspace(0, 20) * u.yr
+    xyzastropy = m.coords_as_ICRS(epoch=t).cartesian.xyz.transpose()
+    xyznew = m.ssb_to_psb_xyz_ICRS(epoch=t)
+    assert np.allclose(xyznew, xyzastropy)
+
+
+@pytest.mark.parametrize(
+    ("elong,elat,pmelong,pmelat"),
+    list(
+        zip(
+            np.random.uniform(0, 360, ntests),
+            np.random.uniform(-90, 90, ntests),
+            np.random.normal(0, scale=10, size=ntests),
+            np.random.normal(0, scale=10, size=ntests),
+        )
+    ),
+)
+def test_ssb_accuracy_ECL_ECLmodel(elong, elat, pmelong, pmelat):
+    m = get_model(
+        StringIO(parECL), ELONG=elong, ELAT=elat, PMELONG=pmelong, PMELAT=pmelat
+    )
+    t0 = m.POSEPOCH.quantity
+    t0.format = "pulsar_mjd"
+    t = t0 + np.linspace(0, 20) * u.yr
+    xyzastropy = m.coords_as_ECL(epoch=t).cartesian.xyz.transpose()
+    xyznew = m.ssb_to_psb_xyz_ECL(epoch=t)
+    assert np.allclose(xyznew, xyzastropy)

@@ -1912,7 +1912,7 @@ class TimingModel:
         res_f = -phase_f[:, 0] + phase_f[:, 1]
         result = (res_i + res_f) / (2.0 * h * unit)
         # shift value back to the original value
-        par.quantity = ori_value
+        par.value = ori_value
         return result
 
     def d_delay_d_param_num(self, toas, param, step=1e-2):

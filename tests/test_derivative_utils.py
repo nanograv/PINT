@@ -68,10 +68,8 @@ def get_derivative_params(model):
             h = 2e-1
         elif p in ["FD2"]:
             h = 3e-2
-        elif p in ["F1", "M2", "PMELONG", "PMELAT"]:
+        elif p in ["F1", "M2", "PMELONG", "PMELAT", "PMRA", "PMDEC"]:
             h = 2
-        elif p in ["PMDEC"]:
-            h = 3e-2
         elif p in ["PBDOT"]:
             h = 200
         elif p in ["FB1"]:

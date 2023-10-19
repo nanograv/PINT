@@ -12,9 +12,12 @@ the released changes.
 - `WAVE` parameters can be added to a `Wave` model with `add_wave_component()` in `wave.py` 
 - Moved design matrix normalization code from `pint.fitter` to the new `pint.utils.normalize_designmatrix()` function.
 - Made `Residuals` independent of `GLSFitter` (GLS chi2 is now computed using the new function `Residuals._calc_gls_chi2()`).
+- `ssb_to_psb_ICRS` implementation is now a lot faster (uses erfa functions directly)
+- `ssb_to_psb_ECL` implementation within `AstrometryEcliptic` model is now a lot faster (uses erfa functions directly)
 - Upgraded versioneer for compatibility with Python 3.12
 - Creation of `Fitter` objects will fail if there are free unfittable parameters in the timing model.
 - Only fittable parameters will be listed as check boxes in the `plk` interface.
+- Update CI tests for Python 3.12
 ### Added
 - CHI2, CHI2R, TRES, DMRES now in postfit par files
 - Added `WaveX` model as a `DelayComponent` with Fourier amplitudes as fitted parameters
@@ -43,5 +46,6 @@ the released changes.
 - Fix ICRS -> ECL conversion when parameter uncertainties are not set.
 - `get_TOAs` raises an exception upon finding mixed narrowband and wideband TOAs in a tim file. `TOAs.is_wideband` returns True only if *ALL* TOAs have the -pp_dm flag.
 - `TimingModel.designmatrix()` method will fail with an informative error message if there are free unfittable parameters in the timing model.
+- `make_fake_toas_uniform` and `make_fake_toas_fromMJDs` respects units of errors
 - Robust access of EPHEM and PLANET_SHAPIRO in `make_fake_toas_fromtim`
 ### Removed
