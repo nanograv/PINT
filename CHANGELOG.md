@@ -9,7 +9,6 @@ the unreleased changes. This file should only be changed while tagging a new ver
 
 ## [0.9.7] 2023-08-24
 ### Changed
-- Third-order Roemer delay terms to ELL1 model
 - Made the addition of a TZR TOA (`AbsPhase`) in the `TimingModel` explicit in `Residuals` class.
 - Updated `CONTRIBUTING.rst` with the latest information.
 - Made `TimingModel.params` and `TimingModel.ordered_params` identical. Deprecated `TimingModel.ordered_params`.

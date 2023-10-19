@@ -11,7 +11,7 @@ from astropy.time import Time
 
 from loguru import logger as log
 
-from erfa import ErfaWarning
+from erfa import ErfaWarning, pmsafe
 from pint import ls
 from pint.models.parameter import (
     AngleParameter,
@@ -22,7 +22,6 @@ from pint.models.parameter import (
 from pint.models.timing_model import DelayComponent, MissingParameter
 from pint.pulsar_ecliptic import OBL, PulsarEcliptic
 from pint.utils import add_dummy_distance, remove_dummy_distance
-
 
 astropy_version = sys.modules["astropy"].__version__
 mas_yr = u.mas / u.yr
@@ -61,8 +60,20 @@ class Astrometry(DelayComponent):
         """Returns unit vector(s) from SSB to pulsar system barycenter under ICRS.
 
         If epochs (MJD) are given, proper motion is included in the calculation.
+
+        Parameters
+        ----------
+        epoch : float or astropy.time.Time, optional
+
+        Returns
+        -------
+        np.ndarray :
+            (len(epoch), 3) array of unit vectors
         """
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
+
+        # this is somewhat slow, since it repeatedly created different SkyCoord Objects
+        # but for consistency only change the method in the subclasses below
         return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
 
     def ssb_to_psb_xyz_ECL(self, epoch=None, ecl=None):
@@ -75,6 +86,11 @@ class Astrometry(DelayComponent):
         epoch : float, optional
         ecl : str, optional
             Obliquity (IERS2010 by default)
+
+        Returns
+        -------
+        np.ndarray :
+            (len(epoch), 3) array of unit vectors
         """
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
         return self.coords_as_ECL(epoch=epoch, ecl=ecl).cartesian.xyz.transpose()
@@ -371,7 +387,7 @@ class AstrometryEquatorial(Astrometry):
         If `ecl` is left unspecified, the global default IERS2010 will be used.
         """
         if ecl is None:
-            log.info("ECL not specified; using IERS2010.")
+            log.debug("ECL not specified; using IERS2010.")
             ecl = "IERS2010"
 
         pos_icrs = self.get_psr_coords(epoch=epoch)
@@ -389,6 +405,63 @@ class AstrometryEquatorial(Astrometry):
             "PMRA": self.PMRA.quantity,
             "PMDEC": self.PMDEC.quantity,
         }
+
+    def ssb_to_psb_xyz_ICRS(self, epoch=None):
+        """Returns unit vector(s) from SSB to pulsar system barycenter under ICRS.
+
+        If epochs (MJD) are given, proper motion is included in the calculation.
+
+        Parameters
+        ----------
+        epoch : float or astropy.time.Time, optional
+
+        Returns
+        -------
+        np.ndarray :
+            (len(epoch), 3) array of unit vectors
+        """
+        # TODO: would it be better for this to return a 6-vector (pos, vel)?
+
+        # this was somewhat slow, since it repeatedly created different SkyCoord Objects
+        # return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
+
+        # Instead look at what https://docs.astropy.org/en/stable/_modules/astropy/coordinates/sky_coordinate.html#SkyCoord.apply_space_motion
+        # does, which is to use https://github.com/liberfa/erfa/blob/master/src/starpm.c
+        # and then just use the relevant pieces of that
+        if epoch is None or (self.PMRA.quantity == 0 and self.PMDEC.quantity == 0):
+            return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
+
+        if isinstance(epoch, Time):
+            jd1 = epoch.jd1
+            jd2 = epoch.jd2
+        else:
+            # assume MJD
+            jd1 = 2400000.5
+            jd2 = epoch
+        # compared to the general case above we can assume that the coordinates are ICRS
+        # so just access those components
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", ErfaWarning)
+            # note that starpm wants mu_alpha not mu_alpha * cos(delta)
+            starpmout = pmsafe(
+                self.RAJ.quantity.to_value(u.radian),
+                self.DECJ.quantity.to_value(u.radian),
+                self.PMRA.quantity.to_value(u.radian / u.yr)
+                / np.cos(self.DECJ.quantity).value,
+                self.PMDEC.quantity.to_value(u.radian / u.yr),
+                self.PX.quantity.to_value(u.arcsec),
+                0.0,
+                self.POSEPOCH.quantity.jd1,
+                self.POSEPOCH.quantity.jd2,
+                jd1,
+                jd2,
+            )
+        # ra,dec now in radians
+        ra, dec = starpmout[0], starpmout[1]
+        x = np.cos(ra) * np.cos(dec)
+        y = np.sin(ra) * np.cos(dec)
+        z = np.sin(dec)
+        return u.Quantity([x, y, z]).T
 
     def d_delay_astrometry_d_RAJ(self, toas, param="", acc_delay=None):
         """Calculate the derivative wrt RAJ
@@ -753,6 +826,78 @@ class AstrometryEcliptic(Astrometry):
         if ecl is not None:
             pos_ecl = pos_ecl.transform_to(PulsarEcliptic(ecl=ecl))
         return pos_ecl
+
+    def ssb_to_psb_xyz_ECL(self, epoch=None, ecl=None):
+        """Returns unit vector(s) from SSB to pulsar system barycenter under ECL.
+
+        If epochs (MJD) are given, proper motion is included in the calculation.
+
+        Parameters
+        ----------
+        epoch : float or astropy.time.Time, optional
+        ecl : str, optional
+            Obliquity (IERS2010 by default)
+
+        Returns
+        -------
+        np.ndarray :
+            (len(epoch), 3) array of unit vectors
+        """
+        # TODO: would it be better for this to return a 6-vector (pos, vel)?
+
+        # this was somewhat slow, since it repeatedly created different SkyCoord Objects
+        # return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
+
+        # Instead look at what https://docs.astropy.org/en/stable/_modules/astropy/coordinates/sky_coordinate.html#SkyCoord.apply_space_motion
+        # does, which is to use https://github.com/liberfa/erfa/blob/master/src/starpm.c
+        # and then just use the relevant pieces of that
+
+        # but we need to check that the obliquity is the same
+        if ecl is not None and ecl != self.ECL.quantity:
+            return super().ssb_to_psb_xyz_ECL(epoch=epoch, ecl=ecl)
+
+        if ecl is None:
+            log.debug("ECL not specified; using IERS2010.")
+            ecl = "IERS2010"
+        if epoch is None or (self.PMELONG.value == 0 and self.PMELAT.value == 0):
+            return self.coords_as_ECL(epoch=epoch, ecl=ecl).cartesian.xyz.transpose()
+        if isinstance(epoch, Time):
+            jd1 = epoch.jd1
+            jd2 = epoch.jd2
+        else:
+            jd1 = 2400000.5
+            jd2 = epoch
+        # compared to the general case above we can assume that the coordinates are ECL
+        # so just access those components
+        lon = self.ELONG.quantity.to_value(u.radian)
+        lat = self.ELAT.quantity.to_value(u.radian)
+        pm_lon = (
+            self.PMELONG.quantity.to_value(u.radian / u.yr)
+            / np.cos(self.ELAT.quantity).value
+        )
+        pm_lat = self.PMELAT.quantity.to_value(u.radian / u.yr)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", ErfaWarning)
+            # note that pmsafe wants mu_lon not mu_lon * cos(lat)
+            starpmout = pmsafe(
+                lon,
+                lat,
+                pm_lon,
+                pm_lat,
+                self.PX.quantity.to_value(u.arcsec),
+                0.0,
+                self.POSEPOCH.quantity.jd1,
+                self.POSEPOCH.quantity.jd2,
+                jd1,
+                jd2,
+            )
+        # lon,lat now in radians
+        lon, lat = starpmout[0], starpmout[1]
+        x = np.cos(lon) * np.cos(lat)
+        y = np.sin(lon) * np.cos(lat)
+        z = np.sin(lat)
+        return u.Quantity([x, y, z]).T
 
     def get_d_delay_quantities_ecliptical(self, toas):
         """Calculate values needed for many d_delay_d_param functions."""
