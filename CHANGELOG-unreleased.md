@@ -12,6 +12,8 @@ the released changes.
 - `WAVE` parameters can be added to a `Wave` model with `add_wave_component()` in `wave.py` 
 - Moved design matrix normalization code from `pint.fitter` to the new `pint.utils.normalize_designmatrix()` function.
 - Made `Residuals` independent of `GLSFitter` (GLS chi2 is now computed using the new function `Residuals._calc_gls_chi2()`).
+- `ssb_to_psb_ICRS` implementation is now a lot faster (uses erfa functions directly)
+- `ssb_to_psb_ECL` implementation within `AstrometryEcliptic` model is now a lot faster (uses erfa functions directly)
 - Upgraded versioneer for compatibility with Python 3.12
 - Creation of `Fitter` objects will fail if there are free unfittable parameters in the timing model.
 - Only fittable parameters will be listed as check boxes in the `plk` interface.
