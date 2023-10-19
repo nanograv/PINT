@@ -308,7 +308,6 @@ def make_fake_toas_uniform(
         include_gps=clk_version["include_gps"],
         planets=model["PLANET_SHAPIRO"].value if "PLANET_SHAPIRO" in model else False,
     )
-    ts.table["error"] = error
 
     if wideband:
         ts = update_fake_dms(model, ts, wideband_dm_error, add_noise)
@@ -412,7 +411,6 @@ def make_fake_toas_fromMJDs(
         include_gps=clk_version["include_gps"],
         planets=model["PLANET_SHAPIRO"].value,
     )
-    ts.table["error"] = error
 
     if wideband:
         ts = update_fake_dms(model, ts, wideband_dm_error, add_noise)
