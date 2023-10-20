@@ -18,6 +18,7 @@ the released changes.
 - Creation of `Fitter` objects will fail if there are free unfittable parameters in the timing model.
 - Only fittable parameters will be listed as check boxes in the `plk` interface.
 - Update CI tests for Python 3.12
+- Made `test_grid` routines faster
 ### Added
 - CHI2, CHI2R, TRES, DMRES now in postfit par files
 - Added `WaveX` model as a `DelayComponent` with Fourier amplitudes as fitted parameters
