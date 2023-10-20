@@ -500,10 +500,14 @@ class Residuals:
             )
         return (phase_resids / self.get_PSR_freq(calctype=calctype)).to(u.s)
 
-    def _calc_gls_chi2(self):
+    def _calc_gls_chi2(self, lognorm=False):
         """Compute the chi2 when correlated noise is present in the timing model.
         If the system is not singular, it uses Cholesky factorization to evaluate this.
-        If the system is singular, it uses singular value decomposition instead."""
+        If the system is singular, it uses singular value decomposition instead.
+
+        If `lognorm=True` is given, the log-normalization-factor of the likelihood
+        function will also be returned.
+        """
         self.update()
 
         residuals = self.time_resids.to(u.s).value
@@ -515,7 +519,11 @@ class Residuals:
         # For implicit offset subtraction
         if "PHOFF" not in self.model:
             M = np.append(M, np.ones((len(self.toas), 1)), axis=1)
-            phiinv = np.append(phiinv, [0])
+
+            # 1e-40 is used here instead of 0 to avoid an
+            # un-normalizable distribution.
+            # ENTERPRISE uses the same value.
+            phiinv = np.append(phiinv, [1e-40])
 
         M, norm = normalize_designmatrix(M, None)
 
@@ -529,6 +537,7 @@ class Residuals:
         try:
             c = cho_factor(mtcm)
             xhat = cho_solve(c, mtcy)
+            svd = False
         except LinAlgError as e:
             log.warning(
                 f"Degenerate conditions encountered when computing chi-squared: {e}"
@@ -541,13 +550,26 @@ class Residuals:
 
             xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
 
+            svd = True
+
         newres = residuals - np.dot(M, xhat)
 
         chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
 
-        return chi2
+        if not lognorm:
+            return chi2
+        else:
+            logdet_N = np.sum(np.log(np.abs(Nvec)))
+            logdet_Phiinv = np.sum(np.log(np.abs(phiinv)))
+            logdet_Sigma = (
+                np.sum(np.log(np.abs(np.diag(c[0]))))
+                if not svd
+                else np.sum(np.log(np.abs(s)))
+            )
+            log_norm = 0.5 * (logdet_N - logdet_Phiinv + logdet_Sigma)
+            return chi2, log_norm
 
-    def calc_chi2(self):
+    def calc_chi2(self, lognorm=False):
         """Return the weighted chi-squared for the model and toas.
 
         If the errors on the TOAs are independent this is a straightforward
@@ -565,14 +587,29 @@ class Residuals:
         Handling of problematic results - degenerate conditions explored by
         a minimizer for example - may need to be checked to confirm that they
         correctly return infinity.
+
+        If `lognorm=True` is given, the log-normalization-factor of the likelihood
+        function will also be returned.
+
+        Parameters
+        ----------
+        lognorm: bool
+            If True, return the the log-normalization-factor of the likelihood
+            function along with the chi2 value.
+
+        Returns
+        -------
+        chi2                   if lognorm is False
+        (chi2, log_norm)       if lognorm is True
         """
         if self.model.has_correlated_errors:
-            return self._calc_gls_chi2()
+            return self._calc_gls_chi2(lognorm=lognorm)
         else:
             # Residual units are in seconds. Error units are in microseconds.
             toa_errors = self.get_data_error()
             if (toa_errors == 0.0).any():
                 return np.inf
+
             # The self.time_resids is in the unit of "s", the error "us".
             # This is more correct way, but it is the slowest.
             # return (((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()).value
@@ -582,10 +619,28 @@ class Residuals:
 
             # This the fastest way, but highly depend on the assumption of time_resids and
             # error units. Ensure only a pure number is returned.
-            try:
-                return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum().value
-            except ValueError:
-                return ((self.time_resids / toa_errors.to(u.s)) ** 2.0).sum()
+
+            r = self.time_resids
+            err = toa_errors.to(u.s)
+
+            chi2 = ((r / err) ** 2.0).sum().value
+
+            if not lognorm:
+                return chi2
+            else:
+                log_norm = np.sum(np.log(err.value))
+                return chi2, log_norm
+
+    def lnlikelihood(self):
+        """Compute the log-likelihood for the model and TOAs."""
+        chi2, log_norm = self.calc_chi2(lognorm=True)
+        return -(chi2 / 2 + log_norm)
+
+    def d_lnlikelihood_d_whitenoise_param(self, param):
+        r = self.time_resids
+        sigma = self.get_data_error()
+        d_sigma_d_param = self.model.d_toasigma_d_param(self.toas, param)
+        return np.sum(((r / sigma) ** 2 - 1) / sigma * d_sigma_d_param)
 
     def ecorr_average(self, use_noise_model=True):
         """Uses the ECORR noise model time-binning to compute "epoch-averaged" residuals.
