@@ -2601,3 +2601,32 @@ def normalize_designmatrix(M, params):
     norm[norm == 0] = 1
 
     return M / norm, norm
+
+
+def akaike_information_criterion(model, toas):
+    """Compute the Akaike information criterion.
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+        The timing model
+    toas: pint.toas.TOAs
+        TOAs
+
+    Returns
+    -------
+    aic: float
+        The Akaike information criterion
+    """
+    from pint.residuals import Residuals
+
+    if not toas.is_wideband():
+        k = (
+            len(model.free_params)
+            if "PhaseOffset" in model.components
+            else len(model.free_params) + 1
+        )
+        lnL = Residuals(toas, model).lnlikelihood()
+        return 2 * (k - lnL)
+    else:
+        raise NotImplementedError
