@@ -1308,7 +1308,12 @@ class DownhillFitter(Fitter):
         iteration of the downhill fit (implemented in the `_fit_toas()` method).
         If free white noise parameters are present, it will fit for them by numerically
         maximizing the likelihood function (implemented in the `_fit_noise()` method).
-        The timing model fit and the noise model fit are run iteratively in an alternating fashion.
+        The timing model fit and the noise model fit are run iteratively in an alternating
+        fashion. Fitting for a white noise parameter is as simple as::
+
+            fitter.model.EFAC1.frozen = False
+            fitter.fit_toas()
+
 
         Parameters
         ==========
