@@ -56,6 +56,7 @@ from pint.utils import (
     print_color_examples,
     parse_time,
     info_string,
+    akaike_information_criterion,
 )
 
 
@@ -871,3 +872,10 @@ def test_parse_time(t):
 def test_info_str():
     info = info_string()
     dinfo = info_string(detailed=True)
+
+
+def test_aic():
+    m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
+    t = toa.get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
+
+    assert np.isfinite(akaike_information_criterion(m, t))
