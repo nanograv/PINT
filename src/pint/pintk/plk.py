@@ -551,7 +551,8 @@ class PlkXYChoiceWidget(tk.Frame):
                 ):
                     self.ybuttons[ii].configure(state="disabled")
             if choice == "frequency" and (
-                len(np.unique(self.master.psr.all_toas["frequency"])) <= 1
+                (len(np.unique(self.master.psr.all_toas["freq"])) <= 1)
+                or np.any(np.isinf(self.master.psr.all_toas["freq"]))
             ):
                 self.xbuttons[ii].configure(state="disabled")
                 self.ybuttons[ii].configure(state="disabled")
