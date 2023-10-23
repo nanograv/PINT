@@ -30,6 +30,7 @@ the released changes.
 - Piecewise orbital model (`BinaryBTPiecewise`)
 - `TimingModel.fittable_params` property
 - Simulate correlated noise using `pint.simulation` (also available via the `zima` script)
+- `pintk` can plot against solar elongation
 - Optionally return the the log normalization factor of the likelihood function from the `Residuals.calc_chi2()` method.
 - `DownhilWLSFitter` can now estimate white noise parameters and their uncertainties.
 - `Residuals.lnlikelihood()` method
