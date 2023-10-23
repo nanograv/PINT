@@ -67,6 +67,7 @@ import numpy as np
 import scipy.linalg
 import scipy.optimize as opt
 from loguru import logger as log
+from numdifftools import Hessdiag
 
 import pint
 import pint.utils
@@ -1166,7 +1167,7 @@ class DownhillFitter(Fitter):
         )
         self.method = "downhill_checked"
 
-    def fit_toas(
+    def _fit_toas(
         self,
         maxiter=20,
         required_chi2_decrease=1e-2,
@@ -1174,37 +1175,11 @@ class DownhillFitter(Fitter):
         min_lambda=1e-3,
         debug=False,
     ):
-        """Carry out a cautious downhill fit.
+        """Downhill fit implementation for fitting the timing model parameters.
+        The `fit_toas()` calls this method iteratively to fit the timing model parameters
+        while also fitting for white noise parameters.
 
-        This tries to take the same steps as
-        :func:`pint.fitter.WLSFitter.fit_toas` or
-        :func:`pint.fitter.GLSFitter.fit_toas` or
-        :func:`pint.fitter.WidebandTOAFitter.fit_toas`.  At each step, it
-        checks whether the new model has a better ``chi2`` than the current
-        one; if the new model is invalid or worse than the current one, it
-        tries taking a shorter step in the same direction. This can exit if it
-        exceeds the maximum number of iterations or if improvement is not
-        possible even with very short steps, or it can exit successfully if a
-        full-size step is taken and it does not decrease the ``chi2`` by much.
-
-        The attribute ``self.converged`` is set to True or False depending on
-        whether the process actually converged.
-
-        Parameters
-        ==========
-
-        maxiter : int
-            Abandon the process if this many successful steps have been taken.
-        required_chi2_decrease : float
-            A full-size step that makes less than this much improvement is taken
-            to indicate that the fitter has converged.
-        max_chi2_increase : float
-            If this is positive, consider taking steps that slightly worsen the chi2 in hopes
-            of eventually finding our way downhill.
-        min_lambda : float
-            If steps are shrunk by this factor and still don't result in improvement, abandon hope
-            of convergence and stop.
-        """
+        See documentation of the `fit_toas()` method for more details."""
         # setup
         self.model.validate()
         self.model.validate_toas(self.toas)
@@ -1213,6 +1188,7 @@ class DownhillFitter(Fitter):
         self.converged = False
         # algorithm
         exception = None
+
         for i in range(maxiter):
             step = current_state.step
             lambda_ = 1
@@ -1266,6 +1242,7 @@ class DownhillFitter(Fitter):
             log.debug(
                 f"Stopping because maximum number of iterations ({maxiter}) reached"
             )
+
         self.current_state = best_state
         # collect results
         self.model = self.current_state.model
@@ -1277,6 +1254,7 @@ class DownhillFitter(Fitter):
         self.parameter_correlation_matrix = (
             self.parameter_covariance_matrix.to_correlation_matrix()
         )
+
         for p, e in zip(self.current_state.params, self.errors):
             try:
                 # I don't know why this fails with multiprocessing, but bypass if it does
@@ -1297,9 +1275,153 @@ class DownhillFitter(Fitter):
             raise MaxiterReached(f"Convergence not detected after {maxiter} steps.")
         return self.converged
 
+    def fit_toas(
+        self,
+        maxiter=20,
+        noise_fit_niter=5,
+        required_chi2_decrease=1e-2,
+        max_chi2_increase=1e-2,
+        min_lambda=1e-3,
+        noisefit_method="Newton-CG",
+        debug=False,
+    ):
+        """Carry out a cautious downhill fit.
+
+        This tries to take the same steps as
+        :func:`pint.fitter.WLSFitter.fit_toas` or
+        :func:`pint.fitter.GLSFitter.fit_toas` or
+        :func:`pint.fitter.WidebandTOAFitter.fit_toas`.  At each step, it
+        checks whether the new model has a better ``chi2`` than the current
+        one; if the new model is invalid or worse than the current one, it
+        tries taking a shorter step in the same direction. This can exit if it
+        exceeds the maximum number of iterations or if improvement is not
+        possible even with very short steps, or it can exit successfully if a
+        full-size step is taken and it does not decrease the ``chi2`` by much.
+
+        The attribute ``self.converged`` is set to True or False depending on
+        whether the process actually converged.
+
+        This function can also estimate white noise parameters (EFACs and EQUADs)
+        and their uncertainties.
+
+        If there are no free white noise parameters, this function will do one
+        iteration of the downhill fit (implemented in the `_fit_toas()` method).
+        If free white noise parameters are present, it will fit for them by numerically
+        maximizing the likelihood function (implemented in the `_fit_noise()` method).
+        The timing model fit and the noise model fit are run iteratively in an alternating
+        fashion. Fitting for a white noise parameter is as simple as::
+
+            fitter.model.EFAC1.frozen = False
+            fitter.fit_toas()
+
+
+        Parameters
+        ==========
+
+        maxiter : int
+            Abandon the process if this many successful steps have been taken.
+        required_chi2_decrease : float
+            A full-size step that makes less than this much improvement is taken
+            to indicate that the fitter has converged.
+        max_chi2_increase : float
+            If this is positive, consider taking steps that slightly worsen the chi2 in hopes
+            of eventually finding our way downhill.
+        min_lambda : float
+            If steps are shrunk by this factor and still don't result in improvement, abandon hope
+            of convergence and stop.
+        noisefit_method: str
+            Algorithm used to fit for noise parameters. See the documentation for
+            `scipy.optimize.minimize()` for more details and available options.
+        """
+        free_noise_params = self._get_free_noise_params()
+
+        if len(free_noise_params) == 0:
+            return self._fit_toas(
+                maxiter=maxiter,
+                required_chi2_decrease=required_chi2_decrease,
+                max_chi2_increase=required_chi2_decrease,
+                min_lambda=required_chi2_decrease,
+                debug=debug,
+            )
+        else:
+            log.debug("Will fit for noise parameters.")
+            for _ in range(noise_fit_niter):
+                self._fit_toas(
+                    maxiter=maxiter,
+                    required_chi2_decrease=required_chi2_decrease,
+                    max_chi2_increase=max_chi2_increase,
+                    min_lambda=min_lambda,
+                    debug=debug,
+                )
+                values, errors = self._fit_noise(noisefit_method=noisefit_method)
+                self._update_noise_params(values, errors)
+
+            return self._fit_toas(
+                maxiter=maxiter,
+                required_chi2_decrease=required_chi2_decrease,
+                max_chi2_increase=max_chi2_increase,
+                min_lambda=min_lambda,
+                debug=debug,
+            )
+
     @property
     def fac(self):
         return self.current_state.fac
+
+    def _get_free_noise_params(self):
+        """Returns a list of all free noise parameters."""
+        return [
+            fp
+            for fp in self.model.get_params_of_component_type("NoiseComponent")
+            if not getattr(self.model, fp).frozen
+        ]
+
+    def _update_noise_params(self, values, errors):
+        """Update the model using estimated noise parameters."""
+        free_noise_params = self._get_free_noise_params()
+        for fp, val, err in zip(free_noise_params, values, errors):
+            getattr(self.model, fp).value = val
+            getattr(self.model, fp).uncertainty_value = err
+
+    def _fit_noise(self, noisefit_method="Newton-CG"):
+        """Estimate noise parameters and their uncertainties. Noise parameters
+        are estimated by numerically maximizing the log-likelihood function including
+        the normalization term. The uncertainties thereof are computed using the
+        numerically-evaluated Hessian."""
+        free_noise_params = self._get_free_noise_params()
+
+        xs0 = [getattr(self.model, fp).value for fp in free_noise_params]
+
+        model1 = copy.deepcopy(self.model)
+        res = Residuals(self.toas, model1)
+
+        def _mloglike(xs):
+            """Negative of the log-likelihood function."""
+            for fp, x in zip(free_noise_params, xs):
+                getattr(res.model, fp).value = x
+
+            return -res.lnlikelihood()
+
+        def _mloglike_grad(xs):
+            """Gradient of the negative of the log-likelihood function w.r.t. white noise parameters."""
+            for fp, x in zip(free_noise_params, xs):
+                getattr(res.model, fp).value = x
+
+            return np.array(
+                [
+                    -res.d_lnlikelihood_d_whitenoise_param(par).value
+                    for par in free_noise_params
+                ]
+            )
+
+        maxlike_result = opt.minimize(
+            _mloglike, xs0, method=noisefit_method, jac=_mloglike_grad
+        )
+
+        hess = Hessdiag(_mloglike)
+        errs = np.sqrt(1 / hess(maxlike_result.x))
+
+        return maxlike_result.x, errs
 
 
 class WLSState(ModelState):

@@ -29,6 +29,15 @@ the released changes.
 - Piecewise orbital model (`BinaryBTPiecewise`)
 - `TimingModel.fittable_params` property
 - Simulate correlated noise using `pint.simulation` (also available via the `zima` script)
+- `pintk` can plot against solar elongation
+- Optionally return the the log normalization factor of the likelihood function from the `Residuals.calc_chi2()` method.
+- `DownhilWLSFitter` can now estimate white noise parameters and their uncertainties.
+- `Residuals.lnlikelihood()` method
+- `pint.utils.akaike_information_criterion()` function
+- `TimingModel.d_toasigma_d_param` method to compute derivatives of scaled TOA uncertainties w.r.t. white noise parameters.
+- `TimingModel.toasigma_derivs` property to get all derivatives functions of scaled TOA uncertainties.
+- `ScaleToaError.register_toasigma_deriv_funcs` method to populate derivatives of scaled TOA uncertainties.
+- `ScaleToaError.d_toasigma_d_EFAC` and `ScaleToaError.d_toasigma_d_EQUAD` methods.
 ### Fixed
 - Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
 - Fixed RTD by specifying theme explicitly.
@@ -39,4 +48,5 @@ the released changes.
 - `get_TOAs` raises an exception upon finding mixed narrowband and wideband TOAs in a tim file. `TOAs.is_wideband` returns True only if *ALL* TOAs have the -pp_dm flag.
 - `TimingModel.designmatrix()` method will fail with an informative error message if there are free unfittable parameters in the timing model.
 - `make_fake_toas_uniform` and `make_fake_toas_fromMJDs` respects units of errors
+- Robust access of EPHEM and PLANET_SHAPIRO in `make_fake_toas_fromtim`
 ### Removed
