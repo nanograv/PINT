@@ -37,6 +37,7 @@ plot_labels = [
     "frequency",
     "TOA error",
     "rounded MJD",
+    "elongation",
 ]
 
 # Some parameters we do not want to add a fitting checkbox for:

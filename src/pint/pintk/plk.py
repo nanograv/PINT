@@ -49,6 +49,7 @@ plotlabels = {
     "frequency": r"Observing Frequency (MHz)",
     "TOA error": r"TOA uncertainty ($\mu$s)",
     "rounded MJD": r"MJD",
+    "elongation": r"Solar Elongation (deg)",
 }
 
 helpstring = """The following interactions are currently supported in the plotting pane in `pintk`:
@@ -1228,6 +1229,12 @@ class PlkWidget(tk.Frame):
         elif label == "rounded MJD":
             data = np.floor(self.psr.all_toas.get_mjds() + 0.5 * u.d)
             error = self.psr.all_toas.get_errors().to(u.d)
+        elif label == "elongation":
+            data = np.degrees(
+                self.psr.prefit_model.sun_angle(self.psr.all_toas, also_distance=False)
+            )
+            error = None
+
         return data, error
 
     def coordToPoint(self, cx, cy):
