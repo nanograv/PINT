@@ -49,5 +49,6 @@ the released changes.
 - `TimingModel.designmatrix()` method will fail with an informative error message if there are free unfittable parameters in the timing model.
 - `make_fake_toas_uniform` and `make_fake_toas_fromMJDs` respects units of errors
 - Robust access of EPHEM and PLANET_SHAPIRO in `make_fake_toas_fromtim`
-- `pintk` will not allow choices of axes that are not in timing model
+- `pintk` will not allow choices of axes that are not in timing model/data
+- `pintk` correctly displays initial log level
 ### Removed
