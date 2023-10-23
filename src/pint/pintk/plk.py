@@ -524,6 +524,38 @@ class PlkXYChoiceWidget(tk.Frame):
             if choice.lower() == yid:
                 self.ybuttons[ii].select()
 
+            if choice == "elongation":
+                if not any(
+                    x.startswith("Astrometry")
+                    for x in self.master.psr.prefit_model.components
+                ):
+                    self.xbuttons[ii].configure(state="disabled")
+                    if not self.master.psr.fitted:
+                        self.ybuttons[ii].configure(state="disabled")
+                if self.master.psr.fitted and not any(
+                    x.startswith("Astrometry")
+                    for x in self.master.psr.pstfit_model.components
+                ):
+                    self.ybuttons[ii].configure(state="disabled")
+            if choice == "orbital phase":
+                if not any(
+                    x.startswith("Binary")
+                    for x in self.master.psr.prefit_model.components
+                ):
+                    self.xbuttons[ii].configure(state="disabled")
+                    if not self.master.psr.fitted:
+                        self.ybuttons[ii].configure(state="disabled")
+                if self.master.psr.fitted and not any(
+                    x.startswith("Binary")
+                    for x in self.master.psr.prefit_model.components
+                ):
+                    self.ybuttons[ii].configure(state="disabled")
+            if choice == "frequency" and (
+                len(np.unique(self.master.psr.all_toas["frequency"])) <= 1
+            ):
+                self.xbuttons[ii].configure(state="disabled")
+                self.ybuttons[ii].configure(state="disabled")
+
     def setCallbacks(self, updatePlot):
         """
         Set the callback functions
