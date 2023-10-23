@@ -3,11 +3,13 @@
 import argparse
 
 import sys
+import os
 
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
 import tkinter.messagebox as tkMessageBox
 import matplotlib as mpl
+from loguru import logger as log
 
 import pint.logging
 
@@ -260,6 +262,24 @@ def main(argv=None):
     pint.logging.setup(
         level=pint.logging.get_level(args.loglevel, args.verbosity, args.quiet)
     )
+    # see if the arguments were flipped
+    if (
+        os.path.splitext(args.parfile)[1] == ".tim"
+        and os.path.splitext(args.timfile)[1] == ".par"
+    ):
+        log.debug(
+            f"Swapping inputs: parfile='{args.timfile}' and timfile='{args.parfile}'"
+        )
+        args.parfile, args.timfile = args.timfile, args.parfile
+    else:
+        if os.path.splitext(args.timfile)[1] != ".tim":
+            log.info(
+                f"Input timfile '{args.timfile}' has unusual extension '{os.path.splitext(args.timfile)[1]}': is this intended?"
+            )
+        if os.path.splitext(args.parfile)[1] != ".par":
+            log.info(
+                f"Input parfile '{args.parfile}' has unusual extension '{os.path.splitext(args.parfile)[1]}': is this intended?"
+            )
 
     root = tk.Tk()
     root.minsize(1000, 800)
