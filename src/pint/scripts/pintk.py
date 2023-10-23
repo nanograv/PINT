@@ -270,7 +270,7 @@ def main(argv=None):
             timfile=args.timfile,
             fitter=args.fitter,
             ephem=args.ephem,
-            loglevel=args.loglevel,
+            loglevel=pint.logging.get_level(args.loglevel, args.verbosity, args.quiet),
         )
         root.protocol("WM_DELETE_WINDOW", root.destroy)
         img = tk.Image("photo", file=pint.pintk.plk.icon_img)
