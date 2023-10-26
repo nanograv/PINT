@@ -524,31 +524,18 @@ class PlkXYChoiceWidget(tk.Frame):
             if choice.lower() == yid:
                 self.ybuttons[ii].select()
 
+            model = (
+                self.master.psr.postfit_model
+                if self.master.psr.fitted
+                else self.master.psr.prefit_model
+            )
             if choice == "elongation":
-                if not any(
-                    x.startswith("Astrometry")
-                    for x in self.master.psr.prefit_model.components
-                ):
+                if not any(x.startswith("Astrometry") for x in model.components):
                     self.xbuttons[ii].configure(state="disabled")
-                    if not self.master.psr.fitted:
-                        self.ybuttons[ii].configure(state="disabled")
-                if self.master.psr.fitted and not any(
-                    x.startswith("Astrometry")
-                    for x in self.master.psr.pstfit_model.components
-                ):
                     self.ybuttons[ii].configure(state="disabled")
             if choice == "orbital phase":
-                if not any(
-                    x.startswith("Binary")
-                    for x in self.master.psr.prefit_model.components
-                ):
+                if not any(x.startswith("Binary") for x in model.components):
                     self.xbuttons[ii].configure(state="disabled")
-                    if not self.master.psr.fitted:
-                        self.ybuttons[ii].configure(state="disabled")
-                if self.master.psr.fitted and not any(
-                    x.startswith("Binary")
-                    for x in self.master.psr.prefit_model.components
-                ):
                     self.ybuttons[ii].configure(state="disabled")
             if choice == "frequency" and (
                 (len(np.unique(self.master.psr.all_toas["freq"])) <= 1)
