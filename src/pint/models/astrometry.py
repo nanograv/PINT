@@ -923,7 +923,7 @@ class AstrometryEcliptic(Astrometry):
         M = np.array(
             [[1, 0, 0], [0, np.cos(obl), -np.sin(obl)], [0, np.sin(obl), np.cos(obl)]]
         )
-        return M @ x_ecl
+        return x_ecl @ M
 
     def get_d_delay_quantities_ecliptical(self, toas):
         """Calculate values needed for many d_delay_d_param functions."""
