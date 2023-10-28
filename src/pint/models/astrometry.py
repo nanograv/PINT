@@ -900,6 +900,21 @@ class AstrometryEcliptic(Astrometry):
         return u.Quantity([x, y, z]).T
 
     def ssb_to_psb_xyz_ICRS(self, epoch=None, ecl=None):
+        """Returns unit vector(s) from SSB to pulsar system barycenter under ICRS.
+
+        If epochs (MJD) are given, proper motion is included in the calculation.
+
+        Parameters
+        ----------
+        epoch : float or astropy.time.Time, optional
+        ecl : str, optional
+            Obliquity (IERS2010 by default)
+
+        Returns
+        -------
+        np.ndarray :
+            (len(epoch), 3) array of unit vectors
+        """
         ecl = ecl if ecl is not None else self.ECL.value
 
         x_ecl = self.ssb_to_psb_xyz_ECL(epoch=epoch, ecl=ecl)
