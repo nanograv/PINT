@@ -1278,7 +1278,7 @@ class DownhillFitter(Fitter):
     def fit_toas(
         self,
         maxiter=20,
-        noise_fit_niter=5,
+        noise_fit_niter=3,
         required_chi2_decrease=1e-2,
         max_chi2_increase=1e-2,
         min_lambda=1e-3,
@@ -1345,7 +1345,7 @@ class DownhillFitter(Fitter):
             )
         else:
             log.debug("Will fit for noise parameters.")
-            for _ in range(noise_fit_niter):
+            for idx in range(noise_fit_niter):
                 self._fit_toas(
                     maxiter=maxiter,
                     required_chi2_decrease=required_chi2_decrease,
@@ -1353,8 +1353,14 @@ class DownhillFitter(Fitter):
                     min_lambda=min_lambda,
                     debug=debug,
                 )
-                values, errors = self._fit_noise(noisefit_method=noisefit_method)
-                self._update_noise_params(values, errors)
+
+                compute_noise_uncertainties = idx == noise_fit_niter - 1
+                values, errors = self._fit_noise(
+                    noisefit_method=noisefit_method,
+                    compute_uncertainties=compute_noise_uncertainties,
+                )
+                if compute_noise_uncertainties:
+                    self._update_noise_params(values, errors)
 
             return self._fit_toas(
                 maxiter=maxiter,
@@ -1383,7 +1389,7 @@ class DownhillFitter(Fitter):
             getattr(self.model, fp).value = val
             getattr(self.model, fp).uncertainty_value = err
 
-    def _fit_noise(self, noisefit_method="Newton-CG"):
+    def _fit_noise(self, noisefit_method="Newton-CG", compute_uncertainties=True):
         """Estimate noise parameters and their uncertainties. Noise parameters
         are estimated by numerically maximizing the log-likelihood function including
         the normalization term. The uncertainties thereof are computed using the
@@ -1418,8 +1424,11 @@ class DownhillFitter(Fitter):
             _mloglike, xs0, method=noisefit_method, jac=_mloglike_grad
         )
 
-        hess = Hessdiag(_mloglike)
-        errs = np.sqrt(1 / hess(maxlike_result.x))
+        if compute_uncertainties:
+            hess = Hessdiag(_mloglike)
+            errs = np.sqrt(1 / hess(maxlike_result.x))
+        else:
+            errs = None
 
         return maxlike_result.x, errs
 
