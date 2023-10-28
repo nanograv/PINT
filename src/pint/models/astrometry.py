@@ -899,6 +899,17 @@ class AstrometryEcliptic(Astrometry):
         z = np.sin(lat)
         return u.Quantity([x, y, z]).T
 
+    def ssb_to_psb_xyz_ICRS(self, epoch=None, ecl=None):
+        ecl = ecl if ecl is not None else self.ECL.value
+
+        x_ecl = self.ssb_to_psb_xyz_ECL(epoch=epoch, ecl=ecl)
+
+        obl = OBL[ecl]
+        M = np.array(
+            [[1, 0, 0], [0, np.cos(obl), -np.sin(obl)], [0, np.sin(obl), np.cos(obl)]]
+        )
+        return M @ x_ecl
+
     def get_d_delay_quantities_ecliptical(self, toas):
         """Calculate values needed for many d_delay_d_param functions."""
         # TODO: Move all these calculations in a separate class for elegance
