@@ -14,6 +14,8 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 import pint.pintk.pulsar as pulsar
 import pint.pintk.colormodes as cm
+from pint.models.pulsar_binary import PulsarBinary
+from pint.models.astrometry import Astrometry
 
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
@@ -529,14 +531,16 @@ class PlkXYChoiceWidget(tk.Frame):
                 if self.master.psr.fitted
                 else self.master.psr.prefit_model
             )
-            if choice == "elongation":
-                if not any(x.startswith("Astrometry") for x in model.components):
-                    self.xbuttons[ii].configure(state="disabled")
-                    self.ybuttons[ii].configure(state="disabled")
-            if choice == "orbital phase":
-                if not any(x.startswith("Binary") for x in model.components):
-                    self.xbuttons[ii].configure(state="disabled")
-                    self.ybuttons[ii].configure(state="disabled")
+            if choice == "elongation" and not any(
+                isinstance(x, Astrometry) for x in model.components
+            ):
+                self.xbuttons[ii].configure(state="disabled")
+                self.ybuttons[ii].configure(state="disabled")
+            elif choice == "orbital phase" and not any(
+                isinstance(x, PulsarBinary) for x in model.components
+            ):
+                self.xbuttons[ii].configure(state="disabled")
+                self.ybuttons[ii].configure(state="disabled")
             if choice == "frequency" and (
                 (len(np.unique(self.master.psr.all_toas["freq"])) <= 1)
                 or np.any(np.isinf(self.master.psr.all_toas["freq"]))
