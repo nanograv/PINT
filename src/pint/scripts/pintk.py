@@ -223,7 +223,7 @@ def main(argv=None):
         "--fitter",
         type=str,
         choices=(
-            "auto",
+            "notdownhill",
             "downhill",
             "WLSFitter",
             "GLSFitter",
@@ -234,8 +234,8 @@ def main(argv=None):
             "WidebandDownhillFitter",
             "WidebandLMFitter",
         ),
-        default="auto",
-        help="PINT Fitter to use [default='auto'].  'auto' will choose WLS/GLS/WidebandTOA depending on TOA/model properties.  'downhill' will do the same for Downhill versions.",
+        default="downhill",
+        help="PINT Fitter to use [default='downhill'].  'notdownhill' will choose WLS/GLS/WidebandTOA depending on TOA/model properties.  'downhill' will do the same for Downhill versions.",
     )
     parser.add_argument(
         "--version",
