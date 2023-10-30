@@ -773,7 +773,10 @@ class TimingModel:
     @property_exists
     def is_binary(self):
         """Does the model describe a binary pulsar?"""
-        return any(x.startswith("Binary") for x in self.components.keys())
+        # need to import here to avoid circular imports
+        from pint.models.pulsar_binary import PulsarBinary
+
+        return any(isinstance(x, PulsarBinary) for x in self.components.keys())
 
     def orbital_phase(self, barytimes, anom="mean", radians=True):
         """Return orbital phase (in radians) at barycentric MJD times.
