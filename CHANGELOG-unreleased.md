@@ -19,6 +19,7 @@ the released changes.
 - Only fittable parameters will be listed as check boxes in the `plk` interface.
 - Update CI tests for Python 3.12
 - Made `test_grid` routines faster
+- `pintk` uses downhill fitters by default
 ### Added
 - CHI2, CHI2R, TRES, DMRES now in postfit par files
 - Added `WaveX` model as a `DelayComponent` with Fourier amplitudes as fitted parameters
