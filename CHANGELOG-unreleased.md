@@ -20,7 +20,6 @@ the released changes.
 - Update CI tests for Python 3.12
 - Made `test_grid` routines faster
 - `pintk` uses downhill fitters by default
-- `is_binary` attribute now uses component inheritance
 ### Added
 - CHI2, CHI2R, TRES, DMRES now in postfit par files
 - Added `WaveX` model as a `DelayComponent` with Fourier amplitudes as fitted parameters
