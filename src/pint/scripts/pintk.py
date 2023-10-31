@@ -33,7 +33,7 @@ class PINTk:
         master,
         parfile=None,
         timfile=None,
-        fitter="auto",
+        fitter="downhill",
         ephem=None,
         loglevel=None,
         **kwargs,
@@ -151,7 +151,7 @@ class PINTk:
                 self.mainFrame.grid_columnconfigure(col, weight=1)
                 visible += 1
 
-    def openPulsar(self, parfile, timfile, fitter="auto", ephem=None):
+    def openPulsar(self, parfile, timfile, fitter="downhill", ephem=None):
         self.psr = Pulsar(parfile, timfile, ephem, fitter=fitter)
         self.widgets["plk"].setPulsar(
             self.psr,
