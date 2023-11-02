@@ -12,6 +12,7 @@ from pint.models import get_model_and_toas, get_model
 from pint.simulation import make_fake_toas_uniform
 from pint.residuals import Residuals
 from pint.fitter import DownhillGLSFitter
+from astropy import units as u
 
 
 @pytest.mark.parametrize("addnoise", ["", "--addnoise"])
@@ -132,3 +133,35 @@ def test_simulate_corrnoise(tmp_path):
     x = (rw / sigma).to_value("")
     assert np.isclose(np.std(x), 1, atol=0.2)
     assert np.isclose(np.mean(x), 0, atol=0.01)
+
+
+@pytest.mark.parametrize("multifreq", [True, False])
+def test_simulate_uniform_multifreq(multifreq):
+    parfile = os.path.join(datadir, "NGC6440E.par")
+    m = get_model(parfile)
+
+    ntoas = 100
+
+    freqs = np.array([500, 1400]) * u.MHz
+    t = make_fake_toas_uniform(
+        50000,
+        51000,
+        ntoas,
+        m,
+        add_noise=True,
+        freq=freqs,
+        multi_freqs_in_epoch=multifreq,
+    )
+    assert len(t) == ntoas
+
+    freqs = np.array([500, 750, 1400]) * u.MHz
+    t = make_fake_toas_uniform(
+        50000,
+        51000,
+        ntoas,
+        m,
+        add_noise=True,
+        freq=freqs,
+        multi_freqs_in_epoch=multifreq,
+    )
+    assert len(t) == ntoas
