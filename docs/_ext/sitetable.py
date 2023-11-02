@@ -51,7 +51,7 @@ class SiteTable(Table):
                         entry += nodes.paragraph(text=" (" + ", ".join(o.aliases) + ")")
                 elif c == "origin":
                     origin = (
-                        f"{o.fullname}\n{o.origin}"
+                        f"{o.fullname}.  {o.origin}"
                         if o.fullname != o.name
                         else o.origin
                     )
