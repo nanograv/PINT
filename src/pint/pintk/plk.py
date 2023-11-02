@@ -14,6 +14,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 import pint.pintk.pulsar as pulsar
 import pint.pintk.colormodes as cm
+from pint.models.astrometry import Astrometry
 
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
@@ -523,6 +524,26 @@ class PlkXYChoiceWidget(tk.Frame):
                 self.xbuttons[ii].select()
             if choice.lower() == yid:
                 self.ybuttons[ii].select()
+
+            model = (
+                self.master.psr.postfit_model
+                if self.master.psr.fitted
+                else self.master.psr.prefit_model
+            )
+            if choice == "elongation" and not any(
+                isinstance(x, Astrometry) for x in model.components
+            ):
+                self.xbuttons[ii].configure(state="disabled")
+                self.ybuttons[ii].configure(state="disabled")
+            elif choice == "orbital phase" and not model.is_binary:
+                self.xbuttons[ii].configure(state="disabled")
+                self.ybuttons[ii].configure(state="disabled")
+            if choice == "frequency" and (
+                (len(np.unique(self.master.psr.all_toas["freq"])) <= 1)
+                or np.any(np.isinf(self.master.psr.all_toas["freq"]))
+            ):
+                self.xbuttons[ii].configure(state="disabled")
+                self.ybuttons[ii].configure(state="disabled")
 
     def setCallbacks(self, updatePlot):
         """
