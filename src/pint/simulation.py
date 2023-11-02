@@ -316,6 +316,7 @@ def make_fake_toas_fromMJDs(
     name="fake",
     include_bipm=False,
     include_gps=True,
+    multi_freqs_in_epoch=True,
 ):
     """Make toas from a list of MJDs
 
@@ -351,6 +352,8 @@ def make_fake_toas_fromMJDs(
     include_gps : bool, optional
         Whether or not to disable UTC(GPS)->UTC clock correction
         (see :class:`pint.observatory.topo_obs.TopoObs`)
+    multi_freqs_in_epoch : bool, optional
+        Whether to generate multiple frequency TOAs for the same epoch.
 
     Returns
     -------
@@ -373,14 +376,17 @@ def make_fake_toas_fromMJDs(
         raise TypeError(
             f"Do not know how to interpret input times of type '{type(MJDs)}'"
         )
-    times = MJDs
 
     if freq is None or np.isinf(freq).all():
         freq = np.inf * u.MHz
-
     freqs = np.atleast_1d(freq)
-    freq_array = np.tile(freqs, len(times) // len(freqs) + 1)[: len(times)]
-    # freq_array = _get_freq_array(np.atleast_1d(freq), len(times))
+
+    if not multi_freqs_in_epoch:
+        times = MJDs
+        freq_array = np.tile(freqs, len(MJDs) // len(freqs) + 1)[: len(times)]
+    else:
+        times = np.repeat(MJDs, len(freqs))
+        freq_array = np.tile(freqs, len(MJDs))
 
     clk_version = get_fake_toa_clock_versions(
         model, include_bipm=include_bipm, include_gps=include_gps
