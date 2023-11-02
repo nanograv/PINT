@@ -18,6 +18,8 @@ the released changes.
 - Creation of `Fitter` objects will fail if there are free unfittable parameters in the timing model.
 - Only fittable parameters will be listed as check boxes in the `plk` interface.
 - Update CI tests for Python 3.12
+- Made `test_grid` routines faster
+- `pintk` uses downhill fitters by default
 ### Added
 - CHI2, CHI2R, TRES, DMRES now in postfit par files
 - Added `WaveX` model as a `DelayComponent` with Fourier amplitudes as fitted parameters
@@ -29,6 +31,7 @@ the released changes.
 - Piecewise orbital model (`BinaryBTPiecewise`)
 - `TimingModel.fittable_params` property
 - Simulate correlated noise using `pint.simulation` (also available via the `zima` script)
+- `pintk` will recognize when timfile and parfile inputs are switched and swap them
 - `pintk` can plot against solar elongation
 - Optionally return the the log normalization factor of the likelihood function from the `Residuals.calc_chi2()` method.
 - `DownhilWLSFitter` can now estimate white noise parameters and their uncertainties.
@@ -49,4 +52,6 @@ the released changes.
 - `TimingModel.designmatrix()` method will fail with an informative error message if there are free unfittable parameters in the timing model.
 - `make_fake_toas_uniform` and `make_fake_toas_fromMJDs` respects units of errors
 - Robust access of EPHEM and PLANET_SHAPIRO in `make_fake_toas_fromtim`
+- `pintk` will not allow choices of axes that are not in timing model/data
+- `pintk` correctly displays initial log level
 ### Removed

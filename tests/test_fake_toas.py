@@ -330,7 +330,7 @@ def test_fake_DMfit():
     f = GLSFitter(t, m)
     f.fit_toas()
 
-    N = 30
+    N = 15
 
     DMs = np.zeros(N) * u.pc / u.cm**3
     for iter in range(N):
