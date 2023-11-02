@@ -525,7 +525,7 @@
             4479103.55
         ],
         "fullname": "Canadian Centre for Experimental Radio Astronomy",
-        "origin": "The origin of this data is unknown."
+        "origin": "The origin of this data is unknown. Note that this location is in Smiths Falls, ON, where the telescope was previously deployed.  It has since moved to Rideau Ferry, ON but the coordinates have not been updated.",
     },
     "AXIS": {
         "aliases": [
