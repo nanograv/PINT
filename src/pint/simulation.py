@@ -22,30 +22,6 @@ __all__ = [
 ]
 
 
-def _get_freq_array(base_frequencies, ntoas):
-    """Make frequency array out of one or more frequencies
-
-    If >1 frequency is specified, will alternate
-
-    Parameters
-    ----------
-    base_frequencies : astropy.units.Quantity
-       array of frequencies
-    ntoas : int
-       number of TOAs
-
-    Returns
-    -------
-    astropy.units.Quantity
-        array of (potentially alternating) frequencies
-    """
-    freq = np.zeros(ntoas) * base_frequencies[0].unit
-    num_freqs = len(base_frequencies)
-    for ii, fv in enumerate(base_frequencies):
-        freq[ii::num_freqs] = fv
-    return freq
-
-
 def zero_residuals(ts, model, maxiter=10, tolerance=None):
     """Use a model to adjust a TOAs object, setting residuals to 0 iteratively.
 
@@ -213,6 +189,7 @@ def make_fake_toas_uniform(
     name="fake",
     include_bipm=False,
     include_gps=True,
+    multi_freqs_in_epoch=True,
 ):
     """Make evenly spaced toas
 
@@ -256,6 +233,8 @@ def make_fake_toas_uniform(
     include_gps : bool, optional
         Whether or not to disable UTC(GPS)->UTC clock correction
         (see :class:`pint.observatory.topo_obs.TopoObs`)
+    multi_freqs_in_epoch : bool, optional
+        Whether to generate multiple frequency TOAs for the same epoch.
     Returns
     -------
     TOAs : pint.toa.TOAs
@@ -284,15 +263,18 @@ def make_fake_toas_uniform(
     if not isinstance(endMJD, u.Quantity):
         endMJD = endMJD << u.d
 
-    times = np.linspace(startMJD, endMJD, ntoas, dtype=np.longdouble)
+    if freq is None or np.isinf(freq).all():
+        freq = np.inf * u.MHz
+
+    times, freq_array = _get_freqs_and_times(
+        startMJD, endMJD, ntoas, freq, multi_freqs_in_epoch=multi_freqs_in_epoch
+    )
+
     if fuzz > 0:
         # apply some fuzz to the dates
         fuzz = np.random.normal(scale=fuzz.to_value(u.d), size=len(times)) * u.d
         times += fuzz
 
-    if freq is None or np.isinf(freq).all():
-        freq = np.inf * u.MHz
-    freq_array = _get_freq_array(np.atleast_1d(freq), len(times))
     clk_version = get_fake_toa_clock_versions(
         model, include_bipm=include_bipm, include_gps=include_gps
     )
@@ -395,10 +377,15 @@ def make_fake_toas_fromMJDs(
 
     if freq is None or np.isinf(freq).all():
         freq = np.inf * u.MHz
-    freq_array = _get_freq_array(np.atleast_1d(freq), len(times))
+
+    freqs = np.atleast_1d(freq)
+    freq_array = np.tile(freqs, len(times) // len(freqs) + 1)[: len(times)]
+    # freq_array = _get_freq_array(np.atleast_1d(freq), len(times))
+
     clk_version = get_fake_toa_clock_versions(
         model, include_bipm=include_bipm, include_gps=include_gps
     )
+
     ts = pint.toa.get_TOAs_array(
         times,
         obs=obs,
@@ -604,3 +591,48 @@ def calculate_random_models(
         dphase /= freqs
 
     return (dphase, random_models) if keep_models else dphase
+
+
+def _get_freqs_and_times(start, end, ntoas, freqs, multi_freqs_in_epoch=True):
+    freqs = np.atleast_1d(freqs)
+    assert (
+        len(freqs.shape) == 1 and len(freqs) <= ntoas
+    ), "`freqs` should be a single quantity or a 1D array with length less than `ntoas`."
+    nfreqs = len(freqs)
+
+    if multi_freqs_in_epoch:
+        nepochs = ntoas // nfreqs + 1
+
+        epochs = np.linspace(start, end, nepochs, dtype=np.longdouble)
+        times = np.repeat(epochs, nfreqs)
+        tfreqs = np.tile(freqs, nepochs)
+
+        return times[:ntoas], tfreqs[:ntoas]
+    else:
+        times = np.linspace(start, end, ntoas, dtype=np.longdouble)
+        tfreqs = np.tile(freqs, ntoas // nfreqs + 1)[:ntoas]
+        return times, tfreqs
+
+
+# def _get_freq_array(base_frequencies, ntoas):
+#     """Make frequency array out of one or more frequencies
+
+#     If >1 frequency is specified, will alternate
+
+#     Parameters
+#     ----------
+#     base_frequencies : astropy.units.Quantity
+#        array of frequencies
+#     ntoas : int
+#        number of TOAs
+
+#     Returns
+#     -------
+#     astropy.units.Quantity
+#         array of (potentially alternating) frequencies
+#     """
+#     freq = np.zeros(ntoas) * base_frequencies[0].unit
+#     num_freqs = len(base_frequencies)
+#     for ii, fv in enumerate(base_frequencies):
+#         freq[ii::num_freqs] = fv
+#     return freq
