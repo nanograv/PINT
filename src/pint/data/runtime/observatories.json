@@ -74,7 +74,7 @@
             2006852.586,
             -3238948.127
         ],
-        "fullname": "MEERKAT",
+        "fullname": "MeerKAT",
         "origin": "For MeerKAT when used in timing mode.\nThe origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
     },
     "parkes": {
@@ -90,7 +90,7 @@
             2816759.1,
             -3454036.3
         ],
-        "fullname": "The Parkes radio telescope",
+        "fullname": "The Parkes (Murriyang) radio telescope",
         "origin": "The origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
     },
     "jodrell": {
@@ -279,7 +279,7 @@
             6087044.73,
             1251052.35
         ],
-        "fullname": "he Ooty Radio Telescope (ORT)",
+        "fullname": "The Ooty Radio Telescope (ORT)",
         "origin": "Coordinates provided by Jaikhomba Singha on 25 Jan 2023.\nORT does not need clock files as the data is recorded against UTC(gps)."
     },
     "wsrt": {
@@ -1515,7 +1515,7 @@
             1665449.2317,
             -2505096.8054
         ],
-        "fullname": "H.E.S.S., the High Energy Stereoscopic System",
+        "fullname": "The High Energy Stereoscopic System (HESS)",
         "origin": "An Imaging Atmospheric Cherenkov Telescope.\nThese coordinates are provided (from geodetic coordinates : lat = 23°16'18''S, lon = 16°30'00''E at 1800m asl) by the Maxime Regeard and Arache Djannati-Atai on behalf of the H.E.S.S. Collabotation, 2023 January 18."
     },
     "hawc": {
@@ -1526,7 +1526,7 @@
             -5987810.65796205,
             2064148.57332404
         ],
-        "fullname": "HAWC: High Altitude Water Cherenkov Experiment",
+        "fullname": "High Altitude Water Cherenkov Experiment (HAWC)",
         "origin": "Coordinates provided (as geodetic coordinates : 18:59:41.63 N, 97:18:27.39 W, 4096 m) by the spokesperson Ke Fang on behalf of the HAWC Collabotation, 2023 April 21."
     }
 }
