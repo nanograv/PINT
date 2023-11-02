@@ -33,7 +33,7 @@ class PINTk:
         master,
         parfile=None,
         timfile=None,
-        fitter="auto",
+        fitter="downhill",
         ephem=None,
         loglevel=None,
         **kwargs,
@@ -151,7 +151,7 @@ class PINTk:
                 self.mainFrame.grid_columnconfigure(col, weight=1)
                 visible += 1
 
-    def openPulsar(self, parfile, timfile, fitter="auto", ephem=None):
+    def openPulsar(self, parfile, timfile, fitter="downhill", ephem=None):
         self.psr = Pulsar(parfile, timfile, ephem, fitter=fitter)
         self.widgets["plk"].setPulsar(
             self.psr,
@@ -223,7 +223,7 @@ def main(argv=None):
         "--fitter",
         type=str,
         choices=(
-            "auto",
+            "notdownhill",
             "downhill",
             "WLSFitter",
             "GLSFitter",
@@ -234,8 +234,8 @@ def main(argv=None):
             "WidebandDownhillFitter",
             "WidebandLMFitter",
         ),
-        default="auto",
-        help="PINT Fitter to use [default='auto'].  'auto' will choose WLS/GLS/WidebandTOA depending on TOA/model properties.  'downhill' will do the same for Downhill versions.",
+        default="downhill",
+        help="PINT Fitter to use [default='downhill'].  'notdownhill' will choose WLS/GLS/WidebandTOA depending on TOA/model properties.  'downhill' will do the same for Downhill versions.",
     )
     parser.add_argument(
         "--version",
@@ -290,7 +290,7 @@ def main(argv=None):
             timfile=args.timfile,
             fitter=args.fitter,
             ephem=args.ephem,
-            loglevel=args.loglevel,
+            loglevel=pint.logging.get_level(args.loglevel, args.verbosity, args.quiet),
         )
         root.protocol("WM_DELETE_WINDOW", root.destroy)
         img = tk.Image("photo", file=pint.pintk.plk.icon_img)

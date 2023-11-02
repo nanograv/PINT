@@ -104,7 +104,7 @@ class Pulsar:
         )
         # Set of indices from original list that are deleted
         self.deleted = set([])
-        if fitter == "auto":
+        if fitter == "notdownhill":
             self.fit_method = self.getDefaultFitter(downhill=False)
             log.info(
                 f"Since wideband={self.all_toas.wideband} and correlated={self.prefit_model.has_correlated_errors}, selecting fitter={self.fit_method}"
