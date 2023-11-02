@@ -20,7 +20,6 @@ class Chromatic(DelayComponent):
         self.cm_value_funcs = []
         self.cm_deriv_funcs = {}
 
-        self.alpha_value_funcs = []
         self.alpha_deriv_funcs = {}
 
     def chromatic_time_delay(self, cm, alpha, freq):
@@ -75,12 +74,7 @@ class Chromatic(DelayComponent):
         ------
             chromatic index values at given TOAs.
         """
-        toas_table = toas if isinstance(toas, Table) else toas.table
-        alpha = np.zeros(len(toas_table)) * u.dimensionless_unscaled
-
-        for alpha_f in self.alpha_value_funcs:
-            alpha += alpha_f(toas)
-        return alpha
+        raise NotImplementedError
 
     def d_delay_d_cmparam(self, toas, param_name, acc_delay=None):
         """Derivative of delay wrt to CM parameter.
@@ -130,8 +124,8 @@ class Chromatic(DelayComponent):
             bfreq = toas.table["freq"]
 
         param_unit = getattr(self, param_name).units
-        d_alpha_d_alphaparam = (
-            np.zeros(toas.ntoas) * u.dimensionless_unscaled / param_unit
+        d_alpha_d_alphaparam = np.zeros(toas.ntoas) * (
+            u.dimensionless_unscaled / param_unit
         )
         cm = self.cm_value(toas)
         alpha = self.alpha_value(toas)
@@ -140,10 +134,10 @@ class Chromatic(DelayComponent):
             d_alpha_d_alphaparam += df(toas, param_name)
 
         return (
-            DMconst
+            -DMconst
             * cm
             * (bfreq / u.MHz) ** (-alpha)
-            * np.log((bfreq / u.MHz).to("").value)
+            * np.log((bfreq / u.MHz).to_value(u.dimensionless_unscaled))
             * d_alpha_d_alphaparam
         )
 
@@ -241,7 +235,7 @@ class ChromaticCM(Chromatic):
         )
 
         self.cm_value_funcs += [self.base_cm]
-        self.alpha_value_funcs += [self.base_alpha]
+        # self.alpha_value_funcs += [self.base_alpha]
         self.delay_funcs_component += [self.constant_chromatic_delay]
 
     def setup(self):
@@ -300,8 +294,8 @@ class ChromaticCM(Chromatic):
         cm = taylor_horner(dt_value, cm_terms_value)
         return cm * cmu
 
-    def base_alpha(self, toas):
-        return np.ones(len(toas)) * self.CMIDX
+    def alpha_value(self, toas):
+        return np.ones(len(toas)) * self.CMIDX.quantity
 
     def constant_chromatic_delay(self, toas, acc_delay=None):
         """This is a wrapper function for interacting with the TimingModel class"""
@@ -320,9 +314,7 @@ class ChromaticCM(Chromatic):
                 result += getattr(self, pm).as_parfile_line(format=format)
         return result
 
-    def d_cm_d_CMs(
-        self, toas, param_name, acc_delay=None
-    ):  # NOTE we should have a better name for this.)
+    def d_cm_d_CMs(self, toas, param_name, acc_delay=None):
         """Derivatives of CM wrt the CM taylor expansion coefficients."""
         par = getattr(self, param_name)
         if param_name == "CM":
