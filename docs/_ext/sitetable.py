@@ -51,7 +51,7 @@ class SiteTable(Table):
                         entry += nodes.paragraph(text=" (" + ", ".join(o.aliases) + ")")
                 elif c == "origin":
                     if o.fullname != o.name:
-                        entry += nodes.strong(text=o.fullname + "\n")
+                        entry += nodes.strong(text=o.fullname + ".\n")
                     entry += nodes.paragraph(text=o.origin)
                 elif c == "location":
                     loc = o.earth_location_itrf()
