@@ -16,9 +16,9 @@ def test_SWM():
 
     m = get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
     assert (
-        ("SWM" in m.as_parfile())
-        and not ("SWM" in m.as_parfile(format="tempo"))
-        and not ("SWM" in m.as_parfile(format="tempo2"))
+        "SWM" in m.as_parfile()
+        and "SWM" not in m.as_parfile(format="tempo")
+        and "SWM" not in m.as_parfile(format="tempo2")
     )
 
 
@@ -29,9 +29,10 @@ def test_CHI2():
     )
 
     f = fitter.WLSFitter(toas=t, model=m)
+    f.fit_toas()
     assert "CHI2" in f.model.as_parfile()
-    assert not ("CHI2" in f.model.as_parfile(format="tempo2"))
-    assert not ("CHI2" in f.model.as_parfile(format="tempo"))
+    assert "CHI2" in f.model.as_parfile(format="tempo2")
+    assert "CHI2" in f.model.as_parfile(format="tempo")
 
 
 def test_T2CMETHOD():
@@ -62,12 +63,12 @@ def test_STIGMA():
     """Should get changed to VARSIGMA for TEMPO/TEMPO2"""
     m = get_model(os.path.join(datadir, "J0613-0200_NANOGrav_9yv1_ELL1H_STIG.gls.par"))
     assert (
-        ("STIGMA" in m.as_parfile())
-        and not ("VARSIGMA" in m.as_parfile())
-        and not ("STIGMA" in m.as_parfile(format="tempo"))
-        and ("VARSIGMA" in m.as_parfile(format="tempo"))
-        and not ("STIGMA" in m.as_parfile(format="tempo2"))
-        and ("VARSIGMA" in m.as_parfile(format="tempo2"))
+        "STIGMA" in m.as_parfile()
+        and "VARSIGMA" not in m.as_parfile()
+        and "STIGMA" not in m.as_parfile(format="tempo")
+        and "VARSIGMA" in m.as_parfile(format="tempo")
+        and "STIGMA" not in m.as_parfile(format="tempo2")
+        and "VARSIGMA" in m.as_parfile(format="tempo2")
     )
 
 
@@ -75,12 +76,12 @@ def test_A1DOT():
     """Should get changed to XDOT for TEMPO/TEMPO2"""
     m = get_model(os.path.join(datadir, "J1600-3053_test.par"))
     assert (
-        ("A1DOT" in m.as_parfile())
-        and not ("XDOT" in m.as_parfile())
-        and not ("A1DOT" in m.as_parfile(format="tempo"))
-        and ("XDOT" in m.as_parfile(format="tempo"))
-        and not ("A1DOT" in m.as_parfile(format="tempo2"))
-        and ("XDOT" in m.as_parfile(format="tempo2"))
+        "A1DOT" in m.as_parfile()
+        and "XDOT" not in m.as_parfile()
+        and "A1DOT" not in m.as_parfile(format="tempo")
+        and "XDOT" in m.as_parfile(format="tempo")
+        and "A1DOT" not in m.as_parfile(format="tempo2")
+        and "XDOT" in m.as_parfile(format="tempo2")
     )
 
 

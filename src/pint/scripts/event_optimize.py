@@ -68,8 +68,7 @@ def read_gaussfitfile(gaussfitfile, proflen):
             fwhms.append(float(line.split()[2]))
     if not (len(phass) == len(ampls) == len(fwhms)):
         log.warning(
-            "Number of phases, amplitudes, and FWHMs are not the same in '%s'!"
-            % gaussfitfile
+            f"Number of phases, amplitudes, and FWHMs are not the same in '{gaussfitfile}'!"
         )
         return 0.0
     phass = np.asarray(phass)
@@ -248,6 +247,82 @@ def get_fit_keyvals(model, phs=0.0, phserr=0.1):
     return fitkeys, np.asarray(fitvals), np.asarray(fiterrs)
 
 
+def run_sampler_autocorr(sampler, pos, nsteps, burnin, csteps=100, crit1=10):
+    """Runs the sampler and checks for chain convergence. Return the converged sampler and the mean autocorrelation time per 100 steps
+    Parameters
+    ----------
+    Sampler
+        The Emcee Ensemble Sampler
+    pos
+        The Initial positions of the walkers
+    nsteps : int
+        The number of integration steps
+    csteps : int
+        The interval at which the autocorrelation time is computed.
+    crit1 : int
+        The ratio of chain length to autocorrelation time to satisfy convergence
+    Returns
+    -------
+    The sampler and the mean autocorrelation times
+    Note
+    ----
+    The function checks for convergence of the chains every specified number of steps.
+    The criteria to check for convergence is:
+        1. the chain has to be longer than the specified ratio times the estimated autocorrelation time
+        2. the change in the estimated autocorrelation time is less than 1%
+    """
+    autocorr = []
+    old_tau = np.inf
+    converged1 = False
+    converged2 = False
+    for sample in sampler.sample(pos, iterations=nsteps, progress=True):
+        if not converged1:
+            # Checks if the iteration is past the burnin and checks for convergence at 10% tau change
+            if sampler.iteration >= burnin and sampler.iteration % csteps == 0:
+                tau = sampler.get_autocorr_time(tol=0, quiet=True)
+                if np.any(np.isnan(tau)):
+                    continue
+                else:
+                    x = np.mean(tau)
+                    autocorr.append(x)
+                    converged1 = np.all(tau * crit1 < sampler.iteration)
+                    converged1 &= np.all(np.abs(old_tau - tau) / tau < 0.1)
+                    # log.info("The mean estimated integrated autocorrelation step is: " + str(x))
+                    old_tau = tau
+                    if converged1:
+                        log.info(
+                            "10 % convergence reached with a mean estimated integrated step: "
+                            + str(x)
+                        )
+                    else:
+                        continue
+            else:
+                continue
+        else:
+            if not converged2:
+                # Checks for convergence at every 25 steps instead of 100 and tau change is 1%
+                if sampler.iteration % int(csteps / 4) == 0:
+                    tau = sampler.get_autocorr_time(tol=0, quiet=True)
+                    if np.any(np.isnan(tau)):
+                        continue
+                    else:
+                        x = np.mean(tau)
+                        autocorr.append(x)
+                        converged2 = np.all(tau * crit1 < sampler.iteration)
+                        converged2 &= np.all(np.abs(old_tau - tau) / tau < 0.01)
+                        # log.info("The mean estimated integrated autocorrelation step is: " + str(x))
+                        old_tau = tau
+                        converge_step = sampler.iteration
+                else:
+                    continue
+            if converged2 and (sampler.iteration - burnin) >= 1000:
+                log.info(f"Convergence reached at {converge_step}")
+                break
+            else:
+                continue
+    return autocorr
+
+
 class emcee_fitter(Fitter):
     def __init__(
         self, toas=None, model=None, template=None, weights=None, phs=0.5, phserr=0.03
@@ -280,9 +355,7 @@ class emcee_fitter(Fitter):
         for val, key in zip(theta[:-1], self.fitkeys[:-1]):
             lnsum += getattr(self.model, key).prior_pdf(val, logpdf=True)
         # Add the phase term
-        if theta[-1] > 1.0 or theta[-1] < 0.0:
-            return -np.inf
-        return lnsum
+        return -np.inf if theta[-1] > 1.0 or theta[-1] < 0.0 else lnsum
 
     def lnposterior(self, theta):
         """
@@ -366,10 +439,7 @@ class emcee_fitter(Fitter):
             if nphotons <= 0:
                 hval = 0
             else:
-                if use_weights:
-                    hval = hmw(phss[good], weights=wgts)
-                else:
-                    hval = hm(phss[good])
+                hval = hmw(phss[good], weights=wgts) if use_weights else hm(phss[good])
             htests.append(hval)
             if ii > 0 and ii % 2 == 0 and ii < 20:
                 r, c = ((ii - 2) // 2) // 3, ((ii - 2) // 2) % 3
@@ -389,22 +459,22 @@ class emcee_fitter(Fitter):
                 if r == 2:
                     ax[r][c].set_xlabel("Phase")
                 f.suptitle(
-                    "%s:  Minwgt / H-test / Approx # events" % self.model.PSR.value,
+                    f"{self.model.PSR.value}:  Minwgt / H-test / Approx # events",
                     fontweight="bold",
                 )
         if use_weights:
-            plt.savefig(ftr.model.PSR.value + "_profs_v_wgtcut.png")
+            plt.savefig(f"{ftr.model.PSR.value}_profs_v_wgtcut.png")
         else:
-            plt.savefig(ftr.model.PSR.value + "_profs_v_wgtcut_unweighted.png")
+            plt.savefig(f"{ftr.model.PSR.value}_profs_v_wgtcut_unweighted.png")
         plt.close()
         plt.plot(weights, htests, "k")
         plt.xlabel("Min Weight")
         plt.ylabel("H-test")
         plt.title(self.model.PSR.value)
         if use_weights:
-            plt.savefig(ftr.model.PSR.value + "_htest_v_wgtcut.png")
+            plt.savefig(f"{ftr.model.PSR.value}_htest_v_wgtcut.png")
         else:
-            plt.savefig(ftr.model.PSR.value + "_htest_v_wgtcut_unweighted.png")
+            plt.savefig(f"{ftr.model.PSR.value}_htest_v_wgtcut_unweighted.png")
         plt.close()
 
     def plot_priors(self, chains, burnin, bins=100, scale=False):
@@ -551,6 +621,13 @@ def main(argv=None):
         default=False,
         action="store_true",
     )
+    parser.add_argument(
+        "--no-autocorr",
+        help="Turn the autocorrelation check function off",
+        default=False,
+        action="store_true",
+        dest="noautocorr",
+    )
 
     args = parser.parse_args(argv)
     pint.logging.setup(
@@ -587,8 +664,8 @@ def main(argv=None):
     modelin = pint.models.get_model(parfile)
 
     # File name setup and clobber file check
-    filepath = args.filepath if args.filepath else os.getcwd()
-    basename = args.basename if args.basename else modelin.PSR.value
+    filepath = args.filepath or os.getcwd()
+    basename = args.basename or modelin.PSR.value
     filename = os.path.join(filepath, basename)
 
     check_file = os.path.isfile(
@@ -632,23 +709,17 @@ def main(argv=None):
         except IOError:
             pass
     if ts is None:
-        # Read event file and return list of TOA objects
-        tl = fermi.load_Fermi_TOAs(
-            eventfile, weightcolumn=weightcol, targetcoord=target, minweight=minWeight
+        ts = fermi.get_Fermi_TOAs(
+            eventfile,
+            weightcolumn=weightcol,
+            targetcoord=target,
+            minweight=minWeight,
+            minmjd=minMJD,
+            maxmjd=maxMJD,
+            ephem="DE421",
+            planets=False,
         )
-        # Limit the TOAs to ones in selected MJD range and above minWeight
-        tl = [
-            tl[ii]
-            for ii in range(len(tl))
-            if (
-                tl[ii].mjd.value > minMJD
-                and tl[ii].mjd.value < maxMJD
-                and (weightcol is None or float(tl[ii].flags["weight"]) > minWeight)
-            )
-        ]
-        log.info("There are %d events we will use" % len(tl))
-        # Now convert to TOAs object and compute TDBs and posvels
-        ts = toa.get_TOAs_list(tl, ephem="DE421", planets=False)
+        log.info("There are %d events we will use" % len(ts))
         ts.filename = eventfile
         # FIXME: writes to the TOA directory unconditionally
         try:
@@ -832,7 +903,10 @@ def main(argv=None):
                     pool=pool,
                     backend=backend,
                 )
-                sampler.run_mcmc(pos, nsteps)
+                if args.noautocorr:
+                    sampler.run_mcmc(pos, nsteps, progress=True)
+                else:
+                    autocorr = run_sampler_autocorr(sampler, pos, nsteps, burnin)
             pool.close()
             pool.join()
         except ImportError:
@@ -840,16 +914,22 @@ def main(argv=None):
             sampler = emcee.EnsembleSampler(
                 nwalkers, ndim, ftr.lnposterior, blobs_dtype=dtype, backend=backend
             )
-            sampler.run_mcmc(pos, nsteps)
+            if args.noautocorr:
+                sampler.run_mcmc(pos, nsteps, progress=True)
+            else:
+                autocorr = run_sampler_autocorr(sampler, pos, nsteps, burnin)
     else:
         sampler = emcee.EnsembleSampler(
             nwalkers, ndim, ftr.lnposterior, blobs_dtype=dtype, backend=backend
         )
-        # The number is the number of points in the chain
-        sampler.run_mcmc(pos, nsteps)
+        if args.noautocorr:
+            sampler.run_mcmc(pos, nsteps, progress=True)
+        else:
+            autocorr = run_sampler_autocorr(sampler, pos, nsteps, burnin)
 
     def chains_to_dict(names, sampler):
-        chains = [sampler.chain[:, :, ii].T for ii in range(len(names))]
+        samples = np.transpose(sampler.get_chain(), (1, 0, 2))
+        chains = [samples[:, :, ii].T for ii in range(len(names))]
         return dict(zip(names, chains))
 
     def plot_chains(chain_dict, file=False):
@@ -871,7 +951,9 @@ def main(argv=None):
     plot_chains(chains, file=filename + "_chains.png")
 
     # Make the triangle plot.
-    samples = sampler.chain[:, burnin:, :].reshape((-1, ndim))
+    samples = np.transpose(sampler.get_chain(discard=burnin), (1, 0, 2)).reshape(
+        (-1, ndim)
+    )
 
     blobs = sampler.get_blobs()
     lnprior_samps = blobs["lnprior"]
@@ -919,6 +1001,14 @@ def main(argv=None):
     f.close()
 
     # Write out the par file for the best MCMC parameter est
+    centered_samples = [
+        samples[:, i] - ftr.maxpost_fitvals[i] for i in range(len(ftr.fitkeys))
+    ]
+    errors = [
+        np.percentile(np.abs(centered_samples[i]), 68) for i in range(len(ftr.fitkeys))
+    ]
+    ftr.set_param_uncertainties(dict(zip(ftr.fitkeys[:-1], errors[:-1])))
+
     f = open(filename + "_post.par", "w")
     f.write(ftr.model.as_parfile())
     f.close()

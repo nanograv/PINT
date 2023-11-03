@@ -1,5 +1,4 @@
-""" Various of tests on the wideband DM data
-"""
+""" Various of tests on the wideband DM data"""
 
 import io
 import os
@@ -62,19 +61,6 @@ def wb_model(tmpdir):
 
 
 @pytest.fixture
-def wb_toas(wb_model):
-    toas = get_TOAs(io.StringIO(tim))
-    for i in range(9):
-        r = Residuals(toas, wb_model)
-        if np.all(r.time_resids < 1 * u.ns):
-            break
-        toas.adjust_TOAs(TimeDelta(-r.time_resids))
-    else:
-        raise ValueError
-    return toas
-
-
-@pytest.fixture
 def wb_toas_all(wb_model):
     toas = get_TOAs(io.StringIO(tim_all))
     for i in range(9):
@@ -88,7 +74,7 @@ def wb_toas_all(wb_model):
 
 
 class TestDMData:
-    def setup(self):
+    def setup_method(self):
         self.model = get_model("J1614-2230_NANOGrav_12yv3.wb.gls.par")
         self.toas = get_TOAs("J1614-2230_NANOGrav_12yv3.wb.tim")
         toa_backends, valid_flags = self.toas.get_flag_value("fe")
@@ -163,14 +149,18 @@ class TestDMData:
             assert self.model.dm_derivs[dmj_param.name] == [self.model.d_dm_d_dmjump]
 
 
-def test_wideband_residuals(wb_model, wb_toas):
-    r = WidebandTOAResiduals(wb_toas, wb_model, dm_resid_args=dict(subtract_mean=False))
-    assert len(r.toa.time_resids) == len(wb_toas)
-    assert len(r.dm.dm_data) < len(wb_toas)
+def test_wideband_residuals(wb_model, wb_toas_all):
+    r = WidebandTOAResiduals(
+        wb_toas_all, wb_model, dm_resid_args=dict(subtract_mean=False)
+    )
+    assert len(r.toa.time_resids) == len(wb_toas_all)
+    assert len(r.dm.dm_data) == len(wb_toas_all)
 
 
-def test_wideband_residuals_dmjump(wb_model, wb_toas):
-    r = WidebandTOAResiduals(wb_toas, wb_model, dm_resid_args=dict(subtract_mean=False))
+def test_wideband_residuals_dmjump(wb_model, wb_toas_all):
+    r = WidebandTOAResiduals(
+        wb_toas_all, wb_model, dm_resid_args=dict(subtract_mean=False)
+    )
     model = deepcopy(wb_model)
     assert wb_model.DMJUMP1.value == 0
     model.DMJUMP1.value = 10
@@ -179,8 +169,15 @@ def test_wideband_residuals_dmjump(wb_model, wb_toas):
         model.DMJUMP0
     with pytest.raises(AttributeError):
         model.DMJUMP2
-    r2 = WidebandTOAResiduals(wb_toas, model, dm_resid_args=dict(subtract_mean=False))
+    r2 = WidebandTOAResiduals(
+        wb_toas_all, model, dm_resid_args=dict(subtract_mean=False)
+    )
     assert 0 < np.sum(r.dm.resids_value != r2.dm.resids_value) < len(r.dm.resids_value)
+
+
+def test_read_mixed_timfile():
+    with pytest.raises(ValueError):
+        get_TOAs(io.StringIO(tim))
 
 
 def test_wideband_residuals_dof(wb_model, wb_toas_all):
@@ -191,14 +188,6 @@ def test_wideband_residuals_dof(wb_model, wb_toas_all):
     assert r.dof == 12 - 2
     assert_allclose(r.chi2, 2e14)
     assert_allclose(r.reduced_chi2, r.chi2 / r.dof)
-
-
-@pytest.mark.xfail(reason="All TOAs must have DMs, currently")
-def test_wideband_fit_dmjump(wb_model, wb_toas):
-    wb_model.free_params = ["DMJUMP1"]
-    fitter = WidebandTOAFitter(wb_toas, wb_model)
-    fitter.fit_toas()
-    assert_allclose(fitter.model.DMJUMP1.value, -10, atol=1e-3)
 
 
 def test_wideband_fit_dmjump_all(wb_model, wb_toas_all):

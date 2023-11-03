@@ -85,6 +85,8 @@ class TopoObs(Observatory):
     ----------
     name : str
         The name of the observatory
+    fullname : str
+        A fuller name of the observatory
     location : ~astropy.coordinates.EarthLocation, optional
     itrf_xyz : ~astropy.units.Quantity or array-like, optional
         IRTF site coordinates (len-3 array).  Can include
@@ -149,6 +151,7 @@ class TopoObs(Observatory):
         self,
         name,
         *,
+        fullname=None,
         tempo_code=None,
         itoa_code=None,
         aliases=None,
@@ -177,8 +180,7 @@ class TopoObs(Observatory):
         ]
         if sum(input_values) == 0:
             raise ValueError(
-                "EarthLocation, ITRF coordinates, or lat/lon/height are required for observatory '%s'"
-                % name
+                f"EarthLocation, ITRF coordinates, or lat/lon/height are required for observatory '{name}'"
             )
         if sum(input_values) > 1:
             raise ValueError(
@@ -198,7 +200,7 @@ class TopoObs(Observatory):
             # Check for correct array dims
             if xyz.shape != (3,):
                 raise ValueError(
-                    "Incorrect coordinate dimensions for observatory '%s'" % (name)
+                    f"Incorrect coordinate dimensions for observatory '{name}'"
                 )
             # Convert to astropy EarthLocation, ensuring use of ITRF geocentric coordinates
             self.location = EarthLocation.from_geocentric(*xyz)
@@ -216,7 +218,7 @@ class TopoObs(Observatory):
         # If using TEMPO time.dat we need to know the 1-char tempo-style
         # observatory code.
         if clock_fmt == "tempo" and clock_file == "time.dat" and tempo_code is None:
-            raise ValueError("No tempo_code set for observatory '%s'" % name)
+            raise ValueError(f"No tempo_code set for observatory '{name}'")
 
         # GPS corrections
         self.include_gps = include_gps
@@ -238,6 +240,7 @@ class TopoObs(Observatory):
         self.origin = origin
         super().__init__(
             name,
+            fullname=fullname,
             aliases=aliases,
             include_gps=include_gps,
             include_bipm=include_bipm,
@@ -247,7 +250,12 @@ class TopoObs(Observatory):
 
     def __repr__(self):
         aliases = [f"'{x}'" for x in self.aliases]
-        return f"TopoObs('{self.name}' ({','.join(aliases)}) at [{self.location.x}, {self.location.y} {self.location.z}]:\n{self.origin})"
+        origin = (
+            f"{self.fullname}\n{self.origin}"
+            if self.fullname != self.name
+            else self.origin
+        )
+        return f"TopoObs('{self.name}' ({','.join(aliases)}) at [{self.location.x}, {self.location.y} {self.location.z}]:\n{origin})"
 
     @property
     def timescale(self):

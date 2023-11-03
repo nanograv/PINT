@@ -1,6 +1,5 @@
-#!/usr/bin/env python
 import os
-import unittest
+import pytest
 
 import numpy as np
 from scipy.stats import norm
@@ -17,9 +16,9 @@ from pint.models.priors import (
 from pinttestdata import datadir
 
 
-class TestPriors(unittest.TestCase):
+class TestPriors:
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         os.chdir(datadir)
         cls.m = pint.models.get_model("B1855+09_NANOGrav_dfg+12_modified.par")
 
@@ -85,7 +84,3 @@ class TestPriors(unittest.TestCase):
         )
         # Test that integral is 1.0, not safe since using _rv private var
         assert np.isclose(self.m.M2.prior._rv.cdf(0.6), 1.0)
-
-
-# if __name__ == '__main__':
-#    unittest.main()

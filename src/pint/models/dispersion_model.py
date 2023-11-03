@@ -74,11 +74,7 @@ class Dispersion(DelayComponent):
         ------
             DM values at given TOAs in the unit of DM.
         """
-        if isinstance(toas, Table):
-            toas_table = toas
-        else:
-            toas_table = toas.table
-
+        toas_table = toas if isinstance(toas, Table) else toas.table
         dm = np.zeros(len(toas_table)) * self._parent.DM.units
 
         for dm_f in self.dm_value_funcs:
@@ -105,7 +101,7 @@ class Dispersion(DelayComponent):
             bfreq = self._parent.barycentric_radio_freq(toas)
         except AttributeError:
             warn("Using topocentric frequency for dedispersion!")
-            bfreq = toas.table["freq"]
+            bfreq = toas.table["freq"].quantity
         param_unit = getattr(self, param_name).units
         d_dm_d_dmparam = np.zeros(toas.ntoas) * u.pc / u.cm**3 / param_unit
         for df in self.dm_deriv_funcs[param_name]:
@@ -127,15 +123,10 @@ class Dispersion(DelayComponent):
 
         if pn not in list(self.dm_deriv_funcs.keys()):
             self.dm_deriv_funcs[pn] = [func]
+        elif func in self.dm_deriv_funcs[pn]:
+            return
         else:
-            # TODO:
-            # Running setup() multiple times can lead to adding derivative
-            # function multiple times. This prevent it from happening now. But
-            # in the future, we should think a better way to do so.
-            if func in self.dm_deriv_funcs[pn]:
-                return
-            else:
-                self.dm_deriv_funcs[pn] += [func]
+            self.dm_deriv_funcs[pn] += [func]
 
 
 class DispersionDM(Dispersion):
@@ -201,12 +192,12 @@ class DispersionDM(Dispersion):
             if self.DMEPOCH.value is None:
                 # Copy PEPOCH (PEPOCH must be set!)
                 self.DMEPOCH.value = self._parent.PEPOCH.value
-                if self.DMEPOCH.value is None:
-                    raise MissingParameter(
-                        "Dispersion",
-                        "DMEPOCH",
-                        "DMEPOCH or PEPOCH is required if DM1 or higher are set",
-                    )
+            if self.DMEPOCH.value is None:
+                raise MissingParameter(
+                    "Dispersion",
+                    "DMEPOCH",
+                    "DMEPOCH or PEPOCH is required if DM1 or higher are set",
+                )
 
     def DM_dervative_unit(self, n):
         return "pc cm^-3/yr^%d" % n if n else "pc cm^-3"
@@ -242,13 +233,9 @@ class DispersionDM(Dispersion):
         return self.dispersion_type_delay(toas)
 
     def print_par(self, format="pint"):
-        # TODO we need to have a better design for print out the parameters in
-        # an inheritance class.
-        result = ""
         prefix_dm = list(self.get_prefix_mapping_component("DM").values())
         dms = ["DM"] + prefix_dm
-        for dm in dms:
-            result += getattr(self, dm).as_parfile_line(format=format)
+        result = "".join(getattr(self, dm).as_parfile_line(format=format) for dm in dms)
         if hasattr(self, "components"):
             all_params = self.components["DispersionDM"].params
         else:
@@ -280,11 +267,7 @@ class DispersionDM(Dispersion):
             DMEPOCH = self.DMEPOCH.value
         dt = (toas["tdbld"] - DMEPOCH) * u.day
         dt_value = (dt.to(u.yr)).value
-        d_dm_d_dm_param = taylor_horner(dt_value, dm_terms) * (
-            self.DM.units / par.units
-        )
-
-        return d_dm_d_dm_param
+        return taylor_horner(dt_value, dm_terms) * (self.DM.units / par.units)
 
     def change_dmepoch(self, new_epoch):
         """Change DMEPOCH to a new value and update DM accordingly.
@@ -312,7 +295,7 @@ class DispersionDM(Dispersion):
         dt = (new_epoch.tdb.mjd_long - dmepoch_ld) * u.day
 
         for n in range(len(dmterms) - 1):
-            cur_deriv = self.DM if n == 0 else getattr(self, "DM{}".format(n))
+            cur_deriv = self.DM if n == 0 else getattr(self, f"DM{n}")
             cur_deriv.value = taylor_horner_deriv(
                 dt.to(u.yr), dmterms, deriv_order=n + 1
             )
@@ -391,8 +374,7 @@ class DispersionDMX(Dispersion):
 
         if int(index) in self.get_prefix_mapping_component("DMX_"):
             raise ValueError(
-                "Index '%s' is already in use in this model. Please choose another."
-                % index
+                f"Index '{index}' is already in use in this model. Please choose another."
             )
 
         if isinstance(dmx, u.quantity.Quantity):
@@ -407,7 +389,7 @@ class DispersionDMX(Dispersion):
             mjd_end = mjd_end.value
         self.add_param(
             prefixParameter(
-                name="DMX_" + i,
+                name=f"DMX_{i}",
                 units="pc cm^-3",
                 value=dmx,
                 description="Dispersion measure variation",
@@ -417,7 +399,7 @@ class DispersionDMX(Dispersion):
         )
         self.add_param(
             prefixParameter(
-                name="DMXR1_" + i,
+                name=f"DMXR1_{i}",
                 units="MJD",
                 description="Beginning of DMX interval",
                 parameter_type="MJD",
@@ -427,7 +409,7 @@ class DispersionDMX(Dispersion):
         )
         self.add_param(
             prefixParameter(
-                name="DMXR2_" + i,
+                name=f"DMXR2_{i}",
                 units="MJD",
                 description="End of DMX interval",
                 parameter_type="MJD",
@@ -508,8 +490,7 @@ class DispersionDMX(Dispersion):
                 raise ValueError("Only one MJD bound is set.")
             if int(index) in dct:
                 raise ValueError(
-                    "Index '%s' is already in use in this model. Please choose another."
-                    % index
+                    f"Index '{index}' is already in use in this model. Please choose another."
                 )
             if isinstance(dmx, u.quantity.Quantity):
                 dmx = dmx.to_value(u.pc / u.cm**3)
@@ -524,7 +505,7 @@ class DispersionDMX(Dispersion):
             log.trace(f"Adding DMX_{i} from MJD {mjd_start} to MJD {mjd_end}")
             self.add_param(
                 prefixParameter(
-                    name="DMX_" + i,
+                    name=f"DMX_{i}",
                     units="pc cm^-3",
                     value=dmx,
                     description="Dispersion measure variation",
@@ -534,7 +515,7 @@ class DispersionDMX(Dispersion):
             )
             self.add_param(
                 prefixParameter(
-                    name="DMXR1_" + i,
+                    name=f"DMXR1_{i}",
                     units="MJD",
                     description="Beginning of DMX interval",
                     parameter_type="MJD",
@@ -544,7 +525,7 @@ class DispersionDMX(Dispersion):
             )
             self.add_param(
                 prefixParameter(
-                    name="DMXR2_" + i,
+                    name=f"DMXR2_{i}",
                     units="MJD",
                     description="End of DMX interval",
                     parameter_type="MJD",

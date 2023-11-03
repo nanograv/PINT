@@ -1,6 +1,5 @@
-#! /usr/bin/env python
 import os
-import unittest
+import pytest
 
 import astropy.units as u
 
@@ -17,9 +16,9 @@ parfile = os.path.join(datadir, "vela_wave.par")
 timfile = os.path.join(datadir, "vela_wave.tim")
 
 
-class TestWave(unittest.TestCase):
+class TestWave:
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         cls.m = pint.models.get_model(parfile)
         cls.t = pint.toa.get_TOAs(timfile, ephem="DE405", include_bipm=False)
 

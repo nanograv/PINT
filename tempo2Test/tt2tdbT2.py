@@ -89,8 +89,7 @@ def mjd2tdt(mjd):
     delta_TT = mp.mpf(dt) + 32.184
     delta_TT_DAY = mp.mpf(delta_TT) / mp.mpf(86400.0)
     delta_TT_DAY = mp.mpf(delta_TT_DAY)
-    mjd_tt = mp.mpf(mjd) + delta_TT_DAY
-    return mjd_tt
+    return mp.mpf(mjd) + delta_TT_DAY
 
 
 #### From mjdutc to et
@@ -101,8 +100,7 @@ def mjd2et(mjd, tt2tdb):
     mjdJ2000 = mp.mpf("51544.5")
     secDay = mp.mpf("86400.0")
     mjdTT = mjd2tdt(mjd)
-    et = (mjdTT - mjdJ2000) * secDay + mp.mpf(tt2tdb)
-    return et
+    return (mjdTT - mjdJ2000) * secDay + mp.mpf(tt2tdb)
 
 
 #### Read tempo2 tim file
@@ -111,7 +109,7 @@ fp1 = open(fname1, "r")
 
 toa = []
 # Read TOA column to toa array
-for l in fp1.readlines():
+for l in fp1:
     l = l.strip()
     l = l.strip("\n")
     l = l.split()
@@ -126,15 +124,15 @@ tt2tdb = []  # Tempo2 tt2tdb difference in (sec)
 earth1 = []  # Tempo2 earth position in (light time, sec)
 earth2 = []
 earth3 = []
-# Read tt2tdb earthposition output
-for l in fp.readlines():
+# Read tt2tdb earth position output
+for l in fp:
     l = l.strip()
     l = l.strip("\n")
     l = l.split()
     # Avoid the column that is not data
     try:
         m = float(l[0])
-    except:
+    except Exception:
         pass
     else:
         tt2tdb.append(l[-1])
@@ -142,17 +140,13 @@ for l in fp.readlines():
         earth2.append(l[1])
         earth3.append(l[2])
 
-et = []
-# Convert toa mjd to toa et
-for i in range(len(toa)):
-    et.append(mjd2et(toa[i], tt2tdb[i]))
-
+et = [mjd2et(toa[i], tt2tdb[i]) for i in range(len(toa))]
 ###### calculate earth position
 stateInterp = []  # interpolated earth position   in (km)
 ltInterp = []  # interpolated earth to ssb light time in (sec)
-statespk = []  # Directlt calculated earth position in (km)
+statespk = []  # Directly calculated earth position in (km)
 ltspk = []  # Directly calculated earth to ssb lt time in (sec)
-# Calculating postion
+# Calculating position
 for time in et:
     (
         state0,

@@ -53,6 +53,10 @@ from pint.utils import (
     find_prefix_bytime,
     merge_dmx,
     convert_dispersion_measure,
+    print_color_examples,
+    parse_time,
+    info_string,
+    akaike_information_criterion,
 )
 
 
@@ -843,3 +847,35 @@ def test_convert_dm():
     dm_codata = convert_dispersion_measure(dm)
 
     assert np.isfinite(dm_codata)
+
+
+def test_print_color_examples():
+    print_color_examples()
+
+
+@pytest.mark.parametrize(
+    "t",
+    [
+        Time(55555, format="pulsar_mjd", scale="tdb", precision=9),
+        55555 * u.d,
+        55555.0,
+        55555,
+        "55555",
+    ],
+)
+def test_parse_time(t):
+    assert parse_time(t, scale="tdb") == Time(
+        55555, format="pulsar_mjd", scale="tdb", precision=9
+    )
+
+
+def test_info_str():
+    info = info_string()
+    dinfo = info_string(detailed=True)
+
+
+def test_aic():
+    m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
+    t = toa.get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
+
+    assert np.isfinite(akaike_information_criterion(m, t))

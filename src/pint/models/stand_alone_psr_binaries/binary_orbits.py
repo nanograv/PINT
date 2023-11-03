@@ -26,11 +26,10 @@ class Orbit:
         """Orbital phase (between zero and two pi)."""
         orbits = self.orbits()
         norbits = np.array(np.floor(orbits), dtype=np.compat.long)
-        phase = (orbits - norbits) * 2 * np.pi * u.rad
-        return phase
+        return (orbits - norbits) * 2 * np.pi * u.rad
 
     def pbprime(self):
-        """Derivative of binary period with respect to time."""
+        """Instantaneous binary period as a function of time."""
         raise NotImplementedError
 
     def pbdot_orbit(self):
@@ -47,7 +46,7 @@ class Orbit:
         """
         par_obj = getattr(self, par)
         try:
-            func = getattr(self, "d_orbits_d_" + par)
+            func = getattr(self, f"d_orbits_d_{par}")
         except AttributeError:
 
             def func():
@@ -60,7 +59,7 @@ class Orbit:
         """Derivative of binary period with respect to some parameter."""
         par_obj = getattr(self, par)
         try:
-            func = getattr(self, "d_pbprime_d_" + par)
+            func = getattr(self, f"d_pbprime_d_{par}")
         except AttributeError:
 
             def func():
@@ -72,13 +71,12 @@ class Orbit:
     def __getattr__(self, name):
         try:
             return super().__getattribute__(name)
-        except AttributeError:
+        except AttributeError as e:
             p = super().__getattribute__("_parent")
             if p is None:
                 raise AttributeError(
-                    "'%s' object has no attribute '%s'."
-                    % (self.__class__.__name__, name)
-                )
+                    f"'{self.__class__.__name__}' object has no attribute '{name}'."
+                ) from e
             else:
                 return self._parent.__getattribute__(name)
 
@@ -102,13 +100,12 @@ class OrbitPB(Orbit):
         PB = self.PB.to("second")
         PBDOT = self.PBDOT
         XPBDOT = self.XPBDOT
-        orbits = (
+        return (
             self.tt0 / PB - 0.5 * (PBDOT + XPBDOT) * (self.tt0 / PB) ** 2
         ).decompose()
-        return orbits
 
     def pbprime(self):
-        """Derivative of binary period with respect to time."""
+        """Instantaneous binary period as a function of time."""
         return self.PB + self.PBDOT * self.tt0
 
     def pbdot_orbit(self):
@@ -151,6 +148,8 @@ class OrbitPB(Orbit):
         return self.tt0
 
     def d_pbprime_d_T0(self):
+        if not np.isscalar(self.PBDOT):
+            return -self.PBDOT
         result = np.empty(len(self.tt0))
         result.fill(-self.PBDOT.value)
         return result * u.Unit(self.PBDOT.unit)
@@ -164,10 +163,9 @@ class OrbitFBX(Orbit):
         # add the rest of FBX parameters.
         indices = set()
         for k in self.binary_params:
-            if re.match(r"FB\d+", k) is not None:
-                if k not in self.orbit_params:
-                    self.orbit_params += [k]
-                    indices.add(int(k[2:]))
+            if re.match(r"FB\d+", k) is not None and k not in self.orbit_params:
+                self.orbit_params += [k]
+                indices.add(int(k[2:]))
         if indices != set(range(len(indices))):
             raise ValueError(
                 f"Indices must be 0 up to some number k without gaps "
@@ -177,8 +175,8 @@ class OrbitFBX(Orbit):
     def _FBXs(self):
         FBXs = [0 * u.Unit("")]
         ii = 0
-        while "FB" + str(ii) in self.orbit_params:
-            FBXs.append(getattr(self, "FB" + str(ii)))
+        while f"FB{ii}" in self.orbit_params:
+            FBXs.append(getattr(self, f"FB{ii}"))
             ii += 1
         return FBXs
 
@@ -188,7 +186,7 @@ class OrbitFBX(Orbit):
         return orbits.decompose()
 
     def pbprime(self):
-        """Derivative of binary period with respect to time."""
+        """Instantaneous binary period as a function of time."""
         orbit_freq = taylor_horner_deriv(self.tt0, self._FBXs(), 1)
         return 1.0 / orbit_freq
 
@@ -198,21 +196,21 @@ class OrbitFBX(Orbit):
         return -(self.pbprime() ** 2) * orbit_freq_dot
 
     def d_orbits_d_par(self, par):
-        if re.match(r"FB\d+", par) is not None:
-            result = self.d_orbits_d_FBX(par)
-        else:
-            result = super().d_orbits_d_par(par)
-        return result
+        return (
+            self.d_orbits_d_FBX(par)
+            if re.match(r"FB\d+", par) is not None
+            else super().d_orbits_d_par(par)
+        )
 
     def d_orbits_d_FBX(self, FBX):
         par = getattr(self, FBX)
         ii = 0
         FBXs = [0 * u.Unit("")]
-        while "FB" + str(ii) in self.orbit_params:
-            if "FB" + str(ii) != FBX:
-                FBXs.append(0.0 * getattr(self, "FB" + str(ii)).unit)
+        while f"FB{ii}" in self.orbit_params:
+            if f"FB{ii}" != FBX:
+                FBXs.append(0.0 * getattr(self, f"FB{ii}").unit)
             else:
-                FBXs.append(1.0 * getattr(self, "FB" + str(ii)).unit)
+                FBXs.append(1.0 * getattr(self, f"FB{ii}").unit)
                 break
             ii += 1
         d_orbits = taylor_horner(self.tt0, FBXs) / par.unit
@@ -222,11 +220,11 @@ class OrbitFBX(Orbit):
         par = getattr(self, FBX)
         ii = 0
         FBXs = [0 * u.Unit("")]
-        while "FB" + str(ii) in self.orbit_params:
-            if "FB" + str(ii) != FBX:
-                FBXs.append(0.0 * getattr(self, "FB" + str(ii)).unit)
+        while f"FB{ii}" in self.orbit_params:
+            if f"FB{ii}" != FBX:
+                FBXs.append(0.0 * getattr(self, f"FB{ii}").unit)
             else:
-                FBXs.append(1.0 * getattr(self, "FB" + str(ii)).unit)
+                FBXs.append(1.0 * getattr(self, f"FB{ii}").unit)
                 break
             ii += 1
         d_FB = taylor_horner_deriv(self.tt0, FBXs, 1) / par.unit
@@ -234,8 +232,8 @@ class OrbitFBX(Orbit):
 
     def d_pbprime_d_par(self, par):
         par_obj = getattr(self, par)
-        if re.match(r"FB\d+", par) is not None:
-            result = self.d_pbprime_d_FBX(par)
-        else:
-            result = np.zeros(len(self.tt0)) * u.second / par_obj.unit
-        return result
+        return (
+            self.d_pbprime_d_FBX(par)
+            if re.match(r"FB\d+", par) is not None
+            else np.zeros(len(self.tt0)) * u.second / par_obj.unit
+        )

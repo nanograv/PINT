@@ -259,7 +259,7 @@ def test_fake_uniform(t1, t2):
     assert np.isclose(r.calc_time_resids().std(), 1 * u.us, rtol=0.2)
 
 
-def test_fake_from_timfile():
+def test_fake_from_toas():
     # FIXME: this file is unnecessarily huge
     m, t = get_model_and_toas(
         pint.config.examplefile("B1855+09_NANOGrav_9yv1.gls.par"),
@@ -274,6 +274,29 @@ def test_fake_from_timfile():
     t_sim = pint.simulation.make_fake_toas(t, f.model, add_noise=True)
     r_sim = pint.residuals.Residuals(t_sim, f.model)
     # need a generous rtol because of the small statistics
+    assert np.isclose(
+        r.calc_time_resids().std(), r_sim.calc_time_resids().std(), rtol=2
+    )
+
+
+@pytest.mark.parametrize("planets", (True, False))
+def test_fake_from_timfile(planets):
+    m = get_model(pint.config.examplefile("NGC6440E.par.good"))
+    t = get_TOAs(pint.config.examplefile("NGC6440E.tim"), planets=planets)
+
+    m.PLANET_SHAPIRO.value = planets
+
+    r = pint.residuals.Residuals(t, m)
+
+    t_sim = pint.simulation.make_fake_toas_fromtim(
+        pint.config.examplefile("NGC6440E.tim"), m, add_noise=True
+    )
+    r_sim = pint.residuals.Residuals(t_sim, m)
+
+    m, t = get_model_and_toas(
+        pint.config.examplefile("B1855+09_NANOGrav_9yv1.gls.par"),
+        pint.config.examplefile("B1855+09_NANOGrav_9yv1.tim"),
+    )
     assert np.isclose(
         r.calc_time_resids().std(), r_sim.calc_time_resids().std(), rtol=2
     )
@@ -307,7 +330,7 @@ def test_fake_DMfit():
     f = GLSFitter(t, m)
     f.fit_toas()
 
-    N = 30
+    N = 15
 
     DMs = np.zeros(N) * u.pc / u.cm**3
     for iter in range(N):

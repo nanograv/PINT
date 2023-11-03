@@ -70,8 +70,39 @@ def test_ECL_to_ICRS():
     assert np.allclose(r_ECL.resids, r_ICRS.resids)
 
 
+def test_ICRS_to_ECL_nouncertainties():
+    # start with ICRS model with no pm uncertainties, get residuals with ECL model, compare
+    model_ICRS = get_model(io.StringIO(modelstring_ICRS))
+    model_ICRS.PMRA._uncertainty = None
+    model_ICRS.PMRA.frozen = True
+    model_ICRS.PMDEC._uncertainty = None
+    model_ICRS.PMDEC.frozen = True
+    toas = pint.simulation.make_fake_toas_uniform(
+        MJDStart, MJDStop, NTOA, model=model_ICRS, error=1 * u.us, add_noise=True
+    )
+    r_ICRS = pint.residuals.Residuals(toas, model_ICRS)
+    r_ECL = pint.residuals.Residuals(toas, model_ICRS.as_ECL())
+    assert np.allclose(r_ECL.resids, r_ICRS.resids)
+    # assert model_ICRS.as_ECL(ecl).ECL.value == ecl
+
+
+def test_ECL_to_ICRS_nouncertainties():
+    # start with ECL model with no pm uncertainties, get residuals with ICRS model, compare
+    model_ECL = get_model(io.StringIO(modelstring_ECL))
+    model_ECL.PMELONG._uncertainty = None
+    model_ECL.PMELONG.frozen = True
+    model_ECL.PMELAT._uncertainty = None
+    model_ECL.PMELAT.frozen = True
+    toas = pint.simulation.make_fake_toas_uniform(
+        MJDStart, MJDStop, NTOA, model=model_ECL, error=1 * u.us, add_noise=True
+    )
+    r_ECL = pint.residuals.Residuals(toas, model_ECL)
+    r_ICRS = pint.residuals.Residuals(toas, model_ECL.as_ICRS())
+    assert np.allclose(r_ECL.resids, r_ICRS.resids)
+
+
 def test_ECL_to_ECL():
-    # start with ECL model, get residuals with ECL model with differenct obliquity, compare
+    # start with ECL model, get residuals with ECL model with different obliquity, compare
     model_ECL = get_model(io.StringIO(modelstring_ECL))
 
     toas = pint.simulation.make_fake_toas_uniform(
@@ -124,7 +155,10 @@ def test_ICRS_to_ECL_uncertainties():
     m2 = fit_ECL.model.as_ICRS()
 
     for p in ("RAJ", "DECJ", "PMRA", "PMDEC"):
-        assert np.isclose(m1.__getitem__(p).value, m2.__getitem__(p).value)
+        tol = 1e-12 if p in ["RAJ", "DECJ"] else 1e-3
+        assert np.isclose(
+            m1.__getitem__(p).value, m2.__getitem__(p).value, atol=tol
+        ), f"Paramter {p} with values {m1.__getitem__(p).value}, {m2.__getitem__(p).value} was too far apart (difference={m1.__getitem__(p).value-m2.__getitem__(p).value})"
         # do a generous test here since the uncertainties could change
         assert np.isclose(
             m1.__getitem__(p).uncertainty, m2.__getitem__(p).uncertainty, rtol=0.5

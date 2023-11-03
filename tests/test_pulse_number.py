@@ -1,4 +1,4 @@
-#!/usr/bin/python
+import contextlib
 from io import StringIO
 import os
 import pytest
@@ -148,13 +148,9 @@ def test_fitter_respects_pulse_numbers(fitter, model, fake_toas):
         fitter(t, m_2, track_mode="capybara")
 
     f_1 = fitter(t, m_2, track_mode="nearest")
-    try:
+    with contextlib.suppress(ValueError):
         f_1.fit_toas()
         assert abs(f_1.model.F0.quantity - model.F0.quantity) > 0.1 * delta_f
-    except ValueError:
-        # convergence fails for Downhill fitters
-        pass
-
     f_2 = fitter(t, m_2, track_mode="use_pulse_numbers")
     f_2.fit_toas()
     assert abs(f_2.model.F0.quantity - model.F0.quantity) < 0.01 * delta_f

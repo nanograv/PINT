@@ -40,6 +40,7 @@ plot_labels = [
     "WB DM",
     "WB DM res",
     "WB DM err",
+    "elongation",
 ]
 
 # Some parameters we do not want to add a fitting checkbox for:
@@ -106,7 +107,7 @@ class Pulsar:
         )
         # Set of indices from original list that are deleted
         self.deleted = set([])
-        if fitter == "auto":
+        if fitter == "notdownhill":
             self.fit_method = self.getDefaultFitter(downhill=False)
             log.info(
                 f"Since wideband={self.all_toas.wideband} and correlated={self.prefit_model.has_correlated_errors}, selecting fitter={self.fit_method}"

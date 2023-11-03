@@ -453,7 +453,7 @@ FD3  1.07526915D-04  1      2.50177766D-05
 SOLARN0               0.00
 EPHEM               DE421
 ECL                 IERS2003
-CLK                 TT(BIPM)
+CLK                 TT(BIPM2019)
 UNITS               TDB
 TIMEEPH             FB90
 #T2CMETHOD           TEMPO

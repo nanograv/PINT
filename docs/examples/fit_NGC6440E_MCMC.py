@@ -26,12 +26,13 @@ def plot_chains(chain_dict, file=False):
     fig.tight_layout()
     if file:
         fig.savefig(file)
-        plt.close()
     else:
         plt.show()
-        plt.close()
+
+    plt.close()
 
 
+import contextlib
 import pint.config
 
 parfile = pint.config.examplefile("NGC6440E.par.good")
@@ -51,7 +52,7 @@ t.print_summary()
 rs = pint.residuals.Residuals(t, m).phase_resids
 xt = t.get_mjds()
 plt.plot(xt, rs, "x")
-plt.title("%s Pre-Fit Timing Residuals" % m.PSR.value)
+plt.title(f"{m.PSR.value} Pre-Fit Timing Residuals")
 plt.xlabel("MJD")
 plt.ylabel("Residual (phase)")
 plt.grid()
@@ -83,21 +84,20 @@ print(f.fit_toas(nsteps))
 
 # plotting the chains
 chains = sampler.chains_to_dict(f.fitkeys)
-plot_chains(chains, file=f.model.PSR.value + "_chains.png")
+plot_chains(chains, file=f"{f.model.PSR.value}_chains.png")
 
 # triangle plot
-# this doesn't include burn-in because we're not using it here, otherwise would have middle ':' --> 'burnin:'
-samples = sampler.sampler.chain[:, :, :].reshape((-1, f.n_fit_params))
-try:
+# this doesn't include burn-in because we're not using it here, otherwise set get_chain(discard=burnin)
+# samples = sampler.sampler.chain[:, :, :].reshape((-1, f.n_fit_params))
+samples = np.transpose(sampler.get_chain(), (1, 0, 2)).reshape((-1, ndim))
+with contextlib.suppress(ImportError):
     import corner
 
     fig = corner.corner(
         samples, labels=f.fitkeys, bins=50, truths=f.maxpost_fitvals, plot_contours=True
     )
-    fig.savefig(f.model.PSR.value + "_triangle.png")
+    fig.savefig(f"{f.model.PSR.value}_triangle.png")
     plt.close()
-except ImportError:
-    pass
 
 # Print some basic params
 print("Best fit has reduced chi^2 of", f.resids.reduced_chi2)
@@ -112,7 +112,7 @@ plt.errorbar(
     t.get_errors().to(u.us).value,
     fmt="x",
 )
-plt.title("%s Post-Fit Timing Residuals" % m.PSR.value)
+plt.title(f"{m.PSR.value} Post-Fit Timing Residuals")
 plt.xlabel("MJD")
 plt.ylabel("Residual (us)")
 plt.grid()

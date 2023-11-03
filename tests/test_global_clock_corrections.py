@@ -12,7 +12,7 @@ from pint.observatory.global_clock_corrections import get_file, update_all
 
 
 def test_not_existing(tmp_path, temp_cache):
-    url_base = tmp_path.as_uri() + "/"
+    url_base = f"{tmp_path.as_uri()}/"
 
     test_file_name = "test_file"
     url = url_base + test_file_name
@@ -27,7 +27,7 @@ def test_not_existing(tmp_path, temp_cache):
 
 
 def test_existing(tmp_path, temp_cache):
-    url_base = tmp_path.as_uri() + "/"
+    url_base = f"{tmp_path.as_uri()}/"
 
     test_file_name = "test_file"
     url = url_base + test_file_name
@@ -46,7 +46,7 @@ def test_existing(tmp_path, temp_cache):
 
 
 def test_update_needed(tmp_path, temp_cache):
-    url_base = tmp_path.as_uri() + "/"
+    url_base = f"{tmp_path.as_uri()}/"
 
     test_file_name = "test_file"
     url = url_base + test_file_name
@@ -94,7 +94,7 @@ def sandbox(tmp_path):
         # File                                   Update (days)   Invalid if older than
         {sandbox.filename}                                  7.0   --- """
     )
-    sandbox.repo_url = sandbox.repo_path.as_uri() + "/"
+    sandbox.repo_url = f"{sandbox.repo_path.as_uri()}/"
 
     return sandbox
 

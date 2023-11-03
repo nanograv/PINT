@@ -4,9 +4,11 @@ and PLDMNoise give the same result as the old code."""
 import numpy as np
 import pytest
 from pint.config import examplefile
-from pint.models import get_model_and_toas
+from pint.models import get_model_and_toas, get_model
 from pint.models.timing_model import Component
 from pint.models.noise_model import NoiseComponent
+from pint.simulation import make_fake_toas_uniform
+from io import StringIO
 
 
 noise_component_labels = [
@@ -119,3 +121,36 @@ def test_noise_basis_weights_funcs(model_and_toas, component_label):
     weights_ = component.get_noise_weights(toas)
 
     assert np.allclose(basis_, basis) and np.allclose(weights, weights_)
+
+
+def test_white_noise_model_derivs():
+    par = """
+        ELAT    1.3     1
+        ELONG   2.5     1
+        F0      100     1
+        F1      1e-13   1
+        PEPOCH  55000
+        EFAC mjd 49999 53000 2      1
+        EQUAD mjd 49999 53000 0.5      1
+        EFAC mjd 53000 55000 1.5    1
+        EQUAD mjd 53000 55000 1    1
+    """
+    m = get_model(StringIO(par))
+    t = make_fake_toas_uniform(50000, 55000, 1000, m, add_noise=True)
+
+    dq1 = m.d_toasigma_d_param(t, "EQUAD1")
+    dq2 = m.d_toasigma_d_param(t, "EQUAD2")
+    df1 = m.d_toasigma_d_param(t, "EFAC1")
+    df2 = m.d_toasigma_d_param(t, "EFAC2")
+
+    sigma = m.scaled_toa_uncertainty(t)
+
+    assert np.isclose(df1[0], sigma[0] / m.EFAC1.quantity)
+    assert np.isclose(df2[-1], sigma[-1] / m.EFAC2.quantity)
+
+    assert np.isclose(
+        dq1[0], sigma[0] * m.EQUAD1.quantity * (m.EFAC1.quantity / sigma[0]) ** 2
+    )
+    assert np.isclose(
+        dq2[-1], sigma[-1] * m.EQUAD2.quantity * (m.EFAC2.quantity / sigma[-1]) ** 2
+    )

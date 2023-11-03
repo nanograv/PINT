@@ -8,12 +8,13 @@ import sys
 from astropy.time import Time
 import astropy.units as u
 import matplotlib as mpl
+from matplotlib import figure
 import numpy as np
-import matplotlib.figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 import pint.pintk.pulsar as pulsar
 import pint.pintk.colormodes as cm
+from pint.models.astrometry import Astrometry
 
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
@@ -52,6 +53,7 @@ plotlabels = {
     "WB DM": "Wideband DM (dmu)",
     "WB DM res": "Wideband DM residual (dmu)",
     "WB DM err": "Wideband DM error (dmu)",
+    "elongation": r"Solar Elongation (deg)",
 }
 
 helpstring = """The following interactions are currently supported in the plotting pane in `pintk`:
@@ -211,6 +213,7 @@ class PlkFitBoxesWidget(tk.Frame):
                 for p in model.components[comp].params
                 if p not in pulsar.nofitboxpars
                 and getattr(model, p).quantity is not None
+                and p in model.fittable_params
             ]
 
             # Don't bother showing components without any fittable parameters
@@ -527,6 +530,26 @@ class PlkXYChoiceWidget(tk.Frame):
                 self.xbuttons[ii].select()
             if choice.lower() == yid:
                 self.ybuttons[ii].select()
+
+            model = (
+                self.master.psr.postfit_model
+                if self.master.psr.fitted
+                else self.master.psr.prefit_model
+            )
+            if choice == "elongation" and not any(
+                isinstance(x, Astrometry) for x in model.components
+            ):
+                self.xbuttons[ii].configure(state="disabled")
+                self.ybuttons[ii].configure(state="disabled")
+            elif choice == "orbital phase" and not model.is_binary:
+                self.xbuttons[ii].configure(state="disabled")
+                self.ybuttons[ii].configure(state="disabled")
+            if choice == "frequency" and (
+                (len(np.unique(self.master.psr.all_toas["freq"])) <= 1)
+                or np.any(np.isinf(self.master.psr.all_toas["freq"]))
+            ):
+                self.xbuttons[ii].configure(state="disabled")
+                self.ybuttons[ii].configure(state="disabled")
 
     def setCallbacks(self, updatePlot):
         """
@@ -1103,14 +1126,7 @@ class PlkWidget(tk.Frame):
                     # Get the time of conjunction after T0 or TASC
                     tt = m.T0.value if hasattr(m, "T0") else m.TASC.value
                     mjd = m.conjunction(tt)
-                    if m.PB.value is not None:
-                        pb = m.PB.value
-                    elif m.FB0.quantity is not None:
-                        pb = (1 / m.FB0.quantity).to("day").value
-                    else:
-                        raise AttributeError(
-                            "Neither PB nor FB0 is present in the timing model."
-                        )
+                    pb = m.pb()[0].to_value("day")
                     phs = (mjd - tt) / pb
                     self.plkAxes.plot([phs, phs], [ymin, ymax], "k-")
         else:
@@ -1272,6 +1288,11 @@ class PlkWidget(tk.Frame):
                 log.warning("Cannot plot WB DM errors for NB TOAs.")
                 data = None
                 error = None
+        elif label == "elongation":
+            data = np.degrees(
+                self.psr.prefit_model.sun_angle(self.psr.all_toas, also_distance=False)
+            )
+            error = None
 
         return data, error
 
@@ -1552,11 +1573,7 @@ class PlkWidget(tk.Frame):
                 self.psr.selected_toas = self.psr.all_toas[cluster_bool]
                 jump_name = self.psr.add_jump(cluster_bool)
                 self.updateJumped(jump_name)
-            if (
-                self.selected is not None
-                and self.selected is not []
-                and all(self.selected)
-            ):
+            if self.selected is not None and self.selected != [] and all(self.selected):
                 self.psr.selected_toas = self.all_toas[self.selected]
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.randomboxWidget.addRandomCheckbox(self)

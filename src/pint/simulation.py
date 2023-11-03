@@ -106,9 +106,8 @@ def get_fake_toa_clock_versions(model, include_bipm=False, include_gps=True):
             if len(clk) == 2:
                 ctype, cvers = clk
                 if ctype == "TT" and cvers.startswith("BIPM"):
-                    if bipm_version is None:
-                        bipm_version = cvers
-                        log.info(f"Using CLOCK = {bipm_version} from the given model")
+                    bipm_version = cvers
+                    log.info(f"Using CLOCK = {bipm_version} from the given model")
                 else:
                     log.warning(
                         f'CLOCK = {model["CLOCK"].value} is not implemented. '
@@ -129,7 +128,7 @@ def get_fake_toa_clock_versions(model, include_bipm=False, include_gps=True):
     }
 
 
-def make_fake_toas(ts, model, add_noise=False, name="fake"):
+def make_fake_toas(ts, model, add_noise=False, add_correlated_noise=False, name="fake"):
     """Make toas from an array of times
 
     Can include alternating frequencies if fed an array of frequencies,
@@ -143,6 +142,8 @@ def make_fake_toas(ts, model, add_noise=False, name="fake"):
         current model
     add_noise : bool, optional
         Add noise to the TOAs (otherwise `error` just populates the column)
+    add_correlated_noise : bool, optional
+        Add correlated noise to the TOAs if it's present in the timing mode.
     name : str, optional
         Name for the TOAs (goes into the flags)
 
@@ -157,6 +158,13 @@ def make_fake_toas(ts, model, add_noise=False, name="fake"):
     """
     tsim = deepcopy(ts)
     zero_residuals(tsim, model)
+
+    if add_correlated_noise:
+        U = model.noise_model_designmatrix(tsim)
+        b = model.noise_model_basis_weight(tsim)
+        corrn = (U @ (b**0.5 * np.random.normal(size=len(b)))) << u.s
+        tsim.adjust_TOAs(time.TimeDelta(corrn))
+
     if add_noise:
         # this function will include EFAC and EQUAD
         err = model.scaled_toa_uncertainty(tsim) * np.random.normal(size=len(tsim))
@@ -199,6 +207,7 @@ def make_fake_toas_uniform(
     obs="GBT",
     error=1 * u.us,
     add_noise=False,
+    add_correlated_noise=False,
     wideband=False,
     wideband_dm_error=1e-4 * pint.dmu,
     name="fake",
@@ -230,6 +239,8 @@ def make_fake_toas_uniform(
         uncertainty to attach to each TOA
     add_noise : bool, optional
         Add noise to the TOAs (otherwise `error` just populates the column)
+    add_correlated_noise : bool, optional
+        Add correlated noise to the TOAs if it's present in the timing mode.
     wideband : bool, optional
         Whether to include wideband DM information with each TOA; default is
         not to include any wideband DM information. If True, the DM associated
@@ -295,14 +306,19 @@ def make_fake_toas_uniform(
         include_bipm=clk_version["include_bipm"],
         bipm_version=clk_version["bipm_version"],
         include_gps=clk_version["include_gps"],
-        planets=model["PLANET_SHAPIRO"].value,
+        planets=model["PLANET_SHAPIRO"].value if "PLANET_SHAPIRO" in model else False,
     )
-    ts.table["error"] = error
 
     if wideband:
         ts = update_fake_dms(model, ts, wideband_dm_error, add_noise)
 
-    return make_fake_toas(ts, model=model, add_noise=add_noise, name=name)
+    return make_fake_toas(
+        ts,
+        model=model,
+        add_noise=add_noise,
+        add_correlated_noise=add_correlated_noise,
+        name=name,
+    )
 
 
 def make_fake_toas_fromMJDs(
@@ -312,6 +328,7 @@ def make_fake_toas_fromMJDs(
     obs="GBT",
     error=1 * u.us,
     add_noise=False,
+    add_correlated_noise=False,
     wideband=False,
     wideband_dm_error=1e-4 * pint.dmu,
     name="fake",
@@ -337,6 +354,8 @@ def make_fake_toas_fromMJDs(
         uncertainty to attach to each TOA
     add_noise : bool, optional
         Add noise to the TOAs (otherwise `error` just populates the column)
+    add_correlated_noise : bool, optional
+        Add correlated noise to the TOAs if it's present in the timing mode.
     wideband : astropy.units.Quantity, optional
         Whether to include wideband DM values with each TOA; default is
         not to include any DM information
@@ -392,15 +411,22 @@ def make_fake_toas_fromMJDs(
         include_gps=clk_version["include_gps"],
         planets=model["PLANET_SHAPIRO"].value,
     )
-    ts.table["error"] = error
 
     if wideband:
         ts = update_fake_dms(model, ts, wideband_dm_error, add_noise)
 
-    return make_fake_toas(ts, model=model, add_noise=add_noise, name=name)
+    return make_fake_toas(
+        ts,
+        model=model,
+        add_noise=add_noise,
+        add_correlated_noise=add_correlated_noise,
+        name=name,
+    )
 
 
-def make_fake_toas_fromtim(timfile, model, add_noise=False, name="fake"):
+def make_fake_toas_fromtim(
+    timfile, model, add_noise=False, add_correlated_noise=False, name="fake"
+):
     """Make fake toas with the same times as an input tim file
 
     Can include alternating frequencies if fed an array of frequencies,
@@ -414,6 +440,8 @@ def make_fake_toas_fromtim(timfile, model, add_noise=False, name="fake"):
         current model
     add_noise : bool, optional
         Add noise to the TOAs (otherwise `error` just populates the column)
+    add_correlated_noise : bool, optional
+        Add correlated noise to the TOAs if it's present in the timing mode.
     name : str, optional
         Name for the TOAs (goes into the flags)
 
@@ -427,13 +455,30 @@ def make_fake_toas_fromtim(timfile, model, add_noise=False, name="fake"):
     --------
     :func:`make_fake_toas`
     """
-    input_ts = pint.toa.get_TOAs(timfile)
+    ephem = (
+        model.EPHEM.value
+        if hasattr(model, "EPHEM") and model.EPHEM.value is not None
+        else None
+    )
+    planets = (
+        model.PLANET_SHAPIRO.value
+        if hasattr(model, "PLANET_SHAPIRO") and model.PLANET_SHAPIRO.value is not None
+        else False
+    )
+
+    input_ts = pint.toa.get_TOAs(timfile, ephem=ephem, planets=planets)
 
     if input_ts.is_wideband():
         dm_errors = input_ts.get_dm_errors()
         ts = update_fake_dms(model, ts, dm_errors, add_noise)
 
-    return make_fake_toas(input_ts, model=model, add_noise=add_noise, name=name)
+    return make_fake_toas(
+        input_ts,
+        model=model,
+        add_noise=add_noise,
+        add_correlated_noise=add_correlated_noise,
+        name=name,
+    )
 
 
 def calculate_random_models(

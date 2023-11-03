@@ -93,7 +93,7 @@ class PhaseJump(PhaseComponent):
             maskParameter(
                 name="JUMP",
                 units="second",
-                description="Amount to jump the selected TOAs by.",
+                description="Phase jump for selection.",
             )
         )
         self.phase_funcs_component += [self.jump_phase]
@@ -117,7 +117,11 @@ class PhaseJump(PhaseComponent):
         F0.
         """
         tbl = toas.table
-        jphase = numpy.zeros(len(tbl)) * (self.JUMP1.units * self._parent.F0.units)
+        # base this on the first available jump (doesn't have to be JUMP1)
+        jphase = numpy.zeros(len(tbl)) * (
+            getattr(self, self.get_params_of_type("maskParameter")[0]).units
+            * self._parent.F0.units
+        )
         for jump in self.jumps:
             jump_par = getattr(self, jump)
             mask = jump_par.select_toa_mask(toas)

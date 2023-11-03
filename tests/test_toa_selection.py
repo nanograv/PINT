@@ -1,7 +1,7 @@
 import copy
 import logging
 import os
-import unittest
+import pytest
 
 import astropy.units as u
 import numpy as np
@@ -15,9 +15,9 @@ import pint.toa as toa
 from pinttestdata import datadir
 
 
-class TestTOAselection(unittest.TestCase):
+class TestTOAselection:
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         os.chdir(datadir)
         cls.parf = "B1855+09_NANOGrav_9yv1.gls.par"
         cls.timf = "B1855+09_NANOGrav_9yv1.tim"
@@ -42,7 +42,7 @@ class TestTOAselection(unittest.TestCase):
                     toas_table["mjd_float"] >= r1.mjd, toas_table["mjd_float"] <= r2.mjd
                 )
                 toas_table["DMX_section"][msk] = epoch_ind
-                epoch_ind = epoch_ind + 1
+                epoch_ind += 1
         return toas_table
 
     def get_dmx_old(self, toas):
@@ -76,7 +76,7 @@ class TestTOAselection(unittest.TestCase):
         self.toas.unselect()
         assert self.toas.ntoas == 4005
 
-    def test_DMX_selection(self):
+    def test_dmx_selection(self):
         dmx_old = self.get_dmx_old(self.toas).value
         # New way in the code.
         dmx_new = self.model.dmx_dm(self.toas).value
@@ -131,7 +131,3 @@ class TestTOAselection(unittest.TestCase):
         assert len(indx0005_2) == 0
         assert len(run1) == len(run2)
         assert np.allclose(run1, run2)
-
-
-if __name__ == "__main__":
-    unittest.main()
