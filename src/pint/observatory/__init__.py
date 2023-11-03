@@ -164,6 +164,7 @@ class Observatory:
     def __init__(
         self,
         name,
+        fullname=None,
         aliases=None,
         include_gps=True,
         include_bipm=True,
@@ -172,7 +173,7 @@ class Observatory:
     ):
         if aliases is not None:
             Observatory._add_aliases(self, aliases)
-
+        self.fullname = fullname if fullname is not None else name
         self.include_gps = include_gps
         self.include_bipm = include_bipm
         self.bipm_version = bipm_version

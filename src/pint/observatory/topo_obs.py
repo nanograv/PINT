@@ -85,6 +85,8 @@ class TopoObs(Observatory):
     ----------
     name : str
         The name of the observatory
+    fullname : str
+        A fuller name of the observatory
     location : ~astropy.coordinates.EarthLocation, optional
     itrf_xyz : ~astropy.units.Quantity or array-like, optional
         IRTF site coordinates (len-3 array).  Can include
@@ -149,6 +151,7 @@ class TopoObs(Observatory):
         self,
         name,
         *,
+        fullname=None,
         tempo_code=None,
         itoa_code=None,
         aliases=None,
@@ -237,6 +240,7 @@ class TopoObs(Observatory):
         self.origin = origin
         super().__init__(
             name,
+            fullname=fullname,
             aliases=aliases,
             include_gps=include_gps,
             include_bipm=include_bipm,
@@ -246,7 +250,12 @@ class TopoObs(Observatory):
 
     def __repr__(self):
         aliases = [f"'{x}'" for x in self.aliases]
-        return f"TopoObs('{self.name}' ({','.join(aliases)}) at [{self.location.x}, {self.location.y} {self.location.z}]:\n{self.origin})"
+        origin = (
+            f"{self.fullname}\n{self.origin}"
+            if self.fullname != self.name
+            else self.origin
+        )
+        return f"TopoObs('{self.name}' ({','.join(aliases)}) at [{self.location.x}, {self.location.y} {self.location.z}]:\n{origin})"
 
     @property
     def timescale(self):
