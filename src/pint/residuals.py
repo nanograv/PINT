@@ -500,6 +500,12 @@ class Residuals:
             )
         return (phase_resids / self.get_PSR_freq(calctype=calctype)).to(u.s)
 
+    def calc_whitened_resids(self):
+        r = self.calc_time_resids()
+        nr = sum(self.noise_resids.values())
+        sigma = self.get_data_error()
+        return (r - nr) / sigma
+
     def _calc_gls_chi2(self, lognorm=False):
         """Compute the chi2 when correlated noise is present in the timing model.
         If the system is not singular, it uses Cholesky factorization to evaluate this.
