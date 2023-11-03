@@ -241,13 +241,13 @@ def test_fake_uniform(t1, t2):
     model = get_model(
         io.StringIO(
             """
-        PSRJ J1234+5678
-        ELAT 0
-        ELONG 0
-        DM 10
-        F0 1
-        PEPOCH 58000
-        """
+            PSRJ J1234+5678
+            ELAT 0
+            ELONG 0
+            DM 10
+            F0 1
+            PEPOCH 58000
+            """
         )
     )
     toas = pint.simulation.make_fake_toas_uniform(
