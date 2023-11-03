@@ -8,7 +8,6 @@ import sys
 from astropy.time import Time
 import astropy.units as u
 import matplotlib as mpl
-from matplotlib import figure
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
@@ -22,6 +21,8 @@ from tkinter import ttk
 
 import pint.logging
 from loguru import logger as log
+
+from pint.residuals import WidebandDMResiduals
 
 
 try:
@@ -1268,13 +1269,14 @@ class PlkWidget(tk.Frame):
                 error = None
         elif label == "WB DM res":
             if self.psr.all_toas.wideband:
-                if self.psr.fitted:
-                    data = self.psr.postfit_resids.dm.resids.to(pint.dmu)
+                if self.psr.fitter is not None:
+                    data = self.psr.fitter.resids.dm.calc_resids().to(pint.dmu)
                 else:
-                    log.warning(
-                        "Pulsar has not been fitted yet! Giving pre-fit residuals"
+                    data = (
+                        WidebandDMResiduals(self.psr.all_toas, self.psr.prefit_model)
+                        .calc_resids()
+                        .to(pint.dmu)
                     )
-                    data = self.psr.prefit_resids.dm.resids.to(pint.dmu)
                 error = self.psr.all_toas.get_dm_errors().to(pint.dmu)
             else:
                 log.warning("Cannot plot WB DM resids for NB TOAs.")

@@ -94,7 +94,7 @@ class Residuals:
                 raise ValueError(
                     f"'{residual_type}' is not a PINT supported residual. Currently supported data types are {list(residual_map.keys())}"
                 ) from e
-                
+
         return super().__new__(cls)
 
     def __init__(
@@ -364,7 +364,7 @@ class Residuals:
             # and delta_pulse_numbers (from PHASE lines or adding phase jumps in GUI)
             i = pulse_num.copy()
             f = np.zeros_like(pulse_num)
-            
+
             c = np.isnan(pulse_num)
             if np.any(c):
                 # i[c] = 0
