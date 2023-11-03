@@ -504,7 +504,7 @@ class Residuals:
         r = self.calc_time_resids()
         nr = sum(self.noise_resids.values())
         sigma = self.get_data_error()
-        return (r - nr) / sigma
+        return ((r - nr) / sigma).to(u.dimensionless_unscaled)
 
     def _calc_gls_chi2(self, lognorm=False):
         """Compute the chi2 when correlated noise is present in the timing model.
