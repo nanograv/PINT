@@ -189,7 +189,7 @@ def make_fake_toas_uniform(
     name="fake",
     include_bipm=False,
     include_gps=True,
-    multi_freqs_in_epoch=True,
+    multi_freqs_in_epoch=False,
 ):
     """Make evenly spaced toas
 
@@ -316,7 +316,7 @@ def make_fake_toas_fromMJDs(
     name="fake",
     include_bipm=False,
     include_gps=True,
-    multi_freqs_in_epoch=True,
+    multi_freqs_in_epoch=False,
 ):
     """Make toas from a list of MJDs
 
