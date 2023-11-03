@@ -385,7 +385,11 @@ def make_fake_toas_fromMJDs(
         times = MJDs
         freq_array = np.tile(freqs, len(MJDs) // len(freqs) + 1)[: len(times)]
     else:
-        times = np.repeat(MJDs, len(freqs))
+        times = (
+            time.Time(np.repeat(MJDs, len(freqs)))
+            if isinstance(MJDs, time.Time)
+            else np.repeat(MJDs, len(freqs))
+        )
         freq_array = np.tile(freqs, len(MJDs))
 
     clk_version = get_fake_toa_clock_versions(
