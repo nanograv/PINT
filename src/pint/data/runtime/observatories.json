@@ -8,7 +8,8 @@
             -4924872.368,
             3943729.418
         ],
-        "origin": "The Robert C. Byrd Green Bank Telescope.\nThis data was obtained by Joe Swiggum from Ryan Lynch in 2021 September.\n"
+        "fullname": "The Robert C. Byrd Green Bank Telescope",
+        "origin": "This data was obtained by Joe Swiggum from Ryan Lynch in 2021 September.\n"
     },
     "gbt_pre_2021": {
         "clock_file": "time_gbt.dat",
@@ -17,8 +18,8 @@
             -4924872.32,
             3943729.348
         ],
+        "fullname": "The Robert C. Byrd Green Bank Telescope (pre-2021)",
         "origin": [
-            "The Robert C. Byrd Green Bank Telescope.",
             "The origin of this data is unknown but as of 2021 June 8 it agrees exactly with",
             "the values used by TEMPO and TEMPO2."
         ]
@@ -35,7 +36,8 @@
             -5564731.357,
             1994720.633
         ],
-        "origin": "The Arecibo telescope.\nThese are the coordinates used for VLBI as of March 2020 (MJD 58919). They are based on\na fiducial position at MJD 52275 plus a (continental) drift velocity of\n[0.0099, 0.0045, 0.0101] m/yr. This data was obtained from Ben Perera in September 2021.\n"
+        "fullname": "The Arecibo telescope",
+        "origin": "These are the coordinates used for VLBI as of March 2020 (MJD 58919). They are based on\na fiducial position at MJD 52275 plus a (continental) drift velocity of\n[0.0099, 0.0045, 0.0101] m/yr. This data was obtained from Ben Perera in September 2021.\n"
     },
     "arecibo_pre_2021": {
         "itrf_xyz": [
@@ -44,7 +46,8 @@
             1994727.0
         ],
         "clock_file": "time_ao.dat",
-        "origin": "The Arecibo telescope.\nThe origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2. It is preserved to facilitate comparisons with\nthe more modern position measurement.\n"
+        "fullname": "The Arecibo telescope (pre-2021)",
+        "origin": "The origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2. It is preserved to facilitate comparisons with\nthe more modern position measurement.\n"
     },
     "vla": {
         "tempo_code": "6",
@@ -58,7 +61,8 @@
             -5041981.4,
             3554871.4
         ],
-        "origin": "The Jansky Very Large Array.\nThe origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
+        "fullname": "The Jansky Very Large Array (VLA)",
+        "origin": "The origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
     },
     "meerkat": {
         "tempo_code": "m",
@@ -70,7 +74,8 @@
             2006852.586,
             -3238948.127
         ],
-        "origin": "MEERKAT, used in timing mode.\nThe origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
+        "fullname": "MeerKAT",
+        "origin": "For MeerKAT when used in timing mode.\nThe origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
     },
     "parkes": {
         "tempo_code": "7",
@@ -85,7 +90,8 @@
             2816759.1,
             -3454036.3
         ],
-        "origin": "The Parkes radio telescope.\nThe origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
+        "fullname": "The Parkes (Murriyang) radio telescope",
+        "origin": "The origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
     },
     "jodrell": {
         "tempo_code": "8",
@@ -98,7 +104,8 @@
             -154105.255,
             5086486.256
         ],
-        "origin": "The Lovell telescope at Jodrell Bank.\nThese are the coordinates used for VLBI as of March 2020 (MJD 58919). They are based on\na fiducial position at MJD 50449 plus a (continental) drift velocity of\n[-0.0117, 0.0170, 0.0093] m/yr. This data was obtained from Ben Perera in September 2021.\nNote that any actual instrument - DFB, Roach, AFB - requires a different observatory code to obtain the correct clock files."
+        "fullname": "The Lovell telescope at Jodrell Bank",
+        "origin": "These are the coordinates used for VLBI as of March 2020 (MJD 58919). They are based on\na fiducial position at MJD 50449 plus a (continental) drift velocity of\n[-0.0117, 0.0170, 0.0093] m/yr. This data was obtained from Ben Perera in September 2021.\nNote that any actual instrument - DFB, Roach, AFB - requires a different observatory code to obtain the correct clock files."
     },
     "jbroach": {
         "clock_file": [
@@ -118,8 +125,8 @@
             -154105.255,
             5086486.256
         ],
+        "fullname": "The Lovell telescope at Jodrell Bank with the Roach backend",
         "origin": [
-            "The Lovell telescope at Jodrell Bank.",
             "These are the coordinates used for VLBI as of March 2020 (MJD 58919). They are based on",
             "a fiducial position at MJD 50449 plus a (continental) drift velocity of",
             "[-0.0117, 0.0170, 0.0093] m/yr. This data was obtained from Ben Perera in September 2021.",
@@ -144,8 +151,8 @@
             -154105.255,
             5086486.256
         ],
+        "fullname": "The Lovell telescope at Jodrell Bank with the DFB backend",
         "origin": [
-            "The Lovell telescope at Jodrell Bank.",
             "These are the coordinates used for VLBI as of March 2020 (MJD 58919). They are based on",
             "a fiducial position at MJD 50449 plus a (continental) drift velocity of",
             "[-0.0117, 0.0170, 0.0093] m/yr. This data was obtained from Ben Perera in September 2021.",
@@ -164,8 +171,8 @@
             -154105.255,
             5086486.256
         ],
+        "fullname": "The Lovell telescope at Jodrell Bank with the AFB backend",
         "origin": [
-            "The Lovell telescope at Jodrell Bank.",
             "These are the coordinates used for VLBI as of March 2020 (MJD 58919). They are based on",
             "a fiducial position at MJD 50449 plus a (continental) drift velocity of",
             "[-0.0117, 0.0170, 0.0093] m/yr. This data was obtained from Ben Perera in September 2021.",
@@ -181,7 +188,8 @@
             5086486.04
         ],
         "bogus_last_correction": true,
-        "origin": "The Lovell telescope at Jodrell Bank.\nThe origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
+        "fullname": "The Lovell telescope at Jodrell Bank (pre-2021)",
+        "origin": "The origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
     },
     "nancay": {
         "tempo_code": "f",
@@ -196,7 +204,8 @@
             165927.11,
             4670132.83
         ],
-        "origin": "The Nan\u00e7ay radio telescope.\nThe origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\nThis telescope appears to require zero clock corrections to GPS.\n"
+        "fullname": "The Nan\u00e7ay radio telescope",
+        "origin": "The origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\nThis telescope appears to require zero clock corrections to GPS.\n"
     },
     "ncyobs": {
         "aliases": [
@@ -214,7 +223,8 @@
             "obspm2gps.clk"
         ],
         "bogus_last_correction": true,
-        "origin": "The Nan\u00e7ay radio telescope with the NUPPI back-end.\nThe origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
+        "fullname": "The Nan\u00e7ay radio telescope with the NUPPI back-end",
+        "origin": "The origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
     },
     "effelsberg": {
         "tempo_code": "g",
@@ -230,7 +240,8 @@
             4900431.067
         ],
         "bogus_last_correction": true,
-        "origin": "The Effelsberg radio telescope.\nThese are the coordinates used for VLBI as of March 2020 (MJD 58919). They are based on\na fiducial position at MJD 56658 plus a (continental) drift velocity of\n[-0.0144, 0.0167, 0.0106] m/yr. This data was obtained from Ben Perera in September 2021.\n"
+        "fullname": "The Effelsberg radio telescope",
+        "origin": "These are the coordinates used for VLBI as of March 2020 (MJD 58919). They are based on\na fiducial position at MJD 56658 plus a (continental) drift velocity of\n[-0.0144, 0.0167, 0.0106] m/yr. This data was obtained from Ben Perera in September 2021.\n"
     },
     "effelsberg_pre_2021": {
         "clock_fmt": "tempo2",
@@ -241,7 +252,8 @@
             4900430.8
         ],
         "bogus_last_correction": true,
-        "origin": "The Effelsberg radio telescope.\nThe origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
+        "fullname": "The Effelsberg radio telescope (pre-2021)",
+        "origin": "The origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
     },
     "gmrt": {
         "tempo_code": "r",
@@ -253,7 +265,8 @@
             5797947.77,
             2073243.16
         ],
-        "origin": "The Giant Metre-wave Radio Telescope.\nThe origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\nGMRT does not need clock files as the data is recorded against UTC(gps)."
+        "fullname": "The Giant Metre-wave Radio Telescope (GMRT)",
+        "origin": "The origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\nGMRT does not need clock files as the data is recorded against UTC(gps)."
     },
     "ort": {
         "aliases": [
@@ -266,7 +279,8 @@
             6087044.73,
             1251052.35
         ],
-        "origin": "The Ooty Radio Telescope.\nCoordinates provided by Jaikhomba Singha on 25 Jan 2023.\nORT does not need clock files as the data is recorded against UTC(gps)."
+        "fullname": "The Ooty Radio Telescope (ORT)",
+        "origin": "Coordinates provided by Jaikhomba Singha on 25 Jan 2023.\nORT does not need clock files as the data is recorded against UTC(gps)."
     },
     "wsrt": {
         "aliases": [
@@ -281,7 +295,8 @@
             445223.6,
             5064921.5677
         ],
-        "origin": "The Westerbork Synthesis Radio Telescope.\nNote that different letters have been used in the past to indicate this telescope.\nThe origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
+        "fullname": "The Westerbork Synthesis Radio Telescope (WSRT)",
+        "origin": "Note that different letters have been used in the past to indicate this telescope.\nThe origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
     },
     "fast": {
         "tempo_code": "k",
@@ -292,7 +307,8 @@
             5506838.0,
             2744934.0
         ],
-        "origin": "The FAST radio telescope in China.\nOrigin of this data is unknown but as of 2021 June 8 it agrees exactly with the\nTEMPO value and disagrees by about 17 km with the TEMPO2 value.\n"
+        "fullname": "The FAST radio telescope in China",
+        "origin": "Origin of this data is unknown but as of 2021 June 8 it agrees exactly with the\nTEMPO value and disagrees by about 17 km with the TEMPO2 value.\n"
     },
     "mwa": {
         "tempo_code": "u",
@@ -302,7 +318,8 @@
             5095372.14,
             -2849057.18
         ],
-        "origin": "The Murchison Widefield Array.\nOrigin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2 and TEMPO.\n"
+        "fullname": "The Murchison Widefield Array (MWA)",
+        "origin": "Origin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2 and TEMPO.\n"
     },
     "lwa1": {
         "tempo_code": "x",
@@ -312,7 +329,8 @@
             -5042313.47,
             3553971.51
         ],
-        "origin": "The LWA (long wavelength array, in New Mexico).\nOrigin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2 but disagrees with the value used by TEMPO by about 125 m.\n"
+        "fullname": "The Long Wavelength Array (LWA) in New Mexico",
+        "origin": "Origin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2 but disagrees with the value used by TEMPO by about 125 m.\n"
     },
     "ps1": {
         "tempo_code": "p",
@@ -322,7 +340,8 @@
             -2412559.0,
             2243024.0
         ],
-        "origin": "Pan-STARRS.\nOrigin of this data is unknown.\n"
+        "fullname": "Pan-STARRS",
+        "origin": "Origin of this data is unknown.\n"
     },
     "hobart": {
         "tempo_code": "4",
@@ -332,7 +351,8 @@
             2522377.31,
             -4311667.52
         ],
-        "origin": "A telescope in Hobart, Tasmania.\nOrigin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2 and TEMPO.\n"
+        "fullname": "Mt Pleasant Radio Observatory in Hobart, Tasmania",
+        "origin": "Origin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2 and TEMPO.\n"
     },
     "most": {
         "tempo_code": "e",
@@ -345,7 +365,8 @@
         "clock_fmt": "tempo2",
         "clock_file": "mo2gps.clk",
         "bogus_last_correction": true,
-        "origin": "The Molonglo Observatory Synthesis Telescope.\nOrigin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2.\n"
+        "fullname": "The Molonglo Observatory Synthesis Telescope (MOST)",
+        "origin": "Origin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2.\n"
     },
     "chime": {
         "tempo_code": "y",
@@ -356,7 +377,8 @@
             -3621302.972,
             4814304.113
         ],
-        "origin": "The Canadian Hydrogen Intensity Mapping Experiment.\nOrigin of these coordinates are from surveyor reports of the CHIME site\n(circa 2019 & 2020) and technical documents on the dimensions of the telescope\nstructure (circa 2015). Results were compiled in January 2021. The coordinates\nare relative to the GRS80 ellipsoid.\n"
+        "fullname": "The Canadian Hydrogen Intensity Mapping Experiment (CHIME)",
+        "origin": "Origin of these coordinates are from surveyor reports of the CHIME site\n(circa 2019 & 2020) and technical documents on the dimensions of the telescope\nstructure (circa 2015). Results were compiled in January 2021. The coordinates\nare relative to the GRS80 ellipsoid.\n"
     },
     "magic": {
         "include_bipm": false,
@@ -365,7 +387,8 @@
             -1719509.5201,
             3051884.5175
         ],
-        "origin": "MAGIC (a ground-based gamma-ray telescope).\nOrigin of this data is unknown.\n"
+        "fullname": "MAGIC Florian Goebel Telescopes",
+        "origin": "A ground-based gamma-ray telescope.\nOrigin of this data is unknown.\n"
     },
     "lst": {
         "include_bipm": false,
@@ -374,7 +397,8 @@
             -1719636.1588,
             3051795.1913
         ],
-        "origin": "Large Size Telescope Cherenkov facility. \nOrigin of this data is unknown.\n"
+        "fullname": "Large Size Telescope Cherenkov facility",
+        "origin": "Origin of this data is unknown.\n"
     },
     "virgo": {
         "aliases": [
@@ -386,7 +410,8 @@
             842989.6976,
             4378576.9624
         ],
-        "origin": "The VIRGO gravitational-wave observatory.\nOrigin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2.\n"
+        "fullname": "The VIRGO gravitational-wave observatory",
+        "origin": "Origin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2.\n"
     },
     "lho": {
         "aliases": [
@@ -399,7 +424,8 @@
             -3834695.1789,
             4600350.2266
         ],
-        "origin": "The LIGO Hanford gravitational-wave observatory.\nOrigin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2.\n"
+        "fullname": "The LIGO Hanford gravitational-wave observatory",
+        "origin": "Origin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2.\n"
     },
     "llo": {
         "aliases": [
@@ -412,7 +438,8 @@
             -5496283.7197,
             3224257.0174
         ],
-        "origin": "The LIGO Livingston gravitational-wave observatory.\nOrigin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2.\n"
+        "fullname": "The LIGO Livingston gravitational-wave observatory",
+        "origin": "Origin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2.\n"
     },
     "geo600": {
         "aliases": [
@@ -424,7 +451,8 @@
             666598.9563,
             5019641.4172
         ],
-        "origin": "The GEO600 gravitational-wave observatory.\nNote that PINT used to list 'G1' as an alias for this telescope, but TEMPO accepts\n'G1' as an alias for the Green Bank 140-foot telescope, so it was removed here.\nOrigin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2.\n"
+        "fullname": "The GEO600 gravitational-wave observatory",
+        "origin": "Note that PINT used to list 'G1' as an alias for this telescope, but TEMPO accepts\n'G1' as an alias for the Green Bank 140-foot telescope, so it was removed here.\nOrigin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2.\n"
     },
     "kagra": {
         "aliases": [
@@ -437,7 +465,8 @@
             3484898.411,
             3765313.697
         ],
-        "origin": "The KAGRA gravitational-wave observatory.\nOrigin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2.\n"
+        "fullname": "The KAGRA gravitational-wave observatory",
+        "origin": "Origin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2.\n"
     },
     "algonquin": {
         "itoa_code": "AR",
@@ -450,7 +479,8 @@
             -4346129.702203057,
             4562012.861165226
         ],
-        "origin": "The Algonquin Radio Observatory.\nThe origin of this data is unknown.\n"
+        "fullname": "The Algonquin Radio Observatory",
+        "origin": "The origin of this data is unknown.\n"
     },
     "drao": {
         "itoa_code": "DR",
@@ -459,7 +489,8 @@
             -3621371.264826613,
             4814353.577678314
         ],
-        "origin": "The Dominion Radio Astronomical Observatory.\nThe origin of this data is unknown.\n"
+        "fullname": "The Dominion Radio Astronomical Observatory (DRAO)",
+        "origin": "The origin of this data is unknown.\n"
     },
     "acre": {
         "aliases": [
@@ -472,6 +503,7 @@
             -269156.74,
             5258407.3
         ],
+        "fullname": "University of Glasgow observatory",
         "origin": "The origin of this data is unknown."
     },
     "ata": {
@@ -483,7 +515,8 @@
             -4123529.78,
             4147966.36
         ],
-        "origin": "The Allen telescope array.\nOrigin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2.\n"
+        "fullname": "The Allen Telescope Array (ATA)",
+        "origin": "At Hat Creek Radio Observatory.\nOrigin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2.\n"
     },
     "ccera": {
         "itrf_xyz": [
@@ -491,7 +524,8 @@
             -4391945.819,
             4479103.55
         ],
-        "origin": "The origin of this data is unknown."
+        "fullname": "Canadian Centre for Experimental Radio Astronomy",
+        "origin": "The origin of this data is unknown. Note that this location is in Smiths Falls, ON, where the telescope was previously deployed.  It has since moved to Rideau Ferry, ON but the coordinates have not been updated."
     },
     "AXIS": {
         "aliases": [
@@ -502,7 +536,8 @@
             0.0,
             0.0
         ],
-        "origin": "Fake telescope for IPTA data challenge.\nImported from TEMPO2 observatories.dat 2021 June 7.\n"
+        "fullname": "Fake telescope for IPTA data challenge",
+        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7.\n"
     },
     "narrabri": {
         "aliases": [
@@ -513,6 +548,7 @@
             2790505.934,
             -3200483.747
         ],
+        "fullname": "Australia Telescope Compact Array (ATCA)",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "nanshan": {
@@ -524,7 +560,8 @@
             4631922.905,
             4367064.059
         ],
-        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
+        "fullname": "Nanshan Radio Telescope",
+        "origin": "At the Xinjiang Astronomical Observatory.\nImported from TEMPO2 observatories.dat 2021 June 7."
     },
     "uao": {
         "aliases": [
@@ -535,7 +572,8 @@
             4631922.905,
             4367064.059
         ],
-        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
+        "fullname": "Urumqi Astronomical Observatory",
+        "origin": "At the Xinjiang Astronomical Observatory.\nImported from TEMPO2 observatories.dat 2021 June 7."
     },
     "dss_43": {
         "aliases": [
@@ -546,6 +584,7 @@
             2682358.9,
             -3674756.0
         ],
+        "fullname": "Tidbinbilla Deep Space Network",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "op": {
@@ -557,7 +596,8 @@
             165927.11,
             4670132.83
         ],
-        "origin": "The Nan\u00e7ay radio telescope.\nImported from TEMPO2 observatories.dat 2021 June 7."
+        "fullname": "The Nan\u00e7ay radio telescope",
+        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "effelsberg_asterix": {
         "aliases": [
@@ -568,6 +608,7 @@
             486989.4,
             4900430.8
         ],
+        "fullname": "The Effelsberg Radio Telescope with the Asterix backend",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7.",
         "clock_file": "effix2gps.clk",
         "clock_fmt": "tempo2"
@@ -586,7 +627,8 @@
             "leap2effix.clk",
             "effix2gps.clk"
         ],
-        "origin": "The Large European Array for Pulsars.\nThis is the same as the position of the Effelsberg radio telescope.\nImported from TEMPO2 observatories.dat 2021 June 7."
+        "fullname": "The Large European Array for Pulsars",
+        "origin": "This is the same as the position of the Effelsberg radio telescope.\nImported from TEMPO2 observatories.dat 2021 June 7."
     },
     "jodrellm4": {
         "aliases": [
@@ -597,6 +639,7 @@
             -153995.683,
             5086051.443
         ],
+        "fullname": "The Mark IV telescope at Jodrell Bank Observatory",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "gb300": {
@@ -607,7 +650,8 @@
             -4925311.86,
             3943459.7
         ],
-        "origin": "The Green Bank 300-foot telescope.\nImported from TEMPO2 observatories.dat 2021 June 7."
+        "fullname": "The Green Bank 300-foot telescope",
+        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "gb140": {
         "itoa_code": "G1",
@@ -618,7 +662,8 @@
             -4924552.73,
             3944154.92
         ],
-        "origin": "The Green Bank 140-foot telescope.\nNote that PINT used to accept 'G1' as an alias for the GEO600 gravitational-wave\nobservatory but that conflicted with what TEMPO accepted for this telescope\nso that has been removed.\nImported from TEMPO2 observatories.dat 2021 June 7."
+        "fullname": "The Green Bank 140-foot telescope",
+        "origin": "Note that PINT used to accept 'G1' as an alias for the GEO600 gravitational-wave\nobservatory but that conflicted with what TEMPO accepted for this telescope\nso that has been removed.\nImported from TEMPO2 observatories.dat 2021 June 7."
     },
     "gb853": {
         "tempo_code": "b",
@@ -630,7 +675,8 @@
             3943414.05
         ],
         "bogus_last_correction": true,
-        "origin": "The Green Bank 85-3 telescope.\nImported from TEMPO2 observatories.dat 2021 June 7."
+        "fullname": "The Green Bank 85-3 telescope",
+        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "la_palma": {
         "aliases": [
@@ -642,7 +688,8 @@
             -1719555.576,
             3051967.932
         ],
-        "origin": "La Palma observatory in the Canary Islands.\nNote that as of 2021 June 8 TEMPO2's position for this observatory lists\nit as somewhere in central Pakistan, exactly 90 degrees to the east of\nthis position.\n"
+        "fullname": "La Palma observatory in the Canary Islands",
+        "origin": "Note that as of 2021 June 8 TEMPO2's position for this observatory lists\nit as somewhere in central Pakistan, exactly 90 degrees to the east of\nthis position.\n"
     },
     "hartebeesthoek": {
         "aliases": [
@@ -653,6 +700,7 @@
             2668263.483,
             -2768697.034
         ],
+        "fullname": "Hartebeesthoek Radio Astronomy Observatory",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "warkworth_30m": {
@@ -664,6 +712,7 @@
             477880.31,
             -3767042.81
         ],
+        "fullname": "Warkwork 30m Radio Telescope",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "warkworth_12m": {
@@ -675,6 +724,7 @@
             477843.305,
             -3767192.886
         ],
+        "fullname": "Warkwork 12m Radio Telescope",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "lofar": {
@@ -685,7 +735,8 @@
             461022.624,
             5064892.526
         ],
-        "origin": "The Dutch low-frequency array LOFAR.\nNote that other TEMPO codes have been used for this telescope.\nImported from TEMPO2 observatories.dat 2021 June 7."
+        "fullname": "The Dutch Low-Frequency Array (LOFAR)",
+        "origin": "Note that other TEMPO codes have been used for this telescope.\nImported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de601lba": {
         "aliases": [
@@ -696,6 +747,7 @@
             487026.223,
             4900280.057
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) low-band antenna (LBA) at Effelsberg Observatory",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de601lbh": {
@@ -707,6 +759,7 @@
             487026.223,
             4900280.057
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) low-band antenna (LBA) at Effelsberg Observatory?",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de601hba": {
@@ -718,6 +771,7 @@
             487012.401,
             4900230.21
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) high-band antenna (HBA) at Effelsberg Observatory",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de601": {
@@ -729,6 +783,7 @@
             487012.401,
             4900230.21
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) high-band antenna (HBA) at Effelsberg Observatory",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de602lba": {
@@ -740,6 +795,7 @@
             828868.725,
             4754356.878
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) low-band antenna (LBA) at Unterweilenbach, Germany",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de602lbh": {
@@ -751,6 +807,7 @@
             828868.725,
             4754356.878
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) low-band antenna (LBA) at Unterweilenbach, Germany",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de602hba": {
@@ -762,6 +819,7 @@
             828788.802,
             4754361.926
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) high-band antenna (HBA) at Unterweilenbach, Germany",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de602": {
@@ -773,6 +831,7 @@
             828788.802,
             4754361.926
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) high-band antenna (HBA) at Unterweilenbach, Germany",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de603lba": {
@@ -784,6 +843,7 @@
             816802.001,
             4932392.757
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) low-band antenna (LBA) at Tautenburg, Germany",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de603lbh": {
@@ -795,6 +855,7 @@
             816802.001,
             4932392.757
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) low-band antenna (LBA) at Tautenburg, Germany",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de603hba": {
@@ -806,6 +867,7 @@
             816722.532,
             4932394.152
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) high-band antenna (HBA) at Tautenburg, Germany",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de603": {
@@ -817,6 +879,7 @@
             816722.532,
             4932394.152
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) high-band antenna (HBA) at Tautenburg, Germany",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de604lba": {
@@ -828,6 +891,7 @@
             877591.315,
             5032757.252
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) low-band antenna (LBA) at Bornim, Germany",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de604lbh": {
@@ -839,6 +903,7 @@
             877591.315,
             5032757.252
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) low-band antenna (LBA) at Bornim, Germany",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de604hba": {
@@ -850,6 +915,7 @@
             877613.809,
             5032712.272
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) high-band antenna (HBA) at Bornim, Germany",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de604": {
@@ -861,6 +927,7 @@
             877613.809,
             5032712.272
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) high-band antenna (HBA) at Bornim, Germany",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de605lba": {
@@ -872,6 +939,7 @@
             450968.282,
             4926457.67
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) low-band antenna (LBA) at J\u00fclich, Germany",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de605lbh": {
@@ -883,6 +951,7 @@
             450968.282,
             4926457.67
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) low-band antenna (LBA) at J\u00fclich, Germany",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de605hba": {
@@ -894,6 +963,7 @@
             450968.304,
             4926457.94
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) high-band antenna (HBA) at J\u00fclich, Germany",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de605": {
@@ -905,6 +975,7 @@
             450968.304,
             4926457.94
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) high-band antenna (HBA) at J\u00fclich, Germany",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "fr606lba": {
@@ -916,6 +987,7 @@
             165608.408,
             4670302.803
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) low-band antenna (LBA) at Nan\u00e7ay, France",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "fr606lbh": {
@@ -927,6 +999,7 @@
             165608.408,
             4670302.803
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) low-band antenna (LBA) at Nan\u00e7ay, France",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "fr606hba": {
@@ -938,6 +1011,7 @@
             165545.16,
             4670271.072
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) high-band antenna (HBA) at Nan\u00e7ay, France",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "fr606": {
@@ -949,6 +1023,7 @@
             165545.16,
             4670271.072
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) high-band antenna (HBA) at Nan\u00e7ay, France",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "se607lba": {
@@ -960,6 +1035,7 @@
             712053.586,
             5349991.228
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) low-band antenna (LBA) at Onsala, Sweden",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "se607lbh": {
@@ -971,6 +1047,7 @@
             712053.586,
             5349991.228
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) low-band antenna (LBA) at Onsala, Sweden",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "se607hba": {
@@ -982,6 +1059,7 @@
             712125.596,
             5349990.934
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) high-band antenna (HBA) at Onsala, Sweden",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "se607": {
@@ -993,6 +1071,7 @@
             712125.596,
             5349990.934
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) high-band antenna (HBA) at Onsala, Sweden",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "uk608lba": {
@@ -1004,6 +1083,7 @@
             -100310.064,
             4943735.554
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) low-band antenna (LBA) at Chilbolton, UK",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "uk608lbh": {
@@ -1015,6 +1095,7 @@
             -100310.064,
             4943735.554
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) low-band antenna (LBA) at Chilbolton, UK",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "uk608hba": {
@@ -1026,6 +1107,7 @@
             -100376.948,
             4943716.6
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) high-band antenna (HBA) at Chilbolton, UK",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "uk608": {
@@ -1037,6 +1119,7 @@
             -100376.948,
             4943716.6
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) high-band antenna (HBA) at Chilbolton, UK",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de609lba": {
@@ -1048,6 +1131,7 @@
             655184.9,
             5117000.625
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) low-band antenna (LBA) at Norderstedt, Germany",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de609lbh": {
@@ -1059,6 +1143,7 @@
             655184.9,
             5117000.625
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) low-band antenna (LBA) at Norderstedt, Germany",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de609hba": {
@@ -1070,6 +1155,7 @@
             655108.821,
             5117002.847
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) high-band antenna (HBA) at Norderstedt, Germany",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "de609": {
@@ -1081,6 +1167,7 @@
             655108.821,
             5117002.847
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) high-band antenna (HBA) at Norderstedt, Germany",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "fi609lba": {
@@ -1092,6 +1179,7 @@
             810088.74,
             5935285.279
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) low-band antenna (LBA) at Kilpisj\u00e4rvi, Finland",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "fi609lbh": {
@@ -1103,6 +1191,7 @@
             810088.74,
             5935285.279
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) low-band antenna (LBA) at Kilpisj\u00e4rvi, Finland",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "fi609hba": {
@@ -1114,6 +1203,7 @@
             810039.5757,
             5935299.0536
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) high-band antenna (HBA) at Kilpisj\u00e4rvi, Finland",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "fi609": {
@@ -1125,6 +1215,7 @@
             810039.5757,
             5935299.0536
         ],
+        "fullname": "The Low-Frequency Array (LOFAR) high-band antenna (HBA) at Kilpisj\u00e4rvi, Finland",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "utr-2": {
@@ -1136,6 +1227,7 @@
             2487350.541,
             4836939.784
         ],
+        "fullname": "Giant Ukrainian Radio Telescope",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "goldstone": {
@@ -1147,6 +1239,7 @@
             -4641341.52,
             3677052.352
         ],
+        "fullname": "Deep Space Network at Goldstone",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "shao": {
@@ -1157,6 +1250,7 @@
             4679231.627,
             3274665.675
         ],
+        "fullname": "Shanghai Astronomical Observatory",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "pico_veleta": {
@@ -1170,7 +1264,8 @@
             301689.8,
             3825017.0
         ],
-        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
+        "fullname": "Observatorio Pico Veleta",
+        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7. As of 2023-11-01 this appears to be somewhere in the sea."
     },
     "iar1": {
         "itrf_xyz": [
@@ -1178,7 +1273,8 @@
             -4449628.98,
             -3625726.47
         ],
-        "origin": "Argentine Institute for Radio Astronomy.  Imported from TEMPO2 observatories.dat 2021 June 7."
+        "fullname": "Argentine Institute for Radio Astronomy Telescope 1",
+        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "iar2": {
         "itrf_xyz": [
@@ -1186,6 +1282,7 @@
             -4449569.52,
             -3625825.14
         ],
+        "fullname": "Argentine Institute for Radio Astronomy Telescope 2",
         "origin": "Argentine Institute for Radio Astronomy.  Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "kat-7": {
@@ -1197,6 +1294,7 @@
             2003650.7359,
             -3239908.3195
         ],
+        "fullname": "KAT-7",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "mkiii": {
@@ -1208,6 +1306,7 @@
             -173759.585,
             5077751.313
         ],
+        "fullname": "The Mark III telescope at Jodrell Bank Observatory",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7.  However, it is likely incorrect (shows up as north of Greenland)."
     },
     "tabley": {
@@ -1219,6 +1318,7 @@
             -162921.17,
             5089462.046
         ],
+        "fullname": "Pickmere",
         "origin": "Part of MERLIN.  Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "darnhall": {
@@ -1227,6 +1327,7 @@
             -169458.987,
             5080647.749
         ],
+        "fullname": "Darnhall",
         "origin": "Part of MERLIN.  Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "knockin": {
@@ -1235,6 +1336,7 @@
             -201995.082,
             5056134.285
         ],
+        "fullname": "Knockin",
         "origin": "Part of MERLIN.  Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "defford": {
@@ -1243,6 +1345,7 @@
             -146804.404,
             5009320.57
         ],
+        "fullname": "Defford",
         "origin": "Part of MERLIN.  Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "cambridge": {
@@ -1254,6 +1357,7 @@
             2651.982,
             5013849.826
         ],
+        "fullname": "Mullard Radio Astronomy Observatory (MRAO)",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "princeton": {
@@ -1264,6 +1368,7 @@
             -4694221.77,
             4107418.8
         ],
+        "fullname": "Princeton University",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "hamburg": {
@@ -1272,7 +1377,7 @@
             1131748.336,
             5035101.19
         ],
-        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
+        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7.  As of 2023-11-01 this shows up in Poland."
     },
     "jb_42ft": {
         "aliases": [
@@ -1283,6 +1388,7 @@
             -153862.275,
             5085987.071
         ],
+        "fullname": "42ft telescope at Jodrell Bank Observatory",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "jb_mkii": {
@@ -1296,6 +1402,7 @@
             -153802.28,
             5086285.9
         ],
+        "fullname": "The Mark II telescope at Jodrell Bank Observatory",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "jb_mkii_rch": {
@@ -1307,6 +1414,7 @@
             -153802.28,
             5086285.9
         ],
+        "fullname": "The Mark II telescope at Jodrell Bank Observatory with the Roach backend",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "jb_mkii_dfb": {
@@ -1318,6 +1426,7 @@
             -153802.28,
             5086285.9
         ],
+        "fullname": "The Mark II telescope at Jodrell Bank Observatory with the DFB backend",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "lwa_sv": {
@@ -1330,6 +1439,7 @@
             -5045324.30517,
             3579583.8945
         ],
+        "fullname": "Long Wavelength Array (LWA) at Sevilleta",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "grao": {
@@ -1341,7 +1451,8 @@
             -33779.7127,
             634844.9454
         ],
-        "origin": "Ghana Radio Astronomy Observatory.  Imported from TEMPO2 observatories.dat 2021 June 7."
+        "fullname": "Ghana Radio Astronomy Observatory",
+        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "srt": {
         "tempo_code": "z",
@@ -1351,6 +1462,7 @@
             791922.689,
             4035137.174
         ],
+        "fullname": "Sardinia Radio Telescope",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7."
     },
     "quabbin": {
@@ -1361,6 +1473,7 @@
             -4495711.383965823,
             4278113.974517222
         ],
+        "fullname": "Five College Radio Astronomy Observatory",
         "origin": "Imported from TEMPO obsys.dat 2021 June 8."
     },
     "vla_site": {
@@ -1371,6 +1484,7 @@
             -5042005.480977412,
             3554875.076856462
         ],
+        "fullname": "The Jansky Very Large Array (VLA) site",
         "origin": "Imported from TEMPO obsys.dat 2021 June 8."
     },
     "gb_20m_xyz": {
@@ -1380,6 +1494,7 @@
             -4924385.5975,
             3944042.4991
         ],
+        "fullname": "Green Bank Observatory 20m",
         "origin": "Imported from TEMPO obsys.dat 2021 June 8."
     },
     "northern_cross": {
@@ -1390,6 +1505,7 @@
             919559.8351226494,
             4449633.220012489
         ],
+        "fullname": "Northern Cross Radio Telescope",
         "origin": "Imported from TEMPO obsys.dat 2021 June 8."
     },
     "hess": {
@@ -1399,7 +1515,8 @@
             1665449.2317,
             -2505096.8054
         ],
-        "origin": "H.E.S.S., the High Energy Stereoscopic System, an Imaging Atmospheric Cherenkov Telescope.\nThese coordinates are provided (from geodetic coordinates : lat = 23°16'18''S, lon = 16°30'00''E at 1800m asl) by the Maxime Regeard and Arache Djannati-Atai on behalf of the H.E.S.S. Collabotation, 2023 January 18."
+        "fullname": "The High Energy Stereoscopic System (HESS)",
+        "origin": "An Imaging Atmospheric Cherenkov Telescope.\nThese coordinates are provided (from geodetic coordinates : lat = 23°16'18''S, lon = 16°30'00''E at 1800m asl) by the Maxime Regeard and Arache Djannati-Atai on behalf of the H.E.S.S. Collabotation, 2023 January 18."
     },
     "hawc": {
         "include_bipm": false,
@@ -1409,6 +1526,7 @@
             -5987810.65796205,
             2064148.57332404
         ],
-        "origin": "HAWC: High Altitude Water Cherenkov Experiment.\nCoordinates provided (as geodetic coordinates : 18:59:41.63 N, 97:18:27.39 W, 4096 m) by the spokesperson Ke Fang on behalf of the HAWC Collabotation, 2023 April 21."
+        "fullname": "High Altitude Water Cherenkov Experiment (HAWC)",
+        "origin": "Coordinates provided (as geodetic coordinates : 18:59:41.63 N, 97:18:27.39 W, 4096 m) by the spokesperson Ke Fang on behalf of the HAWC Collabotation, 2023 April 21."
     }
 }
