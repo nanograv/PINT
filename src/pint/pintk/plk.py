@@ -539,7 +539,7 @@ class PlkXYChoiceWidget(tk.Frame):
                 else self.master.psr.prefit_model
             )
             if choice == "elongation" and not any(
-                isinstance(x, Astrometry) for x in model.components
+                isinstance(x, Astrometry) for x in model.components.values()
             ):
                 self.xbuttons[ii].configure(state="disabled")
                 self.ybuttons[ii].configure(state="disabled")
@@ -549,6 +549,12 @@ class PlkXYChoiceWidget(tk.Frame):
             if choice == "frequency" and (
                 (len(np.unique(self.master.psr.all_toas["freq"])) <= 1)
                 or np.any(np.isinf(self.master.psr.all_toas["freq"]))
+            ):
+                self.xbuttons[ii].configure(state="disabled")
+                self.ybuttons[ii].configure(state="disabled")
+            if (
+                choice in ["WB DM", "WB DM res", "WB DM err"]
+                and not self.master.psr.all_toas.is_wideband()
             ):
                 self.xbuttons[ii].configure(state="disabled")
                 self.ybuttons[ii].configure(state="disabled")
