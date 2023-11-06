@@ -41,6 +41,7 @@ the released changes.
 - `TimingModel.toasigma_derivs` property to get all derivatives functions of scaled TOA uncertainties.
 - `ScaleToaError.register_toasigma_deriv_funcs` method to populate derivatives of scaled TOA uncertainties.
 - `ScaleToaError.d_toasigma_d_EFAC` and `ScaleToaError.d_toasigma_d_EQUAD` methods.
+- Separate `.fullname` for all observatories
 ### Fixed
 - Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
 - Fixed RTD by specifying theme explicitly.
@@ -54,4 +55,5 @@ the released changes.
 - Robust access of EPHEM and PLANET_SHAPIRO in `make_fake_toas_fromtim`
 - `pintk` will not allow choices of axes that are not in timing model/data
 - `pintk` correctly displays initial log level
+- Fixed sign of y coordinate for Pico Veleta observatory (also being fixed in tempo2)
 ### Removed
