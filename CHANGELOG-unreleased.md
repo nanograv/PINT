@@ -42,6 +42,7 @@ the released changes.
 - `ScaleToaError.register_toasigma_deriv_funcs` method to populate derivatives of scaled TOA uncertainties.
 - `ScaleToaError.d_toasigma_d_EFAC` and `ScaleToaError.d_toasigma_d_EQUAD` methods.
 - Separate `.fullname` for all observatories
+- Plot wideband DM measurements, wideband DM residuals, and wideband DM errors in `pintk`. (Disabled for narrowband data.)
 ### Fixed
 - Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
 - Fixed RTD by specifying theme explicitly.
