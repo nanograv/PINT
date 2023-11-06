@@ -8,6 +8,7 @@ import sys
 from astropy.time import Time
 import astropy.units as u
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
@@ -725,7 +726,7 @@ class PlkWidget(tk.Frame):
         self.colorModeWidget = PlkColorModeBoxes(master=self)
 
         self.plkDpi = 100
-        self.plkFig = mpl.figure.Figure(dpi=self.plkDpi)
+        self.plkFig = plt.Figure(dpi=self.plkDpi)
         self.plkCanvas = FigureCanvasTkAgg(self.plkFig, self)
         self.plkCanvas.mpl_connect("button_press_event", self.canvasClickEvent)
         self.plkCanvas.mpl_connect("button_release_event", self.canvasReleaseEvent)
