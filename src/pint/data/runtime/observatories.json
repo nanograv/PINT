@@ -1261,11 +1261,11 @@
         "itoa_code": "PV",
         "itrf_xyz": [
             5088964.0,
-            301689.8,
+            -301689.8,
             3825017.0
         ],
         "fullname": "Observatorio Pico Veleta",
-        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7. As of 2023-11-01 this appears to be somewhere in the sea."
+        "origin": "Imported from TEMPO2 observatories.dat 2021 June 7. Fixed signed of y coordinate on 2023 Nov 6 along with M. Keith in tempo2 to make location sensible."
     },
     "iar1": {
         "itrf_xyz": [

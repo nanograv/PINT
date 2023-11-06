@@ -56,4 +56,5 @@ the released changes.
 - Robust access of EPHEM and PLANET_SHAPIRO in `make_fake_toas_fromtim`
 - `pintk` will not allow choices of axes that are not in timing model/data
 - `pintk` correctly displays initial log level
+- Fixed sign of y coordinate for Pico Veleta observatory (also being fixed in tempo2)
 ### Removed
