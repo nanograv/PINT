@@ -52,9 +52,9 @@ plotlabels = {
     "frequency": r"Observing Frequency (MHz)",
     "TOA error": r"TOA uncertainty ($\mu$s)",
     "rounded MJD": r"MJD",
-    "WB DM": "Wideband DM (dmu)",
-    "WB DM res": "Wideband DM residual (dmu)",
-    "WB DM err": "Wideband DM error (dmu)",
+    "WB DM": "Wideband DM (pc/cm3)",
+    "WB DM res": "Wideband DM residual (pc/cm3)",
+    "WB DM err": "Wideband DM error (pc/cm3)",
     "elongation": r"Solar Elongation (deg)",
 }
 
