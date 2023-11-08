@@ -18,7 +18,12 @@ from loguru import logger as log
 
 from pint.models.dispersion_model import Dispersion
 from pint.phase import Phase
-from pint.utils import normalize_designmatrix, weighted_mean, taylor_horner_deriv
+from pint.utils import (
+    normalize_designmatrix,
+    sherman_morrison_dot,
+    weighted_mean,
+    taylor_horner_deriv,
+)
 
 __all__ = [
     "Residuals",
@@ -569,6 +574,48 @@ class Residuals:
             log_norm = 0.5 * (logdet_N - logdet_Phiinv + logdet_Sigma)
             return chi2, log_norm
 
+    def _calc_ecorr_chi2(self, lognorm=False):
+        """Compute the chi2 when ECORR is present in the timing
+        model without any other correlated noise components."""
+        m, t = self.model, self.toas
+
+        assert "EcorrNoise" in m.components
+
+        ecorr_masks = m.components["EcorrNoise"].get_noise_basis(t).T.astype(bool)
+        ecorr_weights = m.components["EcorrNoise"].get_noise_weights(t)
+
+        r = self.time_resids
+        sigma = self.get_data_error()
+
+        # For TOAs which don't belong to any ECORR group.
+        noecmask = np.logical_not(np.any(ecorr_masks, axis=0))
+        Ndiag = sigma[noecmask] ** 2
+        s = r[noecmask]
+        chisq = (
+            np.dot(s, s / Ndiag)
+            if len(s) > 0
+            else u.Quantity(0, u.dimensionless_unscaled)
+        )
+        logdet_C = np.sum(np.log(Ndiag.to_value(u.s**2)))
+
+        # For TOAs which belong to an ECORR group.
+        for ecmask, ecw in zip(ecorr_masks, ecorr_weights):
+            Ndiag = sigma[ecmask] ** 2
+            s = r[ecmask]
+
+            v = np.ones(len(s)) << u.s
+
+            chisq_sm, logdet_sm = sherman_morrison_dot(Ndiag, v, ecw, s, s)
+
+            chisq += chisq_sm
+            logdet_C += logdet_sm
+
+        return (
+            (chisq.to_value(u.dimensionless_unscaled), 0.5 * logdet_C)
+            if lognorm
+            else chisq.to_value(u.dimensionless_unscaled)
+        )
+
     def calc_chi2(self, lognorm=False):
         """Return the weighted chi-squared for the model and toas.
 
@@ -603,7 +650,22 @@ class Residuals:
         (chi2, log_norm)       if lognorm is True
         """
         if self.model.has_correlated_errors:
-            return self._calc_gls_chi2(lognorm=lognorm)
+            from pint.models.noise_model import EcorrNoise
+
+            corrnoise_components = [
+                c
+                for c in self.model.NoiseComponent_list
+                if c.introduces_correlated_errors
+            ]
+            ecorr_only = len(corrnoise_components) == 1 and isinstance(
+                corrnoise_components[0], EcorrNoise
+            )
+
+            return (
+                self._calc_ecorr_chi2(lognorm=lognorm)
+                if ecorr_only
+                else self._calc_gls_chi2(lognorm=lognorm)
+            )
         else:
             # Residual units are in seconds. Error units are in microseconds.
             toa_errors = self.get_data_error()
