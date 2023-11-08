@@ -17,7 +17,7 @@ from pint.models import get_model
 from pint.residuals import CombinedResiduals, Residuals, WidebandTOAResiduals
 import pint.residuals
 from pint.toa import get_TOAs
-from pint.simulation import make_fake_toas_uniform
+from pint.simulation import make_fake_toas_uniform, make_fake_toas_fromMJDs
 
 os.chdir(datadir)
 
@@ -438,3 +438,34 @@ def test_resid_mean_phase():
     mean, _ = pint.residuals.weighted_mean(full, w)
     assert mean == r.calc_phase_mean()
     assert r.calc_phase_mean() == r2.calc_phase_mean()
+
+
+def test_ecorr_chi2():
+    m = get_model(
+        StringIO(
+            """
+            RAJ    05:00:00
+            DECJ   20:00:00
+            F0     100     1 
+            F1     -1e-14  1
+            PEPOCH 58000
+            PHOFF  0
+            DM     15
+            EFAC tel ao 1.3
+            ECORR tel ao 0.9
+            EPHEM  DE440
+            """
+        )
+    )
+
+    t_tmpl = get_TOAs(datadir / "B1855+09_NANOGrav_9yv1.tim")
+    t = make_fake_toas_fromMJDs(
+        t_tmpl.get_mjds(), m, add_noise=True, add_correlated_noise=True, obs="ao"
+    )
+
+    res = Residuals(t, m)
+
+    chi2_1 = res._calc_ecorr_chi2()
+    chi2_2 = res._calc_gls_chi2()
+
+    assert np.isclose(chi2_1, chi2_2, atol=1e-3)
