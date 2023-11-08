@@ -20,7 +20,6 @@ the released changes.
 - Update CI tests for Python 3.12
 - Made `test_grid` routines faster
 - `pintk` uses downhill fitters by default
-- Optionally generate multi-frequency TOAs in an epoch using `make_fake_toas_uniform`
 ### Added
 - CHI2, CHI2R, TRES, DMRES now in postfit par files
 - Added `WaveX` model as a `DelayComponent` with Fourier amplitudes as fitted parameters
@@ -43,6 +42,7 @@ the released changes.
 - `ScaleToaError.register_toasigma_deriv_funcs` method to populate derivatives of scaled TOA uncertainties.
 - `ScaleToaError.d_toasigma_d_EFAC` and `ScaleToaError.d_toasigma_d_EQUAD` methods.
 - Separate `.fullname` for all observatories
+- Optionally generate multi-frequency TOAs in an epoch using `make_fake_toas_uniform` and `make_fake_toas_fromMJDs`
 ### Fixed
 - Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
 - Fixed RTD by specifying theme explicitly.
