@@ -2630,3 +2630,52 @@ def akaike_information_criterion(model, toas):
         return 2 * (k - lnL)
     else:
         raise NotImplementedError
+
+
+def sherman_morrison_dot(Ndiag, v, w, x, y, calc_logdetC=False):
+    """
+    Compute an inner product of the form
+        (x| C^-1 |y)
+    where
+        C = N + w |v)(v|
+    using the Sherman-Morrison identity, which gives
+        C^-1 = N^-1 - ( w N^-1 |v)(v| N^-1 / (1 + w (v| N^-1 |v)) )
+    such that N is a diagonal matrix.
+
+    Paremeters
+    ----------
+    Ndiag: array-like
+        Diagonal elements of the diagonal matrix N
+    v: array-like
+        A vector that represents a rank-1 update to N
+    w: float
+        Weight associated with the rank-1 update
+    x: array-like
+        Vector 1 for the inner product
+    y: array-like
+        Vector 2 for the inner product
+    calc_logdetC: bool
+        Whether to return log[det[C]] along with the inner product
+
+    Returns
+    -------
+    result: float
+        The inner product
+    logdetC: float
+        log[det[C]] (only if calc_logdetC is True)
+    """
+    Ninv = 1 / Ndiag
+
+    Ninv_v = Ninv * v
+    denom = 1 + w * np.dot(v, Ninv_v)
+    numer = w * np.dot(x, Ninv_v) * np.dot(y, Ninv_v)
+
+    result = np.dot(x, Ninv * y) - numer / denom
+
+    if calc_logdetC:
+        logdet_C = np.sum(np.log(Ndiag.to_value(u.s**2))) + np.log(
+            denom.to_value(u.dimensionless_unscaled)
+        )
+        return result, logdet_C
+
+    return result
