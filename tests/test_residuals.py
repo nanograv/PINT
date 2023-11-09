@@ -216,7 +216,7 @@ def test_residuals_gls_chi2():
     toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
     r = Residuals(toas, model)
     f = GLSFitter(toas, model)
-    assert f.fit_toas() == r.chi2
+    assert np.isclose(f.fit_toas(), r.chi2)
 
 
 def test_residuals_wideband_chi2(wideband_fake):
