@@ -2377,11 +2377,12 @@ class GLSFitter(Fitter):
             log.trace(f"norm: {norm}")
             log.trace(f"xhat: {xhat}")
             newres = residuals - np.dot(M, xhat)
+
             # compute linearized chisq
-            if full_cov:
-                chi2 = np.dot(newres, scipy.linalg.cho_solve(cf, newres))
-            else:
-                chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
+            # if full_cov:
+            #     chi2 = np.dot(newres, scipy.linalg.cho_solve(cf, newres))
+            # else:
+            #     chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
 
             # compute absolute estimates, normalized errors, covariance matrix
             dpars = xhat / norm
@@ -2432,6 +2433,7 @@ class GLSFitter(Fitter):
                 if debug:
                     setattr(self.resids, "norm", norm)
 
+        chi2 = self.resids.calc_chi2()
         self.update_model(chi2)
 
         return chi2

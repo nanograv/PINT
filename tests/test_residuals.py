@@ -273,9 +273,7 @@ def test_gls_chi2_reasonable(full_cov):
     f = GLSFitter(toas, model)
     fit_chi2 = f.fit_toas(full_cov=full_cov)
 
-    # Increasing the tolerance here temporarily.
-    # TODO: Figure out why these are different.
-    assert_allclose(fit_chi2, f.resids.calc_chi2(), atol=1e-2)
+    assert_allclose(fit_chi2, f.resids.calc_chi2())
 
 
 # @abhisrkckl: I am commenting this out because calc_chisq no longer has the full_cov option.
