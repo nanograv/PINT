@@ -2723,7 +2723,7 @@ def woodbury_dot(Ndiag, U, Phidiag, x, y):
     Sigma = np.diag(1 / Phidiag) + (U.T / Ndiag) @ U
     Sigma_cf = cho_factor(Sigma)
 
-    chi2 = x_Ninv_y - x_Ninv_U @ cho_solve(Sigma_cf, y_Ninv_U)
+    x_Cinv_y = x_Ninv_y - x_Ninv_U @ cho_solve(Sigma_cf, y_Ninv_U)
 
     logdet_N = np.sum(np.log(Ndiag))
     logdet_Phi = np.sum(np.log(Phidiag))
@@ -2731,4 +2731,4 @@ def woodbury_dot(Ndiag, U, Phidiag, x, y):
 
     logdet_C = logdet_N + logdet_Phi + logdet_Sigma
 
-    return chi2, logdet_C
+    return x_Cinv_y, logdet_C
