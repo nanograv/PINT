@@ -12,17 +12,16 @@ import warnings
 
 import astropy.units as u
 import numpy as np
-import scipy
-from scipy.linalg import LinAlgError, cho_factor, cho_solve
+from scipy.linalg import LinAlgError
 from loguru import logger as log
 
 from pint.models.dispersion_model import Dispersion
 from pint.phase import Phase
 from pint.utils import (
-    normalize_designmatrix,
     sherman_morrison_dot,
     weighted_mean,
     taylor_horner_deriv,
+    woodbury_dot,
 )
 
 __all__ = [
@@ -513,66 +512,14 @@ class Residuals:
         If `lognorm=True` is given, the log-normalization-factor of the likelihood
         function will also be returned.
         """
-        self.update()
+        s = self.time_resids.to_value(u.s)
+        Ndiag = self.get_data_error().to_value(u.s) ** 2
+        U = self.model.noise_model_designmatrix(self.toas)
+        Phidiag = self.model.noise_model_basis_weight(self.toas)
 
-        residuals = self.time_resids.to(u.s).value
+        chi2, logdet_C = woodbury_dot(Ndiag, U, Phidiag, s, s)
 
-        M = self.model.noise_model_designmatrix(self.toas)
-        phi = self.model.noise_model_basis_weight(self.toas)
-        phiinv = 1 / phi
-
-        # For implicit offset subtraction
-        if "PHOFF" not in self.model:
-            M = np.append(M, np.ones((len(self.toas), 1)), axis=1)
-
-            # 1e-40 is used here instead of 0 to avoid an
-            # un-normalizable distribution.
-            # ENTERPRISE uses the same value.
-            phiinv = np.append(phiinv, [1e-40])
-
-        M, norm = normalize_designmatrix(M, None)
-
-        phiinv /= norm**2
-        Nvec = self.model.scaled_toa_uncertainty(self.toas).to(u.s).value ** 2
-        cinv = 1 / Nvec
-        mtcm = np.dot(M.T, cinv[:, None] * M)
-        mtcm += np.diag(phiinv)
-        mtcy = np.dot(M.T, cinv * residuals)
-
-        try:
-            c = cho_factor(mtcm)
-            xhat = cho_solve(c, mtcy)
-            svd = False
-        except LinAlgError as e:
-            log.warning(
-                f"Degenerate conditions encountered when computing chi-squared: {e}"
-            )
-
-            U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
-
-            bad = np.where(s <= 0)[0]
-            s[bad] = np.inf
-
-            xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
-
-            svd = True
-
-        newres = residuals - np.dot(M, xhat)
-
-        chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
-
-        if not lognorm:
-            return chi2
-        else:
-            logdet_N = np.sum(np.log(np.abs(Nvec)))
-            logdet_Phiinv = np.sum(np.log(np.abs(phiinv)))
-            logdet_Sigma = (
-                np.sum(np.log(np.abs(np.diag(c[0]))))
-                if not svd
-                else np.sum(np.log(np.abs(s)))
-            )
-            log_norm = 0.5 * (logdet_N - logdet_Phiinv + logdet_Sigma)
-            return chi2, log_norm
+        return (chi2, logdet_C / 2) if lognorm else chi2
 
     def _calc_ecorr_chi2(self, lognorm=False):
         """Compute the chi2 when ECORR is present in the timing
