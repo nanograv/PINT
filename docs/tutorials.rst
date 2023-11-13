@@ -69,6 +69,7 @@ are not included in the default build because they take too long, but you can do
    examples/solar_wind.ipynb
    examples/bayesian-example-NGC6440E.py
    examples/bayesian-wideband-example.py
+   examples/simulation-example.py
    examples-rendered/paper_validation_example.ipynb
 
 .. _`Time a Pulsar`: examples/time_a_pulsar.html
