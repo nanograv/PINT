@@ -1,8 +1,6 @@
 #!/usr/bin/env python
-import numpy as np
 from copy import deepcopy
 import pint.models
-from pint.models.parameter import strParameter
 import astropy.units as u
 import pint.toa
 from pint.residuals import Residuals
