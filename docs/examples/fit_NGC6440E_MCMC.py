@@ -1,5 +1,5 @@
-#! /usr/bin/env python
-"""Demonstrate fitting from a script."""
+# %% [markdown]
+# # Demonstrate fitting from a script."""
 
 # %%
 import pint.toa
@@ -128,7 +128,3 @@ plt.xlabel("MJD")
 plt.ylabel("Residual (us)")
 plt.grid()
 plt.show()
-
-# %%
-print(ndim)
-# %%
