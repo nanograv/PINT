@@ -1,12 +1,11 @@
 # %% [markdown]
 # # Demonstrate TOA simulation using PINT
 
-# %% [markdown]
+# %%
 from pint.models import get_model
 from pint.simulation import (
     make_fake_toas_uniform,
     make_fake_toas_fromtim,
-    make_fake_toas_fromMJDs,
 )
 from pint.residuals import Residuals, WidebandTOAResiduals
 from pint.logging import setup as setup_log
