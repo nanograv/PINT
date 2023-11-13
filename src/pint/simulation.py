@@ -235,6 +235,7 @@ def make_fake_toas_uniform(
         (see :class:`pint.observatory.topo_obs.TopoObs`)
     multi_freqs_in_epoch : bool, optional
         Whether to generate multiple frequency TOAs for the same epoch.
+
     Returns
     -------
     TOAs : pint.toa.TOAs
@@ -249,6 +250,10 @@ def make_fake_toas_uniform(
        without adding the measurement noise to the simulated DM values.
     3. The simulated DM measurement noise respects ``DMEFAC`` and ``DMEQUAD``
        values in the `model`.
+    4. If `multi_freqs_in_epoch` is True, each epoch will contain TOAs for all
+       frequencies given in the `freq` argument. Otherwise, each epoch will have
+       only one TOA, and the frequencies are distributed amongst TOAs in an
+       alternating manner. In either case, the total number of TOAs will be `ntoas`.
 
     See Also
     --------
@@ -362,7 +367,17 @@ def make_fake_toas_fromMJDs(
 
     Notes
     -----
-    `add_noise` respects any ``EFAC`` or ``EQUAD`` present in the `model`
+    1. `add_noise` respects any ``EFAC`` or ``EQUAD`` present in the `model`
+    2. When `wideband` is set, wideband DM measurement noise will be included
+       only if `add_noise` is set. Otherwise, the `-pp_dme` flags will be set
+       without adding the measurement noise to the simulated DM values.
+    3. The simulated DM measurement noise respects ``DMEFAC`` and ``DMEQUAD``
+       values in the `model`.
+    4. If `multi_freqs_in_epoch` is True, each epoch will contain TOAs for all
+       frequencies given in the `freq` argument, and the total number of
+       TOAs will be `len(MJDs)*len(freq)`. Otherwise, each epoch will have
+       only one TOA, and the frequencies are distributed amongst TOAs in an
+       alternating manner, and the total number of TOAs will be `len(MJDs)`.
 
     See Also
     --------
