@@ -12,7 +12,7 @@ from astropy.time import TimeDelta
 from numpy.testing import assert_allclose
 from pinttestdata import datadir
 
-from pint.fitter import GLSFitter, WidebandTOAFitter, WLSFitter
+from pint.fitter import Fitter, GLSFitter, WidebandTOAFitter, WLSFitter
 from pint.models import get_model
 from pint.residuals import CombinedResiduals, Residuals, WidebandTOAResiduals
 import pint.residuals
@@ -438,3 +438,46 @@ def test_resid_mean_phase():
     mean, _ = pint.residuals.weighted_mean(full, w)
     assert mean == r.calc_phase_mean()
     assert r.calc_phase_mean() == r2.calc_phase_mean()
+
+
+@pytest.mark.parametrize(
+    "par",
+    [
+        """
+        PSRJ J1234+5678
+        ELAT 0
+        ELONG 0
+        DM 10
+        F0 1
+        PEPOCH 58000
+        EFAC mjd 57000 58000 2
+        """,
+        """
+        PSRJ J1234+5678
+        ELAT 0
+        ELONG 0
+        DM 10
+        F0 1
+        PEPOCH 58000
+        TNRedAmp -14.227505410948254
+        TNRedGam 4.91353
+        TNRedC 45
+        """,
+    ],
+)
+def test_whitened_res(par):
+    m = get_model(StringIO(par))
+    t = make_fake_toas_uniform(
+        57000,
+        59000,
+        20,
+        model=m,
+        error=1 * u.us,
+        add_noise=True,
+        add_correlated_noise=m.has_correlated_errors,
+    )
+
+    ftr = Fitter.auto(t, m)
+    ftr.fit_toas()
+
+    assert np.isclose(ftr.resids.calc_whitened_resids().std(), 1, atol=0.75)

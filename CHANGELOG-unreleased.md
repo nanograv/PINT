@@ -42,6 +42,7 @@ the released changes.
 - `ScaleToaError.register_toasigma_deriv_funcs` method to populate derivatives of scaled TOA uncertainties.
 - `ScaleToaError.d_toasigma_d_EFAC` and `ScaleToaError.d_toasigma_d_EQUAD` methods.
 - Separate `.fullname` for all observatories
+- `Residuals.calc_whitened_resids()` method
 - Optionally generate multi-frequency TOAs in an epoch using `make_fake_toas_uniform` and `make_fake_toas_fromMJDs`
 - Documentation: Example notebook for simulations
 ### Fixed
