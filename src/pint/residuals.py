@@ -504,7 +504,7 @@ class Residuals:
             )
         return (phase_resids / self.get_PSR_freq(calctype=calctype)).to(u.s)
 
-    def _calc_gls_chi2(self, lognorm=False):
+    def _calc_gls_chi2(self, lognorm=False, incoffset=True):
         """Compute the chi2 when correlated noise is present in the timing model.
         If the system is not singular, it uses Cholesky factorization to evaluate this.
         If the system is singular, it uses singular value decomposition instead.
@@ -516,6 +516,10 @@ class Residuals:
         Ndiag = self.get_data_error().to_value(u.s) ** 2
         U = self.model.noise_model_designmatrix(self.toas)
         Phidiag = self.model.noise_model_basis_weight(self.toas)
+
+        if incoffset and "PhaseOffset" not in self.model.components:
+            U = np.append(U, np.ones((len(self.toas), 1)), axis=1)
+            Phidiag = np.append(Phidiag, [1e40])
 
         chi2, logdet_C = woodbury_dot(Ndiag, U, Phidiag, s, s)
 

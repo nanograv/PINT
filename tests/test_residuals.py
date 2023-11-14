@@ -467,6 +467,6 @@ def test_ecorr_chi2():
     res = Residuals(t, m)
 
     chi2_1 = res._calc_ecorr_chi2(lognorm=True)
-    chi2_2 = res._calc_gls_chi2(lognorm=True)
+    chi2_2 = res._calc_gls_chi2(lognorm=True, incoffset=False)
 
     assert np.allclose(chi2_1, chi2_2, atol=1e-3)
