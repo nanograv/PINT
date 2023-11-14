@@ -322,6 +322,12 @@ class Residuals:
         Returns
         -------
         Phase
+
+        See Also
+        --------
+        :meth:`pint.residuals.Residuals.get_PSR_freq`
+        :meth:`pint.residuals.Residuals.calc_time_resids`
+        :meth:`pint.residuals.Residuals.calc_whitened_resids`
         """
 
         if subtract_mean is None:
@@ -481,6 +487,8 @@ class Residuals:
         See Also
         --------
         :meth:`pint.residuals.Residuals.get_PSR_freq`
+        :meth:`pint.residuals.Residuals.calc_phase_resids`
+        :meth:`pint.residuals.Residuals.calc_whitened_resids`
         """
         assert calctype.lower() in ["modelf0", "taylor", "numerical"]
         if subtract_mean is None and use_weighted_mean is None:
@@ -499,6 +507,33 @@ class Residuals:
                 use_abs_phase=use_abs_phase,
             )
         return (phase_resids / self.get_PSR_freq(calctype=calctype)).to(u.s)
+
+    def calc_whitened_resids(self):
+        """Compute whitened timing residuals (dimensionless).
+
+        Whitened residuals are computed by subtracting the correlated
+        noise realization from the time residuals and normalizes the
+        result using scaled TOA uncertainties.
+
+        This requires the `noise_resids` attribute to be set. This is
+        usually available in a post-fit residuals object.
+
+        Example usage::
+
+            >>> ftr = Fitter.auto(toas, model)
+            >>> ftr.fit_toas()
+            >>> res = ftr.resids
+            >>> white_res = res.calc_whitened_resids()
+
+        See Also
+        --------
+        :meth:`pint.residuals.Residuals.calc_time_resids`
+        :meth:`pint.residuals.Residuals.calc_phase_resids`
+        """
+        r = self.calc_time_resids()
+        nr = sum(self.noise_resids.values())
+        sigma = self.get_data_error()
+        return ((r - nr) / sigma).to(u.dimensionless_unscaled)
 
     def _calc_gls_chi2(self, lognorm=False):
         """Compute the chi2 when correlated noise is present in the timing model.
