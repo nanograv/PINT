@@ -191,10 +191,7 @@ def make_fake_toas_uniform(
     include_gps=True,
     multi_freqs_in_epoch=False,
 ):
-    """Make evenly spaced toas
-
-    Can include alternating frequencies if fed an array of frequencies,
-    only works with one observatory at a time
+    """Simulate uniformly spaced TOAs.
 
     Parameters
     ----------
@@ -209,7 +206,8 @@ def make_fake_toas_uniform(
     fuzz : astropy.units.Quantity, optional
         Standard deviation of 'fuzz' distribution to be applied to TOAs
     freq : astropy.units.Quantity, optional
-        frequency of the fake toas, default 1400 MHz
+        Frequency (or array of frequencies) for the fake TOAs,
+        default is 1400 MHz
     obs : str, optional
         observatory for fake toas, default GBT
     error : astropy.units.Quantity
@@ -254,6 +252,7 @@ def make_fake_toas_uniform(
        frequencies given in the `freq` argument. Otherwise, each epoch will have
        only one TOA, and the frequencies are distributed amongst TOAs in an
        alternating manner. In either case, the total number of TOAs will be `ntoas`.
+    5. Currently supports simulating only one observatory.
 
     See Also
     --------
@@ -323,10 +322,7 @@ def make_fake_toas_fromMJDs(
     include_gps=True,
     multi_freqs_in_epoch=False,
 ):
-    """Make toas from a list of MJDs
-
-    Can include alternating frequencies if fed an array of frequencies,
-    only works with one observatory at a time
+    """Simulate TOAs from a list of MJDs
 
     Parameters
     ----------
@@ -335,7 +331,8 @@ def make_fake_toas_fromMJDs(
     model : pint.models.timing_model.TimingModel
         current model
     freq : astropy.units.Quantity, optional
-        frequency of the fake toas, default 1400 MHz
+        Frequency (or array of frequencies) for the fake toas,
+        default is 1400 MHz
     obs : str, optional
         observatory for fake toas, default GBT
     error : astropy.units.Quantity
@@ -343,7 +340,7 @@ def make_fake_toas_fromMJDs(
     add_noise : bool, optional
         Add noise to the TOAs (otherwise `error` just populates the column)
     add_correlated_noise : bool, optional
-        Add correlated noise to the TOAs if it's present in the timing mode.
+        Add correlated noise to the TOAs if it's present in the timing model.
     wideband : astropy.units.Quantity, optional
         Whether to include wideband DM values with each TOA; default is
         not to include any DM information
@@ -378,6 +375,7 @@ def make_fake_toas_fromMJDs(
        TOAs will be `len(MJDs)*len(freq)`. Otherwise, each epoch will have
        only one TOA, and the frequencies are distributed amongst TOAs in an
        alternating manner, and the total number of TOAs will be `len(MJDs)`.
+    5. Currently supports simulating only one observatory.
 
     See Also
     --------
@@ -439,10 +437,7 @@ def make_fake_toas_fromMJDs(
 def make_fake_toas_fromtim(
     timfile, model, add_noise=False, add_correlated_noise=False, name="fake"
 ):
-    """Make fake toas with the same times as an input tim file
-
-    Can include alternating frequencies if fed an array of frequencies,
-    only works with one observatory at a time
+    """Simulate fake TOAs with the same times as an input tim file
 
     Parameters
     ----------
