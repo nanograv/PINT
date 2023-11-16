@@ -27,7 +27,7 @@ import astropy.units as u
 
 import pint.fitter, pint.toa, pint.simulation
 from pint.models import get_model_and_toas
-from pint import utils, simulation
+from pint import simulation
 import pint.config
 import pint.logging
 

@@ -1,8 +1,9 @@
-#!/usr/bin/env python
-import numpy as np
+# %% [markdown]
+# ## Pulse numbers demonstration
+
+# %%
 from copy import deepcopy
 import pint.models
-from pint.models.parameter import strParameter
 import astropy.units as u
 import pint.toa
 from pint.residuals import Residuals
@@ -11,12 +12,14 @@ from astropy.visualization import quantity_support
 from astropy import log
 import pint.config
 import pint.logging
+import pint.fitter as fit
 
 # setup logging
 pint.logging.setup(level="INFO")
 
 quantity_support()
 
+# %%
 modelin = pint.models.get_model(pint.config.examplefile("waves.par"))
 model2 = deepcopy(modelin)
 component, order, from_list, comp_type = model2.map_component("Wave")
@@ -24,10 +27,12 @@ from_list.remove(component)
 # modelin.TRACK.value = "0"
 # model2.TRACK.value = "0"
 
+# %%
 realtoas = pint.toa.get_TOAs(pint.config.examplefile("waves_withpn.tim"))
 res = Residuals(realtoas, modelin)
 res2 = Residuals(realtoas, model2)
 
+# %%
 fig, ax = plt.subplots(figsize=(16, 9))
 ax.set_title("Residuals using PN from .tim file")
 ax.errorbar(
@@ -47,11 +52,12 @@ ax.errorbar(
 ax.legend()
 ax.grid(True)
 
-
+# %%
 realtoas.compute_pulse_numbers(modelin)
 res = Residuals(realtoas, modelin)
 res2 = Residuals(realtoas, model2)
 
+# %%
 fig, ax = plt.subplots(figsize=(16, 9))
 ax.set_title("Residuals using PN from compute_pulse_numbers")
 ax.errorbar(
@@ -73,8 +79,7 @@ ax.grid(True)
 
 plt.show()
 
-import pint.fitter as fit
-
+# %%
 modelin.WAVE1.quantity = (0.0 * u.s, 0.0 * u.s)
 modelin.WAVE2.quantity = (0.0 * u.s, 0.0 * u.s)
 modelin.WAVE3.quantity = (0.0 * u.s, 0.0 * u.s)
@@ -87,8 +92,10 @@ modelin.WAVE3.frozen = False
 modelin.WAVE4.frozen = False
 modelin.WAVE5.frozen = False
 
+# %%
 prefitresids = Residuals(realtoas, modelin)
 
+# %%
 try:
     f = fit.WLSFitter(realtoas, modelin)
     f.fit_toas()
