@@ -1000,12 +1000,34 @@ class TimingModel:
     @property_exists
     def has_correlated_errors(self):
         """Whether or not this model has correlated errors."""
-        if "NoiseComponent" in self.component_types:
-            for nc in self.NoiseComponent_list:
-                # recursive if necessary
-                if nc.introduces_correlated_errors:
-                    return True
-        return False
+
+        return (
+            "NoiseComponent" in self.component_types
+            and len(
+                (
+                    nc
+                    for nc in self.NoiseComponent_list
+                    if nc.introduces_correlated_errors
+                )
+            )
+            > 0
+        )
+
+    @property_exists
+    def has_time_correlated_errors(self):
+        """Whether or not this model has time-correlated errors."""
+
+        return (
+            "NoiseComponent" in self.component_types
+            and len(
+                (
+                    nc
+                    for nc in self.NoiseComponent_list
+                    if (nc.introduces_correlated_errors and nc.is_time_correlated)
+                )
+            )
+            > 0
+        )
 
     @property_exists
     def covariance_matrix_funcs(self):
@@ -2205,36 +2227,37 @@ class TimingModel:
             log.debug("Check verbosity - only warnings/info will be displayed")
         othermodel = copy.deepcopy(othermodel)
 
-        if "POSEPOCH" in self.params and "POSEPOCH" in othermodel.params:
-            if (
-                self.POSEPOCH.value is not None
-                and othermodel.POSEPOCH.value is not None
-                and self.POSEPOCH.value != othermodel.POSEPOCH.value
-            ):
-                log.info(
-                    "Updating POSEPOCH in %s to match %s"
-                    % (other_model_name, model_name)
-                )
-                othermodel.change_posepoch(self.POSEPOCH.value)
-        if "PEPOCH" in self.params and "PEPOCH" in othermodel.params:
-            if (
-                self.PEPOCH.value is not None
-                and self.PEPOCH.value != othermodel.PEPOCH.value
-            ):
-                log.info(
-                    "Updating PEPOCH in %s to match %s" % (other_model_name, model_name)
-                )
-                othermodel.change_pepoch(self.PEPOCH.value)
-        if "DMEPOCH" in self.params and "DMEPOCH" in othermodel.params:
-            if (
-                self.DMEPOCH.value is not None
-                and self.DMEPOCH.value != othermodel.DMEPOCH.value
-            ):
-                log.info(
-                    "Updating DMEPOCH in %s to match %s"
-                    % (other_model_name, model_name)
-                )
-                othermodel.change_dmepoch(self.DMEPOCH.value)
+        if (
+            "POSEPOCH" in self.params
+            and "POSEPOCH" in othermodel.params
+            and self.POSEPOCH.value is not None
+            and othermodel.POSEPOCH.value is not None
+            and self.POSEPOCH.value != othermodel.POSEPOCH.value
+        ):
+            log.info(
+                "Updating POSEPOCH in %s to match %s" % (other_model_name, model_name)
+            )
+            othermodel.change_posepoch(self.POSEPOCH.value)
+        if (
+            "PEPOCH" in self.params
+            and "PEPOCH" in othermodel.params
+            and self.PEPOCH.value is not None
+            and self.PEPOCH.value != othermodel.PEPOCH.value
+        ):
+            log.info(
+                "Updating PEPOCH in %s to match %s" % (other_model_name, model_name)
+            )
+            othermodel.change_pepoch(self.PEPOCH.value)
+        if (
+            "DMEPOCH" in self.params
+            and "DMEPOCH" in othermodel.params
+            and self.DMEPOCH.value is not None
+            and self.DMEPOCH.value != othermodel.DMEPOCH.value
+        ):
+            log.info(
+                "Updating DMEPOCH in %s to match %s" % (other_model_name, model_name)
+            )
+            othermodel.change_dmepoch(self.DMEPOCH.value)
         if (
             "AstrometryEquatorial" in self.components
             and "AstrometryEcliptic" in othermodel.components
@@ -2346,16 +2369,13 @@ class TimingModel:
                                 modifier[pn].append("diff2")
                         else:
                             diff2[pn] = ""
-                    if otherpar is not None:
-                        if (
-                            par.uncertainty is not None
-                            and otherpar.uncertainty is not None
-                        ):
-                            if (
-                                unc_rat_threshold * par.uncertainty
-                                < otherpar.uncertainty
-                            ):
-                                modifier[pn].append("unc_rat")
+                    if (
+                        otherpar is not None
+                        and par.uncertainty is not None
+                        and otherpar.uncertainty is not None
+                        and (unc_rat_threshold * par.uncertainty < otherpar.uncertainty)
+                    ):
+                        modifier[pn].append("unc_rat")
             else:
                 # Assume numerical parameter
                 if nodmx and pn.startswith("DMX"):
@@ -2399,12 +2419,12 @@ class TimingModel:
                         if (
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
-                        ):
-                            if (
+                            and (
                                 par.uncertainty * unc_rat_threshold
                                 < otherpar.uncertainty
-                            ):
-                                modifier[pn].append("unc_rat")
+                            )
+                        ):
+                            modifier[pn].append("unc_rat")
                     else:
                         value2[pn] = "Missing"
                 else:
@@ -2460,12 +2480,12 @@ class TimingModel:
                         if (
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
-                        ):
-                            if (
+                            and (
                                 par.uncertainty * unc_rat_threshold
                                 < otherpar.uncertainty
-                            ):
-                                modifier[pn].append("unc_rat")
+                            )
+                        ):
+                            modifier[pn].append("unc_rat")
                     else:
                         diff1[pn] = ""
                         diff2[pn] = ""
@@ -2950,9 +2970,8 @@ class ModelMeta(abc.ABCMeta):
 
     def __init__(cls, name, bases, dct):
         regname = "component_types"
-        if "register" in dct:
-            if cls.register:
-                getattr(cls, regname)[name] = cls
+        if "register" in dct and cls.register:
+            getattr(cls, regname)[name] = cls
         super().__init__(name, bases, dct)
 
 
@@ -3193,7 +3212,7 @@ class Component(metaclass=ModelMeta):
 
         """
         parnames = [x for x in self.params if x.startswith(prefix)]
-        mapping = dict()
+        mapping = {}
         for parname in parnames:
             par = getattr(self, parname)
             if par.is_prefix and par.prefix == prefix:
@@ -3494,11 +3513,10 @@ class AllComponents:
         units = {}
         for k, cp in self.components.items():
             for p in cp.params:
-                if p in units.keys():
-                    if units[p] != getattr(cp, p).units:
-                        raise TimingModelError(
-                            f"Units of parameter '{p}' in component '{cp}' ({getattr(cp, p).units}) do not match those of existing parameter ({units[p]})"
-                        )
+                if p in units.keys() and units[p] != getattr(cp, p).units:
+                    raise TimingModelError(
+                        f"Units of parameter '{p}' in component '{cp}' ({getattr(cp, p).units}) do not match those of existing parameter ({units[p]})"
+                    )
                 units[p] = getattr(cp, p).units
         tm = TimingModel()
         for tp in tm.params:

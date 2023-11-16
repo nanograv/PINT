@@ -602,6 +602,35 @@ class Residuals:
             else chisq.to_value(u.dimensionless_unscaled)
         )
 
+    def _calc_wls_chi2(self, lognorm=False):
+        """Compute the chi2 when no correlated noise components are present."""
+
+        # Residual units are in seconds. Error units are in microseconds.
+        toa_errors = self.get_data_error()
+        if (toa_errors == 0.0).any():
+            return np.inf
+
+        # The self.time_resids is in the unit of "s", the error "us".
+        # This is more correct way, but it is the slowest.
+        # return (((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()).value
+
+        # This method is faster then the method above but not the most correct way
+        # return ((self.time_resids.to(u.s) / self.toas.get_errors().to(u.s)).value**2.0).sum()
+
+        # This the fastest way, but highly depend on the assumption of time_resids and
+        # error units. Ensure only a pure number is returned.
+
+        r = self.time_resids
+        err = toa_errors.to(u.s)
+
+        chi2 = ((r / err) ** 2.0).sum().value
+
+        if not lognorm:
+            return chi2
+
+        log_norm = np.sum(np.log(err.value))
+        return chi2, log_norm
+
     def calc_chi2(self, lognorm=False):
         """Return the weighted chi-squared for the model and toas.
 
@@ -635,49 +664,13 @@ class Residuals:
         chi2                   if lognorm is False
         (chi2, log_norm)       if lognorm is True
         """
-        if self.model.has_correlated_errors:
-            from pint.models.noise_model import EcorrNoise
 
-            corrnoise_components = [
-                c
-                for c in self.model.NoiseComponent_list
-                if c.introduces_correlated_errors
-            ]
-            ecorr_only = len(corrnoise_components) == 1 and isinstance(
-                corrnoise_components[0], EcorrNoise
-            )
-
-            return (
-                self._calc_ecorr_chi2(lognorm=lognorm)
-                if ecorr_only
-                else self._calc_gls_chi2(lognorm=lognorm)
-            )
+        if not self.model.has_correlated_errors:
+            return self._calc_wls_chi2(lognorm=lognorm)
+        elif not self.model.has_time_correlated_errors and "PHOFF" in self.model.params:
+            return self._calc_ecorr_chi2(lognorm=lognorm)
         else:
-            # Residual units are in seconds. Error units are in microseconds.
-            toa_errors = self.get_data_error()
-            if (toa_errors == 0.0).any():
-                return np.inf
-
-            # The self.time_resids is in the unit of "s", the error "us".
-            # This is more correct way, but it is the slowest.
-            # return (((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()).value
-
-            # This method is faster then the method above but not the most correct way
-            # return ((self.time_resids.to(u.s) / self.toas.get_errors().to(u.s)).value**2.0).sum()
-
-            # This the fastest way, but highly depend on the assumption of time_resids and
-            # error units. Ensure only a pure number is returned.
-
-            r = self.time_resids
-            err = toa_errors.to(u.s)
-
-            chi2 = ((r / err) ** 2.0).sum().value
-
-            if not lognorm:
-                return chi2
-            else:
-                log_norm = np.sum(np.log(err.value))
-                return chi2, log_norm
+            return self._calc_gls_chi2(lognorm=lognorm)
 
     def lnlikelihood(self):
         """Compute the log-likelihood for the model and TOAs."""
