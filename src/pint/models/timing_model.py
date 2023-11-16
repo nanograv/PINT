@@ -1004,11 +1004,11 @@ class TimingModel:
         return (
             "NoiseComponent" in self.component_types
             and len(
-                (
+                [
                     nc
                     for nc in self.NoiseComponent_list
                     if nc.introduces_correlated_errors
-                )
+                ]
             )
             > 0
         )
@@ -1020,11 +1020,11 @@ class TimingModel:
         return (
             "NoiseComponent" in self.component_types
             and len(
-                (
+                [
                     nc
                     for nc in self.NoiseComponent_list
                     if (nc.introduces_correlated_errors and nc.is_time_correlated)
-                )
+                ]
             )
             > 0
         )
