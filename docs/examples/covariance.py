@@ -19,7 +19,6 @@
 # The results of a fit consist of best-fit parameter values and uncertainties, and residuals; these are conventional data products from pulsar timing. Additional information can be useful though: we can describe the correlations between model parameters in a matrix, and we can compute the derivatives of the residuals with respect to the model parameters. Both of these additional pieces of information can be obtained from a Fitter object in PINT; this notebook will demonstrate how to do this efficiently.
 # %%
 import contextlib
-import os
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -27,7 +26,6 @@ import numpy as np
 import scipy.linalg
 import scipy.stats
 
-import astropy.units as u
 import matplotlib.pyplot as plt
 from astropy.visualization import quantity_support
 

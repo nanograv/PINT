@@ -1,5 +1,8 @@
 """Various tests to assess the performance of the J0623-0200."""
 
+# This example requires `tempo2_utils`. It is available at
+# https://github.com/demorest/tempo_utils.
+
 import pint.models.model_builder as mb
 import pint.toa as toa
 import pint.logging

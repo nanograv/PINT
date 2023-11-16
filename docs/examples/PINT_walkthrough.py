@@ -33,7 +33,6 @@
 
 # %%
 import tempfile
-import numpy as np
 import astropy.units as u
 from pprint import pprint
 from glob import glob
