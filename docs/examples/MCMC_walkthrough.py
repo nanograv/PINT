@@ -63,6 +63,7 @@ weightcol = "PSRJ0030+0451"
 # %%
 minWeight = 0.9
 nwalkers = 10
+# make this larger for real use
 nsteps = 50
 nbins = 256
 phs = 0.0
@@ -126,7 +127,7 @@ fitter.fit_toas(maxiter=nsteps, pos=None)
 fitter.set_parameters(fitter.maxpost_fitvals)
 
 # %% [markdown]
-# To make this run relatively fast for demonstration purposes, nsteps was purposefully kept very small. However, this means that the results of this fit will not be very good. For an example of MCMC fitting that produces better results, look at ``pint/examples/fitNGC440E_MCMC.py``
+# To make this run relatively fast for demonstration purposes, ``nsteps`` was purposefully kept very small. However, this means that the results of this fit will not be very good. For an example of MCMC fitting that produces better results, look at ``pint/examples/fitNGC440E_MCMC.py``
 
 # %%
 fitter.phaseogram()
