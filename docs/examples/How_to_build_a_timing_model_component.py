@@ -34,8 +34,6 @@
 # ## Import the necessary modules
 
 # %%
-import numpy as np  # Numpy is a widely used package
-
 # PINT uses astropy units in the internal calculation and is highly recommended for a new component
 import astropy.units as u
 
