@@ -56,7 +56,9 @@ state = np.random.mtrand.RandomState()
 
 # %%
 parfile = pint.config.examplefile("PSRJ0030+0451_psrcat.par")
-eventfile = pint.config.examplefile("J0030+0451_P8_15.0deg_239557517_458611204_ft1weights_GEO_wt.gt.0.4.fits")
+eventfile = pint.config.examplefile(
+    "J0030+0451_P8_15.0deg_239557517_458611204_ft1weights_GEO_wt.gt.0.4.fits"
+)
 gaussianfile = pint.config.examplefile("templateJ0030.3gauss")
 weightcol = "PSRJ0030+0451"
 
@@ -70,7 +72,9 @@ phs = 0.0
 
 # %%
 model = pint.models.get_model(parfile)
-ts = fermi.get_Fermi_TOAs(eventfile, weightcolumn=weightcol, minweight=minWeight,ephem="DE421")
+ts = fermi.get_Fermi_TOAs(
+    eventfile, weightcolumn=weightcol, minweight=minWeight, ephem="DE421"
+)
 # Introduce a small error so that residuals can be calculated
 ts.table["error"] = 1.0
 ts.filename = eventfile
@@ -78,7 +82,7 @@ ts.compute_TDBs()
 ts.compute_posvels(ephem="DE421", planets=False)
 
 # %%
-weights,_ = ts.get_flag_value("weight",as_type=float)
+weights, _ = ts.get_flag_value("weight", as_type=float)
 template = read_gaussfitfile(gaussianfile, nbins)
 template /= template.mean()
 
@@ -132,7 +136,8 @@ fitter.set_parameters(fitter.maxpost_fitvals)
 # %%
 fitter.phaseogram()
 samples = np.transpose(sampler.sampler.get_chain(discard=10), (1, 0, 2)).reshape(
-    (-1, fitter.n_fit_params))
+    (-1, fitter.n_fit_params)
+)
 ranges = map(
     lambda v: (v[1], v[2] - v[1], v[1] - v[0]),
     zip(*np.percentile(samples, [16, 50, 84], axis=0)),
@@ -165,6 +170,7 @@ nsteps2 = 10
 # The new functions can be passed to the constructor of the ``MCMCFitter`` object using the keywords ``lnprior`` and ``lnlike``, as shown below.
 #
 
+
 # %%
 def lnprior_basic(ftr, theta):
     lnsum = 0.0
@@ -184,6 +190,7 @@ def lnlikelihood_chi2(ftr, theta):
     # print('Count is: %d' % ftr.numcalls)
     return -Residuals(toas=ftr.toas, model=ftr.model).chi2
 
+
 sampler2 = EmceeSampler(nwalkers=nwalkers2)
 fitter2 = MCMCFitter(
     toas2, model2, sampler2, lnprior=lnprior_basic, lnlike=lnlikelihood_chi2
@@ -198,7 +205,9 @@ print("Starting pulse likelihood: %f" % like_start)
 fitter2.fit_toas(maxiter=nsteps2, pos=None)
 
 # %%
-samples2 = np.transpose(sampler2.sampler.get_chain(), (1, 0, 2)).reshape((-1, fitter2.n_fit_params))
+samples2 = np.transpose(sampler2.sampler.get_chain(), (1, 0, 2)).reshape(
+    (-1, fitter2.n_fit_params)
+)
 ranges2 = map(
     lambda v: (v[1], v[2] - v[1], v[1] - v[0]),
     zip(*np.percentile(samples2, [16, 50, 84], axis=0)),
