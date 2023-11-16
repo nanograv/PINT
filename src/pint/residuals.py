@@ -539,7 +539,7 @@ class Residuals:
         sigma = self.get_data_error()
         return ((r - nr) / sigma).to(u.dimensionless_unscaled)
 
-    def _calc_gls_chi2(self, lognorm=False, incoffset=True):
+    def _calc_gls_chi2(self, lognorm=False):
         """Compute the chi2 when correlated noise is present in the timing model.
         If the system is not singular, it uses Cholesky factorization to evaluate this.
         If the system is singular, it uses singular value decomposition instead.
@@ -547,12 +547,15 @@ class Residuals:
         If `lognorm=True` is given, the log-normalization-factor of the likelihood
         function will also be returned.
         """
+
+        assert self.model.has_correlated_errors
+
         s = self.time_resids.to_value(u.s)
         Ndiag = self.get_data_error().to_value(u.s) ** 2
         U = self.model.noise_model_designmatrix(self.toas)
         Phidiag = self.model.noise_model_basis_weight(self.toas)
 
-        if incoffset and "PhaseOffset" not in self.model.components:
+        if "PhaseOffset" not in self.model.components:
             U = np.append(U, np.ones((len(self.toas), 1)), axis=1)
             Phidiag = np.append(Phidiag, [1e40])
 
@@ -563,6 +566,12 @@ class Residuals:
     def _calc_ecorr_chi2(self, lognorm=False):
         """Compute the chi2 when ECORR is present in the timing
         model without any other correlated noise components."""
+
+        assert (
+            self.model.has_correlated_errors
+            and not self.model.has_time_correlated_errors
+        )
+
         m, t = self.model, self.toas
 
         assert "EcorrNoise" in m.components
@@ -604,6 +613,8 @@ class Residuals:
 
     def _calc_wls_chi2(self, lognorm=False):
         """Compute the chi2 when no correlated noise components are present."""
+
+        assert not self.model.has_correlated_errors
 
         # Residual units are in seconds. Error units are in microseconds.
         toa_errors = self.get_data_error()
@@ -667,7 +678,10 @@ class Residuals:
 
         if not self.model.has_correlated_errors:
             return self._calc_wls_chi2(lognorm=lognorm)
-        elif not self.model.has_time_correlated_errors and "PHOFF" in self.model.params:
+        elif (
+            not self.model.has_time_correlated_errors
+            and "PhaseOffset" in self.model.components
+        ):
             return self._calc_ecorr_chi2(lognorm=lognorm)
         else:
             return self._calc_gls_chi2(lognorm=lognorm)
