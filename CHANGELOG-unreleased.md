@@ -57,4 +57,5 @@ the released changes.
 - `pintk` will not allow choices of axes that are not in timing model/data
 - `pintk` correctly displays initial log level
 - Fixed sign of y coordinate for Pico Veleta observatory (also being fixed in tempo2)
+- Minor bug fixes in example notebooks
 ### Removed
