@@ -1106,7 +1106,17 @@ class TimingModel:
         return Dphase_Ddelay
 
     def get_deriv_funcs(self, component_type, derivative_type=""):
-        """Return dictionary of derivative functions."""
+        """Return a dictionary of derivative functions.
+
+        Parameters
+        ----------
+        component_type: str
+            Type of component to look for derivatives ("PhaseComponent",
+            "DelayComponent", or "NoiseComponent")
+        derivative_type: str
+            Derivative type ("", "dm", or "toasigma". Empty string
+            denotes delay and phase derivatives.)
+        """
         # TODO, this function can be a more generic function collector.
         deriv_funcs = defaultdict(list)
         if derivative_type != "":
