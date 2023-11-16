@@ -414,15 +414,19 @@ class Residuals:
 
     def _calc_mean(self, weighted, type, calctype=None):
         assert type in ["time", "phase"]
-        
-        r = self.calc_phase_resids(subtract_mean=False) if type == "phase" else self.calc_time_resids(subtract_mean=False, calctype=calctype)
-        
+
+        r = (
+            self.calc_phase_resids(subtract_mean=False)
+            if type == "phase"
+            else self.calc_time_resids(subtract_mean=False, calctype=calctype)
+        )
+
         if not weighted:
             return r.mean()
-        
+
         if np.any(self.get_data_error() == 0):
             raise ValueError("Some TOA errors are zero - cannot calculate residuals")
-        
+
         w = 1.0 / (self.get_data_error().value ** 2)
         mean, _ = weighted_mean(r, w)
         return mean
