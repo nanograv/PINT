@@ -347,7 +347,7 @@ class MCMCFitter(Fitter):
         self.sampler.initialize_sampler(self.lnposterior, self.n_fit_params)
 
         # Run sampler for some number of iterations
-        self.sampler.run_mcmc(pos, maxiter, store=True)
+        self.sampler.run_mcmc(pos, maxiter)
 
         # Process results and get chi2 for new parameters
         self.set_params(dict(zip(self.fitkeys, self.maxpost_fitvals)))
