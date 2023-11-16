@@ -111,10 +111,9 @@ plt.show()
 
 # %% [markdown]
 # The same thing can be achieved in the command line using
-# the following command::
+# the following command:
 #
-#       $ zima --startMJD 54000 --ntoa 100 --duration 2000 --obs gbt \
-#           --freq 1400 --error 1 --addnoise test.par test.tim
+#       $ zima --startMJD 54000 --ntoa 100 --duration 2000 --obs gbt --freq 1400 --error 1 --addnoise test.par test.tim
 
 # %% [markdown]
 # ## Multiple frequency example
@@ -213,11 +212,9 @@ plt.show()
 
 # %% [markdown]
 # The same thing can be achieved in the command line using
-# the following command::
+# the following command:
 #
-#       $ zima --startMJD 54000 --ntoa 100 --duration 2000 --obs gbt \
-#           --freq 1000 1333.33 1666.67 2000 --error 1 --addnoise --multifreq \
-#           test.par test.tim
+#       $ zima --startMJD 54000 --ntoa 100 --duration 2000 --obs gbt --freq 1000 1333.33 1666.67 2000 --error 1 --addnoise --multifreq test.par test.tim
 
 # %% [markdown]
 # ## Correlated noise simulation example
@@ -281,11 +278,9 @@ plt.show()
 
 # %% [markdown]
 # The same thing can be achieved in the command line using
-# the following command::
+# the following command:
 #
-#       $ zima --startMJD 54000 --ntoa 100 --duration 2000 --obs gbt \
-#           --freq 1400 --error 1 --addnoise --addcorrnoise \
-#           test.par test.tim
+#       $ zima --startMJD 54000 --ntoa 100 --duration 2000 --obs gbt --freq 1400 --error 1 --addnoise --addcorrnoise test.par test.tim
 
 # %% [markdown]
 # ## Wideband TOA simulation example
@@ -364,9 +359,7 @@ plt.show()
 # The same thing can be achieved in the command line using
 # the following command::
 #
-#       $ zima --startMJD 54000 --ntoa 100 --duration 2000 --obs gbt \
-#           --freq 1400 --error 1 --addnoise --wideband --dmerror 1e-5 \
-#           test.par test.tim
+#       $ zima --startMJD 54000 --ntoa 100 --duration 2000 --obs gbt --freq 1400 --error 1 --addnoise --wideband --dmerror 1e-5 test.par test.tim
 
 # %% [markdown]
 # ## Simulating TOAs based on a tim file
@@ -400,5 +393,4 @@ plt.show()
 # The same thing can be achieved in the command line using
 # the following command::
 #
-#       $ zima --inputtim B1855+09_NANOGrav_9yv1.tim --addnoise \
-#           test.par test.tim
+#       $ zima --inputtim B1855+09_NANOGrav_9yv1.tim --addnoise test.par test.tim
