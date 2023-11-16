@@ -127,6 +127,7 @@ for name, val in zip(fitter.fitkeys, fitter.fitvals):
 # The MCMCFitter class is a subclass of ``pint.fitter.Fitter``. It is run in exactly the same way - with the ``fit_toas()`` method.
 
 # %%
+fitter.fiterrs[1] *= 1e10
 fitter.fit_toas(maxiter=nsteps, pos=None)
 fitter.set_parameters(fitter.maxpost_fitvals)
 
