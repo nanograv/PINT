@@ -692,6 +692,12 @@ class Residuals:
         return -(chi2 / 2 + log_norm)
 
     def d_lnlikelihood_d_whitenoise_param(self, param):
+        if self.model.has_correlated_errors:
+            raise NotImplementedError(
+                "d_lnlikelihood_d_whitenoise_param is not implemented "
+                "for the case when correlated noise is present."
+            )
+
         r = self.time_resids
         sigma = self.get_data_error()
         d_sigma_d_param = self.model.d_toasigma_d_param(self.toas, param)
