@@ -67,6 +67,7 @@ are not included in the default build because they take too long, but you can do
    examples/check_phase_connection.ipynb
    examples/PINT_observatories.ipynb
    examples/solar_wind.ipynb
+   examples/MCMC_walkthrough.ipynb
    examples/bayesian-example-NGC6440E.py
    examples/bayesian-wideband-example.py
    examples-rendered/paper_validation_example.ipynb
