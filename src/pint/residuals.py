@@ -559,7 +559,7 @@ class Residuals:
         U = self.model.noise_model_designmatrix(self.toas)
         Phidiag = self.model.noise_model_basis_weight(self.toas)
 
-        if "PhaseOffset" not in self.model.components:
+        if "PHOFF" not in self.model.free_params:
             U = np.append(U, np.ones((len(self.toas), 1)), axis=1)
             Phidiag = np.append(Phidiag, [1e40])
 
@@ -574,11 +574,10 @@ class Residuals:
         assert (
             self.model.has_correlated_errors
             and not self.model.has_time_correlated_errors
+            and "PHOFF" in self.model.free_params
         )
 
         m, t = self.model, self.toas
-
-        assert "EcorrNoise" in m.components
 
         ecorr_masks = m.components["EcorrNoise"].get_noise_basis(t).T.astype(bool)
         ecorr_weights = m.components["EcorrNoise"].get_noise_weights(t)
