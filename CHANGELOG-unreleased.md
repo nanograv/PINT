@@ -60,4 +60,5 @@ the released changes.
 - `pintk` correctly displays initial log level
 - Fixed sign of y coordinate for Pico Veleta observatory (also being fixed in tempo2)
 - Minor bug fixes in example notebooks
+- `MCMC_walkthrough` notebook now runs
 ### Removed
