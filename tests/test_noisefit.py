@@ -1,6 +1,8 @@
-from pint.models import get_model
+from pint.models import get_model, get_model_and_toas
 from pint.simulation import make_fake_toas_uniform
-from pint.fitter import DownhillWLSFitter
+from pint.fitter import DownhillWLSFitter, DownhillGLSFitter
+from pinttestdata import datadir
+
 
 from io import StringIO
 import numpy as np
@@ -18,6 +20,10 @@ par = """
 
 m = get_model(StringIO(par))
 t = make_fake_toas_uniform(50000, 55000, 200, m, add_noise=True)
+
+m2, t2 = get_model_and_toas(
+    datadir / "ecorr_fit_test.par", datadir / "ecorr_fit_test.tim"
+)
 
 
 def test_white_noise_fit():
@@ -57,5 +63,32 @@ def test_white_noise_refit():
     assert (
         np.abs(m.EQUAD1.value - ftr.model.EQUAD1.value)
         / ftr.model.EQUAD1.uncertainty_value
+        < 3
+    )
+
+
+def test_ecorr_fit():
+    ftr = DownhillGLSFitter(t2, m2)
+    ftr.fit_toas()
+
+    assert ftr.model.ECORR1.uncertainty_value > 0
+    assert (
+        np.abs(m2.ECORR1.value - ftr.model.ECORR1.value)
+        / ftr.model.ECORR1.uncertainty_value
+        < 3
+    )
+
+
+def test_ecorr_refit():
+    ftr = DownhillGLSFitter(t2, m2)
+
+    ftr.model.ECORR1.value = 0.75
+
+    ftr.fit_toas()
+
+    assert ftr.model.ECORR1.uncertainty_value > 0
+    assert (
+        np.abs(m2.ECORR1.value - ftr.model.ECORR1.value)
+        / ftr.model.ECORR1.uncertainty_value
         < 3
     )
