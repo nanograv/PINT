@@ -43,6 +43,7 @@ the released changes.
 - `ScaleToaError.d_toasigma_d_EFAC` and `ScaleToaError.d_toasigma_d_EQUAD` methods.
 - Separate `.fullname` for all observatories
 - `Residuals.calc_whitened_resids()` method
+- Plot wideband DM measurements, wideband DM residuals, and wideband DM errors in `pintk`. (Disabled for narrowband data.)
 - Optionally generate multi-frequency TOAs in an epoch using `make_fake_toas_uniform` and `make_fake_toas_fromMJDs`
 - Documentation: Example notebook for simulations
 ### Fixed
