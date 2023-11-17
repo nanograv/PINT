@@ -116,9 +116,9 @@ phases = fitter.get_event_phases()
 maxbin, like_start = marginalize_over_phase(
     phases, template, weights=fitter.weights, minimize=True, showplot=True
 )
-fitter.fitvals[-1] = 1.0 - maxbin[0] / float(len(template))
-print("Starting pulse likelihood: %f" % like_start)
-print("Starting pulse phase: %f" % fitter.fitvals[-1])
+phase = 1.0 - maxbin[0] / float(len(template))
+print(f"Starting pulse likelihood: {like_start}")
+print("Starting pulse phase: {phase}")
 print("Pre-MCMC Values:")
 for name, val in zip(fitter.fitkeys, fitter.fitvals):
     print("%8s:\t%12.5g" % (name, val))
