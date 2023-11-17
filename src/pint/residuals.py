@@ -93,7 +93,7 @@ class Residuals:
             except KeyError as e:
                 raise ValueError(
                     f"'{residual_type}' is not a PINT supported residual. Currently supported data types are {list(residual_map.keys())}"
-                )
+                ) from e
 
         return super().__new__(cls)
 
@@ -370,11 +370,15 @@ class Residuals:
             # and delta_pulse_numbers (from PHASE lines or adding phase jumps in GUI)
             i = pulse_num.copy()
             f = np.zeros_like(pulse_num)
-            if np.any(np.isnan(pulse_num)):
+
+            c = np.isnan(pulse_num)
+            if np.any(c):
+                # i[c] = 0
                 raise ValueError("Pulse numbers are missing on some TOAs")
             residualphase = modelphase - Phase(i, f)
             # This converts from a Phase object to a np.float128
             full = residualphase.int + residualphase.frac
+
         elif self.track_mode == "nearest":
             # Compute model phase
             modelphase = self.model.phase(self.toas) + delta_pulse_numbers

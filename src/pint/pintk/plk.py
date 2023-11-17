@@ -8,7 +8,7 @@ import sys
 from astropy.time import Time
 import astropy.units as u
 import matplotlib as mpl
-from matplotlib import figure
+import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
@@ -22,6 +22,8 @@ from tkinter import ttk
 
 import pint.logging
 from loguru import logger as log
+
+from pint.residuals import WidebandDMResiduals
 
 
 try:
@@ -50,6 +52,9 @@ plotlabels = {
     "frequency": r"Observing Frequency (MHz)",
     "TOA error": r"TOA uncertainty ($\mu$s)",
     "rounded MJD": r"MJD",
+    "WB DM": "Wideband DM (pc/cm3)",
+    "WB DM res": "Wideband DM residual (pc/cm3)",
+    "WB DM err": "Wideband DM error (pc/cm3)",
     "elongation": r"Solar Elongation (deg)",
 }
 
@@ -475,6 +480,9 @@ class PlkXYChoiceWidget(tk.Frame):
         self.xvar = tk.StringVar()
         self.yvar = tk.StringVar()
 
+        # This will be set in PlkWidget.setPulsar and PlkWidget.update methods.
+        self.wideband = False
+
         self.initPlkXYChoice()
 
     def initPlkXYChoice(self):
@@ -531,7 +539,7 @@ class PlkXYChoiceWidget(tk.Frame):
                 else self.master.psr.prefit_model
             )
             if choice == "elongation" and not any(
-                isinstance(x, Astrometry) for x in model.components
+                isinstance(x, Astrometry) for x in model.components.values()
             ):
                 self.xbuttons[ii].configure(state="disabled")
                 self.ybuttons[ii].configure(state="disabled")
@@ -541,6 +549,12 @@ class PlkXYChoiceWidget(tk.Frame):
             if choice == "frequency" and (
                 (len(np.unique(self.master.psr.all_toas["freq"])) <= 1)
                 or np.any(np.isinf(self.master.psr.all_toas["freq"]))
+            ):
+                self.xbuttons[ii].configure(state="disabled")
+                self.ybuttons[ii].configure(state="disabled")
+            if (
+                choice in ["WB DM", "WB DM res", "WB DM err"]
+                and not self.master.psr.all_toas.is_wideband()
             ):
                 self.xbuttons[ii].configure(state="disabled")
                 self.ybuttons[ii].configure(state="disabled")
@@ -718,7 +732,7 @@ class PlkWidget(tk.Frame):
         self.colorModeWidget = PlkColorModeBoxes(master=self)
 
         self.plkDpi = 100
-        self.plkFig = mpl.figure.Figure(dpi=self.plkDpi)
+        self.plkFig = plt.Figure(dpi=self.plkDpi)
         self.plkCanvas = FigureCanvasTkAgg(self.plkFig, self)
         self.plkCanvas.mpl_connect("button_press_event", self.canvasClickEvent)
         self.plkCanvas.mpl_connect("button_release_event", self.canvasReleaseEvent)
@@ -773,6 +787,7 @@ class PlkWidget(tk.Frame):
             self.randomboxWidget.addRandomCheckbox(self)
             self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             self.fitterWidget.updateFitterChoices(self.psr.all_toas.wideband)
+            self.xyChoiceWidget.wideband = self.psr.all_toas.wideband
             self.xyChoiceWidget.setChoice()
             self.updatePlot(keepAxes=True)
             self.plkToolbar.update()
@@ -797,6 +812,7 @@ class PlkWidget(tk.Frame):
 
         self.fitboxesWidget.setCallbacks(self.fitboxChecked)
         self.colorModeWidget.setCallbacks(self.updateGraphColors)
+        self.xyChoiceWidget.wideband = self.psr.all_toas.wideband
         self.xyChoiceWidget.setCallbacks(self.updatePlot)
         self.actionsWidget.setCallbacks(
             self.fit, self.reset, self.writePar, self.writeTim, self.revert
@@ -919,7 +935,7 @@ class PlkWidget(tk.Frame):
                         f"Pulsar has not been fitted! Saving pre-fit parfile to {filename} in {format} format"
                     )
 
-        except:
+        except Exception:
             if filename in [(), ""]:
                 print("Write Par cancelled.")
             else:
@@ -938,7 +954,7 @@ class PlkWidget(tk.Frame):
             log.info(f"Choose output file {filename}")
             self.psr.all_toas.write_TOA_file(filename, format=format)
             log.info(f"Wrote TOAs to {filename} with format {format}")
-        except:
+        except Exception:
             if filename in [(), ""]:
                 print("Write Tim cancelled.")
             else:
@@ -1250,6 +1266,37 @@ class PlkWidget(tk.Frame):
         elif label == "rounded MJD":
             data = np.floor(self.psr.all_toas.get_mjds() + 0.5 * u.d)
             error = self.psr.all_toas.get_errors().to(u.d)
+        elif label == "WB DM":
+            if self.psr.all_toas.wideband:
+                data = self.psr.all_toas.get_dms().to(pint.dmu)
+                error = self.psr.all_toas.get_dm_errors().to(pint.dmu)
+            else:
+                log.warning("Cannot plot WB DMs for NB TOAs.")
+                data = None
+                error = None
+        elif label == "WB DM res":
+            if self.psr.all_toas.wideband:
+                if self.psr.fitter is not None:
+                    data = self.psr.fitter.resids.dm.calc_resids().to(pint.dmu)
+                else:
+                    data = (
+                        WidebandDMResiduals(self.psr.all_toas, self.psr.prefit_model)
+                        .calc_resids()
+                        .to(pint.dmu)
+                    )
+                error = self.psr.all_toas.get_dm_errors().to(pint.dmu)
+            else:
+                log.warning("Cannot plot WB DM resids for NB TOAs.")
+                data = None
+                error = None
+        elif label == "WB DM err":
+            if self.psr.all_toas.wideband:
+                data = self.psr.all_toas.get_dm_errors().to(pint.dmu)
+                error = None
+            else:
+                log.warning("Cannot plot WB DM errors for NB TOAs.")
+                data = None
+                error = None
         elif label == "elongation":
             data = np.degrees(
                 self.psr.prefit_model.sun_angle(self.psr.all_toas, also_distance=False)
