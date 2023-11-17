@@ -44,6 +44,8 @@ the released changes.
 - Separate `.fullname` for all observatories
 - `Residuals.calc_whitened_resids()` method
 - Plot wideband DM measurements, wideband DM residuals, and wideband DM errors in `pintk`. (Disabled for narrowband data.)
+- Optionally generate multi-frequency TOAs in an epoch using `make_fake_toas_uniform` and `make_fake_toas_fromMJDs`
+- Documentation: Example notebook for simulations
 ### Fixed
 - Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
 - Fixed RTD by specifying theme explicitly.
