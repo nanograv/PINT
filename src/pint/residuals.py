@@ -378,8 +378,6 @@ class Residuals:
             residualphase = modelphase - Phase(i, f)
             # This converts from a Phase object to a np.float128
             full = residualphase.int + residualphase.frac
-            if np.any(c):
-                full[c] -= np.round(full[c])
 
         elif self.track_mode == "nearest":
             # Compute model phase
