@@ -43,6 +43,8 @@ the released changes.
 - `ScaleToaError.d_toasigma_d_EFAC` and `ScaleToaError.d_toasigma_d_EQUAD` methods.
 - Separate `.fullname` for all observatories
 - `Residuals.calc_whitened_resids()` method
+- Optionally generate multi-frequency TOAs in an epoch using `make_fake_toas_uniform` and `make_fake_toas_fromMJDs`
+- Documentation: Example notebook for simulations
 ### Fixed
 - Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
 - Fixed RTD by specifying theme explicitly.
@@ -57,4 +59,5 @@ the released changes.
 - `pintk` will not allow choices of axes that are not in timing model/data
 - `pintk` correctly displays initial log level
 - Fixed sign of y coordinate for Pico Veleta observatory (also being fixed in tempo2)
+- Minor bug fixes in example notebooks
 ### Removed
