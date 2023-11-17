@@ -116,7 +116,7 @@ docs/_autosummary
 docs/examples/*.ipynb
 
 # Actual tests are supposed to be python scripts.
-# These notebooks are used for interactive testing using development.
+# These notebooks are used for interactive testing during development.
 # They should be converted to scripts before committing.
 tests/*.ipynb
 
