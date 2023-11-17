@@ -118,7 +118,7 @@ maxbin, like_start = marginalize_over_phase(
 )
 phase = 1.0 - maxbin[0] / float(len(template))
 print(f"Starting pulse likelihood: {like_start}")
-print("Starting pulse phase: {phase}")
+print(f"Starting pulse phase: {phase}")
 print("Pre-MCMC Values:")
 for name, val in zip(fitter.fitkeys, fitter.fitvals):
     print("%8s:\t%12.5g" % (name, val))
@@ -176,11 +176,6 @@ def lnprior_basic(ftr, theta):
     lnsum = 0.0
     for val, key in zip(theta[:-1], ftr.fitkeys[:-1]):
         lnsum += getattr(ftr.model, key).prior_pdf(val, logpdf=True)
-        # print('%s:\t%f' % (key, val))
-    # print('PHASE:\t%f' % theta[-1])
-    # Add phase term
-    if theta[-1] > 1.0 or theta[-1] < 0.0:
-        return np.inf
     return lnsum
 
 
@@ -199,7 +194,7 @@ fitter2.sampler.random_state = state
 
 # %%
 like_start = fitter2.lnlikelihood(fitter2, fitter2.get_parameters())
-print("Starting pulse likelihood: %f" % like_start)
+print(f"Starting pulse likelihood: {like_start}")
 
 # %%
 fitter2.fit_toas(maxiter=nsteps2, pos=None)
