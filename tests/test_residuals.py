@@ -493,7 +493,7 @@ def test_ecorr_chi2():
             F0     100     1 
             F1     -1e-14  1
             PEPOCH 58000
-            PHOFF  0
+            PHOFF  0 1
             DM     15
             EFAC tel ao 1.3
             ECORR tel ao 0.9
