@@ -634,7 +634,7 @@ class TimingModel:
                         and p in self.toasigma_deriv_funcs
                     )
                 )
-                or (hasattr(p, "prefix") and p.prefix == "ECORR")
+                or (hasattr(self[p], "prefix") and self[p].prefix == "ECORR")
             )
         ]
 
