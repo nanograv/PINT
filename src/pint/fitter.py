@@ -1343,26 +1343,26 @@ class DownhillFitter(Fitter):
                 min_lambda=required_chi2_decrease,
                 debug=debug,
             )
-        else:
-            log.debug("Will fit for noise parameters.")
-            for _ in range(noise_fit_niter):
-                self._fit_toas(
-                    maxiter=maxiter,
-                    required_chi2_decrease=required_chi2_decrease,
-                    max_chi2_increase=max_chi2_increase,
-                    min_lambda=min_lambda,
-                    debug=debug,
-                )
-                values, errors = self._fit_noise(noisefit_method=noisefit_method)
-                self._update_noise_params(values, errors)
 
-            return self._fit_toas(
+        log.debug("Will fit for noise parameters.")
+        for _ in range(noise_fit_niter):
+            self._fit_toas(
                 maxiter=maxiter,
                 required_chi2_decrease=required_chi2_decrease,
                 max_chi2_increase=max_chi2_increase,
                 min_lambda=min_lambda,
                 debug=debug,
             )
+            values, errors = self._fit_noise(noisefit_method=noisefit_method)
+            self._update_noise_params(values, errors)
+
+        return self._fit_toas(
+            maxiter=maxiter,
+            required_chi2_decrease=required_chi2_decrease,
+            max_chi2_increase=max_chi2_increase,
+            min_lambda=min_lambda,
+            debug=debug,
+        )
 
     @property
     def fac(self):
@@ -1402,21 +1402,25 @@ class DownhillFitter(Fitter):
 
             return -res.lnlikelihood()
 
-        def _mloglike_grad(xs):
-            """Gradient of the negative of the log-likelihood function w.r.t. white noise parameters."""
-            for fp, x in zip(free_noise_params, xs):
-                getattr(res.model, fp).value = x
+        if not res.model.has_correlated_errors:
 
-            return np.array(
-                [
-                    -res.d_lnlikelihood_d_whitenoise_param(par).value
-                    for par in free_noise_params
-                ]
+            def _mloglike_grad(xs):
+                """Gradient of the negative of the log-likelihood function w.r.t. white noise parameters."""
+                for fp, x in zip(free_noise_params, xs):
+                    getattr(res.model, fp).value = x
+
+                return np.array(
+                    [
+                        -res.d_lnlikelihood_d_whitenoise_param(par).value
+                        for par in free_noise_params
+                    ]
+                )
+
+            maxlike_result = opt.minimize(
+                _mloglike, xs0, method=noisefit_method, jac=_mloglike_grad
             )
-
-        maxlike_result = opt.minimize(
-            _mloglike, xs0, method=noisefit_method, jac=_mloglike_grad
-        )
+        else:
+            maxlike_result = opt.minimize(_mloglike, xs0, method="Nelder-Mead")
 
         hess = Hessdiag(_mloglike)
         errs = np.sqrt(1 / hess(maxlike_result.x))
@@ -1725,6 +1729,7 @@ class DownhillGLSFitter(DownhillFitter):
         self.threshold = threshold
         self.full_cov = full_cov
         r = super().fit_toas(maxiter=maxiter, debug=debug, **kwargs)
+
         # FIXME: set up noise residuals et cetera
         # Compute the noise realizations if possible
         if not self.full_cov:
