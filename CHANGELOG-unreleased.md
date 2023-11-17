@@ -45,6 +45,16 @@ the released changes.
 - `Residuals.calc_whitened_resids()` method
 - Optionally generate multi-frequency TOAs in an epoch using `make_fake_toas_uniform` and `make_fake_toas_fromMJDs`
 - Documentation: Example notebook for simulations
+- Maximum likelihood fitting for ECORR
+    - `is_time_correlated` class attribute in correlated `NoiseComponent`s
+    - `has_time_correlated_errors` property in `TimingModel`
+    - `Residuals._calc_ecorr_chi2()` method for fast chi2 computation using Sherman-Morrison identity
+    - `pint.utils.sherman_morrison_dot` and `pint.utils.woodbury_dot`
+    - Refactored repeated code out of `Residuals.calc_phase_mean` and `Residuals.calc_time_mean`
+    - Simplified `Residuals._calc_gls_chi2()` so that it uses Woodbury identity directly
+    - Refactored WLS chi2 code out of `Residuals.calc_chi2()` into a new function `Residuals._calc_wls_chi2()`
+    - `Residuals.d_lnlikelihood_d_whitenoise_param` throw `NotImplementedError` when correlated noise is present.
+    - `DownhillFitter._fit_noise()` doesn't use derivatives when correlated noise is present.
 ### Fixed
 - Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
 - Fixed RTD by specifying theme explicitly.
