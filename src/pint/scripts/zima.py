@@ -54,6 +54,12 @@ def main(argv=None):
         default=1400.0,
     )
     parser.add_argument(
+        "--multifreq",
+        help="Simulate multiple frequency TOAs per epoch",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
         "--error",
         help="Random error to apply to each TOA (us)",
         type=float,
@@ -136,6 +142,7 @@ def main(argv=None):
             add_correlated_noise=args.addcorrnoise,
             wideband=args.wideband,
             wideband_dm_error=args.dmerror * pint.dmu,
+            multi_freqs_in_epoch=args.multifreq,
         )
     else:
         log.info(f"Reading initial TOAs from {args.inputtim}")
