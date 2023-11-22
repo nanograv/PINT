@@ -13,6 +13,8 @@
 # pickle files
 *.pickle.gz
 
+*.npy
+
 # Packages
 *.egg
 *.egg-info
