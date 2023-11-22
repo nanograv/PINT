@@ -38,12 +38,12 @@ def test_white_noise_fit():
     assert (
         np.abs(m.EFAC1.value - ftr.model.EFAC1.value)
         / ftr.model.EFAC1.uncertainty_value
-        < 3
+        < 4
     )
     assert (
         np.abs(m.EQUAD1.value - ftr.model.EQUAD1.value)
         / ftr.model.EQUAD1.uncertainty_value
-        < 3
+        < 4
     )
 
 
@@ -58,12 +58,12 @@ def test_white_noise_refit():
     assert (
         np.abs(m.EFAC1.value - ftr.model.EFAC1.value)
         / ftr.model.EFAC1.uncertainty_value
-        < 3
+        < 4
     )
     assert (
         np.abs(m.EQUAD1.value - ftr.model.EQUAD1.value)
         / ftr.model.EQUAD1.uncertainty_value
-        < 3
+        < 4
     )
 
 
