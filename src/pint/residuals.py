@@ -698,6 +698,70 @@ class Residuals:
         chi2, log_norm = self.calc_chi2(lognorm=True)
         return -(chi2 / 2 + log_norm)
 
+    def d_lnlikelihood_d_Ndiag(self):
+        r = self.time_resids
+        sigma = self.get_data_error()
+
+        if not self.model.has_correlated_errors:
+            Ndiag = sigma**2
+
+            term1 = -(r**2) / Ndiag**2
+            term2 = 1 / Ndiag
+
+            return -0.5 * (term1 + term2)
+        else:
+            if (
+                self.model.has_time_correlated_errors
+                or "PHOFF" not in self.model.free_params
+            ):
+                raise NotImplementedError
+
+            ecorr_masks = (
+                self.model.components["EcorrNoise"]
+                .get_noise_basis(self.toas)
+                .T.astype(bool)
+            )
+            ecorr_weights = self.model.components["EcorrNoise"].get_noise_weights(
+                self.toas
+            )
+
+            # For TOAs which don't belong to any ECORR group.
+            noecmask = np.logical_not(np.any(ecorr_masks, axis=0))
+            Ndiag = sigma[noecmask] ** 2
+            s = r[noecmask]
+            term1 = -(s**2) / Ndiag**2
+            term2 = 1 / Ndiag
+            term3 = term4 = 0
+
+            # For TOAs which belong to an ECORR group.
+            for ecmask, c in zip(ecorr_masks, ecorr_weights):
+                Ndiag = sigma[ecmask] ** 2
+                s = r[ecmask]
+                v = np.ones(len(s)) << u.s
+
+                s_Ninv_v = np.sum(s * v / Ndiag)
+                v_Ninv_v = np.sum(v**2 / Ndiag)
+                denom = 1 + c**2 * v_Ninv_v
+
+                term1 += -(s**2) / Ndiag**2
+                term2 += 1 / Ndiag
+                term3 += 2 * c**2 * (
+                    s_Ninv_v / denom * (s * v / Ndiag**2)
+                ) - c**4 * (s_Ninv_v**2 / denom**2 * (v**2 / Ndiag**2))
+                term4 += -(c**2) * (v**2 / Ndiag**2) / denom
+
+            return -0.5 * (term1 + term2 + term3 + term4)
+
+    def d_Ndiag_d_param(self, param):
+        """Derivative of the white noise covariance matrix diagonal elements
+        w.r.t. a white noise parameter (EFAC or EQUAD)."""
+        sigma = self.get_data_error()
+        d_sigma_d_param = self.model.d_toasigma_d_param(self.toas, param)
+        return 2 * sigma * d_sigma_d_param
+
+    def d_lnlikelihood_d_param(self, param):
+        return np.sum(self.d_lnlikelihood_d_Ndiag() * self.d_Ndiag_d_param(param))
+
     def d_lnlikelihood_d_whitenoise_param(self, param):
         if self.model.has_correlated_errors:
             raise NotImplementedError(
