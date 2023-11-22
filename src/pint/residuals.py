@@ -16,6 +16,7 @@ from scipy.linalg import LinAlgError
 from loguru import logger as log
 
 from pint.models.dispersion_model import Dispersion
+from pint.models.parameter import maskParameter
 from pint.phase import Phase
 from pint.utils import (
     sherman_morrison_dot,
@@ -759,8 +760,58 @@ class Residuals:
         d_sigma_d_param = self.model.d_toasigma_d_param(self.toas, param)
         return 2 * sigma * d_sigma_d_param
 
+    def d_lnlikelihood_d_ECORR(self, param):
+        par = self.model[param]
+
+        fullmask = par.select_toa_mask(self.toas)
+        t = self.toas[fullmask]
+
+        sigma = self.get_data_error()
+        r = self.time_resids
+        c = par.quantity
+
+        ecorr_masks = (
+            self.model.components["EcorrNoise"].get_noise_basis(t).T.astype(bool)
+        )
+
+        result = 0
+
+        # For TOAs which belong to an ECORR group.
+        for ecmask in ecorr_masks:
+            Ndiag = sigma[ecmask] ** 2
+            s = r[ecmask]
+            v = np.ones_like(s)
+
+            s_Ninv_v = np.sum(s * v / Ndiag)
+            v_Ninv_v = np.sum(v**2 / Ndiag)
+            denom = 1 + c**2 * v_Ninv_v
+
+            result += (
+                c * (s_Ninv_v**2 - v_Ninv_v - c**2 * v_Ninv_v**2) / denom**2
+            )
+
+        return result
+
     def d_lnlikelihood_d_param(self, param):
-        return np.sum(self.d_lnlikelihood_d_Ndiag() * self.d_Ndiag_d_param(param))
+        par = self.model[param]
+
+        if self.model.has_correlated_errors and (
+            self.model.has_time_correlated_errors
+            or "PHOFF" not in self.model.free_params
+        ):
+            raise NotImplementedError
+
+        if isinstance(par, maskParameter):
+            if par.prefix in ["EFAC", "EQUAD"]:
+                return np.sum(
+                    self.d_lnlikelihood_d_Ndiag() * self.d_Ndiag_d_param(param)
+                )
+            elif par.prefix == "ECORR":
+                return self.d_lnlikelihood_d_ECORR(param)
+
+        raise NotImplementedError(
+            f"d_lnlikelihood_d_param is not defined for parameter {param}."
+        )
 
     def d_lnlikelihood_d_whitenoise_param(self, param):
         if self.model.has_correlated_errors:
