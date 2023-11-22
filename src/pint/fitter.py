@@ -1411,7 +1411,7 @@ class DownhillFitter(Fitter):
 
                 return np.array(
                     [
-                        -res.d_lnlikelihood_d_whitenoise_param(par).value
+                        -res.d_lnlikelihood_d_param(par).value
                         for par in free_noise_params
                     ]
                 )
