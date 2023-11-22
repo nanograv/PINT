@@ -190,6 +190,7 @@ def make_fake_toas_uniform(
     include_bipm=False,
     include_gps=True,
     multi_freqs_in_epoch=False,
+    flags=None,
 ):
     """Simulate uniformly spaced TOAs.
 
@@ -233,6 +234,8 @@ def make_fake_toas_uniform(
         (see :class:`pint.observatory.topo_obs.TopoObs`)
     multi_freqs_in_epoch : bool, optional
         Whether to generate multiple frequency TOAs for the same epoch.
+    flags: None or dict
+        Dictionary of flags to be added to all simulated TOAs.
 
     Returns
     -------
@@ -293,6 +296,7 @@ def make_fake_toas_uniform(
         bipm_version=clk_version["bipm_version"],
         include_gps=clk_version["include_gps"],
         planets=model["PLANET_SHAPIRO"].value if "PLANET_SHAPIRO" in model else False,
+        flags=flags,
     )
 
     if wideband:
@@ -321,6 +325,7 @@ def make_fake_toas_fromMJDs(
     include_bipm=False,
     include_gps=True,
     multi_freqs_in_epoch=False,
+    flags=None,
 ):
     """Simulate TOAs from a list of MJDs
 
@@ -356,6 +361,8 @@ def make_fake_toas_fromMJDs(
         (see :class:`pint.observatory.topo_obs.TopoObs`)
     multi_freqs_in_epoch : bool, optional
         Whether to generate multiple frequency TOAs for the same epoch.
+    flags: None or dict
+        Dictionary of flags to be added to all simulated TOAs.
 
     Returns
     -------
@@ -420,6 +427,7 @@ def make_fake_toas_fromMJDs(
         bipm_version=clk_version["bipm_version"],
         include_gps=clk_version["include_gps"],
         planets=model["PLANET_SHAPIRO"].value,
+        flags=flags,
     )
 
     if wideband:

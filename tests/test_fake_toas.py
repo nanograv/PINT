@@ -68,11 +68,22 @@ def test_roundtrip(clock, planet):
         obs="gbt",
         error=1 * u.microsecond,
         freq=1400 * u.MHz,
+        flags={"be": "GUPPI"},
     )
     res = pint.residuals.Residuals(toas, model)
     toas2 = roundtrip(toas, model)
     res2 = pint.residuals.Residuals(toas2, model)
     assert np.allclose(res.time_resids, res2.time_resids)
+    assert (
+        "be" in toas.get_all_flags()
+        and all(np.array(toas.get_flag_value("be")[0]) == "GUPPI")
+        and len(toas.get_flag_value("be")[0]) == len(toas)
+    )
+    assert (
+        "be" in toas2.get_all_flags()
+        and all(np.array(toas2.get_flag_value("be")[0]) == "GUPPI")
+        and len(toas2.get_flag_value("be")[0]) == len(toas2)
+    )
 
 
 def test_noise_addition():
