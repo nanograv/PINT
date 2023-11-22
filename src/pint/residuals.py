@@ -805,9 +805,9 @@ class Residuals:
             if par.prefix in ["EFAC", "EQUAD"]:
                 return np.sum(
                     self.d_lnlikelihood_d_Ndiag() * self.d_Ndiag_d_param(param)
-                )
+                ).to(1 / par.units)
             elif par.prefix == "ECORR":
-                return self.d_lnlikelihood_d_ECORR(param)
+                return self.d_lnlikelihood_d_ECORR(param).to(1 / par.units)
 
         raise NotImplementedError(
             f"d_lnlikelihood_d_param is not defined for parameter {param}."
@@ -823,7 +823,7 @@ class Residuals:
     #     r = self.time_resids
     #     sigma = self.get_data_error()
     #     d_sigma_d_param = self.model.d_toasigma_d_param(self.toas, param)
-    #     return np.sum(((r / sigma) ** 2 - 1) / sigma * d_sigma_d_param)
+    #     return np.sum(((r / sigma) ** 2 - 1) / sigma * d_sigma_d_param).to(1/self.model[param].units)
 
     def ecorr_average(self, use_noise_model=True):
         """Uses the ECORR noise model time-binning to compute "epoch-averaged" residuals.
