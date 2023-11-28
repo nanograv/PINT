@@ -45,7 +45,7 @@ the released changes.
 - `Residuals.calc_whitened_resids()` method
 - Plot wideband DM measurements, wideband DM residuals, and wideband DM errors in `pintk`. (Disabled for narrowband data.)
 - Optionally generate multi-frequency TOAs in an epoch using `make_fake_toas_uniform` and `make_fake_toas_fromMJDs`
-- Documentation: Example notebook for simulations
+- Documentation: Example notebook for simulations and flag usage
 ### Fixed
 - Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
 - Fixed RTD by specifying theme explicitly.
@@ -61,4 +61,5 @@ the released changes.
 - `pintk` correctly displays initial log level
 - Fixed sign of y coordinate for Pico Veleta observatory (also being fixed in tempo2)
 - Minor bug fixes in example notebooks
+- Set `UNITS` to TDB if it's not given in the par file.
 ### Removed

@@ -51,6 +51,7 @@ class TestModelBuilding:
 
     def test_from_par(self):
         tm = get_model(self.parfile)
+        assert tm.UNITS.value == "TDB"
         assert len(tm.components) == 6
         assert len(tm.DelayComponent_list) == 4
         assert len(tm.PhaseComponent_list) == 2
