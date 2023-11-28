@@ -198,6 +198,10 @@ class ModelBuilder:
             warnings.warn(f"Unrecognized parfile line '{p_line}'", UserWarning)
             # log.warning(f"Unrecognized parfile line '{p_line}'")
 
+        if tm.UNITS.value is None or tm.UNITS.value == "":
+            log.warning("UNITS is not specified. Assuming TDB...")
+            tm.UNITS.value = "TDB"
+
         if tm.UNITS.value == "TCB" and convert_tcb:
             convert_tcb_tdb(tm)
 
