@@ -62,4 +62,5 @@ the released changes.
 - Fixed sign of y coordinate for Pico Veleta observatory (also being fixed in tempo2)
 - Minor bug fixes in example notebooks
 - Set `UNITS` to TDB if it's not given in the par file.
+- Fixed runtime data README 
 ### Removed
