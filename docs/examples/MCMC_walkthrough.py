@@ -108,7 +108,7 @@ fitter.sampler.random_state = state
 
 # %% [markdown]
 #
-# The next step determines the predicted starting phase of the pulse, which is used to set an accurate initial phase in the model. This will result in a more accurate fit. This step uses the *marginalize over phase* method implemented in ``pint.scripts.event_optimize.py``.
+# The next step determines the predicted starting phase of the pulse, which is used to set an accurate initial phase in the model. This will result in a more accurate fit, although we don't actually use it here. This step uses the *marginalize over phase* method implemented in ``pint.scripts.event_optimize.py``.
 #
 
 # %%
