@@ -10,5 +10,6 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
+- Added numdifftools to setup.cfg to match requirements.txt
 ### Fixed
 ### Removed
