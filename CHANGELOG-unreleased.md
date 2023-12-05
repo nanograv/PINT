@@ -13,4 +13,5 @@ the released changes.
 - Added numdifftools to setup.cfg to match requirements.txt
 ### Fixed
 - `MCMC_walkthrough` notebook now runs
+- Fixed runtime data README 
 ### Removed
