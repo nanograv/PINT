@@ -13,4 +13,5 @@ the released changes.
 - Added numdifftools to setup.cfg to match requirements.txt
 - Added `convert_parfile` to list of command-line tools in RTD
 ### Fixed
+- Fixed runtime data README 
 ### Removed
