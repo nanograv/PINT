@@ -12,4 +12,5 @@ the released changes.
 ### Added
 - Added numdifftools to setup.cfg to match requirements.txt
 ### Fixed
+- Fixed runtime data README 
 ### Removed
