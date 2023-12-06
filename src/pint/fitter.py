@@ -1278,7 +1278,7 @@ class DownhillFitter(Fitter):
     def fit_toas(
         self,
         maxiter=20,
-        noise_fit_niter=3,
+        noise_fit_niter=2,
         required_chi2_decrease=1e-2,
         max_chi2_increase=1e-2,
         min_lambda=1e-3,
