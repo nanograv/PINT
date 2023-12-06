@@ -111,6 +111,10 @@ plt.show()
 # ## Fitting for ECORRs
 
 # %%
+# Note the explicit offset (PHOFF) in the par file below.
+# Implicit offset subtraction is typically not accurate enough when
+# ECORR (or any other type of correlated noise) is present.
+# i.e., PHOFF should be a free parameter when ECORRs are being fit.
 par = """
     PSR             TEST2
     RAJ             05:00:00    1
@@ -118,6 +122,7 @@ par = """
     PEPOCH          55000
     F0              100         1
     F1              -1e-15      1
+    PHOFF           0           1
     EFAC tel gbt    1.3         1
     ECORR tel gbt   1.1         1
     TZRMJD          55000
