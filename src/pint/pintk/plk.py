@@ -52,6 +52,7 @@ plotlabels = {
     "frequency": r"Observing Frequency (MHz)",
     "TOA error": r"TOA uncertainty ($\mu$s)",
     "rounded MJD": r"MJD",
+    "model DM": "Model DM (pc/cm3)",
     "WB DM": "Wideband DM (pc/cm3)",
     "WB DM res": "Wideband DM residual (pc/cm3)",
     "WB DM err": "Wideband DM error (pc/cm3)",
@@ -1266,6 +1267,12 @@ class PlkWidget(tk.Frame):
         elif label == "rounded MJD":
             data = np.floor(self.psr.all_toas.get_mjds() + 0.5 * u.d)
             error = self.psr.all_toas.get_errors().to(u.d)
+        elif label == "model DM":
+            if self.psr.fitted:
+                data = self.psr.postfit_model.total_dm(self.psr.all_toas)
+            else:
+                data = self.psr.prefit_model.total_dm(self.psr.all_toas)
+            error = None
         elif label == "WB DM":
             if self.psr.all_toas.wideband:
                 data = self.psr.all_toas.get_dms().to(pint.dmu)
