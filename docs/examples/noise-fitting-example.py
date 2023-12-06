@@ -108,9 +108,6 @@ plt.legend()
 plt.show()
 
 # %% [markdown]
-# We see that the measurements are consistent with the injected values.
-
-# %% [markdown]
 # ## Fitting for ECORRs
 
 # %%
@@ -184,7 +181,3 @@ plt.xlabel("EFAC_tel_gbt")
 plt.ylabel("ECORR_tel_gbt (us)")
 plt.legend()
 plt.show()
-
-# %%
-# %% [markdown]
-# Again, we see that the measurements are consistent with the injected values.
