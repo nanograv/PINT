@@ -22,6 +22,7 @@ the released changes.
     - Refactored WLS chi2 code out of `Residuals.calc_chi2()` into a new function `Residuals._calc_wls_chi2()`
     - `Residuals.d_lnlikelihood_d_whitenoise_param` will throw a `NotImplementedError` when correlated noise is present.
     - `DownhillFitter._fit_noise()` doesn't use derivatives when correlated noise is present.
+    - Documentation: Noise fitting example notebook.
 ### Fixed
 - Fixed runtime data README 
 - Use `Hessian` instead of `Hessdiag` in `DownhillFitter._fit_noise`; compute noise parameter uncertainties only once in `DownhillFitter.fit_toas`.
