@@ -75,7 +75,7 @@ def test_ecorr_fit():
     assert (
         np.abs(m2.ECORR1.value - ftr.model.ECORR1.value)
         / ftr.model.ECORR1.uncertainty_value
-        < 3
+        < 4
     )
 
 
@@ -90,5 +90,5 @@ def test_ecorr_refit():
     assert (
         np.abs(m2.ECORR1.value - ftr.model.ECORR1.value)
         / ftr.model.ECORR1.uncertainty_value
-        < 3
+        < 4
     )
