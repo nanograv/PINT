@@ -67,7 +67,7 @@ import numpy as np
 import scipy.linalg
 import scipy.optimize as opt
 from loguru import logger as log
-from numdifftools import Hessdiag
+from numdifftools import Hessian
 
 import pint
 import pint.utils
@@ -1278,7 +1278,7 @@ class DownhillFitter(Fitter):
     def fit_toas(
         self,
         maxiter=20,
-        noise_fit_niter=5,
+        noise_fit_niter=3,
         required_chi2_decrease=1e-2,
         max_chi2_increase=1e-2,
         min_lambda=1e-3,
@@ -1345,7 +1345,7 @@ class DownhillFitter(Fitter):
             )
 
         log.debug("Will fit for noise parameters.")
-        for _ in range(noise_fit_niter):
+        for ii in range(noise_fit_niter):
             self._fit_toas(
                 maxiter=maxiter,
                 required_chi2_decrease=required_chi2_decrease,
@@ -1353,8 +1353,17 @@ class DownhillFitter(Fitter):
                 min_lambda=min_lambda,
                 debug=debug,
             )
-            values, errors = self._fit_noise(noisefit_method=noisefit_method)
-            self._update_noise_params(values, errors)
+
+            if ii == noise_fit_niter - 1:
+                values, errors = self._fit_noise(
+                    noisefit_method=noisefit_method, uncertainty=True
+                )
+                self._update_noise_params(values, errors)
+            else:
+                values = self._fit_noise(
+                    noisefit_method=noisefit_method, uncertainty=False
+                )
+                self._update_noise_params(values)
 
         return self._fit_toas(
             maxiter=maxiter,
@@ -1376,14 +1385,19 @@ class DownhillFitter(Fitter):
             if not getattr(self.model, fp).frozen
         ]
 
-    def _update_noise_params(self, values, errors):
+    def _update_noise_params(self, values, errors=None):
         """Update the model using estimated noise parameters."""
         free_noise_params = self._get_free_noise_params()
-        for fp, val, err in zip(free_noise_params, values, errors):
-            getattr(self.model, fp).value = val
-            getattr(self.model, fp).uncertainty_value = err
 
-    def _fit_noise(self, noisefit_method="Newton-CG"):
+        if errors is not None:
+            for fp, val, err in zip(free_noise_params, values, errors):
+                getattr(self.model, fp).value = val
+                getattr(self.model, fp).uncertainty_value = err
+        else:
+            for fp, val in zip(free_noise_params, values):
+                getattr(self.model, fp).value = val
+
+    def _fit_noise(self, noisefit_method="Newton-CG", uncertainty=False):
         """Estimate noise parameters and their uncertainties. Noise parameters
         are estimated by numerically maximizing the log-likelihood function including
         the normalization term. The uncertainties thereof are computed using the
@@ -1422,10 +1436,11 @@ class DownhillFitter(Fitter):
         else:
             maxlike_result = opt.minimize(_mloglike, xs0, method="Nelder-Mead")
 
-        hess = Hessdiag(_mloglike)
-        errs = np.sqrt(1 / hess(maxlike_result.x))
+        if uncertainty:
+            hess = Hessian(_mloglike)
+            errs = np.sqrt(np.diag(np.linalg.pinv(hess(maxlike_result.x))))
 
-        return maxlike_result.x, errs
+        return (maxlike_result.x, errs) if uncertainty else maxlike_result.x
 
 
 class WLSState(ModelState):
