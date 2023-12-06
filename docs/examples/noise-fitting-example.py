@@ -111,7 +111,7 @@ plt.show()
 # We see that the measurements are consistent with the injected values.
 
 # %% [markdown]
-# Fitting for ECORRs
+# ## Fitting for ECORRs
 
 # %%
 par = """
