@@ -11,6 +11,7 @@ the released changes.
 ### Changed
 ### Added
 - Added numdifftools to setup.cfg to match requirements.txt
+- Documentation: Added `convert_parfile` to list of command-line tools in RTD
 ### Fixed
 - `MCMC_walkthrough` notebook now runs
 - Fixed runtime data README 
