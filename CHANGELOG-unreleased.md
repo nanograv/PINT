@@ -20,7 +20,7 @@ the released changes.
     - Refactored repeated code out of `Residuals.calc_phase_mean` and `Residuals.calc_time_mean`
     - Simplified `Residuals._calc_gls_chi2()` so that it uses Woodbury identity directly
     - Refactored WLS chi2 code out of `Residuals.calc_chi2()` into a new function `Residuals._calc_wls_chi2()`
-    - `Residuals.d_lnlikelihood_d_whitenoise_param` throw `NotImplementedError` when correlated noise is present.
+    - `Residuals.d_lnlikelihood_d_whitenoise_param` will throw a `NotImplementedError` when correlated noise is present.
     - `DownhillFitter._fit_noise()` doesn't use derivatives when correlated noise is present.
 ### Fixed
 - Fixed runtime data README 
