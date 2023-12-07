@@ -24,6 +24,7 @@ the released changes.
     - `DownhillFitter._fit_noise()` doesn't use derivatives when correlated noise is present.
     - Documentation: Noise fitting example notebook.
 ### Fixed
+- `MCMC_walkthrough` notebook now runs
 - Fixed runtime data README 
 - Use `Hessian` instead of `Hessdiag` in `DownhillFitter._fit_noise`; compute noise parameter uncertainties only once in `DownhillFitter.fit_toas`.
 ### Removed
