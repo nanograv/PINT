@@ -15,5 +15,6 @@ the released changes.
 - Plot model DM in pintk
 - More tests for pintk
 ### Fixed
+- `MCMC_walkthrough` notebook now runs
 - Fixed runtime data README 
 ### Removed
