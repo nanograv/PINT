@@ -14,4 +14,5 @@ the released changes.
 - Documentation: Added `convert_parfile` to list of command-line tools in RTD
 ### Fixed
 - Fixed runtime data README 
+- Fixed `derived_params` when OMDOT has 0 uncertainty
 ### Removed
