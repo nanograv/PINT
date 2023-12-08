@@ -11,6 +11,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from pint.models.dispersion_model import Dispersion
 
 import pint.pintk.pulsar as pulsar
 import pint.pintk.colormodes as cm
@@ -550,6 +551,11 @@ class PlkXYChoiceWidget(tk.Frame):
             if choice == "frequency" and (
                 (len(np.unique(self.master.psr.all_toas["freq"])) <= 1)
                 or np.any(np.isinf(self.master.psr.all_toas["freq"]))
+            ):
+                self.xbuttons[ii].configure(state="disabled")
+                self.ybuttons[ii].configure(state="disabled")
+            if choice == "model DM" and not any(
+                isinstance(x, Dispersion) for x in model.components.values()
             ):
                 self.xbuttons[ii].configure(state="disabled")
                 self.ybuttons[ii].configure(state="disabled")
