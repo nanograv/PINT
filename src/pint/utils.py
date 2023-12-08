@@ -2630,7 +2630,9 @@ def akaike_information_criterion(model, toas):
         lnL = Residuals(toas, model).lnlikelihood()
         return 2 * (k - lnL)
     else:
-        raise NotImplementedError
+        raise NotImplementedError(
+            "akaike_information_criterion is not yet implemented for wideband data."
+        )
 
 
 def sherman_morrison_dot(Ndiag, v, w, x, y):
