@@ -2960,7 +2960,22 @@ class TimingModel:
         return new_model
 
     def get_derived_params(self, rms=None, ntoas=None, returndict=False):
-        """Return a string with various derived parameters from the fitted model"""
+        """Return a string with various derived parameters from the fitted model
+
+        Parameters
+        ----------
+        rms : astropy.units.Quantity, optional
+            RMS of fit for checking ELL1 validity
+        ntoas : int, optional
+            Number of TOAs for checking ELL1 validity
+        returndict : bool, optional
+            Whether to only return the string of results or also a dictionary
+
+        Returns
+        -------
+        results : str
+        parameters : dict, optional
+        """
 
         import uncertainties.umath as um
         from uncertainties import ufloat
@@ -3148,7 +3163,9 @@ class TimingModel:
                     )
                     s += f"Pulsar mass (Shapiro Delay) = {psrmass}"
                     outdict["Mp (Msun)"] = psrmass
-        return s if not returndict else s, outdict
+        if not returndict:
+            return s
+        return s, outdict
 
 
 class ModelMeta(abc.ABCMeta):
