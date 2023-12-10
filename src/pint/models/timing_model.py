@@ -32,12 +32,14 @@ import abc
 import copy
 import inspect
 import contextlib
+import contextlib
 from collections import OrderedDict, defaultdict
 from functools import wraps
 from warnings import warn
 from uncertainties import ufloat
 
 import astropy.time as time
+from astropy import units as u, constants as c
 from astropy import units as u, constants as c
 import numpy as np
 from astropy.utils.decorators import lazyproperty
@@ -2949,22 +2951,7 @@ class TimingModel:
         return new_model
 
     def get_derived_params(self, rms=None, ntoas=None, returndict=False):
-        """Return a string with various derived parameters from the fitted model
-
-        Parameters
-        ----------
-        rms : astropy.units.Quantity, optional
-            RMS of fit for checking ELL1 validity
-        ntoas : int, optional
-            Number of TOAs for checking ELL1 validity
-        returndict : bool, optional
-            Whether to only return the string of results or also a dictionary
-
-        Returns
-        -------
-        results : str
-        parameters : dict, optional
-        """
+        """Return a string with various derived parameters from the fitted model"""
 
         import uncertainties.umath as um
         from uncertainties import ufloat
@@ -3009,7 +2996,7 @@ class TimingModel:
             s += "\n"
             px = self.PX.as_ufloat(u.arcsec)
             s += f"Parallax distance = {1.0/px:.3uP} pc\n"
-            outdict["Dist (pc)"] = 1.0 / px
+            outdict["Dist (pc):P"] = 1.0 / px
         # Now binary system derived parameters
         if self.is_binary:
             for x in self.components:
@@ -3091,7 +3078,7 @@ class TimingModel:
                 # This is the mass function, done explicitly so that we get
                 # uncertainty propagation automatically.
                 # TODO: derived quantities funcs should take uncertainties
-                fm = 4.0 * np.pi**2 * a1**3 / (4.925490947e-6 * (pb * 86400) ** 2)
+                fm = 4.0 * np.pi**2 * a1**3 / (4.925490947e-6 * pb**2)
                 s += f"Mass function = {fm:SP} Msun\n"
                 outdict["Mass Function (Msun)"] = fm
                 mcmed = pint.derived_quantities.companion_mass(
@@ -3152,9 +3139,7 @@ class TimingModel:
                     )
                     s += f"Pulsar mass (Shapiro Delay) = {psrmass}"
                     outdict["Mp (Msun)"] = psrmass
-        if not returndict:
-            return s
-        return s, outdict
+        return s if not returndict else s, outdict
 
 
 class ModelMeta(abc.ABCMeta):
