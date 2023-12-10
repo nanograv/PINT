@@ -474,6 +474,23 @@ class Fitter:
         return s
 
     def get_derived_params(self, returndict=False):
+        """Return a string with various derived parameters from the fitted model
+
+        Parameters
+        ----------
+        returndict : bool, optional
+            Whether to only return the string of results or also a dictionary
+
+        Returns
+        -------
+        results : str
+        parameters : dict, optional
+
+        See Also
+        --------
+        :func:`pint.models.timing_model.TimingModel.get_derived_params`
+        """
+
         return self.model.get_derived_params(
             rms=self.resids.toa.rms_weighted()
             if self.is_wideband
