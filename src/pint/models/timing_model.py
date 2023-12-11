@@ -3091,7 +3091,7 @@ class TimingModel:
                 # This is the mass function, done explicitly so that we get
                 # uncertainty propagation automatically.
                 # TODO: derived quantities funcs should take uncertainties
-                fm = 4.0 * np.pi**2 * a1**3 / (4.925490947e-6 * pb**2)
+                fm = 4.0 * np.pi**2 * a1**3 / (4.925490947e-6 * (pb * 86400) ** 2)
                 s += f"Mass function = {fm:SP} Msun\n"
                 outdict["Mass Function (Msun)"] = fm
                 mcmed = pint.derived_quantities.companion_mass(
