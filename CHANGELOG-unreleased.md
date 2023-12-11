@@ -17,4 +17,5 @@ the released changes.
 ### Fixed
 - `MCMC_walkthrough` notebook now runs
 - Fixed runtime data README 
+- Fixed `derived_params` when OMDOT has 0 uncertainty
 ### Removed
