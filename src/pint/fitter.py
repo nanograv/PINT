@@ -72,7 +72,12 @@ from numdifftools import Hessian
 import pint
 import pint.utils
 import pint.derived_quantities
-from pint.models.parameter import AngleParameter, boolParameter, strParameter
+from pint.models.parameter import (
+    AngleParameter,
+    boolParameter,
+    strParameter,
+    funcParameter,
+)
 from pint.pint_matrix import (
     CorrelationMatrix,
     CovarianceMatrix,
@@ -624,7 +629,11 @@ class Fitter:
                 and self.model.OMDOT.value != 0.0
             ):
                 omdot = self.model.OMDOT.quantity
-                omdot_err = self.model.OMDOT.uncertainty
+                omdot_err = (
+                    self.model.OMDOT.uncertainty
+                    if self.model.OMDOT.uncertainty is not None
+                    else 0 * self.model.OMDOT.quantity.unit
+                )
                 ecc = (
                     ecc.n * u.dimensionless_unscaled
                     if ell1

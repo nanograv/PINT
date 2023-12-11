@@ -26,5 +26,6 @@ the released changes.
 ### Fixed
 - `MCMC_walkthrough` notebook now runs
 - Fixed runtime data README 
+- Fixed `derived_params` when OMDOT has 0 uncertainty
 - Use `Hessian` instead of `Hessdiag` in `DownhillFitter._fit_noise`; compute noise parameter uncertainties only once in `DownhillFitter.fit_toas`.
 ### Removed
