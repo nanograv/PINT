@@ -72,7 +72,12 @@ from numdifftools import Hessdiag
 import pint
 import pint.utils
 import pint.derived_quantities
-from pint.models.parameter import AngleParameter, boolParameter, strParameter
+from pint.models.parameter import (
+    AngleParameter,
+    boolParameter,
+    strParameter,
+    funcParameter,
+)
 from pint.pint_matrix import (
     CorrelationMatrix,
     CovarianceMatrix,
