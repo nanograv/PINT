@@ -3020,7 +3020,7 @@ class TimingModel:
             s += "\n"
             px = self.PX.as_ufloat(u.arcsec)
             s += f"Parallax distance = {1.0/px:.3uP} pc\n"
-            outdict["Dist (pc):P"] = 1.0 / px
+            outdict["Dist (pc)"] = 1.0 / px
         # Now binary system derived parameters
         if self.is_binary:
             for x in self.components:
