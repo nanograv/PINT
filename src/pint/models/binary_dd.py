@@ -2,11 +2,13 @@
 import numpy as np
 from astropy import units as u, constants as c
 
-from pint.models.parameter import floatParameter, funcParameter
+from pint import Tsun
+from pint.models.parameter import floatParameter, funcParameter, intParameter
 from pint.models.pulsar_binary import PulsarBinary
 from pint.models.stand_alone_psr_binaries.DD_model import DDmodel
 from pint.models.stand_alone_psr_binaries.DDS_model import DDSmodel
 from pint.models.stand_alone_psr_binaries.DDGR_model import DDGRmodel
+from pint.models.stand_alone_psr_binaries.DDH_model import DDHmodel
 import pint.derived_quantities
 
 
@@ -18,6 +20,14 @@ def _sini_from_shapmax(SHAPMAX):
 
 def _mp_from_mtot(MTOT, M2):
     return MTOT - M2
+
+
+def _m2_from_h3_stigma(H3, STIGMA):
+    return (H3 / Tsun / STIGMA**3) * u.Msun
+
+
+def _sini_from_stigma(STIGMA):
+    return 2 * STIGMA / (1 + STIGMA**2)
 
 
 class BinaryDD(PulsarBinary):
@@ -354,3 +364,83 @@ class BinaryDDGR(BinaryDD):
     def update_binary_object(self, toas, acc_delay=None):
         super().update_binary_object(toas, acc_delay)
         self.binary_instance._updatePK()
+
+
+class BinaryDDH(BinaryDD):
+    """DD modified to use H3 parameter for Shapiro delay.
+
+    The actual calculations for this are done in
+    :class:`pint.models.stand_alone_psr_binaries.ELL1_model.ELL1model`.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.binary_dd.BinaryDDH
+
+    Notes
+    -----
+    Default value in `pint` for `NHARMS` is 7, while in `tempo2` it is 4.
+
+    References
+    ----------
+    - Freire & Wex (2010), MNRAS, 409 (1), 199-212 [1]_
+
+    .. [1] https://ui.adsabs.harvard.edu/abs/2010MNRAS.409..199F/abstract
+    """
+
+    register = True
+
+    def __init__(self):
+        super().__init__()
+        self.binary_model_name = "DDH"
+        self.binary_model_class = DDHmodel
+
+        self.add_param(
+            floatParameter(
+                name="H3",
+                units="second",
+                description="Shapiro delay parameter H3 as in Freire and Wex 2010 Eq(20)",
+                long_double=True,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="STIGMA",
+                units="",
+                description="Shapiro delay parameter STIGMA as in Freire and Wex 2010 Eq(12)",
+                long_double=True,
+                aliases=["VARSIGMA", "STIG"],
+            )
+        )
+        self.remove_param("M2")
+        self.remove_param("SINI")
+        self.add_param(
+            funcParameter(
+                name="SINI",
+                units="",
+                description="Sine of inclination angle",
+                params=("STIGMA",),
+                func=_sini_from_stigma,
+            )
+        )
+        self.add_param(
+            funcParameter(
+                name="M2",
+                units=u.Msun,
+                description="Companion mass",
+                params=("H3", "STIGMA"),
+                func=_m2_from_h3_stigma,
+            )
+        )
+
+    def setup(self):
+        """Parameter setup."""
+        super().setup()
+
+        self.update_binary_object(None)
+
+    def validate(self):
+        """Parameter validation."""
+        super().validate()
+        # if self.H3.quantity is None:
+        #     raise MissingParameter("ELL1H", "H3", "'H3' is required for ELL1H model")

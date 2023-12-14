@@ -148,13 +148,17 @@ EPS2DOT           -1e-10 1 1e-11
 kwargs = {"ELL1H": {"NHARMS": 3, "useSTIGMA": True}, "DDK": {"KOM": 0 * u.deg}}
 
 
-@pytest.mark.parametrize("output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK"])
+@pytest.mark.parametrize(
+    "output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK", "DDH"]
+)
 def test_ELL1(output):
     m = get_model(io.StringIO(parELL1))
     mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
 
 
-@pytest.mark.parametrize("output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK"])
+@pytest.mark.parametrize(
+    "output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK", "DDH"]
+)
 def test_ELL1_roundtrip(output):
     m = get_model(io.StringIO(parELL1))
     mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
@@ -216,7 +220,9 @@ def test_ELL1_roundtripFB0(output):
             ), f"{p}: {getattr(m, p).value} does not match {getattr(mback, p).value}"
 
 
-@pytest.mark.parametrize("output", ["ELL1", "ELL1k", "ELL1H", "DD", "BT", "DDS", "DDK"])
+@pytest.mark.parametrize(
+    "output", ["ELL1", "ELL1k", "ELL1H", "DD", "BT", "DDS", "DDH", "DDK"]
+)
 def test_DD(output):
     m = get_model(
         io.StringIO(
@@ -226,7 +232,9 @@ def test_DD(output):
     mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
 
 
-@pytest.mark.parametrize("output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK"])
+@pytest.mark.parametrize(
+    "output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDH", "DDK"]
+)
 def test_DD_roundtrip(output):
     s = f"{parDD}\nBINARY DD\nSINI {np.sin(i).value} 1 0.01\nA1 {A1.value}\nPB {PB.value} 1 0.1\nM2 {Mc.value} 1 0.01\n"
     if output not in ["ELL1", "ELL1H"]:
@@ -249,14 +257,14 @@ def test_DD_roundtrip(output):
                 if output in ["ELL1", "ELL1H", "ELL1k"] and p in ["ECC"]:
                     # we lose precision on ECC since it also contains a contribution from OM now
                     continue
-                if output == "ELL1H" and p == "M2":
+                if output in ["ELL1H", "DDH"] and p == "M2":
                     # this also loses precision
                     continue
                 assert np.isclose(
                     getattr(m, p).uncertainty_value,
                     getattr(mback, p).uncertainty_value,
                     rtol=0.2,
-                )
+                ), f"Parameter '{p}' failed: initial uncertainty {getattr(m, p).uncertainty_value} but returned {getattr(mback, p).uncertainty_value}"
         else:
             assert getattr(m, p).value == getattr(mback, p).value
 
