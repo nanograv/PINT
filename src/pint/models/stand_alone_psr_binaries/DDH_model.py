@@ -10,7 +10,7 @@ from .DD_model import DDmodel
 
 
 class DDHmodel(DDmodel):
-    """Damour and Deruelle model modified to use H3 parameter for Shapiro delay.
+    """Damour and Deruelle model modified to use H3/STIGMA parameter for Shapiro delay.
 
     It supports all the parameters defined in :class:`pint.models.pulsar_binary.PulsarBinary`
     and :class:`pint.models.binary_dd.BinaryDD` plus:
@@ -34,18 +34,10 @@ class DDHmodel(DDmodel):
     ----
     Based on Freire and Wex (2010)
 
-    The :class:`~pint.models.binary_ell1.BinaryDDH` model parameterizes the Shapiro
-    delay differently compare to the :class:`~pint.models.binary_ell1.BinaryDD`
-    model. A fourier series expansion is used for the Shapiro delay:
-
-    .. math::
-
-        \\Delta_S = -2r \\left( \\frac{a_0}{2} + \\Sum_k (a_k \\cos k\\phi + b_k \\sin k \phi) \\right)
-
-
-    Notes
+    TNotes
     -----
-    Default value in `pint` for `NHARMS` is 7, while in `tempo2` it is 4.
+    This uses the full expression for the Shapiro delay, not the harmonic
+    decomposition used in :class:`pint.models.stand_alone_psr_binaries.ELL1H_model.ELL1Hmodel`.
 
     References
     ----------

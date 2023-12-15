@@ -367,10 +367,10 @@ class BinaryDDGR(BinaryDD):
 
 
 class BinaryDDH(BinaryDD):
-    """DD modified to use H3 parameter for Shapiro delay.
+    """DD modified to use H3/STIGMA parameter for Shapiro delay.
 
     The actual calculations for this are done in
-    :class:`pint.models.stand_alone_psr_binaries.ELL1_model.ELL1model`.
+    :class:`pint.models.stand_alone_psr_binaries.DDH_model.DDHmodel`.
 
     Parameters supported:
 
@@ -379,7 +379,8 @@ class BinaryDDH(BinaryDD):
 
     Notes
     -----
-    Default value in `pint` for `NHARMS` is 7, while in `tempo2` it is 4.
+    This uses the full expression for the Shapiro delay, not the harmonic
+    decomposition used in :class:`pint.models.stand_alone_psr_binaries.ELL1H_model.ELL1Hmodel`.
 
     References
     ----------

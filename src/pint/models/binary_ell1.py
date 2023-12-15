@@ -305,7 +305,7 @@ class BinaryELL1H(BinaryELL1):
     """ELL1 modified to use H3 parameter for Shapiro delay.
 
     The actual calculations for this are done in
-    :class:`pint.models.stand_alone_psr_binaries.ELL1_model.ELL1model`.
+    :class:`pint.models.stand_alone_psr_binaries.ELL1H_model.ELL1Hmodel`.
 
     Parameters supported:
 
