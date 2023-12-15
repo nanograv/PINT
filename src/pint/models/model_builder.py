@@ -444,11 +444,22 @@ class ModelBuilder:
         # the overall control parameters. This will get us the binary model name
         # build the base fo the timing model
         # pint_param_dict, unknown_param = self._pintify_parfile(param_inpar)
-        binary = param_inpar.get("BINARY", None)
-        if binary is not None:
-            binary = binary[0]
-            binary_cp = self.all_components.search_binary_components(binary)
-            selected_components.add(binary_cp.__class__.__name__)
+        try:
+            binary = param_inpar.get("BINARY", None)
+            if binary is not None:
+                binary = binary[0]
+                binary_cp = self.all_components.search_binary_components(binary)
+                selected_components.add(binary_cp.__class__.__name__)
+        except UnknownBinaryModel as ubm:
+            # Guess what the binary model should be
+            binary_model_guesses = guess_binary_model(param_inpar)
+
+            # Modify the error message
+            new_message = f"{str(ubm)} Perhaps use {binary_model_guesses[0]}?"
+
+            # Re-raise the error with the new message
+            raise UnknownBinaryModel(new_message) from None
+
         # 2. Get the component list from the parameters in the parfile.
         # 2.1 Check the aliases of input parameters.
         # This does not include the repeating parameters, but it should not
@@ -817,3 +828,44 @@ def get_model_and_toas(
         mm.add_tzr_toa(tt)
 
     return mm, tt
+
+def guess_binary_model(parfile_dict):
+    """Based on the PINT parameter dictionary, guess the binary model
+
+    Parameters
+    ----------
+    parfile_dict
+        The parameter dictionary as read-in by parse_parfile
+
+    """
+
+    def add_sini(parameters):
+        if 'KIN' in parameters:
+            return list(parameters) + ['SINI']
+        else:
+            return list(parameters)
+
+    all_components = AllComponents()
+    binary_models = all_components.category_component_map['pulsar_system']
+
+    # Find all binary parameters
+    binary_parameters_map = {binary_model[6:]: add_sini(all_components.search_binary_components(binary_model).aliases_map.keys()) for binary_model in binary_models}
+    binary_parameters_map.update({'Isolated': []})
+    all_binary_parameters = {parname for parnames in binary_parameters_map.values() for parname in parnames}
+
+    # Find all parfile parameters
+    all_parfile_parameters = set(parfile_dict.keys())
+
+    # All binary parameters in the parfile
+    parfile_binary_parameters = all_parfile_parameters & all_binary_parameters
+
+    # Find which binary models include those
+    allowed_binary_models = {binary_model for (binary_model, bmc) in binary_parameters_map.items() if len(parfile_binary_parameters-set(bmc))==0}
+
+    # The ordering/priority of the binary models
+    binary_model_priority = ['Isolated', 'BT', 'ELL1', 'ELL1H', 'ELL1k', 'DDK', 'DDGR', 'DDS', 'DD']
+
+    # Now print out the binary model
+    priority = [bm for bm in binary_model_priority if bm in allowed_binary_models]
+    omitted = allowed_binary_models - set(priority)
+    return priority + list(omitted)
