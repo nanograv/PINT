@@ -2,7 +2,6 @@ import re
 
 import astropy.units as u
 import numpy as np
-import matplotlib.pyplot as plt
 
 from pint.utils import taylor_horner, taylor_horner_deriv
 
@@ -256,7 +255,7 @@ class OrbitWaves(Orbit):
         ],
     ):
         super().__init__("orbitWaves", parent, orbit_params)
-        # add the rest of FBX parameters.
+
         Cindices = set()
         Sindices = set()
 
@@ -375,15 +374,11 @@ class OrbitWaves(Orbit):
         )
 
     def orbits(self):
-
+        """Orbital phase (number of orbits since TASC)."""
         PB = self.PB.to("second")
         orbits = self.tt0 / PB
 
-        # If TASC occurs "early", then accumulated orbital phase is larger,
-        # hence -ve sign here
         dphi = self._deltaPhi()
-
-        """Orbital phase (number of orbits since T0)."""
 
         orbits += dphi
         return orbits.decompose()
@@ -415,7 +410,6 @@ class OrbitWaves(Orbit):
 
     def d_orbits_d_orbwave(self, par):
 
-        print("d_orbits_d_orbwave", par)
         tw = self._tw()
         WOM = self.ORBWAVE_OM.to("radian/second")
         nh = int(par[8:])

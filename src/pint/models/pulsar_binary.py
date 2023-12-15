@@ -1,3 +1,4 @@
+
 """Support for independent binary models.
 
 This module if for wrapping standalone binary models so that they work
@@ -189,7 +190,7 @@ class PulsarBinary(DelayComponent):
                 units="",
                 description="Amplitude of cosine wave in Tasc-shift function",
                 aliases=["ORBWAVEC"],
-                description_template=self.ORBWAVE_description,
+                description_template=self.ORBWAVEC_description,
                 type_match="float",
                 long_double=True,
             )
@@ -202,7 +203,7 @@ class PulsarBinary(DelayComponent):
                 units="",
                 description="Amplitude of sine wave in Tasc-shift function",
                 aliases=["ORBWAVES"],
-                description_template=self.ORBWAVE_description,
+                description_template=self.ORBWAVES_description,
                 type_match="float",
                 long_double=True,
             )
@@ -212,7 +213,7 @@ class PulsarBinary(DelayComponent):
             floatParameter(
                 name="ORBWAVE_OM",
                 units="rad/s",
-                description="Amplitude of cosine wave in Tasc-shift function",
+                description="Base frequency for ORBWAVEs model",
                 long_double=True,
             )
         )
@@ -249,6 +250,34 @@ class PulsarBinary(DelayComponent):
                 self.binary_instance, list(FBXs.keys())
             )
 
+            # Note: if we are happy to use these to show alternate parameterizations then this can be uncommented
+
+            # # remove the PB parameterization, replace with functions
+            # self.remove_param("PB")
+            # self.remove_param("PBDOT")
+            # self.add_param(
+            #     funcParameter(
+            #         name="PB",
+            #         units=u.day,
+            #         description="Orbital period",
+            #         long_double=True,
+            #         params=("FB0",),
+            #         func=_p_to_f,
+            #     )
+            # )
+            # self.add_param(
+            #     funcParameter(
+            #         name="PBDOT",
+            #         units=u.day / u.day,
+            #         description="Orbital period derivative respect to time",
+            #         unit_scale=True,
+            #         scale_factor=1e-12,
+            #         scale_threshold=1e-7,
+            #         params=("FB0", "FB1"),
+            #         func=_pdot_to_fdot,
+            #     )
+            # )
+
         ORBWAVES_mapping = self.get_prefix_mapping_component("ORBWAVES")
         ORBWAVES = {
             ows: getattr(self, ows).quantity for ows in ORBWAVES_mapping.values()
@@ -280,33 +309,6 @@ class PulsarBinary(DelayComponent):
                 + list(ORBWAVEC.keys()),
             )
 
-            # Note: if we are happy to use these to show alternate parameterizations then this can be uncommented
-
-            # # remove the PB parameterization, replace with functions
-            # self.remove_param("PB")
-            # self.remove_param("PBDOT")
-            # self.add_param(
-            #     funcParameter(
-            #         name="PB",
-            #         units=u.day,
-            #         description="Orbital period",
-            #         long_double=True,
-            #         params=("FB0",),
-            #         func=_p_to_f,
-            #     )
-            # )
-            # self.add_param(
-            #     funcParameter(
-            #         name="PBDOT",
-            #         units=u.day / u.day,
-            #         description="Orbital period derivative respect to time",
-            #         unit_scale=True,
-            #         scale_factor=1e-12,
-            #         scale_threshold=1e-7,
-            #         params=("FB0", "FB1"),
-            #         func=_pdot_to_fdot,
-            #     )
-            # )
         # Note: if we are happy to use these to show alternate parameterizations then this can be uncommented
         # else:
         #     # remove the FB parameterization, replace with functions
@@ -543,8 +545,11 @@ class PulsarBinary(DelayComponent):
     def FBX_description(self, n):
         return "%dth time derivative of frequency of orbit" % n
 
-    def ORBWAVE_description(self, n):
-        return "%dth cosine wave in Fourier series model of Tasc shifts" % n
+    def ORBWAVES_description(self, n):
+        return "Coefficient of the %dth sine wave in Fourier series model of Tasc variations" % n
+
+    def ORBWAVEC_description(self, n):
+        return "Coefficient of the %dth cosine wave in Fourier series model of Tasc variations" % n
 
     def change_binary_epoch(self, new_epoch):
         """Change the epoch for this binary model.
