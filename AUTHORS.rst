@@ -16,11 +16,12 @@ Contributors
 
 Active developers are indicated by (*). Authors of the PINT paper are indicated by (#).
 
+* Gabriella Agazie (*)
 * Akash Anumarlapudi (*)
 * Anne Archibald (#*)
 * Matteo Bachetti (#)
 * Bastian Beischer 
-* Deven Bhakta 
+* Deven Bhakta (*)
 * Chloe Champagne (#)
 * Jonathan Colen (#)
 * Thankful Cromartie 
@@ -40,7 +41,7 @@ Active developers are indicated by (*). Authors of the PINT paper are indicated 
 * Sasha Levina 
 * Nikhil Mahajan 
 * Alex McEwen 
-* Patrick O'Neill 
+* Patrick O'Neill (*)
 * Tim Pennucci 
 * Camryn Phillips (#)
 * Matt Pitkin 

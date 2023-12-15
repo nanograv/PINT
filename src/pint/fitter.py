@@ -67,11 +67,17 @@ import numpy as np
 import scipy.linalg
 import scipy.optimize as opt
 from loguru import logger as log
+from numdifftools import Hessdiag
 
 import pint
 import pint.utils
 import pint.derived_quantities
-from pint.models.parameter import AngleParameter, boolParameter, strParameter
+from pint.models.parameter import (
+    AngleParameter,
+    boolParameter,
+    strParameter,
+    funcParameter,
+)
 from pint.pint_matrix import (
     CorrelationMatrix,
     CovarianceMatrix,
@@ -83,12 +89,11 @@ from pint.pint_matrix import (
 )
 from pint.residuals import Residuals, WidebandTOAResiduals
 from pint.toa import TOAs
-from pint.utils import FTest
+from pint.utils import FTest, normalize_designmatrix
 
 
 __all__ = [
     "Fitter",
-    "auto",
     "WLSFitter",
     "GLSFitter",
     "WidebandTOAFitter",
@@ -218,6 +223,16 @@ class Fitter:
     """
 
     def __init__(self, toas, model, track_mode=None, residuals=None):
+        if not set(model.free_params).issubset(model.fittable_params):
+            free_unfittable_params = set(model.free_params).difference(
+                model.fittable_params
+            )
+            raise ValueError(
+                f"Cannot create fitter because the following unfittable parameters "
+                f"were found unfrozen in the model: {free_unfittable_params}. "
+                f"Freeze these parameters before creating the fitter."
+            )
+
         self.toas = toas
         self.model_init = model
         self.track_mode = track_mode
@@ -363,7 +378,7 @@ class Fitter:
 
         # to handle all parameter names, determine the longest length for the first column
         longestName = 0  # optionally specify the minimum length here instead of 0
-        for pn in self.model.params_ordered:
+        for pn in self.model.params:
             if nodmx and pn.startswith("DMX"):
                 continue
             if len(pn) > longestName:
@@ -378,7 +393,7 @@ class Fitter:
         s += ("{:<" + spacingName + "s} {:>20s} {:>28s} {}\n").format(
             "=" * longestName, "=" * 20, "=" * 28, "=" * 5
         )
-        for pn in self.model.params_ordered:
+        for pn in self.model.params:
             if nodmx and pn.startswith("DMX"):
                 continue
             prefitpar = getattr(self.model_init, pn)
@@ -416,13 +431,7 @@ class Fitter:
                         pn, prefitpar.str_quantity(prefitpar.value), "", par.units
                     )
                 elif par.frozen:
-                    if (
-                        par.name == "START"
-                        and prefitpar.value is None
-                        or par.name != "START"
-                        and par.name == "FINISH"
-                        and prefitpar.value is None
-                    ):
+                    if par.name in ["START", "FINISH"] and prefitpar.value is None:
                         s += ("{:" + spacingName + "s} {:20s} {:28g} {} \n").format(
                             pn, " ", par.value, par.units
                         )
@@ -430,10 +439,22 @@ class Fitter:
                         s += ("{:" + spacingName + "s} {:20g} {:28g} {} \n").format(
                             pn, prefitpar.value, par.value, par.units
                         )
+                    elif (
+                        par.name in ["CHI2", "CHI2R", "TRES", "DMRES"]
+                        and prefitpar.value is None
+                    ):
+                        s += ("{:" + spacingName + "s} {:20s} {:28g} {} \n").format(
+                            pn, " ", par.value, par.units
+                        )
+                    elif par.name in ["CHI2", "CHI2R", "TRES", "DMRES"]:
+                        s += ("{:" + spacingName + "s} {:20g} {:28g} {} \n").format(
+                            pn, prefitpar.value, par.value, par.units
+                        )
                     else:
                         s += ("{:" + spacingName + "s} {:20g} {:28s} {} \n").format(
                             pn, prefitpar.value, "", par.units
                         )
+
                 else:
                     # s += "{:14s} {:20g} {:20g} {:20.2g} {} \n".format(
                     #     pn,
@@ -608,7 +629,11 @@ class Fitter:
                 and self.model.OMDOT.value != 0.0
             ):
                 omdot = self.model.OMDOT.quantity
-                omdot_err = self.model.OMDOT.uncertainty
+                omdot_err = (
+                    self.model.OMDOT.uncertainty
+                    if self.model.OMDOT.uncertainty is not None
+                    else 0 * self.model.OMDOT.quantity.unit
+                )
                 ecc = (
                     ecc.n * u.dimensionless_unscaled
                     if ell1
@@ -699,6 +724,15 @@ class Fitter:
             if self.toas.clock_corr_info["include_bipm"]
             else "TT(TAI)"
         )
+        if chi2 is not None:
+            # assume a fit has been done
+            self.model.CHI2.value = chi2
+            self.model.CHI2R.value = chi2 / self.resids.dof
+            if not self.is_wideband:
+                self.model.TRES.quantity = self.resids.rms_weighted()
+            else:
+                self.model.TRES.quantity = self.resids.rms_weighted()["toa"]
+                self.model.DMRES.quantity = self.resids.rms_weighted()["dm"]
 
     def reset_model(self):
         """Reset the current model to the initial model."""
@@ -1142,7 +1176,7 @@ class DownhillFitter(Fitter):
         )
         self.method = "downhill_checked"
 
-    def fit_toas(
+    def _fit_toas(
         self,
         maxiter=20,
         required_chi2_decrease=1e-2,
@@ -1150,37 +1184,11 @@ class DownhillFitter(Fitter):
         min_lambda=1e-3,
         debug=False,
     ):
-        """Carry out a cautious downhill fit.
+        """Downhill fit implementation for fitting the timing model parameters.
+        The `fit_toas()` calls this method iteratively to fit the timing model parameters
+        while also fitting for white noise parameters.
 
-        This tries to take the same steps as
-        :func:`pint.fitter.WLSFitter.fit_toas` or
-        :func:`pint.fitter.GLSFitter.fit_toas` or
-        :func:`pint.fitter.WidebandTOAFitter.fit_toas`.  At each step, it
-        checks whether the new model has a better ``chi2`` than the current
-        one; if the new model is invalid or worse than the current one, it
-        tries taking a shorter step in the same direction. This can exit if it
-        exceeds the maximum number of iterations or if improvement is not
-        possible even with very short steps, or it can exit successfully if a
-        full-size step is taken and it does not decrease the ``chi2`` by much.
-
-        The attribute ``self.converged`` is set to True or False depending on
-        whether the process actually converged.
-
-        Parameters
-        ==========
-
-        maxiter : int
-            Abandon the process if this many successful steps have been taken.
-        required_chi2_decrease : float
-            A full-size step that makes less than this much improvement is taken
-            to indicate that the fitter has converged.
-        max_chi2_increase : float
-            If this is positive, consider taking steps that slightly worsen the chi2 in hopes
-            of eventually finding our way downhill.
-        min_lambda : float
-            If steps are shrunk by this factor and still don't result in improvement, abandon hope
-            of convergence and stop.
-        """
+        See documentation of the `fit_toas()` method for more details."""
         # setup
         self.model.validate()
         self.model.validate_toas(self.toas)
@@ -1189,6 +1197,7 @@ class DownhillFitter(Fitter):
         self.converged = False
         # algorithm
         exception = None
+
         for i in range(maxiter):
             step = current_state.step
             lambda_ = 1
@@ -1242,6 +1251,7 @@ class DownhillFitter(Fitter):
             log.debug(
                 f"Stopping because maximum number of iterations ({maxiter}) reached"
             )
+
         self.current_state = best_state
         # collect results
         self.model = self.current_state.model
@@ -1253,6 +1263,7 @@ class DownhillFitter(Fitter):
         self.parameter_correlation_matrix = (
             self.parameter_covariance_matrix.to_correlation_matrix()
         )
+
         for p, e in zip(self.current_state.params, self.errors):
             try:
                 # I don't know why this fails with multiprocessing, but bypass if it does
@@ -1273,9 +1284,153 @@ class DownhillFitter(Fitter):
             raise MaxiterReached(f"Convergence not detected after {maxiter} steps.")
         return self.converged
 
+    def fit_toas(
+        self,
+        maxiter=20,
+        noise_fit_niter=5,
+        required_chi2_decrease=1e-2,
+        max_chi2_increase=1e-2,
+        min_lambda=1e-3,
+        noisefit_method="Newton-CG",
+        debug=False,
+    ):
+        """Carry out a cautious downhill fit.
+
+        This tries to take the same steps as
+        :func:`pint.fitter.WLSFitter.fit_toas` or
+        :func:`pint.fitter.GLSFitter.fit_toas` or
+        :func:`pint.fitter.WidebandTOAFitter.fit_toas`.  At each step, it
+        checks whether the new model has a better ``chi2`` than the current
+        one; if the new model is invalid or worse than the current one, it
+        tries taking a shorter step in the same direction. This can exit if it
+        exceeds the maximum number of iterations or if improvement is not
+        possible even with very short steps, or it can exit successfully if a
+        full-size step is taken and it does not decrease the ``chi2`` by much.
+
+        The attribute ``self.converged`` is set to True or False depending on
+        whether the process actually converged.
+
+        This function can also estimate white noise parameters (EFACs and EQUADs)
+        and their uncertainties.
+
+        If there are no free white noise parameters, this function will do one
+        iteration of the downhill fit (implemented in the `_fit_toas()` method).
+        If free white noise parameters are present, it will fit for them by numerically
+        maximizing the likelihood function (implemented in the `_fit_noise()` method).
+        The timing model fit and the noise model fit are run iteratively in an alternating
+        fashion. Fitting for a white noise parameter is as simple as::
+
+            fitter.model.EFAC1.frozen = False
+            fitter.fit_toas()
+
+
+        Parameters
+        ==========
+
+        maxiter : int
+            Abandon the process if this many successful steps have been taken.
+        required_chi2_decrease : float
+            A full-size step that makes less than this much improvement is taken
+            to indicate that the fitter has converged.
+        max_chi2_increase : float
+            If this is positive, consider taking steps that slightly worsen the chi2 in hopes
+            of eventually finding our way downhill.
+        min_lambda : float
+            If steps are shrunk by this factor and still don't result in improvement, abandon hope
+            of convergence and stop.
+        noisefit_method: str
+            Algorithm used to fit for noise parameters. See the documentation for
+            `scipy.optimize.minimize()` for more details and available options.
+        """
+        free_noise_params = self._get_free_noise_params()
+
+        if len(free_noise_params) == 0:
+            return self._fit_toas(
+                maxiter=maxiter,
+                required_chi2_decrease=required_chi2_decrease,
+                max_chi2_increase=required_chi2_decrease,
+                min_lambda=required_chi2_decrease,
+                debug=debug,
+            )
+        else:
+            log.debug("Will fit for noise parameters.")
+            for _ in range(noise_fit_niter):
+                self._fit_toas(
+                    maxiter=maxiter,
+                    required_chi2_decrease=required_chi2_decrease,
+                    max_chi2_increase=max_chi2_increase,
+                    min_lambda=min_lambda,
+                    debug=debug,
+                )
+                values, errors = self._fit_noise(noisefit_method=noisefit_method)
+                self._update_noise_params(values, errors)
+
+            return self._fit_toas(
+                maxiter=maxiter,
+                required_chi2_decrease=required_chi2_decrease,
+                max_chi2_increase=max_chi2_increase,
+                min_lambda=min_lambda,
+                debug=debug,
+            )
+
     @property
     def fac(self):
         return self.current_state.fac
+
+    def _get_free_noise_params(self):
+        """Returns a list of all free noise parameters."""
+        return [
+            fp
+            for fp in self.model.get_params_of_component_type("NoiseComponent")
+            if not getattr(self.model, fp).frozen
+        ]
+
+    def _update_noise_params(self, values, errors):
+        """Update the model using estimated noise parameters."""
+        free_noise_params = self._get_free_noise_params()
+        for fp, val, err in zip(free_noise_params, values, errors):
+            getattr(self.model, fp).value = val
+            getattr(self.model, fp).uncertainty_value = err
+
+    def _fit_noise(self, noisefit_method="Newton-CG"):
+        """Estimate noise parameters and their uncertainties. Noise parameters
+        are estimated by numerically maximizing the log-likelihood function including
+        the normalization term. The uncertainties thereof are computed using the
+        numerically-evaluated Hessian."""
+        free_noise_params = self._get_free_noise_params()
+
+        xs0 = [getattr(self.model, fp).value for fp in free_noise_params]
+
+        model1 = copy.deepcopy(self.model)
+        res = Residuals(self.toas, model1)
+
+        def _mloglike(xs):
+            """Negative of the log-likelihood function."""
+            for fp, x in zip(free_noise_params, xs):
+                getattr(res.model, fp).value = x
+
+            return -res.lnlikelihood()
+
+        def _mloglike_grad(xs):
+            """Gradient of the negative of the log-likelihood function w.r.t. white noise parameters."""
+            for fp, x in zip(free_noise_params, xs):
+                getattr(res.model, fp).value = x
+
+            return np.array(
+                [
+                    -res.d_lnlikelihood_d_whitenoise_param(par).value
+                    for par in free_noise_params
+                ]
+            )
+
+        maxlike_result = opt.minimize(
+            _mloglike, xs0, method=noisefit_method, jac=_mloglike_grad
+        )
+
+        hess = Hessdiag(_mloglike)
+        errs = np.sqrt(1 / hess(maxlike_result.x))
+
+        return maxlike_result.x, errs
 
 
 class WLSState(ModelState):
@@ -1303,9 +1458,7 @@ class WLSState(ModelState):
         # NOTE, We remove subtract mean value here, since it did not give us a
         # fast converge fitting.
         # M[:,1:] -= M[:,1:].mean(axis=0)
-        fac = np.sqrt((M**2).mean(axis=0))
-        fac[fac == 0] = 1.0
-        M /= fac
+        M, fac = normalize_designmatrix(M, params)
         # Singular value decomp of design matrix:
         #   M = U s V^T
         # Dimensions:
@@ -1457,15 +1610,7 @@ class GLSState(ModelState):
                 M = np.hstack((M, Mn))
 
         # normalize the design matrix
-        norm = np.sqrt(np.sum(M**2, axis=0))
-        for c in np.where(norm == 0)[0]:
-            warn(
-                f"Parameter degeneracy; the following parameter yields "
-                f"almost no change: {params[c]}",
-                DegeneracyWarning,
-            )
-        norm[norm == 0] = 1
-        M /= norm
+        M, norm = normalize_designmatrix(M, params)
         self.M = M
         self.fac = norm
 
@@ -2014,10 +2159,7 @@ class WLSFitter(Fitter):
             # NOTE, We remove subtract mean value here, since it did not give us a
             # fast converge fitting.
             # M[:,1:] -= M[:,1:].mean(axis=0)
-            fac = np.sqrt((M**2).mean(axis=0))
-            # fac[0] = 1.0
-            fac[fac == 0] = 1.0
-            M /= fac
+            M, fac = normalize_designmatrix(M, params)
             # Singular value decomp of design matrix:
             #   M = U s V^T
             # Dimensions:
@@ -2165,7 +2307,11 @@ class GLSFitter(Fitter):
             fitperrs = self.model.get_params_dict("free", "uncertainty")
 
             # Define the linear system
+            # normalize the design matrix
             M, params, units = self.get_designmatrix()
+            # M /= norm
+
+            ntmpar = len(fitp)
 
             # Get residuals and TOA uncertainties in seconds
             if i == 0:
@@ -2182,18 +2328,11 @@ class GLSFitter(Fitter):
                     phiinv = np.concatenate((phiinv, 1 / phi))
                     M = np.hstack((M, Mn))
 
-            # normalize the design matrix
-            norm = np.sqrt(np.sum(M**2, axis=0))
             ntmpar = len(fitp)
-            for c in np.where(norm == 0)[0]:
-                warn(
-                    f"Parameter degeneracy; the following parameter yields "
-                    f"almost no change: {params[c]}",
-                    DegeneracyWarning,
-                )
-            norm[norm == 0] = 1
+
+            # normalize the design matrix
+            M, norm = normalize_designmatrix(M, params)
             self.fac = norm
-            M /= norm
 
             # compute covariance matrices
             if full_cov:
@@ -2537,17 +2676,10 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                         new_d_matrix.param_units,
                     )
 
-            # normalize the design matrix
-            norm = np.sqrt(np.sum(M**2, axis=0))
             ntmpar = len(fitp)
-            for c in np.where(norm == 0)[0]:
-                warn(
-                    f"Parameter degeneracy; the following parameter yields "
-                    f"almost no change: {params[c]}",
-                    DegeneracyWarning,
-                )
-            norm[norm == 0] = 1
-            M /= norm
+
+            # normalize the design matrix
+            M, norm = normalize_designmatrix(M, params)
             self.fac = norm
 
             # compute covariance matrices

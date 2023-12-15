@@ -560,6 +560,10 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
     Returns
     -------
     outmodel : pint.models.timing_model.TimingModel
+
+    Notes
+    -----
+    Default value in `pint` for `NHARMS` is 7, while in `tempo2` it is 4.
     """
     # Do initial checks
     if output not in binary_types:

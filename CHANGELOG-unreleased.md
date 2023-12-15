@@ -10,7 +10,10 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
-- Third-order Roemer delay terms to ELL1 model
+- Added numdifftools to setup.cfg to match requirements.txt
+- Documentation: Added `convert_parfile` to list of command-line tools in RTD
 ### Fixed
-- Deleting JUMP1 from flag tables will not prevent fitting
+- `MCMC_walkthrough` notebook now runs
+- Fixed runtime data README 
+- Fixed `derived_params` when OMDOT has 0 uncertainty
 ### Removed

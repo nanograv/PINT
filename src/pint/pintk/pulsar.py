@@ -1,4 +1,4 @@
-"""A wrapper around pulsar functions for pintk to use.
+"""A wrapper around pulsar functions for `pintk` to use.
 
 This object will be shared between widgets in the main frame
 and will contain the pre/post fit model, toas,
@@ -37,6 +37,10 @@ plot_labels = [
     "frequency",
     "TOA error",
     "rounded MJD",
+    "WB DM",
+    "WB DM res",
+    "WB DM err",
+    "elongation",
 ]
 
 # Some parameters we do not want to add a fitting checkbox for:
@@ -103,7 +107,7 @@ class Pulsar:
         )
         # Set of indices from original list that are deleted
         self.deleted = set([])
-        if fitter == "auto":
+        if fitter == "notdownhill":
             self.fit_method = self.getDefaultFitter(downhill=False)
             log.info(
                 f"Since wideband={self.all_toas.wideband} and correlated={self.prefit_model.has_correlated_errors}, selecting fitter={self.fit_method}"
@@ -323,7 +327,7 @@ class Pulsar:
                     line += "%24s\t" % post.str_quantity(post.quantity)
                     try:
                         line += "%16.8g  " % post.uncertainty.value
-                    except:
+                    except Exception:
                         line += "%18s" % ""
                     diff = post.value - pre.value
                     line += "%16.8g  " % diff

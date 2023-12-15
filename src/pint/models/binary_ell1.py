@@ -117,7 +117,7 @@ class BinaryELL1(PulsarBinary):
             floatParameter(
                 name="EPS1",
                 units="",
-                description="First Laplace-Lagrange parameter, ECC x sin(OM) for ELL1 model",
+                description="First Laplace-Lagrange parameter, ECC*sin(OM)",
                 long_double=True,
             )
         )
@@ -126,7 +126,7 @@ class BinaryELL1(PulsarBinary):
             floatParameter(
                 name="EPS2",
                 units="",
-                description="Second Laplace-Lagrange parameter, ECC x cos(OM) for ELL1 model",
+                description="Second Laplace-Lagrange parameter, ECC*cos(OM)",
                 long_double=True,
             )
         )
@@ -312,9 +312,11 @@ class BinaryELL1H(BinaryELL1):
     .. paramtable::
         :class: pint.models.binary_ell1.BinaryELL1H
 
-    Note
-    ----
+    Notes
+    -----
     Only the Medium-inclination case model is implemented.
+
+    Default value in `pint` for `NHARMS` is 7, while in `tempo2` it is 4.
 
     References
     ----------
@@ -431,6 +433,11 @@ class BinaryELL1k(BinaryELL1):
         self.binary_model_name = "ELL1k"
         self.binary_model_class = ELL1kmodel
 
+        self.remove_param("OMDOT")
+        self.remove_param("EDOT")
+        self.remove_param("EPS1DOT")
+        self.remove_param("EPS2DOT")
+
         self.add_param(
             floatParameter(
                 name="OMDOT",
@@ -448,9 +455,6 @@ class BinaryELL1k(BinaryELL1):
                 long_double=True,
             )
         )
-
-        self.remove_param("EPS1DOT")
-        self.remove_param("EPS2DOT")
 
     def validate(self):
         """Validate parameters."""

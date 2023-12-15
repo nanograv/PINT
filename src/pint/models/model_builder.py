@@ -7,6 +7,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from astropy import units as u
 from loguru import logger as log
+import re
 
 from pint.models.astrometry import Astrometry
 from pint.models.parameter import maskParameter
@@ -64,6 +65,28 @@ def parse_parfile(parfile):
     return parfile_dict
 
 
+def _replace_fdjump_in_parfile_dict(pardict):
+    """Replace parameter names s of the form "FDJUMPp" by "FDpJUMP"
+    while reading the par file, where p is the prefix index.
+
+    Ideally, this should have been done using the parameter alias
+    mechanism, but there is no easy way to do this currently due to the
+    mask and prefix indices being treated in an identical manner.
+
+    See :class:`~pint.models.fdjump.FDJump` for more details."""
+    fdjumpn_regex = re.compile("^FDJUMP(\\d+)")
+    pardict_new = {}
+    for key, value in pardict.items():
+        if m := fdjumpn_regex.match(key):
+            j = int(m.groups()[0])
+            new_key = f"FD{j}JUMP"
+            pardict_new[new_key] = value
+        else:
+            pardict_new[key] = value
+
+    return pardict_new
+
+
 class ModelBuilder:
     """Class for building a `TimingModel` object from a parameter file.
 
@@ -84,7 +107,14 @@ class ModelBuilder:
         self._validate_components()
         self.default_components = []
 
-    def __call__(self, parfile, allow_name_mixing=False, allow_tcb=False, **kwargs):
+    def __call__(
+        self,
+        parfile,
+        allow_name_mixing=False,
+        allow_tcb=False,
+        toas_for_tzr=None,
+        **kwargs,
+    ):
         """Callable object for making a timing model from .par file.
 
         Parameters
@@ -103,6 +133,10 @@ class ModelBuilder:
             error upon encountering TCB par files. If True, the par file will be
             converted to TDB upon read. If "raw", an unconverted malformed TCB
             TimingModel object will be returned.
+
+        toas_for_tzr : TOAs or None, optional
+            If this is not None, a TZR TOA (AbsPhase) will be created using the
+            given TOAs object.
 
         kwargs : dict
             Any additional parameter/value pairs that will add to or override those in the parfile.
@@ -164,6 +198,10 @@ class ModelBuilder:
             warnings.warn(f"Unrecognized parfile line '{p_line}'", UserWarning)
             # log.warning(f"Unrecognized parfile line '{p_line}'")
 
+        if tm.UNITS.value is None or tm.UNITS.value == "":
+            log.warning("UNITS is not specified. Assuming TDB...")
+            tm.UNITS.value = "TDB"
+
         if tm.UNITS.value == "TCB" and convert_tcb:
             convert_tcb_tdb(tm)
 
@@ -175,6 +213,16 @@ class ModelBuilder:
                 getattr(tm, k).quantity = v
             else:
                 getattr(tm, k).value = v
+
+        # Explicitly add a TZR TOA from a given TOAs object.
+        if "AbsPhase" not in tm.components and toas_for_tzr is not None:
+            log.info("Creating a TZR TOA (AbsPhase) using the given TOAs object.")
+            tm.add_tzr_toa(toas_for_tzr)
+
+        if not hasattr(tm, "DelayComponent_list"):
+            setattr(tm, "DelayComponent_list", [])
+        if not hasattr(tm, "NoiseComponent_list"):
+            setattr(tm, "NoiseComponent_list", [])
 
         return tm
 
@@ -309,6 +357,11 @@ class ModelBuilder:
             parfile_dict = parse_parfile(parfile)
         else:
             parfile_dict = parfile
+
+        # This is a special-case-hack to deal with FDJUMP parameters.
+        # @TODO: Implement a general mechanism to deal with cases like this.
+        parfile_dict = _replace_fdjump_in_parfile_dict(parfile_dict)
+
         for k, v in parfile_dict.items():
             try:
                 pint_name, init0 = self.all_components.alias_to_pint_param(k)
@@ -606,7 +659,9 @@ class ModelBuilder:
             raise ComponentConflict(f"Can not decide the one component from: {cf_cps}")
 
 
-def get_model(parfile, allow_name_mixing=False, allow_tcb=False, **kwargs):
+def get_model(
+    parfile, allow_name_mixing=False, allow_tcb=False, toas_for_tzr=None, **kwargs
+):
     """A one step function to build model from a parfile.
 
     Parameters
@@ -626,6 +681,10 @@ def get_model(parfile, allow_name_mixing=False, allow_tcb=False, **kwargs):
         converted to TDB upon read. If "raw", an unconverted malformed TCB
         TimingModel object will be returned.
 
+    toas_for_tzr : TOAs or None, optional
+        If this is not None, a TZR TOA (AbsPhase) will be created using the
+        given TOAs object.
+
     kwargs : dict
         Any additional parameter/value pairs that will add to or override those in the parfile.
 
@@ -640,13 +699,23 @@ def get_model(parfile, allow_name_mixing=False, allow_tcb=False, **kwargs):
         contents = None
     if contents is not None:
         return model_builder(
-            StringIO(contents), allow_name_mixing, allow_tcb=allow_tcb, **kwargs
+            StringIO(contents),
+            allow_name_mixing,
+            allow_tcb=allow_tcb,
+            toas_for_tzr=toas_for_tzr,
+            **kwargs,
         )
 
     # # parfile is a filename and can be handled by ModelBuilder
     # if _model_builder is None:
     #     _model_builder = ModelBuilder()
-    model = model_builder(parfile, allow_name_mixing, allow_tcb=allow_tcb, **kwargs)
+    model = model_builder(
+        parfile,
+        allow_name_mixing,
+        allow_tcb=allow_tcb,
+        toas_for_tzr=toas_for_tzr,
+        **kwargs,
+    )
     model.name = parfile
 
     return model
@@ -667,6 +736,7 @@ def get_model_and_toas(
     allow_name_mixing=False,
     limits="warn",
     allow_tcb=False,
+    add_tzr_to_model=True,
     **kwargs,
 ):
     """Load a timing model and a related TOAs, using model commands as needed
@@ -677,6 +747,9 @@ def get_model_and_toas(
         The parfile name, or a file-like object to read the parfile contents from
     timfile : str
         The timfile name, or a file-like object to read the timfile contents from
+    ephem : str, optional
+        If not None (default), this ephemeris will be used to create the TOAs object.
+        Default is to use the EPHEM parameter from the timing model.
     include_bipm : bool or None
         Whether to apply the BIPM clock correction. Defaults to True.
     bipm_version : string or None
@@ -711,6 +784,9 @@ def get_model_and_toas(
         error upon encountering TCB par files. If True, the par file will be
         converted to TDB upon read. If "raw", an unconverted malformed TCB
         TimingModel object will be returned.
+    add_tzr_to_model : bool, optional
+        Create a TZR TOA in the timing model using the created TOAs object. Default is
+        True.
     kwargs : dict
         Any additional parameter/value pairs that will add to or override those in the parfile.
 
@@ -718,7 +794,9 @@ def get_model_and_toas(
     -------
     A tuple with (model instance, TOAs instance)
     """
+
     mm = get_model(parfile, allow_name_mixing, allow_tcb=allow_tcb, **kwargs)
+
     tt = get_TOAs(
         timfile,
         include_pn=include_pn,
@@ -733,4 +811,9 @@ def get_model_and_toas(
         picklefilename=picklefilename,
         limits=limits,
     )
+
+    if "AbsPhase" not in mm.components and add_tzr_to_model:
+        log.info("Creating a TZR TOA (AbsPhase) using the given TOAs object.")
+        mm.add_tzr_toa(tt)
+
     return mm, tt

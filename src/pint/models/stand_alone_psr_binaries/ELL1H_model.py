@@ -27,6 +27,10 @@ class ELL1Hmodel(ELL1BaseModel):
     Thus, :class:`~pint.models.binary_ell1.BinaryELL1H` uses the series from the third
     harmonic and higher.
 
+    Notes
+    -----
+    Default value in `pint` for `NHARMS` is 7, while in `tempo2` it is 4.
+
     References
     ----------
     - Freire and Wex (2010), MNRAS, 409, 199 [1]_

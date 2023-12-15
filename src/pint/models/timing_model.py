@@ -53,6 +53,7 @@ from pint.models.parameter import (
     Parameter,
     boolParameter,
     floatParameter,
+    funcParameter,
     intParameter,
     maskParameter,
     strParameter,
@@ -89,13 +90,13 @@ __all__ = [
 #
 # Comparisons with keywords in par file lines is done in a case insensitive way.
 ignore_params = {
-    "TRES",
+    #    "TRES",
     "TZRMJD",
     "TZRFRQ",
     "TZRSITE",
     "NITS",
     "IBOOT",
-    "CHI2R",
+    #    "CHI2R",
     "MODE",
     "PLANET_SHAPIRO2",
 }
@@ -117,6 +118,7 @@ DEFAULT_ORDER = [
     "spindown",
     "phase_jump",
     "wave",
+    "wavex",
 ]
 
 
@@ -183,12 +185,11 @@ class TimingModel:
     removed with methods on this object, and for many of them additional
     parameters in families (``DMXEP_1234``) can be added.
 
-    Parameters in a TimingModel object are listed in the ``model.params`` and
-    ``model.params_ordered`` objects. Each Parameter can be set as free or
-    frozen using its ``.frozen`` attribute, and a list of the free parameters
-    is available through the ``model.free_params`` property; this can also
-    be used to set which parameters are free. Several methods are available
-    to get and set some or all parameters in the forms of dictionaries.
+    Parameters in a TimingModel object are listed in the ``model.params`` object.
+    Each Parameter can be set as free or frozen using its ``.frozen`` attribute,
+    and a list of the free parameters is available through the ``model.free_params``
+    property; this can also be used to set which parameters are free. Several methods
+    are available to get and set some or all parameters in the forms of dictionaries.
 
     TimingModel objects also support a number of functions for computing
     various things like orbital phase, and barycentric versions of TOAs,
@@ -309,7 +310,7 @@ class TimingModel:
         self.add_param_from_top(
             strParameter(
                 name="BINARY",
-                description="The Pulsar System/Binary model to use.",
+                description="Pulsar System/Binary model",
                 value=None,
             ),
             "",
@@ -339,13 +340,36 @@ class TimingModel:
         self.add_param_from_top(
             floatParameter(
                 name="CHI2",
-                value=0.0,
                 units="",
                 description="Chi-squared value obtained during fitting",
             ),
             "",
         )
+        self.add_param_from_top(
+            floatParameter(
+                name="CHI2R",
+                units="",
+                description="Reduced chi-squared value obtained during fitting",
+            ),
+            "",
+        )
 
+        self.add_param_from_top(
+            floatParameter(
+                name="TRES",
+                units=u.us,
+                description="TOA residual after fitting",
+            ),
+            "",
+        )
+        self.add_param_from_top(
+            floatParameter(
+                name="DMRES",
+                units=u.pc / u.cm**3,
+                description="DM residual after fitting (wideband only)",
+            ),
+            "",
+        )
         for cp in components:
             self.add_component(cp, setup=False, validate=False)
 
@@ -499,21 +523,41 @@ class TimingModel:
             f"Attribute {name} not found in TimingModel or any Component"
         )
 
-    @property_exists
-    def params(self):
-        """List of all parameter names in this model and all its components (order is arbitrary)."""
-        # FIXME: any reason not to just use params_ordered here?
-        p = self.top_level_params
-        for cp in self.components.values():
-            p = p + cp.params
-        return p
+    def __setattr__(self, name, value):
+        """Mostly this just sets ``self.name = value``.  But in the case where they are both :class:`Parameter` instances
+        with different names, this copies the ``quantity``, ``uncertainty``, ``frozen`` attributes only.
+        """
+        if isinstance(value, (Parameter, prefixParameter)) and name != value.name:
+            for p in ["quantity", "uncertainty", "frozen"]:
+                setattr(getattr(self, name), p, getattr(value, p))
+        else:
+            super().__setattr__(name, value)
 
     @property_exists
     def params_ordered(self):
+        """List of all parameter names in this model and all its components.
+        This is the same as `params`."""
+
+        # Historically, this was different from `params` because Python
+        # dictionaries were unordered until Python 3.7. Now there is no reason for
+        # them to be different.
+
+        warn(
+            "`TimingModel.params_ordered` is now deprecated and may be removed in the future. "
+            "Use `TimingModel.params` instead. It gives the same output as `TimingModel.params_ordered`.",
+            DeprecationWarning,
+        )
+
+        return self.params
+
+    @property_exists
+    def params(self):
         """List of all parameter names in this model and all its components, in a sensible order."""
+
         # Define the order of components in the list
         # Any not included will be printed between the first and last set.
         # FIXME: make order completely canonical (sort components by name?)
+
         start_order = ["astrometry", "spindown", "dispersion"]
         last_order = ["jump_delay"]
         compdict = self.get_components_by_category()
@@ -549,9 +593,10 @@ class TimingModel:
 
     @property_exists
     def free_params(self):
-        """List of all the free parameters in the timing model. Can be set to change which are free.
+        """List of all the free parameters in the timing model.
+        Can be set to change which are free.
 
-        These are ordered as ``self.params_ordered`` does.
+        These are ordered as ``self.params`` does.
 
         Upon setting, order does not matter, and aliases are accepted.
         ValueError is raised if a parameter is not recognized.
@@ -559,7 +604,7 @@ class TimingModel:
         On setting, parameter aliases are converted with
         :func:`pint.models.timing_model.TimingModel.match_param_aliases`.
         """
-        return [p for p in self.params_ordered if not getattr(self, p).frozen]
+        return [p for p in self.params if not getattr(self, p).frozen]
 
     @free_params.setter
     def free_params(self, params):
@@ -571,6 +616,26 @@ class TimingModel:
             raise ValueError(
                 f"Parameter(s) are familiar but not in the model: {params}"
             )
+
+    @property_exists
+    def fittable_params(self):
+        """List of parameters that are fittable, i.e., the parameters
+        which have a derivative implemented. These derivatives are usually
+        accessed via the `d_delay_d_param` and `d_phase_d_param` methods."""
+        return [
+            p
+            for p in self.params
+            if (
+                p in self.phase_deriv_funcs
+                or p in self.delay_deriv_funcs
+                or (
+                    (
+                        hasattr(self, "toasigma_deriv_funcs")
+                        and p in self.toasigma_deriv_funcs
+                    )
+                )
+            )
+        ]
 
     def match_param_aliases(self, alias):
         """Return PINT parameter name corresponding to this alias.
@@ -620,7 +685,7 @@ class TimingModel:
         if which == "free":
             ps = self.free_params
         elif which == "all":
-            ps = self.params_ordered
+            ps = self.params
         else:
             raise ValueError("get_params_dict expects which to be 'all' or 'free'")
         c = OrderedDict()
@@ -779,6 +844,88 @@ class TimingModel:
         # return with radian units or return as unitless cycles from 0-1
         return anoms * u.rad if radians else anoms / (2 * np.pi)
 
+    def pulsar_radial_velocity(self, barytimes):
+        """Return line-of-sight velocity of the pulsar relative to the system barycenter at barycentric MJD times.
+
+        Parameters
+        ----------
+        barytimes: Time, TOAs, array-like, or float
+            MJD barycentric time(s). The times to compute the
+            orbital phases.  Needs to be a barycentric time in TDB.
+            If a TOAs instance is passed, the barycentering will happen
+            automatically.  If an astropy Time object is passed, it must
+            be in scale='tdb'.  If an array-like object is passed or
+            a simple float, the time must be in MJD format.
+
+        Raises
+        ------
+        ValueError
+            If an astropy Time object is passed with scale!="tdb".
+
+        Returns
+        -------
+        array
+            The line-of-sight velocity
+
+        Notes
+        -----
+        This is the radial velocity of the pulsar.
+
+        See [1]_
+
+        .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.24
+        """
+        # this should also update the binary instance
+        nu = self.orbital_phase(barytimes, anom="true")
+        b = self.components[
+            [x for x in self.components.keys() if x.startswith("Binary")][0]
+        ]
+        bbi = b.binary_instance  # shorthand
+        psi = nu + bbi.omega()
+        return (
+            2
+            * np.pi
+            * bbi.a1()
+            / (bbi.pb() * np.sqrt(1 - bbi.ecc() ** 2))
+            * (np.cos(psi) + bbi.ecc() * np.cos(bbi.omega()))
+        ).cgs
+
+    def companion_radial_velocity(self, barytimes, massratio):
+        """Return line-of-sight velocity of the companion relative to the system barycenter at barycentric MJD times.
+
+        Parameters
+        ----------
+        barytimes: Time, TOAs, array-like, or float
+            MJD barycentric time(s). The times to compute the
+            orbital phases.  Needs to be a barycentric time in TDB.
+            If a TOAs instance is passed, the barycentering will happen
+            automatically.  If an astropy Time object is passed, it must
+            be in scale='tdb'.  If an array-like object is passed or
+            a simple float, the time must be in MJD format.
+        massratio : float
+            Ratio of pulsar mass to companion mass
+
+
+        Raises
+        ------
+        ValueError
+            If an astropy Time object is passed with scale!="tdb".
+
+        Returns
+        -------
+        array
+            The line-of-sight velocity
+
+        Notes
+        -----
+        This is the radial velocity of the companion.
+
+        See [1]_
+
+        .. [1] Lorimer & Kramer, 2008, "The Handbook of Pulsar Astronomy", Eqn. 8.24
+        """
+        return -self.pulsar_radial_velocity(barytimes) * massratio
+
     def conjunction(self, baryMJD):
         """Return the time(s) of the first superior conjunction(s) after baryMJD.
 
@@ -920,8 +1067,13 @@ class TimingModel:
 
     @property_exists
     def dm_derivs(self):  #  TODO need to be careful about the name here.
-        """List of dm derivative functions."""
+        """List of DM derivative functions."""
         return self.get_deriv_funcs("DelayComponent", "dm")
+
+    @property_exists
+    def toasigma_derivs(self):
+        """List of scaled TOA uncertainty derivative functions"""
+        return self.get_deriv_funcs("NoiseComponent", "toasigma")
 
     @property_exists
     def d_phase_d_delay_funcs(self):
@@ -932,7 +1084,17 @@ class TimingModel:
         return Dphase_Ddelay
 
     def get_deriv_funcs(self, component_type, derivative_type=""):
-        """Return dictionary of derivative functions."""
+        """Return a dictionary of derivative functions.
+
+        Parameters
+        ----------
+        component_type: str
+            Type of component to look for derivatives ("PhaseComponent",
+            "DelayComponent", or "NoiseComponent")
+        derivative_type: str
+            Derivative type ("", "dm", or "toasigma". Empty string
+            denotes delay and phase derivatives.)
+        """
         # TODO, this function can be a more generic function collector.
         deriv_funcs = defaultdict(list)
         if derivative_type != "":
@@ -1317,23 +1479,33 @@ class TimingModel:
         # False.  Of course, if you manually set it, it will use that setting.
         if abs_phase is None:
             abs_phase = "AbsPhase" in list(self.components.keys())
+
+        # This function gets called in `Residuals.calc_phase_resids()` with `abs_phase=True`
+        # by default. Hence, this branch is not run by default.
         if not abs_phase:
             return phase
-        if "AbsPhase" not in list(self.components.keys()):
-            # if no absolute phase (TZRMJD), add the component to the model and calculate it
-            from pint.models import absolute_phase
 
-            self.add_component(absolute_phase.AbsPhase(), validate=False)
-            self.make_TZR_toa(
-                toas
-            )  # TODO:needs timfile to get all toas, but model doesn't have access to timfile. different place for this?
-            self.validate()
+        if "AbsPhase" not in list(self.components.keys()):
+            log.info("Creating a TZR TOA (AbsPhase) using the given TOAs object.")
+
+            # if no absolute phase (TZRMJD), add the component to the model and calculate it
+            self.add_tzr_toa(toas)
+
         tz_toa = self.get_TZR_toa(toas)
         tz_delay = self.delay(tz_toa)
         tz_phase = Phase(np.zeros(len(toas.table)), np.zeros(len(toas.table)))
         for pf in self.phase_funcs:
             tz_phase += Phase(pf(tz_toa, tz_delay))
         return phase - tz_phase
+
+    def add_tzr_toa(self, toas):
+        """Create a TZR TOA for the given TOAs object and add it to
+        the timing model. This corresponds to TOA closest to the PEPOCH."""
+        from pint.models.absolute_phase import AbsPhase
+
+        self.add_component(AbsPhase(), validate=False)
+        self.make_TZR_toa(toas)
+        self.validate()
 
     def total_dm(self, toas):
         """Calculate dispersion measure from all the dispersion type of components."""
@@ -1715,7 +1887,7 @@ class TimingModel:
         if param not in list(delay_derivs.keys()):
             raise AttributeError(
                 "Derivative function for '{param}' is not provided"
-                " or not registered. "
+                " or not registered; parameter '{param}' may not be fittable. "
             )
         for df in delay_derivs[param]:
             result += df(toas, param, acc_delay).to(
@@ -1750,7 +1922,7 @@ class TimingModel:
         res_f = -phase_f[:, 0] + phase_f[:, 1]
         result = (res_i + res_f) / (2.0 * h * unit)
         # shift value back to the original value
-        par.quantity = ori_value
+        par.value = ori_value
         return result
 
     def d_delay_d_param_num(self, toas, param, step=1e-2):
@@ -1781,7 +1953,7 @@ class TimingModel:
         return d_delay * (u.second / unit)
 
     def d_dm_d_param(self, data, param):
-        """Return the derivative of dm with respect to the parameter."""
+        """Return the derivative of DM with respect to the parameter."""
         par = getattr(self, param)
         result = np.zeros(len(data)) << (u.pc / u.cm**3 / par.units)
         dm_df = self.dm_derivs.get(param, None)
@@ -1792,6 +1964,23 @@ class TimingModel:
                 return result
 
         for df in dm_df:
+            result += df(data, param).to(
+                result.unit, equivalencies=u.dimensionless_angles()
+            )
+        return result
+
+    def d_toasigma_d_param(self, data, param):
+        """Return the derivative of the scaled TOA uncertainty with respect to the parameter."""
+        par = getattr(self, param)
+        result = np.zeros(len(data)) << (u.s / par.units)
+        sigma_df = self.toasigma_derivs.get(param, None)
+        if sigma_df is None:
+            if param not in self.params:  # Maybe add differentiable params
+                raise AttributeError(f"Parameter {param} does not exist")
+            else:
+                return result
+
+        for df in sigma_df:
             result += df(data, param).to(
                 result.unit, equivalencies=u.dimensionless_angles()
             )
@@ -1830,16 +2019,38 @@ class TimingModel:
         units : astropy.units.Unit
             The units of the corresponding parts of the design matrix
 
-        Note
-        ----
-        Here we have negative sign here. Since in pulsar timing
-        the residuals are calculated as (Phase - int(Phase)), which is different
-        from the conventional definition of least square definition (Data - model)
-        We decide to add minus sign here in the design matrix, so the fitter
-        keeps the conventional way.
+        Notes
+        -----
+        1. We have negative sign here. Since the residuals are calculated as
+        (Phase - int(Phase)) in pulsar timing, which is different from the conventional
+        definition of least square definition (Data - model), we have decided to add
+        a minus sign here in the design matrix so that the fitter keeps the conventional
+        sign.
+
+        2. Design matrix entries can be computed only for parameters for which the
+        derivatives are implemented. If a parameter without a derivative is unfrozen
+        while calling this method, it will raise an informative error, except in the
+        case of unfrozen noise parameters, which are simply ignored.
         """
 
         noise_params = self.get_params_of_component_type("NoiseComponent")
+
+        if (
+            not set(self.free_params)
+            .difference(noise_params)
+            .issubset(self.fittable_params)
+        ):
+            free_unfittable_params = (
+                set(self.free_params)
+                .difference(noise_params)
+                .difference(self.fittable_params)
+            )
+            raise ValueError(
+                f"Cannot compute the design matrix because the following unfittable parameters "
+                f"were found unfrozen in the model: {free_unfittable_params}. "
+                f"Freeze these parameters before computing the design matrix."
+            )
+
         # unfrozen_noise_params = [
         #     param for param in noise_params if not getattr(self, param).frozen
         # ]
@@ -1876,6 +2087,7 @@ class TimingModel:
                 the_unit = u.Unit("") / getattr(self, param).units
                 M[:, ii] = q.to_value(the_unit) / F0.value
                 units.append(the_unit / F0.unit)
+
         return M, params, units
 
     def compare(
@@ -2003,10 +2215,7 @@ class TimingModel:
             log.debug("Check verbosity - only warnings/info will be displayed")
         othermodel = copy.deepcopy(othermodel)
 
-        if (
-            "POSEPOCH" in self.params_ordered
-            and "POSEPOCH" in othermodel.params_ordered
-        ):
+        if "POSEPOCH" in self.params and "POSEPOCH" in othermodel.params:
             if (
                 self.POSEPOCH.value is not None
                 and othermodel.POSEPOCH.value is not None
@@ -2017,7 +2226,7 @@ class TimingModel:
                     % (other_model_name, model_name)
                 )
                 othermodel.change_posepoch(self.POSEPOCH.value)
-        if "PEPOCH" in self.params_ordered and "PEPOCH" in othermodel.params_ordered:
+        if "PEPOCH" in self.params and "PEPOCH" in othermodel.params:
             if (
                 self.PEPOCH.value is not None
                 and self.PEPOCH.value != othermodel.PEPOCH.value
@@ -2026,7 +2235,7 @@ class TimingModel:
                     "Updating PEPOCH in %s to match %s" % (other_model_name, model_name)
                 )
                 othermodel.change_pepoch(self.PEPOCH.value)
-        if "DMEPOCH" in self.params_ordered and "DMEPOCH" in othermodel.params_ordered:
+        if "DMEPOCH" in self.params and "DMEPOCH" in othermodel.params:
             if (
                 self.DMEPOCH.value is not None
                 and self.DMEPOCH.value != othermodel.DMEPOCH.value
@@ -2061,7 +2270,7 @@ class TimingModel:
                     f"{model_name} is in ECL({self.ECL.value}) coordinates but {other_model_name} is in ICRS coordinates and convertcoordinates=False"
                 )
 
-        for pn in self.params_ordered:
+        for pn in self.params:
             par = getattr(self, pn)
             if par.value is None:
                 continue
@@ -2176,7 +2385,7 @@ class TimingModel:
                         else:
                             value2[pn] = str(otherpar.value)
                         if otherpar.value != par.value:
-                            if par.name in ["START", "FINISH", "CHI2", "NTOA"]:
+                            if par.name in ["START", "FINISH", "CHI2", "CHI2R", "NTOA"]:
                                 if verbosity == "max":
                                     log.info(
                                         "Parameter %s has changed between these models"
@@ -2288,8 +2497,8 @@ class TimingModel:
                 )
 
         # Now print any parameters in othermodel that were missing in self.
-        mypn = self.params_ordered
-        for opn in othermodel.params_ordered:
+        mypn = self.params
+        for opn in othermodel.params:
             if opn in mypn and getattr(self, opn).value is not None:
                 continue
             if nodmx and opn.startswith("DMX"):
@@ -2785,7 +2994,11 @@ class Component(metaclass=ModelMeta):
     def __repr__(self):
         return "{}(\n    {})".format(
             self.__class__.__name__,
-            ",\n    ".join(str(getattr(self, p)) for p in self.params),
+            ",\n    ".join(
+                str(getattr(self, p))
+                for p in self.params
+                if not isinstance(p, funcParameter)
+            ),
         )
 
     def setup(self):
@@ -2892,6 +3105,9 @@ class Component(metaclass=ModelMeta):
             # convention of name + no_leading_zero_index
             param.name = prefix + str(idx)
             param.index = idx
+
+            if hasattr(self, f"{prefix}1"):
+                param.description = getattr(self, f"{prefix}1").description
 
         # A more general check
         if param.name in self.params:

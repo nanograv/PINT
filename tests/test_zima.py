@@ -8,8 +8,11 @@ from pinttestdata import datadir
 
 import matplotlib
 import pint.scripts.zima as zima
-from pint.models import get_model_and_toas
+from pint.models import get_model_and_toas, get_model
+from pint.simulation import make_fake_toas_uniform
 from pint.residuals import Residuals
+from pint.fitter import DownhillGLSFitter
+from astropy import units as u
 
 
 @pytest.mark.parametrize("addnoise", ["", "--addnoise"])
@@ -88,6 +91,20 @@ def test_zima_fuzzdays(tmp_path):
     saved_stdout, sys.stdout = sys.stdout, StringIO("_")
     try:
         cmd = f"--fuzzdays 1 {parfile} {output_timfile}"
+        zima.main(cmd.split())
+        lines = sys.stdout.getvalue()
+    finally:
+        sys.stdout = saved_stdout
+
+
+def test_zima_multifreq(tmp_path):
+    matplotlib.use("Agg")
+
+    parfile = os.path.join(datadir, "NGC6440E.par")
+    output_timfile = tmp_path / "fake_testzima.tim"
+    saved_stdout, sys.stdout = sys.stdout, StringIO("_")
+    try:
+        cmd = f"--freq 1400 500 --multifreq {parfile} {output_timfile}"
         zima.main(cmd.split())
         lines = sys.stdout.getvalue()
     finally:

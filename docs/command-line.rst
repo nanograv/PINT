@@ -21,6 +21,23 @@ pintk
 
    pintk NGC6440E.par NGC6440E.tim
 
+convert_parfile
+---------------
+
+``convert_parfile`` allows a user to convert a par file between various formats and among various binary models.  For instance:
+
+::
+
+   convert_parfile -f tempo input.par -o output.par
+
+will convert ``input.par`` to ``output.par`` in the ``tempo`` format.  Or:
+
+::
+
+   convert_parfile -b DD ell1.par -o dd.par
+
+will convert the model in ``ell1.par`` to the DD binary model.
+
 
 pintbary
 --------

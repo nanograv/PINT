@@ -12,7 +12,7 @@ from astropy.time import TimeDelta
 from numpy.testing import assert_allclose
 from pinttestdata import datadir
 
-from pint.fitter import GLSFitter, WidebandTOAFitter, WLSFitter
+from pint.fitter import Fitter, GLSFitter, WidebandTOAFitter, WLSFitter
 from pint.models import get_model
 from pint.residuals import CombinedResiduals, Residuals, WidebandTOAResiduals
 import pint.residuals
@@ -272,32 +272,33 @@ def test_gls_chi2_reasonable(full_cov):
     toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
     f = GLSFitter(toas, model)
     fit_chi2 = f.fit_toas(full_cov=full_cov)
-    assert_allclose(fit_chi2, f.resids.calc_chi2(full_cov=full_cov))
+    assert_allclose(fit_chi2, f.resids.calc_chi2())
 
 
+# @abhisrkckl: I am commenting this out because calc_chisq no longer has the full_cov option.
 # @pytest.mark.xfail(reason="numerical instability maybe?")
-def test_gls_chi2_full_cov():
-    model = get_model(
-        StringIO(
-            """
-            PSRJ J1234+5678
-            ELAT 0
-            ELONG 0
-            DM 10
-            F0 1
-            PEPOCH 58000
-            TNRedAmp -14.227505410948254
-            TNRedGam 4.91353
-            TNRedC 45
-            """
-        )
-    )
-    model.free_params = ["ELAT", "ELONG"]
-    toas = make_fake_toas_uniform(57000, 59000, 100, model=model, error=1 * u.us)
-    np.random.seed(0)
-    toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
-    r = Residuals(toas, model)
-    assert_allclose(r.calc_chi2(full_cov=True), r.calc_chi2(full_cov=False))
+# def test_gls_chi2_full_cov():
+#     model = get_model(
+#         StringIO(
+#             """
+#             PSRJ J1234+5678
+#             ELAT 0
+#             ELONG 0
+#             DM 10
+#             F0 1
+#             PEPOCH 58000
+#             TNRedAmp -14.227505410948254
+#             TNRedGam 4.91353
+#             TNRedC 45
+#             """
+#         )
+#     )
+#     model.free_params = ["ELAT", "ELONG"]
+#     toas = make_fake_toas_uniform(57000, 59000, 100, model=model, error=1 * u.us)
+#     np.random.seed(0)
+#     toas.adjust_TOAs(TimeDelta(np.random.randn(len(toas)) * u.us))
+#     r = Residuals(toas, model)
+#     assert_allclose(r.calc_chi2(full_cov=True), r.calc_chi2(full_cov=False))
 
 
 def test_gls_chi2_behaviour():
@@ -437,3 +438,46 @@ def test_resid_mean_phase():
     mean, _ = pint.residuals.weighted_mean(full, w)
     assert mean == r.calc_phase_mean()
     assert r.calc_phase_mean() == r2.calc_phase_mean()
+
+
+@pytest.mark.parametrize(
+    "par",
+    [
+        """
+        PSRJ J1234+5678
+        ELAT 0
+        ELONG 0
+        DM 10
+        F0 1
+        PEPOCH 58000
+        EFAC mjd 57000 58000 2
+        """,
+        """
+        PSRJ J1234+5678
+        ELAT 0
+        ELONG 0
+        DM 10
+        F0 1
+        PEPOCH 58000
+        TNRedAmp -14.227505410948254
+        TNRedGam 4.91353
+        TNRedC 45
+        """,
+    ],
+)
+def test_whitened_res(par):
+    m = get_model(StringIO(par))
+    t = make_fake_toas_uniform(
+        57000,
+        59000,
+        20,
+        model=m,
+        error=1 * u.us,
+        add_noise=True,
+        add_correlated_noise=m.has_correlated_errors,
+    )
+
+    ftr = Fitter.auto(t, m)
+    ftr.fit_toas()
+
+    assert np.isclose(ftr.resids.calc_whitened_resids().std(), 1, atol=0.75)
