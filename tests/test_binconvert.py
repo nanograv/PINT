@@ -157,6 +157,18 @@ def test_ELL1(output):
 
 
 @pytest.mark.parametrize(
+    "output1", ["ELL1", "ELL1H", "ELL1k", "DD", "DDS", "DDK", "DDH"]
+)
+@pytest.mark.parametrize(
+    "output2", ["ELL1", "ELL1H", "ELL1k", "DD", "DDS", "DDK", "DDH"]
+)
+def test_matrix(output1, output2):
+    m = get_model(io.StringIO(parELL1))
+    mout = pint.binaryconvert.convert_binary(m, output1, **kwargs.get(output1, {}))
+    mout2 = pint.binaryconvert.convert_binary(mout, output2, **kwargs.get(output2, {}))
+
+
+@pytest.mark.parametrize(
     "output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK", "DDH"]
 )
 def test_ELL1_roundtrip(output):

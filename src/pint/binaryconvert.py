@@ -824,7 +824,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
             else:
                 outmodel.EDOT.frozen = model.LNEDOT.frozen
             if binary_component.binary_model_name == "ELL1H":
-                if output != "DDH":
+                if output not in ["DDH", "DDS", "DDK"]:
                     M2, SINI, M2_unc, SINI_unc = _orthometric_to_M2SINI(model)
                     outmodel.M2.quantity = M2
                     outmodel.SINI.quantity = SINI
@@ -838,7 +838,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                     else:
                         outmodel.SINI.frozen = model.H3.frozen or model.H4.frozen
                         outmodel.M2.frozen = model.H3.frozen or model.H4.frozen
-                else:
+                elif output == "DDH":
                     outmodel.H3.quantity = model.H3.quantity
                     if model.H3.uncertainty is not None:
                         outmodel.H3.uncertainty = model.H3.uncertainty
@@ -864,6 +864,12 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                                 ** 2
                             )
                         outmodel.STIGMA.frozen = model.H3.frozen or model.H4.frozen
+                elif output == "DDS":
+                    tempmodel = convert_binary(model, "ELL1")
+                    outmodel = convert_binary(tempmodel, output)
+                elif output == "DDK":
+                    tempmodel = convert_binary(model, "ELL1")
+                    outmodel = convert_binary(tempmodel, output)
             elif output == "DDH":
                 stigma, h3, h4, stigma_unc, h3_unc, h4_unc = _M2SINI_to_orthometric(
                     model
@@ -901,7 +907,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
             if binary_component.binary_model_name == "DDS":
                 badlist += ["SHAPMAX", "SINI"]
             elif binary_component.binary_model_name == "DDK":
-                badlist += ["KIN", "KOM"]
+                badlist += ["KIN", "KOM", "SINI"]
             elif binary_component.binary_model_name == "DDH":
                 badlist += ["H3", "STIGMA", "M2", "SINI"]
             elif binary_component.binary_model_name == "DDGR":
@@ -931,12 +937,12 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 badlist += ["M2", "SINI"]
             _transfer_params(model, outmodel, badlist)
             if binary_component.binary_model_name == "DDS":
-                if output != "DDH":
+                if output not in ["DDH", "DDK"]:
                     SINI, SINI_unc = _SHAPMAX_to_SINI(model)
                     outmodel.SINI.quantity = SINI
                     if SINI_unc is not None:
                         outmodel.SINI.uncertainty = SINI_unc
-                else:
+                elif output == "DDH":
                     tempmodel = convert_binary(model, "DD")
                     stigma, h3, h4, stigma_unc, h3_unc, h4_unc = _M2SINI_to_orthometric(
                         tempmodel
@@ -949,18 +955,25 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                         outmodel.H3.uncertainty = h3_unc
                     outmodel.STIGMA.frozen = model.SHAPMAX.frozen
                     outmodel.H3.frozen = model.SHAPMAX.frozen or model.M2.frozen
+                elif output == "DDK":
+                    tempmodel = convert_binary(model, "DD")
+                    outmodel = convert_binary(tempmodel, output)
             elif binary_component.binary_model_name == "DDH":
-                M2, SINI, M2_unc, SINI_unc = _orthometric_to_M2SINI(model)
-                outmodel.M2.quantity = M2
-                outmodel.SINI.quantity = SINI
-                if M2_unc is not None:
-                    outmodel.M2.uncertainty = M2_unc
-                if SINI_unc is not None:
-                    outmodel.SINI.uncertainty = SINI_unc
-                outmodel.SINI.frozen = model.STIGMA.frozen
-                outmodel.M2.frozen = model.STIGMA.frozen or model.H3.frozen
+                if output not in ["DDS", "DDK"]:
+                    M2, SINI, M2_unc, SINI_unc = _orthometric_to_M2SINI(model)
+                    outmodel.M2.quantity = M2
+                    outmodel.SINI.quantity = SINI
+                    if M2_unc is not None:
+                        outmodel.M2.uncertainty = M2_unc
+                    if SINI_unc is not None:
+                        outmodel.SINI.uncertainty = SINI_unc
+                    outmodel.SINI.frozen = model.STIGMA.frozen
+                    outmodel.M2.frozen = model.STIGMA.frozen or model.H3.frozen
+                else:
+                    tempmodel = convert_binary(model, "DD")
+                    outmodel = convert_binary(tempmodel, output)
             elif binary_component.binary_model_name == "DDK":
-                if output != "DDH":
+                if output not in ["DDH", "DDS"]:
                     if model.KIN.quantity is not None:
                         outmodel.SINI.quantity = np.sin(model.KIN.quantity)
                         if model.KIN.uncertainty is not None:
@@ -971,7 +984,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                                 equivalencies=u.dimensionless_angles(),
                             )
                         outmodel.SINI.frozen = model.KIN.frozen
-                else:
+                elif output == "DDH":
                     tempmodel = convert_binary(model, "DD")
                     stigma, h3, h4, stigma_unc, h3_unc, h4_unc = _M2SINI_to_orthometric(
                         tempmodel
@@ -982,8 +995,15 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                     outmodel.H3.quantity = h3
                     if h3_unc is not None:
                         outmodel.H3.uncertainty = h3_unc
-                    outmodel.STIGMA.frozen = model.SHAPMAX.frozen
-                    outmodel.H3.frozen = model.SHAPMAX.frozen or model.M2.frozen
+                    outmodel.STIGMA.frozen = model.KIN.frozen
+                    outmodel.H3.frozen = model.KIN.frozen or model.M2.frozen
+                elif output == "DDS":
+                    tempmodel = convert_binary(model, "DD")
+                    shapmax, shapmax_unc = _SINI_to_SHAPMAX(tempmodel)
+                    outmodel.SHAPMAX.quantity = shapmax
+                    if shapmax_unc is not None:
+                        outmodel.SHAPMAX.uncertainty = shapmax_unc
+                    outmodel.SHAPMAX.frozen = model.KIN.frozen
             elif binary_component.binary_model_name == "DDGR":
                 pbdot, gamma, omegadot, s, r, Dr, Dth = _DDGR_to_PK(model)
                 outmodel.GAMMA.value = gamma.n
@@ -1086,7 +1106,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
             elif binary_component.binary_model_name == "DDH":
                 badlist += ["M2", "SINI", "STIGMA", "H3"]
             elif binary_component.binary_model_name == "DDK":
-                badlist += ["KIN", "KOM"]
+                badlist += ["KIN", "KOM", "SINI"]
             if output == "ELL1":
                 outmodel.add_component(BinaryELL1(), validate=False)
             elif output == "ELL1H":
@@ -1173,18 +1193,22 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                     outmodel.SINI.frozen = model.STIGMA.frozen
                     outmodel.M2.frozen = model.STIGMA.frozen or model.H3.frozen
             elif binary_component.binary_model_name == "DDK":
-                if model.KIN.quantity is not None:
-                    outmodel.SINI.quantity = np.sin(model.KIN.quantity)
-                    if model.KIN.uncertainty is not None:
-                        outmodel.SINI.uncertainty = np.abs(
-                            model.KIN.uncertainty * np.cos(model.KIN.quantity)
-                        ).to(
-                            u.dimensionless_unscaled,
-                            equivalencies=u.dimensionless_angles(),
-                        )
-                    outmodel.SINI.frozen = model.KIN.frozen
+                if output != "ELL1H":
+                    if model.KIN.quantity is not None:
+                        outmodel.SINI.quantity = np.sin(model.KIN.quantity)
+                        if model.KIN.uncertainty is not None:
+                            outmodel.SINI.uncertainty = np.abs(
+                                model.KIN.uncertainty * np.cos(model.KIN.quantity)
+                            ).to(
+                                u.dimensionless_unscaled,
+                                equivalencies=u.dimensionless_angles(),
+                            )
+                        outmodel.SINI.frozen = model.KIN.frozen
+                else:
+                    tempmodel = convert_binary(model, "DD")
+                    outmodel = convert_binary(tempmodel, output)
             if output == "ELL1H":
-                if binary_component.binary_model_name in ["DDGR", "DDH"]:
+                if binary_component.binary_model_name in ["DDGR", "DDH", "DDK"]:
                     model = convert_binary(model, "DD")
                 stigma, h3, h4, stigma_unc, h3_unc, h4_unc = _M2SINI_to_orthometric(
                     model
@@ -1204,27 +1228,36 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                     outmodel.H4.uncertainty = h4_unc
                     outmodel.H4.frozen = outmodel.H3.frozen
 
-    if output == "DDS" and binary_component.binary_model_name != "DDGR":
+    if (
+        output == "DDS"
+        and binary_component.binary_model_name != "DDGR"
+        and hasattr(model, "SINI")
+    ):
         SHAPMAX, SHAPMAX_unc = _SINI_to_SHAPMAX(model)
         outmodel.SHAPMAX.quantity = SHAPMAX
-        outmodel.SHAPMAX.uncertainty = SHAPMAX_unc
+        if SHAPMAX_unc is not None:
+            outmodel.SHAPMAX.uncertainty = SHAPMAX_unc
         outmodel.SHAPMAX.frozen = model.SINI.frozen
 
     if output == "DDH":
-        if binary_component.binary_model_name == "DDGR":
+        if binary_component.binary_model_name in ["DDGR", "DDK"]:
             model = convert_binary(model, "DD")
+        if binary_component.binary_model_name == "ELL1H":
+            model = convert_binary(model, "ELL1")
         stigma, h3, h4, stigma_unc, h3_unc, h4_unc = _M2SINI_to_orthometric(model)
         outmodel.H3.quantity = h3
-        outmodel.H3.uncertainty = h3_unc
+        if h3_unc is not None:
+            outmodel.H3.uncertainty = h3_unc
         outmodel.H3.frozen = model.M2.frozen or model.SINI.frozen
         outmodel.STIGMA.quantity = stigma
-        outmodel.STIGMA.uncertainty = stigma_unc
+        if stigma_unc is not None:
+            outmodel.STIGMA.uncertainty = stigma_unc
         outmodel.STIGMA.frozen = model.SINI.frozen
 
     if output == "DDK":
         outmodel.KOM.quantity = KOM
         if binary_component.binary_model_name != "DDGR":
-            if model.SINI.quantity is not None:
+            if hasattr(model, "SINI") and model.SINI.quantity is not None:
                 outmodel.KIN.quantity = np.arcsin(model.SINI.quantity).to(
                     u.deg, equivalencies=u.dimensionless_angles()
                 )
@@ -1235,7 +1268,7 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 log.warning(
                     f"Setting KIN={outmodel.KIN} from SINI={model.SINI}: check that the sign is correct"
                 )
-            outmodel.KIN.frozen = model.SINI.frozen
+                outmodel.KIN.frozen = model.SINI.frozen
     outmodel.validate()
 
     return outmodel
