@@ -356,7 +356,7 @@ class BinaryELL1H(BinaryELL1):
                 units="",
                 description="Shapiro delay parameter STIGMA as in Freire and Wex 2010 Eq(12)",
                 long_double=True,
-                aliases=["VARSIGMA"],
+                aliases=["VARSIGMA", "STIG"],
             )
         )
         self.add_param(
