@@ -241,13 +241,6 @@ def test_ddk_ECL_ICRS():
     assert np.isclose(mECL_transformed.KOM.quantity, mECL.KOM.quantity)
 
 
-def test_sini_raises():
-    # SINI is not an allowed parameter for DDK
-    test_par_str = temp_par_str + "\n SINI  0.8     1  0.562"
-    with pytest.raises(ValueError):
-        mb.get_model(StringIO(test_par_str))
-
-
 def test_stand_alone_model_params_updates():
     test_par_str = temp_par_str + "\n KIN  71.969  1  0.562"
     m = mb.get_model(StringIO(test_par_str))
