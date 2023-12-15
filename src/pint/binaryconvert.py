@@ -594,14 +594,15 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
         return copy.deepcopy(model)
     log.debug(f"Converting from '{binary_component.binary_model_name}' to '{output}'")
 
+    outmodel = copy.deepcopy(model)
+    outmodel.remove_component(binary_component_name)
+    outmodel.BINARY.value = output
+
     if binary_component.binary_model_name in ["ELL1", "ELL1H", "ELL1k"]:
         # from ELL1, ELL1H, ELL1k
         if output == "ELL1H":
             # ELL1,ELL1k -> ELL1H
             stigma, h3, h4, stigma_unc, h3_unc, h4_unc = _M2SINI_to_orthometric(model)
-            outmodel = copy.deepcopy(model)
-            outmodel.remove_component(binary_component_name)
-            outmodel.BINARY.value = output
             # parameters not to copy
             badlist = ["M2", "SINI", "BINARY", "EDOT", "OMDOT"]
             outmodel.add_component(BinaryELL1H(), validate=False)
@@ -637,9 +638,6 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
             if model.BINARY.value == "ELL1H":
                 # ELL1H -> ELL1
                 M2, SINI, M2_unc, SINI_unc = _orthometric_to_M2SINI(model)
-                outmodel = copy.deepcopy(model)
-                outmodel.remove_component(binary_component_name)
-                outmodel.BINARY.value = output
                 # parameters not to copy
                 badlist = ["H3", "H4", "STIGMA", "BINARY", "EDOT", "OMDOT"]
                 if output == "ELL1":
@@ -659,9 +657,6 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                     outmodel.SINI.uncertainty = SINI_unc
             elif model.BINARY.value == "ELL1k":
                 # ELL1k -> ELL1
-                outmodel = copy.deepcopy(model)
-                outmodel.remove_component(binary_component_name)
-                outmodel.BINARY.value = output
                 # parameters not to copy
                 badlist = ["BINARY", "LNEDOT", "OMDOT", "EDOT"]
                 if output == "ELL1":
@@ -682,9 +677,6 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
             if model.BINARY.value in ["ELL1"]:
                 # ELL1 -> ELL1k
                 LNEDOT, OMDOT, LNEDOT_unc, OMDOT_unc = _ELL1_to_ELL1k(model)
-                outmodel = copy.deepcopy(model)
-                outmodel.remove_component(binary_component_name)
-                outmodel.BINARY.value = output
                 # parameters not to copy
                 badlist = ["BINARY", "EPS1DOT", "EPS2DOT", "OMDOT", "EDOT"]
                 outmodel.add_component(BinaryELL1k(), validate=False)
@@ -701,9 +693,6 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 # ELL1H -> ELL1k
                 LNEDOT, OMDOT, LNEDOT_unc, OMDOT_unc = _ELL1_to_ELL1k(model)
                 M2, SINI, M2_unc, SINI_unc = _orthometric_to_M2SINI(model)
-                outmodel = copy.deepcopy(model)
-                outmodel.remove_component(binary_component_name)
-                outmodel.BINARY.value = output
                 # parameters not to copy
                 badlist = [
                     "BINARY",
@@ -752,9 +741,6 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
                 EDOT_unc,
                 OMDOT_unc,
             ) = _from_ELL1(model)
-            outmodel = copy.deepcopy(model)
-            outmodel.remove_component(binary_component_name)
-            outmodel.BINARY.value = output
             # parameters not to copy
             badlist = [
                 "ECC",
@@ -897,9 +883,6 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
     ]:
         if output in ["DD", "DDH", "DDS", "DDK", "BT"]:
             # (DD, DDH, DDGR, DDS, DDK, BT) -> (DD, DDH, DDS, DDK, BT)
-            outmodel = copy.deepcopy(model)
-            outmodel.remove_component(binary_component_name)
-            outmodel.BINARY.value = output
             # parameters not to copy
             badlist = [
                 "BINARY",
@@ -1096,9 +1079,6 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
 
         elif output in ["ELL1", "ELL1H", "ELL1k"]:
             # (DD, DDH, DDGR, DDS, DDK, BT) -> (ELL1, ELL1H, ELL1k)
-            outmodel = copy.deepcopy(model)
-            outmodel.remove_component(binary_component_name)
-            outmodel.BINARY.value = output
             # parameters not to copy
             badlist = ["BINARY", "ECC", "OM", "T0", "OMDOT", "EDOT", "GAMMA"]
             if binary_component.binary_model_name == "DDS":
