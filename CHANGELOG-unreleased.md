@@ -16,4 +16,5 @@ the released changes.
 - `MCMC_walkthrough` notebook now runs
 - Fixed runtime data README 
 - Fixed `derived_params` when OMDOT has 0 uncertainty
+- Fixed `make_fake_toas_fromtim`
 ### Removed
