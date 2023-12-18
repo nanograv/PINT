@@ -385,8 +385,10 @@ class BinaryDDH(BinaryDD):
     References
     ----------
     - Freire & Wex (2010), MNRAS, 409 (1), 199-212 [1]_
+    - Weisberg & Huang (2016), ApH, 829 (1), 55 [2]_
 
     .. [1] https://ui.adsabs.harvard.edu/abs/2010MNRAS.409..199F/abstract
+    .. [2] https://ui.adsabs.harvard.edu/abs/2016ApJ...829...55W/abstract
     """
 
     register = True

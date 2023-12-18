@@ -32,9 +32,9 @@ class DDHmodel(DDmodel):
 
     Note
     ----
-    Based on Freire and Wex (2010)
+    Based on Freire and Wex (2010) and Weisberg and Huang (2016)
 
-    TNotes
+    Notes
     -----
     This uses the full expression for the Shapiro delay, not the harmonic
     decomposition used in :class:`pint.models.stand_alone_psr_binaries.ELL1H_model.ELL1Hmodel`.
@@ -42,10 +42,10 @@ class DDHmodel(DDmodel):
     References
     ----------
     - Freire and Wex (2010), MNRAS, 409, 199 [1]_
+    - Weisberg & Huang (2016), ApH, 829 (1), 55 [2]_
 
     .. [1] https://ui.adsabs.harvard.edu/abs/2010MNRAS.409..199F/abstract
-
-
+    .. [2] https://ui.adsabs.harvard.edu/abs/2016ApJ...829...55W/abstract
 
     """
 
