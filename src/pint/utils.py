@@ -2632,7 +2632,7 @@ def akaike_information_criterion(model, toas):
         raise NotImplementedError
 
 
-def plrednoise_from_wavex(model):
+def plrednoise_from_wavex(model, ignore_fyr=True):
     """Convert a `WaveX` representation of red noise to a `PLRedNoise`
     representation. This is done by minimizing a likelihood function
     that acts on the `WaveX` amplitudes over the powerlaw spectral
@@ -2642,6 +2642,9 @@ def plrednoise_from_wavex(model):
     ----------
     model: pint.models.timing_model.TimingModel
         The timing model with a `WaveX` component.
+    ignore_fyr: bool
+        Whether to ignore the frequency bin containinf 1 yr^-1
+        while fitting for the spectral parameters.
 
     Returns
     -------
@@ -2651,17 +2654,28 @@ def plrednoise_from_wavex(model):
     from pint.models.noise_model import powerlaw, PLRedNoise
 
     idxs = np.array(model.components["WaveX"].get_indices())
-    a = np.array([model[f"WXSIN_{idx:04d}"].quantity.to_value(u.s) for idx in idxs])
-    da = np.array([model[f"WXSIN_{idx:04d}"].uncertainty.to_value(u.s) for idx in idxs])
-    b = np.array([model[f"WXCOS_{idx:04d}"].quantity.to_value(u.s) for idx in idxs])
-    db = np.array([model[f"WXCOS_{idx:04d}"].uncertainty.to_value(u.s) for idx in idxs])
 
     fs = np.array([model[f"WXFREQ_{idx:04d}"].quantity.to_value(u.Hz) for idx in idxs])
     f0 = np.min(fs)
+    fyr = (1 / u.year).to_value(u.Hz)
 
     assert np.allclose(
         np.diff(np.diff(fs)), 0
     ), "`plrednoise_from_wavex` requires the WaveX frequencies to be uniformly spaced."
+
+    if ignore_fyr:
+        year_mask = np.abs(((fs - fyr) / f0)) > 0.5
+
+        idxs = idxs[year_mask]
+        fs = np.array(
+            [model[f"WXFREQ_{idx:04d}"].quantity.to_value(u.Hz) for idx in idxs]
+        )
+        f0 = np.min(fs)
+
+    a = np.array([model[f"WXSIN_{idx:04d}"].quantity.to_value(u.s) for idx in idxs])
+    da = np.array([model[f"WXSIN_{idx:04d}"].uncertainty.to_value(u.s) for idx in idxs])
+    b = np.array([model[f"WXCOS_{idx:04d}"].quantity.to_value(u.s) for idx in idxs])
+    db = np.array([model[f"WXCOS_{idx:04d}"].uncertainty.to_value(u.s) for idx in idxs])
 
     def powl_model(params):
         """Get the powerlaw spectrum for the WaveX frequencies for a given
@@ -2692,7 +2706,7 @@ def plrednoise_from_wavex(model):
     model1.add_component(PLRedNoise())
     model1.TNREDAMP.value = log10_A_val
     model1.TNREDGAM.value = gamma_val
-    model1.TNREDC.value = len(idxs)
+    model1.TNREDC.value = len(idxs) + 1 if ignore_fyr else len(idxs)
     model1.TNREDAMP.uncertainty_value = log10_A_err
     model1.TNREDGAM.uncertainty_value = gamma_err
 
