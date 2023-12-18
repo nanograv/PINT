@@ -154,6 +154,8 @@ kwargs = {"ELL1H": {"NHARMS": 3, "useSTIGMA": True}, "DDK": {"KOM": 0 * u.deg}}
 def test_ELL1(output):
     m = get_model(io.StringIO(parELL1))
     mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
+    assert mout.BINARY.value == output
+    assert f"Binary{output}" in mout.components
 
 
 @pytest.mark.parametrize(
@@ -202,6 +204,8 @@ def test_ELL1_roundtrip(output):
 def test_ELL1FB0(output):
     m = get_model(io.StringIO(parELL1FB0))
     mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
+    assert mout.BINARY.value == output
+    assert f"Binary{output}" in mout.components
 
 
 @pytest.mark.parametrize("output", ["ELL1", "ELL1H", "ELL1k", "DD", "BT", "DDS", "DDK"])
@@ -242,6 +246,8 @@ def test_DD(output):
         )
     )
     mout = pint.binaryconvert.convert_binary(m, output, **kwargs.get(output, {}))
+    assert mout.BINARY.value == output
+    assert f"Binary{output}" in mout.components
 
 
 @pytest.mark.parametrize(
