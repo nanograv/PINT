@@ -152,7 +152,7 @@ class Observatory:
         if name.lower() in cls._registry:
             if "overwrite" not in kwargs or not kwargs["overwrite"]:
                 raise ValueError(
-                    f"Observatory {name.lower} already present and overwrite=False"
+                    f"Observatory {name.lower()} already present and overwrite=False"
                 )
             log.warning(f"Observatory '{name.lower()}' already present; overwriting...")
 
