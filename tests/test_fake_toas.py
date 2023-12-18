@@ -304,10 +304,27 @@ def test_fake_from_timfile(planets):
     )
     r_sim = pint.residuals.Residuals(t_sim, m)
 
-    m, t = get_model_and_toas(
-        pint.config.examplefile("B1855+09_NANOGrav_9yv1.gls.par"),
-        pint.config.examplefile("B1855+09_NANOGrav_9yv1.tim"),
+    assert np.isclose(
+        r.calc_time_resids().std(), r_sim.calc_time_resids().std(), rtol=2
     )
+
+
+@pytest.mark.parametrize("planets", (True, False))
+def test_fake_from_timfile_wb(planets):
+    m = get_model(os.path.join(datadir, "B1855+09_NANOGrav_12yv3.wb.gls.par"))
+    t = get_TOAs(
+        os.path.join(datadir, "B1855+09_NANOGrav_12yv3.wb.tim"), planets=planets
+    )
+
+    m.PLANET_SHAPIRO.value = planets
+
+    r = pint.residuals.Residuals(t, m)
+
+    t_sim = pint.simulation.make_fake_toas_fromtim(
+        os.path.join(datadir, "B1855+09_NANOGrav_12yv3.wb.tim"), m, add_noise=True
+    )
+    r_sim = pint.residuals.Residuals(t_sim, m)
+
     assert np.isclose(
         r.calc_time_resids().std(), r_sim.calc_time_resids().std(), rtol=2
     )

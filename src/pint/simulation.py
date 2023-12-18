@@ -485,7 +485,7 @@ def make_fake_toas_fromtim(
 
     if input_ts.is_wideband():
         dm_errors = input_ts.get_dm_errors()
-        ts = update_fake_dms(model, ts, dm_errors, add_noise)
+        ts = update_fake_dms(model, input_ts, dm_errors, add_noise)
 
     return make_fake_toas(
         input_ts,
