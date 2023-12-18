@@ -86,11 +86,11 @@ class DDHmodel(DDmodel):
 
         Computes::
 
-            dsDelay/dPar = dsDelay/dH3*dH3/dPar+
-                        dsDelay/decc*decc/dPar+
-                        dsDelay/dE*dE/dPar+
-                        dsDelay/domega*domega/dPar+
-                        dsDelay/dSTIGMA*dSTIGMA/dPar
+            dsDelay/dPar = (dsDelay/dH3) * (dH3/dPar) +
+                        (dsDelay/decc) * (decc/dPar) +
+                        (dsDelay/dE) * (dE/dPar) +
+                        (dsDelay/domega) * (domega/dPar) +
+                        (dsDelay/dSTIGMA) * (dSTIGMA/dPar)
         """
         e = self.ecc()
         cE = np.cos(self.E())
