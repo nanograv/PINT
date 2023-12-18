@@ -9,11 +9,15 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- Moved `get_derived_params` to `timing_model`
 ### Added
 - Added numdifftools to setup.cfg to match requirements.txt
 - Documentation: Added `convert_parfile` to list of command-line tools in RTD
+- Plot model DM in pintk
+- More tests for pintk
 ### Fixed
 - `MCMC_walkthrough` notebook now runs
 - Fixed runtime data README 
 - Fixed `derived_params` when OMDOT has 0 uncertainty
+- Fixed `make_fake_toas_fromtim`
 ### Removed
