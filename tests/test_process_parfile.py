@@ -200,14 +200,41 @@ H3 1.0e-07
 H4 1.0e-07
 """
 
+nobinarymodel_par = """
+PSR J1234+5678
+ELAT 0 1 2
+ELONG 0 1 3
+F0 1 1 5
+DM 10 0 3
+PEPOCH 57000
+BINARY T2
+PB 60
+A1 1
+PBDOT 2.0e-14
+TASC 54300
+T0 54300
+EPS1 1.0e-06
+EPS2 1.0e-6
+H3 1.0e-07
+H4 1.0e-07
+"""
+
 
 def test_guess_binary_model():
-    parfiles = [base_par, ddk_par, ell1h_par]
-    binary_models = ["Isolated", "DDK", "ELL1H"]
+    parfiles = [base_par, ddk_par, ell1h_par, nobinarymodel_par]
+    binary_models = ["Isolated", "DDK", "ELL1H", None]
+    trip_raise = [False, True, True, True]
 
-    for parfile, binary_model in zip(parfiles, binary_models):
+    for parfile, binary_model, trip in zip(parfiles, binary_models, trip_raise):
         par_dict = parse_parfile(StringIO(parfile))
 
         binary_model_guesses = guess_binary_model(par_dict)
 
-        assert binary_model_guesses[0] == binary_model
+        if binary_model:
+            assert binary_model_guesses[0] == binary_model
+        else:
+            assert binary_model_guesses == []
+
+        if trip:
+            with pytest.raises(TimingModelError):
+                m = get_model(StringIO(parfile))

@@ -34,6 +34,7 @@ from pint.utils import (
     get_unit,
 )
 from pint.models.tcb_conversion import convert_tcb_tdb
+from pint.models.binary_ddk import _convert_kin, _convert_kom
 
 __all__ = ["ModelBuilder", "get_model", "get_model_and_toas"]
 
@@ -444,24 +445,8 @@ class ModelBuilder:
         # the overall control parameters. This will get us the binary model name
         # build the base fo the timing model
         # pint_param_dict, unknown_param = self._pintify_parfile(param_inpar)
-        try:
-            binary = param_inpar.get("BINARY", None)
-            if binary is not None:
-                binary = binary[0]
-                binary_cp = self.all_components.search_binary_components(binary)
-                selected_components.add(binary_cp.__class__.__name__)
-        except UnknownBinaryModel as ubm:
-            # Guess what the binary model should be
-            binary_model_guesses = guess_binary_model(param_inpar)
-
-            if len(binary_model_guesses) > 0:
-                # Modify the error message if we have a clue
-                new_message = f"{str(ubm)} Perhaps use {binary_model_guesses[0]}?"
-            else:
-                new_message = str(ubm)
-
-            # Re-raise the error with the new message
-            raise UnknownBinaryModel(new_message) from None
+        if "BINARY" in param_inpar:
+            selected_components.add(self.choose_binary_model(param_inpar))
 
         # 2. Get the component list from the parameters in the parfile.
         # 2.1 Check the aliases of input parameters.
@@ -545,6 +530,49 @@ class ModelBuilder:
             else:
                 selected_cates[cate] = cp
         return selected_components, conflict_components, param_not_in_pint
+
+    def choose_binary_model(self, param_inpar):
+        """Choose the BINARY model based on the parfile.
+
+        Parameters
+        ----------
+        param_inpar: dict
+            Dictionary of the unique parameters in .par file with the key is the
+            parfile line. :func:`parse_parfile` returns this dictionary.
+
+        Returns
+        -------
+        str
+            Name of the binary component
+
+        Note
+        ----
+        If the binary model does not have a PINT model (e.g. the T2 model), an
+        error is thrown with the suggested model that could replace it. If an
+        appropriate model cannot be found, no suggestion is given
+        """
+        binary = param_inpar["BINARY"][0]
+
+        try:
+            binary_cp = self.all_components.search_binary_components(binary)
+
+        except UnknownBinaryModel as e:
+            log.error(f"Could not find binary model {binary}")
+
+            # Guess what the binary model should be
+            binary_model_guesses = guess_binary_model(param_inpar)
+            log.info(
+                f"Compatible models with these parameters: {', '.join(binary_model_guesses)}."
+            )
+
+            # Re-raise the error, with an added guess for the binary model if we have one
+            if binary_model_guesses:
+                raise UnknownBinaryModel(
+                    str(e), suggestion=binary_model_guesses[0]
+                ) from None
+            raise
+
+        return binary_cp.__class__.__name__
 
     def _setup_model(
         self,
@@ -900,4 +928,70 @@ def guess_binary_model(parfile_dict):
     # Now select the best-guess binary model
     priority = [bm for bm in binary_model_priority if bm in allowed_binary_models]
     omitted = allowed_binary_models - set(priority)
+
     return priority + list(omitted)
+
+
+def convert_binary_model(parfile_dict, convert_komkin=True, drop_ddk_sini=True):
+    """Convert the PINT parameter dictionary to include the best-guess binary
+
+    Parameters
+    ----------
+    parfile_dict
+        The parameter dictionary as read-in by parse_parfile
+    convert_komkin
+        Whether or not to convert the KOM and KIN parameters
+    drop_ddk_sini
+        Whether to drop SINI when converting to the DDK model
+
+    Returns
+    -------
+    A new parfile dictionary with the binary model replaced with the best-guess
+    model. For a conversion to DDK, this function also converts the KOM/KIN
+    parameters if they exist.
+    """
+    binary = parfile_dict.get("BINARY", None)
+    binary = binary if not binary else binary[0]
+    log.debug(f"Requested to convert binary model for BINARY model: {binary}")
+
+    parfile_out = copy.deepcopy(parfile_dict)
+
+    if binary:
+        binary_model_guesses = guess_binary_model(parfile_dict)
+        log.info(
+            f"Compatible models with these parameters: {', '.join(binary_model_guesses)}. Using {binary_model_guesses[0]}"
+        )
+
+        if not binary_model_guesses:
+            error_message = f"Unable to determine binary model for this par file"
+            log_message = (
+                f"Unable to determine the binary model based"
+                f"on the model parameters in the par file."
+            )
+
+            log.error(log_message)
+            raise UnknownBinaryModel(error_message)
+
+        # Select the best-guess binary model
+        parfile_out["BINARY"] = [binary_model_guesses[0]]
+
+        # Convert KIN if requested
+        if convert_komkin and "KIN" in parfile_dict:
+            log.debug(f"Converting KIN to/from IAU <--> DT96")
+            parfile_out["KIN"] = [
+                _convert_kin(float(parfile_dict["KIN"][0]) * u.deg).value
+            ]
+
+        # Convert KOM if requested
+        if convert_komkin and "KOM" in parfile_dict:
+            log.debug(f"Converting KOM to/from IAU <--> DT96")
+            parfile_out["KOM"] = [
+                _convert_kom(float(parfile_dict["KOM"][0]) * u.deg).value
+            ]
+
+        # Drop SINI if requested
+        if drop_ddk_sini and binary_model_guesses[0] == "DDK":
+            log.debug(f"Dropping SINI from DDK model")
+            parfile_out.pop("SINI", None)
+
+    return parfile_out
