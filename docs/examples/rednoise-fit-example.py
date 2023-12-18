@@ -16,11 +16,18 @@
 # parameters and compare them with the injected values.
 
 # %%
+from pint import DMconst
 from pint.models import get_model
 from pint.simulation import make_fake_toas_uniform
 from pint.logging import setup as setup_log
 from pint.fitter import WLSFitter
-from pint.utils import akaike_information_criterion, wavex_setup, plrednoise_from_wavex
+from pint.utils import (
+    akaike_information_criterion,
+    dmwavex_setup,
+    wavex_setup,
+    plrednoise_from_wavex,
+    pldmnoise_from_dmwavex,
+)
 
 from io import StringIO
 import numpy as np
@@ -85,11 +92,6 @@ t = make_fake_toas_uniform(
 )
 
 # %%
-# Write the model and toas to disk.
-m.write_parfile("sim3.par")
-t.write_TOA_file("sim3.tim")
-
-# %%
 # We also need the WaveX version of the par file.
 m1 = deepcopy(m)
 m1.remove_component("PLRedNoise")
@@ -101,18 +103,14 @@ for p in m1.params:
     if p.startswith("WXSIN") or p.startswith("WXCOS"):
         m1[p].frozen = False
 
-m1.write_parfile("sim3.wx.par")
-
 # %% [markdown]
 # ### Initial fitting
 
 # %%
 ftr = WLSFitter(t, m1)
 
-# %%
 ftr.fit_toas(maxiter=15)
 
-# %%
 m1 = ftr.model
 print(m1)
 
@@ -247,3 +245,179 @@ plt.yscale("log")
 plt.ylabel("Spectral power (s$^2$)")
 plt.xlabel("Frequency (Hz)")
 plt.legend()
+
+# %% [markdown]
+# ## DM noise fitting
+# Let us now do a similar kind of analysis for DM noise.
+
+# %%
+par_sim = """
+    PSR           SIM3
+    RAJ           05:00:00     1
+    DECJ          15:00:00     1
+    PEPOCH        55000
+    F0            100          1
+    F1            -1e-15       1 
+    PHOFF         0            1
+    DM            15           1
+    TNDMAMP       -13
+    TNDMGAM       3.5
+    TNDMC         30
+    TZRMJD        55000
+    TZRFRQ        1400 
+    TZRSITE       gbt
+    UNITS         TDB
+    EPHEM         DE440
+    CLOCK         TT(BIPM2019)
+"""
+
+m = get_model(StringIO(par_sim))
+
+# %%
+# Generate the simulated TOAs.
+ntoas = 2000
+toaerrs = np.random.uniform(0.5, 2.0, ntoas) * u.us
+freqs = np.linspace(500, 1500, 8) * u.MHz
+
+t = make_fake_toas_uniform(
+    startMJD=53001,
+    endMJD=57001,
+    ntoas=ntoas,
+    model=m,
+    freq=freqs,
+    obs="gbt",
+    error=toaerrs,
+    add_noise=True,
+    add_correlated_noise=True,
+    name="fake",
+    include_bipm=True,
+    include_gps=True,
+    multi_freqs_in_epoch=True,
+)
+
+# %%
+# Create the DMWaveX version of the par file.
+m1 = deepcopy(m)
+m1.remove_component("PLDMNoise")
+
+Tspan = t.get_mjds().max() - t.get_mjds().min()
+dmwavex_setup(m1, Tspan, n_freqs=45)
+
+for p in m1.params:
+    if p.startswith("DMWXSIN") or p.startswith("DMWXCOS"):
+        m1[p].frozen = False
+
+# %% [markdown]
+# ### Initial fitting
+
+# %%
+ftr = WLSFitter(t, m1)
+
+ftr.fit_toas(maxiter=15)
+
+m1 = ftr.model
+print(m1)
+
+# %% [markdown]
+# ### Optimal number of harmonics
+# The optimal number of harmonics can be estimated
+# using the Akaike Information Criterion (AIC).
+
+# %%
+m2 = deepcopy(m1)
+
+aics = []
+idxs = m2.components["DMWaveX"].get_indices()
+
+ftr = WLSFitter(t, m2)
+ftr.fit_toas(maxiter=3)
+aic = akaike_information_criterion(ftr.model, t)
+aics += [aic]
+print(f"{len(idxs)}\t{aic}\t{ftr.resids.chi2_reduced}")
+
+for idx in reversed(idxs):
+    if idx == 1:
+        m2.remove_component("DMWaveX")
+    else:
+        m2.components["DMWaveX"].remove_dmwavex_component(idx)
+
+    ftr = WLSFitter(t, m2)
+    ftr.fit_toas(maxiter=3)
+    aic = akaike_information_criterion(ftr.model, t)
+    aics += [aic]
+    print(f"{idx-1}\t{aic}\t{ftr.resids.chi2_reduced}")
+
+# %%
+# Find the optimum number of harmonics by minimizing AIC.
+d_aics = np.array(aics) - np.min(aics)
+nharm_opt = len(d_aics) - 1 - np.argmin(d_aics)
+print("Optimum no of harmonics = ", nharm_opt)
+
+# %%
+# The Y axis is plotted in log scale only for better visibility.
+plt.scatter(list(reversed(range(len(d_aics)))), d_aics + 1)
+plt.axvline(nharm_opt, color="red", label="Optimum number of harmonics")
+plt.axvline(
+    int(m.TNDMC.value), color="black", ls="--", label="Injected number of harmonics"
+)
+plt.xlabel("Number of harmonics")
+plt.ylabel("AIC - AIC$_\\min{} + 1$")
+plt.legend()
+plt.yscale("log")
+# plt.savefig("sim3-aic.pdf")
+
+# %%
+# Now create a new model with the optimum number of
+# harmonics
+m2 = deepcopy(m1)
+
+idxs = m2.components["DMWaveX"].get_indices()
+for idx in reversed(idxs):
+    if idx > nharm_opt:
+        m2.components["DMWaveX"].remove_dmwavex_component(idx)
+
+ftr = WLSFitter(t, m2)
+ftr.fit_toas(maxiter=5)
+m2 = ftr.model
+
+print(m2)
+
+# %% [markdown]
+# ### Estimate the spectral parameters from the `DMWaveX` fit.
+
+# %%
+# Get the Fourier amplitudes and powers and their uncertainties.
+# Note that the `DMWaveX` amplitudes have the units of DM.
+# We multiply them by a constant factor to convert them to dimensions
+# of time so that they are consistent with `PLDMNoise`.
+scale = DMconst / (1400 * u.MHz) ** 2
+
+idxs = np.array(m2.components["DMWaveX"].get_indices())
+a = np.array(
+    [(scale * m2[f"DMWXSIN_{idx:04d}"].quantity).to_value("s") for idx in idxs]
+)
+da = np.array(
+    [(scale * m2[f"DMWXSIN_{idx:04d}"].uncertainty).to_value("s") for idx in idxs]
+)
+b = np.array(
+    [(scale * m2[f"DMWXCOS_{idx:04d}"].quantity).to_value("s") for idx in idxs]
+)
+db = np.array(
+    [(scale * m2[f"DMWXCOS_{idx:04d}"].uncertainty).to_value("s") for idx in idxs]
+)
+print(len(idxs))
+
+P = (a**2 + b**2) / 2
+dP = ((a * da) ** 2 + (b * db) ** 2) ** 0.5
+
+f0 = (1 / Tspan).to_value(u.Hz)
+fyr = (1 / u.year).to_value(u.Hz)
+
+# %%
+# We can create a `PLDMNoise` model from the `DMWaveX` model.
+# This will estimate the spectral parameters from the `DMWaveX`
+# amplitudes.
+m3 = pldmnoise_from_dmwavex(m2)
+print(m3)
+
+# %%
