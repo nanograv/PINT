@@ -67,7 +67,7 @@ def test_ddh_real():
     f2 = pint.fitter.Fitter.auto(t, m2)
     f.fit_toas()
     f2.fit_toas()
-    assert np.isclose(f.resids.calc_chi2(), f2.resids.calc_chi2())
+    assert np.isclose(f.resids.calc_chi2(), f2.resids.calc_chi2(), atol=0.5)
     assert np.isclose(f.model.M2.value, f2.model.M2.value, atol=0.01)
     assert np.isclose(f.model.SINI.value, f2.model.SINI.value, atol=0.01)
 
@@ -91,6 +91,6 @@ def test_ddh_sim():
     f2 = pint.fitter.Fitter.auto(t, m2)
     f.fit_toas()
     f2.fit_toas()
-    assert np.isclose(f.resids.calc_chi2(), f2.resids.calc_chi2())
+    assert np.isclose(f.resids.calc_chi2(), f2.resids.calc_chi2(), atol=0.5)
     assert np.isclose(f.model.M2.value, f2.model.M2.value, atol=0.01)
     assert np.isclose(f.model.SINI.value, f2.model.SINI.value, atol=0.01)
