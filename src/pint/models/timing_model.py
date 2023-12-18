@@ -31,13 +31,14 @@ See :ref:`Timing Models` for more details on how PINT's timing models work.
 import abc
 import copy
 import inspect
+import contextlib
 from collections import OrderedDict, defaultdict
 from functools import wraps
 from warnings import warn
 from uncertainties import ufloat
 
 import astropy.time as time
-import astropy.units as u
+from astropy import units as u, constants as c
 import numpy as np
 from astropy.utils.decorators import lazyproperty
 import astropy.coordinates as coords
@@ -2955,6 +2956,214 @@ class TimingModel:
             ).to(self.KOM.units)
 
         return new_model
+
+    def get_derived_params(self, rms=None, ntoas=None, returndict=False):
+        """Return a string with various derived parameters from the fitted model
+
+        Parameters
+        ----------
+        rms : astropy.units.Quantity, optional
+            RMS of fit for checking ELL1 validity
+        ntoas : int, optional
+            Number of TOAs for checking ELL1 validity
+        returndict : bool, optional
+            Whether to only return the string of results or also a dictionary
+
+        Returns
+        -------
+        results : str
+        parameters : dict, optional
+        """
+
+        import uncertainties.umath as um
+        from uncertainties import ufloat
+
+        outdict = {}
+
+        # Now print some useful derived parameters
+        s = "Derived Parameters:\n"
+        if hasattr(self, "F0"):
+            F0 = self.F0.as_ufloat()
+            p = 1 / F0
+            s += f"Period = {p:P} s\n"
+            outdict["P (s)"] = p
+        if hasattr(self, "F1"):
+            F1 = self.F1.as_ufloat()
+            pdot = -F1 / F0**2
+            outdict["Pdot (s/s)"] = pdot
+            s += f"Pdot = {pdot:P}\n"
+            if self.F1.value < 0.0:  # spinning-down
+                brakingindex = 3
+                s += f"Characteristic age = {pint.derived_quantities.pulsar_age(self.F0.quantity, self.F1.quantity, n=brakingindex):.4g} (braking index = {brakingindex})\n"
+                s += f"Surface magnetic field = {pint.derived_quantities.pulsar_B(self.F0.quantity, self.F1.quantity):.3g}\n"
+                s += f"Magnetic field at light cylinder = {pint.derived_quantities.pulsar_B_lightcyl(self.F0.quantity, self.F1.quantity):.4g}\n"
+                I_NS = I = 1.0e45 * u.g * u.cm**2
+                s += f"Spindown Edot = {pint.derived_quantities.pulsar_edot(self.F0.quantity, self.F1.quantity, I=I_NS):.4g} (I={I_NS})\n"
+                outdict["age"] = pint.derived_quantities.pulsar_age(
+                    self.F0.quantity, self.F1.quantity, n=brakingindex
+                )
+                outdict["B"] = pint.derived_quantities.pulsar_B(
+                    self.F0.quantity, self.F1.quantity
+                )
+                outdict["Blc"] = pint.derived_quantities.pulsar_B_lightcyl(
+                    self.F0.quantity, self.F1.quantity
+                )
+                outdict["Edot"] = pint.derived_quantities.pulsar_B_lightcyl(
+                    self.F0.quantity, self.F1.quantity
+                )
+            else:
+                s += "Not computing Age, B, or Edot since F1 > 0.0\n"
+
+        if hasattr(self, "PX") and not self.PX.frozen:
+            s += "\n"
+            px = self.PX.as_ufloat(u.arcsec)
+            s += f"Parallax distance = {1.0/px:.3uP} pc\n"
+            outdict["Dist (pc)"] = 1.0 / px
+        # Now binary system derived parameters
+        if self.is_binary:
+            for x in self.components:
+                if x.startswith("Binary"):
+                    binary = x
+
+            s += f"\nBinary model {binary}\n"
+            outdict["Binary"] = binary
+
+            btx = False
+            if (
+                hasattr(self, "FB0")
+                and self.FB0.quantity is not None
+                and self.FB0.value != 0.0
+            ):
+                btx = True
+                pb = 1 / self.FB0.as_ufloat(1 / u.d)
+                s += f"Orbital Period  (PB) = {pb:P} (d)\n"
+            else:
+                pb = self.PB.as_ufloat(u.d)
+            outdict["PB (d)"] = pb
+
+            pbdot = None
+            if (
+                hasattr(self, "FB1")
+                and self.FB1.quantity is not None
+                and self.FB1.value != 0.0
+            ):
+                pbdot = -self.FB1.as_ufloat(u.Hz / u.s) / self.FB0.as_ufloat(u.Hz) ** 2
+            elif (
+                hasattr(self, "PBDOT")
+                and self.PBDOT.quantity is not None
+                and self.PBDOT.value != 0
+            ):
+                pbdot = self.PBDOT.as_ufloat(u.s / u.s)
+
+            if pbdot is not None:
+                s += f"Orbital Pdot (PBDOT) = {pbdot:P} (s/s)\n"
+                outdict["PBDOT (s/s)"] = pbdot
+
+            ell1 = False
+            if binary.startswith("BinaryELL1"):
+                ell1 = True
+                eps1 = self.EPS1.as_ufloat()
+                eps2 = self.EPS2.as_ufloat()
+                tasc = ufloat(
+                    # This is a time in MJD
+                    self.TASC.quantity.mjd,
+                    self.TASC.uncertainty.to(u.d).value
+                    if self.TASC.uncertainty is not None
+                    else 0,
+                )
+                s += "Conversion from ELL1 parameters:\n"
+                ecc = um.sqrt(eps1**2 + eps2**2)
+                s += "ECC = {:P}\n".format(ecc)
+                outdict["ECC"] = ecc
+                om = um.atan2(eps1, eps2) * 180.0 / np.pi
+                if om < 0.0:
+                    om += 360.0
+                s += f"OM  = {om:P} deg\n"
+                outdict["OM (deg)"] = om
+                t0 = tasc + pb * om / 360.0
+                s += f"T0  = {t0:SP}\n"
+                outdict["T0"] = t0
+
+                a1 = self.A1.quantity if self.A1.quantity is not None else 0 * pint.ls
+                if rms is not None and ntoas is not None:
+                    s += pint.utils.ELL1_check(
+                        a1,
+                        ecc.nominal_value * u.s / u.s,
+                        rms,
+                        ntoas,
+                        outstring=True,
+                    )
+                s += "\n"
+            # Masses and inclination
+            if not self.A1.frozen:
+                a1 = self.A1.as_ufloat(pint.ls)
+                # This is the mass function, done explicitly so that we get
+                # uncertainty propagation automatically.
+                # TODO: derived quantities funcs should take uncertainties
+                fm = 4.0 * np.pi**2 * a1**3 / (4.925490947e-6 * (pb * 86400) ** 2)
+                s += f"Mass function = {fm:SP} Msun\n"
+                outdict["Mass Function (Msun)"] = fm
+                mcmed = pint.derived_quantities.companion_mass(
+                    pb.n * u.d,
+                    self.A1.quantity,
+                    i=60.0 * u.deg,
+                    mp=1.4 * u.solMass,
+                )
+                mcmin = pint.derived_quantities.companion_mass(
+                    pb.n * u.d,
+                    self.A1.quantity,
+                    i=90.0 * u.deg,
+                    mp=1.4 * u.solMass,
+                )
+                s += f"Min / Median Companion mass (assuming Mpsr = 1.4 Msun) = {mcmin.value:.4f} / {mcmed.value:.4f} Msun\n"
+                outdict["Mc,med (Msun)"] = mcmed.value
+                outdict["Mc,min (Msun)"] = mcmin.value
+
+            if (
+                hasattr(self, "OMDOT")
+                and self.OMDOT.quantity is not None
+                and self.OMDOT.value != 0.0
+            ):
+                omdot = self.OMDOT.as_ufloat(u.rad / u.s)
+                e = ecc if ell1 else self.ECC.as_ufloat()
+                mt = (
+                    (
+                        omdot
+                        / (
+                            3
+                            * (c.G * u.Msun / c.c**3).to_value(u.s) ** (2.0 / 3)
+                            * ((pb * 86400 / 2 / np.pi)) ** (-5.0 / 3)
+                            * (1 - e**2) ** -1
+                        )
+                    )
+                ) ** (3.0 / 2)
+                s += f"Total mass, assuming GR, from OMDOT is {mt:SP} Msun\n"
+                outdict["Mtot (Msun)"] = mt
+
+            if (
+                hasattr(self, "SINI")
+                and self.SINI.quantity is not None
+                and (self.SINI.value >= 0.0 and self.SINI.value < 1.0)
+            ):
+                with contextlib.suppress(TypeError, ValueError):
+                    # Put this in a try in case SINI is UNSET or an illegal value
+                    if not self.SINI.frozen:
+                        si = self.SINI.as_ufloat()
+                        s += f"From SINI in model:\n"
+                        s += f"    cos(i) = {um.sqrt(1 - si**2):SP}\n"
+                        s += f"    i = {um.asin(si) * 180.0 / np.pi:SP} deg\n"
+
+                    psrmass = pint.derived_quantities.pulsar_mass(
+                        pb.n * u.d,
+                        self.A1.quantity,
+                        self.M2.quantity,
+                        np.arcsin(self.SINI.quantity),
+                    )
+                    s += f"Pulsar mass (Shapiro Delay) = {psrmass}"
+                    outdict["Mp (Msun)"] = psrmass
+        if not returndict:
+            return s
+        return s, outdict
 
 
 class ModelMeta(abc.ABCMeta):
