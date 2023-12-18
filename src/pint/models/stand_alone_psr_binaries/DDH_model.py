@@ -108,29 +108,30 @@ class DDHmodel(DDmodel):
             dH3_dpar = self.prtl_der("H3", par)
             dsDelay_dH3 = -2 * np.log(logNum) / self.STIGMA**3
             dSTIGMA_dpar = self.prtl_der("STIGMA", par)
-            dsDelay_dSTIGMA = 6 * self.H3 * np.log(
-                logNum
-            ) / self.STIGMA**4 - 2 * self.H3 * (
+            dsDelay_dSTIGMA = 6 * self.H3 / self.STIGMA**4 / Tsun.value * np.log(
+                1
+                - e * cE
+                - 2
+                * self.STIGMA
+                / (self.STIGMA**2 + 1)
+                * (sOmega * (cE - e) + (-(e**2) + 1) ** 0.5e0 * cOmega * sE)
+            ) - 2 * self.H3 / self.STIGMA**3 / Tsun.value * (
                 -2
-                * (sOmega * (cE - e) + (1 - e**2) ** 0.5 * cOmega * sE)
-                / (1 + self.STIGMA**2)
+                / (self.STIGMA**2 + 1)
+                * (sOmega * (cE - e) + (-(e**2) + 1) ** 0.5e0 * cOmega * sE)
                 + 4
                 * self.STIGMA**2
-                * (sOmega * (cE - e) + (1 - e**2) ** 0.5 * cOmega * sE)
-                / (1 + self.STIGMA**2) ** 2
+                / (self.STIGMA**2 + 1) ** 2
+                * (sOmega * (cE - e) + (-(e**2) + 1) ** 0.5e0 * cOmega * sE)
             ) / (
-                self.STIGMA**3
-                * (
-                    1
-                    - e * cE
-                    - (
-                        2
-                        * self.STIGMA
-                        * (sOmega * (cE - e) + (1 - e**2) ** 0.5 * cOmega * sE)
-                    )
-                    / (1 + self.STIGMA**2)
-                )
+                1
+                - e * cE
+                - 2
+                * self.STIGMA
+                / (self.STIGMA**2 + 1)
+                * (sOmega * (cE - e) + (-(e**2) + 1) ** 0.5e0 * cOmega * sE)
             )
+
             decc_dpar = self.prtl_der("ecc", par)
             dsDelay_decc = (
                 -2
