@@ -82,8 +82,7 @@ class ELL1Hmodel(ELL1BaseModel):
             stigma = 0.0
         else:
             raise NotImplementedError(
-                "ELL1H did not implement %s parameter"
-                " set yet." % str(self.fit_params)
+                f"ELL1H did not implement {str(self.fit_params)} parameter set yet."
             )
         return self.ds_func(self.H3, stigma, self.NHARMS)
 
@@ -191,7 +190,7 @@ class ELL1Hmodel(ELL1BaseModel):
             d_stigma_d_H3 = 0.0
         else:
             raise NotImplementedError(
-                f"ELL1H did not implemented {str(self.fit_params)} parameter set yet."
+                f"ELL1H did not implement {str(self.fit_params)} parameter set yet."
             )
         return d_stigma_d_H3
 
