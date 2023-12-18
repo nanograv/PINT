@@ -445,7 +445,9 @@ class ModelBuilder:
         # the overall control parameters. This will get us the binary model name
         # build the base fo the timing model
         # pint_param_dict, unknown_param = self._pintify_parfile(param_inpar)
-        if "BINARY" in param_inpar:
+        binary = param_input.get("BINARY", None)
+        if binary:
+            binary = binary[0]
             selected_components.add(self.choose_binary_model(param_inpar))
 
         # 2. Get the component list from the parameters in the parfile.
