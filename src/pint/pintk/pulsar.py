@@ -37,6 +37,7 @@ plot_labels = [
     "frequency",
     "TOA error",
     "rounded MJD",
+    "model DM",
     "WB DM",
     "WB DM res",
     "WB DM err",
