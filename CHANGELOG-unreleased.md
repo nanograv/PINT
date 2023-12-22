@@ -13,6 +13,8 @@ the released changes.
 ### Added
 - Added numdifftools to setup.cfg to match requirements.txt
 - Documentation: Added `convert_parfile` to list of command-line tools in RTD
+- DDH binary model
+- function `pint.utils.xxxselections` to do DMX-style selections for any parameter name
 - Plot model DM in pintk
 - More tests for pintk
 - `pint.models.chromatic_model.Chromatic` as the base class for variable-index chromatic delays.
@@ -21,5 +23,6 @@ the released changes.
 - `MCMC_walkthrough` notebook now runs
 - Fixed runtime data README 
 - Fixed `derived_params` when OMDOT has 0 uncertainty
+- `model.find_empty_masks` will now also look at DMX and SWX parameters
 - Fixed `make_fake_toas_fromtim`
 ### Removed
