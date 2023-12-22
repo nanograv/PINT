@@ -67,6 +67,7 @@ from pint.utils import (
     split_prefixed_name,
     open_or_use,
     colorize,
+    xxxselections,
 )
 from pint.derived_quantities import dispersion_slope
 
@@ -2840,6 +2841,14 @@ class TimingModel:
                 if freeze:
                     log.info(f"'{maskpar}' has no TOAs so freezing")
                     getattr(self, maskpar).frozen = True
+        for prefix in ["DM", "SW"]:
+            mapping = pint.utils.xxxselections(self, toas, prefix=prefix)
+            for k in mapping:
+                if len(mapping[k]) == 0:
+                    if freeze:
+                        log.info(f"'{k}' has no TOAs so freezing")
+                        getattr(self, k).frozen = True
+                    bad_parameters.append(k)
         return bad_parameters
 
     def setup(self):

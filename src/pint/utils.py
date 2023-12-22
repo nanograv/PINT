@@ -82,6 +82,7 @@ __all__ = [
     "dmx_ranges_old",
     "dmx_ranges",
     "dmxselections",
+    "xxxselections",
     "dmxstats",
     "dmxparse",
     "get_prefix_timerange",
@@ -844,6 +845,35 @@ def dmx_ranges(toas, divide_freq=1000.0 * u.MHz, binwidth=15.0 * u.d, verbose=Fa
     dmx_comp.validate()
 
     return mask, dmx_comp
+
+
+def xxxselections(model, toas, prefix="DM"):
+    """Map DMX/SWX/other selections to TOAs
+
+    Parameters
+    ----------
+    model : pint.models.TimingModel
+    toas : pint.toa.TOAs
+    prefix : str
+        Name of selection
+
+    Returns
+    -------
+    dict :
+        keys are XXX indices, values are the TOAs selected for each index
+    """
+    if not any(p.startswith(f"{prefix}X") for p in model.params):
+        return {}
+    toas_selector = TOASelect(is_range=True)
+    X_mapping = model.get_prefix_mapping(f"{prefix}X_")
+    XR1_mapping = model.get_prefix_mapping(f"{prefix}XR1_")
+    XR2_mapping = model.get_prefix_mapping(f"{prefix}XR2_")
+    condition = {}
+    for ii in X_mapping:
+        r1 = getattr(model, XR1_mapping[ii]).quantity
+        r2 = getattr(model, XR2_mapping[ii]).quantity
+        condition[X_mapping[ii]] = (r1.mjd, r2.mjd)
+    return toas_selector.get_select_index(condition, toas["mjd_float"])
 
 
 def dmxselections(model, toas):
