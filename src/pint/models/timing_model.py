@@ -3827,6 +3827,26 @@ class AllComponents:
             for cp_name in all_systems:
                 if system_name == self.components[cp_name].binary_model_name:
                     return self.components[cp_name]
+
+            if system_name == "BTX":
+                raise UnknownBinaryModel(
+                    "`BINARY  BTX` is not supported bt PINT. Use "
+                    "`BINARY  BT` instead. It supports both orbital "
+                    "period (PB, PBDOT) and orbital frequency (FB0, ...) "
+                    "parametrizations."
+                )
+            elif system_name == "DDFWHE":
+                raise UnknownBinaryModel(
+                    "`BINARY  DDFWHE` is not supported, but the same model "
+                    "is available as `BINARY  DDH`."
+                )
+            elif system_name in ["MSS", "EH", "H88", "DDT", "BT1P", "BT2P"]:
+                # Binary model list taken from
+                # https://tempo.sourceforge.net/ref_man_sections/binary.txt
+                raise UnknownBinaryModel(
+                    f"`The binary model {system_name} is not yet implemented."
+                )
+
             raise UnknownBinaryModel(
                 f"Pulsar system/Binary model component"
                 f" {system_name} is not provided."
