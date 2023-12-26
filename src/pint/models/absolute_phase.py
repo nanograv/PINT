@@ -135,6 +135,6 @@ class AbsPhase(PhaseComponent):
         # TODO: add warning for PEPOCH far away from center of data?
         later = [i for i in toas.get_mjds() if i > PEPOCH * u.d]
         earlier = [i for i in toas.get_mjds() if i <= PEPOCH * u.d]
-        TZRMJD = min(later) if later else max(earlier)
+        TZRMJD = min(later, default=max(earlier))
         self.TZRMJD.quantity = TZRMJD.value
         self.setup()
