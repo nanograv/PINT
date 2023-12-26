@@ -23,4 +23,5 @@ the released changes.
 - Fixed `derived_params` when OMDOT has 0 uncertainty
 - `model.find_empty_masks` will now also look at DMX and SWX parameters
 - Fixed `make_fake_toas_fromtim`
+- Better exceptions for unsupported/unimplemented binary models (BTX, MSS, etc.)
 ### Removed
