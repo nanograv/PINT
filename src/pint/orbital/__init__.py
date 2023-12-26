@@ -1,3 +1,1 @@
-"""Orbital models
-
-"""
+"""Orbital models"""

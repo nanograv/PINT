@@ -264,7 +264,7 @@ def publish(
         for fp in model.free_params:
             param = getattr(model, fp)
             if (
-                all([not isinstance(param._parent, exc) for exc in exclude_components])
+                all(not isinstance(param._parent, exc) for exc in exclude_components)
                 and fp not in exclude_params
                 and (param.value != 0 or include_zeros)
             ):
@@ -280,10 +280,7 @@ def publish(
 
                 if (
                     all(
-                        [
-                            not isinstance(param._parent, exc)
-                            for exc in exclude_components
-                        ]
+                        not isinstance(param._parent, exc) for exc in exclude_components
                     )
                     and param.value is not None
                     and param.frozen
