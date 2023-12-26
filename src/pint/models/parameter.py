@@ -577,7 +577,7 @@ class Parameter:
         return True
 
     def value_as_latex(self):
-        return f"${self.as_ufloat():.1uSL}$" if not self.frozen else f"{self.value:f}"
+        return f"{self.value:f}" if self.frozen else f"${self.as_ufloat():.1uSL}$"
 
     def as_latex(self):
         try:
