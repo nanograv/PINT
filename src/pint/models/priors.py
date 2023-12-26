@@ -7,7 +7,7 @@ such as total proper motion, 2-d sky location, etc.
 
 """
 import numpy as np
-from scipy.stats import norm, rv_continuous, rv_discrete, uniform
+from scipy.stats import rv_continuous, uniform
 
 
 class Prior:
