@@ -2267,7 +2267,7 @@ class TimingModel:
                 and othermodel.T0.value is not None
                 and self.T0.value != othermodel.T0.value
             ):
-                othermodel.change_binary_epoch(self.T0.value)
+                othermodel.change_binary_epoch(self.T0.quantity)
             elif (
                 "TASC" in self
                 and "TASC" in othermodel
@@ -2275,7 +2275,7 @@ class TimingModel:
                 and othermodel.TASC.value is not None
                 and self.TASC.value != othermodel.TASC.value
             ):
-                othermodel.change_binary_epoch(self.TASC.value)
+                othermodel.change_binary_epoch(self.TASC.quantity)
 
         if (
             "AstrometryEquatorial" in self.components
