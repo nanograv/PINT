@@ -147,10 +147,10 @@ class CreateToolTip:
         self.id = self.widget.after(self.waittime, self.showtip)
 
     def unschedule(self):
-        id = self.id
+        id_ = self.id
         self.id = None
-        if id:
-            self.widget.after_cancel(id)
+        if id_:
+            self.widget.after_cancel(id_)
 
     def showtip(self, event=None):
         x = y = 0
