@@ -12,7 +12,6 @@ pint.logging.setup(level=pint.logging.script_level)
 
 import pint.models
 import pint.residuals
-import pint.toa as toa
 from pint.eventstats import h2sig, hmw
 from pint.fermi_toas import get_Fermi_TOAs
 from pint.fits_utils import read_fits_event_mjds_tuples

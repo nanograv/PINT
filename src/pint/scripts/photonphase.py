@@ -11,7 +11,6 @@ pint.logging.setup(level=pint.logging.script_level)
 
 import pint.models
 import pint.residuals
-import pint.toa as toa
 from pint.event_toas import get_event_TOAs
 from pint.eventstats import h2sig, hm
 from pint.fits_utils import read_fits_event_mjds
@@ -155,9 +154,8 @@ def main(argv=None):
     # Read in model
     modelin = pint.models.get_model(args.parfile)
     use_planets = False
-    if "PLANET_SHAPIRO" in modelin.params:
-        if modelin.PLANET_SHAPIRO.value:
-            use_planets = True
+    if "PLANET_SHAPIRO" in modelin.params and modelin.PLANET_SHAPIRO.value:
+        use_planets = True
     if "AbsPhase" not in modelin.components:
         log.error(
             "TimingModel does not include AbsPhase component, which is required "
