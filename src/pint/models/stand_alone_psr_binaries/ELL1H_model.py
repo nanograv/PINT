@@ -3,7 +3,6 @@
 # This Python file uses the following encoding: utf-8
 import astropy.units as u
 import numpy as np
-from loguru import logger as log
 
 from .ELL1_model import ELL1BaseModel
 
