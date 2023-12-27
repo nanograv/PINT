@@ -1343,7 +1343,7 @@ class TimingModel:
 
     def get_params_mapping(self):
         """Report which component each parameter name comes from."""
-        param_mapping = {p: "timing_model" for p in self.top_level_params}
+        param_mapping = {p: "TimingModel" for p in self.top_level_params}
         for cp in list(self.components.values()):
             for pp in cp.params:
                 param_mapping[pp] = cp.__class__.__name__
