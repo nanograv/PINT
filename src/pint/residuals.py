@@ -12,13 +12,18 @@ import warnings
 
 import astropy.units as u
 import numpy as np
-import scipy
-from scipy.linalg import LinAlgError, cho_factor, cho_solve
+from scipy.linalg import LinAlgError
 from loguru import logger as log
 
 from pint.models.dispersion_model import Dispersion
+from pint.models.parameter import maskParameter
 from pint.phase import Phase
-from pint.utils import normalize_designmatrix, weighted_mean, taylor_horner_deriv
+from pint.utils import (
+    sherman_morrison_dot,
+    weighted_mean,
+    taylor_horner_deriv,
+    woodbury_dot,
+)
 
 __all__ = [
     "Residuals",
@@ -412,6 +417,25 @@ class Residuals:
 
         return full - mean
 
+    def _calc_mean(self, weighted, type, calctype=None):
+        assert type in ["time", "phase"]
+
+        r = (
+            self.calc_phase_resids(subtract_mean=False)
+            if type == "phase"
+            else self.calc_time_resids(subtract_mean=False, calctype=calctype)
+        )
+
+        if not weighted:
+            return r.mean()
+
+        if np.any(self.get_data_error() == 0):
+            raise ValueError("Some TOA errors are zero - cannot calculate residuals")
+
+        w = 1.0 / (self.get_data_error().value ** 2)
+        mean, _ = weighted_mean(r, w)
+        return mean
+
     def calc_phase_mean(self, weighted=True):
         """Calculate mean phase of residuals, optionally weighted
 
@@ -423,14 +447,7 @@ class Residuals:
         -------
         astropy.units.Quantity
         """
-        r = self.calc_phase_resids(subtract_mean=False)
-        if not weighted:
-            return r.mean()
-        if np.any(self.get_data_error() == 0):
-            raise ValueError("Some TOA errors are zero - cannot calculate residuals")
-        w = 1.0 / (self.get_data_error().value ** 2)
-        mean, _ = weighted_mean(r, w)
-        return mean
+        return self._calc_mean(weighted, "phase")
 
     def calc_time_mean(self, calctype="taylor", weighted=True):
         """Calculate mean time of residuals, optionally weighted
@@ -445,15 +462,7 @@ class Residuals:
         -------
         astropy.units.Quantity
         """
-
-        r = self.calc_time_resids(calctype=calctype, subtract_mean=False)
-        if not weighted:
-            return r.mean()
-        if np.any(self.get_data_error() == 0):
-            raise ValueError("Some TOA errors are zero - cannot calculate residuals")
-        w = 1.0 / (self.get_data_error().value ** 2)
-        mean, _ = weighted_mean(r, w)
-        return mean
+        return self._calc_mean(weighted, "time", calctype=calctype)
 
     def calc_time_resids(
         self,
@@ -547,66 +556,99 @@ class Residuals:
         If `lognorm=True` is given, the log-normalization-factor of the likelihood
         function will also be returned.
         """
-        self.update()
 
-        residuals = self.time_resids.to(u.s).value
+        assert self.model.has_correlated_errors
 
-        M = self.model.noise_model_designmatrix(self.toas)
-        phi = self.model.noise_model_basis_weight(self.toas)
-        phiinv = 1 / phi
+        s = self.time_resids.to_value(u.s)
+        Ndiag = self.get_data_error().to_value(u.s) ** 2
+        U = self.model.noise_model_designmatrix(self.toas)
+        Phidiag = self.model.noise_model_basis_weight(self.toas)
 
-        # For implicit offset subtraction
-        if "PHOFF" not in self.model:
-            M = np.append(M, np.ones((len(self.toas), 1)), axis=1)
+        if "PHOFF" not in self.model.free_params:
+            U = np.append(U, np.ones((len(self.toas), 1)), axis=1)
+            Phidiag = np.append(Phidiag, [1e40])
 
-            # 1e-40 is used here instead of 0 to avoid an
-            # un-normalizable distribution.
-            # ENTERPRISE uses the same value.
-            phiinv = np.append(phiinv, [1e-40])
+        chi2, logdet_C = woodbury_dot(Ndiag, U, Phidiag, s, s)
 
-        M, norm = normalize_designmatrix(M, None)
+        return (chi2, logdet_C / 2) if lognorm else chi2
 
-        phiinv /= norm**2
-        Nvec = self.model.scaled_toa_uncertainty(self.toas).to(u.s).value ** 2
-        cinv = 1 / Nvec
-        mtcm = np.dot(M.T, cinv[:, None] * M)
-        mtcm += np.diag(phiinv)
-        mtcy = np.dot(M.T, cinv * residuals)
+    def _calc_ecorr_chi2(self, lognorm=False):
+        """Compute the chi2 when ECORR is present in the timing
+        model without any other correlated noise components."""
 
-        try:
-            c = cho_factor(mtcm)
-            xhat = cho_solve(c, mtcy)
-            svd = False
-        except LinAlgError as e:
-            log.warning(
-                f"Degenerate conditions encountered when computing chi-squared: {e}"
-            )
+        assert (
+            self.model.has_correlated_errors
+            and not self.model.has_time_correlated_errors
+            and "PHOFF" in self.model.free_params
+        )
 
-            U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
+        m, t = self.model, self.toas
 
-            bad = np.where(s <= 0)[0]
-            s[bad] = np.inf
+        ecorr_masks = m.components["EcorrNoise"].get_noise_basis(t).T.astype(bool)
+        ecorr_weights = m.components["EcorrNoise"].get_noise_weights(t)
 
-            xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+        r = self.time_resids
+        sigma = self.get_data_error()
 
-            svd = True
+        # For TOAs which don't belong to any ECORR group.
+        noecmask = np.logical_not(np.any(ecorr_masks, axis=0))
+        Ndiag = sigma[noecmask] ** 2
+        s = r[noecmask]
+        chisq = (
+            np.dot(s, s / Ndiag)
+            if len(s) > 0
+            else u.Quantity(0, u.dimensionless_unscaled)
+        )
+        logdet_C = np.sum(np.log(Ndiag.to_value(u.s**2)))
 
-        newres = residuals - np.dot(M, xhat)
+        # For TOAs which belong to an ECORR group.
+        for ecmask, ecw in zip(ecorr_masks, ecorr_weights):
+            Ndiag = sigma[ecmask] ** 2
+            s = r[ecmask]
 
-        chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
+            v = np.ones(len(s)) << u.s
+
+            chisq_sm, logdet_sm = sherman_morrison_dot(Ndiag, v, ecw, s, s)
+
+            chisq += chisq_sm
+            logdet_C += logdet_sm
+
+        return (
+            (chisq.to_value(u.dimensionless_unscaled), 0.5 * logdet_C)
+            if lognorm
+            else chisq.to_value(u.dimensionless_unscaled)
+        )
+
+    def _calc_wls_chi2(self, lognorm=False):
+        """Compute the chi2 when no correlated noise components are present."""
+
+        assert not self.model.has_correlated_errors
+
+        # Residual units are in seconds. Error units are in microseconds.
+        toa_errors = self.get_data_error()
+        if (toa_errors == 0.0).any():
+            return np.inf
+
+        # The self.time_resids is in the unit of "s", the error "us".
+        # This is more correct way, but it is the slowest.
+        # return (((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()).value
+
+        # This method is faster then the method above but not the most correct way
+        # return ((self.time_resids.to(u.s) / self.toas.get_errors().to(u.s)).value**2.0).sum()
+
+        # This the fastest way, but highly depend on the assumption of time_resids and
+        # error units. Ensure only a pure number is returned.
+
+        r = self.time_resids
+        err = toa_errors.to(u.s)
+
+        chi2 = ((r / err) ** 2.0).sum().value
 
         if not lognorm:
             return chi2
-        else:
-            logdet_N = np.sum(np.log(np.abs(Nvec)))
-            logdet_Phiinv = np.sum(np.log(np.abs(phiinv)))
-            logdet_Sigma = (
-                np.sum(np.log(np.abs(np.diag(c[0]))))
-                if not svd
-                else np.sum(np.log(np.abs(s)))
-            )
-            log_norm = 0.5 * (logdet_N - logdet_Phiinv + logdet_Sigma)
-            return chi2, log_norm
+
+        log_norm = np.sum(np.log(err.value))
+        return chi2, log_norm
 
     def calc_chi2(self, lognorm=False):
         """Return the weighted chi-squared for the model and toas.
@@ -641,45 +683,147 @@ class Residuals:
         chi2                   if lognorm is False
         (chi2, log_norm)       if lognorm is True
         """
-        if self.model.has_correlated_errors:
-            return self._calc_gls_chi2(lognorm=lognorm)
+
+        if not self.model.has_correlated_errors:
+            return self._calc_wls_chi2(lognorm=lognorm)
+        elif (
+            not self.model.has_time_correlated_errors
+            and "PhaseOffset" in self.model.components
+        ):
+            return self._calc_ecorr_chi2(lognorm=lognorm)
         else:
-            # Residual units are in seconds. Error units are in microseconds.
-            toa_errors = self.get_data_error()
-            if (toa_errors == 0.0).any():
-                return np.inf
-
-            # The self.time_resids is in the unit of "s", the error "us".
-            # This is more correct way, but it is the slowest.
-            # return (((self.time_resids / self.toas.get_errors()).decompose()**2.0).sum()).value
-
-            # This method is faster then the method above but not the most correct way
-            # return ((self.time_resids.to(u.s) / self.toas.get_errors().to(u.s)).value**2.0).sum()
-
-            # This the fastest way, but highly depend on the assumption of time_resids and
-            # error units. Ensure only a pure number is returned.
-
-            r = self.time_resids
-            err = toa_errors.to(u.s)
-
-            chi2 = ((r / err) ** 2.0).sum().value
-
-            if not lognorm:
-                return chi2
-            else:
-                log_norm = np.sum(np.log(err.value))
-                return chi2, log_norm
+            return self._calc_gls_chi2(lognorm=lognorm)
 
     def lnlikelihood(self):
         """Compute the log-likelihood for the model and TOAs."""
         chi2, log_norm = self.calc_chi2(lognorm=True)
         return -(chi2 / 2 + log_norm)
 
-    def d_lnlikelihood_d_whitenoise_param(self, param):
+    def d_lnlikelihood_d_Ndiag(self):
         r = self.time_resids
         sigma = self.get_data_error()
+
+        if not self.model.has_correlated_errors:
+            Ndiag = sigma**2
+
+            term1 = -(r**2) / Ndiag**2
+            term2 = 1 / Ndiag
+
+            return -0.5 * (term1 + term2)
+        else:
+            if (
+                self.model.has_time_correlated_errors
+                or "PHOFF" not in self.model.free_params
+            ):
+                raise NotImplementedError
+
+            ecorr_masks = (
+                self.model.components["EcorrNoise"]
+                .get_noise_basis(self.toas)
+                .T.astype(bool)
+            )
+            ecorr_weights = self.model.components["EcorrNoise"].get_noise_weights(
+                self.toas
+            )
+
+            # For TOAs which don't belong to any ECORR group.
+            noecmask = np.logical_not(np.any(ecorr_masks, axis=0))
+            Ndiag = sigma[noecmask] ** 2
+            s = r[noecmask]
+            term1 = -(s**2) / Ndiag**2
+            term2 = 1 / Ndiag
+            term3 = term4 = 0
+
+            # For TOAs which belong to an ECORR group.
+            for ecmask, c in zip(ecorr_masks, ecorr_weights):
+                Ndiag = sigma[ecmask] ** 2
+                s = r[ecmask]
+                v = np.ones(len(s)) << u.s
+
+                s_Ninv_v = np.sum(s * v / Ndiag)
+                v_Ninv_v = np.sum(v**2 / Ndiag)
+                denom = 1 + c**2 * v_Ninv_v
+
+                term1 += -(s**2) / Ndiag**2
+                term2 += 1 / Ndiag
+                term3 += 2 * c**2 * (
+                    s_Ninv_v / denom * (s * v / Ndiag**2)
+                ) - c**4 * (s_Ninv_v**2 / denom**2 * (v**2 / Ndiag**2))
+                term4 += -(c**2) * (v**2 / Ndiag**2) / denom
+
+            return -0.5 * (term1 + term2 + term3 + term4)
+
+    def d_Ndiag_d_param(self, param):
+        """Derivative of the white noise covariance matrix diagonal elements
+        w.r.t. a white noise parameter (EFAC or EQUAD)."""
+        sigma = self.get_data_error()
         d_sigma_d_param = self.model.d_toasigma_d_param(self.toas, param)
-        return np.sum(((r / sigma) ** 2 - 1) / sigma * d_sigma_d_param)
+        return 2 * sigma * d_sigma_d_param
+
+    def d_lnlikelihood_d_ECORR(self, param):
+        par = self.model[param]
+
+        fullmask = par.select_toa_mask(self.toas)
+        t = self.toas[fullmask]
+
+        sigma = self.get_data_error()
+        r = self.time_resids
+        c = par.quantity
+
+        ecorr_masks = (
+            self.model.components["EcorrNoise"].get_noise_basis(t).T.astype(bool)
+        )
+
+        result = 0
+
+        # For TOAs which belong to an ECORR group.
+        for ecmask in ecorr_masks:
+            Ndiag = sigma[ecmask] ** 2
+            s = r[ecmask]
+            v = np.ones_like(s)
+
+            s_Ninv_v = np.sum(s * v / Ndiag)
+            v_Ninv_v = np.sum(v**2 / Ndiag)
+            denom = 1 + c**2 * v_Ninv_v
+
+            result += (
+                c * (s_Ninv_v**2 - v_Ninv_v - c**2 * v_Ninv_v**2) / denom**2
+            )
+
+        return result
+
+    def d_lnlikelihood_d_param(self, param):
+        par = self.model[param]
+
+        if self.model.has_correlated_errors and (
+            self.model.has_time_correlated_errors
+            or "PHOFF" not in self.model.free_params
+        ):
+            raise NotImplementedError
+
+        if isinstance(par, maskParameter):
+            if par.prefix in ["EFAC", "EQUAD"]:
+                return np.sum(
+                    self.d_lnlikelihood_d_Ndiag() * self.d_Ndiag_d_param(param)
+                ).to(1 / par.units)
+            elif par.prefix == "ECORR":
+                return self.d_lnlikelihood_d_ECORR(param).to(1 / par.units)
+
+        raise NotImplementedError(
+            f"d_lnlikelihood_d_param is not defined for parameter {param}."
+        )
+
+    # def d_lnlikelihood_d_whitenoise_param(self, param):
+    #     if self.model.has_correlated_errors:
+    #         raise NotImplementedError(
+    #             "d_lnlikelihood_d_whitenoise_param is not implemented "
+    #             "for the case when correlated noise is present."
+    #         )
+
+    #     r = self.time_resids
+    #     sigma = self.get_data_error()
+    #     d_sigma_d_param = self.model.d_toasigma_d_param(self.toas, param)
+    #     return np.sum(((r / sigma) ** 2 - 1) / sigma * d_sigma_d_param).to(1/self.model[param].units)
 
     def ecorr_average(self, use_noise_model=True):
         """Uses the ECORR noise model time-binning to compute "epoch-averaged" residuals.
