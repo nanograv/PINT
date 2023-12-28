@@ -335,6 +335,7 @@ class EcorrNoise(NoiseComponent):
     category = "ecorr_noise"
 
     introduces_correlated_errors = True
+    is_time_correlated = False
 
     def __init__(
         self,
@@ -461,6 +462,7 @@ class PLDMNoise(NoiseComponent):
     category = "pl_DM_noise"
 
     introduces_correlated_errors = True
+    is_time_correlated = True
 
     def __init__(
         self,
@@ -570,6 +572,7 @@ class PLRedNoise(NoiseComponent):
     category = "pl_red_noise"
 
     introduces_correlated_errors = True
+    is_time_correlated = True
 
     def __init__(
         self,

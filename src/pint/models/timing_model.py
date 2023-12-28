@@ -636,6 +636,7 @@ class TimingModel:
                         and p in self.toasigma_deriv_funcs
                     )
                 )
+                or (hasattr(self[p], "prefix") and self[p].prefix == "ECORR")
             )
         ]
 
@@ -1002,12 +1003,34 @@ class TimingModel:
     @property_exists
     def has_correlated_errors(self):
         """Whether or not this model has correlated errors."""
-        if "NoiseComponent" in self.component_types:
-            for nc in self.NoiseComponent_list:
-                # recursive if necessary
-                if nc.introduces_correlated_errors:
-                    return True
-        return False
+
+        return (
+            "NoiseComponent" in self.component_types
+            and len(
+                [
+                    nc
+                    for nc in self.NoiseComponent_list
+                    if nc.introduces_correlated_errors
+                ]
+            )
+            > 0
+        )
+
+    @property_exists
+    def has_time_correlated_errors(self):
+        """Whether or not this model has time-correlated errors."""
+
+        return (
+            "NoiseComponent" in self.component_types
+            and len(
+                [
+                    nc
+                    for nc in self.NoiseComponent_list
+                    if (nc.introduces_correlated_errors and nc.is_time_correlated)
+                ]
+            )
+            > 0
+        )
 
     @property_exists
     def covariance_matrix_funcs(self):
