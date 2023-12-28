@@ -92,9 +92,6 @@ def test_model():
     # run tempo1 also, if the tempo_utils module is available
     did_tempo1 = False
     with contextlib.suppress(Exception):
-        import tempo_utils
-
-        log.info("Running TEMPO1...")
         t1_result = np.genfromtxt(
             f"{t1_parfile}.tempo_test", names=True, comments="#", dtype=np.longdouble
         )
