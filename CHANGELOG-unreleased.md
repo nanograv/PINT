@@ -35,4 +35,5 @@ the released changes.
 - `model.find_empty_masks` will now also look at DMX and SWX parameters
 - Fixed `make_fake_toas_fromtim`
 - Use `Hessian` instead of `Hessdiag` in `DownhillFitter._fit_noise`; compute noise parameter uncertainties only once in `DownhillFitter.fit_toas`.
+- Consistent naming in `TimingModel.get_params_mapping()`
 ### Removed
