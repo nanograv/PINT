@@ -67,7 +67,7 @@ import numpy as np
 import scipy.linalg
 import scipy.optimize as opt
 from loguru import logger as log
-from numdifftools import Hessdiag
+from numdifftools import Hessian
 
 import pint
 import pint.utils
@@ -1107,7 +1107,7 @@ class DownhillFitter(Fitter):
     def fit_toas(
         self,
         maxiter=20,
-        noise_fit_niter=5,
+        noise_fit_niter=2,
         required_chi2_decrease=1e-2,
         max_chi2_increase=1e-2,
         min_lambda=1e-3,
@@ -1172,26 +1172,35 @@ class DownhillFitter(Fitter):
                 min_lambda=required_chi2_decrease,
                 debug=debug,
             )
-        else:
-            log.debug("Will fit for noise parameters.")
-            for _ in range(noise_fit_niter):
-                self._fit_toas(
-                    maxiter=maxiter,
-                    required_chi2_decrease=required_chi2_decrease,
-                    max_chi2_increase=max_chi2_increase,
-                    min_lambda=min_lambda,
-                    debug=debug,
-                )
-                values, errors = self._fit_noise(noisefit_method=noisefit_method)
-                self._update_noise_params(values, errors)
 
-            return self._fit_toas(
+        log.debug("Will fit for noise parameters.")
+        for ii in range(noise_fit_niter):
+            self._fit_toas(
                 maxiter=maxiter,
                 required_chi2_decrease=required_chi2_decrease,
                 max_chi2_increase=max_chi2_increase,
                 min_lambda=min_lambda,
                 debug=debug,
             )
+
+            if ii == noise_fit_niter - 1:
+                values, errors = self._fit_noise(
+                    noisefit_method=noisefit_method, uncertainty=True
+                )
+                self._update_noise_params(values, errors)
+            else:
+                values = self._fit_noise(
+                    noisefit_method=noisefit_method, uncertainty=False
+                )
+                self._update_noise_params(values)
+
+        return self._fit_toas(
+            maxiter=maxiter,
+            required_chi2_decrease=required_chi2_decrease,
+            max_chi2_increase=max_chi2_increase,
+            min_lambda=min_lambda,
+            debug=debug,
+        )
 
     @property
     def fac(self):
@@ -1205,14 +1214,19 @@ class DownhillFitter(Fitter):
             if not getattr(self.model, fp).frozen
         ]
 
-    def _update_noise_params(self, values, errors):
+    def _update_noise_params(self, values, errors=None):
         """Update the model using estimated noise parameters."""
         free_noise_params = self._get_free_noise_params()
-        for fp, val, err in zip(free_noise_params, values, errors):
-            getattr(self.model, fp).value = val
-            getattr(self.model, fp).uncertainty_value = err
 
-    def _fit_noise(self, noisefit_method="Newton-CG"):
+        if errors is not None:
+            for fp, val, err in zip(free_noise_params, values, errors):
+                getattr(self.model, fp).value = val
+                getattr(self.model, fp).uncertainty_value = err
+        else:
+            for fp, val in zip(free_noise_params, values):
+                getattr(self.model, fp).value = val
+
+    def _fit_noise(self, noisefit_method="Newton-CG", uncertainty=False):
         """Estimate noise parameters and their uncertainties. Noise parameters
         are estimated by numerically maximizing the log-likelihood function including
         the normalization term. The uncertainties thereof are computed using the
@@ -1231,26 +1245,31 @@ class DownhillFitter(Fitter):
 
             return -res.lnlikelihood()
 
-        def _mloglike_grad(xs):
-            """Gradient of the negative of the log-likelihood function w.r.t. white noise parameters."""
-            for fp, x in zip(free_noise_params, xs):
-                getattr(res.model, fp).value = x
+        if not res.model.has_correlated_errors:
 
-            return np.array(
-                [
-                    -res.d_lnlikelihood_d_whitenoise_param(par).value
-                    for par in free_noise_params
-                ]
+            def _mloglike_grad(xs):
+                """Gradient of the negative of the log-likelihood function w.r.t. white noise parameters."""
+                for fp, x in zip(free_noise_params, xs):
+                    getattr(res.model, fp).value = x
+
+                return np.array(
+                    [
+                        -res.d_lnlikelihood_d_param(par).value
+                        for par in free_noise_params
+                    ]
+                )
+
+            maxlike_result = opt.minimize(
+                _mloglike, xs0, method=noisefit_method, jac=_mloglike_grad
             )
+        else:
+            maxlike_result = opt.minimize(_mloglike, xs0, method="Nelder-Mead")
 
-        maxlike_result = opt.minimize(
-            _mloglike, xs0, method=noisefit_method, jac=_mloglike_grad
-        )
+        if uncertainty:
+            hess = Hessian(_mloglike)
+            errs = np.sqrt(np.diag(np.linalg.pinv(hess(maxlike_result.x))))
 
-        hess = Hessdiag(_mloglike)
-        errs = np.sqrt(1 / hess(maxlike_result.x))
-
-        return maxlike_result.x, errs
+        return (maxlike_result.x, errs) if uncertainty else maxlike_result.x
 
 
 class WLSState(ModelState):
@@ -1554,6 +1573,7 @@ class DownhillGLSFitter(DownhillFitter):
         self.threshold = threshold
         self.full_cov = full_cov
         r = super().fit_toas(maxiter=maxiter, debug=debug, **kwargs)
+
         # FIXME: set up noise residuals et cetera
         # Compute the noise realizations if possible
         if not self.full_cov:
@@ -2206,11 +2226,12 @@ class GLSFitter(Fitter):
             log.trace(f"norm: {norm}")
             log.trace(f"xhat: {xhat}")
             newres = residuals - np.dot(M, xhat)
+
             # compute linearized chisq
-            if full_cov:
-                chi2 = np.dot(newres, scipy.linalg.cho_solve(cf, newres))
-            else:
-                chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
+            # if full_cov:
+            #     chi2 = np.dot(newres, scipy.linalg.cho_solve(cf, newres))
+            # else:
+            #     chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
 
             # compute absolute estimates, normalized errors, covariance matrix
             dpars = xhat / norm
@@ -2261,6 +2282,7 @@ class GLSFitter(Fitter):
                 if debug:
                     setattr(self.resids, "norm", norm)
 
+        chi2 = self.resids.calc_chi2()
         self.update_model(chi2)
 
         return chi2
