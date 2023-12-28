@@ -4,7 +4,7 @@ import numpy as np
 from loguru import logger as log
 from warnings import warn
 
-from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
+from pint.models.parameter import MJDParameter, prefixParameter
 from pint.models.timing_model import DelayComponent, MissingParameter
 
 

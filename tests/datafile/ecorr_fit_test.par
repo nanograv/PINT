@@ -1,0 +1,35 @@
+# Created: 2023-11-17T11:55:12.047191
+# PINT_version: 0.9.6+632.g705aa492
+# User: Abhimanyu Susobhanan (abhimanyu)
+# Host: abhimanyu-HP-Envy-x360-2-in-1-Laptop-15-fh0xxx
+# OS: Linux-6.2.0-26-generic-x86_64-with-glibc2.35
+# Python: 3.12.0 | packaged by Anaconda, Inc. | (main, Oct  2 2023, 17:29:18) [GCC 11.2.0]
+# Format: pint
+PSRJ                                JTEST
+EPHEM                               DE440
+CLOCK                             TT(TAI)
+START              53358.7274648756137848
+FINISH             56598.8719953145437848
+DILATEFREQ                              N
+DMDATA                                  N
+NTOA                                 4005
+CHI2                   4005.0029567183433
+CHI2R                  1.0012507391795857
+TRES                1.5468138649408288014
+RAJ                      5:00:00.00000000
+DECJ                    20:00:00.00000000
+PMRA                                  0.0
+PMDEC                                 0.0
+PX                                    0.0
+F0                   100.0000000000000264 1 6.134677718382646903e-14
+F1                                 -1e-14
+PEPOCH             58000.0000000000000000
+TZRMJD             56598.8719953145409853
+TZRSITE                               ssb
+TZRFRQ                                inf
+PHOFF                  0.3994970428309456 1 1.7265902508160817e-05
+ECORR           tel arecibo        0.8629622814352842 1 0.048344420661909526
+EFAC            tel arecibo        1.3009114697742186 1 0.014956744587181306
+PLANET_SHAPIRO                          N
+DM                                   15.0
+UNITS                                 TDB 
