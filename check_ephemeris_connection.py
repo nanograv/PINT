@@ -1,8 +1,5 @@
-import urllib.request
 import pint.solar_system_ephemerides
 
-
-urllib.request.urlopen("https://data.nanograv.org/static/data/ephem/de405.bsp").read()
 
 for e in [
     "de440",
