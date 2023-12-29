@@ -10,6 +10,7 @@ the released changes.
 ## Unreleased
 ### Changed
 - Moved `get_derived_params` to `timing_model`
+- `check_ephemeris_connection` CI test no longer requires access to static NANOGrav site
 ### Added
 - Added numdifftools to setup.cfg to match requirements.txt
 - Documentation: Added `convert_parfile` to list of command-line tools in RTD
