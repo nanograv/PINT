@@ -2255,6 +2255,7 @@ class TimingModel:
                 "Updating POSEPOCH in %s to match %s" % (other_model_name, model_name)
             )
             othermodel.change_posepoch(self.POSEPOCH.value)
+
         if (
             "PEPOCH" in self.params
             and "PEPOCH" in othermodel.params
@@ -2265,6 +2266,7 @@ class TimingModel:
                 "Updating PEPOCH in %s to match %s" % (other_model_name, model_name)
             )
             othermodel.change_pepoch(self.PEPOCH.value)
+
         if (
             "DMEPOCH" in self.params
             and "DMEPOCH" in othermodel.params
@@ -2275,6 +2277,33 @@ class TimingModel:
                 "Updating DMEPOCH in %s to match %s" % (other_model_name, model_name)
             )
             othermodel.change_dmepoch(self.DMEPOCH.value)
+
+        if (
+            self.BINARY.value is not None
+            and othermodel.BINARY.value is not None
+            and self.BINARY.value == othermodel.BINARY.value
+        ):
+            log.info(
+                "Updating binary epoch (T0 or TASC) in %s to match %s"
+                % (other_model_name, model_name)
+            )
+            if (
+                "T0" in self
+                and "T0" in othermodel
+                and self.T0.value is not None
+                and othermodel.T0.value is not None
+                and self.T0.value != othermodel.T0.value
+            ):
+                othermodel.change_binary_epoch(self.T0.quantity)
+            elif (
+                "TASC" in self
+                and "TASC" in othermodel
+                and self.TASC.value is not None
+                and othermodel.TASC.value is not None
+                and self.TASC.value != othermodel.TASC.value
+            ):
+                othermodel.change_binary_epoch(self.TASC.quantity)
+
         if (
             "AstrometryEquatorial" in self.components
             and "AstrometryEcliptic" in othermodel.components
