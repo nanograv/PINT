@@ -1,0 +1,25 @@
+# Created: 2024-01-01T06:22:32.211591
+# PINT_version: 0+untagged.7956.g4025e32.dirty
+# User: ceribell
+# Host: magicserv02
+# OS: Linux-5.4.0-150-generic-x86_64-with-glibc2.27
+# Python: 3.11.0 (main, Feb  9 2023, 15:56:06) [GCC 7.5.0]
+# Format: pint
+PSR                            J1713+0747
+EPHEM                               DE421
+CLK                          TT(BIPM2015)
+UNITS                                 TDB
+TIMEEPH                              FB90
+DILATEFREQ                              N
+DMDATA                                  N
+NTOA                                    0
+RAJ                     17:13:49.53355031 1 0.00000057727246830927
+DECJ                     7:47:37.48847685 1 0.00001419450415241618
+PMRA                    4.925763856775273 1 0.002489055022551827
+PMDEC                 -3.9156180453775624 1 0.004087126752953659
+PX                                 0.8211 1 0.0258
+POSEPOCH           55391.0000000000000000
+F0                    218.811843796082627 1 9.88e-14
+F1                    -4.083888637248e-16 1 1.433249826455e-21
+PEPOCH             55391.0000000000000000
+PLANET_SHAPIRO                          N

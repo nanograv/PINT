@@ -108,16 +108,28 @@ class AbsPhase(PhaseComponent):
         #     ephem=toas.ephem,
         #     planets=toas.planets,
         # )
-        tz = toa.get_TOAs_array(
-            (self.TZRMJD.quantity.jd1 - 2400000.5, self.TZRMJD.quantity.jd2),
-            obs=self.TZRSITE.value,
-            freqs=self.TZRFRQ.quantity,
-            include_bipm=clkc_info["include_bipm"],
-            include_gps=clkc_info["include_gps"],
-            ephem=toas.ephem,
-            planets=toas.planets,
-            tzr=True,
-        )
+        if self.TZRSITE.value != "@" and self.TZRSITE.value.lower() != "bat":
+            tz = toa.get_TOAs_array(
+                (self.TZRMJD.quantity.jd1 - 2400000.5, self.TZRMJD.quantity.jd2),
+                obs=self.TZRSITE.value,
+                freqs=self.TZRFRQ.quantity,
+                include_bipm=clkc_info["include_bipm"],
+                include_gps=clkc_info["include_gps"],
+                ephem=toas.ephem,
+                planets=toas.planets,
+                tzr=True,
+            )
+        else:
+            tz = toa.get_TOAs_array(
+                (self.TZRMJD.quantity.jd1 - 2400000.5, self.TZRMJD.quantity.jd2),
+                obs=self.TZRSITE.value,
+                freqs=self.TZRFRQ.quantity,
+                include_bipm=False,
+                include_gps=False,
+                ephem=toas.ephem,
+                planets=toas.planets,
+                tzr=True,
+            )
         log.debug("Done with TZR_toa")
         self.tz_cache = tz
         self.tz_hash = hash((self.TZRMJD.value, self.TZRSITE.value, self.TZRFRQ.value))
