@@ -252,7 +252,7 @@ plt.legend()
 
 # %%
 par_sim = """
-    PSR           SIM3
+    PSR           SIM4
     RAJ           05:00:00     1
     DECJ          15:00:00     1
     PEPOCH        55000
