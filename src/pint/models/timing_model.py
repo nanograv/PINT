@@ -32,14 +32,12 @@ import abc
 import copy
 import inspect
 import contextlib
-import contextlib
 from collections import OrderedDict, defaultdict
 from functools import wraps
 from warnings import warn
 from uncertainties import ufloat
 
 import astropy.time as time
-from astropy import units as u, constants as c
 from astropy import units as u, constants as c
 import numpy as np
 from astropy.utils.decorators import lazyproperty
