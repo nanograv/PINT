@@ -62,11 +62,7 @@ def test_wx2pl():
     m1.remove_component("PLRedNoise")
 
     Tspan = t.get_mjds().max() - t.get_mjds().min()
-    wavex_setup(m1, Tspan, n_freqs=int(m.TNREDC.value))
-
-    for p in m1.params:
-        if p.startswith("WXSIN") or p.startswith("WXCOS"):
-            m1[p].frozen = False
+    wavex_setup(m1, Tspan, n_freqs=int(m.TNREDC.value), freeze_params=False)
 
     ftr = WLSFitter(t, m1)
     ftr.fit_toas(maxiter=3)
@@ -124,11 +120,7 @@ def test_dmwx2pldm():
     m1.remove_component("PLDMNoise")
 
     Tspan = t.get_mjds().max() - t.get_mjds().min()
-    dmwavex_setup(m1, Tspan, n_freqs=int(m.TNDMC.value))
-
-    for p in m1.params:
-        if p.startswith("DMWXSIN") or p.startswith("DMWXCOS"):
-            m1[p].frozen = False
+    dmwavex_setup(m1, Tspan, n_freqs=int(m.TNDMC.value), freeze_params=False)
 
     ftr = WLSFitter(t, m1)
     ftr.fit_toas(maxiter=3)
