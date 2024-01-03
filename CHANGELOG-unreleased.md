@@ -30,6 +30,8 @@ the released changes.
     - `Residuals.d_lnlikelihood_d_whitenoise_param` will throw a `NotImplementedError` when correlated noise is present.
     - `DownhillFitter._fit_noise()` doesn't use derivatives when correlated noise is present.
     - Documentation: Noise fitting example notebook.
+- `freeze_params` option in `wavex_setup` and `dmwavex_setup`
+- `plrednoise_from_wavex` and `pldmnoise_from_dmwavex` functions
 ### Fixed
 - `MCMC_walkthrough` notebook now runs
 - Fixed runtime data README 
