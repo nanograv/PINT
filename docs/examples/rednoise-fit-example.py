@@ -7,7 +7,7 @@
 # We will use the `PLRedNoise` and `PLDMNoise` models to generate
 # noise realizations (these models provide Fourier Gaussian process
 # descriptions of achromatic red noise and DM noise respectively).
-
+#
 # We will fit the generated datasets using the `WaveX` and `DMWaveX` models,
 # which provide deterministic Fourier representations of achromatic red noise
 # and DM noise respectively.
@@ -58,7 +58,7 @@ par_sim = """
     DM            15           1
     TNREDAMP      -13
     TNREDGAM      3.5
-    TNREDC        20
+    TNREDC        30
     TZRMJD        55000
     TZRFRQ        1400 
     TZRSITE       gbt
@@ -97,11 +97,7 @@ m1 = deepcopy(m)
 m1.remove_component("PLRedNoise")
 
 Tspan = t.get_mjds().max() - t.get_mjds().min()
-wavex_setup(m1, Tspan, n_freqs=45)
-
-for p in m1.params:
-    if p.startswith("WXSIN") or p.startswith("WXCOS"):
-        m1[p].frozen = False
+wavex_setup(m1, Tspan, n_freqs=30, freeze_params=False)
 
 # %% [markdown]
 # ### Initial fitting
@@ -244,7 +240,11 @@ plt.xscale("log")
 plt.yscale("log")
 plt.ylabel("Spectral power (s$^2$)")
 plt.xlabel("Frequency (Hz)")
+plt.axvline(fyr, color="black", ls="dotted", label="1 yr$^{-1}$")
 plt.legend()
+
+# %% [markdown]
+# Note the outlier in the 1 year^-1 bin. This is caused by the covariance with RA and DEC, which introduce a delay with the same frequency.
 
 # %% [markdown]
 # ## DM noise fitting
@@ -301,11 +301,7 @@ m1 = deepcopy(m)
 m1.remove_component("PLDMNoise")
 
 Tspan = t.get_mjds().max() - t.get_mjds().min()
-dmwavex_setup(m1, Tspan, n_freqs=45)
-
-for p in m1.params:
-    if p.startswith("DMWXSIN") or p.startswith("DMWXCOS"):
-        m1[p].frozen = False
+dmwavex_setup(m1, Tspan, n_freqs=30, freeze_params=False)
 
 # %% [markdown]
 # ### Initial fitting
@@ -421,3 +417,45 @@ m3 = pldmnoise_from_dmwavex(m2)
 print(m3)
 
 # %%
+# Now let us plot the estimated spectrum with the injected
+# spectrum.
+plt.subplot(211)
+plt.errorbar(
+    idxs * f0,
+    b * 1e6,
+    db * 1e6,
+    ls="",
+    marker="o",
+    label="$\\hat{a}_j$ (DMWXCOS)",
+    color="red",
+)
+plt.errorbar(
+    idxs * f0,
+    a * 1e6,
+    da * 1e6,
+    ls="",
+    marker="o",
+    label="$\\hat{b}_j$ (DMWXSIN)",
+    color="blue",
+)
+plt.axvline(fyr, color="black", ls="dotted")
+plt.axhline(0, color="grey", ls="--")
+plt.ylabel("Fourier coeffs ($\mu$s)")
+plt.xscale("log")
+plt.legend(fontsize=8)
+
+plt.subplot(212)
+plt.errorbar(
+    idxs * f0, P, dP, ls="", marker="o", label="Spectral power (PINT)", color="k"
+)
+P_inj = m.components["PLDMNoise"].get_noise_weights(t)[::2][:nharm_opt]
+plt.plot(idxs * f0, P_inj, label="Injected Spectrum", color="r")
+P_est = m3.components["PLDMNoise"].get_noise_weights(t)[::2][:nharm_opt]
+print(len(idxs), len(P_est))
+plt.plot(idxs * f0, P_est, label="Estimated Spectrum", color="b")
+plt.xscale("log")
+plt.yscale("log")
+plt.ylabel("Spectral power (s$^2$)")
+plt.xlabel("Frequency (Hz)")
+plt.axvline(fyr, color="black", ls="dotted", label="1 yr$^{-1}$")
+plt.legend()
