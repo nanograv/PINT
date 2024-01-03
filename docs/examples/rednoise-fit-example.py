@@ -58,7 +58,7 @@ par_sim = """
     DM            15           1
     TNREDAMP      -13
     TNREDGAM      3.5
-    TNREDC        30
+    TNREDC        20
     TZRMJD        55000
     TZRFRQ        1400 
     TZRSITE       gbt

@@ -1317,7 +1317,7 @@ def split_swx(model, time):
     return index, newindex
 
 
-def wavex_setup(model, T_span, freqs=None, n_freqs=None):
+def wavex_setup(model, T_span, freqs=None, n_freqs=None, freeze_params=False):
     """
     Set-up a WaveX model based on either an array of user-provided frequencies or the wave number
     frequency calculation. Sine and Cosine amplitudes are initially set to zero
@@ -1395,10 +1395,15 @@ def wavex_setup(model, T_span, freqs=None, n_freqs=None):
             wave_freqs = wave_numbers / T_span
             model.WXFREQ_0001.quantity = wave_freqs[0]
             model.components["WaveX"].add_wavex_components(wave_freqs[1:])
+
+    for p in model.params:
+        if p.startswith("WXSIN") or p.startswith("WXCOS"):
+            model[p].frozen = freeze_params
+
     return model.components["WaveX"].get_indices()
 
 
-def dmwavex_setup(model, T_span, freqs=None, n_freqs=None):
+def dmwavex_setup(model, T_span, freqs=None, n_freqs=None, freeze_params=False):
     """
     Set-up a DMWaveX model based on either an array of user-provided frequencies or the wave number
     frequency calculation. Sine and Cosine amplitudes are initially set to zero
@@ -1476,6 +1481,11 @@ def dmwavex_setup(model, T_span, freqs=None, n_freqs=None):
             wave_freqs = wave_numbers / T_span
             model.DMWXFREQ_0001.quantity = wave_freqs[0]
             model.components["DMWaveX"].add_dmwavex_components(wave_freqs[1:])
+
+    for p in model.params:
+        if p.startswith("DMWXSIN") or p.startswith("DMWXCOS"):
+            model[p].frozen = freeze_params
+
     return model.components["DMWaveX"].get_indices()
 
 
