@@ -460,7 +460,7 @@ class Observatory:
 
 
 def get_observatory(
-    name, include_gps=True, include_bipm=True, bipm_version=bipm_default
+    name, include_gps=None, include_bipm=None, bipm_version=bipm_default
 ):
     """Convenience function to get observatory object with options.
 
@@ -474,10 +474,10 @@ def get_observatory(
     ----------
     name : str
         The name of the observatory
-    include_gps : bool, optional
-        Set False to disable UTC(GPS)->UTC clock correction.
-    include_bipm : bool, optional
-        Set False to disable TAI TT(BIPM) clock correction.
+    include_gps : bool or None, optional
+        Override UTC(GPS)->UTC clock correction.
+    include_bipm : bool or None, optional
+        Override TAI TT(BIPM) clock correction.
     bipm_version : str, optional
         Set the version of TT BIPM clock correction files.
 
@@ -486,9 +486,14 @@ def get_observatory(
 
     """
     site = Observatory.get(name)
-    site.include_gps = include_gps
-    site.include_bipm = include_bipm
-    site.bipm_version = bipm_version
+
+    if include_gps is not None:
+        site.include_gps = include_gps
+
+    if include_bipm is not None:
+        site.include_bipm = include_bipm
+        site.bipm_version = bipm_version
+
     return site
 
 

@@ -336,3 +336,16 @@ def test_compare_t2_observatories_dat():
 def test_compare_tempo_obsys_dat():
     s = compare_tempo_obsys_dat(testdatadir / "observatory")
     assert isinstance(s, defaultdict)
+
+
+def test_ssb_obs():
+    ssb = Observatory.get("@")
+    assert not ssb.include_bipm and not ssb.include_gps
+
+    ssb = get_observatory("@")
+    assert not ssb.include_bipm and not ssb.include_gps
+
+    # get_observatory changes the state of the registered
+    # Observatory objects. So this needs to be repeated.
+    ssb = Observatory.get("@")
+    assert not ssb.include_bipm and not ssb.include_gps
