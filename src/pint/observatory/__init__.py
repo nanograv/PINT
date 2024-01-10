@@ -21,6 +21,7 @@ done, but if you are using a different subset of PINT these imports may be
 necessary.
 """
 
+from copy import deepcopy
 import os
 import textwrap
 from collections import defaultdict
@@ -498,7 +499,7 @@ def get_observatory(
         file switches/options are added at a public API level.
 
     """
-    site = Observatory.get(name)
+    site = deepcopy(Observatory.get(name))
 
     if include_gps is not None:
         site.include_gps = include_gps
