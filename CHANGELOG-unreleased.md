@@ -39,4 +39,5 @@ the released changes.
 - Better exceptions for unsupported/unimplemented binary models (BTX, MSS, etc.)
 - Use `Hessian` instead of `Hessdiag` in `DownhillFitter._fit_noise`; compute noise parameter uncertainties only once in `DownhillFitter.fit_toas`.
 - Consistent naming in `TimingModel.get_params_mapping()`
+- `get_observatory()` no longer overwrites `include_gps` and `include_bipm` of `Observatory` objects unless explicitly stated.
 ### Removed
