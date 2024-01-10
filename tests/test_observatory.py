@@ -276,8 +276,10 @@ def test_json_observatory_output(sandbox):
     gbt_reload = get_observatory("gbt")
 
     for p in gbt_orig.__dict__:
-        if p not in ["_clock"]:
+        if p not in ["_clock", "_aliases"]:
             assert getattr(gbt_orig, p) == getattr(gbt_reload, p)
+
+        assert set(gbt_orig._aliases) == set(gbt_reload._aliases)
 
 
 def test_json_observatory_input_latlon(sandbox):

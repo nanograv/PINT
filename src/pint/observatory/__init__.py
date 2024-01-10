@@ -143,23 +143,23 @@ class Observatory:
     # standard name.
     _alias_map = {}
 
-    def __new__(cls, name, *args, **kwargs):
-        # Generates a new Observatory object instance, and adds it
-        # it the registry, using name as the key.  Name must be unique,
-        # a new instance with a given name will over-write the existing
-        # one only if overwrite=True
-        obs = super().__new__(cls)
-        if name.lower() in cls._registry:
-            if "overwrite" not in kwargs or not kwargs["overwrite"]:
-                raise ValueError(
-                    f"Observatory {name.lower()} already present and overwrite=False"
-                )
-            log.warning(f"Observatory '{name.lower()}' already present; overwriting...")
+    # def __new__(cls, name, *args, **kwargs):
+    #     # Generates a new Observatory object instance, and adds it
+    #     # it the registry, using name as the key.  Name must be unique,
+    #     # a new instance with a given name will over-write the existing
+    #     # one only if overwrite=True
+    #     obs = super().__new__(cls)
+    #     if name.lower() in cls._registry:
+    #         if "overwrite" not in kwargs or not kwargs["overwrite"]:
+    #             raise ValueError(
+    #                 f"Observatory {name.lower()} already present and overwrite=False"
+    #             )
+    #         log.warning(f"Observatory '{name.lower()}' already present; overwriting...")
 
-            cls._register(obs, name)
-            return obs
-        cls._register(obs, name)
-        return obs
+    #         cls._register(obs, name)
+    #         return obs
+    #     cls._register(obs, name)
+    #     return obs
 
     def __init__(
         self,
@@ -171,12 +171,25 @@ class Observatory:
         bipm_version=bipm_default,
         overwrite=False,
     ):
+        self._name = name.lower()
+        self._aliases = (
+            list(set(map(str.lower, aliases))) if aliases is not None else []
+        )
         if aliases is not None:
             Observatory._add_aliases(self, aliases)
         self.fullname = fullname if fullname is not None else name
         self.include_gps = include_gps
         self.include_bipm = include_bipm
         self.bipm_version = bipm_version
+
+        if name.lower() in Observatory._registry:
+            if not overwrite:
+                raise ValueError(
+                    f"Observatory {name.lower()} already present and overwrite=False"
+                )
+            log.warning(f"Observatory '{name.lower()}' already present; overwriting...")
+
+        Observatory._register(self, name)
 
     @classmethod
     def _register(cls, obs, name):
@@ -186,7 +199,7 @@ class Observatory:
         The Observatory instance's name attribute will be updated for
         consistency."""
         cls._registry[name.lower()] = obs
-        obs._name = name.lower()
+        # obs._name = name.lower()
 
     @classmethod
     def _add_aliases(cls, obs, aliases):
@@ -199,10 +212,10 @@ class Observatory:
         to ensure consistency."""
         for a in aliases:
             cls._alias_map[a.lower()] = obs.name
-        for o in cls._registry.values():
-            o._aliases = [
-                alias for alias, name in cls._alias_map.items() if name == o.name
-            ]
+        # for o in cls._registry.values():
+        #     o._aliases = [
+        #         alias for alias, name in cls._alias_map.items() if name == o.name
+        #     ]
 
     @staticmethod
     def gps_correction(t, limits="warn"):
