@@ -1,10 +1,8 @@
-#!/usr/bin/env python
 import matplotlib.pyplot as plt
 import numpy as np
 import astropy
 import astropy.units as u
 import astropy.time
-from loguru import logger as log
 
 __all__ = ["phaseogram", "phaseogram_binned", "plot_priors"]
 
