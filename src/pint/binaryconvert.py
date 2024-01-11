@@ -7,7 +7,7 @@ Potential issues:
 """
 
 import numpy as np
-from astropy import units as u, constants as c
+from astropy import units as u
 from astropy.time import Time
 import copy
 from uncertainties import ufloat, umath
@@ -15,15 +15,9 @@ from loguru import logger as log
 
 from pint import Tsun
 from pint.models.binary_bt import BinaryBT
-from pint.models.binary_dd import BinaryDD, BinaryDDS, BinaryDDGR, BinaryDDH
+from pint.models.binary_dd import BinaryDD, BinaryDDS, BinaryDDH
 from pint.models.binary_ddk import BinaryDDK
 from pint.models.binary_ell1 import BinaryELL1, BinaryELL1H, BinaryELL1k
-from pint.models.parameter import (
-    floatParameter,
-    MJDParameter,
-    intParameter,
-    funcParameter,
-)
 
 # output types
 # DDGR is not included as there is not a well-defined way to get a unique output
@@ -1111,22 +1105,23 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
             ) = _to_ELL1(model)
             LNEDOT = None
             LNEDOT_unc = None
-            if output == "ELL1k":
-                if model.EDOT.quantity is not None and model.ECC.quantity is not None:
-                    LNEDOT = model.EDOT.quantity / model.ECC.quantity
-                    if (
-                        model.EDOT.uncertainty is not None
-                        and model.ECC.uncertainty is not None
-                    ):
-                        LNEDOT_unc = np.sqrt(
-                            (model.EDOT.uncertainty / model.ECC.quantity) ** 2
-                            + (
-                                model.EDOT.quantity
-                                * model.ECC.uncertainty
-                                / model.ECC.quantity**2
-                            )
-                            ** 2
+            if output == "ELL1k" and (
+                model.EDOT.quantity is not None and model.ECC.quantity is not None
+            ):
+                LNEDOT = model.EDOT.quantity / model.ECC.quantity
+                if (
+                    model.EDOT.uncertainty is not None
+                    and model.ECC.uncertainty is not None
+                ):
+                    LNEDOT_unc = np.sqrt(
+                        (model.EDOT.uncertainty / model.ECC.quantity) ** 2
+                        + (
+                            model.EDOT.quantity
+                            * model.ECC.uncertainty
+                            / model.ECC.quantity**2
                         )
+                        ** 2
+                    )
             outmodel.EPS1.quantity = EPS1
             outmodel.EPS2.quantity = EPS2
             outmodel.TASC.quantity = TASC
@@ -1236,19 +1231,20 @@ def convert_binary(model, output, NHARMS=3, useSTIGMA=False, KOM=0 * u.deg):
 
     if output == "DDK":
         outmodel.KOM.quantity = KOM
-        if binary_component.binary_model_name != "DDGR":
-            if hasattr(model, "SINI") and model.SINI.quantity is not None:
-                outmodel.KIN.quantity = np.arcsin(model.SINI.quantity).to(
-                    u.deg, equivalencies=u.dimensionless_angles()
-                )
-                if model.SINI.uncertainty is not None:
-                    outmodel.KIN.uncertainty = (
-                        model.SINI.uncertainty / np.sqrt(1 - model.SINI.quantity**2)
-                    ).to(u.deg, equivalencies=u.dimensionless_angles())
-                log.warning(
-                    f"Setting KIN={outmodel.KIN} from SINI={model.SINI}: check that the sign is correct"
-                )
-                outmodel.KIN.frozen = model.SINI.frozen
+        if binary_component.binary_model_name != "DDGR" and (
+            hasattr(model, "SINI") and model.SINI.quantity is not None
+        ):
+            outmodel.KIN.quantity = np.arcsin(model.SINI.quantity).to(
+                u.deg, equivalencies=u.dimensionless_angles()
+            )
+            if model.SINI.uncertainty is not None:
+                outmodel.KIN.uncertainty = (
+                    model.SINI.uncertainty / np.sqrt(1 - model.SINI.quantity**2)
+                ).to(u.deg, equivalencies=u.dimensionless_angles())
+            log.warning(
+                f"Setting KIN={outmodel.KIN} from SINI={model.SINI}: check that the sign is correct"
+            )
+            outmodel.KIN.frozen = model.SINI.frozen
     outmodel.validate()
 
     return outmodel
