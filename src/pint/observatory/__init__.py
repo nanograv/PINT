@@ -144,24 +144,6 @@ class Observatory:
     # standard name.
     _alias_map = {}
 
-    # def __new__(cls, name, *args, **kwargs):
-    #     # Generates a new Observatory object instance, and adds it
-    #     # it the registry, using name as the key.  Name must be unique,
-    #     # a new instance with a given name will over-write the existing
-    #     # one only if overwrite=True
-    #     obs = super().__new__(cls)
-    #     if name.lower() in cls._registry:
-    #         if "overwrite" not in kwargs or not kwargs["overwrite"]:
-    #             raise ValueError(
-    #                 f"Observatory {name.lower()} already present and overwrite=False"
-    #             )
-    #         log.warning(f"Observatory '{name.lower()}' already present; overwriting...")
-
-    #         cls._register(obs, name)
-    #         return obs
-    #     cls._register(obs, name)
-    #     return obs
-
     def __init__(
         self,
         name,
@@ -200,7 +182,6 @@ class Observatory:
         The Observatory instance's name attribute will be updated for
         consistency."""
         cls._registry[name.lower()] = obs
-        # obs._name = name.lower()
 
     @classmethod
     def _add_aliases(cls, obs, aliases):
@@ -213,10 +194,6 @@ class Observatory:
         to ensure consistency."""
         for a in aliases:
             cls._alias_map[a.lower()] = obs.name
-        # for o in cls._registry.values():
-        #     o._aliases = [
-        #         alias for alias, name in cls._alias_map.items() if name == o.name
-        #     ]
 
     @staticmethod
     def gps_correction(t, limits="warn"):
@@ -555,8 +532,8 @@ def compare_t2_observatories_dat(t2dir=None):
         for line in interesting_lines(f, comments="#"):
             try:
                 x, y, z, full_name, short_name = line.split()
-            except ValueError:
-                raise ValueError(f"unrecognized line '{line}'")
+            except ValueError as e:
+                raise ValueError(f"unrecognized line '{line}'") from e
             x, y, z = float(x), float(y), float(z)
             full_name, short_name = full_name.lower(), short_name.lower()
             topo_obs_entry = textwrap.dedent(
@@ -853,10 +830,7 @@ def find_clock_file(
     """
     # Avoid import loop
     from pint.observatory.clock_file import ClockFile, GlobalClockFile
-    from pint.observatory.global_clock_corrections import (
-        Index,
-        get_clock_correction_file,
-    )
+    from pint.observatory.global_clock_corrections import Index
 
     if name == "":
         raise ValueError("No filename supplied to find_clock_file")
