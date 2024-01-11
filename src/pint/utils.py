@@ -40,8 +40,6 @@ import textwrap
 from contextlib import contextmanager
 from pathlib import Path
 from warnings import warn
-import scipy
-import uncertainties
 
 import astropy.constants as const
 import astropy.coordinates as coords
