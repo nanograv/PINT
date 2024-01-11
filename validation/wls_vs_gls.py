@@ -190,7 +190,7 @@ if __name__ == "__main__":
                     T2_pval, T2_unc, T2_post_rms, T2_chi = check_tempo2_output(
                         tempo_par, tim, p, result_par
                     )
-                except:
+                except Exception:
                     T2_pval, T2_unc, T2_post_rms, T2_chi = check_tempo2_output(
                         tempo_par, tim, pn, result_par
                     )
