@@ -460,6 +460,7 @@ def export_all_clock_files(directory):
     for name in Observatory.names():
         o = get_observatory(name)
         if hasattr(o, "_clock") and o._clock is not None:
+            print(name)
             for clock in o._clock:
                 if clock.filename is not None:
                     clock.export(directory / Path(clock.filename).name)
