@@ -117,8 +117,6 @@ if not rtd:
     # The burn-in should be decided after looking at the chains in the real world.
     samples_emcee = sampler.get_chain(flat=True, discard=100)
 
-    # %%
-if not rtd:
     # Plot the MCMC chains to make sure that the burn-in has been removed properly.
     # Otherwise, go back and discard more points.
     for idx, param_chain in enumerate(samples_emcee.T):
