@@ -55,8 +55,6 @@ import sys
 import warnings
 from loguru import logger as log
 
-from erfa import ErfaWarning
-
 __all__ = ["LogFilter", "setup", "format", "levels", "get_level"]
 
 # defaults can be overridden using $LOGURU_LEVEL and $LOGURU_FORMAT
