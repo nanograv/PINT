@@ -2776,6 +2776,82 @@ def woodbury_dot(Ndiag, U, Phidiag, x, y):
     return x_Cinv_y, logdet_C
 
 
+def _get_wx2pl_lnlike(model, component_name, ignore_fyr=True):
+    from pint.models.noise_model import powerlaw
+    from pint import DMconst
+
+    assert component_name in ["WaveX", "DMWaveX"]
+    prefix = "WX" if component_name == "WaveX" else "DMWX"
+
+    idxs = np.array(model.components[component_name].get_indices())
+
+    fs = np.array(
+        [model[f"{prefix}FREQ_{idx:04d}"].quantity.to_value(u.Hz) for idx in idxs]
+    )
+    f0 = np.min(fs)
+    fyr = (1 / u.year).to_value(u.Hz)
+
+    assert np.allclose(
+        np.diff(np.diff(fs)), 0
+    ), "[DM]WaveX frequencies must be uniformly spaced."
+
+    if ignore_fyr:
+        year_mask = np.abs(((fs - fyr) / f0)) > 0.5
+
+        idxs = idxs[year_mask]
+        fs = np.array(
+            [model[f"{prefix}FREQ_{idx:04d}"].quantity.to_value(u.Hz) for idx in idxs]
+        )
+        f0 = np.min(fs)
+
+    scaling_factor = 1 if component_name == "WaveX" else DMconst / (1400 * u.MHz) ** 2
+
+    a = np.array(
+        [
+            (scaling_factor * model[f"{prefix}SIN_{idx:04d}"].quantity).to_value(u.s)
+            for idx in idxs
+        ]
+    )
+    da = np.array(
+        [
+            (scaling_factor * model[f"{prefix}SIN_{idx:04d}"].uncertainty).to_value(u.s)
+            for idx in idxs
+        ]
+    )
+    b = np.array(
+        [
+            (scaling_factor * model[f"{prefix}COS_{idx:04d}"].quantity).to_value(u.s)
+            for idx in idxs
+        ]
+    )
+    db = np.array(
+        [
+            (scaling_factor * model[f"{prefix}COS_{idx:04d}"].uncertainty).to_value(u.s)
+            for idx in idxs
+        ]
+    )
+
+    def powl_model(params):
+        """Get the powerlaw spectrum for the WaveX frequencies for a given
+        set of parameters. This calls the powerlaw function used by `PLRedNoise`/`PLDMNoise`.
+        """
+        gamma, log10_A = params
+        return (powerlaw(fs, A=10**log10_A, gamma=gamma) * f0) ** 0.5
+
+    def mlnlike(params):
+        """Negative of the likelihood function that acts on the
+        `[DM]WaveX` amplitudes."""
+        sigma = powl_model(params)
+        return 0.5 * np.sum(
+            (a**2 / (sigma**2 + da**2))
+            + (b**2 / (sigma**2 + db**2))
+            + np.log(sigma**2 + da**2)
+            + np.log(sigma**2 + db**2)
+        )
+
+    return mlnlike
+
+
 def plrednoise_from_wavex(model, ignore_fyr=True):
     """Convert a `WaveX` representation of red noise to a `PLRedNoise`
     representation. This is done by minimizing a likelihood function
@@ -2795,48 +2871,9 @@ def plrednoise_from_wavex(model, ignore_fyr=True):
     pint.models.timing_model.TimingModel
         The timing model with a converted `PLRedNoise` component.
     """
-    from pint.models.noise_model import powerlaw, PLRedNoise
+    from pint.models.noise_model import PLRedNoise
 
-    idxs = np.array(model.components["WaveX"].get_indices())
-
-    fs = np.array([model[f"WXFREQ_{idx:04d}"].quantity.to_value(u.Hz) for idx in idxs])
-    f0 = np.min(fs)
-    fyr = (1 / u.year).to_value(u.Hz)
-
-    assert np.allclose(
-        np.diff(np.diff(fs)), 0
-    ), "`plrednoise_from_wavex` requires the WaveX frequencies to be uniformly spaced."
-
-    if ignore_fyr:
-        year_mask = np.abs(((fs - fyr) / f0)) > 0.5
-
-        idxs = idxs[year_mask]
-        fs = np.array(
-            [model[f"WXFREQ_{idx:04d}"].quantity.to_value(u.Hz) for idx in idxs]
-        )
-        f0 = np.min(fs)
-
-    a = np.array([model[f"WXSIN_{idx:04d}"].quantity.to_value(u.s) for idx in idxs])
-    da = np.array([model[f"WXSIN_{idx:04d}"].uncertainty.to_value(u.s) for idx in idxs])
-    b = np.array([model[f"WXCOS_{idx:04d}"].quantity.to_value(u.s) for idx in idxs])
-    db = np.array([model[f"WXCOS_{idx:04d}"].uncertainty.to_value(u.s) for idx in idxs])
-
-    def powl_model(params):
-        """Get the powerlaw spectrum for the WaveX frequencies for a given
-        set of parameters. This calls the powerlaw function used by `PLRedNoise`."""
-        gamma, log10_A = params
-        return (powerlaw(fs, A=10**log10_A, gamma=gamma) * f0) ** 0.5
-
-    def mlnlike(params):
-        """Negative of the likelihood function that acts on the
-        `WaveX` amplitudes."""
-        sigma = powl_model(params)
-        return 0.5 * np.sum(
-            (a**2 / (sigma**2 + da**2))
-            + (b**2 / (sigma**2 + db**2))
-            + np.log(sigma**2 + da**2)
-            + np.log(sigma**2 + db**2)
-        )
+    mlnlike = _get_wx2pl_lnlike(model, "WaveX", ignore_fyr=ignore_fyr)
 
     gamma_val, log10_A_val = minimize(mlnlike, [4, -13], method="Nelder-Mead").x
 
@@ -2845,19 +2882,21 @@ def plrednoise_from_wavex(model, ignore_fyr=True):
         np.diag(np.linalg.pinv(hess((gamma_val, log10_A_val))))
     )
 
+    tnredc = len(model.components["WaveX"].get_indices())
+
     model1 = deepcopy(model)
     model1.remove_component("WaveX")
     model1.add_component(PLRedNoise())
     model1.TNREDAMP.value = log10_A_val
     model1.TNREDGAM.value = gamma_val
-    model1.TNREDC.value = len(idxs) + 1 if ignore_fyr else len(idxs)
+    model1.TNREDC.value = tnredc
     model1.TNREDAMP.uncertainty_value = log10_A_err
     model1.TNREDGAM.uncertainty_value = gamma_err
 
     return model1
 
 
-def pldmnoise_from_dmwavex(model):
+def pldmnoise_from_dmwavex(model, ignore_fyr=False):
     """Convert a `DMWaveX` representation of red noise to a `PLDMNoise`
     representation. This is done by minimizing a likelihood function
     that acts on the `DMWaveX` amplitudes over the powerlaw spectral
@@ -2873,56 +2912,9 @@ def pldmnoise_from_dmwavex(model):
     pint.models.timing_model.TimingModel
         The timing model with a converted `PLDMNoise` component.
     """
-    from pint.models.noise_model import powerlaw, PLDMNoise
-    from pint import DMconst
+    from pint.models.noise_model import PLDMNoise
 
-    scale = DMconst / (1400 * u.MHz) ** 2
-
-    idxs = np.array(model.components["DMWaveX"].get_indices())
-    a = np.array(
-        [(scale * model[f"DMWXSIN_{idx:04d}"].quantity).to_value(u.s) for idx in idxs]
-    )
-    da = np.array(
-        [
-            (scale * model[f"DMWXSIN_{idx:04d}"].uncertainty).to_value(u.s)
-            for idx in idxs
-        ]
-    )
-    b = np.array(
-        [(scale * model[f"DMWXCOS_{idx:04d}"].quantity).to_value(u.s) for idx in idxs]
-    )
-    db = np.array(
-        [
-            (scale * model[f"DMWXCOS_{idx:04d}"].uncertainty).to_value(u.s)
-            for idx in idxs
-        ]
-    )
-
-    fs = np.array(
-        [model[f"DMWXFREQ_{idx:04d}"].quantity.to_value(u.Hz) for idx in idxs]
-    )
-    f0 = np.min(fs)
-
-    assert np.allclose(
-        np.diff(np.diff(fs)), 0
-    ), "`pldmnoise_from_dmwavex` requires the DMWaveX frequencies to be uniformly spaced."
-
-    def powl_model(params):
-        """Get the powerlaw spectrum for the DMWaveX frequencies for a given
-        set of parameters. This calls the powerlaw function used by `PLDMNoise`."""
-        gamma, log10_A = params
-        return (powerlaw(fs, A=10**log10_A, gamma=gamma) * f0) ** 0.5
-
-    def mlnlike(params):
-        """Negative of the likelihood function that acts on the
-        `WaveX` amplitudes."""
-        sigma = powl_model(params)
-        return 0.5 * np.sum(
-            (a**2 / (sigma**2 + da**2))
-            + (b**2 / (sigma**2 + db**2))
-            + np.log(sigma**2 + da**2)
-            + np.log(sigma**2 + db**2)
-        )
+    mlnlike = _get_wx2pl_lnlike(model, "DMWaveX", ignore_fyr=ignore_fyr)
 
     gamma_val, log10_A_val = minimize(mlnlike, [4, -13], method="Nelder-Mead").x
 
@@ -2931,12 +2923,14 @@ def pldmnoise_from_dmwavex(model):
         np.diag(np.linalg.pinv(hess((gamma_val, log10_A_val))))
     )
 
+    tndmc = len(model.components["DMWaveX"].get_indices())
+
     model1 = deepcopy(model)
     model1.remove_component("DMWaveX")
     model1.add_component(PLDMNoise())
     model1.TNDMAMP.value = log10_A_val
     model1.TNDMGAM.value = gamma_val
-    model1.TNDMC.value = len(idxs)
+    model1.TNDMC.value = tndmc
     model1.TNDMAMP.uncertainty_value = log10_A_err
     model1.TNDMGAM.uncertainty_value = gamma_err
 
