@@ -2919,9 +2919,16 @@ def pldmnoise_from_dmwavex(model, ignore_fyr=False):
     gamma_val, log10_A_val = minimize(mlnlike, [4, -13], method="Nelder-Mead").x
 
     hess = Hessian(mlnlike)
-    gamma_err, log10_A_err = np.sqrt(
-        np.diag(np.linalg.pinv(hess((gamma_val, log10_A_val))))
-    )
+
+    H = hess((gamma_val, log10_A_val))
+    assert np.all(np.linalg.eigvals(H) > 0), "The Hessian is not positive definite!"
+
+    Hinv = np.linalg.pinv(H)
+    assert np.all(
+        np.linalg.eigvals(Hinv) > 0
+    ), "The inverse Hessian is not positive definite!"
+
+    gamma_err, log10_A_err = np.sqrt(np.diag(Hinv))
 
     tndmc = len(model.components["DMWaveX"].get_indices())
 
