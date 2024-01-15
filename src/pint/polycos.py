@@ -793,13 +793,17 @@ class Polycos:
             rdcPhase = rdcPhase.int - (dt * model.F0.value * 60.0) + rdcPhase.frac
             dtd = dt.astype(float)  # Truncate to double
             rdcPhased = rdcPhase.astype(float)
-            coeffs = np.polyfit(dtd, rdcPhased, ncoeff - 1)[::-1]
+            rawcoeffs = np.polyfit(dtd, rdcPhased, ncoeff - 1)
+            coeffs = rawcoeffs[::-1]
+            rms = np.std(np.polyval(rawcoeffs, dtd) - rdcPhased)
 
             date, hms = Time(tmid, format="mjd", scale="utc").iso.split()
             yy, mm, dd = date.split("-")
             date = f"{dd}-{MONTHS[int(mm) - 1]}-{yy[-2:]}"
             hms = float(hms.replace(":", ""))
 
+            ssbfreq = model.barycentric_radio_freq(toaMid)
+            doppler = 1e4 * ((ssbfreq - toaMid["freq"]) / toaMid["freq"]).decompose()
             entry = PolycoEntry(
                 tmid,
                 segLength,
@@ -816,8 +820,8 @@ class Polycos:
             entry_dict["utc"] = hms
             entry_dict["tmid"] = tmid
             entry_dict["dm"] = model.DM.value
-            entry_dict["doppler"] = 0.0
-            entry_dict["logrms"] = 0.0
+            entry_dict["doppler"] = doppler
+            entry_dict["logrms"] = np.log10(rms)
             entry_dict["mjd_span"] = segLength
             entry_dict["t_start"] = entry.tstart
             entry_dict["t_stop"] = entry.tstop
