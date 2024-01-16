@@ -2993,8 +2993,15 @@ def find_optimal_nharms(model, toas, component, nharms_max=45):
         aics.append(akaike_information_criterion(ftr.model, toas))
 
         model1 = ftr.model
-        model1.components[component].add_wavex_component(
-            (len(model1.components[component].get_indices()) + 1) / T_span, frozen=False
-        )
+        if component == "WaveX":
+            model1.components[component].add_wavex_component(
+                (len(model1.components[component].get_indices()) + 1) / T_span,
+                frozen=False,
+            )
+        else:
+            model1.components[component].add_dmwavex_component(
+                (len(model1.components[component].get_indices()) + 1) / T_span,
+                frozen=False,
+            )
 
     return np.argmin(aics), np.array(aics) - np.min(aics)
