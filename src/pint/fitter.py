@@ -470,7 +470,6 @@ class Fitter:
                         par.units,
                     )
         s += "\n" + self.model.get_derived_params()
-        s += "\n" + self.model.get_derived_params()
         return s
 
     def get_derived_params(self, returndict=False):
