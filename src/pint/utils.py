@@ -689,7 +689,7 @@ def dmx_ranges_old(
     # Mark TOAs as True if they are in any DMX bin
     for DMX in DMXs:
         mask[np.logical_and(MJDs > DMX.min - offset, MJDs < DMX.max + offset)] = True
-    log.info("{} out of {} TOAs are in a DMX bin".format(mask.sum(), len(mask)))
+    log.info(f"{mask.sum()} out of {len(mask)} TOAs are in a DMX bin")
     # Instantiate a DMX component
     dmx_class = Component.component_types["DispersionDMX"]
     dmx_comp = dmx_class()
@@ -980,8 +980,8 @@ def dmxparse(fitter, save=False):
     # Get number of DMX epochs
     try:
         DMX_mapping = fitter.model.get_prefix_mapping("DMX_")
-    except ValueError:
-        raise RuntimeError("No DMX values in model!")
+    except ValueError as e:
+        raise RuntimeError("No DMX values in model!") from e
     dmx_epochs = [f"{x:04d}" for x in DMX_mapping.keys()]
     DMX_keys = list(DMX_mapping.values())
     DMXs = np.zeros(len(dmx_epochs))
@@ -1013,7 +1013,7 @@ def dmxparse(fitter, save=False):
         # access by label name to make sure we get the right values
         # make sure they are sorted in ascending order
         cc = fitter.parameter_covariance_matrix.get_label_matrix(
-            sorted(["DMX_" + x for x in dmx_epochs])
+            sorted([f"DMX_{x}" for x in dmx_epochs])
         )
         n = len(DMX_Errs) - np.sum(mask_idxs)
         # Find error in mean DM
@@ -1046,25 +1046,24 @@ def dmxparse(fitter, save=False):
         if isinstance(save, bool):
             save = "dmxparse.out"
         DMX = "DMX"
-        lines = []
-        lines.append("# Mean %s value = %+.6e \n" % (DMX, DMX_mean))
-        lines.append("# Uncertainty in average %s = %.5e \n" % ("DM", DMX_mean_err))
-        lines.append(
+        lines = [
+            "# Mean %s value = %+.6e \n" % (DMX, DMX_mean),
+            "# Uncertainty in average %s = %.5e \n" % ("DM", DMX_mean_err),
             "# Columns: %sEP %s_value %s_var_err %sR1 %sR2 %s_bin \n"
-            % (DMX, DMX, DMX, DMX, DMX, DMX)
-        )
-        for k in range(len(dmx_epochs)):
-            lines.append(
-                "%.4f %+.7e %.3e %.4f %.4f %s \n"
-                % (
-                    DMX_center_MJD[k],
-                    DMXs[k] - DMX_mean,
-                    DMX_vErrs[k],
-                    DMX_R1[k],
-                    DMX_R2[k],
-                    DMX_keys[k],
-                )
+            % (DMX, DMX, DMX, DMX, DMX, DMX),
+        ]
+        lines.extend(
+            "%.4f %+.7e %.3e %.4f %.4f %s \n"
+            % (
+                DMX_center_MJD[k],
+                DMXs[k] - DMX_mean,
+                DMX_vErrs[k],
+                DMX_R1[k],
+                DMX_R2[k],
+                DMX_keys[k],
             )
+            for k in range(len(dmx_epochs))
+        )
         with open_or_use(save, mode="w") as dmxout:
             dmxout.writelines(lines)
             if isinstance(save, (str, Path)):
@@ -1076,18 +1075,16 @@ def dmxparse(fitter, save=False):
     DMX_units = getattr(fitter.model, "DMX_{:}".format(dmx_epochs[0])).units
     DMXR_units = getattr(fitter.model, "DMXR1_{:}".format(dmx_epochs[0])).units
 
-    # define the output dictionary
-    dmx = {}
-    dmx["dmxs"] = mean_sub_DMXs * DMX_units
-    dmx["dmx_verrs"] = DMX_vErrs * DMX_units
-    dmx["dmxeps"] = DMX_center_MJD * DMXR_units
-    dmx["r1s"] = DMX_R1 * DMXR_units
-    dmx["r2s"] = DMX_R2 * DMXR_units
-    dmx["bins"] = DMX_keys
-    dmx["mean_dmx"] = DMX_mean * DMX_units
-    dmx["avg_dm_err"] = DMX_mean_err * DMX_units
-
-    return dmx
+    return {
+        "dmxs": mean_sub_DMXs * DMX_units,
+        "dmx_verrs": DMX_vErrs * DMX_units,
+        "dmxeps": DMX_center_MJD * DMXR_units,
+        "r1s": DMX_R1 * DMXR_units,
+        "r2s": DMX_R2 * DMXR_units,
+        "bins": DMX_keys,
+        "mean_dmx": DMX_mean * DMX_units,
+        "avg_dm_err": DMX_mean_err * DMX_units,
+    }
 
 
 def get_prefix_timerange(model, prefixname):
@@ -1136,7 +1133,7 @@ def get_prefix_timeranges(model, prefixname):
     """
     if prefixname.endswith("_"):
         prefixname = prefixname[:-1]
-    prefix_mapping = model.get_prefix_mapping(prefixname + "_")
+    prefix_mapping = model.get_prefix_mapping(f"{prefixname}_")
     r1 = np.zeros(len(prefix_mapping))
     r2 = np.zeros(len(prefix_mapping))
     indices = np.zeros(len(prefix_mapping), dtype=np.int32)
@@ -1534,15 +1531,12 @@ def _translate_wavex_freqs(wxfreq, k):
         wxfreq *= u.d**-1
     if len(wxfreq) == 1:
         return (2.0 * np.pi * wxfreq) / (k + 1.0)
-    else:
-        wave_om = [
-            ((2.0 * np.pi * wxfreq[i]) / (k[i] + 1.0)) for i in range(len(wxfreq))
-        ]
-        if np.allclose(wave_om, wave_om[0], atol=1e-3):
-            om = sum(wave_om) / len(wave_om)
-            return om
-        else:
-            return False
+    wave_om = [((2.0 * np.pi * wxfreq[i]) / (k[i] + 1.0)) for i in range(len(wxfreq))]
+    return (
+        sum(wave_om) / len(wave_om)
+        if np.allclose(wave_om, wave_om[0], atol=1e-3)
+        else False
+    )
 
 
 def translate_wave_to_wavex(model):
@@ -1619,10 +1613,10 @@ def get_wavex_freqs(model, index=None, quantity=False):
             ]
     elif isinstance(index, (int, float, np.int64)):
         idx_rf = f"{int(index):04d}"
-        values = getattr(model.components["WaveX"], "WXFREQ_" + idx_rf)
+        values = getattr(model.components["WaveX"], f"WXFREQ_{idx_rf}")
     elif isinstance(index, (list, set, np.ndarray)):
         idx_rf = [f"{int(idx):04d}" for idx in index]
-        values = [getattr(model.components["WaveX"], "WXFREQ_" + ind) for ind in idx_rf]
+        values = [getattr(model.components["WaveX"], f"WXFREQ_{ind}") for ind in idx_rf]
     else:
         raise TypeError(
             f"index most be a float, int, set, list, array, or None - not {type(index)}"
@@ -1660,30 +1654,28 @@ def get_wavex_amps(model, index=None, quantity=False):
             model.components["WaveX"].get_prefix_mapping_component("WXSIN_").keys()
         )
         if len(indices) == 1:
-            values = (
-                getattr(model.components["WaveX"], "WXSIN_" + f"{int(indices):04d}"),
-                getattr(model.components["WaveX"], "WXCOS_" + f"{int(indices):04d}"),
-            )
+            values = getattr(
+                model.components["WaveX"], f"WXSIN_{int(indices):04d}"
+            ), getattr(model.components["WaveX"], f"WXCOS_{int(indices):04d}")
         else:
             values = [
                 (
-                    getattr(model.components["WaveX"], "WXSIN_" + f"{int(idx):04d}"),
-                    getattr(model.components["WaveX"], "WXCOS_" + f"{int(idx):04d}"),
+                    getattr(model.components["WaveX"], f"WXSIN_{int(idx):04d}"),
+                    getattr(model.components["WaveX"], f"WXCOS_{int(idx):04d}"),
                 )
                 for idx in indices
             ]
     elif isinstance(index, (int, float, np.int64)):
         idx_rf = f"{int(index):04d}"
-        values = (
-            getattr(model.components["WaveX"], "WXSIN_" + idx_rf),
-            getattr(model.components["WaveX"], "WXCOS_" + idx_rf),
+        values = getattr(model.components["WaveX"], f"WXSIN_{idx_rf}"), getattr(
+            model.components["WaveX"], f"WXCOS_{idx_rf}"
         )
     elif isinstance(index, (list, set, np.ndarray)):
         idx_rf = [f"{int(idx):04d}" for idx in index]
         values = [
             (
-                getattr(model.components["WaveX"], "WXSIN_" + ind),
-                getattr(model.components["WaveX"], "WXCOS_" + ind),
+                getattr(model.components["WaveX"], f"WXSIN_{ind}"),
+                getattr(model.components["WaveX"], f"WXCOS_{ind}"),
             )
             for ind in idx_rf
         ]
@@ -1695,7 +1687,7 @@ def get_wavex_amps(model, index=None, quantity=False):
         if isinstance(values, tuple):
             values = tuple(v.quantity for v in values)
         if isinstance(values, list):
-            values = [tuple((v[0].quantity, v[1].quantity)) for v in values]
+            values = [(v[0].quantity, v[1].quantity) for v in values]
     return values
 
 
@@ -1782,10 +1774,7 @@ def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
     weights = weights_in
     wtot = weights.sum()
     # user has input a mean value
-    if inputmean is None:
-        wmean = (weights * arr).sum() / wtot
-    else:
-        wmean = float(inputmean)
+    wmean = (weights * arr).sum() / wtot if inputmean is None else float(inputmean)
     # how should error be calculated?
     if calcerr:
         werr2 = (weights**2 * (arr - wmean) ** 2).sum()
@@ -1836,10 +1825,12 @@ def ELL1_check(
     lhs = A1 / const.c * E**4.0
     rhs = TRES / np.sqrt(NTOA)
     if outstring:
-        s = "Checking applicability of ELL1 model -- \n"
-        s += "    Condition is asini/c * ecc**4 << timing precision / sqrt(# TOAs) to use ELL1\n"
-        s += "    asini/c * ecc**4    = {:.3g} \n".format(lhs.to(u.us))
-        s += "    TRES / sqrt(# TOAs) = {:.3g} \n".format(rhs.to(u.us))
+        s = (
+            f"Checking applicability of ELL1 model -- \n"
+            f"    Condition is asini/c * ecc**4 << timing precision / sqrt(# TOAs) to use ELL1\n"
+            f"    asini/c * ecc**4    = {lhs.to(u.us):.3g} \n"
+            f"    TRES / sqrt(# TOAs) = {rhs.to(u.us):.3g} \n"
+        )
     if lhs * 50.0 < rhs:
         if outstring:
             s += "    Should be fine.\n"
@@ -1894,20 +1885,15 @@ def FTest(chi2_1, dof_1, chi2_2, dof_2):
         delta_dof = dof_1 - dof_2
         new_redchi2 = chi2_2 / dof_2
         F = float((delta_chi2 / delta_dof) / new_redchi2)  # fdtr doesn't like float128
-        ft = fdtrc(delta_dof, dof_2, F)
+        return fdtrc(delta_dof, dof_2, F)
     elif dof_1 == dof_2:
         log.warning("Models have equal degrees of freedom, cannot perform F-test.")
-        ft = np.nan
-    elif delta_chi2 <= 0:
+        return np.nan
+    else:
         log.warning(
             "Chi^2 for Model 2 is larger than Chi^2 for Model 1, cannot perform F-test."
         )
-        ft = 1.0
-    else:
-        raise ValueError(
-            f"Mystery problem in Ftest - maybe NaN? {chi2_1} {dof_1} {chi2_2} {dof_2}"
-        )
-    return ft
+        return 1.0
 
 
 def add_dummy_distance(c, distance=1 * u.kpc):
@@ -1933,8 +1919,8 @@ def add_dummy_distance(c, distance=1 * u.kpc):
         return c
 
     if isinstance(c.frame, coords.builtin_frames.icrs.ICRS):
-        if hasattr(c, "pm_ra_cosdec"):
-            cnew = coords.SkyCoord(
+        return (
+            coords.SkyCoord(
                 ra=c.ra,
                 dec=c.dec,
                 pm_ra_cosdec=c.pm_ra_cosdec,
@@ -1943,11 +1929,8 @@ def add_dummy_distance(c, distance=1 * u.kpc):
                 distance=distance,
                 frame=coords.ICRS,
             )
-        else:
-            # it seems that after applying proper motions
-            # it changes the RA pm to pm_ra instead of pm_ra_cosdec
-            # although the value seems the same
-            cnew = coords.SkyCoord(
+            if hasattr(c, "pm_ra_cosdec")
+            else coords.SkyCoord(
                 ra=c.ra,
                 dec=c.dec,
                 pm_ra_cosdec=c.pm_ra,
@@ -1956,10 +1939,9 @@ def add_dummy_distance(c, distance=1 * u.kpc):
                 distance=distance,
                 frame=coords.ICRS,
             )
-
-        return cnew
+        )
     elif isinstance(c.frame, coords.builtin_frames.galactic.Galactic):
-        cnew = coords.SkyCoord(
+        return coords.SkyCoord(
             l=c.l,
             b=c.b,
             pm_l_cosb=c.pm_l_cosb,
@@ -1968,9 +1950,8 @@ def add_dummy_distance(c, distance=1 * u.kpc):
             distance=distance,
             frame=coords.Galactic,
         )
-        return cnew
     elif isinstance(c.frame, pint.pulsar_ecliptic.PulsarEcliptic):
-        cnew = coords.SkyCoord(
+        return coords.SkyCoord(
             lon=c.lon,
             lat=c.lat,
             pm_lon_coslat=c.pm_lon_coslat,
@@ -1980,7 +1961,6 @@ def add_dummy_distance(c, distance=1 * u.kpc):
             obliquity=c.obliquity,
             frame=pint.pulsar_ecliptic.PulsarEcliptic,
         )
-        return cnew
     else:
         log.warning(
             "Do not know coordinate frame for %r: returning coordinates unchanged" % c
@@ -2008,8 +1988,8 @@ def remove_dummy_distance(c):
         )
         return c
     if isinstance(c.frame, coords.builtin_frames.icrs.ICRS):
-        if hasattr(c, "pm_ra_cosdec"):
-            cnew = coords.SkyCoord(
+        return (
+            coords.SkyCoord(
                 ra=c.ra,
                 dec=c.dec,
                 pm_ra_cosdec=c.pm_ra_cosdec,
@@ -2017,11 +1997,8 @@ def remove_dummy_distance(c):
                 obstime=c.obstime,
                 frame=coords.ICRS,
             )
-        else:
-            # it seems that after applying proper motions
-            # it changes the RA pm to pm_ra instead of pm_ra_cosdec
-            # although the value seems the same
-            cnew = coords.SkyCoord(
+            if hasattr(c, "pm_ra_cosdec")
+            else coords.SkyCoord(
                 ra=c.ra,
                 dec=c.dec,
                 pm_ra_cosdec=c.pm_ra,
@@ -2029,9 +2006,9 @@ def remove_dummy_distance(c):
                 obstime=c.obstime,
                 frame=coords.ICRS,
             )
-        return cnew
+        )
     elif isinstance(c.frame, coords.builtin_frames.galactic.Galactic):
-        cnew = coords.SkyCoord(
+        return coords.SkyCoord(
             l=c.l,
             b=c.b,
             pm_l_cosb=c.pm_l_cosb,
@@ -2039,9 +2016,8 @@ def remove_dummy_distance(c):
             obstime=c.obstime,
             frame=coords.Galactic,
         )
-        return cnew
     elif isinstance(c.frame, pint.pulsar_ecliptic.PulsarEcliptic):
-        cnew = coords.SkyCoord(
+        return coords.SkyCoord(
             lon=c.lon,
             lat=c.lat,
             pm_lon_coslat=c.pm_lon_coslat,
@@ -2050,7 +2026,6 @@ def remove_dummy_distance(c):
             obliquity=c.obliquity,
             frame=pint.pulsar_ecliptic.PulsarEcliptic,
         )
-        return cnew
     else:
         log.warning(
             "Do not know coordinate frame for %r: returning coordinates unchanged" % c
@@ -2222,10 +2197,7 @@ def info_string(prefix_string="# ", comment=None, detailed=False):
                 }
             )
 
-    s = ""
-    for key, val in info_dict.items():
-        s += f"{key}: {val}\n"
-
+    s = "".join(f"{key}: {val}\n" for key, val in info_dict.items())
     s = textwrap.dedent(s)
     # remove blank lines
     s = os.linesep.join([x for x in s.splitlines() if x])
@@ -2516,8 +2488,7 @@ def divide_times(t, t0, offset=0.5):
     """
     dt = t - t0
     values = (dt.to(u.yr).value + offset) // 1
-    indices = np.digitize(values, np.unique(values), right=True)
-    return indices
+    return np.digitize(values, np.unique(values), right=True)
 
 
 def convert_dispersion_measure(dm, dmconst=None):
