@@ -1,5 +1,4 @@
 import pytest
-from pint import DMconst
 from pint.models import get_model
 from pint.simulation import make_fake_toas_uniform
 from pint.fitter import WLSFitter

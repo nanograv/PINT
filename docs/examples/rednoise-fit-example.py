@@ -22,7 +22,6 @@ from pint.simulation import make_fake_toas_uniform
 from pint.logging import setup as setup_log
 from pint.fitter import WLSFitter
 from pint.utils import (
-    akaike_information_criterion,
     dmwavex_setup,
     find_optimal_nharms,
     wavex_setup,
