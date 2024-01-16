@@ -31,7 +31,7 @@ the released changes.
     - `DownhillFitter._fit_noise()` doesn't use derivatives when correlated noise is present.
     - Documentation: Noise fitting example notebook.
 - `freeze_params` option in `wavex_setup` and `dmwavex_setup`
-- `plrednoise_from_wavex` and `pldmnoise_from_dmwavex` functions
+- `plrednoise_from_wavex`, `pldmnoise_from_dmwavex`, and `find_optimal_nharms` functions
 ### Fixed
 - `MCMC_walkthrough` notebook now runs
 - Fixed runtime data README 
