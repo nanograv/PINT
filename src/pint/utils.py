@@ -2942,3 +2942,59 @@ def pldmnoise_from_dmwavex(model, ignore_fyr=False):
     model1.TNDMGAM.uncertainty_value = gamma_err
 
     return model1
+
+
+def find_optimal_nharms(model, toas, component, nharms_max=45):
+    """Find the optimal number of harmonics for `WaveX`/`DMWaveX` using the Akaike Information
+    Criterion.
+
+    Parameters
+    ----------
+    model: `pint.models.timing_model.TimingModel`
+        The timing model. Should not already contain `WaveX`/`DMWaveX` or `PLRedNoise`/`PLDMNoise`.
+    toas: `pint.toa.TOAs`
+        Input TOAs
+    component: str
+        Component name; "WaveX" or "DMWaveX"
+    nharms_max: int
+        Maximum number of harmonics
+
+    Returns
+    -------
+    nharms_opt: int
+        Optimal number of harmonics
+    aics: ndarray
+        Array of normalized AIC values.
+    """
+    from pint.fitter import Fitter
+
+    assert component in ["WaveX", "DMWaveX"]
+    assert (
+        component not in model.components
+    ), f"{component} is already included in the model."
+    assert (
+        "PLRedNoise" not in model.components and "PLDMNoise" not in model.components
+    ), "PLRedNoise/PLDMNoise cannot be included in the model."
+
+    model1 = deepcopy(model)
+
+    ftr = Fitter.auto(toas, model1, downhill=False)
+    ftr.fit_toas(maxiter=5)
+    aics = [akaike_information_criterion(model1, toas)]
+    model1 = ftr.model
+
+    T_span = toas.get_mjds().max() - toas.get_mjds().min()
+    setup_component = wavex_setup if component == "WaveX" else dmwavex_setup
+    setup_component(model1, T_span, n_freqs=1, freeze_params=False)
+
+    for _ in range(nharms_max):
+        ftr = Fitter.auto(toas, model1, downhill=False)
+        ftr.fit_toas(maxiter=5)
+        aics.append(akaike_information_criterion(ftr.model, toas))
+
+        model1 = ftr.model
+        model1.components[component].add_wavex_component(
+            (len(model1.components[component].get_indices()) + 1) / T_span, frozen=False
+        )
+
+    return np.argmin(aics), np.array(aics) - np.min(aics)
