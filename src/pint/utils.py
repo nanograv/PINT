@@ -601,10 +601,8 @@ def dmx_ranges_old(
     # Round off the dates to 0.1 days and only keep unique values so we ignore closely spaced TOAs
     loMJDs = np.unique(loMJDs.round(1))
     hiMJDs = np.unique(hiMJDs.round(1))
-    log.info("There are {} dates with freqs > {} MHz".format(len(hiMJDs), divide_freq))
-    log.info(
-        "There are {} dates with freqs < {} MHz\n".format(len(loMJDs), divide_freq)
-    )
+    log.info(f"There are {len(hiMJDs)} dates with freqs > {divide_freq} MHz")
+    log.info(f"There are {len(loMJDs)} dates with freqs < {divide_freq} MHz\n")
 
     DMXs = []
 
@@ -768,12 +766,10 @@ def dmx_ranges(toas, divide_freq=1000.0 * u.MHz, binwidth=15.0 * u.d, verbose=Fa
     DMXs = []
 
     prevbinR2 = MJDs[0] - 0.001 * u.d
-    while True:
+    while np.any(MJDs > prevbinR2):
         # Consider all TOAs with times after the last bin up through a total span of binwidth
         # Get indexes that should be in this bin
         # If there are no more MJDs to process, we are done.
-        if not np.any(MJDs > prevbinR2):
-            break
         startMJD = MJDs[MJDs > prevbinR2][0]
         binidx = np.logical_and(MJDs > prevbinR2, MJDs <= startMJD + binwidth)
         if not np.any(binidx):
@@ -802,7 +798,7 @@ def dmx_ranges(toas, divide_freq=1000.0 * u.MHz, binwidth=15.0 * u.d, verbose=Fa
     # Mark TOAs as True if they are in any DMX bin
     for DMX in DMXs:
         mask[np.logical_and(MJDs >= DMX.min, MJDs <= DMX.max)] = True
-    log.info("{} out of {} TOAs are in a DMX bin".format(mask.sum(), len(mask)))
+    log.info(f"{mask.sum()} out of {len(mask)} TOAs are in a DMX bin")
     # Instantiate a DMX component
     dmx_class = Component.component_types["DispersionDMX"]
     dmx_comp = dmx_class()
