@@ -24,6 +24,7 @@ from pint.fitter import WLSFitter
 from pint.utils import (
     akaike_information_criterion,
     dmwavex_setup,
+    find_optimal_nharms,
     wavex_setup,
     plrednoise_from_wavex,
     pldmnoise_from_dmwavex,
@@ -91,63 +92,26 @@ t = make_fake_toas_uniform(
     multi_freqs_in_epoch=True,
 )
 
+# %% [markdown]
+# ### Optimal number of harmonics
+# The optimal number of harmonics can be estimated by minimizing the
+# Akaike Information Criterion (AIC). This is implemented in the
+# `pint.utils.find_optimal_nharms` function.
+
 # %%
-# We also need the WaveX version of the par file.
 m1 = deepcopy(m)
 m1.remove_component("PLRedNoise")
 
-Tspan = t.get_mjds().max() - t.get_mjds().min()
-wavex_setup(m1, Tspan, n_freqs=30, freeze_params=False)
+nharm_opt, d_aics = find_optimal_nharms(m1, t, "WaveX", 30)
 
-# %% [markdown]
-# ### Initial fitting
-
-# %%
-ftr = WLSFitter(t, m1)
-
-ftr.fit_toas(maxiter=15)
-
-m1 = ftr.model
-print(m1)
-
-# %% [markdown]
-# ### Optimal number of harmonics
-# The optimal number of harmonics can be estimated
-# using the Akaike Information Criterion (AIC).
-
-# %%
-m2 = deepcopy(m1)
-
-aics = []
-idxs = m2.components["WaveX"].get_indices()
-
-ftr = WLSFitter(t, m2)
-ftr.fit_toas(maxiter=3)
-aic = akaike_information_criterion(ftr.model, t)
-aics += [aic]
-print(f"{len(idxs)}\t{aic}\t{ftr.resids.chi2_reduced}")
-
-for idx in reversed(idxs):
-    if idx == 1:
-        m2.remove_component("WaveX")
-    else:
-        m2.components["WaveX"].remove_wavex_component(idx)
-
-    ftr = WLSFitter(t, m2)
-    ftr.fit_toas(maxiter=3)
-    aic = akaike_information_criterion(ftr.model, t)
-    aics += [aic]
-    print(f"{idx-1}\t{aic}\t{ftr.resids.chi2_reduced}")
-
-# %%
-# Find the optimum number of harmonics by minimizing AIC.
-d_aics = np.array(aics) - np.min(aics)
-nharm_opt = len(d_aics) - 1 - np.argmin(d_aics)
 print("Optimum no of harmonics = ", nharm_opt)
 
 # %%
+print(np.argmin(d_aics))
+
+# %%
 # The Y axis is plotted in log scale only for better visibility.
-plt.scatter(list(reversed(range(len(d_aics)))), d_aics + 1)
+plt.scatter(list(range(len(d_aics))), d_aics + 1)
 plt.axvline(nharm_opt, color="red", label="Optimum number of harmonics")
 plt.axvline(
     int(m.TNREDC.value), color="black", ls="--", label="Injected number of harmonics"
@@ -159,23 +123,19 @@ plt.yscale("log")
 # plt.savefig("sim3-aic.pdf")
 
 # %%
-# Now create a new model with the optimum number of
-# harmonics
+# Now create a new model with the optimum number of harmonics
 m2 = deepcopy(m1)
-
-idxs = m2.components["WaveX"].get_indices()
-for idx in reversed(idxs):
-    if idx > nharm_opt:
-        m2.components["WaveX"].remove_wavex_component(idx)
+Tspan = t.get_mjds().max() - t.get_mjds().min()
+wavex_setup(m2, T_span=Tspan, n_freqs=nharm_opt, freeze_params=False)
 
 ftr = WLSFitter(t, m2)
-ftr.fit_toas(maxiter=5)
+ftr.fit_toas(maxiter=10)
 m2 = ftr.model
 
 print(m2)
 
 # %% [markdown]
-# ### Estimate the spectral parameters from the WaveX fit.
+# ### Estimating the spectral parameters from the WaveX fit.
 
 # %%
 # Get the Fourier amplitudes and powers and their uncertainties.
@@ -296,62 +256,18 @@ t = make_fake_toas_uniform(
 )
 
 # %%
-# Create the DMWaveX version of the par file.
+# Find the optimum number of harmonics by minimizing AIC.
 m1 = deepcopy(m)
 m1.remove_component("PLDMNoise")
 
-Tspan = t.get_mjds().max() - t.get_mjds().min()
-dmwavex_setup(m1, Tspan, n_freqs=30, freeze_params=False)
-
-# %% [markdown]
-# ### Initial fitting
-
-# %%
-ftr = WLSFitter(t, m1)
-
-ftr.fit_toas(maxiter=15)
-
-m1 = ftr.model
-print(m1)
-
-# %% [markdown]
-# ### Optimal number of harmonics
-# The optimal number of harmonics can be estimated
-# using the Akaike Information Criterion (AIC).
-
-# %%
 m2 = deepcopy(m1)
 
-aics = []
-idxs = m2.components["DMWaveX"].get_indices()
-
-ftr = WLSFitter(t, m2)
-ftr.fit_toas(maxiter=3)
-aic = akaike_information_criterion(ftr.model, t)
-aics += [aic]
-print(f"{len(idxs)}\t{aic}\t{ftr.resids.chi2_reduced}")
-
-for idx in reversed(idxs):
-    if idx == 1:
-        m2.remove_component("DMWaveX")
-    else:
-        m2.components["DMWaveX"].remove_dmwavex_component(idx)
-
-    ftr = WLSFitter(t, m2)
-    ftr.fit_toas(maxiter=3)
-    aic = akaike_information_criterion(ftr.model, t)
-    aics += [aic]
-    print(f"{idx-1}\t{aic}\t{ftr.resids.chi2_reduced}")
-
-# %%
-# Find the optimum number of harmonics by minimizing AIC.
-d_aics = np.array(aics) - np.min(aics)
-nharm_opt = len(d_aics) - 1 - np.argmin(d_aics)
+nharm_opt, d_aics = find_optimal_nharms(m2, t, "DMWaveX", 30)
 print("Optimum no of harmonics = ", nharm_opt)
 
 # %%
 # The Y axis is plotted in log scale only for better visibility.
-plt.scatter(list(reversed(range(len(d_aics)))), d_aics + 1)
+plt.scatter(list(range(len(d_aics))), d_aics + 1)
 plt.axvline(nharm_opt, color="red", label="Optimum number of harmonics")
 plt.axvline(
     int(m.TNDMC.value), color="black", ls="--", label="Injected number of harmonics"
@@ -367,19 +283,17 @@ plt.yscale("log")
 # harmonics
 m2 = deepcopy(m1)
 
-idxs = m2.components["DMWaveX"].get_indices()
-for idx in reversed(idxs):
-    if idx > nharm_opt:
-        m2.components["DMWaveX"].remove_dmwavex_component(idx)
+Tspan = t.get_mjds().max() - t.get_mjds().min()
+dmwavex_setup(m2, T_span=Tspan, n_freqs=nharm_opt, freeze_params=False)
 
 ftr = WLSFitter(t, m2)
-ftr.fit_toas(maxiter=5)
+ftr.fit_toas(maxiter=10)
 m2 = ftr.model
 
 print(m2)
 
 # %% [markdown]
-# ### Estimate the spectral parameters from the `DMWaveX` fit.
+# ### Estimating the spectral parameters from the `DMWaveX` fit.
 
 # %%
 # Get the Fourier amplitudes and powers and their uncertainties.
