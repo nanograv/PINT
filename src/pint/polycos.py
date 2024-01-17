@@ -99,7 +99,7 @@ class PolycoEntry:
         Reference spin frequency
     ncoeff : int
         Number of coefficients
-    coeff : numpy.ndarray
+    coeffs : numpy.ndarray
         Polynomial coefficents
     """
 
@@ -795,7 +795,6 @@ class Polycos:
             rdcPhased = rdcPhase.astype(float)
             rawcoeffs = np.polyfit(dtd, rdcPhased, ncoeff - 1)
             coeffs = rawcoeffs[::-1]
-            rms = np.std(np.polyval(rawcoeffs, dtd) - rdcPhased)
 
             date, hms = Time(tmid, format="mjd", scale="utc").iso.split()
             yy, mm, dd = date.split("-")
@@ -815,6 +814,8 @@ class Polycos:
                 ncoeff,
                 coeffs,
             )
+            ph_polyco = entry.evalabsphase(toas["tdbld"])
+            rms = np.std((ph_polyco - ph).frac)
 
             entry_dict = OrderedDict()
             entry_dict["psr"] = model.PSR.value
@@ -823,8 +824,7 @@ class Polycos:
             entry_dict["tmid"] = tmid
             entry_dict["dm"] = model.DM.value
             entry_dict["doppler"] = doppler
-            # cap this to make it work format-wise
-            entry_dict["logrms"] = max(np.log10(rms), -9.9)
+            entry_dict["logrms"] = np.log10(rms)
             entry_dict["mjd_span"] = segLength
             entry_dict["t_start"] = entry.tstart
             entry_dict["t_stop"] = entry.tstop
