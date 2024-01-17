@@ -294,8 +294,8 @@ def tempo_polyco_table_reader(filename):
             utc = float(fields[2])
             tmid = np.longdouble(fields[3])
             dm = float(fields[4])
-            doppler = float(fields[5])
-            logrms = float(fields[6])
+            doppler = float(line[74:79])
+            logrms = float(line[79:86])
 
             # Second line
             fields = f.readline().split()
@@ -823,7 +823,8 @@ class Polycos:
             entry_dict["tmid"] = tmid
             entry_dict["dm"] = model.DM.value
             entry_dict["doppler"] = doppler
-            entry_dict["logrms"] = np.log10(rms)
+            # cap this to make it work format-wise
+            entry_dict["logrms"] = max(np.log10(rms), -9.9)
             entry_dict["mjd_span"] = segLength
             entry_dict["t_start"] = entry.tstart
             entry_dict["t_stop"] = entry.tstop
