@@ -803,7 +803,9 @@ class Polycos:
             hms = float(hms.replace(":", ""))
 
             ssbfreq = model.barycentric_radio_freq(toaMid)
-            doppler = 1e4 * ((ssbfreq - toaMid["freq"]) / toaMid["freq"]).decompose()
+            doppler = float(
+                1e4 * ((ssbfreq - toaMid["freq"]) / toaMid["freq"]).decompose()
+            )
             entry = PolycoEntry(
                 tmid,
                 segLength,
