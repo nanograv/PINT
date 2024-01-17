@@ -76,7 +76,6 @@ from pint.models.parameter import (
     AngleParameter,
     boolParameter,
     strParameter,
-    funcParameter,
 )
 from pint.pint_matrix import (
     CorrelationMatrix,

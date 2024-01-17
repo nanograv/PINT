@@ -341,8 +341,8 @@ class WaveX(DelayComponent):
                 warn(f"Frequency WXFREQ_{index:04d} is negative")
             wfreqs[j] = getattr(self, f"WXFREQ_{index:04d}").value
         wfreqs.sort()
-        if np.any(np.diff(wfreqs) <= (1.0 / (2.0 * 364.25))):
-            warn("Frequency resolution is greater than 1/yr")
+        # if np.any(np.diff(wfreqs) <= (1.0 / (2.0 * 364.25))):
+        #     warn("Frequency resolution is greater than 1/yr")
         if self.WXEPOCH.value is None and self._parent is not None:
             if self._parent.PEPOCH.value is None:
                 raise MissingParameter(
