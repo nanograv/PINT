@@ -38,7 +38,8 @@ the released changes.
 - Fixed `derived_params` when OMDOT has 0 uncertainty
 - `model.find_empty_masks` will now also look at DMX and SWX parameters
 - Fixed `make_fake_toas_fromtim`
-- Better exceptions for unsupported/unimplemented binary models (BTX, MSS, etc.)
 - Use `Hessian` instead of `Hessdiag` in `DownhillFitter._fit_noise`; compute noise parameter uncertainties only once in `DownhillFitter.fit_toas`.
 - Consistent naming in `TimingModel.get_params_mapping()`
+- Better exceptions for unsupported/unimplemented binary models (BTX, MSS, etc.)
+- Emit warnings when `WaveX`/`DMWaveX` is used together with other representations of red/DM noise
 ### Removed
