@@ -294,8 +294,8 @@ def tempo_polyco_table_reader(filename):
             utc = float(fields[2])
             tmid = np.longdouble(fields[3])
             dm = float(fields[4])
-            doppler = float(line[74:79])
-            logrms = float(line[79:86])
+            doppler = float(fields[5])
+            logrms = float(fields[6])
 
             # Second line
             fields = f.readline().split()
@@ -712,7 +712,7 @@ class Polycos:
         method : str, optional
             Method to generate polycos. Only the ``TEMPO`` method is supported for now.
         numNodes : int, optional
-            Number of nodes for fitting. It cannot be less then the number of
+            Number of nodes (sample points within each segment) for fitting. It cannot be less then the number of
             coefficents. Default: 20
         progress : bool, optional
             Whether or not to show the progress bar during calculation
@@ -751,35 +751,21 @@ class Polycos:
         obsFreq = float(obsFreq)
 
         # Using tempo1 method to create polycos
-        # If you want to disable the progress bar, add disable=True to the tqdm() call.
         for tmid in tqdm(tmids, disable=not progress):
             tStart = tmid - mjdSpan / 2
             tStop = tmid + mjdSpan / 2
             nodes = np.linspace(tStart, tStop, numNodes)
 
+            # midpoint TOA and reference phase for each segment
             toaMid = toa.get_TOAs_array(
                 (np.modf(tmid)[1], np.modf(tmid)[0]),
                 obs=obs,
                 freqs=obsFreq,
                 ephem=ephem,
             )
-            # toaMid = toa.get_TOAs_list(
-            #     [toa.TOA()],
-            # )
-
             refPhase = model.phase(toaMid, abs_phase=True)
 
             # Create node toas(Time sample using TOA class)
-            # toaList = [
-            #     toa.TOA(
-            #         (np.modf(toaNode)[1], np.modf(toaNode)[0]),
-            #         obs=obs,
-            #         freq=obsFreq,
-            #     )
-            #     for toaNode in nodes
-            # ]
-
-            # toas = toa.get_TOAs_list(toaList, ephem=ephem)
             toas = toa.get_TOAs_array(
                 (np.modf(nodes)[0], np.modf(nodes)[1]),
                 obs=obs,
@@ -814,8 +800,8 @@ class Polycos:
                 ncoeff,
                 coeffs,
             )
-            ph_polyco = entry.evalabsphase(toas["tdbld"])
-            rms = np.std((ph_polyco - ph).frac)
+            ph_polyco = np.polyval(dtd, rawcoeffs)
+            rms = np.sqrt(((ph_polyco - ph).value) ** 2 / (len(dtd) - 1))
 
             entry_dict = OrderedDict()
             entry_dict["psr"] = model.PSR.value
