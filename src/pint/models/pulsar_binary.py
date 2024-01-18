@@ -235,7 +235,6 @@ class PulsarBinary(DelayComponent):
             self.register_deriv_funcs(self.d_binary_delay_d_xxxx, bpar)
         # Setup the model isinstance
         self.binary_instance = self.binary_model_class()
-
         # Setup the FBX orbits if FB is set.
         # TODO this should use a smarter way to set up orbit.
         FBX_mapping = self.get_prefix_mapping_component("FB")
@@ -248,7 +247,6 @@ class PulsarBinary(DelayComponent):
             self.binary_instance.orbits_cls = bo.OrbitFBX(
                 self.binary_instance, list(FBXs.keys())
             )
-
             # Note: if we are happy to use these to show alternate parameterizations then this can be uncommented
 
             # # remove the PB parameterization, replace with functions
