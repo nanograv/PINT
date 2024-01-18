@@ -491,15 +491,19 @@ class TimingModel:
 
         from pint.models.dispersion_model import DispersionDMX
         from pint.models.wave import Wave
+        from pint.models.wavex import WaveX
+        from pint.models.dmwavex import DMWaveX
         from pint.models.noise_model import PLRedNoise, PLDMNoise
 
-        if num_components_of_type((DispersionDMX, PLDMNoise)) > 1:
+        if num_components_of_type((DispersionDMX, PLDMNoise, DMWaveX)) > 1:
             log.warning(
-                "DispersionDMX and PLDMNoise are being used together. They are two ways of modelling the same effect."
+                "DispersionDMX, PLDMNoise, and DMWaveX cannot be used together. "
+                "They are ways of modelling the same effect."
             )
-        if num_components_of_type((Wave, PLRedNoise)) > 1:
+        if num_components_of_type((Wave, WaveX, PLRedNoise)) > 1:
             log.warning(
-                "Wave and PLRedNoise are being used together. They are two ways of modelling the same effect."
+                "Wave, WaveX, and PLRedNoise cannot be used together. "
+                "They are ways of modelling the same effect."
             )
 
     # def __str__(self):
