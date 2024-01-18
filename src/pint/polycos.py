@@ -800,8 +800,8 @@ class Polycos:
                 ncoeff,
                 coeffs,
             )
-            ph_polyco = np.polyval(dtd, rawcoeffs)
-            rms = np.sqrt(((ph_polyco - ph).value) ** 2 / (len(dtd) - 1))
+            ph_polyco = np.polyval(rawcoeffs, dtd)
+            rms = np.sqrt(((ph_polyco - rdcPhased) ** 2).sum() / (len(dtd) - 1))
 
             entry_dict = OrderedDict()
             entry_dict["psr"] = model.PSR.value
@@ -810,7 +810,8 @@ class Polycos:
             entry_dict["tmid"] = tmid
             entry_dict["dm"] = model.DM.value
             entry_dict["doppler"] = doppler
-            entry_dict["logrms"] = np.log10(rms)
+            # truncate so write/read work
+            entry_dict["logrms"] = max(np.log10(rms), -9.999)
             entry_dict["mjd_span"] = segLength
             entry_dict["t_start"] = entry.tstart
             entry_dict["t_stop"] = entry.tstop
