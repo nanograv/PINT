@@ -1,4 +1,3 @@
-
 """Support for independent binary models.
 
 This module if for wrapping standalone binary models so that they work
@@ -546,10 +545,16 @@ class PulsarBinary(DelayComponent):
         return "%dth time derivative of frequency of orbit" % n
 
     def ORBWAVES_description(self, n):
-        return "Coefficient of the %dth sine wave in Fourier series model of Tasc variations" % n
+        return (
+            "Coefficient of the %dth sine wave in Fourier series model of Tasc variations"
+            % n
+        )
 
     def ORBWAVEC_description(self, n):
-        return "Coefficient of the %dth cosine wave in Fourier series model of Tasc variations" % n
+        return (
+            "Coefficient of the %dth cosine wave in Fourier series model of Tasc variations"
+            % n
+        )
 
     def change_binary_epoch(self, new_epoch):
         """Change the epoch for this binary model.

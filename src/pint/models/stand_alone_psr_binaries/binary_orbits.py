@@ -288,7 +288,6 @@ class OrbitWaves(Orbit):
         self.nwaves = ns
 
     def _ORBWAVEs(self):
-
         ii = 0
         while f"ORBWAVEC{ii}" in self.orbit_params:
             ii += 1
@@ -303,7 +302,6 @@ class OrbitWaves(Orbit):
         return ORBWAVEs
 
     def _tw(self):
-
         t = self.t
         if not hasattr(self.t, "unit") or self.t.unit is None:
             t = self.t * u.day
@@ -312,7 +310,6 @@ class OrbitWaves(Orbit):
         return tw
 
     def _deltaPhi(self):
-
         tw = self._tw()
         waveamps = self._ORBWAVEs()
         OM = self.ORBWAVE_OM.to("radian/second")
@@ -326,7 +323,6 @@ class OrbitWaves(Orbit):
         return delta_Phi
 
     def _d_deltaPhi_dt(self):
-
         tw = self._tw()
         waveamps = self._ORBWAVEs()
         OM = self.ORBWAVE_OM.to("radian/second")
@@ -350,7 +346,6 @@ class OrbitWaves(Orbit):
         return d_deltaPhi_dt.to(u.Unit("1/s"), equivalencies=u.dimensionless_angles())
 
     def _d2_deltaPhi_dt2(self):
-
         tw = self._tw()
         waveamps = self._ORBWAVEs()
         OM = self.ORBWAVE_OM.to("radian/second")
@@ -399,17 +394,14 @@ class OrbitWaves(Orbit):
         return -(self.pbprime() ** 2) * FB1
 
     def d_orbits_d_TASC(self):
-
         PB = self.PB.to("second")
         return -(1 / PB) * 2 * np.pi * u.rad
 
     def d_orbits_d_PB(self):
-
         PB = self.PB.to("second")
         return -(self.tt0 / PB**2).decompose() * 2 * np.pi * u.rad
 
     def d_orbits_d_orbwave(self, par):
-
         tw = self._tw()
         WOM = self.ORBWAVE_OM.to("radian/second")
         nh = int(par[8:]) + 1
@@ -422,7 +414,6 @@ class OrbitWaves(Orbit):
         )
 
     def d_pbprime_d_PB(self):
-
         PB = self.PB.to("second")
         FB0 = 1.0 / PB
 
@@ -433,7 +424,6 @@ class OrbitWaves(Orbit):
         return (1.0 / ((FB0_prime * PB) ** 2)).decompose()
 
     def d_pbprime_d_orbwave(self, par):
-
         tw = self._tw()
         WOM = self.ORBWAVE_OM.to("radian/second")
         PB = self.PB.to("second")
@@ -453,7 +443,6 @@ class OrbitWaves(Orbit):
         )
 
     def d_orbits_d_par(self, par):
-
         return (
             self.d_orbits_d_orbwave(par)
             if re.match(r"ORBWAVE[CS]\d+", par) is not None
