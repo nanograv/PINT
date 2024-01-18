@@ -412,7 +412,7 @@ class OrbitWaves(Orbit):
 
         tw = self._tw()
         WOM = self.ORBWAVE_OM.to("radian/second")
-        nh = int(par[8:])
+        nh = int(par[8:]) + 1
 
         return (
             (np.cos(WOM * nh * tw) if par[7] == "C" else np.sin(WOM * nh * tw))
@@ -442,7 +442,7 @@ class OrbitWaves(Orbit):
 
         FB0_prime = FB0 + FB0_shift
 
-        nh = int(par[8:])
+        nh = int(par[8:]) + 1
         if par[7] == "C":
             d_deltaFB0_d_orbwave = -WOM * nh * np.sin(WOM * nh * tw)
         else:
