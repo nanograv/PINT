@@ -51,6 +51,7 @@ from astropy import constants
 from astropy.time import Time
 from loguru import logger as log
 from scipy.special import fdtrc
+from scipy.linalg import cho_factor, cho_solve
 from copy import deepcopy
 import warnings
 
@@ -81,6 +82,7 @@ __all__ = [
     "dmx_ranges_old",
     "dmx_ranges",
     "dmxselections",
+    "xxxselections",
     "dmxstats",
     "dmxparse",
     "get_prefix_timerange",
@@ -843,6 +845,35 @@ def dmx_ranges(toas, divide_freq=1000.0 * u.MHz, binwidth=15.0 * u.d, verbose=Fa
     dmx_comp.validate()
 
     return mask, dmx_comp
+
+
+def xxxselections(model, toas, prefix="DM"):
+    """Map DMX/SWX/other selections to TOAs
+
+    Parameters
+    ----------
+    model : pint.models.TimingModel
+    toas : pint.toa.TOAs
+    prefix : str
+        Name of selection
+
+    Returns
+    -------
+    dict :
+        keys are XXX indices, values are the TOAs selected for each index
+    """
+    if not any(p.startswith(f"{prefix}X") for p in model.params):
+        return {}
+    toas_selector = TOASelect(is_range=True)
+    X_mapping = model.get_prefix_mapping(f"{prefix}X_")
+    XR1_mapping = model.get_prefix_mapping(f"{prefix}XR1_")
+    XR2_mapping = model.get_prefix_mapping(f"{prefix}XR2_")
+    condition = {}
+    for ii in X_mapping:
+        r1 = getattr(model, XR1_mapping[ii]).quantity
+        r2 = getattr(model, XR2_mapping[ii]).quantity
+        condition[X_mapping[ii]] = (r1.mjd, r2.mjd)
+    return toas_selector.get_select_index(condition, toas["mjd_float"])
 
 
 def dmxselections(model, toas):
@@ -2629,4 +2660,107 @@ def akaike_information_criterion(model, toas):
         lnL = Residuals(toas, model).lnlikelihood()
         return 2 * (k - lnL)
     else:
-        raise NotImplementedError
+        raise NotImplementedError(
+            "akaike_information_criterion is not yet implemented for wideband data."
+        )
+
+
+def sherman_morrison_dot(Ndiag, v, w, x, y):
+    """
+    Compute an inner product of the form
+        (x| C^-1 |y)
+    where
+        C = N + w |v)(v| ,
+    N is a diagonal matrix, and w is a positive real number,
+    using the Sherman-Morrison identity
+        C^-1 = N^-1 - ( w N^-1 |v)(v| N^-1 / (1 + w (v| N^-1 |v)) )
+
+    Additionally,
+        det[C] = det[N] * (1 + w (v| N^-1 |v)) )
+
+    Paremeters
+    ----------
+    Ndiag: array-like
+        Diagonal elements of the diagonal matrix N
+    v: array-like
+        A vector that represents a rank-1 update to N
+    w: float
+        Weight associated with the rank-1 update
+    x: array-like
+        Vector 1 for the inner product
+    y: array-like
+        Vector 2 for the inner product
+
+    Returns
+    -------
+    result: float
+        The inner product
+    logdetC: float
+        log-determinant of C
+    """
+    Ninv = 1 / Ndiag
+
+    Ninv_v = Ninv * v
+    denom = 1 + w * np.dot(v, Ninv_v)
+    numer = w * np.dot(x, Ninv_v) * np.dot(y, Ninv_v)
+
+    result = np.dot(x, Ninv * y) - numer / denom
+
+    logdet_C = np.sum(np.log(Ndiag.to_value(u.s**2))) + np.log(
+        denom.to_value(u.dimensionless_unscaled)
+    )
+
+    return result, logdet_C
+
+
+def woodbury_dot(Ndiag, U, Phidiag, x, y):
+    """
+    Compute an inner product of the form
+        (x| C^-1 |y)
+    where
+        C = N + U Phi U^T ,
+    N and Phi are diagonal matrices, using the Woodbury
+    identity
+        C^-1 = N^-1 - N^-1 - N^-1 U Sigma^-1 U^T N^-1
+    where
+        Sigma = Phi^-1 + U^T N^-1 U
+
+    Additionally,
+        det[C] = det[N] * det[Phi] * det[Sigma]
+
+    Paremeters
+    ----------
+    Ndiag: array-like
+        Diagonal elements of the diagonal matrix N
+    U: array-like
+        A matrix that represents a rank-n update to N
+    Phidiag: float
+        Weights associated with the rank-n update
+    x: array-like
+        Vector 1 for the inner product
+    y: array-like
+        Vector 2 for the inner product
+
+    Returns
+    -------
+    result: float
+        The inner product
+    logdetC: float
+        log-determinant of C
+    """
+
+    x_Ninv_y = np.sum(x * y / Ndiag)
+    x_Ninv_U = (x / Ndiag) @ U
+    y_Ninv_U = (y / Ndiag) @ U
+    Sigma = np.diag(1 / Phidiag) + (U.T / Ndiag) @ U
+    Sigma_cf = cho_factor(Sigma)
+
+    x_Cinv_y = x_Ninv_y - x_Ninv_U @ cho_solve(Sigma_cf, y_Ninv_U)
+
+    logdet_N = np.sum(np.log(Ndiag))
+    logdet_Phi = np.sum(np.log(Phidiag))
+    _, logdet_Sigma = np.linalg.slogdet(Sigma)
+
+    logdet_C = logdet_N + logdet_Phi + logdet_Sigma
+
+    return x_Cinv_y, logdet_C

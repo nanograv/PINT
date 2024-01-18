@@ -31,13 +31,14 @@ See :ref:`Timing Models` for more details on how PINT's timing models work.
 import abc
 import copy
 import inspect
+import contextlib
 from collections import OrderedDict, defaultdict
 from functools import wraps
 from warnings import warn
 from uncertainties import ufloat
 
 import astropy.time as time
-import astropy.units as u
+from astropy import units as u, constants as c
 import numpy as np
 from astropy.utils.decorators import lazyproperty
 import astropy.coordinates as coords
@@ -66,6 +67,7 @@ from pint.utils import (
     split_prefixed_name,
     open_or_use,
     colorize,
+    xxxselections,
 )
 from pint.derived_quantities import dispersion_slope
 
@@ -489,15 +491,19 @@ class TimingModel:
 
         from pint.models.dispersion_model import DispersionDMX
         from pint.models.wave import Wave
+        from pint.models.wavex import WaveX
+        from pint.models.dmwavex import DMWaveX
         from pint.models.noise_model import PLRedNoise, PLDMNoise
 
-        if num_components_of_type((DispersionDMX, PLDMNoise)) > 1:
+        if num_components_of_type((DispersionDMX, PLDMNoise, DMWaveX)) > 1:
             log.warning(
-                "DispersionDMX and PLDMNoise are being used together. They are two ways of modelling the same effect."
+                "DispersionDMX, PLDMNoise, and DMWaveX cannot be used together. "
+                "They are ways of modelling the same effect."
             )
-        if num_components_of_type((Wave, PLRedNoise)) > 1:
+        if num_components_of_type((Wave, WaveX, PLRedNoise)) > 1:
             log.warning(
-                "Wave and PLRedNoise are being used together. They are two ways of modelling the same effect."
+                "Wave, WaveX, and PLRedNoise cannot be used together. "
+                "They are ways of modelling the same effect."
             )
 
     # def __str__(self):
@@ -634,6 +640,7 @@ class TimingModel:
                         and p in self.toasigma_deriv_funcs
                     )
                 )
+                or (hasattr(self[p], "prefix") and self[p].prefix == "ECORR")
             )
         ]
 
@@ -1000,12 +1007,34 @@ class TimingModel:
     @property_exists
     def has_correlated_errors(self):
         """Whether or not this model has correlated errors."""
-        if "NoiseComponent" in self.component_types:
-            for nc in self.NoiseComponent_list:
-                # recursive if necessary
-                if nc.introduces_correlated_errors:
-                    return True
-        return False
+
+        return (
+            "NoiseComponent" in self.component_types
+            and len(
+                [
+                    nc
+                    for nc in self.NoiseComponent_list
+                    if nc.introduces_correlated_errors
+                ]
+            )
+            > 0
+        )
+
+    @property_exists
+    def has_time_correlated_errors(self):
+        """Whether or not this model has time-correlated errors."""
+
+        return (
+            "NoiseComponent" in self.component_types
+            and len(
+                [
+                    nc
+                    for nc in self.NoiseComponent_list
+                    if (nc.introduces_correlated_errors and nc.is_time_correlated)
+                ]
+            )
+            > 0
+        )
 
     @property_exists
     def covariance_matrix_funcs(self):
@@ -1341,7 +1370,7 @@ class TimingModel:
 
     def get_params_mapping(self):
         """Report which component each parameter name comes from."""
-        param_mapping = {p: "timing_model" for p in self.top_level_params}
+        param_mapping = {p: "TimingModel" for p in self.top_level_params}
         for cp in list(self.components.values()):
             for pp in cp.params:
                 param_mapping[pp] = cp.__class__.__name__
@@ -2215,36 +2244,66 @@ class TimingModel:
             log.debug("Check verbosity - only warnings/info will be displayed")
         othermodel = copy.deepcopy(othermodel)
 
-        if "POSEPOCH" in self.params and "POSEPOCH" in othermodel.params:
+        if (
+            "POSEPOCH" in self.params
+            and "POSEPOCH" in othermodel.params
+            and self.POSEPOCH.value is not None
+            and othermodel.POSEPOCH.value is not None
+            and self.POSEPOCH.value != othermodel.POSEPOCH.value
+        ):
+            log.info(
+                "Updating POSEPOCH in %s to match %s" % (other_model_name, model_name)
+            )
+            othermodel.change_posepoch(self.POSEPOCH.value)
+
+        if (
+            "PEPOCH" in self.params
+            and "PEPOCH" in othermodel.params
+            and self.PEPOCH.value is not None
+            and self.PEPOCH.value != othermodel.PEPOCH.value
+        ):
+            log.info(
+                "Updating PEPOCH in %s to match %s" % (other_model_name, model_name)
+            )
+            othermodel.change_pepoch(self.PEPOCH.value)
+
+        if (
+            "DMEPOCH" in self.params
+            and "DMEPOCH" in othermodel.params
+            and self.DMEPOCH.value is not None
+            and self.DMEPOCH.value != othermodel.DMEPOCH.value
+        ):
+            log.info(
+                "Updating DMEPOCH in %s to match %s" % (other_model_name, model_name)
+            )
+            othermodel.change_dmepoch(self.DMEPOCH.value)
+
+        if (
+            self.BINARY.value is not None
+            and othermodel.BINARY.value is not None
+            and self.BINARY.value == othermodel.BINARY.value
+        ):
+            log.info(
+                "Updating binary epoch (T0 or TASC) in %s to match %s"
+                % (other_model_name, model_name)
+            )
             if (
-                self.POSEPOCH.value is not None
-                and othermodel.POSEPOCH.value is not None
-                and self.POSEPOCH.value != othermodel.POSEPOCH.value
+                "T0" in self
+                and "T0" in othermodel
+                and self.T0.value is not None
+                and othermodel.T0.value is not None
+                and self.T0.value != othermodel.T0.value
             ):
-                log.info(
-                    "Updating POSEPOCH in %s to match %s"
-                    % (other_model_name, model_name)
-                )
-                othermodel.change_posepoch(self.POSEPOCH.value)
-        if "PEPOCH" in self.params and "PEPOCH" in othermodel.params:
-            if (
-                self.PEPOCH.value is not None
-                and self.PEPOCH.value != othermodel.PEPOCH.value
+                othermodel.change_binary_epoch(self.T0.quantity)
+            elif (
+                "TASC" in self
+                and "TASC" in othermodel
+                and self.TASC.value is not None
+                and othermodel.TASC.value is not None
+                and self.TASC.value != othermodel.TASC.value
             ):
-                log.info(
-                    "Updating PEPOCH in %s to match %s" % (other_model_name, model_name)
-                )
-                othermodel.change_pepoch(self.PEPOCH.value)
-        if "DMEPOCH" in self.params and "DMEPOCH" in othermodel.params:
-            if (
-                self.DMEPOCH.value is not None
-                and self.DMEPOCH.value != othermodel.DMEPOCH.value
-            ):
-                log.info(
-                    "Updating DMEPOCH in %s to match %s"
-                    % (other_model_name, model_name)
-                )
-                othermodel.change_dmepoch(self.DMEPOCH.value)
+                othermodel.change_binary_epoch(self.TASC.quantity)
+
         if (
             "AstrometryEquatorial" in self.components
             and "AstrometryEcliptic" in othermodel.components
@@ -2356,16 +2415,13 @@ class TimingModel:
                                 modifier[pn].append("diff2")
                         else:
                             diff2[pn] = ""
-                    if otherpar is not None:
-                        if (
-                            par.uncertainty is not None
-                            and otherpar.uncertainty is not None
-                        ):
-                            if (
-                                unc_rat_threshold * par.uncertainty
-                                < otherpar.uncertainty
-                            ):
-                                modifier[pn].append("unc_rat")
+                    if (
+                        otherpar is not None
+                        and par.uncertainty is not None
+                        and otherpar.uncertainty is not None
+                        and (unc_rat_threshold * par.uncertainty < otherpar.uncertainty)
+                    ):
+                        modifier[pn].append("unc_rat")
             else:
                 # Assume numerical parameter
                 if nodmx and pn.startswith("DMX"):
@@ -2409,12 +2465,12 @@ class TimingModel:
                         if (
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
-                        ):
-                            if (
+                            and (
                                 par.uncertainty * unc_rat_threshold
                                 < otherpar.uncertainty
-                            ):
-                                modifier[pn].append("unc_rat")
+                            )
+                        ):
+                            modifier[pn].append("unc_rat")
                     else:
                         value2[pn] = "Missing"
                 else:
@@ -2470,12 +2526,12 @@ class TimingModel:
                         if (
                             par.uncertainty is not None
                             and otherpar.uncertainty is not None
-                        ):
-                            if (
+                            and (
                                 par.uncertainty * unc_rat_threshold
                                 < otherpar.uncertainty
-                            ):
-                                modifier[pn].append("unc_rat")
+                            )
+                        ):
+                            modifier[pn].append("unc_rat")
                     else:
                         diff1[pn] = ""
                         diff2[pn] = ""
@@ -2818,6 +2874,14 @@ class TimingModel:
                 if freeze:
                     log.info(f"'{maskpar}' has no TOAs so freezing")
                     getattr(self, maskpar).frozen = True
+        for prefix in ["DM", "SW"]:
+            mapping = pint.utils.xxxselections(self, toas, prefix=prefix)
+            for k in mapping:
+                if len(mapping[k]) == 0:
+                    if freeze:
+                        log.info(f"'{k}' has no TOAs so freezing")
+                        getattr(self, k).frozen = True
+                    bad_parameters.append(k)
         return bad_parameters
 
     def setup(self):
@@ -2947,6 +3011,214 @@ class TimingModel:
 
         return new_model
 
+    def get_derived_params(self, rms=None, ntoas=None, returndict=False):
+        """Return a string with various derived parameters from the fitted model
+
+        Parameters
+        ----------
+        rms : astropy.units.Quantity, optional
+            RMS of fit for checking ELL1 validity
+        ntoas : int, optional
+            Number of TOAs for checking ELL1 validity
+        returndict : bool, optional
+            Whether to only return the string of results or also a dictionary
+
+        Returns
+        -------
+        results : str
+        parameters : dict, optional
+        """
+
+        import uncertainties.umath as um
+        from uncertainties import ufloat
+
+        outdict = {}
+
+        # Now print some useful derived parameters
+        s = "Derived Parameters:\n"
+        if hasattr(self, "F0"):
+            F0 = self.F0.as_ufloat()
+            p = 1 / F0
+            s += f"Period = {p:P} s\n"
+            outdict["P (s)"] = p
+        if hasattr(self, "F1"):
+            F1 = self.F1.as_ufloat()
+            pdot = -F1 / F0**2
+            outdict["Pdot (s/s)"] = pdot
+            s += f"Pdot = {pdot:P}\n"
+            if self.F1.value < 0.0:  # spinning-down
+                brakingindex = 3
+                s += f"Characteristic age = {pint.derived_quantities.pulsar_age(self.F0.quantity, self.F1.quantity, n=brakingindex):.4g} (braking index = {brakingindex})\n"
+                s += f"Surface magnetic field = {pint.derived_quantities.pulsar_B(self.F0.quantity, self.F1.quantity):.3g}\n"
+                s += f"Magnetic field at light cylinder = {pint.derived_quantities.pulsar_B_lightcyl(self.F0.quantity, self.F1.quantity):.4g}\n"
+                I_NS = I = 1.0e45 * u.g * u.cm**2
+                s += f"Spindown Edot = {pint.derived_quantities.pulsar_edot(self.F0.quantity, self.F1.quantity, I=I_NS):.4g} (I={I_NS})\n"
+                outdict["age"] = pint.derived_quantities.pulsar_age(
+                    self.F0.quantity, self.F1.quantity, n=brakingindex
+                )
+                outdict["B"] = pint.derived_quantities.pulsar_B(
+                    self.F0.quantity, self.F1.quantity
+                )
+                outdict["Blc"] = pint.derived_quantities.pulsar_B_lightcyl(
+                    self.F0.quantity, self.F1.quantity
+                )
+                outdict["Edot"] = pint.derived_quantities.pulsar_B_lightcyl(
+                    self.F0.quantity, self.F1.quantity
+                )
+            else:
+                s += "Not computing Age, B, or Edot since F1 > 0.0\n"
+
+        if hasattr(self, "PX") and not self.PX.frozen:
+            s += "\n"
+            px = self.PX.as_ufloat(u.arcsec)
+            s += f"Parallax distance = {1.0/px:.3uP} pc\n"
+            outdict["Dist (pc)"] = 1.0 / px
+        # Now binary system derived parameters
+        if self.is_binary:
+            for x in self.components:
+                if x.startswith("Binary"):
+                    binary = x
+
+            s += f"\nBinary model {binary}\n"
+            outdict["Binary"] = binary
+
+            btx = False
+            if (
+                hasattr(self, "FB0")
+                and self.FB0.quantity is not None
+                and self.FB0.value != 0.0
+            ):
+                btx = True
+                pb = 1 / self.FB0.as_ufloat(1 / u.d)
+                s += f"Orbital Period  (PB) = {pb:P} (d)\n"
+            else:
+                pb = self.PB.as_ufloat(u.d)
+            outdict["PB (d)"] = pb
+
+            pbdot = None
+            if (
+                hasattr(self, "FB1")
+                and self.FB1.quantity is not None
+                and self.FB1.value != 0.0
+            ):
+                pbdot = -self.FB1.as_ufloat(u.Hz / u.s) / self.FB0.as_ufloat(u.Hz) ** 2
+            elif (
+                hasattr(self, "PBDOT")
+                and self.PBDOT.quantity is not None
+                and self.PBDOT.value != 0
+            ):
+                pbdot = self.PBDOT.as_ufloat(u.s / u.s)
+
+            if pbdot is not None:
+                s += f"Orbital Pdot (PBDOT) = {pbdot:P} (s/s)\n"
+                outdict["PBDOT (s/s)"] = pbdot
+
+            ell1 = False
+            if binary.startswith("BinaryELL1"):
+                ell1 = True
+                eps1 = self.EPS1.as_ufloat()
+                eps2 = self.EPS2.as_ufloat()
+                tasc = ufloat(
+                    # This is a time in MJD
+                    self.TASC.quantity.mjd,
+                    self.TASC.uncertainty.to(u.d).value
+                    if self.TASC.uncertainty is not None
+                    else 0,
+                )
+                s += "Conversion from ELL1 parameters:\n"
+                ecc = um.sqrt(eps1**2 + eps2**2)
+                s += "ECC = {:P}\n".format(ecc)
+                outdict["ECC"] = ecc
+                om = um.atan2(eps1, eps2) * 180.0 / np.pi
+                if om < 0.0:
+                    om += 360.0
+                s += f"OM  = {om:P} deg\n"
+                outdict["OM (deg)"] = om
+                t0 = tasc + pb * om / 360.0
+                s += f"T0  = {t0:SP}\n"
+                outdict["T0"] = t0
+
+                a1 = self.A1.quantity if self.A1.quantity is not None else 0 * pint.ls
+                if rms is not None and ntoas is not None:
+                    s += pint.utils.ELL1_check(
+                        a1,
+                        ecc.nominal_value * u.s / u.s,
+                        rms,
+                        ntoas,
+                        outstring=True,
+                    )
+                s += "\n"
+            # Masses and inclination
+            if not self.A1.frozen:
+                a1 = self.A1.as_ufloat(pint.ls)
+                # This is the mass function, done explicitly so that we get
+                # uncertainty propagation automatically.
+                # TODO: derived quantities funcs should take uncertainties
+                fm = 4.0 * np.pi**2 * a1**3 / (4.925490947e-6 * (pb * 86400) ** 2)
+                s += f"Mass function = {fm:SP} Msun\n"
+                outdict["Mass Function (Msun)"] = fm
+                mcmed = pint.derived_quantities.companion_mass(
+                    pb.n * u.d,
+                    self.A1.quantity,
+                    i=60.0 * u.deg,
+                    mp=1.4 * u.solMass,
+                )
+                mcmin = pint.derived_quantities.companion_mass(
+                    pb.n * u.d,
+                    self.A1.quantity,
+                    i=90.0 * u.deg,
+                    mp=1.4 * u.solMass,
+                )
+                s += f"Min / Median Companion mass (assuming Mpsr = 1.4 Msun) = {mcmin.value:.4f} / {mcmed.value:.4f} Msun\n"
+                outdict["Mc,med (Msun)"] = mcmed.value
+                outdict["Mc,min (Msun)"] = mcmin.value
+
+            if (
+                hasattr(self, "OMDOT")
+                and self.OMDOT.quantity is not None
+                and self.OMDOT.value != 0.0
+            ):
+                omdot = self.OMDOT.as_ufloat(u.rad / u.s)
+                e = ecc if ell1 else self.ECC.as_ufloat()
+                mt = (
+                    (
+                        omdot
+                        / (
+                            3
+                            * (c.G * u.Msun / c.c**3).to_value(u.s) ** (2.0 / 3)
+                            * ((pb * 86400 / 2 / np.pi)) ** (-5.0 / 3)
+                            * (1 - e**2) ** -1
+                        )
+                    )
+                ) ** (3.0 / 2)
+                s += f"Total mass, assuming GR, from OMDOT is {mt:SP} Msun\n"
+                outdict["Mtot (Msun)"] = mt
+
+            if (
+                hasattr(self, "SINI")
+                and self.SINI.quantity is not None
+                and (self.SINI.value >= 0.0 and self.SINI.value < 1.0)
+            ):
+                with contextlib.suppress(TypeError, ValueError):
+                    # Put this in a try in case SINI is UNSET or an illegal value
+                    if not self.SINI.frozen:
+                        si = self.SINI.as_ufloat()
+                        s += f"From SINI in model:\n"
+                        s += f"    cos(i) = {um.sqrt(1 - si**2):SP}\n"
+                        s += f"    i = {um.asin(si) * 180.0 / np.pi:SP} deg\n"
+
+                    psrmass = pint.derived_quantities.pulsar_mass(
+                        pb.n * u.d,
+                        self.A1.quantity,
+                        self.M2.quantity,
+                        np.arcsin(self.SINI.quantity),
+                    )
+                    s += f"Pulsar mass (Shapiro Delay) = {psrmass}"
+                    outdict["Mp (Msun)"] = psrmass
+        if not returndict:
+            return s
+        return s, outdict
+
 
 class ModelMeta(abc.ABCMeta):
     """Ensure timing model registration.
@@ -2960,9 +3232,8 @@ class ModelMeta(abc.ABCMeta):
 
     def __init__(cls, name, bases, dct):
         regname = "component_types"
-        if "register" in dct:
-            if cls.register:
-                getattr(cls, regname)[name] = cls
+        if "register" in dct and cls.register:
+            getattr(cls, regname)[name] = cls
         super().__init__(name, bases, dct)
 
 
@@ -3203,7 +3474,7 @@ class Component(metaclass=ModelMeta):
 
         """
         parnames = [x for x in self.params if x.startswith(prefix)]
-        mapping = dict()
+        mapping = {}
         for parname in parnames:
             par = getattr(self, parname)
             if par.is_prefix and par.prefix == prefix:
@@ -3504,11 +3775,10 @@ class AllComponents:
         units = {}
         for k, cp in self.components.items():
             for p in cp.params:
-                if p in units.keys():
-                    if units[p] != getattr(cp, p).units:
-                        raise TimingModelError(
-                            f"Units of parameter '{p}' in component '{cp}' ({getattr(cp, p).units}) do not match those of existing parameter ({units[p]})"
-                        )
+                if p in units.keys() and units[p] != getattr(cp, p).units:
+                    raise TimingModelError(
+                        f"Units of parameter '{p}' in component '{cp}' ({getattr(cp, p).units}) do not match those of existing parameter ({units[p]})"
+                    )
                 units[p] = getattr(cp, p).units
         tm = TimingModel()
         for tp in tm.params:
@@ -3609,6 +3879,26 @@ class AllComponents:
             for cp_name in all_systems:
                 if system_name == self.components[cp_name].binary_model_name:
                     return self.components[cp_name]
+
+            if system_name == "BTX":
+                raise UnknownBinaryModel(
+                    "`BINARY  BTX` is not supported bt PINT. Use "
+                    "`BINARY  BT` instead. It supports both orbital "
+                    "period (PB, PBDOT) and orbital frequency (FB0, ...) "
+                    "parametrizations."
+                )
+            elif system_name == "DDFWHE":
+                raise UnknownBinaryModel(
+                    "`BINARY  DDFWHE` is not supported, but the same model "
+                    "is available as `BINARY  DDH`."
+                )
+            elif system_name in ["MSS", "EH", "H88", "DDT", "BT1P", "BT2P"]:
+                # Binary model list taken from
+                # https://tempo.sourceforge.net/ref_man_sections/binary.txt
+                raise UnknownBinaryModel(
+                    f"`The binary model {system_name} is not yet implemented."
+                )
+
             raise UnknownBinaryModel(
                 f"Pulsar system/Binary model component"
                 f" {system_name} is not provided."
