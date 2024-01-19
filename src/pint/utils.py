@@ -2832,7 +2832,11 @@ def plrednoise_from_wavex(model, ignore_fyr=True):
 
     mlnlike = _get_wx2pl_lnlike(model, "WaveX", ignore_fyr=ignore_fyr)
 
-    gamma_val, log10_A_val = minimize(mlnlike, [4, -13], method="Nelder-Mead").x
+    result = minimize(mlnlike, [4, -13], method="Nelder-Mead")
+    if not result.success:
+        raise ValueError("Log-likelihood maximization failed to converge.")
+
+    gamma_val, log10_A_val = result.x
 
     hess = Hessian(mlnlike)
     gamma_err, log10_A_err = np.sqrt(
@@ -2873,7 +2877,11 @@ def pldmnoise_from_dmwavex(model, ignore_fyr=False):
 
     mlnlike = _get_wx2pl_lnlike(model, "DMWaveX", ignore_fyr=ignore_fyr)
 
-    gamma_val, log10_A_val = minimize(mlnlike, [4, -13], method="Nelder-Mead").x
+    result = minimize(mlnlike, [4, -13], method="Nelder-Mead")
+    if not result.success:
+        raise ValueError("Log-likelihood maximization failed to converge.")
+
+    gamma_val, log10_A_val = result.x
 
     hess = Hessian(mlnlike)
 
