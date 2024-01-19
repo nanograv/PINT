@@ -2969,4 +2969,6 @@ def find_optimal_nharms(model, toas, component, nharms_max=45):
                 frozen=False,
             )
 
+    assert all(np.isfinite(aics)), "Infs/NaNs found in AICs!"
+
     return np.argmin(aics), np.array(aics) - np.min(aics)
