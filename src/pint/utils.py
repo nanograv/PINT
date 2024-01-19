@@ -183,11 +183,11 @@ class PosVel:
 
     def __init__(self, pos, vel, obj=None, origin=None):
         if len(pos) != 3:
-            raise ValueError("Position vector has length %d instead of 3" % len(pos))
+            raise ValueError(f"Position vector has length {len(pos)} instead of 3")
         self.pos = pos if isinstance(pos, u.Quantity) else np.asarray(pos)
 
         if len(vel) != 3:
-            raise ValueError("Position vector has length %d instead of 3" % len(pos))
+            raise ValueError(f"Position vector has length {len(pos)} instead of 3")
         self.vel = vel if isinstance(vel, u.Quantity) else np.asarray(vel)
 
         if len(self.pos.shape) != len(self.vel.shape):
@@ -1045,23 +1045,13 @@ def dmxparse(fitter, save=False):
     if save is not None and save:
         if isinstance(save, bool):
             save = "dmxparse.out"
-        DMX = "DMX"
         lines = [
-            "# Mean %s value = %+.6e \n" % (DMX, DMX_mean),
-            "# Uncertainty in average %s = %.5e \n" % ("DM", DMX_mean_err),
-            "# Columns: %sEP %s_value %s_var_err %sR1 %sR2 %s_bin \n"
-            % (DMX, DMX, DMX, DMX, DMX, DMX),
+            f"# Mean DMX value = {DMX_mean:+.6e} \n",
+            f"# Uncertainty in average DM = {DMX_mean_err:.5e} \n",
+            f"# Columns: DMXEP DMX_value DMX_var_err DMXR1 DMXR2 %s_bin \n",
         ]
         lines.extend(
-            "%.4f %+.7e %.3e %.4f %.4f %s \n"
-            % (
-                DMX_center_MJD[k],
-                DMXs[k] - DMX_mean,
-                DMX_vErrs[k],
-                DMX_R1[k],
-                DMX_R2[k],
-                DMX_keys[k],
-            )
+            f"{DMX_center_MJD[k]:.4f} {DMXs[k] - DMX_mean:+.7e} {DMX_vErrs[k]:.3e} {DMX_R1[k]:.4f} {DMX_R2[k]:.4f} {DMX_keys[k]} \n"
             for k in range(len(dmx_epochs))
         )
         with open_or_use(save, mode="w") as dmxout:
@@ -1914,7 +1904,7 @@ def add_dummy_distance(c, distance=1 * u.kpc):
 
     if c.frame.data.differentials == {}:
         log.warning(
-            "No proper motions available for %r: returning coordinates unchanged" % c
+            f"No proper motions available for {c}: returning coordinates unchanged"
         )
         return c
 
@@ -1963,7 +1953,7 @@ def add_dummy_distance(c, distance=1 * u.kpc):
         )
     else:
         log.warning(
-            "Do not know coordinate frame for %r: returning coordinates unchanged" % c
+            f"Do not know coordinate frame for {c}: returning coordinates unchanged"
         )
         return c
 
@@ -1984,7 +1974,7 @@ def remove_dummy_distance(c):
 
     if c.frame.data.differentials == {}:
         log.warning(
-            "No proper motions available for %r: returning coordinates unchanged" % c
+            f"No proper motions available for {c}: returning coordinates unchanged"
         )
         return c
     if isinstance(c.frame, coords.builtin_frames.icrs.ICRS):
@@ -2028,7 +2018,7 @@ def remove_dummy_distance(c):
         )
     else:
         log.warning(
-            "Do not know coordinate frame for %r: returning coordinates unchanged" % c
+            f"Do not know coordinate frame for {c}: returning coordinates unchanged"
         )
         return c
 
