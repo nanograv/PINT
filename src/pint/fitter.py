@@ -396,8 +396,8 @@ class Fitter:
         for pn in self.model.params:
             if nodmx and pn.startswith("DMX"):
                 continue
-            prefitpar = getattr(self.model_init, pn)
-            par = getattr(self.model, pn)
+            prefitpar = self.model_init[pn]
+            par = self.model[pn]
             if par.value is not None:
                 if isinstance(par, strParameter):
                     s += ("{:" + spacingName + "s} {:>20s} {:28s} {}\n").format(
@@ -577,7 +577,7 @@ class Fitter:
         self, matrix_type, with_phase, pretty_print, prec, usecolor
     ):
         if hasattr(self, f"parameter_{matrix_type}_matrix"):
-            cm = getattr(self, f"parameter_{matrix_type}_matrix")
+            cm = self[f"parameter_{matrix_type}_matrix"]
             if not pretty_print:
                 return cm.prettyprint(prec=prec, offset=with_phase)
             else:
@@ -699,9 +699,9 @@ class Fitter:
         if remove:
             # Set values to zero and freeze them
             for p in parameter:
-                getattr(fitter_copy.model, "{:}".format(p.name)).value = 0.0
-                getattr(fitter_copy.model, "{:}".format(p.name)).uncertainty_value = 0.0
-                getattr(fitter_copy.model, "{:}".format(p.name)).frozen = True
+                fitter_copy.model["{:}".format(p.name)].value = 0.0
+                fitter_copy.model["{:}".format(p.name)].uncertainty_value = 0.0
+                fitter_copy.model["{:}".format(p.name)].frozen = True
             # validate and setup model
             fitter_copy.model.validate()
             fitter_copy.model.setup()
@@ -725,9 +725,7 @@ class Fitter:
                 # Check if parameter already exists in model
                 if hasattr(fitter_copy.model, "{:}".format(parameter[ii].name)):
                     # Set frozen to False
-                    getattr(
-                        fitter_copy.model, "{:}".format(parameter[ii].name)
-                    ).frozen = False
+                    fitter_copy.model["{:}".format(parameter[ii].name)].frozen = False
                     # Check if parameter is one that needs to be checked
                     if (
                         parameter[ii].name in check_params
@@ -737,9 +735,9 @@ class Fitter:
                             f"Default value for {parameter[ii].name} cannot be 0, resetting to {check_params[parameter[ii].name]}"
                         )
                         parameter[ii].value = check_params[parameter[ii].name]
-                    getattr(
-                        fitter_copy.model, "{:}".format(parameter[ii].name)
-                    ).value = parameter[ii].value
+                    fitter_copy.model[
+                        "{:}".format(parameter[ii].name)
+                    ].value = parameter[ii].value
                 else:
                     fitter_copy.model.components[component[ii]].add_param(
                         parameter[ii], setup=True
@@ -960,8 +958,8 @@ class ModelState:
         for p, s in zip(self.params, step * lambda_):
             try:
                 with contextlib.suppress(ValueError):
-                    log.trace(f"Adjusting {getattr(self.model, p)} by {s}")
-                pm = getattr(new_model, p)
+                    log.trace(f"Adjusting {self.model[p]} by {s}")
+                pm = new_model[p]
                 if pm.value is None:
                     pm.value = 0
                 pm.value += s
@@ -1087,8 +1085,8 @@ class DownhillFitter(Fitter):
             try:
                 # I don't know why this fails with multiprocessing, but bypass if it does
                 with contextlib.suppress(ValueError):
-                    log.trace(f"Setting {getattr(self.model, p)} uncertainty to {e}")
-                pm = getattr(self.model, p)
+                    log.trace(f"Setting {self.model[p]} uncertainty to {e}")
+                pm = self.model[p]
             except AttributeError:
                 if p != "Offset":
                     log.warning(f"Unexpected parameter {p}")
@@ -1210,7 +1208,7 @@ class DownhillFitter(Fitter):
         return [
             fp
             for fp in self.model.get_params_of_component_type("NoiseComponent")
-            if not getattr(self.model, fp).frozen
+            if not self.model[fp].frozen
         ]
 
     def _update_noise_params(self, values, errors=None):
@@ -1219,11 +1217,11 @@ class DownhillFitter(Fitter):
 
         if errors is not None:
             for fp, val, err in zip(free_noise_params, values, errors):
-                getattr(self.model, fp).value = val
-                getattr(self.model, fp).uncertainty_value = err
+                self.model[fp].value = val
+                self.model[fp].uncertainty_value = err
         else:
             for fp, val in zip(free_noise_params, values):
-                getattr(self.model, fp).value = val
+                self.model[fp].value = val
 
     def _fit_noise(self, noisefit_method="Newton-CG", uncertainty=False):
         """Estimate noise parameters and their uncertainties. Noise parameters
@@ -1232,7 +1230,7 @@ class DownhillFitter(Fitter):
         numerically-evaluated Hessian."""
         free_noise_params = self._get_free_noise_params()
 
-        xs0 = [getattr(self.model, fp).value for fp in free_noise_params]
+        xs0 = [self.model[fp].value for fp in free_noise_params]
 
         model1 = copy.deepcopy(self.model)
         res = Residuals(self.toas, model1)
@@ -1240,7 +1238,7 @@ class DownhillFitter(Fitter):
         def _mloglike(xs):
             """Negative of the log-likelihood function."""
             for fp, x in zip(free_noise_params, xs):
-                getattr(res.model, fp).value = x
+                res.model[fp].value = x
 
             return -res.lnlikelihood()
 
@@ -1249,7 +1247,7 @@ class DownhillFitter(Fitter):
             def _mloglike_grad(xs):
                 """Gradient of the negative of the log-likelihood function w.r.t. white noise parameters."""
                 for fp, x in zip(free_noise_params, xs):
-                    getattr(res.model, fp).value = x
+                    res.model[fp].value = x
 
                 return np.array(
                     [
@@ -2420,7 +2418,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         func_map = {"toa": "get_errors", "dm": "get_dm_errors"}
         error_func_name = func_map[data_name]
         if hasattr(data_obj, error_func_name):
-            return getattr(data_obj, error_func_name)()
+            return data_obj[error_func_name]()
         else:
             raise ValueError("No method to access data error is provided.")
 
@@ -2806,8 +2804,8 @@ class WidebandLMFitter(LMFitter):
         self.errors = np.sqrt(np.diag(self.parameter_covariance_matrix.matrix))
         for p, e in zip(state.params, self.errors):
             try:
-                log.trace(f"Setting {getattr(self.model, p)} uncertainty to {e}")
-                pm = getattr(self.model, p)
+                log.trace(f"Setting {self.model[p]} uncertainty to {e}")
+                pm = self.model[p]
             except AttributeError:
                 if p != "Offset":
                     log.warning(f"Unexpected parameter {p}")

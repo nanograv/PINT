@@ -1144,7 +1144,7 @@ class TOA:
     def __eq__(self, other):
         result = True
         for p in ["mjd", "error", "obs", "freq", "flags"]:
-            result = result and getattr(self, p) == getattr(other, p)
+            result = result and self[p] == other[p]
         return result
 
     def as_line(self, format="Tempo2", name=None, dm=0 * pint.dmu):
@@ -2893,9 +2893,12 @@ def get_TOAs_array(
     # Then construct the full time, with observatory location set
     mjd = time.Time(t, location=loc, precision=9)
 
+    print(errors)
     errors = np.atleast_1d(errors)
+    print(errors)
     if len(errors) == 1:
         errors = np.repeat(errors, len(t))
+    print(errors)
     if len(errors) != len(t):
         raise AttributeError(
             f"Length of error array ({len(errors)}) must match length of times ({len(t)})"
@@ -2909,6 +2912,7 @@ def get_TOAs_array(
             )
     else:
         errors = errors * u.microsecond
+    print(errors)
 
     obs = [site.name] * len(t)
 
