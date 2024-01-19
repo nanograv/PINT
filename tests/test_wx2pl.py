@@ -27,9 +27,9 @@ def data_wx():
             F1            -1e-15       1 
             PHOFF         0            1
             DM            15           1
-            TNREDAMP      -13
+            TNREDAMP      -12.5
             TNREDGAM      3.5
-            TNREDC        5
+            TNREDC        10
             TZRMJD        55000
             TZRFRQ        1400 
             TZRSITE       gbt
@@ -75,7 +75,7 @@ def data_dmwx():
             DM            15           1
             TNDMAMP       -13
             TNDMGAM       3.5
-            TNDMC         5
+            TNDMC         10
             TZRMJD        55000
             TZRFRQ        1400 
             TZRSITE       gbt
@@ -119,12 +119,14 @@ def test_wx2pl(data_wx):
     wavex_setup(m1, Tspan, n_freqs=int(m.TNREDC.value), freeze_params=False)
 
     ftr = WLSFitter(t, m1)
-    ftr.fit_toas(maxiter=3)
+    ftr.fit_toas(maxiter=10)
     m1 = ftr.model
 
     m2 = plrednoise_from_wavex(m1)
 
     assert "PLRedNoise" in m2.components
+    assert abs(m.TNREDAMP.value - m2.TNREDAMP.value) / m2.TNREDAMP.uncertainty_value < 5
+    assert abs(m.TNREDGAM.value - m2.TNREDGAM.value) / m2.TNREDGAM.uncertainty_value < 5
 
 
 def test_dmwx2pldm(data_dmwx):
@@ -137,12 +139,14 @@ def test_dmwx2pldm(data_dmwx):
     dmwavex_setup(m1, Tspan, n_freqs=int(m.TNDMC.value), freeze_params=False)
 
     ftr = WLSFitter(t, m1)
-    ftr.fit_toas(maxiter=3)
+    ftr.fit_toas(maxiter=10)
     m1 = ftr.model
 
     m2 = pldmnoise_from_dmwavex(m1)
 
     assert "PLDMNoise" in m2.components
+    assert abs(m.TNDMAMP.value - m2.TNDMAMP.value) / m2.TNDMAMP.uncertainty_value < 5
+    assert abs(m.TNDMGAM.value - m2.TNDMGAM.value) / m2.TNDMGAM.uncertainty_value < 5
 
 
 def test_find_optimal_nharms_wx(data_wx):
