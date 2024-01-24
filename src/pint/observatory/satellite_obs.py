@@ -311,7 +311,6 @@ class SatelliteObs(SpecialLocation):
         overwrite=False,
     ):
         super().__init__(
-            self,
             name,
             include_gps=include_gps,
             include_bipm=include_bipm,
@@ -444,4 +443,5 @@ def get_satellite_observatory(name, ft2name, **kwargs):
     # values as new observatories are added.
     if "maxextrap" not in kwargs:
         kwargs["maxextrap"] = 2
+
     return SatelliteObs(name, ft2name, **kwargs)

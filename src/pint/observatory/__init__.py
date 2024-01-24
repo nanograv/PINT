@@ -21,6 +21,7 @@ done, but if you are using a different subset of PINT these imports may be
 necessary.
 """
 
+from copy import deepcopy
 import os
 import textwrap
 from collections import defaultdict
@@ -143,24 +144,6 @@ class Observatory:
     # standard name.
     _alias_map = {}
 
-    def __new__(cls, name, *args, **kwargs):
-        # Generates a new Observatory object instance, and adds it
-        # it the registry, using name as the key.  Name must be unique,
-        # a new instance with a given name will over-write the existing
-        # one only if overwrite=True
-        obs = super().__new__(cls)
-        if name.lower() in cls._registry:
-            if "overwrite" not in kwargs or not kwargs["overwrite"]:
-                raise ValueError(
-                    f"Observatory {name.lower()} already present and overwrite=False"
-                )
-            log.warning(f"Observatory '{name.lower()}' already present; overwriting...")
-
-            cls._register(obs, name)
-            return obs
-        cls._register(obs, name)
-        return obs
-
     def __init__(
         self,
         name,
@@ -171,12 +154,25 @@ class Observatory:
         bipm_version=bipm_default,
         overwrite=False,
     ):
+        self._name = name.lower()
+        self._aliases = (
+            list(set(map(str.lower, aliases))) if aliases is not None else []
+        )
         if aliases is not None:
             Observatory._add_aliases(self, aliases)
         self.fullname = fullname if fullname is not None else name
         self.include_gps = include_gps
         self.include_bipm = include_bipm
         self.bipm_version = bipm_version
+
+        if name.lower() in Observatory._registry:
+            if not overwrite:
+                raise ValueError(
+                    f"Observatory {name.lower()} already present and overwrite=False"
+                )
+            log.warning(f"Observatory '{name.lower()}' already present; overwriting...")
+
+        Observatory._register(self, name)
 
     @classmethod
     def _register(cls, obs, name):
@@ -186,7 +182,6 @@ class Observatory:
         The Observatory instance's name attribute will be updated for
         consistency."""
         cls._registry[name.lower()] = obs
-        obs._name = name.lower()
 
     @classmethod
     def _add_aliases(cls, obs, aliases):
@@ -199,10 +194,6 @@ class Observatory:
         to ensure consistency."""
         for a in aliases:
             cls._alias_map[a.lower()] = obs.name
-        for o in cls._registry.values():
-            o._aliases = [
-                alias for alias, name in cls._alias_map.items() if name == o.name
-            ]
 
     @staticmethod
     def gps_correction(t, limits="warn"):
@@ -460,7 +451,7 @@ class Observatory:
 
 
 def get_observatory(
-    name, include_gps=True, include_bipm=True, bipm_version=bipm_default
+    name, include_gps=None, include_bipm=None, bipm_version=bipm_default
 ):
     """Convenience function to get observatory object with options.
 
@@ -474,10 +465,10 @@ def get_observatory(
     ----------
     name : str
         The name of the observatory
-    include_gps : bool, optional
-        Set False to disable UTC(GPS)->UTC clock correction.
-    include_bipm : bool, optional
-        Set False to disable TAI TT(BIPM) clock correction.
+    include_gps : bool or None, optional
+        Override UTC(GPS)->UTC clock correction.
+    include_bipm : bool or None, optional
+        Override TAI TT(BIPM) clock correction.
     bipm_version : str, optional
         Set the version of TT BIPM clock correction files.
 
@@ -485,11 +476,19 @@ def get_observatory(
         file switches/options are added at a public API level.
 
     """
-    site = Observatory.get(name)
-    site.include_gps = include_gps
-    site.include_bipm = include_bipm
-    site.bipm_version = bipm_version
-    return site
+    if include_bipm is not None or include_gps is not None:
+        site = deepcopy(Observatory.get(name))
+
+        if include_gps is not None:
+            site.include_gps = include_gps
+
+        if include_bipm is not None:
+            site.include_bipm = include_bipm
+            site.bipm_version = bipm_version
+
+        return site
+
+    return Observatory.get(name)
 
 
 def earth_location_distance(loc1, loc2):
@@ -533,8 +532,8 @@ def compare_t2_observatories_dat(t2dir=None):
         for line in interesting_lines(f, comments="#"):
             try:
                 x, y, z, full_name, short_name = line.split()
-            except ValueError:
-                raise ValueError(f"unrecognized line '{line}'")
+            except ValueError as e:
+                raise ValueError(f"unrecognized line '{line}'") from e
             x, y, z = float(x), float(y), float(z)
             full_name, short_name = full_name.lower(), short_name.lower()
             topo_obs_entry = textwrap.dedent(
@@ -831,10 +830,7 @@ def find_clock_file(
     """
     # Avoid import loop
     from pint.observatory.clock_file import ClockFile, GlobalClockFile
-    from pint.observatory.global_clock_corrections import (
-        Index,
-        get_clock_correction_file,
-    )
+    from pint.observatory.global_clock_corrections import Index
 
     if name == "":
         raise ValueError("No filename supplied to find_clock_file")
