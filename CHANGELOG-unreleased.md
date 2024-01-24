@@ -40,4 +40,5 @@ the released changes.
 - Consistent naming in `TimingModel.get_params_mapping()`
 - Better exceptions for unsupported/unimplemented binary models (BTX, MSS, etc.)
 - Emit warnings when `WaveX`/`DMWaveX` is used together with other representations of red/DM noise
+- `get_observatory()` no longer overwrites `include_gps` and `include_bipm` of `Observatory` objects unless explicitly stated (BIPM and GPS clock corrections no longer incorrectly applied to BAT TOAs).
 ### Removed
