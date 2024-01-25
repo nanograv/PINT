@@ -30,6 +30,8 @@ the released changes.
     - `Residuals.d_lnlikelihood_d_whitenoise_param` will throw a `NotImplementedError` when correlated noise is present.
     - `DownhillFitter._fit_noise()` doesn't use derivatives when correlated noise is present.
     - Documentation: Noise fitting example notebook.
+- `pint.models.chromatic_model.Chromatic` as the base class for variable-index chromatic delays.
+- `pint.models.chromatic_model.ChromaticCM` for a Taylor series representation of the variable-index chromatic delay.
 ### Fixed
 - `MCMC_walkthrough` notebook now runs
 - Fixed runtime data README 
