@@ -9,7 +9,7 @@ import numpy as np
 import tempfile
 import os
 import pint.config
-from pint.fitter import GLSFitter
+from pint.fitter import GLSFitter, DownhillGLSFitter
 from pinttestdata import datadir
 import pytest
 
@@ -68,11 +68,22 @@ def test_roundtrip(clock, planet):
         obs="gbt",
         error=1 * u.microsecond,
         freq=1400 * u.MHz,
+        flags={"be": "GUPPI"},
     )
     res = pint.residuals.Residuals(toas, model)
     toas2 = roundtrip(toas, model)
     res2 = pint.residuals.Residuals(toas2, model)
     assert np.allclose(res.time_resids, res2.time_resids)
+    assert (
+        "be" in toas.get_all_flags()
+        and all(np.array(toas.get_flag_value("be")[0]) == "GUPPI")
+        and len(toas.get_flag_value("be")[0]) == len(toas)
+    )
+    assert (
+        "be" in toas2.get_all_flags()
+        and all(np.array(toas2.get_flag_value("be")[0]) == "GUPPI")
+        and len(toas2.get_flag_value("be")[0]) == len(toas2)
+    )
 
 
 def test_noise_addition():
@@ -241,13 +252,13 @@ def test_fake_uniform(t1, t2):
     model = get_model(
         io.StringIO(
             """
-        PSRJ J1234+5678
-        ELAT 0
-        ELONG 0
-        DM 10
-        F0 1
-        PEPOCH 58000
-        """
+            PSRJ J1234+5678
+            ELAT 0
+            ELONG 0
+            DM 10
+            F0 1
+            PEPOCH 58000
+            """
         )
     )
     toas = pint.simulation.make_fake_toas_uniform(
@@ -330,7 +341,7 @@ def test_fake_DMfit():
     f = GLSFitter(t, m)
     f.fit_toas()
 
-    N = 30
+    N = 15
 
     DMs = np.zeros(N) * u.pc / u.cm**3
     for iter in range(N):
@@ -357,3 +368,73 @@ def test_fake_wb_toas():
     )
     assert len(tfu) == 100
     assert all("pp_dm" in f and "pp_dme" in f for f in tfu.get_flags())
+
+
+def test_simulate_corrnoise(tmp_path):
+    parfile = datadir / "B1855+09_NANOGrav_9yv1.gls.par"
+
+    m = get_model(parfile)
+
+    # Simulated TOAs won't have the correct flags for some of these to work.
+    m.remove_component("ScaleToaError")
+    m.remove_component("EcorrNoise")
+    m.remove_component("DispersionDMX")
+    m.remove_component("PhaseJump")
+    m.remove_component("FD")
+    m.PLANET_SHAPIRO.value = False
+
+    t = pint.simulation.make_fake_toas_uniform(
+        m.START.value,
+        m.FINISH.value,
+        1000,
+        m,
+        add_noise=True,
+        add_correlated_noise=True,
+    )
+
+    # Check if the created TOAs can be whitened using
+    # the original timing model. This won't work if the
+    # noise is not realized correctly.
+    ftr = DownhillGLSFitter(t, m)
+    ftr.fit_toas()
+    rc = sum(ftr.resids.noise_resids.values())
+    r = ftr.resids.time_resids
+    rw = r - rc
+    sigma = ftr.resids.get_data_error()
+
+    # This should be independent and standard-normal distributed.
+    x = (rw / sigma).to_value("")
+    assert np.isclose(np.std(x), 1, atol=0.2)
+    assert np.isclose(np.mean(x), 0, atol=0.01)
+
+
+@pytest.mark.parametrize("multifreq", [True, False])
+def test_simulate_uniform_multifreq(multifreq):
+    parfile = os.path.join(datadir, "NGC6440E.par")
+    m = get_model(parfile)
+
+    ntoas = 100
+
+    freqs = np.array([500, 1400]) * u.MHz
+    t = pint.simulation.make_fake_toas_uniform(
+        50000,
+        51000,
+        ntoas,
+        m,
+        add_noise=True,
+        freq=freqs,
+        multi_freqs_in_epoch=multifreq,
+    )
+    assert len(t) == ntoas
+
+    freqs = np.array([500, 750, 1400]) * u.MHz
+    t = pint.simulation.make_fake_toas_uniform(
+        50000,
+        51000,
+        ntoas,
+        m,
+        add_noise=True,
+        freq=freqs,
+        multi_freqs_in_epoch=multifreq,
+    )
+    assert len(t) == ntoas

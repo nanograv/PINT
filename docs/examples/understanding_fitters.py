@@ -20,8 +20,6 @@
 #
 
 # %%
-import numpy as np
-import astropy.units as u
 from IPython.display import display_markdown
 
 import pint.toa

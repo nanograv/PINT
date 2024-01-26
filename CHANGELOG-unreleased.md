@@ -9,24 +9,9 @@ the released changes.
 
 ## Unreleased
 ### Changed
-- `WAVE` parameters can be added to a `Wave` model with `add_wave_component()` in `wave.py` 
-- Moved design matrix normalization code from `pint.fitter` to the new `pint.utils.normalize_designmatrix()` function.
-- Made `Residuals` independent of `GLSFitter` (GLS chi2 is now computed using the new function `Residuals._calc_gls_chi2()`).
 ### Added
-- CHI2, CHI2R, TRES, DMRES now in postfit par files
-- Added `WaveX` model as a `DelayComponent` with Fourier amplitudes as fitted parameters
-- `Parameter.as_latex` method for latex representation of a parameter.
-- `pint.output.publish` module and `pintpublish` script for generating publication (LaTeX) output.
-- Added radial velocity methods for binary models
-- Support for wideband data in `pint.bayesian` (no correlated noise).
-- Added `DMWaveX` model (Fourier representation of DM noise)
-- Piecewise orbital model (`BinaryBTPiecewise`)
+- Added numdifftools to setup.cfg to match requirements.txt
+- Documentation: Added `convert_parfile` to list of command-line tools in RTD
 ### Fixed
-- Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
-- Fixed RTD by specifying theme explicitly.
-- `.value()` now works for pairParameters
-- Setting `model.PARAM1 = model.PARAM2` no longer overrides the name of `PARAM1`
-- Fixed an incorrect docstring in `pbprime()` functions. 
-- Fix ICRS -> ECL conversion when parameter uncertainties are not set.
-- `get_TOAs` raises an exception upon finding mixed narrowband and wideband TOAs in a tim file. `TOAs.is_wideband` returns True only if *ALL* TOAs have the -pp_dm flag.
+- Fixed runtime data README 
 ### Removed

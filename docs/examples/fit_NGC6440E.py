@@ -33,11 +33,12 @@ import astropy.units as u
 # This will change which output method matplotlib uses and may behave better on some machines
 # import matplotlib
 # matplotlib.use('TKAgg')
+
 import matplotlib.pyplot as plt
 import pint.fitter
 import pint.residuals
 import pint.toa
-from pint.models import get_model, get_model_and_toas
+from pint.models import get_model_and_toas
 import pint.logging
 import os
 

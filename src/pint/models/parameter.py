@@ -158,6 +158,8 @@ class Parameter:
     use_alias : str or None
         Alias to use on write; normally whatever alias was in the par
         file it was read from
+    parent: pint.models.timing_model.Component, optional
+        The parent timing model component
 
     Attributes
     ----------
@@ -183,6 +185,7 @@ class Parameter:
         # The input parameter from parfile, which can be an alias of the parameter
         # TODO give a better name and make it easy to access.
         self._parfile_name = name
+
         self.units = units  # Default unit
         self.quantity = value  # The value of parameter, internal storage
         self.prior = prior
@@ -216,6 +219,7 @@ class Parameter:
                 raise ValueError("Setting an existing value to None is not allowed.")
             self._quantity = val
             return
+
         self._quantity = self._set_quantity(val)
 
     @property
@@ -240,6 +244,7 @@ class Parameter:
                 )
             else:
                 self.value = val
+
         self._quantity = self._set_quantity(val)
 
     @property
@@ -969,8 +974,8 @@ class intParameter(Parameter):
     ----------
     name : str
         The name of the parameter.
-    value : str, bool, [0,1]
-        The input parameter boolean value.
+    value : int
+        The parameter value.
     description : str, optional
         A short description of what this parameter means.
     aliases : list, optional

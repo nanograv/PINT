@@ -1328,8 +1328,9 @@ def wavex_setup(model, T_span, freqs=None, n_freqs=None):
             "Both freqs and n_freqs are specified. Only one or the other should be used"
         )
 
-    if n_freqs <= 0:
+    if n_freqs is not None and n_freqs <= 0:
         raise ValueError("Must use a non-zero number of wave frequencies")
+
     model.add_component(WaveX())
     if isinstance(T_span, u.quantity.Quantity):
         T_span.to(u.d)
@@ -1356,11 +1357,11 @@ def wavex_setup(model, T_span, freqs=None, n_freqs=None):
 
     if n_freqs is not None:
         if n_freqs == 1:
-            wave_freq = 2.0 * np.pi / T_span
+            wave_freq = 1 / T_span
             model.WXFREQ_0001.quantity = wave_freq
         else:
             wave_numbers = np.arange(1, n_freqs + 1)
-            wave_freqs = 2.0 * np.pi * wave_numbers / T_span
+            wave_freqs = wave_numbers / T_span
             model.WXFREQ_0001.quantity = wave_freqs[0]
             model.components["WaveX"].add_wavex_components(wave_freqs[1:])
     return model.components["WaveX"].get_indices()
@@ -1408,8 +1409,9 @@ def dmwavex_setup(model, T_span, freqs=None, n_freqs=None):
             "Both freqs and n_freqs are specified. Only one or the other should be used"
         )
 
-    if n_freqs <= 0:
+    if n_freqs is not None and n_freqs <= 0:
         raise ValueError("Must use a non-zero number of wave frequencies")
+
     model.add_component(DMWaveX())
     if isinstance(T_span, u.quantity.Quantity):
         T_span.to(u.d)
@@ -1436,11 +1438,11 @@ def dmwavex_setup(model, T_span, freqs=None, n_freqs=None):
 
     if n_freqs is not None:
         if n_freqs == 1:
-            wave_freq = 2.0 * np.pi / T_span
+            wave_freq = 1 / T_span
             model.DMWXFREQ_0001.quantity = wave_freq
         else:
             wave_numbers = np.arange(1, n_freqs + 1)
-            wave_freqs = 2.0 * np.pi * wave_numbers / T_span
+            wave_freqs = wave_numbers / T_span
             model.DMWXFREQ_0001.quantity = wave_freqs[0]
             model.components["DMWaveX"].add_dmwavex_components(wave_freqs[1:])
     return model.components["DMWaveX"].get_indices()
@@ -2599,3 +2601,32 @@ def normalize_designmatrix(M, params):
     norm[norm == 0] = 1
 
     return M / norm, norm
+
+
+def akaike_information_criterion(model, toas):
+    """Compute the Akaike information criterion.
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+        The timing model
+    toas: pint.toas.TOAs
+        TOAs
+
+    Returns
+    -------
+    aic: float
+        The Akaike information criterion
+    """
+    from pint.residuals import Residuals
+
+    if not toas.is_wideband():
+        k = (
+            len(model.free_params)
+            if "PhaseOffset" in model.components
+            else len(model.free_params) + 1
+        )
+        lnL = Residuals(toas, model).lnlikelihood()
+        return 2 * (k - lnL)
+    else:
+        raise NotImplementedError

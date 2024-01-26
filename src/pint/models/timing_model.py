@@ -53,6 +53,7 @@ from pint.models.parameter import (
     Parameter,
     boolParameter,
     floatParameter,
+    funcParameter,
     intParameter,
     maskParameter,
     strParameter,
@@ -592,7 +593,8 @@ class TimingModel:
 
     @property_exists
     def free_params(self):
-        """List of all the free parameters in the timing model. Can be set to change which are free.
+        """List of all the free parameters in the timing model.
+        Can be set to change which are free.
 
         These are ordered as ``self.params`` does.
 
@@ -614,6 +616,26 @@ class TimingModel:
             raise ValueError(
                 f"Parameter(s) are familiar but not in the model: {params}"
             )
+
+    @property_exists
+    def fittable_params(self):
+        """List of parameters that are fittable, i.e., the parameters
+        which have a derivative implemented. These derivatives are usually
+        accessed via the `d_delay_d_param` and `d_phase_d_param` methods."""
+        return [
+            p
+            for p in self.params
+            if (
+                p in self.phase_deriv_funcs
+                or p in self.delay_deriv_funcs
+                or (
+                    (
+                        hasattr(self, "toasigma_deriv_funcs")
+                        and p in self.toasigma_deriv_funcs
+                    )
+                )
+            )
+        ]
 
     def match_param_aliases(self, alias):
         """Return PINT parameter name corresponding to this alias.
@@ -1045,8 +1067,13 @@ class TimingModel:
 
     @property_exists
     def dm_derivs(self):  #  TODO need to be careful about the name here.
-        """List of dm derivative functions."""
+        """List of DM derivative functions."""
         return self.get_deriv_funcs("DelayComponent", "dm")
+
+    @property_exists
+    def toasigma_derivs(self):
+        """List of scaled TOA uncertainty derivative functions"""
+        return self.get_deriv_funcs("NoiseComponent", "toasigma")
 
     @property_exists
     def d_phase_d_delay_funcs(self):
@@ -1057,7 +1084,17 @@ class TimingModel:
         return Dphase_Ddelay
 
     def get_deriv_funcs(self, component_type, derivative_type=""):
-        """Return dictionary of derivative functions."""
+        """Return a dictionary of derivative functions.
+
+        Parameters
+        ----------
+        component_type: str
+            Type of component to look for derivatives ("PhaseComponent",
+            "DelayComponent", or "NoiseComponent")
+        derivative_type: str
+            Derivative type ("", "dm", or "toasigma". Empty string
+            denotes delay and phase derivatives.)
+        """
         # TODO, this function can be a more generic function collector.
         deriv_funcs = defaultdict(list)
         if derivative_type != "":
@@ -1885,7 +1922,7 @@ class TimingModel:
         res_f = -phase_f[:, 0] + phase_f[:, 1]
         result = (res_i + res_f) / (2.0 * h * unit)
         # shift value back to the original value
-        par.quantity = ori_value
+        par.value = ori_value
         return result
 
     def d_delay_d_param_num(self, toas, param, step=1e-2):
@@ -1916,7 +1953,7 @@ class TimingModel:
         return d_delay * (u.second / unit)
 
     def d_dm_d_param(self, data, param):
-        """Return the derivative of dm with respect to the parameter."""
+        """Return the derivative of DM with respect to the parameter."""
         par = getattr(self, param)
         result = np.zeros(len(data)) << (u.pc / u.cm**3 / par.units)
         dm_df = self.dm_derivs.get(param, None)
@@ -1927,6 +1964,23 @@ class TimingModel:
                 return result
 
         for df in dm_df:
+            result += df(data, param).to(
+                result.unit, equivalencies=u.dimensionless_angles()
+            )
+        return result
+
+    def d_toasigma_d_param(self, data, param):
+        """Return the derivative of the scaled TOA uncertainty with respect to the parameter."""
+        par = getattr(self, param)
+        result = np.zeros(len(data)) << (u.s / par.units)
+        sigma_df = self.toasigma_derivs.get(param, None)
+        if sigma_df is None:
+            if param not in self.params:  # Maybe add differentiable params
+                raise AttributeError(f"Parameter {param} does not exist")
+            else:
+                return result
+
+        for df in sigma_df:
             result += df(data, param).to(
                 result.unit, equivalencies=u.dimensionless_angles()
             )
@@ -1965,16 +2019,38 @@ class TimingModel:
         units : astropy.units.Unit
             The units of the corresponding parts of the design matrix
 
-        Note
-        ----
-        Here we have negative sign here. Since in pulsar timing
-        the residuals are calculated as (Phase - int(Phase)), which is different
-        from the conventional definition of least square definition (Data - model)
-        We decide to add minus sign here in the design matrix, so the fitter
-        keeps the conventional way.
+        Notes
+        -----
+        1. We have negative sign here. Since the residuals are calculated as
+        (Phase - int(Phase)) in pulsar timing, which is different from the conventional
+        definition of least square definition (Data - model), we have decided to add
+        a minus sign here in the design matrix so that the fitter keeps the conventional
+        sign.
+
+        2. Design matrix entries can be computed only for parameters for which the
+        derivatives are implemented. If a parameter without a derivative is unfrozen
+        while calling this method, it will raise an informative error, except in the
+        case of unfrozen noise parameters, which are simply ignored.
         """
 
         noise_params = self.get_params_of_component_type("NoiseComponent")
+
+        if (
+            not set(self.free_params)
+            .difference(noise_params)
+            .issubset(self.fittable_params)
+        ):
+            free_unfittable_params = (
+                set(self.free_params)
+                .difference(noise_params)
+                .difference(self.fittable_params)
+            )
+            raise ValueError(
+                f"Cannot compute the design matrix because the following unfittable parameters "
+                f"were found unfrozen in the model: {free_unfittable_params}. "
+                f"Freeze these parameters before computing the design matrix."
+            )
+
         # unfrozen_noise_params = [
         #     param for param in noise_params if not getattr(self, param).frozen
         # ]
@@ -2918,7 +2994,11 @@ class Component(metaclass=ModelMeta):
     def __repr__(self):
         return "{}(\n    {})".format(
             self.__class__.__name__,
-            ",\n    ".join(str(getattr(self, p)) for p in self.params),
+            ",\n    ".join(
+                str(getattr(self, p))
+                for p in self.params
+                if not isinstance(p, funcParameter)
+            ),
         )
 
     def setup(self):

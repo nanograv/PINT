@@ -54,6 +54,12 @@ def main(argv=None):
         default=1400.0,
     )
     parser.add_argument(
+        "--multifreq",
+        help="Simulate multiple frequency TOAs per epoch",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
         "--error",
         help="Random error to apply to each TOA (us)",
         type=float,
@@ -64,6 +70,12 @@ def main(argv=None):
         action="store_true",
         default=False,
         help="Actually add in random noise, or just populate the column",
+    )
+    parser.add_argument(
+        "--addcorrnoise",
+        action="store_true",
+        default=False,
+        help="Add in a correlated noise realization if it's present in the model",
     )
     parser.add_argument(
         "--wideband",
@@ -127,13 +139,18 @@ def main(argv=None):
             freq=np.atleast_1d(args.freq) * u.MHz,
             fuzz=args.fuzzdays * u.d,
             add_noise=args.addnoise,
+            add_correlated_noise=args.addcorrnoise,
             wideband=args.wideband,
             wideband_dm_error=args.dmerror * pint.dmu,
+            multi_freqs_in_epoch=args.multifreq,
         )
     else:
         log.info(f"Reading initial TOAs from {args.inputtim}")
         ts = pint.simulation.make_fake_toas_fromtim(
-            args.inputtim, model=m, add_noise=args.addnoise
+            args.inputtim,
+            model=m,
+            add_noise=args.addnoise,
+            add_correlated_noise=args.addcorrnoise,
         )
 
     # Write TOAs to a file
