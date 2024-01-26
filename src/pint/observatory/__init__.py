@@ -476,8 +476,14 @@ def get_observatory(
         file switches/options are added at a public API level.
 
     """
-    if include_bipm is not None or include_gps is not None:
-        site = deepcopy(Observatory.get(name))
+    from pint.observatory.topo_obs import TopoObs
+
+    site0 = Observatory.get(name)
+
+    if (include_bipm is not None or include_gps is not None) and isinstance(
+        site0, TopoObs
+    ):
+        site = deepcopy(site0)
 
         if include_gps is not None:
             site.include_gps = include_gps
@@ -488,7 +494,7 @@ def get_observatory(
 
         return site
 
-    return Observatory.get(name)
+    return site0
 
 
 def earth_location_distance(loc1, loc2):
