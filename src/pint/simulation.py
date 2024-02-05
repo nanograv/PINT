@@ -22,7 +22,7 @@ __all__ = [
 ]
 
 
-def zero_residuals(ts, model, maxiter=10, tolerance=None):
+def zero_residuals(ts, model, subtract_mean=True, maxiter=10, tolerance=None):
     """Use a model to adjust a TOAs object, setting residuals to 0 iteratively.
 
     Parameters
@@ -42,7 +42,9 @@ def zero_residuals(ts, model, maxiter=10, tolerance=None):
     if tolerance is None:
         tolerance = 1 * u.ns if pint.utils.check_longdouble_precision() else 5 * u.us
     for i in range(maxiter):
-        r = pint.residuals.Residuals(ts, model, track_mode="use_pulse_numbers")
+        r = pint.residuals.Residuals(
+            ts, model, subtract_mean=subtract_mean, track_mode="use_pulse_numbers"
+        )
         resids = r.calc_time_resids(calctype="taylor")
         if maxresid is not None and (np.abs(resids).max() > maxresid):
             log.warning(
@@ -104,7 +106,14 @@ def get_fake_toa_clock_versions(model, include_bipm=False, include_gps=True):
     }
 
 
-def make_fake_toas(ts, model, add_noise=False, add_correlated_noise=False, name="fake"):
+def make_fake_toas(
+    ts,
+    model,
+    add_noise=False,
+    add_correlated_noise=False,
+    name="fake",
+    subtract_mean=True,
+):
     """Make toas from an array of times
 
     Can include alternating frequencies if fed an array of frequencies,
@@ -122,6 +131,8 @@ def make_fake_toas(ts, model, add_noise=False, add_correlated_noise=False, name=
         Add correlated noise to the TOAs if it's present in the timing mode.
     name : str, optional
         Name for the TOAs (goes into the flags)
+    subtract_mean : bool, optional
+        Controls whether mean will be subtracted from the residuals when making fake TOAs
 
     Returns
     -------
@@ -133,7 +144,7 @@ def make_fake_toas(ts, model, add_noise=False, add_correlated_noise=False, name=
     `add_noise` respects any ``EFAC`` or ``EQUAD`` present in the `model`
     """
     tsim = deepcopy(ts)
-    zero_residuals(tsim, model)
+    zero_residuals(tsim, model, subtract_mean=subtract_mean)
 
     if add_correlated_noise:
         U = model.noise_model_designmatrix(tsim)
@@ -191,6 +202,7 @@ def make_fake_toas_uniform(
     include_gps=True,
     multi_freqs_in_epoch=False,
     flags=None,
+    subtract_mean=True,
 ):
     """Simulate uniformly spaced TOAs.
 
@@ -236,6 +248,8 @@ def make_fake_toas_uniform(
         Whether to generate multiple frequency TOAs for the same epoch.
     flags: None or dict
         Dictionary of flags to be added to all simulated TOAs.
+    subtract_mean : bool, optional
+        Controls whether mean will be subtracted from the residuals when making fake TOAs
 
     Returns
     -------
@@ -308,6 +322,7 @@ def make_fake_toas_uniform(
         add_noise=add_noise,
         add_correlated_noise=add_correlated_noise,
         name=name,
+        subtract_mean=subtract_mean,
     )
 
 
@@ -326,6 +341,7 @@ def make_fake_toas_fromMJDs(
     include_gps=True,
     multi_freqs_in_epoch=False,
     flags=None,
+    subtract_mean=True,
 ):
     """Simulate TOAs from a list of MJDs
 
@@ -363,6 +379,8 @@ def make_fake_toas_fromMJDs(
         Whether to generate multiple frequency TOAs for the same epoch.
     flags: None or dict
         Dictionary of flags to be added to all simulated TOAs.
+    subtract_mean : bool, optional
+        Controls whether mean will be subtracted from the residuals when making fake TOAs
 
     Returns
     -------
@@ -439,11 +457,17 @@ def make_fake_toas_fromMJDs(
         add_noise=add_noise,
         add_correlated_noise=add_correlated_noise,
         name=name,
+        subtract_mean=subtract_mean,
     )
 
 
 def make_fake_toas_fromtim(
-    timfile, model, add_noise=False, add_correlated_noise=False, name="fake"
+    timfile,
+    model,
+    add_noise=False,
+    add_correlated_noise=False,
+    name="fake",
+    subtract_mean=True,
 ):
     """Simulate fake TOAs with the same times as an input tim file
 
@@ -459,6 +483,8 @@ def make_fake_toas_fromtim(
         Add correlated noise to the TOAs if it's present in the timing mode.
     name : str, optional
         Name for the TOAs (goes into the flags)
+    subtract_mean : bool, optional
+        Controls whether mean will be subtracted from the residuals when making fake TOAs
 
     Returns
     -------
@@ -493,6 +519,7 @@ def make_fake_toas_fromtim(
         add_noise=add_noise,
         add_correlated_noise=add_correlated_noise,
         name=name,
+        subtract_mean=subtract_mean,
     )
 
 
