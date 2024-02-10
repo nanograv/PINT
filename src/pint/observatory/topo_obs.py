@@ -17,12 +17,15 @@ See Also
 --------
 :mod:`pint.observatory.special_locations`
 """
+import copy
 import json
 import os
+from functools import cached_property
 from pathlib import Path
-import copy
+from typing import Optional
 
 import astropy.constants as c
+import astropy.time
 import astropy.units as u
 import numpy as np
 from astropy.coordinates import EarthLocation
@@ -36,9 +39,9 @@ from pint.observatory import (
     NoClockCorrections,
     Observatory,
     bipm_default,
+    earth_location_distance,
     find_clock_file,
     get_observatory,
-    earth_location_distance,
 )
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import get_tdb_tt_ephem_geocenter, objPosVel_wrt_SSB
@@ -149,36 +152,36 @@ class TopoObs(Observatory):
 
     def __init__(
         self,
-        name,
+        name: str,
         *,
-        fullname=None,
-        tempo_code=None,
-        itoa_code=None,
-        aliases=None,
+        fullname: Optional[str] = None,
+        tempo_code: Optional[str] = None,
+        itoa_code: Optional[str] = None,
+        aliases: Optional[list[str]] = None,
         location=None,
         itrf_xyz=None,
-        lat=None,
-        lon=None,
+        lat: Optional[float] = None,
+        lon: Optional[float] = None,
         height=None,
-        clock_file="",
-        clock_fmt="tempo",
+        clock_file: str = "",
+        clock_fmt: str = "tempo",
         clock_dir=None,
-        include_gps=True,
-        include_bipm=True,
-        bipm_version=bipm_default,
+        include_gps: bool = True,
+        include_bipm: bool = True,
+        bipm_version: str = bipm_default,
         origin=None,
-        overwrite=False,
-        bogus_last_correction=False,
+        overwrite: bool = False,
+        bogus_last_correction: bool = False,
     ):
         input_values = [lat is not None, lon is not None, height is not None]
-        if sum(input_values) > 0 and sum(input_values) < 3:
+        if any(input_values) and not all(input_values):
             raise ValueError("All of lat, lon, height are required for observatory")
         input_values = [
             location is not None,
             itrf_xyz is not None,
             (lat is not None and lon is not None and height is not None),
         ]
-        if sum(input_values) == 0:
+        if not any(input_values):
             raise ValueError(
                 f"EarthLocation, ITRF coordinates, or lat/lon/height are required for observatory '{name}'"
             )
@@ -209,11 +212,12 @@ class TopoObs(Observatory):
 
         # Save clock file info, the data will be read only if clock
         # corrections for this site are requested.
-        self.clock_files = [clock_file] if isinstance(clock_file, str) else clock_file
-        self.clock_files = [c for c in self.clock_files if c != ""]
-        self.clock_fmt = clock_fmt
+        clock_files: list[str] = (
+            [clock_file] if isinstance(clock_file, str) else clock_file
+        )
+        self.clock_files: list[str] = [c for c in clock_files if c != ""]
+        self.clock_fmt: str = clock_fmt
         self.clock_dir = clock_dir
-        self._clock = None  # The ClockFile objects, will be read on demand
 
         # If using TEMPO time.dat we need to know the 1-char tempo-style
         # observatory code.
@@ -315,10 +319,9 @@ class TopoObs(Observatory):
     def earth_location_itrf(self, time=None):
         return self.location
 
-    def _load_clock_corrections(self):
-        if self._clock is not None:
-            return
-        self._clock = []
+    @cached_property
+    def _clock(self) -> list:
+        clock = []
         for cf in self.clock_files:
             if cf == "":
                 continue
@@ -326,7 +329,7 @@ class TopoObs(Observatory):
             if isinstance(cf, dict):
                 kwargs.update(cf)
                 cf = kwargs.pop("name")
-            self._clock.append(
+            clock.append(
                 find_clock_file(
                     cf,
                     format=self.clock_fmt,
@@ -334,8 +337,11 @@ class TopoObs(Observatory):
                     **kwargs,
                 )
             )
+        return clock
 
-    def clock_corrections(self, t, limits="warn"):
+    def clock_corrections(
+        self, t: astropy.time.Time, limits: str = "warn"
+    ) -> u.Quantity:
         """Compute the total clock corrections,
 
         Parameters
@@ -344,17 +350,16 @@ class TopoObs(Observatory):
             The time when the clock correcions are applied.
         """
 
-        corr = super().clock_corrections(t, limits=limits)
-        # Read clock file if necessary
-        self._load_clock_corrections()
+        corr: u.Quantity = super().clock_corrections(t, limits=limits)
         if self._clock:
             log.info(
                 f"Applying observatory clock corrections for observatory='{self.name}'."
             )
             for clock in self._clock:
                 corr += clock.evaluate(t, limits=limits)
-
         elif self.clock_files:
+            # clock_files is not empty, but no clock corrections found
+            # FIXME: what if only some were found?
             msg = f"No clock corrections found for observatory {self.name} taken from file {self.clock_files}"
             if limits == "warn":
                 log.warning(msg)
@@ -365,19 +370,18 @@ class TopoObs(Observatory):
             log.info(f"Observatory {self.name} requires no clock corrections.")
         return corr
 
-    def last_clock_correction_mjd(self):
+    def last_clock_correction_mjd(self) -> float:
         """Return the MJD of the last clock correction.
 
         Combines constraints based on Earth orientation parameters and on the
         available clock corrections specific to the telescope.
         """
         t = super().last_clock_correction_mjd()
-        self._load_clock_corrections()
         for clock in self._clock:
             t = min(t, clock.last_correction_mjd())
         return t
 
-    def _get_TDB_ephem(self, t, ephem):
+    def _get_TDB_ephem(self, t: astropy.time.Time, ephem):
         """Read the ephem TDB-TT column.
 
         This column is provided by DE4XXt version of ephemeris. This function is only
@@ -406,7 +410,7 @@ class TopoObs(Observatory):
             location=self.earth_location_itrf(),
         )
 
-    def get_gcrs(self, t, ephem=None):
+    def get_gcrs(self, t: astropy.time.Time, ephem=None):
         """Return position vector of TopoObs in GCRS
 
         Parameters
@@ -423,7 +427,7 @@ class TopoObs(Observatory):
         )
         return obs_geocenter_pv.pos
 
-    def posvel(self, t, ephem, group=None):
+    def posvel(self, t: astropy.time.Time, ephem, group=None):
         if t.isscalar:
             t = Time([t])
         earth_pv = objPosVel_wrt_SSB("earth", t, ephem)
