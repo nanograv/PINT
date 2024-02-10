@@ -45,7 +45,7 @@ from pint.observatory import (
 )
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import get_tdb_tt_ephem_geocenter, objPosVel_wrt_SSB
-from pint.utils import has_astropy_unit, open_or_use
+from pint.utils import has_astropy_unit, open_or_use, PosVel
 
 # environment variables that can override clock location and observatory location
 pint_obs_env_var = "PINT_OBS_OVERRIDE"
@@ -277,7 +277,7 @@ class TopoObs(Observatory):
             overwrite=overwrite,
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         aliases = [f"'{x}'" for x in self.aliases]
         origin = (
             f"{self.fullname}\n{self.origin}"
@@ -309,7 +309,7 @@ class TopoObs(Observatory):
         """Return as a JSON string"""
         return json.dumps(self.get_dict())
 
-    def separation(self, other, method="cartesian"):
+    def separation(self, other: "TopoObs", method: str = "cartesian"):
         """Return separation between two TopoObs objects
 
         Parameters
@@ -341,7 +341,7 @@ class TopoObs(Observatory):
             )
             return (c.R_earth * dsigma).to(u.m, equivalencies=u.dimensionless_angles())
 
-    def earth_location_itrf(self, time=None):
+    def earth_location_itrf(self, time=None) -> EarthLocation:
         return self.location
 
     @cached_property
@@ -364,9 +364,7 @@ class TopoObs(Observatory):
             )
         return clock
 
-    def clock_corrections(
-        self, t: astropy.time.Time, limits: str = "warn"
-    ) -> u.Quantity:
+    def clock_corrections(self, t: Time, limits: str = "warn") -> u.Quantity:
         """Compute the total clock corrections,
 
         Parameters
@@ -406,7 +404,7 @@ class TopoObs(Observatory):
             t = min(t, clock.last_correction_mjd())
         return t
 
-    def _get_TDB_ephem(self, t: astropy.time.Time, ephem):
+    def _get_TDB_ephem(self, t: Time, ephem) -> Time:
         """Read the ephem TDB-TT column.
 
         This column is provided by DE4XXt version of ephemeris. This function is only
@@ -418,8 +416,8 @@ class TopoObs(Observatory):
         # Topocenter to Geocenter
         # Since earth velocity is not going to change a lot in 3ms. The
         # differences between TT and TDB can be ignored.
-        earth_pv = objPosVel_wrt_SSB("earth", t.tdb, ephem)
-        obs_geocenter_pv = gcrs_posvel_from_itrf(
+        earth_pv: PosVel = objPosVel_wrt_SSB("earth", t.tdb, ephem)
+        obs_geocenter_pv: PosVel = gcrs_posvel_from_itrf(
             self.earth_location_itrf(), t, obsname=self.name
         )
         # NOTE
@@ -447,22 +445,22 @@ class TopoObs(Observatory):
         np.array
             a 3-vector of Quantities representing the position in GCRS coordinates.
         """
-        obs_geocenter_pv = gcrs_posvel_from_itrf(
+        obs_geocenter_pv: PosVel = gcrs_posvel_from_itrf(
             self.earth_location_itrf(), t, obsname=self.name
         )
         return obs_geocenter_pv.pos
 
-    def posvel(self, t: astropy.time.Time, ephem, group=None):
+    def posvel(self, t: astropy.time.Time, ephem, group=None) -> PosVel:
         if t.isscalar:
             t = Time([t])
-        earth_pv = objPosVel_wrt_SSB("earth", t, ephem)
-        obs_geocenter_pv = gcrs_posvel_from_itrf(
+        earth_pv: PosVel = objPosVel_wrt_SSB("earth", t, ephem)
+        obs_geocenter_pv: PosVel = gcrs_posvel_from_itrf(
             self.earth_location_itrf(), t, obsname=self.name
         )
         return obs_geocenter_pv + earth_pv
 
 
-def export_all_clock_files(directory):
+def export_all_clock_files(directory: Union[str, Path]) -> None:
     """Export all clock files PINT is using.
 
     This will export all the clock files PINT is using - every clock file used
@@ -494,7 +492,7 @@ def export_all_clock_files(directory):
                     clock.export(directory / Path(clock.filename).name)
 
 
-def load_observatories(filename=observatories_json, overwrite=False):
+def load_observatories(filename=observatories_json, overwrite: bool = False) -> None:
     """Load observatory definitions from JSON and create :class:`pint.observatory.topo_obs.TopoObs` objects, registering them
 
     Set `overwrite` to ``True`` if you want to re-read a file with updated definitions.
@@ -528,7 +526,7 @@ def load_observatories(filename=observatories_json, overwrite=False):
         TopoObs(name=obsname, **obsdict)
 
 
-def load_observatories_from_usual_locations(clear=False):
+def load_observatories_from_usual_locations(clear: bool = False) -> None:
     """Load observatories from the default JSON file as well as ``$PINT_OBS_OVERRIDE``, optionally clearing the registry
 
     Running with ``clear=True`` will return PINT to the state it is on import.

@@ -39,7 +39,7 @@ from loguru import logger as log
 
 from pint.config import runtimefile
 from pint.pulsar_mjd import Time
-from pint.utils import interesting_lines
+from pint.utils import interesting_lines, PosVel
 
 # Include any files that define observatories here.  This will start
 # with the standard distribution files, then will read any system- or
@@ -90,7 +90,7 @@ _gps_clock = None
 _bipm_clock_versions = {}
 
 
-def _load_gps_clock():
+def _load_gps_clock() -> None:
     global _gps_clock
     if _gps_clock is None:
         log.info("Loading global GPS clock file")
@@ -100,7 +100,7 @@ def _load_gps_clock():
         )
 
 
-def _load_bipm_clock(bipm_version: str):
+def _load_bipm_clock(bipm_version: str) -> None:
     bipm_version = bipm_version.lower()
     if bipm_version not in _bipm_clock_versions:
         try:
@@ -140,7 +140,6 @@ class Observatory:
     """
 
     fullname: str
-    aliases: List[str]
     include_gps: bool
     include_bipm: bool
     bipm_version: str
@@ -184,7 +183,7 @@ class Observatory:
         Observatory._register(self, name)
 
     @classmethod
-    def _register(cls, obs: "Observatory", name: str):
+    def _register(cls, obs: "Observatory", name: str) -> None:
         """Add an observatory to the registry using the specified name (which will be converted to lower case).
 
         If an existing observatory
@@ -195,7 +194,7 @@ class Observatory:
         cls._registry[name.lower()] = obs
 
     @classmethod
-    def _add_aliases(cls, obs: "Observatory", aliases: List[str]):
+    def _add_aliases(cls, obs: "Observatory", aliases: List[str]) -> None:
         """Add aliases for the specified Observatory.  Aliases
         should be given as a list.  If any of the new aliases are already in
         use, they will be replaced.  Aliases are not checked against the
@@ -207,7 +206,7 @@ class Observatory:
             cls._alias_map[a.lower()] = obs.name
 
     @staticmethod
-    def gps_correction(t: astropy.time.Time, limits: str = "warn"):
+    def gps_correction(t: astropy.time.Time, limits: str = "warn") -> u.Quantity:
         """Compute the GPS clock corrections for times t."""
         log.info("Applying GPS to UTC clock correction (~few nanoseconds)")
         _load_gps_clock()
@@ -217,7 +216,7 @@ class Observatory:
     @staticmethod
     def bipm_correction(
         t: astropy.time.Time, bipm_version: str = bipm_default, limits: str = "warn"
-    ):
+    ) -> u.Quantity:
         """Compute the GPS clock corrections for times t."""
         log.info(f"Applying TT(TAI) to TT({bipm_version}) clock correction (~27 us)")
         tt2tai = 32.184 * 1e6 * u.us
@@ -466,7 +465,7 @@ class Observatory:
         """
         raise NotImplementedError
 
-    def posvel(self, t: astropy.time.Time, ephem, group=None):
+    def posvel(self, t: astropy.time.Time, ephem, group=None) -> PosVel:
         """Return observatory position and velocity for the given times.
 
         Position is relative to solar system barycenter; times are
@@ -519,14 +518,14 @@ def get_observatory(
     return Observatory.get(name)
 
 
-def earth_location_distance(loc1, loc2):
+def earth_location_distance(loc1: EarthLocation, loc2: EarthLocation) -> u.Quantity:
     """Compute the distance between two EarthLocations."""
     return (
         sum((u.Quantity(loc1.to_geocentric()) - u.Quantity(loc2.to_geocentric())) ** 2)
     ) ** 0.5
 
 
-def compare_t2_observatories_dat(t2dir=None):
+def compare_t2_observatories_dat(t2dir: Optional[str] = None) -> Dict[str, List[Dict]]:
     """Read a tempo2 observatories.dat file and compare with PINT
 
     Produces a report including lines that can be added to PINT's
@@ -617,7 +616,7 @@ def compare_t2_observatories_dat(t2dir=None):
     return report
 
 
-def compare_tempo_obsys_dat(tempodir=None):
+def compare_tempo_obsys_dat(tempodir: Optional[str] = None) -> Dict[str, List[Dict]]:
     """Read a tempo obsys.dat file and compare with PINT.
 
     Produces a report including lines that can be added to PINT's
@@ -657,8 +656,8 @@ def compare_tempo_obsys_dat(tempodir=None):
                 y = float(line_io.read(15))
                 z = float(line_io.read(15))
                 line_io.read(2)
-                icoord = line_io.read(1).strip()
-                icoord = int(icoord) if icoord else 0
+                icoord_str = line_io.read(1).strip()
+                icoord = int(icoord_str) if icoord_str else 0
                 line_io.read(2)
                 obsnam = line_io.read(20).strip().lower()
                 tempo_code = line_io.read(1)
