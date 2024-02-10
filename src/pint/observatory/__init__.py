@@ -140,9 +140,13 @@ class Observatory:
     """
 
     fullname: str
+    """Full human-readable name of the observatory."""
     include_gps: bool
+    """Whether to include GPS clock corrections."""
     include_bipm: bool
+    """Whether to include BIPM clock corrections."""
     bipm_version: str
+    """Version of the BIPM clock file to use."""
 
     # This is a dict containing all defined Observatory instances,
     # keyed on standard observatory name.
@@ -255,10 +259,19 @@ class Observatory:
 
     @property
     def name(self) -> str:
+        """Short name of the observatory.
+
+        This is the name used in TOA files and in the observatory registry.
+        """
         return self._name
 
     @property
     def aliases(self) -> List[str]:
+        """List of aliases for the observatory.
+
+        These are short names also used to specify this observatory.
+        Includes ITOA and TEMPO codes, and any other common names.
+        """
         return self._aliases
 
     @classmethod

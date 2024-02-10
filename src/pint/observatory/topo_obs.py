@@ -306,11 +306,11 @@ class TopoObs(Observatory):
         return {self.name: output}
 
     def get_json(self):
-        """Return as a JSON string"""
+        """Return as a JSON string."""
         return json.dumps(self.get_dict())
 
     def separation(self, other: "TopoObs", method: str = "cartesian"):
-        """Return separation between two TopoObs objects
+        """Return separation between two TopoObs objects.
 
         Parameters
         ----------
