@@ -28,7 +28,7 @@ from collections.abc import Callable
 from copy import deepcopy
 from io import StringIO
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, List, Dict
 
 import astropy.coordinates
 import astropy.time
@@ -140,31 +140,31 @@ class Observatory:
     """
 
     fullname: str
-    aliases: list[str]
+    aliases: List[str]
     include_gps: bool
     include_bipm: bool
     bipm_version: str
 
     # This is a dict containing all defined Observatory instances,
     # keyed on standard observatory name.
-    _registry: dict[str, "Observatory"] = {}
+    _registry: Dict[str, "Observatory"] = {}
 
     # This is a dict mapping any defined aliases to the corresponding
     # standard name.
-    _alias_map: dict[str, str] = {}
+    _alias_map: Dict[str, str] = {}
 
     def __init__(
         self,
         name: str,
         fullname: Optional[str] = None,
-        aliases: Optional[list[str]] = None,
+        aliases: Optional[List[str]] = None,
         include_gps: bool = True,
         include_bipm: bool = True,
         bipm_version: str = bipm_default,
         overwrite: bool = False,
     ):
         self._name: str = name.lower()
-        self._aliases: list[str] = (
+        self._aliases: List[str] = (
             list(set(map(str.lower, aliases))) if aliases is not None else []
         )
         if aliases is not None:
@@ -195,7 +195,7 @@ class Observatory:
         cls._registry[name.lower()] = obs
 
     @classmethod
-    def _add_aliases(cls, obs: "Observatory", aliases: list[str]):
+    def _add_aliases(cls, obs: "Observatory", aliases: List[str]):
         """Add aliases for the specified Observatory.  Aliases
         should be given as a list.  If any of the new aliases are already in
         use, they will be replaced.  Aliases are not checked against the
@@ -243,7 +243,7 @@ class Observatory:
         return cls._registry.keys()
 
     @classmethod
-    def names_and_aliases(cls) -> dict[str, list[str]]:
+    def names_and_aliases(cls) -> Dict[str, List[str]]:
         """List all observatories and their aliases"""
         import pint.observatory.topo_obs  # noqa
         import pint.observatory.special_locations  # noqa
@@ -259,7 +259,7 @@ class Observatory:
         return self._name
 
     @property
-    def aliases(self) -> list[str]:
+    def aliases(self) -> List[str]:
         return self._aliases
 
     @classmethod

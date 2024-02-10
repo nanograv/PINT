@@ -22,7 +22,7 @@ import json
 import os
 from functools import cached_property
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union, List
 
 import astropy.constants as c
 import astropy.time
@@ -150,6 +150,31 @@ class TopoObs(Observatory):
 
     """
 
+    tempo_code: Optional[str]
+    """One-character TEMPO code."""
+    itoa_code: Optional[str]
+    """Two-character ITOA code."""
+    location: EarthLocation
+    """Location of the observatory."""
+    clock_files: List[str]
+    """List of files to read for clock corrections.  If empty, no clock corrections are applied."""
+    clock_fmt: str
+    """Format of the clock files.
+    
+    See :class:`pint.observatory.clock_file.ClockFile` for allowed values.
+    """
+    bogus_last_correction: bool
+    """Clock correction files include a bogus last correction.
+    
+    This is common with TEMPO/TEMPO2 clock files since neither program does
+    a good job with times past the end ot the table. It makes detecting values
+    past the end of real calibration difficult if it's not marked as bogus.
+    """
+    clock_dir: Optional[Union[str, Path]]
+    """Where to look for the clock files."""
+    origin: Optional[str]
+    """Documentation of the origin/author/date for the information."""
+
     def __init__(
         self,
         name: str,
@@ -157,7 +182,7 @@ class TopoObs(Observatory):
         fullname: Optional[str] = None,
         tempo_code: Optional[str] = None,
         itoa_code: Optional[str] = None,
-        aliases: Optional[list[str]] = None,
+        aliases: Optional[List[str]] = None,
         location=None,
         itrf_xyz=None,
         lat: Optional[float] = None,
@@ -169,7 +194,7 @@ class TopoObs(Observatory):
         include_gps: bool = True,
         include_bipm: bool = True,
         bipm_version: str = bipm_default,
-        origin=None,
+        origin: Optional[str] = None,
         overwrite: bool = False,
         bogus_last_correction: bool = False,
     ):
@@ -212,10 +237,10 @@ class TopoObs(Observatory):
 
         # Save clock file info, the data will be read only if clock
         # corrections for this site are requested.
-        clock_files: list[str] = (
+        clock_files: List[str] = (
             [clock_file] if isinstance(clock_file, str) else clock_file
         )
-        self.clock_files: list[str] = [c for c in clock_files if c != ""]
+        self.clock_files: List[str] = [c for c in clock_files if c != ""]
         self.clock_fmt: str = clock_fmt
         self.clock_dir = clock_dir
 
