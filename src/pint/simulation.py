@@ -1,8 +1,9 @@
 """Functions related to simulating TOAs and models
 """
+from __future__ import annotations
 from collections import OrderedDict
 from copy import deepcopy
-from typing import Optional, Union, List, Dict
+from typing import Optional, List
 import pathlib
 
 import astropy.units as u
