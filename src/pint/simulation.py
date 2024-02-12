@@ -22,7 +22,7 @@ __all__ = [
 ]
 
 
-def zero_residuals(ts, model, subtract_mean=True, maxiter=10, tolerance=None):
+def zero_residuals(ts, model, *, subtract_mean=True, maxiter=10, tolerance=None):
     """Use a model to adjust a TOAs object, setting residuals to 0 iteratively.
 
     Parameters
@@ -31,6 +31,8 @@ def zero_residuals(ts, model, subtract_mean=True, maxiter=10, tolerance=None):
         Input TOAs (modified in-place)
     model : pint.models.timing_model.TimingModel
         current model
+    subtract_mean : bool, optional
+        Controls whether mean will be subtracted from the residuals when making fake TOAs
     maxiter : int, optional
         maximum number of iterations allowed
     tolerance : astropy.units.Quantity
