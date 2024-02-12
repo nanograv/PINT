@@ -32,12 +32,15 @@ References
 ----------
 http://tempo.sourceforge.net/ref_man_sections/tz-polyco.txt
 """
+from __future__ import annotations
 import astropy.table as table
 import astropy.units as u
 import numpy as np
 from astropy.io import registry
 from astropy.time import Time
 from collections import OrderedDict
+import pathlib
+from typing import Optional, Callable
 
 from loguru import logger as log
 
@@ -93,8 +96,10 @@ class PolycoEntry:
         Middle point of the time span in mjd
     mjdspan : int
         Time span in minutes
-    rphase : float
-        Reference phase
+    rph_int : int
+        Integer part of reference phase
+    rph_frac : float
+        Fractional part of reference phase
     f0 : float
         Reference spin frequency
     ncoeff : int
@@ -103,7 +108,16 @@ class PolycoEntry:
         Polynomial coefficents
     """
 
-    def __init__(self, tmid, mjdspan, rph_int, rph_frac, f0, ncoeff, coeffs):
+    def __init__(
+        self,
+        tmid: float,
+        mjdspan: int,
+        rph_int: int,
+        rph_frac: float,
+        f0: float,
+        ncoeff: int,
+        coeffs: np.ndarray,
+    ):
         self.tmid = data2longdouble(tmid) * u.day
         self.mjdspan = data2longdouble(mjdspan / MIN_PER_DAY) * u.day
         self.tstart = self.tmid - (self.mjdspan / 2)
@@ -140,7 +154,7 @@ class PolycoEntry:
             + repr(self.coeffs)
         )
 
-    def evalabsphase(self, t):
+    def evalabsphase(self, t: float | np.ndarray) -> Phase:
         """Return the phase at time t, computed with this polyco entry
 
         Parameters
@@ -167,7 +181,7 @@ class PolycoEntry:
         phase += self.rphase + Phase(dt * 60.0 * self.f0)
         return phase
 
-    def evalphase(self, t):
+    def evalphase(self, t: float | np.ndarray) -> Phase:
         """Return the phase at time t, computed with this polyco entry
 
         Parameters
@@ -181,7 +195,7 @@ class PolycoEntry:
         """
         return self.evalabsphase(t).frac
 
-    def evalfreq(self, t):
+    def evalfreq(self, t: float | np.ndarray) -> np.ndarray:
         """Return the freq at time t, computed with this polyco entry
 
         Parameters
@@ -200,7 +214,7 @@ class PolycoEntry:
             s += data2longdouble(i) * self.coeffs[i] * dt ** (i - 1)
         return self.f0 + s / 60.0
 
-    def evalfreqderiv(self, t):
+    def evalfreqderiv(self, t: float | np.ndarray) -> np.ndarray:
         """Return the frequency derivative at time t.
 
         Parameters
@@ -227,7 +241,7 @@ class PolycoEntry:
 
 
 # Read polycos file data to table
-def tempo_polyco_table_reader(filename):
+def tempo_polyco_table_reader(filename: str) -> table.Table:
     """Read tempo style polyco file to an astropy table.
 
     Tempo style: The polynomial ephemerides are written to file 'polyco.dat'.
@@ -355,7 +369,9 @@ def tempo_polyco_table_reader(filename):
     return table.Table(entries, meta={"name": "Polyco Data Table"})
 
 
-def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
+def tempo_polyco_table_writer(
+    polycoTable: table.Table, filename: str | pathlib.Path = "polyco.dat"
+):
     """Write tempo style polyco file from an astropy table.
 
     Tempo style polyco file:
@@ -486,7 +502,7 @@ class Polycos:
     polycoFormats = []
 
     @classmethod
-    def _register(cls, formatlist=_polycoFormats):
+    def _register(cls, formatlist: list = _polycoFormats):
         """
         Register the table built-in reading and writing format
 
@@ -510,7 +526,9 @@ class Polycos:
                     fmt["format"], "rw", fmt["read_method"], fmt["write_method"]
                 )
 
-    def __init__(self, filename=None, format="tempo"):
+    def __init__(
+        self, filename: Optional[str | pathlib.Path] = None, format: str = "tempo"
+    ):
         """Initialize polycos from a file
 
         Parameters
@@ -541,7 +559,7 @@ class Polycos:
                 raise ValueError("Zero polycos found for table")
 
     @classmethod
-    def read(cls, filename, format="tempo"):
+    def read(cls, filename: str | pathlib.Path, format: str = "tempo") -> Polycos:
         """Read polyco file to a table.
 
         Parameters
@@ -560,7 +578,11 @@ class Polycos:
 
     @classmethod
     def add_polyco_file_format(
-        cls, formatName, methodMood, readMethod=None, writeMethod=None
+        cls,
+        formatName: str,
+        methodMood: str,
+        readMethod: Optional[Callable] = None,
+        writeMethod: Optional[Callable] = None,
     ):
         """
         Add a polyco file format and its reading/writing method to the class.
@@ -631,7 +653,9 @@ class Polycos:
 
         cls.polycoFormats.append(pFormat)
 
-    def read_polyco_file(self, filename, format="tempo"):
+    def read_polyco_file(
+        self, filename: str | pathlib.Path, format: str = "tempo"
+    ) -> Polcos:
         """Read polyco file to a table.
 
         Included for backward compatibility.  It is better to use :meth:`pint.polycos.Polycos.read`.
@@ -676,18 +700,18 @@ class Polycos:
     @classmethod
     def generate_polycos(
         cls,
-        model,
-        mjdStart,
-        mjdEnd,
-        obs,
-        segLength,
-        ncoeff,
-        obsFreq,
-        maxha=12.0,
-        method="TEMPO",
-        numNodes=20,
-        progress=True,
-    ):
+        model: pint.models.TimingModel,
+        mjdStart: float | np.longdouble,
+        mjdEnd: float | np.longdouble,
+        obs: str,
+        segLength: int,
+        ncoeff: int,
+        obsFreq: float,
+        maxha: float = 12.0,
+        method: str = "TEMPO",
+        numNodes: int = 20,
+        progress: bool = True,
+    ) -> Polycos:
         """
         Generate the polyco data.
 
@@ -834,7 +858,7 @@ class Polycos:
             raise ValueError("Zero polycos found for table")
         return out
 
-    def write_polyco_file(self, filename="polyco.dat", format="tempo"):
+    def write_polyco_file(self, filename: str = "polyco.dat", format: str = "tempo"):
         """Write Polyco table to a file.
 
         Parameters
@@ -856,7 +880,7 @@ class Polycos:
 
         self.polycoTable.write(filename, format=format)
 
-    def find_entry(self, t):
+    def find_entry(self, t: float | np.ndarray) -> np.ndarray:
         """Find the right entry for the input time.
 
         Parameters
@@ -890,7 +914,7 @@ class Polycos:
             raise ValueError("Some input times not covered by Polyco entries.")
         return start_idx
 
-    def eval_phase(self, t):
+    def eval_phase(self, t: float | np.ndarray) -> np.ndarray:
         """Polyco evaluation of fractional phase
 
         Parameters
@@ -911,7 +935,7 @@ class Polycos:
             t = np.array([t])
         return self.eval_abs_phase(t).frac
 
-    def eval_abs_phase(self, t):
+    def eval_abs_phase(self, t: float | np.ndarray) -> pint.phase.Phase:
         """
         Polyco evaluate absolute phase for a time array.
 
@@ -956,7 +980,7 @@ class Polycos:
         phaseFrac = np.hstack(phaseFrac).value
         return Phase(phaseInt, phaseFrac)
 
-    def eval_spin_freq(self, t):
+    def eval_spin_freq(self, t: float | np.ndarray) -> np.ndarray:
         """
         Polyco evaluate spin frequency for a time array.
 
@@ -991,7 +1015,7 @@ class Polycos:
 
         return spinFreq
 
-    def eval_spin_freq_derivative(self, t):
+    def eval_spin_freq_derivative(self, t: float | np.ndarray) -> np.ndarray:
         """
         Polyco evaluate spin frequency derivative for a time array.
 
