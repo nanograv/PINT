@@ -26,6 +26,7 @@ was observing the sky at the moment a leap second was introduced.
 
 .. _leap_smear: https://developers.google.com/time/smear
 """
+import warnings
 
 import erfa
 import astropy.time
@@ -264,7 +265,11 @@ def time_from_longdouble(t, scale="utc", format="pulsar_mjd"):
     t = np.longdouble(t)
     i = float(np.floor(t))
     f = float(t - i)
-    return astropy.time.Time(val=i, val2=f, format=format, scale=scale)
+    # FIXME: double-check whether warnings from here could be useful
+    # if they only arise because of weird test inputs silence them in the tests
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", r".*dubious year", erfa.ErfaWarning)
+        return astropy.time.Time(val=i, val2=f, format=format, scale=scale)
 
 
 def time_to_mjd_string(t):
@@ -400,7 +405,9 @@ def jds_to_mjds_pulsar(jd1, jd2):
     # Note this will return an incorrect value during
     # leap seconds, so raise an exception in that
     # case.
-    y, mo, d, hmsf = erfa.d2dtf("UTC", _digits, jd1, jd2)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", r".*dubious year", erfa.ErfaWarning)
+        y, mo, d, hmsf = erfa.d2dtf("UTC", _digits, jd1, jd2)
     # For ASTROPY_LT_3_1, convert to the new structured array dtype that
     # is returned by the new erfa gufuncs.
     if not hmsf.dtype.names:
@@ -443,7 +450,9 @@ def mjds_to_jds_pulsar(mjd1, mjd2):
     f -= m
     f *= 60
     s = f
-    return erfa.dtf2d("UTC", y, mo, d, h, m, s)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", r".*dubious year", erfa.ErfaWarning)
+        return erfa.dtf2d("UTC", y, mo, d, h, m, s)
 
 
 # Please forgive the horrible hacks to make these work cleanly on both arrays

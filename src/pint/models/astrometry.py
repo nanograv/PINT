@@ -801,9 +801,11 @@ class AstrometryEcliptic(Astrometry):
             epoch if isinstance(epoch, Time) else Time(epoch, scale="tdb", format="mjd")
         )
         position_now = add_dummy_distance(self.get_psr_coords())
-        return remove_dummy_distance(
-            position_now.apply_space_motion(new_obstime=newepoch)
-        )
+        with warnings.catch_warnings():
+            # This is a fake position, no point ERFA warning the user it's bogus
+            warnings.filterwarnings("ignore", r".*distance overridden", ErfaWarning)
+            position_then = position_now.apply_space_motion(new_obstime=newepoch)
+        return remove_dummy_distance(position_then)
 
     def coords_as_ICRS(self, epoch=None):
         """Return the pulsar's ICRS coordinates as an astropy coordinate object."""

@@ -1,11 +1,13 @@
 """Routines for reading and writing various formats of clock file."""
 
 import re
+import warnings
 from pathlib import Path
 from textwrap import dedent
 from warnings import warn
 
 import astropy.units as u
+import erfa
 import numpy as np
 from loguru import logger as log
 
@@ -864,7 +866,11 @@ class GlobalClockFile(ClockFile):
         corrections : astropy.units.Quantity
             The corrections in units of microseconds.
         """
-        if np.any(t > self.clock_file.time[-1]):
+        with warnings.catch_warnings():
+            # FIXME: could these warnings be useful?
+            warnings.filterwarnings("ignore", r".*dubuious year", erfa.ErfaWarning)
+            needs_update = np.any(t > self.clock_file.time[-1])
+        if needs_update:
             self.update()
         return self.clock_file.evaluate(t, limits=limits)
 
