@@ -324,13 +324,15 @@ def test_time_from_longdouble(scale, i_f):
 @example(i_f=(41498, 0.9999999999999982))
 @pytest.mark.parametrize("format", ["mjd", "pulsar_mjd"])
 def test_time_from_longdouble_utc(format, i_f):
-    i, f = i_f
-    assume(format != "pulsar_mjd" or i not in leap_sec_days or (1 - f) * 86400 >= 1e-9)
-    t = Time(val=i, val2=f, format=format, scale="utc")
-    ld = np.longdouble(i) + np.longdouble(f)
     with warnings.catch_warnings():
         # Plenty of dubious years from hypothesis
         warnings.filterwarnings("ignore", r".*dubious year", erfa.ErfaWarning)
+        i, f = i_f
+        assume(
+            format != "pulsar_mjd" or i not in leap_sec_days or (1 - f) * 86400 >= 1e-9
+        )
+        t = Time(val=i, val2=f, format=format, scale="utc")
+        ld = np.longdouble(i) + np.longdouble(f)
         assert (
             abs(time_from_longdouble(ld, format=format, scale="utc") - t).to(u.ns)
             < 1 * u.ns
@@ -351,15 +353,17 @@ def test_time_from_longdouble_utc(format, i_f):
 @example(i_f=(43143, 9.313492199680697e-10))
 @pytest.mark.parametrize("format", ["mjd", "pulsar_mjd"])
 def test_time_to_longdouble_close_to_time_to_mjd_string(format, i_f):
-    i, f = i_f
-    t = Time(val=i, val2=f, format=format, scale="utc")
-    tld = time_to_longdouble(t)
-    tstr = time_to_mjd_string(t)
-    # NOTE: have to add str() here, because of a numpy bug which treats
-    # numpy string type differently from python str.
-    # See https://github.com/numpy/numpy/issues/15608
-    tld_str = np.longdouble(str(tstr))
-    assert abs(tld_str - tld) * u.day < 1 * u.ns
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", r".*dubious year", erfa.ErfaWarning)
+        i, f = i_f
+        t = Time(val=i, val2=f, format=format, scale="utc")
+        tld = time_to_longdouble(t)
+        tstr = time_to_mjd_string(t)
+        # NOTE: have to add str() here, because of a numpy bug which treats
+        # numpy string type differently from python str.
+        # See https://github.com/numpy/numpy/issues/15608
+        tld_str = np.longdouble(str(tstr))
+        assert abs(tld_str - tld) * u.day < 1 * u.ns
 
 
 @given(reasonable_mjd())
@@ -380,15 +384,17 @@ def test_time_to_longdouble_no_longer_than_time_to_mjd_string(i_f):
 @example(i_f=(43143, 9.313492199680697e-10))  # format="mjd"
 @pytest.mark.parametrize("format", ["mjd", "pulsar_mjd"])
 def test_time_to_mjd_string_versus_longdouble(format, i_f):
-    i, f = i_f
-    m = i + np.longdouble(f)
-    t = Time(val=i, val2=f, format=format, scale="utc")
-    tstr = time_to_mjd_string(t)
-    # NOTE: have to add str() here, because of a numpy bug which treats
-    # numpy string type differently from python str.
-    # See https://github.com/numpy/numpy/issues/15608
-    tld_str = np.longdouble(str(tstr))
-    assert abs(tld_str - m) * u.day < 1 * u.ns
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", r".*dubious year", erfa.ErfaWarning)
+        i, f = i_f
+        m = i + np.longdouble(f)
+        t = Time(val=i, val2=f, format=format, scale="utc")
+        tstr = time_to_mjd_string(t)
+        # NOTE: have to add str() here, because of a numpy bug which treats
+        # numpy string type differently from python str.
+        # See https://github.com/numpy/numpy/issues/15608
+        tld_str = np.longdouble(str(tstr))
+        assert abs(tld_str - m) * u.day < 1 * u.ns
 
 
 @given(reasonable_mjd())
@@ -400,11 +406,13 @@ def test_time_to_mjd_string_versus_longdouble(format, i_f):
 @example(i_f=(43143, 9.313492199680697e-10))  # format="mjd"
 @pytest.mark.parametrize("format", ["mjd", "pulsar_mjd"])
 def test_time_to_mjd_string_versus_decimal(format, i_f):
-    i, f = i_f
-    with decimal.localcontext(decimal.Context(prec=40)):
-        m = Decimal(i) + Decimal(f)
-        t = Time(val=i, val2=f, format=format, scale="utc")
-        assert (abs(Decimal(time_to_mjd_string(t)) - m) * u.day).to(u.ns) < 1 * u.ns
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", r".*dubious year", erfa.ErfaWarning)
+        i, f = i_f
+        with decimal.localcontext(decimal.Context(prec=40)):
+            m = Decimal(i) + Decimal(f)
+            t = Time(val=i, val2=f, format=format, scale="utc")
+            assert (abs(Decimal(time_to_mjd_string(t)) - m) * u.day).to(u.ns) < 1 * u.ns
 
 
 @given(reasonable_mjd())
@@ -445,10 +453,12 @@ def test_time_from_mjd_string_versus_longdouble_utc(format, i_f):
 @example(i_f=(40000, -8.881784197001254e-16))
 @example(i_f=(69666, -1.4552476513551895))
 def test_pulsar_mjd_never_differs_too_much_from_mjd_tai(i_f):
-    i, f = i_f
-    t = Time(val=i, val2=f, format="mjd", scale="tai")
-    t2 = Time(val=i, val2=f, format="pulsar_mjd", scale="tai")
-    assert abs(t2 - t) <= 1 * u.ns
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", r".*dubious year", erfa.ErfaWarning)
+        i, f = i_f
+        t = Time(val=i, val2=f, format="mjd", scale="tai")
+        t2 = Time(val=i, val2=f, format="pulsar_mjd", scale="tai")
+        assert abs(t2 - t) <= 1 * u.ns
 
 
 @given(reasonable_mjd())
@@ -456,12 +466,14 @@ def test_pulsar_mjd_never_differs_too_much_from_mjd_tai(i_f):
 @example(i_f=(43510, -1.0000000000000002))
 @example(i_f=(41498, 0.7333333333333333))
 def test_pulsar_mjd_never_differs_too_much_from_mjd_utc(i_f):
-    i, f = i_f
-    t = Time(val=i, val2=f, format="mjd", scale="utc")
-    t2 = Time(val=i, val2=f, format="pulsar_mjd", scale="utc")
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", r".*dubious year", erfa.ErfaWarning)
-        assert abs(t2 - t).to(u.s) < (1 + 1e-10) * u.s
+        i, f = i_f
+        t = Time(val=i, val2=f, format="mjd", scale="utc")
+        t2 = Time(val=i, val2=f, format="pulsar_mjd", scale="utc")
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", r".*dubious year", erfa.ErfaWarning)
+            assert abs(t2 - t).to(u.s) < (1 + 1e-10) * u.s
 
 
 def test_posvel_respects_longdouble():
@@ -481,22 +493,24 @@ def test_posvel_respects_longdouble():
 @example(i_f=(48803, 1.0000079160299438e-06))
 @pytest.mark.parametrize("format", ["pulsar_mjd", "mjd"])
 def test_time_from_mjd_string_accuracy_vs_longdouble(format, i_f):
-    i, f = i_f
-    mjd = np.longdouble(i) + np.longdouble(f)
-    assume(format != "pulsar_mjd" or i not in leap_sec_days or (1 - f) * 86400 >= 1e-9)
-    s = str(mjd)
-    t = Time(val=i, val2=f, format=format, scale="utc")
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", r".*dubious year", erfa.ErfaWarning)
+        i, f = i_f
+        mjd = np.longdouble(i) + np.longdouble(f)
+        assume(
+            format != "pulsar_mjd" or i not in leap_sec_days or (1 - f) * 86400 >= 1e-9
+        )
+        s = str(mjd)
+        t = Time(val=i, val2=f, format=format, scale="utc")
         assert (
             abs(time_from_mjd_string(s, format=format, scale="utc") - t).to(u.us)
             < 1 * u.us
         )
-    if 40000 <= i <= 60000:
-        assert (
-            abs(time_from_mjd_string(s, format=format, scale="utc") - t).to(u.us)
-            < 1 * u.ns
-        )
+        if 40000 <= i <= 60000:
+            assert (
+                abs(time_from_mjd_string(s, format=format, scale="utc") - t).to(u.us)
+                < 1 * u.ns
+            )
 
 
 @pytest.mark.parametrize("format", ["pulsar_mjd", "mjd"])
@@ -511,11 +525,13 @@ def test_time_from_mjd_string_roundtrip_very_close(format):
 @given(reasonable_mjd())
 @pytest.mark.parametrize("format", ["pulsar_mjd", "mjd"])
 def test_time_from_mjd_string_roundtrip(format, i_f):
-    i, f = i_f
-    assume(format != "pulsar_mjd" or i not in leap_sec_days or (1 - f) * 86400 >= 1e-9)
-    t = Time(val=i, val2=f, format=format, scale="utc")
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", r".*dubious year", erfa.ErfaWarning)
+        i, f = i_f
+        assume(
+            format != "pulsar_mjd" or i not in leap_sec_days or (1 - f) * 86400 >= 1e-9
+        )
+        t = Time(val=i, val2=f, format=format, scale="utc")
         assert (
             abs(t - time_from_mjd_string(time_to_mjd_string(t), format=format)).to(u.ns)
             < 1 * u.ns
@@ -567,11 +583,11 @@ def test_make_mjd_ancient(i_f):
 @example(i_f=(41316, 3.338154197507493e-10))
 @example(i_f=(40000, 0.7333333333333333))
 def test_pulsar_mjd_equals_mjd_on_non_leap_second_days(i_f):
-    i, f = i_f
-    t1 = Time(val=i, val2=f, format="mjd", scale="utc")
-    t2 = Time(val=i, val2=f, format="pulsar_mjd", scale="utc")
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", r".*dubious year", erfa.ErfaWarning)
+        i, f = i_f
+        t1 = Time(val=i, val2=f, format="mjd", scale="utc")
+        t2 = Time(val=i, val2=f, format="pulsar_mjd", scale="utc")
         assert abs(t1 - t2).to(u.ns) < 5 * time_eps
 
 
@@ -772,11 +788,13 @@ def test_mjd_jd_round_trip(i_f):
 
 @given(reasonable_mjd())
 def test_mjd_jd_pulsar_round_trip(i_f):
-    i, f = i_f
-    assume(i not in leap_sec_days or (1 - f) * 86400 >= 1e-9)
-    with decimal.localcontext(decimal.Context(prec=40)):
-        jds = mjds_to_jds_pulsar(*i_f)
-        assert_closer_than_ns(jds_to_mjds_pulsar(*jds), i_f, 1)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", r".*dubious year", erfa.ErfaWarning)
+        i, f = i_f
+        assume(i not in leap_sec_days or (1 - f) * 86400 >= 1e-9)
+        with decimal.localcontext(decimal.Context(prec=40)):
+            jds = mjds_to_jds_pulsar(*i_f)
+            assert_closer_than_ns(jds_to_mjds_pulsar(*jds), i_f, 1)
 
 
 # @pytest.mark.xfail(
