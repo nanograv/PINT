@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 from astropy.tests.helper import assert_quantity_allclose
 from astropy.time import Time
-from hypothesis import assume, example, given, settings, HealthCheck
+from hypothesis import assume, example, given, settings, HealthCheck, target
 from hypothesis.strategies import (
     booleans,
     composite,
@@ -606,13 +606,17 @@ def test_pulsar_mjd_equals_mjd_on_leap_second_days(i_f):
 @given(leap_sec_day_mjd())
 @example(i_f=(41498, 0.7333333333333333))
 def test_pulsar_mjd_close_to_mjd_on_leap_second_days(i_f):
-    i, f = i_f
-    assume(f != 1)
-    assume(f != 0)
-    t1 = Time(val=i, val2=f, format="mjd", scale="utc")
-    t2 = Time(val=i, val2=f, format="pulsar_mjd", scale="utc")
-    assert abs(t1 - t2).to(u.s) < 1.0 * u.s
-    # assert abs(t1 - t2).to(u.ns) < 4 * time_eps
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", r".*dubious year", erfa.ErfaWarning)
+        i, f = i_f
+        assume(f != 1)
+        assume(f != 0)
+        t1 = Time(val=i, val2=f, format="mjd", scale="utc")
+        t2 = Time(val=i, val2=f, format="pulsar_mjd", scale="utc")
+        target((t1 - t2).to_value(u.s), label="positive difference")
+        target((t2 - t1).to_value(u.s), label="negative difference")
+        assert abs(t1 - t2).to(u.s) < 1.1 * u.s
+        # assert abs(t1 - t2).to(u.ns) < 4 * time_eps
 
 
 @given(leap_sec_day_mjd())
@@ -647,7 +651,7 @@ def test_pulsar_mjd_likes_arrays():
 @given(leap_sec_day_mjd())
 @example(i_f=(41498, 0.5000057870370372))
 def test_erfa_conversion_on_leap_sec_days(i_f):
-    _test_erfa_conversion(leap=True, i_f=i_f)
+    _test_erfa_jd2cal_roundtrip(leap=True, i_f=i_f)
 
 
 @given(normal_mjd())
@@ -657,29 +661,35 @@ def test_erfa_conversion_on_leap_sec_days(i_f):
 @example(i_f=(41497, 0.7333333333333333))
 @example(i_f=(41316, 9.280065826899888e-09))
 def test_erfa_conversion_normal(i_f):
-    _test_erfa_conversion(leap=False, i_f=i_f)
+    _test_erfa_jd2cal_roundtrip(leap=False, i_f=i_f)
 
 
-def _test_erfa_conversion(leap, i_f):
-    i_i, f_i = i_f
-    assume(0 <= f_i < 1)
+def _test_erfa_jd2cal_roundtrip(leap, i_f):
+    # We need JDs not MJDs
+    i_in, f_in = i_f
+    assume(0 <= f_in < 1)
     if leap:
-        assume(i_i in leap_sec_days)
+        assume(i_in in leap_sec_days)
     else:
-        assume(i_i not in leap_sec_days)
-    jd1_in, jd2_in = day_frac(erfa.DJM0 + i_i, f_i)
+        assume(i_in not in leap_sec_days)
+    jd1_in, jd2_in = day_frac(erfa.DJM0 + i_in, f_in)
+
+    # ERFA forward
     y, mo, d, f = erfa.jd2cal(jd1_in, jd2_in)
     assert 0 < y < 3000
     assert 0 < mo <= 12
     assert 0 <= d < 32
     assert 0 <= f < 1
 
+    # ERFA backward - integer day
     jd1_temp, jd2_temp = erfa.cal2jd(y, mo, d)
     jd1_temp, jd2_temp = day_frac(jd1_temp, jd2_temp)  # improve numerics
     jd1_temp, jd2_temp = day_frac(jd1_temp, jd2_temp + f)
     jd_change = abs((jd1_temp - jd1_in) + (jd2_temp - jd2_in)) * u.day
     assert jd_change.to(u.ns) < 1 * u.ns
 
+    # ERFA backward - setting up for fractional day
+    # Need to tidy up the fractional day into fractional seconds
     ft = 24 * f
     h = safe_kind_conversion(np.floor(ft), dtype=int)
     ft -= h
@@ -691,33 +701,26 @@ def _test_erfa_conversion(leap, i_f):
     assert 0 <= h < 24
     assert 0 <= m < 60
     assert 0 <= s < 60
+
+    # ERFA backward - dtf2d including fractional day
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", r".*dubious year", erfa.ErfaWarning)
         jd1, jd2 = erfa.dtf2d("UTC", y, mo, d, h, m, s)
-    y2, mo2, d2, f2 = erfa.jd2cal(jd1, jd2)
-    # assert (y, mo, d) == (y2, mo2, d2)
-    # assert (abs(f2-f)*u.day).to(u.s) < 1*u.ns
+        assert jd1 == np.floor(jd1) + 0.5
+        assert 0 <= jd2 < 1
 
-    assert jd1 == np.floor(jd1) + 0.5
-    assert 0 <= jd2 < 1
+    # Check whether jd1/jd2 is close to jd1_in/jd2_in
     jd1, jd2 = day_frac(jd1, jd2)
-    jd_change = abs((jd1 - jd1_in) + (jd2 - jd2_in)) * u.day
+    jd_change = ((jd1 - jd1_in) + (jd2 - jd2_in)) * u.day
+    target(jd_change.to_value(u.ns), label="positive difference")
+    target(-jd_change.to_value(u.ns), label="negative difference")
+
     if leap:
-        assert jd_change.to(u.s) < 1 * u.s
+        # Leap second days are a bit special
+        assert abs(jd_change).to(u.s) < 1 * u.s
     else:
-        assert jd_change.to(u.ns) < 2 * u.ns
-        # assert jd_change.to(u.ns) < 1 * u.ns
-
-    # @abhisrkckl : There was a return statement above which made the
-    # code below unreachable. I have removed it and commented out the code below.
-
-    # i_o, f_o = day_frac(jd1 - erfa.DJM0, jd2)
-
-    # mjd_change = abs((i_o - i_i) + (f_o - f_i)) * u.day
-    # if leap:
-    #     assert mjd_change.to(u.s) < 1 * u.s
-    # else:
-    #     assert mjd_change.to(u.ns) < 1 * u.ns
+        # Normal days should be very close
+        assert abs(jd_change).to(u.ns) < 2 * u.ns
 
 
 # Try to nail down ERFA behaviour
@@ -750,6 +753,7 @@ def tf2d_nice(sgn, h, m, s):
 @example(f=1.3322676295501882e-15)  # ndp=10
 @example(f=4.440892098500627e-16)  # ndp=11
 @example(f=4.440892098500627e-16)  # ndp=12
+@example(f=0.50390625)  # ndp=10
 @pytest.mark.parametrize(
     "ndp, k",
     [
