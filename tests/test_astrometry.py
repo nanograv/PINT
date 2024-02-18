@@ -8,6 +8,8 @@ from astropy.coordinates import Latitude, Longitude
 
 from pint.models import get_model
 from pinttestdata import datadir
+import hypothesis.strategies as st
+from hypothesis import given
 
 
 @pytest.fixture
@@ -108,20 +110,7 @@ TZRSITE                  1
 """
 
 
-ntests = 200
-
-
-@pytest.mark.parametrize(
-    ("ra,dec,pmra,pmdec"),
-    list(
-        zip(
-            np.random.uniform(0, 360, ntests),
-            np.random.uniform(-90, 90, ntests),
-            np.random.normal(0, scale=10, size=ntests),
-            np.random.normal(0, scale=10, size=ntests),
-        )
-    ),
-)
+@given(st.floats(0, 360), st.floats(-90, 90), st.floats(0, 10), st.floats(0, 10))
 def test_ssb_accuracy_ICRS(ra, dec, pmra, pmdec):
     m = get_model(StringIO(parICRS), RAJ=ra, DECJ=dec, PMRA=pmra, PMDEC=pmdec)
     t0 = m.POSEPOCH.quantity
@@ -157,17 +146,7 @@ TZRSITE                  1
 """
 
 
-@pytest.mark.parametrize(
-    ("elong,elat,pmelong,pmelat"),
-    list(
-        zip(
-            np.random.uniform(0, 360, ntests),
-            np.random.uniform(-90, 90, ntests),
-            np.random.normal(0, scale=10, size=ntests),
-            np.random.normal(0, scale=10, size=ntests),
-        )
-    ),
-)
+@given(st.floats(0, 360), st.floats(-90, 90), st.floats(0, 10), st.floats(0, 10))
 def test_ssb_accuracy_ICRS_ECLmodel(elong, elat, pmelong, pmelat):
     m = get_model(
         StringIO(parECL), ELONG=elong, ELAT=elat, PMELONG=pmelong, PMELAT=pmelat
@@ -180,17 +159,7 @@ def test_ssb_accuracy_ICRS_ECLmodel(elong, elat, pmelong, pmelat):
     assert np.allclose(xyznew, xyzastropy)
 
 
-@pytest.mark.parametrize(
-    ("elong,elat,pmelong,pmelat"),
-    list(
-        zip(
-            np.random.uniform(0, 360, ntests),
-            np.random.uniform(-90, 90, ntests),
-            np.random.normal(0, scale=10, size=ntests),
-            np.random.normal(0, scale=10, size=ntests),
-        )
-    ),
-)
+@given(st.floats(0, 360), st.floats(-90, 90), st.floats(0, 10), st.floats(0, 10))
 def test_ssb_accuracy_ECL_ECLmodel(elong, elat, pmelong, pmelat):
     m = get_model(
         StringIO(parECL), ELONG=elong, ELAT=elat, PMELONG=pmelong, PMELAT=pmelat
