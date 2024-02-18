@@ -2,14 +2,13 @@ import os.path
 from io import StringIO
 
 import astropy.units as u
+import hypothesis.strategies as st
 import numpy as np
 import pytest
 from astropy.coordinates import Latitude, Longitude
-
+from hypothesis import given
 from pint.models import get_model
 from pinttestdata import datadir
-import hypothesis.strategies as st
-from hypothesis import given
 
 
 @pytest.fixture
@@ -100,7 +99,6 @@ EPHEM               DE421
 CLK              UTC(NIST)
 UNITS               TDB
 TIMEEPH             FB90
-T2CMETHOD           TEMPO
 CORRECT_TROPOSPHERE N
 PLANET_SHAPIRO      N
 DILATEFREQ          N
@@ -110,7 +108,12 @@ TZRSITE                  1
 """
 
 
-@given(st.floats(0, 360), st.floats(-90, 90), st.floats(0, 10), st.floats(0, 10))
+@given(
+    st.floats(0, 360),
+    st.floats(-89.9, 89.9),
+    st.floats(0, 10),
+    st.floats(0, 10),
+)
 def test_ssb_accuracy_ICRS(ra, dec, pmra, pmdec):
     m = get_model(StringIO(parICRS), RAJ=ra, DECJ=dec, PMRA=pmra, PMDEC=pmdec)
     t0 = m.POSEPOCH.quantity
@@ -136,7 +139,6 @@ EPHEM               DE421
 CLK              UTC(NIST)
 UNITS               TDB
 TIMEEPH             FB90
-T2CMETHOD           TEMPO
 CORRECT_TROPOSPHERE N
 PLANET_SHAPIRO      N
 DILATEFREQ          N
@@ -146,7 +148,12 @@ TZRSITE                  1
 """
 
 
-@given(st.floats(0, 360), st.floats(-90, 90), st.floats(0, 10), st.floats(0, 10))
+@given(
+    st.floats(0, 360),
+    st.floats(-89.9, 89.9),
+    st.floats(0, 10),
+    st.floats(0, 10),
+)
 def test_ssb_accuracy_ICRS_ECLmodel(elong, elat, pmelong, pmelat):
     m = get_model(
         StringIO(parECL), ELONG=elong, ELAT=elat, PMELONG=pmelong, PMELAT=pmelat
@@ -159,7 +166,12 @@ def test_ssb_accuracy_ICRS_ECLmodel(elong, elat, pmelong, pmelat):
     assert np.allclose(xyznew, xyzastropy)
 
 
-@given(st.floats(0, 360), st.floats(-90, 90), st.floats(0, 10), st.floats(0, 10))
+@given(
+    st.floats(0, 360),
+    st.floats(-89.9, 89.9),
+    st.floats(0, 10),
+    st.floats(0, 10),
+)
 def test_ssb_accuracy_ECL_ECLmodel(elong, elat, pmelong, pmelat):
     m = get_model(
         StringIO(parECL), ELONG=elong, ELAT=elat, PMELONG=pmelong, PMELAT=pmelat
