@@ -1,12 +1,14 @@
 import os.path
 from io import StringIO
+from packaging import version
 
 import astropy.units as u
+import erfa
 import hypothesis.strategies as st
 import numpy as np
 import pytest
 from astropy.coordinates import Latitude, Longitude
-from hypothesis import given, example
+from hypothesis import example, given
 from pint.models import get_model
 from pinttestdata import datadir
 
@@ -115,6 +117,10 @@ TZRSITE                  1
     st.floats(0, 10),
 )
 @example(ra=1.0, dec=1.0, pmra=2.0, pmdec=4.345847379899e-311)
+@pytest.mark.xfail(
+    version.parse(erfa.__version__) < version.parse("2.0.1"),
+    reason="Old version of pyerfa had a bug",
+)
 def test_ssb_accuracy_ICRS(ra, dec, pmra, pmdec):
     m = get_model(StringIO(parICRS), RAJ=ra, DECJ=dec, PMRA=pmra, PMDEC=pmdec)
     t0 = m.POSEPOCH.quantity
@@ -174,6 +180,10 @@ def test_ssb_accuracy_ICRS_ECLmodel(elong, elat, pmelong, pmelat):
     st.floats(0, 10),
 )
 @example(1.0, 1.0, 0.5, 4.345847379899e-311)
+@pytest.mark.xfail(
+    version.parse(erfa.__version__) < version.parse("2.0.1"),
+    reason="Old version of pyerfa had a bug",
+)
 def test_ssb_accuracy_ECL_ECLmodel(elong, elat, pmelong, pmelat):
     m = get_model(
         StringIO(parECL), ELONG=elong, ELAT=elat, PMELONG=pmelong, PMELAT=pmelat
