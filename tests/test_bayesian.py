@@ -30,13 +30,20 @@ def data_NGC6440E():
 
 
 @pytest.fixture()
+def data_NGC6440E_default_priors():
+    parfile = examplefile("NGC6440E.par.good")
+    timfile = examplefile("NGC6440E.tim")
+    model, toas = get_model_and_toas(parfile, timfile)
+    return model, toas
+
+
+@pytest.fixture()
 def data_NGC6440E_efac():
     parfile = examplefile("NGC6440E.par.good")
     timfile = examplefile("NGC6440E.tim")
     model, toas = get_model_and_toas(parfile, timfile)
 
-    parfile = str(model)
-    parfile += "EFAC TEL gbt 1 1"
+    parfile = f"{str(model)}EFAC TEL gbt 1 1"
     model = get_model(io.StringIO(parfile))
     set_dummy_priors(model)
 
@@ -51,6 +58,25 @@ def data_J0740p6620_wb():
     timfile = examplefile("J0740+6620.FCP+21.wb.tim")
     model, toas = get_model_and_toas(parfile, timfile)
     set_dummy_priors(model)
+    return model, toas
+
+
+@pytest.fixture()
+def data_NGC6440E_red():
+    parfile = examplefile("NGC6440E.par.good")
+    timfile = examplefile("NGC6440E.tim")
+    model, toas = get_model_and_toas(parfile, timfile)
+    parfile = (
+        str(model)
+        + """RNAMP         1e-6
+             RNIDX         -3.82398"""
+    )
+    model = get_model(io.StringIO(parfile))
+    set_dummy_priors(model)
+
+    model.RNAMP.prior = Prior(uniform(1e-8, 1e-5))
+    model.RNAMP.prior = Prior(uniform(-6, -1))
+
     return model, toas
 
 
@@ -116,11 +142,21 @@ def test_bayesian_timing_funcs(data_NGC6440E_efac):
     lnp = bt.lnposterior(test_params)
     assert np.isfinite(lnp) and np.isclose(lnp, lnpr + lnl)
 
+    # parameters outside prior range
+    test_cube = np.ones(nparams)
+    test_params = bt.prior_transform(test_cube) + np.ones_like(test_cube)
+    assert bt.lnprior(test_params) == -np.inf
+    assert bt.lnposterior(test_params) == -np.inf
+
+    # wrong number of parameters
+    with pytest.raises(IndexError):
+        bt.lnprior([1])
+
 
 def test_prior_dict(data_NGC6440E_efac):
     model, toas = data_NGC6440E_efac
 
-    prior_info = dict()
+    prior_info = {}
     for par in model.free_params:
         param = getattr(model, par)
         param_min = float(param.value - 10 * param.uncertainty_value)
@@ -137,8 +173,39 @@ def test_prior_dict(data_NGC6440E_efac):
     lnpr = bt.lnprior(test_params)
     assert np.isfinite(lnpr)
 
+    with pytest.raises(NotImplementedError):
+        prior_info["EFAC1"] = {"distr": "loguniform", "pmin": 0.1, "pmax": 2.0}
+        bt = BayesianTiming(model, toas, use_pulse_numbers=True, prior_info=prior_info)
 
-def test_wideband_exception(data_J0740p6620_wb):
+
+def test_wideband_data(data_J0740p6620_wb):
     model, toas = data_J0740p6620_wb
+    bt = BayesianTiming(model, toas)
+
+    assert bt.is_wideband and bt.likelihood_method == "wls"
+
+    test_cube = 0.5 * np.ones(bt.nparams)
+    test_params = bt.prior_transform(test_cube)
+    assert np.all(np.isfinite(test_params))
+
+    lnpr = bt.lnprior(test_params)
+    assert np.isfinite(lnpr)
+
+    lnl = bt.lnlikelihood(test_params)
+    assert np.isfinite(lnl)
+
+    lnp = bt.lnposterior(test_params)
+    assert np.isfinite(lnp) and np.isclose(lnp, lnpr + lnl)
+
+
+def test_gls_exception(data_NGC6440E, data_NGC6440E_red):
+    model, toas = data_NGC6440E_red
+    with pytest.raises(NotImplementedError):
+        bt = BayesianTiming(model, toas)
+
+
+def test_badprior_exception(data_NGC6440E_default_priors):
+    model, toas = data_NGC6440E_default_priors
+
     with pytest.raises(NotImplementedError):
         bt = BayesianTiming(model, toas)

@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.8
+#       jupytext_version: 1.14.4
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -25,7 +25,6 @@ import matplotlib.pyplot as plt
 import pint.fitter
 from pint.models import get_model_and_toas
 from pint.residuals import Residuals
-from pint.toa import get_TOAs
 import pint.logging
 
 pint.logging.setup(level="INFO")
@@ -60,7 +59,7 @@ rs = Residuals(t_all, m).phase_resids
 xt = t_all.get_mjds()
 plt.figure()
 plt.plot(xt, rs, "x")
-plt.title("%s Pre-Fit Timing Residuals" % m.PSR.value)
+plt.title(f"{m.PSR.value} Pre-Fit Timing Residuals")
 plt.xlabel("MJD")
 plt.ylabel("Residual (phase)")
 plt.grid()
@@ -78,7 +77,7 @@ rs = Residuals(t, m).phase_resids
 xt = t.get_mjds()
 plt.figure()
 plt.plot(xt, rs, "x")
-plt.title("%s Pre-Fit Timing Residuals" % m.PSR.value)
+plt.title(f"{m.PSR.value} Pre-Fit Timing Residuals")
 plt.xlabel("MJD")
 plt.ylabel("Residual (phase)")
 plt.grid()
@@ -111,7 +110,7 @@ plt.errorbar(
     t.get_errors().to(u.us).value,
     fmt="x",
 )
-plt.title("%s Post-Fit Timing Residuals" % m.PSR.value)
+plt.title(f"{m.PSR.value} Post-Fit Timing Residuals")
 plt.xlabel("MJD")
 plt.ylabel("Residual (us)")
 plt.grid()
@@ -134,7 +133,7 @@ plt.errorbar(
     fmt="x",
     label="bad data",
 )
-plt.title("%s Post-Fit Timing Residuals" % m.PSR.value)
+plt.title(f"{m.PSR.value} Post-Fit Timing Residuals")
 plt.xlabel("MJD")
 plt.ylabel("Residual (us)")
 plt.grid()

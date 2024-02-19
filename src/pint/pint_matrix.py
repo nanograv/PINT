@@ -406,14 +406,18 @@ class DesignMatrixMaker:
         derivative_params : list
             The parameter list for the derivatives 'd_quantity_d_param'.
         offset : bool, optional
-            Add the an offset to the beginning of design matrix. Default is False.
-            This is match the current phase offset in the design matrix.
+            Add the implicit offset to the beginning of design matrix. Default is False.
+            This is to match the current phase offset in the design matrix.
+            This option will be ignored if a `PhaseOffset` component is present in the timing model.
         offset_padding : float, optional
             if including offset, the value for padding.
         """
         # Get derivative functions
         deriv_func = getattr(model, self.deriv_func_name)
         # Check if the derivate quantity a phase derivative
+
+        offset = offset and "PhaseOffset" not in model.components
+
         params = ["Offset"] if offset else []
         params += derivative_params
         labels = []
@@ -450,12 +454,16 @@ class PhaseDesignMatrixMaker(DesignMatrixMaker):
         derivative_params : list
             The parameter list for the derivatives 'd_quantity_d_param'.
         offset : bool, optional
-            Add the an offset to the beginning of design matrix. Default is True.
+            Add the the implicit offset to the beginning of design matrix. Default is True.
+            This option will be ignored if a `PhaseOffset` component is present in the timing model.
         offset_padding : float, optional
             if including offset, the value for padding. Default is 1.0
         """
         deriv_func = getattr(model, self.deriv_func_name)
         # Check if the derivate quantity a phase derivative
+
+        offset = offset and "PhaseOffset" not in model.components
+
         params = ["Offset"] if offset else []
         params += derivative_params
         labels = []
@@ -723,7 +731,7 @@ class CovarianceMatrix(PintMatrix):
         coordinatefirst : bool, optional
             whether or not the output should be re-ordered to put the coordinates first (after the Offset, if present)
         offset : bool, optional
-            whether the absolute phase (i.e. "offset") should be shown
+            whether the implicit phase offset (i.e. "Offset") should be shown
         usecolor : bool, optional
             use color for "problem" CorrelationMatrix params
 

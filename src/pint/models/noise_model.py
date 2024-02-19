@@ -58,8 +58,7 @@ class ScaleToaError(NoiseComponent):
                 name="EFAC",
                 units="",
                 aliases=["T2EFAC", "TNEF"],
-                description="A multiplication factor on"
-                " the measured TOA uncertainties,",
+                description="A multiplication factor on the measured TOA uncertainties,",
             )
         )
 
@@ -68,9 +67,7 @@ class ScaleToaError(NoiseComponent):
                 name="EQUAD",
                 units="us",
                 aliases=["T2EQUAD"],
-                description="An error term added in "
-                "quadrature to the scaled (by"
-                " EFAC) TOA uncertainty.",
+                description="An error term added in quadrature to the scaled (by EFAC) TOA uncertainty.",
             )
         )
 
@@ -78,18 +75,15 @@ class ScaleToaError(NoiseComponent):
             maskParameter(
                 name="TNEQ",
                 units=u.LogUnit(physical_unit=u.second),
-                description="An error term added in "
-                "quadrature to the scaled (by"
-                " EFAC) TOA uncertainty in "
-                " the unit of log10(second).",
+                description="An error term added in quadrature to the scaled (by EFAC) TOA uncertainty in units of log10(second).",
             )
         )
         self.covariance_matrix_funcs += [self.sigma_scaled_cov_matrix]
         self.scaled_toa_sigma_funcs += [self.scale_toa_sigma]
+        self.toasigma_deriv_funcs = {}
 
     def setup(self):
         super().setup()
-        # Get all the EFAC parameters and EQUAD
         self.EFACs = {}
         self.EQUADs = {}
         self.TNEQs = {}
@@ -107,42 +101,49 @@ class ScaleToaError(NoiseComponent):
                 continue
         # convert all the TNEQ to EQUAD
 
-        for tneq in self.TNEQs:
+        for tneq, value in self.TNEQs.items():
             tneq_par = getattr(self, tneq)
             if tneq_par.key is None:
                 continue
-            if self.TNEQs[tneq] in list(self.EQUADs.values()):
+            if value in list(self.EQUADs.values()):
                 log.warning(
-                    "'%s %s %s' is provided by parameter EQUAD, using"
-                    " EQUAD instead. " % (tneq, tneq_par.key, tneq_par.key_value)
+                    f"'{tneq} {tneq_par.key} {tneq_par.key_value}' is provided by parameter EQUAD, using EQUAD instead. "
                 )
             else:
-                EQUAD_name = "EQUAD" + str(tneq_par.index)
-                if EQUAD_name in list(self.EQUADs.keys()):
-                    EQUAD_par = getattr(self, EQUAD_name)
-                    EQUAD_par.key = tneq_par.key
-                    EQUAD_par.key_value = tneq_par.key_value
-                    EQUAD_par.quantity = tneq_par.quantity.to(u.us)
-                else:
+                EQUAD_name = f"EQUAD{str(tneq_par.index)}"
+                if EQUAD_name not in list(self.EQUADs.keys()):
                     self.add_param(
                         maskParameter(
                             name="EQUAD",
                             units="us",
                             index=tneq_par.index,
                             aliases=["T2EQUAD"],
-                            description="An error term "
-                            " added in quadrature to the"
-                            " scaled (by EFAC) TOA uncertainty.",
+                            description="An error term added in quadrature to the scaled (by EFAC) TOA uncertainty.",
                         )
                     )
-                    EQUAD_par = getattr(self, EQUAD_name)
-                    EQUAD_par.key = tneq_par.key
-                    EQUAD_par.key_value = tneq_par.key_value
-                    EQUAD_par.quantity = tneq_par.quantity.to(u.us)
+                EQUAD_par = getattr(self, EQUAD_name)
+                EQUAD_par.quantity = tneq_par.quantity.to(u.us)
+                EQUAD_par.key_value = tneq_par.key_value
+                EQUAD_par.key = tneq_par.key
         for pp in self.params:
             if pp.startswith("EQUAD"):
                 par = getattr(self, pp)
                 self.EQUADs[pp] = (par.key, par.key_value)
+
+        for ef in self.EFACs:
+            self.register_toasigma_deriv_funcs(self.d_toasigma_d_EFAC, ef)
+
+        for eq in self.EQUADs:
+            self.register_toasigma_deriv_funcs(self.d_toasigma_d_EQUAD, eq)
+
+    def register_toasigma_deriv_funcs(self, func, param):
+        pn = self.match_param_aliases(param)
+        if pn not in list(self.toasigma_deriv_funcs.keys()):
+            self.toasigma_deriv_funcs[pn] = [func]
+        elif func in self.toasigma_deriv_funcs[pn]:
+            return
+        else:
+            self.toasigma_deriv_funcs[pn] += [func]
 
     def validate(self):
         super().validate()
@@ -150,9 +151,9 @@ class ScaleToaError(NoiseComponent):
         for el in ["EFACs", "EQUADs"]:
             l = list(getattr(self, el).values())
             if [x for x in l if l.count(x) > 1] != []:
-                raise ValueError("'%s' have duplicated keys and key values." % el)
+                raise ValueError(f"'{el}' have duplicated keys and key values.")
 
-    def scale_toa_sigma(self, toas):
+    def scale_toa_sigma(self, toas, warn=True):
         sigma_scaled = toas.table["error"].quantity.copy()
         for equad_name in self.EQUADs:
             equad = getattr(self, equad_name)
@@ -161,20 +162,53 @@ class ScaleToaError(NoiseComponent):
             mask = equad.select_toa_mask(toas)
             if np.any(mask):
                 sigma_scaled[mask] = np.hypot(sigma_scaled[mask], equad.quantity)
-            else:
+            elif warn:
                 warnings.warn(f"EQUAD {equad} has no TOAs")
         for efac_name in self.EFACs:
             efac = getattr(self, efac_name)
             mask = efac.select_toa_mask(toas)
             if np.any(mask):
                 sigma_scaled[mask] *= efac.quantity
-            else:
+            elif warn:
                 warnings.warn(f"EFAC {efac} has no TOAs")
         return sigma_scaled
 
     def sigma_scaled_cov_matrix(self, toas):
         scaled_sigma = self.scale_toa_sigma(toas).to(u.s).value ** 2
         return np.diag(scaled_sigma)
+
+    def d_toasigma_d_EFAC(self, toas, param):
+        par = getattr(self, param)
+        mask = par.select_toa_mask(toas)
+        result = np.zeros(len(toas)) << u.s
+        result[mask] = self.scale_toa_sigma(toas[mask], warn=False).to(
+            u.s
+        ) / par.quantity.to(u.dimensionless_unscaled)
+        return result
+
+    def d_toasigma_d_EQUAD(self, toas, param):
+        par = getattr(self, param)
+        mask = par.select_toa_mask(toas)
+        toas_mask = toas[mask]
+
+        result = np.zeros(len(toas)) << u.dimensionless_unscaled
+
+        sigma_mask = self.scale_toa_sigma(toas_mask, warn=False)
+
+        sigma2_mask_noefac = toas_mask.get_errors().to(u.s) ** 2
+        for equad_name in self.EQUADs:
+            equad = getattr(self, equad_name)
+            if equad.quantity is None:
+                continue
+            eqmask = equad.select_toa_mask(toas_mask)
+            if np.any(eqmask):
+                sigma2_mask_noefac[eqmask] += equad.quantity**2
+
+        result[mask] = (sigma_mask * par.quantity / sigma2_mask_noefac).to(
+            u.dimensionless_unscaled
+        )
+
+        return result
 
 
 class ScaleDmError(NoiseComponent):
@@ -203,8 +237,7 @@ class ScaleDmError(NoiseComponent):
             maskParameter(
                 name="DMEFAC",
                 units="",
-                description="A multiplication factor on"
-                " the measured DM uncertainties,",
+                description="A multiplication factor on the measured DM uncertainties,",
             )
         )
 
@@ -212,9 +245,7 @@ class ScaleDmError(NoiseComponent):
             maskParameter(
                 name="DMEQUAD",
                 units="pc / cm ^ 3",
-                description="An error term added in "
-                "quadrature to the scaled (by"
-                " EFAC) TOA uncertainty.",
+                description="An error term added in quadrature to the scaled (by EFAC) TOA uncertainty.",
             )
         )
 
@@ -250,7 +281,7 @@ class ScaleDmError(NoiseComponent):
         for el in ["DMEFACs", "DMEQUADs"]:
             l = list(getattr(self, el).values())
             if [x for x in l if l.count(x) > 1] != []:
-                raise ValueError("'%s' have duplicated keys and key values." % el)
+                raise ValueError(f"'{el}' have duplicated keys and key values.")
 
     def scale_dm_sigma(self, toas):
         """
@@ -304,6 +335,7 @@ class EcorrNoise(NoiseComponent):
     category = "ecorr_noise"
 
     introduces_correlated_errors = True
+    is_time_correlated = False
 
     def __init__(
         self,
@@ -314,9 +346,7 @@ class EcorrNoise(NoiseComponent):
                 name="ECORR",
                 units="us",
                 aliases=["TNECORR"],
-                description="An error term added that"
-                " correlated all TOAs in an"
-                " observing epoch.",
+                description="An error term that is correlated among all TOAs in an observing epoch.",
             )
         )
 
@@ -341,13 +371,10 @@ class EcorrNoise(NoiseComponent):
         for el in ["ECORRs"]:
             l = list(getattr(self, el).values())
             if [x for x in l if l.count(x) > 1] != []:
-                raise ValueError("'%s' have duplicated keys and key values." % el)
+                raise ValueError(f"'{el}' have duplicated keys and key values.")
 
     def get_ecorrs(self):
-        ecorrs = []
-        for ecorr, ecorr_key in list(self.ECORRs.items()):
-            ecorrs.append(getattr(self, ecorr))
-        return ecorrs
+        return [getattr(self, ecorr) for ecorr, ecorr_key in list(self.ECORRs.items())]
 
     def get_noise_basis(self, toas):
         """Return the quantization matrix for ECORR.
@@ -435,6 +462,7 @@ class PLDMNoise(NoiseComponent):
     category = "pl_DM_noise"
 
     introduces_correlated_errors = True
+    is_time_correlated = True
 
     def __init__(
         self,
@@ -446,7 +474,7 @@ class PLDMNoise(NoiseComponent):
                 name="TNDMAMP",
                 units="",
                 aliases=[],
-                description="Amplitude of powerlaw " "DM noise in tempo2 format",
+                description="Amplitude of powerlaw DM noise in tempo2 format",
             )
         )
         self.add_param(
@@ -497,8 +525,7 @@ class PLDMNoise(NoiseComponent):
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
         amp, gam, nf = self.get_pl_vals()
         Ffreqs = get_rednoise_freqs(t, nf)
-        weights = powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
-        return weights
+        return powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
 
     def pl_dm_basis_weight_pair(self, toas):
         """Return a Fourier design matrix and power law DM noise weights.
@@ -545,6 +572,7 @@ class PLRedNoise(NoiseComponent):
     category = "pl_red_noise"
 
     introduces_correlated_errors = True
+    is_time_correlated = True
 
     def __init__(
         self,
@@ -556,7 +584,7 @@ class PLRedNoise(NoiseComponent):
                 name="RNAMP",
                 units="",
                 aliases=[],
-                description="Amplitude of powerlaw " "red noise.",
+                description="Amplitude of powerlaw red noise.",
             )
         )
         self.add_param(
@@ -564,7 +592,7 @@ class PLRedNoise(NoiseComponent):
                 name="RNIDX",
                 units="",
                 aliases=[],
-                description="Spectral index of " "powerlaw red noise.",
+                description="Spectral index of powerlaw red noise.",
             )
         )
 
@@ -573,7 +601,7 @@ class PLRedNoise(NoiseComponent):
                 name="TNREDAMP",
                 units="",
                 aliases=[],
-                description="Amplitude of powerlaw " "red noise in tempo2 format",
+                description="Amplitude of powerlaw red noise in tempo2 format",
             )
         )
         self.add_param(
@@ -581,7 +609,7 @@ class PLRedNoise(NoiseComponent):
                 name="TNREDGAM",
                 units="",
                 aliases=[],
-                description="Spectral index of powerlaw " "red noise in tempo2 format",
+                description="Spectral index of powerlaw red noise in tempo2 format",
             )
         )
         self.add_param(
@@ -613,8 +641,7 @@ class PLRedNoise(NoiseComponent):
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
         nf = self.get_pl_vals()[2]
-        Fmat = create_fourier_design_matrix(t, nf)
-        return Fmat
+        return create_fourier_design_matrix(t, nf)
 
     def get_noise_weights(self, toas):
         """Return power law red noise weights.
@@ -625,8 +652,7 @@ class PLRedNoise(NoiseComponent):
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
         amp, gam, nf = self.get_pl_vals()
         Ffreqs = get_rednoise_freqs(t, nf)
-        weights = powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
-        return weights
+        return powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
 
     def pl_rn_basis_weight_pair(self, toas):
         """Return a Fourier design matrix and power law red noise weights.
@@ -662,9 +688,7 @@ def get_ecorr_epochs(toas_table, dt=1, nmin=2):
             bucket_ref.append(toas_table[i])
             bucket_ind.append([i])
 
-    bucket_ind2 = [ind for ind in bucket_ind if len(ind) >= nmin]
-
-    return bucket_ind2
+    return [ind for ind in bucket_ind if len(ind) >= nmin]
 
 
 def get_ecorr_nweights(toas_table, dt=1, nmin=2):
@@ -689,15 +713,12 @@ def create_ecorr_quantization_matrix(toas_table, dt=1, nmin=2):
 def get_rednoise_freqs(t, nmodes, Tspan=None):
     """Frequency components for creating the red noise basis matrix."""
 
-    if Tspan is not None:
-        T = Tspan
-    else:
-        T = t.max() - t.min()
+    T = Tspan if Tspan is not None else t.max() - t.min()
 
     f = np.linspace(1 / T, nmodes / T, nmodes)
 
     Ffreqs = np.zeros(2 * nmodes)
-    Ffreqs[0::2] = f
+    Ffreqs[::2] = f
     Ffreqs[1::2] = f
 
     return Ffreqs
@@ -719,7 +740,7 @@ def create_fourier_design_matrix(t, nmodes, Tspan=None):
 
     Ffreqs = get_rednoise_freqs(t, nmodes, Tspan=Tspan)
 
-    F[:, ::2] = np.sin(2 * np.pi * t[:, None] * Ffreqs[0::2])
+    F[:, ::2] = np.sin(2 * np.pi * t[:, None] * Ffreqs[::2])
     F[:, 1::2] = np.cos(2 * np.pi * t[:, None] * Ffreqs[1::2])
 
     return F

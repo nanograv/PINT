@@ -85,6 +85,8 @@ class TopoObs(Observatory):
     ----------
     name : str
         The name of the observatory
+    fullname : str
+        A fuller name of the observatory
     location : ~astropy.coordinates.EarthLocation, optional
     itrf_xyz : ~astropy.units.Quantity or array-like, optional
         IRTF site coordinates (len-3 array).  Can include
@@ -149,6 +151,7 @@ class TopoObs(Observatory):
         self,
         name,
         *,
+        fullname=None,
         tempo_code=None,
         itoa_code=None,
         aliases=None,
@@ -167,21 +170,19 @@ class TopoObs(Observatory):
         overwrite=False,
         bogus_last_correction=False,
     ):
-
-        input = [lat is not None, lon is not None, height is not None]
-        if sum(input) > 0 and sum(input) < 3:
+        input_values = [lat is not None, lon is not None, height is not None]
+        if sum(input_values) > 0 and sum(input_values) < 3:
             raise ValueError("All of lat, lon, height are required for observatory")
-        input = [
+        input_values = [
             location is not None,
             itrf_xyz is not None,
             (lat is not None and lon is not None and height is not None),
         ]
-        if sum(input) == 0:
+        if sum(input_values) == 0:
             raise ValueError(
-                "EarthLocation, ITRF coordinates, or lat/lon/height are required for observatory '%s'"
-                % name
+                f"EarthLocation, ITRF coordinates, or lat/lon/height are required for observatory '{name}'"
             )
-        if sum(input) > 1:
+        if sum(input_values) > 1:
             raise ValueError(
                 f"Cannot supply more than one of EarthLocation, ITRF coordinates, and lat/lon/height for observatory '{name}'"
             )
@@ -190,14 +191,16 @@ class TopoObs(Observatory):
         elif itrf_xyz is not None:
             # Convert coords to standard format.  If no units are given, assume
             # meters.
-            if not has_astropy_unit(itrf_xyz):
-                xyz = np.array(itrf_xyz) * u.m
-            else:
-                xyz = itrf_xyz.to(u.m)
+            xyz = (
+                itrf_xyz.to(u.m)
+                if has_astropy_unit(itrf_xyz)
+                else np.array(itrf_xyz) * u.m
+            )
+
             # Check for correct array dims
             if xyz.shape != (3,):
                 raise ValueError(
-                    "Incorrect coordinate dimensions for observatory '%s'" % (name)
+                    f"Incorrect coordinate dimensions for observatory '{name}'"
                 )
             # Convert to astropy EarthLocation, ensuring use of ITRF geocentric coordinates
             self.location = EarthLocation.from_geocentric(*xyz)
@@ -206,10 +209,7 @@ class TopoObs(Observatory):
 
         # Save clock file info, the data will be read only if clock
         # corrections for this site are requested.
-        if isinstance(clock_file, str):
-            self.clock_files = [clock_file]
-        else:
-            self.clock_files = clock_file
+        self.clock_files = [clock_file] if isinstance(clock_file, str) else clock_file
         self.clock_files = [c for c in self.clock_files if c != ""]
         self.clock_fmt = clock_fmt
         self.clock_dir = clock_dir
@@ -218,7 +218,7 @@ class TopoObs(Observatory):
         # If using TEMPO time.dat we need to know the 1-char tempo-style
         # observatory code.
         if clock_fmt == "tempo" and clock_file == "time.dat" and tempo_code is None:
-            raise ValueError("No tempo_code set for observatory '%s'" % name)
+            raise ValueError(f"No tempo_code set for observatory '{name}'")
 
         # GPS corrections
         self.include_gps = include_gps
@@ -240,6 +240,7 @@ class TopoObs(Observatory):
         self.origin = origin
         super().__init__(
             name,
+            fullname=fullname,
             aliases=aliases,
             include_gps=include_gps,
             include_bipm=include_bipm,
@@ -249,8 +250,12 @@ class TopoObs(Observatory):
 
     def __repr__(self):
         aliases = [f"'{x}'" for x in self.aliases]
-        s = f"TopoObs('{self.name}' ({','.join(aliases)}) at [{self.location.x}, {self.location.y} {self.location.z}]:\n{self.origin})"
-        return s
+        origin = (
+            f"{self.fullname}\n{self.origin}"
+            if self.fullname != self.name
+            else self.origin
+        )
+        return f"TopoObs('{self.name}' ({','.join(aliases)}) at [{self.location.x}, {self.location.y} {self.location.z}]:\n{origin})"
 
     @property
     def timescale(self):
@@ -311,23 +316,24 @@ class TopoObs(Observatory):
         return self.location
 
     def _load_clock_corrections(self):
-        if self._clock is None:
-            self._clock = []
-            for cf in self.clock_files:
-                if cf == "":
-                    continue
-                kwargs = dict(bogus_last_correction=self.bogus_last_correction)
-                if isinstance(cf, dict):
-                    kwargs.update(cf)
-                    cf = kwargs.pop("name")
-                self._clock.append(
-                    find_clock_file(
-                        cf,
-                        format=self.clock_fmt,
-                        clock_dir=self.clock_dir,
-                        **kwargs,
-                    )
+        if self._clock is not None:
+            return
+        self._clock = []
+        for cf in self.clock_files:
+            if cf == "":
+                continue
+            kwargs = dict(bogus_last_correction=self.bogus_last_correction)
+            if isinstance(cf, dict):
+                kwargs.update(cf)
+                cf = kwargs.pop("name")
+            self._clock.append(
+                find_clock_file(
+                    cf,
+                    format=self.clock_fmt,
+                    clock_dir=self.clock_dir,
+                    **kwargs,
                 )
+            )
 
     def clock_corrections(self, t, limits="warn"):
         """Compute the total clock corrections,
@@ -341,23 +347,22 @@ class TopoObs(Observatory):
         corr = super().clock_corrections(t, limits=limits)
         # Read clock file if necessary
         self._load_clock_corrections()
-        if not self._clock:
-            if self.clock_files:
-                msg = f"No clock corrections found for observatory {self.name} taken from file {self.clock_files}"
-                if limits == "warn":
-                    log.warning(msg)
-                    corr = np.zeros_like(t) * u.us
-                elif limits == "error":
-                    raise NoClockCorrections(msg)
-            else:
-                log.info(f"Observatory {self.name} requires no clock corrections.")
-        else:
+        if self._clock:
             log.info(
                 f"Applying observatory clock corrections for observatory='{self.name}'."
             )
             for clock in self._clock:
                 corr += clock.evaluate(t, limits=limits)
 
+        elif self.clock_files:
+            msg = f"No clock corrections found for observatory {self.name} taken from file {self.clock_files}"
+            if limits == "warn":
+                log.warning(msg)
+                corr = np.zeros_like(t) * u.us
+            elif limits == "error":
+                raise NoClockCorrections(msg)
+        else:
+            log.info(f"Observatory {self.name} requires no clock corrections.")
         return corr
 
     def last_clock_correction_mjd(self):
@@ -393,14 +398,13 @@ class TopoObs(Observatory):
         # from Simon et al. 1994.
         topo_time_corr = np.sum(earth_pv.vel / c.c * obs_geocenter_pv.pos / c.c, axis=0)
         topo_tdb_tt = geo_tdb_tt - topo_time_corr
-        result = Time(
+        return Time(
             t.tt.jd1 - JD_MJD,
             t.tt.jd2 - topo_tdb_tt.to(u.day).value,
             format="pulsar_mjd",
             scale="tdb",
             location=self.earth_location_itrf(),
         )
-        return result
 
     def get_gcrs(self, t, ephem=None):
         """Return position vector of TopoObs in GCRS
@@ -487,9 +491,8 @@ def load_observatories(filename=observatories_json, overwrite=False):
         observatories = json.load(f)
 
     for obsname, obsdict in observatories.items():
-        if "origin" in obsdict:
-            if isinstance(obsdict["origin"], list):
-                obsdict["origin"] = "\n".join(obsdict["origin"])
+        if "origin" in obsdict and isinstance(obsdict["origin"], list):
+            obsdict["origin"] = "\n".join(obsdict["origin"])
         if overwrite:
             obsdict["overwrite"] = True
         # create the object, which will also register it
@@ -499,7 +502,8 @@ def load_observatories(filename=observatories_json, overwrite=False):
 def load_observatories_from_usual_locations(clear=False):
     """Load observatories from the default JSON file as well as ``$PINT_OBS_OVERRIDE``, optionally clearing the registry
 
-    Running with ``clear=True`` will return PINT to the state it is on import.  Running with ``clear=False`` may result in conflicting definitions if observatories have already been imported.
+    Running with ``clear=True`` will return PINT to the state it is on import.
+    Running with ``clear=False`` may result in conflicting definitions if observatories have already been imported.
 
     Parameters
     ----------

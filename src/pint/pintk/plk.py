@@ -8,11 +8,14 @@ import sys
 from astropy.time import Time
 import astropy.units as u
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from pint.models.dispersion_model import Dispersion
 
 import pint.pintk.pulsar as pulsar
 import pint.pintk.colormodes as cm
+from pint.models.astrometry import Astrometry
 
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
@@ -20,6 +23,8 @@ from tkinter import ttk
 
 import pint.logging
 from loguru import logger as log
+
+from pint.residuals import WidebandDMResiduals
 
 
 try:
@@ -48,6 +53,11 @@ plotlabels = {
     "frequency": r"Observing Frequency (MHz)",
     "TOA error": r"TOA uncertainty ($\mu$s)",
     "rounded MJD": r"MJD",
+    "model DM": "Model DM (pc/cm3)",
+    "WB DM": "Wideband DM (pc/cm3)",
+    "WB DM res": "Wideband DM residual (pc/cm3)",
+    "WB DM err": "Wideband DM error (pc/cm3)",
+    "elongation": r"Solar Elongation (deg)",
 }
 
 helpstring = """The following interactions are currently supported in the plotting pane in `pintk`:
@@ -207,6 +217,7 @@ class PlkFitBoxesWidget(tk.Frame):
                 for p in model.components[comp].params
                 if p not in pulsar.nofitboxpars
                 and getattr(model, p).quantity is not None
+                and p in model.fittable_params
             ]
 
             # Don't bother showing components without any fittable parameters
@@ -391,10 +402,7 @@ class PlkFitterSelect(tk.Frame):
         self.fitterSelect.bind("<<ComboboxSelected>>", self.changeFitter)
 
     def updateFitterChoices(self, wideband):
-        if wideband:
-            self.fitterSelect["values"] = wb_fitters
-        else:
-            self.fitterSelect["values"] = nb_fitters
+        self.fitterSelect["values"] = wb_fitters if wideband else nb_fitters
 
     def changeFitter(self, event):
         self.fitter = self.fitterSelect.get()  # get current value
@@ -437,7 +445,7 @@ class PlkColorModeBoxes(tk.Frame):
                     model = self.master.psr.postfit_model
                 else:
                     model = self.master.psr.prefit_model
-                if not "PhaseJump" in model.components:
+                if "PhaseJump" not in model.components:
                     self.checkboxes[index].configure(state="disabled")
 
         self.updateLayout()
@@ -473,6 +481,9 @@ class PlkXYChoiceWidget(tk.Frame):
         self.configure(bg=background)
         self.xvar = tk.StringVar()
         self.yvar = tk.StringVar()
+
+        # This will be set in PlkWidget.setPulsar and PlkWidget.update methods.
+        self.wideband = False
 
         self.initPlkXYChoice()
 
@@ -523,6 +534,37 @@ class PlkXYChoiceWidget(tk.Frame):
                 self.xbuttons[ii].select()
             if choice.lower() == yid:
                 self.ybuttons[ii].select()
+
+            model = (
+                self.master.psr.postfit_model
+                if self.master.psr.fitted
+                else self.master.psr.prefit_model
+            )
+            if choice == "elongation" and not any(
+                isinstance(x, Astrometry) for x in model.components.values()
+            ):
+                self.xbuttons[ii].configure(state="disabled")
+                self.ybuttons[ii].configure(state="disabled")
+            elif choice == "orbital phase" and not model.is_binary:
+                self.xbuttons[ii].configure(state="disabled")
+                self.ybuttons[ii].configure(state="disabled")
+            if choice == "frequency" and (
+                (len(np.unique(self.master.psr.all_toas["freq"])) <= 1)
+                or np.any(np.isinf(self.master.psr.all_toas["freq"]))
+            ):
+                self.xbuttons[ii].configure(state="disabled")
+                self.ybuttons[ii].configure(state="disabled")
+            if choice == "model DM" and not any(
+                isinstance(x, Dispersion) for x in model.components.values()
+            ):
+                self.xbuttons[ii].configure(state="disabled")
+                self.ybuttons[ii].configure(state="disabled")
+            if (
+                choice in ["WB DM", "WB DM res", "WB DM err"]
+                and not self.master.psr.all_toas.is_wideband()
+            ):
+                self.xbuttons[ii].configure(state="disabled")
+                self.ybuttons[ii].configure(state="disabled")
 
     def setCallbacks(self, updatePlot):
         """
@@ -669,7 +711,7 @@ class PlkWidget(tk.Frame):
     def __init__(self, master=None, **kwargs):
         tk.Frame.__init__(self, master)
         self.configure(bg=background)
-        self.init_loglevel = kwargs["loglevel"] if "loglevel" in kwargs else None
+        self.init_loglevel = kwargs.get("loglevel")
         self.initPlk()
         self.initPlkLayout()
         self.current_state = State()
@@ -697,7 +739,7 @@ class PlkWidget(tk.Frame):
         self.colorModeWidget = PlkColorModeBoxes(master=self)
 
         self.plkDpi = 100
-        self.plkFig = mpl.figure.Figure(dpi=self.plkDpi)
+        self.plkFig = plt.Figure(dpi=self.plkDpi)
         self.plkCanvas = FigureCanvasTkAgg(self.plkFig, self)
         self.plkCanvas.mpl_connect("button_press_event", self.canvasClickEvent)
         self.plkCanvas.mpl_connect("button_release_event", self.canvasReleaseEvent)
@@ -752,6 +794,7 @@ class PlkWidget(tk.Frame):
             self.randomboxWidget.addRandomCheckbox(self)
             self.colorModeWidget.addColorModeCheckbox(self.color_modes)
             self.fitterWidget.updateFitterChoices(self.psr.all_toas.wideband)
+            self.xyChoiceWidget.wideband = self.psr.all_toas.wideband
             self.xyChoiceWidget.setChoice()
             self.updatePlot(keepAxes=True)
             self.plkToolbar.update()
@@ -776,6 +819,7 @@ class PlkWidget(tk.Frame):
 
         self.fitboxesWidget.setCallbacks(self.fitboxChecked)
         self.colorModeWidget.setCallbacks(self.updateGraphColors)
+        self.xyChoiceWidget.wideband = self.psr.all_toas.wideband
         self.xyChoiceWidget.setCallbacks(self.updatePlot)
         self.actionsWidget.setCallbacks(
             self.fit, self.reset, self.writePar, self.writeTim, self.revert
@@ -898,7 +942,7 @@ class PlkWidget(tk.Frame):
                         f"Pulsar has not been fitted! Saving pre-fit parfile to {filename} in {format} format"
                     )
 
-        except:
+        except Exception:
             if filename in [(), ""]:
                 print("Write Par cancelled.")
             else:
@@ -917,7 +961,7 @@ class PlkWidget(tk.Frame):
             log.info(f"Choose output file {filename}")
             self.psr.all_toas.write_TOA_file(filename, format=format)
             log.info(f"Wrote TOAs to {filename} with format {format}")
-        except:
+        except Exception:
             if filename in [(), ""]:
                 print("Write Tim cancelled.")
             else:
@@ -1097,7 +1141,8 @@ class PlkWidget(tk.Frame):
                     # Get the time of conjunction after T0 or TASC
                     tt = m.T0.value if hasattr(m, "T0") else m.TASC.value
                     mjd = m.conjunction(tt)
-                    phs = (mjd - tt) * u.day / m.PB
+                    pb = m.pb()[0].to_value("day")
+                    phs = (mjd - tt) / pb
                     self.plkAxes.plot([phs, phs], [ymin, ymax], "k-")
         else:
             self.plkAxes.set_ylabel(plotlabels[self.yid])
@@ -1228,6 +1273,49 @@ class PlkWidget(tk.Frame):
         elif label == "rounded MJD":
             data = np.floor(self.psr.all_toas.get_mjds() + 0.5 * u.d)
             error = self.psr.all_toas.get_errors().to(u.d)
+        elif label == "model DM":
+            if self.psr.fitted:
+                data = self.psr.postfit_model.total_dm(self.psr.all_toas)
+            else:
+                data = self.psr.prefit_model.total_dm(self.psr.all_toas)
+            error = None
+        elif label == "WB DM":
+            if self.psr.all_toas.wideband:
+                data = self.psr.all_toas.get_dms().to(pint.dmu)
+                error = self.psr.all_toas.get_dm_errors().to(pint.dmu)
+            else:
+                log.warning("Cannot plot WB DMs for NB TOAs.")
+                data = None
+                error = None
+        elif label == "WB DM res":
+            if self.psr.all_toas.wideband:
+                if self.psr.fitter is not None:
+                    data = self.psr.fitter.resids.dm.calc_resids().to(pint.dmu)
+                else:
+                    data = (
+                        WidebandDMResiduals(self.psr.all_toas, self.psr.prefit_model)
+                        .calc_resids()
+                        .to(pint.dmu)
+                    )
+                error = self.psr.all_toas.get_dm_errors().to(pint.dmu)
+            else:
+                log.warning("Cannot plot WB DM resids for NB TOAs.")
+                data = None
+                error = None
+        elif label == "WB DM err":
+            if self.psr.all_toas.wideband:
+                data = self.psr.all_toas.get_dm_errors().to(pint.dmu)
+                error = None
+            else:
+                log.warning("Cannot plot WB DM errors for NB TOAs.")
+                data = None
+                error = None
+        elif label == "elongation":
+            data = np.degrees(
+                self.psr.prefit_model.sun_angle(self.psr.all_toas, also_distance=False)
+            )
+            error = None
+
         return data, error
 
     def coordToPoint(self, cx, cy):
@@ -1507,11 +1595,7 @@ class PlkWidget(tk.Frame):
                 self.psr.selected_toas = self.psr.all_toas[cluster_bool]
                 jump_name = self.psr.add_jump(cluster_bool)
                 self.updateJumped(jump_name)
-            if (
-                self.selected is not None
-                and self.selected is not []
-                and all(self.selected)
-            ):
+            if self.selected is not None and self.selected != [] and all(self.selected):
                 self.psr.selected_toas = self.all_toas[self.selected]
             self.fitboxesWidget.addFitCheckBoxes(self.psr.prefit_model)
             self.randomboxWidget.addRandomCheckbox(self)

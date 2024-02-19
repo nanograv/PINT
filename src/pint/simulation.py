@@ -22,30 +22,6 @@ __all__ = [
 ]
 
 
-def _get_freq_array(base_frequencies, ntoas):
-    """Make frequency array out of one or more frequencies
-
-    If >1 frequency is specified, will alternate
-
-    Parameters
-    ----------
-    base_frequencies : astropy.units.Quantity
-       array of frequencies
-    ntoas : int
-       number of TOAs
-
-    Returns
-    -------
-    astropy.units.Quantity
-        array of (potentially alternating) frequencies
-    """
-    freq = np.zeros(ntoas) * base_frequencies[0].unit
-    num_freqs = len(base_frequencies)
-    for ii, fv in enumerate(base_frequencies):
-        freq[ii::num_freqs] = fv
-    return freq
-
-
 def zero_residuals(ts, model, maxiter=10, tolerance=None):
     """Use a model to adjust a TOAs object, setting residuals to 0 iteratively.
 
@@ -64,10 +40,7 @@ def zero_residuals(ts, model, maxiter=10, tolerance=None):
     ts.compute_pulse_numbers(model)
     maxresid = None
     if tolerance is None:
-        if pint.utils.check_longdouble_precision():
-            tolerance = 1 * u.ns
-        else:
-            tolerance = 5 * u.us
+        tolerance = 1 * u.ns if pint.utils.check_longdouble_precision() else 5 * u.us
     for i in range(maxiter):
         r = pint.residuals.Residuals(ts, model, track_mode="use_pulse_numbers")
         resids = r.calc_time_resids(calctype="taylor")
@@ -85,13 +58,11 @@ def zero_residuals(ts, model, maxiter=10, tolerance=None):
         )
 
 
-def update_fake_toa_clock(ts, model, include_bipm=False, include_gps=True):
-    """Update the clock settings (corrections, etc) for fake TOAs
+def get_fake_toa_clock_versions(model, include_bipm=False, include_gps=True):
+    """Get the clock settings (corrections, etc) for fake TOAs
 
     Parameters
     ----------
-    ts : pint.toa.TOAs
-        Input TOAs (modified in-place)
     model : pint.models.timing_model.TimingModel
         current model
     include_bipm : bool, optional
@@ -111,31 +82,29 @@ def update_fake_toa_clock(ts, model, include_bipm=False, include_gps=True):
             if len(clk) == 2:
                 ctype, cvers = clk
                 if ctype == "TT" and cvers.startswith("BIPM"):
-                    include_bipm = True
-                    if bipm_version is None:
-                        bipm_version = cvers
-                        log.info(f"Using CLOCK = {bipm_version} from the given model")
+                    bipm_version = cvers
+                    log.info(f"Using CLOCK = {bipm_version} from the given model")
                 else:
                     log.warning(
                         f'CLOCK = {model["CLOCK"].value} is not implemented. '
                         f"Using TT({bipm_default}) instead."
                     )
+                include_bipm = True
         else:
             log.warning(
                 f'CLOCK = {model["CLOCK"].value} is not implemented. '
                 f"Using TT({bipm_default}) instead."
             )
+            include_bipm = True
 
-    ts.clock_corr_info.update(
-        {
-            "include_bipm": include_bipm,
-            "bipm_version": bipm_version,
-            "include_gps": include_gps,
-        }
-    )
+    return {
+        "include_bipm": include_bipm,
+        "bipm_version": bipm_version,
+        "include_gps": include_gps,
+    }
 
 
-def make_fake_toas(ts, model, add_noise=False, name="fake"):
+def make_fake_toas(ts, model, add_noise=False, add_correlated_noise=False, name="fake"):
     """Make toas from an array of times
 
     Can include alternating frequencies if fed an array of frequencies,
@@ -149,6 +118,8 @@ def make_fake_toas(ts, model, add_noise=False, name="fake"):
         current model
     add_noise : bool, optional
         Add noise to the TOAs (otherwise `error` just populates the column)
+    add_correlated_noise : bool, optional
+        Add correlated noise to the TOAs if it's present in the timing mode.
     name : str, optional
         Name for the TOAs (goes into the flags)
 
@@ -163,6 +134,13 @@ def make_fake_toas(ts, model, add_noise=False, name="fake"):
     """
     tsim = deepcopy(ts)
     zero_residuals(tsim, model)
+
+    if add_correlated_noise:
+        U = model.noise_model_designmatrix(tsim)
+        b = model.noise_model_basis_weight(tsim)
+        corrn = (U @ (b**0.5 * np.random.normal(size=len(b)))) << u.s
+        tsim.adjust_TOAs(time.TimeDelta(corrn))
+
     if add_noise:
         # this function will include EFAC and EQUAD
         err = model.scaled_toa_uncertainty(tsim) * np.random.normal(size=len(tsim))
@@ -175,6 +153,26 @@ def make_fake_toas(ts, model, add_noise=False, name="fake"):
     return tsim
 
 
+def update_fake_dms(model, ts, dm_error, add_noise):
+    """Update simulated wideband DM information in TOAs."""
+    toas = deepcopy(ts)
+
+    dm_errors = dm_error * np.ones(len(toas))
+
+    for f, dme in zip(toas.table["flags"], dm_errors):
+        f["pp_dme"] = str(dme.to_value(pint.dmu))
+
+    scaled_dm_errors = model.scaled_dm_uncertainty(toas)
+    dms = model.total_dm(toas)
+    if add_noise:
+        dms += scaled_dm_errors.to(pint.dmu) * np.random.randn(len(scaled_dm_errors))
+
+    for f, dm in zip(toas.table["flags"], dms):
+        f["pp_dm"] = str(dm.to_value(pint.dmu))
+
+    return toas
+
+
 def make_fake_toas_uniform(
     startMJD,
     endMJD,
@@ -185,22 +183,22 @@ def make_fake_toas_uniform(
     obs="GBT",
     error=1 * u.us,
     add_noise=False,
-    dm=None,
-    dm_error=1e-4 * pint.dmu,
+    add_correlated_noise=False,
+    wideband=False,
+    wideband_dm_error=1e-4 * pint.dmu,
     name="fake",
     include_bipm=False,
     include_gps=True,
+    multi_freqs_in_epoch=False,
+    flags=None,
 ):
-    """Make evenly spaced toas
-
-    Can include alternating frequencies if fed an array of frequencies,
-    only works with one observatory at a time
+    """Simulate uniformly spaced TOAs.
 
     Parameters
     ----------
-    startMJD : float
+    startMJD : float or astropy.units.Quantity or astropy.time.Time
         starting MJD for fake toas
-    endMJD : float
+    endMJD : float or astropy.units.Quantity or astropy.time.Time
         ending MJD for fake toas
     ntoas : int
         number of fake toas to create between startMJD and endMJD
@@ -209,16 +207,21 @@ def make_fake_toas_uniform(
     fuzz : astropy.units.Quantity, optional
         Standard deviation of 'fuzz' distribution to be applied to TOAs
     freq : astropy.units.Quantity, optional
-        frequency of the fake toas, default 1400 MHz
+        Frequency (or array of frequencies) for the fake TOAs,
+        default is 1400 MHz
     obs : str, optional
         observatory for fake toas, default GBT
     error : astropy.units.Quantity
         uncertainty to attach to each TOA
     add_noise : bool, optional
         Add noise to the TOAs (otherwise `error` just populates the column)
-    dm : astropy.units.Quantity, optional
-        DM value to include with each TOA; default is
-        not to include any DM information
+    add_correlated_noise : bool, optional
+        Add correlated noise to the TOAs if it's present in the timing mode.
+    wideband : bool, optional
+        Whether to include wideband DM information with each TOA; default is
+        not to include any wideband DM information. If True, the DM associated
+        with each TOA will be computed using the model, and the `-ppdm` and
+        `-ppdme` flags will be set.
     dm_error : astropy.units.Quantity
         uncertainty to attach to each DM measurement
     name : str, optional
@@ -229,6 +232,11 @@ def make_fake_toas_uniform(
     include_gps : bool, optional
         Whether or not to disable UTC(GPS)->UTC clock correction
         (see :class:`pint.observatory.topo_obs.TopoObs`)
+    multi_freqs_in_epoch : bool, optional
+        Whether to generate multiple frequency TOAs for the same epoch.
+    flags: None or dict
+        Dictionary of flags to be added to all simulated TOAs.
+
     Returns
     -------
     TOAs : pint.toa.TOAs
@@ -237,38 +245,70 @@ def make_fake_toas_uniform(
 
     Notes
     -----
-    `add_noise` respects any ``EFAC`` or ``EQUAD`` present in the `model`
+    1. `add_noise` respects any ``EFAC`` or ``EQUAD`` present in the `model`
+    2. When `wideband` is set, wideband DM measurement noise will be included
+       only if `add_noise` is set. Otherwise, the `-pp_dme` flags will be set
+       without adding the measurement noise to the simulated DM values.
+    3. The simulated DM measurement noise respects ``DMEFAC`` and ``DMEQUAD``
+       values in the `model`.
+    4. If `multi_freqs_in_epoch` is True, each epoch will contain TOAs for all
+       frequencies given in the `freq` argument. Otherwise, each epoch will have
+       only one TOA, and the frequencies are distributed amongst TOAs in an
+       alternating manner. In either case, the total number of TOAs will be `ntoas`.
+    5. Currently supports simulating only one observatory.
 
     See Also
     --------
     :func:`make_fake_toas`
     """
+    if isinstance(startMJD, time.Time):
+        startMJD = startMJD.mjd << u.d
+    if isinstance(endMJD, time.Time):
+        endMJD = endMJD.mjd << u.d
+    if not isinstance(startMJD, u.Quantity):
+        startMJD = startMJD << u.d
+    if not isinstance(endMJD, u.Quantity):
+        endMJD = endMJD << u.d
 
-    times = np.linspace(startMJD, endMJD, ntoas, dtype=np.longdouble) * u.d
+    if freq is None or np.isinf(freq).all():
+        freq = np.inf * u.MHz
+
+    times, freq_array = _get_freqs_and_times(
+        startMJD, endMJD, ntoas, freq, multi_freqs_in_epoch=multi_freqs_in_epoch
+    )
+
     if fuzz > 0:
         # apply some fuzz to the dates
         fuzz = np.random.normal(scale=fuzz.to_value(u.d), size=len(times)) * u.d
         times += fuzz
 
-    if freq is None or np.isinf(freq).all():
-        freq = np.inf * u.MHz
-    freq_array = _get_freq_array(np.atleast_1d(freq), len(times))
-    t1 = [
-        pint.toa.TOA(t.value, obs=obs, freq=f, scale=get_observatory(obs).timescale)
-        for t, f in zip(times, freq_array)
-    ]
-    ts = pint.toa.TOAs(toalist=t1)
-    ts.planets = model["PLANET_SHAPIRO"].value
-    ts.ephem = model["EPHEM"].value
-    update_fake_toa_clock(ts, model, include_bipm=include_bipm, include_gps=include_gps)
-    ts.table["error"] = error
-    if dm is not None:
-        for f in ts.table["flags"]:
-            f["pp_dm"] = str(dm.to_value(pint.dmu))
-            f["pp_dme"] = str(dm_error.to_value(pint.dmu))
-    ts.compute_TDBs()
-    ts.compute_posvels()
-    return make_fake_toas(ts, model=model, add_noise=add_noise, name=name)
+    clk_version = get_fake_toa_clock_versions(
+        model, include_bipm=include_bipm, include_gps=include_gps
+    )
+    ts = pint.toa.get_TOAs_array(
+        times,
+        obs=obs,
+        scale=get_observatory(obs).timescale,
+        freqs=freq_array,
+        errors=error,
+        ephem=model["EPHEM"].value,
+        include_bipm=clk_version["include_bipm"],
+        bipm_version=clk_version["bipm_version"],
+        include_gps=clk_version["include_gps"],
+        planets=model["PLANET_SHAPIRO"].value if "PLANET_SHAPIRO" in model else False,
+        flags=flags,
+    )
+
+    if wideband:
+        ts = update_fake_dms(model, ts, wideband_dm_error, add_noise)
+
+    return make_fake_toas(
+        ts,
+        model=model,
+        add_noise=add_noise,
+        add_correlated_noise=add_correlated_noise,
+        name=name,
+    )
 
 
 def make_fake_toas_fromMJDs(
@@ -278,35 +318,38 @@ def make_fake_toas_fromMJDs(
     obs="GBT",
     error=1 * u.us,
     add_noise=False,
-    dm=None,
-    dm_error=1e-4 * pint.dmu,
+    add_correlated_noise=False,
+    wideband=False,
+    wideband_dm_error=1e-4 * pint.dmu,
     name="fake",
     include_bipm=False,
     include_gps=True,
+    multi_freqs_in_epoch=False,
+    flags=None,
 ):
-    """Make evenly spaced toas
-
-    Can include alternating frequencies if fed an array of frequencies,
-    only works with one observatory at a time
+    """Simulate TOAs from a list of MJDs
 
     Parameters
     ----------
-    MJDs : astropy.units.Quantity
+    MJDs : astropy.units.Quantity or astropy.time.Time or numpy.ndarray
         array of MJDs for fake toas
     model : pint.models.timing_model.TimingModel
         current model
     freq : astropy.units.Quantity, optional
-        frequency of the fake toas, default 1400 MHz
+        Frequency (or array of frequencies) for the fake toas,
+        default is 1400 MHz
     obs : str, optional
         observatory for fake toas, default GBT
     error : astropy.units.Quantity
         uncertainty to attach to each TOA
     add_noise : bool, optional
         Add noise to the TOAs (otherwise `error` just populates the column)
-    dm : astropy.units.Quantity, optional
-        DM value to include with each TOA; default is
+    add_correlated_noise : bool, optional
+        Add correlated noise to the TOAs if it's present in the timing model.
+    wideband : astropy.units.Quantity, optional
+        Whether to include wideband DM values with each TOA; default is
         not to include any DM information
-    dm_error : astropy.units.Quantity
+    wideband_dm_error : astropy.units.Quantity
         uncertainty to attach to each DM measurement
     name : str, optional
         Name for the TOAs (goes into the flags)
@@ -316,6 +359,10 @@ def make_fake_toas_fromMJDs(
     include_gps : bool, optional
         Whether or not to disable UTC(GPS)->UTC clock correction
         (see :class:`pint.observatory.topo_obs.TopoObs`)
+    multi_freqs_in_epoch : bool, optional
+        Whether to generate multiple frequency TOAs for the same epoch.
+    flags: None or dict
+        Dictionary of flags to be added to all simulated TOAs.
 
     Returns
     -------
@@ -324,41 +371,81 @@ def make_fake_toas_fromMJDs(
 
     Notes
     -----
-    `add_noise` respects any ``EFAC`` or ``EQUAD`` present in the `model`
+    1. `add_noise` respects any ``EFAC`` or ``EQUAD`` present in the `model`
+    2. When `wideband` is set, wideband DM measurement noise will be included
+       only if `add_noise` is set. Otherwise, the `-pp_dme` flags will be set
+       without adding the measurement noise to the simulated DM values.
+    3. The simulated DM measurement noise respects ``DMEFAC`` and ``DMEQUAD``
+       values in the `model`.
+    4. If `multi_freqs_in_epoch` is True, each epoch will contain TOAs for all
+       frequencies given in the `freq` argument, and the total number of
+       TOAs will be `len(MJDs)*len(freq)`. Otherwise, each epoch will have
+       only one TOA, and the frequencies are distributed amongst TOAs in an
+       alternating manner, and the total number of TOAs will be `len(MJDs)`.
+    5. Currently supports simulating only one observatory.
 
     See Also
     --------
     :func:`make_fake_toas`
     """
-
-    times = MJDs
+    scale = get_observatory(obs).timescale
+    if isinstance(MJDs, time.Time):
+        times = MJDs.mjd * u.d
+        scale = None
+    elif not isinstance(MJDs, (u.Quantity, np.ndarray)):
+        raise TypeError(
+            f"Do not know how to interpret input times of type '{type(MJDs)}'"
+        )
 
     if freq is None or np.isinf(freq).all():
         freq = np.inf * u.MHz
-    freq_array = _get_freq_array(np.atleast_1d(freq), len(times))
-    t1 = [
-        pint.toa.TOA(t.value, obs=obs, freq=f, scale=get_observatory(obs).timescale)
-        for t, f in zip(times, freq_array)
-    ]
-    ts = pint.toa.TOAs(toalist=t1)
-    ts.planets = model["PLANET_SHAPIRO"].value
-    ts.ephem = model["EPHEM"].value
-    update_fake_toa_clock(ts, model, include_bipm=include_bipm, include_gps=include_gps)
-    ts.table["error"] = error
-    if dm is not None:
-        for f in ts.table["flags"]:
-            f["pp_dm"] = str(dm.to_value(pint.dmu))
-            f["pp_dme"] = str(dm_error.to_value(pint.dmu))
-    ts.compute_TDBs()
-    ts.compute_posvels()
-    return make_fake_toas(ts, model=model, add_noise=add_noise, name=name)
+    freqs = np.atleast_1d(freq)
+
+    if not multi_freqs_in_epoch:
+        times = MJDs
+        freq_array = np.tile(freqs, len(MJDs) // len(freqs) + 1)[: len(times)]
+    else:
+        times = (
+            time.Time(np.repeat(MJDs, len(freqs)))
+            if isinstance(MJDs, time.Time)
+            else np.repeat(MJDs, len(freqs))
+        )
+        freq_array = np.tile(freqs, len(MJDs))
+
+    clk_version = get_fake_toa_clock_versions(
+        model, include_bipm=include_bipm, include_gps=include_gps
+    )
+
+    ts = pint.toa.get_TOAs_array(
+        times,
+        obs=obs,
+        freqs=freq_array,
+        errors=error,
+        scale=scale,
+        ephem=model["EPHEM"].value,
+        include_bipm=clk_version["include_bipm"],
+        bipm_version=clk_version["bipm_version"],
+        include_gps=clk_version["include_gps"],
+        planets=model["PLANET_SHAPIRO"].value,
+        flags=flags,
+    )
+
+    if wideband:
+        ts = update_fake_dms(model, ts, wideband_dm_error, add_noise)
+
+    return make_fake_toas(
+        ts,
+        model=model,
+        add_noise=add_noise,
+        add_correlated_noise=add_correlated_noise,
+        name=name,
+    )
 
 
-def make_fake_toas_fromtim(timfile, model, add_noise=False, name="fake"):
-    """Make fake toas with the same times as an input tim file
-
-    Can include alternating frequencies if fed an array of frequencies,
-    only works with one observatory at a time
+def make_fake_toas_fromtim(
+    timfile, model, add_noise=False, add_correlated_noise=False, name="fake"
+):
+    """Simulate fake TOAs with the same times as an input tim file
 
     Parameters
     ----------
@@ -368,6 +455,8 @@ def make_fake_toas_fromtim(timfile, model, add_noise=False, name="fake"):
         current model
     add_noise : bool, optional
         Add noise to the TOAs (otherwise `error` just populates the column)
+    add_correlated_noise : bool, optional
+        Add correlated noise to the TOAs if it's present in the timing mode.
     name : str, optional
         Name for the TOAs (goes into the flags)
 
@@ -381,8 +470,30 @@ def make_fake_toas_fromtim(timfile, model, add_noise=False, name="fake"):
     --------
     :func:`make_fake_toas`
     """
-    input_ts = pint.toa.get_TOAs(timfile)
-    return make_fake_toas(input_ts, model=model, add_noise=add_noise, name=name)
+    ephem = (
+        model.EPHEM.value
+        if hasattr(model, "EPHEM") and model.EPHEM.value is not None
+        else None
+    )
+    planets = (
+        model.PLANET_SHAPIRO.value
+        if hasattr(model, "PLANET_SHAPIRO") and model.PLANET_SHAPIRO.value is not None
+        else False
+    )
+
+    input_ts = pint.toa.get_TOAs(timfile, ephem=ephem, planets=planets)
+
+    if input_ts.is_wideband():
+        dm_errors = input_ts.get_dm_errors()
+        ts = update_fake_dms(model, input_ts, dm_errors, add_noise)
+
+    return make_fake_toas(
+        input_ts,
+        model=model,
+        add_noise=add_noise,
+        add_correlated_noise=add_correlated_noise,
+        name=name,
+    )
 
 
 def calculate_random_models(
@@ -449,12 +560,12 @@ def calculate_random_models(
     freqs = np.zeros((Nmodels, Nmjd), dtype=np.float128) * u.Hz
 
     cov_matrix = fitter.parameter_covariance_matrix
-    # this is a list of the parameter names in the order they appear in the coviarance matrix
+    # this is a list of the parameter names in the order they appear in the covariance matrix
     param_names = cov_matrix.get_label_names(axis=0)
     # this is a dictionary with the parameter values, but it might not be in the same order
     # and it leaves out the Offset parameter
     param_values = fitter.model.get_params_dict("free", "value")
-    mean_vector = np.array([param_values[x] for x in param_names if not x == "Offset"])
+    mean_vector = np.array([param_values[x] for x in param_names if x != "Offset"])
     if params == "all":
         # remove the first column and row (absolute phase)
         if param_names[0] == "Offset":
@@ -507,7 +618,49 @@ def calculate_random_models(
     if return_time:
         dphase /= freqs
 
-    if keep_models:
-        return dphase, random_models
+    return (dphase, random_models) if keep_models else dphase
+
+
+def _get_freqs_and_times(start, end, ntoas, freqs, multi_freqs_in_epoch=True):
+    freqs = np.atleast_1d(freqs)
+    assert (
+        len(freqs.shape) == 1 and len(freqs) <= ntoas
+    ), "`freqs` should be a single quantity or a 1D array with length less than `ntoas`."
+    nfreqs = len(freqs)
+
+    if multi_freqs_in_epoch:
+        nepochs = ntoas // nfreqs + 1
+
+        epochs = np.linspace(start, end, nepochs, dtype=np.longdouble)
+        times = np.repeat(epochs, nfreqs)
+        tfreqs = np.tile(freqs, nepochs)
+
+        return times[:ntoas], tfreqs[:ntoas]
     else:
-        return dphase
+        times = np.linspace(start, end, ntoas, dtype=np.longdouble)
+        tfreqs = np.tile(freqs, ntoas // nfreqs + 1)[:ntoas]
+        return times, tfreqs
+
+
+# def _get_freq_array(base_frequencies, ntoas):
+#     """Make frequency array out of one or more frequencies
+
+#     If >1 frequency is specified, will alternate
+
+#     Parameters
+#     ----------
+#     base_frequencies : astropy.units.Quantity
+#        array of frequencies
+#     ntoas : int
+#        number of TOAs
+
+#     Returns
+#     -------
+#     astropy.units.Quantity
+#         array of (potentially alternating) frequencies
+#     """
+#     freq = np.zeros(ntoas) * base_frequencies[0].unit
+#     num_freqs = len(base_frequencies)
+#     for ii, fv in enumerate(base_frequencies):
+#         freq[ii::num_freqs] = fv
+#     return freq

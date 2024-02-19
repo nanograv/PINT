@@ -61,7 +61,6 @@ def test_jump_by_cluster(setup_NGC6440E):
 
 
 def test_jump_by_cluster_invalidflags(setup_NGC6440E):
-
     # add clusters to the TOAs
     t = copy.deepcopy(setup_NGC6440E.t)
     with pytest.raises(ValueError):
@@ -79,7 +78,3 @@ def test_jump_by_cluster_invalidflags(setup_NGC6440E):
             add_column=False,
             add_flag=1,
         )
-
-
-if __name__ == "__main__":
-    pass

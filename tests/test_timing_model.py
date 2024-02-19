@@ -24,7 +24,6 @@ from pint.models import (
 )
 from pint.simulation import make_fake_toas_uniform
 from pint.toa import get_TOAs
-import pint.residuals
 
 
 @pytest.fixture
@@ -47,11 +46,12 @@ len_timfile_nojumps = len(get_TOAs(os.path.join(datadir, "NGC6440E.tim")))
 
 
 class TestModelBuilding:
-    def setup(self):
+    def setup_method(self):
         self.parfile = os.path.join(datadir, "J0437-4715.par")
 
     def test_from_par(self):
         tm = get_model(self.parfile)
+        assert tm.UNITS.value == "TDB"
         assert len(tm.components) == 6
         assert len(tm.DelayComponent_list) == 4
         assert len(tm.PhaseComponent_list) == 2
@@ -443,3 +443,9 @@ def test_writing_to_file_equals_string(tmp_path, model_0437):
     p = tmp_path / "file.par"
     model_0437.write_parfile(p, include_info=False)
     assert p.read_text() == model_0437.as_parfile(include_info=False)
+
+
+def test_dispersion_slope(model_0437):
+    toas = make_fake_toas_uniform(56000, 57000, 50, model=model_0437)
+    dsl = model_0437.total_dispersion_slope(toas)
+    assert np.all(np.isfinite(dsl))

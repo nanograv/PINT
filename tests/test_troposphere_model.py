@@ -1,7 +1,5 @@
-#!/usr/bin/env python
-
 import os
-import unittest
+import pytest
 
 import astropy.units as u
 import numpy as np
@@ -11,14 +9,12 @@ import pint.toa as toa
 from pinttestdata import datadir
 
 
-class TestTroposphereDelay(unittest.TestCase):
-
+class TestTroposphereDelay:
     MIN_ALT = 5  # the minimum altitude in degrees for testing the delay model
 
     FLOAT_THRESHOLD = 1e-12  #
 
-    def setUp(self):
-
+    def setup_method(self):
         # parfile = os.path.join(datadir, "J1744-1134.basic.par")
         # ngc = os.path.join(datadir, "NGC6440E")
 
@@ -47,9 +43,10 @@ class TestTroposphereDelay(unittest.TestCase):
 
     def test_heights(self):
         # higher elevation observatories should have less troposphere delay
-        heightDelays = []  # list of the delays at each height
-        for h in self.testHeights:
-            heightDelays.append(self.td.delay_model(self.testAltitudes, 0, h, 0))
+        heightDelays = [
+            self.td.delay_model(self.testAltitudes, 0, h, 0) for h in self.testHeights
+        ]
+
         for i in range(1, len(self.testHeights)):
             print(heightDelays[i], heightDelays[i - 1])
             assert np.all(np.less(heightDelays[i], heightDelays[i - 1]))

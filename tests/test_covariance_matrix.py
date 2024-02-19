@@ -1,5 +1,4 @@
-""" Various of tests for the pint covariance.
-"""
+""" Various of tests for the pint covariance."""
 
 import pytest
 import os
@@ -16,7 +15,7 @@ os.chdir(datadir)
 class TestCovarianceMatrix:
     """Test for covariance matrix"""
 
-    def setup(self):
+    def setup_method(self):
         self.matrix1 = np.arange(16).reshape((4, 4))
         self.label1 = [{"c": (0, 4, u.s)}] * 2
         self.matrix2 = np.arange(9).reshape((3, 3))

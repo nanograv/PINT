@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.8
+#       jupytext_version: 1.14.4
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -33,7 +33,6 @@
 
 # %%
 import tempfile
-import numpy as np
 import astropy.units as u
 from pprint import pprint
 from glob import glob
@@ -77,7 +76,7 @@ import pint.config
 
 # maybe we want extra logging info here to see what happens when we load TOAs
 pint.logging.setup(level="DEBUG")
-t = toa.get_TOAs(pint.config.examplefile("NGC6440E.tim"), usepickle=False)
+t = toa.get_TOAs(pint.config.examplefile("NGC6440E.tim"), ephem="DE440")
 # but then turn back to "WARNING" later
 pint.logging.setup(level="WARNING")
 
@@ -220,7 +219,7 @@ plt.errorbar(
     yerr=rs.toas.get_errors().to(u.us),
     fmt=".",
 )
-plt.title("%s Pre-Fit Timing Residuals" % m.PSR.value)
+plt.title(f"{m.PSR.value} Pre-Fit Timing Residuals")
 plt.xlabel("MJD")
 plt.ylabel("Residual (us)")
 plt.grid()
@@ -247,7 +246,7 @@ f.print_summary()
 plt.errorbar(
     t.get_mjds(), f.resids.time_resids.to(u.us), t.get_errors().to(u.us), fmt="x"
 )
-plt.title("%s Post-Fit Timing Residuals" % m.PSR.value)
+plt.title(f"{m.PSR.value} Post-Fit Timing Residuals")
 plt.xlabel("MJD")
 plt.ylabel("Residual (us)")
 plt.grid()
@@ -277,5 +276,5 @@ import pint.observatory.topo_obs
 
 d = tempfile.mkdtemp()
 pint.observatory.topo_obs.export_all_clock_files(d)
-for f in sorted(glob(d + "/*")):
+for f in sorted(glob(f"{d}/*")):
     print(f)

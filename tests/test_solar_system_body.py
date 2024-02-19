@@ -1,6 +1,5 @@
-#!/usr/bin/env python
 import os
-import unittest
+import pytest
 
 import astropy.time as time
 import numpy as np
@@ -10,16 +9,10 @@ import pint.config
 from pint.solar_system_ephemerides import objPosVel, objPosVel_wrt_SSB
 from pinttestdata import datadir
 
-# Hack to support FileNotFoundError in Python 2
-try:
-    FileNotFoundError
-except NameError:
-    FileNotFoundError = IOError
 
-
-class TestSolarSystemDynamic(unittest.TestCase):
+class TestSolarSystemDynamic:
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         os.chdir(datadir)
         MJDREF = 2400000.5
         J2000_JD = 2451545.0

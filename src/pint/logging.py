@@ -55,10 +55,7 @@ import sys
 import warnings
 from loguru import logger as log
 
-try:
-    from erfa import ErfaWarning
-except ImportError:
-    from astropy._erfa import ErfaWarning
+from erfa import ErfaWarning
 
 __all__ = ["LogFilter", "setup", "format", "levels", "get_level"]
 
@@ -128,7 +125,8 @@ def showwarning(message, category, filename, lineno, file=None, line=None):
 class LogFilter:
     """Custom logging filter for ``loguru``.
     Define some messages that are never seen (e.g., Deprecation Warnings).
-    Others that will only be seen once.  Filtering of those is done on the basis of regular expressions."""
+    Others that will only be seen once.  Filtering of those is done on the basis of regular expressions.
+    """
 
     def __init__(self, onlyonce=None, never=None, onlyonce_level="INFO"):
         """
@@ -173,11 +171,12 @@ class LogFilter:
             r"Adding columns .*": False,
             r"Applying TT\(\S+\) to TT\(\S+\) clock correction \(\~27 us\)": False,
             r"No pulse number flags found in the TOAs": False,
-            r"SSB obs pos \[\S+ \S+ \S+\] m": False,
+            r"SSB obs pos \[\S+\s+\S+\s+\S+\] m": False,
             r"Column \S+ already exists. Removing...": False,
             r"Skipping Shapiro delay for Barycentric TOAs": False,
             r"Special observatory location. No clock corrections applied.": False,
             r"DDK model uses KIN as inclination angle. SINI will not be used. This happens every time a DDK model is constructed.": False,
+            r"Glitch phase for glitch (\S+):": False,
         }
         # add in any more defined on init
         if onlyonce is not None:
@@ -214,15 +213,19 @@ class LogFilter:
             if re.search(m, record["message"]):
                 return False
         # display all warnings and above
-        if record["level"].no < log.level(self.onlyonce_level).no:
+        if record["level"].no > log.level(self.onlyonce_level).no:
             return True
         for m in self.onlyonce:
             if re.match(m, record["message"]):
+                # save not the whole message, but only the portion that matches the regex
+                # this allows filtering on things like glitch number
+                match = re.match(m, record["message"])
+                message_to_save = record["message"][slice(*match.span())]
                 if not self.onlyonce[m]:
-                    self.onlyonce[m] = [record["message"]]
+                    self.onlyonce[m] = [message_to_save]
                     return True
-                elif not (record["message"] in self.onlyonce[m]):
-                    self.onlyonce[m].append(record["message"])
+                elif message_to_save not in self.onlyonce[m]:
+                    self.onlyonce[m].append(message_to_save)
                     return True
                 return False
         return True
@@ -308,6 +311,7 @@ def setup(
         filter=filter,
         format=format,
         colorize=usecolors,
+        enqueue=True,
     )
     # change default colors
     for level in colors:

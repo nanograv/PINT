@@ -1,9 +1,6 @@
 """Observatory position and velocity calculation."""
 
-try:
-    import erfa
-except ImportError:
-    import astropy._erfa as erfa
+import erfa
 
 import numpy as np
 from astropy import table
@@ -64,17 +61,13 @@ def gcrs_posvel_from_itrf(loc, toas, obsname="obs"):
             unpack = True
         else:
             ttoas = toas
+    elif np.isscalar(toas):
+        ttoas = Time([toas], format="mjd")
+        unpack = True
     else:
-        if np.isscalar(toas):
-            ttoas = Time([toas], format="mjd")
-            unpack = True
-        else:
-            ttoas = toas
+        ttoas = toas
     t = ttoas
 
     pos, vel = loc.get_gcrs_posvel(t)
     r = PosVel(pos.xyz, vel.xyz, obj=obsname, origin="earth")
-    if unpack:
-        return r[0]
-    else:
-        return r
+    return r[0] if unpack else r

@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.8
+#       jupytext_version: 1.14.4
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -20,19 +20,14 @@
 #
 
 # %%
-from __future__ import print_function, division
-import numpy as np
-import astropy.units as u
 from IPython.display import display_markdown
 
-# %%
 import pint.toa
 import pint.models
 import pint.fitter
 import pint.config
 import pint.logging
 
-# setup logging
 pint.logging.setup(level="INFO")
 
 # %%
@@ -46,8 +41,9 @@ quantity_support()
 
 # %%
 # Load some TOAs and a model to fit
-t = pint.toa.get_TOAs(pint.config.examplefile("NGC6440E.tim"), usepickle=False)
-m = pint.models.get_model(pint.config.examplefile("NGC6440E.par"))
+m, t = pint.models.get_model_and_toas(
+    pint.config.examplefile("NGC6440E.par"), pint.config.examplefile("NGC6440E.tim")
+)
 
 # %%
 # You can check if a model includes a noise model with correlated errors (e.g. ECORR or TNRED) by checking the has_correlated_errors property
@@ -56,11 +52,14 @@ m.has_correlated_errors
 # %% [markdown]
 # There are several fitters in PINT, each of which is a subclass of `Fitter`
 #
-# * `WLSFitter` - PINT's workhorse fitter, which does a basic weighted least-squares minimization of the residuals.
-# * `GLSFitter` - A generalized least squares fitter, like "tempo -G", that can handle noise processes like ECORR and red noise that are specified by their correlation function properties.
+# * `DownhillWLSFitter` - PINT's workhorse fitter, which does a basic weighted least-squares minimization of the residuals.
+# * `DownhillGLSFitter` - A generalized least squares fitter, like "tempo -G", that can handle noise processes like ECORR and red noise that are specified by their correlation function properties.
+# * `WidebandDownhillFitter` - A fitter that uses DM estimates associated with each TOA. Also supports generalized least squares.
 # * `PowellFitter` - A very simple example fitter that uses the Powell method implemented in scipy. One notable feature is that it does not require evaluating derivatives w.r.t the model parameters.
 # * `MCMCFitter` - A fitter that does an MCMC fit using the [emcee](https://emcee.readthedocs.io/en/stable/) package. This can be very slow, but accomodates Priors on the parameter values and can produce corner plots and other analyses of the posterior distributions of the parameters.
+# * `WLSFitter`, `GLSFitter`, `WidebandFitter` - Simpler fitters that make no attempt to ensure convergence.
 #
+# You can normally use the function `pint.fitter.Fitter.auto(toas, model)` to construct an appropriate fitter for your model and data.
 #
 
 # %% [markdown]
@@ -68,17 +67,20 @@ m.has_correlated_errors
 
 # %%
 # Instantiate a fitter
-wlsfit = pint.fitter.WLSFitter(toas=t, model=m)
+wlsfit = pint.fitter.DownhillWLSFitter(toas=t, model=m)
 
 # %% [markdown]
 # A fit is performed by calling `fit_toas()`
 #
-# For most fitters, multiple iterations can be done by setting the `maxiter` keyword argument
+# For most fitters, multiple iterations can be limited by setting the `maxiter` keyword argument.
 #
-# The return value of most fitters is the final chi^2 value
+# Downhill fitters will raise the `pint.fitter.MaxiterReached` exception if they stop before detecting convergence; you can capture this exception and continue if you don't mind not having the best-fit answer.
 
 # %%
-wlsfit.fit_toas(maxiter=1)
+try:
+    wlsfit.fit_toas(maxiter=1)
+except pint.fitter.MaxiterReached:
+    print("Fitter has not fully converged.")
 
 # %%
 # A summary of the fit and resulting model parameters can easily be printed
@@ -98,42 +100,20 @@ cov = wlsfit.get_parameter_covariance_matrix(pretty_print=True)
 wlsfit.plot()
 
 # %% [markdown]
-# ## Powell fitter
-#
-# The Powell fitter takes much longer to run! It also doesn't find quite as good of a minimum as the WLS fitter.
-#
-# This uses scipy's modification of Powell’s method, which is a conjugate direction method. It performs sequential one-dimensional minimizations along each vector of the directions, which is updated at each iteration of the main minimization loop. The function need not be differentiable, and no derivatives are taken.
-#
-# The default number of iterations is 20, but this can be changed with the `maxiter` parameter
-
-# %%
-powfit = pint.fitter.PowellFitter(toas=t, model=m)
-
-# %%
-powfit.fit_toas()
-
-# %%
-powfit.print_summary()
-
-# %% [markdown]
-# ***!!! Note that the Powell fitter does not produce a covariance matrix or estimates of the uncertainties. !!!***
-#
-# **Also note that the F1 value here is not really believable.  The Powell fitter ended up in a different place**
-
-# %% [markdown]
 #
 # ## Comparing models
 #
 # There also a convenience function for pretty printing a comparison of two models with the differences measured in sigma.
 
 # %%
-display_markdown(wlsfit.model.compare(powfit.model, format="markdown"), raw=True)
+display_markdown(wlsfit.model.compare(wlsfit.model_init, format="markdown"), raw=True)
 
 # %% [markdown]
-# You can see just how much F1 changed.  But the $\chi^2$ is still good (in fact it's too good), and the residuals look OK:
+# You can see just how much F1 changed.  Let's compare the $\chi^2$ values:
 
 # %%
-powfit.plot()
+print(f"Pre-fit chi-squared value: {wlsfit.resids_init.chi2}")
+print(f"Post-fit chi-squared value: {wlsfit.resids.chi2}")
 
 # %% [markdown]
 # ## Generalized Least Squares fitter
@@ -162,7 +142,7 @@ powfit.plot()
 # straightforward but the full covariance matrix may be enormous.
 # If False, an algorithm is used that takes advantage of the structure
 # of the covariance matrix, based on information provided by the noise
-# model. The two algorithms should give the same result to numerical
+# model. The two algorithms should give the same result up to numerical
 # accuracy where they both can be applied.
 
 # %% [markdown]
@@ -179,8 +159,13 @@ m1855.has_correlated_errors
 print(m1855)
 
 # %%
-ts1855 = pint.toa.get_TOAs(pint.config.examplefile("B1855+09_NANOGrav_9yv1.tim"))
+ts1855 = pint.toa.get_TOAs(
+    pint.config.examplefile("B1855+09_NANOGrav_9yv1.tim"), model=m1855
+)
 ts1855.print_summary()
+
+# %% [markdown]
+# There is currently a problem with `DownhillGLSFitter`: it doesn't record appropriate noise parameters.
 
 # %%
 glsfit = pint.fitter.GLSFitter(toas=ts1855, model=m1855)
@@ -190,11 +175,6 @@ m1855.DMX_0001.prefix
 
 # %%
 glsfit.fit_toas(maxiter=1)
-
-# %%
-# Not sure how to do this properly yet.
-# glsfit2 = pint.fitter.GLSFitter(toas=t, model=glsfit.model, residuals=glsfit.resids)
-# glsfit2.fit_toas(maxiter=0)
 
 # %%
 glsfit.print_summary()
@@ -219,7 +199,8 @@ ax.plot(mjds, glsfit.resids.noise_resids["pl_red_noise"], ".")
 # %% [markdown]
 # ## Choosing fitters
 #
-# You can use the automatic fitter selection to help you choose between `WLSFitter`, `GLSFitter`, and their wideband variants.  The default `Downhill` fitters generally have better performance than the plain variants.
+# You can use the automatic fitter selection to help you choose between `WLSFitter`, `GLSFitter`, and their wideband variants.
+# The default `Downhill` fitters generally have better performance than the plain variants.
 
 # %%
 autofit = pint.fitter.Fitter.auto(toas=ts1855, model=m1855)
@@ -234,4 +215,5 @@ display_markdown(autofit.model.compare(glsfit.model, format="markdown"), raw=Tru
 # The results are (thankfully) identical.
 
 # %% [markdown]
-# The MCMC fitter is considerably more complicated, so it has its own dedicated walkthroughs in `MCMC_walkthrough.ipynb` (for photon data) and `examples/fit_NGC6440E_MCMC.py` (for fitting TOAs).
+# The MCMC fitter is considerably more complicated, so it has its own dedicated walkthroughs in `MCMC_walkthrough.ipynb`
+# (for photon data) and `examples/fit_NGC6440E_MCMC.py` (for fitting TOAs).

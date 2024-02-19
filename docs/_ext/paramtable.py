@@ -1,5 +1,4 @@
 from docutils import nodes
-from docutils.parsers.rst import Directive
 from docutils.parsers.rst.directives.tables import Table
 from docutils.parsers.rst.directives import unchanged_required
 from docutils.statemachine import ViewList
@@ -55,17 +54,14 @@ class ParamTable(Table):
                     entry += para
                 elif c == "name":
                     text = d[c]
-                    alias_list = d.get("aliases", [])
-                    if alias_list:
+                    if alias_list := d.get("aliases", []):
                         text += " / " + ", ".join(d["aliases"])
                     entry += nodes.paragraph(text=text)
                 elif isinstance(d[c], str):
                     entry += nodes.paragraph(text=d[c])
                 elif isinstance(d[c], list):
                     entry += nodes.paragraph(text=", ".join(d[c]))
-                elif d[c] is None:
-                    pass
-                else:
+                elif d[c] is not None:
                     entry += nodes.paragraph(text=str(d[c]))
             tbody += row
         tgroup += tbody
@@ -74,7 +70,6 @@ class ParamTable(Table):
 
 
 def setup(app):
-
     app.add_directive("paramtable", ParamTable)
 
     return {

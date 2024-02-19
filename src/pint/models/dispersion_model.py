@@ -5,6 +5,8 @@ import numpy as np
 import astropy.units as u
 from astropy.table import Table
 from astropy.time import Time
+from loguru import logger as log
+
 from pint.models.parameter import (
     MJDParameter,
     floatParameter,
@@ -13,15 +15,24 @@ from pint.models.parameter import (
 )
 from pint.models.timing_model import DelayComponent, MissingParameter, MissingTOAs
 from pint.toa_select import TOASelect
-from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
+from pint.utils import (
+    split_prefixed_name,
+    taylor_horner,
+    taylor_horner_deriv,
+    get_prefix_timeranges,
+)
+from pint import DMconst
 
 # This value is cited from Duncan Lorimer, Michael Kramer, Handbook of Pulsar
 # Astronomy, Second edition, Page 86, Note 1
-DMconst = 1.0 / 2.41e-4 * u.MHz * u.MHz * u.s * u.cm**3 / u.pc
+# DMconst = 1.0 / 2.41e-4 * u.MHz * u.MHz * u.s * u.cm**3 / u.pc
 
 
 class Dispersion(DelayComponent):
-    """A base dispersion timing model."""
+    """A base dispersion timing model.
+
+    See https://nanograv-pint.readthedocs.io/en/latest/explanation.html#dispersion-measure
+    for an explanation on the dispersion delay and dispersion measure."""
 
     def __init__(self):
         super().__init__()
@@ -63,16 +74,15 @@ class Dispersion(DelayComponent):
         ------
             DM values at given TOAs in the unit of DM.
         """
-        if isinstance(toas, Table):
-            toas_table = toas
-        else:
-            toas_table = toas.table
-
+        toas_table = toas if isinstance(toas, Table) else toas.table
         dm = np.zeros(len(toas_table)) * self._parent.DM.units
 
         for dm_f in self.dm_value_funcs:
             dm += dm_f(toas)
         return dm
+
+    def dispersion_slope_value(self, toas):
+        return
 
     def d_delay_d_dmparam(self, toas, param_name, acc_delay=None):
         """Derivative of delay wrt to DM parameter.
@@ -91,7 +101,7 @@ class Dispersion(DelayComponent):
             bfreq = self._parent.barycentric_radio_freq(toas)
         except AttributeError:
             warn("Using topocentric frequency for dedispersion!")
-            bfreq = toas.table["freq"]
+            bfreq = toas.table["freq"].quantity
         param_unit = getattr(self, param_name).units
         d_dm_d_dmparam = np.zeros(toas.ntoas) * u.pc / u.cm**3 / param_unit
         for df in self.dm_deriv_funcs[param_name]:
@@ -113,15 +123,10 @@ class Dispersion(DelayComponent):
 
         if pn not in list(self.dm_deriv_funcs.keys()):
             self.dm_deriv_funcs[pn] = [func]
+        elif func in self.dm_deriv_funcs[pn]:
+            return
         else:
-            # TODO:
-            # Running setup() multiple times can lead to adding derivative
-            # function multiple times. This prevent it from happening now. But
-            # in the future, we should think a better way to do so.
-            if func in self.dm_deriv_funcs[pn]:
-                return
-            else:
-                self.dm_deriv_funcs[pn] += [func]
+            self.dm_deriv_funcs[pn] += [func]
 
 
 class DispersionDM(Dispersion):
@@ -187,12 +192,12 @@ class DispersionDM(Dispersion):
             if self.DMEPOCH.value is None:
                 # Copy PEPOCH (PEPOCH must be set!)
                 self.DMEPOCH.value = self._parent.PEPOCH.value
-                if self.DMEPOCH.value is None:
-                    raise MissingParameter(
-                        "Dispersion",
-                        "DMEPOCH",
-                        "DMEPOCH or PEPOCH is required if DM1 or higher are set",
-                    )
+            if self.DMEPOCH.value is None:
+                raise MissingParameter(
+                    "Dispersion",
+                    "DMEPOCH",
+                    "DMEPOCH or PEPOCH is required if DM1 or higher are set",
+                )
 
     def DM_dervative_unit(self, n):
         return "pc cm^-3/yr^%d" % n if n else "pc cm^-3"
@@ -228,13 +233,9 @@ class DispersionDM(Dispersion):
         return self.dispersion_type_delay(toas)
 
     def print_par(self, format="pint"):
-        # TODO we need to have a better design for print out the parameters in
-        # an inheritance class.
-        result = ""
         prefix_dm = list(self.get_prefix_mapping_component("DM").values())
         dms = ["DM"] + prefix_dm
-        for dm in dms:
-            result += getattr(self, dm).as_parfile_line(format=format)
+        result = "".join(getattr(self, dm).as_parfile_line(format=format) for dm in dms)
         if hasattr(self, "components"):
             all_params = self.components["DispersionDM"].params
         else:
@@ -266,11 +267,7 @@ class DispersionDM(Dispersion):
             DMEPOCH = self.DMEPOCH.value
         dt = (toas["tdbld"] - DMEPOCH) * u.day
         dt_value = (dt.to(u.yr)).value
-        d_dm_d_dm_param = taylor_horner(dt_value, dm_terms) * (
-            self.DM.units / par.units
-        )
-
-        return d_dm_d_dm_param
+        return taylor_horner(dt_value, dm_terms) * (self.DM.units / par.units)
 
     def change_dmepoch(self, new_epoch):
         """Change DMEPOCH to a new value and update DM accordingly.
@@ -298,7 +295,7 @@ class DispersionDM(Dispersion):
         dt = (new_epoch.tdb.mjd_long - dmepoch_ld) * u.day
 
         for n in range(len(dmterms) - 1):
-            cur_deriv = self.DM if n == 0 else getattr(self, "DM{}".format(n))
+            cur_deriv = self.DM if n == 0 else getattr(self, f"DM{n}")
             cur_deriv.value = taylor_horner_deriv(
                 dt.to(u.yr), dmterms, deriv_order=n + 1
             )
@@ -377,8 +374,7 @@ class DispersionDMX(Dispersion):
 
         if int(index) in self.get_prefix_mapping_component("DMX_"):
             raise ValueError(
-                "Index '%s' is already in use in this model. Please choose another."
-                % index
+                f"Index '{index}' is already in use in this model. Please choose another."
             )
 
         if isinstance(dmx, u.quantity.Quantity):
@@ -393,7 +389,7 @@ class DispersionDMX(Dispersion):
             mjd_end = mjd_end.value
         self.add_param(
             prefixParameter(
-                name="DMX_" + i,
+                name=f"DMX_{i}",
                 units="pc cm^-3",
                 value=dmx,
                 description="Dispersion measure variation",
@@ -403,7 +399,7 @@ class DispersionDMX(Dispersion):
         )
         self.add_param(
             prefixParameter(
-                name="DMXR1_" + i,
+                name=f"DMXR1_{i}",
                 units="MJD",
                 description="Beginning of DMX interval",
                 parameter_type="MJD",
@@ -413,7 +409,7 @@ class DispersionDMX(Dispersion):
         )
         self.add_param(
             prefixParameter(
-                name="DMXR2_" + i,
+                name=f"DMXR2_{i}",
                 units="MJD",
                 description="End of DMX interval",
                 parameter_type="MJD",
@@ -425,6 +421,122 @@ class DispersionDMX(Dispersion):
         self.validate()
         return index
 
+    def add_DMX_ranges(self, mjd_starts, mjd_ends, indices=None, dmxs=0, frozens=True):
+        """Add DMX ranges to a dispersion model with specified start/end MJDs and DMXs.
+
+        Parameters
+        ----------
+
+        mjd_starts : iterable of float or astropy.quantity.Quantity or astropy.time.Time
+            MJD for beginning of DMX event.
+        mjd_end : iterable of float or astropy.quantity.Quantity or astropy.time.Time
+            MJD for end of DMX event.
+        indices : iterable of int, None
+            Integer label for DMX event. If None, will increment largest used index by 1.
+        dmxs : iterable of float or astropy.quantity.Quantity, or float or astropy.quantity.Quantity
+            Change in DM during DMX event.
+        frozens : iterable of bool or bool
+            Indicates whether DMX will be fit.
+
+        Returns
+        -------
+
+        indices : list
+            Indices that has been assigned to new DMX events
+
+        """
+        if len(mjd_starts) != len(mjd_ends):
+            raise ValueError(
+                f"Number of mjd_start values {len(mjd_starts)} must match number of mjd_end values {len(mjd_ends)}"
+            )
+        if indices is None:
+            indices = [None] * len(mjd_starts)
+        dmxs = np.atleast_1d(dmxs)
+        if len(dmxs) == 1:
+            dmxs = np.repeat(dmxs, len(mjd_starts))
+        if len(dmxs) != len(mjd_starts):
+            raise ValueError(
+                f"Number of mjd_start values {len(mjd_starts)} must match number of dmx values {len(dmxs)}"
+            )
+        frozens = np.atleast_1d(frozens)
+        if len(frozens) == 1:
+            frozens = np.repeat(frozens, len(mjd_starts))
+        if len(frozens) != len(mjd_starts):
+            raise ValueError(
+                f"Number of mjd_start values {len(mjd_starts)} must match number of frozen values {len(frozens)}"
+            )
+
+        #### Setting up the DMX title convention. If index is None, want to increment the current max DMX index by 1.
+        dct = self.get_prefix_mapping_component("DMX_")
+        last_index = np.max(list(dct.keys()))
+        added_indices = []
+        for mjd_start, mjd_end, index, dmx, frozen in zip(
+            mjd_starts, mjd_ends, indices, dmxs, frozens
+        ):
+            if index is None:
+                index = last_index + 1
+                last_index += 1
+            elif index in list(dct.keys()):
+                raise ValueError(
+                    f"Attempting to insert DMX_{index:04d} but it already exists"
+                )
+            added_indices.append(index)
+            i = f"{int(index):04d}"
+
+            if mjd_end is not None and mjd_start is not None:
+                if mjd_end < mjd_start:
+                    raise ValueError("Starting MJD is greater than ending MJD.")
+            elif mjd_start != mjd_end:
+                raise ValueError("Only one MJD bound is set.")
+            if int(index) in dct:
+                raise ValueError(
+                    f"Index '{index}' is already in use in this model. Please choose another."
+                )
+            if isinstance(dmx, u.quantity.Quantity):
+                dmx = dmx.to_value(u.pc / u.cm**3)
+            if isinstance(mjd_start, Time):
+                mjd_start = mjd_start.mjd
+            elif isinstance(mjd_start, u.quantity.Quantity):
+                mjd_start = mjd_start.value
+            if isinstance(mjd_end, Time):
+                mjd_end = mjd_end.mjd
+            elif isinstance(mjd_end, u.quantity.Quantity):
+                mjd_end = mjd_end.value
+            log.trace(f"Adding DMX_{i} from MJD {mjd_start} to MJD {mjd_end}")
+            self.add_param(
+                prefixParameter(
+                    name=f"DMX_{i}",
+                    units="pc cm^-3",
+                    value=dmx,
+                    description="Dispersion measure variation",
+                    parameter_type="float",
+                    frozen=frozen,
+                )
+            )
+            self.add_param(
+                prefixParameter(
+                    name=f"DMXR1_{i}",
+                    units="MJD",
+                    description="Beginning of DMX interval",
+                    parameter_type="MJD",
+                    time_scale="utc",
+                    value=mjd_start,
+                )
+            )
+            self.add_param(
+                prefixParameter(
+                    name=f"DMXR2_{i}",
+                    units="MJD",
+                    description="End of DMX interval",
+                    parameter_type="MJD",
+                    time_scale="utc",
+                    value=mjd_end,
+                )
+            )
+        self.setup()
+        self.validate()
+        return added_indices
+
     def remove_DMX_range(self, index):
         """Removes all DMX parameters associated with a given index/list of indices.
 
@@ -435,17 +547,13 @@ class DispersionDMX(Dispersion):
             Number or list/array of numbers corresponding to DMX indices to be removed from model.
         """
 
-        if (
-            isinstance(index, int)
-            or isinstance(index, float)
-            or isinstance(index, np.int64)
-        ):
+        if isinstance(index, (int, float, np.int64)):
             indices = [index]
-        elif isinstance(index, (list, np.ndarray)):
+        elif isinstance(index, (list, set, np.ndarray)):
             indices = index
         else:
             raise TypeError(
-                f"index must be a float, int, list, or array - not {type(index)}"
+                f"index must be a float, int, set, list, or array - not {type(index)}"
             )
         for index in indices:
             index_rf = f"{int(index):04d}"
@@ -461,10 +569,7 @@ class DispersionDMX(Dispersion):
         inds : np.ndarray
         Array of DMX indices in model.
         """
-        inds = []
-        for p in self.params:
-            if "DMX_" in p:
-                inds.append(int(p.split("_")[-1]))
+        inds = [int(p.split("_")[-1]) for p in self.params if "DMX_" in p]
         return np.array(inds)
 
     def setup(self):
@@ -495,6 +600,30 @@ class DispersionDMX(Dispersion):
                 "match DMXR2_ parameters. "
                 "Please check your prefixed parameters."
             )
+        r1 = np.zeros(len(DMX_mapping))
+        r2 = np.zeros(len(DMX_mapping))
+        indices = np.zeros(len(DMX_mapping), dtype=np.int32)
+        for j, index in enumerate(DMX_mapping):
+            if (
+                getattr(self, f"DMXR1_{index:04d}").quantity is not None
+                and getattr(self, f"DMXR2_{index:04d}").quantity is not None
+            ):
+                r1[j] = getattr(self, f"DMXR1_{index:04d}").quantity.mjd
+                r2[j] = getattr(self, f"DMXR2_{index:04d}").quantity.mjd
+                indices[j] = index
+        for j, index in enumerate(DMXR1_mapping):
+            if np.any((r1[j] > r1) & (r1[j] < r2)):
+                k = np.where((r1[j] > r1) & (r1[j] < r2))[0]
+                for kk in k.flatten():
+                    log.warning(
+                        f"Start of DMX_{index:04d} ({r1[j]}-{r2[j]}) overlaps with DMX_{indices[kk]:04d} ({r1[kk]}-{r2[kk]})"
+                    )
+            if np.any((r2[j] > r1) & (r2[j] < r2)):
+                k = np.where((r2[j] > r1) & (r2[j] < r2))[0]
+                for kk in k.flatten():
+                    log.warning(
+                        f"End of DMX_{index:04d} ({r1[j]}-{r2[j]}) overlaps with DMX_{indices[kk]:04d} ({r1[kk]}-{r2[kk]})"
+                    )
 
     def validate_toas(self, toas):
         DMX_mapping = self.get_prefix_mapping_component("DMX_")
@@ -531,7 +660,7 @@ class DispersionDMX(Dispersion):
         # Get DMX delays
         dm = np.zeros(len(tbl)) * self._parent.DM.units
         for k, v in select_idx.items():
-            dm[v] = getattr(self, k).quantity
+            dm[v] += getattr(self, k).quantity
         return dm
 
     def DMX_dispersion_delay(self, toas, acc_delay=None):

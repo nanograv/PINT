@@ -5,9 +5,39 @@ from astropy import units as u
 from loguru import logger as log
 
 from pint.models.binary_dd import BinaryDD
-from pint.models.parameter import boolParameter, floatParameter
+from pint.models.parameter import boolParameter, floatParameter, funcParameter
 from pint.models.stand_alone_psr_binaries.DDK_model import DDKmodel
 from pint.models.timing_model import MissingParameter, TimingModelError
+
+
+def _convert_kin(kin):
+    """Convert DDK KIN to/from IAU/DT92 conventions
+
+    Parameters
+    ----------
+    kin : astropy.units.Quantity
+
+    Returns
+    -------
+    astropy.units.Quantity
+        Value returned in other convention
+    """
+    return 180 * u.deg - kin
+
+
+def _convert_kom(kom):
+    """Convert DDK KOM to/from IAU/DT92 conventions
+
+    Parameters
+    ----------
+    kom : astropy.units.Quantity
+
+    Returns
+    -------
+    astropy.units.Quantity
+        Value returned in other convention
+    """
+    return 90 * u.deg - kom
 
 
 class BinaryDDK(BinaryDD):
@@ -47,7 +77,13 @@ class BinaryDDK(BinaryDD):
 
     Note
     ----
-    This model defines KOM with reference to north, either equatorial or ecliptic depending on how the model is defined.
+    This model defines KOM with reference to east, either equatorial or ecliptic depending on how the model is defined.
+    KOM and KIN are defined in the Damour & Taylor (1992) convention (DT92), where:
+
+        KIN = 180 deg means the orbital angular momentum vector points toward the Earth, and KIN = 0 means the orbital angular momentum vector points away from the Earth.
+
+        KOM is 0 toward the East and increases clockwise on the sky; it is measured "East through North."
+
 
     Parameters supported:
 
@@ -58,9 +94,11 @@ class BinaryDDK(BinaryDD):
     ----------
     - Kopeikin (1995), ApJ, 439, L5 [1]_
     - Kopeikin (1996), ApJ, 467, L93 [2]_
+    - Damour & Taylor (1992), Phys Rev D, 45, 1840 [3]_
 
     .. [1] https://ui.adsabs.harvard.edu/abs/1995ApJ...439L...5K/abstract
     .. [2] https://ui.adsabs.harvard.edu/abs/1996ApJ...467L..93K/abstract
+    .. [3] https://ui.adsabs.harvard.edu/abs/1992PhRvD..45.1840D/abstract
 
     """
 
@@ -95,6 +133,34 @@ class BinaryDDK(BinaryDD):
         )
         self.remove_param("SINI")
         self.internal_params += ["PMLONG_DDK", "PMLAT_DDK"]
+
+        self.add_param(
+            funcParameter(
+                name="KINIAU",
+                description="Inclination angle in the IAU convention",
+                params=("KIN",),
+                func=_convert_kin,
+                units="deg",
+            )
+        )
+        self.add_param(
+            funcParameter(
+                name="KOMIAU",
+                description="The longitude of the ascending node in the IAU convention",
+                params=("KOM",),
+                func=_convert_kom,
+                units="deg",
+            )
+        )
+        self.add_param(
+            funcParameter(
+                name="SINI",
+                description="Sine of inclination angle",
+                params=("KIN",),
+                func=np.sin,
+                units="",
+            )
+        )
 
     @property
     def PMLONG_DDK(self):
@@ -143,14 +209,13 @@ class BinaryDDK(BinaryDD):
                 "No valid AstrometryEcliptic or AstrometryEquatorial component found"
             )
 
-        if hasattr(self._parent, "PX"):
-            if self._parent.PX.value <= 0.0 or self._parent.PX.value is None:
-                raise TimingModelError("DDK model needs a valid `PX` value.")
-        else:
+        if not hasattr(self._parent, "PX"):
             raise MissingParameter(
                 "Binary_DDK", "PX", "DDK model needs PX from" "Astrometry."
             )
 
+        if self._parent.PX.value <= 0.0 or self._parent.PX.value is None:
+            raise TimingModelError("DDK model needs a valid `PX` value.")
         if "A1DOT" in self.params and self.A1DOT.value != 0:
             warnings.warn("Using A1DOT with a DDK model is not advised.")
 

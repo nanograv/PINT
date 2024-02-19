@@ -15,7 +15,6 @@
 
 import os
 import sys
-from packaging.version import parse
 
 import jupytext
 
@@ -58,6 +57,7 @@ extensions = [
     "nbsphinx",
     "paramtable",
     "componentlist",
+    "sitetable",
     #'IPython.sphinxext.ipython_console_highlighting',
 ]
 
@@ -87,7 +87,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "pint"
-copyright = "2017-2021 PINT Developers"
+copyright = "2017-2023 PINT Developers"
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
@@ -119,9 +119,14 @@ exclude_patterns = [
     "examples/compare_tempo2_B1855.py",
     "examples/example_dmx_ranges.py",
     "examples/example_pulse_numbers.py",
+    # "examples/bayesian-example-NGC6440E.py",
+    # "examples/bayesian-wideband-example.py",
     "conf.py",
     "_ext",
 ]
+
+if tags.has("noexamples"):
+    exclude_patterns.append("examples/*.py")
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -179,8 +184,10 @@ def setup(app):
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 on_rtd = os.environ.get("READTHEDOCS", None) == "True"
-if not on_rtd:  # only import and set the theme if we're building docs locally
-    html_theme = "sphinx_rtd_theme"
+# if not on_rtd:  # only import and set the theme if we're building docs locally
+#     html_theme = "sphinx_rtd_theme"
+# it seems that we need to specify it anyway
+html_theme = "sphinx_rtd_theme"
 
 # Theme options are theme-specific and customize the look and feel of a
 # theme further.  For a list of options available for each theme, see the
@@ -200,7 +207,7 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
 
 # The name of an image file (relative to this directory) to place at the
 # top of the sidebar.
-# html_logo = None
+html_logo = "logo/PINT_LOGO_64trans.png"
 
 # The name of an image file (within the static path) to use as favicon
 # of the docs.  This file should be a Windows icon file (.ico) being

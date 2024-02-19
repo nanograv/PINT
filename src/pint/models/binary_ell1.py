@@ -5,13 +5,54 @@ from astropy.time import Time
 
 from loguru import logger as log
 
-from pint.models.parameter import MJDParameter, floatParameter, intParameter
+from pint.models.parameter import (
+    MJDParameter,
+    floatParameter,
+    intParameter,
+    funcParameter,
+)
 from pint.models.pulsar_binary import PulsarBinary
 from pint.models.stand_alone_psr_binaries import binary_orbits as bo
 from pint.models.stand_alone_psr_binaries.ELL1_model import ELL1model
 from pint.models.stand_alone_psr_binaries.ELL1H_model import ELL1Hmodel
+from pint.models.stand_alone_psr_binaries.ELL1k_model import ELL1kmodel
 from pint.models.timing_model import MissingParameter
 from pint.utils import taylor_horner_deriv
+from pint import Tsun
+
+
+def _eps_to_e(eps1, eps2):
+    return np.sqrt(eps1**2 + eps2**2)
+
+
+def _eps_to_om(eps1, eps2):
+    OM = np.arctan2(eps1, eps2)
+    if OM < 0:
+        OM += 360 * u.deg
+    return OM.to(u.deg)
+
+
+def _epsdot_to_edot(eps1, eps2, eps1dot, eps2dot):
+    # Eqn. A14,A15 in Lange et al. inverted
+    ecc = np.sqrt(eps1**2 + eps2**2)
+    return (eps1dot * eps1 + eps2dot * eps2) / ecc
+
+
+def _epsdot_to_omdot(eps1, eps2, eps1dot, eps2dot):
+    # Eqn. A14,A15 in Lange et al. inverted
+    ecc = np.sqrt(eps1**2 + eps2**2)
+    return ((eps1dot * eps2 - eps2dot * eps1) / ecc**2).to(
+        u.deg / u.yr, equivalencies=u.dimensionless_angles()
+    )
+
+
+def _tasc_to_T0(TASC, PB, eps1, eps2):
+    OM = np.arctan2(eps1, eps2)
+    if OM < 0:
+        OM += 360 * u.deg
+    return TASC + ((PB / 2 / np.pi) * OM).to(
+        u.d, equivalencies=u.dimensionless_angles()
+    )
 
 
 class BinaryELL1(PulsarBinary):
@@ -19,7 +60,7 @@ class BinaryELL1(PulsarBinary):
 
     This binary model uses a rectangular representation for the eccentricity of an orbit,
     resolving complexities that arise with periastron-based parameters in nearly-circular
-    orbits. It also makes certain approximations that are invalid when the eccentricity
+    orbits. It also makes certain approximations (up to O(e^3)) that are invalid when the eccentricity
     is "large"; what qualifies as "large" depends on your data quality. A formula exists
     to determine when the approximations this model makes are sufficiently accurate.
 
@@ -27,12 +68,36 @@ class BinaryELL1(PulsarBinary):
     :class:`pint.models.stand_alone_psr_binaries.ELL1_model.ELL1model`.
 
     It supports all the parameters defined in :class:`pint.models.pulsar_binary.PulsarBinary`
-    except that it removes the polar orbital parameters:
+    except that it removes ECC, OM, and T0:
 
     Parameters supported:
 
     .. paramtable::
         :class: pint.models.binary_ell1.BinaryELL1
+
+    References
+    ----------
+    - Lange et al. (2001), MNRAS, 326 (1), 274–282 [1]_
+    - Zhu et al. (2019), MNRAS, 482 (3), 3249-3260 [2]_
+    - Fiore et al. (2023), arXiv:2305.13624 [astro-ph.HE] [3]_
+
+    .. [1] https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.3249Z/abstract
+    .. [2] https://ui.adsabs.harvard.edu/abs/2001MNRAS.326..274L/abstract
+    .. [3] https://arxiv.org/abs/2305.13624
+
+    Notes
+    -----
+    This includes o(e^2) expression for Roemer delay from Norbert Wex and Weiwei Zhu
+    This is equation (1) of Zhu et al (2019) but with a corrected typo:
+        In the first line of that equation, ex->e1 and ey->e2
+        In the other lines, ex->e2 and ey->e1
+    See Email from NW and WZ to David Nice on 2019-Aug-08
+    The dre expression comes from NW and WZ; the derivatives
+    were calculated by hand for PINT
+
+    Also includes o(e^3) expression from equation (4) of Fiore et al. (2023)
+    (derivatives also calculated by hand)
+
     """
 
     register = True
@@ -52,7 +117,7 @@ class BinaryELL1(PulsarBinary):
             floatParameter(
                 name="EPS1",
                 units="",
-                description="First Laplace-Lagrange parameter, ECC x sin(OM) for ELL1 model",
+                description="First Laplace-Lagrange parameter, ECC*sin(OM)",
                 long_double=True,
             )
         )
@@ -61,7 +126,7 @@ class BinaryELL1(PulsarBinary):
             floatParameter(
                 name="EPS2",
                 units="",
-                description="Second Laplace-Lagrange parameter, ECC x cos(OM) for ELL1 model",
+                description="Second Laplace-Lagrange parameter, ECC*cos(OM)",
                 long_double=True,
             )
         )
@@ -86,6 +151,60 @@ class BinaryELL1(PulsarBinary):
         self.remove_param("ECC")
         self.remove_param("OM")
         self.remove_param("T0")
+
+        self.add_param(
+            funcParameter(
+                name="ECC",
+                units="",
+                aliases=["E"],
+                description="Eccentricity",
+                params=("EPS1", "EPS2"),
+                func=_eps_to_e,
+            )
+        )
+        self.add_param(
+            funcParameter(
+                name="OM",
+                units=u.deg,
+                description="Longitude of periastron",
+                long_double=True,
+                params=("EPS1", "EPS2"),
+                func=_eps_to_om,
+            )
+        )
+        self.add_param(
+            funcParameter(
+                name="EDOT",
+                units="1/s",
+                description="Eccentricity derivative respect to time",
+                unit_scale=True,
+                scale_factor=1e-12,
+                scale_threshold=1e-7,
+                params=("EPS1", "EPS2", "EPS1DOT", "EPS2DOT"),
+                func=_epsdot_to_edot,
+            )
+        )
+        self.add_param(
+            funcParameter(
+                name="OMDOT",
+                units="deg/year",
+                description="Rate of advance of periastron",
+                long_double=True,
+                params=("EPS1", "EPS2", "EPS1DOT", "EPS2DOT"),
+                func=_epsdot_to_omdot,
+            )
+        )
+        # don't implement T0 yet since that is a MJDparameter at base
+        # and our funcParameters don't support that yet
+        # self.add_param(
+        #     funcParameter(
+        #         name="T0",
+        #         description="Epoch of periastron passage",
+        #         time_scale="tdb",
+        #         params=("TASC", "PB", "EPS1", "EPS2"),
+        #         func=_tasc_to_T0,
+        #     )
+        # )
 
         self.warn_default_params = []
 
@@ -125,7 +244,8 @@ class BinaryELL1(PulsarBinary):
             new_epoch = Time(new_epoch, scale="tdb", format="mjd", precision=9)
 
         # Get PB and PBDOT from model
-        if self.PB.quantity is not None:
+        # make sure that the PB is the base parameter
+        if self.PB.quantity is not None and not isinstance(self.PB, funcParameter):
             PB = self.PB.quantity
             if self.PBDOT.quantity is not None:
                 PBDOT = self.PBDOT.quantity
@@ -168,31 +288,41 @@ class BinaryELL1(PulsarBinary):
                 )
 
         # Update EPS1, EPS2, and A1
-        if self.EPS1DOT.quantity is not None:
+        if hasattr(self, "EPS1DOT") and self.EPS1DOT.quantity is not None:
             dEPS1 = self.EPS1DOT.quantity * dt_integer_orbits
             self.EPS1.quantity = self.EPS1.quantity + dEPS1
-        if self.EPS2DOT.quantity is not None:
+        if hasattr(self, "EPS2DOT") and self.EPS2DOT.quantity is not None:
             dEPS2 = self.EPS2DOT.quantity * dt_integer_orbits
             self.EPS2.quantity = self.EPS2.quantity + dEPS2
-        if self.A1DOT.quantity is not None:
+        if hasattr(self, "A1DOT") and self.A1DOT.quantity is not None:
             dA1 = self.A1DOT.quantity * dt_integer_orbits
             self.A1.quantity = self.A1.quantity + dA1
+
+        return dt_integer_orbits
 
 
 class BinaryELL1H(BinaryELL1):
     """ELL1 modified to use H3 parameter for Shapiro delay.
 
     The actual calculations for this are done in
-    :class:`pint.models.stand_alone_psr_binaries.ELL1_model.ELL1model`.
+    :class:`pint.models.stand_alone_psr_binaries.ELL1H_model.ELL1Hmodel`.
 
     Parameters supported:
 
     .. paramtable::
         :class: pint.models.binary_ell1.BinaryELL1H
 
-    Note
-    ----
-    Ref:  Freire and Wex 2010; Only the Medium-inclination case model is implemented.
+    Notes
+    -----
+    Only the Medium-inclination case model is implemented.
+
+    Default value in `pint` for `NHARMS` is 7, while in `tempo2` it is 4.
+
+    References
+    ----------
+    - Freire & Wex (2010), MNRAS, 409 (1), 199-212 [1]_
+
+    .. [1] https://ui.adsabs.harvard.edu/abs/2010MNRAS.409..199F/abstract
     """
 
     register = True
@@ -226,7 +356,7 @@ class BinaryELL1H(BinaryELL1):
                 units="",
                 description="Shapiro delay parameter STIGMA as in Freire and Wex 2010 Eq(12)",
                 long_double=True,
-                aliases=["VARSIGMA"],
+                aliases=["VARSIGMA", "STIG"],
             )
         )
         self.add_param(
@@ -250,8 +380,7 @@ class BinaryELL1H(BinaryELL1):
         if self.H4.quantity is not None:
             self.binary_instance.fit_params = ["H3", "H4"]
             # If have H4 or STIGMA, choose 7th order harmonics
-            if self.NHARMS.value < 7:
-                self.NHARMS.value = 7
+            self.NHARMS.value = max(self.NHARMS.value, 7)
             if self.STIGMA.quantity is not None:
                 raise ValueError("ELL1H can use H4 or STIGMA but not both")
 
@@ -267,3 +396,93 @@ class BinaryELL1H(BinaryELL1):
         super().validate()
         # if self.H3.quantity is None:
         #     raise MissingParameter("ELL1H", "H3", "'H3' is required for ELL1H model")
+
+
+class BinaryELL1k(BinaryELL1):
+    """ELL1k binary model.
+
+    Modified version of the ELL1 model applicable to short-orbital period binaries where
+    the periastron advance timescale is comparable to the data span. In such cases, the
+    evolution of EPS1 and EPS2 should be described using OMDOT and LNEDOT rather than
+    EPS1DOT and EPS2DOT. The (EPS1DOT, EPS2DOT) parametrization of the evolution of EPS1
+    and EPS2 is a linear approximation of the (OMDOT, LNEDOT) parametrization which breaks
+    down when the periastron advance timescale is comparable to the data span.
+
+    The actual calculations for this are done in
+    :class:`pint.models.stand_alone_psr_binaries.ELL1k_model.ELL1kmodel`.
+
+    It supports all the parameters defined in :class:`pint.models.pulsar_binary.PulsarBinary`
+    except that it removes ECC, OM, and T0:
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.binary_ell1.BinaryELL1k
+
+    References
+    ----------
+    - Susobhanan et al. (2018), MNRAS, 480 (4), 5260-5271 [1]_
+
+    .. [1] https://ui.adsabs.harvard.edu/abs/2018MNRAS.480.5260S/abstract
+    """
+
+    register = True
+
+    def __init__(self):
+        super().__init__()
+        self.binary_model_name = "ELL1k"
+        self.binary_model_class = ELL1kmodel
+
+        self.remove_param("OMDOT")
+        self.remove_param("EDOT")
+        self.remove_param("EPS1DOT")
+        self.remove_param("EPS2DOT")
+
+        self.add_param(
+            floatParameter(
+                name="OMDOT",
+                units="deg/year",
+                description="Rate of advance of periastron",
+                long_double=True,
+            )
+        )
+
+        self.add_param(
+            floatParameter(
+                name="LNEDOT",
+                units="1/year",
+                description="Log-derivative of the eccentricity EDOT/ECC",
+                long_double=True,
+            )
+        )
+
+    def validate(self):
+        """Validate parameters."""
+        super().validate()
+
+    def change_binary_epoch(self, new_epoch):
+        """Change the epoch for this binary model.
+
+        EPS1 and EPS2 will be evolved in time according to OMDOT and LNEDOT.
+        Everything else is the same as in the ELL1 model.
+
+        Parameters
+        ----------
+        new_epoch: float MJD (in TDB) or `astropy.Time` object
+            The new epoch value.
+        """
+        dt = super().change_binary_epoch(new_epoch)
+
+        # Update EPS1, EPS2
+        if self.OMDOT.quantity is not None and self.LNEDOT.quantity is not None:
+            eps10 = self.EPS1.quantity
+            eps20 = self.EPS1.quantity
+            omdot = self.OMDOT.quantity
+            lnedot = self.LNEDOT.quantity
+
+            self.EPS1.quantity = (1 + lnedot * dt) * (
+                eps10 * np.cos(omdot * dt) + eps20 * np.sin(omdot * dt)
+            )
+            self.EPS2.quantity = (1 + lnedot * dt) * (
+                eps20 * np.cos(omdot * dt) - eps10 * np.sin(omdot * dt)
+            )

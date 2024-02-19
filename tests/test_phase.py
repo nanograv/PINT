@@ -5,6 +5,7 @@ import numpy as np
 import astropy.units as u
 from pint.phase import Phase
 
+
 # modified from @mhvk's test_phase_class.py
 def assert_equal(first, second):
     assert type(first) is type(second)
@@ -89,6 +90,7 @@ class TestScalarArithmeticFunc:
         assert_equal(phasesum.int, u.Quantity(sumi))
         assert_equal(phasesum.frac, u.Quantity(sumf))
         assert np.isfinite(phasesum.quantity.value)
+        assert phasesum.quantity.value == phasesum.value
 
     def test_commutative_scalar_addition(self):
         phase1 = Phase(2, 0.5)

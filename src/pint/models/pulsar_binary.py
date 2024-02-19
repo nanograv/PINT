@@ -4,14 +4,20 @@ This module if for wrapping standalone binary models so that they work
 as PINT timing models.
 """
 
+
 import astropy.units as u
+import contextlib
 import numpy as np
-from astropy.time import Time
 from astropy.coordinates import SkyCoord
 from loguru import logger as log
 
 from pint import ls
-from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
+from pint.models.parameter import (
+    MJDParameter,
+    floatParameter,
+    prefixParameter,
+    funcParameter,
+)
 from pint.models.stand_alone_psr_binaries import binary_orbits as bo
 from pint.models.timing_model import (
     DelayComponent,
@@ -19,8 +25,16 @@ from pint.models.timing_model import (
     TimingModelError,
     UnknownParameter,
 )
-from pint.utils import taylor_horner_deriv
+from pint.utils import taylor_horner_deriv, parse_time
 from pint.pulsar_ecliptic import PulsarEcliptic
+
+
+# def _p_to_f(p):
+#     return 1 / p
+
+
+# def _pdot_to_fdot(p, pdot):
+#     return -pdot / p**2
 
 
 class PulsarBinary(DelayComponent):
@@ -88,7 +102,9 @@ class PulsarBinary(DelayComponent):
         )
         self.add_param(
             floatParameter(
-                name="A1", units=ls, description="Projected semi-major axis, a*sin(i)"
+                name="A1",
+                units=ls,
+                description="Projected semi-major axis of pulsar orbit, ap*sin(i)",
             )
         )
         # NOTE: the DOT here takes the value and times 1e-12, tempo/tempo2 can
@@ -98,7 +114,7 @@ class PulsarBinary(DelayComponent):
                 name="A1DOT",
                 aliases=["XDOT"],
                 units=ls / u.s,
-                description="Derivative of projected semi-major axis, da*sin(i)/dt",
+                description="Derivative of projected semi-major axis, d[ap*sin(i)]/dt",
                 unit_scale=True,
                 scale_factor=1e-12,
                 scale_threshold=1e-7,
@@ -136,7 +152,7 @@ class PulsarBinary(DelayComponent):
             floatParameter(
                 name="OMDOT",
                 units="deg/year",
-                description="Longitude of periastron",
+                description="Rate of advance of periastron",
                 long_double=True,
             )
         )
@@ -144,7 +160,7 @@ class PulsarBinary(DelayComponent):
             floatParameter(
                 name="M2",
                 units=u.M_sun,
-                description="Mass of companion in the unit Sun mass",
+                description="Companion mass",
             )
         )
         self.add_param(
@@ -179,10 +195,8 @@ class PulsarBinary(DelayComponent):
         # Setup the FBX orbits if FB is set.
         # TODO this should use a smarter way to set up orbit.
         FBX_mapping = self.get_prefix_mapping_component("FB")
-        FBXs = {}
-        for fbn in FBX_mapping.values():
-            FBXs[fbn] = getattr(self, fbn).quantity
-        if any([v is not None for v in FBXs.values()]):
+        FBXs = {fbn: getattr(self, fbn).quantity for fbn in FBX_mapping.values()}
+        if any(v is not None for v in FBXs.values()):
             if self.FB0.value is None:
                 raise ValueError("Some FBn parameters are set but FB0 is not.")
             for fb_name, fb_value in FBXs.items():
@@ -190,6 +204,59 @@ class PulsarBinary(DelayComponent):
             self.binary_instance.orbits_cls = bo.OrbitFBX(
                 self.binary_instance, list(FBXs.keys())
             )
+            # Note: if we are happy to use these to show alternate parameterizations then this can be uncommented
+
+            # # remove the PB parameterization, replace with functions
+            # self.remove_param("PB")
+            # self.remove_param("PBDOT")
+            # self.add_param(
+            #     funcParameter(
+            #         name="PB",
+            #         units=u.day,
+            #         description="Orbital period",
+            #         long_double=True,
+            #         params=("FB0",),
+            #         func=_p_to_f,
+            #     )
+            # )
+            # self.add_param(
+            #     funcParameter(
+            #         name="PBDOT",
+            #         units=u.day / u.day,
+            #         description="Orbital period derivative respect to time",
+            #         unit_scale=True,
+            #         scale_factor=1e-12,
+            #         scale_threshold=1e-7,
+            #         params=("FB0", "FB1"),
+            #         func=_pdot_to_fdot,
+            #     )
+            # )
+        # Note: if we are happy to use these to show alternate parameterizations then this can be uncommented
+        # else:
+        #     # remove the FB parameterization, replace with functions
+        #     self.remove_param("FB0")
+        #     self.add_param(
+        #         funcParameter(
+        #             name="FB0",
+        #             units="1/s^1",
+        #             description="0th time derivative of frequency of orbit",
+        #             aliases=["FB"],
+        #             long_double=True,
+        #             params=("PB",),
+        #             func=_p_to_f,
+        #         )
+        #     )
+        #     self.add_param(
+        #         funcParameter(
+        #             name="FB1",
+        #             units="1/s^2",
+        #             description="1st time derivative of frequency of orbit",
+        #             long_double=True,
+        #             params=("PB", "PBDOT"),
+        #             func=_pdot_to_fdot,
+        #         )
+        #     )
+
         # Update the parameters in the stand alone binary
         self.update_binary_object(None)
 
@@ -224,7 +291,10 @@ class PulsarBinary(DelayComponent):
                 raise ValueError(
                     f"Binary period PB must be non-negative ({self.PB.quantity})"
                 )
-            if self.FB0.value is not None:
+            if self.FB0.value is not None and not (
+                isinstance(self.FB0, funcParameter)
+                or isinstance(self.PB, funcParameter)
+            ):
                 raise ValueError("Model cannot have values for both FB0 and PB")
         if self.FB0.value is not None and self.FB0.value <= 0:
             raise ValueError(
@@ -232,18 +302,18 @@ class PulsarBinary(DelayComponent):
             )
 
     def check_required_params(self, required_params):
-        # seach for all the possible to get the parameters.
+        # search for all the possible to get the parameters.
         for p in required_params:
             par = getattr(self, p)
             if par.value is None:
                 # try to search if there is any class method that computes it
-                method_name = p.lower() + "_func"
+                method_name = f"{p.lower()}_func"
                 try:
                     par_method = getattr(self.binary_instance, method_name)
                 except AttributeError:
                     raise MissingParameter(
                         self.binary_model_name,
-                        p + " is required for '%s'." % self.binary_model_name,
+                        f"{p} is required for '{self.binary_model_name}'.",
                     )
                 par_method()
 
@@ -335,7 +405,15 @@ class PulsarBinary(DelayComponent):
                 except UnknownParameter:
                     if par in self.internal_params:
                         pint_bin_name = par
+                    else:
+                        raise UnknownParameter(
+                            f"Unable to find {par} in the parent model"
+                        )
                 binObjpar = getattr(self._parent, pint_bin_name)
+
+                # make sure we aren't passing along derived parameters to the binary instance
+                if isinstance(binObjpar, funcParameter):
+                    continue
                 instance_par = getattr(self.binary_instance, par)
                 if hasattr(instance_par, "value"):
                     instance_par_val = instance_par.value
@@ -365,21 +443,22 @@ class PulsarBinary(DelayComponent):
         return self.binary_instance.d_binarydelay_d_par(param)
 
     def print_par(self, format="pint"):
-        if self._parent is not None:
-            # Check if the binary name are the same as BINARY parameter
-            if self._parent.BINARY.value != self.binary_model_name:
-                raise TimingModelError(
-                    f"Parameter BINARY {self._parent.BINARY.value}"
-                    f" does not match the binary"
-                    f" component {self.binary_model_name}"
-                )
-            result = self._parent.BINARY.as_parfile_line(format=format)
+        if self._parent is None:
+            result = f"BINARY {self.binary_model_name}\n"
+        elif self._parent.BINARY.value != self.binary_model_name:
+            raise TimingModelError(
+                f"Parameter BINARY {self._parent.BINARY.value}"
+                f" does not match the binary"
+                f" component {self.binary_model_name}"
+            )
         else:
-            result = "BINARY {0}\n".format(self.binary_model_name)
+            result = self._parent.BINARY.as_parfile_line(format=format)
+
         for p in self.params:
             par = getattr(self, p)
             if par.quantity is not None:
                 result += par.as_parfile_line(format=format)
+
         return result
 
     def FBX_unit(self, n):
@@ -409,13 +488,10 @@ class PulsarBinary(DelayComponent):
         new_epoch: float MJD (in TDB) or `astropy.Time` object
             The new epoch value.
         """
-        if isinstance(new_epoch, Time):
-            new_epoch = Time(new_epoch, scale="tdb", precision=9)
-        else:
-            new_epoch = Time(new_epoch, scale="tdb", format="mjd", precision=9)
+        new_epoch = parse_time(new_epoch, scale="tdb", precision=9)
 
         # Get PB and PBDOT from model
-        if self.PB.quantity is not None:
+        if self.PB.quantity is not None and not isinstance(self.PB, funcParameter):
             PB = self.PB.quantity
             if self.PBDOT.quantity is not None:
                 PBDOT = self.PBDOT.quantity
@@ -438,15 +514,12 @@ class PulsarBinary(DelayComponent):
         dt_integer_orbits = PB * n_orbits + PB * PBDOT * n_orbits**2 / 2.0
         self.T0.quantity = self.T0.quantity + dt_integer_orbits
 
-        try:
+        with contextlib.suppress(AttributeError):
             if self.FB2.quantity is not None:
                 log.warning(
                     "Ignoring orbital frequency derivatives higher than FB1"
                     "in computing new T0; a model fit should resolve this"
                 )
-        except AttributeError:
-            pass
-
         # Update PB or FB0, FB1, etc.
         if isinstance(self.binary_instance.orbits_cls, bo.OrbitPB):
             dPB = PBDOT * dt_integer_orbits
@@ -455,7 +528,7 @@ class PulsarBinary(DelayComponent):
             fbterms = [0.0 * u.Unit("")] + self._parent.get_prefix_list("FB")
 
             for n in range(len(fbterms) - 1):
-                cur_deriv = getattr(self, "FB{}".format(n))
+                cur_deriv = getattr(self, f"FB{n}")
                 cur_deriv.value = taylor_horner_deriv(
                     dt_integer_orbits.to(u.s), fbterms, deriv_order=n + 1
                 )
@@ -467,3 +540,64 @@ class PulsarBinary(DelayComponent):
         self.OM.quantity = self.OM.quantity + dOM
         dA1 = self.A1DOT.quantity * dt_integer_orbits
         self.A1.quantity = self.A1.quantity + dA1
+
+    def pb(self, t=None):
+        """Return binary period and uncertainty (optionally evaluated at different times) regardless of binary model
+
+        Parameters
+        ----------
+        t : astropy.time.Time, astropy.units.Quantity, numpy.ndarray, float, int, str, optional
+            Time(s) to evaluate period
+
+        Returns
+        -------
+        astropy.units.Quantity :
+            Binary period
+        astropy.units.Quantity :
+            Binary period uncertainty
+
+        """
+        if self.binary_model_name.startswith("ELL1"):
+            t0 = self.TASC.quantity
+        else:
+            t0 = self.T0.quantity
+        t = t0 if t is None else parse_time(t)
+        if self.PB.quantity is not None:
+            if self.PBDOT.quantity is None and (
+                not hasattr(self, "XPBDOT")
+                or getattr(self, "XPBDOT").quantity is not None
+            ):
+                return self.PB.quantity, self.PB.uncertainty
+            pb = self.PB.as_ufloat(u.d)
+            if self.PBDOT.quantity is not None:
+                pbdot = self.PBDOT.as_ufloat(u.s / u.s)
+            if hasattr(self, "XPBDOT") and self.XPBDOT.quantity is not None:
+                pbdot += self.XPBDOT.as_ufloat(u.s / u.s)
+            pnew = pb + pbdot * (t - t0).jd
+            if not isinstance(pnew, np.ndarray):
+                return pnew.n * u.d, pnew.s * u.d if pnew.s > 0 else None
+            import uncertainties.unumpy
+
+            return (
+                uncertainties.unumpy.nominal_values(pnew) * u.d,
+                uncertainties.unumpy.std_devs(pnew) * u.d,
+            )
+
+        elif self.FB0.quantity is not None:
+            # assume FB terms
+            dt = (t - t0).sec
+            coeffs = []
+            unit = u.Hz
+            for p in self.get_prefix_mapping_component("FB").values():
+                coeffs.append(getattr(self, p).as_ufloat(unit))
+                unit /= u.s
+            pnew = 1 / taylor_horner_deriv(dt, coeffs, deriv_order=0)
+            if not isinstance(pnew, np.ndarray):
+                return pnew.n * u.s, pnew.s * u.s if pnew.s > 0 else None
+            import uncertainties.unumpy
+
+            return (
+                uncertainties.unumpy.nominal_values(pnew) * u.s,
+                uncertainties.unumpy.std_devs(pnew) * u.s,
+            )
+        raise AttributeError("Neither PB nor FB0 is present in the timing model.")

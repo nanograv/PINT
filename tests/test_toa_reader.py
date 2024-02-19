@@ -1,6 +1,6 @@
 import os
 import shutil
-import unittest
+import pytest
 from io import StringIO
 from pathlib import Path
 
@@ -61,8 +61,8 @@ def check_indices_contiguous(toas):
     assert ix[0] == 0
 
 
-class TestTOAReader(unittest.TestCase):
-    def setUp(self):
+class TestTOAReader:
+    def setup_method(self):
         self.x = toa.TOAs(datadir / "test1.tim")
         self.x.apply_clock_corrections()
         self.x.compute_TDBs()
@@ -73,8 +73,16 @@ class TestTOAReader(unittest.TestCase):
         assert "barycenter" in ts.observatories
         assert ts.ntoas == 8
 
+    def test_read_parkes_phaseoffset(self):
+        # Fourth column contains non-zero phase offset
+        toaline = " PUPPI_J2044+28_58852_652 432.3420  58852.7590686063892    1.00  120.75        @"
+
+        # To be changed if/when phase offset for Parkes format is implemented
+        with pytest.raises(ValueError):
+            toa._parse_TOA_line(toaline)
+
     def test_commands(self):
-        assert len(self.x.commands) == 18
+        assert len(self.x.commands) == 19
 
     def test_count(self):
         assert self.x.ntoas == 9
@@ -177,7 +185,7 @@ def test_toa_merge():
         datadir / "parkes.toa",
     ]
     toas = [toa.get_TOAs(ff) for ff in filenames]
-    ntoas = sum([tt.ntoas for tt in toas])
+    ntoas = sum(tt.ntoas for tt in toas)
     nt = toa.merge_TOAs(toas)
     assert len(nt.observatories) == 3
     assert nt.table.meta["filename"] == filenames
@@ -193,7 +201,7 @@ def test_toa_merge_again():
         datadir / "parkes.toa",
     ]
     toas = [toa.get_TOAs(ff) for ff in filenames]
-    ntoas = sum([tt.ntoas for tt in toas])
+    ntoas = sum(tt.ntoas for tt in toas)
     nt = toa.merge_TOAs(toas)
     # The following tests merging with and already merged TOAs
     other = toa.get_TOAs(datadir / "test1.tim")
@@ -210,7 +218,7 @@ def test_toa_merge_again_2():
         datadir / "parkes.toa",
     ]
     toas = [toa.get_TOAs(ff) for ff in filenames]
-    ntoas = sum([tt.ntoas for tt in toas])
+    ntoas = sum(tt.ntoas for tt in toas)
     other = toa.get_TOAs(datadir / "test1.tim")
     # check consecutive merging
     nt = toa.merge_TOAs(toas[:2])

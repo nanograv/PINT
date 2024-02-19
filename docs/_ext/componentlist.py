@@ -1,9 +1,6 @@
 from docutils import nodes
 from docutils.parsers.rst import Directive
-from docutils.parsers.rst.directives.tables import Table
-from docutils.parsers.rst.directives import unchanged_required
 from docutils.statemachine import ViewList
-import pint.utils
 
 
 class ComponentList(Directive):
@@ -16,6 +13,7 @@ class ComponentList(Directive):
         content.append("", source)
 
         import pint.models.timing_model
+
         d = pint.models.timing_model.Component.component_types.copy()
         for k in sorted(d.keys()):
             class_ = d[k]
@@ -40,7 +38,6 @@ class ComponentList(Directive):
 
 
 def setup(app):
-
     app.add_directive("componentlist", ComponentList)
 
     return {

@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.8
+#       jupytext_version: 1.14.4
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -27,7 +27,6 @@ import astropy.time
 import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib.cm as cm
-import copy
 import io
 
 import pint.fitter
@@ -43,6 +42,7 @@ pint.logging.setup(level="INFO")
 # %% [markdown]
 # Some helper functions for plotting
 
+
 # %%
 def plot_contour(mp, mc, quantity, target, uncertainty, color, nsigma=3, **kwargs):
     """Plot two lines at +/-nsigma * the uncertainty to illustrate a constraint.
@@ -54,7 +54,7 @@ def plot_contour(mp, mc, quantity, target, uncertainty, color, nsigma=3, **kwarg
     mc : astropy.units.Quantity
         array of companion masses (y-axis)
     quantity : astropy.units.Quantity
-        2D array of the prediction as a function of mp,mc.  Shape is (len(mc),len(mp))
+        2D array of the prediction as a function of mp and mc. Shape is (len(mc), len(mp))
     target : astropy.units.Quantity
         best-fit value of the prediction (say from a PINT fit).
     uncertainty : astropy.units.Quantity
@@ -72,7 +72,7 @@ def plot_contour(mp, mc, quantity, target, uncertainty, color, nsigma=3, **kwarg
     return plt.contour(
         mp.value,
         mc.value,
-        quantity,
+        quantity.value,
         [(target - nsigma * uncertainty).value, (target + nsigma * uncertainty).value],
         colors=color,
         **kwargs,
@@ -163,6 +163,8 @@ def get_plot_xy(mp, mc, quantity, target, uncertainty, mp_to_plot, nsigma=3):
 # except
 # * I removed the DM1/DM2 parameters (they were causing errors without a DMEPOCH)
 # * I removed RM (PINT couldn't understand it)
+# * I removed EPHVER 2 (PINT doesn't do anything with it)
+# * I added EPHEM DE440
 test_par = """
 PSRJ            J1537+1155
 RAJ             15:37:09.961730               3.000e-06
@@ -190,8 +192,8 @@ F3              -1.6E-36                      2.000e-37
 GAMMA           2.0708E-03                    5.000e-07
 SINI            0.9772                        1.600e-03
 M2              1.35                          5.000e-02
-EPHVER          2
 UNITS           TDB
+EPHEM           DE440
 """
 
 # %%
@@ -205,7 +207,7 @@ m = get_model(f)
 
 # %%
 # roughly the parameters from Fonseca, Stairs, Thorsett (2014)
-tstart = astropy.time.Time(1990, format="jyear")
+tstart = astropy.time.Time(1990.25, format="jyear")
 tstop = astropy.time.Time(2014, format="jyear")
 # this is the error on each TOA
 error = 5 * u.us
@@ -238,7 +240,10 @@ fit.fit_toas()
 # %%
 # look at the output.  Hopefully, since these are simulated TOAs
 # the fit will be good.  And indeed we see a reduced chi^2 very close to 1
-fit.print_summary()
+try:
+    fit.print_summary()
+except ValueError as e:
+    print(f"Unexpected exception: {e}")
 
 # %% [markdown]
 # The value of $\dot P_B$ is biased because of kinematic effects:
@@ -426,7 +431,7 @@ plt.contour(
             fit.model.PB.quantity, fit.model.A1.quantity
         ).value
     ],
-    color="k",
+    colors="k",
 )
 z = (
     pint.derived_quantities.mass_funct2(Mp, Mc, 90 * u.deg).value
@@ -454,3 +459,5 @@ plt.ylabel("Companion Mass $(M_\\odot)$", fontsize=fontsize)
 plt.xticks(fontsize=fontsize)
 plt.yticks(fontsize=fontsize)
 # plt.savefig('PSRB1534_massmass.png')
+
+# %%

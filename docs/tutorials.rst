@@ -55,17 +55,25 @@ are not included in the default build because they take too long, but you can do
    examples/time_a_pulsar.ipynb
    examples/PINT_walkthrough.ipynb
    examples/fit_NGC6440E.ipynb
+   examples/covariance.ipynb
    examples/check_clock_corrections.ipynb
    examples/understanding_timing_models.ipynb
    examples/understanding_parameters.ipynb
    examples/build_model_from_scratch.ipynb
    examples/How_to_build_a_timing_model_component.ipynb
    examples/understanding_fitters.ipynb
+   examples/noise-fitting-example.ipynb
+   examples/rednoise-fit-example.ipynb
+   examples/WorkingWithFlags.ipynb
    examples/Wideband_TOA_walkthrough.ipynb
    examples/Simulate_and_make_MassMass.ipynb
    examples/check_phase_connection.ipynb
    examples/PINT_observatories.ipynb
    examples/solar_wind.ipynb
+   examples/MCMC_walkthrough.ipynb
+   examples/bayesian-example-NGC6440E.py
+   examples/bayesian-wideband-example.py
+   examples/simulation_example.py
    examples-rendered/paper_validation_example.ipynb
 
 .. _`Time a Pulsar`: examples/time_a_pulsar.html

@@ -36,16 +36,17 @@ PINT
 PINT is not TEMPO3
 ------------------
 
-PINT is a project to develop a new pulsar timing solution based on
+PINT is a project to develop a pulsar timing solution based on
 python and modern libraries. It is still in active development,
-but it can already produce residuals from most "normal"
+but it is in production use by the NANOGrav collaboration and
+it has been demonstrated produce residuals from most "normal"
 timing models that agree with Tempo and Tempo2 to within ~10
 nanoseconds. It can be used within python scripts or notebooks,
 and there are several command line tools that come with it.
 
-The primary reasons we are developing PINT are:
+The primary reasons PINT was developed are:
 
-* To have a robust system to check high-precision timing results that is
+* To have a robust system to produce high-precision timing results that is
   completely independent of TEMPO and Tempo2
 
 * To make a system that is easy to extend and modify due to a good design
@@ -57,7 +58,13 @@ IMPORTANT Notes!
 PINT has a naming conflict with the `pint <https://pypi.org/project/Pint/>`_ units package available from PyPI (i.e. using pip) and conda.  
 Do **NOT** ``pip install pint`` or ``conda install pint``!  See below!
 
-PINT requires `longdouble` arithmetic within `numpy`, which is currently not supported natively on M1 Macs (e.g., with the `ARM64 conda build <https://conda-forge.org/blog/posts/2020-10-29-macos-arm64/>`_).  So it may be better to install the standard `osx-64` build and rely on Rosetta.
+PINT requires ``longdouble`` (80- or 128-bit floating point) arithmetic within ``numpy``, which is currently not supported natively on M1/M2 Macs. 
+However, you can use an x86 version of ``conda`` even on an M1/M2 Mac (which will run under Rosetta emulation): 
+see `instructions for using Apple Intel packages on Apple 
+silicon <https://conda-forge.org/docs/user/tipsandtricks.html#installing-apple-intel-packages-on-apple-silicon>`_. 
+It's possible to have `parallel versions of conda for x86 and 
+ARM <https://towardsdatascience.com/python-conda-environments-for-both-arm64-and-x86-64-on-m1-apple-silicon-147b943ffa55>`_.
+
 
 Installing
 ----------
@@ -83,7 +90,7 @@ By default this will install in your system site-packages.  Depending on your sy
 to install it for just yourself (e.g. if you don't have permission to write in the system site-packages), or you may want to create a 
 virtualenv to work on PINT (using a virtualenv is highly recommended by the PINT developers).
 
-PINT is also available for Anaconda python under the conda-forge channel:
+PINT is also available for Anaconda python under the conda-forge channel::
 
     $ conda install -c conda-forge pint-pulsar
 
@@ -96,19 +103,17 @@ it, ensuring that all dependencies needed to run PINT are available::
     $ cd PINT
     $ pip install .
 
-Complete installation instructions are available here_.
-
-.. _here: https://nanograv-pint.readthedocs.io/en/latest/installation.html
+Complete installation instructions are available on `readthedocs <https://nanograv-pint.readthedocs.io/en/latest/installation.html>`_.
 
 
 Using
 -----
 
-See the online documentation_.  Specifically:
+See the online documentation_. Specifically:
 
-* `tutorials <https://nanograv-pint.readthedocs.io/en/latest/tutorials.html>`_
+* `Tutorials <https://nanograv-pint.readthedocs.io/en/latest/tutorials.html>`_
 * `API reference <https://nanograv-pint.readthedocs.io/en/latest/reference.html>`_
-* `How to's for common tasks <https://github.com/nanograv/PINT/wiki/How-To>`_
+* `How-Tos for common tasks <https://github.com/nanograv/PINT/wiki/How-To>`_
 
 Are you a NANOGrav member?  Then join the #pint channel in the NANOGrav slack.
   
@@ -119,10 +124,13 @@ email pint@nanograv.org or one of the people below:
 * Paul Ray (Paul.Ray@nrl.navy.mil)
 * David Kaplan (kaplan@uwm.edu)  
 
-Want to do something new?  Submit a github `issue <https://github.com/nanograv/PINT/issues>`_.
+Want to do something new? Submit a github `issue <https://github.com/nanograv/PINT/issues>`_.
   
 .. _documentation:   http://nanograv-pint.readthedocs.io/en/latest/
 
 And for more details, please read and cite(!) the PINT paper_.
 
 .. _paper:   https://ui.adsabs.harvard.edu/abs/2021ApJ...911...45L/abstract
+
+Articles that cite the PINT paper can be found in an ADS `Library <https://ui.adsabs.harvard.edu/search/q=citations(bibcode%3A2021ApJ...911...45L)&sort=date%20desc%2C%20bibcode%20desc&p_=0>`_.
+A list of software packages that use PINT can be found `here <https://nanograv-pint.readthedocs.io/en/latest/dependent-packages.html>`_.

@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.8
+#       jupytext_version: 1.14.4
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -27,7 +27,7 @@ import astropy.units as u
 
 import pint.fitter, pint.toa, pint.simulation
 from pint.models import get_model_and_toas
-from pint import utils, simulation
+from pint import simulation
 import pint.config
 import pint.logging
 
@@ -49,7 +49,7 @@ f.fit_toas()
 print("Current free parameters: ", f.model.free_params)
 
 # %%
-print("Current last TOA: MJD {}".format(f.model.FINISH.quantity))
+print(f"Current last TOA: MJD {f.model.FINISH.quantity}")
 
 # %%
 # pretend we have new observations starting at MJD 59000

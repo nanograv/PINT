@@ -1,4 +1,4 @@
-"""A wrapper around pulsar functions for pintkinter to use.
+"""A wrapper around pulsar functions for `pintk` to use.
 
 This object will be shared between widgets in the main frame
 and will contain the pre/post fit model, toas,
@@ -20,7 +20,7 @@ from pint.simulation import (
 )
 from pint.residuals import Residuals
 from pint.toa import get_TOAs, merge_TOAs
-from pint.utils import FTest
+from pint.utils import FTest, akaike_information_criterion
 
 import pint.logging
 from loguru import logger as log
@@ -37,6 +37,11 @@ plot_labels = [
     "frequency",
     "TOA error",
     "rounded MJD",
+    "model DM",
+    "WB DM",
+    "WB DM res",
+    "WB DM err",
+    "elongation",
 ]
 
 # Some parameters we do not want to add a fitting checkbox for:
@@ -103,7 +108,7 @@ class Pulsar:
         )
         # Set of indices from original list that are deleted
         self.deleted = set([])
-        if fitter == "auto":
+        if fitter == "notdownhill":
             self.fit_method = self.getDefaultFitter(downhill=False)
             log.info(
                 f"Since wideband={self.all_toas.wideband} and correlated={self.prefit_model.has_correlated_errors}, selecting fitter={self.fit_method}"
@@ -167,10 +172,7 @@ class Pulsar:
 
     def _delete_TOAs(self, toa_table):
         del_inds = np.in1d(toa_table["index"], np.array(list(self.deleted)))
-        if del_inds.sum() < len(toa_table):
-            return toa_table[~del_inds]
-        else:
-            return None
+        return toa_table[~del_inds] if del_inds.sum() < len(toa_table) else None
 
     def delete_TOAs(self, indices, selected):
         # note: indices should be a list or an array
@@ -326,7 +328,7 @@ class Pulsar:
                     line += "%24s\t" % post.str_quantity(post.quantity)
                     try:
                         line += "%16.8g  " % post.uncertainty.value
-                    except:
+                    except Exception:
                         line += "%18s" % ""
                     diff = post.value - pre.value
                     line += "%16.8g  " % diff
@@ -452,21 +454,11 @@ class Pulsar:
 
     def getDefaultFitter(self, downhill=False):
         if self.all_toas.wideband:
-            if downhill:
-                return "WidebandDownhillFitter"
-            else:
-                return "WidebandTOAFitter"
+            return "WidebandDownhillFitter" if downhill else "WidebandTOAFitter"
+        if self.prefit_model.has_correlated_errors:
+            return "DownhillGLSFitter" if downhill else "GLSFitter"
         else:
-            if self.prefit_model.has_correlated_errors:
-                if downhill:
-                    return "DownhillGLSFitter"
-                else:
-                    return "GLSFitter"
-            else:
-                if downhill:
-                    return "DownhillWLSFitter"
-                else:
-                    return "WLSFitter"
+            return "DownhillWLSFitter" if downhill else "WLSFitter"
 
     def print_chi2(self, selected):
         # Select all the TOAs if none are explicitly set
@@ -591,6 +583,10 @@ class Pulsar:
 
         # adds extra prefix params for fitting
         self.add_model_params()
+
+        print(
+            f"Akaike information criterion = {akaike_information_criterion(self.fitter.model, self.fitter.toas)}"
+        )
 
     def random_models(self, selected):
         """Compute and plot random models"""
