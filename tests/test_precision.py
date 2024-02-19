@@ -560,6 +560,7 @@ def test_astropy_time_epsilon():
 )
 @given(any_mjd())
 @example(i_f=(-2431739, -4.440892098500627e-16))
+@example(i_f=(-2431740, 0.0))
 def test_make_pulsar_mjd_ancient(i_f):
     i, f = i_f
     Time(val=i, val2=f, format="pulsar_mjd", scale="utc")
@@ -767,7 +768,7 @@ def tf2d_nice(sgn, h, m, s):
 def test_d2tf_tf2d_roundtrip(ndp, k, f):
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", r".*ihour outside range", erfa.ErfaWarning)
-        # Sometimes d2tf returns an hour of 24, which makes tf2d camplain
+        # Sometimes d2tf returns an hour of 24, which makes tf2d complain
         assert abs(tf2d_nice(*d2tf_nice(ndp, f)) - f) * 86400 < k * 10 ** (-ndp)
 
 

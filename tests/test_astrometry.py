@@ -6,7 +6,7 @@ import hypothesis.strategies as st
 import numpy as np
 import pytest
 from astropy.coordinates import Latitude, Longitude
-from hypothesis import given
+from hypothesis import given, example
 from pint.models import get_model
 from pinttestdata import datadir
 
@@ -114,6 +114,7 @@ TZRSITE                  1
     st.floats(0, 10),
     st.floats(0, 10),
 )
+@example(ra=1.0, dec=1.0, pmra=2.0, pmdec=4.345847379899e-311)
 def test_ssb_accuracy_ICRS(ra, dec, pmra, pmdec):
     m = get_model(StringIO(parICRS), RAJ=ra, DECJ=dec, PMRA=pmra, PMDEC=pmdec)
     t0 = m.POSEPOCH.quantity
@@ -172,6 +173,7 @@ def test_ssb_accuracy_ICRS_ECLmodel(elong, elat, pmelong, pmelat):
     st.floats(0, 10),
     st.floats(0, 10),
 )
+@example(1.0, 1.0, 0.5, 4.345847379899e-311)
 def test_ssb_accuracy_ECL_ECLmodel(elong, elat, pmelong, pmelat):
     m = get_model(
         StringIO(parECL), ELONG=elong, ELAT=elat, PMELONG=pmelong, PMELAT=pmelat
