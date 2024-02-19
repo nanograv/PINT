@@ -1,5 +1,6 @@
 """Functions related to simulating TOAs and models
 """
+
 from __future__ import annotations
 from collections import OrderedDict
 from copy import deepcopy
@@ -13,6 +14,7 @@ from astropy import time
 
 import pint.residuals
 import pint.toa
+import pint.fitter
 from pint.observatory import bipm_default, get_observatory
 
 __all__ = [
