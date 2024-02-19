@@ -1,10 +1,9 @@
 """Functions related to simulating TOAs and models
 """
 
-from __future__ import annotations
 from collections import OrderedDict
 from copy import deepcopy
-from typing import Optional, List
+from typing import Optional, List, Union
 import pathlib
 
 import astropy.units as u
@@ -222,8 +221,8 @@ def update_fake_dms(
 
 
 def make_fake_toas_uniform(
-    startMJD: float | u.Quantity | time.Time,
-    endMJD: float | u.Quantity | time.Time,
+    startMJD: Union[float, u.Quantity, time.Time],
+    endMJD: Union[float, u.Quantity, time.Time],
     ntoas: int,
     model: pint.models.timing_model.TimingModel,
     fuzz: u.Quantity = 0,
@@ -364,7 +363,7 @@ def make_fake_toas_uniform(
 
 
 def make_fake_toas_fromMJDs(
-    MJDs: u.Quantity | time.Time | np.ndarray,
+    MJDs: Union[u.Quantity, time.Time, np.ndarray],
     model: pint.models.timing_model.TimingModel,
     freq: u.Quantity = 1400 * u.MHz,
     obs: str = "GBT",
@@ -499,7 +498,7 @@ def make_fake_toas_fromMJDs(
 
 
 def make_fake_toas_fromtim(
-    timfile: str | List[str] | pathlib.Path,
+    timfile: Union[str, List[str], pathlib.Path],
     model: pint.models.timing_model.TimingModel,
     add_noise: bool = False,
     add_correlated_noise: bool = False,
@@ -691,12 +690,12 @@ def calculate_random_models(
 
 
 def _get_freqs_and_times(
-    start: float | u.Quantity | time.Time,
-    end: float | u.Quantity | time.Time,
+    start: Union[float, u.Quantity, time.Time],
+    end: Union[float, u.Quantity, time.Time],
     ntoas: int,
     freqs: u.Quantity,
     multi_freqs_in_epoch: bool = True,
-) -> (float | u.Quantity | time.Time, np.ndarray):
+) -> (Union[float, u.Quantity, time.Time], np.ndarray):
     freqs = np.atleast_1d(freqs)
     assert (
         len(freqs.shape) == 1 and len(freqs) <= ntoas
