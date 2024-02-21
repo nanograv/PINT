@@ -10,6 +10,7 @@ See Also
 --------
 :mod:`pint.observatory.topo_obs`
 """
+
 import astropy.units as u
 import numpy as np
 from astropy.coordinates import EarthLocation
@@ -258,7 +259,7 @@ def load_special_locations():
     # Need to initialize one of each so that it gets added to the list
     BarycenterObs("barycenter", aliases=["@", "ssb", "bary", "bat"], overwrite=True)
     GeocenterObs("geocenter", aliases=["0", "o", "coe", "geo"], overwrite=True)
-    T2SpacecraftObs("stl_geo", aliases=["STL_GEO"], overwrite=True)
+    T2SpacecraftObs("stl_geo", aliases=["STL_GEO", "spacecraft"], overwrite=True)
     # TODO -- How to handle user changing bipm_version?
 
 
