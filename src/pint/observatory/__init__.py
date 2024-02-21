@@ -28,7 +28,7 @@ from collections.abc import Callable
 from copy import deepcopy
 from io import StringIO
 from pathlib import Path
-from typing import Optional, Union, List, Dict
+from typing import Optional, Union, List, Dict, Literal
 
 import astropy.coordinates
 import astropy.time
@@ -348,7 +348,7 @@ class Observatory:
         """
         return None
 
-    def get_gcrs(self, t: astropy.time.Time, ephem=None):
+    def get_gcrs(self, t: astropy.time.Time, ephem: Optional[str] = None):
         """Return position vector of observatory in GCRS.
 
         t is an astropy.Time or array of astropy.Time objects
@@ -468,17 +468,17 @@ class Observatory:
         else:
             raise ValueError(f"Unknown method '{method}'.")
 
-    def _get_TDB_default(self, t: astropy.time.Time, ephem):
+    def _get_TDB_default(self, t: astropy.time.Time, ephem: Optional[str]):
         return t.tdb
 
-    def _get_TDB_ephem(self, t: astropy.time.Time, ephem):
+    def _get_TDB_ephem(self, t: astropy.time.Time, ephem: Optional[str]):
         """Read the ephem TDB-TT column.
 
         This column is provided by DE4XXt version of ephemeris.
         """
         raise NotImplementedError
 
-    def posvel(self, t: astropy.time.Time, ephem, group=None) -> PosVel:
+    def posvel(self, t: astropy.time.Time, ephem: Optional[str], group=None) -> PosVel:
         """Return observatory position and velocity for the given times.
 
         Position is relative to solar system barycenter; times are
@@ -491,7 +491,10 @@ class Observatory:
 
 
 def get_observatory(
-    name: str, include_gps=None, include_bipm=None, bipm_version: str = bipm_default
+    name: str,
+    include_gps: Optional[bool] = None,
+    include_bipm: Optional[bool] = None,
+    bipm_version: str = bipm_default,
 ):
     """Convenience function to get observatory object with options.
 
@@ -753,7 +756,7 @@ def compare_tempo_obsys_dat(tempodir: Optional[str] = None) -> Dict[str, List[Di
     return report
 
 
-def list_last_correction_mjds():
+def list_last_correction_mjds() -> None:
     """Print out a list of the last MJD each clock correction is good for.
 
     Each observatory lists the clock files it uses and their last dates,
@@ -784,7 +787,7 @@ def list_last_correction_mjds():
                 print(f"    {c.friendly_name:<20} MISSING")
 
 
-def update_clock_files(bipm_versions=None):
+def update_clock_files(bipm_versions: Optional[list[str]] = None) -> None:
     """Obtain an up-to-date version of all clock files.
 
     This up-to-date version will be stored in the Astropy cache;
@@ -826,13 +829,13 @@ def update_clock_files(bipm_versions=None):
 
 # Both topo_obs and special_locations need this
 def find_clock_file(
-    name,
-    format,
-    bogus_last_correction=False,
-    url_base=None,
-    clock_dir=None,
-    valid_beyond_ends=False,
-):
+    name: str,
+    format: Literal["tempo", "tempo2"],
+    bogus_last_correction: bool = False,
+    url_base: Optional[str] = None,
+    clock_dir: Union[str, Path, None] = None,
+    valid_beyond_ends: bool = False,
+) -> "ClockFile":
     """Locate and return a ClockFile in one of several places.
 
     PINT looks for clock files in three places, in order:

@@ -22,7 +22,7 @@ import json
 import os
 from functools import cached_property
 from pathlib import Path
-from typing import Optional, Union, List
+from typing import Optional, Union, List, Any
 
 import astropy.constants as c
 import astropy.time
@@ -183,14 +183,14 @@ class TopoObs(Observatory):
         tempo_code: Optional[str] = None,
         itoa_code: Optional[str] = None,
         aliases: Optional[List[str]] = None,
-        location=None,
+        location: Optional[EarthLocation] = None,
         itrf_xyz=None,
         lat: Optional[float] = None,
         lon: Optional[float] = None,
         height=None,
         clock_file: str = "",
         clock_fmt: str = "tempo",
-        clock_dir=None,
+        clock_dir: Union[str, Path, None] = None,
         include_gps: bool = True,
         include_bipm: bool = True,
         bipm_version: str = bipm_default,
@@ -287,10 +287,10 @@ class TopoObs(Observatory):
         return f"TopoObs('{self.name}' ({','.join(aliases)}) at [{self.location.x}, {self.location.y} {self.location.z}]:\n{origin})"
 
     @property
-    def timescale(self):
+    def timescale(self) -> str:
         return "utc"
 
-    def get_dict(self):
+    def get_dict(self) -> dict[str, dict[str, Any]]:
         """Return as a dict with limited/changed info"""
         # start with the default __dict__
         # copy some attributes to rename them and remove those that aren't needed for initialization
@@ -305,11 +305,11 @@ class TopoObs(Observatory):
         output["itrf_xyz"] = [x.to_value(u.m) for x in self.location.geocentric]
         return {self.name: output}
 
-    def get_json(self):
+    def get_json(self) -> str:
         """Return as a JSON string."""
         return json.dumps(self.get_dict())
 
-    def separation(self, other: "TopoObs", method: str = "cartesian"):
+    def separation(self, other: "TopoObs", method: str = "cartesian") -> u.Quantity:
         """Return separation between two TopoObs objects.
 
         Parameters
@@ -433,7 +433,7 @@ class TopoObs(Observatory):
             location=self.earth_location_itrf(),
         )
 
-    def get_gcrs(self, t: astropy.time.Time, ephem=None):
+    def get_gcrs(self, t: astropy.time.Time, ephem: Optional[str] = None):
         """Return position vector of TopoObs in GCRS
 
         Parameters
@@ -450,7 +450,7 @@ class TopoObs(Observatory):
         )
         return obs_geocenter_pv.pos
 
-    def posvel(self, t: astropy.time.Time, ephem, group=None) -> PosVel:
+    def posvel(self, t: astropy.time.Time, ephem: Optional[str], group=None) -> PosVel:
         if t.isscalar:
             t = Time([t])
         earth_pv: PosVel = objPosVel_wrt_SSB("earth", t, ephem)
