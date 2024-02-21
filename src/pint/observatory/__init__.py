@@ -787,7 +787,7 @@ def list_last_correction_mjds() -> None:
                 print(f"    {c.friendly_name:<20} MISSING")
 
 
-def update_clock_files(bipm_versions: Optional[list[str]] = None) -> None:
+def update_clock_files(bipm_versions: Optional[List[str]] = None) -> None:
     """Obtain an up-to-date version of all clock files.
 
     This up-to-date version will be stored in the Astropy cache;

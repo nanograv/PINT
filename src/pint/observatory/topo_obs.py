@@ -404,7 +404,7 @@ class TopoObs(Observatory):
             t = min(t, clock.last_correction_mjd())
         return t
 
-    def _get_TDB_ephem(self, t: Time, ephem) -> Time:
+    def _get_TDB_ephem(self, t: Time, ephem: Optional[str]) -> Time:
         """Read the ephem TDB-TT column.
 
         This column is provided by DE4XXt version of ephemeris. This function is only
