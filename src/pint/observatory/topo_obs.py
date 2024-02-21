@@ -22,7 +22,7 @@ import json
 import os
 from functools import cached_property
 from pathlib import Path
-from typing import Optional, Union, List, Any
+from typing import Optional, Union, List, Any, Dict
 
 import astropy.constants as c
 import astropy.time
@@ -290,7 +290,7 @@ class TopoObs(Observatory):
     def timescale(self) -> str:
         return "utc"
 
-    def get_dict(self) -> dict[str, dict[str, Any]]:
+    def get_dict(self) -> Dict[str, Dict[str, Any]]:
         """Return as a dict with limited/changed info"""
         # start with the default __dict__
         # copy some attributes to rename them and remove those that aren't needed for initialization
