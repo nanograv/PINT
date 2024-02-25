@@ -72,7 +72,7 @@ script_level = "WARNING"
 # https://loguru.readthedocs.io/en/stable/api/logger.html#color
 
 showwarning_ = warnings.showwarning
-warning_onceregistry = {}
+warning_onceregistry: dict[tuple[str, str], int] = {}
 
 # basic loguru level definitions from:
 # https://loguru.readthedocs.io/en/stable/api/logger.html
