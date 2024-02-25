@@ -35,6 +35,9 @@ jobs:
           - os: ubuntu-latest
             python: '3.12'
             tox_env: 'notebooks'
+          - os: ubuntu-latest
+            python: '3.12'
+            tox_env: 'mypy'
 #          - os: ubuntu-latest
 #            python: '3.8'
 #            tox_env: 'docs'
