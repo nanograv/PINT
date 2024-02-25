@@ -34,7 +34,7 @@ __all__ = [
     p=[u.Hz, u.s], pd=[u.Hz / u.s, u.s / u.s], pdd=[u.Hz / u.s**2, u.s / u.s**2]
 )
 def p_to_f(p, pd, pdd=None):
-    """Converts P, Pdot to F, Fdot (or vice versa)
+    r"""Converts P, Pdot to F, Fdot (or vice versa)
 
     Convert period, period derivative and period second
     derivative (if supplied) to the equivalent frequency counterparts.
@@ -81,7 +81,7 @@ def p_to_f(p, pd, pdd=None):
     pdorfderr=[u.Hz / u.s, u.s / u.s],
 )
 def pferrs(porf, porferr, pdorfd=None, pdorfderr=None):
-    """Convert P, Pdot to F, Fdot with uncertainties (or vice versa).
+    r"""Convert P, Pdot to F, Fdot with uncertainties (or vice versa).
 
     Calculate the period or frequency errors and
     the Pdot or fdot errors from the opposite ones.
@@ -129,7 +129,7 @@ def pferrs(porf, porferr, pdorfd=None, pdorfderr=None):
 
 @u.quantity_input(fo=u.Hz)
 def pulsar_age(f: u.Hz, fdot: u.Hz / u.s, n=3, fo=1e99 * u.Hz):
-    """Compute pulsar characteristic age
+    r"""Compute pulsar characteristic age
 
     Return the age of a pulsar given the spin frequency
     and frequency derivative.  By default, the characteristic age
@@ -172,7 +172,7 @@ def pulsar_age(f: u.Hz, fdot: u.Hz / u.s, n=3, fo=1e99 * u.Hz):
 
 @u.quantity_input(I=u.g * u.cm**2)
 def pulsar_edot(f: u.Hz, fdot: u.Hz / u.s, I=1.0e45 * u.g * u.cm**2):
-    """Compute pulsar spindown energy loss rate
+    r"""Compute pulsar spindown energy loss rate
 
     Return the pulsar `Edot` (:math:`\dot E`, in erg/s) given the spin frequency `f` and
     frequency derivative `fdot`. The NS moment of inertia is assumed to be
@@ -208,7 +208,7 @@ def pulsar_edot(f: u.Hz, fdot: u.Hz / u.s, I=1.0e45 * u.g * u.cm**2):
 
 @u.quantity_input
 def pulsar_B(f: u.Hz, fdot: u.Hz / u.s):
-    """Compute pulsar surface magnetic field
+    r"""Compute pulsar surface magnetic field
 
     Return the estimated pulsar surface magnetic field strength
     given the spin frequency and frequency derivative.
@@ -243,7 +243,7 @@ def pulsar_B(f: u.Hz, fdot: u.Hz / u.s):
 
 @u.quantity_input
 def pulsar_B_lightcyl(f: u.Hz, fdot: u.Hz / u.s):
-    """Compute pulsar magnetic field at the light cylinder
+    r"""Compute pulsar magnetic field at the light cylinder
 
     Return the estimated pulsar magnetic field strength at the
     light cylinder given the spin frequency and
@@ -285,7 +285,7 @@ def pulsar_B_lightcyl(f: u.Hz, fdot: u.Hz / u.s):
 
 @u.quantity_input
 def mass_funct(pb: u.d, x: u.cm):
-    """Compute binary mass function from period and semi-major axis
+    r"""Compute binary mass function from period and semi-major axis
 
     Can handle scalar or array inputs.
 
@@ -326,7 +326,7 @@ def mass_funct(pb: u.d, x: u.cm):
 
 @u.quantity_input
 def mass_funct2(mp: u.Msun, mc: u.Msun, i: u.deg):
-    """Compute binary mass function from masses and inclination
+    r"""Compute binary mass function from masses and inclination
 
     Can handle scalar or array inputs.
 
@@ -371,7 +371,7 @@ def mass_funct2(mp: u.Msun, mc: u.Msun, i: u.deg):
 
 @u.quantity_input
 def pulsar_mass(pb: u.d, x: u.cm, mc: u.Msun, i: u.deg):
-    """Compute pulsar mass from orbital parameters
+    r"""Compute pulsar mass from orbital parameters
 
     Return the pulsar mass (in solar mass units) for a binary.
     Can handle scalar or array inputs.
@@ -438,7 +438,7 @@ def pulsar_mass(pb: u.d, x: u.cm, mc: u.Msun, i: u.deg):
 
 @u.quantity_input(inc=u.deg, mpsr=u.solMass)
 def companion_mass(pb: u.d, x: u.cm, i=60.0 * u.deg, mp=1.4 * u.solMass):
-    """Commpute the companion mass from the orbital parameters
+    r"""Commpute the companion mass from the orbital parameters
 
     Compute companion mass for a binary system from orbital mechanics,
     not Shapiro delay.
@@ -542,7 +542,7 @@ def companion_mass(pb: u.d, x: u.cm, i=60.0 * u.deg, mp=1.4 * u.solMass):
 
 @u.quantity_input
 def pbdot(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
-    """Post-Keplerian orbital decay pbdot, assuming general relativity.
+    r"""Post-Keplerian orbital decay pbdot, assuming general relativity.
 
     pbdot (:math:`\dot P_B`) is the change in the binary orbital period
     due to emission of gravitational waves.
@@ -605,7 +605,7 @@ def pbdot(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
 @u.quantity_input
 def gamma(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
-    """Post-Keplerian time dilation and gravitational redshift gamma, assuming general relativity.
+    r"""Post-Keplerian time dilation and gravitational redshift gamma, assuming general relativity.
 
     gamma (:math:`\gamma`) is the amplitude of the modification in arrival times caused by the varying
     gravitational redshift of the companion and time dilation in an elliptical orbit.  The time delay is
@@ -661,7 +661,7 @@ def gamma(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
 @u.quantity_input
 def omdot(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
-    """Post-Keplerian longitude of periastron precession rate omdot, assuming general relativity.
+    r"""Post-Keplerian longitude of periastron precession rate omdot, assuming general relativity.
 
     omdot (:math:`\dot \omega`) is the relativistic advance of periastron.
     Can handle scalar or array inputs.
@@ -716,7 +716,7 @@ def omdot(mp: u.Msun, mc: u.Msun, pb: u.d, e: u.dimensionless_unscaled):
 
 @u.quantity_input
 def sini(mp: u.Msun, mc: u.Msun, pb: u.d, x: u.cm):
-    """Post-Keplerian sine of inclination, assuming general relativity.
+    r"""Post-Keplerian sine of inclination, assuming general relativity.
 
     Can handle scalar or array inputs.
 
@@ -916,14 +916,12 @@ def omdot_to_mtot(omdot: u.deg / u.yr, pb: u.d, e: u.dimensionless_unscaled):
     """
     return (
         (
-            (
-                omdot
-                / (
-                    3
-                    * (const.G / const.c**3) ** (2.0 / 3)
-                    * (pb / (2 * np.pi)) ** (-5.0 / 3)
-                    * (1 - e**2) ** (-1)
-                )
+            omdot
+            / (
+                3
+                * (const.G / const.c**3) ** (2.0 / 3)
+                * (pb / (2 * np.pi)) ** (-5.0 / 3)
+                * (1 - e**2) ** (-1)
             )
         )
         ** (3.0 / 2)

@@ -259,7 +259,7 @@ def publish(
                 )
             tex.write("\\hline\n")
 
-        tex.write("\multicolumn{2}{c}{Measured Quantities} \\\\ \n")
+        tex.write("\\multicolumn{2}{c}{Measured Quantities} \\\\ \n")
         tex.write("\\hline\n")
         for fp in model.free_params:
             param = getattr(model, fp)
@@ -273,7 +273,7 @@ def publish(
         tex.write("\\hline\n")
 
         if include_set_params:
-            tex.write("\multicolumn{2}{c}{Set Quantities} \\\\ \n")
+            tex.write("\\multicolumn{2}{c}{Set Quantities} \\\\ \n")
             tex.write("\\hline\n")
             for p in model.params:
                 param = getattr(model, p)
@@ -303,7 +303,7 @@ def publish(
                 and getattr(model, p).quantity is not None
             ]
             if len(derived_params) > 0:
-                tex.write("\multicolumn{2}{c}{Derived Quantities} \\\\ \n")
+                tex.write("\\multicolumn{2}{c}{Derived Quantities} \\\\ \n")
                 tex.write("\\hline\n")
                 for param in derived_params:
                     tex.write(publish_param(param))
