@@ -124,12 +124,13 @@ def showwarning(message, category, filename, lineno, file=None, line=None):
 
 class LogFilter:
     """Custom logging filter for ``loguru``.
+
     Define some messages that are never seen (e.g., Deprecation Warnings).
     Others that will only be seen once.  Filtering of those is done on the basis of regular expressions.
     """
 
     def __init__(self, onlyonce=None, never=None, onlyonce_level="INFO"):
-        """
+        r"""
         Define regexs for messages that will only be seen once.  Use ``\S+`` for a variable that might change.
         If a message comes through with a new value for that variable, it will be seen.
 

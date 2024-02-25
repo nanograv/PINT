@@ -1,4 +1,4 @@
-"""Polynomial coefficients for phase prediction
+r"""Polynomial coefficients for phase prediction
 
 Polycos designed to predict the pulsar's phase and pulse-period over a
 given interval using polynomial expansions.   
@@ -7,11 +7,11 @@ The pulse phase and frequency at time T are then calculated as:
 
 .. math::
 
-    \\Delta T = 1440(T-T_{\\rm mid})
+    \Delta T = 1440(T-T_{\rm mid})
 
-    \\phi = \\phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
+    \phi = \phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \Delta T + COEFF[3] \Delta T^2 + \ldots
 
-    f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \\ldots \\right)
+    f({\rm Hz}) = f_0 + \frac{1}{60}\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \ldots \right)
 
 Examples
 --------
@@ -228,7 +228,7 @@ class PolycoEntry:
 
 # Read polycos file data to table
 def tempo_polyco_table_reader(filename):
-    """Read tempo style polyco file to an astropy table.
+    r"""Read tempo style polyco file to an astropy table.
 
     Tempo style: The polynomial ephemerides are written to file 'polyco.dat'.
     Entries are listed sequentially within the file.  The file format is::
@@ -262,11 +262,11 @@ def tempo_polyco_table_reader(filename):
 
     .. math::
 
-        \\Delta T = 1440(T-T_{\\rm mid})
+        \Delta T = 1440(T-T_{\rm mid})
 
-        \\phi = \\phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
+        \phi = \phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \Delta T + COEFF[3] \Delta T^2 + \ldots
 
-        f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \\ldots \\right)
+        f({\rm Hz}) = f_0 + \frac{1}{60}\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \ldots \right)
 
     Parameters
     ----------
@@ -356,7 +356,7 @@ def tempo_polyco_table_reader(filename):
 
 
 def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
-    """Write tempo style polyco file from an astropy table.
+    r"""Write tempo style polyco file from an astropy table.
 
     Tempo style polyco file:
     The polynomial ephemerides are written to file 'polyco.dat'.  Entries
@@ -389,11 +389,11 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
 
     .. math::
 
-        \\Delta T = 1440(T-T_{\\rm mid})
+        \Delta T = 1440(T-T_{\rm mid})
 
-        \\phi = \\phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
+        \phi = \phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \Delta T + COEFF[3] \Delta T^2 + \ldots
 
-        f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \\ldots \\right)
+        f({\rm Hz}) = f_0 + \frac{1}{60}\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \ldots \right)
 
     Parameters
     ----------
@@ -918,7 +918,7 @@ class Polycos:
         return self.eval_abs_phase(t).frac
 
     def eval_abs_phase(self, t):
-        """
+        r"""
         Polyco evaluate absolute phase for a time array.
 
         Parameters
@@ -937,7 +937,7 @@ class Polycos:
 
         .. math::
 
-            \\phi = \\phi_0 + 60 \\Delta T f_0 + COEFF[1] + COEFF[2] \Delta T + COEFF[3] \Delta T^2 + \\ldots
+            \phi = \phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \Delta T + COEFF[3] \Delta T^2 + \ldots
 
         Calculation done using :meth:`pint.polycos.PolycoEntry.evalabsphase`
         """

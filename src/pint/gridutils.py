@@ -164,7 +164,7 @@ def grid_chisq(
     printprogress=True,
     **fitargs,
 ):
-    """Compute chisq over a grid of parameters
+    r"""Compute chisq over a grid of parameters
 
     Parameters
     ----------
