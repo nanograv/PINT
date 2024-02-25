@@ -120,8 +120,7 @@ def pferrs(porf, porferr, pdorfd=None, pdorfderr=None):
         return [1.0 / porf, porferr / porf**2.0]
     forperr = porferr / porf**2.0
     fdorpderr = np.sqrt(
-        (4.0 * pdorfd**2.0 * porferr**2.0) / porf**6.0
-        + pdorfderr**2.0 / porf**4.0
+        (4.0 * pdorfd**2.0 * porferr**2.0) / porf**6.0 + pdorfderr**2.0 / porf**4.0
     )
     [forp, fdorpd] = p_to_f(porf, pdorfd)
     return [forp, forperr, fdorpd, fdorpderr]
@@ -165,7 +164,7 @@ def pulsar_age(f: u.Hz, fdot: u.Hz / u.s, n=3, fo=1e99 * u.Hz):
 
     .. math::
 
-        \\tau = \\frac{f}{(n-1)\dot f}\\left(1-\\left(\\frac{f}{f_0}\\right)^{n-1}\\right)
+        \tau = \frac{f}{(n-1)\dot f}\left(1-\left(\frac{f}{f_0}\right)^{n-1}\right)
     """
     return (-f / ((n - 1.0) * fdot) * (1.0 - (f / fo) ** (n - 1.0))).to(u.yr)
 
@@ -515,17 +514,12 @@ def companion_mass(pb: u.d, x: u.cm, i=60.0 * u.deg, mp=1.4 * u.solMass):
     # delta1 is always <0
     # delta1 = 2 * b ** 3 - 9 * a * b * c + 27 * a ** 2 * d
     delta1 = (
-        -2 * massfunct**3
-        - 18 * a * mp * massfunct**2
-        - 27 * a**2 * massfunct * mp**2
+        -2 * massfunct**3 - 18 * a * mp * massfunct**2 - 27 * a**2 * massfunct * mp**2
     )
     # Q**2 is always > 0, so this is never a problem
     # in terms of complex numbers
     # Q = np.sqrt(delta1**2 - 4*delta0**3)
-    Q = np.sqrt(
-        108 * a**3 * mp**3 * massfunct**3
-        + 729 * a**4 * mp**4 * massfunct**2
-    )
+    Q = np.sqrt(108 * a**3 * mp**3 * massfunct**3 + 729 * a**4 * mp**4 * massfunct**2)
     # this could be + or - Q
     # pick the - branch since delta1 is <0 so that delta1 - Q is never near 0
     Ccubed = 0.5 * (delta1 + Q)
@@ -770,7 +764,7 @@ def sini(mp: u.Msun, mc: u.Msun, pb: u.d, x: u.cm):
 
 @u.quantity_input
 def dr(mp: u.Msun, mc: u.Msun, pb: u.d):
-    """Post-Keplerian Roemer delay term
+    r"""Post-Keplerian Roemer delay term
 
     dr (:math:`\delta_r`) is part of the relativistic deformation of the orbit
 
@@ -820,9 +814,9 @@ def dr(mp: u.Msun, mc: u.Msun, pb: u.d):
 
 @u.quantity_input
 def dth(mp: u.Msun, mc: u.Msun, pb: u.d):
-    """Post-Keplerian Roemer delay term
+    r"""Post-Keplerian Roemer delay term
 
-    dth (:math:`\delta_{\\theta}`) is part of the relativistic deformation of the orbit
+    dth (:math:`\delta_{\theta}`) is part of the relativistic deformation of the orbit
 
     Parameters
     ----------
@@ -850,8 +844,8 @@ def dth(mp: u.Msun, mc: u.Msun, pb: u.d):
 
     .. math::
 
-        \delta_{\\theta} = T_{\odot}^{2/3} \\left(\\frac{P_b}{2\pi}\\right)^{2/3}
-        \\frac{3.5 m_p^2+6 m_p m_c +2m_c^2}{(m_p+m_c)^{4/3}}
+        \delta_{\theta} = T_{\odot}^{2/3} \left(\frac{P_b}{2\pi}\right)^{2/3}
+        \frac{3.5 m_p^2+6 m_p m_c +2m_c^2}{(m_p+m_c)^{4/3}}
 
     with :math:`T_\odot = GM_\odot c^{-3}`.
 
@@ -870,7 +864,7 @@ def dth(mp: u.Msun, mc: u.Msun, pb: u.d):
 
 @u.quantity_input
 def omdot_to_mtot(omdot: u.deg / u.yr, pb: u.d, e: u.dimensionless_unscaled):
-    """Determine total mass from Post-Keplerian longitude of periastron precession rate omdot,
+    r"""Determine total mass from Post-Keplerian longitude of periastron precession rate omdot,
     assuming general relativity.
 
     omdot (:math:`\dot \omega`) is the relativistic advance of periastron.  It relates to the total
@@ -904,8 +898,8 @@ def omdot_to_mtot(omdot: u.deg / u.yr, pb: u.d, e: u.dimensionless_unscaled):
 
     .. math::
 
-        \dot \omega = 3T_{\odot}^{2/3} \\left(\\frac{P_b}{2\pi}\\right)^{-5/3}
-        \\frac{1}{1-e^2}(m_p+m_c)^{2/3}
+        \dot \omega = 3T_{\odot}^{2/3} \left(\frac{P_b}{2\pi}\right)^{-5/3}
+        \frac{1}{1-e^2}(m_p+m_c)^{2/3}
 
     to calculate :math:`m_{\\rm tot} = m_p + m_c`,
     with :math:`T_\odot = GM_\odot c^{-3}`.
@@ -930,7 +924,7 @@ def omdot_to_mtot(omdot: u.deg / u.yr, pb: u.d, e: u.dimensionless_unscaled):
 
 @u.quantity_input(pb=u.d, mp=u.Msun, mc=u.Msun, i=u.deg)
 def a1sini(mp, mc, pb, i=90 * u.deg):
-    """Pulsar's semi-major axis.
+    r"""Pulsar's semi-major axis.
 
     The full semi-major axis is given by Kepler's third law.  This is the
     projection (:math:`\sin i`) of just the pulsar's orbit (:math:`m_c/(m_p+m_c)`
@@ -966,8 +960,8 @@ def a1sini(mp, mc, pb, i=90 * u.deg):
 
     .. math::
 
-        \\frac{a_p \sin i}{c} = \\frac{m_c \sin i}{(m_p+m_c)^{2/3}}
-        G^{1/3}\\left(\\frac{P_b}{2\pi}\\right)^{2/3}
+        \frac{a_p \sin i}{c} = \frac{m_c \sin i}{(m_p+m_c)^{2/3}}
+        G^{1/3}\left(\frac{P_b}{2\pi}\right)^{2/3}
 
     More details in :ref:`Timing Models`.  Also see [8]_
 
@@ -982,7 +976,7 @@ def a1sini(mp, mc, pb, i=90 * u.deg):
 
 @u.quantity_input
 def shklovskii_factor(pmtot: u.mas / u.yr, D: u.kpc):
-    """Compute magnitude of Shklovskii correction factor.
+    r"""Compute magnitude of Shklovskii correction factor.
 
     Computes the Shklovskii correction factor, as defined in Eq 8.12 of Lorimer & Kramer (2005) [10]_
     This is the factor by which :math:`\dot P /P` is increased due to the transverse velocity.
@@ -991,7 +985,7 @@ def shklovskii_factor(pmtot: u.mas / u.yr, D: u.kpc):
 
     .. math::
 
-        \dot P_{\\rm intrinsic} = \dot P_{\\rm observed} - a_s P
+        \dot P_{\rm intrinsic} = \dot P_{\rm observed} - a_s P
 
     Parameters
     ----------

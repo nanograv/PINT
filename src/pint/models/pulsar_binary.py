@@ -38,7 +38,7 @@ from pint.pulsar_ecliptic import PulsarEcliptic
 
 
 class PulsarBinary(DelayComponent):
-    """Base class for binary models in PINT.
+    r"""Base class for binary models in PINT.
 
     This class provides a wrapper for internal classes that do the actual calculations.
     The calculations are done by the classes located in

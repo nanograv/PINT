@@ -1644,9 +1644,10 @@ def get_wavex_amps(model, index=None, quantity=False):
             model.components["WaveX"].get_prefix_mapping_component("WXSIN_").keys()
         )
         if len(indices) == 1:
-            values = getattr(
-                model.components["WaveX"], f"WXSIN_{int(indices):04d}"
-            ), getattr(model.components["WaveX"], f"WXCOS_{int(indices):04d}")
+            values = (
+                getattr(model.components["WaveX"], f"WXSIN_{int(indices):04d}"),
+                getattr(model.components["WaveX"], f"WXCOS_{int(indices):04d}"),
+            )
         else:
             values = [
                 (
@@ -1657,8 +1658,9 @@ def get_wavex_amps(model, index=None, quantity=False):
             ]
     elif isinstance(index, (int, float, np.int64)):
         idx_rf = f"{int(index):04d}"
-        values = getattr(model.components["WaveX"], f"WXSIN_{idx_rf}"), getattr(
-            model.components["WaveX"], f"WXCOS_{idx_rf}"
+        values = (
+            getattr(model.components["WaveX"], f"WXSIN_{idx_rf}"),
+            getattr(model.components["WaveX"], f"WXCOS_{idx_rf}"),
         )
     elif isinstance(index, (list, set, np.ndarray)):
         idx_rf = [f"{int(idx):04d}" for idx in index]
@@ -1784,12 +1786,12 @@ def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
 def ELL1_check(
     A1: u.cm, E: u.dimensionless_unscaled, TRES: u.us, NTOA: int, outstring=True
 ):
-    """Check for validity of assumptions in ELL1 binary model
+    r"""Check for validity of assumptions in ELL1 binary model
 
     Checks whether the assumptions that allow ELL1 to be safely used are
     satisfied. To work properly, we should have:
-    :math:`asini/c  e^4 \ll {\\rm timing precision} / \sqrt N_{\\rm TOA}`
-    or :math:`A1 E^4 \ll TRES / \sqrt N_{\\rm TOA}`
+    :math:`asini/c  e^4 \ll {\rm timing precision} / \sqrt N_{\rm TOA}`
+    or :math:`A1 E^4 \ll TRES / \sqrt N_{\rm TOA}`
 
     since the ELL1 model now includes terms up to O(E^3)
 
@@ -1810,7 +1812,6 @@ def ELL1_check(
     bool or str
         Returns True if ELL1 is safe to use, otherwise False.
         If outstring is True then returns a string summary instead.
-
     """
     lhs = A1 / const.c * E**4.0
     rhs = TRES / np.sqrt(NTOA)

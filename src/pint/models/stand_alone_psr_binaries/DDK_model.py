@@ -8,7 +8,7 @@ from .DD_model import DDmodel
 
 
 class DDKmodel(DDmodel):
-    """DDK model, a Kopeikin method corrected DD model.
+    r"""DDK model, a Kopeikin method corrected DD model.
 
     The main difference is that DDK model considers the effects on the pulsar binary parameters from the annual parallax of earth and the proper motion of the pulsar.
 
@@ -155,7 +155,7 @@ class DDKmodel(DDmodel):
     # Update binary parameters due to the pulser proper motion
 
     def delta_kin_proper_motion(self):
-        """The time dependent inclination angle
+        r"""The time dependent inclination angle
         (Kopeikin 1996 Eq 10):
 
         .. math::
@@ -231,7 +231,7 @@ class DDKmodel(DDmodel):
         return func()
 
     def delta_a1_proper_motion(self):
-        """The correction on a1 (projected semi-major axis)
+        r"""The correction on a1 (projected semi-major axis)
         due to the pulsar proper motion
         (Kopeikin 1996 Eq 8):
 
@@ -289,7 +289,7 @@ class DDKmodel(DDmodel):
         return d_delta_a1_proper_motion_d_T0.to(a1.unit / self.T0.unit)
 
     def delta_omega_proper_motion(self):
-        """The correction on omega (Longitude of periastron)
+        r"""The correction on omega (Longitude of periastron)
         due to the pulsar proper motion
         (Kopeikin 1996 Eq 9):
 
@@ -353,7 +353,7 @@ class DDKmodel(DDmodel):
     # Reference KOPEIKIN. 1995 Eq 18 -> Eq 19.
 
     def delta_I0(self):
-        """
+        r"""
         :math:`\Delta_{I0}`
 
         Reference: (Kopeikin 1995 Eq 15)
@@ -361,7 +361,7 @@ class DDKmodel(DDmodel):
         return -self.obs_pos[:, 0] * self.sin_long + self.obs_pos[:, 1] * self.cos_long
 
     def delta_J0(self):
-        """
+        r"""
         :math:`\Delta_{J0}`
 
         Reference: (Kopeikin 1995 Eq 16)
@@ -373,19 +373,19 @@ class DDKmodel(DDmodel):
         )
 
     def delta_sini_parallax(self):
-        """Reference (Kopeikin 1995 Eq 18).  Computes:
+        r"""Reference (Kopeikin 1995 Eq 18).  Computes:
 
         .. math::
 
-            x_{obs} = \\frac{a_p  \sin(i)_{obs}}{c}
+            x_{obs} = \frac{a_p  \sin(i)_{obs}}{c}
 
         Since :math:`a_p` and :math:`c` will not be changed by parallax:
 
         .. math::
 
-            x_{obs} = \\frac{a_p}{c}(\sin(i)_{\\rm intrisic} + \delta_{\sin(i)})
+            x_{obs} = \frac{a_p}{c}(\sin(i)_{\rm intrisic} + \delta_{\sin(i)})
 
-            \delta_{\sin(i)} = \sin(i)_{\\rm intrisic}  \\frac{\cot(i)_{\\rm intrisic}}{d} (\Delta_{I0} \sin KOM - \Delta_{J0}  \cos KOM)
+            \delta_{\sin(i)} = \sin(i)_{\rm intrisic}  \frac{\cot(i)_{\rm intrisic}}{d} (\Delta_{I0} \sin KOM - \Delta_{J0}  \cos KOM)
 
         """
         PX_kpc = self.PX.to(u.kpc, equivalencies=u.parallax())
@@ -518,9 +518,7 @@ class DDKmodel(DDmodel):
         PX_kpc = self.PX.to(u.kpc, equivalencies=u.parallax())
         kom_projection = self.delta_I0() * self.cos_KOM + self.delta_J0() * self.sin_KOM
         d_kin_d_T0 = self.d_kin_d_par("T0")
-        d_delta_omega_d_T0 = (
-            cos_kin / sin_kin**2 / PX_kpc * d_kin_d_T0 * kom_projection
-        )
+        d_delta_omega_d_T0 = cos_kin / sin_kin**2 / PX_kpc * d_kin_d_T0 * kom_projection
         return d_delta_omega_d_T0.to(
             self.OM.unit / self.T0.unit, equivalencies=u.dimensionless_angles()
         )
