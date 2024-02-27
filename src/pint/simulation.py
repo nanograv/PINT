@@ -51,7 +51,7 @@ def zero_residuals(
         1 nanosecond if operating in full precision or 5 us if not.
     """
     ts.compute_pulse_numbers(model)
-    maxresid = None
+    maxresid: Optional[float] = None
     if tolerance is None:
         tolerance = 1 * u.ns if pint.utils.check_longdouble_precision() else 5 * u.us
     for i in range(maxiter):
@@ -566,7 +566,7 @@ def calculate_random_models(
     keep_models: bool = True,
     return_time: bool = False,
     params: str = "all",
-) -> Tuple[np.ndarray, Optional[list]]:
+) -> Union[Tuple[np.ndarray, Optional[list]], np.ndarray]:
     """
     Calculates random models based on the covariance matrix of the `fitter` object.
 
