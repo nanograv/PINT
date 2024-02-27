@@ -53,7 +53,7 @@ import os
 import re
 import sys
 import warnings
-from typing import Dict
+from typing import Dict, Tuple
 
 from erfa import ErfaWarning
 from loguru import logger as log
@@ -73,7 +73,7 @@ script_level = "WARNING"
 # https://loguru.readthedocs.io/en/stable/api/logger.html#color
 
 showwarning_ = warnings.showwarning
-warning_onceregistry: Dict[tuple[str, str], int] = {}
+warning_onceregistry: Dict[Tuple[str, str], int] = {}
 
 # basic loguru level definitions from:
 # https://loguru.readthedocs.io/en/stable/api/logger.html
