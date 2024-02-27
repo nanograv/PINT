@@ -1,19 +1,19 @@
 """Functions related to simulating TOAs and models
 """
 
+import pathlib
 from collections import OrderedDict
 from copy import deepcopy
-from typing import Optional, List, Union
-import pathlib
+from typing import List, Optional, Tuple, Union
 
 import astropy.units as u
 import numpy as np
-from loguru import logger as log
 from astropy import time
+from loguru import logger as log
 
+import pint.fitter
 import pint.residuals
 import pint.toa
-import pint.fitter
 from pint.observatory import bipm_default, get_observatory
 
 __all__ = [
@@ -566,7 +566,7 @@ def calculate_random_models(
     keep_models: bool = True,
     return_time: bool = False,
     params: str = "all",
-) -> (np.ndarray, Optional[list]):
+) -> Tuple[np.ndarray, Optional[list]]:
     """
     Calculates random models based on the covariance matrix of the `fitter` object.
 
@@ -695,7 +695,7 @@ def _get_freqs_and_times(
     ntoas: int,
     freqs: u.Quantity,
     multi_freqs_in_epoch: bool = True,
-) -> (Union[float, u.Quantity, time.Time], np.ndarray):
+) -> Tuple[Union[np.ndarray, u.Quantity, time.Time], np.ndarray]:
     freqs = np.atleast_1d(freqs)
     assert (
         len(freqs.shape) == 1 and len(freqs) <= ntoas

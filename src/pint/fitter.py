@@ -60,6 +60,7 @@ To automatically select a fitter based on the properties of the data and model::
 
 import contextlib
 import copy
+from typing import List, Optional
 from warnings import warn
 
 import astropy.units as u
@@ -70,8 +71,9 @@ from loguru import logger as log
 from numdifftools import Hessian
 
 import pint
-import pint.utils
 import pint.derived_quantities
+import pint.utils
+import pint.models.timing_model
 from pint.models.parameter import (
     AngleParameter,
     boolParameter,
@@ -89,7 +91,6 @@ from pint.pint_matrix import (
 from pint.residuals import Residuals, WidebandTOAResiduals
 from pint.toa import TOAs
 from pint.utils import FTest, normalize_designmatrix
-
 
 __all__ = [
     "Fitter",
@@ -221,7 +222,41 @@ class Fitter:
         ``GLSFitter`` is used to compute ``chi2`` for appropriate Residuals objects.
     """
 
-    def __init__(self, toas, model, track_mode=None, residuals=None):
+    toas: TOAs
+    """TOAs to fit."""
+    model_init: pint.models.timing_model.TimingModel
+    """Initial timing model the Fitter was created with."""
+    track_mode: Optional[str]
+    """How to handle phase wrapping. 
+    
+    This is used when creating :class:`pint.residuals.Residuals` 
+    objects, and its meaning is defined there.
+    """
+    resids_init: Residuals
+    """Initial residuals with respect to the timing model."""
+    model: pint.models.timing_model.TimingModel
+    """Current timing model in use by the Fitter."""
+    fitresult: List
+    method: Optional[str]
+    is_wideband: bool
+    converged: bool
+    parameter_covariance_matrix: CovarianceMatrix
+    """The covariance matrix of the model parameters after fitting.
+    
+    This attribute may not exist if the fitter has not been run
+    (some subclasses of Fitter don't compute this matrix except 
+    as part of the fit, and don't create the attribute).
+    """
+    fac: np.ndarray
+    """Scaling factors applied to the columns(?) of the design matrix."""
+
+    def __init__(
+        self,
+        toas: TOAs,
+        model: pint.models.TimingModel,
+        track_mode: Optional[str] = None,
+        residuals: Optional[Residuals] = None,
+    ):
         if not set(model.free_params).issubset(model.fittable_params):
             free_unfittable_params = set(model.free_params).difference(
                 model.fittable_params
@@ -490,9 +525,11 @@ class Fitter:
         """
 
         return self.model.get_derived_params(
-            rms=self.resids.toa.rms_weighted()
-            if self.is_wideband
-            else self.resids.rms_weighted(),
+            rms=(
+                self.resids.toa.rms_weighted()
+                if self.is_wideband
+                else self.resids.rms_weighted()
+            ),
             ntoas=self.toas.ntoas,
             returndict=returndict,
         )
