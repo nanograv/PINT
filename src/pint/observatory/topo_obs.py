@@ -359,7 +359,10 @@ class TopoObs(Observatory):
                     cf,
                     format=self.clock_fmt,
                     clock_dir=self.clock_dir,
-                    **kwargs,
+                    # mypy is unhappy about passing in a dict as **kwargs
+                    # which is fair enough since it can't check the keys
+                    # are valid arguments.
+                    **kwargs,  # type: ignore
                 )
             )
         return clock

@@ -28,7 +28,7 @@ from collections.abc import Callable
 from copy import deepcopy
 from io import StringIO
 from pathlib import Path
-from typing import Optional, Union, List, Dict, Literal
+from typing import TYPE_CHECKING, Dict, List, Literal, Optional, Union
 
 import astropy.coordinates
 import astropy.time
@@ -39,7 +39,10 @@ from loguru import logger as log
 
 from pint.config import runtimefile
 from pint.pulsar_mjd import Time
-from pint.utils import interesting_lines, PosVel
+from pint.utils import PosVel, interesting_lines
+
+if TYPE_CHECKING:
+    from pint.observatory.clock_file import ClockFile
 
 # Include any files that define observatories here.  This will start
 # with the standard distribution files, then will read any system- or
@@ -830,7 +833,7 @@ def update_clock_files(bipm_versions: Optional[List[str]] = None) -> None:
 # Both topo_obs and special_locations need this
 def find_clock_file(
     name: str,
-    format: Literal["tempo", "tempo2"],
+    format: str,
     bogus_last_correction: bool = False,
     url_base: Optional[str] = None,
     clock_dir: Union[str, Path, None] = None,
