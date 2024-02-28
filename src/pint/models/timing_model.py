@@ -24,53 +24,53 @@ To actually create a timing model, you almost certainly want to use
 :func:`~pint.models.model_builder.get_model`.
 
 See :ref:`Timing Models` for more details on how PINT's timing models work.
-
 """
 
 
 import abc
+import contextlib
 import copy
 import inspect
-import contextlib
 from collections import OrderedDict, defaultdict
 from functools import wraps
+from typing import Dict
 from warnings import warn
+
+import astropy.coordinates as coords
+import astropy.time as time
+import numpy as np
+from astropy import constants as c
+from astropy import units as u
+from astropy.utils.decorators import lazyproperty
+from loguru import logger as log
+from scipy.optimize import brentq
 from uncertainties import ufloat
 
-import astropy.time as time
-from astropy import units as u, constants as c
-import numpy as np
-from astropy.utils.decorators import lazyproperty
-import astropy.coordinates as coords
-from pint.pulsar_ecliptic import OBL, PulsarEcliptic
-from scipy.optimize import brentq
-from loguru import logger as log
-
 import pint
+from pint.derived_quantities import dispersion_slope
 from pint.models.parameter import (
-    _parfile_formats,
     AngleParameter,
     MJDParameter,
     Parameter,
+    _parfile_formats,
     boolParameter,
     floatParameter,
     funcParameter,
     intParameter,
     maskParameter,
-    strParameter,
     prefixParameter,
+    strParameter,
 )
 from pint.phase import Phase
+from pint.pulsar_ecliptic import OBL, PulsarEcliptic
 from pint.toa import TOAs
 from pint.utils import (
     PrefixError,
-    split_prefixed_name,
-    open_or_use,
     colorize,
+    open_or_use,
+    split_prefixed_name,
     xxxselections,
 )
-from pint.derived_quantities import dispersion_slope
-
 
 __all__ = [
     "DEFAULT_ORDER",
@@ -490,10 +490,10 @@ class TimingModel:
         ), "Model can have at most one solar wind dispersion component."
 
         from pint.models.dispersion_model import DispersionDMX
+        from pint.models.dmwavex import DMWaveX
+        from pint.models.noise_model import PLDMNoise, PLRedNoise
         from pint.models.wave import Wave
         from pint.models.wavex import WaveX
-        from pint.models.dmwavex import DMWaveX
-        from pint.models.noise_model import PLRedNoise, PLDMNoise
 
         if num_components_of_type((DispersionDMX, PLDMNoise, DMWaveX)) > 1:
             log.warning(
@@ -612,7 +612,9 @@ class TimingModel:
         """
         return [p for p in self.params if not getattr(self, p).frozen]
 
-    @free_params.setter
+    # mypy doesn't understand the decorator syntax here
+    # maybe we'd need to express the type of property_exists better?
+    @free_params.setter  # type: ignore
     def free_params(self, params):
         params_true = {self.match_param_aliases(p) for p in params}
         for p in self.params:
@@ -635,10 +637,8 @@ class TimingModel:
                 p in self.phase_deriv_funcs
                 or p in self.delay_deriv_funcs
                 or (
-                    (
-                        hasattr(self, "toasigma_deriv_funcs")
-                        and p in self.toasigma_deriv_funcs
-                    )
+                    hasattr(self, "toasigma_deriv_funcs")
+                    and p in self.toasigma_deriv_funcs
                 )
                 or (hasattr(self[p], "prefix") and self[p].prefix == "ECORR")
             )
@@ -3127,7 +3127,9 @@ class TimingModel:
                 )
                 s += "Conversion from ELL1 parameters:\n"
                 ecc = um.sqrt(eps1**2 + eps2**2)
-                s += "ECC = {:P}\n".format(ecc)
+                # mypy does not know about uncertainties introducing a new
+                # format code, so we have to tell it to ignore this line
+                s += "ECC = {:P}\n".format(ecc)  # type: ignore
                 outdict["ECC"] = ecc
                 om = um.atan2(eps1, eps2) * 180.0 / np.pi
                 if om < 0.0:
@@ -3181,14 +3183,12 @@ class TimingModel:
                 omdot = self.OMDOT.as_ufloat(u.rad / u.s)
                 e = ecc if ell1 else self.ECC.as_ufloat()
                 mt = (
-                    (
-                        omdot
-                        / (
-                            3
-                            * (c.G * u.Msun / c.c**3).to_value(u.s) ** (2.0 / 3)
-                            * ((pb * 86400 / 2 / np.pi)) ** (-5.0 / 3)
-                            * (1 - e**2) ** -1
-                        )
+                    omdot
+                    / (
+                        3
+                        * (c.G * u.Msun / c.c**3).to_value(u.s) ** (2.0 / 3)
+                        * (pb * 86400 / 2 / np.pi) ** (-5.0 / 3)
+                        * (1 - e**2) ** -1
                     )
                 ) ** (3.0 / 2)
                 s += f"Total mass, assuming GR, from OMDOT is {mt:SP} Msun\n"
@@ -3254,7 +3254,7 @@ class Component(metaclass=ModelMeta):
     invalid parameter values are chosen.
     """
 
-    component_types = {}
+    component_types: Dict[str, ModelMeta] = {}
 
     def __init__(self):
         self.params = []
