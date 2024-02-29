@@ -1,7 +1,10 @@
 """Functions related to simulating TOAs and models
 """
+
 from collections import OrderedDict
 from copy import deepcopy
+from typing import Optional, List, Union
+import pathlib
 
 import astropy.units as u
 import numpy as np
@@ -10,6 +13,7 @@ from astropy import time
 
 import pint.residuals
 import pint.toa
+import pint.fitter
 from pint.observatory import bipm_default, get_observatory
 
 __all__ = [
@@ -22,7 +26,14 @@ __all__ = [
 ]
 
 
-def zero_residuals(ts, model, maxiter=10, tolerance=None):
+def zero_residuals(
+    ts: pint.toa.TOAs,
+    model: pint.models.timing_model.TimingModel,
+    *,
+    subtract_mean: bool = True,
+    maxiter: int = 10,
+    tolerance: Optional[u.Quantity] = None,
+):
     """Use a model to adjust a TOAs object, setting residuals to 0 iteratively.
 
     Parameters
@@ -31,6 +42,8 @@ def zero_residuals(ts, model, maxiter=10, tolerance=None):
         Input TOAs (modified in-place)
     model : pint.models.timing_model.TimingModel
         current model
+    subtract_mean : bool, optional
+        Controls whether mean will be subtracted from the residuals when making fake TOAs
     maxiter : int, optional
         maximum number of iterations allowed
     tolerance : astropy.units.Quantity
@@ -42,7 +55,9 @@ def zero_residuals(ts, model, maxiter=10, tolerance=None):
     if tolerance is None:
         tolerance = 1 * u.ns if pint.utils.check_longdouble_precision() else 5 * u.us
     for i in range(maxiter):
-        r = pint.residuals.Residuals(ts, model, track_mode="use_pulse_numbers")
+        r = pint.residuals.Residuals(
+            ts, model, subtract_mean=subtract_mean, track_mode="use_pulse_numbers"
+        )
         resids = r.calc_time_resids(calctype="taylor")
         if maxresid is not None and (np.abs(resids).max() > maxresid):
             log.warning(
@@ -58,7 +73,11 @@ def zero_residuals(ts, model, maxiter=10, tolerance=None):
         )
 
 
-def get_fake_toa_clock_versions(model, include_bipm=False, include_gps=True):
+def get_fake_toa_clock_versions(
+    model: pint.models.timing_model.TimingModel,
+    include_bipm: bool = False,
+    include_gps: bool = True,
+) -> dict:
     """Get the clock settings (corrections, etc) for fake TOAs
 
     Parameters
@@ -71,6 +90,10 @@ def get_fake_toa_clock_versions(model, include_bipm=False, include_gps=True):
     include_gps : bool, optional
         Whether or not to disable UTC(GPS)->UTC clock correction
         (see :class:`pint.observatory.topo_obs.TopoObs`)
+
+    Returns
+    -------
+    dict
     """
     bipm_version = bipm_default
     if model["CLOCK"].value is not None:
@@ -104,7 +127,14 @@ def get_fake_toa_clock_versions(model, include_bipm=False, include_gps=True):
     }
 
 
-def make_fake_toas(ts, model, add_noise=False, add_correlated_noise=False, name="fake"):
+def make_fake_toas(
+    ts: pint.toa.TOAs,
+    model: pint.models.timing_model.TimingModel,
+    add_noise: bool = False,
+    add_correlated_noise: bool = False,
+    name: str = "fake",
+    subtract_mean: bool = True,
+) -> pint.toa.TOAs:
     """Make toas from an array of times
 
     Can include alternating frequencies if fed an array of frequencies,
@@ -122,6 +152,8 @@ def make_fake_toas(ts, model, add_noise=False, add_correlated_noise=False, name=
         Add correlated noise to the TOAs if it's present in the timing mode.
     name : str, optional
         Name for the TOAs (goes into the flags)
+    subtract_mean : bool, optional
+        Controls whether mean will be subtracted from the residuals when making fake TOAs
 
     Returns
     -------
@@ -133,7 +165,7 @@ def make_fake_toas(ts, model, add_noise=False, add_correlated_noise=False, name=
     `add_noise` respects any ``EFAC`` or ``EQUAD`` present in the `model`
     """
     tsim = deepcopy(ts)
-    zero_residuals(tsim, model)
+    zero_residuals(tsim, model, subtract_mean=subtract_mean)
 
     if add_correlated_noise:
         U = model.noise_model_designmatrix(tsim)
@@ -153,8 +185,23 @@ def make_fake_toas(ts, model, add_noise=False, add_correlated_noise=False, name=
     return tsim
 
 
-def update_fake_dms(model, ts, dm_error, add_noise):
-    """Update simulated wideband DM information in TOAs."""
+def update_fake_dms(
+    model: pint.models.timing_model.TimingModel,
+    ts: pint.toa.TOAs,
+    dm_error: u.Quantity,
+    add_noise: bool,
+) -> pint.toa.TOAs:
+    """Update simulated wideband DM information in TOAs.
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+    ts : pint.toa.TOAs
+        Input TOAs
+    dm_error: u.Quantity
+    add_noise : bool, optional
+        Add noise to the DMs (otherwise `dm_error` just populates the column)
+    """
     toas = deepcopy(ts)
 
     dm_errors = dm_error * np.ones(len(toas))
@@ -174,24 +221,25 @@ def update_fake_dms(model, ts, dm_error, add_noise):
 
 
 def make_fake_toas_uniform(
-    startMJD,
-    endMJD,
-    ntoas,
-    model,
-    fuzz=0,
-    freq=1400 * u.MHz,
-    obs="GBT",
-    error=1 * u.us,
-    add_noise=False,
-    add_correlated_noise=False,
-    wideband=False,
-    wideband_dm_error=1e-4 * pint.dmu,
-    name="fake",
-    include_bipm=False,
-    include_gps=True,
-    multi_freqs_in_epoch=False,
-    flags=None,
-):
+    startMJD: Union[float, u.Quantity, time.Time],
+    endMJD: Union[float, u.Quantity, time.Time],
+    ntoas: int,
+    model: pint.models.timing_model.TimingModel,
+    fuzz: u.Quantity = 0,
+    freq: u.Quantity = 1400 * u.MHz,
+    obs: str = "GBT",
+    error: u.Quantity = 1 * u.us,
+    add_noise: bool = False,
+    add_correlated_noise: bool = False,
+    wideband: bool = False,
+    wideband_dm_error: u.Quantity = 1e-4 * pint.dmu,
+    name: str = "fake",
+    include_bipm: bool = False,
+    include_gps: bool = True,
+    multi_freqs_in_epoch: bool = False,
+    flags: Optional[dict] = None,
+    subtract_mean: bool = True,
+) -> pint.toa.TOAs:
     """Simulate uniformly spaced TOAs.
 
     Parameters
@@ -236,6 +284,8 @@ def make_fake_toas_uniform(
         Whether to generate multiple frequency TOAs for the same epoch.
     flags: None or dict
         Dictionary of flags to be added to all simulated TOAs.
+    subtract_mean : bool, optional
+        Controls whether mean will be subtracted from the residuals when making fake TOAs
 
     Returns
     -------
@@ -308,25 +358,27 @@ def make_fake_toas_uniform(
         add_noise=add_noise,
         add_correlated_noise=add_correlated_noise,
         name=name,
+        subtract_mean=subtract_mean,
     )
 
 
 def make_fake_toas_fromMJDs(
-    MJDs,
-    model,
-    freq=1400 * u.MHz,
-    obs="GBT",
-    error=1 * u.us,
-    add_noise=False,
-    add_correlated_noise=False,
-    wideband=False,
-    wideband_dm_error=1e-4 * pint.dmu,
-    name="fake",
-    include_bipm=False,
-    include_gps=True,
-    multi_freqs_in_epoch=False,
-    flags=None,
-):
+    MJDs: Union[u.Quantity, time.Time, np.ndarray],
+    model: pint.models.timing_model.TimingModel,
+    freq: u.Quantity = 1400 * u.MHz,
+    obs: str = "GBT",
+    error: u.Quantity = 1 * u.us,
+    add_noise: bool = False,
+    add_correlated_noise: bool = False,
+    wideband: bool = False,
+    wideband_dm_error: u.Quantity = 1e-4 * pint.dmu,
+    name: str = "fake",
+    include_bipm: bool = False,
+    include_gps: bool = True,
+    multi_freqs_in_epoch: bool = False,
+    flags: Optional[dict] = None,
+    subtract_mean: bool = True,
+) -> pint.toa.TOAs:
     """Simulate TOAs from a list of MJDs
 
     Parameters
@@ -363,6 +415,8 @@ def make_fake_toas_fromMJDs(
         Whether to generate multiple frequency TOAs for the same epoch.
     flags: None or dict
         Dictionary of flags to be added to all simulated TOAs.
+    subtract_mean : bool, optional
+        Controls whether mean will be subtracted from the residuals when making fake TOAs
 
     Returns
     -------
@@ -439,12 +493,18 @@ def make_fake_toas_fromMJDs(
         add_noise=add_noise,
         add_correlated_noise=add_correlated_noise,
         name=name,
+        subtract_mean=subtract_mean,
     )
 
 
 def make_fake_toas_fromtim(
-    timfile, model, add_noise=False, add_correlated_noise=False, name="fake"
-):
+    timfile: Union[str, List[str], pathlib.Path],
+    model: pint.models.timing_model.TimingModel,
+    add_noise: bool = False,
+    add_correlated_noise: bool = False,
+    name: str = "fake",
+    subtract_mean: bool = True,
+) -> pint.toa.TOAs:
     """Simulate fake TOAs with the same times as an input tim file
 
     Parameters
@@ -459,6 +519,8 @@ def make_fake_toas_fromtim(
         Add correlated noise to the TOAs if it's present in the timing mode.
     name : str, optional
         Name for the TOAs (goes into the flags)
+    subtract_mean : bool, optional
+        Controls whether mean will be subtracted from the residuals when making fake TOAs
 
     Returns
     -------
@@ -493,12 +555,18 @@ def make_fake_toas_fromtim(
         add_noise=add_noise,
         add_correlated_noise=add_correlated_noise,
         name=name,
+        subtract_mean=subtract_mean,
     )
 
 
 def calculate_random_models(
-    fitter, toas, Nmodels=100, keep_models=True, return_time=False, params="all"
-):
+    fitter: pint.fitter.Fitter,
+    toas: pint.toa.TOAs,
+    Nmodels: int = 100,
+    keep_models: bool = True,
+    return_time: bool = False,
+    params: str = "all",
+) -> (np.ndarray, Optional[list]):
     """
     Calculates random models based on the covariance matrix of the `fitter` object.
 
@@ -621,7 +689,13 @@ def calculate_random_models(
     return (dphase, random_models) if keep_models else dphase
 
 
-def _get_freqs_and_times(start, end, ntoas, freqs, multi_freqs_in_epoch=True):
+def _get_freqs_and_times(
+    start: Union[float, u.Quantity, time.Time],
+    end: Union[float, u.Quantity, time.Time],
+    ntoas: int,
+    freqs: u.Quantity,
+    multi_freqs_in_epoch: bool = True,
+) -> (Union[float, u.Quantity, time.Time], np.ndarray):
     freqs = np.atleast_1d(freqs)
     assert (
         len(freqs.shape) == 1 and len(freqs) <= ntoas

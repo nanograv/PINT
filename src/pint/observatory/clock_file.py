@@ -105,8 +105,9 @@ class ClockFile:
             raise ValueError(f"MJDs have {len(mjd)} entries but clock has {len(clock)}")
         self._time = Time(mjd, format="pulsar_mjd", scale="utc")
         if not np.all(np.diff(self._time.mjd) >= 0):
+            i = np.where(np.diff(self._time.mjd) < 0)[0][0]
             raise ValueError(
-                f"Clock file {self.friendly_name} appears to be out of order"
+                f"Clock file {self.friendly_name} appears to be out of order: {self._time[i]} > {self._time[i+1]}"
             )
         self._clock = clock.to(u.us)
         if comments is None:
