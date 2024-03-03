@@ -1,24 +1,28 @@
 """Generate LaTeX summary of a timing model and TOAs."""
+
+from io import StringIO
+from typing import List, Union
+
+import numpy as np
 from pint.models import (
-    TimingModel,
-    DispersionDMX,
     FD,
+    AbsPhase,
+    DispersionDMX,
     Glitch,
     PhaseJump,
     SolarWindDispersionX,
-    AbsPhase,
+    TimingModel,
     Wave,
 )
+from pint.models.timing_model import Component
 from pint.models.dispersion_model import DispersionJump
 from pint.models.noise_model import NoiseComponent
 from pint.models.parameter import (
     Parameter,
     funcParameter,
 )
-from pint.toa import TOAs
 from pint.residuals import Residuals, WidebandTOAResiduals
-from io import StringIO
-import numpy as np
+from pint.toa import TOAs
 
 
 def publish_param(param: Parameter):
@@ -91,6 +95,7 @@ def publish(
         else "WLS"
     )
 
+    res: Union[Residuals, WidebandTOAResiduals]
     if toas.is_wideband():
         res = WidebandTOAResiduals(toas, model)
         toares = res.toa
@@ -117,7 +122,7 @@ def publish(
         "BINARY",
     ]
 
-    exclude_components = [Wave]
+    exclude_components: List[type[Component]] = [Wave]
     if not include_dmx:
         exclude_components.append(DispersionDMX)
     if not include_jumps:

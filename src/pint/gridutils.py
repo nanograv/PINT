@@ -1,4 +1,5 @@
 """Tools for building chi-squared grids."""
+
 import concurrent.futures
 import copy
 import multiprocessing
@@ -12,7 +13,7 @@ from loguru import logger as log
 try:
     from tqdm import tqdm
 except ModuleNotFoundError:
-    tqdm = None
+    tqdm = None  # type: ignore
 
 from astropy.utils.console import ProgressBar
 

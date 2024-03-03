@@ -1,4 +1,5 @@
 """The DDS model - Damour and Deruelle with alternate Shapiro delay parametrization."""
+
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
@@ -69,13 +70,13 @@ class DDHmodel(DDmodel):
     def M2(self):
         return self.H3 / self.STIGMA**3 / Tsun.value
 
-    @SINI.setter
+    @SINI.setter  # type: ignore[no-redef, attr-defined]
     def SINI(self, val):
         log.debug(
             "DDH model uses H3/STIGMA as Shapiro delay parameter. SINI will not be used."
         )
 
-    @M2.setter
+    @M2.setter  # type: ignore[no-redef, attr-defined]
     def M2(self, val):
         log.debug(
             "DDH model uses H3/STIGMA as Shapiro delay parameter. M2 will not be used."

@@ -1,5 +1,4 @@
-"""Functions to compute various derived quantities from pulsar spin parameters, masses, etc.
-"""
+"""Functions to compute various derived quantities from pulsar spin parameters, masses, etc."""
 
 import astropy.constants as const
 import astropy.units as u
@@ -128,7 +127,7 @@ def pferrs(porf, porferr, pdorfd=None, pdorfderr=None):
 
 
 @u.quantity_input(fo=u.Hz)
-def pulsar_age(f: u.Hz, fdot: u.Hz / u.s, n=3, fo=1e99 * u.Hz):
+def pulsar_age(f: u.Quantity[u.Hz], fdot: u.Quantity[u.Hz / u.s], n=3, fo=1e99 * u.Hz):
     r"""Compute pulsar characteristic age
 
     Return the age of a pulsar given the spin frequency
@@ -171,7 +170,9 @@ def pulsar_age(f: u.Hz, fdot: u.Hz / u.s, n=3, fo=1e99 * u.Hz):
 
 
 @u.quantity_input(I=u.g * u.cm**2)
-def pulsar_edot(f: u.Hz, fdot: u.Hz / u.s, I=1.0e45 * u.g * u.cm**2):
+def pulsar_edot(
+    f: u.Quantity[u.Hz], fdot: u.Quantity[u.Hz / u.s], I=1.0e45 * u.g * u.cm**2
+):
     r"""Compute pulsar spindown energy loss rate
 
     Return the pulsar `Edot` (:math:`\dot E`, in erg/s) given the spin frequency `f` and
@@ -207,7 +208,7 @@ def pulsar_edot(f: u.Hz, fdot: u.Hz / u.s, I=1.0e45 * u.g * u.cm**2):
 
 
 @u.quantity_input
-def pulsar_B(f: u.Hz, fdot: u.Hz / u.s):
+def pulsar_B(f: u.Quantity[u.Hz], fdot: u.Quantity[u.Hz / u.s]):
     r"""Compute pulsar surface magnetic field
 
     Return the estimated pulsar surface magnetic field strength
@@ -242,7 +243,7 @@ def pulsar_B(f: u.Hz, fdot: u.Hz / u.s):
 
 
 @u.quantity_input
-def pulsar_B_lightcyl(f: u.Hz, fdot: u.Hz / u.s):
+def pulsar_B_lightcyl(f: u.Quantity[u.Hz], fdot: u.Quantity[u.Hz / u.s]):
     r"""Compute pulsar magnetic field at the light cylinder
 
     Return the estimated pulsar magnetic field strength at the
@@ -373,59 +374,61 @@ def mass_funct2(mp: u.Msun, mc: u.Msun, i: u.deg):
 def pulsar_mass(pb: u.d, x: u.cm, mc: u.Msun, i: u.deg):
     r"""Compute pulsar mass from orbital parameters
 
-    Return the pulsar mass (in solar mass units) for a binary.
-    Can handle scalar or array inputs.
+        Return the pulsar mass (in solar mass units) for a binary.
+        Can handle scalar or array inputs.
 
-    Parameters
-    ----------
-    pb : astropy.units.Quantity
-        Binary orbital period
-    x : astropy.units.Quantity
-        Projected pulsar semi-major axis (aka ASINI) in ``pint.ls``
-    mc : astropy.units.Quantity
-        Companion mass in ``u.solMass``
-    i : astropy.coordinates.Angle or astropy.units.Quantity
-        Inclination angle, in ``u.deg`` or ``u.rad``
+        Parameters
+        ----------
+        pb : astropy.units.Quantity
+            Binary orbital period
+        x : astropy.units.Quantity
+            Projected pulsar semi-major axis (aka ASINI) in ``pint.ls``
+        mc : astropy.units.Quantit[mypy-pint.templates.*]
+    ; ignore_errors = True
+    y
+            Companion mass in ``u.solMass``
+        i : astropy.coordinates.Angle or astropy.units.Quantity
+            Inclination angle, in ``u.deg`` or ``u.rad``
 
-    Returns
-    -------
-    mass : astropy.units.Quantity
-        In ``u.solMass``
+        Returns
+        -------
+        mass : astropy.units.Quantity
+            In ``u.solMass``
 
-    Raises
-    ------
-    astropy.units.UnitsError
-        If the input data are not appropriate quantities
-    TypeError
-        If the input data are not quantities
+        Raises
+        ------
+        astropy.units.UnitsError
+            If the input data are not appropriate quantities
+        TypeError
+            If the input data are not quantities
 
-    Example
-    -------
-    >>> import pint
-    >>> import pint.derived_quantities
-    >>> from astropy import units as u
-    >>> print(pint.derived_quantities.pulsar_mass(2*u.hr, .2*pint.ls, 0.5*u.Msun, 60*u.deg))
-    7.6018341985817885 solMass
+        Example
+        -------
+        >>> import pint
+        >>> import pint.derived_quantities
+        >>> from astropy import units as u
+        >>> print(pint.derived_quantities.pulsar_mass(2*u.hr, .2*pint.ls, 0.5*u.Msun, 60*u.deg))
+        7.6018341985817885 solMass
 
 
-    Notes
-    -------
-    This forms a quadratic equation of the form:
-    :math:`a M_p^2 + b M_p + c = 0``
+        Notes
+        -------
+        This forms a quadratic equation of the form:
+        :math:`a M_p^2 + b M_p + c = 0``
 
-    with:
+        with:
 
-    - :math:`a = f(P_b,x)` (the mass function)
-    - :math:`b = 2 f(P_b,x) M_c`
-    - :math:`c = f(P_b,x)  M_c^2 - M_c\sin^3 i`
+        - :math:`a = f(P_b,x)` (the mass function)
+        - :math:`b = 2 f(P_b,x) M_c`
+        - :math:`c = f(P_b,x)  M_c^2 - M_c\sin^3 i`
 
-    except the discriminant simplifies to:
-    :math:`4f(P_b,x) M_c^3 \sin^3 i`
+        except the discriminant simplifies to:
+        :math:`4f(P_b,x) M_c^3 \sin^3 i`
 
-    solve it directly
-    this has to be the positive branch of the quadratic
-    because the vertex is at :math:`-M_c`, so
-    the negative branch will always be < 0
+        solve it directly
+        this has to be the positive branch of the quadratic
+        because the vertex is at :math:`-M_c`, so
+        the negative branch will always be < 0
     """
     massfunct = mass_funct(pb, x)
 
@@ -869,7 +872,11 @@ def dth(mp: u.Msun, mc: u.Msun, pb: u.d):
 
 
 @u.quantity_input
-def omdot_to_mtot(omdot: u.deg / u.yr, pb: u.d, e: u.dimensionless_unscaled):
+def omdot_to_mtot(
+    omdot: u.Quantity[u.deg / u.yr],
+    pb: u.Quantity[u.d],
+    e: u.Quantity[u.dimensionless_unscaled],
+):
     r"""Determine total mass from Post-Keplerian longitude of periastron precession rate omdot,
     assuming general relativity.
 
@@ -981,7 +988,7 @@ def a1sini(mp, mc, pb, i=90 * u.deg):
 
 
 @u.quantity_input
-def shklovskii_factor(pmtot: u.mas / u.yr, D: u.kpc):
+def shklovskii_factor(pmtot: u.Quantity[u.mas / u.yr], D: u.Quantity[u.kpc]):
     r"""Compute magnitude of Shklovskii correction factor.
 
     Computes the Shklovskii correction factor, as defined in Eq 8.12 of Lorimer & Kramer (2005) [10]_
@@ -1019,7 +1026,7 @@ def shklovskii_factor(pmtot: u.mas / u.yr, D: u.kpc):
 
 
 @u.quantity_input
-def dispersion_slope(dm: pint.dmu):
+def dispersion_slope(dm: u.Quantity[pint.dmu]):
     """Compute the dispersion slope.
 
     This is equal to DMconst * DM.

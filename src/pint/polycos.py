@@ -1,7 +1,7 @@
 r"""Polynomial coefficients for phase prediction
 
 Polycos designed to predict the pulsar's phase and pulse-period over a
-given interval using polynomial expansions.   
+given interval using polynomial expansions.
 
 The pulse phase and frequency at time T are then calculated as:
 
@@ -27,25 +27,28 @@ Or, to generate polycos from a timing model:
     >>> from pint.polycos import Polycos
     >>> model = get_model(filename)
     >>> p = Polycos.generate_polycos(model, 50000, 50001, "AO", 144, 12, 1400)
-  
+
 References
 ----------
 http://tempo.sourceforge.net/ref_man_sections/tz-polyco.txt
 """
+
+from collections import OrderedDict
+from collections.abc import Callable
+from typing import Dict, List, Union
+
 import astropy.table as table
 import astropy.units as u
 import numpy as np
 from astropy.io import registry
 from astropy.time import Time
-from collections import OrderedDict
-
 from loguru import logger as log
 
 try:
     from tqdm import tqdm
-except (ModuleNotFoundError, ImportError) as e:
+except (ModuleNotFoundError, ImportError):
 
-    def tqdm(*args, **kwargs):
+    def tqdm(*args, **kwargs):  # type: ignore
         return args[0] if args else kwargs.get("iterable", None)
 
 
@@ -483,7 +486,7 @@ class Polycos:
     """
 
     # loaded formats
-    polycoFormats = []
+    polycoFormats: List[Dict[str, Union[str, Callable]]] = []
 
     @classmethod
     def _register(cls, formatlist=_polycoFormats):

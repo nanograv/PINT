@@ -20,10 +20,6 @@ from .lceprimitives import *
 log = logging.getLogger(__name__)
 
 
-def isvector(x):
-    return len(np.asarray(x).shape) > 0
-
-
 class LCTemplate:
     """Manage a lightcurve template (collection of LCPrimitive objects).
 
@@ -1071,7 +1067,3 @@ def check_gradient_derivative(templ):
     for i in range(gd.shape[0]):
         print(np.max(np.abs(gd[i] - ngd[i])))
     return pcs, gd, ngd
-
-
-def isvector(x):
-    return len(np.asarray(x).shape) > 0
