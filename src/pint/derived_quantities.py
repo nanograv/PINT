@@ -126,8 +126,10 @@ def pferrs(porf, porferr, pdorfd=None, pdorfderr=None):
     return [forp, forperr, fdorpd, fdorpderr]
 
 
-@u.quantity_input(fo=u.Hz)
-def pulsar_age(f: u.Quantity[u.Hz], fdot: u.Quantity[u.Hz / u.s], n=3, fo=1e99 * u.Hz):
+@u.quantity_input(f=u.Hz, fdot=u.Hz / u.s, fo=u.Hz)
+def pulsar_age(
+    f: u.Quantity, fdot: u.Quantity, n: float = 3, fo: u.Quantity = 1e99 * u.Hz
+) -> u.Quantity:
     r"""Compute pulsar characteristic age
 
     Return the age of a pulsar given the spin frequency
@@ -169,10 +171,10 @@ def pulsar_age(f: u.Quantity[u.Hz], fdot: u.Quantity[u.Hz / u.s], n=3, fo=1e99 *
     return (-f / ((n - 1.0) * fdot) * (1.0 - (f / fo) ** (n - 1.0))).to(u.yr)
 
 
-@u.quantity_input(I=u.g * u.cm**2)
+@u.quantity_input(f=u.Hz, fdot=u.Hz / u.s, I=u.g * u.cm**2)
 def pulsar_edot(
-    f: u.Quantity[u.Hz], fdot: u.Quantity[u.Hz / u.s], I=1.0e45 * u.g * u.cm**2
-):
+    f: u.Quantity, fdot: u.Quantity, I: u.Quantity = 1.0e45 * u.g * u.cm**2
+) -> u.Quantity:
     r"""Compute pulsar spindown energy loss rate
 
     Return the pulsar `Edot` (:math:`\dot E`, in erg/s) given the spin frequency `f` and
@@ -207,8 +209,8 @@ def pulsar_edot(
     return (-4.0 * np.pi**2 * I * f * fdot).to(u.erg / u.s)
 
 
-@u.quantity_input
-def pulsar_B(f: u.Quantity[u.Hz], fdot: u.Quantity[u.Hz / u.s]):
+@u.quantity_input(f=u.Hz, fdot=u.Hz / u.s)
+def pulsar_B(f: u.Quantity, fdot: u.Quantity) -> u.Quantity:
     r"""Compute pulsar surface magnetic field
 
     Return the estimated pulsar surface magnetic field strength
@@ -242,8 +244,8 @@ def pulsar_B(f: u.Quantity[u.Hz], fdot: u.Quantity[u.Hz / u.s]):
     return 3.2e19 * u.G * np.sqrt(-fdot.to_value(u.Hz / u.s) / f.to_value(u.Hz) ** 3.0)
 
 
-@u.quantity_input
-def pulsar_B_lightcyl(f: u.Quantity[u.Hz], fdot: u.Quantity[u.Hz / u.s]):
+@u.quantity_input(f=u.Hz, fdot=u.Hz / u.s)
+def pulsar_B_lightcyl(f: u.Quantity, fdot: u.Quantity) -> u.Quantity:
     r"""Compute pulsar magnetic field at the light cylinder
 
     Return the estimated pulsar magnetic field strength at the
@@ -871,12 +873,12 @@ def dth(mp: u.Msun, mc: u.Msun, pb: u.d):
     ).decompose()
 
 
-@u.quantity_input
+@u.quantity_input(omdot=u.deg / u.yr, pb=u.d, e=u.dimensionless_unscaled)
 def omdot_to_mtot(
-    omdot: u.Quantity[u.deg / u.yr],
-    pb: u.Quantity[u.d],
-    e: u.Quantity[u.dimensionless_unscaled],
-):
+    omdot: u.Quantity,
+    pb: u.Quantity,
+    e: u.Quantity,
+) -> u.Quantity:
     r"""Determine total mass from Post-Keplerian longitude of periastron precession rate omdot,
     assuming general relativity.
 
@@ -987,8 +989,8 @@ def a1sini(mp, mc, pb, i=90 * u.deg):
     ).to(pint.ls)
 
 
-@u.quantity_input
-def shklovskii_factor(pmtot: u.Quantity[u.mas / u.yr], D: u.Quantity[u.kpc]):
+@u.quantity_input(pmtot=u.mas / u.yr, d=u.kpc)
+def shklovskii_factor(pmtot: u.Quantity, D: u.Quantity) -> u.Quantity:
     r"""Compute magnitude of Shklovskii correction factor.
 
     Computes the Shklovskii correction factor, as defined in Eq 8.12 of Lorimer & Kramer (2005) [10]_
@@ -1025,8 +1027,8 @@ def shklovskii_factor(pmtot: u.Quantity[u.mas / u.yr], D: u.Quantity[u.kpc]):
     return a_s
 
 
-@u.quantity_input
-def dispersion_slope(dm: u.Quantity[pint.dmu]):
+@u.quantity_input(dm=pint.dmu)
+def dispersion_slope(dm: u.Quantity) -> u.Quantity:
     """Compute the dispersion slope.
 
     This is equal to DMconst * DM.
