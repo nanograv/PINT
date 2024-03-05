@@ -116,7 +116,7 @@ __all__ = [
     "get_unit",
 ]
 
-COLOR_NAMES: list[str] = [
+COLOR_NAMES: List[str] = [
     "black",
     "red",
     "green",
@@ -126,7 +126,7 @@ COLOR_NAMES: list[str] = [
     "cyan",
     "white",
 ]
-TEXT_ATTRIBUTES: list[str] = [
+TEXT_ATTRIBUTES: List[str] = [
     "normal",
     "bold",
     "subdued",
