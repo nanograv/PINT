@@ -129,7 +129,7 @@ def pferrs(porf, porferr, pdorfd=None, pdorfderr=None):
 @u.quantity_input(f=u.Hz, fdot=u.Hz / u.s, fo=u.Hz)
 def pulsar_age(
     f: u.Quantity, fdot: u.Quantity, n: float = 3, fo: u.Quantity = 1e99 * u.Hz
-) -> u.Quantity:
+):
     r"""Compute pulsar characteristic age
 
     Return the age of a pulsar given the spin frequency
@@ -174,7 +174,7 @@ def pulsar_age(
 @u.quantity_input(f=u.Hz, fdot=u.Hz / u.s, I=u.g * u.cm**2)
 def pulsar_edot(
     f: u.Quantity, fdot: u.Quantity, I: u.Quantity = 1.0e45 * u.g * u.cm**2
-) -> u.Quantity:
+):
     r"""Compute pulsar spindown energy loss rate
 
     Return the pulsar `Edot` (:math:`\dot E`, in erg/s) given the spin frequency `f` and
@@ -210,7 +210,7 @@ def pulsar_edot(
 
 
 @u.quantity_input(f=u.Hz, fdot=u.Hz / u.s)
-def pulsar_B(f: u.Quantity, fdot: u.Quantity) -> u.Quantity:
+def pulsar_B(f: u.Quantity, fdot: u.Quantity):
     r"""Compute pulsar surface magnetic field
 
     Return the estimated pulsar surface magnetic field strength
@@ -245,7 +245,7 @@ def pulsar_B(f: u.Quantity, fdot: u.Quantity) -> u.Quantity:
 
 
 @u.quantity_input(f=u.Hz, fdot=u.Hz / u.s)
-def pulsar_B_lightcyl(f: u.Quantity, fdot: u.Quantity) -> u.Quantity:
+def pulsar_B_lightcyl(f: u.Quantity, fdot: u.Quantity):
     r"""Compute pulsar magnetic field at the light cylinder
 
     Return the estimated pulsar magnetic field strength at the
@@ -878,7 +878,7 @@ def omdot_to_mtot(
     omdot: u.Quantity,
     pb: u.Quantity,
     e: u.Quantity,
-) -> u.Quantity:
+):
     r"""Determine total mass from Post-Keplerian longitude of periastron precession rate omdot,
     assuming general relativity.
 
@@ -990,7 +990,7 @@ def a1sini(mp, mc, pb, i=90 * u.deg):
 
 
 @u.quantity_input(pmtot=u.mas / u.yr, d=u.kpc)
-def shklovskii_factor(pmtot: u.Quantity, D: u.Quantity) -> u.Quantity:
+def shklovskii_factor(pmtot: u.Quantity, D: u.Quantity):
     r"""Compute magnitude of Shklovskii correction factor.
 
     Computes the Shklovskii correction factor, as defined in Eq 8.12 of Lorimer & Kramer (2005) [10]_
@@ -1028,7 +1028,7 @@ def shklovskii_factor(pmtot: u.Quantity, D: u.Quantity) -> u.Quantity:
 
 
 @u.quantity_input(dm=pint.dmu)
-def dispersion_slope(dm: u.Quantity) -> u.Quantity:
+def dispersion_slope(dm: u.Quantity):
     """Compute the dispersion slope.
 
     This is equal to DMconst * DM.
