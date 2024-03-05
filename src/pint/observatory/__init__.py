@@ -577,10 +577,10 @@ def compare_t2_observatories_dat(t2dir: Optional[str] = None) -> Dict[str, List[
     with open(filename) as f:
         for line in interesting_lines(f, comments="#"):
             try:
-                x, y, z, full_name, short_name = line.split()
+                x_str, y_str, z_str, full_name, short_name = line.split()
             except ValueError as e:
                 raise ValueError(f"unrecognized line '{line}'") from e
-            x, y, z = float(x), float(y), float(z)
+            x, y, z = float(x_str), float(y_str), float(z_str)
             full_name, short_name = full_name.lower(), short_name.lower()
             topo_obs_entry = textwrap.dedent(
                 f"""
