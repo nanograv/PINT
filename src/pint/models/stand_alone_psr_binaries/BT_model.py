@@ -143,17 +143,17 @@ class BTmodel(PSR_BINARY):
         """Full BT model delay"""
         return (self.delayL1() + self.delayL2()) * self.delayR()
 
+    # NOTE: Below, OMEGA is supposed to be in RADIANS!
+    # TODO: Fix UNITS!!!
     def d_delayL1_d_E(self):
         a1 = self.a1() / c.c
-        return -a1 * np.sin(self.omega()) * np.sin(self.E()) / self.E().unit
+        return -a1 * np.sin(self.omega()) * np.sin(self.E())
 
     def d_delayL2_d_E(self):
         a1 = self.a1() / c.c
         return (
-            (a1 * np.cos(self.omega()) * np.sqrt(1 - self.ecc() ** 2) + self.GAMMA)
-            * np.cos(self.E())
-            / self.E().unit
-        )
+            a1 * np.cos(self.omega()) * np.sqrt(1 - self.ecc() ** 2) + self.GAMMA
+        ) * np.cos(self.E())
 
     def d_delayL1_d_A1(self):
         return np.sin(self.omega()) * (np.cos(self.E()) - self.ecc()) / c.c
@@ -171,12 +171,7 @@ class BTmodel(PSR_BINARY):
 
     def d_delayL1_d_OM(self):
         a1 = self.a1() / c.c
-        return (
-            a1
-            * np.cos(self.omega())
-            * (np.cos(self.E()) - self.ecc())
-            / self.omega().unit
-        )
+        return a1 * np.cos(self.omega()) * (np.cos(self.E()) - self.ecc())
 
     def d_delayL1_d_OMDOT(self):
         return self.tt0 * self.d_delayL1_d_OM()
@@ -184,11 +179,7 @@ class BTmodel(PSR_BINARY):
     def d_delayL2_d_OM(self):
         a1 = self.a1() / c.c
         return (
-            -a1
-            * np.sin(self.omega())
-            * np.sqrt(1 - self.ecc() ** 2)
-            * np.sin(self.E())
-            / self.omega().unit
+            -a1 * np.sin(self.omega()) * np.sqrt(1 - self.ecc() ** 2) * np.sin(self.E())
         )
 
     def d_delayL2_d_OMDOT(self):

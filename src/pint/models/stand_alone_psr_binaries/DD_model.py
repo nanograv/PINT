@@ -1,5 +1,4 @@
 """Damour and Deruelle binary model."""
-
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
@@ -302,7 +301,7 @@ class DDmodel(PSR_BINARY):
         d_eTheta_d_par = self.d_eTheta_d_par(par)
 
         d_beta_d_a1 = 1.0 / c.c * (1 - eTheta**2) ** 0.5 * cosOmg
-        d_beta_d_omega = -a1 / c.c * (1 - eTheta**2) ** 0.5 * sinOmg / omega.unit
+        d_beta_d_omega = -a1 / c.c * (1 - eTheta**2) ** 0.5 * sinOmg
         d_beta_d_eTheta = a1 / c.c * (-eTheta) / np.sqrt(1 - eTheta**2) * cosOmg
         with u.set_enabled_equivalencies(u.dimensionless_angles()):
             return (
@@ -757,7 +756,10 @@ class DDmodel(PSR_BINARY):
                 -2
                 * TM2
                 / logNum
-                * (e * sE - self.SINI * (np.sqrt(1 - e**2) * cE * cOmega - sE * sOmega))
+                * (
+                    e * sE
+                    - self.SINI * (np.sqrt(1 - e**2) * cE * cOmega - sE * sOmega)
+                )
             )
             domega_dpar = self.prtl_der("omega", par)
             dsDelay_domega = (
