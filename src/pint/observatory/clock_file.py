@@ -1,11 +1,13 @@
 """Routines for reading and writing various formats of clock file."""
 
 import re
+import warnings
 from pathlib import Path
 from textwrap import dedent
 from warnings import warn
 
 import astropy.units as u
+import erfa
 import numpy as np
 from loguru import logger as log
 
@@ -522,16 +524,22 @@ def read_tempo2_clock_file(
         mjd = mjd[1:]
         clk = clk[1:]
         comments = comments[1:]
-    return ClockFile(
-        mjd,
-        clk * u.s,
-        filename=filename,
-        comments=comments,
-        leading_comment=leading_comment,
-        header=header,
-        friendly_name=friendly_name,
-        valid_beyond_ends=valid_beyond_ends,
-    )
+    with warnings.catch_warnings():
+        # Some clock files have dubious years in them
+        # Most are removed by automatically ignoring MJD 0, or with "bogus_last_correction"
+        # But Parkes incudes a non-zero correction for MJD 0 so it isn't removed
+        # In any case, the user doesn't need a warning about strange years in clock files
+        warnings.filterwarnings("ignore", r".*dubious year", erfa.ErfaWarning)
+        return ClockFile(
+            mjd,
+            clk * u.s,
+            filename=filename,
+            comments=comments,
+            leading_comment=leading_comment,
+            header=header,
+            friendly_name=friendly_name,
+            valid_beyond_ends=valid_beyond_ends,
+        )
 
 
 ClockFile._formats["tempo2"] = read_tempo2_clock_file
@@ -865,7 +873,8 @@ class GlobalClockFile(ClockFile):
         corrections : astropy.units.Quantity
             The corrections in units of microseconds.
         """
-        if np.any(t > self.clock_file.time[-1]):
+        needs_update = np.any(t > self.clock_file.time[-1])
+        if needs_update:
             self.update()
         return self.clock_file.evaluate(t, limits=limits)
 
