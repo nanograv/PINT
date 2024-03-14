@@ -10,7 +10,7 @@ from .DD_model import DDmodel
 
 
 class DDSmodel(DDmodel):
-    """Damour and Deruelle model with alternate Shapiro delay parameterization.
+    r"""Damour and Deruelle model with alternate Shapiro delay parameterization.
 
     This extends the :class:`pint.models.binary_dd.BinaryDD` model with
     :math:`SHAPMAX = -\log(1-s)` instead of just :math:`s=\sin i`, which behaves better

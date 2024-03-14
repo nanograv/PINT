@@ -47,7 +47,7 @@ def from_array(x):
 
 
 def sig2sigma(sig, two_tailed=True, logprob=False):
-    """Convert tail probability to "sigma" units.
+    r"""Convert tail probability to "sigma" units.
 
     Find the value of the argument for the normal distribution beyond which the
     integrated tail probability is sig.  Note that the default is to interpret

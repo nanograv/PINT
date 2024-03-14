@@ -35,13 +35,6 @@ import numpy as np
 from astropy.time import Time
 from astropy.time.formats import TimeFormat
 
-try:
-    maketrans = str.maketrans
-except AttributeError:
-    # fallback for Python 2
-    from string import maketrans
-
-
 # This check is implemented in pint.utils, but we want to avoid circular imports
 if np.finfo(np.longdouble).eps > 2e-19:
     import warnings
@@ -304,7 +297,7 @@ def fortran_float(x):
     """
     try:
         # First treat it as a string, wih d->e
-        return float(x.translate(maketrans("Dd", "ee")))
+        return float(x.translate(str.maketrans("Dd", "ee")))
     except AttributeError:
         # If that didn't work it may already be a numeric type
         return float(x)
@@ -362,7 +355,7 @@ def str2longdouble(str_data):
     """
     if not isinstance(str_data, (str, bytes)):
         raise TypeError("Need a string: {!r}".format(str_data))
-    return np.longdouble(str_data.translate(maketrans("Dd", "ee")))
+    return np.longdouble(str_data.translate(str.maketrans("Dd", "ee")))
 
 
 # Simplified functions: These core functions, if they can be made to work
@@ -454,7 +447,7 @@ def mjds_to_jds_pulsar(mjd1, mjd2):
 def _str_to_mjds(s):
     ss = s.lower().strip()
     if "e" in ss or "d" in ss:
-        ss = ss.translate(maketrans("d", "e"))
+        ss = ss.translate(str.maketrans("d", "e"))
         num, expon = ss.split("e")
         expon = int(expon)
         if expon < 0:

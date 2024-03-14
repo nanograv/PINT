@@ -1,24 +1,28 @@
 """Generate LaTeX summary of a timing model and TOAs."""
+
+from io import StringIO
+from typing import List, Union
+
+import numpy as np
 from pint.models import (
-    TimingModel,
-    DispersionDMX,
     FD,
+    AbsPhase,
+    DispersionDMX,
     Glitch,
     PhaseJump,
     SolarWindDispersionX,
-    AbsPhase,
+    TimingModel,
     Wave,
 )
+from pint.models.timing_model import Component
 from pint.models.dispersion_model import DispersionJump
 from pint.models.noise_model import NoiseComponent
 from pint.models.parameter import (
     Parameter,
     funcParameter,
 )
-from pint.toa import TOAs
 from pint.residuals import Residuals, WidebandTOAResiduals
-from io import StringIO
-import numpy as np
+from pint.toa import TOAs
 
 
 def publish_param(param: Parameter):
@@ -91,6 +95,7 @@ def publish(
         else "WLS"
     )
 
+    res: Union[Residuals, WidebandTOAResiduals]
     if toas.is_wideband():
         res = WidebandTOAResiduals(toas, model)
         toares = res.toa
@@ -117,7 +122,7 @@ def publish(
         "BINARY",
     ]
 
-    exclude_components = [Wave]
+    exclude_components: List[type[Component]] = [Wave]
     if not include_dmx:
         exclude_components.append(DispersionDMX)
     if not include_jumps:
@@ -259,7 +264,7 @@ def publish(
                 )
             tex.write("\\hline\n")
 
-        tex.write("\multicolumn{2}{c}{Measured Quantities} \\\\ \n")
+        tex.write("\\multicolumn{2}{c}{Measured Quantities} \\\\ \n")
         tex.write("\\hline\n")
         for fp in model.free_params:
             param = getattr(model, fp)
@@ -273,7 +278,7 @@ def publish(
         tex.write("\\hline\n")
 
         if include_set_params:
-            tex.write("\multicolumn{2}{c}{Set Quantities} \\\\ \n")
+            tex.write("\\multicolumn{2}{c}{Set Quantities} \\\\ \n")
             tex.write("\\hline\n")
             for p in model.params:
                 param = getattr(model, p)
@@ -303,7 +308,7 @@ def publish(
                 and getattr(model, p).quantity is not None
             ]
             if len(derived_params) > 0:
-                tex.write("\multicolumn{2}{c}{Derived Quantities} \\\\ \n")
+                tex.write("\\multicolumn{2}{c}{Derived Quantities} \\\\ \n")
                 tex.write("\\hline\n")
                 for param in derived_params:
                     tex.write(publish_param(param))

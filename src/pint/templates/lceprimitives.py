@@ -1,10 +1,6 @@
 from pint.templates.lcprimitives import *
 
 
-def isvector(x):
-    return len(np.asarray(x).shape) > 0
-
-
 def edep_gradient(self, grad_func, phases, log10_ens=3, free=False):
     """Return the analytic gradient of a general LCEPrimitive.
 
@@ -232,7 +228,8 @@ class LCESkewGaussian(LCEWrappedFunction, LCSkewGaussian):
         self.slope_bounds[2] = [-0.3, 0.3]
 
 
-class LCELorentzian(LCEWrappedFunction, LCLorentzian):
+# LCWrappedFunction.derivative doesn't accept index but LCLorentzian.derivative does
+class LCELorentzian(LCEWrappedFunction, LCLorentzian):  # type: ignore[misc]
     """Represent a (wrapped) Lorentzian peak.
 
     Parameters

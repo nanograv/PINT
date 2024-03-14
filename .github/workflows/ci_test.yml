@@ -31,6 +31,9 @@ jobs:
             tox_env: 'black'
           - os: ubuntu-latest
             python: '3.12'
+            tox_env: 'mypy'
+          - os: ubuntu-latest
+            python: '3.12'
             tox_env: 'py312-test-cov'
           - os: ubuntu-latest
             python: '3.12'

@@ -661,6 +661,7 @@ class LCWrappedFunction(LCPrimitive):
             # results[i,:] += gn[i]
         return results[self.free, self.free] if free else results
 
+    # This derivative doesn't accept an index argument, but LCLorentzian does
     def derivative(self, phases, log10_ens=3, order=1):
         """Return the phase gradient (dprim/dphi) at a vector of phases.
 

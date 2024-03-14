@@ -9,7 +9,7 @@ from .ELL1_model import ELL1BaseModel
 
 
 class ELL1Hmodel(ELL1BaseModel):
-    """ELL1H pulsar binary model using H3, H4 or STIGMA as shapiro delay parameters.
+    r"""ELL1H pulsar binary model using H3, H4 or STIGMA as shapiro delay parameters.
 
     Note
     ----
@@ -21,7 +21,7 @@ class ELL1Hmodel(ELL1BaseModel):
 
     .. math::
 
-        \\Delta_S = -2r \\left( \\frac{a_0}{2} + \\Sum_k (a_k \\cos k\\phi + b_k \\sin k \phi) \\right)
+        \Delta_S = -2r \left( \frac{a_0}{2} + \Sum_k (a_k \cos k\phi + b_k \sin k \phi) \right)
 
     The first two harmonics are generlly absorbed by the ELL1 Roemer delay.
     Thus, :class:`~pint.models.binary_ell1.BinaryELL1H` uses the series from the third

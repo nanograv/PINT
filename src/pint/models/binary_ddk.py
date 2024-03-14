@@ -41,7 +41,7 @@ def _convert_kom(kom):
 
 
 class BinaryDDK(BinaryDD):
-    """Damour and Deruelle model with kinematics.
+    r"""Damour and Deruelle model with kinematics.
 
     This extends the :class:`pint.models.binary_dd.BinaryDD` model with
     "Shklovskii" and "Kopeikin" terms that account for the finite distance
@@ -220,14 +220,14 @@ class BinaryDDK(BinaryDD):
             warnings.warn("Using A1DOT with a DDK model is not advised.")
 
     def alternative_solutions(self):
-        """Alternative Kopeikin solutions (potential local minima)
+        r"""Alternative Kopeikin solutions (potential local minima)
 
         There are 4 potential local minima for a DDK model where a1dot is the same
         These are given by where Eqn. 8 in Kopeikin (1996) is equal to the best-fit value.
 
         We first define the symmetry point where a1dot is zero (in equatorial coordinates):
 
-        :math:`KOM_0 = \\tan^{-1} (\mu_{\delta} / \mu_{\\alpha})`
+        :math:`KOM_0 = \tan^{-1} (\mu_{\delta} / \mu_{\alpha})`
 
         The solutions are then:
 

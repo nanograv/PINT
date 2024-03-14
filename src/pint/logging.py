@@ -53,9 +53,10 @@ import os
 import re
 import sys
 import warnings
-from loguru import logger as log
+from typing import Dict, Tuple
 
 from erfa import ErfaWarning
+from loguru import logger as log
 
 __all__ = ["LogFilter", "setup", "format", "levels", "get_level"]
 
@@ -72,7 +73,7 @@ script_level = "WARNING"
 # https://loguru.readthedocs.io/en/stable/api/logger.html#color
 
 showwarning_ = warnings.showwarning
-warning_onceregistry = {}
+warning_onceregistry: Dict[Tuple[str, str], int] = {}
 
 # basic loguru level definitions from:
 # https://loguru.readthedocs.io/en/stable/api/logger.html
@@ -124,12 +125,13 @@ def showwarning(message, category, filename, lineno, file=None, line=None):
 
 class LogFilter:
     """Custom logging filter for ``loguru``.
+
     Define some messages that are never seen (e.g., Deprecation Warnings).
     Others that will only be seen once.  Filtering of those is done on the basis of regular expressions.
     """
 
     def __init__(self, onlyonce=None, never=None, onlyonce_level="INFO"):
-        """
+        r"""
         Define regexs for messages that will only be seen once.  Use ``\S+`` for a variable that might change.
         If a message comes through with a new value for that variable, it will be seen.
 
