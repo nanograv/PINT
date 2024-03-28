@@ -139,7 +139,7 @@ class ModelBuilder:
 
         allow_T2 : True, False, or str, optional
             Whether to convert a T2 binary model to an appropriate underlying
-            binary model. Default is False, and will throw an error upon 
+            binary model. Default is False, and will throw an error upon
             encountering the T2 binary model. If True, the binary model will be
             converted to the most appropriate PINT-compatible binary model.
 
@@ -185,9 +185,9 @@ class ModelBuilder:
                 original_name[k] = k
             else:
                 remaining_args[k] = v
-        selected, conflict, param_not_in_pint = self.choose_model(pint_param_dict,
-                          force_binary_model=force_binary_model,
-                          allow_T2=allow_T2)
+        selected, conflict, param_not_in_pint = self.choose_model(
+            pint_param_dict, force_binary_model=force_binary_model, allow_T2=allow_T2
+        )
         selected.update(set(self.default_components))
 
         # Add SolarSystemShapiro only if an Astrometry component is present.
@@ -423,8 +423,7 @@ class ModelBuilder:
 
         return pint_param_dict, original_name_map, unknown_param
 
-    def choose_model(self, param_inpar, force_binary_model=None,
-                     allow_T2=False):
+    def choose_model(self, param_inpar, force_binary_model=None, allow_T2=False):
         """Choose the model components based on the parfile.
 
         Parameters
@@ -435,7 +434,7 @@ class ModelBuilder:
 
         allow_T2 : True, False, or str optional
             Whether to convert a T2 binary model to an appropriate underlying
-            binary model. Default is False, and will throw an error upon 
+            binary model. Default is False, and will throw an error upon
             encountering the T2 binary model. If True, the binary model will be
             converted to the most appropriate PINT-compatible binary model.
 
@@ -481,7 +480,9 @@ class ModelBuilder:
 
         if binary:
             binary = binary[0]
-            selected_components.add(self.choose_binary_model(param_inpar, force_binary_model, allow_T2))
+            selected_components.add(
+                self.choose_binary_model(param_inpar, force_binary_model, allow_T2)
+            )
 
         # 2. Get the component list from the parameters in the parfile.
         # 2.1 Check the aliases of input parameters.
@@ -581,7 +582,7 @@ class ModelBuilder:
 
         allow_T2 : True, False, or str optional
             Whether to convert a T2 binary model to an appropriate underlying
-            binary model. Default is False, and will throw an error upon 
+            binary model. Default is False, and will throw an error upon
             encountering the T2 binary model. If True, the binary model will be
             converted to the most appropriate PINT-compatible binary model.
 
@@ -604,11 +605,9 @@ class ModelBuilder:
         # Allow for T2 model, gracefully
         if force_binary_model is not None:
             binary = force_binary_model
-        elif binary=="T2" and allow_T2:
+        elif binary == "T2" and allow_T2:
             binary = binary_model_guesses[0]
-            log.info(
-                f"Found T2 binary model. Gracefully converting T2 to: {binary}."
-            )
+            log.info(f"Found T2 binary model. Gracefully converting T2 to: {binary}.")
 
             # Make sure that DDK parameters are properly converted
             convert_binary_model(param_inpar)
@@ -991,7 +990,9 @@ def guess_binary_model(parfile_dict):
     return priority + list(omitted)
 
 
-def convert_binary_model(parfile_dict, convert_komkin=True, drop_ddk_sini=True, force_binary_model=None):
+def convert_binary_model(
+    parfile_dict, convert_komkin=True, drop_ddk_sini=True, force_binary_model=None
+):
     """Convert the PINT parameter dictionary to include the best-guess binary
 
     Parameters

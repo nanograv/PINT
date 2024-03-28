@@ -11,8 +11,6 @@ pint.logging.setup(level="INFO")
 
 __all__ = ["main"]
 
-#def convert_binary_model(parfile_dict, convert_komkin=True, drop_ddk_sini=True):
-
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
@@ -36,13 +34,13 @@ def main(argv=None):
     parser.add_argument("input_par", help="Input par file name (TCB)")
     parser.add_argument("output_par", help="Output par file name (TDB)")
     parser.add_argument(
-        "convert_komkin",
+        "--convert_komkin",
         type=bool,
         default=True,
         help="Whether to convert KOM/KIN parameters (True)",
     )
     parser.add_argument(
-        "drop_ddk_sini",
+        "--drop_ddk_sini",
         type=bool,
         default=True,
         help="Whether to drop SINI if the model is DDK (True)",
@@ -55,5 +53,6 @@ def main(argv=None):
 
     model = mb(args.input_par, allow_T2=True, allow_tcb=True)
     model.write_parfile(args.output_par)
+    print(f"Output written to {args.output_par}")
 
     log.info(f"Output written to {args.output_par}.")
