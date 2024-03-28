@@ -604,13 +604,14 @@ class ModelBuilder:
 
         # Allow for T2 model, gracefully
         if force_binary_model is not None:
+            # TODO: also need to convert here? Not very clean flow here
             binary = force_binary_model
         elif binary == "T2" and allow_T2:
             binary = binary_model_guesses[0]
             log.info(f"Found T2 binary model. Gracefully converting T2 to: {binary}.")
 
             # Make sure that DDK parameters are properly converted
-            convert_binary_model(param_inpar)
+            convert_binary_model(param_inpar, force_binary_model=binary)
 
         try:
             binary_cp = self.all_components.search_binary_components(binary)
