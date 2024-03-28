@@ -11,6 +11,8 @@ pint.logging.setup(level="INFO")
 
 __all__ = ["main"]
 
+#def convert_binary_model(parfile_dict, convert_komkin=True, drop_ddk_sini=True):
+
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
@@ -27,7 +29,7 @@ def main(argv=None):
 
         The following parameters are optionally ignored:
             1. SINI (if the binary model is DDK)
-        
+
         """,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
@@ -51,7 +53,7 @@ def main(argv=None):
     # Perhaps build this into the model builder? It needs to allow for the options to do so though...
     mb = ModelBuilder()
 
-    model = mb(args.input_par, allow_tcb=True)
+    model = mb(args.input_par, allow_T2=True, allow_tcb=True)
     model.write_parfile(args.output_par)
 
     log.info(f"Output written to {args.output_par}.")
