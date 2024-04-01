@@ -254,7 +254,7 @@ This type of offset only applies to the wideband DM values and not to the wideba
 
 Similar offsets also arise in the case of narrowband TOAs. Unlike the wideband case, these offsets 
 manifest as system-dependent corrections to the DM delay. They are modeled using the FDJUMPDM parameters
-(see see :class:`pint.models.fdjump.FDJUMPDM`)
+(see see :class:`pint.models.fdjump.FDJumpDM`)
 
 System- and frequency-dependent offsets (FDJUMPs)
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -264,7 +264,7 @@ This systematic effect is usually modeled phenomenologically as a log-polynomial
 whose coefficients are the so-called FD parameters (see :class:`pint.models.frequency_dependent.FD`). 
 Sometimes, this effect needs to be modeled separately for different systems since different template 
 profiles will be used for each system. This is achieved through system-dependent FD parameters or FDJUMPs 
-(see :class:`pint.models.frequency_dependent.FDJump`). 
+(see :class:`pint.models.fdjump.FDJump`). 
 
 Observatories
 -------------

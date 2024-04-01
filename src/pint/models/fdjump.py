@@ -277,7 +277,7 @@ class FDJumpDM(Dispersion):
         return self.dispersion_type_delay(toas)
 
     def d_dm_d_fdjumpdm(self, toas, jump_param):
-        """Derivative of dm values wrt dm jumps."""
+        """Derivative of DM values w.r.t FDJUMPDM parameters."""
         tbl = toas.table
         d_dm_d_j = np.zeros(len(tbl))
         jpar = getattr(self, jump_param)
