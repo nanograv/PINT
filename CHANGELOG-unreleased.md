@@ -36,6 +36,7 @@ the released changes.
 - `plrednoise_from_wavex`, `pldmnoise_from_dmwavex`, and `find_optimal_nharms` functions
 - fake TOAs can be created with `subtract_mean=False`, to maintain phase coherence between different data sets
 - FDJumpDM component for System-dependent DM offsets / Index-0 FD jumps 
+- Documentation: Explanation for FDJUMP and FDJUMPDM
 ### Fixed
 - `MCMC_walkthrough` notebook now runs
 - Fixed runtime data README 
