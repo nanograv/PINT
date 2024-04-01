@@ -17,6 +17,8 @@ def model_and_toas():
         "FD1JUMP -sys GM_GWB_1460_100_b1 0.02 1\n"
         "FD2JUMP -sys GM_GWB_500_100_b1 0.001 1\n"
         "FD2JUMP -sys GM_GWB_1460_100_b1 0.002 1\n"
+        "FDJUMPDM -sys GM_GWB_500_100_b1 0.00002 1\n"
+        "FDJUMPDM -sys GM_GWB_1460_100_b1 0.00001 1\n"
     )
     par = str(model_raw) + fdlines
 
@@ -34,6 +36,8 @@ def test_params(model_and_toas):
         and hasattr(model, "FD2JUMP1")
         and hasattr(model, "FD1JUMP2")
         and hasattr(model, "FD2JUMP2")
+        and hasattr(model, "FDJUMPDM1")
+        and hasattr(model, "FDJUMPDM2")
     )
 
 
@@ -56,6 +60,7 @@ def test_refitting(model_and_toas):
     model, toas = model_and_toas
     FD1JUMP1_value_original = model.FD1JUMP1.value
     model.FD1JUMP1.value = 0
+    model.FDJUMPDM1.value = 0
 
     ftr = DownhillWLSFitter(toas, model)
     ftr.fit_toas()
