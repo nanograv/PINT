@@ -1,4 +1,5 @@
 """A simple model of a base dispersion delay and DMX dispersion."""
+
 from warnings import warn
 
 import numpy as np
@@ -713,7 +714,7 @@ class DispersionJump(Dispersion):
     Parameters supported:
 
     .. paramtable::
-        :class: pint.models.dispersion_model.DispersionDMX
+        :class: pint.models.dispersion_model.DispersionJump
 
     Notes
     -----
@@ -749,14 +750,14 @@ class DispersionJump(Dispersion):
             # Note we can not use the derivative function 'd_delay_d_dmparam',
             # Since dmjump does not effect delay.
             # The function 'd_delay_d_dmparam' applies d_dm_d_dmparam first and
-            # than applys the time delay part.
+            # than applies the time delay part.
             self.register_deriv_funcs(self.d_delay_d_dmjump, j)
 
     def validate(self):
         super().validate()
 
     def jump_dm(self, toas):
-        """Return the DM jump for each dm section collected by dmjump parameters.
+        """Return the DM jump for each DM section collected by DMJUMP parameters.
 
         The delay value is determined by DMJUMP parameter
         value in the unit of pc / cm ** 3.
@@ -770,18 +771,18 @@ class DispersionJump(Dispersion):
         return jdm * dm_jump_par.units
 
     def d_dm_d_dmjump(self, toas, jump_param):
-        """Derivative of dm values wrt dm jumps."""
+        """Derivative of the DM values w.r.t DM jumps."""
         tbl = toas.table
         d_dm_d_j = np.zeros(len(tbl))
         jpar = getattr(self, jump_param)
         mask = jpar.select_toa_mask(toas)
         d_dm_d_j[mask] = -1.0
-        return d_dm_d_j * jpar.units / jpar.units
+        return d_dm_d_j * u.dimensionless_unscaled
 
     def d_delay_d_dmjump(self, toas, param_name, acc_delay=None):
-        """Derivative for delay wrt to dm jumps.
+        """Derivative of the delay w.r.t DM jumps.
 
-        Since DMJUMPS does not affect delay, this would be zero.
+        Since DMJUMPs do not affect the delay, this should be zero.
         """
         dmjump = getattr(self, param_name)
         return np.zeros(toas.ntoas) * (u.s / dmjump.units)
