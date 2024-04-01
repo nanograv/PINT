@@ -56,7 +56,9 @@ from copy import deepcopy
 import warnings
 
 import pint
+from pint.models.timing_model import TimingModel
 import pint.pulsar_ecliptic
+from pint.toa import TOAs
 from pint.toa_select import TOASelect
 
 
@@ -2601,13 +2603,13 @@ def normalize_designmatrix(M, params):
     return M / norm, norm
 
 
-def akaike_information_criterion(model, toas):
+def akaike_information_criterion(model: TimingModel, toas: TOAs) -> float:
     """Compute the Akaike information criterion.
 
     Parameters
     ----------
     model: pint.models.timing_model.TimingModel
-        The timing model
+        The best-fit timing model
     toas: pint.toas.TOAs
         TOAs
 
@@ -2629,6 +2631,38 @@ def akaike_information_criterion(model, toas):
     else:
         raise NotImplementedError(
             "akaike_information_criterion is not yet implemented for wideband data."
+        )
+
+
+def bayesian_information_criterion(model: TimingModel, toas: TOAs) -> float:
+    """Compute the Bayesian information criterion.
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+        The best-fit timing model
+    toas: pint.toas.TOAs
+        TOAs
+
+    Returns
+    -------
+    bic: float
+        The Bayesian information criterion
+    """
+    from pint.residuals import Residuals
+
+    if not toas.is_wideband():
+        k = (
+            len(model.free_params)
+            if "PhaseOffset" in model.components
+            else len(model.free_params) + 1
+        )
+        lnN = len(toas)
+        lnL = Residuals(toas, model).lnlikelihood()
+        return k * lnN - 2 * lnL
+    else:
+        raise NotImplementedError(
+            "bayesian_information_criterion is not yet implemented for wideband data."
         )
 
 

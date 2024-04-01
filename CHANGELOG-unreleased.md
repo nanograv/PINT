@@ -39,6 +39,7 @@ the released changes.
 - Better explanation of ELL1H behavior when H3/H4/STIGMA supplied and when NHARMS is used
 - FDJumpDM component for System-dependent DM offsets
 - Documentation: Explanation for FDJUMP and FDJUMPDM
+- `bayesian_information_criterion()` function 
 ### Fixed
 - `MCMC_walkthrough` notebook now runs
 - Fixed runtime data README 
