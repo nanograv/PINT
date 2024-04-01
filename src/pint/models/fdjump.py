@@ -207,15 +207,20 @@ class FDJump(DelayComponent):
 
 
 class FDJumpDM(Dispersion):
-    """This class provides index-0 (frequency-independent) FD jumps.
-    These can also be interpreted as system-dependent DM offsets.
-    Hence, we have chosen the offset parameters to have dimensions
-    of DM. This convention is different from regular FD jumps.
+    """This class provides system-dependent DM offsets for narrow-band
+    datasets. Such offsets can arise if different fiducial DMs are used
+    to dedisperse the template profiles used to derive the TOAs for different
+    systems.
 
     FDJumpDM is not to be confused with DMJump, which provides a DM offset
     without providing the corresponding DM delay. DMJump is specific to
     wideband datasets whereas FDJumpDM is intended to be used with narrowband
-    datasets in conjunction with FDJump.
+    datasets.
+
+    This component is called FDJumpDM because the name DMJump was already taken,
+    and because this is often used in conjunction with FDJumps which account for
+    the fact that the templates may not adequately model the frequency-dependent
+    profile evolution.
 
     Parameters supported:
 
