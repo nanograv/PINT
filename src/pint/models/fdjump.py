@@ -267,7 +267,11 @@ class FDJumpDM(Dispersion):
             jdm[mask] += -fdjumpdm_par.value
         return jdm * fdjumpdm_par.units
 
-    def d_dm_d_dmjump(self, toas, jump_param):
+    def fdjump_dm_delay(self, toas, acc_delay=None):
+        """This is a wrapper function for interacting with the TimingModel class"""
+        return self.dispersion_type_delay(toas)
+
+    def d_dm_d_fdjumpdm(self, toas, jump_param):
         """Derivative of dm values wrt dm jumps."""
         tbl = toas.table
         d_dm_d_j = np.zeros(len(tbl))
