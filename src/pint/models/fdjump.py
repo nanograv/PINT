@@ -241,7 +241,7 @@ class FDJumpDM(Dispersion):
                 name="FDJUMPDM",
                 units="pc cm^-3",
                 value=None,
-                description="System-dependent DM offset / FD parameter of polynomial index 0.",
+                description="System-dependent DM offset.",
             )
         )
 
