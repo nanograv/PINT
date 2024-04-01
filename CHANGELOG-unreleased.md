@@ -35,6 +35,7 @@ the released changes.
 - `freeze_params` option in `wavex_setup` and `dmwavex_setup`
 - `plrednoise_from_wavex`, `pldmnoise_from_dmwavex`, and `find_optimal_nharms` functions
 - fake TOAs can be created with `subtract_mean=False`, to maintain phase coherence between different data sets
+- FDJumpDM component for System-dependent DM offsets / Index-0 FD jumps 
 ### Fixed
 - `MCMC_walkthrough` notebook now runs
 - Fixed runtime data README 
