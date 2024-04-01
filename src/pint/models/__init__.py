@@ -16,6 +16,7 @@ handling; they are implemented by deriving from
 :class:`~pint.models.stand_alone_psr_binaries.binary_generic.PSR_BINARY`, which
 provides some of the infrastructure needed to implement them conveniently.
 """
+
 from pint.models.absolute_phase import AbsPhase
 
 # Import all standard model components here
@@ -24,7 +25,7 @@ from pint.models.binary_bt import BinaryBT, BinaryBTPiecewise
 from pint.models.binary_dd import BinaryDD, BinaryDDS, BinaryDDGR
 from pint.models.binary_ddk import BinaryDDK
 from pint.models.binary_ell1 import BinaryELL1, BinaryELL1H, BinaryELL1k
-from pint.models.dispersion_model import DispersionDM, DispersionDMX
+from pint.models.dispersion_model import DispersionDM, DispersionDMX, DispersionJump
 from pint.models.dmwavex import DMWaveX
 from pint.models.frequency_dependent import FD
 from pint.models.glitch import Glitch
@@ -37,7 +38,7 @@ from pint.models.noise_model import EcorrNoise, PLRedNoise, ScaleToaError
 from pint.models.solar_system_shapiro import SolarSystemShapiro
 from pint.models.solar_wind_dispersion import SolarWindDispersion, SolarWindDispersionX
 from pint.models.spindown import Spindown
-from pint.models.fdjump import FDJump
+from pint.models.fdjump import FDJump, FDJumpDM
 
 # Import the main timing model classes
 from pint.models.timing_model import DEFAULT_ORDER, TimingModel
