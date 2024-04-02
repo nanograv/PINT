@@ -27,7 +27,6 @@ See :ref:`Timing Models` for more details on how PINT's timing models work.
 
 """
 
-
 import abc
 import copy
 import inspect
@@ -1915,8 +1914,8 @@ class TimingModel:
         delay_derivs = self.delay_deriv_funcs
         if param not in list(delay_derivs.keys()):
             raise AttributeError(
-                "Derivative function for '{param}' is not provided"
-                " or not registered; parameter '{param}' may not be fittable. "
+                f"Derivative function for '{param}' is not provided"
+                f" or not registered; parameter '{param}' may not be fittable. "
             )
         for df in delay_derivs[param]:
             result += df(toas, param, acc_delay).to(
@@ -2898,7 +2897,7 @@ class TimingModel:
         for cp in self.components.values():
             if name in cp.params:
                 return getattr(cp, name)
-        raise KeyError("TimingModel does not have parameter {}".format(name))
+        raise KeyError(f"TimingModel does not have parameter {name}")
 
     def __setitem__(self, name, value):
         # FIXME: This could be the right way to add Parameters?
@@ -3121,9 +3120,11 @@ class TimingModel:
                 tasc = ufloat(
                     # This is a time in MJD
                     self.TASC.quantity.mjd,
-                    self.TASC.uncertainty.to(u.d).value
-                    if self.TASC.uncertainty is not None
-                    else 0,
+                    (
+                        self.TASC.uncertainty.to(u.d).value
+                        if self.TASC.uncertainty is not None
+                        else 0
+                    ),
                 )
                 s += "Conversion from ELL1 parameters:\n"
                 ecc = um.sqrt(eps1**2 + eps2**2)
