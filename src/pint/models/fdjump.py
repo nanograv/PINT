@@ -210,7 +210,8 @@ class FDJumpDM(Dispersion):
     """This class provides system-dependent DM offsets for narrow-band
     datasets. Such offsets can arise if different fiducial DMs are used
     to dedisperse the template profiles used to derive the TOAs for different
-    systems.
+    systems. They can also arise while combining TOAs obtained using frequency-
+    collapsed templates with those obtained using frequency-resolved templates.
 
     FDJumpDM is not to be confused with DMJump, which provides a DM offset
     without providing the corresponding DM delay. DMJump is specific to
