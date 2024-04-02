@@ -8,7 +8,6 @@ import numpy as np
 
 from pint.models.parameter import boolParameter, maskParameter
 from pint.models.timing_model import DelayComponent
-from pint.models.dispersion_model import Dispersion
 
 fdjump_max_index = 20
 
@@ -204,84 +203,3 @@ class FDJump(DelayComponent):
                 par = par.replace(f"FD{j}JUMP", f"FDJUMP{j}")
 
         return par
-
-
-class FDJumpDM(Dispersion):
-    """This class provides system-dependent DM offsets for narrow-band
-    datasets. Such offsets can arise if different fiducial DMs are used
-    to dedisperse the template profiles used to derive the TOAs for different
-    systems. They can also arise while combining TOAs obtained using frequency-
-    collapsed templates with those obtained using frequency-resolved templates.
-
-    FDJumpDM is not to be confused with DMJump, which provides a DM offset
-    without providing the corresponding DM delay. DMJump is specific to
-    wideband datasets whereas FDJumpDM is intended to be used with narrowband
-    datasets.
-
-    This component is called FDJumpDM because the name DMJump was already taken,
-    and because this is often used in conjunction with FDJumps which account for
-    the fact that the templates may not adequately model the frequency-dependent
-    profile evolution.
-
-    Parameters supported:
-
-    .. paramtable::
-        :class: pint.models.fdjump.FDJumpDM
-    """
-
-    register = True
-    category = "fdjumpdm"
-
-    def __init__(self):
-        super().__init__()
-        self.dm_value_funcs += [self.fdjump_dm]
-        self.delay_funcs_component += [self.fdjump_dm_delay]
-
-        self.add_param(
-            maskParameter(
-                name="FDJUMPDM",
-                units="pc cm^-3",
-                value=None,
-                description="System-dependent DM offset.",
-            )
-        )
-
-    def setup(self):
-        super().setup()
-        self.fdjump_dms = []
-        for mask_par in self.get_params_of_type("maskParameter"):
-            if mask_par.startswith("FDJUMPDM"):
-                self.fdjump_dms.append(mask_par)
-        for j in self.fdjump_dms:
-            self.register_dm_deriv_funcs(self.d_dm_d_fdjumpdm, j)
-            self.register_deriv_funcs(self.d_delay_d_dmparam, j)
-
-    def validate(self):
-        super().validate()
-
-    def fdjump_dm(self, toas):
-        """Return the system-dependent DM offset.
-
-        The delay value is determined by FDJUMPDM parameter
-        value in the unit of pc / cm ** 3.
-        """
-        tbl = toas.table
-        jdm = np.zeros(len(tbl))
-        for fdjumpdm in self.fdjump_dms:
-            fdjumpdm_par = getattr(self, fdjumpdm)
-            mask = fdjumpdm_par.select_toa_mask(toas)
-            jdm[mask] += -fdjumpdm_par.value
-        return jdm * fdjumpdm_par.units
-
-    def fdjump_dm_delay(self, toas, acc_delay=None):
-        """This is a wrapper function for interacting with the TimingModel class"""
-        return self.dispersion_type_delay(toas)
-
-    def d_dm_d_fdjumpdm(self, toas, jump_param):
-        """Derivative of DM values w.r.t FDJUMPDM parameters."""
-        tbl = toas.table
-        d_dm_d_j = np.zeros(len(tbl))
-        jpar = getattr(self, jump_param)
-        mask = jpar.select_toa_mask(toas)
-        d_dm_d_j[mask] = -1.0
-        return d_dm_d_j * u.dimensionless_unscaled
