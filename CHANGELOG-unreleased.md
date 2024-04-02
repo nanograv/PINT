@@ -13,6 +13,7 @@ the released changes.
 - `check_ephemeris_connection` CI test no longer requires access to static NANOGrav site
 - `TimingModel.compare()` now calls `change_binary_epoch()`.
 - When clock files contain out-of-order entries, the exception now records the first MJDs that are out of order
+- `np.compat.long` -> `int` (former is deprecated)
 - Turned ErfaWarning into an exception during testing; cleaned up test suite.
 ### Added
 - Added numdifftools to setup.cfg to match requirements.txt
@@ -49,5 +50,6 @@ the released changes.
 - Emit warnings when `WaveX`/`DMWaveX` is used together with other representations of red/DM noise
 - `get_observatory()` no longer overwrites `include_gps` and `include_bipm` of `Observatory` objects unless explicitly stated (BIPM and GPS clock corrections no longer incorrectly applied to BAT TOAs).
 - Added back `spacecraft` as an alias for `stl_geo`
+- Fix bug 1729 (missing f-string)
 - Docstring of `DispersionJump`
 ### Removed
