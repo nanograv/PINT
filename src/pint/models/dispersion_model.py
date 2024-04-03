@@ -808,7 +808,7 @@ class FDJumpDM(Dispersion):
     Parameters supported:
 
     .. paramtable::
-        :class: pint.models.fdjump.FDJumpDM
+        :class: pint.models.dispersion_model.FDJumpDM
     """
 
     register = True
