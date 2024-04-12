@@ -166,8 +166,6 @@ class ModelBuilder:
 
         assert allow_T2 in [True, False]
 
-        binary_models = AllComponents().category_component_map["pulsar_system"]
-
         pint_param_dict, original_name, unknown_param = self._pintify_parfile(
             parfile, allow_name_mixing
         )
