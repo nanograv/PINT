@@ -67,7 +67,7 @@ import numpy as np
 import scipy.linalg
 import scipy.optimize as opt
 from loguru import logger as log
-from numdifftools import Hessdiag
+from numdifftools import Hessian
 
 import pint
 import pint.utils
@@ -76,7 +76,6 @@ from pint.models.parameter import (
     AngleParameter,
     boolParameter,
     strParameter,
-    funcParameter,
 )
 from pint.pint_matrix import (
     CorrelationMatrix,
@@ -469,215 +468,34 @@ class Fitter:
                         ufloat(par.value, par.uncertainty.value),
                         par.units,
                     )
-        s += "\n" + self.get_derived_params()
+        s += "\n" + self.model.get_derived_params()
         return s
 
-    def get_derived_params(self):
-        """Return a string with various derived parameters from the fitted model"""
+    def get_derived_params(self, returndict=False):
+        """Return a string with various derived parameters from the fitted model
 
-        import uncertainties.umath as um
-        from uncertainties import ufloat
+        Parameters
+        ----------
+        returndict : bool, optional
+            Whether to only return the string of results or also a dictionary
 
-        # Now print some useful derived parameters
-        s = "Derived Parameters:\n"
-        if hasattr(self.model, "F0"):
-            F0 = self.model.F0.quantity
-            if not self.model.F0.frozen:
-                p, perr = pint.derived_quantities.pferrs(F0, self.model.F0.uncertainty)
-                s += f"Period = {p.to(u.s)} +/- {perr.to(u.s)}\n"
-            else:
-                s += f"Period = {(1.0 / F0).to(u.s)}\n"
-        if hasattr(self.model, "F1"):
-            F1 = self.model.F1.quantity
-            if not any([self.model.F1.frozen, self.model.F0.frozen]):
-                p, perr, pd, pderr = pint.derived_quantities.pferrs(
-                    F0, self.model.F0.uncertainty, F1, self.model.F1.uncertainty
-                )
-                s += f"Pdot = {pd.to(u.dimensionless_unscaled)} +/- {pderr.to(u.dimensionless_unscaled)}\n"
-                if F1.value < 0.0:  # spinning-down
-                    brakingindex = 3
-                    s += f"Characteristic age = {pint.derived_quantities.pulsar_age(F0, F1, n=brakingindex):.4g} (braking index = {brakingindex})\n"
-                    s += f"Surface magnetic field = {pint.derived_quantities.pulsar_B(F0, F1):.3g}\n"
-                    s += f"Magnetic field at light cylinder = {pint.derived_quantities.pulsar_B_lightcyl(F0, F1):.4g}\n"
-                    I_NS = I = 1.0e45 * u.g * u.cm**2
-                    s += f"Spindown Edot = {pint.derived_quantities.pulsar_edot(F0, F1, I=I_NS):.4g} (I={I_NS})\n"
-                else:
-                    s += "Not computing Age, B, or Edot since F1 > 0.0\n"
+        Returns
+        -------
+        results : str
+        parameters : dict, optional
 
-        if hasattr(self.model, "PX") and not self.model.PX.frozen:
-            s += "\n"
-            px = self.model.PX.as_ufloat(u.arcsec)
-            s += f"Parallax distance = {1.0/px:.3uP} pc\n"
+        See Also
+        --------
+        :func:`pint.models.timing_model.TimingModel.get_derived_params`
+        """
 
-        # Now binary system derived parameters
-        if self.model.is_binary:
-            for x in self.model.components:
-                if x.startswith("Binary"):
-                    binary = x
-
-            s += f"\nBinary model {binary}\n"
-
-            btx = False
-            if (
-                hasattr(self.model, "FB0")
-                and self.model.FB0.quantity is not None
-                and self.model.FB0.value != 0.0
-            ):
-                btx = True
-                FB0 = self.model.FB0.quantity
-                if not self.model.FB0.frozen:
-                    pb, pberr = pint.derived_quantities.pferrs(
-                        FB0, self.model.FB0.uncertainty
-                    )
-                    s += f"Orbital Period  (PB) = {pb.to(u.d)} +/- {pberr.to(u.d)}\n"
-                else:
-                    s += f"Orbital Period  (PB) = {(1.0 / FB0).to(u.d)}\n"
-
-            if (
-                hasattr(self.model, "FB1")
-                and self.model.FB1.quantity is not None
-                and self.model.FB1.value != 0.0
-            ):
-                FB1 = self.model.FB1.quantity
-                if not any([self.model.FB1.frozen, self.model.FB0.frozen]):
-                    pb, pberr, pbd, pbderr = pint.derived_quantities.pferrs(
-                        FB0, self.model.FB0.uncertainty, FB1, self.model.FB1.uncertainty
-                    )
-                    s += f"Orbital Pdot (PBDOT) = {pbd.to(u.dimensionless_unscaled)} +/- {pbderr.to(u.dimensionless_unscaled)}\n"
-
-            ell1 = False
-            if binary.startswith("BinaryELL1"):
-                ell1 = True
-                eps1 = self.model.EPS1.as_ufloat()
-                eps2 = self.model.EPS2.as_ufloat()
-                tasc = ufloat(
-                    # This is a time in MJD
-                    self.model.TASC.quantity.mjd,
-                    self.model.TASC.uncertainty.to(u.d).value,
-                )
-                if hasattr(self.model, "PB") and self.model.PB.value is not None:
-                    pb = self.model.PB.as_ufloat(u.d)
-                elif hasattr(self.model, "FB0") and self.model.FB0.value is not None:
-                    pb = 1 / self.model.FB0.as_ufloat(1 / u.d)
-                s += "Conversion from ELL1 parameters:\n"
-                ecc = um.sqrt(eps1**2 + eps2**2)
-                s += "ECC = {:P}\n".format(ecc)
-                om = um.atan2(eps1, eps2) * 180.0 / np.pi
-                if om < 0.0:
-                    om += 360.0
-                s += f"OM  = {om:P} deg\n"
-                t0 = tasc + pb * om / 360.0
-                s += f"T0  = {t0:SP}\n"
-
-                a1 = (
-                    self.model.A1.quantity
-                    if self.model.A1.quantity is not None
-                    else 0 * pint.ls
-                )
-                if self.is_wideband:
-                    s += pint.utils.ELL1_check(
-                        a1,
-                        ecc.nominal_value * u.s / u.s,
-                        self.resids.toa.rms_weighted(),
-                        self.toas.ntoas,
-                        outstring=True,
-                    )
-                else:
-                    s += pint.utils.ELL1_check(
-                        a1,
-                        ecc.nominal_value * u.s / u.s,
-                        self.resids.rms_weighted(),
-                        self.toas.ntoas,
-                        outstring=True,
-                    )
-                s += "\n"
-            if hasattr(self.model, "FB0") and self.model.FB0.value is not None:
-                pb, pberr = pint.derived_quantities.pferrs(
-                    self.model.FB0.quantity, self.model.FB0.uncertainty
-                )
-            # Masses and inclination
-            pb = pb.to(u.d) if btx else self.model.PB.quantity
-            pberr = pberr.to(u.d) if btx else self.model.PB.uncertainty
-            if not self.model.A1.frozen:
-                pbs = ufloat(
-                    pb.to(u.s).value,
-                    pberr.to(u.s).value,
-                )
-                a1 = self.model.A1.as_ufloat(pint.ls)
-                # This is the mass function, done explicitly so that we get
-                # uncertainty propagation automatically.
-                # TODO: derived quantities funcs should take uncertainties
-                fm = 4.0 * np.pi**2 * a1**3 / (4.925490947e-6 * pbs**2)
-                s += f"Mass function = {fm:SP} Msun\n"
-                mcmed = pint.derived_quantities.companion_mass(
-                    pb,
-                    self.model.A1.quantity,
-                    i=60.0 * u.deg,
-                    mp=1.4 * u.solMass,
-                )
-                mcmin = pint.derived_quantities.companion_mass(
-                    pb,
-                    self.model.A1.quantity,
-                    i=90.0 * u.deg,
-                    mp=1.4 * u.solMass,
-                )
-                s += f"Min / Median Companion mass (assuming Mpsr = 1.4 Msun) = {mcmin.value:.4f} / {mcmed.value:.4f} Msun\n"
-
-            if (
-                hasattr(self.model, "OMDOT")
-                and self.model.OMDOT.quantity is not None
-                and self.model.OMDOT.value != 0.0
-            ):
-                omdot = self.model.OMDOT.quantity
-                omdot_err = (
-                    self.model.OMDOT.uncertainty
-                    if self.model.OMDOT.uncertainty is not None
-                    else 0 * self.model.OMDOT.quantity.unit
-                )
-                ecc = (
-                    ecc.n * u.dimensionless_unscaled
-                    if ell1
-                    else self.model.ECC.quantity
-                )
-                Mtot = pint.derived_quantities.omdot_to_mtot(omdot, pb, ecc)
-                # Assume that the uncertainty on OMDOT dominates the Mtot uncertainty
-                # This is probably a good assumption until we can get the uncertainties module
-                # to work with quantities.
-                Mtot_hi = pint.derived_quantities.omdot_to_mtot(
-                    omdot + omdot_err,
-                    pb,
-                    ecc,
-                )
-                Mtot_lo = pint.derived_quantities.omdot_to_mtot(
-                    omdot - omdot_err,
-                    pb,
-                    ecc,
-                )
-                Mtot_err = max(abs(Mtot_hi - Mtot), abs(Mtot - Mtot_lo))
-                mt = ufloat(Mtot.value, Mtot_err.value)
-                s += f"Total mass, assuming GR, from OMDOT is {mt:SP} Msun\n"
-
-            if (
-                hasattr(self.model, "SINI")
-                and self.model.SINI.quantity is not None
-                and (self.model.SINI.value >= 0.0 and self.model.SINI.value < 1.0)
-            ):
-                with contextlib.suppress(TypeError, ValueError):
-                    # Put this in a try in case SINI is UNSET or an illegal value
-                    if not self.model.SINI.frozen:
-                        si = self.model.SINI.as_ufloat()
-                        s += f"From SINI in model:\n"
-                        s += f"    cos(i) = {um.sqrt(1 - si**2):SP}\n"
-                        s += f"    i = {um.asin(si) * 180.0 / np.pi:SP} deg\n"
-
-                    psrmass = pint.derived_quantities.pulsar_mass(
-                        pb,
-                        self.model.A1.quantity,
-                        self.model.M2.quantity,
-                        np.arcsin(self.model.SINI.quantity),
-                    )
-                    s += f"Pulsar mass (Shapiro Delay) = {psrmass}"
-        return s
+        return self.model.get_derived_params(
+            rms=self.resids.toa.rms_weighted()
+            if self.is_wideband
+            else self.resids.rms_weighted(),
+            ntoas=self.toas.ntoas,
+            returndict=returndict,
+        )
 
     def print_summary(self):
         """Write a summary of the TOAs to stdout."""
@@ -1287,11 +1105,12 @@ class DownhillFitter(Fitter):
     def fit_toas(
         self,
         maxiter=20,
-        noise_fit_niter=5,
+        noise_fit_niter=2,
         required_chi2_decrease=1e-2,
         max_chi2_increase=1e-2,
         min_lambda=1e-3,
         noisefit_method="Newton-CG",
+        compute_noise_uncertainties=True,
         debug=False,
     ):
         """Carry out a cautious downhill fit.
@@ -1352,26 +1171,35 @@ class DownhillFitter(Fitter):
                 min_lambda=required_chi2_decrease,
                 debug=debug,
             )
-        else:
-            log.debug("Will fit for noise parameters.")
-            for _ in range(noise_fit_niter):
-                self._fit_toas(
-                    maxiter=maxiter,
-                    required_chi2_decrease=required_chi2_decrease,
-                    max_chi2_increase=max_chi2_increase,
-                    min_lambda=min_lambda,
-                    debug=debug,
-                )
-                values, errors = self._fit_noise(noisefit_method=noisefit_method)
-                self._update_noise_params(values, errors)
 
-            return self._fit_toas(
+        log.debug("Will fit for noise parameters.")
+        for ii in range(noise_fit_niter):
+            self._fit_toas(
                 maxiter=maxiter,
                 required_chi2_decrease=required_chi2_decrease,
                 max_chi2_increase=max_chi2_increase,
                 min_lambda=min_lambda,
                 debug=debug,
             )
+
+            if ii == noise_fit_niter - 1 and compute_noise_uncertainties:
+                values, errors = self._fit_noise(
+                    noisefit_method=noisefit_method, uncertainty=True
+                )
+                self._update_noise_params(values, errors)
+            else:
+                values = self._fit_noise(
+                    noisefit_method=noisefit_method, uncertainty=False
+                )
+                self._update_noise_params(values)
+
+        return self._fit_toas(
+            maxiter=maxiter,
+            required_chi2_decrease=required_chi2_decrease,
+            max_chi2_increase=max_chi2_increase,
+            min_lambda=min_lambda,
+            debug=debug,
+        )
 
     @property
     def fac(self):
@@ -1385,14 +1213,19 @@ class DownhillFitter(Fitter):
             if not getattr(self.model, fp).frozen
         ]
 
-    def _update_noise_params(self, values, errors):
+    def _update_noise_params(self, values, errors=None):
         """Update the model using estimated noise parameters."""
         free_noise_params = self._get_free_noise_params()
-        for fp, val, err in zip(free_noise_params, values, errors):
-            getattr(self.model, fp).value = val
-            getattr(self.model, fp).uncertainty_value = err
 
-    def _fit_noise(self, noisefit_method="Newton-CG"):
+        if errors is not None:
+            for fp, val, err in zip(free_noise_params, values, errors):
+                getattr(self.model, fp).value = val
+                getattr(self.model, fp).uncertainty_value = err
+        else:
+            for fp, val in zip(free_noise_params, values):
+                getattr(self.model, fp).value = val
+
+    def _fit_noise(self, noisefit_method="Newton-CG", uncertainty=False):
         """Estimate noise parameters and their uncertainties. Noise parameters
         are estimated by numerically maximizing the log-likelihood function including
         the normalization term. The uncertainties thereof are computed using the
@@ -1411,26 +1244,31 @@ class DownhillFitter(Fitter):
 
             return -res.lnlikelihood()
 
-        def _mloglike_grad(xs):
-            """Gradient of the negative of the log-likelihood function w.r.t. white noise parameters."""
-            for fp, x in zip(free_noise_params, xs):
-                getattr(res.model, fp).value = x
+        if not res.model.has_correlated_errors:
 
-            return np.array(
-                [
-                    -res.d_lnlikelihood_d_whitenoise_param(par).value
-                    for par in free_noise_params
-                ]
+            def _mloglike_grad(xs):
+                """Gradient of the negative of the log-likelihood function w.r.t. white noise parameters."""
+                for fp, x in zip(free_noise_params, xs):
+                    getattr(res.model, fp).value = x
+
+                return np.array(
+                    [
+                        -res.d_lnlikelihood_d_param(par).value
+                        for par in free_noise_params
+                    ]
+                )
+
+            maxlike_result = opt.minimize(
+                _mloglike, xs0, method=noisefit_method, jac=_mloglike_grad
             )
+        else:
+            maxlike_result = opt.minimize(_mloglike, xs0, method="Nelder-Mead")
 
-        maxlike_result = opt.minimize(
-            _mloglike, xs0, method=noisefit_method, jac=_mloglike_grad
-        )
+        if uncertainty:
+            hess = Hessian(_mloglike)
+            errs = np.sqrt(np.diag(np.linalg.pinv(hess(maxlike_result.x))))
 
-        hess = Hessdiag(_mloglike)
-        errs = np.sqrt(1 / hess(maxlike_result.x))
-
-        return maxlike_result.x, errs
+        return (maxlike_result.x, errs) if uncertainty else maxlike_result.x
 
 
 class WLSState(ModelState):
@@ -1734,6 +1572,7 @@ class DownhillGLSFitter(DownhillFitter):
         self.threshold = threshold
         self.full_cov = full_cov
         r = super().fit_toas(maxiter=maxiter, debug=debug, **kwargs)
+
         # FIXME: set up noise residuals et cetera
         # Compute the noise realizations if possible
         if not self.full_cov:
@@ -2386,11 +2225,12 @@ class GLSFitter(Fitter):
             log.trace(f"norm: {norm}")
             log.trace(f"xhat: {xhat}")
             newres = residuals - np.dot(M, xhat)
+
             # compute linearized chisq
-            if full_cov:
-                chi2 = np.dot(newres, scipy.linalg.cho_solve(cf, newres))
-            else:
-                chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
+            # if full_cov:
+            #     chi2 = np.dot(newres, scipy.linalg.cho_solve(cf, newres))
+            # else:
+            #     chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
 
             # compute absolute estimates, normalized errors, covariance matrix
             dpars = xhat / norm
@@ -2441,6 +2281,7 @@ class GLSFitter(Fitter):
                 if debug:
                     setattr(self.resids, "norm", norm)
 
+        chi2 = self.resids.calc_chi2()
         self.update_model(chi2)
 
         return chi2

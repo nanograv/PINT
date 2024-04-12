@@ -20,7 +20,7 @@ from pint.simulation import (
 )
 from pint.residuals import Residuals
 from pint.toa import get_TOAs, merge_TOAs
-from pint.utils import FTest
+from pint.utils import FTest, akaike_information_criterion
 
 import pint.logging
 from loguru import logger as log
@@ -37,6 +37,7 @@ plot_labels = [
     "frequency",
     "TOA error",
     "rounded MJD",
+    "model DM",
     "WB DM",
     "WB DM res",
     "WB DM err",
@@ -582,6 +583,10 @@ class Pulsar:
 
         # adds extra prefix params for fitting
         self.add_model_params()
+
+        print(
+            f"Akaike information criterion = {akaike_information_criterion(self.fitter.model, self.fitter.toas)}"
+        )
 
     def random_models(self, selected):
         """Compute and plot random models"""

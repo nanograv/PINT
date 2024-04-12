@@ -1,11 +1,14 @@
 import os.path
 from io import StringIO
+from packaging import version
 
 import astropy.units as u
+import erfa
+import hypothesis.strategies as st
 import numpy as np
 import pytest
 from astropy.coordinates import Latitude, Longitude
-
+from hypothesis import example, given
 from pint.models import get_model
 from pinttestdata import datadir
 
@@ -98,7 +101,6 @@ EPHEM               DE421
 CLK              UTC(NIST)
 UNITS               TDB
 TIMEEPH             FB90
-T2CMETHOD           TEMPO
 CORRECT_TROPOSPHERE N
 PLANET_SHAPIRO      N
 DILATEFREQ          N
@@ -108,19 +110,16 @@ TZRSITE                  1
 """
 
 
-ntests = 200
-
-
-@pytest.mark.parametrize(
-    ("ra,dec,pmra,pmdec"),
-    list(
-        zip(
-            np.random.uniform(0, 360, ntests),
-            np.random.uniform(-90, 90, ntests),
-            np.random.normal(0, scale=10, size=ntests),
-            np.random.normal(0, scale=10, size=ntests),
-        )
-    ),
+@given(
+    st.floats(0, 360),
+    st.floats(-89.9, 89.9),
+    st.floats(0, 10),
+    st.floats(0, 10),
+)
+@example(ra=1.0, dec=1.0, pmra=2.0, pmdec=4.345847379899e-311)
+@pytest.mark.xfail(
+    version.parse(erfa.__version__) < version.parse("2.0.1"),
+    reason="Old version of pyerfa had a bug",
 )
 def test_ssb_accuracy_ICRS(ra, dec, pmra, pmdec):
     m = get_model(StringIO(parICRS), RAJ=ra, DECJ=dec, PMRA=pmra, PMDEC=pmdec)
@@ -147,7 +146,6 @@ EPHEM               DE421
 CLK              UTC(NIST)
 UNITS               TDB
 TIMEEPH             FB90
-T2CMETHOD           TEMPO
 CORRECT_TROPOSPHERE N
 PLANET_SHAPIRO      N
 DILATEFREQ          N
@@ -157,16 +155,11 @@ TZRSITE                  1
 """
 
 
-@pytest.mark.parametrize(
-    ("elong,elat,pmelong,pmelat"),
-    list(
-        zip(
-            np.random.uniform(0, 360, ntests),
-            np.random.uniform(-90, 90, ntests),
-            np.random.normal(0, scale=10, size=ntests),
-            np.random.normal(0, scale=10, size=ntests),
-        )
-    ),
+@given(
+    st.floats(0, 360),
+    st.floats(-89.9, 89.9),
+    st.floats(0, 10),
+    st.floats(0, 10),
 )
 def test_ssb_accuracy_ICRS_ECLmodel(elong, elat, pmelong, pmelat):
     m = get_model(
@@ -180,16 +173,16 @@ def test_ssb_accuracy_ICRS_ECLmodel(elong, elat, pmelong, pmelat):
     assert np.allclose(xyznew, xyzastropy)
 
 
-@pytest.mark.parametrize(
-    ("elong,elat,pmelong,pmelat"),
-    list(
-        zip(
-            np.random.uniform(0, 360, ntests),
-            np.random.uniform(-90, 90, ntests),
-            np.random.normal(0, scale=10, size=ntests),
-            np.random.normal(0, scale=10, size=ntests),
-        )
-    ),
+@given(
+    st.floats(0, 360),
+    st.floats(-89.9, 89.9),
+    st.floats(0, 10),
+    st.floats(0, 10),
+)
+@example(1.0, 1.0, 0.5, 4.345847379899e-311)
+@pytest.mark.xfail(
+    version.parse(erfa.__version__) < version.parse("2.0.1"),
+    reason="Old version of pyerfa had a bug",
 )
 def test_ssb_accuracy_ECL_ECLmodel(elong, elat, pmelong, pmelat):
     m = get_model(

@@ -167,7 +167,7 @@ class DMWaveX(Dispersion):
             frozens = np.repeat(frozens, len(dmwxfreqs))
         if len(frozens) != len(dmwxfreqs):
             raise ValueError(
-                f"Number of base frequencies must match number of frozen values"
+                "Number of base frequencies must match number of frozen values"
             )
         #### If indices is None, increment the current max DMWaveX index by 1. Increment using DMWXFREQ
         dct = self.get_prefix_mapping_component("DMWXFREQ_")
@@ -331,16 +331,15 @@ class DMWaveX(Dispersion):
                 warn(f"Frequency DMWXFREQ_{index:04d} is negative")
             wfreqs[j] = getattr(self, f"DMWXFREQ_{index:04d}").value
         wfreqs.sort()
-        if np.any(np.diff(wfreqs) <= (1.0 / (2.0 * 364.25))):
-            warn("Frequency resolution is greater than 1/yr")
-        if self.DMWXEPOCH.value is None:
-            if self._parent is not None:
-                if self._parent.PEPOCH.value is None:
-                    raise MissingParameter(
-                        "DMWXEPOCH or PEPOCH are required if DMWaveX is being used"
-                    )
-                else:
-                    self.DMWXEPOCH.quantity = self._parent.PEPOCH.quantity
+        # if np.any(np.diff(wfreqs) <= (1.0 / (2.0 * 364.25))):
+        #     warn("Frequency resolution is greater than 1/yr")
+        if self.DMWXEPOCH.value is None and self._parent is not None:
+            if self._parent.PEPOCH.value is None:
+                raise MissingParameter(
+                    "DMWXEPOCH or PEPOCH are required if DMWaveX is being used"
+                )
+            else:
+                self.DMWXEPOCH.quantity = self._parent.PEPOCH.quantity
 
     def validate_toas(self, toas):
         return super().validate_toas(toas)

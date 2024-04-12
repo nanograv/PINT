@@ -627,6 +627,7 @@
             "leap2effix.clk",
             "effix2gps.clk"
         ],
+        "bogus_last_correction": true,
         "fullname": "The Large European Array for Pulsars",
         "origin": "This is the same as the position of the Effelsberg radio telescope.\nImported from TEMPO2 observatories.dat 2021 June 7."
     },
