@@ -48,7 +48,6 @@ def main(argv=None):
 
     args = parser.parse_args(argv)
 
-    # Perhaps build this into the model builder? It needs to allow for the options to do so though...
     mb = ModelBuilder()
 
     model = mb(args.input_par, allow_T2=True, allow_tcb=True)
