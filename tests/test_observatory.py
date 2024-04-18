@@ -297,7 +297,10 @@ def test_json_observatory_input_latlon(sandbox):
     for p in gbt_orig.__dict__:
         if p not in ["location", "_clock"]:
             # everything else should be identical
-            assert getattr(gbt_orig, p) == getattr(gbt_reload, p)
+            # but check for either order
+            assert (getattr(gbt_orig, p) == getattr(gbt_reload, p)) or (
+                getattr(gbt_orig, p) == getattr(gbt_reload, p)[::-1]
+            )
     # check distance separately to allow for precision
     distance = gbt_orig.separation(gbt_reload)
     assert distance < 1 * u.m
