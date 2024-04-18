@@ -398,6 +398,7 @@ class BinaryELL1H(BinaryELL1):
                 log.warning(
                     f"Requested NHARMS={self.NHARMS.value} will be ignored, since will use exact parameterization with STIGMA specified"
                 )
+            self.remove_param("NHARMS")
             self.binary_instance.ds_func = self.binary_instance.delayS_H3_STIGMA_exact
             if self.STIGMA.quantity <= 0:
                 raise ValueError("STIGMA must be greater than zero.")
