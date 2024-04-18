@@ -1,6 +1,7 @@
 """
 Interactive emulator of tempo2 plk
 """
+
 import copy
 import os
 import sys
@@ -1238,17 +1239,17 @@ class PlkWidget(tk.Frame):
             if self.psr.fitted:
                 # TODO: may want to include option for prefit resids to include jumps
                 data = self.psr.prefit_resids_no_jumps.time_resids.to(u.us)
-                error = self.psr.all_toas.get_errors().to(u.us)
+                error = self.psr.prefit_resids_no_jumps.get_data_error().to(u.us)
                 return data, error
             data = self.psr.prefit_resids.time_resids.to(u.us)
-            error = self.psr.all_toas.get_errors().to(u.us)
+            error = self.psr.prefit_resids.get_data_error().to(u.us)
         elif label == "post-fit":
             if self.psr.fitted:
                 data = self.psr.postfit_resids.time_resids.to(u.us)
             else:
                 log.warning("Pulsar has not been fitted yet! Giving pre-fit residuals")
                 data = self.psr.prefit_resids.time_resids.to(u.us)
-            error = self.psr.all_toas.get_errors().to(u.us)
+            error = self.psr.postfit_resids.get_data_error().to(u.us)
         elif label == "mjd":
             data = self.psr.all_toas.get_mjds()
             error = self.psr.all_toas.get_errors()
