@@ -367,7 +367,7 @@ class BinaryELL1H(BinaryELL1):
             intParameter(
                 name="NHARMS",
                 units="",
-                value=7,
+                # value=7,
                 description="Number of harmonics for ELL1H shapiro delay.",
             )
         )
@@ -384,21 +384,22 @@ class BinaryELL1H(BinaryELL1):
         if self.H4.quantity is not None:
             self.binary_instance.fit_params = ["H3", "H4"]
             # If have H4 or STIGMA, choose 7th order harmonics
-            if self.NHARMS.value < 7:
+            if (self.NHARMS.value is not None) and (self.NHARMS.value < 7):
                 log.warning(
                     f"Requested NHARMS={self.NHARMS.value}, but setting it to 7 since H4 is also specified"
                 )
-            self.NHARMS.value = max(self.NHARMS.value, 7)
+            self.NHARMS.value = (
+                max(self.NHARMS.value, 7) if self.NHARMS.value is not None else 7
+            )
             if self.STIGMA.quantity is not None:
                 raise ValueError("ELL1H can use H4 or STIGMA but not both")
 
         if self.STIGMA.quantity is not None:
             self.binary_instance.fit_params = ["H3", "STIGMA"]
-            if self.NHARMS.value != 7:
+            if self.NHARMS.value is not None:
                 log.warning(
                     f"Requested NHARMS={self.NHARMS.value} will be ignored, since will use exact parameterization with STIGMA specified"
                 )
-            self.remove_param("NHARMS")
             self.binary_instance.ds_func = self.binary_instance.delayS_H3_STIGMA_exact
             if self.STIGMA.quantity <= 0:
                 raise ValueError("STIGMA must be greater than zero.")
