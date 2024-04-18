@@ -50,4 +50,5 @@ the released changes.
 - Added back `spacecraft` as an alias for `stl_geo`
 - Fix bug 1729 (missing f-string)
 - Fixed common failure of test_observatory
+- pintk now shows scaled error bars
 ### Removed
