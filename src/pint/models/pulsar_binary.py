@@ -370,13 +370,13 @@ class PulsarBinary(DelayComponent):
                 # use the barycentered TOAS
                 self.barycentric_time = self._parent.get_barycentric_toas(toas)
             else:
-                self.barycentric_time = tbl["tdbfloat"] * u.day - acc_delay
+                self.barycentric_time = tbl["tdbld"] * u.day - acc_delay
             updates["barycentric_toa"] = self.barycentric_time
             if "AstrometryEquatorial" in self._parent.components:
                 # it's already in ICRS
                 updates["obs_pos"] = tbl["ssb_obs_pos"].quantity
                 updates["psr_pos"] = self._parent.ssb_to_psb_xyz_ICRS(
-                    epoch=tbl["tdbfloat"]
+                    epoch=tbl["tdbld"]
                 )
             elif "AstrometryEcliptic" in self._parent.components:
                 # convert from ICRS to ECL
@@ -389,7 +389,7 @@ class PulsarBinary(DelayComponent):
                     PulsarEcliptic(ecl=self._parent.ECL.value)
                 ).cartesian.xyz.transpose()
                 updates["psr_pos"] = self._parent.ssb_to_psb_xyz_ECL(
-                    epoch=tbl["tdbfloat"], ecl=self._parent.ECL.value
+                    epoch=tbl["tdbld"], ecl=self._parent.ECL.value
                 )
         for par in self.binary_instance.binary_params:
             if par in self.binary_instance.param_aliases.keys():
