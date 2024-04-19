@@ -250,7 +250,6 @@ offsets are usually modeled using phase jumps (the `JUMP` parameter, see :class:
 between TOAs generated from different systems.
 
 Here are some examples for `JUMP` parameters in a par file:
-
     `JUMP   -f 430_PUPPI    0.01  1   1e-5`
     `JUMP   tel ao          0.01  1   1e-5`
     `JUMP   mjd 55000 55100 0.01  1   1e-5`
@@ -284,7 +283,7 @@ evolution of pulse profiles, resulting in a frequency-dependent artefact in the 
 This systematic effect is usually modeled phenomenologically as a log-polynomial function of frequency 
 whose coefficients are the so-called FD parameters (see :class:`pint.models.frequency_dependent.FD`). 
 Sometimes, this effect needs to be modeled separately for different systems since different template 
-profiles will be used for each system. This is achieved through system-dependent FD parameters or FDJUMPs 
+profiles will be used for each system. This is achieved through system-dependent FD parameters or `FDJUMP`s 
 (see :class:`pint.models.fdjump.FDJump`). 
 
 Here are some examples for `FDJUMP` parameters in a par file:
