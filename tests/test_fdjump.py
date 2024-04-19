@@ -7,6 +7,7 @@ from pint.fitter import DownhillWLSFitter
 import pytest
 from io import StringIO
 import numpy as np
+from copy import deepcopy
 
 
 @pytest.fixture
@@ -123,3 +124,19 @@ def test_residual_change(model_and_toas):
 
     assert not np.allclose(r_old[mask_FD1JUMP1], r_new[mask_FD1JUMP1])
     assert np.allclose(r_old[mask_FD1JUMP1_inv], r_new[mask_FD1JUMP1_inv])
+
+
+def test_fdjumpdm_offset(model_and_toas):
+    model, toas = model_and_toas
+
+    model2 = deepcopy(model)
+    model2.FDJUMPDM.value = 0
+
+    mask = model.FDJUMPDM1.select_toa_mask(toas)
+    not_mask = np.setdiff1d(np.arange(len(toas)), mask)
+
+    dm1 = model.total_dm(toas)
+    dm2 = model2.total_dm(toas)
+
+    assert np.allclose((dm1 - dm2)[not_mask], 0)
+    assert np.allclose((dm1 - dm2)[mask], -model.FDJUMPDM1.quantity)
