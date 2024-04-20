@@ -51,6 +51,7 @@ the released changes.
 - `get_observatory()` no longer overwrites `include_gps` and `include_bipm` of `Observatory` objects unless explicitly stated (BIPM and GPS clock corrections no longer incorrectly applied to BAT TOAs).
 - Added back `spacecraft` as an alias for `stl_geo`
 - Fix bug 1729 (missing f-string)
+- Fixed common failure of test_observatory
 - pintk now shows scaled error bars
 - Docstring of `DispersionJump`
 ### Removed
