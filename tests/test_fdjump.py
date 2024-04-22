@@ -130,7 +130,7 @@ def test_fdjumpdm_offset(model_and_toas):
     model, toas = model_and_toas
 
     model2 = deepcopy(model)
-    model2.FDJUMPDM.value = 0
+    model2.FDJUMPDM1.value = 0
 
     mask = model.FDJUMPDM1.select_toa_mask(toas)
     not_mask = np.setdiff1d(np.arange(len(toas)), mask)
