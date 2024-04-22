@@ -36,6 +36,7 @@ the released changes.
 - `freeze_params` option in `wavex_setup` and `dmwavex_setup`
 - `plrednoise_from_wavex`, `pldmnoise_from_dmwavex`, and `find_optimal_nharms` functions
 - fake TOAs can be created with `subtract_mean=False`, to maintain phase coherence between different data sets
+- Better explanation of ELL1H behavior when H3/H4/STIGMA supplied and when NHARMS is used
 ### Fixed
 - `MCMC_walkthrough` notebook now runs
 - Fixed runtime data README 
@@ -49,5 +50,6 @@ the released changes.
 - `get_observatory()` no longer overwrites `include_gps` and `include_bipm` of `Observatory` objects unless explicitly stated (BIPM and GPS clock corrections no longer incorrectly applied to BAT TOAs).
 - Added back `spacecraft` as an alias for `stl_geo`
 - Fix bug 1729 (missing f-string)
+- Fixed common failure of test_observatory
 - pintk now shows scaled error bars
 ### Removed
