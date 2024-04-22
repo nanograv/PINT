@@ -2,8 +2,28 @@
 
 import numpy as np
 
-from pint.models.parameter import MJDParameter
+from pint import DMconst
+from pint.models.parameter import (
+    AngleParameter,
+    MJDParameter,
+    floatParameter,
+    maskParameter,
+    prefixParameter,
+)
+from pint.models.noise_model import NoiseComponent
+from pint.models.solar_wind_dispersion import SolarWindDispersionBase
+from pint.models.absolute_phase import AbsPhase
+from pint.models.dispersion_model import DispersionJump
+from pint.models.frequency_dependent import FD
+from pint.models.fdjump import FDJump
+from pint.models.binary_bt import BinaryBTPiecewise
+from pint.models.wave import Wave
+from pint.models.ifunc import IFunc
+from pint.models.glitch import Glitch
+
 from loguru import logger as log
+from astropy import units as u
+from astropy import constants as c
 
 __all__ = [
     "IFTE_K",
@@ -17,6 +37,43 @@ __all__ = [
 IFTE_MJD0 = np.longdouble("43144.0003725")
 IFTE_KM1 = np.longdouble("1.55051979176e-8")
 IFTE_K = 1 + IFTE_KM1
+
+
+def get_scaling_factor(param):
+    scale_factors = {
+        "DM": DMconst,
+        "DMX_": DMconst,
+        "DMWXSIN_": DMconst,
+        "DMWXCOS_": DMconst,
+        # "NE_SW": c.c * DMconst,
+        "PX": c.c / u.au,
+        "A1": 1 / c.c,
+        "A1DOT": 1 / c.c,
+        "M2": c.G / c.c**3,
+        "MTOT": c.G / c.c**3,
+    }
+
+    if param.name in scale_factors:
+        return scale_factors[param.name]
+    elif hasattr(param, "prefix") and param.prefix in scale_factors:
+        return scale_factors[param.prefix]
+    else:
+        return 1
+
+
+def compute_effective_dimension(quantity, scaling_factor=1):
+    unit = (quantity * scaling_factor).si.unit
+
+    if len(unit.bases) == 0 or unit.bases == [u.rad]:
+        return 0
+    elif unit.bases == [u.s]:
+        return unit.powers[0]
+    elif set(unit.bases) == {u.s, u.rad}:
+        return unit.powers[unit.bases.index(u.s)]
+    else:
+        raise ValueError(
+            "The scaled quantity has an unsupported unit. Check the scaling_factor.",
+        )
 
 
 def scale_parameter(model, param, n, backwards):
@@ -135,37 +192,50 @@ def convert_tcb_tdb(model, backwards=False):
         "the resulting timing model should be re-fit to get reliable results."
     )
 
-    if "Spindown" in model.components:
-        for n, Fn_par in model.get_prefix_mapping("F").items():
-            scale_parameter(model, Fn_par, n + 1, backwards)
+    # It's unclear how to transform noise parameters, so let them be for the time being.
+    # Same thing for DMJUMP. It's weird.
+    # I haven't worked out how the rest of these stuff transform. So I am ignoring them for the time being.
+    ignore_components = [
+        NoiseComponent,
+        SolarWindDispersionBase,
+        AbsPhase,
+        DispersionJump,
+        FD,
+        FDJump,
+        BinaryBTPiecewise,
+        Wave,
+        IFunc,
+        Glitch,
+    ]
 
-        transform_mjd_parameter(model, "PEPOCH", backwards)
+    for param_name in model.params:
+        param = model[param_name]
 
-    if "AstrometryEquatorial" in model.components:
-        scale_parameter(model, "PMRA", 1, backwards)
-        scale_parameter(model, "PMDEC", 1, backwards)
-    elif "AstrometryEcliptic" in model.components:
-        scale_parameter(model, "PMELAT", 1, backwards)
-        scale_parameter(model, "PMELONG", 1, backwards)
-    transform_mjd_parameter(model, "POSEPOCH", backwards)
+        if (
+            not isinstance(
+                param,
+                (
+                    floatParameter,
+                    MJDParameter,
+                    AngleParameter,
+                    maskParameter,
+                    prefixParameter,
+                ),
+            )
+            or param.quantity is None
+            or any(
+                isinstance(param._parent, component_type)
+                for component_type in ignore_components
+            )
+        ):
+            continue
 
-    # Although DM has the unit pc/cm^3, the quantity that enters
-    # the timing model is DMconst*DM, which has dimensions
-    # of frequency. Hence, DM and its derivatives will be
-    # scaled by IFTE_K**(i+1).
-    if "DispersionDM" in model.components:
-        scale_parameter(model, "DM", 1, backwards)
-        for n, DMn_par in model.get_prefix_mapping("DM").items():
-            scale_parameter(model, DMn_par, n + 1, backwards)
-        transform_mjd_parameter(model, "DMEPOCH", backwards)
-
-    if hasattr(model, "BINARY") and getattr(model, "BINARY").value is not None:
-        transform_mjd_parameter(model, "T0", backwards)
-        transform_mjd_parameter(model, "TASC", backwards)
-        scale_parameter(model, "PB", -1, backwards)
-        scale_parameter(model, "FB0", 1, backwards)
-        scale_parameter(model, "FB1", 2, backwards)
-        scale_parameter(model, "A1", -1, backwards)
+        if isinstance(param, MJDParameter):
+            transform_mjd_parameter(model, param_name, backwards)
+        else:
+            sf = get_scaling_factor(param)
+            n = -compute_effective_dimension(param.quantity, sf)
+            scale_parameter(model, param_name, n, backwards)
 
     model.UNITS.value = target_units
 

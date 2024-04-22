@@ -16,6 +16,7 @@ handling; they are implemented by deriving from
 :class:`~pint.models.stand_alone_psr_binaries.binary_generic.PSR_BINARY`, which
 provides some of the infrastructure needed to implement them conveniently.
 """
+
 from pint.models.absolute_phase import AbsPhase
 
 # Import all standard model components here
@@ -24,7 +25,7 @@ from pint.models.binary_bt import BinaryBT, BinaryBTPiecewise
 from pint.models.binary_dd import BinaryDD, BinaryDDS, BinaryDDGR
 from pint.models.binary_ddk import BinaryDDK
 from pint.models.binary_ell1 import BinaryELL1, BinaryELL1H, BinaryELL1k
-from pint.models.dispersion_model import DispersionDM, DispersionDMX
+from pint.models.dispersion_model import DispersionDM, DispersionDMX, DispersionJump
 from pint.models.dmwavex import DMWaveX
 from pint.models.frequency_dependent import FD
 from pint.models.glitch import Glitch

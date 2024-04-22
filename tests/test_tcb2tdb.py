@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from pint.models.model_builder import ModelBuilder
-from pint.models.tcb_conversion import convert_tcb_tdb
+from pint.models.tcb_conversion import convert_tcb_tdb, IFTE_K
 from pint.scripts import tcb2tdb
 
 simplepar = """
