@@ -46,6 +46,7 @@ the unreleased changes. This file should only be changed while tagging a new ver
 - Plot wideband DM measurements, wideband DM residuals, and wideband DM errors in `pintk`. (Disabled for narrowband data.)
 - Optionally generate multi-frequency TOAs in an epoch using `make_fake_toas_uniform` and `make_fake_toas_fromMJDs`
 - Documentation: Example notebook for simulations and flag usage
+- Proper motion conversion/calculations can now uniformly use float, Quantity, or Time input
 ### Fixed
 - Wave model `validate()` can correctly use PEPOCH to assign WAVEEPOCH parameter
 - Fixed RTD by specifying theme explicitly.
