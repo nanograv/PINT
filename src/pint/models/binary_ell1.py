@@ -1,4 +1,5 @@
 """Approximate binary model for small eccentricity."""
+
 import astropy.units as u
 import numpy as np
 from astropy.time import Time
@@ -314,9 +315,12 @@ class BinaryELL1H(BinaryELL1):
 
     Notes
     -----
-    Only the Medium-inclination case model is implemented.
+    When `H3` only is supplied, `NHARMS` is ignored, and the approximate version is used (Eqn. 19) appropriate for medium inclinations.
 
-    Default value in `pint` for `NHARMS` is 7, while in `tempo2` it is 4.
+    When `H3` and `H4` are supplied, `NHARMS` is taken to be `max(7,NHARMS)`, and the approximate version is used (Eqn. 19) appropriate for medium inclinations.
+    Note that the default value in `pint` for `NHARMS` is 7, while in `tempo2` it is 4.
+
+    When `H3` and `STIGMA` are supplied, `NHARMS` is ignored since the exact version is used (Eqn. 29) appropriate for very high inclinations.
 
     References
     ----------
@@ -363,7 +367,7 @@ class BinaryELL1H(BinaryELL1):
             intParameter(
                 name="NHARMS",
                 units="",
-                value=3,
+                # value=7,
                 description="Number of harmonics for ELL1H shapiro delay.",
             )
         )
@@ -380,12 +384,22 @@ class BinaryELL1H(BinaryELL1):
         if self.H4.quantity is not None:
             self.binary_instance.fit_params = ["H3", "H4"]
             # If have H4 or STIGMA, choose 7th order harmonics
-            self.NHARMS.value = max(self.NHARMS.value, 7)
+            if (self.NHARMS.value is not None) and (self.NHARMS.value < 7):
+                log.warning(
+                    f"Requested NHARMS={self.NHARMS.value}, but setting it to 7 since H4 is also specified"
+                )
+            self.NHARMS.value = (
+                max(self.NHARMS.value, 7) if self.NHARMS.value is not None else 7
+            )
             if self.STIGMA.quantity is not None:
                 raise ValueError("ELL1H can use H4 or STIGMA but not both")
 
         if self.STIGMA.quantity is not None:
             self.binary_instance.fit_params = ["H3", "STIGMA"]
+            if self.NHARMS.value is not None:
+                log.warning(
+                    f"Requested NHARMS={self.NHARMS.value} will be ignored, since will use exact parameterization with STIGMA specified"
+                )
             self.binary_instance.ds_func = self.binary_instance.delayS_H3_STIGMA_exact
             if self.STIGMA.quantity <= 0:
                 raise ValueError("STIGMA must be greater than zero.")
