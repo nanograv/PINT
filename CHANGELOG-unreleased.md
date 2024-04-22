@@ -37,6 +37,8 @@ the released changes.
 - `plrednoise_from_wavex`, `pldmnoise_from_dmwavex`, and `find_optimal_nharms` functions
 - fake TOAs can be created with `subtract_mean=False`, to maintain phase coherence between different data sets
 - Better explanation of ELL1H behavior when H3/H4/STIGMA supplied and when NHARMS is used
+- FDJumpDM component for System-dependent DM offsets
+- Documentation: Explanation for FDJUMP and FDJUMPDM
 ### Fixed
 - `MCMC_walkthrough` notebook now runs
 - Fixed runtime data README 
@@ -52,4 +54,5 @@ the released changes.
 - Fix bug 1729 (missing f-string)
 - Fixed common failure of test_observatory
 - pintk now shows scaled error bars
+- Docstring of `DispersionJump`
 ### Removed
