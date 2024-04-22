@@ -1,4 +1,5 @@
 """The DDGR model - Damour and Deruelle with GR assumed"""
+
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
@@ -618,29 +619,29 @@ class DDGRmodel(DDmodel):
             * self.d_omega_d_M2()
         )
 
-    @SINI.setter
+    @SINI.setter  # type: ignore[no-redef, attr-defined]
     def SINI(self, val):
         log.debug(
             "DDGR model uses MTOT to derive the inclination angle. SINI will not be used."
         )
 
-    @PBDOT.setter
+    @PBDOT.setter  # type: ignore[no-redef, attr-defined]
     def PBDOT(self, val):
         log.debug("DDGR model uses MTOT to derive PBDOT. PBDOT will not be used.")
 
-    @OMDOT.setter
+    @OMDOT.setter  # type: ignore[no-redef, attr-defined]
     def OMDOT(self, val):
         log.debug("DDGR model uses MTOT to derive OMDOT. OMDOT will not be used.")
 
-    @GAMMA.setter
+    @GAMMA.setter  # type: ignore[no-redef, attr-defined]
     def GAMMA(self, val):
         log.debug("DDGR model uses MTOT to derive GAMMA. GAMMA will not be used.")
 
-    @DR.setter
+    @DR.setter  # type: ignore[no-redef, attr-defined]
     def DR(self, val):
         log.debug("DDGR model uses MTOT to derive Dr. Dr will not be used.")
 
-    @DTH.setter
+    @DTH.setter  # type: ignore[no-redef, attr-defined]
     def DTH(self, val):
         log.debug("DDGR model uses MTOT to derive Dth. Dth will not be used.")
 

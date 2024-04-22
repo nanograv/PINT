@@ -1,19 +1,19 @@
 """Functions related to simulating TOAs and models
 """
 
+import pathlib
 from collections import OrderedDict
 from copy import deepcopy
-from typing import Optional, List, Union
-import pathlib
+from typing import List, Optional, Tuple, Union, Dict, overload
 
 import astropy.units as u
 import numpy as np
-from loguru import logger as log
 from astropy import time
+from loguru import logger as log
 
+import pint.fitter
 import pint.residuals
 import pint.toa
-import pint.fitter
 from pint.observatory import bipm_default, get_observatory
 
 __all__ = [
@@ -33,7 +33,7 @@ def zero_residuals(
     subtract_mean: bool = True,
     maxiter: int = 10,
     tolerance: Optional[u.Quantity] = None,
-):
+) -> None:
     """Use a model to adjust a TOAs object, setting residuals to 0 iteratively.
 
     Parameters
@@ -51,7 +51,7 @@ def zero_residuals(
         1 nanosecond if operating in full precision or 5 us if not.
     """
     ts.compute_pulse_numbers(model)
-    maxresid = None
+    maxresid: Optional[float] = None
     if tolerance is None:
         tolerance = 1 * u.ns if pint.utils.check_longdouble_precision() else 5 * u.us
     for i in range(maxiter):
@@ -77,7 +77,7 @@ def get_fake_toa_clock_versions(
     model: pint.models.timing_model.TimingModel,
     include_bipm: bool = False,
     include_gps: bool = True,
-) -> dict:
+) -> Dict[str, Union[bool, str]]:
     """Get the clock settings (corrections, etc) for fake TOAs
 
     Parameters
@@ -218,6 +218,54 @@ def update_fake_dms(
         f["pp_dm"] = str(dm.to_value(pint.dmu))
 
     return toas
+
+
+@overload
+def make_fake_toas_uniform(
+    startMJD: float,
+    endMJD: float,
+    ntoas: int,
+    model: pint.models.timing_model.TimingModel,
+    fuzz: u.Quantity = 0,
+    freq: u.Quantity = 1400 * u.MHz,
+    obs: str = "GBT",
+    error: u.Quantity = 1 * u.us,
+    add_noise: bool = False,
+    add_correlated_noise: bool = False,
+    wideband: bool = False,
+    wideband_dm_error: u.Quantity = 1e-4 * pint.dmu,
+    name: str = "fake",
+    include_bipm: bool = False,
+    include_gps: bool = True,
+    multi_freqs_in_epoch: bool = False,
+    flags: Optional[dict] = None,
+    subtract_mean: bool = True,
+) -> pint.toa.TOAs:
+    ...
+
+
+@overload
+def make_fake_toas_uniform(
+    startMJD: u.Quantity,
+    endMJD: u.Quantity,
+    ntoas: int,
+    model: pint.models.timing_model.TimingModel,
+    fuzz: u.Quantity = 0,
+    freq: u.Quantity = 1400 * u.MHz,
+    obs: str = "GBT",
+    error: u.Quantity = 1 * u.us,
+    add_noise: bool = False,
+    add_correlated_noise: bool = False,
+    wideband: bool = False,
+    wideband_dm_error: u.Quantity = 1e-4 * pint.dmu,
+    name: str = "fake",
+    include_bipm: bool = False,
+    include_gps: bool = True,
+    multi_freqs_in_epoch: bool = False,
+    flags: Optional[dict] = None,
+    subtract_mean: bool = True,
+) -> pint.toa.TOAs:
+    ...
 
 
 def make_fake_toas_uniform(
@@ -566,7 +614,7 @@ def calculate_random_models(
     keep_models: bool = True,
     return_time: bool = False,
     params: str = "all",
-) -> (np.ndarray, Optional[list]):
+) -> Union[Tuple[np.ndarray, list], np.ndarray]:
     """
     Calculates random models based on the covariance matrix of the `fitter` object.
 
@@ -689,13 +737,35 @@ def calculate_random_models(
     return (dphase, random_models) if keep_models else dphase
 
 
+@overload
+def _get_freqs_and_times(
+    start: float,
+    end: float,
+    ntoas: int,
+    freqs: u.Quantity,
+    multi_freqs_in_epoch: bool = True,
+) -> Tuple[np.ndarray, np.ndarray]:
+    ...
+
+
+@overload
+def _get_freqs_and_times(
+    start: time.Time,
+    end: time.Time,
+    ntoas: int,
+    freqs: u.Quantity,
+    multi_freqs_in_epoch: bool = True,
+) -> Tuple[time.Time, np.ndarray]:
+    ...
+
+
 def _get_freqs_and_times(
     start: Union[float, u.Quantity, time.Time],
     end: Union[float, u.Quantity, time.Time],
     ntoas: int,
     freqs: u.Quantity,
     multi_freqs_in_epoch: bool = True,
-) -> (Union[float, u.Quantity, time.Time], np.ndarray):
+) -> Tuple[Union[np.ndarray, u.Quantity, time.Time], np.ndarray]:
     freqs = np.atleast_1d(freqs)
     assert (
         len(freqs.shape) == 1 and len(freqs) <= ntoas

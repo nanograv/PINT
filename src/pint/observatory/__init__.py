@@ -21,14 +21,17 @@ done, but if you are using a different subset of PINT these imports may be
 necessary.
 """
 
-from copy import deepcopy
 import os
 import textwrap
 from collections import defaultdict
+from collections.abc import Callable
+from copy import deepcopy
 from io import StringIO
 from pathlib import Path
+from typing import TYPE_CHECKING, Dict, List, Literal, Optional, Union
 
 import astropy.coordinates
+import astropy.time
 import astropy.units as u
 import numpy as np
 from astropy.coordinates import EarthLocation
@@ -36,7 +39,10 @@ from loguru import logger as log
 
 from pint.config import runtimefile
 from pint.pulsar_mjd import Time
-from pint.utils import interesting_lines
+from pint.utils import PosVel, interesting_lines
+
+if TYPE_CHECKING:
+    from pint.observatory.clock_file import ClockFile
 
 # Include any files that define observatories here.  This will start
 # with the standard distribution files, then will read any system- or
@@ -87,7 +93,7 @@ _gps_clock = None
 _bipm_clock_versions = {}
 
 
-def _load_gps_clock():
+def _load_gps_clock() -> None:
     global _gps_clock
     if _gps_clock is None:
         log.info("Loading global GPS clock file")
@@ -97,7 +103,7 @@ def _load_gps_clock():
         )
 
 
-def _load_bipm_clock(bipm_version):
+def _load_bipm_clock(bipm_version: str) -> None:
     bipm_version = bipm_version.lower()
     if bipm_version not in _bipm_clock_versions:
         try:
@@ -140,34 +146,43 @@ class Observatory:
     position.
     """
 
+    fullname: str
+    """Full human-readable name of the observatory."""
+    include_gps: bool
+    """Whether to include GPS clock corrections."""
+    include_bipm: bool
+    """Whether to include BIPM clock corrections."""
+    bipm_version: str
+    """Version of the BIPM clock file to use."""
+
     # This is a dict containing all defined Observatory instances,
     # keyed on standard observatory name.
-    _registry = {}
+    _registry: Dict[str, "Observatory"] = {}
 
     # This is a dict mapping any defined aliases to the corresponding
     # standard name.
-    _alias_map = {}
+    _alias_map: Dict[str, str] = {}
 
     def __init__(
         self,
-        name,
-        fullname=None,
-        aliases=None,
-        include_gps=True,
-        include_bipm=True,
-        bipm_version=bipm_default,
-        overwrite=False,
+        name: str,
+        fullname: Optional[str] = None,
+        aliases: Optional[List[str]] = None,
+        include_gps: bool = True,
+        include_bipm: bool = True,
+        bipm_version: str = bipm_default,
+        overwrite: bool = False,
     ):
-        self._name = name.lower()
-        self._aliases = (
+        self._name: str = name.lower()
+        self._aliases: List[str] = (
             list(set(map(str.lower, aliases))) if aliases is not None else []
         )
         if aliases is not None:
             Observatory._add_aliases(self, aliases)
-        self.fullname = fullname if fullname is not None else name
-        self.include_gps = include_gps
-        self.include_bipm = include_bipm
-        self.bipm_version = bipm_version
+        self.fullname: str = fullname if fullname is not None else name
+        self.include_gps: bool = include_gps
+        self.include_bipm: bool = include_bipm
+        self.bipm_version: str = bipm_version
 
         if name.lower() in Observatory._registry:
             if not overwrite:
@@ -179,16 +194,18 @@ class Observatory:
         Observatory._register(self, name)
 
     @classmethod
-    def _register(cls, obs, name):
-        """Add an observatory to the registry using the specified name
-        (which will be converted to lower case).  If an existing observatory
+    def _register(cls, obs: "Observatory", name: str) -> None:
+        """Add an observatory to the registry using the specified name (which will be converted to lower case).
+
+        If an existing observatory
         of the same name exists, it will be replaced with the new one.
         The Observatory instance's name attribute will be updated for
-        consistency."""
+        consistency.
+        """
         cls._registry[name.lower()] = obs
 
     @classmethod
-    def _add_aliases(cls, obs, aliases):
+    def _add_aliases(cls, obs: "Observatory", aliases: List[str]) -> None:
         """Add aliases for the specified Observatory.  Aliases
         should be given as a list.  If any of the new aliases are already in
         use, they will be replaced.  Aliases are not checked against the
@@ -200,14 +217,17 @@ class Observatory:
             cls._alias_map[a.lower()] = obs.name
 
     @staticmethod
-    def gps_correction(t, limits="warn"):
+    def gps_correction(t: astropy.time.Time, limits: str = "warn") -> u.Quantity:
         """Compute the GPS clock corrections for times t."""
         log.info("Applying GPS to UTC clock correction (~few nanoseconds)")
         _load_gps_clock()
+        assert _gps_clock is not None
         return _gps_clock.evaluate(t, limits=limits)
 
     @staticmethod
-    def bipm_correction(t, bipm_version=bipm_default, limits="warn"):
+    def bipm_correction(
+        t: astropy.time.Time, bipm_version: str = bipm_default, limits: str = "warn"
+    ) -> u.Quantity:
         """Compute the GPS clock corrections for times t."""
         log.info(f"Applying TT(TAI) to TT({bipm_version}) clock correction (~27 us)")
         tt2tai = 32.184 * 1e6 * u.us
@@ -218,7 +238,7 @@ class Observatory:
         )
 
     @classmethod
-    def clear_registry(cls):
+    def clear_registry(cls) -> None:
         """Clear registry for ground-based observatories."""
         cls._registry = {}
         cls._alias_map = {}
@@ -233,7 +253,7 @@ class Observatory:
         return cls._registry.keys()
 
     @classmethod
-    def names_and_aliases(cls):
+    def names_and_aliases(cls) -> Dict[str, List[str]]:
         """List all observatories and their aliases"""
         import pint.observatory.topo_obs  # noqa
         import pint.observatory.special_locations  # noqa
@@ -245,15 +265,24 @@ class Observatory:
     # setter methods that update the registries appropriately.
 
     @property
-    def name(self):
+    def name(self) -> str:
+        """Short name of the observatory.
+
+        This is the name used in TOA files and in the observatory registry.
+        """
         return self._name
 
     @property
-    def aliases(self):
+    def aliases(self) -> List[str]:
+        """List of aliases for the observatory.
+
+        These are short names also used to specify this observatory.
+        Includes ITOA and TEMPO codes, and any other common names.
+        """
         return self._aliases
 
     @classmethod
-    def get(cls, name):
+    def get(cls, name: str) -> "Observatory":
         """Returns the Observatory instance for the specified name/alias.
 
         If the name has not been defined, an error will be raised.  Aside
@@ -307,9 +336,12 @@ class Observatory:
     # Any which raise NotImplementedError below must be implemented in
     # derived classes.
 
-    def earth_location_itrf(self, time=None):
-        """Returns observatory geocentric position as an astropy
-        EarthLocation object.  For observatories where this is not
+    def earth_location_itrf(
+        self, time: Optional[astropy.time.Time] = None
+    ) -> Union[None, np.ndarray]:
+        """Returns observatory geocentric position as an astropy EarthLocation object.
+
+        For observatories where this is not
         relevant, None can be returned.
 
         The location is in the International Terrestrial Reference Frame (ITRF).
@@ -323,8 +355,9 @@ class Observatory:
         """
         return None
 
-    def get_gcrs(self, t, ephem=None):
-        """Return position vector of observatory in GCRS
+    def get_gcrs(self, t: astropy.time.Time, ephem: Optional[str] = None):
+        """Return position vector of observatory in GCRS.
+
         t is an astropy.Time or array of astropy.Time objects
         ephem is a link to an ephemeris file. Needed for SSB observatory
         Returns a 3-vector of Quantities representing the position
@@ -333,14 +366,17 @@ class Observatory:
         raise NotImplementedError
 
     @property
-    def timescale(self):
-        """Returns the timescale that TOAs from this observatory will be in,
-        once any clock corrections have been applied.  This should be a
+    def timescale(self) -> str:
+        """Returns the timescale that TOAs from this observatory will be in, once any clock corrections have been applied.
+
+        This should be a
         string suitable to be passed directly to the scale argument of
         astropy.time.Time()."""
         raise NotImplementedError
 
-    def clock_corrections(self, t, limits="warn"):
+    def clock_corrections(
+        self, t: astropy.time.Time, limits: str = "warn"
+    ) -> u.Quantity:
         """Compute clock corrections for a Time array.
 
         Given an array-valued Time, return the clock corrections
@@ -360,7 +396,7 @@ class Observatory:
 
         return corr
 
-    def last_clock_correction_mjd(self):
+    def last_clock_correction_mjd(self) -> float:
         """Return the MJD of the last available clock correction.
 
         Returns ``np.inf`` if no clock corrections are relevant.
@@ -369,6 +405,7 @@ class Observatory:
 
         if self.include_gps:
             _load_gps_clock()
+            assert _gps_clock is not None
             t = min(t, _gps_clock.last_correction_mjd())
         if self.include_bipm:
             _load_bipm_clock(self.bipm_version)
@@ -378,7 +415,13 @@ class Observatory:
             )
         return t
 
-    def get_TDBs(self, t, method="default", ephem=None, options=None):
+    def get_TDBs(
+        self,
+        t: astropy.time.Time,
+        method: Union[str, Callable] = "default",
+        ephem: Optional[str] = None,
+        options: Optional[dict] = None,
+    ):
         """This is a high level function for converting TOAs to TDB time scale.
 
         Different method can be applied to obtain the result. Current supported
@@ -413,13 +456,13 @@ class Observatory:
             t = Time([t])
         if t.scale == "tdb":
             return t
-        # Check the method. This pattern is from numpy minimize
-        meth = "_custom" if callable(method) else method.lower()
         if options is None:
             options = {}
-        if meth == "_custom":
+        if callable(method):
             options = dict(options)
             return method(t, **options)
+        else:
+            meth = method.lower()
         if meth == "default":
             return self._get_TDB_default(t, ephem)
         elif meth == "ephemeris":
@@ -432,17 +475,17 @@ class Observatory:
         else:
             raise ValueError(f"Unknown method '{method}'.")
 
-    def _get_TDB_default(self, t, ephem):
+    def _get_TDB_default(self, t: astropy.time.Time, ephem: Optional[str]):
         return t.tdb
 
-    def _get_TDB_ephem(self, t, ephem):
+    def _get_TDB_ephem(self, t: astropy.time.Time, ephem: Optional[str]):
         """Read the ephem TDB-TT column.
 
         This column is provided by DE4XXt version of ephemeris.
         """
         raise NotImplementedError
 
-    def posvel(self, t, ephem, group=None):
+    def posvel(self, t: astropy.time.Time, ephem: Optional[str], group=None) -> PosVel:
         """Return observatory position and velocity for the given times.
 
         Position is relative to solar system barycenter; times are
@@ -455,7 +498,10 @@ class Observatory:
 
 
 def get_observatory(
-    name, include_gps=None, include_bipm=None, bipm_version=bipm_default
+    name: str,
+    include_gps: Optional[bool] = None,
+    include_bipm: Optional[bool] = None,
+    bipm_version: str = bipm_default,
 ):
     """Convenience function to get observatory object with options.
 
@@ -495,14 +541,14 @@ def get_observatory(
     return Observatory.get(name)
 
 
-def earth_location_distance(loc1, loc2):
+def earth_location_distance(loc1: EarthLocation, loc2: EarthLocation) -> u.Quantity:
     """Compute the distance between two EarthLocations."""
     return (
         sum((u.Quantity(loc1.to_geocentric()) - u.Quantity(loc2.to_geocentric())) ** 2)
     ) ** 0.5
 
 
-def compare_t2_observatories_dat(t2dir=None):
+def compare_t2_observatories_dat(t2dir: Optional[str] = None) -> Dict[str, List[Dict]]:
     """Read a tempo2 observatories.dat file and compare with PINT
 
     Produces a report including lines that can be added to PINT's
@@ -535,10 +581,10 @@ def compare_t2_observatories_dat(t2dir=None):
     with open(filename) as f:
         for line in interesting_lines(f, comments="#"):
             try:
-                x, y, z, full_name, short_name = line.split()
+                x_str, y_str, z_str, full_name, short_name = line.split()
             except ValueError as e:
                 raise ValueError(f"unrecognized line '{line}'") from e
-            x, y, z = float(x), float(y), float(z)
+            x, y, z = float(x_str), float(y_str), float(z_str)
             full_name, short_name = full_name.lower(), short_name.lower()
             topo_obs_entry = textwrap.dedent(
                 f"""
@@ -593,7 +639,7 @@ def compare_t2_observatories_dat(t2dir=None):
     return report
 
 
-def compare_tempo_obsys_dat(tempodir=None):
+def compare_tempo_obsys_dat(tempodir: Optional[str] = None) -> Dict[str, List[Dict]]:
     """Read a tempo obsys.dat file and compare with PINT.
 
     Produces a report including lines that can be added to PINT's
@@ -633,8 +679,8 @@ def compare_tempo_obsys_dat(tempodir=None):
                 y = float(line_io.read(15))
                 z = float(line_io.read(15))
                 line_io.read(2)
-                icoord = line_io.read(1).strip()
-                icoord = int(icoord) if icoord else 0
+                icoord_str = line_io.read(1).strip()
+                icoord = int(icoord_str) if icoord_str else 0
                 line_io.read(2)
                 obsnam = line_io.read(20).strip().lower()
                 tempo_code = line_io.read(1)
@@ -717,7 +763,7 @@ def compare_tempo_obsys_dat(tempodir=None):
     return report
 
 
-def list_last_correction_mjds():
+def list_last_correction_mjds() -> None:
     """Print out a list of the last MJD each clock correction is good for.
 
     Each observatory lists the clock files it uses and their last dates,
@@ -748,7 +794,7 @@ def list_last_correction_mjds():
                 print(f"    {c.friendly_name:<20} MISSING")
 
 
-def update_clock_files(bipm_versions=None):
+def update_clock_files(bipm_versions: Optional[List[str]] = None) -> None:
     """Obtain an up-to-date version of all clock files.
 
     This up-to-date version will be stored in the Astropy cache;
@@ -790,13 +836,13 @@ def update_clock_files(bipm_versions=None):
 
 # Both topo_obs and special_locations need this
 def find_clock_file(
-    name,
-    format,
-    bogus_last_correction=False,
-    url_base=None,
-    clock_dir=None,
-    valid_beyond_ends=False,
-):
+    name: str,
+    format: str,
+    bogus_last_correction: bool = False,
+    url_base: Optional[str] = None,
+    clock_dir: Union[str, Path, None] = None,
+    valid_beyond_ends: bool = False,
+) -> "ClockFile":
     """Locate and return a ClockFile in one of several places.
 
     PINT looks for clock files in three places, in order:

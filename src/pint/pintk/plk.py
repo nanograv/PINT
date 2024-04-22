@@ -29,9 +29,9 @@ from pint.residuals import WidebandDMResiduals
 
 
 try:
-    from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
+    from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk  # type: ignore[attr-defined]
 except ImportError:
-    from matplotlib.backends.backend_tkagg import (
+    from matplotlib.backends.backend_tkagg import (  # type: ignore[no-redef,attr-defined]
         NavigationToolbar2TkAgg as NavigationToolbar2Tk,
     )
 
@@ -588,11 +588,11 @@ class PlkToolbar(NavigationToolbar2Tk):
     necessary selections/un-selections on points
     """
 
-    toolitems = [
+    toolitems = tuple(
         t
         for t in NavigationToolbar2Tk.toolitems
         if t[0] in ("Home", "Back", "Forward", "Pan", "Zoom", "Save")
-    ]
+    )
 
 
 class PlkActionsWidget(tk.Frame):

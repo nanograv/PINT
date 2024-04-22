@@ -1,17 +1,17 @@
-"""Polynomial coefficients for phase prediction
+r"""Polynomial coefficients for phase prediction
 
 Polycos designed to predict the pulsar's phase and pulse-period over a
-given interval using polynomial expansions.   
+given interval using polynomial expansions.
 
 The pulse phase and frequency at time T are then calculated as:
 
 .. math::
 
-    \\Delta T = 1440(T-T_{\\rm mid})
+    \Delta T = 1440(T-T_{\rm mid})
 
-    \\phi = \\phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
+    \phi = \phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \Delta T + COEFF[3] \Delta T^2 + \ldots
 
-    f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \\ldots \\right)
+    f({\rm Hz}) = f_0 + \frac{1}{60}\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \ldots \right)
 
 Examples
 --------
@@ -27,25 +27,28 @@ Or, to generate polycos from a timing model:
     >>> from pint.polycos import Polycos
     >>> model = get_model(filename)
     >>> p = Polycos.generate_polycos(model, 50000, 50001, "AO", 144, 12, 1400)
-  
+
 References
 ----------
 http://tempo.sourceforge.net/ref_man_sections/tz-polyco.txt
 """
+
+from collections import OrderedDict
+from collections.abc import Callable
+from typing import Dict, List, Union
+
 import astropy.table as table
 import astropy.units as u
 import numpy as np
 from astropy.io import registry
 from astropy.time import Time
-from collections import OrderedDict
-
 from loguru import logger as log
 
 try:
     from tqdm import tqdm
-except (ModuleNotFoundError, ImportError) as e:
+except (ModuleNotFoundError, ImportError):
 
-    def tqdm(*args, **kwargs):
+    def tqdm(*args, **kwargs):  # type: ignore
         return args[0] if args else kwargs.get("iterable", None)
 
 
@@ -228,7 +231,7 @@ class PolycoEntry:
 
 # Read polycos file data to table
 def tempo_polyco_table_reader(filename):
-    """Read tempo style polyco file to an astropy table.
+    r"""Read tempo style polyco file to an astropy table.
 
     Tempo style: The polynomial ephemerides are written to file 'polyco.dat'.
     Entries are listed sequentially within the file.  The file format is::
@@ -262,11 +265,11 @@ def tempo_polyco_table_reader(filename):
 
     .. math::
 
-        \\Delta T = 1440(T-T_{\\rm mid})
+        \Delta T = 1440(T-T_{\rm mid})
 
-        \\phi = \\phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
+        \phi = \phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \Delta T + COEFF[3] \Delta T^2 + \ldots
 
-        f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \\ldots \\right)
+        f({\rm Hz}) = f_0 + \frac{1}{60}\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \ldots \right)
 
     Parameters
     ----------
@@ -356,7 +359,7 @@ def tempo_polyco_table_reader(filename):
 
 
 def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
-    """Write tempo style polyco file from an astropy table.
+    r"""Write tempo style polyco file from an astropy table.
 
     Tempo style polyco file:
     The polynomial ephemerides are written to file 'polyco.dat'.  Entries
@@ -389,11 +392,11 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
 
     .. math::
 
-        \\Delta T = 1440(T-T_{\\rm mid})
+        \Delta T = 1440(T-T_{\rm mid})
 
-        \\phi = \\phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \\Delta T + COEFF[3] \\Delta T^2 + \\ldots
+        \phi = \phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \Delta T + COEFF[3] \Delta T^2 + \ldots
 
-        f({\\rm Hz}) = f_0 + \\frac{1}{60}\\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \\ldots \\right)
+        f({\rm Hz}) = f_0 + \frac{1}{60}\left( COEFF[2] + 2 COEFF[3] \Delta T + 3 COEFF[4] \Delta T^2  + \ldots \right)
 
     Parameters
     ----------
@@ -483,7 +486,7 @@ class Polycos:
     """
 
     # loaded formats
-    polycoFormats = []
+    polycoFormats: List[Dict[str, Union[str, Callable]]] = []
 
     @classmethod
     def _register(cls, formatlist=_polycoFormats):
@@ -918,7 +921,7 @@ class Polycos:
         return self.eval_abs_phase(t).frac
 
     def eval_abs_phase(self, t):
-        """
+        r"""
         Polyco evaluate absolute phase for a time array.
 
         Parameters
@@ -937,7 +940,7 @@ class Polycos:
 
         .. math::
 
-            \\phi = \\phi_0 + 60 \\Delta T f_0 + COEFF[1] + COEFF[2] \Delta T + COEFF[3] \Delta T^2 + \\ldots
+            \phi = \phi_0 + 60 \Delta T f_0 + COEFF[1] + COEFF[2] \Delta T + COEFF[3] \Delta T^2 + \ldots
 
         Calculation done using :meth:`pint.polycos.PolycoEntry.evalabsphase`
         """

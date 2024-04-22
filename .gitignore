@@ -139,3 +139,6 @@ tests/datafile/par_*.par
 tests/datafile/fake_toas.tim
 tests/datafile/*.converted.par
 tests/datafile/_test_pintempo.out
+
+# mypy
+.mypy_cache
