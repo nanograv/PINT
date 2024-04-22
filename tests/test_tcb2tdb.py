@@ -38,17 +38,18 @@ DILATEFREQ          N
 """
 
 
-@pytest.mark.parametrize("backwards", [True, False])
-def test_convert_units(backwards):
+def test_convert_units():
     with pytest.raises(ValueError):
         m = ModelBuilder()(StringIO(simplepar))
 
-    m = ModelBuilder()(StringIO(simplepar), allow_tcb="raw")
-    f0_tcb = m.F0.value
-    pb_tcb = m.PB.value
-    convert_tcb_tdb(m, backwards=backwards)
-    assert m.UNITS.value == ("TCB" if backwards else "TDB")
-    assert np.isclose(m.F0.value / f0_tcb, pb_tcb / m.PB.value)
+    m1 = ModelBuilder()(StringIO(simplepar), allow_tcb="raw")
+    m2 = ModelBuilder()(StringIO(simplepar), allow_tcb=True)
+
+    assert m2.UNITS.value == "TDB"
+    assert np.isclose(m2.F0.value / m1.F0.value, m1.PB.value / m2.PB.value)
+
+    assert np.isclose(m1.F0.value / m2.F0.value, 1 / IFTE_K, rtol=1e-9)
+    assert np.isclose(m1.DM.value / m2.DM.value, 1 / IFTE_K, rtol=1e-9)
 
 
 def test_convert_units_roundtrip():
@@ -65,7 +66,7 @@ def test_convert_units_roundtrip():
         elif isinstance(p.value, str):
             assert getattr(m, par).value == getattr(m_, par).value
         else:
-            assert np.isclose(getattr(m, par).value, getattr(m_, par).value)
+            assert np.isclose(getattr(m, par).value, getattr(m_, par).value, atol=1e-9)
 
 
 def test_tcb2tdb(tmp_path):
