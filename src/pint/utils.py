@@ -28,6 +28,7 @@ have moved to :mod:`pint.derived_quantities`.
 has moved to :mod:`pint.simulation`.
 
 """
+
 import configparser
 import datetime
 import getpass
@@ -56,9 +57,7 @@ from copy import deepcopy
 import warnings
 
 import pint
-from pint.models.timing_model import TimingModel
 import pint.pulsar_ecliptic
-from pint.toa import TOAs
 from pint.toa_select import TOASelect
 
 
@@ -2603,7 +2602,7 @@ def normalize_designmatrix(M, params):
     return M / norm, norm
 
 
-def akaike_information_criterion(model: TimingModel, toas: TOAs) -> float:
+def akaike_information_criterion(model, toas):
     """Compute the Akaike information criterion.
 
     Parameters
@@ -2634,7 +2633,7 @@ def akaike_information_criterion(model: TimingModel, toas: TOAs) -> float:
         )
 
 
-def bayesian_information_criterion(model: TimingModel, toas: TOAs) -> float:
+def bayesian_information_criterion(model, toas):
     """Compute the Bayesian information criterion.
 
     Parameters
