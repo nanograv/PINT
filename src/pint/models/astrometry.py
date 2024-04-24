@@ -136,7 +136,7 @@ class Astrometry(DelayComponent):
             osv = tbl["obs_sun_pos"].quantity.copy()
         else:
             osv = -tbl["ssb_obs_pos"].quantity.copy()
-        psr_vec = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"])
+        psr_vec = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbfloat"])
         r = (osv**2).sum(axis=1) ** 0.5
         osv /= r[:, None]
         cos = (osv * psr_vec).sum(axis=1)
@@ -159,7 +159,7 @@ class Astrometry(DelayComponent):
         # c selects the non-barycentric TOAs that need actual calculation
         c = np.logical_and.reduce(tbl["ssb_obs_pos"] != 0, axis=1)
         if np.any(c):
-            L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"][c].astype(np.float64))
+            L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbfloat"][c])
             re_dot_L = np.sum(tbl["ssb_obs_pos"][c] * L_hat, axis=1)
             delay[c] = -re_dot_L.to(ls).value
             if self.PX.value != 0.0:
@@ -179,10 +179,10 @@ class Astrometry(DelayComponent):
         # TODO: Should delay not have units of u.second?
         delay = self._parent.delay(toas)
 
-        # TODO: tbl['tdbld'].quantity should have units of u.day
+        # TODO: tbl['tdbfloat'].quantity should have units of u.day
         # NOTE: Do we need to include the delay here?
         tbl = toas.table
-        rd = {"epoch": tbl["tdbld"].quantity * u.day}
+        rd = {"epoch": tbl["tdbfloat"].quantity * u.day}
         # Distance from SSB to observatory, and from SSB to psr
         ssb_obs = tbl["ssb_obs_pos"].quantity
         ssb_psr = self.ssb_to_psb_xyz_ICRS(epoch=np.array(rd["epoch"]))
@@ -346,7 +346,7 @@ class AstrometryEquatorial(Astrometry):
     def barycentric_radio_freq(self, toas: pint.toa.TOAs) -> u.Quantity:
         """Return radio frequencies (MHz) of the toas corrected for Earth motion"""
         tbl = toas.table
-        L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"].astype(np.float64))
+        L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbfloat"])
         v_dot_L_array = np.sum(tbl["ssb_obs_vel"] * L_hat, axis=1)
         return tbl["freq"] * (1.0 - v_dot_L_array / const.c)
 
@@ -833,7 +833,7 @@ class AstrometryEcliptic(Astrometry):
             obliquity = OBL[self.ECL.value]
             toas.add_vel_ecl(obliquity)
         tbl = toas.table
-        L_hat = self.ssb_to_psb_xyz_ECL(epoch=tbl["tdbld"].astype(np.float64))
+        L_hat = self.ssb_to_psb_xyz_ECL(epoch=tbl["tdbfloat"])
         v_dot_L_array = np.sum(tbl["ssb_obs_vel_ecl"] * L_hat, axis=1)
         return tbl["freq"] * (1.0 - v_dot_L_array / const.c)
 
