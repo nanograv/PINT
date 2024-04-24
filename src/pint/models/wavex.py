@@ -1,4 +1,5 @@
 """Delays expressed as a sum of sinusoids."""
+
 import astropy.units as u
 import numpy as np
 from loguru import logger as log
@@ -361,7 +362,9 @@ class WaveX(DelayComponent):
         wave_cos = self.get_prefix_mapping_component("WXCOS_")
 
         base_phase = (
-            toas.table["tdbld"].data * u.d - self.WXEPOCH.value * u.d - delays.to(u.d)
+            toas.table["tdbfloat"].data * u.d
+            - self.WXEPOCH.value * u.d
+            - delays.to(u.d)
         )
         for idx, param in wave_freqs.items():
             freq = getattr(self, param).quantity
@@ -374,7 +377,7 @@ class WaveX(DelayComponent):
     def d_wavex_delay_d_WXSIN(self, toas, param, delays, acc_delay=None):
         par = getattr(self, param)
         freq = getattr(self, f"WXFREQ_{int(par.index):04d}").quantity
-        base_phase = toas.table["tdbld"].data * u.d - self.WXEPOCH.value * u.d
+        base_phase = toas.table["tdbfloat"].data * u.d - self.WXEPOCH.value * u.d
         arg = 2.0 * np.pi * freq * base_phase
         deriv = np.sin(arg.value)
         return deriv * u.s / par.units
@@ -382,7 +385,7 @@ class WaveX(DelayComponent):
     def d_wavex_delay_d_WXCOS(self, toas, param, delays, acc_delay=None):
         par = getattr(self, param)
         freq = getattr(self, f"WXFREQ_{int(par.index):04d}").quantity
-        base_phase = toas.table["tdbld"].data * u.d - self.WXEPOCH.value * u.d
+        base_phase = toas.table["tdbfloat"].data * u.d - self.WXEPOCH.value * u.d
         arg = 2.0 * np.pi * freq * base_phase
         deriv = np.cos(arg.value)
         return deriv * u.s / par.units

@@ -1,4 +1,5 @@
 """Delays expressed as a sum of sinusoids."""
+
 import astropy.units as u
 import numpy as np
 
@@ -148,7 +149,7 @@ class Wave(PhaseComponent):
         base_phase = (
             wave_om
             * (
-                toas.table["tdbld"] * u.day
+                toas.table["tdbfloat"] * u.day
                 - self.WAVEEPOCH.value * u.day
                 - delays.to(u.day)
             )
