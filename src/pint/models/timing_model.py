@@ -3486,17 +3486,18 @@ class Component(metaclass=ModelMeta):
         # Split the alias prefix, see if it is a perfix alias
         try:
             prefix, idx_str, idx = split_prefixed_name(alias)
-        except PrefixError:  # Not a prefixed name
-            if pname is not None:
-                par = getattr(self, pname)
-                if par.is_prefix:
-                    raise UnknownParameter(
-                        f"Prefix {alias} maps to mulitple parameters"
-                        ". Please specify the index as well."
-                    )
-            else:
+        except PrefixError as e:  # Not a prefixed name
+            if pname is None:
                 # Not a prefix, not an alias
-                raise UnknownParameter(f"Unknown parameter name or alias {alias}")
+                raise UnknownParameter(
+                    f"Unknown parameter name or alias {alias}"
+                ) from e
+            par = getattr(self, pname)
+            if par.is_prefix:
+                raise UnknownParameter(
+                    f"Prefix {alias} maps to mulitple parameters"
+                    ". Please specify the index as well."
+                ) from e
         # When the alias is a prefixed name but not in the parameter list yet
         if pname is None:
             prefix_pname = self.aliases_map.get(prefix, None)
@@ -3767,11 +3768,9 @@ class AllComponents:
             for p in cp.params:
                 par = getattr(cp, p)
                 if par.repeatable:
-                    repeatable.append(p)
-                    repeatable.append(par._parfile_name)
+                    repeatable.extend((p, par._parfile_name))
                     # also add the aliases to the repeatable param
-                    for als in par.aliases:
-                        repeatable.append(als)
+                    repeatable.extend(iter(par.aliases))
         return set(repeatable)
 
     @lazyproperty
