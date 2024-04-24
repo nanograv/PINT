@@ -137,7 +137,7 @@ class ModelBuilder:
             converted to TDB upon read. If "raw", an unconverted malformed TCB
             TimingModel object will be returned.
 
-        allow_T2 : True, False, or str, optional
+        allow_T2 : bool, optional
             Whether to convert a T2 binary model to an appropriate underlying
             binary model. Default is False, and will throw an error upon
             encountering the T2 binary model. If True, the binary model will be
@@ -164,7 +164,7 @@ class ModelBuilder:
         convert_tcb = allow_tcb == True
         allow_tcb_ = allow_tcb in [True, "raw"]
 
-        assert allow_T2 in [True, False]
+        assert isinstance(allow_T2, bool)
 
         pint_param_dict, original_name, unknown_param = self._pintify_parfile(
             parfile, allow_name_mixing
@@ -430,7 +430,7 @@ class ModelBuilder:
             Dictionary of the unique parameters in .par file with the key is the
             parfile line. :func:`parse_parfile` returns this dictionary.
 
-        allow_T2 : True, False, or str optional
+        allow_T2 : bool, optional
             Whether to convert a T2 binary model to an appropriate underlying
             binary model. Default is False, and will throw an error upon
             encountering the T2 binary model. If True, the binary model will be
@@ -578,7 +578,7 @@ class ModelBuilder:
             When set to some binary model, this will override the binary model
             set in the parfile.
 
-        allow_T2 : True, False, or str optional
+        allow_T2 : bool, optional
             Whether to convert a T2 binary model to an appropriate underlying
             binary model. Default is False, and will throw an error upon
             encountering the T2 binary model. If True, the binary model will be
@@ -609,7 +609,7 @@ class ModelBuilder:
             log.info(f"Found T2 binary model. Gracefully converting T2 to: {binary}.")
 
             # Make sure that DDK parameters are properly converted
-            convert_binary_model(param_inpar, force_binary_model=binary)
+            convert_binary_params_dict(param_inpar, force_binary_model=binary)
 
         try:
             binary_cp = self.all_components.search_binary_components(binary)
@@ -989,7 +989,7 @@ def guess_binary_model(parfile_dict):
     return priority + list(omitted)
 
 
-def convert_binary_model(
+def convert_binary_params_dict(
     parfile_dict, convert_komkin=True, drop_ddk_sini=True, force_binary_model=None
 ):
     """Convert the PINT parameter dictionary to include the best-guess binary

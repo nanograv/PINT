@@ -5,7 +5,7 @@ import argparse
 from loguru import logger as log
 
 import pint.logging
-from pint.models.model_builder import ModelBuilder, convert_binary_model
+from pint.models.model_builder import ModelBuilder
 
 pint.logging.setup(level="INFO")
 
