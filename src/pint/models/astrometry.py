@@ -485,7 +485,9 @@ class AstrometryEquatorial(Astrometry):
         # does, which is to use https://github.com/liberfa/erfa/blob/master/src/starpm.c
         # and then just use the relevant pieces of that
         if epoch is None or (self.PMRA.quantity == 0 and self.PMDEC.quantity == 0):
-            return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
+            ra, dec = self.RAJ.quantity, self.DECJ.quantity
+            return self.xyz_from_radec(ra, dec)
+            # return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
 
         if isinstance(epoch, Time):
             jd1 = epoch.jd1
@@ -518,6 +520,9 @@ class AstrometryEquatorial(Astrometry):
             )
         # ra,dec now in radians
         ra, dec = starpmout[0], starpmout[1]
+        return self.xyz_from_radec(ra, dec)
+
+    def xyz_from_radec(self, ra, dec):
         x = np.cos(ra) * np.cos(dec)
         y = np.sin(ra) * np.cos(dec)
         z = np.sin(dec)
