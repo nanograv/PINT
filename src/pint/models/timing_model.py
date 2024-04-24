@@ -2687,16 +2687,12 @@ class TimingModel:
             if reset_to_default:
                 po.use_alias = None
             if alias_translation is not None:
-                if hasattr(po, "origin_name"):
-                    try:
-                        po.use_alias = alias_translation[po.origin_name]
-                    except KeyError:
-                        pass
-                else:
-                    try:
-                        po.use_alias = alias_translation[p]
-                    except KeyError:
-                        pass
+                with contextlib.suppress(KeyError):
+                    po.use_alias = (
+                        alias_translation[po.origin_name]
+                        if hasattr(po, "origin_name")
+                        else alias_translation[p]
+                    )
 
     def as_parfile(
         self,
@@ -2725,7 +2721,7 @@ class TimingModel:
              Parfile output format. PINT outputs in 'tempo', 'tempo2' and 'pint'
              formats. The defaul format is `pint`.
         """
-        if not format.lower() in _parfile_formats:
+        if format.lower() not in _parfile_formats:
             raise ValueError(f"parfile format must be one of {_parfile_formats}")
 
         self.validate()
@@ -2913,8 +2909,7 @@ class TimingModel:
         return len(self.params)
 
     def __iter__(self):
-        for p in self.params:
-            yield p
+        yield from self.params
 
     def as_ECL(self, epoch=None, ecl="IERS2010"):
         """Return TimingModel in PulsarEcliptic frame.
@@ -3386,10 +3381,7 @@ class Component(metaclass=ModelMeta):
             exist_par = getattr(self, param.name)
             if exist_par.value is not None:
                 raise ValueError(
-                    "Tried to add a second parameter called {}. "
-                    "Old value: {} New value: {}".format(
-                        param.name, getattr(self, param.name), param
-                    )
+                    f"Tried to add a second parameter called {param.name}. Old value: {getattr(self, param.name)} New value: {param}"
                 )
             else:
                 setattr(self, param.name, param)
@@ -3412,10 +3404,7 @@ class Component(metaclass=ModelMeta):
         param : str or pint.models.Parameter
             The parameter to remove.
         """
-        if isinstance(param, str):
-            param_name = param
-        else:
-            param_name = param.name
+        param_name = param if isinstance(param, str) else param.name
         if param_name not in self.params:
             raise ValueError(
                 f"Tried to remove parameter {param_name} but it is not listed: {self.params}"
@@ -3452,10 +3441,7 @@ class Component(metaclass=ModelMeta):
             par = getattr(self, p)
             par_type = type(par).__name__
             par_prefix = par_type[:-9]
-            if (
-                param_type.upper() == par_type.upper()
-                or param_type.upper() == par_prefix.upper()
-            ):
+            if param_type.upper() in [par_type.upper(), par_prefix.upper()]:
                 result.append(par.name)
         return result
 
@@ -3573,11 +3559,7 @@ class Component(metaclass=ModelMeta):
 
         """
         if self.component_special_params:
-            for p in self.component_special_params:
-                if p in para_dict:
-                    return True
-            return False
-
+            return any(p in para_dict for p in self.component_special_params)
         pNames_inpar = list(para_dict.keys())
         pNames_inModel = self.params
 
@@ -3585,22 +3567,14 @@ class Component(metaclass=ModelMeta):
         # should go in them.
         # For solar system Shapiro delay component
         if hasattr(self, "PLANET_SHAPIRO"):
-            if "NO_SS_SHAPIRO" in pNames_inpar:
-                return False
-            else:
-                return True
-
+            return "NO_SS_SHAPIRO" not in pNames_inpar
         try:
             bmn = getattr(self, "binary_model_name")
         except AttributeError:
             # This isn't a binary model, keep looking
             pass
         else:
-            if "BINARY" in para_dict:
-                return bmn == para_dict["BINARY"][0]
-            else:
-                return False
-
+            return bmn == para_dict["BINARY"][0] if "BINARY" in para_dict else False
         # Compare the componets parameter names with par file parameters
         compr = list(set(pNames_inpar).intersection(pNames_inModel))
 
@@ -3633,10 +3607,9 @@ class Component(metaclass=ModelMeta):
         -------
         str : formatted line for par file
         """
-        result = ""
-        for p in self.params:
-            result += getattr(self, p).as_parfile_line(format=format)
-        return result
+        return "".join(
+            getattr(self, p).as_parfile_line(format=format) for p in self.params
+        )
 
 
 class DelayComponent(Component):
@@ -3828,10 +3801,7 @@ class AllComponents:
             The mapping from components to its categore. The key is the component
             name and the value is the component's category name.
         """
-        cp_ca = {}
-        for k, cp in self.components.items():
-            cp_ca[k] = cp.category
-        return cp_ca
+        return {k: cp.category for k, cp in self.components.items()}
 
     @lazyproperty
     def component_unique_params(self):
@@ -3968,14 +3938,11 @@ class AllComponents:
                 # count length of idx_str and dectect leading zeros
                 # TODO fix the case for searching `DMX`
                 num_lzero = len(idx_str) - len(str(idx))
-                if num_lzero > 0:  # Has leading zero
-                    fmt = len(idx_str)
-                else:
-                    fmt = 0
+                fmt = len(idx_str) if num_lzero > 0 else 0
                 first_init_par = None
                 # Handle the case of start index from 0 and 1
                 for start_idx in [0, 1]:
-                    first_init_par_alias = prefix + f"{start_idx:0{fmt}}"
+                    first_init_par_alias = f"{prefix}{start_idx:0{fmt}}"
                     first_init_par = self._param_alias_map.get(
                         first_init_par_alias, None
                     )
@@ -3990,7 +3957,7 @@ class AllComponents:
             first_init_par = pint_par
         if pint_par is None:
             raise UnknownParameter(
-                "Can not find matching PINT parameter for '{}'".format(alias)
+                f"Can not find matching PINT parameter for '{alias}'"
             )
         return pint_par, first_init_par
 
@@ -4051,7 +4018,7 @@ class MissingParameter(TimingModelError):
         self.msg = msg
 
     def __str__(self):
-        result = self.module + "." + self.param
+        result = f"{self.module}.{self.param}"
         if self.msg is not None:
             result += "\n  " + self.msg
         return result
