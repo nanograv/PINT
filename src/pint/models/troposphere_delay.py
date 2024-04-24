@@ -1,4 +1,5 @@
 """Delay due to Earth's troposphere"""
+
 import astropy.constants as const
 import astropy.units as u
 import numpy as np
@@ -175,7 +176,7 @@ class TroposphereDelay(DelayComponent):
                 # now actually calculate the atmospheric delay based on the models
 
                 delay[grp] = self.delay_model(
-                    alt, obs.lat, obs.height, tbl[grp]["tdbld"]
+                    alt, obs.lat, obs.height, tbl[grp]["tdbfloat"]
                 )
         return delay * u.s
 
@@ -358,11 +359,12 @@ class TroposphereDelay(DelayComponent):
             [(i.jyear + seasonOffset + self.DOY_OFFSET / 365.25) % 1.0 for i in mjd]
         )
 
-    def _get_year_fraction_fast(self, tdbld, lat):
+    def _get_year_fraction_fast(self, tdbfloat, lat):
         """
         use numpy array arithmetic to calculate the year fraction more quickly
         """
         seasonOffset = 0.5 if lat < 0 else 0.0
         return np.mod(
-            2000.0 + (tdbld - 51544.5 + self.DOY_OFFSET) / (365.25) + seasonOffset, 1.0
+            2000.0 + (tdbfloat - 51544.5 + self.DOY_OFFSET) / (365.25) + seasonOffset,
+            1.0,
         )
