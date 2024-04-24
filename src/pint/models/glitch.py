@@ -1,4 +1,5 @@
 """Pulsar timing glitches."""
+
 import astropy.units as u
 import numpy as np
 
@@ -199,7 +200,7 @@ class Glitch(PhaseComponent):
             dF0 = getattr(self, "GLF0_%d" % idx).quantity
             dF1 = getattr(self, "GLF1_%d" % idx).quantity
             dF2 = getattr(self, "GLF2_%d" % idx).quantity
-            dt = (tbl["tdbld"] - eph) * u.day - delay
+            dt = (tbl["tdbfloat"] - eph) * u.day - delay
             dt = dt.to(u.second)
             affected = dt > 0.0  # TOAs affected by glitch
             # decay term
@@ -228,7 +229,7 @@ class Glitch(PhaseComponent):
         tbl = toas.table
         p, ids, idv = split_prefixed_name(param)
         eph = getattr(self, f"GLEP_{ids}").value
-        dt = (tbl["tdbld"] - eph) * u.day - delay
+        dt = (tbl["tdbfloat"] - eph) * u.day - delay
         dt = dt.to(u.second)
         affected = np.where(dt > 0.0)[0]
         return tbl, p, ids, idv, dt, affected
