@@ -102,7 +102,7 @@ class SolarSystemShapiro(DelayComponent):
                 log.debug("Skipping Shapiro delay for Barycentric TOAs")
                 continue
             psr_dir = self._parent.ssb_to_psb_xyz_ICRS(
-                epoch=tbl[grp]["tdbld"].astype(numpy.float64)
+                epoch=tbl[grp]["tdbfloat"].astype(numpy.float64)
             )
             delay[grp] += self.ss_obj_shapiro_delay(
                 tbl[grp]["obs_sun_pos"], psr_dir, self._ss_mass_sec["sun"]
