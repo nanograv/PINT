@@ -15,6 +15,8 @@ the released changes.
 - When clock files contain out-of-order entries, the exception now records the first MJDs that are out of order
 - `np.compat.long` -> `int` (former is deprecated)
 - Turned ErfaWarning into an exception during testing; cleaned up test suite.
+- Avoided unnecessary creation of `SkyCoord` objects in `AstrometryEquatorial`.
+- Avoided unnecessary array slices in `SolarSystemShapiro`
 ### Added
 - Added numdifftools to setup.cfg to match requirements.txt
 - Documentation: Added `convert_parfile` to list of command-line tools in RTD
@@ -39,6 +41,7 @@ the released changes.
 - Better explanation of ELL1H behavior when H3/H4/STIGMA supplied and when NHARMS is used
 - FDJumpDM component for System-dependent DM offsets
 - Documentation: Explanation for FDJUMP and FDJUMPDM
+- `tdbfloat` column in the TOAs table (avoid long double operations as much as possible)
 ### Fixed
 - `MCMC_walkthrough` notebook now runs
 - Fixed runtime data README 
