@@ -21,6 +21,7 @@ See :ref:`Supported Parameters` for an overview, including a table of all the
 parameters PINT understands.
 
 """
+
 import numbers
 from warnings import warn
 
@@ -577,7 +578,7 @@ class Parameter:
         return True
 
     def value_as_latex(self):
-        return f"${self.as_ufloat():.1uSL}$" if not self.frozen else f"{self.value:f}"
+        return f"{self.value:f}" if self.frozen else f"${self.as_ufloat():.1uSL}$"
 
     def as_latex(self):
         try:
