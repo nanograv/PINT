@@ -39,6 +39,19 @@ from pint.models.binary_ddk import _convert_kin, _convert_kom
 __all__ = ["ModelBuilder", "get_model", "get_model_and_toas"]
 
 default_models = ["StandardTimingModel"]
+_binary_model_priority = [
+    "Isolated",
+    "BT",
+    "BT_piecewise",
+    "ELL1",
+    "ELL1H",
+    "ELL1k",
+    "DD",
+    "DDK",
+    "DDGR",
+    "DDS",
+    "DDH",
+]
 
 
 class ComponentConflict(ValueError):
@@ -144,8 +157,8 @@ class ModelBuilder:
             converted to the most appropriate PINT-compatible binary model.
 
         force_binary_model : str, optional
-            When set to some binary model, this will override the binary model
-            set in the parfile. Defaults to None
+            When set to some binary model, like force_binary_model="DD", this
+            will override the binary model set in the parfile. Defaults to None
 
         toas_for_tzr : TOAs or None, optional
             If this is not None, a TZR TOA (AbsPhase) will be created using the
@@ -436,9 +449,9 @@ class ModelBuilder:
             encountering the T2 binary model. If True, the binary model will be
             converted to the most appropriate PINT-compatible binary model.
 
-        force_binary_model : str
-            When set to some binary model, this will override the binary model
-            set in the parfile.
+        force_binary_model : str, optional
+            When set to some binary model, like force_binary_model="DD", this
+            will override the binary model set in the parfile. Defaults to None
 
         Returns
         -------
@@ -471,10 +484,7 @@ class ModelBuilder:
         # the overall control parameters. This will get us the binary model name
         # build the base fo the timing model
         # pint_param_dict, unknown_param = self._pintify_parfile(param_inpar)
-        if not force_binary_model:
-            binary = param_inpar.get("BINARY", None)
-        else:
-            binary = [force_binary_model]
+        binary = param_inpar.get("BINARY", None)
 
         if binary:
             binary = binary[0]
@@ -574,9 +584,9 @@ class ModelBuilder:
             Dictionary of the unique parameters in .par file with the key is the
             parfile line. :func:`parse_parfile` returns this dictionary.
 
-        force_binary_model : str
-            When set to some binary model, this will override the binary model
-            set in the parfile.
+        force_binary_model : str, optional
+            When set to some binary model, like force_binary_model="DD", this
+            will override the binary model set in the parfile. Defaults to None
 
         allow_T2 : bool, optional
             Whether to convert a T2 binary model to an appropriate underlying
@@ -944,9 +954,8 @@ def guess_binary_model(parfile_dict):
     binary_models = all_components.category_component_map["pulsar_system"]
 
     # Find all binary parameters
-    # TODO: Check whetehr binary_model[:6]=="Binary" ??
     binary_parameters_map = {
-        binary_model[6:]: add_sini(
+        all_components.components[binary_model].binary_model_name: add_sini(
             all_components.search_binary_components(binary_model).aliases_map.keys()
         )
         for binary_model in binary_models
@@ -969,21 +978,8 @@ def guess_binary_model(parfile_dict):
         if len(parfile_binary_parameters - set(bmc)) == 0
     }
 
-    # The ordering/priority of the binary models
-    binary_model_priority = [
-        "Isolated",
-        "BT",
-        "ELL1",
-        "ELL1H",
-        "ELL1k",
-        "DDK",
-        "DDGR",
-        "DDS",
-        "DD",
-    ]
-
     # Now select the best-guess binary model
-    priority = [bm for bm in binary_model_priority if bm in allowed_binary_models]
+    priority = [bm for bm in _binary_model_priority if bm in allowed_binary_models]
     omitted = allowed_binary_models - set(priority)
 
     return priority + list(omitted)
@@ -1003,9 +999,9 @@ def convert_binary_params_dict(
     drop_ddk_sini
         Whether to drop SINI when converting to the DDK model
 
-    force_binary_model : str
-        When set to some binary model, this will override the binary model set
-        in the parfile.
+    force_binary_model : str, optional
+        When set to some binary model, like force_binary_model="DD", this will
+        override the binary model set in the parfile. Defaults to None
 
     Returns
     -------

@@ -4,6 +4,8 @@ import os
 import numpy as np
 
 from pint.models.model_builder import ModelBuilder
+from pint.models.model_builder import _binary_model_priority
+from pint.models.timing_model import AllComponents
 from pint.scripts import t2binary2pint
 
 
@@ -58,3 +60,18 @@ def test_t2binary2pint(tmp_path):
     assert m2.BINARY.value == "DDK"
     assert np.isclose(m2.KIN.value, 109.053918264)
     assert np.isclose(m2.KOM.value, -2.8244442419)
+
+
+def test_binary_model_priority():
+    all_components = AllComponents()
+    binary_models = all_components.category_component_map["pulsar_system"]
+    binary_models = [
+        all_components.components[m].binary_model_name for m in binary_models
+    ]
+
+    msg = (
+        "Please update _binary_model_priority in model_builder.py "
+        "to include all binary models"
+    )
+
+    assert set(binary_models) - set(_binary_model_priority) == set(), msg
