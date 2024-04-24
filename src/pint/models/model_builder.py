@@ -602,20 +602,30 @@ class ModelBuilder:
         Note
         ----
         If the binary model does not have a PINT model (e.g. the T2 model), an
-        error is thrown with the suggested model that could replace it. If an
-        appropriate model cannot be found, no suggestion is given
+        error is thrown with the suggested model that could replace it. If
+        allow_T2 is set to True, the most appropriate binary model is guessed
+        and used. If an appropriate model cannot be found, no suggestion is
+        given and an error is thrown.
         """
         binary = param_inpar["BINARY"][0]
 
-        # Guess what the binary model should be, regardless of binary parameter
-        binary_model_guesses = guess_binary_model(param_inpar)
+        # Guess what the binary model should be, regardless of BINARY parameter
+        try:
+            binary_model_guesses = guess_binary_model(param_inpar)
+        except UnknownBinaryModel as e:
+            log.error(
+                "Unable to find suitable binary model that has all the"
+                "parameters in the parfile. Please fix the par file."
+            )
 
         # Allow for T2 model, gracefully
         if force_binary_model is not None and binary != "T2":
             binary = force_binary_model
         elif binary == "T2" and allow_T2:
             binary = binary_model_guesses[0]
-            log.info(f"Found T2 binary model. Gracefully converting T2 to: {binary}.")
+            log.warning(
+                f"Found T2 binary model. Gracefully converting T2 to: {binary}."
+            )
 
             # Make sure that DDK parameters are properly converted
             convert_binary_params_dict(param_inpar, force_binary_model=binary)
