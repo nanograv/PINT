@@ -1,4 +1,5 @@
 """Tabulated extra delays."""
+
 import astropy.units as u
 import numpy as np
 
@@ -110,7 +111,7 @@ class IFunc(PhaseComponent):
         # the MJDs(x) and offsets (y) of the interpolation points
         x, y = np.asarray([t.quantity for t in terms]).T
         # form barycentered times
-        ts = toas.table["tdbld"] - delays.to(u.day).value
+        ts = toas.table["tdbfloat"] - delays.to(u.day).value
         times = np.zeros(len(ts))
 
         # Determine what type of interpolation we are doing.
