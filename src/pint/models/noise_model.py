@@ -382,7 +382,7 @@ class EcorrNoise(NoiseComponent):
         A quantization matrix maps TOAs to observing epochs.
         """
         tbl = toas.table
-        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        t = (tbl["tdbfloat"].quantity * u.day).to(u.s).value
         ecorrs = self.get_ecorrs()
         umats = []
         for ec in ecorrs:
@@ -408,7 +408,7 @@ class EcorrNoise(NoiseComponent):
         """
         ecorrs = self.get_ecorrs()
         if nweights is None:
-            ts = (toas.table["tdbld"].quantity * u.day).to(u.s).value
+            ts = (toas.table["tdbfloat"].quantity * u.day).to(u.s).value
             nweights = [
                 get_ecorr_nweights(ts[ec.select_toa_mask(toas)]) for ec in ecorrs
             ]
@@ -508,7 +508,7 @@ class PLDMNoise(NoiseComponent):
         See the documentation for pl_dm_basis_weight_pair function for details."""
 
         tbl = toas.table
-        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        t = (tbl["tdbfloat"].quantity * u.day).to(u.s).value
         freqs = self._parent.barycentric_radio_freq(toas).to(u.MHz)
         fref = 1400 * u.MHz
         D = (fref.value / freqs.value) ** 2
@@ -522,7 +522,7 @@ class PLDMNoise(NoiseComponent):
         See the documentation for pl_dm_basis_weight_pair for details."""
 
         tbl = toas.table
-        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        t = (tbl["tdbfloat"].quantity * u.day).to(u.s).value
         amp, gam, nf = self.get_pl_vals()
         Ffreqs = get_rednoise_freqs(t, nf)
         return powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
@@ -639,7 +639,7 @@ class PLRedNoise(NoiseComponent):
         See the documentation for pl_rn_basis_weight_pair function for details."""
 
         tbl = toas.table
-        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        t = (tbl["tdbfloat"].quantity * u.day).to(u.s).value
         nf = self.get_pl_vals()[2]
         return create_fourier_design_matrix(t, nf)
 
@@ -649,7 +649,7 @@ class PLRedNoise(NoiseComponent):
         See the documentation for pl_rn_basis_weight_pair for details."""
 
         tbl = toas.table
-        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        t = (tbl["tdbfloat"].quantity * u.day).to(u.s).value
         amp, gam, nf = self.get_pl_vals()
         Ffreqs = get_rednoise_freqs(t, nf)
         return powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
