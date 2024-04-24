@@ -2259,6 +2259,9 @@ class TOAs:
         if "tdbld" in self.table.colnames:
             log.debug("tdbld column already exists. Deleting...")
             self.table.remove_column("tdbld")
+        if "tdbfloat" in self.table.colnames:
+            log.debug("tdbfloat column already exists. Deleting...")
+            self.table.remove_column("tdbfloat")
 
         if ephem is None:
             if self.ephem is None:
@@ -2303,7 +2306,10 @@ class TOAs:
         # Now add the new columns to the table
         col_tdb = table.Column(name="tdb", data=tdbs)
         col_tdbld = table.Column(name="tdbld", data=[t.tdb.mjd_long for t in tdbs])
-        self.table.add_columns([col_tdb, col_tdbld])
+        col_tdbfloat = table.Column(
+            name="tdbfloat", data=[float(t.tdb.mjd_long) for t in tdbs]
+        )
+        self.table.add_columns([col_tdb, col_tdbld, col_tdbfloat])
 
     def compute_posvels(self, ephem=None, planets=None):
         """Compute positions and velocities of the observatories and Earth.
@@ -2927,10 +2933,10 @@ def get_TOAs_array(
     if hasattr(freqs, "unit"):
         try:
             freqs = freqs.to(u.MHz)
-        except u.UnitConversionError:
+        except u.UnitConversionError as e:
             raise u.UnitConversionError(
                 f"Frequency for TOA with incompatible unit {freqs}"
-            )
+            ) from e
     else:
         freqs = freqs * u.MHz
     freqs[freqs == 0] = np.inf * u.MHz
@@ -2942,9 +2948,9 @@ def get_TOAs_array(
             )
         flagdicts = [FlagDict.from_dict(f) for f in flags]
     elif flags is not None:
-        flagdicts = [FlagDict(flags) for i in range(len(t))]
+        flagdicts = [FlagDict(flags) for _ in range(len(t))]
     else:
-        flagdicts = [FlagDict() for i in range(len(t))]
+        flagdicts = [FlagDict() for _ in range(len(t))]
 
     for k, v in kwargs.items():
         if isinstance(v, (list, tuple, np.ndarray)):
