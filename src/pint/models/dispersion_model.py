@@ -221,7 +221,7 @@ class DispersionDM(Dispersion):
                     f"DMEPOCH not set but some derivatives are not zero: {dm_terms}"
                 )
             else:
-                dt = (toas["tdbld"] - DMEPOCH) * u.day
+                dt = (toas["tdbfloat"] - DMEPOCH) * u.day
             dt_value = dt.to_value(u.yr)
         else:
             dt_value = np.zeros(len(toas), dtype=np.longdouble)
@@ -266,7 +266,7 @@ class DispersionDM(Dispersion):
             DMEPOCH = 0
         else:
             DMEPOCH = self.DMEPOCH.value
-        dt = (toas["tdbld"] - DMEPOCH) * u.day
+        dt = (toas["tdbfloat"] - DMEPOCH) * u.day
         dt_value = (dt.to(u.yr)).value
         return taylor_horner(dt_value, dm_terms) * (self.DM.units / par.units)
 
