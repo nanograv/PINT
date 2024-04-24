@@ -1,4 +1,5 @@
 """DM variations expressed as a sum of sinusoids."""
+
 import astropy.units as u
 import numpy as np
 from loguru import logger as log
@@ -350,7 +351,7 @@ class DMWaveX(Dispersion):
         dmwave_sins = self.get_prefix_mapping_component("DMWXSIN_")
         dmwave_cos = self.get_prefix_mapping_component("DMWXCOS_")
 
-        base_phase = toas.table["tdbld"].data * u.d - self.DMWXEPOCH.value * u.d
+        base_phase = toas.table["tdbfloat"].data * u.d - self.DMWXEPOCH.value * u.d
         for idx, param in dmwave_freqs.items():
             freq = getattr(self, param).quantity
             dmwxsin = getattr(self, dmwave_sins[idx]).quantity
@@ -365,7 +366,7 @@ class DMWaveX(Dispersion):
     def d_dm_d_DMWXSIN(self, toas, param, acc_delay=None):
         par = getattr(self, param)
         freq = getattr(self, f"DMWXFREQ_{int(par.index):04d}").quantity
-        base_phase = toas.table["tdbld"].data * u.d - self.DMWXEPOCH.value * u.d
+        base_phase = toas.table["tdbfloat"].data * u.d - self.DMWXEPOCH.value * u.d
         arg = 2.0 * np.pi * freq * base_phase
         deriv = np.sin(arg.value)
         return deriv * dmu / par.units
@@ -373,7 +374,7 @@ class DMWaveX(Dispersion):
     def d_dm_d_DMWXCOS(self, toas, param, acc_delay=None):
         par = getattr(self, param)
         freq = getattr(self, f"DMWXFREQ_{int(par.index):04d}").quantity
-        base_phase = toas.table["tdbld"].data * u.d - self.DMWXEPOCH.value * u.d
+        base_phase = toas.table["tdbfloat"].data * u.d - self.DMWXEPOCH.value * u.d
         arg = 2.0 * np.pi * freq * base_phase
         deriv = np.cos(arg.value)
         return deriv * dmu / par.units
