@@ -611,8 +611,7 @@ class ModelBuilder:
         binary_model_guesses = guess_binary_model(param_inpar)
 
         # Allow for T2 model, gracefully
-        if force_binary_model is not None:
-            # TODO: also need to convert here? Not very clean flow here
+        if force_binary_model is not None and binary!='T2':
             binary = force_binary_model
         elif binary == "T2" and allow_T2:
             binary = binary_model_guesses[0]
