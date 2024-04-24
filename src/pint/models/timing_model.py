@@ -3211,9 +3211,7 @@ class TimingModel:
                     )
                     s += f"Pulsar mass (Shapiro Delay) = {psrmass}"
                     outdict["Mp (Msun)"] = psrmass
-        if not returndict:
-            return s
-        return s, outdict
+        return (s, outdict) if returndict else s
 
 
 class ModelMeta(abc.ABCMeta):
@@ -3227,8 +3225,8 @@ class ModelMeta(abc.ABCMeta):
     """
 
     def __init__(cls, name, bases, dct):
-        regname = "component_types"
         if "register" in dct and cls.register:
+            regname = "component_types"
             getattr(cls, regname)[name] = cls
         super().__init__(name, bases, dct)
 
@@ -3308,10 +3306,10 @@ class Component(metaclass=ModelMeta):
         for p in self.params:
             par = getattr(self, p)
             if par.is_prefix:
-                if par.prefix not in prefixs.keys():
-                    prefixs[par.prefix] = [p]
-                else:
+                if par.prefix in prefixs:
                     prefixs[par.prefix].append(p)
+                else:
+                    prefixs[par.prefix] = [p]
         return prefixs
 
     @property_exists
