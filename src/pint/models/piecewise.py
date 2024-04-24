@@ -1,4 +1,5 @@
 """Pulsar timing piecewise spin-down solution."""
+
 import astropy.units as u
 import numpy as np
 
@@ -176,9 +177,9 @@ class PiecewiseSpindown(PhaseComponent):
         idx = glep.index
         start = getattr(self, "PWSTART_%d" % idx).value
         stop = getattr(self, "PWSTOP_%d" % idx).value
-        affected = (tbl["tdbld"] >= start) & (tbl["tdbld"] < stop)
+        affected = (tbl["tdbfloat"] >= start) & (tbl["tdbfloat"] < stop)
         phsepoch_ld = glep.quantity.tdb.mjd_long
-        dt = (tbl["tdbld"][affected] - phsepoch_ld) * u.day - delay[affected]
+        dt = (tbl["tdbfloat"][affected] - phsepoch_ld) * u.day - delay[affected]
         return dt, affected
 
     def piecewise_phase(self, toas, delay):
