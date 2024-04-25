@@ -12,7 +12,7 @@ from pinttestdata import datadir
 
 from pint.models import get_model
 from pint.observatory import get_observatory
-from pint.toa import TOA, TOAs
+from pint.toa import TOA, TOAs, get_TOAs
 import pint.toa
 from pint.simulation import make_fake_toas_uniform
 
@@ -113,7 +113,6 @@ class TestTOAs:
         assert toas.table["error"].unit == u.us
         assert toas.table["mjd"][0].precision == 9
         assert toas.table["mjd"][0].location is not None
-        assert all(toas.table["tdbfloat"] == toas.table["tdbld"].astype(float))
 
     def test_multiple_observatories_stay_attached(self):
         obs1 = "gbt"
@@ -195,3 +194,8 @@ def test_mix_nb_wb():
                 """
             )
         )
+
+
+def test_tdbfloat():
+    toas = get_TOAs(datadir / "NGC6440E.tim")
+    assert all(toas.table["tdbfloat"] == toas.table["tdbld"].astype(float))
