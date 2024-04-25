@@ -928,7 +928,6 @@ def get_model_and_toas(
         binary model. Default is False, and will throw an error upon
         encountering the T2 binary model. If True, the binary model will be
         converted to the most appropriate PINT-compatible binary model.
-
     force_binary_model : str, optional
         When set to some binary model, like force_binary_model="DD", this
         will override the binary model set in the parfile. Defaults to None
