@@ -777,7 +777,13 @@ class ModelBuilder:
 
 
 def get_model(
-    parfile, allow_name_mixing=False, allow_tcb=False, toas_for_tzr=None, **kwargs
+    parfile,
+    allow_name_mixing=False,
+    allow_tcb=False,
+    allow_T2=False,
+    force_binary_model=None,
+    toas_for_tzr=None,
+    **kwargs,
 ):
     """A one step function to build model from a parfile.
 
@@ -797,6 +803,16 @@ def get_model(
         error upon encountering TCB par files. If True, the par file will be
         converted to TDB upon read. If "raw", an unconverted malformed TCB
         TimingModel object will be returned.
+
+    allow_T2 : bool, optional
+        Whether to convert a T2 binary model to an appropriate underlying
+        binary model. Default is False, and will throw an error upon
+        encountering the T2 binary model. If True, the binary model will be
+        converted to the most appropriate PINT-compatible binary model.
+
+    force_binary_model : str, optional
+        When set to some binary model, like force_binary_model="DD", this will
+        override the binary model set in the parfile. Defaults to None
 
     toas_for_tzr : TOAs or None, optional
         If this is not None, a TZR TOA (AbsPhase) will be created using the
@@ -819,6 +835,8 @@ def get_model(
             StringIO(contents),
             allow_name_mixing,
             allow_tcb=allow_tcb,
+            allow_T2=allow_T2,
+            force_binary_model=force_binary_model,
             toas_for_tzr=toas_for_tzr,
             **kwargs,
         )
@@ -830,6 +848,8 @@ def get_model(
         parfile,
         allow_name_mixing,
         allow_tcb=allow_tcb,
+        allow_T2=allow_T2,
+        force_binary_model=force_binary_model,
         toas_for_tzr=toas_for_tzr,
         **kwargs,
     )
@@ -853,6 +873,8 @@ def get_model_and_toas(
     allow_name_mixing=False,
     limits="warn",
     allow_tcb=False,
+    allow_T2=False,
+    force_binary_model=None,
     add_tzr_to_model=True,
     **kwargs,
 ):
@@ -901,6 +923,15 @@ def get_model_and_toas(
         error upon encountering TCB par files. If True, the par file will be
         converted to TDB upon read. If "raw", an unconverted malformed TCB
         TimingModel object will be returned.
+    allow_T2 : bool, optional
+        Whether to convert a T2 binary model to an appropriate underlying
+        binary model. Default is False, and will throw an error upon
+        encountering the T2 binary model. If True, the binary model will be
+        converted to the most appropriate PINT-compatible binary model.
+
+    force_binary_model : str, optional
+        When set to some binary model, like force_binary_model="DD", this
+        will override the binary model set in the parfile. Defaults to None
     add_tzr_to_model : bool, optional
         Create a TZR TOA in the timing model using the created TOAs object. Default is
         True.
@@ -912,7 +943,14 @@ def get_model_and_toas(
     A tuple with (model instance, TOAs instance)
     """
 
-    mm = get_model(parfile, allow_name_mixing, allow_tcb=allow_tcb, **kwargs)
+    mm = get_model(
+        parfile,
+        allow_name_mixing,
+        allow_tcb=allow_tcb,
+        allow_T2=allow_T2,
+        force_binary_model=force_binary_model,
+        **kwargs,
+    )
 
     tt = get_TOAs(
         timfile,
