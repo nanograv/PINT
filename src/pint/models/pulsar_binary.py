@@ -376,7 +376,7 @@ class PulsarBinary(DelayComponent):
                 # it's already in ICRS
                 updates["obs_pos"] = tbl["ssb_obs_pos"].quantity
                 updates["psr_pos"] = self._parent.ssb_to_psb_xyz_ICRS(
-                    epoch=tbl["tdbld"]
+                    epoch=tbl["tdbfloat"]
                 )
             elif "AstrometryEcliptic" in self._parent.components:
                 # convert from ICRS to ECL
@@ -389,7 +389,7 @@ class PulsarBinary(DelayComponent):
                     PulsarEcliptic(ecl=self._parent.ECL.value)
                 ).cartesian.xyz.transpose()
                 updates["psr_pos"] = self._parent.ssb_to_psb_xyz_ECL(
-                    epoch=tbl["tdbld"], ecl=self._parent.ECL.value
+                    epoch=tbl["tdbfloat"], ecl=self._parent.ECL.value
                 )
         for par in self.binary_instance.binary_params:
             if par in self.binary_instance.param_aliases.keys():
