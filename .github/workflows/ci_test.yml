@@ -41,7 +41,7 @@ jobs:
 #          - os: ubuntu-latest
 #            python: '3.10'
 #            tox_env: 'py310-test-alldeps-cov'
-          - os: macos-latest
+          - os: macos-12
             python: '3.12'
             tox_env: 'py312-test'
 #          - os: windows-latest
