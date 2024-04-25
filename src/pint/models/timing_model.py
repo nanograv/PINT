@@ -2921,9 +2921,9 @@ class TimingModel:
 
         Parameters
         ----------
-        epoch : `astropy.time.Time` or Float, optional
-            new epoch for position.  If Float, MJD(TDB) is assumed.
-            Note that uncertainties are not adjusted.
+        epoch : float or astropy.time.Time or astropy.units.Quantity, optional
+            If float or Quantity, MJD(TDB) is assumed.
+            New epoch for position.
         ecl : str, optional
             Obliquity for PulsarEcliptic frame
 
@@ -2971,9 +2971,9 @@ class TimingModel:
 
         Parameters
         ----------
-        epoch : `astropy.time.Time` or Float, optional
-            new epoch for position.  If Float, MJD(TDB) is assumed.
-            Note that uncertainties are not adjusted.
+        epoch : float or astropy.time.Time or astropy.units.Quantity, optional
+            If float or Quantity, MJD(TDB) is assumed.
+            New epoch for position.
 
         Returns
         -------
