@@ -2856,6 +2856,9 @@ def get_TOAs_array(
                             f'CLOCK = {model["CLOCK"].value} is not implemented. '
                             f"Using TT({bipm_default}) instead."
                         )
+            elif model["CLOCK"].value == "UNCORR":
+                include_bipm = False
+                include_gps = False
             else:
                 log.warning(
                     f'CLOCK = {model["CLOCK"].value} is not implemented. '
@@ -2907,10 +2910,10 @@ def get_TOAs_array(
     if hasattr(errors, "unit"):
         try:
             errors = errors.to(u.microsecond)
-        except u.UnitConversionError:
+        except u.UnitConversionError as e:
             raise u.UnitConversionError(
                 f"Uncertainty for TOA with incompatible unit {errors}"
-            )
+            ) from e
     else:
         errors = errors * u.microsecond
 
@@ -2927,10 +2930,10 @@ def get_TOAs_array(
     if hasattr(freqs, "unit"):
         try:
             freqs = freqs.to(u.MHz)
-        except u.UnitConversionError:
+        except u.UnitConversionError as e:
             raise u.UnitConversionError(
                 f"Frequency for TOA with incompatible unit {freqs}"
-            )
+            ) from e
     else:
         freqs = freqs * u.MHz
     freqs[freqs == 0] = np.inf * u.MHz
@@ -2942,9 +2945,9 @@ def get_TOAs_array(
             )
         flagdicts = [FlagDict.from_dict(f) for f in flags]
     elif flags is not None:
-        flagdicts = [FlagDict(flags) for i in range(len(t))]
+        flagdicts = [FlagDict(flags) for _ in range(len(t))]
     else:
-        flagdicts = [FlagDict() for i in range(len(t))]
+        flagdicts = [FlagDict() for _ in range(len(t))]
 
     for k, v in kwargs.items():
         if isinstance(v, (list, tuple, np.ndarray)):
