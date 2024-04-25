@@ -309,11 +309,11 @@ class PulsarBinary(DelayComponent):
                 method_name = f"{p.lower()}_func"
                 try:
                     par_method = getattr(self.binary_instance, method_name)
-                except AttributeError:
+                except AttributeError as e:
                     raise MissingParameter(
                         self.binary_model_name,
                         f"{p} is required for '{self.binary_model_name}'.",
-                    )
+                    ) from e
                 par_method()
 
     # With new parameter class set up, do we need this?
@@ -401,13 +401,13 @@ class PulsarBinary(DelayComponent):
             if hasattr(self._parent, par) or set(alias).intersection(self.params):
                 try:
                     pint_bin_name = self._parent.match_param_aliases(par)
-                except UnknownParameter:
+                except UnknownParameter as e:
                     if par in self.internal_params:
                         pint_bin_name = par
                     else:
                         raise UnknownParameter(
                             f"Unable to find {par} in the parent model"
-                        )
+                        ) from e
                 binObjpar = getattr(self._parent, pint_bin_name)
 
                 # make sure we aren't passing along derived parameters to the binary instance
