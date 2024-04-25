@@ -214,6 +214,9 @@ def get_TOAs(
                             f'CLOCK = {model["CLOCK"].value} is not implemented. '
                             f"Using TT({bipm_default}) instead."
                         )
+            elif model["CLOCK"].value == "UNCORR":
+                include_bipm = False
+                include_gps = False
             else:
                 log.warning(
                     f'CLOCK = {model["CLOCK"].value} is not implemented. '

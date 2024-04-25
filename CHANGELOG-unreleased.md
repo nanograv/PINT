@@ -15,6 +15,7 @@ the released changes.
 - When clock files contain out-of-order entries, the exception now records the first MJDs that are out of order
 - `np.compat.long` -> `int` (former is deprecated)
 - Turned ErfaWarning into an exception during testing; cleaned up test suite.
+- Allow "CLK UNCORR"
 ### Added
 - Added numdifftools to setup.cfg to match requirements.txt
 - Documentation: Added `convert_parfile` to list of command-line tools in RTD
