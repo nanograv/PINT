@@ -15,6 +15,7 @@ the released changes.
 - When clock files contain out-of-order entries, the exception now records the first MJDs that are out of order
 - `np.compat.long` -> `int` (former is deprecated)
 - Turned ErfaWarning into an exception during testing; cleaned up test suite.
+- macos-latest runner changed to macos-12 runner for CI tests to avoid M1 architecture issues
 - Allow "CLK UNCORR"
 ### Added
 - Added numdifftools to setup.cfg to match requirements.txt
