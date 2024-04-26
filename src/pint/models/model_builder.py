@@ -34,10 +34,24 @@ from pint.utils import (
     get_unit,
 )
 from pint.models.tcb_conversion import convert_tcb_tdb
+from pint.models.binary_ddk import _convert_kin, _convert_kom
 
 __all__ = ["ModelBuilder", "get_model", "get_model_and_toas"]
 
 default_models = ["StandardTimingModel"]
+_binary_model_priority = [
+    "Isolated",
+    "BT",
+    "BT_piecewise",
+    "ELL1",
+    "ELL1H",
+    "ELL1k",
+    "DD",
+    "DDK",
+    "DDGR",
+    "DDS",
+    "DDH",
+]
 
 
 class ComponentConflict(ValueError):
@@ -112,6 +126,8 @@ class ModelBuilder:
         parfile,
         allow_name_mixing=False,
         allow_tcb=False,
+        allow_T2=False,
+        force_binary_model=None,
         toas_for_tzr=None,
         **kwargs,
     ):
@@ -134,6 +150,16 @@ class ModelBuilder:
             converted to TDB upon read. If "raw", an unconverted malformed TCB
             TimingModel object will be returned.
 
+        allow_T2 : bool, optional
+            Whether to convert a T2 binary model to an appropriate underlying
+            binary model. Default is False, and will throw an error upon
+            encountering the T2 binary model. If True, the binary model will be
+            converted to the most appropriate PINT-compatible binary model.
+
+        force_binary_model : str, optional
+            When set to some binary model, like force_binary_model="DD", this
+            will override the binary model set in the parfile. Defaults to None
+
         toas_for_tzr : TOAs or None, optional
             If this is not None, a TZR TOA (AbsPhase) will be created using the
             given TOAs object.
@@ -150,6 +176,8 @@ class ModelBuilder:
         assert allow_tcb in [True, False, "raw"]
         convert_tcb = allow_tcb == True
         allow_tcb_ = allow_tcb in [True, "raw"]
+
+        assert isinstance(allow_T2, bool)
 
         pint_param_dict, original_name, unknown_param = self._pintify_parfile(
             parfile, allow_name_mixing
@@ -168,7 +196,9 @@ class ModelBuilder:
                 original_name[k] = k
             else:
                 remaining_args[k] = v
-        selected, conflict, param_not_in_pint = self.choose_model(pint_param_dict)
+        selected, conflict, param_not_in_pint = self.choose_model(
+            pint_param_dict, force_binary_model=force_binary_model, allow_T2=allow_T2
+        )
         selected.update(set(self.default_components))
 
         # Add SolarSystemShapiro only if an Astrometry component is present.
@@ -404,7 +434,7 @@ class ModelBuilder:
 
         return pint_param_dict, original_name_map, unknown_param
 
-    def choose_model(self, param_inpar):
+    def choose_model(self, param_inpar, force_binary_model=None, allow_T2=False):
         """Choose the model components based on the parfile.
 
         Parameters
@@ -412,6 +442,16 @@ class ModelBuilder:
         param_inpar: dict
             Dictionary of the unique parameters in .par file with the key is the
             parfile line. :func:`parse_parfile` returns this dictionary.
+
+        allow_T2 : bool, optional
+            Whether to convert a T2 binary model to an appropriate underlying
+            binary model. Default is False, and will throw an error upon
+            encountering the T2 binary model. If True, the binary model will be
+            converted to the most appropriate PINT-compatible binary model.
+
+        force_binary_model : str, optional
+            When set to some binary model, like force_binary_model="DD", this
+            will override the binary model set in the parfile. Defaults to None
 
         Returns
         -------
@@ -445,10 +485,13 @@ class ModelBuilder:
         # build the base fo the timing model
         # pint_param_dict, unknown_param = self._pintify_parfile(param_inpar)
         binary = param_inpar.get("BINARY", None)
-        if binary is not None:
+
+        if binary:
             binary = binary[0]
-            binary_cp = self.all_components.search_binary_components(binary)
-            selected_components.add(binary_cp.__class__.__name__)
+            selected_components.add(
+                self.choose_binary_model(param_inpar, force_binary_model, allow_T2)
+            )
+
         # 2. Get the component list from the parameters in the parfile.
         # 2.1 Check the aliases of input parameters.
         # This does not include the repeating parameters, but it should not
@@ -531,6 +574,80 @@ class ModelBuilder:
             else:
                 selected_cates[cate] = cp
         return selected_components, conflict_components, param_not_in_pint
+
+    def choose_binary_model(self, param_inpar, force_binary_model=None, allow_T2=False):
+        """Choose the BINARY model based on the parfile.
+
+        Parameters
+        ----------
+        param_inpar: dict
+            Dictionary of the unique parameters in .par file with the key is the
+            parfile line. :func:`parse_parfile` returns this dictionary.
+
+        force_binary_model : str, optional
+            When set to some binary model, like force_binary_model="DD", this
+            will override the binary model set in the parfile. Defaults to None
+
+        allow_T2 : bool, optional
+            Whether to convert a T2 binary model to an appropriate underlying
+            binary model. Default is False, and will throw an error upon
+            encountering the T2 binary model. If True, the binary model will be
+            converted to the most appropriate PINT-compatible binary model.
+
+        Returns
+        -------
+        str
+            Name of the binary component
+
+        Note
+        ----
+        If the binary model does not have a PINT model (e.g. the T2 model), an
+        error is thrown with the suggested model that could replace it. If
+        allow_T2 is set to True, the most appropriate binary model is guessed
+        and used. If an appropriate model cannot be found, no suggestion is
+        given and an error is thrown.
+        """
+        binary = param_inpar["BINARY"][0]
+
+        # Guess what the binary model should be, regardless of BINARY parameter
+        try:
+            binary_model_guesses = guess_binary_model(param_inpar)
+        except UnknownBinaryModel as e:
+            log.error(
+                "Unable to find suitable binary model that has all the"
+                "parameters in the parfile. Please fix the par file."
+            )
+
+        # Allow for T2 model, gracefully
+        if force_binary_model is not None and binary != "T2":
+            binary = force_binary_model
+        elif binary == "T2" and allow_T2:
+            binary = binary_model_guesses[0]
+            log.warning(
+                f"Found T2 binary model. Gracefully converting T2 to: {binary}."
+            )
+
+            # Make sure that DDK parameters are properly converted
+            convert_binary_params_dict(param_inpar, force_binary_model=binary)
+
+        try:
+            binary_cp = self.all_components.search_binary_components(binary)
+
+        except UnknownBinaryModel as e:
+            log.error(f"Could not find binary model {binary}")
+
+            log.info(
+                f"Compatible models with these parameters: {', '.join(binary_model_guesses)}."
+            )
+
+            # Re-raise the error, with an added guess for the binary model if we have one
+            if binary_model_guesses:
+                raise UnknownBinaryModel(
+                    str(e), suggestion=binary_model_guesses[0]
+                ) from None
+            raise
+
+        return binary_cp.__class__.__name__
 
     def _setup_model(
         self,
@@ -660,7 +777,13 @@ class ModelBuilder:
 
 
 def get_model(
-    parfile, allow_name_mixing=False, allow_tcb=False, toas_for_tzr=None, **kwargs
+    parfile,
+    allow_name_mixing=False,
+    allow_tcb=False,
+    allow_T2=False,
+    force_binary_model=None,
+    toas_for_tzr=None,
+    **kwargs,
 ):
     """A one step function to build model from a parfile.
 
@@ -680,6 +803,16 @@ def get_model(
         error upon encountering TCB par files. If True, the par file will be
         converted to TDB upon read. If "raw", an unconverted malformed TCB
         TimingModel object will be returned.
+
+    allow_T2 : bool, optional
+        Whether to convert a T2 binary model to an appropriate underlying
+        binary model. Default is False, and will throw an error upon
+        encountering the T2 binary model. If True, the binary model will be
+        converted to the most appropriate PINT-compatible binary model.
+
+    force_binary_model : str, optional
+        When set to some binary model, like force_binary_model="DD", this will
+        override the binary model set in the parfile. Defaults to None
 
     toas_for_tzr : TOAs or None, optional
         If this is not None, a TZR TOA (AbsPhase) will be created using the
@@ -702,6 +835,8 @@ def get_model(
             StringIO(contents),
             allow_name_mixing,
             allow_tcb=allow_tcb,
+            allow_T2=allow_T2,
+            force_binary_model=force_binary_model,
             toas_for_tzr=toas_for_tzr,
             **kwargs,
         )
@@ -713,6 +848,8 @@ def get_model(
         parfile,
         allow_name_mixing,
         allow_tcb=allow_tcb,
+        allow_T2=allow_T2,
+        force_binary_model=force_binary_model,
         toas_for_tzr=toas_for_tzr,
         **kwargs,
     )
@@ -736,6 +873,8 @@ def get_model_and_toas(
     allow_name_mixing=False,
     limits="warn",
     allow_tcb=False,
+    allow_T2=False,
+    force_binary_model=None,
     add_tzr_to_model=True,
     **kwargs,
 ):
@@ -784,6 +923,14 @@ def get_model_and_toas(
         error upon encountering TCB par files. If True, the par file will be
         converted to TDB upon read. If "raw", an unconverted malformed TCB
         TimingModel object will be returned.
+    allow_T2 : bool, optional
+        Whether to convert a T2 binary model to an appropriate underlying
+        binary model. Default is False, and will throw an error upon
+        encountering the T2 binary model. If True, the binary model will be
+        converted to the most appropriate PINT-compatible binary model.
+    force_binary_model : str, optional
+        When set to some binary model, like force_binary_model="DD", this
+        will override the binary model set in the parfile. Defaults to None
     add_tzr_to_model : bool, optional
         Create a TZR TOA in the timing model using the created TOAs object. Default is
         True.
@@ -795,7 +942,14 @@ def get_model_and_toas(
     A tuple with (model instance, TOAs instance)
     """
 
-    mm = get_model(parfile, allow_name_mixing, allow_tcb=allow_tcb, **kwargs)
+    mm = get_model(
+        parfile,
+        allow_name_mixing,
+        allow_tcb=allow_tcb,
+        allow_T2=allow_T2,
+        force_binary_model=force_binary_model,
+        **kwargs,
+    )
 
     tt = get_TOAs(
         timfile,
@@ -817,3 +971,135 @@ def get_model_and_toas(
         mm.add_tzr_toa(tt)
 
     return mm, tt
+
+
+def guess_binary_model(parfile_dict):
+    """Based on the PINT parameter dictionary, guess the binary model
+
+    Parameters
+    ----------
+    parfile_dict
+        The parameter dictionary as read-in by parse_parfile
+
+    Returns
+    -------
+    list:
+        A priority-ordered list of possible binary models. The first one is the
+        best-guess
+
+    """
+
+    def add_sini(parameters):
+        """If 'KIN' is a model parameter, Tempo2 doesn't really use SINI"""
+        if "KIN" in parameters:
+            return list(parameters) + ["SINI"]
+        else:
+            return list(parameters)
+
+    all_components = AllComponents()
+    binary_models = all_components.category_component_map["pulsar_system"]
+
+    # Find all binary parameters
+    binary_parameters_map = {
+        all_components.components[binary_model].binary_model_name: add_sini(
+            all_components.search_binary_components(binary_model).aliases_map.keys()
+        )
+        for binary_model in binary_models
+    }
+    binary_parameters_map.update({"Isolated": []})
+    all_binary_parameters = {
+        parname for parnames in binary_parameters_map.values() for parname in parnames
+    }
+
+    # Find all parfile parameters
+    all_parfile_parameters = set(parfile_dict.keys())
+
+    # All binary parameters in the parfile
+    parfile_binary_parameters = all_parfile_parameters & all_binary_parameters
+
+    # Find which binary models include those
+    allowed_binary_models = {
+        binary_model
+        for (binary_model, bmc) in binary_parameters_map.items()
+        if len(parfile_binary_parameters - set(bmc)) == 0
+    }
+
+    # Now select the best-guess binary model
+    priority = [bm for bm in _binary_model_priority if bm in allowed_binary_models]
+    omitted = allowed_binary_models - set(priority)
+
+    return priority + list(omitted)
+
+
+def convert_binary_params_dict(
+    parfile_dict, convert_komkin=True, drop_ddk_sini=True, force_binary_model=None
+):
+    """Convert the PINT parameter dictionary to include the best-guess binary
+
+    Parameters
+    ----------
+    parfile_dict
+        The parameter dictionary as read-in by parse_parfile
+    convert_komkin
+        Whether or not to convert the KOM and KIN parameters
+    drop_ddk_sini
+        Whether to drop SINI when converting to the DDK model
+
+    force_binary_model : str, optional
+        When set to some binary model, like force_binary_model="DD", this will
+        override the binary model set in the parfile. Defaults to None
+
+    Returns
+    -------
+    A new parfile dictionary with the binary model replaced with the best-guess
+    model. For a conversion to DDK, this function also converts the KOM/KIN
+    parameters if they exist.
+    """
+    binary = parfile_dict.get("BINARY", None)
+    binary = binary if not binary else binary[0]
+    log.debug(f"Requested to convert binary model for BINARY model: {binary}")
+
+    if binary:
+        if not force_binary_model:
+            binary_model_guesses = guess_binary_model(parfile_dict)
+            log.info(
+                f"Compatible models with these parameters: {', '.join(binary_model_guesses)}. Using {binary_model_guesses[0]}"
+            )
+
+            if not binary_model_guesses:
+                error_message = f"Unable to determine binary model for this par file"
+                log_message = (
+                    f"Unable to determine the binary model based"
+                    f"on the model parameters in the par file."
+                )
+
+                log.error(log_message)
+                raise UnknownBinaryModel(error_message)
+
+        else:
+            binary_model_guesses = [force_binary_model]
+
+        # Select the best-guess binary model
+        parfile_dict["BINARY"] = [binary_model_guesses[0]]
+
+        # Convert KIN if requested
+        if convert_komkin and "KIN" in parfile_dict:
+            log.info(f"Converting KOM to/from IAU <--> DT96: {parfile_dict['KIN']}")
+            log.debug(f"Converting KIN to/from IAU <--> DT96")
+            entries = parfile_dict["KIN"][0].split()
+            new_value = _convert_kin(float(entries[0]) * u.deg).value
+            parfile_dict["KIN"] = [" ".join([repr(new_value)] + entries[1:])]
+
+        # Convert KOM if requested
+        if convert_komkin and "KOM" in parfile_dict:
+            log.debug(f"Converting KOM to/from IAU <--> DT96")
+            entries = parfile_dict["KOM"][0].split()
+            new_value = _convert_kom(float(entries[0]) * u.deg).value
+            parfile_dict["KOM"] = [" ".join([repr(new_value)] + entries[1:])]
+
+        # Drop SINI if requested
+        if drop_ddk_sini and binary_model_guesses[0] == "DDK":
+            log.debug(f"Dropping SINI from DDK model")
+            parfile_dict.pop("SINI", None)
+
+    return parfile_dict
