@@ -4070,9 +4070,17 @@ class UnknownParameter(TimingModelError):
 
 
 class UnknownBinaryModel(TimingModelError):
-    """Signal that the par file requested a binary model no in PINT."""
+    """Signal that the par file requested a binary model not in PINT."""
 
-    pass
+    def __init__(self, message, suggestion=None):
+        super().__init__(message)
+        self.suggestion = suggestion
+
+    def __str__(self):
+        base_message = super().__str__()
+        if self.suggestion:
+            return f"{base_message} Perhaps use {self.suggestion}?"
+        return base_message
 
 
 class MissingBinaryError(TimingModelError):
