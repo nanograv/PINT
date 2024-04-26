@@ -39,6 +39,7 @@ the released changes.
 - `freeze_params` option in `wavex_setup` and `dmwavex_setup`
 - `plrednoise_from_wavex`, `pldmnoise_from_dmwavex`, and `find_optimal_nharms` functions
 - fake TOAs can be created with `subtract_mean=False`, to maintain phase coherence between different data sets
+- Binary models can be guessed by the `ModelBuilder`. Options and script are added to allow reading/conversion of the T2 binary model
 - Better explanation of ELL1H behavior when H3/H4/STIGMA supplied and when NHARMS is used
 - FDJumpDM component for System-dependent DM offsets
 - Documentation: Explanation for FDJUMP and FDJUMPDM
