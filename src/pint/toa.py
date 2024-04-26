@@ -492,7 +492,11 @@ def _parse_TOA_line(line, fmt="Unknown"):
         d["freq"] = float(line[15:24])
         d["error"] = float(line[44:53])
         ii, ff = line[24:44].split(".")
-        MJD = (int(ii), float(f"0.{ff}"))
+        ii = int(ii)
+        # For very old TOAs, see https://tempo.sourceforge.net/ref_man_sections/toa.txt
+        if ii < 40000:
+            ii += 39126
+        MJD = (ii, float(f"0.{ff}"))
         try:
             d["ddm"] = str(float(line[68:78]))
         except ValueError:

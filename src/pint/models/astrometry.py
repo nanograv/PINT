@@ -1,7 +1,9 @@
 """Astrometric models for describing pulsar sky positions."""
+
 import copy
 import sys
 import warnings
+from typing import Optional, List, Union
 
 import astropy.constants as const
 import astropy.coordinates as coords
@@ -19,6 +21,7 @@ from pint.models.parameter import (
     floatParameter,
     strParameter,
 )
+import pint.toa
 from pint.models.timing_model import DelayComponent, MissingParameter
 from pint.pulsar_ecliptic import OBL, PulsarEcliptic
 from pint.utils import add_dummy_distance, remove_dummy_distance
@@ -56,14 +59,17 @@ class Astrometry(DelayComponent):
         self.delay_funcs_component += [self.solar_system_geometric_delay]
         self.register_deriv_funcs(self.d_delay_astrometry_d_PX, "PX")
 
-    def ssb_to_psb_xyz_ICRS(self, epoch=None):
+    def ssb_to_psb_xyz_ICRS(
+        self, epoch: Union[float, u.Quantity, Time] = None
+    ) -> u.Quantity:
         """Returns unit vector(s) from SSB to pulsar system barycenter under ICRS.
 
         If epochs (MJD) are given, proper motion is included in the calculation.
 
         Parameters
         ----------
-        epoch : float or astropy.time.Time, optional
+        epoch : float or astropy.time.Time or astropy.units.Quantity, optional
+            If float or Quantity, MJD(TDB) is assumed
 
         Returns
         -------
@@ -76,14 +82,17 @@ class Astrometry(DelayComponent):
         # but for consistency only change the method in the subclasses below
         return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
 
-    def ssb_to_psb_xyz_ECL(self, epoch=None, ecl=None):
+    def ssb_to_psb_xyz_ECL(
+        self, epoch: Union[float, u.Quantity, Time] = None, ecl: str = None
+    ) -> u.Quantity:
         """Returns unit vector(s) from SSB to pulsar system barycenter under Ecliptic coordinates.
 
         If epochs (MJD) are given, proper motion is included in the calculation.
 
         Parameters
         ----------
-        epoch : float, optional
+        epoch : float or astropy.time.Time or astropy.units.Quantity, optional
+            If float or Quantity, MJD(TDB) is assumed
         ecl : str, optional
             Obliquity (IERS2010 by default)
 
@@ -95,7 +104,9 @@ class Astrometry(DelayComponent):
         # TODO: would it be better for this to return a 6-vector (pos, vel)?
         return self.coords_as_ECL(epoch=epoch, ecl=ecl).cartesian.xyz.transpose()
 
-    def sun_angle(self, toas, heliocenter=True, also_distance=False):
+    def sun_angle(
+        self, toas: pint.toa.TOAs, heliocenter: bool = True, also_distance: bool = False
+    ) -> np.ndarray:
         """Compute the pulsar-observatory-Sun angle.
 
         This is the angle between the center of the Sun and the direction to
@@ -105,7 +116,7 @@ class Astrometry(DelayComponent):
 
         Parameters
         ----------
-        toas: :class:`pint.toas.TOAs`
+        toas: :class:`pint.toa.TOAs`
             The pulse arrival times at which to evaluate the sun angle.
         heliocenter: bool
             Whether to use the Sun's actual position (the heliocenter) or
@@ -134,7 +145,9 @@ class Astrometry(DelayComponent):
     def barycentric_radio_freq(self, toas):
         raise NotImplementedError
 
-    def solar_system_geometric_delay(self, toas, acc_delay=None):
+    def solar_system_geometric_delay(
+        self, toas: pint.toa.TOAs, acc_delay=None
+    ) -> u.Quantity:
         """Returns geometric delay (in sec) due to position of site in
         solar system.  This includes Roemer delay and parallax.
 
@@ -161,7 +174,7 @@ class Astrometry(DelayComponent):
                 )
         return delay * u.second
 
-    def get_d_delay_quantities(self, toas):
+    def get_d_delay_quantities(self, toas: pint.toa.TOAs) -> dict:
         """Calculate values needed for many d_delay_d_param functions"""
         # TODO: Should delay not have units of u.second?
         delay = self._parent.delay(toas)
@@ -194,7 +207,9 @@ class Astrometry(DelayComponent):
     def get_psr_coords(self, epoch=None):
         raise NotImplementedError
 
-    def d_delay_astrometry_d_PX(self, toas, param="", acc_delay=None):
+    def d_delay_astrometry_d_PX(
+        self, toas: pint.toa.TOAs, param="", acc_delay=None
+    ) -> u.Quantity:
         """Calculate the derivative wrt PX
 
         Roughly following Smart, 1977, chapter 9.
@@ -308,7 +323,7 @@ class AstrometryEquatorial(Astrometry):
                 raise MissingParameter("Astrometry", p)
         # Check for POSEPOCH
         if (
-            self.PMRA.quantity != 0 or self.PMDEC.quantity != 0
+            np.any(self.PMRA.quantity != 0) or np.any(self.PMDEC.quantity != 0)
         ) and self.POSEPOCH.quantity is None:
             if self._parent.PEPOCH.quantity is None:
                 raise MissingParameter(
@@ -319,7 +334,7 @@ class AstrometryEquatorial(Astrometry):
             else:
                 self.POSEPOCH.quantity = self._parent.PEPOCH.quantity
 
-    def print_par(self, format="pint"):
+    def print_par(self, format: str = "pint") -> str:
         result = ""
         print_order = ["RAJ", "DECJ", "PMRA", "PMDEC", "PX", "POSEPOCH"]
         for p in print_order:
@@ -328,14 +343,16 @@ class AstrometryEquatorial(Astrometry):
                 result += getattr(self, p).as_parfile_line(format=format)
         return result
 
-    def barycentric_radio_freq(self, toas):
+    def barycentric_radio_freq(self, toas: pint.toa.TOAs) -> u.Quantity:
         """Return radio frequencies (MHz) of the toas corrected for Earth motion"""
         tbl = toas.table
         L_hat = self.ssb_to_psb_xyz_ICRS(epoch=tbl["tdbld"].astype(np.float64))
         v_dot_L_array = np.sum(tbl["ssb_obs_vel"] * L_hat, axis=1)
         return tbl["freq"] * (1.0 - v_dot_L_array / const.c)
 
-    def get_psr_coords(self, epoch=None):
+    def get_psr_coords(
+        self, epoch: Union[float, u.Quantity, Time] = None
+    ) -> coords.SkyCoord:
         """Returns pulsar sky coordinates as an astropy ICRS object instance.
 
         Parameters
@@ -375,16 +392,40 @@ class AstrometryEquatorial(Astrometry):
 
         return position_then
 
-    def coords_as_ICRS(self, epoch=None):
-        """Return the pulsar's ICRS coordinates as an astropy coordinate object."""
+    def coords_as_ICRS(
+        self, epoch: Union[float, u.Quantity, Time] = None
+    ) -> coords.SkyCoord:
+        """Return the pulsar's ICRS coordinates as an astropy coordinate object.
+
+        Parameters
+        ----------
+        epoch : float or astropy.time.Time or astropy.units.Quantity, optional
+            If float or Quantity, MJD(TDB) is assumed
+
+        Returns
+        -------
+        astropy.coordinates.SkyCoord
+        """
         return self.get_psr_coords(epoch)
 
-    def coords_as_ECL(self, epoch=None, ecl=None):
+    def coords_as_ECL(
+        self, epoch: Union[float, u.Quantity, Time] = None, ecl: str = None
+    ) -> coords.SkyCoord:
         """Return the pulsar's ecliptic coordinates as an astropy coordinate object.
 
         The value used for the obliquity of the ecliptic can be controlled with the
         `ecl` keyword, which should be one of the codes listed in `ecliptic.dat`.
         If `ecl` is left unspecified, the global default IERS2010 will be used.
+
+        Parameters
+        ----------
+        epoch : float or astropy.time.Time or astropy.units.Quantity, optional
+            If float or Quantity, MJD(TDB) is assumed
+        ecl : str
+
+        Returns
+        -------
+        astropy.coordinates.SkyCoord
         """
         if ecl is None:
             log.debug("ECL not specified; using IERS2010.")
@@ -393,12 +434,24 @@ class AstrometryEquatorial(Astrometry):
         pos_icrs = self.get_psr_coords(epoch=epoch)
         return pos_icrs.transform_to(PulsarEcliptic(ecl=ecl))
 
-    def coords_as_GAL(self, epoch=None):
-        """Return the pulsar's galactic coordinates as an astropy coordinate object."""
+    def coords_as_GAL(
+        self, epoch: Union[float, u.Quantity, Time] = None
+    ) -> coords.SkyCoord:
+        """Return the pulsar's galactic coordinates as an astropy coordinate object.
+
+        Parameters
+        ----------
+        epoch : float or astropy.time.Time or astropy.units.Quantity, optional
+            If float or Quantity, MJD(TDB) is assumed
+
+        Returns
+        -------
+        astropy.coordinates.SkyCoord
+        """
         pos_icrs = self.get_psr_coords(epoch=epoch)
         return pos_icrs.transform_to(coords.Galactic)
 
-    def get_params_as_ICRS(self):
+    def get_params_as_ICRS(self) -> dict:
         return {
             "RAJ": self.RAJ.quantity,
             "DECJ": self.DECJ.quantity,
@@ -406,14 +459,17 @@ class AstrometryEquatorial(Astrometry):
             "PMDEC": self.PMDEC.quantity,
         }
 
-    def ssb_to_psb_xyz_ICRS(self, epoch=None):
+    def ssb_to_psb_xyz_ICRS(
+        self, epoch: Union[float, u.Quantity, Time] = None
+    ) -> u.Quantity:
         """Returns unit vector(s) from SSB to pulsar system barycenter under ICRS.
 
         If epochs (MJD) are given, proper motion is included in the calculation.
 
         Parameters
         ----------
-        epoch : float or astropy.time.Time, optional
+        epoch : float or astropy.time.Time or astropy.units.Quantity, optional
+            If float or Quantity, MJD(TDB) is assumed
 
         Returns
         -------
@@ -432,6 +488,10 @@ class AstrometryEquatorial(Astrometry):
             return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
 
         if isinstance(epoch, Time):
+            jd1 = epoch.jd1
+            jd2 = epoch.jd2
+        elif isinstance(epoch, u.Quantity):
+            epoch = Time(epoch, format="mjd", scale="tdb")
             jd1 = epoch.jd1
             jd2 = epoch.jd2
         else:
@@ -463,7 +523,9 @@ class AstrometryEquatorial(Astrometry):
         z = np.sin(dec)
         return u.Quantity([x, y, z]).T
 
-    def d_delay_astrometry_d_RAJ(self, toas, param="", acc_delay=None):
+    def d_delay_astrometry_d_RAJ(
+        self, toas: pint.toa.TOAs, param="", acc_delay=None
+    ) -> u.Quantity:
         """Calculate the derivative wrt RAJ
 
         For the RAJ and DEC derivatives, use the following approximate model for
@@ -490,7 +552,9 @@ class AstrometryEquatorial(Astrometry):
 
         return dd_draj.decompose(u.si.bases)
 
-    def d_delay_astrometry_d_DECJ(self, toas, param="", acc_delay=None):
+    def d_delay_astrometry_d_DECJ(
+        self, toas: pint.toa.TOAs, param="", acc_delay=None
+    ) -> u.Quantity:
         """Calculate the derivative wrt DECJ
 
         Definitions as in d_delay_d_RAJ
@@ -507,7 +571,9 @@ class AstrometryEquatorial(Astrometry):
 
         return dd_ddecj.decompose(u.si.bases)
 
-    def d_delay_astrometry_d_PMRA(self, toas, param="", acc_delay=None):
+    def d_delay_astrometry_d_PMRA(
+        self, toas: pint.toa.TOAs, param="", acc_delay=None
+    ) -> u.Quantity:
         """Calculate the derivative wrt PMRA
 
         Definitions as in d_delay_d_RAJ. Now we have a derivative in mas/yr for
@@ -526,7 +592,9 @@ class AstrometryEquatorial(Astrometry):
         # We want to return sec / (mas / yr)
         return dd_dpmra.decompose(u.si.bases) / (u.mas / u.year)
 
-    def d_delay_astrometry_d_PMDEC(self, toas, param="", acc_delay=None):
+    def d_delay_astrometry_d_PMDEC(
+        self, toas: pint.toa.TOAs, param="", acc_delay=None
+    ) -> u.Quantity:
         """Calculate the derivative wrt PMDEC
 
         Definitions as in d_delay_d_RAJ. Now we have a derivative in mas/yr for
@@ -548,12 +616,14 @@ class AstrometryEquatorial(Astrometry):
         # We want to return sec / (mas / yr)
         return dd_dpmdec.decompose(u.si.bases) / (u.mas / u.year)
 
-    def change_posepoch(self, new_epoch):
+    def change_posepoch(self, new_epoch: Union[float, u.Quantity, Time]):
         """Change POSEPOCH to a new value and update the position accordingly.
 
         Parameters
         ----------
-        new_epoch: float or `astropy.Time` object
+        new_epoch: `astropy.time.Time` or float or astropy.units.Quantity
+            If float or Quantity, MJD(TDB) is assumed.
+            Note that uncertainties are not adjusted.
             The new POSEPOCH value.
         """
         if isinstance(new_epoch, Time):
@@ -568,14 +638,16 @@ class AstrometryEquatorial(Astrometry):
         self.DECJ.value = new_coords.dec
         self.POSEPOCH.value = new_epoch
 
-    def as_ICRS(self, epoch=None):
+    def as_ICRS(
+        self, epoch: Union[float, u.Quantity, Time] = None
+    ) -> "AstrometryEquatorial":
         """Return pint.models.astrometry.Astrometry object in ICRS frame.
 
         Parameters
         ----------
-        epoch : `astropy.time.Time` or Float, optional
-            new epoch for position.  If Float, MJD(TDB) is assumed.
-            Note that uncertainties are not adjusted.
+        epoch : `astropy.time.Time` or float or astropy.units.Quantity, optional
+            If float or Quantity, MJD(TDB) is assumed.
+            New epoch for position.
 
         Returns
         -------
@@ -586,14 +658,16 @@ class AstrometryEquatorial(Astrometry):
             m.change_posepoch(epoch)
         return m
 
-    def as_ECL(self, epoch=None, ecl="IERS2010"):
+    def as_ECL(
+        self, epoch: Union[float, u.Quantity, Time] = None, ecl: str = "IERS2010"
+    ) -> "AstrometryEcliptic":
         """Return pint.models.astrometry.Astrometry object in PulsarEcliptic frame.
 
         Parameters
         ----------
-        epoch : `astropy.time.Time` or Float, optional
-            new epoch for position.  If Float, MJD(TDB) is assumed.
-            Note that uncertainties are not adjusted.
+        epoch : float or astropy.time.Time or astropy.units.Quantity, optional
+            If float or Quantity, MJD(TDB) is assumed.
+            New epoch for position.
         ecl : str, optional
             Obliquity for PulsarEcliptic frame
 
@@ -742,7 +816,7 @@ class AstrometryEcliptic(Astrometry):
                 raise MissingParameter("AstrometryEcliptic", p)
         # Check for POSEPOCH
         if (
-            self.PMELONG.value != 0 or self.PMELAT.value != 0
+            np.any(self.PMELONG.value != 0) or np.any(self.PMELAT.value != 0)
         ) and self.POSEPOCH.quantity is None:
             if self._parent.PEPOCH.quantity is None:
                 raise MissingParameter(
@@ -753,7 +827,7 @@ class AstrometryEcliptic(Astrometry):
             else:
                 self.POSEPOCH.quantity = self._parent.PEPOCH.quantity
 
-    def barycentric_radio_freq(self, toas):
+    def barycentric_radio_freq(self, toas: pint.toa.TOAs) -> u.Quantity:
         """Return radio frequencies (MHz) of the toas corrected for Earth motion"""
         if "ssb_obs_vel_ecl" not in toas.table.colnames:
             obliquity = OBL[self.ECL.value]
@@ -763,13 +837,15 @@ class AstrometryEcliptic(Astrometry):
         v_dot_L_array = np.sum(tbl["ssb_obs_vel_ecl"] * L_hat, axis=1)
         return tbl["freq"] * (1.0 - v_dot_L_array / const.c)
 
-    def get_psr_coords(self, epoch=None):
+    def get_psr_coords(
+        self, epoch: Union[float, u.Quantity, Time] = None
+    ) -> coords.SkyCoord:
         """Returns pulsar sky coordinates as an astropy ecliptic coordinate instance.
 
         Parameters
         ----------
-        epoch: `astropy.time.Time` or Float, optional
-            new epoch for position.  If Float, MJD(TDB) is assumed
+        epoch: `astropy.time.Time` or float or astropy.units.Quantity, optional
+            new epoch for position.  If float or Quantity, MJD(TDB) is assumed
 
         Returns
         -------
@@ -801,40 +877,81 @@ class AstrometryEcliptic(Astrometry):
             epoch if isinstance(epoch, Time) else Time(epoch, scale="tdb", format="mjd")
         )
         position_now = add_dummy_distance(self.get_psr_coords())
-        return remove_dummy_distance(
-            position_now.apply_space_motion(new_obstime=newepoch)
-        )
+        with warnings.catch_warnings():
+            # This is a fake position, no point ERFA warning the user it's bogus
+            warnings.filterwarnings("ignore", r".*distance overridden", ErfaWarning)
+            position_then = position_now.apply_space_motion(new_obstime=newepoch)
+        return remove_dummy_distance(position_then)
 
-    def coords_as_ICRS(self, epoch=None):
-        """Return the pulsar's ICRS coordinates as an astropy coordinate object."""
+    def coords_as_ICRS(
+        self, epoch: Union[float, u.Quantity, Time] = None
+    ) -> coords.SkyCoord:
+        """Return the pulsar's ICRS coordinates as an astropy coordinate object.
+
+        Parameters
+        ----------
+        epoch : float or astropy.time.Time or astropy.units.Quantity, optional
+            If float or Quantity, MJD(TDB) is assumed.
+
+        Returns
+        -------
+        astropy.coordinates.SkyCoord
+        """
         pos_ecl = self.get_psr_coords(epoch=epoch)
         return pos_ecl.transform_to(coords.ICRS)
 
-    def coords_as_GAL(self, epoch=None):
-        """Return the pulsar's galactic coordinates as an astropy coordinate object."""
+    def coords_as_GAL(
+        self, epoch: Union[float, u.Quantity, Time] = None
+    ) -> coords.SkyCoord:
+        """Return the pulsar's galactic coordinates as an astropy coordinate object.
+
+        Parameters
+        ----------
+        epoch : float or astropy.time.Time or astropy.units.Quantity, optional
+            If float or Quantity, MJD(TDB) is assumed
+
+        Returns
+        -------
+        astropy.coordinates.SkyCoord
+        """
         pos_ecl = self.get_psr_coords(epoch=epoch)
         return pos_ecl.transform_to(coords.Galactic)
 
-    def coords_as_ECL(self, epoch=None, ecl=None):
+    def coords_as_ECL(
+        self, epoch: Union[float, u.Quantity, Time] = None, ecl: str = None
+    ) -> coords.SkyCoord:
         """Return the pulsar's ecliptic coordinates as an astropy coordinate object.
 
         The value used for the obliquity of the ecliptic can be controlled with the
         `ecl` keyword, which should be one of the codes listed in `ecliptic.dat`.
         If `ecl` is left unspecified, the model's ECL parameter will be used.
+
+        Parameters
+        ----------
+        epoch : float or astropy.time.Time or astropy.units.Quantity, optional
+            If float or Quantity, MJD(TDB) is assumed
+        ecl : str
+
+        Returns
+        -------
+        astropy.coordinates.SkyCoord
         """
         pos_ecl = self.get_psr_coords(epoch=epoch)
         if ecl is not None:
             pos_ecl = pos_ecl.transform_to(PulsarEcliptic(ecl=ecl))
         return pos_ecl
 
-    def ssb_to_psb_xyz_ECL(self, epoch=None, ecl=None):
+    def ssb_to_psb_xyz_ECL(
+        self, epoch: Union[float, u.Quantity, Time] = None, ecl: str = None
+    ) -> u.Quantity:
         """Returns unit vector(s) from SSB to pulsar system barycenter under ECL.
 
         If epochs (MJD) are given, proper motion is included in the calculation.
 
         Parameters
         ----------
-        epoch : float or astropy.time.Time, optional
+        epoch : float or astropy.time.Time or astropy.units.Quantity, optional
+            If float or Quantity, MJD(TDB) is assumed
         ecl : str, optional
             Obliquity (IERS2010 by default)
 
@@ -862,6 +979,10 @@ class AstrometryEcliptic(Astrometry):
         if epoch is None or (self.PMELONG.value == 0 and self.PMELAT.value == 0):
             return self.coords_as_ECL(epoch=epoch, ecl=ecl).cartesian.xyz.transpose()
         if isinstance(epoch, Time):
+            jd1 = epoch.jd1
+            jd2 = epoch.jd2
+        elif isinstance(epoch, u.Quantity):
+            epoch = Time(epoch, format="mjd", scale="tdb")
             jd1 = epoch.jd1
             jd2 = epoch.jd2
         else:
@@ -899,7 +1020,7 @@ class AstrometryEcliptic(Astrometry):
         z = np.sin(lat)
         return u.Quantity([x, y, z]).T
 
-    def get_d_delay_quantities_ecliptical(self, toas):
+    def get_d_delay_quantities_ecliptical(self, toas: pint.toa.TOAs) -> u.Quantity:
         """Calculate values needed for many d_delay_d_param functions."""
         # TODO: Move all these calculations in a separate class for elegance
 
@@ -922,7 +1043,7 @@ class AstrometryEcliptic(Astrometry):
 
         return rd
 
-    def get_params_as_ICRS(self):
+    def get_params_as_ICRS(self) -> dict:
         pv_ECL = self.get_psr_coords()
         pv_ICRS = pv_ECL.transform_to(coords.ICRS)
         return {
@@ -932,7 +1053,9 @@ class AstrometryEcliptic(Astrometry):
             "PMDEC": pv_ICRS.pm_dec,
         }
 
-    def d_delay_astrometry_d_ELONG(self, toas, param="", acc_delay=None):
+    def d_delay_astrometry_d_ELONG(
+        self, toas: pint.toa.TOAs, param="", acc_delay=None
+    ) -> u.Quantity:
         """Calculate the derivative wrt RAJ.
 
         For the RAJ and DEC derivatives, use the following approximate model for
@@ -970,7 +1093,9 @@ class AstrometryEcliptic(Astrometry):
 
         return dd_delong.decompose(u.si.bases)
 
-    def d_delay_astrometry_d_ELAT(self, toas, param="", acc_delay=None):
+    def d_delay_astrometry_d_ELAT(
+        self, toas: pint.toa.TOAs, param="", acc_delay=None
+    ) -> u.Quantity:
         """Calculate the derivative wrt DECJ
 
         Definitions as in d_delay_d_RAJ
@@ -987,7 +1112,9 @@ class AstrometryEcliptic(Astrometry):
 
         return dd_delat.decompose(u.si.bases)
 
-    def d_delay_astrometry_d_PMELONG(self, toas, param="", acc_delay=None):
+    def d_delay_astrometry_d_PMELONG(
+        self, toas: pint.toa.TOAs, param="", acc_delay=None
+    ) -> u.Quantity:
         """Calculate the derivative wrt PMRA
 
         Definitions as in d_delay_d_RAJ. Now we have a derivative in mas/yr for
@@ -1007,7 +1134,9 @@ class AstrometryEcliptic(Astrometry):
         # We want to return sec / (mas / yr)
         return dd_dpmelong.decompose(u.si.bases) / (u.mas / u.year)
 
-    def d_delay_astrometry_d_PMELAT(self, toas, param="", acc_delay=None):
+    def d_delay_astrometry_d_PMELAT(
+        self, toas: pint.toa.TOAs, param="", acc_delay=None
+    ) -> u.Quantity:
         """Calculate the derivative wrt PMDEC
 
         Definitions as in d_delay_d_RAJ. Now we have a derivative in mas/yr for
@@ -1029,7 +1158,7 @@ class AstrometryEcliptic(Astrometry):
         # We want to return sec / (mas / yr)
         return dd_dpmelat.decompose(u.si.bases) / (u.mas / u.year)
 
-    def print_par(self, format="pint"):
+    def print_par(self, format: str = "pint") -> str:
         result = ""
         print_order = ["ELONG", "ELAT", "PMELONG", "PMELAT", "PX", "ECL", "POSEPOCH"]
         for p in print_order:
@@ -1038,12 +1167,12 @@ class AstrometryEcliptic(Astrometry):
                 result += getattr(self, p).as_parfile_line(format=format)
         return result
 
-    def change_posepoch(self, new_epoch):
+    def change_posepoch(self, new_epoch: Union[float, u.Quantity, Time]):
         """Change POSEPOCH to a new value and update the position accordingly.
 
         Parameters
         ----------
-        new_epoch: float or `astropy.Time` object
+        new_epoch: float or `astropy.Time` or `astropy.units.Quantity` object
             The new POSEPOCH value.
         """
         if isinstance(new_epoch, Time):
@@ -1058,14 +1187,16 @@ class AstrometryEcliptic(Astrometry):
         self.ELAT.value = new_coords.lat
         self.POSEPOCH.value = new_epoch
 
-    def as_ECL(self, epoch=None, ecl="IERS2010"):
+    def as_ECL(
+        self, epoch: Union[float, u.Quantity, Time] = None, ecl: str = "IERS2010"
+    ) -> "AstrometryEcliptic":
         """Return pint.models.astrometry.Astrometry object in PulsarEcliptic frame.
 
         Parameters
         ----------
-        epoch : `astropy.time.Time` or Float, optional
-            new epoch for position.  If Float, MJD(TDB) is assumed.
-            Note that uncertainties are not adjusted.
+        epoch : float or astropy.time.Time or astropy.units.Quantity, optional
+            If float or Quantity, MJD(TDB) is assumed.
+            New epoch for position.
         ecl : str, optional
             Obliquity for PulsarEcliptic frame
 
@@ -1149,21 +1280,22 @@ class AstrometryEcliptic(Astrometry):
 
         return m_ecl
 
-    def as_ICRS(self, epoch=None):
+    def as_ICRS(
+        self, epoch: Union[float, u.Quantity, Time] = None
+    ) -> "AstrometryEquatorial":
         """Return pint.models.astrometry.Astrometry object in ICRS frame.
 
         Parameters
         ----------
-        epoch : `astropy.time.Time` or Float, optional
-            new epoch for position.  If Float, MJD(TDB) is assumed.
-            Note that uncertainties are not adjusted.
+        epoch : float or astropy.time.Time or astropy.units.Quantity, optional
+            If float or Quantity, MJD(TDB) is assumed.
+            New epoch for position.
 
         Returns
         -------
         pint.models.astrometry.AstrometryEquatorial
         """
         m_eq = AstrometryEquatorial()
-
         # transfer over parallax and POSEPOCH: don't need to change
         m_eq.PX = self.PX
         m_eq.POSEPOCH = self.POSEPOCH
@@ -1184,15 +1316,20 @@ class AstrometryEcliptic(Astrometry):
             lat=self.ELAT.quantity,
             obliquity=OBL[self.ECL.value],
             obstime=self.POSEPOCH.quantity,
-            pm_lon_coslat=self.ELONG.uncertainty * np.cos(self.ELAT.quantity) / dt
-            if self.ELONG.uncertainty is not None
-            else 0 * self.ELONG.units / dt,
-            pm_lat=self.ELAT.uncertainty / dt
-            if self.ELAT.uncertainty is not None
-            else 0 * self.ELAT.units / dt,
+            pm_lon_coslat=(
+                self.ELONG.uncertainty * np.cos(self.ELAT.quantity) / dt
+                if self.ELONG.uncertainty is not None
+                else 0 * self.ELONG.units / dt
+            ),
+            pm_lat=(
+                self.ELAT.uncertainty / dt
+                if self.ELAT.uncertainty is not None
+                else 0 * self.ELAT.units / dt
+            ),
             frame=PulsarEcliptic,
         )
         c_ICRS = c.transform_to(coords.ICRS)
+
         m_eq.RAJ.uncertainty = np.abs(c_ICRS.pm_ra_cosdec * dt / np.cos(c_ICRS.dec))
         m_eq.DECJ.uncertainty = np.abs(c_ICRS.pm_dec * dt)
         # use fake proper motions to convert uncertainties on proper motion
@@ -1202,12 +1339,16 @@ class AstrometryEcliptic(Astrometry):
             lat=self.ELAT.quantity,
             obliquity=OBL[self.ECL.value],
             obstime=self.POSEPOCH.quantity,
-            pm_lon_coslat=self.PMELONG.uncertainty
-            if self.PMELONG.uncertainty is not None
-            else 0 * self.PMELONG.units,
-            pm_lat=self.PMELAT.uncertainty
-            if self.PMELAT.uncertainty is not None
-            else 0 * self.PMELAT.units,
+            pm_lon_coslat=(
+                self.PMELONG.uncertainty
+                if self.PMELONG.uncertainty is not None
+                else 0 * self.PMELONG.units
+            ),
+            pm_lat=(
+                self.PMELAT.uncertainty
+                if self.PMELAT.uncertainty is not None
+                else 0 * self.PMELAT.units
+            ),
             frame=PulsarEcliptic,
         )
         c_ICRS = c.transform_to(coords.ICRS)
