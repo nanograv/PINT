@@ -3,27 +3,30 @@
 import os
 import numpy as np
 
+import pytest
+
 from pint.models.model_builder import ModelBuilder
 from pint.models.model_builder import _binary_model_priority
+from pint.models.timing_model import UnknownBinaryModel
 from pint.models.timing_model import AllComponents
 from pint.scripts import t2binary2pint
 
 
 ddkpar = """
 PSR            PSRTEST
-ELONG          256.66869638  1  
+ELONG          256.66869638  1
 ELAT           30.700359811  1
 F0             218.81184039  1
 F1             -4.08278e-16  1
-PEPOCH         55636                       
-POSEPOCH       55636                       
-DMEPOCH        58983                       
+PEPOCH         55636
+POSEPOCH       55636
+DMEPOCH        58983
 DM             15.988527064  1
 PMELONG        5.2676082172  1
 PMELAT         -3.441494631  1
 PX             0.8981169694  1
 SINI            KIN
-#SINI		0.9509308076719      
+#SINI          0.9509308076719
 BINARY         T2
 PB             67.825136364  1
 T0             54303.634515  1
@@ -36,7 +39,35 @@ M2             0.3016563544  1
 KOM            92.824444242  1
 KIN            70.946081736  1
 EPHEM          DE436
-EPHVER         5                           
+EPHVER         5
+CLK            TT(BIPM2020)
+T2CMETHOD      IAU2000B
+NE_SW          0.000
+TIMEEPH        FB90
+CORRECT_TROPOSPHERE  Y
+"""
+
+incompatiblepar = """
+PSR            PSRTEST
+ELONG          256.66869638  1
+ELAT           30.700359811  1
+F0             218.81184039  1
+F1             -4.08278e-16  1
+PEPOCH         55636
+POSEPOCH       55636
+SINI            KIN
+#SINI          0.9509308076719
+BINARY         T2
+PB             67.825136364  1
+T0             54303.634515  1
+A1             32.342422610  1
+OM             176.19952646  1
+EPS1           0.1237542123  1
+M2             0.3016563544  1
+KOM            92.824444242  1
+KIN            70.946081736  1
+EPHEM          DE436
+EPHVER         5
 CLK            TT(BIPM2020)
 T2CMETHOD      IAU2000B
 NE_SW          0.000
@@ -75,3 +106,12 @@ def test_binary_model_priority():
     )
 
     assert set(binary_models) - set(_binary_model_priority) == set(), msg
+
+
+def test_binary_exception(tmp_path):
+    tmppar = tmp_path / "tmp1.par"
+    with open(tmppar, "w") as f:
+        f.write(incompatiblepar)
+
+    with pytest.raises(UnknownBinaryModel):
+        m = ModelBuilder()(tmppar)
