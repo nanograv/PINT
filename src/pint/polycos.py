@@ -32,6 +32,7 @@ References
 ----------
 http://tempo.sourceforge.net/ref_man_sections/tz-polyco.txt
 """
+
 import astropy.table as table
 import astropy.units as u
 import numpy as np
@@ -84,7 +85,7 @@ class PolycoEntry:
     """One Polyco entry.
 
     Referenced from polyco.py authored by
-        - Paul S. Ray <paul.ray@nrl.navy.mil>
+        - Paul S. Ray <paul.s.ray3.civ@us.navy.mil>
         - Matthew Kerr <matthew.kerr@gmail.com>
 
     Parameters
