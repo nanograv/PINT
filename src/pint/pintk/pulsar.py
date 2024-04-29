@@ -5,6 +5,7 @@ and will contain the pre/post fit model, toas,
 pre/post fit residuals, and other useful information.
 self.selected_toas = selected toas, self.all_toas = all toas in tim file
 """
+
 import copy
 
 import astropy.units as u
@@ -83,7 +84,13 @@ class Pulsar:
                 f"Overriding model ephemeris {self.prefit_model.EPHEM.value} with {ephem}"
             )
             self.prefit_model.EPHEM.value = ephem
-        self.all_toas = get_TOAs(self.timfile, model=self.prefit_model, usepickle=True)
+        self.all_toas = get_TOAs(
+            self.timfile,
+            model=self.prefit_model,
+            usepickle=True,
+            allow_tcb=True,
+            allow_T2=True,
+        )
         self.all_toas.table.sort("index")
         self.all_toas.get_clusters(add_column=True)
         # Make sure that if we used a model, that any phase jumps from
