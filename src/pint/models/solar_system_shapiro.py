@@ -97,26 +97,29 @@ class SolarSystemShapiro(DelayComponent):
 
         # Apply Shapiro delay correction only for non-barycentered TOAs.
         non_bary_mask = toas.get_obss() != "barycenter"
-        tbl_grp = toas.table if np.all(non_bary_mask) else toas.table[non_bary_mask]
         delay = np.zeros(len(toas))
 
-        psr_dir = self._parent.ssb_to_psb_xyz_ICRS(
-            epoch=tbl_grp["tdbld"].astype(np.float64)
-        )
-        delay[non_bary_mask] += self.ss_obj_shapiro_delay(
-            tbl_grp["obs_sun_pos"], psr_dir, self._ss_mass_sec["sun"]
-        )
-        if self.PLANET_SHAPIRO.value:
-            try:
-                for pl in ("jupiter", "saturn", "venus", "uranus", "neptune"):
-                    delay[non_bary_mask] += self.ss_obj_shapiro_delay(
-                        tbl_grp[f"obs_{pl}_pos"],
-                        psr_dir,
-                        self._ss_mass_sec[pl],
-                    )
-            except KeyError as e:
-                raise KeyError(
-                    "Planet positions not found when trying to compute Solar System Shapiro delay. "
-                    "Make sure that you include `planets=True` in your `get_TOAs()` call, or use `get_model_and_toas()`."
-                ) from e
+        if np.any(non_bary_mask):
+            tbl_grp = toas.table if np.all(non_bary_mask) else toas.table[non_bary_mask]
+
+            psr_dir = self._parent.ssb_to_psb_xyz_ICRS(
+                epoch=tbl_grp["tdbld"].astype(np.float64)
+            )
+            delay[non_bary_mask] += self.ss_obj_shapiro_delay(
+                tbl_grp["obs_sun_pos"], psr_dir, self._ss_mass_sec["sun"]
+            )
+            if self.PLANET_SHAPIRO.value:
+                try:
+                    for pl in ("jupiter", "saturn", "venus", "uranus", "neptune"):
+                        delay[non_bary_mask] += self.ss_obj_shapiro_delay(
+                            tbl_grp[f"obs_{pl}_pos"],
+                            psr_dir,
+                            self._ss_mass_sec[pl],
+                        )
+                except KeyError as e:
+                    raise KeyError(
+                        "Planet positions not found when trying to compute Solar System Shapiro delay. "
+                        "Make sure that you include `planets=True` in your `get_TOAs()` call, or use `get_model_and_toas()`."
+                    ) from e
+
         return delay * u.second
