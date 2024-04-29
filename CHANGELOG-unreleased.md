@@ -9,6 +9,8 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- Avoided unnecessary creation of `SkyCoord` objects in `AstrometryEquatorial` and `AstrometryEcliptic`.
+- Avoided unnecessary array slices in `SolarSystemShapiro`
 ### Added
 ### Fixed
 ### Removed
