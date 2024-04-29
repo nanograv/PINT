@@ -55,6 +55,6 @@ Active developers are indicated by (*). Authors of the PINT paper are indicated 
 * Joe Swiggum (*)
 * Jackson Taylor 
 * Michele Vallisneri 
-* Rutger van Haasteren (#)
+* Rutger van Haasteren (#*)
 * Marten van Kerkwijk 
 * Josef Zimmerman (#)
