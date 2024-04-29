@@ -2603,7 +2603,25 @@ def normalize_designmatrix(M, params):
 
 
 def akaike_information_criterion(model, toas):
-    """Compute the Akaike information criterion.
+    """Compute the Akaike information criterion (AIC). The AIC is used for comparing different
+    models for the given dataset.
+
+    Given a model with best-fit parameters, the AIC is defined as
+
+        AIC = 2*k - 2*ln(L)
+
+    where k is the number of free parameters in the model and L is the maximum value of the likelihood
+    for the model.
+
+    Given n models with AIC values AIC1, ..., AICn, the preferred model is the one that minimizes the
+    AIC value.
+
+    If AIC_min is the minimum AIC value, then the i'th model can be said to be exp[AIC_min - AICi]
+    times as probable as the favored model in minimizing information loss.
+
+    See, e.g., Burnham & Anderson 2004 for further details.
+
+    Unlike the F-test (:function:`~pint.utils.FTest`), the AIC does not require the models to be nested.
 
     Parameters
     ----------
