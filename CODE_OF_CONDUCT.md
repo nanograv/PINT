@@ -37,7 +37,7 @@ This Code of Conduct applies within all community spaces, and also applies when 
 
 ## Actions
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the any of the project maintainers:  Scott Ransom <sransom@nrao.edu>, Jing Luo <luojing1211@gmail.com>, Paul Demorest <pdemores@nrao.edu>, Anne Archibald <anne.archibald@ncl.ac.uk>, or Paul Ray <paul.ray@nrl.navy.mil>.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the any of the project maintainers:  Scott Ransom <sransom@nrao.edu>, Paul Demorest <pdemores@nrao.edu>, Anne Archibald <anne.archibald@ncl.ac.uk>, or Paul Ray <paul.s.ray3.civ@us.navy.mil>.
 
 The project maintainers are obligated to respect the privacy and security of the reporter of any incident.
 
