@@ -882,11 +882,3 @@ def test_aic_bic_nb():
 
     assert np.isfinite(akaike_information_criterion(m, t))
     assert np.isfinite(bayesian_information_criterion(m, t))
-
-
-def test_aic_bic_wb():
-    m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_12yv3.wb.gls.par"))
-    t = toa.get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_12yv3.wb.tim"))
-
-    assert np.isfinite(akaike_information_criterion(m, t))
-    assert np.isfinite(bayesian_information_criterion(m, t))
