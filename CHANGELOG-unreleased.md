@@ -10,7 +10,7 @@ the released changes.
 ## Unreleased
 ### Changed
 - Avoided unnecessary creation of `SkyCoord` objects in `AstrometryEquatorial` and `AstrometryEcliptic`.
-- Avoided unnecessary `TOA` table slices in `SolarSystemShapiro`
+- Avoided unnecessary `TOAs` table slices in `SolarSystemShapiro`
 ### Added
 ### Fixed
 ### Removed
