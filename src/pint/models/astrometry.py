@@ -982,7 +982,9 @@ class AstrometryEcliptic(Astrometry):
             log.debug("ECL not specified; using IERS2010.")
             ecl = "IERS2010"
         if epoch is None or (self.PMELONG.value == 0 and self.PMELAT.value == 0):
-            return self.coords_as_ECL(epoch=epoch, ecl=ecl).cartesian.xyz.transpose()
+            # return self.coords_as_ECL(epoch=epoch, ecl=ecl).cartesian.xyz.transpose()
+            lon, lat = self.ELONG.quantity, self.ELAT.quantity
+            return self.xyz_from_latlong(lon, lat)
         if isinstance(epoch, Time):
             jd1 = epoch.jd1
             jd2 = epoch.jd2
@@ -1020,6 +1022,9 @@ class AstrometryEcliptic(Astrometry):
             )
         # lon,lat now in radians
         lon, lat = starpmout[0], starpmout[1]
+        return self.xyz_from_latlong(lon, lat)
+
+    def xyz_from_latlong(self, lon, lat):
         x = np.cos(lon) * np.cos(lat)
         y = np.sin(lon) * np.cos(lat)
         z = np.sin(lat)
