@@ -2623,6 +2623,10 @@ def akaike_information_criterion(model, toas):
 
     Unlike the F-test (:function:`~pint.utils.FTest`), the AIC does not require the models to be nested.
 
+    See also :function:`~pint.utils.bayesian_information_criterion` for the Bayesian Information Criterion (BIC),
+    a similar quantity used for model comparison. The main practical difference between AIC and BIC is that the
+    BIC more heavily penalizes the number of free parameters.
+
     Parameters
     ----------
     model: pint.models.timing_model.TimingModel
@@ -2652,7 +2656,30 @@ def akaike_information_criterion(model, toas):
 
 
 def bayesian_information_criterion(model, toas):
-    """Compute the Bayesian information criterion.
+    """Compute the Bayesian information criterion (BIC). The BIC is used for comparing different
+    models for the given dataset.
+
+    Given a model with best-fit parameters, the AIC is defined as
+
+        BIC = k*ln(N) - 2*ln(L)
+
+    where k is the number of free parameters in the model, N is the number of data points/samples,
+    and L is the maximum value of the likelihood for the model.
+
+    Given n models with BIC values BIC1, ..., BICn, the preferred model is the one that minimizes the
+    BIC value.
+
+    The BIC is an approximation for the Bayesian evidence. It is computed by Taylor-expanding the log-likelihood
+    function up to the second order in the vicinity of the maximum-likelihood point and assuming that the
+    prior distribution doesn't vary appreciably in this neighbourhood.
+
+    See, e.g., Burnham & Anderson 2004 for further details.
+
+    Unlike the F-test (:function:`~pint.utils.FTest`), the BIC does not require the models to be nested.
+
+    See also :function:`~pint.utils.akaike_information_criterion` for the Akaike Information Criterion (BIC),
+    a similar quantity used for model comparison. The main practical difference between AIC and BIC is that the
+    BIC more heavily penalizes the number of free parameters.
 
     Parameters
     ----------
