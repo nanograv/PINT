@@ -1,4 +1,5 @@
 """Test basic functionality of the :module:`pint.utils`."""
+
 import io
 import os
 from itertools import product
@@ -875,9 +876,17 @@ def test_info_str():
     dinfo = info_string(detailed=True)
 
 
-def test_aic_bic():
+def test_aic_bic_nb():
     m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
     t = toa.get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
+
+    assert np.isfinite(akaike_information_criterion(m, t))
+    assert np.isfinite(bayesian_information_criterion(m, t))
+
+
+def test_aic_bic_wb():
+    m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_12yv3.wb.gls.par"))
+    t = toa.get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_12yv3.wb.tim"))
 
     assert np.isfinite(akaike_information_criterion(m, t))
     assert np.isfinite(bayesian_information_criterion(m, t))

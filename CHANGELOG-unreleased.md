@@ -9,6 +9,7 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- Better documentation for `akaike_information_criterion()`
 ### Added
 - `bayesian_information_criterion()` function 
 ### Fixed
