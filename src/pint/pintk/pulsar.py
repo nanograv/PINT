@@ -77,7 +77,11 @@ class Pulsar:
 
         self.parfile = parfile
         self.timfile = timfile
-        self.prefit_model = pint.models.get_model(self.parfile)
+        self.prefit_model = pint.models.get_model(
+            self.parfile,
+            allow_tcb=True,
+            allow_T2=True,
+        )
 
         if ephem is not None:
             log.info(
@@ -88,8 +92,6 @@ class Pulsar:
             self.timfile,
             model=self.prefit_model,
             usepickle=True,
-            allow_tcb=True,
-            allow_T2=True,
         )
         self.all_toas.table.sort("index")
         self.all_toas.get_clusters(add_column=True)
