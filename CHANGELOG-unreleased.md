@@ -9,7 +9,7 @@ the released changes.
 
 ## Unreleased
 ### Changed
-- Allow "CLK UNCORR" in par files (indicates no GPS or BPIM corrections). 
+- Allow "CLK UNCORR" in par files (indicates no GPS or BIPM corrections). 
 ### Added
 ### Fixed
 ### Removed
