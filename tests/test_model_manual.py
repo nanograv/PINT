@@ -67,6 +67,9 @@ binary_models = [
     ("ELL1H", pytest.raises(MissingParameter)),
     ("T2", pytest.raises(UnknownBinaryModel)),
     ("ELLL1", pytest.raises(UnknownBinaryModel)),
+    ("BTX", pytest.raises(UnknownBinaryModel)),
+    ("DDFWHE", pytest.raises(UnknownBinaryModel)),
+    ("MSS", pytest.raises(UnknownBinaryModel)),
 ]
 
 

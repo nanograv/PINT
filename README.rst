@@ -58,8 +58,8 @@ IMPORTANT Notes!
 PINT has a naming conflict with the `pint <https://pypi.org/project/Pint/>`_ units package available from PyPI (i.e. using pip) and conda.  
 Do **NOT** ``pip install pint`` or ``conda install pint``!  See below!
 
-PINT requires ``longdouble`` (80- or 128-bit floating point) arithmetic within ``numpy``, which is currently not supported natively on M1/M2 Macs. 
-However, you can use an x86 version of ``conda`` even on an M1/M2 Mac (which will run under Rosetta emulation): 
+PINT requires ``longdouble`` (80- or 128-bit floating point) arithmetic within ``numpy``, which is currently not supported natively on M1/M2/M3 Macs. 
+However, you can use an x86 version of ``conda`` even on an M1/M2/M3 Mac (which will run under Rosetta emulation): 
 see `instructions for using Apple Intel packages on Apple 
 silicon <https://conda-forge.org/docs/user/tipsandtricks.html#installing-apple-intel-packages-on-apple-silicon>`_. 
 It's possible to have `parallel versions of conda for x86 and 
@@ -121,7 +121,7 @@ If you have tasks that aren't covered in the material above, you can
 email pint@nanograv.org or one of the people below:
 
 * Scott Ransom (sransom@nrao.edu)
-* Paul Ray (Paul.Ray@nrl.navy.mil)
+* Paul Ray (paul.s.ray3.civ@us.navy.mil)
 * David Kaplan (kaplan@uwm.edu)  
 
 Want to do something new? Submit a github `issue <https://github.com/nanograv/PINT/issues>`_.

@@ -9,9 +9,9 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- Allow "CLK UNCORR" in par files (indicates no GPS or BIPM corrections). 
+- Better documentation for `akaike_information_criterion()`
 ### Added
-- Added numdifftools to setup.cfg to match requirements.txt
-- Documentation: Added `convert_parfile` to list of command-line tools in RTD
+- `bayesian_information_criterion()` function 
 ### Fixed
-- Fixed runtime data README 
 ### Removed

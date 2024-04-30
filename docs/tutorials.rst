@@ -62,12 +62,15 @@ are not included in the default build because they take too long, but you can do
    examples/build_model_from_scratch.ipynb
    examples/How_to_build_a_timing_model_component.ipynb
    examples/understanding_fitters.ipynb
+   examples/noise-fitting-example.ipynb
+   examples/rednoise-fit-example.ipynb
    examples/WorkingWithFlags.ipynb
    examples/Wideband_TOA_walkthrough.ipynb
    examples/Simulate_and_make_MassMass.ipynb
    examples/check_phase_connection.ipynb
    examples/PINT_observatories.ipynb
    examples/solar_wind.ipynb
+   examples/MCMC_walkthrough.ipynb
    examples/bayesian-example-NGC6440E.py
    examples/bayesian-wideband-example.py
    examples/simulation_example.py

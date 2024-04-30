@@ -41,8 +41,8 @@ import textwrap
 from contextlib import contextmanager
 from pathlib import Path
 from warnings import warn
-import scipy
-import uncertainties
+from scipy.optimize import minimize
+from numdifftools import Hessian
 
 import astropy.constants as const
 import astropy.coordinates as coords
@@ -52,6 +52,7 @@ from astropy import constants
 from astropy.time import Time
 from loguru import logger as log
 from scipy.special import fdtrc
+from scipy.linalg import cho_factor, cho_solve
 from copy import deepcopy
 import warnings
 
@@ -82,6 +83,7 @@ __all__ = [
     "dmx_ranges_old",
     "dmx_ranges",
     "dmxselections",
+    "xxxselections",
     "dmxstats",
     "dmxparse",
     "get_prefix_timerange",
@@ -182,11 +184,11 @@ class PosVel:
 
     def __init__(self, pos, vel, obj=None, origin=None):
         if len(pos) != 3:
-            raise ValueError("Position vector has length %d instead of 3" % len(pos))
+            raise ValueError(f"Position vector has length {len(pos)} instead of 3")
         self.pos = pos if isinstance(pos, u.Quantity) else np.asarray(pos)
 
         if len(vel) != 3:
-            raise ValueError("Position vector has length %d instead of 3" % len(pos))
+            raise ValueError(f"Position vector has length {len(pos)} instead of 3")
         self.vel = vel if isinstance(vel, u.Quantity) else np.asarray(vel)
 
         if len(self.pos.shape) != len(self.vel.shape):
@@ -600,10 +602,8 @@ def dmx_ranges_old(
     # Round off the dates to 0.1 days and only keep unique values so we ignore closely spaced TOAs
     loMJDs = np.unique(loMJDs.round(1))
     hiMJDs = np.unique(hiMJDs.round(1))
-    log.info("There are {} dates with freqs > {} MHz".format(len(hiMJDs), divide_freq))
-    log.info(
-        "There are {} dates with freqs < {} MHz\n".format(len(loMJDs), divide_freq)
-    )
+    log.info(f"There are {len(hiMJDs)} dates with freqs > {divide_freq} MHz")
+    log.info(f"There are {len(loMJDs)} dates with freqs < {divide_freq} MHz\n")
 
     DMXs = []
 
@@ -690,7 +690,7 @@ def dmx_ranges_old(
     # Mark TOAs as True if they are in any DMX bin
     for DMX in DMXs:
         mask[np.logical_and(MJDs > DMX.min - offset, MJDs < DMX.max + offset)] = True
-    log.info("{} out of {} TOAs are in a DMX bin".format(mask.sum(), len(mask)))
+    log.info(f"{mask.sum()} out of {len(mask)} TOAs are in a DMX bin")
     # Instantiate a DMX component
     dmx_class = Component.component_types["DispersionDMX"]
     dmx_comp = dmx_class()
@@ -767,12 +767,10 @@ def dmx_ranges(toas, divide_freq=1000.0 * u.MHz, binwidth=15.0 * u.d, verbose=Fa
     DMXs = []
 
     prevbinR2 = MJDs[0] - 0.001 * u.d
-    while True:
+    while np.any(MJDs > prevbinR2):
         # Consider all TOAs with times after the last bin up through a total span of binwidth
         # Get indexes that should be in this bin
         # If there are no more MJDs to process, we are done.
-        if not np.any(MJDs > prevbinR2):
-            break
         startMJD = MJDs[MJDs > prevbinR2][0]
         binidx = np.logical_and(MJDs > prevbinR2, MJDs <= startMJD + binwidth)
         if not np.any(binidx):
@@ -801,7 +799,7 @@ def dmx_ranges(toas, divide_freq=1000.0 * u.MHz, binwidth=15.0 * u.d, verbose=Fa
     # Mark TOAs as True if they are in any DMX bin
     for DMX in DMXs:
         mask[np.logical_and(MJDs >= DMX.min, MJDs <= DMX.max)] = True
-    log.info("{} out of {} TOAs are in a DMX bin".format(mask.sum(), len(mask)))
+    log.info(f"{mask.sum()} out of {len(mask)} TOAs are in a DMX bin")
     # Instantiate a DMX component
     dmx_class = Component.component_types["DispersionDMX"]
     dmx_comp = dmx_class()
@@ -844,6 +842,35 @@ def dmx_ranges(toas, divide_freq=1000.0 * u.MHz, binwidth=15.0 * u.d, verbose=Fa
     dmx_comp.validate()
 
     return mask, dmx_comp
+
+
+def xxxselections(model, toas, prefix="DM"):
+    """Map DMX/SWX/other selections to TOAs
+
+    Parameters
+    ----------
+    model : pint.models.TimingModel
+    toas : pint.toa.TOAs
+    prefix : str
+        Name of selection
+
+    Returns
+    -------
+    dict :
+        keys are XXX indices, values are the TOAs selected for each index
+    """
+    if not any(p.startswith(f"{prefix}X") for p in model.params):
+        return {}
+    toas_selector = TOASelect(is_range=True)
+    X_mapping = model.get_prefix_mapping(f"{prefix}X_")
+    XR1_mapping = model.get_prefix_mapping(f"{prefix}XR1_")
+    XR2_mapping = model.get_prefix_mapping(f"{prefix}XR2_")
+    condition = {}
+    for ii in X_mapping:
+        r1 = getattr(model, XR1_mapping[ii]).quantity
+        r2 = getattr(model, XR2_mapping[ii]).quantity
+        condition[X_mapping[ii]] = (r1.mjd, r2.mjd)
+    return toas_selector.get_select_index(condition, toas["mjd_float"])
 
 
 def dmxselections(model, toas):
@@ -954,8 +981,8 @@ def dmxparse(fitter, save=False):
     # Get number of DMX epochs
     try:
         DMX_mapping = fitter.model.get_prefix_mapping("DMX_")
-    except ValueError:
-        raise RuntimeError("No DMX values in model!")
+    except ValueError as e:
+        raise RuntimeError("No DMX values in model!") from e
     dmx_epochs = [f"{x:04d}" for x in DMX_mapping.keys()]
     DMX_keys = list(DMX_mapping.values())
     DMXs = np.zeros(len(dmx_epochs))
@@ -987,7 +1014,7 @@ def dmxparse(fitter, save=False):
         # access by label name to make sure we get the right values
         # make sure they are sorted in ascending order
         cc = fitter.parameter_covariance_matrix.get_label_matrix(
-            sorted(["DMX_" + x for x in dmx_epochs])
+            sorted([f"DMX_{x}" for x in dmx_epochs])
         )
         n = len(DMX_Errs) - np.sum(mask_idxs)
         # Find error in mean DM
@@ -1019,26 +1046,15 @@ def dmxparse(fitter, save=False):
     if save is not None and save:
         if isinstance(save, bool):
             save = "dmxparse.out"
-        DMX = "DMX"
-        lines = []
-        lines.append("# Mean %s value = %+.6e \n" % (DMX, DMX_mean))
-        lines.append("# Uncertainty in average %s = %.5e \n" % ("DM", DMX_mean_err))
-        lines.append(
-            "# Columns: %sEP %s_value %s_var_err %sR1 %sR2 %s_bin \n"
-            % (DMX, DMX, DMX, DMX, DMX, DMX)
+        lines = [
+            f"# Mean DMX value = {DMX_mean:+.6e} \n",
+            f"# Uncertainty in average DM = {DMX_mean_err:.5e} \n",
+            f"# Columns: DMXEP DMX_value DMX_var_err DMXR1 DMXR2 %s_bin \n",
+        ]
+        lines.extend(
+            f"{DMX_center_MJD[k]:.4f} {DMXs[k] - DMX_mean:+.7e} {DMX_vErrs[k]:.3e} {DMX_R1[k]:.4f} {DMX_R2[k]:.4f} {DMX_keys[k]} \n"
+            for k in range(len(dmx_epochs))
         )
-        for k in range(len(dmx_epochs)):
-            lines.append(
-                "%.4f %+.7e %.3e %.4f %.4f %s \n"
-                % (
-                    DMX_center_MJD[k],
-                    DMXs[k] - DMX_mean,
-                    DMX_vErrs[k],
-                    DMX_R1[k],
-                    DMX_R2[k],
-                    DMX_keys[k],
-                )
-            )
         with open_or_use(save, mode="w") as dmxout:
             dmxout.writelines(lines)
             if isinstance(save, (str, Path)):
@@ -1050,18 +1066,16 @@ def dmxparse(fitter, save=False):
     DMX_units = getattr(fitter.model, "DMX_{:}".format(dmx_epochs[0])).units
     DMXR_units = getattr(fitter.model, "DMXR1_{:}".format(dmx_epochs[0])).units
 
-    # define the output dictionary
-    dmx = {}
-    dmx["dmxs"] = mean_sub_DMXs * DMX_units
-    dmx["dmx_verrs"] = DMX_vErrs * DMX_units
-    dmx["dmxeps"] = DMX_center_MJD * DMXR_units
-    dmx["r1s"] = DMX_R1 * DMXR_units
-    dmx["r2s"] = DMX_R2 * DMXR_units
-    dmx["bins"] = DMX_keys
-    dmx["mean_dmx"] = DMX_mean * DMX_units
-    dmx["avg_dm_err"] = DMX_mean_err * DMX_units
-
-    return dmx
+    return {
+        "dmxs": mean_sub_DMXs * DMX_units,
+        "dmx_verrs": DMX_vErrs * DMX_units,
+        "dmxeps": DMX_center_MJD * DMXR_units,
+        "r1s": DMX_R1 * DMXR_units,
+        "r2s": DMX_R2 * DMXR_units,
+        "bins": DMX_keys,
+        "mean_dmx": DMX_mean * DMX_units,
+        "avg_dm_err": DMX_mean_err * DMX_units,
+    }
 
 
 def get_prefix_timerange(model, prefixname):
@@ -1110,7 +1124,7 @@ def get_prefix_timeranges(model, prefixname):
     """
     if prefixname.endswith("_"):
         prefixname = prefixname[:-1]
-    prefix_mapping = model.get_prefix_mapping(prefixname + "_")
+    prefix_mapping = model.get_prefix_mapping(f"{prefixname}_")
     r1 = np.zeros(len(prefix_mapping))
     r2 = np.zeros(len(prefix_mapping))
     indices = np.zeros(len(prefix_mapping), dtype=np.int32)
@@ -1287,7 +1301,7 @@ def split_swx(model, time):
     return index, newindex
 
 
-def wavex_setup(model, T_span, freqs=None, n_freqs=None):
+def wavex_setup(model, T_span, freqs=None, n_freqs=None, freeze_params=False):
     """
     Set-up a WaveX model based on either an array of user-provided frequencies or the wave number
     frequency calculation. Sine and Cosine amplitudes are initially set to zero
@@ -1365,10 +1379,15 @@ def wavex_setup(model, T_span, freqs=None, n_freqs=None):
             wave_freqs = wave_numbers / T_span
             model.WXFREQ_0001.quantity = wave_freqs[0]
             model.components["WaveX"].add_wavex_components(wave_freqs[1:])
+
+    for p in model.params:
+        if p.startswith("WXSIN") or p.startswith("WXCOS"):
+            model[p].frozen = freeze_params
+
     return model.components["WaveX"].get_indices()
 
 
-def dmwavex_setup(model, T_span, freqs=None, n_freqs=None):
+def dmwavex_setup(model, T_span, freqs=None, n_freqs=None, freeze_params=False):
     """
     Set-up a DMWaveX model based on either an array of user-provided frequencies or the wave number
     frequency calculation. Sine and Cosine amplitudes are initially set to zero
@@ -1446,6 +1465,11 @@ def dmwavex_setup(model, T_span, freqs=None, n_freqs=None):
             wave_freqs = wave_numbers / T_span
             model.DMWXFREQ_0001.quantity = wave_freqs[0]
             model.components["DMWaveX"].add_dmwavex_components(wave_freqs[1:])
+
+    for p in model.params:
+        if p.startswith("DMWXSIN") or p.startswith("DMWXCOS"):
+            model[p].frozen = freeze_params
+
     return model.components["DMWaveX"].get_indices()
 
 
@@ -1498,15 +1522,12 @@ def _translate_wavex_freqs(wxfreq, k):
         wxfreq *= u.d**-1
     if len(wxfreq) == 1:
         return (2.0 * np.pi * wxfreq) / (k + 1.0)
-    else:
-        wave_om = [
-            ((2.0 * np.pi * wxfreq[i]) / (k[i] + 1.0)) for i in range(len(wxfreq))
-        ]
-        if np.allclose(wave_om, wave_om[0], atol=1e-3):
-            om = sum(wave_om) / len(wave_om)
-            return om
-        else:
-            return False
+    wave_om = [((2.0 * np.pi * wxfreq[i]) / (k[i] + 1.0)) for i in range(len(wxfreq))]
+    return (
+        sum(wave_om) / len(wave_om)
+        if np.allclose(wave_om, wave_om[0], atol=1e-3)
+        else False
+    )
 
 
 def translate_wave_to_wavex(model):
@@ -1583,10 +1604,10 @@ def get_wavex_freqs(model, index=None, quantity=False):
             ]
     elif isinstance(index, (int, float, np.int64)):
         idx_rf = f"{int(index):04d}"
-        values = getattr(model.components["WaveX"], "WXFREQ_" + idx_rf)
+        values = getattr(model.components["WaveX"], f"WXFREQ_{idx_rf}")
     elif isinstance(index, (list, set, np.ndarray)):
         idx_rf = [f"{int(idx):04d}" for idx in index]
-        values = [getattr(model.components["WaveX"], "WXFREQ_" + ind) for ind in idx_rf]
+        values = [getattr(model.components["WaveX"], f"WXFREQ_{ind}") for ind in idx_rf]
     else:
         raise TypeError(
             f"index most be a float, int, set, list, array, or None - not {type(index)}"
@@ -1624,30 +1645,28 @@ def get_wavex_amps(model, index=None, quantity=False):
             model.components["WaveX"].get_prefix_mapping_component("WXSIN_").keys()
         )
         if len(indices) == 1:
-            values = (
-                getattr(model.components["WaveX"], "WXSIN_" + f"{int(indices):04d}"),
-                getattr(model.components["WaveX"], "WXCOS_" + f"{int(indices):04d}"),
-            )
+            values = getattr(
+                model.components["WaveX"], f"WXSIN_{int(indices):04d}"
+            ), getattr(model.components["WaveX"], f"WXCOS_{int(indices):04d}")
         else:
             values = [
                 (
-                    getattr(model.components["WaveX"], "WXSIN_" + f"{int(idx):04d}"),
-                    getattr(model.components["WaveX"], "WXCOS_" + f"{int(idx):04d}"),
+                    getattr(model.components["WaveX"], f"WXSIN_{int(idx):04d}"),
+                    getattr(model.components["WaveX"], f"WXCOS_{int(idx):04d}"),
                 )
                 for idx in indices
             ]
     elif isinstance(index, (int, float, np.int64)):
         idx_rf = f"{int(index):04d}"
-        values = (
-            getattr(model.components["WaveX"], "WXSIN_" + idx_rf),
-            getattr(model.components["WaveX"], "WXCOS_" + idx_rf),
+        values = getattr(model.components["WaveX"], f"WXSIN_{idx_rf}"), getattr(
+            model.components["WaveX"], f"WXCOS_{idx_rf}"
         )
     elif isinstance(index, (list, set, np.ndarray)):
         idx_rf = [f"{int(idx):04d}" for idx in index]
         values = [
             (
-                getattr(model.components["WaveX"], "WXSIN_" + ind),
-                getattr(model.components["WaveX"], "WXCOS_" + ind),
+                getattr(model.components["WaveX"], f"WXSIN_{ind}"),
+                getattr(model.components["WaveX"], f"WXCOS_{ind}"),
             )
             for ind in idx_rf
         ]
@@ -1659,7 +1678,7 @@ def get_wavex_amps(model, index=None, quantity=False):
         if isinstance(values, tuple):
             values = tuple(v.quantity for v in values)
         if isinstance(values, list):
-            values = [tuple((v[0].quantity, v[1].quantity)) for v in values]
+            values = [(v[0].quantity, v[1].quantity) for v in values]
     return values
 
 
@@ -1746,10 +1765,7 @@ def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
     weights = weights_in
     wtot = weights.sum()
     # user has input a mean value
-    if inputmean is None:
-        wmean = (weights * arr).sum() / wtot
-    else:
-        wmean = float(inputmean)
+    wmean = (weights * arr).sum() / wtot if inputmean is None else float(inputmean)
     # how should error be calculated?
     if calcerr:
         werr2 = (weights**2 * (arr - wmean) ** 2).sum()
@@ -1800,10 +1816,12 @@ def ELL1_check(
     lhs = A1 / const.c * E**4.0
     rhs = TRES / np.sqrt(NTOA)
     if outstring:
-        s = "Checking applicability of ELL1 model -- \n"
-        s += "    Condition is asini/c * ecc**4 << timing precision / sqrt(# TOAs) to use ELL1\n"
-        s += "    asini/c * ecc**4    = {:.3g} \n".format(lhs.to(u.us))
-        s += "    TRES / sqrt(# TOAs) = {:.3g} \n".format(rhs.to(u.us))
+        s = (
+            f"Checking applicability of ELL1 model -- \n"
+            f"    Condition is asini/c * ecc**4 << timing precision / sqrt(# TOAs) to use ELL1\n"
+            f"    asini/c * ecc**4    = {lhs.to(u.us):.3g} \n"
+            f"    TRES / sqrt(# TOAs) = {rhs.to(u.us):.3g} \n"
+        )
     if lhs * 50.0 < rhs:
         if outstring:
             s += "    Should be fine.\n"
@@ -1858,20 +1876,15 @@ def FTest(chi2_1, dof_1, chi2_2, dof_2):
         delta_dof = dof_1 - dof_2
         new_redchi2 = chi2_2 / dof_2
         F = float((delta_chi2 / delta_dof) / new_redchi2)  # fdtr doesn't like float128
-        ft = fdtrc(delta_dof, dof_2, F)
+        return fdtrc(delta_dof, dof_2, F)
     elif dof_1 == dof_2:
         log.warning("Models have equal degrees of freedom, cannot perform F-test.")
-        ft = np.nan
-    elif delta_chi2 <= 0:
+        return np.nan
+    else:
         log.warning(
             "Chi^2 for Model 2 is larger than Chi^2 for Model 1, cannot perform F-test."
         )
-        ft = 1.0
-    else:
-        raise ValueError(
-            f"Mystery problem in Ftest - maybe NaN? {chi2_1} {dof_1} {chi2_2} {dof_2}"
-        )
-    return ft
+        return 1.0
 
 
 def add_dummy_distance(c, distance=1 * u.kpc):
@@ -1892,13 +1905,13 @@ def add_dummy_distance(c, distance=1 * u.kpc):
 
     if c.frame.data.differentials == {}:
         log.warning(
-            "No proper motions available for %r: returning coordinates unchanged" % c
+            f"No proper motions available for {c}: returning coordinates unchanged"
         )
         return c
 
     if isinstance(c.frame, coords.builtin_frames.icrs.ICRS):
-        if hasattr(c, "pm_ra_cosdec"):
-            cnew = coords.SkyCoord(
+        return (
+            coords.SkyCoord(
                 ra=c.ra,
                 dec=c.dec,
                 pm_ra_cosdec=c.pm_ra_cosdec,
@@ -1907,11 +1920,8 @@ def add_dummy_distance(c, distance=1 * u.kpc):
                 distance=distance,
                 frame=coords.ICRS,
             )
-        else:
-            # it seems that after applying proper motions
-            # it changes the RA pm to pm_ra instead of pm_ra_cosdec
-            # although the value seems the same
-            cnew = coords.SkyCoord(
+            if hasattr(c, "pm_ra_cosdec")
+            else coords.SkyCoord(
                 ra=c.ra,
                 dec=c.dec,
                 pm_ra_cosdec=c.pm_ra,
@@ -1920,10 +1930,9 @@ def add_dummy_distance(c, distance=1 * u.kpc):
                 distance=distance,
                 frame=coords.ICRS,
             )
-
-        return cnew
+        )
     elif isinstance(c.frame, coords.builtin_frames.galactic.Galactic):
-        cnew = coords.SkyCoord(
+        return coords.SkyCoord(
             l=c.l,
             b=c.b,
             pm_l_cosb=c.pm_l_cosb,
@@ -1932,9 +1941,8 @@ def add_dummy_distance(c, distance=1 * u.kpc):
             distance=distance,
             frame=coords.Galactic,
         )
-        return cnew
     elif isinstance(c.frame, pint.pulsar_ecliptic.PulsarEcliptic):
-        cnew = coords.SkyCoord(
+        return coords.SkyCoord(
             lon=c.lon,
             lat=c.lat,
             pm_lon_coslat=c.pm_lon_coslat,
@@ -1944,10 +1952,9 @@ def add_dummy_distance(c, distance=1 * u.kpc):
             obliquity=c.obliquity,
             frame=pint.pulsar_ecliptic.PulsarEcliptic,
         )
-        return cnew
     else:
         log.warning(
-            "Do not know coordinate frame for %r: returning coordinates unchanged" % c
+            f"Do not know coordinate frame for {c}: returning coordinates unchanged"
         )
         return c
 
@@ -1968,12 +1975,12 @@ def remove_dummy_distance(c):
 
     if c.frame.data.differentials == {}:
         log.warning(
-            "No proper motions available for %r: returning coordinates unchanged" % c
+            f"No proper motions available for {c}: returning coordinates unchanged"
         )
         return c
     if isinstance(c.frame, coords.builtin_frames.icrs.ICRS):
-        if hasattr(c, "pm_ra_cosdec"):
-            cnew = coords.SkyCoord(
+        return (
+            coords.SkyCoord(
                 ra=c.ra,
                 dec=c.dec,
                 pm_ra_cosdec=c.pm_ra_cosdec,
@@ -1981,11 +1988,8 @@ def remove_dummy_distance(c):
                 obstime=c.obstime,
                 frame=coords.ICRS,
             )
-        else:
-            # it seems that after applying proper motions
-            # it changes the RA pm to pm_ra instead of pm_ra_cosdec
-            # although the value seems the same
-            cnew = coords.SkyCoord(
+            if hasattr(c, "pm_ra_cosdec")
+            else coords.SkyCoord(
                 ra=c.ra,
                 dec=c.dec,
                 pm_ra_cosdec=c.pm_ra,
@@ -1993,9 +1997,9 @@ def remove_dummy_distance(c):
                 obstime=c.obstime,
                 frame=coords.ICRS,
             )
-        return cnew
+        )
     elif isinstance(c.frame, coords.builtin_frames.galactic.Galactic):
-        cnew = coords.SkyCoord(
+        return coords.SkyCoord(
             l=c.l,
             b=c.b,
             pm_l_cosb=c.pm_l_cosb,
@@ -2003,9 +2007,8 @@ def remove_dummy_distance(c):
             obstime=c.obstime,
             frame=coords.Galactic,
         )
-        return cnew
     elif isinstance(c.frame, pint.pulsar_ecliptic.PulsarEcliptic):
-        cnew = coords.SkyCoord(
+        return coords.SkyCoord(
             lon=c.lon,
             lat=c.lat,
             pm_lon_coslat=c.pm_lon_coslat,
@@ -2014,10 +2017,9 @@ def remove_dummy_distance(c):
             obliquity=c.obliquity,
             frame=pint.pulsar_ecliptic.PulsarEcliptic,
         )
-        return cnew
     else:
         log.warning(
-            "Do not know coordinate frame for %r: returning coordinates unchanged" % c
+            f"Do not know coordinate frame for {c}: returning coordinates unchanged"
         )
         return c
 
@@ -2186,10 +2188,7 @@ def info_string(prefix_string="# ", comment=None, detailed=False):
                 }
             )
 
-    s = ""
-    for key, val in info_dict.items():
-        s += f"{key}: {val}\n"
-
+    s = "".join(f"{key}: {val}\n" for key, val in info_dict.items())
     s = textwrap.dedent(s)
     # remove blank lines
     s = os.linesep.join([x for x in s.splitlines() if x])
@@ -2480,8 +2479,7 @@ def divide_times(t, t0, offset=0.5):
     """
     dt = t - t0
     values = (dt.to(u.yr).value + offset) // 1
-    indices = np.digitize(values, np.unique(values), right=True)
-    return indices
+    return np.digitize(values, np.unique(values), right=True)
 
 
 def convert_dispersion_measure(dm, dmconst=None):
@@ -2604,13 +2602,37 @@ def normalize_designmatrix(M, params):
     return M / norm, norm
 
 
-def akaike_information_criterion(model, toas):
-    """Compute the Akaike information criterion.
+def akaike_information_criterion(
+    model: "pint.models.timing_model.TimingModel", toas: "pint.toas.TOAs"
+) -> float:
+    """Compute the Akaike information criterion (AIC). The AIC is used for comparing different
+    models for the given dataset.
+
+    Given a model with best-fit parameters, the AIC is defined as
+
+        AIC = 2*k - 2*ln(L)
+
+    where k is the number of free parameters in the model and L is the maximum value of the likelihood
+    for the model.
+
+    Given n models with AIC values AIC1, ..., AICn, the preferred model is the one that minimizes the
+    AIC value.
+
+    If AIC_min is the minimum AIC value, then the i'th model can be said to be exp[AIC_min - AICi]
+    times as probable as the favored model in minimizing information loss.
+
+    See, e.g., Burnham & Anderson 2004 for further details.
+
+    Unlike the F-test (:function:`~pint.utils.FTest`), the AIC does not require the models to be nested.
+
+    See also :function:`~pint.utils.bayesian_information_criterion` for the Bayesian Information Criterion (BIC),
+    a similar quantity used for model comparison. The main practical difference between AIC and BIC is that the
+    BIC more heavily penalizes the number of free parameters.
 
     Parameters
     ----------
     model: pint.models.timing_model.TimingModel
-        The timing model
+        The best-fit timing model
     toas: pint.toas.TOAs
         TOAs
 
@@ -2630,4 +2652,405 @@ def akaike_information_criterion(model, toas):
         lnL = Residuals(toas, model).lnlikelihood()
         return 2 * (k - lnL)
     else:
-        raise NotImplementedError
+        raise NotImplementedError(
+            "akaike_information_criterion is not yet implemented for wideband data."
+        )
+
+
+def bayesian_information_criterion(
+    model: "pint.models.timing_model.TimingModel", toas: "pint.toas.TOAs"
+) -> float:
+    """Compute the Bayesian information criterion (BIC). The BIC is used for comparing different
+    models for the given dataset.
+
+    Given a model with best-fit parameters, the AIC is defined as
+
+        BIC = k*ln(N) - 2*ln(L)
+
+    where k is the number of free parameters in the model, N is the number of data points/samples,
+    and L is the maximum value of the likelihood for the model.
+
+    Given n models with BIC values BIC1, ..., BICn, the preferred model is the one that minimizes the
+    BIC value.
+
+    The BIC is an approximation for the Bayesian evidence. It is computed by Taylor-expanding the log-likelihood
+    function up to the second order in the vicinity of the maximum-likelihood point and assuming that the
+    prior distribution doesn't vary appreciably in this neighbourhood.
+
+    See, e.g., Burnham & Anderson 2004 for further details.
+
+    Unlike the F-test (:function:`~pint.utils.FTest`), the BIC does not require the models to be nested.
+
+    See also :function:`~pint.utils.akaike_information_criterion` for the Akaike Information Criterion (AIC),
+    a similar quantity used for model comparison. The main practical difference between AIC and BIC is that the
+    BIC more heavily penalizes the number of free parameters.
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+        The best-fit timing model
+    toas: pint.toas.TOAs
+        TOAs
+
+    Returns
+    -------
+    bic: float
+        The Bayesian information criterion
+    """
+    from pint.residuals import Residuals
+
+    if not toas.is_wideband():
+        k = (
+            len(model.free_params)
+            if "PhaseOffset" in model.components
+            else len(model.free_params) + 1
+        )
+        lnN = len(toas)
+        lnL = Residuals(toas, model).lnlikelihood()
+        return k * lnN - 2 * lnL
+    else:
+        raise NotImplementedError(
+            "bayesian_information_criterion is not yet implemented for wideband data."
+        )
+
+
+def sherman_morrison_dot(Ndiag, v, w, x, y):
+    """
+    Compute an inner product of the form
+        (x| C^-1 |y)
+    where
+        C = N + w |v)(v| ,
+    N is a diagonal matrix, and w is a positive real number,
+    using the Sherman-Morrison identity
+        C^-1 = N^-1 - ( w N^-1 |v)(v| N^-1 / (1 + w (v| N^-1 |v)) )
+
+    Additionally,
+        det[C] = det[N] * (1 + w (v| N^-1 |v)) )
+
+    Paremeters
+    ----------
+    Ndiag: array-like
+        Diagonal elements of the diagonal matrix N
+    v: array-like
+        A vector that represents a rank-1 update to N
+    w: float
+        Weight associated with the rank-1 update
+    x: array-like
+        Vector 1 for the inner product
+    y: array-like
+        Vector 2 for the inner product
+
+    Returns
+    -------
+    result: float
+        The inner product
+    logdetC: float
+        log-determinant of C
+    """
+    Ninv = 1 / Ndiag
+
+    Ninv_v = Ninv * v
+    denom = 1 + w * np.dot(v, Ninv_v)
+    numer = w * np.dot(x, Ninv_v) * np.dot(y, Ninv_v)
+
+    result = np.dot(x, Ninv * y) - numer / denom
+
+    logdet_C = np.sum(np.log(Ndiag.to_value(u.s**2))) + np.log(
+        denom.to_value(u.dimensionless_unscaled)
+    )
+
+    return result, logdet_C
+
+
+def woodbury_dot(Ndiag, U, Phidiag, x, y):
+    """
+    Compute an inner product of the form
+        (x| C^-1 |y)
+    where
+        C = N + U Phi U^T ,
+    N and Phi are diagonal matrices, using the Woodbury
+    identity
+        C^-1 = N^-1 - N^-1 - N^-1 U Sigma^-1 U^T N^-1
+    where
+        Sigma = Phi^-1 + U^T N^-1 U
+
+    Additionally,
+        det[C] = det[N] * det[Phi] * det[Sigma]
+
+    Paremeters
+    ----------
+    Ndiag: array-like
+        Diagonal elements of the diagonal matrix N
+    U: array-like
+        A matrix that represents a rank-n update to N
+    Phidiag: float
+        Weights associated with the rank-n update
+    x: array-like
+        Vector 1 for the inner product
+    y: array-like
+        Vector 2 for the inner product
+
+    Returns
+    -------
+    result: float
+        The inner product
+    logdetC: float
+        log-determinant of C
+    """
+
+    x_Ninv_y = np.sum(x * y / Ndiag)
+    x_Ninv_U = (x / Ndiag) @ U
+    y_Ninv_U = (y / Ndiag) @ U
+    Sigma = np.diag(1 / Phidiag) + (U.T / Ndiag) @ U
+    Sigma_cf = cho_factor(Sigma)
+
+    x_Cinv_y = x_Ninv_y - x_Ninv_U @ cho_solve(Sigma_cf, y_Ninv_U)
+
+    logdet_N = np.sum(np.log(Ndiag))
+    logdet_Phi = np.sum(np.log(Phidiag))
+    _, logdet_Sigma = np.linalg.slogdet(Sigma)
+
+    logdet_C = logdet_N + logdet_Phi + logdet_Sigma
+
+    return x_Cinv_y, logdet_C
+
+
+def _get_wx2pl_lnlike(model, component_name, ignore_fyr=True):
+    from pint.models.noise_model import powerlaw
+    from pint import DMconst
+
+    assert component_name in ["WaveX", "DMWaveX"]
+    prefix = "WX" if component_name == "WaveX" else "DMWX"
+
+    idxs = np.array(model.components[component_name].get_indices())
+
+    fs = np.array(
+        [model[f"{prefix}FREQ_{idx:04d}"].quantity.to_value(u.Hz) for idx in idxs]
+    )
+    f0 = np.min(fs)
+    fyr = (1 / u.year).to_value(u.Hz)
+
+    assert np.allclose(
+        np.diff(np.diff(fs)), 0
+    ), "[DM]WaveX frequencies must be uniformly spaced."
+
+    if ignore_fyr:
+        year_mask = np.abs(((fs - fyr) / f0)) > 0.5
+
+        idxs = idxs[year_mask]
+        fs = np.array(
+            [model[f"{prefix}FREQ_{idx:04d}"].quantity.to_value(u.Hz) for idx in idxs]
+        )
+        f0 = np.min(fs)
+
+    scaling_factor = 1 if component_name == "WaveX" else DMconst / (1400 * u.MHz) ** 2
+
+    a = np.array(
+        [
+            (scaling_factor * model[f"{prefix}SIN_{idx:04d}"].quantity).to_value(u.s)
+            for idx in idxs
+        ]
+    )
+    da = np.array(
+        [
+            (scaling_factor * model[f"{prefix}SIN_{idx:04d}"].uncertainty).to_value(u.s)
+            for idx in idxs
+        ]
+    )
+    b = np.array(
+        [
+            (scaling_factor * model[f"{prefix}COS_{idx:04d}"].quantity).to_value(u.s)
+            for idx in idxs
+        ]
+    )
+    db = np.array(
+        [
+            (scaling_factor * model[f"{prefix}COS_{idx:04d}"].uncertainty).to_value(u.s)
+            for idx in idxs
+        ]
+    )
+
+    def powl_model(params):
+        """Get the powerlaw spectrum for the WaveX frequencies for a given
+        set of parameters. This calls the powerlaw function used by `PLRedNoise`/`PLDMNoise`.
+        """
+        gamma, log10_A = params
+        return (powerlaw(fs, A=10**log10_A, gamma=gamma) * f0) ** 0.5
+
+    def mlnlike(params):
+        """Negative of the likelihood function that acts on the
+        `[DM]WaveX` amplitudes."""
+        sigma = powl_model(params)
+        return 0.5 * np.sum(
+            (a**2 / (sigma**2 + da**2))
+            + (b**2 / (sigma**2 + db**2))
+            + np.log(sigma**2 + da**2)
+            + np.log(sigma**2 + db**2)
+        )
+
+    return mlnlike
+
+
+def plrednoise_from_wavex(model, ignore_fyr=True):
+    """Convert a `WaveX` representation of red noise to a `PLRedNoise`
+    representation. This is done by minimizing a likelihood function
+    that acts on the `WaveX` amplitudes over the powerlaw spectral
+    parameters.
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+        The timing model with a `WaveX` component.
+    ignore_fyr: bool
+        Whether to ignore the frequency bin containinf 1 yr^-1
+        while fitting for the spectral parameters.
+
+    Returns
+    -------
+    pint.models.timing_model.TimingModel
+        The timing model with a converted `PLRedNoise` component.
+    """
+    from pint.models.noise_model import PLRedNoise
+
+    mlnlike = _get_wx2pl_lnlike(model, "WaveX", ignore_fyr=ignore_fyr)
+
+    result = minimize(mlnlike, [4, -13], method="Nelder-Mead")
+    if not result.success:
+        raise ValueError("Log-likelihood maximization failed to converge.")
+
+    gamma_val, log10_A_val = result.x
+
+    hess = Hessian(mlnlike)
+    gamma_err, log10_A_err = np.sqrt(
+        np.diag(np.linalg.pinv(hess((gamma_val, log10_A_val))))
+    )
+
+    tnredc = len(model.components["WaveX"].get_indices())
+
+    model1 = deepcopy(model)
+    model1.remove_component("WaveX")
+    model1.add_component(PLRedNoise())
+    model1.TNREDAMP.value = log10_A_val
+    model1.TNREDGAM.value = gamma_val
+    model1.TNREDC.value = tnredc
+    model1.TNREDAMP.uncertainty_value = log10_A_err
+    model1.TNREDGAM.uncertainty_value = gamma_err
+
+    return model1
+
+
+def pldmnoise_from_dmwavex(model, ignore_fyr=False):
+    """Convert a `DMWaveX` representation of red noise to a `PLDMNoise`
+    representation. This is done by minimizing a likelihood function
+    that acts on the `DMWaveX` amplitudes over the powerlaw spectral
+    parameters.
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+        The timing model with a `DMWaveX` component.
+
+    Returns
+    -------
+    pint.models.timing_model.TimingModel
+        The timing model with a converted `PLDMNoise` component.
+    """
+    from pint.models.noise_model import PLDMNoise
+
+    mlnlike = _get_wx2pl_lnlike(model, "DMWaveX", ignore_fyr=ignore_fyr)
+
+    result = minimize(mlnlike, [4, -13], method="Nelder-Mead")
+    if not result.success:
+        raise ValueError("Log-likelihood maximization failed to converge.")
+
+    gamma_val, log10_A_val = result.x
+
+    hess = Hessian(mlnlike)
+
+    H = hess((gamma_val, log10_A_val))
+    assert np.all(np.linalg.eigvals(H) > 0), "The Hessian is not positive definite!"
+
+    Hinv = np.linalg.pinv(H)
+    assert np.all(
+        np.linalg.eigvals(Hinv) > 0
+    ), "The inverse Hessian is not positive definite!"
+
+    gamma_err, log10_A_err = np.sqrt(np.diag(Hinv))
+
+    tndmc = len(model.components["DMWaveX"].get_indices())
+
+    model1 = deepcopy(model)
+    model1.remove_component("DMWaveX")
+    model1.add_component(PLDMNoise())
+    model1.TNDMAMP.value = log10_A_val
+    model1.TNDMGAM.value = gamma_val
+    model1.TNDMC.value = tndmc
+    model1.TNDMAMP.uncertainty_value = log10_A_err
+    model1.TNDMGAM.uncertainty_value = gamma_err
+
+    return model1
+
+
+def find_optimal_nharms(model, toas, component, nharms_max=45):
+    """Find the optimal number of harmonics for `WaveX`/`DMWaveX` using the Akaike Information
+    Criterion.
+
+    Parameters
+    ----------
+    model: `pint.models.timing_model.TimingModel`
+        The timing model. Should not already contain `WaveX`/`DMWaveX` or `PLRedNoise`/`PLDMNoise`.
+    toas: `pint.toa.TOAs`
+        Input TOAs
+    component: str
+        Component name; "WaveX" or "DMWaveX"
+    nharms_max: int
+        Maximum number of harmonics
+
+    Returns
+    -------
+    nharms_opt: int
+        Optimal number of harmonics
+    aics: ndarray
+        Array of normalized AIC values.
+    """
+    from pint.fitter import Fitter
+
+    assert component in ["WaveX", "DMWaveX"]
+    assert (
+        component not in model.components
+    ), f"{component} is already included in the model."
+    assert (
+        "PLRedNoise" not in model.components and "PLDMNoise" not in model.components
+    ), "PLRedNoise/PLDMNoise cannot be included in the model."
+
+    model1 = deepcopy(model)
+
+    ftr = Fitter.auto(toas, model1, downhill=False)
+    ftr.fit_toas(maxiter=5)
+    aics = [akaike_information_criterion(model1, toas)]
+    model1 = ftr.model
+
+    T_span = toas.get_mjds().max() - toas.get_mjds().min()
+    setup_component = wavex_setup if component == "WaveX" else dmwavex_setup
+    setup_component(model1, T_span, n_freqs=1, freeze_params=False)
+
+    for _ in range(nharms_max):
+        ftr = Fitter.auto(toas, model1, downhill=False)
+        ftr.fit_toas(maxiter=5)
+        aics.append(akaike_information_criterion(ftr.model, toas))
+
+        model1 = ftr.model
+        if component == "WaveX":
+            model1.components[component].add_wavex_component(
+                (len(model1.components[component].get_indices()) + 1) / T_span,
+                frozen=False,
+            )
+        else:
+            model1.components[component].add_dmwavex_component(
+                (len(model1.components[component].get_indices()) + 1) / T_span,
+                frozen=False,
+            )
+
+    assert all(np.isfinite(aics)), "Infs/NaNs found in AICs!"
+
+    return np.argmin(aics), np.array(aics) - np.min(aics)

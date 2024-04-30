@@ -276,8 +276,10 @@ def test_json_observatory_output(sandbox):
     gbt_reload = get_observatory("gbt")
 
     for p in gbt_orig.__dict__:
-        if p not in ["_clock"]:
+        if p not in ["_clock", "_aliases"]:
             assert getattr(gbt_orig, p) == getattr(gbt_reload, p)
+
+        assert set(gbt_orig._aliases) == set(gbt_reload._aliases)
 
 
 def test_json_observatory_input_latlon(sandbox):
@@ -295,7 +297,11 @@ def test_json_observatory_input_latlon(sandbox):
     for p in gbt_orig.__dict__:
         if p not in ["location", "_clock"]:
             # everything else should be identical
-            assert getattr(gbt_orig, p) == getattr(gbt_reload, p)
+            # but fix the order if it is a list
+            if isinstance(getattr(gbt_orig, p), list):
+                assert set(getattr(gbt_orig, p)) == set(getattr(gbt_reload, p))
+            else:
+                assert getattr(gbt_orig, p) == getattr(gbt_reload, p)
     # check distance separately to allow for precision
     distance = gbt_orig.separation(gbt_reload)
     assert distance < 1 * u.m
@@ -336,3 +342,16 @@ def test_compare_t2_observatories_dat():
 def test_compare_tempo_obsys_dat():
     s = compare_tempo_obsys_dat(testdatadir / "observatory")
     assert isinstance(s, defaultdict)
+
+
+def test_ssb_obs():
+    ssb = Observatory.get("@")
+    assert not ssb.include_bipm and not ssb.include_gps
+
+    ssb = get_observatory("@")
+    assert not ssb.include_bipm and not ssb.include_gps
+
+    # get_observatory changes the state of the registered
+    # Observatory objects. So this needs to be repeated.
+    ssb = Observatory.get("@")
+    assert not ssb.include_bipm and not ssb.include_gps
