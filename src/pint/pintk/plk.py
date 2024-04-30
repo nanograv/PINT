@@ -14,6 +14,7 @@ import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from pint.models.dispersion_model import Dispersion
 
+from pint.models.parameter import funcParameter
 import pint.pintk.pulsar as pulsar
 import pint.pintk.colormodes as cm
 from pint.models.astrometry import Astrometry
@@ -216,9 +217,12 @@ class PlkFitBoxesWidget(tk.Frame):
             showpars = [
                 p
                 for p in model.components[comp].params
-                if p not in pulsar.nofitboxpars
-                and getattr(model, p).quantity is not None
-                and p in model.fittable_params
+                if (
+                    p not in pulsar.nofitboxpars
+                    and model[p].quantity is not None
+                    and p in model.fittable_params
+                    and not isinstance(model[p], funcParameter)
+                )
             ]
 
             # Don't bother showing components without any fittable parameters
@@ -1184,7 +1188,7 @@ class PlkWidget(tk.Frame):
         elif diff > 0.2 * u.ms:
             maxy = maxy.to(u.ms)
             miny = miny.to(u.ms)
-        elif diff <= 0.2 * u.ms:
+        else:
             maxy = maxy.to(u.us)
             miny = miny.to(u.us)
         return miny, maxy
@@ -1306,11 +1310,10 @@ class PlkWidget(tk.Frame):
         elif label == "WB DM err":
             if self.psr.all_toas.wideband:
                 data = self.psr.all_toas.get_dm_errors().to(pint.dmu)
-                error = None
             else:
                 log.warning("Cannot plot WB DM errors for NB TOAs.")
                 data = None
-                error = None
+            error = None
         elif label == "elongation":
             data = np.degrees(
                 self.psr.prefit_model.sun_angle(self.psr.all_toas, also_distance=False)
@@ -1412,10 +1415,11 @@ class PlkWidget(tk.Frame):
         """
         Call this function when the figure/canvas is released
         """
-        if self.press and not self.move:
-            self.stationaryClick(event)
-        elif self.press and self.move:
-            self.clickAndDrag(event)
+        if self.press:
+            if self.move:
+                self.clickAndDrag(event)
+            else:
+                self.stationaryClick(event)
         self.press = False
         self.move = False
 
