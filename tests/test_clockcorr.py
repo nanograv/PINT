@@ -11,6 +11,7 @@ from pinttestdata import datadir
 from pint.observatory import Observatory
 from pint.observatory.clock_file import ClockFile
 from pint.toa import get_TOAs
+from pint.models import get_model_and_toas
 
 
 class TestClockcorrection:
@@ -67,3 +68,14 @@ def test_clockcorr_roundtrip():
             assert float(line.split()[2]) == 55555
         if line.startswith("toa2"):
             assert float(line.split()[2]) == 55556
+
+
+def test_clk_uncorr():
+    m, t = get_model_and_toas(
+        datadir / "J0030+0451.mdc1.par", datadir / "J0030+0451.mdc1.tim", allow_tcb=True
+    )
+    assert m.CLOCK.value == "UNCORR"
+    assert (
+        not t.clock_corr_info["include_bipm"] and not t.clock_corr_info["include_gps"]
+    )
+    assert all("clkcorr" not in flags for flags in t.get_flags())
