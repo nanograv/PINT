@@ -2677,7 +2677,7 @@ def bayesian_information_criterion(model, toas):
 
     Unlike the F-test (:function:`~pint.utils.FTest`), the BIC does not require the models to be nested.
 
-    See also :function:`~pint.utils.akaike_information_criterion` for the Akaike Information Criterion (BIC),
+    See also :function:`~pint.utils.akaike_information_criterion` for the Akaike Information Criterion (AIC),
     a similar quantity used for model comparison. The main practical difference between AIC and BIC is that the
     BIC more heavily penalizes the number of free parameters.
 
