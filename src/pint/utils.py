@@ -2602,7 +2602,9 @@ def normalize_designmatrix(M, params):
     return M / norm, norm
 
 
-def akaike_information_criterion(model, toas):
+def akaike_information_criterion(
+    model: "pint.models.timing_model.TimingModel", toas: "pint.toas.TOAs"
+) -> float:
     """Compute the Akaike information criterion (AIC). The AIC is used for comparing different
     models for the given dataset.
 
@@ -2655,7 +2657,9 @@ def akaike_information_criterion(model, toas):
         )
 
 
-def bayesian_information_criterion(model, toas):
+def bayesian_information_criterion(
+    model: "pint.models.timing_model.TimingModel", toas: "pint.toas.TOAs"
+) -> float:
     """Compute the Bayesian information criterion (BIC). The BIC is used for comparing different
     models for the given dataset.
 
