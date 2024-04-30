@@ -38,7 +38,7 @@ class Chromatic(DelayComponent):
             bfreq = toas.table["freq"]
 
         cm = self.cm_value(toas)
-        alpha = self.alpha_value(toas)
+        alpha = self._parent["TNCHROMIDX"].quantity
         return self.chromatic_time_delay(cm, alpha, bfreq)
 
     def cm_value(self, toas):
@@ -61,21 +61,6 @@ class Chromatic(DelayComponent):
             cm += cm_f(toas)
         return cm
 
-    def alpha_value(self, toas):
-        """Compute modeled chromatic index value at given TOAs.
-
-        Parameters
-        ----------
-        toas : `TOAs` object or TOA table(TOAs.table)
-            If given a TOAs object, it will use the whole TOA table in the
-             `TOAs` object.
-
-        Return
-        ------
-            chromatic index values at given TOAs.
-        """
-        raise NotImplementedError
-
     def d_delay_d_cmparam(self, toas, param_name, acc_delay=None):
         """Derivative of delay wrt to CM parameter.
 
@@ -97,7 +82,7 @@ class Chromatic(DelayComponent):
 
         param_unit = getattr(self, param_name).units
         d_cm_d_cmparam = np.zeros(toas.ntoas) * cmu / param_unit
-        alpha = self.alpha_value(toas)
+        alpha = self._parent["TNCHROMIDX"].quantity
 
         for df in self.cm_deriv_funcs[param_name]:
             d_cm_d_cmparam += df(toas, param_name)
@@ -161,25 +146,25 @@ class Chromatic(DelayComponent):
         else:
             self.cm_deriv_funcs[pn] += [func]
 
-    def register_alpha_deriv_funcs(self, func, param):
-        """Register the derivative function in to the deriv_func dictionaries.
+    # def register_alpha_deriv_funcs(self, func, param):
+    #     """Register the derivative function in to the deriv_func dictionaries.
 
-        Parameters
-        ----------
-        func : callable
-            Calculates the derivative
-        param : str
-            Name of parameter the derivative is with respect to
+    #     Parameters
+    #     ----------
+    #     func : callable
+    #         Calculates the derivative
+    #     param : str
+    #         Name of parameter the derivative is with respect to
 
-        """
-        pn = self.match_param_aliases(param)
+    #     """
+    #     pn = self.match_param_aliases(param)
 
-        if pn not in list(self.alpha_deriv_funcs.keys()):
-            self.alpha_deriv_funcs[pn] = [func]
-        elif func in self.alpha_deriv_funcs[pn]:
-            return
-        else:
-            self.alpha_deriv_funcs[pn] += [func]
+    #     if pn not in list(self.alpha_deriv_funcs.keys()):
+    #         self.alpha_deriv_funcs[pn] = [func]
+    #     elif func in self.alpha_deriv_funcs[pn]:
+    #         return
+    #     else:
+    #         self.alpha_deriv_funcs[pn] += [func]
 
 
 class ChromaticCM(Chromatic):
@@ -226,7 +211,7 @@ class ChromaticCM(Chromatic):
         )
         self.add_param(
             floatParameter(
-                name="CMIDX",
+                name="TNCHROMIDX",
                 units=u.dimensionless_unscaled,
                 value=4.0,
                 description="Chromatic measure index",
@@ -247,26 +232,25 @@ class ChromaticCM(Chromatic):
             self.register_deriv_funcs(self.d_delay_d_cmparam, cm_name)
             self.register_cm_deriv_funcs(self.d_cm_d_CMs, cm_name)
 
-        self.register_deriv_funcs(self.d_delay_d_alphaparam, "CMIDX")
-        self.register_alpha_deriv_funcs(self.d_alpha_d_CMIDX, "CMIDX")
+        self.register_deriv_funcs(self.d_delay_d_alphaparam, "TNCHROMIDX")
+        # self.register_alpha_deriv_funcs(self.d_alpha_d_CMIDX, "TNCHROMIDX")
 
     def validate(self):
         """Validate the CM parameters input."""
         super().validate()
         # If CM1 is set, we need CMEPOCH
-        if self.CM1.value is not None and self.CM1.value != 0.0:
-            if self.CMEPOCH.value is None:
-                if self._parent.PEPOCH.value is not None:
-                    self.CMEPOCH.value = self._parent.PEPOCH.value
-                else:
-                    raise MissingParameter(
-                        "Chromatic",
-                        "CMEPOCH",
-                        "CMEPOCH or PEPOCH is required if CM1 or higher are set",
-                    )
+        if self.CM1.value is not None and self.CM1.value != 0.0 and self.CMEPOCH.value is None:
+            if self._parent.PEPOCH.value is not None:
+                self.CMEPOCH.value = self._parent.PEPOCH.value
+            else:
+                raise MissingParameter(
+                    "Chromatic",
+                    "CMEPOCH",
+                    "CMEPOCH or PEPOCH is required if CM1 or higher are set",
+                )
 
     def CM_derivative_unit(self, n):
-        return f"pc cm^-3 MHz^-2 /yr^{n:d}" if n else "pc cm^-3 MHz^-2"
+        return f"pc cm^-3 MHz^-2 / yr^{n:d}" if n else "pc cm^-3 MHz^-2"
 
     def CM_derivative_description(self, n):
         return f"{n:d}'th time derivative of the chromatic measure"
@@ -336,11 +320,11 @@ class ChromaticCM(Chromatic):
         dt_value = (dt.to(u.yr)).value
         return taylor_horner(dt_value, cm_terms) * (cmu / par.units)
 
-    def d_alpha_d_CMIDX(
-        self, toas, param_name, acc_delay=None
-    ):  # NOTE we should have a better name for this.)
-        """Derivatives of alpha wrt the CM index."""
-        return np.ones(len(toas)) * u.dimensionless_unscaled
+    # def d_alpha_d_CMIDX(
+    #     self, toas, param_name, acc_delay=None
+    # ):  # NOTE we should have a better name for this.)
+    #     """Derivatives of alpha wrt the CM index."""
+    #     return np.ones(len(toas)) * u.dimensionless_unscaled
 
     def change_cmepoch(self, new_epoch):
         """Change CMEPOCH to a new value and update CM accordingly.
