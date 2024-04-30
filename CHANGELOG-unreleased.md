@@ -11,6 +11,8 @@ the released changes.
 ### Changed
 - Avoided unnecessary creation of `SkyCoord` objects in `AstrometryEquatorial` and `AstrometryEcliptic`.
 - Avoided unnecessary `TOAs` table slices in `SolarSystemShapiro`
+- Better documentation for `akaike_information_criterion()`
 ### Added
+- `bayesian_information_criterion()` function 
 ### Fixed
 ### Removed
