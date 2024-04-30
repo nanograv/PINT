@@ -25,7 +25,7 @@ class Orbit:
     def orbit_phase(self):
         """Orbital phase (between zero and two pi)."""
         orbits = self.orbits()
-        norbits = np.array(np.floor(orbits), dtype=np.compat.long)
+        norbits = np.array(np.floor(orbits), dtype=int)
         return (orbits - norbits) * 2 * np.pi * u.rad
 
     def pbprime(self):

@@ -107,7 +107,8 @@ def test_merge_mjds_trims_range():
     ca = ClockFile(mjd=a, clock=np.zeros_like(a) * u.s)
     cb = ClockFile(mjd=b, clock=np.zeros_like(b) * u.s)
 
-    m = ClockFile.merge([ca, cb])
+    with pytest.warns(UserWarning, match="out of range"):
+        m = ClockFile.merge([ca, cb])
     assert_array_equal(m.time.mjd, np.array([50000, 55000, 60000]))
 
 
@@ -118,7 +119,8 @@ def test_merge_mjds_trims_range_repeat_beginning():
     ca = ClockFile(mjd=a, clock=np.zeros_like(a) * u.s)
     cb = ClockFile(mjd=b, clock=np.zeros_like(b) * u.s)
 
-    m = ClockFile.merge([ca, cb])
+    with pytest.warns(UserWarning, match="out of range"):
+        m = ClockFile.merge([ca, cb])
     assert_array_equal(m.time.mjd, np.array([50000, 50000, 55000, 60000]))
 
 
@@ -129,7 +131,8 @@ def test_merge_mjds_trims_range_repeat_end():
     ca = ClockFile(mjd=a, clock=np.zeros_like(a) * u.s)
     cb = ClockFile(mjd=b, clock=np.zeros_like(b) * u.s)
 
-    m = ClockFile.merge([ca, cb])
+    with pytest.warns(UserWarning, match="out of range"):
+        m = ClockFile.merge([ca, cb])
     assert_array_equal(m.time.mjd, np.array([50000, 55000, 60000, 60000]))
 
 
@@ -139,7 +142,8 @@ def test_merge_mjds_trims_range_mixed():
 
     ca = ClockFile(mjd=a, clock=np.zeros_like(a) * u.s)
     cb = ClockFile(mjd=b, clock=np.zeros_like(b) * u.s)
-    m = ClockFile.merge([ca, cb])
+    with pytest.warns(UserWarning, match="out of range"):
+        m = ClockFile.merge([ca, cb])
     assert_array_equal(m.time.mjd, np.array([50000, 55000, 60000]))
 
 
@@ -469,3 +473,13 @@ def test_out_of_range_allowed():
         valid_beyond_ends=True,
     )
     basic_clock.evaluate(Time(60001, format="mjd"), limits="error")
+
+
+def test_out_of_order_raises_exception():
+    with pytest.raises(ValueError) as excinfo:
+        ClockFile(
+            mjd=np.array([50000, 55000, 54000, 60000]),
+            clock=np.array([1.0, 2.0, -1.0, 1.0]) * u.us,
+            friendly_name="basic_clock",
+        )
+    assert "55000" in str(excinfo.value)

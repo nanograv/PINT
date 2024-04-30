@@ -5,7 +5,7 @@ import numpy as np
 from loguru import logger as log
 from warnings import warn
 
-from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
+from pint.models.parameter import MJDParameter, prefixParameter
 from pint.models.timing_model import DelayComponent, MissingParameter
 
 
@@ -182,7 +182,7 @@ class WaveX(DelayComponent):
             frozens = np.repeat(frozens, len(wxfreqs))
         if len(frozens) != len(wxfreqs):
             raise ValueError(
-                f"Number of base frequencies must match number of frozen values"
+                "Number of base frequencies must match number of frozen values"
             )
         #### If indices is None, increment the current max WaveX index by 1. Increment using WXFREQ
         dct = self.get_prefix_mapping_component("WXFREQ_")
@@ -342,16 +342,15 @@ class WaveX(DelayComponent):
                 warn(f"Frequency WXFREQ_{index:04d} is negative")
             wfreqs[j] = getattr(self, f"WXFREQ_{index:04d}").value
         wfreqs.sort()
-        if np.any(np.diff(wfreqs) <= (1.0 / (2.0 * 364.25))):
-            warn("Frequency resolution is greater than 1/yr")
-        if self.WXEPOCH.value is None:
-            if self._parent is not None:
-                if self._parent.PEPOCH.value is None:
-                    raise MissingParameter(
-                        "WXEPOCH or PEPOCH are required if WaveX is being used"
-                    )
-                else:
-                    self.WXEPOCH.quantity = self._parent.PEPOCH.quantity
+        # if np.any(np.diff(wfreqs) <= (1.0 / (2.0 * 364.25))):
+        #     warn("Frequency resolution is greater than 1/yr")
+        if self.WXEPOCH.value is None and self._parent is not None:
+            if self._parent.PEPOCH.value is None:
+                raise MissingParameter(
+                    "WXEPOCH or PEPOCH are required if WaveX is being used"
+                )
+            else:
+                self.WXEPOCH.quantity = self._parent.PEPOCH.quantity
 
     def validate_toas(self, toas):
         return super().validate_toas(toas)

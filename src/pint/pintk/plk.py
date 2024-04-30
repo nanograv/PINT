@@ -1,6 +1,7 @@
 """
 Interactive emulator of tempo2 plk
 """
+
 import copy
 import os
 import sys
@@ -11,6 +12,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from pint.models.dispersion_model import Dispersion
 
 import pint.pintk.pulsar as pulsar
 import pint.pintk.colormodes as cm
@@ -52,6 +54,7 @@ plotlabels = {
     "frequency": r"Observing Frequency (MHz)",
     "TOA error": r"TOA uncertainty ($\mu$s)",
     "rounded MJD": r"MJD",
+    "model DM": "Model DM (pc/cm3)",
     "WB DM": "Wideband DM (pc/cm3)",
     "WB DM res": "Wideband DM residual (pc/cm3)",
     "WB DM err": "Wideband DM error (pc/cm3)",
@@ -549,6 +552,11 @@ class PlkXYChoiceWidget(tk.Frame):
             if choice == "frequency" and (
                 (len(np.unique(self.master.psr.all_toas["freq"])) <= 1)
                 or np.any(np.isinf(self.master.psr.all_toas["freq"]))
+            ):
+                self.xbuttons[ii].configure(state="disabled")
+                self.ybuttons[ii].configure(state="disabled")
+            if choice == "model DM" and not any(
+                isinstance(x, Dispersion) for x in model.components.values()
             ):
                 self.xbuttons[ii].configure(state="disabled")
                 self.ybuttons[ii].configure(state="disabled")
@@ -1231,17 +1239,17 @@ class PlkWidget(tk.Frame):
             if self.psr.fitted:
                 # TODO: may want to include option for prefit resids to include jumps
                 data = self.psr.prefit_resids_no_jumps.time_resids.to(u.us)
-                error = self.psr.all_toas.get_errors().to(u.us)
+                error = self.psr.prefit_resids_no_jumps.get_data_error().to(u.us)
                 return data, error
             data = self.psr.prefit_resids.time_resids.to(u.us)
-            error = self.psr.all_toas.get_errors().to(u.us)
+            error = self.psr.prefit_resids.get_data_error().to(u.us)
         elif label == "post-fit":
             if self.psr.fitted:
                 data = self.psr.postfit_resids.time_resids.to(u.us)
             else:
                 log.warning("Pulsar has not been fitted yet! Giving pre-fit residuals")
                 data = self.psr.prefit_resids.time_resids.to(u.us)
-            error = self.psr.all_toas.get_errors().to(u.us)
+            error = self.psr.postfit_resids.get_data_error().to(u.us)
         elif label == "mjd":
             data = self.psr.all_toas.get_mjds()
             error = self.psr.all_toas.get_errors()
@@ -1266,6 +1274,12 @@ class PlkWidget(tk.Frame):
         elif label == "rounded MJD":
             data = np.floor(self.psr.all_toas.get_mjds() + 0.5 * u.d)
             error = self.psr.all_toas.get_errors().to(u.d)
+        elif label == "model DM":
+            if self.psr.fitted:
+                data = self.psr.postfit_model.total_dm(self.psr.all_toas)
+            else:
+                data = self.psr.prefit_model.total_dm(self.psr.all_toas)
+            error = None
         elif label == "WB DM":
             if self.psr.all_toas.wideband:
                 data = self.psr.all_toas.get_dms().to(pint.dmu)

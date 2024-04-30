@@ -236,6 +236,60 @@ def test_fake_fromMJDs(MJDs):
     assert np.isclose(r.calc_time_resids().std(), 1 * u.us, rtol=0.2)
 
 
+def test_fake_fromMJDs_keepmean():
+    # basic model, no EFAC or EQUAD
+    model = get_model(
+        io.StringIO(
+            """
+        PSRJ J1234+5678
+        ELAT 0
+        ELONG 0
+        DM 10
+        F0 1
+        F1 -1E-15
+        PEPOCH 58000
+        """
+        )
+    )
+    t1 = np.linspace(57001, 57500, 100, dtype=np.longdouble) * u.d
+    t2 = np.linspace(57501, 58000, 100, dtype=np.longdouble) * u.d
+    toas1 = pint.simulation.make_fake_toas_fromMJDs(
+        t1,
+        model=model,
+        error=1 * u.us,
+        add_noise=True,
+    )
+    toas2 = pint.simulation.make_fake_toas_fromMJDs(
+        t2,
+        model=model,
+        error=1 * u.us,
+        add_noise=True,
+    )
+    r = pint.residuals.Residuals(toas1 + toas2, model)
+    toas1m = pint.simulation.make_fake_toas_fromMJDs(
+        t1,
+        model=model,
+        error=1 * u.us,
+        add_noise=True,
+        subtract_mean=False,
+    )
+    toas2m = pint.simulation.make_fake_toas_fromMJDs(
+        t2,
+        model=model,
+        error=1 * u.us,
+        add_noise=True,
+        subtract_mean=False,
+    )
+    r = pint.residuals.Residuals(toas1 + toas2, model)
+    rm = pint.residuals.Residuals(toas1m + toas2m, model)
+
+    # need a generous rtol because of the small statistics
+    # this first test should fail because the two segments won't have the same mean
+    assert not np.isclose(r.calc_time_resids().std(), 1 * u.us, rtol=0.2)
+    # but this should pass because we no longer subtract the mean.  they should be coherent
+    assert np.isclose(rm.calc_time_resids().std(), 1 * u.us, rtol=0.2)
+
+
 @pytest.mark.parametrize(
     "t1,t2",
     [
@@ -304,10 +358,27 @@ def test_fake_from_timfile(planets):
     )
     r_sim = pint.residuals.Residuals(t_sim, m)
 
-    m, t = get_model_and_toas(
-        pint.config.examplefile("B1855+09_NANOGrav_9yv1.gls.par"),
-        pint.config.examplefile("B1855+09_NANOGrav_9yv1.tim"),
+    assert np.isclose(
+        r.calc_time_resids().std(), r_sim.calc_time_resids().std(), rtol=2
     )
+
+
+@pytest.mark.parametrize("planets", (True, False))
+def test_fake_from_timfile_wb(planets):
+    m = get_model(os.path.join(datadir, "B1855+09_NANOGrav_12yv3.wb.gls.par"))
+    t = get_TOAs(
+        os.path.join(datadir, "B1855+09_NANOGrav_12yv3.wb.tim"), planets=planets
+    )
+
+    m.PLANET_SHAPIRO.value = planets
+
+    r = pint.residuals.Residuals(t, m)
+
+    t_sim = pint.simulation.make_fake_toas_fromtim(
+        os.path.join(datadir, "B1855+09_NANOGrav_12yv3.wb.tim"), m, add_noise=True
+    )
+    r_sim = pint.residuals.Residuals(t_sim, m)
+
     assert np.isclose(
         r.calc_time_resids().std(), r_sim.calc_time_resids().std(), rtol=2
     )

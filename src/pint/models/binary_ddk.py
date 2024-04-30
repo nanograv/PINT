@@ -152,6 +152,15 @@ class BinaryDDK(BinaryDD):
                 units="deg",
             )
         )
+        self.add_param(
+            funcParameter(
+                name="SINI",
+                description="Sine of inclination angle",
+                params=("KIN",),
+                func=np.sin,
+                units="",
+            )
+        )
 
     @property
     def PMLONG_DDK(self):

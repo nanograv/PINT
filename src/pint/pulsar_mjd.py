@@ -26,6 +26,7 @@ was observing the sky at the moment a leap second was introduced.
 
 .. _leap_smear: https://developers.google.com/time/smear
 """
+import warnings
 
 import erfa
 import astropy.time
