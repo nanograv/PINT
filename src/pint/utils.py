@@ -28,6 +28,7 @@ have moved to :mod:`pint.derived_quantities`.
 has moved to :mod:`pint.simulation`.
 
 """
+
 import configparser
 import datetime
 import getpass
@@ -1259,7 +1260,7 @@ def split_swx(model, time):
 
     """
     try:
-        SWX_mapping = model.get_prefix_mapping("SWX_")
+        SWX_mapping = model.get_prefix_mapping("SWXDM_")
     except ValueError:
         raise RuntimeError("No SWX values in model!")
     swx_epochs = [f"{x:04d}" for x in SWX_mapping.keys()]
@@ -1280,8 +1281,8 @@ def split_swx(model, time):
     newindex = model.add_swx_range(
         time.mjd,
         t2,
-        swx=getattr(model, f"SWX_{index:04d}").quantity,
-        frozen=getattr(model, f"SWX_{index:04d}").frozen,
+        swxdm=getattr(model, f"SWXDM_{index:04d}").quantity,
+        frozen=getattr(model, f"SWXDM_{index:04d}").frozen,
     )
     return index, newindex
 
