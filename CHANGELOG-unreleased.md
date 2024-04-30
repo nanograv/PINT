@@ -9,6 +9,8 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- `funcParameter`s are no longer listed in the `pintk` interface.
 ### Added
+- `pintk` now reads and automatically converts TCB par files and par files with `BINARY T2`.
 ### Fixed
 ### Removed
