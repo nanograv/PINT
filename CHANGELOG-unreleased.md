@@ -10,6 +10,8 @@ the released changes.
 ## Unreleased
 ### Changed
 - Allow "CLK UNCORR" in par files (indicates no GPS or BIPM corrections). 
+- Better documentation for `akaike_information_criterion()`
 ### Added
+- `bayesian_information_criterion()` function 
 ### Fixed
 ### Removed
