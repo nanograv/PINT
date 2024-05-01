@@ -84,6 +84,7 @@ __all__ = [
     "sum_print",
     "dmx_ranges_old",
     "dmx_ranges",
+    "dmx_setup",
     "dmxselections",
     "xxxselections",
     "dmxstats",
@@ -115,6 +116,14 @@ __all__ = [
     "convert_dispersion_measure",
     "parse_time",
     "get_unit",
+    "normalize_designmatrix",
+    "akaike_information_criterion",
+    "bayesian_information_criterion",
+    "sherman_morrison_dot",
+    "woodbury_dot",
+    "plrednoise_from_wavex",
+    "pldmnoise_from_dmwavex",
+    "find_optimal_nharms",
 ]
 
 COLOR_NAMES = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
@@ -788,6 +797,7 @@ def dmx_ranges(
         Array with True for all TOAs that got assigned to a DMX bin
     component : TimingModel.Component object
         A DMX Component class with the DMX ranges included
+
     """
     import pint.models.parameter
     from pint.models.timing_model import Component
@@ -873,6 +883,87 @@ def dmx_ranges(
     dmx_comp.validate()
 
     return mask, dmx_comp
+
+
+def dmx_setup(
+    t: Union["pint.toa.TOAs", u.Quantity, Time],
+    minwidth: u.Quantity = 10 * u.d,
+    mintoas: int = 1,
+) -> Tuple[u.Quantity, u.Quantity, np.ndarray]:
+    """Set up DMX bins with a minimal binning strategy
+
+    The nominal binwidth will be >=`minwidth`, but will always include >=`mintoas` TOAs.
+    No dividing based on observing frequency is done.
+
+    Parameters
+    ----------
+    t : `pint.toa.TOAs` or astropy.units.Quantity or astropy.time.Time
+        Input TOAs to divide.  If Quantity, assume MJD
+    minwidth : astropy.units.Quantity
+        Minimum bin width
+    mintoas : int
+        Minimum number of TOAs in a bin
+
+    Returns
+    -------
+    R1 : astropy.units.Quantity
+        Start times of the bins
+    R2 : astropy.units.Quantity
+        Stop times of the bins
+    N : np.ndarray
+        Number of TOAs in each bin
+
+    Example
+    -------
+    To use the output of this function::
+
+        >>> R1, R2, N = dmx_setup(t)
+        >>> model.add_component(pint.models.dispersion_model.DispersionDMX())
+        >>> model.DMXR1_0001.value = R1[0].value
+        >>> model.DMXR2_0001.value = R2[0].value
+        >>> model.add_DMX_ranges(R1[1:].value, R2[1:].value, frozens=False)
+
+    Since the first DMX range already exists, we update those values before adding the other ranges.
+    """
+    if isinstance(t, Time):
+        MJDs = np.sort(t.mjd * u.d)
+    elif isinstance(t, u.Quantity):
+        MJDs = np.sort(t)
+    else:
+        # assume TOAs, although we don't want to check explicitly to avoid circular imports
+        MJDs = np.sort(t.get_mjds())
+    itoa = 0
+    idmx = 0
+    R1 = []
+    R2 = []
+    while itoa < len(MJDs) - 1:
+        if idmx == 0:
+            R1.append(MJDs[itoa])
+        else:
+            R1.append(R2[-1])
+        R2.append(R1[idmx] + minwidth)
+        itoa = np.where(MJDs <= R2[-1])[0].max()
+        while ((MJDs >= R1[idmx]) & (MJDs < R2[idmx])).sum() < mintoas:
+            itoa += 1
+            if itoa < len(MJDs):
+                R2[idmx] = MJDs[itoa] + 1 * u.d
+            else:
+                R2[idmx] = MJDs[itoa - 1] + 1 * u.d
+                break
+        idmx += 1
+    if (R2[-1] - R1[-1] < minwidth) or (
+        ((MJDs >= R1[-1]) & (MJDs < R2[-1])).sum() < mintoas
+    ):
+        # in case the last bin is too short
+        R2[-2] = R2[-1]
+        R1.pop()
+        R2.pop()
+    R1 = np.array([x.value for x in R1]) * u.d
+    R2 = np.array([x.value for x in R2]) * u.d
+    N = np.zeros(len(R1), dtype=int)
+    for idmx in range(len(R1)):
+        N[idmx] = ((MJDs >= R1[idmx]) & (MJDs < R2[idmx])).sum()
+    return R1, R2, N
 
 
 def xxxselections(

@@ -11,7 +11,9 @@ the released changes.
 ### Changed
 - Allow "CLK UNCORR" in par files (indicates no GPS or BIPM corrections). 
 - Better documentation for `akaike_information_criterion()`
+- Type hinting for most of the `pint.utils` module
 ### Added
 - `bayesian_information_criterion()` function 
+- `dmx_setup` function
 ### Fixed
 ### Removed

@@ -7,6 +7,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 import astropy.units as u
+from astropy.time import Time
 import numpy as np
 import pytest
 import scipy.stats
@@ -59,6 +60,7 @@ from pint.utils import (
     parse_time,
     info_string,
     akaike_information_criterion,
+    dmx_setup,
 )
 
 
@@ -882,3 +884,29 @@ def test_aic_bic_nb():
 
     assert np.isfinite(akaike_information_criterion(m, t))
     assert np.isfinite(bayesian_information_criterion(m, t))
+
+
+@pytest.mark.parametrize(
+    "N",
+    [100, 1000],
+)
+@pytest.mark.parametrize("mintoas", [1, 2, 3])
+@pytest.mark.parametrize("minwidth", [10 * u.d, 20 * u.d, 100 * u.d])
+def test_dmxsetup(N, mintoas, minwidth):
+    t = (55000 + 1000 * np.random.random(size=N)) * u.d
+    R1, R2, N = dmx_setup(t, minwidth=minwidth, mintoas=mintoas)
+    assert np.all((R2 - R1) >= minwidth)
+    assert np.all(N[:-1] >= mintoas)
+
+    tTOA = toa.get_TOAs_array(t, "gbt")
+    R1TOA, R2TOA, NTOA = dmx_setup(tTOA, minwidth=minwidth, mintoas=mintoas)
+    # can't check this since the clock corrections lead to small differences
+    # assert np.all(R1TOA==R1)
+    # assert np.all(R2TOA==R2)
+    assert np.all(NTOA == N)
+
+    tTime = Time(t, format="mjd")
+    R1Time, R2Time, NTime = dmx_setup(tTime, minwidth=minwidth, mintoas=mintoas)
+    assert np.all(R1Time == R1)
+    assert np.all(R2Time == R2)
+    assert np.all(NTime == N)
