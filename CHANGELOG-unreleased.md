@@ -13,5 +13,7 @@ the released changes.
 - Better documentation for `akaike_information_criterion()`
 ### Added
 - `bayesian_information_criterion()` function 
+- test for `pint.utils.split_swx()` 
 ### Fixed
+- `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
 ### Removed
