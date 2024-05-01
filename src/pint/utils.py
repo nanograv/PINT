@@ -43,7 +43,20 @@ from pathlib import Path
 from warnings import warn
 from scipy.optimize import minimize
 from numdifftools import Hessian
-from typing import Optional, List, Union, Callable, Any, Tuple, IO, Dict, Iterable, Type
+from typing import (
+    Optional,
+    List,
+    Union,
+    Callable,
+    Any,
+    Tuple,
+    IO,
+    Dict,
+    Iterable,
+    Type,
+    Iterator,
+    Generator,
+)
 import uncertainties
 
 import astropy.constants as const
@@ -479,7 +492,7 @@ def taylor_horner_deriv(
 
 
 @contextmanager
-def open_or_use(f, mode="r"):
+def open_or_use(f: Union[str, bytes, Path, IO], mode: str = "r") -> Iterator:
     """Open a filename or use an open file.
 
     Specifically, if f is a string, try to use it as an argument to
@@ -494,7 +507,7 @@ def open_or_use(f, mode="r"):
         yield f
 
 
-def lines_of(f):
+def lines_of(f: Any) -> Iterator:
     """Iterate over the lines of a file, an open file, or an iterator.
 
     If ``f`` is a string, try to open a file of that name. Otherwise
@@ -507,7 +520,7 @@ def lines_of(f):
         yield from fo
 
 
-def interesting_lines(lines, comments=None):
+def interesting_lines(lines: Iterable, comments: Optional[str] = None) -> Iterator[str]:
     """Iterate over lines skipping whitespace and comments.
 
     Each line has its whitespace stripped and then it is checked whether
@@ -2517,7 +2530,7 @@ def print_color_examples() -> None:
             print("")
 
 
-def group_iterator(items):
+def group_iterator(items: np.ndarray) -> Iterator[str, np.ndarray]:
     """An iterator to step over identical items in a :class:`numpy.ndarray`
 
     Example
