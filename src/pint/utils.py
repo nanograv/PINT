@@ -2530,7 +2530,7 @@ def print_color_examples() -> None:
             print("")
 
 
-def group_iterator(items: np.ndarray) -> Iterator[str, np.ndarray]:
+def group_iterator(items: np.ndarray) -> Iterator[Tuple]:
     """An iterator to step over identical items in a :class:`numpy.ndarray`
 
     Example
