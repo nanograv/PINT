@@ -249,8 +249,8 @@ def test_multiple_wavex_unit_conversion():
         wxcoses=[2, 3],
         frozens=False,
     )
-    assert getattr(model, f"WXFREQ_0002").value == freqs[0].to(u.d**-1).value
-    assert getattr(model, f"WXFREQ_0003").value == freqs[1].to(u.d**-1).value
+    assert getattr(model, "WXFREQ_0002").value == freqs[0].to(u.d**-1).value
+    assert getattr(model, "WXFREQ_0003").value == freqs[1].to(u.d**-1).value
 
 
 def test_cos_amp_missing():
