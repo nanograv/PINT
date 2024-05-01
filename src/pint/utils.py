@@ -59,7 +59,6 @@ from copy import deepcopy
 import warnings
 
 import pint
-import pint.fitter
 import pint.pulsar_ecliptic
 from pint.toa_select import TOASelect
 
