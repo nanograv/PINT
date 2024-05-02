@@ -15,5 +15,6 @@ the released changes.
 - Better documentation for `akaike_information_criterion()`
 ### Added
 - `bayesian_information_criterion()` function 
+- A more general algorithm for TCB <-> TDB conversion
 ### Fixed
 ### Removed
