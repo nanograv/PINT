@@ -50,6 +50,7 @@ from pint.utils import (
     lines_of,
     list_parameters,
     open_or_use,
+    split_swx,
     taylor_horner,
     taylor_horner_deriv,
     find_prefix_bytime,
@@ -842,6 +843,40 @@ def test_merge_dmx():
     newindex = merge_dmx(model, 1, 2, value="mean")
     print(model, newindex)
     assert getattr(model, f"DMX_{newindex:04d}").value == 1.5
+
+
+def test_split_swx():
+    """Check that the beginning of the new SWX window matches the split mjd"""
+    par = """
+    PSR J1234+5678
+    F0 1
+    DM 10
+    ELAT 0
+    ELONG 0
+    PEPOCH 54000
+    """
+    swx_par = """
+    SWXDM_0001 1 
+    SWXP_0001 2 
+    SWXR1_0001 53999
+    SWXR2_0001 55000
+    SWXDM_0002 1 
+    SWXP_0002 2 
+    SWXR1_0002 55000
+    SWXR2_0002 56000
+    SWXDM_0003 1 
+    SWXP_0003 2 
+    SWXR1_0003 56000
+    SWXR2_0003 57000
+    """
+
+    split_date = Time(55500, format="mjd")
+    model = tm.get_model(io.StringIO("\n".join([par, swx_par])))
+    index, newindex = split_swx(model, split_date)
+    assert (
+        getattr(model, f"SWXR1_{newindex:04d}").value == split_date.value,
+        getattr(model, f"SWXR2_{index:04d}").value == split_date.value,
+    )
 
 
 def test_convert_dm():
