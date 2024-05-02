@@ -15,7 +15,9 @@ the released changes.
 - Better documentation for `akaike_information_criterion()`
 ### Added
 - `bayesian_information_criterion()` function 
+- test for `pint.utils.split_swx()` 
 - `pint.models.chromatic_model.Chromatic` as the base class for variable-index chromatic delays.
 - `pint.models.chromatic_model.ChromaticCM` for a Taylor series representation of the variable-index chromatic delay.
 ### Fixed
+- `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
 ### Removed
