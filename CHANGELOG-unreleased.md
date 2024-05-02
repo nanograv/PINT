@@ -17,5 +17,7 @@ the released changes.
 ### Added
 - `bayesian_information_criterion()` function 
 - `pintk` now reads and automatically converts TCB par files and par files with `BINARY T2`.
+- test for `pint.utils.split_swx()` 
 ### Fixed
+- `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
 ### Removed

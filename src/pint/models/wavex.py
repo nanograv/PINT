@@ -1,4 +1,5 @@
 """Delays expressed as a sum of sinusoids."""
+
 import astropy.units as u
 import numpy as np
 from loguru import logger as log
