@@ -408,7 +408,7 @@ bad_trouble = ["J1923+2515_NANOGrav_9yv1.gls.par", "J1744-1134.basic.ecliptic.pa
 def test_all_parfiles(parfile):
     if basename(parfile) in bad_trouble:
         pytest.skip("This parfile is unclear")
-    model = get_model(parfile)
+    model = get_model(parfile, allow_tcb=True)
 
 
 def test_include_solar_system_shapiro():

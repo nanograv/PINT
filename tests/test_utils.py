@@ -1,4 +1,5 @@
 """Test basic functionality of the :module:`pint.utils`."""
+
 import io
 import os
 from itertools import product
@@ -42,6 +43,7 @@ from pint.pulsar_mjd import (
 from pint.utils import (
     FTest,
     PosVel,
+    bayesian_information_criterion,
     compute_hash,
     dmxparse,
     interesting_lines,
@@ -874,8 +876,9 @@ def test_info_str():
     dinfo = info_string(detailed=True)
 
 
-def test_aic():
+def test_aic_bic_nb():
     m = tm.get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
     t = toa.get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
 
     assert np.isfinite(akaike_information_criterion(m, t))
+    assert np.isfinite(bayesian_information_criterion(m, t))
