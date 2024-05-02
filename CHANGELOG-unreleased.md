@@ -9,12 +9,12 @@ the released changes.
 
 ## Unreleased
 ### Changed
-- `funcParameter`s are no longer listed in the `pintk` interface.
-### Added
 - Avoided unnecessary creation of `SkyCoord` objects in `AstrometryEquatorial` and `AstrometryEcliptic`.
 - Avoided unnecessary `TOAs` table slices in `SolarSystemShapiro`
 - Allow "CLK UNCORR" in par files (indicates no GPS or BIPM corrections). 
 - Better documentation for `akaike_information_criterion()`
+- `funcParameter`s are no longer listed in the `pintk` interface.
+### Added
 - `bayesian_information_criterion()` function 
 - `pintk` now reads and automatically converts TCB par files and par files with `BINARY T2`.
 ### Fixed
