@@ -1918,7 +1918,7 @@ class TOAs:
         except (AttributeError, IndexError):
             log.error("No previous TOA table found.  No changes made.")
 
-    def get_summary(self):
+    def get_summary(self) -> str:
         """Return a short ASCII summary of the TOAs.
 
         This includes summary information about the errors and frequencies
@@ -1971,7 +1971,7 @@ class TOAs:
         # same for padd
         self["padd"] = ""
 
-    def compute_pulse_numbers(self, model):
+    def compute_pulse_numbers(self, model: "pint.model.timing_model.TimingModel"):
         """Set pulse numbers (in TOA table column pulse_numbers) based on model.
 
         Replace any existing pulse numbers by computing phases according to
@@ -1998,7 +1998,7 @@ class TOAs:
         else:
             log.warning("Requested deleting of pulse numbers, but they are not present")
 
-    def adjust_TOAs(self, delta):
+    def adjust_TOAs(self, delta: Union[time.TimeDelta, u.Quantity]):
         """Apply a time delta to TOAs.
 
         Adjusts the time (MJD) of the TOAs by applying delta, which should
@@ -2491,7 +2491,7 @@ class TOAs:
         """Update the ``mjd_float`` column from the ``mjd`` column"""
         self["mjd_float"] = np.array([t.mjd for t in self["mjd"]], dtype=float) * u.d
 
-    def update_all_times(self, tdb_method="default"):
+    def update_all_times(self, tdb_method: str = "default"):
         """Update the various derived time columns
 
         Updates:
@@ -2518,7 +2518,7 @@ class TOAs:
         if self.obliquity is not None:
             self.add_vel_ecl(self.obliquity)
 
-    def merge(self, t, *args, strict=False):
+    def merge(self, t: "TOAs", *args, strict=False):
         """Merge TOAs instances into the existing object
 
         In order for a merge to work, each TOAs instance needs to have
@@ -2700,7 +2700,7 @@ class TOAs:
         nt.merged = True
 
 
-def merge_TOAs(TOAs_list: List[TOAs], strict: bool = False):
+def merge_TOAs(TOAs_list: List[TOAs], strict: bool = False) -> TOAs:
     """Merge a list of TOAs instances and return a new combined TOAs instance
 
     In order for a merge to work, each TOAs instance needs to have
