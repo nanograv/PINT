@@ -2731,25 +2731,25 @@ def merge_TOAs(TOAs_list, strict=False):
 
 
 def get_TOAs_array(
-    times,
-    obs,
-    scale=None,
-    errors=1 * u.us,
-    freqs=np.inf * u.MHz,
-    flags=None,
-    model=None,
-    ephem=None,
-    include_bipm=True,
-    bipm_version=bipm_default,
-    include_gps=True,
-    planets=False,
-    tdb_method="default",
+    times: Union[time.Time, float, np.ndarray, tuple],
+    obs: str,
+    scale: str = None,
+    errors: Union[u.Quantity, np.ndarray, float] = 1 * u.us,
+    freqs: Union[u.Quantity, np.ndarray, float] = np.inf * u.MHz,
+    flags: dict = None,
+    model: "pint.models.timing_model.TimingModel" = None,
+    ephem: str = None,
+    include_bipm: bool = True,
+    bipm_version: str = bipm_default,
+    include_gps: bool = True,
+    planets: bool = False,
+    tdb_method: str = "default",
     commands=None,
-    hashes=None,
-    limits="warn",
-    tzr=False,
+    hashes: dict = None,
+    limits: str = "warn",
+    tzr: bool = False,
     **kwargs,
-):
+) -> TOAs:
     """Load and prepare TOAs for PINT use from an array of times.
 
     Creates TOAs from a an array of times, applies clock corrections, computes
