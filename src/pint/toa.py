@@ -103,7 +103,7 @@ tempo_aliases = {
 
 
 def get_TOAs(
-    timfile: Union[str, list[str], IO],
+    timfile: Union[str, List[str], IO],
     ephem: str = None,
     include_bipm: bool = None,
     bipm_version: str = None,
@@ -415,7 +415,7 @@ def get_TOAs_list(
     include_gps: bool = True,
     planets: bool = False,
     tdb_method: str = "default",
-    commands: list[str] = None,
+    commands: List[str] = None,
     filename: str = None,
     hashes: dict = None,
     limits: str = "warn",
