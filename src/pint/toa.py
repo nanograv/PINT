@@ -2700,7 +2700,7 @@ class TOAs:
         nt.merged = True
 
 
-def merge_TOAs(TOAs_list, strict=False):
+def merge_TOAs(TOAs_list: List[TOAs], strict: bool = False):
     """Merge a list of TOAs instances and return a new combined TOAs instance
 
     In order for a merge to work, each TOAs instance needs to have
