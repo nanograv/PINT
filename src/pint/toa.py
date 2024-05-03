@@ -408,7 +408,7 @@ def save_pickle(toas: "TOAs", picklefilename: str = None):
 
 
 def get_TOAs_list(
-    toa_list: list["TOA"],
+    toa_list: List["TOA"],
     ephem: str = None,
     include_bipm: bool = True,
     bipm_version: str = bipm_default,
