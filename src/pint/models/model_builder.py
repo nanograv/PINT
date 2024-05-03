@@ -1,6 +1,7 @@
 """Building a timing model from a par file."""
 
 import copy
+from typing import IO, Tuple, Union
 import warnings
 from io import StringIO
 from collections import Counter, defaultdict
@@ -25,7 +26,7 @@ from pint.models.timing_model import (
     ignore_params,
     ignore_prefix,
 )
-from pint.toa import get_TOAs
+from pint.toa import TOAs, get_TOAs
 from pint.utils import (
     PrefixError,
     interesting_lines,
@@ -777,14 +778,14 @@ class ModelBuilder:
 
 
 def get_model(
-    parfile,
-    allow_name_mixing=False,
-    allow_tcb=False,
-    allow_T2=False,
-    force_binary_model=None,
-    toas_for_tzr=None,
+    parfile: Union[str, IO],
+    allow_name_mixing: bool = False,
+    allow_tcb: bool = False,
+    allow_T2: bool = False,
+    force_binary_model: str = None,
+    toas_for_tzr: TOAs = None,
     **kwargs,
-):
+) -> TimingModel:
     """A one step function to build model from a parfile.
 
     Parameters
@@ -859,25 +860,25 @@ def get_model(
 
 
 def get_model_and_toas(
-    parfile,
-    timfile,
-    ephem=None,
-    include_bipm=None,
-    bipm_version=None,
-    include_gps=None,
-    planets=None,
-    usepickle=False,
-    tdb_method="default",
-    include_pn=True,
-    picklefilename=None,
-    allow_name_mixing=False,
-    limits="warn",
-    allow_tcb=False,
-    allow_T2=False,
-    force_binary_model=None,
-    add_tzr_to_model=True,
+    parfile: Union[str, IO],
+    timfile: Union[str, IO],
+    ephem: str = None,
+    include_bipm: bool = None,
+    bipm_version: str = None,
+    include_gps: bool = None,
+    planets: bool = None,
+    usepickle: bool = False,
+    tdb_method: str = "default",
+    include_pn: bool = True,
+    picklefilename: str = None,
+    allow_name_mixing: bool = False,
+    limits: str = "warn",
+    allow_tcb: bool = False,
+    allow_T2: bool = False,
+    force_binary_model: str = None,
+    add_tzr_to_model: bool = True,
     **kwargs,
-):
+) -> Tuple[TimingModel, TOAs]:
     """Load a timing model and a related TOAs, using model commands as needed
 
     Parameters
@@ -991,10 +992,7 @@ def guess_binary_model(parfile_dict):
 
     def add_sini(parameters):
         """If 'KIN' is a model parameter, Tempo2 doesn't really use SINI"""
-        if "KIN" in parameters:
-            return list(parameters) + ["SINI"]
-        else:
-            return list(parameters)
+        return list(parameters) + ["SINI"] if "KIN" in parameters else list(parameters)
 
     all_components = AllComponents()
     binary_models = all_components.category_component_map["pulsar_system"]
@@ -1006,7 +1004,7 @@ def guess_binary_model(parfile_dict):
         )
         for binary_model in binary_models
     }
-    binary_parameters_map.update({"Isolated": []})
+    binary_parameters_map["Isolated"] = []
     all_binary_parameters = {
         parname for parnames in binary_parameters_map.values() for parname in parnames
     }
@@ -1056,8 +1054,8 @@ def convert_binary_params_dict(
     parameters if they exist.
     """
     binary = parfile_dict.get("BINARY", None)
-    binary = binary if not binary else binary[0]
-    log.debug(f"Requested to convert binary model for BINARY model: {binary}")
+    binary = binary[0] if binary else binary
+    log.debug("Requested to convert binary model for BINARY model: {binary}")
 
     if binary:
         if not force_binary_model:
@@ -1067,11 +1065,8 @@ def convert_binary_params_dict(
             )
 
             if not binary_model_guesses:
-                error_message = f"Unable to determine binary model for this par file"
-                log_message = (
-                    f"Unable to determine the binary model based"
-                    f"on the model parameters in the par file."
-                )
+                error_message = "Unable to determine binary model for this par file"
+                log_message = "Unable to determine the binary model based on the model parameters in the par file."
 
                 log.error(log_message)
                 raise UnknownBinaryModel(error_message)
@@ -1085,21 +1080,21 @@ def convert_binary_params_dict(
         # Convert KIN if requested
         if convert_komkin and "KIN" in parfile_dict:
             log.info(f"Converting KOM to/from IAU <--> DT96: {parfile_dict['KIN']}")
-            log.debug(f"Converting KIN to/from IAU <--> DT96")
+            log.debug("Converting KIN to/from IAU <--> DT96")
             entries = parfile_dict["KIN"][0].split()
             new_value = _convert_kin(float(entries[0]) * u.deg).value
             parfile_dict["KIN"] = [" ".join([repr(new_value)] + entries[1:])]
 
         # Convert KOM if requested
         if convert_komkin and "KOM" in parfile_dict:
-            log.debug(f"Converting KOM to/from IAU <--> DT96")
+            log.debug("Converting KOM to/from IAU <--> DT96")
             entries = parfile_dict["KOM"][0].split()
             new_value = _convert_kom(float(entries[0]) * u.deg).value
             parfile_dict["KOM"] = [" ".join([repr(new_value)] + entries[1:])]
 
         # Drop SINI if requested
         if drop_ddk_sini and binary_model_guesses[0] == "DDK":
-            log.debug(f"Dropping SINI from DDK model")
+            log.debug("Dropping SINI from DDK model")
             parfile_dict.pop("SINI", None)
 
     return parfile_dict
