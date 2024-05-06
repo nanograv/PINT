@@ -1,6 +1,5 @@
 """Model parametrizing Shapiro delay differently."""
 
-# This Python file uses the following encoding: utf-8
 import astropy.units as u
 import numpy as np
 from loguru import logger as log

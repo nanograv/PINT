@@ -991,10 +991,7 @@ def guess_binary_model(parfile_dict):
 
     def add_sini(parameters):
         """If 'KIN' is a model parameter, Tempo2 doesn't really use SINI"""
-        if "KIN" in parameters:
-            return list(parameters) + ["SINI"]
-        else:
-            return list(parameters)
+        return list(parameters) + ["SINI"] if "KIN" in parameters else list(parameters)
 
     all_components = AllComponents()
     binary_models = all_components.category_component_map["pulsar_system"]
@@ -1006,7 +1003,7 @@ def guess_binary_model(parfile_dict):
         )
         for binary_model in binary_models
     }
-    binary_parameters_map.update({"Isolated": []})
+    binary_parameters_map["Isolated"] = []
     all_binary_parameters = {
         parname for parnames in binary_parameters_map.values() for parname in parnames
     }
@@ -1056,7 +1053,7 @@ def convert_binary_params_dict(
     parameters if they exist.
     """
     binary = parfile_dict.get("BINARY", None)
-    binary = binary if not binary else binary[0]
+    binary = binary[0] if binary else binary
     log.debug(f"Requested to convert binary model for BINARY model: {binary}")
 
     if binary:
@@ -1067,11 +1064,8 @@ def convert_binary_params_dict(
             )
 
             if not binary_model_guesses:
-                error_message = f"Unable to determine binary model for this par file"
-                log_message = (
-                    f"Unable to determine the binary model based"
-                    f"on the model parameters in the par file."
-                )
+                error_message = "Unable to determine binary model for this par file"
+                log_message = "Unable to determine the binary model basedon the model parameters in the par file."
 
                 log.error(log_message)
                 raise UnknownBinaryModel(error_message)
@@ -1085,21 +1079,21 @@ def convert_binary_params_dict(
         # Convert KIN if requested
         if convert_komkin and "KIN" in parfile_dict:
             log.info(f"Converting KOM to/from IAU <--> DT96: {parfile_dict['KIN']}")
-            log.debug(f"Converting KIN to/from IAU <--> DT96")
+            log.debug("Converting KIN to/from IAU <--> DT96")
             entries = parfile_dict["KIN"][0].split()
             new_value = _convert_kin(float(entries[0]) * u.deg).value
             parfile_dict["KIN"] = [" ".join([repr(new_value)] + entries[1:])]
 
         # Convert KOM if requested
         if convert_komkin and "KOM" in parfile_dict:
-            log.debug(f"Converting KOM to/from IAU <--> DT96")
+            log.debug("Converting KOM to/from IAU <--> DT96")
             entries = parfile_dict["KOM"][0].split()
             new_value = _convert_kom(float(entries[0]) * u.deg).value
             parfile_dict["KOM"] = [" ".join([repr(new_value)] + entries[1:])]
 
         # Drop SINI if requested
         if drop_ddk_sini and binary_model_guesses[0] == "DDK":
-            log.debug(f"Dropping SINI from DDK model")
+            log.debug("Dropping SINI from DDK model")
             parfile_dict.pop("SINI", None)
 
     return parfile_dict
