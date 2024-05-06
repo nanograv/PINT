@@ -1230,8 +1230,8 @@ def split_dmx(model, time):
     """
     try:
         DMX_mapping = model.get_prefix_mapping("DMX_")
-    except ValueError:
-        raise RuntimeError("No DMX values in model!")
+    except ValueError as e:
+        raise RuntimeError("No DMX values in model!") from e
     dmx_epochs = [f"{x:04d}" for x in DMX_mapping.keys()]
     DMX_R1 = np.zeros(len(dmx_epochs))
     DMX_R2 = np.zeros(len(dmx_epochs))
@@ -1275,8 +1275,8 @@ def split_swx(model, time):
     """
     try:
         SWX_mapping = model.get_prefix_mapping("SWXDM_")
-    except ValueError:
-        raise RuntimeError("No SWX values in model!")
+    except ValueError as e:
+        raise RuntimeError("No SWX values in model!") from e
     swx_epochs = [f"{x:04d}" for x in SWX_mapping.keys()]
     SWX_R1 = np.zeros(len(swx_epochs))
     SWX_R2 = np.zeros(len(swx_epochs))

@@ -653,20 +653,21 @@ class Polycos:
             "Use `p=pint.polycos.Polycos.read()` rather than `p.read_polyco_file()`"
         )
 
-        self.fileName = filename
+        # @abhisrkckl: Commenting out unreachable code.
+        # self.fileName = filename
 
-        if format not in [f["format"] for f in self.polycoFormats]:
-            raise ValueError(
-                "Unknown polyco file format '" + format + "'\n"
-                "Please use function 'Polyco.add_polyco_file_format()'"
-                " to register the format\n"
-            )
-        else:
-            self.fileFormat = format
+        # if format not in [f["format"] for f in self.polycoFormats]:
+        #     raise ValueError(
+        #         "Unknown polyco file format '" + format + "'\n"
+        #         "Please use function 'Polyco.add_polyco_file_format()'"
+        #         " to register the format\n"
+        #     )
+        # else:
+        #     self.fileFormat = format
 
-        self.polycoTable = table.Table.read(filename, format=format)
-        if len(self.polycoTable) == 0:
-            raise ValueError("Zero polycos found for table")
+        # self.polycoTable = table.Table.read(filename, format=format)
+        # if len(self.polycoTable) == 0:
+        #     raise ValueError("Zero polycos found for table")
 
     def __len__(self):
         return len(self.polycoTable)
