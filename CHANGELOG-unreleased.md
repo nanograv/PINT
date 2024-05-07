@@ -21,4 +21,5 @@ the released changes.
 - test for `pint.utils.split_swx()` 
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
+- Fix #1759 by changing order of comparison
 ### Removed

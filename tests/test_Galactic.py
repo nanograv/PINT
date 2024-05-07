@@ -79,7 +79,7 @@ class TestGalactic:
         J0613_icrs_alt = self.modelJ0613.coords_as_ICRS(
             epoch=self.modelJ0613.POSEPOCH.quantity.mjd
         )
-        sep = J0613_icrs_alt.separation(J0613_icrs)
+        sep = J0613_icrs.separation(J0613_icrs_alt)
         assert sep < 1e-11 * u.arcsec
 
     def test_equatorial_to_galactic(self):
