@@ -875,6 +875,7 @@ class AstrometryEcliptic(Astrometry):
             ) from e
         if epoch is None or (self.PMELONG.value == 0.0 and self.PMELAT.value == 0.0):
             # Compute only once
+            distance = (1 / self.PX.value) * u.kpc if self.PX.value > 0 else 1 * u.kpc
             return coords.SkyCoord(
                 obliquity=obliquity,
                 lon=self.ELONG.quantity,
@@ -883,17 +884,23 @@ class AstrometryEcliptic(Astrometry):
                 pm_lat=self.PMELAT.quantity,
                 obstime=self.POSEPOCH.quantity,
                 frame=PulsarEcliptic,
+                distance=distance,
             )
             # Compute for each time because there is proper motion
         newepoch = (
             epoch if isinstance(epoch, Time) else Time(epoch, scale="tdb", format="mjd")
         )
-        position_now = add_dummy_distance(self.get_psr_coords())
+        position_now = (
+            self.get_psr_coords()
+        )  # add_dummy_distance(self.get_psr_coords())
         with warnings.catch_warnings():
             # This is a fake position, no point ERFA warning the user it's bogus
             warnings.filterwarnings("ignore", r".*distance overridden", ErfaWarning)
             position_then = position_now.apply_space_motion(new_obstime=newepoch)
-        return remove_dummy_distance(position_then)
+
+        # return remove_dummy_distance(position_then)
+
+        return position_then
 
     def coords_as_ICRS(
         self, epoch: Union[float, u.Quantity, Time] = None
