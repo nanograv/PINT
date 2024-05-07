@@ -370,6 +370,7 @@ class AstrometryEquatorial(Astrometry):
 
         """
         if epoch is None or (self.PMRA.value == 0.0 and self.PMDEC.value == 0.0):
+            distance = (1 / self.PX.value) * u.kpc if self.PX.value > 0 else 1 * u.kpc
             return coords.SkyCoord(
                 ra=self.RAJ.quantity,
                 dec=self.DECJ.quantity,
@@ -377,19 +378,22 @@ class AstrometryEquatorial(Astrometry):
                 pm_dec=self.PMDEC.quantity,
                 obstime=self.POSEPOCH.quantity,
                 frame=coords.ICRS,
+                distance=distance,
             )
+
         newepoch = (
             epoch if isinstance(epoch, Time) else Time(epoch, scale="tdb", format="mjd")
         )
+
+        position_now = (
+            self.get_psr_coords()
+        )  # add_dummy_distance(self.get_psr_coords())
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", ErfaWarning)
             # for the most part the dummy distance should remove any potential erfa warnings
             # but for some very large proper motions that does not quite work
             # so we catch the warnings
-            position_now = (
-                self.get_psr_coords()
-            )  # add_dummy_distance(self.get_psr_coords())
             position_then = position_now.apply_space_motion(new_obstime=newepoch)
             # position_then = remove_dummy_distance(position_then)
 
