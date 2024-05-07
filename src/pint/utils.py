@@ -56,6 +56,7 @@ from typing import (
     Type,
     Iterator,
     Generator,
+    Literal,
 )
 import uncertainties
 
@@ -492,7 +493,9 @@ def taylor_horner_deriv(
 
 
 @contextmanager
-def open_or_use(f: Union[str, bytes, Path, IO], mode: str = "r") -> Iterator:
+def open_or_use(
+    f: Union[str, bytes, Path, IO], mode: Literal["r", "rb", "w", "wb"] = "r"
+) -> Iterator:
     """Open a filename or use an open file.
 
     Specifically, if f is a string, try to use it as an argument to
@@ -1321,7 +1324,7 @@ def merge_dmx(
     model: "pint.models.TimingModel",
     index1: int,
     index2: int,
-    value: str = "mean",
+    value: Literal["first", "second", "mean"] = "mean",
     frozen: bool = True,
 ) -> int:
     """Merge two DMX bins
@@ -2577,7 +2580,10 @@ def compute_hash(filename: Union[str, Path, IO]) -> bytes:
 
 
 def get_conjunction(
-    coord: coords.SkyCoord, t0: Time, precision: str = "low", ecl: str = "IERS2010"
+    coord: coords.SkyCoord,
+    t0: Time,
+    precision: Literal["low", "high"] = "low",
+    ecl: str = "IERS2010",
 ) -> Time:
     """
     Find first time of Solar conjuction after t0 and approximate elongation at conjunction
@@ -3208,7 +3214,7 @@ def pldmnoise_from_dmwavex(
 def find_optimal_nharms(
     model: "pint.models.TimingModel",
     toas: "pint.toa.TOAs",
-    component: str,
+    component: Literal["WaveX", "DMWaveX"],
     nharms_max: int = 45,
 ) -> Tuple[int, np.ndarray]:
     """Find the optimal number of harmonics for `WaveX`/`DMWaveX` using the Akaike Information
