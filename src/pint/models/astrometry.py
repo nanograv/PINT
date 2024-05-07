@@ -381,14 +381,17 @@ class AstrometryEquatorial(Astrometry):
         newepoch = (
             epoch if isinstance(epoch, Time) else Time(epoch, scale="tdb", format="mjd")
         )
-        position_now = add_dummy_distance(self.get_psr_coords())
+
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", ErfaWarning)
             # for the most part the dummy distance should remove any potential erfa warnings
             # but for some very large proper motions that does not quite work
             # so we catch the warnings
+            position_now = (
+                self.get_psr_coords()
+            )  # add_dummy_distance(self.get_psr_coords())
             position_then = position_now.apply_space_motion(new_obstime=newepoch)
-            position_then = remove_dummy_distance(position_then)
+            # position_then = remove_dummy_distance(position_then)
 
         return position_then
 
