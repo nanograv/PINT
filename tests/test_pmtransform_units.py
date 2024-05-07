@@ -39,19 +39,21 @@ mECL = get_model(io.StringIO(modelstring_ECL))
 mICRS = get_model(io.StringIO(modelstring_ICRS))
 models = {"ECL": mECL, "ICRS": mICRS}
 
-t_float = np.linspace(55000, 56000)
-for modelframe in ["ECL", "ICRS"]:
-    for coordframe in ["ECL", "ICRS"]:
-        for ttype in ["float", "quantity", "time"]:
-            if ttype == "float":
-                t = t_float
-            elif ttype == "quantity":
-                t = t_float * u.d
-            elif ttype == "time":
-                t = Time(t_float, format="mjd")
-            print(f"Running m{modelframe}.ssb_to_psb_xyz_{coordframe}({ttype})")
-            getattr(models[modelframe], f"ssb_to_psb_xyz_{coordframe}")(t)
-            print(f"Running m{modelframe}.coords_as_{coordframe}({ttype})")
-            getattr(models[modelframe], f"coords_as_{coordframe}")(t)
-            print(f"Running m{modelframe}.as_{coordframe}({ttype})")
-            getattr(models[modelframe], f"as_{coordframe}")(t)
+
+def test_pmtransform_units():
+    t_float = np.linspace(55000, 56000)
+    for modelframe in ["ECL", "ICRS"]:
+        for coordframe in ["ECL", "ICRS"]:
+            for ttype in ["float", "quantity", "time"]:
+                if ttype == "float":
+                    t = t_float
+                elif ttype == "quantity":
+                    t = t_float * u.d
+                elif ttype == "time":
+                    t = Time(t_float, format="mjd")
+                print(f"Running m{modelframe}.ssb_to_psb_xyz_{coordframe}({ttype})")
+                getattr(models[modelframe], f"ssb_to_psb_xyz_{coordframe}")(t)
+                print(f"Running m{modelframe}.coords_as_{coordframe}({ttype})")
+                getattr(models[modelframe], f"coords_as_{coordframe}")(t)
+                print(f"Running m{modelframe}.as_{coordframe}({ttype})")
+                getattr(models[modelframe], f"as_{coordframe}")(t)
