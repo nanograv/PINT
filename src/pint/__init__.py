@@ -22,10 +22,10 @@ from pathlib import Path
 
 from pint import logging
 from pint.extern._version import get_versions
-from pint.utils import info_string
-
 from pint.pulsar_ecliptic import PulsarEcliptic
 from pint.pulsar_mjd import PulsarMJD, time_to_longdouble  # ensure always loaded
+
+from pint.utils import info_string
 
 
 __all__ = [
