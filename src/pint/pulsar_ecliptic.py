@@ -7,7 +7,6 @@ from astropy.coordinates import QuantityAttribute, frame_transform_graph
 from astropy.coordinates.matrix_utilities import rotation_matrix
 
 import pint.config
-from pint.utils import interesting_lines, lines_of
 
 __all__ = ["OBL", "PulsarEcliptic"]
 
@@ -15,6 +14,9 @@ __all__ = ["OBL", "PulsarEcliptic"]
 # Load obliquity data
 # Assume the data file is in the ./datafile directory
 def load_obliquity_file(filename):
+    # import here to avoid circular imports with utils module
+    from pint.utils import interesting_lines, lines_of
+
     obliquity_data = {}
     for l in interesting_lines(lines_of(filename), comments="#"):
         if l.startswith("Obliquity of the ecliptic"):

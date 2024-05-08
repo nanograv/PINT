@@ -72,7 +72,7 @@ from scipy.linalg import cho_factor, cho_solve
 from copy import deepcopy
 import warnings
 
-import pint
+# import pint
 from pint import file_like, time_like, quantity_like
 import pint.pulsar_ecliptic
 from pint.toa_select import TOASelect

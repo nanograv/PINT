@@ -24,10 +24,11 @@ from typing import Union, IO
 
 from pint import logging
 from pint.extern._version import get_versions
-from pint.pulsar_ecliptic import PulsarEcliptic
+
+# do not import this here to avoid circular imports
+# from pint.pulsar_ecliptic import PulsarEcliptic
 from pint.pulsar_mjd import PulsarMJD, time_to_longdouble  # ensure always loaded
 
-from pint.utils import info_string
 
 __all__ = [
     "__version__",
@@ -116,6 +117,9 @@ if astropy.version.major < 4:
 
 
 def print_info():
+    # import here to avoid circular imports with utils module
+    from pint.utils import info_string
+
     """Print the OS version, Python version, PINT version, versions of the dependencies etc."""
     print(info_string(detailed=True))
 
