@@ -74,7 +74,6 @@ import warnings
 
 # import pint
 from pint import file_like, time_like, quantity_like
-import pint.pulsar_ecliptic
 from pint.toa_select import TOASelect
 
 
@@ -2095,6 +2094,8 @@ def add_dummy_distance(
     cnew : astropy.coordinates.SkyCoord
         new SkyCoord object with a distance attached
     """
+    # import here to avoid circular imports
+    import pint.pulsar_ecliptic
 
     if c.frame.data.differentials == {}:
         log.warning(
@@ -2165,6 +2166,8 @@ def remove_dummy_distance(c: coords.SkyCoord) -> coords.SkyCoord:
     cnew : astropy.coordinates.SkyCoord
         new SkyCoord object with a distance removed
     """
+    # import here to avoid circular imports
+    import pint.pulsar_ecliptic
 
     if c.frame.data.differentials == {}:
         log.warning(
@@ -2606,6 +2609,8 @@ def get_conjunction(
     astropy.units.Quantity
         Elongation at conjunction
     """
+    # import here to avoid circular import
+    import pint.pulsar_ecliptic
 
     assert precision.lower() in ["low", "high"]
     coord = coord.transform_to(pint.pulsar_ecliptic.PulsarEcliptic(ecl=ecl))
