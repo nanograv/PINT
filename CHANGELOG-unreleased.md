@@ -13,9 +13,12 @@ the released changes.
 - Avoided unnecessary `TOAs` table slices in `SolarSystemShapiro`
 - Allow "CLK UNCORR" in par files (indicates no GPS or BIPM corrections). 
 - Better documentation for `akaike_information_criterion()`
+- `funcParameter`s are no longer listed in the `pintk` interface.
 ### Added
 - `bayesian_information_criterion()` function 
+- `pintk` now reads and automatically converts TCB par files and par files with `BINARY T2`.
 - test for `pint.utils.split_swx()` 
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
+- Fix #1759 by changing order of comparison
 ### Removed
