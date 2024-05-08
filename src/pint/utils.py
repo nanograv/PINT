@@ -74,6 +74,7 @@ import warnings
 
 # import pint
 from pint import file_like, time_like, quantity_like
+from pint import __version__ as pint_version
 from pint.toa_select import TOASelect
 
 
@@ -2336,7 +2337,7 @@ def info_string(
 
     info_dict = {
         "Created": f"{datetime.datetime.now().isoformat()}",
-        "PINT_version": pint.__version__,
+        "PINT_version": pint_version,
         "User": username,
         "Host": platform.node(),
         "OS": platform.platform(),
