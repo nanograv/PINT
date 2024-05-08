@@ -73,6 +73,7 @@ from copy import deepcopy
 import warnings
 
 import pint
+from pint import file_like, time_like, quantity_like
 import pint.pulsar_ecliptic
 from pint.toa_select import TOASelect
 
@@ -418,9 +419,9 @@ def split_prefixed_name(name: str) -> Tuple[str, str, int]:
 
 
 def taylor_horner(
-    x: Union[float, np.ndarray, u.Quantity],
+    x: quantity_like,
     coeffs: Union[List[u.Quantity], List[uncertainties.ufloat]],
-) -> Union[float, np.ndarray, u.Quantity]:
+) -> quantity_like:
     """Evaluate a Taylor series of coefficients at x via the Horner scheme.
 
     For example, if we want: 10 + 3*x/1! + 4*x^2/2! + 12*x^3/3! with
@@ -448,10 +449,10 @@ def taylor_horner(
 
 
 def taylor_horner_deriv(
-    x: Union[float, np.ndarray, u.Quantity],
+    x: quantity_like,
     coeffs: Union[List[u.Quantity], List[uncertainties.ufloat]],
     deriv_order: int = 1,
-) -> Union[float, np.ndarray, u.Quantity]:
+) -> quantity_like:
     """Evaluate the nth derivative of a Taylor series.
 
     For example, if we want: first order of (10 + 3*x/1! + 4*x^2/2! + 12*x^3/3!)
@@ -493,9 +494,7 @@ def taylor_horner_deriv(
 
 
 @contextmanager
-def open_or_use(
-    f: Union[str, bytes, Path, IO], mode: Literal["r", "rb", "w", "wb"] = "r"
-) -> Iterator:
+def open_or_use(f: file_like, mode: Literal["r", "rb", "w", "wb"] = "r") -> Iterator:
     """Open a filename or use an open file.
 
     Specifically, if f is a string, try to use it as an argument to
@@ -1294,7 +1293,7 @@ def get_prefix_timeranges(
 
 
 def find_prefix_bytime(
-    model: "pint.models.TimingModel", prefixname: str, t: Union[float, Time, u.Quantity]
+    model: "pint.models.TimingModel", prefixname: str, t: time_like
 ) -> Union[int, np.ndarray]:
     """Identify matching index(es) for a prefix parameter like DMX
 
@@ -2550,7 +2549,7 @@ def group_iterator(items: np.ndarray) -> Iterator[Tuple]:
         yield item, np.where(items == item)[0]
 
 
-def compute_hash(filename: Union[str, Path, IO]) -> bytes:
+def compute_hash(filename: file_like) -> bytes:
     """Compute a unique hash of a file.
 
     This is designed to keep around to detect changes, not to be
