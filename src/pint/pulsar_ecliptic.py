@@ -17,7 +17,6 @@ __all__ = ["OBL", "PulsarEcliptic"]
 # Load obliquity data
 # Assume the data file is in the ./datafile directory
 def load_obliquity_file(filename: file_like) -> Dict[str, u.Quantity]:
-
     obliquity_data = {}
     for l in interesting_lines(lines_of(filename), comments="#"):
         if l.startswith("Obliquity of the ecliptic"):
