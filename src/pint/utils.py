@@ -2336,7 +2336,7 @@ def info_string(
 
     info_dict = {
         "Created": f"{datetime.datetime.now().isoformat()}",
-        "PINT_version": pint_version,
+        "PINT_version": pint.__version__,
         "User": username,
         "Host": platform.node(),
         "OS": platform.platform(),
