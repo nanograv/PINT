@@ -20,13 +20,11 @@ import pkg_resources
 from astropy.units import si
 from pathlib import Path
 
-from typing import Union, IO
-
 from pint import logging
 from pint.extern._version import get_versions
+from pint.utils import info_string
 
-# do not import this here to avoid circular imports
-# from pint.pulsar_ecliptic import PulsarEcliptic
+from pint.pulsar_ecliptic import PulsarEcliptic
 from pint.pulsar_mjd import PulsarMJD, time_to_longdouble  # ensure always loaded
 
 
@@ -117,16 +115,5 @@ if astropy.version.major < 4:
 
 
 def print_info():
-    # import here to avoid circular imports with utils module
-    from pint.utils import info_string
-
     """Print the OS version, Python version, PINT version, versions of the dependencies etc."""
     print(info_string(detailed=True))
-
-
-# custom types
-# Something that is a Quantity or can behave like one (with units assumed)
-quantity_like = Union[float, np.ndarray, u.Quantity]
-# Something that is a Time or can behave like one
-time_like = Union[float, np.ndarray, u.Quantity, time.Time]
-file_like = Union[str, Path, IO]
