@@ -541,6 +541,10 @@ class PLDMNoise(NoiseComponent):
         f_low_factor = 10**self.TNDMFLOW.value
         return f_low_factor / (t.max() - t.min())
 
+    def get_corner_frequency(self, t):
+        f_c_factor = self.TNDMCORNER.value
+        return f_c_factor / (t.max() - t.min())
+
     def get_noise_weights(self, toas):
         """Return power law DM noise weights.
 
@@ -550,8 +554,13 @@ class PLDMNoise(NoiseComponent):
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
         amp, gam, nf = self.get_pl_vals()
         f_1 = self.get_fundamental_frequency(t)
+        f_c = self.get_corner_frequency(t)
         Ffreqs = get_rednoise_freqs(nf, f_1)
-        return powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
+        return (
+            powerlaw(Ffreqs, amp, gam)
+            if f_c == 0
+            else powerlaw_corner(Ffreqs, amp, gam, f_c)
+        ) * Ffreqs[0]
 
     def pl_dm_basis_weight_pair(self, toas):
         """Return a Fourier design matrix and power law DM noise weights.
@@ -681,6 +690,10 @@ class PLRedNoise(NoiseComponent):
         f_low_factor = 10**self.TNREDFLOW.value
         return f_low_factor / (t.max() - t.min())
 
+    def get_corner_frequency(self, t):
+        f_c_factor = self.TNREDCORNER.value
+        return f_c_factor / (t.max() - t.min())
+
     def get_noise_basis(self, toas):
         """Return a Fourier design matrix for red noise.
 
@@ -705,9 +718,14 @@ class PLRedNoise(NoiseComponent):
         amp, gam, nf = self.get_pl_vals()
 
         f_1 = self.get_fundamental_frequency(t)
+        f_c = self.get_fundamental_frequency(t)
 
         Ffreqs = get_rednoise_freqs(nf, f_1)
-        return powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
+        return (
+            powerlaw(Ffreqs, amp, gam)
+            if f_c == 0
+            else powerlaw_corner(Ffreqs, amp, gam, f_c)
+        ) * Ffreqs[0]
 
     def pl_rn_basis_weight_pair(self, toas):
         """Return a Fourier design matrix and power law red noise weights.
