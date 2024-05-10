@@ -486,9 +486,9 @@ class PLDMNoise(NoiseComponent):
             )
         )
         self.add_param(
-            floatParameter(
+            intParameter(
                 name="TNDMC",
-                units="",
+                value=30,
                 aliases=[],
                 description="Number of DM noise frequencies.",
             )
@@ -498,7 +498,7 @@ class PLDMNoise(NoiseComponent):
         self.basis_funcs += [self.pl_dm_basis_weight_pair]
 
     def get_pl_vals(self):
-        nf = int(self.TNDMC.value) if self.TNDMC.value is not None else 30
+        nf = self.TNDMC.value
         amp, gam = 10**self.TNDMAMP.value, self.TNDMGAM.value
         return (amp, gam, nf)
 
@@ -615,6 +615,7 @@ class PLRedNoise(NoiseComponent):
         self.add_param(
             intParameter(
                 name="TNREDC",
+                value=30,
                 description="Number of red noise frequencies.",
                 aliases=[],
             )
@@ -624,7 +625,7 @@ class PLRedNoise(NoiseComponent):
         self.basis_funcs += [self.pl_rn_basis_weight_pair]
 
     def get_pl_vals(self):
-        nf = int(self.TNREDC.value) if self.TNREDC.value is not None else 30
+        nf = self.TNREDC.value
         if self.TNREDAMP.value is not None and self.TNREDGAM.value is not None:
             amp, gam = 10**self.TNREDAMP.value, self.TNREDGAM.value
         elif self.RNAMP.value is not None and self.RNIDX is not None:
