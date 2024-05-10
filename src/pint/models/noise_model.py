@@ -747,10 +747,10 @@ def create_ecorr_quantization_matrix(toas_table, dt=1, nmin=2):
     return U
 
 
-def get_rednoise_freqs(nmodes, F1):
+def get_rednoise_freqs(nmodes, f_1):
     """Frequency components for creating the red/DM noise basis matrix."""
 
-    f = np.linspace(F1, nmodes * F1, nmodes)
+    f = np.linspace(f_1, nmodes * f_1, nmodes)
 
     Ffreqs = np.zeros(2 * nmodes)
     Ffreqs[::2] = f
@@ -759,13 +759,13 @@ def get_rednoise_freqs(nmodes, F1):
     return Ffreqs
 
 
-def create_fourier_design_matrix(t, nmodes, F1):
+def create_fourier_design_matrix(t, nmodes, f_1):
     """
     Construct fourier design matrix from eq 11 of Lentati et al, 2013
 
     :param t: vector of time series in seconds
     :param nmodes: number of fourier coefficients to use
-    :param F1: fundamental frequency of the Fourier basis
+    :param f_1: fundamental frequency of the Fourier basis
     :return: F: fourier design matrix
     :return: f: Sampling frequencies
     """
@@ -773,7 +773,7 @@ def create_fourier_design_matrix(t, nmodes, F1):
     N = len(t)
     F = np.zeros((N, 2 * nmodes))
 
-    Ffreqs = get_rednoise_freqs(nmodes, F1)
+    Ffreqs = get_rednoise_freqs(nmodes, f_1)
 
     F[:, ::2] = np.sin(2 * np.pi * t[:, None] * Ffreqs[::2])
     F[:, 1::2] = np.cos(2 * np.pi * t[:, None] * Ffreqs[1::2])

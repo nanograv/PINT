@@ -16,6 +16,7 @@ the released changes.
 - `funcParameter`s are no longer listed in the `pintk` interface.
 - Updated location of CCERA
 - Changed `TNRedC` and `TNDMC` into `intParameter`s; made their default values explicit.
+- `get_rednoise_freqs()` and `get_rednoise_freqs()` now take `f_1` as input instead of `Tspan`.
 ### Added
 - `bayesian_information_criterion()` function 
 - `pintk` now reads and automatically converts TCB par files and par files with `BINARY T2`.
