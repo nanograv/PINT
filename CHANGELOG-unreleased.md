@@ -22,4 +22,5 @@ the released changes.
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
 - Fix #1759 by changing order of comparison
+- Moved the test in `test_pmtransform_units.py` into a function.
 ### Removed
