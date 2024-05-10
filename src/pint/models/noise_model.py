@@ -493,6 +493,13 @@ class PLDMNoise(NoiseComponent):
                 description="Number of DM noise frequencies.",
             )
         )
+        self.add_param(
+            floatParameter(
+                name="TNDMFLOW",
+                description="Fundamental log-frequency of the DM noise Fourier basis.",
+                aliases=[],
+            )
+        )
 
         self.covariance_matrix_funcs += [self.pl_dm_cov_matrix]
         self.basis_funcs += [self.pl_dm_basis_weight_pair]
@@ -617,6 +624,13 @@ class PLRedNoise(NoiseComponent):
                 name="TNREDC",
                 value=30,
                 description="Number of red noise frequencies.",
+                aliases=[],
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="TNREDFLOW",
+                description="Fundamental log-frequency of the red noise Fourier basis.",
                 aliases=[],
             )
         )
