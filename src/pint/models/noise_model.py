@@ -540,8 +540,8 @@ class PLDMNoise(NoiseComponent):
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
         amp, gam, nf = self.get_pl_vals()
-        F1 = self.get_fundamental_frequency(t)
-        Ffreqs = get_rednoise_freqs(nf, F1)
+        f_1 = self.get_fundamental_frequency(t)
+        Ffreqs = get_rednoise_freqs(nf, f_1)
         return powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
 
     def pl_dm_basis_weight_pair(self, toas):
