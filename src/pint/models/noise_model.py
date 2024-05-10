@@ -523,8 +523,7 @@ class PLDMNoise(NoiseComponent):
         D = (fref.value / freqs.value) ** 2
         nf = self.get_pl_vals()[2]
 
-        f_low_factor = 10**self.TNDMFLOW.value
-        Tspan = (t.max() - t.min()) / f_low_factor
+        Tspan = self.get_Tspan(t)
 
         Fmat = create_fourier_design_matrix(t, nf, Tspan)
         return Fmat * D[:, None]
