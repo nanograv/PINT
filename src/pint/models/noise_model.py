@@ -496,7 +496,8 @@ class PLDMNoise(NoiseComponent):
         self.add_param(
             floatParameter(
                 name="TNDMFLOW",
-                description="Fundamental log-frequency of the DM noise Fourier basis.",
+                value=0,
+                description="Fundamental log-frequency of the DM noise Fourier basis as a multiple of the inverse data span (tempo2 format).",
                 aliases=[],
             )
         )
@@ -520,8 +521,16 @@ class PLDMNoise(NoiseComponent):
         fref = 1400 * u.MHz
         D = (fref.value / freqs.value) ** 2
         nf = self.get_pl_vals()[2]
-        Fmat = create_fourier_design_matrix(t, nf)
+
+        f_low_factor = 10**self.TNDMFLOW.value
+        Tspan = (t.max() - t.min()) / f_low_factor
+
+        Fmat = create_fourier_design_matrix(t, nf, Tspan)
         return Fmat * D[:, None]
+
+    def get_Tspan(self, t):
+        f_low_factor = 10**self.TNDMFLOW.value
+        return (t.max() - t.min()) / f_low_factor
 
     def get_noise_weights(self, toas):
         """Return power law DM noise weights.
@@ -531,7 +540,8 @@ class PLDMNoise(NoiseComponent):
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
         amp, gam, nf = self.get_pl_vals()
-        Ffreqs = get_rednoise_freqs(t, nf)
+        Tspan = self.get_Tspan(t)
+        Ffreqs = get_rednoise_freqs(nf, Tspan)
         return powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
 
     def pl_dm_basis_weight_pair(self, toas):
@@ -608,7 +618,7 @@ class PLRedNoise(NoiseComponent):
                 name="TNREDAMP",
                 units="",
                 aliases=[],
-                description="Amplitude of powerlaw red noise in tempo2 format",
+                description="Log-amplitude of powerlaw red noise in tempo2 format",
             )
         )
         self.add_param(
@@ -630,7 +640,8 @@ class PLRedNoise(NoiseComponent):
         self.add_param(
             floatParameter(
                 name="TNREDFLOW",
-                description="Fundamental log-frequency of the red noise Fourier basis.",
+                value=0,
+                description="Fundamental log-frequency of the red noise Fourier basis as a multiple of the inverse data span (tempo2 format).",
                 aliases=[],
             )
         )
@@ -647,6 +658,10 @@ class PLRedNoise(NoiseComponent):
             amp, gam = self.RNAMP.value / fac, -1 * self.RNIDX.value
         return (amp, gam, nf)
 
+    def get_Tspan(self, t):
+        f_low_factor = 10**self.TNREDFLOW.value
+        return (t.max() - t.min()) / f_low_factor
+
     def get_noise_basis(self, toas):
         """Return a Fourier design matrix for red noise.
 
@@ -654,8 +669,12 @@ class PLRedNoise(NoiseComponent):
 
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+
+        Tspan = self.get_Tspan(t)
+
         nf = self.get_pl_vals()[2]
-        return create_fourier_design_matrix(t, nf)
+
+        return create_fourier_design_matrix(t, nf, Tspan)
 
     def get_noise_weights(self, toas):
         """Return power law red noise weights.
@@ -665,7 +684,10 @@ class PLRedNoise(NoiseComponent):
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
         amp, gam, nf = self.get_pl_vals()
-        Ffreqs = get_rednoise_freqs(t, nf)
+
+        Tspan = self.get_Tspan(t)
+
+        Ffreqs = get_rednoise_freqs(nf, Tspan)
         return powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
 
     def pl_rn_basis_weight_pair(self, toas):
@@ -724,12 +746,10 @@ def create_ecorr_quantization_matrix(toas_table, dt=1, nmin=2):
     return U
 
 
-def get_rednoise_freqs(t, nmodes, Tspan=None):
-    """Frequency components for creating the red noise basis matrix."""
+def get_rednoise_freqs(nmodes, Tspan):
+    """Frequency components for creating the red/DM noise basis matrix."""
 
-    T = Tspan if Tspan is not None else t.max() - t.min()
-
-    f = np.linspace(1 / T, nmodes / T, nmodes)
+    f = np.linspace(1 / Tspan, nmodes / Tspan, nmodes)
 
     Ffreqs = np.zeros(2 * nmodes)
     Ffreqs[::2] = f
@@ -738,13 +758,13 @@ def get_rednoise_freqs(t, nmodes, Tspan=None):
     return Ffreqs
 
 
-def create_fourier_design_matrix(t, nmodes, Tspan=None):
+def create_fourier_design_matrix(t, nmodes, Tspan):
     """
     Construct fourier design matrix from eq 11 of Lentati et al, 2013
 
     :param t: vector of time series in seconds
     :param nmodes: number of fourier coefficients to use
-    :param Tspan: option to some other Tspan
+    :param Tspan: fundamental period of the Fourier basis
     :return: F: fourier design matrix
     :return: f: Sampling frequencies
     """
@@ -752,7 +772,7 @@ def create_fourier_design_matrix(t, nmodes, Tspan=None):
     N = len(t)
     F = np.zeros((N, 2 * nmodes))
 
-    Ffreqs = get_rednoise_freqs(t, nmodes, Tspan=Tspan)
+    Ffreqs = get_rednoise_freqs(nmodes, Tspan)
 
     F[:, ::2] = np.sin(2 * np.pi * t[:, None] * Ffreqs[::2])
     F[:, 1::2] = np.cos(2 * np.pi * t[:, None] * Ffreqs[1::2])
@@ -766,19 +786,6 @@ def powerlaw(f, A=1e-16, gamma=5):
     :param f: Sampling frequencies
     :param A: Amplitude of red noise [GW units]
     :param gamma: Spectral index of red noise process
-    """
-
-    fyr = 1 / 3.16e7
-    return A**2 / 12.0 / np.pi**2 * fyr ** (gamma - 3) * f ** (-gamma)
-
-
-def powerlaw_corner(f, A=1e-16, gamma=5, fc=1e9):
-    """Power-law PSD.
-
-    :param f: Sampling frequencies
-    :param A: Amplitude of red noise [GW units]
-    :param gamma: Spectral index of red noise process
-    :param fc: The corner frequency for spectral turnover
     """
 
     fyr = 1 / 3.16e7
