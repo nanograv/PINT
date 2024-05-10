@@ -523,12 +523,12 @@ class PLDMNoise(NoiseComponent):
         D = (fref.value / freqs.value) ** 2
         nf = self.get_pl_vals()[2]
 
-        F1 = self.get_F1(t)
+        f_1 = self.get_fundamental_frequency(t)
 
-        Fmat = create_fourier_design_matrix(t, nf, F1)
+        Fmat = create_fourier_design_matrix(t, nf, f_1)
         return Fmat * D[:, None]
 
-    def get_F1(self, t):
+    def get_fundamental_frequency(self, t):
         f_low_factor = 10**self.TNDMFLOW.value
         return f_low_factor / (t.max() - t.min())
 
@@ -540,7 +540,7 @@ class PLDMNoise(NoiseComponent):
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
         amp, gam, nf = self.get_pl_vals()
-        F1 = self.get_F1(t)
+        F1 = self.get_fundamental_frequency(t)
         Ffreqs = get_rednoise_freqs(nf, F1)
         return powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
 
@@ -659,7 +659,7 @@ class PLRedNoise(NoiseComponent):
             amp, gam = self.RNAMP.value / fac, -1 * self.RNIDX.value
         return (amp, gam, nf)
 
-    def get_F1(self, t):
+    def get_fundamental_frequency(self, t):
         f_low_factor = 10**self.TNREDFLOW.value
         return f_low_factor / (t.max() - t.min())
 
@@ -671,11 +671,11 @@ class PLRedNoise(NoiseComponent):
         tbl = toas.table
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
 
-        F1 = self.get_F1(t)
+        f_1 = self.get_fundamental_frequency(t)
 
         nf = self.get_pl_vals()[2]
 
-        return create_fourier_design_matrix(t, nf, F1)
+        return create_fourier_design_matrix(t, nf, f_1)
 
     def get_noise_weights(self, toas):
         """Return power law red noise weights.
@@ -686,9 +686,9 @@ class PLRedNoise(NoiseComponent):
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
         amp, gam, nf = self.get_pl_vals()
 
-        F1 = self.get_F1(t)
+        f_1 = self.get_fundamental_frequency(t)
 
-        Ffreqs = get_rednoise_freqs(nf, F1)
+        Ffreqs = get_rednoise_freqs(nf, f_1)
         return powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
 
     def pl_rn_basis_weight_pair(self, toas):
