@@ -8,7 +8,7 @@ import numpy as np
 
 from loguru import logger as log
 
-from pint.models.parameter import floatParameter, maskParameter
+from pint.models.parameter import floatParameter, intParameter, maskParameter
 from pint.models.timing_model import Component
 
 
@@ -613,11 +613,10 @@ class PLRedNoise(NoiseComponent):
             )
         )
         self.add_param(
-            floatParameter(
+            intParameter(
                 name="TNREDC",
-                units="",
-                aliases=[],
                 description="Number of red noise frequencies.",
+                aliases=[],
             )
         )
 
@@ -752,6 +751,19 @@ def powerlaw(f, A=1e-16, gamma=5):
     :param f: Sampling frequencies
     :param A: Amplitude of red noise [GW units]
     :param gamma: Spectral index of red noise process
+    """
+
+    fyr = 1 / 3.16e7
+    return A**2 / 12.0 / np.pi**2 * fyr ** (gamma - 3) * f ** (-gamma)
+
+
+def powerlaw_corner(f, A=1e-16, gamma=5, fc=1e9):
+    """Power-law PSD.
+
+    :param f: Sampling frequencies
+    :param A: Amplitude of red noise [GW units]
+    :param gamma: Spectral index of red noise process
+    :param fc: The corner frequency for spectral turnover
     """
 
     fyr = 1 / 3.16e7
