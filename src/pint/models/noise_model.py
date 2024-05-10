@@ -781,7 +781,7 @@ def create_fourier_design_matrix(t, nmodes, f_1):
     return F
 
 
-def powerlaw(f, A=1e-16, gamma=5):
+def powerlaw(f, A, gamma):
     """Power-law PSD.
 
     :param f: Sampling frequencies
@@ -791,3 +791,23 @@ def powerlaw(f, A=1e-16, gamma=5):
 
     fyr = 1 / 3.16e7
     return A**2 / 12.0 / np.pi**2 * fyr ** (gamma - 3) * f ** (-gamma)
+
+
+def powerlaw_corner(f, A, gamma, fc):
+    """Power-law PSD that saturates at low frequencies.
+
+    :param f: Sampling frequencies
+    :param A: Amplitude of red noise [GW units]
+    :param gamma: Spectral index of red noise process
+    :param fc: Corner frequency
+    """
+
+    fyr = 1 / 3.16e7
+
+    return (
+        A**2
+        / 12.0
+        / np.pi**2
+        / fyr**3
+        * ((1 + (fyr / fc) ** (gamma / 2)) / (1 + (f / fc) ** (gamma / 2))) ** 2
+    )

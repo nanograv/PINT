@@ -23,7 +23,9 @@ the released changes.
 - Test for `pint.utils.split_swx()`
 - Custom type definitions for type hints
 - `plrednoise_from_wavex()` and `pldmnoise_from_dmwavex()` functions now compute `TNRedFLow` and `TNDMFLow`
+- `powerlaw_corner` function
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
 - Fix #1759 by changing order of comparison
 ### Removed
+- Unnecessary default arguments from the `powerlaw()` function.
