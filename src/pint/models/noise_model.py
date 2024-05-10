@@ -499,6 +499,7 @@ class PLDMNoise(NoiseComponent):
                 value=0,
                 description="Fundamental log-frequency of the DM noise Fourier basis as a multiple of the inverse data span (tempo2 format).",
                 aliases=[],
+                frozen=True,
             )
         )
 
@@ -643,6 +644,7 @@ class PLRedNoise(NoiseComponent):
                 value=0,
                 description="Fundamental log-frequency of the red noise Fourier basis as a multiple of the inverse data span (tempo2 format).",
                 aliases=[],
+                frozen=True,
             )
         )
 
