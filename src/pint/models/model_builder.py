@@ -36,6 +36,7 @@ from pint.utils import (
 )
 from pint.models.tcb_conversion import convert_tcb_tdb
 from pint.models.binary_ddk import _convert_kin, _convert_kom
+from pint import file_like, quantity_like
 
 __all__ = ["ModelBuilder", "get_model", "get_model_and_toas"]
 
@@ -778,7 +779,7 @@ class ModelBuilder:
 
 
 def get_model(
-    parfile: Union[str, IO],
+    parfile: file_like,
     allow_name_mixing: bool = False,
     allow_tcb: bool = False,
     allow_T2: bool = False,
@@ -860,8 +861,8 @@ def get_model(
 
 
 def get_model_and_toas(
-    parfile: Union[str, IO],
-    timfile: Union[str, IO],
+    parfile: file_like,
+    timfile: file_like,
     ephem: str = None,
     include_bipm: bool = None,
     bipm_version: str = None,
