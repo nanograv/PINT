@@ -2981,7 +2981,7 @@ def sherman_morrison_dot(
 
 
 def woodbury_dot(
-    Ndiag: np.ndarray, U: np.ndarray, Phidiag: float, x: np.ndarray, y: np.ndarray
+    Ndiag: np.ndarray, U: np.ndarray, Phidiag: np.ndarray, x: np.ndarray, y: np.ndarray
 ) -> Tuple[float, float]:
     """
     Compute an inner product of the form
@@ -3003,7 +3003,7 @@ def woodbury_dot(
         Diagonal elements of the diagonal matrix N
     U: array-like
         A matrix that represents a rank-n update to N
-    Phidiag: float
+    Phidiag: array-like
         Weights associated with the rank-n update
     x: array-like
         Vector 1 for the inner product
@@ -3035,7 +3035,9 @@ def woodbury_dot(
     return x_Cinv_y, logdet_C
 
 
-def _get_wx2pl_lnlike(model, component_name, ignore_fyr=True):
+def _get_wx2pl_lnlike(
+    model: "pint.models.TimingModel", component_name: str, ignore_fyr: bool = True
+) -> float:
     from pint.models.noise_model import powerlaw
     from pint import DMconst
 
@@ -3090,14 +3092,14 @@ def _get_wx2pl_lnlike(model, component_name, ignore_fyr=True):
         ]
     )
 
-    def powl_model(params):
+    def powl_model(params: Tuple[float, float]) -> float:
         """Get the powerlaw spectrum for the WaveX frequencies for a given
         set of parameters. This calls the powerlaw function used by `PLRedNoise`/`PLDMNoise`.
         """
         gamma, log10_A = params
         return (powerlaw(fs, A=10**log10_A, gamma=gamma) * f0) ** 0.5
 
-    def mlnlike(params):
+    def mlnlike(params: Tuple[float, ...]) -> float:
         """Negative of the likelihood function that acts on the
         `[DM]WaveX` amplitudes."""
         sigma = powl_model(params)
@@ -3112,7 +3114,7 @@ def _get_wx2pl_lnlike(model, component_name, ignore_fyr=True):
 
 
 def plrednoise_from_wavex(
-    model: "pint.models.TimingModel", ignore_fyr: float = True
+    model: "pint.models.TimingModel", ignore_fyr: bool = True
 ) -> "pint.models.TimingModel":
     """Convert a `WaveX` representation of red noise to a `PLRedNoise`
     representation. This is done by minimizing a likelihood function
