@@ -502,6 +502,15 @@ class PLDMNoise(NoiseComponent):
                 frozen=True,
             )
         )
+        self.add_param(
+            floatParameter(
+                name="TNDMCORNER",
+                value=0,
+                description="Corner frequency of the DM noise as a multiple of the inverse data span (tempo2 format).",
+                aliases=[],
+                frozen=True,
+            )
+        )
 
         self.covariance_matrix_funcs += [self.pl_dm_cov_matrix]
         self.basis_funcs += [self.pl_dm_basis_weight_pair]
@@ -642,6 +651,15 @@ class PLRedNoise(NoiseComponent):
                 name="TNREDFLOW",
                 value=0,
                 description="Fundamental log-frequency of the red noise Fourier basis as a multiple of the inverse data span (tempo2 format).",
+                aliases=[],
+                frozen=True,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="TNREDCORNER",
+                value=0,
+                description="Corner frequency of the red noise as a multiple of the inverse data span (tempo2 format).",
                 aliases=[],
                 frozen=True,
             )
