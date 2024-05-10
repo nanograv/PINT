@@ -20,7 +20,7 @@ import pkg_resources
 from astropy.units import si
 from pathlib import Path
 
-from typing import Union, IO
+from typing import Tuple, Union, IO
 
 from pint import logging
 from pint.extern._version import get_versions
@@ -124,5 +124,7 @@ def print_info():
 # Something that is a Quantity or can behave like one (with units assumed)
 quantity_like = Union[float, np.ndarray, u.Quantity]
 # Something that is a Time or can behave like one
-time_like = Union[float, np.ndarray, u.Quantity, time.Time]
+time_like = Union[float, np.ndarray, u.Quantity, time.Time, Tuple[float, float]]
 file_like = Union[str, Path, IO]
+dir_like = Union[str, Path]
+toas_index_like = Union[str, tuple, np.ndarray, slice, int]

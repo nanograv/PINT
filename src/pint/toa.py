@@ -38,7 +38,7 @@ from astropy.coordinates import (
 from loguru import logger as log
 
 import pint
-import pint.utils
+from pint import utils, file_like, dir_like, time_like, quantity_like, toas_index_like
 from pint.observatory import Observatory, bipm_default, get_observatory
 from pint.observatory.special_locations import T2SpacecraftObs
 from pint.observatory.satellite_obs import SatelliteObs
@@ -103,7 +103,7 @@ tempo_aliases = {
 
 
 def get_TOAs(
-    timfile: Union[str, List[str], IO],
+    timfile: file_like,
     ephem: str = None,
     include_bipm: bool = None,
     bipm_version: str = None,
@@ -281,7 +281,7 @@ def get_TOAs(
 
         files = [t.filename] if isinstance(t.filename, (str, Path)) else t.filename
         if files is not None:
-            t.hashes = {f: pint.utils.compute_hash(f) for f in files}
+            t.hashes = {f: utils.compute_hash(f) for f in files}
         recalc = True
 
     if all("clkcorr" not in f for f in t.table["flags"]):
@@ -706,7 +706,7 @@ def read_toa_file(
     filename: str,
     process_includes: bool = True,
     cdict: dict = None,
-    dir: Union[str, Path] = None,
+    dir: dir_like = None,
 ):
     """Read TOAs from the given filename into a list.
 
@@ -1073,10 +1073,10 @@ class TOA:
 
     def __init__(
         self,
-        MJD: Union[time.Time, float, Tuple[float, float]],
-        error: Union[u.Quantity, float] = 0.0,
+        MJD: time_like,
+        error: quantity_like = 0.0,
         obs: str = "Barycenter",
-        freq: Union[u.Quantity, float] = np.inf,
+        freq: quantity_like = np.inf,
         scale: str = None,
         flags: dict = None,
         **kwargs,
@@ -1380,7 +1380,7 @@ class TOAs:
     def __len__(self):
         return len(self.table)
 
-    def __getitem__(self, index: Union[str, tuple, np.ndarray, slice, int]) -> "TOAs":
+    def __getitem__(self, index: toas_index_like) -> "TOAs":
         """Extract a subset of TOAs and/or a column/flag from each one.
 
         When selecting a column from ``self.table`` or a flag from ``self.table["flags"]``,
@@ -1467,7 +1467,7 @@ class TOAs:
             # FIXME: what to do if length zero? How to ensure it's a string array even then?
             return np.array(r)
 
-    def __setitem__(self, index: Union[str, tuple, np.ndarray, slice, int], value):
+    def __setitem__(self, index: toas_index_like, value):
         """Set values in this object.
 
         This can set specified values into columns/flags or subsets of the same.
@@ -1699,7 +1699,7 @@ class TOAs:
 
     def get_obs_groups(self):
         """Return an iterator over the different observatories"""
-        return pint.utils.group_iterator(self["obs"])
+        return utils.group_iterator(self["obs"])
 
     def get_pulse_numbers(self) -> Union[table.Column, None]:
         """Return a numpy array of the pulse numbers for each TOA if they exist."""
@@ -1878,8 +1878,7 @@ class TOAs:
             return False
 
         return all(
-            pint.utils.compute_hash(t) == self.hashes[f]
-            for t, f in zip(timfiles, filenames)
+            utils.compute_hash(t) == self.hashes[f] for t, f in zip(timfiles, filenames)
         )
 
     def select(self, selectarray):
@@ -2113,7 +2112,7 @@ class TOAs:
         if format.upper() in ("TEMPO2", "1"):
             outf.write("FORMAT 1\n")
         if include_info:
-            info_string = pint.utils.info_string(prefix_string="C ", comment=comment)
+            info_string = utils.info_string(prefix_string="C ", comment=comment)
             outf.write(info_string + "\n")
 
         # Add pulse numbers to flags temporarily if there is a pulse number column
@@ -2731,11 +2730,11 @@ def merge_TOAs(TOAs_list: List[TOAs], strict: bool = False) -> TOAs:
 
 
 def get_TOAs_array(
-    times: Union[time.Time, float, np.ndarray, tuple],
+    times: time_like,
     obs: str,
     scale: str = None,
-    errors: Union[u.Quantity, np.ndarray, float] = 1 * u.us,
-    freqs: Union[u.Quantity, np.ndarray, float] = np.inf * u.MHz,
+    errors: quantity_like = 1 * u.us,
+    freqs: quantity_like = np.inf * u.MHz,
     flags: dict = None,
     model: "pint.models.timing_model.TimingModel" = None,
     ephem: str = None,
