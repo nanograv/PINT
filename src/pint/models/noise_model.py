@@ -474,7 +474,7 @@ class PLDMNoise(NoiseComponent):
                 name="TNDMAMP",
                 units="",
                 aliases=[],
-                description="Amplitude of powerlaw DM noise in tempo2 format",
+                description="Log-amplitude of powerlaw DM noise in tempo2 format",
             )
         )
         self.add_param(
