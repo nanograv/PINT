@@ -20,10 +20,10 @@ import copy
 import gzip
 import pickle
 import re
-from typing import IO, List, Set, Tuple, Union
 import warnings
 from collections.abc import MutableMapping
 from pathlib import Path
+from typing import IO, List, Set, Tuple, Union
 
 import astropy.table as table
 import astropy.time as time
@@ -38,10 +38,10 @@ from astropy.coordinates import (
 from loguru import logger as log
 
 import pint
-from pint import utils, file_like, dir_like, time_like, quantity_like, toas_index_like
+from pint import dir_like, file_like, quantity_like, time_like, toas_index_like, utils
 from pint.observatory import Observatory, bipm_default, get_observatory
-from pint.observatory.special_locations import T2SpacecraftObs
 from pint.observatory.satellite_obs import SatelliteObs
+from pint.observatory.special_locations import T2SpacecraftObs
 from pint.observatory.topo_obs import TopoObs
 from pint.phase import Phase
 from pint.pulsar_ecliptic import PulsarEcliptic
