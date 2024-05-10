@@ -21,6 +21,7 @@ the released changes.
 - `pintk` now reads and automatically converts TCB par files and par files with `BINARY T2`.
 - Test for `pint.utils.split_swx()`
 - Custom type definitions for type hints
+- `plrednoise_from_wavex()` and `pldmnoise_from_dmwavex()` functions now compute `TNRedFLow` and `TNDMFLow`
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
 - Fix #1759 by changing order of comparison
