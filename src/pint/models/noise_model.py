@@ -718,7 +718,7 @@ class PLRedNoise(NoiseComponent):
         amp, gam, nf = self.get_pl_vals()
 
         f_1 = self.get_fundamental_frequency(t)
-        f_c = self.get_fundamental_frequency(t)
+        f_c = self.get_corner_frequency(t)
 
         Ffreqs = get_rednoise_freqs(nf, f_1)
         return (
