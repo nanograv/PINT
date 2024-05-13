@@ -59,6 +59,7 @@ __all__ = [
 
 # The default BIPM to use if not explicitly specified
 # FIXME: this should be auto-detected by checking the index file to see what's available
+# ALSO: Why is the a feature of the Observatory class?  Seems like the wrong place for it.
 bipm_default = "BIPM2021"
 
 pint_clock_env_var = "PINT_CLOCK_OVERRIDE"
@@ -153,9 +154,6 @@ class Observatory:
         name,
         fullname=None,
         aliases=None,
-        include_gps=True,
-        include_bipm=True,
-        bipm_version=bipm_default,
         overwrite=False,
     ):
         self._name = name.lower()
@@ -165,9 +163,6 @@ class Observatory:
         if aliases is not None:
             Observatory._add_aliases(self, aliases)
         self.fullname = fullname if fullname is not None else name
-        self.include_gps = include_gps
-        self.include_bipm = include_bipm
-        self.bipm_version = bipm_version
 
         if name.lower() in Observatory._registry:
             if not overwrite:
@@ -340,7 +335,14 @@ class Observatory:
         astropy.time.Time()."""
         raise NotImplementedError
 
-    def clock_corrections(self, t, limits="warn"):
+    def clock_corrections(
+        self,
+        t,
+        include_gps=True,
+        include_bipm=True,
+        bipm_version=bipm_default,
+        limits="warn",
+    ):
         """Compute clock corrections for a Time array.
 
         Given an array-valued Time, return the clock corrections
@@ -352,29 +354,31 @@ class Observatory:
         # TOA metadata which may be necessary in some cases.
         corr = np.zeros_like(t) * u.us
 
-        if self.include_gps:
+        if include_gps and self.timescale != "tdb":
             corr += self.gps_correction(t, limits=limits)
 
-        if self.include_bipm:
-            corr += self.bipm_correction(t, self.bipm_version, limits=limits)
+        if include_bipm and self.timescale != "tdb":
+            corr += self.bipm_correction(t, bipm_version, limits=limits)
 
         return corr
 
-    def last_clock_correction_mjd(self):
+    def last_clock_correction_mjd(
+        self, include_gps=True, include_bipm=True, bipm_version=bipm_default
+    ):
         """Return the MJD of the last available clock correction.
 
         Returns ``np.inf`` if no clock corrections are relevant.
         """
         t = np.inf
 
-        if self.include_gps:
+        if include_gps:
             _load_gps_clock()
             t = min(t, _gps_clock.last_correction_mjd())
-        if self.include_bipm:
-            _load_bipm_clock(self.bipm_version)
+        if include_bipm:
+            _load_bipm_clock(bipm_version)
             t = min(
                 t,
-                _bipm_clock_versions[self.bipm_version.lower()].last_correction_mjd(),
+                _bipm_clock_versions[bipm_version.lower()].last_correction_mjd(),
             )
         return t
 
@@ -454,9 +458,7 @@ class Observatory:
         raise NotImplementedError
 
 
-def get_observatory(
-    name, include_gps=None, include_bipm=None, bipm_version=bipm_default
-):
+def get_observatory(name):
     """Convenience function to get observatory object with options.
 
     This function will simply call the ``Observatory.get`` method but
@@ -469,29 +471,11 @@ def get_observatory(
     ----------
     name : str
         The name of the observatory
-    include_gps : bool or None, optional
-        Override UTC(GPS)->UTC clock correction.
-    include_bipm : bool or None, optional
-        Override TAI TT(BIPM) clock correction.
-    bipm_version : str, optional
-        Set the version of TT BIPM clock correction files.
 
     .. note:: This function can and should be expanded if more clock
         file switches/options are added at a public API level.
 
     """
-    if include_bipm is not None or include_gps is not None:
-        site = deepcopy(Observatory.get(name))
-
-        if include_gps is not None:
-            site.include_gps = include_gps
-
-        if include_bipm is not None:
-            site.include_bipm = include_bipm
-            site.bipm_version = bipm_version
-
-        return site
-
     return Observatory.get(name)
 
 
@@ -577,9 +561,9 @@ def compare_t2_observatories_dat(t2dir=None):
                         pint=oloc.to_geodetic(),
                         topo_obs_entry=topo_obs_entry,
                         pint_name=obs.name,
-                        pint_tempo_code=obs.tempo_code
-                        if hasattr(obs, "tempo_code")
-                        else "",
+                        pint_tempo_code=(
+                            obs.tempo_code if hasattr(obs, "tempo_code") else ""
+                        ),
                         pint_aliases=obs.aliases,
                         position_difference=d,
                         pint_origin=obs.origin,
@@ -697,9 +681,9 @@ def compare_tempo_obsys_dat(tempodir=None):
                     dict(
                         name=obsnam,
                         pint_name=obs.name,
-                        pint_tempo_code=obs.tempo_code
-                        if hasattr(obs, "tempo_code")
-                        else "",
+                        pint_tempo_code=(
+                            obs.tempo_code if hasattr(obs, "tempo_code") else ""
+                        ),
                         pint_aliases=obs.aliases,
                         itoa_code=itoa_code,
                         tempo_code=tempo_code,
@@ -771,7 +755,9 @@ def update_clock_files(bipm_versions=None):
     # FIXME: what to do about GPS and BIPM files?
 
     if bipm_versions is not None:
-        o = get_observatory("arecibo")
+        o = get_observatory(
+            "arecibo"
+        )  # Why arecibo? Would be better to use an observatory with no clock file of its own, right?
         for v in bipm_versions:
             o._load_bipm_clock(v)
 
@@ -781,7 +767,8 @@ def update_clock_files(bipm_versions=None):
         if not hasattr(o, "clock_file"):
             continue
         try:
-            o.clock_corrections(t, limits="error")
+            # For this purpose (pre-loading observatory clock files) no need for BIPM or GPS corrections
+            o.clock_corrections(t, use_bipm=False, use_gps=False, limits="error")
         except ClockCorrectionOutOfRange:
             pass
         except NoClockCorrections:

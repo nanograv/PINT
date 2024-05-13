@@ -1,6 +1,5 @@
 """Observatories at special (non-Earth) locations."""
 
-
 import astropy.constants as const
 import astropy.io.fits as pyfits
 import astropy.units as u
@@ -305,16 +304,10 @@ class SatelliteObs(SpecialLocation):
         name,
         ft2name,
         maxextrap=2,
-        include_gps=True,
-        include_bipm=True,
-        bipm_version=bipm_default,
         overwrite=False,
     ):
         super().__init__(
             name,
-            include_gps=include_gps,
-            include_bipm=include_bipm,
-            bipm_version=bipm_version,
             overwrite=overwrite,
         )
         self.FT2 = load_orbit(name, ft2name)

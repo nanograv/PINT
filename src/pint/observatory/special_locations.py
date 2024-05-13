@@ -45,18 +45,6 @@ class SpecialLocation(Observatory):
         The name of the observatory
     aliases : str, optional
         List of other aliases for the observatory name.
-    include_gps : bool, optional
-        Set False to disable UTC(GPS)->UTC clock correction.
-    include_bipm : bool, optional
-        Set False to disable TAI-> TT BIPM clock
-        correction. If False, it only apply TAI->TT correction
-        TT = TAI+32.184s, the same as TEMPO2 TT(TAI) in the
-        parfile. If True, it will apply the correction from
-        BIPM TT=TT(BIPMYYYY). See the link:
-        https://www.bipm.org/en/bipm-services/timescales/time-ftp/ttbipm.html
-    bipm_version : str, optional
-        Set the version of TT BIPM clock correction file to
-        use. It has to be in the format like 'BIPM2015'
     overwrite : bool, optional
         If True, allow redefinition of an existing observatory; if False,
         raise an exception.
@@ -66,17 +54,11 @@ class SpecialLocation(Observatory):
         self,
         name,
         aliases=None,
-        include_gps=True,
-        include_bipm=True,
-        bipm_version=bipm_default,
         overwrite=False,
     ):
         super().__init__(
             name,
             aliases=aliases,
-            include_gps=include_gps,
-            include_bipm=include_bipm,
-            bipm_version=bipm_version,
             overwrite=overwrite,
         )
 
@@ -97,9 +79,6 @@ class BarycenterObs(SpecialLocation):
         super().__init__(
             name,
             aliases=aliases,
-            include_gps=False,
-            include_bipm=False,
-            bipm_version=bipm_default,
             overwrite=overwrite,
         )
 

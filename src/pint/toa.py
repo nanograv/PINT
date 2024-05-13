@@ -2208,14 +2208,13 @@ class TOAs:
         # values of "-to" flags
         time_statements = self.get_flag_value("to", 0, float)[0] * u.s
         for obs, grp in self.get_obs_groups():
-            site = get_observatory(
-                obs,
+            site = get_observatory(obs)
+            clock_corrections = site.clock_corrections(
+                time.Time(self["mjd"][grp]),
                 include_gps=include_gps,
                 include_bipm=include_bipm,
                 bipm_version=bipm_version,
-            )
-            clock_corrections = site.clock_corrections(
-                time.Time(self["mjd"][grp]), limits=limits
+                limits=limits,
             )
             corrections[grp] = time_statements[grp] + clock_corrections
             for jj in grp:

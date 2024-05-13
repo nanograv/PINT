@@ -381,7 +381,6 @@
         "origin": "Origin of these coordinates are from surveyor reports of the CHIME site\n(circa 2019 & 2020) and technical documents on the dimensions of the telescope\nstructure (circa 2015). Results were compiled in January 2021. The coordinates\nare relative to the GRS80 ellipsoid.\n"
     },
     "magic": {
-        "include_bipm": false,
         "itrf_xyz": [
             5326878.7967,
             -1719509.5201,
@@ -391,7 +390,6 @@
         "origin": "A ground-based gamma-ray telescope.\nOrigin of this data is unknown.\n"
     },
     "lst": {
-        "include_bipm": false,
         "itrf_xyz": [
             5326832.7629,
             -1719636.1588,
@@ -404,7 +402,6 @@
         "aliases": [
             "v1"
         ],
-        "include_bipm": false,
         "itrf_xyz": [
             4546374.099,
             842989.6976,
@@ -418,7 +415,6 @@
             "h1",
             "hanford"
         ],
-        "include_bipm": false,
         "itrf_xyz": [
             -2161414.9264,
             -3834695.1789,
@@ -432,7 +428,6 @@
             "l1",
             "livingston"
         ],
-        "include_bipm": false,
         "itrf_xyz": [
             -74276.0447,
             -5496283.7197,
@@ -445,7 +440,6 @@
         "aliases": [
             "geohf"
         ],
-        "include_bipm": false,
         "itrf_xyz": [
             3856309.9493,
             666598.9563,
@@ -459,7 +453,6 @@
             "k1",
             "lcgt"
         ],
-        "include_bipm": false,
         "itrf_xyz": [
             -3777336.024,
             3484898.411,
@@ -1510,7 +1503,6 @@
         "origin": "Imported from TEMPO obsys.dat 2021 June 8."
     },
     "hess": {
-        "include_bipm": false,
         "itrf_xyz": [
             5622462.3793,
             1665449.2317,
@@ -1520,8 +1512,6 @@
         "origin": "An Imaging Atmospheric Cherenkov Telescope.\nThese coordinates are provided (from geodetic coordinates : lat = 23°16'18''S, lon = 16°30'00''E at 1800m asl) by the Maxime Regeard and Arache Djannati-Atai on behalf of the H.E.S.S. Collabotation, 2023 January 18."
     },
     "hawc": {
-        "include_bipm": false,
-        "include_gps": true,
         "itrf_xyz": [
             -767864.42219771,
             -5987810.65796205,
