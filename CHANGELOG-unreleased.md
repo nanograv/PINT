@@ -24,6 +24,8 @@ the released changes.
 - Custom type definitions for type hints
 - `plrednoise_from_wavex()` and `pldmnoise_from_dmwavex()` functions now compute `TNRedFLow` and `TNDMFLow`
 - `powerlaw_corner` function
+- `TNREDFLOW` and `TNREDCORNER` parameters in `PLRedNoise`
+- `TNDMFLOW` and `TNDMCORNER` parameters in `PLDMNoise`
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
 - Fix #1759 by changing order of comparison
