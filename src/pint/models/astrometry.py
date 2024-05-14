@@ -8,6 +8,7 @@ from typing import Optional, List, Union
 import astropy.constants as const
 import astropy.coordinates as coords
 import astropy.units as u
+import astropy.constants as consts
 import numpy as np
 from astropy.time import Time
 
@@ -53,7 +54,13 @@ class Astrometry(DelayComponent):
         )
 
         self.add_param(
-            floatParameter(name="PX", units="mas", value=0.0, description="Parallax")
+            floatParameter(
+                name="PX",
+                units="mas",
+                value=0.0,
+                description="Parallax",
+                tcb2tdb_scale_factor=(consts.c / u.au),
+            )
         )
 
         self.delay_funcs_component += [self.solar_system_geometric_delay]
