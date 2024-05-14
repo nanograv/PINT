@@ -89,43 +89,6 @@ class Chromatic(DelayComponent):
 
         return DMconst * d_cm_d_cmparam * (bfreq / u.MHz) ** (-alpha)
 
-    def d_delay_d_alphaparam(self, toas, param_name, acc_delay=None):
-        """Derivative of delay wrt to alpha parameter.
-
-        Parameters
-        ----------
-        toas : `pint.TOAs` object.
-            Input toas.
-        param_name : str
-            Derivative parameter name
-        acc_delay : `astropy.quantity` or `numpy.ndarray`
-            Accumulated delay values. This parameter is to keep the unified API,
-            but not used in this function.
-        """
-        try:
-            bfreq = self._parent.barycentric_radio_freq(toas)
-        except AttributeError:
-            warn("Using topocentric frequency for dedispersion!")
-            bfreq = toas.table["freq"]
-
-        param_unit = getattr(self, param_name).units
-        d_alpha_d_alphaparam = np.zeros(toas.ntoas) * (
-            u.dimensionless_unscaled / param_unit
-        )
-        cm = self.cm_value(toas)
-        alpha = self.alpha_value(toas)
-
-        for df in self.alpha_deriv_funcs[param_name]:
-            d_alpha_d_alphaparam += df(toas, param_name)
-
-        return (
-            -DMconst
-            * cm
-            * (bfreq / u.MHz) ** (-alpha)
-            * np.log((bfreq / u.MHz).to_value(u.dimensionless_unscaled))
-            * d_alpha_d_alphaparam
-        )
-
     def register_cm_deriv_funcs(self, func, param):
         """Register the derivative function in to the deriv_func dictionaries.
 
@@ -210,8 +173,6 @@ class ChromaticCM(Chromatic):
         for cm_name in base_cms:
             self.register_deriv_funcs(self.d_delay_d_cmparam, cm_name)
             self.register_cm_deriv_funcs(self.d_cm_d_CMs, cm_name)
-
-        self.register_deriv_funcs(self.d_delay_d_alphaparam, "TNCHROMIDX")
 
     def validate(self):
         """Validate the CM parameters input."""
