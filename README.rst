@@ -136,7 +136,12 @@ And for more details, please read and cite(!) the PINT paper_1_ and paper_2_ .
 Here are the BibTeX entries for these papers::
 
    @ARTICLE{LuoRansom+2021,
-         author = {{Luo}, Jing and {Ransom}, Scott and {Demorest}, Paul and {Ray}, Paul S. and {Archibald}, Anne and {Kerr}, Matthew and {Jennings}, Ross J. and {Bachetti}, Matteo and {van Haasteren}, Rutger and {Champagne}, Chloe A. and {Colen}, Jonathan and {Phillips}, Camryn and {Zimmerman}, Josef and {Stovall}, Kevin and {Lam}, Michael T. and {Jenet}, Fredrick A.},
+         author = {{Luo}, Jing and {Ransom}, Scott and {Demorest}, Paul and {Ray}, Paul S. and
+            {Archibald}, Anne and {Kerr}, Matthew and {Jennings}, Ross J. and {Bachetti}, Matteo and 
+            {van Haasteren}, Rutger and {Champagne}, Chloe A. and {Colen}, Jonathan and 
+            {Phillips}, Camryn and {Zimmerman}, Josef and {Stovall}, Kevin and {Lam}, Michael T. and 
+            {Jenet}, Fredrick A.
+         },
          title = "{PINT: A Modern Software Package for Pulsar Timing}",
          journal = {The Astrophysical Journal},
          year = 2021,
@@ -154,7 +159,14 @@ Here are the BibTeX entries for these papers::
    }
 
    @ARTICLE{SusobhananKaplan+2024,
-         author = {{Susobhanan}, Abhimanyu and {Kaplan}, David and {Archibald}, Anne and {Luo}, Jing and {Ray}, Paul and {Pennucci}, Timothy and {Ransom}, Scott and {Agazie}, Gabriella and {Fiore}, William and {Larsen}, Bjorn and {O'Neill}, Patrick and {van Haasteren}, Rutger and {Anumarlapudi}, Akash and {Bachetti}, Matteo and {Bhakta}, Deven and {Champagne}, Chloe and {Cromartie}, H. Thankful and {Demorest}, Paul and {Jennings}, Ross and {Kerr}, Matthew and {Levina}, Sasha and {McEwen}, Alexander and {Shapiro-Albert}, Brent and {Swiggum}, Joseph},
+         author = {{Susobhanan}, Abhimanyu and {Kaplan}, David and {Archibald}, Anne and 
+            {Luo}, Jing and {Ray}, Paul and {Pennucci}, Timothy and {Ransom}, Scott and 
+            {Agazie}, Gabriella and {Fiore}, William and {Larsen}, Bjorn and {O'Neill}, Patrick and 
+            {van Haasteren}, Rutger and {Anumarlapudi}, Akash and {Bachetti}, Matteo and 
+            {Bhakta}, Deven and {Champagne}, Chloe and {Cromartie}, H. Thankful and {Demorest}, Paul and 
+            {Jennings}, Ross and {Kerr}, Matthew and {Levina}, Sasha and {McEwen}, Alexander and 
+            {Shapiro-Albert}, Brent and {Swiggum}, Joseph
+         },
          title = "{PINT: Maximum-likelihood estimation of pulsar timing noise parameters}",
          journal = {arXiv e-prints},
          year = 2024,

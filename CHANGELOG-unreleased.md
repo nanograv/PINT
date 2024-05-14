@@ -20,6 +20,7 @@ the released changes.
 - `pintk` now reads and automatically converts TCB par files and par files with `BINARY T2`.
 - Test for `pint.utils.split_swx()`
 - Custom type definitions for type hints
+- PINT Paper BibTeX in the README file
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
 - Fix #1759 by changing order of comparison
