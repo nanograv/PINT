@@ -2,7 +2,14 @@
 
 import numpy as np
 
-from pint.models.parameter import MJDParameter
+import pint
+from pint.models.parameter import (
+    AngleParameter,
+    MJDParameter,
+    floatParameter,
+    maskParameter,
+    prefixParameter,
+)
 from loguru import logger as log
 
 __all__ = [
@@ -19,7 +26,9 @@ IFTE_KM1 = np.longdouble("1.55051979176e-8")
 IFTE_K = 1 + IFTE_KM1
 
 
-def scale_parameter(model, param, n, backwards):
+def scale_parameter(
+    model: "pint.model.timing_model.TimingModel", param: str, n: int, backwards: bool
+):
     """Scale a parameter x by a power of IFTE_K
         x_tdb = x_tcb * IFTE_K**n
 
@@ -59,7 +68,9 @@ def scale_parameter(model, param, n, backwards):
             par.uncertainty_value *= factor
 
 
-def transform_mjd_parameter(model, param, backwards):
+def transform_mjd_parameter(
+    model: "pint.model.timing_model.TimingModel", param: str, backwards: bool
+):
     """Convert an MJD from TCB to TDB or vice versa.
         t_tdb = (t_tcb - IFTE_MJD0) / IFTE_K + IFTE_MJD0
         t_tcb = (t_tdb - IFTE_MJD0) * IFTE_K + IFTE_MJD0
@@ -78,40 +89,34 @@ def transform_mjd_parameter(model, param, backwards):
 
     if hasattr(model, param) and getattr(model, param).quantity is not None:
         par = getattr(model, param)
-        assert isinstance(par, MJDParameter)
+        assert isinstance(par, MJDParameter) or (
+            isinstance(par, prefixParameter)
+            and isinstance(par.param_comp, MJDParameter)
+        )
 
         par.value = (par.value - tref) * factor + tref
         if par.uncertainty_value is not None:
             par.uncertainty_value *= factor
 
 
-def convert_tcb_tdb(model, backwards=False):
+def convert_tcb_tdb(
+    model: "pint.model.timing_model.TimingModel", backwards: bool = False
+):
     """This function performs a partial conversion of a model
     specified in TCB to TDB. While this should be sufficient as
     a starting point, the resulting parameters are only approximate
     and the model should be re-fit.
 
-    This is based on the `transform` plugin of tempo2.
-
-    The following parameters are converted to TDB:
-        1. Spin frequency, its derivatives and spin epoch
-        2. Sky coordinates, proper motion and the position epoch
-        3. DM, DM derivatives and DM epoch
-        4. Keplerian binary parameters and FB1
+    This is roughly based on the `transform` plugin of tempo2, but uses
+    a different algorithm and does a more complete conversion.
 
     The following parameters are NOT converted although they are
     in fact affected by the TCB to TDB conversion:
-        1. Parallax
-        2. TZRMJD and TZRFRQ
-        2. DMX parameters
-        3. Solar wind parameters
-        4. Binary post-Keplerian parameters including Shapiro delay
-           parameters (except FB1)
-        5. Jumps and DM Jumps
-        6. FD parameters
-        7. EQUADs
-        8. Red noise parameters including FITWAVES, powerlaw red noise and
-           powerlaw DM noise parameters
+        1. TZRMJD and TZRFRQ
+        2. DMJUMPs (the wideband kind)
+        6. FD parameters and FD jumps
+        7. EQUADs and ECORRs.
+        8. GP Red noise and GP DM noise parameters
 
     Parameters
     ----------
@@ -135,37 +140,20 @@ def convert_tcb_tdb(model, backwards=False):
         "the resulting timing model should be re-fit to get reliable results."
     )
 
-    if "Spindown" in model.components:
-        for n, Fn_par in model.get_prefix_mapping("F").items():
-            scale_parameter(model, Fn_par, n + 1, backwards)
-
-        transform_mjd_parameter(model, "PEPOCH", backwards)
-
-    if "AstrometryEquatorial" in model.components:
-        scale_parameter(model, "PMRA", 1, backwards)
-        scale_parameter(model, "PMDEC", 1, backwards)
-    elif "AstrometryEcliptic" in model.components:
-        scale_parameter(model, "PMELAT", 1, backwards)
-        scale_parameter(model, "PMELONG", 1, backwards)
-    transform_mjd_parameter(model, "POSEPOCH", backwards)
-
-    # Although DM has the unit pc/cm^3, the quantity that enters
-    # the timing model is DMconst*DM, which has dimensions
-    # of frequency. Hence, DM and its derivatives will be
-    # scaled by IFTE_K**(i+1).
-    if "DispersionDM" in model.components:
-        scale_parameter(model, "DM", 1, backwards)
-        for n, DMn_par in model.get_prefix_mapping("DM").items():
-            scale_parameter(model, DMn_par, n + 1, backwards)
-        transform_mjd_parameter(model, "DMEPOCH", backwards)
-
-    if hasattr(model, "BINARY") and getattr(model, "BINARY").value is not None:
-        transform_mjd_parameter(model, "T0", backwards)
-        transform_mjd_parameter(model, "TASC", backwards)
-        scale_parameter(model, "PB", -1, backwards)
-        scale_parameter(model, "FB0", 1, backwards)
-        scale_parameter(model, "FB1", 2, backwards)
-        scale_parameter(model, "A1", -1, backwards)
+    for par in model.params:
+        param = model[par]
+        if isinstance(param, (floatParameter, AngleParameter, maskParameter)) or (
+            isinstance(param, prefixParameter)
+            and isinstance(param.param_comp, (floatParameter, AngleParameter))
+        ):
+            if param.convert_tcb2tdb:
+                scale_parameter(model, par, -param.effective_dimensionality, backwards)
+        elif isinstance(param, MJDParameter) or (
+            isinstance(param, prefixParameter)
+            and isinstance(param.param_comp, MJDParameter)
+        ):
+            if param.convert_tcb2tdb:
+                transform_mjd_parameter(model, "PEPOCH", backwards)
 
     model.UNITS.value = target_units
 
