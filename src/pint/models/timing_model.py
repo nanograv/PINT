@@ -2486,11 +2486,7 @@ class TimingModel:
                                 ufloat(otherpar.value, otherpar.uncertainty.value)
                             )
                         else:
-                            # otherpar must have no uncertainty
-                            if otherpar.value is not None:
-                                value2[pn] = str(otherpar.value)
-                            else:
-                                value2[pn] = "Missing"
+                            value2[pn] = str(otherpar.value)
                     else:
                         value2[pn] = "Missing"
                     if value2[pn] == "Missing":
@@ -2641,9 +2637,7 @@ class TimingModel:
                         and not "unc_rat" in m
                     ):
                         sout = colorize(sout, "red")
-                    elif (
-                        "change" in m or "diff1" in m or "diff2" in m and "unc_rat" in m
-                    ):
+                    elif "diff2" in m:
                         sout = colorize(sout, "red", bg_color="green")
                     elif "unc_rat" in m:
                         sout = colorize(sout, bg_color="green")
@@ -2888,7 +2882,7 @@ class TimingModel:
         for cp in self.components.values():
             cp.setup()
 
-    def __contains__(self, name):
+    def __contains__(self, name: str) -> bool:
         return name in self.params
 
     def __getitem__(self, name: str) -> Parameter:
