@@ -13,11 +13,16 @@ the released changes.
 - Avoided unnecessary `TOAs` table slices in `SolarSystemShapiro`
 - Allow "CLK UNCORR" in par files (indicates no GPS or BIPM corrections). 
 - Better documentation for `akaike_information_criterion()`
+- `funcParameter`s are no longer listed in the `pintk` interface.
+- Updated location of CCERA
 ### Added
 - `bayesian_information_criterion()` function 
-- test for `pint.utils.split_swx()` 
+- `pintk` now reads and automatically converts TCB par files and par files with `BINARY T2`.
+- Test for `pint.utils.split_swx()`
+- Custom type definitions for type hints
 - `pint.models.chromatic_model.Chromatic` as the base class for variable-index chromatic delays.
 - `pint.models.chromatic_model.ChromaticCM` for a Taylor series representation of the variable-index chromatic delay.
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
+- Fix #1759 by changing order of comparison
 ### Removed
