@@ -863,6 +863,7 @@ class floatParameter(Parameter):
         self.quantity = value.n * units
         self.uncertainty = value.s * units if value.s > 0 else None
 
+    @property
     def effective_dimensionality(self) -> int:
         """Compute the effective dimensionality for TCB <-> TDB conversion."""
         return compute_effective_dimensionality(
@@ -1124,6 +1125,7 @@ class MJDParameter(Parameter):
         self.value_type = time.Time
         self.paramType = "MJDParameter"
         self.special_arg += ["time_scale"]
+        self.effective_dimensionality = 1
 
     def str_quantity(self, quan):
         return time_to_mjd_string(quan)
@@ -1258,6 +1260,11 @@ class AngleParameter(Parameter):
     aliases : list, optional
         An optional list of strings specifying alternate names that can also
         be accepted for this parameter.
+    convert_tcb2tdb: bool
+        Whether to convert this parameter during TCB <-> TDB conversion.
+    tcb2tdb_scale_factor: astropy.units.Quantity
+        The scaling factor to be applied while computing the effective
+        dimensionality. The default is 1.
 
     Example
     -------
@@ -1277,6 +1284,8 @@ class AngleParameter(Parameter):
         frozen=True,
         continuous=True,
         aliases=None,
+        convert_tcb2tdb=True,
+        tcb2tdb_scale_factor=u.Quantity(1),
         **kwargs,
     ):
         self._str_unit = units
@@ -1305,6 +1314,9 @@ class AngleParameter(Parameter):
             continuous=continuous,
             aliases=aliases,
         )
+
+        self.convert_tcb2tdb = convert_tcb2tdb
+        self.tcb2tdb_scale_factor = tcb2tdb_scale_factor
 
     def _get_value(self, quan):
         # return Angle(x * self.unit_identifier[units.lower()][0])
@@ -1390,6 +1402,13 @@ class AngleParameter(Parameter):
         value = self.quantity.to_value(units) if self.quantity is not None else 0
         error = self.uncertainty.to_value(units) if self.uncertainty is not None else 0
         return ufloat(value, error)
+
+    @property
+    def effective_dimensionality(self) -> int:
+        """Compute the effective dimensionality for TCB <-> TDB conversion."""
+        return compute_effective_dimensionality(
+            self.quantity, self.tcb2tdb_scale_factor
+        )
 
 
 class prefixParameter:
@@ -1721,9 +1740,10 @@ class prefixParameter:
         error = self.uncertainty.to_value(units) if self.uncertainty is not None else 0
         return ufloat(value, error)
 
+    @property
     def effective_dimensionality(self) -> int:
         """Compute the effective dimensionality for TCB <-> TDB conversion."""
-        return self.param_comp.effective_dimensionality()
+        return self.param_comp.effective_dimensionality
 
 
 class maskParameter(floatParameter):
