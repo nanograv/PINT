@@ -742,6 +742,7 @@ class SolarWindDispersionX(SolarWindDispersionBase):
                 description="Max Solar Wind DM",
                 parameter_type="float",
                 frozen=frozen,
+                tcb2tdb_scale_factor=DMconst,
             )
         )
         self.add_param(
