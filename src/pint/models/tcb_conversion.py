@@ -136,17 +136,21 @@ def convert_tcb_tdb(model: TimingModel, backwards: bool = False):
 
     for par in model.params:
         param = model[par]
-        if isinstance(param, (floatParameter, AngleParameter, maskParameter)) or (
-            isinstance(param, prefixParameter)
-            and isinstance(param.param_comp, (floatParameter, AngleParameter))
+        if (
+            param.quantity is not None
+            and hasattr(param, "convert_tcb2tdb")
+            and param.convert_tcb2tdb
         ):
-            if param.quantity is not None and param.convert_tcb2tdb:
+            if isinstance(param, (floatParameter, AngleParameter, maskParameter)) or (
+                isinstance(param, prefixParameter)
+                and isinstance(param.param_comp, (floatParameter, AngleParameter))
+            ):
+
                 scale_parameter(model, par, -param.effective_dimensionality, backwards)
-        elif isinstance(param, MJDParameter) or (
-            isinstance(param, prefixParameter)
-            and isinstance(param.param_comp, MJDParameter)
-        ):
-            if param.quantity is not None and param.convert_tcb2tdb:
+            elif isinstance(param, MJDParameter) or (
+                isinstance(param, prefixParameter)
+                and isinstance(param.param_comp, MJDParameter)
+            ):
                 transform_mjd_parameter(model, par, backwards)
 
     model["UNITS"].value = target_units
