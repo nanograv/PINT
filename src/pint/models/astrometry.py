@@ -14,7 +14,8 @@ from astropy.time import Time
 from loguru import logger as log
 
 from erfa import ErfaWarning, pmsafe
-from pint import ls, time_like, quantity_like
+from pint import ls
+from pint.types import time_like, quantity_like
 from pint.models.parameter import (
     AngleParameter,
     MJDParameter,
