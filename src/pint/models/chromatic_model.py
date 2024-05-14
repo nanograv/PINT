@@ -146,26 +146,6 @@ class Chromatic(DelayComponent):
         else:
             self.cm_deriv_funcs[pn] += [func]
 
-    # def register_alpha_deriv_funcs(self, func, param):
-    #     """Register the derivative function in to the deriv_func dictionaries.
-
-    #     Parameters
-    #     ----------
-    #     func : callable
-    #         Calculates the derivative
-    #     param : str
-    #         Name of parameter the derivative is with respect to
-
-    #     """
-    #     pn = self.match_param_aliases(param)
-
-    #     if pn not in list(self.alpha_deriv_funcs.keys()):
-    #         self.alpha_deriv_funcs[pn] = [func]
-    #     elif func in self.alpha_deriv_funcs[pn]:
-    #         return
-    #     else:
-    #         self.alpha_deriv_funcs[pn] += [func]
-
 
 class ChromaticCM(Chromatic):
     """Simple chromatic delay model.
@@ -220,7 +200,6 @@ class ChromaticCM(Chromatic):
         )
 
         self.cm_value_funcs += [self.base_cm]
-        # self.alpha_value_funcs += [self.base_alpha]
         self.delay_funcs_component += [self.constant_chromatic_delay]
 
     def setup(self):
@@ -233,7 +212,6 @@ class ChromaticCM(Chromatic):
             self.register_cm_deriv_funcs(self.d_cm_d_CMs, cm_name)
 
         self.register_deriv_funcs(self.d_delay_d_alphaparam, "TNCHROMIDX")
-        # self.register_alpha_deriv_funcs(self.d_alpha_d_CMIDX, "TNCHROMIDX")
 
     def validate(self):
         """Validate the CM parameters input."""
@@ -323,12 +301,6 @@ class ChromaticCM(Chromatic):
         dt = (toas["tdbld"] - CMEPOCH) * u.day
         dt_value = (dt.to(u.yr)).value
         return taylor_horner(dt_value, cm_terms) * (cmu / par.units)
-
-    # def d_alpha_d_CMIDX(
-    #     self, toas, param_name, acc_delay=None
-    # ):  # NOTE we should have a better name for this.)
-    #     """Derivatives of alpha wrt the CM index."""
-    #     return np.ones(len(toas)) * u.dimensionless_unscaled
 
     def change_cmepoch(self, new_epoch):
         """Change CMEPOCH to a new value and update CM accordingly.
