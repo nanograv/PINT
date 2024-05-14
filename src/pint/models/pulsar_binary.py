@@ -4,11 +4,11 @@ This module if for wrapping standalone binary models so that they work
 as PINT timing models.
 """
 
-
 import astropy.units as u
 import contextlib
 import numpy as np
 from astropy.coordinates import SkyCoord
+import astropy.constants as consts
 from loguru import logger as log
 
 from pint import ls
@@ -105,6 +105,7 @@ class PulsarBinary(DelayComponent):
                 name="A1",
                 units=ls,
                 description="Projected semi-major axis of pulsar orbit, ap*sin(i)",
+                tcb2tdb_scale_factor=(1 / consts.c),
             )
         )
         # NOTE: the DOT here takes the value and times 1e-12, tempo/tempo2 can
@@ -118,6 +119,7 @@ class PulsarBinary(DelayComponent):
                 unit_scale=True,
                 scale_factor=1e-12,
                 scale_threshold=1e-7,
+                tcb2tdb_scale_factor=(1 / consts.c),
             )
         )
         self.add_param(
@@ -161,6 +163,7 @@ class PulsarBinary(DelayComponent):
                 name="M2",
                 units=u.M_sun,
                 description="Companion mass",
+                tcb2tdb_scale_factor=(consts.G / consts.c**3),
             )
         )
         self.add_param(
@@ -310,11 +313,11 @@ class PulsarBinary(DelayComponent):
                 method_name = f"{p.lower()}_func"
                 try:
                     par_method = getattr(self.binary_instance, method_name)
-                except AttributeError:
+                except AttributeError as e:
                     raise MissingParameter(
                         self.binary_model_name,
                         f"{p} is required for '{self.binary_model_name}'.",
-                    )
+                    ) from e
                 par_method()
 
     # With new parameter class set up, do we need this?
@@ -402,13 +405,13 @@ class PulsarBinary(DelayComponent):
             if hasattr(self._parent, par) or set(alias).intersection(self.params):
                 try:
                     pint_bin_name = self._parent.match_param_aliases(par)
-                except UnknownParameter:
+                except UnknownParameter as e:
                     if par in self.internal_params:
                         pint_bin_name = par
                     else:
                         raise UnknownParameter(
                             f"Unable to find {par} in the parent model"
-                        )
+                        ) from e
                 binObjpar = getattr(self._parent, pint_bin_name)
 
                 # make sure we aren't passing along derived parameters to the binary instance
