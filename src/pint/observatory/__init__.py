@@ -197,7 +197,7 @@ class Observatory:
     @staticmethod
     def gps_correction(t, limits="warn"):
         """Compute the GPS clock corrections for times t.
-        
+
         Parameters
         ----------
         t : astropy.time.Time
@@ -211,7 +211,7 @@ class Observatory:
     @staticmethod
     def bipm_correction(t, bipm_version=bipm_default, limits="warn"):
         """Compute the GPS clock corrections for times t.
-        
+
         Parameters
         ----------
         t : astropy.time.Time

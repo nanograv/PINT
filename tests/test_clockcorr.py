@@ -127,10 +127,10 @@ def test_bipm_corr():
     # Check that to_TOA_list undoes clock corrections when requested and leaves them in when not
     tsZZ = deepcopy(tsYY)
     lst = tsYY.to_TOA_list(undo_clkcorr=False)
-    assert ('clkcorr' in lst[1].flags)
+    assert "clkcorr" in lst[1].flags
 
     lst = tsZZ.to_TOA_list(undo_clkcorr=True)
-    assert ('clkcorr' not in lst[1].flags)
+    assert "clkcorr" not in lst[1].flags
 
     # Now make sure corrections are not applied when not requested
     timfile = io.StringIO(toastr)
