@@ -128,9 +128,46 @@ Want to do something new? Submit a github `issue <https://github.com/nanograv/PI
   
 .. _documentation:   http://nanograv-pint.readthedocs.io/en/latest/
 
-And for more details, please read and cite(!) the PINT paper_.
+And for more details, please read and cite(!) the PINT paper_1_ and paper_2_ .
 
-.. _paper:   https://ui.adsabs.harvard.edu/abs/2021ApJ...911...45L/abstract
+.. _paper_1:   https://ui.adsabs.harvard.edu/abs/2021ApJ...911...45L/abstract
+.. _paper_2:   https://ui.adsabs.harvard.edu/abs/2024arXiv240501977S/abstract
+
+Here are the BibTeX entries for these papers::
+
+   @ARTICLE{LuoRansom+2021,
+         author = {{Luo}, Jing and {Ransom}, Scott and {Demorest}, Paul and {Ray}, Paul S. and {Archibald}, Anne and {Kerr}, Matthew and {Jennings}, Ross J. and {Bachetti}, Matteo and {van Haasteren}, Rutger and {Champagne}, Chloe A. and {Colen}, Jonathan and {Phillips}, Camryn and {Zimmerman}, Josef and {Stovall}, Kevin and {Lam}, Michael T. and {Jenet}, Fredrick A.},
+         title = "{PINT: A Modern Software Package for Pulsar Timing}",
+         journal = {The Astrophysical Journal},
+         year = 2021,
+         month = apr,
+         volume = {911},
+         number = {1},
+         eid = {45},
+         pages = {45},
+         doi = {10.3847/1538-4357/abe62f},
+         archivePrefix = {arXiv},
+         eprint = {2012.00074},
+         primaryClass = {astro-ph.IM},
+         adsurl = {https://ui.adsabs.harvard.edu/abs/2021ApJ...911...45L},
+         adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+   }
+
+   @ARTICLE{SusobhananKaplan+2024,
+         author = {{Susobhanan}, Abhimanyu and {Kaplan}, David and {Archibald}, Anne and {Luo}, Jing and {Ray}, Paul and {Pennucci}, Timothy and {Ransom}, Scott and {Agazie}, Gabriella and {Fiore}, William and {Larsen}, Bjorn and {O'Neill}, Patrick and {van Haasteren}, Rutger and {Anumarlapudi}, Akash and {Bachetti}, Matteo and {Bhakta}, Deven and {Champagne}, Chloe and {Cromartie}, H. Thankful and {Demorest}, Paul and {Jennings}, Ross and {Kerr}, Matthew and {Levina}, Sasha and {McEwen}, Alexander and {Shapiro-Albert}, Brent and {Swiggum}, Joseph},
+         title = "{PINT: Maximum-likelihood estimation of pulsar timing noise parameters}",
+         journal = {arXiv e-prints},
+         year = 2024,
+         month = may,
+         eid = {arXiv:2405.01977},
+         pages = {arXiv:2405.01977},
+         doi = {10.48550/arXiv.2405.01977},
+         archivePrefix = {arXiv},
+         eprint = {2405.01977},
+         primaryClass = {astro-ph.IM},
+         adsurl = {https://ui.adsabs.harvard.edu/abs/2024arXiv240501977S},
+         adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+   }
 
 Articles that cite the PINT paper can be found in an ADS `Library <https://ui.adsabs.harvard.edu/search/q=citations(bibcode%3A2021ApJ...911...45L)&sort=date%20desc%2C%20bibcode%20desc&p_=0>`_.
 A list of software packages that use PINT can be found `here <https://nanograv-pint.readthedocs.io/en/latest/dependent-packages.html>`_.
