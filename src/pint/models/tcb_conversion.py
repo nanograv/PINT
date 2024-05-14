@@ -60,7 +60,7 @@ def scale_parameter(model: TimingModel, param: str, n: int, backwards: bool):
     factor = IFTE_K ** (p * n)
 
     if hasattr(model, param) and getattr(model, param).quantity is not None:
-        par = getattr(model, param)
+        par = model[param]
         par.value *= factor
         if par.uncertainty_value is not None:
             par.uncertainty_value *= factor
@@ -83,7 +83,7 @@ def transform_mjd_parameter(model: TimingModel, param: str, backwards: bool):
     factor = IFTE_K if backwards else 1 / IFTE_K
     tref = IFTE_MJD0
 
-    if hasattr(model, param) and getattr(model, param).quantity is not None:
+    if hasattr(model, param) and model[param].quantity is not None:
         par = getattr(model, param)
         assert isinstance(par, MJDParameter) or (
             isinstance(par, prefixParameter)
@@ -122,8 +122,8 @@ def convert_tcb_tdb(model: TimingModel, backwards: bool = False):
 
     target_units = "TCB" if backwards else "TDB"
 
-    if model.UNITS.value == target_units or (
-        model.UNITS.value is None and not backwards
+    if model["UNITS"].value == target_units or (
+        model["UNITS"].value is None and not backwards
     ):
         log.warning("The input par file is already in the target units. Doing nothing.")
         return
@@ -149,6 +149,6 @@ def convert_tcb_tdb(model: TimingModel, backwards: bool = False):
             if param.quantity is not None and param.convert_tcb2tdb:
                 transform_mjd_parameter(model, par, backwards)
 
-    model.UNITS.value = target_units
+    model["UNITS"].value = target_units
 
     model.validate(allow_tcb=backwards)

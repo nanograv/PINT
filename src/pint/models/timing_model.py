@@ -2891,7 +2891,7 @@ class TimingModel:
     def __contains__(self, name):
         return name in self.params
 
-    def __getitem__(self, name):
+    def __getitem__(self, name: str) -> Parameter:
         if name in self.top_level_params:
             return getattr(self, name)
         for cp in self.components.values():
