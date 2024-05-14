@@ -146,14 +146,14 @@ def convert_tcb_tdb(
             isinstance(param, prefixParameter)
             and isinstance(param.param_comp, (floatParameter, AngleParameter))
         ):
-            if param.convert_tcb2tdb:
+            if param.quantity is not None and param.convert_tcb2tdb:
                 scale_parameter(model, par, -param.effective_dimensionality, backwards)
         elif isinstance(param, MJDParameter) or (
             isinstance(param, prefixParameter)
             and isinstance(param.param_comp, MJDParameter)
         ):
-            if param.convert_tcb2tdb:
-                transform_mjd_parameter(model, "PEPOCH", backwards)
+            if param.quantity is not None and param.convert_tcb2tdb:
+                transform_mjd_parameter(model, par, backwards)
 
     model.UNITS.value = target_units
 
