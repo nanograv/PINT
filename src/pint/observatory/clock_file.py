@@ -148,6 +148,10 @@ class ClockFile:
         included ClockFile object; anything still not covered is treated
         according to ``limits``.
 
+        Note: The correction is evaluated at `t.mjd` without regard to what the scale of `t`.
+        Generally the times in observatory clock correction files are represented in UTC,
+        but nothing is done here to enforce that.
+
         Parameters
         ----------
         t : astropy.time.Time

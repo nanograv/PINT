@@ -15,6 +15,9 @@ the released changes.
 - Better documentation for `akaike_information_criterion()`
 - `funcParameter`s are no longer listed in the `pintk` interface.
 - Updated location of CCERA
+- Removed `include_bipm`, `include_gps`, and `bipm_version` from the Observatory class. Now they are passed as arguments to `site.clock_correction()`
+- The following observatories no longer have a default of include_bipm=False: magic, lst, virgo, lho, llo, geo600, kagra, hess, hawc
+- The following observatory no longer has a default of include_gps=False: hawc
 ### Added
 - `bayesian_information_criterion()` function 
 - `pintk` now reads and automatically converts TCB par files and par files with `BINARY T2`.
@@ -23,4 +26,5 @@ the released changes.
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
 - Fix #1759 by changing order of comparison
+- Fix #1766 by correcting logic and more clearly naming argument (clkcorr->undo_clkcorr)
 ### Removed

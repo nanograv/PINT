@@ -196,14 +196,29 @@ class Observatory:
 
     @staticmethod
     def gps_correction(t, limits="warn"):
-        """Compute the GPS clock corrections for times t."""
+        """Compute the GPS clock corrections for times t.
+        
+        Parameters
+        ----------
+        t : astropy.time.Time
+            An array-valued Time object specifying the times at which to evaluate the
+            GPS clock correction.
+        """
         log.info("Applying GPS to UTC clock correction (~few nanoseconds)")
         _load_gps_clock()
         return _gps_clock.evaluate(t, limits=limits)
 
     @staticmethod
     def bipm_correction(t, bipm_version=bipm_default, limits="warn"):
-        """Compute the GPS clock corrections for times t."""
+        """Compute the GPS clock corrections for times t.
+        
+        Parameters
+        ----------
+        t : astropy.time.Time
+            An array-valued Time object specifying the times at which to evaluate the
+            GPS clock correction.
+
+        """
         log.info(f"Applying TT(TAI) to TT({bipm_version}) clock correction (~27 us)")
         tt2tai = 32.184 * 1e6 * u.us
         _load_bipm_clock(bipm_version)

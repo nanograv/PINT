@@ -81,8 +81,9 @@ def load_Fermi_TOAs(
     errors=_default_uncertainty,
 ):
     """
-    Read photon event times out of a Fermi FT1 file and return a list of PINT :class:`~pint.toa.TOA` objects.
+    DEPRECATED: Read photon event times out of a Fermi FT1 file and return a list of PINT :class:`~pint.toa.TOA` objects.
 
+    Deprecated in favor of get_Fermi_TOAs(), which returns a TOAs object instead of a list of TOAs
     Correctly handles raw FT1 files, or ones processed with gtbary
     to have barycentered or geocentered TOAs.
 
@@ -139,7 +140,7 @@ def load_Fermi_TOAs(
         fermiobs=fermiobs,
         errors=errors,
     )
-    return t.to_TOA_list()
+    return t.to_TOA_list(undo_clkcorr=False)  # Leave clock corrections included
 
 
 def get_Fermi_TOAs(

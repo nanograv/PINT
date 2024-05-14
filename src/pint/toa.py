@@ -434,6 +434,10 @@ def get_TOAs_list(
             bipm_version=bipm_version,
             limits=limits,
         )
+    else:
+        log.debug(
+            f"Not applying clock corrections since at least some TOAs already have clkcorr in their flags."
+        )
     if "tdb" not in t.table.colnames:
         t.compute_TDBs(method=tdb_method, ephem=ephem)
     if "ssb_obs_pos" not in t.table.colnames:
@@ -1606,7 +1610,7 @@ class TOAs:
         """Whether or not the data have wideband TOA values"""
         return self.is_wideband()
 
-    def to_TOA_list(self, clkcorr=False):
+    def to_TOA_list(self, undo_clkcorr=True):
         """Turn a :class:`pint.toa.TOAs` object into a list of :class:`pint.toa.TOA` objects
 
         This effectively undoes :func:`pint.toa.get_TOAs_list`, optionally undoing clock corrections too
@@ -1626,7 +1630,7 @@ class TOAs:
         for i in range(len(self)):
             t = self.table["mjd"][i]
             f = self.table["flags"][i]
-            if not clkcorr:
+            if undo_clkcorr:
                 t -= clkcorrs[i]
                 if "clkcorr" in f:
                     del f["clkcorr"]
