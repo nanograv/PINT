@@ -15,6 +15,7 @@ the released changes.
 - Better documentation for `akaike_information_criterion()`
 - `funcParameter`s are no longer listed in the `pintk` interface.
 - Updated location of CCERA
+- New algorithm for TCB <-> TDB conversion
 ### Added
 - `bayesian_information_criterion()` function 
 - `pintk` now reads and automatically converts TCB par files and par files with `BINARY T2`.
