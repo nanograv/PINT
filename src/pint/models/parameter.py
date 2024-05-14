@@ -1108,6 +1108,8 @@ class MJDParameter(Parameter):
         continuous=True,
         aliases=None,
         time_scale="tdb",
+        convert_tcb2tdb=True,
+        tcb2tdb_scale_factor=u.Quantity(1),
         **kwargs,
     ):
         self._time_scale = time_scale
@@ -1125,7 +1127,9 @@ class MJDParameter(Parameter):
         self.value_type = time.Time
         self.paramType = "MJDParameter"
         self.special_arg += ["time_scale"]
-        self.effective_dimensionality = 1
+
+        self.convert_tcb2tdb = convert_tcb2tdb
+        self.tcb2tdb_scale_factor = tcb2tdb_scale_factor
 
     def str_quantity(self, quan):
         return time_to_mjd_string(quan)
@@ -1232,6 +1236,13 @@ class MJDParameter(Parameter):
         uncertainties.ufloat
         """
         return ufloat(self.value, self.uncertainty_value)
+
+    @property
+    def effective_dimensionality(self) -> int:
+        """Compute the effective dimensionality for TCB <-> TDB conversion."""
+        return compute_effective_dimensionality(
+            self.quantity, self.tcb2tdb_scale_factor
+        )
 
 
 class AngleParameter(Parameter):

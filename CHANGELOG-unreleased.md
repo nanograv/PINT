@@ -20,7 +20,7 @@ the released changes.
 - `pintk` now reads and automatically converts TCB par files and par files with `BINARY T2`.
 - Test for `pint.utils.split_swx()`
 - Custom type definitions for type hints
-- `convert_tcb2tdb`, `tcb2tdb_scaling_factor`, and `effective_dimensionality` attributes for `floatParameter`s, `MJDParameter`s, `AngleParameter`s, `maskParameter`s, and `prefixParameter`s.
+- `convert_tcb2tdb`, `tcb2tdb_scale_factor`, and `effective_dimensionality` attributes for `floatParameter`s, `MJDParameter`s, `AngleParameter`s, `maskParameter`s, and `prefixParameter`s.
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
 - Fix #1759 by changing order of comparison
