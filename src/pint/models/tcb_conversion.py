@@ -145,7 +145,6 @@ def convert_tcb_tdb(model: TimingModel, backwards: bool = False):
                 isinstance(param, prefixParameter)
                 and isinstance(param.param_comp, (floatParameter, AngleParameter))
             ):
-
                 scale_parameter(model, par, -param.effective_dimensionality, backwards)
             elif isinstance(param, MJDParameter) or (
                 isinstance(param, prefixParameter)
