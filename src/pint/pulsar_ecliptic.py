@@ -1,20 +1,22 @@
 import sys
 import numpy as np
+from typing import Dict
 
 import astropy.coordinates as coord
 import astropy.units as u
 from astropy.coordinates import QuantityAttribute, frame_transform_graph
 from astropy.coordinates.matrix_utilities import rotation_matrix
+from pint.utils import interesting_lines, lines_of
+from pint.types import file_like, quantity_like
 
 import pint.config
-from pint.utils import interesting_lines, lines_of
 
 __all__ = ["OBL", "PulsarEcliptic"]
 
 
 # Load obliquity data
 # Assume the data file is in the ./datafile directory
-def load_obliquity_file(filename):
+def load_obliquity_file(filename: file_like) -> Dict[str, u.Quantity]:
     obliquity_data = {}
     for l in interesting_lines(lines_of(filename), comments="#"):
         if l.startswith("Obliquity of the ecliptic"):
@@ -64,7 +66,7 @@ class PulsarEcliptic(coord.BaseCoordinateFrame):
         super().__init__(*args, **kwargs)
 
 
-def _ecliptic_rotation_matrix_pulsar(obl):
+def _ecliptic_rotation_matrix_pulsar(obl: quantity_like) -> np.ndarray:
     """Here we only do the obliquity angle rotation. Astropy will add the
     precession-nutation correction.
     """
@@ -74,14 +76,18 @@ def _ecliptic_rotation_matrix_pulsar(obl):
 @frame_transform_graph.transform(
     coord.DynamicMatrixTransform, coord.ICRS, PulsarEcliptic
 )
-def icrs_to_pulsarecliptic(from_coo, to_frame):
+def icrs_to_pulsarecliptic(
+    from_coo: coord.BaseCoordinateFrame, to_frame: coord.BaseCoordinateFrame
+) -> np.ndarray:
     return _ecliptic_rotation_matrix_pulsar(to_frame.obliquity)
 
 
 @frame_transform_graph.transform(
     coord.DynamicMatrixTransform, PulsarEcliptic, coord.ICRS
 )
-def pulsarecliptic_to_icrs(from_coo, to_frame):
+def pulsarecliptic_to_icrs(
+    from_coo: coord.BaseCoordinateFrame, to_frame: coord.BaseCoordinateFrame
+) -> np.ndarray:
     return icrs_to_pulsarecliptic(to_frame, from_coo).T
 
 
@@ -91,7 +97,9 @@ def pulsarecliptic_to_icrs(from_coo, to_frame):
     PulsarEcliptic,
     PulsarEcliptic,
 )
-def pulsarecliptic_to_pulsarecliptic(from_coo, to_frame):
+def pulsarecliptic_to_pulsarecliptic(
+    from_coo: coord.BaseCoordinateFrame, to_frame: coord.BaseCoordinateFrame
+) -> np.ndarray:
     return np.matmul(
         icrs_to_pulsarecliptic(coord.ICRS, from_coo).T,
         icrs_to_pulsarecliptic(coord.ICRS, to_frame),

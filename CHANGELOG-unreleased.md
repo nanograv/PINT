@@ -13,11 +13,14 @@ the released changes.
 - Avoided unnecessary `TOAs` table slices in `SolarSystemShapiro`
 - Allow "CLK UNCORR" in par files (indicates no GPS or BIPM corrections). 
 - Better documentation for `akaike_information_criterion()`
+- Type hinting for most of the `pint.utils` module
 - `funcParameter`s are no longer listed in the `pintk` interface.
 - Updated location of CCERA
 - New algorithm for TCB <-> TDB conversion
 ### Added
 - `bayesian_information_criterion()` function 
+- `dmx_setup` function
+- `funcParameter`s are no longer listed in the `pintk` interface.
 - `pintk` now reads and automatically converts TCB par files and par files with `BINARY T2`.
 - Test for `pint.utils.split_swx()`
 - Custom type definitions for type hints
