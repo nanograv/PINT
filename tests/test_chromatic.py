@@ -20,7 +20,7 @@ def test_chromatic_cm():
     assert "CM" in m
     assert "CM1" in m
     assert "CMEPOCH" in m
-    assert "CMIDX" in m and m.CMIDX.value == 4
+    assert "TNCHROMIDX" in m and m.TNCHROMIDX.value == 4
     assert len(m.get_CM_terms()) == 3
     assert u.Unit(m.CM_derivative_unit(1)) == m.CM1.units
 
@@ -33,7 +33,7 @@ def test_chromatic_cm_fit():
         PEPOCH  55000
         DM      10 0
         CM      10 1
-        CMIDX   4 1
+        TNCHROMIDX   4 
         TZRSITE   gbt
         TZRMJD  55000
         TZRFRQ  500
@@ -47,7 +47,3 @@ def test_chromatic_cm_fit():
     ftr.fit_toas(maxiter=5)
 
     assert np.abs(ftr.model.CM.value - m.CM.value) / ftr.model.CM.uncertainty_value < 3
-    assert (
-        np.abs(ftr.model.CMIDX.value - m.CMIDX.value) / ftr.model.CM.uncertainty_value
-        < 3
-    )
