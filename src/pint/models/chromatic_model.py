@@ -239,7 +239,11 @@ class ChromaticCM(Chromatic):
         """Validate the CM parameters input."""
         super().validate()
         # If CM1 is set, we need CMEPOCH
-        if self.CM1.value is not None and self.CM1.value != 0.0 and self.CMEPOCH.value is None:
+        if (
+            self.CM1.value is not None
+            and self.CM1.value != 0.0
+            and self.CMEPOCH.value is None
+        ):
             if self._parent.PEPOCH.value is not None:
                 self.CMEPOCH.value = self._parent.PEPOCH.value
             else:
