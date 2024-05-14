@@ -1241,7 +1241,7 @@ class MJDParameter(Parameter):
     def effective_dimensionality(self) -> int:
         """Compute the effective dimensionality for TCB <-> TDB conversion."""
         return compute_effective_dimensionality(
-            self.quantity, self.tcb2tdb_scale_factor
+            self.value * u.day, self.tcb2tdb_scale_factor
         )
 
 
