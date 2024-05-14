@@ -68,6 +68,30 @@ def test_convert_units_roundtrip():
             assert np.isclose(getattr(m, par).value, getattr(m_, par).value)
 
 
+def test_effective_dimensionality():
+    m = ModelBuilder()(StringIO(simplepar), allow_tcb=True)
+    assert m.PEPOCH.effective_dimensionality == 1
+    assert m.F0.effective_dimensionality == -1
+    assert m.F1.effective_dimensionality == -2
+
+    assert m.POSEPOCH.effective_dimensionality == 1
+    assert m.RAJ.effective_dimensionality == 0
+    assert m.DECJ.effective_dimensionality == 0
+    assert m.PMRA.effective_dimensionality == -1
+    assert m.PMDEC.effective_dimensionality == -1
+    assert m.PX.effective_dimensionality == -1
+
+    assert m.DM.effective_dimensionality == -1
+
+    assert m.T0.effective_dimensionality == 1
+    assert m.A1.effective_dimensionality == 1
+    assert m.ECC.effective_dimensionality == 0
+    assert m.OM.effective_dimensionality == 0
+    assert m.PB.effective_dimensionality == 1
+
+    assert m.NE_SW.effective_dimensionality == -2
+
+
 def test_tcb2tdb(tmp_path):
     tmppar1 = tmp_path / "tmp1.par"
     tmppar2 = tmp_path / "tmp2.par"
