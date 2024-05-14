@@ -20,7 +20,6 @@ from pint.utils import (
     split_prefixed_name,
     taylor_horner,
     taylor_horner_deriv,
-    get_prefix_timeranges,
 )
 from pint import DMconst
 
@@ -154,6 +153,7 @@ class DispersionDM(Dispersion):
                 value=0.0,
                 description="Dispersion measure",
                 long_double=True,
+                tcb2tdb_scale_factor=DMconst,
             )
         )
         self.add_param(
@@ -165,6 +165,7 @@ class DispersionDM(Dispersion):
                 description_template=self.DM_dervative_description,
                 type_match="float",
                 long_double=True,
+                tcb2tdb_scale_factor=DMconst,
             )
         )
         self.add_param(
@@ -327,6 +328,7 @@ class DispersionDMX(Dispersion):
                 units="pc cm^-3",
                 value=0.0,
                 description="Dispersion measure",
+                convert_tcb2tdb=False,
             )
         )
 
@@ -396,6 +398,7 @@ class DispersionDMX(Dispersion):
                 description="Dispersion measure variation",
                 parameter_type="float",
                 frozen=frozen,
+                tcb2tdb_scale_factor=DMconst,
             )
         )
         self.add_param(
@@ -512,6 +515,7 @@ class DispersionDMX(Dispersion):
                     description="Dispersion measure variation",
                     parameter_type="float",
                     frozen=frozen,
+                    tcb2tdb_scale_factor=DMconst,
                 )
             )
             self.add_param(
@@ -736,6 +740,7 @@ class DispersionJump(Dispersion):
                 units="pc cm^-3",
                 value=None,
                 description="DM value offset.",
+                convert_tcb2tdb=False,
             )
         )
 
@@ -825,6 +830,7 @@ class FDJumpDM(Dispersion):
                 units="pc cm^-3",
                 value=None,
                 description="System-dependent DM offset.",
+                tcb2tdb_scale_factor=DMconst,
             )
         )
 
