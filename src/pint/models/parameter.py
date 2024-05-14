@@ -21,6 +21,7 @@ See :ref:`Supported Parameters` for an overview, including a table of all the
 parameters PINT understands.
 
 """
+
 import numbers
 from warnings import warn
 
@@ -160,6 +161,11 @@ class Parameter:
         file it was read from
     parent: pint.models.timing_model.Component, optional
         The parent timing model component
+    convert_tcb2tdb: bool
+        Whether to convert this parameter during TCB <-> TDB conversion.
+    tcb2tdb_scale_factor: astropy.units.Quantity
+        The scaling factor to be applied while computing the effective
+        dimensionality. The default is 1.
 
     Attributes
     ----------
@@ -180,6 +186,8 @@ class Parameter:
         prior=priors.Prior(priors.UniformUnboundedRV()),
         use_alias=None,
         parent=None,
+        convert_tcb2tdb=True,
+        tcb2tdb_scale_factor=u.Quantity(1),
     ):
         self.name = name  # name of the parameter
         # The input parameter from parfile, which can be an alias of the parameter
@@ -201,6 +209,9 @@ class Parameter:
         self.special_arg = []
         self.use_alias = use_alias
         self._parent = parent
+
+        self.convert_tcb2tdb = convert_tcb2tdb
+        self.tcb2tdb_scale_factor = tcb2tdb_scale_factor
 
     @property
     def quantity(self):
@@ -577,7 +588,7 @@ class Parameter:
         return True
 
     def value_as_latex(self):
-        return f"${self.as_ufloat():.1uSL}$" if not self.frozen else f"{self.value:f}"
+        return f"{self.value:f}" if self.frozen else f"${self.as_ufloat():.1uSL}$"
 
     def as_latex(self):
         try:
