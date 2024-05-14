@@ -166,10 +166,10 @@ website from time to time.
 
 It is also conventional to record pulsar data with reference to an
 observatory clock, usually a maser, that may drift with respect to
-International Atomic Time (TAI_). Usually GPS is used to track the
-deviations of this observatory clock and record them in a file. PINT
-also needs up-to-date versions of these observatory clock correction files
-to produce accurate results.
+International Atomic Time (TAI_). Usually, GPS is used to track the
+deviations of this observatory clock and these deviations are recorded in a file
+known as a clock file. PINT also needs up-to-date versions of these observatory 
+clock correction files to produce accurate results.
 
 Even more detail about how PINT handles time scales is available on the github
 wiki_.

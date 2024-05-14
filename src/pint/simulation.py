@@ -3,7 +3,7 @@
 
 from collections import OrderedDict
 from copy import deepcopy
-from typing import Optional, List, Union
+from typing import Optional, List, Tuple, Union
 import pathlib
 
 import astropy.units as u
@@ -11,6 +11,7 @@ import numpy as np
 from loguru import logger as log
 from astropy import time
 
+from pint import time_like, quantity_like, file_like
 import pint.residuals
 import pint.toa
 import pint.fitter
@@ -221,8 +222,8 @@ def update_fake_dms(
 
 
 def make_fake_toas_uniform(
-    startMJD: Union[float, u.Quantity, time.Time],
-    endMJD: Union[float, u.Quantity, time.Time],
+    startMJD: time_like,
+    endMJD: time_like,
     ntoas: int,
     model: pint.models.timing_model.TimingModel,
     fuzz: u.Quantity = 0,
@@ -363,7 +364,7 @@ def make_fake_toas_uniform(
 
 
 def make_fake_toas_fromMJDs(
-    MJDs: Union[u.Quantity, time.Time, np.ndarray],
+    MJDs: time_like,
     model: pint.models.timing_model.TimingModel,
     freq: u.Quantity = 1400 * u.MHz,
     obs: str = "GBT",
@@ -498,7 +499,7 @@ def make_fake_toas_fromMJDs(
 
 
 def make_fake_toas_fromtim(
-    timfile: Union[str, List[str], pathlib.Path],
+    timfile: Union[file_like, List[str]],
     model: pint.models.timing_model.TimingModel,
     add_noise: bool = False,
     add_correlated_noise: bool = False,
@@ -566,7 +567,7 @@ def calculate_random_models(
     keep_models: bool = True,
     return_time: bool = False,
     params: str = "all",
-) -> (np.ndarray, Optional[list]):
+) -> Tuple[np.ndarray, Optional[list]]:
     """
     Calculates random models based on the covariance matrix of the `fitter` object.
 
@@ -690,12 +691,12 @@ def calculate_random_models(
 
 
 def _get_freqs_and_times(
-    start: Union[float, u.Quantity, time.Time],
-    end: Union[float, u.Quantity, time.Time],
+    start: time_like,
+    end: time_like,
     ntoas: int,
     freqs: u.Quantity,
     multi_freqs_in_epoch: bool = True,
-) -> (Union[float, u.Quantity, time.Time], np.ndarray):
+) -> Tuple[time_like, np.ndarray]:
     freqs = np.atleast_1d(freqs)
     assert (
         len(freqs.shape) == 1 and len(freqs) <= ntoas

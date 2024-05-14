@@ -9,6 +9,18 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- Avoided unnecessary creation of `SkyCoord` objects in `AstrometryEquatorial` and `AstrometryEcliptic`.
+- Avoided unnecessary `TOAs` table slices in `SolarSystemShapiro`
+- Allow "CLK UNCORR" in par files (indicates no GPS or BIPM corrections). 
+- Better documentation for `akaike_information_criterion()`
+- `funcParameter`s are no longer listed in the `pintk` interface.
+- Updated location of CCERA
 ### Added
+- `bayesian_information_criterion()` function 
+- `pintk` now reads and automatically converts TCB par files and par files with `BINARY T2`.
+- Test for `pint.utils.split_swx()`
+- Custom type definitions for type hints
 ### Fixed
+- `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
+- Fix #1759 by changing order of comparison
 ### Removed

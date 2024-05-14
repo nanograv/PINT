@@ -513,12 +513,12 @@
     },
     "ccera": {
         "itrf_xyz": [
-            1093406.84,
-            -4391945.819,
-            4479103.55
+            1081906.02007569,
+            -4358005.62381148,
+            4514986.16069416
         ],
         "fullname": "Canadian Centre for Experimental Radio Astronomy",
-        "origin": "The origin of this data is unknown. Note that this location is in Smiths Falls, ON, where the telescope was previously deployed.  It has since moved to Rideau Ferry, ON but the coordinates have not been updated."
+        "origin": "Updated 2024-05-06 based on email from  Marcus Leech."
     },
     "AXIS": {
         "aliases": [

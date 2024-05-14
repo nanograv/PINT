@@ -28,6 +28,7 @@ have moved to :mod:`pint.derived_quantities`.
 has moved to :mod:`pint.simulation`.
 
 """
+
 import configparser
 import datetime
 import getpass
@@ -1273,7 +1274,7 @@ def split_swx(model, time):
 
     """
     try:
-        SWX_mapping = model.get_prefix_mapping("SWX_")
+        SWX_mapping = model.get_prefix_mapping("SWXDM_")
     except ValueError:
         raise RuntimeError("No SWX values in model!")
     swx_epochs = [f"{x:04d}" for x in SWX_mapping.keys()]
@@ -1294,8 +1295,8 @@ def split_swx(model, time):
     newindex = model.add_swx_range(
         time.mjd,
         t2,
-        swx=getattr(model, f"SWX_{index:04d}").quantity,
-        frozen=getattr(model, f"SWX_{index:04d}").frozen,
+        swxdm=getattr(model, f"SWXDM_{index:04d}").quantity,
+        frozen=getattr(model, f"SWXDM_{index:04d}").frozen,
     )
     return index, newindex
 
@@ -2601,13 +2602,37 @@ def normalize_designmatrix(M, params):
     return M / norm, norm
 
 
-def akaike_information_criterion(model, toas):
-    """Compute the Akaike information criterion.
+def akaike_information_criterion(
+    model: "pint.models.timing_model.TimingModel", toas: "pint.toas.TOAs"
+) -> float:
+    """Compute the Akaike information criterion (AIC). The AIC is used for comparing different
+    models for the given dataset.
+
+    Given a model with best-fit parameters, the AIC is defined as
+
+        AIC = 2*k - 2*ln(L)
+
+    where k is the number of free parameters in the model and L is the maximum value of the likelihood
+    for the model.
+
+    Given n models with AIC values AIC1, ..., AICn, the preferred model is the one that minimizes the
+    AIC value.
+
+    If AIC_min is the minimum AIC value, then the i'th model can be said to be exp[AIC_min - AICi]
+    times as probable as the favored model in minimizing information loss.
+
+    See, e.g., Burnham & Anderson 2004 for further details.
+
+    Unlike the F-test (:function:`~pint.utils.FTest`), the AIC does not require the models to be nested.
+
+    See also :function:`~pint.utils.bayesian_information_criterion` for the Bayesian Information Criterion (BIC),
+    a similar quantity used for model comparison. The main practical difference between AIC and BIC is that the
+    BIC more heavily penalizes the number of free parameters.
 
     Parameters
     ----------
     model: pint.models.timing_model.TimingModel
-        The timing model
+        The best-fit timing model
     toas: pint.toas.TOAs
         TOAs
 
@@ -2629,6 +2654,63 @@ def akaike_information_criterion(model, toas):
     else:
         raise NotImplementedError(
             "akaike_information_criterion is not yet implemented for wideband data."
+        )
+
+
+def bayesian_information_criterion(
+    model: "pint.models.timing_model.TimingModel", toas: "pint.toas.TOAs"
+) -> float:
+    """Compute the Bayesian information criterion (BIC). The BIC is used for comparing different
+    models for the given dataset.
+
+    Given a model with best-fit parameters, the AIC is defined as
+
+        BIC = k*ln(N) - 2*ln(L)
+
+    where k is the number of free parameters in the model, N is the number of data points/samples,
+    and L is the maximum value of the likelihood for the model.
+
+    Given n models with BIC values BIC1, ..., BICn, the preferred model is the one that minimizes the
+    BIC value.
+
+    The BIC is an approximation for the Bayesian evidence. It is computed by Taylor-expanding the log-likelihood
+    function up to the second order in the vicinity of the maximum-likelihood point and assuming that the
+    prior distribution doesn't vary appreciably in this neighbourhood.
+
+    See, e.g., Burnham & Anderson 2004 for further details.
+
+    Unlike the F-test (:function:`~pint.utils.FTest`), the BIC does not require the models to be nested.
+
+    See also :function:`~pint.utils.akaike_information_criterion` for the Akaike Information Criterion (AIC),
+    a similar quantity used for model comparison. The main practical difference between AIC and BIC is that the
+    BIC more heavily penalizes the number of free parameters.
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+        The best-fit timing model
+    toas: pint.toas.TOAs
+        TOAs
+
+    Returns
+    -------
+    bic: float
+        The Bayesian information criterion
+    """
+    from pint.residuals import Residuals
+
+    if not toas.is_wideband():
+        k = (
+            len(model.free_params)
+            if "PhaseOffset" in model.components
+            else len(model.free_params) + 1
+        )
+        lnN = len(toas)
+        lnL = Residuals(toas, model).lnlikelihood()
+        return k * lnN - 2 * lnL
+    else:
+        raise NotImplementedError(
+            "bayesian_information_criterion is not yet implemented for wideband data."
         )
 
 

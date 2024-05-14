@@ -14,7 +14,7 @@ from astropy.time import Time
 from loguru import logger as log
 
 from erfa import ErfaWarning, pmsafe
-from pint import ls
+from pint import ls, time_like, quantity_like
 from pint.models.parameter import (
     AngleParameter,
     MJDParameter,
@@ -59,9 +59,7 @@ class Astrometry(DelayComponent):
         self.delay_funcs_component += [self.solar_system_geometric_delay]
         self.register_deriv_funcs(self.d_delay_astrometry_d_PX, "PX")
 
-    def ssb_to_psb_xyz_ICRS(
-        self, epoch: Union[float, u.Quantity, Time] = None
-    ) -> u.Quantity:
+    def ssb_to_psb_xyz_ICRS(self, epoch: Optional[time_like] = None) -> u.Quantity:
         """Returns unit vector(s) from SSB to pulsar system barycenter under ICRS.
 
         If epochs (MJD) are given, proper motion is included in the calculation.
@@ -83,7 +81,7 @@ class Astrometry(DelayComponent):
         return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
 
     def ssb_to_psb_xyz_ECL(
-        self, epoch: Union[float, u.Quantity, Time] = None, ecl: str = None
+        self, epoch: Optional[time_like] = None, ecl: str = None
     ) -> u.Quantity:
         """Returns unit vector(s) from SSB to pulsar system barycenter under Ecliptic coordinates.
 
@@ -243,7 +241,7 @@ class Astrometry(DelayComponent):
         """Calculate the derivative wrt POSEPOCH"""
         pass
 
-    def change_posepoch(self, new_epoch):
+    def change_posepoch(self, new_epoch: time_like):
         """Change POSEPOCH to a new value and update the position accordingly.
 
         Parameters
@@ -350,9 +348,7 @@ class AstrometryEquatorial(Astrometry):
         v_dot_L_array = np.sum(tbl["ssb_obs_vel"] * L_hat, axis=1)
         return tbl["freq"] * (1.0 - v_dot_L_array / const.c)
 
-    def get_psr_coords(
-        self, epoch: Union[float, u.Quantity, Time] = None
-    ) -> coords.SkyCoord:
+    def get_psr_coords(self, epoch: Optional[time_like] = None) -> coords.SkyCoord:
         """Returns pulsar sky coordinates as an astropy ICRS object instance.
 
         Parameters
@@ -392,9 +388,7 @@ class AstrometryEquatorial(Astrometry):
 
         return position_then
 
-    def coords_as_ICRS(
-        self, epoch: Union[float, u.Quantity, Time] = None
-    ) -> coords.SkyCoord:
+    def coords_as_ICRS(self, epoch: Optional[time_like] = None) -> coords.SkyCoord:
         """Return the pulsar's ICRS coordinates as an astropy coordinate object.
 
         Parameters
@@ -409,7 +403,7 @@ class AstrometryEquatorial(Astrometry):
         return self.get_psr_coords(epoch)
 
     def coords_as_ECL(
-        self, epoch: Union[float, u.Quantity, Time] = None, ecl: str = None
+        self, epoch: Optional[time_like] = None, ecl: str = None
     ) -> coords.SkyCoord:
         """Return the pulsar's ecliptic coordinates as an astropy coordinate object.
 
@@ -434,9 +428,7 @@ class AstrometryEquatorial(Astrometry):
         pos_icrs = self.get_psr_coords(epoch=epoch)
         return pos_icrs.transform_to(PulsarEcliptic(ecl=ecl))
 
-    def coords_as_GAL(
-        self, epoch: Union[float, u.Quantity, Time] = None
-    ) -> coords.SkyCoord:
+    def coords_as_GAL(self, epoch: Optional[time_like] = None) -> coords.SkyCoord:
         """Return the pulsar's galactic coordinates as an astropy coordinate object.
 
         Parameters
@@ -459,9 +451,7 @@ class AstrometryEquatorial(Astrometry):
             "PMDEC": self.PMDEC.quantity,
         }
 
-    def ssb_to_psb_xyz_ICRS(
-        self, epoch: Union[float, u.Quantity, Time] = None
-    ) -> u.Quantity:
+    def ssb_to_psb_xyz_ICRS(self, epoch: Optional[time_like] = None) -> u.Quantity:
         """Returns unit vector(s) from SSB to pulsar system barycenter under ICRS.
 
         If epochs (MJD) are given, proper motion is included in the calculation.
@@ -485,7 +475,9 @@ class AstrometryEquatorial(Astrometry):
         # does, which is to use https://github.com/liberfa/erfa/blob/master/src/starpm.c
         # and then just use the relevant pieces of that
         if epoch is None or (self.PMRA.quantity == 0 and self.PMDEC.quantity == 0):
-            return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
+            ra, dec = self.RAJ.quantity, self.DECJ.quantity
+            return self.xyz_from_radec(ra, dec)
+            # return self.coords_as_ICRS(epoch=epoch).cartesian.xyz.transpose()
 
         if isinstance(epoch, Time):
             jd1 = epoch.jd1
@@ -518,6 +510,9 @@ class AstrometryEquatorial(Astrometry):
             )
         # ra,dec now in radians
         ra, dec = starpmout[0], starpmout[1]
+        return self.xyz_from_radec(ra, dec)
+
+    def xyz_from_radec(self, ra, dec):
         x = np.cos(ra) * np.cos(dec)
         y = np.sin(ra) * np.cos(dec)
         z = np.sin(dec)
@@ -616,7 +611,7 @@ class AstrometryEquatorial(Astrometry):
         # We want to return sec / (mas / yr)
         return dd_dpmdec.decompose(u.si.bases) / (u.mas / u.year)
 
-    def change_posepoch(self, new_epoch: Union[float, u.Quantity, Time]):
+    def change_posepoch(self, new_epoch: time_like):
         """Change POSEPOCH to a new value and update the position accordingly.
 
         Parameters
@@ -638,9 +633,7 @@ class AstrometryEquatorial(Astrometry):
         self.DECJ.value = new_coords.dec
         self.POSEPOCH.value = new_epoch
 
-    def as_ICRS(
-        self, epoch: Union[float, u.Quantity, Time] = None
-    ) -> "AstrometryEquatorial":
+    def as_ICRS(self, epoch: Optional[time_like] = None) -> "AstrometryEquatorial":
         """Return pint.models.astrometry.Astrometry object in ICRS frame.
 
         Parameters
@@ -659,7 +652,7 @@ class AstrometryEquatorial(Astrometry):
         return m
 
     def as_ECL(
-        self, epoch: Union[float, u.Quantity, Time] = None, ecl: str = "IERS2010"
+        self, epoch: Optional[time_like] = None, ecl: str = "IERS2010"
     ) -> "AstrometryEcliptic":
         """Return pint.models.astrometry.Astrometry object in PulsarEcliptic frame.
 
@@ -837,9 +830,7 @@ class AstrometryEcliptic(Astrometry):
         v_dot_L_array = np.sum(tbl["ssb_obs_vel_ecl"] * L_hat, axis=1)
         return tbl["freq"] * (1.0 - v_dot_L_array / const.c)
 
-    def get_psr_coords(
-        self, epoch: Union[float, u.Quantity, Time] = None
-    ) -> coords.SkyCoord:
+    def get_psr_coords(self, epoch: Optional[time_like] = None) -> coords.SkyCoord:
         """Returns pulsar sky coordinates as an astropy ecliptic coordinate instance.
 
         Parameters
@@ -883,9 +874,7 @@ class AstrometryEcliptic(Astrometry):
             position_then = position_now.apply_space_motion(new_obstime=newepoch)
         return remove_dummy_distance(position_then)
 
-    def coords_as_ICRS(
-        self, epoch: Union[float, u.Quantity, Time] = None
-    ) -> coords.SkyCoord:
+    def coords_as_ICRS(self, epoch: Optional[time_like] = None) -> coords.SkyCoord:
         """Return the pulsar's ICRS coordinates as an astropy coordinate object.
 
         Parameters
@@ -900,9 +889,7 @@ class AstrometryEcliptic(Astrometry):
         pos_ecl = self.get_psr_coords(epoch=epoch)
         return pos_ecl.transform_to(coords.ICRS)
 
-    def coords_as_GAL(
-        self, epoch: Union[float, u.Quantity, Time] = None
-    ) -> coords.SkyCoord:
+    def coords_as_GAL(self, epoch: Optional[time_like] = None) -> coords.SkyCoord:
         """Return the pulsar's galactic coordinates as an astropy coordinate object.
 
         Parameters
@@ -918,7 +905,7 @@ class AstrometryEcliptic(Astrometry):
         return pos_ecl.transform_to(coords.Galactic)
 
     def coords_as_ECL(
-        self, epoch: Union[float, u.Quantity, Time] = None, ecl: str = None
+        self, epoch: Optional[time_like] = None, ecl: str = None
     ) -> coords.SkyCoord:
         """Return the pulsar's ecliptic coordinates as an astropy coordinate object.
 
@@ -942,7 +929,7 @@ class AstrometryEcliptic(Astrometry):
         return pos_ecl
 
     def ssb_to_psb_xyz_ECL(
-        self, epoch: Union[float, u.Quantity, Time] = None, ecl: str = None
+        self, epoch: Optional[time_like] = None, ecl: str = None
     ) -> u.Quantity:
         """Returns unit vector(s) from SSB to pulsar system barycenter under ECL.
 
@@ -977,7 +964,9 @@ class AstrometryEcliptic(Astrometry):
             log.debug("ECL not specified; using IERS2010.")
             ecl = "IERS2010"
         if epoch is None or (self.PMELONG.value == 0 and self.PMELAT.value == 0):
-            return self.coords_as_ECL(epoch=epoch, ecl=ecl).cartesian.xyz.transpose()
+            # return self.coords_as_ECL(epoch=epoch, ecl=ecl).cartesian.xyz.transpose()
+            lon, lat = self.ELONG.quantity, self.ELAT.quantity
+            return self.xyz_from_latlong(lon, lat)
         if isinstance(epoch, Time):
             jd1 = epoch.jd1
             jd2 = epoch.jd2
@@ -1015,6 +1004,9 @@ class AstrometryEcliptic(Astrometry):
             )
         # lon,lat now in radians
         lon, lat = starpmout[0], starpmout[1]
+        return self.xyz_from_latlong(lon, lat)
+
+    def xyz_from_latlong(self, lon, lat):
         x = np.cos(lon) * np.cos(lat)
         y = np.sin(lon) * np.cos(lat)
         z = np.sin(lat)
@@ -1167,7 +1159,7 @@ class AstrometryEcliptic(Astrometry):
                 result += getattr(self, p).as_parfile_line(format=format)
         return result
 
-    def change_posepoch(self, new_epoch: Union[float, u.Quantity, Time]):
+    def change_posepoch(self, new_epoch: time_like):
         """Change POSEPOCH to a new value and update the position accordingly.
 
         Parameters
@@ -1188,7 +1180,7 @@ class AstrometryEcliptic(Astrometry):
         self.POSEPOCH.value = new_epoch
 
     def as_ECL(
-        self, epoch: Union[float, u.Quantity, Time] = None, ecl: str = "IERS2010"
+        self, epoch: Optional[time_like] = None, ecl: str = "IERS2010"
     ) -> "AstrometryEcliptic":
         """Return pint.models.astrometry.Astrometry object in PulsarEcliptic frame.
 
@@ -1280,9 +1272,7 @@ class AstrometryEcliptic(Astrometry):
 
         return m_ecl
 
-    def as_ICRS(
-        self, epoch: Union[float, u.Quantity, Time] = None
-    ) -> "AstrometryEquatorial":
+    def as_ICRS(self, epoch: Optional[time_like] = None) -> "AstrometryEquatorial":
         """Return pint.models.astrometry.Astrometry object in ICRS frame.
 
         Parameters
