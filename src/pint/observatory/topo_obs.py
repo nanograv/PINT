@@ -345,7 +345,7 @@ class TopoObs(Observatory):
             msg = f"No clock corrections found for observatory {self.name} taken from file {self.clock_files}"
             if limits == "warn":
                 log.warning(msg)
-                corr = np.zeros_like(t) * u.us
+                corr += np.zeros_like(t) * u.us
             elif limits == "error":
                 raise NoClockCorrections(msg)
         else:
