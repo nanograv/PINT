@@ -59,7 +59,7 @@ def scale_parameter(model: TimingModel, param: str, n: int, backwards: bool):
 
     factor = IFTE_K ** (p * n)
 
-    if hasattr(model, param) and getattr(model, param).quantity is not None:
+    if (param in model) and model[param].quantity is not None:
         par = model[param]
         par.value *= factor
         if par.uncertainty_value is not None:
@@ -83,8 +83,8 @@ def transform_mjd_parameter(model: TimingModel, param: str, backwards: bool):
     factor = IFTE_K if backwards else 1 / IFTE_K
     tref = IFTE_MJD0
 
-    if hasattr(model, param) and model[param].quantity is not None:
-        par = getattr(model, param)
+    if (param in model) and model[param].quantity is not None:
+        par = model[param]
         assert isinstance(par, MJDParameter) or (
             isinstance(par, prefixParameter)
             and isinstance(par.param_comp, MJDParameter)
