@@ -38,7 +38,7 @@ from astropy.coordinates import (
 from loguru import logger as log
 
 import pint
-from pint import dir_like, file_like, quantity_like, time_like, toas_index_like, utils
+from pint import utils
 from pint.observatory import Observatory, bipm_default, get_observatory
 from pint.observatory.satellite_obs import SatelliteObs
 from pint.observatory.special_locations import T2SpacecraftObs
@@ -47,6 +47,7 @@ from pint.phase import Phase
 from pint.pulsar_ecliptic import PulsarEcliptic
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
+from pint.types import dir_like, file_like, quantity_like, time_like, toas_index_like
 
 __all__ = [
     "TOAs",
