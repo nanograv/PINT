@@ -36,7 +36,7 @@ from pint.utils import (
 )
 from pint.models.tcb_conversion import convert_tcb_tdb
 from pint.models.binary_ddk import _convert_kin, _convert_kom
-from pint import file_like, quantity_like
+from pint.types import file_like, quantity_like
 
 __all__ = ["ModelBuilder", "get_model", "get_model_and_toas"]
 
