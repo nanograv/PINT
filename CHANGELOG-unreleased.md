@@ -25,6 +25,7 @@ the released changes.
 - Test for `pint.utils.split_swx()`
 - Custom type definitions for type hints
 - `convert_tcb2tdb`, `tcb2tdb_scale_factor`, and `effective_dimensionality` attributes for `floatParameter`s, `MJDParameter`s, `AngleParameter`s, `maskParameter`s, and `prefixParameter`s.
+- Documentation: HOWTO about determining tcb<->tdb scaling factors
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
 - Fix #1759 by changing order of comparison
