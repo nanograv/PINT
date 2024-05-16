@@ -58,3 +58,6 @@ EQUADs. Since we are not converting TOA variances, it doesn't make sense to conv
 either. Hence, ECORRs and red and DM noise parameters are not converted. This means that 
 the noise parameters must ALWAYS be re-estimated after a TCB <-> TDB conversion.
 
+Another exception to this are FD parameters and FD jumps, which involve polynomials of logarithms.
+Such functions transform in a non-linear fashion during TCB <-> TDB conversion, and we have chosen
+not to apply the conversion to such parameters.
