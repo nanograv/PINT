@@ -89,7 +89,7 @@ title: "PINT: A Modern Software Package for Pulsar Timing"
 version: 1.0
 doi: 10.3847/1538-4357/abe62f
 date-released: 2024-04-26
-url: "https://github.com/github-linguist/linguist"
+url: "https://github.com/nanograv/PINT"
 preferred-citation:
   type: article
   authors:
