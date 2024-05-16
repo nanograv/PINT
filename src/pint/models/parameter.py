@@ -1473,9 +1473,10 @@ class prefixParameter:
         Time scale for MJDParameter class.
     convert_tcb2tdb: bool
         Whether to convert this parameter during TCB <-> TDB conversion.
-    tcb2tdb_scale_factor: astropy.units.Quantity
+    tcb2tdb_scale_factor: astropy.units.Quantity or function
         The scaling factor to be applied while computing the effective
-        dimensionality. The default is 1.
+        dimensionality. If this is a function, it should take the prefix as 
+        argument and return the scaling factor. The default is 1.
     """
 
     def __init__(
@@ -1539,6 +1540,14 @@ class prefixParameter:
             real_description = input_description
         aliases = [pa + self.idxfmt for pa in self.prefix_aliases]
         self.long_double = long_double
+
+        # For prefix parameters, the scaling factor can in principle be
+        # a function of the prefix.
+        if hasattr(tcb2tdb_scale_factor, "__call__"):
+            tcb2tdb_scale_factor_val = tcb2tdb_scale_factor(self.prefix)
+        else:
+            tcb2tdb_scale_factor_val = tcb2tdb_scale_factor
+
         # initiate parameter class
         self.param_comp = self.param_class(
             name=self.name,
@@ -1555,7 +1564,7 @@ class prefixParameter:
             scale_factor=scale_factor,
             scale_threshold=scale_threshold,
             convert_tcb2tdb=convert_tcb2tdb,
-            tcb2tdb_scale_factor=tcb2tdb_scale_factor,
+            tcb2tdb_scale_factor=tcb2tdb_scale_factor_val,
         )
         self.is_prefix = True
         self.time_scale = time_scale
