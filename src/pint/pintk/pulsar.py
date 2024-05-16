@@ -224,7 +224,7 @@ class Pulsar:
                 track_mode=track_mode,
             )
             if (
-                self.selected_toas.ntoas
+                self.selected_toas.ntoas > 0
                 and self.selected_toas.ntoas != self.all_toas.ntoas
             ):
                 self.selected_postfit_resids = Residuals(
