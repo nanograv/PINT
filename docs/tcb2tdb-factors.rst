@@ -68,5 +68,5 @@ Such functions transform in a non-linear fashion during TCB <-> TDB conversion, 
 not to apply the conversion to such parameters. They too must be re-estimated after a TCB <-> TDB 
 conversion.
 
-In such cases, the parameter can be excluded from TCB <-> TDB conversion by passing `convert_tcb2tdb=True`
+In such cases, the parameter can be excluded from TCB <-> TDB conversion by passing `convert_tcb2tdb=False`
 into the `Parameter` class constructor.
