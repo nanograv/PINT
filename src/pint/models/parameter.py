@@ -1475,7 +1475,7 @@ class prefixParameter:
         Whether to convert this parameter during TCB <-> TDB conversion.
     tcb2tdb_scale_factor: astropy.units.Quantity or function
         The scaling factor to be applied while computing the effective
-        dimensionality. If this is a function, it should take the prefix as 
+        dimensionality. If this is a function, it should take the prefix as
         argument and return the scaling factor. The default is 1.
     """
 
@@ -1543,10 +1543,11 @@ class prefixParameter:
 
         # For prefix parameters, the scaling factor can in principle be
         # a function of the prefix.
-        if hasattr(tcb2tdb_scale_factor, "__call__"):
-            tcb2tdb_scale_factor_val = tcb2tdb_scale_factor(self.prefix)
-        else:
-            tcb2tdb_scale_factor_val = tcb2tdb_scale_factor
+        tcb2tdb_scale_factor_val = (
+            tcb2tdb_scale_factor(self.prefix)
+            if hasattr(tcb2tdb_scale_factor, "__call__")
+            else tcb2tdb_scale_factor
+        )
 
         # initiate parameter class
         self.param_comp = self.param_class(
