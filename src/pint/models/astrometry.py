@@ -170,8 +170,8 @@ class Astrometry(DelayComponent):
             delay[c] = -re_dot_L.to(ls).value
             if self.PX.value != 0.0:
                 # This is equivalent to PX * c / AU.
-                L = (1.0 / self.PX.value) * u.kpc 
-                
+                L = (1.0 / self.PX.value) * u.kpc
+
                 # TODO: np.sum currently loses units in some cases...
                 re_sqr = (
                     np.sum(tbl["ssb_obs_pos"][c] ** 2, axis=1)
