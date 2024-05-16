@@ -13,10 +13,10 @@ Similarly, a time difference will be scaled as::
     dt_tdb = dt_tcb / IFTE_K
 
 Since the definition of the second is changing, all parameters involved in the timing model
-must also be transformed. In the simplest case, if a quantity x has dimensions of [T**n], it
+must also be transformed. In the simplest case, if a quantity x has dimensions of [T^n], it
 will be transformed as::
     
-    x_tdb = x_tcb / IFTE_K**n
+    x_tdb = x_tcb / IFTE_K^n
 
 This rule applies to the majority of parameters.
 
@@ -26,12 +26,12 @@ my some constants. Examples include
     1. DM appears as DMconst * DM
     2. A1 appears as A1 / c
     3. PX appears as PX * c / AU 
-    4. M2 appears as M2 * G / c**3
+    4. M2 appears as M2 * G / c^3
 
 In these cases, it is customary to keep the multiplication factor numerically constant during 
 TCB <-> TDB conversion, and to absorb the effect of converting this constant into the parameter
 itself. Note that the parameter multiplied by the constant in these cases has dimensions of the 
-form [T**n]. In the above cases, the value of n is as follows.
+form [T^n]. In the above cases, the value of n is as follows.
 
     1. DM has n = -1
     2. A1 has n = 1
@@ -39,14 +39,14 @@ form [T**n]. In the above cases, the value of n is as follows.
     4. M2 has n = 1
 
 In general, if a parameter x appears in the timing model as C*x and if C*x has dimensionality of
-the form [T**n], the scaling should be done with the "effective dimensionality" n.
+the form [T^n], the scaling should be done with the "effective dimensionality" n.
 
-If a parameter doesn't have a dimensionality of [T**n], a general rule is to reorganize the 
-factors in the equation such that each group has a dimensionality [T**n]. This is ALWAYS possible
+If a parameter doesn't have a dimensionality of [T^n], a general rule is to reorganize the 
+factors in the equation such that each group has a dimensionality [T^n]. This is ALWAYS possible
 because the timing model components produce either a delay ([T^1]) or a phase ([T^0]).
 
 A useful trick for doing this type of transformation is to express the parameters in geometrized 
-units, where everything has dimensions of [T**n]. For example, a mass M will be expressed as G*M/c**3, 
+units, where everything has dimensions of [T^n]. For example, a mass M will be expressed as G*M/c^3, 
 and a distance L will be expressed as L/c. Please note that this may not work in every case, and 
 each parameter should be treated in a case-by-case basis depending on the delay/phase expression 
 they appear in.
