@@ -46,10 +46,15 @@ factors in the equation such that each group has a dimensionality [T^n]. This is
 because the timing model components produce either a delay ([T^1]) or a phase ([T^0]).
 
 A useful trick for doing this type of transformation is to express the parameters in geometrized 
-units, where everything has dimensions of [T^n]. For example, a mass M will be expressed as G*M/c^3, 
-and a distance L will be expressed as L/c. Please note that this may not work in every case, and 
-each parameter should be treated in a case-by-case basis depending on the delay/phase expression 
-they appear in.
+units, where everything has dimensions of [T^n]. For example, a mass M will be expressed as M*(G/c^3)
+(e.g., M2, MTOT), and a distance L will be expressed as L/c (e.g., A1). Please note that this may not 
+work in every case, and each parameter should be treated in a case-by-case basis depending on the 
+delay/phase expression they appear in.
+
+While defining a parameter, these constants/multiplication factors should be passed into the 
+`Parameter` class constructor via the `tcb2tdb_scale_factor` argument to ensure that the
+TCB <-> TDB conversion happens correctly. The default is 1, indicating that no such factor 
+applies, e.g., in the case of F0, PB, etc.
 
 Exceptions to this are noise parameters. The TOA uncertainties are measured in the observatory 
 timescale and the are not converted into TCB or TDB before computing the likelihood function/
@@ -60,4 +65,8 @@ the noise parameters must ALWAYS be re-estimated after a TCB <-> TDB conversion.
 
 Another exception to this are FD parameters and FD jumps, which involve polynomials of logarithms.
 Such functions transform in a non-linear fashion during TCB <-> TDB conversion, and we have chosen
-not to apply the conversion to such parameters.
+not to apply the conversion to such parameters. They too must be re-estimated after a TCB <-> TDB 
+conversion.
+
+In such cases, the parameter can be excluded from TCB <-> TDB conversion by passing `convert_tcb2tdb=True`
+into the `Parameter` class constructor.
