@@ -23,9 +23,11 @@ the released changes.
 - `pintk` now reads and automatically converts TCB par files and par files with `BINARY T2`.
 - Test for `pint.utils.split_swx()`
 - Custom type definitions for type hints
+- Added `citation.cff`
 - Type hints in `pint.toa` and `get_model()` & `get_model_and_toas()` functions
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
 - Fix #1759 by changing order of comparison
 - Moved the test in `test_pmtransform_units.py` into a function.
+- Fixed bug in residual calculation when adding or removing phase wraps
 ### Removed
