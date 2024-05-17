@@ -27,6 +27,7 @@ A1                  100.0 1 0.1
 ECC                 1.0
 OM                  0.0
 PB                  10.0
+FD1                 1e-3
 EPHEM               DE436
 CLK              TT(BIPM2017)
 UNITS               TCB
