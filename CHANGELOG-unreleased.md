@@ -13,17 +13,22 @@ the released changes.
 - Avoided unnecessary `TOAs` table slices in `SolarSystemShapiro`
 - Allow "CLK UNCORR" in par files (indicates no GPS or BIPM corrections). 
 - Better documentation for `akaike_information_criterion()`
+- Type hinting for most of the `pint.utils` module
 - `funcParameter`s are no longer listed in the `pintk` interface.
 - Updated location of CCERA
 - Removed `include_bipm`, `include_gps`, and `bipm_version` from the Observatory class. Now they are passed as arguments to `site.clock_correction()`
 - The following observatories no longer have a default of include_bipm=False: magic, lst, virgo, lho, llo, geo600, kagra, hess, hawc
 ### Added
 - `bayesian_information_criterion()` function 
+- `dmx_setup` function
+- `funcParameter`s are no longer listed in the `pintk` interface.
 - `pintk` now reads and automatically converts TCB par files and par files with `BINARY T2`.
 - Test for `pint.utils.split_swx()`
 - Custom type definitions for type hints
+- Added `citation.cff`
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
 - Fix #1759 by changing order of comparison
+- Fixed bug in residual calculation when adding or removing phase wraps
 - Fix #1766 by correcting logic and more clearly naming argument (clkcorr->undo_clkcorr)
 ### Removed
