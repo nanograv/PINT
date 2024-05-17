@@ -30,7 +30,11 @@ my some constants. Examples include
 
 In these cases, it is customary to keep the multiplication factor numerically constant during 
 TCB <-> TDB conversion, and to absorb the effect of converting this constant into the parameter
-itself. Note that the parameter multiplied by the constant in these cases has dimensions of the 
+itself. If a parameter has such a factor, it must be specified using the `tcb2tdb_scale_factor`
+argument while constructing the `Parameter` object. For example, DM will have 
+`tcb2tdb_scale_factor=DMconst`.
+
+Note that the parameter multiplied by the constant in these cases has dimensions of the 
 form [T^n]. In the above cases, the value of n is as follows.
 
     1. DM has n = -1
@@ -50,11 +54,6 @@ units, where everything has dimensions of [T^n]. For example, a mass M will be e
 (e.g., M2, MTOT), and a distance L will be expressed as L/c (e.g., A1). Please note that this may not 
 work in every case, and each parameter should be treated in a case-by-case basis depending on the 
 delay/phase expression they appear in.
-
-While defining a parameter, these constants/multiplication factors should be passed into the 
-`Parameter` class constructor via the `tcb2tdb_scale_factor` argument to ensure that the
-TCB <-> TDB conversion happens correctly. The default is 1, indicating that no such factor 
-applies, e.g., in the case of F0, PB, etc.
 
 Exceptions to this are noise parameters. The TOA uncertainties are measured in the observatory 
 timescale and the are not converted into TCB or TDB before computing the likelihood function/
