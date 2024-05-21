@@ -2106,6 +2106,8 @@ class maskParameter(floatParameter):
                 frozen=self.frozen,
                 continuous=self.continuous,
                 aliases=self.prefix_aliases,
+                convert_tcb2tdb=self.convert_tcb2tdb,
+                tcb2tdb_scale_factor=self.tcb2tdb_scale_factor,
             )
             if copy_all
             else maskParameter(
@@ -2114,6 +2116,8 @@ class maskParameter(floatParameter):
                 long_double=self.long_double,
                 units=self.units,
                 aliases=self.prefix_aliases,
+                convert_tcb2tdb=self.convert_tcb2tdb,
+                tcb2tdb_scale_factor=self.tcb2tdb_scale_factor,
             )
         )
 

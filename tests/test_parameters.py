@@ -569,13 +569,13 @@ def test_compare_key_value_list():
         intParameter(name="FISH"),
         strParameter(name="FISH"),
         pytest.param(
-            maskParameter(name="JUMP"),
+            maskParameter(name="JUMP", tcb2tdb_scale_factor=u.Quantity(1)),
         ),
         pytest.param(
-            prefixParameter(name="F0"),
+            prefixParameter(name="F0", tcb2tdb_scale_factor=u.Quantity(1)),
         ),
-        pairParameter(name="WEAVE"),
-        AngleParameter(name="BEND"),
+        pairParameter(name="WEAVE", convert_tcb2tdb=False),
+        AngleParameter(name="BEND", tcb2tdb_scale_factor=u.Quantity(1)),
     ],
 )
 def test_parameter_can_be_pickled(p):
@@ -586,7 +586,9 @@ def test_fitter_construction_success_after_remove_param():
     """Checks that add_param and remove_param don't require m.setup() to be run prior to constructing a fitter. This addresses issue #1260."""
     m = get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
     t = get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
-    FD4 = prefixParameter(parameter_type="float", name="FD4", value=0.0, units=u.s)
+    FD4 = prefixParameter(
+        parameter_type="float", name="FD4", value=0.0, units=u.s, convert_tcb2tdb=False
+    )
     """Fitter construction used to fail after remove_param without m.setup(). Test this (for both adding and removing, just to be safe):"""
     m.add_param_from_top(FD4, "FD")
     f = pint.fitter.GLSFitter(toas=t, model=m)

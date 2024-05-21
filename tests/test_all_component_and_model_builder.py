@@ -17,6 +17,7 @@ from pint.models.model_builder import ModelBuilder, ComponentConflict, get_model
 from pint.models.parameter import floatParameter
 from pint.utils import split_prefixed_name, PrefixError
 from pinttestdata import datadir
+from astropy import units as u
 
 
 class SimpleModel(PhaseComponent):
@@ -27,7 +28,14 @@ class SimpleModel(PhaseComponent):
 
     def __init__(self):
         super(SimpleModel, self).__init__()
-        self.add_param(floatParameter(name="TESTPARAM", value=0.0, unit="s"))
+        self.add_param(
+            floatParameter(
+                name="TESTPARAM",
+                value=0.0,
+                unit="s",
+                tcb2tdb_scale_factor=u.Quantity(1),
+            )
+        )
 
 
 class SubsetModel(PhaseComponent):

@@ -1,4 +1,5 @@
 """Delays expressed as a sum of sinusoids."""
+
 import astropy.units as u
 import numpy as np
 
@@ -33,6 +34,7 @@ class Wave(PhaseComponent):
                 name="WAVEEPOCH",
                 description="Reference epoch for wave solution",
                 time_scale="tdb",
+                convert_tcb2tdb=False,
             )
         )
         self.add_param(
@@ -40,6 +42,7 @@ class Wave(PhaseComponent):
                 name="WAVE_OM",
                 description="Base frequency of wave solution",
                 units="1/d",
+                convert_tcb2tdb=False,
             )
         )
         self.add_param(
@@ -50,6 +53,7 @@ class Wave(PhaseComponent):
                 type_match="pair",
                 long_double=True,
                 parameter_type="pair",
+                convert_tcb2tdb=False,
             )
         )
         self.phase_funcs_component += [self.wave_phase]
