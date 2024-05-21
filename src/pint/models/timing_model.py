@@ -276,14 +276,23 @@ class TimingModel:
             strParameter(name="UNITS", description="Units (TDB assumed)"), ""
         )
         self.add_param_from_top(
-            MJDParameter(name="START", description="Start MJD for fitting"), ""
+            MJDParameter(
+                name="START", description="Start MJD for fitting", convert_tcb2tdb=False
+            ),
+            "",
         )
         self.add_param_from_top(
-            MJDParameter(name="FINISH", description="End MJD for fitting"), ""
+            MJDParameter(
+                name="FINISH", description="End MJD for fitting", convert_tcb2tdb=False
+            ),
+            "",
         )
         self.add_param_from_top(
             floatParameter(
-                name="RM", description="Rotation measure", units=u.radian / u.m**2
+                name="RM",
+                description="Rotation measure",
+                units=u.radian / u.m**2,
+                convert_tcb2tdb=False,
             ),
             "",
         )
@@ -343,6 +352,7 @@ class TimingModel:
                 name="CHI2",
                 units="",
                 description="Chi-squared value obtained during fitting",
+                convert_tcb2tdb=False,
             ),
             "",
         )
@@ -351,6 +361,7 @@ class TimingModel:
                 name="CHI2R",
                 units="",
                 description="Reduced chi-squared value obtained during fitting",
+                convert_tcb2tdb=False,
             ),
             "",
         )
@@ -360,6 +371,7 @@ class TimingModel:
                 name="TRES",
                 units=u.us,
                 description="TOA residual after fitting",
+                convert_tcb2tdb=False,
             ),
             "",
         )
@@ -368,6 +380,7 @@ class TimingModel:
                 name="DMRES",
                 units=u.pc / u.cm**3,
                 description="DM residual after fitting (wideband only)",
+                convert_tcb2tdb=False,
             ),
             "",
         )
