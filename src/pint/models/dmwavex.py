@@ -209,6 +209,7 @@ class DMWaveX(Dispersion):
                     units="1/d",
                     value=dmwxfreq,
                     parameter_type="float",
+                    tcb2tdb_scale_factor=u.Quantity(1),
                 )
             )
             self.add_param(
