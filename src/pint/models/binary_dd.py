@@ -64,6 +64,7 @@ class BinaryDD(PulsarBinary):
                 value=0.0,
                 units="s",
                 description="DD model aberration parameter A0",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -73,6 +74,7 @@ class BinaryDD(PulsarBinary):
                 value=0.0,
                 units="s",
                 description="DD model aberration parameter B0",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -82,6 +84,7 @@ class BinaryDD(PulsarBinary):
                 value=0.0,
                 units="second",
                 description="Time dilation & gravitational redshift",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -91,6 +94,7 @@ class BinaryDD(PulsarBinary):
                 value=0.0,
                 units="",
                 description="Relativistic deformation of the orbit",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -101,6 +105,7 @@ class BinaryDD(PulsarBinary):
                 value=0.0,
                 units="",
                 description="Relativistic deformation of the orbit",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -174,7 +179,10 @@ class BinaryDDS(BinaryDD):
 
         self.add_param(
             floatParameter(
-                name="SHAPMAX", value=0.0, description="Function of inclination angle"
+                name="SHAPMAX",
+                value=0.0,
+                description="Function of inclination angle",
+                convert_tcb2tdb=False,
             )
         )
         self.remove_param("SINI")
@@ -261,6 +269,7 @@ class BinaryDDGR(BinaryDD):
                 units="deg/year",
                 description="Excess longitude of periastron advance compared to GR",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -271,6 +280,7 @@ class BinaryDDGR(BinaryDD):
                 unit_scale=True,
                 scale_factor=1e-12,
                 scale_threshold=1e-7,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         for p in ["OMDOT", "PBDOT", "GAMMA", "SINI", "DR", "DTH"]:
@@ -406,6 +416,7 @@ class BinaryDDH(BinaryDD):
                 units="second",
                 description="Shapiro delay parameter H3 as in Freire and Wex 2010 Eq(20)",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -415,6 +426,7 @@ class BinaryDDH(BinaryDD):
                 description="Shapiro delay parameter STIGMA as in Freire and Wex 2010 Eq(12)",
                 long_double=True,
                 aliases=["VARSIGMA", "STIG"],
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.remove_param("M2")
