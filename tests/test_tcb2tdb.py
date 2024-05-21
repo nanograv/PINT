@@ -7,7 +7,8 @@ from io import StringIO
 import numpy as np
 import pytest
 
-from pint.models.model_builder import ModelBuilder
+from pint import DMconst, dmu
+from pint.models.model_builder import ModelBuilder, get_model
 from pint.models.tcb_conversion import convert_tcb_tdb
 from pint.scripts import tcb2tdb
 
@@ -91,6 +92,36 @@ def test_effective_dimensionality():
     assert m.PB.effective_dimensionality == 1
 
     assert m.NE_SW.effective_dimensionality == -2
+
+
+def test_dm_scaling_factor():
+    m = get_model(
+        StringIO(
+            """
+            PSR         TEST
+            F0          100
+            F1          -1e-14
+            PEPOCH      55000
+            DMEPOCH     55000
+            DM          12.5
+            DM1         -0.001
+            DM2         1e-5
+            DMXR1_0001  51000
+            DMXR2_0001  51000
+            DMX_0001    0.002
+            DMWXEPOCH   55000
+            DMWXFREQ_0001   0.001
+            DMWXSIN_0001    0.0003
+            DMWXCOS_0001    0.0002
+            """
+        )
+    )
+
+    for param in m.params:
+        par = m[param]
+
+        if hasattr(par, "units") and par.units == dmu:
+            assert not par.convert_tcb2tdb or par.tcb2tdb_scale_factor == DMconst
 
 
 def test_tcb2tdb(tmp_path):
