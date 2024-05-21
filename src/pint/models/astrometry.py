@@ -51,6 +51,7 @@ class Astrometry(DelayComponent):
                 name="POSEPOCH",
                 description="Reference epoch for position",
                 time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -287,6 +288,7 @@ class AstrometryEquatorial(Astrometry):
                 units="H:M:S",
                 description="Right ascension (J2000)",
                 aliases=["RA"],
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -296,6 +298,7 @@ class AstrometryEquatorial(Astrometry):
                 units="D:M:S",
                 description="Declination (J2000)",
                 aliases=["DEC"],
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -305,6 +308,7 @@ class AstrometryEquatorial(Astrometry):
                 units="mas/year",
                 description="Proper motion in RA",
                 value=0.0,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -314,6 +318,7 @@ class AstrometryEquatorial(Astrometry):
                 units="mas/year",
                 description="Proper motion in DEC",
                 value=0.0,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.set_special_params(["RAJ", "DECJ", "PMRA", "PMDEC"])
@@ -764,6 +769,7 @@ class AstrometryEcliptic(Astrometry):
                 units="deg",
                 description="Ecliptic longitude",
                 aliases=["LAMBDA"],
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -773,6 +779,7 @@ class AstrometryEcliptic(Astrometry):
                 units="deg",
                 description="Ecliptic latitude",
                 aliases=["BETA"],
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -783,6 +790,7 @@ class AstrometryEcliptic(Astrometry):
                 description="Proper motion in ecliptic longitude",
                 aliases=["PMLAMBDA"],
                 value=0.0,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -793,6 +801,7 @@ class AstrometryEcliptic(Astrometry):
                 description="Proper motion in ecliptic latitude",
                 aliases=["PMBETA"],
                 value=0.0,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
