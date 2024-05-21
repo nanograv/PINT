@@ -112,7 +112,12 @@ def test_ftest_nb():
     assert isinstance(Ftest_dict["ft"], (float, bool))
     # Test removing parameter
     F1 = param.prefixParameter(
-        parameter_type="float", name="F1", value=0.0, units=u.Hz / u.s, frozen=False
+        parameter_type="float",
+        name="F1",
+        value=0.0,
+        units=u.Hz / u.s,
+        frozen=False,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )
     ft = f.ftest(F1, "Spindown", remove=True)
     assert isinstance(ft["ft"], (float, bool))
