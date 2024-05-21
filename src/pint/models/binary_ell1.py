@@ -468,6 +468,7 @@ class BinaryELL1k(BinaryELL1):
                 units="deg/year",
                 description="Rate of advance of periastron",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -477,6 +478,7 @@ class BinaryELL1k(BinaryELL1):
                 units="1/year",
                 description="Log-derivative of the eccentricity EDOT/ECC",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 

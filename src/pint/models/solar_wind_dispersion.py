@@ -308,6 +308,7 @@ class SolarWindDispersion(SolarWindDispersionBase):
                 value=2.0,
                 units="",
                 description="Solar Wind Model radial power-law index (only for SWM=1)",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -752,6 +753,7 @@ class SolarWindDispersionX(SolarWindDispersionBase):
                 description="Solar wind power-law index",
                 parameter_type="float",
                 frozen=frozen,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -762,6 +764,7 @@ class SolarWindDispersionX(SolarWindDispersionBase):
                 parameter_type="MJD",
                 time_scale="utc",
                 value=mjd_start,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -772,6 +775,7 @@ class SolarWindDispersionX(SolarWindDispersionBase):
                 parameter_type="MJD",
                 time_scale="utc",
                 value=mjd_end,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.setup()

@@ -412,6 +412,7 @@ class DispersionDMX(Dispersion):
                 parameter_type="MJD",
                 time_scale="utc",
                 value=mjd_start,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -422,6 +423,7 @@ class DispersionDMX(Dispersion):
                 parameter_type="MJD",
                 time_scale="utc",
                 value=mjd_end,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.setup()

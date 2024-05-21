@@ -27,6 +27,7 @@ class PhaseOffset(PhaseComponent):
                 value=0.0,
                 units="",
                 description="Overall phase offset between physical TOAs and the TZR TOA.",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.phase_funcs_component += [self.offset_phase]

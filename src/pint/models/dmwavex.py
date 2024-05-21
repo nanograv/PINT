@@ -36,6 +36,7 @@ class DMWaveX(Dispersion):
                 name="DMWXEPOCH",
                 description="Reference epoch for Fourier representation of DM noise",
                 time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_dmwavex_component(0.1, index=1, dmwxsin=0, dmwxcos=0, frozen=False)
@@ -94,6 +95,7 @@ class DMWaveX(Dispersion):
                 units="1/d",
                 value=dmwxfreq,
                 parameter_type="float",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(

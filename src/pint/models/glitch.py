@@ -1,4 +1,5 @@
 """Pulsar timing glitches."""
+
 import astropy.units as u
 import numpy as np
 
@@ -59,6 +60,7 @@ class Glitch(PhaseComponent):
                 value=0.0,
                 description_template=self._description_glitch_phase,
                 type_match="float",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -68,6 +70,7 @@ class Glitch(PhaseComponent):
                 description_template=self._description_glitch_epoch,
                 parameter_type="MJD",
                 time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -77,6 +80,7 @@ class Glitch(PhaseComponent):
                 value=0.0,
                 description_template=self._description_glitch_frequencychange,
                 type_match="float",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -85,6 +89,7 @@ class Glitch(PhaseComponent):
                 units="Hz/s",
                 value=0.0,
                 description_template=self._description_glitch_frequencyderivativechange,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -93,6 +98,7 @@ class Glitch(PhaseComponent):
                 units="Hz/s^2",
                 value=0.0,
                 description_template=self._description_glitch_frequencysecondderivativechange,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -102,6 +108,7 @@ class Glitch(PhaseComponent):
                 value=0.0,
                 description_template=self._description_decaying_frequencychange,
                 type_match="float",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -112,6 +119,7 @@ class Glitch(PhaseComponent):
                 value=0.0,
                 description_template=self._description_decaytimeconstant,
                 type_match="float",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.phase_funcs_component += [self.glitch_phase]
