@@ -107,6 +107,7 @@ class PeriodSpindown(SpindownBase):
                 units=u.s,
                 description="Spin period",
                 longdouble=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         # Add spin period derivative P1. Since it is not all rquired, we are setting the
@@ -118,6 +119,7 @@ class PeriodSpindown(SpindownBase):
                 units=u.s / u.s,
                 description="Spin period derivative",
                 longdouble=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         # Add reference epoch time.
@@ -126,6 +128,7 @@ class PeriodSpindown(SpindownBase):
                 name="PEPOCH_P0",
                 description="Reference epoch for spin-down",
                 time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         # Add spindown phase model function to phase functions
