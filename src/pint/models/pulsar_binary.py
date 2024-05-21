@@ -91,6 +91,7 @@ class PulsarBinary(DelayComponent):
                 units=u.day,
                 description="Orbital period",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -101,6 +102,7 @@ class PulsarBinary(DelayComponent):
                 unit_scale=True,
                 scale_factor=1e-12,
                 scale_threshold=1e-7,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -127,7 +129,11 @@ class PulsarBinary(DelayComponent):
         )
         self.add_param(
             floatParameter(
-                name="ECC", units="", aliases=["E"], description="Eccentricity"
+                name="ECC",
+                units="",
+                aliases=["E"],
+                description="Eccentricity",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -138,11 +144,15 @@ class PulsarBinary(DelayComponent):
                 unit_scale=True,
                 scale_factor=1e-12,
                 scale_threshold=1e-7,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
             MJDParameter(
-                name="T0", description="Epoch of periastron passage", time_scale="tdb"
+                name="T0",
+                description="Epoch of periastron passage",
+                time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -151,6 +161,7 @@ class PulsarBinary(DelayComponent):
                 units=u.deg,
                 description="Longitude of periastron",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -159,6 +170,7 @@ class PulsarBinary(DelayComponent):
                 units="deg/year",
                 description="Rate of advance of periastron",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -171,7 +183,10 @@ class PulsarBinary(DelayComponent):
         )
         self.add_param(
             floatParameter(
-                name="SINI", units="", description="Sine of inclination angle"
+                name="SINI",
+                units="",
+                description="Sine of inclination angle",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -185,6 +200,7 @@ class PulsarBinary(DelayComponent):
                 description_template=self.FBX_description,
                 type_match="float",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.internal_params = []
