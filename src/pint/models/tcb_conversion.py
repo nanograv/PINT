@@ -108,9 +108,10 @@ def convert_tcb_tdb(model: TimingModel, backwards: bool = False):
     in fact affected by the TCB to TDB conversion:
         1. TZRMJD and TZRFRQ
         2. DMJUMPs (the wideband kind)
-        6. FD parameters and FD jumps
-        7. EQUADs and ECORRs.
-        8. GP Red noise and GP DM noise parameters
+        3. FD parameters and FD jumps
+        4. EQUADs and ECORRs.
+        5. GP Red noise and GP DM noise parameters
+        6. Pair parameters such as Wave and IFunc parameters
 
     Parameters
     ----------
