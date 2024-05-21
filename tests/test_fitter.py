@@ -103,6 +103,7 @@ def test_ftest_nb():
         value=0.0,
         units=u.Hz / u.s / u.s,
         frozen=False,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )
     ft = f.ftest(F2, "Spindown", remove=False)
     assert isinstance(ft["ft"], (float, bool))
@@ -129,7 +130,12 @@ def test_ftest_wb():
     wb_f.fit_toas()
     # Parallax
     PX = param.floatParameter(
-        parameter_type="float", name="PX", value=0.0, units=u.mas, frozen=False
+        parameter_type="float",
+        name="PX",
+        value=0.0,
+        units=u.mas,
+        frozen=False,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )
     PX_Component = "AstrometryEcliptic"
     # A1DOT
@@ -139,6 +145,7 @@ def test_ftest_wb():
         value=0.0,
         units=ls / u.second,
         frozen=False,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )
     A1DOT_Component = "BinaryELL1"
     # Test adding A1DOT
