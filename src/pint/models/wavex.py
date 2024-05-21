@@ -223,6 +223,7 @@ class WaveX(DelayComponent):
                     units="1/d",
                     value=wxfreq,
                     parameter_type="float",
+                    tcb2tdb_scale_factor=u.Quantity(1),
                 )
             )
             self.add_param(
@@ -233,6 +234,7 @@ class WaveX(DelayComponent):
                     value=wxsin,
                     parameter_type="float",
                     frozen=frozen,
+                    tcb2tdb_scale_factor=u.Quantity(1),
                 )
             )
             self.add_param(
@@ -243,6 +245,7 @@ class WaveX(DelayComponent):
                     value=wxcos,
                     parameter_type="float",
                     frozen=frozen,
+                    tcb2tdb_scale_factor=u.Quantity(1),
                 )
             )
         self.setup()

@@ -138,6 +138,7 @@ class Wave(PhaseComponent):
                 type_match="pair",
                 long_double=True,
                 parameter_type="pair",
+                convert_tcb2tdb=False,
             )
         )
         self.setup()
