@@ -324,7 +324,9 @@ class DispersionDMX(Dispersion):
 
     def __init__(self):
         super().__init__()
+
         # DMX is for info output right now
+        # @abhisrkckl: What exactly is the use of this parameter?
         self.add_param(
             floatParameter(
                 name="DMX",
