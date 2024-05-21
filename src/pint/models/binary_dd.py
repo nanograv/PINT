@@ -181,8 +181,9 @@ class BinaryDDS(BinaryDD):
             floatParameter(
                 name="SHAPMAX",
                 value=0.0,
+                units=u.dimensionless_unscaled,
                 description="Function of inclination angle",
-                convert_tcb2tdb=False,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.remove_param("SINI")
