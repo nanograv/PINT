@@ -679,7 +679,7 @@ class floatParameter(Parameter):
         scale_factor=None,
         scale_threshold=None,
         convert_tcb2tdb=True,
-        tcb2tdb_scale_factor=u.Quantity(1),
+        tcb2tdb_scale_factor=None,
         **kwargs,
     ):
         self.long_double = long_double
@@ -707,6 +707,9 @@ class floatParameter(Parameter):
         ]
         self.unit_scale = unit_scale
 
+        assert (
+            not convert_tcb2tdb or tcb2tdb_scale_factor is not None
+        ), "Please specify the tcb2tdb_scale_factor explicitly."
         self.convert_tcb2tdb = convert_tcb2tdb
         self.tcb2tdb_scale_factor = tcb2tdb_scale_factor
 
@@ -1109,7 +1112,7 @@ class MJDParameter(Parameter):
         aliases=None,
         time_scale="tdb",
         convert_tcb2tdb=True,
-        tcb2tdb_scale_factor=u.Quantity(1),
+        tcb2tdb_scale_factor=None,
         **kwargs,
     ):
         self._time_scale = time_scale
@@ -1128,6 +1131,9 @@ class MJDParameter(Parameter):
         self.paramType = "MJDParameter"
         self.special_arg += ["time_scale"]
 
+        assert (
+            not convert_tcb2tdb or tcb2tdb_scale_factor is not None
+        ), "Please specify the tcb2tdb_scale_factor explicitly."
         self.convert_tcb2tdb = convert_tcb2tdb
         self.tcb2tdb_scale_factor = tcb2tdb_scale_factor
 
@@ -1296,7 +1302,7 @@ class AngleParameter(Parameter):
         continuous=True,
         aliases=None,
         convert_tcb2tdb=True,
-        tcb2tdb_scale_factor=u.Quantity(1),
+        tcb2tdb_scale_factor=None,
         **kwargs,
     ):
         self._str_unit = units
@@ -1326,6 +1332,9 @@ class AngleParameter(Parameter):
             aliases=aliases,
         )
 
+        assert (
+            not convert_tcb2tdb or tcb2tdb_scale_factor is not None
+        ), "Please specify the tcb2tdb_scale_factor explicitly."
         self.convert_tcb2tdb = convert_tcb2tdb
         self.tcb2tdb_scale_factor = tcb2tdb_scale_factor
 
@@ -1498,7 +1507,7 @@ class prefixParameter:
         scale_threshold=None,
         time_scale="utc",
         convert_tcb2tdb=True,
-        tcb2tdb_scale_factor=u.Quantity(1),
+        tcb2tdb_scale_factor=None,
         **kwargs,
     ):
         # Split prefixed name, if the name is not in the prefixed format, error
@@ -1543,6 +1552,9 @@ class prefixParameter:
 
         # For prefix parameters, the scaling factor can in principle be
         # a function of the prefix.
+        assert (
+            not convert_tcb2tdb or tcb2tdb_scale_factor is not None
+        ), "Please specify the tcb2tdb_scale_factor explicitly."
         tcb2tdb_scale_factor_val = (
             tcb2tdb_scale_factor(self.prefix)
             if hasattr(tcb2tdb_scale_factor, "__call__")
@@ -1844,7 +1856,7 @@ class maskParameter(floatParameter):
         continuous=False,
         aliases=[],
         convert_tcb2tdb=True,
-        tcb2tdb_scale_factor=u.Quantity(1),
+        tcb2tdb_scale_factor=None,
     ):
         self.is_mask = True
         # {key_name: (keyvalue parse function, keyvalue length)}
