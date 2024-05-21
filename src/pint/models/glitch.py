@@ -21,31 +21,31 @@ class Glitch(PhaseComponent):
 
     @classmethod
     def _description_glitch_phase(cls, x):
-        return "Phase change for glitch %d" % x
+        return f"Phase change for glitch {x}"
 
     @classmethod
     def _description_glitch_epoch(cls, x):
-        return "Epoch of glitch %d" % x
+        return f"Epoch of glitch {x}"
 
     @classmethod
     def _description_glitch_frequencychange(cls, x):
-        return ("Permanent frequency change for glitch %d" % x,)
+        return (f"Permanent frequency change for glitch {x}",)
 
     @classmethod
     def _description_glitch_frequencyderivativechange(cls, x):
-        return ("Permanent frequency-derivative change for glitch %d" % x,)
+        return (f"Permanent frequency-derivative change for glitch {x}",)
 
     @classmethod
     def _description_glitch_frequencysecondderivativechange(cls, x):
-        return ("Permanent second frequency-derivative change for glitch %d" % x,)
+        return (f"Permanent second frequency-derivative change for glitch {x}",)
 
     @classmethod
     def _description_decaying_frequencychange(cls, x):
-        return "Decaying frequency change for glitch %d " % x
+        return f"Decaying frequency change for glitch {x}"
 
     @classmethod
     def _description_decaytimeconstant(cls, x):
-        return "Decay time constant for glitch %d" % x
+        return f"Decay time constant for glitch {x}"
 
     register = True
     category = "glitch"
@@ -216,7 +216,7 @@ class Glitch(PhaseComponent):
                 tau = getattr(self, "GLTD_%d" % idx).quantity
                 decayterm = dF0D * tau * (1.0 - np.exp(-(dt[affected] / tau)))
             else:
-                decayterm = 0.0 * u.Unit("")
+                decayterm = u.Quantity(0)
 
             log.debug(f"Glitch phase for glitch {idx}: {dphs} {dphs.unit}")
             phs[affected] += (
