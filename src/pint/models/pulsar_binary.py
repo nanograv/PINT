@@ -87,7 +87,10 @@ class PulsarBinary(DelayComponent):
         self.binary_model_class = None
         self.add_param(
             floatParameter(
-                name="PB", units=u.day, description="Orbital period", long_double=True
+                name="PB",
+                units=u.day,
+                description="Orbital period",
+                long_double=True,
             )
         )
         self.add_param(
