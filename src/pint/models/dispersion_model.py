@@ -170,7 +170,10 @@ class DispersionDM(Dispersion):
         )
         self.add_param(
             MJDParameter(
-                name="DMEPOCH", description="Epoch of DM measurement", time_scale="tdb"
+                name="DMEPOCH",
+                description="Epoch of DM measurement",
+                time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
