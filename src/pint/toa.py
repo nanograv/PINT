@@ -337,7 +337,7 @@ def get_TOAs(
     return t
 
 
-def load_pickle(toafilename: str, picklefilename: str = None):
+def load_pickle(toafilename: str, picklefilename: Optional[str] = None):
     """Load a pickle file, un-gzipping if necessary.
 
     Parameters
@@ -377,7 +377,7 @@ def load_pickle(toafilename: str, picklefilename: str = None):
     raise IOError("No readable pickle found")
 
 
-def save_pickle(toas: "TOAs", picklefilename: str = None):
+def save_pickle(toas: "TOAs", picklefilename: Optional[str] = None):
     """Write the TOAs to a ``.pickle.gz`` file.
 
     Parameters
@@ -410,15 +410,15 @@ def save_pickle(toas: "TOAs", picklefilename: str = None):
 
 def get_TOAs_list(
     toa_list: List["TOA"],
-    ephem: str = None,
+    ephem: Optional[str] = None,
     include_bipm: bool = True,
     bipm_version: str = bipm_default,
     include_gps: bool = True,
     planets: bool = False,
     tdb_method: str = "default",
-    commands: List[str] = None,
-    filename: str = None,
-    hashes: dict = None,
+    commands: Optional[List[str]] = None,
+    filename: Optional[str] = None,
+    hashes: Optional[dict] = None,
     limits: str = "warn",
 ):
     """Load TOAs from a list of TOA objects.
