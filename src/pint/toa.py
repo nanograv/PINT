@@ -337,7 +337,7 @@ def get_TOAs(
     return t
 
 
-def load_pickle(toafilename: str, picklefilename: Optional[str] = None):
+def load_pickle(toafilename: str, picklefilename: Optional[str] = None) -> "TOAs":
     """Load a pickle file, un-gzipping if necessary.
 
     Parameters
@@ -420,7 +420,7 @@ def get_TOAs_list(
     filename: Optional[str] = None,
     hashes: Optional[dict] = None,
     limits: str = "warn",
-):
+) -> "TOAs":
     """Load TOAs from a list of TOA objects.
 
     See :func:`pint.toa.get_TOAs` for details of what this function does.
@@ -577,8 +577,8 @@ def format_toa_line(
     name: str = "unknown",
     flags: dict = {},
     format: str = "Princeton",
-    alias_translation: dict = None,
-):
+    alias_translation: Optional[dict] = None,
+) -> str:
     """Format TOA line for writing
 
     Parameters
@@ -706,9 +706,9 @@ def format_toa_line(
 def read_toa_file(
     filename: str,
     process_includes: bool = True,
-    cdict: dict = None,
-    dir: dir_like = None,
-):
+    cdict: Optional[dict] = None,
+    dir: Optional[dir_like] = None,
+) -> "TOAs":
     """Read TOAs from the given filename into a list.
 
     Will process INCLUDEd files unless process_includes is False.
@@ -861,7 +861,7 @@ def read_toa_file(
     return toas, commands
 
 
-def build_table(toas, filename=None):
+def build_table(toas: "TOAs", filename: Optional[str] = None) -> table.Table:
     mjds, mjd_floats, errors, freqs, obss, flags = zip(
         *[
             (
@@ -1078,8 +1078,8 @@ class TOA:
         error: quantity_like = 0.0,
         obs: str = "Barycenter",
         freq: quantity_like = np.inf,
-        scale: str = None,
-        flags: dict = None,
+        scale: Optional[str] = None,
+        flags: Optional[dict] = None,
         **kwargs,
     ):
         site = get_observatory(obs)
@@ -1145,7 +1145,7 @@ class TOA:
                     f"TOA constructor does not accept keyword arguments {kwargs} when flags are specified."
                 )
 
-    def __str__(self):
+    def __str__(self) -> str:
         s = (
             self.mjd.mjd_string
             + f": {self.error.value:6.3f} {self.error.unit} error at '{self.obs}' at {self.freq.value:.4f} {self.freq.unit}"
@@ -1154,13 +1154,13 @@ class TOA:
             s += f" {str(self.flags)}"
         return s
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         result = True
         for p in ["mjd", "error", "obs", "freq", "flags"]:
             result = result and getattr(self, p) == getattr(other, p)
         return result
 
-    def as_line(self, format="Tempo2", name=None, dm=0 * pint.dmu):
+    def as_line(self, format="Tempo2", name=None, dm=0 * pint.dmu) -> str:
         """Format TOA as a line for a ``.tim`` file."""
         if name is not None:
             pass
@@ -1325,9 +1325,9 @@ class TOAs:
 
     def __init__(
         self,
-        toafile: str = None,
-        toalist: List[TOA] = None,
-        toatable: table.Table = None,
+        toafile: Optional[str] = None,
+        toalist: Optional[List[TOA]] = None,
+        toatable: Optional[table.Table] = None,
         tzr: bool = False,
     ):
         # First, just make an empty container
@@ -1551,25 +1551,25 @@ class TOAs:
     def __repr__(self):
         return f"{len(self)} TOAs starting at MJD {self.first_MJD}"
 
-    def __eq__(self, other: "TOAs"):
+    def __eq__(self, other: "TOAs") -> bool:
         sd, od = self.__dict__.copy(), other.__dict__.copy()
         st = sd.pop("table")
         ot = od.pop("table")
         return sd == od and np.all(st == ot)
 
-    def __add__(self, other: "TOAs"):
+    def __add__(self, other: "TOAs") -> "TOAs":
         """Addition operator, allowing merging/concatenation of TOAs"""
         if isinstance(other, type(self)):
             return merge_TOAs([self, other])
         raise TypeError(f"Do not know how to add '{type(self)}' and '{type(other)}'")
 
-    def __iadd__(self, other):
+    def __iadd__(self, other) -> "TOAs":
         if isinstance(other, type(self)):
             self.merge(other)
             return self
         raise TypeError(f"Do not know how to add '{type(self)}' and '{type(other)}'")
 
-    def __sub__(self, other):
+    def __sub__(self, other: Union[u.Quantity, time.TimeDelta]) -> "TOAs":
         if isinstance(other, (u.Quantity, time.TimeDelta)):
             return self + (-1 * other)
         raise TypeError(
