@@ -1751,6 +1751,7 @@ class TimingModel:
                 value=0.0,
                 units="second",
                 uncertainty=0.0,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
             self.add_param_from_top(param, "PhaseJump")
             getattr(self, param.name).frozen = False
