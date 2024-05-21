@@ -23,7 +23,7 @@ import re
 import warnings
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import IO, List, Set, Tuple, Union
+from typing import IO, List, Optional, Set, Tuple, Union
 
 import astropy.table as table
 import astropy.time as time
@@ -105,16 +105,16 @@ tempo_aliases = {
 
 def get_TOAs(
     timfile: file_like,
-    ephem: str = None,
-    include_bipm: bool = None,
-    bipm_version: str = None,
-    include_gps: bool = None,
-    planets: bool = None,
-    include_pn: bool = True,
+    ephem: Optional[str] = None,
+    include_bipm: Optional[bool] = None,
+    bipm_version: Optional[str] = None,
+    include_gps: Optional[bool] = None,
+    planets: Optional[bool] = None,
+    include_pn: Optional[bool] = True,
     model: "pint.models.timing_model.TimingModel" = None,
     usepickle: bool = False,
     tdb_method: str = "default",
-    picklefilename: str = None,
+    picklefilename: Optional[str] = None,
     limits: str = "warn",
 ) -> "TOAs":
     """Load and prepare TOAs for PINT use.
