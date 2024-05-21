@@ -7,6 +7,7 @@ from pint.models.stand_alone_psr_binaries.BT_model import BTmodel
 from pint.models.stand_alone_psr_binaries.BT_piecewise import BTpiecewise
 from pint.models.timing_model import MissingParameter
 import astropy.units as u
+import astropy.constants as consts
 from pint import ls
 from astropy.time import Time
 from pint.models.parameter import (
@@ -56,6 +57,7 @@ class BinaryBT(PulsarBinary):
                 value=0.0,
                 units="second",
                 description="Time dilation & gravitational redshift",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.remove_param("M2")
@@ -104,6 +106,7 @@ class BinaryBTPiecewise(PulsarBinary):
                 value=0.0,
                 units="second",
                 description="Time dilation & gravitational redshift",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.A1_value_funcs = []
@@ -177,6 +180,7 @@ class BinaryBTPiecewise(PulsarBinary):
                 parameter_type="MJD",
                 time_scale="utc",
                 value=group_start_mjd,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -187,6 +191,7 @@ class BinaryBTPiecewise(PulsarBinary):
                 parameter_type="MJD",
                 time_scale="utc",
                 value=group_end_mjd,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.setup()
@@ -296,6 +301,7 @@ class BinaryBTPiecewise(PulsarBinary):
                 description=f"Parameter{param}variation",
                 parameter_type="float",
                 frozen=False,
+                tcb2tdb_scale_factor=(1 / consts.c if param == "A1" else u.Quantity(1)),
             )
         )
         self.setup()
