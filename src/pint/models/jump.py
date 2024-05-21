@@ -221,6 +221,7 @@ class PhaseJump(PhaseComponent):
                 value=0.0,
                 units="second",
                 frozen=False,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         # otherwise add on jump with next index
         else:
@@ -242,6 +243,7 @@ class PhaseJump(PhaseComponent):
                 value=0.0,
                 units="second",
                 frozen=False,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         self.add_param(param)
         ind = param.index
