@@ -746,7 +746,7 @@ class DispersionJump(Dispersion):
                 name="DMJUMP",
                 units="pc cm^-3",
                 value=None,
-                description="DM value offset.",
+                description="Wideband DM value offset.",
                 convert_tcb2tdb=False,
             )
         )
