@@ -162,6 +162,7 @@ class PeriodSpindown(SpindownBase):
             units="Hz",
             description="Spin-frequency",
             long_double=True,
+            tcb2tdb_scale_factor=u.Quantity(1),
         )
 
     # Defining the derivatives. In the PINT, a common format of derivative naming is
@@ -178,6 +179,7 @@ class PeriodSpindown(SpindownBase):
             units=u.Hz / u.s,
             description="Spin down frequency",
             long_double=True,
+            tcb2tdb_scale_factor=u.Quantity(1),
         )
 
     @property
