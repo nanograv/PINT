@@ -26,7 +26,7 @@ IFTE_KM1 = np.longdouble("1.55051979176e-8")
 IFTE_K = 1 + IFTE_KM1
 
 
-def scale_parameter(model: TimingModel, param: str, n: int, backwards: bool):
+def scale_parameter(model: TimingModel, param: str, n: int, backwards: bool) -> None:
     """Scale a parameter x by a power of IFTE_K
         x_tdb = x_tcb * IFTE_K**n
 
@@ -66,7 +66,7 @@ def scale_parameter(model: TimingModel, param: str, n: int, backwards: bool):
             par.uncertainty_value *= factor
 
 
-def transform_mjd_parameter(model: TimingModel, param: str, backwards: bool):
+def transform_mjd_parameter(model: TimingModel, param: str, backwards: bool) -> None:
     """Convert an MJD from TCB to TDB or vice versa.
         t_tdb = (t_tcb - IFTE_MJD0) / IFTE_K + IFTE_MJD0
         t_tcb = (t_tdb - IFTE_MJD0) * IFTE_K + IFTE_MJD0
@@ -95,7 +95,7 @@ def transform_mjd_parameter(model: TimingModel, param: str, backwards: bool):
             par.uncertainty_value *= factor
 
 
-def convert_tcb_tdb(model: TimingModel, backwards: bool = False):
+def convert_tcb_tdb(model: TimingModel, backwards: bool = False) -> None:
     """This function performs a partial conversion of a model
     specified in TCB to TDB. While this should be sufficient as
     a starting point, the resulting parameters are only approximate
