@@ -20,7 +20,6 @@ from pint.utils import (
     split_prefixed_name,
     taylor_horner,
     taylor_horner_deriv,
-    get_prefix_timeranges,
 )
 from pint import DMconst
 
@@ -154,6 +153,7 @@ class DispersionDM(Dispersion):
                 value=0.0,
                 description="Dispersion measure",
                 long_double=True,
+                tcb2tdb_scale_factor=DMconst,
             )
         )
         self.add_param(
@@ -165,11 +165,15 @@ class DispersionDM(Dispersion):
                 description_template=self.DM_dervative_description,
                 type_match="float",
                 long_double=True,
+                tcb2tdb_scale_factor=DMconst,
             )
         )
         self.add_param(
             MJDParameter(
-                name="DMEPOCH", description="Epoch of DM measurement", time_scale="tdb"
+                name="DMEPOCH",
+                description="Epoch of DM measurement",
+                time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -320,13 +324,16 @@ class DispersionDMX(Dispersion):
 
     def __init__(self):
         super().__init__()
+
         # DMX is for info output right now
+        # @abhisrkckl: What exactly is the use of this parameter?
         self.add_param(
             floatParameter(
                 name="DMX",
                 units="pc cm^-3",
                 value=0.0,
                 description="Dispersion measure",
+                convert_tcb2tdb=False,
             )
         )
 
@@ -396,6 +403,7 @@ class DispersionDMX(Dispersion):
                 description="Dispersion measure variation",
                 parameter_type="float",
                 frozen=frozen,
+                tcb2tdb_scale_factor=DMconst,
             )
         )
         self.add_param(
@@ -406,6 +414,7 @@ class DispersionDMX(Dispersion):
                 parameter_type="MJD",
                 time_scale="utc",
                 value=mjd_start,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -416,6 +425,7 @@ class DispersionDMX(Dispersion):
                 parameter_type="MJD",
                 time_scale="utc",
                 value=mjd_end,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.setup()
@@ -512,6 +522,7 @@ class DispersionDMX(Dispersion):
                     description="Dispersion measure variation",
                     parameter_type="float",
                     frozen=frozen,
+                    tcb2tdb_scale_factor=DMconst,
                 )
             )
             self.add_param(
@@ -522,6 +533,7 @@ class DispersionDMX(Dispersion):
                     parameter_type="MJD",
                     time_scale="utc",
                     value=mjd_start,
+                    tcb2tdb_scale_factor=u.Quantity(1),
                 )
             )
             self.add_param(
@@ -532,6 +544,7 @@ class DispersionDMX(Dispersion):
                     parameter_type="MJD",
                     time_scale="utc",
                     value=mjd_end,
+                    tcb2tdb_scale_factor=u.Quantity(1),
                 )
             )
         self.setup()
@@ -735,7 +748,8 @@ class DispersionJump(Dispersion):
                 name="DMJUMP",
                 units="pc cm^-3",
                 value=None,
-                description="DM value offset.",
+                description="Wideband DM value offset.",
+                convert_tcb2tdb=False,
             )
         )
 
@@ -825,6 +839,7 @@ class FDJumpDM(Dispersion):
                 units="pc cm^-3",
                 value=None,
                 description="System-dependent DM offset.",
+                tcb2tdb_scale_factor=DMconst,
             )
         )
 

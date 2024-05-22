@@ -79,6 +79,7 @@ class FDJump(DelayComponent):
                     name=f"FD{j}JUMP",
                     units="second",
                     description=f"System-dependent FD parameter of polynomial index {j}",
+                    convert_tcb2tdb=False,
                 )
             )
 
