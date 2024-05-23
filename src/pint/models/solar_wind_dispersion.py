@@ -1,4 +1,5 @@
 """Dispersion due to the solar wind."""
+
 from warnings import warn
 
 import astropy.constants as const
@@ -7,8 +8,9 @@ import astropy.time
 import numpy as np
 import scipy.special
 
+from pint import DMconst
 from pint.models.dispersion_model import Dispersion
-from pint.models.parameter import floatParameter, prefixParameter
+from pint.models.parameter import floatParameter, intParameter, prefixParameter
 import pint.utils
 from pint.models.timing_model import MissingTOAs
 from pint.toa_select import TOASelect
@@ -297,6 +299,7 @@ class SolarWindDispersion(SolarWindDispersionBase):
                 value=0.0,
                 aliases=["NE1AU", "SOLARN0"],
                 description="Solar Wind density at 1 AU",
+                tcb2tdb_scale_factor=(const.c * DMconst),
             )
         )
         self.add_param(
@@ -305,13 +308,13 @@ class SolarWindDispersion(SolarWindDispersionBase):
                 value=2.0,
                 units="",
                 description="Solar Wind Model radial power-law index (only for SWM=1)",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
-            floatParameter(
+            intParameter(
                 name="SWM",
-                value=0.0,
-                units="",
+                value=0,
                 description="Solar Wind Model (0 is from Edwards+ 2006, 1 is from You+2007,2012/Hazboun+ 2022)",
             )
         )
@@ -740,6 +743,7 @@ class SolarWindDispersionX(SolarWindDispersionBase):
                 description="Max Solar Wind DM",
                 parameter_type="float",
                 frozen=frozen,
+                tcb2tdb_scale_factor=DMconst,
             )
         )
         self.add_param(
@@ -749,6 +753,7 @@ class SolarWindDispersionX(SolarWindDispersionBase):
                 description="Solar wind power-law index",
                 parameter_type="float",
                 frozen=frozen,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -759,6 +764,7 @@ class SolarWindDispersionX(SolarWindDispersionBase):
                 parameter_type="MJD",
                 time_scale="utc",
                 value=mjd_start,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -769,6 +775,7 @@ class SolarWindDispersionX(SolarWindDispersionBase):
                 parameter_type="MJD",
                 time_scale="utc",
                 value=mjd_end,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.setup()

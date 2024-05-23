@@ -8,6 +8,7 @@ from typing import Optional, List, Union
 import astropy.constants as const
 import astropy.coordinates as coords
 import astropy.units as u
+import astropy.constants as consts
 import numpy as np
 from astropy.time import Time
 
@@ -50,11 +51,18 @@ class Astrometry(DelayComponent):
                 name="POSEPOCH",
                 description="Reference epoch for position",
                 time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
         self.add_param(
-            floatParameter(name="PX", units="mas", value=0.0, description="Parallax")
+            floatParameter(
+                name="PX",
+                units="mas",
+                value=0.0,
+                description="Parallax",
+                tcb2tdb_scale_factor=(consts.c / u.au),
+            )
         )
 
         self.delay_funcs_component += [self.solar_system_geometric_delay]
@@ -162,7 +170,9 @@ class Astrometry(DelayComponent):
             re_dot_L = np.sum(tbl["ssb_obs_pos"][c] * L_hat, axis=1)
             delay[c] = -re_dot_L.to(ls).value
             if self.PX.value != 0.0:
+                # This is equivalent to PX * c / AU.
                 L = (1.0 / self.PX.value) * u.kpc
+
                 # TODO: np.sum currently loses units in some cases...
                 re_sqr = (
                     np.sum(tbl["ssb_obs_pos"][c] ** 2, axis=1)
@@ -278,6 +288,7 @@ class AstrometryEquatorial(Astrometry):
                 units="H:M:S",
                 description="Right ascension (J2000)",
                 aliases=["RA"],
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -287,6 +298,7 @@ class AstrometryEquatorial(Astrometry):
                 units="D:M:S",
                 description="Declination (J2000)",
                 aliases=["DEC"],
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -296,6 +308,7 @@ class AstrometryEquatorial(Astrometry):
                 units="mas/year",
                 description="Proper motion in RA",
                 value=0.0,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -305,6 +318,7 @@ class AstrometryEquatorial(Astrometry):
                 units="mas/year",
                 description="Proper motion in DEC",
                 value=0.0,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.set_special_params(["RAJ", "DECJ", "PMRA", "PMDEC"])
@@ -755,6 +769,7 @@ class AstrometryEcliptic(Astrometry):
                 units="deg",
                 description="Ecliptic longitude",
                 aliases=["LAMBDA"],
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -764,6 +779,7 @@ class AstrometryEcliptic(Astrometry):
                 units="deg",
                 description="Ecliptic latitude",
                 aliases=["BETA"],
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -774,6 +790,7 @@ class AstrometryEcliptic(Astrometry):
                 description="Proper motion in ecliptic longitude",
                 aliases=["PMLAMBDA"],
                 value=0.0,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -784,6 +801,7 @@ class AstrometryEcliptic(Astrometry):
                 description="Proper motion in ecliptic latitude",
                 aliases=["PMBETA"],
                 value=0.0,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 

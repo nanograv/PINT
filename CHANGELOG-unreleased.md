@@ -16,6 +16,7 @@ the released changes.
 - Type hinting for most of the `pint.utils` module
 - `funcParameter`s are no longer listed in the `pintk` interface.
 - Updated location of CCERA
+- New algorithm for TCB <-> TDB conversion
 ### Added
 - `bayesian_information_criterion()` function 
 - `dmx_setup` function
@@ -24,6 +25,8 @@ the released changes.
 - Test for `pint.utils.split_swx()`
 - Custom type definitions for type hints
 - Added `citation.cff`
+- `convert_tcb2tdb`, `tcb2tdb_scale_factor`, and `effective_dimensionality` attributes for `floatParameter`s, `MJDParameter`s, `AngleParameter`s, `maskParameter`s, and `prefixParameter`s.
+- Documentation: HOWTO about determining tcb<->tdb scaling factors
 - `pint.models.chromatic_model.Chromatic` as the base class for variable-index chromatic delays.
 - `pint.models.chromatic_model.ChromaticCM` for a Taylor series representation of the variable-index chromatic delay.
 ### Fixed
