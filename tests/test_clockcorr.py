@@ -79,13 +79,13 @@ def test_clockcorr_roundtrip():
 
 
 def test_clk_uncorr():
+    # Make AXIS observatory without GPS corrections
+    site = get_observatory("AXIS", apply_gps2utc=False)
     m, t = get_model_and_toas(
         datadir / "J0030+0451.mdc1.par", datadir / "J0030+0451.mdc1.tim", allow_tcb=True
     )
     assert m.CLOCK.value == "UNCORR"
-    assert (
-        not t.clock_corr_info["include_bipm"] and not t.clock_corr_info["include_gps"]
-    )
+    assert not t.clock_corr_info["include_bipm"]
     assert all("clkcorr" not in flags for flags in t.get_flags())
 
 
@@ -105,9 +105,7 @@ def test_bipm_corr():
     t = Time(60000.0, scale="utc", format="mjd")
     bipm_delta = obs.bipm_correction(t, bipm_version="BIPM2021")
     gps_delta = obs.gps_correction(t)
-    tsYY = get_TOAs(
-        timfile, include_bipm=True, include_gps=True, bipm_version="BIPM2021"
-    )
+    tsYY = get_TOAs(timfile, include_bipm=True, bipm_version="BIPM2021")
     # No correction should have been applied tot the bat TOA
     assert np.abs(tsYY.table["mjd"][0].mjd - t.mjd) < 1.0e-9 / 86400.0
     # COE TOA should have gotten both GPS and BIPM correction
@@ -132,11 +130,11 @@ def test_bipm_corr():
     lst = tsZZ.to_TOA_list(undo_clkcorr=True)
     assert "clkcorr" not in lst[1].flags
 
-    # Now make sure corrections are not applied when not requested
+    # Now make sure BIPM corrections are not applied when not requested
     timfile = io.StringIO(toastr)
-    tsNN = get_TOAs(
-        timfile, include_bipm=False, include_gps=False, bipm_version="BIPM2021"
-    )
+    tsNN = get_TOAs(timfile, include_bipm=False, bipm_version="BIPM2021")
     # No correction should have been applied to the bat or the COE TOA
+    # ACTUALLY the GPS to UTC correction should still have been applied for coe.
+    # but at MJD 60000.0 the correction is 0.7 ns so doesn't cause this to fail.
     assert np.abs(tsNN.table["mjd"][0].mjd - t.mjd) < 1.0e-9 / 86400
     assert np.abs(tsNN.table["mjd"][2] - t) < 1.0 * u.ns

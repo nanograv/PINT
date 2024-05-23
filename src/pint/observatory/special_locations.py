@@ -45,6 +45,8 @@ class SpecialLocation(Observatory):
         The name of the observatory
     aliases : str, optional
         List of other aliases for the observatory name.
+    apply_gps2utc : bool or None
+        Set False to disable UTC(GPS)->UTC clock correction
     overwrite : bool, optional
         If True, allow redefinition of an existing observatory; if False,
         raise an exception.
@@ -54,11 +56,13 @@ class SpecialLocation(Observatory):
         self,
         name,
         aliases=None,
+        apply_gps2utc=None,
         overwrite=False,
     ):
         super().__init__(
             name,
             aliases=aliases,
+            apply_gps2utc=apply_gps2utc,
             overwrite=overwrite,
         )
 
@@ -68,17 +72,19 @@ class SpecialLocation(Observatory):
 class BarycenterObs(SpecialLocation):
     """Observatory-derived class for the solar system barycenter.
 
-    Time scale is assumed to be tdb."""
+    Time scale is assumed to be TDB, so no GPS or BIPM corrections should be applied."""
 
     def __init__(
         self,
         name,
         aliases=None,
+        apply_gps2utc=False,
         overwrite=False,
     ):
         super().__init__(
             name,
             aliases=aliases,
+            apply_gps2utc=apply_gps2utc,
             overwrite=overwrite,
         )
 
@@ -113,6 +119,20 @@ class BarycenterObs(SpecialLocation):
 class GeocenterObs(SpecialLocation):
     """Observatory-derived class for the Earth geocenter."""
 
+    def __init__(
+        self,
+        name,
+        aliases=None,
+        apply_gps2utc=True,
+        overwrite=False,
+    ):
+        super().__init__(
+            name,
+            aliases=aliases,
+            apply_gps2utc=apply_gps2utc,
+            overwrite=overwrite,
+        )
+
     @property
     def timescale(self):
         return "utc"
@@ -143,7 +163,23 @@ class T2SpacecraftObs(SpecialLocation):
     observatory via the -telx, -tely, and -telz flags in a TOA file.  This
     class is able to obtain its position in this way, i.e. by examining the
     flags in a TOA table.
+
+    Since the source of timing for spacecraft TOAs is unknown, by default the GPS to UTC correction is not applied.
     """
+
+    def __init__(
+        self,
+        name,
+        aliases=None,
+        apply_gps2utc=False,
+        overwrite=False,
+    ):
+        super().__init__(
+            name,
+            aliases=aliases,
+            apply_gps2utc=apply_gps2utc,
+            overwrite=overwrite,
+        )
 
     @property
     def timescale(self):
@@ -236,9 +272,24 @@ def load_special_locations():
     and :class:`~pint.observatory.special_locations.T2SpacecraftObs` into observatory registry.
     """
     # Need to initialize one of each so that it gets added to the list
-    BarycenterObs("barycenter", aliases=["@", "ssb", "bary", "bat"], overwrite=True)
-    GeocenterObs("geocenter", aliases=["0", "o", "coe", "geo"], overwrite=True)
-    T2SpacecraftObs("stl_geo", aliases=["STL_GEO", "spacecraft"], overwrite=True)
+    BarycenterObs(
+        "barycenter",
+        aliases=["@", "ssb", "bary", "bat"],
+        apply_gps2utc=False,
+        overwrite=True,
+    )
+    GeocenterObs(
+        "geocenter",
+        aliases=["0", "o", "coe", "geo"],
+        apply_gps2utc=True,
+        overwrite=True,
+    )
+    T2SpacecraftObs(
+        "stl_geo",
+        aliases=["STL_GEO", "spacecraft"],
+        apply_gps2utc=False,
+        overwrite=True,
+    )
     # TODO -- How to handle user changing bipm_version?
 
 

@@ -158,7 +158,7 @@ class LogFilter:
             r"Using EPHEM = \S+ for \S+ calculation": False,
             r"Using CLOCK = \S+ from the given model": False,
             r"Using PLANET_SHAPIRO = \S+ from the given model": False,
-            r"Applying clock corrections \(include_gps = \S+, include_bipm = \S+\)": False,
+            r"Applying clock corrections \(include_bipm = \S+\)": False,
             r"Applying observatory clock corrections.": False,
             r"Applying GPS to UTC clock correction \(\~few nanoseconds\)": False,
             r"Computing \S+ columns.": False,

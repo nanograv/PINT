@@ -864,7 +864,6 @@ def get_model_and_toas(
     ephem=None,
     include_bipm=None,
     bipm_version=None,
-    include_gps=None,
     planets=None,
     usepickle=False,
     tdb_method="default",
@@ -894,8 +893,6 @@ def get_model_and_toas(
     bipm_version : string or None
         Which version of the BIPM tables to use for the clock correction.
         The format must be 'BIPMXXXX' where XXXX is a year.
-    include_gps : bool or None
-        Whether to include the GPS clock correction. Defaults to True.
     planets : bool or None
         Whether to apply Shapiro delays based on planet positions. Note that a
         long-standing TEMPO2 bug in this feature went unnoticed for years.
@@ -958,7 +955,6 @@ def get_model_and_toas(
         ephem=ephem,
         include_bipm=include_bipm,
         bipm_version=bipm_version,
-        include_gps=include_gps,
         planets=planets,
         usepickle=usepickle,
         tdb_method=tdb_method,

@@ -71,7 +71,6 @@ t = make_fake_toas_uniform(
     error=toaerrs,
     add_noise=True,
     include_bipm=True,
-    include_gps=True,
 )
 
 # %%
@@ -156,7 +155,6 @@ t = make_fake_toas_uniform(
     add_noise=True,
     add_correlated_noise=True,
     include_bipm=True,
-    include_gps=True,
     multi_freqs_in_epoch=True,
 )
 

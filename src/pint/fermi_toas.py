@@ -55,9 +55,7 @@ def calc_lat_weights(energies, angseps, logeref=4.1, logesig=0.5):
     logE = np.log10(energies)
 
     sigma = (
-        np.sqrt(
-            (psfpar0**2 * np.power(100.0 / energies, 2.0 * psfpar1) + psfpar2**2)
-        )
+        np.sqrt((psfpar0**2 * np.power(100.0 / energies, 2.0 * psfpar1) + psfpar2**2))
         / scalepsf
     )
 
@@ -156,7 +154,6 @@ def get_Fermi_TOAs(
     ephem=None,
     planets=False,
     include_bipm=False,
-    include_gps=False,
     errors=_default_uncertainty,
 ):
     """
@@ -194,8 +191,6 @@ def get_Fermi_TOAs(
         Defaults to False.
     include_bipm : bool, optional
         Use TT(BIPM) instead of TT(TAI)
-    include_gps : bool, optional
-        Apply GPS to UTC clock corrections
     errors : astropy.units.Quantity or float, optional
         The uncertainty on the TOA; if it's a float it is assumed to be
         in microseconds
@@ -317,7 +312,6 @@ def get_Fermi_TOAs(
             t,
             obs,
             errors=errors,
-            include_gps=include_gps,
             include_bipm=include_bipm,
             planets=planets,
             ephem=ephem,
@@ -328,7 +322,6 @@ def get_Fermi_TOAs(
             t,
             obs,
             errors=errors,
-            include_gps=False,
             include_bipm=False,
             planets=planets,
             ephem=ephem,

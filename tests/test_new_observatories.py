@@ -22,9 +22,7 @@ def test_get_TOAs():
     tt = get_TOAs(StringIO(tim), ephem="DE421")
     # Check the site clock correction by itself
     site = get_observatory("meerkat")
-    clock_corr = site.clock_corrections(
-        tt.table["mjd"][0], include_gps=False, include_bipm=False
-    )
+    clock_corr = site.clock_corrections(tt.table["mjd"][0], include_bipm=False)
     assert np.isclose(clock_corr.to_value(u.us), 0.40802, atol=0.002)  # from mk2utc.clk
     # Now check barycentering
     mm = get_model(parfile)

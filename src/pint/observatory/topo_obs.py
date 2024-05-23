@@ -121,6 +121,8 @@ class TopoObs(Observatory):
         PINT's usual seach approach; "TEMPO" or "TEMPO2" mean to look in those
         programs' usual location (pointed to by their environment variables),
         while a path means to look in that specific directory.
+    apply_gps2utc : bool, optional
+        Whether to apply UTC(GPS)->UTC clock corrections
     origin : str, optional
         Documentation of the origin/author/date for the information
     overwrite : bool, optional
@@ -150,6 +152,7 @@ class TopoObs(Observatory):
         clock_file="",
         clock_fmt="tempo",
         clock_dir=None,
+        apply_gps2utc=None,
         origin=None,
         overwrite=False,
         bogus_last_correction=False,
@@ -219,6 +222,7 @@ class TopoObs(Observatory):
             name,
             fullname=fullname,
             aliases=aliases,
+            apply_gps2utc=apply_gps2utc,
             overwrite=overwrite,
         )
 
@@ -312,7 +316,6 @@ class TopoObs(Observatory):
     def clock_corrections(
         self,
         t,
-        include_gps=True,
         include_bipm=True,
         bipm_version=bipm_default,
         limits="warn",
@@ -327,7 +330,6 @@ class TopoObs(Observatory):
 
         corr = super().clock_corrections(
             t,
-            include_gps=include_gps,
             include_bipm=include_bipm,
             bipm_version=bipm_version,
             limits=limits,

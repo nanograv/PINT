@@ -532,6 +532,16 @@
         "fullname": "Fake telescope for IPTA data challenge",
         "origin": "Imported from TEMPO2 observatories.dat 2021 June 7.\n"
     },
+    "AXISnoGPS": {
+        "itrf_xyz": [
+            6378138.0,
+            0.0,
+            0.0
+        ],
+        "apply_gps2utc": false,
+        "fullname": "Fake telescope for IPTA data challenge (w/o GPS corrections)",
+        "origin": "Just made for testing\n"
+    },
     "narrabri": {
         "aliases": [
             "atca"

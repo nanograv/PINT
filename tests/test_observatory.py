@@ -51,11 +51,11 @@ def test_different_bipm(tobs):
 def test_clock_corr_shape(tobs, test_time):
     site = get_observatory(tobs)
     clock_corr = site.clock_corrections(
-        test_time, include_gps=True, include_bipm=True, bipm_version="BIPM2015"
+        test_time, include_bipm=True, bipm_version="BIPM2015"
     )
     assert len(clock_corr) == len(test_time)
     clock_corr1 = site.clock_corrections(
-        test_time[0], include_gps=True, include_bipm=True, bipm_version="BIPM2015"
+        test_time[0], include_bipm=True, bipm_version="BIPM2015"
     )
     assert clock_corr1.shape == ()
 
@@ -177,12 +177,12 @@ def test_no_clock_means_no_corrections():
         o = TopoObs(
             "arecibo_bogus",
             itrf_xyz=[2390487.080, -5564731.357, 1994720.633],
+            apply_gps2utc=False,
         )
 
         assert (
             o.clock_corrections(
                 Time(57600, format="mjd"),
-                include_gps=False,
                 include_bipm=False,
                 limits="error",
             ).to_value(u.s)

@@ -295,6 +295,8 @@ class SatelliteObs(SpecialLocation):
         File name to read spacecraft position information from
     maxextrap: float
         Maximum minutes between a time and the closest S/C measurement.
+    apply_gps2utc: bool
+        Whether to apply UTC(GPS)->UTC correction (e.g. if satellite clock is from a GPS receiver)
     overwrite: bool
         Replace the entry in the observatory table.
     """
@@ -304,10 +306,12 @@ class SatelliteObs(SpecialLocation):
         name,
         ft2name,
         maxextrap=2,
+        apply_gps2utc=True,
         overwrite=False,
     ):
         super().__init__(
             name,
+            apply_gps2utc=apply_gps2utc,
             overwrite=overwrite,
         )
         self.FT2 = load_orbit(name, ft2name)

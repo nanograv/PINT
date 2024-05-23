@@ -16,7 +16,9 @@ the released changes.
 - Type hinting for most of the `pint.utils` module
 - `funcParameter`s are no longer listed in the `pintk` interface.
 - Updated location of CCERA
-- Removed `include_bipm`, `include_gps`, and `bipm_version` from the Observatory class. Now they are passed as arguments to `site.clock_correction()`
+- Removed `include_bipm`, and `bipm_version` from the Observatory class. Now they are passed as arguments to `site.clock_correction()`
+- Renamed `include_gps` to `apply_gps2utc` in the Observatory class
+- Removed `apply_gps2utc` from `TOAs.clock_corr_info` since it can be different for different observatories. It is not a global setting.
 - The following observatories no longer have a default of include_bipm=False: magic, lst, virgo, lho, llo, geo600, kagra, hess, hawc
 ### Added
 - `bayesian_information_criterion()` function 
