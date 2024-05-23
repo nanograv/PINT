@@ -123,9 +123,13 @@ class GeocenterObs(SpecialLocation):
         self,
         name,
         aliases=None,
-        apply_gps2utc=True,
+        apply_gps2utc=False,
         overwrite=False,
+        tempo_code_str="0",
+        tempo2_code_str="coe",
     ):
+        self.tempo_code_str = tempo_code_str
+        self.tempo2_code_str = tempo2_code_str
         super().__init__(
             name,
             aliases=aliases,
@@ -142,11 +146,11 @@ class GeocenterObs(SpecialLocation):
 
     @property
     def tempo_code(self):
-        return "0"
+        return self.tempo_code_str
 
     @property
     def tempo2_code(self):
-        return "coe"
+        return self.tempo2_code_str
 
     def get_gcrs(self, t, ephem=None):
         vdim = (3,) + t.shape
@@ -278,11 +282,21 @@ def load_special_locations():
         apply_gps2utc=False,
         overwrite=True,
     )
+    # Geocentric observatory where time is assume to be UTC with no corrections needed
     GeocenterObs(
         "geocenter",
-        aliases=["0", "o", "coe", "geo"],
+        aliases=["0", "o", "coe", "geo", "geo_nogps"],
+        apply_gps2utc=False,
+        overwrite=True,
+    )
+    # Geocentric observatory where GPS->UTC corrections are applie
+    GeocenterObs(
+        "geocenter_gps",
+        aliases=["geo_gps", "coe_gps"],
         apply_gps2utc=True,
         overwrite=True,
+        tempo_code_str=None,
+        tempo2_code_str=None,
     )
     T2SpacecraftObs(
         "stl_geo",
