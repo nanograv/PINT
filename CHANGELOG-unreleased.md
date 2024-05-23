@@ -16,6 +16,7 @@ the released changes.
 - Type hinting for most of the `pint.utils` module
 - `funcParameter`s are no longer listed in the `pintk` interface.
 - Updated location of CCERA
+- New algorithm for TCB <-> TDB conversion
 - Changed `TNRedC` and `TNDMC` into `intParameter`s; made their default values explicit.
 - `get_rednoise_freqs()` and `get_rednoise_freqs()` now take `f_1` as input instead of `Tspan`.
 ### Added
@@ -25,6 +26,9 @@ the released changes.
 - `pintk` now reads and automatically converts TCB par files and par files with `BINARY T2`.
 - Test for `pint.utils.split_swx()`
 - Custom type definitions for type hints
+- Added `citation.cff`
+- `convert_tcb2tdb`, `tcb2tdb_scale_factor`, and `effective_dimensionality` attributes for `floatParameter`s, `MJDParameter`s, `AngleParameter`s, `maskParameter`s, and `prefixParameter`s.
+- Documentation: HOWTO about determining tcb<->tdb scaling factors
 - `plrednoise_from_wavex()` and `pldmnoise_from_dmwavex()` functions now compute `TNRedFLow` and `TNDMFLow`
 - `powerlaw_corner` function
 - `TNREDFLOW` and `TNREDCORNER` parameters in `PLRedNoise`
@@ -32,5 +36,6 @@ the released changes.
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
 - Fix #1759 by changing order of comparison
+- Fixed bug in residual calculation when adding or removing phase wraps
 ### Removed
 - Unnecessary default arguments from the `powerlaw()` function.

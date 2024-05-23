@@ -276,14 +276,23 @@ class TimingModel:
             strParameter(name="UNITS", description="Units (TDB assumed)"), ""
         )
         self.add_param_from_top(
-            MJDParameter(name="START", description="Start MJD for fitting"), ""
+            MJDParameter(
+                name="START", description="Start MJD for fitting", convert_tcb2tdb=False
+            ),
+            "",
         )
         self.add_param_from_top(
-            MJDParameter(name="FINISH", description="End MJD for fitting"), ""
+            MJDParameter(
+                name="FINISH", description="End MJD for fitting", convert_tcb2tdb=False
+            ),
+            "",
         )
         self.add_param_from_top(
             floatParameter(
-                name="RM", description="Rotation measure", units=u.radian / u.m**2
+                name="RM",
+                description="Rotation measure",
+                units=u.radian / u.m**2,
+                convert_tcb2tdb=False,
             ),
             "",
         )
@@ -343,6 +352,7 @@ class TimingModel:
                 name="CHI2",
                 units="",
                 description="Chi-squared value obtained during fitting",
+                convert_tcb2tdb=False,
             ),
             "",
         )
@@ -351,6 +361,7 @@ class TimingModel:
                 name="CHI2R",
                 units="",
                 description="Reduced chi-squared value obtained during fitting",
+                convert_tcb2tdb=False,
             ),
             "",
         )
@@ -360,6 +371,7 @@ class TimingModel:
                 name="TRES",
                 units=u.us,
                 description="TOA residual after fitting",
+                convert_tcb2tdb=False,
             ),
             "",
         )
@@ -368,6 +380,7 @@ class TimingModel:
                 name="DMRES",
                 units=u.pc / u.cm**3,
                 description="DM residual after fitting (wideband only)",
+                convert_tcb2tdb=False,
             ),
             "",
         )
@@ -1738,6 +1751,7 @@ class TimingModel:
                 value=0.0,
                 units="second",
                 uncertainty=0.0,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
             self.add_param_from_top(param, "PhaseJump")
             getattr(self, param.name).frozen = False
@@ -2486,11 +2500,7 @@ class TimingModel:
                                 ufloat(otherpar.value, otherpar.uncertainty.value)
                             )
                         else:
-                            # otherpar must have no uncertainty
-                            if otherpar.value is not None:
-                                value2[pn] = str(otherpar.value)
-                            else:
-                                value2[pn] = "Missing"
+                            value2[pn] = str(otherpar.value)
                     else:
                         value2[pn] = "Missing"
                     if value2[pn] == "Missing":
@@ -2641,9 +2651,7 @@ class TimingModel:
                         and not "unc_rat" in m
                     ):
                         sout = colorize(sout, "red")
-                    elif (
-                        "change" in m or "diff1" in m or "diff2" in m and "unc_rat" in m
-                    ):
+                    elif "diff2" in m:
                         sout = colorize(sout, "red", bg_color="green")
                     elif "unc_rat" in m:
                         sout = colorize(sout, bg_color="green")
@@ -2888,10 +2896,10 @@ class TimingModel:
         for cp in self.components.values():
             cp.setup()
 
-    def __contains__(self, name):
+    def __contains__(self, name: str) -> bool:
         return name in self.params
 
-    def __getitem__(self, name):
+    def __getitem__(self, name: str) -> Parameter:
         if name in self.top_level_params:
             return getattr(self, name)
         for cp in self.components.values():

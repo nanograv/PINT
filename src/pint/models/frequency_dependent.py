@@ -1,4 +1,5 @@
 """Frequency-dependent delays to model profile evolution."""
+
 from warnings import warn
 
 import astropy.units as u
@@ -43,6 +44,7 @@ class FD(DelayComponent):
                 descriptionTplt=self._description_template,
                 # unitTplt=lambda x: "second",
                 type_match="float",
+                convert_tcb2tdb=False,
             )
         )
 

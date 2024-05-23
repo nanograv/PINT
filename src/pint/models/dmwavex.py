@@ -1,4 +1,5 @@
 """DM variations expressed as a sum of sinusoids."""
+
 import astropy.units as u
 import numpy as np
 from loguru import logger as log
@@ -7,7 +8,7 @@ from warnings import warn
 from pint.models.parameter import MJDParameter, prefixParameter
 from pint.models.timing_model import MissingParameter
 from pint.models.dispersion_model import Dispersion
-from pint import dmu
+from pint import DMconst, dmu
 
 
 class DMWaveX(Dispersion):
@@ -35,6 +36,7 @@ class DMWaveX(Dispersion):
                 name="DMWXEPOCH",
                 description="Reference epoch for Fourier representation of DM noise",
                 time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_dmwavex_component(0.1, index=1, dmwxsin=0, dmwxcos=0, frozen=False)
@@ -93,6 +95,7 @@ class DMWaveX(Dispersion):
                 units="1/d",
                 value=dmwxfreq,
                 parameter_type="float",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -103,6 +106,7 @@ class DMWaveX(Dispersion):
                 value=dmwxsin,
                 frozen=frozen,
                 parameter_type="float",
+                tcb2tdb_scale_factor=DMconst,
             )
         )
         self.add_param(
@@ -113,6 +117,7 @@ class DMWaveX(Dispersion):
                 value=dmwxcos,
                 frozen=frozen,
                 parameter_type="float",
+                tcb2tdb_scale_factor=DMconst,
             )
         )
         self.setup()
@@ -204,6 +209,7 @@ class DMWaveX(Dispersion):
                     units="1/d",
                     value=dmwxfreq,
                     parameter_type="float",
+                    tcb2tdb_scale_factor=u.Quantity(1),
                 )
             )
             self.add_param(
@@ -214,6 +220,7 @@ class DMWaveX(Dispersion):
                     value=dmwxsin,
                     parameter_type="float",
                     frozen=frozen,
+                    tcb2tdb_scale_factor=DMconst,
                 )
             )
             self.add_param(
@@ -224,6 +231,7 @@ class DMWaveX(Dispersion):
                     value=dmwxcos,
                     parameter_type="float",
                     frozen=frozen,
+                    tcb2tdb_scale_factor=DMconst,
                 )
             )
         self.setup()
