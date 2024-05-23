@@ -79,8 +79,6 @@ def test_clockcorr_roundtrip():
 
 
 def test_clk_uncorr():
-    # Make AXIS observatory without GPS corrections
-    site = get_observatory("AXIS", apply_gps2utc=False)
     m, t = get_model_and_toas(
         datadir / "J0030+0451.mdc1.par", datadir / "J0030+0451.mdc1.tim", allow_tcb=True
     )
