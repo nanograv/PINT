@@ -20,6 +20,7 @@ the released changes.
 - Renamed `include_gps` to `apply_gps2utc` in the Observatory class
 - Removed `apply_gps2utc` from `TOAs.clock_corr_info` since it can be different for different observatories. It is not a global setting.
 - The following observatories no longer have a default of include_bipm=False: magic, lst, virgo, lho, llo, geo600, kagra, hess, hawc
+- New algorithm for TCB <-> TDB conversion
 ### Added
 - `bayesian_information_criterion()` function 
 - `dmx_setup` function
@@ -28,6 +29,8 @@ the released changes.
 - Test for `pint.utils.split_swx()`
 - Custom type definitions for type hints
 - Added `citation.cff`
+- `convert_tcb2tdb`, `tcb2tdb_scale_factor`, and `effective_dimensionality` attributes for `floatParameter`s, `MJDParameter`s, `AngleParameter`s, `maskParameter`s, and `prefixParameter`s.
+- Documentation: HOWTO about determining tcb<->tdb scaling factors
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
 - Fix #1759 by changing order of comparison

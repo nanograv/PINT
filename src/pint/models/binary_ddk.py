@@ -1,4 +1,5 @@
 """The DDK model - Damour and Deruelle with kinematics."""
+
 import warnings
 import numpy as np
 from astropy import units as u
@@ -113,7 +114,11 @@ class BinaryDDK(BinaryDD):
 
         self.add_param(
             floatParameter(
-                name="KIN", value=0.0, units="deg", description="Inclination angle"
+                name="KIN",
+                value=0.0,
+                units="deg",
+                description="Inclination angle",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -122,6 +127,7 @@ class BinaryDDK(BinaryDD):
                 value=0.0,
                 units="deg",
                 description="The longitude of the ascending node",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(

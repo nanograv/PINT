@@ -1,4 +1,4 @@
-"""Timing model absolute phase (TZRMJD, TZRSITE ...)"""
+"""Timing model absolute phase"""
 
 import astropy.units as u
 from loguru import logger as log
@@ -34,6 +34,7 @@ class AbsPhase(PhaseComponent):
                 name="TZRMJD",
                 description="Epoch of the zero phase TOA.",
                 time_scale="utc",
+                convert_tcb2tdb=False,
             )
         )
         self.add_param(
@@ -46,6 +47,7 @@ class AbsPhase(PhaseComponent):
                 name="TZRFRQ",
                 units=u.MHz,
                 description="The frequency of the zero phase TOA.",
+                convert_tcb2tdb=False,
             )
         )
         self.tz_cache = None

@@ -1979,8 +1979,8 @@ def ELL1_check(
 
     Checks whether the assumptions that allow ELL1 to be safely used are
     satisfied. To work properly, we should have:
-    :math:`asini/c  e^4 \ll {\\rm timing precision} / \sqrt N_{\\rm TOA}`
-    or :math:`A1 E^4 \ll TRES / \sqrt N_{\\rm TOA}`
+    :math:`asini/c  e^4 \\ll {\\rm timing precision} / \\sqrt N_{\\rm TOA}`
+    or :math:`A1 E^4 \\ll TRES / \\sqrt N_{\\rm TOA}`
 
     since the ELL1 model now includes terms up to O(E^3)
 
