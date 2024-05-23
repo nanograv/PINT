@@ -3,6 +3,7 @@
         "tempo_code": "1",
         "itoa_code": "GB",
         "clock_file": "time_gbt.dat",
+        "apply_gps2utc": true,
         "itrf_xyz": [
             882589.289,
             -4924872.368,
@@ -13,6 +14,7 @@
     },
     "gbt_pre_2021": {
         "clock_file": "time_gbt.dat",
+        "apply_gps2utc": true,
         "itrf_xyz": [
             882589.65,
             -4924872.32,
@@ -28,6 +30,7 @@
         "tempo_code": "3",
         "itoa_code": "AO",
         "clock_file": "time_ao.dat",
+        "apply_gps2utc": true,
         "aliases": [
             "aoutc"
         ],
@@ -46,6 +49,7 @@
             1994727.0
         ],
         "clock_file": "time_ao.dat",
+        "apply_gps2utc": true,
         "fullname": "The Arecibo telescope (pre-2021)",
         "origin": "The origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2. It is preserved to facilitate comparisons with\nthe more modern position measurement.\n"
     },
@@ -53,6 +57,7 @@
         "tempo_code": "6",
         "itoa_code": "VL",
         "clock_file": "time_vla.dat",
+        "apply_gps2utc": true,
         "aliases": [
             "jvla"
         ],
@@ -69,6 +74,7 @@
         "itoa_code": "MK",
         "clock_fmt": "tempo2",
         "clock_file": "mk2utc_observatory.clk",
+        "apply_gps2utc": true,
         "itrf_xyz": [
             5109360.133,
             2006852.586,
@@ -85,6 +91,7 @@
         ],
         "clock_fmt": "tempo2",
         "clock_file": "pks2gps.clk",
+        "apply_gps2utc": true,
         "itrf_xyz": [
             -4554231.5,
             2816759.1,
@@ -98,6 +105,7 @@
         "itoa_code": "JB",
         "clock_file": "jb2gps.clk",
         "clock_fmt": "tempo2",
+        "apply_gps2utc": true,
         "bogus_last_correction": true,
         "itrf_xyz": [
             3822625.769,
@@ -116,6 +124,7 @@
             "jb2gps.clk"
         ],
         "clock_fmt": "tempo2",
+        "apply_gps2utc": true,
         "aliases": [
             "jboroach"
         ],
@@ -142,6 +151,7 @@
             "jb2gps.clk"
         ],
         "clock_fmt": "tempo2",
+        "apply_gps2utc": true,
         "aliases": [
             "jbodfb"
         ],
@@ -182,6 +192,7 @@
     "jodrell_pre_2021": {
         "clock_file": "jb2gps.clk",
         "clock_fmt": "tempo2",
+        "apply_gps2utc": true,
         "itrf_xyz": [
             3822626.04,
             -154105.65,
@@ -222,6 +233,7 @@
             "ncyobs2obspm.clk",
             "obspm2gps.clk"
         ],
+        "apply_gps2utc": true,
         "bogus_last_correction": true,
         "fullname": "The Nan\u00e7ay radio telescope with the NUPPI back-end",
         "origin": "The origin of this data is unknown but as of 2021 June 8 it agrees exactly with\nthe values used by TEMPO and TEMPO2.\n"
@@ -234,6 +246,7 @@
         ],
         "clock_fmt": "tempo2",
         "clock_file": "eff2gps.clk",
+        "apply_gps2utc": true,
         "itrf_xyz": [
             4033947.146,
             486990.898,
@@ -246,6 +259,7 @@
     "effelsberg_pre_2021": {
         "clock_fmt": "tempo2",
         "clock_file": "eff2gps.clk",
+        "apply_gps2utc": true,
         "itrf_xyz": [
             4033949.5,
             486989.4,
@@ -290,6 +304,7 @@
         "itoa_code": "WS",
         "clock_fmt": "tempo2",
         "clock_file": "wsrt2gps.clk",
+        "apply_gps2utc": true,
         "itrf_xyz": [
             3828445.659,
             445223.6,
@@ -364,6 +379,7 @@
         ],
         "clock_fmt": "tempo2",
         "clock_file": "mo2gps.clk",
+        "apply_gps2utc": true,
         "bogus_last_correction": true,
         "fullname": "The Molonglo Observatory Synthesis Telescope (MOST)",
         "origin": "Origin of this data is unknown but as of 2021 June 8 this value agrees exactly with\nthe value used by TEMPO2.\n"
@@ -621,6 +637,7 @@
             "leap2effix.clk",
             "effix2gps.clk"
         ],
+        "apply_gps2utc": true,
         "bogus_last_correction": true,
         "fullname": "The Large European Array for Pulsars",
         "origin": "This is the same as the position of the Effelsberg radio telescope.\nImported from TEMPO2 observatories.dat 2021 June 7."
