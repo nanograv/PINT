@@ -134,6 +134,7 @@ class ChromaticCM(Chromatic):
                 value=0.0,
                 description="Chromatic measure",
                 long_double=True,
+                convert_tcb2tdb=False,
             )
         )
         self.add_param(
@@ -145,11 +146,15 @@ class ChromaticCM(Chromatic):
                 description_template=self.CM_derivative_description,
                 type_match="float",
                 long_double=True,
+                convert_tcb2tdb=False,
             )
         )
         self.add_param(
             MJDParameter(
-                name="CMEPOCH", description="Epoch of CM measurement", time_scale="tdb"
+                name="CMEPOCH",
+                description="Epoch of CM measurement",
+                time_scale="tdb",
+                convert_tcb2tdb=False,
             )
         )
         self.add_param(
@@ -159,6 +164,7 @@ class ChromaticCM(Chromatic):
                 value=4.0,
                 description="Chromatic measure index",
                 long_double=True,
+                convert_tcb2tdb=False,
             )
         )
 
