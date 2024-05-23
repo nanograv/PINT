@@ -16,6 +16,7 @@ the released changes.
 - Type hinting for most of the `pint.utils` module
 - `funcParameter`s are no longer listed in the `pintk` interface.
 - Updated location of CCERA
+- New algorithm for TCB <-> TDB conversion
 ### Added
 - `bayesian_information_criterion()` function 
 - `dmx_setup` function
@@ -24,6 +25,8 @@ the released changes.
 - Test for `pint.utils.split_swx()`
 - Custom type definitions for type hints
 - Added `citation.cff`
+- `convert_tcb2tdb`, `tcb2tdb_scale_factor`, and `effective_dimensionality` attributes for `floatParameter`s, `MJDParameter`s, `AngleParameter`s, `maskParameter`s, and `prefixParameter`s.
+- Documentation: HOWTO about determining tcb<->tdb scaling factors
 - Type hints in `pint.toa` and `get_model()` & `get_model_and_toas()` functions
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 

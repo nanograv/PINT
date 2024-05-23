@@ -1056,6 +1056,7 @@ def convert_binary_params_dict(
     """
     binary = parfile_dict.get("BINARY", None)
     binary = binary[0] if binary else binary
+
     log.debug("Requested to convert binary model for BINARY model: {binary}")
 
     if binary:
