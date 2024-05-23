@@ -91,7 +91,7 @@ _bipm_clock_versions = {}
 def _load_gps_clock():
     global _gps_clock
     if _gps_clock is None:
-        log.info("Loading global GPS clock file")
+        log.debug("Loading global GPS clock file")
         _gps_clock = find_clock_file(
             "gps2utc.clk",
             format="tempo2",

@@ -262,6 +262,9 @@ def get_TOAs(
             ):
                 log.info("Pickle contains wrong bipm_version")
                 updatepickle = True
+            if t.clock_corr_info.get("include_gps", None):
+                log.info("Old pickle (contains include_gps)")
+                updatepickle = True
     if not usepickle or updatepickle:
         if isinstance(timfile, (str, Path)) or hasattr(timfile, "readlines"):
             t = TOAs(timfile)
