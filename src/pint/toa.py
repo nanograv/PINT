@@ -23,7 +23,7 @@ import re
 import warnings
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import Any, List, Optional, Set, Tuple, Union, TYPE_CHECKING
+from typing import Any, Generator, List, Optional, Set, Tuple, Union, TYPE_CHECKING
 
 import astropy.table as table
 import astropy.time as time
@@ -114,7 +114,7 @@ def get_TOAs(
     include_gps: Optional[bool] = None,
     planets: Optional[bool] = None,
     include_pn: Optional[bool] = True,
-    model: TimingModel = None,
+    model: "TimingModel" = None,
     usepickle: bool = False,
     tdb_method: str = "default",
     picklefilename: Optional[str] = None,
@@ -1157,13 +1157,18 @@ class TOA:
             s += f" {str(self.flags)}"
         return s
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: "TOA") -> bool:
         result = True
         for p in ["mjd", "error", "obs", "freq", "flags"]:
             result = result and getattr(self, p) == getattr(other, p)
         return result
 
-    def as_line(self, format="Tempo2", name=None, dm=0 * pint.dmu) -> str:
+    def as_line(
+        self,
+        format: str = "Tempo2",
+        name: Optional[str] = None,
+        dm: u.Quantity = 0 * pint.dmu,
+    ) -> str:
         """Format TOA as a line for a ``.tim`` file."""
         if name is not None:
             pass
@@ -1384,7 +1389,7 @@ class TOAs:
     def __len__(self):
         return len(self.table)
 
-    def __getitem__(self, index: toas_index_like) -> "TOAs":
+    def __getitem__(self, index: toas_index_like) -> Union["TOAs", table.Column]:
         """Extract a subset of TOAs and/or a column/flag from each one.
 
         When selecting a column from ``self.table`` or a flag from ``self.table["flags"]``,
@@ -1471,7 +1476,7 @@ class TOAs:
             # FIXME: what to do if length zero? How to ensure it's a string array even then?
             return np.array(r)
 
-    def __setitem__(self, index: toas_index_like, value):
+    def __setitem__(self, index: toas_index_like, value: Any) -> None:
         """Set values in this object.
 
         This can set specified values into columns/flags or subsets of the same.
@@ -1551,7 +1556,7 @@ class TOAs:
             for i in subset:
                 self[column, i] = str(value[i])
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{len(self)} TOAs starting at MJD {self.first_MJD}"
 
     def __eq__(self, other: "TOAs") -> bool:
@@ -1579,7 +1584,7 @@ class TOAs:
             f"Do not know how to subtract '{type(self)}' and '{type(other)}'"
         )
 
-    def __setstate__(self, state):
+    def __setstate__(self, state: dict) -> None:
         # Normal unpickling behaviour
         self.__dict__.update(state)
         if not hasattr(self, "max_index"):
@@ -1701,7 +1706,7 @@ class TOAs:
         """Return a numpy array of the observatories for each TOA."""
         return self.table["obs"]
 
-    def get_obs_groups(self):
+    def get_obs_groups(self) -> Generator:
         """Return an iterator over the different observatories"""
         return utils.group_iterator(self["obs"])
 
@@ -1786,7 +1791,9 @@ class TOAs:
             raise AttributeError("No DM error is provided.")
         return np.array(result)[valid] * pint.dmu
 
-    def get_clusters(self, gap_limit=2 * u.hour, add_column=False, add_flag=None):
+    def get_clusters(
+        self, gap_limit=2 * u.hour, add_column=False, add_flag=None
+    ) -> np.ndarray:
         """Identify toas within gap limit (default 2h = 0.0833d)
         of each other as the same cluster.
 
@@ -1807,7 +1814,8 @@ class TOAs:
         add_column : bool, optional
             Whether or not to add a ``clusters`` column to the TOA table (default: False)
         add_flag : str, optional
-            If not ``None``, will add a flag with that name to the TOA table whose value is the cluster number (as a string, starting at 0) (default: None)
+            If not ``None``, will add a flag with that name to the TOA table whose value
+            is the cluster number (as a string, starting at 0) (default: None)
 
         Returns
         -------
@@ -1836,7 +1844,7 @@ class TOAs:
 
         return clusters
 
-    def get_highest_density_range(self, ndays=7 * u.d):
+    def get_highest_density_range(self, ndays=7 * u.d) -> Tuple[u.Quantity, u.Quantity]:
         """Print the range of mjds (default 7 days) with the most toas"""
         sorted_mjds = np.sort(self.get_mjds())
         s = np.searchsorted(sorted_mjds, sorted_mjds + ndays)
@@ -1846,7 +1854,7 @@ class TOAs:
         )
         return sorted_mjds[i], sorted_mjds[s[i]]
 
-    def check_hashes(self, timfile=None):
+    def check_hashes(self, timfile=None) -> bool:
         """Determine whether the input files are the same as when loaded.
 
         Parameters
@@ -1944,7 +1952,7 @@ class TOAs:
             s += f"  Median error:  {np.median(self['error'][grp].to(u.us)):.3g}\n"
         return s
 
-    def print_summary(self):
+    def print_summary(self) -> None:
         """Prints self.get_summary()."""
         # FIXME: really do we need to have this function?
         print(self.get_summary())
@@ -1974,7 +1982,7 @@ class TOAs:
         # same for padd
         self["padd"] = ""
 
-    def compute_pulse_numbers(self, model: "pint.model.timing_model.TimingModel"):
+    def compute_pulse_numbers(self, model: "TimingModel") -> None:
         """Set pulse numbers (in TOA table column pulse_numbers) based on model.
 
         Replace any existing pulse numbers by computing phases according to
@@ -2001,7 +2009,7 @@ class TOAs:
         else:
             log.warning("Requested deleting of pulse numbers, but they are not present")
 
-    def adjust_TOAs(self, delta: Union[time.TimeDelta, u.Quantity]):
+    def adjust_TOAs(self, delta: Union[time.TimeDelta, u.Quantity]) -> None:
         """Apply a time delta to TOAs.
 
         Adjusts the time (MJD) of the TOAs by applying delta, which should
@@ -2037,7 +2045,7 @@ class TOAs:
         if self.obliquity is not None:
             self.add_vel_ecl(self.obliquity)
 
-    def renumber(self, index_order=True):
+    def renumber(self, index_order=True) -> None:
         """Recreate the index column so the values go from 0 to len(self)-1.
 
         This modifies the TOAs object and also returns it, for calling
@@ -2073,7 +2081,7 @@ class TOAs:
         include_pn=True,
         include_info=True,
         comment=None,
-    ):
+    ) -> None:
         """Write this object to a ``.tim`` file.
 
         This function writes the contents of this object to a (single) ``.tim``
@@ -2180,7 +2188,7 @@ class TOAs:
         bipm_version=bipm_default,
         include_gps=True,
         limits="warn",
-    ):
+    ) -> None:
         """Apply observatory clock corrections and TIME statments.
 
         Apply clock corrections to all the TOAs where corrections are
@@ -2252,7 +2260,7 @@ class TOAs:
             }
         )
 
-    def compute_TDBs(self, method="default", ephem=None):
+    def compute_TDBs(self, method="default", ephem: Optional[str] = None) -> None:
         """Compute and add TDB and TDB long double columns to the TOA table.
 
         This routine creates new columns 'tdb' and 'tdbld' in a TOA table
@@ -2324,7 +2332,9 @@ class TOAs:
         col_tdbld = table.Column(name="tdbld", data=[t.tdb.mjd_long for t in tdbs])
         self.table.add_columns([col_tdb, col_tdbld])
 
-    def compute_posvels(self, ephem=None, planets=None):
+    def compute_posvels(
+        self, ephem: Optional[str] = None, planets: Optional[bool] = None
+    ):
         """Compute positions and velocities of the observatories and Earth.
 
         Compute the positions and velocities of the observatory (wrt
@@ -2440,7 +2450,7 @@ class TOAs:
         log.debug("Adding columns " + " ".join([cc.name for cc in cols_to_add]))
         self.table.add_columns(cols_to_add)
 
-    def add_vel_ecl(self, obliquity):
+    def add_vel_ecl(self, obliquity) -> None:
         """Compute and add a column to self.table with velocities in ecliptic coordinates.
 
         Called in barycentric_radio_freq() in AstrometryEcliptic (astrometry.py)
@@ -2490,11 +2500,11 @@ class TOAs:
         log.debug(f"Adding column {col.name}")
         self.table.add_column(col)
 
-    def update_mjd_float(self):
+    def update_mjd_float(self) -> None:
         """Update the ``mjd_float`` column from the ``mjd`` column"""
         self["mjd_float"] = np.array([t.mjd for t in self["mjd"]], dtype=float) * u.d
 
-    def update_all_times(self, tdb_method: str = "default"):
+    def update_all_times(self, tdb_method: str = "default") -> None:
         """Update the various derived time columns
 
         Updates:
@@ -2521,7 +2531,7 @@ class TOAs:
         if self.obliquity is not None:
             self.add_vel_ecl(self.obliquity)
 
-    def merge(self, t: "TOAs", *args, strict=False):
+    def merge(self, t: "TOAs", *args, strict: bool = False) -> None:
         """Merge TOAs instances into the existing object
 
         In order for a merge to work, each TOAs instance needs to have
@@ -2740,7 +2750,7 @@ def get_TOAs_array(
     errors: quantity_like = 1 * u.us,
     freqs: quantity_like = np.inf * u.MHz,
     flags: dict = None,
-    model: "pint.models.timing_model.TimingModel" = None,
+    model: "TimingModel" = None,
     ephem: str = None,
     include_bipm: bool = True,
     bipm_version: str = bipm_default,
