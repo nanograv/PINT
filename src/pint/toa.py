@@ -1728,7 +1728,10 @@ class TOAs:
         return self.table["flags"]
 
     def get_flag_value(
-        self, flag: str, fill_value=None, as_type=None
+        self,
+        flag: str,
+        fill_value: Optional[str] = None,
+        as_type: Optional[type] = None,
     ) -> Tuple[List[str], List[int]]:
         """Get the requested TOA flag values.
 
