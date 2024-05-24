@@ -58,9 +58,37 @@ __all__ = [
 ]
 
 # The default BIPM to use if not explicitly specified
-# FIXME: this should be auto-detected by checking the index file to see what's available
-# ALSO: Why is the a feature of the Observatory class?  Seems like the wrong place for it.
-bipm_default = "BIPM2021"
+# Should set this to the most recent available version
+# Automated ways of doing this are possible (see find_latest_bipm below), but require network access.
+# They are also fragile since URLs can chaange. So this should just be done manually every year or so.
+bipm_default = "BIPM2023"
+
+# Current URL for BIPM correction files is: https://webtai.bipm.org/ftp/pub/tai/ttbipm/
+ttbipmxy_url = "https://webtai.bipm.org/ftp/pub/tai/ttbipm/TTBIPM.{}"
+
+
+def find_latest_bipm():
+    "Check BIPM servers for the most recent version of TT(BIPMYYYY)"
+    year = int(bipm_default[4:])
+    while True:
+        try:
+            f = astropy.utils.data.download_file(ttbipmxy_url.format(year), cache=True)
+            # latestyear is the last successfully loaded BIPM file
+            latestyear = year
+        except IOError:
+            if first:
+                log.error(f"Default BIPM {year} not found!")
+            break
+        except:
+            log.error("Unknown exception in find_latest_bipm")
+            raise
+        else:
+            first = False
+            year += 1
+
+    log.info(f"Most recent BIPM year is {latestyear}")
+    return latestyear
+
 
 pint_clock_env_var = "PINT_CLOCK_OVERRIDE"
 
@@ -306,6 +334,9 @@ class Observatory:
         if site is not None:
             if overwrite and apply_gps2utc is not None:
                 # This will modify the Observatory object in the registry, so it will "stick" until overwritten
+                log.warning(
+                    f"Observatory {name}: Overwriting apply_gps2utc={apply_gps2utc} in registry."
+                )
                 site.apply_gps2utc = apply_gps2utc
             return site
         # Then look in astropy
@@ -379,6 +410,18 @@ class Observatory:
         limits="warn",
     ):
         """Compute clock corrections for a Time array.
+
+        Parameters
+        ----------
+        t: astropy.time.Time object
+            Array-valued Time to compute corrections for
+        include_bipm: bool
+            Whether to apply TT(TAI)->TT(BIPM) correction
+        bipm_version: str, optional
+            Which version of BIPM to apply (e.g. "BIPM2021")
+        limits: str, optional
+            Either "warn" or "error" to control behavior when times are outside
+            limits of known corrections.
 
         Given an array-valued Time, return the clock corrections
         as a numpy array, with units.  These values are to be added to the
@@ -797,14 +840,14 @@ def update_clock_files(bipm_versions=None):
         "BIPM2019".
     """
     # FIXME: allow forced downloads for non-expired files
-    # FIXME: what to do about GPS and BIPM files?
 
     if bipm_versions is not None:
-        o = get_observatory(
-            "arecibo"
-        )  # Why arecibo? Would be better to use an observatory with no clock file of its own, right?
+        o = get_observatory("AXIS")
+        # Load requested BIPM files
         for v in bipm_versions:
             o._load_bipm_clock(v)
+        # Load gps2utc.clk
+        o._load_gps_clock()
 
     t = Time.now()
     for n in Observatory.names():

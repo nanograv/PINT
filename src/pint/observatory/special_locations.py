@@ -78,13 +78,12 @@ class BarycenterObs(SpecialLocation):
         self,
         name,
         aliases=None,
-        apply_gps2utc=False,
         overwrite=False,
     ):
         super().__init__(
             name,
             aliases=aliases,
-            apply_gps2utc=apply_gps2utc,
+            apply_gps2utc=False,
             overwrite=overwrite,
         )
 
@@ -279,7 +278,6 @@ def load_special_locations():
     BarycenterObs(
         "barycenter",
         aliases=["@", "ssb", "bary", "bat"],
-        apply_gps2utc=False,
         overwrite=True,
     )
     # Geocentric observatory where time is assume to be UTC with no corrections needed
@@ -289,7 +287,7 @@ def load_special_locations():
         apply_gps2utc=False,
         overwrite=True,
     )
-    # Geocentric observatory where GPS->UTC corrections are applie
+    # Geocentric observatory where GPS->UTC corrections are applied
     GeocenterObs(
         "geocenter_gps",
         aliases=["geo_gps", "coe_gps"],
