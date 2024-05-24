@@ -92,6 +92,7 @@ FORMAT 1
 unk 0.000000 60000.000000000 0.000 bat 
 unk 0.000000 60000.000000000 0.000 gbt 
 unk 0.000000 60000.000000000 0.000 coe 
+unk 0.000000 60000.000000000 0.000 coe_gps 
 """
 
 
@@ -105,9 +106,11 @@ def test_bipm_corr():
     gps_delta = obs.gps_correction(t)
     tsYY = get_TOAs(timfile, include_bipm=True, bipm_version="BIPM2021")
     # No correction should have been applied tot the bat TOA
-    assert np.abs(tsYY.table["mjd"][0].mjd - t.mjd) < 1.0e-9 / 86400.0
-    # COE TOA should have gotten both GPS and BIPM correction
-    assert np.abs(tsYY.table["mjd"][2] - t - bipm_delta - gps_delta) < 1.0 * u.ns
+    assert np.abs(tsYY.table["mjd"][0].mjd - t.mjd) < 1.0e-10 / 86400.0
+    # COE TOA should have gotten only BIPM correction
+    assert np.abs(tsYY.table["mjd"][2] - t - bipm_delta) < 0.1 * u.ns
+    # COE_GPS TOA should have gotten both GPS and BIPM correction
+    assert np.abs(tsYY.table["mjd"][3] - t - bipm_delta - gps_delta) < 0.1 * u.ns
 
     # Now check that clock corrections have been backed out before writing to a tim file
     o = io.StringIO()

@@ -30,6 +30,7 @@ the released changes.
 - Custom type definitions for type hints
 - Added `citation.cff`
 - `convert_tcb2tdb`, `tcb2tdb_scale_factor`, and `effective_dimensionality` attributes for `floatParameter`s, `MJDParameter`s, `AngleParameter`s, `maskParameter`s, and `prefixParameter`s.
+- Added `pint.observatory.find_latest_bipm()` which returns latest BIPM year available
 - Documentation: HOWTO about determining tcb<->tdb scaling factors
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
