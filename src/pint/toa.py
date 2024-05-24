@@ -23,7 +23,7 @@ import re
 import warnings
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import IO, List, Optional, Set, Tuple, Union
+from typing import Any, List, Optional, Set, Tuple, Union, TYPE_CHECKING
 
 import astropy.table as table
 import astropy.time as time
@@ -48,6 +48,9 @@ from pint.pulsar_ecliptic import PulsarEcliptic
 from pint.pulsar_mjd import Time
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 from pint.types import dir_like, file_like, quantity_like, time_like, toas_index_like
+
+if TYPE_CHECKING:
+    from pint.models import TimingModel
 
 __all__ = [
     "TOAs",
@@ -111,7 +114,7 @@ def get_TOAs(
     include_gps: Optional[bool] = None,
     planets: Optional[bool] = None,
     include_pn: Optional[bool] = True,
-    model: "pint.models.timing_model.TimingModel" = None,
+    model: TimingModel = None,
     usepickle: bool = False,
     tdb_method: str = "default",
     picklefilename: Optional[str] = None,
@@ -377,7 +380,7 @@ def load_pickle(toafilename: str, picklefilename: Optional[str] = None) -> "TOAs
     raise IOError("No readable pickle found")
 
 
-def save_pickle(toas: "TOAs", picklefilename: Optional[str] = None):
+def save_pickle(toas: "TOAs", picklefilename: Optional[str] = None) -> None:
     """Write the TOAs to a ``.pickle.gz`` file.
 
     Parameters
@@ -443,7 +446,7 @@ def get_TOAs_list(
     return t
 
 
-def _toa_format(line: str, fmt: str = "Unknown"):
+def _toa_format(line: str, fmt: str = "Unknown") -> str:
     """Determine the type of a TOA line.
 
     Identifies a TOA line as one of the following types:
@@ -473,7 +476,7 @@ def _toa_format(line: str, fmt: str = "Unknown"):
         return "Unknown"
 
 
-def _parse_TOA_line(line: str, fmt: str = "Unknown"):
+def _parse_TOA_line(line: str, fmt: str = "Unknown") -> Tuple[Tuple[int, float], dict]:
     """Parse a one-line ASCII time-of-arrival.
 
     Return an MJD tuple and a dictionary of other TOA information.
@@ -904,7 +907,7 @@ def build_table(toas: "TOAs", filename: Optional[str] = None) -> table.Table:
     )
 
 
-def _cluster_by_gaps(t: np.ndarray, gap: float):
+def _cluster_by_gaps(t: np.ndarray, gap: float) -> np.ndarray:
     """A utility function to cluster times according to gap-less stretches.
 
     This function is used by :func:`pint.toa.TOAs.get_clusters` to determine
@@ -940,7 +943,7 @@ class FlagDict(MutableMapping):
         self.update(dict(*args, **kwargs))
 
     @staticmethod
-    def from_dict(d):
+    def from_dict(d: dict) -> "FlagDict":
         r = FlagDict()
         r.update(d)
         return r
@@ -948,7 +951,7 @@ class FlagDict(MutableMapping):
     _key_re = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*")
 
     @staticmethod
-    def check_allowed_key(k):
+    def check_allowed_key(k: Any) -> None:
         if not isinstance(k, str):
             raise ValueError(f"flag {k} must be a string")
         if k.startswith("-"):
@@ -957,13 +960,13 @@ class FlagDict(MutableMapping):
             raise ValueError(f"flag {k} is not a valid flag")
 
     @staticmethod
-    def check_allowed_value(k, v):
+    def check_allowed_value(k: str, v: Any) -> None:
         if not isinstance(v, str):
             raise ValueError(f"value {v} for key {k} must be a string")
         if not v and len(v.split()) != 1:
             raise ValueError(f"value {repr(v)} for key {k} cannot contain whitespace")
 
-    def __setitem__(self, key, val):
+    def __setitem__(self, key: str, val: str):
         self.__class__.check_allowed_key(key)
         self.__class__.check_allowed_value(key, val)
         if val:
@@ -971,10 +974,10 @@ class FlagDict(MutableMapping):
         elif key in self.store:
             del self.store[key]
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: str):
         del self.store[key.lower()]
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> str:
         return self.store[key.lower()]
 
     def __iter__(self):
@@ -986,10 +989,10 @@ class FlagDict(MutableMapping):
     def __repr__(self):
         return f"FlagDict({repr(self.store)})"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.store)
 
-    def copy(self):
+    def copy(self) -> "FlagDict":
         return FlagDict.from_dict(self.store)
 
 
