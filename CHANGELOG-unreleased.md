@@ -29,13 +29,18 @@ the released changes.
 - Added `citation.cff`
 - `convert_tcb2tdb`, `tcb2tdb_scale_factor`, and `effective_dimensionality` attributes for `floatParameter`s, `MJDParameter`s, `AngleParameter`s, `maskParameter`s, and `prefixParameter`s.
 - Documentation: HOWTO about determining tcb<->tdb scaling factors
+<<<<<<< redcorner
 - `plrednoise_from_wavex()` and `pldmnoise_from_dmwavex()` functions now compute `TNRedFLow` and `TNDMFLow`
 - `powerlaw_corner` function
 - `TNREDFLOW` and `TNREDCORNER` parameters in `PLRedNoise`
 - `TNDMFLOW` and `TNDMCORNER` parameters in `PLDMNoise`
+=======
+- Type hints in `pint.toa` and `get_model()` & `get_model_and_toas()` functions
+>>>>>>> master
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
 - Fix #1759 by changing order of comparison
+- Moved the test in `test_pmtransform_units.py` into a function.
 - Fixed bug in residual calculation when adding or removing phase wraps
 ### Removed
 - Unnecessary default arguments from the `powerlaw()` function.
