@@ -29,8 +29,10 @@ the released changes.
 - Documentation: HOWTO about determining tcb<->tdb scaling factors
 - `pint.models.chromatic_model.Chromatic` as the base class for variable-index chromatic delays.
 - `pint.models.chromatic_model.ChromaticCM` for a Taylor series representation of the variable-index chromatic delay.
+- Type hints in `pint.toa` and `get_model()` & `get_model_and_toas()` functions
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
 - Fix #1759 by changing order of comparison
+- Moved the test in `test_pmtransform_units.py` into a function.
 - Fixed bug in residual calculation when adding or removing phase wraps
 ### Removed
