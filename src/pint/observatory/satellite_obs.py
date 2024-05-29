@@ -1,6 +1,5 @@
 """Observatories at special (non-Earth) locations."""
 
-
 import astropy.constants as const
 import astropy.io.fits as pyfits
 import astropy.units as u
@@ -296,6 +295,8 @@ class SatelliteObs(SpecialLocation):
         File name to read spacecraft position information from
     maxextrap: float
         Maximum minutes between a time and the closest S/C measurement.
+    apply_gps2utc: bool
+        Whether to apply UTC(GPS)->UTC correction (e.g. if satellite clock is from a GPS receiver)
     overwrite: bool
         Replace the entry in the observatory table.
     """
@@ -305,16 +306,12 @@ class SatelliteObs(SpecialLocation):
         name,
         ft2name,
         maxextrap=2,
-        include_gps=True,
-        include_bipm=True,
-        bipm_version=bipm_default,
+        apply_gps2utc=True,
         overwrite=False,
     ):
         super().__init__(
             name,
-            include_gps=include_gps,
-            include_bipm=include_bipm,
-            bipm_version=bipm_version,
+            apply_gps2utc=apply_gps2utc,
             overwrite=overwrite,
         )
         self.FT2 = load_orbit(name, ft2name)

@@ -111,7 +111,6 @@ def get_TOAs(
     ephem: Optional[str] = None,
     include_bipm: Optional[bool] = None,
     bipm_version: Optional[str] = None,
-    include_gps: Optional[bool] = None,
     planets: Optional[bool] = None,
     include_pn: Optional[bool] = True,
     model: "TimingModel" = None,
@@ -162,8 +161,6 @@ def get_TOAs(
     bipm_version : str or None
         Which version of the BIPM tables to use for the clock correction.
         The format must be 'BIPMXXXX' where XXXX is a year.
-    include_gps : bool or None
-        Whether to include the GPS clock correction. Defaults to True.
     planets : bool or None
         Whether to apply Shapiro delays based on planet positions. Note that a
         long-standing TEMPO2 bug in this feature went unnoticed for years.
@@ -221,7 +218,6 @@ def get_TOAs(
                         )
             elif model["CLOCK"].value == "UNCORR":
                 include_bipm = False
-                include_gps = False
             else:
                 log.warning(
                     f'CLOCK = {model["CLOCK"].value} is not implemented. '
@@ -260,12 +256,6 @@ def get_TOAs(
                 updatepickle = True
                 log.info("Pickle is very old")
             if (
-                include_gps is not None
-                and t.clock_corr_info.get("include_gps", None) != include_gps
-            ):
-                log.info("Pickle contains wrong include_gps")
-                updatepickle = True
-            if (
                 include_bipm is not None
                 and t.clock_corr_info.get("include_bipm", None) != include_bipm
             ):
@@ -276,6 +266,9 @@ def get_TOAs(
                 and t.clock_corr_info.get("bipm_version", None) != bipm_version
             ):
                 log.info("Pickle contains wrong bipm_version")
+                updatepickle = True
+            if t.clock_corr_info.get("include_gps", None):
+                log.info("Old pickle (contains include_gps)")
                 updatepickle = True
     if not usepickle or updatepickle:
         if isinstance(timfile, (str, Path)) or hasattr(timfile, "readlines"):
@@ -289,15 +282,12 @@ def get_TOAs(
         recalc = True
 
     if all("clkcorr" not in f for f in t.table["flags"]):
-        if include_gps is None:
-            include_gps = True
         if bipm_version is None:
             bipm_version = bipm_default
         if include_bipm is None:
             include_bipm = True
         # FIXME: should we permit existing clkcorr flags?
         t.apply_clock_corrections(
-            include_gps=include_gps,
             include_bipm=include_bipm,
             bipm_version=bipm_version,
             limits=limits,
@@ -416,7 +406,6 @@ def get_TOAs_list(
     ephem: Optional[str] = None,
     include_bipm: bool = True,
     bipm_version: str = bipm_default,
-    include_gps: bool = True,
     planets: bool = False,
     tdb_method: str = "default",
     commands: Optional[List[str]] = None,
@@ -434,10 +423,13 @@ def get_TOAs_list(
     t.hashes = {} if hashes is None else hashes
     if all("clkcorr" not in f for f in t.table["flags"]):
         t.apply_clock_corrections(
-            include_gps=include_gps,
             include_bipm=include_bipm,
             bipm_version=bipm_version,
             limits=limits,
+        )
+    else:
+        log.debug(
+            f"Not applying clock corrections since at least some TOAs already have clkcorr in their flags."
         )
     if "tdb" not in t.table.colnames:
         t.compute_TDBs(method=tdb_method, ephem=ephem)
@@ -1626,7 +1618,7 @@ class TOAs:
         """Whether or not the data have wideband TOA values"""
         return self.is_wideband()
 
-    def to_TOA_list(self, clkcorr: bool = False) -> List[TOA]:
+    def to_TOA_list(self, undo_clkcorr: bool = True) -> List[TOA]:
         """Turn a :class:`pint.toa.TOAs` object into a list of :class:`pint.toa.TOA` objects
 
         This effectively undoes :func:`pint.toa.get_TOAs_list`, optionally undoing clock corrections too
@@ -1646,7 +1638,7 @@ class TOAs:
         for i in range(len(self)):
             t = self.table["mjd"][i]
             f = self.table["flags"][i]
-            if not clkcorr:
+            if undo_clkcorr:
                 t -= clkcorrs[i]
                 if "clkcorr" in f:
                     del f["clkcorr"]
@@ -2189,7 +2181,6 @@ class TOAs:
         self,
         include_bipm=True,
         bipm_version=bipm_default,
-        include_gps=True,
         limits="warn",
     ) -> None:
         """Apply observatory clock corrections and TIME statments.
@@ -2205,9 +2196,6 @@ class TOAs:
         If the clock corrections have already been applied they will not
         be re-applied.
 
-        Options to include GPS or BIPM clock corrections are set to True
-        by default in order to give the most accurate clock corrections.
-
         A description of how PINT handles clock corrections and timescales is here:
         https://github.com/nanograv/PINT/wiki/Clock-Corrections-and-Timescales-in-PINT
 
@@ -2217,8 +2205,6 @@ class TOAs:
             Whether or not to include BIPM correction
         bipm_version : str
             BIPM version to use.  The format must be 'BIPMXXXX' where XXXX is a year.
-        include_gps : bool
-            Whether or not to include GPS corrections
         limits : "warn" or "error"
             What to do when encountering TOAs for which clock corrections are not available.
         """
@@ -2231,21 +2217,17 @@ class TOAs:
             log.warning("Clock corrections already applied. Not re-applying.")
             return
         # An array of all the time corrections, one for each TOA
-        log.debug(
-            f"Applying clock corrections (include_gps = {include_gps}, include_bipm = {include_bipm})"
-        )
+        log.debug(f"Applying clock corrections (include_bipm = {include_bipm})")
         corrections = np.zeros(self.ntoas) * u.s
         # values of "-to" flags
         time_statements = self.get_flag_value("to", 0, float)[0] * u.s
         for obs, grp in self.get_obs_groups():
-            site = get_observatory(
-                obs,
-                include_gps=include_gps,
+            site = get_observatory(obs)
+            clock_corrections = site.clock_corrections(
+                time.Time(self["mjd"][grp]),
                 include_bipm=include_bipm,
                 bipm_version=bipm_version,
-            )
-            clock_corrections = site.clock_corrections(
-                time.Time(self["mjd"][grp]), limits=limits
+                limits=limits,
             )
             corrections[grp] = time_statements[grp] + clock_corrections
             for jj in grp:
@@ -2259,7 +2241,6 @@ class TOAs:
             {
                 "include_bipm": include_bipm,
                 "bipm_version": bipm_version,
-                "include_gps": include_gps,
             }
         )
 
@@ -2570,11 +2551,6 @@ class TOAs:
             raise TypeError(
                 f"merge_TOAs() cannot merge. Inconsistent bipm_version: {BIPM_vers}"
             )
-        inc_GPS = [tt.clock_corr_info.get("include_gps", None) for tt in TOAs_list]
-        if len(set(inc_GPS)) > 1:
-            raise TypeError(
-                f"merge_TOAs() cannot merge. Inconsistent include_gps: {inc_GPS}"
-            )
         planets = [tt.planets for tt in TOAs_list]
         if len(set(planets)) > 1:
             raise TypeError(
@@ -2757,7 +2733,6 @@ def get_TOAs_array(
     ephem: str = None,
     include_bipm: bool = True,
     bipm_version: str = bipm_default,
-    include_gps: bool = True,
     planets: bool = False,
     tdb_method: str = "default",
     commands=None,
@@ -2809,8 +2784,6 @@ def get_TOAs_array(
     bipm_version : str or None
         Which version of the BIPM tables to use for the clock correction.
         The format must be 'BIPMXXXX' where XXXX is a year.
-    include_gps : bool or None
-        Whether to include the GPS clock correction. Defaults to True.
     planets : bool or None
         Whether to apply Shapiro delays based on planet positions. Note that a
         long-standing TEMPO2 bug in this feature went unnoticed for years.
@@ -2890,7 +2863,6 @@ def get_TOAs_array(
                         )
             elif model["CLOCK"].value == "UNCORR":
                 include_bipm = False
-                include_gps = False
             else:
                 log.warning(
                     f'CLOCK = {model["CLOCK"].value} is not implemented. '
@@ -3024,7 +2996,6 @@ def get_TOAs_array(
     t.hashes = {} if hashes is None else hashes
     if all("clkcorr" not in f for f in t.table["flags"]):
         t.apply_clock_corrections(
-            include_gps=include_gps,
             include_bipm=include_bipm,
             bipm_version=bipm_version,
             limits=limits,

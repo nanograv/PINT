@@ -62,7 +62,6 @@ def test_process_and_accuracy():
     ts = get_Fermi_TOAs(
         eventfileraw,
         weightcolumn="PSRJ0030+0451",
-        include_gps=False,
         include_bipm=False,
         planets=False,
         ephem="DE405",
@@ -91,7 +90,6 @@ def test_for_toa_errors_default():
     ts = get_Fermi_TOAs(
         eventfileraw,
         weightcolumn="PSRJ0030+0451",
-        include_gps=False,
         include_bipm=False,
         planets=False,
         ephem="DE405",
@@ -105,7 +103,6 @@ def test_for_toa_errors_manual(errors):
     ts = get_Fermi_TOAs(
         eventfileraw,
         weightcolumn="PSRJ0030+0451",
-        include_gps=False,
         include_bipm=False,
         planets=False,
         ephem="DE405",
