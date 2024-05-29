@@ -20,6 +20,7 @@ class SiteTable(Table):
             ("Origin", "origin", 50),
             ("Location", "location", 20),
             ("Clock File(s)", "clock", 20),
+            ("Apply UTC(GPS)->UTC?", "applygps", 20),
         ]
 
         class_ = None
@@ -87,6 +88,12 @@ class SiteTable(Table):
                             refnode.append(innernode)
                             para += refnode
                             entry += para
+                elif c == "applygps":
+                    if o.apply_gps2utc:
+                        entry += nodes.strong(text="Yes")
+                    else:
+                        entry += nodes.emphasis(text="No")
+
             tbody += row
         tgroup += tbody
         return [table]

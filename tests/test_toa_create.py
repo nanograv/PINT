@@ -114,7 +114,7 @@ def test_toas_tolist(t, errors, freqs):
             toa.TOA((tt0, tt1), obs=obs, error=e, freq=fr, flags=f)
             for tt0, tt1, e, f, fr in zip(t[0], t[1], errors, combined_flags, freqs)
         ]
-    toas_tolist = toas.to_TOA_list()
+    toas_tolist = toas.to_TOA_list(undo_clkcorr=True)
     # for i in range(len(toalist)):
     #     assert toalist[i] == toas_tolist[i], f"{toalist[i]} != {toas_tolist[i]}"
     # depending on precision they should be equal, but if they aren't then just check the MJDs
@@ -228,16 +228,13 @@ def test_toas_fermi():
     get_satellite_observatory("Fermi", ft2file, overwrite=True)
 
     tl = load_Fermi_TOAs(eventfileraw, weightcolumn="PSRJ0030+0451")
-    ts = toa.get_TOAs_list(
-        tl, include_gps=False, include_bipm=False, planets=False, ephem="DE405"
-    )
+    ts = toa.get_TOAs_list(tl, include_bipm=False, planets=False, ephem="DE405")
 
     t = time.Time([toa.mjd for toa in tl], scale="tt")
     flags = [toa.flags for toa in tl]
     ts2 = toa.get_TOAs_array(
         t,
         "fermi",
-        include_gps=False,
         include_bipm=False,
         planets=False,
         ephem="DE405",
@@ -252,9 +249,7 @@ def test_toas_fermi_notoalist():
     get_satellite_observatory("Fermi", ft2file, overwrite=True)
 
     tl = load_Fermi_TOAs(eventfileraw, weightcolumn="PSRJ0030+0451")
-    toas = toa.get_TOAs_list(
-        tl, include_gps=False, include_bipm=False, planets=False, ephem="DE405"
-    )
+    toas = toa.get_TOAs_list(tl, include_bipm=False, planets=False, ephem="DE405")
 
     toas2 = get_Fermi_TOAs(
         eventfileraw,

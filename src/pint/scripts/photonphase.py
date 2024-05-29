@@ -178,7 +178,6 @@ def main(argv=None):
                 maxmjd=maxmjd,
                 ephem=args.ephem,
                 include_bipm=args.use_bipm,
-                include_gps=args.use_gps,
                 planets=use_planets,
             )
         except KeyError:
