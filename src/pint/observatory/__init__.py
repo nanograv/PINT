@@ -432,10 +432,10 @@ class Observatory:
         # TOA metadata which may be necessary in some cases.
         corr = np.zeros_like(t) * u.us
 
-        if self.apply_gps2utc and self.timescale != "tdb":
+        if self.apply_gps2utc:
             corr += self.gps_correction(t, limits=limits)
 
-        if include_bipm and self.timescale != "tdb":
+        if include_bipm and self.timescale.lower() != "tdb":
             corr += self.bipm_correction(t, bipm_version, limits=limits)
 
         return corr
