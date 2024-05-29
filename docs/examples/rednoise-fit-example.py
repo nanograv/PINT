@@ -87,7 +87,6 @@ t = make_fake_toas_uniform(
     add_correlated_noise=True,
     name="fake",
     include_bipm=True,
-    include_gps=True,
     multi_freqs_in_epoch=True,
 )
 
@@ -250,7 +249,6 @@ t = make_fake_toas_uniform(
     add_correlated_noise=True,
     name="fake",
     include_bipm=True,
-    include_gps=True,
     multi_freqs_in_epoch=True,
 )
 

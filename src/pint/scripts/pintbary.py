@@ -55,12 +55,6 @@ def main(argv=None):
     )
     parser.add_argument("--ephem", default="DE421", help="Ephemeris to use")
     parser.add_argument(
-        "--use_gps",
-        default=False,
-        action="store_true",
-        help="Apply GPS to UTC clock corrections",
-    )
-    parser.add_argument(
         "--use_bipm",
         default=False,
         action="store_true",
@@ -107,7 +101,6 @@ def main(argv=None):
         obs=args.obs,
         ephem=args.ephem,
         include_bipm=args.use_bipm,
-        include_gps=args.use_gps,
         planets=False,
     )
 

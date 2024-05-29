@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.7
+#       jupytext_version: 1.16.0
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -71,7 +71,6 @@ t = make_fake_toas_uniform(
     error=toaerrs,
     add_noise=True,
     include_bipm=True,
-    include_gps=True,
 )
 
 # %%
@@ -156,7 +155,6 @@ t = make_fake_toas_uniform(
     add_noise=True,
     add_correlated_noise=True,
     include_bipm=True,
-    include_gps=True,
     multi_freqs_in_epoch=True,
 )
 

@@ -648,7 +648,6 @@ class Pulsar:
                 obs="coe",
                 freq=1 * u.THz,  # effectively infinite frequency
                 include_bipm=sim_sel.clock_corr_info["include_bipm"],
-                include_gps=sim_sel.clock_corr_info["include_gps"],
             )
         self.faketoas1.compute_pulse_numbers(self.postfit_model)
         self.faketoas1.get_clusters(add_column=True)

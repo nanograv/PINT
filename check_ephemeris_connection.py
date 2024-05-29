@@ -1,5 +1,5 @@
 import pint.solar_system_ephemerides
-
+import pint.observatory
 
 for e in [
     "de440",
@@ -13,3 +13,6 @@ for e in [
     "de436t",
 ]:
     pint.solar_system_ephemerides.load_kernel(e)
+
+
+pint.observatory.find_latest_bipm()

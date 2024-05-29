@@ -55,7 +55,6 @@ def data_wx():
         add_correlated_noise=True,
         name="fake",
         include_bipm=True,
-        include_gps=True,
         multi_freqs_in_epoch=True,
     )
 
@@ -102,7 +101,6 @@ def data_dmwx():
         add_correlated_noise=True,
         name="fake",
         include_bipm=True,
-        include_gps=True,
         multi_freqs_in_epoch=True,
     )
 
