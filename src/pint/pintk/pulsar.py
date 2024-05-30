@@ -43,6 +43,7 @@ plot_labels = [
     "WB DM res",
     "WB DM err",
     "elongation",
+    "white-res",
 ]
 
 # Some parameters we do not want to add a fitting checkbox for:
