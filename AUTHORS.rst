@@ -20,7 +20,7 @@ Active developers are indicated by (*). Authors of the PINT paper are indicated 
 * Akash Anumarlapudi (*)
 * Anne Archibald (#*)
 * Matteo Bachetti (#)
-* Bastian Beischer 
+* Bastian Beranek 
 * Deven Bhakta (*)
 * Chloe Champagne (#)
 * Jonathan Colen (#)
