@@ -308,7 +308,7 @@ class DispersionDM(Dispersion):
 
 
 class DispersionDMX(Dispersion):
-    """This class provides a DMX model - multiple DM values.
+    """This class provides a DMX model - piecewise-constant DM variations.
 
     This model lets the user specify time ranges and fit for a different
     DM value in each time range.
