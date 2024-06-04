@@ -23,6 +23,7 @@ the released changes.
 - New algorithm for TCB <-> TDB conversion
 - Changed `TNRedC` and `TNDMC` into `intParameter`s; made their default values explicit.
 - `get_rednoise_freqs()` and `get_rednoise_freqs()` now take `f_1` as input instead of `Tspan`.
+- Reordered plotting axes in `pintk`
 ### Added
 - `bayesian_information_criterion()` function 
 - `dmx_setup` function
@@ -34,14 +35,14 @@ the released changes.
 - `convert_tcb2tdb`, `tcb2tdb_scale_factor`, and `effective_dimensionality` attributes for `floatParameter`s, `MJDParameter`s, `AngleParameter`s, `maskParameter`s, and `prefixParameter`s.
 - Added `pint.observatory.find_latest_bipm()` which returns latest BIPM year available
 - Documentation: HOWTO about determining tcb<->tdb scaling factors
-<<<<<<< redcorner
 - `plrednoise_from_wavex()` and `pldmnoise_from_dmwavex()` functions now compute `TNRedFLow` and `TNDMFLow`
 - `powerlaw_corner` function
 - `TNREDFLOW` and `TNREDCORNER` parameters in `PLRedNoise`
 - `TNDMFLOW` and `TNDMCORNER` parameters in `PLDMNoise`
-=======
 - Type hints in `pint.toa` and `get_model()` & `get_model_and_toas()` functions
->>>>>>> master
+- `pint.models.chromatic_model.Chromatic` as the base class for variable-index chromatic delays.
+- `pint.models.chromatic_model.ChromaticCM` for a Taylor series representation of the variable-index chromatic delay.
+- Whitened residuals (`white-res`) as a plotting axis in `pintk`
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
 - Fix #1759 by changing order of comparison

@@ -30,19 +30,20 @@ from loguru import logger as log
 plot_labels = [
     "pre-fit",
     "post-fit",
+    "WB DM res",
+    "white-res",
+    "WB DM",
+    "model DM",
     "mjd",
     "year",
-    "orbital phase",
-    "serial",
     "day of year",
+    "rounded MJD",
+    "serial",
+    "orbital phase",
+    "elongation",
     "frequency",
     "TOA error",
-    "rounded MJD",
-    "model DM",
-    "WB DM",
-    "WB DM res",
     "WB DM err",
-    "elongation",
 ]
 
 # Some parameters we do not want to add a fitting checkbox for:
