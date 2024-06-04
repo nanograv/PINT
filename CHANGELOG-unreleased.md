@@ -32,9 +32,9 @@ the released changes.
 - `convert_tcb2tdb`, `tcb2tdb_scale_factor`, and `effective_dimensionality` attributes for `floatParameter`s, `MJDParameter`s, `AngleParameter`s, `maskParameter`s, and `prefixParameter`s.
 - Added `pint.observatory.find_latest_bipm()` which returns latest BIPM year available
 - Documentation: HOWTO about determining tcb<->tdb scaling factors
+- Type hints in `pint.toa` and `get_model()` & `get_model_and_toas()` functions
 - `pint.models.chromatic_model.Chromatic` as the base class for variable-index chromatic delays.
 - `pint.models.chromatic_model.ChromaticCM` for a Taylor series representation of the variable-index chromatic delay.
-- Type hints in `pint.toa` and `get_model()` & `get_model_and_toas()` functions
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
 - Fix #1759 by changing order of comparison
