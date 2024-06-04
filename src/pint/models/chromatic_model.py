@@ -211,7 +211,7 @@ class ChromaticCM(Chromatic):
     def base_cm(self, toas):
         cm = np.zeros(len(toas))
         cm_terms = self.get_CM_terms()
-        if any(t.value != 0 for t in cm_terms[1:]):
+        if any(cmi.value != 0 for cmi in cm_terms[1:]):
             CMEPOCH = self.CMEPOCH.value
             if CMEPOCH is None:
                 # Should be ruled out by validate()

@@ -1,6 +1,9 @@
 from copy import deepcopy
+
+import pytest
 from pint.models import get_model, get_model_and_toas
 from pint.models.chromatic_model import ChromaticCM
+from pint.models.timing_model import MissingParameter
 from pint.simulation import make_fake_toas_uniform
 from pint.fitter import WLSFitter
 import astropy.units as u
@@ -28,6 +31,16 @@ def test_chromatic_cm():
     assert u.Unit(m.CM_derivative_unit(1)) == m.CM1.units
 
     assert "CM2" in str(m)
+
+    # test bad model
+    with pytest.raises(MissingParameter):
+        par = """
+            F0 100 1
+            CM 0.01
+            CM1 0.001
+            CM2 0.0001 
+        """
+        m1 = get_model(StringIO(par))
 
 
 def test_change_cmepoch():
