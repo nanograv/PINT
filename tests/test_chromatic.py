@@ -75,4 +75,4 @@ def test_cm_dm_comparison():
     ftr.fit_toas(maxiter=3)
 
     assert ftr.resids.chi2_reduced < 1.5
-    assert (ftr.model.CM.value - m0.DM.value) / ftr.model.CM.uncertainty_value < 2
+    assert (ftr.model.CM.value - m0.DM.value) / ftr.model.CM.uncertainty_value < 1.1
