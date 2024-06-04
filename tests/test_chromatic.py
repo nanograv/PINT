@@ -114,6 +114,4 @@ def test_cm_dm_comparison():
 
     assert ftr.resids.chi2_reduced < 1.5
     assert (ftr.model.CM.value - m0.DM.value) / ftr.model.CM.uncertainty_value < 1.1
-    assert np.isclose(
-        ftr.model.CM.uncertainty_value, ftr.model.CM.uncertainty_value, atol=0.1
-    )
+    assert np.isclose(ftr.model.CM.uncertainty_value, m0.DM.uncertainty_value, atol=0.1)
