@@ -33,6 +33,7 @@ def test_chromatic_cm_fit():
         PEPOCH  55000
         DM      10 0
         CM      10 1
+        CM1     0.001 1
         TNCHROMIDX   4 
         TZRSITE   gbt
         TZRMJD  55000
@@ -47,3 +48,6 @@ def test_chromatic_cm_fit():
     ftr.fit_toas(maxiter=5)
 
     assert np.abs(ftr.model.CM.value - m.CM.value) / ftr.model.CM.uncertainty_value < 3
+    assert (
+        np.abs(ftr.model.CM1.value - m.CM1.value) / ftr.model.CM1.uncertainty_value < 3
+    )
