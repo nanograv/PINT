@@ -21,6 +21,7 @@ the released changes.
 - Removed `apply_gps2utc` from `TOAs.clock_corr_info` since it can be different for different observatories. It is not a global setting.
 - The following observatories no longer have a default of `include_bipm=False`: magic, lst, virgo, lho, llo, geo600, kagra, hess, hawc
 - New algorithm for TCB <-> TDB conversion
+- Reordered plotting axes in `pintk`
 ### Added
 - `bayesian_information_criterion()` function 
 - `dmx_setup` function
@@ -33,6 +34,7 @@ the released changes.
 - Added `pint.observatory.find_latest_bipm()` which returns latest BIPM year available
 - Documentation: HOWTO about determining tcb<->tdb scaling factors
 - Type hints in `pint.toa` and `get_model()` & `get_model_and_toas()` functions
+- Whitened residuals (`white-res`) as a plotting axis in `pintk`
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
 - Fix #1759 by changing order of comparison
