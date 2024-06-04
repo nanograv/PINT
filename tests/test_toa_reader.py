@@ -406,21 +406,6 @@ def test_toa_merge_different_bipm_ver():
         nt = toa.merge_TOAs(toas)
 
 
-def test_toa_merge_different_gps():
-    filenames = [
-        datadir / "NGC6440E.tim",
-        datadir / "testtimes.tim",
-        datadir / "parkes.toa",
-    ]
-    inc_gpss = [True, True, False]
-    toas = [
-        toa.get_TOAs(ff, include_gps=inc_gps)
-        for ff, inc_gps in zip(filenames, inc_gpss)
-    ]
-    with pytest.raises(TypeError):
-        nt = toa.merge_TOAs(toas)
-
-
 def test_toa_merge_different_planets():
     filenames = [
         datadir / "NGC6440E.tim",

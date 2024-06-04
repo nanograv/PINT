@@ -110,7 +110,10 @@ class BinaryELL1(PulsarBinary):
 
         self.add_param(
             MJDParameter(
-                name="TASC", description="Epoch of ascending node", time_scale="tdb"
+                name="TASC",
+                description="Epoch of ascending node",
+                time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -120,6 +123,7 @@ class BinaryELL1(PulsarBinary):
                 units="",
                 description="First Laplace-Lagrange parameter, ECC*sin(OM)",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -129,6 +133,7 @@ class BinaryELL1(PulsarBinary):
                 units="",
                 description="Second Laplace-Lagrange parameter, ECC*cos(OM)",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -138,6 +143,7 @@ class BinaryELL1(PulsarBinary):
                 units="1e-12/s",
                 description="First derivative of first Laplace-Lagrange parameter",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -147,6 +153,7 @@ class BinaryELL1(PulsarBinary):
                 units="1e-12/s",
                 description="Second derivative of first Laplace-Lagrange parameter",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.remove_param("ECC")
@@ -342,6 +349,7 @@ class BinaryELL1H(BinaryELL1):
                 units="second",
                 description="Shapiro delay parameter H3 as in Freire and Wex 2010 Eq(20)",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -351,6 +359,7 @@ class BinaryELL1H(BinaryELL1):
                 units="second",
                 description="Shapiro delay parameter H4 as in Freire and Wex 2010 Eq(21)",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -361,6 +370,7 @@ class BinaryELL1H(BinaryELL1):
                 description="Shapiro delay parameter STIGMA as in Freire and Wex 2010 Eq(12)",
                 long_double=True,
                 aliases=["VARSIGMA", "STIG"],
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -458,6 +468,7 @@ class BinaryELL1k(BinaryELL1):
                 units="deg/year",
                 description="Rate of advance of periastron",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -467,6 +478,7 @@ class BinaryELL1k(BinaryELL1):
                 units="1/year",
                 description="Log-derivative of the eccentricity EDOT/ECC",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 

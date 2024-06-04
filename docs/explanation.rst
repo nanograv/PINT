@@ -317,19 +317,27 @@ The observatory data are stored in JSON format.  A simple example is::
         "tempo_code": "1",
         "itoa_code": "GB",
         "clock_file": "time_gbt.dat",
+        "apply_gps2utc": true,
         "itrf_xyz": [
             882589.289,
             -4924872.368,
             3943729.418
         ],
-        "origin": "The Robert C. Byrd Green Bank Telescope.\nThis data was obtained by Joe Swiggum from Ryan Lynch in 2021 September.\n"
-    }
+        "fullname": "The Robert C. Byrd Green Bank Telescope",
+        "origin": "This data was obtained by Joe Swiggum from Ryan Lynch in 2021 September.\n"
+    },
 
 The observatory is defined by its name (``gbt``) and its position.  This can be given as 
 geocentric coordinates in the International_Terrestrial_Reference_System_ (ITRF) through 
 the ``itrf_xyz`` triple (units as ``m``), or geodetic coordinates (WGS84_ assumed) through 
 ``lat``, ``lon``, ``alt`` (units are ``deg`` and ``m``).  Conversion is done through 
 Astropy_EarthLocation_.
+
+The time corrections are specified by the ``clock_file`` parameter, which gives the time corrections to be 
+applied to site arrival times to get to UTC.  Usually this is done by reference to an observatory time
+standard that is tied to GPS, and so the times are in UTC(GPS).  The ``apply_gps2utc`` parameter
+is a boolean that selects whether to apply the correction from UTC(GPS) to UTC that is 
+derived from BIPM Circular T.
 
 Other attributes are optional.  Here we have also specified the ``tempo_code`` and 
 ``itoa_code``, and a human-readable ``origin`` string.
@@ -345,6 +353,7 @@ A more complex/complete example is::
             "jb2gps.clk"
         ],
         "clock_fmt": "tempo2",
+        "apply_gps2utc" : true,
         "aliases": [
             "jboroach"
         ],
@@ -402,6 +411,7 @@ This can be done by specifying the ITRF coordinates, (``lat``, ``lon``, ``alt``)
             "tempo_code": "1",
             "itoa_code": "GB",
             "clock_file": "",
+            "apply_gps2utc": false,
             "itrf_xyz": [
                 882589.289,
                 -4924872.368,

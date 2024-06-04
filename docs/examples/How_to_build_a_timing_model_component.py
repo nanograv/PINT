@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.4
+#       jupytext_version: 1.16.0
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -107,6 +107,7 @@ class PeriodSpindown(SpindownBase):
                 units=u.s,
                 description="Spin period",
                 longdouble=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         # Add spin period derivative P1. Since it is not all rquired, we are setting the
@@ -118,6 +119,7 @@ class PeriodSpindown(SpindownBase):
                 units=u.s / u.s,
                 description="Spin period derivative",
                 longdouble=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         # Add reference epoch time.
@@ -126,6 +128,7 @@ class PeriodSpindown(SpindownBase):
                 name="PEPOCH_P0",
                 description="Reference epoch for spin-down",
                 time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         # Add spindown phase model function to phase functions
@@ -159,6 +162,7 @@ class PeriodSpindown(SpindownBase):
             units="Hz",
             description="Spin-frequency",
             long_double=True,
+            tcb2tdb_scale_factor=u.Quantity(1),
         )
 
     # Defining the derivatives. In the PINT, a common format of derivative naming is
@@ -175,6 +179,7 @@ class PeriodSpindown(SpindownBase):
             units=u.Hz / u.s,
             description="Spin down frequency",
             long_double=True,
+            tcb2tdb_scale_factor=u.Quantity(1),
         )
 
     @property
@@ -319,7 +324,7 @@ plt.grid()
 # %% [markdown]
 # ### Print out the summary
 
-# %% tags=[]
+# %%
 f.print_summary()
 
 # %% [markdown]

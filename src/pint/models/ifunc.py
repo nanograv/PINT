@@ -1,4 +1,5 @@
 """Tabulated extra delays."""
+
 import astropy.units as u
 import numpy as np
 
@@ -56,7 +57,12 @@ class IFunc(PhaseComponent):
         super().__init__()
 
         self.add_param(
-            floatParameter(name="SIFUNC", description="Type of interpolation", units="")
+            floatParameter(
+                name="SIFUNC",
+                description="Type of interpolation",
+                units="",
+                convert_tcb2tdb=False,
+            )
         )
         self.add_param(
             prefixParameter(
@@ -66,6 +72,7 @@ class IFunc(PhaseComponent):
                 type_match="pair",
                 long_double=True,
                 parameter_type="pair",
+                convert_tcb2tdb=False,
             )
         )
         self.phase_funcs_component += [self.ifunc_phase]

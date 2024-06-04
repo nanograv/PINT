@@ -47,19 +47,20 @@ plotlabels = {
         "Post-fit residual (phase)",
         "Post-fit residual (us)",
     ],
-    "mjd": r"MJD",
-    "orbital phase": "Orbital Phase",
-    "serial": "TOA number",
+    "WB DM res": "Wideband DM residual (pc/cm3)",
+    "white-res": "Whitened residuals",
+    "WB DM": "Wideband DM (pc/cm3)",
+    "model DM": "Model DM (pc/cm3)",
+    "mjd": "MJD",
     "day of year": "Day of the year",
     "year": "Year",
-    "frequency": r"Observing Frequency (MHz)",
-    "TOA error": r"TOA uncertainty ($\mu$s)",
-    "rounded MJD": r"MJD",
-    "model DM": "Model DM (pc/cm3)",
-    "WB DM": "Wideband DM (pc/cm3)",
-    "WB DM res": "Wideband DM residual (pc/cm3)",
+    "rounded MJD": "MJD",
+    "serial": "TOA number",
+    "orbital phase": "Orbital Phase",
+    "elongation": "Solar Elongation (deg)",
+    "frequency": "Observing Frequency (MHz)",
+    "TOA error": "TOA uncertainty ($\\mu$s)",
     "WB DM err": "Wideband DM error (pc/cm3)",
-    "elongation": r"Solar Elongation (deg)",
 }
 
 helpstring = """The following interactions are currently supported in the plotting pane in `pintk`:
@@ -1130,7 +1131,7 @@ class PlkWidget(tk.Frame):
                 self.plkAx2x.yaxis.set_major_locator(
                     mpl.ticker.FixedLocator(self.plkAxes.get_yticks() * f0)
                 )
-            except:
+            except Exception:
                 pass
             # If fitting orbital phase, plot the conjunction
             if self.xid == "orbital phase":
@@ -1318,6 +1319,12 @@ class PlkWidget(tk.Frame):
             data = np.degrees(
                 self.psr.prefit_model.sun_angle(self.psr.all_toas, also_distance=False)
             )
+            error = None
+        elif label == "white-res":
+            if self.psr.fitter is not None:
+                data = self.psr.fitter.resids.calc_whitened_resids()
+            else:
+                data = self.prefit_resids.calc_whitened_resids()
             error = None
 
         return data, error

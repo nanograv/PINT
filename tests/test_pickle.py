@@ -7,6 +7,7 @@ import pint.models.parameter as param
 from pint.models.model_builder import get_model
 from pinttestdata import datadir
 import pickle
+from astropy import units as u
 
 
 def test_pickle_prefixparameter():
@@ -23,6 +24,7 @@ def test_pickle_prefixparameter():
         description=modelcomponent.F_description(2),
         longdouble=True,
         frozen=False,
+        tcb2tdb_scale_factor=u.Quantity(1),
     )
     modelcomponent.add_param(p, setup=True)
     m.validate()

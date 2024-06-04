@@ -77,7 +77,6 @@ def zero_residuals(
 def get_fake_toa_clock_versions(
     model: pint.models.timing_model.TimingModel,
     include_bipm: bool = False,
-    include_gps: bool = True,
 ) -> dict:
     """Get the clock settings (corrections, etc) for fake TOAs
 
@@ -88,9 +87,6 @@ def get_fake_toa_clock_versions(
     include_bipm : bool, optional
         Whether or not to disable UTC-> TT BIPM clock
         correction (see :class:`pint.observatory.topo_obs.TopoObs`)
-    include_gps : bool, optional
-        Whether or not to disable UTC(GPS)->UTC clock correction
-        (see :class:`pint.observatory.topo_obs.TopoObs`)
 
     Returns
     -------
@@ -124,7 +120,6 @@ def get_fake_toa_clock_versions(
     return {
         "include_bipm": include_bipm,
         "bipm_version": bipm_version,
-        "include_gps": include_gps,
     }
 
 
@@ -236,7 +231,6 @@ def make_fake_toas_uniform(
     wideband_dm_error: u.Quantity = 1e-4 * pint.dmu,
     name: str = "fake",
     include_bipm: bool = False,
-    include_gps: bool = True,
     multi_freqs_in_epoch: bool = False,
     flags: Optional[dict] = None,
     subtract_mean: bool = True,
@@ -278,9 +272,6 @@ def make_fake_toas_uniform(
     include_bipm : bool, optional
         Whether or not to disable UTC-> TT BIPM clock
         correction (see :class:`pint.observatory.topo_obs.TopoObs`)
-    include_gps : bool, optional
-        Whether or not to disable UTC(GPS)->UTC clock correction
-        (see :class:`pint.observatory.topo_obs.TopoObs`)
     multi_freqs_in_epoch : bool, optional
         Whether to generate multiple frequency TOAs for the same epoch.
     flags: None or dict
@@ -333,9 +324,7 @@ def make_fake_toas_uniform(
         fuzz = np.random.normal(scale=fuzz.to_value(u.d), size=len(times)) * u.d
         times += fuzz
 
-    clk_version = get_fake_toa_clock_versions(
-        model, include_bipm=include_bipm, include_gps=include_gps
-    )
+    clk_version = get_fake_toa_clock_versions(model, include_bipm=include_bipm)
     ts = pint.toa.get_TOAs_array(
         times,
         obs=obs,
@@ -345,7 +334,6 @@ def make_fake_toas_uniform(
         ephem=model["EPHEM"].value,
         include_bipm=clk_version["include_bipm"],
         bipm_version=clk_version["bipm_version"],
-        include_gps=clk_version["include_gps"],
         planets=model["PLANET_SHAPIRO"].value if "PLANET_SHAPIRO" in model else False,
         flags=flags,
     )
@@ -375,7 +363,6 @@ def make_fake_toas_fromMJDs(
     wideband_dm_error: u.Quantity = 1e-4 * pint.dmu,
     name: str = "fake",
     include_bipm: bool = False,
-    include_gps: bool = True,
     multi_freqs_in_epoch: bool = False,
     flags: Optional[dict] = None,
     subtract_mean: bool = True,
@@ -409,9 +396,6 @@ def make_fake_toas_fromMJDs(
     include_bipm : bool, optional
         Whether or not to disable UTC-> TT BIPM clock
         correction (see :class:`pint.observatory.topo_obs.TopoObs`)
-    include_gps : bool, optional
-        Whether or not to disable UTC(GPS)->UTC clock correction
-        (see :class:`pint.observatory.topo_obs.TopoObs`)
     multi_freqs_in_epoch : bool, optional
         Whether to generate multiple frequency TOAs for the same epoch.
     flags: None or dict
@@ -467,9 +451,7 @@ def make_fake_toas_fromMJDs(
         )
         freq_array = np.tile(freqs, len(MJDs))
 
-    clk_version = get_fake_toa_clock_versions(
-        model, include_bipm=include_bipm, include_gps=include_gps
-    )
+    clk_version = get_fake_toa_clock_versions(model, include_bipm=include_bipm)
 
     ts = pint.toa.get_TOAs_array(
         times,
@@ -480,7 +462,6 @@ def make_fake_toas_fromMJDs(
         ephem=model["EPHEM"].value,
         include_bipm=clk_version["include_bipm"],
         bipm_version=clk_version["bipm_version"],
-        include_gps=clk_version["include_gps"],
         planets=model["PLANET_SHAPIRO"].value,
         flags=flags,
     )
