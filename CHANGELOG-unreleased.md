@@ -34,6 +34,8 @@ the released changes.
 - Added `pint.observatory.find_latest_bipm()` which returns latest BIPM year available
 - Documentation: HOWTO about determining tcb<->tdb scaling factors
 - Type hints in `pint.toa` and `get_model()` & `get_model_and_toas()` functions
+- `pint.models.chromatic_model.Chromatic` as the base class for variable-index chromatic delays.
+- `pint.models.chromatic_model.ChromaticCM` for a Taylor series representation of the variable-index chromatic delay.
 - Whitened residuals (`white-res`) as a plotting axis in `pintk`
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 

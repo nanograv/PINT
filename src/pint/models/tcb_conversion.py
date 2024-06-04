@@ -112,6 +112,7 @@ def convert_tcb_tdb(model: TimingModel, backwards: bool = False) -> None:
         4. EQUADs and ECORRs.
         5. GP Red noise and GP DM noise parameters
         6. Pair parameters such as Wave and IFunc parameters
+        7. Variable-index chromatic delay parameters
 
     Parameters
     ----------
