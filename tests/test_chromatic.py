@@ -27,6 +27,31 @@ def test_chromatic_cm():
     assert len(m.get_CM_terms()) == 3
     assert u.Unit(m.CM_derivative_unit(1)) == m.CM1.units
 
+    assert "CM2" in str(m)
+
+
+def test_change_cmepoch():
+    par = """
+        F0 100 1
+        CMEPOCH 55000
+        CM 0.01
+        CM1 0.001
+        CM2 0.0001 
+    """
+    m0 = get_model(StringIO(par))
+    m1 = deepcopy(m0)
+
+    m1.change_cmepoch(55100)
+    assert m1.CMEPOCH.value == 55100
+    assert np.isclose(
+        m1.CM.value,
+        (
+            m0.CM.quantity
+            + m0.CM1.quantity * (100 * u.day)
+            + 0.5 * m0.CM2.quantity * (100 * u.day) ** 2
+        ).value,
+    )
+
 
 def test_chromatic_cm_fit():
     par = """
