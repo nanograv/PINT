@@ -40,9 +40,9 @@ class Dispersion(DelayComponent):
         self.dm_deriv_funcs = {}
 
     def dispersion_time_delay(self, DM, freq):
-        """Return the dispersion time delay for a set of frequency.
+        """Return the dispersion time delay for a set of frequencies.
 
-        This equation if cited from Duncan Lorimer, Michael Kramer,
+        This equation is taken from Duncan Lorimer, Michael Kramer,
         Handbook of Pulsar Astronomy, Second edition, Page 86, Equation [4.7]
         Here we assume the reference frequency is at infinity and the EM wave
         frequency is much larger than plasma frequency.
@@ -161,8 +161,8 @@ class DispersionDM(Dispersion):
                 name="DM1",
                 units="pc cm^-3/yr^1",
                 description="First order time derivative of the dispersion measure",
-                unit_template=self.DM_dervative_unit,
-                description_template=self.DM_dervative_description,
+                unit_template=self.DM_derivative_unit,
+                description_template=self.DM_derivative_description,
                 type_match="float",
                 long_double=True,
                 tcb2tdb_scale_factor=DMconst,
@@ -204,10 +204,10 @@ class DispersionDM(Dispersion):
                     "DMEPOCH or PEPOCH is required if DM1 or higher are set",
                 )
 
-    def DM_dervative_unit(self, n):
+    def DM_derivative_unit(self, n):
         return "pc cm^-3/yr^%d" % n if n else "pc cm^-3"
 
-    def DM_dervative_description(self, n):
+    def DM_derivative_description(self, n):
         return "%d'th time derivative of the dispersion measure" % n
 
     def get_DM_terms(self):
