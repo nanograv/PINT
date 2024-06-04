@@ -1,9 +1,12 @@
-from pint.models import get_model
+from copy import deepcopy
+from pint.models import get_model, get_model_and_toas
+from pint.models.chromatic_model import ChromaticCM
 from pint.simulation import make_fake_toas_uniform
 from pint.fitter import WLSFitter
 import astropy.units as u
 from io import StringIO
 import numpy as np
+from pinttestdata import datadir
 
 
 def test_chromatic_cm():
@@ -51,3 +54,25 @@ def test_chromatic_cm_fit():
     assert (
         np.abs(ftr.model.CM1.value - m.CM1.value) / ftr.model.CM1.uncertainty_value < 3
     )
+
+
+def test_cm_dm_comparison():
+    m, t = get_model_and_toas(datadir / "NGC6440E.par", datadir / "NGC6440E.tim")
+
+    ftr = WLSFitter(t, m)
+    ftr.fit_toas(maxiter=3)
+    m0 = ftr.model
+
+    dmval = m0.DM.value
+    m1 = deepcopy(m0)
+    m1.remove_component("DispersionDM")
+    m1.add_component(ChromaticCM())
+    m1.TNCHROMIDX.value = 2
+    m1.CM.value = dmval
+    m1.CM.frozen = False
+
+    ftr = WLSFitter(t, m1)
+    ftr.fit_toas(maxiter=3)
+
+    assert ftr.resids.chi2_reduced < 1.5
+    assert (ftr.model.CM.value - m0.DM.value) / ftr.model.CM.uncertainty_value < 2
