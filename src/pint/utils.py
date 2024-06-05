@@ -1401,7 +1401,6 @@ def split_dmx(model: "pint.models.TimingModel", time: Time) -> Tuple[int, int]:
     index = int(dmx_epochs[ii])
     t1 = DMX_R1[ii]
     t2 = DMX_R2[ii]
-    print(f"{ii} {t1} {t2} {time}")
     getattr(model, f"DMXR2_{index:04d}").value = time.mjd
     newindex = model.add_DMX_range(
         time.mjd,
@@ -1446,7 +1445,6 @@ def split_swx(model: "pint.models.TimingModel", time: Time) -> Tuple[int, int]:
     index = int(swx_epochs[ii])
     t1 = SWX_R1[ii]
     t2 = SWX_R2[ii]
-    print(f"{ii} {t1} {t2} {time}")
     getattr(model, f"SWXR2_{index:04d}").value = time.mjd
     newindex = model.add_swx_range(
         time.mjd,
