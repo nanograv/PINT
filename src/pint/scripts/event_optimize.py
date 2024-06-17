@@ -151,7 +151,7 @@ def profile_likelihood(phs, *otherargs):
     Likelihood is calculated as per eqn 2 in Pletsch & Clark 2015.
     """
     xvals, phases, template, weights = otherargs
-    phss = phases.astype(np.float64) + phs
+    phss = phases.astype(np.float64) + phs.astype(np.float64)
     phss %= 1
     probs = np.interp(phss, xvals, template, right=template[0])
     if weights is None:
