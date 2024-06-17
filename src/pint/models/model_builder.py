@@ -1081,14 +1081,14 @@ def convert_binary_params_dict(
             log.debug("Converting KIN to/from IAU <--> DT96")
             entries = parfile_dict["KIN"][0].split()
             new_value = _convert_kin(float(entries[0]) * u.deg).value
-            parfile_dict["KIN"] = [" ".join([repr(new_value)] + entries[1:])]
+            parfile_dict["KIN"] = [" ".join([str(new_value)] + entries[1:])]
 
         # Convert KOM if requested
         if convert_komkin and "KOM" in parfile_dict:
             log.debug("Converting KOM to/from IAU <--> DT96")
             entries = parfile_dict["KOM"][0].split()
             new_value = _convert_kom(float(entries[0]) * u.deg).value
-            parfile_dict["KOM"] = [" ".join([repr(new_value)] + entries[1:])]
+            parfile_dict["KOM"] = [" ".join([str(new_value)] + entries[1:])]
 
         # Drop SINI if requested
         if drop_ddk_sini and binary_model_guesses[0] == "DDK":
