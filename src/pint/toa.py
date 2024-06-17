@@ -429,7 +429,7 @@ def get_TOAs_list(
         )
     else:
         log.debug(
-            f"Not applying clock corrections since at least some TOAs already have clkcorr in their flags."
+            "Not applying clock corrections since at least some TOAs already have clkcorr in their flags."
         )
     if "tdb" not in t.table.colnames:
         t.compute_TDBs(method=tdb_method, ephem=ephem)
@@ -1689,6 +1689,10 @@ class TOAs:
             return np.array(self.table["mjd"])
         else:
             return self.table["mjd_float"].quantity
+
+    def get_Tspan(self) -> u.Quantity:
+        mjds = self.get_mjds()
+        return mjds.max() - mjds.min()
 
     def get_errors(self) -> u.Quantity:
         """Return a numpy array of the TOA errors in us."""
