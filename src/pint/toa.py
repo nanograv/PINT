@@ -1601,7 +1601,7 @@ class TOAs:
     @property
     def observatories(self) -> Set[str]:
         """The set of observatories in use by these TOAs."""
-        return set(self.get_obss())
+        return set([str(x) for x in self.get_obss()])
 
     @property
     def first_MJD(self) -> time.Time:
