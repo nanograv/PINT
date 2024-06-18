@@ -25,6 +25,7 @@ from pint.observatory.satellite_obs import get_satellite_observatory
 
 __all__ = ["read_gaussfitfile", "marginalize_over_phase", "main"]
 
+
 def read_gaussfitfile(gaussfitfile, proflen):
     """Read a Gaussian-fit file as created by the output of pygaussfit.py.
 
@@ -388,6 +389,7 @@ def load_events_weights(eventfile, model, weightcol, wgtexp, minMJD, maxMJD, min
         log.info("There are %d events, no weights are being used." % ts.ntoas)
 
     return ts, weights
+
 
 class emcee_fitter(Fitter):
     def __init__(
