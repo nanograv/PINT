@@ -24,22 +24,6 @@ from pint.observatory.satellite_obs import get_satellite_observatory
 
 
 __all__ = ["read_gaussfitfile", "marginalize_over_phase", "main"]
-# log.setLevel('DEBUG')
-# np.seterr(all='raise')
-
-# initialization values
-# Should probably figure a way to make these not global variables
-maxpost = -9e99
-numcalls = 0
-
-
-class custom_timing(
-    pint.models.spindown.Spindown, pint.models.astrometry.AstrometryEcliptic
-):
-    def __init__(self, parfile):
-        super().__init__()
-        self.read_parfile(parfile)
-
 
 def read_gaussfitfile(gaussfitfile, proflen):
     """Read a Gaussian-fit file as created by the output of pygaussfit.py.
@@ -323,6 +307,88 @@ def run_sampler_autocorr(sampler, pos, nsteps, burnin, csteps=100, crit1=10):
     return autocorr
 
 
+def load_events_weights(eventfile, model, weightcol, wgtexp, minMJD, maxMJD, minWeight):
+    """Loads in Fermi photon events and generates a TOA object and a corresponding weights array
+    ----------
+    Parameters
+        eventfile: Photon events file, format: fits, pickle, pickle.gz
+        model: Timing Model
+        weightcol (str): Name of weight column (or 'CALC' to have them computed)
+        wgtexp (float): Raise computed weights to this power (or 0.0 to disable any rescaling of weights)
+        minMJD (float): Earliest MJD to use
+        maxMJD (float): Latest MJD to use
+        minWeight (float)): Minimum weight to include
+    -------
+    Returns
+        ts: TOA object containing all of the photon data
+        weights: numpy array containing the corresponding weights
+    """
+    if "ELONG" in model.params:
+        tc = SkyCoord(
+            model.ELONG.quantity,
+            model.ELAT.quantity,
+            frame="barycentrictrueecliptic",
+        )
+    else:
+        tc = SkyCoord(model.RAJ.quantity, model.DECJ.quantity, frame="icrs")
+
+    target = tc if weightcol == "CALC" else None
+
+    ts = None
+    if eventfile.endswith("pickle") or eventfile.endswith("pickle.gz"):
+        try:
+            ts = toa.load_pickle(eventfile)
+            mjds = ts.get_mjds().value
+            ts = ts[(mjds >= minMJD) & (mjds <= maxMJD)]
+        except IOError:
+            pass
+
+    if ts is None:
+        ts = fermi.get_Fermi_TOAs(
+            eventfile,
+            weightcolumn=weightcol,
+            targetcoord=target,
+            minweight=minWeight,
+            minmjd=minMJD,
+            maxmjd=maxMJD,
+            ephem="DE421",
+            planets=False,
+        )
+        ts.filename = eventfile
+        try:
+            toa.save_pickle(ts)
+        except IOError:
+            pass
+
+    if weightcol is not None:
+        if weightcol == "CALC":
+            weights = np.asarray([float(x["weight"]) for x in ts.table["flags"]])
+            log.info(
+                "Original weights have min / max weights %.3f / %.3f"
+                % (weights.min(), weights.max())
+            )
+            # Rescale the weights, if requested (by having wgtexp != 0.0)
+            if wgtexp != 0.0:
+                weights **= wgtexp
+                wmx, wmn = weights.max(), weights.min()
+                # make the highest weight = 1, but keep min weight the same
+                weights = wmn + ((weights - wmn) * (1.0 - wmn) / (wmx - wmn))
+            for ii, x in enumerate(ts.table["flags"]):
+                x["weight"] = str(weights[ii])
+        weights = np.asarray([float(x["weight"]) for x in ts.table["flags"]])
+
+        ts = ts[weights >= minWeight]
+        weights = weights[weights >= minWeight]
+        log.info(
+            "There are %d events, with min / max weights %.3f / %.3f"
+            % (len(weights), weights.min(), weights.max())
+        )
+    else:
+        weights = None
+        log.info("There are %d events, no weights are being used." % ts.ntoas)
+
+    return ts, weights
+
 class emcee_fitter(Fitter):
     def __init__(
         self, toas=None, model=None, template=None, weights=None, phs=0.5, phserr=0.03
@@ -361,12 +427,8 @@ class emcee_fitter(Fitter):
         """
         The log posterior (priors * likelihood)
         """
-        global maxpost, numcalls, ftr
+        global ftr
         self.set_params(dict(zip(self.fitkeys[:-1], theta[:-1])))
-
-        numcalls += 1
-        if numcalls % (nwalkers * nsteps / 100) == 0:
-            log.info("~%d%% complete" % (numcalls / (nwalkers * nsteps / 100)))
 
         # Evaluate the prior FIRST, then don't even both computing
         # the posterior if the prior is not finite
@@ -380,12 +442,6 @@ class emcee_fitter(Fitter):
             theta[-1], self.xtemp, phases, self.template, self.weights
         )
         lnpost = lnprior + lnlikelihood
-        if lnpost > maxpost:
-            log.info("New max: %f" % lnpost)
-            for name, val in zip(ftr.fitkeys, theta):
-                log.info("  %8s: %25.15g" % (name, val))
-            maxpost = lnpost
-            self.maxpost_fitvals = theta
         return lnpost, lnprior, lnlikelihood
 
     def minimize_func(self, theta):
@@ -523,7 +579,7 @@ def main(argv=None):
         "--minMJD", help="Earliest MJD to use", type=float, default=54680.0
     )
     parser.add_argument(
-        "--maxMJD", help="Latest MJD to use", type=float, default=57250.0
+        "--maxMJD", help="Latest MJD to use", type=float, default=65000.0
     )
     parser.add_argument(
         "--phs", help="Starting phase offset [0-1] (def is to measure)", type=float
@@ -566,12 +622,6 @@ def main(argv=None):
         help="Multiple par file errors by this factor when setting gaussian prior widths",
         type=float,
         default=10.0,
-    )
-    parser.add_argument(
-        "--usepickle",
-        help="Read events from pickle file, if available?",
-        default=False,
-        action="store_true",
     )
     parser.add_argument(
         "--log-level",
@@ -680,76 +730,10 @@ def main(argv=None):
             )
             raise Exception
 
-    # The custom_timing version below is to manually construct the TimingModel
-    # class, which allows it to be pickled. This is needed for parallelizing
-    # the emcee call over a number of threads.  So far, it isn't quite working
-    # so it is disabled.  The code above constructs the TimingModel class
-    # dynamically, as usual.
-    # modelin = custom_timing(parfile)
-
-    # Remove the dispersion delay as it is unnecessary
-    # modelin.delay_funcs['L1'].remove(modelin.dispersion_delay)
-    # Set the target coords for automatic weighting if necessary
-    if "ELONG" in modelin.params:
-        tc = SkyCoord(
-            modelin.ELONG.quantity,
-            modelin.ELAT.quantity,
-            frame="barycentrictrueecliptic",
-        )
-    else:
-        tc = SkyCoord(modelin.RAJ.quantity, modelin.DECJ.quantity, frame="icrs")
-
-    target = tc if weightcol == "CALC" else None
-
-    # TODO: make this properly handle long double
-    ts = None
-    if args.usepickle:
-        try:
-            ts = toa.load_pickle(eventfile)
-        except IOError:
-            pass
-    if ts is None:
-        ts = fermi.get_Fermi_TOAs(
-            eventfile,
-            weightcolumn=weightcol,
-            targetcoord=target,
-            minweight=minWeight,
-            minmjd=minMJD,
-            maxmjd=maxMJD,
-            ephem="DE421",
-            planets=False,
-        )
-        log.info("There are %d events we will use" % len(ts))
-        ts.filename = eventfile
-        # FIXME: writes to the TOA directory unconditionally
-        try:
-            toa.save_pickle(ts)
-        except IOError:
-            pass
-
-    if weightcol is not None:
-        if weightcol == "CALC":
-            weights = np.asarray([float(x["weight"]) for x in ts.table["flags"]])
-            log.info(
-                "Original weights have min / max weights %.3f / %.3f"
-                % (weights.min(), weights.max())
-            )
-            # Rescale the weights, if requested (by having wgtexp != 0.0)
-            if wgtexp != 0.0:
-                weights **= wgtexp
-                wmx, wmn = weights.max(), weights.min()
-                # make the highest weight = 1, but keep min weight the same
-                weights = wmn + ((weights - wmn) * (1.0 - wmn) / (wmx - wmn))
-            for ii, x in enumerate(ts.table["flags"]):
-                x["weight"] = str(weights[ii])
-        weights = np.asarray([float(x["weight"]) for x in ts.table["flags"]])
-        log.info(
-            "There are %d events, with min / max weights %.3f / %.3f"
-            % (len(weights), weights.min(), weights.max())
-        )
-    else:
-        weights = None
-        log.info("There are %d events, no weights are being used." % ts.ntoas)
+    # Load in events and weights
+    ts, weights = load_events_weights(
+        eventfile, modelin, weightcol, wgtexp, minMJD, maxMJD, minWeight
+    )
 
     # Now load in the gaussian template and normalize it
     gtemplate = read_gaussfitfile(gaussianfile, nbins)
