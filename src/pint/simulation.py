@@ -514,11 +514,11 @@ def make_fake_toas_fromtim(
     --------
     :func:`make_fake_toas`
     """
-    input_ts = pint.toa.get_TOAs(timfile, model=model)
+    ts = pint.toa.get_TOAs(timfile, model=model)
 
-    if input_ts.is_wideband():
-        dm_errors = input_ts.get_dm_errors()
-        ts = update_fake_dms(model, input_ts, dm_errors, add_noise)
+    if ts.is_wideband():
+        dm_errors = ts.get_dm_errors()
+        ts = update_fake_dms(model, ts, dm_errors, add_noise)
 
     return make_fake_toas(
         ts,
