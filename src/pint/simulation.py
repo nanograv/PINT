@@ -514,25 +514,14 @@ def make_fake_toas_fromtim(
     --------
     :func:`make_fake_toas`
     """
-    ephem = (
-        model.EPHEM.value
-        if hasattr(model, "EPHEM") and model.EPHEM.value is not None
-        else None
-    )
-    planets = (
-        model.PLANET_SHAPIRO.value
-        if hasattr(model, "PLANET_SHAPIRO") and model.PLANET_SHAPIRO.value is not None
-        else False
-    )
-
-    input_ts = pint.toa.get_TOAs(timfile, ephem=ephem, planets=planets)
+    input_ts = pint.toa.get_TOAs(timfile, model=model)
 
     if input_ts.is_wideband():
         dm_errors = input_ts.get_dm_errors()
         ts = update_fake_dms(model, input_ts, dm_errors, add_noise)
 
     return make_fake_toas(
-        input_ts,
+        ts,
         model=model,
         add_noise=add_noise,
         add_correlated_noise=add_correlated_noise,
