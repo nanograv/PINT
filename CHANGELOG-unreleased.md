@@ -43,4 +43,5 @@ the released changes.
 - Moved the test in `test_pmtransform_units.py` into a function.
 - Fixed bug in residual calculation when adding or removing phase wraps
 - Fix #1766 by correcting logic and more clearly naming argument (clkcorr->undo_clkcorr)
+- `make_fake_toas_fromtim` now handles BIPM corrections and wideband DMs correctly. 
 ### Removed
