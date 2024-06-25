@@ -22,6 +22,7 @@ the released changes.
 - The following observatories no longer have a default of `include_bipm=False`: magic, lst, virgo, lho, llo, geo600, kagra, hess, hawc
 - New algorithm for TCB <-> TDB conversion
 - Reordered plotting axes in `pintk`
+- Moved the events -> TOAs and photon weights code into the function `load_events_weights` within `event_optimize`.
 ### Added
 - `bayesian_information_criterion()` function 
 - `dmx_setup` function
@@ -44,3 +45,6 @@ the released changes.
 - Fixed bug in residual calculation when adding or removing phase wraps
 - Fix #1766 by correcting logic and more clearly naming argument (clkcorr->undo_clkcorr)
 ### Removed
+- Removed the argument `--usepickle` in `event_optimize` as the `load_events_weights` function checks the events file type to see if the 
+file is a pickle file.
+- Removed obsolete code, such as manually tracking the progress of the MCMC run within `event_optimize`
