@@ -49,5 +49,6 @@ the released changes.
 - Moved the test in `test_pmtransform_units.py` into a function.
 - Fixed bug in residual calculation when adding or removing phase wraps
 - Fix #1766 by correcting logic and more clearly naming argument (clkcorr->undo_clkcorr)
+- Minimal fixes to allow usage of numpy 2.0
 ### Removed
 - Unnecessary default arguments from the `powerlaw()` function.
