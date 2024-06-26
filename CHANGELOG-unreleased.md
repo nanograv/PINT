@@ -24,6 +24,7 @@ the released changes.
 - Changed `TNRedC` and `TNDMC` into `intParameter`s; made their default values explicit.
 - `get_rednoise_freqs()` and `get_rednoise_freqs()` now take `f_1` as input instead of `Tspan`.
 - Reordered plotting axes in `pintk`
+- Changed `scipy.integrate.simps` to `scipy.integrate.simpson` to work with scipy 1.14
 ### Added
 - `bayesian_information_criterion()` function 
 - `dmx_setup` function
