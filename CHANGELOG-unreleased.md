@@ -22,6 +22,7 @@ the released changes.
 - The following observatories no longer have a default of `include_bipm=False`: magic, lst, virgo, lho, llo, geo600, kagra, hess, hawc
 - New algorithm for TCB <-> TDB conversion
 - Reordered plotting axes in `pintk`
+- Changed `scipy.integrate.simps` to `scipy.integrate.simpson` to work with scipy 1.14
 ### Added
 - `bayesian_information_criterion()` function 
 - `dmx_setup` function
