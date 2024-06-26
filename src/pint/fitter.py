@@ -490,9 +490,11 @@ class Fitter:
         """
 
         return self.model.get_derived_params(
-            rms=self.resids.toa.rms_weighted()
-            if self.is_wideband
-            else self.resids.rms_weighted(),
+            rms=(
+                self.resids.toa.rms_weighted()
+                if self.is_wideband
+                else self.resids.rms_weighted()
+            ),
             ntoas=self.toas.ntoas,
             returndict=returndict,
         )
@@ -1242,7 +1244,7 @@ class DownhillFitter(Fitter):
             for fp, x in zip(free_noise_params, xs):
                 getattr(res.model, fp).value = x
 
-            return -res.lnlikelihood()
+            return -res.lnlikelihood().astype(np.float64)
 
         if not res.model.has_correlated_errors:
 
