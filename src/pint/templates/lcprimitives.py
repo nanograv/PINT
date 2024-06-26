@@ -16,7 +16,7 @@ author: M. Kerr <matthew.kerr@gmail.com>
 from math import atan, cosh, tan
 
 import numpy as np
-from scipy.integrate import quad, simps
+from scipy.integrate import quad, simpson
 from scipy.interpolate import interp1d
 from scipy.special import erf, i0, i1, owens_t
 from scipy.stats import cauchy, norm, vonmises, skewnorm
@@ -1593,7 +1593,7 @@ class LCKernelDensity(LCPrimitive):
         x = self.interpolator.x
         y = self.interpolator.y
         mask = (x >= x1) & (x <= x2)
-        return simps(y[mask], x=x[mask])
+        return simpson(y[mask], x=x[mask])
         # return self.interpolator.y[mask].sum()/len(mask)
 
 
