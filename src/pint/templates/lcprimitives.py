@@ -16,7 +16,12 @@ author: M. Kerr <matthew.kerr@gmail.com>
 from math import atan, cosh, tan
 
 import numpy as np
-from scipy.integrate import quad, simpson
+from scipy.integrate import quad
+
+try:
+    from scipy.integrate import simpson
+except ImportError:
+    from scipy.integrate import simps as simpson
 from scipy.interpolate import interp1d
 from scipy.special import erf, i0, i1, owens_t
 from scipy.stats import cauchy, norm, vonmises, skewnorm
