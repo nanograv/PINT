@@ -131,10 +131,10 @@ def make_fake_toas(
     name: str = "fake",
     subtract_mean: bool = True,
 ) -> pint.toa.TOAs:
-    """Make toas from an array of times
+    """Make toas from an array of TOAs
 
-    Can include alternating frequencies if fed an array of frequencies,
-    only works with one observatory at a time
+    Uses the input TOAs as a starting place, but then adjusts to fit the given model
+    and then optionally adds noise.
 
     Parameters
     ----------
