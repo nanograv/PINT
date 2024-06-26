@@ -545,9 +545,30 @@ class TimingModel:
         """Mostly this just sets ``self.name = value``.  But in the case where they are both :class:`Parameter` instances
         with different names, this copies the ``quantity``, ``uncertainty``, ``frozen`` attributes only.
         """
+        # print(name, value)
+        # try:
+        #     print(getattr(self, name).__class__)
+        # except:
+        #     pass
+        # try:
+        #     print(f"{name} in params: {name in self.params}")
+        # except:
+        #     print(f"Cannot tell if {name} is in params")
+        # if hasattr(self, "top_level_params"):
+        #     print(f"{self.top_level_params}")
         if isinstance(value, (Parameter, prefixParameter)) and name != value.name:
             for p in ["quantity", "uncertainty", "frozen"]:
                 setattr(getattr(self, name), p, getattr(value, p))
+        elif isinstance(value, u.Quantity):
+            log.warning(
+                f"Setting '{name}.quantity' to '{value}' although 'quantity' not specified"
+            )
+            getattr(self, name).quantity = value
+        elif isinstance(value, (float, str, bool,int)) and name != "name":
+            log.warning(
+                f"Setting '{name}.value' to '{value}' although 'value' not specified"
+            )
+            getattr(self, name).value = value
         else:
             super().__setattr__(name, value)
 
