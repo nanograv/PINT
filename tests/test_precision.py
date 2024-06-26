@@ -146,11 +146,10 @@ def test_longdouble_str_roundtrip_is_exact(i_f):
 
 
 @given(any_mjd())
-def test_longdouble2str_same_as_str_and_repr(i_f):
+def test_longdouble2str_same_as_str(i_f):
     i, f = i_f
     ld = np.longdouble(i) + np.longdouble(f)
     assert longdouble2str(ld) == str(ld)
-    assert longdouble2str(ld) == repr(ld)
 
 
 @pytest.mark.parametrize("s", ["1.0.2", "1.0.", "1.0e1e0", "twelve"])

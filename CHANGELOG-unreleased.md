@@ -44,6 +44,7 @@ the released changes.
 - Moved the test in `test_pmtransform_units.py` into a function.
 - Fixed bug in residual calculation when adding or removing phase wraps
 - Fix #1766 by correcting logic and more clearly naming argument (clkcorr->undo_clkcorr)
+- Minimal fixes to allow usage of numpy 2.0
 ### Removed
 - Removed the argument `--usepickle` in `event_optimize` as the `load_events_weights` function checks the events file type to see if the 
 file is a pickle file.

@@ -26,6 +26,7 @@ was observing the sky at the moment a leap second was introduced.
 
 .. _leap_smear: https://developers.google.com/time/smear
 """
+
 import warnings
 
 import erfa
@@ -352,7 +353,7 @@ def quantity2longdouble_withunit(data):
 
 def longdouble2str(x):
     """Convert numpy longdouble to string."""
-    return repr(x)
+    return str(x)
 
 
 def str2longdouble(str_data):
