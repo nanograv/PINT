@@ -103,7 +103,7 @@ def _return_frequency_asquantity(f):
     astropy.units.Quantity
     """
 
-    return u.Quantity(f, u.MHz, copy=False)
+    return f << u.MHz
 
 
 class Parameter:

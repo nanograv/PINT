@@ -22,6 +22,7 @@ the released changes.
 - The following observatories no longer have a default of `include_bipm=False`: magic, lst, virgo, lho, llo, geo600, kagra, hess, hawc
 - New algorithm for TCB <-> TDB conversion
 - Reordered plotting axes in `pintk`
+- Changed `scipy.integrate.simps` to `scipy.integrate.simpson` to work with scipy 1.14
 ### Added
 - `bayesian_information_criterion()` function 
 - `dmx_setup` function
@@ -43,4 +44,5 @@ the released changes.
 - Moved the test in `test_pmtransform_units.py` into a function.
 - Fixed bug in residual calculation when adding or removing phase wraps
 - Fix #1766 by correcting logic and more clearly naming argument (clkcorr->undo_clkcorr)
+- Minimal fixes to allow usage of numpy 2.0
 ### Removed
