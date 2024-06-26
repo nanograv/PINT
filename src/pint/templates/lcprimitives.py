@@ -21,6 +21,8 @@ from scipy.integrate import quad
 try:
     from scipy.integrate import simpson
 except ImportError:
+    # for old versions of scipy that don't have simpson
+    # this change was made in 1.6.0, so if we support older versions we need this
     from scipy.integrate import simps as simpson
 from scipy.interpolate import interp1d
 from scipy.special import erf, i0, i1, owens_t
