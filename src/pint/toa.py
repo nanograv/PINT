@@ -955,7 +955,7 @@ class FlagDict(MutableMapping):
     def check_allowed_value(k: str, v: Any) -> None:
         if not isinstance(v, str):
             raise ValueError(f"value {v} for key {k} must be a string")
-        if not v and len(v.split()) != 1:
+        if len(v.split()) != 1:
             raise ValueError(f"value {repr(v)} for key {k} cannot contain whitespace")
 
     def __setitem__(self, key: str, val: str):
@@ -1601,7 +1601,7 @@ class TOAs:
     @property
     def observatories(self) -> Set[str]:
         """The set of observatories in use by these TOAs."""
-        return set(self.get_obss())
+        return set([str(x) for x in self.get_obss()])
 
     @property
     def first_MJD(self) -> time.Time:
