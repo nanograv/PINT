@@ -6,6 +6,7 @@ import pytest
 import os
 from pinttestdata import datadir
 
+
 @pytest.mark.parametrize(
     "par,newvalue",
     (
@@ -37,7 +38,8 @@ def test_parchange(par, newvalue):
 )
 def test_parchange_fails(par, newvalue):
     m, t = get_model_and_toas(
-           os.path.join(datadir, "NGC6440E.par"), os.path.join(datadir, "NGC6440E.tim")
+        os.path.join(datadir, "NGC6440E.par"), os.path.join(datadir, "NGC6440E.tim")
+    )
 
     with pytest.raises((ValueError, u.UnitConversionError)):
         setattr(m, par, newvalue)
