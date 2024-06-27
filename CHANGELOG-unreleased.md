@@ -46,5 +46,6 @@ the released changes.
 - Fixed bug in residual calculation when adding or removing phase wraps
 - Fix #1766 by correcting logic and more clearly naming argument (clkcorr->undo_clkcorr)
 - `make_fake_toas_fromtim` now handles BIPM corrections and wideband DMs correctly. 
+- Fix removal of top-level parameter
 - Minimal fixes to allow usage of numpy 2.0
 ### Removed
