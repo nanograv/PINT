@@ -310,8 +310,9 @@ def run_sampler_autocorr(sampler, pos, nsteps, burnin, csteps=100, crit1=10):
 
 def load_events_weights(eventfile, model, weightcol, wgtexp, minMJD, maxMJD, minWeight):
     """Loads in Fermi photon events and generates a TOA object and a corresponding weights array
-    ----------
+
     Parameters
+    ----------
         eventfile: Photon events file, format: fits, pickle, pickle.gz
         model: Timing Model
         weightcol (str): Name of weight column (or 'CALC' to have them computed)
@@ -319,8 +320,8 @@ def load_events_weights(eventfile, model, weightcol, wgtexp, minMJD, maxMJD, min
         minMJD (float): Earliest MJD to use
         maxMJD (float): Latest MJD to use
         minWeight (float)): Minimum weight to include
-    -------
     Returns
+    -------
         ts: TOA object containing all of the photon data
         weights: numpy array containing the corresponding weights
     """
