@@ -2,9 +2,9 @@ from astropy import units as u, constants as c
 from astropy.time import Time
 import numpy as np
 from pint.models import get_model_and_toas
-import pint.logging
 import pytest
-
+import os
+from pinttestdata import datadir
 
 @pytest.mark.parametrize(
     "par,newvalue",
@@ -19,7 +19,7 @@ import pytest
 )
 def test_parchange(par, newvalue):
     m, t = get_model_and_toas(
-        "tests/datafile/NGC6440E.par", "tests/datafile/NGC6440E.tim"
+        os.path.join(datadir, "NGC6440E.par"), os.path.join(datadir, "NGC6440E.tim")
     )
     setattr(m, par, newvalue)
     if isinstance(newvalue, (u.Quantity, Time)):
@@ -37,7 +37,7 @@ def test_parchange(par, newvalue):
 )
 def test_parchange_fails(par, newvalue):
     m, t = get_model_and_toas(
-        "tests/datafile/NGC6440E.par", "tests/datafile/NGC6440E.tim"
-    )
+           os.path.join(datadir, "NGC6440E.par"), os.path.join(datadir, "NGC6440E.tim")
+
     with pytest.raises((ValueError, u.UnitConversionError)):
         setattr(m, par, newvalue)
