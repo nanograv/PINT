@@ -358,6 +358,8 @@ def test_fake_from_timfile(planets):
     )
     r_sim = pint.residuals.Residuals(t_sim, m)
 
+    assert t.clock_corr_info["bipm_version"] == t_sim.clock_corr_info["bipm_version"]
+
     assert np.isclose(
         r.calc_time_resids().std(), r_sim.calc_time_resids().std(), rtol=2
     )
