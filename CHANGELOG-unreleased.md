@@ -39,12 +39,15 @@ the released changes.
 - `pint.models.chromatic_model.Chromatic` as the base class for variable-index chromatic delays.
 - `pint.models.chromatic_model.ChromaticCM` for a Taylor series representation of the variable-index chromatic delay.
 - Whitened residuals (`white-res`) as a plotting axis in `pintk`
+- `TOAs.get_Tspan()` method
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
 - Fix #1759 by changing order of comparison
 - Moved the test in `test_pmtransform_units.py` into a function.
 - Fixed bug in residual calculation when adding or removing phase wraps
 - Fix #1766 by correcting logic and more clearly naming argument (clkcorr->undo_clkcorr)
+- `make_fake_toas_fromtim` now handles BIPM corrections and wideband DMs correctly. 
+- Fix removal of top-level parameter
 - Minimal fixes to allow usage of numpy 2.0
 ### Removed
 - Removed the argument `--usepickle` in `event_optimize` as the `load_events_weights` function checks the events file type to see if the 
