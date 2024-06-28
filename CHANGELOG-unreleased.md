@@ -23,6 +23,7 @@ the released changes.
 - New algorithm for TCB <-> TDB conversion
 - Reordered plotting axes in `pintk`
 - Changed `scipy.integrate.simps` to `scipy.integrate.simpson` to work with scipy 1.14
+- Moved the events -> TOAs and photon weights code into the function `load_events_weights` within `event_optimize`.
 ### Added
 - `bayesian_information_criterion()` function 
 - `dmx_setup` function
@@ -49,3 +50,6 @@ the released changes.
 - Fix removal of top-level parameter
 - Minimal fixes to allow usage of numpy 2.0
 ### Removed
+- Removed the argument `--usepickle` in `event_optimize` as the `load_events_weights` function checks the events file type to see if the 
+file is a pickle file.
+- Removed obsolete code, such as manually tracking the progress of the MCMC run within `event_optimize`
