@@ -632,7 +632,7 @@ class PLChromNoise(NoiseComponent):
         return (amp, gam, nf)
 
     def get_noise_basis(self, toas):
-        """Return a Fourier design matrix for DM noise.
+        """Return a Fourier design matrix for chromatic noise.
 
         See the documentation for pl_chrom_basis_weight_pair function for details."""
 
@@ -658,7 +658,7 @@ class PLChromNoise(NoiseComponent):
         return powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
 
     def pl_chrom_basis_weight_pair(self, toas):
-        """Return a Fourier design matrix and power law DM noise weights.
+        """Return a Fourier design matrix and power law chromatic noise weights.
 
         A Fourier design matrix contains the sine and cosine basis_functions
         in a Fourier series expansion. Here we scale the design matrix by
@@ -666,7 +666,7 @@ class PLChromNoise(NoiseComponent):
         enterprise.
 
         The weights used are the power-law PSD values at frequencies n/T,
-        where n is in [1, TNDMC] and T is the total observing duration of
+        where n is in [1, TNCHROMC] and T is the total observing duration of
         the dataset.
 
         """
