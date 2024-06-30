@@ -24,7 +24,7 @@ class NoiseComponent(Component):
         # need to think about the design now. If we do not define the list
         # here and calling the same name from other component, it will get
         # it from the component that hosts it. It has the risk to duplicate
-        # the list elements.What is the origin of these defaults?
+        # the list elements.
         self.dm_covariance_matrix_funcs_component = []
         self.basis_funcs = []
 
