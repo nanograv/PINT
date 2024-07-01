@@ -59,10 +59,10 @@ from pint.models.wave import Wave
 from pint.models.wavex import WaveX
 
 # Define a standard basic model
-StandardTimingModel = TimingModel(
-    "StandardTimingModel",
-    [AstrometryEquatorial(), Spindown(), DispersionDM(), SolarSystemShapiro()],
-)
+# StandardTimingModel = TimingModel(
+#     "StandardTimingModel",
+#     [AstrometryEquatorial(), Spindown(), DispersionDM(), SolarSystemShapiro()],
+# )
 # BTTimingModel = generate_timing_model("BTTimingModel",
 #         (Astrometry, Spindown, Dispersion, SolarSystemShapiro, BT))
 # DDTimingModel = generate_timing_model("DDTimingModel",
