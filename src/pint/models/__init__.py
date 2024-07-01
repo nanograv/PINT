@@ -40,7 +40,13 @@ from pint.models.piecewise import PiecewiseSpindown
 from pint.models.ifunc import IFunc
 from pint.models.jump import DelayJump, PhaseJump
 from pint.models.model_builder import get_model, get_model_and_toas
-from pint.models.noise_model import EcorrNoise, PLRedNoise, ScaleToaError
+from pint.models.noise_model import (
+    EcorrNoise,
+    PLRedNoise,
+    PLDMNoise,
+    PLChromNoise,
+    ScaleToaError,
+)
 from pint.models.solar_system_shapiro import SolarSystemShapiro
 from pint.models.solar_wind_dispersion import SolarWindDispersion, SolarWindDispersionX
 from pint.models.spindown import Spindown
