@@ -131,10 +131,10 @@ def make_fake_toas(
     name: str = "fake",
     subtract_mean: bool = True,
 ) -> pint.toa.TOAs:
-    """Make toas from an array of times
+    """Make toas from an array of TOAs
 
-    Can include alternating frequencies if fed an array of frequencies,
-    only works with one observatory at a time
+    Uses the input TOAs as a starting place, but then adjusts to fit the given model
+    and then optionally adds noise.
 
     Parameters
     ----------
@@ -514,25 +514,14 @@ def make_fake_toas_fromtim(
     --------
     :func:`make_fake_toas`
     """
-    ephem = (
-        model.EPHEM.value
-        if hasattr(model, "EPHEM") and model.EPHEM.value is not None
-        else None
-    )
-    planets = (
-        model.PLANET_SHAPIRO.value
-        if hasattr(model, "PLANET_SHAPIRO") and model.PLANET_SHAPIRO.value is not None
-        else False
-    )
+    ts = pint.toa.get_TOAs(timfile, model=model)
 
-    input_ts = pint.toa.get_TOAs(timfile, ephem=ephem, planets=planets)
-
-    if input_ts.is_wideband():
-        dm_errors = input_ts.get_dm_errors()
-        ts = update_fake_dms(model, input_ts, dm_errors, add_noise)
+    if ts.is_wideband():
+        dm_errors = ts.get_dm_errors()
+        ts = update_fake_dms(model, ts, dm_errors, add_noise)
 
     return make_fake_toas(
-        input_ts,
+        ts,
         model=model,
         add_noise=add_noise,
         add_correlated_noise=add_correlated_noise,
