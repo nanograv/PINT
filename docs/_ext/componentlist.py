@@ -19,7 +19,7 @@ class ComponentList(Directive):
             class_ = d[k]
             full_name = f"{class_.__module__}.{class_.__name__}"
             if hasattr(class_, "__doc__") and class_.__doc__ is not None:
-                doc = class_.__doc__.split("\n")[0].strip()
+                doc = class_.__doc__.strip().split("\n")[0].strip()
             else:
                 doc = ""
             msg = f"* :class:`~{full_name}` - {doc}"

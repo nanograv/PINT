@@ -10,5 +10,8 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
+- `PLChromNoise` component to model chromatic red noise with a power law spectrum
 ### Fixed
+- Explicit type conversion in `woodbury_dot()` function
+- Documentation: Fixed empty descriptions in the timing model components table
 ### Removed
