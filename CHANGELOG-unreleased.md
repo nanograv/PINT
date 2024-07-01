@@ -50,4 +50,5 @@ the released changes.
 - Fix removal of top-level parameter
 - Minimal fixes to allow usage of numpy 2.0
 - Explicit type conversion in `woodbury_dot()` function
+- Documentation: Fixed empty descriptions in the timing model components table
 ### Removed
