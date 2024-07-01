@@ -10,5 +10,10 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
+- `plrednoise_from_wavex()` and `pldmnoise_from_dmwavex()` functions now compute `TNRedFLow` and `TNDMFLow`
+- `powerlaw_corner` function
+- `TNREDFLOW` and `TNREDCORNER` parameters in `PLRedNoise`
+- `TNDMFLOW` and `TNDMCORNER` parameters in `PLDMNoise`
 ### Fixed
 ### Removed
+- Unnecessary default arguments from the `powerlaw()` function.
