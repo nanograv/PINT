@@ -49,4 +49,5 @@ the released changes.
 - `make_fake_toas_fromtim` now handles BIPM corrections and wideband DMs correctly. 
 - Fix removal of top-level parameter
 - Minimal fixes to allow usage of numpy 2.0
+- Explicit type conversion in `woodbury_dot()` function
 ### Removed
