@@ -42,9 +42,6 @@ def timfile_nojumps():
     return get_TOAs(os.path.join(datadir, "NGC6440E.tim"))
 
 
-len_timfile_nojumps = len(get_TOAs(os.path.join(datadir, "NGC6440E.tim")))
-
-
 class TestModelBuilding:
     def setup_method(self):
         self.parfile = os.path.join(datadir, "J0437-4715.par")
