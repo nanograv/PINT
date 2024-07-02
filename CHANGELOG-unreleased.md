@@ -9,6 +9,7 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- Run CI tests in parallel
 ### Added
 ### Fixed
 ### Removed
