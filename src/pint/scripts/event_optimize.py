@@ -523,9 +523,7 @@ def main(argv=None):
     parser.add_argument(
         "--minMJD", help="Earliest MJD to use", type=float, default=54680.0
     )
-    parser.add_argument(
-        "--maxMJD", help="Latest MJD to use", type=float, default=-1.0
-    )
+    parser.add_argument("--maxMJD", help="Latest MJD to use", type=float, default=-1.0)
     parser.add_argument(
         "--phs", help="Starting phase offset [0-1] (def is to measure)", type=float
     )
@@ -656,7 +654,10 @@ def main(argv=None):
     minMJD = args.minMJD
     maxMJD = args.maxMJD  # Usually set by coverage of IERS file
     if maxMJD <= 0.0:
-        maxMJD = pyfits.getval(eventfile,"MJDREFI",ext=1)+pyfits.getval(eventfile,"TSTOP",ext=1)/86400.0
+        maxMJD = (
+            pyfits.getval(eventfile, "MJDREFI", ext=1)
+            + pyfits.getval(eventfile, "TSTOP", ext=1) / 86400.0
+        )
         log.info(f"maxMJD not set, using TSTOP of MJD {maxMJD}")
 
     minWeight = args.minWeight
