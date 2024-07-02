@@ -578,8 +578,8 @@ class ChromaticCMX(Chromatic):
         # Register the CMX derivatives
         for prefix_par in self.get_params_of_type("prefixParameter"):
             if prefix_par.startswith("CMX_"):
-                self.register_deriv_funcs(self.d_delay_d_dmparam, prefix_par)
-                self.register_dm_deriv_funcs(self.d_dm_d_CMX, prefix_par)
+                self.register_deriv_funcs(self.d_delay_d_cmparam, prefix_par)
+                self.register_cm_deriv_funcs(self.d_cm_d_CMX, prefix_par)
 
     def validate(self):
         """Validate the CMX parameters."""
@@ -642,7 +642,7 @@ class ChromaticCMX(Chromatic):
         if bad_parameters:
             raise MissingTOAs(bad_parameters)
 
-    def cmx_dm(self, toas):
+    def cmx_cm(self, toas):
         condition = {}
         tbl = toas.table
         if not hasattr(self, "cmx_toas_selector"):
@@ -658,16 +658,16 @@ class ChromaticCMX(Chromatic):
             condition, tbl["mjd_float"]
         )
         # Get CMX delays
-        dm = np.zeros(len(tbl)) * self._parent.DM.units
+        cm = np.zeros(len(tbl)) * self._parent.CM.units
         for k, v in select_idx.items():
-            dm[v] += getattr(self, k).quantity
-        return dm
+            cm[v] += getattr(self, k).quantity
+        return cm
 
-    def CMX_dispersion_delay(self, toas, acc_delay=None):
+    def CMX_chromatic_delay(self, toas, acc_delay=None):
         """This is a wrapper function for interacting with the TimingModel class"""
         return self.dispersion_type_delay(toas)
 
-    def d_dm_d_CMX(self, toas, param_name, acc_delay=None):
+    def d_cm_d_CMX(self, toas, param_name, acc_delay=None):
         condition = {}
         tbl = toas.table
         if not hasattr(self, "cmx_toas_selector"):
