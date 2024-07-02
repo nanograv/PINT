@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize as op
 from astropy.coordinates import SkyCoord
+import astropy.io.fits as pyfits
 from scipy.stats import norm, uniform
 import pint.logging
 from loguru import logger as log
@@ -523,7 +524,7 @@ def main(argv=None):
         "--minMJD", help="Earliest MJD to use", type=float, default=54680.0
     )
     parser.add_argument(
-        "--maxMJD", help="Latest MJD to use", type=float, default=57250.0
+        "--maxMJD", help="Latest MJD to use", type=float, default=-1.0
     )
     parser.add_argument(
         "--phs", help="Starting phase offset [0-1] (def is to measure)", type=float
@@ -654,6 +655,9 @@ def main(argv=None):
     outprof_nbins = 256  # in the text file, for pygaussfit.py, for instance
     minMJD = args.minMJD
     maxMJD = args.maxMJD  # Usually set by coverage of IERS file
+    if maxMJD <= 0.0:
+        maxMJD = pyfits.getval(eventfile,"MJDREFI",ext=1)+pyfits.getval(eventfile,"TSTOP",ext=1)/86400.0
+        log.info(f"maxMJD not set, using TSTOP of MJD {maxMJD}")
 
     minWeight = args.minWeight
     do_opt_first = args.doOpt
