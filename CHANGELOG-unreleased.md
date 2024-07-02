@@ -10,5 +10,6 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
+- Piecewise-constant model for chromatic variations (CMX)
 ### Fixed
 ### Removed
