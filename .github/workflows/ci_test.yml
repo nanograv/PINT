@@ -77,7 +77,7 @@ jobs:
         python -c "import pip; print(f'pip {pip.__version__}')"
         python -c "import tox; print(f'tox {tox.__version__}')"
     - name: Run tests
-      run: tox -p auto -e ${{ matrix.tox_env }}
+      run: tox -e ${{ matrix.tox_env }}
     - name: Upload coverage to codecov
       if: "endsWith(matrix.tox_env, '-cov')"
       uses: codecov/codecov-action@v2
