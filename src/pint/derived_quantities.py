@@ -37,7 +37,7 @@ __all__ = [
 def p_to_f(
     p: u.Quantity, pd: u.Quantity, pdd: Optional[u.Quantity] = None
 ) -> Tuple[u.Quantity]:
-    """Converts P, Pdot to F, Fdot (or vice versa)
+    r"""Converts P, Pdot to F, Fdot (or vice versa)
 
     Convert period, period derivative and period second
     derivative (if supplied) to the equivalent frequency counterparts.
@@ -504,7 +504,7 @@ def companion_mass(
 
     - :math:`a = \sin^3(inc)`
     - :math:`b = -{\rm massfunct}`
-    - :math:`c = -2 M_p {\\rm massfunct}`
+    - :math:`c = -2 M_p {\rm massfunct}`
     - :math:`d = -{\rm massfunct} M_p^2`
 
     To solve it we can use a direct calculation of the cubic roots [3]_.
