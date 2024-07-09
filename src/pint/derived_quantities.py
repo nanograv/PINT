@@ -140,7 +140,7 @@ def pferrs(
 
 @u.quantity_input(f=u.Hz, fdot=u.Hz / u.s, fo=u.Hz)
 def pulsar_age(
-    f: u, Quantity, fdot: u.Quantity, n: int = 3, fo: u.Quantity = 1e99 * u.Hz
+    f: u.Quantity, fdot: u.Quantity, n: int = 3, fo: u.Quantity = 1e99 * u.Hz
 ) -> u.Quantity:
     """Compute pulsar characteristic age
 
