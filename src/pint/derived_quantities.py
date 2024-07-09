@@ -631,7 +631,7 @@ def gamma(
 ) -> u.Quantity:
     """Post-Keplerian time dilation and gravitational redshift gamma, assuming general relativity.
 
-    gamma (:math:`\gamma`) is the amplitude of the modification in arrival times caused by the varying
+    gamma (:math:`\\gamma`) is the amplitude of the modification in arrival times caused by the varying
     gravitational redshift of the companion and time dilation in an elliptical orbit.  The time delay is
     :math:`\gamma \sin E`, where :math:`E` is the eccentric anomaly.
     Can handle scalar or array inputs.
