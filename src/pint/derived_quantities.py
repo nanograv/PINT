@@ -147,7 +147,7 @@ def pulsar_age(
     Return the age of a pulsar given the spin frequency
     and frequency derivative.  By default, the characteristic age
     is returned (assuming a braking index `n` =3 and an initial
-    spin frequency :math:`f_0 \gg f`).  But `n` and `fo` can be set.
+    spin frequency :math:`f_0 \\gg f`).  But `n` and `fo` can be set.
 
     Parameters
     ----------
@@ -633,7 +633,7 @@ def gamma(
 
     gamma (:math:`\\gamma`) is the amplitude of the modification in arrival times caused by the varying
     gravitational redshift of the companion and time dilation in an elliptical orbit.  The time delay is
-    :math:`\gamma \sin E`, where :math:`E` is the eccentric anomaly.
+    :math:`\\gamma \sin E`, where :math:`E` is the eccentric anomaly.
     Can handle scalar or array inputs.
 
     Parameters
@@ -664,7 +664,7 @@ def gamma(
     Calculates
 
     .. math::
-        \gamma = T_{\odot}^{2/3} \\left(\\frac{P_b}{2\pi}\\right)^{1/3} e \\frac{m_c(m_p+2m_c)}{(m_p+m_c)^{4/3}}
+        \\gamma = T_{\odot}^{2/3} \\left(\\frac{P_b}{2\pi}\\right)^{1/3} e \\frac{m_c(m_p+2m_c)}{(m_p+m_c)^{4/3}}
 
     with :math:`T_\odot = GM_\odot c^{-3}`.
 
