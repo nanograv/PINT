@@ -25,30 +25,7 @@ the released changes.
 - Changed `scipy.integrate.simps` to `scipy.integrate.simpson` to work with scipy 1.14
 - Moved the events -> TOAs and photon weights code into the function `load_events_weights` within `event_optimize`.
 ### Added
-- `bayesian_information_criterion()` function 
-- `dmx_setup` function
-- `funcParameter`s are no longer listed in the `pintk` interface.
-- `pintk` now reads and automatically converts TCB par files and par files with `BINARY T2`.
-- Test for `pint.utils.split_swx()`
-- Custom type definitions for type hints
-- Added `citation.cff`
-- `convert_tcb2tdb`, `tcb2tdb_scale_factor`, and `effective_dimensionality` attributes for `floatParameter`s, `MJDParameter`s, `AngleParameter`s, `maskParameter`s, and `prefixParameter`s.
-- Added `pint.observatory.find_latest_bipm()` which returns latest BIPM year available
-- Documentation: HOWTO about determining tcb<->tdb scaling factors
-- Type hints in `pint.toa` and `get_model()` & `get_model_and_toas()` functions
-- `pint.models.chromatic_model.Chromatic` as the base class for variable-index chromatic delays.
-- `pint.models.chromatic_model.ChromaticCM` for a Taylor series representation of the variable-index chromatic delay.
-- Whitened residuals (`white-res`) as a plotting axis in `pintk`
-- `TOAs.get_Tspan()` method
 ### Fixed
-- `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
-- Fix #1759 by changing order of comparison
-- Moved the test in `test_pmtransform_units.py` into a function.
-- Fixed bug in residual calculation when adding or removing phase wraps
-- Fix #1766 by correcting logic and more clearly naming argument (clkcorr->undo_clkcorr)
-- `make_fake_toas_fromtim` now handles BIPM corrections and wideband DMs correctly. 
-- Fix removal of top-level parameter
-- Minimal fixes to allow usage of numpy 2.0
 ### Removed
 - Removed the argument `--usepickle` in `event_optimize` as the `load_events_weights` function checks the events file type to see if the 
 file is a pickle file.
