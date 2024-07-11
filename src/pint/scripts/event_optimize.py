@@ -2,11 +2,13 @@
 import argparse
 import sys
 import os
+from contextlib import suppress
 
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize as op
 from astropy.coordinates import SkyCoord
+from astropy.time import Time
 from scipy.stats import norm, uniform
 import pint.logging
 from loguru import logger as log
@@ -17,16 +19,18 @@ import pint.fermi_toas as fermi
 import pint.models
 import pint.plot_utils as plot_utils
 import pint.toa as toa
+from pint.toa import TOAs
+from pint.models.timing_model import TimingModel
 from pint.eventstats import hm, hmw
 from pint.fitter import Fitter
 from pint.models.priors import Prior
 from pint.observatory.satellite_obs import get_satellite_observatory
-
+from pint.types import file_like
 
 __all__ = ["read_gaussfitfile", "marginalize_over_phase", "main"]
 
 
-def read_gaussfitfile(gaussfitfile, proflen):
+def read_gaussfitfile(gaussfitfile: file_like, proflen: int):
     """Read a Gaussian-fit file as created by the output of pygaussfit.py.
 
     Parameters
@@ -74,7 +78,7 @@ def read_gaussfitfile(gaussfitfile, proflen):
     return template
 
 
-def gaussian_profile(N, phase, fwhm):
+def gaussian_profile(N: int, phase: float, fwhm: float):
     """Return a gaussian pulse profile with 'N' bins and an integrated 'flux' of 1 unit.
 
     Parameters
@@ -108,7 +112,7 @@ def gaussian_profile(N, phase, fwhm):
         )
         return retval
     except OverflowError:
-        log.warning("Problem in gaussian prof:  mean = %f  sigma = %f" % (mean, sigma))
+        log.warning(f"Problem in gaussian prof:  mean = {mean} sigma = {sigma}")
         return np.zeros(N, "d")
 
 
@@ -276,8 +280,7 @@ def run_sampler_autocorr(sampler, pos, nsteps, burnin, csteps=100, crit1=10):
                     old_tau = tau
                     if converged1:
                         log.info(
-                            "10 % convergence reached with a mean estimated integrated step: "
-                            + str(x)
+                            f"10% convergence reached with a mean estimated integrated step: {x}"
                         )
                     else:
                         continue
@@ -308,7 +311,15 @@ def run_sampler_autocorr(sampler, pos, nsteps, burnin, csteps=100, crit1=10):
     return autocorr
 
 
-def load_events_weights(eventfile, model, weightcol, wgtexp, minMJD, maxMJD, minWeight):
+def load_events_weights(
+    eventfile: file_like,
+    model: TimingModel,
+    weightcol: str,
+    wgtexp: float,
+    minMJD: float,
+    maxMJD: float,
+    minWeight: float,
+):
     """Loads in Fermi photon events and generates a TOA object and a corresponding weights array
 
     Parameters
@@ -319,13 +330,13 @@ def load_events_weights(eventfile, model, weightcol, wgtexp, minMJD, maxMJD, min
         wgtexp (float): Raise computed weights to this power (or 0.0 to disable any rescaling of weights)
         minMJD (float): Earliest MJD to use
         maxMJD (float): Latest MJD to use
-        minWeight (float)): Minimum weight to include
+        minWeight (float): Minimum weight to include
     Returns
     -------
-        ts: TOA object containing all of the photon data
+        ts: TOAs object containing all of the photon data
         weights: numpy array containing the corresponding weights
     """
-    if "ELONG" in model.params:
+    if "AstrometryEcliptic" in list(model.components.keys()):
         tc = SkyCoord(
             model.ELONG.quantity,
             model.ELAT.quantity,
@@ -338,12 +349,11 @@ def load_events_weights(eventfile, model, weightcol, wgtexp, minMJD, maxMJD, min
 
     ts = None
     if eventfile.endswith("pickle") or eventfile.endswith("pickle.gz"):
-        try:
+        with suppress(IOError):
+            log.info(f"Using pickle file with minMJD {minMJD} and maxMJD: {maxMJD}")
             ts = toa.load_pickle(eventfile)
             mjds = ts.get_mjds().value
             ts = ts[(mjds >= minMJD) & (mjds <= maxMJD)]
-        except IOError:
-            pass
 
     if ts is None:
         ts = fermi.get_Fermi_TOAs(
@@ -357,17 +367,14 @@ def load_events_weights(eventfile, model, weightcol, wgtexp, minMJD, maxMJD, min
             planets=False,
         )
         ts.filename = eventfile
-        try:
+        with suppress(IOError):
             toa.save_pickle(ts)
-        except IOError:
-            pass
 
     if weightcol is not None:
         if weightcol == "CALC":
             weights = np.asarray([float(x["weight"]) for x in ts.table["flags"]])
             log.info(
-                "Original weights have min / max weights %.3f / %.3f"
-                % (weights.min(), weights.max())
+                f"Original weights have min / max weights {weights.min():.3f} / {weights.max():.3f}"
             )
             # Rescale the weights, if requested (by having wgtexp != 0.0)
             if wgtexp != 0.0:
@@ -382,12 +389,11 @@ def load_events_weights(eventfile, model, weightcol, wgtexp, minMJD, maxMJD, min
         ts = ts[weights >= minWeight]
         weights = weights[weights >= minWeight]
         log.info(
-            "There are %d events, with min / max weights %.3f / %.3f"
-            % (len(weights), weights.min(), weights.max())
+            f"There are {len(weights)} events, with min / max weights {weights.min():.3f} / {weights.max():.3f}"
         )
     else:
         weights = None
-        log.info("There are %d events, no weights are being used." % ts.ntoas)
+        log.info(f"There are {ts.ntoas} events, no weights are being used.")
 
     return ts, weights
 
@@ -549,6 +555,7 @@ class emcee_fitter(Fitter):
 
 
 def main(argv=None):
+    tnow = Time.now().mjd
     parser = argparse.ArgumentParser(
         description="PINT tool for MCMC optimization of timing models using event data.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -581,9 +588,7 @@ def main(argv=None):
     parser.add_argument(
         "--minMJD", help="Earliest MJD to use", type=float, default=54680.0
     )
-    parser.add_argument(
-        "--maxMJD", help="Latest MJD to use", type=float, default=65000.0
-    )
+    parser.add_argument("--maxMJD", help="Latest MJD to use", type=float, default=tnow)
     parser.add_argument(
         "--phs", help="Starting phase offset [0-1] (def is to measure)", type=float
     )
@@ -726,10 +731,10 @@ def main(argv=None):
     )  # Checks to see if the first generated phaseogram file exists
     if check_file:
         if args.clobber:
-            log.warning("Clobber flag is on: Preexisting files will be overwritten")
+            log.warning(f"Clobber flag is on: Preexisting files will be overwritten")
         else:
             log.warning(
-                "Clobber flag is not on: Preexisting files will not be overwritten. Change the basename or filepath to avoid overwritting previous results"
+                f"Clobber flag is not on: Preexisting files will not be overwritten. Change the basename or filepath to avoid overwritting previous results"
             )
             raise Exception
 

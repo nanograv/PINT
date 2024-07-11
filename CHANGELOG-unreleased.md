@@ -24,6 +24,7 @@ the released changes.
 - Reordered plotting axes in `pintk`
 - Changed `scipy.integrate.simps` to `scipy.integrate.simpson` to work with scipy 1.14
 - Moved the events -> TOAs and photon weights code into the function `load_events_weights` within `event_optimize`.
+- Updated the `maxMJD` argument in `event_optimize` to default to the current mjd
 ### Added
 ### Fixed
 ### Removed
