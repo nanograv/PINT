@@ -132,8 +132,7 @@ def pferrs(
         return [1.0 / porf, porferr / porf**2.0]
     forperr = porferr / porf**2.0
     fdorpderr = np.sqrt(
-        (4.0 * pdorfd**2.0 * porferr**2.0) / porf**6.0
-        + pdorfderr**2.0 / porf**4.0
+        (4.0 * pdorfd**2.0 * porferr**2.0) / porf**6.0 + pdorfderr**2.0 / porf**4.0
     )
     [forp, fdorpd] = p_to_f(porf, pdorfd)
     return (forp, forperr, fdorpd, fdorpderr)
@@ -142,7 +141,7 @@ def pferrs(
 @u.quantity_input(f=u.Hz, fdot=u.Hz / u.s, fo=u.Hz)
 def pulsar_age(
     f: u.Quantity, fdot: u.Quantity, n: int = 3, fo: u.Quantity = 1e99 * u.Hz
-) -> u.Quantity:
+) -> u.yr:
     r"""Compute pulsar characteristic age
 
     Return the age of a pulsar given the spin frequency
@@ -187,7 +186,7 @@ def pulsar_age(
 @u.quantity_input(f=u.Hz, fdot=u.Hz / u.s, I=u.g * u.cm**2)
 def pulsar_edot(
     f: u.Quantity, fdot: u.Quantity, I: u.Quantity = 1.0e45 * u.g * u.cm**2
-) -> u.Quantity:
+) -> u.erg / u.s:
     r"""Compute pulsar spindown energy loss rate
 
     Return the pulsar `Edot` (:math:`\dot E`, in erg/s) given the spin frequency `f` and
@@ -223,7 +222,7 @@ def pulsar_edot(
 
 
 @u.quantity_input(f=u.Hz, fdot=u.Hz / u.s)
-def pulsar_B(f: u.Quantity, fdot: u.Quantity) -> u.Quantity:
+def pulsar_B(f: u.Quantity, fdot: u.Quantity) -> u.G:
     r"""Compute pulsar surface magnetic field
 
     Return the estimated pulsar surface magnetic field strength
@@ -258,7 +257,7 @@ def pulsar_B(f: u.Quantity, fdot: u.Quantity) -> u.Quantity:
 
 
 @u.quantity_input(f=u.Hz, fdot=u.Hz / u.s)
-def pulsar_B_lightcyl(f: u.Quantity, fdot: u.Quantity) -> u.Quantity:
+def pulsar_B_lightcyl(f: u.Quantity, fdot: u.Quantity) -> u.G:
     r"""Compute pulsar magnetic field at the light cylinder
 
     Return the estimated pulsar magnetic field strength at the
@@ -300,7 +299,7 @@ def pulsar_B_lightcyl(f: u.Quantity, fdot: u.Quantity) -> u.Quantity:
 
 
 @u.quantity_input(pb=u.d, x=u.cm)
-def mass_funct(pb: u.Quantity, x: u.Quantity) -> u.Quantity:
+def mass_funct(pb: u.Quantity, x: u.Quantity) -> u.Msun:
     r"""Compute binary mass function from period and semi-major axis
 
     Can handle scalar or array inputs.
@@ -341,7 +340,7 @@ def mass_funct(pb: u.Quantity, x: u.Quantity) -> u.Quantity:
 
 
 @u.quantity_input(mp=u.Msun, mc=u.Msun, i=u.deg)
-def mass_funct2(mp: u.Quantity, mc: u.Quantity, i: u.Quantity) -> u.Quantity:
+def mass_funct2(mp: u.Quantity, mc: u.Quantity, i: u.Quantity) -> u.Msun:
     r"""Compute binary mass function from masses and inclination
 
     Can handle scalar or array inputs.
@@ -386,9 +385,7 @@ def mass_funct2(mp: u.Quantity, mc: u.Quantity, i: u.Quantity) -> u.Quantity:
 
 
 @u.quantity_input(pb=u.d, x=u.cm, mc=u.Msun, i=u.deg)
-def pulsar_mass(
-    pb: u.Quantity, x: u.Quantity, mc: u.Quantity, i: u.Quantity
-) -> u.Quantity:
+def pulsar_mass(pb: u.Quantity, x: u.Quantity, mc: u.Quantity, i: u.Quantity) -> u.Msun:
     r"""Compute pulsar mass from orbital parameters
 
     Return the pulsar mass (in solar mass units) for a binary.
@@ -460,7 +457,7 @@ def companion_mass(
     x: u.Quantity,
     i: u.Quantity = 60.0 * u.deg,
     mp: u.Quantity = 1.4 * u.solMass,
-) -> u.Quantity:
+) -> u.Msun:
     r"""Commpute the companion mass from the orbital parameters
 
     Compute companion mass for a binary system from orbital mechanics,
@@ -538,17 +535,12 @@ def companion_mass(
     # delta1 is always <0
     # delta1 = 2 * b ** 3 - 9 * a * b * c + 27 * a ** 2 * d
     delta1 = (
-        -2 * massfunct**3
-        - 18 * a * mp * massfunct**2
-        - 27 * a**2 * massfunct * mp**2
+        -2 * massfunct**3 - 18 * a * mp * massfunct**2 - 27 * a**2 * massfunct * mp**2
     )
     # Q**2 is always > 0, so this is never a problem
     # in terms of complex numbers
     # Q = np.sqrt(delta1**2 - 4*delta0**3)
-    Q = np.sqrt(
-        108 * a**3 * mp**3 * massfunct**3
-        + 729 * a**4 * mp**4 * massfunct**2
-    )
+    Q = np.sqrt(108 * a**3 * mp**3 * massfunct**3 + 729 * a**4 * mp**4 * massfunct**2)
     # this could be + or - Q
     # pick the - branch since delta1 is <0 so that delta1 - Q is never near 0
     Ccubed = 0.5 * (delta1 + Q)
@@ -566,7 +558,7 @@ def companion_mass(
 @u.quantity_input(mp=u.Msun, mc=u.Msun, pb=u.d, e=u.dimensionless_unscaled)
 def pbdot(
     mp: u.Quantity, mc: u.Quantity, pb: u.Quantity, e: Union[float, u.Quantity]
-) -> u.Quantity:
+) -> u.dimensionless_unscaled:
     r"""Post-Keplerian orbital decay pbdot, assuming general relativity.
 
     pbdot (:math:`\dot P_B`) is the change in the binary orbital period
@@ -634,7 +626,7 @@ def gamma(
     mc: u.Quantity,
     pb: u.Quantity,
     e: Union[float, u.Quantity],
-) -> u.Quantity:
+) -> u.s:
     r"""Post-Keplerian time dilation and gravitational redshift gamma, assuming general relativity.
 
     gamma (:math:`\gamma`) is the amplitude of the modification in arrival times caused by the varying
@@ -695,7 +687,7 @@ def omdot(
     mc: u.Quantity,
     pb: u.Quantity,
     e: Union[float, u.Quantity],
-) -> u.Quantity:
+) -> u.deg / u.yr:
     r"""Post-Keplerian longitude of periastron precession rate omdot, assuming general relativity.
 
     omdot (:math:`\dot \omega`) is the relativistic advance of periastron.
@@ -750,7 +742,9 @@ def omdot(
 
 
 @u.quantity_input(mp=u.Msun, mc=u.Msun, pb=u.d, x=u.cm)
-def sini(mp: u.Quantity, mc: u.Quantity, pb: u.Quantity, x: u.Quantity) -> u.Quantity:
+def sini(
+    mp: u.Quantity, mc: u.Quantity, pb: u.Quantity, x: u.Quantity
+) -> u.dimensionless_unscaled:
     r"""Post-Keplerian sine of inclination, assuming general relativity.
 
     Can handle scalar or array inputs.
@@ -804,7 +798,7 @@ def sini(mp: u.Quantity, mc: u.Quantity, pb: u.Quantity, x: u.Quantity) -> u.Qua
 
 
 @u.quantity_input(mp=u.Msun, mc=u.Msun, pb=u.d)
-def dr(mp: u.Quantity, mc: u.Quantity, pb: u.Quantity) -> u.Quantity:
+def dr(mp: u.Quantity, mc: u.Quantity, pb: u.Quantity) -> u.dimensionless_angles:
     r"""Post-Keplerian Roemer delay term
 
     dr (:math:`\delta_r`) is part of the relativistic deformation of the orbit
@@ -854,7 +848,7 @@ def dr(mp: u.Quantity, mc: u.Quantity, pb: u.Quantity) -> u.Quantity:
 
 
 @u.quantity_input(mp=u.Msun, mc=u.Msun, pb=u.d)
-def dth(mp: u.Quantity, mc: u.Quantity, pb: u.Quantity) -> u.Quantity:
+def dth(mp: u.Quantity, mc: u.Quantity, pb: u.Quantity) -> u.dimensionless_unscaled:
     r"""Post-Keplerian Roemer delay term
 
     dth (:math:`\delta_{\theta}`) is part of the relativistic deformation of the orbit
@@ -906,7 +900,7 @@ def dth(mp: u.Quantity, mc: u.Quantity, pb: u.Quantity) -> u.Quantity:
 @u.quantity_input(omdot=u.deg / u.yr, pb=u.d, e=u.dimensionless_unscaled)
 def omdot_to_mtot(
     omdot: u.Quantity, pb: u.Quantity, e: Union[float, u.Quantity]
-) -> u.Quantity:
+) -> u.Msun:
     r"""Determine total mass from Post-Keplerian longitude of periastron precession rate omdot,
     assuming general relativity.
 
@@ -967,10 +961,10 @@ def omdot_to_mtot(
     ).to(u.Msun, equivalencies=u.dimensionless_angles())
 
 
-@u.quantity_input(pb=u.d, mp=u.Msun, mc=u.Msun, i=u.deg)
+@u.quantity_input(mp=u.Msun, mc=u.Msun, pb=u.d, i=u.deg)
 def a1sini(
     mp: u.Quantity, mc: u.Quantity, pb: u.Quantity, i: u.Quantity = 90 * u.deg
-) -> u.Quantity:
+) -> pint.ls:
     r"""Pulsar's semi-major axis.
 
     The full semi-major axis is given by Kepler's third law.  This is the
@@ -1022,7 +1016,7 @@ def a1sini(
 
 
 @u.quantity_input(pmtot=u.mas / u.yr, D=u.kpc)
-def shklovskii_factor(pmtot: u.Quantity, D: u.Quantity) -> u.Quantity:
+def shklovskii_factor(pmtot: u.Quantity, D: u.Quantity) -> 1 / u.s:
     r"""Compute magnitude of Shklovskii correction factor.
 
     Computes the Shklovskii correction factor, as defined in Eq 8.12 of Lorimer & Kramer (2005) [10]_
@@ -1060,7 +1054,7 @@ def shklovskii_factor(pmtot: u.Quantity, D: u.Quantity) -> u.Quantity:
 
 
 @u.quantity_input(dm=pint.dmu)
-def dispersion_slope(dm: u.Quantity) -> u.Quantity:
+def dispersion_slope(dm: u.Quantity) -> 1 / u.s:
     """Compute the dispersion slope.
 
     This is equal to DMconst * DM.
