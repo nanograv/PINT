@@ -19,7 +19,11 @@ PINT
 
 .. image:: https://img.shields.io/badge/arXiv-2012.00074-red
    :target: https://arxiv.org/abs/2012.00074
-   :alt: PINT Paper on arXiv
+   :alt: PINT Paper 1 on arXiv
+
+.. image:: https://img.shields.io/badge/arXiv-2405.01977-red
+   :target: https://arxiv.org/abs/2405.01977
+   :alt: PINT Paper 2 on arXiv
 
 .. image:: https://img.shields.io/badge/ascl-1902.007-blue.svg?colorB=262255
    :target: https://www.ascl.net/1902.007
