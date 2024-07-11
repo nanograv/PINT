@@ -555,7 +555,7 @@ class TimingModel:
             getattr(self, name).quantity = value
         elif isinstance(value, (float, str, bool, int)) and name != "name":
             log.warning(
-                f"Setting '{name}.value' to '{value}' although 'value' not specified"
+                f"Setting '{name}.value' to '{value}' (assumed units '{getattr(self,name).units}') although 'value' not specified"
             )
             getattr(self, name).value = value
         else:
