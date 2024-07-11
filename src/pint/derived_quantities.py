@@ -802,7 +802,7 @@ def sini(
 
 
 @u.quantity_input(mp=u.Msun, mc=u.Msun, pb=u.d)
-def dr(mp: u.Quantity, mc: u.Quantity, pb: u.Quantity) -> u.dimensionless_angles:
+def dr(mp: u.Quantity, mc: u.Quantity, pb: u.Quantity) -> u.dimensionless_unscaled:
     r"""Post-Keplerian Roemer delay term
 
     dr (:math:`\delta_r`) is part of the relativistic deformation of the orbit
