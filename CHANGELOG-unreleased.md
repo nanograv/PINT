@@ -11,5 +11,6 @@ the released changes.
 ### Changed
 - Run CI tests in parallel
 ### Added
+- Type hints in `pint.derived_quantities`
 ### Fixed
 ### Removed
