@@ -10,6 +10,7 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
+- Type hints in `pint.derived_quantities`
 - `plrednoise_from_wavex()` and `pldmnoise_from_dmwavex()` functions now compute `TNRedFLow` and `TNDMFLow`
 - `powerlaw_corner` function
 - `TNREDFLOW` and `TNREDCORNER` parameters in `PLRedNoise`
