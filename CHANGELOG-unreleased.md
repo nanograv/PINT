@@ -10,5 +10,6 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
+- Type hints in `pint.derived_quantities`
 ### Fixed
 ### Removed
