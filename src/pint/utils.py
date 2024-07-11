@@ -3120,7 +3120,7 @@ def woodbury_dot(
 
     logdet_N = np.sum(np.log(Ndiag))
     logdet_Phi = np.sum(np.log(Phidiag))
-    _, logdet_Sigma = np.linalg.slogdet(Sigma)
+    _, logdet_Sigma = np.linalg.slogdet(Sigma.astype(float))
 
     logdet_C = logdet_N + logdet_Phi + logdet_Sigma
 
