@@ -10,6 +10,7 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
+- Type hints in `pint.derived_quantities`
 - `PLChromNoise` component to model chromatic red noise with a power law spectrum
 - Fourier series representation of chromatic noise (`CMWaveX`)
 - `pint.utils.cmwavex_setup` function
