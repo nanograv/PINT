@@ -10,6 +10,7 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
+- Type hints in `pint.derived_quantities`
 - `PLChromNoise` component to model chromatic red noise with a power law spectrum
 ### Fixed
 - Explicit type conversion in `woodbury_dot()` function
