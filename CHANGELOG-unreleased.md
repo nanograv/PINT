@@ -10,6 +10,7 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
+- Type hints in `pint.derived_quantities`
 - Piecewise-constant model for chromatic variations (CMX)
 ### Fixed
 ### Removed
