@@ -586,7 +586,7 @@ def main(argv=None):
         default=1000,
     )
     parser.add_argument(
-        "--minMJD", help="Earliest MJD to use", type=float, default=54680.0
+        "--minMJD", help="Earliest MJD to use", type=float, default=39822.0
     )
     parser.add_argument("--maxMJD", help="Latest MJD to use", type=float, default=tnow)
     parser.add_argument(
@@ -706,7 +706,7 @@ def main(argv=None):
     burnin = args.burnin
     nsteps = args.nsteps
     if burnin >= nsteps:
-        log.error("burnin must be < nsteps")
+        log.error(f"burnin must be < nsteps")
         sys.exit(1)
     nbins = 256  # For likelihood calculation based on gaussians file
     outprof_nbins = 256  # in the text file, for pygaussfit.py, for instance
@@ -774,7 +774,7 @@ def main(argv=None):
 
     # Use this if you want to see the effect of setting minWeight
     if args.testWeights:
-        log.info("Checking H-test vs weights")
+        log.info(f"Checking H-test vs weights")
         ftr.prof_vs_weights(use_weights=True)
         ftr.prof_vs_weights(use_weights=False)
         sys.exit()
@@ -784,18 +784,17 @@ def main(argv=None):
     maxbin, like_start = marginalize_over_phase(
         phss, gtemplate, weights=ftr.weights, minimize=True, showplot=False
     )
-    log.info("Starting pulse likelihood: %f" % like_start)
+    log.info(f"Starting pulse likelihood: {like_start}")
     if args.phs is None:
         fitvals[-1] = 1.0 - maxbin[0] / float(len(gtemplate))
         if fitvals[-1] > 1.0:
             fitvals[-1] -= 1.0
         if fitvals[-1] < 0.0:
             fitvals[-1] += 1.0
-        log.info("Starting pulse phase: %f" % fitvals[-1])
+        log.info(f"Starting pulse phase: {fitvals[-1]}")
     else:
         log.warning(
-            "Measured starting pulse phase is %f, but using %f"
-            % (1.0 - maxbin / float(len(gtemplate)), args.phs)
+            f"Measured starting pulse phase is {1.0 - maxbin / float(len(gtemplate))}, but using {args.phs}"
         )
         fitvals[-1] = args.phs
     ftr.fitvals[-1] = fitvals[-1]
@@ -817,7 +816,7 @@ def main(argv=None):
         result = op.minimize(ftr.minimize_func, np.zeros_like(ftr.fitvals))
         newfitvals = np.asarray(result["x"]) * ftr.fiterrs + ftr.fitvals
         like_optmin = -result["fun"]
-        log.info("Optimization likelihood: %f" % like_optmin)
+        log.info(f"Optimization likelihood: {like_optmin}")
         ftr.set_params(dict(zip(ftr.fitkeys, newfitvals)))
         ftr.phaseogram()
     else:
@@ -871,7 +870,7 @@ def main(argv=None):
             backend = emcee.backends.HDFBackend(filename + "_chains.h5")
             backend.reset(nwalkers, ndim)
         except ImportError:
-            log.warning("h5py package not installed. Backend set to None")
+            log.warning(f"h5py package not installed. Backend set to None")
             backend = None
     else:
         backend = None
@@ -902,7 +901,7 @@ def main(argv=None):
             pool.close()
             pool.join()
         except ImportError:
-            log.info("Pathos module not available, using single core")
+            log.info(f"Pathos module not available, using single core")
             sampler = emcee.EnsembleSampler(
                 nwalkers, ndim, ftr.lnposterior, blobs_dtype=dtype, backend=backend
             )
@@ -1010,18 +1009,18 @@ def main(argv=None):
         lambda v: (v[1], v[2] - v[1], v[1] - v[0]),
         zip(*np.percentile(samples, [16, 50, 84], axis=0)),
     )
-    log.info("Post-MCMC values (50th percentile +/- (16th/84th percentile):")
+    log.info(f"Post-MCMC values (50th percentile +/- (16th/84th percentile):")
     for name, vals in zip(ftr.fitkeys, ranges):
         log.info("%8s:" % name + "%25.15g (+ %12.5g  / - %12.5g)" % vals)
 
     # Put the same stuff in a file
     f = open(filename + "_results.txt", "w")
 
-    f.write("Post-MCMC values (50th percentile +/- (16th/84th percentile):\n")
+    f.write(f"Post-MCMC values (50th percentile +/- (16th/84th percentile):\n")
     for name, vals in zip(ftr.fitkeys, ranges):
         f.write("%8s:" % name + " %25.15g (+ %12.5g  / - %12.5g)\n" % vals)
 
-    f.write("\nMaximum likelihood par file:\n")
+    f.write(f"\nMaximum likelihood par file:\n")
     f.write(ftr.model.as_parfile())
     f.close()
 
