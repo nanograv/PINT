@@ -507,7 +507,7 @@ class TimingModel:
         from pint.models.wavex import WaveX
         from pint.models.dmwavex import DMWaveX
         from pint.models.cmwavex import CMWaveX
-        from pint.models.noise_model import PLRedNoise, PLDMNoise
+        from pint.models.noise_model import PLRedNoise, PLDMNoise, PLChromNoise
         from pint.models.ifunc import IFunc
 
         if num_components_of_type((DispersionDMX, PLDMNoise, DMWaveX)) > 1:
@@ -526,7 +526,7 @@ class TimingModel:
                 num_components_of_type(DispersionDM) == 1
             ), "PLDMNoise / DMWaveX component cannot be used without the DispersionDM component."
 
-        if num_components_of_type((CMWaveX)) == 1:
+        if num_components_of_type((PLChromNoise, CMWaveX)) == 1:
             assert (
                 num_components_of_type(ChromaticCM) == 1
             ), "PLChromNoise / CMWaveX component cannot be used without the ChromaticCM component."
