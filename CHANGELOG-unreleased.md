@@ -10,5 +10,6 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
+- arXiv link of PINT noise paper in README
 ### Fixed
 ### Removed
