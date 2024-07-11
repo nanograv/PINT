@@ -4,7 +4,7 @@
 import astropy.constants as const
 import astropy.units as u
 import numpy as np
-from typing import Optional, List, Tuple, Union
+from typing import Optional, Union
 
 import pint
 
@@ -34,9 +34,7 @@ __all__ = [
 @u.quantity_input(
     p=[u.Hz, u.s], pd=[u.Hz / u.s, u.s / u.s], pdd=[u.Hz / u.s**2, u.s / u.s**2]
 )
-def p_to_f(
-    p: u.Quantity, pd: u.Quantity, pdd: Optional[u.Quantity] = None
-) -> Tuple[u.Quantity]:
+def p_to_f(p: u.Quantity, pd: u.Quantity, pdd: Optional[u.Quantity] = None):
     r"""Converts P, Pdot to F, Fdot (or vice versa)
 
     Convert period, period derivative and period second
@@ -92,7 +90,7 @@ def pferrs(
     porferr: u.Quantity,
     pdorfd: Optional[u.Quantity] = None,
     pdorfderr: Optional[u.Quantity] = None,
-) -> Tuple[u.Quantity]:
+):
     r"""Convert P, Pdot to F, Fdot with uncertainties (or vice versa).
 
     Calculate the period or frequency errors and
