@@ -39,6 +39,7 @@ the released changes.
 - `pint.models.chromatic_model.ChromaticCM` for a Taylor series representation of the variable-index chromatic delay.
 - Whitened residuals (`white-res`) as a plotting axis in `pintk`
 - `TOAs.get_Tspan()` method
+- Doing `model.par = something` will try to assign to `par.quantity` or `par.value` but will give warning
 ### Fixed
 - `pint.utils.split_swx()` to use updated `SolarWindDispersionX()` parameter naming convention 
 - Fix #1759 by changing order of comparison
