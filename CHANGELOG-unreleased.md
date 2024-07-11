@@ -10,5 +10,8 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
+- Fourier series representation of chromatic noise (`CMWaveX`)
+- `pint.utils.cmwavex_setup` function
 ### Fixed
+- Bug in `DMWaveX.get_indices()` function
 ### Removed
