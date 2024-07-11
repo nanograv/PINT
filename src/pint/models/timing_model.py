@@ -501,22 +501,35 @@ class TimingModel:
             num_components_of_type(SolarWindDispersionBase) <= 1
         ), "Model can have at most one solar wind dispersion component."
 
-        from pint.models.dispersion_model import DispersionDMX
+        from pint.models.dispersion_model import DispersionDM, DispersionDMX
+        from pint.models.chromatic_model import ChromaticCM
         from pint.models.wave import Wave
         from pint.models.wavex import WaveX
         from pint.models.dmwavex import DMWaveX
+        from pint.models.cmwavex import CMWaveX
         from pint.models.noise_model import PLRedNoise, PLDMNoise
+        from pint.models.ifunc import IFunc
 
         if num_components_of_type((DispersionDMX, PLDMNoise, DMWaveX)) > 1:
             log.warning(
                 "DispersionDMX, PLDMNoise, and DMWaveX cannot be used together. "
                 "They are ways of modelling the same effect."
             )
-        if num_components_of_type((Wave, WaveX, PLRedNoise)) > 1:
+        if num_components_of_type((Wave, WaveX, PLRedNoise, IFunc)) > 1:
             log.warning(
                 "Wave, WaveX, and PLRedNoise cannot be used together. "
                 "They are ways of modelling the same effect."
             )
+
+        if num_components_of_type((PLDMNoise, DMWaveX)) == 1:
+            assert (
+                num_components_of_type(DispersionDM) == 1
+            ), "PLDMNoise / DMWaveX component cannot be used without the DispersionDM component."
+
+        if num_components_of_type((CMWaveX)) == 1:
+            assert (
+                num_components_of_type(ChromaticCM) == 1
+            ), "PLChromNoise / CMWaveX component cannot be used without the ChromaticCM component."
 
     # def __str__(self):
     #    result = ""
