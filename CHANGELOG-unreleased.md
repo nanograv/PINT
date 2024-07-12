@@ -9,8 +9,11 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- Moved the events -> TOAs and photon weights code into the function `load_events_weights` within `event_optimize`.
+- Updated the `maxMJD` argument in `event_optimize` to default to the current mjd
 ### Added
 - Type hints in `pint.derived_quantities`
+- Doing `model.par = something` will try to assign to `par.quantity` or `par.value` but will give warning
 - `PLChromNoise` component to model chromatic red noise with a power law spectrum
 - Fourier series representation of chromatic noise (`CMWaveX`)
 - `pint.utils.cmwavex_setup` function
@@ -20,3 +23,6 @@ the released changes.
 - Documentation: Fixed empty descriptions in the timing model components table
 - Bug in `DMWaveX.get_indices()` function
 ### Removed
+- Removed the argument `--usepickle` in `event_optimize` as the `load_events_weights` function checks the events file type to see if the 
+file is a pickle file.
+- Removed obsolete code, such as manually tracking the progress of the MCMC run within `event_optimize`

@@ -561,6 +561,16 @@ class TimingModel:
         if isinstance(value, (Parameter, prefixParameter)) and name != value.name:
             for p in ["quantity", "uncertainty", "frozen"]:
                 setattr(getattr(self, name), p, getattr(value, p))
+        elif isinstance(value, (u.Quantity, time.Time)):
+            log.warning(
+                f"Setting '{name}.quantity' to '{value}' although 'quantity' not specified"
+            )
+            getattr(self, name).quantity = value
+        elif isinstance(value, (float, str, bool, int)) and name != "name":
+            log.warning(
+                f"Setting '{name}.value' to '{value}' (assumed units '{getattr(self,name).units}') although 'value' not specified"
+            )
+            getattr(self, name).value = value
         else:
             super().__setattr__(name, value)
 
