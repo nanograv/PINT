@@ -11,5 +11,6 @@ the released changes.
 ### Changed
 ### Added
 - Type hints in `pint.derived_quantities`
+- Doing `model.par = something` will try to assign to `par.quantity` or `par.value` but will give warning
 ### Fixed
 ### Removed
