@@ -460,7 +460,7 @@ class PLDMNoise(NoiseComponent):
 
     Note
     ----
-    Ref: Lentati et al. 2014
+    Ref: Lentati et al. 2014, MNRAS 437(3), 3004-3023
 
     """
 
@@ -580,7 +580,7 @@ class PLChromNoise(NoiseComponent):
 
     Note
     ----
-    Ref: Lentati et al. 2014
+    Ref: Lentati et al. 2014, MNRAS 437(3), 3004-3023
 
     """
 
@@ -694,7 +694,7 @@ class PLRedNoise(NoiseComponent):
 
     Note
     ----
-    Ref: NANOGrav 11 yrs data
+    Ref: Lentati et al. 2014, MNRAS 437(3), 3004-3023
 
     """
 
