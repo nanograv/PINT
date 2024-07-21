@@ -1,5 +1,5 @@
 import numpy as np
-from astropy import units as u, constants as c
+from astropy import units as u
 from pint.models import get_model_and_toas, get_model
 import pint.fitter
 import pint.logging

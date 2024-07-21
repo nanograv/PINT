@@ -55,7 +55,6 @@ from typing import (
     Iterable,
     Type,
     Iterator,
-    Generator,
     Literal,
 )
 import uncertainties
@@ -75,7 +74,7 @@ import warnings
 import pint
 import pint.pulsar_ecliptic
 from pint.toa_select import TOASelect
-from pint.types import file_like, time_like, quantity_like
+from pint.types import file_like, quantity_like
 
 __all__ = [
     "PINTPrecisionError",

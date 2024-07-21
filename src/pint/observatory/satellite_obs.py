@@ -10,7 +10,6 @@ from loguru import logger as log
 from scipy.interpolate import InterpolatedUnivariateSpline
 
 from pint.fits_utils import read_fits_event_mjds
-from pint.observatory import bipm_default
 from pint.observatory.special_locations import SpecialLocation
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 from pint.utils import PosVel

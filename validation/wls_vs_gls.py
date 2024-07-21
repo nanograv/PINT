@@ -4,9 +4,7 @@ import pint.fitter as fitter
 
 # import matplotlib
 # matplotlib.use('TKAgg')
-import matplotlib.pyplot as plt
 
-import astropy.units as u
 import numpy as np
 import os
 from tempfile import mkstemp
@@ -15,7 +13,6 @@ from os import remove, close
 import pint.utils as ut
 import subprocess
 import re
-import tempo2_utils as t2u
 from astropy.table import Table
 
 
