@@ -19,9 +19,9 @@ the released changes.
 - `pint.utils.cmwavex_setup` function
 - More validation for correlated noise components in `TimingModel`
 ### Fixed
+- Bug in `DMWaveX.get_indices()` function
 - Explicit type conversion in `woodbury_dot()` function
 - Documentation: Fixed empty descriptions in the timing model components table
-- Bug in `DMWaveX.get_indices()` function
 ### Removed
 - Removed the argument `--usepickle` in `event_optimize` as the `load_events_weights` function checks the events file type to see if the 
 file is a pickle file.
