@@ -18,7 +18,10 @@ the released changes.
 - `powerlaw_corner` function
 - `TNREDFLOW` and `TNREDCORNER` parameters in `PLRedNoise`
 - `TNDMFLOW` and `TNDMCORNER` parameters in `PLDMNoise`
+- `PLChromNoise` component to model chromatic red noise with a power law spectrum
 ### Fixed
+- Explicit type conversion in `woodbury_dot()` function
+- Documentation: Fixed empty descriptions in the timing model components table
 ### Removed
 - Removed the argument `--usepickle` in `event_optimize` as the `load_events_weights` function checks the events file type to see if the 
 file is a pickle file.
