@@ -15,7 +15,10 @@ the released changes.
 ### Added
 - Type hints in `pint.derived_quantities`
 - Doing `model.par = something` will try to assign to `par.quantity` or `par.value` but will give warning
+- `PLChromNoise` component to model chromatic red noise with a power law spectrum
 ### Fixed
+- Explicit type conversion in `woodbury_dot()` function
+- Documentation: Fixed empty descriptions in the timing model components table
 ### Removed
 - Removed the argument `--usepickle` in `event_optimize` as the `load_events_weights` function checks the events file type to see if the 
 file is a pickle file.
