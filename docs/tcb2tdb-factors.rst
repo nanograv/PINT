@@ -21,7 +21,7 @@ will be transformed as::
 This rule applies to the majority of parameters.
 
 However, there are some parameters in pulsar timing which appear in the timing model multiplied 
-my some constants. Examples include
+by some constants. Examples include
 
     1. DM appears as DMconst * DM
     2. A1 appears as A1 / c
@@ -56,7 +56,7 @@ work in every case, and each parameter should be treated in a case-by-case basis
 delay/phase expression they appear in.
 
 Exceptions to this are noise parameters. The TOA uncertainties are measured in the observatory 
-timescale and the are not converted into TCB or TDB before computing the likelihood function/
+timescale and are not converted into TCB or TDB before computing the likelihood function/
 chi-squared. Hence, we don't convert the quantities that modify TOA uncertainties, namely EFACs and``
 EQUADs. Since we are not converting TOA variances, it doesn't make sense to convert TOA covariances
 either. Hence, ECORRs and red and DM noise parameters are not converted. This means that 

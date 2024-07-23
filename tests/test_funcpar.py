@@ -1,6 +1,6 @@
 import io
 import pytest
-from astropy import units as u, constants as c
+from astropy import units as u
 import numpy as np
 
 import pint.models.parameter

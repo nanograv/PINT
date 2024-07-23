@@ -1,7 +1,6 @@
-from astropy import units as u, constants as c
+from astropy import units as u
 import numpy as np
 import io
-import os
 import copy
 
 from pint.models import get_model

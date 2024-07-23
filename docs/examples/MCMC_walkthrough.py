@@ -24,7 +24,6 @@
 #
 
 # %%
-import random
 import numpy as np
 import pint.models
 import pint.toa as toa
@@ -35,8 +34,6 @@ from pint.mcmc_fitter import MCMCFitter, MCMCFitterBinnedTemplate
 from pint.scripts.event_optimize import read_gaussfitfile, marginalize_over_phase
 import pint.config
 import pint.logging
-import matplotlib.pyplot as plt
-import pickle
 
 # %%
 pint.logging.setup("WARNING")

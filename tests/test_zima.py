@@ -8,11 +8,8 @@ from pinttestdata import datadir
 
 import matplotlib
 import pint.scripts.zima as zima
-from pint.models import get_model_and_toas, get_model
-from pint.simulation import make_fake_toas_uniform
+from pint.models import get_model_and_toas
 from pint.residuals import Residuals
-from pint.fitter import DownhillGLSFitter
-from astropy import units as u
 
 
 @pytest.mark.parametrize("addnoise", ["", "--addnoise"])
