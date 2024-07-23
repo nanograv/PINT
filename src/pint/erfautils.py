@@ -4,7 +4,6 @@ import erfa
 
 import numpy as np
 from astropy import table
-from loguru import logger as log
 
 from pint.pulsar_mjd import Time
 from pint.utils import PosVel

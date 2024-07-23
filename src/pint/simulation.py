@@ -4,14 +4,13 @@
 from collections import OrderedDict
 from copy import deepcopy
 from typing import Optional, List, Tuple, Union
-import pathlib
 
 import astropy.units as u
 import numpy as np
 from loguru import logger as log
 from astropy import time
 
-from pint.types import time_like, quantity_like, file_like
+from pint.types import time_like, file_like
 import pint.residuals
 import pint.toa
 import pint.fitter

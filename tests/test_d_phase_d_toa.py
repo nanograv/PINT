@@ -8,7 +8,7 @@ from erfa import DJM0
 import pint.toa as toa
 from pint.models import model_builder as mb
 from pint.polycos import Polycos
-from pinttestdata import datadir, testdir
+from pinttestdata import datadir
 
 
 class TestD_phase_d_toa:
