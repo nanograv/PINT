@@ -4,12 +4,11 @@ import numpy as np
 from loguru import logger as log
 
 from astropy import units as u
-from pint.models import get_model, get_model_and_toas
+from pint.models import get_model
 from pint.models import model_builder as mb
-from pint.models.timing_model import Component, MissingParameter
+from pint.models.timing_model import MissingParameter
 from pint.fitter import Fitter
 from pint.residuals import Residuals
-from pint.toa import get_TOAs
 from pint.simulation import make_fake_toas_uniform
 import pint.utils
 from pinttestdata import datadir

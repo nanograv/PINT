@@ -1,6 +1,6 @@
 from astropy import units as u
 import pytest
-from pint.models import get_model_and_toas, get_model
+from pint.models import get_model
 import pint.fitter
 import pint.simulation
 from pinttestdata import datadir

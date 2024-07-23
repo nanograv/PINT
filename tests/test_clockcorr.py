@@ -14,7 +14,6 @@ from pint.observatory import (
     Observatory,
     get_observatory,
     ClockCorrectionOutOfRange,
-    NoClockCorrections,
 )
 
 from pint.observatory.clock_file import ClockFile

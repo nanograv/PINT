@@ -8,7 +8,6 @@ import pint.sampler
 import pint.residuals
 import pint.models.model_builder as mb
 import astropy.units as u
-from scipy.stats import norm, uniform
 
 datadir = "."
 parfile = os.path.join(datadir, "NGC6440E.par")

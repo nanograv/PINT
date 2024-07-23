@@ -8,7 +8,6 @@ from numpy.testing import assert_array_equal
 
 import pint.fermi_toas as fermi
 import pint.models
-import pint.toa as toa
 from pint.mcmc_fitter import MCMCFitterBinnedTemplate
 from pint.sampler import EmceeSampler
 from pint.scripts.event_optimize import read_gaussfitfile

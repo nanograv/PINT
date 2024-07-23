@@ -6,7 +6,6 @@ import shutil
 import sys
 from io import StringIO
 from pathlib import Path
-from contextlib import suppress
 
 import emcee.backends
 import pytest
