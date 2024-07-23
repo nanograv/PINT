@@ -1,12 +1,11 @@
 import os
 import pytest
 import io
-import copy
 
 import astropy.units as u
 import numpy as np
 
-from pint.models import get_model, get_model_and_toas
+from pint.models import get_model
 import pint.simulation
 import pint.fitter
 import pint.toa as toa

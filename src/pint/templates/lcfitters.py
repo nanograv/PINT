@@ -16,7 +16,7 @@ author: M. Kerr <matthew.kerr@gmail.com>
 """
 import numpy as np
 import scipy
-from pint.eventstats import hm, hmw
+from pint.eventstats import hmw
 from scipy.optimize import fmin, fmin_tnc, leastsq
 
 SECSPERDAY = 86400.0

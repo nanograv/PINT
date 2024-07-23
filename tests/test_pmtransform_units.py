@@ -1,6 +1,6 @@
 import io
 import numpy as np
-from astropy import units as u, constants as c
+from astropy import units as u
 from astropy.time import Time
 from pint.models import get_model
 import pint.logging

@@ -1,6 +1,5 @@
 from astropy import units as u, constants as c
 from astropy.time import Time
-import numpy as np
 from pint.models import get_model_and_toas
 import pytest
 import os

@@ -1,7 +1,7 @@
 """Building a timing model from a par file."""
 
 import copy
-from typing import IO, Tuple, Union
+from typing import Tuple
 import warnings
 from io import StringIO
 from collections import Counter, defaultdict
@@ -11,14 +11,10 @@ from loguru import logger as log
 import re
 
 from pint.models.astrometry import Astrometry
-from pint.models.parameter import maskParameter
 from pint.models.timing_model import (
-    DEFAULT_ORDER,
-    Component,
     AllComponents,
     TimingModel,
     ignore_prefix,
-    AliasConflict,
     UnknownBinaryModel,
     UnknownParameter,
     TimingModelError,
