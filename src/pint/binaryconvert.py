@@ -7,7 +7,7 @@ Potential issues:
 """
 
 import numpy as np
-from astropy import units as u, constants as c
+from astropy import units as u
 from astropy.time import Time
 import copy
 from uncertainties import ufloat, umath
@@ -15,15 +15,9 @@ from loguru import logger as log
 
 from pint import Tsun
 from pint.models.binary_bt import BinaryBT
-from pint.models.binary_dd import BinaryDD, BinaryDDS, BinaryDDGR, BinaryDDH
+from pint.models.binary_dd import BinaryDD, BinaryDDS, BinaryDDH
 from pint.models.binary_ddk import BinaryDDK
 from pint.models.binary_ell1 import BinaryELL1, BinaryELL1H, BinaryELL1k
-from pint.models.parameter import (
-    floatParameter,
-    MJDParameter,
-    intParameter,
-    funcParameter,
-)
 
 # output types
 # DDGR is not included as there is not a well-defined way to get a unique output

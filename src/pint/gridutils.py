@@ -17,7 +17,6 @@ except ModuleNotFoundError:
 from astropy.utils.console import ProgressBar
 
 from pint import fitter
-from pint.observatory import clock_file
 
 __all__ = ["doonefit", "grid_chisq", "grid_chisq_derived"]
 
