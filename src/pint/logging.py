@@ -55,7 +55,6 @@ import sys
 import warnings
 from loguru import logger as log
 
-from erfa import ErfaWarning
 
 __all__ = ["LogFilter", "setup", "format", "levels", "get_level"]
 
