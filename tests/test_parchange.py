@@ -79,6 +79,7 @@ def test_parcopy():
     m1.F0 = m2.F0
     assert m1.F0 == m2.F0
     assert m1.components["Spindown"].F0 == m2.components["Spindown"].F0
+    assert m1.as_parfile(include_info=False) == m2.as_parfile(include_info=False)
 
 
 def test_parcopy_andchange():
@@ -88,6 +89,7 @@ def test_parcopy_andchange():
     m2.F0.value = 20
     assert m1.F0 == m2.F0
     assert m1.components["Spindown"].F0 == m2.components["Spindown"].F0
+    assert m1.as_parfile(include_info=False) == m2.as_parfile(include_info=False)
 
 
 def test_parcopy_toplevel():
@@ -97,6 +99,8 @@ def test_parcopy_toplevel():
     m2.PSR.value = "DEF"
     m1.PSR = m2.PSR
     assert m1.PSR == m2.PSR
+    m1.F0 = m2.F0
+    assert m1.as_parfile(include_info=False) == m2.as_parfile(include_info=False)
 
 
 def test_parcopy_toplevel_andchange():
@@ -108,3 +112,5 @@ def test_parcopy_toplevel_andchange():
     assert m1.PSR == m2.PSR
     m2.PSR.value = "HGI"
     assert m1.PSR == m2.PSR
+    m1.F0 = m2.F0
+    assert m1.as_parfile(include_info=False) == m2.as_parfile(include_info=False)
