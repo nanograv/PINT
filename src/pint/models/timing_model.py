@@ -542,12 +542,31 @@ class TimingModel:
         )
 
     def __setattr__(self, name, value):
-        """Mostly this just sets ``self.name = value``.  But in the case where they are both :class:`Parameter` instances
-        with different names, this copies the ``quantity``, ``uncertainty``, ``frozen`` attributes only.
+        """Mostly this just sets ``self.name = value``.   But there are a few special cases:
+
+        * Where they are both :class:`Parameter` instances with different names,
+          this copies the ``quantity``, ``uncertainty``, ``frozen`` attributes only.
+
+        * When setting a parameter from the top-level to a float or Quantity,
+          it will set the ``quantity`` or ``value`` attribute appropriately.
+
+        * When setting a parameter from the top-level but which belongs to a component,
+          it will find the approprirate component and set the parameter within that.
         """
         if isinstance(value, (Parameter, prefixParameter)) and name != value.name:
+            # set parameter from another parameter with a different name
             for p in ["quantity", "uncertainty", "frozen"]:
                 setattr(getattr(self, name), p, getattr(value, p))
+        elif (
+            isinstance(value, (Parameter, prefixParameter))
+            and hasattr(value, "_parent")
+            and hasattr(value._parent, "_parent")
+            and self != value._parent._parent
+        ):
+            # find the parameter in a component when it's being set from a different model
+            for cp in self.components.values():
+                if name in cp.params:
+                    setattr(cp, name, value)
         elif isinstance(value, (u.Quantity, time.Time)):
             log.warning(
                 f"Setting '{name}.quantity' to '{value}' although 'quantity' not specified"
