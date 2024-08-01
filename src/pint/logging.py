@@ -85,6 +85,8 @@ def showwarning(
     category: Warning,
     filename: str,
     lineno: int,
+    file=None,
+    line=None,
 ) -> None:
     """
     Function to allow ``loguru`` to capture warnings emitted by :func:`warnings.warn`.
