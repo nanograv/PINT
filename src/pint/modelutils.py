@@ -71,7 +71,7 @@ def model_equatorial_to_ecliptic(
 
     Returns
     -------
-    model
+    model : `pint.models.TimingModel`
         new model with AstrometryEcliptic component
     """
 
