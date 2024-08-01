@@ -8,7 +8,6 @@ from astropy.coordinates import EarthLocation
 
 from pint.pulsar_mjd import Time
 from pint.utils import PosVel
-import pint.toa
 
 __all__ = ["gcrs_posvel_from_itrf"]
 
@@ -26,7 +25,7 @@ asec2rad = 4.84813681109536e-06
 
 
 def gcrs_posvel_from_itrf(
-    loc: EarthLocation, toas: pint.toa.TOAs, obsname: str = "obs"
+    loc: EarthLocation, toas: "pint.toa.TOAs", obsname: str = "obs"
 ) -> PosVel:
     """Return a list of PosVel instances for the observatory at the TOA times.
 
