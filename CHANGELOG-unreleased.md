@@ -16,7 +16,7 @@ the released changes.
 - Doing `model.par = something` will try to assign to `par.quantity` or `par.value` but will give warning
 - `PLChromNoise` component to model chromatic red noise with a power law spectrum
 - Fourier series representation of chromatic noise (`CMWaveX`)
-- `pint.utils.cmwavex_setup` function
+- `pint.utils.cmwavex_setup` and `pint.utils.plchromnoise_from_cmwavex` functions
 - More validation for correlated noise components in `TimingModel`
 ### Fixed
 - Bug in `DMWaveX.get_indices()` function
