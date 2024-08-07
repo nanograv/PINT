@@ -9,7 +9,7 @@ dispersion measures (:class:`pint.residuals.WidebandTOAResiduals`).
 
 import collections
 import copy
-from typing import Literal, Optional
+from typing import Literal, Optional, Union
 import warnings
 
 import astropy.units as u
@@ -90,7 +90,7 @@ class Residuals:
         toas: Optional[TOAs] = None,
         model: Optional[TimingModel] = None,
         residual_type: Literal["toa", "dm"] = "toa",
-        unit: u.Unit | str = u.s,
+        unit: Union[u.Unit, str] = u.s,
         subtract_mean: bool = True,
         use_weighted_mean: bool = True,
         track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
@@ -111,7 +111,7 @@ class Residuals:
         toas: Optional[TOAs] = None,
         model: Optional[TimingModel] = None,
         residual_type: Literal["toa", "dm"] = "toa",
-        unit: u.Unit | str = u.s,
+        unit: Union[u.Unit, str] = u.s,
         subtract_mean: bool = True,
         use_weighted_mean: bool = True,
         track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
@@ -936,7 +936,7 @@ class WidebandDMResiduals(Residuals):
         toas: Optional[TOAs] = None,
         model: Optional[TimingModel] = None,
         residual_type: Literal["toa", "dm"] = "dm",
-        unit: u.Unit | str = u.pc / u.cm**3,
+        unit: Union[u.Unit, str] = u.pc / u.cm**3,
         subtract_mean: bool = False,
         use_weighted_mean: bool = True,
     ):
