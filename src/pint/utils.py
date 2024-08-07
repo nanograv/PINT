@@ -2970,7 +2970,7 @@ def bayesian_information_criterion(
     """Compute the Bayesian information criterion (BIC). The BIC is used for comparing different
     models for the given dataset.
 
-    Given a model with best-fit parameters, the AIC is defined as
+    Given a model with best-fit parameters, the BIC is defined as
 
         BIC = k*ln(N) - 2*ln(L)
 
@@ -3012,7 +3012,7 @@ def bayesian_information_criterion(
             if "PhaseOffset" in model.components
             else len(model.free_params) + 1
         )
-        lnN = len(toas)
+        lnN = np.log(len(toas))
         lnL = Residuals(toas, model).lnlikelihood()
         return k * lnN - 2 * lnL
     else:
