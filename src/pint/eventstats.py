@@ -2,6 +2,7 @@
 
 author: M. Kerr <matthew.kerr@gmail.com>
 """
+
 import numpy as np
 from numpy import exp, arange, log
 from scipy.special import erfc, gamma

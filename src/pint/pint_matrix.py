@@ -861,9 +861,7 @@ class CovarianceMatrixMaker:
         """
         func = getattr(model, self.cov_func_name)
         M = func(data)
-        label = [
-            {self.covariance_quantity: (0, M.shape[0], self.quantity_unit**2)}
-        ] * 2
+        label = [{self.covariance_quantity: (0, M.shape[0], self.quantity_unit**2)}] * 2
         return CovarianceMatrix(M, label)
 
 
@@ -907,9 +905,9 @@ def combine_covariance_matrix(covariance_matrices, crossterm={}, crossterm_paddi
     for ii, lb1 in enumerate(new_label):
         for jj, lb2 in enumerate(new_label):
             if ii == jj:
-                new_cm[
-                    lb1[1][0] : lb1[1][1], lb2[1][0] : lb2[1][1]
-                ] = covariance_matrices[ii].matrix
+                new_cm[lb1[1][0] : lb1[1][1], lb2[1][0] : lb2[1][1]] = (
+                    covariance_matrices[ii].matrix
+                )
             else:
                 if crossterm != {}:
                     cross_m = crossterm.get((lb1, lb2), None)

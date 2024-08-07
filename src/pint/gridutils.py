@@ -1,4 +1,5 @@
 """Tools for building chi-squared grids."""
+
 import concurrent.futures
 import copy
 import multiprocessing
