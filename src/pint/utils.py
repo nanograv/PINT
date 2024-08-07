@@ -3132,8 +3132,9 @@ def _get_wx2pl_lnlike(
     from pint.models.noise_model import powerlaw
     from pint import DMconst
 
-    assert component_name in {"WaveX", "DMWaveX"}
-    prefix = "WX" if component_name == "WaveX" else "DMWX"
+    assert component_name in {"WaveX", "DMWaveX", "CMWaveX"}
+    prefix_dict = {"WaveX": "WX", "DMWaveX": "DMWX", "CMWaveX": "CMWX"}
+    prefix = prefix_dict[component_name]
 
     idxs = np.array(model.components[component_name].get_indices())
 
@@ -3145,7 +3146,7 @@ def _get_wx2pl_lnlike(
 
     assert np.allclose(
         np.diff(np.diff(fs)), 0
-    ), "[DM]WaveX frequencies must be uniformly spaced."
+    ), "WaveX/DMWaveX/CMWaveX frequencies must be uniformly spaced for this conversion to work."
 
     if ignore_fyr:
         year_mask = np.abs(((fs - fyr) / f0)) > 0.5
@@ -3156,7 +3157,15 @@ def _get_wx2pl_lnlike(
         )
         f0 = np.min(fs)
 
-    scaling_factor = 1 if component_name == "WaveX" else DMconst / (1400 * u.MHz) ** 2
+    scaling_factor = (
+        1
+        if component_name == "WaveX"
+        else (
+            DMconst / (1400 * u.MHz) ** 2
+            if component_name == "DMWaveX"
+            else DMconst / 1400**model.TNCHROMIDX.value
+        )
+    )
 
     a = np.array(
         [
@@ -3185,14 +3194,14 @@ def _get_wx2pl_lnlike(
 
     def powl_model(params: Tuple[float, float]) -> float:
         """Get the powerlaw spectrum for the WaveX frequencies for a given
-        set of parameters. This calls the powerlaw function used by `PLRedNoise`/`PLDMNoise`.
+        set of parameters. This calls the powerlaw function used by `PLRedNoise`/`PLDMNoise`/`PLChromNoise`.
         """
         gamma, log10_A = params
         return (powerlaw(fs, A=10**log10_A, gamma=gamma) * f0) ** 0.5
 
     def mlnlike(params: Tuple[float, ...]) -> float:
         """Negative of the likelihood function that acts on the
-        `[DM]WaveX` amplitudes."""
+        `[DM/CM]WaveX` amplitudes."""
         sigma = powl_model(params)
         return 0.5 * np.sum(
             (a**2 / (sigma**2 + da**2))
@@ -3304,6 +3313,60 @@ def pldmnoise_from_dmwavex(
     model1.TNDMC.value = tndmc
     model1.TNDMAMP.uncertainty_value = log10_A_err
     model1.TNDMGAM.uncertainty_value = gamma_err
+
+    return model1
+
+
+def plchromnoise_from_cmwavex(
+    model: "pint.models.TimingModel", ignore_fyr: bool = False
+) -> "pint.models.TimingModel":
+    """Convert a `CMWaveX` representation of red noise to a `PLChromNoise`
+    representation. This is done by minimizing a likelihood function
+    that acts on the `CMWaveX` amplitudes over the powerlaw spectral
+    parameters.
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+        The timing model with a `CMWaveX` component.
+
+    Returns
+    -------
+    pint.models.timing_model.TimingModel
+        The timing model with a converted `PLChromNoise` component.
+    """
+    from pint.models.noise_model import PLChromNoise
+
+    mlnlike = _get_wx2pl_lnlike(model, "CMWaveX", ignore_fyr=ignore_fyr)
+
+    result = minimize(mlnlike, [4, -13], method="Nelder-Mead")
+    if not result.success:
+        raise ValueError("Log-likelihood maximization failed to converge.")
+
+    gamma_val, log10_A_val = result.x
+
+    hess = Hessian(mlnlike)
+
+    H = hess((gamma_val, log10_A_val))
+    assert np.all(np.linalg.eigvals(H) > 0), "The Hessian is not positive definite!"
+
+    Hinv = np.linalg.pinv(H)
+    assert np.all(
+        np.linalg.eigvals(Hinv) > 0
+    ), "The inverse Hessian is not positive definite!"
+
+    gamma_err, log10_A_err = np.sqrt(np.diag(Hinv))
+
+    tndmc = len(model.components["CMWaveX"].get_indices())
+
+    model1 = deepcopy(model)
+    model1.remove_component("CMWaveX")
+    model1.add_component(PLChromNoise())
+    model1.TNCHROMAMP.value = log10_A_val
+    model1.TNCHROMGAM.value = gamma_val
+    model1.TNCHROMC.value = tndmc
+    model1.TNCHROMAMP.uncertainty_value = log10_A_err
+    model1.TNCHROMGAM.uncertainty_value = gamma_err
 
     return model1
 
