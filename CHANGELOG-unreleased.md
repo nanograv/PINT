@@ -18,6 +18,7 @@ the released changes.
 ### Fixed
 - Explicit type conversion in `woodbury_dot()` function
 - Documentation: Fixed empty descriptions in the timing model components table
+- BIC implementation
 ### Removed
 - Removed the argument `--usepickle` in `event_optimize` as the `load_events_weights` function checks the events file type to see if the 
 file is a pickle file.
