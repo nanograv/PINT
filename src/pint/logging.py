@@ -129,7 +129,7 @@ class LogFilter:
 
     def __init__(self, onlyonce=None, never=None, onlyonce_level="INFO"):
         """
-        Define regexs for messages that will only be seen once.  Use ``\S+`` for a variable that might change.
+        Define regexs for messages that will only be seen once.  Use ``\\S+`` for a variable that might change.
         If a message comes through with a new value for that variable, it will be seen.
 
         Make sure to escape other regex commands like ``()``.
