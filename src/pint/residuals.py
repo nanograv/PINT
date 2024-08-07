@@ -9,7 +9,7 @@ dispersion measures (:class:`pint.residuals.WidebandTOAResiduals`).
 
 import collections
 import copy
-from typing import Dict, Literal, Optional
+from typing import Literal, Optional
 import warnings
 
 import astropy.units as u
