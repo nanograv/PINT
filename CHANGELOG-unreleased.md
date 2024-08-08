@@ -14,6 +14,10 @@ the released changes.
 ### Added
 - Type hints in `pint.derived_quantities`
 - Doing `model.par = something` will try to assign to `par.quantity` or `par.value` but will give warning
+- `plrednoise_from_wavex()` and `pldmnoise_from_dmwavex()` functions now compute `TNRedFLow` and `TNDMFLow`
+- `powerlaw_corner` function
+- `TNREDFLOW` and `TNREDCORNER` parameters in `PLRedNoise`
+- `TNDMFLOW` and `TNDMCORNER` parameters in `PLDMNoise`
 - `PLChromNoise` component to model chromatic red noise with a power law spectrum
 ### Fixed
 - Explicit type conversion in `woodbury_dot()` function
@@ -24,3 +28,4 @@ the released changes.
 - Removed the argument `--usepickle` in `event_optimize` as the `load_events_weights` function checks the events file type to see if the 
 file is a pickle file.
 - Removed obsolete code, such as manually tracking the progress of the MCMC run within `event_optimize`
+- Unnecessary default arguments from the `powerlaw()` function.
