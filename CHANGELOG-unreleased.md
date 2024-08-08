@@ -14,6 +14,7 @@ the released changes.
 ### Added
 - Type hints in `pint.derived_quantities`
 - Doing `model.par = something` will try to assign to `par.quantity` or `par.value` but will give warning
+- Piecewise-constant model for chromatic variations (CMX)
 - `PLChromNoise` component to model chromatic red noise with a power law spectrum
 ### Fixed
 - Explicit type conversion in `woodbury_dot()` function
