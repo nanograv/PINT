@@ -35,6 +35,10 @@ def test_result(tmp_path):
         event_optimize.main(cmd.split())
         lines = sys.stdout.getvalue()
         # Need to add some check here.
+        with open("J0030+0451_results.txt") as f:
+            lines = f.readlines()
+        assert lines[1].split()[0] == "F0"
+        assert len(lines[1].split()[2]) == 16
     finally:
         os.chdir(p)
         sys.stdout = saved_stdout
