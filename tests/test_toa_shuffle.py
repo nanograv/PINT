@@ -18,12 +18,6 @@ from pint import simulation, toa
 import pint.residuals
 from pint.models import get_model
 
-shuffletoas = """FORMAT 1
-test 1234.0 54321 0 pks
-test2 888 59055 0 meerkat
-test3 350 59000 0 gbt
-"""
-
 
 class TOAOrderSetup:
     parfile = os.path.join(datadir, "NGC6440E.par")
@@ -95,6 +89,11 @@ def test_resorting_toas_chi2_match(sortkey):
 
 
 class TOALineOrderSetup:
+    shuffletoas = """FORMAT 1
+        test 1234.0 54321 0 pks
+        test2 888 59055 0 meerkat
+        test3 350 59000 0 gbt
+    """
     timfile = io.StringIO(shuffletoas)
     t = toa.get_TOAs(timfile)
     timfile.seek(0)
