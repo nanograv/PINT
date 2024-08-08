@@ -11,6 +11,7 @@ the released changes.
 ### Changed
 - Moved the events -> TOAs and photon weights code into the function `load_events_weights` within `event_optimize`.
 - Updated the `maxMJD` argument in `event_optimize` to default to the current mjd
+- `maskParameter.__repr__()` output now includes the frozen attribute.
 ### Added
 - Type hints in `pint.derived_quantities`
 - Doing `model.par = something` will try to assign to `par.quantity` or `par.value` but will give warning
