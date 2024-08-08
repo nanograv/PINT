@@ -1935,7 +1935,7 @@ class maskParameter(floatParameter):
             out += f" +/- {str(self.uncertainty.to(self.units))}"
         if self.units is not None:
             out += f" ({str(self.units)})"
-        out += f"frozen={self.frozen})"
+        out += f" frozen={self.frozen})"
 
         return out
 
