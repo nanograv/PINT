@@ -1005,20 +1005,24 @@ def main(argv=None):
     f.close()
 
     # Print the best MCMC values and ranges
-    ranges = map(
-        lambda v: (v[1], v[2] - v[1], v[1] - v[0]),
-        zip(*np.percentile(samples, [16, 50, 84], axis=0)),
+    ranges = list(
+        map(
+            lambda v: (v[1], v[2] - v[1], v[1] - v[0]),
+            zip(*np.percentile(samples, [16, 50, 84], axis=0)),
+        )
     )
     log.info(f"Post-MCMC values (50th percentile +/- (16th/84th percentile):")
     for name, vals in zip(ftr.fitkeys, ranges):
-        log.info("%8s:" % name + "%25.15g (+ %12.5g  / - %12.5g)" % vals)
+        log.info(f"{name:8s}: {vals[0]:25.15g} (+ {vals[1]:12.5g} / - {vals[2]:12.5g})")
 
     # Put the same stuff in a file
     f = open(filename + "_results.txt", "w")
 
     f.write(f"Post-MCMC values (50th percentile +/- (16th/84th percentile):\n")
     for name, vals in zip(ftr.fitkeys, ranges):
-        f.write("%8s:" % name + " %25.15g (+ %12.5g  / - %12.5g)\n" % vals)
+        f.write(
+            f"{name:8s}: {vals[0]:25.15g} (+ {vals[1]:12.5g} / - {vals[2]:12.5g})\n"
+        )
 
     f.write(f"\nMaximum likelihood par file:\n")
     f.write(ftr.model.as_parfile())
