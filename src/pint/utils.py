@@ -3203,11 +3203,13 @@ def _get_wx2pl_lnlike(
         """Negative of the likelihood function that acts on the
         `[DM/CM]WaveX` amplitudes."""
         sigma = powl_model(params)
-        return 0.5 * np.sum(
-            (a**2 / (sigma**2 + da**2))
-            + (b**2 / (sigma**2 + db**2))
-            + np.log(sigma**2 + da**2)
-            + np.log(sigma**2 + db**2)
+        return 0.5 * float(
+            np.sum(
+                (a**2 / (sigma**2 + da**2))
+                + (b**2 / (sigma**2 + db**2))
+                + np.log(sigma**2 + da**2)
+                + np.log(sigma**2 + db**2)
+            )
         )
 
     return mlnlike
