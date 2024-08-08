@@ -3,9 +3,9 @@ from io import StringIO
 import numpy as np
 
 from pint.models import get_model
+from pint.models.dmwavex import dmwavex_setup
 from pint.fitter import Fitter
 from pint.simulation import make_fake_toas_uniform
-from pint.utils import dmwavex_setup
 from pint import dmu
 
 import pytest

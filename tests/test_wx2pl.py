@@ -1,13 +1,13 @@
 import pytest
 from pint.models import get_model
+from pint.models.cmwavex import cmwavex_setup
+from pint.models.dmwavex import dmwavex_setup
+from pint.models.wavex import wavex_setup
 from pint.simulation import make_fake_toas_uniform
 from pint.fitter import WLSFitter
 from pint.utils import (
-    cmwavex_setup,
-    dmwavex_setup,
     find_optimal_nharms,
     plchromnoise_from_cmwavex,
-    wavex_setup,
     plrednoise_from_wavex,
     pldmnoise_from_dmwavex,
 )

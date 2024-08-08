@@ -4,8 +4,8 @@ import numpy as np
 
 from pint.models import get_model
 from pint.fitter import Fitter
+from pint.models.cmwavex import cmwavex_setup
 from pint.simulation import make_fake_toas_uniform
-from pint.utils import cmwavex_setup
 from pint.models.chromatic_model import cmu
 
 import pytest
