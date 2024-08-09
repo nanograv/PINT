@@ -1,7 +1,8 @@
 from copy import deepcopy
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 from itertools import product as cartesian_product
 
+from joblib import Parallel, cpu_count, delayed
 import numpy as np
 from astropy import units as u
 from scipy.optimize import minimize
@@ -14,10 +15,10 @@ from pint.models.parameter import prefixParameter
 from pint.models.phase_offset import PhaseOffset
 from pint.models.timing_model import TimingModel
 from pint.models.wavex import wavex_setup
+from pint.polycos import tqdm
 from pint.toa import TOAs
-from pint.utils import (
-    akaike_information_criterion,
-)
+from pint.utils import akaike_information_criterion
+from pint.logging import setup as setup_log
 
 
 def _get_wx2pl_lnlike(
@@ -269,6 +270,7 @@ def find_optimal_nharms(
     include_components: List[str] = ["WaveX", "DMWaveX", "CMWaveX"],
     nharms_max: int = 45,
     chromatic_index: float = 4,
+    num_parallel_jobs: Optional[int] = None,
 ):
     assert len(set(include_components).intersection(set(model.components.keys()))) == 0
 
@@ -278,9 +280,17 @@ def find_optimal_nharms(
         )
     )
 
-    aics = np.zeros(np.repeat(nharms_max, len(include_components)))
-    for ii in idxs:
-        aics[ii] = compute_aic(model, toas, include_components, ii, chromatic_index)
+    if num_parallel_jobs is None:
+        num_parallel_jobs = cpu_count()
+
+    aics_flat = Parallel(n_jobs=num_parallel_jobs)(
+        delayed(
+            lambda ii: compute_aic(model, toas, include_components, ii, chromatic_index)
+        )(ii)
+        for ii in idxs
+    )
+
+    aics = np.reshape(aics_flat, [nharms_max + 1] * len(include_components))
 
     assert all(np.isfinite(aics)), "Infs/NaNs found in AICs!"
 
@@ -294,6 +304,8 @@ def compute_aic(
     ii: np.ndarray,
     chromatic_index: float,
 ):
+    setup_log(level="WARNING")
+
     model1 = prepare_model(
         model, toas.get_Tspan(), include_components, ii, chromatic_index
     )
@@ -331,48 +343,52 @@ def prepare_model(
             if nharms_wx > 0:
                 wavex_setup(model1, Tspan, n_freqs=nharms_wx, freeze_params=False)
         elif comp == "DMWaveX":
-            if "DispersionDM" not in model1.components:
-                model1.add_component(DispersionDM())
-
-            model1["DM"].frozen = False
-
-            if model1["DM1"].quantity is None:
-                model1["DM1"].quantity = 0 * model1["DM1"].units
-            model1["DM1"].frozen = False
-
-            if "DM2" not in model1.params:
-                model1.components["DispersionDM"].add_param(model["DM1"].new_param(2))
-            if model1["DM2"].quantity is None:
-                model1["DM2"].quantity = 0 * model1["DM2"].units
-            model1["DM2"].frozen = False
-
-            if model1["DMEPOCH"].quantity is None:
-                model1["DMEPOCH"].quantity = model1["PEPOCH"].quantity
-
             nharms_dwx = nharms[jj]
             if nharms_dwx > 0:
+                if "DispersionDM" not in model1.components:
+                    model1.add_component(DispersionDM())
+
+                model1["DM"].frozen = False
+
+                if model1["DM1"].quantity is None:
+                    model1["DM1"].quantity = 0 * model1["DM1"].units
+                model1["DM1"].frozen = False
+
+                if "DM2" not in model1.params:
+                    model1.components["DispersionDM"].add_param(
+                        model["DM1"].new_param(2)
+                    )
+                if model1["DM2"].quantity is None:
+                    model1["DM2"].quantity = 0 * model1["DM2"].units
+                model1["DM2"].frozen = False
+
+                if model1["DMEPOCH"].quantity is None:
+                    model1["DMEPOCH"].quantity = model1["PEPOCH"].quantity
+
                 dmwavex_setup(model1, Tspan, n_freqs=nharms_dwx, freeze_params=False)
         elif comp == "CMWaveX":
-            if "ChromaticCM" not in model1.components:
-                model1.add_component(ChromaticCM())
-                model1["TNCHROMIDX"].value = chromatic_index
-
-            model1["CM"].frozen = False
-            if model1["CM1"].quantity is None:
-                model1["CM1"].quantity = 0 * model1["CM1"].units
-            model1["CM1"].frozen = False
-
-            if "CM2" not in model1.params:
-                model1.components["ChromaticCM"].add_param(model1["CM1"].new_param(2))
-            if model1["CM2"].quantity is None:
-                model1["CM2"].quantity = 0 * model1["CM2"].units
-            model1["CM2"].frozen = False
-
-            if model1["CMEPOCH"].quantity is None:
-                model1["CMEPOCH"].quantity = model1["PEPOCH"].quantity
-
             nharms_cwx = nharms[jj]
             if nharms_cwx > 0:
+                if "ChromaticCM" not in model1.components:
+                    model1.add_component(ChromaticCM())
+                    model1["TNCHROMIDX"].value = chromatic_index
+
+                model1["CM"].frozen = False
+                if model1["CM1"].quantity is None:
+                    model1["CM1"].quantity = 0 * model1["CM1"].units
+                model1["CM1"].frozen = False
+
+                if "CM2" not in model1.params:
+                    model1.components["ChromaticCM"].add_param(
+                        model1["CM1"].new_param(2)
+                    )
+                if model1["CM2"].quantity is None:
+                    model1["CM2"].quantity = 0 * model1["CM2"].units
+                model1["CM2"].frozen = False
+
+                if model1["CMEPOCH"].quantity is None:
+                    model1["CMEPOCH"].quantity = model1["PEPOCH"].quantity
+
                 cmwavex_setup(model1, Tspan, n_freqs=nharms_cwx, freeze_params=False)
         else:
             raise ValueError(f"Unsupported component {comp}.")

@@ -10,3 +10,4 @@ uncertainties
 loguru
 nestle>=0.2.0
 numdifftools
+joblib
