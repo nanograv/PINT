@@ -279,7 +279,7 @@ def find_optimal_nharms(
 
     aics = np.zeros(np.repeat(nharms_max, len(include_components)))
     for ii in idxs:
-        aics[*ii] = compute_aic(model, toas, include_components, ii, chromatic_index)
+        aics[ii] = compute_aic(model, toas, include_components, ii, chromatic_index)
 
     assert all(np.isfinite(aics)), "Infs/NaNs found in AICs!"
 

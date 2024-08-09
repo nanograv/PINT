@@ -5,8 +5,8 @@ from pint.models.dmwavex import dmwavex_setup
 from pint.models.wavex import wavex_setup
 from pint.simulation import make_fake_toas_uniform
 from pint.fitter import WLSFitter
-from pint.utils import (
-    find_optimal_nharms,
+from pint.utils import find_optimal_nharms
+from pint.noise_analysis import (
     plchromnoise_from_cmwavex,
     plrednoise_from_wavex,
     pldmnoise_from_dmwavex,
