@@ -480,9 +480,7 @@ def _DDGR_to_PK(model: pint.models.TimingModel) -> Tuple[u.Quantity]:
     )
     if model.XOMDOT.quantity is not None:
         omegadot += model.XOMDOT.as_ufloat(u.rad / u.s)
-    fe = (1 + (73.0 / 24) * ecc**2 + (37.0 / 96) * ecc**4) / (1 - ecc**2) ** (
-        7.0 / 2
-    )
+    fe = (1 + (73.0 / 24) * ecc**2 + (37.0 / 96) * ecc**4) / (1 - ecc**2) ** (7.0 / 2)
     # units as s/s
     pbdot = (
         (-192 * np.pi / 5)
