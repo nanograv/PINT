@@ -271,7 +271,7 @@ class DMWaveX(Dispersion):
         inds : np.ndarray
         Array of DMWaveX indices in model.
         """
-        inds = [int(p.split("_")[-1]) for p in self.params if "WXFREQ_" in p]
+        inds = [int(p.split("_")[-1]) for p in self.params if "DMWXFREQ_" in p]
         return np.array(inds)
 
     # Initialize setup
@@ -299,7 +299,7 @@ class DMWaveX(Dispersion):
         DMWXCOS_mapping = self.get_prefix_mapping_component("DMWXCOS_")
         if DMWXFREQ_mapping.keys() != DMWXSIN_mapping.keys():
             raise ValueError(
-                "WXFREQ_ parameters do not match DMWXSIN_ parameters."
+                "DMWXFREQ_ parameters do not match DMWXSIN_ parameters."
                 "Please check your prefixed parameters"
             )
         if DMWXFREQ_mapping.keys() != DMWXCOS_mapping.keys():
