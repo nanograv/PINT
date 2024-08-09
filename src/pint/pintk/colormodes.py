@@ -1,4 +1,5 @@
 """ Color modes for graphed pintk TOAs. """
+
 import numpy as np
 import matplotlib
 import matplotlib.colors
@@ -297,9 +298,9 @@ class ObsMode(ColorMode):
             obs_name = "MeerKAT"
         else:
             obs_name = obs.upper()
-        obs_text[
-            obs
-        ] = f"  {obs_colors[obs].replace('xkcd:','').capitalize()} = {obs_name}"
+        obs_text[obs] = (
+            f"  {obs_colors[obs].replace('xkcd:','').capitalize()} = {obs_name}"
+        )
 
     def displayInfo(self):
         outstr = '"Observatory" mode selected\n'

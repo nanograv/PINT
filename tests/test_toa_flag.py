@@ -1,6 +1,5 @@
 """Various tests to assess the performance of TOA get_flag_value."""
 
-
 import os
 import pytest
 import io
