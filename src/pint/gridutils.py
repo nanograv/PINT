@@ -6,6 +6,8 @@ import multiprocessing
 import subprocess
 import sys
 
+from typing import List, Tuple, Optional, Dict
+
 import numpy as np
 
 from loguru import logger as log
@@ -16,17 +18,18 @@ except ModuleNotFoundError:
     tqdm = None
 
 from astropy.utils.console import ProgressBar
+from astropy import units as u
 
 from pint import fitter
 
 __all__ = ["doonefit", "grid_chisq", "grid_chisq_derived"]
 
 
-def hostinfo():
+def hostinfo() -> str:
     return subprocess.check_output("uname -a", shell=True)
 
 
-def set_log(logger_):
+def set_log(logger_: "loguru._logger.Logger") -> None:
     global log
     log = logger_
 
@@ -34,7 +37,7 @@ def set_log(logger_):
 class WrappedFitter:
     """Worker class to compute one fit with specified parameters fixed but passing other parameters to fit_toas()"""
 
-    def __init__(self, ftr, **fitargs):
+    def __init__(self, ftr: fitter.Fitter, **fitargs) -> None:
         """Worker class to computes one fit with specified parameters fixed
 
         Parameters
@@ -46,7 +49,9 @@ class WrappedFitter:
         self.ftr = ftr
         self.fitargs = fitargs
 
-    def doonefit(self, parnames, parvalues, extraparnames=[]):
+    def doonefit(
+        self, parnames: List[str], parvalues: List[str], extraparnames: List[str] = []
+    ) -> Tuple[float, List[float]]:
         """Worker process that computes one fit with specified parameters fixed
 
         Parameters
@@ -106,7 +111,12 @@ class WrappedFitter:
         return chi2, extraparvalues
 
 
-def doonefit(ftr, parnames, parvalues, extraparnames=[]):
+def doonefit(
+    ftr: fitter.Fitter,
+    parnames: List[str],
+    parvalues: List[u.Quantity],
+    extraparnames: List[str] = [],
+) -> Tuple[float, List[float]]:
     """Worker process that computes one fit with specified parameters fixed
 
     Parameters
@@ -154,16 +164,16 @@ def doonefit(ftr, parnames, parvalues, extraparnames=[]):
 
 
 def grid_chisq(
-    ftr,
-    parnames,
-    parvalues,
-    extraparnames=[],
-    executor=None,
-    ncpu=None,
-    chunksize=1,
-    printprogress=True,
+    ftr: fitter.Fitter,
+    parnames: List[str],
+    parvalues: List[u.Quantity],
+    extraparnames: List[str] = [],
+    executor: Optional[concurrent.futures.Executor] = None,
+    ncpu: Optional[int] = None,
+    chunksize: int = 1,
+    printprogress: bool = True,
     **fitargs,
-):
+) -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
     """Compute chisq over a grid of parameters
 
     Parameters
@@ -380,17 +390,17 @@ def grid_chisq(
 
 
 def grid_chisq_derived(
-    ftr,
-    parnames,
-    parfuncs,
-    gridvalues,
-    extraparnames=[],
-    executor=None,
-    ncpu=None,
-    chunksize=1,
-    printprogress=True,
+    ftr: fitter.Fitter,
+    parnames: List[str],
+    parfuncs: List[callable],
+    gridvalues: List[np.ndarray],
+    extraparnames: List[str] = [],
+    executor: Optional[concurrent.futures.Executor] = None,
+    ncpu: Optional[int] = None,
+    chunksize: int = 1,
+    printprogress: bool = True,
     **fitargs,
-):
+) -> Tuple[np.ndarray, List[np.ndarray], Dict[str, np.ndarray]]:
     """Compute chisq over a grid of derived parameters
 
     Parameters
@@ -576,16 +586,16 @@ def grid_chisq_derived(
 
 
 def tuple_chisq(
-    ftr,
-    parnames,
-    parvalues,
-    extraparnames=[],
-    executor=None,
-    ncpu=None,
-    chunksize=1,
-    printprogress=True,
+    ftr: fitter.Fitter,
+    parnames: List[str],
+    parvalues: List[np.ndarray],
+    extraparnames: List[str] = [],
+    executor: Optional[concurrent.futures.Executor] = None,
+    ncpu: Optional[int] = None,
+    chunksize: int = 1,
+    printprogress: bool = True,
     **fitargs,
-):
+) -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
     """Compute chisq over a list of parameter tuples
 
     Parameters
@@ -761,17 +771,17 @@ def tuple_chisq(
 
 
 def tuple_chisq_derived(
-    ftr,
-    parnames,
-    parfuncs,
-    parvalues,
-    extraparnames=[],
-    executor=None,
-    ncpu=None,
-    chunksize=1,
-    printprogress=True,
+    ftr: fitter.Fitter,
+    parnames: List[str],
+    parfuncs: List[callable],
+    parvalues: List[np.ndarray],
+    extraparnames: List[str] = [],
+    executor: Optional[concurrent.futures.Executor] = None,
+    ncpu: Optional[int] = None,
+    chunksize: int = 1,
+    printprogress: bool = True,
     **fitargs,
-):
+) -> Tuple[np.ndarray, List, Dict[str, np.ndarray]]:
     """Compute chisq over a list of derived parameter tuples
 
     Parameters
