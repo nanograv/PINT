@@ -18,6 +18,7 @@ the released changes.
 - Fourier series representation of chromatic noise (`CMWaveX`)
 - `pint.utils.cmwavex_setup` and `pint.utils.plchromnoise_from_cmwavex` functions
 - More validation for correlated noise components in `TimingModel`
+- Moved functions related to `WaveX`, `DMWaveX`, and `CMWaveX` from `pint.utils` to their own namespaces within `pint.models`
 ### Fixed
 - Bug in `DMWaveX.get_indices()` function
 - Explicit type conversion in `woodbury_dot()` function
