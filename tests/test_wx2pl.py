@@ -7,6 +7,7 @@ from pint.simulation import make_fake_toas_uniform
 from pint.fitter import WLSFitter
 from pint.utils import find_optimal_nharms
 from pint.noise_analysis import (
+    compute_aic,
     plchromnoise_from_cmwavex,
     plrednoise_from_wavex,
     pldmnoise_from_dmwavex,
@@ -248,27 +249,6 @@ def test_find_optimal_nharms_dmwx(data_dmwx):
     assert np.all(aics >= 0)
 
 
-@pytest.fixture
-def model_sim3():
-    par_sim = """
-        PSR           SIM3
-        RAJ           05:00:00     1
-        DECJ          15:00:00     1
-        PEPOCH        55000
-        F0            100          1
-        F1            -1e-15       1 
-        PHOFF         0            1
-        DM            15           1
-        TZRMJD        55000
-        TZRFRQ        1400 
-        TZRSITE       gbt
-        UNITS         TDB
-        EPHEM         DE440
-        CLOCK         TT(BIPM2019)
-    """
-    return get_model(StringIO(par_sim))
-
-
 @pytest.mark.parametrize(
     "component_names",
     [
@@ -281,8 +261,8 @@ def model_sim3():
         ["WaveX", "DMWaveX", "CMWaveX"],
     ],
 )
-def test_prepare_model_for_find_optimal_nharms(model_sim3, component_names):
-    m0 = model_sim3
+def test_prepare_model_for_find_optimal_nharms(data_dmwx, component_names):
+    m0, t = data_dmwx
 
     m = prepare_model(
         model=m0,
@@ -291,6 +271,8 @@ def test_prepare_model_for_find_optimal_nharms(model_sim3, component_names):
         nharms=np.repeat(10, len(component_names)),
         chromatic_index=4,
     )
+
+    assert "PLDMNoise" not in m.components
 
     assert "PHOFF" in m.free_params
 
@@ -312,3 +294,28 @@ def test_prepare_model_for_find_optimal_nharms(model_sim3, component_names):
         assert not m.CM1.frozen and m.CM1.quantity is not None
         assert not m.CM2.frozen and m.CM2.quantity is not None
         assert len(m.components["CMWaveX"].get_indices()) == 10
+
+
+@pytest.mark.parametrize(
+    "component_names",
+    [
+        ["WaveX"],
+        ["DMWaveX"],
+        ["CMWaveX"],
+        ["WaveX", "DMWaveX"],
+        ["WaveX", "CMWaveX"],
+        ["DMWaveX", "CMWaveX"],
+        ["WaveX", "DMWaveX", "CMWaveX"],
+    ],
+)
+def test_compute_aic(data_dmwx, component_names):
+    m, t = data_dmwx
+    assert np.isfinite(
+        compute_aic(
+            m,
+            t,
+            include_components=component_names,
+            ii=np.array((8, 9, 10)),
+            chromatic_index=4,
+        )
+    )

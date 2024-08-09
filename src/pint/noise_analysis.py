@@ -302,7 +302,9 @@ def compute_aic(
 
     from pint.fitter import Fitter
 
-    ftr = Fitter.auto(toas, model1)
+    # Downhill fitters don't work well here.
+    # TODO: Investigate this.
+    ftr = Fitter.auto(toas, model1, downhill=False)
     ftr.fit_toas(maxiter=10)
 
     return akaike_information_criterion(ftr.model, toas)
@@ -316,6 +318,10 @@ def prepare_model(
     chromatic_index: float,
 ):
     model1 = deepcopy(model)
+
+    for comp in ["PLRedNoise", "PLDMNoise", "PLCMNoise"]:
+        if comp in model1.components:
+            model1.remove_component(comp)
 
     if "PhaseOffset" not in model1.components:
         model1.add_component(PhaseOffset())
@@ -342,6 +348,9 @@ def prepare_model(
                 model1["DM2"].quantity = 0 * model1["DM2"].units
             model1["DM2"].frozen = False
 
+            if model1["DMEPOCH"].quantity is None:
+                model1["DMEPOCH"].quantity = model1["PEPOCH"].quantity
+
             nharms_dwx = nharms[jj]
             if nharms_dwx > 0:
                 dmwavex_setup(model1, Tspan, n_freqs=nharms_dwx, freeze_params=False)
@@ -360,6 +369,9 @@ def prepare_model(
             if model1["CM2"].quantity is None:
                 model1["CM2"].quantity = 0 * model1["CM2"].units
             model1["CM2"].frozen = False
+
+            if model1["CMEPOCH"].quantity is None:
+                model1["CMEPOCH"].quantity = model1["PEPOCH"].quantity
 
             nharms_cwx = nharms[jj]
             if nharms_cwx > 0:
