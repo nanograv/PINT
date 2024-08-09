@@ -69,7 +69,7 @@ class FDJump(DelayComponent):
         self.add_param(
             boolParameter(
                 name="FDJUMPLOG",
-                value=False,
+                value=True,
                 description="Whether to use log-frequency (Y) or linear-frequency (N) for computing FDJUMPs.",
             )
         )
