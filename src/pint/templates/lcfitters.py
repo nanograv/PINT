@@ -14,6 +14,7 @@ $Header: /nfs/slac/g/glast/ground/cvs/pointlike/python/uw/pulsar/lcfitters.py,v 
 author: M. Kerr <matthew.kerr@gmail.com>
 
 """
+
 import numpy as np
 import scipy
 from pint.eventstats import hmw

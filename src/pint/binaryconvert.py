@@ -262,9 +262,11 @@ def _from_ELL1(model):
         (om.s * u.rad).to(u.deg) if om.s > 0 else None,
         t02.s * u.d if t02.s > 0 else None,
         edot.s * u.Hz if (edot is not None and edot.s > 0) else None,
-        (omdot.s * u.rad / u.s).to(u.deg / u.yr)
-        if (omdot is not None and omdot.s > 0)
-        else None,
+        (
+            (omdot.s * u.rad / u.s).to(u.deg / u.yr)
+            if (omdot is not None and omdot.s > 0)
+            else None
+        ),
     )
 
 
@@ -476,9 +478,7 @@ def _DDGR_to_PK(model):
     )
     if model.XOMDOT.quantity is not None:
         omegadot += model.XOMDOT.as_ufloat(u.rad / u.s)
-    fe = (1 + (73.0 / 24) * ecc**2 + (37.0 / 96) * ecc**4) / (1 - ecc**2) ** (
-        7.0 / 2
-    )
+    fe = (1 + (73.0 / 24) * ecc**2 + (37.0 / 96) * ecc**4) / (1 - ecc**2) ** (7.0 / 2)
     # units as s/s
     pbdot = (
         (-192 * np.pi / 5)

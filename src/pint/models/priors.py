@@ -6,6 +6,7 @@ in the model class, that implements priors on combinations of parameters,
 such as total proper motion, 2-d sky location, etc.
 
 """
+
 import numpy as np
 from scipy.stats import rv_continuous, uniform
 

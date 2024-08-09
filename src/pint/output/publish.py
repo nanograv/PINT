@@ -1,4 +1,5 @@
 """Generate LaTeX summary of a timing model and TOAs."""
+
 from pint.models import (
     TimingModel,
     DispersionDMX,
