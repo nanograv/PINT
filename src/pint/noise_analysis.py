@@ -10,6 +10,7 @@ from pint.models.chromatic_model import ChromaticCM
 from pint.models.cmwavex import cmwavex_setup
 from pint.models.dispersion_model import DispersionDM
 from pint.models.dmwavex import dmwavex_setup
+from pint.models.parameter import prefixParameter
 from pint.models.phase_offset import PhaseOffset
 from pint.models.timing_model import TimingModel
 from pint.models.wavex import wavex_setup
@@ -295,7 +296,9 @@ def compute_aic(
     ii: np.ndarray,
     chromatic_index: float,
 ):
-    model1 = prepare_model(model, toas, include_components, ii, chromatic_index)
+    model1 = prepare_model(
+        model, toas.get_Tspan(), include_components, ii, chromatic_index
+    )
 
     from pint.fitter import Fitter
 
@@ -307,37 +310,48 @@ def compute_aic(
 
 def prepare_model(
     model: TimingModel,
-    toas: TOAs,
+    Tspan: u.Quantity,
     include_components: List[str],
     nharms: np.ndarray,
     chromatic_index: float,
 ):
     model1 = deepcopy(model)
 
-    Tspan = toas.get_Tspan()
-
     if "PhaseOffset" not in model1.components:
         model1.add_component(PhaseOffset())
-        model1.PHOFF.frozen = False
+    model1.PHOFF.frozen = False
 
     if "DMWaveX" in include_components:
         if "DispersionDM" not in model1.components:
             model1.add_component(DispersionDM())
 
-        model1.DM.frozen = False
-        if model.DM1.quantity is None:
-            model.DM1.quantity = 0 * model.DM1.units
-        model1.DM1.frozen = False
+        model1["DM"].frozen = False
+
+        if model1["DM1"].quantity is None:
+            model1["DM1"].quantity = 0 * model1["DM1"].units
+        model1["DM1"].frozen = False
+
+        if "DM2" not in model1.params:
+            model1.components["DispersionDM"].add_param(model["DM1"].new_param(2))
+        if model1["DM2"].quantity is None:
+            model1["DM2"].quantity = 0 * model1["DM2"].units
+        model1["DM2"].frozen = False
 
     if "CMWaveX" in include_components:
         if "ChromaticCM" not in model1.components:
             model1.add_component(ChromaticCM())
-            model1.TNCHROMIDX.value = chromatic_index
+            model1["TNCHROMIDX"].value = chromatic_index
 
-        model1.CM.frozen = False
-        if model.CM1.quantity is None:
-            model.CM1.quantity = 0 * model.CM1.units
-        model1.CM1.frozen = False
+        model1["CM"].frozen = False
+        if model1["CM1"].quantity is None:
+            model1["CM1"].quantity = 0 * model1["CM1"].units
+        model1["CM1"].frozen = False
+
+        if "CM2" not in model1.params:
+            model1.components["ChromaticCM"].add_param(model1["CM1"].new_param(2))
+        if model1["CM2"].quantity is None:
+            model1["CM2"].quantity = 0 * model1["CM2"].units
+        model1["CM2"].frozen = False
 
     for jj, comp in enumerate(include_components):
         if comp == "WaveX":

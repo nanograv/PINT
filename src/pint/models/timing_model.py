@@ -33,6 +33,7 @@ import inspect
 import contextlib
 from collections import OrderedDict, defaultdict
 from functools import wraps
+from typing import Dict
 from warnings import warn
 from uncertainties import ufloat
 
@@ -807,7 +808,7 @@ class TimingModel:
             p.uncertainty = v if isinstance(v, u.Quantity) else v * p.units
 
     @property_exists
-    def components(self):
+    def components(self) -> Dict[str, "Component"]:
         """All the components in a dictionary indexed by name."""
         comps = {}
         for ct in self.component_types:

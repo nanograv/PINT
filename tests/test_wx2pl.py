@@ -10,6 +10,7 @@ from pint.noise_analysis import (
     plchromnoise_from_cmwavex,
     plrednoise_from_wavex,
     pldmnoise_from_dmwavex,
+    prepare_model,
 )
 
 from io import StringIO
@@ -245,3 +246,69 @@ def test_find_optimal_nharms_dmwx(data_dmwx):
 
     assert nharm <= 7
     assert np.all(aics >= 0)
+
+
+@pytest.fixture
+def model_sim3():
+    par_sim = """
+        PSR           SIM3
+        RAJ           05:00:00     1
+        DECJ          15:00:00     1
+        PEPOCH        55000
+        F0            100          1
+        F1            -1e-15       1 
+        PHOFF         0            1
+        DM            15           1
+        TZRMJD        55000
+        TZRFRQ        1400 
+        TZRSITE       gbt
+        UNITS         TDB
+        EPHEM         DE440
+        CLOCK         TT(BIPM2019)
+    """
+    return get_model(StringIO(par_sim))
+
+
+@pytest.mark.parametrize(
+    "component_names",
+    [
+        ["WaveX"],
+        ["DMWaveX"],
+        ["CMWaveX"],
+        ["WaveX", "DMWaveX"],
+        ["WaveX", "CMWaveX"],
+        ["DMWaveX", "CMWaveX"],
+        ["WaveX", "DMWaveX", "CMWaveX"],
+    ],
+)
+def test_prepare_model_for_find_optimal_nharms(model_sim3, component_names):
+    m0 = model_sim3
+
+    m = prepare_model(
+        model=m0,
+        Tspan=10 * u.year,
+        include_components=component_names,
+        nharms=np.repeat(10, len(component_names)),
+        chromatic_index=4,
+    )
+
+    assert "PHOFF" in m.free_params
+
+    assert ("WaveX" in component_names) == ("WaveX" in m.components)
+    assert ("DMWaveX" in component_names) == ("DMWaveX" in m.components)
+    assert ("CMWaveX" in component_names) == ("CMWaveX" in m.components)
+
+    if "WaveX" in component_names:
+        assert len(m.components["WaveX"].get_indices()) == 10
+
+    if "DMWaveX" in component_names:
+        assert not m.DM.frozen and m.DM.quantity is not None
+        assert not m.DM1.frozen and m.DM1.quantity is not None
+        assert not m.DM2.frozen and m.DM2.quantity is not None
+        assert len(m.components["DMWaveX"].get_indices()) == 10
+
+    if "CMWaveX" in component_names:
+        assert not m.CM.frozen and m.CM.quantity is not None
+        assert not m.CM1.frozen and m.CM1.quantity is not None
+        assert not m.CM2.frozen and m.CM2.quantity is not None
+        assert len(m.components["CMWaveX"].get_indices()) == 10
