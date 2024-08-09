@@ -14,7 +14,8 @@ the released changes.
 - Changed default value of `FDJUMPLOG` to `Y`
 - Bumped `black` version to 24.x
 ### Added
-- Type hints in `pint.derived_quantities` and `pint.residuals`
+- Type hints in `pint.derived_quantities`, `pint.modelutils`, `pint.binaryconvert`, `pint.config`, 
+`pint.erfautils`, `pint.fits_utils`, `pint.logging` and `pint.residuals`
 - Doing `model.par = something` will try to assign to `par.quantity` or `par.value` but will give warning
 - `PLChromNoise` component to model chromatic red noise with a power law spectrum
 ### Fixed
