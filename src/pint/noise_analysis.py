@@ -284,8 +284,6 @@ def find_optimal_nharms(
 
     assert all(np.isfinite(aics)), "Infs/NaNs found in AICs!"
 
-    aics -= np.min(aics)
-
     return aics, np.unravel_index(np.argmin(aics), aics.shape)
 
 
