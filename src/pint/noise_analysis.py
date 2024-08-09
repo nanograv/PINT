@@ -321,48 +321,46 @@ def prepare_model(
         model1.add_component(PhaseOffset())
     model1.PHOFF.frozen = False
 
-    if "DMWaveX" in include_components:
-        if "DispersionDM" not in model1.components:
-            model1.add_component(DispersionDM())
-
-        model1["DM"].frozen = False
-
-        if model1["DM1"].quantity is None:
-            model1["DM1"].quantity = 0 * model1["DM1"].units
-        model1["DM1"].frozen = False
-
-        if "DM2" not in model1.params:
-            model1.components["DispersionDM"].add_param(model["DM1"].new_param(2))
-        if model1["DM2"].quantity is None:
-            model1["DM2"].quantity = 0 * model1["DM2"].units
-        model1["DM2"].frozen = False
-
-    if "CMWaveX" in include_components:
-        if "ChromaticCM" not in model1.components:
-            model1.add_component(ChromaticCM())
-            model1["TNCHROMIDX"].value = chromatic_index
-
-        model1["CM"].frozen = False
-        if model1["CM1"].quantity is None:
-            model1["CM1"].quantity = 0 * model1["CM1"].units
-        model1["CM1"].frozen = False
-
-        if "CM2" not in model1.params:
-            model1.components["ChromaticCM"].add_param(model1["CM1"].new_param(2))
-        if model1["CM2"].quantity is None:
-            model1["CM2"].quantity = 0 * model1["CM2"].units
-        model1["CM2"].frozen = False
-
     for jj, comp in enumerate(include_components):
         if comp == "WaveX":
             nharms_wx = nharms[jj]
             if nharms_wx > 0:
                 wavex_setup(model1, Tspan, n_freqs=nharms_wx, freeze_params=False)
         elif comp == "DMWaveX":
+            if "DispersionDM" not in model1.components:
+                model1.add_component(DispersionDM())
+
+            model1["DM"].frozen = False
+
+            if model1["DM1"].quantity is None:
+                model1["DM1"].quantity = 0 * model1["DM1"].units
+            model1["DM1"].frozen = False
+
+            if "DM2" not in model1.params:
+                model1.components["DispersionDM"].add_param(model["DM1"].new_param(2))
+            if model1["DM2"].quantity is None:
+                model1["DM2"].quantity = 0 * model1["DM2"].units
+            model1["DM2"].frozen = False
+
             nharms_dwx = nharms[jj]
             if nharms_dwx > 0:
                 dmwavex_setup(model1, Tspan, n_freqs=nharms_dwx, freeze_params=False)
         elif comp == "CMWaveX":
+            if "ChromaticCM" not in model1.components:
+                model1.add_component(ChromaticCM())
+                model1["TNCHROMIDX"].value = chromatic_index
+
+            model1["CM"].frozen = False
+            if model1["CM1"].quantity is None:
+                model1["CM1"].quantity = 0 * model1["CM1"].units
+            model1["CM1"].frozen = False
+
+            if "CM2" not in model1.params:
+                model1.components["ChromaticCM"].add_param(model1["CM1"].new_param(2))
+            if model1["CM2"].quantity is None:
+                model1["CM2"].quantity = 0 * model1["CM2"].units
+            model1["CM2"].frozen = False
+
             nharms_cwx = nharms[jj]
             if nharms_cwx > 0:
                 cmwavex_setup(model1, Tspan, n_freqs=nharms_cwx, freeze_params=False)
