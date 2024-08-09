@@ -11,14 +11,15 @@ the released changes.
 ### Changed
 - Moved the events -> TOAs and photon weights code into the function `load_events_weights` within `event_optimize`.
 - Updated the `maxMJD` argument in `event_optimize` to default to the current mjd
+- More validation for correlated noise components in `TimingModel`
+- Moved functions related to `WaveX`, `DMWaveX`, and `CMWaveX` from `pint.utils` to their own namespaces within `pint.models`
+- Moved `plrednoise_from_wavex` and similar functions from `pint.utils` to `pint.noise_analysis`
 ### Added
 - Type hints in `pint.derived_quantities`
 - Doing `model.par = something` will try to assign to `par.quantity` or `par.value` but will give warning
 - `PLChromNoise` component to model chromatic red noise with a power law spectrum
 - Fourier series representation of chromatic noise (`CMWaveX`)
 - `pint.utils.cmwavex_setup` and `pint.utils.plchromnoise_from_cmwavex` functions
-- More validation for correlated noise components in `TimingModel`
-- Moved functions related to `WaveX`, `DMWaveX`, and `CMWaveX` from `pint.utils` to their own namespaces within `pint.models`
 ### Fixed
 - Bug in `DMWaveX.get_indices()` function
 - Explicit type conversion in `woodbury_dot()` function
