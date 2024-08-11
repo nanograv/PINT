@@ -1,4 +1,5 @@
 """The DDS model - Damour and Deruelle with alternate Shapiro delay parametrization."""
+
 import astropy.constants as c
 import astropy.units as u
 import numpy as np

@@ -41,6 +41,8 @@ def test_params(model_and_toas):
         and hasattr(model, "FDJUMPDM2")
     )
 
+    assert model.FDJUMPLOG.value
+
 
 def test_residuals(model_and_toas):
     model, toas = model_and_toas

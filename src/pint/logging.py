@@ -54,7 +54,8 @@ import re
 import sys
 import warnings
 from loguru import logger as log
-
+from typing import Union, Optional, Dict, List
+import pint.types
 
 __all__ = ["LogFilter", "setup", "format", "levels", "get_level"]
 
@@ -79,7 +80,14 @@ warning_onceregistry = {}
 levels = ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 
-def showwarning(message, category, filename, lineno, file=None, line=None):
+def showwarning(
+    message: Union[str, Warning],
+    category: Warning,
+    filename: str,
+    lineno: int,
+    file=None,
+    line=None,
+) -> None:
     """
     Function to allow ``loguru`` to capture warnings emitted by :func:`warnings.warn`.
 
@@ -127,8 +135,13 @@ class LogFilter:
     Others that will only be seen once.  Filtering of those is done on the basis of regular expressions.
     """
 
-    def __init__(self, onlyonce=None, never=None, onlyonce_level="INFO"):
-        """
+    def __init__(
+        self,
+        onlyonce: Optional[List[str]] = None,
+        never: Optional[List[str]] = None,
+        onlyonce_level: str = "INFO",
+    ) -> None:
+        r"""
         Define regexs for messages that will only be seen once.  Use ``\\S+`` for a variable that might change.
         If a message comes through with a new value for that variable, it will be seen.
 
@@ -194,7 +207,7 @@ class LogFilter:
 
         self.onlyonce_level = onlyonce_level
 
-    def filter(self, record):
+    def filter(self, record: Dict[str, str]) -> bool:
         """Filter the record based on ``record["message"]`` and ``record["level"]``
         If this returns s,``False``, the message is not seen
 
@@ -234,15 +247,15 @@ class LogFilter:
 
 
 def setup(
-    level="INFO",
-    sink=sys.stderr,
-    format=format,
-    filter=LogFilter(),
-    usecolors=True,
-    colors={"DEBUG": debug_color},
-    capturewarnings=True,
-    removeprior=True,
-):
+    level: str = "INFO",
+    sink: pint.types.file_like = sys.stderr,
+    format: str = format,
+    filter: callable = LogFilter(),
+    usecolors: bool = True,
+    colors: Dict[str, str] = {"DEBUG": debug_color},
+    capturewarnings: bool = True,
+    removeprior: bool = True,
+) -> int:
     """
     Setup the PINT logging using ``loguru``
 
@@ -319,7 +332,7 @@ def setup(
     return loghandler
 
 
-def get_level(starting_level_name, verbosity, quietness):
+def get_level(starting_level_name: str, verbosity: int, quietness: int) -> str:
     """Get appropriate logging level given command-line input
 
     Parameters
