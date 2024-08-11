@@ -7,7 +7,7 @@ __all__ = ["datadir", "examplefile", "runtimefile"]
 
 
 # location of tim, par files installed via pkg_resources
-def datadir():
+def datadir() -> str:
     """Location of the PINT data (par and tim files)
 
     Returns
@@ -18,7 +18,7 @@ def datadir():
     return pkg_resources.resource_filename(__name__, "data/")
 
 
-def examplefile(filename):
+def examplefile(filename: str) -> str:
     """Full path to the requested PINT example data file
 
     Parameters
@@ -40,7 +40,7 @@ def examplefile(filename):
     )
 
 
-def runtimefile(filename):
+def runtimefile(filename: str) -> str:
     """Full path to the requested PINT runtime (clock etc) data file
 
     Parameters
