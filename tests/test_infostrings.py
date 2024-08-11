@@ -1,4 +1,5 @@
 """Tests for adding info strings to parfiles and tim files"""
+
 import os
 import pytest
 import io
