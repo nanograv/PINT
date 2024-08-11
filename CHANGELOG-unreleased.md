@@ -14,8 +14,11 @@ the released changes.
 - More validation for correlated noise components in `TimingModel`
 - Moved functions related to `WaveX`, `DMWaveX`, and `CMWaveX` from `pint.utils` to their own namespaces within `pint.models`
 - Moved `plrednoise_from_wavex` and similar functions from `pint.utils` to `pint.noise_analysis`
+- Changed default value of `FDJUMPLOG` to `Y`
+- Bumped `black` version to 24.x
 ### Added
-- Type hints in `pint.derived_quantities`
+- Type hints in `pint.derived_quantities`, `pint.modelutils`, `pint.binaryconvert`, `pint.config`, 
+`pint.erfautils`, `pint.fits_utils`, `pint.logging` and `pint.residuals`
 - Doing `model.par = something` will try to assign to `par.quantity` or `par.value` but will give warning
 - `PLChromNoise` component to model chromatic red noise with a power law spectrum
 - Fourier series representation of chromatic noise (`CMWaveX`)
