@@ -134,7 +134,7 @@ class LogFilter:
     Define some messages that are never seen (e.g., Deprecation Warnings).
     Others that will only be seen once.  Filtering of those is done on the basis of regular expressions.
     """
-    
+
     def __init__(
         self,
         onlyonce: Optional[List[str]] = None,
