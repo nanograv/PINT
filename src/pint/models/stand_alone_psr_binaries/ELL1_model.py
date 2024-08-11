@@ -1,4 +1,5 @@
 """The ELL1 model for approximately handling near-circular orbits."""
+
 import astropy.constants as c
 import astropy.units as u
 import numpy as np

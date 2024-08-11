@@ -55,9 +55,7 @@ def calc_lat_weights(energies, angseps, logeref=4.1, logesig=0.5):
     logE = np.log10(energies)
 
     sigma = (
-        np.sqrt(
-            (psfpar0**2 * np.power(100.0 / energies, 2.0 * psfpar1) + psfpar2**2)
-        )
+        np.sqrt((psfpar0**2 * np.power(100.0 / energies, 2.0 * psfpar1) + psfpar2**2))
         / scalepsf
     )
 

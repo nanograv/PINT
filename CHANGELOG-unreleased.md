@@ -11,8 +11,11 @@ the released changes.
 ### Changed
 - Moved the events -> TOAs and photon weights code into the function `load_events_weights` within `event_optimize`.
 - Updated the `maxMJD` argument in `event_optimize` to default to the current mjd
+- Changed default value of `FDJUMPLOG` to `Y`
+- Bumped `black` version to 24.x
 ### Added
-- Type hints in `pint.derived_quantities`
+- Type hints in `pint.derived_quantities`, `pint.modelutils`, `pint.binaryconvert`, `pint.config`, 
+`pint.erfautils`, `pint.fits_utils`, `pint.logging` and `pint.residuals`
 - Doing `model.par = something` will try to assign to `par.quantity` or `par.value` but will give warning
 - `plrednoise_from_wavex()` and `pldmnoise_from_dmwavex()` functions now compute `TNRedFLow` and `TNDMFLow`
 - `powerlaw_corner` function
