@@ -11,4 +11,4 @@ def test_require_longdouble_precision(monkeypatch):
     import pint.pulsar_mjd
 
     with pytest.raises(PINTPrecisionError):
-        require_longdouble_precision()
+        require_longdouble_precision(warning=False)
