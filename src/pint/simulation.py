@@ -10,6 +10,7 @@ import numpy as np
 from loguru import logger as log
 from astropy import time
 
+from pint.pulsar_mjd import check_longdouble_precision
 from pint.types import time_like, file_like
 import pint.residuals
 import pint.toa
@@ -53,7 +54,7 @@ def zero_residuals(
     ts.compute_pulse_numbers(model)
     maxresid = None
     if tolerance is None:
-        tolerance = 1 * u.ns if pint.utils.check_longdouble_precision() else 5 * u.us
+        tolerance = 1 * u.ns if check_longdouble_precision() else 5 * u.us
     for i in range(maxiter):
         r = pint.residuals.Residuals(
             ts, model, subtract_mean=subtract_mean, track_mode="use_pulse_numbers"

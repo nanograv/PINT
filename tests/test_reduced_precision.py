@@ -1,5 +1,5 @@
 import numpy as np
-from pint.utils import require_longdouble_precision, PINTPrecisionError
+from pint.pulsar_mjd import require_longdouble_precision, PINTPrecisionError
 import pytest
 
 
