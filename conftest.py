@@ -47,4 +47,4 @@ def temp_cache(tmpdir):
 
 
 # Refuse to run test suite if precision not available
-pint.pulsar_mjd.require_longdouble_precision()
+pint.pulsar_mjd.require_longdouble_precision(warning=False)
