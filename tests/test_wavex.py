@@ -10,7 +10,12 @@ from pint.models.timing_model import MissingParameter
 from pint.fitter import Fitter
 from pint.residuals import Residuals
 from pint.simulation import make_fake_toas_uniform
-from pint.models.wavex import WaveX, translate_wave_to_wavex, translate_wavex_to_wave
+from pint.models.wavex import (
+    WaveX,
+    translate_wave_to_wavex,
+    translate_wavex_to_wave,
+    wavex_setup,
+)
 
 par1 = """
     PSR              B1937+21
@@ -397,3 +402,14 @@ def test_wave_wavex_roundtrip_conversion():
     rs_wavex_to_wave = Residuals(toas, wavex_to_wave_model)
     assert np.allclose(rs_wave.resids, rs_wave_to_wavex.resids, atol=1e-3)
     assert np.allclose(rs_wave.resids, rs_wavex_to_wave.resids, atol=1e-3)
+
+
+def test_wavex_setup():
+    m = get_model(StringIO(par1))
+    wavex_setup(m, T_span=3 * u.year, n_freqs=1)
+
+    m = get_model(StringIO(par1))
+    wavex_setup(m, T_span=3 * u.year, n_freqs=10)
+
+    m = get_model(StringIO(par1))
+    wavex_setup(m, T_span=3 * u.year, freqs=np.linspace(1, 10, 10) / u.year)

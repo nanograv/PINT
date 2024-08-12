@@ -31,7 +31,7 @@ def test_cmwavex():
     """
     m = get_model(StringIO(par))
 
-    with pytest.raises(ValueError):
+    with pytest.raises(AssertionError):
         idxs = cmwavex_setup(m, 3600)
 
     idxs = cmwavex_setup(m, 3600, n_freqs=5)
@@ -175,3 +175,31 @@ def test_add_cmwavex():
             cmwxcoses=[0, 0],
             frozens=[False, False, False],
         )
+
+
+def test_cmwavex_setup():
+    par1 = """
+        PSR              B1937+21
+        LAMBDA   301.9732445337270
+        BETA      42.2967523367957
+        PMLAMBDA           -0.0175
+        PMBETA             -0.3971
+        PX                  0.1515
+        POSEPOCH        55321.0000
+        F0    641.9282333345536244  1  0.0000000000000132
+        F1     -4.330899370129D-14  1  2.149749089617D-22
+        PEPOCH        55321.000000
+        DM               71.016633
+        CM                     0.1
+        TNCHROMIDX               4
+        UNITS                  TDB
+    """
+
+    m = get_model(StringIO(par1))
+    cmwavex_setup(m, T_span=3 * u.year, n_freqs=1)
+
+    m = get_model(StringIO(par1))
+    cmwavex_setup(m, T_span=3 * u.year, n_freqs=10)
+
+    m = get_model(StringIO(par1))
+    cmwavex_setup(m, T_span=3 * u.year, freqs=np.linspace(1, 10, 10) / u.year)

@@ -428,41 +428,36 @@ def dmwavex_setup(
     """
     from pint.models.dmwavex import DMWaveX
 
-    if (freqs is None) and (n_freqs is None):
-        raise ValueError(
-            "DMWaveX component base frequencies are not specified. "
-            "Please input either freqs or n_freqs"
-        )
+    assert (freqs is not None) or (
+        n_freqs is not None
+    ), "DMWaveX component base frequencies are not specified. Please input either freqs or n_freqs"
+    assert (freqs is None) or (
+        n_freqs is None
+    ), "Both freqs and n_freqs are specified. Only one or the other should be used"
 
-    if (freqs is not None) and (n_freqs is not None):
-        raise ValueError(
-            "Both freqs and n_freqs are specified. Only one or the other should be used"
-        )
-
-    if n_freqs is not None and n_freqs <= 0:
-        raise ValueError("Must use a non-zero number of wave frequencies")
+    assert (
+        n_freqs is None or n_freqs > 0
+    ), "Must use a non-zero number of wave frequencies"
 
     model.add_component(DMWaveX())
-    if isinstance(T_span, u.quantity.Quantity):
-        T_span.to(u.d)
-    else:
+    if not isinstance(T_span, u.quantity.Quantity):
         T_span *= u.d
 
     nyqist_freq = 1.0 / (2.0 * T_span)
     if freqs is not None:
-        if isinstance(freqs, u.quantity.Quantity):
-            freqs.to(u.d**-1)
-        else:
+        if not isinstance(freqs, u.quantity.Quantity):
             freqs *= u.d**-1
         if len(freqs) == 1:
             model.DMWXFREQ_0001.quantity = freqs
         else:
-            freqs = np.array(freqs)
-            freqs.sort()
             if min(np.diff(freqs)) < nyqist_freq:
                 warnings.warn(
                     "DMWaveX frequency spacing is finer than frequency resolution of data"
                 )
+
+            freqs = np.array(freqs)
+            freqs.sort()
+
             model.DMWXFREQ_0001.quantity = freqs[0]
             model.components["DMWaveX"].add_dmwavex_components(freqs[1:])
 
