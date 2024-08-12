@@ -14,6 +14,7 @@ the released changes.
 - More validation for correlated noise components in `TimingModel`
 - Moved functions related to `WaveX`, `DMWaveX`, and `CMWaveX` from `pint.utils` to their own namespaces within `pint.models`
 - Moved `plrednoise_from_wavex` and similar functions from `pint.utils` to `pint.noise_analysis`
+- `maskParameter.__repr__()` output now includes the frozen attribute.
 - Changed default value of `FDJUMPLOG` to `Y`
 - Bumped `black` version to 24.x
 ### Added
