@@ -214,6 +214,7 @@ class PulsarBinary(DelayComponent):
                 description_template=self.ORBWAVEC_description,
                 type_match="float",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -227,6 +228,7 @@ class PulsarBinary(DelayComponent):
                 description_template=self.ORBWAVES_description,
                 type_match="float",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
@@ -236,6 +238,7 @@ class PulsarBinary(DelayComponent):
                 units="rad/s",
                 description="Base frequency for ORBWAVEs model",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -243,6 +246,7 @@ class PulsarBinary(DelayComponent):
                 name="ORBWAVE_EPOCH",
                 description="Reference epoch for ORBWAVEs model",
                 time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 
