@@ -448,7 +448,13 @@ def test_model_from_par_hassubset():
     del Component.component_types["SubsetModel2"]
 
 
-bad_trouble = ["J1923+2515_NANOGrav_9yv1.gls.par", "J1744-1134.basic.ecliptic.par"]
+bad_trouble = [
+    "J1923+2515_NANOGrav_9yv1.gls.par",
+    "J1744-1134.basic.ecliptic.par",
+    "J1048+2339_orbwaves_invalid1.par",
+    "J1048+2339_orbwaves_invalid2.par",
+    "J1048+2339_orbwaves_invalid3.par",
+]
 
 
 # Test all the parameters.
