@@ -28,3 +28,5 @@ the released changes.
 - Removed the argument `--usepickle` in `event_optimize` as the `load_events_weights` function checks the events file type to see if the 
 file is a pickle file.
 - Removed obsolete code, such as manually tracking the progress of the MCMC run within `event_optimize`
+- `download_data.sh` script and `de432s.bsp` ephemeris file
+``
