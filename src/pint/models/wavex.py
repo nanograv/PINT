@@ -1,4 +1,5 @@
 """Delays expressed as a sum of sinusoids."""
+
 import astropy.units as u
 import numpy as np
 from loguru import logger as log
@@ -52,6 +53,7 @@ class WaveX(DelayComponent):
                 name="WXEPOCH",
                 description="Reference epoch for Fourier representation of red noise",
                 time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_wavex_component(0.1, index=1, wxsin=0, wxcos=0, frozen=False)
@@ -107,6 +109,7 @@ class WaveX(DelayComponent):
                 units="1/d",
                 value=wxfreq,
                 parameter_type="float",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -117,6 +120,7 @@ class WaveX(DelayComponent):
                 value=wxsin,
                 frozen=frozen,
                 parameter_type="float",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -127,6 +131,7 @@ class WaveX(DelayComponent):
                 value=wxcos,
                 frozen=frozen,
                 parameter_type="float",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.setup()
@@ -181,7 +186,7 @@ class WaveX(DelayComponent):
             frozens = np.repeat(frozens, len(wxfreqs))
         if len(frozens) != len(wxfreqs):
             raise ValueError(
-                f"Number of base frequencies must match number of frozen values"
+                "Number of base frequencies must match number of frozen values"
             )
         #### If indices is None, increment the current max WaveX index by 1. Increment using WXFREQ
         dct = self.get_prefix_mapping_component("WXFREQ_")
@@ -218,6 +223,7 @@ class WaveX(DelayComponent):
                     units="1/d",
                     value=wxfreq,
                     parameter_type="float",
+                    tcb2tdb_scale_factor=u.Quantity(1),
                 )
             )
             self.add_param(
@@ -228,6 +234,7 @@ class WaveX(DelayComponent):
                     value=wxsin,
                     parameter_type="float",
                     frozen=frozen,
+                    tcb2tdb_scale_factor=u.Quantity(1),
                 )
             )
             self.add_param(
@@ -238,6 +245,7 @@ class WaveX(DelayComponent):
                     value=wxcos,
                     parameter_type="float",
                     frozen=frozen,
+                    tcb2tdb_scale_factor=u.Quantity(1),
                 )
             )
         self.setup()
@@ -341,16 +349,15 @@ class WaveX(DelayComponent):
                 warn(f"Frequency WXFREQ_{index:04d} is negative")
             wfreqs[j] = getattr(self, f"WXFREQ_{index:04d}").value
         wfreqs.sort()
-        if np.any(np.diff(wfreqs) <= (1.0 / (2.0 * 364.25))):
-            warn("Frequency resolution is greater than 1/yr")
-        if self.WXEPOCH.value is None:
-            if self._parent is not None:
-                if self._parent.PEPOCH.value is None:
-                    raise MissingParameter(
-                        "WXEPOCH or PEPOCH are required if WaveX is being used"
-                    )
-                else:
-                    self.WXEPOCH.quantity = self._parent.PEPOCH.quantity
+        # if np.any(np.diff(wfreqs) <= (1.0 / (2.0 * 364.25))):
+        #     warn("Frequency resolution is greater than 1/yr")
+        if self.WXEPOCH.value is None and self._parent is not None:
+            if self._parent.PEPOCH.value is None:
+                raise MissingParameter(
+                    "WXEPOCH or PEPOCH are required if WaveX is being used"
+                )
+            else:
+                self.WXEPOCH.quantity = self._parent.PEPOCH.quantity
 
     def validate_toas(self, toas):
         return super().validate_toas(toas)

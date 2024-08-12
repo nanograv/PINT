@@ -21,6 +21,7 @@ See :ref:`Supported Parameters` for an overview, including a table of all the
 parameters PINT understands.
 
 """
+
 import numbers
 from warnings import warn
 
@@ -102,7 +103,7 @@ def _return_frequency_asquantity(f):
     astropy.units.Quantity
     """
 
-    return u.Quantity(f, u.MHz, copy=False)
+    return f << u.MHz
 
 
 class Parameter:
@@ -577,7 +578,7 @@ class Parameter:
         return True
 
     def value_as_latex(self):
-        return f"${self.as_ufloat():.1uSL}$" if not self.frozen else f"{self.value:f}"
+        return f"{self.value:f}" if self.frozen else f"${self.as_ufloat():.1uSL}$"
 
     def as_latex(self):
         try:
@@ -649,6 +650,11 @@ class floatParameter(Parameter):
         parameter exist.
     long_double : bool, optional, default False
         A flag specifying whether value is float or long double.
+    convert_tcb2tdb: bool
+        Whether to convert this parameter during TCB <-> TDB conversion.
+    tcb2tdb_scale_factor: astropy.units.Quantity
+        The scaling factor to be applied while computing the effective
+        dimensionality. The default is 1.
 
     Example
     -------
@@ -672,6 +678,8 @@ class floatParameter(Parameter):
         unit_scale=False,
         scale_factor=None,
         scale_threshold=None,
+        convert_tcb2tdb=True,
+        tcb2tdb_scale_factor=None,
         **kwargs,
     ):
         self.long_double = long_double
@@ -699,10 +707,18 @@ class floatParameter(Parameter):
         ]
         self.unit_scale = unit_scale
 
+        assert (
+            not convert_tcb2tdb or tcb2tdb_scale_factor is not None
+        ), "Please specify the tcb2tdb_scale_factor explicitly."
+        self.convert_tcb2tdb = convert_tcb2tdb
+        self.tcb2tdb_scale_factor = tcb2tdb_scale_factor
+
     @property
     def long_double(self):
         """Whether the parameter has long double precision."""
         # FIXME: why not just always keep long double precision?
+        # AS: Because it is not supported in Mac M* machines, and we
+        # should avoid long doubles as much as we can.
         return self._long_double
 
     @long_double.setter
@@ -754,8 +770,8 @@ class floatParameter(Parameter):
         1. Astropy quantity
         2. float
         3. string
-
         """
+
         # Check long_double
         if not self._long_double:
             setfunc_with_unit = _identity_function
@@ -849,6 +865,13 @@ class floatParameter(Parameter):
             units = self.units
         self.quantity = value.n * units
         self.uncertainty = value.s * units if value.s > 0 else None
+
+    @property
+    def effective_dimensionality(self) -> int:
+        """Compute the effective dimensionality for TCB <-> TDB conversion."""
+        return compute_effective_dimensionality(
+            self.quantity, self.tcb2tdb_scale_factor
+        )
 
 
 class strParameter(Parameter):
@@ -1088,6 +1111,8 @@ class MJDParameter(Parameter):
         continuous=True,
         aliases=None,
         time_scale="tdb",
+        convert_tcb2tdb=True,
+        tcb2tdb_scale_factor=None,
         **kwargs,
     ):
         self._time_scale = time_scale
@@ -1105,6 +1130,12 @@ class MJDParameter(Parameter):
         self.value_type = time.Time
         self.paramType = "MJDParameter"
         self.special_arg += ["time_scale"]
+
+        assert (
+            not convert_tcb2tdb or tcb2tdb_scale_factor is not None
+        ), "Please specify the tcb2tdb_scale_factor explicitly."
+        self.convert_tcb2tdb = convert_tcb2tdb
+        self.tcb2tdb_scale_factor = tcb2tdb_scale_factor
 
     def str_quantity(self, quan):
         return time_to_mjd_string(quan)
@@ -1212,6 +1243,13 @@ class MJDParameter(Parameter):
         """
         return ufloat(self.value, self.uncertainty_value)
 
+    @property
+    def effective_dimensionality(self) -> int:
+        """Compute the effective dimensionality for TCB <-> TDB conversion."""
+        return compute_effective_dimensionality(
+            self.value * u.day, self.tcb2tdb_scale_factor
+        )
+
 
 class AngleParameter(Parameter):
     """Parameter in angle units.
@@ -1239,6 +1277,11 @@ class AngleParameter(Parameter):
     aliases : list, optional
         An optional list of strings specifying alternate names that can also
         be accepted for this parameter.
+    convert_tcb2tdb: bool
+        Whether to convert this parameter during TCB <-> TDB conversion.
+    tcb2tdb_scale_factor: astropy.units.Quantity
+        The scaling factor to be applied while computing the effective
+        dimensionality. The default is 1.
 
     Example
     -------
@@ -1258,6 +1301,8 @@ class AngleParameter(Parameter):
         frozen=True,
         continuous=True,
         aliases=None,
+        convert_tcb2tdb=True,
+        tcb2tdb_scale_factor=None,
         **kwargs,
     ):
         self._str_unit = units
@@ -1286,6 +1331,12 @@ class AngleParameter(Parameter):
             continuous=continuous,
             aliases=aliases,
         )
+
+        assert (
+            not convert_tcb2tdb or tcb2tdb_scale_factor is not None
+        ), "Please specify the tcb2tdb_scale_factor explicitly."
+        self.convert_tcb2tdb = convert_tcb2tdb
+        self.tcb2tdb_scale_factor = tcb2tdb_scale_factor
 
     def _get_value(self, quan):
         # return Angle(x * self.unit_identifier[units.lower()][0])
@@ -1372,6 +1423,13 @@ class AngleParameter(Parameter):
         error = self.uncertainty.to_value(units) if self.uncertainty is not None else 0
         return ufloat(value, error)
 
+    @property
+    def effective_dimensionality(self) -> int:
+        """Compute the effective dimensionality for TCB <-> TDB conversion."""
+        return compute_effective_dimensionality(
+            self.quantity, self.tcb2tdb_scale_factor
+        )
+
 
 class prefixParameter:
     """Families of parameters identified by a prefix like ``DMX_0123``.
@@ -1422,6 +1480,12 @@ class prefixParameter:
         Set float type quantity and value in numpy long doubles.
     time_scale : str, optional
         Time scale for MJDParameter class.
+    convert_tcb2tdb: bool
+        Whether to convert this parameter during TCB <-> TDB conversion.
+    tcb2tdb_scale_factor: astropy.units.Quantity or function
+        The scaling factor to be applied while computing the effective
+        dimensionality. If this is a function, it should take the prefix as
+        argument and return the scaling factor. The default is 1.
     """
 
     def __init__(
@@ -1442,6 +1506,8 @@ class prefixParameter:
         scale_factor=None,
         scale_threshold=None,
         time_scale="utc",
+        convert_tcb2tdb=True,
+        tcb2tdb_scale_factor=None,
         **kwargs,
     ):
         # Split prefixed name, if the name is not in the prefixed format, error
@@ -1483,6 +1549,18 @@ class prefixParameter:
             real_description = input_description
         aliases = [pa + self.idxfmt for pa in self.prefix_aliases]
         self.long_double = long_double
+
+        # For prefix parameters, the scaling factor can in principle be
+        # a function of the prefix.
+        assert (
+            not convert_tcb2tdb or tcb2tdb_scale_factor is not None
+        ), "Please specify the tcb2tdb_scale_factor explicitly."
+        tcb2tdb_scale_factor_val = (
+            tcb2tdb_scale_factor(self.prefix)
+            if hasattr(tcb2tdb_scale_factor, "__call__")
+            else tcb2tdb_scale_factor
+        )
+
         # initiate parameter class
         self.param_comp = self.param_class(
             name=self.name,
@@ -1498,6 +1576,8 @@ class prefixParameter:
             unit_scale=unit_scale,
             scale_factor=scale_factor,
             scale_threshold=scale_threshold,
+            convert_tcb2tdb=convert_tcb2tdb,
+            tcb2tdb_scale_factor=tcb2tdb_scale_factor_val,
         )
         self.is_prefix = True
         self.time_scale = time_scale
@@ -1598,6 +1678,14 @@ class prefixParameter:
     def special_arg(self):
         return self.param_comp.special_arg
 
+    @property
+    def convert_tcb2tdb(self):
+        return self.param_comp.convert_tcb2tdb
+
+    @property
+    def tcb2tdb_scale_factor(self):
+        return self.param_comp.tcb2tdb_scale_factor
+
     def __repr__(self):
         return self.param_comp.__repr__()
 
@@ -1657,6 +1745,8 @@ class prefixParameter:
                 "long_double",
                 "time_scale",
                 "parameter_type",
+                "convert_tcb2tdb",
+                "tcb2tdb_scale_factor",
             ]
             if hasattr(self, key) and (key != "frozen" or inheritfrozen)
         }
@@ -1682,6 +1772,11 @@ class prefixParameter:
         value = self.quantity.to_value(units) if self.quantity is not None else 0
         error = self.uncertainty.to_value(units) if self.uncertainty is not None else 0
         return ufloat(value, error)
+
+    @property
+    def effective_dimensionality(self) -> int:
+        """Compute the effective dimensionality for TCB <-> TDB conversion."""
+        return self.param_comp.effective_dimensionality
 
 
 class maskParameter(floatParameter):
@@ -1737,6 +1832,11 @@ class maskParameter(floatParameter):
         Whether derivatives with respect to this parameter make sense.
     aliases : list, optional
         List of aliases for parameter name.
+    convert_tcb2tdb: bool
+        Whether to convert this parameter during TCB <-> TDB conversion.
+    tcb2tdb_scale_factor: astropy.units.Quantity
+        The scaling factor to be applied while computing the effective
+        dimensionality. The default is 1.
     """
 
     # TODO: Is mask parameter provide some other type of parameters other then floatParameter?
@@ -1755,6 +1855,8 @@ class maskParameter(floatParameter):
         frozen=True,
         continuous=False,
         aliases=[],
+        convert_tcb2tdb=True,
+        tcb2tdb_scale_factor=None,
     ):
         self.is_mask = True
         # {key_name: (keyvalue parse function, keyvalue length)}
@@ -1805,6 +1907,8 @@ class maskParameter(floatParameter):
             continuous=continuous,
             aliases=idx_aliases + aliases,
             long_double=long_double,
+            convert_tcb2tdb=convert_tcb2tdb,
+            tcb2tdb_scale_factor=tcb2tdb_scale_factor,
         )
 
         # For the first mask parameter, add name to aliases for the reading
@@ -2002,6 +2106,8 @@ class maskParameter(floatParameter):
                 frozen=self.frozen,
                 continuous=self.continuous,
                 aliases=self.prefix_aliases,
+                convert_tcb2tdb=self.convert_tcb2tdb,
+                tcb2tdb_scale_factor=self.tcb2tdb_scale_factor,
             )
             if copy_all
             else maskParameter(
@@ -2010,6 +2116,8 @@ class maskParameter(floatParameter):
                 long_double=self.long_double,
                 units=self.units,
                 aliases=self.prefix_aliases,
+                convert_tcb2tdb=self.convert_tcb2tdb,
+                tcb2tdb_scale_factor=self.tcb2tdb_scale_factor,
             )
         )
 
@@ -2239,10 +2347,12 @@ class pairParameter(floatParameter):
         try:
             # Maybe it's a singleton quantity
             return floatParameter.str_quantity(self, quan)
-        except AttributeError:
+        except AttributeError as e:
             # Not a quantity, let's hope it's a list of length two?
             if len(quan) != 2:
-                raise ValueError(f"Don't know how to print this as a pair: {quan}")
+                raise ValueError(
+                    f"Don't know how to print this as a pair: {quan}"
+                ) from e
 
         v0 = quan[0].to(self.units).value
         v1 = quan[1].to(self.units).value
@@ -2485,4 +2595,22 @@ class funcParameter(floatParameter):
             super().as_parfile_line(format=format)
             if self.inpar
             else f"# {super().as_parfile_line(format=format)}"
+        )
+
+
+def compute_effective_dimensionality(
+    quantity: u.Quantity, scaling_factor: u.Quantity
+) -> int:
+    """Compute the effective dimensionality for TCB <-> TDB conversion."""
+    unit = (quantity * scaling_factor).si.unit
+
+    if len(unit.bases) == 0 or unit.bases == [u.rad]:
+        return 0
+    elif unit.bases == [u.s]:
+        return unit.powers[0]
+    elif set(unit.bases) == {u.s, u.rad}:
+        return unit.powers[unit.bases.index(u.s)]
+    else:
+        raise ValueError(
+            "The scaled quantity has an unsupported unit. Check the scaling_factor.",
         )

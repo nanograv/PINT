@@ -27,7 +27,6 @@ See :ref:`Timing Models` for more details on how PINT's timing models work.
 
 """
 
-
 import abc
 import copy
 import inspect
@@ -277,14 +276,23 @@ class TimingModel:
             strParameter(name="UNITS", description="Units (TDB assumed)"), ""
         )
         self.add_param_from_top(
-            MJDParameter(name="START", description="Start MJD for fitting"), ""
+            MJDParameter(
+                name="START", description="Start MJD for fitting", convert_tcb2tdb=False
+            ),
+            "",
         )
         self.add_param_from_top(
-            MJDParameter(name="FINISH", description="End MJD for fitting"), ""
+            MJDParameter(
+                name="FINISH", description="End MJD for fitting", convert_tcb2tdb=False
+            ),
+            "",
         )
         self.add_param_from_top(
             floatParameter(
-                name="RM", description="Rotation measure", units=u.radian / u.m**2
+                name="RM",
+                description="Rotation measure",
+                units=u.radian / u.m**2,
+                convert_tcb2tdb=False,
             ),
             "",
         )
@@ -344,6 +352,7 @@ class TimingModel:
                 name="CHI2",
                 units="",
                 description="Chi-squared value obtained during fitting",
+                convert_tcb2tdb=False,
             ),
             "",
         )
@@ -352,6 +361,7 @@ class TimingModel:
                 name="CHI2R",
                 units="",
                 description="Reduced chi-squared value obtained during fitting",
+                convert_tcb2tdb=False,
             ),
             "",
         )
@@ -361,6 +371,7 @@ class TimingModel:
                 name="TRES",
                 units=u.us,
                 description="TOA residual after fitting",
+                convert_tcb2tdb=False,
             ),
             "",
         )
@@ -369,6 +380,7 @@ class TimingModel:
                 name="DMRES",
                 units=u.pc / u.cm**3,
                 description="DM residual after fitting (wideband only)",
+                convert_tcb2tdb=False,
             ),
             "",
         )
@@ -530,12 +542,41 @@ class TimingModel:
         )
 
     def __setattr__(self, name, value):
-        """Mostly this just sets ``self.name = value``.  But in the case where they are both :class:`Parameter` instances
-        with different names, this copies the ``quantity``, ``uncertainty``, ``frozen`` attributes only.
+        """Mostly this just sets ``self.name = value``.   But there are a few special cases:
+
+        * Where they are both :class:`Parameter` instances with different names,
+          this copies the ``quantity``, ``uncertainty``, ``frozen`` attributes only.
+
+        * When setting a parameter from the top-level to a float or Quantity,
+          it will set the ``quantity`` or ``value`` attribute appropriately.
+
+        * When setting a parameter from the top-level but which belongs to a component,
+          it will find the approprirate component and set the parameter within that.
         """
         if isinstance(value, (Parameter, prefixParameter)) and name != value.name:
+            # set parameter from another parameter with a different name
             for p in ["quantity", "uncertainty", "frozen"]:
                 setattr(getattr(self, name), p, getattr(value, p))
+        elif (
+            isinstance(value, (Parameter, prefixParameter))
+            and hasattr(value, "_parent")
+            and hasattr(value._parent, "_parent")
+            and self != value._parent._parent
+        ):
+            # find the parameter in a component when it's being set from a different model
+            for cp in self.components.values():
+                if name in cp.params:
+                    setattr(cp, name, value)
+        elif isinstance(value, (u.Quantity, time.Time)):
+            log.warning(
+                f"Setting '{name}.quantity' to '{value}' although 'quantity' not specified"
+            )
+            getattr(self, name).quantity = value
+        elif isinstance(value, (float, str, bool, int)) and name != "name":
+            log.warning(
+                f"Setting '{name}.value' to '{value}' (assumed units '{getattr(self,name).units}') although 'value' not specified"
+            )
+            getattr(self, name).value = value
         else:
             super().__setattr__(name, value)
 
@@ -1360,7 +1401,7 @@ class TimingModel:
         param_map = self.get_params_mapping()
         if param not in param_map:
             raise AttributeError(f"Can not find '{param}' in timing model.")
-        if param_map[param] == "timing_model":
+        if param_map[param] == "TimingModel":
             delattr(self, param)
             self.top_level_params.remove(param)
         else:
@@ -1739,6 +1780,7 @@ class TimingModel:
                 value=0.0,
                 units="second",
                 uncertainty=0.0,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
             self.add_param_from_top(param, "PhaseJump")
             getattr(self, param.name).frozen = False
@@ -1915,8 +1957,8 @@ class TimingModel:
         delay_derivs = self.delay_deriv_funcs
         if param not in list(delay_derivs.keys()):
             raise AttributeError(
-                "Derivative function for '{param}' is not provided"
-                " or not registered; parameter '{param}' may not be fittable. "
+                f"Derivative function for '{param}' is not provided"
+                f" or not registered; parameter '{param}' may not be fittable. "
             )
         for df in delay_derivs[param]:
             result += df(toas, param, acc_delay).to(
@@ -2487,11 +2529,7 @@ class TimingModel:
                                 ufloat(otherpar.value, otherpar.uncertainty.value)
                             )
                         else:
-                            # otherpar must have no uncertainty
-                            if otherpar.value is not None:
-                                value2[pn] = str(otherpar.value)
-                            else:
-                                value2[pn] = "Missing"
+                            value2[pn] = str(otherpar.value)
                     else:
                         value2[pn] = "Missing"
                     if value2[pn] == "Missing":
@@ -2642,9 +2680,7 @@ class TimingModel:
                         and not "unc_rat" in m
                     ):
                         sout = colorize(sout, "red")
-                    elif (
-                        "change" in m or "diff1" in m or "diff2" in m and "unc_rat" in m
-                    ):
+                    elif "diff2" in m:
                         sout = colorize(sout, "red", bg_color="green")
                     elif "unc_rat" in m:
                         sout = colorize(sout, bg_color="green")
@@ -2889,16 +2925,16 @@ class TimingModel:
         for cp in self.components.values():
             cp.setup()
 
-    def __contains__(self, name):
+    def __contains__(self, name: str) -> bool:
         return name in self.params
 
-    def __getitem__(self, name):
+    def __getitem__(self, name: str) -> Parameter:
         if name in self.top_level_params:
             return getattr(self, name)
         for cp in self.components.values():
             if name in cp.params:
                 return getattr(cp, name)
-        raise KeyError("TimingModel does not have parameter {}".format(name))
+        raise KeyError(f"TimingModel does not have parameter {name}")
 
     def __setitem__(self, name, value):
         # FIXME: This could be the right way to add Parameters?
@@ -2922,9 +2958,9 @@ class TimingModel:
 
         Parameters
         ----------
-        epoch : `astropy.time.Time` or Float, optional
-            new epoch for position.  If Float, MJD(TDB) is assumed.
-            Note that uncertainties are not adjusted.
+        epoch : float or astropy.time.Time or astropy.units.Quantity, optional
+            If float or Quantity, MJD(TDB) is assumed.
+            New epoch for position.
         ecl : str, optional
             Obliquity for PulsarEcliptic frame
 
@@ -2972,9 +3008,9 @@ class TimingModel:
 
         Parameters
         ----------
-        epoch : `astropy.time.Time` or Float, optional
-            new epoch for position.  If Float, MJD(TDB) is assumed.
-            Note that uncertainties are not adjusted.
+        epoch : float or astropy.time.Time or astropy.units.Quantity, optional
+            If float or Quantity, MJD(TDB) is assumed.
+            New epoch for position.
 
         Returns
         -------
@@ -3121,9 +3157,11 @@ class TimingModel:
                 tasc = ufloat(
                     # This is a time in MJD
                     self.TASC.quantity.mjd,
-                    self.TASC.uncertainty.to(u.d).value
-                    if self.TASC.uncertainty is not None
-                    else 0,
+                    (
+                        self.TASC.uncertainty.to(u.d).value
+                        if self.TASC.uncertainty is not None
+                        else 0
+                    ),
                 )
                 s += "Conversion from ELL1 parameters:\n"
                 ecc = um.sqrt(eps1**2 + eps2**2)
@@ -4069,9 +4107,17 @@ class UnknownParameter(TimingModelError):
 
 
 class UnknownBinaryModel(TimingModelError):
-    """Signal that the par file requested a binary model no in PINT."""
+    """Signal that the par file requested a binary model not in PINT."""
 
-    pass
+    def __init__(self, message, suggestion=None):
+        super().__init__(message)
+        self.suggestion = suggestion
+
+    def __str__(self):
+        base_message = super().__str__()
+        if self.suggestion:
+            return f"{base_message} Perhaps use {self.suggestion}?"
+        return base_message
 
 
 class MissingBinaryError(TimingModelError):

@@ -114,7 +114,7 @@ def test_toas_tolist(t, errors, freqs):
             toa.TOA((tt0, tt1), obs=obs, error=e, freq=fr, flags=f)
             for tt0, tt1, e, f, fr in zip(t[0], t[1], errors, combined_flags, freqs)
         ]
-    toas_tolist = toas.to_TOA_list()
+    toas_tolist = toas.to_TOA_list(undo_clkcorr=True)
     # for i in range(len(toalist)):
     #     assert toalist[i] == toas_tolist[i], f"{toalist[i]} != {toas_tolist[i]}"
     # depending on precision they should be equal, but if they aren't then just check the MJDs
@@ -228,16 +228,13 @@ def test_toas_fermi():
     get_satellite_observatory("Fermi", ft2file, overwrite=True)
 
     tl = load_Fermi_TOAs(eventfileraw, weightcolumn="PSRJ0030+0451")
-    ts = toa.get_TOAs_list(
-        tl, include_gps=False, include_bipm=False, planets=False, ephem="DE405"
-    )
+    ts = toa.get_TOAs_list(tl, include_bipm=False, planets=False, ephem="DE405")
 
     t = time.Time([toa.mjd for toa in tl], scale="tt")
     flags = [toa.flags for toa in tl]
     ts2 = toa.get_TOAs_array(
         t,
         "fermi",
-        include_gps=False,
         include_bipm=False,
         planets=False,
         ephem="DE405",
@@ -252,9 +249,7 @@ def test_toas_fermi_notoalist():
     get_satellite_observatory("Fermi", ft2file, overwrite=True)
 
     tl = load_Fermi_TOAs(eventfileraw, weightcolumn="PSRJ0030+0451")
-    toas = toa.get_TOAs_list(
-        tl, include_gps=False, include_bipm=False, planets=False, ephem="DE405"
-    )
+    toas = toa.get_TOAs_list(tl, include_bipm=False, planets=False, ephem="DE405")
 
     toas2 = get_Fermi_TOAs(
         eventfileraw,
@@ -264,6 +259,24 @@ def test_toas_fermi_notoalist():
     )
     assert np.all(toas["mjd"] == toas2["mjd"])
     assert np.all(toas.table == toas2.table)
+
+
+def test_geocenter():
+    toas = toa.get_TOAs(
+        io.StringIO(
+            """pint 0.000000 57932.5446286608075925 4.321 stl_geo  -format Tempo2 -creator nicer -mjdtt 57932.5454294 -tely -2783.63069101 -telx 6119.42973459 -telz -890.7794845 -nsrc 18.34 -obsid 70020101 -t NICER -vy 4.04867262 -vx 2.69970132 -dphi 0.20496 -nbkg 430.66 -vz 5.92980989 -exposure 1543.0
+pint 0.000000 57933.6326461481560532 2.422 stl_geo  -format Tempo2 -creator nicer -mjdtt 57933.6334469 -tely -4545.24145649 -telx 3799.22279181 -telz -3304.56529985 -nsrc 101.96 -obsid 70020102 -t NICER -vy 1.48403228 -vx 5.86477721 -dphi 0.20355 -nbkg 2394.04 -vz 4.70930058 -exposure 8100.71
+"""
+        )
+    )
+    toas2 = toa.get_TOAs(
+        io.StringIO(
+            """pint 0.000000 57932.5446286608075925 4.321 spacecraft  -format Tempo2 -creator nicer -mjdtt 57932.5454294 -tely -2783.63069101 -telx 6119.42973459 -telz -890.7794845 -nsrc 18.34 -obsid 70020101 -t NICER -vy 4.04867262 -vx 2.69970132 -dphi 0.20496 -nbkg 430.66 -vz 5.92980989 -exposure 1543.0
+pint 0.000000 57933.6326461481560532 2.422 spacecraft  -format Tempo2 -creator nicer -mjdtt 57933.6334469 -tely -4545.24145649 -telx 3799.22279181 -telz -3304.56529985 -nsrc 101.96 -obsid 70020102 -t NICER -vy 1.48403228 -vx 5.86477721 -dphi 0.20355 -nbkg 2394.04 -vz 4.70930058 -exposure 8100.71
+"""
+        )
+    )
+    assert np.all(toas == toas2)
 
 
 def test_toa_wb():

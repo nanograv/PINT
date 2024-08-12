@@ -2,11 +2,13 @@
 import argparse
 import sys
 import os
+from contextlib import suppress
 
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize as op
 from astropy.coordinates import SkyCoord
+from astropy.time import Time
 from scipy.stats import norm, uniform
 import pint.logging
 from loguru import logger as log
@@ -17,31 +19,18 @@ import pint.fermi_toas as fermi
 import pint.models
 import pint.plot_utils as plot_utils
 import pint.toa as toa
+from pint.toa import TOAs
+from pint.models.timing_model import TimingModel
 from pint.eventstats import hm, hmw
 from pint.fitter import Fitter
 from pint.models.priors import Prior
 from pint.observatory.satellite_obs import get_satellite_observatory
-
+from pint.types import file_like
 
 __all__ = ["read_gaussfitfile", "marginalize_over_phase", "main"]
-# log.setLevel('DEBUG')
-# np.seterr(all='raise')
-
-# initialization values
-# Should probably figure a way to make these not global variables
-maxpost = -9e99
-numcalls = 0
 
 
-class custom_timing(
-    pint.models.spindown.Spindown, pint.models.astrometry.AstrometryEcliptic
-):
-    def __init__(self, parfile):
-        super().__init__()
-        self.read_parfile(parfile)
-
-
-def read_gaussfitfile(gaussfitfile, proflen):
+def read_gaussfitfile(gaussfitfile: file_like, proflen: int):
     """Read a Gaussian-fit file as created by the output of pygaussfit.py.
 
     Parameters
@@ -89,7 +78,7 @@ def read_gaussfitfile(gaussfitfile, proflen):
     return template
 
 
-def gaussian_profile(N, phase, fwhm):
+def gaussian_profile(N: int, phase: float, fwhm: float):
     """Return a gaussian pulse profile with 'N' bins and an integrated 'flux' of 1 unit.
 
     Parameters
@@ -123,7 +112,7 @@ def gaussian_profile(N, phase, fwhm):
         )
         return retval
     except OverflowError:
-        log.warning("Problem in gaussian prof:  mean = %f  sigma = %f" % (mean, sigma))
+        log.warning(f"Problem in gaussian prof:  mean = {mean} sigma = {sigma}")
         return np.zeros(N, "d")
 
 
@@ -151,7 +140,7 @@ def profile_likelihood(phs, *otherargs):
     Likelihood is calculated as per eqn 2 in Pletsch & Clark 2015.
     """
     xvals, phases, template, weights = otherargs
-    phss = phases.astype(np.float64) + phs
+    phss = phases.astype(np.float64) + phs.astype(np.float64)
     phss %= 1
     probs = np.interp(phss, xvals, template, right=template[0])
     if weights is None:
@@ -291,8 +280,7 @@ def run_sampler_autocorr(sampler, pos, nsteps, burnin, csteps=100, crit1=10):
                     old_tau = tau
                     if converged1:
                         log.info(
-                            "10 % convergence reached with a mean estimated integrated step: "
-                            + str(x)
+                            f"10% convergence reached with a mean estimated integrated step: {x}"
                         )
                     else:
                         continue
@@ -321,6 +309,93 @@ def run_sampler_autocorr(sampler, pos, nsteps, burnin, csteps=100, crit1=10):
             else:
                 continue
     return autocorr
+
+
+def load_events_weights(
+    eventfile: file_like,
+    model: TimingModel,
+    weightcol: str,
+    wgtexp: float,
+    minMJD: float,
+    maxMJD: float,
+    minWeight: float,
+):
+    """Loads in Fermi photon events and generates a TOA object and a corresponding weights array
+
+    Parameters
+    ----------
+        eventfile: Photon events file, format: fits, pickle, pickle.gz
+        model: Timing Model
+        weightcol (str): Name of weight column (or 'CALC' to have them computed)
+        wgtexp (float): Raise computed weights to this power (or 0.0 to disable any rescaling of weights)
+        minMJD (float): Earliest MJD to use
+        maxMJD (float): Latest MJD to use
+        minWeight (float): Minimum weight to include
+    Returns
+    -------
+        ts: TOAs object containing all of the photon data
+        weights: numpy array containing the corresponding weights
+    """
+    if "AstrometryEcliptic" in list(model.components.keys()):
+        tc = SkyCoord(
+            model.ELONG.quantity,
+            model.ELAT.quantity,
+            frame="barycentrictrueecliptic",
+        )
+    else:
+        tc = SkyCoord(model.RAJ.quantity, model.DECJ.quantity, frame="icrs")
+
+    target = tc if weightcol == "CALC" else None
+
+    ts = None
+    if eventfile.endswith("pickle") or eventfile.endswith("pickle.gz"):
+        with suppress(IOError):
+            log.info(f"Using pickle file with minMJD {minMJD} and maxMJD: {maxMJD}")
+            ts = toa.load_pickle(eventfile)
+            mjds = ts.get_mjds().value
+            ts = ts[(mjds >= minMJD) & (mjds <= maxMJD)]
+
+    if ts is None:
+        ts = fermi.get_Fermi_TOAs(
+            eventfile,
+            weightcolumn=weightcol,
+            targetcoord=target,
+            minweight=minWeight,
+            minmjd=minMJD,
+            maxmjd=maxMJD,
+            ephem="DE421",
+            planets=False,
+        )
+        ts.filename = eventfile
+        with suppress(IOError):
+            toa.save_pickle(ts)
+
+    if weightcol is not None:
+        if weightcol == "CALC":
+            weights = np.asarray([float(x["weight"]) for x in ts.table["flags"]])
+            log.info(
+                f"Original weights have min / max weights {weights.min():.3f} / {weights.max():.3f}"
+            )
+            # Rescale the weights, if requested (by having wgtexp != 0.0)
+            if wgtexp != 0.0:
+                weights **= wgtexp
+                wmx, wmn = weights.max(), weights.min()
+                # make the highest weight = 1, but keep min weight the same
+                weights = wmn + ((weights - wmn) * (1.0 - wmn) / (wmx - wmn))
+            for ii, x in enumerate(ts.table["flags"]):
+                x["weight"] = str(weights[ii])
+        weights = np.asarray([float(x["weight"]) for x in ts.table["flags"]])
+
+        ts = ts[weights >= minWeight]
+        weights = weights[weights >= minWeight]
+        log.info(
+            f"There are {len(weights)} events, with min / max weights {weights.min():.3f} / {weights.max():.3f}"
+        )
+    else:
+        weights = None
+        log.info(f"There are {ts.ntoas} events, no weights are being used.")
+
+    return ts, weights
 
 
 class emcee_fitter(Fitter):
@@ -361,12 +436,8 @@ class emcee_fitter(Fitter):
         """
         The log posterior (priors * likelihood)
         """
-        global maxpost, numcalls, ftr
+        global ftr
         self.set_params(dict(zip(self.fitkeys[:-1], theta[:-1])))
-
-        numcalls += 1
-        if numcalls % (nwalkers * nsteps / 100) == 0:
-            log.info("~%d%% complete" % (numcalls / (nwalkers * nsteps / 100)))
 
         # Evaluate the prior FIRST, then don't even both computing
         # the posterior if the prior is not finite
@@ -380,12 +451,6 @@ class emcee_fitter(Fitter):
             theta[-1], self.xtemp, phases, self.template, self.weights
         )
         lnpost = lnprior + lnlikelihood
-        if lnpost > maxpost:
-            log.info("New max: %f" % lnpost)
-            for name, val in zip(ftr.fitkeys, theta):
-                log.info("  %8s: %25.15g" % (name, val))
-            maxpost = lnpost
-            self.maxpost_fitvals = theta
         return lnpost, lnprior, lnlikelihood
 
     def minimize_func(self, theta):
@@ -490,6 +555,7 @@ class emcee_fitter(Fitter):
 
 
 def main(argv=None):
+    tnow = Time.now().mjd
     parser = argparse.ArgumentParser(
         description="PINT tool for MCMC optimization of timing models using event data.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -520,11 +586,9 @@ def main(argv=None):
         default=1000,
     )
     parser.add_argument(
-        "--minMJD", help="Earliest MJD to use", type=float, default=54680.0
+        "--minMJD", help="Earliest MJD to use", type=float, default=39822.0
     )
-    parser.add_argument(
-        "--maxMJD", help="Latest MJD to use", type=float, default=57250.0
-    )
+    parser.add_argument("--maxMJD", help="Latest MJD to use", type=float, default=tnow)
     parser.add_argument(
         "--phs", help="Starting phase offset [0-1] (def is to measure)", type=float
     )
@@ -566,12 +630,6 @@ def main(argv=None):
         help="Multiple par file errors by this factor when setting gaussian prior widths",
         type=float,
         default=10.0,
-    )
-    parser.add_argument(
-        "--usepickle",
-        help="Read events from pickle file, if available?",
-        default=False,
-        action="store_true",
     )
     parser.add_argument(
         "--log-level",
@@ -648,7 +706,7 @@ def main(argv=None):
     burnin = args.burnin
     nsteps = args.nsteps
     if burnin >= nsteps:
-        log.error("burnin must be < nsteps")
+        log.error(f"burnin must be < nsteps")
         sys.exit(1)
     nbins = 256  # For likelihood calculation based on gaussians file
     outprof_nbins = 256  # in the text file, for pygaussfit.py, for instance
@@ -673,83 +731,17 @@ def main(argv=None):
     )  # Checks to see if the first generated phaseogram file exists
     if check_file:
         if args.clobber:
-            log.warning("Clobber flag is on: Preexisting files will be overwritten")
+            log.warning(f"Clobber flag is on: Preexisting files will be overwritten")
         else:
             log.warning(
-                "Clobber flag is not on: Preexisting files will not be overwritten. Change the basename or filepath to avoid overwritting previous results"
+                f"Clobber flag is not on: Preexisting files will not be overwritten. Change the basename or filepath to avoid overwritting previous results"
             )
             raise Exception
 
-    # The custom_timing version below is to manually construct the TimingModel
-    # class, which allows it to be pickled. This is needed for parallelizing
-    # the emcee call over a number of threads.  So far, it isn't quite working
-    # so it is disabled.  The code above constructs the TimingModel class
-    # dynamically, as usual.
-    # modelin = custom_timing(parfile)
-
-    # Remove the dispersion delay as it is unnecessary
-    # modelin.delay_funcs['L1'].remove(modelin.dispersion_delay)
-    # Set the target coords for automatic weighting if necessary
-    if "ELONG" in modelin.params:
-        tc = SkyCoord(
-            modelin.ELONG.quantity,
-            modelin.ELAT.quantity,
-            frame="barycentrictrueecliptic",
-        )
-    else:
-        tc = SkyCoord(modelin.RAJ.quantity, modelin.DECJ.quantity, frame="icrs")
-
-    target = tc if weightcol == "CALC" else None
-
-    # TODO: make this properly handle long double
-    ts = None
-    if args.usepickle:
-        try:
-            ts = toa.load_pickle(eventfile)
-        except IOError:
-            pass
-    if ts is None:
-        ts = fermi.get_Fermi_TOAs(
-            eventfile,
-            weightcolumn=weightcol,
-            targetcoord=target,
-            minweight=minWeight,
-            minmjd=minMJD,
-            maxmjd=maxMJD,
-            ephem="DE421",
-            planets=False,
-        )
-        log.info("There are %d events we will use" % len(ts))
-        ts.filename = eventfile
-        # FIXME: writes to the TOA directory unconditionally
-        try:
-            toa.save_pickle(ts)
-        except IOError:
-            pass
-
-    if weightcol is not None:
-        if weightcol == "CALC":
-            weights = np.asarray([float(x["weight"]) for x in ts.table["flags"]])
-            log.info(
-                "Original weights have min / max weights %.3f / %.3f"
-                % (weights.min(), weights.max())
-            )
-            # Rescale the weights, if requested (by having wgtexp != 0.0)
-            if wgtexp != 0.0:
-                weights **= wgtexp
-                wmx, wmn = weights.max(), weights.min()
-                # make the highest weight = 1, but keep min weight the same
-                weights = wmn + ((weights - wmn) * (1.0 - wmn) / (wmx - wmn))
-            for ii, x in enumerate(ts.table["flags"]):
-                x["weight"] = str(weights[ii])
-        weights = np.asarray([float(x["weight"]) for x in ts.table["flags"]])
-        log.info(
-            "There are %d events, with min / max weights %.3f / %.3f"
-            % (len(weights), weights.min(), weights.max())
-        )
-    else:
-        weights = None
-        log.info("There are %d events, no weights are being used." % ts.ntoas)
+    # Load in events and weights
+    ts, weights = load_events_weights(
+        eventfile, modelin, weightcol, wgtexp, minMJD, maxMJD, minWeight
+    )
 
     # Now load in the gaussian template and normalize it
     gtemplate = read_gaussfitfile(gaussianfile, nbins)
@@ -782,7 +774,7 @@ def main(argv=None):
 
     # Use this if you want to see the effect of setting minWeight
     if args.testWeights:
-        log.info("Checking H-test vs weights")
+        log.info(f"Checking H-test vs weights")
         ftr.prof_vs_weights(use_weights=True)
         ftr.prof_vs_weights(use_weights=False)
         sys.exit()
@@ -792,18 +784,17 @@ def main(argv=None):
     maxbin, like_start = marginalize_over_phase(
         phss, gtemplate, weights=ftr.weights, minimize=True, showplot=False
     )
-    log.info("Starting pulse likelihood: %f" % like_start)
+    log.info(f"Starting pulse likelihood: {like_start}")
     if args.phs is None:
         fitvals[-1] = 1.0 - maxbin[0] / float(len(gtemplate))
         if fitvals[-1] > 1.0:
             fitvals[-1] -= 1.0
         if fitvals[-1] < 0.0:
             fitvals[-1] += 1.0
-        log.info("Starting pulse phase: %f" % fitvals[-1])
+        log.info(f"Starting pulse phase: {fitvals[-1]}")
     else:
         log.warning(
-            "Measured starting pulse phase is %f, but using %f"
-            % (1.0 - maxbin / float(len(gtemplate)), args.phs)
+            f"Measured starting pulse phase is {1.0 - maxbin / float(len(gtemplate))}, but using {args.phs}"
         )
         fitvals[-1] = args.phs
     ftr.fitvals[-1] = fitvals[-1]
@@ -825,7 +816,7 @@ def main(argv=None):
         result = op.minimize(ftr.minimize_func, np.zeros_like(ftr.fitvals))
         newfitvals = np.asarray(result["x"]) * ftr.fiterrs + ftr.fitvals
         like_optmin = -result["fun"]
-        log.info("Optimization likelihood: %f" % like_optmin)
+        log.info(f"Optimization likelihood: {like_optmin}")
         ftr.set_params(dict(zip(ftr.fitkeys, newfitvals)))
         ftr.phaseogram()
     else:
@@ -879,7 +870,7 @@ def main(argv=None):
             backend = emcee.backends.HDFBackend(filename + "_chains.h5")
             backend.reset(nwalkers, ndim)
         except ImportError:
-            log.warning("h5py package not installed. Backend set to None")
+            log.warning(f"h5py package not installed. Backend set to None")
             backend = None
     else:
         backend = None
@@ -910,7 +901,7 @@ def main(argv=None):
             pool.close()
             pool.join()
         except ImportError:
-            log.info("Pathos module not available, using single core")
+            log.info(f"Pathos module not available, using single core")
             sampler = emcee.EnsembleSampler(
                 nwalkers, ndim, ftr.lnposterior, blobs_dtype=dtype, backend=backend
             )
@@ -1014,22 +1005,26 @@ def main(argv=None):
     f.close()
 
     # Print the best MCMC values and ranges
-    ranges = map(
-        lambda v: (v[1], v[2] - v[1], v[1] - v[0]),
-        zip(*np.percentile(samples, [16, 50, 84], axis=0)),
+    ranges = list(
+        map(
+            lambda v: (v[1], v[2] - v[1], v[1] - v[0]),
+            zip(*np.percentile(samples, [16, 50, 84], axis=0)),
+        )
     )
-    log.info("Post-MCMC values (50th percentile +/- (16th/84th percentile):")
+    log.info(f"Post-MCMC values (50th percentile +/- (16th/84th percentile):")
     for name, vals in zip(ftr.fitkeys, ranges):
-        log.info("%8s:" % name + "%25.15g (+ %12.5g  / - %12.5g)" % vals)
+        log.info(f"{name:8s}: {vals[0]:25.15g} (+ {vals[1]:12.5g} / - {vals[2]:12.5g})")
 
     # Put the same stuff in a file
     f = open(filename + "_results.txt", "w")
 
-    f.write("Post-MCMC values (50th percentile +/- (16th/84th percentile):\n")
+    f.write(f"Post-MCMC values (50th percentile +/- (16th/84th percentile):\n")
     for name, vals in zip(ftr.fitkeys, ranges):
-        f.write("%8s:" % name + " %25.15g (+ %12.5g  / - %12.5g)\n" % vals)
+        f.write(
+            f"{name:8s}: {vals[0]:25.15g} (+ {vals[1]:12.5g} / - {vals[2]:12.5g})\n"
+        )
 
-    f.write("\nMaximum likelihood par file:\n")
+    f.write(f"\nMaximum likelihood par file:\n")
     f.write(ftr.model.as_parfile())
     f.close()
 

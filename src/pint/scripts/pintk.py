@@ -2,7 +2,6 @@
 """Tkinter interactive interface for PINT pulsar timing tool"""
 import argparse
 
-import sys
 import os
 
 import tkinter as tk

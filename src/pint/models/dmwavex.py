@@ -1,4 +1,5 @@
 """DM variations expressed as a sum of sinusoids."""
+
 import astropy.units as u
 import numpy as np
 from loguru import logger as log
@@ -7,7 +8,7 @@ from warnings import warn
 from pint.models.parameter import MJDParameter, prefixParameter
 from pint.models.timing_model import MissingParameter
 from pint.models.dispersion_model import Dispersion
-from pint import dmu
+from pint import DMconst, dmu
 
 
 class DMWaveX(Dispersion):
@@ -35,6 +36,7 @@ class DMWaveX(Dispersion):
                 name="DMWXEPOCH",
                 description="Reference epoch for Fourier representation of DM noise",
                 time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_dmwavex_component(0.1, index=1, dmwxsin=0, dmwxcos=0, frozen=False)
@@ -93,6 +95,7 @@ class DMWaveX(Dispersion):
                 units="1/d",
                 value=dmwxfreq,
                 parameter_type="float",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         self.add_param(
@@ -103,6 +106,7 @@ class DMWaveX(Dispersion):
                 value=dmwxsin,
                 frozen=frozen,
                 parameter_type="float",
+                tcb2tdb_scale_factor=DMconst,
             )
         )
         self.add_param(
@@ -113,6 +117,7 @@ class DMWaveX(Dispersion):
                 value=dmwxcos,
                 frozen=frozen,
                 parameter_type="float",
+                tcb2tdb_scale_factor=DMconst,
             )
         )
         self.setup()
@@ -167,7 +172,7 @@ class DMWaveX(Dispersion):
             frozens = np.repeat(frozens, len(dmwxfreqs))
         if len(frozens) != len(dmwxfreqs):
             raise ValueError(
-                f"Number of base frequencies must match number of frozen values"
+                "Number of base frequencies must match number of frozen values"
             )
         #### If indices is None, increment the current max DMWaveX index by 1. Increment using DMWXFREQ
         dct = self.get_prefix_mapping_component("DMWXFREQ_")
@@ -204,6 +209,7 @@ class DMWaveX(Dispersion):
                     units="1/d",
                     value=dmwxfreq,
                     parameter_type="float",
+                    tcb2tdb_scale_factor=u.Quantity(1),
                 )
             )
             self.add_param(
@@ -214,6 +220,7 @@ class DMWaveX(Dispersion):
                     value=dmwxsin,
                     parameter_type="float",
                     frozen=frozen,
+                    tcb2tdb_scale_factor=DMconst,
                 )
             )
             self.add_param(
@@ -224,6 +231,7 @@ class DMWaveX(Dispersion):
                     value=dmwxcos,
                     parameter_type="float",
                     frozen=frozen,
+                    tcb2tdb_scale_factor=DMconst,
                 )
             )
         self.setup()
@@ -331,16 +339,15 @@ class DMWaveX(Dispersion):
                 warn(f"Frequency DMWXFREQ_{index:04d} is negative")
             wfreqs[j] = getattr(self, f"DMWXFREQ_{index:04d}").value
         wfreqs.sort()
-        if np.any(np.diff(wfreqs) <= (1.0 / (2.0 * 364.25))):
-            warn("Frequency resolution is greater than 1/yr")
-        if self.DMWXEPOCH.value is None:
-            if self._parent is not None:
-                if self._parent.PEPOCH.value is None:
-                    raise MissingParameter(
-                        "DMWXEPOCH or PEPOCH are required if DMWaveX is being used"
-                    )
-                else:
-                    self.DMWXEPOCH.quantity = self._parent.PEPOCH.quantity
+        # if np.any(np.diff(wfreqs) <= (1.0 / (2.0 * 364.25))):
+        #     warn("Frequency resolution is greater than 1/yr")
+        if self.DMWXEPOCH.value is None and self._parent is not None:
+            if self._parent.PEPOCH.value is None:
+                raise MissingParameter(
+                    "DMWXEPOCH or PEPOCH are required if DMWaveX is being used"
+                )
+            else:
+                self.DMWXEPOCH.quantity = self._parent.PEPOCH.quantity
 
     def validate_toas(self, toas):
         return super().validate_toas(toas)

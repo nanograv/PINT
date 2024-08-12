@@ -4,7 +4,6 @@ import numpy as np
 import astropy
 import astropy.units as u
 import astropy.time
-from loguru import logger as log
 
 __all__ = ["phaseogram", "phaseogram_binned", "plot_priors"]
 
@@ -168,10 +167,10 @@ def phaseogram_binned(
             ax2.scatter(phss, mjds, s=size, color=colarray)
             ax2.scatter(phss + 1.0, mjds, s=size, color=colarray)
     else:
-        profile = np.zeros(bins, dtype=np.float_)
+        profile = np.zeros(bins, dtype=np.float64)
         ntoa = 64
         toadur = (mjds.max() - mjds.min()) / ntoa
-        mjdstarts = mjds.min() + toadur * np.arange(ntoa, dtype=np.float_)
+        mjdstarts = mjds.min() + toadur * np.arange(ntoa, dtype=np.float64)
         mjdstops = mjdstarts + toadur
         # Loop over blocks to process
         a = []

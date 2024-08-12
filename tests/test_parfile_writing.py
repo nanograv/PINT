@@ -1,4 +1,5 @@
 """Various tests to assess the performance of parfile writing."""
+
 import numbers
 import os
 from io import StringIO

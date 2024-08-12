@@ -76,7 +76,6 @@ from pint.models.parameter import (
     AngleParameter,
     boolParameter,
     strParameter,
-    funcParameter,
 )
 from pint.pint_matrix import (
     CorrelationMatrix,
@@ -491,9 +490,11 @@ class Fitter:
         """
 
         return self.model.get_derived_params(
-            rms=self.resids.toa.rms_weighted()
-            if self.is_wideband
-            else self.resids.rms_weighted(),
+            rms=(
+                self.resids.toa.rms_weighted()
+                if self.is_wideband
+                else self.resids.rms_weighted()
+            ),
             ntoas=self.toas.ntoas,
             returndict=returndict,
         )
@@ -1111,6 +1112,7 @@ class DownhillFitter(Fitter):
         max_chi2_increase=1e-2,
         min_lambda=1e-3,
         noisefit_method="Newton-CG",
+        compute_noise_uncertainties=True,
         debug=False,
     ):
         """Carry out a cautious downhill fit.
@@ -1182,7 +1184,7 @@ class DownhillFitter(Fitter):
                 debug=debug,
             )
 
-            if ii == noise_fit_niter - 1:
+            if ii == noise_fit_niter - 1 and compute_noise_uncertainties:
                 values, errors = self._fit_noise(
                     noisefit_method=noisefit_method, uncertainty=True
                 )
@@ -1242,7 +1244,7 @@ class DownhillFitter(Fitter):
             for fp, x in zip(free_noise_params, xs):
                 getattr(res.model, fp).value = x
 
-            return -res.lnlikelihood()
+            return -res.lnlikelihood().astype(np.float64)
 
         if not res.model.has_correlated_errors:
 

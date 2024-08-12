@@ -1,4 +1,5 @@
 """Polynomial pulsar spindown."""
+
 # spindown.py
 # Defines Spindown timing model class
 import astropy.units as u
@@ -56,6 +57,7 @@ class Spindown(SpindownBase):
                 description_template=self.F_description,
                 type_match="float",
                 long_double=True,
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
         # self.add_param(
@@ -75,6 +77,7 @@ class Spindown(SpindownBase):
                 name="PEPOCH",
                 description="Reference epoch for spin-down",
                 time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
 

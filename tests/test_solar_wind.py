@@ -12,7 +12,6 @@ from astropy.time import Time
 from astropy import units as u
 from pint.models import get_model, get_model_and_toas
 from pint.fitter import Fitter
-from pint.toa import get_TOAs
 from pint.simulation import make_fake_toas_uniform
 from pint.models.solar_wind_dispersion import SolarWindDispersionX
 import pint.utils

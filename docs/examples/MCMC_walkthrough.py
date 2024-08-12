@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.8
+#       jupytext_version: 1.16.0
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -24,7 +24,6 @@
 #
 
 # %%
-import random
 import numpy as np
 import pint.models
 import pint.toa as toa
@@ -35,8 +34,6 @@ from pint.mcmc_fitter import MCMCFitter, MCMCFitterBinnedTemplate
 from pint.scripts.event_optimize import read_gaussfitfile, marginalize_over_phase
 import pint.config
 import pint.logging
-import matplotlib.pyplot as plt
-import pickle
 
 # %%
 pint.logging.setup("WARNING")

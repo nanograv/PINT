@@ -12,6 +12,7 @@ The downloaded files are stored in the Astropy cache,
 to clear out old files you will want to do
 ``astropy.utils.data.clear_download_cache()``.
 """
+
 import collections
 import time
 from pathlib import Path

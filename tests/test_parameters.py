@@ -476,7 +476,7 @@ class TestParameters:
     ],
 )
 def test_parameter_parsing(type_, str_value, value):
-    p = type_(name="TEST")
+    p = type_(name="TEST", tcb2tdb_scale_factor=u.Quantity(1))
     assert p.from_parfile_line(str_value)
     assert p.value == value
 
@@ -494,7 +494,7 @@ def test_parameter_parsing(type_, str_value, value):
     ],
 )
 def test_parameter_parsing_fail(type_, par_line):
-    p = type_(name="TEST")
+    p = type_(name="TEST", tcb2tdb_scale_factor=u.Quantity(1))
     with pytest.raises(ValueError):
         p.from_parfile_line(par_line)
 
@@ -514,7 +514,7 @@ def test_parameter_parsing_fail(type_, par_line):
     ],
 )
 def test_parameter_setting(type_, set_value, value):
-    p = type_(name="TEST")
+    p = type_(name="TEST", tcb2tdb_scale_factor=u.Quantity(1))
     if isinstance(value, type(Exception)) and issubclass(value, Exception):
         with pytest.raises(value):
             p.value = set_value
@@ -533,10 +533,18 @@ def test_set_uncertainty_bogus_raises(p):
 
 
 def test_compare_key_value():
-    par1 = maskParameter(name="Test1", key="-k1", key_value="kv1")
-    par2 = maskParameter(name="Test2", key="-k1", key_value="kv1")
-    par3 = maskParameter(name="Test3", key="-k2", key_value="kv1")
-    par4 = maskParameter(name="Test4", key="-k1", key_value="kv2")
+    par1 = maskParameter(
+        name="Test1", key="-k1", key_value="kv1", tcb2tdb_scale_factor=u.Quantity(1)
+    )
+    par2 = maskParameter(
+        name="Test2", key="-k1", key_value="kv1", tcb2tdb_scale_factor=u.Quantity(1)
+    )
+    par3 = maskParameter(
+        name="Test3", key="-k2", key_value="kv1", tcb2tdb_scale_factor=u.Quantity(1)
+    )
+    par4 = maskParameter(
+        name="Test4", key="-k1", key_value="kv2", tcb2tdb_scale_factor=u.Quantity(1)
+    )
     assert par1.compare_key_value(par2)
     assert par2.compare_key_value(par1)
     assert not par1.compare_key_value(par3)
@@ -546,18 +554,53 @@ def test_compare_key_value():
 
 
 def test_compare_key_value_list():
-    par1 = maskParameter(name="Test1", key="-k1", key_value=["k", "q"])
-    par2 = maskParameter(name="Test2", key="-k1", key_value=["q", "k"])
-    par3 = maskParameter(name="Test3", key="-k1", key_value=["k", "q"])
+    par1 = maskParameter(
+        name="Test1",
+        key="-k1",
+        key_value=["k", "q"],
+        tcb2tdb_scale_factor=u.Quantity(1),
+    )
+    par2 = maskParameter(
+        name="Test2",
+        key="-k1",
+        key_value=["q", "k"],
+        tcb2tdb_scale_factor=u.Quantity(1),
+    )
+    par3 = maskParameter(
+        name="Test3",
+        key="-k1",
+        key_value=["k", "q"],
+        tcb2tdb_scale_factor=u.Quantity(1),
+    )
     assert par1.compare_key_value(par2)
     assert par2.compare_key_value(par1)
     assert par3.compare_key_value(par1)
-    par4 = maskParameter(name="Test4", key="-k1", key_value=[2000, 3000])
-    par5 = maskParameter(name="Test5", key="-k1", key_value=[3000, 2000])
+    par4 = maskParameter(
+        name="Test4",
+        key="-k1",
+        key_value=[2000, 3000],
+        tcb2tdb_scale_factor=u.Quantity(1),
+    )
+    par5 = maskParameter(
+        name="Test5",
+        key="-k1",
+        key_value=[3000, 2000],
+        tcb2tdb_scale_factor=u.Quantity(1),
+    )
     assert par4.compare_key_value(par5)
     assert par5.compare_key_value(par4)
-    par6 = maskParameter(name="Test6", key="-k1", key_value=["430", "guppi", "puppi"])
-    par7 = maskParameter(name="Test7", key="-k1", key_value=["puppi", "guppi", "430"])
+    par6 = maskParameter(
+        name="Test6",
+        key="-k1",
+        key_value=["430", "guppi", "puppi"],
+        tcb2tdb_scale_factor=u.Quantity(1),
+    )
+    par7 = maskParameter(
+        name="Test7",
+        key="-k1",
+        key_value=["puppi", "guppi", "430"],
+        tcb2tdb_scale_factor=u.Quantity(1),
+    )
     assert par6.compare_key_value(par7)
     assert par7.compare_key_value(par6)
 
@@ -569,13 +612,13 @@ def test_compare_key_value_list():
         intParameter(name="FISH"),
         strParameter(name="FISH"),
         pytest.param(
-            maskParameter(name="JUMP"),
+            maskParameter(name="JUMP", tcb2tdb_scale_factor=u.Quantity(1)),
         ),
         pytest.param(
-            prefixParameter(name="F0"),
+            prefixParameter(name="F0", tcb2tdb_scale_factor=u.Quantity(1)),
         ),
-        pairParameter(name="WEAVE"),
-        AngleParameter(name="BEND"),
+        pairParameter(name="WEAVE", convert_tcb2tdb=False),
+        AngleParameter(name="BEND", tcb2tdb_scale_factor=u.Quantity(1)),
     ],
 )
 def test_parameter_can_be_pickled(p):
@@ -586,7 +629,9 @@ def test_fitter_construction_success_after_remove_param():
     """Checks that add_param and remove_param don't require m.setup() to be run prior to constructing a fitter. This addresses issue #1260."""
     m = get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
     t = get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
-    FD4 = prefixParameter(parameter_type="float", name="FD4", value=0.0, units=u.s)
+    FD4 = prefixParameter(
+        parameter_type="float", name="FD4", value=0.0, units=u.s, convert_tcb2tdb=False
+    )
     """Fitter construction used to fail after remove_param without m.setup(). Test this (for both adding and removing, just to be safe):"""
     m.add_param_from_top(FD4, "FD")
     f = pint.fitter.GLSFitter(toas=t, model=m)
@@ -594,11 +639,22 @@ def test_fitter_construction_success_after_remove_param():
     f = pint.fitter.GLSFitter(toas=t, model=m)
 
 
+def test_fitter_construction_success_after_remove_param_toplevel():
+    """Checks that remove_param succeeds when removing a paramter from the top-level model (not always meaningful)"""
+    m = get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
+    t = get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
+    m.remove_component("BinaryDD")
+    m.remove_param("BINARY")
+    f = pint.fitter.GLSFitter(toas=t, model=m)
+
+
 def test_correct_number_of_params_and_FD_terms_after_add_or_remove_param():
     """Checks that the number of parameters in some component after add_param or remove_param is correct. Similarly checks that len(m.get_prefix_mapping('FD')) (i.e. num_FD_terms) is correct after seeing a bug where the length didn't change after FD param removal (see #1260)."""
     m = get_model(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.gls.par"))
     t = get_TOAs(os.path.join(datadir, "B1855+09_NANOGrav_9yv1.tim"))
-    FD4 = prefixParameter(parameter_type="float", name="FD4", value=0.0, units=u.s)
+    FD4 = prefixParameter(
+        parameter_type="float", name="FD4", value=0.0, units=u.s, convert_tcb2tdb=False
+    )
     m.add_param_from_top(FD4, "FD")
     assert len(m.components["FD"].params) == 4
     assert len(m.get_prefix_mapping("FD")) == 4

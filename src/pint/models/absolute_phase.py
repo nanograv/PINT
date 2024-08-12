@@ -1,4 +1,5 @@
-"""Timing model absolute phase (TZRMJD, TZRSITE ...)"""
+"""Timing model absolute phase"""
+
 import astropy.units as u
 from loguru import logger as log
 
@@ -33,6 +34,7 @@ class AbsPhase(PhaseComponent):
                 name="TZRMJD",
                 description="Epoch of the zero phase TOA.",
                 time_scale="utc",
+                convert_tcb2tdb=False,
             )
         )
         self.add_param(
@@ -45,6 +47,7 @@ class AbsPhase(PhaseComponent):
                 name="TZRFRQ",
                 units=u.MHz,
                 description="The frequency of the zero phase TOA.",
+                convert_tcb2tdb=False,
             )
         )
         self.tz_cache = None
@@ -85,7 +88,6 @@ class AbsPhase(PhaseComponent):
         # If we have cached the TZR TOA and all the TZR* and clock info has not changed, then don't rebuild it
         if self.tz_cache is not None and (
             self.tz_clkc_info["include_bipm"] == clkc_info["include_bipm"]
-            and self.tz_clkc_info["include_gps"] == clkc_info["include_gps"]
             and self.tz_planets == toas.planets
             and self.tz_ephem == toas.ephem
             and self.tz_hash
@@ -104,7 +106,6 @@ class AbsPhase(PhaseComponent):
         # tz = toa.get_TOAs_list(
         #     [TZR_toa],
         #     include_bipm=clkc_info["include_bipm"],
-        #     include_gps=clkc_info["include_gps"],
         #     ephem=toas.ephem,
         #     planets=toas.planets,
         # )
@@ -113,7 +114,6 @@ class AbsPhase(PhaseComponent):
             obs=self.TZRSITE.value,
             freqs=self.TZRFRQ.quantity,
             include_bipm=clkc_info["include_bipm"],
-            include_gps=clkc_info["include_gps"],
             ephem=toas.ephem,
             planets=toas.planets,
             tzr=True,
