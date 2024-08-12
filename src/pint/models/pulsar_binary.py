@@ -283,21 +283,18 @@ class PulsarBinary(DelayComponent):
         ORBWAVEC = {
             owc: getattr(self, owc).quantity for owc in ORBWAVEC_mapping.values()
         }
+
         if any(v is not None for v in ORBWAVES.values()):
             self.binary_instance.add_binary_params("ORBWAVE_OM", self.ORBWAVE_OM.value)
             self.binary_instance.add_binary_params(
                 "ORBWAVE_EPOCH", self.ORBWAVE_EPOCH.value
             )
 
-            ii = 0
-            while f"ORBWAVES{ii}" in ORBWAVES.keys():
-                self.binary_instance.add_binary_params(
-                    f"ORBWAVES{ii}", ORBWAVES[f"ORBWAVES{ii}"]
-                )
-                self.binary_instance.add_binary_params(
-                    f"ORBWAVEC{ii}", ORBWAVEC[f"ORBWAVEC{ii}"]
-                )
-                ii += 1
+            for k in ORBWAVES.keys():
+                self.binary_instance.add_binary_params(k, ORBWAVES[k])
+
+            for k in ORBWAVEC.keys():
+                self.binary_instance.add_binary_params(k, ORBWAVEC[k])
 
             self.binary_instance.orbits_cls = bo.OrbitWaves(
                 self.binary_instance,

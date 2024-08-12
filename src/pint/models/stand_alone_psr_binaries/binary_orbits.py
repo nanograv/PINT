@@ -261,13 +261,16 @@ class OrbitWaves(Orbit):
 
         nc = 0
         ns = 0
+
         for k in self.binary_params:
-            if re.match(r"ORBWAVEC\d+", k) is not None and k not in self.orbit_params:
-                self.orbit_params += [k]
+            if re.match(r"ORBWAVEC\d+", k) is not None:
+                if k not in self.orbit_params:
+                    self.orbit_params += [k]
                 Cindices.add(int(k[8:]))
                 nc += 1
-            if re.match(r"ORBWAVES\d+", k) is not None and k not in self.orbit_params:
-                self.orbit_params += [k]
+            if re.match(r"ORBWAVES\d+", k) is not None:
+                if k not in self.orbit_params:
+                    self.orbit_params += [k]
                 Sindices.add(int(k[8:]))
                 ns += 1
 
@@ -275,8 +278,8 @@ class OrbitWaves(Orbit):
             range(len(Sindices))
         ):
             raise ValueError(
-                f"Orbwave Indices must be 0 up to some number k without gaps "
-                f"but are {indices}."
+                f"Orbwave indices must be 0 up to some number k without gaps "
+                f"but are {Cindices} and {Sindices}."
             )
 
         if nc != ns:
@@ -285,14 +288,12 @@ class OrbitWaves(Orbit):
                 f"but have {ns} and {nc}."
             )
 
+        if self.ORBWAVEC0 is None or self.ORBWAVES0 is None:
+            raise ValueError("The ORBWAVEC0 or ORBWAVES0 parameter is unset")
+
         self.nwaves = ns
 
     def _ORBWAVEs(self):
-        ii = 0
-        while f"ORBWAVEC{ii}" in self.orbit_params:
-            ii += 1
-        self.nwaves = ii
-
         ORBWAVEs = np.zeros((self.nwaves, 2)) * u.Unit("")
 
         for ii in range(self.nwaves):
@@ -302,11 +303,7 @@ class OrbitWaves(Orbit):
         return ORBWAVEs
 
     def _tw(self):
-        t = self.t
-        if not hasattr(self.t, "unit") or self.t.unit is None:
-            t = self.t * u.day
-
-        tw = t - self.ORBWAVE_EPOCH.value * u.d
+        tw = self.t - self.ORBWAVE_EPOCH.value * u.d
         return tw
 
     def _deltaPhi(self):
