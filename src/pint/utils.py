@@ -76,6 +76,12 @@ import pint.pulsar_ecliptic
 from pint.toa_select import TOASelect
 from pint.types import file_like, quantity_like
 
+from pint.pulsar_mjd import (
+    PINTPrecisionError,
+    check_longdouble_precision,
+    require_longdouble_precision,
+)
+
 __all__ = [
     "PINTPrecisionError",
     "check_longdouble_precision",
@@ -2367,7 +2373,7 @@ def info_string(
         else:
             s += f"{os.linesep}Comment: {comment}"
 
-    if (prefix_string is not None) and (len(prefix_string) > 0):
+    if prefix_string is not None and prefix_string != "":
         s = os.linesep.join([prefix_string + x for x in s.splitlines()])
     return s
 
@@ -3010,7 +3016,7 @@ def _get_wx2pl_lnlike(
     from pint.models.noise_model import powerlaw
     from pint import DMconst
 
-    assert component_name in ["WaveX", "DMWaveX"]
+    assert component_name in {"WaveX", "DMWaveX"}
     prefix = "WX" if component_name == "WaveX" else "DMWX"
 
     idxs = np.array(model.components[component_name].get_indices())
