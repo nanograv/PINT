@@ -43,20 +43,50 @@ except AttributeError:
     from string import maketrans
 
 
-# This check is implemented in pint.utils, but we want to avoid circular imports
-if np.finfo(np.longdouble).eps > 2e-19:
-    import warnings
+class PINTPrecisionError(RuntimeError):
+    pass
 
-    def readable_warning(message, category, filename, lineno, line=None):
-        return "%s: %s\n" % (category.__name__, message)
 
-    warnings.formatwarning = readable_warning
+def check_longdouble_precision() -> bool:
+    """Check whether long doubles have adequate precision.
 
-    msg = (
-        "This platform does not support extended precision "
-        "floating-point, and PINT will run at reduced precision."
-    )
-    warnings.warn(msg, RuntimeWarning)
+    Returns True if long doubles have enough precision to use PINT
+    for sub-microsecond timing on this machine.
+    """
+    return np.finfo(np.longdouble).eps < 2e-19
+
+
+def require_longdouble_precision(warning=True) -> None:
+    """Raise an exception if long doubles do not have enough precision.
+
+    Raises RuntimeError if PINT cannot be run with high precision on this
+    machine.
+    """
+    if not check_longdouble_precision():
+        if warning:
+
+            def readable_warning(message, category, filename, lineno, line=None):
+                return f"{category.__name__}: {message}\n"
+
+            warnings.formatwarning = readable_warning
+            warnings.warn(
+                "This platform does not support extended precision "
+                "floating-point, and PINT will run at reduced precision.",
+                RuntimeWarning,
+            )
+        else:
+            raise PINTPrecisionError(
+                "PINT needs higher precision floating point than you have available. "
+                "PINT uses the numpy longdouble type to represent modified Julian days, "
+                "and this machine does not have sufficient numerical precision to represent "
+                "sub-microsecond times with np.longdouble. On an M1 Mac you will need to use a "
+                "Rosetta environment, or on a Windows machine you will need to us a different "
+                "Python interpreter. Some PINT operations can work with reduced precision, but "
+                "you have requested one that cannot."
+            )
+
+
+require_longdouble_precision()
 
 
 __all__ = [

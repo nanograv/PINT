@@ -13,6 +13,7 @@ the released changes.
 - Updated the `maxMJD` argument in `event_optimize` to default to the current mjd
 - Changed default value of `FDJUMPLOG` to `Y`
 - Bumped `black` version to 24.x
+- Moved `require_longdouble_precision()` from `pint.utils` to `pint.pulsar_mjd`
 ### Added
 - Type hints in `pint.derived_quantities`, `pint.modelutils`, `pint.binaryconvert`, `pint.config`, 
 `pint.erfautils`, `pint.fits_utils`, `pint.logging` and `pint.residuals`
