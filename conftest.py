@@ -3,6 +3,7 @@ import hypothesis
 import pytest
 from astropy.utils.data import check_download_cache
 from astropy.config import paths
+import pint.pulsar_mjd
 import pint.utils
 
 # This setup is drawn from Astropy and might not be entirely relevant to us;
@@ -46,4 +47,4 @@ def temp_cache(tmpdir):
 
 
 # Refuse to run test suite if precision not available
-pint.utils.require_longdouble_precision()
+pint.pulsar_mjd.require_longdouble_precision()
