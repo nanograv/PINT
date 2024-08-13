@@ -14,6 +14,8 @@ the released changes.
 - `maskParameter.__repr__()` output now includes the frozen attribute.
 - Changed default value of `FDJUMPLOG` to `Y`
 - Bumped `black` version to 24.x
+- Replaced `pint.utils.find_optimal_nharms` by a more general function `pint.noise_analysis.find_optimal_nharms` which optimizes the `Nharms` for multiple noise components simultaneously. 
+- Updated the example `rednoise-fit-example.py`
 ### Added
 - Type hints in `pint.derived_quantities`, `pint.modelutils`, `pint.binaryconvert`, `pint.config`, 
 `pint.erfautils`, `pint.fits_utils`, `pint.logging` and `pint.residuals`
