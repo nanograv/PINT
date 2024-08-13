@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from itertools import product as cartesian_product
 
 from joblib import Parallel, cpu_count, delayed
@@ -27,8 +27,30 @@ def find_optimal_nharms(
     nharms_max: int = 45,
     chromatic_index: float = 4,
     num_parallel_jobs: Optional[int] = None,
-):
+) -> Tuple[tuple, np.ndarray]:
+    """Find the optimal number of harmonics for `WaveX`/`DMWaveX`/`CMWaveX` using the
+    Akaike Information Criterion.
+
+    Parameters
+    ----------
+    model: `pint.models.timing_model.TimingModel`
+        The timing model. Should not already contain `WaveX`/`DMWaveX` or `PLRedNoise`/`PLDMNoise`.
+    toas: `pint.toa.TOAs`
+        Input TOAs
+    component: list[str]
+        Component names; a non-empty sublist of ["WaveX", "DMWaveX", "CMWaveX"]
+    nharms_max: int
+        Maximum number of harmonics
+
+    Returns
+    -------
+    aics: ndarray
+        Array of AIC values.
+    nharms_opt: tuple
+        Optimal numbers of harmonics
+    """
     assert len(set(include_components).intersection(set(model.components.keys()))) == 0
+    assert len(include_components) > 0
 
     idxs = list(
         cartesian_product(
@@ -48,7 +70,7 @@ def find_optimal_nharms(
 
     aics = np.reshape(aics_flat, [nharms_max + 1] * len(include_components))
 
-    assert all(np.isfinite(aics)), "Infs/NaNs found in AICs!"
+    assert np.isfinite(aics).all(), "Infs/NaNs found in AICs!"
 
     return aics, np.unravel_index(np.argmin(aics), aics.shape)
 
