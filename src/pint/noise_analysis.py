@@ -61,7 +61,7 @@ def find_optimal_nharms(
     if num_parallel_jobs is None:
         num_parallel_jobs = cpu_count()
 
-    aics_flat = Parallel(n_jobs=num_parallel_jobs)(
+    aics_flat = Parallel(n_jobs=num_parallel_jobs, verbose=13)(
         delayed(
             lambda ii: compute_aic(model, toas, include_components, ii, chromatic_index)
         )(ii)
