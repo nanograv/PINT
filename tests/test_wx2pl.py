@@ -6,12 +6,12 @@ from pint.fitter import WLSFitter
 from pint.utils import (
     cmwavex_setup,
     dmwavex_setup,
-    find_optimal_nharms,
     plchromnoise_from_cmwavex,
     wavex_setup,
     plrednoise_from_wavex,
     pldmnoise_from_dmwavex,
 )
+from pint.noise_analysis import find_optimal_nharms
 
 from io import StringIO
 import numpy as np
@@ -228,24 +228,40 @@ def test_find_optimal_nharms_wx(data_wx):
     m, t = data_wx
 
     m1 = deepcopy(m)
-    m1.remove_component("PLRedNoise")
 
-    nharm, aics = find_optimal_nharms(m1, t, "WaveX", nharms_max=7)
+    aics, nharm = find_optimal_nharms(m1, t, include_components=["WaveX"], nharms_max=7)
 
-    assert nharm <= 7
-    assert np.all(aics >= 0)
+    assert np.size(nharm) == 1
+    assert np.array(nharm).item() <= 7
+    assert np.all(np.isfinite(aics))
 
 
 def test_find_optimal_nharms_dmwx(data_dmwx):
     m, t = data_dmwx
 
     m1 = deepcopy(m)
-    m1.remove_component("PLDMNoise")
 
-    nharm, aics = find_optimal_nharms(m1, t, "DMWaveX", nharms_max=7)
+    aics, nharm = find_optimal_nharms(
+        m1, t, include_components=["DMWaveX"], nharms_max=7
+    )
 
-    assert nharm <= 7
-    assert np.all(aics >= 0)
+    assert np.size(nharm) == 1
+    assert np.array(nharm).item() <= 7
+    assert np.all(np.isfinite(aics))
+
+
+def test_find_optimal_nharms_cmwx(data_cmwx):
+    m, t = data_cmwx
+
+    m1 = deepcopy(m)
+
+    aics, nharm = find_optimal_nharms(
+        m1, t, include_components=["CMWaveX"], nharms_max=7
+    )
+
+    assert np.size(nharm) == 1
+    assert np.array(nharm).item() <= 7
+    assert np.all(np.isfinite(aics))
 
 
 @pytest.mark.parametrize(
