@@ -24,6 +24,7 @@ the unreleased changes. This file should only be changed while tagging a new ver
 - Reordered plotting axes in `pintk`
 - Changed `scipy.integrate.simps` to `scipy.integrate.simpson` to work with scipy 1.14
 - Replaced `pint.utils.find_optimal_nharms` by a more general function `pint.noise_analysis.find_optimal_nharms` which optimizes the `Nharms` for multiple noise components simultaneously. 
+- Updated the example `rednoise-fit-example.py`
 ### Added
 - `bayesian_information_criterion()` function 
 - `dmx_setup` function
