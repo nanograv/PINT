@@ -23,22 +23,17 @@ class TOAOrderSetup:
     parfile = os.path.join(datadir, "NGC6440E.par")
     model = get_model(parfile)
     # fake a multi-telescope, multi-frequency data-set and make sure the results don't depend on TOA order
-    fakes = [
+    t = (
         simulation.make_fake_toas_uniform(
             55000, 55500, 30, model=model, freq=1400 * u.MHz, obs="ao"
-        ),
-        simulation.make_fake_toas_uniform(
+        )
+        + simulation.make_fake_toas_uniform(
             55010, 55500, 40, model=model, freq=800 * u.MHz, obs="gbt"
-        ),
-        simulation.make_fake_toas_uniform(
+        )
+        + simulation.make_fake_toas_uniform(
             55020, 55500, 50, model=model, freq=2000 * u.MHz, obs="@"
-        ),
-    ]
-    f = io.StringIO()
-    for t in fakes:
-        t.write_TOA_file(f)
-    f.seek(0)
-    t = toa.get_TOAs(f)
+        )
+    )
     r = pint.residuals.Residuals(t, model, subtract_mean=False)
 
     @classmethod
