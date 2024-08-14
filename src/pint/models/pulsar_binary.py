@@ -213,7 +213,6 @@ class PulsarBinary(DelayComponent):
                 aliases=["ORBWAVEC"],
                 description_template=self.ORBWAVEC_description,
                 type_match="float",
-                long_double=True,
                 tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
@@ -227,7 +226,6 @@ class PulsarBinary(DelayComponent):
                 aliases=["ORBWAVES"],
                 description_template=self.ORBWAVES_description,
                 type_match="float",
-                long_double=True,
                 tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
@@ -237,7 +235,6 @@ class PulsarBinary(DelayComponent):
                 name="ORBWAVE_OM",
                 units="rad/s",
                 description="Base frequency for ORBWAVEs model",
-                long_double=True,
                 tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
