@@ -31,6 +31,14 @@ def find_optimal_nharms(
     """Find the optimal number of harmonics for `WaveX`/`DMWaveX`/`CMWaveX` using the
     Akaike Information Criterion.
 
+    This function runs a brute force search over a grid of harmonic numbers, from 0 to
+    `nharms_max`. This is executed in multiple processes using the `joblib` library the
+    number of processes is controlled through the `num_parallel_jobs` argument.
+
+    Please note that the execution time scales as `O(nharms_max**len(include_components))`,
+    which can quickly become large. Hence, if you are using large values of `nharms_max`, it
+    is recommended that this be run on a cluster with a large number of CPUs.
+
     Parameters
     ----------
     model: `pint.models.timing_model.TimingModel`
@@ -39,8 +47,12 @@ def find_optimal_nharms(
         Input TOAs
     component: list[str]
         Component names; a non-empty sublist of ["WaveX", "DMWaveX", "CMWaveX"]
-    nharms_max: int
-        Maximum number of harmonics
+    nharms_max: int, optional
+        Maximum number of harmonics (default is 45) for each component
+    chromatic_index: float
+        Chromatic index for `CMWaveX`
+    num_parallel_jobs: int, optional
+        Number of parallel processes. The default is the number of available CPU cores.
 
     Returns
     -------
@@ -79,13 +91,35 @@ def compute_aic(
     model: TimingModel,
     toas: TOAs,
     include_components: List[str],
-    ii: np.ndarray,
+    nharms: np.ndarray,
     chromatic_index: float,
 ):
+    """Given a pre-fit model and TOAs, add the `[CM|DM]WaveX` components to the model,
+    fit the model to the TOAs, and compute the Akaike Information criterion using the
+    post-fit timing model.
+
+    Parameters
+    ----------
+    model: `pint.models.timing_model.TimingModel`
+        The pre-fit timing model. Should not already contain `WaveX`/`DMWaveX` or `PLRedNoise`/`PLDMNoise`.
+    toas: `pint.toa.TOAs`
+        Input TOAs
+    component: list[str]
+        Component names; a non-empty sublist of ["WaveX", "DMWaveX", "CMWaveX"]
+    nharms: ndarray
+        The number of harmonics for each component
+    chromatic_index: float
+        Chromatic index for `CMWaveX`
+
+    Returns
+    -------
+    aic: float
+        The AIC value.
+    """
     setup_log(level="WARNING")
 
     model1 = prepare_model(
-        model, toas.get_Tspan(), include_components, ii, chromatic_index
+        model, toas.get_Tspan(), include_components, nharms, chromatic_index
     )
 
     from pint.fitter import Fitter
@@ -105,6 +139,28 @@ def prepare_model(
     nharms: np.ndarray,
     chromatic_index: float,
 ):
+    """Given a pre-fit model and TOAs, add the `[CM|DM]WaveX` components to the model. Also sets parameters like
+    `PHOFF` and `DM` and `CM` derivatives as free.
+
+    Parameters
+    ----------
+    model: `pint.models.timing_model.TimingModel`
+        The pre-fit timing model. Should not already contain `WaveX`/`DMWaveX` or `PLRedNoise`/`PLDMNoise`.
+    Tspan: u.Quantity
+        The observation time span
+    component: list[str]
+        Component names; a non-empty sublist of ["WaveX", "DMWaveX", "CMWaveX"]
+    nharms: ndarray
+        The number of harmonics for each component
+    chromatic_index: float
+        Chromatic index for `CMWaveX`
+
+    Returns
+    -------
+    aic: float
+        The AIC value.
+    """
+
     model1 = deepcopy(model)
 
     for comp in ["PLRedNoise", "PLDMNoise", "PLCMNoise"]:
