@@ -253,7 +253,7 @@ def test_compute_aic(data_dmwx, component_names):
             m,
             t,
             include_components=component_names,
-            ii=np.array((8, 9, 10)),
+            nharms=np.array((8, 9, 10)),
             chromatic_index=4,
         )
     )
