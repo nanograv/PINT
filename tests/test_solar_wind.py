@@ -128,6 +128,7 @@ def test_swx_frozen():
         )
     )
     assert model.SWXP_0001.frozen is True
+    assert model.SWXDM_0001.frozen is True
     model = get_model(
         StringIO(
             "\n".join(
@@ -141,6 +142,7 @@ def test_swx_frozen():
     assert model.SWXP_0001.frozen is False
     model.add_swx_range(54000, 54180, swxdm=10, swxp=1.5, frozen=False)
     assert model.SWXP_0002.frozen is True
+    assert model.SWXDM_0002.frozen is False
 
 
 def test_swx_minmax():
