@@ -571,7 +571,7 @@ class SolarWindDispersionX(SolarWindDispersionBase):
     def __init__(self):
         super().__init__()
 
-        self.add_swx_range(None, None, swxdm=0, swxp=2, frozen=False, index=1)
+        self.add_swx_range(None, None, swxdm=0, swxp=2, index=1)
 
         self.set_special_params(["SWXDM_0001", "SWXP_0001", "SWXR1_0001", "SWXR2_0001"])
         self.dm_value_funcs += [self.swx_dm]
@@ -684,7 +684,7 @@ class SolarWindDispersionX(SolarWindDispersionBase):
         return _d_solar_wind_geometry_d_p(r0, 180 * u.deg - self.theta0, p)
 
     def add_swx_range(
-        self, mjd_start, mjd_end, index=None, swxdm=0, swxp=2, frozen=False
+        self, mjd_start, mjd_end, index=None, swxdm=0, swxp=2, frozen=True
     ):
         """Add SWX range to a dispersion model with specified start/end MJD, SWXDM, and power-law index
 
