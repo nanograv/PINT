@@ -526,7 +526,8 @@ class SolarWindDispersionX(SolarWindDispersionBase):
     """This class provides a SWX model - multiple Solar Wind segments.
 
     This model lets the user specify time ranges and fit for a different
-    SWXDM (max solar wind DM) value and SWXP (radial power-law index) in each time range.
+    SWXDM (max solar wind DM) value with a different SWXP (radial power-law index)
+    in each time range.
 
     The default radial power-law index value of 2 corresponds to the Edwards et al. model.
     Other values are for the You et al./Hazboun et al. model.
@@ -536,6 +537,8 @@ class SolarWindDispersionX(SolarWindDispersionBase):
     However, to get the peak to still be the requested max DM the values are scaled compared
     to the standard model: the standard model goes from opposition (min) to conjunction (max),
     while this model goes from 0 to conjunction (max), so the scaling is ``((conjunction - opposition)/conjuction)``.
+
+    Also note that fitting for SWXP is possible but not advised.
 
     See `Solar Wind Examples <examples/solar_wind.html>`_.
 
@@ -698,7 +701,7 @@ class SolarWindDispersionX(SolarWindDispersionBase):
         swxp : float or astropy.quantity.Quantity
             Solar wind power-law index
         frozen : bool
-            Indicates whether SWXDM and SWXP will be fit.
+            Indicates whether SWXDM will be fit.
 
         Returns
         -------
@@ -752,7 +755,7 @@ class SolarWindDispersionX(SolarWindDispersionBase):
                 value=swxp,
                 description="Solar wind power-law index",
                 parameter_type="float",
-                frozen=frozen,
+                frozen=True,
                 tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
