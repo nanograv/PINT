@@ -294,6 +294,7 @@ def test_swfit_swx():
     model3.SWXR2_0001.value = t.get_mjds().max().value
     model3.SWXP_0001.value = 2
     model3.SWXDM_0001.value = 1e-3
+    model3.SWXDM_0001.frozen = False
 
     f1 = Fitter.auto(t, model1)
     f3 = Fitter.auto(t, model3)
