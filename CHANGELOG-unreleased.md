@@ -25,6 +25,7 @@ the released changes.
 - Documentation: Fixed empty descriptions in the timing model components table
 - BIC implementation
 - `event_optimize`: Fixed a bug that was causing the results.txt file to be written without the median values. 
+- SWX model now has SWXP_0001 frozen by default, and new segments should also have SWXP frozen
 ### Removed
 - Removed the argument `--usepickle` in `event_optimize` as the `load_events_weights` function checks the events file type to see if the 
 file is a pickle file.
