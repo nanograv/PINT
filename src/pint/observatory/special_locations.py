@@ -16,7 +16,6 @@ import numpy as np
 from astropy.coordinates import EarthLocation
 from loguru import logger as log
 
-from pint.observatory import bipm_default
 from pint.solar_system_ephemerides import objPosVel_wrt_SSB
 from pint.utils import PosVel
 

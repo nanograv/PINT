@@ -55,7 +55,6 @@ from typing import (
     Iterable,
     Type,
     Iterator,
-    Generator,
     Literal,
 )
 import uncertainties
@@ -75,7 +74,7 @@ import warnings
 import pint
 import pint.pulsar_ecliptic
 from pint.toa_select import TOASelect
-from pint.types import file_like, time_like, quantity_like
+from pint.types import file_like, quantity_like
 
 __all__ = [
     "PINTPrecisionError",
@@ -2877,7 +2876,7 @@ def bayesian_information_criterion(
     """Compute the Bayesian information criterion (BIC). The BIC is used for comparing different
     models for the given dataset.
 
-    Given a model with best-fit parameters, the AIC is defined as
+    Given a model with best-fit parameters, the BIC is defined as
 
         BIC = k*ln(N) - 2*ln(L)
 
@@ -2919,7 +2918,7 @@ def bayesian_information_criterion(
             if "PhaseOffset" in model.components
             else len(model.free_params) + 1
         )
-        lnN = len(toas)
+        lnN = np.log(len(toas))
         lnL = Residuals(toas, model).lnlikelihood()
         return k * lnN - 2 * lnL
     else:
@@ -3026,7 +3025,7 @@ def woodbury_dot(
 
     logdet_N = np.sum(np.log(Ndiag))
     logdet_Phi = np.sum(np.log(Phidiag))
-    _, logdet_Sigma = np.linalg.slogdet(Sigma)
+    _, logdet_Sigma = np.linalg.slogdet(Sigma.astype(float))
 
     logdet_C = logdet_N + logdet_Phi + logdet_Sigma
 

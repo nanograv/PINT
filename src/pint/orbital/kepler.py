@@ -2,6 +2,7 @@
 
 All times are in days, distances in light-seconds, and masses in solar masses.
 """
+
 import collections
 
 import numpy as np
@@ -246,11 +247,7 @@ def kepler_2d(params, t):
 
     r = a * (1 - e**2) / (1 + e * np.cos(true_anomaly))
     r_prime = (
-        a
-        * e
-        * (1 - e**2)
-        * np.sin(true_anomaly)
-        / (1 + e * np.cos(true_anomaly)) ** 2
+        a * e * (1 - e**2) * np.sin(true_anomaly) / (1 + e * np.cos(true_anomaly)) ** 2
     )
     r_dot = r_prime * true_anomaly_dot
     d_a = np.array([1, 0, 0, 0, 0, 0])
