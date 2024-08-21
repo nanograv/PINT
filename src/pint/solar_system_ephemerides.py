@@ -3,7 +3,6 @@
 import os
 import pathlib
 from typing import Optional, Union
-import copy
 
 import astropy.coordinates
 import astropy.units as u
@@ -55,9 +54,7 @@ def clear_loaded_ephem() -> None:
     loaded_ephems = {}
 
 
-def _load_kernel_link(
-    ephem: str, link: Optional[str] = None
-) -> "astropy.utils.state._ScienceStateContext":
+def _load_kernel_link(ephem: str, link: Optional[str] = None) -> bool:
     """Load an ephemeris file from a URL
 
     Parameters
@@ -69,7 +66,8 @@ def _load_kernel_link(
 
     Returns
     -------
-    loaded_ephemeris : astropy.utils.state._ScienceStateContext
+    result : bool
+        True if loaded successfully
 
     Notes
     -----
@@ -81,11 +79,11 @@ def _load_kernel_link(
     mirrors = [f"{m}{ephem}.bsp" for m in ephemeris_mirrors]
     if link is not None:
         mirrors = [link] + mirrors
-    loaded = astropy.coordinates.solar_system_ephemeris.set(
+    astropy.coordinates.solar_system_ephemeris.set(
         download_file(mirrors[0], cache=True, sources=mirrors)
     )
     log.info(f"Set solar system ephemeris to {ephem} from download")
-    return loaded
+    return True
 
 
 def _load_kernel_local(
@@ -171,7 +169,7 @@ def load_kernel(
 
     If ``path`` is not provided, will still search default mirror sites.
 
-    Any loaded ephemeris will be stored so it will not be re-requested.
+    Any local loaded ephemeris will be stored so it will not be re-requested.
     """
     ephem = ephem.lower()
     if ephem in loaded_ephems:
