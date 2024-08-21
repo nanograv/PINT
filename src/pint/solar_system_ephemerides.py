@@ -170,6 +170,8 @@ def load_kernel(
 
     Any loaded ephemeris will be stored so it will not be re-requested.
     """
+    log.debug(f"Requesting {ephem}, current loaded ephemerides: {loaded_ephems}")
+
     ephem = ephem.lower()
     if ephem in loaded_ephems:
         log.debug(f"Using pre-loaded kernel for {ephem}: {loaded_ephems[ephem]}")
