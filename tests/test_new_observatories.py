@@ -23,6 +23,7 @@ def test_get_TOAs():
     tt = get_TOAs(StringIO(tim), ephem="DE421")
     out = pint.solar_system_ephemerides.load_kernel("de421")
     print(f"Ephemeris found at {out}")
+    print(pint.solar_system_ephemerides.loaded_ephems)
     # Check the site clock correction by itself
     site = get_observatory("meerkat")
     clock_corr = site.clock_corrections(tt.table["mjd"][0], include_bipm=False)
