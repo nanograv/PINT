@@ -170,7 +170,7 @@ def load_kernel(
 
     Any loaded ephemeris will be stored so it will not be re-requested.
     """
-    log.debug(f"Requesting {ephem}, current loaded ephemerides: {loaded_ephems}")
+    print(f"Requesting {ephem}, current loaded ephemerides: {loaded_ephems}")
 
     ephem = ephem.lower()
     if ephem in loaded_ephems:
