@@ -54,7 +54,7 @@ def clear_loaded_ephem() -> None:
 
 def _load_kernel_link(
     ephem: str, link: Optional[str] = None
-) -> astropy.utils.state._ScienceStateContext:
+) -> "astropy.utils.state._ScienceStateContext":
     """Load an ephemeris file from a URL
 
     Parameters
@@ -123,7 +123,7 @@ def load_kernel(
     ephem: str,
     path: Optional[Union[str, pathlib.Path]] = None,
     link: Optional[str] = None,
-) -> Union[str, pathlib.Path, astropy.utils.state._ScienceStateContext]:
+) -> Union[str, pathlib.Path, "astropy.utils.state._ScienceStateContext"]:
     """Load the solar system ephemeris
 
     Ephemeris files may be obtained through astropy's internal
