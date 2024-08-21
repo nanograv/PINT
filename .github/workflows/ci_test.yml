@@ -32,9 +32,6 @@ jobs:
           - os: ubuntu-latest
             python: '3.12'
             tox_env: 'py312-test-cov'
-#           - os: ubuntu-latest
-#             python: '3.12'
-#             tox_env: 'shorttest'
           - os: ubuntu-latest
             python: '3.12'
             tox_env: 'notebooks'
