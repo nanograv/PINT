@@ -44,9 +44,7 @@ def test_downloaded_file():
     astropy.utils.data.clear_download_cache(
         "https://data.nanograv.org/static/data/ephem/de118.bsp"
     )
-    print(pint.solar_system_ephemerides.loaded_ephems)
     pint.solar_system_ephemerides.clear_loaded_ephem()
-    print(pint.solar_system_ephemerides.loaded_ephems)
     out = pint.solar_system_ephemerides.load_kernel("de118")
     model = get_model(
         io.StringIO(

@@ -50,7 +50,7 @@ loaded_ephems = {}
 
 def clear_loaded_ephem() -> None:
     """Clear the dictionary of pre-loaded ephemeris files, to allow fresh loading"""
-    print("Clearing loaded ephemerides")
+    log.debug("Clearing loaded ephemerides")
     global loaded_ephems
     loaded_ephems = {}
 
@@ -173,8 +173,6 @@ def load_kernel(
 
     Any loaded ephemeris will be stored so it will not be re-requested.
     """
-    print(f"Requesting {ephem.lower()}, current loaded ephemerides: {loaded_ephems}")
-
     ephem = ephem.lower()
     if ephem in loaded_ephems:
         log.debug(f"Using pre-loaded kernel for {ephem}: {loaded_ephems[ephem]}")
