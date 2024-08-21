@@ -44,7 +44,9 @@ def test_downloaded_file():
     astropy.utils.data.clear_download_cache(
         "https://data.nanograv.org/static/data/ephem/de118.bsp"
     )
+    print(pint.solar_system_ephemerides.loaded_ephems)
     pint.solar_system_ephemerides.clear_loaded_ephem()
+    print(pint.solar_system_ephemerides.loaded_ephems)
     out = pint.solar_system_ephemerides.load_kernel("de118")
     model = get_model(
         io.StringIO(
@@ -62,8 +64,4 @@ def test_downloaded_file():
     toas = pint.simulation.make_fake_toas_uniform(
         57001, 58000, 200, model=model, error=1 * u.us, add_noise=True
     )
-    print(out, out.__class__)
-    # cannot do this test in astropy 4 since the astropy.utils.state._ScienceStateContext
-    # class does not exist.  So use a weaker test
-    # assert isinstance(out, astropy.utils.state._ScienceStateContext)
-    assert not isinstance(out, str)
+    assert isinstance(out, bool)

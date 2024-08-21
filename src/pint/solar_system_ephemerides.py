@@ -3,6 +3,7 @@
 import os
 import pathlib
 from typing import Optional, Union
+import copy
 
 import astropy.coordinates
 import astropy.units as u
@@ -49,6 +50,8 @@ loaded_ephems = {}
 
 def clear_loaded_ephem() -> None:
     """Clear the dictionary of pre-loaded ephemeris files, to allow fresh loading"""
+    print("Clearing loaded ephemerides")
+    global loaded_ephems
     loaded_ephems = {}
 
 
@@ -123,7 +126,7 @@ def load_kernel(
     ephem: str,
     path: Optional[Union[str, pathlib.Path]] = None,
     link: Optional[str] = None,
-) -> Union[str, pathlib.Path, "astropy.utils.state._ScienceStateContext"]:
+) -> Union[str, pathlib.Path, bool]:
     """Load the solar system ephemeris
 
     Ephemeris files may be obtained through astropy's internal
@@ -157,8 +160,8 @@ def load_kernel(
 
     Returns
     -------
-    loaded_ephemeris : str or pathlib.Path or astropy.utils.state._ScienceStateContext
-        Can be str or pathlib.Path if loaded from a local file, or :class:`astropy.utils.state._ScienceStateContext`
+    loaded_ephemeris : str or pathlib.Path or bool
+        Can be str or pathlib.Path if loaded from a local file, or ``True``
         if loaded from URL
 
 
@@ -170,7 +173,7 @@ def load_kernel(
 
     Any loaded ephemeris will be stored so it will not be re-requested.
     """
-    print(f"Requesting {ephem}, current loaded ephemerides: {loaded_ephems}")
+    print(f"Requesting {ephem.lower()}, current loaded ephemerides: {loaded_ephems}")
 
     ephem = ephem.lower()
     if ephem in loaded_ephems:
@@ -191,12 +194,12 @@ def load_kernel(
     # or astropy can't access it (because astropy doesn't know about
     # the nanograv mirrors)
     with contextlib.suppress(ValueError, OSError):
-        loaded_ephems[ephem] = astropy.coordinates.solar_system_ephemeris.set(ephem)
+        astropy.coordinates.solar_system_ephemeris.set(ephem)
         log.info(f"Set solar system ephemeris to {ephem} through astropy")
-        return loaded_ephems[ephem]
+        return True
     # If this raises an exception our last hope is gone so let it propagate
-    loaded_ephems[ephem] = _load_kernel_link(ephem, link=link)
-    return loaded_ephems[ephem]
+    _load_kernel_link(ephem, link=link)
+    return True
 
 
 def objPosVel_wrt_SSB(
