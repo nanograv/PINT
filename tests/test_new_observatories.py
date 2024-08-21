@@ -9,6 +9,7 @@ from pinttestdata import datadir
 from pint.models import get_model
 from pint.observatory import get_observatory
 from pint.toa import get_TOAs
+import pint.solar_system_ephemerides
 
 parfile = os.path.join(datadir, "NGC6440E.par")
 
@@ -20,6 +21,8 @@ fake 1400 58514.619895 1.0 mk -flag thing2
 
 def test_get_TOAs():
     tt = get_TOAs(StringIO(tim), ephem="DE421")
+    out = pint.solar_system_ephemerides.load_kernel("de421")
+    print(f"Ephemeris found at {out}")
     # Check the site clock correction by itself
     site = get_observatory("meerkat")
     clock_corr = site.clock_corrections(tt.table["mjd"][0], include_bipm=False)
