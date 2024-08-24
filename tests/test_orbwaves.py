@@ -1,7 +1,9 @@
+from collections import deque
+from io import StringIO
 import os
-import astropy.units as u
 import pytest
 
+import astropy.units as u
 import pint.models as tm
 from pint import fitter, toa, simulation
 from pinttestdata import datadir
@@ -12,9 +14,8 @@ from pint.models import get_model, get_model_and_toas
 
 def test_orbwaves_fit():
     m, t = get_model_and_toas(
-        os.path.join(datadir, "J1048+2339_orbwaves.par"),
-        os.path.join(datadir, "J1048+2339_3PC_fake.tim"),
-    )
+        datadir / "J1048+2339_orbwaves.par",
+        datadir / "J1048+2339_3PC_fake.tim")
 
     f = fitter.WLSFitter(toas=t, model=m)
 
@@ -29,14 +30,27 @@ def test_orbwaves_fit():
 
 
 def test_invalid_parfiles():
-    with pytest.raises(Exception):
-        m1 = get_model(os.path.join(datadir, "J1048+2339_orbwaves_invalid1.par"))
+    parlines = open(datadir / "J1048+2339_orbwaves.par").readlines()
 
-    with pytest.raises(Exception):
-        m2 = get_model(os.path.join(datadir, "J1048+2339_orbwaves_invalid2.par"))
+    def _delete_line(labels):
+        lines = deque()
+        for line in parlines:
+            label = line.split()[0]
+            if label in labels:
+                continue
+            lines.append(line)
+        return StringIO(lines)
 
-    with pytest.raises(Exception):
-        m3 = get_model(os.path.join(datadir, "J1048+2339_orbwaves_invalid3.par"))
+    deleted_lines = [
+            ['ORBWAVEC0','ORBWAVES0'],
+            ['ORBWAVEC3'],
+            ['ORBWAVES4']
+    ]
+
+    for lines in deleted_lines:
+        with pytest.raises(Exception):
+            m = get_model(_delete_line(lines))
+
 
 
 if __name__ == "__main__":

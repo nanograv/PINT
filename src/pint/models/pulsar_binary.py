@@ -308,9 +308,8 @@ class PulsarBinary(DelayComponent):
         }
 
         if any(v is not None for v in ORBWAVES.values()):
-            for k in ['ORBWAVE_OM','ORBWAVE_EPOCH']:
-                self.binary_instance.add_binary_params(
-                        k,getattr(self,k).value)
+            for k in ["ORBWAVE_OM", "ORBWAVE_EPOCH"]:
+                self.binary_instance.add_binary_params(k, getattr(self, k).value)
 
             for k in ORBWAVES.keys():
                 self.binary_instance.add_binary_params(k, ORBWAVES[k])
@@ -322,15 +321,16 @@ class PulsarBinary(DelayComponent):
             if using_FBX:
                 fbx = sorted(list(FBXs.keys()))
                 if len(fbx) > 2:
-                    raise ValueError('Only FB0/FB1 are supported.')
-                if (len(fbx) == 2) and  (fbx[1] != 'FB1'):
-                        raise ValueError('Only FB0/FB1 are supported.')
+                    raise ValueError("Only FB0/FB1 are supported.")
+                if (len(fbx) == 2) and (fbx[1] != "FB1"):
+                    raise ValueError("Only FB0/FB1 are supported.")
                 self.binary_instance.orbits_cls = bo.OrbitWavesFBX(
                     self.binary_instance,
                     fbx
                     + ["TASC", "ORBWAVE_OM", "ORBWAVE_EPOCH"]
                     + list(ORBWAVES.keys())
-                    + list(ORBWAVEC.keys())
+                    + list(ORBWAVEC.keys()),
+                )
             else:
                 self.binary_instance.orbits_cls = bo.OrbitWaves(
                     self.binary_instance,

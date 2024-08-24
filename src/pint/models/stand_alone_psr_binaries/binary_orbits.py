@@ -434,7 +434,7 @@ class OrbitWaves(Orbit):
             d_deltaFB0_d_orbwave = WOM * nh * np.cos(WOM * nh * tw)
 
         # use of pbprime should account for both Taylor and Fourier terms
-        return (-self.pbprime()**2 * d_deltaFB0_d_orbwave).to(
+        return (-self.pbprime() ** 2 * d_deltaFB0_d_orbwave).to(
             "d", equivalencies=u.dimensionless_angles()
         )
 
@@ -453,9 +453,10 @@ class OrbitWaves(Orbit):
 
         return super().d_pbprime_d_par(par)
 
+
 class OrbitWavesFBX(OrbitWaves):
     """Orbit with orbital phase variations described both by FBX terms and
-       by a Fourier series"""
+    by a Fourier series"""
 
     def __init__(
         self,
@@ -467,25 +468,27 @@ class OrbitWavesFBX(OrbitWaves):
             "ORBWAVE_EPOCH",
             "ORBWAVEC0",
             "ORBWAVES0",
-        ]
+        ],
     ):
-        if not hasattr(parent,'FB1'):
-            parent.add_param(floatParameter(name="FB1",units=u.Hz**2,long_double=True,value=0))
-            parent.binary_instance.add_binary_params('FB1',parent.FB1)
-            orbit_params += ['FB1']
+        if not hasattr(parent, "FB1"):
+            parent.add_param(
+                floatParameter(name="FB1", units=u.Hz**2, long_double=True, value=0)
+            )
+            parent.binary_instance.add_binary_params("FB1", parent.FB1)
+            orbit_params += ["FB1"]
         super().__init__(parent, orbit_params)
 
     def orbits(self):
         """Orbital phase (number of orbits since TASC)."""
         tt = self.tt0
-        orbits = self.FB0*tt * (1 + (0.5*self.FB1/self.FB0)*tt)
+        orbits = self.FB0 * tt * (1 + (0.5 * self.FB1 / self.FB0) * tt)
         orbits += self._deltaPhi()
         return orbits.decompose()
 
     def pbprime(self):
         """Instantaneous binary period as a function of time."""
 
-        orbit_freq = self.FB0 + self.FB1*self.tt0
+        orbit_freq = self.FB0 + self.FB1 * self.tt0
         orbit_freq += self._d_deltaPhi_dt()
         return 1.0 / orbit_freq.decompose()
 
@@ -501,13 +504,13 @@ class OrbitWavesFBX(OrbitWaves):
         return self.tt0.decompose() * (2 * np.pi * u.rad)
 
     def d_orbits_d_FB1(self):
-        return (0.5*self.tt0**2).decompose() * (2 * np.pi * u.rad)
+        return (0.5 * self.tt0**2).decompose() * (2 * np.pi * u.rad)
 
     def d_pbprime_d_FB0(self):
-        return -1*self.pbprime()**2
+        return -1 * self.pbprime() ** 2
 
     def d_pbprime_d_FB1(self):
-        return -self.tt0*self.pbprime()**2
+        return -self.tt0 * self.pbprime() ** 2
 
     def d_pbprime_d_TASC(self):
-        return self.FB1*self.pbprime()**2
+        return self.FB1 * self.pbprime() ** 2
