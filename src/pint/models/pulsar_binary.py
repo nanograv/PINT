@@ -308,10 +308,9 @@ class PulsarBinary(DelayComponent):
         }
 
         if any(v is not None for v in ORBWAVES.values()):
-            self.binary_instance.add_binary_params("ORBWAVE_OM", self.ORBWAVE_OM.value)
-            self.binary_instance.add_binary_params(
-                "ORBWAVE_EPOCH", self.ORBWAVE_EPOCH.value
-            )
+            for k in ['ORBWAVE_OM','ORBWAVE_EPOCH']:
+                self.binary_instance.add_binary_params(
+                        k,getattr(self,k).value)
 
             for k in ORBWAVES.keys():
                 self.binary_instance.add_binary_params(k, ORBWAVES[k])
@@ -319,12 +318,26 @@ class PulsarBinary(DelayComponent):
             for k in ORBWAVEC.keys():
                 self.binary_instance.add_binary_params(k, ORBWAVEC[k])
 
-            self.binary_instance.orbits_cls = bo.OrbitWaves(
-                self.binary_instance,
-                ["PB", "TASC", "ORBWAVE_OM", "ORBWAVE_EPOCH"]
-                + list(ORBWAVES.keys())
-                + list(ORBWAVEC.keys()),
-            )
+            using_FBX = any(v is not None for v in FBXs.values())
+            if using_FBX:
+                fbx = sorted(list(FBXs.keys()))
+                if len(fbx) > 2:
+                    raise ValueError('Only FB0/FB1 are supported.')
+                if (len(fbx) == 2) and  (fbx[1] != 'FB1'):
+                        raise ValueError('Only FB0/FB1 are supported.')
+                self.binary_instance.orbits_cls = bo.OrbitWavesFBX(
+                    self.binary_instance,
+                    fbx
+                    + ["TASC", "ORBWAVE_OM", "ORBWAVE_EPOCH"]
+                    + list(ORBWAVES.keys())
+                    + list(ORBWAVEC.keys())
+            else:
+                self.binary_instance.orbits_cls = bo.OrbitWaves(
+                    self.binary_instance,
+                    ["PB", "TASC", "ORBWAVE_OM", "ORBWAVE_EPOCH"]
+                    + list(ORBWAVES.keys())
+                    + list(ORBWAVEC.keys()),
+                )
 
         # Note: if we are happy to use these to show alternate parameterizations then this can be uncommented
         # else:
