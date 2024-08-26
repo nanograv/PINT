@@ -132,9 +132,10 @@ Want to do something new? Submit a github `issue <https://github.com/nanograv/PI
   
 .. _documentation:   http://nanograv-pint.readthedocs.io/en/latest/
 
-And for more details, please read and cite(!) the PINT paper_.
+And for more details, please read and cite(!) the PINT paper_1_ and paper_2_.
 
-.. _paper:   https://ui.adsabs.harvard.edu/abs/2021ApJ...911...45L/abstract
+.. _paper_1:   https://ui.adsabs.harvard.edu/abs/2021ApJ...911...45L/abstract
+.. _paper_2:   https://ui.adsabs.harvard.edu/abs/2024ApJ...971..150S/abstract
 
 Articles that cite the PINT paper can be found in an ADS `Library <https://ui.adsabs.harvard.edu/search/q=citations(bibcode%3A2021ApJ...911...45L)&sort=date%20desc%2C%20bibcode%20desc&p_=0>`_.
 A list of software packages that use PINT can be found `here <https://nanograv-pint.readthedocs.io/en/latest/dependent-packages.html>`_.
