@@ -141,8 +141,7 @@ class LogFilter:
         never: Optional[List[str]] = None,
         onlyonce_level: str = "INFO",
     ) -> None:
-        r"""
-        Define regexs for messages that will only be seen once.  Use ``\\S+`` for a variable that might change.
+        r"""Define regexes for messages that will only be seen once.  Use ``\S+`` for a variable that might change.
         If a message comes through with a new value for that variable, it will be seen.
 
         Make sure to escape other regex commands like ``()``.
