@@ -21,7 +21,7 @@ the released changes.
 - `PLChromNoise` component to model chromatic red noise with a power law spectrum
 - Fourier series representation of chromatic noise (`CMWaveX`)
 - `pint.utils.cmwavex_setup` and `pint.utils.plchromnoise_from_cmwavex` functions
-- More validation for correlated noise components in `TimingModel`
+- More validation for correlated noise components in `TimingModel.validate_component_types()`
 ### Fixed
 - Bug in `DMWaveX.get_indices()` function
 - Explicit type conversion in `woodbury_dot()` function
