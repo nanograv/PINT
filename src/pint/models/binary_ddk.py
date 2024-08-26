@@ -231,26 +231,26 @@ class BinaryDDK(BinaryDD):
             warnings.warn("Using A1DOT with a DDK model is not advised.")
 
     def alternative_solutions(self):
-        """Alternative Kopeikin solutions (potential local minima)
+        r"""Alternative Kopeikin solutions (potential local minima)
 
         There are 4 potential local minima for a DDK model where a1dot is the same
         These are given by where Eqn. 8 in Kopeikin (1996) is equal to the best-fit value.
 
         We first define the symmetry point where a1dot is zero (in equatorial coordinates):
 
-        :math:`KOM_0 = \\tan^{-1} (\\mu_{\\delta} / \\mu_{\\alpha})`
+        :math:`KOM_0 = \tan^{-1} (\mu_{\delta} / \mu_{\alpha})`
 
         The solutions are then:
 
         :math:`(KIN, KOM)`
 
-        :math:`(KIN, 2KOM_0 - KOM - 180^{\\circ})`
+        :math:`(KIN, 2KOM_0 - KOM - 180^{\circ})`
 
-        :math:`(180^{\\circ}-KIN, KOM+180^{\\circ})`
+        :math:`(180^{\circ}-KIN, KOM+180^{\circ})`
 
-        :math:`(180^{\\circ}-KIN, 2KOM_0 - KOM)`
+        :math:`(180^{\circ}-KIN, 2KOM_0 - KOM)`
 
-        All values will be between 0 and :math:`360^{\\circ}`.
+        All values will be between 0 and :math:`360^{\circ}`.
 
         Returns
         -------
