@@ -618,7 +618,6 @@ class PLChromNoise(NoiseComponent):
     Note
     ----
     Ref: Lentati et al. 2014, MNRAS 437(3), 3004-3023
-
     """
 
     register = True
