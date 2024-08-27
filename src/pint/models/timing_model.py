@@ -501,22 +501,35 @@ class TimingModel:
             num_components_of_type(SolarWindDispersionBase) <= 1
         ), "Model can have at most one solar wind dispersion component."
 
-        from pint.models.dispersion_model import DispersionDMX
+        from pint.models.dispersion_model import DispersionDM, DispersionDMX
+        from pint.models.chromatic_model import ChromaticCM
         from pint.models.wave import Wave
         from pint.models.wavex import WaveX
         from pint.models.dmwavex import DMWaveX
-        from pint.models.noise_model import PLRedNoise, PLDMNoise
+        from pint.models.cmwavex import CMWaveX
+        from pint.models.noise_model import PLRedNoise, PLDMNoise, PLChromNoise
+        from pint.models.ifunc import IFunc
 
         if num_components_of_type((DispersionDMX, PLDMNoise, DMWaveX)) > 1:
             log.warning(
                 "DispersionDMX, PLDMNoise, and DMWaveX cannot be used together. "
                 "They are ways of modelling the same effect."
             )
-        if num_components_of_type((Wave, WaveX, PLRedNoise)) > 1:
+        if num_components_of_type((Wave, WaveX, PLRedNoise, IFunc)) > 1:
             log.warning(
                 "Wave, WaveX, and PLRedNoise cannot be used together. "
                 "They are ways of modelling the same effect."
             )
+
+        if num_components_of_type((PLDMNoise, DMWaveX)) == 1:
+            assert (
+                num_components_of_type(DispersionDM) == 1
+            ), "PLDMNoise / DMWaveX component cannot be used without the DispersionDM component."
+
+        if num_components_of_type((PLChromNoise, CMWaveX)) == 1:
+            assert (
+                num_components_of_type(ChromaticCM) == 1
+            ), "PLChromNoise / CMWaveX component cannot be used without the ChromaticCM component."
 
     # def __str__(self):
     #    result = ""
@@ -2724,16 +2737,12 @@ class TimingModel:
             if reset_to_default:
                 po.use_alias = None
             if alias_translation is not None:
-                if hasattr(po, "origin_name"):
-                    try:
-                        po.use_alias = alias_translation[po.origin_name]
-                    except KeyError:
-                        pass
-                else:
-                    try:
-                        po.use_alias = alias_translation[p]
-                    except KeyError:
-                        pass
+                with contextlib.suppress(KeyError):
+                    po.use_alias = (
+                        alias_translation[po.origin_name]
+                        if hasattr(po, "origin_name")
+                        else alias_translation[p]
+                    )
 
     def as_parfile(
         self,
@@ -2762,7 +2771,7 @@ class TimingModel:
              Parfile output format. PINT outputs in 'tempo', 'tempo2' and 'pint'
              formats. The defaul format is `pint`.
         """
-        if not format.lower() in _parfile_formats:
+        if format.lower() not in _parfile_formats:
             raise ValueError(f"parfile format must be one of {_parfile_formats}")
 
         self.validate()
@@ -2784,33 +2793,30 @@ class TimingModel:
                 continue
             result_begin += getattr(self, p).as_parfile_line(format=format)
         for cat in start_order:
-            if cat in list(cates_comp.keys()):
-                # print("Starting: %s" % cat)
-                cp = cates_comp[cat]
-                for cpp in cp:
-                    result_begin += cpp.print_par(format=format)
-                printed_cate.append(cat)
-            else:
+            if cat not in list(cates_comp.keys()):
                 continue
 
+            # print("Starting: %s" % cat)
+            cp = cates_comp[cat]
+            for cpp in cp:
+                result_begin += cpp.print_par(format=format)
+            printed_cate.append(cat)
         for cat in last_order:
-            if cat in list(cates_comp.keys()):
-                # print("Ending: %s" % cat)
-                cp = cates_comp[cat]
-                for cpp in cp:
-                    result_end += cpp.print_par(format=format)
-                printed_cate.append(cat)
-            else:
+            if cat not in list(cates_comp.keys()):
                 continue
 
+            # print("Ending: %s" % cat)
+            cp = cates_comp[cat]
+            for cpp in cp:
+                result_end += cpp.print_par(format=format)
+            printed_cate.append(cat)
         for cat in list(cates_comp.keys()):
             if cat in printed_cate:
                 continue
-            else:
-                cp = cates_comp[cat]
-                for cpp in cp:
-                    result_middle += cpp.print_par(format=format)
-                printed_cate.append(cat)
+            cp = cates_comp[cat]
+            for cpp in cp:
+                result_middle += cpp.print_par(format=format)
+            printed_cate.append(cat)
 
         return result_begin + result_middle + result_end
 
@@ -2950,8 +2956,7 @@ class TimingModel:
         return len(self.params)
 
     def __iter__(self):
-        for p in self.params:
-            yield p
+        yield from self.params
 
     def as_ECL(self, epoch=None, ecl="IERS2010"):
         """Return TimingModel in PulsarEcliptic frame.
@@ -3253,9 +3258,7 @@ class TimingModel:
                     )
                     s += f"Pulsar mass (Shapiro Delay) = {psrmass}"
                     outdict["Mp (Msun)"] = psrmass
-        if not returndict:
-            return s
-        return s, outdict
+        return (s, outdict) if returndict else s
 
 
 class ModelMeta(abc.ABCMeta):
@@ -3269,8 +3272,8 @@ class ModelMeta(abc.ABCMeta):
     """
 
     def __init__(cls, name, bases, dct):
-        regname = "component_types"
         if "register" in dct and cls.register:
+            regname = "component_types"
             getattr(cls, regname)[name] = cls
         super().__init__(name, bases, dct)
 
@@ -3350,10 +3353,10 @@ class Component(metaclass=ModelMeta):
         for p in self.params:
             par = getattr(self, p)
             if par.is_prefix:
-                if par.prefix not in prefixs.keys():
-                    prefixs[par.prefix] = [p]
-                else:
+                if par.prefix in prefixs:
                     prefixs[par.prefix].append(p)
+                else:
+                    prefixs[par.prefix] = [p]
         return prefixs
 
     @property_exists
@@ -3423,10 +3426,7 @@ class Component(metaclass=ModelMeta):
             exist_par = getattr(self, param.name)
             if exist_par.value is not None:
                 raise ValueError(
-                    "Tried to add a second parameter called {}. "
-                    "Old value: {} New value: {}".format(
-                        param.name, getattr(self, param.name), param
-                    )
+                    f"Tried to add a second parameter called {param.name}. Old value: {getattr(self, param.name)} New value: {param}"
                 )
             else:
                 setattr(self, param.name, param)
@@ -3449,10 +3449,7 @@ class Component(metaclass=ModelMeta):
         param : str or pint.models.Parameter
             The parameter to remove.
         """
-        if isinstance(param, str):
-            param_name = param
-        else:
-            param_name = param.name
+        param_name = param if isinstance(param, str) else param.name
         if param_name not in self.params:
             raise ValueError(
                 f"Tried to remove parameter {param_name} but it is not listed: {self.params}"
@@ -3489,10 +3486,7 @@ class Component(metaclass=ModelMeta):
             par = getattr(self, p)
             par_type = type(par).__name__
             par_prefix = par_type[:-9]
-            if (
-                param_type.upper() == par_type.upper()
-                or param_type.upper() == par_prefix.upper()
-            ):
+            if param_type.upper() in [par_type.upper(), par_prefix.upper()]:
                 result.append(par.name)
         return result
 
@@ -3537,37 +3531,35 @@ class Component(metaclass=ModelMeta):
         # Split the alias prefix, see if it is a perfix alias
         try:
             prefix, idx_str, idx = split_prefixed_name(alias)
-        except PrefixError:  # Not a prefixed name
-            if pname is not None:
-                par = getattr(self, pname)
-                if par.is_prefix:
-                    raise UnknownParameter(
-                        f"Prefix {alias} maps to mulitple parameters"
-                        ". Please specify the index as well."
-                    )
-            else:
+        except PrefixError as e:  # Not a prefixed name
+            if pname is None:
                 # Not a prefix, not an alias
-                raise UnknownParameter(f"Unknown parameter name or alias {alias}")
-        # When the alias is a prefixed name but not in the parameter list yet
-        if pname is None:
-            prefix_pname = self.aliases_map.get(prefix, None)
-            if prefix_pname:
-                par = getattr(self, prefix_pname)
-                if par.is_prefix:
-                    raise UnknownParameter(
-                        f"Found a similar prefixed parameter '{prefix_pname}'"
-                        f" But parameter {par.prefix}{idx} need to be added"
-                        f" to the model."
-                    )
-                else:
-                    raise UnknownParameter(
-                        f"{par} is not a prefixed parameter, howere the input"
-                        f" {alias} has index with it."
-                    )
-            else:
-                raise UnknownParameter(f"Unknown parameter name or alias {alias}")
-        else:
+                raise UnknownParameter(
+                    f"Unknown parameter name or alias {alias}"
+                ) from e
+            par = getattr(self, pname)
+            if par.is_prefix:
+                raise UnknownParameter(
+                    f"Prefix {alias} maps to mulitple parameters"
+                    ". Please specify the index as well."
+                ) from e
+        if pname is not None:
             return pname
+        if prefix_pname := self.aliases_map.get(prefix, None):
+            par = getattr(self, prefix_pname)
+            if par.is_prefix:
+                raise UnknownParameter(
+                    f"Found a similar prefixed parameter '{prefix_pname}'"
+                    f" But parameter {par.prefix}{idx} need to be added"
+                    f" to the model."
+                )
+            else:
+                raise UnknownParameter(
+                    f"{par} is not a prefixed parameter, howere the input"
+                    f" {alias} has index with it."
+                )
+        else:
+            raise UnknownParameter(f"Unknown parameter name or alias {alias}")
 
     def register_deriv_funcs(self, func, param):
         """Register the derivative function in to the deriv_func dictionaries.
@@ -3584,15 +3576,10 @@ class Component(metaclass=ModelMeta):
 
         if pn not in list(self.deriv_funcs.keys()):
             self.deriv_funcs[pn] = [func]
+        elif func in self.deriv_funcs[pn]:
+            return
         else:
-            # TODO:
-            # Runing setup() mulitple times can lead to adding derivative
-            # function multiple times. This prevent it from happening now. But
-            # in the future, we should think a better way to do so.
-            if func in self.deriv_funcs[pn]:
-                return
-            else:
-                self.deriv_funcs[pn] += [func]
+            self.deriv_funcs[pn] += [func]
 
     def is_in_parfile(self, para_dict):
         """Check if this subclass included in parfile.
@@ -3610,11 +3597,7 @@ class Component(metaclass=ModelMeta):
 
         """
         if self.component_special_params:
-            for p in self.component_special_params:
-                if p in para_dict:
-                    return True
-            return False
-
+            return any(p in para_dict for p in self.component_special_params)
         pNames_inpar = list(para_dict.keys())
         pNames_inModel = self.params
 
@@ -3622,22 +3605,14 @@ class Component(metaclass=ModelMeta):
         # should go in them.
         # For solar system Shapiro delay component
         if hasattr(self, "PLANET_SHAPIRO"):
-            if "NO_SS_SHAPIRO" in pNames_inpar:
-                return False
-            else:
-                return True
-
+            return "NO_SS_SHAPIRO" not in pNames_inpar
         try:
             bmn = getattr(self, "binary_model_name")
         except AttributeError:
             # This isn't a binary model, keep looking
             pass
         else:
-            if "BINARY" in para_dict:
-                return bmn == para_dict["BINARY"][0]
-            else:
-                return False
-
+            return bmn == para_dict["BINARY"][0] if "BINARY" in para_dict else False
         # Compare the componets parameter names with par file parameters
         compr = list(set(pNames_inpar).intersection(pNames_inModel))
 
@@ -3670,10 +3645,9 @@ class Component(metaclass=ModelMeta):
         -------
         str : formatted line for par file
         """
-        result = ""
-        for p in self.params:
-            result += getattr(self, p).as_parfile_line(format=format)
-        return result
+        return "".join(
+            getattr(self, p).as_parfile_line(format=format) for p in self.params
+        )
 
 
 class DelayComponent(Component):
@@ -3813,7 +3787,7 @@ class AllComponents:
         units = {}
         for k, cp in self.components.items():
             for p in cp.params:
-                if p in units.keys() and units[p] != getattr(cp, p).units:
+                if p in units and units[p] != getattr(cp, p).units:
                     raise TimingModelError(
                         f"Units of parameter '{p}' in component '{cp}' ({getattr(cp, p).units}) do not match those of existing parameter ({units[p]})"
                     )
@@ -3831,11 +3805,9 @@ class AllComponents:
             for p in cp.params:
                 par = getattr(cp, p)
                 if par.repeatable:
-                    repeatable.append(p)
-                    repeatable.append(par._parfile_name)
+                    repeatable.extend((p, par._parfile_name))
                     # also add the aliases to the repeatable param
-                    for als in par.aliases:
-                        repeatable.append(als)
+                    repeatable.extend(iter(par.aliases))
         return set(repeatable)
 
     @lazyproperty
@@ -3865,10 +3837,7 @@ class AllComponents:
             The mapping from components to its categore. The key is the component
             name and the value is the component's category name.
         """
-        cp_ca = {}
-        for k, cp in self.components.items():
-            cp_ca[k] = cp.category
-        return cp_ca
+        return {k: cp.category for k, cp in self.components.items()}
 
     @lazyproperty
     def component_unique_params(self):
@@ -3910,37 +3879,34 @@ class AllComponents:
             model.
         """
         all_systems = self.category_component_map["pulsar_system"]
-        # Search the system name first
         if system_name in all_systems:
             return self.components[system_name]
-        else:  # search for the pulsar system aliases
-            for cp_name in all_systems:
-                if system_name == self.components[cp_name].binary_model_name:
-                    return self.components[cp_name]
+        for cp_name in all_systems:
+            if system_name == self.components[cp_name].binary_model_name:
+                return self.components[cp_name]
 
-            if system_name == "BTX":
-                raise UnknownBinaryModel(
-                    "`BINARY  BTX` is not supported bt PINT. Use "
-                    "`BINARY  BT` instead. It supports both orbital "
-                    "period (PB, PBDOT) and orbital frequency (FB0, ...) "
-                    "parametrizations."
-                )
-            elif system_name == "DDFWHE":
-                raise UnknownBinaryModel(
-                    "`BINARY  DDFWHE` is not supported, but the same model "
-                    "is available as `BINARY  DDH`."
-                )
-            elif system_name in ["MSS", "EH", "H88", "DDT", "BT1P", "BT2P"]:
-                # Binary model list taken from
-                # https://tempo.sourceforge.net/ref_man_sections/binary.txt
-                raise UnknownBinaryModel(
-                    f"`The binary model {system_name} is not yet implemented."
-                )
-
+        if system_name == "BTX":
             raise UnknownBinaryModel(
-                f"Pulsar system/Binary model component"
-                f" {system_name} is not provided."
+                "`BINARY  BTX` is not supported bt PINT. Use "
+                "`BINARY  BT` instead. It supports both orbital "
+                "period (PB, PBDOT) and orbital frequency (FB0, ...) "
+                "parametrizations."
             )
+        elif system_name == "DDFWHE":
+            raise UnknownBinaryModel(
+                "`BINARY  DDFWHE` is not supported, but the same model "
+                "is available as `BINARY  DDH`."
+            )
+        elif system_name in ["MSS", "EH", "H88", "DDT", "BT1P", "BT2P"]:
+            # Binary model list taken from
+            # https://tempo.sourceforge.net/ref_man_sections/binary.txt
+            raise UnknownBinaryModel(
+                f"`The binary model {system_name} is not yet implemented."
+            )
+
+        raise UnknownBinaryModel(
+            f"Pulsar system/Binary model component" f" {system_name} is not provided."
+        )
 
     def alias_to_pint_param(self, alias):
         """Translate a alias to a PINT parameter name.
@@ -4005,14 +3971,11 @@ class AllComponents:
                 # count length of idx_str and dectect leading zeros
                 # TODO fix the case for searching `DMX`
                 num_lzero = len(idx_str) - len(str(idx))
-                if num_lzero > 0:  # Has leading zero
-                    fmt = len(idx_str)
-                else:
-                    fmt = 0
+                fmt = len(idx_str) if num_lzero > 0 else 0
                 first_init_par = None
                 # Handle the case of start index from 0 and 1
                 for start_idx in [0, 1]:
-                    first_init_par_alias = prefix + f"{start_idx:0{fmt}}"
+                    first_init_par_alias = f"{prefix}{start_idx:0{fmt}}"
                     first_init_par = self._param_alias_map.get(
                         first_init_par_alias, None
                     )
@@ -4022,13 +3985,14 @@ class AllComponents:
                         break
             except PrefixError:
                 pint_par = None
-
         else:
             first_init_par = pint_par
+
         if pint_par is None:
             raise UnknownParameter(
-                "Can not find matching PINT parameter for '{}'".format(alias)
+                f"Can not find matching PINT parameter for '{alias}'"
             )
+
         return pint_par, first_init_par
 
     def param_to_unit(self, name):
@@ -4088,7 +4052,7 @@ class MissingParameter(TimingModelError):
         self.msg = msg
 
     def __str__(self):
-        result = self.module + "." + self.param
+        result = f"{self.module}.{self.param}"
         if self.msg is not None:
             result += "\n  " + self.msg
         return result
