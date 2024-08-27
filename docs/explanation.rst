@@ -525,6 +525,20 @@ repository or specific versions for reproducibility, you have several options:
    custom observatory and point the clock correction files to the right place
    as above.
 
+Ephemerides
+'''''''''''
+
+JPL Solar System ephemerides (of the form ``DE*.bsp``) are typically downloaded automatically 
+and stored using ```astropy``'s data downloading and caching mechanism.  The list of URLs used for this 
+are given in :module:`pint.solar_system_ephemerides`.  However, you can also specify a local file instead.  
+To do this, load the file explicitly with:
+::
+
+    out = pint.solar_system_ephemerides.load_kernel("de118", path=<path_to_file>)
+
+After this, you can specify the ephemeris normally when creating TOAs etc.  
+This will persist as long as the current session lasts.
+
 Structure of Pulsar Timing Data Formats
 ---------------------------------------
 
