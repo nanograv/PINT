@@ -17,6 +17,7 @@ the released changes.
 - Replaced `pint.utils.find_optimal_nharms` by a more general function `pint.noise_analysis.find_optimal_nharms` which optimizes the `Nharms` for multiple noise components simultaneously. 
 - Updated the example `rednoise-fit-example.py`
 ### Added
+- arXiv link of PINT noise paper in README
 - Type hints in `pint.derived_quantities`, `pint.modelutils`, `pint.binaryconvert`, `pint.config`, 
 `pint.erfautils`, `pint.fits_utils`, `pint.logging` and `pint.residuals`
 - Doing `model.par = something` will try to assign to `par.quantity` or `par.value` but will give warning
