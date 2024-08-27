@@ -1,5 +1,5 @@
 # %% [markdown]
-# # Red noise and DM noise fitting examples
+# # Red noise, DM noise, and chromatic noise fitting examples
 #
 # This notebook provides an example on how to fit for red noise
 # and DM noise using PINT using simulated datasets.
