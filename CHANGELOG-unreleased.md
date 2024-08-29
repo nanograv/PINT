@@ -14,6 +14,7 @@ the released changes.
 - `maskParameter.__repr__()` output now includes the frozen attribute.
 - Changed default value of `FDJUMPLOG` to `Y`
 - Bumped `black` version to 24.x
+- Moved `require_longdouble_precision()` from `pint.utils` to `pint.pulsar_mjd`
 ### Added
 - arXiv link of PINT noise paper in README
 - Type hints in `pint.derived_quantities`, `pint.modelutils`, `pint.binaryconvert`, `pint.config`, 
