@@ -529,8 +529,8 @@ Ephemerides
 '''''''''''
 
 JPL Solar System ephemerides (of the form ``DE*.bsp``) are typically downloaded automatically 
-and stored using ```astropy``'s data downloading and caching mechanism.  The list of URLs used for this 
-are given in :module:`pint.solar_system_ephemerides`.  However, you can also specify a local file instead.  
+and stored using ``astropy``'s data downloading and caching mechanism.  The list of URLs used for this 
+are given in :mod:`pint.solar_system_ephemerides`.  However, you can also specify a local file instead.  
 To do this, load the file explicitly with:
 ::
 
