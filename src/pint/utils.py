@@ -1547,7 +1547,7 @@ def dmwavex_setup(
     model : pint.models.timing_model.TimingModel
     T_span : float, astropy.quantity.Quantity
         Time span used to calculate nyquist frequency when using freqs
-        Time span used to calculate WaveX frequencies when using n_freqs
+        Time span used to calculate DMWaveX frequencies when using n_freqs
         Usually to be set as the length of the timing baseline the model is being used for
     freqs : iterable of float or astropy.quantity.Quantity, None
         User inputed base frequencies
@@ -1618,6 +1618,100 @@ def dmwavex_setup(
             model[p].frozen = freeze_params
 
     return model.components["DMWaveX"].get_indices()
+
+
+def cmwavex_setup(
+    model: "pint.models.TimingModel",
+    T_span: Union[float, u.Quantity],
+    freqs: Optional[Iterable[Union[float, u.Quantity]]] = None,
+    n_freqs: Optional[int] = None,
+    freeze_params: bool = False,
+) -> List[int]:
+    """
+    Set-up a CMWaveX model based on either an array of user-provided frequencies or the wave number
+    frequency calculation. Sine and Cosine amplitudes are initially set to zero
+
+    User specifies T_span and either freqs or n_freqs. This function assumes that the timing model does not already
+    have any CMWaveX components. See add_cmwavex_component() or add_cmwavex_components() to add components
+    to an existing CMWaveX model.
+
+    Parameters
+    ----------
+
+    model : pint.models.timing_model.TimingModel
+    T_span : float, astropy.quantity.Quantity
+        Time span used to calculate nyquist frequency when using freqs
+        Time span used to calculate CMWaveX frequencies when using n_freqs
+        Usually to be set as the length of the timing baseline the model is being used for
+    freqs : iterable of float or astropy.quantity.Quantity, None
+        User inputed base frequencies
+    n_freqs : int, None
+        Number of wave frequencies to calculate using the equation: freq_n = 2 * pi * n / T_span
+        Where n is the wave number, and T_span is the total time span of the toas in the fitter object
+    freeze_params : bool, optional
+        Whether the new parameters should be frozen
+
+    Returns
+    -------
+
+    indices : list
+            Indices that have been assigned to new WaveX components
+    """
+    from pint.models.cmwavex import CMWaveX
+
+    if (freqs is None) and (n_freqs is None):
+        raise ValueError(
+            "CMWaveX component base frequencies are not specified. "
+            "Please input either freqs or n_freqs"
+        )
+
+    if (freqs is not None) and (n_freqs is not None):
+        raise ValueError(
+            "Both freqs and n_freqs are specified. Only one or the other should be used"
+        )
+
+    if n_freqs is not None and n_freqs <= 0:
+        raise ValueError("Must use a non-zero number of wave frequencies")
+
+    model.add_component(CMWaveX())
+    if isinstance(T_span, u.quantity.Quantity):
+        T_span.to(u.d)
+    else:
+        T_span *= u.d
+
+    nyqist_freq = 1.0 / (2.0 * T_span)
+    if freqs is not None:
+        if isinstance(freqs, u.quantity.Quantity):
+            freqs.to(u.d**-1)
+        else:
+            freqs *= u.d**-1
+        if len(freqs) == 1:
+            model.CMWXFREQ_0001.quantity = freqs
+        else:
+            freqs = np.array(freqs)
+            freqs.sort()
+            if min(np.diff(freqs)) < nyqist_freq:
+                warnings.warn(
+                    "CMWaveX frequency spacing is finer than frequency resolution of data"
+                )
+            model.CMWXFREQ_0001.quantity = freqs[0]
+            model.components["CMWaveX"].add_cmwavex_components(freqs[1:])
+
+    if n_freqs is not None:
+        if n_freqs == 1:
+            wave_freq = 1 / T_span
+            model.CMWXFREQ_0001.quantity = wave_freq
+        else:
+            wave_numbers = np.arange(1, n_freqs + 1)
+            wave_freqs = wave_numbers / T_span
+            model.CMWXFREQ_0001.quantity = wave_freqs[0]
+            model.components["CMWaveX"].add_cmwavex_components(wave_freqs[1:])
+
+    for p in model.params:
+        if p.startswith("CMWXSIN") or p.startswith("CMWXCOS"):
+            model[p].frozen = freeze_params
+
+    return model.components["CMWaveX"].get_indices()
 
 
 def _translate_wave_freqs(om: Union[float, u.Quantity], k: int) -> u.Quantity:
@@ -2378,7 +2472,7 @@ def info_string(
     return s
 
 
-def list_parameters(class_: Type = None) -> List[Dict[str, Union[str, List]]]:
+def list_parameters(class_: Optional[Type] = None) -> List[Dict[str, Union[str, List]]]:
     """List parameters understood by PINT.
 
     Parameters
@@ -3016,8 +3110,9 @@ def _get_wx2pl_lnlike(
     from pint.models.noise_model import powerlaw
     from pint import DMconst
 
-    assert component_name in {"WaveX", "DMWaveX"}
-    prefix = "WX" if component_name == "WaveX" else "DMWX"
+    assert component_name in {"WaveX", "DMWaveX", "CMWaveX"}
+    prefix_dict = {"WaveX": "WX", "DMWaveX": "DMWX", "CMWaveX": "CMWX"}
+    prefix = prefix_dict[component_name]
 
     idxs = np.array(model.components[component_name].get_indices())
 
@@ -3029,7 +3124,7 @@ def _get_wx2pl_lnlike(
 
     assert np.allclose(
         np.diff(np.diff(fs)), 0
-    ), "[DM]WaveX frequencies must be uniformly spaced."
+    ), "WaveX/DMWaveX/CMWaveX frequencies must be uniformly spaced for this conversion to work."
 
     if ignore_fyr:
         year_mask = np.abs(((fs - fyr) / f0)) > 0.5
@@ -3040,7 +3135,15 @@ def _get_wx2pl_lnlike(
         )
         f0 = np.min(fs)
 
-    scaling_factor = 1 if component_name == "WaveX" else DMconst / (1400 * u.MHz) ** 2
+    scaling_factor = (
+        1
+        if component_name == "WaveX"
+        else (
+            DMconst / (1400 * u.MHz) ** 2
+            if component_name == "DMWaveX"
+            else DMconst / 1400**model.TNCHROMIDX.value
+        )
+    )
 
     a = np.array(
         [
@@ -3069,20 +3172,22 @@ def _get_wx2pl_lnlike(
 
     def powl_model(params: Tuple[float, float]) -> float:
         """Get the powerlaw spectrum for the WaveX frequencies for a given
-        set of parameters. This calls the powerlaw function used by `PLRedNoise`/`PLDMNoise`.
+        set of parameters. This calls the powerlaw function used by `PLRedNoise`/`PLDMNoise`/`PLChromNoise`.
         """
         gamma, log10_A = params
         return (powerlaw(fs, A=10**log10_A, gamma=gamma) * f0) ** 0.5
 
     def mlnlike(params: Tuple[float, ...]) -> float:
         """Negative of the likelihood function that acts on the
-        `[DM]WaveX` amplitudes."""
+        `[DM/CM]WaveX` amplitudes."""
         sigma = powl_model(params)
-        return 0.5 * np.sum(
-            (a**2 / (sigma**2 + da**2))
-            + (b**2 / (sigma**2 + db**2))
-            + np.log(sigma**2 + da**2)
-            + np.log(sigma**2 + db**2)
+        return 0.5 * float(
+            np.sum(
+                (a**2 / (sigma**2 + da**2))
+                + (b**2 / (sigma**2 + db**2))
+                + np.log(sigma**2 + da**2)
+                + np.log(sigma**2 + db**2)
+            )
         )
 
     return mlnlike
@@ -3188,6 +3293,60 @@ def pldmnoise_from_dmwavex(
     model1.TNDMC.value = tndmc
     model1.TNDMAMP.uncertainty_value = log10_A_err
     model1.TNDMGAM.uncertainty_value = gamma_err
+
+    return model1
+
+
+def plchromnoise_from_cmwavex(
+    model: "pint.models.TimingModel", ignore_fyr: bool = False
+) -> "pint.models.TimingModel":
+    """Convert a `CMWaveX` representation of red noise to a `PLChromNoise`
+    representation. This is done by minimizing a likelihood function
+    that acts on the `CMWaveX` amplitudes over the powerlaw spectral
+    parameters.
+
+    Parameters
+    ----------
+    model: pint.models.timing_model.TimingModel
+        The timing model with a `CMWaveX` component.
+
+    Returns
+    -------
+    pint.models.timing_model.TimingModel
+        The timing model with a converted `PLChromNoise` component.
+    """
+    from pint.models.noise_model import PLChromNoise
+
+    mlnlike = _get_wx2pl_lnlike(model, "CMWaveX", ignore_fyr=ignore_fyr)
+
+    result = minimize(mlnlike, [4, -13], method="Nelder-Mead")
+    if not result.success:
+        raise ValueError("Log-likelihood maximization failed to converge.")
+
+    gamma_val, log10_A_val = result.x
+
+    hess = Hessian(mlnlike)
+
+    H = hess((gamma_val, log10_A_val))
+    assert np.all(np.linalg.eigvals(H) > 0), "The Hessian is not positive definite!"
+
+    Hinv = np.linalg.pinv(H)
+    assert np.all(
+        np.linalg.eigvals(Hinv) > 0
+    ), "The inverse Hessian is not positive definite!"
+
+    gamma_err, log10_A_err = np.sqrt(np.diag(Hinv))
+
+    tndmc = len(model.components["CMWaveX"].get_indices())
+
+    model1 = deepcopy(model)
+    model1.remove_component("CMWaveX")
+    model1.add_component(PLChromNoise())
+    model1.TNCHROMAMP.value = log10_A_val
+    model1.TNCHROMGAM.value = gamma_val
+    model1.TNCHROMC.value = tndmc
+    model1.TNCHROMAMP.uncertainty_value = log10_A_err
+    model1.TNCHROMGAM.uncertainty_value = gamma_err
 
     return model1
 

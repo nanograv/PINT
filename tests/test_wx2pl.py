@@ -3,8 +3,10 @@ from pint.models import get_model
 from pint.simulation import make_fake_toas_uniform
 from pint.fitter import WLSFitter
 from pint.utils import (
+    cmwavex_setup,
     dmwavex_setup,
     find_optimal_nharms,
+    plchromnoise_from_cmwavex,
     wavex_setup,
     plrednoise_from_wavex,
     pldmnoise_from_dmwavex,
@@ -107,6 +109,54 @@ def data_dmwx():
     return m, t
 
 
+@pytest.fixture
+def data_cmwx():
+    par_sim_cmwx = """
+            PSR           SIM3
+            RAJ           05:00:00     1
+            DECJ          15:00:00     1
+            PEPOCH        55000
+            F0            100          1
+            F1            -1e-15       1 
+            PHOFF         0            1
+            DM            15           1
+            TNCHROMIDX    4
+            CM            10
+            TNCHROMAMP    -13
+            TNCHROMGAM    3.5
+            TNCHROMC      10
+            TZRMJD        55000
+            TZRFRQ        1400 
+            TZRSITE       gbt
+            UNITS         TDB
+            EPHEM         DE440
+            CLOCK         TT(BIPM2019)
+        """
+
+    m = get_model(StringIO(par_sim_cmwx))
+
+    ntoas = 200
+    toaerrs = np.random.uniform(0.5, 2.0, ntoas) * u.us
+    freqs = np.linspace(500, 1500, 4) * u.MHz
+
+    t = make_fake_toas_uniform(
+        startMJD=54001,
+        endMJD=56001,
+        ntoas=ntoas,
+        model=m,
+        freq=freqs,
+        obs="gbt",
+        error=toaerrs,
+        add_noise=True,
+        add_correlated_noise=True,
+        name="fake",
+        include_bipm=True,
+        multi_freqs_in_epoch=True,
+    )
+
+    return m, t
+
+
 def test_wx2pl(data_wx):
     m, t = data_wx
 
@@ -145,6 +195,32 @@ def test_dmwx2pldm(data_dmwx):
     assert "PLDMNoise" in m2.components
     assert abs(m.TNDMAMP.value - m2.TNDMAMP.value) / m2.TNDMAMP.uncertainty_value < 5
     assert abs(m.TNDMGAM.value - m2.TNDMGAM.value) / m2.TNDMGAM.uncertainty_value < 5
+
+
+def test_cmwx2pldm(data_cmwx):
+    m, t = data_cmwx
+
+    m1 = deepcopy(m)
+    m1.remove_component("PLChromNoise")
+
+    Tspan = t.get_mjds().max() - t.get_mjds().min()
+    cmwavex_setup(m1, Tspan, n_freqs=int(m.TNCHROMC.value), freeze_params=False)
+
+    ftr = WLSFitter(t, m1)
+    ftr.fit_toas(maxiter=10)
+    m1 = ftr.model
+
+    m2 = plchromnoise_from_cmwavex(m1)
+
+    assert "PLChromNoise" in m2.components
+    assert (
+        abs(m.TNCHROMAMP.value - m2.TNCHROMAMP.value) / m2.TNCHROMAMP.uncertainty_value
+        < 5
+    )
+    assert (
+        abs(m.TNCHROMGAM.value - m2.TNCHROMGAM.value) / m2.TNCHROMGAM.uncertainty_value
+        < 5
+    )
 
 
 def test_find_optimal_nharms_wx(data_wx):

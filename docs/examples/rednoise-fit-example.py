@@ -1,5 +1,5 @@
 # %% [markdown]
-# # Red noise and DM noise fitting examples
+# # Red noise, DM noise, and chromatic noise fitting examples
 #
 # This notebook provides an example on how to fit for red noise
 # and DM noise using PINT using simulated datasets.
@@ -22,8 +22,10 @@ from pint.simulation import make_fake_toas_uniform
 from pint.logging import setup as setup_log
 from pint.fitter import WLSFitter
 from pint.utils import (
+    cmwavex_setup,
     dmwavex_setup,
     find_optimal_nharms,
+    plchromnoise_from_cmwavex,
     wavex_setup,
     plrednoise_from_wavex,
     pldmnoise_from_dmwavex,
@@ -370,3 +372,162 @@ plt.ylabel("Spectral power (s$^2$)")
 plt.xlabel("Frequency (Hz)")
 plt.axvline(fyr, color="black", ls="dotted", label="1 yr$^{-1}$")
 plt.legend()
+
+
+# %% [markdown]
+# ## Chromatic noise fitting
+# Let us now do a similar kind of analysis for chromatic noise.
+
+# %%
+par_sim = """
+    PSR           SIM5
+    RAJ           05:00:00     1
+    DECJ          15:00:00     1
+    PEPOCH        55000
+    F0            100          1
+    F1            -1e-15       1 
+    PHOFF         0            1
+    DM            15
+    CM            1.2          1
+    TNCHROMIDX    3.5
+    TNCHROMAMP    -13
+    TNCHROMGAM    3.5
+    TNCHROMC      30
+    TZRMJD        55000
+    TZRFRQ        1400 
+    TZRSITE       gbt
+    UNITS         TDB
+    EPHEM         DE440
+    CLOCK         TT(BIPM2019)
+"""
+
+m = get_model(StringIO(par_sim))
+
+# %%
+# Generate the simulated TOAs.
+ntoas = 2000
+toaerrs = np.random.uniform(0.5, 2.0, ntoas) * u.us
+freqs = np.linspace(500, 1500, 8) * u.MHz
+
+t = make_fake_toas_uniform(
+    startMJD=53001,
+    endMJD=57001,
+    ntoas=ntoas,
+    model=m,
+    freq=freqs,
+    obs="gbt",
+    error=toaerrs,
+    add_noise=True,
+    add_correlated_noise=True,
+    name="fake",
+    include_bipm=True,
+    multi_freqs_in_epoch=True,
+)
+
+# %%
+# Find the optimum number of harmonics by minimizing AIC.
+m1 = deepcopy(m)
+m1.remove_component("PLChromNoise")
+
+m2 = deepcopy(m1)
+
+nharm_opt = m.TNCHROMC.value
+
+# %%
+# Now create a new model with the optimum number of
+# harmonics
+m2 = deepcopy(m1)
+
+Tspan = t.get_mjds().max() - t.get_mjds().min()
+cmwavex_setup(m2, T_span=Tspan, n_freqs=nharm_opt, freeze_params=False)
+
+ftr = WLSFitter(t, m2)
+ftr.fit_toas(maxiter=10)
+m2 = ftr.model
+
+print(m2)
+
+# %% [markdown]
+# ### Estimating the spectral parameters from the `CMWaveX` fit.
+
+# %%
+# Get the Fourier amplitudes and powers and their uncertainties.
+# Note that the `CMWaveX` amplitudes have the units of pc/cm^3/MHz^2.
+# We multiply them by a constant factor to convert them to dimensions
+# of time so that they are consistent with `PLChromNoise`.
+scale = DMconst / 1400**m.TNCHROMIDX.value
+
+idxs = np.array(m2.components["CMWaveX"].get_indices())
+a = np.array(
+    [(scale * m2[f"CMWXSIN_{idx:04d}"].quantity).to_value("s") for idx in idxs]
+)
+da = np.array(
+    [(scale * m2[f"CMWXSIN_{idx:04d}"].uncertainty).to_value("s") for idx in idxs]
+)
+b = np.array(
+    [(scale * m2[f"CMWXCOS_{idx:04d}"].quantity).to_value("s") for idx in idxs]
+)
+db = np.array(
+    [(scale * m2[f"CMWXCOS_{idx:04d}"].uncertainty).to_value("s") for idx in idxs]
+)
+print(len(idxs))
+
+P = (a**2 + b**2) / 2
+dP = ((a * da) ** 2 + (b * db) ** 2) ** 0.5
+
+f0 = (1 / Tspan).to_value(u.Hz)
+fyr = (1 / u.year).to_value(u.Hz)
+
+# %%
+# We can create a `PLChromNoise` model from the `CMWaveX` model.
+# This will estimate the spectral parameters from the `CMWaveX`
+# amplitudes.
+m3 = plchromnoise_from_cmwavex(m2)
+print(m3)
+
+# %%
+# Now let us plot the estimated spectrum with the injected
+# spectrum.
+plt.subplot(211)
+plt.errorbar(
+    idxs * f0,
+    b * 1e6,
+    db * 1e6,
+    ls="",
+    marker="o",
+    label="$\\hat{a}_j$ (CMWXCOS)",
+    color="red",
+)
+plt.errorbar(
+    idxs * f0,
+    a * 1e6,
+    da * 1e6,
+    ls="",
+    marker="o",
+    label="$\\hat{b}_j$ (CMWXSIN)",
+    color="blue",
+)
+plt.axvline(fyr, color="black", ls="dotted")
+plt.axhline(0, color="grey", ls="--")
+plt.ylabel("Fourier coeffs ($\mu$s)")
+plt.xscale("log")
+plt.legend(fontsize=8)
+
+plt.subplot(212)
+plt.errorbar(
+    idxs * f0, P, dP, ls="", marker="o", label="Spectral power (PINT)", color="k"
+)
+P_inj = m.components["PLChromNoise"].get_noise_weights(t)[::2]
+plt.plot(idxs * f0, P_inj, label="Injected Spectrum", color="r")
+P_est = m3.components["PLChromNoise"].get_noise_weights(t)[::2]
+print(len(idxs), len(P_est))
+plt.plot(idxs * f0, P_est, label="Estimated Spectrum", color="b")
+plt.xscale("log")
+plt.yscale("log")
+plt.ylabel("Spectral power (s$^2$)")
+plt.xlabel("Frequency (Hz)")
+plt.axvline(fyr, color="black", ls="dotted", label="1 yr$^{-1}$")
+plt.legend()
+
+
+# %%
