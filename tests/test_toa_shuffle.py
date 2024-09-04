@@ -18,33 +18,22 @@ from pint import simulation, toa
 import pint.residuals
 from pint.models import get_model
 
-shuffletoas = """FORMAT 1
-test 1234.0 54321 0 pks
-test2 888 59055 0 meerkat
-test3 350 59000 0 gbt
-"""
-
 
 class TOAOrderSetup:
     parfile = os.path.join(datadir, "NGC6440E.par")
     model = get_model(parfile)
     # fake a multi-telescope, multi-frequency data-set and make sure the results don't depend on TOA order
-    fakes = [
+    t = (
         simulation.make_fake_toas_uniform(
             55000, 55500, 30, model=model, freq=1400 * u.MHz, obs="ao"
-        ),
-        simulation.make_fake_toas_uniform(
+        )
+        + simulation.make_fake_toas_uniform(
             55010, 55500, 40, model=model, freq=800 * u.MHz, obs="gbt"
-        ),
-        simulation.make_fake_toas_uniform(
+        )
+        + simulation.make_fake_toas_uniform(
             55020, 55500, 50, model=model, freq=2000 * u.MHz, obs="@"
-        ),
-    ]
-    f = io.StringIO()
-    for t in fakes:
-        t.write_TOA_file(f)
-    f.seek(0)
-    t = toa.get_TOAs(f)
+        )
+    )
     r = pint.residuals.Residuals(t, model, subtract_mean=False)
 
     @classmethod
@@ -95,6 +84,11 @@ def test_resorting_toas_chi2_match(sortkey):
 
 
 class TOALineOrderSetup:
+    shuffletoas = """FORMAT 1
+        test 1234.0 54321 0 pks
+        test2 888 59055 0 meerkat
+        test3 350 59000 0 gbt
+    """
     timfile = io.StringIO(shuffletoas)
     t = toa.get_TOAs(timfile)
     timfile.seek(0)
