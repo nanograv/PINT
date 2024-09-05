@@ -1,11 +1,13 @@
 """Damour and Deruelle binary model."""
 
+from multiprocessing import Value
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
 from loguru import logger as log
 
 from pint import Tsun
+from pint.models.parameter import InvalidModelParameters
 
 from .binary_generic import PSR_BINARY
 
@@ -708,6 +710,9 @@ class DDmodel(PSR_BINARY):
         sOmega = np.sin(self.omega())
         cOmega = np.cos(self.omega())
         TM2 = self.M2.value * Tsun
+
+        if (self.SINI < 0) or (self.SINI > 1):
+            raise InvalidModelParameters("SINI parameter must be between 0 and 1")
 
         return (
             -2
