@@ -601,7 +601,7 @@ class ELL1model(ELL1BaseModel):
         """ELL1 Shapiro delay. Lange et al 2001 eq. A16"""
         TM2 = self.TM2()
         Phi = self.Phi()
-        if (self.SINI < 0) or (self.SINI > 1):
+        if np.any(self.SINI < 0) or np.any(self.SINI > 1):
             raise InvalidModelParameters("SINI must be between 0 and 1")
         return -2 * TM2 * np.log(1 - self.SINI * np.sin(Phi))
 

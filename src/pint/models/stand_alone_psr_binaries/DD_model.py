@@ -711,7 +711,7 @@ class DDmodel(PSR_BINARY):
         cOmega = np.cos(self.omega())
         TM2 = self.M2.value * Tsun
 
-        if (self.SINI < 0) or (self.SINI > 1):
+        if np.any(self.SINI < 0) or np.any(self.SINI > 1):
             raise InvalidModelParameters("SINI parameter must be between 0 and 1")
 
         return (
