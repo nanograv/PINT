@@ -53,6 +53,9 @@ jobs:
 #          - os: ubuntu-latest
 #            python: '3.8'
 #            tox_env: 'codestyle'
+          - os: macos-12
+            python: '3.12'
+            tox_env: 'py312-singletest'
 
     steps:
     - name: Check out repository
