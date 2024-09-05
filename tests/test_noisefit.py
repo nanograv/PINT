@@ -6,38 +6,27 @@ from pinttestdata import datadir
 
 from io import StringIO
 import numpy as np
-import pytest
+
+par = """
+    ELAT    1.3     1
+    ELONG   2.5     1
+    F0      100     1
+    F1      1e-13   1
+    PEPOCH  55000
+    EPHEM   DE440
+    EFAC mjd 50000 53000 2      1
+    EQUAD mjd 53000 55000 0.8    1
+"""
+
+m = get_model(StringIO(par))
+t = make_fake_toas_uniform(50000, 55000, 200, m, add_noise=True)
+
+m2, t2 = get_model_and_toas(
+    datadir / "ecorr_fit_test.par", datadir / "ecorr_fit_test.tim"
+)
 
 
-@pytest.fixture
-def model_and_toas_1():
-    par = """
-        ELAT    1.3     1
-        ELONG   2.5     1
-        F0      100     1
-        F1      1e-13   1
-        PEPOCH  55000
-        EPHEM   DE440
-        EFAC mjd 50000 53000 2      1
-        EQUAD mjd 53000 55000 0.8    1
-    """
-
-    m = get_model(StringIO(par))
-    t = make_fake_toas_uniform(50000, 55000, 200, m, add_noise=True)
-
-    return m, t
-
-
-@pytest.fixture
-def model_and_toas_2():
-    return get_model_and_toas(
-        datadir / "ecorr_fit_test.par", datadir / "ecorr_fit_test.tim"
-    )
-
-
-def test_white_noise_fit(model_and_toas_1):
-    m, t = model_and_toas_1
-
+def test_white_noise_fit():
     assert m.EFAC1.uncertainty_value == 0 and m.EQUAD1.uncertainty_value == 0
 
     ftr = DownhillWLSFitter(t, m)
@@ -58,9 +47,7 @@ def test_white_noise_fit(model_and_toas_1):
     )
 
 
-def test_white_noise_refit(model_and_toas_1):
-    m, t = model_and_toas_1
-
+def test_white_noise_refit():
     ftr = DownhillWLSFitter(t, m)
 
     ftr.model.EFAC1.value = 1.5
@@ -80,9 +67,7 @@ def test_white_noise_refit(model_and_toas_1):
     )
 
 
-def test_ecorr_fit(model_and_toas_2):
-    m2, t2 = model_and_toas_2
-
+def test_ecorr_fit():
     ftr = DownhillGLSFitter(t2, m2)
     ftr.fit_toas()
 
@@ -94,9 +79,7 @@ def test_ecorr_fit(model_and_toas_2):
     )
 
 
-def test_ecorr_refit(model_and_toas_2):
-    m2, t2 = model_and_toas_2
-
+def test_ecorr_refit():
     ftr = DownhillGLSFitter(t2, m2)
 
     ftr.model.ECORR1.value = 0.75
