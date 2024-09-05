@@ -54,8 +54,10 @@ from pint.utils import split_prefixed_name
 # in one place for consistency
 _parfile_formats = ["pint", "tempo", "tempo2"]
 
+
 class InvalidModelParameters(ValueError):
     pass
+
 
 def _identity_function(x):
     """A function to just return the input argument
