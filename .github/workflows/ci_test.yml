@@ -55,7 +55,7 @@ jobs:
 #            tox_env: 'codestyle'
           - os: macos-12
             python: '3.12'
-            tox_env: 'py312-singletest'
+            tox_env: 'singletest'
 
     steps:
     - name: Check out repository
