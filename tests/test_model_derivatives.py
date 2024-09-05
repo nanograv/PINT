@@ -179,7 +179,7 @@ def test_derivative_equals_numerical(parfile, param):
             np.abs(model.FB3.value.astype(np.float64)) * 1e7
         )
     elif param == "SINI":
-        sini = model.SINI.value
+        sini = model.SINI.value.astype(np.float64)
         stepgen = numdifftools.MaxStepGenerator(abs(sini) / 2)
     else:
         stepgen = None
