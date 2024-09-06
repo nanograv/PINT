@@ -180,10 +180,16 @@ def test_derivative_equals_numerical(parfile, param):
         )
     elif param == "SINI":
         sini = model.SINI.value.astype(np.float64)
-        stepgen = numdifftools.MaxStepGenerator(abs(sini) / 2)
+        print(sini.dtype)
+        stepgen = numdifftools.MaxStepGenerator(abs(sini) / 10)
+        print(stepgen)
     else:
         stepgen = None
     df = numdifftools.Derivative(f, step=stepgen)
+
+    if param == "SINI":
+        print(getattr(model, param).value.astype(np.float64).dtype)
+        print(f(getattr(model, param).value.astype(np.float64)).dtype)
 
     a = model.d_phase_d_param(toas, delay=None, param=param).to_value(1 / units)
     b = df(getattr(model, param).value.astype(np.float64))
