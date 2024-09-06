@@ -153,7 +153,7 @@ def test_derivative_equals_numerical(parfile, param):
             try:
                 dphase = m.phase(toas, abs_phase=False) - phase
             except ValueError:
-                return np.nan * np.zeros_like(phase.frac)
+                return np.nan * np.zeros_like(phase.frac).astype(np.float64)
         return np.float64(dphase.int + dphase.frac)
 
     if param == "ECC":
