@@ -14,8 +14,8 @@ from pint.models import get_model, get_model_and_toas
 
 def test_orbwaves_fit():
     m, t = get_model_and_toas(
-        datadir / "J1048+2339_orbwaves.par",
-        datadir / "J1048+2339_3PC_fake.tim")
+        datadir / "J1048+2339_orbwaves.par", datadir / "J1048+2339_3PC_fake.tim"
+    )
 
     f = fitter.WLSFitter(toas=t, model=m)
 
@@ -41,16 +41,11 @@ def test_invalid_parfiles():
             lines.append(line)
         return StringIO(lines)
 
-    deleted_lines = [
-            ['ORBWAVEC0','ORBWAVES0'],
-            ['ORBWAVEC3'],
-            ['ORBWAVES4']
-    ]
+    deleted_lines = [["ORBWAVEC0", "ORBWAVES0"], ["ORBWAVEC3"], ["ORBWAVES4"]]
 
     for lines in deleted_lines:
         with pytest.raises(Exception):
             m = get_model(_delete_line(lines))
-
 
 
 if __name__ == "__main__":
