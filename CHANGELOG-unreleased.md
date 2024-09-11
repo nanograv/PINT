@@ -19,6 +19,7 @@ the released changes.
 - Type hints in `pint.derived_quantities`, `pint.modelutils`, `pint.binaryconvert`, `pint.config`, 
 `pint.erfautils`, `pint.fits_utils`, `pint.logging` and `pint.residuals`
 - Doing `model.par = something` will try to assign to `par.quantity` or `par.value` but will give warning
+- Piecewise-constant model for chromatic variations (CMX)
 - `PLChromNoise` component to model chromatic red noise with a power law spectrum
 - Fourier series representation of chromatic noise (`CMWaveX`)
 - `pint.utils.cmwavex_setup` and `pint.utils.plchromnoise_from_cmwavex` functions
