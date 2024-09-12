@@ -1,6 +1,5 @@
 """Damour and Deruelle binary model."""
 
-from multiprocessing import Value
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
