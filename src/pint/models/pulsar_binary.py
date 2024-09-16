@@ -63,6 +63,18 @@ class PulsarBinary(DelayComponent):
         - FB0 - orbital frequency (1/s, alternative to PB, non-negative)
         - FBn - time derivatives of orbital frequency (1/s**(n+1))
 
+    The following ORBWAVEs parameters define a Fourier series model for orbital phase
+    variations, as an alternative to the FBn Taylor series expansion:
+
+        - ORBWAVE_OM - base angular frequency for ORBWAVEs expansion (rad / s)
+        - ORBWAVE_EPOCH - reference epoch for ORBWAVEs model (MJD)
+        - ORBWAVECn/ORBWAVESn - coefficients for cosine/sine components (dimensionless)
+
+    The orbital phase is then given by:
+        orbits(t) = (t - T0) / PB
+                    + \sum_{n=0} (ORBWAVECn cos(ORBWAVE_OM * (n + 1) * (t - ORBWAVE_EPOCH))
+                                + ORBWAVESn sin(ORBWAVE_OM * (n + 1) * (t - ORBWAVE_EPOCH))
+
     The internal calculation code uses different names for some parameters:
 
         - Eccentric Anomaly:               E (not parameter ECC)
