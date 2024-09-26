@@ -76,6 +76,7 @@ from pint.models.parameter import (
     AngleParameter,
     boolParameter,
     strParameter,
+    InvalidModelParameters,
 )
 from pint.pint_matrix import (
     CorrelationMatrix,
@@ -885,10 +886,6 @@ class Fitter:
             category=DeprecationWarning,
         )
         return self.parameter_covariance_matrix
-
-
-class InvalidModelParameters(ValueError):
-    pass
 
 
 class CorrelatedErrors(ValueError):

@@ -32,6 +32,7 @@ the released changes.
 - SWX model now has SWXP_0001 frozen by default, and new segments should also have SWXP frozen
 - Can now properly use local files for ephemeris
 - Typos in `explanation.rst` regarding local ephemeris.
+- DD/ELL1 models will check for valid SINI and raise exception if it strays, which will tell the fitter to try elsewhere
 - Don't try to print AIC for wideband data in `pintk` (it's not yet implemented)
 ### Removed
 - Removed the argument `--usepickle` in `event_optimize` as the `load_events_weights` function checks the events file type to see if the 
