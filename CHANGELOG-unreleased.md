@@ -23,6 +23,7 @@ the released changes.
 - Fourier series representation of chromatic noise (`CMWaveX`)
 - `pint.utils.cmwavex_setup` and `pint.utils.plchromnoise_from_cmwavex` functions
 - More validation for correlated noise components in `TimingModel.validate_component_types()`
+- ORBWAVEs model for modelling binary orbital period variations in the fourier domain
 ### Fixed
 - Bug in `DMWaveX.get_indices()` function
 - Explicit type conversion in `woodbury_dot()` function
