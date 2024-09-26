@@ -127,6 +127,7 @@ email pint@nanograv.org or one of the people below:
 * Scott Ransom (sransom@nrao.edu)
 * Paul Ray (paul.s.ray3.civ@us.navy.mil)
 * David Kaplan (kaplan@uwm.edu)  
+* Abhimanyu Susobhanan (abhimanyu.susobhanan@nanograv.org)
 
 Want to do something new? Submit a github `issue <https://github.com/nanograv/PINT/issues>`_.
   
