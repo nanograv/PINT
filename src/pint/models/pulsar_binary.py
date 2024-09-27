@@ -21,12 +21,10 @@ from pint.models.parameter import (
 from pint.models.stand_alone_psr_binaries import binary_orbits as bo
 from pint.models.timing_model import (
     DelayComponent,
-    MissingParameter,
-    TimingModelError,
-    UnknownParameter,
 )
 from pint.utils import taylor_horner_deriv, parse_time
 from pint.pulsar_ecliptic import PulsarEcliptic
+from pint.exceptions import MissingParameter, TimingModelError, UnknownParameter
 
 
 # def _p_to_f(p):

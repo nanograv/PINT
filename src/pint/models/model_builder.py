@@ -15,16 +15,11 @@ from pint.models.timing_model import (
     AllComponents,
     TimingModel,
     ignore_prefix,
-    UnknownBinaryModel,
-    UnknownParameter,
-    TimingModelError,
-    MissingBinaryError,
     ignore_params,
     ignore_prefix,
 )
 from pint.toa import TOAs, get_TOAs
 from pint.utils import (
-    PrefixError,
     interesting_lines,
     lines_of,
     split_prefixed_name,
@@ -33,6 +28,14 @@ from pint.utils import (
 from pint.models.tcb_conversion import convert_tcb_tdb
 from pint.models.binary_ddk import _convert_kin, _convert_kom
 from pint.types import file_like, quantity_like
+from pint.exceptions import (
+    PrefixError,
+    ComponentConflict,
+    UnknownParameter,
+    UnknownBinaryModel,
+    TimingModelError,
+    MissingBinaryError,
+)
 
 __all__ = ["ModelBuilder", "get_model", "get_model_and_toas"]
 
@@ -50,10 +53,6 @@ _binary_model_priority = [
     "DDS",
     "DDH",
 ]
-
-
-class ComponentConflict(ValueError):
-    """Error for multiple components can be select but no other indications."""
 
 
 def parse_parfile(parfile):

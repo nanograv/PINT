@@ -8,7 +8,7 @@ from loguru import logger as log
 from pint.models.binary_dd import BinaryDD
 from pint.models.parameter import boolParameter, floatParameter, funcParameter
 from pint.models.stand_alone_psr_binaries.DDK_model import DDKmodel
-from pint.models.timing_model import MissingParameter, TimingModelError
+from pint.exceptions import MissingParameter, TimingModelError
 
 
 def _convert_kin(kin):

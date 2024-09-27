@@ -4,9 +4,10 @@
 import pytest
 from io import StringIO
 
-from pint.models.model_builder import ModelBuilder, parse_parfile, TimingModelError
+from pint.models.model_builder import ModelBuilder, parse_parfile
 from pint.models.model_builder import guess_binary_model
 
+from pint.exceptions import TimingModelError
 from pint.models import get_model
 
 base_par = """
