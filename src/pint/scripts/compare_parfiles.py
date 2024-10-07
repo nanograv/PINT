@@ -89,8 +89,9 @@ def main(argv=None):
         level=pint.logging.get_level(args.loglevel, args.verbosity, args.quiet)
     )
 
-    m1 = get_model(args.input1)
-    m2 = get_model(args.input2)
+    m1 = get_model(args.input1, allow_T2=True, allow_tcb=True)
+    m2 = get_model(args.input2, allow_T2=True, allow_tcb=True)
+
     print(
         m1.compare(
             m2,
