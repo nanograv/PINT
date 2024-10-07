@@ -164,7 +164,7 @@ def main(argv=None):
     wgtexp = args.wgtexp
 
     # Read in initial model
-    modelin = pint.models.get_model(parfile)
+    modelin = pint.models.get_model(parfile, allow_T2=True, allow_tcb=True)
 
     # The custom_timing version below is to manually construct the TimingModel
     # class, which allows it to be pickled. This is needed for parallelizing

@@ -88,7 +88,8 @@ def main(argv=None):
         args.addphase = True
 
     # Read in model
-    modelin = pint.models.get_model(args.parfile)
+    modelin = pint.models.get_model(args.parfile, allow_T2=True, allow_tcb=True)
+
     if "ELONG" in modelin.params:
         tc = SkyCoord(
             modelin.ELONG.quantity,

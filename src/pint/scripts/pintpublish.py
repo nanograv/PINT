@@ -62,7 +62,7 @@ def main(argv=None):
 
     args = parser.parse_args(argv)
 
-    model, toas = get_model_and_toas(args.parfile, args.timfile)
+    model, toas = get_model_and_toas(args.parfile, args.timfile, allow_T2=True)
 
     output = publish(
         model,

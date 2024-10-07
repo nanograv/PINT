@@ -122,7 +122,7 @@ def main(argv=None):
     )
 
     log.info("Reading model from {0}".format(args.parfile))
-    m = pint.models.get_model(args.parfile)
+    m = pint.models.get_model(args.parfile, allow_T2=True, allow_tcb=True)
 
     out_format = args.format
     error = args.error * u.microsecond
