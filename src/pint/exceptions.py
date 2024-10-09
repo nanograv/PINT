@@ -1,9 +1,24 @@
 __all__ = [
+    "DegeneracyWarning",
+    "ConvergenceFailure",
+    "MaxiterReached",
+    "StepProblem",
+    "CorrelatedErrors",
+    "MissingTOAs",
+    "PropertyAttributeError",
     "TimingModelError",
     "MissingParameter",
-    "MissingTOAs",
-    "MissingBinaryError",
+    "AliasConflict",
+    "UnknownParameter",
     "UnknownBinaryModel",
+    "MissingBinaryError",
+    "PINTPrecisionError",
+    "PrefixError",
+    "InvalidModelParameters",
+    "ComponentConflict",
+    "ClockCorrectionError",
+    "NoClockCorrections",
+    "ClockCorrectionOutOfRange",
 ]
 
 
