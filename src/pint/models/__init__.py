@@ -44,8 +44,11 @@ from pint.models.model_builder import get_model, get_model_and_toas
 from pint.models.noise_model import (
     EcorrNoise,
     PLRedNoise,
+    FreeSpecRedNoise,
     PLDMNoise,
+    FreeSpecDMNoise,
     PLChromNoise,
+    FreeSpecChromNoise,
     ScaleToaError,
 )
 from pint.models.solar_system_shapiro import SolarSystemShapiro
