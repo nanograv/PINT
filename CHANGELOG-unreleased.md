@@ -14,6 +14,7 @@ the released changes.
 - `maskParameter.__repr__()` output now includes the frozen attribute.
 - Changed default value of `FDJUMPLOG` to `Y`
 - Bumped `black` version to 24.x
+- Moved all custom exceptions and warnings to a single module `pint.exceptions`
 - Changed from `setup.cfg` to `pyproject.toml`
 ### Added
 - arXiv link of PINT noise paper in README

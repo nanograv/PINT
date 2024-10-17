@@ -14,7 +14,7 @@ from pint.models.parameter import (
     prefixParameter,
     maskParameter,
 )
-from pint.models.timing_model import DelayComponent, MissingParameter, MissingTOAs
+from pint.models.timing_model import DelayComponent
 from pint.toa_select import TOASelect
 from pint.utils import (
     split_prefixed_name,
@@ -22,6 +22,7 @@ from pint.utils import (
     taylor_horner_deriv,
 )
 from pint import DMconst
+from pint.exceptions import MissingParameter, MissingTOAs
 
 # This value is cited from Duncan Lorimer, Michael Kramer, Handbook of Pulsar
 # Astronomy, Second edition, Page 86, Note 1
