@@ -151,7 +151,9 @@ class Pulsar:
         return key in self.prefit_model.params
 
     def reset_model(self):
-        self.prefit_model = pint.models.get_model(self.parfile)
+        self.prefit_model = pint.models.get_model(
+            self.parfile, allow_T2=True, allow_tcb=True
+        )
         self.add_model_params()
         self.postfit_model = None
         self.postfit_resids = None
@@ -172,7 +174,9 @@ class Pulsar:
         self.update_resids()
 
     def resetAll(self):
-        self.prefit_model = pint.models.get_model(self.parfile)
+        self.prefit_model = pint.models.get_model(
+            self.parfile, allow_T2=True, allow_tcb=True
+        )
         self.postfit_model = None
         self.postfit_resids = None
         self.fitted = False

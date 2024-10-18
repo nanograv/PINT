@@ -105,7 +105,7 @@ def main(argv=None):
     )
 
     if args.parfile is not None:
-        m = pint.models.get_model(args.parfile)
+        m = pint.models.get_model(args.parfile, allow_T2=True, allow_tcb=True)
     else:
         # Construct model by hand
         m = pint.models.StandardTimingModel

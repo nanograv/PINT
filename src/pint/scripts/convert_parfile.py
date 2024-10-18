@@ -83,7 +83,9 @@ def main(argv=None):
         return
 
     log.info(f"Reading '{args.input}'")
-    model = get_model(args.input)
+
+    model = get_model(args.input, allow_T2=True, allow_tcb=True)
+
     if hasattr(model, "BINARY") and args.binary is not None:
         log.info(f"Converting from {model.BINARY.value} to {args.binary}")
         if args.binary == "ELL1H":

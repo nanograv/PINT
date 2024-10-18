@@ -153,7 +153,8 @@ def main(argv=None):
                 "Please barycenter the event file using the official mission tools before processing with PINT"
             )
     # Read in model
-    modelin = pint.models.get_model(args.parfile)
+    modelin = pint.models.get_model(args.parfile, allow_T2=True, allow_tcb=True)
+
     use_planets = False
     if "PLANET_SHAPIRO" in modelin.params:
         if modelin.PLANET_SHAPIRO.value:

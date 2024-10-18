@@ -261,7 +261,7 @@ def main(argv=None):
     wgtexp = args.wgtexp
 
     # Read in initial model
-    modelin = pint.models.get_model(parfile)
+    modelin = pint.models.get_model(parfile, allow_T2=True, allow_tcb=True)
 
     # Set the target coords for automatic weighting if necessary
     if "ELONG" in modelin.params:

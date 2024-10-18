@@ -34,7 +34,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     mb = ModelBuilder()
-    model = mb(args.input_par, allow_tcb=True)
+    model = mb(args.input_par, allow_tcb=True, allow_T2=True)
     model.write_parfile(args.output_par)
 
     log.info(f"Output written to {args.output_par}.")

@@ -719,7 +719,7 @@ def main(argv=None):
     ncores = args.ncores
 
     # Read in initial model
-    modelin = pint.models.get_model(parfile)
+    modelin = pint.models.get_model(parfile, allow_T2=True, allow_tcb=True)
 
     # File name setup and clobber file check
     filepath = args.filepath or os.getcwd()
