@@ -62,13 +62,23 @@ from pint.models.parameter import (
 from pint.phase import Phase
 from pint.toa import TOAs
 from pint.utils import (
-    PrefixError,
     split_prefixed_name,
     open_or_use,
     colorize,
     xxxselections,
 )
 from pint.derived_quantities import dispersion_slope
+from pint.exceptions import (
+    PrefixError,
+    MissingTOAs,
+    PropertyAttributeError,
+    TimingModelError,
+    MissingParameter,
+    AliasConflict,
+    UnknownParameter,
+    UnknownBinaryModel,
+    MissingBinaryError,
+)
 
 
 __all__ = [
@@ -76,11 +86,6 @@ __all__ = [
     "TimingModel",
     "Component",
     "AllComponents",
-    "TimingModelError",
-    "MissingParameter",
-    "MissingTOAs",
-    "MissingBinaryError",
-    "UnknownBinaryModel",
 ]
 # Parameters or lines in par files we don't understand but shouldn't
 # complain about. These are still passed to components so that they
@@ -121,26 +126,6 @@ DEFAULT_ORDER = [
     "wave",
     "wavex",
 ]
-
-
-class MissingTOAs(ValueError):
-    """Some parameter does not describe any TOAs."""
-
-    def __init__(self, parameter_names):
-        if isinstance(parameter_names, str):
-            parameter_names = [parameter_names]
-        if len(parameter_names) == 1:
-            msg = f"Parameter {parameter_names[0]} does not correspond to any TOAs: you might need to run `model.find_empty_masks(toas, freeze=True)`"
-        elif len(parameter_names) > 1:
-            msg = f"Parameters {' '.join(parameter_names)} do not correspond to any TOAs: you might need to run `model.find_empty_masks(toas, freeze=True)`"
-        else:
-            raise ValueError("Incorrect attempt to construct MissingTOAs")
-        super().__init__(msg)
-        self.parameter_names = parameter_names
-
-
-class PropertyAttributeError(ValueError):
-    pass
 
 
 def property_exists(f):
@@ -4023,68 +4008,3 @@ class AllComponents:
         if getattr(self.components[component], firstname).unit_template is None:
             return self._param_unit_map[firstname]
         return u.Unit(getattr(self.components[component], firstname).unit_template(idx))
-
-
-class TimingModelError(ValueError):
-    """Generic base class for timing model errors."""
-
-    pass
-
-
-class MissingParameter(TimingModelError):
-    """A required model parameter was not included.
-
-    Parameters
-    ----------
-    module
-        name of the model class that raised the error
-    param
-        name of the missing parameter
-    msg
-        additional message
-
-    """
-
-    def __init__(self, module, param, msg=None):
-        super().__init__(msg)
-        self.module = module
-        self.param = param
-        self.msg = msg
-
-    def __str__(self):
-        result = f"{self.module}.{self.param}"
-        if self.msg is not None:
-            result += "\n  " + self.msg
-        return result
-
-
-class AliasConflict(TimingModelError):
-    """If the same alias is used for different parameters."""
-
-    pass
-
-
-class UnknownParameter(TimingModelError):
-    """Signal that a parameter name does not match any PINT parameters and their aliases."""
-
-    pass
-
-
-class UnknownBinaryModel(TimingModelError):
-    """Signal that the par file requested a binary model not in PINT."""
-
-    def __init__(self, message, suggestion=None):
-        super().__init__(message)
-        self.suggestion = suggestion
-
-    def __str__(self):
-        base_message = super().__str__()
-        if self.suggestion:
-            return f"{base_message} Perhaps use {self.suggestion}?"
-        return base_message
-
-
-class MissingBinaryError(TimingModelError):
-    """Error for missing BINARY parameter."""
-
-    pass

@@ -37,6 +37,11 @@ from loguru import logger as log
 from pint.config import runtimefile
 from pint.pulsar_mjd import Time
 from pint.utils import interesting_lines
+from pint.exceptions import (
+    ClockCorrectionError,
+    NoClockCorrections,
+    ClockCorrectionOutOfRange,
+)
 
 # Include any files that define observatories here.  This will start
 # with the standard distribution files, then will read any system- or
@@ -91,24 +96,6 @@ def find_latest_bipm():
 
 
 pint_clock_env_var = "PINT_CLOCK_OVERRIDE"
-
-
-class ClockCorrectionError(RuntimeError):
-    """Unspecified error doing clock correction."""
-
-    pass
-
-
-class NoClockCorrections(ClockCorrectionError):
-    """Clock corrections are expected but none are available."""
-
-    pass
-
-
-class ClockCorrectionOutOfRange(ClockCorrectionError):
-    """Clock corrections are available but the requested time is not covered."""
-
-    pass
 
 
 # Global clock files shared by all observatories

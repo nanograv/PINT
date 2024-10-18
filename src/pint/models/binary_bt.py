@@ -5,7 +5,7 @@ from pint.models.parameter import floatParameter
 from pint.models.pulsar_binary import PulsarBinary
 from pint.models.stand_alone_psr_binaries.BT_model import BTmodel
 from pint.models.stand_alone_psr_binaries.BT_piecewise import BTpiecewise
-from pint.models.timing_model import MissingParameter
+from pint.exceptions import MissingParameter
 import astropy.units as u
 import astropy.constants as consts
 from pint import ls

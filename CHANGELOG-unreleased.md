@@ -15,6 +15,8 @@ the released changes.
 - Changed default value of `FDJUMPLOG` to `Y`
 - Bumped `black` version to 24.x
 - Command line scripts now automatically do `allow_tcb` and `allow_T2` while reading par files.
+- Moved all custom exceptions and warnings to a single module `pint.exceptions`
+- Changed from `setup.cfg` to `pyproject.toml`
 ### Added
 - arXiv link of PINT noise paper in README
 - Type hints in `pint.derived_quantities`, `pint.modelutils`, `pint.binaryconvert`, `pint.config`, 

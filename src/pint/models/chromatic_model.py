@@ -2,10 +2,11 @@ from astropy.table import Table
 from warnings import warn
 import numpy as np
 import astropy.units as u
-from pint.models.timing_model import DelayComponent, MissingParameter
+from pint.models.timing_model import DelayComponent
 from pint.models.parameter import floatParameter, prefixParameter, MJDParameter
 from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
 from pint import DMconst
+from pint.exceptions import MissingParameter
 from astropy.time import Time
 
 cmu = u.pc / u.cm**3 / u.MHz**2
