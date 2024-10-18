@@ -15,7 +15,7 @@ def datadir() -> str:
     str
         Directory of PINT data files
     """
-    return os.path.join(importlib.resources.files("pint"), "data/")
+    return importlib.resources.path("pint", "data/")
 
 
 def examplefile(filename: str) -> str:
@@ -35,7 +35,7 @@ def examplefile(filename: str) -> str:
     This is **not** for files needed at runtime. Those are located by :func:`pint.config.runtimefile`.
     This is for files needed for the example notebooks.
     """
-    return os.path.join(importlib.resources.files("pint"), f"data/examples/{filename}")
+    return importlib.resources.path("pint", "data", "examples", filename)
 
 
 def runtimefile(filename: str) -> str:
@@ -55,4 +55,4 @@ def runtimefile(filename: str) -> str:
     This **is**  for files needed at runtime. Files needed for the example notebooks
     are found via :func:`pint.config.examplefile`.
     """
-    return os.path.join(importlib.resources.files("pint"), f"data/runtime/{filename}")
+    return importlib.resources.path("pint", "data", "runtime", filename)
