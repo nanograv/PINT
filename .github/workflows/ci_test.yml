@@ -76,12 +76,11 @@ jobs:
     - name: Install pandoc dependency
       if: "endsWith(matrix.tox_env, 'docs')"
       run: sudo apt-get -y install pandoc
-    - name: Print Python, pip, setuptools, and tox versions
+    - name: Print Python, pip, and tox versions
       run: |
         python -c "import sys; print(f'Python {sys.version}')"
         python -c "import pip; print(f'pip {pip.__version__}')"
         python -c "import tox; print(f'tox {tox.__version__}')"
-        python -c "import setuptools; print(f'setuptools {setuptools.__version__}')"
     - name: Run tests
       run: tox -e ${{ matrix.tox_env }}
     - name: Upload coverage to codecov
