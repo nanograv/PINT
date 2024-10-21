@@ -279,11 +279,13 @@ def plot_priors(
     for i in range(len(keys[:-1])):
         values[i] = values[i][burnin:].flatten()
         x_range.append(np.linspace(values[i].min(), values[i].max(), num=bins))
-        priors.append(getattr(model, keys[i]).prior.pdf(x_range[i]))
+        priors.append(getattr(model, keys[i]).prior.logpdf(x_range[i]))
         a, x = np.histogram(values[i], bins=bins, density=True)
         counts.append(a)
 
-    fig, axs = plt.subplots(len(keys), figsize=(8, 11), constrained_layout=True)
+    fig, axs = plt.subplots(
+        len(keys), figsize=(8, len(keys) * 1.5), constrained_layout=True
+    )
 
     for i, p in enumerate(keys):
         if i != len(keys[:-1]):
