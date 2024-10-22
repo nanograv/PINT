@@ -13,8 +13,8 @@ from pinttestdata import datadir
 from pint.observatory import (
     Observatory,
     get_observatory,
-    ClockCorrectionOutOfRange,
 )
+from pint.exceptions import ClockCorrectionOutOfRange
 
 from pint.observatory.clock_file import ClockFile
 from pint.toa import get_TOAs

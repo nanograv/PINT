@@ -6,7 +6,7 @@ from loguru import logger as log
 from warnings import warn
 
 from pint.models.parameter import MJDParameter, prefixParameter
-from pint.models.timing_model import MissingParameter
+from pint.exceptions import MissingParameter
 from pint.models.chromatic_model import Chromatic, cmu
 from pint import DMconst
 
