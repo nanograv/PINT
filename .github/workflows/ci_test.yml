@@ -31,7 +31,7 @@ jobs:
             tox_env: 'black'
           - os: ubuntu-latest
             python: '3.13'
-            tox_env: 'py312-test-cov'
+            tox_env: 'py313-test-cov'
           - os: ubuntu-latest
             python: '3.13'
             tox_env: 'notebooks'
