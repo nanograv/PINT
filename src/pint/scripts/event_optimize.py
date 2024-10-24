@@ -417,7 +417,7 @@ class emcee_fitter(Fitter):
         self.M, _, _ = self.model.designmatrix(self.toas)
         self.M = self.M.transpose() * -self.model.F0.value
         self.phases = self.get_event_phases()
-        self.calc_phase = False
+        self.linearize_model = False
 
     def calc_phase_matrix(self, theta):
         d_phs = np.zeros(len(self.toas))
@@ -456,7 +456,7 @@ class emcee_fitter(Fitter):
             return -np.inf, -np.inf, -np.inf
 
         # Call PINT to compute the phases
-        if self.calc_phase:
+        if self.linearize_model:
             phases = self.calc_phase_matrix(theta)
         else:
             phases = self.get_event_phases()
@@ -700,11 +700,11 @@ def main(argv=None):
         dest="noautocorr",
     )
     parser.add_argument(
-        "--calc_phase",
+        "--linearize_model",
         help="Calculates the phase at each MCMC step using the designmatrix",
         default=False,
         action="store_true",
-        dest="calc_phase",
+        dest="linearize_model",
     )
 
     args = parser.parse_args(argv)
@@ -882,8 +882,8 @@ def main(argv=None):
     # This way, one walker should always be in a good position
     pos[0] = ftr.fitvals
 
-    # How phase will be calculated at each step (either with the designmatrix or )
-    ftr.calc_phase = True if args.calc_phase else False
+    # How phase will be calculated at each step (either with the designmatrix orthe exact phase calculation)
+    ftr.linearize_model = args.linearize_model
 
     import emcee
 
