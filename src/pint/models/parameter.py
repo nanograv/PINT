@@ -48,15 +48,11 @@ from pint.pulsar_mjd import (
 )
 from pint.toa_select import TOASelect
 from pint.utils import split_prefixed_name
-
+from pint.exceptions import InvalidModelParameters
 
 # potential parfile formats
 # in one place for consistency
 _parfile_formats = ["pint", "tempo", "tempo2"]
-
-
-class InvalidModelParameters(ValueError):
-    pass
 
 
 def _identity_function(x):
