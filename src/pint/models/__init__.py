@@ -46,6 +46,7 @@ from pint.models.noise_model import (
     PLRedNoise,
     PLDMNoise,
     PLChromNoise,
+    PLSWNoise,
     ScaleToaError,
 )
 from pint.models.solar_system_shapiro import SolarSystemShapiro

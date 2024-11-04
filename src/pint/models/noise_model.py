@@ -4,6 +4,7 @@ import copy
 import warnings
 
 import astropy.units as u
+import astropy.constants as const
 import numpy as np
 
 from loguru import logger as log
@@ -11,6 +12,8 @@ from loguru import logger as log
 from pint.models.parameter import floatParameter, maskParameter
 from pint.models.timing_model import Component
 
+AU_light_sec = const.au.to('lightsecond').value  # 1 AU in light seconds
+AU_pc = const.au.to('parsec').value  # 1 AU in parsecs (for DM normalization)
 
 class NoiseComponent(Component):
     def __init__(
@@ -523,6 +526,7 @@ class PLDMNoise(NoiseComponent):
         D = (fref.value / freqs.value) ** 2
         nf = self.get_pl_vals()[2]
         Fmat = create_fourier_design_matrix(t, nf)
+        
         return Fmat * D[:, None]
 
     def get_noise_weights(self, toas):
@@ -553,6 +557,121 @@ class PLDMNoise(NoiseComponent):
 
     def pl_dm_cov_matrix(self, toas):
         Fmat, phi = self.pl_dm_basis_weight_pair(toas)
+        return np.dot(Fmat * phi[None, :], Fmat.T)
+    
+
+class PLSWNoise(NoiseComponent):
+    """Model of solar wind DM variations as radio frequency-dependent noise with a
+    power-law spectrum.
+    
+    Commonly used as perturbations on top of a deterministic solar wind model.
+    
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.noise_model.PLSWNoise
+
+    Note
+    ----
+    Ref: Lentati et al. 2014, MNRAS 437(3), 3004-3023.
+    See also: Hazboun et al. 2019 and Susurla et al. 2024.
+
+    """
+
+    register = True
+    category = "pl_SW_noise"
+
+    introduces_correlated_errors = True
+    is_time_correlated = True
+
+    def __init__(
+        self,
+    ):
+        super().__init__()
+
+        self.add_param(
+            floatParameter(
+                name="TNSWAMP",
+                units="",
+                aliases=[],
+                description="Amplitude of power-law SW DM noise in tempo2 format",
+                convert_tcb2tdb=False,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="TNSWGAM",
+                units="",
+                aliases=[],
+                description="Spectral index of power-law " "SW DM noise in tempo2 format",
+                convert_tcb2tdb=False,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="TNSWC",
+                units="",
+                aliases=[],
+                description="Number of SW DM noise frequencies.",
+                convert_tcb2tdb=False,
+            )
+        )
+
+        self.covariance_matrix_funcs += [self.pl_sw_cov_matrix]
+        self.basis_funcs += [self.pl_sw_basis_weight_pair]
+
+    def get_pl_vals(self):
+        nf = int(self.TNSWC.value) if self.TNSWC.value is not None else 30
+        amp, gam = 10**self.TNSWAMP.value, self.TNSWGAM.value
+        return (amp, gam, nf)
+
+    def get_noise_basis(self, toas, planetssb, sunssb, pos_t):
+        """Return a Fourier design matrix for SW DM noise.
+        
+        See the documentation for pl_sw_basis_weight_pair function for details."""
+
+        tbl = toas.table
+        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        freqs = self._parent.barycentric_radio_freq(toas).to(u.MHz)
+        nf = self.get_pl_vals()[2]
+        # get the acrhomatic Fourier design matrix
+        Fmat = create_fourier_design_matrix(t, nf)
+        # then get the solar wind chromatic part to multiply by
+        theta, R_earth, _, _ = self.theta_impact(planetssb, sunssb, pos_t)
+        dm_sol_wind = dm_solar(1.0, theta, R_earth)
+        dt_DM = dm_sol_wind * 4.148808e3 /(freqs**2)
+        
+        return Fmat * dt_DM[:, None]
+
+    def get_noise_weights(self, toas):
+        """Return power-law SW DM noise weights.
+
+        See the documentation for pl_sw_basis_weight_pair for details."""
+
+        tbl = toas.table
+        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        amp, gam, nf = self.get_pl_vals()
+        Ffreqs = get_rednoise_freqs(t, nf)
+        return powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
+
+    def pl_sw_basis_weight_pair(self, toas, planetssb, sunssb, pos_t):
+        """Return a Fourier design matrix and power law SW DM noise weights.
+
+        A Fourier design matrix contains the sine and cosine basis_functions
+        in a Fourier series expansion. Here we scale the design matrix by
+        (fref/f)**2 and a solar wind geometric factor,
+        where fref = 1400 MHz to match the convention used in enterprise.
+
+        The weights used are the power-law PSD values at frequencies n/T,
+        where n is in [1, TNDMC] and T is the total observing duration of
+        the dataset.
+
+        """
+        return (self.get_noise_basis(toas, planetssb, sunssb, pos_t), self.get_noise_weights(toas))
+
+    def pl_sw_cov_matrix(self, toas):
+        Fmat, phi = self.pl_sw_basis_weight_pair(toas)
         return np.dot(Fmat * phi[None, :], Fmat.T)
 
 
@@ -890,3 +1009,55 @@ def powerlaw(f, A=1e-16, gamma=5):
 
     fyr = 1 / 3.16e7
     return A**2 / 12.0 / np.pi**2 * fyr ** (gamma - 3) * f ** (-gamma)
+
+
+#### the follow four functions are copied from enterprise_extensions.chromatic.solar_wind.py
+
+def _dm_solar_close(n_earth, r_earth):
+    return (n_earth * AU_light_sec * AU_pc / r_earth)
+
+
+def _dm_solar(n_earth, theta, r_earth):
+    return ((np.pi - theta) *
+            (n_earth * AU_light_sec * AU_pc
+            / (r_earth * np.sin(theta))))
+
+
+def dm_solar(n_earth, theta, r_earth):
+    """
+    Calculates Dispersion measure due to 1/r^2 solar wind density model.
+    ::param :n_earth Solar wind proto/electron density at Earth (1/cm^3)
+    ::param :theta: angle between sun and line-of-sight to pulsar (rad)
+    ::param :r_earth :distance from Earth to Sun in (light seconds).
+    See You et al. 2007 for more details.
+    """
+    return np.where(np.pi - theta >= 1e-5,
+                    _dm_solar(n_earth, theta, r_earth),
+                    _dm_solar_close(n_earth, r_earth))
+
+
+def theta_impact(planetssb, sunssb, pos_t):
+    """
+    Copied from `enterprise_extensions.chromatic.solar_wind`.
+    Calculate the solar impact angle.
+    
+    ::param :planetssb Solar system barycenter time series supplied with
+    enterprise.Pulsar objects.
+    ::param :sunssb Solar system sun-to-barycenter timeseries supplied with
+        enterprise.Pulsar objects.
+    ::param :pos_t Unit vector to pulsar position over time in ecliptic
+        coordinates. Supplied with enterprise.Pulsar objects.
+
+    returns: Solar impact angle (rad), Distance to Earth (R_earth),
+            impact distance (b), perpendicular distance (z_earth)
+    """
+    earth = planetssb[:, 2, :3]
+    sun = sunssb[:, :3]
+    earthsun = earth - sun
+    R_earth = np.sqrt(np.einsum('ij,ij->i', earthsun, earthsun))
+    Re_cos_theta_impact = np.einsum('ij,ij->i', earthsun, pos_t)
+
+    theta_impact = np.arccos(-Re_cos_theta_impact / R_earth)
+    b = np.sqrt(R_earth**2 - Re_cos_theta_impact**2)
+
+    return theta_impact, R_earth, b, -Re_cos_theta_impact
