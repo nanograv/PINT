@@ -12,8 +12,9 @@ from loguru import logger as log
 from pint.models.parameter import floatParameter, maskParameter
 from pint.models.timing_model import Component
 
-AU_light_sec = const.au.to('lightsecond').value  # 1 AU in light seconds
-AU_pc = const.au.to('parsec').value  # 1 AU in parsecs (for DM normalization)
+AU_light_sec = const.au.to("lightsecond").value  # 1 AU in light seconds
+AU_pc = const.au.to("parsec").value  # 1 AU in parsecs (for DM normalization)
+
 
 class NoiseComponent(Component):
     def __init__(
@@ -526,7 +527,7 @@ class PLDMNoise(NoiseComponent):
         D = (fref.value / freqs.value) ** 2
         nf = self.get_pl_vals()[2]
         Fmat = create_fourier_design_matrix(t, nf)
-        
+
         return Fmat * D[:, None]
 
     def get_noise_weights(self, toas):
@@ -558,14 +559,14 @@ class PLDMNoise(NoiseComponent):
     def pl_dm_cov_matrix(self, toas):
         Fmat, phi = self.pl_dm_basis_weight_pair(toas)
         return np.dot(Fmat * phi[None, :], Fmat.T)
-    
+
 
 class PLSWNoise(NoiseComponent):
     """Model of solar wind DM variations as radio frequency-dependent noise with a
     power-law spectrum.
-    
+
     Commonly used as perturbations on top of a deterministic solar wind model.
-    
+
 
     Parameters supported:
 
@@ -604,7 +605,8 @@ class PLSWNoise(NoiseComponent):
                 name="TNSWGAM",
                 units="",
                 aliases=[],
-                description="Spectral index of power-law " "SW DM noise in tempo2 format",
+                description="Spectral index of power-law "
+                "SW DM noise in tempo2 format",
                 convert_tcb2tdb=False,
             )
         )
@@ -628,7 +630,7 @@ class PLSWNoise(NoiseComponent):
 
     def get_noise_basis(self, toas, planetssb, sunssb, pos_t):
         """Return a Fourier design matrix for SW DM noise.
-        
+
         See the documentation for pl_sw_basis_weight_pair function for details."""
 
         tbl = toas.table
@@ -640,8 +642,8 @@ class PLSWNoise(NoiseComponent):
         # then get the solar wind chromatic part to multiply by
         theta, R_earth, _, _ = self.theta_impact(planetssb, sunssb, pos_t)
         dm_sol_wind = dm_solar(1.0, theta, R_earth)
-        dt_DM = dm_sol_wind * 4.148808e3 /(freqs**2)
-        
+        dt_DM = dm_sol_wind * 4.148808e3 / (freqs**2)
+
         return Fmat * dt_DM[:, None]
 
     def get_noise_weights(self, toas):
@@ -668,7 +670,10 @@ class PLSWNoise(NoiseComponent):
         the dataset.
 
         """
-        return (self.get_noise_basis(toas, planetssb, sunssb, pos_t), self.get_noise_weights(toas))
+        return (
+            self.get_noise_basis(toas, planetssb, sunssb, pos_t),
+            self.get_noise_weights(toas),
+        )
 
     def pl_sw_cov_matrix(self, toas):
         Fmat, phi = self.pl_sw_basis_weight_pair(toas)
@@ -1013,14 +1018,15 @@ def powerlaw(f, A=1e-16, gamma=5):
 
 #### the follow four functions are copied from enterprise_extensions.chromatic.solar_wind.py
 
+
 def _dm_solar_close(n_earth, r_earth):
-    return (n_earth * AU_light_sec * AU_pc / r_earth)
+    return n_earth * AU_light_sec * AU_pc / r_earth
 
 
 def _dm_solar(n_earth, theta, r_earth):
-    return ((np.pi - theta) *
-            (n_earth * AU_light_sec * AU_pc
-            / (r_earth * np.sin(theta))))
+    return (np.pi - theta) * (
+        n_earth * AU_light_sec * AU_pc / (r_earth * np.sin(theta))
+    )
 
 
 def dm_solar(n_earth, theta, r_earth):
@@ -1031,16 +1037,18 @@ def dm_solar(n_earth, theta, r_earth):
     ::param :r_earth :distance from Earth to Sun in (light seconds).
     See You et al. 2007 for more details.
     """
-    return np.where(np.pi - theta >= 1e-5,
-                    _dm_solar(n_earth, theta, r_earth),
-                    _dm_solar_close(n_earth, r_earth))
+    return np.where(
+        np.pi - theta >= 1e-5,
+        _dm_solar(n_earth, theta, r_earth),
+        _dm_solar_close(n_earth, r_earth),
+    )
 
 
 def theta_impact(planetssb, sunssb, pos_t):
     """
     Copied from `enterprise_extensions.chromatic.solar_wind`.
     Calculate the solar impact angle.
-    
+
     ::param :planetssb Solar system barycenter time series supplied with
     enterprise.Pulsar objects.
     ::param :sunssb Solar system sun-to-barycenter timeseries supplied with
@@ -1054,8 +1062,8 @@ def theta_impact(planetssb, sunssb, pos_t):
     earth = planetssb[:, 2, :3]
     sun = sunssb[:, :3]
     earthsun = earth - sun
-    R_earth = np.sqrt(np.einsum('ij,ij->i', earthsun, earthsun))
-    Re_cos_theta_impact = np.einsum('ij,ij->i', earthsun, pos_t)
+    R_earth = np.sqrt(np.einsum("ij,ij->i", earthsun, earthsun))
+    Re_cos_theta_impact = np.einsum("ij,ij->i", earthsun, pos_t)
 
     theta_impact = np.arccos(-Re_cos_theta_impact / R_earth)
     b = np.sqrt(R_earth**2 - Re_cos_theta_impact**2)
