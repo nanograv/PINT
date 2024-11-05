@@ -9,9 +9,6 @@ the released changes.
 
 ## Unreleased
 ### Changed
-* Bump oldest python to 3.9
-* Change oldest dependencies: `numpy` 1.18.5 to 1.23.0; `astropy` 4.0 to 5.0.5; `scipy` 1.4.1 to 1.9.0; `matplotlib` 3.2.0 to 3.4.3
-* Update CI testing to use python 3.13
 ### Added
 ### Fixed
 ### Removed
