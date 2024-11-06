@@ -130,10 +130,20 @@ def pferrs(
         return [1.0 / porf, porferr / porf**2.0]
     forperr = porferr / porf**2.0
     fdorpderr = np.sqrt(
-        (4.0 * pdorfd**2.0 * porferr**2.0) / porf**6.0 + pdorfderr**2.0 / porf**4.0
+        (4.0 * pdorfd**2.0 * porferr**2.0) / porf**6.0
+        + pdorfderr**2.0 / porf**4.0
     )
     [forp, fdorpd] = p_to_f(porf, pdorfd)
     return (forp, forperr, fdorpd, fdorpderr)
+
+
+def _to_gauss(B: u.Quantity) -> u.G:
+    """Convert quantity with mass, length, and time units to Gauss.
+
+    In cgs units, magnetic field is has units (mass/length)^(1/2) / time.
+    """
+    eq = [u.Gauss, u.Hz * (u.g / u.cm) ** (1 / 2), lambda x: x, lambda x: x]
+    return B.to(u.Gauss, equivalencies=[eq])
 
 
 @u.quantity_input(f=u.Hz, fdot=u.Hz / u.s, fo=u.Hz)
@@ -219,12 +229,16 @@ def pulsar_edot(
     return (-4.0 * np.pi**2 * I * f * fdot).to(u.erg / u.s)
 
 
-@u.quantity_input(f=u.Hz, fdot=u.Hz / u.s)
-def pulsar_B(f: u.Quantity, fdot: u.Quantity) -> u.G:
+@u.quantity_input(f=u.Hz, fdot=u.Hz / u.s, I=u.g * u.cm**2, R=u.km)
+def pulsar_B(
+    f: u.Quantity,
+    fdot: u.Quantity,
+    I: u.Quantity = 1.0e45 * u.g * u.cm**2,
+    R: u.Quantity = 10 * u.km,
+) -> u.G:
     r"""Compute pulsar surface magnetic field
 
-    Return the estimated pulsar surface magnetic field strength
-    given the spin frequency and frequency derivative.
+    Return the pulsar surface magnetic field strength given the spin frequency `f` and frequency derivative `fdot`.
 
     Parameters
     ----------
@@ -232,6 +246,10 @@ def pulsar_B(f: u.Quantity, fdot: u.Quantity) -> u.G:
         pulsar frequency
     fdot : astropy.units.Quantity
         frequency derivative :math:`\dot f`
+    I : astropy.units.Quantity, optional
+        pulsar moment of inertia, default of 1e45 g*cm**2
+    R : astropy.units.Quantity, optional
+        pulsar radius, default of 10 km
 
     Returns
     -------
@@ -247,15 +265,19 @@ def pulsar_B(f: u.Quantity, fdot: u.Quantity) -> u.G:
 
     Notes
     -----
-    Calculates :math:`B=3.2\times 10^{19}\,{\rm  G}\sqrt{ f \dot f^{-3}}`
+    Calculates :math:`B=\sqrt{\frac{3\,I\,c^3}{8\pi^2\,R^6}\times\frac{-\dot{f}}{f^3}}`
     """
-    # This is a hack to use the traditional formula by stripping the units.
-    # It would be nice to improve this to a  proper formula with units
-    return 3.2e19 * u.G * np.sqrt(-fdot.to_value(u.Hz / u.s) / f.to_value(u.Hz) ** 3.0)
+    factor = (3.0 * I * const.c**3) / (8.0 * np.pi**2 * R**6)
+    return _to_gauss((factor * (-fdot) / f**3) ** 0.5)
 
 
-@u.quantity_input(f=u.Hz, fdot=u.Hz / u.s)
-def pulsar_B_lightcyl(f: u.Quantity, fdot: u.Quantity) -> u.G:
+@u.quantity_input(f=u.Hz, fdot=u.Hz / u.s, I=u.g * u.cm**2, R=u.km)
+def pulsar_B_lightcyl(
+    f: u.Quantity,
+    fdot: u.Quantity,
+    I: u.Quantity = 1.0e45 * u.g * u.cm**2,
+    R=10 * u.km,
+) -> u.G:
     r"""Compute pulsar magnetic field at the light cylinder
 
     Return the estimated pulsar magnetic field strength at the
@@ -268,6 +290,10 @@ def pulsar_B_lightcyl(f: u.Quantity, fdot: u.Quantity) -> u.G:
         pulsar frequency
     fdot : astropy.units.Quantity
         frequency derivative :math:`\dot f`
+    I : astropy.units.Quantity, optional
+        pulsar moment of inertia, default of 1e45 g*cm**2
+    R : astropy.units.Quantity, optional
+        pulsar radius, default of 10 km
 
     Returns
     -------
@@ -283,17 +309,10 @@ def pulsar_B_lightcyl(f: u.Quantity, fdot: u.Quantity) -> u.G:
 
     Notes
     -----
-    Calculates :math:`B_{LC} = 2.9\times 10^8\,{\rm G} P^{-5/2} \dot P^{1/2}`
+    Calculates :math:`B_{LC} = \sqrt{\frac{-24\pi^4\,I}{c^3}\dot{f}f^3}`
     """
-    p, pd = p_to_f(f, fdot)
-    # This is a hack to use the traditional formula by stripping the units.
-    # It would be nice to improve this to a  proper formula with units
-    return (
-        2.9e8
-        * u.G
-        * p.to_value(u.s) ** (-5.0 / 2.0)
-        * np.sqrt(pd.to(u.dimensionless_unscaled).value)
-    )
+    factor = 24.0 * np.pi**4.0 * I / const.c**3.0
+    return _to_gauss((factor * (-fdot) * f**3.0) ** 0.5)
 
 
 @u.quantity_input(pb=u.d, x=u.cm)
@@ -533,12 +552,17 @@ def companion_mass(
     # delta1 is always <0
     # delta1 = 2 * b ** 3 - 9 * a * b * c + 27 * a ** 2 * d
     delta1 = (
-        -2 * massfunct**3 - 18 * a * mp * massfunct**2 - 27 * a**2 * massfunct * mp**2
+        -2 * massfunct**3
+        - 18 * a * mp * massfunct**2
+        - 27 * a**2 * massfunct * mp**2
     )
     # Q**2 is always > 0, so this is never a problem
     # in terms of complex numbers
     # Q = np.sqrt(delta1**2 - 4*delta0**3)
-    Q = np.sqrt(108 * a**3 * mp**3 * massfunct**3 + 729 * a**4 * mp**4 * massfunct**2)
+    Q = np.sqrt(
+        108 * a**3 * mp**3 * massfunct**3
+        + 729 * a**4 * mp**4 * massfunct**2
+    )
     # this could be + or - Q
     # pick the - branch since delta1 is <0 so that delta1 - Q is never near 0
     Ccubed = 0.5 * (delta1 + Q)

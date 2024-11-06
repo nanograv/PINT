@@ -67,7 +67,7 @@ def test_Edot():
 def test_Bfield():
     # B
     assert np.isclose(
-        pulsar_B(0.033 * u.Hz, -2.0e-15 * u.Hz / u.s), 238722891596281.66 * u.G
+        pulsar_B(0.033 * u.Hz, -2.0e-15 * u.Hz / u.s), 238693670891966.22 * u.G
     )
 
 
@@ -75,7 +75,7 @@ def test_Blc():
     # B_lc
     assert np.isclose(
         pulsar_B_lightcyl(0.033 * u.Hz, -2.0e-15 * u.Hz / u.s),
-        0.07774704753236616 * u.G,
+        0.07896965114785195 * u.G,
     )
 
 
