@@ -21,7 +21,7 @@ from pint.utils import (
     taylor_horner,
     taylor_horner_deriv,
 )
-from pint import DMconst
+from pint import DMconst, dmu
 from pint.exceptions import MissingParameter, MissingTOAs
 
 # This value is cited from Duncan Lorimer, Michael Kramer, Handbook of Pulsar
@@ -76,7 +76,7 @@ class Dispersion(DelayComponent):
             DM values at given TOAs in the unit of DM.
         """
         toas_table = toas if isinstance(toas, Table) else toas.table
-        dm = np.zeros(len(toas_table)) * self._parent.DM.units
+        dm = np.zeros(len(toas_table)) * dmu
 
         for dm_f in self.dm_value_funcs:
             dm += dm_f(toas)
@@ -673,7 +673,7 @@ class DispersionDMX(Dispersion):
             condition, tbl["mjd_float"]
         )
         # Get DMX delays
-        dm = np.zeros(len(tbl)) * self._parent.DM.units
+        dm = np.zeros(len(tbl)) * dmu
         for k, v in select_idx.items():
             dm[v] += getattr(self, k).quantity
         return dm
