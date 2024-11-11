@@ -10,5 +10,7 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
+- Derivatives of NE_SW in `SolarWindDispersion`
+- New prefix pattern for `split_prefixed_name` to handle derivatives of NE_SW
 ### Fixed
 ### Removed
