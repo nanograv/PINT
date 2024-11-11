@@ -183,8 +183,8 @@ class DispersionDM(Dispersion):
 
     def setup(self):
         super().setup()
-        base_dms = list(self.get_prefix_mapping_component("DM").values())
-        base_dms += ["DM"]
+
+        base_dms = ["DM"] + list(self.get_prefix_mapping_component("DM").values())
 
         for dm_name in base_dms:
             self.register_deriv_funcs(self.d_delay_d_dmparam, dm_name)
@@ -223,7 +223,7 @@ class DispersionDM(Dispersion):
             if DMEPOCH is None:
                 # Should be ruled out by validate()
                 raise ValueError(
-                    f"DMEPOCH not set but some derivatives are not zero: {dm_terms}"
+                    f"DMEPOCH not set but some DM derivatives are not zero: {dm_terms}"
                 )
             else:
                 dt = (toas["tdbld"] - DMEPOCH) * u.day
