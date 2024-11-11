@@ -206,10 +206,10 @@ class DispersionDM(Dispersion):
                 )
 
     def DM_derivative_unit(self, n):
-        return "pc cm^-3/yr^%d" % n if n else "pc cm^-3"
+        return f"pc cm^-3/yr^{n}" if n != 0 else "pc cm^-3"
 
     def DM_derivative_description(self, n):
-        return "%d'th time derivative of the dispersion measure" % n
+        return f"{n}'th time derivative of the dispersion measure"
 
     def get_DM_terms(self):
         """Return a list of the DM term values in the model: [DM, DM1, ..., DMn]"""

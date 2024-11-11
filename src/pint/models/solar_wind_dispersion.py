@@ -304,6 +304,17 @@ class SolarWindDispersion(SolarWindDispersionBase):
         )
         self.add_param(
             floatParameter(
+                name="NE_SW1",
+                units="cm^-3",
+                value=0.0,
+                description="Derivative of Solar Wind density at 1 AU",
+                unit_template=self.NE_SW_derivative_unit,
+                description_template=self.NE_SW_derivative_description,
+                tcb2tdb_scale_factor=(const.c * DMconst),
+            )
+        )
+        self.add_param(
+            floatParameter(
                 name="SWP",
                 value=2.0,
                 units="",
@@ -328,6 +339,12 @@ class SolarWindDispersion(SolarWindDispersionBase):
         self.register_deriv_funcs(self.d_delay_d_ne_sw, "NE_SW")
         self.register_dm_deriv_funcs(self.d_dm_d_swp, "SWP")
         self.register_deriv_funcs(self.d_delay_d_swp, "SWP")
+
+    def NE_SW_derivative_unit(self, n):
+        return f"cm^-3/yr^{n}" if n != 0 else "cm^-3"
+
+    def NE_SW_derivative_description(self, n):
+        return f"{n}'th time derivative of the Solar Wind density at 1 AU"
 
     def solar_wind_geometry(self, toas):
         """Return the geometry of solar wind dispersion.
