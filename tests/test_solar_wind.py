@@ -359,3 +359,29 @@ def test_overlapping_swx():
     dm3 = model3.components["SolarWindDispersionX"].swx_dm(toas)
     dm3[toas.get_mjds() >= 54180 * u.d] = 0
     assert np.allclose(dm2 - dm, dm3)
+
+
+def test_nesw_derivatives():
+    par = """
+        PSRJ            J1744-1134
+        ELONG           266.119458498                 6.000e-09
+        ELAT            11.80517508                   3.000e-08
+        DM              3.1379                        4.000e-04
+        PEPOCH          55000
+        F0              245.4261196898081             5.000e-13
+        F1              -5.38156E-16                  3.000e-21
+        PMRA            18.806                        2.000e-03
+        PMDEC           -9.386                        1.000e-02
+        POSEPOCH        59150
+        DMEPOCH         55000
+        CLK             TT(BIPM2018)
+        EPHEM           DE436
+        RM              1.62                          9.000e-02
+        PX              2.61                          9.000e-02
+        DM1             -7.0E-5                       3.000e-05
+        PMELONG         19.11                         2.000e-02
+        DM2             1.7E-5                        4.000e-06
+        PMELAT          -9.21                         1.300e-01
+        UNITS           TDB        
+        NE_SW           
+    """

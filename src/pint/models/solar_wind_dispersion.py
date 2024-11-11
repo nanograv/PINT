@@ -308,13 +308,14 @@ class SolarWindDispersion(SolarWindDispersionBase):
             )
         )
         self.add_param(
-            floatParameter(
+            prefixParameter(
                 name="NE_SW1",
-                units="cm^-3",
+                units="cm^-3 / yr",
                 value=0.0,
                 description="Derivative of Solar Wind density at 1 AU",
                 unit_template=self.NE_SW_derivative_unit,
                 description_template=self.NE_SW_derivative_description,
+                type_match="float",
                 tcb2tdb_scale_factor=(const.c * DMconst),
             )
         )
@@ -462,12 +463,12 @@ class SolarWindDispersion(SolarWindDispersionBase):
             )
 
         par = getattr(self, param_name)
-        order = 0 if param_name == "DM" else par.index
+        order = 0 if param_name == "NE_SW" else par.index
 
         ne_sws = self.get_NE_SW_terms()
 
-        dm_terms = np.longdouble(np.zeros(len(ne_sws)))
-        dm_terms[order] = np.longdouble(1.0)
+        ne_sw_terms = np.longdouble(np.zeros(len(ne_sws)))
+        ne_sw_terms[order] = np.longdouble(1.0)
 
         if self.SWEPOCH.value is None:
             if any(t.value != 0 for t in ne_sws[1:]):
@@ -475,18 +476,16 @@ class SolarWindDispersion(SolarWindDispersionBase):
                 raise ValueError(f"SWEPOCH is not set but {param_name} is not zero")
             SWEPOCH = 0
         else:
-            SWEPOCH = self.DMEPOCH.value
+            SWEPOCH = self.SWEPOCH.value
 
         dt = (toas["tdbld"] - SWEPOCH) * u.day
-        dt_value = (dt.to(u.yr)).value
-        return (
-            solar_wind_geometry
-            * pint.utils.taylor_horner(dt_value, dm_terms)
-            * (u.pc / u.cm**3 / par.units)
+
+        return (solar_wind_geometry * dt**order / scipy.special.factorial(order)).to(
+            u.pc / u.cm**3 / par.units
         )
 
     def d_delay_d_ne_sw(self, toas, param_name, acc_delay=None):
-        return self.d_delay_d_dmparam(toas, "NE_SW")
+        return self.d_delay_d_dmparam(toas, param_name)
 
     def d_solar_wind_geometry_d_swp(self, toas, param_name, acc_delay=None):
         """Derivative of solar_wind_geometry (path length) wrt power-law index p
@@ -529,10 +528,12 @@ class SolarWindDispersion(SolarWindDispersionBase):
 
     def print_par(self, format="pint"):
         result = ""
-        result += getattr(self, "NE_SW").as_parfile_line(format=format)
-        result += getattr(self, "SWM").as_parfile_line(format=format)
-        if self.SWM.value == 1:
-            result += getattr(self, "SWP").as_parfile_line(format=format)
+        for par in self.params:
+            if par == "SWP" and self.SWM.value != 1:
+                continue
+            else:
+                result += getattr(self, par).as_parfile_line(format=format)
+
         return result
 
     def get_max_dm(self):
