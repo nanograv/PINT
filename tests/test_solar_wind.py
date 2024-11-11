@@ -370,8 +370,6 @@ def test_nesw_derivatives():
         PEPOCH          55000
         F0              245.4261196898081             5.000e-13
         F1              -5.38156E-16                  3.000e-21
-        PMRA            18.806                        2.000e-03
-        PMDEC           -9.386                        1.000e-02
         POSEPOCH        59150
         DMEPOCH         55000
         CLK             TT(BIPM2018)
@@ -383,5 +381,22 @@ def test_nesw_derivatives():
         DM2             1.7E-5                        4.000e-06
         PMELAT          -9.21                         1.300e-01
         UNITS           TDB        
-        NE_SW           
+        NE_SW           8           1
+        NE_SW1          0           1
+        NE_SW2          0           1
+        SWEPOCH         55000
     """
+    m = get_model(StringIO(par))
+    t = make_fake_toas_uniform(54500, 55500, 1000, m, add_noise=True)
+    ftr = Fitter.auto(t, m)
+    ftr.fit_toas()
+
+    assert (
+        m.NE_SW.value - ftr.model.NE_SW.value
+    ) / ftr.model.NE_SW.uncertainty_value < 3
+    assert (
+        m.NE_SW1.value - ftr.model.NE_SW1.value
+    ) / ftr.model.NE_SW1.uncertainty_value < 3
+    assert (
+        m.NE_SW2.value - ftr.model.NE_SW2.value
+    ) / ftr.model.NE_SW2.uncertainty_value < 3
