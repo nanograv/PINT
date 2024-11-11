@@ -10,7 +10,7 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
-* When TCB->TDB conversion info is missing, will print parameter name
+- When TCB->TDB conversion info is missing, will print parameter name
 ### Fixed
-* When EQUAD is created from TNEQ, has proper TCB->TDB conversion info
+- When EQUAD is created from TNEQ, has proper TCB->TDB conversion info
 ### Removed
