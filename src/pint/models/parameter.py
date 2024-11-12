@@ -709,7 +709,7 @@ class floatParameter(Parameter):
 
         assert (
             not convert_tcb2tdb or tcb2tdb_scale_factor is not None
-        ), "Please specify the tcb2tdb_scale_factor explicitly."
+        ), f"Please specify the tcb2tdb_scale_factor explicitly for {name}."
         self.convert_tcb2tdb = convert_tcb2tdb
         self.tcb2tdb_scale_factor = tcb2tdb_scale_factor
 
@@ -1133,7 +1133,7 @@ class MJDParameter(Parameter):
 
         assert (
             not convert_tcb2tdb or tcb2tdb_scale_factor is not None
-        ), "Please specify the tcb2tdb_scale_factor explicitly."
+        ), f"Please specify the tcb2tdb_scale_factor explicitly for {name}."
         self.convert_tcb2tdb = convert_tcb2tdb
         self.tcb2tdb_scale_factor = tcb2tdb_scale_factor
 
@@ -1334,7 +1334,7 @@ class AngleParameter(Parameter):
 
         assert (
             not convert_tcb2tdb or tcb2tdb_scale_factor is not None
-        ), "Please specify the tcb2tdb_scale_factor explicitly."
+        ), f"Please specify the tcb2tdb_scale_factor explicitly for {name}."
         self.convert_tcb2tdb = convert_tcb2tdb
         self.tcb2tdb_scale_factor = tcb2tdb_scale_factor
 
@@ -1554,7 +1554,7 @@ class prefixParameter:
         # a function of the prefix.
         assert (
             not convert_tcb2tdb or tcb2tdb_scale_factor is not None
-        ), "Please specify the tcb2tdb_scale_factor explicitly."
+        ), f"Please specify the tcb2tdb_scale_factor explicitly for {name}."
         tcb2tdb_scale_factor_val = (
             tcb2tdb_scale_factor(self.prefix)
             if hasattr(tcb2tdb_scale_factor, "__call__")
