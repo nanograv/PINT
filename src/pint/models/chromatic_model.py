@@ -672,7 +672,7 @@ class ChromaticCMX(Chromatic):
 
     def CMX_chromatic_delay(self, toas, acc_delay=None):
         """This is a wrapper function for interacting with the TimingModel class"""
-        return self.dispersion_type_delay(toas)
+        return self.chromatic_type_delay(toas)
 
     def d_cm_d_CMX(self, toas, param_name, acc_delay=None):
         condition = {}
