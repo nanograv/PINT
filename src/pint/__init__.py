@@ -16,7 +16,6 @@ import astropy.constants as c
 import astropy.time as time
 import astropy.units as u
 import numpy as np
-import pkg_resources
 from astropy.units import si
 from pathlib import Path
 
