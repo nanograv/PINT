@@ -12,5 +12,7 @@ the released changes.
 ### Added
 - Derivatives of NE_SW in `SolarWindDispersion`
 - New prefix pattern for `split_prefixed_name` to handle derivatives of NE_SW
+- When TCB->TDB conversion info is missing, will print parameter name
 ### Fixed
+- When EQUAD is created from TNEQ, has proper TCB->TDB conversion info
 ### Removed
