@@ -75,3 +75,5 @@ def test_cmx(model_and_toas):
     )
 
     assert ftr.resids.chi2_reduced < 1.6
+
+    assert "CMX_0001" in str(ftr.model)

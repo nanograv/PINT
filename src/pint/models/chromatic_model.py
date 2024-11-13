@@ -705,7 +705,6 @@ class ChromaticCMX(Chromatic):
         CMX_mapping = self.get_prefix_mapping_component("CMX_")
         CMXR1_mapping = self.get_prefix_mapping_component("CMXR1_")
         CMXR2_mapping = self.get_prefix_mapping_component("CMXR2_")
-        result += getattr(self, "CMX").as_parfile_line(format=format)
         sorted_list = sorted(CMX_mapping.keys())
         for ii in sorted_list:
             result += getattr(self, CMX_mapping[ii]).as_parfile_line(format=format)
