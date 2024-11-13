@@ -7,6 +7,7 @@ from pint.models.parameter import floatParameter, prefixParameter, MJDParameter
 from pint.toa_select import TOASelect
 from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
 from pint import DMconst
+from pint.exceptions import MissingParameter
 from astropy.time import Time
 from loguru import logger as log
 

@@ -75,9 +75,9 @@ import pint
 import pint.pulsar_ecliptic
 from pint.toa_select import TOASelect
 from pint.types import file_like, quantity_like
+from pint.exceptions import PINTPrecisionError, PrefixError
 
 __all__ = [
-    "PINTPrecisionError",
     "check_longdouble_precision",
     "require_longdouble_precision",
     "PosVel",
@@ -152,10 +152,6 @@ TEXT_ATTRIBUTES = [
 ]
 
 # Actual exported tools
-
-
-class PINTPrecisionError(RuntimeError):
-    pass
 
 
 # A warning is emitted in pint.pulsar_mjd if sufficient precision is not available
@@ -363,10 +359,6 @@ prefix_pattern = [
     re.compile(r"^([a-zA-Z0-9]+_)(\d+)$"),  # For the prefix like DMXR1_3
     # re.compile(r'([a-zA-Z]\d[a-zA-Z]+)(\d+)'),  # for prefixes like PLANET_SHAPIRO2?
 ]
-
-
-class PrefixError(ValueError):
-    pass
 
 
 def split_prefixed_name(name: str) -> Tuple[str, str, int]:

@@ -4,6 +4,7 @@ import astropy.constants as c
 import astropy.units as u
 import numpy as np
 
+from pint.models.parameter import InvalidModelParameters
 from .binary_generic import PSR_BINARY
 
 
@@ -600,6 +601,8 @@ class ELL1model(ELL1BaseModel):
         """ELL1 Shapiro delay. Lange et al 2001 eq. A16"""
         TM2 = self.TM2()
         Phi = self.Phi()
+        if np.any(self.SINI < 0) or np.any(self.SINI > 1):
+            raise InvalidModelParameters("SINI must be between 0 and 1")
         return -2 * TM2 * np.log(1 - self.SINI * np.sin(Phi))
 
     def d_delayS_d_par(self, par):

@@ -603,9 +603,10 @@ class Pulsar:
         # adds extra prefix params for fitting
         self.add_model_params()
 
-        print(
-            f"Akaike information criterion = {akaike_information_criterion(self.fitter.model, self.fitter.toas)}"
-        )
+        if not self.all_toas.is_wideband():
+            print(
+                f"Akaike information criterion = {akaike_information_criterion(self.fitter.model, self.fitter.toas)}"
+            )
 
     def random_models(self, selected):
         """Compute and plot random models"""
