@@ -15,7 +15,7 @@ cmu = u.pc / u.cm**3 / u.MHz**2
 
 
 class Chromatic(DelayComponent):
-    """A base chromatic timing model."""
+    """A base chromatic timing model with a constant chromatic index."""
 
     def __init__(self):
         super().__init__()
@@ -114,10 +114,13 @@ class Chromatic(DelayComponent):
 
 
 class ChromaticCM(Chromatic):
-    """Simple chromatic delay model.
+    """Simple chromatic delay model with a constant chromatic index.
 
     This model uses Taylor expansion to model CM variation over time. It
     can also be used for a constant CM.
+
+    Fitting for the chromatic index is not supported because the fit is too
+    unstable when fit simultaneously with the DM.
 
     Parameters supported:
 
@@ -306,10 +309,13 @@ class ChromaticCM(Chromatic):
 
 
 class ChromaticCMX(Chromatic):
-    """This class provides a CMX model - piecewise-constant chromatic variations.
+    """This class provides a CMX model - piecewise-constant chromatic variations with constant
+    chromatic index.
 
-    This model lets the user specify time ranges and fit for a different
-    CMX value in each time range.
+    This model lets the user specify time ranges and fit for a different CMX value in each time range.
+
+    It should be used in combination with the `ChromaticCM` model. Specifically, TNCHROMIDX must be
+    set.
 
     Parameters supported:
 
