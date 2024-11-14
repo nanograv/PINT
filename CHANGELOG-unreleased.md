@@ -9,9 +9,12 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- Updated the `plot_chains` function in `event_optimize` so that the subplots are a fixed size to prevent the subplots from being condensed in the case of many fit parameters.
 ### Added
-- Derivatives of NE_SW in `SolarWindDispersion`
+- Time derivatives of NE_SW in `SolarWindDispersion`
 - New prefix pattern for `split_prefixed_name` to handle derivatives of NE_SW
+- Added an option `linearize_model` to speed up the photon phases calculation within `event_optimize` through the designmatrix.
+- Added AIC and BIC calculation to be written in the post fit parfile from `event_optimize`
 - When TCB->TDB conversion info is missing, will print parameter name
 ### Fixed
 - When EQUAD is created from TNEQ, has proper TCB->TDB conversion info
