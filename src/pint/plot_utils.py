@@ -279,7 +279,7 @@ def plot_priors(
     for i in range(len(keys[:-1])):
         values[i] = values[i][burnin:].flatten()
         x_range.append(np.linspace(values[i].min(), values[i].max(), num=bins))
-        priors.append(getattr(model, keys[i]).prior.logpdf(x_range[i]))
+        priors.append(getattr(model, keys[i]).prior.pdf(x_range[i]))
         a, x = np.histogram(values[i], bins=bins, density=True)
         counts.append(a)
 
