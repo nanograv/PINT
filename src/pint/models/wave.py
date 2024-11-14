@@ -15,9 +15,8 @@ class Wave(PhaseComponent):
     sine/cosine components.
 
     For consistency with the implementation in tempo2, this signal is treated
-    as a time series, but trivially converted into phase by multiplication by
-    F0, which could makes changes to PEPOCH fragile if there is strong spin
-    frequency evolution.
+    as a time series and trivially converted into phase by multiplication by
+    F0.
 
     Parameters supported:
 
@@ -42,7 +41,7 @@ class Wave(PhaseComponent):
             floatParameter(
                 name="WAVE_OM",
                 description="Base frequency of wave solution",
-                units="1/d",
+                units="rad/d",
                 convert_tcb2tdb=False,
             )
         )
