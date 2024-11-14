@@ -141,8 +141,7 @@ def _to_gauss(B: u.Quantity) -> u.G:
 
     In cgs units, magnetic field is has units (mass/length)^(1/2) / time.
     """
-    eq = [u.Gauss, u.Hz * (u.g / u.cm) ** (1 / 2), lambda x: x, lambda x: x]
-    return B.to(u.Gauss, equivalencies=[eq])
+    return B.to(u.Gauss, equivalencies=[pint.gauss_equiv])
 
 
 @u.quantity_input(f=u.Hz, fdot=u.Hz / u.s, fo=u.Hz)
