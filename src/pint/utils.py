@@ -1745,7 +1745,7 @@ def _translate_wave_freqs(om: Union[float, u.Quantity], k: int) -> u.Quantity:
     astropy.units.Quantity
         WXFREQ_ quantity in units 1/d that can be used in WaveX model
     """
-    om <<= u.rad/u.d
+    om <<= u.rad / u.d
     return (om * (k + 1)) / (2.0 * np.pi * u.rad)
 
 
@@ -1769,7 +1769,9 @@ def _translate_wavex_freqs(wxfreq: Union[float, u.Quantity], k: int) -> u.Quanti
     wxfreq <<= u.d**-1
     if len(wxfreq) == 1:
         return (2.0 * np.pi * u.rad * wxfreq) / (k + 1.0)
-    wave_om = [((2.0 * np.pi * u.rad * wxfreq[i]) / (k[i] + 1.0)) for i in range(len(wxfreq))]
+    wave_om = [
+        ((2.0 * np.pi * u.rad * wxfreq[i]) / (k[i] + 1.0)) for i in range(len(wxfreq))
+    ]
     return (
         sum(wave_om) / len(wave_om)
         if np.allclose(wave_om, wave_om[0], atol=1e-3)
