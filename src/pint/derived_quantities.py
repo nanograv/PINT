@@ -130,8 +130,7 @@ def pferrs(
         return [1.0 / porf, porferr / porf**2.0]
     forperr = porferr / porf**2.0
     fdorpderr = np.sqrt(
-        (4.0 * pdorfd**2.0 * porferr**2.0) / porf**6.0
-        + pdorfderr**2.0 / porf**4.0
+        (4.0 * pdorfd**2.0 * porferr**2.0) / porf**6.0 + pdorfderr**2.0 / porf**4.0
     )
     [forp, fdorpd] = p_to_f(porf, pdorfd)
     return (forp, forperr, fdorpd, fdorpderr)
@@ -552,17 +551,12 @@ def companion_mass(
     # delta1 is always <0
     # delta1 = 2 * b ** 3 - 9 * a * b * c + 27 * a ** 2 * d
     delta1 = (
-        -2 * massfunct**3
-        - 18 * a * mp * massfunct**2
-        - 27 * a**2 * massfunct * mp**2
+        -2 * massfunct**3 - 18 * a * mp * massfunct**2 - 27 * a**2 * massfunct * mp**2
     )
     # Q**2 is always > 0, so this is never a problem
     # in terms of complex numbers
     # Q = np.sqrt(delta1**2 - 4*delta0**3)
-    Q = np.sqrt(
-        108 * a**3 * mp**3 * massfunct**3
-        + 729 * a**4 * mp**4 * massfunct**2
-    )
+    Q = np.sqrt(108 * a**3 * mp**3 * massfunct**3 + 729 * a**4 * mp**4 * massfunct**2)
     # this could be + or - Q
     # pick the - branch since delta1 is <0 so that delta1 - Q is never near 0
     Ccubed = 0.5 * (delta1 + Q)
