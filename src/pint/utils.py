@@ -1746,10 +1746,10 @@ def _translate_wave_freqs(om: Union[float, u.Quantity], k: int) -> u.Quantity:
         WXFREQ_ quantity in units 1/d that can be used in WaveX model
     """
     if isinstance(om, u.quantity.Quantity):
-        om.to(u.d**-1)
+        om.to(u.rad*u.d**-1)
     else:
-        om *= u.d**-1
-    return (om * (k + 1)) / (2.0 * np.pi)
+        om *= u.rad*u.d**-1
+    return (om * (k + 1)) / (2.0 * np.pi * u.rad)
 
 
 def _translate_wavex_freqs(wxfreq: Union[float, u.Quantity], k: int) -> u.Quantity:
@@ -1774,8 +1774,8 @@ def _translate_wavex_freqs(wxfreq: Union[float, u.Quantity], k: int) -> u.Quanti
     else:
         wxfreq *= u.d**-1
     if len(wxfreq) == 1:
-        return (2.0 * np.pi * wxfreq) / (k + 1.0)
-    wave_om = [((2.0 * np.pi * wxfreq[i]) / (k[i] + 1.0)) for i in range(len(wxfreq))]
+        return (2.0 * np.pi * u.rad * wxfreq) / (k + 1.0)
+    wave_om = [((2.0 * np.pi * u.rad * wxfreq[i]) / (k[i] + 1.0)) for i in range(len(wxfreq))]
     return (
         sum(wave_om) / len(wave_om)
         if np.allclose(wave_om, wave_om[0], atol=1e-3)
