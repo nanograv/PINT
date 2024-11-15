@@ -11,4 +11,5 @@ the released changes.
 ### Changed
 ### Added
 ### Fixed
+- Changed WAVE\_OM units from 1/d to rad/d.
 ### Removed
