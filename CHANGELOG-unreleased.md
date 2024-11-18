@@ -11,6 +11,8 @@ the released changes.
 ### Changed
 ### Added
 - When TCB->TDB conversion info is missing, will print parameter name
+- `add_param` returns the name of the parameter (useful for numbered parameters)
 ### Fixed
 - When EQUAD is created from TNEQ, has proper TCB->TDB conversion info
+- TOA selection masks will work when only TOA is the first one
 ### Removed
