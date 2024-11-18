@@ -122,6 +122,7 @@ class ScaleToaError(NoiseComponent):
                             index=tneq_par.index,
                             aliases=["T2EQUAD"],
                             description="An error term added in quadrature to the scaled (by EFAC) TOA uncertainty.",
+                            convert_tcb2tdb=False,
                         )
                     )
                 EQUAD_par = getattr(self, EQUAD_name)
