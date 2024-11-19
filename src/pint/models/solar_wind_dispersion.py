@@ -415,21 +415,26 @@ class SolarWindDispersion(SolarWindDispersionBase):
         """
         ne_sw_terms = self.get_NE_SW_terms()
 
-        if any(t.value != 0 for t in ne_sw_terms[1:]):
-            SWEPOCH = self.SWEPOCH.value
-            if SWEPOCH is None:
-                # Should be ruled out by validate()
-                raise ValueError(
-                    f"SWEPOCH not set but some NE_SW derivatives are not zero: {ne_sw_terms}"
-                )
-            else:
-                dt = (toas["tdbld"] - SWEPOCH) * u.day
-            dt_value = dt.to_value(u.yr)
+        if len(ne_sw_terms) == 1:
+            ne_sw = self.NE_SW.quantity * np.ones(len(toas))
         else:
-            dt_value = np.zeros(len(toas), dtype=np.longdouble)
+            if any(t.value != 0 for t in ne_sw_terms[1:]):
+                SWEPOCH = self.SWEPOCH.value
+                if SWEPOCH is None:
+                    # Should be ruled out by validate()
+                    raise ValueError(
+                        f"SWEPOCH not set but some NE_SW derivatives are not zero: {ne_sw_terms}"
+                    )
+                else:
+                    dt = (toas["tdbld"] - SWEPOCH) * u.day
+                dt_value = dt.to_value(u.yr)
+            else:
+                dt_value = np.zeros(len(toas), dtype=np.longdouble)
 
-        ne_sw_terms_value = [d.value for d in ne_sw_terms]
-        ne_sw = pint.utils.taylor_horner(dt_value, ne_sw_terms_value) * self.NE_SW.units
+            ne_sw_terms_value = [d.value for d in ne_sw_terms]
+            ne_sw = (
+                pint.utils.taylor_horner(dt_value, ne_sw_terms_value) * self.NE_SW.units
+            )
 
         if np.all(ne_sw.value == 0):
             return np.zeros(len(toas)) * u.pc / u.cm**3
