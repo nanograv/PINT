@@ -107,6 +107,9 @@ def main(argv=None):
         dest="loglevel",
     )
     parser.add_argument(
+        "--nbin", help="Number of phase bins in the phaseogram", default=100, type=int
+    )
+    parser.add_argument(
         "-v", "--verbosity", default=0, action="count", help="Increase output verbosity"
     )
     parser.add_argument(
@@ -254,7 +257,7 @@ def main(argv=None):
         print("Htest : {0:.2f} ({1:.2f} sigma)".format(h, h2sig(h)))
 
     if args.plot:
-        phaseogram_binned(mjds, phases, bins=100, plotfile=args.plotfile)
+        phaseogram_binned(mjds, phases, bins=args.nbin, plotfile=args.plotfile)
 
     # Compute orbital phases for each photon TOA
     if args.addorbphase:
