@@ -400,3 +400,42 @@ def test_nesw_derivatives():
     assert (
         m.NE_SW2.value - ftr.model.NE_SW2.value
     ) / ftr.model.NE_SW2.uncertainty_value < 3
+
+    m.components["SolarWindDispersion"]
+
+
+def test_expression():
+    par = """
+        PSRJ            J1744-1134
+        ELONG           266.119458498                 6.000e-09
+        ELAT            11.80517508                   3.000e-08
+        DM              3.1379                        4.000e-04
+        PEPOCH          55000
+        F0              245.4261196898081             5.000e-13
+        F1              -5.38156E-16                  3.000e-21
+        POSEPOCH        59150
+        DMEPOCH         55000
+        CLK             TT(BIPM2018)
+        EPHEM           DE436
+        PX              2.61                          9.000e-02
+        PMELONG         19.11                         2.000e-02
+        PMELAT          -9.21                         1.300e-01
+        UNITS           TDB        
+        NE_SW           8           1
+        NE_SW1          1           1
+        SWEPOCH         55000
+    """
+    m = get_model(StringIO(par))
+    t = make_fake_toas_uniform(54500, 55500, 10, m, add_noise=True)
+
+    t0 = m.SWEPOCH.value * u.day
+    t1 = t["tdbld"][-1] * u.day
+    dt = t1 - t0
+
+    assert np.isclose(
+        (
+            m.components["SolarWindDispersion"].solar_wind_dm(t)
+            / m.components["SolarWindDispersion"].solar_wind_geometry(t)
+        )[-1],
+        (m.NE_SW.quantity + dt * m.NE_SW1.quantity),
+    )
