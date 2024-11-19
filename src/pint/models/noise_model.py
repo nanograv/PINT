@@ -122,6 +122,7 @@ class ScaleToaError(NoiseComponent):
                             index=tneq_par.index,
                             aliases=["T2EQUAD"],
                             description="An error term added in quadrature to the scaled (by EFAC) TOA uncertainty.",
+                            convert_tcb2tdb=False,
                         )
                     )
                 EQUAD_par = getattr(self, EQUAD_name)
@@ -163,14 +164,14 @@ class ScaleToaError(NoiseComponent):
             if equad.quantity is None:
                 continue
             mask = equad.select_toa_mask(toas)
-            if np.any(mask):
+            if len(mask) > 0:
                 sigma_scaled[mask] = np.hypot(sigma_scaled[mask], equad.quantity)
             elif warn:
                 warnings.warn(f"EQUAD {equad} has no TOAs")
         for efac_name in self.EFACs:
             efac = getattr(self, efac_name)
             mask = efac.select_toa_mask(toas)
-            if np.any(mask):
+            if len(mask) > 0:
                 sigma_scaled[mask] *= efac.quantity
             elif warn:
                 warnings.warn(f"EFAC {efac} has no TOAs")
