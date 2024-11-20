@@ -112,6 +112,16 @@ def main(argv=None):
     parser.add_argument(
         "-q", "--quiet", default=0, action="count", help="Decrease output verbosity"
     )
+    parser.add_argument(
+        "--allow_tcb",
+        action="store_true",
+        help="Convert TCB par files to TDB automatically",
+    )
+    parser.add_argument(
+        "--allow_T2",
+        action="store_true",
+        help="Guess the underlying binary model when T2 is given",
+    )
 
     args = parser.parse_args(argv)
     pint.logging.setup(
@@ -153,7 +163,9 @@ def main(argv=None):
                 "Please barycenter the event file using the official mission tools before processing with PINT"
             )
     # Read in model
-    modelin = pint.models.get_model(args.parfile, allow_T2=True, allow_tcb=True)
+    modelin = pint.models.get_model(
+        args.parfile, allow_T2=args.allow_T2, allow_tcb=args.allow_tcb
+    )
 
     use_planets = False
     if "PLANET_SHAPIRO" in modelin.params:
