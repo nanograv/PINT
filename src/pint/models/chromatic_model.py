@@ -357,7 +357,6 @@ class ChromaticCMX(Chromatic):
 
         index : int
             Index that has been assigned to new CMX event.
-
         """
 
         #### Setting up the CMX title convention. If index is None, want to increment the current max CMX index by 1.
@@ -447,7 +446,6 @@ class ChromaticCMX(Chromatic):
 
         indices : list
             Indices that has been assigned to new CMX events
-
         """
         if len(mjd_starts) != len(mjd_ends):
             raise ValueError(
@@ -574,7 +572,7 @@ class ChromaticCMX(Chromatic):
         Returns
         -------
         inds : np.ndarray
-        Array of CMX indices in model.
+            Array of CMX indices in model.
         """
         inds = [int(p.split("_")[-1]) for p in self.params if "CMX_" in p]
         return np.array(inds)
@@ -690,11 +688,6 @@ class ChromaticCMX(Chromatic):
             condition, tbl["mjd_float"]
         )
 
-        try:
-            bfreq = self._parent.barycentric_radio_freq(toas)
-        except AttributeError:
-            warn("Using topocentric frequency for dedispersion!")
-            bfreq = tbl["freq"]
         cmx = np.zeros(len(tbl))
         for k, v in select_idx.items():
             cmx[v] = 1.0

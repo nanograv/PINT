@@ -43,7 +43,7 @@ def model_and_toas():
     freqs = np.linspace(300, 1600, 16) * u.MHz
     toas = make_fake_toas_uniform(
         startMJD=54000,
-        endMJD=55500,
+        endMJD=56000,
         ntoas=2000,
         model=model,
         freq=freqs,
@@ -77,3 +77,56 @@ def test_cmx(model_and_toas):
     assert ftr.resids.chi2_reduced < 1.6
 
     assert "CMX_0001" in str(ftr.model)
+
+
+def test_cmx_delay(model_and_toas):
+    model, toas = model_and_toas
+
+    # Zero delay outside CMX ranges
+    nocmx_mask = toas.get_mjds().value > 55500
+    assert all(
+        model.components["ChromaticCMX"].CMX_chromatic_delay(toas)[nocmx_mask] == 0
+    )
+
+    # The delay is consistent
+    cmx1_mask = np.logical_and(
+        toas.get_mjds().value >= model.CMXR1_0001.value,
+        toas.get_mjds().value <= model.CMXR2_0001.value,
+    )
+    cmx1_freqs = toas.get_freqs()[cmx1_mask]
+    assert all(
+        np.isclose(
+            model.components["ChromaticCMX"].chromatic_time_delay(
+                model.CMX_0001.quantity, model.TNCHROMIDX.quantity, cmx1_freqs
+            ),
+            model.components["ChromaticCMX"].CMX_chromatic_delay(toas)[cmx1_mask],
+        )
+    )
+
+    cmx2_mask = np.logical_and(
+        toas.get_mjds().value >= model.CMXR1_0002.value,
+        toas.get_mjds().value <= model.CMXR2_0002.value,
+    )
+    cmx2_freqs = toas.get_freqs()[cmx2_mask]
+    assert all(
+        np.isclose(
+            model.components["ChromaticCMX"].chromatic_time_delay(
+                model.CMX_0002.quantity, model.TNCHROMIDX.quantity, cmx2_freqs
+            ),
+            model.components["ChromaticCMX"].CMX_chromatic_delay(toas)[cmx2_mask],
+        )
+    )
+
+    cmx3_mask = np.logical_and(
+        toas.get_mjds().value >= model.CMXR1_0003.value,
+        toas.get_mjds().value <= model.CMXR2_0003.value,
+    )
+    cmx3_freqs = toas.get_freqs()[cmx3_mask]
+    assert all(
+        np.isclose(
+            model.components["ChromaticCMX"].chromatic_time_delay(
+                model.CMX_0003.quantity, model.TNCHROMIDX.quantity, cmx3_freqs
+            ),
+            model.components["ChromaticCMX"].CMX_chromatic_delay(toas)[cmx3_mask],
+        )
+    )
