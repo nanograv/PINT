@@ -105,6 +105,9 @@ pint_units = {
     "hourangle_second": hourangle_second,
 }
 
+# define a units equivalency for gauss in cgs
+gauss_equiv = [u.Gauss, u.Hz * (u.g / u.cm) ** (1 / 2), lambda x: x, lambda x: x]
+
 import astropy.version
 
 if astropy.version.major < 4:
