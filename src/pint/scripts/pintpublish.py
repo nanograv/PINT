@@ -59,10 +59,22 @@ def main(argv=None):
         action="store_true",
         default=False,
     )
+    parser.add_argument(
+        "--allow_tcb",
+        action="store_true",
+        help="Convert TCB par files to TDB automatically",
+    )
+    parser.add_argument(
+        "--allow_T2",
+        action="store_true",
+        help="Guess the underlying binary model when T2 is given",
+    )
 
     args = parser.parse_args(argv)
 
-    model, toas = get_model_and_toas(args.parfile, args.timfile)
+    model, toas = get_model_and_toas(
+        args.parfile, args.timfile, allow_T2=args.allow_T2, allow_tcb=args.allow_tcb
+    )
 
     output = publish(
         model,
