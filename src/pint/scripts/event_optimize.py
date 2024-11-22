@@ -706,6 +706,16 @@ def main(argv=None):
         action="store_true",
         dest="linearize_model",
     )
+    parser.add_argument(
+        "--allow_tcb",
+        action="store_true",
+        help="Convert TCB par files to TDB automatically",
+    )
+    parser.add_argument(
+        "--allow_T2",
+        action="store_true",
+        help="Guess the underlying binary model when T2 is given",
+    )
 
     args = parser.parse_args(argv)
     pint.logging.setup(
@@ -739,7 +749,9 @@ def main(argv=None):
     ncores = args.ncores
 
     # Read in initial model
-    modelin = pint.models.get_model(parfile)
+    modelin = pint.models.get_model(
+        parfile, allow_T2=args.allow_T2, allow_tcb=args.allow_tcb
+    )
 
     # File name setup and clobber file check
     filepath = args.filepath or os.getcwd()

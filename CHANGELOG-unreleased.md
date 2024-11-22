@@ -9,6 +9,7 @@ the released changes.
 
 ## Unreleased
 ### Changed
+- Command line scripts now automatically do `allow_tcb` and `allow_T2` while reading par files.
 - Updated the `plot_chains` function in `event_optimize` so that the subplots are a fixed size to prevent the subplots from being condensed in the case of many fit parameters.
 ### Added
 - Time derivatives of NE_SW in `SolarWindDispersion`
