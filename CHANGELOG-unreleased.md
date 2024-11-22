@@ -14,6 +14,7 @@ the released changes.
 ### Added
 - Time derivatives of NE_SW in `SolarWindDispersion`
 - New prefix pattern for `split_prefixed_name` to handle derivatives of NE_SW
+- Added an option `nbin` to `photonphase` to decide how many phase bins to use for the phaseogram
 - Added an option `linearize_model` to speed up the photon phases calculation within `event_optimize` through the designmatrix.
 - Added AIC and BIC calculation to be written in the post fit parfile from `event_optimize`
 - When TCB->TDB conversion info is missing, will print parameter name
