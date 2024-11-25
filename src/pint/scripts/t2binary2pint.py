@@ -45,12 +45,17 @@ def main(argv=None):
         default=True,
         help="Whether to drop SINI if the model is DDK (True)",
     )
+    parser.add_argument(
+        "--allow_tcb",
+        action="store_true",
+        help="Convert TCB par files to TDB automatically",
+    )
 
     args = parser.parse_args(argv)
 
     mb = ModelBuilder()
 
-    model = mb(args.input_par, allow_T2=True, allow_tcb=True)
+    model = mb(args.input_par, allow_T2=True, allow_tcb=args.allow_tcb)
     model.write_parfile(args.output_par)
     print(f"Output written to {args.output_par}")
 

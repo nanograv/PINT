@@ -24,16 +24,16 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            python: '3.12'
+            python: '3.13'
             tox_env: 'ephemeris_connection'
           - os: ubuntu-latest
-            python: '3.12'
+            python: '3.13'
             tox_env: 'black'
           - os: ubuntu-latest
-            python: '3.12'
-            tox_env: 'py312-test-cov'
+            python: '3.13'
+            tox_env: 'py313-test-cov'
           - os: ubuntu-latest
-            python: '3.12'
+            python: '3.13'
             tox_env: 'notebooks'
 #          - os: ubuntu-latest
 #            python: '3.8'
@@ -42,13 +42,13 @@ jobs:
 #            python: '3.10'
 #            tox_env: 'py310-test-alldeps-cov'
           - os: macos-12
-            python: '3.12'
-            tox_env: 'py312-test'
+            python: '3.13'
+            tox_env: 'py313-test'
 #          - os: windows-latest
 #            python: '3.8'
 #            tox_env: 'py38-test'
           - os: ubuntu-latest
-            python: '3.8'
+            python: '3.9'
             tox_env: 'oldestdeps'
 #          - os: ubuntu-latest
 #            python: '3.8'

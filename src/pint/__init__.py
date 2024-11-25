@@ -16,7 +16,6 @@ import astropy.constants as c
 import astropy.time as time
 import astropy.units as u
 import numpy as np
-import pkg_resources
 from astropy.units import si
 from pathlib import Path
 
@@ -105,6 +104,9 @@ pint_units = {
     "pulse phase": u.dimensionless_unscaled,
     "hourangle_second": hourangle_second,
 }
+
+# define a units equivalency for gauss in cgs
+gauss_equiv = [u.Gauss, u.Hz * (u.g / u.cm) ** (1 / 2), lambda x: x, lambda x: x]
 
 import astropy.version
 

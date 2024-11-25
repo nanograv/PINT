@@ -228,6 +228,16 @@ def main(argv=None):
         help="Logging level",
         dest="loglevel",
     )
+    parser.add_argument(
+        "--allow_tcb",
+        action="store_true",
+        help="Convert TCB par files to TDB automatically",
+    )
+    parser.add_argument(
+        "--allow_T2",
+        action="store_true",
+        help="Guess the underlying binary model when T2 is given",
+    )
 
     global nwalkers, nsteps, ftr
 
@@ -261,7 +271,9 @@ def main(argv=None):
     wgtexp = args.wgtexp
 
     # Read in initial model
-    modelin = pint.models.get_model(parfile)
+    modelin = pint.models.get_model(
+        parfile, allow_T2=args.allow_T2, allow_tcb=args.allow_tcb
+    )
 
     # Set the target coords for automatic weighting if necessary
     if "ELONG" in modelin.params:
