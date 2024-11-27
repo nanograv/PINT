@@ -95,7 +95,7 @@ jobs:
 #          name: documentation
 #          path: .tox/docs_out/
   test-mamba:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
         - uses: actions/checkout@v4
         - name: Set-Up Python Env
@@ -106,6 +106,7 @@ jobs:
             cache-environment: true
             cache-downloads: true
             create-args: >-
+              --platform osx-64
               -c conda-forge
               python=3.11
               astropy
