@@ -309,7 +309,7 @@ class DispersionDM(Dispersion):
 
 
 class DispersionDMX(Dispersion):
-    """This class provides a DMX model - multiple DM values.
+    """This class provides a DMX model - piecewise-constant DM variations.
 
     This model lets the user specify time ranges and fit for a different
     DM value in each time range.
@@ -345,7 +345,7 @@ class DispersionDMX(Dispersion):
         self.delay_funcs_component += [self.DMX_dispersion_delay]
 
     def add_DMX_range(self, mjd_start, mjd_end, index=None, dmx=0, frozen=True):
-        """Add DMX range to a dispersion model with specified start/end MJDs and DMX.
+        """Add DMX range to a dispersion model with specified start/end MJDs and DMX value.
 
         Parameters
         ----------
