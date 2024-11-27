@@ -96,7 +96,7 @@ jobs:
 #          path: .tox/docs_out/
   test-mamba:
     runs-on: ubuntu-latest
-        steps:
+    steps:
         - uses: actions/checkout@v4
         - name: Set-Up Python Env
           uses: mamba-org/setup-micromamba@v1
