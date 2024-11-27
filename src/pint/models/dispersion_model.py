@@ -21,7 +21,7 @@ from pint.utils import (
     taylor_horner,
     taylor_horner_deriv,
 )
-from pint import DMconst
+from pint import DMconst, dmu
 from pint.exceptions import MissingParameter, MissingTOAs
 
 # This value is cited from Duncan Lorimer, Michael Kramer, Handbook of Pulsar
@@ -76,7 +76,7 @@ class Dispersion(DelayComponent):
             DM values at given TOAs in the unit of DM.
         """
         toas_table = toas if isinstance(toas, Table) else toas.table
-        dm = np.zeros(len(toas_table)) * self._parent.DM.units
+        dm = np.zeros(len(toas_table)) * dmu
 
         for dm_f in self.dm_value_funcs:
             dm += dm_f(toas)
@@ -183,8 +183,8 @@ class DispersionDM(Dispersion):
 
     def setup(self):
         super().setup()
-        base_dms = list(self.get_prefix_mapping_component("DM").values())
-        base_dms += ["DM"]
+
+        base_dms = ["DM"] + list(self.get_prefix_mapping_component("DM").values())
 
         for dm_name in base_dms:
             self.register_deriv_funcs(self.d_delay_d_dmparam, dm_name)
@@ -206,10 +206,10 @@ class DispersionDM(Dispersion):
                 )
 
     def DM_derivative_unit(self, n):
-        return "pc cm^-3/yr^%d" % n if n else "pc cm^-3"
+        return f"pc cm^-3/yr^{n}" if n != 0 else "pc cm^-3"
 
     def DM_derivative_description(self, n):
-        return "%d'th time derivative of the dispersion measure" % n
+        return f"{n}'th time derivative of the dispersion measure"
 
     def get_DM_terms(self):
         """Return a list of the DM term values in the model: [DM, DM1, ..., DMn]"""
@@ -223,7 +223,7 @@ class DispersionDM(Dispersion):
             if DMEPOCH is None:
                 # Should be ruled out by validate()
                 raise ValueError(
-                    f"DMEPOCH not set but some derivatives are not zero: {dm_terms}"
+                    f"DMEPOCH not set but some DM derivatives are not zero: {dm_terms}"
                 )
             else:
                 dt = (toas["tdbld"] - DMEPOCH) * u.day
@@ -673,7 +673,7 @@ class DispersionDMX(Dispersion):
             condition, tbl["mjd_float"]
         )
         # Get DMX delays
-        dm = np.zeros(len(tbl)) * self._parent.DM.units
+        dm = np.zeros(len(tbl)) * dmu
         for k, v in select_idx.items():
             dm[v] += getattr(self, k).quantity
         return dm
