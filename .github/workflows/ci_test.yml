@@ -120,7 +120,8 @@ jobs:
           shell: bash -el {0}
           run: |
             python -c "import os; print(f'os {os.uname()}')"
-            python -c "import platform; print(f'processor {platform.processor}')"
+            python -c "import platform; print(f'processor {platform.processor()}')"
+            python -c "import numpy as np; print(f'eps: {np.finfo(np.longdouble).eps}')"
         - name: Print Python, pip, and tox versions
           shell: bash -el {0}
           run: |
