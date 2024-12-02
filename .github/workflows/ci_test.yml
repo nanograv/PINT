@@ -94,7 +94,7 @@ jobs:
 #      with:
 #          name: documentation
 #          path: .tox/docs_out/
-  test-mamba:
+  ci-tests-macos:
     runs-on: macos-latest
     steps:
         - uses: actions/checkout@v4
@@ -124,5 +124,6 @@ jobs:
             python -c "import tox; print(f'tox {tox.__version__}')"
         - name: Run tests
           shell: bash -el {0}
-          run: tox -e singletest
+          run: tox -e py313-test
+          
           
