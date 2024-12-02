@@ -116,6 +116,11 @@ jobs:
           run: |
             python -m pip install --upgrade pip
             python -m pip install tox
+        - name: Print OS, machine info
+          shell: bash -el {0}
+          run: |
+            python -c "import os; print(f'os {os.uname()}')"
+            python -c "import platform; print(f'processor {platform.processor}')"
         - name: Print Python, pip, and tox versions
           shell: bash -el {0}
           run: |
