@@ -130,5 +130,5 @@ jobs:
             python -c "import tox; print(f'tox {tox.__version__}')"
         - name: Run tests
           shell: bash -el {0}
-          run: bash -el {0} -c 'tox -e py313-test'
+          run: tox -e py313-test
           
