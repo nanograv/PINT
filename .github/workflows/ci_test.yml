@@ -115,7 +115,7 @@ jobs:
           shell: bash -el {0}
           run: |
             python -m pip install --upgrade pip
-            python -m pip install tox
+            python -m pip install tox pytest hypothesis numdifftools pathos setuptools
         - name: Print OS, machine info
           shell: bash -el {0}
           run: |
