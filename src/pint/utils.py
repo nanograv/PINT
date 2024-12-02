@@ -163,6 +163,7 @@ def check_longdouble_precision() -> bool:
     Returns True if long doubles have enough precision to use PINT
     for sub-microsecond timing on this machine.
     """
+    log.debug(f"longdouble eps: {np.finfo(np.longdouble).eps}")
     return np.finfo(np.longdouble).eps < 2e-19
 
 
