@@ -136,6 +136,5 @@ jobs:
             python -m pip install --force-reinstall --no-deps .
         - name: Run tests
           shell: bash -el {0}
-          #run: pytest -v --pyargs tests
-          run: pytest -v --pyargs tests/test_phase_offset.py
+          run: pytest -v --pyargs tests
           
