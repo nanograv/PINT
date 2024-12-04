@@ -177,10 +177,7 @@ class Glitch(PhaseComponent):
             glf0d = getattr(self, glf0dnm)
             idx = glf0d.index
             if glf0d.value != 0.0 and getattr(self, "GLTD_%d" % idx).value == 0.0:
-                msg = (
-                    "None zero GLF0D_%d parameter needs a none"
-                    " zero GLTD_%d parameter" % (idx, idx)
-                )
+                msg = f"Non-zero GLF0D_{idx} parameter needs a non-zero GLTD_{idx} parameter"
                 raise MissingParameter("Glitch", "GLTD_%d" % idx, msg)
 
     def print_par(self, format="pint"):
@@ -232,114 +229,77 @@ class Glitch(PhaseComponent):
             )
         return phs
 
-    def deriv_prep(self, toas, param, delay):
+    def deriv_prep(self, toas, param, delay, check_param):
         """Get the things we need for any of the derivative calcs"""
-        tbl = toas.table
         p, ids, idv = split_prefixed_name(param)
+        if p != f'{check_param}_':
+            raise ValueError(
+                f"Can not calculate d_phase_d_{check_param} with respect to {param}."
+            )
+        tbl = toas.table
         eph = getattr(self, f"GLEP_{ids}").value
         dt = (tbl["tdbld"] - eph) * u.day - delay
         dt = dt.to(u.second)
         affected = np.where(dt > 0.0)[0]
-        return tbl, p, ids, idv, dt, affected
+        par = getattr(self, param)
+        zeros = np.zeros(len(tbl), dtype=np.longdouble) << 1/par.units
+        return tbl, p, ids, idv, dt, affected, par, zeros
 
     def d_phase_d_GLPH(self, toas, param, delay):
         """Calculate the derivative wrt GLPH"""
-        tbl, p, ids, idv, dt, affected = self.deriv_prep(toas, param, delay)
-        if p != "GLPH_":
-            raise ValueError(
-                f"Can not calculate d_phase_d_GLPH with respect to {param}."
-            )
-        par_GLPH = getattr(self, param)
-        dpdGLPH = np.zeros(len(tbl), dtype=np.longdouble) / par_GLPH.units
-        dpdGLPH[affected] += 1.0 / par_GLPH.units
+        tbl, p, ids, idv, dt, affected, par_GLPH, dpdGLPH = self.deriv_prep(toas, param, delay, 'GLPH')
+        dpdGLPH[affected] = 1.0 / par_GLPH.units
         return dpdGLPH
 
     def d_phase_d_GLF0(self, toas, param, delay):
         """Calculate the derivative wrt GLF0"""
-        tbl, p, ids, idv, dt, affected = self.deriv_prep(toas, param, delay)
-        if p != "GLF0_":
-            raise ValueError(
-                f"Can not calculate d_phase_d_GLF0 with respect to {param}."
-            )
-        par_GLF0 = getattr(self, param)
-        dpdGLF0 = np.zeros(len(tbl), dtype=np.longdouble) / par_GLF0.units
+        tbl, p, ids, idv, dt, affected, par_GLF0, dpdGLF0 = self.deriv_prep(toas, param, delay, 'GLF0')
         dpdGLF0[affected] = dt[affected]
         return dpdGLF0
 
     def d_phase_d_GLF1(self, toas, param, delay):
         """Calculate the derivative wrt GLF1"""
-        tbl, p, ids, idv, dt, affected = self.deriv_prep(toas, param, delay)
-        if p != "GLF1_":
-            raise ValueError(
-                f"Can not calculate d_phase_d_GLF1 with respect to {param}."
-            )
-        par_GLF1 = getattr(self, param)
-        dpdGLF1 = np.zeros(len(tbl), dtype=np.longdouble) / par_GLF1.units
-        dpdGLF1[affected] += np.longdouble(0.5) * dt[affected] * dt[affected]
+        tbl, p, ids, idv, dt, affected, par_GLF1, dpdGLF1 = self.deriv_prep(toas, param, delay,'GLF1')
+        dpdGLF1[affected] = 0.5 * dt[affected]**2
         return dpdGLF1
 
     def d_phase_d_GLF2(self, toas, param, delay):
         """Calculate the derivative wrt GLF1"""
-        tbl, p, ids, idv, dt, affected = self.deriv_prep(toas, param, delay)
-        if p != "GLF2_":
-            raise ValueError(
-                f"Can not calculate d_phase_d_GLF2 with respect to {param}."
-            )
-        par_GLF2 = getattr(self, param)
-        dpdGLF2 = np.zeros(len(tbl), dtype=np.longdouble) / par_GLF2.units
-        dpdGLF2[affected] += (
-            np.longdouble(1.0) / 6.0 * dt[affected] * dt[affected] * dt[affected]
-        )
+        tbl, p, ids, idv, dt, affected, par_GLF2, dpdGLF2 = self.deriv_prep(toas, param, delay,'GLF2')
+        dpdGLF2[affected] = (1.0 / 6.0) * dt[affected]**3
         return dpdGLF2
 
     def d_phase_d_GLF0D(self, toas, param, delay):
         """Calculate the derivative wrt GLF0D"""
-        tbl, p, ids, idv, dt, affected = self.deriv_prep(toas, param, delay)
-        if p != "GLF0D_":
-            raise ValueError(
-                f"Can not calculate d_phase_d_GLF0D with respect to {param}."
-            )
-        par_GLF0D = getattr(self, param)
-        tau = getattr(self, "GLTD_%d" % idv).quantity
-        dpdGLF0D = np.zeros(len(tbl), dtype=np.longdouble) / par_GLF0D.units
-        dpdGLF0D[affected] += tau * (np.longdouble(1.0) - np.exp(-dt[affected] / tau))
+        tbl, p, ids, idv, dt, affected, par_GLF0D, dpdGLF0D = self.deriv_prep(toas, param, delay,'GLF0D')
+        print('glf0d','ids',ids,'idv',idv)
+        tau = getattr(self, f"GLTD_{idv}").quantity # CHECK, idv/ids
+        dpdGLF0D[affected] = tau * (1.0 - np.exp(-dt[affected] / tau))
         return dpdGLF0D
 
     def d_phase_d_GLTD(self, toas, param, delay):
         """Calculate the derivative wrt GLTD"""
-        tbl, p, ids, idv, dt, affected = self.deriv_prep(toas, param, delay)
-        if p != "GLTD_":
-            raise ValueError(
-                f"Can not calculate d_phase_d_GLTD with respect to {param}."
-            )
-        par_GLTD = getattr(self, param)
+        tbl, p, ids, idv, dt, affected, par_GLTD, dpdGLTD = self.deriv_prep(toas, param, delay,'GLTD')
+        print('gltd','ids',ids,'idv',idv)
         if par_GLTD.value == 0.0:
-            return np.zeros(len(tbl), dtype=np.longdouble) / par_GLTD.units
-        glf0d = getattr(self, f"GLF0D_{ids}").quantity
+            return dpdGLTD
+        glf0d = getattr(self, f"GLF0D_{ids}").quantity # CHECK, idv/ids
         tau = par_GLTD.quantity
-        dpdGLTD = np.zeros(len(tbl), dtype=np.longdouble) / par_GLTD.units
-        dpdGLTD[affected] += glf0d * (
-            np.longdouble(1.0) - np.exp(-dt[affected] / tau)
-        ) + glf0d * tau * (-np.exp(-dt[affected] / tau)) * dt[affected] / (tau * tau)
+        et = np.exp(-dt[affected] / tau)
+        dpdGLTD[affected] = glf0d * (1.0 - np.exp(-dt[affected] / tau) * (1.0 + dt[affected]/tau))
         return dpdGLTD
 
     def d_phase_d_GLEP(self, toas, param, delay):
         """Calculate the derivative wrt GLEP"""
-        tbl, p, ids, idv, dt, affected = self.deriv_prep(toas, param, delay)
-        if p != "GLEP_":
-            raise ValueError(
-                f"Can not calculate d_phase_d_GLEP with respect to {param}."
-            )
-        par_GLEP = getattr(self, param)
+        tbl, p, ids, idv, dt, affected, par_GLEP, dpdGLEP = self.deriv_prep(toas, param, delay,'GLEP')
         glf0 = getattr(self, f"GLF0_{ids}").quantity
         glf1 = getattr(self, f"GLF1_{ids}").quantity
         glf2 = getattr(self, f"GLF2_{ids}").quantity
         glf0d = getattr(self, f"GLF0D_{ids}").quantity
         tau = getattr(self, f"GLTD_{ids}").quantity
-        dpdGLEP = np.zeros(len(tbl), dtype=np.longdouble) / par_GLEP.units
         dpdGLEP[affected] += (
             -glf0 + -glf1 * dt[affected] + -0.5 * glf2 * dt[affected] ** 2
         )
         if tau.value != 0.0:
-            dpdGLEP[affected] += -glf0d / np.exp(dt[affected] / tau)
+            dpdGLEP[affected] -= glf0d * np.exp(-dt[affected] / tau)
         return dpdGLEP
