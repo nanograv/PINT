@@ -94,7 +94,7 @@ jobs:
 #      with:
 #          name: documentation
 #          path: .tox/docs_out/
-  ci-tests-macos:
+  macos-latest-py313:
     runs-on: macos-latest
     steps:
         - uses: actions/checkout@v4
@@ -108,7 +108,7 @@ jobs:
             create-args: >-
               --platform osx-64
               -c conda-forge
-              python=3.11
+              python=3.13
               astropy
               git
         - name: Install base dependencies
