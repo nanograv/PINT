@@ -145,12 +145,13 @@ class Glitch(PhaseComponent):
         ]
         for idx in set(self.glitch_indices):
             for param in self.glitch_prop:
-                if not hasattr(self, param + str(idx)):
+                check = f"{param}{idx}"
+                if not hasattr(self, check):
                     param0 = getattr(self, f"{param}1")
                     self.add_param(param0.new_param(idx))
-                    getattr(self, param + str(idx)).value = 0.0
+                    getattr(self, check).value = 0.0
                 self.register_deriv_funcs(
-                    getattr(self, f"d_phase_d_{param[:-1]}"), param + str(idx)
+                    getattr(self, f"d_phase_d_{param[:-1]}"), check
                 )
 
     def validate(self):
@@ -185,7 +186,7 @@ class Glitch(PhaseComponent):
         result = ""
         for idx in set(self.glitch_indices):
             for param in self.glitch_prop:
-                par = getattr(self, param + "%d" % idx)
+                par = getattr(self, f"{param}{idx}")
                 result += par.as_parfile_line(format=format)
         return result
 
