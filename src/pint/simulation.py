@@ -213,8 +213,7 @@ def update_fake_dms(
 
     if add_correlated_noise:
         dm_noise = np.zeros(len(toas)) * pint.dmu
-        for ncomp in model.NoiseComponent_list:
-            noise_comp = model.components[ncomp]
+        for noise_comp in model.NoiseComponent_list:
             if (
                 noise_comp.introduces_correlated_errors
                 and noise_comp.introduces_dm_errors
@@ -355,7 +354,9 @@ def make_fake_toas_uniform(
     )
 
     if wideband:
-        ts = update_fake_dms(model, ts, wideband_dm_error, add_noise)
+        ts = update_fake_dms(
+            model, ts, wideband_dm_error, add_noise, add_correlated_noise
+        )
 
     return make_fake_toas(
         ts,
