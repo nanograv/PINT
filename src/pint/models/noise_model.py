@@ -13,6 +13,9 @@ from pint.models.timing_model import Component
 
 
 class NoiseComponent(Component):
+
+    introduces_dm_errors = False
+
     def __init__(
         self,
     ):
@@ -232,6 +235,7 @@ class ScaleDmError(NoiseComponent):
     category = "scale_dm_error"
 
     introduces_correlated_errors = False
+    introduces_dm_errors = True
 
     def __init__(
         self,
@@ -469,6 +473,7 @@ class PLDMNoise(NoiseComponent):
     category = "pl_DM_noise"
 
     introduces_correlated_errors = True
+    introduces_dm_errors = True
     is_time_correlated = True
 
     def __init__(
