@@ -21,6 +21,7 @@ the released changes.
 - Piecewise-constant model for chromatic variations (CMX)
 - `add_param` returns the name of the parameter (useful for numbered parameters)
 - `introduces_dm_errors` class attribute in `NoiseComponent`s to distinguish DM noise
+- Simulate correlated DM noise for wideband TOAs
 ### Fixed
 - Changed WAVE_OM units from 1/d to rad/d.
 - When EQUAD is created from TNEQ, has proper TCB->TDB conversion info

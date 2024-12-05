@@ -10,6 +10,7 @@ import numpy as np
 from loguru import logger as log
 from astropy import time
 
+from pint.models.noise_model import NoiseComponent
 from pint.types import time_like, file_like
 import pint.residuals
 import pint.toa
@@ -185,6 +186,7 @@ def update_fake_dms(
     ts: pint.toa.TOAs,
     dm_error: u.Quantity,
     add_noise: bool,
+    add_correlated_noise: bool,
 ) -> pint.toa.TOAs:
     """Update simulated wideband DM information in TOAs.
 
@@ -208,6 +210,21 @@ def update_fake_dms(
     dms = model.total_dm(toas)
     if add_noise:
         dms += scaled_dm_errors.to(pint.dmu) * np.random.randn(len(scaled_dm_errors))
+
+    if add_correlated_noise:
+        dm_noise = np.zeros(len(toas)) * pint.dmu
+        for ncomp in model.NoiseComponent_list:
+            noise_comp = model.components[ncomp]
+            if (
+                noise_comp.introduces_correlated_errors
+                and noise_comp.introduces_dm_errors
+            ):
+                U = noise_comp.get_noise_basis(toas)
+                b = noise_comp.get_noise_weights(toas)
+                delay = (U @ (b**0.5 * np.random.normal(size=len(b)))) << u.s
+                freqs = model.barycentric_radio_freq(toas)
+                dm_noise += (delay / pint.DMconst * freqs**2).to(pint.dmu)
+        dms += dm_noise
 
     for f, dm in zip(toas.table["flags"], dms):
         f["pp_dm"] = str(dm.to_value(pint.dmu))
