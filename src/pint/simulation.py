@@ -484,7 +484,9 @@ def make_fake_toas_fromMJDs(
     )
 
     if wideband:
-        ts = update_fake_dms(model, ts, wideband_dm_error, add_noise)
+        ts = update_fake_dms(
+            model, ts, wideband_dm_error, add_noise, add_correlated_noise
+        )
 
     return make_fake_toas(
         ts,
@@ -535,7 +537,7 @@ def make_fake_toas_fromtim(
 
     if ts.is_wideband():
         dm_errors = ts.get_dm_errors()
-        ts = update_fake_dms(model, ts, dm_errors, add_noise)
+        ts = update_fake_dms(model, ts, dm_errors, add_noise, add_correlated_noise)
 
     return make_fake_toas(
         ts,
