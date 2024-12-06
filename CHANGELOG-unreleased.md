@@ -20,10 +20,8 @@ the released changes.
 - When TCB->TDB conversion info is missing, will print parameter name
 - Piecewise-constant model for chromatic variations (CMX)
 - `add_param` returns the name of the parameter (useful for numbered parameters)
-
 - `introduces_dm_errors` class attribute in `NoiseComponent`s to distinguish DM noise
 - Simulate correlated DM noise for wideband TOAs
-
 - micromamba CI environment for testing macOS-latest, without tox
 
 ### Fixed
