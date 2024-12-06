@@ -1124,15 +1124,6 @@ class TimingModel:
         return bfs
 
     @property_exists
-    def wideband_basis_funcs(self):
-        """List of scaled uncertainty functions."""
-        bfs = []
-        if "NoiseComponent" in self.component_types:
-            for nc in self.NoiseComponent_list:
-                bfs += nc.wideband_basis_funcs
-        return bfs
-
-    @property_exists
     def phase_deriv_funcs(self):
         """List of derivative functions for phase components."""
         return self.get_deriv_funcs("PhaseComponent")
@@ -1686,6 +1677,15 @@ class TimingModel:
             return None
         result = [nf(toas)[0] for nf in self.basis_funcs]
         return np.hstack(list(result))
+
+    def noise_model_wideband_designmatrix(self, toas):
+        return np.hstack(
+            [
+                nc.get_wideband_noise_basis(toas)
+                for nc in self.NoiseComponent_list
+                if nc.introduces_correlated_errors
+            ]
+        )
 
     def noise_model_basis_weight(self, toas):
         if len(self.basis_funcs) == 0:
