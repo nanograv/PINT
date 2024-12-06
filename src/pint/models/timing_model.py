@@ -1687,11 +1687,26 @@ class TimingModel:
             ]
         )
 
+    def full_designmatrix(self, toas, wideband=False):
+        if not wideband:
+            M_tm, par, M_units = self.designmatrix(toas)
+            M_nm = self.noise_model_designmatrix(toas)
+        else:
+            M_tm, par, M_units = self.wideband_designmatrix(toas)
+            M_nm = self.noise_model_wideband_designmatrix(toas)
+        return np.hstack(M_tm, M_nm)
+
     def noise_model_basis_weight(self, toas):
         if len(self.basis_funcs) == 0:
             return None
         result = [nf(toas)[1] for nf in self.basis_funcs]
         return np.hstack(list(result))
+
+    def full_basis_weight(self, toas):
+        npar_tm = len(self.free_params) + int("PhaseOffset" not in self.components)
+        phi_tm = np.ones(npar_tm) * 1e40
+        phi_nm = self.noise_model_basis_weight(toas)
+        return np.hstack(phi_tm, phi_nm)
 
     def noise_model_dimensions(self, toas):
         """Number of basis functions for each noise model component.
