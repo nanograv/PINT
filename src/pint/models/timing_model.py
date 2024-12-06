@@ -1124,6 +1124,15 @@ class TimingModel:
         return bfs
 
     @property_exists
+    def wideband_basis_funcs(self):
+        """List of scaled uncertainty functions."""
+        bfs = []
+        if "NoiseComponent" in self.component_types:
+            for nc in self.NoiseComponent_list:
+                bfs += nc.wideband_basis_funcs
+        return bfs
+
+    @property_exists
     def phase_deriv_funcs(self):
         """List of derivative functions for phase components."""
         return self.get_deriv_funcs("PhaseComponent")
