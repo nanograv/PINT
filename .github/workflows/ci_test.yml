@@ -41,9 +41,9 @@ jobs:
 #          - os: ubuntu-latest
 #            python: '3.10'
 #            tox_env: 'py310-test-alldeps-cov'
-          - os: macos-12
-            python: '3.13'
-            tox_env: 'py313-test'
+          # - os: macos-12
+          #   python: '3.13'
+          #   tox_env: 'py313-test'
 #          - os: windows-latest
 #            python: '3.8'
 #            tox_env: 'py38-test'
@@ -94,3 +94,47 @@ jobs:
 #      with:
 #          name: documentation
 #          path: .tox/docs_out/
+  macos-latest-py313:
+    runs-on: macos-latest
+    steps:
+        - uses: actions/checkout@v4
+        - name: Set-Up Python Env
+          uses: mamba-org/setup-micromamba@v1
+          with: 
+            init-shell: bash
+            environment-name: pint
+            cache-environment: true
+            cache-downloads: true
+            create-args: >-
+              --platform osx-64
+              -c conda-forge
+              python=3.13
+              astropy
+              git
+        - name: Install base dependencies
+          shell: bash -el {0}
+          run: |
+            python -m pip install --upgrade pip
+            python -m pip install tox pytest hypothesis numdifftools pathos setuptools
+        - name: Print OS, machine info
+          shell: bash -el {0}
+          run: |
+            python -c "import os; print(f'os {os.uname()}')"
+            python -c "import platform; print(f'processor {platform.processor()}')"
+            python -c "import numpy as np; print(f'eps: {np.finfo(np.longdouble).eps}')"
+        - name: Print Python, pip, and tox versions
+          shell: bash -el {0}
+          run: |
+            python -c "import sys; print(f'Python {sys.version}')"
+            python -c "import pip; print(f'pip {pip.__version__}')"
+            python -c "import tox; print(f'tox {tox.__version__}')"
+        - name: Install PINT and requirements
+          shell: bash -el {0}
+          run: |
+            python -m pip install -r requirements.txt
+            python -m pip install -r requirements_dev.txt
+            python -m pip install --force-reinstall --no-deps .
+        - name: Run tests
+          shell: bash -el {0}
+          run: pytest -v --pyargs tests
+          
