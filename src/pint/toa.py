@@ -38,7 +38,7 @@ from astropy.coordinates import (
 from loguru import logger as log
 
 import pint
-from pint import utils
+from pint import dmu, utils
 from pint.observatory import Observatory, bipm_default, get_observatory
 from pint.observatory.satellite_obs import SatelliteObs
 from pint.observatory.special_locations import T2SpacecraftObs
@@ -1789,6 +1789,11 @@ class TOAs:
         if valid == []:
             raise AttributeError("No DM error is provided.")
         return np.array(result)[valid] * pint.dmu
+
+    def get_wideband_errors(self) -> np.ndarray:
+        terr = self.get_errors().to_value(u.s)
+        derr = self.get_dm_errors().to_value(dmu)
+        return np.hstack([terr, derr])
 
     def get_clusters(
         self, gap_limit=2 * u.hour, add_column=False, add_flag=None

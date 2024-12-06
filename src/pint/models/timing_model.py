@@ -1672,6 +1672,11 @@ class TimingModel:
             result += nf(toas)
         return result
 
+    def scaled_wideband_uncertainty(self, toas: TOAs) -> np.ndarray:
+        terr = self.scaled_toa_uncertainty(toas).to_value(u.s)
+        derr = self.scaled_dm_uncertainty(toas).to_value(pint.dmu)
+        return np.hstack((terr, derr))
+
     def noise_model_designmatrix(self, toas):
         if len(self.basis_funcs) == 0:
             return None
@@ -1687,14 +1692,14 @@ class TimingModel:
             ]
         )
 
-    def full_designmatrix(self, toas, wideband=False):
-        if not wideband:
+    def full_designmatrix(self, toas: TOAs):
+        if not toas.is_wideband():
             M_tm, par, M_units = self.designmatrix(toas)
             M_nm = self.noise_model_designmatrix(toas)
         else:
             M_tm, par, M_units = self.wideband_designmatrix(toas)
             M_nm = self.noise_model_wideband_designmatrix(toas)
-        return np.hstack(M_tm, M_nm)
+        return np.hstack((M_tm, M_nm))
 
     def noise_model_basis_weight(self, toas):
         if len(self.basis_funcs) == 0:
@@ -1706,7 +1711,7 @@ class TimingModel:
         npar_tm = len(self.free_params) + int("PhaseOffset" not in self.components)
         phi_tm = np.ones(npar_tm) * 1e40
         phi_nm = self.noise_model_basis_weight(toas)
-        return np.hstack(phi_tm, phi_nm)
+        return np.hstack((phi_tm, phi_nm))
 
     def noise_model_dimensions(self, toas):
         """Number of basis functions for each noise model component.
