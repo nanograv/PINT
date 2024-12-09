@@ -28,6 +28,7 @@ the released changes.
 - Changed WAVE_OM units from 1/d to rad/d.
 - When EQUAD is created from TNEQ, has proper TCB->TDB conversion info
 - TOA selection masks will work when only TOA is the first one
+- Condense code in Glitch model and add test coverage.
 ### Removed
 - macOS 12 CI 
 
