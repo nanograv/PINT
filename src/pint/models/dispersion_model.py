@@ -627,6 +627,10 @@ class DispersionDMX(Dispersion):
                 r2[j] = getattr(self, f"DMXR2_{index:04d}").quantity.mjd
                 indices[j] = index
         for j, index in enumerate(DMXR1_mapping):
+            if (r1[j] == r2[j]) and (r1[j] > 0):
+                log.warning(
+                    f"Start of DMX_{index:04d} ({r1[j]}) equal to end of DMX_{index:04d} ({r2[j]})"
+                )
             if np.any((r1[j] > r1) & (r1[j] < r2)):
                 k = np.where((r1[j] > r1) & (r1[j] < r2))[0]
                 for kk in k.flatten():
@@ -651,7 +655,7 @@ class DispersionDMX(Dispersion):
             b = self._parent[DMXR1_mapping[k]].quantity.mjd * u.d
             e = self._parent[DMXR2_mapping[k]].quantity.mjd * u.d
             mjds = toas.get_mjds()
-            n = np.sum((b <= mjds) & (mjds < e))
+            n = np.sum((b <= mjds) & (mjds <= e))
             if n == 0:
                 bad_parameters.append(DMX_mapping[k])
         if bad_parameters:
