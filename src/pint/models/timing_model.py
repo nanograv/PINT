@@ -109,6 +109,9 @@ ignore_params = {
 
 ignore_prefix = {"DMXF1_", "DMXF2_", "DMXEP_"}
 
+# prefixes of parameters that may need to be checked for empty ranges
+prefixes = ["DM", "SW", "CM"]
+
 DEFAULT_ORDER = [
     "astrometry",
     "jump_delay",
@@ -2901,7 +2904,7 @@ class TimingModel:
                 if freeze:
                     log.info(f"'{maskpar}' has no TOAs so freezing")
                     getattr(self, maskpar).frozen = True
-        for prefix in ["DM", "SW"]:
+        for prefix in prefixes:
             mapping = pint.utils.xxxselections(self, toas, prefix=prefix)
             for k in mapping:
                 if len(mapping[k]) == 0:
