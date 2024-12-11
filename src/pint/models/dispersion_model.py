@@ -643,6 +643,8 @@ class DispersionDMX(Dispersion):
                     log.warning(
                         f"End of DMX_{index:04d} ({r1[j]}-{r2[j]}) overlaps with DMX_{indices[kk]:04d} ({r1[kk]}-{r2[kk]})"
                     )
+        if not hasattr(self, "dmx_toas_selector"):
+            self.dmx_toas_selector = TOASelect(is_range=True)
 
     def validate_toas(self, toas):
         DMX_mapping = self.get_prefix_mapping_component("DMX_")
