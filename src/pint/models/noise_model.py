@@ -442,8 +442,7 @@ class EcorrNoise(NoiseComponent):
 
 
 class PLDMNoise(NoiseComponent):
-    """Model of DM variations as radio frequency-dependent noise with a
-    power-law spectrum.
+    """Model of DM variations as radio frequency-dependent noise with a power-law spectrum.
 
     Variations in DM over time result from both the proper motion of the
     pulsar and the changing electron number density along the line of sight
@@ -459,9 +458,11 @@ class PLDMNoise(NoiseComponent):
     .. paramtable::
         :class: pint.models.noise_model.PLDMNoise
 
-    Note
-    ----
-    Ref: Lentati et al. 2014, MNRAS 437(3), 3004-3023
+    References
+    ----------
+    - Lentati et al. 2014, MNRAS 437(3), 3004-3023 [1]_
+
+    .. [1] https://ui.adsabs.harvard.edu/abs/2014MNRAS.437.3004L/abstract
 
     """
 
@@ -558,8 +559,7 @@ class PLDMNoise(NoiseComponent):
 
 
 class PLChromNoise(NoiseComponent):
-    """Model of a radio frequency-dependent noise with a power-law spectrum and
-    arbitrary chromatic index.
+    """Model of a radio frequency-dependent noise with a power-law spectrum and arbitrary chromatic index.
 
     Such variations are usually attributed to time-variable scattering in the
     ISM. Scattering smears/broadens the shape of the pulse profile by convolving it with
@@ -579,9 +579,11 @@ class PLChromNoise(NoiseComponent):
     .. paramtable::
         :class: pint.models.noise_model.PLChromNoise
 
-    Note
-    ----
-    Ref: Lentati et al. 2014, MNRAS 437(3), 3004-3023
+    References
+    ----------
+    - Lentati et al. 2014, MNRAS 437(3), 3004-3023 [1]_
+
+    .. [1] https://ui.adsabs.harvard.edu/abs/2014MNRAS.437.3004L/abstract
     """
 
     register = True
@@ -692,10 +694,11 @@ class PLRedNoise(NoiseComponent):
     .. paramtable::
         :class: pint.models.noise_model.PLRedNoise
 
-    Note
-    ----
-    Ref: Lentati et al. 2014, MNRAS 437(3), 3004-3023
+    References
+    ----------
+    - Lentati et al. 2014, MNRAS 437(3), 3004-3023 [1]_
 
+    .. [1] https://ui.adsabs.harvard.edu/abs/2014MNRAS.437.3004L/abstract
     """
 
     register = True
