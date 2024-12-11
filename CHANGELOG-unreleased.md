@@ -28,6 +28,7 @@ the released changes.
 - TOA selection masks will work when only TOA is the first one
 - Condense code in Glitch model and add test coverage.
 - `find_empty_masks` will now search through `CMX` parameters
+- Fixed some docstrings for binary models.
 ### Removed
 - macOS 12 CI 
 
