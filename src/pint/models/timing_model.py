@@ -29,6 +29,7 @@ See :ref:`Timing Models` for more details on how PINT's timing models work.
 
 import abc
 import copy
+import datetime
 import inspect
 import contextlib
 from collections import OrderedDict, defaultdict
@@ -228,6 +229,8 @@ class TimingModel:
     ----------
     name : str
         The name of the timing model
+    meta : dict
+        A dictionary of metadata
     component_types : list
         A list of the distinct categories of component. For example,
         delay components will be register as 'DelayComponent'.
@@ -242,6 +245,9 @@ class TimingModel:
                 "First parameter should be the model name, was {!r}".format(name)
             )
         self.name = name
+        self.meta = {
+            "read_time": f"{datetime.datetime.now().isoformat()}",
+        }
         self.component_types = []
         self.top_level_params = []
         self.add_param_from_top(
@@ -2766,6 +2772,7 @@ class TimingModel:
         if include_info:
             info_string = pint.utils.info_string(prefix_string="# ", comment=comment)
             info_string += f"\n# Format: {format.lower()}"
+            info_string += "".join([f"\n# {x}: {self.meta[x]}" for x in self.meta])
             result_begin = info_string + "\n"
         else:
             result_begin = ""
