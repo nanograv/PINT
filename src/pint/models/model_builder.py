@@ -251,6 +251,10 @@ class ModelBuilder:
         if not hasattr(tm, "NoiseComponent_list"):
             setattr(tm, "NoiseComponent_list", [])
 
+        tm.meta["allow_tcb"] = allow_tcb_
+        tm.meta["convert_tcb"] = convert_tcb
+        tm.meta["allow_T2"] = allow_T2
+
         return tm
 
     def _validate_components(self):
@@ -851,6 +855,7 @@ def get_model(
         **kwargs,
     )
     model.name = parfile
+    model.meta["original_name"] = parfile
 
     return model
 
