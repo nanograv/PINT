@@ -24,7 +24,6 @@ the released changes.
 - Simulate correlated DM noise for wideband TOAs
 - Rerun intermittent failures in CI
 - micromamba CI environment for testing macOS-latest, without tox
-
 ### Fixed
 - Changed WAVE_OM units from 1/d to rad/d.
 - When EQUAD is created from TNEQ, has proper TCB->TDB conversion info
