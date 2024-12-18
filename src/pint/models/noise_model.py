@@ -499,9 +499,11 @@ class PLDMNoise(CorrelatedNoiseComponent):
     .. paramtable::
         :class: pint.models.noise_model.PLDMNoise
 
-    Note
-    ----
-    Ref: Lentati et al. 2014, MNRAS 437(3), 3004-3023
+    References
+    ----------
+    - Lentati et al. 2014, MNRAS 437(3), 3004-3023 [1]_
+
+    .. [1] https://ui.adsabs.harvard.edu/abs/2014MNRAS.437.3004L/abstract
 
     """
 
@@ -619,9 +621,11 @@ class PLChromNoise(CorrelatedNoiseComponent):
     .. paramtable::
         :class: pint.models.noise_model.PLChromNoise
 
-    Note
-    ----
-    Ref: Lentati et al. 2014, MNRAS 437(3), 3004-3023
+    References
+    ----------
+    - Lentati et al. 2014, MNRAS 437(3), 3004-3023 [1]_
+
+    .. [1] https://ui.adsabs.harvard.edu/abs/2014MNRAS.437.3004L/abstract
     """
 
     register = True
@@ -731,10 +735,11 @@ class PLRedNoise(CorrelatedNoiseComponent):
     .. paramtable::
         :class: pint.models.noise_model.PLRedNoise
 
-    Note
-    ----
-    Ref: Lentati et al. 2014, MNRAS 437(3), 3004-3023
+    References
+    ----------
+    - Lentati et al. 2014, MNRAS 437(3), 3004-3023 [1]_
 
+    .. [1] https://ui.adsabs.harvard.edu/abs/2014MNRAS.437.3004L/abstract
     """
 
     register = True

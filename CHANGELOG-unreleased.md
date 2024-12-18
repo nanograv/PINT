@@ -22,18 +22,15 @@ the released changes.
 - `add_param` returns the name of the parameter (useful for numbered parameters)
 - `introduces_dm_errors` class attribute in `NoiseComponent`s to distinguish DM noise
 - Simulate correlated DM noise for wideband TOAs
-- Abstract base classes `WhiteNoiseComponent` and `CorrelatedNoiseComponent`
-- `get_dm_noise_basis` and `get_wideband_noise_basis` methods in `CorrelatedNoiseComponent`s
-- `scaled_wideband_uncertainty`, `noise_model_wideband_designmatrix`, `dm_designmatrix`, `wideband_designmatrix`,  `full_designmatrix`, and `full_basis_weight` methods in `TimingModel`
-- `get_wideband_errors` method in `TOAs`
-- `calc_combined_resids` method in `WidebandTOAResiduals`
 - Rerun intermittent failures in CI
 - micromamba CI environment for testing macOS-latest, without tox
+
 ### Fixed
 - Changed WAVE_OM units from 1/d to rad/d.
 - When EQUAD is created from TNEQ, has proper TCB->TDB conversion info
 - TOA selection masks will work when only TOA is the first one
 - Condense code in Glitch model and add test coverage.
+- `find_empty_masks` will now search through `CMX` parameters
+- Fixed some docstrings for binary models.
 ### Removed
 - macOS 12 CI 
-
