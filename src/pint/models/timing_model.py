@@ -29,6 +29,7 @@ See :ref:`Timing Models` for more details on how PINT's timing models work.
 
 import abc
 import copy
+import datetime
 import inspect
 import contextlib
 from collections import OrderedDict, defaultdict
@@ -62,13 +63,23 @@ from pint.models.parameter import (
 from pint.phase import Phase
 from pint.toa import TOAs
 from pint.utils import (
-    PrefixError,
     split_prefixed_name,
     open_or_use,
     colorize,
     xxxselections,
 )
 from pint.derived_quantities import dispersion_slope
+from pint.exceptions import (
+    PrefixError,
+    MissingTOAs,
+    PropertyAttributeError,
+    TimingModelError,
+    MissingParameter,
+    AliasConflict,
+    UnknownParameter,
+    UnknownBinaryModel,
+    MissingBinaryError,
+)
 
 
 __all__ = [
@@ -76,11 +87,6 @@ __all__ = [
     "TimingModel",
     "Component",
     "AllComponents",
-    "TimingModelError",
-    "MissingParameter",
-    "MissingTOAs",
-    "MissingBinaryError",
-    "UnknownBinaryModel",
 ]
 # Parameters or lines in par files we don't understand but shouldn't
 # complain about. These are still passed to components so that they
@@ -104,6 +110,9 @@ ignore_params = {
 
 ignore_prefix = {"DMXF1_", "DMXF2_", "DMXEP_"}
 
+# prefixes of parameters that may need to be checked for empty ranges
+prefixes = ["DM", "SW", "CM"]
+
 DEFAULT_ORDER = [
     "astrometry",
     "jump_delay",
@@ -121,26 +130,6 @@ DEFAULT_ORDER = [
     "wave",
     "wavex",
 ]
-
-
-class MissingTOAs(ValueError):
-    """Some parameter does not describe any TOAs."""
-
-    def __init__(self, parameter_names):
-        if isinstance(parameter_names, str):
-            parameter_names = [parameter_names]
-        if len(parameter_names) == 1:
-            msg = f"Parameter {parameter_names[0]} does not correspond to any TOAs: you might need to run `model.find_empty_masks(toas, freeze=True)`"
-        elif len(parameter_names) > 1:
-            msg = f"Parameters {' '.join(parameter_names)} do not correspond to any TOAs: you might need to run `model.find_empty_masks(toas, freeze=True)`"
-        else:
-            raise ValueError("Incorrect attempt to construct MissingTOAs")
-        super().__init__(msg)
-        self.parameter_names = parameter_names
-
-
-class PropertyAttributeError(ValueError):
-    pass
 
 
 def property_exists(f):
@@ -240,6 +229,8 @@ class TimingModel:
     ----------
     name : str
         The name of the timing model
+    meta : dict
+        A dictionary of metadata
     component_types : list
         A list of the distinct categories of component. For example,
         delay components will be register as 'DelayComponent'.
@@ -254,6 +245,9 @@ class TimingModel:
                 "First parameter should be the model name, was {!r}".format(name)
             )
         self.name = name
+        self.meta = {
+            "read_time": f"{datetime.datetime.now().isoformat()}",
+        }
         self.component_types = []
         self.top_level_params = []
         self.add_param_from_top(
@@ -2778,6 +2772,7 @@ class TimingModel:
         if include_info:
             info_string = pint.utils.info_string(prefix_string="# ", comment=comment)
             info_string += f"\n# Format: {format.lower()}"
+            info_string += "".join([f"\n# {x}: {self.meta[x]}" for x in self.meta])
             result_begin = info_string + "\n"
         else:
             result_begin = ""
@@ -2916,7 +2911,7 @@ class TimingModel:
                 if freeze:
                     log.info(f"'{maskpar}' has no TOAs so freezing")
                     getattr(self, maskpar).frozen = True
-        for prefix in ["DM", "SW"]:
+        for prefix in prefixes:
             mapping = pint.utils.xxxselections(self, toas, prefix=prefix)
             for k in mapping:
                 if len(mapping[k]) == 0:
@@ -3440,6 +3435,7 @@ class Component(metaclass=ModelMeta):
         if deriv_func is not None:
             self.register_deriv_funcs(deriv_func, param.name)
         param._parent = self
+        return param.name
 
     def remove_param(self, param):
         """Remove a parameter from the Component.
@@ -4023,68 +4019,3 @@ class AllComponents:
         if getattr(self.components[component], firstname).unit_template is None:
             return self._param_unit_map[firstname]
         return u.Unit(getattr(self.components[component], firstname).unit_template(idx))
-
-
-class TimingModelError(ValueError):
-    """Generic base class for timing model errors."""
-
-    pass
-
-
-class MissingParameter(TimingModelError):
-    """A required model parameter was not included.
-
-    Parameters
-    ----------
-    module
-        name of the model class that raised the error
-    param
-        name of the missing parameter
-    msg
-        additional message
-
-    """
-
-    def __init__(self, module, param, msg=None):
-        super().__init__(msg)
-        self.module = module
-        self.param = param
-        self.msg = msg
-
-    def __str__(self):
-        result = f"{self.module}.{self.param}"
-        if self.msg is not None:
-            result += "\n  " + self.msg
-        return result
-
-
-class AliasConflict(TimingModelError):
-    """If the same alias is used for different parameters."""
-
-    pass
-
-
-class UnknownParameter(TimingModelError):
-    """Signal that a parameter name does not match any PINT parameters and their aliases."""
-
-    pass
-
-
-class UnknownBinaryModel(TimingModelError):
-    """Signal that the par file requested a binary model not in PINT."""
-
-    def __init__(self, message, suggestion=None):
-        super().__init__(message)
-        self.suggestion = suggestion
-
-    def __str__(self):
-        base_message = super().__str__()
-        if self.suggestion:
-            return f"{base_message} Perhaps use {self.suggestion}?"
-        return base_message
-
-
-class MissingBinaryError(TimingModelError):
-    """Error for missing BINARY parameter."""
-
-    pass

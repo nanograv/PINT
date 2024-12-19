@@ -75,9 +75,9 @@ import pint
 import pint.pulsar_ecliptic
 from pint.toa_select import TOASelect
 from pint.types import file_like, quantity_like
+from pint.exceptions import PINTPrecisionError, PrefixError
 
 __all__ = [
-    "PINTPrecisionError",
     "check_longdouble_precision",
     "require_longdouble_precision",
     "PosVel",
@@ -152,10 +152,6 @@ TEXT_ATTRIBUTES = [
 ]
 
 # Actual exported tools
-
-
-class PINTPrecisionError(RuntimeError):
-    pass
 
 
 # A warning is emitted in pint.pulsar_mjd if sufficient precision is not available
@@ -361,12 +357,8 @@ prefix_pattern = [
     re.compile(r"^([a-zA-Z]*\d+[a-zA-Z]+)(\d+)$"),  # For the prefix like T2EFAC2
     re.compile(r"^([a-zA-Z]+)0*(\d+)$"),  # For the prefix like F12
     re.compile(r"^([a-zA-Z0-9]+_)(\d+)$"),  # For the prefix like DMXR1_3
-    # re.compile(r'([a-zA-Z]\d[a-zA-Z]+)(\d+)'),  # for prefixes like PLANET_SHAPIRO2?
+    re.compile(r"([a-zA-Z]+_[a-zA-Z]+)(\d+)$"),  # for prefixes like NE_SW2?
 ]
-
-
-class PrefixError(ValueError):
-    pass
 
 
 def split_prefixed_name(name: str) -> Tuple[str, str, int]:
@@ -1753,11 +1745,8 @@ def _translate_wave_freqs(om: Union[float, u.Quantity], k: int) -> u.Quantity:
     astropy.units.Quantity
         WXFREQ_ quantity in units 1/d that can be used in WaveX model
     """
-    if isinstance(om, u.quantity.Quantity):
-        om.to(u.d**-1)
-    else:
-        om *= u.d**-1
-    return (om * (k + 1)) / (2.0 * np.pi)
+    om <<= u.rad / u.d
+    return (om * (k + 1)) / (2.0 * np.pi * u.rad)
 
 
 def _translate_wavex_freqs(wxfreq: Union[float, u.Quantity], k: int) -> u.Quantity:
@@ -1777,13 +1766,12 @@ def _translate_wavex_freqs(wxfreq: Union[float, u.Quantity], k: int) -> u.Quanti
     astropy.units.Quantity
         WAVEOM quantity in units 1/d that can be used in Wave model
     """
-    if isinstance(wxfreq, u.quantity.Quantity):
-        wxfreq.to(u.d**-1)
-    else:
-        wxfreq *= u.d**-1
+    wxfreq <<= u.d**-1
     if len(wxfreq) == 1:
-        return (2.0 * np.pi * wxfreq) / (k + 1.0)
-    wave_om = [((2.0 * np.pi * wxfreq[i]) / (k[i] + 1.0)) for i in range(len(wxfreq))]
+        return (2.0 * np.pi * u.rad * wxfreq) / (k + 1.0)
+    wave_om = [
+        ((2.0 * np.pi * u.rad * wxfreq[i]) / (k[i] + 1.0)) for i in range(len(wxfreq))
+    ]
     return (
         sum(wave_om) / len(wave_om)
         if np.allclose(wave_om, wave_om[0], atol=1e-3)

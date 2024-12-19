@@ -23,6 +23,7 @@ Active developers are indicated by (*). Authors of the PINT paper are indicated 
 * Bastian Beranek 
 * Deven Bhakta (*)
 * Chloe Champagne (#)
+* Colin Clark
 * Jonathan Colen (#)
 * H Thankful Cromartie 
 * Christoph Deil 

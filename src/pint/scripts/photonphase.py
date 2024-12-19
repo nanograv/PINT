@@ -107,10 +107,23 @@ def main(argv=None):
         dest="loglevel",
     )
     parser.add_argument(
+        "--nbin", help="Number of phase bins in the phaseogram", default=100, type=int
+    )
+    parser.add_argument(
         "-v", "--verbosity", default=0, action="count", help="Increase output verbosity"
     )
     parser.add_argument(
         "-q", "--quiet", default=0, action="count", help="Decrease output verbosity"
+    )
+    parser.add_argument(
+        "--allow_tcb",
+        action="store_true",
+        help="Convert TCB par files to TDB automatically",
+    )
+    parser.add_argument(
+        "--allow_T2",
+        action="store_true",
+        help="Guess the underlying binary model when T2 is given",
     )
 
     args = parser.parse_args(argv)
@@ -153,7 +166,10 @@ def main(argv=None):
                 "Please barycenter the event file using the official mission tools before processing with PINT"
             )
     # Read in model
-    modelin = pint.models.get_model(args.parfile)
+    modelin = pint.models.get_model(
+        args.parfile, allow_T2=args.allow_T2, allow_tcb=args.allow_tcb
+    )
+
     use_planets = False
     if "PLANET_SHAPIRO" in modelin.params:
         if modelin.PLANET_SHAPIRO.value:
@@ -254,7 +270,7 @@ def main(argv=None):
         print("Htest : {0:.2f} ({1:.2f} sigma)".format(h, h2sig(h)))
 
     if args.plot:
-        phaseogram_binned(mjds, phases, bins=100, plotfile=args.plotfile)
+        phaseogram_binned(mjds, phases, bins=args.nbin, plotfile=args.plotfile)
 
     # Compute orbital phases for each photon TOA
     if args.addorbphase:
