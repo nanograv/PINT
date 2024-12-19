@@ -7,6 +7,32 @@ and this project, at least loosely, adheres to [Semantic Versioning](https://sem
 This file contains the released changes to the codebase. See CHANGELOG-unreleased.md for
 the unreleased changes. This file should only be changed while tagging a new version.
 
+## [1.1.1] 2024-012-18
+### Changed
+- Command line scripts now automatically do `allow_tcb` and `allow_T2` while reading par files.
+- Updated the `plot_chains` function in `event_optimize` so that the subplots are a fixed size to prevent the subplots from being condensed in the case of many fit parameters.
+### Added
+- Time derivatives of NE_SW in `SolarWindDispersion`
+- New prefix pattern for `split_prefixed_name` to handle derivatives of NE_SW
+- Added an option `nbin` to `photonphase` to decide how many phase bins to use for the phaseogram
+- Added an option `linearize_model` to speed up the photon phases calculation within `event_optimize` through the designmatrix.
+- Added AIC and BIC calculation to be written in the post fit parfile from `event_optimize`
+- When TCB->TDB conversion info is missing, will print parameter name
+- Piecewise-constant model for chromatic variations (CMX)
+- `add_param` returns the name of the parameter (useful for numbered parameters)
+- Rerun intermittent failures in CI
+- micromamba CI environment for testing macOS-latest, without tox
+- models now have metadata dictionary
+### Fixed
+- Changed WAVE_OM units from 1/d to rad/d.
+- When EQUAD is created from TNEQ, has proper TCB->TDB conversion info
+- TOA selection masks will work when only TOA is the first one
+- Condense code in Glitch model and add test coverage.
+- `find_empty_masks` will now search through `CMX` parameters
+- Fixed some docstrings for binary models.
+### Removed
+- macOS 12 CI 
+
 ## [1.1] 2024-11-05
 ### Changed
 * Bump oldest python to 3.9
