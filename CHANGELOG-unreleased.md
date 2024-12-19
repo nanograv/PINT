@@ -10,6 +10,7 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
+- Simulate correlated DM noise for wideband TOAs
 ### Fixed
 ### Removed
 
