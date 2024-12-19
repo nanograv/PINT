@@ -3241,12 +3241,21 @@ def plrednoise_from_wavex(
 
     tnredc = len(model.components["WaveX"].get_indices())
 
+    tnredflow = (
+        0
+        if (model.START.quantity is None or model.FINISH.quantity is None)
+        else np.log10(
+            (model.FINISH.quantity - model.START.quantity) * model.WXFREQ_0001.quantity
+        ).si.value
+    )
+
     model1 = deepcopy(model)
     model1.remove_component("WaveX")
     model1.add_component(PLRedNoise())
     model1.TNREDAMP.value = log10_A_val
     model1.TNREDGAM.value = gamma_val
     model1.TNREDC.value = tnredc
+    model1.TNREDFLOW.value = tnredflow
     model1.TNREDAMP.uncertainty_value = log10_A_err
     model1.TNREDGAM.uncertainty_value = gamma_err
 
@@ -3295,12 +3304,22 @@ def pldmnoise_from_dmwavex(
 
     tndmc = len(model.components["DMWaveX"].get_indices())
 
+    tndmflow = (
+        0
+        if (model.START.quantity is None or model.FINISH.quantity is None)
+        else np.log10(
+            (model.FINISH.quantity - model.START.quantity)
+            * model.DMWXFREQ_0001.quantity
+        ).si.value
+    )
+
     model1 = deepcopy(model)
     model1.remove_component("DMWaveX")
     model1.add_component(PLDMNoise())
     model1.TNDMAMP.value = log10_A_val
     model1.TNDMGAM.value = gamma_val
     model1.TNDMC.value = tndmc
+    model1.TNDMFLOW.value = tndmflow
     model1.TNDMAMP.uncertainty_value = log10_A_err
     model1.TNDMGAM.uncertainty_value = gamma_err
 
