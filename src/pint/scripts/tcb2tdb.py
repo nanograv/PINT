@@ -30,11 +30,16 @@ def main(argv=None):
     )
     parser.add_argument("input_par", help="Input par file name (TCB)")
     parser.add_argument("output_par", help="Output par file name (TDB)")
+    parser.add_argument(
+        "--allow_T2",
+        action="store_true",
+        help="Guess the underlying binary model when T2 is given",
+    )
 
     args = parser.parse_args(argv)
 
     mb = ModelBuilder()
-    model = mb(args.input_par, allow_tcb=True)
+    model = mb(args.input_par, allow_tcb=True, allow_T2=args.allow_T2)
     model.write_parfile(args.output_par)
 
     log.info(f"Output written to {args.output_par}.")

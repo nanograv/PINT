@@ -76,6 +76,7 @@ from pint.models.parameter import (
     AngleParameter,
     boolParameter,
     strParameter,
+    InvalidModelParameters,
 )
 from pint.pint_matrix import (
     CorrelationMatrix,
@@ -89,6 +90,13 @@ from pint.pint_matrix import (
 from pint.residuals import Residuals, WidebandTOAResiduals
 from pint.toa import TOAs
 from pint.utils import FTest, normalize_designmatrix
+from pint.exceptions import (
+    DegeneracyWarning,
+    ConvergenceFailure,
+    MaxiterReached,
+    StepProblem,
+    CorrelatedErrors,
+)
 
 
 __all__ = [
@@ -164,22 +172,6 @@ except ImportError:
                             )
                             raise TypeError(msg) from None
             return val
-
-
-class DegeneracyWarning(UserWarning):
-    pass
-
-
-class ConvergenceFailure(ValueError):
-    pass
-
-
-class MaxiterReached(ConvergenceFailure):
-    pass
-
-
-class StepProblem(ConvergenceFailure):
-    pass
 
 
 class Fitter:
@@ -885,24 +877,6 @@ class Fitter:
             category=DeprecationWarning,
         )
         return self.parameter_covariance_matrix
-
-
-class InvalidModelParameters(ValueError):
-    pass
-
-
-class CorrelatedErrors(ValueError):
-    def __init__(self, model):
-        trouble_components = [
-            c.__class__.__name__
-            for c in model.NoiseComponent_list
-            if c.introduces_correlated_errors
-        ]
-        super().__init__(
-            f"Model has correlated errors and requires a GLS-based fitter; "
-            f"remove {trouble_components} if you want to use WLS"
-        )
-        self.trouble_components = trouble_components
 
 
 class ModelState:

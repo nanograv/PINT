@@ -21,12 +21,10 @@ from pint.models.parameter import (
 from pint.models.stand_alone_psr_binaries import binary_orbits as bo
 from pint.models.timing_model import (
     DelayComponent,
-    MissingParameter,
-    TimingModelError,
-    UnknownParameter,
 )
 from pint.utils import taylor_horner_deriv, parse_time
 from pint.pulsar_ecliptic import PulsarEcliptic
+from pint.exceptions import MissingParameter, TimingModelError, UnknownParameter
 
 
 # def _p_to_f(p):
@@ -62,6 +60,18 @@ class PulsarBinary(DelayComponent):
         - SINI - system inclination (0<=SINI<=1)
         - FB0 - orbital frequency (1/s, alternative to PB, non-negative)
         - FBn - time derivatives of orbital frequency (1/s**(n+1))
+
+    The following ORBWAVEs parameters define a Fourier series model for orbital phase
+    variations, as an alternative to the FBn Taylor series expansion:
+
+        - ORBWAVE_OM - base angular frequency for ORBWAVEs expansion (rad / s)
+        - ORBWAVE_EPOCH - reference epoch for ORBWAVEs model (MJD)
+        - ORBWAVECn/ORBWAVESn - coefficients for cosine/sine components (dimensionless)
+
+    The orbital phase is then given by:
+        orbits(t) = (t - T0) / PB
+                    + \sum_{n=0} (ORBWAVECn cos(ORBWAVE_OM * (n + 1) * (t - ORBWAVE_EPOCH))
+                                + ORBWAVESn sin(ORBWAVE_OM * (n + 1) * (t - ORBWAVE_EPOCH))
 
     The internal calculation code uses different names for some parameters:
 
@@ -203,6 +213,50 @@ class PulsarBinary(DelayComponent):
                 tcb2tdb_scale_factor=u.Quantity(1),
             )
         )
+
+        self.add_param(
+            prefixParameter(
+                name="ORBWAVEC0",
+                value=None,
+                units="",
+                description="Amplitude of cosine wave in Tasc-shift function",
+                aliases=["ORBWAVEC"],
+                description_template=self.ORBWAVEC_description,
+                type_match="float",
+                tcb2tdb_scale_factor=u.Quantity(1),
+            )
+        )
+
+        self.add_param(
+            prefixParameter(
+                name="ORBWAVES0",
+                value=None,
+                units="",
+                description="Amplitude of sine wave in Tasc-shift function",
+                aliases=["ORBWAVES"],
+                description_template=self.ORBWAVES_description,
+                type_match="float",
+                tcb2tdb_scale_factor=u.Quantity(1),
+            )
+        )
+
+        self.add_param(
+            floatParameter(
+                name="ORBWAVE_OM",
+                units="rad/s",
+                description="Base frequency for ORBWAVEs model",
+                tcb2tdb_scale_factor=u.Quantity(1),
+            )
+        )
+        self.add_param(
+            MJDParameter(
+                name="ORBWAVE_EPOCH",
+                description="Reference epoch for ORBWAVEs model",
+                time_scale="tdb",
+                tcb2tdb_scale_factor=u.Quantity(1),
+            )
+        )
+
         self.internal_params = []
         self.warn_default_params = ["ECC", "OM"]
         # Set up delay function
@@ -253,6 +307,48 @@ class PulsarBinary(DelayComponent):
             #         func=_pdot_to_fdot,
             #     )
             # )
+
+        ORBWAVES_mapping = self.get_prefix_mapping_component("ORBWAVES")
+        ORBWAVES = {
+            ows: getattr(self, ows).quantity for ows in ORBWAVES_mapping.values()
+        }
+        ORBWAVEC_mapping = self.get_prefix_mapping_component("ORBWAVEC")
+        ORBWAVEC = {
+            owc: getattr(self, owc).quantity for owc in ORBWAVEC_mapping.values()
+        }
+
+        if any(v is not None for v in ORBWAVES.values()):
+            for k in ["ORBWAVE_OM", "ORBWAVE_EPOCH"]:
+                self.binary_instance.add_binary_params(k, getattr(self, k).value)
+
+            for k in ORBWAVES.keys():
+                self.binary_instance.add_binary_params(k, ORBWAVES[k])
+
+            for k in ORBWAVEC.keys():
+                self.binary_instance.add_binary_params(k, ORBWAVEC[k])
+
+            using_FBX = any(v is not None for v in FBXs.values())
+            if using_FBX:
+                fbx = sorted(list(FBXs.keys()))
+                if len(fbx) > 2:
+                    raise ValueError("Only FB0/FB1 are supported.")
+                if (len(fbx) == 2) and (fbx[1] != "FB1"):
+                    raise ValueError("Only FB0/FB1 are supported.")
+                self.binary_instance.orbits_cls = bo.OrbitWavesFBX(
+                    self.binary_instance,
+                    fbx
+                    + ["TASC", "ORBWAVE_OM", "ORBWAVE_EPOCH"]
+                    + list(ORBWAVES.keys())
+                    + list(ORBWAVEC.keys()),
+                )
+            else:
+                self.binary_instance.orbits_cls = bo.OrbitWaves(
+                    self.binary_instance,
+                    ["PB", "TASC", "ORBWAVE_OM", "ORBWAVE_EPOCH"]
+                    + list(ORBWAVES.keys())
+                    + list(ORBWAVEC.keys()),
+                )
+
         # Note: if we are happy to use these to show alternate parameterizations then this can be uncommented
         # else:
         #     # remove the FB parameterization, replace with functions
@@ -488,6 +584,18 @@ class PulsarBinary(DelayComponent):
 
     def FBX_description(self, n):
         return "%dth time derivative of frequency of orbit" % n
+
+    def ORBWAVES_description(self, n):
+        return (
+            "Coefficient of the %dth sine wave in Fourier series model of Tasc variations"
+            % n
+        )
+
+    def ORBWAVEC_description(self, n):
+        return (
+            "Coefficient of the %dth cosine wave in Fourier series model of Tasc variations"
+            % n
+        )
 
     def change_binary_epoch(self, new_epoch):
         """Change the epoch for this binary model.

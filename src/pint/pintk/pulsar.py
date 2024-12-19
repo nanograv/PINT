@@ -151,7 +151,9 @@ class Pulsar:
         return key in self.prefit_model.params
 
     def reset_model(self):
-        self.prefit_model = pint.models.get_model(self.parfile)
+        self.prefit_model = pint.models.get_model(
+            self.parfile, allow_T2=True, allow_tcb=True
+        )
         self.add_model_params()
         self.postfit_model = None
         self.postfit_resids = None
@@ -172,7 +174,9 @@ class Pulsar:
         self.update_resids()
 
     def resetAll(self):
-        self.prefit_model = pint.models.get_model(self.parfile)
+        self.prefit_model = pint.models.get_model(
+            self.parfile, allow_T2=True, allow_tcb=True
+        )
         self.postfit_model = None
         self.postfit_resids = None
         self.fitted = False
@@ -603,9 +607,10 @@ class Pulsar:
         # adds extra prefix params for fitting
         self.add_model_params()
 
-        print(
-            f"Akaike information criterion = {akaike_information_criterion(self.fitter.model, self.fitter.toas)}"
-        )
+        if not self.all_toas.is_wideband():
+            print(
+                f"Akaike information criterion = {akaike_information_criterion(self.fitter.model, self.fitter.toas)}"
+            )
 
     def random_models(self, selected):
         """Compute and plot random models"""

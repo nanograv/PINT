@@ -3,7 +3,7 @@
 import pytest
 from io import StringIO
 
-from pint.models.timing_model import (
+from pint.exceptions import (
     TimingModelError,
     UnknownBinaryModel,
     MissingBinaryError,

@@ -359,3 +359,83 @@ def test_overlapping_swx():
     dm3 = model3.components["SolarWindDispersionX"].swx_dm(toas)
     dm3[toas.get_mjds() >= 54180 * u.d] = 0
     assert np.allclose(dm2 - dm, dm3)
+
+
+def test_nesw_derivatives():
+    par = """
+        PSRJ            J1744-1134
+        ELONG           266.119458498                 6.000e-09
+        ELAT            11.80517508                   3.000e-08
+        DM              3.1379                        4.000e-04
+        PEPOCH          55000
+        F0              245.4261196898081             5.000e-13
+        F1              -5.38156E-16                  3.000e-21
+        POSEPOCH        59150
+        DMEPOCH         55000
+        CLK             TT(BIPM2018)
+        EPHEM           DE436
+        RM              1.62                          9.000e-02
+        PX              2.61                          9.000e-02
+        DM1             -7.0E-5                       3.000e-05
+        PMELONG         19.11                         2.000e-02
+        DM2             1.7E-5                        4.000e-06
+        PMELAT          -9.21                         1.300e-01
+        UNITS           TDB        
+        NE_SW           8           1
+        NE_SW1          0           1
+        NE_SW2          0           1
+        SWEPOCH         55000
+    """
+    m = get_model(StringIO(par))
+    t = make_fake_toas_uniform(54500, 55500, 1000, m, add_noise=True)
+    ftr = Fitter.auto(t, m)
+    ftr.fit_toas()
+
+    assert (
+        m.NE_SW.value - ftr.model.NE_SW.value
+    ) / ftr.model.NE_SW.uncertainty_value < 3
+    assert (
+        m.NE_SW1.value - ftr.model.NE_SW1.value
+    ) / ftr.model.NE_SW1.uncertainty_value < 3
+    assert (
+        m.NE_SW2.value - ftr.model.NE_SW2.value
+    ) / ftr.model.NE_SW2.uncertainty_value < 3
+
+    m.components["SolarWindDispersion"]
+
+
+def test_expression():
+    par = """
+        PSRJ            J1744-1134
+        ELONG           266.119458498                 6.000e-09
+        ELAT            11.80517508                   3.000e-08
+        DM              3.1379                        4.000e-04
+        PEPOCH          55000
+        F0              245.4261196898081             5.000e-13
+        F1              -5.38156E-16                  3.000e-21
+        POSEPOCH        59150
+        DMEPOCH         55000
+        CLK             TT(BIPM2018)
+        EPHEM           DE436
+        PX              2.61                          9.000e-02
+        PMELONG         19.11                         2.000e-02
+        PMELAT          -9.21                         1.300e-01
+        UNITS           TDB        
+        NE_SW           8           1
+        NE_SW1          1           1
+        SWEPOCH         55000
+    """
+    m = get_model(StringIO(par))
+    t = make_fake_toas_uniform(54500, 55500, 10, m, add_noise=True)
+
+    t0 = m.SWEPOCH.value * u.day
+    t1 = t["tdbld"][-1] * u.day
+    dt = t1 - t0
+
+    assert np.isclose(
+        (
+            m.components["SolarWindDispersion"].solar_wind_dm(t)
+            / m.components["SolarWindDispersion"].solar_wind_geometry(t)
+        )[-1],
+        (m.NE_SW.quantity + dt * m.NE_SW1.quantity),
+    )

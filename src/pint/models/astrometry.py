@@ -24,9 +24,10 @@ from pint.models.parameter import (
     strParameter,
 )
 import pint.toa
-from pint.models.timing_model import DelayComponent, MissingParameter
+from pint.models.timing_model import DelayComponent
 from pint.pulsar_ecliptic import OBL, PulsarEcliptic
 from pint.utils import add_dummy_distance, remove_dummy_distance
+from pint.exceptions import MissingParameter
 
 astropy_version = sys.modules["astropy"].__version__
 mas_yr = u.mas / u.yr
