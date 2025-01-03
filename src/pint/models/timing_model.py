@@ -552,7 +552,7 @@ class TimingModel:
         )
 
     def __setattr__(
-        self, name: str, value: Parameter | prefixParameter | u.Quantity | float
+        self, name: str, value: Union[Parameter, prefixParameter, u.Quantity, float]
     ):
         """Mostly this just sets ``self.name = value``.   But there are a few special cases:
 
@@ -731,7 +731,7 @@ class TimingModel:
         self,
         which: Literal["free", "all"] = "free",
         kind: Literal["quantity", "value", "uncertainty"] = "quantity",
-    ) -> OrderedDict[str, float] | OrderedDict[str, u.Quantity]:
+    ) -> Union[OrderedDict[str, float], OrderedDict[str, u.Quantity]]:
         """Return a dict mapping parameter names to values.
 
         This can return only the free parameters or all; and it can return the
@@ -846,7 +846,7 @@ class TimingModel:
 
     def orbital_phase(
         self,
-        barytimes: time.Time | TOAs | np.ndarray | float | MJDParameter,
+        barytimes: Union[time.Time, TOAs, np.ndarray, float, MJDParameter],
         anom: Literal["mean", "eccentric", "true"] = "mean",
         radians: bool = True,
     ) -> np.ndarray:
@@ -919,7 +919,7 @@ class TimingModel:
         return anoms * u.rad if radians else anoms / (2 * np.pi)
 
     def pulsar_radial_velocity(
-        self, barytimes: time.Time | TOAs | np.ndarray | float | MJDParameter
+        self, barytimes: Union[time.Time, TOAs, np.ndarray, float, MJDParameter]
     ) -> np.ndarray:
         """Return line-of-sight velocity of the pulsar relative to the system barycenter at barycentric MJD times.
 
@@ -968,7 +968,7 @@ class TimingModel:
 
     def companion_radial_velocity(
         self,
-        barytimes: time.Time | TOAs | np.ndarray | float | MJDParameter,
+        barytimes: Union[time.Time, TOAs, np.ndarray, float, MJDParameter],
         massratio: float,
     ) -> np.ndarray:
         """Return line-of-sight velocity of the companion relative to the system barycenter at barycentric MJD times.
@@ -1006,7 +1006,7 @@ class TimingModel:
         """
         return -self.pulsar_radial_velocity(barytimes) * massratio
 
-    def conjunction(self, baryMJD: float | time.Time) -> float | np.ndarray:
+    def conjunction(self, baryMJD: Union[float, time.Time]) -> Union[float, np.ndarray]:
         """Return the time(s) of the first superior conjunction(s) after baryMJD.
 
         Args
@@ -3518,7 +3518,7 @@ class Component(metaclass=ModelMeta):
         param._parent = self
         return param.name
 
-    def remove_param(self, param: str | Parameter) -> None:
+    def remove_param(self, param: Union[str, Parameter]) -> None:
         """Remove a parameter from the Component.
 
         Parameters
