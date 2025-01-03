@@ -1756,7 +1756,10 @@ class TimingModel:
         result = [nf(toas)[0] for nf in self.basis_funcs]
         return np.hstack(list(result))
 
-    def noise_model_wideband_designmatrix(self, toas):
+    def noise_model_wideband_designmatrix(self, toas: TOAs) -> Optional[np.ndarray]:
+        """Returns the design/basis matrix for all noise components for wideband TOAs.
+        Includes both TOA and DM partial derivatives. Returns None if no correlated noise
+        component is present."""
         return (
             np.hstack(
                 [
@@ -1769,7 +1772,10 @@ class TimingModel:
             else None
         )
 
-    def full_designmatrix(self, toas: TOAs):
+    def full_designmatrix(self, toas: TOAs) -> np.ndarray:
+        """Returns the full design matrix containing both the timing model design
+        matrix and the noise basis matrix. If the TOAs are wideband, the DM partial
+        derivatives are also included. The units are not returned."""
         if not toas.is_wideband():
             M_tm, par, M_units = self.designmatrix(toas)
             M_nm = self.noise_model_designmatrix(toas)
@@ -1785,7 +1791,10 @@ class TimingModel:
         result = [nf(toas)[1] for nf in self.basis_funcs]
         return np.hstack(list(result))
 
-    def full_basis_weight(self, toas):
+    def full_basis_weight(self, toas: TOAs) -> np.ndarray:
+        """Returns the joint weight vector for all timing and noise components.
+        The weights of the timing model parameters are set to be a large constant,
+        representing an uninformative prior."""
         npar_tm = len(self.free_params) + int("PhaseOffset" not in self.components)
         phi_tm = np.ones(npar_tm) * 1e40
         phi_nm = self.noise_model_basis_weight(toas)
