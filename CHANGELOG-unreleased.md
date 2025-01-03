@@ -16,5 +16,7 @@ the released changes.
     - `get_wideband_errors` method in `TOAs`
     - `scaled_wideband_uncertainty`, `noise_model_wideband_designmatrix`, `dm_designmatrix`, `wideband_designmatrix`, `full_designmatrix`, and `full_basis_weight` methods in `TimingModel`
     - `calc_combined_resids` method in `WidebandTOAResiduals`
+- Type hints in `pint.models.timing_model`
 ### Fixed
+- Made `TimingModel.is_binary()` more robust. 
 ### Removed
