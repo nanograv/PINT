@@ -34,7 +34,7 @@ import inspect
 import contextlib
 from collections import OrderedDict, defaultdict
 from functools import wraps
-from typing import Callable, Dict, List, Literal, Optional, Tuple, Union
+from typing import Callable, Dict, List, Literal, Optional, Set, Tuple, Union
 from warnings import warn
 from uncertainties import ufloat
 
@@ -3773,7 +3773,7 @@ class AllComponents:
             self.components[k] = v()
 
     @lazyproperty
-    def param_component_map(self):
+    def param_component_map(self) -> Dict[str, List[str]]:
         """Return the parameter to component map.
 
         This property returns the all PINT defined parameters to their host
@@ -3798,7 +3798,9 @@ class AllComponents:
                 p2c_map[ap].append("timing_model")
         return p2c_map
 
-    def _check_alias_conflict(self, alias, param_name, alias_map):
+    def _check_alias_conflict(
+        self, alias: str, param_name: str, alias_map: dict
+    ) -> None:
         """Check if a aliase has conflict in the alias map.
 
         This function checks if an alias already have record in the alias_map.
@@ -3831,7 +3833,7 @@ class AllComponents:
             return
 
     @lazyproperty
-    def _param_alias_map(self):
+    def _param_alias_map(self) -> Dict[str, str]:
         """Return the aliases map of all parameters
 
         The returned map includes: 1. alias to PINT parameter name. 2. PINT
@@ -3862,7 +3864,7 @@ class AllComponents:
         return alias
 
     @lazyproperty
-    def _param_unit_map(self):
+    def _param_unit_map(self) -> Dict[str, u.Unit]:
         """A dictionary to map parameter names to their units
 
         This excludes prefix parameters and aliases.  Use :func:`param_to_unit` to handle those.
@@ -3881,7 +3883,7 @@ class AllComponents:
         return units
 
     @lazyproperty
-    def repeatable_param(self):
+    def repeatable_param(self) -> Set[str]:
         """Return the repeatable parameter map."""
         repeatable = []
         for k, cp in self.components.items():
@@ -3894,7 +3896,7 @@ class AllComponents:
         return set(repeatable)
 
     @lazyproperty
-    def category_component_map(self):
+    def category_component_map(self) -> Dict[str, str]:
         """A dictionary mapping category to a list of component names.
 
         Return
@@ -3911,7 +3913,7 @@ class AllComponents:
         return category
 
     @lazyproperty
-    def component_category_map(self):
+    def component_category_map(self) -> Dict[str, str]:
         """A dictionary mapping component name to its category name.
 
         Return
@@ -3923,7 +3925,7 @@ class AllComponents:
         return {k: cp.category for k, cp in self.components.items()}
 
     @lazyproperty
-    def component_unique_params(self):
+    def component_unique_params(self) -> Dict[str, List[str]]:
         """Return the parameters that are only present in one component.
 
         Return
@@ -3943,7 +3945,7 @@ class AllComponents:
                 component_special_params[cps[0]].append(param)
         return component_special_params
 
-    def search_binary_components(self, system_name):
+    def search_binary_components(self, system_name: str) -> "Component":
         """Search the pulsar binary component based on given name.
 
         Parameters
@@ -3991,7 +3993,7 @@ class AllComponents:
             f"Pulsar system/Binary model component" f" {system_name} is not provided."
         )
 
-    def alias_to_pint_param(self, alias):
+    def alias_to_pint_param(self, alias: str) -> Tuple[str, str]:
         """Translate a alias to a PINT parameter name.
 
         This is a wrapper function over the property ``_param_alias_map``. It
@@ -4008,10 +4010,10 @@ class AllComponents:
         -------
         pint_par : str
             PINT parameter name the given alias maps to. If there is no matching
-            PINT parameters, it will raise a `UnknownParameter` error.
+            PINT parameters, it will raise an `UnknownParameter` error.
         first_init_par : str
             The parameter name that is first initialized in a component. If the
-            paramere is non-indexable, it is the same as ``pint_par``, otherwrise
+            paramere is non-indexable, it is the same as ``pint_par``, otherwise
             it returns the parameter with the first index. For example, the
             ``first_init_par`` for 'T2EQUAD25' is 'EQUAD1'
 
@@ -4078,7 +4080,7 @@ class AllComponents:
 
         return pint_par, first_init_par
 
-    def param_to_unit(self, name):
+    def param_to_unit(self, name: str) -> u.Unit:
         """Return the unit associated with a parameter
 
         This is a wrapper function over the property ``_param_unit_map``.  It
@@ -4095,7 +4097,7 @@ class AllComponents:
 
         Returns
         -------
-        astropy.u.Unit
+        astropy.units.Unit
         """
         pintname, firstname = self.alias_to_pint_param(name)
         if pintname == firstname:
