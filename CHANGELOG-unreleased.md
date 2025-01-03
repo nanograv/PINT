@@ -11,5 +11,10 @@ the released changes.
 ### Changed
 ### Added
 - Simulate correlated DM noise for wideband TOAs
+- Properly incorporate correlated DM noise in fitting
+    - Replaced the removed `introduces_correlated_errors` attribute with `WhiteNoiseComponent` and `CorrelatedNoiseComponent` abstract base classes
+    - `get_wideband_errors` method in `TOAs`
+    - `scaled_wideband_uncertainty`, `noise_model_wideband_designmatrix`, `dm_designmatrix`, `wideband_designmatrix`, `full_designmatrix`, and `full_basis_weight` methods in `TimingModel`
+    - `calc_combined_resids` method in `WidebandTOAResiduals`
 ### Fixed
 ### Removed
