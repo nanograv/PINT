@@ -34,6 +34,7 @@ import inspect
 import contextlib
 from collections import OrderedDict, defaultdict
 from functools import wraps
+from typing import Callable, Dict, List, Literal
 from warnings import warn
 from uncertainties import ufloat
 
@@ -239,7 +240,7 @@ class TimingModel:
         rather than to any particular component.
     """
 
-    def __init__(self, name="", components=[]):
+    def __init__(self, name: str = "", components: List["Component"] = []):
         if not isinstance(name, str):
             raise ValueError(
                 "First parameter should be the model name, was {!r}".format(name)
@@ -381,16 +382,16 @@ class TimingModel:
         for cp in components:
             self.add_component(cp, setup=False, validate=False)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{}(\n  {}\n)".format(
             self.__class__.__name__,
             ",\n  ".join(str(v) for k, v in sorted(self.components.items())),
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.as_parfile()
 
-    def validate(self, allow_tcb=False):
+    def validate(self, allow_tcb: bool = False) -> None:
         """Validate component setup.
 
         The checks include required parameters and parameter values, and component types.
@@ -440,7 +441,7 @@ class TimingModel:
 
         self.validate_component_types()
 
-    def validate_component_types(self):
+    def validate_component_types(self) -> None:
         """Physically motivated validation of a timing model. This method checks the
         compatibility of different model components when used together.
 
@@ -534,7 +535,7 @@ class TimingModel:
     #            result += str(getattr(cp, pp)) + "\n"
     #    return result
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str):
         if name in ["components", "component_types", "search_cmp_attr"]:
             raise AttributeError
         if not hasattr(self, "component_types"):
@@ -548,7 +549,9 @@ class TimingModel:
             f"Attribute {name} not found in TimingModel or any Component"
         )
 
-    def __setattr__(self, name, value):
+    def __setattr__(
+        self, name: str, value: Parameter | prefixParameter | u.Quantity | float
+    ):
         """Mostly this just sets ``self.name = value``.   But there are a few special cases:
 
         * Where they are both :class:`Parameter` instances with different names,
@@ -588,7 +591,7 @@ class TimingModel:
             super().__setattr__(name, value)
 
     @property_exists
-    def params_ordered(self):
+    def params_ordered(self) -> List[str]:
         """List of all parameter names in this model and all its components.
         This is the same as `params`."""
 
@@ -605,7 +608,7 @@ class TimingModel:
         return self.params
 
     @property_exists
-    def params(self):
+    def params(self) -> List[str]:
         """List of all parameter names in this model and all its components, in a sensible order."""
 
         # Define the order of components in the list
@@ -646,7 +649,7 @@ class TimingModel:
         return pstart + pmid + pend
 
     @property_exists
-    def free_params(self):
+    def free_params(self) -> List[str]:
         """List of all the free parameters in the timing model.
         Can be set to change which are free.
 
@@ -661,7 +664,7 @@ class TimingModel:
         return [p for p in self.params if not getattr(self, p).frozen]
 
     @free_params.setter
-    def free_params(self, params):
+    def free_params(self, params: List[str]):
         params_true = {self.match_param_aliases(p) for p in params}
         for p in self.params:
             getattr(self, p).frozen = p not in params_true
@@ -672,7 +675,7 @@ class TimingModel:
             )
 
     @property_exists
-    def fittable_params(self):
+    def fittable_params(self) -> List[str]:
         """List of parameters that are fittable, i.e., the parameters
         which have a derivative implemented. These derivatives are usually
         accessed via the `d_delay_d_param` and `d_phase_d_param` methods."""
@@ -692,7 +695,7 @@ class TimingModel:
             )
         ]
 
-    def match_param_aliases(self, alias):
+    def match_param_aliases(self, alias: str) -> str:
         """Return PINT parameter name corresponding to this alias.
 
         Parameters
@@ -722,7 +725,11 @@ class TimingModel:
 
         raise UnknownParameter(f"{alias} is not recognized as a parameter or alias")
 
-    def get_params_dict(self, which="free", kind="quantity"):
+    def get_params_dict(
+        self,
+        which: Literal["free", "all"] = "free",
+        kind: Literal["quantity", "value", "uncertainty"] = "quantity",
+    ) -> OrderedDict[str, float] | OrderedDict[str, u.Quantity]:
         """Return a dict mapping parameter names to values.
 
         This can return only the free parameters or all; and it can return the
@@ -756,7 +763,10 @@ class TimingModel:
                 raise ValueError(f"Unknown kind {kind!r}")
         return c
 
-    def get_params_of_component_type(self, component_type):
+    def get_params_of_component_type(
+        self,
+        component_type: Literal["PhaseComponent", "DelayComponent", "NoiseComponent"],
+    ) -> List[str]:
         """Get a list of parameters belonging to a component type.
 
         Parameters
@@ -776,7 +786,7 @@ class TimingModel:
         else:
             return []
 
-    def set_param_values(self, fitp):
+    def set_param_values(self, fitp: Dict[str, float]) -> None:
         """Set the model parameters to the value contained in the input dict.
 
         Ex. model.set_param_values({'F0':60.1,'F1':-1.3e-15})
@@ -794,14 +804,14 @@ class TimingModel:
             else:
                 p.value = v
 
-    def set_param_uncertainties(self, fitp):
+    def set_param_uncertainties(self, fitp: Dict[str, float]) -> None:
         """Set the model parameters to the value contained in the input dict."""
         for k, v in fitp.items():
             p = getattr(self, k)
             p.uncertainty = v if isinstance(v, u.Quantity) else v * p.units
 
     @property_exists
-    def components(self):
+    def components(self) -> Dict[str, "Component"]:
         """All the components in a dictionary indexed by name."""
         comps = {}
         for ct in self.component_types:
@@ -810,7 +820,7 @@ class TimingModel:
         return comps
 
     @property_exists
-    def delay_funcs(self):
+    def delay_funcs(self) -> List[Callable]:
         """List of all delay functions."""
         dfs = []
         for d in self.DelayComponent_list:
@@ -818,7 +828,7 @@ class TimingModel:
         return dfs
 
     @property_exists
-    def phase_funcs(self):
+    def phase_funcs(self) -> List[Callable]:
         """List of all phase functions."""
         pfs = []
         for p in self.PhaseComponent_list:
@@ -826,9 +836,11 @@ class TimingModel:
         return pfs
 
     @property_exists
-    def is_binary(self):
+    def is_binary(self) -> bool:
         """Does the model describe a binary pulsar?"""
-        return any(x.startswith("Binary") for x in self.components.keys())
+        from pint.models.pulsar_binary import PulsarBinary
+
+        return any(isinstance(x, PulsarBinary) for x in self.components.values())
 
     def orbital_phase(self, barytimes, anom="mean", radians=True):
         """Return orbital phase (in radians) at barycentric MJD times.
