@@ -3016,7 +3016,7 @@ class TimingModel:
     def keys(self) -> List[str]:
         return self.params
 
-    def items(self) -> List[str, Parameter]:
+    def items(self) -> List[Tuple[str, Parameter]]:
         return [(p, self[p]) for p in self.params]
 
     def __len__(self) -> int:
