@@ -1791,6 +1791,14 @@ class TOAs:
         return np.array(result)[valid] * pint.dmu
 
     def get_wideband_errors(self) -> np.ndarray:
+        """Returns the combined unscaled TOA and DM uncertainty vector. The first Ntoa
+        elements are the TOA uncertainties and the rest are DM uncertainties. TOA
+        uncertainties are in s and the DM uncertainties are in dmu. Note that the
+        output is an `ndarray` and not a `Quantity`.
+
+        Raises an exception if called with narrowband TOAs.
+        """
+        assert self.is_wideband(), "This method is valid only for wideband TOAs."
         terr = self.get_errors().to_value(u.s)
         derr = self.get_dm_errors().to_value(dmu)
         return np.hstack([terr, derr])
