@@ -894,3 +894,269 @@ def powerlaw(f, A=1e-16, gamma=5):
 
     fyr = 1 / 3.16e7
     return A**2 / 12.0 / np.pi**2 * fyr ** (gamma - 3) * f ** (-gamma)
+
+
+def get_binning(T, logmode, f_min, nlin, nlog):
+    """
+    Get the frequency binning for low-rank approximations, including
+    log-spaced low-frequency coverage.
+
+    :param T: Duration of the experiment (in seconds).
+    :param logmode: The linear mode index at which to switch to log spacing.
+    :param f_min: Minimum frequency to sample (as a fraction of 1/T).
+    :param nlin: Number of linearly spaced frequencies.
+    :param nlog: Number of log-spaced frequencies.
+    :raises ValueError: If logmode < 0 (cannot do log spacing).
+    :returns: (freqs, weights) where
+        freqs is the combined array of log- and linearly spaced frequencies,
+        weights is the corresponding array of weights for each frequency.
+    """
+    if logmode < 0:
+        raise ValueError(
+            "Cannot do log-spacing when all frequencies are linearly sampled."
+        )
+
+    # Linear spacing and weights
+    df_lin = 1.0 / T
+    f_min_lin = (1.0 + logmode) / T
+    f_lin = np.linspace(f_min_lin, f_min_lin + (nlin - 1) * df_lin, nlin)
+    w_lin = np.sqrt(df_lin * np.ones(nlin))
+
+    # Log spacing and weights
+    f_min_log = np.log(f_min)
+    f_max_log = np.log((logmode + 0.5) / T)
+    df_log = (f_max_log - f_min_log) / nlog
+    f_log = np.exp(
+        np.linspace(
+            f_min_log + 0.5 * df_log,
+            f_max_log - 0.5 * df_log,
+            nlog
+        )
+    )
+    w_log = np.sqrt(df_log * f_log)
+
+    return np.append(f_log, f_lin), np.append(w_log, w_lin)
+
+
+def create_weighted_fourier_design_matrix(t, freqs, weights):
+    """
+    Construct a custom Fourier design matrix using specified frequencies
+    and weights.
+
+    :param t: Time array (e.g., TOAs in seconds).
+    :param freqs: Frequencies array, e.g. from get_binning().
+    :param weights: Weights array, e.g. from get_binning().
+    :returns: (Fmat, freqs) where
+        Fmat is the weighted Fourier design matrix of shape (len(t), 2 * len(freqs)),
+        freqs is the repeated frequency array (cos and sin components).
+    """
+    freqs = freqs.repeat(2)
+    weights = weights.repeat(2)
+
+    nt = len(t)
+    nf = len(freqs)
+    Fmat = np.zeros((nt, nf))
+
+    for ii in range(0, nf, 2):
+        omega = 2.0 * np.pi * freqs[ii]
+        Fmat[:, ii] = weights[ii] * np.cos(omega * t)
+
+        omega = 2.0 * np.pi * freqs[ii + 1]
+        Fmat[:, ii + 1] = weights[ii + 1] * np.sin(omega * t)
+
+    return Fmat, freqs
+
+
+def get_loglin_basis(toas, linmodes=200, logmodes=100, fmin_ratio=0.01):
+    """
+    Construct a hybrid log-linear Fourier basis for a set of TOAs.
+
+    :param toas: Array of time-of-arrival values in seconds.
+    :param linmodes: Number of linearly spaced frequency modes.
+    :param logmodes: Number of log-spaced frequency modes.
+    :param fmin_ratio: Minimum frequency ratio relative to 1/T.
+    :returns: (Fmat, bfreqs), where
+        Fmat is the weighted Fourier design matrix,
+        bfreqs is the frequency array used in the matrix.
+    """
+    T = np.max(toas) - np.min(toas)
+    N = len(toas)
+    Teff = N * T / (N - 1.0)
+    fmin_log = fmin_ratio / Teff
+
+    bfreqs, bweights = get_binning(Teff, 1, fmin_log, linmodes, logmodes)
+
+    return create_weighted_fourier_design_matrix(toas, bfreqs, bweights)
+
+
+class PLCRedNoise(NoiseComponent):
+    """
+    Timing noise with a correct power-law spectrum (PLC).
+
+    Over the long term, pulsars are observed to experience timing noise
+    dominated by low frequencies. This can occur, for example, if the
+    torque on the pulsar varies randomly. If the torque experiences
+    white noise, the phase we observe will experience "red" noise, that
+    is noise dominated by the lowest frequency. This results in errors
+    that are correlated between TOAs over fairly long time spans.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.noise_model.PLRedNoise
+
+    References
+    ----------
+    - van Haasteren & Vallisneri, 2014, MNRAS 446(2), 1170-1174 [1]_
+
+    .. [1] https://ui.adsabs.harvard.edu/abs/2015MNRAS.446.1170V/abstract
+    """
+
+    register = True
+    category = "plc_red_noise"
+
+    introduces_correlated_errors = True
+    is_time_correlated = True
+
+    def __init__(self):
+        super().__init__()
+
+        self.add_param(
+            floatParameter(
+                name="PLCAMP",
+                units="",
+                description="Amplitude of power-law red noise (corrected).",
+                convert_tcb2tdb=False,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="PLCIDX",
+                units="",
+                description="Spectral index of power-law red noise (corrected).",
+                convert_tcb2tdb=False,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="PLCFL",
+                units="",
+                description="Low-frequency cutoff of power-law signal (below which PSD = 0).",
+                convert_tcb2tdb=False,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="PLCLINC",
+                units="",
+                description="Number of linear red noise frequencies in the basis.",
+                convert_tcb2tdb=False,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="PLCLOGC",
+                units="",
+                description="Number of logarithmic red noise frequencies in the basis.",
+                convert_tcb2tdb=False,
+            )
+        )
+        self.add_param(
+            floatParameter(
+                name="PLCFMIN",
+                units="",
+                description="Lowest frequency (relative to 1/T_eff) to include in the model.",
+                convert_tcb2tdb=False,
+            )
+        )
+
+        self.covariance_matrix_funcs += [self.plc_rn_cov_matrix]
+        self.basis_funcs += [self.plc_rn_basis_weight_pair]
+
+    def get_plc_vals(self):
+        """
+        Retrieve power-law parameters and frequency-basis parameters
+        from the model, substituting defaults if unspecified.
+        """
+        amp = self.PLCAMP.value if (self.PLCAMP.value is not None) else 1e-14
+
+        gam = self.PLCIDX.value if (self.PLCIDX.value is not None) else 4.0
+
+        f_low_cut = self.PLCFL.value if (self.PLCFL.value is not None) else 1e-11  # 1e-11 Hz
+
+        n_lin = int(self.PLCLINC.value) if (self.PLCLINC.value is not None) else 30
+        n_log = int(self.PLCLOGC.value) if (self.PLCLOGC.value is not None) else 30
+
+        f_min_ratio = self.PLCFMIN.value if (self.PLCFMIN.value is not None) else 0.01
+
+        return amp, gam, f_low_cut, n_lin, n_log, f_min_ratio
+
+    def get_noise_basis(self, toas):
+        """
+        Construct a log-linear basis matrix for red noise using the new
+        get_binning() / create_weighted_fourier_design_matrix() approach.
+        """
+        tbl = toas.table
+        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+
+        T = np.max(t) - np.min(t)
+        N = len(t)
+        Teff = N * T / (N - 1.0)
+
+        (
+            amp,
+            gam,
+            f_low_cut,
+            n_lin,
+            n_log,
+            f_min_ratio,
+        ) = self.get_plc_vals()
+
+        f_min = f_min_ratio / Teff
+
+        bfreqs, bweights = get_binning(
+            T=Teff,
+            logmode=1,
+            f_min=f_min,
+            nlin=n_lin,
+            nlog=n_log,
+        )
+
+        Fmat, freq_expanded = create_weighted_fourier_design_matrix(t, bfreqs, bweights)
+
+        return Fmat, freq_expanded
+
+    def get_noise_weights(self, freqs):
+        """
+        Return the diagonal (per-frequency) power spectral density (PSD)
+        values, applying the cutoff below PLCFL.
+        """
+        amp, gam, f_low_cut, *_ = self.get_plc_vals()
+
+        psd = powerlaw(freqs, A=amp, gamma=gam)
+
+        if f_low_cut > 0.0:
+            psd[freqs < f_low_cut] = 0.0
+
+        return psd
+
+    def plc_rn_basis_weight_pair(self, toas):
+        """
+        Return the (basis matrix, PSD array) pair for the corrected red noise.
+        The basis is a weighted Fourier design matrix with log-linear
+        frequency coverage; the PSD is diagonal in that basis and is
+        zeroed out below PLCFL.
+        """
+        Fmat, freq_expanded = self.get_noise_basis(toas)
+        phi = self.get_noise_weights(freq_expanded)
+        return (Fmat, phi)
+
+    def plc_rn_cov_matrix(self, toas):
+        """
+        Construct the covariance matrix = F * Phi * F^T,
+        where Phi is diagonal in frequency space but zero
+        below the cutoff frequency, and F is the weighted
+        Fourier design matrix.
+        """
+        Fmat, phi = self.plc_rn_basis_weight_pair(toas)
+        return np.dot(Fmat * phi[None, :], Fmat.T)
