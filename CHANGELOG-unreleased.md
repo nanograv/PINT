@@ -10,6 +10,8 @@ the released changes.
 ## Unreleased
 ### Changed
 ### Added
+- Type hints in `pint.models.timing_model`
 ### Fixed
+- Made `TimingModel.is_binary()` more robust. 
 ### Removed
 
