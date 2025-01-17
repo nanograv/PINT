@@ -524,7 +524,8 @@ class PLDMNoise(NoiseComponent):
         fref = 1400 * u.MHz
         D = (fref.value / freqs.value) ** 2
         nf = self.get_pl_vals()[2]
-        Fmat = create_fourier_design_matrix(t, nf)
+        f = get_rednoise_freqs(t, nf)
+        Fmat = create_fourier_design_matrix(t, f)
         return Fmat * D[:, None]
 
     def get_noise_weights(self, toas):
@@ -536,7 +537,8 @@ class PLDMNoise(NoiseComponent):
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
         amp, gam, nf = self.get_pl_vals()
         Ffreqs = get_rednoise_freqs(t, nf)
-        return powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
+        df = np.diff(np.concatenate([[0], Ffreqs]))
+        return powerlaw(Ffreqs.repeat(2), amp, gam) * df.repeat(2)
 
     def pl_dm_basis_weight_pair(self, toas):
         """Return a Fourier design matrix and power law DM noise weights.
@@ -645,7 +647,8 @@ class PLChromNoise(NoiseComponent):
         alpha = self._parent.TNCHROMIDX.value
         D = (fref.value / freqs.value) ** alpha
         nf = self.get_pl_vals()[2]
-        Fmat = create_fourier_design_matrix(t, nf)
+        f = get_rednoise_freqs(t, nf)
+        Fmat = create_fourier_design_matrix(t, f)
         return Fmat * D[:, None]
 
     def get_noise_weights(self, toas):
@@ -657,7 +660,8 @@ class PLChromNoise(NoiseComponent):
         t = (tbl["tdbld"].quantity * u.day).to(u.s).value
         amp, gam, nf = self.get_pl_vals()
         Ffreqs = get_rednoise_freqs(t, nf)
-        return powerlaw(Ffreqs, amp, gam) * Ffreqs[0]
+        df = np.diff(np.concatenate([[0], Ffreqs]))
+        return powerlaw(Ffreqs.repeat(2), amp, gam) * df.repeat(2)
 
     def pl_chrom_basis_weight_pair(self, toas):
         """Return a Fourier design matrix and power law chromatic noise weights.
@@ -851,12 +855,13 @@ class PLRedNoise(NoiseComponent):
             f_min_ratio,
         ) = self.get_plc_vals()
 
+        T = np.max(t) - np.min(t)
         f_min = f_min_ratio / T
 
         Ffreqs = get_rednoise_freqs(t, n_lin, Tspan=T, logmode=0, f_min=f_min, nlog=n_log)
         df = np.diff(np.concatenate([[0], Ffreqs]))
 
-        return powerlaw(Ffreqs.repeat(2), amp, gam) * df.repeat(2)
+        return powerlaw(Ffreqs.repeat(2), amp, gam, f_low_cut) * df.repeat(2)
 
 
     def pl_rn_basis_weight_pair(self, toas):
@@ -915,40 +920,6 @@ def create_ecorr_quantization_matrix(toas_table, dt=1, nmin=2):
     return U
 
 
-#def get_rednoise_freqs(t, nmodes, Tspan=None):
-#    """Frequency components for creating the red noise basis matrix."""
-#
-#    T = Tspan if Tspan is not None else t.max() - t.min()
-#
-#    f = np.linspace(1 / T, nmodes / T, nmodes)
-#
-#    Ffreqs = np.zeros(2 * nmodes)
-#    Ffreqs[::2] = f
-#    Ffreqs[1::2] = f
-#
-#    return Ffreqs
-#
-#
-#def create_fourier_design_matrix(t, nmodes, Tspan=None):
-#    """
-#    Construct fourier design matrix from eq 11 of Lentati et al, 2013
-#
-#    :param t: vector of time series in seconds
-#    :param nmodes: number of fourier coefficients to use
-#    :param Tspan: option to some other Tspan
-#    :return: F: fourier design matrix
-#    :return: f: Sampling frequencies
-#    """
-#
-#    N = len(t)
-#    F = np.zeros((N, 2 * nmodes))
-#
-#    Ffreqs = get_rednoise_freqs(t, nmodes, Tspan=Tspan)
-#
-#    F[:, ::2] = np.sin(2 * np.pi * t[:, None] * Ffreqs[::2])
-#    F[:, 1::2] = np.cos(2 * np.pi * t[:, None] * Ffreqs[1::2])
-#
-#    return F
 def get_rednoise_freqs(t,
                        nmodes,
                        Tspan=None,
@@ -1046,9 +1017,9 @@ def get_rednoise_freqs(t,
     use_log = all([have_logmode, have_nlog, have_fmin])
 
     if not use_log and np.any([have_logmode, have_nlog, have_fmin]):
-        log.warn("Log-spaced parameters are ignored because "
-                 "logmode, nlog, and f_min ALL neeed to be set"
-                 "Use: logmode > 0 or nlog > 0 or f_min > 0.")
+        log.warning("Log-spaced parameters are ignored because "
+                    "logmode, nlog, and f_min ALL neeed to be set"
+                    "Use: logmode > 0 or nlog > 0 or f_min > 0.")
 
     # ------------------------------------------------
     # 5. Build the frequencies
@@ -1094,13 +1065,18 @@ def create_fourier_design_matrix(t, f):
     return F, f
 
 
-def powerlaw(f, A=1e-16, gamma=5):
+def powerlaw(f, A=1e-16, gamma=5, f_low_cut=None):
     """Power-law PSD.
 
     :param f: Sampling frequencies
     :param A: Amplitude of red noise [GW units]
     :param gamma: Spectral index of red noise process
+    :param f_low_cut: Minimum frequency to include [Hz]
+    :return: Power spectral density
     """
 
+    f_low_cut = f_low_cut if f_low_cut is not None else np.min(f)
+    above_fl = np.array(f >= f_low_cut, dtype=np.float)
+
     fyr = 1 / 3.16e7
-    return A**2 / 12.0 / np.pi**2 * fyr ** (gamma - 3) * f ** (-gamma)
+    return A**2 / 12.0 / np.pi**2 * fyr ** (gamma - 3) * f ** (-gamma) * above_fl
