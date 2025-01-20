@@ -160,7 +160,6 @@ class Residuals:
         # also it's expensive
         # only relevant if there are correlated errors
         self._chi2 = None
-        # self.noise_resids = {}
         # For residual debugging
         self.debug_info = {}
         # We should be carefully for the other type of residuals
