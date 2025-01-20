@@ -384,6 +384,13 @@ class TimingModel:
         for cp in components:
             self.add_component(cp, setup=False, validate=False)
 
+        # Type definitions for better code highlighting.
+        from pint.models.noise_model import NoiseComponent
+
+        self.PhaseComponent_list: List[PhaseComponent]
+        self.DelayComponent_list: List[DelayComponent]
+        self.NoiseComponent_list: List[NoiseComponent]
+
     def __repr__(self) -> str:
         return "{}(\n  {}\n)".format(
             self.__class__.__name__,

@@ -19,7 +19,7 @@ from loguru import logger as log
 
 from pint import dmu
 from pint.models.dispersion_model import Dispersion
-from pint.models.noise_model import CorrelatedNoiseComponent, NoiseComponent
+from pint.models.noise_model import CorrelatedNoiseComponent
 from pint.models.parameter import maskParameter
 from pint.models.timing_model import TimingModel
 from pint.phase import Phase
@@ -1297,3 +1297,28 @@ class WidebandTOAResiduals(CombinedResiduals):
         tres = self.toa.calc_time_resids().to_value(u.s)
         dres = self.dm.calc_resids().to_value(dmu)
         return np.hstack((tres, dres)).astype(float)
+
+    @property
+    def noise_resids(self) -> Dict[str, u.Quantity]:
+        return {
+            component.category: (
+                component.get_noise_basis(self.toas)
+                @ self.toa.noise_ampls[component.category]
+            )
+            for component in self.model.NoiseComponent_list
+            if component.introduces_correlated_errors
+        }
+
+    @property
+    def dm_noise_resids(self) -> Dict[str, u.Quantity]:
+        return {
+            component.category: (
+                (
+                    component.get_dm_noise_basis(self.toas)
+                    @ self.toa.noise_ampls[component.category]
+                )
+                * (dmu / u.s)
+            )
+            for component in self.model.NoiseComponent_list
+            if component.introduces_correlated_errors
+        }
