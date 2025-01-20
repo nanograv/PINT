@@ -1322,3 +1322,9 @@ class WidebandTOAResiduals(CombinedResiduals):
             for component in self.model.NoiseComponent_list
             if component.introduces_correlated_errors
         }
+
+    def calc_whitened_resids(self):
+        return self.toa.time_resids - self.noise_resids
+
+    def calc_whitened_dm_resids(self):
+        return self.dm.resids - self.dm_noise_resids
