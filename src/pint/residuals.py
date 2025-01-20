@@ -1324,7 +1324,13 @@ class WidebandTOAResiduals(CombinedResiduals):
         }
 
     def calc_whitened_resids(self):
-        return self.toa.time_resids - self.noise_resids
+        return (
+            (self.toa.time_resids - sum(self.noise_resids.values()))
+            / self.toa.get_data_error()
+        ).to(u.dimensionless_unscaled)
 
     def calc_whitened_dm_resids(self):
-        return self.dm.resids - self.dm_noise_resids
+        return (
+            (self.dm.resids - sum(self.dm_noise_resids.values()))
+            / self.dm.get_data_error()
+        ).to(u.dimensionless_unscaled)
