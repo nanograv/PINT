@@ -2294,7 +2294,7 @@ class GLSFitter(Fitter):
                     # the indices of noise designmatrix
                     p0 = noise_dims[comp][0] + ntmpar + 1
                     p1 = p0 + noise_dims[comp][1]
-                    noise_ampls[comp] = xhat[p0:p1] * u.s
+                    noise_ampls[comp] = dpars[p0:p1] * u.s
                     if debug:
                         setattr(self.resids, f"{comp}_M", (M[:, p0:p1], xhat[p0:p1]))
                         setattr(self.resids, f"{comp}_M_index", (p0, p1))
