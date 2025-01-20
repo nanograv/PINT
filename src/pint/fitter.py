@@ -1610,7 +1610,9 @@ class DownhillGLSFitter(DownhillFitter):
                 # the indices of noise designmatrix
                 p0 = noise_dims[comp][0] + ntmpar + 1
                 p1 = p0 + noise_dims[comp][1]
-                noise_ampls[comp] = self.current_state.xhat[p0:p1] * u.s
+                noise_ampls[comp] = (self.current_state.xhat / self.current_state.norm)[
+                    p0:p1
+                ] * u.s
                 if debug:
                     setattr(
                         self.resids,
