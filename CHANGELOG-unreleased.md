@@ -12,6 +12,7 @@ the released changes.
 ### Added
 - Simulate correlated DM noise for wideband TOAs
 - Properly incorporate correlated DM noise in fitting
+    - Store correlated noise amplitudes in `Residuals` and use them to compute `noise_resids` and whitened resids.
     - `WhiteNoiseComponent` and `CorrelatedNoiseComponent` abstract base classes
     - `get_wideband_errors` method in `TOAs`
     - `scaled_wideband_uncertainty`, `noise_model_wideband_designmatrix`, `dm_designmatrix`, `wideband_designmatrix`, `full_designmatrix`, and `full_basis_weight` methods in `TimingModel`

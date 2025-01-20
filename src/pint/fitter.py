@@ -60,6 +60,7 @@ To automatically select a fitter based on the properties of the data and model::
 
 import contextlib
 import copy
+from typing import Literal, Optional
 from warnings import warn
 
 import astropy.units as u
@@ -70,6 +71,7 @@ from loguru import logger as log
 from numdifftools import Hessian
 
 import pint
+from pint.models.timing_model import TimingModel
 import pint.utils
 import pint.derived_quantities
 from pint.models.parameter import (
@@ -224,8 +226,8 @@ class Fitter:
                 f"Freeze these parameters before creating the fitter."
             )
 
-        self.toas = toas
-        self.model_init = model
+        self.toas: TOAs = toas
+        self.model_init: TimingModel = model
         self.track_mode = track_mode
         if residuals is None:
             self.resids_init = self.make_resids(self.model_init)
@@ -233,8 +235,8 @@ class Fitter:
             # residuals were provided, we're just going to use them
             self.resids_init = residuals
             # probably using GLSFitter to compute a chi-squared
-        self.model = copy.deepcopy(self.model_init)
-        self.resids = copy.deepcopy(self.resids_init)
+        self.model: TimingModel = copy.deepcopy(self.model_init)
+        self.resids: Residuals = copy.deepcopy(self.resids_init)
         self.fitresult = []
         self.method = None
         self.is_wideband = False
@@ -1507,7 +1509,13 @@ class DownhillGLSFitter(DownhillFitter):
 
     # FIXME: do something clever to efficiently compute chi-squared
 
-    def __init__(self, toas, model, track_mode=None, residuals=None):
+    def __init__(
+        self,
+        toas: TOAs,
+        model: TimingModel,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
+        residuals: Optional[Residuals] = None,
+    ):
         if not model.has_correlated_errors:
             log.info(
                 "Model does not appear to have correlated errors so the GLS fitter "
@@ -1553,19 +1561,14 @@ class DownhillGLSFitter(DownhillFitter):
         # Compute the noise realizations if possible
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
-            noise_resids = {}
+            noise_ampls = {}
             ntmpar = len(self.model.free_params)
             for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
                 # the indices of noise designmatrix
                 p0 = noise_dims[comp][0] + ntmpar + 1
                 p1 = p0 + noise_dims[comp][1]
-                noise_resids[comp] = (
-                    np.dot(
-                        self.current_state.M[:, p0:p1], self.current_state.xhat[p0:p1]
-                    )
-                    * u.s
-                )
+                noise_ampls[comp] = self.current_state.xhat[p0:p1] * u.s
                 if debug:
                     setattr(
                         self.resids,
@@ -1576,7 +1579,7 @@ class DownhillGLSFitter(DownhillFitter):
                         ),
                     )
                     setattr(self.resids, f"{comp}_M_index", (p0, p1))
-            self.resids.noise_resids = noise_resids
+            self.resids.noise_ampls = noise_ampls
             if debug:
                 setattr(self.resids, "norm", self.current_state.norm)
 
@@ -2243,17 +2246,17 @@ class GLSFitter(Fitter):
             # Compute the noise realizations if possible
             if not full_cov:
                 noise_dims = self.model.noise_model_dimensions(self.toas)
-                noise_resids = {}
+                noise_ampls = {}
                 for comp in noise_dims:
                     # The first column of designmatrix is "offset", add 1 to match
                     # the indices of noise designmatrix
                     p0 = noise_dims[comp][0] + ntmpar + 1
                     p1 = p0 + noise_dims[comp][1]
-                    noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
+                    noise_ampls[comp] = xhat[p0:p1] * u.s
                     if debug:
                         setattr(self.resids, f"{comp}_M", (M[:, p0:p1], xhat[p0:p1]))
                         setattr(self.resids, f"{comp}_M_index", (p0, p1))
-                self.resids.noise_resids = noise_resids
+                self.resids.noise_ampls = noise_ampls
                 if debug:
                     setattr(self.resids, "norm", norm)
 
