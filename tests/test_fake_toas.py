@@ -12,6 +12,7 @@ import pint.config
 from pint.fitter import GLSFitter, DownhillGLSFitter
 from pinttestdata import datadir
 import pytest
+from statsmodels.stats.diagnostic import acorr_ljungbox
 
 
 def roundtrip(toas, model):
@@ -565,3 +566,5 @@ def test_simulate_wideband_dmgp():
         / len(t)
         > 10
     )
+
+    assert all(acorr_ljungbox(t.get_dms() - m.total_dm(t)).lb_pvalue < 1e-5)
