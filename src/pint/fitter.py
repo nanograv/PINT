@@ -60,7 +60,7 @@ To automatically select a fitter based on the properties of the data and model::
 
 import contextlib
 import copy
-from typing import List, Literal, Optional, Tuple, Union
+from typing import Dict, Iterable, List, Literal, Optional, OrderedDict, Tuple, Union
 from warnings import warn
 
 import astropy.units as u
@@ -76,6 +76,7 @@ import pint.utils
 import pint.derived_quantities
 from pint.models.parameter import (
     AngleParameter,
+    Parameter,
     boolParameter,
     strParameter,
     InvalidModelParameters,
@@ -584,9 +585,9 @@ class Fitter:
 
     def _get_corr_cov_matrix(
         self, matrix_type, with_phase, pretty_print, prec, usecolor
-    ):
+    ) -> Optional[str]:
         if hasattr(self, f"parameter_{matrix_type}_matrix"):
-            cm = getattr(self, f"parameter_{matrix_type}_matrix")
+            cm: CovarianceMatrix = getattr(self, f"parameter_{matrix_type}_matrix")
             if not pretty_print:
                 return cm.prettyprint(prec=prec, offset=with_phase)
             else:
@@ -598,8 +599,8 @@ class Fitter:
             raise AttributeError
 
     def get_parameter_covariance_matrix(
-        self, with_phase=False, pretty_print=False, prec=3
-    ):
+        self, with_phase: bool = False, pretty_print: bool = False, prec: int = 3
+    ) -> Optional[str]:
         """Show the parameter covariance matrix post-fit.
 
         If with_phase, then show and return the phase column as well.
@@ -611,8 +612,12 @@ class Fitter:
         )
 
     def get_parameter_correlation_matrix(
-        self, with_phase=False, pretty_print=False, prec=3, usecolor=True
-    ):
+        self,
+        with_phase: bool = False,
+        pretty_print: bool = False,
+        prec: int = 3,
+        usecolor: bool = True,
+    ) -> Optional[str]:
         """Show the parameter correlation matrix post-fit.
 
         If with_phase, then show and return the phase column as well.
@@ -624,7 +629,14 @@ class Fitter:
             "correlation", with_phase, pretty_print, prec, usecolor
         )
 
-    def ftest(self, parameter, component, remove=False, full_output=False, maxiter=1):
+    def ftest(
+        self,
+        parameter: Union[Parameter, List[Parameter]],
+        component: str,
+        remove: bool = False,
+        full_output: bool = False,
+        maxiter: int = 1,
+    ) -> dict:
         """Compare the significance of adding/removing parameters to a timing model.
 
         Parameters
@@ -799,7 +811,7 @@ class Fitter:
                 "dm_resid_wrms_test": dm_resid_wrms_test,
             }
 
-    def minimize_func(self, x, *args):
+    def minimize_func(self, x, *args) -> float:
         """Wrapper function for the residual class.
 
         This is meant to be passed to
@@ -812,7 +824,11 @@ class Fitter:
         # Return chi^2
         return self.resids.chi2
 
-    def get_params_dict(self, which="free", kind="quantity"):
+    def get_params_dict(
+        self,
+        which: Literal["free", "all"] = "free",
+        kind: Literal["quantity", "value", "uncertainty"] = "quantity",
+    ) -> Union[OrderedDict[str, float], OrderedDict[str, u.Quantity]]:
         """Return a dict mapping parameter names to values.
 
         See :func:`pint.models.timing_model.TimingModel.get_params_dict`.
@@ -872,14 +888,14 @@ class Fitter:
         )
         return self.model.get_params_dict("free", "uncertainty")
 
-    def set_params(self, fitp):
+    def set_params(self, fitp: Dict[str, float]) -> None:
         """Set the model parameters to the value contained in the input dict.
 
         See :func:`pint.models.timing_model.TimingModel.set_param_values`.
         """
         self.model.set_param_values(fitp)
 
-    def set_param_uncertainties(self, fitp):
+    def set_param_uncertainties(self, fitp: Dict[str, float]) -> None:
         """Set the model parameters to the value contained in the input dict.
 
         See :func:`pint.models.timing_model.TimingModel.set_param_uncertainties`.
@@ -887,7 +903,7 @@ class Fitter:
         self.model.set_param_uncertainties(fitp)
 
     @property
-    def covariance_matrix(self):
+    def covariance_matrix(self) -> CovarianceMatrix:
         warn(
             "This parameter is deprecated. Use `parameter_covariance_matrix` instead of `covariance_matrix`",
             category=DeprecationWarning,
@@ -905,19 +921,19 @@ class ModelState:
     These objects should be regarded as immutable but lazily evaluated.
     """
 
-    def __init__(self, fitter, model):
+    def __init__(self, fitter: Fitter, model: TimingModel):
         self.fitter = fitter
         self.model = model
 
     @cached_property
-    def resids(self):
+    def resids(self) -> Residuals:
         try:
             return self.fitter.make_resids(self.model)
         except ValueError as e:
             raise InvalidModelParameters("Step landed at invalid point") from e
 
     @cached_property
-    def chi2(self):
+    def chi2(self) -> float:
         # there may be some shareable computation here
         try:
             return self.resids.chi2
@@ -952,7 +968,7 @@ class ModelState:
             try:
                 with contextlib.suppress(ValueError):
                     log.trace(f"Adjusting {getattr(self.model, p)} by {s}")
-                pm = getattr(new_model, p)
+                pm = new_model[p]
                 if pm.value is None:
                     pm.value = 0
                 pm.value += s
@@ -980,7 +996,13 @@ class DownhillFitter(Fitter):
     for correlated or uncorrelated TOA errors and narrowband or wideband TOAs.
     """
 
-    def __init__(self, toas, model, track_mode=None, residuals=None):
+    def __init__(
+        self,
+        toas: TOAs,
+        model: TimingModel,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
+        residuals: Optional[Residuals] = None,
+    ):
         super().__init__(
             toas=toas, model=model, residuals=residuals, track_mode=track_mode
         )
@@ -988,12 +1010,12 @@ class DownhillFitter(Fitter):
 
     def _fit_toas(
         self,
-        maxiter=20,
-        required_chi2_decrease=1e-2,
-        max_chi2_increase=1e-2,
-        min_lambda=1e-3,
-        debug=False,
-    ):
+        maxiter: int = 20,
+        required_chi2_decrease: float = 1e-2,
+        max_chi2_increase: float = 1e-2,
+        min_lambda: float = 1e-3,
+        debug: bool = False,
+    ) -> bool:
         """Downhill fit implementation for fitting the timing model parameters.
         The `fit_toas()` calls this method iteratively to fit the timing model parameters
         while also fitting for white noise parameters.
@@ -1096,15 +1118,15 @@ class DownhillFitter(Fitter):
 
     def fit_toas(
         self,
-        maxiter=20,
-        noise_fit_niter=2,
-        required_chi2_decrease=1e-2,
-        max_chi2_increase=1e-2,
-        min_lambda=1e-3,
-        noisefit_method="Newton-CG",
-        compute_noise_uncertainties=True,
-        debug=False,
-    ):
+        maxiter: int = 20,
+        noise_fit_niter: int = 2,
+        required_chi2_decrease: float = 1e-2,
+        max_chi2_increase: float = 1e-2,
+        min_lambda: float = 1e-3,
+        noisefit_method: str = "Newton-CG",
+        compute_noise_uncertainties: bool = True,
+        debug: bool = False,
+    ) -> bool:
         """Carry out a cautious downhill fit.
 
         This tries to take the same steps as
@@ -1197,7 +1219,7 @@ class DownhillFitter(Fitter):
     def fac(self):
         return self.current_state.fac
 
-    def _get_free_noise_params(self):
+    def _get_free_noise_params(self) -> List[str]:
         """Returns a list of all free noise parameters."""
         return [
             fp
@@ -1205,19 +1227,23 @@ class DownhillFitter(Fitter):
             if not getattr(self.model, fp).frozen
         ]
 
-    def _update_noise_params(self, values, errors=None):
+    def _update_noise_params(
+        self, values: Iterable[float], errors: Iterable[float] = None
+    ) -> None:
         """Update the model using estimated noise parameters."""
         free_noise_params = self._get_free_noise_params()
 
         if errors is not None:
             for fp, val, err in zip(free_noise_params, values, errors):
-                getattr(self.model, fp).value = val
-                getattr(self.model, fp).uncertainty_value = err
+                self.model[fp].value = val
+                self.model[fp].uncertainty_value = err
         else:
             for fp, val in zip(free_noise_params, values):
-                getattr(self.model, fp).value = val
+                self.model[fp].value = val
 
-    def _fit_noise(self, noisefit_method="Newton-CG", uncertainty=False):
+    def _fit_noise(
+        self, noisefit_method: str = "Newton-CG", uncertainty: bool = False
+    ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
         """Estimate noise parameters and their uncertainties. Noise parameters
         are estimated by numerically maximizing the log-likelihood function including
         the normalization term. The uncertainties thereof are computed using the
@@ -1229,7 +1255,7 @@ class DownhillFitter(Fitter):
         model1 = copy.deepcopy(self.model)
         res = Residuals(self.toas, model1)
 
-        def _mloglike(xs):
+        def _mloglike(xs: np.ndarray) -> float:
             """Negative of the log-likelihood function."""
             for fp, x in zip(free_noise_params, xs):
                 getattr(res.model, fp).value = x
@@ -1264,7 +1290,9 @@ class DownhillFitter(Fitter):
 
 
 class WLSState(ModelState):
-    def __init__(self, fitter, model, threshold=None):
+    def __init__(
+        self, fitter: Fitter, model: TimingModel, threshold: Optional[float] = None
+    ):
         super().__init__(fitter, model)
         self.threshold = threshold
 
