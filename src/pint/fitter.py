@@ -60,7 +60,17 @@ To automatically select a fitter based on the properties of the data and model::
 
 import contextlib
 import copy
-from typing import Dict, Iterable, List, Literal, Optional, OrderedDict, Tuple, Union
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Literal,
+    Optional,
+    OrderedDict,
+    Tuple,
+    Union,
+)
 from warnings import warn
 from functools import cached_property
 
@@ -480,7 +490,7 @@ class Fitter:
         ax.grid(True)
         plt.show()
 
-    def update_model(self, chi2: Optional[float] = None):
+    def update_model(self, chi2: Optional[float] = None) -> None:
         """Update the model to reflect fit results and TOA properties.
 
         This is called by ``fit_toas`` to ensure that parameters like
@@ -580,7 +590,7 @@ class Fitter:
         remove: bool = False,
         full_output: bool = False,
         maxiter: int = 1,
-    ) -> dict:
+    ) -> Dict[str, Any]:
         """Compare the significance of adding/removing parameters to a timing model.
 
         Parameters
@@ -779,7 +789,7 @@ class Fitter:
         """
         return self.model.get_params_dict(which=which, kind=kind)
 
-    def set_fitparams(self, *params):
+    def set_fitparams(self, *params) -> None:
         """Update the "frozen" attribute of model parameters. Deprecated."""
         warn(
             "This function is confusing and deprecated. Set self.model.free_params instead.",
@@ -847,7 +857,7 @@ class Fitter:
         self.model.set_param_uncertainties(fitp)
 
     @property
-    def covariance_matrix(self) -> CovarianceMatrix:
+    def covariance_matrix(self):
         warn(
             "This parameter is deprecated. Use `parameter_covariance_matrix` instead of `covariance_matrix`",
             category=DeprecationWarning,
@@ -904,7 +914,7 @@ class ModelState:
         """Predict the chi2 after taking a step based on the linear approximation"""
         raise NotImplementedError
 
-    def take_step_model(self, step, lambda_=1):
+    def take_step_model(self, step, lambda_=1) -> TimingModel:
         """Make a new model reflecting the new parameters."""
         # log.debug(f"Taking step {lambda_} * {list(zip(self.params, step))}")
         new_model = copy.deepcopy(self.model)
@@ -924,7 +934,7 @@ class ModelState:
                     log.warning(f"Unexpected parameter {p}")
         return new_model
 
-    def take_step(self, step, lambda_):
+    def take_step(self, step, lambda_) -> "ModelState":
         """Return a new state moved by lambda_*step."""
         raise NotImplementedError
 
@@ -951,6 +961,13 @@ class DownhillFitter(Fitter):
             toas=toas, model=model, residuals=residuals, track_mode=track_mode
         )
         self.method = "downhill_checked"
+
+        self.current_state: ModelState
+
+    def create_state() -> ModelState:
+        # Subclasses will override this.
+        # I am adding this here just to improve code highlighting.
+        raise NotImplementedError
 
     def _fit_toas(
         self,
