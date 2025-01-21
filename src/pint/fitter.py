@@ -1627,7 +1627,13 @@ class DownhillGLSFitter(DownhillFitter):
 
 
 class WidebandState(ModelState):
-    def __init__(self, fitter, model, full_cov=False, threshold=None):
+    def __init__(
+        self,
+        fitter: Fitter,
+        model: TimingModel,
+        full_cov: bool = False,
+        threshold: Optional[float] = None,
+    ):
         super().__init__(fitter, model)
         self.threshold = threshold
         self.full_cov = full_cov
@@ -1835,7 +1841,14 @@ class WidebandDownhillFitter(DownhillFitter):
 
     # FIXME: do something clever to efficiently compute chi-squared
 
-    def __init__(self, toas, model, track_mode=None, residuals=None, add_args=None):
+    def __init__(
+        self,
+        toas,
+        model,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
+        residuals=None,
+        add_args=None,
+    ):
         self.method = "downhill_wideband"
         self.full_cov = False
         self.threshold = 0
@@ -1927,7 +1940,13 @@ class PowellFitter(Fitter):
     may serve as an example of how to write your own fitting procedure.
     """
 
-    def __init__(self, toas, model, track_mode=None, residuals=None):
+    def __init__(
+        self,
+        toas,
+        model,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
+        residuals=None,
+    ):
         super().__init__(toas, model, residuals=residuals, track_mode=track_mode)
         self.method = "Powell"
 
@@ -1973,7 +1992,13 @@ class WLSFitter(Fitter):
     close enough that the derivatives are a good approximation.
     """
 
-    def __init__(self, toas, model, track_mode=None, residuals=None):
+    def __init__(
+        self,
+        toas,
+        model,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
+        residuals=None,
+    ):
         super().__init__(
             toas=toas, model=model, residuals=residuals, track_mode=track_mode
         )
@@ -2112,7 +2137,13 @@ class GLSFitter(Fitter):
     the data covariance matrix.
     """
 
-    def __init__(self, toas=None, model=None, track_mode=None, residuals=None):
+    def __init__(
+        self,
+        toas: TOAs = None,
+        model: TimingModel = None,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
+        residuals=None,
+    ):
         super().__init__(
             toas=toas, model=model, residuals=residuals, track_mode=track_mode
         )
@@ -2333,7 +2364,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         fit_data,
         model,
         fit_data_names=["toa", "dm"],
-        track_mode=None,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
         additional_args={},
     ):
         self.model_init = model
