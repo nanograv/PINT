@@ -1624,7 +1624,13 @@ class DownhillGLSFitter(DownhillFitter):
 
 
 class WidebandState(ModelState):
-    def __init__(self, fitter, model, full_cov=False, threshold=None):
+    def __init__(
+        self,
+        fitter: Fitter,
+        model: TimingModel,
+        full_cov: bool = False,
+        threshold: Optional[float] = None,
+    ):
         super().__init__(fitter, model)
         self.threshold = threshold
         self.full_cov = full_cov
