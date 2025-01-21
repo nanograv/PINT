@@ -459,7 +459,7 @@ class PhaseDesignMatrixMaker(DesignMatrixMaker):
         for ii, param in enumerate(params):
             if param == "Offset":
                 M[:, ii] = offset_padding
-                param_unit = u.Unit("")
+                param_unit = u.dimensionless_unscaled
             else:
                 param_unit = getattr(model, param).units
                 # Since this is the phase derivative, we know the quantity unit.
