@@ -15,4 +15,4 @@ the released changes.
 ### Fixed
 - Made `TimingModel.is_binary()` more robust. 
 ### Removed
-
+- Unnecessary definition of `cached_property` from `pint.fitter` (Python 3.8 no longer needs to be supported).
