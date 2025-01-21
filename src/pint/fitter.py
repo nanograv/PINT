@@ -1372,7 +1372,7 @@ class DownhillWLSFitter(DownhillFitter):
         toas: TOAs,
         model: TimingModel,
         track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
-        residuals: Residuals = None,
+        residuals: Optional[Residuals] = None,
     ):
         if model.has_correlated_errors:
             raise CorrelatedErrors(model)
@@ -1412,13 +1412,19 @@ class DownhillWLSFitter(DownhillFitter):
 
 
 class GLSState(ModelState):
-    def __init__(self, fitter, model, full_cov=False, threshold=None):
+    def __init__(
+        self,
+        fitter: Fitter,
+        model: TimingModel,
+        full_cov: bool = False,
+        threshold: Optional[float] = None,
+    ):
         super().__init__(fitter, model)
         self.threshold = threshold
         self.full_cov = full_cov
 
     @cached_property
-    def step(self):
+    def step(self) -> np.ndarray:
         # Define the linear system
         M, params, units = self.model.designmatrix(
             toas=self.fitter.toas, incfrozen=False, incoffset=True
@@ -1502,7 +1508,7 @@ class GLSState(ModelState):
         # compute absolute estimates, normalized errors, covariance matrix
         return xhat / norm
 
-    def take_step(self, step, lambda_=1):
+    def take_step(self, step: np.ndarray, lambda_: float = 1.0) -> "GLSState":
         return GLSState(
             self.fitter,
             self.take_step_model(step, lambda_),
@@ -1511,7 +1517,7 @@ class GLSState(ModelState):
         )
 
     @cached_property
-    def parameter_covariance_matrix(self):
+    def parameter_covariance_matrix(self) -> CovarianceMatrix:
         # make sure we compute the SVD
         self.step
         xvar = np.dot(self.Vt.T / self.s, self.Vt)
@@ -1529,7 +1535,13 @@ class DownhillGLSFitter(DownhillFitter):
 
     # FIXME: do something clever to efficiently compute chi-squared
 
-    def __init__(self, toas, model, track_mode=None, residuals=None):
+    def __init__(
+        self,
+        toas: TOAs,
+        model: TimingModel,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
+        residuals: Optional[Residuals] = None,
+    ):
         if not model.has_correlated_errors:
             log.info(
                 "Model does not appear to have correlated errors so the GLS fitter "
@@ -1542,12 +1554,21 @@ class DownhillGLSFitter(DownhillFitter):
         self.full_cov = False
         self.threshold = 0
 
-    def create_state(self):
+        self.current_state: GLSState
+
+    def create_state(self) -> GLSState:
         return GLSState(
             self, self.model, full_cov=self.full_cov, threshold=self.threshold
         )
 
-    def fit_toas(self, maxiter=10, threshold=0, full_cov=False, debug=False, **kwargs):
+    def fit_toas(
+        self,
+        maxiter: int = 10,
+        threshold: float = 0.0,
+        full_cov: bool = False,
+        debug: bool = False,
+        **kwargs,
+    ):
         """Fit TOAs.
 
         This is mostly implemented in
