@@ -60,6 +60,7 @@ To automatically select a fitter based on the properties of the data and model::
 
 import contextlib
 import copy
+from typing import Dict, Literal, Optional, Tuple, Union
 from warnings import warn
 from functools import cached_property
 
@@ -71,6 +72,7 @@ from loguru import logger as log
 from numdifftools import Hessian
 
 import pint
+from pint.models.timing_model import TimingModel
 import pint.utils
 import pint.derived_quantities
 from pint.models.parameter import (
@@ -156,7 +158,13 @@ class Fitter:
         ``GLSFitter`` is used to compute ``chi2`` for appropriate Residuals objects.
     """
 
-    def __init__(self, toas, model, track_mode=None, residuals=None):
+    def __init__(
+        self,
+        toas: TOAs,
+        model: TimingModel,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
+        residuals: Optional[Residuals] = None,
+    ):
         if not set(model.free_params).issubset(model.fittable_params):
             free_unfittable_params = set(model.free_params).difference(
                 model.fittable_params
@@ -185,8 +193,14 @@ class Fitter:
 
     @classmethod
     def auto(
-        cls, toas, model, downhill=True, track_mode=None, residuals=None, **kwargs
-    ):
+        cls,
+        toas: TOAs,
+        model: TimingModel,
+        downhill: bool = True,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
+        residuals: Optional[Residuals] = None,
+        **kwargs,
+    ) -> "Fitter":
         """Automatically return the proper :class:`pint.fitter.Fitter` object depending on the TOAs and model.
 
         In general the `downhill` fitters are to be preferred.
@@ -271,7 +285,7 @@ class Fitter:
                 **kwargs,
             )
 
-    def fit_toas(self, maxiter=None, debug=False):
+    def fit_toas(self, maxiter: Optional[int] = None, debug: bool = False):
         """Run fitting operation.
 
         This method needs to be implemented by subclasses. All implementations
@@ -280,7 +294,7 @@ class Fitter:
         """
         raise NotImplementedError
 
-    def get_summary(self, nodmx=False):
+    def get_summary(self, nodmx: bool = False) -> str:
         """Return a human-readable summary of the Fitter results.
 
         Parameters
@@ -406,7 +420,9 @@ class Fitter:
         s += "\n" + self.model.get_derived_params()
         return s
 
-    def get_derived_params(self, returndict=False):
+    def get_derived_params(
+        self, returndict: bool = False
+    ) -> Union[str, Tuple[str, Dict[str, u.Quantity]]]:
         """Return a string with various derived parameters from the fitted model
 
         Parameters
@@ -434,11 +450,11 @@ class Fitter:
             returndict=returndict,
         )
 
-    def print_summary(self):
+    def print_summary(self) -> None:
         """Write a summary of the TOAs to stdout."""
         print(self.get_summary())
 
-    def plot(self):
+    def plot(self) -> None:
         """Make residuals plot.
 
         This produces a time residual plot.
@@ -453,59 +469,59 @@ class Fitter:
         ax.set_xlabel("MJD")
         ax.set_ylabel("Residuals")
         try:
-            psr = self.model.PSR
+            psr = self.model["PSR"]
         except AttributeError:
-            psr = self.model.PSRJ
+            psr = self.model["PSRJ"]
         else:
             psr = "Residuals"
         ax.set_title(psr)
         ax.grid(True)
         plt.show()
 
-    def update_model(self, chi2=None):
+    def update_model(self, chi2: Optional[float] = None) -> None:
         """Update the model to reflect fit results and TOA properties.
 
         This is called by ``fit_toas`` to ensure that parameters like
         ``START``, ``FINISH``, ``EPHEM``, and ``DMDATA`` are set in the model
         to reflect the TOAs in actual use.
         """
-        self.model.START.value = self.toas.first_MJD
-        self.model.FINISH.value = self.toas.last_MJD
-        self.model.NTOA.value = len(self.toas)
-        self.model.EPHEM.value = self.toas.ephem
-        self.model.DMDATA.value = hasattr(self.resids, "dm")
-        self.model.CLOCK.value = (
+        self.model["START"].value = self.toas.first_MJD
+        self.model["FINISH.value"] = self.toas.last_MJD
+        self.model["NTOA.value"] = len(self.toas)
+        self.model["EPHEM.value"] = self.toas.ephem
+        self.model["DMDATA.value"] = hasattr(self.resids, "dm")
+        self.model["CLOCK.value"] = (
             f"TT({self.toas.clock_corr_info['bipm_version']})"
             if self.toas.clock_corr_info["include_bipm"]
             else "TT(TAI)"
         )
         if chi2 is not None:
             # assume a fit has been done
-            self.model.CHI2.value = chi2
-            self.model.CHI2R.value = chi2 / self.resids.dof
+            self.model["CHI2"].value = chi2
+            self.model["CHI2R"].value = chi2 / self.resids.dof
             if not self.is_wideband:
-                self.model.TRES.quantity = self.resids.rms_weighted()
+                self.model["TRES"].quantity = self.resids.rms_weighted()
             else:
-                self.model.TRES.quantity = self.resids.rms_weighted()["toa"]
-                self.model.DMRES.quantity = self.resids.rms_weighted()["dm"]
+                self.model["TRES"].quantity = self.resids.rms_weighted()["toa"]
+                self.model["DMRES"].quantity = self.resids.rms_weighted()["dm"]
 
-    def reset_model(self):
+    def reset_model(self) -> None:
         """Reset the current model to the initial model."""
         self.model = copy.deepcopy(self.model_init)
         self.update_resids()
         self.fitresult = []
 
-    def update_resids(self):
+    def update_resids(self) -> None:
         """Update the residuals.
 
         Run after updating a model parameter.
         """
         self.resids = self.make_resids(self.model)
 
-    def make_resids(self, model):
+    def make_resids(self, model: TimingModel) -> Residuals:
         return Residuals(toas=self.toas, model=model, track_mode=self.track_mode)
 
-    def get_designmatrix(self):
+    def get_designmatrix(self, full: bool = False):
         """Return the model's design matrix for these TOAs."""
         return self.model.designmatrix(toas=self.toas, incfrozen=False, incoffset=True)
 
