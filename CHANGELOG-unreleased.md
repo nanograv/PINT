@@ -20,6 +20,10 @@ the released changes.
     - `noise_resids` and `dm_noise_resids` properties in `WidebandTOAResiduals`
     - `calc_combined_resids`, `calc_whitened_resids`, and `calc_whitened_dm_resids` methods in `WidebandTOAResiduals`
 - Type hints in `pint.models.timing_model`
+- Type hints in `pint.fitter`
 ### Fixed
 - Made `TimingModel.is_binary()` more robust. 
 ### Removed
+- Unnecessary definition of `cached_property` from `pint.fitter` (Python 3.8 no longer needs to be supported).
+
+

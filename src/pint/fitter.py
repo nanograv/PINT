@@ -60,8 +60,19 @@ To automatically select a fitter based on the properties of the data and model::
 
 import contextlib
 import copy
-from typing import Dict, Iterable, List, Literal, Optional, OrderedDict, Tuple, Union
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Literal,
+    Optional,
+    OrderedDict,
+    Tuple,
+    Union,
+)
 from warnings import warn
+from functools import cached_property
 
 import astropy.units as u
 import numpy as np
@@ -117,64 +128,6 @@ __all__ = [
     "StepProblem",
     "MaxiterReached",
 ]
-
-try:
-    from functools import cached_property
-except ImportError:
-    # not supported in python 3.7
-    # This is just the code from python 3.8
-    from _thread import RLock
-
-    _NOT_FOUND = object()
-
-    class cached_property:
-        def __init__(self, func):
-            self.func = func
-            self.attrname = None
-            self.__doc__ = func.__doc__
-            self.lock = RLock()
-
-        def __set_name__(self, owner, name):
-            if self.attrname is None:
-                self.attrname = name
-            elif name != self.attrname:
-                raise TypeError(
-                    "Cannot assign the same cached_property to two different names "
-                    f"({self.attrname!r} and {name!r})."
-                )
-
-        def __get__(self, instance, owner=None):
-            if instance is None:
-                return self
-            if self.attrname is None:
-                raise TypeError(
-                    "Cannot use cached_property instance without calling __set_name__ on it."
-                )
-            try:
-                cache = instance.__dict__
-            except AttributeError:
-                # not all objects have __dict__ (e.g. class defines slots)
-                msg = (
-                    f"No '__dict__' attribute on {type(instance).__name__!r} "
-                    f"instance to cache {self.attrname!r} property."
-                )
-                raise TypeError(msg) from None
-            val = cache.get(self.attrname, _NOT_FOUND)
-            if val is _NOT_FOUND:
-                with self.lock:
-                    # check if another thread filled cache while we awaited lock
-                    val = cache.get(self.attrname, _NOT_FOUND)
-                    if val is _NOT_FOUND:
-                        val = self.func(instance)
-                        try:
-                            cache[self.attrname] = val
-                        except TypeError:
-                            msg = (
-                                f"The '__dict__' attribute on {type(instance).__name__!r} instance "
-                                f"does not support item assignment for caching {self.attrname!r} property."
-                            )
-                            raise TypeError(msg) from None
-            return val
 
 
 class Fitter:
@@ -375,6 +328,7 @@ class Fitter:
         # First, print fit quality metrics
         s = f"Fitted model using {self.method} method with {len(self.model.free_params)} free parameters to {self.toas.ntoas} TOAs\n"
         if is_wideband:
+            self.resids_init: WidebandTOAResiduals
             s += f"Prefit TOA residuals Wrms = {self.resids_init.toa.rms_weighted()}, Postfit TOA residuals Wrms = {self.resids.toa.rms_weighted()}\n"
             s += f"Prefit DM residuals Wrms = {self.resids_init.dm.rms_weighted()}, Postfit DM residuals Wrms = {self.resids.dm.rms_weighted()}\n"
         else:
@@ -536,7 +490,7 @@ class Fitter:
         ax.grid(True)
         plt.show()
 
-    def update_model(self, chi2: Optional[float] = None):
+    def update_model(self, chi2: Optional[float] = None) -> None:
         """Update the model to reflect fit results and TOA properties.
 
         This is called by ``fit_toas`` to ensure that parameters like
@@ -636,7 +590,7 @@ class Fitter:
         remove: bool = False,
         full_output: bool = False,
         maxiter: int = 1,
-    ) -> dict:
+    ) -> Dict[str, Any]:
         """Compare the significance of adding/removing parameters to a timing model.
 
         Parameters
@@ -835,7 +789,7 @@ class Fitter:
         """
         return self.model.get_params_dict(which=which, kind=kind)
 
-    def set_fitparams(self, *params):
+    def set_fitparams(self, *params) -> None:
         """Update the "frozen" attribute of model parameters. Deprecated."""
         warn(
             "This function is confusing and deprecated. Set self.model.free_params instead.",
@@ -903,7 +857,7 @@ class Fitter:
         self.model.set_param_uncertainties(fitp)
 
     @property
-    def covariance_matrix(self) -> CovarianceMatrix:
+    def covariance_matrix(self):
         warn(
             "This parameter is deprecated. Use `parameter_covariance_matrix` instead of `covariance_matrix`",
             category=DeprecationWarning,
@@ -925,6 +879,9 @@ class ModelState:
         self.fitter = fitter
         self.model = model
 
+        self.params: List[str]
+        self.fac: np.ndarray
+
     @cached_property
     def resids(self) -> Residuals:
         try:
@@ -945,7 +902,7 @@ class ModelState:
         raise NotImplementedError
 
     @cached_property
-    def parameter_covariance_matrix(self):
+    def parameter_covariance_matrix(self) -> CovarianceMatrix:
         raise NotImplementedError
 
     @property
@@ -960,7 +917,7 @@ class ModelState:
         """Predict the chi2 after taking a step based on the linear approximation"""
         raise NotImplementedError
 
-    def take_step_model(self, step, lambda_=1):
+    def take_step_model(self, step, lambda_=1) -> TimingModel:
         """Make a new model reflecting the new parameters."""
         # log.debug(f"Taking step {lambda_} * {list(zip(self.params, step))}")
         new_model = copy.deepcopy(self.model)
@@ -980,7 +937,7 @@ class ModelState:
                     log.warning(f"Unexpected parameter {p}")
         return new_model
 
-    def take_step(self, step, lambda_):
+    def take_step(self, step: np.ndarray, lambda_: float) -> "ModelState":
         """Return a new state moved by lambda_*step."""
         raise NotImplementedError
 
@@ -1007,6 +964,13 @@ class DownhillFitter(Fitter):
             toas=toas, model=model, residuals=residuals, track_mode=track_mode
         )
         self.method = "downhill_checked"
+
+        self.current_state: ModelState
+
+    def create_state() -> ModelState:
+        # Subclasses will override this.
+        # I am adding this here just to improve code highlighting.
+        raise NotImplementedError
 
     def _fit_toas(
         self,
@@ -1101,7 +1065,7 @@ class DownhillFitter(Fitter):
                 # I don't know why this fails with multiprocessing, but bypass if it does
                 with contextlib.suppress(ValueError):
                     log.trace(f"Setting {getattr(self.model, p)} uncertainty to {e}")
-                pm = getattr(self.model, p)
+                pm = self.model[p]
             except AttributeError:
                 if p != "Offset":
                     log.warning(f"Unexpected parameter {p}")
@@ -1297,13 +1261,15 @@ class WLSState(ModelState):
         self.threshold = threshold
 
     @cached_property
-    def step(self):
+    def step(self) -> np.ndarray:
         # Define the linear system
         M, params, units = self.model.designmatrix(
             toas=self.fitter.toas, incfrozen=False, incoffset=True
         )
         # Get residuals and TOA uncertainties in seconds
-        Nvec = self.model.scaled_toa_uncertainty(self.fitter.toas).to(u.s).value
+        Nvec: np.ndarray = (
+            self.model.scaled_toa_uncertainty(self.fitter.toas).to(u.s).value
+        )
         scaled_resids = self.resids.time_resids.to(u.s).value / Nvec
 
         # "Whiten" design matrix and residuals by dividing by uncertainties
@@ -1376,13 +1342,13 @@ class WLSState(ModelState):
         # Scaling by fac recovers original units
         return (Vt.T @ ((U.T @ scaled_resids) / s)) / fac
 
-    def take_step(self, step, lambda_=1):
+    def take_step(self, step: np.ndarray, lambda_: float = 1.0) -> "WLSState":
         return WLSState(
             self.fitter, self.take_step_model(step, lambda_), threshold=self.threshold
         )
 
     @cached_property
-    def parameter_covariance_matrix(self):
+    def parameter_covariance_matrix(self) -> CovarianceMatrix:
         # make sure we compute the SVD
         self.step
         # Sigma = np.dot(Vt.T / s, U.T)
@@ -1401,7 +1367,13 @@ class DownhillWLSFitter(DownhillFitter):
     or :class:`pint.fitter.DownhillFitter`.
     """
 
-    def __init__(self, toas, model, track_mode=None, residuals=None):
+    def __init__(
+        self,
+        toas: TOAs,
+        model: TimingModel,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
+        residuals: Optional[Residuals] = None,
+    ):
         if model.has_correlated_errors:
             raise CorrelatedErrors(model)
         super().__init__(
@@ -1409,7 +1381,13 @@ class DownhillWLSFitter(DownhillFitter):
         )
         self.method = "downhill_wls"
 
-    def fit_toas(self, maxiter=10, threshold=None, debug=False, **kwargs):
+    def fit_toas(
+        self,
+        maxiter: int = 10,
+        threshold: Optional[float] = None,
+        debug: bool = False,
+        **kwargs,
+    ):
         """Fit TOAs.
 
         This is mostly implemented in
@@ -1429,18 +1407,24 @@ class DownhillWLSFitter(DownhillFitter):
         self.threshold = threshold
         super().fit_toas(maxiter=maxiter, debug=debug, **kwargs)
 
-    def create_state(self):
+    def create_state(self) -> WLSState:
         return WLSState(self, self.model)
 
 
 class GLSState(ModelState):
-    def __init__(self, fitter, model, full_cov=False, threshold=None):
+    def __init__(
+        self,
+        fitter: Fitter,
+        model: TimingModel,
+        full_cov: bool = False,
+        threshold: Optional[float] = None,
+    ):
         super().__init__(fitter, model)
         self.threshold = threshold
         self.full_cov = full_cov
 
     @cached_property
-    def step(self):
+    def step(self) -> np.ndarray:
         # Define the linear system
         M, params, units = self.model.designmatrix(
             toas=self.fitter.toas, incfrozen=False, incoffset=True
@@ -1524,7 +1508,7 @@ class GLSState(ModelState):
         # compute absolute estimates, normalized errors, covariance matrix
         return xhat / norm
 
-    def take_step(self, step, lambda_=1):
+    def take_step(self, step: np.ndarray, lambda_: float = 1.0) -> "GLSState":
         return GLSState(
             self.fitter,
             self.take_step_model(step, lambda_),
@@ -1533,7 +1517,7 @@ class GLSState(ModelState):
         )
 
     @cached_property
-    def parameter_covariance_matrix(self):
+    def parameter_covariance_matrix(self) -> CovarianceMatrix:
         # make sure we compute the SVD
         self.step
         xvar = np.dot(self.Vt.T / self.s, self.Vt)
@@ -1570,12 +1554,21 @@ class DownhillGLSFitter(DownhillFitter):
         self.full_cov = False
         self.threshold = 0
 
-    def create_state(self):
+        self.current_state: GLSState
+
+    def create_state(self) -> GLSState:
         return GLSState(
             self, self.model, full_cov=self.full_cov, threshold=self.threshold
         )
 
-    def fit_toas(self, maxiter=10, threshold=0, full_cov=False, debug=False, **kwargs):
+    def fit_toas(
+        self,
+        maxiter: int = 10,
+        threshold: float = 0.0,
+        full_cov: bool = False,
+        debug: bool = False,
+        **kwargs,
+    ):
         """Fit TOAs.
 
         This is mostly implemented in
