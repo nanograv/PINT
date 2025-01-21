@@ -384,6 +384,13 @@ class TimingModel:
         for cp in components:
             self.add_component(cp, setup=False, validate=False)
 
+        # Type definitions for better code highlighting.
+        from pint.models.noise_model import NoiseComponent
+
+        self.PhaseComponent_list: List[PhaseComponent]
+        self.DelayComponent_list: List[DelayComponent]
+        self.NoiseComponent_list: List[NoiseComponent]
+
     def __repr__(self) -> str:
         return "{}(\n  {}\n)".format(
             self.__class__.__name__,
@@ -1729,6 +1736,23 @@ class TimingModel:
         for nf in self.scaled_dm_uncertainty_funcs:
             result += nf(toas)
         return result
+
+    def scaled_wideband_uncertainty(self, toas: TOAs) -> np.ndarray:
+        """Returns the combined scaled TOA and DM uncertainty values as a single
+        vector for wideband TOAs. The TOA uncertainties are in s and the DM uncertainties
+        are in dmu. The output is an `ndarray` rather than a `Quantity`.
+        Raises an exception if the input TOAs are narrowband.
+        Parameters
+        ----------
+        toas: pint.toa.TOAs
+            The input TOAs object for unscaled TOA and DM uncertainties.
+        """
+        assert (
+            toas.is_wideband()
+        ), "This method is only valid when the input TOAs are wideband."
+        terr = self.scaled_toa_uncertainty(toas).to_value(u.s)
+        derr = self.scaled_dm_uncertainty(toas).to_value(pint.dmu)
+        return np.hstack((terr, derr))
 
     def noise_model_designmatrix(self, toas: TOAs) -> np.ndarray:
         """Returns the joint design/basis matrix for all noise components."""
