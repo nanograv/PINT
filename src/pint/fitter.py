@@ -497,25 +497,25 @@ class Fitter:
         ``START``, ``FINISH``, ``EPHEM``, and ``DMDATA`` are set in the model
         to reflect the TOAs in actual use.
         """
-        self.model.START.value = self.toas.first_MJD
-        self.model.FINISH.value = self.toas.last_MJD
-        self.model.NTOA.value = len(self.toas)
-        self.model.EPHEM.value = self.toas.ephem
-        self.model.DMDATA.value = hasattr(self.resids, "dm")
-        self.model.CLOCK.value = (
+        self.model["START"].value = self.toas.first_MJD
+        self.model["FINISH"].value = self.toas.last_MJD
+        self.model["NTOA"].value = len(self.toas)
+        self.model["EPHEM"].value = self.toas.ephem
+        self.model["DMDATA"].value = hasattr(self.resids, "dm")
+        self.model["CLOCK"].value = (
             f"TT({self.toas.clock_corr_info['bipm_version']})"
             if self.toas.clock_corr_info["include_bipm"]
             else "TT(TAI)"
         )
         if chi2 is not None:
             # assume a fit has been done
-            self.model.CHI2.value = chi2
-            self.model.CHI2R.value = chi2 / self.resids.dof
+            self.model["CHI2"].value = chi2
+            self.model["CHI2R"].value = chi2 / self.resids.dof
             if not self.is_wideband:
-                self.model.TRES.quantity = self.resids.rms_weighted()
+                self.model["TRES"].quantity = self.resids.rms_weighted()
             else:
-                self.model.TRES.quantity = self.resids.rms_weighted()["toa"]
-                self.model.DMRES.quantity = self.resids.rms_weighted()["dm"]
+                self.model["TRES"].quantity = self.resids.rms_weighted()["toa"]
+                self.model["DMRES"].quantity = self.resids.rms_weighted()["dm"]
 
     def reset_model(self) -> None:
         """Reset the current model to the initial model."""
