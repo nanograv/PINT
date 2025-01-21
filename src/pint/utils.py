@@ -2864,7 +2864,9 @@ def get_unit(parname: str) -> u.Unit:
     return ac.param_to_unit(parname)
 
 
-def normalize_designmatrix(M, params):
+def normalize_designmatrix(
+    M: np.ndarray, params: List[str]
+) -> Tuple[np.ndarray, np.ndarray]:
     """Normalize each row of the design matrix.
 
     This is used while computing the GLS chi2 and the GLS fitting step. The

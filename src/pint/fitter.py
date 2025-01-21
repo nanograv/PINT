@@ -879,6 +879,9 @@ class ModelState:
         self.fitter = fitter
         self.model = model
 
+        self.params: List[str]
+        self.fac: np.ndarray
+
     @cached_property
     def resids(self) -> Residuals:
         try:
@@ -899,7 +902,7 @@ class ModelState:
         raise NotImplementedError
 
     @cached_property
-    def parameter_covariance_matrix(self):
+    def parameter_covariance_matrix(self) -> CovarianceMatrix:
         raise NotImplementedError
 
     @property
@@ -934,7 +937,7 @@ class ModelState:
                     log.warning(f"Unexpected parameter {p}")
         return new_model
 
-    def take_step(self, step, lambda_) -> "ModelState":
+    def take_step(self, step: np.ndarray, lambda_: float) -> "ModelState":
         """Return a new state moved by lambda_*step."""
         raise NotImplementedError
 
@@ -1062,7 +1065,7 @@ class DownhillFitter(Fitter):
                 # I don't know why this fails with multiprocessing, but bypass if it does
                 with contextlib.suppress(ValueError):
                     log.trace(f"Setting {getattr(self.model, p)} uncertainty to {e}")
-                pm = getattr(self.model, p)
+                pm = self.model[p]
             except AttributeError:
                 if p != "Offset":
                     log.warning(f"Unexpected parameter {p}")
@@ -1258,13 +1261,15 @@ class WLSState(ModelState):
         self.threshold = threshold
 
     @cached_property
-    def step(self):
+    def step(self) -> np.ndarray:
         # Define the linear system
         M, params, units = self.model.designmatrix(
             toas=self.fitter.toas, incfrozen=False, incoffset=True
         )
         # Get residuals and TOA uncertainties in seconds
-        Nvec = self.model.scaled_toa_uncertainty(self.fitter.toas).to(u.s).value
+        Nvec: np.ndarray = (
+            self.model.scaled_toa_uncertainty(self.fitter.toas).to(u.s).value
+        )
         scaled_resids = self.resids.time_resids.to(u.s).value / Nvec
 
         # "Whiten" design matrix and residuals by dividing by uncertainties
@@ -1337,13 +1342,13 @@ class WLSState(ModelState):
         # Scaling by fac recovers original units
         return (Vt.T @ ((U.T @ scaled_resids) / s)) / fac
 
-    def take_step(self, step, lambda_=1):
+    def take_step(self, step: np.ndarray, lambda_: float = 1.0) -> "WLSState":
         return WLSState(
             self.fitter, self.take_step_model(step, lambda_), threshold=self.threshold
         )
 
     @cached_property
-    def parameter_covariance_matrix(self):
+    def parameter_covariance_matrix(self) -> CovarianceMatrix:
         # make sure we compute the SVD
         self.step
         # Sigma = np.dot(Vt.T / s, U.T)
@@ -1362,7 +1367,13 @@ class DownhillWLSFitter(DownhillFitter):
     or :class:`pint.fitter.DownhillFitter`.
     """
 
-    def __init__(self, toas, model, track_mode=None, residuals=None):
+    def __init__(
+        self,
+        toas: TOAs,
+        model: TimingModel,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
+        residuals: Residuals = None,
+    ):
         if model.has_correlated_errors:
             raise CorrelatedErrors(model)
         super().__init__(
@@ -1370,7 +1381,13 @@ class DownhillWLSFitter(DownhillFitter):
         )
         self.method = "downhill_wls"
 
-    def fit_toas(self, maxiter=10, threshold=None, debug=False, **kwargs):
+    def fit_toas(
+        self,
+        maxiter: int = 10,
+        threshold: Optional[float] = None,
+        debug: bool = False,
+        **kwargs,
+    ):
         """Fit TOAs.
 
         This is mostly implemented in
@@ -1390,7 +1407,7 @@ class DownhillWLSFitter(DownhillFitter):
         self.threshold = threshold
         super().fit_toas(maxiter=maxiter, debug=debug, **kwargs)
 
-    def create_state(self):
+    def create_state(self) -> WLSState:
         return WLSState(self, self.model)
 
 
