@@ -1779,7 +1779,10 @@ class TimingModel:
             else None
         )
 
-    def full_designmatrix(self, toas: TOAs) -> np.ndarray:
+    def full_designmatrix(self, toas: TOAs) -> Union[
+        Tuple[np.ndarray, List[str], List[u.Unit]],
+        Tuple[np.ndarray, List[str], List[u.Unit], List[u.Unit]],
+    ]:
         """Returns the full design matrix containing both the timing model design
         matrix and the noise basis matrix. If the TOAs are wideband, the DM partial
         derivatives are also included. The units are not returned."""
@@ -1787,9 +1790,17 @@ class TimingModel:
             M_tm, par, M_units = self.designmatrix(toas)
             M_nm = self.noise_model_designmatrix(toas)
         else:
-            M_tm, par, M_units = self.wideband_designmatrix(toas)
+            M_tm, par, M_units, M_units_d = self.wideband_designmatrix(toas)
             M_nm = self.noise_model_wideband_designmatrix(toas)
-        return np.hstack((M_tm, M_nm)) if M_nm is not None else M_tm
+
+        M = np.hstack((M_tm, M_nm)) if M_nm is not None else M_tm
+
+        par.extend([f"_NOISE_{ii}" for ii in range(M_nm.shape[1])])
+        M_units.extend(np.repeat(u.dimensionless_unscaled, M_nm.shape[1]))
+        if toas.is_wideband():
+            M_units_d.extend(np.repeat(pint.dmu / u.s, M_nm.shape[1]))
+
+        return (M, par, M_units, M_units_d) if toas.is_wideband() else (M, par, M_units)
 
     def noise_model_basis_weight(self, toas: TOAs) -> np.ndarray:
         """Returns the joint weight vector for all noise components."""
@@ -2371,7 +2382,7 @@ class TimingModel:
         M = np.vstack((M_t, M_d))
         assert M.shape == (2 * len(toas), len(par_t))
 
-        return M, par_t, units_t + units_d
+        return M, par_t, units_t, units_d
 
     def compare(
         self,
