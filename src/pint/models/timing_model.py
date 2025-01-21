@@ -545,7 +545,7 @@ class TimingModel:
     #    return result
 
     def __getattr__(self, name: str):
-        if name in ["components", "component_types", "search_cmp_attr"]:
+        if name in {"components", "component_types", "search_cmp_attr"}:
             raise AttributeError
         if not hasattr(self, "component_types"):
             raise AttributeError
@@ -1761,7 +1761,7 @@ class TimingModel:
         if len(self.basis_funcs) == 0:
             return None
         result = [nf(toas)[0] for nf in self.basis_funcs]
-        return np.hstack(list(result))
+        return np.hstack(result)
 
     def noise_model_wideband_designmatrix(self, toas: TOAs) -> Optional[np.ndarray]:
         """Returns the design/basis matrix for all noise components for wideband TOAs.
@@ -2460,10 +2460,7 @@ class TimingModel:
         assert format.lower() in ["text", "markdown"]
         format = format.lower()
 
-        if self.name != "":
-            model_name = self.name.split("/")[-1]
-        else:
-            model_name = "Model 1"
+        model_name = self.name.split("/")[-1] if self.name != "" else "Model 1"
         if othermodel.name != "":
             other_model_name = othermodel.name.split("/")[-1]
         else:
@@ -2610,8 +2607,7 @@ class TimingModel:
                         value2[pn] = str(otherpar.quantity)
                         if otherpar.quantity != par.quantity:
                             log.info(
-                                "Parameter %s not fit, but has changed between these models"
-                                % par.name
+                                f"Parameter {par.name} not fit, but has changed between these models"
                             )
                     else:
                         value2[pn] = "Missing"
@@ -2712,8 +2708,7 @@ class TimingModel:
                                 )
                             else:
                                 log.warning(
-                                    "Parameter %s not fit, but has changed between these models"
-                                    % par.name
+                                    f"Parameter {par.name} not fit, but has changed between these models"
                                 )
                                 modifier[pn].append("change")
                         if (
@@ -2889,7 +2884,7 @@ class TimingModel:
                         "change" in m
                         or "diff1" in m
                         or "diff2" in m
-                        and not "unc_rat" in m
+                        and "unc_rat" not in m
                     ):
                         sout = colorize(sout, "red")
                     elif "diff2" in m:
@@ -3959,15 +3954,16 @@ class AllComponents:
             does not match the input parameter name that is going to be mapped
             to the input alias.
         """
-        if alias in alias_map.keys():
-            if param_name == alias_map[alias]:
-                return
-            else:
-                raise AliasConflict(
-                    f"Alias {alias} has been used by" f" parameter {param_name}."
-                )
-        else:
+        if (
+            alias in alias_map
+            and param_name == alias_map[alias]
+            or alias not in alias_map.keys()
+        ):
             return
+        else:
+            raise AliasConflict(
+                f"Alias {alias} has been used by" f" parameter {param_name}."
+            )
 
     @lazyproperty
     def _param_alias_map(self) -> Dict[str, str]:
@@ -4119,7 +4115,7 @@ class AllComponents:
                 "`BINARY  DDFWHE` is not supported, but the same model "
                 "is available as `BINARY  DDH`."
             )
-        elif system_name in ["MSS", "EH", "H88", "DDT", "BT1P", "BT2P"]:
+        elif system_name in {"MSS", "EH", "H88", "DDT", "BT1P", "BT2P"}:
             # Binary model list taken from
             # https://tempo.sourceforge.net/ref_man_sections/binary.txt
             raise UnknownBinaryModel(

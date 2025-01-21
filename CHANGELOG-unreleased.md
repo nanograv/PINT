@@ -26,4 +26,3 @@ the released changes.
 ### Removed
 - Unnecessary definition of `cached_property` from `pint.fitter` (Python 3.8 no longer needs to be supported).
 
-
