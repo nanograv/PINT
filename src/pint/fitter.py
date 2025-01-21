@@ -533,9 +533,20 @@ class Fitter:
     def make_resids(self, model: TimingModel) -> Residuals:
         return Residuals(toas=self.toas, model=model, track_mode=self.track_mode)
 
-    def get_designmatrix(self) -> Tuple[np.ndarray, List[str], List[u.Unit]]:
+    def get_designmatrix(self, full: bool = False) -> Union[
+        Tuple[np.ndarray, List[str], List[u.Unit]],
+        Tuple[np.ndarray, List[str], List[u.Unit], List[u.Unit]],
+    ]:
         """Return the model's design matrix for these TOAs."""
-        return self.model.designmatrix(toas=self.toas, incfrozen=False, incoffset=True)
+        if full:
+            return self.model.full_designmatrix(self.toas)
+        else:
+            if not self.toas.is_wideband():
+                return self.model.designmatrix(
+                    toas=self.toas, incfrozen=False, incoffset=True
+                )
+            else:
+                return self.model.wideband_designmatrix(toas=self.toas, incoffset=True)
 
     def _get_corr_cov_matrix(
         self, matrix_type, with_phase, pretty_print, prec, usecolor
