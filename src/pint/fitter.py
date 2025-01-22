@@ -2019,8 +2019,10 @@ class WLSFitter(Fitter):
             fitp = self.model.get_params_dict("free", "quantity")
             fitpv = self.model.get_params_dict("free", "num")
             fitperrs = self.model.get_params_dict("free", "uncertainty")
+
             # Define the linear system
-            M, params, units = self.get_designmatrix()
+            M, params, units = self.model.designmatrix(self.toas)
+
             # Get residuals and TOA uncertainties in seconds
             self.update_resids()
             residuals = self.resids.time_resids.to(u.s).value
@@ -2186,7 +2188,7 @@ class GLSFitter(Fitter):
 
             # Define the linear system
             # normalize the design matrix
-            M, params, units = self.get_designmatrix()
+            M, params, units = self.model.designmatrix(self.toas)
             # M /= norm
 
             ntmpar = len(fitp)
@@ -2544,7 +2546,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             residuals = self.resids.calc_combined_resids()
 
             # get any noise design matrices and weight vectors
-            M, params, units, units_d = self.get_designmatrix(full=(not full_cov))
+            M, params, units, units_d = self.model.full_designmatrix()
 
             # normalize the design matrix
             M, norm = normalize_designmatrix(M, params)
@@ -2561,7 +2563,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 phi = self.model.full_basis_weight(self.toas)
                 phiinv_norm = 1 / phi / norm**2
 
-                Nvec = self.scaled_all_sigma() ** 2
+                Nvec = self.model.scaled_wideband_uncertainty(self.toas) ** 2
                 cinv = 1 / Nvec
 
                 mtcm = np.dot(M.T, cinv[:, None] * M)
