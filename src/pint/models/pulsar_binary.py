@@ -4,28 +4,26 @@ This module if for wrapping standalone binary models so that they work
 as PINT timing models.
 """
 
-import astropy.units as u
 import contextlib
+
+import astropy.constants as consts
+import astropy.units as u
 import numpy as np
 from astropy.coordinates import SkyCoord
-import astropy.constants as consts
 from loguru import logger as log
 
 from pint import ls
+from pint.exceptions import MissingParameter, TimingModelError, UnknownParameter
 from pint.models.parameter import (
     MJDParameter,
     floatParameter,
-    prefixParameter,
     funcParameter,
+    prefixParameter,
 )
 from pint.models.stand_alone_psr_binaries import binary_orbits as bo
-from pint.models.timing_model import (
-    DelayComponent,
-)
-from pint.utils import taylor_horner_deriv, parse_time
+from pint.models.timing_model import DelayComponent
 from pint.pulsar_ecliptic import PulsarEcliptic
-from pint.exceptions import MissingParameter, TimingModelError, UnknownParameter
-
+from pint.utils import parse_time, taylor_horner_deriv
 
 # def _p_to_f(p):
 #     return 1 / p

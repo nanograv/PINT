@@ -1,14 +1,15 @@
 """Chromatic variations expressed as a sum of sinusoids."""
 
+from warnings import warn
+
 import astropy.units as u
 import numpy as np
 from loguru import logger as log
-from warnings import warn
 
-from pint.models.parameter import MJDParameter, prefixParameter
+from pint import DMconst
 from pint.exceptions import MissingParameter
 from pint.models.chromatic_model import Chromatic, cmu
-from pint import DMconst
+from pint.models.parameter import MJDParameter, prefixParameter
 
 
 class CMWaveX(Chromatic):

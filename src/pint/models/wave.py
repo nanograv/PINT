@@ -3,9 +3,9 @@
 import astropy.units as u
 import numpy as np
 
+from pint.exceptions import MissingParameter
 from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
 from pint.models.timing_model import PhaseComponent
-from pint.exceptions import MissingParameter
 
 
 class Wave(PhaseComponent):
