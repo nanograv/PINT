@@ -155,7 +155,7 @@ plt.xlabel("MJD")
 # #### Design Matrix are combined
 
 # %%
-d_matrix, labels, units = fitter.get_designmatrix()
+d_matrix, labels, units, units_d = fitter.model.full_designmatrix(toas)
 
 # %%
 print("Number of TOAs:", toas.ntoas)
