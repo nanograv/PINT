@@ -1,15 +1,15 @@
 import sys
-import numpy as np
 from typing import Dict
 
 import astropy.coordinates as coord
 import astropy.units as u
+import numpy as np
 from astropy.coordinates import QuantityAttribute, frame_transform_graph
 from astropy.coordinates.matrix_utilities import rotation_matrix
-from pint.utils import interesting_lines, lines_of
-from pint.types import file_like, quantity_like
 
 import pint.config
+from pint.types import file_like, quantity_like
+from pint.utils import interesting_lines, lines_of
 
 __all__ = ["OBL", "PulsarEcliptic"]
 

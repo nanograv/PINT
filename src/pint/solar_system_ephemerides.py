@@ -1,5 +1,6 @@
 """Solar system ephemeris downloading and setting support."""
 
+import contextlib
 import os
 import pathlib
 from typing import Optional, Union
@@ -7,7 +8,6 @@ from typing import Optional, Union
 import astropy.coordinates
 import astropy.units as u
 import astropy.utils.state
-import contextlib
 import numpy as np
 from astropy.utils.data import download_file
 from loguru import logger as log

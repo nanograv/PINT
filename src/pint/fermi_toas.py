@@ -1,10 +1,10 @@
 """Work with Fermi TOAs."""
 
-from astropy.coordinates import SkyCoord, EarthLocation
-from astropy.time import Time
-from astropy.io import fits
 import astropy.units as u
 import numpy as np
+from astropy.coordinates import EarthLocation, SkyCoord
+from astropy.io import fits
+from astropy.time import Time
 from loguru import logger as log
 
 import pint.toa as toa

@@ -1,12 +1,13 @@
 """ pint_matrix module defines the pint matrix base class, the design matrix .  and the covariance matrix
 """
 
-import numpy as np
-from itertools import combinations
-import astropy.units as u
-from collections import OrderedDict
-from warnings import warn
 import copy
+from collections import OrderedDict
+from itertools import combinations
+from warnings import warn
+
+import astropy.units as u
+import numpy as np
 
 import pint.utils as pu
 

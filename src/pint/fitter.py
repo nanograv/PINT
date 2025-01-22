@@ -70,13 +70,20 @@ from loguru import logger as log
 from numdifftools import Hessian
 
 import pint
-import pint.utils
 import pint.derived_quantities
+import pint.utils
+from pint.exceptions import (
+    ConvergenceFailure,
+    CorrelatedErrors,
+    DegeneracyWarning,
+    MaxiterReached,
+    StepProblem,
+)
 from pint.models.parameter import (
     AngleParameter,
+    InvalidModelParameters,
     boolParameter,
     strParameter,
-    InvalidModelParameters,
 )
 from pint.pint_matrix import (
     CorrelationMatrix,
@@ -90,14 +97,6 @@ from pint.pint_matrix import (
 from pint.residuals import Residuals, WidebandTOAResiduals
 from pint.toa import TOAs
 from pint.utils import FTest, normalize_designmatrix
-from pint.exceptions import (
-    DegeneracyWarning,
-    ConvergenceFailure,
-    MaxiterReached,
-    StepProblem,
-    CorrelatedErrors,
-)
-
 
 __all__ = [
     "Fitter",

@@ -1,7 +1,7 @@
 """Functions related to PINT configuration."""
 
-import os
 import importlib.resources
+import os
 
 __all__ = ["datadir", "examplefile", "runtimefile"]
 
