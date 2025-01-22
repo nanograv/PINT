@@ -2546,7 +2546,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             residuals = self.resids.calc_combined_resids()
 
             # get any noise design matrices and weight vectors
-            M, params, units, units_d = self.model.full_designmatrix()
+            M, params, _, _ = self.model.full_designmatrix(self.toas)
 
             # normalize the design matrix
             M, norm = normalize_designmatrix(M, params)
@@ -2616,8 +2616,16 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             covmat = (xvar / norm).T / norm
             # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
             covariance_matrix_labels = {
-                param: (i, i + 1, unit)
-                for i, (param, unit) in enumerate(zip(params, units))
+                param: (
+                    i,
+                    i + 1,
+                    (
+                        fitp[param].units
+                        if param != "Offset"
+                        else u.dimensionless_unscaled
+                    ),
+                )
+                for i, param in enumerate(params)
             }
             # covariance matrix is 2D and symmetric
             covariance_matrix_labels = [covariance_matrix_labels] * covmat.ndim
@@ -2633,10 +2641,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
 
             for pn in fitp.keys():
                 uind = params.index(pn)  # Index of designmatrix
-                # Here we use design matrix's label, so the unit goes to normal.
-                # instead of un = 1 / (units[uind])
-                un = units[uind]
-                pv, dpv = fitpv[pn] * fitp[pn].units, dpars[uind] * un
+                pv, dpv = fitpv[pn] * fitp[pn].units, dpars[uind] * fitp[pn].units
                 fitpv[pn] = np.longdouble((pv + dpv) / fitp[pn].units)
                 # NOTE We need some way to use the parameter limits.
                 fitperrs[pn] = errs[uind]
