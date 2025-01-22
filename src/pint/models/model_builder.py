@@ -29,7 +29,7 @@ from pint.models.timing_model import (
     ignore_prefix,
 )
 from pint.toa import TOAs, get_TOAs
-from pint.types import file_like, quantity_like
+from pint.types import file_like
 from pint.utils import get_unit, interesting_lines, lines_of, split_prefixed_name
 
 __all__ = ["ModelBuilder", "get_model", "get_model_and_toas"]

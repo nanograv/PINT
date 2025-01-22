@@ -62,7 +62,7 @@ def load_Fermi_FT2(ft2_filename):
         Vx = SC_VEL[:, 0] * u.m / u.s
         Vy = SC_VEL[:, 1] * u.m / u.s
         Vz = SC_VEL[:, 2] * u.m / u.s
-    except:
+    except Exception:
         # Otherwise, compute velocities by differentiation because FT2 does not have velocities
         # This is not the best way. Should fit an orbit and determine velocity from that.
         dt = mjds_TT[1] - mjds_TT[0]

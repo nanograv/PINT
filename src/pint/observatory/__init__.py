@@ -21,7 +21,6 @@ done, but if you are using a different subset of PINT these imports may be
 necessary.
 """
 
-from copy import deepcopy
 import os
 import textwrap
 from collections import defaultdict
@@ -187,11 +186,7 @@ class Observatory:
         self.fullname = fullname if fullname is not None else name
         # If not specified elsewhere, assume UTC(GPS)->UTC correction should be applied
         # Observatory specific settings are in observatories.json
-        if apply_gps2utc is None:
-            self.apply_gps2utc = True
-        else:
-            self.apply_gps2utc = apply_gps2utc
-
+        self.apply_gps2utc = True if apply_gps2utc is None else apply_gps2utc
         if name.lower() in Observatory._registry:
             if not overwrite:
                 raise ValueError(
@@ -544,14 +539,11 @@ def get_observatory(name, apply_gps2utc=None):
 
     """
     if apply_gps2utc is None:
-        site = Observatory.get(name)
-    else:
-        # If we are overriding the gps2utc setting then  site and update apply_gps2utc
-        # Otherwise, will just use default setting for this site.
-        log.debug(f"Observatory.get(apply_gps2utc={apply_gps2utc})")
-        site = Observatory.get(name, apply_gps2utc=apply_gps2utc, overwrite=True)
-
-    return site
+        return Observatory.get(name)
+    # If we are overriding the gps2utc setting then  site and update apply_gps2utc
+    # Otherwise, will just use default setting for this site.
+    log.debug(f"Observatory.get(apply_gps2utc={apply_gps2utc})")
+    return Observatory.get(name, apply_gps2utc=apply_gps2utc, overwrite=True)
 
 
 def earth_location_distance(loc1, loc2):
