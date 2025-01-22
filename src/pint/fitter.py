@@ -2423,20 +2423,20 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         """Update the residuals. Run after updating a model parameter."""
         return self.make_combined_residuals(add_args=self.additional_args, model=model)
 
-    # def get_designmatrix(self):
-    #     design_matrixs = []
-    #     fit_params = self.model.free_params
-    #     if len(self.fit_data) == 1:
-    #         design_matrixs.extend(
-    #             dmatrix_maker(self.fit_data[0], self.model, fit_params, offset=True)
-    #             for dmatrix_maker in self.designmatrix_makers
-    #         )
-    #     else:
-    #         design_matrixs.extend(
-    #             dmatrix_maker(self.fit_data[ii], self.model, fit_params, offset=True)
-    #             for ii, dmatrix_maker in enumerate(self.designmatrix_makers)
-    #         )
-    #     return combine_design_matrices_by_quantity(design_matrixs)
+    def get_designmatrix(self):
+        design_matrixs = []
+        fit_params = self.model.free_params
+        if len(self.fit_data) == 1:
+            design_matrixs.extend(
+                dmatrix_maker(self.fit_data[0], self.model, fit_params, offset=True)
+                for dmatrix_maker in self.designmatrix_makers
+            )
+        else:
+            design_matrixs.extend(
+                dmatrix_maker(self.fit_data[ii], self.model, fit_params, offset=True)
+                for ii, dmatrix_maker in enumerate(self.designmatrix_makers)
+            )
+        return combine_design_matrices_by_quantity(design_matrixs)
 
     def get_noise_covariancematrix(self):
         # TODO This needs to be more general
@@ -2621,7 +2621,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                     i + 1,
                     (
                         fitp[param].units
-                        if param != "Offset"
+                        if param != "Offset" and not param.startswith("_NOISE_")
                         else u.dimensionless_unscaled
                     ),
                 )
