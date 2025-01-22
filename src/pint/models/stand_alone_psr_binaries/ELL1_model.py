@@ -5,6 +5,7 @@ import astropy.units as u
 import numpy as np
 
 from pint.models.parameter import InvalidModelParameters
+
 from .binary_generic import PSR_BINARY
 
 

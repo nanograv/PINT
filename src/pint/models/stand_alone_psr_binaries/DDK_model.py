@@ -1,8 +1,9 @@
 """Kopeikin corrected DD model."""
 
+import warnings
+
 import astropy.units as u
 import numpy as np
-import warnings
 
 from .DD_model import DDmodel
 

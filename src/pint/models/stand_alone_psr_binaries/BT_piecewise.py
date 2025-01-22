@@ -1,9 +1,11 @@
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
+
 import pint.toa
 from pint import GMsun, Tsun, ls
 from pint.models.stand_alone_psr_binaries.BT_model import BTmodel
+
 from .binary_generic import PSR_BINARY
 
 
