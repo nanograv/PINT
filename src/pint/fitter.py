@@ -1304,7 +1304,7 @@ class WLSState(ModelState):
         # Note, here we could do various checks like report
         # matrix condition number or zero out low singular values.
         # print 'log_10 cond=', np.log10(s.max()/s.min())
-        # Note, Check the threshold from data precision level.Borrowed from
+        # Note, Check the threshold from data precision level. Borrowed from
         # np Curve fit.
         threshold = self.threshold
         if threshold is None:
@@ -2421,20 +2421,20 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         """Update the residuals. Run after updating a model parameter."""
         return self.make_combined_residuals(add_args=self.additional_args, model=model)
 
-    def get_designmatrix(self):
-        design_matrixs = []
-        fit_params = self.model.free_params
-        if len(self.fit_data) == 1:
-            design_matrixs.extend(
-                dmatrix_maker(self.fit_data[0], self.model, fit_params, offset=True)
-                for dmatrix_maker in self.designmatrix_makers
-            )
-        else:
-            design_matrixs.extend(
-                dmatrix_maker(self.fit_data[ii], self.model, fit_params, offset=True)
-                for ii, dmatrix_maker in enumerate(self.designmatrix_makers)
-            )
-        return combine_design_matrices_by_quantity(design_matrixs)
+    # def get_designmatrix(self):
+    #     design_matrixs = []
+    #     fit_params = self.model.free_params
+    #     if len(self.fit_data) == 1:
+    #         design_matrixs.extend(
+    #             dmatrix_maker(self.fit_data[0], self.model, fit_params, offset=True)
+    #             for dmatrix_maker in self.designmatrix_makers
+    #         )
+    #     else:
+    #         design_matrixs.extend(
+    #             dmatrix_maker(self.fit_data[ii], self.model, fit_params, offset=True)
+    #             for ii, dmatrix_maker in enumerate(self.designmatrix_makers)
+    #         )
+    #     return combine_design_matrices_by_quantity(design_matrixs)
 
     def get_noise_covariancematrix(self):
         # TODO This needs to be more general
@@ -2534,37 +2534,17 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             fitpv = self.model.get_params_dict("free", "num")
             fitperrs = self.model.get_params_dict("free", "uncertainty")
 
-            # Define the linear system
-            d_matrix = self.get_designmatrix()
-            M, params, units = (
-                d_matrix.matrix,
-                d_matrix.derivative_params,
-                d_matrix.param_units,
-            )
+            ntmpar = len(fitp)
 
             # Get residuals and TOA uncertainties in seconds
             if i == 0:
                 self.update_resids()
             # Since the residuals may not have the same unit. Thus the residual here
             # has no unit.
-            residuals = self.resids._combined_resids
+            residuals = self.resids.calc_combined_resids()
 
             # get any noise design matrices and weight vectors
-            if not full_cov:
-                # We assume the fit date type is toa
-                Mn = self.noise_designmatrix_maker(self.toas, self.model)
-                phi = self.model.noise_model_basis_weight(self.toas)
-                phiinv = np.zeros(M.shape[1])
-                if Mn is not None and phi is not None:
-                    phiinv = np.concatenate((phiinv, 1 / phi))
-                    new_d_matrix = combine_design_matrices_by_param(d_matrix, Mn)
-                    M, params, units = (
-                        new_d_matrix.matrix,
-                        new_d_matrix.derivative_params,
-                        new_d_matrix.param_units,
-                    )
-
-            ntmpar = len(fitp)
+            M, params, units, units_d = self.get_designmatrix(full=(not full_cov))
 
             # normalize the design matrix
             M, norm = normalize_designmatrix(M, params)
@@ -2577,14 +2557,15 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 cm = scipy.linalg.cho_solve(cf, M)
                 mtcm = np.dot(M.T, cm)
                 mtcy = np.dot(cm.T, residuals)
-
             else:
-                phiinv /= norm**2
-                Nvec = self.scaled_all_sigma() ** 2
+                phi = self.model.full_basis_weight(self.toas)
+                phiinv_norm = 1 / phi / norm**2
 
+                Nvec = self.scaled_all_sigma() ** 2
                 cinv = 1 / Nvec
+
                 mtcm = np.dot(M.T, cinv[:, None] * M)
-                mtcm += np.diag(phiinv)
+                mtcm += np.diag(phiinv_norm)
                 mtcy = np.dot(M.T, cinv * residuals)
 
             xhat, xvar = None, None
@@ -2618,12 +2599,14 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
 
                 xvar = np.dot(Vt.T / s, Vt)
                 xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+
             newres = residuals - np.dot(M, xhat)
+
             # compute linearized chisq
             if full_cov:
                 chi2 = np.dot(newres, scipy.linalg.cho_solve(cf, newres))
             else:
-                chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
+                chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv_norm * xhat)
 
             # compute absolute estimates, normalized errors, covariance matrix
             dpars = xhat / norm

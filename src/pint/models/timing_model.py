@@ -1795,10 +1795,11 @@ class TimingModel:
 
         M = np.hstack((M_tm, M_nm)) if M_nm is not None else M_tm
 
-        par.extend([f"_NOISE_{ii}" for ii in range(M_nm.shape[1])])
-        M_units.extend(np.repeat(u.dimensionless_unscaled, M_nm.shape[1]))
-        if toas.is_wideband():
-            M_units_d.extend(np.repeat(pint.dmu / u.s, M_nm.shape[1]))
+        if M_nm is not None:
+            par.extend([f"_NOISE_{ii}" for ii in range(M_nm.shape[1])])
+            M_units.extend(np.repeat(u.dimensionless_unscaled, M_nm.shape[1]))
+            if toas.is_wideband():
+                M_units_d.extend(np.repeat(pint.dmu / u.s, M_nm.shape[1]))
 
         return (M, par, M_units, M_units_d) if toas.is_wideband() else (M, par, M_units)
 
