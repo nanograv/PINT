@@ -563,6 +563,115 @@ class PLDMNoise(NoiseComponent):
         return np.dot(Fmat * phi[None, :], Fmat.T)
 
 
+class FreeSpecDMNoise(NoiseComponent):
+    """Model of DM variations as radio frequency-dependent noise with a
+    free spec.
+
+    Variations in DM over time result from both the proper motion of the
+    pulsar and the changing electron number density along the line of sight
+    from the solar wind and ISM. In particular, Kolmogorov turbulence in the
+    ionized ISM will induce stochastic DM variations with a power law
+    spectrum. Timing errors due to unmodelled DM variations can therefore
+    appear very similar to intrinsic red noise, however the amplitude of these
+    variations will scale with the inverse of the square of the (Earth Doppler
+    corrected) radio frequency.
+    
+    Free spectral model. PSD amplitude at each frequency
+    is a free parameter. Model is parameterized by
+    S(f_i) = \rho_i^2 * T,
+    where \rho_i is the free parameter and T is the observation length.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.noise_model.FreeSpecDMNoise
+
+    Note
+    ----
+
+    """
+
+    register = True
+    category = "free_spec_DM_noise"
+
+    introduces_correlated_errors = True
+    is_time_correlated = True
+
+    def __init__(
+        self,
+        free_spec_components=100,
+    ):
+        super().__init__()
+
+        self.add_param(
+            floatParameter(
+                name="TNDMC",
+                units="",
+                aliases=[],
+                description="Number of DM noise frequencies.",
+                convert_tcb2tdb=False,
+            )
+        )
+        for i in range(free_spec_components):
+            self.add_param(
+                floatParameter(
+                    name=f"TNDM_log10_rho_{i}",
+                    units="",
+                    aliases=[],
+                    description="Log10 PSD Amplitude at each Fourier mode.",
+                    convert_tcb2tdb=False,
+                )
+            )
+
+        self.covariance_matrix_funcs += [self.free_spec_dm_cov_matrix]
+        self.basis_funcs += [self.free_spec_dm_basis_weight_pair]
+
+    def get_free_spec_vals(self):
+        nf = int(self.TNDMC.value) if self.TNDMC.value is not None else 30
+        log10_rhos = [getattr(self, f"TNDM_log10_rho_{i}").value for i in range(nf)]
+        return (nf, log10_rhos)
+
+    def get_noise_basis(self, toas):
+        """Return a Fourier design matrix for DM noise.
+
+        See the documentation for free_spec_dm_basis_weight_pair function for details."""
+
+        tbl = toas.table
+        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        freqs = self._parent.barycentric_radio_freq(toas).to(u.MHz)
+        fref = 1400 * u.MHz
+        D = (fref.value / freqs.value) ** 2
+        nf = self.get_free_spec_vals()[0]
+        Fmat = create_fourier_design_matrix(t, nf)
+        return Fmat * D[:, None]
+
+    def get_noise_weights(self):
+        """Return free spec DM noise weights.
+
+        See the documentation for free_spec_dm_basis_weight_pair for details."""
+        nf, log10_rhos = self.get_free_spec_vals()
+        return powerlaw(log10_rhos)
+
+    def free_spec_dm_basis_weight_pair(self, toas):
+        """Return a Fourier design matrix and free spec DM noise weights.
+
+        A Fourier design matrix contains the sine and cosine basis_functions
+        in a Fourier series expansion. Here we scale the design matrix by
+        (fref/f)**2, where fref = 1400 MHz to match the convention used in
+        enterprise.
+
+        The weights used are the free-spec PSD values at frequencies n/T,
+        where n is in [1, TNDMC] and T is the total observing duration of
+        the dataset.
+
+        """
+        return (self.get_noise_basis(toas), self.get_noise_weights())
+
+    def free_spec_dm_cov_matrix(self, toas):
+        Fmat, phi = self.free_spec_dm_basis_weight_pair(toas)
+        return np.dot(Fmat * phi[None, :], Fmat.T)
+
+
 class PLChromNoise(NoiseComponent):
     """Model of a radio frequency-dependent noise with a power-law spectrum and arbitrary chromatic index.
 
@@ -681,6 +790,120 @@ class PLChromNoise(NoiseComponent):
 
     def pl_chrom_cov_matrix(self, toas):
         Fmat, phi = self.pl_chrom_basis_weight_pair(toas)
+        return np.dot(Fmat * phi[None, :], Fmat.T)
+
+
+class FreeSpecChromNoise(NoiseComponent):
+    """Model of a radio frequency-dependent noise with a free spec and
+    arbitrary chromatic index.
+
+    Such variations are usually attributed to time-variable scattering in the
+    ISM. Scattering smears/broadens the shape of the pulse profile by convolving it with
+    a transfer function that is determined by the geometry and electron distribution
+    in the scattering screen(s). The scattering timescale is typically a decreasing
+    function of the observing frequency.
+
+    Scatter broadening causes systematic offsets in the TOA measurements due to the
+    pulse shape mismatch. While this offset need not be a simple function of frequency,
+    it has been often modeled using a delay that is proportional to f^-alpha where alpha
+    is known as the chromatic index.
+
+    This model should be used in combination with the ChromaticCM model.
+    
+    Free spectral model. PSD amplitude at each frequency
+    is a free parameter. Model is parameterized by
+    S(f_i) = \rho_i^2 * T,
+    where \rho_i is the free parameter and T is the observation length.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.noise_model.FreeSpecChromNoise
+
+    Note
+    ----
+
+    """
+
+    register = True
+    category = "free_spec_chrom_noise"
+
+    introduces_correlated_errors = True
+    is_time_correlated = True
+
+    def __init__(
+        self,
+        free_spec_components=100,
+    ):
+        super().__init__()
+
+        self.add_param(
+            floatParameter(
+                name="TNCHROMC",
+                units="",
+                aliases=[],
+                description="Number of chromatic noise frequencies.",
+                convert_tcb2tdb=False,
+            )
+        )
+        for i in range(free_spec_components):
+            self.add_param(
+                floatParameter(
+                    name=f"TNCHROM_log10_rho_{i}",
+                    units="",
+                    aliases=[],
+                    description="Log10 PSD Amplitude at each Fourier mode.",
+                    convert_tcb2tdb=False,
+                )
+            )
+
+        self.covariance_matrix_funcs += [self.free_spec_chrom_cov_matrix]
+        self.basis_funcs += [self.free_spec_chrom_basis_weight_pair]
+
+    def get_free_spec_vals(self):
+        nf = int(self.TNCHROMC.value) if self.TNCHROMC.value is not None else 100
+        log10_rhos = [getattr(self, f"TNCHROM_log10_rho_{i}").value for i in range(nf)]
+        return (nf, log10_rhos)
+
+    def get_noise_basis(self, toas):
+        """Return a Fourier design matrix for chromatic noise.
+
+        See the documentation for free_spec_chrom_basis_weight_pair function for details."""
+
+        tbl = toas.table
+        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        freqs = self._parent.barycentric_radio_freq(toas).to(u.MHz)
+        fref = 1400 * u.MHz
+        alpha = self._parent.TNCHROMIDX.value
+        D = (fref.value / freqs.value) ** alpha
+        nf = self.get_pl_vals()[0]
+        Fmat = create_fourier_design_matrix(t, nf)
+        return Fmat * D[:, None]
+
+    def get_noise_weights(self):
+        """Return free spec chromatic noise weights.
+
+        See the documentation for free_spec_chrom_basis_weight_pair for details."""
+        nf, log10_rhos = self.get_free_spec_vals()
+        return freespec(log10_rhos)
+
+    def free_spec_chrom_basis_weight_pair(self, toas):
+        """Return a Fourier design matrix and free spec chromatic noise weights.
+
+        A Fourier design matrix contains the sine and cosine basis_functions
+        in a Fourier series expansion. Here we scale the design matrix by
+        (fref/f)**2, where fref = 1400 MHz to match the convention used in
+        enterprise.
+
+        The weights used are the free-spec PSD values at frequencies n/T,
+        where n is in [1, TNCHROMC] and T is the total observing duration of
+        the dataset.
+
+        """
+        return (self.get_noise_basis(toas), self.get_noise_weights())
+
+    def free_spec_chrom_cov_matrix(self, toas):
+        Fmat, phi = self.free_spec_chrom_basis_weight_pair(toas)
         return np.dot(Fmat * phi[None, :], Fmat.T)
 
 
@@ -814,6 +1037,106 @@ class PLRedNoise(NoiseComponent):
         return np.dot(Fmat * phi[None, :], Fmat.T)
 
 
+class FreeSpecRedNoise(NoiseComponent):
+    """Timing noise with a free spectral model.
+
+    Over the long term, pulsars are observed to experience timing noise
+    dominated by low frequencies. This can occur, for example, if the
+    torque on the pulsar varies randomly. If the torque experiences
+    white noise, the phase we observe will experience "red" noise, that
+    is noise dominated by the lowest frequency. This results in errors
+    that are correlated between TOAs over fairly long time spans.
+    
+    Free spectral model. PSD amplitude at each frequency
+    is a free parameter. Model is parameterized by
+    S(f_i) = \rho_i^2 * T,
+    where \rho_i is the free parameter and T is the observation length.
+
+    Parameters supported:
+
+    .. paramtable::
+        :class: pint.models.noise_model.FreeSpecRedNoise
+
+    Note
+    ----
+    
+
+    """
+
+    register = True
+    category = "free_spec_red_noise"
+
+    introduces_correlated_errors = True
+    is_time_correlated = True
+
+    def __init__(
+        self,
+        free_spec_components=30
+    ):
+        super().__init__()
+
+        self.add_param(
+            floatParameter(
+                name="TNREDC",
+                units="",
+                aliases=[],
+                description="Number of red noise frequencies.",
+                convert_tcb2tdb=False,
+            )
+        )
+        for i in range(free_spec_components):
+            self.add_param(
+                floatParameter(
+                    name=f"TNRED_log10_rho_{i}",
+                    units="",
+                    aliases=[],
+                    description="Log10 PSD Amplitude at each Fourier mode.",
+                    convert_tcb2tdb=False,
+                )
+            )
+
+        self.covariance_matrix_funcs += [self.free_spec_rn_cov_matrix]
+        self.basis_funcs += [self.free_spec_rn_basis_weight_pair]
+
+    def get_free_spec_vals(self):
+        nf = int(self.TNREDC.value) if self.TNREDC.value is not None else 30
+        log10_rhos = [getattr(self, f"TNRED_log10_rho_{i}").value for i in range(nf)]
+        return (nf, log10_rhos)
+
+    def get_noise_basis(self, toas):
+        """Return a Fourier design matrix for red noise.
+
+        See the documentation for free_spec_rn_basis_weight_pair function for details."""
+
+        tbl = toas.table
+        t = (tbl["tdbld"].quantity * u.day).to(u.s).value
+        nf = self.get_free_spec_vals()[0]
+        return create_fourier_design_matrix(t, nf)
+
+    def get_noise_weights(self):
+        """Return free spec red noise weights.
+
+        See the documentation for free_spec_rn_basis_weight_pair for details."""
+        nf, log10_rhos = self.get_free_spec_vals()
+        return freespec(log10_rhos)
+
+    def free_spec_rn_basis_weight_pair(self, toas):
+        """Return a Fourier design matrix and free spec red noise weights.
+
+        A Fourier design matrix contains the sine and cosine basis_functions
+        in a Fourier series expansion.
+        The weights used are the free-spec PSD values at frequencies n/T,
+        where n is in [1, TNREDC] and T is the total observing duration of
+        the dataset.
+
+        """
+        return (self.get_noise_basis(toas), self.get_noise_weights())
+
+    def free_spec_rn_cov_matrix(self, toas):
+        Fmat, phi = self.free_spec_rn_basis_weight_pair(toas)
+        return np.dot(Fmat * phi[None, :], Fmat.T)
+
+
 def get_ecorr_epochs(toas_table, dt=1, nmin=2):
     """Find only epochs with more than 1 TOA for applying ECORR."""
     if len(toas_table) == 0:
@@ -899,3 +1222,11 @@ def powerlaw(f, A=1e-16, gamma=5):
 
     fyr = 1 / 3.16e7
     return A**2 / 12.0 / np.pi**2 * fyr ** (gamma - 3) * f ** (-gamma)
+
+def freespec(log10_rhos):
+    """Free-spectral PSD.
+    
+    :param log10_rhos: array - rho values in free spec model [GW units]
+    """
+    return np.repeat(10 ** (2 * np.array(log10_rhos)), 2)
+
