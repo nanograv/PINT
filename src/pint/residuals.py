@@ -9,7 +9,7 @@ dispersion measures (:class:`pint.residuals.WidebandTOAResiduals`).
 
 import collections
 import copy
-from typing import Literal, Optional, Union
+from typing import Dict, Literal, Optional, Union
 import warnings
 
 import astropy.units as u
@@ -158,7 +158,6 @@ class Residuals:
         # also it's expensive
         # only relevant if there are correlated errors
         self._chi2 = None
-        self.noise_resids = {}
         # For residual debugging
         self.debug_info = {}
         # We should be carefully for the other type of residuals
@@ -166,6 +165,13 @@ class Residuals:
         # A flag to identify if this residual object is combined with residual
         # class.
         self._is_combined = False
+
+        self.noise_ampls: Dict[str, u.Quantity] = {}
+        for component in model.NoiseComponent_list:
+            if component.introduces_correlated_errors:
+                self.noise_ampls[component.category] = (
+                    np.zeros_like(component.get_noise_weights(toas)) << u.s
+                )
 
     @property
     def resids(self) -> u.Quantity:
@@ -178,6 +184,17 @@ class Residuals:
     def resids_value(self) -> np.ndarray:
         """Residuals in seconds, with the units stripped."""
         return self.resids.to_value(self.unit)
+
+    @property
+    def noise_resids(self) -> Dict[str, u.Quantity]:
+        return {
+            component.category: (
+                component.get_noise_basis(self.toas)
+                @ self.noise_ampls[component.category]
+            )
+            for component in self.model.NoiseComponent_list
+            if component.introduces_correlated_errors
+        }
 
     def update(self) -> None:
         """Recalculate everything in residuals class after changing model or TOAs"""
