@@ -1841,19 +1841,16 @@ class WidebandDownhillFitter(DownhillFitter):
         # Compute the noise realizations if possibl
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
-            noise_resids = {}
+            noise_ampls = {}
             ntmpar = len(self.model.free_params)
             for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
                 # the indices of noise designmatrix
                 p0 = noise_dims[comp][0] + ntmpar + 1
                 p1 = p0 + noise_dims[comp][1]
-                noise_resids[comp] = (
-                    np.dot(
-                        self.current_state.M[:, p0:p1], self.current_state.xhat[p0:p1]
-                    )
-                    * u.s
-                )
+                noise_ampls[comp] = (self.current_state.xhat / self.current_state.norm)[
+                    p0:p1
+                ] * u.s
                 if debug:
                     setattr(
                         self.resids,
@@ -1864,7 +1861,7 @@ class WidebandDownhillFitter(DownhillFitter):
                         ),
                     )
                     setattr(self.resids, f"{comp}_M_index", (p0, p1))
-            self.resids.noise_resids = noise_resids
+            self.resids.noise_ampls = noise_ampls
             if debug:
                 setattr(self.resids, "norm", self.current_state.norm)
         return r
@@ -2591,17 +2588,17 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             # Compute the noise realizations if possible
             if not full_cov:
                 noise_dims = self.model.noise_model_dimensions(self.toas)
-                noise_resids = {}
+                noise_ampls = {}
                 for comp in noise_dims:
                     # The first column of designmatrix is "offset", add 1 to match
                     # the indices of noise designmatrix
                     p0 = noise_dims[comp][0] + ntmpar + 1
                     p1 = p0 + noise_dims[comp][1]
-                    noise_resids[comp] = np.dot(M[:, p0:p1], xhat[p0:p1]) * u.s
+                    noise_ampls[comp] = (xhat / norm)[p0:p1] * u.s
                     if debug:
                         setattr(self.resids, f"{comp}_M", (M[:, p0:p1], xhat[p0:p1]))
                         setattr(self.resids, f"{comp}_M_index", (p0, p1))
-                self.resids.noise_resids = noise_resids
+                self.resids.noise_ampls = noise_ampls
                 if debug:
                     setattr(self.resids, "norm", norm)
 
@@ -2798,19 +2795,19 @@ class WidebandLMFitter(LMFitter):
         # Compute the noise realizations if possible
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
-            noise_resids = {}
+            noise_ampls = {}
             ntmpar = len(self.model.free_params)
             for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
                 # the indices of noise designmatrix
                 p0 = noise_dims[comp][0] + ntmpar + 1
                 p1 = p0 + noise_dims[comp][1]
-                noise_resids[comp] = np.dot(state.M[:, p0:p1], state.xhat[p0:p1]) * u.s
+                noise_ampls[comp] = (state.xhat / state.norm)[p0:p1] * u.s
                 if debug:
                     setattr(
                         self.resids, f"{comp}_M", (state.M[:, p0:p1], state.xhat[p0:p1])
                     )
                     setattr(self.resids, f"{comp}_M_index", (p0, p1))
-            self.resids.noise_resids = noise_resids
+            self.resids.noise_ampls = noise_ampls
             if debug:
                 setattr(self.resids, "norm", state.norm)
