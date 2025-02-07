@@ -1,20 +1,16 @@
 """The BT (Blandford & Teukolsky) model."""
 
+import astropy.constants as consts
+import astropy.units as u
 import numpy as np
-from pint.models.parameter import floatParameter
+from astropy.time import Time
+
+from pint import ls
+from pint.exceptions import MissingParameter
+from pint.models.parameter import floatParameter, prefixParameter
 from pint.models.pulsar_binary import PulsarBinary
 from pint.models.stand_alone_psr_binaries.BT_model import BTmodel
 from pint.models.stand_alone_psr_binaries.BT_piecewise import BTpiecewise
-from pint.exceptions import MissingParameter
-import astropy.units as u
-import astropy.constants as consts
-from pint import ls
-from astropy.time import Time
-from pint.models.parameter import (
-    floatParameter,
-    prefixParameter,
-)
-
 from pint.toa_select import TOASelect
 
 

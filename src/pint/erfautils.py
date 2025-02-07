@@ -1,7 +1,6 @@
 """Observatory position and velocity calculation."""
 
 import erfa
-
 import numpy as np
 from astropy import table
 from astropy.coordinates import EarthLocation

@@ -1,14 +1,15 @@
 """The DDK model - Damour and Deruelle with kinematics."""
 
 import warnings
+
 import numpy as np
 from astropy import units as u
 from loguru import logger as log
 
+from pint.exceptions import MissingParameter, TimingModelError
 from pint.models.binary_dd import BinaryDD
 from pint.models.parameter import boolParameter, floatParameter, funcParameter
 from pint.models.stand_alone_psr_binaries.DDK_model import DDKmodel
-from pint.exceptions import MissingParameter, TimingModelError
 
 
 def _convert_kin(kin):

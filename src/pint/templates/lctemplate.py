@@ -280,7 +280,7 @@ class LCTemplate:
             for pname in prim.get_parameter_names(free=free)
         ]
         norm_names = [
-            "Norm_%s" % pname for pname in self.norms.get_parameter_names(free=free)
+            f"Norm_{pname}" for pname in self.norms.get_parameter_names(free=free)
         ]
         return prim_names + norm_names
         # return np.append(np.concatenate( [prim.pnames(free) for prim in self.primitives]) , self.norms.get_parameters(free))
@@ -1039,7 +1039,7 @@ def prim_io(template, bound_eps=1e-5):
         # check norms
         norms = np.asarray(norms)
         n = norms.sum()
-        if (n > 1) and (abs(n - 1) < bounds_eps):
+        if (n > 1) and (abs(n - 1) < bound_eps):
             norms *= 1.0 / n
         return primitives, list(norms)
 

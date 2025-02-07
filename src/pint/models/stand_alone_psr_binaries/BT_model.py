@@ -4,7 +4,6 @@ import numpy as np
 
 from .binary_generic import PSR_BINARY
 
-
 """
 This version of the BT model is under construction. Overview of progress:
 

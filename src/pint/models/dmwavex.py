@@ -1,14 +1,15 @@
 """DM variations expressed as a sum of sinusoids."""
 
+from warnings import warn
+
 import astropy.units as u
 import numpy as np
 from loguru import logger as log
-from warnings import warn
 
-from pint.models.parameter import MJDParameter, prefixParameter
+from pint import DMconst, dmu
 from pint.exceptions import MissingParameter
 from pint.models.dispersion_model import Dispersion
-from pint import DMconst, dmu
+from pint.models.parameter import MJDParameter, prefixParameter
 
 
 class DMWaveX(Dispersion):

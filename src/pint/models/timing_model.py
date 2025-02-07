@@ -28,62 +28,56 @@ See :ref:`Timing Models` for more details on how PINT's timing models work.
 """
 
 import abc
+import contextlib
 import copy
 import datetime
 import inspect
-import contextlib
 from collections import OrderedDict, defaultdict
 from functools import wraps
 from typing import Callable, Dict, List, Literal, Optional, Set, Tuple, Union
 from warnings import warn
+
+import astropy.coordinates as coords
+import astropy.time as time
+import numpy as np
+from astropy import constants as c, units as u
+from astropy.table import Table
+from astropy.utils.decorators import lazyproperty
+from loguru import logger as log
+from scipy.optimize import brentq
 from uncertainties import ufloat
 
-import astropy.time as time
-from astropy.table import Table
-from astropy import units as u, constants as c
-import numpy as np
-from astropy.utils.decorators import lazyproperty
-import astropy.coordinates as coords
-from pint.pulsar_ecliptic import OBL, PulsarEcliptic
-from scipy.optimize import brentq
-from loguru import logger as log
-
 import pint
+from pint.derived_quantities import dispersion_slope
+from pint.exceptions import (
+    AliasConflict,
+    MissingBinaryError,
+    MissingParameter,
+    MissingTOAs,
+    PrefixError,
+    PropertyAttributeError,
+    TimingModelError,
+    UnknownBinaryModel,
+    UnknownParameter,
+)
 from pint.models.parameter import (
-    _parfile_formats,
     AngleParameter,
     MJDParameter,
     Parameter,
+    _parfile_formats,
     boolParameter,
     floatParameter,
     funcParameter,
     intParameter,
     maskParameter,
-    strParameter,
     prefixParameter,
+    strParameter,
 )
 from pint.phase import Phase
+from pint.pulsar_ecliptic import OBL, PulsarEcliptic
 from pint.toa import TOAs
-from pint.utils import (
-    split_prefixed_name,
-    open_or_use,
-    colorize,
-    xxxselections,
-)
-from pint.derived_quantities import dispersion_slope
-from pint.exceptions import (
-    PrefixError,
-    MissingTOAs,
-    PropertyAttributeError,
-    TimingModelError,
-    MissingParameter,
-    AliasConflict,
-    UnknownParameter,
-    UnknownBinaryModel,
-    MissingBinaryError,
-)
 from pint.types import file_like, time_like
-
+from pint.utils import colorize, open_or_use, split_prefixed_name, xxxselections
 
 __all__ = [
     "DEFAULT_ORDER",
@@ -498,14 +492,14 @@ class TimingModel:
             num_components_of_type(SolarWindDispersionBase) <= 1
         ), "Model can have at most one solar wind dispersion component."
 
-        from pint.models.dispersion_model import DispersionDM, DispersionDMX
         from pint.models.chromatic_model import ChromaticCM
+        from pint.models.cmwavex import CMWaveX
+        from pint.models.dispersion_model import DispersionDM, DispersionDMX
+        from pint.models.dmwavex import DMWaveX
+        from pint.models.ifunc import IFunc
+        from pint.models.noise_model import PLChromNoise, PLDMNoise, PLRedNoise
         from pint.models.wave import Wave
         from pint.models.wavex import WaveX
-        from pint.models.dmwavex import DMWaveX
-        from pint.models.cmwavex import CMWaveX
-        from pint.models.noise_model import PLRedNoise, PLDMNoise, PLChromNoise
-        from pint.models.ifunc import IFunc
 
         if num_components_of_type((DispersionDMX, PLDMNoise, DMWaveX)) > 1:
             log.warning(
@@ -538,7 +532,7 @@ class TimingModel:
     #    return result
 
     def __getattr__(self, name: str):
-        if name in ["components", "component_types", "search_cmp_attr"]:
+        if name in {"components", "component_types", "search_cmp_attr"}:
             raise AttributeError
         if not hasattr(self, "component_types"):
             raise AttributeError
@@ -2323,10 +2317,7 @@ class TimingModel:
         assert format.lower() in ["text", "markdown"]
         format = format.lower()
 
-        if self.name != "":
-            model_name = self.name.split("/")[-1]
-        else:
-            model_name = "Model 1"
+        model_name = self.name.split("/")[-1] if self.name != "" else "Model 1"
         if othermodel.name != "":
             other_model_name = othermodel.name.split("/")[-1]
         else:
@@ -2752,7 +2743,7 @@ class TimingModel:
                         "change" in m
                         or "diff1" in m
                         or "diff2" in m
-                        and not "unc_rat" in m
+                        and "unc_rat" not in m
                     ):
                         sout = colorize(sout, "red")
                     elif "diff2" in m:
@@ -3822,15 +3813,16 @@ class AllComponents:
             does not match the input parameter name that is going to be mapped
             to the input alias.
         """
-        if alias in alias_map.keys():
-            if param_name == alias_map[alias]:
-                return
-            else:
-                raise AliasConflict(
-                    f"Alias {alias} has been used by" f" parameter {param_name}."
-                )
-        else:
+        if (
+            alias in alias_map
+            and param_name == alias_map[alias]
+            or alias not in alias_map.keys()
+        ):
             return
+        else:
+            raise AliasConflict(
+                f"Alias {alias} has been used by parameter {param_name}."
+            )
 
     @lazyproperty
     def _param_alias_map(self) -> Dict[str, str]:
@@ -3982,7 +3974,7 @@ class AllComponents:
                 "`BINARY  DDFWHE` is not supported, but the same model "
                 "is available as `BINARY  DDH`."
             )
-        elif system_name in ["MSS", "EH", "H88", "DDT", "BT1P", "BT2P"]:
+        elif system_name in {"MSS", "EH", "H88", "DDT", "BT1P", "BT2P"}:
             # Binary model list taken from
             # https://tempo.sourceforge.net/ref_man_sections/binary.txt
             raise UnknownBinaryModel(

@@ -15,4 +15,4 @@ the released changes.
 ### Fixed
 - Made `TimingModel.is_binary()` more robust. 
 ### Removed
-
+- Definition of `@cached_property` to support Python<=3.7

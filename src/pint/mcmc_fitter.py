@@ -5,8 +5,8 @@ import copy
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy.table import vstack
-from scipy.stats import norm, uniform
 from loguru import logger as log
+from scipy.stats import norm, uniform
 
 import pint.plot_utils as plot_utils
 from pint.eventstats import hm, hmw
@@ -14,7 +14,6 @@ from pint.fitter import Fitter
 from pint.models.priors import Prior
 from pint.residuals import Residuals
 from pint.templates.lctemplate import LCTemplate
-
 
 __all__ = [
     "MCMCFitter",

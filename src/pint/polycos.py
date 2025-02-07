@@ -33,13 +33,13 @@ References
 http://tempo.sourceforge.net/ref_man_sections/tz-polyco.txt
 """
 
+from collections import OrderedDict
+
 import astropy.table as table
 import astropy.units as u
 import numpy as np
 from astropy.io import registry
 from astropy.time import Time
-from collections import OrderedDict
-
 from loguru import logger as log
 
 try:

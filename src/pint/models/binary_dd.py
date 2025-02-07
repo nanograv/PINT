@@ -1,16 +1,16 @@
 """Damour and Deruelle binary model."""
 
 import numpy as np
-from astropy import units as u, constants as c
+from astropy import constants as c, units as u
 
+import pint.derived_quantities
 from pint import Tsun
 from pint.models.parameter import floatParameter, funcParameter
 from pint.models.pulsar_binary import PulsarBinary
 from pint.models.stand_alone_psr_binaries.DD_model import DDmodel
-from pint.models.stand_alone_psr_binaries.DDS_model import DDSmodel
 from pint.models.stand_alone_psr_binaries.DDGR_model import DDGRmodel
 from pint.models.stand_alone_psr_binaries.DDH_model import DDHmodel
-import pint.derived_quantities
+from pint.models.stand_alone_psr_binaries.DDS_model import DDSmodel
 
 
 # these would be doable with lambda functions

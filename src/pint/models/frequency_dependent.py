@@ -5,9 +5,9 @@ from warnings import warn
 import astropy.units as u
 import numpy as np
 
+from pint.exceptions import MissingParameter
 from pint.models.parameter import prefixParameter
 from pint.models.timing_model import DelayComponent
-from pint.exceptions import MissingParameter
 
 
 class FD(DelayComponent):

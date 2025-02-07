@@ -13,8 +13,6 @@ from scipy.stats import norm, uniform
 import pint.logging
 from loguru import logger as log
 
-pint.logging.setup(level=pint.logging.script_level)
-
 import pint.fermi_toas as fermi
 import pint.models
 import pint.plot_utils as plot_utils
@@ -28,6 +26,8 @@ from pint.observatory.satellite_obs import get_satellite_observatory
 from pint.types import file_like
 
 __all__ = ["read_gaussfitfile", "marginalize_over_phase", "main"]
+
+pint.logging.setup(level=pint.logging.script_level)
 
 
 def read_gaussfitfile(gaussfitfile: file_like, proflen: int):

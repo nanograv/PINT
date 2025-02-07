@@ -23,7 +23,7 @@ import re
 import warnings
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import Any, Generator, List, Optional, Set, Tuple, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Generator, List, Optional, Set, Tuple, Union
 
 import astropy.table as table
 import astropy.time as time

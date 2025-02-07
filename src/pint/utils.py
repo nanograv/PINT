@@ -38,44 +38,44 @@ import platform
 import re
 import sys
 import textwrap
+import warnings
 from contextlib import contextmanager
+from copy import deepcopy
 from pathlib import Path
-from warnings import warn
-from scipy.optimize import minimize
-from numdifftools import Hessian
 from typing import (
-    Optional,
-    List,
-    Union,
-    Callable,
-    Any,
-    Tuple,
     IO,
+    Any,
+    Callable,
     Dict,
     Iterable,
-    Type,
     Iterator,
+    List,
     Literal,
+    Optional,
+    Tuple,
+    Type,
+    Union,
 )
-import uncertainties
+from warnings import warn
 
 import astropy.constants as const
 import astropy.coordinates as coords
 import astropy.units as u
 import numpy as np
+import uncertainties
 from astropy import constants
 from astropy.time import Time
 from loguru import logger as log
-from scipy.special import fdtrc
+from numdifftools import Hessian
 from scipy.linalg import cho_factor, cho_solve
-from copy import deepcopy
-import warnings
+from scipy.optimize import minimize
+from scipy.special import fdtrc
 
 import pint
 import pint.pulsar_ecliptic
+from pint.exceptions import PINTPrecisionError, PrefixError
 from pint.toa_select import TOASelect
 from pint.types import file_like, quantity_like
-from pint.exceptions import PINTPrecisionError, PrefixError
 
 __all__ = [
     "check_longdouble_precision",
@@ -2423,13 +2423,14 @@ def info_string(
     }
 
     if detailed:
-        from numpy import __version__ as numpy_version
-        from scipy import __version__ as scipy_version
         from astropy import __version__ as astropy_version
         from erfa import __version__ as erfa_version
         from jplephem import __version__ as jpleph_version
-        from matplotlib import __version__ as matplotlib_version
         from loguru import __version__ as loguru_version
+        from matplotlib import __version__ as matplotlib_version
+        from numpy import __version__ as numpy_version
+        from scipy import __version__ as scipy_version
+
         from pint import __file__ as pint_file
 
         info_dict.update(
@@ -3117,8 +3118,8 @@ def woodbury_dot(
 def _get_wx2pl_lnlike(
     model: "pint.models.TimingModel", component_name: str, ignore_fyr: bool = True
 ) -> float:
-    from pint.models.noise_model import powerlaw
     from pint import DMconst
+    from pint.models.noise_model import powerlaw
 
     assert component_name in {"WaveX", "DMWaveX", "CMWaveX"}
     prefix_dict = {"WaveX": "WX", "DMWaveX": "DMWX", "CMWaveX": "CMWX"}
