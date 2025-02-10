@@ -1201,65 +1201,13 @@ class WLSState(ModelState):
             toas=self.fitter.toas, incfrozen=False, incoffset=True
         )
         # Get residuals and TOA uncertainties in seconds
-        Nvec = self.model.scaled_toa_uncertainty(self.fitter.toas).to(u.s).value
-        scaled_resids = self.resids.time_resids.to(u.s).value / Nvec
+        sigma = self.model.scaled_toa_uncertainty(self.fitter.toas).to(u.s).value
+        residuals = self.resids.time_resids.to(u.s).value
 
-        # "Whiten" design matrix and residuals by dividing by uncertainties
-        M = M / Nvec.reshape((-1, 1))
+        dpars, _, _, (self.U, self.s, self.Vt, self.fac) = fit_wls_svd(
+            residuals, sigma, M, params, self.threshold
+        )
 
-        # For each column in design matrix except for col 0 (const. pulse
-        # phase), subtract the mean value, and scale by the column RMS.
-        # This helps avoid numerical problems later.  The scaling factors need
-        # to be saved to recover correct parameter units.
-        # NOTE, We remove subtract mean value here, since it did not give us a
-        # fast converge fitting.
-        # M[:,1:] -= M[:,1:].mean(axis=0)
-        M, fac = normalize_designmatrix(M, params)
-        # Singular value decomp of design matrix:
-        #   M = U s V^T
-        # Dimensions:
-        #   M, U are Ntoa x Nparam
-        #   s is Nparam x Nparam diagonal matrix encoded as 1-D vector
-        #   V^T is Nparam x Nparam
-        U, s, Vt = scipy.linalg.svd(M, full_matrices=False)
-        # Note, here we could do various checks like report
-        # matrix condition number or zero out low singular values.
-        # print 'log_10 cond=', np.log10(s.max()/s.min())
-        # Note, Check the threshold from data precision level.Borrowed from
-        # np Curve fit.
-        threshold = self.threshold
-        if threshold is None:
-            # M is float, not longdouble
-            # threshold = np.finfo(float).eps * max(M.shape)
-            threshold = 1e-14 * max(M.shape)
-
-        log.trace(f"Singular values for fit are {s}")
-        bad = np.where(s <= threshold * s[0])[0]
-        s[bad] = np.inf
-        for c in bad:
-            bad_col = Vt[c, :]
-            bad_col /= abs(bad_col).max()
-            bad_combination = " + ".join(
-                [
-                    f"{co}*{p}"
-                    for (co, p) in sorted(zip(bad_col, params))
-                    if abs(co) > threshold
-                ]
-            )
-            warn(
-                f"Parameter degeneracy; the following linear combination yields "
-                f"almost no change: {bad_combination}",
-                DegeneracyWarning,
-            )
-
-        self.M = M
-        self.U = U
-        self.Vt = Vt
-        self.s = s
-        self.fac = fac
-        self.params = params
-        self.units = units
-        self.scaled_resids = scaled_resids
         # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
         covariance_matrix_labels = {
             param: (i, i + 1, unit)
@@ -1269,10 +1217,9 @@ class WLSState(ModelState):
         covariance_matrix_labels = [covariance_matrix_labels] * 2
         self.parameter_covariance_matrix_labels = covariance_matrix_labels
 
-        # The delta-parameter values
-        #   dpars = V s^-1 U^T r
-        # Scaling by fac recovers original units
-        return (Vt.T @ ((U.T @ scaled_resids) / s)) / fac
+        self.params = params
+
+        return dpars
 
     def take_step(self, step, lambda_=1):
         return WLSState(
@@ -1903,66 +1850,20 @@ class WLSFitter(Fitter):
             # Get residuals and TOA uncertainties in seconds
             self.update_resids()
             residuals = self.resids.time_resids.to(u.s).value
-            Nvec = self.model.scaled_toa_uncertainty(self.toas).to(u.s).value
+            sigma = self.model.scaled_toa_uncertainty(self.toas).to(u.s).value
 
-            # "Whiten" design matrix and residuals by dividing by uncertainties
-            M = M / Nvec.reshape((-1, 1))
-            residuals = residuals / Nvec
+            dpars, Sigma, norm, _ = fit_wls_svd(residuals, sigma, M, params, threshold)
 
-            # For each column in design matrix except for col 0 (const. pulse
-            # phase), subtract the mean value, and scale by the column RMS.
-            # This helps avoid numerical problems later.  The scaling factors need
-            # to be saved to recover correct parameter units.
-            # NOTE, We remove subtract mean value here, since it did not give us a
-            # fast converge fitting.
-            # M[:,1:] -= M[:,1:].mean(axis=0)
-            M, fac = normalize_designmatrix(M, params)
-            # Singular value decomp of design matrix:
-            #   M = U s V^T
-            # Dimensions:
-            #   M, U are Ntoa x Nparam
-            #   s is Nparam x Nparam diagonal matrix encoded as 1-D vector
-            #   V^T is Nparam x Nparam
-            U, s, Vt = scipy.linalg.svd(M, full_matrices=False)
-            # Note, here we could do various checks like report
-            # matrix condition number or zero out low singular values.
-            # print 'log_10 cond=', np.log10(s.max()/s.min())
-            # Note, Check the threshold from data precision level.Borrowed from
-            # np Curve fit.
-            if threshold is None:
-                # M is float, not longdouble
-                # threshold = np.finfo(float).eps * max(M.shape)
-                threshold = 1e-14 * max(M.shape)
+            # errs = np.sqrt(np.diag(Sigma)) / fac
 
-            bad = np.where(s <= threshold * s[0])[0]
-            s[bad] = np.inf
-            for c in bad:
-                bad_col = Vt[c, :]
-                bad_col /= abs(bad_col).max()
-                bad_combination = " + ".join(
-                    [
-                        f"{co}*{p}"
-                        for (co, p) in reversed(sorted(zip(bad_col, params)))
-                        if abs(co) > threshold
-                    ]
-                )
-                warn(
-                    f"Parameter degeneracy; the following linear combination yields "
-                    f"almost no change: {bad_combination}",
-                    DegeneracyWarning,
-                )
-            # Sigma = np.dot(Vt.T / s, U.T)
-            # The post-fit parameter covariance matrix
-            #   Sigma = V s^-2 V^T
-            Sigma = np.dot(Vt.T / (s**2), Vt)
-            # Parameter uncertainties. Scale by fac recovers original units.
-            errs = np.sqrt(np.diag(Sigma)) / fac
+            errors = np.sqrt(np.diag(Sigma))
+
             # covariance matrix stuff (for randomized models in pintk)
-            sigma_var = (Sigma / fac).T / fac
-            errors = np.sqrt(np.diag(sigma_var))
-            sigma_cov = (sigma_var / errors).T / errors
+            # sigma_var = (Sigma / fac).T / fac
+            # errors = np.sqrt(np.diag(sigma_var))
+            Sigma_cov = (Sigma / errors).T / errors
             # covariance matrix = variances in diagonal, used for gaussian random models
-            covariance_matrix = sigma_var
+            covariance_matrix = Sigma
             covariance_matrix_labels = {
                 param: (i, i + 1, unit)
                 for i, (param, unit) in enumerate(zip(params, units))
@@ -1977,15 +1878,15 @@ class WLSFitter(Fitter):
 
             # correlation matrix = 1s in diagonal, use for comparison to tempo/tempo2 cov matrix
             self.parameter_correlation_matrix = CorrelationMatrix(
-                sigma_cov, covariance_matrix_labels
+                Sigma_cov, covariance_matrix_labels
             )
-            self.fac = fac
+            self.fac = norm
             self.errors = errors
 
             # The delta-parameter values
             #   dpars = V s^-1 U^T r
             # Scaling by fac recovers original units
-            dpars = np.dot(Vt.T, np.dot(U.T, residuals) / s) / fac
+            # dpars = np.dot(Vt.T, np.dot(U.T, residuals) / s) / fac
             for pn in fitp.keys():
                 uind = params.index(pn)  # Index of designmatrix
                 un = 1.0 / (units[uind])  # Unit in designmatrix
@@ -1993,7 +1894,7 @@ class WLSFitter(Fitter):
                 pv, dpv = fitpv[pn] * fitp[pn].units, dpars[uind] * un
                 fitpv[pn] = np.longdouble((pv + dpv) / fitp[pn].units)
                 # NOTE We need some way to use the parameter limits.
-                fitperrs[pn] = errs[uind]
+                fitperrs[pn] = errors[uind]
             chi2 = self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
             # Update Uncertainties
             self.set_param_uncertainties(fitperrs)
@@ -2759,3 +2660,55 @@ class WidebandLMFitter(LMFitter):
             self.resids.noise_resids = noise_resids
             if debug:
                 setattr(self.resids, "norm", state.norm)
+
+
+def fit_wls_svd(r, sigma, M, params, threshold):
+    """Perform a linear WLS fit given timing residuals (r),
+    uncertainties (sigma), and design matrix (M) using SVD."""
+    # r1 = N^{-0.5} r
+    # N is the diagonal TOA covariance matrix.
+    r1 = r / sigma
+
+    # M1 = N^{-0.5} M
+    M1 = M / sigma[:, None]
+
+    # M2 = M1 C^{-1}
+    # where C = diag[diag[M^T M]]
+    # This makes the design matrix elements roughly of the
+    # same order of magnitude for improving numerical stability.
+    M2, Cdiag = normalize_designmatrix(M1, params)
+
+    # M2 = U S V^T
+    # Both U and V^T are orthogonal matrices.
+    U, Sdiag, VT = scipy.linalg.svd(M2, full_matrices=False)
+
+    # Deal with degeneracies by replacing very small singular
+    # values by inf. This is the same thing as using a pseudoinverse
+    # instead of (M2^T M)^{-1}.
+    threshold = 1e-14 * max(M.shape) if threshold is None else threshold
+    bad = np.where(Sdiag <= threshold * Sdiag[0])[0]
+    Sdiag[bad] = np.inf
+    for c in bad:
+        bad_col = VT[c, :]
+        bad_col /= abs(bad_col).max()
+        bad_combination = " + ".join(
+            [
+                f"{co}*{p}"
+                for (co, p) in reversed(sorted(zip(bad_col, params)))
+                if abs(co) > threshold
+            ]
+        )
+        warn(
+            f"Parameter degeneracy; the following linear combination yields "
+            f"almost no change: {bad_combination}",
+            DegeneracyWarning,
+        )
+
+    # Sigma = (M2^T M)^{-1} = C^{-1} V (S^T S)^{-1} V^T C^-1
+    Sigma_ = (VT.T / (Sdiag**2)) @ VT
+    Sigma = (Sigma_ / Cdiag).T / Cdiag
+
+    # betahat = C^{-1} V (S^T S)^{-1} S^T U^T r1
+    dpars = (VT.T @ ((U.T @ r1) / Sdiag)) / Cdiag
+
+    return dpars, Sigma, Cdiag, (U, Sdiag, VT, Cdiag)
