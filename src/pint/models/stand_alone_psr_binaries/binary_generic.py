@@ -3,10 +3,8 @@
 import astropy.constants as c
 import astropy.units as u
 import numpy as np
-
-from loguru import logger as log
-
 from erfa import DAYSEC as SECS_PER_DAY
+from loguru import logger as log
 
 from pint import Tsun, ls
 from pint.models.stand_alone_psr_binaries.binary_orbits import OrbitPB

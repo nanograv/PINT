@@ -22,10 +22,10 @@ import os
 from functools import partial
 
 import astropy.io.fits as pyfits
-from astropy.time import Time
-from astropy.coordinates import EarthLocation
-from astropy import units as u
 import numpy as np
+from astropy import units as u
+from astropy.coordinates import EarthLocation
+from astropy.time import Time
 from loguru import logger as log
 
 import pint.toa as toa

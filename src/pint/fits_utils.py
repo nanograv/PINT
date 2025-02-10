@@ -1,14 +1,11 @@
 """FITS handling functions"""
 
 import numpy as np
+from astropy.io import fits
+from erfa import DAYSEC as SECS_PER_DAY
 from loguru import logger as log
 
-from erfa import DAYSEC as SECS_PER_DAY
-
-from astropy.io import fits
-
 from pint.pulsar_mjd import fortran_float
-
 
 __all__ = ["read_fits_event_mjds", "read_fits_event_mjds_tuples"]
 

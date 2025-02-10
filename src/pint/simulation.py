@@ -3,19 +3,19 @@
 
 from collections import OrderedDict
 from copy import deepcopy
-from typing import Optional, List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import astropy.units as u
 import numpy as np
-from loguru import logger as log
 from astropy import time
+from loguru import logger as log
 
-from pint.models.noise_model import NoiseComponent
-from pint.types import time_like, file_like
+import pint.fitter
 import pint.residuals
 import pint.toa
-import pint.fitter
+from pint.models.noise_model import NoiseComponent
 from pint.observatory import bipm_default, get_observatory
+from pint.types import file_like, time_like
 
 __all__ = [
     "zero_residuals",

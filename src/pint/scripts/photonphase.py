@@ -171,9 +171,8 @@ def main(argv=None):
     )
 
     use_planets = False
-    if "PLANET_SHAPIRO" in modelin.params:
-        if modelin.PLANET_SHAPIRO.value:
-            use_planets = True
+    if "PLANET_SHAPIRO" in modelin.params and modelin.PLANET_SHAPIRO.value:
+        use_planets = True
     if "AbsPhase" not in modelin.components:
         log.error(
             "TimingModel does not include AbsPhase component, which is required "

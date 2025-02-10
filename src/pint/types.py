@@ -1,8 +1,9 @@
 from pathlib import Path
-import numpy as np
-from typing import Union, IO
-from astropy import units as u
+from typing import IO, Union
+
 import astropy.time
+import numpy as np
+from astropy import units as u
 
 # custom types
 # Something that is a Quantity or can behave like one (with units assumed)

@@ -1,13 +1,14 @@
 """Delays expressed as a sum of sinusoids."""
 
+from warnings import warn
+
 import astropy.units as u
 import numpy as np
 from loguru import logger as log
-from warnings import warn
 
+from pint.exceptions import MissingParameter
 from pint.models.parameter import MJDParameter, prefixParameter
 from pint.models.timing_model import DelayComponent
-from pint.exceptions import MissingParameter
 
 
 class WaveX(DelayComponent):

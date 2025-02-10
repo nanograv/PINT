@@ -14,8 +14,8 @@ import warnings
 
 import astropy.units as u
 import numpy as np
-from scipy.linalg import LinAlgError
 from loguru import logger as log
+from scipy.linalg import LinAlgError
 
 from pint.models.dispersion_model import Dispersion
 from pint.models.parameter import maskParameter
@@ -24,8 +24,8 @@ from pint.phase import Phase
 from pint.toa import TOAs
 from pint.utils import (
     sherman_morrison_dot,
-    weighted_mean,
     taylor_horner_deriv,
+    weighted_mean,
     woodbury_dot,
 )
 

@@ -2,27 +2,23 @@
 
 from warnings import warn
 
-import numpy as np
 import astropy.units as u
+import numpy as np
 from astropy.table import Table
 from astropy.time import Time
 from loguru import logger as log
 
+from pint import DMconst, dmu
+from pint.exceptions import MissingParameter, MissingTOAs
 from pint.models.parameter import (
     MJDParameter,
     floatParameter,
-    prefixParameter,
     maskParameter,
+    prefixParameter,
 )
 from pint.models.timing_model import DelayComponent
 from pint.toa_select import TOASelect
-from pint.utils import (
-    split_prefixed_name,
-    taylor_horner,
-    taylor_horner_deriv,
-)
-from pint import DMconst, dmu
-from pint.exceptions import MissingParameter, MissingTOAs
+from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
 
 # This value is cited from Duncan Lorimer, Michael Kramer, Handbook of Pulsar
 # Astronomy, Second edition, Page 86, Note 1

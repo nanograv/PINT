@@ -1,5 +1,6 @@
 """Solar system ephemeris downloading and setting support."""
 
+import contextlib
 import os
 import pathlib
 from typing import Optional, Union
@@ -7,7 +8,6 @@ from typing import Optional, Union
 import astropy.coordinates
 import astropy.units as u
 import astropy.utils.state
-import contextlib
 import numpy as np
 from astropy.utils.data import download_file
 from loguru import logger as log
@@ -275,7 +275,7 @@ def objPosVel(
     elif obj2.lower() == "ssb" and obj1.lower() != "ssb":
         obj1pv = objPosVel_wrt_SSB(obj1, t, ephem, path=path, link=link)
         return -obj1pv
-    elif obj2.lower() != "ssb" and obj1.lower() != "ssb":
+    elif obj2.lower() != "ssb":
         obj1pv = objPosVel_wrt_SSB(obj1, t, ephem, path=path, link=link)
         obj2pv = objPosVel_wrt_SSB(obj2, t, ephem, path=path, link=link)
         return obj2pv - obj1pv

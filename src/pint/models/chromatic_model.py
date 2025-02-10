@@ -1,15 +1,17 @@
-from astropy.table import Table
 from warnings import warn
-import numpy as np
+
 import astropy.units as u
-from pint.models.timing_model import DelayComponent, MissingParameter, MissingTOAs
-from pint.models.parameter import floatParameter, prefixParameter, MJDParameter
-from pint.toa_select import TOASelect
-from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
-from pint import DMconst
-from pint.exceptions import MissingParameter
+import numpy as np
+from astropy.table import Table
 from astropy.time import Time
 from loguru import logger as log
+
+from pint import DMconst
+from pint.exceptions import MissingParameter
+from pint.models.parameter import MJDParameter, floatParameter, prefixParameter
+from pint.models.timing_model import DelayComponent, MissingParameter, MissingTOAs
+from pint.toa_select import TOASelect
+from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
 
 cmu = u.pc / u.cm**3 / u.MHz**2
 

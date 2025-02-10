@@ -1,9 +1,9 @@
 #!/usr/bin/env python
+import astropy
+import astropy.time
+import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
-import astropy
-import astropy.units as u
-import astropy.time
 
 __all__ = ["phaseogram", "phaseogram_binned", "plot_priors"]
 
