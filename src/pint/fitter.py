@@ -1980,8 +1980,6 @@ class GLSFitter(Fitter):
                     phiinv = np.concatenate((phiinv, 1 / phi))
                     M = np.hstack((M, Mn))
 
-            ntmpar = len(fitp)
-
             # normalize the design matrix
             M, norm = normalize_designmatrix(M, params)
             self.fac = norm
@@ -2656,30 +2654,7 @@ class WidebandLMFitter(LMFitter):
                 setattr(self.resids, "norm", state.norm)
 
 
-def fit_wls_svd(r, sigma, M, params, threshold):
-    """Perform a linear WLS fit given timing residuals (r),
-    uncertainties (sigma), and design matrix (M) using SVD."""
-    # r1 = N^{-0.5} r
-    # N is the diagonal TOA covariance matrix.
-    r1 = r / sigma
-
-    # M1 = N^{-0.5} M
-    M1 = M / sigma[:, None]
-
-    # M2 = M1 C^{-1}
-    # where C = diag[diag[M^T M]]
-    # This makes the design matrix elements roughly of the
-    # same order of magnitude for improving numerical stability.
-    M2, Cdiag = normalize_designmatrix(M1, params)
-
-    # M2 = U S V^T
-    # Both U and V^T are orthogonal matrices.
-    U, Sdiag, VT = scipy.linalg.svd(M2, full_matrices=False)
-
-    # Deal with degeneracies by replacing very small singular
-    # values by inf. This is the same thing as using a pseudoinverse
-    # instead of (M2^T M)^{-1}.
-    threshold = 1e-14 * max(M.shape) if threshold is None else threshold
+def apply_Sdiag_threshold(Sdiag, VT, threshold, params):
     bad = np.where(Sdiag <= threshold * Sdiag[0])[0]
     Sdiag[bad] = np.inf
     for c in bad:
@@ -2698,11 +2673,83 @@ def fit_wls_svd(r, sigma, M, params, threshold):
             DegeneracyWarning,
         )
 
+    return Sdiag
+
+
+def fit_wls_svd(r, sigma, M, params, threshold):
+    """Perform a linear WLS fit given timing residuals (r),
+    uncertainties (sigma), and design matrix (M) using SVD."""
+    # r1 = N^{-0.5} r
+    # N is the diagonal TOA covariance matrix.
+    r1 = r / sigma
+
+    # M1 = N^{-0.5} M
+    M1 = M / sigma[:, None]
+
+    # M2 = M1 A^{-1}
+    # where A = diag[diag[M^T M]]
+    # This makes the design matrix elements roughly of the
+    # same order of magnitude for improving numerical stability.
+    M2, Adiag = normalize_designmatrix(M1, params)
+
+    # M2 = U S V^T
+    # Both U and V^T are orthogonal matrices.
+    U, Sdiag, VT = scipy.linalg.svd(M2, full_matrices=False)
+
+    # Deal with degeneracies by replacing very small singular
+    # values by inf. This is the same thing as using a pseudoinverse
+    # instead of (M2^T M)^{-1}.
+    Sdiag = apply_Sdiag_threshold(Sdiag, VT, threshold, params)
+
     # Sigma = (M2^T M)^{-1} = C^{-1} V (S^T S)^{-1} V^T C^-1
     Sigma_ = (VT.T / (Sdiag**2)) @ VT
-    Sigma = (Sigma_ / Cdiag).T / Cdiag
+    Sigma = (Sigma_ / Adiag).T / Adiag
 
     # betahat = C^{-1} V (S^T S)^{-1} S^T U^T r1
-    dpars = (VT.T @ ((U.T @ r1) / Sdiag)) / Cdiag
+    dpars = (VT.T @ ((U.T @ r1) / Sdiag)) / Adiag
 
-    return dpars, Sigma, Cdiag, (U, Sdiag, VT, Cdiag)
+    return dpars, Sigma, Adiag, (U, Sdiag, VT, Adiag)
+
+
+def fit_gls_svd(r, sigma, M, Phidiag, params, threshold):
+    # M1 = M A^{-1}
+    # where A = diag[diag[M^T M]]
+    # This makes the design matrix elements roughly of the
+    # same order of magnitude for improving numerical stability.
+    M1, Cdiag = normalize_designmatrix(M, params)
+
+    # Phi1 = Phi C^2
+    Phiinvdiag1 = 1 / Phidiag / Cdiag**2
+
+    # N^{-1}
+    Ninv = 1 / sigma**2
+
+    # Sigma1^{-1} = Phi1^{-1} + M1^T N^{-1} M1
+    M1T_Ninv_M1 = M1.T @ (Ninv[:, None] * M1)
+    Sigma1inv = M1T_Ninv_M1 + np.diag(Phiinvdiag1)
+
+    # M1^T N^{-1} r
+    M1T_Ninv_r = M1.T @ (Ninv * r)
+
+    return _fit_svd(Sigma1inv, M1T_Ninv_r, Cdiag, threshold, params)
+
+
+def fit_gls_svd_fullcov(r, C, M, params, threshold):
+    M1, Cdiag = normalize_designmatrix(M, params)
+    C_cf = scipy.linalg.cho_factor(C)
+    Cinv_M1 = scipy.linalg.cho_solve(C_cf, M1)
+    M1T_Cinv_M = M.T @ Cinv_M1
+    M1T_Cinv_r = Cinv_M1.T @ r
+
+    return _fit_svd(M1T_Cinv_M, M1T_Cinv_r, Cdiag, threshold, params)
+
+
+def _fit_svd(Sigmainv, y, Cdiag, threshold, params):
+    U, Sdiag, VT = scipy.linalg.svd(Sigmainv, full_matrices=False)
+
+    Sdiag = apply_Sdiag_threshold(Sdiag, VT, threshold, params)
+
+    x1hat = np.dot(VT.T, np.dot(U.T, y) / Sdiag)
+    dpars = x1hat / Cdiag
+
+    return dpars, (Sdiag, VT)
