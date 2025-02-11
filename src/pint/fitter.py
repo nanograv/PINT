@@ -1333,23 +1333,7 @@ class GLSState(ModelState):
         U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
         log.trace(f"s: {s}")
 
-        bad = np.where(s <= self.threshold * s[0])[0]
-        s[bad] = np.inf
-        for c in bad:
-            bad_col = Vt[c, :]
-            bad_col /= abs(bad_col).max()
-            bad_combination = " ".join(
-                [
-                    f"{p}"
-                    for (co, p) in sorted(zip(bad_col, params))
-                    if abs(co) > self.threshold
-                ]
-            )
-            warn(
-                f"Parameter degeneracy; the following combination of parameters yields "
-                f"almost no change: {bad_combination}",
-                DegeneracyWarning,
-            )
+        s = apply_Sdiag_threshold(s, Vt, self.threshold, params)
 
         self.norm = norm
         self.s, self.Vt = s, Vt
@@ -2000,26 +1984,11 @@ class GLSFitter(Fitter):
                 U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
                 log.trace(f"s: {s}")
 
-                bad = np.where(s <= threshold * s[0])[0]
-                s[bad] = np.inf
-                for c in bad:
-                    bad_col = Vt[c, :]
-                    bad_col /= abs(bad_col).max()
-                    bad_combination = " ".join(
-                        [
-                            f"{co}*{p}"
-                            for (co, p) in reversed(sorted(zip(bad_col, params)))
-                            if abs(co) > threshold
-                        ]
-                    )
-                    warn(
-                        f"Parameter degeneracy; the following combination of parameters yields "
-                        f"almost no change: {bad_combination}",
-                        DegeneracyWarning,
-                    )
+                s = apply_Sdiag_threshold(s, Vt, threshold, params)
 
                 xvar = np.dot(Vt.T / s, Vt)
                 xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+
             log.trace(f"norm: {norm}")
             log.trace(f"xhat: {xhat}")
             newres = residuals - np.dot(M, xhat)
