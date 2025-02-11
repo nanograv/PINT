@@ -1760,7 +1760,13 @@ class TimingModel:
         """Returns the joint weight vector for all timing and noise components.
         The weights of the timing model parameters are set to be a large constant,
         representing an uninformative prior."""
-        npar_tm = len(self.free_params) + int("PhaseOffset" not in self.components)
+        npar_tm = len(
+            [
+                pname
+                for pname in self.free_params
+                if pname not in self.get_params_of_component_type("NoiseComponent")
+            ]
+        ) + int("PhaseOffset" not in self.components)
         phi_tm = np.ones(npar_tm) * 1e40
         phi_nm = self.noise_model_basis_weight(toas)
         return np.hstack((phi_tm, phi_nm)) if phi_nm is not None else phi_tm
