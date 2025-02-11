@@ -1971,40 +1971,32 @@ class GLSFitter(Fitter):
 
             # Define the linear system
             # normalize the design matrix
-            M, params, units = self.get_designmatrix()
 
             ntmpar = len(fitp)
 
             residuals = self.resids.time_resids.to(u.s).value
 
-            # get any noise design matrices and weight vectors
-            if not full_cov:
-                Mn = self.model.noise_model_designmatrix(self.toas)
-                phi = self.model.noise_model_basis_weight(self.toas)
-                phiinv = np.zeros(M.shape[1])
-                if Mn is not None and phi is not None:
-                    phiinv = np.concatenate((phiinv, 1 / phi))
-                    M = np.hstack((M, Mn))
-
-            # normalize the design matrix
-            M, norm = normalize_designmatrix(M, params)
-            self.fac = norm
-
             # compute covariance matrices
             if full_cov:
+                M, params, units = self.get_designmatrix()
+                M, norm = normalize_designmatrix(M, params)
                 cov = self.model.toa_covariance_matrix(self.toas)
                 cf = scipy.linalg.cho_factor(cov)
                 cm = scipy.linalg.cho_solve(cf, M)
                 mtcm = np.dot(M.T, cm)
                 mtcy = np.dot(cm.T, residuals)
-
             else:
+                M, params, units = self.model.full_designmatrix(self.toas)
+                phiinv = 1 / self.model.full_basis_weight(self.toas)
+                M, norm = normalize_designmatrix(M, params)
                 phiinv /= norm**2
                 Nvec = self.model.scaled_toa_uncertainty(self.toas).to(u.s).value ** 2
                 cinv = 1 / Nvec
                 mtcm = np.dot(M.T, cinv[:, None] * M)
                 mtcm += np.diag(phiinv)
                 mtcy = np.dot(M.T, cinv * residuals)
+
+            self.fac = norm
 
             log.trace(f"mtcm: {mtcm}")
             xhat, xvar = None, None
