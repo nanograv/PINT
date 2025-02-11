@@ -1205,7 +1205,11 @@ class WLSState(ModelState):
         residuals = self.resids.time_resids.to(u.s).value
 
         dpars, _, _, (self.U, self.s, self.Vt, self.fac) = fit_wls_svd(
-            residuals, sigma, M, params, self.threshold
+            residuals,
+            sigma,
+            M,
+            params,
+            (self.threshold if self.threshold is not None else 1e-14 * max(M.shape)),
         )
 
         # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
@@ -1958,8 +1962,9 @@ class GLSFitter(Fitter):
         # check that params of timing model have necessary components
         self.model.validate()
         self.model.validate_toas(self.toas)
+        self.update_resids()
         chi2 = 0
-        for i in range(maxiter):
+        for _ in range(maxiter):
             fitp = self.model.get_params_dict("free", "quantity")
             fitpv = self.model.get_params_dict("free", "num")
             fitperrs = self.model.get_params_dict("free", "uncertainty")
@@ -1971,10 +1976,6 @@ class GLSFitter(Fitter):
 
             ntmpar = len(fitp)
 
-            # Get residuals and TOA uncertainties in seconds
-            if i == 0:
-                # Why is this here?
-                self.update_resids()
             residuals = self.resids.time_resids.to(u.s).value
 
             # get any noise design matrices and weight vectors
