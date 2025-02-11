@@ -1344,12 +1344,8 @@ class GLSState(ModelState):
         covariance_matrix_labels = [covariance_matrix_labels] * 2
         self.parameter_covariance_matrix_labels = covariance_matrix_labels
 
-        U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
-        s = apply_Sdiag_threshold(s, Vt, self.threshold, params)
-
+        self.xvar, self.xhat = _solve_svd(mtcm, mtcy, self.threshold, params)
         self.norm = norm
-        self.xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
-        self.xvar = np.dot(Vt.T / s, Vt)
 
         return self.xhat / norm
 
