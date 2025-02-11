@@ -316,6 +316,7 @@ class Fitter:
         # First, print fit quality metrics
         s = f"Fitted model using {self.method} method with {len(self.model.free_params)} free parameters to {self.toas.ntoas} TOAs\n"
         if is_wideband:
+            self.resids_init: WidebandTOAResiduals
             s += f"Prefit TOA residuals Wrms = {self.resids_init.toa.rms_weighted()}, Postfit TOA residuals Wrms = {self.resids.toa.rms_weighted()}\n"
             s += f"Prefit DM residuals Wrms = {self.resids_init.dm.rms_weighted()}, Postfit DM residuals Wrms = {self.resids.dm.rms_weighted()}\n"
         else:
@@ -845,7 +846,7 @@ class ModelState:
     These objects should be regarded as immutable but lazily evaluated.
     """
 
-    def __init__(self, fitter, model):
+    def __init__(self, fitter: Fitter, model: TimingModel):
         self.fitter = fitter
         self.model = model
 
