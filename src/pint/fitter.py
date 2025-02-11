@@ -395,15 +395,7 @@ class Fitter:
                         s += ("{:" + spacingName + "s} {:20g} {:28s} {} \n").format(
                             pn, prefitpar.value, "", par.units
                         )
-
                 else:
-                    # s += "{:14s} {:20g} {:20g} {:20.2g} {} \n".format(
-                    #     pn,
-                    #     prefitpar.value,
-                    #     par.value,
-                    #     par.uncertainty.value,
-                    #     par.units,
-                    # )
                     s += ("{:" + spacingName + "s} {:20g} {:28SP} {} \n").format(
                         pn,
                         prefitpar.value,
@@ -1341,8 +1333,7 @@ class GLSState(ModelState):
             for i, (param, unit) in enumerate(zip(params, units))
         }
         # covariance matrix is 2D and symmetric
-        covariance_matrix_labels = [covariance_matrix_labels] * 2
-        self.parameter_covariance_matrix_labels = covariance_matrix_labels
+        self.parameter_covariance_matrix_labels = [covariance_matrix_labels] * 2
 
         self.xvar, self.xhat = _solve_svd(mtcm, mtcy, self.threshold, params)
         self.norm = norm
