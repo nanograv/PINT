@@ -60,6 +60,7 @@ To automatically select a fitter based on the properties of the data and model::
 
 import contextlib
 import copy
+from typing import Literal, Optional
 from warnings import warn
 from functools import cached_property
 
@@ -72,6 +73,7 @@ from numdifftools import Hessian
 
 import pint
 import pint.derived_quantities
+from pint.models.timing_model import TimingModel
 import pint.utils
 from pint.exceptions import (
     ConvergenceFailure,
@@ -155,7 +157,13 @@ class Fitter:
         ``GLSFitter`` is used to compute ``chi2`` for appropriate Residuals objects.
     """
 
-    def __init__(self, toas, model, track_mode=None, residuals=None):
+    def __init__(
+        self,
+        toas: TOAs,
+        model: TimingModel,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
+        residuals: Residuals = None,
+    ):
         if not set(model.free_params).issubset(model.fittable_params):
             free_unfittable_params = set(model.free_params).difference(
                 model.fittable_params
@@ -501,7 +509,7 @@ class Fitter:
         """
         self.resids = self.make_resids(self.model)
 
-    def make_resids(self, model):
+    def make_resids(self, model: TimingModel):
         return Residuals(toas=self.toas, model=model, track_mode=self.track_mode)
 
     def get_designmatrix(self):
@@ -831,7 +839,7 @@ class ModelState:
     These objects should be regarded as immutable but lazily evaluated.
     """
 
-    def __init__(self, fitter, model):
+    def __init__(self, fitter: Fitter, model: TimingModel):
         self.fitter = fitter
         self.model = model
 
@@ -906,7 +914,13 @@ class DownhillFitter(Fitter):
     for correlated or uncorrelated TOA errors and narrowband or wideband TOAs.
     """
 
-    def __init__(self, toas, model, track_mode=None, residuals=None):
+    def __init__(
+        self,
+        toas: TOAs,
+        model: TimingModel,
+        track_mode=None,
+        residuals: Optional[Residuals] = None,
+    ):
         super().__init__(
             toas=toas, model=model, residuals=residuals, track_mode=track_mode
         )
@@ -1283,7 +1297,13 @@ class DownhillWLSFitter(DownhillFitter):
 
 
 class GLSState(ModelState):
-    def __init__(self, fitter, model, full_cov=False, threshold=None):
+    def __init__(
+        self,
+        fitter: Fitter,
+        model: TimingModel,
+        full_cov: bool = False,
+        threshold: Optional[float] = None,
+    ):
         super().__init__(fitter, model)
         self.threshold = threshold
         self.full_cov = full_cov
@@ -1991,6 +2011,7 @@ class GLSFitter(Fitter):
                 fitpv[pn] = np.longdouble((pv + dpv) / fitp[pn].units)
                 # NOTE We need some way to use the parameter limits.
                 fitperrs[pn] = errs[uind]
+
             newparams = dict(zip(list(fitp.keys()), list(fitpv.values())))
             self.set_params(newparams)
             self.update_resids()
