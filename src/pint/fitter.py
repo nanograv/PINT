@@ -1314,7 +1314,6 @@ class GLSState(ModelState):
             mtcm = np.dot(M.T, cinv[:, None] * M)
             mtcm += np.diag(phiinv)
             mtcy = np.dot(M.T, cinv * residuals)
-        log.trace(f"mtcm: {mtcm}")
 
         self.params = params
         self.units = units
@@ -1331,19 +1330,14 @@ class GLSState(ModelState):
         self.parameter_covariance_matrix_labels = covariance_matrix_labels
 
         U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
-        log.trace(f"s: {s}")
 
         s = apply_Sdiag_threshold(s, Vt, self.threshold, params)
 
         self.norm = norm
         self.s, self.Vt = s, Vt
         xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
-        log.trace(f"norm: {norm}")
-        log.trace(f"xhat: {xhat}")
         self.xhat = xhat
-        # newres = residuals - np.dot(M, xhat)
 
-        # compute absolute estimates, normalized errors, covariance matrix
         return xhat / norm
 
     def take_step(self, step, lambda_=1):
@@ -1582,23 +1576,7 @@ class WidebandState(ModelState):
     def U_s_Vt_xhat(self):
         U, s, Vt = scipy.linalg.svd(self.mtcm, full_matrices=False)
 
-        bad = np.where(s <= self.threshold * s[0])[0]
-        s[bad] = np.inf
-        for c in bad:
-            bad_col = Vt[c, :]
-            bad_col /= abs(bad_col).max()
-            bad_combination = " ".join(
-                [
-                    f"{co}*{p}"
-                    for (co, p) in reversed(sorted(zip(bad_col, self.params)))
-                    if abs(co) > self.threshold
-                ]
-            )
-            warn(
-                f"Parameter degeneracy; the following combination of parameters yields "
-                f"almost no change: {bad_combination}",
-                DegeneracyWarning,
-            )
+        s = apply_Sdiag_threshold(s, Vt, self.threshold, self.params)
 
         xhat = np.dot(Vt.T, np.dot(U.T, self.mtcy) / s)
         return U, s, Vt, xhat
@@ -1971,7 +1949,6 @@ class GLSFitter(Fitter):
 
             self.fac = norm
 
-            log.trace(f"mtcm: {mtcm}")
             xhat, xvar = None, None
             if threshold <= 0:
                 try:
@@ -1988,16 +1965,6 @@ class GLSFitter(Fitter):
 
                 xvar = np.dot(Vt.T / s, Vt)
                 xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
-
-            log.trace(f"norm: {norm}")
-            log.trace(f"xhat: {xhat}")
-            newres = residuals - np.dot(M, xhat)
-
-            # compute linearized chisq
-            # if full_cov:
-            #     chi2 = np.dot(newres, scipy.linalg.cho_solve(cf, newres))
-            # else:
-            #     chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
 
             # compute absolute estimates, normalized errors, covariance matrix
             dpars = xhat / norm
@@ -2027,7 +1994,6 @@ class GLSFitter(Fitter):
             newparams = dict(zip(list(fitp.keys()), list(fitpv.values())))
             self.set_params(newparams)
             self.update_resids()
-            # self.minimize_func(list(fitpv.values()), *list(fitp.keys()))
             # Update Uncertainties
             self.set_param_uncertainties(fitperrs)
 
@@ -2318,23 +2284,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             if xhat is None:
                 U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
 
-                bad = np.where(s <= threshold * s[0])[0]
-                s[bad] = np.inf
-                for c in bad:
-                    bad_col = Vt[c, :]
-                    bad_col /= abs(bad_col).max()
-                    bad_combination = " ".join(
-                        [
-                            f"{co}*{p}"
-                            for (co, p) in reversed(sorted(zip(bad_col, params)))
-                            if abs(co) > threshold
-                        ]
-                    )
-                    warn(
-                        f"Parameter degeneracy; the following combination of parameters yields "
-                        f"almost no change: {bad_combination}",
-                        DegeneracyWarning,
-                    )
+                s = apply_Sdiag_threshold(s, Vt, threshold, params)
 
                 xvar = np.dot(Vt.T / s, Vt)
                 xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
@@ -2425,12 +2375,12 @@ class LMFitter(Fitter):
                 raise ValueError("Initial configuration is invalid") from e
             self.converged = False
             lambda_ = min_lambda
+            ill_conditioned = False
             for i in range(maxiter):
                 lf = lambda_ if lambda_ > min_lambda else 0
                 # Attempt: do not scale the phiinv penalty factor by lambda
                 A = current_state.mtcm + lf * np.diag(np.diag(current_state.mtcmplain))
                 b = current_state.mtcy
-                ill_conditioned = False
                 if threshold is None:
                     dx = scipy.linalg.solve(A, b, assume_a="pos")
                 else:
@@ -2439,27 +2389,7 @@ class LMFitter(Fitter):
                         f"Iteration {i}: Condition number for lambda_ = {lambda_} is {s[0]/s[-1]}"
                     )
 
-                    bad = np.where(s <= threshold * s[0])[0]
-                    s[bad] = np.inf
-                    for c in bad:
-                        ill_conditioned = True
-                        # FIXME: maybe don't stop while ill-conditioned? Always try increasing lambda?
-                        bad_col = Vt[c, :]
-                        bad_col /= abs(bad_col).max()
-                        bad_combination = " ".join(
-                            [
-                                f"{co}*{p}"
-                                for (co, p) in reversed(
-                                    sorted(zip(bad_col, current_state.params))
-                                )
-                                if abs(co) > threshold
-                            ]
-                        )
-                        warn(
-                            f"Parameter degeneracy; the following combination of parameters yields "
-                            f"almost no change: {bad_combination}",
-                            DegeneracyWarning,
-                        )
+                    s = apply_Sdiag_threshold(s, Vt, threshold, current_state.params)
 
                     dx = np.dot(Vt.T, np.dot(U.T, b) / s)
 
