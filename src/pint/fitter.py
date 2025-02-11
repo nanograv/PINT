@@ -1575,9 +1575,7 @@ class WidebandState(ModelState):
     @cached_property
     def U_s_Vt_xhat(self):
         U, s, Vt = scipy.linalg.svd(self.mtcm, full_matrices=False)
-
         s = apply_Sdiag_threshold(s, Vt, self.threshold, self.params)
-
         xhat = np.dot(Vt.T, np.dot(U.T, self.mtcy) / s)
         return U, s, Vt, xhat
 
@@ -1944,9 +1942,9 @@ class GLSFitter(Fitter):
 
             if threshold <= 0:
                 try:
-                    xhat, xvar = _solve_cholesky(mtcm, mtcy)
+                    xvar, xhat = _solve_cholesky(mtcm, mtcy)
                 except scipy.linalg.LinAlgError:
-                    xhat, xvar = _solve_svd(mtcm, mtcy, threshold, params)
+                    xvar, xhat = _solve_svd(mtcm, mtcy, threshold, params)
             else:
                 xvar, xhat = _solve_svd(mtcm, mtcy, threshold, params)
 
@@ -2258,21 +2256,14 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 mtcm += np.diag(phiinv)
                 mtcy = np.dot(M.T, cinv * residuals)
 
-            xhat, xvar = None, None
             if threshold <= 0:
                 try:
-                    c = scipy.linalg.cho_factor(mtcm)
-                    xhat = scipy.linalg.cho_solve(c, mtcy)
-                    xvar = scipy.linalg.cho_solve(c, np.eye(len(mtcy)))
+                    xvar, xhat = _solve_cholesky(mtcm, mtcy)
                 except scipy.linalg.LinAlgError:
-                    xhat, xvar = None, None
-            if xhat is None:
-                U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
+                    xvar, xhat = _solve_svd(mtcm, mtcy, threshold, params)
+            else:
+                xvar, xhat = _solve_svd(mtcm, mtcy, threshold, params)
 
-                s = apply_Sdiag_threshold(s, Vt, threshold, params)
-
-                xvar = np.dot(Vt.T / s, Vt)
-                xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
             newres = residuals - np.dot(M, xhat)
             # compute linearized chisq
             if full_cov:
@@ -2610,4 +2601,4 @@ def _solve_cholesky(mtcm, mtcy):
     c = scipy.linalg.cho_factor(mtcm)
     xhat = scipy.linalg.cho_solve(c, mtcy)
     xvar = scipy.linalg.cho_solve(c, np.eye(len(mtcy)))
-    return xhat, xvar
+    return xvar, xhat
