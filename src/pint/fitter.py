@@ -1290,46 +1290,21 @@ class GLSState(ModelState):
 
     @cached_property
     def step(self):
-        # Define the linear system
-        M, params, units = self.model.designmatrix(
-            toas=self.fitter.toas, incfrozen=False, incoffset=True
-        )
-        self.params = params
-        self.units = units
-        # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
-        covariance_matrix_labels = {
-            param: (i, i + 1, unit)
-            for i, (param, unit) in enumerate(zip(params, units))
-        }
-        # covariance matrix is 2D and symmetric
-        covariance_matrix_labels = [covariance_matrix_labels] * 2
-        self.parameter_covariance_matrix_labels = covariance_matrix_labels
-
         residuals = self.resids.time_resids.to(u.s).value
-
-        # get any noise design matrices and weight vectors
-        if not self.full_cov:
-            Mn = self.model.noise_model_designmatrix(self.fitter.toas)
-            phi = self.model.noise_model_basis_weight(self.fitter.toas)
-            phiinv = np.zeros(M.shape[1])
-            if Mn is not None and phi is not None:
-                phiinv = np.concatenate((phiinv, 1 / phi))
-                M = np.hstack((M, Mn))
-
-        # normalize the design matrix
-        M, norm = normalize_designmatrix(M, params)
-        self.M = M
-        self.fac = norm
 
         # compute covariance matrices
         if self.full_cov:
+            M, params, units = self.model.designmatrix(toas=self.fitter.toas)
+            M, norm = normalize_designmatrix(M, params)
             cov = self.model.toa_covariance_matrix(self.fitter.toas)
             cf = scipy.linalg.cho_factor(cov)
             cm = scipy.linalg.cho_solve(cf, M)
             mtcm = np.dot(M.T, cm)
             mtcy = np.dot(cm.T, residuals)
-
         else:
+            M, params, units = self.model.full_designmatrix(self.fitter.toas)
+            phiinv = 1 / self.model.full_basis_weight(self.fitter.toas)
+            M, norm = normalize_designmatrix(M, params)
             phiinv /= norm**2
             # Why are we scaling residuals by the *square* of the uncertainty?
             Nvec = (
@@ -1340,6 +1315,20 @@ class GLSState(ModelState):
             mtcm += np.diag(phiinv)
             mtcy = np.dot(M.T, cinv * residuals)
         log.trace(f"mtcm: {mtcm}")
+
+        self.params = params
+        self.units = units
+        self.M = M
+        self.fac = norm
+
+        # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
+        covariance_matrix_labels = {
+            param: (i, i + 1, unit)
+            for i, (param, unit) in enumerate(zip(params, units))
+        }
+        # covariance matrix is 2D and symmetric
+        covariance_matrix_labels = [covariance_matrix_labels] * 2
+        self.parameter_covariance_matrix_labels = covariance_matrix_labels
 
         U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
         log.trace(f"s: {s}")
