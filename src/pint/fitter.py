@@ -1320,23 +1320,15 @@ class GLSState(ModelState):
             M, params, units = self.model.designmatrix(toas=self.fitter.toas)
             M, norm = normalize_designmatrix(M, params)
             cov = self.model.toa_covariance_matrix(self.fitter.toas)
-            cf = scipy.linalg.cho_factor(cov)
-            cm = scipy.linalg.cho_solve(cf, M)
-            mtcm = np.dot(M.T, cm)
-            mtcy = np.dot(cm.T, residuals)
+            mtcm, mtcy = get_gls_mtcm_mtcy_fullcov(cov, M, residuals)
         else:
             M, params, units = self.model.full_designmatrix(self.fitter.toas)
-            phiinv = 1 / self.model.full_basis_weight(self.fitter.toas)
             M, norm = normalize_designmatrix(M, params)
-            phiinv /= norm**2
-            # Why are we scaling residuals by the *square* of the uncertainty?
+            phiinv = 1 / self.model.full_basis_weight(self.fitter.toas) / norm**2
             Nvec = (
-                self.model.scaled_toa_uncertainty(self.fitter.toas).to(u.s).value ** 2
+                self.model.scaled_toa_uncertainty(self.fitter.toas).to_value(u.s) ** 2
             )
-            cinv = 1 / Nvec
-            mtcm = np.dot(M.T, cinv[:, None] * M)
-            mtcm += np.diag(phiinv)
-            mtcy = np.dot(M.T, cinv * residuals)
+            mtcm, mtcy = get_gls_mtcm_mtcy(phiinv, Nvec, M, residuals)
 
         self.params = params
         self.units = units
@@ -1353,16 +1345,13 @@ class GLSState(ModelState):
         self.parameter_covariance_matrix_labels = covariance_matrix_labels
 
         U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
-
         s = apply_Sdiag_threshold(s, Vt, self.threshold, params)
 
-        xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
-
         self.norm = norm
-        self.s, self.Vt = s, Vt
-        self.xhat = xhat
+        self.xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+        self.xvar = np.dot(Vt.T / s, Vt)
 
-        return xhat / norm
+        return self.xhat / norm
 
     def take_step(self, step, lambda_=1):
         return GLSState(
@@ -1376,9 +1365,9 @@ class GLSState(ModelState):
     def parameter_covariance_matrix(self):
         # make sure we compute the SVD
         self.step
-        xvar = np.dot(self.Vt.T / self.s, self.Vt)
         return CovarianceMatrix(
-            (xvar / self.norm).T / self.norm, self.parameter_covariance_matrix_labels
+            (self.xvar / self.norm).T / self.norm,
+            self.parameter_covariance_matrix_labels,
         )
 
 
@@ -1956,39 +1945,23 @@ class GLSFitter(Fitter):
                 M, params, units = self.get_designmatrix()
                 M, norm = normalize_designmatrix(M, params)
                 cov = self.model.toa_covariance_matrix(self.toas)
-                cf = scipy.linalg.cho_factor(cov)
-                cm = scipy.linalg.cho_solve(cf, M)
-                mtcm = np.dot(M.T, cm)
-                mtcy = np.dot(cm.T, residuals)
+                mtcm, mtcy = get_gls_mtcm_mtcy_fullcov(cov, M, residuals)
             else:
                 M, params, units = self.model.full_designmatrix(self.toas)
-                phiinv = 1 / self.model.full_basis_weight(self.toas)
                 M, norm = normalize_designmatrix(M, params)
-                phiinv /= norm**2
+                phiinv = 1 / self.model.full_basis_weight(self.toas) / norm**2
                 Nvec = self.model.scaled_toa_uncertainty(self.toas).to(u.s).value ** 2
-                cinv = 1 / Nvec
-                mtcm = np.dot(M.T, cinv[:, None] * M)
-                mtcm += np.diag(phiinv)
-                mtcy = np.dot(M.T, cinv * residuals)
+                mtcm, mtcy = get_gls_mtcm_mtcy(phiinv, Nvec, M, residuals)
 
             self.fac = norm
 
-            xhat, xvar = None, None
             if threshold <= 0:
                 try:
-                    c = scipy.linalg.cho_factor(mtcm)
-                    xhat = scipy.linalg.cho_solve(c, mtcy)
-                    xvar = scipy.linalg.cho_solve(c, np.eye(len(mtcy)))
+                    xhat, xvar = _solve_cholesky(mtcm, mtcy)
                 except scipy.linalg.LinAlgError:
-                    xhat, xvar = None, None
-            if xhat is None:
-                U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
-                log.trace(f"s: {s}")
-
-                s = apply_Sdiag_threshold(s, Vt, threshold, params)
-
-                xvar = np.dot(Vt.T / s, Vt)
-                xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+                    xhat, xvar = _solve_svd(mtcm, mtcy, threshold, params)
+            else:
+                xvar, xhat = _solve_svd(mtcm, mtcy, threshold, params)
 
             # compute absolute estimates, normalized errors, covariance matrix
             dpars = xhat / norm
@@ -2622,45 +2595,32 @@ def fit_wls_svd(r, sigma, M, params, threshold):
     return dpars, Sigma, Adiag, (U, Sdiag, VT, Adiag)
 
 
-def fit_gls_svd(r, sigma, M, Phidiag, params, threshold):
-    # M1 = M A^{-1}
-    # where A = diag[diag[M^T M]]
-    # This makes the design matrix elements roughly of the
-    # same order of magnitude for improving numerical stability.
-    M1, Cdiag = normalize_designmatrix(M, params)
-
-    # Phi1 = Phi C^2
-    Phiinvdiag1 = 1 / Phidiag / Cdiag**2
-
-    # N^{-1}
-    Ninv = 1 / sigma**2
-
-    # Sigma1^{-1} = Phi1^{-1} + M1^T N^{-1} M1
-    M1T_Ninv_M1 = M1.T @ (Ninv[:, None] * M1)
-    Sigma1inv = M1T_Ninv_M1 + np.diag(Phiinvdiag1)
-
-    # M1^T N^{-1} r
-    M1T_Ninv_r = M1.T @ (Ninv * r)
-
-    return _fit_svd(Sigma1inv, M1T_Ninv_r, Cdiag, threshold, params)
+def get_gls_mtcm_mtcy_fullcov(cov, M, residuals):
+    cf = scipy.linalg.cho_factor(cov)
+    cm = scipy.linalg.cho_solve(cf, M)
+    mtcm = np.dot(M.T, cm)
+    mtcy = np.dot(cm.T, residuals)
+    return mtcm, mtcy
 
 
-def fit_gls_svd_fullcov(r, C, M, params, threshold):
-    M1, Cdiag = normalize_designmatrix(M, params)
-    C_cf = scipy.linalg.cho_factor(C)
-    Cinv_M1 = scipy.linalg.cho_solve(C_cf, M1)
-    M1T_Cinv_M = M.T @ Cinv_M1
-    M1T_Cinv_r = Cinv_M1.T @ r
-
-    return _fit_svd(M1T_Cinv_M, M1T_Cinv_r, Cdiag, threshold, params)
+def get_gls_mtcm_mtcy(phiinv, Nvec, M, residuals):
+    cinv = 1 / Nvec
+    mtcm = np.dot(M.T, cinv[:, None] * M)
+    mtcm += np.diag(phiinv)
+    mtcy = np.dot(M.T, cinv * residuals)
+    return mtcm, mtcy
 
 
-def _fit_svd(Sigmainv, y, Cdiag, threshold, params):
-    U, Sdiag, VT = scipy.linalg.svd(Sigmainv, full_matrices=False)
+def _solve_svd(mtcm, mtcy, threshold, params):
+    U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
+    s = apply_Sdiag_threshold(s, Vt, threshold, params)
+    xvar = np.dot(Vt.T / s, Vt)
+    xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+    return xvar, xhat
 
-    Sdiag = apply_Sdiag_threshold(Sdiag, VT, threshold, params)
 
-    x1hat = np.dot(VT.T, np.dot(U.T, y) / Sdiag)
-    dpars = x1hat / Cdiag
-
-    return dpars, (Sdiag, VT)
+def _solve_cholesky(mtcm, mtcy):
+    c = scipy.linalg.cho_factor(mtcm)
+    xhat = scipy.linalg.cho_solve(c, mtcy)
+    xvar = scipy.linalg.cho_solve(c, np.eye(len(mtcy)))
+    return xhat, xvar
