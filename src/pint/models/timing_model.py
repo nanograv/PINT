@@ -2464,8 +2464,7 @@ class TimingModel:
                         value2[pn] = str(otherpar.quantity)
                         if otherpar.quantity != par.quantity:
                             log.info(
-                                "Parameter %s not fit, but has changed between these models"
-                                % par.name
+                                f"Parameter {par.name} not fit, but has changed between these models"
                             )
                     else:
                         value2[pn] = "Missing"
@@ -2566,8 +2565,7 @@ class TimingModel:
                                 )
                             else:
                                 log.warning(
-                                    "Parameter %s not fit, but has changed between these models"
-                                    % par.name
+                                    f"Parameter {par.name} not fit, but has changed between these models"
                                 )
                                 modifier[pn].append("change")
                         if (
