@@ -1025,13 +1025,16 @@ class DownhillFitter(Fitter):
                     log.warning(f"Unexpected parameter {p}")
             else:
                 pm.uncertainty = e * pm.units
+
         self.update_model(self.current_state.chi2)
+
         if exception is not None:
             raise StepProblem(
                 "Unable to improve chi2 even with very small steps"
             ) from exception
         if not self.converged:
             raise MaxiterReached(f"Convergence not detected after {maxiter} steps.")
+
         return self.converged
 
     def fit_toas(
@@ -1353,9 +1356,10 @@ class GLSState(ModelState):
 
         s = apply_Sdiag_threshold(s, Vt, self.threshold, params)
 
+        xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
+
         self.norm = norm
         self.s, self.Vt = s, Vt
-        xhat = np.dot(Vt.T, np.dot(U.T, mtcy) / s)
         self.xhat = xhat
 
         return xhat / norm
