@@ -60,7 +60,7 @@ To automatically select a fitter based on the properties of the data and model::
 
 import contextlib
 import copy
-from typing import Literal, Optional
+from typing import List, Literal, Optional
 from warnings import warn
 from functools import cached_property
 
@@ -183,7 +183,7 @@ class Fitter:
             # residuals were provided, we're just going to use them
             self.resids_init = residuals
             # probably using GLSFitter to compute a chi-squared
-        self.model = copy.deepcopy(self.model_init)
+        self.model: TimingModel = copy.deepcopy(self.model_init)
         self.resids = copy.deepcopy(self.resids_init)
         self.fitresult = []
         self.method = None
@@ -467,9 +467,9 @@ class Fitter:
         ax.set_xlabel("MJD")
         ax.set_ylabel("Residuals")
         try:
-            psr = self.model.PSR
+            psr = self.model["PSR"].value
         except AttributeError:
-            psr = self.model.PSRJ
+            psr = self.model["PSRJ"].value
         else:
             psr = "Residuals"
         ax.set_title(psr)
@@ -483,25 +483,25 @@ class Fitter:
         ``START``, ``FINISH``, ``EPHEM``, and ``DMDATA`` are set in the model
         to reflect the TOAs in actual use.
         """
-        self.model.START.value = self.toas.first_MJD
-        self.model.FINISH.value = self.toas.last_MJD
-        self.model.NTOA.value = len(self.toas)
-        self.model.EPHEM.value = self.toas.ephem
-        self.model.DMDATA.value = hasattr(self.resids, "dm")
-        self.model.CLOCK.value = (
+        self.model["START"].value = self.toas.first_MJD
+        self.model["FINISH"].value = self.toas.last_MJD
+        self.model["NTOA"].value = len(self.toas)
+        self.model["EPHEM"].value = self.toas.ephem
+        self.model["DMDATA"].value = hasattr(self.resids, "dm")
+        self.model["CLOCK"].value = (
             f"TT({self.toas.clock_corr_info['bipm_version']})"
             if self.toas.clock_corr_info["include_bipm"]
             else "TT(TAI)"
         )
         if chi2 is not None:
             # assume a fit has been done
-            self.model.CHI2.value = chi2
-            self.model.CHI2R.value = chi2 / self.resids.dof
+            self.model["CHI2"].value = chi2
+            self.model["CHI2R"].value = chi2 / self.resids.dof
             if not self.is_wideband:
-                self.model.TRES.quantity = self.resids.rms_weighted()
+                self.model["TRES"].quantity = self.resids.rms_weighted()
             else:
-                self.model.TRES.quantity = self.resids.rms_weighted()["toa"]
-                self.model.DMRES.quantity = self.resids.rms_weighted()["dm"]
+                self.model["TRES"].quantity = self.resids.rms_weighted()["toa"]
+                self.model["DMRES"].quantity = self.resids.rms_weighted()["dm"]
 
     def reset_model(self):
         """Reset the current model to the initial model."""
@@ -850,6 +850,8 @@ class ModelState:
         self.fitter = fitter
         self.model = model
 
+        self.params: List[str]
+
     @cached_property
     def resids(self):
         try:
@@ -870,7 +872,7 @@ class ModelState:
         raise NotImplementedError
 
     @cached_property
-    def parameter_covariance_matrix(self):
+    def parameter_covariance_matrix(self) -> CovarianceMatrix:
         raise NotImplementedError
 
     @property
@@ -893,7 +895,7 @@ class ModelState:
             try:
                 with contextlib.suppress(ValueError):
                     log.trace(f"Adjusting {getattr(self.model, p)} by {s}")
-                pm = getattr(new_model, p)
+                pm = new_model[p]
                 if pm.value is None:
                     pm.value = 0
                 pm.value += s
@@ -905,7 +907,7 @@ class ModelState:
                     log.warning(f"Unexpected parameter {p}")
         return new_model
 
-    def take_step(self, step, lambda_):
+    def take_step(self, step, lambda_) -> "ModelState":
         """Return a new state moved by lambda_*step."""
         raise NotImplementedError
 
@@ -921,7 +923,13 @@ class DownhillFitter(Fitter):
     for correlated or uncorrelated TOA errors and narrowband or wideband TOAs.
     """
 
-    def __init__(self, toas, model, track_mode=None, residuals=None):
+    def __init__(
+        self,
+        toas: TOAs,
+        model: TimingModel,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
+        residuals=None,
+    ):
         super().__init__(
             toas=toas, model=model, residuals=residuals, track_mode=track_mode
         )
@@ -1020,7 +1028,7 @@ class DownhillFitter(Fitter):
                 # I don't know why this fails with multiprocessing, but bypass if it does
                 with contextlib.suppress(ValueError):
                     log.trace(f"Setting {getattr(self.model, p)} uncertainty to {e}")
-                pm = getattr(self.model, p)
+                pm = self.model[p]
             except AttributeError:
                 if p != "Offset":
                     log.warning(f"Unexpected parameter {p}")
@@ -1137,6 +1145,9 @@ class DownhillFitter(Fitter):
     @property
     def fac(self):
         return self.current_state.fac
+
+    def create_state(self) -> ModelState:
+        raise NotImplementedError
 
     def _get_free_noise_params(self):
         """Returns a list of all free noise parameters."""
@@ -1314,7 +1325,13 @@ class DownhillWLSFitter(DownhillFitter):
     or :class:`pint.fitter.DownhillFitter`.
     """
 
-    def __init__(self, toas, model, track_mode=None, residuals=None):
+    def __init__(
+        self,
+        toas,
+        model,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
+        residuals=None,
+    ):
         if model.has_correlated_errors:
             raise CorrelatedErrors(model)
         super().__init__(
@@ -1464,7 +1481,13 @@ class DownhillGLSFitter(DownhillFitter):
 
     # FIXME: do something clever to efficiently compute chi-squared
 
-    def __init__(self, toas, model, track_mode=None, residuals=None):
+    def __init__(
+        self,
+        toas,
+        model,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
+        residuals=None,
+    ):
         if not model.has_correlated_errors:
             log.info(
                 "Model does not appear to have correlated errors so the GLS fitter "
@@ -1749,7 +1772,14 @@ class WidebandDownhillFitter(DownhillFitter):
 
     # FIXME: do something clever to efficiently compute chi-squared
 
-    def __init__(self, toas, model, track_mode=None, residuals=None, add_args=None):
+    def __init__(
+        self,
+        toas,
+        model,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
+        residuals=None,
+        add_args=None,
+    ):
         self.method = "downhill_wideband"
         self.full_cov = False
         self.threshold = 0
@@ -1841,7 +1871,13 @@ class PowellFitter(Fitter):
     may serve as an example of how to write your own fitting procedure.
     """
 
-    def __init__(self, toas, model, track_mode=None, residuals=None):
+    def __init__(
+        self,
+        toas,
+        model,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
+        residuals=None,
+    ):
         super().__init__(toas, model, residuals=residuals, track_mode=track_mode)
         self.method = "Powell"
 
@@ -1887,7 +1923,13 @@ class WLSFitter(Fitter):
     close enough that the derivatives are a good approximation.
     """
 
-    def __init__(self, toas, model, track_mode=None, residuals=None):
+    def __init__(
+        self,
+        toas,
+        model,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
+        residuals=None,
+    ):
         super().__init__(
             toas=toas, model=model, residuals=residuals, track_mode=track_mode
         )
@@ -2026,7 +2068,13 @@ class GLSFitter(Fitter):
     the data covariance matrix.
     """
 
-    def __init__(self, toas=None, model=None, track_mode=None, residuals=None):
+    def __init__(
+        self,
+        toas=None,
+        model=None,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
+        residuals=None,
+    ):
         super().__init__(
             toas=toas, model=model, residuals=residuals, track_mode=track_mode
         )
@@ -2247,7 +2295,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         fit_data,
         model,
         fit_data_names=["toa", "dm"],
-        track_mode=None,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
         additional_args={},
     ):
         self.model_init = model
@@ -2702,7 +2750,14 @@ class WidebandLMFitter(LMFitter):
     Unfortunately it doesn't.
     """
 
-    def __init__(self, toas, model, track_mode=None, residuals=None, add_args=None):
+    def __init__(
+        self,
+        toas: TOAs,
+        model: TimingModel,
+        track_mode: Optional[Literal["use_pulse_numbers", "nearest"]] = None,
+        residuals: Optional[Residuals] = None,
+        add_args=None,
+    ):
         self.method = "downhill_wideband"
         self.full_cov = False
         self.threshold = 0
