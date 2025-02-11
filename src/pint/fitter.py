@@ -2246,15 +2246,15 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 cm = scipy.linalg.cho_solve(cf, M)
                 mtcm = np.dot(M.T, cm)
                 mtcy = np.dot(cm.T, residuals)
-
+                # mtcm, mtcy = get_gls_mtcm_mtcy_fullcov(cov, M, residuals)
             else:
                 phiinv /= norm**2
                 Nvec = self.scaled_all_sigma() ** 2
-
                 cinv = 1 / Nvec
                 mtcm = np.dot(M.T, cinv[:, None] * M)
                 mtcm += np.diag(phiinv)
                 mtcy = np.dot(M.T, cinv * residuals)
+                # mtcm, mtcy = get_gls_mtcm_mtcy(phiinv, Nvec, M, residuals)
 
             if threshold <= 0:
                 try:
