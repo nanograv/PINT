@@ -1846,7 +1846,13 @@ class WLSFitter(Fitter):
             residuals = self.resids.time_resids.to(u.s).value
             sigma = self.model.scaled_toa_uncertainty(self.toas).to(u.s).value
 
-            dpars, Sigma, norm, _ = fit_wls_svd(residuals, sigma, M, params, threshold)
+            dpars, Sigma, norm, _ = fit_wls_svd(
+                residuals,
+                sigma,
+                M,
+                params,
+                (threshold if threshold is not None else 1e-14 * max(M.shape)),
+            )
 
             # errs = np.sqrt(np.diag(Sigma)) / fac
 
