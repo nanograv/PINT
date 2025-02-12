@@ -14,5 +14,6 @@ the released changes.
 - Type hints in `pint.models.timing_model`
 ### Fixed
 - Made `TimingModel.is_binary()` more robust. 
+- Bug in `Fitter.plot()`
 ### Removed
 - Definition of `@cached_property` to support Python<=3.7
