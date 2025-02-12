@@ -16,6 +16,7 @@ the released changes.
 - Type hints in `pint.models.timing_model`
 - `full_designmatrix()` and `full_basis_weights()` methods in `TimingModel`
 ### Fixed
-- Made `TimingModel.is_binary()` more robust. 
+- Made `TimingModel.is_binary()` more robust.
+- Fixed `TestPintk`
 ### Removed
 - Definition of `@cached_property` to support Python<=3.7
