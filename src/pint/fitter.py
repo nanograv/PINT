@@ -1414,11 +1414,11 @@ class DownhillGLSFitter(DownhillFitter):
         if not self.full_cov:
             noise_dims = self.model.noise_model_dimensions(self.toas)
             noise_ampls = {}
-            ntmpar = len(self.model.free_params)
+            ntmpar = len(self.current_state.params)
             for comp in noise_dims:
                 # The first column of designmatrix is "offset", add 1 to match
                 # the indices of noise designmatrix
-                p0 = noise_dims[comp][0] + ntmpar + 1
+                p0 = noise_dims[comp][0] + ntmpar
                 p1 = p0 + noise_dims[comp][1]
                 noise_ampls[comp] = (self.current_state.xhat / self.current_state.norm)[
                     p0:p1
@@ -1918,11 +1918,6 @@ class GLSFitter(Fitter):
             fitpv = self.model.get_params_dict("free", "num")
             fitperrs = self.model.get_params_dict("free", "uncertainty")
 
-            # Define the linear system
-            # normalize the design matrix
-
-            ntmpar = len(fitp)
-
             residuals = self.resids.time_resids.to(u.s).value
 
             # compute covariance matrices
@@ -1983,11 +1978,12 @@ class GLSFitter(Fitter):
             # Compute the noise realizations if possible
             if not full_cov:
                 noise_dims = self.model.noise_model_dimensions(self.toas)
+                ntmpar = len(params)
                 noise_ampls = {}
                 for comp in noise_dims:
                     # The first column of designmatrix is "offset", add 1 to match
                     # the indices of noise designmatrix
-                    p0 = noise_dims[comp][0] + ntmpar + 1
+                    p0 = noise_dims[comp][0] + ntmpar
                     p1 = p0 + noise_dims[comp][1]
                     noise_ampls[comp] = (xhat / norm)[p0:p1] * u.s
                     if debug:

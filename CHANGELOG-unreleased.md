@@ -18,5 +18,6 @@ the released changes.
 ### Fixed
 - Made `TimingModel.is_binary()` more robust.
 - Fixed `TestPintk`
+- Fixed the noise realization indexing in `Fitter`s
 ### Removed
 - Definition of `@cached_property` to support Python<=3.7
