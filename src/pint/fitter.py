@@ -60,7 +60,7 @@ To automatically select a fitter based on the properties of the data and model::
 
 import contextlib
 import copy
-from typing import Literal, Optional
+from typing import List, Literal, Optional
 from warnings import warn
 from functools import cached_property
 
@@ -2023,9 +2023,9 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
 
     def __init__(
         self,
-        fit_data,
-        model,
-        fit_data_names=["toa", "dm"],
+        fit_data: TOAs,
+        model: TimingModel,
+        fit_data_names: List[str] = ["toa", "dm"],
         track_mode=None,
         additional_args={},
     ):
@@ -2068,6 +2068,8 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         ]
         self.is_wideband = True
         self.method = "General_Data_Fitter"
+
+        self.resids: WidebandTOAResiduals
 
     @property
     def toas(self):
@@ -2193,8 +2195,9 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         # check that params of timing model have necessary components
         self.model.validate()
         self.model.validate_toas(self.toas)
+        self.update_resids()
         chi2 = 0
-        for i in range(maxiter):
+        for _ in range(maxiter):
             fitp = self.model.get_params_dict("free", "quantity")
             fitpv = self.model.get_params_dict("free", "num")
             fitperrs = self.model.get_params_dict("free", "uncertainty")
@@ -2207,12 +2210,9 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 d_matrix.param_units,
             )
 
-            # Get residuals and TOA uncertainties in seconds
-            if i == 0:
-                self.update_resids()
             # Since the residuals may not have the same unit. Thus the residual here
             # has no unit.
-            residuals = self.resids._combined_resids
+            residuals = self.resids.calc_wideband_resids()
 
             # get any noise design matrices and weight vectors
             if not full_cov:
@@ -2262,11 +2262,11 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
 
             newres = residuals - np.dot(M, xhat)
             # compute linearized chisq
-            if full_cov:
-                chi2 = np.dot(newres, scipy.linalg.cho_solve(cf, newres))
-            else:
-                chi2 = np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
-
+            chi2 = (
+                np.dot(newres, scipy.linalg.cho_solve(cf, newres))
+                if full_cov
+                else np.dot(newres, cinv * newres) + np.dot(xhat, phiinv * xhat)
+            )
             # compute absolute estimates, normalized errors, covariance matrix
             dpars = xhat / norm
             errs = np.sqrt(np.diag(xvar)) / norm
@@ -2466,7 +2466,7 @@ class WidebandLMFitter(LMFitter):
         # FIXME: set up noise residuals et cetera
         return super().fit_toas(maxiter=maxiter, debug=debug, **kwargs)
 
-    def update_from_state(self, state, debug=False):
+    def update_from_state(self, state: WidebandState, debug: bool = False):
         # Nicer not to keep this if we have a choice, it introduces reference cycles
         self.current_state = state
         self.model = state.model
@@ -2476,7 +2476,7 @@ class WidebandLMFitter(LMFitter):
         for p, e in zip(state.params, self.errors):
             try:
                 log.trace(f"Setting {getattr(self.model, p)} uncertainty to {e}")
-                pm = getattr(self.model, p)
+                pm = self.model[p]
             except AttributeError:
                 if p != "Offset":
                     log.warning(f"Unexpected parameter {p}")
