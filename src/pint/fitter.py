@@ -2207,7 +2207,8 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
 
             # compute covariance matrices
             if full_cov:
-                cov = self.get_noise_covariancematrix().matrix
+                # cov = self.get_noise_covariancematrix().matrix
+                cov = self.model.wideband_covariance_matrix(self.toas)
                 cf = scipy.linalg.cho_factor(cov)
                 cm = scipy.linalg.cho_solve(cf, M)
                 mtcm = np.dot(M.T, cm)
