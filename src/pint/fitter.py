@@ -2188,10 +2188,10 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
             if not full_cov:
                 # We assume the fit date type is toa
                 Mn = self.noise_designmatrix_maker(self.toas, self.model)
-                phi = self.model.noise_model_basis_weight(self.toas)
-                phiinv = np.zeros(M.shape[1])
-                if Mn is not None and phi is not None:
-                    phiinv = np.concatenate((phiinv, 1 / phi))
+                # phi = self.model.noise_model_basis_weight(self.toas)
+                phiinv = 1 / self.model.full_basis_weight(self.toas)
+                if Mn is not None:
+                    # phiinv = np.concatenate((phiinv, 1 / phi))
                     new_d_matrix = combine_design_matrices_by_param(d_matrix, Mn)
                     M, params, units = (
                         new_d_matrix.matrix,
