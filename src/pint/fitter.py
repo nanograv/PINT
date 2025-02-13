@@ -1446,6 +1446,7 @@ class WidebandState(ModelState):
         self.threshold = threshold
         self.full_cov = full_cov
         self.add_args = {}  # for adding arguments to residual creation
+        self.resids: WidebandTOAResiduals
 
     @cached_property
     def M_params_units_norm(self):
@@ -1519,10 +1520,7 @@ class WidebandState(ModelState):
 
     @cached_property
     def mtcm_mtcy_mtcmplain(self):
-        # FIXME: ensure that TOAs are before DM
-        residuals = np.hstack(
-            (self.resids.toa.time_resids.to_value(u.s), self.resids.dm.resids_value)
-        )
+        residuals = self.resids.calc_wideband_resids()
 
         # compute covariance matrices
         if self.full_cov:
@@ -1540,19 +1538,7 @@ class WidebandState(ModelState):
             mtcy = np.dot(cm.T, residuals)
             mtcmplain = mtcm
         else:
-            Nvec = (
-                np.hstack(
-                    [
-                        self.model.scaled_toa_uncertainty(self.fitter.toas).to_value(
-                            u.s
-                        ),
-                        self.model.scaled_dm_uncertainty(self.fitter.toas).to_value(
-                            u.pc / u.cm**3
-                        ),
-                    ]
-                )
-                ** 2
-            )
+            Nvec = self.model.scaled_wideband_uncertainty(self.fitter.toas) ** 2
             cinv = 1 / Nvec
             mtcm = np.dot(self.M.T, cinv[:, None] * self.M)
             mtcmplain = mtcm
