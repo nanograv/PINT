@@ -1466,18 +1466,11 @@ class WidebandState(ModelState):
             d_matrix.derivative_params,
             d_matrix.param_units,
         )
-        # get any noise design matrices and weight vectors
+
         if not self.full_cov:
-            # We assume the fit date type is toa
             Mn = DesignMatrixMaker("toa_noise", u.s)(self.fitter.toas, self.model)
             phiinv = 1 / self.model.full_basis_weight(self.fitter.toas)
             if Mn is not None:
-                # new_d_matrix = combine_design_matrices_by_param(d_matrix, Mn)
-                # M, params, units = (
-                #     new_d_matrix.matrix,
-                #     new_d_matrix.derivative_params,
-                #     new_d_matrix.param_units,
-                # )
                 M, params, units, _ = self.model.full_wideband_designmatrix(
                     self.fitter.toas
                 )
