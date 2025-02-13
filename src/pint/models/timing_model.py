@@ -2365,7 +2365,7 @@ class TimingModel:
                 M[:, ii] = 0.0
                 units.append(pint.dmu / u.s)
             else:
-                q = -self.d_dm_d_param(toas, param)
+                q = self.d_dm_d_param(toas, param)
                 the_unit = pint.dmu / getattr(self, param).units
                 M[:, ii] = q.to_value(the_unit)
                 units.append(the_unit)
