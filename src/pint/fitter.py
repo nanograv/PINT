@@ -1470,10 +1470,8 @@ class WidebandState(ModelState):
         if not self.full_cov:
             # We assume the fit date type is toa
             Mn = DesignMatrixMaker("toa_noise", u.s)(self.fitter.toas, self.model)
-            phi = self.model.noise_model_basis_weight(self.fitter.toas)
-            phiinv = np.zeros(M.shape[1])
-            if Mn is not None and phi is not None:
-                phiinv = np.concatenate((phiinv, 1 / phi))
+            phiinv = 1 / self.model.full_basis_weight(self.fitter.toas)
+            if Mn is not None:
                 new_d_matrix = combine_design_matrices_by_param(d_matrix, Mn)
                 M, params, units = (
                     new_d_matrix.matrix,
@@ -1481,24 +1479,12 @@ class WidebandState(ModelState):
                     new_d_matrix.param_units,
                 )
 
-        # normalize the design matrix
-        norm = np.sqrt(np.sum(M**2, axis=0))
-        # The fixed offset is an unlisted parameter
-        ntmpar = len(self.model.free_params) + 1
-        if M.shape[1] > ntmpar:
-            norm[ntmpar:] = 1
-        for c in np.where(norm == 0)[0]:
-            warn(
-                f"Parameter degeneracy; the following parameter yields "
-                f"almost no change: {params[c]}",
-                DegeneracyWarning,
-            )
-        norm[norm == 0] = 1
-        M /= norm
+        M, norm = normalize_designmatrix(M, params)
+        self.fac = norm
+
         if not self.full_cov:
             phiinv /= norm**2
             self.phiinv = phiinv
-        self.fac = norm
 
         return M, params, units, norm
 
@@ -1585,6 +1571,44 @@ class WidebandState(ModelState):
     def step(self):
         # compute absolute estimates, normalized errors, covariance matrix
         return self.xhat / self.norm
+
+    @cached_property
+    def step1(self):
+        residuals = self.resids.calc_wideband_resids()
+
+        # compute covariance matrices
+        if self.full_cov:
+            M, params, units, _ = self.model.wideband_designmatrix(self.fitter.toas)
+            M, norm = normalize_designmatrix(M, params)
+            cov = self.model.wideband_covariance_matrix(self.fitter.toas)
+            mtcm, mtcy = get_gls_mtcm_mtcy_fullcov(cov, M, residuals)
+        else:
+            M, params, units, _ = self.model.full_wideband_designmatrix(
+                self.fitter.toas
+            )
+            M, norm = normalize_designmatrix(M, params)
+            phiinv = 1 / self.model.full_basis_weight(self.fitter.toas) / norm**2
+            self.phiinv = phiinv
+            Nvec = self.model.scaled_wideband_uncertainty(self.fitter.toas) ** 2
+            mtcm, mtcy = get_gls_mtcm_mtcy(phiinv, Nvec, M, residuals)
+
+        self.params = params
+        self.units = units
+        self.M = M
+        self.fac = norm
+
+        # TODO: seems like doing this on every iteration is wasteful, and we should just do it once and then update the matrix
+        covariance_matrix_labels = {
+            param: (i, i + 1, unit)
+            for i, (param, unit) in enumerate(zip(params, units))
+        }
+        # covariance matrix is 2D and symmetric
+        self.parameter_covariance_matrix_labels = [covariance_matrix_labels] * 2
+
+        self.xvar, self.xhat = _solve_svd(mtcm, mtcy, self.threshold, params)
+        self.norm = norm
+
+        return self.xhat / norm
 
     def take_step(self, step, lambda_=1):
         return WidebandState(
