@@ -2144,42 +2144,6 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
         else:
             raise ValueError("No method to access data error is provided.")
 
-    def scaled_all_sigma(self):
-        """Scale all data's uncertainty.
-
-        If the function of scaled_`data`_sigma is not given, it will just
-        return the original data uncertainty.
-        """
-        scaled_sigmas = []
-        sigma_units = []
-        for ii, fd_name in enumerate(self.fit_data_names):
-            func_name = f"scaled_{fd_name}_uncertainty"
-            sigma_units.append(self.resids.residual_objs[fd_name].unit)
-            if hasattr(self.model, func_name):
-                scale_func = getattr(self.model, func_name)
-                if len(self.fit_data) == 1:
-                    scaled_sigmas.append(scale_func(self.fit_data[0]))
-                else:
-                    scaled_sigmas.append(scale_func(self.fit_data[ii]))
-            else:
-                if len(self.fit_data) == 1:
-                    original_sigma = self.get_data_uncertainty(
-                        fd_name, self.fit_data[0]
-                    )
-                else:
-                    original_sigma = self.get_data_uncertainty(
-                        fd_name, self.fit_data[ii]
-                    )
-                scaled_sigmas.append(original_sigma)
-
-        scaled_sigmas_no_unit = []
-        for ii, scaled_sigma in enumerate(scaled_sigmas):
-            if hasattr(scaled_sigma, "unit"):
-                scaled_sigmas_no_unit.append(scaled_sigma.to_value(sigma_units[ii]))
-            else:
-                scaled_sigmas_no_unit.append(scaled_sigma)
-        return np.hstack(scaled_sigmas_no_unit)
-
     def fit_toas(self, maxiter=1, threshold=0, full_cov=False, debug=False):
         """Carry out a generalized least-squares fitting procedure.
 
@@ -2251,7 +2215,7 @@ class WidebandTOAFitter(Fitter):  # Is GLSFitter the best here?
                 # mtcm, mtcy = get_gls_mtcm_mtcy_fullcov(cov, M, residuals)
             else:
                 phiinv /= norm**2
-                Nvec = self.scaled_all_sigma() ** 2
+                Nvec = self.model.scaled_wideband_uncertainty(self.toas) ** 2
                 cinv = 1 / Nvec
                 mtcm = np.dot(M.T, cinv[:, None] * M)
                 mtcm += np.diag(phiinv)
