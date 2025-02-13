@@ -1743,7 +1743,7 @@ class TimingModel:
         if len(self.basis_funcs) == 0:
             return None
         result = [nf(toas)[0] for nf in self.basis_funcs]
-        return np.hstack(list(result))
+        return np.hstack(result)
 
     def full_designmatrix(
         self, toas: TOAs
@@ -2273,6 +2273,80 @@ class TimingModel:
                 units.append(the_unit / F0.unit)
 
         return M, params, units
+
+    def dm_designmatrix(self, toas: TOAs, incoffset=True):
+        """Returns the DM part of the wideband designmatrix. This contains the partial
+        derivatives of the model DM w.r.t. the timing model parameters."""
+        noise_params = self.get_params_of_component_type("NoiseComponent")
+
+        if (
+            not set(self.free_params)
+            .difference(noise_params)
+            .issubset(self.fittable_params)
+        ):
+            free_unfittable_params = (
+                set(self.free_params)
+                .difference(noise_params)
+                .difference(self.fittable_params)
+            )
+            raise ValueError(
+                f"Cannot compute the design matrix because the following unfittable parameters "
+                f"were found unfrozen in the model: {free_unfittable_params}. "
+                f"Freeze these parameters before computing the design matrix."
+            )
+
+        # unfrozen_noise_params = [
+        #     param for param in noise_params if not getattr(self, param).frozen
+        # ]
+
+        # The entries for any unfrozen noise parameters will not be
+        # included in the design matrix as they are not well-defined.
+
+        incoffset = incoffset and "PhaseOffset" not in self.components
+
+        params = ["Offset"] if incoffset else []
+        params += [
+            par
+            for par in self.params
+            if (not getattr(self, par).frozen) and par not in noise_params
+        ]
+
+        ntoas = len(toas)
+        nparams = len(params)
+        units = []
+        # Apply all delays ?
+        # tt = toas['tdbld']
+        # for df in self.delay_funcs:
+        #    tt -= df(toas)
+
+        M = np.zeros((ntoas, nparams))
+        for ii, param in enumerate(params):
+            if param == "Offset":
+                M[:, ii] = 0.0
+                units.append(pint.dmu / u.s)
+            else:
+                q = -self.d_dm_d_param(toas, param)
+                the_unit = pint.dmu / getattr(self, param).units
+                M[:, ii] = q.to_value(the_unit)
+                units.append(the_unit)
+
+        return M, params, units
+
+    def wideband_designmatrix(self, toas: TOAs, incoffset=True):
+        """The wideband design matrix including the partial derivatives of the
+        TOA and DM residuals w.r.t. the model parameters."""
+
+        assert toas.is_wideband()
+
+        M_t, par_t, units_t = self.designmatrix(toas, incoffset=incoffset)
+        M_d, par_d, units_d = self.dm_designmatrix(toas, incoffset=incoffset)
+
+        assert all(pt == pd for pt, pd in zip(par_t, par_d))
+
+        M = np.vstack((M_t, M_d))
+        assert M.shape == (2 * len(toas), len(par_t))
+
+        return M, par_t, units_t, units_d
 
     def compare(
         self,
