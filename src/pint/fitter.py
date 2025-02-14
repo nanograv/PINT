@@ -1451,29 +1451,28 @@ class WidebandState(ModelState):
     @cached_property
     def M_params_units_norm(self):
         # Define the linear system
-        d_matrix = combine_design_matrices_by_quantity(
-            [
-                DesignMatrixMaker("toa", u.s)(
-                    self.fitter.toas, self.model, self.model.free_params, offset=True
-                ),
-                DesignMatrixMaker("dm", u.pc / u.cm**3)(
-                    self.fitter.toas, self.model, self.model.free_params, offset=True
-                ),
-            ]
-        )
-        M, params, units = (
-            d_matrix.matrix,
-            d_matrix.derivative_params,
-            d_matrix.param_units,
-        )
+        # d_matrix = combine_design_matrices_by_quantity(
+        #     [
+        #         DesignMatrixMaker("toa", u.s)(
+        #             self.fitter.toas, self.model, self.model.free_params, offset=True
+        #         ),
+        #         DesignMatrixMaker("dm", u.pc / u.cm**3)(
+        #             self.fitter.toas, self.model, self.model.free_params, offset=True
+        #         ),
+        #     ]
+        # )
+        # M, params, units = (
+        #     d_matrix.matrix,
+        #     d_matrix.derivative_params,
+        #     d_matrix.param_units,
+        # )
+        M, params, units, _ = self.model.wideband_designmatrix(self.fitter.toas)
 
         if not self.full_cov:
-            Mn = DesignMatrixMaker("toa_noise", u.s)(self.fitter.toas, self.model)
             phiinv = 1 / self.model.full_basis_weight(self.fitter.toas)
-            if Mn is not None:
-                M, params, units, _ = self.model.full_wideband_designmatrix(
-                    self.fitter.toas
-                )
+            M, params, units, _ = self.model.full_wideband_designmatrix(
+                self.fitter.toas
+            )
 
         M, norm = normalize_designmatrix(M, params)
         self.fac = norm
