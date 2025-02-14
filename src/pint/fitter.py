@@ -1506,14 +1506,7 @@ class WidebandState(ModelState):
 
         # compute covariance matrices
         if self.full_cov:
-            cov = combine_covariance_matrix(
-                [
-                    CovarianceMatrixMaker("toa", u.s)(self.fitter.toas, self.model),
-                    CovarianceMatrixMaker("dm", u.pc / u.cm**3)(
-                        self.fitter.toas, self.model
-                    ),
-                ]
-            ).matrix
+            cov = self.model.wideband_covariance_matrix(self.fitter.toas)
             cf = scipy.linalg.cho_factor(cov)
             cm = scipy.linalg.cho_solve(cf, self.M)
             mtcm = np.dot(self.M.T, cm)
@@ -1563,13 +1556,13 @@ class WidebandState(ModelState):
     def xhat(self):
         return self.U_s_Vt_xhat[3]
 
-    @cached_property
-    def step(self):
-        # compute absolute estimates, normalized errors, covariance matrix
-        return self.xhat / self.norm
+    # @cached_property
+    # def step(self):
+    #     # compute absolute estimates, normalized errors, covariance matrix
+    #     return self.xhat / self.norm
 
     @cached_property
-    def step1(self):
+    def step(self):
         residuals = self.resids.calc_wideband_resids()
 
         # compute covariance matrices
