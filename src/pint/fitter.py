@@ -1213,7 +1213,7 @@ class WLSState(ModelState):
         sigma = self.model.scaled_toa_uncertainty(self.fitter.toas).to(u.s).value
         residuals = self.resids.time_resids.to(u.s).value
 
-        dpars, _, _, (self.U, self.s, self.Vt, self.fac) = fit_wls_svd(
+        dpars, _, self.fac, (self.U, self.s, self.Vt) = fit_wls_svd(
             residuals,
             sigma,
             M,
@@ -2535,8 +2535,20 @@ def apply_Sdiag_threshold(Sdiag, VT, threshold, params):
 
 
 def fit_wls_svd(r, sigma, M, params, threshold):
-    """Perform a linear WLS fit given timing residuals (r),
-    uncertainties (sigma), and design matrix (M) using SVD."""
+    """A utility function used by the WLS fitters.
+
+    Perform a linear WLS fit given timing residuals (r),
+    uncertainties (sigma), and design matrix (M) using
+    singular value decomposition.
+
+    To handle parameter degeneracies, singular values less than `threshold` are
+    replaced with infinity, so that the fit only takes place in a non-singular
+    subspace of the parameter space.
+
+    Returns the parameter deviations (`dpars`), parameter covariance
+    matrix (`Sigma`), design matrix normalization factors (`Adiag`),
+    and the results of the SVD.
+    """
     # r1 = N^{-0.5} r
     # N is the diagonal TOA covariance matrix.
     r1 = r / sigma
@@ -2566,10 +2578,16 @@ def fit_wls_svd(r, sigma, M, params, threshold):
     # betahat = C^{-1} V (S^T S)^{-1} S^T U^T r1
     dpars = (VT.T @ ((U.T @ r1) / Sdiag)) / Adiag
 
-    return dpars, Sigma, Adiag, (U, Sdiag, VT, Adiag)
+    return dpars, Sigma, Adiag, (U, Sdiag, VT)
 
 
 def get_gls_mtcm_mtcy_fullcov(cov, M, residuals):
+    """A utility function used by the GLS fitters.
+
+    Computes the matrix products `mtcm = M^T C^-1 M` and `mtcy = M^T C^-1 y`
+    given the data covariance matrix (`cov`), timing model design matrix (`M`),
+    and residuals y (`residuals`).
+    """
     cf = scipy.linalg.cho_factor(cov)
     cm = scipy.linalg.cho_solve(cf, M)
     mtcm = np.dot(M.T, cm)
@@ -2578,6 +2596,13 @@ def get_gls_mtcm_mtcy_fullcov(cov, M, residuals):
 
 
 def get_gls_mtcm_mtcy(phiinv, Nvec, M, residuals):
+    """A utility function used by the GLS fitters.
+
+    Computes the matrix products `mtcm = M^T N^-1 M` and `mtcy = M^T N^-1 y`
+    given the parameter weights (`phiinv`), white noise variances (`Nvec`),
+    full design matrix (`M`) containing the timing model design matrix and the
+    correlated noise basis, and residuals y (`residuals`).
+    """
     cinv = 1 / Nvec
     mtcm = np.dot(M.T, cinv[:, None] * M)
     mtcm += np.diag(phiinv)
@@ -2586,6 +2611,26 @@ def get_gls_mtcm_mtcy(phiinv, Nvec, M, residuals):
 
 
 def _solve_svd(mtcm, mtcy, threshold, params):
+    """A utility function used by the GLS fitters.
+
+    Solves a linearized timing model using singular value decomposition given
+
+        `mtcm = M^T C^-1 M`   and
+        `mtcy = M^T C^-1 y`
+
+    If `full_cov` is `True` in `Fitter.fit_toas()`, C is the full covariance
+    matrix including white noise and correlated noise,M is the timing model design matrix.
+    If `full_cov` is `False` in `Fitter.fit_toas(), C only contains the white noise, and M
+    contains both the timing model design matrix and the correlated noise basis.
+    y contains the residuals.
+
+    To handle parameter degeneracies, singular values less than `threshold` are
+    replaced with infinity, so that the fit only takes place in a non-singular
+    subspace of the parameter space.
+
+    Returns the parameter covariance matrix (`xvar`) and the parameter
+    deviations (`xhat`). `xhat` elements have the same units as their
+    corresponding parameters."""
     U, s, Vt = scipy.linalg.svd(mtcm, full_matrices=False)
     s = apply_Sdiag_threshold(s, Vt, threshold, params)
     xvar = np.dot(Vt.T / s, Vt)
@@ -2594,6 +2639,22 @@ def _solve_svd(mtcm, mtcy, threshold, params):
 
 
 def _solve_cholesky(mtcm, mtcy):
+    """A utility function used by the GLS fitters.
+
+    Solves a linearized timing model using Cholesky decomposition given
+
+        `mtcm = M^T C^-1 M`   and
+        `mtcy = M^T C^-1 y`
+
+    If `full_cov` is `True` in `Fitter.fit_toas()`, C is the full covariance
+    matrix including white noise and correlated noise,M is the timing model design matrix.
+    If `full_cov` is `False` in `Fitter.fit_toas(), C only contains the white noise, and M
+    contains both the timing model design matrix and the correlated noise basis.
+    y contains the residuals.
+
+    Returns the parameter covariance matrix (`xvar`) and the parameter
+    deviations (`xhat`). `xhat` elements have the same units as their
+    corresponding parameters."""
     c = scipy.linalg.cho_factor(mtcm)
     xhat = scipy.linalg.cho_solve(c, mtcy)
     xvar = scipy.linalg.cho_solve(c, np.eye(len(mtcy)))
