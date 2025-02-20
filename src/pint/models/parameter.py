@@ -23,6 +23,7 @@ parameters PINT understands.
 """
 
 import numbers
+from typing import Optional
 from warnings import warn
 
 import astropy.time as time
@@ -200,7 +201,10 @@ class Parameter:
         self.valueType = None
         self.special_arg = []
         self.use_alias = use_alias
-        self._parent = parent
+
+        from pint.models.timing_model import Component
+
+        self._parent: Optional[Component] = parent
 
     @property
     def quantity(self):
@@ -2132,6 +2136,17 @@ class maskParameter(floatParameter):
         array
             An array of TOA indices selected by the mask.
         """
+
+        # Get the TOA mask from cache if the TOAs are immutable.
+        if (
+            self._parent is not None
+            and self._parent._parent is not None
+            and self._parent._parent.immutable_toas is toas
+            and self._parent._parent.mask_cache is not None
+            and self.name in self._parent._parent.mask_cache
+        ):
+            return self._parent._parent.mask_cache[self.name]
+
         if len(self.key_value) == 1:
             if not hasattr(self, "toa_selector"):
                 self.toa_selector = TOASelect(is_range=False, use_hash=True)
