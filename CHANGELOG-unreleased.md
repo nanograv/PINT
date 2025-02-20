@@ -17,3 +17,4 @@ the released changes.
 - Made `TimingModel.is_binary()` more robust. 
 ### Removed
 - Definition of `@cached_property` to support Python<=3.7
+- The broken `data.nanograv.org` URL from the list of solar system ephemeris mirrors
