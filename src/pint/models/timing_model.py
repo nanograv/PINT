@@ -2464,8 +2464,7 @@ class TimingModel:
                         value2[pn] = str(otherpar.quantity)
                         if otherpar.quantity != par.quantity:
                             log.info(
-                                "Parameter %s not fit, but has changed between these models"
-                                % par.name
+                                f"Parameter {par.name} not fit, but has changed between these models"
                             )
                     else:
                         value2[pn] = "Missing"
@@ -2485,22 +2484,22 @@ class TimingModel:
                         par.uncertainty.to_value(uncertainty_unit),
                     )
 
-                    if otherpar is not None:
-                        if otherpar.uncertainty is not None:
-                            value2[pn] = "{:>16s} +/- {:7.2g}".format(
-                                str(otherpar.quantity),
-                                otherpar.uncertainty.to_value(uncertainty_unit),
-                            )
-                        else:
-                            # otherpar must have no uncertainty
-                            if otherpar.quantity is not None:
-                                value2[pn] = "{:>s}".format(str(otherpar.quantity))
-                            else:
-                                value2[pn] = "Missing"
-                    else:
+                    if otherpar is None:
                         value2[pn] = "Missing"
                         diff1[pn] = ""
                         diff2[pn] = ""
+                    elif otherpar.uncertainty is not None:
+                        value2[pn] = "{:>16s} +/- {:7.2g}".format(
+                            str(otherpar.quantity),
+                            otherpar.uncertainty.to_value(uncertainty_unit),
+                        )
+                    else:
+                        # otherpar must have no uncertainty
+                        value2[pn] = (
+                            "{:>s}".format(str(otherpar.quantity))
+                            if otherpar.quantity is not None
+                            else "Missing"
+                        )
                     if otherpar is not None and otherpar.quantity is not None:
                         diff = otherpar.quantity - par.quantity
                         if par.uncertainty is not None:
@@ -2566,8 +2565,7 @@ class TimingModel:
                                 )
                             else:
                                 log.warning(
-                                    "Parameter %s not fit, but has changed between these models"
-                                    % par.name
+                                    f"Parameter {par.name} not fit, but has changed between these models"
                                 )
                                 modifier[pn].append("change")
                         if (
