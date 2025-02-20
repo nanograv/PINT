@@ -378,6 +378,13 @@ class TimingModel:
         for cp in components:
             self.add_component(cp, setup=False, validate=False)
 
+        # These are used for caching TOA masks associated with `maskParameter`s
+        # when the `TimingModel` is specific to a certain `TOAs` object that is
+        # known to be invariant. This is set using the `TimingModel.set_immutable_toas()`
+        # method. Mutating the `TOAs` specified therein will result in undefined behavior.
+        self.mask_cache: Optional[Dict[str, np.array]] = None
+        self.immutable_toas: Optional[TOAs] = None
+
     def __repr__(self) -> str:
         return "{}(\n  {}\n)".format(
             self.__class__.__name__,
@@ -522,14 +529,32 @@ class TimingModel:
                 num_components_of_type(ChromaticCM) == 1
             ), "PLChromNoise / CMWaveX component cannot be used without the ChromaticCM component."
 
-    # def __str__(self):
-    #    result = ""
-    #    comps = self.components
-    #    for k, cp in list(comps.items()):
-    #        result += "In component '%s'" % k + "\n\n"
-    #        for pp in cp.params:
-    #            result += str(getattr(cp, pp)) + "\n"
-    #    return result
+    def set_immutable_toas(self, immutable_toas: TOAs) -> None:
+        """This method couples the `TimingModel` object with a `TOAs` object that is assumed
+        to be immutable. This allows the TOA selection masks to be cached. Mutating the `TOAs` object
+        given herein will result in undefined behavior."""
+
+        warn(
+            "Setting immutable `TOAs` in the `TimingModel`. Mutating this `TOAs` object hereafter will result in undefined behavior."
+        )
+
+        assert (
+            self.immutable_toas is None
+        ), "The `immutable_toas` attribute has already been set."
+
+        mask_cache = {}
+        for p in self.params:
+            if isinstance(self[p], maskParameter):
+                param: maskParameter = self[p]
+                mask_cache[p] = param.select_toa_mask(immutable_toas)
+
+        self.immutable_toas = immutable_toas
+        self.mask_cache = mask_cache
+
+    def unset_immutable_toas(self):
+        """Undo the action of `set_mutable_toas()`."""
+        self.immutable_toas = None
+        self.mask_cache = None
 
     def __getattr__(self, name: str):
         if name in {"components", "component_types", "search_cmp_attr"}:
@@ -3359,7 +3384,7 @@ class Component(metaclass=ModelMeta):
 
     def __init__(self):
         self.params = []
-        self._parent = None
+        self._parent: Optional[TimingModel] = None
         self.deriv_funcs = {}
         self.component_special_params = []
 
