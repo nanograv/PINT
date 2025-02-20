@@ -19,3 +19,4 @@ the released changes.
 - Proper warning in `read_polyco_file()`
 ### Removed
 - Definition of `@cached_property` to support Python<=3.7
+- The broken `data.nanograv.org` URL from the list of solar system ephemeris mirrors
