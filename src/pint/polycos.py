@@ -464,7 +464,10 @@ def tempo_polyco_table_writer(polycoTable, filename="polyco.dat"):
                 if (i + 1) % 3 == 0:
                     coeff_block += "\n"
 
-            f.write(line1 + line2 + coeff_block + "\n")
+            if not coeff_block.endswith("\n"):
+                coeff_block += "\n"
+
+            f.write(line1 + line2 + coeff_block)
 
 
 # default formats
