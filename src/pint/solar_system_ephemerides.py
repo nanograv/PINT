@@ -21,7 +21,7 @@ ephemeris_mirrors = [
     # NOTE the JPL ftp site is disabled for our automatic builds. Instead,
     # we duplicated the JPL ftp site on the nanograv server.
     # Search nanograv server first, then the other two.
-    "https://data.nanograv.org/static/data/ephem/",
+    # "https://data.nanograv.org/static/data/ephem/",
     "ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp/",
     "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/a_old_versions/",
     # DE440 is here, officially
