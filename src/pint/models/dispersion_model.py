@@ -17,6 +17,7 @@ from pint.models.parameter import (
     prefixParameter,
 )
 from pint.models.timing_model import DelayComponent
+from pint.toa import TOAs
 from pint.toa_select import TOASelect
 from pint.utils import split_prefixed_name, taylor_horner, taylor_horner_deriv
 
@@ -659,7 +660,7 @@ class DispersionDMX(Dispersion):
         if bad_parameters:
             raise MissingTOAs(bad_parameters)
 
-    def dmx_dm(self, toas):
+    def get_select_idxs(self, toas: TOAs):
         condition = {}
         tbl = toas.table
         if not hasattr(self, "dmx_toas_selector"):
@@ -671,11 +672,21 @@ class DispersionDMX(Dispersion):
             r1 = getattr(self, DMXR1_mapping[epoch_ind]).quantity
             r2 = getattr(self, DMXR2_mapping[epoch_ind]).quantity
             condition[DMX_mapping[epoch_ind]] = (r1.mjd, r2.mjd)
-        select_idx = self.dmx_toas_selector.get_select_index(
-            condition, tbl["mjd_float"]
-        )
-        # Get DMX delays
-        dm = np.zeros(len(tbl)) * dmu
+
+        return self.dmx_toas_selector.get_select_index(condition, tbl["mjd_float"])
+
+    def dmx_dm(self, toas: TOAs):
+        if (
+            self._parent is not None
+            and self._parent.toas_for_cache is toas
+            and self._parent.piecewise_cache is not None
+            and "DispersionDMX" in self._parent.piecewise_cache
+        ):
+            select_idx = self._parent.piecewise_cache["DispersionDMX"]
+        else:
+            select_idx = self.get_select_idxs(toas)
+
+        dm = np.zeros(len(toas)) << dmu
         for k, v in select_idx.items():
             dm[v] += getattr(self, k).quantity
         return dm

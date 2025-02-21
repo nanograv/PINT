@@ -18,7 +18,11 @@ def model_and_toas():
 def test_cache_set_unset(model_and_toas: Tuple[TimingModel, TOAs]):
     model, toas = model_and_toas
 
-    assert model.toas_for_cache is None and model.mask_cache is None
+    assert (
+        model.toas_for_cache is None
+        and model.mask_cache is None
+        and model.piecewise_cache is None
+    )
 
     model._set_cache(toas)
 
@@ -30,6 +34,14 @@ def test_cache_set_unset(model_and_toas: Tuple[TimingModel, TOAs]):
         if model[p].quantity is not None and isinstance(model, maskParameter)
     )
 
+    assert (
+        model.piecewise_cache is not None and "DispersionDMX" in model.piecewise_cache
+    )
+
     model._unset_cache()
 
-    assert model.toas_for_cache is None and model.mask_cache is None
+    assert (
+        model.toas_for_cache is None
+        and model.mask_cache is None
+        and model.piecewise_cache is None
+    )

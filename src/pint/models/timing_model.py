@@ -383,6 +383,7 @@ class TimingModel:
         # known to be invariant. This is set using the `TimingModel.set_immutable_toas()`
         # method. Mutating the `TOAs` specified therein will result in undefined behavior.
         self.mask_cache: Optional[Dict[str, np.array]] = None
+        self.piecewise_cache: Optional[Dict[str, np.array]] = None
         self.toas_for_cache: Optional[TOAs] = None
 
     def __repr__(self) -> str:
@@ -547,13 +548,21 @@ class TimingModel:
                 param: maskParameter = self[p]
                 mask_cache[p] = param.select_toa_mask(toas)
 
+        piecewise_cache = {
+            component_name: self.components[component_name].get_select_idxs(toas)
+            for component_name in ["DispersionDMX", "ChromaticCMX"]
+            if component_name in self.components
+        }
+
         self.toas_for_cache = toas
         self.mask_cache = mask_cache
+        self.piecewise_cache = piecewise_cache
 
     def _unset_cache(self):
         """Undo the action of `_set_cache()`."""
         self.toas_for_cache = None
         self.mask_cache = None
+        self.piecewise_cache = None
 
     def __getattr__(self, name: str):
         if name in {"components", "component_types", "search_cmp_attr"}:
