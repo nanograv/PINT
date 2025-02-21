@@ -1733,14 +1733,13 @@ class TimingModel:
         toas: pint.toa.TOAs
             The input data object for DM uncertainty.
         """
-        dm_error, valid = toas.get_flag_value("pp_dme", as_type=float)
-        dm_error = np.array(dm_error)[valid] * u.pc / u.cm**3
-        result = np.zeros(len(dm_error)) * u.pc / u.cm**3
+        dm_error, _ = np.array(toas.get_flag_value("pp_dme", as_type=float)) << pint.dmu
+
         # When there is no noise model.
         if len(self.scaled_dm_uncertainty_funcs) == 0:
-            result += dm_error
-            return result
+            return dm_error
 
+        result = np.zeros(len(dm_error)) << pint.dmu
         for nf in self.scaled_dm_uncertainty_funcs:
             result += nf(toas)
         return result
