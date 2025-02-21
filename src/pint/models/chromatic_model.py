@@ -676,10 +676,10 @@ class ChromaticCMX(Chromatic):
             select_idx = self.get_select_idxs(toas)
 
         # Get CMX delays
-        cm = np.zeros(len(toas)) << self._parent.CM.units
+        cm = np.zeros(len(toas))
         for k, v in select_idx.items():
-            cm[v] += getattr(self, k).quantity
-        return cm
+            cm[v] += getattr(self, k).value
+        return cm << self._parent.CM.units
 
     def CMX_chromatic_delay(self, toas, acc_delay=None):
         """This is a wrapper function for interacting with the TimingModel class"""

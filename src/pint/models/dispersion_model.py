@@ -46,7 +46,7 @@ class Dispersion(DelayComponent):
         frequency is much larger than plasma frequency.
         """
         # dm delay
-        dmdelay = DM * DMconst / freq.to(u.MHz) ** 2.0
+        dmdelay = DM * DMconst / freq**2.0
         return dmdelay.to(u.s)
 
     def dispersion_type_delay(self, toas):
@@ -686,10 +686,10 @@ class DispersionDMX(Dispersion):
         else:
             select_idx = self.get_select_idxs(toas)
 
-        dm = np.zeros(len(toas)) << dmu
+        dm = np.zeros(len(toas))
         for k, v in select_idx.items():
-            dm[v] += getattr(self, k).quantity
-        return dm
+            dm[v] += getattr(self, k).value
+        return dm << dmu
 
     def DMX_dispersion_delay(self, toas, acc_delay=None):
         """This is a wrapper function for interacting with the TimingModel class"""
