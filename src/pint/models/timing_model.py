@@ -529,31 +529,30 @@ class TimingModel:
                 num_components_of_type(ChromaticCM) == 1
             ), "PLChromNoise / CMWaveX component cannot be used without the ChromaticCM component."
 
-    def set_immutable_toas(self, immutable_toas: TOAs) -> None:
+    def _set_cache(self, toas: TOAs) -> None:
         """This method couples the `TimingModel` object with a `TOAs` object that is assumed
         to be immutable. This allows the TOA selection masks to be cached. Mutating the `TOAs` object
-        given herein will result in undefined behavior."""
+        given herein or one of the timing model metaparameters (e.g. TNREDC) will result in undefined
+        behavior."""
 
         warn(
-            "Setting immutable `TOAs` in the `TimingModel`. Mutating this `TOAs` object hereafter will result in undefined behavior."
+            "Setting `TOAs` for caching in the `TimingModel`. Mutating this `TOAs` object "
+            "or any of the timing model metaparameters like TNREDC hereafter will result "
+            "in undefined behavior."
         )
-
-        assert (
-            self.immutable_toas is None
-        ), "The `immutable_toas` attribute has already been set."
 
         mask_cache = {}
         for p in self.params:
             if isinstance(self[p], maskParameter):
                 param: maskParameter = self[p]
-                mask_cache[p] = param.select_toa_mask(immutable_toas)
+                mask_cache[p] = param.select_toa_mask(toas)
 
-        self.immutable_toas = immutable_toas
+        self.toas_for_cache = toas
         self.mask_cache = mask_cache
 
-    def unset_immutable_toas(self):
+    def _unset_cache(self):
         """Undo the action of `set_mutable_toas()`."""
-        self.immutable_toas = None
+        self.toas_for_cache = None
         self.mask_cache = None
 
     def __getattr__(self, name: str):

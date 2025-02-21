@@ -2137,11 +2137,11 @@ class maskParameter(floatParameter):
             An array of TOA indices selected by the mask.
         """
 
-        # Get the TOA mask from cache if the TOAs are immutable.
+        # Get the TOA mask from cache if the TOAs are constant.
         if (
             self._parent is not None
             and self._parent._parent is not None
-            and self._parent._parent.immutable_toas is toas
+            and self._parent._parent.toas_for_cache is toas
             and self._parent._parent.mask_cache is not None
             and self.name in self._parent._parent.mask_cache
         ):
