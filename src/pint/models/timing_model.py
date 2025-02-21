@@ -383,7 +383,7 @@ class TimingModel:
         # known to be invariant. This is set using the `TimingModel.set_immutable_toas()`
         # method. Mutating the `TOAs` specified therein will result in undefined behavior.
         self.mask_cache: Optional[Dict[str, np.array]] = None
-        self.immutable_toas: Optional[TOAs] = None
+        self.toas_for_cache: Optional[TOAs] = None
 
     def __repr__(self) -> str:
         return "{}(\n  {}\n)".format(
@@ -543,7 +543,7 @@ class TimingModel:
 
         mask_cache = {}
         for p in self.params:
-            if isinstance(self[p], maskParameter):
+            if isinstance(self[p], maskParameter) and self[p].quantity is not None:
                 param: maskParameter = self[p]
                 mask_cache[p] = param.select_toa_mask(toas)
 
@@ -551,7 +551,7 @@ class TimingModel:
         self.mask_cache = mask_cache
 
     def _unset_cache(self):
-        """Undo the action of `set_mutable_toas()`."""
+        """Undo the action of `_set_cache()`."""
         self.toas_for_cache = None
         self.mask_cache = None
 
