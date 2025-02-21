@@ -1713,14 +1713,11 @@ class TimingModel:
         toas: pint.toa.TOAs
             The input data object for TOAs uncertainty.
         """
-        ntoa = toas.ntoas
-        tbl = toas.table
-        result = np.zeros(ntoa) * u.us
         # When there is no noise model.
         if len(self.scaled_toa_uncertainty_funcs) == 0:
-            result += tbl["error"].quantity
-            return result
+            return toas.table["error"].quantity
 
+        result = np.zeros(toas.ntoas) << u.us
         for nf in self.scaled_toa_uncertainty_funcs:
             result += nf(toas)
         return result
