@@ -1764,8 +1764,11 @@ class TimingModel:
         npar_tm = len(
             [pname for pname in self.free_params if pname not in noise_params]
         ) + int("PhaseOffset" not in self.components)
+
+        # The number 1e40 is chosen to be consistent with ENTERPRISE.
         phi_tm = np.ones(npar_tm) * 1e40
         phi_nm = self.noise_model_basis_weight(toas)
+
         return np.hstack((phi_tm, phi_nm)) if phi_nm is not None else phi_tm
 
     def noise_model_dimensions(self, toas: TOAs) -> Dict[str, Tuple[int, int]]:
