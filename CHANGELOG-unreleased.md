@@ -10,6 +10,7 @@ the released changes.
 ## Unreleased
 ### Changed
 - In `Residuals`, store correlated noise amplitudes instead of noise residuals. `Residuals.noise_resids` is now a `@property`.
+- Reorder `TimingModel.scaled_toa_uncertainty()` and `TimingModel.scaled_dm_uncertainty()` to improve performance.
 ### Added
 - Simulate correlated DM noise for wideband TOAs
 - Type hints in `pint.models.timing_model`
