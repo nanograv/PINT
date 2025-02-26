@@ -3,6 +3,7 @@
 import argparse
 
 import os
+import sys
 
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
